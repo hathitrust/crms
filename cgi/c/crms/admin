@@ -1,0 +1,248 @@
+#!/l/local/bin/perl
+
+my $DLXSROOT;
+my $DLPS_DEV;
+BEGIN 
+{ 
+    $DLXSROOT = $ENV{'DLXSROOT'}; 
+    $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+    ## unshift ( @INC, $ENV{'DLXSROOT'} . "/crms/cgi" );
+}
+
+use strict;
+use CRMS;
+use CGI;
+
+my $crms = CRMS->new(
+    logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
+    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
+    verbose      =>   0,
+    root         =>   $DLXSROOT,
+    dev          =>   $DLPS_DEV,
+);
+
+my $cgi  = new CGI;
+my $user = $ENV{'REMOTE_USER'};
+my %args;
+my $page           = $cgi->param('p');
+$args{'add'}       = $cgi->param('add');
+$args{'id'}        = $cgi->param('id');
+$args{'name'}      = $cgi->param('name');
+$args{'expert'}    = $cgi->param('expert');
+$args{'reviewer'}  = $cgi->param('reviewer');
+$args{'admin'}     = $cgi->param('admin');
+$args{'delete'}    = $cgi->param('delete');
+
+
+## if not logged in, send to login page
+## if logged in, get status and send to review or other page
+if ( $user eq "" ) 
+{
+    LoginRedirect();
+    exit; 
+}
+else
+{
+    my @types = $crms->GetUserTypes( $user );
+
+    if    ( grep /3/, @types ) { MainMenu();      }
+    else                       { NoAccessPage();  }
+    exit;
+}
+
+sub MainMenu
+{
+    my $userName       = $crms->GetUserName( $user );
+
+    ## start page
+    print qq{Content-type: text/html
+
+    <html>
+      <head>
+        <title>CRMS</title>
+        <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css" />
+        <script type="text/javascript">
+        <!--
+        //-->
+        </script>
+      </head>
+    <body>\n};
+
+    my @disputedItems = $crms->GetItemsInDispute();
+
+    ## greeting and links
+    print qq{<h3>Hello $userName </h3>
+      <div><a href="/cgi/c/crms/home">home</a></div>
+      <div><a href="?p=user">adminster user accounts</a></div>
+      <div><a href="?p=reviews">view all reviews</a></div>
+      };
+    
+    if    ( $page eq "user" )     { BuildUserPage(); }
+    elsif ( $page eq "editUser" ) { BuildUserEditPage(); }
+    elsif ( $page eq "reviews" )  { BuildReviewsPage(); }
+
+    ## the end
+    print "</body></html>"; 
+}
+
+sub BuildUserPage 
+{
+    my %users = $crms->GetUserData();
+ 
+    print qq{<hr width="25%" align="left"/>
+      <h3>Click to edit users</h3>};
+    foreach my $userID ( sort keys %users )
+    {
+        my $types = join(", ", sort(@{$users{$userID}{'types'}}));
+        print qq{<div><a href="/cgi/c/crms/admin?p=editUser&id=$userID">$users{$userID}{'name'} ($types)</a></div>};
+    }
+
+    ## form to add a new user
+    print qq{<hr width="25%" align="left"/><div>
+        <h3>Add a new user:</h3>
+        <form action="/cgi/c/crms/admin">
+          <input type="hidden" name="p" value="editUser"/>
+          <input type="hidden" name="add" value="1"/>
+          ID: <input type="text" name="id"/><br/>
+          Name:   <input type="text" name="name"/><br/>
+          <input type="checkbox" name="reviewer">reviewer (1)</input>
+          <input type="checkbox" name="expert">expert (2)</input>
+          <input type="checkbox" name="admin">admin (3)</input><br/>
+          <input type="submit"   value="Submit"/>
+        </form>
+      </div>};
+}
+
+sub BuildUserEditPage
+{
+    if ( $args{'add'} ) { AddUser();  }
+    else                { EditUser(); }
+}
+
+sub AddUser
+{
+    ## submit user
+    my $rc = $crms->AddUser( \%args );
+    if ( $rc ) { print qq{<h3>User $args{'name'} added/modified</h3>}; }
+    else       { print qq{<h3>Error while submting new/modify user</h3>}; }
+
+    ## for to edit again
+    EditUser();
+}
+
+sub EditUser
+{
+    my %user  = $crms->GetUserData( $args{'id'} );
+
+    print qq|<div>
+      <h3>Edit user</h3>
+          <form action="/cgi/c/crms/admin">
+          <input type="hidden" name="add" value="1"/>
+          <input type="hidden" name="p"   value="editUser"/>
+          <input type="hidden" name="id"  value="$args{'id'}"/>
+          Name:   <input type="text" name="name" value="$user{$args{'id'}}{'name'}"/> ($args{'id'})
+          <br/>|;
+
+    print qq{<input type="checkbox" name="reviewer" };
+    if ( grep /1/, @{$user{$args{'id'}}{'types'}} ) { print qq{checked="1"}; }
+    print qq{>reviewer (1)</input>};
+
+    print qq{<input type="checkbox" name="expert" };
+    if ( grep /2/, @{$user{$args{'id'}}{'types'}} ) { print qq{checked="1"}; }
+    print qq{>expert (2)</input>};
+
+    print qq{<input type="checkbox" name="admin" };
+    if ( grep /3/, @{$user{$args{'id'}}{'types'}} ) { print qq{checked="1"}; }
+    print qq{>admin (3)</input>};
+
+    print qq{<br/><input type="checkbox" name="delete">Delete user</input>};
+    print qq{<br/><input type="submit" value="Submit"/></form></div>};
+}
+
+
+sub BuildReviewsPage 
+{
+    my $order = $cgi->param( 'order' );
+    my $since = $cgi->param( 'since' );
+    my $user  = $cgi->param( 'user' );
+    my $id    = $cgi->param( 'id' );
+
+    if ( ! $order ) { $order = "id"; }
+
+    print qq{<hr width="25%" align="left"/><div>
+      <h3>Reviews:</h3>
+      <form>
+        <input type="hidden" name="p" value="reviews"/>
+        Restrict selection:<br/>
+        barcode: <input type="text"  name="id"    value="$id"/><br/>
+        User ID: <input type="text"  name="user"  value="$user"/><br/>
+        Since:   <input type="text"  name="since" value="$since"/><span class="smallText">(YYYY-MM-DD HH:MM:SS)</span><br/>
+        Order:   } . 
+        $cgi->radio_group(-name=>'order', -values=>['id','time','user','attr'], -default=>$order) . 
+        qq{<br/><input type="submit"   value="Submit"/>
+      </form>
+    </div>};
+
+    print $crms->GetReviewsHtml( $order, $id, $user, $since );
+}
+
+sub UrlEncode
+{
+    ## need to work on this...
+    my $in = shift;
+    $in =~ s, ,+,g;
+    return $in
+}
+
+sub fail { die $_; }
+
+sub Redirect
+{
+    my $loc      = shift;
+    my $msg      = shift;
+    my $time     = shift;
+    print qq{Content-type: text/html
+
+    <html>
+      <head>
+        <title>CRMS</title>
+        <script type="text/javascript">
+        <!--
+        function adminRedir(){
+            newURL = "https://" + window.location.host + "/cgi/c/crms/admin";
+            window.location = newURL;
+        }
+        function reviewRedir(){
+            newURL = "https://" + window.location.host + "/" + window.location.pathname;
+            window.location = newURL;
+        }
+        //-->
+        </script>
+      </head> };
+    if ( $loc eq "review" ) { print qq{<body onLoad="setTimeout('reviewRedir()', $time)">\n}; }
+    if ( $loc eq "admin" )  { print qq{<body onLoad="setTimeout('adminRedir()',  $time)">\n}; }
+
+    print qq{<p>$msg</p>};
+
+    ## the end
+    print "</body></html>";
+}
+
+sub LoginRedirect { Redirect("review", "login redirect.", 0); }
+
+sub AdminRedirect { Redirect("admin",  "admin redirect.", 0); }
+
+sub NoAccessPage 
+{ 
+    print qq{Content-type: text/html
+
+    <html>
+      <head>
+        <title>CRMS</title>
+      </head>
+      <body>
+        <p>You do no appear to have sufficient permissions to access the CRMS review system.</p>
+      </body>
+    </html>};
+}
+

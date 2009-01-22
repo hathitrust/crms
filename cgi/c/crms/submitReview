@@ -1,0 +1,209 @@
+#!/l/local/bin/perl
+
+my $DLXSROOT;
+my $DLPS_DEV;
+BEGIN 
+{ 
+    $DLXSROOT = $ENV{'DLXSROOT'}; 
+    $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+    ## unshift ( @INC, $ENV{'DLXSROOT'} . "/crms/cgi" );
+}
+
+use strict;
+use CRMS;
+use CGI;
+
+my $crms = CRMS->new(
+    logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
+    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
+    verbose      =>   0,
+    root         =>   $DLXSROOT,
+    dev          =>   $DLPS_DEV,
+);
+
+my $cgi   = new CGI;
+my $user  = $ENV{'REMOTE_USER'};
+my @types = $crms->GetUserTypes( $user );
+my %args;
+my @errors;
+
+## if not logged in, send to login page
+
+## if logged in, get status and send to review or other page
+if ( $user ne "" ) 
+{
+    if ( grep /1/, @types ) { Submit(); }
+}
+
+sub Submit 
+{
+    if ( $cgi->param('skip') )
+    {
+        $crms->UnlockItem( $cgi->param('barcode') );
+        print qq{Content-type: text/html
+
+        <html>
+          <head>
+            <title>CRMS</title>
+          </head>
+        <body onLoad="setTimeout('redir()', 1000)">\n};
+    
+        print qq{<p>Logged out. Item checked in. <a href="/cgi/c/crms/review">Go back for more if you like.</a></p>};
+
+        ## the end
+        print "</body></html>";
+    }
+    elsif ( $cgi->param('delete') )
+    {
+        my $bar  = $cgi->param( 'barcode' );
+        my $user = $cgi->param( 'user' );
+        if ( ! grep /3/, @types ) { Error( "You do not have permission to delete reviews"); }
+
+        my $rc = $crms->DeleteReview( $bar, $user );
+        if ( $rc )
+        {
+            print qq{Content-type: text/html
+
+            <html>
+              <head>
+                <title>CRMS</title>
+                <script type="text/javascript">
+                <!--
+                function redir(){
+                    window.location = "/cgi/c/crms/home"
+                }
+                //-->
+                </script>
+              </head>
+            <body onLoad="setTimeout('redir()', 3000)">\n};
+
+            print qq{<p>Review deleted: $bar, $user.  Going back...</a></p>};
+
+            ## the end
+            print "</body></html>";
+        }
+        else { Error( "There was an error while deleting this record"); }
+    }
+    else
+    {
+        my $rc = validateArgs();
+
+        if ( ! $rc ) { ReportProblem(); return; }
+
+        my ($rights, $reason) = ConvertCode( $args{'rights'} );
+ 
+        $rc = $crms->SubmitReview($args{'barcode'}, $args{'user'},   $rights, $reason,
+                                  $args{'comment'}, $args{'renNum'}, $args{'exp'});
+
+        push( @errors, "failed to submit, check error log");
+
+        if ( ! $rc ) { ReportProblem(); return; }
+        RedirectBack();
+    }
+}
+
+sub validateArgs
+{
+    my $return = 1;
+
+    $args{'barcode'}    = $cgi->param('barcode');
+    $args{'publ'}       = $cgi->param('publ');
+    $args{'user'}       = $cgi->param('user');
+    $args{'rights'}     = $cgi->param('rights');
+    $args{'reason'}     = $cgi->param('reason');
+    $args{'renNum'}     = $cgi->param('renNum');
+    $args{'renDate'}    = $cgi->param('renDate');
+    $args{'flag'}       = $cgi->param('flag');
+    $args{'comment'}    = $cgi->param('comment');
+
+    if ( $cgi->param('exp') )        { $args{'exp'} = 1; }
+    if ( $cgi->param('commentPre') ) { $args{'comment'} = $cgi->param('commentPre') .": ". $args{'comment'}; }
+
+    if ( $user ne $args{'user'} )          { push( @errors, "You are not $user"); $return = 0; }
+    if ( ! $crms->ChechReviewer( $user ) ) { push( @errors, "permissions error"); $return = 0; }
+    if ( ! $args{'publ'} )                 { push( @errors, "missing publ date"); $return = 0; }
+    if ( ! $args{'rights'} )               { push( @errors, "missing rights");    $return = 0; }
+    ## if ( ! $args{'reason'} )               { push( @errors, "missing reason");    $return = 0; }
+
+    return $return;
+}
+
+sub Error
+{
+    my $msg = shift;
+    print qq{Content-type: text/html
+
+    <html>
+      <head>
+        <title>CRMS</title>
+      </head>
+      <body>
+        <p>$msg</p>
+        <p><a href="/cgi/c/crms/hom">home</a></p>
+      </body>
+    </html>};
+
+    exit;
+}
+
+sub ConvertCode
+{
+    my $code = shift;
+
+    if    ( $code eq "1" ) { return (1,2); }
+    elsif ( $code eq "2" ) { return (1,7); }
+    elsif ( $code eq "3" ) { return (1,9); }
+    elsif ( $code eq "4" ) { return (2,7); }
+    elsif ( $code eq "5" ) { return (2,9); }
+    elsif ( $code eq "6" ) { return (5,8); }
+}
+
+sub RedirectBack
+{
+    print qq{Content-type: text/html
+
+    <html>
+      <head>
+        <title>CRMS</title>
+        <script type="text/javascript">
+        <!--
+        function redir(){
+            window.location = "/cgi/c/crms/review"
+        }
+        //-->
+        </script>
+      </head>
+    <body onLoad="setTimeout('redir()', 2000)">\n};
+
+    print qq{<p>Thanks. Have another...</p>};
+
+    ## the end
+    print "</body></html>";
+}
+
+sub ReportProblem
+{
+    ## start page
+    print qq{Content-type: text/html
+
+    <html>
+      <head>
+        <title>CRMS</title>
+      </head>
+    <body>\n};
+
+    print qq{<p><strong>Yo! It looks like we found a problem with your sibmission.<br/> } . 
+          qq{Errors listed at the bottom. Go back to fix the problems.</strong></p>\n};
+
+    print "<table border=\"1\">\n";
+    foreach ( keys %args ) { print "<tr><td>$_</td> <td>$args{$_}</td><tr>\n"; }
+    print "</table>\n";
+
+    if ( @errors )      { print "<h3>ERRORS:</h3>\n"; }
+    foreach ( @errors ) { print "<strong>$_<br/></strong>"; }
+
+    ## the end
+    print "</body></html>"; 
+}
+
+

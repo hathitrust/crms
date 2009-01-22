@@ -1,0 +1,60 @@
+
+.divbody   {              width:98%; padding-left:0px; }
+.divNav    { float:right; width:20%; padding-left:2px; }
+.divFrame  { float:left;  width:78%; padding-left:2px; }
+
+.navtop    { text-align:left; vertical-align:top;      }
+.navbotom  { text-align:left; vertical-align:bottom;   }
+
+.smallText { font-size:11px }
+
+table.nav    { 
+        border-width: 1px 1px 1px 1px;
+        border-spacing: 2px;
+        border-style: outset outset outset outset;
+        border-color: gray gray gray gray;
+        border-collapse: separate;
+        background-color: white;
+}
+table.nav th { 
+        border-width: 1px 1px 1px 1px;
+        padding: 1px 1px 1px 1px;
+        border-style: inset inset inset inset;
+        border-color: gray gray gray gray;
+        background-color: white;
+        -moz-border-radius: 0px 0px 0px 0px;
+}
+table.nav td {
+        border-width: 1px 1px 1px 1px;
+        padding: 1px 1px 1px 1px;
+        border-style: inset inset inset inset;
+        border-color: gray gray gray gray;
+        background-color: white;
+        -moz-border-radius: 0px 0px 0px 0px;
+}
+
+table.allReviews {
+	border-width: 1px 1px 1px 1px;
+	border-spacing: 2px;
+	border-style: outset outset outset outset;
+	border-color: gray gray gray gray;
+	border-collapse: separate;
+	background-color: white;
+}
+table.allReviews th {
+	border-width: 1px 1px 1px 1px;
+	padding: 1px 1px 1px 1px;
+	border-style: inset inset inset inset;
+	border-color: gray gray gray gray;
+	background-color: white;
+	-moz-border-radius: 0px 0px 0px 0px;
+}
+table.allReviews td {
+	border-width: 1px 1px 1px 1px;
+	padding: 1px 1px 1px 1px;
+	border-style: inset inset inset inset;
+	border-color: gray gray gray gray;
+	background-color: white;
+	-moz-border-radius: 0px 0px 0px 0px;
+}
+
