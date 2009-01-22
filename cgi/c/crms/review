@@ -138,21 +138,21 @@ sub StartReviewing
              </table><hr />};
 
     print qq{<a href="$titleLink" target="topFrame">Stanford</a>   ||
-             <a href="$ptLink"    target="topFrame">HathiTrust</a> ||
-             <a href="$catLink"   target="topFrame">Mirlyn</a> || <br />
+             <a href="$ptLink"    target="topFrame" accesskey="h">HathiTrust</a> ||
+             <a href="$catLink"   target="topFrame" accesskey="m">Mirlyn</a> || <br />
 
              <a href="$wCatLink"  target="topFrame">World Cat</a>   ||
              <a href="$uscorLink" target="topFrame">U.S. Copyright</a><br/>
  
              <hr />
-             <strong>bottom: </strong><a href="javascript:changeFrame( '$titleLink' )">Stanford</a> ||
-                                           <a href="javascript:changeFrame( '$ptLink' )">HathiTrust</a>  ||
-                                           <a href="javascript:closeFrame()">[x]</a>
+             <strong>bottom: </strong><a href="javascript:changeFrame( '$titleLink' )"   accesskey="b">Stanford</a> ||
+                                           <a href="javascript:changeFrame( '$ptLink' )" accesskey="n">HathiTrust</a>  ||
+                                           <a href="javascript:closeFrame()" accesskey="x">[x]</a>
 
              <hr />
              <strong>ID:</strong> <tt>$barcode</tt></br>
-             <strong>Title:</strong>  <a href="$titleLink"  target="topFrame">$title</a><br/>
-             <strong>Author:</strong> <a href="$authorLink" target="topFrame">$author</a><br/>
+             <strong>Title:</strong>  <a href="$titleLink"  target="topFrame" accesskey="t">$title</a><br/>
+             <strong>Author:</strong> <a href="$authorLink" target="topFrame" accesskey="a">$author</a><br/>
              <strong>Pub Date:</strong> $pub_date <br/>};
 
     if ( $regNum ) 
@@ -207,12 +207,12 @@ sub buildSubmitReviewForm
         -->
 
         <strong>Rights/Reason: </string><a href="/c/crms/help.html#rights" target="_blank">?</a><br/>
-        <input type="radio" id="1" name="rights" value="1">pd/ncn</input><br/>
-        <input type="radio" id="2" name="rights" value="2">pd/ren</input><br/>
-        <input type="radio" id="3" name="rights" value="3">pd/cdpp</input><br/>
-        <input type="radio" id="4" name="rights" value="4">ic/ren</input><br/>
-        <input type="radio" id="5" name="rights" value="5">ic/cdpp</input><br/>
-        <input type="radio" id="6" name="rights" value="6">und/nfi</input><br/>
+        <input type="radio" id="1" name="rights" value="1" accesskey="1">pd/ncn (1)</input><br/>
+        <input type="radio" id="2" name="rights" value="2" accesskey="2">pd/ren (2)</input><br/>
+        <input type="radio" id="3" name="rights" value="3" accesskey="3">pd/cdpp (3)</input><br/>
+        <input type="radio" id="4" name="rights" value="4" accesskey="4">ic/ren (4)</input><br/>
+        <input type="radio" id="5" name="rights" value="5" accesskey="5">ic/cdpp (5)</input><br/>
+        <input type="radio" id="6" name="rights" value="6" accesskey="6">und/nfi (6)</input><br/>
         <br/>
         <!--
         <Strong>Save Link to this Renewal:</strong>
