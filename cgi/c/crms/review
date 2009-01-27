@@ -74,6 +74,23 @@ sub StartReviewing
             document.getElementById("topFrame").height = "100%";
             document.getElementById("bFrame").height   = "0%";
         }
+
+        function CopyToRenNum()
+        {
+            var clip = window.getSelection();
+            window.clipboardData.setData( 'cb', window.getSelection() );
+        }
+        function PasteToRenNum()
+        {
+           // document.forms['submitReview'].elements['renNum'] = document.execCommand('Paste');
+           // document.submitReview['renNum'].focus();
+           // document.execCommand( 'Paste' );
+           // alert( 'txt' );
+           // document.submitReview['renNum'].value = document.execCommand('Paste');
+           var txt = document.execCommand('Copy');
+           alert( 'clip' );
+           // document.submitReview['renNum'].value = window.clipboardData.getData();;
+        }
         //-->
         </script>
       </head>
@@ -182,7 +199,7 @@ sub StartReviewing
 sub buildSubmitReviewForm
 {
     my $id       = shift;
-    my $publ     = shift;
+    my $date     = shift;
     my $regNum   = shift;
 
     my $expertCheck = buildExp();
@@ -191,6 +208,7 @@ sub buildSubmitReviewForm
       <form name="submitReview" action="/cgi/c/crms/submitReview">
         <input type="hidden" name="barcode" value="$id"> 
         <input type="hidden" name="user"    value="$user"> 
+        <input type="hidden" name="date"    value="$date"> 
 
         <!--
         <strong>Rights: </string><a href="/c/crms/help.html#rights" target="_blank">?</a><br/>
@@ -222,12 +240,11 @@ sub buildSubmitReviewForm
         -->
 
         <Strong>Copyright renewal ID: <a href="/c/crms/help.html#renewal" target="_blank">?</a></strong>
-        <!-- <input type="text" name="renNum" value="$regNum"  onClick="popRights()"/> -->
         <input type="text" name="renNum" value="$regNum"/>
         <br/><br/>
 
         <Strong>Publication date: <a href="/c/crms/help.html#publ" target="_blank">?</a></strong>
-        <input type="text" name="publ" value="$publ"/>
+        <input type="text" name="cDate" value="$date"/>
         <br/><br/>
 
         <!--

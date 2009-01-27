@@ -92,7 +92,7 @@ sub Submit
 
         my ($rights, $reason) = ConvertCode( $args{'rights'} );
  
-        $rc = $crms->SubmitReview($args{'barcode'}, $args{'user'},   $rights, $reason,
+        $rc = $crms->SubmitReview($args{'barcode'}, $args{'user'},   $rights, $reason, $args{'date'}, $args{'cDate'},
                                   $args{'comment'}, $args{'renNum'}, $args{'exp'});
 
         push( @errors, "failed to submit, check error log");
@@ -107,7 +107,8 @@ sub validateArgs
     my $return = 1;
 
     $args{'barcode'}    = $cgi->param('barcode');
-    $args{'publ'}       = $cgi->param('publ');
+    $args{'date'}       = $cgi->param('date');
+    $args{'cDate'}      = $cgi->param('cDate');
     $args{'user'}       = $cgi->param('user');
     $args{'rights'}     = $cgi->param('rights');
     $args{'reason'}     = $cgi->param('reason');
@@ -121,7 +122,6 @@ sub validateArgs
 
     if ( $user ne $args{'user'} )          { push( @errors, "You are not $user"); $return = 0; }
     if ( ! $crms->ChechReviewer( $user ) ) { push( @errors, "permissions error"); $return = 0; }
-    if ( ! $args{'publ'} )                 { push( @errors, "missing publ date"); $return = 0; }
     if ( ! $args{'rights'} )               { push( @errors, "missing rights");    $return = 0; }
     ## if ( ! $args{'reason'} )               { push( @errors, "missing reason");    $return = 0; }
 

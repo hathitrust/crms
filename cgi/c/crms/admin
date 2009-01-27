@@ -72,9 +72,10 @@ sub MainMenu
 
     ## greeting and links
     print qq{<h3>Hello $userName </h3>
-      <div><a href="/cgi/c/crms/home">home</a></div>
-      <div><a href="?p=user">adminster user accounts</a></div>
-      <div><a href="?p=reviews">view all reviews</a></div>
+      <div><a href="/cgi/c/crms/home">home</a> > 
+      <a href="/cgi/c/crms/admin">admin</a> > [
+      <a href="?p=user">adminster user accounts</a> || 
+      <a href="?p=reviews">view all reviews</a> ]</div>
       };
     
     if    ( $page eq "user" )     { BuildUserPage(); }

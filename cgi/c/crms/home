@@ -40,12 +40,12 @@ print qq{Content-type: text/html
 
   <h3>Hello $userName</h3> 
   <hr width="25%" align="left"/>
-      <div><a href="/cgi/c/crms/home">home</a></div>};
-if ( grep /1/, @types ) { print qq{<div><a href="/cgi/c/crms/review">review</a></div>}; }
-if ( grep /2/, @types ) { print qq{<div><a href="/cgi/c/crms/menu">expert review</a></div>}; }
-if ( grep /3/, @types ) { print qq{<div><a href="/cgi/c/crms/admin">admin menu</a></div>}; }
+      <div>|| <a href="/cgi/c/crms/home">home</a> || };
+if ( grep /1/, @types ) { print qq{<a href="/cgi/c/crms/review">review</a> || }; }
+if ( grep /2/, @types ) { print qq{<a href="/cgi/c/crms/menu">expert review</a> || }; }
+if ( grep /3/, @types ) { print qq{<a href="/cgi/c/crms/admin">admin menu</a> || }; }
 
-print qq{</body></html>};
+print qq{</div></body></html>};
 
 ## ============================================================================ ##
 ##
