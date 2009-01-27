@@ -121,7 +121,7 @@ sub LoadNewItems				## date
 sub SubmitReview
 {
     my $self = shift;
-    my ($id, $user, $attr, $reason, $note, $reg, $exp) = @_;
+    my ($id, $user, $attr, $reason, $date, $cDate, $note, $reg, $exp) = @_;
 
     if ( ! $self->ChechForId( $id ) )                { $self->logit("id check failed");          return 0; }
     if ( ! $self->ChechReviewer( $user, $exp ) )     { $self->logit("review check failed");      return 0; }
@@ -135,13 +135,13 @@ sub SubmitReview
     if ( ! $self->ValidateSubmition( $id, $user ) ) { $self->logit("submit check failed"); return 0; }
    
     ## all good, INSERT
-    my $sql = qq{INSERT INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, note, regNum) } . 
-              qq{VALUES('$id', '$user', '$attr', '$reason', '$note', '$reg') };
+    my $sql = qq{INSERT INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, date, cDate, note, regNum) } . 
+              qq{VALUES('$id', '$user', '$attr', '$reason', '$date', '$cDate', '$note', '$reg') };
 
     if ( $exp )
     {
-        $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, note, regNum, expert) } .
-              qq{VALUES('$id', '$user', '$attr', '$reason', '$note', '$reg', $exp) };
+        $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, date, cDate, note, regNum, expert) } .
+              qq{VALUES('$id', '$user', '$attr', '$reason', '$date', '$cDate', '$note', '$reg', $exp) };
     }
 
     $self->PrepareSubmitSql( $sql );
@@ -150,6 +150,38 @@ sub SubmitReview
     else        { $self->IncrementStatus( $id );      }
     $self->UnlockItem( $id );
     $self->EndTimer( $id, $user );
+
+    return 1;
+}
+
+## ----------------------------------------------------------------------------
+##  Function:   submit historical review  (from excel SS)   
+##  Parameters: 
+##  Return:     1 || 0
+## ----------------------------------------------------------------------------
+sub SubmitHistReview
+{
+    my $self = shift;
+    my ($id, $user, $date, $attr, $reason, $date, $cDate, $regNum, $regDate, $note, $eNote) = @_;
+
+    ## change attr and reason back to numbers
+    $attr   = $self->GetRightsNum( $attr );
+    $reason = $self->GetReasonNum( $reason );
+
+    if ( ! $self->ValidateAttr( $attr ) )            { $self->logit("attr check failed");        return 0; }
+    if ( ! $self->ValidateReason( $reason ) )        { $self->logit("reason check failed");      return 0; }
+    if ( ! $self->AttrReasonComb( $attr, $reason ) ) { $self->logit("attr/reason check failed"); return 0; }
+    
+    ## do some sort of check for expert submissions
+
+    ## make sure this user did not already check this item
+    if ( ! $self->ValidateSubmition( $id, $user ) ) { $self->logit("submit check failed"); return 0; }
+
+    ## all good, INSERT
+    my $sql = qq{INSERT INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, date, cDate, regNum, regDate, note, expertNote, hist) } .
+              qq{VALUES('$id', '$user', '$attr', '$reason', '$date', '$cDate', '$regNum', '$regDate', '$note', '$eNote', 1) };
+
+    $self->PrepareSubmitSql( $sql );
 
     return 1;
 }
@@ -191,7 +223,8 @@ sub GetReviewsHtml
     my $user    = shift;
     my $since   = shift;
 
-    if ( $order eq "" ) { $order = "id"; }
+    if ( $order eq "" )     { $order = "id"; }
+    if ( $order eq "time" ) { $order = "time DESC "; }
 
     my $sql = qq{ SELECT id, time, user, attr, reason, note, regNum, expert, duration FROM $CRMSGlobals::reviewsTable };
 
@@ -203,7 +236,7 @@ sub GetReviewsHtml
     if    ( $id && ($user || $since) ) { $sql .= qq{ AND   id = "$id" }; }
     elsif ( $id )                      { $sql .= qq{ WHERE id = "$id" }; }
 
-    $sql .= qq{ ORDER BY $order };
+    $sql .= qq{ ORDER BY $order LIMIT 100 };
 
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -687,6 +720,8 @@ sub GetRecordMetadata
     my $barcode    = shift;
     my $parser     = $self->get( 'parser' );
     
+    if ( ! $barcode ) { $self->logit( "no barcode given: $barcode" ); }
+
     my ($ns,$bar)  = split(/\./, $barcode);
 
     ## get from object if we have it
@@ -943,7 +978,6 @@ sub GetNextItemForReview
     {
         my @itemsReviewedByUser = $self->ItemsReviewedByUser( $name );
 
-
         ## we might want to change or remove the limit
         my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND } .
                   qq{ status < 2 ORDER BY pub_date LIMIT 100 };
@@ -996,9 +1030,14 @@ sub GetItemsReviewedOnce
 
     if ( $name ne "" ) 
     { 
-        $sql .= qq{ WHERE not(id IN (SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$name")) };
+        $sql .= qq{ WHERE not(id IN (SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$name")) } . 
+                qq{ AND hist < 1 };
     }
+    else { $sql .= qq{ WHERE hist < 1 }; }
+
     $sql .= qq{ GROUP BY id }; 
+
+    ## $self->logit( "GetItemsReviewedOnce: $sql" );
 
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -1079,6 +1118,26 @@ sub GetReasonName
     my $self = shift;
     my $id   = shift;
     my $sql  = qq{ SELECT name FROM reasons WHERE id = "$id" };
+    my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref( $sql );
+
+    return $ref->[0]->[0];
+}
+
+sub GetRightsNum
+{
+    my $self = shift;
+    my $id   = shift;
+    my $sql  = qq{ SELECT id FROM attributes WHERE name = "$id" };
+    my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref( $sql );
+
+    return $ref->[0]->[0];
+}
+
+sub GetReasonNum
+{
+    my $self = shift;
+    my $id   = shift;
+    my $sql  = qq{ SELECT id FROM reasons WHERE name = "$id" };
     my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref( $sql );
 
     return $ref->[0]->[0];
