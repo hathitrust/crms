@@ -5,7 +5,6 @@ package CRMS;
 ##
 ## ----------------------------------------------------------------------------
 
-
 use strict;
 use LWP::UserAgent;
 use XML::LibXML;
@@ -45,6 +44,9 @@ sub new {
 
     $self->set( 'logFile', $args{'logFile'} );
     ## $self->OpenErrorLog();
+
+    my $errors = [];
+    $self->set( 'errors', $errors );
 
     require $args{'configFile'};
 
@@ -867,10 +869,15 @@ sub LockItem
     my $name = shift;
 
     ## can only have 1 item locked at a time 
-    my $locked = $self->GetLockedItem( $name );
+    my $locked = $self->HasLockedItem( $name );
 
     if ( $locked eq $id ) { return 1; }  ## already locked
-    if ( $locked )        { return 0; }  ## use has something locked already
+    if ( $locked ) 
+    { 
+        ## use has something locked already
+        ## add some error handling
+        return 0; 
+    }
 
     my $sql  = qq{UPDATE queue SET locked = "$name" WHERE id = "$id"};
     my $sth  = $self->get( 'dbh' )->prepare( $sql ) or return 0;
@@ -1274,6 +1281,28 @@ sub logit                               ## STRING (to be loged)
 
     print $fh "$date: $str\n"; 
     $self->CloseErrorLog();
+}
+
+## ----------------------------------------------------------------------------
+##  Function:   add to and get errors
+##              $self->setError( "foo" );
+##              my $r = $self->getErrors();
+##              if ( defined $r ) { $self->logit( join(", ", @{$r}) ); }
+##  Parameters: 
+##  Return:     
+## ----------------------------------------------------------------------------
+sub setError
+{
+    my $self   = shift;
+    my $error  = shift;
+    my $errors = $self->get( 'errors' );
+    push @{$errors}, $error;
+}
+
+sub getErrors
+{
+    my $self = shift;
+    return $self->get( 'errors' );
 }
 
 ## ----------------------------------------------------------------------------
