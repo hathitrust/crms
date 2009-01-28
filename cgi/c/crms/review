@@ -70,6 +70,15 @@ sub StartReviewing
             document.getElementById("bFrame").height   = "50%";
             document.getElementById("topFrame").height = "50%";
         }
+        function changeFrame2(url) {
+            document.getElementById("bFrame").src      = url;
+            document.getElementById("bFrame").height   = "100%";
+            document.getElementById("topFrame").height = "0%";
+        }
+        function openFrame() {
+            document.getElementById("topFrame").height = "0%";
+            document.getElementById("bFrame").height   = "100%";
+        }
         function closeFrame() {
             document.getElementById("topFrame").height = "100%";
             document.getElementById("bFrame").height   = "0%";
@@ -167,6 +176,12 @@ sub StartReviewing
                                            <a href="javascript:closeFrame()" accesskey="x">[x]</a>
 
              <hr />
+             <strong>switch: </strong><a href="javascript:changeFrame2('$titleLink')"  accesskey="b">ti</a> ||
+                                      <a href="javascript:changeFrame2('$authorLink')" accesskey="b">au</a> ||
+                                      <a href="javascript:openFrame()"                 accesskey="o">[open]</a> ||
+                                      <a href="javascript:closeFrame()"                accesskey="c">[close]</a>
+
+             <hr />
              <strong>ID:</strong> <tt>$barcode</tt></br>
              <strong>Title:</strong>  <a href="$titleLink"  target="topFrame" accesskey="t">$title</a><br/>
              <strong>Author:</strong> <a href="$authorLink" target="topFrame" accesskey="a">$author</a><br/>
@@ -188,7 +203,7 @@ sub StartReviewing
     print qq{</div>
         <div class="divFrame">
           <iframe width="100%" height="100%" id="topFrame" name="topFrame" src="$ptLink"></iframe>
-          <iframe width="100%" height="0%"   id="bFrame"   name="bFrame"   src="about:blank"></iframe>
+          <iframe width="100%" height="0%"   id="bFrame"   name="bFrame"   src="$titleLink"></iframe>
         </div>
       </div>};
 
