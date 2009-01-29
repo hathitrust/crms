@@ -53,6 +53,21 @@ sub Submit
         ## the end
         print "</body></html>";
     }
+    elsif ( $cgi->param('confirm') )
+    {
+        print qq{Content-type: text/html
+
+        <html>
+          <head>
+            <title>CRMS</title>
+          </head>
+        <body>\n};
+  
+        BuildConfirmationPage();
+
+        ## the end
+        print "</body></html>";
+    }
     elsif ( $cgi->param('delete') )
     {
         my $bar  = $cgi->param( 'barcode' );
@@ -117,6 +132,15 @@ sub validateArgs
     $args{'flag'}       = $cgi->param('flag');
     $args{'comment'}    = $cgi->param('comment');
 
+    ## get the renDate is renNum is provided.  If that fails, ask user to provide it
+    if ( $args{'renNum'} ne "" )
+    {
+        $args{'regDate'} = $crms->GetRegDate( $args{'renNum'} );
+        my $error = "Failed to get the renewal date for $args{'renNum'}. You" . 
+                    " may need to go back and add that manually";
+        if ( ! $args{'regDate'} ) { push( @errors, $error); $return = 0; }
+    }
+
     if ( $cgi->param('exp') )        { $args{'exp'} = 1; }
     if ( $cgi->param('commentPre') ) { $args{'comment'} = $cgi->param('commentPre') .": ". $args{'comment'}; }
 
@@ -127,6 +151,28 @@ sub validateArgs
 
     return $return;
 }
+
+
+sub BuildConfirmationPage
+{
+    if ( ! validateArgs() ) { ReportProblem(); return; }
+
+    print qq{<form name="submitReview" action="/cgi/c/crms/submitReview">};
+    foreach ( keys %args ) 
+    {
+        print qq|<input type="hidden" name="$_" value="$args{$_}">\n|; 
+    }
+    print qq{ <div><input type="submit" accesskey="s" value="Submit"> or go back to change</div></form></div>};
+
+    print qq{<table border="1">};
+    foreach ( sort keys %args ) 
+    { 
+        if ( $_ eq "user" ) { next; } 
+        print "<tr><td>$_</td> <td>$args{$_}</td><tr>\n";
+    }
+    print "</table>\n";
+}
+
 
 sub Error
 {
@@ -196,7 +242,7 @@ sub ReportProblem
           qq{Errors listed at the bottom. Go back to fix the problems.</strong></p>\n};
 
     print "<table border=\"1\">\n";
-    foreach ( keys %args ) { print "<tr><td>$_</td> <td>$args{$_}</td><tr>\n"; }
+    foreach ( sort keys %args ) { print "<tr><td>$_</td> <td>$args{$_}</td><tr>\n"; }
     print "</table>\n";
 
     if ( @errors )      { print "<h3>ERRORS:</h3>\n"; }

@@ -224,6 +224,7 @@ sub buildSubmitReviewForm
         <input type="hidden" name="barcode" value="$id"> 
         <input type="hidden" name="user"    value="$user"> 
         <input type="hidden" name="date"    value="$date"> 
+        <input type="hidden" name="confirm" value="1"> 
 
         <!--
         <strong>Rights: </string><a href="/c/crms/help.html#rights" target="_blank">?</a><br/>

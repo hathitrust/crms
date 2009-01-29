@@ -75,6 +75,11 @@ LoadNewItems will load the new or changed records from the right DB and will loa
 
 ## ----------------------------------------------------------------------------
 ##  Function:   get a list of new barcodes (mdp.123456789) since a given date
+##              1) 008:28 not equal ‘f’
+##              2) Select records that meet criteria in (1), and have an mdp id 
+##                 in call_no_2, and whose item statistic date is in the range
+##                 that Greg requests.  Also, I check to see if the record has
+##                 been sent previously -- if so, it’s exclud
 ##  Parameters: date
 ##  Return:     NOTHING, loads DB
 ## ----------------------------------------------------------------------------
@@ -98,9 +103,13 @@ sub LoadNewItems				## date
     ## into the new table, not SELECT then INSERT
     foreach my $row ( @{$ref} )
     {
-        my $id   = $row->[0];
-        my $time = $row->[1];
-        my $pub  = $self->GetPublDate( $id );
+        my $id      = $row->[0];
+        my $time    = $row->[1];
+
+        my $fedDoc  = $self->IsGovDoc( $id );
+        if ( $fedDoc ) { $self->logit( "skip fed doc: $id" ); next; }
+
+        my $pub     = $self->GetPublDate( $id );
 
         ## check for item, warn if already exists, then update ???
         my $iSql = qq{REPLACE INTO $CRMSGlobals::queueTable (id, time, pub_date) VALUES ('$id', '$time', '$pub')};
@@ -200,9 +209,98 @@ sub DeleteReview
     my $sql  = qq{ DELETE FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user" };
     $self->PrepareSubmitSql( $sql );
 
-    ## minus 1 in status for queue
-    $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = status - 1 WHERE id = "$id" };
+    ## minus 1 in status for queue, if there are two reviews that agree
+    if ( $self->GetDoubleAgree($id) )
+    {
+        $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = status - 1 WHERE id = "$id" };
+        $self->PrepareSubmitSql( $sql );
+    }
+
+    return 1;
+}
+
+sub ClearQueue
+{
+    my $self = shift;
+
+    ## get items > 2, clear these  
+    my @experts;
+    my $expert = $self->GetExpertRevItems();
+
+    foreach my $row ( @{$expert} )
+    {
+        my $id = $row->[0];
+        push @experts, $id;
+        ## $self->DelFromQueue( $id );
+    }
+
+    ## get items = 2 and see if they agree  
+    my $doubles = $self->GetDoubleRevItems();  
+    my @doubles;
+    foreach my $row ( @{$doubles} )
+    {
+        my $id = $row->[0];
+        if ( $self->GetDoubleAgree( $id ) ) 
+        { 
+            push @doubles, $id;
+            ## $self->DelFromQueue( $id ); 
+        }
+    }
+
+    ## report back
+    my $eCount = scalar( @experts );
+    $self->logit( "export reviewed items removed from queue ($eCount): " . join(", ", @experts) );
+    my $dCount = scalar( @doubles );
+    $self->logit( "double reviewed items removed from queue ($dCount): " . join(", ", @doubles) );
+
+    return ("Double reviewed items removed from queue: $dCount",
+            "Expert Items removed from queue: $eCount");
+}
+
+sub DelFromQueue
+{
+    my $self = shift;
+    my $id   = shift;
+
+    if ( ! $id ) { return 0; }
+    my $sql  = qq{DELETE FROM $CRMSGlobals::queueTable  WHERE id = "$id"};
+
     $self->PrepareSubmitSql( $sql );
+    return 1;
+}
+
+sub GetExpertRevItems
+{
+    my $self = shift;
+    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status > 2 };
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    return $ref;
+}
+
+sub GetDoubleRevItems
+{
+    my $self = shift;
+    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status = 2 };
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    return $ref;
+}
+
+sub GetDoubleAgree
+{
+    my $self = shift;
+    my $id   = shift;
+
+    my $sql  = qq{ SELECT id, attr, reason FROM $CRMSGlobals::reviewsTable WHERE id = "$id" }; 
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    
+    if ( scalar @{$ref} < 2 ) { return 0; }
+    if ( scalar @{$ref} > 2 ) { return 0; }
+
+    ## attr and reason are the same for both
+    if ( $ref->[0]->[1] ne $ref->[1]->[1] ||
+         $ref->[0]->[2] ne $ref->[1]->[2] )  { return 0; }
 
     return 1;
 }
@@ -551,6 +649,20 @@ sub ConnectToSdrDb                      ## NOTHING || ref to DB
     return $sdr_dbh;
 }
 
+sub IsGovDoc
+{
+    my $self    = shift;
+    my $barcode = shift;
+    my $record  = $self->GetRecordMetadata($barcode);
+    my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
+    my $leader  = $record->findvalue( $xpath );
+    my $doc     = substr($leader, 28, 1);
+ 
+    if ( $doc eq "f" ) { return 1; }
+
+    return 0;
+}
+
 =head1 GetPublDate
 
 Get the publ date for a given barcode
@@ -731,7 +843,7 @@ sub GetRecordMetadata
 
     ## my $sysId = $slef->BarcodeToId( $barcode );
     ## my $url   = "http://mirlyn.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
-    my $url    = "http://mirlyn.lib.umich.edu/cgi-bin/api/marc.xml/itemid/$bar";
+    my $url    = "http://mirlyn.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
     my $ua     = LWP::UserAgent->new;
 
     $ua->timeout( 1000 );
