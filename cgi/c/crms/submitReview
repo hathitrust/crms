@@ -164,13 +164,20 @@ sub BuildConfirmationPage
     }
     print qq{ <div><input type="submit" accesskey="s" value="Submit"> or go back to change</div></form></div>};
 
-    print qq{<table border="1">};
-    foreach ( sort keys %args ) 
-    { 
-        if ( $_ eq "user" ) { next; } 
-        print "<tr><td>$_</td> <td>$args{$_}</td><tr>\n";
-    }
-    print "</table>\n";
+    my ($rights, $reason) = ConvertCode( $args{'rights'} );
+    $rights = $crms->GetRightsName( $rights );
+    $reason = $crms->GetReasonName( $reason );
+
+    print qq|
+      <table border="1">
+        <tr><td>Item:</td> <td>$args{barcode}</td><tr>
+        <tr><td>Rights/Reason:</td> <td>$rights/$reason</td><tr>
+        <tr><td>Renewal Number:</td> <td>$args{renNum}</td><tr>
+        <tr><td>Reneal Date:</td> <td>$args{regDate}</td><tr>
+        <tr><td>Pub Date (corrected date):</td> <td>$args{date} ($args{cDate})</td><tr>
+        <tr><td>flag</td> <td>$args{flag}</td><tr>
+        <tr><td>comment</td> <td>$args{comment}</td><tr>
+      </table>\n|;
 }
 
 
