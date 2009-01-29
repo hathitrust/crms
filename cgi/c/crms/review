@@ -195,7 +195,7 @@ sub StartReviewing
     ## bottom nav, review submission form
     print qq{</div><div class="navbottom">\n};
 
-    print "<hr/>" . buildSubmitReviewForm( $barcode, $pub_date, $regNum );
+    print "<hr/>" . buildSubmitReviewForm( $barcode, $pub_date, $regNum, $regDate );
 
     print qq{</div>\n};
 
@@ -216,6 +216,7 @@ sub buildSubmitReviewForm
     my $id       = shift;
     my $date     = shift;
     my $regNum   = shift;
+    my $regDate   = shift;
 
     my $expertCheck = buildExp();
 
@@ -257,11 +258,15 @@ sub buildSubmitReviewForm
 
         <Strong>Copyright renewal ID: <a href="/c/crms/help.html#renewal" target="_blank">?</a></strong>
         <input type="text" name="renNum" value="$regNum"/>
-        <br/><br/>
+        <br/>
+        <Strong>Copyright renewal Date: <a href="/c/crms/help.html#renewal" target="_blank">?</a></strong>
+        <input type="text" name="regDate" value="$regDate"/>
+        <br/>
+
 
         <Strong>Publication date: <a href="/c/crms/help.html#publ" target="_blank">?</a></strong>
         <input type="text" name="cDate" value="$date"/>
-        <br/><br/>
+        <br/>
 
         <!--
         <Strong>Copyright renewal date:</strong>
@@ -301,12 +306,12 @@ sub buildExp
     if ( $third )
     { 
         $html = qq{<input type="checkbox" name="exp" checked="checked">Final Determination</input>
-                   <a href="/c/crms/help.html#final" target="_blank">?</a><br/><br/>}; 
+                   <a href="/c/crms/help.html#final" target="_blank">?</a><br/>}; 
     }
     else
     {
         $html = qq{<input type="checkbox" name="exp">Final Determination</input>
-                   <a href="/c/crms/help.html#ifinal" target="_blank">?</a><br/><br/>};
+                   <a href="/c/crms/help.html#ifinal" target="_blank">?</a><br/>};
     }
     return $html;
 }

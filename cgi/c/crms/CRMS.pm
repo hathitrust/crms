@@ -963,7 +963,7 @@ sub IsLockedForUser
     my $id   = shift;
     my $name = shift;
 
-    my $sql = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NOT NULL AND id = "$id"};
+    my $sql = qq{SELECT locked FROM $CRMSGlobals::queueTable WHERE id = "$id"};
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     if ( scalar @{$ref} ) 
@@ -979,6 +979,9 @@ sub LockItem
     my $self = shift;
     my $id   = shift;
     my $name = shift;
+
+    ## if already locked for this user, that's OK
+    if ( $self->IsLockedForUser( $id, $name ) ) { return 1; }
 
     ## can only have 1 item locked at a time 
     my $locked = $self->HasLockedItem( $name );

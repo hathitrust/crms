@@ -133,7 +133,7 @@ sub validateArgs
     $args{'comment'}    = $cgi->param('comment');
 
     ## get the renDate is renNum is provided.  If that fails, ask user to provide it
-    if ( $args{'renNum'} ne "" )
+    if ( $args{'renNum'} ne "" && $args{'regDate'} eq "" )
     {
         $args{'regDate'} = $crms->GetRegDate( $args{'renNum'} );
         my $error = "Failed to get the renewal date for $args{'renNum'}. You" . 
@@ -175,8 +175,9 @@ sub BuildConfirmationPage
         <tr><td>Renewal Number:</td> <td>$args{renNum}</td><tr>
         <tr><td>Reneal Date:</td> <td>$args{regDate}</td><tr>
         <tr><td>Pub Date (corrected date):</td> <td>$args{date} ($args{cDate})</td><tr>
-        <tr><td>flag</td> <td>$args{flag}</td><tr>
-        <tr><td>comment</td> <td>$args{comment}</td><tr>
+        <tr><td>Flag:</td> <td>$args{flag}</td><tr>
+        <tr><td>Final:</td> <td>$args{exp}</td><tr>
+        <tr><td>comment:</td> <td>$args{comment}</td><tr>
       </table>\n|;
 }
 
