@@ -76,12 +76,42 @@ sub StartReviewing
             document.getElementById("topFrame").height = "0%";
         }
         function openFrame() {
+            document.getElementById("topFrame").height = "50%";
+            document.getElementById("bFrame").height   = "50%";
+        }
+        function openFrame2() {
             document.getElementById("topFrame").height = "0%";
             document.getElementById("bFrame").height   = "100%";
         }
         function closeFrame() {
             document.getElementById("topFrame").height = "100%";
             document.getElementById("bFrame").height   = "0%";
+        }
+        function flipFrame() {
+            topSize= (document.getElementById("bFrame").height);
+            if ( topSize == "0%")
+            {
+                document.getElementById("topFrame").height = "50%";
+                document.getElementById("bFrame").height   = "50%";
+            }
+            else
+            {
+                document.getElementById("topFrame").height = "100%";
+                document.getElementById("bFrame").height   = "0%";
+            }
+        }
+        function flipFrame2() {
+            topSize= (document.getElementById("topFrame").height);
+            if ( topSize == "100%")
+            {
+                document.getElementById("topFrame").height = "0%";
+                document.getElementById("bFrame").height   = "100%";
+            }
+            else
+            {
+                document.getElementById("topFrame").height = "100%";
+                document.getElementById("bFrame").height   = "0%";
+            }    
         }
 
         function CopyToRenNum()
@@ -173,15 +203,14 @@ sub StartReviewing
              <a href="$uscorLink" target="topFrame">U.S. Copyright</a><br/>
  
              <hr />
-             <strong>bottom: </strong><a href="javascript:changeFrame( '$titleLink' )"   accesskey="b">Stanford</a> ||
-                                           <a href="javascript:changeFrame( '$ptLink' )" accesskey="n">HathiTrust</a>  ||
-                                           <a href="javascript:closeFrame()" accesskey="x">[x]</a>
+             <strong>1/2: </strong><a href="javascript:changeFrame('$titleLink' )">ti</a> ||
+                                   <a href="javascript:changeFrame('$authorLink')">au</a> ||
+                                    <a href="javascript:flipFrame()"              >[x]</a>
 
              <hr />
-             <strong>switch: </strong><a href="javascript:changeFrame2('$titleLink')"  accesskey="b">ti</a> ||
-                                      <a href="javascript:changeFrame2('$authorLink')" accesskey="b">au</a> ||
-                                      <a href="javascript:openFrame()"                 accesskey="o">[open]</a> ||
-                                      <a href="javascript:closeFrame()"                accesskey="c">[close]</a>
+             <strong>full: </strong><a href="javascript:changeFrame2('$titleLink')"  accesskey="b">ti</a> ||
+                                    <a href="javascript:changeFrame2('$authorLink')" accesskey="b">au</a> ||
+                                    <a href="javascript:flipFrame2()"                accesskey="o">[x]</a>
 
              <hr />
              <strong>ID:</strong> <tt>$barcode</tt></br>

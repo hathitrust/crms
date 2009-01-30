@@ -75,15 +75,39 @@ sub MainMenu
       <div><a href="/cgi/c/crms/home">home</a> > 
       <a href="/cgi/c/crms/admin">admin</a> > [
       <a href="?p=user">adminster user accounts</a> || 
+      <a href="?p=queue">manage the queue</a> || 
       <a href="?p=reviews">view all reviews</a> ]</div>
       };
     
-    if    ( $page eq "user" )     { BuildUserPage(); }
-    elsif ( $page eq "editUser" ) { BuildUserEditPage(); }
-    elsif ( $page eq "reviews" )  { BuildReviewsPage(); }
+    if    ( $page eq "user" )          { BuildUserPage(); }
+    elsif ( $page eq "queue" )         { BuildQueuePage(); }
+    elsif ( $page eq "clearQueue" )    { BuildClearQueuePage(); }
+    elsif ( $page eq "updateQueue" )   { BuildUpdateQueuePage(); }
+    elsif ( $page eq "updateRights" )  { BuildUpdateRightsPage(); }
+    elsif ( $page eq "editUser" )      { BuildUserEditPage(); }
+    elsif ( $page eq "reviews" )       { BuildReviewsPage(); }
 
     ## the end
     print "</body></html>"; 
+}
+
+sub BuildQueuePage
+{
+    print qq{<hr width="25%" align="left"/>
+      <h3>options:</h3>
+      <div><a href="/cgi/c/crms/admin?p=clearQueue">clear the queue</a></div>
+      <div><a href="/cgi/c/crms/admin?p=updateQueue">update queue</a></div>
+      <div><a href="/cgi/c/crms/admin?p=updateRights">update rights</a></div>
+      };
+}
+
+sub BuildClearQueuePage
+{
+    my ($a,$b) = $crms->ClearQueue();
+    print qq{<hr width="25%" align="left"/>
+      <h3>, what have you done?</h3>
+      <div>$a</div>
+      <div>$b</div>}
 }
 
 sub BuildUserPage 
@@ -112,6 +136,17 @@ sub BuildUserPage
           <input type="submit"   value="Submit"/>
         </form>
       </div>};
+}
+
+sub BuildUpdateQueuePage
+{
+    ## $crms->LoadNewItems();
+    
+}
+
+sub BuildRightsQueuePage
+{
+    
 }
 
 sub BuildUserEditPage
