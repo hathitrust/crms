@@ -134,11 +134,11 @@ sub SubmitReview
     my $self = shift;
     my ($id, $user, $attr, $reason, $date, $cDate, $note, $reg, $exp, $regDate) = @_;
 
-    if ( ! $self->ChechForId( $id ) )                { $self->logit("id check failed");          return 0; }
-    if ( ! $self->ChechReviewer( $user, $exp ) )     { $self->logit("review check failed");      return 0; }
-    if ( ! $self->ValidateAttr( $attr ) )            { $self->logit("attr check failed");        return 0; }
-    if ( ! $self->ValidateReason( $reason ) )        { $self->logit("reason check failed");      return 0; }
-    if ( ! $self->AttrReasonComb( $attr, $reason ) ) { $self->logit("attr/reason check failed"); return 0; }
+    if ( ! $self->ChechForId( $id ) )                     { $self->logit("id check failed");          return 0; }
+    if ( ! $self->ChechReviewer( $user, $exp ) )          { $self->logit("review check failed");      return 0; }
+    if ( ! $self->ValidateAttr( $attr ) )                 { $self->logit("attr check failed");        return 0; }
+    if ( ! $self->ValidateReason( $reason ) )             { $self->logit("reason check failed");      return 0; }
+    if ( ! $self->CheckAttrReasonComb( $attr, $reason ) ) { $self->logit("attr/reason check failed"); return 0; }
 
     ## do some sort of check for expert submissions
 
@@ -181,7 +181,7 @@ sub SubmitHistReview
 
     if ( ! $self->ValidateAttr( $attr ) )            { $self->logit("attr check failed");        return 0; }
     if ( ! $self->ValidateReason( $reason ) )        { $self->logit("reason check failed");      return 0; }
-    if ( ! $self->AttrReasonComb( $attr, $reason ) ) { $self->logit("attr/reason check failed"); return 0; }
+    if ( ! $self->CheckAttrReasonComb( $attr, $reason ) ) { $self->logit("attr/reason check failed"); return 0; }
     
     ## do some sort of check for expert submissions
 
@@ -398,14 +398,55 @@ sub IncrementStatus
     $self->PrepareSubmitSql( $sql );
 }
 
-sub AttrReasonComb
+sub CheckAttrReasonComb 
 {
-    my $self   = shift;
-    my $attr   = shift;
-    my $reason = shift;
- 
-    ## pd/ncn, pd/ren, ic/ren, pd/cdpp, ic/cdpp, und/nfi
+    my $self = shift;
+    my $in   = shift;
 
+}
+sub GetAttrReasonCom
+{
+    my $self = shift;
+    my $in   = shift;
+ 
+    my %codes = (1 => "pd/ncn", 2 => "pd/ren",  3 => "pd/cdpp",
+                 4 => "ic/ren", 5 => "ic/cdpp", 6 => "und/nfi" );
+
+    my %str   = ("pd/ncn" => 1, "pd/ren"  => 2, "pd/cdpp" => 3,
+                 "ic/ren" => 4, "ic/cdpp" => 5, "und/nfi" => 6);
+
+    if ( $in =~ m/\d/ ) { return $codes{$in}; }
+    else                { return $str{$in};   }
+}
+
+sub GetReviewComment
+{
+    my $self = shift;
+    my $id   = shift;
+    my $user = shift;
+
+    my $sql  = qq{ SELECT note FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    my $str = $ref->[0]->[0];
+
+    if ( $str =~ m/(\w+):\s(.*)/ ) { return( $1, $2 );  }
+    else                           { return( "", $str); }
+}
+
+sub GetAttrReasonCode
+{
+    my $self = shift;
+    my $id   = shift;
+    my $user = shift;
+
+    my $sql  = qq{ SELECT attr, reason FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    my $rights = $self->GetRightsName( $ref->[0]->[0] );
+    my $reason = $self->GetReasonName( $ref->[0]->[1] );
+
+    return $self->GetAttrReasonCom( "$rights/$reason" );
 }
 
 sub ValidateSubmition
@@ -1291,8 +1332,12 @@ sub GetRegNum
 {
     my $self = shift;
     my $id   = shift;
+    my $user = shift;
     
-    my $sql  = qq{ SELECT regNum FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND regNum IS NOT NULL};
+    my $sql  = qq{ SELECT regNum FROM $CRMSGlobals::reviewsTable WHERE id = "$id" };
+
+    if ( $user ) { $sql .= qq{ AND user = "$user"}; }
+
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref->[0]->[0];

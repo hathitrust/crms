@@ -129,6 +129,8 @@ sub StartReviewing
     my $normReg  = $crms->NormalizeRenewalId( $barcode );
     $third       = $crms->IsThirdReview( $barcode );
 
+    my ($commPre, $comm) = $crms->GetReviewComment( $barcode, $user );
+
     ## links to PT, stanford DB search, or Mirlyn catalog
     my $encAuthor  = UrlEncode( $author );
     my $encTitle   = UrlEncode( $title );
@@ -195,7 +197,7 @@ sub StartReviewing
     ## bottom nav, review submission form
     print qq{</div><div class="navbottom">\n};
 
-    print "<hr/>" . buildSubmitReviewForm( $barcode, $pub_date, $regNum, $regDate );
+    print "<hr/>" . buildSubmitReviewForm( $barcode, $pub_date, $regNum, $regDate, $comm, $commPre );
 
     print qq{</div>\n};
 
@@ -216,9 +218,13 @@ sub buildSubmitReviewForm
     my $id       = shift;
     my $date     = shift;
     my $regNum   = shift;
-    my $regDate   = shift;
+    my $regDate  = shift;
+    my $comm     = shift;
+    my $commPre  = shift;
 
-    my $expertCheck = buildExp();
+    my $expertCheck  = buildExp();
+    my $rightsReason = buildRightsReason( $crms->GetAttrReasonCode($id, $user) );
+    my $commentPre   = buildCommPre( $commPre );
 
     my $html = qq{
       <form name="submitReview" action="/cgi/c/crms/submitReview">
@@ -241,6 +247,9 @@ sub buildSubmitReviewForm
         <br/>
         -->
 
+        $rightsReason
+ 
+        <!--
         <strong>Rights/Reason: </string><a href="/c/crms/help.html#rights" target="_blank">?</a><br/>
         <input type="radio" id="1" name="rights" value="1" accesskey="1">pd/ncn (1)</input><br/>
         <input type="radio" id="2" name="rights" value="2" accesskey="2">pd/ren (2)</input><br/>
@@ -248,7 +257,9 @@ sub buildSubmitReviewForm
         <input type="radio" id="4" name="rights" value="4" accesskey="4">ic/ren (4)</input><br/>
         <input type="radio" id="5" name="rights" value="5" accesskey="5">ic/cdpp (5)</input><br/>
         <input type="radio" id="6" name="rights" value="6" accesskey="6">und/nfi (6)</input><br/>
+        -->
         <br/>
+
         <!--
         <Strong>Save Link to this Renewal:</strong>
         <input type="text"   name="renewLink" />
@@ -279,6 +290,7 @@ sub buildSubmitReviewForm
         <input type="checkbox" name="flag">Flag:</input> <a href="/c/crms/help.html#flag" target="_blank">?</a><br/>
         <br/>
         <strong>Comments: </string><a href="/c/crms/help.html#comment" target="_blank">?</a><br/>
+        <!--
         <select name="commentPre">
           <option value="" selected="selected">none</option>
           <option value="Foreign"    >Foreign Pub</option>
@@ -289,13 +301,67 @@ sub buildSubmitReviewForm
           <option value="Translation">Translation</option>
           <option value="Misc"       >Misc.</option>
         </select>
-        <textarea name="comment" cols="25" rows="3"></textarea>
+        -->
+        $commentPre
+
+        <textarea name="comment" cols="25" rows="3">$comm</textarea>
 
         <br/><br/>
         <input type="submit" value="Submit"> 
       </form>};
 
     return $html;
+}
+
+sub buildRightsReason
+{
+    my $select = shift;
+    my $return = qq{<strong>Rights/Reason: </strong><a href="/c/crms/help.html#rights" } .
+                 qq{ target="_blank">?</a><br/>};
+    
+    my %key = (1 => "pd/ncn", 2 => "pd/ren",  3 => "pd/cdpp",
+               4 => "ic/ren", 5 => "ic/cdpp", 6 => "und/nfi" );
+    foreach my $num ( 1..6 )
+    {
+        if ( $num eq $select )
+        {
+            $return .= qq|<input type="radio" id="$num" name="rights" value="$num" | .
+                       qq|accesskey="1" checked="checked">$key{$num} ($num)</input><br/>|;
+        }
+        else 
+        {
+            $return .= qq|<input type="radio" id="$num" name="rights" value="$num" | .
+                       qq|accesskey="1">$key{$num} ($num)</input><br/>|;
+        }
+    }
+
+    return $return;
+}
+
+sub buildCommPre
+{    
+    my $select = shift;
+    my $return = qq{<select name="commentPre">};
+
+    my %key = ("Foreign"    => "Foreign Pub",   "Missing"     => "Missing",
+               "Collection" => "Collection",    "Reprint"     => "Reprint",
+               "Series"     => "Series/Serial", "Translation" => "Translation",
+               "Misc"       => "Misc.",         ""            => "none");
+
+    foreach ( sort keys %key )
+    {
+        if ( $_ eq $select )
+        {
+            $return .= qq|<option value="$_" selected="selected">$key{$_}</option>|;
+        }
+        else
+        {
+            $return .= qq|<option value="$_">$key{$_}</option>|;
+        }
+    }
+    $return .= "</select>";
+
+    return $return;
 }
 
 sub buildExp
