@@ -208,14 +208,14 @@ sub StartReviewing
                                     <a href="javascript:flipFrame()"              >[x]</a>
 
              <hr />
-             <strong>full: </strong><a href="javascript:changeFrame2('$titleLink')"  accesskey="b">ti</a> ||
-                                    <a href="javascript:changeFrame2('$authorLink')" accesskey="b">au</a> ||
-                                    <a href="javascript:flipFrame2()"                accesskey="o">[x]</a>
+             <strong>full: </strong><a href="javascript:changeFrame2('$titleLink')"  accesskey="t">ti</a> ||
+                                    <a href="javascript:changeFrame2('$authorLink')" accesskey="a">au</a> ||
+                                    <a href="javascript:flipFrame2()"                accesskey="x">[x]</a>
 
              <hr />
              <strong>ID:</strong> <tt>$barcode</tt></br>
-             <strong>Title:</strong>  <a href="$titleLink"  target="topFrame" accesskey="t">$title</a><br/>
-             <strong>Author:</strong> <a href="$authorLink" target="topFrame" accesskey="a">$author</a><br/>
+             <strong>Title:</strong>  <a href="$titleLink"  target="bFrame">$title</a><br/>
+             <strong>Author:</strong> <a href="$authorLink" target="bFrame">$author</a><br/>
              <strong>Pub Date:</strong> $pub_date <br/>};
 
     if ( $regNum ) 
@@ -316,7 +316,7 @@ sub buildSubmitReviewForm
         
         $expertCheck
  
-        <input type="checkbox" name="flag">Flag:</input> <a href="/c/crms/help.html#flag" target="_blank">?</a><br/>
+        <input type="checkbox" name="flag" accesskey="f">Flag:</input> <a href="/c/crms/help.html#flag" target="_blank">?</a><br/>
         <br/>
         <strong>Comments: </string><a href="/c/crms/help.html#comment" target="_blank">?</a><br/>
         <!--
@@ -355,12 +355,12 @@ sub buildRightsReason
         if ( $num eq $select )
         {
             $return .= qq|<input type="radio" id="$num" name="rights" value="$num" | .
-                       qq|accesskey="1" checked="checked">$key{$num} ($num)</input><br/>|;
+                       qq|accesskey="$num" checked="checked">$key{$num} ($num)</input><br/>|;
         }
         else 
         {
             $return .= qq|<input type="radio" id="$num" name="rights" value="$num" | .
-                       qq|accesskey="1">$key{$num} ($num)</input><br/>|;
+                       qq|accesskey="$num">$key{$num} ($num)</input><br/>|;
         }
     }
 
