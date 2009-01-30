@@ -132,7 +132,7 @@ sub LoadNewItems				## date
 sub SubmitReview
 {
     my $self = shift;
-    my ($id, $user, $attr, $reason, $date, $cDate, $note, $reg, $exp) = @_;
+    my ($id, $user, $attr, $reason, $date, $cDate, $note, $reg, $exp, $regDate) = @_;
 
     if ( ! $self->ChechForId( $id ) )                { $self->logit("id check failed");          return 0; }
     if ( ! $self->ChechReviewer( $user, $exp ) )     { $self->logit("review check failed");      return 0; }
@@ -146,13 +146,13 @@ sub SubmitReview
     if ( ! $self->ValidateSubmition( $id, $user ) ) { $self->logit("submit check failed"); return 0; }
    
     ## all good, INSERT
-    my $sql = qq{INSERT INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, date, cDate, note, regNum) } . 
-              qq{VALUES('$id', '$user', '$attr', '$reason', '$date', '$cDate', '$note', '$reg') };
+    my $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, date, cDate, note, regNum, regDate) } . 
+              qq{VALUES('$id', '$user', '$attr', '$reason', '$date', '$cDate', '$note', '$reg', '$regDate') };
 
     if ( $exp )
     {
-        $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, date, cDate, note, regNum, expert) } .
-              qq{VALUES('$id', '$user', '$attr', '$reason', '$date', '$cDate', '$note', '$reg', $exp) };
+        $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, date, cDate, note, regNum, expert, regDate) } .
+              qq{VALUES('$id', '$user', '$attr', '$reason', '$date', '$cDate', '$note', '$reg', $exp, '$regDate') };
     }
 
     $self->PrepareSubmitSql( $sql );
@@ -989,7 +989,7 @@ sub LockItem
     if ( $locked eq $id ) { return 1; }  ## already locked
     if ( $locked ) 
     { 
-        ## use has something locked already
+        ## user has something locked already
         ## add some error handling
         return 0; 
     }
@@ -1125,11 +1125,20 @@ sub GetNextItemForReview
 
 sub ItemsReviewedByUser
 {
-    my $self = shift;
-    my $name = shift;
+    my $self  = shift;
+    my $name  = shift;
+    my $since = shift;
 
-    my $sql .= qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$name" GROUP BY id };
+    my $sql .= qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$name" GROUP BY id ORDER BY time DESC };
 
+    ## if date, restrict to just items since that date
+    if ( $since )
+    {
+        $sql = qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$name" } . 
+               qq{ AND time >= "$since" GROUP BY id ORDER BY time DESC };
+    }
+
+$self->logit( $sql );
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my @return;
@@ -1198,15 +1207,22 @@ sub GetItemReviewDetails
 {
     my $self = shift;
     my $id   = shift;
+    my $user = shift;
 
     my $sql  = qq{ SELECT attr, reason, regNum, note FROM reviews WHERE id = "$id"};
+
+    ## if name, limit to just that users review details
+    if ( $user ) { $sql .= qq{ AND user = "$user" }; }
+
+
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my @return;
     foreach my $r ( @{$ref} ) 
     { 
-        my $str = $self->GetRightsName($r->[0]) ."/". $self->GetReasonName($r->[1]) .", $r->[2]"; 
-        if ($r->[3]) { $str .= ", $r->[3]"; }
+        my $str = $self->GetRightsName($r->[0]) ."/". $self->GetReasonName($r->[1]);
+        if ( $r->[2] ) { $str .= ", ". $self->LinkToStanford( $r->[2] ); }
+        if ( $r->[3] ) { $str .= ", $r->[3]"; }
         push @return, $str; 
     }
 

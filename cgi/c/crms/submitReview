@@ -108,7 +108,7 @@ sub Submit
         my ($rights, $reason) = ConvertCode( $args{'rights'} );
  
         $rc = $crms->SubmitReview($args{'barcode'}, $args{'user'},   $rights, $reason, $args{'date'}, $args{'cDate'},
-                                  $args{'comment'}, $args{'renNum'}, $args{'exp'});
+                                  $args{'comment'}, $args{'renNum'}, $args{'exp'}, $args{'regDate'});
 
         push( @errors, "failed to submit, check error log");
 
