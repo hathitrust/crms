@@ -65,7 +65,16 @@ sub MainMenu
 
     print qq{<h3>Hello $userName </h3>
       <div><a href="/cgi/c/crms/home">home</a/</div>
-      <div style="width:50%; float:left"><hr /><div>Review or edit your recent determinations:<br/><blockquote>};
+      </blockquote></div>
+      <hr />
+      <div>Enter a barcode to review:
+        <form name="review" action="/cgi/c/crms/review">
+          <input type="text" name="barcode"/>
+          <input type="submit" value="Review"> 
+        </form>
+      </div>
+      </div>
+      <div style="width:50%; float:left"><hr /><div>Edit your recent determinations:<br/><blockquote>};
  
     foreach my $item ( @items ) 
     { 
