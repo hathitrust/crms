@@ -721,6 +721,7 @@ sub GetPublDate				## barcode || publ date
 {
     my $self    = shift;
     my $barcode = shift;
+$self->logit( "bar: $barcode" ); ## DEBUG
     my $record  = $self->GetRecordMetadata($barcode);
     ## my $xpath   = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
     my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
@@ -1161,6 +1162,7 @@ sub GetNextItemForReview
 
         my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
         $barcode = $ref->[0]->[0];
+
     }
     else
     {
@@ -1230,7 +1232,6 @@ sub GetItemsReviewedOnce
                 qq{ AND hist < 1 };
     }
     else { $sql .= qq{ WHERE hist < 1 }; }
-
     $sql .= qq{ GROUP BY id }; 
 
     ## $self->logit( "GetItemsReviewedOnce: $sql" );
@@ -1240,7 +1241,15 @@ sub GetItemsReviewedOnce
     my @return;
     foreach (@{$ref}) 
     { 
-        if ($_->[1] == 1) { push @return, $_->[0]; }
+        my $id = $_->[0];
+        my $c  = $_->[1];
+
+        ## make sure status is < 2
+        $sql    = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE id = "$id" AND status < 2};
+
+        my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+        
+        if ($c == 1 and @{$ref}) { push @return, $id; }
     }
 
     return @return;

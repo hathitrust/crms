@@ -205,11 +205,13 @@ sub AddUser
 {
     ## submit user
     my $rc = $crms->AddUser( \%args );
-    if ( $rc ) { print qq{<h3>User $args{'name'} added/modified</h3>}; }
-    else       { print qq{<h3>Error while submting new/modify user</h3>}; }
 
     ## for to edit again
     EditUser();
+
+    if ( $rc ) { print qq{<h3>User $args{'name'} added/modified</h3>}; }
+    else       { print qq{<h3>Error while submting new/modify user</h3>}; }
+
 }
 
 sub EditUser
