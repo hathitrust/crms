@@ -211,7 +211,6 @@ sub AddUser
 
     if ( $rc ) { print qq{<h3>User $args{'name'} added/modified</h3>}; }
     else       { print qq{<h3>Error while submting new/modify user</h3>}; }
-
 }
 
 sub EditUser

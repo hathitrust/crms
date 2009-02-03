@@ -202,7 +202,7 @@ sub StartReviewing
         {
             my $stanLink = qq{http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$RN};
             my $RD       = $crms->GetRegDate( $RN );
-            print qq{<strong>Renewal: </strong><a href="$stanLink" target="topFrame">$RN</a> ($RD)<br/>}; 
+            print qq{<strong>Renewal: </strong><a href="$stanLink" target="bFrame">$RN</a> ($RD)<br/>}; 
         }
     }
 

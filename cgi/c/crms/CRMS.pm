@@ -721,7 +721,6 @@ sub GetPublDate				## barcode || publ date
 {
     my $self    = shift;
     my $barcode = shift;
-$self->logit( "bar: $barcode" ); ## DEBUG
     my $record  = $self->GetRecordMetadata($barcode);
     ## my $xpath   = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
     my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
