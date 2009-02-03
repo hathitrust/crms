@@ -39,7 +39,6 @@ print qq{Content-type: text/html
   <body onLoad="setTimeout('redir()', 1000)">
 
   <h3>Hello $userName</h3> 
-  <hr width="25%" align="left"/>
       <div>|| <a href="/cgi/c/crms/home">home</a> || 
       <a href="/cgi/c/crms/editReviews">edit reviews</a> || };
 if ( grep /1/, @types ) { print qq{<a href="/cgi/c/crms/review">review</a> || }; }

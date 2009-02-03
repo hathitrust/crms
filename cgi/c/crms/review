@@ -24,6 +24,7 @@ my $crms = CRMS->new(
 my $user      = $ENV{'REMOTE_USER'};
 my $expert    = 0;
 my $third     = 0;
+my $isEdit    = 0;
 my $cgi       = new CGI;
 my $inBarcode = $cgi->param('barcode');
 
@@ -58,13 +59,6 @@ sub StartReviewing
         <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css" />
         <script type="text/javascript">
         <!--
-        function popRenewLink(){
-            document.forms['submitReview'].elements['renewLink'].value = document.getElementById('topFrame').src;
-        }
-        function popRights() {
-            document.getElementById('ic').checked = true;
-            document.getElementById('ren').checked = true;
-        }
         function changeFrame(url) {
             document.getElementById("bFrame").src      = url;
             document.getElementById("bFrame").height   = "50%";
@@ -113,23 +107,6 @@ sub StartReviewing
                 document.getElementById("bFrame").height   = "0%";
             }    
         }
-
-        function CopyToRenNum()
-        {
-            var clip = window.getSelection();
-            window.clipboardData.setData( 'cb', window.getSelection() );
-        }
-        function PasteToRenNum()
-        {
-           // document.forms['submitReview'].elements['renNum'] = document.execCommand('Paste');
-           // document.submitReview['renNum'].focus();
-           // document.execCommand( 'Paste' );
-           // alert( 'txt' );
-           // document.submitReview['renNum'].value = document.execCommand('Paste');
-           var txt = document.execCommand('Copy');
-           alert( 'clip' );
-           // document.submitReview['renNum'].value = window.clipboardData.getData();;
-        }
         //-->
         </script>
       </head>
@@ -141,6 +118,7 @@ sub StartReviewing
 
     if ( $inBarcode ne "" )
     { 
+        $isEdit = 1;
         if ( ! $crms->LockItem( $inBarcode, $user ) ) { fail( "One item at a time please." ); }
     }
 
@@ -154,7 +132,8 @@ sub StartReviewing
     my $pub_date = $crms->GetPublDate( $barcode );
     my $author   = $crms->GetMarcDatafield( $barcode, "100", "a");
     my $title    = $crms->GetMarcDatafield( $barcode, "245", "a");
-    my $regNum   = $crms->GetRegNum( $barcode );
+    my $regNum   = $crms->GetRegNum( $barcode, $user );
+    my @regNums  = $crms->GetRegNums( $barcode, $user );
     my $regDate  = $crms->GetRegDate( $regNum );
     my $normReg  = $crms->NormalizeRenewalId( $barcode );
     $third       = $crms->IsThirdReview( $barcode );
@@ -183,7 +162,6 @@ sub StartReviewing
         $uscorLink = qq{http://cocatalog.loc.gov/cgi-bin/Pwebrecon.cgi?Search_Arg=$normReg&Search_Code=REGS&PAGE=First};
     }
 
-    my $stanLink   = qq{http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$regNum};
 
     print qq{<div class="divbody"><div class="divNav">
              <div class="navtop"> 
@@ -218,9 +196,14 @@ sub StartReviewing
              <strong>Author:</strong> <a href="$authorLink" target="bFrame">$author</a><br/>
              <strong>Pub Date:</strong> $pub_date <br/>};
 
-    if ( $regNum ) 
+    if ( @regNums ) 
     { 
-        print qq{<strong>Renewal:      </strong><a href="$stanLink" target="topFrame">$regNum</a> ($regDate)<br/>}; 
+        foreach my $RN ( @regNums )
+        {
+            my $stanLink = qq{http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$RN};
+            my $RD       = $crms->GetRegDate( $RN );
+            print qq{<strong>Renewal: </strong><a href="$stanLink" target="topFrame">$RN</a> ($RD)<br/>}; 
+        }
     }
 
     ## bottom nav, review submission form
@@ -288,13 +271,6 @@ sub buildSubmitReviewForm
         <input type="radio" id="6" name="rights" value="6" accesskey="6">und/nfi (6)</input><br/>
         -->
         <br/>
-
-        <!--
-        <Strong>Save Link to this Renewal:</strong>
-        <input type="text"   name="renewLink" />
-        <input type="button" value="save" onChange="popRenewLink()">
-        <br/>
-        -->
 
         <Strong>Copyright renewal ID: <a href="/c/crms/help.html#renewal" target="_blank">?</a></strong>
         <input type="text" name="renNum" value="$regNum"/>

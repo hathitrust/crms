@@ -1035,7 +1035,7 @@ sub LockItem
         return 0; 
     }
 
-    my $sql  = qq{UPDATE queue SET locked = "$name" WHERE id = "$id"};
+    my $sql  = qq{UPDATE $CRMSGlobals::queueTable SET locked = "$name" WHERE id = "$id"};
     my $sth  = $self->get( 'dbh' )->prepare( $sql ) or return 0;
 
     $sth->execute or return 0;
@@ -1051,13 +1051,38 @@ sub UnlockItem
 
     if ( ! $self->IsLocked( $id ) ) { return 0; }
 
-    my $sql  = qq{UPDATE queue SET locked = NULL  WHERE id = "$id"};
+    my $sql  = qq{UPDATE $CRMSGlobals::queueTable SET locked = NULL  WHERE id = "$id"};
     my $sth  = $self->get( 'dbh' )->prepare( $sql ) or return 0;
 
     $sth->execute or return 0;
 
     ## $self->EndTimer( $id, $name );
     $self->logit( "unlocking $id" );
+}
+
+sub GetLockedItems
+{
+    my $self = shift;
+    my $sql  = qq{SELECT id, locked FROM $CRMSGlobals::queueTable WHERE locked IS NOT NULL};
+
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    my %return;
+    foreach my $row (@{$ref}) { $return{$row->[0]} = $row->[1]; }
+    return %return;
+}
+
+sub ItemLockedSince
+{
+    my $self = shift;
+    my $id   = shift;
+    my $user = shift;
+
+    my $sql  = qq{SELECT start_time FROM $CRMSGlobals::timerTable WHERE id = "$id" and user = "$user"};
+
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    return $ref->[0]->[0];
+
 }
 
 sub StartTimer
@@ -1179,7 +1204,6 @@ sub ItemsReviewedByUser
                qq{ AND time >= "$since" GROUP BY id ORDER BY time DESC };
     }
 
-$self->logit( $sql );
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my @return;
@@ -1334,13 +1358,35 @@ sub GetRegNum
     my $id   = shift;
     my $user = shift;
     
-    my $sql  = qq{ SELECT regNum FROM $CRMSGlobals::reviewsTable WHERE id = "$id" };
+    my $sql  = qq{ SELECT regNum, user FROM $CRMSGlobals::reviewsTable WHERE id = "$id" };
 
-    if ( $user ) { $sql .= qq{ AND user = "$user"}; }
+    ## if user is expert review, show
+    if ( ! $self->IsUserExpert($user) ) { $sql .= qq{ AND user = "$user"}; }
 
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
-    return $ref->[0]->[0];
+    my $return = $ref->[0]->[0];
+    foreach ( @{$ref} ) { if ( $_->[1] eq $user ) { $return = $_->[0]; } }
+
+    return $return;
+}
+
+sub GetRegNums
+{   
+    my $self = shift;
+    my $id   = shift;
+    my $user = shift;
+
+    my $sql  = qq{SELECT regNum FROM $CRMSGlobals::reviewsTable WHERE id = "$id" };
+
+    ## if not expert, limit to just that users regNums
+    if ( ! $self->IsUserExpert($user) ) { $sql .= qq{ AND user = "$user"}; }
+
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    my @return;
+    foreach ( @{$ref} ) { push @return, $_->[0]; }
+    return @return;
 }
 
 sub GetRegDate

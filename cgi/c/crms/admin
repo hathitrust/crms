@@ -73,11 +73,7 @@ sub MainMenu
     ## greeting and links
     print qq{<h3>Hello $userName </h3>
       <div><a href="/cgi/c/crms/home">home</a> > 
-      <a href="/cgi/c/crms/admin">admin</a> > [
-      <a href="?p=user">adminster user accounts</a> || 
-      <a href="?p=queue">manage the queue</a> || 
-      <a href="?p=reviews">view all reviews</a> ]</div>
-      };
+      <a href="/cgi/c/crms/admin">admin</a>};
     
     if    ( $page eq "user" )          { BuildUserPage(); }
     elsif ( $page eq "queue" )         { BuildQueuePage(); }
@@ -86,19 +82,68 @@ sub MainMenu
     elsif ( $page eq "updateRights" )  { BuildUpdateRightsPage(); }
     elsif ( $page eq "editUser" )      { BuildUserEditPage(); }
     elsif ( $page eq "reviews" )       { BuildReviewsPage(); }
+    elsif ( $page eq "unlockItem" )    { BuildUnlockItemPage(); }
+    else                               { BuildNavigationPage(); }
 
     ## the end
     print "</body></html>"; 
 }
 
+sub BuildNavigationPage
+{
+    print qq{<div>
+      <hr width="25%" align="left"/>
+      <a href="?p=user">adminster user accounts</a> || 
+      <a href="?p=queue">manage the queue</a> || 
+      <a href="?p=reviews">view all reviews</a> </div>
+      };
+
+}
+
 sub BuildQueuePage
 {
-    print qq{<hr width="25%" align="left"/>
-      <h3>options:</h3>
+    my $lockedItems = GetLockedItems();
+    print qq{ > manage the queue
+      <hr width="25%" align="left"/>
+      <strong>Items that are locked (click to unlock): </strong>
+      <blockquote>$lockedItems</blockquote>
+
+      <hr width="25%" align="left"/>
+      some other stuff...
+      <!-- 
       <div><a href="/cgi/c/crms/admin?p=clearQueue">clear the queue</a></div>
       <div><a href="/cgi/c/crms/admin?p=updateQueue">update queue</a></div>
       <div><a href="/cgi/c/crms/admin?p=updateRights">update rights</a></div>
+      -->
       };
+}
+
+sub GetLockedItems
+{
+    my %locked = $crms->GetLockedItems();
+
+    if ( ! scalar keys %locked ) { return "none"; }
+
+    my $return;
+
+    foreach my $item ( keys %locked )
+    {
+        my $since = $crms->ItemLockedSince($item, $locked{$item});
+        $return .= qq|<div><a href="?p=unlockItem&id=$item">$item</a> ($locked{$item}, since: $since)</div>|;
+    }
+    return $return;
+}
+
+sub BuildUnlockItemPage 
+{
+    my $rc = $crms->UnlockItem( $args{'id'} );
+    if ( ! $rc ) 
+    {
+        print qq|<h3>Failed to unlock $args{'id'}</h3>|;
+        return;
+    }
+
+    print qq|<h3>$args{'id'} has been unlocked.</h3>|;
 }
 
 sub BuildClearQueuePage
@@ -114,7 +159,8 @@ sub BuildUserPage
 {
     my %users = $crms->GetUserData();
  
-    print qq{<hr width="25%" align="left"/>
+    print qq{ > adminster user accounts
+      <hr width="25%" align="left"/>
       <h3>Click to edit users</h3>};
     foreach my $userID ( sort keys %users )
     {
@@ -170,7 +216,9 @@ sub EditUser
 {
     my %user  = $crms->GetUserData( $args{'id'} );
 
-    print qq|<div>
+    print qq| > <a href="?p=user">adminster user accounts</a> > edit user
+      <hr width="25%" align="left"/>
+      <div>
       <h3>Edit user</h3>
           <form action="/cgi/c/crms/admin">
           <input type="hidden" name="add" value="1"/>
@@ -205,7 +253,8 @@ sub BuildReviewsPage
 
     if ( ! $order ) { $order = "id"; }
 
-    print qq{<hr width="25%" align="left"/><div>
+    print qq{ > view all reviews
+      <hr width="25%" align="left"/><div>
       <h3>Reviews:</h3>
       <form>
         <input type="hidden" name="p" value="reviews"/>
