@@ -266,12 +266,12 @@ sub buildSubmitReviewForm
         <table>
           <tr>
             <td><strong>Renewal ID: </strong></td>
-            <td><input type="text" name="renNum" value="$regNum" size="10"/></td>
+            <td><input type="text" name="renNum" value="$regNum" size="9"/></td>
             <td><a href="/c/crms/help.html#renewal" target="_blank">?</a></td>
           </tr>
           <tr>
             <td><strong>Renewal Date: </strong></td>
-            <td><input type="text" name="regDate" value="$regDate" size="7"/></td>
+            <td><input type="text" name="regDate" value="$regDate" size="9"/></td>
             <td><a href="/c/crms/help.html#renewal" target="_blank">?</a></td>
           </tr>
         </table>
