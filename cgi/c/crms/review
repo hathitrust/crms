@@ -145,12 +145,12 @@ sub StartReviewing
     my $encAuthor  = UrlEncode( $author );
     my $encTitle   = UrlEncode( $title );
 
-    my $authorLink = "http://collections.stanford.edu/copyrightrenewals" . 
-                     "/bin/search/advanced/process?clauseMapped(author)=$encAuthor";
-    my $titleLink  = "http://collections.stanford.edu/copyrightrenewals" . 
-                     "/bin/search/advanced/process?clauseMapped(title)=$encTitle";
-    my $searchForm = qq{http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/process?} .
-                     qq{clauseMapped(title)=$encTitle&clauseMapped(author)=$encAuthor};
+    my $authorLink = qq{http://collections.stanford.edu/copyrightrenewals} . 
+                     qq{/bin/search/advanced/process?clauseMapped(author)=$encAuthor};
+    my $titleLink  = qq{http://collections.stanford.edu/copyrightrenewals} . 
+                     qq{/bin/search/advanced/process?clauseMapped(title)=$encTitle};
+    my $searchForm = qq{http://collections.stanford.edu/copyrightrenewals} .
+                     qq{/bin/search/advanced/modify?clauseMapped(title)=$encTitle&clauseMapped(author)=$encAuthor};
 
     ## my $ptLink     = qq{https://babel.hathitrust.org/cgi/pt?id=$barcode} . 
     my $ptLink     = qq{https://santelli.dev.umdl.umich.edu/cgi/m/mdp/pt?skin=crms;id=$barcode} . 
