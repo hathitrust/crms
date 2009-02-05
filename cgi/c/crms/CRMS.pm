@@ -1051,6 +1051,18 @@ sub EndTimer
     $self->logit( "end timer for $id, $user" );
 }
 
+sub GetDuration
+{
+    my $self = shift;
+    my $id   = shift;
+    my $user = shift;
+
+    my $sql = qq{ SELECT duration FROM $CRMSGlobals::reviewsTable WHERE user = "$user" AND id = "$id" };
+
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    return $ref->[0]->[0];
+}
+
 sub SetDuration
 {
     my $self = shift;
@@ -1070,6 +1082,36 @@ sub SetDuration
     $sql = qq{ UPDATE $CRMSGlobals::reviewsTable SET duration = "$dur" WHERE user = "$user" AND id = "$id" };
 
     $self->PrepareSubmitSql( $sql );
+}
+
+sub GetReviewerPace
+{
+    my $self = shift;
+    my $user = shift;
+
+    my $lastMonth = POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time - 2629743));
+    if ($self->get('verbose')) { $self->logit( "lastMonth: $lastMonth"); }
+
+    my @items = $self->ItemsReviewedByUser( $user, $lastMonth );
+    my $count = scalar( @items );
+
+    my $totalTime;
+    foreach my $item ( @items ) 
+    { 
+        my $dur = $self->GetDuration( $item, $user );
+        my ($h,$m,$s) = split(":", $dur);
+        ## hh:mm:ss -> seconds
+        my $time = $s;
+        $time   += ($m * 60);
+        $time   += ($h * 3660);
+        $totalTime += $time;
+    }
+
+    my $ave = int( ($totalTime / $count) + .5 );
+    if ($self->get('verbose')) { $self->logit( "$totalTime / $count : $ave" ); }
+
+    if ($ave > 60) { return POSIX::strftime( "%M:%S", $ave, 0,0,0,0,0,0 ) . " minutes"; }
+    else           { return "$ave seconds"; }
 }
 
 ## ----------------------------------------------------------------------------

@@ -61,7 +61,9 @@ sub MainMenu
     <body>\n};
 
     ## my @items = $crms->ItemsReviewedByUser( $user, yesterday() );
-    my @items = $crms->ItemsReviewedByUser( $user );
+    my @items    = $crms->ItemsReviewedByUser( $user );
+    my $pace     = $crms->GetReviewerPace( $user );
+    my $revCount = scalar( @items );
 
     print qq{<h3>Hello $userName </h3>
       <div><a href="/cgi/c/crms/home">home</a/</div>
@@ -74,12 +76,18 @@ sub MainMenu
         </form>
       </div>
       </div>
-      <div style="width:50%; float:left"><hr /><div>Edit your recent determinations:<br/><blockquote>};
+      <div style="width:50%; float:left">
+      <hr />
+      <div>You have completed $revCount reviews in the last month (ave: $pace/record).</div>
+      <br />
+      <div>Edit your recent determinations:<br/><blockquote>};
  
     foreach my $item ( @items ) 
     { 
         my @itemDetails = $crms->GetItemReviewDetails( $item, $user );
-        print qq{<a href="/cgi/c/crms/review?barcode=$item">$item</a> [ } . join("; ", @itemDetails) . qq{ ]<br/>\n}; 
+        my $duration    = $crms->GetDuration( $item, $user );
+        print qq{<a href="/cgi/c/crms/review?barcode=$item">$item</a> [ } . join("; ", @itemDetails) . 
+              qq{, (dur: $duration) ]<br/>\n}; 
     }
 
     ## the end
