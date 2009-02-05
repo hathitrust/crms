@@ -60,10 +60,13 @@ sub MainMenu
       </head>
     <body>\n};
 
-    ## my @items = $crms->ItemsReviewedByUser( $user, yesterday() );
-    my @items    = $crms->ItemsReviewedByUser( $user );
-    my $pace     = $crms->GetReviewerPace( $user );
-    my $revCount = scalar( @items );
+    my @items     = $crms->ItemsReviewedByUser( $user );
+    my $pace      = $crms->GetReviewerPace( $user );
+    my $revCount  = scalar( @items );
+
+    my @dItems    = $crms->ItemsReviewedByUser( $user, yesterday() );
+    my $dPace     = $crms->GetReviewerPace( $user, yesterday() );
+    my $dRevCount = scalar( @dItems );
 
     print qq{<h3>Hello $userName </h3>
       <div><a href="/cgi/c/crms/home">home</a/</div>
@@ -78,7 +81,8 @@ sub MainMenu
       </div>
       <div style="width:50%; float:left">
       <hr />
-      <div>You have completed $revCount reviews in the last month (ave: $pace/record).</div>
+      <div>$revCount reviews in the last month (ave: $pace/record).</div>
+      <div>$dRevCount reviews in the last 24 hours (ave: $dPace/record).</div>
       <br />
       <div>Edit your recent determinations:<br/><blockquote>};
  

@@ -1088,11 +1088,15 @@ sub GetReviewerPace
 {
     my $self = shift;
     my $user = shift;
+    my $date = shift;
 
-    my $lastMonth = POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time - 2629743));
-    if ($self->get('verbose')) { $self->logit( "lastMonth: $lastMonth"); }
+    if ( ! $date ) 
+    {
+        $date = POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time - 2629743));
+        $self->logit( "date: $date"); 
+    }
 
-    my @items = $self->ItemsReviewedByUser( $user, $lastMonth );
+    my @items = $self->ItemsReviewedByUser( $user, $date );
     my $count = scalar( @items );
 
     my $totalTime;
@@ -1100,12 +1104,11 @@ sub GetReviewerPace
     { 
         my $dur = $self->GetDuration( $item, $user );
         my ($h,$m,$s) = split(":", $dur);
-        ## hh:mm:ss -> seconds
-        my $time = $s;
-        $time   += ($m * 60);
-        $time   += ($h * 3660);
+        my $time = $s + ($m * 60) + ($h * 3660);
         $totalTime += $time;
     }
+
+    if ( ! $count ) { return 0; }
 
     my $ave = int( ($totalTime / $count) + .5 );
     if ($self->get('verbose')) { $self->logit( "$totalTime / $count : $ave" ); }
