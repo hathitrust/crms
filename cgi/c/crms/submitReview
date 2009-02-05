@@ -107,8 +107,8 @@ sub Submit
 
         my ($rights, $reason) = ConvertCode( $args{'rights'} );
  
-        $rc = $crms->SubmitReview($args{'barcode'}, $args{'user'},   $rights, $reason, $args{'date'}, $args{'cDate'},
-                                  $args{'comment'}, $args{'renNum'}, $args{'exp'}, $args{'regDate'});
+        $rc = $crms->SubmitReview($args{'barcode'}, $args{'user'}, $rights, $reason, $args{'date'}, $args{'cDate'},
+                                  $args{'copyDate'}, $args{'comment'}, $args{'renNum'}, $args{'exp'}, $args{'regDate'});
 
         push( @errors, "failed to submit, check error log");
 
@@ -124,6 +124,7 @@ sub validateArgs
     $args{'barcode'}    = $cgi->param('barcode');
     $args{'date'}       = $cgi->param('date');
     $args{'cDate'}      = $cgi->param('cDate');
+    $args{'copyDate'}   = $cgi->param('copyDate');
     $args{'user'}       = $cgi->param('user');
     $args{'rights'}     = $cgi->param('rights');
     $args{'reason'}     = $cgi->param('reason');
@@ -175,6 +176,7 @@ sub BuildConfirmationPage
         <tr><td>Renewal Number:</td> <td>$args{renNum}</td><tr>
         <tr><td>Reneal Date:</td> <td>$args{regDate}</td><tr>
         <tr><td>Pub Date (corrected date):</td> <td>$args{date} ($args{cDate})</td><tr>
+        <tr><td>copy Date:</td> <td>$args{copyDate}</td><tr>
         <tr><td>Flag:</td> <td>$args{flag}</td><tr>
         <tr><td>Final:</td> <td>$args{exp}</td><tr>
         <tr><td>comment:</td> <td>$args{comment}</td><tr>

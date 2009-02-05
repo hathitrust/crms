@@ -12,30 +12,13 @@ use XML::LibXSLT;
 use POSIX qw(strftime);
 use DBI qw(:sql_types);
 
-=head1 NAME
-
-CRMS -- object of shared code
-
-=cut
-
-=head1 new()
-
-  my $crms = CRMS->new(
-    logFile      =>   'log.txt',
-    configFile   =>   'crms.cfg',
-    verbose      =>   1,
-    root         =>   $DLXSROOT,
-    dev          =>   $DLPS_DEV,
- );
-
-=cut
-
 ## ----------------------------------------------------------------------------
 ##  Function:   new() for object
 ##  Parameters: %hash with a bunch of args
 ##  Return:     ref to object
 ## ----------------------------------------------------------------------------
-sub new {
+sub new 
+{
     my ($class, %args) = @_;
     my $self = bless {}, $class;
 
@@ -43,7 +26,6 @@ sub new {
     if ( ! $args{'configFile'} ) { return "missing configFile"; }
 
     $self->set( 'logFile', $args{'logFile'} );
-    ## $self->OpenErrorLog();
 
     my $errors = [];
     $self->set( 'errors', $errors );
@@ -65,14 +47,6 @@ sub new {
     $self;
 }
 
-=head1 LoadNewItems()
-
-LoadNewItems will load the new or changed records from the right DB and will load them into the CRMS reviewer queue.
-
-    $crms->LoadNewItems( "2009-01-01 10:31:17" );
-
-=cut
-
 ## ----------------------------------------------------------------------------
 ##  Function:   get a list of new barcodes (mdp.123456789) since a given date
 ##              1) 008:28 not equal ‘f’
@@ -83,7 +57,7 @@ LoadNewItems will load the new or changed records from the right DB and will loa
 ##  Parameters: date
 ##  Return:     NOTHING, loads DB
 ## ----------------------------------------------------------------------------
-sub LoadNewItems				## date
+sub LoadNewItems
 {
     my $self    = shift;
     my $update  = shift;
@@ -118,12 +92,6 @@ sub LoadNewItems				## date
     }
 }
 
-=head1 SubmitReview
-
-  $crms->SubmitReview( id, user, attr, reason, note, stanford reg. number );
-
-=cut
-
 ## ----------------------------------------------------------------------------
 ##  Function:   submit review
 ##  Parameters: id, user, attr, reason, note, stanford reg. number
@@ -132,7 +100,7 @@ sub LoadNewItems				## date
 sub SubmitReview
 {
     my $self = shift;
-    my ($id, $user, $attr, $reason, $date, $cDate, $note, $reg, $exp, $regDate) = @_;
+    my ($id, $user, $attr, $reason, $date, $cDate, $copyDate, $note, $reg, $exp, $regDate) = @_;
 
     if ( ! $self->ChechForId( $id ) )                     { $self->logit("id check failed");          return 0; }
     if ( ! $self->ChechReviewer( $user, $exp ) )          { $self->logit("review check failed");      return 0; }
@@ -146,13 +114,13 @@ sub SubmitReview
     if ( ! $self->ValidateSubmition( $id, $user ) ) { $self->logit("submit check failed"); return 0; }
    
     ## all good, INSERT
-    my $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, date, cDate, note, regNum, regDate) } . 
-              qq{VALUES('$id', '$user', '$attr', '$reason', '$date', '$cDate', '$note', '$reg', '$regDate') };
+    my $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, date, cDate, copyDate, note, regNum, regDate) } . 
+              qq{VALUES('$id', '$user', '$attr', '$reason', '$date', '$cDate', '$copyDate', '$note', '$reg', '$regDate') };
 
     if ( $exp )
     {
-        $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, date, cDate, note, regNum, expert, regDate) } .
-              qq{VALUES('$id', '$user', '$attr', '$reason', '$date', '$cDate', '$note', '$reg', $exp, '$regDate') };
+        $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, date, cDate, copyDate, note, regNum, expert, regDate) } .
+              qq{VALUES('$id', '$user', '$attr', '$reason', '$date', '$cDate', '$copyDate', '$note', '$reg', $exp, '$regDate') };
     }
 
     $self->PrepareSubmitSql( $sql );
@@ -326,7 +294,7 @@ sub GetReviewsHtml
     if ( $order eq "" )     { $order = "id"; }
     if ( $order eq "time" ) { $order = "time DESC "; }
 
-    my $sql = qq{ SELECT id, time, user, attr, reason, note, regNum, expert, duration FROM $CRMSGlobals::reviewsTable };
+    my $sql = qq{ SELECT id, time, duration, user, attr, reason, note, regNum, expert, cDate, copyDate FROM $CRMSGlobals::reviewsTable };
 
     if    ( $user )                    { $sql .= qq{ WHERE user = "$user" };   }
 
@@ -341,17 +309,25 @@ sub GetReviewsHtml
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my $html = qq{<table class="allReviews">};
-    $html   .= qq{<th>id</th><th>time</th><th>user</th><th>attr</th><th>reason</th><th>note</th><th>reg num</th>
-                  <th>expert review</th><th>time taken</th><th>delete (be sure, no undo)</th>};
+    $html   .= qq{<th>id</th><th>time</th><th>time taken</th><th>user</th><th>attr</th><th>reason</th><th>note</th><th>reg num</th>
+                  <th>expert review</th><th>publ</th><th>copy</th><th>delete (be sure, no undo)</th>};
 
     foreach my $row ( @{$ref} )
     {
-        $html .= qq{<tr><td>} . 
-                    $self->LinkToPT($row->[0])       . qq{</td><td>$row->[1]</td><td>$row->[2]</td><td> }.
-                    $self->GetRightsName($row->[3])  . qq{</td><td>} . 
-                    $self->GetReasonName($row->[4])  . qq{</td><td>$row->[5]</td><td> } .
-                    $self->LinkToStanford($row->[6]) . qq{</td><td>$row->[7]</td><td>$row->[8]</td><td>} .
-                    $self->GetDeleteLink($row->[0], $row->[2])  . qq{</td></tr>};
+        $html .= qq{<tr>} . 
+                 qq{<td>} . $self->LinkToPT($row->[0]) . qq{</td>} . 
+                 qq{<td>$row->[1]</td>} .
+                 qq{<td>$row->[2]</td>} . 
+                 qq{<td>$row->[3]</td>} .
+                 qq{<td>} . $self->GetRightsName($row->[4]) . qq{</td>} . 
+                 qq{<td>} . $self->GetReasonName($row->[5]) . qq{</td>} .
+                 qq{<td>$row->[6]</td>} .
+                 qq{<td>} . $self->LinkToStanford($row->[7]) . qq{</td>} . 
+                 qq{<td>$row->[8]</td>} . 
+                 qq{<td>$row->[9]</td>} . 
+                 qq{<td>$row->[10]</td>} . 
+                 qq{<td>} . $self->GetDeleteLink($row->[0], $row->[2]) . qq{</td>} .
+                 qq{</tr>};
     }
 
     $html .= qq{</table>};
@@ -567,38 +543,13 @@ sub AddUser
     my $sql = qq|REPLACE INTO $CRMSGlobals::usersTable SET id = "$args->{'id'}" | .
               qq|, name = "$args->{'name'}"|;
 
-    if ( $args->{'reviewer'} ) { $self->AddUserReviewer( $sql ); }
-    if ( $args->{'expert'} )   { $self->AddUserExpert( $sql );   }
-    if ( $args->{'admin'} )    { $self->AddUserAdmin( $sql );    }
+    if ( $args->{'reviewer'} ) { $sql .= qq{, type = 1}; }
+    if ( $args->{'expert'} )   { $sql .= qq{, type = 2}; }
+    if ( $args->{'admin'} )    { $sql .= qq{, type = 3}; }
+
+    $self->PrepareSubmitSql( $sql );
 
     return 1;
-}
-
-sub AddUserReviewer
-{
-    my $self = shift;
-    my $sql  = shift;
-    $sql    .= qq{, type = 1};
-
-    $self->PrepareSubmitSql( $sql );
-}
-
-sub AddUserExpert
-{
-    my $self = shift;
-    my $sql  = shift;
-    $sql    .= qq{, type = 2};
-
-    $self->PrepareSubmitSql( $sql );
-}
-
-sub AddUserAdmin
-{
-    my $self = shift;
-    my $sql  = shift;
-    $sql    .= qq{, type = 3};
-
-    $self->PrepareSubmitSql( $sql );
 }
 
 sub ValidateAttr
@@ -647,7 +598,7 @@ sub ValidateReason
 ##  Parameters: nothing
 ##  Return:     ref to DBI
 ## ----------------------------------------------------------------------------
-sub ConnectToDb                         ## NOTHING || ref to DB
+sub ConnectToDb
 {
     my $self      = shift;
     my $db_user   = $CRMSGlobals::mysqlUser;
@@ -671,7 +622,7 @@ sub ConnectToDb                         ## NOTHING || ref to DB
 ##  Parameters: nothing
 ##  Return:     ref to DBI
 ## ----------------------------------------------------------------------------
-sub ConnectToSdrDb                      ## NOTHING || ref to DB
+sub ConnectToSdrDb
 {
     my $self      = shift;
     my $db_user   = $CRMSGlobals::mysqlMdpUser;
@@ -704,20 +655,12 @@ sub IsGovDoc
     return 0;
 }
 
-=head1 GetPublDate
-
-Get the publ date for a given barcode
-  
-  $crms->GetPublDate( "mdp.123456789" );
-
-=cut
-
 ## ----------------------------------------------------------------------------
 ##  Function:   get the publ date (260|c)for a specific vol.
 ##  Parameters: barcode
 ##  Return:     date string
 ## ----------------------------------------------------------------------------
-sub GetPublDate				## barcode || publ date
+sub GetPublDate
 {
     my $self    = shift;
     my $barcode = shift;
@@ -779,14 +722,6 @@ sub GetMarcDatafield
 
     return $record->findvalue( $xpath );
 }
-
-=head1 GetRecordMetadata
-
-Get the MARC21 metadata for a given record
-
-  $crms->GetRecordMetadata( "mdp.123456789" );
-
-=cut
 
 ## ----------------------------------------------------------------------------
 ##  Function:   get the metadata record (MARC21)
@@ -915,7 +850,7 @@ sub GetRecordMetadata
 ##  Parameters: barcode
 ##  Return:     ID
 ## ----------------------------------------------------------------------------
-sub BarcodeToId                         ## barcode || ID
+sub BarcodeToId
 {
     my $self       = shift;
     my $barcode    = shift;
@@ -1354,7 +1289,18 @@ sub GetReasonNum
     return $ref->[0]->[0];
 }
 
-    
+sub GetCopyDate
+{
+    my $self = shift;
+    my $id   = shift;
+    my $user = shift;
+
+    my $sql  = qq{ SELECT copyDate FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    return $ref->[0]->[0];
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   get regNum (stanford reg num)
 ##  Parameters: id
@@ -1393,7 +1339,7 @@ sub GetRegNums
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my @return;
-    foreach ( @{$ref} ) { push @return, $_->[0]; }
+    foreach ( @{$ref} ) { if ($_->[0] ne "") { push @return, $_->[0]; } }
     return @return;
 }
 
@@ -1448,7 +1394,7 @@ sub GetOldestItemForReview
 ##  Parameters: NOTHING
 ##  Return:     date
 ## ----------------------------------------------------------------------------
-sub GetUpdateTime			## NOTHING || date
+sub GetUpdateTime
 {
     my $self = shift;
     my $dbh  = $self->get( 'dbh' );
@@ -1475,7 +1421,7 @@ sub GetTodaysDate
 ##  Parameters: full path to log file
 ##  Return:     file handle to open file
 ## ----------------------------------------------------------------------------
-sub OpenErrorLog                        ## full path to file || file handle
+sub OpenErrorLog
 {
     my $self    = shift;
     my $logFile = $self->get( 'logFile' );
@@ -1499,7 +1445,7 @@ sub CloseErrorLog
 ##  Parameters: STRING to log
 ##  Return:     NOTHING 
 ## ----------------------------------------------------------------------------
-sub logit                               ## STRING (to be loged) 
+sub logit
 {
     my $self = shift;
     my $str  = shift;

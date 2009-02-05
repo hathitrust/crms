@@ -130,6 +130,7 @@ sub StartReviewing
     ## start body and NAV bar
     my $userName = $crms->GetUserName( $user );
     my $pub_date = $crms->GetPublDate( $barcode );
+    my $copyDate = $crms->GetCopyDate( $barcode, $user );
     my $author   = $crms->GetMarcDatafield( $barcode, "100", "a");
     my $title    = $crms->GetMarcDatafield( $barcode, "245", "a");
     my $regNum   = $crms->GetRegNum( $barcode, $user );
@@ -148,6 +149,9 @@ sub StartReviewing
                      "/bin/search/advanced/process?clauseMapped(author)=$encAuthor";
     my $titleLink  = "http://collections.stanford.edu/copyrightrenewals" . 
                      "/bin/search/advanced/process?clauseMapped(title)=$encTitle";
+    my $searchForm = qq{http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/process?} .
+                     qq{clauseMapped(title)=$encTitle&clauseMapped(author)=$encAuthor};
+
     ## my $ptLink     = qq{https://babel.hathitrust.org/cgi/pt?id=$barcode} . 
     my $ptLink     = qq{https://santelli.dev.umdl.umich.edu/cgi/m/mdp/pt?skin=crms;id=$barcode} . 
                      qq{;page=root;view=image;size=75;seq=7;attr=1};
@@ -181,14 +185,25 @@ sub StartReviewing
              <a href="$uscorLink" target="topFrame">U.S. Copyright</a><br/>
  
              <hr />
-             <strong>1/2: </strong><a href="javascript:changeFrame('$titleLink' )">ti</a> ||
-                                   <a href="javascript:changeFrame('$authorLink')">au</a> ||
-                                    <a href="javascript:flipFrame()"              >[x]</a>
-
-             <hr />
-             <strong>full: </strong><a href="javascript:changeFrame2('$titleLink')"  accesskey="t">ti</a> ||
-                                    <a href="javascript:changeFrame2('$authorLink')" accesskey="a">au</a> ||
-                                    <a href="javascript:flipFrame2()"                accesskey="x">[x]</a>
+             <table width="100%">
+               <tr>
+                 <td><strong>search:</strong></td>
+                 <td>
+                   <a href="javascript:changeFrame2('$titleLink' )" accesskey="t">ti</a> ||
+                   <a href="javascript:changeFrame2('$authorLink')" accesskey="a">au</a> ||
+                   <a href="javascript:changeFrame2('$searchForm')" accesskey="q">form</a> ||
+                   <a href="javascript:flipFrame2()"                accesskey="x">[x]</a>
+                 </td>
+               </tr><tr>
+                 <td><strong>1/2:</strong></td>
+                 <td>
+                   <a href="javascript:changeFrame('$titleLink')">ti</a> ||
+                   <a href="javascript:changeFrame('$authorLink')">au</a> ||
+                   <a href="javascript:changeFrame('$searchForm')">form</a> ||
+                   <a href="javascript:flipFrame()"               >[x]</a>
+                 </td>
+               </tr>
+             </table>
 
              <hr />
              <strong>ID:</strong> <tt>$barcode</tt></br>
@@ -209,7 +224,7 @@ sub StartReviewing
     ## bottom nav, review submission form
     print qq{</div><div class="navbottom">\n};
 
-    print "<hr/>" . buildSubmitReviewForm( $barcode, $pub_date, $regNum, $regDate, $comm, $commPre );
+    print "<hr/>" . buildSubmitReviewForm( $barcode, $pub_date, $regNum, $regDate, $comm, $commPre, $copyDate );
 
     print qq{</div>\n};
 
@@ -233,6 +248,7 @@ sub buildSubmitReviewForm
     my $regDate  = shift;
     my $comm     = shift;
     my $commPre  = shift;
+    my $copyDate = shift;
 
     my $expertCheck  = buildExp();
     my $rightsReason = buildRightsReason( $crms->GetAttrReasonCode($id, $user) );
@@ -245,54 +261,32 @@ sub buildSubmitReviewForm
         <input type="hidden" name="date"    value="$date"> 
         <input type="hidden" name="confirm" value="1"> 
 
-        <!--
-        <strong>Rights: </string><a href="/c/crms/help.html#rights" target="_blank">?</a><br/>
-        <input type="radio" id="pd"  name="rights" value="1" >PD (1)</input><br/>
-        <input type="radio" id="ic"  name="rights" value="2" >IC (2)</input><br/>
-        <input type="radio" id="und" name="rights" value="5">UND (5)</input><br/>
-        <br/>
-        <strong>Reason:</string> <a href="/c/crms/help.html#reason" target="_blank">?</a><br/>
-        <input type="radio" id="ren"  name="reason" value="7">REN (7)</input><br/>
-        <input type="radio" id="ncn"  name="reason" value="2">NCN (2)</input><br/>
-        <input type="radio" id="nfi"  name="reason" value="8">NFI (8)</input><br/> 
-        <input type="radio" id="cdpp" name="reason" value="9">CDPP (9)</input><br/> 
-        <br/>
-        -->
-
         $rightsReason
- 
-        <!--
-        <strong>Rights/Reason: </string><a href="/c/crms/help.html#rights" target="_blank">?</a><br/>
-        <input type="radio" id="1" name="rights" value="1" accesskey="1">pd/ncn (1)</input><br/>
-        <input type="radio" id="2" name="rights" value="2" accesskey="2">pd/ren (2)</input><br/>
-        <input type="radio" id="3" name="rights" value="3" accesskey="3">pd/cdpp (3)</input><br/>
-        <input type="radio" id="4" name="rights" value="4" accesskey="4">ic/ren (4)</input><br/>
-        <input type="radio" id="5" name="rights" value="5" accesskey="5">ic/cdpp (5)</input><br/>
-        <input type="radio" id="6" name="rights" value="6" accesskey="6">und/nfi (6)</input><br/>
-        -->
-        <br/>
 
-        <Strong>Copyright renewal ID: <a href="/c/crms/help.html#renewal" target="_blank">?</a></strong>
-        <input type="text" name="renNum" value="$regNum"/>
-        <br/>
-        <Strong>Copyright renewal Date: <a href="/c/crms/help.html#renewal" target="_blank">?</a></strong>
-        <input type="text" name="regDate" value="$regDate"/>
-        <br/>
+        <table>
+          <tr>
+            <td><strong>Renewal ID: </strong></td>
+            <td><input type="text" name="renNum" value="$regNum" size="10"/></td>
+            <td><a href="/c/crms/help.html#renewal" target="_blank">?</a></td>
+          </tr>
+          <tr>
+            <td><strong>Renewal Date: </strong></td>
+            <td><input type="text" name="regDate" value="$regDate" size="7"/></td>
+            <td><a href="/c/crms/help.html#renewal" target="_blank">?</a></td>
+          </tr>
+        </table>
+        <table>
+          <tr>
+            <td><strong>publ: </strong></td>
+            <td><input type="text" name="cDate"size="4" value="$date"/><td>
+            <td><strong>copy: </strong><input type="text" name="copyDate" size="4" value="$copyDate"/></td>
+            <td><a href="/c/crms/help.html#publ" target="_blank">?</a></td>
+          </tr>
+        </table>
 
-
-        <Strong>Publication date: <a href="/c/crms/help.html#publ" target="_blank">?</a></strong>
-        <input type="text" name="cDate" value="$date"/>
-        <br/>
-
-        <!--
-        <Strong>Copyright renewal date:</strong>
-        <input type="text" name="renDate" />
-        <br/>
-        -->
-        
         $expertCheck
  
-        <input type="checkbox" name="flag" accesskey="f">Flag:</input> <a href="/c/crms/help.html#flag" target="_blank">?</a><br/>
+        <input type="checkbox" name="flag" accesskey="f">Flag:</input> <a href="/c/crms/help.html#flag" target="_blank">?</a>
         <br/>
         <strong>Comments: </string><a href="/c/crms/help.html#comment" target="_blank">?</a><br/>
         <!--
@@ -309,10 +303,10 @@ sub buildSubmitReviewForm
         -->
         $commentPre
 
-        <textarea name="comment" cols="25" rows="3">$comm</textarea>
+        <textarea name="comment" cols="20" rows="1">$comm</textarea>
 
         <br/><br/>
-        <input type="submit" value="Submit"> 
+        <input type="submit" value="Submit" accesskey="s"> 
       </form>};
 
     return $html;
@@ -322,23 +316,26 @@ sub buildRightsReason
 {
     my $select = shift;
     my $return = qq{<strong>Rights/Reason: </strong><a href="/c/crms/help.html#rights" } .
-                 qq{ target="_blank">?</a><br/>};
+                 qq{ target="_blank">?</a><br/><table><tr>};
     
     my %key = (1 => "pd/ncn", 2 => "pd/ren",  3 => "pd/cdpp",
                4 => "ic/ren", 5 => "ic/cdpp", 6 => "und/nfi" );
+
     foreach my $num ( 1..6 )
     {
         if ( $num eq $select )
         {
-            $return .= qq|<input type="radio" id="$num" name="rights" value="$num" | .
-                       qq|accesskey="$num" checked="checked">$key{$num} ($num)</input><br/>|;
+            $return .= qq|<td><input type="radio" id="$num" name="rights" value="$num" | .
+                       qq|accesskey="$num" checked="checked">$key{$num} ($num)</input></td>|;
         }
         else 
         {
-            $return .= qq|<input type="radio" id="$num" name="rights" value="$num" | .
-                       qq|accesskey="$num">$key{$num} ($num)</input><br/>|;
+            $return .= qq|<td><input type="radio" id="$num" name="rights" value="$num" | .
+                       qq|accesskey="$num">$key{$num} ($num)</input></td>|;
         }
+        if ( $num % 2 == 0 ) { $return .= qq{</tr>\n<tr>}; }
     }
+    $return .= qq{</table><br/>};
 
     return $return;
 }
