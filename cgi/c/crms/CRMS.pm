@@ -1095,7 +1095,7 @@ sub GetReviewerPace
     if ( ! $date ) 
     {
         $date = POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time - 2629743));
-        $self->logit( "date: $date"); 
+        if ($self->get('verbose')) { $self->logit( "date: $date"); }
     }
 
     my @items = $self->ItemsReviewedByUser( $user, $date );
