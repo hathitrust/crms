@@ -179,8 +179,8 @@ sub StartReviewing
 
     print qq{<a href="$titleLink" target="topFrame">Stanford</a>   ||
              <a href="$ptLink"    target="topFrame" accesskey="h">HathiTrust</a> ||
-             <a href="$catLink"   target="topFrame" accesskey="m">Mirlyn</a> || <br />
-
+             <a href="$catLink"   target="topFrame" accesskey="m">Mirlyn</a>
+             <br />
              <a href="$wCatLink"  target="topFrame">World Cat</a>   ||
              <a href="$uscorLink" target="topFrame">U.S. Copyright</a><br/>
  
