@@ -100,7 +100,7 @@ sub LoadNewItems
 sub SubmitReview
 {
     my $self = shift;
-    my ($id, $user, $attr, $reason, $date, $cDate, $copyDate, $note, $reg, $exp, $regDate) = @_;
+    my ($id, $user, $attr, $reason, $date, $cDate, $copyDate, $note, $regNum, $exp, $regDate) = @_;
 
     if ( ! $self->ChechForId( $id ) )                     { $self->logit("id check failed");          return 0; }
     if ( ! $self->ChechReviewer( $user, $exp ) )          { $self->logit("review check failed");      return 0; }
@@ -112,21 +112,23 @@ sub SubmitReview
 
     ## make sure this user did not already check this item
     if ( ! $self->ValidateSubmition( $id, $user ) ) { $self->logit("submit check failed"); return 0; }
-   
-    ## all good, INSERT
-    my $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, date, cDate, copyDate, note, regNum, regDate) } . 
-              qq{VALUES('$id', '$user', '$attr', '$reason', '$date', '$cDate', '$copyDate', '$note', '$reg', '$regDate') };
 
-    if ( $exp )
-    {
-        $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, date, cDate, copyDate, note, regNum, expert, regDate) } .
-              qq{VALUES('$id', '$user', '$attr', '$reason', '$date', '$cDate', '$copyDate', '$note', '$reg', $exp, '$regDate') };
-    }
+    my @fieldList = ("id", "user", "attr", "reason", "date", "cDate", "note", "regNum", "regDate");
+    my @valueList = ($id,  $user,  $attr,  $reason,  $date,  $cDate,  $note,  $regNum,  $regDate);
+
+    if ($exp)      { push(@fieldList, "expert");   push(@valueList, $exp); }
+    if ($copyDate) { push(@fieldList, "copyDate"); push(@valueList, $copyDate); }
+
+    my $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (} . join(", ", @fieldList) . 
+              qq{) VALUES('} . join("', '", @valueList) . qq{')};
+
+    if ( $self->get('verbose') ) { $self->logit( $sql ); }
 
     $self->PrepareSubmitSql( $sql );
 
     if ( $exp ) { $self->RegisterExpertReview( $id ); }
     else        { $self->IncrementStatus( $id );      }
+
     $self->UnlockItem( $id );
     $self->EndTimer( $id, $user );
 
