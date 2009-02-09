@@ -545,11 +545,18 @@ sub AddUser
     my $sql = qq|REPLACE INTO $CRMSGlobals::usersTable SET id = "$args->{'id'}" | .
               qq|, name = "$args->{'name'}"|;
 
-    if ( $args->{'reviewer'} ) { $sql .= qq{, type = 1}; }
-    if ( $args->{'expert'} )   { $sql .= qq{, type = 2}; }
-    if ( $args->{'admin'} )    { $sql .= qq{, type = 3}; }
-
-    $self->PrepareSubmitSql( $sql );
+    if ( $args->{'reviewer'} ) 
+    { 
+        $self->PrepareSubmitSql( $sql . qq{, type = 1} );
+    }
+    if ( $args->{'expert'} )
+    { 
+        $self->PrepareSubmitSql( $sql . qq{, type = 2} );
+    }
+    if ( $args->{'admin'} )
+    { 
+        $self->PrepareSubmitSql( $sql . qq{, type = 3} );
+    }
 
     return 1;
 }
