@@ -129,7 +129,7 @@ sub validateArgs
     $args{'rights'}     = $cgi->param('rights');
     $args{'reason'}     = $cgi->param('reason');
     $args{'renNum'}     = $cgi->param('renNum');
-    $args{'renDate'}    = $cgi->param('renDate');
+    $args{'regDate'}    = $cgi->param('regDate');
     $args{'flag'}       = $cgi->param('flag');
     $args{'comment'}    = $cgi->param('comment');
 
@@ -174,7 +174,7 @@ sub BuildConfirmationPage
         <tr><td>Item:</td> <td>$args{barcode}</td><tr>
         <tr><td>Rights/Reason:</td> <td>$rights/$reason</td><tr>
         <tr><td>Renewal Number:</td> <td>$args{renNum}</td><tr>
-        <tr><td>Reneal Date:</td> <td>$args{regDate}</td><tr>
+        <tr><td>Renewal Date:</td> <td>$args{regDate}</td><tr>
         <tr><td>Pub Date (corrected date):</td> <td>$args{date} ($args{cDate})</td><tr>
         <tr><td>copy Date:</td> <td>$args{copyDate}</td><tr>
         <tr><td>Flag:</td> <td>$args{flag}</td><tr>

@@ -170,7 +170,7 @@ sub SubmitReview
     ## do some sort of check for expert submissions
 
     ## make sure this user did not already check this item
-    if ( ! $self->ValidateSubmition( $id, $user ) ) { $self->logit("submit check failed"); return 0; }
+    ## if ( ! $self->ValidateSubmition( $id, $user ) ) { $self->logit("submit check failed"); return 0; }
 
     my @fieldList = ("id", "user", "attr", "reason", "date", "cDate", "note", "regNum", "regDate");
     my @valueList = ($id,  $user,  $attr,  $reason,  $date,  $cDate,  $note,  $regNum,  $regDate);
