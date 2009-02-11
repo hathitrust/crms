@@ -48,12 +48,60 @@ sub new
 }
 
 ## ----------------------------------------------------------------------------
+##  Function:   connect to the mysql DB
+##  Parameters: nothing
+##  Return:     ref to DBI
+## ----------------------------------------------------------------------------
+sub ConnectToDb
+{
+    my $self      = shift;
+    my $db_user   = $CRMSGlobals::mysqlUser;
+    my $db_passwd = $CRMSGlobals::mysqlPasswd;
+    my $db_server = $CRMSGlobals::mysqlServerDev;
+
+    if ( ! $self->get( 'dev' ) ) { $db_server = $CRMSGlobals::mysqlServer; }
+
+    if ($self->get('verbose')) { $self->logit( "DBI:mysql:crms:$db_server, $db_user, [passwd]" ); }
+
+    my $dbh = DBI->connect( "DBI:mysql:crms:$db_server", $db_user, $db_passwd,
+              { RaiseError => 1, AutoCommit => 1 } ) || die "Cannot connect: $DBI::errstr";
+
+    $dbh->{mysql_auto_reconnect} = 1;
+
+    return $dbh;
+}
+
+## ----------------------------------------------------------------------------
+##  Function:   connect to the development mysql DB
+##  Parameters: nothing
+##  Return:     ref to DBI
+## ----------------------------------------------------------------------------
+sub ConnectToSdrDb
+{
+    my $self      = shift;
+    my $db_user   = $CRMSGlobals::mysqlMdpUser;
+    my $db_passwd = $CRMSGlobals::mysqlMdpPasswd;
+    my $db_server = $CRMSGlobals::mysqlMdpServerDev;
+
+    if ( ! $self->get( 'dev' ) ) { $db_server = $CRMSGlobals::mysqlServer; }
+
+    if ($self->get('verbose')) { $self->logit( "DBI:mysql:mdp:$db_server, $db_user, [passwd]" ); }
+
+    my $sdr_dbh   = DBI->connect( "DBI:mysql:mdp:$db_server", $db_user, $db_passwd,
+              { RaiseError => 1, AutoCommit => 1 } ) || die "Cannot connect: $DBI::errstr";
+
+    $sdr_dbh->{mysql_auto_reconnect} = 1;
+
+    return $sdr_dbh;
+}
+
+## ----------------------------------------------------------------------------
 ##  Function:   get a list of new barcodes (mdp.123456789) since a given date
 ##              1) 008:28 not equal ‘f’
 ##              2) Select records that meet criteria in (1), and have an mdp id 
 ##                 in call_no_2, and whose item statistic date is in the range
-##                 that Greg requests.  Also, I check to see if the record has
-##                 been sent previously -- if so, it’s exclud
+##                 that Greg requests.  
+##              3) record has NOT been sent previously
 ##  Parameters: date
 ##  Return:     NOTHING, loads DB
 ## ----------------------------------------------------------------------------
@@ -641,65 +689,15 @@ sub ValidateReason
     return 0;
 }
 
-## ----------------------------------------------------------------------------
-##  Function:   connect to the mysql DB
-##  Parameters: nothing
-##  Return:     ref to DBI
-## ----------------------------------------------------------------------------
-sub ConnectToDb
-{
-    my $self      = shift;
-    my $db_user   = $CRMSGlobals::mysqlUser;
-    my $db_passwd = $CRMSGlobals::mysqlPasswd;
-    my $db_server = $CRMSGlobals::mysqlServerDev;
-
-    if ( ! $self->get( 'dev' ) ) { $db_server = $CRMSGlobals::mysqlServer; }
-
-    if ($self->get('verbose')) { $self->logit( "DBI:mysql:crms:$db_server, $db_user, [passwd]" ); }
-
-    my $dbh = DBI->connect( "DBI:mysql:crms:$db_server", $db_user, $db_passwd,
-              { RaiseError => 1, AutoCommit => 1 } ) || die "Cannot connect: $DBI::errstr";
-
-    $dbh->{mysql_auto_reconnect} = 1;
-
-    return $dbh;
-}
-
-## ----------------------------------------------------------------------------
-##  Function:   connect to the development mysql DB
-##  Parameters: nothing
-##  Return:     ref to DBI
-## ----------------------------------------------------------------------------
-sub ConnectToSdrDb
-{
-    my $self      = shift;
-    my $db_user   = $CRMSGlobals::mysqlMdpUser;
-    my $db_passwd = $CRMSGlobals::mysqlMdpPasswd;
-    my $db_server = $CRMSGlobals::mysqlMdpServerDev;
-
-    if ( ! $self->get( 'dev' ) ) { $db_server = $CRMSGlobals::mysqlServer; }
-
-    if ($self->get('verbose')) { $self->logit( "DBI:mysql:mdp:$db_server, $db_user, [passwd]" ); }
-
-    my $sdr_dbh   = DBI->connect( "DBI:mysql:mdp:$db_server", $db_user, $db_passwd,
-              { RaiseError => 1, AutoCommit => 1 } ) || die "Cannot connect: $DBI::errstr";
-
-    $sdr_dbh->{mysql_auto_reconnect} = 1;
-
-    return $sdr_dbh;
-}
-
-
 sub GetCopyrightPage
 {
     my $self = shift;
     my $id   = shift;
 
-    ## this is a place holder for when the API can answer this easily
+    ## this is a place holder.  The HT API work for this.
 
     return "7";
 }
-
 
 sub IsGovDoc
 {
@@ -1009,7 +1007,6 @@ sub IsLockedForUser
     return 0;
 }
 
-
 sub LockItem
 {
     my $self = shift;
@@ -1136,8 +1133,8 @@ sub SetDuration
     my $user = shift;
 
 
-    my $sql = qq{ SELECT TIMEDIFF((SELECT end_time    FROM timer where id = "$id" and user = "$user"), 
-                                   (SELECT start_time FROM timer where id = "$id" and user = "$user")) };
+    my $sql = qq{ SELECT TIMEDIFF((SELECT end_time   FROM timer where id = "$id" and user = "$user"), 
+                                  (SELECT start_time FROM timer where id = "$id" and user = "$user")) };
 
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
     my $dur = $ref->[0]->[0];
@@ -1255,7 +1252,6 @@ sub ItemsReviewedByUser
     foreach (@{$ref}) { push @return, $_->[0]; }
     return @return;
 }
-
 
 ## ----------------------------------------------------------------------------
 ##  Function:   get items that have been reviewed once
