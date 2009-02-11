@@ -34,7 +34,7 @@ sub new
 
     $self->set( '$bc2metaUrl', q{http://mirlyn.lib.umich.edu/cgi-bin/bc2meta} );
     $self->set( '$oaiBaseUrl', q{http://mirlyn.lib.umich.edu/OAI} );
-    $self->set( 'verbose',     $args{'verbose'} );
+    $self->set( 'verbose',     1);
     $self->set( 'parser',      XML::LibXML->new() );
     $self->set( 'barcodeID',   {} );
  
