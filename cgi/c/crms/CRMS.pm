@@ -61,35 +61,46 @@ sub LoadNewItems
 {
     my $self    = shift;
     my $update  = shift;
-    my $dbh     = $self->get( 'dbh' );
-    my $sdr_dbh = $self->get( 'sdr_dbh' );
 
     if ( ! $update ) { $update = $self->GetUpdateTime(); }
 
     my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time FROM rights } . 
               qq{WHERE attr = 2 AND time >= '$update' GROUP BY id};
 
-    my $ref = $sdr_dbh->selectall_arrayref( $sql );
+    my $ref = $self->get('sdr_dbh')->selectall_arrayref( $sql );
 
     if ($self->get('verbose')) { print "found: " .  scalar( @{$ref} ) . ": $sql\n"; }
 
     ## design note: if these were in the same DB we could just INSERT
     ## into the new table, not SELECT then INSERT
-    foreach my $row ( @{$ref} )
-    {
-        my $id      = $row->[0];
-        my $time    = $row->[1];
+    foreach my $row ( @{$ref} ) { $self->AddItemToQueue( $row->[0], $row->[1] ); }
+}
 
-        my $fedDoc  = $self->IsGovDoc( $id );
-        if ( $fedDoc ) { $self->logit( "skip fed doc: $id" ); next; }
+sub AddItemToQueue
+{
+    my $self    = shift;
+    my $id      = shift;
+    my $time    = shift;
+    my $pub     = $self->GetPublDate( $id );
 
-        my $pub     = $self->GetPublDate( $id );
+    if ( $self->IsGovDoc( $id ) ) { $self->logit( "skip fed doc: $id" ); return; }
 
-        ## check for item, warn if already exists, then update ???
-        my $iSql = qq{REPLACE INTO $CRMSGlobals::queueTable (id, time, pub_date) VALUES ('$id', '$time', '$pub')};
+    ## check for item, warn if already exists, then update ???
+    my $sql = qq{REPLACE INTO $CRMSGlobals::queueTable (id, time, pub_date) VALUES ('$id', '$time', '$pub')};
 
-        $self->PrepareSubmitSql( $iSql );
-    }
+    $self->PrepareSubmitSql( $sql );
+}
+
+sub IsItemInQueue
+{
+    my $self = shift;
+    my $id   = shift;
+
+    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE id = '$id'};
+    my $ref  = $self->get('dbh')->selectall_arrayref( $sql );
+
+    if ( scalar @{$ref} ) { return 1; }
+    return 0;
 }
 
 ## ----------------------------------------------------------------------------
@@ -191,52 +202,80 @@ sub DeleteReview
 
 sub ClearQueue
 {
-    my $self = shift;
+    my $self   = shift;
+    my $eCount = 0;
+    my $dCount = 0;
 
     ## get items > 2, clear these  
-    my @experts;
     my $expert = $self->GetExpertRevItems();
-
     foreach my $row ( @{$expert} )
     {
-        my $id = $row->[0];
-        push @experts, $id;
-        ## $self->DelFromQueue( $id );
-    }
+        #|# my $rc   = $self->QueueToRights( $id ); 
+        #|# $eCount += $rc;
+    } 
 
     ## get items = 2 and see if they agree  
-    my $doubles = $self->GetDoubleRevItems();  
-    my @doubles;
-    foreach my $row ( @{$doubles} )
+    my $double = $self->GetDoubleRevItems();  
+    foreach my $row ( @{$double} )
     {
         my $id = $row->[0];
         if ( $self->GetDoubleAgree( $id ) ) 
         { 
-            push @doubles, $id;
-            ## $self->DelFromQueue( $id ); 
+            #|# my $rc   = $self->QueueToRights( $id ); 
+            #|# $dCount += $rc;
         }
     }
 
     ## report back
-    my $eCount = scalar( @experts );
-    $self->logit( "export reviewed items removed from queue ($eCount): " . join(", ", @experts) );
-    my $dCount = scalar( @doubles );
-    $self->logit( "double reviewed items removed from queue ($dCount): " . join(", ", @doubles) );
+    $self->logit( "export reviewed items removed from queue ($eCount): " . join(", ", @{$expert}) );
+    $self->logit( "double reviewed items removed from queue ($dCount): " . join(", ", @{$double}) );
 
-    return ("Double reviewed items removed from queue: $dCount",
-            "Expert Items removed from queue: $eCount");
+    return ("twice reviewed removed: $dCount, expert reviewed reemoved: $eCount");
 }
 
-sub DelFromQueue
+sub QueueToRights
 {
     my $self = shift;
     my $id   = shift;
 
     if ( ! $id ) { return 0; }
-    my $sql  = qq{DELETE FROM $CRMSGlobals::queueTable  WHERE id = "$id"};
 
+    my $yest = $self->GetYesterdaysDate();
+    my $sql  = qq{SELECT $id FROM $CRMSGlobals::queueTable WHERE id = "$id" AND time < "$yest"};
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    if ( ! @{$ref} ) { return 0; } ## too recently reviewed
+
+    $sql = qq{DELETE FROM $CRMSGlobals::queueTable WHERE id = "$id" AND time < "$yest"};
     $self->PrepareSubmitSql( $sql );
+
+    ## TODO -- This needs some work --
+
+    my ($ns,$barcode)  = split(/\./, $id);
+    my ($attr,$reason) = $self->GetFinalAttrReason($id); 
+    my $source         = "1";
+    my $user           = "crms";
+    my $time           = $self->GetTodaysDate();
+    my $note           = "CRMS";
+
+    $self->logit( "rights: $id, $attr, $reason, $source, $user, $time, $note" );
+
+    $sql = qq{INSERT INTO rights (namespace, id, attr, reason, source, user, time, note) } .
+           qq{VALUES ($ns, $barcode, $attr, $reason, $source, $user, $time, $note)};
+
     return 1;
+}
+
+sub GetFinalAttrReason
+{
+    my $self = shift;
+    my $id   = shift;
+
+    ## order by expert so that if there is an expert review, return that one
+    my $sql = qq{SELECT attr, reason FROM $CRMSGlobals::reviewsTable WHERE id = "$id" } .
+              qq{ORDER BY expert DESC};
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );  
+
+    return ($ref->[0]->[0], $ref->[0]->[1]);
 }
 
 sub GetExpertRevItems
@@ -650,6 +689,18 @@ sub ConnectToSdrDb
     return $sdr_dbh;
 }
 
+
+sub GetCopyrightPage
+{
+    my $self = shift;
+    my $id   = shift;
+
+    ## this is a place holder for when the API can answer this easily
+
+    return "7";
+}
+
+
 sub IsGovDoc
 {
     my $self    = shift;
@@ -979,6 +1030,12 @@ sub LockItem
         return 0; 
     }
 
+    ## if not in the queue, this is the time to add it.
+    if ( ! $self->IsItemInQueue( $id ) )
+    {
+        $self->AddItemToQueue( $id, $self->GetTodaysDate() );
+    }
+
     my $sql  = qq{UPDATE $CRMSGlobals::queueTable SET locked = "$name" WHERE id = "$id"};
     my $sth  = $self->get( 'dbh' )->prepare( $sql ) or return 0;
 
@@ -1185,14 +1242,12 @@ sub ItemsReviewedByUser
     my $name  = shift;
     my $since = shift;
 
-    my $sql .= qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$name" GROUP BY id ORDER BY time DESC };
+    my $sql .= qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$name" };
 
     ## if date, restrict to just items since that date
-    if ( $since )
-    {
-        $sql = qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$name" } . 
-               qq{ AND time >= "$since" GROUP BY id ORDER BY time DESC };
-    }
+    if ( $since ) { $sql .= qq{ AND time >= "$since" }; }
+
+    $sql .= qq{ GROUP BY id ORDER BY time DESC };
 
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -1275,7 +1330,6 @@ sub GetItemReviewDetails
 
     ## if name, limit to just that users review details
     if ( $user ) { $sql .= qq{ AND user = "$user" }; }
-
 
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -1402,7 +1456,7 @@ sub GetRegDate
     my $self = shift;
     my $id   = shift;
 
-    my $sql  = qq{ SELECT DREG FROM stanford WHERE ID = "$id" };
+    my $sql  = qq{ SELECT DREG FROM $CRMSGlobals::stanfordTable WHERE ID = "$id" };
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref->[0]->[0];
@@ -1456,6 +1510,19 @@ sub GetUpdateTime
     my $sql = qq{SELECT MAX(time) FROM $CRMSGlobals::queueTable LIMIT 1};
     my @ref = $dbh->selectrow_array( $sql );
     return $ref[0] || '2000-01-01';
+}
+
+sub GetYesterdaysDate
+{
+    my $self = shift;
+    my @p = localtime( time() );
+    $p[3] = ($p[3]-1);
+    $p[4] = ($p[4]+1);
+    $p[5] = ($p[5]+1900);
+    foreach (0,1,2,3,4) { $p[$_] = sprintf("%0*d", "2", $p[$_]); }
+
+    ## DB format (YYYY-MM-DD HH:MM:SS)
+    return "$p[5]-$p[4]-$p[3] $p[2]:$p[1]:$p[0]";
 }
 
 sub GetTodaysDate
