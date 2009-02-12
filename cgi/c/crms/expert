@@ -1,0 +1,151 @@
+#!/l/local/bin/perl
+
+my $DLXSROOT;
+my $DLPS_DEV;
+BEGIN 
+{ 
+    $DLXSROOT = $ENV{'DLXSROOT'}; 
+    $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+    ## unshift ( @INC, $ENV{'DLXSROOT'} . "/crms/cgi" );
+}
+
+use strict;
+use CRMS;
+use CGI;
+
+my $crms = CRMS->new(
+    logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
+    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
+    verbose      =>   0,
+    root         =>   $DLXSROOT,
+    dev          =>   $DLPS_DEV,
+);
+
+my $user = $ENV{'REMOTE_USER'};
+
+## if not logged in, send to login page
+## if logged in, get status and send to review or other page
+if ( $user eq "" ) 
+{
+    LoginRedirect();
+    exit; 
+}
+else
+{
+    my @types = $crms->GetUserTypes( $user );
+
+    if    ( grep /2/, @types ) { MainMenu();      }
+    elsif ( grep /3/, @types ) { AdminRedirect(); }
+    else                       { NoAccessPage();  }
+    exit;
+}
+
+
+
+sub MainMenu
+{
+    my $userName = $crms->GetUserName( $user );
+
+    ## start page
+    print qq{Content-type: text/html
+
+    <html>
+      <head>
+        <title>CRMS</title>
+        <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css" />
+        <script type="text/javascript">
+        <!--
+        //-->
+        </script>
+      </head>
+    <body>\n};
+
+    my @disputedItems = $crms->GetItemsInDispute();
+
+    print qq{<h3>Hello $userName </h3>
+      <div><a href="/cgi/c/crms/home">home</a/</div>
+      <div style="width:50%; float:left"><hr /><div>Disputed items that need an expert review:<br/><blockquote>};
+ 
+    foreach my $item ( @disputedItems ) 
+    { 
+        my @itemDetails = $crms->GetItemReviewDetails( $item );
+        print qq{<a href="/cgi/c/crms/review?barcode=$item">$item</a> [ } . join("; ", @itemDetails) . qq{ ]<br/>\n}; 
+    }
+    print qq{</blockquote></div>
+      <hr />
+      <div>Enter a barcode to review:
+        <form name="review" action="/cgi/c/crms/review">
+          <input type="text" name="barcode"/>
+          <input type="submit" value="Review"> 
+        </form>
+      </div>
+      </div>
+    };
+
+    ## the end
+    print "</body></html>"; 
+}
+
+sub UrlEncode
+{
+    ## need to work on this...
+    my $in = shift;
+    $in =~ s, ,+,g;
+    return $in
+}
+
+sub fail { die $_; }
+
+sub Redirect
+{
+    my $loc      = shift;
+    my $msg      = shift;
+    my $time     = shift;
+    print qq{Content-type: text/html
+
+    <html>
+      <head>
+        <title>CRMS</title>
+        <script type="text/javascript">
+        <!--
+        function adminRedir(){
+            newURL = "https://" + window.location.host + "/cgi/c/crms/admin";
+            window.location = newURL;
+        }
+        function reviewRedir(){
+            newURL = "https://" + window.location.host + "/" + window.location.pathname;
+            window.location = newURL;
+        }
+        //-->
+        </script>
+      </head> };
+    if ( $loc eq "review" ) { print qq{<body onLoad="setTimeout('reviewRedir()', $time)">\n}; }
+    if ( $loc eq "admin" )  { print qq{<body onLoad="setTimeout('adminRedir()',  $time)">\n}; }
+
+    print qq{<p>$msg</p>};
+
+    ## the end
+    print "</body></html>";
+}
+
+sub LoginRedirect { Redirect("review", "login redirect.", 0); }
+
+sub AdminRedirect { Redirect("admin",  "admin redirect.", 0); }
+
+sub NoAccessPage 
+{ 
+    print qq{Content-type: text/html
+
+    <html>
+      <head>
+        <title>CRMS</title>
+      </head>
+      <body>
+        <p>You do no appear to have sufficient permissions to access the CRMS review system.</p>
+      </body>
+    </html>};
+}
+
+
+
+
