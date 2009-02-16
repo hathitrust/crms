@@ -42,7 +42,7 @@ print qq{Content-type: text/html
       <div>|| <a href="/cgi/c/crms/home">home</a> || 
       <a href="/cgi/c/crms/editReviews">edit reviews</a> || };
 if ( grep /1/, @types ) { print qq{<a href="/cgi/c/crms/review">review</a> || }; }
-if ( grep /2/, @types ) { print qq{<a href="/cgi/c/crms/menu">expert review</a> || }; }
+if ( grep /2/, @types ) { print qq{<a href="/cgi/c/crms/expert">expert review</a> || }; }
 if ( grep /3/, @types ) { print qq{<a href="/cgi/c/crms/admin">admin menu</a> || }; }
 
 print qq{</div></body></html>};
