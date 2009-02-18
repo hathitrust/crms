@@ -1,0 +1,22 @@
+[% INCLUDE header.tt %]
+[% checkin = cgi.param('checkin') %]
+
+[% IF checkin %]
+  [% IF crms.UnlockItem( checkin ) %]
+  [% ELSE %] <h3>ERROR checking in [% checkin %]</h3>
+  [% END  %]
+[% END %]
+
+<div>|| <a href="crms">home</a> || 
+  <a href="crms?p=editReviews">edit reviews</a> ||
+  <a href="crms?p=review">review</a> ||
+
+  [% IF crms.IsUserExpert %]
+    <a href="crms?p=expert">expert review</a> ||
+  [% END %]
+
+  [% IF crms.IsUserAdmin %]
+    <a href="crms?p=admin">admin menu</a> ||
+  [% END %]
+</div>
+[% INCLUDE footer.tt %]

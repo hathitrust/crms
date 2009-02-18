@@ -1,0 +1,29 @@
+[% IF NOT crms.IsUserExpert() %]
+  <h3>You do not have access to this page</h3>
+  [% STOP %]
+[% END %]
+
+[% INCLUDE header.tt    %]
+[% INCLUDE homeLink.tt  %]
+<hr width="50%" align="left"/>
+[% INCLUDE reviewForm.tt %]
+
+<div style="width:100%; float:left">
+  <hr width="50%" align="left"/>
+    <div>disputed items that need an expert review:</div>
+    <blockquote>
+
+      [% FOREACH item IN crms.GetItemsInDispute %]
+        <a href="crms?p=review&barcode=[% item %]">[% item %]</a> 
+        [ 
+          [% FOREACH detail IN crms.GetItemReviewDetails( item ) %]
+            [% detail %];
+          [% END %]
+        ]
+        <br/> 
+      [% END %]
+
+    </blockquote>
+  </div>
+[% INCLUDE footer.tt %]
+

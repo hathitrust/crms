@@ -1,0 +1,21 @@
+[% INCLUDE header.tt %]
+[% INCLUDE adminNav.tt  %]
+
+<hr width="25%" align="left"/>
+
+[% IF NOT crms.IsUserAdmin() %]
+  <h3>You do not have access to this page</h3>
+  [% STOP %]
+[% END %]
+
+[% barcode = cgi.param('barcode') %]
+[% user    = cgi.param('user')    %]
+
+[% IF crms.DeleteReview( barcode, user ) %]
+  <h3>Review Deleted: [% barcode %], [% user %]</h3>
+[% ELSE %]
+  <h3>There was an error with your submission ([% barcode %], [% user %]).</h3>
+[% END %]
+
+[% INCLUDE footer.tt %]
+

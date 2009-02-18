@@ -1,0 +1,30 @@
+[% IF NOT crms.IsUserAdmin() %]
+  <h3>You do not have access to this page</h3>
+  [% STOP %]
+[% END %]
+
+[% INCLUDE header.tt    %]
+[% INCLUDE adminNav.tt  %]
+
+<hr width="25%" align="left"/>
+<strong>items that are locked (click to unlock): </strong>
+
+<blockquote>
+  [% locked = crms.GetLockedItems() %]
+  [% IF locked %]
+    [% FOREACH item IN locked.keys %]
+      <div>
+       <a href="crms?p=unlockItem&id=[% item %]">[% item %]</a> 
+       ([% locked.${item}.locked %], since: 
+         [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
+      </div>
+    [% END %]
+  [% ELSE %]
+    none
+  [% END %]
+</blockquote>
+
+<hr width="25%" align="left"/>
+some other stuff...
+
+[% INCLUDE footer.tt %]

@@ -1,0 +1,14 @@
+[% IF NOT crms.IsUserAdmin() %]
+  <h3>You do not have access to this page</h3>
+  [% STOP %]
+[% END %]
+
+[% INCLUDE header.tt    %]
+[% INCLUDE adminNav.tt  %]
+
+<hr width="25%" align="left"/>
+
+[% INCLUDE editUserForm.tt %]
+
+[% INCLUDE footer.tt %]
+

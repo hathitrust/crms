@@ -1,0 +1,65 @@
+[% barcode    = cgi.param('barcode')    %]
+[% date       = cgi.param('date')       %]
+[% cDate      = cgi.param('cDate')      %]
+[% copyDate   = cgi.param('copyDate')   %]
+[% rights     = cgi.param('rights')     %]
+[% reason     = cgi.param('reason')     %]
+[% renNum     = cgi.param('renNum')     %]
+[% regDate    = cgi.param('regDate')    %]
+[% flag       = cgi.param('flag')       %]
+[% exp        = cgi.param('exp')        %]
+[% comment    = cgi.param('comment')    %]
+[% commentPre = cgi.param('commentPre') %]
+[% errors = [] %]
+
+[% IF renNum AND NOT regDate %]
+  [% regDate = crms.GetRegDate(renNum) %]
+  [% IF NOT regDate %]
+    [% error = "Failed to get the renewal date. Go back and add this manually" %]
+    [% errors.push( error ) %]
+  [% END %]
+[% END %]
+
+[% IF exp        %][% exp = "1" %][% END %]
+[% IF commentPre %][% comment = "$commentPre: $comment" %][% END %]
+
+[% IF NOT crms.ChechReviewer(user) %][% errors.push("permissions error") %][% END %]
+[% IF NOT rights %]                  [% errors.push("missing rights")    %][% END %]
+
+[% parts      = crms.GetAttrReasonFromCode(rights) %]
+[% rights     = parts.0                            %]
+[% reason     = parts.1                            %]
+[% rightsName = crms.GetRightsName(rights)         %]
+[% reasonName = crms.GetReasonName(reason)         %]
+
+<div>
+  <form name="submitReview" action="crms">
+    <input type="hidden" name="p"          value="submitReview"> 
+    <input type="hidden" name="barcode"    value="[% barcode    %]"/>
+    <input type="hidden" name="date"       value="[% date       %]"/>
+    <input type="hidden" name="cDate"      value="[% cDate      %]"/>
+    <input type="hidden" name="copyDate"   value="[% copyDate   %]"/>
+    <input type="hidden" name="rights"     value="[% rights     %]"/>
+    <input type="hidden" name="reason"     value="[% reason     %]"/>
+    <input type="hidden" name="renNum"     value="[% renNum     %]"/>
+    <input type="hidden" name="regDate"    value="[% regDate    %]"/>
+    <input type="hidden" name="flag"       value="[% flag       %]"/>
+    <input type="hidden" name="exp"        value="[% exp        %]"/>
+    <input type="hidden" name="comment"    value="[% comment    %]"/>
+    <input type="hidden" name="commentPre" value="[% commentPre %]"/>
+
+    <input type="submit" accesskey="s" value="Submit"> or go back to change
+  </form>
+</div>
+
+<table border="1">
+  <tr><td>Item:</td> <td>[% barcode %]</td><tr>
+  <tr><td>Rights/Reason:</td> <td>[% rightsName %]/[% reasonName %]</td><tr>
+  <tr><td>Renewal Number:</td> <td>[% renNum %]</td><tr>
+  <tr><td>Renewal Date:</td> <td>[% regDate %]</td><tr>
+  <tr><td>Pub Date (corrected date):</td> <td>[% date %] ([% cDate %])</td><tr>
+  <tr><td>copy Date:</td> <td>[% copyDate %]</td><tr>
+  <tr><td>Flag:</td> <td>[% flag %]</td><tr>
+  <tr><td>Final:</td> <td>[% exp %]</td><tr>
+  <tr><td>comment:</td> <td>[% comment %]</td><tr>
+</table>

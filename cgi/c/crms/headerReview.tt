@@ -1,0 +1,7 @@
+<html>
+  <head>
+    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css" />
+    <title>[% title %]</title>
+    [% INCLUDE reviewJs.tt %]
+  </head>
+  <body> 

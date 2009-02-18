@@ -1,0 +1,123 @@
+[% INCLUDE headerReview.tt %]
+
+[% expert    = 0 %]
+[% isEdit    = 0 %]
+[% inBarcode = cgi.param('barcode') %]
+[% inAdd     = cgi.param('add') %]
+
+[% IF inBarcode %]
+  [% isEdit = 1 %]
+  [% IF NOT crms.LockItem(inBarcode, user) %] 
+    <h3>One item at a time please.</h3>
+    [% STOP %]
+  [% END %]
+[% END %]
+
+[%# ## Get locked item or new one from queue ## %]
+[% IF crms.HasLockedItem(user) %]
+  [% barcode = crms.GetLockedItem( user ) %]
+[% ELSE %]
+  [% barcode = crms.GetNextItemForReview( user ) %]
+[% END %]
+
+[%# ## failed to get a barcode ## %]
+[% IF NOT barcode %] 
+  <h3>No barcode given. ([% barcode %])</h3>
+  [% STOP %]
+[% END %]
+
+[% userName   = crms.GetUserName( user )                    %]
+[% pub_date   = crms.GetPublDate( barcode )                 %]
+[% copyDate   = crms.GetCopyDate( barcode, user )           %]
+[% author     = crms.GetMarcDatafield( barcode, "100", "a") %]
+[% encAuthor  = author | url                                %]
+[% title      = crms.GetMarcDatafield( barcode, "245", "a") %]
+[% encTitle   = title  | url                                %]
+
+[% regNum     = crms.GetRegNum( barcode, user )             %]
+[% regDate    = crms.GetRegDate( regNum )                   %]
+[% crPage     = crms.GetCopyrightPage( barcode )            %]
+
+[% revComm    = crms.GetReviewComment( barcode, user )      %]
+[% commPre    = revComm.0                                   %]
+[% comm       = revComm.1                                   %]
+
+[%# links to PT, stanford DB search, or Mirlyn catalog %]
+[% authorLink = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/process?clauseMapped(author)=$encAuthor" %]
+[% titleLink  = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/process?clauseMapped(title)=$encTitle" %]
+[% searchForm = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/modify?clauseMapped(title)=$encTitle&clauseMapped(author)=$encAuthor" %]
+[% ptLink     = "https://santelli.dev.umdl.umich.edu/cgi/m/mdp/pt?skin=crms;id=$barcode;page=root;view=image;size=75;seq=$crPage;attr=1" %]
+[% catLink    = "http://mirlyn.lib.umich.edu/F?func=find-b&find_code=MDN&local_base=MIU01_PUB&request=$barcode" %]
+[% wCatLink   = "http://www.worldcat.org/search?qt=worldcat_org_bks&fq=dt%3Abks&q=$encTitle" %]
+[% uscorLink  = "http://cocatalog.loc.gov/cgi-bin/Pwebrecon.cgi?DB=local&PAGE=First&Search_Arg=$encTitle" %]
+
+  <div class="divbody">
+    <div class="divNav">
+      <div class="navtop"> 
+        <table width="100%">
+          <tr>
+            <td align="left"   valign="top"><a href="crms?checkin=[% barcode %]">home</a></td>
+            <td align="center" valign="top">Hello [% userName %]</td>
+            <td align="right"  valign="top"><a href="crms?checkin=[% barcode %]">logout</a></td>
+          </tr>
+        </table>
+        <hr />
+
+        <a href="[% titleLink %]" target="topFrame">Stanford</a>   ||
+        <a href="[% ptLink %]"    target="topFrame" accesskey="h">HathiTrust</a> ||
+        <a href="[% catLink %]"   target="topFrame" accesskey="m">Mirlyn</a>
+        <br />
+        <a href="[% wCatLink %]"  target="topFrame">World Cat</a>   ||
+        <a href="[% uscorLink %]" target="topFrame">U.S. Copyright</a><br/>
+ 
+        <hr />
+        <table width="100%">
+          <tr>
+            <td><strong>search:</strong></td>
+            <td>
+              <a href="javascript:changeFrame2('[% titleLink %]' )" accesskey="t">ti</a> ||
+              <a href="javascript:changeFrame2('[% authorLink %]')" accesskey="a">au</a> ||
+              <a href="javascript:changeFrame2('[% searchForm %]')" accesskey="q">form</a> ||
+              <a href="javascript:flipFrame2()"                     accesskey="x">[x]</a>
+            </td>
+          </tr><tr>
+            <td><strong>1/2:</strong></td>
+            <td>
+              <a href="javascript:changeFrame('[% titleLink %]')">ti</a> ||
+              <a href="javascript:changeFrame('[% authorLink %]')">au</a> ||
+              <a href="javascript:changeFrame('[% searchForm %]')">form</a> ||
+              <a href="javascript:flipFrame()"                    >[x]</a>
+            </td>
+          </tr>
+        </table>
+  
+        <hr />
+        <strong>ID:</strong> <tt>[% barcode %]</tt></br>
+        <strong>Title:</strong>  <a href="$titleLink"  target="bFrame">[% title %]</a><br/>
+        <strong>Author:</strong> <a href="$authorLink" target="bFrame">[% author %]</a><br/>
+        <strong>Pub Date:</strong> [% pub_date %] <br/>
+  
+
+        [% FOREACH RN IN crms.GetRegNums( barcode, user ) %]
+          [% stanLink = "http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$RN" %]
+          [% RD       = crms.GetRegDate( RN ) %]
+          <strong>Renewal: </strong><a href="[% stanLink %]" target="bFrame">[% RN %]</a> ([% RD %])<br/>
+        [% END %]
+
+      </div>
+      <div class="navbottom">
+        <hr/>
+        [% comment = "" %] 
+        [% IF comm or commPre %][% comment = "$commPre: $comm" %][% END %]
+
+        [% INCLUDE submitReviewForm.tt barcode = barcode, date    = pub_date, regNum   = regNum, 
+                                       regDate = regDate, comment = comment,  copyDate = copyDate,
+                                       comm    = comm,    commPre = commPre %]
+      </div>
+    </div>
+    [%# the frame (Stanford, HT, Cat...) %]
+    <div class="divFrame">
+      <iframe width="100%" height="100%" id="topFrame" name="topFrame" src="[% ptLink %]"></iframe>
+      <iframe width="100%" height="0%"   id="bFrame"   name="bFrame"   src="[% titleLink %]"></iframe>
+   </div>
+ </div>

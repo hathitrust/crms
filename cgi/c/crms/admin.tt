@@ -1,0 +1,17 @@
+[% IF NOT crms.IsUserAdmin() %]
+  <h3>You do not have access to this page</h3>
+  [% STOP %]
+[% END %]
+
+[% INCLUDE header.tt    %]
+[% INCLUDE adminNav.tt  %]
+
+<div>
+  <hr width="25%" align="left"/>
+  <a href="crms?p=adminUser">adminster user accounts</a> || 
+  <a href="crms?p=adminQueue">manage the queue</a> || 
+  <a href="crms?p=adminReviews">view all reviews</a> 
+</div>
+
+[% INCLUDE footer.tt %]
+

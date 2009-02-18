@@ -1,0 +1,63 @@
+[% INCLUDE header.tt    %]
+[% INCLUDE adminNav.tt  %]
+
+[% IF NOT crms.IsUserAdmin() %]
+  <h3>You do not have access to this page</h3>
+  [% STOP %]
+[% END %]
+
+[% id    = cgi.param('id')    %]
+[% user  = cgi.param('user')  %]
+[% since = cgi.param('since') %]
+[% order = cgi.param('order') %]
+
+<hr width="25%" align="left"/>
+<h3>reviews: </h3>
+
+<form>
+  <input type="hidden" name="p" value="adminReviews"/>
+  Restrict selection:<br/>
+  barcode: <input type="text"  name="id"    value="[% id %]"/><br/>
+  User ID: <input type="text"  name="user"  value="[% user %]"/><br/>
+  Since:   <input type="text"  name="since" value="[% since %]"/>
+           <span class="smallText">(YYYY-MM-DD HH:MM:SS)</span><br/>
+  Order:   
+  <label><input type="radio" name="order" value="id"   
+    [% order == 'id' ? 'checked="1"' : '' %]   />id</label>
+  <label><input type="radio" name="order" value="time" 
+    [% order == 'time' ? 'checked="1"' : '' %] />time</label>
+  <label><input type="radio" name="order" value="user" 
+    [% order == 'user' ? 'checked="1"' : '' %] />user</label>
+  <label><input type="radio" name="order" value="attr" 
+    [% order == 'attr' ? 'checked="1"' : '' %] />attr</label>
+  <br/>
+  <input type="submit" value="Submit"/>
+</form>
+<br/>
+
+[% reviews = crms.GetReviewsRef( order, id, user, since ) %]
+
+<table class="allReviews">
+  <th>id</th><th>time</th><th>time taken</th>
+  <th>user</th><th>attr</th><th>reason</th>
+  <th>note</th><th>reg num</th><th>expert review</th>
+  <th>publ</th><th>copy</th><th>delete (be sure, no undo)</th>
+  [% FOREACH review IN reviews %]
+    <tr>
+      <td>[% crms.LinkToPT( review.id ) %]</td>
+      <td>$review.time</td>
+      <td>$review.duration</td>
+      <td>$review.user</td>
+      <td>$review.attr</td>
+      <td>$review.reason</td>
+      <td>$review.note</td>
+      <td>[% crms.LinkToStanford( review.regNum ) %]</td>
+      <td>$review.expert</td>
+      <td>$review.cDate</td>
+      <td>$review.copyDate</td>
+      <td><a href="crms?p=deleteReview&barcode=$review.id&user=$review.user">delete this review</a></td>
+    </tr>
+  [% END %]
+</table>
+
+[% INCLUDE footer.tt %]

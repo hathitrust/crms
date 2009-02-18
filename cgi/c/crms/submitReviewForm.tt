@@ -1,0 +1,79 @@
+[% select = crms.GetAttrReasonCode(barcode, user) %]
+<form name="submitReview" action="crms">
+  <input type="hidden" name="p"        value="confirmReview"> 
+  <input type="hidden" name="barcode"  value="[% barcode %]"> 
+  <input type="hidden" name="user"     value="[% user %]"> 
+  <input type="hidden" name="date"     value="[% date %]"> 
+  <input type="hidden" name="confirm"  value="1"> 
+
+  <strong>Rights/Reason: </strong><a href="/c/crms/help.html#rights" target="_blank">?</a>
+  <br/>
+  <table>
+    <tr>
+    [% keys = {"1" => "pd/ncn", "2" => "pd/ren",  "3" => "pd/cdpp",
+               "4" => "ic/ren", "5" => "ic/cdpp", "6" => "und/nfi"} %]
+
+    [% FOREACH num IN [ 1..6 ] %]
+      [% IF num == select %]
+        <td><input type="radio" id="[% num %]" name="rights" value="[% num %]"
+          accesskey="[% num %]" checked="checked">[% keys.${num} %] ([% num %])</input></td>
+      [% ELSE %]
+        <td><input type="radio" id="[% num %]" name="rights" value="[% num %]"
+          accesskey="[% num %]">[% keys.${num} %] ([% num %])</input></td>
+      [% END %]
+      [% IF num % 2 == 0 %] </tr><tr> [% END %]
+    [% END %]
+  </table>
+  <br/>
+
+  <table>
+    <tr>
+      <td><strong>Renewal ID: </strong></td>
+      <td><input type="text" name="renNum" value="[% regNum %]" size="9"/></td>
+      <td><a href="/c/crms/help.html#renewal" target="_blank">?</a></td>
+    </tr>
+    <tr>
+      <td><strong>Renewal Date: </strong></td>
+      <td><input type="text" name="regDate" value="[% regDate %]" size="9"/></td>
+      <td><a href="/c/crms/help.html#renewal" target="_blank">?</a></td>
+    </tr>
+  </table>
+  <table>
+    <tr>
+      <td><strong>publ: </strong></td>
+      <td><input type="text" name="cDate"size="4" value="[% date %]"/><td>
+      <td><strong>copy: </strong><input type="text" name="copyDate" size="4" value="[% copyDate %]"/></td>
+      <td><a href="/c/crms/help.html#publ" target="_blank">?</a></td>
+    </tr>
+  </table>
+
+  [% IF crms.IsUserExpert(user) %]
+    <input type="checkbox" name="exp"
+      [% IF crms.IsThirdReview(barcode) %] checked="checked"[% END %]
+      >Final Determination</input>
+    <a href="/c/crms/help.html#final" target="_blank">?</a>
+    <br/>
+  [% END %]
+
+  <input type="checkbox" name="flag" accesskey="f">Flag:</input> <a href="/c/crms/help.html#flag" target="_blank">?</a>
+  <br/>
+  <strong>Comments: </string><a href="/c/crms/help.html#comment" target="_blank">?</a><br/>
+  <select name="commentPre">
+    [% pres = {"Foreign"    => "Foreign Pub",   "Missing"     => "Missing",
+               "Collection" => "Collection",    "Reprint"     => "Reprint",
+               "Series"     => "Series/Serial", "Translation" => "Translation",
+               "Misc"       => "Misc.",         ""            => "none"} %]
+
+    [% FOREACH pre IN pres.sort %]
+      [% IF pre == commPre %]
+        <option value="[% pre %]" selected="selected">[% pres.${pre} %]</option>
+      [% ELSE %]
+        <option value="[% pre %]">[% pres.${pre} %]</option>
+      [% END %]
+    [% END %]
+  </select>
+  <textarea name="comment" cols="20" rows="1">[% comm %]</textarea>
+
+  <br/><br/>
+  <input type="submit" value="Submit" accesskey="s"> 
+</form>

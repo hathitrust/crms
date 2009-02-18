@@ -1,0 +1,25 @@
+[% IF NOT crms.IsUserAdmin() %]
+  <h3>You do not have access to this page</h3>
+  [% STOP %]
+[% END %]
+
+[% INCLUDE header.tt    %]
+[% INCLUDE adminNav.tt  %]
+
+<hr width="25%" align="left"/>
+<h3>click to edit users</h3>
+
+[% users = crms.GetUserData() %]
+[% FOREACH user IN users.keys.sort %]
+  <div>
+    <a href="crms?p=adminEditUser&id=[% users.${user}.id %]">[% users.${user}.name %] 
+    ([% users.${user}.types.sort.join(", ") %])</a>
+  </div>
+[% END %]
+
+<hr width="25%" align="left"/>
+
+[% INCLUDE editUserForm.tt %]
+
+[% INCLUDE footer.tt %]
+
