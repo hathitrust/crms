@@ -8,7 +8,6 @@ package CRMS;
 use strict;
 use LWP::UserAgent;
 use XML::LibXML;
-use XML::LibXSLT;
 use POSIX qw(strftime);
 use DBI qw(:sql_types);
 
@@ -34,12 +33,13 @@ sub new
 
     $self->set( '$bc2metaUrl', q{http://mirlyn.lib.umich.edu/cgi-bin/bc2meta} );
     $self->set( '$oaiBaseUrl', q{http://mirlyn.lib.umich.edu/OAI} );
-    $self->set( 'verbose',     1);
+    $self->set( 'verbose',     $args{'verbose'});
     $self->set( 'parser',      XML::LibXML->new() );
     $self->set( 'barcodeID',   {} );
  
     $self->set( 'root',        $args{'root'} );
     $self->set( 'dev',         $args{'dev'} );
+    $self->set( 'user',        $args{'user'} );
 
     $self->set( 'dbh',         $self->ConnectToDb() );
     $self->set( 'sdr_dbh',     $self->ConnectToSdrDb() );
@@ -95,6 +95,17 @@ sub ConnectToSdrDb
     return $sdr_dbh;
 }
 
+sub PrepareSubmitSql
+{
+    my $self = shift;
+    my $sql  = shift;
+
+    my $sth = $self->get( 'dbh' )->prepare( $sql );
+    eval { $sth->execute(); };
+    if ($@) { $self->logit("sql failed ($sql): " . $sth->errstr); }
+    return 0;
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   get a list of new barcodes (mdp.123456789) since a given date
 ##              1) 008:28 not equal ‘f’
@@ -122,6 +133,21 @@ sub LoadNewItems
     ## design note: if these were in the same DB we could just INSERT
     ## into the new table, not SELECT then INSERT
     foreach my $row ( @{$ref} ) { $self->AddItemToQueue( $row->[0], $row->[1] ); }
+}
+
+## ----------------------------------------------------------------------------
+##  Function:   get the latest time from the queue
+##  Parameters: NOTHING
+##  Return:     date
+## ----------------------------------------------------------------------------
+sub GetUpdateTime
+{
+    my $self = shift;
+    my $dbh  = $self->get( 'dbh' );
+
+    my $sql = qq{SELECT MAX(time) FROM $CRMSGlobals::queueTable LIMIT 1};
+    my @ref = $dbh->selectrow_array( $sql );
+    return $ref[0] || '2000-01-01';
 }
 
 sub AddItemToQueue
@@ -169,9 +195,6 @@ sub SubmitReview
 
     ## do some sort of check for expert submissions
 
-    ## make sure this user did not already check this item
-    ## if ( ! $self->ValidateSubmition( $id, $user ) ) { $self->logit("submit check failed"); return 0; }
-
     my @fieldList = ("id", "user", "attr", "reason", "date", "cDate", "note", "regNum", "regDate");
     my @valueList = ($id,  $user,  $attr,  $reason,  $date,  $cDate,  $note,  $regNum,  $regDate);
 
@@ -213,9 +236,6 @@ sub SubmitHistReview
     if ( ! $self->CheckAttrReasonComb( $attr, $reason ) ) { $self->logit("attr/reason check failed"); return 0; }
     
     ## do some sort of check for expert submissions
-
-    ## make sure this user did not already check this item
-    if ( ! $self->ValidateSubmition( $id, $user ) ) { $self->logit("submit check failed"); return 0; }
 
     ## all good, INSERT
     my $sql = qq{INSERT INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, date, cDate, regNum, regDate, note, expertNote, hist) } .
@@ -362,6 +382,22 @@ sub GetDoubleAgree
     return 1;
 }
 
+## ----------------------------------------------------------------------------
+##  Function:   Get the oldest item, not reviewed twice, not locked
+##  Parameters: NOTHING
+##  Return:     date
+## ----------------------------------------------------------------------------
+sub GetOldestItemForReview
+{
+    my $self = shift;
+
+    my $sql  = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND } . 
+               qq{ status < 2 ORDER BY pub_date LIMIT 1 };
+
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    return $ref->[0]->[0];
+}
+
 sub RegisterExpertReview
 {
     my $self = shift;
@@ -372,7 +408,7 @@ sub RegisterExpertReview
     $self->PrepareSubmitSql( $sql );
 }
 
-sub GetReviewsHtml
+sub GetReviewsRef
 {
     my $self    = shift;
     my $order   = shift;
@@ -380,8 +416,7 @@ sub GetReviewsHtml
     my $user    = shift;
     my $since   = shift;
 
-    if ( $order eq "" )     { $order = "id"; }
-    if ( $order eq "time" ) { $order = "time DESC "; }
+    if ( ! $order || $order eq "time" ) { $order = "time DESC "; }
 
     my $sql = qq{ SELECT id, time, duration, user, attr, reason, note, regNum, expert, cDate, copyDate FROM $CRMSGlobals::reviewsTable };
 
@@ -394,43 +429,28 @@ sub GetReviewsHtml
     elsif ( $id )                      { $sql .= qq{ WHERE id = "$id" }; }
 
     $sql .= qq{ ORDER BY $order LIMIT 100 };
-
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
-    my $html = qq{<table class="allReviews">};
-    $html   .= qq{<th>id</th><th>time</th><th>time taken</th><th>user</th><th>attr</th><th>reason</th><th>note</th><th>reg num</th>
-                  <th>expert review</th><th>publ</th><th>copy</th><th>delete (be sure, no undo)</th>};
-
+    my $return = [];
     foreach my $row ( @{$ref} )
     {
-        $html .= qq{<tr>} . 
-                 qq{<td>} . $self->LinkToPT($row->[0]) . qq{</td>} . 
-                 qq{<td>$row->[1]</td>} .
-                 qq{<td>$row->[2]</td>} . 
-                 qq{<td>$row->[3]</td>} .
-                 qq{<td>} . $self->GetRightsName($row->[4]) . qq{</td>} . 
-                 qq{<td>} . $self->GetReasonName($row->[5]) . qq{</td>} .
-                 qq{<td>$row->[6]</td>} .
-                 qq{<td>} . $self->LinkToStanford($row->[7]) . qq{</td>} . 
-                 qq{<td>$row->[8]</td>} . 
-                 qq{<td>$row->[9]</td>} . 
-                 qq{<td>$row->[10]</td>} . 
-                 qq{<td>} . $self->GetDeleteLink($row->[0], $row->[2]) . qq{</td>} .
-                 qq{</tr>};
+        my $item = {
+                     id       => $row->[0],
+                     time     => $row->[1],
+                     duration => $row->[2],
+                     user     => $row->[3],
+                     attr     => $self->GetRightsName($row->[4]),
+                     reason   => $self->GetReasonName($row->[5]),
+                     note     => $row->[6],
+                     regNum   => $row->[7],
+                     expert   => $row->[8],
+                     cDate    => $row->[9],
+                     copyDate =>$row->[10]
+                   };
+        push( @{$return}, $item );
     }
 
-    $html .= qq{</table>};
-
-    return $html;
-}
-
-sub GetDeleteLink
-{
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
-
-    return  qq{<a href="/cgi/c/crms/submitReview?barcode=$id&user=$user&delete=1">delete this review</a>};
+    return $return;
 }
 
 sub LinkToStanford
@@ -469,6 +489,7 @@ sub CheckAttrReasonComb
     my $in   = shift;
 
 }
+
 sub GetAttrReasonCom
 {
     my $self = shift;
@@ -482,6 +503,19 @@ sub GetAttrReasonCom
 
     if ( $in =~ m/\d/ ) { return $codes{$in}; }
     else                { return $str{$in};   }
+}
+
+sub GetAttrReasonFromCode
+{
+    my $self = shift;
+    my $code = shift;
+
+    if    ( $code eq "1" ) { return (1,2); }
+    elsif ( $code eq "2" ) { return (1,7); }
+    elsif ( $code eq "3" ) { return (1,9); }
+    elsif ( $code eq "4" ) { return (2,7); }
+    elsif ( $code eq "5" ) { return (2,9); }
+    elsif ( $code eq "6" ) { return (5,8); }
 }
 
 sub GetReviewComment
@@ -514,23 +548,6 @@ sub GetAttrReasonCode
     return $self->GetAttrReasonCom( "$rights/$reason" );
 }
 
-sub ValidateSubmition
-{
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
-    my $dbh  = $self->get( 'dbh' );
-
-    ## if user is expert, just return 1
-    if ( $self->IsUserExpert($user) ) { return 1; }
-
-    my $sql  = qq{SELECT id FROM $CRMSGlobals::reviewsTable WHERE id = '$id' AND user = '$user'};
-    my @rows = $dbh->selectrow_array( $sql );
-    
-    if ( scalar( @rows ) ) { return 0; }
-    return 1;
-}
-
 sub ChechForId
 {
     my $self = shift;
@@ -542,8 +559,6 @@ sub ChechForId
     my @rows = $dbh->selectrow_array( $sql );
     
     return scalar( @rows );
-
-    ## maybe check the status or locked  (TODO)
 }
 
 sub ChechReviewer
@@ -573,6 +588,8 @@ sub GetUserName
     my $user = shift;
     my $dbh  = $self->get( 'dbh' );
 
+    if ( ! $user ) { $user = $self->get( "user" ); }
+
     my $sql  = qq{SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' LIMIT 1};
     my $ref  = $dbh->selectall_arrayref( $sql );
     my $name = $ref->[0]->[0];
@@ -582,12 +599,44 @@ sub GetUserName
     return "Unknown";
 }
 
+sub IsUserReviewer
+{
+    my $self = shift;
+    my $user = shift;
+
+    if ( ! $user ) { $user = $self->get( "user" ); }
+
+    my $sql  = qq{ SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' AND type = 1 };
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    if ( scalar @{$ref} ) { return 1; }
+
+    return 0;
+}
+
 sub IsUserExpert
 {
     my $self = shift;
     my $user = shift;
 
+    if ( ! $user ) { $user = $self->get( "user" ); }
+
     my $sql  = qq{ SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' AND type = 2 };
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    if ( scalar @{$ref} ) { return 1; }
+
+    return 0;
+}
+
+sub IsUserAdmin
+{
+    my $self = shift;
+    my $user = shift;
+
+    if ( ! $user ) { $user = $self->get( "user" ); }
+
+    my $sql  = qq{ SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' AND type = 3 };
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     if ( scalar @{$ref} ) { return 1; }
@@ -609,14 +658,28 @@ sub GetUserData
     my %userTypes;
     foreach my $r ( @{$ref} ) { push @{$userTypes{$r->[0]}}, $r->[2]; }
 
-    my %return;
+    my $return;
     foreach my $r ( @{$ref} )
     {
-       $return{$r->[0]} = {'name'  => $r->[1], 
-                           'types' => $userTypes{$r->[0]}};
+       $return->{$r->[0]} = {'name'  => $r->[1], 
+                             'id'    => $r->[0],
+                             'types' => $userTypes{$r->[0]}};
     }
 
-    return %return;
+    return $return;
+}
+
+sub GetUserTypes
+{
+    my $self = shift;
+    my $name = shift;
+
+    my $sql = qq{SELECT type FROM $CRMSGlobals::usersTable WHERE id = "$name"};
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    my @return;
+    foreach ( @{$ref} ) { push @return, $_->[0]; }
+    return @return;
 }
 
 sub AddUser
@@ -663,17 +726,6 @@ sub ValidateAttr
     return 0;
 }
 
-sub PrepareSubmitSql
-{
-    my $self = shift;
-    my $sql  = shift;
-
-    my $sth = $self->get( 'dbh' )->prepare( $sql );
-    eval { $sth->execute(); };
-    if ($@) { $self->logit("sql failed ($sql): " . $sth->errstr); }
-    return 0;
-}
-
 sub ValidateReason
 {
     my $self    = shift;
@@ -694,7 +746,7 @@ sub GetCopyrightPage
     my $self = shift;
     my $id   = shift;
 
-    ## this is a place holder.  The HT API work for this.
+    ## this is a place holder.  The HT API should be able to do this soon.
 
     return "7";
 }
@@ -786,82 +838,6 @@ sub GetMarcDatafield
 ##  Parameters: barcode
 ##  Return:     XML::LibXML record doc
 ## ----------------------------------------------------------------------------
-sub GetRecordMetadataOai
-{
-    my $self       = shift;
-    my $bar        = shift;
-    my $oaiBaseUrl = $self->get( 'oaiBaseUrl' );
-    my $parser     = $self->get( 'parser' );
-    
-    my $id     = $self->BarcodeToId( $bar );
-    my $format = "marc21";
-    my $record;
-
-    my $url = $oaiBaseUrl . "?verb=GetRecord&metadataPrefix=" . 
-              $format  . "&identifier=oai:" . $CRMSGLobals::oaiHost_prod . ":$id";
-
-    my $ua = LWP::UserAgent->new;
-    $ua->timeout( 1000 ); ## # of seconds
-    my $req = HTTP::Request->new( GET => $url );
-    my $res = $ua->request( $req );
-
-    if ( ! $res->is_success) 
-    { 
-        $self->logit( "Request failed: $url " . $res->message() ); 
-        return; 
-    }
-
-    my $source;
-    eval { $source = $parser->parse_string( $res->content() ); };
-    if ($@) { $self->logit( "failed to parse response:$@" ); return; }
-
-    my $errorCode = $source->findvalue( "//*[name()='error']" );
-    if ( $errorCode ne "" )
-    {
-        $self->logit( "$url \nfailed to get $format for $id: $errorCode " . $res->content() );
-        return;
-    }
-
-    ($record) = $source->findnodes( "//*[name()='record']" );
-
-    return $record;
-}
-
-sub GetRecordMetadataBc2Meta
-{
-    my $self       = shift;
-    my $barcode    = shift;
-
-    ## get from object if we have it
-    if ( $self->get( 'marcData' ) ne "" ) { return $self->get( 'marcData' ); }
-
-    my $parser = $self->get( 'parser' );
-    my $url    = $CRMSGlobals::bc2metaUrl . "?id=$barcode";;
-    my $ua     = LWP::UserAgent->new;
-
-    $ua->timeout( 1000 );
-    my $req = HTTP::Request->new( GET => $url );
-    my $res = $ua->request( $req );
-
-    if ( ! $res->is_success ) { $self->logit( "$url failed: ".$res->message() ); return; }
-
-    my $source;
-    eval { $source = $parser->parse_string( $res->content() ); };
-    if ($@) { $self->logit( "failed to parse response:$@" ); return; }
-
-    my $errorCode = $source->findvalue( "//*[name()='error']" );
-    if ( $errorCode ne "" )
-    {
-        $self->logit( "$url \nfailed to get MARC for $barcode: $errorCode " . $res->content() );
-        return;
-    }
-
-    my ($record) = $source->findnodes( "//record" );
-    $self->set( 'marcData', $record );
-
-    return $record;
-}
-
 sub GetRecordMetadata
 {
     my $self       = shift;
@@ -934,24 +910,6 @@ sub BarcodeToId
 
     $barcodeID->{$barcode} = $id;   ## put into cache
     return $id;
-}
-
-## ----------------------------------------------------------------------------
-##  Function:   get a list of user types
-##  Parameters: user name
-##  Return:     list of user types
-## ----------------------------------------------------------------------------
-sub GetUserTypes
-{
-    my $self = shift;
-    my $name = shift;
-
-    my $sql = qq{SELECT type FROM $CRMSGlobals::usersTable WHERE id = "$name"};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    my @return;
-    foreach ( @{$ref} ) { push @return, $_->[0]; }
-    return @return;
 }
 
 sub HasLockedItem
@@ -1056,6 +1014,7 @@ sub UnlockItem
 
     ## $self->EndTimer( $id, $name );
     $self->logit( "unlocking $id" );
+    return 1;
 }
 
 sub GetLockedItems
@@ -1065,9 +1024,9 @@ sub GetLockedItems
 
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
-    my %return;
-    foreach my $row (@{$ref}) { $return{$row->[0]} = $row->[1]; }
-    return %return;
+    my $return; 
+    foreach my $row (@{$ref}) { $return = { $row->[0] => {"id" => $row->[0], "locked" => $row->[1]} }; }
+    return $return;
 }
 
 sub ItemLockedSince
@@ -1153,6 +1112,8 @@ sub GetReviewerPace
     my $user = shift;
     my $date = shift;
 
+    if ( ! $user ) { $user = $self->get("user"); }
+
     if ( ! $date ) 
     {
         $date = POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time - 2629743));
@@ -1178,6 +1139,15 @@ sub GetReviewerPace
 
     if ($ave > 60) { return POSIX::strftime( "%M:%S", $ave, 0,0,0,0,0,0 ) . " minutes"; }
     else           { return "$ave seconds"; }
+}
+
+sub GetReviewerCount
+{
+    my $self = shift;
+    my $user = shift;
+    my $date = shift;
+ 
+    return scalar( $self->ItemsReviewedByUser( $user, $date ) );
 }
 
 ## ----------------------------------------------------------------------------
@@ -1236,10 +1206,12 @@ sub GetNextItemForReview
 sub ItemsReviewedByUser
 {
     my $self  = shift;
-    my $name  = shift;
+    my $user  = shift;
     my $since = shift;
 
-    my $sql .= qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$name" };
+    if ( ! $user ) { $user = $self->get("user"); }
+
+    my $sql .= qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$user" };
 
     ## if date, restrict to just items since that date
     if ( $since ) { $sql .= qq{ AND time >= "$since" }; }
@@ -1416,17 +1388,14 @@ sub GetRegNum
     my $id   = shift;
     my $user = shift;
     
-    my $sql  = qq{ SELECT regNum, user FROM $CRMSGlobals::reviewsTable WHERE id = "$id" };
+    my $sql  = qq{ SELECT regNum FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
 
     ## if user is expert review, show
     if ( ! $self->IsUserExpert($user) ) { $sql .= qq{ AND user = "$user"}; }
 
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
-    my $return = $ref->[0]->[0];
-    foreach ( @{$ref} ) { if ( $_->[1] eq $user ) { $return = $_->[0]; } }
-
-    return $return;
+    return $ref->[0]->[0];
 }
 
 sub GetRegNums
@@ -1458,56 +1427,6 @@ sub GetRegDate
     return $ref->[0]->[0];
 }
 
-sub NormalizeRenewalId
-{
-    my $self = shift;
-    my $id   = shift;
-
-    if ( $id eq "" ) { return; }
-
-    my $sql = qq{ SELECT regNum FROM $CRMSGlobals::reviewsTable WHERE id = "$id" };
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    my $reg = $ref->[0]->[0];
-
-    if ( $reg eq "" ) { return; }
-
-    my ($let, $num) = $reg =~ m/([a-z]+)([0-9]+)/i;
-
-    if ( length($let) == 2 ) { return $let . sprintf( "%010d", $num ); }
-    else                     { return $let . sprintf( "%9d",  $num ); }
-}
-
-## ----------------------------------------------------------------------------
-##  Function:   Get the oldest item, not reviewed twice, not locked
-##  Parameters: NOTHING
-##  Return:     date
-## ----------------------------------------------------------------------------
-sub GetOldestItemForReview
-{
-    my $self = shift;
-
-    my $sql  = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND } . 
-               qq{ status < 2 ORDER BY pub_date LIMIT 1 };
-
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    return $ref->[0]->[0];
-}
-
-## ----------------------------------------------------------------------------
-##  Function:   get the latest time from the queue
-##  Parameters: NOTHING
-##  Return:     date
-## ----------------------------------------------------------------------------
-sub GetUpdateTime
-{
-    my $self = shift;
-    my $dbh  = $self->get( 'dbh' );
-
-    my $sql = qq{SELECT MAX(time) FROM $CRMSGlobals::queueTable LIMIT 1};
-    my @ref = $dbh->selectrow_array( $sql );
-    return $ref[0] || '2000-01-01';
-}
-
 sub GetYesterdaysDate
 {
     my $self = shift;
@@ -1533,11 +1452,6 @@ sub GetTodaysDate
     return "$p[5]-$p[4]-$p[3] $p[2]:$p[1]:$p[0]";
 }
 
-## ----------------------------------------------------------------------------
-##  Function:   open a file 
-##  Parameters: full path to log file
-##  Return:     file handle to open file
-## ----------------------------------------------------------------------------
 sub OpenErrorLog
 {
     my $self    = shift;
@@ -1551,17 +1465,8 @@ sub OpenErrorLog
     $self->set('logFh', $fh );
 }
 
-sub CloseErrorLog
-{
-    my $self = shift;
-    close $self->get( 'logFh' );
-}
+sub CloseErrorLog { my $s = shift; close $s->get( 'logFh' ); }
 
-## ----------------------------------------------------------------------------
-##  Function:   write to the log file
-##  Parameters: STRING to log
-##  Return:     NOTHING 
-## ----------------------------------------------------------------------------
 sub logit
 {
     my $self = shift;
