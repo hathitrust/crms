@@ -7,6 +7,10 @@
 
 [% IF inBarcode %]
   [% isEdit = 1 %]
+  [% IF crms.PreviouslyReviewed(inBarcode, user) %]
+    <h3>Too late, can't edit your review for this item.</h3>
+    [% STOP %]
+  [% END %]
   [% IF NOT crms.LockItem(inBarcode, user) %] 
     <h3>One item at a time please.</h3>
     [% STOP %]
