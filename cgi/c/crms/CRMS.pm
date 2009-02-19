@@ -1011,6 +1011,9 @@ sub PreviouslyReviewed
     my $id   = shift;
     my $user = shift;
 
+    ## expert reviewers can edit any time
+    if ( $self->IsUserExpert( $user ) ) { return 0; }
+
     my $limit = $self->GetYesterdaysDate();
 
     my $sql = qq{SELECT id FROM $CRMSGlobals::reviewsTable WHERE id = "$id" } .
