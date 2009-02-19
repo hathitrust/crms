@@ -9,6 +9,7 @@
 
 <div>|| <a href="crms">home</a> || 
   <a href="crms?p=editReviews">edit reviews</a> ||
+  <a href="crms?p=userReviews">search your reviews</a> ||
   <a href="crms?p=review">review</a> ||
 
   [% IF crms.IsUserExpert %]
