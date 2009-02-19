@@ -18,15 +18,20 @@
   <div>edit your recent determinations:
     <blockquote>
  
-      [% FOREACH item IN crms.ItemsReviewedByUser() %] 
-
+      [% FOREACH item IN crms.ItemsReviewedByUser(user, yesterday) %] 
         <a href="crms?p=review&barcode=[% item %]">[% item %]</a> 
-
         [% FOREACH detail IN crms.GetItemReviewDetails( item, user ) %]
           [ [% detail %], (dur: [% crms.GetDuration( item, user ) %]) ]  <br/> 
         [% END %]
-
       [% END %]
+
+      [% FOREACH item IN crms.ItemsReviewedByUser(user, "", yesterday) %]
+        [% item %]
+        [% FOREACH detail IN crms.GetItemReviewDetails( item, user ) %]
+          [ [% detail %], (dur: [% crms.GetDuration( item, user ) %]) ]  <br/>
+        [% END %]
+      [% END %]
+
     </blockquote>
   </div>
 </div>
