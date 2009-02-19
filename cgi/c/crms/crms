@@ -1,13 +1,7 @@
 #!/l/local/bin/perl
 
-my $DLXSROOT;
-my $DLPS_DEV;
-BEGIN 
-{ 
-    $DLXSROOT = $ENV{'DLXSROOT'}; 
-    $DLPS_DEV = $ENV{'DLPS_DEV'}; 
-    ## unshift ( @INC, $ENV{'DLXSROOT'} . "/crms/cgi" );
-}
+my ($DLXSROOT, $DLPS_DEV);
+BEGIN { $DLXSROOT = $ENV{'DLXSROOT'}; $DLPS_DEV = $ENV{'DLPS_DEV'}; }
 
 use strict;
 use CGI;
@@ -18,29 +12,15 @@ use POSIX;
 my $cgi  = new CGI;
 my $user = $ENV{'REMOTE_USER'};
 
-if ($user eq "") 
-{   
-    my $url = $ENV{'HTTP_HOST'} . $ENV{'SCRIPT_NAME'};
-    print $cgi->redirect( "https://$url" );
+if ( ! $user || ! $ENV{'HTTPS'} ) 
+{
+    print $cgi->redirect( "https://$ENV{'HTTP_HOST'}$ENV{'SCRIPT_NAME'}" );
     exit;
 }
 
-my $page = $cgi->param('p');
-my $input;
-if    ( $page eq "review" )         { $input = 'review.tt';        }
-elsif ( $page eq "editReviews" )    { $input = 'editReviews.tt';   }
-elsif ( $page eq "admin" )          { $input = 'admin.tt';         }
-elsif ( $page eq "adminUser" )      { $input = 'adminUser.tt';     }
-elsif ( $page eq "adminEditUser" )  { $input = 'adminEditUser.tt'; }
-elsif ( $page eq "adminQueue" )     { $input = 'adminQueue.tt';    }
-elsif ( $page eq "adminReviews" )   { $input = 'adminReviews.tt';  }
-elsif ( $page eq "unlockItem" )     { $input = 'unlockItem.tt';    }
-elsif ( $page eq "expert" )         { $input = 'expert.tt';        }
-elsif ( $page eq "logout" )         { $input = 'logout.tt';        }
-elsif ( $page eq "confirmReview" )  { $input = 'confirmReview.tt'; }
-elsif ( $page eq "submitReview" )   { $input = 'submitReview.tt';  }
-elsif ( $page eq "deleteReview" )   { $input = 'deleteReview.tt';  }
-else                                { $input = 'home.tt';          }
+my $page  = $cgi->param('p');
+my $input = $page . ".tt";
+if ( ! -f $input ) { $input = "home.tt"; }
 
 ## config options for TT
 my $config = 
