@@ -177,6 +177,18 @@ sub IsItemInQueue
     return 0;
 }
 
+sub IsItemInReviews
+{
+    my $self = shift;
+    my $id   = shift;
+
+    my $sql  = qq{SELECT id FROM $CRMSGlobals::reviewsTable WHERE id = '$id'};
+    my $ref  = $self->get('dbh')->selectall_arrayref( $sql );
+
+    if ( scalar @{$ref} ) { return 1; }
+    return 0;
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   submit review
 ##  Parameters: id, user, attr, reason, note, stanford reg. number
@@ -273,13 +285,15 @@ sub ClearQueue
     my $self   = shift;
     my $eCount = 0;
     my $dCount = 0;
+    my $export = [];
 
     ## get items > 2, clear these  
     my $expert = $self->GetExpertRevItems();
     foreach my $row ( @{$expert} )
     {
-        #|# my $rc   = $self->QueueToRights( $id ); 
-        #|# $eCount += $rc;
+        my $id = $row->[0];
+        push( @{$export}, $id ); 
+        $eCount++;
     } 
 
     ## get items = 2 and see if they agree  
@@ -289,10 +303,12 @@ sub ClearQueue
         my $id = $row->[0];
         if ( $self->GetDoubleAgree( $id ) ) 
         { 
-            #|# my $rc   = $self->QueueToRights( $id ); 
-            #|# $dCount += $rc;
+            push( @{$export}, $id ); 
+            $dCount++;
         }
     }
+
+    $self->ExportReviews( $export );
 
     ## report back
     $self->logit( "export reviewed items removed from queue ($eCount): " . join(", ", @{$expert}) );
@@ -301,34 +317,51 @@ sub ClearQueue
     return ("twice reviewed removed: $dCount, expert reviewed reemoved: $eCount");
 }
 
-sub QueueToRights
+## ----------------------------------------------------------------------------
+##  Function:   create a tab file of reviews to be loaded into the rights table
+##              barcode | attr | reason | user | null  
+##              mdp.123 | ic   | ren    | crms | null
+##  Parameters: NONE
+##  Return:     1 || 0
+## ----------------------------------------------------------------------------
+sub ExportReviews
+{
+    my $self = shift;
+    my $list = shift;
+
+    my $user = "crms";
+    my $time = $self->GetTodaysDate();
+ 
+    my $out = $self->get('root') . "prep/c/crms/out.rights";
+    ## open my $fh, ">", $out;
+
+    foreach my $barcode ( @{$list} )
+    {
+        my ($attr,$reason) = $self->GetFinalAttrReason($barcode); 
+        if ( ! $attr || ! $reason )
+        {
+            $self->logit( "failed to get rights for $barcode on export" );
+        }
+        else 
+        {
+            print "$barcode\t$attr\t$reason\tcrms\tnull\n";
+            #|# $self->RemoveFromQueue( $barcode );
+        }
+    }
+
+    ## close $fh;
+    return 1;
+}
+
+sub RemoveFromQueue
 {
     my $self = shift;
     my $id   = shift;
 
-    if ( ! $id ) { return 0; }
+    $self->logit( "remove $id from queue" );
 
-    my $yest = $self->GetYesterdaysDate();
-    my $sql  = qq{SELECT $id FROM $CRMSGlobals::queueTable WHERE id = "$id" AND time < "$yest"};
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    if ( ! @{$ref} ) { return 0; } ## too recently reviewed
-
-    $sql = qq{DELETE FROM $CRMSGlobals::queueTable WHERE id = "$id" AND time < "$yest"};
+    my $sql  = qq{ DELETE FROM $CRMSGlobals::queueTable WHERE id = "$id" };
     $self->PrepareSubmitSql( $sql );
-
-    ## TODO -- This needs some work --
-
-    my ($ns,$barcode)  = split(/\./, $id);
-    my ($attr,$reason) = $self->GetFinalAttrReason($id); 
-    my $source         = "1";
-    my $user           = "crms";
-    my $time           = $self->GetTodaysDate();
-    my $note           = "CRMS";
-
-    $self->logit( "rights: $id, $attr, $reason, $source, $user, $time, $note" );
-
-    $sql = qq{INSERT INTO rights (namespace, id, attr, reason, source, user, time, note) } .
-           qq{VALUES ($ns, $barcode, $attr, $reason, $source, $user, $time, $note)};
 
     return 1;
 }
@@ -343,7 +376,14 @@ sub GetFinalAttrReason
               qq{ORDER BY expert DESC};
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );  
 
-    return ($ref->[0]->[0], $ref->[0]->[1]);
+    if ( ! $ref->[0]->[0] )
+    {
+        $self->logit( "$id not found in review table" );
+    }
+
+    my $attr   = $self->GetRightsName( $ref->[0]->[0] );
+    my $reason = $self->GetReasonName( $ref->[0]->[1] );
+    return ($attr, $reason);
 }
 
 sub GetExpertRevItems
@@ -1208,13 +1248,15 @@ sub ItemsReviewedByUser
     my $self  = shift;
     my $user  = shift;
     my $since = shift;
+    my $until = shift;
 
     if ( ! $user ) { $user = $self->get("user"); }
 
     my $sql .= qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$user" };
 
     ## if date, restrict to just items since that date
-    if ( $since ) { $sql .= qq{ AND time >= "$since" }; }
+    if    ( $since ) { $sql .= qq{ AND time >= "$since" }; }
+    elsif ( $until ) { $sql .= qq{ AND time <  "$until" }; }
 
     $sql .= qq{ GROUP BY id ORDER BY time DESC };
 
