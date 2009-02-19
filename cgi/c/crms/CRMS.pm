@@ -1275,10 +1275,8 @@ sub ItemsReviewedByUser
     my $sql .= qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$user" };
 
     ## if date, restrict to just items since that date
-    if    ( $since ) { $sql .= qq{ AND time >= "$since" }; }
-    elsif ( $until ) { $sql .= qq{ AND time <  "$until" }; }
-
-    $sql .= qq{ GROUP BY id ORDER BY time DESC };
+    if    ( $since ) { $sql .= qq{ AND time >= "$since" GROUP BY id ORDER BY time DESC }; }
+    elsif ( $until ) { $sql .= qq{ AND time <  "$until" GROUP BY id ORDER BY time DESC LIMIT 20 }; }
 
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
