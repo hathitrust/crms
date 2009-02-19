@@ -1005,6 +1005,23 @@ sub IsLockedForUser
     return 0;
 }
 
+sub PreviouslyReviewed
+{
+    my $self = shift;
+    my $id   = shift;
+    my $user = shift;
+
+    my $limit = $self->GetYesterdaysDate();
+
+    my $sql = qq{SELECT id FROM $CRMSGlobals::reviewsTable WHERE id = "$id" } .
+              qq{ AND user = "$user" AND time < "$limit" };
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    if ( scalar @{$ref} ) { return 1; }
+  
+    return 0;
+}
+
 sub LockItem
 {
     my $self = shift;
