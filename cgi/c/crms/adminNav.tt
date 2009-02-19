@@ -1,10 +1,13 @@
 <div>
   <a href="crms">home</a> > <a href="crms?p=admin">admin</a>
 
-  [% IF    cgi.param("p") == "adminUser"     %] > adminster user accounts
-  [% ELSIF cgi.param("p") == "adminQueue"    %] > manage the queue
-  [% ELSIF cgi.param("p") == "adminReview"   %] > view all reviews
-  [% ELSIF cgi.param("p") == "adminEditUser" %] > <a href="?p=adminUser">adminster user accounts</a> 
+  [% page = cgi.param("p") %]
+
+  [% IF    page == "adminUser"     %] > adminster user accounts
+  [% ELSIF page == "adminQueue"    %] > manage the queue
+  [% ELSIF page == "adminReview"   %] > view all reviews
+  [% ELSIF page == "adminUserRate" %] > view user review rates
+  [% ELSIF page == "adminEditUser" %] > <a href="?p=adminUser">adminster user accounts</a> 
                                                 > edit user
   [% END %]
 
