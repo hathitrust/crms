@@ -8,9 +8,11 @@
 
 <div>
   <hr width="25%" align="left"/>
-  <a href="crms?p=adminUser">adminster user accounts</a> || 
-  <a href="crms?p=adminQueue">manage the queue</a> || 
-  <a href="crms?p=adminReviews">view all reviews</a> 
+  || <a href="crms?p=adminUser">adminster user accounts</a>
+  || <a href="crms?p=adminQueue">manage the queue</a> 
+  || <a href="crms?p=adminReviews">view all reviews</a>
+  || <a href="crms?p=adminUserRate">view user review rates</a> 
+  ||
 </div>
 
 [% INCLUDE footer.tt %]

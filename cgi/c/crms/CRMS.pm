@@ -1137,8 +1137,8 @@ sub GetReviewerPace
     my $ave = int( ($totalTime / $count) + .5 );
     if ($self->get('verbose')) { $self->logit( "$totalTime / $count : $ave" ); }
 
-    if ($ave > 60) { return POSIX::strftime( "%M:%S", $ave, 0,0,0,0,0,0 ) . " minutes"; }
-    else           { return "$ave seconds"; }
+    if ($ave > 60) { return POSIX::strftime( "%M:%S", $ave, 0,0,0,0,0,0 ) . " min"; }
+    else           { return "$ave sec"; }
 }
 
 sub GetReviewerCount
