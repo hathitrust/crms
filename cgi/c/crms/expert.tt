@@ -14,7 +14,7 @@
     <blockquote>
 
       [% FOREACH item IN crms.GetItemsInDispute %]
-        <a href="crms?p=review&barcode=[% item %]">[% item %]</a> 
+        <a href="crms?p=review&barcode=[% item %]">[% crms.GetMarcDatafield( item, "245", "a") %]</a> 
         [ 
           [% FOREACH detail IN crms.GetItemReviewDetails( item ) %]
             [% detail %];

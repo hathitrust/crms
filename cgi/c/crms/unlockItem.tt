@@ -3,9 +3,9 @@
 
 <hr width="25%" align="left"/>
 
-[% id = cgi.param('id')   %]
-[% IF crms.UnlockItem(id) %]  <h3>[% id %] has been unlocked.</h3>
-[% ELSE %]                    <h3>ERROR unlocking [% id %]</h3>     
+[% id = cgi.param('id')         %]
+[% IF crms.UnlockItem(id, user) %]  <h3>[% id %] has been unlocked.</h3>
+[% ELSE %]                          <h3>ERROR unlocking [% id %]</h3>     
 [% END  %]
 
 [% INCLUDE footer.tt %]

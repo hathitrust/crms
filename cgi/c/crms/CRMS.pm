@@ -103,7 +103,7 @@ sub PrepareSubmitSql
     my $sth = $self->get( 'dbh' )->prepare( $sql );
     eval { $sth->execute(); };
     if ($@) { $self->logit("sql failed ($sql): " . $sth->errstr); }
-    return 0;
+    return 1;
 }
 
 ## ----------------------------------------------------------------------------
@@ -223,7 +223,7 @@ sub SubmitReview
     if ( $exp ) { $self->RegisterExpertReview( $id ); }
     else        { $self->IncrementStatus( $id );      }
 
-    $self->UnlockItem( $id );
+    $self->UnlockItem( $id, $user );
     $self->EndTimer( $id, $user );
 
     return 1;
@@ -280,9 +280,10 @@ sub DeleteReview
     return 1;
 }
 
-sub ClearQueue
+sub ClearQueueAndExport
 {
     my $self   = shift;
+
     my $eCount = 0;
     my $dCount = 0;
     my $export = [];
@@ -331,9 +332,9 @@ sub ExportReviews
 
     my $user = "crms";
     my $time = $self->GetTodaysDate();
- 
-    my $out = $self->get('root') . "prep/c/crms/out.rights";
-    ## open my $fh, ">", $out;
+    my $fh   = $self->GetExportFh();
+    my $user = "crms";
+    my $src  = "null";
 
     foreach my $barcode ( @{$list} )
     {
@@ -341,16 +342,32 @@ sub ExportReviews
         if ( ! $attr || ! $reason )
         {
             $self->logit( "failed to get rights for $barcode on export" );
+            next;
         }
-        else 
-        {
-            print "$barcode\t$attr\t$reason\tcrms\tnull\n";
-            #|# $self->RemoveFromQueue( $barcode );
-        }
+        print $fh "$barcode\t$attr\t$reason\t$user\t$src\n";
     }
+    close $fh;
 
-    ## close $fh;
+    ## now remove these from the queue
+    ## foreach ( @{$list} ) { $self->RemoveFromQueue( $_ ); }
+
     return 1;
+}
+
+sub GetExportFh
+{
+    my $self = shift;
+    my $date = $self->GetTodaysDate();
+    $date    =~ s/:/_/g;
+    $date    =~ s/ /_/g;
+ 
+    my $out  = $self->get('root') . "/prep/c/crms/crms_" . $date . ".rights";
+
+    if ( -f $out ) { die "file already exists: $out \n"; }
+
+    open ( my $fh, ">", $out ) || die "failed to open exported file ($out): $! \n";
+
+    return $fh;
 }
 
 sub RemoveFromQueue
@@ -360,7 +377,7 @@ sub RemoveFromQueue
 
     $self->logit( "remove $id from queue" );
 
-    my $sql  = qq{ DELETE FROM $CRMSGlobals::queueTable WHERE id = "$id" };
+    my $sql = qq{ DELETE FROM $CRMSGlobals::queueTable WHERE id = "$id" };
     $self->PrepareSubmitSql( $sql );
 
     return 1;
@@ -870,7 +887,11 @@ sub GetMarcDatafield
     my $xpath   = qq{//*[local-name()='datafield' and \@tag='$field']} .
                    qq{/*[local-name()='subfield'  and \@code='$code']};
 
-    return $record->findvalue( $xpath );
+    my $data;
+    eval{ $data = $record->findvalue( $xpath ); };
+    if ($@) { $self->logit( "failed to parse metadata: $@" ); }
+    
+    return $data
 }
 
 ## ----------------------------------------------------------------------------
@@ -889,13 +910,14 @@ sub GetRecordMetadata
     my ($ns,$bar)  = split(/\./, $barcode);
 
     ## get from object if we have it
-    if ( $self->get( 'marcData' ) ne "" ) { return $self->get( 'marcData' ); }
+    if ( $self->get( $bar ) ne "" ) { return $self->get( $bar ); }
 
     ## my $sysId = $slef->BarcodeToId( $barcode );
     ## my $url   = "http://mirlyn.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
     my $url    = "http://mirlyn.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
     my $ua     = LWP::UserAgent->new;
 
+    if ($self->get("verbose")) { $self->logit( "GET: $url" ); }
     $ua->timeout( 1000 );
     my $req = HTTP::Request->new( GET => $url );
     my $res = $ua->request( $req );
@@ -914,7 +936,7 @@ sub GetRecordMetadata
     }
 
     my ($record) = $source->findnodes( "//record" );
-    $self->set( 'marcData', $record );
+    $self->set( $bar, $record );
 
     return $record;
 }
@@ -1052,9 +1074,7 @@ sub LockItem
     }
 
     my $sql  = qq{UPDATE $CRMSGlobals::queueTable SET locked = "$name" WHERE id = "$id"};
-    my $sth  = $self->get( 'dbh' )->prepare( $sql ) or return 0;
-
-    $sth->execute or return 0;
+    if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
 
     $self->StartTimer( $id, $name );
     return 1;
@@ -1064,15 +1084,14 @@ sub UnlockItem
 {
     my $self = shift;
     my $id   = shift;
+    my $user = shift;
 
     if ( ! $self->IsLocked( $id ) ) { return 0; }
 
     my $sql  = qq{UPDATE $CRMSGlobals::queueTable SET locked = NULL  WHERE id = "$id"};
-    my $sth  = $self->get( 'dbh' )->prepare( $sql ) or return 0;
+    if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
 
-    $sth->execute or return 0;
-
-    ## $self->EndTimer( $id, $name );
+    $self->RemoveFromTimer( $id, $user );
     $self->logit( "unlocking $id" );
     return 1;
 }
@@ -1084,8 +1103,14 @@ sub GetLockedItems
 
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
-    my $return; 
-    foreach my $row (@{$ref}) { $return = { $row->[0] => {"id" => $row->[0], "locked" => $row->[1]} }; }
+    my $return = {}; 
+    foreach my $row (@{$ref}) 
+    { 
+        my $id = $row->[0];
+        my $lo = $row->[1];
+        $return->{$id} = {"id" => $id, "locked" => $lo}; 
+    }
+    $self->logit( join(", ", keys %{$return}) );
     return $return;
 }
 
@@ -1109,9 +1134,7 @@ sub StartTimer
     my $user = shift;    
     
     my $sql  = qq{ REPLACE INTO timer SET start_time = NOW(), id = "$id", user = "$user" };
-    my $sth  = $self->get( 'dbh' )->prepare( $sql ) or return 0;
-
-    $sth->execute or return 0;
+    if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
 
     $self->logit( "start timer for $id, $user" );
 }
@@ -1123,14 +1146,25 @@ sub EndTimer
     my $user = shift;    
 
     my $sql  = qq{ UPDATE timer SET end_time = NOW() WHERE id = "$id" and user = "$user" };
-    my $sth  = $self->get( 'dbh' )->prepare( $sql ) or return 0;
+    if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
 
-    $sth->execute or return 0;
-
-    ## OK, add duration to reviews table
+    ## add duration to reviews table
     $self->SetDuration( $id, $user );
-
+    $self->RemoveFromTimer( $id, $user );
     $self->logit( "end timer for $id, $user" );
+}
+
+sub RemoveFromTimer
+{
+    my $self = shift;
+    my $id   = shift;
+    my $user = shift;
+
+    ## clear entry in table
+    my $sql = qq{ DELETE FROM timer WHERE id = "$id" and user = "$user" };
+    $self->PrepareSubmitSql( $sql );
+
+    return 1;
 }
 
 sub GetDuration

@@ -2,7 +2,7 @@
 [% checkin = cgi.param('checkin') %]
 
 [% IF checkin %]
-  [% IF crms.UnlockItem( checkin ) %]
+  [% IF crms.UnlockItem( checkin, user ) %]
   [% ELSE %] <h3>ERROR checking in [% checkin %]</h3>
   [% END  %]
 [% END %]
