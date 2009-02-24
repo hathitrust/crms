@@ -894,6 +894,28 @@ sub GetMarcDatafield
     return $data
 }
 
+sub GetEncTitle
+{
+    my $self = shift;
+    my $bar  = shift;
+
+    my $ti = $self->GetMarcDatafield( $bar, "245", "a");
+
+    $ti =~ s,\',\\\',g;
+    return $ti;
+}
+
+sub GetEncAuthor
+{
+    my $self = shift;
+    my $bar  = shift;
+
+    my $au = $self->GetMarcDatafield( $bar, "100", "a");
+
+    $au =~ s,\',\\\',g;
+    return $au;
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   get the metadata record (MARC21)
 ##  Parameters: barcode

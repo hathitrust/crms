@@ -34,9 +34,9 @@
 [% pub_date   = crms.GetPublDate( barcode )                 %]
 [% copyDate   = crms.GetCopyDate( barcode, user )           %]
 [% author     = crms.GetMarcDatafield( barcode, "100", "a") %]
-[% encAuthor  = author | url                                %]
+[% encAuthor  = crms.GetEncAuthor( barcode ) | url          %]
 [% title      = crms.GetMarcDatafield( barcode, "245", "a") %]
-[% encTitle   = title  | url                                %]
+[% encTitle   = crms.GetEncTitle( barcode ) | url           %]
 
 [% regNum     = crms.GetRegNum( barcode, user )             %]
 [% regDate    = crms.GetRegDate( regNum )                   %]
