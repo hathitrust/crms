@@ -8,42 +8,66 @@
 
   <strong>Rights/Reason: </strong><a href="/c/crms/help.html#rights" target="_blank">?</a>
   <br/>
-  <table>
-    <tr>
     [% keys = {"1" => "pd/ncn", "2" => "pd/ren",  "3" => "pd/cdpp",
                "4" => "ic/ren", "5" => "ic/cdpp", "6" => "und/nfi"} %]
 
-    [% FOREACH num IN [ 1..6 ] %]
-      [% IF num == select %]
-        <td><input type="radio" id="[% num %]" name="rights" value="[% num %]"
-          accesskey="[% num %]" checked="checked">[% keys.${num} %] ([% num %])</input></td>
-      [% ELSE %]
-        <td><input type="radio" id="[% num %]" name="rights" value="[% num %]"
-          accesskey="[% num %]">[% keys.${num} %] ([% num %])</input></td>
-      [% END %]
-      [% IF num % 2 == 0 %] </tr><tr> [% END %]
-    [% END %]
+  <table>
+    <tr>
+      <td>
+        <input type="radio" id="1" name="rights" value="1" accesskey="1"
+          [% IF select == "1" %] checked="checked"[% END %]
+          >[% keys.${"1"} %] (1)</input></td>
+      </td>
+      <td>
+        <input type="radio" id="4" name="rights" value="4" accesskey="4"
+          [% IF select == "4" %] checked="checked"[% END %]
+          >[% keys.${"4"} %] (4)</input></td>
+      </td>
+    </tr><tr>
+      <td>
+        <input type="radio" id="2" name="rights" value="2" accesskey="2"
+          [% IF select == "2" %] checked="checked"[% END %]
+          >[% keys.${"2"} %] (2)</input></td>
+      </td>
+      <td>
+        <input type="radio" id="5" name="rights" value="5" accesskey="5"
+          [% IF select == "5" %] checked="checked"[% END %]
+          >[% keys.${"5"} %] (5)</input></td>
+      </td>
+    </tr><tr>
+      <td>
+        <input type="radio" id="3" name="rights" value="3" accesskey="3"
+          [% IF select == "3" %] checked="checked"[% END %]
+          >[% keys.${"3"} %] (3)</input></td>
+      </td>
+      <td>
+        <input type="radio" id="6" name="rights" value="6" accesskey="6"
+          [% IF select == "6" %] checked="checked"[% END %]
+          >[% keys.${"6"} %] (6)</input></td>
+      </td>
+    </tr>
   </table>
   <br/>
 
   <table>
+    <tr>
+      <td><strong>Renewal Date: </strong></td>
+      <td><input type="text" name="regDate" value="[% regDate %]" size="9"/></td>
+      <td><a href="/c/crms/help.html#renewal" target="_blank">?</a></td>
+    </tr>
     <tr>
       <td><strong>Renewal ID: </strong></td>
       <td><input type="text" name="renNum" value="[% regNum %]" size="9"/></td>
       <td><a href="/c/crms/help.html#renewal" target="_blank">?</a></td>
     </tr>
     <tr>
-      <td><strong>Renewal Date: </strong></td>
-      <td><input type="text" name="regDate" value="[% regDate %]" size="9"/></td>
-      <td><a href="/c/crms/help.html#renewal" target="_blank">?</a></td>
-    </tr>
-  </table>
-  <table>
-    <tr>
+<!--  
       <td><strong>publ: </strong></td>
       <td><input type="text" name="cDate"size="4" value="[% date %]"/><td>
-      <td><strong>copy: </strong><input type="text" name="copyDate" size="4" value="[% copyDate %]"/></td>
-      <td><a href="/c/crms/help.html#publ" target="_blank">?</a></td>
+-->
+      <td><strong>Copyright: </strong></td>
+      <td><input type="text" name="copyDate" size="4" value="[% copyDate %]"/>
+        <a href="/c/crms/help.html#publ" target="_blank">?</a></td>
     </tr>
   </table>
 
@@ -55,8 +79,11 @@
     <br/>
   [% END %]
 
+<!--
   <input type="checkbox" name="flag" accesskey="f">Flag:</input> <a href="/c/crms/help.html#flag" target="_blank">?</a>
+-->
   <br/>
+
   <strong>Comments: </string><a href="/c/crms/help.html#comment" target="_blank">?</a><br/>
   <select name="commentPre">
     [% pres = {"Foreign"    => "Foreign Pub",   "Missing"     => "Missing",

@@ -1,5 +1,5 @@
 [% INCLUDE header.tt    %]
-[% INCLUDE adminNav.tt  %]
+[% INCLUDE homeLink.tt  %]
 
 [% id    = cgi.param('id')    %]
 [% since = cgi.param('since') %]

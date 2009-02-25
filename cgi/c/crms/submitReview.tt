@@ -12,9 +12,10 @@
 [% exp        = cgi.param('exp')        %]
 [% comment    = cgi.param('comment')    %]
 [% commentPre = cgi.param('commentPre') %]
+[% done       = cgi.param('done')       %]
 
 [% IF crms.SubmitReview( barcode, user, rights, reason, date, cDate, copyDate, comment, renNum, exp, regDate) %]
-  [% IF crms.IsUserExpert() %]
+  [% IF done %]
     <body onLoad="setTimeout('redirHome()', 2000)">
       <p>Thanks. Going Home...</p>
     </body>

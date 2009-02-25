@@ -8,9 +8,9 @@
 [% END %]
 
 <div>|| <a href="crms">home</a> || 
+  <a href="crms?p=review">review</a> ||
   <a href="crms?p=editReviews">edit reviews</a> ||
   <a href="crms?p=userReviews">search your reviews</a> ||
-  <a href="crms?p=review">review</a> ||
 
   [% IF crms.IsUserExpert %]
     <a href="crms?p=expert">expert review</a> ||
@@ -20,4 +20,24 @@
     <a href="crms?p=admin">admin menu</a> ||
   [% END %]
 </div>
+
+<div>
+  <blockquote>
+    [% locked = crms.GetLockedItems() %]
+    [% IF locked %]
+      [% FOREACH item IN locked.keys %]
+        [% IF locked.${item}.locked == user %]
+          <strong>locked:</strong>
+          [% crms.GetMarcDatafield( item, "245", "a") %]
+           (since: [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
+           [ <a href="crms?p=crms&checkin=[% item %]">unlock item</a> ]
+        [% END %]
+      [% END %]
+    [% ELSE %]
+      none
+    [% END %]
+  </blockquote>
+
+</div>
+
 [% INCLUDE footer.tt %]

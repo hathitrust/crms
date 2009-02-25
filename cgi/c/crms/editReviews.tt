@@ -17,21 +17,27 @@
 
   <div>edit your recent determinations:
     <blockquote>
- 
+      <table>
       [% FOREACH item IN crms.ItemsReviewedByUser(user, yesterday) %] 
-        <a href="crms?p=review&barcode=[% item %]">[% item %]</a>
+        <tr><td>
+        <a href="crms?p=review&barcode=[% item %]">[% crms.GetMarcDatafield( item, "245", "a") %]</a>
         [% FOREACH detail IN crms.GetItemReviewDetails( item, user ) %]
+        </td><td>
           [ [% detail %], (dur: [% crms.GetDuration( item, user ) %]) ]  <br/> 
         [% END %]
+        </td></tr>
       [% END %]
 
       [% FOREACH item IN crms.ItemsReviewedByUser(user, "", yesterday) %]
-        [% item %] 
-        [% FOREACH detail IN crms.GetItemReviewDetails( item, user ) %]
-          [ [% detail %], (dur: [% crms.GetDuration( item, user ) %]) ]  <br/>
-        [% END %]
+        <tr><td>
+          [% item %]
+        </td><td> 
+          [% FOREACH detail IN crms.GetItemReviewDetails( item, user ) %]
+            [ [% detail %], (dur: [% crms.GetDuration( item, user ) %]) ]  <br/>
+          [% END %]
+        </td></tr>
       [% END %]
-
+      </table>
     </blockquote>
   </div>
 </div>

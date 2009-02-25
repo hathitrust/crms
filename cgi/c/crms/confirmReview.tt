@@ -49,6 +49,8 @@
     <input type="hidden" name="commentPre" value="[% commentPre %]"/>
 
     <input type="submit" accesskey="s" value="Submit"> or go back to change
+    <br/>
+    <input type="checkbox" name="done">finished reviewing</inut>
   </form>
 </div>
 
@@ -57,7 +59,9 @@
   <tr><td>Rights/Reason:</td> <td>[% rightsName %]/[% reasonName %]</td><tr>
   <tr><td>Renewal Number:</td> <td>[% renNum %]</td><tr>
   <tr><td>Renewal Date:</td> <td>[% regDate %]</td><tr>
+<!-- 
   <tr><td>Pub Date (corrected date):</td> <td>[% date %] ([% cDate %])</td><tr>
+-->
   <tr><td>copy Date:</td> <td>[% copyDate %]</td><tr>
   <tr><td>Flag:</td> <td>[% flag %]</td><tr>
   <tr><td>Final:</td> <td>[% exp %]</td><tr>
