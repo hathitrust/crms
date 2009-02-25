@@ -19,7 +19,7 @@
     <blockquote>
  
       [% FOREACH item IN crms.ItemsReviewedByUser(user, yesterday) %] 
-        <a href="crms?p=review&barcode=[% item %]">[% crms.GetMarcDatafield( item, "245", "a") %]</a> ($item) 
+        <a href="crms?p=review&barcode=[% item %]">[% item %]</a>
         [% FOREACH detail IN crms.GetItemReviewDetails( item, user ) %]
           [ [% detail %], (dur: [% crms.GetDuration( item, user ) %]) ]  <br/> 
         [% END %]

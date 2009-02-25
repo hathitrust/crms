@@ -50,7 +50,7 @@
 [% authorLink = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/process?clauseMapped(author)=$encAuthor" %]
 [% titleLink  = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/process?clauseMapped(title)=$encTitle" %]
 [% searchForm = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/modify?clauseMapped(title)=$encTitle&clauseMapped(author)=$encAuthor" %]
-[% ptLink     = "https://santelli.dev.umdl.umich.edu/cgi/m/mdp/pt?skin=crms;id=$barcode;page=root;view=image;size=75;seq=$crPage;attr=1" %]
+[% ptLink     = "/cgi/m/mdp/pt?skin=crms;id=$barcode;page=root;view=image;size=75;seq=$crPage;attr=1" %]
 [% catLink    = "http://mirlyn.lib.umich.edu/F?func=find-b&find_code=MDN&local_base=MIU01_PUB&request=$barcode" %]
 [% wCatLink   = "http://www.worldcat.org/search?qt=worldcat_org_bks&fq=dt%3Abks&q=$encTitle" %]
 [% uscorLink  = "http://cocatalog.loc.gov/cgi-bin/Pwebrecon.cgi?DB=local&PAGE=First&Search_Arg=$encTitle" %]
