@@ -223,8 +223,8 @@ sub SubmitReview
     if ( $exp ) { $self->RegisterExpertReview( $id ); }
     else        { $self->IncrementStatus( $id );      }
 
-    $self->UnlockItem( $id, $user );
     $self->EndTimer( $id, $user );
+    $self->UnlockItem( $id, $user );
 
     return 1;
 }
@@ -243,8 +243,8 @@ sub SubmitHistReview
     $attr   = $self->GetRightsNum( $attr );
     $reason = $self->GetReasonNum( $reason );
 
-    if ( ! $self->ValidateAttr( $attr ) )            { $self->logit("attr check failed");        return 0; }
-    if ( ! $self->ValidateReason( $reason ) )        { $self->logit("reason check failed");      return 0; }
+    if ( ! $self->ValidateAttr( $attr ) )                 { $self->logit("attr check failed");        return 0; }
+    if ( ! $self->ValidateReason( $reason ) )             { $self->logit("reason check failed");      return 0; }
     if ( ! $self->CheckAttrReasonComb( $attr, $reason ) ) { $self->logit("attr/reason check failed"); return 0; }
     
     ## do some sort of check for expert submissions
@@ -526,7 +526,7 @@ sub LinkToPT
     my $id   = shift;
     
     ## my $url  = 'http://babel.hathitrust.org/cgi/pt?attr=1&id=';
-    my $url  = 'https://santelli.dev.umdl.umich.edu/cgi/m/mdp/pt?skin=crms;attr=1;id=';
+    my $url  = '/cgi/m/mdp/pt?skin=crms;attr=1;id=';
 
     return qq{<a href="$url$id">$id</a>};
 }
@@ -1172,7 +1172,6 @@ sub EndTimer
 
     ## add duration to reviews table
     $self->SetDuration( $id, $user );
-    $self->RemoveFromTimer( $id, $user );
     $self->logit( "end timer for $id, $user" );
 }
 
@@ -1207,7 +1206,6 @@ sub SetDuration
     my $id   = shift;
     my $user = shift;
 
-
     my $sql = qq{ SELECT TIMEDIFF((SELECT end_time   FROM timer where id = "$id" and user = "$user"), 
                                   (SELECT start_time FROM timer where id = "$id" and user = "$user")) };
 
@@ -1220,6 +1218,7 @@ sub SetDuration
     $sql = qq{ UPDATE $CRMSGlobals::reviewsTable SET duration = "$dur" WHERE user = "$user" AND id = "$id" };
 
     $self->PrepareSubmitSql( $sql );
+    $self->RemoveFromTimer( $id, $user );
 }
 
 sub GetReviewerPace
