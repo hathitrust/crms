@@ -901,7 +901,7 @@ sub GetEncTitle
 
     my $ti = $self->GetMarcDatafield( $bar, "245", "a");
 
-    $ti =~ s,\',\\\',g;
+    $ti =~ s,\',\\\',g; ## escape '
     return $ti;
 }
 
@@ -912,7 +912,7 @@ sub GetEncAuthor
 
     my $au = $self->GetMarcDatafield( $bar, "100", "a");
 
-    $au =~ s,\',\\\',g;
+    $au =~ s,\',\\\',g; ## escape '
     return $au;
 }
 
