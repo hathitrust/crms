@@ -41,7 +41,7 @@
   <th>id</th><th>time</th><th>time taken</th>
   <th>user</th><th>attr</th><th>reason</th>
   <th>note</th><th>reg num</th><th>expert review</th>
-  <th>publ</th><th>copy</th><th>delete (be sure, no undo)</th>
+  <th>copyright date</th><th>delete (be sure, no undo)</th>
   [% FOREACH review IN reviews %]
     <tr>
       <td>[% crms.LinkToPT( review.id ) %]</td>
@@ -53,7 +53,6 @@
       <td>$review.note</td>
       <td>[% crms.LinkToStanford( review.regNum ) %]</td>
       <td>$review.expert</td>
-      <td>$review.cDate</td>
       <td>$review.copyDate</td>
       <td><a href="crms?p=deleteReview&barcode=$review.id&user=$review.user">delete this review</a></td>
     </tr>

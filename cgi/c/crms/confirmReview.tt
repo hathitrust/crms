@@ -1,12 +1,9 @@
 [% barcode    = cgi.param('barcode')    %]
-[% date       = cgi.param('date')       %]
-[% cDate      = cgi.param('cDate')      %]
 [% copyDate   = cgi.param('copyDate')   %]
 [% rights     = cgi.param('rights')     %]
 [% reason     = cgi.param('reason')     %]
 [% renNum     = cgi.param('renNum')     %]
 [% regDate    = cgi.param('regDate')    %]
-[% flag       = cgi.param('flag')       %]
 [% exp        = cgi.param('exp')        %]
 [% comment    = cgi.param('comment')    %]
 [% commentPre = cgi.param('commentPre') %]
@@ -36,14 +33,11 @@
   <form name="submitReview" action="crms">
     <input type="hidden" name="p"          value="submitReview"> 
     <input type="hidden" name="barcode"    value="[% barcode    %]"/>
-    <input type="hidden" name="date"       value="[% date       %]"/>
-    <input type="hidden" name="cDate"      value="[% cDate      %]"/>
     <input type="hidden" name="copyDate"   value="[% copyDate   %]"/>
     <input type="hidden" name="rights"     value="[% rights     %]"/>
     <input type="hidden" name="reason"     value="[% reason     %]"/>
     <input type="hidden" name="renNum"     value="[% renNum     %]"/>
     <input type="hidden" name="regDate"    value="[% regDate    %]"/>
-    <input type="hidden" name="flag"       value="[% flag       %]"/>
     <input type="hidden" name="exp"        value="[% exp        %]"/>
     <input type="hidden" name="comment"    value="[% comment    %]"/>
     <input type="hidden" name="commentPre" value="[% commentPre %]"/>
@@ -59,11 +53,7 @@
   <tr><td>Rights/Reason:</td> <td>[% rightsName %]/[% reasonName %]</td><tr>
   <tr><td>Renewal Number:</td> <td>[% renNum %]</td><tr>
   <tr><td>Renewal Date:</td> <td>[% regDate %]</td><tr>
-<!-- 
-  <tr><td>Pub Date (corrected date):</td> <td>[% date %] ([% cDate %])</td><tr>
--->
   <tr><td>copy Date:</td> <td>[% copyDate %]</td><tr>
-  <tr><td>Flag:</td> <td>[% flag %]</td><tr>
   <tr><td>Final:</td> <td>[% exp %]</td><tr>
   <tr><td>comment:</td> <td>[% comment %]</td><tr>
 </table>

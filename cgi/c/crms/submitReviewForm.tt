@@ -3,7 +3,6 @@
   <input type="hidden" name="p"        value="confirmReview"> 
   <input type="hidden" name="barcode"  value="[% barcode %]"> 
   <input type="hidden" name="user"     value="[% user %]"> 
-  <input type="hidden" name="date"     value="[% date %]"> 
   <input type="hidden" name="confirm"  value="1"> 
 
   <strong>Rights/Reason: </strong><a href="/c/crms/help.html#rights" target="_blank">?</a>
@@ -52,7 +51,7 @@
   <table>
     <tr>
       <td><strong>Renewal Date: </strong></td>
-      <td><input type="text" name="regDate" value="[% regDate %]" size="9"/></td>
+      <td><input type="text" name="regDate" value="[% regDate %]" size="9" onClick="popRenewalDate()"/></td>
       <td><a href="/c/crms/help.html#renewal" target="_blank">?</a></td>
     </tr>
     <tr>
@@ -61,10 +60,6 @@
       <td><a href="/c/crms/help.html#renewal" target="_blank">?</a></td>
     </tr>
     <tr>
-<!--  
-      <td><strong>publ: </strong></td>
-      <td><input type="text" name="cDate"size="4" value="[% date %]"/><td>
--->
       <td><strong>Copyright: </strong></td>
       <td><input type="text" name="copyDate" size="4" value="[% copyDate %]"/>
         <a href="/c/crms/help.html#publ" target="_blank">?</a></td>
@@ -79,11 +74,7 @@
     <br/>
   [% END %]
 
-<!--
-  <input type="checkbox" name="flag" accesskey="f">Flag:</input> <a href="/c/crms/help.html#flag" target="_blank">?</a>
--->
   <br/>
-
   <strong>Comments: </string><a href="/c/crms/help.html#comment" target="_blank">?</a><br/>
   <select name="commentPre">
     [% pres = {"Foreign"    => "Foreign Pub",   "Missing"     => "Missing",

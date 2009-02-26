@@ -111,9 +111,9 @@
         [% comment = "" %] 
         [% IF comm or commPre %][% comment = "$commPre: $comm" %][% END %]
 
-        [% INCLUDE submitReviewForm.tt barcode = barcode, date    = pub_date, regNum   = regNum, 
-                                       regDate = regDate, comment = comment,  copyDate = copyDate,
-                                       comm    = comm,    commPre = commPre %]
+        [% INCLUDE submitReviewForm.tt barcode = barcode, regNum   = regNum,   regDate = regDate,
+                                       comment = comment, copyDate = copyDate, comm    = comm,    
+                                       commPre = commPre %]
       </div>
     </div>
     [%# the frame (Stanford, HT, Cat...) %]

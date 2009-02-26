@@ -197,7 +197,7 @@ sub IsItemInReviews
 sub SubmitReview
 {
     my $self = shift;
-    my ($id, $user, $attr, $reason, $date, $cDate, $copyDate, $note, $regNum, $exp, $regDate) = @_;
+    my ($id, $user, $attr, $reason, $copyDate, $note, $regNum, $exp, $regDate) = @_;
 
     if ( ! $self->ChechForId( $id ) )                     { $self->logit("id check failed");          return 0; }
     if ( ! $self->ChechReviewer( $user, $exp ) )          { $self->logit("review check failed");      return 0; }
@@ -207,8 +207,8 @@ sub SubmitReview
 
     ## do some sort of check for expert submissions
 
-    my @fieldList = ("id", "user", "attr", "reason", "date", "cDate", "note", "regNum", "regDate");
-    my @valueList = ($id,  $user,  $attr,  $reason,  $date,  $cDate,  $note,  $regNum,  $regDate);
+    my @fieldList = ("id", "user", "attr", "reason", "note", "regNum", "regDate");
+    my @valueList = ($id,  $user,  $attr,  $reason,  $note,  $regNum,  $regDate);
 
     if ($exp)      { push(@fieldList, "expert");   push(@valueList, $exp); }
     if ($copyDate) { push(@fieldList, "copyDate"); push(@valueList, $copyDate); }
@@ -237,7 +237,7 @@ sub SubmitReview
 sub SubmitHistReview
 {
     my $self = shift;
-    my ($id, $user, $date, $attr, $reason, $date, $cDate, $regNum, $regDate, $note, $eNote) = @_;
+    my ($id, $user, $date, $attr, $reason, $regNum, $regDate, $note, $eNote) = @_;
 
     ## change attr and reason back to numbers
     $attr   = $self->GetRightsNum( $attr );
@@ -250,8 +250,8 @@ sub SubmitHistReview
     ## do some sort of check for expert submissions
 
     ## all good, INSERT
-    my $sql = qq{INSERT INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, date, cDate, regNum, regDate, note, expertNote, hist) } .
-              qq{VALUES('$id', '$user', '$attr', '$reason', '$date', '$cDate', '$regNum', '$regDate', '$note', '$eNote', 1) };
+    my $sql = qq{INSERT INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, regNum, regDate, note, expertNote, hist) } .
+              qq{VALUES('$id', '$user', '$attr', '$reason', '$regNum', '$regDate', '$note', '$eNote', 1) };
 
     $self->PrepareSubmitSql( $sql );
 
@@ -475,7 +475,7 @@ sub GetReviewsRef
 
     if ( ! $order || $order eq "time" ) { $order = "time DESC "; }
 
-    my $sql = qq{ SELECT id, time, duration, user, attr, reason, note, regNum, expert, cDate, copyDate FROM $CRMSGlobals::reviewsTable };
+    my $sql = qq{ SELECT id, time, duration, user, attr, reason, note, regNum, expert, copyDate FROM $CRMSGlobals::reviewsTable };
 
     if    ( $user )                    { $sql .= qq{ WHERE user = "$user" };   }
 
@@ -501,8 +501,7 @@ sub GetReviewsRef
                      note     => $row->[6],
                      regNum   => $row->[7],
                      expert   => $row->[8],
-                     cDate    => $row->[9],
-                     copyDate =>$row->[10]
+                     copyDate => $row->[9]
                    };
         push( @{$return}, $item );
     }

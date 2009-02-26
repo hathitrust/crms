@@ -1,20 +1,17 @@
 [% INCLUDE headerReview.tt %]
 
 [% barcode    = cgi.param('barcode')    %]
-[% date       = cgi.param('date')       %]
-[% cDate      = cgi.param('cDate')      %]
 [% copyDate   = cgi.param('copyDate')   %]
 [% rights     = cgi.param('rights')     %]
 [% reason     = cgi.param('reason')     %]
 [% renNum     = cgi.param('renNum')     %]
 [% regDate    = cgi.param('regDate')    %]
-[% flag       = cgi.param('flag')       %]
 [% exp        = cgi.param('exp')        %]
 [% comment    = cgi.param('comment')    %]
 [% commentPre = cgi.param('commentPre') %]
 [% done       = cgi.param('done')       %]
 
-[% IF crms.SubmitReview( barcode, user, rights, reason, date, cDate, copyDate, comment, renNum, exp, regDate) %]
+[% IF crms.SubmitReview( barcode, user, rights, reason, copyDate, comment, renNum, exp, regDate) %]
   [% IF done %]
     <body onLoad="setTimeout('redirHome()', 2000)">
       <p>Thanks. Going Home...</p>
