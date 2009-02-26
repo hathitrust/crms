@@ -8,6 +8,8 @@
 
 .smallText { font-size:11px }
 
+.plainLink { text-decoration: none; color: black;}
+
 table.nav    { 
         border-width: 1px 1px 1px 1px;
         border-spacing: 2px;
