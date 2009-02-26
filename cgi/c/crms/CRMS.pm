@@ -812,6 +812,8 @@ sub IsGovDoc
     my $self    = shift;
     my $barcode = shift;
     my $record  = $self->GetRecordMetadata($barcode);
+    if ( ! $record ) { $self->logit( "failed in IsGovDoc: $barcode" ); }
+
     my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
     my $leader  = $record->findvalue( $xpath );
     my $doc     = substr($leader, 28, 1);
@@ -831,6 +833,8 @@ sub GetPublDate
     my $self    = shift;
     my $barcode = shift;
     my $record  = $self->GetRecordMetadata($barcode);
+    if ( ! $record ) { $self->logit( "failed in GetPublDate: $barcode" ); }
+
     ## my $xpath   = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
     my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
     my $leader  = $record->findvalue( $xpath );
@@ -846,6 +850,8 @@ sub GetMarcFixfield
     my $field   = shift;
 
     my $record  = $self->GetRecordMetadata($barcode);
+    if ( ! $record ) { $self->logit( "failed in GetMarcFixfield: $barcode" ); }
+
     my $xpath   = qq{//*[local-name()='oai_marc']/*[local-name()='fixfield' and \@id='$field']};
     return $record->findvalue( $xpath );
 }
@@ -858,6 +864,8 @@ sub GetMarcVarfield
     my $label   = shift;
     
     my $record  = $self->GetRecordMetadata($barcode);
+    if ( ! $record ) { $self->logit( "failed in GetMarcVarfield: $barcode" ); }
+
     my $xpath   = qq{//*[local-name()='oai_marc']/*[local-name()='varfield' and \@id='$field']} .
                   qq{/*[local-name()='subfield' and \@label='$label']};
 
@@ -871,6 +879,8 @@ sub GetMarcControlfield
     my $field   = shift;
         
     my $record  = $self->GetRecordMetadata($barcode);
+    if ( ! $record ) { $self->logit( "failed in GetMarcControlfield: $barcode" ); }
+
     my $xpath   = qq{//*[local-name()='controlfield' and \@tag='$field']};
     return $record->findvalue( $xpath );
 }   
@@ -883,6 +893,8 @@ sub GetMarcDatafield
     my $code    = shift;
 
     my $record  = $self->GetRecordMetadata($barcode);
+    if ( ! $record ) { $self->logit( "failed in GetMarcDatafield: $barcode" ); }
+
     my $xpath   = qq{//*[local-name()='datafield' and \@tag='$field']} .
                    qq{/*[local-name()='subfield'  and \@code='$code']};
 
@@ -926,7 +938,7 @@ sub GetRecordMetadata
     my $barcode    = shift;
     my $parser     = $self->get( 'parser' );
     
-    if ( ! $barcode ) { $self->logit( "no barcode given: $barcode" ); }
+    if ( ! $barcode ) { $self->logit( "no barcode given: $barcode" ); return 0; }
 
     my ($ns,$bar)  = split(/\./, $barcode);
 
@@ -1277,7 +1289,7 @@ sub GetNextItemForReview
     my $barcode;
     my @itemsReviewedOnce = $self->GetItemsReviewedOnce( $name );
 
-    ## if some have been reviewed once (not by this user) sort by date (oldest first)
+    ## if someone have been reviewed once (not by this user) sort by date (oldest first)
     if ( scalar(@itemsReviewedOnce) ) 
     {
         my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND status < 2 AND ( };
@@ -1287,10 +1299,11 @@ sub GetNextItemForReview
         $sql   .= qq{ ) ORDER BY pub_date LIMIT 1 };
 
         my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+        if ( $self->get("verbose") ) { $self->logit("once: $sql"); }
         $barcode = $ref->[0]->[0];
-
     }
-    else
+
+    if ( ! $barcode ) 
     {
         my @itemsReviewedByUser = $self->ItemsReviewedByUser( $name );
 
@@ -1359,7 +1372,7 @@ sub GetItemsReviewedOnce
     else { $sql .= qq{ WHERE hist < 1 }; }
     $sql .= qq{ GROUP BY id }; 
 
-    ## $self->logit( "GetItemsReviewedOnce: $sql" );
+    if ( $self->get("verbose") ) { $self->logit( "GetItemsReviewedOnce: $sql" ); }
 
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
