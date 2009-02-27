@@ -7,6 +7,7 @@
   [% ELSIF page == "adminQueue"    %] > manage the queue
   [% ELSIF page == "adminReview"   %] > view all reviews
   [% ELSIF page == "adminUserRate" %] > view user review rates
+  [% ELSIF page == "undReviews"    %] > und/nfi items
   [% ELSIF page == "adminEditUser" %] > <a href="?p=adminUser">adminster user accounts</a> 
                                                 > edit user
   [% END %]

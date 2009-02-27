@@ -439,6 +439,18 @@ sub GetDoubleAgree
     return 1;
 }
 
+sub GetUndItems
+{
+    my $self = shift;
+    my $sql  = qq{SELECT id FROM $CRMSGlobals::reviewsTable WHERE attr = 5 };
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    my @ids;
+    foreach ( @{$ref} ) { push( @ids, $_->[0]); }
+
+    return @ids;
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   Get the oldest item, not reviewed twice, not locked
 ##  Parameters: NOTHING
