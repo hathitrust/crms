@@ -9,18 +9,22 @@ use CRMS;
 use Template;
 use POSIX;
 
-my $cgi  = new CGI;
 my $user = $ENV{'REMOTE_USER'};
+my $cgi  = new CGI;
+my $crms = CRMS->new(
+        logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
+        configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
+        verbose      =>   1,
+        root         =>   $DLXSROOT,
+        dev          =>   $DLPS_DEV,
+        user         =>   $user,
+        );
 
 if ( ! $user || ! $ENV{'HTTPS'} ) 
 {
     print $cgi->redirect( "https://$ENV{'HTTP_HOST'}$ENV{'SCRIPT_NAME'}" );
     exit;
 }
-
-my $page  = $cgi->param('p');
-my $input = $page . ".tt";
-if ( ! -f $input ) { $input = "home.tt"; }
 
 ## config options for TT
 my $config = 
@@ -31,22 +35,26 @@ my $config =
     EVAL_PERL    => 1,     ## evaluate Perl code blocks
 };
 
-my $tt    = Template->new( $config );
-my $vars  = 
+## make sure user known
+if ( ! $crms->GetUserName($user) )
 {
-    title => "CRMS",
-    crms  => CRMS->new(
-        logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
-        configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
-        verbose      =>   1,
-        root         =>   $DLXSROOT,
-        dev          =>   $DLPS_DEV,
-        user         =>   $user,
-    ),
+    print $cgi->header( -status => "403 Forbidden" ) .
+          "<h2>Forbidden</h2>";
+    exit;
+}
+
+my $tt   = Template->new( $config );
+my $vars = {
+    title     => "CRMS",
+    crms      => $crms,
     cgi       => $cgi,
     user      => $user,
     yesterday => POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time-86400))
 };
+
+my $page  = $cgi->param('p');
+my $input = $page . ".tt";
+if ( ! -f $input ) { $input = "home.tt"; }
 
 print $cgi->header( -charset => 'iso-8859-1', "cache-control" => 'private' );
 $tt->process($input, $vars) || die $tt->error();

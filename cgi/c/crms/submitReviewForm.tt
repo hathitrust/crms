@@ -57,19 +57,16 @@
         </strong>
       </td>
       <td><input type="text" name="regDate" value="[% regDate %]" size="9"/></td>
-      <!-- <td><a href="/c/crms/help.html#renewal" target="_blank">?</a></td> -->
     </tr>
     <tr>
       <td><strong>Renewal ID: </strong></td>
       <td>
         <input type="text" name="renNum" value="[% regNum %]" size="9" onBlur="javascript:popRenewalDate()"/>
       </td>
-      <!-- <td><a href="/c/crms/help.html#renewal" target="_blank">?</a></td> -->
     </tr>
     <tr>
-      <td><strong>Copyright: </strong></td>
+      <td><strong>&copy; Date: </strong></td>
       <td><input type="text" name="copyDate" size="4" value="[% copyDate %]"/>
-        <!-- <a href="/c/crms/help.html#publ" target="_blank">?</a></td> -->
     </tr>
   </table>
 
@@ -77,7 +74,6 @@
     <input type="checkbox" name="exp"
       [% IF crms.IsThirdReview(barcode) %] checked="checked"[% END %]
       >Final Determination</input>
-    <!-- <a href="/c/crms/help.html#final" target="_blank">?</a> -->
     <br/>
   [% END %]
 

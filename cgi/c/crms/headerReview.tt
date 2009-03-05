@@ -1,6 +1,10 @@
 <html>
   <head>
-    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css" />
+    [% IF cgi.param('navRight') %]
+      <link rel="stylesheet" type="text/css" href="/c/crms/css/reviewRight.css" />
+    [% ELSE %]
+      <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css" />
+    [% END %]
     <title>[% title %]</title>
     [% INCLUDE reviewJs.tt %]
   </head>

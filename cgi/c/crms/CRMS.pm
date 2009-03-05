@@ -629,7 +629,7 @@ sub ChechForId
     return scalar( @rows );
 }
 
-sub ChechReviewer
+sub CheckReviewer
 {
     my $self = shift;
     my $user = shift;
@@ -654,17 +654,16 @@ sub GetUserName
 {
     my $self = shift;
     my $user = shift;
-    my $dbh  = $self->get( 'dbh' );
 
     if ( ! $user ) { $user = $self->get( "user" ); }
 
     my $sql  = qq{SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' LIMIT 1};
-    my $ref  = $dbh->selectall_arrayref( $sql );
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
     my $name = $ref->[0]->[0];
 
     if ( $name ne "" ) { return $name; }
 
-    return "Unknown";
+    return 0;
 }
 
 sub IsUserReviewer
@@ -777,6 +776,32 @@ sub AddUser
     }
 
     return 1;
+}
+
+sub ValidateSubmission
+{
+    my $self = shift;
+    my ($attr, $reason, $note, $regNum, $regDate, $user) = @_;
+    my $return = 1;
+
+    ## check user
+    if ( ! $self->IsUserReviewer( $user ) )
+    {
+        $self->setError( "Not a reviewer" ); 
+        $return = 0;
+    } 
+
+    if ( ! $attr )   { $self->setError( "missing rights" ); $return = 0; }
+    if ( ! $reason ) { $self->setError( "missing reason" ); $return = 0; }
+
+    if ( $regNum )
+    {
+        if ( ! $regDate ) { $self->setError( "missing renewal date" ); $return = 0; }
+    }
+
+    ## if und, must have a commentPre (note)
+
+    return $return;
 }
 
 sub ValidateAttr

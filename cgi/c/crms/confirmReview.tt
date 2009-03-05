@@ -7,21 +7,9 @@
 [% exp        = cgi.param('exp')        %]
 [% comment    = cgi.param('comment')    %]
 [% commentPre = cgi.param('commentPre') %]
-[% errors = [] %]
-
-[% IF renNum AND NOT regDate %]
-  [% regDate = crms.GetRegDate(renNum) %]
-  [% IF NOT regDate %]
-    [% error = "Failed to get the renewal date. Go back and add this manually" %]
-    [% errors.push( error ) %]
-  [% END %]
-[% END %]
 
 [% IF exp        %][% exp = "1" %][% END %]
 [% IF commentPre %][% comment = "$commentPre: $comment" %][% END %]
-
-[% IF NOT crms.ChechReviewer(user) %][% errors.push("permissions error") %][% END %]
-[% IF NOT rights %]                  [% errors.push("missing rights")    %][% END %]
 
 [% parts      = crms.GetAttrReasonFromCode(rights) %]
 [% rights     = parts.0                            %]
@@ -57,3 +45,13 @@
   <tr><td>Final:</td> <td>[% exp %]</td><tr>
   <tr><td>comment:</td> <td>[% comment %]</td><tr>
 </table>
+
+<br/>
+
+[% IF NOT crms.ValidateSubmission(rights, reason, commentPre, renNum, regDate, user) %]
+  [% FOREACH error IN crms.getErrors %]
+    <strong>ERROR: [% error %]</strong>
+    <br/>
+  [% END %]
+[% END %]
+
