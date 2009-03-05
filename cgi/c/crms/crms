@@ -48,6 +48,6 @@ my $vars  =
     yesterday => POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time-86400))
 };
 
-print $cgi->header( -charset => 'utf-8' );
+print $cgi->header( -charset => 'iso-8859-1', "cache-control" => 'private' );
 $tt->process($input, $vars) || die $tt->error();
 
