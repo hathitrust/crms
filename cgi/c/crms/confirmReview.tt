@@ -49,7 +49,7 @@
 <br/>
 
 [% IF NOT crms.ValidateSubmission(rights, reason, commentPre, renNum, regDate, user) %]
-  [% FOREACH error IN crms.getErrors %]
+  [% FOREACH error IN crms.GetErrors %]
     <strong>ERROR: [% error %]</strong>
     <br/>
   [% END %]

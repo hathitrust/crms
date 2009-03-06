@@ -47,6 +47,21 @@ sub new
     $self;
 }
 
+sub get
+{
+    my $self = shift;
+    my $key  = shift;
+    return $self->{$key};
+}
+
+sub set
+{
+    my $self = shift;
+    my $key  = shift;
+    my $val  = shift;
+    $self->{$key} = $val;
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   connect to the mysql DB
 ##  Parameters: nothing
@@ -61,7 +76,7 @@ sub ConnectToDb
 
     if ( ! $self->get( 'dev' ) ) { $db_server = $CRMSGlobals::mysqlServer; }
 
-    if ($self->get('verbose')) { $self->logit( "DBI:mysql:crms:$db_server, $db_user, [passwd]" ); }
+    if ($self->get('verbose')) { $self->Logit( "DBI:mysql:crms:$db_server, $db_user, [passwd]" ); }
 
     my $dbh = DBI->connect( "DBI:mysql:crms:$db_server", $db_user, $db_passwd,
               { RaiseError => 1, AutoCommit => 1 } ) || die "Cannot connect: $DBI::errstr";
@@ -85,7 +100,7 @@ sub ConnectToSdrDb
 
     if ( ! $self->get( 'dev' ) ) { $db_server = $CRMSGlobals::mysqlServer; }
 
-    if ($self->get('verbose')) { $self->logit( "DBI:mysql:mdp:$db_server, $db_user, [passwd]" ); }
+    if ($self->get('verbose')) { $self->Logit( "DBI:mysql:mdp:$db_server, $db_user, [passwd]" ); }
 
     my $sdr_dbh   = DBI->connect( "DBI:mysql:mdp:$db_server", $db_user, $db_passwd,
               { RaiseError => 1, AutoCommit => 1 } ) || die "Cannot connect: $DBI::errstr";
@@ -102,8 +117,17 @@ sub PrepareSubmitSql
 
     my $sth = $self->get( 'dbh' )->prepare( $sql );
     eval { $sth->execute(); };
-    if ($@) { $self->logit("sql failed ($sql): " . $sth->errstr); }
+    if ($@) { $self->Logit("sql failed ($sql): " . $sth->errstr); }
     return 1;
+}
+
+sub SimpleSqlGet
+{
+    my $self = shift;
+    my $sql  = shift;
+
+    my $ref  = $self->get('dbh')->selectall_arrayref( $sql );
+    return $ref->[0]->[0];
 }
 
 ## ----------------------------------------------------------------------------
@@ -157,7 +181,7 @@ sub AddItemToQueue
     my $time    = shift;
     my $pub     = $self->GetPublDate( $id );
 
-    if ( $self->IsGovDoc( $id ) ) { $self->logit( "skip fed doc: $id" ); return; }
+    if ( $self->IsGovDoc( $id ) ) { $self->Logit( "skip fed doc: $id" ); return; }
 
     ## check for item, warn if already exists, then update ???
     my $sql = qq{REPLACE INTO $CRMSGlobals::queueTable (id, time, pub_date) VALUES ('$id', '$time', '$pub')};
@@ -199,11 +223,11 @@ sub SubmitReview
     my $self = shift;
     my ($id, $user, $attr, $reason, $copyDate, $note, $regNum, $exp, $regDate) = @_;
 
-    if ( ! $self->ChechForId( $id ) )                     { $self->logit("id check failed");          return 0; }
-    if ( ! $self->ChechReviewer( $user, $exp ) )          { $self->logit("review check failed");      return 0; }
-    if ( ! $self->ValidateAttr( $attr ) )                 { $self->logit("attr check failed");        return 0; }
-    if ( ! $self->ValidateReason( $reason ) )             { $self->logit("reason check failed");      return 0; }
-    if ( ! $self->CheckAttrReasonComb( $attr, $reason ) ) { $self->logit("attr/reason check failed"); return 0; }
+    if ( ! $self->ChechForId( $id ) )                     { $self->Logit("id check failed");          return 0; }
+    if ( ! $self->CheckReviewer( $user, $exp ) )          { $self->Logit("review check failed");      return 0; }
+    if ( ! $self->ValidateAttr( $attr ) )                 { $self->Logit("attr check failed");        return 0; }
+    if ( ! $self->ValidateReason( $reason ) )             { $self->Logit("reason check failed");      return 0; }
+    if ( ! $self->CheckAttrReasonComb( $attr, $reason ) ) { $self->Logit("attr/reason check failed"); return 0; }
 
     ## do some sort of check for expert submissions
 
@@ -216,12 +240,12 @@ sub SubmitReview
     my $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (} . join(", ", @fieldList) . 
               qq{) VALUES('} . join("', '", @valueList) . qq{')};
 
-    if ( $self->get('verbose') ) { $self->logit( $sql ); }
+    if ( $self->get('verbose') ) { $self->Logit( $sql ); }
 
     $self->PrepareSubmitSql( $sql );
 
-    if ( $exp ) { $self->RegisterExpertReview( $id ); }
-    else        { $self->IncrementStatus( $id );      }
+    if ( $exp ) { $self->RegisterExpertReview( $id );  }
+    else        { $self->IncrementStatus( $id, $user, $attr ); }
 
     $self->EndTimer( $id, $user );
     $self->UnlockItem( $id, $user );
@@ -243,9 +267,9 @@ sub SubmitHistReview
     $attr   = $self->GetRightsNum( $attr );
     $reason = $self->GetReasonNum( $reason );
 
-    if ( ! $self->ValidateAttr( $attr ) )                 { $self->logit("attr check failed");        return 0; }
-    if ( ! $self->ValidateReason( $reason ) )             { $self->logit("reason check failed");      return 0; }
-    if ( ! $self->CheckAttrReasonComb( $attr, $reason ) ) { $self->logit("attr/reason check failed"); return 0; }
+    if ( ! $self->ValidateAttr( $attr ) )                 { $self->Logit("attr check failed");        return 0; }
+    if ( ! $self->ValidateReason( $reason ) )             { $self->Logit("reason check failed");      return 0; }
+    if ( ! $self->CheckAttrReasonComb( $attr, $reason ) ) { $self->Logit("attr/reason check failed"); return 0; }
     
     ## do some sort of check for expert submissions
 
@@ -264,7 +288,7 @@ sub DeleteReview
     my $id   = shift;
     my $user = shift;
 
-    $self->logit( "DELETE $id $user" );
+    $self->Logit( "DELETE $id $user" );
 
     ## remove from review table
     my $sql  = qq{ DELETE FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user" };
@@ -312,8 +336,8 @@ sub ClearQueueAndExport
     $self->ExportReviews( $export );
 
     ## report back
-    $self->logit( "export reviewed items removed from queue ($eCount): " . join(", ", @{$expert}) );
-    $self->logit( "double reviewed items removed from queue ($dCount): " . join(", ", @{$double}) );
+    $self->Logit( "export reviewed items removed from queue ($eCount): " . join(", ", @{$expert}) );
+    $self->Logit( "double reviewed items removed from queue ($dCount): " . join(", ", @{$double}) );
 
     return ("twice reviewed removed: $dCount, expert reviewed reemoved: $eCount");
 }
@@ -341,7 +365,7 @@ sub ExportReviews
         my ($attr,$reason) = $self->GetFinalAttrReason($barcode); 
         if ( ! $attr || ! $reason )
         {
-            $self->logit( "failed to get rights for $barcode on export" );
+            $self->Logit( "failed to get rights for $barcode on export" );
             next;
         }
         print $fh "$barcode\t$attr\t$reason\t$user\t$src\n";
@@ -375,7 +399,7 @@ sub RemoveFromQueue
     my $self = shift;
     my $id   = shift;
 
-    $self->logit( "remove $id from queue" );
+    $self->Logit( "remove $id from queue" );
 
     my $sql = qq{ DELETE FROM $CRMSGlobals::queueTable WHERE id = "$id" };
     $self->PrepareSubmitSql( $sql );
@@ -395,7 +419,7 @@ sub GetFinalAttrReason
 
     if ( ! $ref->[0]->[0] )
     {
-        $self->logit( "$id not found in review table" );
+        $self->Logit( "$id not found in review table" );
     }
 
     my $attr   = $self->GetRightsName( $ref->[0]->[0] );
@@ -442,7 +466,7 @@ sub GetDoubleAgree
 sub GetUndItems
 {
     my $self = shift;
-    my $sql  = qq{SELECT id FROM $CRMSGlobals::reviewsTable WHERE attr = 5 };
+    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status = 5 };
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my @ids;
@@ -535,17 +559,33 @@ sub LinkToPT
 {
     my $self = shift;
     my $id   = shift;
+    my $ti   = $self->GetTitle( $id );
     
     ## my $url  = 'http://babel.hathitrust.org/cgi/pt?attr=1&id=';
     my $url  = '/cgi/m/mdp/pt?skin=crms;attr=1;id=';
 
-    return qq{<a href="$url$id">$id</a>};
+    return qq{<a href="$url$id">$ti</a>};
 }
 
 sub IncrementStatus
 {
     my $self = shift;
     my $id   = shift;
+    my $user = shift;
+    my $attr = shift;
+  
+    my ($otherAttr,$r) = $self->GetFinalAttrReason($id);
+
+    ## If this and a previous attr is und (5) - set status to 5
+    if ( $attr == 5 && $otherAttr eq "und" ) 
+    {
+        my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = 5 WHERE id = "$id" };
+        $self->PrepareSubmitSql( $sql );
+        $self->Logit( "$id: two und/nfi reviews, status set to 5" );
+    }
+
+    ## if you have reviewed this one, don't increment
+    if ( $self->ItemWasReviewedByUser($id, $user) ) { return; }
 
     my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = status + 1 WHERE id = "$id" };
     $self->PrepareSubmitSql( $sql );
@@ -787,16 +827,16 @@ sub ValidateSubmission
     ## check user
     if ( ! $self->IsUserReviewer( $user ) )
     {
-        $self->setError( "Not a reviewer" ); 
+        $self->SetError( "Not a reviewer" ); 
         $return = 0;
     } 
 
-    if ( ! $attr )   { $self->setError( "missing rights" ); $return = 0; }
-    if ( ! $reason ) { $self->setError( "missing reason" ); $return = 0; }
+    if ( ! $attr )   { $self->SetError( "missing rights" ); $return = 0; }
+    if ( ! $reason ) { $self->SetError( "missing reason" ); $return = 0; }
 
     if ( $regNum )
     {
-        if ( ! $regDate ) { $self->setError( "missing renewal date" ); $return = 0; }
+        if ( ! $regDate ) { $self->SetError( "missing renewal date" ); $return = 0; }
     }
 
     ## if und, must have a commentPre (note)
@@ -849,7 +889,7 @@ sub IsGovDoc
     my $self    = shift;
     my $barcode = shift;
     my $record  = $self->GetRecordMetadata($barcode);
-    if ( ! $record ) { $self->logit( "failed in IsGovDoc: $barcode" ); }
+    if ( ! $record ) { $self->Logit( "failed in IsGovDoc: $barcode" ); }
 
     my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
     my $leader  = $record->findvalue( $xpath );
@@ -870,7 +910,7 @@ sub GetPublDate
     my $self    = shift;
     my $barcode = shift;
     my $record  = $self->GetRecordMetadata($barcode);
-    if ( ! $record ) { $self->logit( "failed in GetPublDate: $barcode" ); }
+    if ( ! $record ) { $self->Logit( "failed in GetPublDate: $barcode" ); }
 
     ## my $xpath   = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
     my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
@@ -887,7 +927,7 @@ sub GetMarcFixfield
     my $field   = shift;
 
     my $record  = $self->GetRecordMetadata($barcode);
-    if ( ! $record ) { $self->logit( "failed in GetMarcFixfield: $barcode" ); }
+    if ( ! $record ) { $self->Logit( "failed in GetMarcFixfield: $barcode" ); }
 
     my $xpath   = qq{//*[local-name()='oai_marc']/*[local-name()='fixfield' and \@id='$field']};
     return $record->findvalue( $xpath );
@@ -901,7 +941,7 @@ sub GetMarcVarfield
     my $label   = shift;
     
     my $record  = $self->GetRecordMetadata($barcode);
-    if ( ! $record ) { $self->logit( "failed in GetMarcVarfield: $barcode" ); }
+    if ( ! $record ) { $self->Logit( "failed in GetMarcVarfield: $barcode" ); }
 
     my $xpath   = qq{//*[local-name()='oai_marc']/*[local-name()='varfield' and \@id='$field']} .
                   qq{/*[local-name()='subfield' and \@label='$label']};
@@ -916,7 +956,7 @@ sub GetMarcControlfield
     my $field   = shift;
         
     my $record  = $self->GetRecordMetadata($barcode);
-    if ( ! $record ) { $self->logit( "failed in GetMarcControlfield: $barcode" ); }
+    if ( ! $record ) { $self->Logit( "failed in GetMarcControlfield: $barcode" ); }
 
     my $xpath   = qq{//*[local-name()='controlfield' and \@tag='$field']};
     return $record->findvalue( $xpath );
@@ -930,14 +970,14 @@ sub GetMarcDatafield
     my $code    = shift;
 
     my $record  = $self->GetRecordMetadata($barcode);
-    if ( ! $record ) { $self->logit( "failed in GetMarcDatafield: $barcode" ); }
+    if ( ! $record ) { $self->Logit( "failed in GetMarcDatafield: $barcode" ); }
 
     my $xpath   = qq{//*[local-name()='datafield' and \@tag='$field']} .
                    qq{/*[local-name()='subfield'  and \@code='$code']};
 
     my $data;
     eval{ $data = $record->findvalue( $xpath ); };
-    if ($@) { $self->logit( "failed to parse metadata: $@" ); }
+    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
     
     return $data
 }
@@ -947,10 +987,36 @@ sub GetEncTitle
     my $self = shift;
     my $bar  = shift;
 
-    my $ti = $self->GetMarcDatafield( $bar, "245", "a");
+    my $ti = $self->GetTitle( $bar );
 
     $ti =~ s,\',\\\',g; ## escape '
     return $ti;
+}
+
+sub GetTitle
+{
+    my $self = shift;
+    my $id   = shift;
+
+    my $sql  = qq{ SELECT title FROM titles WHERE id = "$id" };
+    my $ti   = $self->SimpleSqlGet( $sql );
+
+    if ( $ti eq "" ) { $ti = $self->UpdateTitle($id); }
+
+    return $ti;
+}
+
+sub UpdateTitle
+{
+    my $self = shift;
+    my $id   = shift;
+
+    my $ti   = $self->GetMarcDatafield( $id, "245", "a");
+    my $tiq  = $self->get("dbh")->quote( $ti );
+    my $sql  = qq{ REPLACE INTO titles (id, title)  VALUES ("$id", $tiq) };
+    $self->PrepareSubmitSql( $sql );
+
+    return $ti; 
 }
 
 sub GetEncAuthor
@@ -975,7 +1041,7 @@ sub GetRecordMetadata
     my $barcode    = shift;
     my $parser     = $self->get( 'parser' );
     
-    if ( ! $barcode ) { $self->logit( "no barcode given: $barcode" ); return 0; }
+    if ( ! $barcode ) { $self->Logit( "no barcode given: $barcode" ); return 0; }
 
     my ($ns,$bar)  = split(/\./, $barcode);
 
@@ -987,26 +1053,28 @@ sub GetRecordMetadata
     my $url    = "http://mirlyn.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
     my $ua     = LWP::UserAgent->new;
 
-    if ($self->get("verbose")) { $self->logit( "GET: $url" ); }
+    if ($self->get("verbose")) { $self->Logit( "GET: $url" ); }
     $ua->timeout( 1000 );
     my $req = HTTP::Request->new( GET => $url );
     my $res = $ua->request( $req );
 
-    if ( ! $res->is_success ) { $self->logit( "$url failed: ".$res->message() ); return; }
+    if ( ! $res->is_success ) { $self->Logit( "$url failed: ".$res->message() ); return; }
 
     my $source;
     eval { $source = $parser->parse_string( $res->content() ); };
-    if ($@) { $self->logit( "failed to parse ($url):$@" ); return; }
+    if ($@) { $self->Logit( "failed to parse ($url):$@" ); return; }
 
     my $errorCode = $source->findvalue( "//*[name()='error']" );
     if ( $errorCode ne "" )
     {
-        $self->logit( "$url \nfailed to get MARC for $barcode: $errorCode " . $res->content() );
+        $self->Logit( "$url \nfailed to get MARC for $barcode: $errorCode " . $res->content() );
         return;
     }
 
     my ($record) = $source->findnodes( "//record" );
     $self->set( $bar, $record );
+
+    $self->UpdateTitle( $barcode );
 
     return $record;
 }
@@ -1033,7 +1101,7 @@ sub BarcodeToId
     my $req = HTTP::Request->new( GET => $url );
     my $res = $ua->request( $req );
 
-    if ( ! $res->is_success ) { $self->logit( "$url failed: ".$res->message() ); return; }
+    if ( ! $res->is_success ) { $self->Logit( "$url failed: ".$res->message() ); return; }
 
     $res->content =~ m,<doc_number>\s*(\d+)\s*</doc_number>,s;
     my $id = $1;
@@ -1064,7 +1132,7 @@ sub GetLockedItem
     my $sql = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE locked = "$name" LIMIT 1};
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
-    $self->logit( "Get locked item for $name: $ref->[0]->[0]" ); 
+    $self->Logit( "Get locked item for $name: $ref->[0]->[0]" ); 
 
     return $ref->[0]->[0];
 }
@@ -1162,7 +1230,7 @@ sub UnlockItem
     if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
 
     $self->RemoveFromTimer( $id, $user );
-    $self->logit( "unlocking $id" );
+    $self->Logit( "unlocking $id" );
     return 1;
 }
 
@@ -1180,7 +1248,7 @@ sub GetLockedItems
         my $lo = $row->[1];
         $return->{$id} = {"id" => $id, "locked" => $lo}; 
     }
-    $self->logit( join(", ", keys %{$return}) );
+    if ( $self->get('verbose') ) { $self->Logit( "locked: " , join(", ", keys %{$return}) ); }
     return $return;
 }
 
@@ -1206,7 +1274,7 @@ sub StartTimer
     my $sql  = qq{ REPLACE INTO timer SET start_time = NOW(), id = "$id", user = "$user" };
     if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
 
-    $self->logit( "start timer for $id, $user" );
+    $self->Logit( "start timer for $id, $user" );
 }
 
 sub EndTimer
@@ -1220,7 +1288,7 @@ sub EndTimer
 
     ## add duration to reviews table
     $self->SetDuration( $id, $user );
-    $self->logit( "end timer for $id, $user" );
+    $self->Logit( "end timer for $id, $user" );
 }
 
 sub RemoveFromTimer
@@ -1280,7 +1348,7 @@ sub GetReviewerPace
     if ( ! $date ) 
     {
         $date = POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time - 2629743));
-        if ($self->get('verbose')) { $self->logit( "date: $date"); }
+        if ($self->get('verbose')) { $self->Logit( "date: $date"); }
     }
 
     my @items = $self->ItemsReviewedByUser( $user, $date );
@@ -1298,7 +1366,7 @@ sub GetReviewerPace
     if ( ! $count ) { return 0; }
 
     my $ave = int( ($totalTime / $count) + .5 );
-    if ($self->get('verbose')) { $self->logit( "$totalTime / $count : $ave" ); }
+    if ($self->get('verbose')) { $self->Logit( "$totalTime / $count : $ave" ); }
 
     if ($ave > 60) { return POSIX::strftime( "%M:%S", $ave, 0,0,0,0,0,0 ) . " min"; }
     else           { return "$ave sec"; }
@@ -1336,7 +1404,7 @@ sub GetNextItemForReview
         $sql   .= qq{ ) ORDER BY pub_date LIMIT 1 };
 
         my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
-        if ( $self->get("verbose") ) { $self->logit("once: $sql"); }
+        if ( $self->get("verbose") ) { $self->Logit("once: $sql"); }
         $barcode = $ref->[0]->[0];
     }
 
@@ -1361,7 +1429,7 @@ sub GetNextItemForReview
     ## lock before returning
     if ( ! $self->LockItem( $barcode, $name ) ) 
     { 
-        $self->logit( "failed to lock $barcode for $name" );
+        $self->Logit( "failed to lock $barcode for $name" );
         return;
     }
     return $barcode;
@@ -1389,6 +1457,19 @@ sub ItemsReviewedByUser
     return @return;
 }
 
+sub ItemWasReviewedByUser
+{
+    my $self  = shift;
+    my $user  = shift;
+    my $id    = shift;
+
+    my $sql = qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$user" AND id = "$id"};
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    if ( @{$ref} ) { return 1; }
+    return 0;
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   get items that have been reviewed once
 ##  Parameters: 
@@ -1409,7 +1490,7 @@ sub GetItemsReviewedOnce
     else { $sql .= qq{ WHERE hist < 1 }; }
     $sql .= qq{ GROUP BY id }; 
 
-    if ( $self->get("verbose") ) { $self->logit( "GetItemsReviewedOnce: $sql" ); }
+    if ( $self->get("verbose") ) { $self->Logit( "GetItemsReviewedOnce: $sql" ); }
 
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -1629,9 +1710,13 @@ sub OpenErrorLog
     $self->set('logFh', $fh );
 }
 
-sub CloseErrorLog { my $s = shift; close $s->get( 'logFh' ); }
+sub CloseErrorLog 
+{ 
+    my $self = shift; 
+    close $self->get( 'logFh' ); 
+}
 
-sub logit
+sub Logit
 {
     my $self = shift;
     my $str  = shift;
@@ -1647,13 +1732,13 @@ sub logit
 
 ## ----------------------------------------------------------------------------
 ##  Function:   add to and get errors
-##              $self->setError( "foo" );
-##              my $r = $self->getErrors();
-##              if ( defined $r ) { $self->logit( join(", ", @{$r}) ); }
+##              $self->SetError( "foo" );
+##              my $r = $self->GetErrors();
+##              if ( defined $r ) { $self->Logit( join(", ", @{$r}) ); }
 ##  Parameters: 
 ##  Return:     
 ## ----------------------------------------------------------------------------
-sub setError
+sub SetError
 {
     my $self   = shift;
     my $error  = shift;
@@ -1661,29 +1746,11 @@ sub setError
     push @{$errors}, $error;
 }
 
-sub getErrors
+sub GetErrors
 {
     my $self = shift;
     return $self->get( 'errors' );
 }
 
-## ----------------------------------------------------------------------------
-##  Function:   object setter and getter
-##  Parameters: 
-##  Return:     
-## ----------------------------------------------------------------------------
-sub get
-{
-    my $self = shift;
-    my $key  = shift;
-    return $self->{$key};
-}
-sub set
-{
-    my $self = shift;
-    my $key  = shift;
-    my $val  = shift;
-    $self->{$key} = $val;
-}
-
 1;
+
