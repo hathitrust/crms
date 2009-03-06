@@ -229,6 +229,9 @@ sub SubmitReview
     if ( ! $self->ValidateReason( $reason ) )             { $self->Logit("reason check failed");      return 0; }
     if ( ! $self->CheckAttrReasonComb( $attr, $reason ) ) { $self->Logit("attr/reason check failed"); return 0; }
 
+    if ( ! $self->ValidateSubmission($attr, $reason, $note, $regNum, $regDate, $user) ) { return 0; }
+
+
     ## do some sort of check for expert submissions
 
     my @fieldList = ("id", "user", "attr", "reason", "note", "regNum", "regDate");
@@ -827,19 +830,31 @@ sub ValidateSubmission
     ## check user
     if ( ! $self->IsUserReviewer( $user ) )
     {
-        $self->SetError( "Not a reviewer" ); 
+        $self->SetError( "Not a reviewer" );
         $return = 0;
     } 
 
     if ( ! $attr )   { $self->SetError( "missing rights" ); $return = 0; }
     if ( ! $reason ) { $self->SetError( "missing reason" ); $return = 0; }
 
-    if ( $regNum )
-    {
-        if ( ! $regDate ) { $self->SetError( "missing renewal date" ); $return = 0; }
+    if ( $regNum && ( ! $regDate ) )
+    { 
+        $self->SetError( "missing renewal date" );
+        $return = 0;
     }
 
     ## if und, must have a commentPre (note)
+    if ( $attr == 5 && $note eq "" ) 
+    {
+        $self->SetError( "comment required for UND" );
+        $return = 0;
+    }
+
+    if ( $reason == 7 && $regNum eq "" ) 
+    {
+        $self->SetError( "missing renewal ID" );
+        $return = 0;
+    }
 
     return $return;
 }

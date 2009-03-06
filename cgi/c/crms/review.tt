@@ -4,6 +4,7 @@
 [% isEdit    = 0 %]
 [% inBarcode = cgi.param('barcode') %]
 [% inAdd     = cgi.param('add') %]
+[% crms.UpdateTitle %]
 
 [% IF inBarcode %]
   [% isEdit = 1 %]

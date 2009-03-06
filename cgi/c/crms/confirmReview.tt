@@ -1,3 +1,5 @@
+[% INCLUDE header.tt %]
+
 [% barcode    = cgi.param('barcode')    %]
 [% copyDate   = cgi.param('copyDate')   %]
 [% rights     = cgi.param('rights')     %]
@@ -17,24 +19,32 @@
 [% rightsName = crms.GetRightsName(rights)         %]
 [% reasonName = crms.GetReasonName(reason)         %]
 
-<div>
-  <form name="submitReview" action="crms">
-    <input type="hidden" name="p"          value="submitReview"> 
-    <input type="hidden" name="barcode"    value="[% barcode    %]"/>
-    <input type="hidden" name="copyDate"   value="[% copyDate   %]"/>
-    <input type="hidden" name="rights"     value="[% rights     %]"/>
-    <input type="hidden" name="reason"     value="[% reason     %]"/>
-    <input type="hidden" name="renNum"     value="[% renNum     %]"/>
-    <input type="hidden" name="regDate"    value="[% regDate    %]"/>
-    <input type="hidden" name="exp"        value="[% exp        %]"/>
-    <input type="hidden" name="comment"    value="[% comment    %]"/>
-    <input type="hidden" name="commentPre" value="[% commentPre %]"/>
+[% IF crms.ValidateSubmission(rights, reason, commentPre, renNum, regDate, user) %]
+  <div>
+    <form name="submitReview" action="crms">
+      <input type="hidden" name="p"          value="submitReview"> 
+      <input type="hidden" name="barcode"    value="[% barcode    %]"/>
+      <input type="hidden" name="copyDate"   value="[% copyDate   %]"/>
+      <input type="hidden" name="rights"     value="[% rights     %]"/>
+      <input type="hidden" name="reason"     value="[% reason     %]"/>
+      <input type="hidden" name="renNum"     value="[% renNum     %]"/>
+      <input type="hidden" name="regDate"    value="[% regDate    %]"/>
+      <input type="hidden" name="exp"        value="[% exp        %]"/>
+      <input type="hidden" name="comment"    value="[% comment    %]"/>
+      <input type="hidden" name="commentPre" value="[% commentPre %]"/>
 
-    <input type="submit" accesskey="s" value="Submit"> or go back to change
+      <input type="submit" accesskey="s" value="Submit"> or go back to change</input>
+      <br/>
+      <input type="checkbox" name="done">finished reviewing</input>
+    </form>
+  </div>
+[% ELSE %]
+  [% FOREACH error IN crms.GetErrors %]
+    <strong>ERROR: [% error %]</strong>
     <br/>
-    <input type="checkbox" name="done">finished reviewing</inut>
-  </form>
-</div>
+  [% END %]
+  <br /><br />
+[% END %]
 
 <table border="1">
   <tr><td>Item:</td> <td>[% barcode %]</td><tr>
@@ -46,12 +56,5 @@
   <tr><td>comment:</td> <td>[% comment %]</td><tr>
 </table>
 
-<br/>
-
-[% IF NOT crms.ValidateSubmission(rights, reason, commentPre, renNum, regDate, user) %]
-  [% FOREACH error IN crms.GetErrors %]
-    <strong>ERROR: [% error %]</strong>
-    <br/>
-  [% END %]
-[% END %]
+[% INCLUDE footer.tt %]
 
