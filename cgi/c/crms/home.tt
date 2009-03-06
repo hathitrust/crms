@@ -28,7 +28,7 @@
       [% FOREACH item IN locked.keys %]
         [% IF locked.${item}.locked == user %]
           <strong>locked:</strong>
-          [% crms.GetMarcDatafield( item, "245", "a") %]
+          [% crms.GetTitle( item ) %]
            (since: [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
            [ <a href="crms?p=crms&checkin=[% item %]">unlock item</a> ]
         [% END %]

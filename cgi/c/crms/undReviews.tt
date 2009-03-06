@@ -13,7 +13,7 @@
     <blockquote>
       [% items = crms.GetUndItems %]
       [% FOREACH item IN items %]
-        <a href="crms?p=review&barcode=[% item %]">[% item %]</a> 
+        <a href="crms?p=review&barcode=[% item %]">[% crms.GetTitle( item ) %]</a> 
         [ 
           [% FOREACH detail IN crms.GetItemReviewDetails( item ) %]
             [% detail %];

@@ -14,7 +14,7 @@
   [% IF locked %]
     [% FOREACH item IN locked.keys %]
       <div>
-       <a href="crms?p=unlockItem&id=[% item %]">[% item %]</a> 
+       <a href="crms?p=unlockItem&id=[% item %]">[% crms.GetTitle( item ) %]</a> 
        ([% locked.${item}.locked %], since: 
          [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
       </div>

@@ -20,7 +20,7 @@
       <table>
       [% FOREACH item IN crms.ItemsReviewedByUser(user, yesterday) %] 
         <tr><td>
-        <a href="crms?p=review&barcode=[% item %]">[% crms.GetMarcDatafield( item, "245", "a") %]</a>
+        <a href="crms?p=review&barcode=[% item %]">[% crms.GetTitle( item ) %]</a>
         [% FOREACH detail IN crms.GetItemReviewDetails( item, user ) %]
         </td><td>
           [ [% detail %], (dur: [% crms.GetDuration( item, user ) %]) ]  <br/> 
@@ -30,7 +30,7 @@
 
       [% FOREACH item IN crms.ItemsReviewedByUser(user, "", yesterday) %]
         <tr><td>
-          [% item %]
+          [% crms.GetTitle( item ) %]
         </td><td> 
           [% FOREACH detail IN crms.GetItemReviewDetails( item, user ) %]
             [ [% detail %], (dur: [% crms.GetDuration( item, user ) %]) ]  <br/>

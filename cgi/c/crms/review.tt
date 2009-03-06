@@ -35,7 +35,7 @@
 [% copyDate   = crms.GetCopyDate( barcode, user )           %]
 [% author     = crms.GetMarcDatafield( barcode, "100", "a") %]
 [% encAuthor  = crms.GetEncAuthor( barcode ) | url          %]
-[% title      = crms.GetMarcDatafield( barcode, "245", "a") %]
+[% title      = crms.GetTitle( barcode )                    %]
 [% encTitle   = crms.GetEncTitle( barcode ) | url           %]
 
 [% regNum     = crms.GetRegNum( barcode, user )             %]
@@ -65,34 +65,24 @@
           </tr>
         </table>
         <hr />
-        <a href="[% titleLink %]" target="topFrame">Stanford</a>   ||
+        <a href="[% titleLink %]" target="bFrame">Stanford</a>   ||
         <a href="[% ptLink %]"    target="topFrame" accesskey="h">HathiTrust</a> ||
         <a href="[% catLink %]"   target="topFrame" accesskey="m">Mirlyn</a>
         <br />
-        <a href="[% wCatLink %]"  target="topFrame">World Cat</a>   ||
-        <a href="[% uscorLink %]" target="topFrame">U.S. Copyright</a><br/>
+        <a href="[% wCatLink %]"  target="bFrame">World Cat</a>   ||
+        <a href="[% uscorLink %]" target="bFrame">U.S. Copyright</a><br/>
         <hr />
 
-        <table width="100%">
-          <tr>
-            <td><strong>search:</strong></td>
-            <td>
-              <a href="javascript:changeFrame2('[% titleLink %]' )" accesskey="t">ti</a> ||
-              <a href="javascript:changeFrame2('[% authorLink %]')" accesskey="a">au</a> ||
-              <a href="javascript:changeFrame2('[% searchForm %]')" accesskey="q">form</a> ||
-              <a href="javascript:flipFrame2()"                     accesskey="x">[x]</a>
-            </td>
-          </tr><tr>
-            <td><strong>1/2:</strong></td>
-            <td>
-              <a href="javascript:changeFrame('[% titleLink %]')">ti</a> ||
-              <a href="javascript:changeFrame('[% authorLink %]')">au</a> ||
-              <a href="javascript:changeFrame('[% searchForm %]')">form</a> ||
-              <a href="javascript:flipFrame()"                    >[x]</a>
-            </td>
-          </tr>
-        </table>
-  
+        <strong>search:  </strong>
+          <a href="javascript:changeFrame2('[% titleLink %]' )" accesskey="t">title</a> ||
+          <a href="javascript:changeFrame2('[% authorLink %]')" accesskey="a">author</a> ||
+          <a href="javascript:changeFrame2('[% searchForm %]')" accesskey="q">form</a>
+        <br />
+        <strong>open/close:  </strong>
+          <a href="javascript:flipFrame2()" accesskey="o">full</a> ||
+          <a href="javascript:flipFrame()"  accesskey="p">half</a>
+        <br />
+
         <hr />
         <strong>ID:</strong> <tt>[% barcode %]</tt></br>
         <strong>Title:</strong>  <a href="$titleLink"  target="bFrame">[% title %]</a><br/>

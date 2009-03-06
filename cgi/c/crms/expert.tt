@@ -12,17 +12,18 @@
   <hr width="50%" align="left"/>
     <div>disputed items that need an expert review:</div>
     <blockquote>
-
+      <table>
       [% FOREACH item IN crms.GetItemsInDispute %]
-        <a href="crms?p=review&barcode=[% item %]">[% crms.GetMarcDatafield( item, "245", "a") %]</a> 
-        [ 
-          [% FOREACH detail IN crms.GetItemReviewDetails( item ) %]
-            [% detail %];
-          [% END %]
-        ]
-        <br/> 
+        <tr>
+          <td><a href="crms?p=review&barcode=[% item %]">[% crms.GetTitle( item ) %]</a></td>
+          <td>[ 
+            [% FOREACH detail IN crms.GetItemReviewDetails( item ) %]
+              [% detail %];
+            [% END %]
+          ] 
+          </td>
+        </tr> 
       [% END %]
-
     </blockquote>
   </div>
 [% INCLUDE footer.tt %]
