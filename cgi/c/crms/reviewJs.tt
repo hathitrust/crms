@@ -83,7 +83,8 @@ function popRenewalDate() {
             }    
             else    
             {
-                document.submitReview.regDate.value = old;
+                // document.submitReview.regDate.value = old;
+                document.submitReview.regDate.value = "";
             }
         } 
     }; 
