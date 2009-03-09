@@ -56,6 +56,7 @@ my $page  = $cgi->param('p');
 my $input = $page . ".tt";
 if ( ! -f $input ) { $input = "home.tt"; }
 
-print $cgi->header( -charset => 'iso-8859-1', "cache-control" => 'private' );
+## print $cgi->header( -charset => 'iso-8859-1', "cache-control" => 'private' );
+print $cgi->header( -charset => 'utf-8', "cache-control" => 'private' );
 $tt->process($input, $vars) || die $tt->error();
 
