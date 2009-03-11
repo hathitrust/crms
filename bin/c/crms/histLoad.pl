@@ -15,13 +15,14 @@ use Getopt::Std;
 use LWP::UserAgent;
 
 my %opts;
-getopts('f:hv', \%opts);
+getopts('f:hva', \%opts);
 
 my $help       = $opts{'h'};
 my $verbose    = $opts{'v'};
 my $file       = $opts{'f'};
+my $alt        = $opts{'a'};
 
-if ( $help || ! $file ) { die "USAGE: $0 -f csv_file [-v] [-h] \n\n"; }
+if ( $help || ! $file ) { die "USAGE: $0 -f csv_file [-v] [-h] [-a (alt. format)] \n\n"; }
 
 
 my $crms = CRMS->new(
@@ -48,6 +49,11 @@ open my $fh, $file or die "failed t_histo open $file: $@ \n";
 ## 11 Notes
 ## 12 akz comments
 
+## F code format
+## 11 F=US Docs
+## 12 Use to record questions or problems with und codes
+
+
 foreach my $line ( <$fh> )
 {
     chomp $line;
@@ -64,7 +70,9 @@ foreach my $line ( <$fh> )
     my $note      = $parts[11];
     my $eNote     = $parts[12];
 
-    if ( scalar @parts > 13 ) { die "ERROR:$line \n"; }
+    if ( $alt ) { undef $eNote; }  ## this is the F flag, not used
+
+    ## if ( scalar @parts > 14 ) { die "ERROR:$line \n"; }
 
     if ( $verbose )
     { 
@@ -75,8 +83,8 @@ foreach my $line ( <$fh> )
     if ( ! $rc ) 
     {
         my $errors = $crms->GetErrors();
-        foreach ( @{$errors} ) { print "$_ \n"; }
-        die "failed \n\n"; 
+        ## foreach ( @{$errors} ) { print "$_ \n"; }
+        print "failed: $line \n"; 
     }
 }
 
