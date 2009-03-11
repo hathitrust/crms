@@ -5,6 +5,29 @@
   <input type="hidden" name="user"     value="[% user %]"> 
   <input type="hidden" name="confirm"  value="1"> 
 
+  <table>
+    <tr>
+      <td><strong>Renewal ID: </strong></td>
+      <td>
+        <input type="text" name="renNum" value="[% regNum %]" size="9" onBlur="javascript:popRenewalDate()"/>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <strong>
+          <a class="plainLink"href="javascript:popRenewalDate()" accesskey="d">Renewal Date: </a>
+        </strong>
+      </td>
+      <td><input type="text" name="regDate" value="[% regDate %]" size="9"/></td>
+    </tr>
+    <tr>
+      <td><strong>&copy; Date: </strong></td>
+      <td><input type="text" name="copyDate" size="4" value="[% copyDate %]"/>
+    </tr>
+  </table>
+
+  <br />
+
   <strong>Rights/Reason: </strong>
   <!-- &nbsp;&nbsp;<a href="/c/crms/help.html#rights" target="_blank">help</a> -->
   <br/>
@@ -47,39 +70,9 @@
       </td>
     </tr>
   </table>
-  <br/>
-
-  <table>
-    <tr>
-      <td>
-        <strong>
-          <a class="plainLink"href="javascript:popRenewalDate()" accesskey="d">Renewal Date: </a>
-        </strong>
-      </td>
-      <td><input type="text" name="regDate" value="[% regDate %]" size="9"/></td>
-    </tr>
-    <tr>
-      <td><strong>Renewal ID: </strong></td>
-      <td>
-        <input type="text" name="renNum" value="[% regNum %]" size="9" onBlur="javascript:popRenewalDate()"/>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>&copy; Date: </strong></td>
-      <td><input type="text" name="copyDate" size="4" value="[% copyDate %]"/>
-    </tr>
-  </table>
-
-  [% IF crms.IsUserExpert(user) %]
-    <input type="checkbox" name="exp"
-      [% IF crms.IsThirdReview(barcode) %] checked="checked"[% END %]
-      >Final Determination</input>
-    <br/>
-  [% END %]
-
-  <br/>
-  <strong>Comments: </string>
-  <!-- <a href="/c/crms/help.html#comment" target="_blank">?</a> --> <br/> 
+  
+  <br />
+  <strong>Comments: </strong><br/>
   <select name="commentPre">
     [% pres = {"Foreign"    => "Foreign Pub",   "Missing"     => "Missing",
                "Collection" => "Collection",    "Reprint"     => "Reprint",
@@ -95,6 +88,15 @@
     [% END %]
   </select>
   <textarea name="comment" cols="20" rows="1">[% comm %]</textarea>
+
+  
+  [% IF crms.IsUserExpert(user) %]
+    <br />
+    <input type="checkbox" name="exp"
+      [% IF crms.IsThirdReview(barcode) %] checked="checked"[% END %]
+      >Final Determination</input>
+    <br/>
+  [% END %]
 
   <br/>
   <div style="padding: 8px;">
