@@ -28,7 +28,7 @@ if ( $help )
 }
 
 my $crms = CRMS->new(
-    logFile      =>   'log.txt',
+    logFile      =>   "$DLXSROOT/prep/c/crms/update_log.txt",
     configFile   =>   'crms.cfg',
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,

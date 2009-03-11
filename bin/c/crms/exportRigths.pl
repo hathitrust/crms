@@ -29,7 +29,7 @@ if ( $help )
 }
 
 my $crms = CRMS->new(
-    logFile      =>   'export_log.txt',
+    logFile      =>   "$DLXSROOT/prep/c/crms/export_log.txt",
     configFile   =>   'crms.cfg',
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,

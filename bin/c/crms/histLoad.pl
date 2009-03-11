@@ -25,7 +25,7 @@ if ( $help || ! $file ) { die "USAGE: $0 -f csv_file [-v] [-h] \n\n"; }
 
 
 my $crms = CRMS->new(
-    logFile      =>   'log_load_hist.txt',
+    logFile      =>   "$DLXSROOT/prep/c/crms/log_load_hist.txt",
     configFile   =>   'crms.cfg',
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
