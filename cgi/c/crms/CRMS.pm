@@ -264,7 +264,7 @@ sub SubmitReview
 sub SubmitHistReview
 {
     my $self = shift;
-    my ($id, $user, $date, $attr, $reason, $regNum, $regDate, $note, $eNote) = @_;
+    my ($id, $user, $date, $attr, $reason, $cDate, $regNum, $regDate, $note, $eNote) = @_;
 
     ## change attr and reason back to numbers
     $attr   = $self->GetRightsNum( $attr );
@@ -276,9 +276,12 @@ sub SubmitHistReview
     
     ## do some sort of check for expert submissions
 
+    $note  = $self->get('dbh')->quote($note);
+    $eNote = $self->get('dbh')->quote($eNote);
+
     ## all good, INSERT
-    my $sql = qq{INSERT INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, regNum, regDate, note, expertNote, hist) } .
-              qq{VALUES('$id', '$user', '$attr', '$reason', '$regNum', '$regDate', '$note', '$eNote', 1) };
+    my $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, copyDate, regNum, regDate, note, expertNote, hist) } .
+              qq{VALUES('$id', '$user', '$attr', '$reason', '$cDate', '$regNum', '$regDate', $note, $eNote, 1) };
 
     $self->PrepareSubmitSql( $sql );
 
@@ -871,6 +874,7 @@ sub ValidateAttr
     {
         if ( $row->[0] eq $attr ) { return 1; }            
     }
+    $self->SetError( "bad attr: $attr" );
     return 0;
 }
 
@@ -1026,12 +1030,49 @@ sub UpdateTitle
     my $self = shift;
     my $id   = shift;
 
-    my $ti   = $self->GetMarcDatafield( $id, "245", "a");
+    ## my $ti   = $self->GetMarcDatafield( $id, "245", "a");
+    my $ti   = $self->GetRecordTitleBc2Meta( $id );
+
     my $tiq  = $self->get("dbh")->quote( $ti );
     my $sql  = qq{ REPLACE INTO titles (id, title)  VALUES ("$id", $tiq) };
     $self->PrepareSubmitSql( $sql );
 
     return $ti; 
+}
+
+## use for now because the API is slow...
+sub GetRecordTitleBc2Meta
+{
+    my $self = shift;
+    my $id   = shift;
+
+    ## get from object if we have it
+    if ( $self->get( 'marcData' ) ne "" ) { return $self->get( 'marcData' ); }
+
+    my $parser = $self->get( 'parser' );
+    my $url    = "http://mirlyn.lib.umich.edu/cgi-bin/bc2meta?id=$id";
+    my $ua     = LWP::UserAgent->new;
+
+    $ua->timeout( 1000 );
+    my $req = HTTP::Request->new( GET => $url );
+    my $res = $ua->request( $req );
+
+    if ( ! $res->is_success ) { $self->Logit( "$url failed: ".$res->message() ); return; }
+
+    my $source;
+    eval { $source = $parser->parse_string( $res->content() ); };
+    if ($@) { $self->Logit( "failed to parse response:$@" ); return; }
+
+    my $errorCode = $source->findvalue( "//*[name()='error']" );
+    if ( $errorCode ne "" )
+    {
+        $self->Logit( "$url \nfailed to get MARC for $id: $errorCode " . $res->content() );
+        return;
+    }
+
+    my ($title) = $source->findvalue( '/present/record/metadata/oai_marc/varfield[@id="245"]/subfield[@label="a"]' );
+
+    return $title;
 }
 
 sub GetEncAuthor
@@ -1363,7 +1404,7 @@ sub GetReviewerPace
     if ( ! $date ) 
     {
         $date = POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time - 2629743));
-        if ($self->get('verbose')) { $self->Logit( "date: $date"); }
+        ## if ($self->get('verbose')) { $self->Logit( "date: $date"); }
     }
 
     my @items = $self->ItemsReviewedByUser( $user, $date );
@@ -1381,10 +1422,20 @@ sub GetReviewerPace
     if ( ! $count ) { return 0; }
 
     my $ave = int( ($totalTime / $count) + .5 );
-    if ($self->get('verbose')) { $self->Logit( "$totalTime / $count : $ave" ); }
+    ## if ($self->get('verbose')) { $self->Logit( "$totalTime / $count : $ave" ); }
 
-    if ($ave > 60) { return POSIX::strftime( "%M:%S", $ave, 0,0,0,0,0,0 ) . " min"; }
-    else           { return "$ave sec"; }
+    if ( ! $ave ) { return 0; }
+
+    my ($h,$m) = (0,0);
+    while ($ave > 3660 ) { $h++; $ave -= 3660; }
+    while ($ave > 60 )   { $m++; $ave -= 60;   }
+
+    my $return;
+    if ( $h ) { $return .= "$h:"; }
+    if ( $m ) { $return .= sprintf("%02d",$m) .":"; }
+    $return .= sprintf("%02d",$ave);
+
+    return $return;
 }
 
 sub GetReviewerCount
