@@ -514,6 +514,9 @@ sub GetReviewsRef
     my $id      = shift;
     my $user    = shift;
     my $since   = shift;
+    my $offset  = shift;
+    
+    if ( ! $offset ) { $offset = 0; }
 
     if ( ! $order || $order eq "time" ) { $order = "time DESC "; }
 
@@ -527,7 +530,8 @@ sub GetReviewsRef
     if    ( $id && ($user || $since) ) { $sql .= qq{ AND   id = "$id" }; }
     elsif ( $id )                      { $sql .= qq{ WHERE id = "$id" }; }
 
-    $sql .= qq{ ORDER BY $order LIMIT 100 };
+    $sql .= qq{ ORDER BY $order LIMIT $offset, 25 };
+
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my $return = [];
@@ -549,6 +553,26 @@ sub GetReviewsRef
     }
 
     return $return;
+}
+
+sub GetReviewsCount
+{
+    my $self    = shift;
+    my $id      = shift;
+    my $user    = shift;
+    my $since   = shift;
+
+    my $sql = qq{ SELECT count(id) FROM $CRMSGlobals::reviewsTable };
+
+    if    ( $user )                    { $sql .= qq{ WHERE user = "$user" };   }
+
+    if    ( $since && $user )          { $sql .= qq{ AND   time >= "$since"};  }
+    elsif ( $since )                   { $sql .= qq{ WHERE time >= "$since" }; }
+
+    if    ( $id && ($user || $since) ) { $sql .= qq{ AND   id = "$id" }; }
+    elsif ( $id )                      { $sql .= qq{ WHERE id = "$id" }; }
+
+    return $self->SimpleSqlGet( $sql );
 }
 
 sub LinkToStanford

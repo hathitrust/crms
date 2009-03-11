@@ -1,9 +1,18 @@
 [% INCLUDE header.tt    %]
 [% INCLUDE homeLink.tt  %]
 
-[% id    = cgi.param('id')    %]
-[% since = cgi.param('since') %]
-[% order = cgi.param('order') %]
+[% id     = cgi.param('id')     %]
+[% since  = cgi.param('since')  %]
+[% order  = cgi.param('order')  %]
+[% offset = cgi.param('offset') %]
+
+[% IF NOT offset %] [% offset = 0 %] [% END %]
+
+[% IF offset > 0 %] [% next = offset + 25 %]
+[% ELSE %]          [% next = 25 %] [% END %]
+
+[% IF offset > 0 %] [% prev = offset - 25 %]
+[% ELSE %]          [% prev = 0 %] [% END %]
 
 <hr width="25%" align="left"/>
 <h3>reviews: </h3>
@@ -27,10 +36,14 @@
 </form>
 <br/>
 
-[% reviews = crms.GetReviewsRef( order, id, user, since ) %]
+[% reviews = crms.GetReviewsRef( order, id, user, since, offset ) %]
+
+<a href="?p=adminReviews&id=$id&time=$time&user=$user&attr=$attr&order=$order&offset=$prev">previous 25</a> || 
+<a href="?p=adminReviews&id=$id&time=$time&user=$user&attr=$attr&order=$order&offset=$next">next 25</a>
+(found: [% crms.GetReviewsCount(d, user, since) %])
 
 <table class="allReviews">
-  <th>id</th><th>time</th><th>time taken</th>
+  <th>title</th><th>time</th><th>time taken</th>
   <th>attr</th><th>reason</th>
   <th>note</th><th>reg num</th><th>expert review</th>
   <th>copy</th>
@@ -48,5 +61,8 @@
     </tr>
   [% END %]
 </table>
+
+<a href="?p=adminReviews&id=$id&time=$time&user=$user&attr=$attr&order=$order&offset=$prev">previous 25</a> || 
+<a href="?p=adminReviews&id=$id&time=$time&user=$user&attr=$attr&order=$order&offset=$next">next 25</a>
 
 [% INCLUDE footer.tt %]
