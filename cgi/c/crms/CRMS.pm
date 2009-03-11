@@ -342,8 +342,8 @@ sub ClearQueueAndExport
     $self->ExportReviews( $export );
 
     ## report back
-    $self->Logit( "export reviewed items removed from queue ($eCount): " . join(", ", @{$expert}) );
-    $self->Logit( "double reviewed items removed from queue ($dCount): " . join(", ", @{$double}) );
+    $self->Logit( "export reviewed items removed from queue ($eCount)" );
+    $self->Logit( "double reviewed items removed from queue ($dCount)" );
 
     return ("twice reviewed removed: $dCount, expert reviewed reemoved: $eCount");
 }
