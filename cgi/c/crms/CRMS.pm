@@ -375,13 +375,9 @@ sub ExportReviews
             next;
         }
         print $fh "$barcode\t$attr\t$reason\t$user\t$src\n";
+        ## $self->RemoveFromQueue($barcode); ## DEBUG
     }
     close $fh;
-
-    ## now remove these from the queue
-    ## foreach ( @{$list} ) { $self->RemoveFromQueue( $_ ); }
-
-    return 1;
 }
 
 sub GetExportFh
