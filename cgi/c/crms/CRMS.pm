@@ -192,24 +192,24 @@ sub AddItemToQueue
 sub IsItemInQueue
 {
     my $self = shift;
-    my $id   = shift;
+    my $bar  = shift;
 
-    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE id = '$id'};
-    my $ref  = $self->get('dbh')->selectall_arrayref( $sql );
+    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE id = '$bar'};
+    my $id   = $self->SimpleSqlGet( $sql );
 
-    if ( scalar @{$ref} ) { return 1; }
+    if ($id) { return 1; }
     return 0;
 }
 
 sub IsItemInReviews
 {
     my $self = shift;
-    my $id   = shift;
+    my $bar  = shift;
 
-    my $sql  = qq{SELECT id FROM $CRMSGlobals::reviewsTable WHERE id = '$id'};
-    my $ref  = $self->get('dbh')->selectall_arrayref( $sql );
+    my $sql  = qq{SELECT id FROM $CRMSGlobals::reviewsTable WHERE id = '$bar'};
+    my $id   = $self->SimpleSqlGet( $sql );
 
-    if ( scalar @{$ref} ) { return 1; }
+    if ($id) { return 1; }
     return 0;
 }
 
@@ -436,7 +436,7 @@ sub GetFinalAttrReason
 sub GetExpertRevItems
 {
     my $self = shift;
-    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status > 2 };
+    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status > 2 AND status < 5 };
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref;
@@ -493,8 +493,7 @@ sub GetOldestItemForReview
     my $sql  = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND } . 
                qq{ status < 2 ORDER BY pub_date LIMIT 1 };
 
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    return $ref->[0]->[0];
+    return $self->SimpleSqlGet( $sql );
 }
 
 sub RegisterExpertReview
@@ -664,8 +663,7 @@ sub GetReviewComment
 
     my $sql  = qq{ SELECT note FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    my $str = $ref->[0]->[0];
+    my $str  = $self->SimpleSqlGet( $sql );
 
     if ( $str =~ m/(\w+):\s(.*)/ ) { return( $1, $2 );  }
     else                           { return( "", $str); }
@@ -728,8 +726,7 @@ sub GetUserName
     if ( ! $user ) { $user = $self->get( "user" ); }
 
     my $sql  = qq{SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' LIMIT 1};
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    my $name = $ref->[0]->[0];
+    my $name = $self->SimpleSqlGet( $sql );
 
     if ( $name ne "" ) { return $name; }
 
@@ -744,9 +741,9 @@ sub IsUserReviewer
     if ( ! $user ) { $user = $self->get( "user" ); }
 
     my $sql  = qq{ SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' AND type = 1 };
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    my $name = $self->SimpleSqlGet( $sql );
 
-    if ( scalar @{$ref} ) { return 1; }
+    if ($name) { return 1; }
 
     return 0;
 }
@@ -759,9 +756,9 @@ sub IsUserExpert
     if ( ! $user ) { $user = $self->get( "user" ); }
 
     my $sql  = qq{ SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' AND type = 2 };
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    my $name = $self->SimpleSqlGet( $sql );
 
-    if ( scalar @{$ref} ) { return 1; }
+    if ($name) { return 1; }
 
     return 0;
 }
@@ -774,9 +771,9 @@ sub IsUserAdmin
     if ( ! $user ) { $user = $self->get( "user" ); }
 
     my $sql  = qq{ SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' AND type = 3 };
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    my $name = $self->SimpleSqlGet( $sql );
 
-    if ( scalar @{$ref} ) { return 1; }
+    if ( $name ) { return 1; }
 
     return 0;
 }
@@ -1198,10 +1195,10 @@ sub HasLockedItem
     my $name = shift;
     
     my $sql = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE locked = "$name" LIMIT 1};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    my $id  = $self->SimpleSqlGet( $sql );
 
-    if ( scalar @{$ref} ) { return 1; }
-    else                  { return 0; }
+    if ($id) { return 1; }
+    return 0;
 }
 
 sub GetLockedItem
@@ -1210,11 +1207,11 @@ sub GetLockedItem
     my $name = shift;
 
     my $sql = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE locked = "$name" LIMIT 1};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    my $id  = $self->SimpleSqlGet( $sql );
 
-    $self->Logit( "Get locked item for $name: $ref->[0]->[0]" ); 
+    $self->Logit( "Get locked item for $name: $id" ); 
 
-    return $ref->[0]->[0];
+    return $id;
 }
 
 sub IsLocked
@@ -1223,10 +1220,10 @@ sub IsLocked
     my $id   = shift;
 
     my $sql = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NOT NULL AND id = "$id"};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    my $id  = $self->SimpleSqlGet( $sql );
 
-    if ( scalar @{$ref} ) { return 1; }
-    else                  { return 0; }
+    if ($id) { return 1; }
+    return 0;
 }
 
 sub IsLockedForUser
@@ -1256,12 +1253,11 @@ sub PreviouslyReviewed
 
     my $limit = $self->GetYesterdaysDate();
 
-    my $sql = qq{SELECT id FROM $CRMSGlobals::reviewsTable WHERE id = "$id" } .
-              qq{ AND user = "$user" AND time < "$limit" };
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    my $sql   = qq{SELECT id FROM $CRMSGlobals::reviewsTable WHERE id = "$id" } .
+                qq{ AND user = "$user" AND time < "$limit" };
+    my $found = $self->SimpleSqlGet( $sql );
 
-    if ( scalar @{$ref} ) { return 1; }
-  
+    if ($found) { return 1; }
     return 0;
 }
 
@@ -1339,9 +1335,7 @@ sub ItemLockedSince
     my $user = shift;
 
     my $sql  = qq{SELECT start_time FROM $CRMSGlobals::timerTable WHERE id = "$id" and user = "$user"};
-
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    return $ref->[0]->[0];
+    return $self->SimpleSqlGet( $sql );
 
 }
 
@@ -1391,9 +1385,7 @@ sub GetDuration
     my $user = shift;
 
     my $sql = qq{ SELECT duration FROM $CRMSGlobals::reviewsTable WHERE user = "$user" AND id = "$id" };
-
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    return $ref->[0]->[0];
+    return $self->SimpleSqlGet( $sql );
 }
 
 sub SetDuration
@@ -1404,9 +1396,7 @@ sub SetDuration
 
     my $sql = qq{ SELECT TIMEDIFF((SELECT end_time   FROM timer where id = "$id" and user = "$user"), 
                                   (SELECT start_time FROM timer where id = "$id" and user = "$user")) };
-
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    my $dur = $ref->[0]->[0];
+    my $dur = $self->SimpleSqlGet( $sql );
 
     if ( ! $dur ) { return; }
 
@@ -1493,9 +1483,8 @@ sub GetNextItemForReview
         foreach my $bar ( @itemsReviewedOnce ) { $sql .= qq{ OR id = "$bar" }; }
         $sql   .= qq{ ) ORDER BY pub_date LIMIT 1 };
 
-        my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+        $barcode = $self->SimpleSqlGet( $sql );
         if ( $self->get("verbose") ) { $self->Logit("once: $sql"); }
-        $barcode = $ref->[0]->[0];
     }
 
     if ( ! $barcode ) 
@@ -1553,10 +1542,11 @@ sub ItemWasReviewedByUser
     my $user  = shift;
     my $id    = shift;
 
-    my $sql = qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$user" AND id = "$id"};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    my $sql   = qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$user" AND id = "$id"};
+    my $ref   = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    my $found = $self->SimpleSqlGet( $sql );
 
-    if ( @{$ref} ) { return 1; }
+    if ($found) { return 1; }
     return 0;
 }
 
@@ -1665,8 +1655,8 @@ sub GetRightsName
     my $self = shift;
     my $id   = shift;
     my $sql  = qq{ SELECT name FROM attributes WHERE id = "$id" };
-    my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref( $sql );
 
+    my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
     return $ref->[0]->[0];
 }
 
@@ -1674,9 +1664,9 @@ sub GetReasonName
 {
     my $self = shift;
     my $id   = shift;
-    my $sql  = qq{ SELECT name FROM reasons WHERE id = "$id" };
-    my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref( $sql );
+    my $sql  = qq{ SELECT name FROM reasons WHERE id = "$id" }; 
 
+    my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
     return $ref->[0]->[0];
 }
 
@@ -1685,8 +1675,8 @@ sub GetRightsNum
     my $self = shift;
     my $id   = shift;
     my $sql  = qq{ SELECT id FROM attributes WHERE name = "$id" };
-    my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref( $sql );
 
+    my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
     return $ref->[0]->[0];
 }
 
@@ -1695,8 +1685,8 @@ sub GetReasonNum
     my $self = shift;
     my $id   = shift;
     my $sql  = qq{ SELECT id FROM reasons WHERE name = "$id" };
-    my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref( $sql );
 
+    my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
     return $ref->[0]->[0];
 }
 
@@ -1705,11 +1695,9 @@ sub GetCopyDate
     my $self = shift;
     my $id   = shift;
     my $user = shift;
-
     my $sql  = qq{ SELECT copyDate FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
-    return $ref->[0]->[0];
+    return $self->SimpleSqlGet( $sql );
 }
 
 ## ----------------------------------------------------------------------------
@@ -1722,15 +1710,11 @@ sub GetRegNum
     my $self = shift;
     my $id   = shift;
     my $user = shift;
-    
     my $sql  = qq{ SELECT regNum FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
 
-    ## if user is expert review, show
     if ( ! $self->IsUserExpert($user) ) { $sql .= qq{ AND user = "$user"}; }
 
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    return $ref->[0]->[0];
+    return $self->SimpleSqlGet( $sql );
 }
 
 sub GetRegNums
@@ -1755,11 +1739,9 @@ sub GetRegDate
 {
     my $self = shift;
     my $id   = shift;
-
     my $sql  = qq{ SELECT DREG FROM $CRMSGlobals::stanfordTable WHERE ID = "$id" };
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
-    return $ref->[0]->[0];
+    return $self->SimpleSqlGet( $sql );
 }
 
 sub GetYesterdaysDate
