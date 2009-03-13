@@ -1259,12 +1259,10 @@ sub RemoveOldLocks
 
         if ( $old ) 
         { 
-            print "REMOVE:\t$id, $user \t\t $since | $time\n"; 
+            print "REMOVING:\t$id, $user \t\t $since | $time\n"; 
             $self->UnlockItem( $id, $user);
         }
-
     }
-
 }
 
 sub PreviouslyReviewed
