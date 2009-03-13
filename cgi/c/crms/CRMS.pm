@@ -1238,6 +1238,35 @@ sub IsLockedForUser
     return 0;
 }
 
+sub RemoveOldLocks
+{
+    my $self = shift;
+    my $time = shift;
+
+    if (! $time)  { $time = 86400; } 
+
+    my $time = $self->GetPrevDate($time);
+
+    my $lockedRef = $self->GetLockedItems();
+    foreach my $item ( keys %{$lockedRef} ) 
+    {
+        my $id    = $lockedRef->{$item}->{id};
+        my $user  = $lockedRef->{$item}->{locked};
+        my $since = $self->ItemLockedSince($id, $user);
+
+        my $sql   = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE id = "$id" AND "$time" >= time };
+        my $old   = $self->SimpleSqlGet($sql);
+
+        if ( $old ) 
+        { 
+            print "REMOVE:\t$id, $user \t\t $since | $time\n"; 
+            $self->UnlockItem( $id, $user);
+        }
+
+    }
+
+}
+
 sub PreviouslyReviewed
 {
     my $self = shift;
@@ -1740,17 +1769,28 @@ sub GetRegDate
     return $self->SimpleSqlGet( $sql );
 }
 
-sub GetYesterdaysDate
+sub GetPrevDate
 {
     my $self = shift;
-    my @p = localtime( time() );
-    $p[3] = ($p[3]-1);
+    my $prev = shift;
+
+    ## default 1 day (86,400 sec.)
+    if (! $prev) { $prev = 86400; }
+ 
+    my @p = localtime( time() - $prev );
+    $p[3] = ($p[3]);
     $p[4] = ($p[4]+1);
     $p[5] = ($p[5]+1900);
     foreach (0,1,2,3,4) { $p[$_] = sprintf("%0*d", "2", $p[$_]); }
 
     ## DB format (YYYY-MM-DD HH:MM:SS)
     return "$p[5]-$p[4]-$p[3] $p[2]:$p[1]:$p[0]";
+}
+
+sub GetYesterdaysDate
+{
+    my $self = shift;
+    return $self->GetPrevDate();
 }
 
 sub GetTodaysDate
