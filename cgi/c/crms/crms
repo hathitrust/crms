@@ -52,6 +52,8 @@ my $vars = {
     yesterday => POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time-86400))
 };
 
+## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
+## the default is home.tt in case a tt is not found
 my $page  = $cgi->param('p');
 my $input = $page . ".tt";
 if ( ! -f $input ) { $input = "home.tt"; }
