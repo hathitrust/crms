@@ -870,6 +870,7 @@ sub ValidateSubmission
         $return = 0;
     }
 
+    ## ic/ren requires a reg number
     if ( $reason == 7 && $attr == 2 && $regNum eq "" ) 
     {
         $self->SetError( "missing renewal ID" );
@@ -1259,7 +1260,7 @@ sub RemoveOldLocks
 
         if ( $old ) 
         { 
-            print "REMOVING:\t$id, $user \t\t $since | $time\n"; 
+            $self->Logit( "REMOVING OLD LOCK:\t$id, $user: $since | $time" );
             $self->UnlockItem( $id, $user);
         }
     }
