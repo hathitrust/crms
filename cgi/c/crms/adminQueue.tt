@@ -7,6 +7,14 @@
 [% INCLUDE adminNav.tt  %]
 
 <hr width="25%" align="left"/>
+
+[% IF cgi.param('clear') %] [% crms.RemoveOldLocks() %][% END %]
+
+<div>
+  <blockquote><a href="?p=adminQueue&clear=1">clear old locks</a></blockquote>
+</div>
+
+<hr width="25%" align="left"/>
 <strong>items that are locked (click to unlock): </strong>
 
 <blockquote>

@@ -870,7 +870,7 @@ sub ValidateSubmission
         $return = 0;
     }
 
-    if ( $reason == 7 && $regNum eq "" ) 
+    if ( $reason == 7 && $attr == 2 && $regNum eq "" ) 
     {
         $self->SetError( "missing renewal ID" );
         $return = 0;
