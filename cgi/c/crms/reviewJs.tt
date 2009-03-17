@@ -2,6 +2,7 @@
 <!--
 function redirHome()   { window.location = "crms" }
 function redirReview() { window.location = "crms?p=review" }
+function redirExpert() { window.location = "crms?p=expert" }
 
 function changeFrame(url) {
     document.getElementById("bFrame").src      = url;

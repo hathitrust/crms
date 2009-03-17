@@ -12,7 +12,11 @@
 [% done       = cgi.param('done')       %]
 
 [% IF crms.SubmitReview( barcode, user, rights, reason, copyDate, comment, renNum, exp, regDate) %]
-  [% IF done %]
+  [% IF exp %]
+    <body onLoad="setTimeout('redirExpert()', 2000)">
+      <p>Thanks. Going back to expert page...</p>
+    </body>
+  [% ELSIF done %]
     <body onLoad="setTimeout('redirHome()', 2000)">
       <p>Thanks. Going Home...</p>
     </body>
