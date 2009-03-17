@@ -179,12 +179,19 @@ sub AddItemToQueue
     my $self    = shift;
     my $id      = shift;
     my $time    = shift;
-    my $pub     = $self->GetPublDate( $id );
 
+    ## skip if $id has been reviewed
+    if ( $self->IsItemInReviews( $id ) ) { return; }
+
+    ## pub date between 1923 and 1963
+    my $pub = $self->GetPublDate( $id );
+    ## confirm date range and add check
+
+    ## no gov docs
     if ( $self->IsGovDoc( $id ) ) { $self->Logit( "skip fed doc: $id" ); return; }
 
     ## check for item, warn if already exists, then update ???
-    my $sql = qq{REPLACE INTO $CRMSGlobals::queueTable (id, time, pub_date) VALUES ('$id', '$time', '$pub')};
+    my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, pub_date) VALUES ('$id', '$time', '$pub')};
 
     $self->PrepareSubmitSql( $sql );
 }
