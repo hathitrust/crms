@@ -44,7 +44,7 @@
 [% crPage     = crms.GetCopyrightPage( barcode )            %]
 
 [% revComm    = crms.GetReviewComment( barcode, user )      %]
-[% commPre    = revComm.0                                   %]
+[% category   = revComm.0                                   %]
 [% comm       = revComm.1                                   %]
 
 [%# links to PT, stanford DB search, or Mirlyn catalog %]
@@ -100,11 +100,11 @@
       <div class="navbottom">
         <hr/>
         [% comment = "" %] 
-        [% IF comm or commPre %][% comment = "$commPre: $comm" %][% END %]
+        [%# IF comm or commPre %][%# comment = "$commPre: $comm" %][%# END %]
 
         [% INCLUDE submitReviewForm.tt barcode = barcode, regNum   = regNum,   regDate = regDate,
                                        comment = comment, copyDate = copyDate, comm    = comm,    
-                                       commPre = commPre %]
+                                       category = category %]
       </div>
     </div>
     [%# the frame (Stanford, HT, Cat...) %]

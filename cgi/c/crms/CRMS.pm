@@ -31,8 +31,8 @@ sub new
 
     require $args{'configFile'};
 
-    $self->set( '$bc2metaUrl', q{http://mirlyn.lib.umich.edu/cgi-bin/bc2meta} );
-    $self->set( '$oaiBaseUrl', q{http://mirlyn.lib.umich.edu/OAI} );
+    $self->set( 'bc2metaUrl', q{http://mirlyn.lib.umich.edu/cgi-bin/bc2meta} );
+    $self->set( 'oaiBaseUrl', q{http://mirlyn.lib.umich.edu/OAI} );
     $self->set( 'verbose',     $args{'verbose'});
     $self->set( 'parser',      XML::LibXML->new() );
     $self->set( 'barcodeID',   {} );
@@ -143,12 +143,13 @@ sub SimpleSqlGet
 sub LoadNewItems
 {
     my $self    = shift;
-    my $update  = shift;
+    my $start   = shift;
+    my $stop    = shift;
 
-    if ( ! $update ) { $update = $self->GetUpdateTime(); }
+    if ( ! $start ) { $start = $self->GetUpdateTime(); }
 
     my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time FROM rights } . 
-              qq{WHERE attr = 2 AND time >= '$update' GROUP BY id};
+              qq{WHERE attr = 2 AND time >= '$start' AND time <= '$stop' GROUP BY id};
 
     my $ref = $self->get('sdr_dbh')->selectall_arrayref( $sql );
 
@@ -187,13 +188,18 @@ sub AddItemToQueue
     my $pub = $self->GetPublDate( $id );
     ## confirm date range and add check
 
-    ## no gov docs
-    if ( $self->IsGovDoc( $id ) ) { $self->Logit( "skip fed doc: $id" ); return; }
+    #Only care about items between 1923 and 1963
+    if ( ( $pub >= '1923' ) && ( $pub <= '1963' ) )
+    {
 
-    ## check for item, warn if already exists, then update ???
-    my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, pub_date) VALUES ('$id', '$time', '$pub')};
+      ## no gov docs
+      if ( $self->IsGovDoc( $id ) ) { $self->Logit( "skip fed doc: $id" ); return; }
 
-    $self->PrepareSubmitSql( $sql );
+      ## check for item, warn if already exists, then update ???
+      my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, pub_date) VALUES ('$id', '$time', '$pub')};
+
+      $self->PrepareSubmitSql( $sql );
+    }
 }
 
 sub IsItemInQueue
@@ -228,7 +234,7 @@ sub IsItemInReviews
 sub SubmitReview
 {
     my $self = shift;
-    my ($id, $user, $attr, $reason, $copyDate, $note, $regNum, $exp, $regDate) = @_;
+    my ($id, $user, $attr, $reason, $copyDate, $note, $regNum, $exp, $regDate, $category) = @_;
 
     if ( ! $self->ChechForId( $id ) )                     { $self->Logit("id check failed");          return 0; }
     if ( ! $self->CheckReviewer( $user, $exp ) )          { $self->Logit("review check failed");      return 0; }
@@ -241,8 +247,8 @@ sub SubmitReview
 
     ## do some sort of check for expert submissions
 
-    my @fieldList = ("id", "user", "attr", "reason", "note", "regNum", "regDate");
-    my @valueList = ($id,  $user,  $attr,  $reason,  $note,  $regNum,  $regDate);
+    my @fieldList = ("id", "user", "attr", "reason", "note", "regNum", "regDate", "category");
+    my @valueList = ($id,  $user,  $attr,  $reason,  $note,  $regNum,  $regDate, $category);
 
     if ($exp)      { push(@fieldList, "expert");   push(@valueList, $exp); }
     if ($copyDate) { push(@fieldList, "copyDate"); push(@valueList, $copyDate); }
@@ -271,7 +277,7 @@ sub SubmitReview
 sub SubmitHistReview
 {
     my $self = shift;
-    my ($id, $user, $date, $attr, $reason, $cDate, $regNum, $regDate, $note, $eNote) = @_;
+    my ($id, $user, $date, $attr, $reason, $cDate, $regNum, $regDate, $note, $eNote, $category) = @_;
 
     ## change attr and reason back to numbers
     $attr   = $self->GetRightsNum( $attr );
@@ -287,8 +293,8 @@ sub SubmitHistReview
     $eNote = $self->get('dbh')->quote($eNote);
 
     ## all good, INSERT
-    my $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, copyDate, regNum, regDate, note, expertNote, hist) } .
-              qq{VALUES('$id', '$user', '$attr', '$reason', '$cDate', '$regNum', '$regDate', $note, $eNote, 1) };
+    my $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, copyDate, regNum, regDate, note, expertNote, hist, category) } .
+              qq{VALUES('$id', '$user', '$attr', '$reason', '$cDate', '$regNum', '$regDate', $note, $eNote, 1, '$category') };
 
     $self->PrepareSubmitSql( $sql );
 
@@ -668,9 +674,23 @@ sub GetReviewComment
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
     my $str  = $self->SimpleSqlGet( $sql );
 
-    if ( $str =~ m/(\w+):\s(.*)/ ) { return( $1, $2 );  }
-    else                           { return( "", $str); }
+    return $str;
+
 }
+
+sub GetReviewCategory
+{
+    my $self = shift;
+    my $id   = shift;
+    my $user = shift;
+
+    my $sql  = qq{ SELECT category FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    my $str  = $self->SimpleSqlGet( $sql );
+
+    return $str;
+}
+
 
 sub GetAttrReasonCode
 {
@@ -1129,8 +1149,8 @@ sub GetRecordMetadata
     ## get from object if we have it
     if ( $self->get( $bar ) ne "" ) { return $self->get( $bar ); }
 
-    ## my $sysId = $slef->BarcodeToId( $barcode );
-    ## my $url   = "http://mirlyn.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
+    #my $sysId = $self->BarcodeToId( $barcode );
+    #my $url   = "http://mirlyn.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
     my $url    = "http://mirlyn.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
     my $ua     = LWP::UserAgent->new;
 

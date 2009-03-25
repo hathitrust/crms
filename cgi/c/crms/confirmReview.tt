@@ -8,10 +8,10 @@
 [% regDate    = cgi.param('regDate')    %]
 [% exp        = cgi.param('exp')        %]
 [% comment    = cgi.param('comment')    %]
-[% commentPre = cgi.param('commentPre') %]
+[% category   = cgi.param('category')   %]
 
 [% IF exp        %][% exp = "1" %][% END %]
-[% IF commentPre %][% comment = "$commentPre: $comment" %][% END %]
+[%# IF commentPre %][%# comment = "$commentPre: $comment" %][%# END %]
 
 [% parts      = crms.GetAttrReasonFromCode(rights) %]
 [% rights     = parts.0                            %]
@@ -26,12 +26,13 @@
   <tr><td>Renewal Date:</td> <td>[% regDate %]</td><tr>
   <tr><td>copy Date:</td> <td>[% copyDate %]</td><tr>
   <tr><td>Final:</td> <td>[% exp %]</td><tr>
+  <tr><td>category:</td> <td>[% category %]</td><tr>
   <tr><td>comment:</td> <td>[% comment %]</td><tr>
 </table>
 
 <br />
 
-[% IF crms.ValidateSubmission(rights, reason, commentPre, renNum, regDate, user) %]
+[% IF crms.ValidateSubmission(rights, reason, category, renNum, regDate, user) %]
   <div>
     <form name="submitReview" action="crms">
       <input type="hidden" name="p"          value="submitReview"> 
@@ -43,7 +44,7 @@
       <input type="hidden" name="regDate"    value="[% regDate    %]"/>
       <input type="hidden" name="exp"        value="[% exp        %]"/>
       <input type="hidden" name="comment"    value="[% comment    %]"/>
-      <input type="hidden" name="commentPre" value="[% commentPre %]"/>
+      <input type="hidden" name="category"   value="[% category   %]"/>
 
       <input type="checkbox" name="done">finished reviewing</input>
       <br/>
