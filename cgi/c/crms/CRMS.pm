@@ -199,6 +199,10 @@ sub AddItemToQueue
       my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, pub_date) VALUES ('$id', '$time', '$pub')};
 
       $self->PrepareSubmitSql( $sql );
+
+      #Update the pub date in bibdata
+      &UpdatePubDate ( $id, $pub );
+      
     }
 }
 
@@ -1062,7 +1066,7 @@ sub GetTitle
     my $self = shift;
     my $id   = shift;
 
-    my $sql  = qq{ SELECT title FROM titles WHERE id = "$id" };
+    my $sql  = qq{ SELECT title FROM bibdata WHERE id = "$id" };
     my $ti   = $self->SimpleSqlGet( $sql );
 
     if ( $ti eq "" ) { $ti = $self->UpdateTitle($id); }
@@ -1079,11 +1083,46 @@ sub UpdateTitle
     my $ti   = $self->GetRecordTitleBc2Meta( $id );
 
     my $tiq  = $self->get("dbh")->quote( $ti );
-    my $sql  = qq{ REPLACE INTO titles (id, title)  VALUES ("$id", $tiq) };
-    $self->PrepareSubmitSql( $sql );
+
+    my $sql  = qq{ SELECT count(*) from bibdata where id="$id"};
+    my $count  = $self->SimpleSqlGet( $sql );
+    if ( $count == 1 )
+    {
+       my $sql  = qq{ UPDATE bibdata set title=$tiq where id="$id"};
+       $self->PrepareSubmitSql( $sql );
+    }
+    else
+    {
+       my $sql  = qq{ INSERT INTO bibdata (id, title, title) VALUES ( "$id", $tiq, "")};
+       $self->PrepareSubmitSql( $sql );
+    }
 
     return $ti; 
 }
+
+
+sub UpdatePubDate
+{
+    my $self = shift;
+    my $id   = shift;
+    my $pub_date = shift;
+
+    my $sql  = qq{ SELECT count(*) from bibdata where id="$id"};
+    my $count  = $self->SimpleSqlGet( $sql );
+    if ( $count == 1 )
+    {
+       my $sql  = qq{ UPDATE bibdata set pub_date="$pub_date" where id="$id"};
+       $self->PrepareSubmitSql( $sql );
+    }
+    else
+    {
+       my $sql  = qq{ INSERT INTO bibdata (id, title, pub_date) VALUES ( "$id", "", "$pub_date"};
+       $self->PrepareSubmitSql( $sql );
+    }
+
+}
+
+
 
 ## use for now because the API is slow...
 sub GetRecordTitleBc2Meta
