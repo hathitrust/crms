@@ -157,7 +157,7 @@ sub LoadNewItems
 
     ## design note: if these were in the same DB we could just INSERT
     ## into the new table, not SELECT then INSERT
-    foreach my $row ( @{$ref} ) { $self->AddItemToQueue( $row->[0], $row->[1] ); }
+    foreach my $row ( @{$ref} ) { $self->AddItemToQueue( $row->[0], $row->[1], 0 ); }
 }
 
 ## ----------------------------------------------------------------------------
@@ -180,6 +180,7 @@ sub AddItemToQueue
     my $self    = shift;
     my $id      = shift;
     my $time    = shift;
+    my $status  = shift;
 
     ## skip if $id has been reviewed
     if ( $self->IsItemInReviews( $id ) ) { return; }
@@ -196,12 +197,12 @@ sub AddItemToQueue
       if ( $self->IsGovDoc( $id ) ) { $self->Logit( "skip fed doc: $id" ); return; }
 
       ## check for item, warn if already exists, then update ???
-      my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, pub_date) VALUES ('$id', '$time', '$pub')};
+      my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date) VALUES ('$id', '$time', $status, '$pub')};
 
       $self->PrepareSubmitSql( $sql );
 
       #Update the pub date in bibdata
-      &UpdatePubDate ( $id, $pub );
+      $self->UpdatePubDate ( $id, $pub );
       
     }
 }
@@ -1093,7 +1094,7 @@ sub UpdateTitle
     }
     else
     {
-       my $sql  = qq{ INSERT INTO bibdata (id, title, title) VALUES ( "$id", $tiq, "")};
+       my $sql  = qq{ INSERT INTO bibdata (id, title, pub_date) VALUES ( "$id", $tiq, "")};
        $self->PrepareSubmitSql( $sql );
     }
 
@@ -1190,7 +1191,8 @@ sub GetRecordMetadata
 
     #my $sysId = $self->BarcodeToId( $barcode );
     #my $url   = "http://mirlyn.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
-    my $url    = "http://mirlyn.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
+    #my $url    = "http://mirlyn.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
+    my $url    = qq{http://mirlyn.lib.umich.edu/cgi-bin/bc2meta?id=$barcode&schema=marcxml};
     my $ua     = LWP::UserAgent->new;
 
     if ($self->get("verbose")) { $self->Logit( "GET: $url" ); }
@@ -1211,7 +1213,8 @@ sub GetRecordMetadata
         return;
     }
 
-    my ($record) = $source->findnodes( "//record" );
+    #my ($record) = $source->findnodes( "//record" );
+    my ($record) = $source->findnodes( "." );
     $self->set( $bar, $record );
 
     $self->UpdateTitle( $barcode );
@@ -1374,7 +1377,7 @@ sub LockItem
     ## if not in the queue, this is the time to add it.
     if ( ! $self->IsItemInQueue( $id ) )
     {
-        $self->AddItemToQueue( $id, $self->GetTodaysDate() );
+        $self->AddItemToQueue( $id, $self->GetTodaysDate(), 0 );
     }
 
     my $sql  = qq{UPDATE $CRMSGlobals::queueTable SET locked = "$name" WHERE id = "$id"};
