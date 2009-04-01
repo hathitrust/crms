@@ -533,7 +533,7 @@ sub GetReviewsRef
 
     if ( ! $order || $order eq "time" ) { $order = "time DESC "; }
 
-    my $sql = qq{ SELECT id, time, duration, user, attr, reason, note, regNum, expert, copyDate FROM $CRMSGlobals::reviewsTable };
+    my $sql = qq{ SELECT id, time, duration, user, attr, reason, note, regNum, expert, copyDate, expertNote, category, hist, regDate, flaged FROM $CRMSGlobals::reviewsTable };
 
     if    ( $user )                    { $sql .= qq{ WHERE user = "$user" };   }
 
@@ -551,16 +551,21 @@ sub GetReviewsRef
     foreach my $row ( @{$ref} )
     {
         my $item = {
-                     id       => $row->[0],
-                     time     => $row->[1],
-                     duration => $row->[2],
-                     user     => $row->[3],
-                     attr     => $self->GetRightsName($row->[4]),
-                     reason   => $self->GetReasonName($row->[5]),
-                     note     => $row->[6],
-                     regNum   => $row->[7],
-                     expert   => $row->[8],
-                     copyDate => $row->[9]
+                     id         => $row->[0],
+                     time       => $row->[1],
+                     duration   => $row->[2],
+                     user       => $row->[3],
+                     attr       => $self->GetRightsName($row->[4]),
+                     reason     => $self->GetReasonName($row->[5]),
+                     note       => $row->[6],
+                     regNum     => $row->[7],
+                     expert     => $row->[8],
+                     copyDate   => $row->[9],
+                     expertNote => $row->[10],
+                     category   => $row->[11],
+                     hist       => $row->[12],
+                     regDate    => $row->[13],
+                     flaged     => $row->[14]
                    };
         push( @{$return}, $item );
     }
@@ -607,8 +612,33 @@ sub LinkToPT
     ## my $url  = 'http://babel.hathitrust.org/cgi/pt?attr=1&id=';
     my $url  = '/cgi/m/mdp/pt?skin=crms;attr=1;id=';
 
-    return qq{<a href="$url$id">$ti</a>};
+    return qq{<a href="$url$id" target="_blank">$ti</a>};
 }
+
+sub DetailInfo
+{
+    my $self   = shift;
+    my $id     = shift;
+    my $user   = shift;
+    
+    my $url  = qq{/cgi/c/crms/crms?p=detailInfo&id=$id&user=$user};
+
+    return qq{<a href="$url" target="_blank">$id</a>};
+}
+
+sub GetStatus
+{
+    my $self = shift;
+    my $id   = shift;
+
+    my $sql  = qq{ SELECT status FROM $CRMSGlobals::queueTable WHERE id = "$id"};
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    my $str  = $self->SimpleSqlGet( $sql );
+
+    return $str;
+
+}
+
 
 sub IncrementStatus
 {
@@ -978,6 +1008,7 @@ sub GetPublDate
 {
     my $self    = shift;
     my $barcode = shift;
+
     my $record  = $self->GetRecordMetadata($barcode);
     if ( ! $record ) { $self->Logit( "failed in GetPublDate: $barcode" ); }
 
@@ -1073,6 +1104,17 @@ sub GetTitle
     if ( $ti eq "" ) { $ti = $self->UpdateTitle($id); }
 
     return $ti;
+}
+
+sub GetPubDate
+{
+    my $self = shift;
+    my $id   = shift;
+
+    my $sql  = qq{ SELECT pub_date FROM bibdata WHERE id = "$id" };
+    my $pub_date   = $self->SimpleSqlGet( $sql );
+
+    return $pub_date;
 }
 
 sub UpdateTitle
