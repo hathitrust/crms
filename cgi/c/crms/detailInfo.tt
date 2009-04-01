@@ -1,0 +1,43 @@
+[% IF NOT crms.IsUserAdmin() %]
+  <h3>You do not have access to this page</h3>
+  [% STOP %]
+[% END %]
+
+[% id     = cgi.param('id')     %]
+[% user   = cgi.param('user')     %]
+
+
+[% reviews = crms.GetReviewsRef( '', id, user, '', '' ) %]
+More Information....&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="JavaScript:window.close()">Close</a>
+
+[% FOREACH review IN reviews %]
+<table border="1">
+<tr><td>ID</td><td>               [% review.id %] </td></tr>
+<tr><td>Title</td><td>            [% crms.LinkToPT( review.id )  %]</td></tr>
+<tr><td>Author</td><td>           [% crms.GetEncAuthor ( review.id ) %]</td></tr>
+<tr><td>Pub Date</td><td>         [% crms.GetPubDate( review.id ) %]</td></tr>
+<tr><td>Cdate</td><td>            [% review.copyDate %]</td></tr>
+</table>
+<BR><table  border="1">
+<tr><td>TimeStamp</td><td>        [% review.time %]</td></tr>
+<tr><td>Review Status</td><td>    [% crms.GetStatus( review.id ) %]</td></tr>
+<tr><td>Hitory Status</td><td>    [% review.hist %]</td></tr>
+</table>
+<BR><table  border="1">
+<tr><td>User</td><td>             [% review.user %]</td></tr>
+<tr><td>Attr/Reason</td><td>      [% review.attr %]/[% review.reason %]</td></tr>
+<tr><td>Renewal Info</td><td>     [%  review.regDate %],[% review.regNum %] </td></tr>
+<tr><td>Note Category</td><td>    [% review.category %]</td></tr>
+<tr><td>User Note</td><td>        [% review.note %]</td></tr>
+</table>
+<BR><table  border="1">
+<tr><td>Expert Note</td><td>      [% review.expertNote %]</td></tr>
+</table>
+<BR><table  border="1">
+<tr><td>Flag Review</td><td> [% review.flaged %]</td></tr>
+</table
+  [% END %]
+<a href="JavaScript:window.close()">Close</a>
+
+
+[% INCLUDE footer.tt %]
