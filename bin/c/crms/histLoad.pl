@@ -22,10 +22,10 @@ my $verbose    = $opts{'v'};
 my $file       = $opts{'f'};
 my $alt        = $opts{'a'};
 
+#For testing.
 #$file = qq{/l1/dev/blancoj/bin/c/crms/historical_data/file1.txt};
-
-$file = qq{/l1/dev/blancoj/bin/c/crms/historical_data/file2.txt};
-$alt = 1;
+#$file = qq{/l1/dev/blancoj/bin/c/crms/historical_data/file2.txt};
+#$alt = 1;
 
 if ( $help || ! $file ) { die "USAGE: $0 -f csv_file [-v] [-h] [-a (alt. format)] \n\n"; }
 
