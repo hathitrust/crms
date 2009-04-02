@@ -149,7 +149,7 @@ sub LoadNewItems
     if ( ! $start ) { $start = $self->GetUpdateTime(); }
 
     my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time FROM rights } . 
-              qq{WHERE attr = 2 AND time >= '$start' AND time <= '$stop' GROUP BY id};
+              qq{WHERE attr = 2 AND reson=1 AND time >= '$start' AND time <= '$stop' GROUP BY id};
 
     my $ref = $self->get('sdr_dbh')->selectall_arrayref( $sql );
 
@@ -157,7 +157,7 @@ sub LoadNewItems
 
     ## design note: if these were in the same DB we could just INSERT
     ## into the new table, not SELECT then INSERT
-    foreach my $row ( @{$ref} ) { $self->AddItemToQueue( $row->[0], $row->[1], 0 ); }
+    foreach my $row ( @{$ref} ) { $self->AddItemToQueue( $row->[0], $row->[1], 0, 0 ); }
 }
 
 ## ----------------------------------------------------------------------------
@@ -177,10 +177,11 @@ sub GetUpdateTime
 
 sub AddItemToQueue
 {
-    my $self    = shift;
-    my $id      = shift;
-    my $time    = shift;
-    my $status  = shift;
+    my $self     = shift;
+    my $id       = shift;
+    my $time     = shift;
+    my $status   = shift;
+    my $priority = shift;
 
     ## skip if $id has been reviewed
     if ( $self->IsItemInReviews( $id ) ) { return; }
@@ -197,13 +198,57 @@ sub AddItemToQueue
       if ( $self->IsGovDoc( $id ) ) { $self->Logit( "skip fed doc: $id" ); return; }
 
       ## check for item, warn if already exists, then update ???
-      my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date) VALUES ('$id', '$time', $status, '$pub')};
+      my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub', $priority)};
 
       $self->PrepareSubmitSql( $sql );
 
       #Update the pub date in bibdata
       $self->UpdatePubDate ( $id, $pub );
       
+    }
+}
+
+
+sub GiveItemsInQueuePriority
+{
+    my $self     = shift;
+    my $id       = shift;
+    my $time     = shift;
+    my $status   = shift;
+    my $priority = shift;
+
+    ## skip if $id has been reviewed
+    if ( $self->IsItemInReviews( $id ) ) { return; }
+
+    ## pub date between 1923 and 1963
+    my $pub = $self->GetPublDate( $id );
+    ## confirm date range and add check
+
+    #Only care about items between 1923 and 1963
+    if ( ( $pub >= '1923' ) && ( $pub <= '1963' ) )
+    {
+
+      ## no gov docs
+      if ( $self->IsGovDoc( $id ) ) { $self->Logit( "skip fed doc: $id" ); return; }
+
+      my $sql  = qq{ SELECT count(*) from $CRMSGlobals::queueTable where id="$id"};
+      my $count  = $self->SimpleSqlGet( $sql );
+      if ( $count == 1 )
+      {
+        $sql = qq{ UPDATE $CRMSGlobals::queueTable SET priority = 1 WHERE id = "$id" };
+        $self->PrepareSubmitSql( $sql );      
+      }
+      else
+      {
+	## check for item, warn if already exists, then update ???
+	my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub', $priority)};
+
+	$self->PrepareSubmitSql( $sql );
+
+	#Update the pub date in bibdata
+	$self->UpdatePubDate ( $id, $pub );
+      }
+	
     }
 }
 
@@ -493,21 +538,6 @@ sub GetUndItems
     foreach ( @{$ref} ) { push( @ids, $_->[0]); }
 
     return @ids;
-}
-
-## ----------------------------------------------------------------------------
-##  Function:   Get the oldest item, not reviewed twice, not locked
-##  Parameters: NOTHING
-##  Return:     date
-## ----------------------------------------------------------------------------
-sub GetOldestItemForReview
-{
-    my $self = shift;
-
-    my $sql  = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND } . 
-               qq{ status < 2 ORDER BY pub_date LIMIT 1 };
-
-    return $self->SimpleSqlGet( $sql );
 }
 
 sub RegisterExpertReview
@@ -1419,7 +1449,7 @@ sub LockItem
     ## if not in the queue, this is the time to add it.
     if ( ! $self->IsItemInQueue( $id ) )
     {
-        $self->AddItemToQueue( $id, $self->GetTodaysDate(), 0 );
+        $self->AddItemToQueue( $id, $self->GetTodaysDate(), 0, 0 );
     }
 
     my $sql  = qq{UPDATE $CRMSGlobals::queueTable SET locked = "$name" WHERE id = "$id"};
@@ -1607,16 +1637,17 @@ sub GetNextItemForReview
     my $self = shift;
     my $name = shift;
     my $barcode;
-    my @itemsReviewedOnce = $self->GetItemsReviewedOnce( $name );
+
 
     ## if someone have been reviewed once (not by this user) sort by date (oldest first)
-    if ( scalar(@itemsReviewedOnce) ) 
+    my @itemsReviewedOnce = $self->GetItemsReviewedOnce( $name );
+    if ( ( ! $barcode ) && ( scalar(@itemsReviewedOnce) )  )
     {
         my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND status < 2 AND ( };
         my $first = pop @itemsReviewedOnce;
         $sql .= qq{ id = "$first" };
         foreach my $bar ( @itemsReviewedOnce ) { $sql .= qq{ OR id = "$bar" }; }
-        $sql   .= qq{ ) ORDER BY pub_date LIMIT 1 };
+        $sql   .= qq{ ) ORDER BY priority DESC, pub_date ASC LIMIT 1 };
 
         $barcode = $self->SimpleSqlGet( $sql );
         if ( $self->get("verbose") ) { $self->Logit("once: $sql"); }
@@ -1628,7 +1659,7 @@ sub GetNextItemForReview
 
         ## we might want to change or remove the limit
         my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND } .
-                  qq{ status < 2 ORDER BY pub_date LIMIT 100 };
+                  qq{ status < 2 ORDER BY priority DESC, pub_date ASC LIMIT 100 };
 
         my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
