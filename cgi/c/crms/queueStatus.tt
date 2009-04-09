@@ -1,0 +1,32 @@
+[% IF NOT crms.IsUserAdmin() %]
+  <h3>You do not have access to this page</h3>
+  [% STOP %]
+[% END %]
+
+[% INCLUDE header.tt    %]
+[% INCLUDE adminNav.tt  %]
+
+<hr width="25%" align="left"/>
+
+
+<strong>Status of the queue: </strong>
+
+<blockquote>
+
+</blockquote>
+
+<hr width="25%" align="left"/>
+
+
+      (1) Total in active queue:  [% crms.GetQueueSize () %]<br>
+      (2) Total und/idf in active queue:  [% crms.GetTotalUndInf () %]<br>
+      (3) Total exported ( not including the ones from the 2 legacy files ):  [% crms.GetTotalExported () %]<br>
+<br>
+<br>
+      (4) Last time items exported:  [% crms.GetLastTimeExported () %]<br>
+      (5) Total of items in queue EVER ( not including the 2 legacy files ) :  This would be (1) + (3)
+
+
+
+
+[% INCLUDE footer.tt %]

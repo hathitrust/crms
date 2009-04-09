@@ -1,0 +1,77 @@
+[% INCLUDE header.tt    %]
+[% INCLUDE adminNav.tt  %]
+
+[% IF NOT crms.IsUserAdmin() %]
+  <h3>You do not have access to this page</h3>
+  [% STOP %]
+[% END %]
+
+[% id     = cgi.param('id')     %]
+[% user   = cgi.param('user')   %]
+[% since  = cgi.param('since')  %]
+[% order  = cgi.param('order')  %]
+[% offset = cgi.param('offset') %]
+
+[% IF NOT offset %] [% offset = 0 %] [% END %]
+
+[% IF offset > 0 %] [% next = offset + 25 %]
+[% ELSE %]          [% next = 25 %] [% END %]
+
+[% IF offset > 0 %] [% prev = offset - 25 %]
+[% ELSE %]          [% prev = 0 %] [% END %]
+
+<hr width="25%" align="left"/>
+<h3>reviews: </h3>
+
+<form>
+  <input type="hidden" name="p" value="adminLegacyReviews"/>
+  Restrict selection:<br/>
+  barcode: <input type="text"  name="id"    value="[% id %]"/><br/>
+  User ID: <input type="text"  name="user"  value="[% user %]"/><br/>
+  Since:   <input type="text"  name="since" value="[% since %]"/>
+           <span class="smallText">(YYYY-MM-DD HH:MM:SS)</span><br/>
+  Order:   
+  <label><input type="radio" name="order" value="id"   
+    [% order == 'id' ? 'checked="1"' : '' %]   />id</label>
+  <label><input type="radio" name="order" value="time" 
+    [% order == 'time' ? 'checked="1"' : '' %] />time</label>
+  <label><input type="radio" name="order" value="user" 
+    [% order == 'user' ? 'checked="1"' : '' %] />user</label>
+  <label><input type="radio" name="order" value="attr" 
+    [% order == 'attr' ? 'checked="1"' : '' %] />attr</label>
+  <br/>
+  <input type="submit" value="Submit"/>
+</form>
+<br/>
+
+[% reviews = crms.GetLegacyReviewsRef( order, id, user, since, offset ) %]
+
+<a href="?p=adminLegacyReviews&id=$id&time=$time&user=$user&attr=$attr&order=$order&offset=$prev">previous 25</a> || 
+<a href="?p=adminLegacyReviews&id=$id&time=$time&user=$user&attr=$attr&order=$order&offset=$next">next 25</a>
+(found: [% crms.GetLegacyReviewsCount(id, user, since) %])
+
+<table class="allReviews">
+  <th>ID</th><th>Title</th><th>time stamp</th><th>status</th><th>hist(0,1)</th>
+  <th>user</th><th>attr</th><th>reason</th><th>note category</th>
+  <th>note</th><th>flaged</th>
+  [% FOREACH review IN reviews %]
+    <tr>
+      <td>[% crms.DetailLegacyInfo( review.id, review.user ) %]</td>
+      <td>[% crms.LinkToPT( review.id ) %]</td>
+      <td>$review.time</td>
+      <td>$review.status</td>
+      <td>$review.hist</td>
+      <td>$review.user</td>
+      <td>$review.attr</td>
+      <td>$review.reason</td>
+      <td>$review.category</td>
+      <td>$review.note</td>
+      <td>$review.flaged</td>
+    </tr>
+  [% END %]
+</table>
+
+<a href="?p=adminLegacyReviews&id=$id&time=$time&user=$user&attr=$attr&order=$order&offset=$prev">previous 25</a> || 
+<a href="?p=adminLegacyReviews&id=$id&time=$time&user=$user&attr=$attr&order=$order&offset=$next">next 25</a>
+
+[% INCLUDE footer.tt %]
