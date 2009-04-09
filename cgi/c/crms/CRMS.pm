@@ -235,18 +235,17 @@ sub GiveItemsInQueuePriority
       my $count  = $self->SimpleSqlGet( $sql );
       if ( $count == 1 )
       {
-        $sql = qq{ UPDATE $CRMSGlobals::queueTable SET priority = 1 WHERE id = "$id" };
-        $self->PrepareSubmitSql( $sql );      
+          $sql = qq{ UPDATE $CRMSGlobals::queueTable SET priority = 1 WHERE id = "$id" };
+          $self->PrepareSubmitSql( $sql );      
       }
       else
       {
-	## check for item, warn if already exists, then update ???
-	my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub', $priority)};
+	  my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub', $priority)};
 
-	$self->PrepareSubmitSql( $sql );
+	  $self->PrepareSubmitSql( $sql );
 
-	#Update the pub date in bibdata
-	$self->UpdatePubDate ( $id, $pub );
+	  #Update the pub date in bibdata
+	  $self->UpdatePubDate ( $id, $pub );
       }
 	
     }
@@ -311,7 +310,7 @@ sub SubmitReview
     $self->PrepareSubmitSql( $sql );
 
     if ( $exp ) { $self->RegisterExpertReview( $id );  }
-    else        { $self->IncrementStatus( $id, $user, $attr ); }
+    else        { $self->SetStatusForNonExpert( $id, $user, $attr ); }
 
     $self->EndTimer( $id, $user );
     $self->UnlockItem( $id, $user );
@@ -327,7 +326,7 @@ sub SubmitReview
 sub SubmitHistReview
 {
     my $self = shift;
-    my ($id, $user, $date, $attr, $reason, $cDate, $regNum, $regDate, $note, $eNote, $category) = @_;
+    my ($id, $user, $date, $attr, $reason, $cDate, $regNum, $regDate, $note, $eNote, $category, $status) = @_;
 
     ## change attr and reason back to numbers
     $attr   = $self->GetRightsNum( $attr );
@@ -343,35 +342,14 @@ sub SubmitHistReview
     $eNote = $self->get('dbh')->quote($eNote);
 
     ## all good, INSERT
-    my $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, attr, reason, copyDate, regNum, regDate, note, expertNote, hist, category) } .
-              qq{VALUES('$id', '$user', '$attr', '$reason', '$cDate', '$regNum', '$regDate', $note, $eNote, 1, '$category') };
+    my $sql = qq{REPLACE INTO $CRMSGlobals::legacyreviewsTable (id, user, attr, reason, copyDate, regNum, regDate, note, expertNote, hist, category, status) } .
+              qq{VALUES('$id', '$user', '$attr', '$reason', '$cDate', '$regNum', '$regDate', $note, $eNote, 1, '$category', $status) };
 
     $self->PrepareSubmitSql( $sql );
 
     return 1;
 }
 
-sub DeleteReview
-{
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
-
-    $self->Logit( "DELETE $id $user" );
-
-    ## remove from review table
-    my $sql  = qq{ DELETE FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user" };
-    $self->PrepareSubmitSql( $sql );
-
-    ## minus 1 in status for queue, if there are two reviews that agree
-    if ( $self->GetDoubleAgree($id) )
-    {
-        $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = status - 1 WHERE id = "$id" };
-        $self->PrepareSubmitSql( $sql );
-    }
-
-    return 1;
-}
 
 sub ClearQueueAndExport
 {
@@ -391,15 +369,12 @@ sub ClearQueueAndExport
     } 
 
     ## get items = 2 and see if they agree  
-    my $double = $self->GetDoubleRevItems();  
+    my $double = $self->GetDoubleRevItemsInAgreement();  
     foreach my $row ( @{$double} )
     {
         my $id = $row->[0];
-        if ( $self->GetDoubleAgree( $id ) ) 
-        { 
-            push( @{$export}, $id ); 
-            $dCount++;
-        }
+	push( @{$export}, $id ); 
+	$dCount++;
     }
 
     $self->ExportReviews( $export );
@@ -423,24 +398,31 @@ sub ExportReviews
     my $self = shift;
     my $list = shift;
 
-    my $user = "crms";
-    my $time = $self->GetTodaysDate();
-    my $fh   = $self->GetExportFh();
-    my $user = "crms";
-    my $src  = "null";
+    my $user  = "crms";
+    my $time  = $self->GetTodaysDate();
+    my $fh    = $self->GetExportFh();
+    my $user  = "crms";
+    my $src   = "null";
+    my $count = 0;
 
     foreach my $barcode ( @{$list} )
-    {
+      {
+	#The routine GetFinalAttrReason may need to change - jose
         my ($attr,$reason) = $self->GetFinalAttrReason($barcode); 
-        if ( ! $attr || ! $reason )
-        {
-            $self->Logit( "failed to get rights for $barcode on export" );
-            next;
-        }
+
         print $fh "$barcode\t$attr\t$reason\t$user\t$src\n";
-        ## $self->RemoveFromQueue($barcode); ## DEBUG
+        $self->MoveFromReviewsToLegacyReviews($barcode); ## DEBUG
+        $self->RemoveFromQueue($barcode); ## DEBUG
+
+	$count = $count + 1;
+
     }
     close $fh;
+
+    my $sql  = qq{ INSERT INTO  $CRMSGlobals::exportrecordTable (count) VALUES ( $count )};
+    $self->PrepareSubmitSql( $sql );
+
+
 }
 
 sub GetExportFh
@@ -472,6 +454,35 @@ sub RemoveFromQueue
     return 1;
 }
 
+
+sub MoveFromReviewsToLegacyReviews
+{
+    my $self = shift;
+    my $id   = shift;
+
+    my $status = $self->GetStatus ( $id );
+
+    $self->Logit( "store $id in legacyreviews" );
+
+
+    my $sql = qq{REPLACE into $CRMSGlobals::legacyreviewsTable (id, time, user, attr, reason, note, regNum, expert, duration, hist, expertNote, regDate, copyDate, category, flaged) select id, time, user, attr, reason, note, regNum, expert, duration, hist, expertNote, regDate, copyDate, category, flaged from reviews where id='$id'};
+    $self->PrepareSubmitSql( $sql );
+
+    my $sql = qq{ UPDATE $CRMSGlobals::legacyreviewsTable set status=$status WHERE id = "$id" };
+    $self->PrepareSubmitSql( $sql );
+
+
+    $self->Logit( "remove $id from reviews" );
+
+    my $sql = qq{ DELETE FROM $CRMSGlobals::reviewsTable WHERE id = "$id" };
+    $self->PrepareSubmitSql( $sql );
+
+    return 1;
+}
+
+
+
+
 sub GetFinalAttrReason
 {
     my $self = shift;
@@ -495,16 +506,16 @@ sub GetFinalAttrReason
 sub GetExpertRevItems
 {
     my $self = shift;
-    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status > 2 AND status < 5 };
+    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status = 5 };
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref;
 }
 
-sub GetDoubleRevItems
+sub GetDoubleRevItemsInAgreement
 {
     my $self = shift;
-    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status = 2 };
+    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status = 4 };
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref;
@@ -531,7 +542,7 @@ sub GetDoubleAgree
 sub GetUndItems
 {
     my $self = shift;
-    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status = 5 };
+    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status = 3 };
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my @ids;
@@ -545,7 +556,7 @@ sub RegisterExpertReview
     my $self = shift;
     my $id   = shift;
 
-    my $sql  = qq{UPDATE $CRMSGlobals::queueTable SET status = 4 WHERE id = "$id"};
+    my $sql  = qq{UPDATE $CRMSGlobals::queueTable SET status = 5 WHERE id = "$id"};
 
     $self->PrepareSubmitSql( $sql );
 }
@@ -603,6 +614,61 @@ sub GetReviewsRef
     return $return;
 }
 
+sub GetLegacyReviewsRef
+{
+    my $self    = shift;
+    my $order   = shift;
+    my $id      = shift;
+    my $user    = shift;
+    my $since   = shift;
+    my $offset  = shift;
+    
+    if ( ! $offset ) { $offset = 0; }
+
+    if ( ! $order || $order eq "time" ) { $order = "time DESC "; }
+
+    my $sql = qq{ SELECT id, time, duration, user, attr, reason, note, regNum, expert, copyDate, expertNote, category, hist, regDate, flaged, status FROM $CRMSGlobals::legacyreviewsTable };
+
+    if    ( $user )                    { $sql .= qq{ WHERE user = "$user" };   }
+
+    if    ( $since && $user )          { $sql .= qq{ AND   time >= "$since"};  }
+    elsif ( $since )                   { $sql .= qq{ WHERE time >= "$since" }; }
+
+    if    ( $id && ($user || $since) ) { $sql .= qq{ AND   id = "$id" }; }
+    elsif ( $id )                      { $sql .= qq{ WHERE id = "$id" }; }
+
+    $sql .= qq{ ORDER BY $order LIMIT $offset, 25 };
+
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    my $return = [];
+    foreach my $row ( @{$ref} )
+    {
+        my $item = {
+                     id         => $row->[0],
+                     time       => $row->[1],
+                     duration   => $row->[2],
+                     user       => $row->[3],
+                     attr       => $self->GetRightsName($row->[4]),
+                     reason     => $self->GetReasonName($row->[5]),
+                     note       => $row->[6],
+                     regNum     => $row->[7],
+                     expert     => $row->[8],
+                     copyDate   => $row->[9],
+                     expertNote => $row->[10],
+                     category   => $row->[11],
+                     hist       => $row->[12],
+                     regDate    => $row->[13],
+                     flaged     => $row->[14],
+                     status     => $row->[15]
+                   };
+        push( @{$return}, $item );
+    }
+
+    return $return;
+}
+
+
 sub GetReviewsCount
 {
     my $self    = shift;
@@ -611,6 +677,27 @@ sub GetReviewsCount
     my $since   = shift;
 
     my $sql = qq{ SELECT count(id) FROM $CRMSGlobals::reviewsTable };
+
+    if    ( $user )                    { $sql .= qq{ WHERE user = "$user" };   }
+
+    if    ( $since && $user )          { $sql .= qq{ AND   time >= "$since"};  }
+    elsif ( $since )                   { $sql .= qq{ WHERE time >= "$since" }; }
+
+    if    ( $id && ($user || $since) ) { $sql .= qq{ AND   id = "$id" }; }
+    elsif ( $id )                      { $sql .= qq{ WHERE id = "$id" }; }
+
+    return $self->SimpleSqlGet( $sql );
+}
+
+
+sub GetLegacyReviewsCount
+{
+    my $self    = shift;
+    my $id      = shift;
+    my $user    = shift;
+    my $since   = shift;
+
+    my $sql = qq{ SELECT count(id) FROM $CRMSGlobals::legacyreviewsTable };
 
     if    ( $user )                    { $sql .= qq{ WHERE user = "$user" };   }
 
@@ -656,6 +743,17 @@ sub DetailInfo
     return qq{<a href="$url" target="_blank">$id</a>};
 }
 
+sub DetailLegacyInfo
+{
+    my $self   = shift;
+    my $id     = shift;
+    my $user   = shift;
+    
+    my $url  = qq{/cgi/c/crms/crms?p=detailLegacyInfo&id=$id&user=$user};
+
+    return qq{<a href="$url" target="_blank">$id</a>};
+}
+
 sub GetStatus
 {
     my $self = shift;
@@ -669,29 +767,97 @@ sub GetStatus
 
 }
 
+sub ItemWasReviewedByOtherUser
+{
+    my $self   = shift;
+    my $id     = shift;
+    my $user   = shift;
 
-sub IncrementStatus
+    my $sql   = qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user != "$user" AND id = "$id"};
+    my $ref   = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    my $found = $self->SimpleSqlGet( $sql );
+
+    if ($found) { return 1; }
+    return 0;
+
+}
+
+sub UsersAgreeOnReview
+{
+    my $self = shift;
+    my $id   = shift;
+
+    ##Agree is when the attr adn reason match.
+
+    my $sql   = qq{ SELECT id, attr, reason FROM $CRMSGlobals::reviewsTable where id = '$id' Group by id, attr, reason having count(*) = 2};
+    my $ref   = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    my $found = $self->SimpleSqlGet( $sql );
+
+    if ($found) { return 1; }
+    return 0;
+
+}
+
+sub GetAttrReasonFromOtherUser
+{
+    my $self   = shift;
+    my $id     = shift;
+    my $name   = shift;
+
+    my $sql = qq{SELECT attr, reason FROM $CRMSGlobals::reviewsTable WHERE id = "$id" and user != '$name'};
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );  
+
+    if ( ! $ref->[0]->[0] )
+    {
+        $self->Logit( "$id not found in review table" );
+    }
+
+    my $attr   = $self->GetRightsName( $ref->[0]->[0] );
+    my $reason = $self->GetReasonName( $ref->[0]->[1] );
+    return ($attr, $reason);
+}
+
+
+
+sub SetStatusForNonExpert
 {
     my $self = shift;
     my $id   = shift;
     my $user = shift;
     my $attr = shift;
   
-    my ($otherAttr,$r) = $self->GetFinalAttrReason($id);
+    my ($otherAttr,$r) = $self->GetAttrReasonFromOtherUser( $id, $user );
 
-    ## If this and a previous attr is und (5) - set status to 5
+    ## If this and a previous attr is und (5) - set status to 3
     if ( $attr == 5 && $otherAttr eq "und" ) 
     {
-        my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = 5 WHERE id = "$id" };
+        my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = 3 WHERE id = "$id" };
         $self->PrepareSubmitSql( $sql );
-        $self->Logit( "$id: two und/nfi reviews, status set to 5" );
+        $self->Logit( "$id: two und/nfi reviews, status set to 3" );
+	return;
     }
 
-    ## if you have reviewed this one, don't increment
-    if ( $self->ItemWasReviewedByUser($id, $user) ) { return; }
 
-    my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = status + 1 WHERE id = "$id" };
-    $self->PrepareSubmitSql( $sql );
+    ## it's a new review, so
+    ## status gets 1 if no one else has reviewed it.
+    ## status gets 2 if reviewed by other and disagrees with this review.
+    ## status gets 3 if reviewed by other and agrees with this review.
+    if ( ! $self->ItemWasReviewedByOtherUser($id, $user) )
+    {
+      my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = 1 WHERE id = "$id" };
+      $self->PrepareSubmitSql( $sql );
+    }
+    elsif ( $self->UsersAgreeOnReview ( $id ) )
+    {
+      my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = 2 WHERE id = "$id" };
+      $self->PrepareSubmitSql( $sql );
+    }
+    else  ## Two users must disagree
+    {
+      my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = 4 WHERE id = "$id" };
+      $self->PrepareSubmitSql( $sql );
+    }
+    
 }
 
 sub CheckAttrReasonComb 
@@ -1638,37 +1804,24 @@ sub GetNextItemForReview
     my $name = shift;
     my $barcode;
 
+    #Find items reviewed once by some other user
+    my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND status = 1 AND id not in ( };
+    $sql   .= qq{ SELECT distinct id from $CRMSGlobals::reviewsTable where user = '$name' ) };
+    $sql   .= qq{ ORDER BY priority DESC, pub_date ASC LIMIT 1 };
 
-    ## if someone have been reviewed once (not by this user) sort by date (oldest first)
-    my @itemsReviewedOnce = $self->GetItemsReviewedOnce( $name );
-    if ( ( ! $barcode ) && ( scalar(@itemsReviewedOnce) )  )
-    {
-        my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND status < 2 AND ( };
-        my $first = pop @itemsReviewedOnce;
-        $sql .= qq{ id = "$first" };
-        foreach my $bar ( @itemsReviewedOnce ) { $sql .= qq{ OR id = "$bar" }; }
-        $sql   .= qq{ ) ORDER BY priority DESC, pub_date ASC LIMIT 1 };
-
-        $barcode = $self->SimpleSqlGet( $sql );
-        if ( $self->get("verbose") ) { $self->Logit("once: $sql"); }
-    }
+    $barcode = $self->SimpleSqlGet( $sql );
+    if ( $self->get("verbose") ) { $self->Logit("once: $sql"); }
 
     if ( ! $barcode ) 
     {
-        my @itemsReviewedByUser = $self->ItemsReviewedByUser( $name );
-
-        ## we might want to change or remove the limit
+        #Get the 1st available item that has never been reviewed.
         my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND } .
-                  qq{ status < 2 ORDER BY priority DESC, pub_date ASC LIMIT 100 };
+                  qq{ status = 0 ORDER BY priority DESC, pub_date ASC LIMIT 1 };
 
         my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
-        foreach my $row ( @{$ref} )
-        {
-            if ( grep(/$row->[0]/, @itemsReviewedByUser) ) { next; }
-            $barcode = $row->[0];
-            last;
-        }
+        $barcode = $self->SimpleSqlGet( $sql );
+
     }
 
     ## lock before returning
@@ -1714,47 +1867,6 @@ sub ItemWasReviewedByUser
 
     if ($found) { return 1; }
     return 0;
-}
-
-## ----------------------------------------------------------------------------
-##  Function:   get items that have been reviewed once
-##  Parameters: 
-##  Return:     list of barcodes
-## ----------------------------------------------------------------------------
-sub GetItemsReviewedOnce
-{
-    my $self = shift;
-    my $name = shift;
-
-    my $sql  = qq{ SELECT id, COUNT(id) FROM $CRMSGlobals::reviewsTable };
-
-    if ( $name ne "" ) 
-    { 
-        $sql .= qq{ WHERE not(id IN (SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$name")) } . 
-                qq{ AND hist < 1 };
-    }
-    else { $sql .= qq{ WHERE hist < 1 }; }
-    $sql .= qq{ GROUP BY id }; 
-
-    if ( $self->get("verbose") ) { $self->Logit( "GetItemsReviewedOnce: $sql" ); }
-
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    my @return;
-    foreach (@{$ref}) 
-    { 
-        my $id = $_->[0];
-        my $c  = $_->[1];
-
-        ## make sure status is < 2
-        $sql    = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE id = "$id" AND status < 2};
-
-        my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-        
-        if ($c == 1 and @{$ref}) { push @return, $id; }
-    }
-
-    return @return;
 }
 
 sub GetItemsInDispute
@@ -2000,6 +2112,51 @@ sub GetErrors
     my $self = shift;
     return $self->get( 'errors' );
 }
+
+sub GetQueueSize
+{
+    my $self = shift;
+
+    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::queueTable};
+    my $count  = $self->SimpleSqlGet( $sql );
+    
+    return $count;
+}
+
+
+sub GetTotalUndInf
+{
+    my $self = shift;
+
+    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::queueTable where status= 3};
+    my $count  = $self->SimpleSqlGet( $sql );
+    
+    return $count;
+}
+
+sub GetTotalExported
+{
+    my $self = shift;
+
+    my $sql  = qq{ SELECT count(id) from $CRMSGlobals::legacyreviewsTable where hist= 0};
+    my $count  = $self->SimpleSqlGet( $sql );
+    
+    return $count;
+}
+
+
+sub GetLastTimeExported
+{
+    my $self = shift;
+
+    my $sql  = qq{ SELECT time from $CRMSGlobals::exportrecordTable order by 1 DESC LIMIT 1};
+    my $export_date  = $self->SimpleSqlGet( $sql );
+    
+    return $export_date;
+}
+
+
+
 
 1;
 

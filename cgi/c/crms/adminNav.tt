@@ -3,12 +3,14 @@
 
   [% page = cgi.param("p") %]
 
-  [% IF    page == "adminUser"     %] > adminster user accounts
-  [% ELSIF page == "adminQueue"    %] > manage the queue
-  [% ELSIF page == "adminReview"   %] > view all reviews
-  [% ELSIF page == "adminUserRate" %] > view user review rates
-  [% ELSIF page == "undReviews"    %] > und/nfi items
-  [% ELSIF page == "adminEditUser" %] > <a href="?p=adminUser">adminster user accounts</a> 
+  [% IF    page == "adminUser"           %] > adminster user accounts
+  [% ELSIF page == "adminQueue"          %] > manage the queue
+  [% ELSIF page == "adminReview"         %] > view all active reviews
+  [% ELSIF page == "adminLegacyReview"   %] > view all legacy reviews
+  [% ELSIF page == "adminUserRate"       %] > view user review rates
+  [% ELSIF page == "undReviews"          %] > und/nfi items
+  [% ELSIF page == "queueStatus"         %] > queue status
+  [% ELSIF page == "adminEditUser"       %] > <a href="?p=adminUser">adminster user accounts</a> 
                                                 > edit user
   [% END %]
 
