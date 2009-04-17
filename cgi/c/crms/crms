@@ -22,6 +22,8 @@ my $crms = CRMS->new(
 
 if  (  $cgi->param('p') eq 'Logout' )  
 {
+  #Remove all locks for this user.
+  $crms->UnlockAllItemsForUser( $user );
 
   #Remove all alias users for this user:
   $crms->ChangeAliasUserName($user, '');
@@ -41,6 +43,7 @@ if  (  $cgi->param('p') eq 'Logout' )
   
   # redirect to central weblogin server
   print( "Location: $central$query_string\n\n" );
+
   
   exit( 0 );
 
