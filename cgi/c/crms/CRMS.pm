@@ -1915,6 +1915,31 @@ sub UnlockItem
     return 1;
 }
 
+
+sub UnlockAllItemsForUser
+{
+    my $self = shift;
+    my $user = shift;
+
+    my $sql  = qq{SELECT id  FROM $CRMSGlobals::timerTable WHERE user= "$user"};
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    my $return = {}; 
+    foreach my $row (@{$ref}) 
+    { 
+        my $id = $row->[0];
+   
+	my $sql  = qq{UPDATE $CRMSGlobals::queueTable SET locked = NULL  WHERE id = "$id"};
+	$self->PrepareSubmitSql( $sql );
+
+    }
+
+    ## clear entry in table
+    my $sql = qq{ DELETE FROM $CRMSGlobals::timerTable WHERE  user = "$user" };
+    $self->PrepareSubmitSql( $sql );
+
+}
+
 sub GetLockedItems
 {
     my $self = shift;
