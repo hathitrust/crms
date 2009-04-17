@@ -1,0 +1,12 @@
+-------------------------------
+
+  <form action="crms">
+    <input type="hidden" name="p" value=""/>
+    <input type="hidden" name="changeuser" value="1"/>
+
+    Change to User (enter id): 
+    <input type="text" name="newuser"/>
+ 
+    <br/><input type="submit"  value="Submit"/>
+  </form>
+
