@@ -157,7 +157,17 @@ sub LoadNewItems
 
     ## design note: if these were in the same DB we could just INSERT
     ## into the new table, not SELECT then INSERT
-    foreach my $row ( @{$ref} ) { $self->AddItemToQueue( $row->[0], $row->[1], 0, 0 ); }
+    my $count = 0;
+    foreach my $row ( @{$ref} ) 
+    { 
+      $self->AddItemToQueue( $row->[0], $row->[1], 0, 0 ); 
+      $count = $count + 1;
+    }
+
+    #Record the update to the queue
+    my $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (itemcount ) values ($count)};
+    $self->PrepareSubmitSql( $sql );
+
 }
 
 ## ----------------------------------------------------------------------------
@@ -342,8 +352,8 @@ sub SubmitHistReview
     $eNote = $self->get('dbh')->quote($eNote);
 
     ## all good, INSERT
-    my $sql = qq{REPLACE INTO $CRMSGlobals::legacyreviewsTable (id, user, attr, reason, copyDate, regNum, regDate, note, expertNote, hist, category, status) } .
-              qq{VALUES('$id', '$user', '$attr', '$reason', '$cDate', '$regNum', '$regDate', $note, $eNote, 1, '$category', $status) };
+    my $sql = qq{REPLACE INTO $CRMSGlobals::legacyreviewsTable (id, user, time, attr, reason, copyDate, regNum, regDate, note, expertNote, hist, category, status) } .
+              qq{VALUES('$id', '$user', '$date', '$attr', '$reason', '$cDate', '$regNum', '$regDate', $note, $eNote, 1, '$category', $status) };
 
     $self->PrepareSubmitSql( $sql );
 
@@ -561,7 +571,7 @@ sub RegisterExpertReview
     $self->PrepareSubmitSql( $sql );
 }
 
-sub GetReviewsRef
+sub GetConflictReviewsRef
 {
     my $self    = shift;
     my $order   = shift;
@@ -574,23 +584,32 @@ sub GetReviewsRef
 
     if ( ! $order || $order eq "time" ) { $order = "time DESC "; }
 
-    my $sql = qq{ SELECT id, time, duration, user, attr, reason, note, regNum, expert, copyDate, expertNote, category, hist, regDate, flaged FROM $CRMSGlobals::reviewsTable };
+    my $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id and ( q.status = 2 or q.status = 3)};
 
-    if    ( $user )                    { $sql .= qq{ WHERE user = "$user" };   }
+    if    ( $user )                    { $sql .= qq{ AND r.user = "$user" };   }
 
-    if    ( $since && $user )          { $sql .= qq{ AND   time >= "$since"};  }
-    elsif ( $since )                   { $sql .= qq{ WHERE time >= "$since" }; }
+    if    ( $since && $user )          { $sql .= qq{ AND   r.time >= "$since"};  }
+    elsif ( $since )                   { $sql .= qq{ AND r.time >= "$since" }; }
 
-    if    ( $id && ($user || $since) ) { $sql .= qq{ AND   id = "$id" }; }
-    elsif ( $id )                      { $sql .= qq{ WHERE id = "$id" }; }
+    if    ( $id && ($user || $since) ) { $sql .= qq{ AND   r.id = "$id" }; }
+    elsif ( $id )                      { $sql .= qq{ AND r.id = "$id" }; }
 
-    $sql .= qq{ ORDER BY $order LIMIT $offset, 25 };
+    if ( $order == 'status' )
+    {
+	$sql .= qq{ ORDER BY q.$order LIMIT $offset, 25 };
+    }
+    else
+    {
+      	$sql .= qq{ ORDER BY r.$order LIMIT $offset, 25 };
+    }
 
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my $return = [];
     foreach my $row ( @{$ref} )
     {
+        $row->[1] =~ s,(.*) .*,$1,;
+        
         my $item = {
                      id         => $row->[0],
                      time       => $row->[1],
@@ -607,6 +626,171 @@ sub GetReviewsRef
                      hist       => $row->[12],
                      regDate    => $row->[13],
                      flaged     => $row->[14]
+                   };
+        push( @{$return}, $item );
+    }
+
+    return $return;
+}
+
+sub GetYesterday
+{
+    my $self    = shift;
+
+    my $newtime = scalar localtime(time() - ( 24 * 60 * 60 ));
+    my $year = substr($newtime, 20, 4);
+    my %months = (
+                  "Jan" => "01",
+                  "Feb" => "02",
+                  "Mar" => "03",
+                  "Apr" => "04",
+                  "May" => "05",
+                  "Jun" => "06",
+                  "Jul" => "07",
+                  "Aug" => "08",
+                  "Sep" => "09",
+                  "Oct" => "10",
+                  "Nov" => "11",
+                  "Dec" => "12",
+                 );
+    my $month = $months{substr ($newtime,4, 3)};
+    my $day = substr($newtime, 8, 2);
+    $day =~ s, ,0,g;
+   
+    my $yesterday = qq{$year-$month-$day};
+
+    return $yesterday;
+}
+
+
+
+sub ConvertToSearchTerm 
+{
+    my $self           = shift;
+    my $search         = shift;
+    my $type           = shift;
+
+    my $new_search = '';
+    if     ( $search eq 'Identifier' ) { $new_search = qq{r.id}; }
+    elsif  ( $search eq 'UserId' ) { $new_search = qq{r.user}; }
+    elsif  ( $search eq 'Status' ) 
+    { 
+      if ( $type eq 'legacyreviews' ){ $new_search = qq{r.status};  }
+      else { $new_search = qq{q.status};  }
+    }
+    elsif  ( $search eq 'Attribute' ) { $new_search = qq{r.attr}; }
+    elsif  ( $search eq 'Reason' ) { $new_search = qq{r.reason}; }
+    elsif  ( $search eq 'NoteCategory' ) { $new_search = qq{r.category}; }
+    elsif  ( $search eq 'History' ) { $new_search = qq{r.hist}; }
+
+    return $new_search;
+
+}
+
+sub GetReviewsRef
+{
+    my $self           = shift;
+    my $order          = shift;
+
+    my $search1        = shift;
+    my $search1value   = shift;
+    my $op1            = shift;
+
+    my $search2        = shift;
+    my $search2value   = shift;
+
+    my $since          = shift;
+    my $offset         = shift;
+
+    my $type           = shift;
+
+  
+    $search1 = $self->ConvertToSearchTerm ( $search1, $type );
+    $search2 = $self->ConvertToSearchTerm ( $search2, $type );
+
+    if ( ! $offset ) { $offset = 0; }
+
+    if ( ! $order || $order eq "time" ) { $order = "time DESC "; }
+
+    my $sql;
+    if ( $type eq 'reviews' )
+    {
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id };
+    }
+    elsif ( $type eq 'conflict' )
+    {
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND ( q.status = 2 or q.status = 3) };
+    }
+    elsif ( $type eq 'legacyreviews' )
+    {
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, r.status FROM $CRMSGlobals::legacyreviewsTable r  WHERE r.status >= 0  };
+    }
+    elsif ( $type eq 'undreviews' )
+      {
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND q.status = 3 };
+    }
+    elsif ( $type eq 'userreviews' )
+      {
+	my $user = $self->get( "user" );
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND r.user = '$user' };
+    }
+    elsif ( $type eq 'editreviews' )
+    {
+	my $user = $self->get( "user" );
+	my $yesterday = $self->GetYesterday();
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND r.user = '$user' AND r.time >= "$yesterday" };
+    }
+
+
+
+    if ( ( $search1value ) && ( $search2value ) )
+    {
+      { $sql .= qq{ AND ( $search1 = "$search1value"  $op1  $search2 = '$search2value' ) };   }
+    }
+    elsif ( $search1value )
+    {
+      { $sql .= qq{ AND $search1 = "$search1value"  };   }
+    }
+    elsif (  $search2value )
+    {
+      { $sql .= qq{ AND $search2 = "$search2value"  };   }
+    }
+
+    if ( $since ) { $sql .= qq{ AND r.time >= "$since" }; }
+
+    if ( $order eq 'status' )
+    {
+	$sql .= qq{ ORDER BY q.$order LIMIT $offset, 25 };
+    }
+    else
+    {
+      	$sql .= qq{ ORDER BY r.$order LIMIT $offset, 25 };
+    }
+
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    my $return = [];
+    foreach my $row ( @{$ref} )
+    {
+        $row->[1] =~ s,(.*) .*,$1,;
+        
+        my $item = {
+                     id         => $row->[0],
+                     time       => $row->[1],
+                     duration   => $row->[2],
+                     user       => $row->[3],
+                     attr       => $self->GetRightsName($row->[4]) . '(' . $row->[4] . ')',
+                     reason     => $self->GetReasonName($row->[5]) . '(' . $row->[5] . ')',
+                     note       => $row->[6],
+                     regNum     => $row->[7],
+                     expert     => $row->[8],
+                     copyDate   => $row->[9],
+                     expertNote => $row->[10],
+                     category   => $row->[11],
+                     hist       => $row->[12],
+                     regDate    => $row->[13],
+                     flaged     => $row->[14],
+                     status     => $row->[15]
                    };
         push( @{$return}, $item );
     }
@@ -644,6 +828,8 @@ sub GetLegacyReviewsRef
     my $return = [];
     foreach my $row ( @{$ref} )
     {
+        $row->[1] =~ s,(.*) .*,$1,;
+	
         my $item = {
                      id         => $row->[0],
                      time       => $row->[1],
@@ -671,20 +857,64 @@ sub GetLegacyReviewsRef
 
 sub GetReviewsCount
 {
-    my $self    = shift;
-    my $id      = shift;
-    my $user    = shift;
-    my $since   = shift;
+    my $self           = shift;
+    my $search1        = shift;
+    my $search1value   = shift;
+    my $op1            = shift;
+    my $search2        = shift;
+    my $search2value   = shift;
+    my $since          = shift;
+    my $type           = shift;
 
-    my $sql = qq{ SELECT count(id) FROM $CRMSGlobals::reviewsTable };
+    $search1 = $self->ConvertToSearchTerm ( $search1, $type );
+    $search2 = $self->ConvertToSearchTerm ( $search2, $type );
 
-    if    ( $user )                    { $sql .= qq{ WHERE user = "$user" };   }
 
-    if    ( $since && $user )          { $sql .= qq{ AND   time >= "$since"};  }
-    elsif ( $since )                   { $sql .= qq{ WHERE time >= "$since" }; }
+    my $sql;
+    if ( $type eq 'reviews' )
+    {
+      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id };
+    }
+    elsif ( $type eq 'conflict' )
+    {
+      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND ( q.status = 2 or q.status = 3) };
+    }
+    elsif ( $type eq 'legacyreviews' )
+    {
+      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::legacyreviewsTable r WHERE r.status >= 0 };
+    }
+    elsif ( $type eq 'undreviews' )
+      {
+	$sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND q.status = 3 };
+    }
+    elsif ( $type eq 'userreviews' )
+      {
+	my $user = $self->get( "user" );
+	$sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND r.user = '$user' };
+    }
+    elsif ( $type eq 'editreviews' )
+    {
+	my $user = $self->get( "user" );
+	my $yesterday = $self->GetYesterday();
+	$sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND r.user = '$user' AND r.time >= "$yesterday" };
+    }
 
-    if    ( $id && ($user || $since) ) { $sql .= qq{ AND   id = "$id" }; }
-    elsif ( $id )                      { $sql .= qq{ WHERE id = "$id" }; }
+
+
+    if ( ( $search1value ) && ( $search2value ) )
+    {
+      { $sql .= qq{ AND ( $search1 = "$search1value"  $op1  $search2 = '$search2value' ) };   }
+    }
+    elsif ( $search1value )
+    {
+      { $sql .= qq{ AND $search1 = "$search1value"  };   }
+    }
+    elsif (  $search2value )
+    {
+      { $sql .= qq{ AND $search2 = "$search2value"  };   }
+    }
+
+    if ( $since ) { $sql .= qq{ AND r.time >= "$since" }; }
 
     return $self->SimpleSqlGet( $sql );
 }
@@ -728,6 +958,18 @@ sub LinkToPT
     
     ## my $url  = 'http://babel.hathitrust.org/cgi/pt?attr=1&id=';
     my $url  = '/cgi/m/mdp/pt?skin=crms;attr=1;id=';
+
+    return qq{<a href="$url$id" target="_blank">$ti</a>};
+}
+
+sub LinkToReview
+{
+    my $self = shift;
+    my $id   = shift;
+    my $ti   = $self->GetTitle( $id );
+    
+    ## my $url  = 'http://babel.hathitrust.org/cgi/pt?attr=1&id=';
+    my $url  = '/cgi/c/crms/crms?p=review;barcode=';
 
     return qq{<a href="$url$id" target="_blank">$ti</a>};
 }
@@ -849,12 +1091,12 @@ sub SetStatusForNonExpert
     }
     elsif ( $self->UsersAgreeOnReview ( $id ) )
     {
-      my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = 2 WHERE id = "$id" };
+      my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = 4 WHERE id = "$id" };
       $self->PrepareSubmitSql( $sql );
     }
     else  ## Two users must disagree
     {
-      my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = 4 WHERE id = "$id" };
+      my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = 2 WHERE id = "$id" };
       $self->PrepareSubmitSql( $sql );
     }
     
@@ -987,6 +1229,36 @@ sub GetUserName
     return 0;
 }
 
+
+sub GetAliasUserName
+{
+    my $self = shift;
+    my $user = shift;
+
+    if ( ! $user ) { $user = $self->get( "user" ); }
+
+    my $sql  = qq{SELECT alias FROM $CRMSGlobals::usersTable WHERE id = '$user' LIMIT 1};
+    my $name = $self->SimpleSqlGet( $sql );
+
+    if ( $name ne "" ) { return $name; }
+
+    return 0;
+}
+
+sub ChangeAliasUserName
+{
+    my $self = shift;
+    my $user = shift;
+    my $new_user = shift;
+
+    if ( ! $user ) { $user = $self->get( "user" ); }
+
+    my $sql  = qq{UPDATE $CRMSGlobals::usersTable set alias = '$new_user' WHERE id = '$user'};
+    $self->PrepareSubmitSql( $sql );
+
+
+}
+
 sub IsUserReviewer
 {
     my $self = shift;
@@ -1038,7 +1310,7 @@ sub GetUserData
     my $id   = shift;
     my $dbh  = $self->get( 'dbh' );
 
-    my $sql  = qq{SELECT id,name, type FROM $CRMSGlobals::usersTable };
+    my $sql  = qq{SELECT id, name, type FROM $CRMSGlobals::usersTable };
     if ( $id ne "" ) { $sql .= qq{ WHERE id = "$id"; } }
 
     my $ref  = $dbh->selectall_arrayref( $sql );
@@ -1056,6 +1328,8 @@ sub GetUserData
 
     return $return;
 }
+
+
 
 sub GetUserTypes
 {
@@ -2131,17 +2405,31 @@ sub GetTotalUndInf
     my $sql  = qq{ SELECT count(*) from $CRMSGlobals::queueTable where status= 3};
     my $count  = $self->SimpleSqlGet( $sql );
     
-    return $count;
+    if ($count) { return $count; }
+    return 0;
 }
 
 sub GetTotalExported
 {
     my $self = shift;
 
-    my $sql  = qq{ SELECT count(id) from $CRMSGlobals::legacyreviewsTable where hist= 0};
+    my $sql  = qq{SELECT sum( itemcount ) from $CRMSGlobals::exportrecordTable};
     my $count  = $self->SimpleSqlGet( $sql );
     
-    return $count;
+    if ($count) { return $count; }
+    return 0;
+
+}
+
+sub GetTotalEverInQueue
+{
+    my $self = shift;
+
+    my $count_exported = $self->GetTotalExported();
+    my $count_queue = $self->GetQueueSize();
+    
+    my $total = $count_exported +  $count_queue;
+    return $total;
 }
 
 
@@ -2153,6 +2441,44 @@ sub GetLastTimeExported
     my $export_date  = $self->SimpleSqlGet( $sql );
     
     return $export_date;
+}
+
+sub GetLastTimeCountExported
+{
+    my $self = shift;
+
+    my $sql  = qq{ SELECT itemcount, time from $CRMSGlobals::exportrecordTable order by 2 DESC LIMIT 1};
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );  
+
+    return $ref->[0]->[0];
+
+}
+
+sub GetLastQueueTime
+{
+    my $self = shift;
+
+    my $sql  = qq{ SELECT max( time ) from $CRMSGlobals::queuerecordTable};
+    my $latest_time  = $self->SimpleSqlGet( $sql );
+    
+    #Keep only the date
+    $latest_time =~ s,(.*) .*,$1,;
+
+    return $latest_time;
+
+}
+
+sub GetLastIdQueueCount
+{
+    my $self = shift;
+
+    my $latest_time = $self->GetLastQueueTime();
+
+    my $sql  = qq{ SELECT itemcount from $CRMSGlobals::queuerecordTable where time like '$latest_time%'};
+    my $latest_time  = $self->SimpleSqlGet( $sql );
+    
+    return $latest_time;
+
 }
 
 
