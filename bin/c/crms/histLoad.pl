@@ -23,9 +23,12 @@ my $file       = $opts{'f'};
 my $alt        = $opts{'a'};
 
 #For testing.
+#This is what's needed fro file1
 #$file = qq{/l1/dev/blancoj/bin/c/crms/historical_data/file1.txt};
-#$file = qq{/l1/dev/blancoj/bin/c/crms/historical_data/file2.txt};
-#$alt = 1;
+
+#These two are what's needed for file2
+$file = qq{/l1/dev/blancoj/bin/c/crms/historical_data/file2.txt};
+$alt = 1;
 
 if ( $help || ! $file ) { die "USAGE: $0 -f csv_file [-v] [-h] [-a (alt. format)] \n\n"; }
 
@@ -82,7 +85,7 @@ foreach my $line ( <$fh> )
     my @parts     = split("\t", $line);
 
     my ( $id, $year, $cDate, $attr, $reason, $renDate, 
-         $renNum, $date, $user, $note, $eNote, $category );
+         $renNum, $date, $user, $note, $eNote, $category, $status );
 
     # $alt indicates file 2 
     if ( ! $alt )
@@ -97,6 +100,7 @@ foreach my $line ( <$fh> )
       $date      = $parts[9];
       $user      = $parts[10];
       $note      = $parts[11];
+      $status    = 1;
 
       #Remove starting and ending quotes
       if ( $note =~ m,^\".*, ) { $note =~ s,^\"(.*),$1,; }
@@ -126,6 +130,7 @@ foreach my $line ( <$fh> )
       $user      = $parts[17];
       $note      = undef;
       $eNote     = $parts[12];
+      $status    = 5;
 
       #Remove starting and ending quotes
       if ( $eNote =~ m,^\".*, ) { $eNote =~ s,^\"(.*),$1,; }
@@ -139,13 +144,13 @@ foreach my $line ( <$fh> )
 
     if ( $verbose )
     { 
-        print qq{$id, $user, $attr, $reason, $cDate, $renNum, $renDate, $note, $eNote, $category } . "\n"; 
+        print qq{$id, $user, $attr, $reason, $cDate, $renNum, $renDate, $note, $eNote, $category, $status } . "\n"; 
     }
 
 
     if ( $id =~ m,\d, )
       {
-	my $rc = $crms->SubmitHistReview( $id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $eNote, $category);
+	my $rc = $crms->SubmitHistReview( $id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $eNote, $category, $status );
 
 	if ( ! $rc ) 
 	{
