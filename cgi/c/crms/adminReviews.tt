@@ -83,7 +83,7 @@
     [% END %]
 
     <tr BGCOLOR="[% active_color %]">
-      <td>[% crms.DetailInfo( review.id, review.user ) %]</td>
+      <td>[% crms.DetailInfo( review.id, review.user, 'reviews' ) %]</td>
       <td>[% crms.LinkToPT( review.id ) %]</td>
       <td>$review.time</td>
       <td>[% crms.GetStatus( review.id ) %]</td>

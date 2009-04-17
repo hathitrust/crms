@@ -1,13 +1,11 @@
-[% IF NOT crms.IsUserAdmin() %]
-  <h3>You do not have access to this page</h3>
-  [% STOP %]
-[% END %]
+
 
 [% id     = cgi.param('id')     %]
 [% user   = cgi.param('user')     %]
+[% page   = cgi.param('page')     %]
 
 
-[% reviews = crms.GetReviewsRef( '', id, user, '', '' ) %]
+[% reviews = crms.GetReviewsRef( '', 'Identifier', id, 'AND', 'UserId', user, '', '', page ) %]
 More Information....&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="JavaScript:window.close()">Close</a>
 
 [% FOREACH review IN reviews %]

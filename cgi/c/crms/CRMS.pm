@@ -979,8 +979,9 @@ sub DetailInfo
     my $self   = shift;
     my $id     = shift;
     my $user   = shift;
+    my $page   = shift;
     
-    my $url  = qq{/cgi/c/crms/crms?p=detailInfo&id=$id&user=$user};
+    my $url  = qq{/cgi/c/crms/crms?p=detailInfo&id=$id&user=$user&page=$page};
 
     return qq{<a href="$url" target="_blank">$id</a>};
 }
