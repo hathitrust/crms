@@ -17,15 +17,26 @@
 
 <hr width="25%" align="left"/>
 
-
+<strong>Current Status:</strong><br>
       (1) Total in active queue:  [% crms.GetQueueSize () %]<br>
       (2) Total und/idf in active queue:  [% crms.GetTotalUndInf () %]<br>
-      (3) Total exported ( not including the ones from the 2 legacy files ):  [% crms.GetTotalExported () %]<br>
 <br>
 <br>
-      (4) Last time items exported:  [% crms.GetLastTimeExported () %]<br>
-      (5) Total of items in queue EVER ( not including the 2 legacy files ) :  This would be (1) + (3)
 
+<strong>Historical Info:</strong><br>
+
+      (1) Total exported ( not including the ones from the 2 legacy files ):  [% crms.GetTotalExported () %]<br>
+      (2) Last time items exported:  [% crms.GetLastTimeExported () %]<br>
+      (3) Number of Items Exported last time:  [% crms.GetLastItemCountExported () %]<br>
+      (4) Total of items in queue EVER ( not including the 2 legacy files ) :   [% crms.GetTotalEverInQueue() %]<br>
+
+<br>
+<br>
+<strong>Queue Status:</strong><br>
+      (1) Last Time Queue was updated:  [% crms.GetLastQueueTime () %]<br>
+      (2) Number of items added to queue:  [% crms.GetLastIdQueueCount () %]<br>
+<br>
+<br>
 
 
 

@@ -11,6 +11,7 @@
   <a href="crms?p=review">review</a> ||
   <a href="crms?p=editReviews">edit reviews</a> ||
   <a href="crms?p=userReviews">search your reviews</a> ||
+  <a href="crms?p=undReviews">und/nfi items</a> ||
 
   [% IF crms.IsUserExpert %]
     <a href="crms?p=expert">expert review</a> ||

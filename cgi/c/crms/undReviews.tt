@@ -1,27 +1,110 @@
+[% INCLUDE header.tt    %]
+[% INCLUDE homeLink.tt  %]
+
 [% IF NOT crms.IsUserExpert() %]
   <h3>You do not have access to this page</h3>
   [% STOP %]
 [% END %]
 
-[% INCLUDE header.tt    %]
-[% INCLUDE adminNav.tt  %]
+[% search1        = cgi.param('search1')        %]
+[% search1value   = cgi.param('search1value')   %]
+[% search2        = cgi.param('search2')        %]
+[% search2value   = cgi.param('search2value')   %]
+[% op1            = cgi.param('op1')            %]
+[% since          = cgi.param('since')  %]
+[% order          = cgi.param('order')  %]
+[% offset         = cgi.param('offset') %]
 
-<div style="width:100%; float:left">
-  <hr width="50%" align="left"/>
-    <div>und/nfi items:</div>
+[% IF NOT offset %] [% offset = 0 %] [% END %]
 
-    <blockquote>
-      [% items = crms.GetUndItems %]
-      [% FOREACH item IN items %]
-        <a href="crms?p=review&barcode=[% item %]">[% crms.GetTitle( item ) %]</a> 
-        [ 
-          [% FOREACH detail IN crms.GetItemReviewDetails( item ) %]
-            [% detail %];
-          [% END %]
-        ]
-        <br/> 
-      [% END %]
-    </blockquote>
-  </div>
+[% IF offset > 0 %] [% next = offset + 25 %]
+[% ELSE %]          [% next = 25 %] [% END %]
+
+[% IF offset > 0 %] [% prev = offset - 25 %]
+[% ELSE %]          [% prev = 0 %] [% END %]
+
+<hr width="25%" align="left"/>
+<h3>reviews with status of und: </h3>
+
+<form>
+  <input type="hidden" name="p" value="undReviews"/>
+  Restrict selection:<br/>
+[% INCLUDE selection.tt  %]
+
+  Since:   <input type="text"  name="since" value="[% since %]"/>
+           <span class="smallText">(YYYY-MM-DD)</span><br/>
+  Order:   
+  <label><input type="radio" name="order" value="id"   
+    [% order == 'id' ? 'checked="1"' : '' %]   />id</label>
+  <label><input type="radio" name="order" value="time" 
+    [% order == 'time' ? 'checked="1"' : '' %] />date</label>
+  <label><input type="radio" name="order" value="user" 
+    [% order == 'user' ? 'checked="1"' : '' %] />user</label>
+  <label><input type="radio" name="order" value="attr" 
+    [% order == 'attr' ? 'checked="1"' : '' %] />attr</label>
+  <label><input type="radio" name="order" value="status" 
+    [% order == 'status' ? 'checked="1"' : '' %] />status</label>
+  <label><input type="radio" name="order" value="category" 
+    [% order == 'category' ? 'checked="1"' : '' %] />note category</label>
+  <br/>
+  <input type="submit" value="Submit"/>
+</form>
+<br/>
+
+[% reviews = crms.GetReviewsRef( order, search1, search1value, op1, search2, search2value, since, offset, 'undreviews' ) %]
+
+<a href="?p=undReviews&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&offset=$prev">previous 25</a> || 
+<a href="?p=undReviews&id=$id&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&offset=$next">next 25</a>
+
+(found: [% crms.GetReviewsCount(search1, search1value, op1, search2, search2value, since, 'undreviews') %])
+
+[% active_color   = '#FFFFFF' %]	
+[% color_white    = '#FFFFFF' %]	
+[% color_gray     = '#FFFFC6' %]
+[% prev_id        = '' %]	
+
+<table BORDER="1" CELLPADDING="0" CELLSPACING="0">
+  <th>ID</th><th>Title</th><th>date</th><th>status</th><th>hist(0,1)</th>
+  <th>user</th><th>attr</th><th>reason</th><th>note category</th>
+  <th>note</th><th>flaged</th>
+  [% FOREACH review IN reviews %]
+
+    [% IF prev_id == '' %]   
+    [% prev_id = review.id %]
+    [% END %]
+
+    [% IF prev_id != review.id %] 
+        [% IF active_color == color_gray  %]
+        [% active_color = color_white %]
+        [% ELSIF active_color == color_white %]
+        [% active_color = color_gray %]
+        [% END %]
+    [% END %]
+
+
+    <tr BGCOLOR="[% active_color %]">
+      <td>[% crms.DetailInfo( review.id, review.user ) %]</td>
+      <td>[% crms.LinkToReview( review.id ) %]</td>
+      <td>$review.time</td>
+      <td>[% crms.GetStatus( review.id ) %]</td>
+      <td>$review.hist</td>
+      <td>$review.user</td>
+      <td>$review.attr</td>
+      <td>$review.reason</td>
+      <td>$review.category</td>
+      <td>$review.note</td>
+      <td>$review.flaged</td>
+    </tr>   
+
+
+
+    [% prev_id = review.id %]
+
+  [% END %]
+</table>
+
+<a href="?p=undReviews&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&offset=$prev">previous 25</a> || 
+<a href="?p=undReviews&id=$id&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&offset=$next">next 25</a>
+
+
 [% INCLUDE footer.tt %]
-

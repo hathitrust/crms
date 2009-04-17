@@ -13,13 +13,15 @@
 [% FOREACH user IN users.keys.sort %]
   <div>
     <a href="crms?p=adminEditUser&id=[% users.${user}.id %]">[% users.${user}.name %] 
-    ([% users.${user}.types.sort.join(", ") %])</a>
+    ([% users.${user}.types.sort.join(", ") %])([% users.${user}.id %])</a>
   </div>
 [% END %]
 
 <hr width="25%" align="left"/>
 
 [% INCLUDE editUserForm.tt %]
+
+[% INCLUDE changeUser.tt %]
 
 [% INCLUDE footer.tt %]
 

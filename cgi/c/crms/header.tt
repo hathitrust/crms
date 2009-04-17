@@ -5,5 +5,9 @@
     <title>[% title %]</title>
   </head>
   <body> 
-    <h3>Hello [% crms.GetUserName %] </h3>
+    <FONT SIZE="5"><Strong>Hello [% crms.GetUserName %] </strong></FONT>
+    <a href="crms?p=Logout"> Logout</a>
+
+<BR>
+<BR>
 
