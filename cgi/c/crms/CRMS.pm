@@ -1916,6 +1916,20 @@ sub UnlockItem
     return 1;
 }
 
+sub UnlockItemEvenIfNotLocked
+{
+    my $self = shift;
+    my $id   = shift;
+    my $user = shift;
+
+    my $sql  = qq{UPDATE $CRMSGlobals::queueTable SET locked = NULL  WHERE id = "$id"};
+    if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
+
+    $self->RemoveFromTimer( $id, $user );
+    $self->Logit( "unlocking $id" );
+    return 1;
+}
+
 
 sub UnlockAllItemsForUser
 {
