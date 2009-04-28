@@ -10,6 +10,7 @@ use Template;
 use POSIX;
 
 my $user = $ENV{'REMOTE_USER'};
+
 my $cgi  = new CGI;
 my $crms = CRMS->new(
         logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
@@ -45,7 +46,7 @@ if  (  $cgi->param('p') eq 'Logout' )
   print( "Location: $central$query_string\n\n" );
 
   
-  exit( 0 );
+  exit ( 0 );
 
 }
 
@@ -78,6 +79,64 @@ elsif  (  $cgi->param('changeuser') == 1 )
         dev          =>   $DLPS_DEV,
         user         =>   $user,
         );
+}
+
+
+if  (  $cgi->param('p') eq 'confirmReview' )  
+{
+
+  if ($cgi->param( 'submit' ) eq 'Cancel')
+  {
+    my $id         = $cgi->param('barcode');
+    $crms->UnlockItem( $id, $user);
+    $cgi->delete_all();
+  }
+  else
+  {
+    #Remove all locks for this user.
+    my $rights     = $cgi->param('rights');
+    my $reason     = $cgi->param('reason');
+    my $comment    = $cgi->param('comment');
+    my $category   = $cgi->param('category');
+    my $renNum     = $cgi->param('renNum');
+    my $regDate    = $cgi->param('regDate');
+    my $id         = $cgi->param('barcode');
+    my $editing    = $cgi->param('editing');
+
+    ( $rights, $reason ) = $crms->GetAttrReasonFromCode($rights);
+
+    my $errorMsg = $crms->ValidateSubmission2( $rights, $reason, $comment, $category, $renNum, $regDate, $user );
+  
+    if ( $errorMsg )
+    {
+       #clear the cgi
+       $cgi->delete_all();
+       $cgi->param('p', 'review' );
+       $cgi->param('errorMsg', $errorMsg );
+       $cgi->param('barcode', $id );
+     }
+     else
+     {
+       #Process the submission, and go on to the next itme
+       my $id     = $cgi->param('barcode');
+       my $copyDate;
+       my $expert;
+       if ( $crms->IsUserExpert ( $user ) ) { $expert = 2; }
+      
+       $crms->SubmitReview($id, $user, $rights, $reason, $copyDate, $comment, $renNum, $expert, $regDate, $category);
+       if  ( $editing )
+       {
+	 $cgi->delete_all();
+       }
+       else
+       {
+	 $cgi->delete_all();
+	 $cgi->param('p', 'review' );
+       }
+
+     }
+  }
+
 }
 
 

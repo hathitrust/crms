@@ -11,7 +11,7 @@
 [% category   = cgi.param('category')   %]
 
 [% IF exp        %][% exp = "1" %][% END %]
-[%# IF commentPre %][%# comment = "$commentPre: $comment" %][%# END %]
+
 
 [% parts      = crms.GetAttrReasonFromCode(rights) %]
 [% rights     = parts.0                            %]
@@ -32,7 +32,7 @@
 
 <br />
 
-[% IF crms.ValidateSubmission(rights, reason, category, renNum, regDate, user) %]
+[% IF crms.ValidateSubmission(rights, reason, comment, category, renNum, regDate, user) %]
   <div>
     <form name="submitReview" action="crms">
       <input type="hidden" name="p"          value="submitReview"> 

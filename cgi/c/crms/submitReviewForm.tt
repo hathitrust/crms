@@ -4,6 +4,7 @@
   <input type="hidden" name="barcode"  value="[% barcode %]"> 
   <input type="hidden" name="user"     value="[% user %]"> 
   <input type="hidden" name="confirm"  value="1"> 
+  <input type="hidden" name="editing"  value="[% editing %]"> 
 
   <table>
     <tr>
@@ -20,13 +21,9 @@
       </td>
       <td><input type="text" name="regDate" value="[% regDate %]" size="9"/></td>
     </tr>
-    <tr>
-      <td><strong>&copy; Date: </strong></td>
-      <td><input type="text" name="copyDate" size="4" value="[% copyDate %]"/>
-    </tr>
   </table>
 
-  <br />
+<hr />
 
   <strong>Rights/Reason: </strong>
   <!-- &nbsp;&nbsp;<a href="/c/crms/help.html#rights" target="_blank">help</a> -->
@@ -77,10 +74,10 @@
     [% pres = {"Foreign"    => "Foreign Pub",   "Missing"     => "Missing",
                "Collection" => "Collection",    "Reprint"     => "Reprint",
                "Series"     => "Series/Serial", "Translation" => "Translation",
-               "Misc"       => "Misc.",         ""            => "none"} %]
+               "Misc"       => "Misc",          ""            => "none"} %]
 
     [% FOREACH pre IN pres.sort %]
-      [% IF pre == commPre %]
+      [% IF pre == category %]
         <option value="[% pre %]" selected="selected">[% pres.${pre} %]</option>
       [% ELSE %]
         <option value="[% pre %]">[% pres.${pre} %]</option>
@@ -90,17 +87,18 @@
   <textarea name="comment" cols="20" rows="1">[% comm %]</textarea>
 
   
-  [% IF crms.IsUserExpert(user) %]
-    <br />
-    <input type="checkbox" name="exp"
-      [% IF crms.IsThirdReview(barcode) %] checked="checked"[% END %]
-      >Final Determination</input>
-    <br/>
-  [% END %]
-
   <br/>
   <div style="padding: 8px;">
-    <input style="float:left" type="submit" value="Submit" accesskey="s"> 
+    <input style="float:left" type="submit" name="submit" value="Submit"  accesskey="s"> 
+    <input style="float:left" type="submit" name="submit" value="Cancel"  accesskey="s"> 
+[% IF error %]
+	<br><FONT color="red">ErrorMsg:</FONT>
+	<textarea>
+	[% error %]
+        </textarea>
+    <br/>
+[% END %]
     <a style="float:right" href="/c/crms/help.html#rights" target="_blank">help</a>
   </div>
+
 </form>

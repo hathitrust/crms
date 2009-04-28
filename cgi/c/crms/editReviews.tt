@@ -1,19 +1,7 @@
 [% INCLUDE header.tt    %]
 [% INCLUDE homeLink.tt  %]
-<hr width="50%" align="left"/>
-[% INCLUDE reviewForm.tt %]
 
-<div style="width:100%; float:left">
-  <hr width="50%" align="left"/>
-  <div>
-    [% crms.GetReviewerCount %] reviews in the last month 
-    (ave: [% crms.GetReviewerPace( user ) %]/record).
-  </div>
-  <div>
-    [% crms.GetReviewerCount(user, yesterday()) %] reviews in the last 24 hours 
-    (ave: [% crms.GetReviewerPace(user, yesterday()) %]/record).
-  </div>
-  <br />
+
 
 [% search1        = cgi.param('search1')        %]
 [% search1value   = cgi.param('search1value')   %]
@@ -32,12 +20,20 @@
 [% IF offset > 0 %] [% prev = offset - 25 %]
 [% ELSE %]          [% prev = 0 %] [% END %]
 
+[% Total = crms.GetReviewsCount(search1, search1value, op1, search2, search2value, since, 'editreviews') %]
+[% IF Total > 25 %] [% last = ( Total - ( Total mod 25 ) )  %]
+[% ELSE %]          [% last = 0 %] [% END %]
+
+[% IF offset >= 25 %] [% pagenum = offset / 25  + 1 %]
+[% ELSE %]          [% pagenum = 1 %] [% END %]
+
 <hr width="25%" align="left"/>
-<h3>reviews that are less than 24 hours old that you can still edit: </h3>
+<h3>edit unsubmitted reviews ( that are less than 24 hours old ): </h3>
+    
 
 <form>
   <input type="hidden" name="p" value="editReviews"/>
-  Restrict selection:<br/>
+  Restrict selection (<a  href="/c/crms/keys.html" target="_blank">help with codes</a>):<br/>
 [% INCLUDE selection.tt  %]
 
 
@@ -64,9 +60,13 @@
 [% reviews = crms.GetReviewsRef( order, search1, search1value, op1, search2, search2value, since, offset, 'editreviews' ) %]
 
 <a href="?p=editReviews&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&offset=$prev">previous 25</a> || 
-<a href="?p=editReviews&id=$id&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&offset=$next">next 25</a>
+<a href="?p=editReviews&id=$id&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&offset=$next">next 25</a> ||
+<a href="?p=editReviews&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&offset=0">first page</a> ||
+<a href="?p=editReviews&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&offset=$last">last page</a>
 
-(found: [% crms.GetReviewsCount(search1, search1value, op1, search2, search2value, since, 'editreviews') %])
+(found: $Total, page = $pagenum)
+
+
 
 [% active_color   = '#FFFFFF' %]	
 [% color_white    = '#FFFFFF' %]	
@@ -74,9 +74,9 @@
 [% prev_id        = '' %]	
 
 <table BORDER="1" CELLPADDING="0" CELLSPACING="0">
-  <th>ID</th><th>Title</th><th>date</th><th>status</th><th>hist(0,1)</th>
+  <th>ID</th><th>Title</th><th>review date</th>
   <th>user</th><th>attr</th><th>reason</th><th>note category</th>
-  <th>note</th><th>flaged</th>
+  <th>note</th><th>flagged</th>
   [% FOREACH review IN reviews %]
 
     [% IF prev_id == '' %]   
@@ -93,11 +93,9 @@
 
 
     <tr BGCOLOR="[% active_color %]">
-      <td>[% crms.DetailInfo( review.id, review.user, 'editreviews' ) %]</td>
+      <td>[% crms.DetailInfoForReview( review.id, review.user, 'editreviews' ) %]</td>
       <td>[% crms.LinkToReview( review.id ) %]</td>
       <td>$review.time</td>
-      <td>[% crms.GetStatus( review.id ) %]</td>
-      <td>$review.hist</td>
       <td>$review.user</td>
       <td>$review.attr</td>
       <td>$review.reason</td>

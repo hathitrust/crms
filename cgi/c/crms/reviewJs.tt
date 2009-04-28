@@ -111,6 +111,22 @@ hp = document.getElementById("hoverpopup");
 hp.style.visibility = "Hidden";
 }
 
+function change()
+{
+hp = document.getElementById("test");
+hp.style.color = "blue";
+
+}
+
+function toggle()  
+{  
+
+hp = document.getElementById(1);
+var color = hp.checked? "red" : "red"; 
+hp.style.color = color;
+} 
+
+
 //-->
 </script>
 

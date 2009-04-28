@@ -301,7 +301,7 @@ sub SubmitReview
     if ( ! $self->ValidateReason( $reason ) )             { $self->Logit("reason check failed");      return 0; }
     if ( ! $self->CheckAttrReasonComb( $attr, $reason ) ) { $self->Logit("attr/reason check failed"); return 0; }
 
-    if ( ! $self->ValidateSubmission($attr, $reason, $note, $regNum, $regDate, $user) ) { return 0; }
+    #if ( ! $self->ValidateSubmission($attr, $reason, $note, $regNum, $regDate, $user) ) { return 0; }
 
 
     ## do some sort of check for expert submissions
@@ -710,7 +710,14 @@ sub GetReviewsRef
 
     if ( ! $offset ) { $offset = 0; }
 
-    if ( ! $order || $order eq "time" ) { $order = "time DESC "; }
+    if ( ( $type eq 'userreviews' ) || ( $type eq 'editreviews' ) )
+    {
+      if ( ! $order || $order eq "time" ) { $order = "time DESC "; }
+    }
+    else
+    {
+      if ( ! $order || $order eq "id" ) { $order = "id DESC "; }
+    }
 
     my $sql;
     if ( $type eq 'reviews' )
@@ -779,8 +786,8 @@ sub GetReviewsRef
                      time       => $row->[1],
                      duration   => $row->[2],
                      user       => $row->[3],
-                     attr       => $self->GetRightsName($row->[4]) . '(' . $row->[4] . ')',
-                     reason     => $self->GetReasonName($row->[5]) . '(' . $row->[5] . ')',
+                     attr       => $self->GetRightsName($row->[4]),
+                     reason     => $self->GetReasonName($row->[5]),
                      note       => $row->[6],
                      regNum     => $row->[7],
                      expert     => $row->[8],
@@ -920,26 +927,6 @@ sub GetReviewsCount
 }
 
 
-sub GetLegacyReviewsCount
-{
-    my $self    = shift;
-    my $id      = shift;
-    my $user    = shift;
-    my $since   = shift;
-
-    my $sql = qq{ SELECT count(id) FROM $CRMSGlobals::legacyreviewsTable };
-
-    if    ( $user )                    { $sql .= qq{ WHERE user = "$user" };   }
-
-    if    ( $since && $user )          { $sql .= qq{ AND   time >= "$since"};  }
-    elsif ( $since )                   { $sql .= qq{ WHERE time >= "$since" }; }
-
-    if    ( $id && ($user || $since) ) { $sql .= qq{ AND   id = "$id" }; }
-    elsif ( $id )                      { $sql .= qq{ WHERE id = "$id" }; }
-
-    return $self->SimpleSqlGet( $sql );
-}
-
 sub LinkToStanford
 {
     my $self = shift;
@@ -969,9 +956,9 @@ sub LinkToReview
     my $ti   = $self->GetTitle( $id );
     
     ## my $url  = 'http://babel.hathitrust.org/cgi/pt?attr=1&id=';
-    my $url  = '/cgi/c/crms/crms?p=review;barcode=';
+    my $url  = qq{/cgi/c/crms/crms?p=review;barcode=$id;editing=1};
 
-    return qq{<a href="$url$id" target="_blank">$ti</a>};
+    return qq{<a href="$url" target="_blank">$ti</a>};
 }
 
 sub DetailInfo
@@ -982,6 +969,18 @@ sub DetailInfo
     my $page   = shift;
     
     my $url  = qq{/cgi/c/crms/crms?p=detailInfo&id=$id&user=$user&page=$page};
+
+    return qq{<a href="$url" target="_blank">$id</a>};
+}
+
+sub DetailInfoForReview
+{
+    my $self   = shift;
+    my $id     = shift;
+    my $user   = shift;
+    my $page   = shift;
+    
+    my $url  = qq{/cgi/c/crms/crms?p=detailInfoForReview&id=$id&user=$user&page=$page};
 
     return qq{<a href="$url" target="_blank">$id</a>};
 }
@@ -1003,6 +1002,19 @@ sub GetStatus
     my $id   = shift;
 
     my $sql  = qq{ SELECT status FROM $CRMSGlobals::queueTable WHERE id = "$id"};
+    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    my $str  = $self->SimpleSqlGet( $sql );
+
+    return $str;
+
+}
+
+sub GetLegacyStatus
+{
+    my $self = shift;
+    my $id   = shift;
+
+    my $sql  = qq{ SELECT status FROM $CRMSGlobals::legacyreviewsTable WHERE id = "$id"};
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
     my $str  = $self->SimpleSqlGet( $sql );
 
@@ -1377,8 +1389,9 @@ sub AddUser
 sub ValidateSubmission
 {
     my $self = shift;
-    my ($attr, $reason, $note, $regNum, $regDate, $user) = @_;
+    my ($attr, $reason, $note, $category, $regNum, $regDate, $user) = @_;
     my $return = 1;
+    my $errorMsg = "";
 
     ## check user
     if ( ! $self->IsUserReviewer( $user ) )
@@ -1387,31 +1400,146 @@ sub ValidateSubmission
         $return = 0;
     } 
 
-    if ( ! $attr )   { $self->SetError( "missing rights" ); $return = 0; }
-    if ( ! $reason ) { $self->SetError( "missing reason" ); $return = 0; }
+    if ( ! $attr )   { $self->SetError( "rights/reason designation required" ); $return = 0; }
+    if ( ! $reason ) { $self->SetError( "rights/reason designation required" ); $return = 0; }
 
     if ( $regNum && ( ! $regDate ) )
     { 
-        $self->SetError( "missing renewal date" );
+        $self->SetError( "missing renewal date and number" );
         $return = 0;
     }
 
     ## if und, must have a commentPre (note)
-    if ( $attr == 5 && $note eq "" ) 
+    if ( $attr == 5 && $reason == 8 && ( $note eq "" || $category eq "" )  )
     {
-        $self->SetError( "comment required for UND" );
+        $self->SetError( "note category/note required for und/nif" );
         $return = 0;
     }
 
     ## ic/ren requires a reg number
-    if ( $reason == 7 && $attr == 2 && $regNum eq "" ) 
+    if ( $reason == 7 && $attr == 2 && $regNum eq "" && $regNum eq "" ) 
     {
-        $self->SetError( "missing renewal ID" );
+        $self->SetError( "rights/reasons requires renewal info for ic/ren" );
         $return = 0;
     }
 
+    ## pd/ren requires a reg number
+    if ( $reason == 7 && $attr == 1 && $regNum eq "" && $regNum eq "" ) 
+    {
+        $self->SetError( "rights/reasons conflicts with renewal info for pd/ren" );
+        $return = 0;
+    }
+
+    ## pd/ncn requires a reg number
+    if ( $reason == 2 && $attr == 1 && $regNum eq "" && $regNum eq "" ) 
+    {
+        $self->SetError( "rights/reasons conflicts with renewal info for pd/ncn" );
+        $return = 0;
+    }
+
+
+    ## pd/cdpp requires a reg number
+    if ( $reason == 9 && $attr == 1 && $regNum eq "" && $regNum eq "" ) 
+    {
+        $self->SetError( "rights/reasons conflicts with renewal info for pd/cdpp" );
+        $return = 0;
+    }
+
+    if ( $reason == 9 && $attr == 1 && ( $note eq "" || $category eq "" ) ) 
+    {
+        $self->SetError( "note category/note text required for pd/cdpp" );
+        $return = 0;
+    }
+
+    ## ic/cdpp requires a reg number
+    if ( $reason == 9 && $attr == 2 && $regNum eq "" && $regNum eq "" ) 
+    {
+        $self->SetError( "rights/reasons conflicts with renewal info for ic/cdpp" );
+        $return = 0;
+    }
+
+    if ( $reason == 9 && $attr == 2 && ( $note eq "" || $category eq "")  ) 
+    {
+        $self->SetError( "note category/note text required for ic/cdpp" );
+        $return = 0;
+    }
+
+
     return $return;
 }
+
+
+sub ValidateSubmission2
+{
+    my $self = shift;
+    my ($attr, $reason, $note, $category, $regNum, $regDate, $user) = @_;
+    my $errorMsg = "";
+
+    ## check user
+    if ( ! $self->IsUserReviewer( $user ) )
+    {
+        $errorMsg .= qq{Not a reviewer.  };
+    } 
+
+    if ( ! $attr )   { $errorMsg .= qq{rights/reason designation required.  }; }
+    if ( ! $reason ) { $errorMsg .= qq{rights/reason designation required.  }; }
+
+    if ( $regNum && ( ! $regDate ) )
+    { 
+        $errorMsg .= qq{missing renewal date and number.  };
+    }
+
+    ## if und, must have a commentPre (note)
+    if ( $attr == 5 && $reason == 8 && ( $note eq "" || $category eq "" )  )
+    {
+        $errorMsg .= qq{note category/note required for und/nif.   };
+    }
+
+    ## ic/ren requires a reg number
+    if ( $reason == 7 && $attr == 2 && $regNum eq "" && $regNum eq "" ) 
+    {
+        $errorMsg .= qq{rights/reasons requires renewal info for ic/ren.  };
+    }
+
+    ## pd/ren requires a reg number
+    if ( $reason == 7 && $attr == 1 && $regNum eq "" && $regNum eq "" ) 
+    {
+        $errorMsg .= qq{rights/reasons conflicts with renewal info for pd/ren.  };
+    }
+
+    ## pd/ncn requires a reg number
+    if ( $reason == 2 && $attr == 1 && $regNum eq "" && $regNum eq "" ) 
+    {
+        $errorMsg .= qq{rights/reasons conflicts with renewal info for pd/ncn.  };
+    }
+
+
+    ## pd/cdpp requires a reg number
+    if ( $reason == 9 && $attr == 1 && $regNum eq "" && $regNum eq "" ) 
+    {
+        $errorMsg .= qq{rights/reasons conflicts with renewal info for pd/cdpp.  };
+    }
+
+    if ( $reason == 9 && $attr == 1 && ( $note eq "" || $category eq "" ) ) 
+    {
+        $errorMsg .= qq{note category/note text required for pd/cdpp.  };
+    }
+
+    ## ic/cdpp requires a reg number
+    if ( $reason == 9 && $attr == 2 && $regNum eq "" && $regNum eq "" ) 
+    {
+        $errorMsg .= qq{rights/reasons conflicts with renewal info for ic/cdpp.  };
+    }
+
+    if ( $reason == 9 && $attr == 2 && ( $note eq "" || $category eq "")  ) 
+    {
+        $errorMsg .= qq{note category/note text required for ic/cdpp.  };
+    }
+
+
+    return $errorMsg;
+}
+
 
 sub ValidateAttr
 {
@@ -1915,6 +2043,7 @@ sub UnlockItem
     $self->Logit( "unlocking $id" );
     return 1;
 }
+
 
 sub UnlockItemEvenIfNotLocked
 {
