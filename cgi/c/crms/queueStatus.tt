@@ -17,27 +17,26 @@
 
 <hr width="25%" align="left"/>
 
-<strong>Current Status:</strong><br>
-      (1) Total in active queue:  [% crms.GetQueueSize () %]<br>
-      (2) Total und/idf in active queue:  [% crms.GetTotalUndInf () %]<br>
+<strong>Queue Status:</strong><br>
+      (1) Total volumes in active queue:  [% crms.GetQueueSize () %]<br>
+      (2) Total matching und/nfi reviews in active queue:  [% crms.GetTotalUndInf () %]<br>
+      (3) Total reviews in conflict:  [% crms.GetTotalConflict () %]<br>
+      (4) Last Time Queue was updated:  [% crms.GetLastQueueTime () %]<br>
+      (5) Number of volumes last added to queue:  [% crms.GetLastIdQueueCount () %]<br>
+      (6) Total Number of reviews in active queue:  [% crms.GetTotalInActiveQueue () %]<br>
+
 <br>
 <br>
 
 <strong>Historical Info:</strong><br>
 
-      (1) Total exported ( not including the ones from the 2 legacy files ):  [% crms.GetTotalExported () %]<br>
-      (2) Last time items exported:  [% crms.GetLastTimeExported () %]<br>
-      (3) Number of Items Exported last time:  [% crms.GetLastItemCountExported () %]<br>
-      (4) Total of items in queue EVER ( not including the 2 legacy files ) :   [% crms.GetTotalEverInQueue() %]<br>
+      (1) Total determinations exported ( not including the ones from the 2 legacy files ):  [% crms.GetTotalExported () %]<br>
+      (2) Last time determinations exported:  [% crms.GetLastTimeExported () %]<br>
+      (3) Number of determinations exported last time:  [% crms.GetLastItemCountExported () %]<br>
+      (4) Total of volumes in queue EVER ( not including the 2 legacy files ) :   [% crms.GetTotalEverInQueue() %]<br>
+      (5) Total Number of historical reviews:  [% crms.GetTotalInHistoricalQueue () %]<br>
 
 <br>
-<br>
-<strong>Queue Status:</strong><br>
-      (1) Last Time Queue was updated:  [% crms.GetLastQueueTime () %]<br>
-      (2) Number of items added to queue:  [% crms.GetLastIdQueueCount () %]<br>
-<br>
-<br>
-
 
 
 [% INCLUDE footer.tt %]

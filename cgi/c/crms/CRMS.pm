@@ -1393,6 +1393,30 @@ sub ChangeAliasUserName
 
 }
 
+sub ChangeDateFormat
+{
+    my $self = shift;
+    my $date = shift;
+    
+    #go from MM/DD/YYYY to YYYY-MM-DD
+
+    my $month = $date;
+    $month =~ s,(.*?)\/.*?\/.*,$1,;
+
+    my $day   = $date;
+    $day =~ s,.*?\/(.*?)\/.*,$1,;
+
+    my $year  = $date;
+    $year =~ s,.*?\/.*?\/(.*),$1,;
+    
+    if ( $month < 10 ) { $month = qq{0$month}; }
+    if ( $day < 10 ) { $day   = qq{0$day}; }
+
+    my $value = qq{$year-$month-$day};
+
+    return $value;
+}
+
 sub IsUserReviewer
 {
     my $self = shift;
@@ -2699,6 +2723,40 @@ sub GetTotalUndInf
     return 0;
 }
 
+sub GetTotalConflict
+{
+    my $self = shift;
+
+    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::queueTable where status= 2};
+    my $count  = $self->SimpleSqlGet( $sql );
+    
+    if ($count) { return $count; }
+    return 0;
+}
+
+
+sub GetTotalInActiveQueue
+{
+    my $self = shift;
+
+    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::queueTable where status > 0 };
+    my $count  = $self->SimpleSqlGet( $sql );
+    
+    if ($count) { return $count; }
+    return 0;
+}
+
+
+sub GetTotalInHistoricalQueue
+{
+    my $self = shift;
+
+    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::legacyreviewsTable };
+    my $count  = $self->SimpleSqlGet( $sql );
+    
+    if ($count) { return $count; }
+    return 0;
+}
 sub GetTotalExported
 {
     my $self = shift;
