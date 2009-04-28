@@ -319,14 +319,126 @@ sub SubmitReview
 
     $self->PrepareSubmitSql( $sql );
 
-    if ( $exp ) { $self->RegisterExpertReview( $id );  }
-    else        { $self->SetStatusForNonExpert( $id, $user, $attr ); }
+    if ( $exp ) { $self->SetExpertReview( $id );  }
+    else        { $self->IncrementRevCount( $id ); }
 
     $self->EndTimer( $id, $user );
     $self->UnlockItem( $id, $user );
 
     return 1;
 }
+
+
+sub SetExpertReview
+{
+    my $self = shift;
+    my $id   = shift;
+
+    my $sql = qq{ UPDATE $CRMSGlobals::queueTable set expcnt=1 WHERE id = "$id" };
+    $self->PrepareSubmitSql( $sql );
+
+}
+
+sub IncrementRevCount
+{
+    my $self = shift;
+    my $id   = shift;
+
+    my $sql  = qq{ SELECT revcnt from $CRMSGlobals::queueTable  where id="$id"};
+    my $newCount  = $self->SimpleSqlGet( $sql );
+    $newCount = $newCount + 1;
+    
+    my $sql = qq{ UPDATE $CRMSGlobals::queueTable set revcnt=$newCount WHERE id = "$id" };
+    $self->PrepareSubmitSql( $sql );
+
+}
+
+sub ProcessReviews
+{
+    my $self = shift;
+
+    my $yesterday = $self->GetYesterday();
+ 
+    my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where revcnt = 2) AND time >= "$yesterday" group by id having count(*) = 2};
+
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    my $check_time   = 0;
+    my ( $prev_attr, $prev_reason, $prev_regDate, $prev_regNum );
+    foreach my $row ( @{$ref} )
+    {
+        my $id      =  $row->[0];
+	my $user    = $row->[1];
+	my $attr    = $row->[2];
+        my $reason  = $row->[3];
+	my $regNum  = $row->[4];
+        my $regDate = $row->[5];
+
+	if ( $check_time )
+	{	  
+	  if ( ( $attr == $prev_attr ) && ( $reason == $prev_reason ) )
+	  {
+	    #If both und/nfi them status is 3
+	    if ( ( $attr == 5 ) && ( $reason == 8 ) )
+	    {
+	      $self->RegisterStatus( $id, 3 );	      
+	    }
+	    else #Mark as 4 - two that agree
+	    {
+	      #If they are ic/ren then the renal date and id must match
+	      if ( ( $attr == 2 ) && ( $reason == 7 ) )
+	      {
+		 if ( ( $regNum == $prev_regNum ) && ( $regDate == $prev_regDate ) )
+		 {
+		   #Mark as 4
+		   $self->RegisterStatus( $id, 4 );	      
+		 }
+		 else
+		 {
+		   #Mark as 2
+		   $self->RegisterStatus( $id, 2 );	      
+		 }
+	      }
+	      else #all other cases mark as 4
+	      {
+		$self->RegisterStatus( $id, 4 );	      
+	      }
+	    }
+	  }
+	  else #Mark as 2 - two that disagree 
+	  {
+	    $self->RegisterStatus( $id, 2 );	      
+	  }
+
+	  $check_time = 0;
+	}
+	else
+	{
+	  $check_time = 1;
+	}
+	$prev_attr = $attr;
+	$prev_reason = $reason;
+
+	$prev_regDate = $regDate;
+	$prev_regNum = $regNum;
+    }
+
+    #Process the expert reviews.
+    my $sql = qq{SELECT id  FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where expcnt = 1) AND AND time >= "$yesterday" order by id};
+
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    foreach my $row ( @{$ref} )
+    {
+        my $id =  $row->[0];
+	$self->RegisterExpertReview( $id );
+    }
+
+
+}
+
+
+
 
 ## ----------------------------------------------------------------------------
 ##  Function:   submit historical review  (from excel SS)   
@@ -571,6 +683,17 @@ sub RegisterExpertReview
     $self->PrepareSubmitSql( $sql );
 }
 
+sub RegisterStatus
+{
+    my $self   = shift;
+    my $id     = shift;
+    my $status = shift;
+
+    my $sql  = qq{UPDATE $CRMSGlobals::queueTable SET status = $status WHERE id = "$id"};
+
+    $self->PrepareSubmitSql( $sql );
+}
+
 sub GetConflictReviewsRef
 {
     my $self    = shift;
@@ -722,7 +845,7 @@ sub GetReviewsRef
     my $sql;
     if ( $type eq 'reviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND q.status > 0 };
     }
     elsif ( $type eq 'conflict' )
     {
@@ -739,7 +862,7 @@ sub GetReviewsRef
     elsif ( $type eq 'userreviews' )
       {
 	my $user = $self->get( "user" );
-	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND r.user = '$user' };
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND r.user = '$user' AND q.status > 0 };
     }
     elsif ( $type eq 'editreviews' )
     {
@@ -747,8 +870,6 @@ sub GetReviewsRef
 	my $yesterday = $self->GetYesterday();
 	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND r.user = '$user' AND r.time >= "$yesterday" };
     }
-
-
 
     if ( ( $search1value ) && ( $search2value ) )
     {
@@ -880,7 +1001,7 @@ sub GetReviewsCount
     my $sql;
     if ( $type eq 'reviews' )
     {
-      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id };
+      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND q.status > 0 };
     }
     elsif ( $type eq 'conflict' )
     {
@@ -897,7 +1018,7 @@ sub GetReviewsCount
     elsif ( $type eq 'userreviews' )
       {
 	my $user = $self->get( "user" );
-	$sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND r.user = '$user' };
+	$sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND r.user = '$user' AND q.status > 0 };
     }
     elsif ( $type eq 'editreviews' )
     {
@@ -2248,7 +2369,7 @@ sub GetNextItemForReview
     my $barcode;
 
     #Find items reviewed once by some other user
-    my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND status = 1 AND id not in ( };
+    my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND status = 0 AND revcnt = 1 and expcnt = 0 AND id not in ( };
     $sql   .= qq{ SELECT distinct id from $CRMSGlobals::reviewsTable where user = '$name' ) };
     $sql   .= qq{ ORDER BY priority DESC, pub_date ASC LIMIT 1 };
 
@@ -2259,7 +2380,7 @@ sub GetNextItemForReview
     {
         #Get the 1st available item that has never been reviewed.
         my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND } .
-                  qq{ status = 0 ORDER BY priority DESC, pub_date ASC LIMIT 1 };
+                  qq{ status = 0 AND revcnt = 0 and expcnt = 0 ORDER BY priority DESC, pub_date ASC LIMIT 1 };
 
         my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
