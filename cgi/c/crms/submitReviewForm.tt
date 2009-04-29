@@ -92,10 +92,10 @@
     <input style="float:left" type="submit" name="submit" value="Submit"  accesskey="s"> 
     <input style="float:left" type="submit" name="submit" value="Cancel"  accesskey="s"> 
 [% IF error %]
-	<br><FONT color="red">ErrorMsg:</FONT>
-	<textarea>
-	[% error %]
-        </textarea>
+	<br>
+         <div style="float:left"> <FONT align="left" color="red">ErrorMsg:</FONT>
+	<textarea>[% error %]</textarea>
+	</div>
     <br/>
 [% END %]
 
