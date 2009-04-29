@@ -102,6 +102,7 @@ if  (  $cgi->param('p') eq 'confirmReview' )
     my $regDate    = $cgi->param('regDate');
     my $id         = $cgi->param('barcode');
     my $editing    = $cgi->param('editing');
+    my $navright   = $cgi->param('navRight');
 
     ( $rights, $reason ) = $crms->GetAttrReasonFromCode($rights);
 
@@ -114,6 +115,7 @@ if  (  $cgi->param('p') eq 'confirmReview' )
        $cgi->param('p', 'review' );
        $cgi->param('errorMsg', $errorMsg );
        $cgi->param('barcode', $id );
+       $cgi->param('navRight', $navright );
      }
      else
      {
@@ -132,6 +134,7 @@ if  (  $cgi->param('p') eq 'confirmReview' )
        {
 	 $cgi->delete_all();
 	 $cgi->param('p', 'review' );
+	 $cgi->param('navRight', $navright );
        }
 
      }

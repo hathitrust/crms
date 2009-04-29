@@ -5,6 +5,7 @@
   <input type="hidden" name="user"     value="[% user %]"> 
   <input type="hidden" name="confirm"  value="1"> 
   <input type="hidden" name="editing"  value="[% editing %]"> 
+  <input type="hidden" name="navRight" value="[% navright %]"> 
 
   <table>
     <tr>

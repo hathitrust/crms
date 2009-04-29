@@ -8,6 +8,7 @@
 [% inBarcode = cgi.param('barcode') %]
 [% inAdd     = cgi.param('add') %]
 [% editing   = cgi.param('editing') %]
+[% navright  = cgi.param('navRight') %]
 [% crms.UpdateTitle %]
 
 [% IF inBarcode %]
@@ -189,7 +190,8 @@
 
         [% INCLUDE submitReviewForm.tt barcode = barcode, regNum   = regNum,   regDate = regDate,
                                        comment = comment, copyDate = copyDate, comm    = comm,    
-                                       category = category, editing = editing, error   = error%]
+                                       category = category, editing = editing, error   = error,
+                                       navright = navright %]
       </div>
     </div>
     [%# the frame (Stanford, HT, Cat...) %]
