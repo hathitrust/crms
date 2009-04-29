@@ -71,10 +71,11 @@
   <br />
   <strong>Comments: </strong><br/>
   <select name="category">
-    [% pres = {"Foreign"    => "Foreign Pub",   "Missing"     => "Missing",
-               "Collection" => "Collection",    "Reprint"     => "Reprint",
-               "Series"     => "Series/Serial", "Translation" => "Translation",
-               "Misc"       => "Misc",          ""            => "none"} %]
+    [% pres = {"FOREIGN PUB"    => "Foreign Pub",   "LANG"     => "Language",
+               "MISC"           => "Misc",          "MISSING"  => "Missing",
+               "REPRINT FROM"   => "Reprint",       "SERIES"   => "Series/Serial",
+               "COLLECTION"     => "Collection",    "TRANS"    => "Translation",
+               ""               => "none"} %]
 
     [% FOREACH pre IN pres.sort %]
       [% IF pre == category %]
