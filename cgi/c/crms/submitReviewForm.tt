@@ -98,7 +98,17 @@
         </textarea>
     <br/>
 [% END %]
-    <a style="float:right" href="/c/crms/help.html#rights" target="_blank">help</a>
+
   </div>
+  <br/>
+        <table width="100%">
+	  <tr>
+            <td style="float:left"><a style="float:right" href="/c/crms/help.html#rights" target="_blank">help</a></td>
+            <td align="center"><a href="crms">Use Cases</a></td>
+            <td align="right"><a href="crms?p=Logout">Logout</a></td>
+          </tr>
+        </table>
+
+
 
 </form>
