@@ -359,7 +359,7 @@ sub ProcessReviews
 
     my $yesterday = $self->GetYesterday();
  
-    my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where revcnt = 2) AND time >= "$yesterday" group by id having count(*) = 2};
+    my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where revcnt = 2 and status = 0) AND time < "$yesterday"  group by id having count(*) = 2};
 
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -424,7 +424,7 @@ sub ProcessReviews
     }
 
     #Process the expert reviews.
-    my $sql = qq{SELECT id  FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where expcnt = 1) AND AND time >= "$yesterday" order by id};
+    my $sql = qq{SELECT id  FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where expcnt = 1 AND status = 0 ) AND time < "$yesterday" order by id};
 
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -1531,87 +1531,6 @@ sub AddUser
     return 1;
 }
 
-sub ValidateSubmission
-{
-    my $self = shift;
-    my ($attr, $reason, $note, $category, $regNum, $regDate, $user) = @_;
-    my $return = 1;
-    my $errorMsg = "";
-
-    ## check user
-    if ( ! $self->IsUserReviewer( $user ) )
-    {
-        $self->SetError( "Not a reviewer" );
-        $return = 0;
-    } 
-
-    if ( ! $attr )   { $self->SetError( "rights/reason designation required" ); $return = 0; }
-    if ( ! $reason ) { $self->SetError( "rights/reason designation required" ); $return = 0; }
-
-    if ( $regNum && ( ! $regDate ) )
-    { 
-        $self->SetError( "missing renewal date and number" );
-        $return = 0;
-    }
-
-    ## if und, must have a commentPre (note)
-    if ( $attr == 5 && $reason == 8 && ( $note eq "" || $category eq "" )  )
-    {
-        $self->SetError( "note category/note required for und/nif" );
-        $return = 0;
-    }
-
-    ## ic/ren requires a reg number
-    if ( $reason == 7 && $attr == 2 && $regNum eq "" && $regNum eq "" ) 
-    {
-        $self->SetError( "rights/reasons requires renewal info for ic/ren" );
-        $return = 0;
-    }
-
-    ## pd/ren requires a reg number
-    if ( $reason == 7 && $attr == 1 && $regNum eq "" && $regNum eq "" ) 
-    {
-        $self->SetError( "rights/reasons conflicts with renewal info for pd/ren" );
-        $return = 0;
-    }
-
-    ## pd/ncn requires a reg number
-    if ( $reason == 2 && $attr == 1 && $regNum eq "" && $regNum eq "" ) 
-    {
-        $self->SetError( "rights/reasons conflicts with renewal info for pd/ncn" );
-        $return = 0;
-    }
-
-
-    ## pd/cdpp requires a reg number
-    if ( $reason == 9 && $attr == 1 && $regNum eq "" && $regNum eq "" ) 
-    {
-        $self->SetError( "rights/reasons conflicts with renewal info for pd/cdpp" );
-        $return = 0;
-    }
-
-    if ( $reason == 9 && $attr == 1 && ( $note eq "" || $category eq "" ) ) 
-    {
-        $self->SetError( "note category/note text required for pd/cdpp" );
-        $return = 0;
-    }
-
-    ## ic/cdpp requires a reg number
-    if ( $reason == 9 && $attr == 2 && $regNum eq "" && $regNum eq "" ) 
-    {
-        $self->SetError( "rights/reasons conflicts with renewal info for ic/cdpp" );
-        $return = 0;
-    }
-
-    if ( $reason == 9 && $attr == 2 && ( $note eq "" || $category eq "")  ) 
-    {
-        $self->SetError( "note category/note text required for ic/cdpp" );
-        $return = 0;
-    }
-
-
-    return $return;
-}
 
 
 sub ValidateSubmission2
@@ -1626,8 +1545,7 @@ sub ValidateSubmission2
         $errorMsg .= qq{Not a reviewer.  };
     } 
 
-    if ( ! $attr )   { $errorMsg .= qq{rights/reason designation required.  }; }
-    if ( ! $reason ) { $errorMsg .= qq{rights/reason designation required.  }; }
+    if ( ( ! $attr ) || ( ! $reason ) )   { $errorMsg .= qq{rights/reason designation required.  }; }
 
     if ( $regNum && ( ! $regDate ) )
     { 
