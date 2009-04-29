@@ -1,5 +1,5 @@
 @import "review.css";
 
-.divbody   { float:right; width:99%;   padding-left:2px; padding-right:2px; position: relative; min-width:1000px; }
+.divbody   { float:left; width:99%;   padding-left:2px; padding-right:2px; position: relative; min-width:1000px; }
 .divNav    { float:right; width:208px; padding-left:2px; padding-right:2px; background-color: #DCDCDC; }
 .divFrame  { float:right; width:78%;   padding-left:2px; padding-right:2px; }

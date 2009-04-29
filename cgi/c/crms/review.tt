@@ -186,7 +186,6 @@
       </div>
       <div class="navbottom">
         [% comment = "" %] 
-        [%# IF comm or commPre %][%# comment = "$commPre: $comm" %][%# END %]
 
         [% INCLUDE submitReviewForm.tt barcode = barcode, regNum   = regNum,   regDate = regDate,
                                        comment = comment, copyDate = copyDate, comm    = comm,    
