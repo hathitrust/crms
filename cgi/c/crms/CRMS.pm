@@ -1562,6 +1562,45 @@ sub ValidateSubmission2
     my ($attr, $reason, $note, $category, $regNum, $regDate, $user) = @_;
     my $errorMsg = "";
 
+    if ( $regDate )
+    {
+      if ( $regDate =~ m,^\d{2}\W{3}\d{2}$, )
+      {
+	$regDate =~ s,\w{5}(.*),$1,;
+	$regDate = qq{19$regDate};
+
+	if ( $regDate < 1950 )
+	{
+	  $errorMsg .= qq{the reg date you have entered $regDate is before 1950, we should not be recording them.   };
+	}
+	  
+	if ( ( $regDate >= 1950 )  && ( $regDate <= 1953 ) )
+	{
+	  if ( ( $regNum =~ m,^R\w{5}$, ) || ( $regNum =~ m,^R\w{6}$, ))
+	  {}
+	  else
+	  {
+	    $errorMsg .= qq{Reg Number format is not correct for item in  1950 - 1953 range.   };
+	  }
+
+	}
+	if ( $regDate >= 1978 )
+	{
+	  if ( $regNum =~ m,^RE\w{6}$, )
+	  {}
+	  else
+	  {
+	    $errorMsg .= qq{Reg Number format is not correct for item with Reg Date >= 1978.   };
+	  }
+	  
+	}
+      }
+      else
+      {
+	$errorMsg .= qq{Reg Date is not of the right format, for example 17Dec73.   };
+      }
+    }
+
     ## check user
     if ( ! $self->IsUserReviewer( $user ) )
     {
@@ -1570,58 +1609,60 @@ sub ValidateSubmission2
 
     if ( ( ! $attr ) || ( ! $reason ) )   { $errorMsg .= qq{rights/reason designation required.  }; }
 
-    if ( $regNum && ( ! $regDate ) )
-    { 
-        $errorMsg .= qq{missing renewal date and number.  };
-    }
 
-    ## if und, must have a commentPre (note)
-    if ( $attr == 5 && $reason == 8 && ( $note eq "" || $category eq "" )  )
+    ## und/nfi
+    if ( $attr == 5 && $reason == 8 && ( ( ! $note ) || ( ! $category ) )  )
     {
-        $errorMsg .= qq{note category/note required for und/nif.   };
+        $errorMsg .= qq{und/nfi must include note category and note text.   };
     }
 
     ## ic/ren requires a reg number
-    if ( $reason == 7 && $attr == 2 && $regNum eq "" && $regNum eq "" ) 
+    if ( $attr == 2 && $reason == 7 && ( ( ! $regNum ) || ( ! $regDate ) )  ) 
     {
-        $errorMsg .= qq{rights/reasons requires renewal info for ic/ren.  };
+        $errorMsg .= qq{ic/ren must include renewal id and renawal date.  };
+    }
+    elsif ( $attr == 2 && $reason == 7 && ( $regDate < 1950 ) )
+    {
+        $errorMsg .= qq{renewal has expired; volume is pd.  date entered is $regDate };
     }
 
     ## pd/ren requires a reg number
-    if ( $reason == 7 && $attr == 1 && $regNum eq "" && $regNum eq "" ) 
+    if ( $attr == 1 && $reason == 7 &&  ( ( $regNum ) || ( $regDate ) )  ) 
     {
-        $errorMsg .= qq{rights/reasons conflicts with renewal info for pd/ren.  };
+        $errorMsg .= qq{pd/ren should not include renewal info.  };
     }
 
     ## pd/ncn requires a reg number
-    if ( $reason == 2 && $attr == 1 && $regNum eq "" && $regNum eq "" ) 
+    if (  $attr == 1 && $reason == 2 && ( ( $regNum ) || ( $regDate ) ) ) 
     {
-        $errorMsg .= qq{rights/reasons conflicts with renewal info for pd/ncn.  };
+        $errorMsg .= qq{pd/ncn should not include renewal info.  };
     }
 
 
     ## pd/cdpp requires a reg number
-    if ( $reason == 9 && $attr == 1 && $regNum eq "" && $regNum eq "" ) 
+    if (  $attr == 1 && $reason == 9 && ( ( $regNum ) || ( $regDate )  ) )
     {
-        $errorMsg .= qq{rights/reasons conflicts with renewal info for pd/cdpp.  };
+        $errorMsg .= qq{pd/cdpp should not include renewal info.  };
     }
 
-    if ( $reason == 9 && $attr == 1 && ( $note eq "" || $category eq "" ) ) 
+    if ( $attr == 1 && $reason == 9 && ( ( ! $note ) || ( ! $category )  )  ) 
     {
-        $errorMsg .= qq{note category/note text required for pd/cdpp.  };
+        $errorMsg .= qq{pd/cdpp must include note category and note text.  };
     }
 
     ## ic/cdpp requires a reg number
-    if ( $reason == 9 && $attr == 2 && $regNum eq "" && $regNum eq "" ) 
+    if (  $attr == 2 && $reason == 9 && ( ( $regNum ) || ( $regDate ) ) )
     {
-        $errorMsg .= qq{rights/reasons conflicts with renewal info for ic/cdpp.  };
+        $errorMsg .= qq{ic/cdpp should not include renewal info.  };
     }
 
-    if ( $reason == 9 && $attr == 2 && ( $note eq "" || $category eq "")  ) 
+    if ( $attr == 2 && $reason == 9 && ( ( ! $note )  || ( ! $category ) )  ) 
     {
-        $errorMsg .= qq{note category/note text required for ic/cdpp.  };
+        $errorMsg .= qq{ic/cdpp must include note category and note text.  };
     }
 
+
+    
 
     return $errorMsg;
 }
