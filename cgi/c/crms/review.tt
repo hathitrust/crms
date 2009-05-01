@@ -101,12 +101,12 @@
           </tr>
           <tr>
             <td>
-	        <strong>Title:</strong>  <a href="$titleLink"  target="bFrame">[% title %]</a>	
+	        <strong>Title:</strong>[% title %]
             </td>
           </tr>
           <tr>
             <td>
-	        <strong>Author:</strong> <a href="$authorLink" target="bFrame">[% author %]</a><br/>
+	        <strong>Author:</strong>[% author %]<br/>
             </td>
           </tr>
           <tr>
@@ -158,13 +158,13 @@
 	       Toggle:
 	    </td>
             <td class="display" align="center" >
-                <a href="javascript:flipFrame2()" accesskey="o">views</a>	
+               <a href="javascript:flipFrame()"  accesskey="p">full/split</a>
 	    </td>
             <td class="display" align="center" >
              ||
 	    </td>
             <td class="display" align="center" >
-               <a href="javascript:flipFrame()"  accesskey="p">full/split</a>
+                <a href="javascript:flipFrame2()" accesskey="o">views</a>	
 	    </td>
           </tr>
 
@@ -201,11 +201,7 @@
    </div>
  </div>
 
-[% IF errorMsg %]
-    <strong>ERROR: [% errorMsg %]</strong>
-    <br/>
-[% END %]
-
+<a></a>
 <div id="hoverpopup" style="visibility:hidden; position:absolute; top:0; left:0;"><table bgcolor="#0000FF">
 
 <tr><td bgcolor="#8888FF">Description needed.  It is here as a sample.</td></tr></table></div>

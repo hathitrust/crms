@@ -206,6 +206,9 @@ sub AddItemToQueue
 
       ## no gov docs
       if ( $self->IsGovDoc( $id ) ) { $self->Logit( "skip fed doc: $id" ); return; }
+      
+      #check 008 field postion 17 = "u" - this would indicate a us publication.
+      if ( $self->IsUSPub( $id ) ) { $self->Logit( "skip not us doc: $id" ); return; }
 
       ## check for item, warn if already exists, then update ???
       my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub', $priority)};
@@ -241,6 +244,9 @@ sub GiveItemsInQueuePriority
       ## no gov docs
       if ( $self->IsGovDoc( $id ) ) { $self->Logit( "skip fed doc: $id" ); return; }
 
+      #check 008 field postion 17 = "u" - this would indicate a us publication.
+      if ( $self->IsUSPub( $id ) ) { $self->Logit( "skip not us doc: $id" ); return; }
+
       my $sql  = qq{ SELECT count(*) from $CRMSGlobals::queueTable where id="$id"};
       my $count  = $self->SimpleSqlGet( $sql );
       if ( $count == 1 )
@@ -271,6 +277,26 @@ sub IsItemInQueue
 
     if ($id) { return 1; }
     return 0;
+}
+
+sub TranslateCategory
+{
+    my $self = shift;
+    my $category  = shift;
+
+
+
+    if    ( $category eq 'COLLECTION:' ) { return 'Collection'; }
+    elsif ( $category eq 'LANG' ) { return 'Language'; }
+    elsif ( $category eq 'MISC' ) { return 'Misc'; }
+    elsif ( $category eq 'MISSING' ) { return 'Missing'; }
+    elsif ( $category eq 'REPRINT FROM' ) { return 'Reprint"'; }
+    elsif ( $category eq 'SERIES' ) { return 'Series/Serial'; }
+    elsif ( $category eq 'TRANS' ) { return 'Translation'; }
+    elsif ( $category eq 'WRONGREC' ) { return 'Wrong Record'; }
+    elsif ( $category eq 'FOREIGN PUB' ) { return 'Foreign Pub'; }
+    else  { return $category };
+    
 }
 
 sub IsItemInReviews
@@ -319,7 +345,7 @@ sub SubmitReview
 
     $self->PrepareSubmitSql( $sql );
 
-    if ( $exp ) { $self->SetExpertReview( $id );  }
+    if ( $exp ) { $self->SetExpertReviewCnt( $id );  }
     else        { $self->IncrementRevCount( $id ); }
 
     $self->EndTimer( $id, $user );
@@ -329,7 +355,7 @@ sub SubmitReview
 }
 
 
-sub SetExpertReview
+sub SetExpertReviewCnt
 {
     my $self = shift;
     my $id   = shift;
@@ -436,9 +462,6 @@ sub ProcessReviews
 
 
 }
-
-
-
 
 ## ----------------------------------------------------------------------------
 ##  Function:   submit historical review  (from excel SS)   
@@ -1654,9 +1677,25 @@ sub IsGovDoc
 
     my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
     my $leader  = $record->findvalue( $xpath );
-    my $doc     = substr($leader, 28, 1);
+    my $doc     = substr($leader, 18, 1);
  
     if ( $doc eq "f" ) { return 1; }
+
+    return 0;
+}
+
+sub IsUSPub
+{
+    my $self    = shift;
+    my $barcode = shift;
+    my $record  = $self->GetRecordMetadata($barcode);
+    if ( ! $record ) { $self->Logit( "failed in IsUSPub: $barcode" ); }
+
+    my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
+    my $leader  = $record->findvalue( $xpath );
+    my $doc     = substr($leader, 17, 1);
+ 
+    if ( $doc eq "u" ) { return 1; }
 
     return 0;
 }

@@ -27,7 +27,7 @@
 
 
 <hr width="25%" align="left"/>
-<h3>search your previously submitted reviews ( to access/edit ou recent reviews, go <a  href="/cgi//c/crms/crms?p=editReviews">here</a>): </h3>
+<h3>search your previously submitted reviews ( to access/edit you recent reviews, go <a  href="/cgi//c/crms/crms?p=editReviews">here</a>): </h3>
 
 <form>
   <input type="hidden" name="p" value="userReviews"/>

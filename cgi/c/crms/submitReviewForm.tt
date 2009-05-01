@@ -70,13 +70,14 @@
   </table>
   
   <br />
-  <strong>Comments: </strong><br/>
+  <strong>Notes: </strong><br/>
   <select name="category">
-    [% pres = {"FOREIGN PUB"    => "Foreign Pub",   "LANG"     => "Language",
-               "MISC"           => "Misc",          "MISSING"  => "Missing",
-               "REPRINT FROM"   => "Reprint",       "SERIES"   => "Series/Serial",
-               "COLLECTION"     => "Collection",    "TRANS"    => "Translation",
-               ""               => "none"} %]
+    [% pres = {"Foreign Pub"    => "Foreign Pub",   "Language"        => "Language",
+               "Misc"           => "Misc",          "Missing"         => "Missing",
+               "Reprint"        => "Reprint",       "Series/Serial"   => "Series/Serial",
+               "Collectin"      => "Collection",    "Translation"     => "Translation",
+               "Wrong Record"   => "Wrong Record",  ""               => "none"} 
+    %]
 
     [% FOREACH pre IN pres.sort %]
       [% IF pre == category %]
@@ -102,7 +103,6 @@
 [% END %]
 
   </div>
-  <br/>
         <table width="100%">
 	  <tr>
             <td style="float:left"><a style="float:right" href="/c/crms/help.html#rights" target="_blank">help</a></td>
