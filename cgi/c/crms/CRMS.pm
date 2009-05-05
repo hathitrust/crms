@@ -835,8 +835,9 @@ sub ConvertToSearchTerm
 
 sub GetReviewsRef
 {
-    my $self           = shift;
-    my $order          = shift;
+    my $self               = shift;
+    my $order              = shift;
+    my $direction          = shift;
 
     my $search1        = shift;
     my $search1value   = shift;
@@ -858,12 +859,18 @@ sub GetReviewsRef
 
     if ( ( $type eq 'userreviews' ) || ( $type eq 'editreviews' ) )
     {
-      if ( ! $order || $order eq "time" ) { $order = "time DESC "; }
+      if ( ! $order || $order eq "time" ) { $order = "time"; }
     }
     else
     {
-      if ( ! $order || $order eq "id" ) { $order = "id DESC "; }
+      if ( ! $order || $order eq "id" ) { $order = "id"; }
     }
+
+    if ( ! $direction ) 
+      {
+	$direction = 'DESC';
+      }
+
 
     my $sql;
     if ( $type eq 'reviews' )
@@ -894,28 +901,48 @@ sub GetReviewsRef
 	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND r.user = '$user' AND r.time >= "$yesterday" };
     }
 
+    my ( $search1term, $search2term );
+    if ( $search1value =~ m,.*\*.*, )
+    {
+      $search1value =~ s,\*,%,gs;
+      $search1term = qq{$search1 like '$search1value'};
+    }
+    else
+    {
+      $search1term = qq{$search1 = '$search1value'};
+    }
+    if ( $search2value =~ m,.*\*.*, )
+    {
+      $search2value =~ s,\*,%,gs;
+      $search2term = qq{$search2 like '$search2value'};
+    }
+    else
+    {
+      $search2term = qq{$search2 = '$search2value'};
+    }
+
     if ( ( $search1value ) && ( $search2value ) )
     {
-      { $sql .= qq{ AND ( $search1 = "$search1value"  $op1  $search2 = '$search2value' ) };   }
+      { $sql .= qq{ AND ( $search1term  $op1  $search2term };   }
     }
     elsif ( $search1value )
     {
-      { $sql .= qq{ AND $search1 = "$search1value"  };   }
+      { $sql .= qq{ AND $search1term  };   }
     }
     elsif (  $search2value )
     {
-      { $sql .= qq{ AND $search2 = "$search2value"  };   }
+      { $sql .= qq{ AND $search2term  };   }
     }
 
     if ( $since ) { $sql .= qq{ AND r.time >= "$since" }; }
 
     if ( $order eq 'status' )
     {
-	$sql .= qq{ ORDER BY q.$order LIMIT $offset, 25 };
+	$sql .= qq{ ORDER BY q.$order $direction LIMIT $offset, 25 };
     }
     else
     {
-      	$sql .= qq{ ORDER BY r.$order LIMIT $offset, 25 };
+      	$sql .= qq{ ORDER BY r.$order $direction LIMIT $offset, 25 };
     }
 
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
@@ -949,6 +976,7 @@ sub GetReviewsRef
     return $return;
 }
 
+#Used for the detail display of legacy items.
 sub GetLegacyReviewsRef
 {
     my $self    = shift;
@@ -1050,19 +1078,37 @@ sub GetReviewsCount
 	$sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND r.user = '$user' AND r.time >= "$yesterday" };
     }
 
-
+    my ( $search1term, $search2term );
+    if ( $search1value =~ m,.*\*.*, )
+    {
+      $search1value =~ s,\*,%,gs;
+      $search1term = qq{$search1 like '$search1value'};
+    }
+    else
+    {
+      $search1term = qq{$search1 = '$search1value'};
+    }
+    if ( $search2value =~ m,.*\*.*, )
+    {
+      $search2value =~ s,\*,%,gs;
+      $search2term = qq{$search2 like '$search2value'};
+    }
+    else
+    {
+      $search2term = qq{$search2 = '$search2value'};
+    }
 
     if ( ( $search1value ) && ( $search2value ) )
     {
-      { $sql .= qq{ AND ( $search1 = "$search1value"  $op1  $search2 = '$search2value' ) };   }
+      { $sql .= qq{ AND ( $search1term  $op1  $search2term };   }
     }
     elsif ( $search1value )
     {
-      { $sql .= qq{ AND $search1 = "$search1value"  };   }
+      { $sql .= qq{ AND $search1term  };   }
     }
     elsif (  $search2value )
     {
-      { $sql .= qq{ AND $search2 = "$search2value"  };   }
+      { $sql .= qq{ AND $search2term  };   }
     }
 
     if ( $since ) { $sql .= qq{ AND r.time >= "$since" }; }
