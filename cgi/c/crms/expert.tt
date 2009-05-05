@@ -6,14 +6,15 @@
   [% STOP %]
 [% END %]
 
-[% search1        = cgi.param('search1')        %]
-[% search1value   = cgi.param('search1value')   %]
-[% search2        = cgi.param('search2')        %]
-[% search2value   = cgi.param('search2value')   %]
-[% op1            = cgi.param('op1')            %]
-[% since          = cgi.param('since')  %]
-[% order          = cgi.param('order')  %]
-[% offset         = cgi.param('offset') %]
+[% search1            = cgi.param('search1')        %]
+[% search1value       = cgi.param('search1value')   %]
+[% search2            = cgi.param('search2')        %]
+[% search2value       = cgi.param('search2value')   %]
+[% op1                = cgi.param('op1')            %]
+[% since              = cgi.param('since')          %]
+[% order              = cgi.param('order')          %]
+[% direction          = cgi.param('direction')      %]
+[% offset             = cgi.param('offset')         %]
 
 [% IF NOT offset %] [% offset = 0 %] [% END %]
 
@@ -56,16 +57,25 @@
   <label><input type="radio" name="order" value="category" 
     [% order == 'category' ? 'checked="1"' : '' %] />note category</label>
   <br/>
+
+  Direction:   
+  <label><input type="radio" name="direction" value="ASC"   
+    [% direction == 'ASC' ? 'checked="1"' : '' %]   />ASC</label>
+  <label><input type="radio" name="direction" value="DESC" 
+    [% direction == 'DESC' ? 'checked="1"' : '' %] />DESC</label>
+
+  <br/>
+
   <input type="submit" value="Submit"/>
 </form>
 <br/>
 
-[% reviews = crms.GetReviewsRef( order, search1, search1value, op1, search2, search2value, since, offset, 'conflict' ) %]
+[% reviews = crms.GetReviewsRef( order, direction, search1, search1value, op1, search2, search2value, since, offset, 'conflict' ) %]
 
-<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&offset=$prev">previous 25</a> || 
-<a href="?p=expert&id=$id&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&offset=$next">next 25</a> ||
-<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&offset=0">first page</a> ||
-<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&offset=$last">last page</a>
+<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$prev">previous 25</a> || 
+<a href="?p=expert&id=$id&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$next">next 25</a> ||
+<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=0">first page</a> ||
+<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$last">last page</a>
 
 (found: $Total, page = $pagenum)
 
@@ -115,7 +125,7 @@
   [% END %]
 </table>
 
-<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&offset=$prev">previous 25</a> || 
-<a href="?p=expert&id=$id&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&offset=$next">next 25</a>
+<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$prev">previous 25</a> || 
+<a href="?p=expert&id=$id&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$next">next 25</a>
 
 [% INCLUDE footer.tt %]

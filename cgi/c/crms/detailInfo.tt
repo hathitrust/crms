@@ -5,7 +5,7 @@
 [% page   = cgi.param('page')     %]
 
 
-[% reviews = crms.GetReviewsRef( '', 'Identifier', id, 'AND', 'UserId', user, '', '', page ) %]
+[% reviews = crms.GetReviewsRef( '', 'Identifier', 'DESC', id, 'AND', 'UserId', user, '', '', page ) %]
 More Information....&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="JavaScript:window.close()">Close</a>
 
 [% FOREACH review IN reviews %]
