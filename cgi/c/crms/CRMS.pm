@@ -1,3 +1,4 @@
+
 package CRMS;
 
 ## ----------------------------------------------------------------------------
@@ -1864,7 +1865,7 @@ sub UpdateAuthor
     my $count  = $self->SimpleSqlGet( $sql );
     if ( $count == 1 )
     {
-       my $sql  = qq{ UPDATE bibdata set author="$author" where id="$id"};
+       my $sql  = qq{ UPDATE bibdata set author='$author' where id="$id"};
        $self->PrepareSubmitSql( $sql );
     }
     else

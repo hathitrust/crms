@@ -2,7 +2,6 @@
     <OPTION VALUE="Identifier" SELECTED> Identifier
     <OPTION VALUE="Title"> Title
     <OPTION VALUE="Author"> Author
-    <OPTION VALUE="UserId"> UserId
     <OPTION VALUE="Status"> Status
     <OPTION VALUE="Attribute"> Attr Num Value
     <OPTION VALUE="Reason"> Rsn Num Value
@@ -18,7 +17,6 @@
     <OPTION VALUE="Identifier" SELECTED> Identifier
     <OPTION VALUE="Title"> Title
     <OPTION VALUE="Author"> Author
-    <OPTION VALUE="UserId"> UserId
     <OPTION VALUE="Status"> Status
     <OPTION VALUE="Attribute"> Attr Num Value
     <OPTION VALUE="Reason"> Rsn Num Value

@@ -42,8 +42,6 @@
     [% order == 'id' ? 'checked="1"' : '' %]   />id</label>
   <label><input type="radio" name="order" value="time" 
     [% order == 'time' ? 'checked="1"' : '' %] />date</label>
-  <label><input type="radio" name="order" value="user" 
-    [% order == 'user' ? 'checked="1"' : '' %] />user</label>
   <label><input type="radio" name="order" value="attr" 
     [% order == 'attr' ? 'checked="1"' : '' %] />attr</label>
   <label><input type="radio" name="order" value="status" 
@@ -82,7 +80,7 @@
 
 <table BORDER="1" CELLPADDING="0" CELLSPACING="0">
   <th>ID</th><th>Title</th><th>Author</th><th>review date</th><th>status</th>
-  <th>user</th><th>attr</th><th>reason</th><th>note category</th>
+  <th>attr</th><th>reason</th><th>note category</th>
   <th>note</th><th>flagged</th>
   [% FOREACH review IN reviews %]
 
@@ -104,7 +102,6 @@
       <td>$review.author</td>	
       <td>$review.time</td>
       <td>[% crms.GetStatus( review.id ) %]</td>
-      <td>$review.user</td>
       <td>$review.attr</td>
       <td>$review.reason</td>
       <td>$review.category</td>
