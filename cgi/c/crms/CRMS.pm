@@ -149,7 +149,7 @@ sub LoadNewItems
     if ( ! $start ) { $start = $self->GetUpdateTime(); }
 
     my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time FROM rights } . 
-              qq{WHERE attr = 2 AND reson=1 AND time >= '$start' AND time <= '$stop' GROUP BY id};
+              qq{WHERE attr = 2 AND reason=1 AND time >= '$start' AND time <= '$stop' GROUP BY id};
 
     my $ref = $self->get('sdr_dbh')->selectall_arrayref( $sql );
 
@@ -158,10 +158,11 @@ sub LoadNewItems
     ## design note: if these were in the same DB we could just INSERT
     ## into the new table, not SELECT then INSERT
     my $count = 0;
+    my $inqueue;
     foreach my $row ( @{$ref} ) 
     { 
-      $self->AddItemToQueue( $row->[0], $row->[1], 0, 0 ); 
-      $count = $count + 1;
+      my $inqueue = $self->AddItemToQueue( $row->[0], $row->[1], 0, 0 ); 
+      $count = $count + $inqueue;
     }
 
     #Record the update to the queue
@@ -194,7 +195,7 @@ sub AddItemToQueue
     my $priority = shift;
 
     ## skip if $id has been reviewed
-    if ( $self->IsItemInReviews( $id ) ) { return; }
+    if ( $self->IsItemInReviews( $id ) ) { return 0; }
 
     ## pub date between 1923 and 1963
     my $pub = $self->GetPublDate( $id );
@@ -205,20 +206,28 @@ sub AddItemToQueue
     {
 
       ## no gov docs
-      if ( $self->IsGovDoc( $id ) ) { $self->Logit( "skip fed doc: $id" ); return; }
+      if ( $self->IsGovDoc( $id ) ) { $self->Logit( "skip fed doc: $id" ); return 0; }
       
       #check 008 field postion 17 = "u" - this would indicate a us publication.
-      if ( $self->IsUSPub( $id ) ) { $self->Logit( "skip not us doc: $id" ); return; }
+      if ( ! $self->IsUSPub( $id ) ) { $self->Logit( "skip not us doc: $id" ); return 0; }
 
       ## check for item, warn if already exists, then update ???
       my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub', $priority)};
 
       $self->PrepareSubmitSql( $sql );
 
+      $self->UpdateTitle ( $id );
+
       #Update the pub date in bibdata
       $self->UpdatePubDate ( $id, $pub );
+
+      my $author = $self->GetEncAuthor ( $id );
+      $self->UpdateAuthor ( $id, $author );
       
+      return 1;
     }
+
+    return 0;
 }
 
 
@@ -245,7 +254,7 @@ sub GiveItemsInQueuePriority
       if ( $self->IsGovDoc( $id ) ) { $self->Logit( "skip fed doc: $id" ); return; }
 
       #check 008 field postion 17 = "u" - this would indicate a us publication.
-      if ( $self->IsUSPub( $id ) ) { $self->Logit( "skip not us doc: $id" ); return; }
+      if ( ! $self->IsUSPub( $id ) ) { $self->Logit( "skip not us doc: $id" ); return; }
 
       my $sql  = qq{ SELECT count(*) from $CRMSGlobals::queueTable where id="$id"};
       my $count  = $self->SimpleSqlGet( $sql );
@@ -260,8 +269,14 @@ sub GiveItemsInQueuePriority
 
 	  $self->PrepareSubmitSql( $sql );
 
+	  $self->UpdateTitle ( $id );
+
 	  #Update the pub date in bibdata
 	  $self->UpdatePubDate ( $id, $pub );
+
+	  my $author = $self->GetEncAuthor ( $id );
+	  $self->UpdateAuthor ( $id, $author );
+
       }
 	
     }
@@ -492,6 +507,16 @@ sub SubmitHistReview
 
     $self->PrepareSubmitSql( $sql );
 
+    #Now load this info into the bibdata table.
+    $self->UpdateTitle ( $id );
+
+    #Update the pub date in bibdata
+    my $pub = $self->GetPublDate( $id );
+    $self->UpdatePubDate ( $id, $pub );
+
+    my $author = $self->GetEncAuthor ( $id );
+    $self->UpdateAuthor ( $id, $author );
+
     return 1;
 }
 
@@ -666,35 +691,6 @@ sub GetDoubleRevItemsInAgreement
     return $ref;
 }
 
-sub GetDoubleAgree
-{
-    my $self = shift;
-    my $id   = shift;
-
-    my $sql  = qq{ SELECT id, attr, reason FROM $CRMSGlobals::reviewsTable WHERE id = "$id" }; 
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    
-    if ( scalar @{$ref} < 2 ) { return 0; }
-    if ( scalar @{$ref} > 2 ) { return 0; }
-
-    ## attr and reason are the same for both
-    if ( $ref->[0]->[1] ne $ref->[1]->[1] ||
-         $ref->[0]->[2] ne $ref->[1]->[2] )  { return 0; }
-
-    return 1;
-}
-
-sub GetUndItems
-{
-    my $self = shift;
-    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status = 3 };
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    my @ids;
-    foreach ( @{$ref} ) { push( @ids, $_->[0]); }
-
-    return @ids;
-}
 
 sub RegisterExpertReview
 {
@@ -715,68 +711,6 @@ sub RegisterStatus
     my $sql  = qq{UPDATE $CRMSGlobals::queueTable SET status = $status WHERE id = "$id"};
 
     $self->PrepareSubmitSql( $sql );
-}
-
-sub GetConflictReviewsRef
-{
-    my $self    = shift;
-    my $order   = shift;
-    my $id      = shift;
-    my $user    = shift;
-    my $since   = shift;
-    my $offset  = shift;
-    
-    if ( ! $offset ) { $offset = 0; }
-
-    if ( ! $order || $order eq "time" ) { $order = "time DESC "; }
-
-    my $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id and ( q.status = 2 or q.status = 3)};
-
-    if    ( $user )                    { $sql .= qq{ AND r.user = "$user" };   }
-
-    if    ( $since && $user )          { $sql .= qq{ AND   r.time >= "$since"};  }
-    elsif ( $since )                   { $sql .= qq{ AND r.time >= "$since" }; }
-
-    if    ( $id && ($user || $since) ) { $sql .= qq{ AND   r.id = "$id" }; }
-    elsif ( $id )                      { $sql .= qq{ AND r.id = "$id" }; }
-
-    if ( $order == 'status' )
-    {
-	$sql .= qq{ ORDER BY q.$order LIMIT $offset, 25 };
-    }
-    else
-    {
-      	$sql .= qq{ ORDER BY r.$order LIMIT $offset, 25 };
-    }
-
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    my $return = [];
-    foreach my $row ( @{$ref} )
-    {
-        $row->[1] =~ s,(.*) .*,$1,;
-        
-        my $item = {
-                     id         => $row->[0],
-                     time       => $row->[1],
-                     duration   => $row->[2],
-                     user       => $row->[3],
-                     attr       => $self->GetRightsName($row->[4]),
-                     reason     => $self->GetReasonName($row->[5]),
-                     note       => $row->[6],
-                     regNum     => $row->[7],
-                     expert     => $row->[8],
-                     copyDate   => $row->[9],
-                     expertNote => $row->[10],
-                     category   => $row->[11],
-                     hist       => $row->[12],
-                     regDate    => $row->[13],
-                     flaged     => $row->[14]
-                   };
-        push( @{$return}, $item );
-    }
-
-    return $return;
 }
 
 sub GetYesterday
@@ -828,6 +762,8 @@ sub ConvertToSearchTerm
     elsif  ( $search eq 'Reason' ) { $new_search = qq{r.reason}; }
     elsif  ( $search eq 'NoteCategory' ) { $new_search = qq{r.category}; }
     elsif  ( $search eq 'History' ) { $new_search = qq{r.hist}; }
+    elsif  ( $search eq 'Title' ) { $new_search = qq{b.title}; }
+    elsif  ( $search eq 'Author' ) { $new_search = qq{b.author}; }
 
     return $new_search;
 
@@ -839,17 +775,17 @@ sub GetReviewsRef
     my $order              = shift;
     my $direction          = shift;
 
-    my $search1        = shift;
-    my $search1value   = shift;
-    my $op1            = shift;
+    my $search1            = shift;
+    my $search1value       = shift;
+    my $op1                = shift;
 
-    my $search2        = shift;
-    my $search2value   = shift;
+    my $search2            = shift;
+    my $search2value       = shift;
 
-    my $since          = shift;
-    my $offset         = shift;
+    my $since              = shift;
+    my $offset             = shift;
 
-    my $type           = shift;
+    my $type               = shift;
 
   
     $search1 = $self->ConvertToSearchTerm ( $search1, $type );
@@ -875,30 +811,30 @@ sub GetReviewsRef
     my $sql;
     if ( $type eq 'reviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND q.status > 0 };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, '', b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status > 0 };
     }
     elsif ( $type eq 'conflict' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND ( q.status = 2 or q.status = 3) };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, '', b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 or q.status = 3) };
     }
     elsif ( $type eq 'legacyreviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, r.status FROM $CRMSGlobals::legacyreviewsTable r  WHERE r.status >= 0  };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, r.status, b.title, b.author FROM $CRMSGlobals::legacyreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0  };
     }
     elsif ( $type eq 'undreviews' )
       {
-	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND q.status = 3 };
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, '', b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
     }
     elsif ( $type eq 'userreviews' )
       {
 	my $user = $self->get( "user" );
-	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND r.user = '$user' AND q.status > 0 };
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, '', b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
     }
     elsif ( $type eq 'editreviews' )
     {
 	my $user = $self->get( "user" );
 	my $yesterday = $self->GetYesterday();
-	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND r.user = '$user' AND r.time >= "$yesterday" };
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, '', b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
     }
 
     my ( $search1term, $search2term );
@@ -968,7 +904,12 @@ sub GetReviewsRef
                      hist       => $row->[12],
                      regDate    => $row->[13],
                      flaged     => $row->[14],
-                     status     => $row->[15]
+                     status     => $row->[15],
+                     title      => $row->[16],
+                     author     => $row->[17]
+
+
+
                    };
         push( @{$return}, $item );
     }
@@ -1052,31 +993,32 @@ sub GetReviewsCount
     my $sql;
     if ( $type eq 'reviews' )
     {
-      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND q.status > 0 };
+      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status > 0 };
     }
     elsif ( $type eq 'conflict' )
     {
-      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND ( q.status = 2 or q.status = 3) };
+      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 or q.status = 3) };
     }
     elsif ( $type eq 'legacyreviews' )
     {
-      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::legacyreviewsTable r WHERE r.status >= 0 };
+      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::legacyreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0  };
     }
     elsif ( $type eq 'undreviews' )
       {
-	$sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND q.status = 3 };
+	$sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
     }
     elsif ( $type eq 'userreviews' )
       {
 	my $user = $self->get( "user" );
-	$sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND r.user = '$user' AND q.status > 0 };
+	$sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
     }
     elsif ( $type eq 'editreviews' )
     {
 	my $user = $self->get( "user" );
 	my $yesterday = $self->GetYesterday();
-	$sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q WHERE q.id = r.id AND r.user = '$user' AND r.time >= "$yesterday" };
+	$sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
     }
+
 
     my ( $search1term, $search2term );
     if ( $search1value =~ m,.*\*.*, )
@@ -1262,48 +1204,6 @@ sub GetAttrReasonFromOtherUser
     return ($attr, $reason);
 }
 
-
-
-sub SetStatusForNonExpert
-{
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
-    my $attr = shift;
-  
-    my ($otherAttr,$r) = $self->GetAttrReasonFromOtherUser( $id, $user );
-
-    ## If this and a previous attr is und (5) - set status to 3
-    if ( $attr == 5 && $otherAttr eq "und" ) 
-    {
-        my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = 3 WHERE id = "$id" };
-        $self->PrepareSubmitSql( $sql );
-        $self->Logit( "$id: two und/nfi reviews, status set to 3" );
-	return;
-    }
-
-
-    ## it's a new review, so
-    ## status gets 1 if no one else has reviewed it.
-    ## status gets 2 if reviewed by other and disagrees with this review.
-    ## status gets 3 if reviewed by other and agrees with this review.
-    if ( ! $self->ItemWasReviewedByOtherUser($id, $user) )
-    {
-      my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = 1 WHERE id = "$id" };
-      $self->PrepareSubmitSql( $sql );
-    }
-    elsif ( $self->UsersAgreeOnReview ( $id ) )
-    {
-      my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = 4 WHERE id = "$id" };
-      $self->PrepareSubmitSql( $sql );
-    }
-    else  ## Two users must disagree
-    {
-      my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET status = 2 WHERE id = "$id" };
-      $self->PrepareSubmitSql( $sql );
-    }
-    
-}
 
 sub CheckAttrReasonComb 
 {
@@ -1954,6 +1854,28 @@ sub UpdatePubDate
 }
 
 
+sub UpdateAuthor
+{
+    my $self = shift;
+    my $id   = shift;
+    my $author = shift;
+
+    my $sql  = qq{ SELECT count(*) from bibdata where id="$id"};
+    my $count  = $self->SimpleSqlGet( $sql );
+    if ( $count == 1 )
+    {
+       my $sql  = qq{ UPDATE bibdata set author="$author" where id="$id"};
+       $self->PrepareSubmitSql( $sql );
+    }
+    else
+    {
+       my $sql  = qq{ INSERT INTO bibdata (id, title, pub_date, author) VALUES ( "$id", "", "", "$author" ) };
+       $self->PrepareSubmitSql( $sql );
+    }
+
+}
+
+
 
 ## use for now because the API is slow...
 sub GetRecordTitleBc2Meta
@@ -2046,8 +1968,6 @@ sub GetRecordMetadata
     #my ($record) = $source->findnodes( "//record" );
     my ($record) = $source->findnodes( "." );
     $self->set( $bar, $record );
-
-    $self->UpdateTitle( $barcode );
 
     return $record;
 }

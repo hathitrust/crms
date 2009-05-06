@@ -85,7 +85,7 @@
 [% prev_id        = '' %]
 
 <table BORDER="1" CELLPADDING="0" CELLSPACING="0">
-  <th>ID</th><th>Title</th><th>date</th><th>status</th><th>hist(0,1)</th>
+  <th>ID</th><th>Title</th><th>Author</th><th>date</th><th>status</th><th>hist(0,1)</th>
   <th>user</th><th>attr</th><th>reason</th><th>note category</th>
   <th>note</th><th>flagged</th>
   [% FOREACH review IN reviews %]
@@ -105,6 +105,7 @@
     <tr BGCOLOR="[% active_color %]">
       <td>[% crms.DetailInfo( review.id, review.user, 'legacyreviews' ) %]</td>
       <td>[% crms.LinkToPT( review.id ) %]</td>
+      <td>$review.author</td>
       <td>$review.time</td>
       <td>[% crms.GetLegacyStatus( review.id ) %]</td>
       <td>$review.hist</td>
