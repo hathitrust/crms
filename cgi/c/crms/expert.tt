@@ -79,6 +79,7 @@
 
 (found: $Total, page = $pagenum)
 
+<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$prev&type=conflict&download=1">download</a>
 
 
 [% active_color   = '#FFFFFF' %]	
@@ -110,7 +111,7 @@
       <td>[% crms.LinkToReview( review.id ) %]</td>
       <td>$review.author</td>
       <td>$review.time</td>
-      <td>[% crms.GetStatus( review.id ) %]</td>
+      <td>$review.status</td>
       <td>$review.user</td>
       <td>$review.attr</td>
       <td>$review.reason</td>

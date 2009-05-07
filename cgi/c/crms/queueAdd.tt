@@ -1,0 +1,40 @@
+[% IF NOT crms.IsUserAdmin() %]
+  <h3>You do not have access to this page</h3>
+  [% STOP %]
+[% END %]
+
+[% INCLUDE header.tt    %]
+[% INCLUDE adminNav.tt  %]
+
+[% addmsg    = cgi.param('addMsg')   %]
+
+<hr width="25%" align="left"/>
+
+
+<strong>Add a volume to the queue: </strong>
+This item will take priority in the review process.
+<blockquote>
+
+</blockquote>
+
+<form>
+  <input type="hidden" name="p" value="queueAdd"/>
+
+
+
+  barcode:   <input type="text"  name="id" value=""/>
+<br/>
+
+<hr width="25%" align="left"/>
+  <input type="submit" value="Submit"/>
+</form>
+
+
+[% IF addmsg %]
+	<br>
+<FONT COLOR=red>[% addmsg %]
+    <br/>
+[% END %]
+
+
+[% INCLUDE footer.tt %]

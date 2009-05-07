@@ -14,6 +14,7 @@
   || <a href="crms?p=adminLegacyReviews">view all legacy reviews</a>
   || <a href="crms?p=adminUserRate">view user review rates</a> 
   || <a href="crms?p=queueStatus">queue status</a> 
+  || <a href="crms?p=queueAdd">add to queue</a> 
   ||
 </div>
 

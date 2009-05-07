@@ -770,7 +770,7 @@ sub ConvertToSearchTerm
 
 }
 
-sub GetReviewsRef
+sub CreateSQL
 {
     my $self               = shift;
     my $order              = shift;
@@ -787,6 +787,7 @@ sub GetReviewsRef
     my $offset             = shift;
 
     my $type               = shift;
+    my $limit              = shift;
 
   
     $search1 = $self->ConvertToSearchTerm ( $search1, $type );
@@ -873,15 +874,171 @@ sub GetReviewsRef
 
     if ( $since ) { $sql .= qq{ AND r.time >= "$since" }; }
 
+    my $limit_section = '';
+    if ( $limit )
+    {
+      my $limit_section = qq{LIMIT $offset, 25};
+    }
     if ( $order eq 'status' )
     {
-	$sql .= qq{ ORDER BY q.$order $direction LIMIT $offset, 25 };
+	$sql .= qq{ ORDER BY q.$order $direction $limit_section };
     }
     else
     {
-      	$sql .= qq{ ORDER BY r.$order $direction LIMIT $offset, 25 };
+      	$sql .= qq{ ORDER BY r.$order $direction $limit_section };
     }
 
+    return $sql;
+}
+
+
+sub SearchAndDownload
+{
+
+    my $self               = shift;
+    my $order              = shift;
+    my $direction          = shift;
+
+    my $search1            = shift;
+    my $search1value       = shift;
+    my $op1                = shift;
+
+    my $search2            = shift;
+    my $search2value       = shift;
+
+    my $since              = shift;
+    my $offset             = shift;
+
+    my $type               = shift;
+    my $limit              = 0;
+
+
+    my $sql =  $self->CreateSQL ( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $since,$offset, $type, $limit );
+
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    my $buffer;
+    if ( scalar @{$ref} != 0 )
+    {
+	if ( $type eq 'userreviews')
+	{
+	  $buffer .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote\tflagged\n};
+	}
+	elsif ( $type eq 'editreviews' )
+	{
+	  $buffer .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote\tflagged\n};
+	}
+	elsif ( $type eq 'undreviews' )
+	{
+	  $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote\tflagged\n}
+	}
+	elsif ( $type eq 'conflict' )
+	{
+	  $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote\tflagged\n};
+	}
+	elsif ( $type eq 'reviews' )
+	{
+	  $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote\tflagged\n};
+	}
+	elsif ( $type eq 'legacyreviews' )
+	{
+	  $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\thist\tuser\tattr\treason\tcategory\tnote\tflagged\n};
+	}
+    }
+
+    foreach my $row ( @{$ref} )
+    {
+        $row->[1] =~ s,(.*) .*,$1,;
+        
+        my $id         = $row->[0];
+        my $time       = $row->[1];
+        my $duration   = $row->[2];
+        my $user       = $row->[3];
+        my $attr       = $self->GetRightsName($row->[4]);
+        my $reason     = $self->GetReasonName($row->[5]);
+        my $note       = $row->[6];
+        my $regNum     = $row->[7];
+        my $expert     = $row->[8];
+        my $copyDate   = $row->[9];
+        my $expertNote = $row->[10];
+        my $category   = $row->[11];
+        my $hist       = $row->[12];
+        my $regDate    = $row->[13];
+        my $flaged     = $row->[14];
+        my $status     = $row->[15];
+        my $title      = $row->[16];
+        my $author     = $row->[17];
+
+	if ( $type eq 'userreviews')
+	{
+	  #for reviews
+	  #id, title, author, review date, attr, reason, category, note, flagged.
+	  $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note$flaged\n};
+	}
+	elsif ( $type eq 'editreviews' )
+	{
+	  #for editRevies
+	  #id, title, author, review date, attr, reason, category, note, flagged.
+	  $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note\t$flaged\n};
+	}
+	elsif ( $type eq 'undreviews' )
+	{
+	  #for und/nif
+	  #id, title, author, review date, status, user, attr, reason, category, note, flagged.
+	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$flaged\n}
+	}
+	elsif ( $type eq 'conflict' )
+	{
+	  #for expert
+	  #id, title, author, review date, status, user, attr, reason, category, note, flagged.
+	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$flaged\n};
+	}
+	elsif ( $type eq 'reviews' )
+	{
+	  #for adminReviews
+	  #id, title, author, review date, status, user, attr, reason, category, note, flagged.
+	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$flaged\n};
+	}
+	elsif ( $type eq 'legacyreviews' )
+	{
+	  #for adminLegacyReviews
+	  #id, title, author, review date, status, user, attr, reason, category, note, flagged.
+	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$hist\t$user\t$attr\t$reason\t$category\t$note\t$flaged\n};
+	}
+
+    }
+
+    $self->DownloadSpreadSheet ( $buffer );
+
+    if ( $buffer ) { return 1; }
+    else { return 0; }
+}
+
+
+
+
+sub GetReviewsRef
+{
+    my $self               = shift;
+    my $order              = shift;
+    my $direction          = shift;
+
+    my $search1            = shift;
+    my $search1value       = shift;
+    my $op1                = shift;
+
+    my $search2            = shift;
+    my $search2value       = shift;
+
+    my $since              = shift;
+    my $offset             = shift;
+
+    my $type               = shift;
+
+    my $limit              = 1;
+
+    my $sql =  $self->CreateSQL ( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $since,$offset, $type, $limit );
+  
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my $return = [];
@@ -1699,7 +1856,7 @@ sub GetPublDate
     my $barcode = shift;
 
     my $record  = $self->GetRecordMetadata($barcode);
-    if ( ! $record ) { $self->Logit( "failed in GetPublDate: $barcode" ); }
+    if ( ! $record ) { return 0; }
 
     ## my $xpath   = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
     my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
@@ -2794,8 +2951,65 @@ sub GetLastIdQueueCount
 
 }
 
+sub DownloadSpreadSheet
+{
+    my $self = shift;
+    my $buffer = shift;
+
+    if ($buffer)
+    {
+
+      my $ZipDir = qq{/tmp/out};
+      `chmod 777 $ZipDir`;
+      `rm -rf $ZipDir`;
+      my $file = qq{$ZipDir\.zip};
+      `rm -f $file`;
+      `mkdir $ZipDir`;
+      `chmod 777 $ZipDir`;
+
+      #The out directory has to already exists.
+      open  (FH, "> $ZipDir/out");
+      print FH $buffer;
+      close(FH);
+      `chmod 777 $ZipDir/out`;      
+
+      my $ZipExec = '/usr/bin/zip';
+      
+      #/l/local/bin/zip
+      #Call Unix to Zip the files
+      my @args = ("$ZipExec", "-r", "$ZipDir", "$ZipDir");
+      my $msg = qq{Error zipping file:};
+      system (@args) == 0 or &errorBail( $msg );
+      
+      my $ZipFile = qq{/tmp/out.zip};
+      $self->OutputZipFile ( $ZipFile );
 
 
+    }
 
+}
+
+sub OutputZipFile
+{
+    my $self = shift;
+    my $ZipFile = shift;
+
+    open FH, "<$ZipFile";
+
+    binmode(FH);
+
+    print &CGI::header(-type => 'application/x-compressed',
+                      );
+    my ($bytesRead, $buffer);
+    while ( $bytesRead = read(FH, $buffer, 1024) ) 
+    {
+        print $buffer;
+    }
+    
+    close (FH);    
+
+    return;
+
+}
 1;
 

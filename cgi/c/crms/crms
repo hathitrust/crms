@@ -142,6 +142,58 @@ if  (  $cgi->param('p') eq 'confirmReview' )
 
 }
 
+if  ( (  $cgi->param('p') eq 'queueAdd' )  && ( $cgi->param('id') ) )
+{
+  my $id = $cgi->param('id');
+
+  # status is 0
+  # priority is 2
+  my $status = $crms->AddItemToQueue( $id, $crms->GetTodaysDate(), 0, 2 );
+  
+  my $msg;
+  if ( $status )
+  {
+    $msg = qq{$id was added successfully to the queue.};
+  }
+  else
+  {
+    $msg = qq{$id could not be added to the queue.};
+  }
+
+  $cgi->param('addMsg', $msg );
+  
+}
+
+
+
+if  (  $cgi->param('download')  )  
+{
+
+    my $order              = $cgi->param('order');
+    my $direction          = $cgi->param('direction');
+
+    my $search1            = $cgi->param('search1');
+    my $search1value       = $cgi->param('search1value');
+    my $op1                = $cgi->param('op1');
+
+    my $search2            = $cgi->param('search2');
+    my $search2value       = $cgi->param('search2value');
+
+    my $since              = $cgi->param('since');
+    my $offset             = $cgi->param('offset');
+
+    my $type               = $cgi->param('type');
+
+
+    my $success = $crms->SearchAndDownload ( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $since, $offset, $type );
+
+    if ( $success )
+    {
+      exit;
+    }
+}
+
+
 
 if ( ! $user || ! $ENV{'HTTPS'} ) 
 {
