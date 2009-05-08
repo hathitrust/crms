@@ -1928,6 +1928,41 @@ sub GetMarcDatafield
     return $data
 }
 
+sub GetMarcDatafieldAuthor
+{   
+    my $self    = shift;
+    my $barcode = shift;
+
+    #After talking to Tim, the author info is in the 1XX field
+    #Margrte told me that the only 1xx fields are: 100, 110, 111, 130.
+    
+
+    my $record  = $self->GetRecordMetadata($barcode);
+    if ( ! $record ) { $self->Logit( "failed in GetMarcDatafield: $barcode" ); }
+
+    my $data;
+
+    my $xpath   = qq{//*[local-name()='datafield' and \@tag='100']}; 
+    eval{ $data .= $record->findvalue( $xpath ); };
+    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
+
+    my $xpath   = qq{//*[local-name()='datafield' and \@tag='110']}; 
+    eval{ $data .= $record->findvalue( $xpath ); };
+    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
+
+    my $xpath   = qq{//*[local-name()='datafield' and \@tag='111']}; 
+    eval{ $data .= $record->findvalue( $xpath ); };
+    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
+
+    my $xpath   = qq{//*[local-name()='datafield' and \@tag='130']}; 
+    eval{ $data .= $record->findvalue( $xpath ); };
+    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
+    
+    $data =~ s,\n,,gs;
+
+    return $data
+}
+
 sub GetEncTitle
 {
     my $self = shift;
@@ -2075,7 +2110,7 @@ sub GetEncAuthor
     my $self = shift;
     my $bar  = shift;
 
-    my $au = $self->GetMarcDatafield( $bar, "100", "a");
+    my $au = $self->GetMarcDatafieldAuthor( $bar );
 
     $au =~ s,\',\\\',g; ## escape '
     return $au;
