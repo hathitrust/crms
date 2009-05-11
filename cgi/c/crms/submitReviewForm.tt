@@ -20,7 +20,8 @@
           <a class="plainLink"href="javascript:popRenewalDate()" accesskey="d">Renewal Date: </a>
         </strong>
       </td>
-      <td><input type="text" name="regDate" value="[% regDate %]" size="9"/></td>
+      <td><input type="text" name="regDate" value="[% regDate %]" size="9" READONLY/></td>
+
     </tr>
   </table>
 
