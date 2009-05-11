@@ -302,15 +302,15 @@ sub TranslateCategory
 
 
 
-    if    ( $category eq 'COLLECTION:' ) { return 'Collection'; }
+    if    ( $category eq 'COLLECTION' ) { return 'Collection'; }
     elsif ( $category eq 'LANG' ) { return 'Language'; }
     elsif ( $category eq 'MISC' ) { return 'Misc'; }
     elsif ( $category eq 'MISSING' ) { return 'Missing'; }
-    elsif ( $category eq 'REPRINT FROM' ) { return 'Reprint"'; }
+    elsif ( $category eq 'REPRINT FROM' ) { return 'Reprint'; }
     elsif ( $category eq 'SERIES' ) { return 'Series/Serial'; }
     elsif ( $category eq 'TRANS' ) { return 'Translation'; }
     elsif ( $category eq 'WRONGREC' ) { return 'Wrong Record'; }
-    elsif ( $category eq 'FOREIGN PUB' ) { return 'Foreign Pub'; }
+    elsif ( $category =~ m,FOREIGN PUB.*, ) { return 'Foreign Pub'; }
     else  { return $category };
     
 }
@@ -861,7 +861,7 @@ sub CreateSQL
 
     if ( ( $search1value ) && ( $search2value ) )
     {
-      { $sql .= qq{ AND ( $search1term  $op1  $search2term };   }
+      { $sql .= qq{ AND ( $search1term  $op1  $search2term ) };   }
     }
     elsif ( $search1value )
     {
@@ -1037,8 +1037,8 @@ sub GetReviewsRef
 
     my $limit              = 1;
 
-    my $sql =  $self->CreateSQL ( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $since,$offset, $type, $limit );
-  
+    my $sql =  $self->CreateSQL ( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $since, $offset, $type, $limit );
+
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my $return = [];
