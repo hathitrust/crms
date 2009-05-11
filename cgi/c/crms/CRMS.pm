@@ -3016,7 +3016,7 @@ sub GetLastIdQueueCount
 
 }
 
-sub DownloadSpreadSheet
+sub DownloadSpreadSheetBkup
 {
     my $self = shift;
     my $buffer = shift;
@@ -3051,6 +3051,25 @@ sub DownloadSpreadSheet
 
 
     }
+
+}
+
+sub DownloadSpreadSheet
+{
+    my $self = shift;
+    my $buffer = shift;
+
+    if ($buffer)
+    {
+
+      print &CGI::header(-type => 'text/plain',
+                      );
+
+      print $buffer;
+   
+    }
+
+    return;
 
 }
 
