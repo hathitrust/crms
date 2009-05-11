@@ -1,5 +1,5 @@
 [% INCLUDE header.tt    %]
-[% INCLUDE homeLink.tt  %]
+[% INCLUDE adminNav.tt  %]
 
 [% IF NOT crms.IsUserExpert() %]
   <h3>You do not have access to this page</h3>

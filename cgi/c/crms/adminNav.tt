@@ -6,7 +6,8 @@
   [% IF    page == "adminUser"           %] > adminster user accounts
   [% ELSIF page == "adminQueue"          %] > manage the queue
   [% ELSIF page == "adminReview"         %] > view all active reviews
-  [% ELSIF page == "adminLegacyReview"   %] > view all legacy reviews
+  [% ELSIF page == "undReviews"          %] > und/nfi items
+  [% ELSIF page == "adminLegacyReview"   %] > view all historical reviews
   [% ELSIF page == "adminUserRate"       %] > view user review rates
   [% ELSIF page == "undReviews"          %] > und/nfi items
   [% ELSIF page == "queueStatus"         %] > queue status
