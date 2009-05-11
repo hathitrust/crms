@@ -7,7 +7,7 @@
   <input type="hidden" name="editing"  value="[% editing %]"> 
   <input type="hidden" name="navRight" value="[% navright %]"> 
 
-  <table>
+  <table  class="test" >
     <tr>
       <td><strong>Renewal ID: </strong></td>
       <td>
@@ -26,7 +26,7 @@
 
 <hr />
 
-  <strong>Rights/Reason: </strong>
+  <Font size="2"><strong>&nbsp;Rights/Reason: </strong></font>
   <!-- &nbsp;&nbsp;<a href="/c/crms/help.html#rights" target="_blank">help</a> -->
   <br/>
     [% keys = {"1" => "pd/ncn", "2" => "pd/ren",  "3" => "pd/cdpp",
@@ -70,7 +70,7 @@
   </table>
   
   <br />
-  <strong>Notes: </strong><br/>
+  <Font size="2"><strong>Notes: </strong><br/></font>
   <select name="category">
     [% pres = {"Foreign Pub"    => "Foreign Pub",   "Language"        => "Language",
                "Misc"           => "Misc",          "Missing"         => "Missing",

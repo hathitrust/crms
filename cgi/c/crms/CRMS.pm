@@ -401,7 +401,7 @@ sub ProcessReviews
 
     my $yesterday = $self->GetYesterday();
  
-    my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where revcnt = 2 and status = 0) AND time < "$yesterday"  group by id having count(*) = 2};
+    my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where revcnt = 2 and status = 0) AND time < "$yesterday"  order by id};
 
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -1658,6 +1658,58 @@ sub AddUser
     return 1;
 }
 
+sub CheckRenDate
+{
+  my $self = shift;
+  my $regNum = shift;
+  my $regDate = shift;
+
+  my $errorMsg = '';
+
+  if ( $regDate )
+  {
+    if ( $regDate =~ /^\d{1,2}[A-Za-z]{3}\d{2}$/ )
+    {
+      $regDate =~ s,\w{5}(.*),$1,;
+      $regDate = qq{19$regDate};
+
+      if ( $regDate < 1950 )
+      {
+	$errorMsg .= qq{the ren date you have entered $regDate is before 1950, we should not be recording them.   };
+      }
+	  
+      if ( ( $regDate >= 1950 )  && ( $regDate <= 1953 ) )
+      {
+	if ( ( $regNum =~ m,^R\w{5}$, ) || ( $regNum =~ m,^R\w{6}$, ))
+	{}
+	else
+	{
+	  $errorMsg .= qq{Ren Number format is not correct for item in  1950 - 1953 range.   };
+	}
+
+      }
+      if ( $regDate >= 1978 )
+      {
+	if ( $regNum =~ m,^RE\w{6}$, )
+	{}
+	else
+	{
+	  $errorMsg .= qq{Ren Number format is not correct for item with Ren Date >= 1978.   };
+	}
+	  
+      }
+    }
+    else
+    {
+      $errorMsg .= qq{Ren Date is not of the right format, for example 17Dec73.   };
+    }
+  }
+
+  retunr $errorMsg;
+
+
+}
+
 
 
 sub ValidateSubmission2
@@ -1665,45 +1717,6 @@ sub ValidateSubmission2
     my $self = shift;
     my ($attr, $reason, $note, $category, $regNum, $regDate, $user) = @_;
     my $errorMsg = "";
-
-    if ( $regDate )
-    {
-      if ( $regDate =~ m,^\d{2}\W{3}\d{2}$, )
-      {
-	$regDate =~ s,\w{5}(.*),$1,;
-	$regDate = qq{19$regDate};
-
-	if ( $regDate < 1950 )
-	{
-	  $errorMsg .= qq{the reg date you have entered $regDate is before 1950, we should not be recording them.   };
-	}
-	  
-	if ( ( $regDate >= 1950 )  && ( $regDate <= 1953 ) )
-	{
-	  if ( ( $regNum =~ m,^R\w{5}$, ) || ( $regNum =~ m,^R\w{6}$, ))
-	  {}
-	  else
-	  {
-	    $errorMsg .= qq{Reg Number format is not correct for item in  1950 - 1953 range.   };
-	  }
-
-	}
-	if ( $regDate >= 1978 )
-	{
-	  if ( $regNum =~ m,^RE\w{6}$, )
-	  {}
-	  else
-	  {
-	    $errorMsg .= qq{Reg Number format is not correct for item with Reg Date >= 1978.   };
-	  }
-	  
-	}
-      }
-      else
-      {
-	$errorMsg .= qq{Reg Date is not of the right format, for example 17Dec73.   };
-      }
-    }
 
     ## check user
     if ( ! $self->IsUserReviewer( $user ) )
@@ -1725,9 +1738,15 @@ sub ValidateSubmission2
     {
         $errorMsg .= qq{ic/ren must include renewal id and renawal date.  };
     }
-    elsif ( $attr == 2 && $reason == 7 && ( $regDate < 1950 ) )
+    elsif ( $attr == 2 && $reason == 7 )
     {
-        $errorMsg .= qq{renewal has expired; volume is pd.  date entered is $regDate };
+        $regDate =~ s,.*[A-Za-z](.*),$1,;
+        $regDate = qq{19$regDate};
+
+        if ( $regDate < 1950 )
+        {
+           $errorMsg .= qq{renewal has expired; volume is pd.  date entered is $regDate };
+        }
     }
 
     ## pd/ren requires a reg number
@@ -1765,8 +1784,6 @@ sub ValidateSubmission2
         $errorMsg .= qq{ic/cdpp must include note category and note text.  };
     }
 
-
-    
 
     return $errorMsg;
 }
@@ -1934,7 +1951,7 @@ sub GetMarcDatafieldAuthor
     my $barcode = shift;
 
     #After talking to Tim, the author info is in the 1XX field
-    #Margrte told me that the only 1xx fields are: 100, 110, 111, 130.
+    #Margrte told me that the only 1xx fields are: 100, 110, 111, 130. 700
     
 
     my $record  = $self->GetRecordMetadata($barcode);
@@ -1957,7 +1974,16 @@ sub GetMarcDatafieldAuthor
     my $xpath   = qq{//*[local-name()='datafield' and \@tag='130']}; 
     eval{ $data .= $record->findvalue( $xpath ); };
     if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
-    
+
+    my $xpath   = qq{//*[local-name()='datafield' and \@tag='700']}; 
+    eval{ $data .= $record->findvalue( $xpath ); };
+    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
+
+    my $xpath   = qq{//*[local-name()='datafield' and \@tag='710']}; 
+    eval{ $data .= $record->findvalue( $xpath ); };
+    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
+
+   
     $data =~ s,\n,,gs;
 
     return $data

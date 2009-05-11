@@ -72,7 +72,7 @@
 [% authorLink = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/process?clauseMapped(author)=$encAuthor" %]
 [% titleLink  = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/process?clauseMapped(title)=$encTitle" %]
 [% searchForm = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/modify?clauseMapped(title)=$encTitle&clauseMapped(author)=$encAuthor" %]
-[% ptLink     = "/cgi/m/mdp/pt?skin=crms;id=$barcode;page=root;view=image;size=75;seq=$crPage;attr=1" %]
+[% ptLink     = "/cgi/m/mdp/pt?skin=crms;id=$barcode;page=root;view=image;size=75;attr=1" %]
 [% catLink    = "http://mirlyn.lib.umich.edu/F?func=find-b&find_code=MDN&local_base=MIU01_PUB&request=$barcode" %]
 [% wCatLink   = "http://www.worldcat.org/search?qt=worldcat_org_bks&fq=dt%3Abks&q=$encTitle" %]
 [% uscorLink  = "http://cocatalog.loc.gov/cgi-bin/Pwebrecon.cgi?DB=local&PAGE=First&Search_Arg=$encTitle" %]
@@ -86,7 +86,7 @@
             <td>User: [% userName %]</td>
 	    <td></td>	
           </tr>
-	  <tr
+	  <tr>
             <td><a href="crms">Home</a></td>
             <td><a href="crms">Use Cases</a></td>
             <td><a href="crms?p=Logout">Logout</a></td>
@@ -170,6 +170,18 @@
 
           <tr>
             <td class="display" align="center" >
+	    </td>
+            <td class="display" align="center" >
+	    </td>
+            <td class="display" align="center" >
+	    </td>
+            <td class="display" align="center" >
+	    </td>
+          </tr>
+
+
+          <tr>
+            <td class="display" align="center" >
 	       Review Pane:
 	    </td>
             <td class="display" align="center" >
@@ -196,11 +208,11 @@
     </div>
     [%# the frame (Stanford, HT, Cat...) %]
     <div class="divFrame">
-      <iframe width="100%" height="100%" id="topFrame" name="topFrame" src="[% ptLink %]"></iframe>
+      <iframe width="100%" height="400%" id="topFrame" name="topFrame" src="[% ptLink %]"></iframe>
       <iframe width="100%" height="0%"   id="bFrame"   name="bFrame"   src="[% titleLink %]"></iframe>
    </div>
  </div>
-<a name="sec1">sdfsdf</a>
+
 <div id="hoverpopup" style="visibility:hidden; position:absolute; top:0; left:0;"><table bgcolor="#0000FF">
 
 <tr><td bgcolor="#8888FF">Description needed.  It is here as a sample.</td></tr></table></div>

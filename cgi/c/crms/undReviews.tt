@@ -33,7 +33,7 @@
 
 
 <hr width="25%" align="left"/>
-<h3>matching reviews with status of und/nif: </h3>
+<h3>matching reviews with status of und/nfi: </h3>
 
 <form>
   <input type="hidden" name="p" value="undReviews"/>
