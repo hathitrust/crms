@@ -401,7 +401,9 @@ sub ProcessReviews
 
     my $yesterday = $self->GetYesterday();
  
-    my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where revcnt = 2 and status = 0) AND time < "$yesterday"  order by id};
+    #my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where revcnt = 2 and status = 0) AND time < "$yesterday"  order by id};
+
+my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where revcnt = 2 and status = 0) order by id};
 
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -466,7 +468,9 @@ sub ProcessReviews
     }
 
     #Process the expert reviews.
-    my $sql = qq{SELECT id  FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where expcnt = 1 AND status = 0 ) AND time < "$yesterday" order by id};
+    #my $sql = qq{SELECT id  FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where expcnt = 1 AND status = 0 ) AND time < "$yesterday" order by id};
+    
+    my $sql = qq{SELECT id  FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where expcnt = 1 AND status = 0 )  order by id};
 
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -817,7 +821,7 @@ sub CreateSQL
     }
     elsif ( $type eq 'conflict' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 or q.status = 3) };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
     }
     elsif ( $type eq 'legacyreviews' )
     {
@@ -1155,7 +1159,7 @@ sub GetReviewsCount
     }
     elsif ( $type eq 'conflict' )
     {
-      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 or q.status = 3) };
+      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
     }
     elsif ( $type eq 'legacyreviews' )
     {
