@@ -877,7 +877,7 @@ sub CreateSQL
     my $limit_section = '';
     if ( $limit )
     {
-      my $limit_section = qq{LIMIT $offset, 25};
+      $limit_section = qq{LIMIT $offset, 25};
     }
     if ( $order eq 'status' )
     {
