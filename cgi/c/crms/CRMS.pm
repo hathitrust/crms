@@ -813,11 +813,11 @@ sub CreateSQL
     my $sql;
     if ( $type eq 'reviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, '', b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status > 0 };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status > 0 };
     }
     elsif ( $type eq 'conflict' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, '', b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 or q.status = 3) };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 or q.status = 3) };
     }
     elsif ( $type eq 'legacyreviews' )
     {
@@ -825,18 +825,18 @@ sub CreateSQL
     }
     elsif ( $type eq 'undreviews' )
       {
-	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, '', b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
     }
     elsif ( $type eq 'userreviews' )
       {
 	my $user = $self->get( "user" );
-	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, '', b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
     }
     elsif ( $type eq 'editreviews' )
     {
 	my $user = $self->get( "user" );
 	my $yesterday = $self->GetYesterday();
-	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, '', b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
     }
 
     my ( $search1term, $search2term );
