@@ -1736,7 +1736,7 @@ sub ValidateSubmission2
     ## ic/ren requires a reg number
     if ( $attr == 2 && $reason == 7 && ( ( ! $regNum ) || ( ! $regDate ) )  ) 
     {
-        $errorMsg .= qq{ic/ren must include renewal id and renawal date.  };
+        $errorMsg .= qq{ic/ren must include renewal id and renewal date.  };
     }
     elsif ( $attr == 2 && $reason == 7 )
     {
