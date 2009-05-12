@@ -888,11 +888,11 @@ sub CreateSQL
     }
     if ( $order eq 'status' )
     {
-	$sql .= qq{ ORDER BY q.$order $direction $limit_section };
+	$sql .= qq{ ORDER BY q.$order, q.id $direction $limit_section };
     }
     else
     {
-      	$sql .= qq{ ORDER BY r.$order $direction $limit_section };
+      	$sql .= qq{ ORDER BY r.$order, r.id $direction $limit_section };
     }
 
     return $sql;
