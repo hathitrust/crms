@@ -10,6 +10,7 @@
   [% ELSIF page == "adminLegacyReview"   %] > view all historical reviews
   [% ELSIF page == "adminUserRate"       %] > view user review rates
   [% ELSIF page == "undReviews"          %] > und/nfi items
+  [% ELSIF page == "expert"              %] > expert review
   [% ELSIF page == "queueStatus"         %] > queue status
   [% ELSIF page == "queueAdd"            %] > add to queue
   [% ELSIF page == "adminEditUser"       %] > <a href="?p=adminUser">adminster user accounts</a> 

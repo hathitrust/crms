@@ -10,11 +10,7 @@
 <div>|| <a href="crms">home</a> || 
   <a href="crms?p=review">review</a> ||
   <a href="crms?p=editReviews">edit unprocessed reviews</a> ||
-  <a href="crms?p=userReviews">edit processed reviews</a> ||
-
-  [% IF crms.IsUserExpert %]
-    <a href="crms?p=expert">expert review</a> ||
-  [% END %]
+  <a href="crms?p=userReviews">search processed reviews</a> ||
 
   [% IF crms.IsUserAdmin %]
     <a href="crms?p=admin">admin menu</a> ||
