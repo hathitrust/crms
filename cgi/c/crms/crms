@@ -94,8 +94,7 @@ if  (  $cgi->param('p') eq 'confirmReview' )
   else
   {
     #Remove all locks for this user.
-    my $rights     = $cgi->param('rights');
-    my $reason     = $cgi->param('reason');
+    my $EncRights  = $cgi->param('rights');
     my $comment    = $cgi->param('comment');
     my $category   = $cgi->param('category');
     my $renNum     = $cgi->param('renNum');
@@ -104,7 +103,7 @@ if  (  $cgi->param('p') eq 'confirmReview' )
     my $editing    = $cgi->param('editing');
     my $navright   = $cgi->param('navRight');
 
-    ( $rights, $reason ) = $crms->GetAttrReasonFromCode($rights);
+    my ( $rights, $reason ) = $crms->GetAttrReasonFromCode($EncRights);
 
     my $errorMsg = $crms->ValidateSubmission2( $rights, $reason, $comment, $category, $renNum, $regDate, $user );
   
@@ -116,6 +115,15 @@ if  (  $cgi->param('p') eq 'confirmReview' )
        $cgi->param('errorMsg', $errorMsg );
        $cgi->param('barcode', $id );
        $cgi->param('navRight', $navright );
+
+       $cgi->param('rights',   $EncRights);
+       $cgi->param('reason',   $reason);
+       $cgi->param('comm',     $comment );
+       $cgi->param('category', $category);
+       $cgi->param('renNum',   $renNum );
+       $cgi->param('regDate',  $regDate);
+
+
      }
      else
      {

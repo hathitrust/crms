@@ -11,6 +11,14 @@
 [% navright  = cgi.param('navRight') %]
 [% crms.UpdateTitle %]
 
+[% regNum     = cgi.param('renNum') %]
+[% regDate    = cgi.param('regDate') %]
+[% comm       = cgi.param('comm') %]
+[% category   = cgi.param('category') %]
+[% select     = cgi.param('rights') %]
+
+
+
 [% IF inBarcode %]
   [% isEdit = 1 %]
   [% IF crms.PreviouslyReviewed(inBarcode, user) %]
@@ -61,12 +69,23 @@
 [% title      = crms.GetTitle( barcode )                    %]
 [% encTitle   = crms.GetEncTitle( barcode ) | url           %]
 
+[% IF NOT regNum %] 
 [% regNum     = crms.GetRegNum( barcode, user )             %]
+[% END %]
+
+[% IF NOT regDate %] 
 [% regDate    = crms.GetRegDate( regNum )                   %]
+[% END %] 
+
 [% crPage     = crms.GetCopyrightPage( barcode )            %]
 
+[% IF NOT comm %] 
 [% comm       = crms.GetReviewComment( barcode, user )      %]
+[% END %] 
+
+[% IF NOT category %] 
 [% category   = crms.GetReviewCategory( barcode, user )      %]
+[% END %] 
 
 [%# links to PT, stanford DB search, or Mirlyn catalog %]
 [% authorLink = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/process?clauseMapped(author)=$encAuthor" %]
@@ -214,7 +233,7 @@
         [% INCLUDE submitReviewForm.tt barcode = barcode, regNum   = regNum,   regDate = regDate,
                                        comment = comment, copyDate = copyDate, comm    = comm,    
                                        category = category, editing = editing, error   = error,
-                                       navright = navright %]
+                                       navright = navright, select = select %]
       </div>
     </div>
     [%# the frame (Stanford, HT, Cat...) %]

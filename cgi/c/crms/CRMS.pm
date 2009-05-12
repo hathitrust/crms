@@ -468,9 +468,9 @@ my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::r
     }
 
     #Process the expert reviews.
-    #my $sql = qq{SELECT id  FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where expcnt = 1 AND status = 0 ) AND time < "$yesterday" order by id};
+    #my $sql = qq{SELECT id  FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where expcnt = 1 ) AND time < "$yesterday" order by id};
     
-    my $sql = qq{SELECT id  FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where expcnt = 1 AND status = 0 )  order by id};
+    my $sql = qq{SELECT id  FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where expcnt = 1 )  order by id};
 
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
