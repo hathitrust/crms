@@ -129,6 +129,16 @@ if  (  $cgi->param('p') eq 'confirmReview' )
        if  ( $editing )
        {
 	 $cgi->delete_all();
+
+	 my $output = qq(
+			 <script type="text/javascript"
+			 language="JavaScript">
+			 window.close();
+			 </script>
+			);
+
+	 print "Content-type: text/html\n\n";
+	 print $output;
        }
        else
        {
