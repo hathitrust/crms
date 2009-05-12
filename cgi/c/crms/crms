@@ -171,7 +171,9 @@ if  ( (  $cgi->param('p') eq 'queueAdd' )  && ( $cgi->param('id') ) )
   my $msg;
   if ( $status )
   {
-    $msg = qq{$id was added successfully to the queue.};
+    $cgi->delete_all();
+    $cgi->param('p', 'review' );
+    $cgi->param('barcode', $id );
   }
   else
   {
