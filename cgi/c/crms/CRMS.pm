@@ -379,6 +379,9 @@ sub SetExpertReviewCnt
     my $sql = qq{ UPDATE $CRMSGlobals::queueTable set expcnt=1 WHERE id = "$id" };
     $self->PrepareSubmitSql( $sql );
 
+    #We have decided to register the expert decission right away.
+    $self->RegisterExpertReview( $id );
+
 }
 
 sub IncrementRevCount
