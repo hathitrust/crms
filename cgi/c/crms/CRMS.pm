@@ -2944,6 +2944,20 @@ sub GetTotalInHistoricalQueue
     if ($count) { return $count; }
     return 0;
 }
+
+
+sub GetTotalReviewedNotProcessed
+{
+    my $self = shift;
+
+    my $sql  = qq{ SELECT count(distinct id) from $CRMSGlobals::reviewsTable where id in ( select id from $CRMSGlobals::queueTable where status = 0)};
+    my $count  = $self->SimpleSqlGet( $sql );
+    
+    if ($count) { return $count; }
+    return 0;
+}
+
+
 sub GetTotalExported
 {
     my $self = shift;
