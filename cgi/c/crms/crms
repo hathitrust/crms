@@ -122,6 +122,7 @@ if  (  $cgi->param('p') eq 'confirmReview' )
        $cgi->param('category', $category);
        $cgi->param('renNum',   $renNum );
        $cgi->param('regDate',  $regDate);
+       $cgi->param('editing',  $editing);
 
 
      }
