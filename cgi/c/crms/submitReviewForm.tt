@@ -12,16 +12,16 @@
 
   <table  class="test" >
     <tr>
-      <td><strong>Renewal ID: </strong></td>
+      <td><Font size="2"><strong>Renewal ID: </strong></Font></td>
       <td>
         <input type="text" name="renNum" value="[% regNum %]" size="9" onBlur="javascript:popRenewalDate()"/>
       </td>
     </tr>
     <tr>
       <td>
-        <strong>
-          <a class="plainLink"href="javascript:popRenewalDate()" accesskey="d">Renewal Date: </a>
-        </strong>
+        <Font size="2"><strong>
+          <a  href="javascript:popRenewalDate()" accesskey="d">Get Renewal Date: </a>
+        </strong></Font>
       </td>
       <td><input type="text" name="regDate" value="[% regDate %]" size="9" READONLY/></td>
 
