@@ -149,8 +149,11 @@ sub LoadNewItems
 
     if ( ! $start ) { $start = $self->GetUpdateTime(); }
 
-    my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time FROM rights } . 
-              qq{WHERE attr = 2 AND reason=1 AND time >= '$start' AND time <= '$stop' GROUP BY id};
+    #my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time, attr, reason FROM rights } . 
+    #          qq{WHERE attr = 2 AND reason=1 AND time >= '$start' AND time <= '$stop' GROUP BY id};
+
+
+    my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time, attr, reason FROM rights GROUP BY id};
 
     my $ref = $self->get('sdr_dbh')->selectall_arrayref( $sql );
 
@@ -162,8 +165,14 @@ sub LoadNewItems
     my $inqueue;
     foreach my $row ( @{$ref} ) 
     { 
-      my $inqueue = $self->AddItemToQueue( $row->[0], $row->[1], 0, 0 ); 
-      $count = $count + $inqueue;
+      my $attr =  $row->[2];
+      my $reason =  $row->[3];
+
+      if ( ( $attr == 2 ) && ( $reason == 1 ) )
+      {	
+	my $inqueue = $self->AddItemToQueue( $row->[0], $row->[1], 0, 0 ); 
+	$count = $count + $inqueue;
+      }
     }
 
     #Record the update to the queue
@@ -198,8 +207,10 @@ sub AddItemToQueue
     ## skip if $id has been reviewed
     if ( $self->IsItemInReviews( $id ) ) { return 0; }
 
+    my $record =  $self->GetRecordMetadata($id);
+
     ## pub date between 1923 and 1963
-    my $pub = $self->GetPublDate( $id );
+    my $pub = $self->GetPublDate( $id, $record );
     ## confirm date range and add check
 
     #Only care about items between 1923 and 1963
@@ -207,10 +218,13 @@ sub AddItemToQueue
     {
 
       ## no gov docs
-      if ( $self->IsGovDoc( $id ) ) { $self->Logit( "skip fed doc: $id" ); return 0; }
+      if ( $self->IsGovDoc( $id, $record ) ) { $self->Logit( "skip fed doc: $id" ); return 0; }
       
       #check 008 field postion 17 = "u" - this would indicate a us publication.
-      if ( ! $self->IsUSPub( $id ) ) { $self->Logit( "skip not us doc: $id" ); return 0; }
+      if ( ! $self->IsUSPub( $id, $record ) ) { $self->Logit( "skip not us doc: $id" ); return 0; }
+
+      #check FMT.
+      if ( ! $self->IsFormatBK( $id, $record ) ) { $self->Logit( "skip not fmt bk: $id" ); return 0; }
 
       ## check for item, warn if already exists, then update ???
       my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub', $priority)};
@@ -243,8 +257,10 @@ sub GiveItemsInQueuePriority
     ## skip if $id has been reviewed
     if ( $self->IsItemInReviews( $id ) ) { return; }
 
+    my $record =  $self->GetRecordMetadata($id);
+
     ## pub date between 1923 and 1963
-    my $pub = $self->GetPublDate( $id );
+    my $pub = $self->GetPublDate( $id, $record );
     ## confirm date range and add check
 
     #Only care about items between 1923 and 1963
@@ -252,10 +268,13 @@ sub GiveItemsInQueuePriority
     {
 
       ## no gov docs
-      if ( $self->IsGovDoc( $id ) ) { $self->Logit( "skip fed doc: $id" ); return; }
+      if ( $self->IsGovDoc( $id, $record ) ) { $self->Logit( "skip fed doc: $id" ); return; }
 
       #check 008 field postion 17 = "u" - this would indicate a us publication.
-      if ( ! $self->IsUSPub( $id ) ) { $self->Logit( "skip not us doc: $id" ); return; }
+      if ( ! $self->IsUSPub( $id, $record ) ) { $self->Logit( "skip not us doc: $id" ); return; }
+
+      #check FMT.
+      if ( ! $self->IsFormatBK( $id, $record ) ) { $self->Logit( "skip not fmt bk: $id" ); return 0; }
 
       my $sql  = qq{ SELECT count(*) from $CRMSGlobals::queueTable where id="$id"};
       my $count  = $self->SimpleSqlGet( $sql );
@@ -361,7 +380,7 @@ sub SubmitReview
 
     $self->PrepareSubmitSql( $sql );
 
-    if ( $exp ) { $self->SetExpertReviewCnt( $id );  }
+    if ( $exp ) { $self->SetExpertReviewCnt( $id, $user );  }
     else        { $self->IncrementRevCount( $id ); }
 
     $self->EndTimer( $id, $user );
@@ -470,18 +489,6 @@ my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::r
 	$prev_regNum = $regNum;
     }
 
-    #Process the expert reviews.
-    #my $sql = qq{SELECT id  FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where expcnt = 1 ) AND time < "$yesterday" order by id};
-    
-    my $sql = qq{SELECT id  FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where expcnt = 1 )  order by id};
-
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    foreach my $row ( @{$ref} )
-    {
-        my $id =  $row->[0];
-	$self->RegisterExpertReview( $id );
-    }
 
 
 }
@@ -597,7 +604,7 @@ sub ExportReviews
     }
     close $fh;
 
-    my $sql  = qq{ INSERT INTO  $CRMSGlobals::exportrecordTable (count) VALUES ( $count )};
+    my $sql  = qq{ INSERT INTO  $CRMSGlobals::exportrecordTable (itemcount) VALUES ( $count )};
     $self->PrepareSubmitSql( $sql );
 
 
@@ -888,11 +895,11 @@ sub CreateSQL
     }
     if ( $order eq 'status' )
     {
-	$sql .= qq{ ORDER BY q.$order, q.id $direction $limit_section };
+	$sql .= qq{ ORDER BY q.$order $direction $limit_section };
     }
     else
     {
-      	$sql .= qq{ ORDER BY r.$order, r.id $direction $limit_section };
+      	$sql .= qq{ ORDER BY r.$order $direction $limit_section };
     }
 
     return $sql;
@@ -1841,7 +1848,8 @@ sub IsGovDoc
 {
     my $self    = shift;
     my $barcode = shift;
-    my $record  = $self->GetRecordMetadata($barcode);
+    my $record  = shift;
+
     if ( ! $record ) { $self->Logit( "failed in IsGovDoc: $barcode" ); }
 
     my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
@@ -1857,7 +1865,8 @@ sub IsUSPub
 {
     my $self    = shift;
     my $barcode = shift;
-    my $record  = $self->GetRecordMetadata($barcode);
+    my $record  = shift;
+
     if ( ! $record ) { $self->Logit( "failed in IsUSPub: $barcode" ); }
 
     my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
@@ -1865,6 +1874,24 @@ sub IsUSPub
     my $doc     = substr($leader, 17, 1);
  
     if ( $doc eq "u" ) { return 1; }
+
+    return 0;
+}
+
+
+sub IsFormatBK
+{
+    my $self    = shift;
+    my $barcode = shift;
+    my $record  = shift;
+
+    if ( ! $record ) { $self->Logit( "failed in IsFormatBK: $barcode" ); }
+
+    my $xpath   = q{//*[local-name()='controlfield' and @tag='FMT']};
+    my $leader  = $record->findvalue( $xpath );
+    my $doc     = $leader;
+ 
+    if ( $doc eq "BK" ) { return 1; }
 
     return 0;
 }
@@ -1878,8 +1905,13 @@ sub GetPublDate
 {
     my $self    = shift;
     my $barcode = shift;
+    my $record  = shift;
 
-    my $record  = $self->GetRecordMetadata($barcode);
+    if ( ! $record )
+    {
+      $record  = $self->GetRecordMetadata($barcode);
+    }
+
     if ( ! $record ) { return 0; }
 
     ## my $xpath   = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
@@ -2647,27 +2679,7 @@ sub ItemWasReviewedByUser
     return 0;
 }
 
-sub GetItemsInDispute
-{
-    my $self = shift;
 
-    ## make sure the user is reviewer II ??
-
-    ## rviewed at 2 times, not by an expert
-    my $sql = qq{ SELECT id, CONCAT(id, ".", attr) AS a FROM ( SELECT * FROM } .
-              qq{ $CRMSGlobals::reviewsTable WHERE id NOT IN ( SELECT id FROM } . 
-              qq{ $CRMSGlobals::reviewsTable WHERE expert IS NOT NULL ) ) AS t1 GROUP BY a};
- 
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    my %ids;
-    foreach ( @{$ref} ) { $ids{$_->[0]}++; }
-
-    my @return;
-    foreach my $id ( keys %ids ) { if ( $ids{$id} > 1 ) { push @return, $id; } }
-
-    return @return;
-}
 
 sub GetItemReviewDetails
 {

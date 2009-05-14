@@ -1,4 +1,4 @@
-][% IF NOT crms.IsUserAdmin() %]
+[% IF NOT crms.IsUserAdmin() %]
   <h3>You do not have access to this page</h3>
   [% STOP %]
 [% END %]
@@ -20,6 +20,7 @@
   || <a href="crms?p=expert">expert review</a> 
   || <a href="crms?p=undReviews">und/nfi items</a>
   || <a href="crms?p=queueAdd">add to queue</a>  
+
   ||
 
 

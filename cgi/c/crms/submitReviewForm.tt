@@ -79,7 +79,7 @@
     [% pres = {"Foreign Pub"    => "Foreign Pub",   "Language"        => "Language",
                "Misc"           => "Misc",          "Missing"         => "Missing",
                "Reprint"        => "Reprint",       "Series/Serial"   => "Series/Serial",
-               "Collectin"      => "Collection",    "Translation"     => "Translation",
+               "Collection"     => "Collection",    "Translation"     => "Translation",
                "Wrong Record"   => "Wrong Record",  ""               => "none"} 
     %]
 
