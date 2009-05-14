@@ -895,7 +895,18 @@ sub CreateSQL
     }
     if ( $order eq 'status' )
     {
+      if ( $type eq 'legacyreviews' )
+      {
+	$sql .= qq{ ORDER BY r.$order $direction $limit_section };
+      }
+      else
+      {
 	$sql .= qq{ ORDER BY q.$order $direction $limit_section };
+      }
+    }
+    elsif ( ( $order eq 'title' ) || ( $order eq 'author' ) )
+    {
+      	$sql .= qq{ ORDER BY b.$order $direction $limit_section };
     }
     else
     {

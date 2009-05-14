@@ -51,6 +51,10 @@
     [% order == 'time' ? 'checked="1"' : '' %] />date</label>
   <label><input type="radio" name="order" value="user" 
     [% order == 'user' ? 'checked="1"' : '' %] />user</label>
+  <label><input type="radio" name="order" value="author" 
+    [% order == 'author' ? 'checked="1"' : '' %] />author</label>
+  <label><input type="radio" name="order" value="title" 
+    [% order == 'title' ? 'checked="1"' : '' %] />title</label>
   <label><input type="radio" name="order" value="attr" 
     [% order == 'attr' ? 'checked="1"' : '' %] />attr</label>
   <label><input type="radio" name="order" value="status" 
