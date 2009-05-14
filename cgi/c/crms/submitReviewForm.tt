@@ -2,7 +2,7 @@
 [% select = crms.GetAttrReasonCode(barcode, user) %]
 [% END %]
 
-<form name="submitReview" action="crms">
+<form name="submitReview" action="crms#anchor">
   <input type="hidden" name="p"        value="confirmReview"> 
   <input type="hidden" name="barcode"  value="[% barcode %]"> 
   <input type="hidden" name="user"     value="[% user %]"> 
@@ -104,6 +104,7 @@
 	<textarea>[% error %]</textarea>
 	</div>
     <br/>
+<a name="anchor"></a> 
 [% END %]
 
   </div>
