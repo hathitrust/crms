@@ -1176,7 +1176,7 @@ sub GetReviewsCount
     my $sql;
     if ( $type eq 'reviews' )
     {
-      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status > 0 };
+      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status >= 0 };
     }
     elsif ( $type eq 'conflict' )
     {
