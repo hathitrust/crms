@@ -107,7 +107,7 @@
           </tr>
 	  <tr>
             <td><a href="crms">Home</a></td>
-            <td><a href="crms">Use Cases</a></td>
+            <td><a href="/c/crms/usecases.mhtml" target="_blank">Use Cases</a></td>
             <td><a href="crms?p=Logout">Logout</a></td>
           </tr>
         </table>
@@ -138,63 +138,45 @@
         <table class="search" width="100%">
           <tr>
 	    <td align="left">
-		<Strong align="left">Search:</Strong>
+		<Strong align="left">Search:</Strong>&nbsp;&nbsp;&nbsp;<a href="[% ptLink %]"    target="topFrame" accesskey="h">HathiTrust</a>&nbsp;&nbsp;&nbsp;<a href="[% catLink %]"   target="topFrame" accesskey="m">Mirlyn</a>
 	    </td>
           </tr>
+
           <tr>
-            <td align="center">
-	        <a href="[% ptLink %]"    target="topFrame" accesskey="h">HathiTrust</a>
-            </td>
-             <td align="center">
-	        ||
-            </td>
-            <td align="center">
-	        <a href="[% catLink %]"   target="topFrame" accesskey="m">Mirlyn</a>
-            </td>
-          </tr>
+            <td align = "left"></td>
+	  </tr>
+
           <tr>
-            <td>
-		&nbsp;&nbsp;&nbsp;Stanford DB:
+            <td align = "left"></td>
+	  </tr>
+
+          <tr>
+            <td align = "left">
+		<strong>Stanford:</strong>&nbsp;&nbsp;&nbsp;<a href="javascript:changeFrame2('[% titleLink %]' )" accesskey="t">Title</a>&nbsp;&nbsp;&nbsp;<a href="javascript:changeFrame2('[% authorLink %]')" accesskey="a">Author</a>&nbsp;&nbsp;&nbsp;<a href="javascript:changeFrame2('[% searchForm %]')" accesskey="q">Adv</a>
 	     </td>
 	  </tr>
-	  <tr>
-   	    <td align="center"><a href="javascript:changeFrame2('[% titleLink %]' )" accesskey="t">title</a></td>
-	    <td align="center"> || </td>
-            <td align="center"><a href="javascript:changeFrame2('[% authorLink %]')" accesskey="a">author</a></td>
-            <td align="center"> || </td>
-            <td align="center"><a href="javascript:changeFrame2('[% searchForm %]')" accesskey="q">advance</a></td>
-           <tr>
+
         </table>
+
 
 	<table class="display" width="100%">
           <tr>
-            <td class="display" align="center" >
+	    <td class="display" align="left" colspan="3">
 	       <strong>Display Options:</strong>
-	    </td>
+            </td>
           </tr>
           <tr>
-            <td class="display" align="center" >
-	       Toggle:
+            <td class="display" align="left" >
+	       &nbsp;&nbsp;&nbsp;Toggle:
 	    </td>
             <td class="display" align="center" >
-               <a href="javascript:flipFrame()"  accesskey="p">full/split</a>
+               <a href="javascript:flipFrame()"  accesskey="p">Full/Split</a>
 	    </td>
             <td class="display" align="center" >
-             ||
+     
 	    </td>
             <td class="display" align="center" >
-                <a href="javascript:flipFrame2()" accesskey="o">views</a>	
-	    </td>
-          </tr>
-
-          <tr>
-            <td class="display" align="center" >
-	    </td>
-            <td class="display" align="center" >
-	    </td>
-            <td class="display" align="center" >
-	    </td>
-            <td class="display" align="center" >
+                <a href="javascript:flipFrame2()" accesskey="o">Views</a>	
 	    </td>
           </tr>
 
@@ -209,16 +191,27 @@
 	    </td>
           </tr>
 
-
           <tr>
             <td class="display" align="center" >
-	       Review Pane:
+	    </td>
+            <td class="display" align="center" >
+	    </td>
+            <td class="display" align="center" >
+	    </td>
+            <td class="display" align="center" >
+	    </td>
+          </tr>
+
+
+          <tr>
+            <td class="display" align="left" >
+	       &nbsp;&nbsp;&nbsp;Review Pane:
 	    </td>
             <td class="display" align="center" >
                 <a href="crms?p=review&navRight=0" >Left</a>	
 	    </td>
             <td class="display" align="center" >
-             ||
+     
 	    </td>
             <td class="display" align="center" >
                <a href="crms?p=review&navRight=1"  >Right</a>

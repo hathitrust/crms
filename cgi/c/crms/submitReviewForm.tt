@@ -10,27 +10,25 @@
   <input type="hidden" name="editing"  value="[% editing %]"> 
   <input type="hidden" name="navRight" value="[% navright %]"> 
 
-  <table  class="test" >
+  <table  class="test" width="100%" >
     <tr>
-      <td><Font size="2"><strong>Renewal ID: </strong></Font></td>
+      <td class="test" align="left" ><strong>Renewal ID: </strong></td>
       <td>
-        <input type="text" name="renNum" value="[% regNum %]" size="9" onBlur="javascript:popRenewalDate()"/>
+        <input type="text" name="renNum" value="[% regNum %]" size="8" onBlur="javascript:popRenewalDate()"/>
       </td>
     </tr>
     <tr>
-      <td>
-        <Font size="2"><strong>
-          <a  href="javascript:popRenewalDate()" accesskey="d">Get Renewal Date: </a>
-        </strong></Font>
+      <td class="test" align="left" >
+        <strong>
+          <a  href="javascript:popRenewalDate()" accesskey="d">Get Renewal Date:</a>
+        </strong>
       </td>
-      <td><input type="text" name="regDate" value="[% regDate %]" size="9" READONLY/></td>
-
+      <td><input type="text" name="regDate" value="[% regDate %]" size="8" READONLY/></td>
     </tr>
   </table>
 
-<hr />
-
-  <Font size="2"><strong>&nbsp;Rights/Reason: </strong></font>
+<font size="1pt"><br></font>
+  <strong>&nbsp;Rights/Reason: </strong>
   <!-- &nbsp;&nbsp;<a href="/c/crms/help.html#rights" target="_blank">help</a> -->
   <br/>
     [% keys = {"1" => "pd/ncn", "2" => "pd/ren",  "3" => "pd/cdpp",
@@ -73,8 +71,8 @@
     </tr>
   </table>
   
-  <br />
-  <Font size="2"><strong>Notes: </strong><br/></font>
+<br>
+  <strong>Notes: </strong>
   <select name="category">
     [% pres = {"Foreign Pub"    => "Foreign Pub",   "Language"        => "Language",
                "Misc"           => "Misc",          "Missing"         => "Missing",
@@ -100,7 +98,7 @@
     <input style="float:left" type="submit" name="submit" value="Cancel"  accesskey="s"> 
 [% IF error %]
 	<br>
-         <div style="float:left"> <FONT align="left" color="red">ErrorMsg:</FONT>
+         <div style="float:left"> <FONT align="left" color="red">Error Message:</FONT>
 	<textarea>[% error %]</textarea>
 	</div>
     <br/>
@@ -110,12 +108,9 @@
   </div>
         <table width="100%">
 	  <tr>
-            <td style="float:left"><a style="float:right" href="/c/crms/help.html#rights" target="_blank">help</a></td>
-            <td align="center"><a href="crms">Use Cases</a></td>
+            <td style="float:left"><a style="float:right" href="/c/crms/help.html#rights" target="_blank">Help</a></td>
+            <td align="center"><a href="/c/crms/usecases.mhtml" target="_blank">Use Cases</a></td>
             <td align="right"><a href="crms?p=Logout">Logout</a></td>
           </tr>
         </table>
-
-
-
 </form>
