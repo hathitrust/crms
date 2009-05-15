@@ -5,10 +5,10 @@
 
 .divFrame  { float:left; width:78%;   padding-left:2px; padding-right:2px; }
 
-.navtop    { text-align:center; vertical-align:top;    }
+.navtop    { text-align:center; vertical-align:top; font-size=11pt; }
 .navbottom  { text-align:left; vertical-align:bottom;  background-color: #C6EFF7;}
 
-.smallText { font-size:11px }
+.smallText { font-size:5px }
 
 .plainLink { text-decoration: none; color: black;}
 
@@ -35,7 +35,7 @@ table.nav td {
         border-color: white white white white;
         background-color: white;
         -moz-border-radius: 0px 0px 0px 0px;
-        font-size:10pt;
+        font-size:11pt;
         text-align:center;
 }
 
@@ -91,7 +91,7 @@ table.search td {
         border-color: white white white white;
         background-color: #FFFFC6;
         -moz-border-radius: 0px 0px 0px 0px;
-        font-size:10pt;
+        font-size:11pt;
   
 }
 
@@ -121,34 +121,42 @@ table.display td {
         border-color: white white white white;
         background-color: #F7BDDE;
         -moz-border-radius: 0px 0px 0px 0px;
-        font-size:10pt;
+        font-size:11pt;
         text-align:left;
 }
 
 
 
-table.allReviews {
-	border-width: 1px 1px 1px 1px;
-	border-spacing: 2px;
-	border-style: outset outset outset outset;
-	border-color: gray gray gray gray;
-	border-collapse: separate;
-	background-color: white;
+table.test    { 
+        border-width: 1px 1px 1px 1px;
+        border-spacing: 2px;
+        border-style: outset outset outset outset;
+        border-color: black black black black;
+        border-collapse: separate;
+        background-color: #C6EFF7;
 }
-table.allReviews th {
-	border-width: 1px 1px 1px 1px;
-	padding: 1px 1px 1px 1px;
-	border-style: inset inset inset inset;
-	border-color: gray gray gray gray;
-	background-color: white;
-	-moz-border-radius: 0px 0px 0px 0px;
+
+table.test th { 
+        border-width: 1px 1px 1px 1px;
+        padding: 1px 1px 1px 1px;
+        border-style: inset inset inset inset;
+        border-color: white black white black;
+        background-color: #C6EFF7;
+        -moz-border-radius: 0px 0px 0px 0px;
 }
-table.allReviews td {
-	border-width: 1px 1px 1px 1px;
-	padding: 1px 1px 1px 1px;
-	border-style: inset inset inset inset;
-	border-color: gray gray gray gray;
-	background-color: white;
-	-moz-border-radius: 0px 0px 0px 0px;
+table.test td {
+        border-width: 0px 0px 0px 0px;
+        padding: 0px 0px 0px 0px;
+        border-style: inset inset inset inset;
+        border-color: white white white white;
+        background-color: #C6EFF7;
+        -moz-border-radius: 0px 0px 0px 0px;
+        font-size:11pt;
+        text-align:left;
+}
+
+
+
+
 }
 
