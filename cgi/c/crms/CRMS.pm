@@ -873,15 +873,15 @@ sub CreateSQL
       $search2term = qq{$search2 = '$search2value'};
     }
 
-    if ( ( $search1value ) && ( $search2value ) )
+    if ( ( $search1value ne "" ) && ( $search2value ne "" ) )
     {
       { $sql .= qq{ AND ( $search1term  $op1  $search2term ) };   }
     }
-    elsif ( $search1value )
+    elsif ( $search1value ne "" )
     {
       { $sql .= qq{ AND $search1term  };   }
     }
-    elsif (  $search2value )
+    elsif (  $search2value ne "" )
     {
       { $sql .= qq{ AND $search2term  };   }
     }
@@ -1223,15 +1223,15 @@ sub GetReviewsCount
       $search2term = qq{$search2 = '$search2value'};
     }
 
-    if ( ( $search1value ) && ( $search2value ) )
+    if ( ( $search1value ne "" ) && ( $search2value ne "" ) )
     {
       { $sql .= qq{ AND ( $search1term  $op1  $search2term };   }
     }
-    elsif ( $search1value )
+    elsif ( $search1value ne "" )
     {
       { $sql .= qq{ AND $search1term  };   }
     }
-    elsif (  $search2value )
+    elsif (  $search2value ne "" )
     {
       { $sql .= qq{ AND $search2term  };   }
     }
