@@ -1,162 +1,165 @@
+* {
+  margin:0;
+  padding:0;
+  font-family: helvetica;
+  line-height:1.1em;
+}
 
-.divbody   { float:left; width:99%;   padding-left:2px; padding-right:2px; position: relative; min-width:1000px; }
 
-.divNav    { float:left; width:208px; padding-left:2px; padding-right:2px; background-color: #DCDCDC; }
+#ReviewPage {
+}
+
+body {
+  margin-top: 3px;
+}
+
+
+.divbody   { float:left; width:99%; position: relative; min-width:1000px; }
+
+.divNav    { float:left; width:210px;}
 
 .divFrame  { float:left; width:78%;   padding-left:2px; padding-right:2px; }
 
-.navtop    { text-align:center; vertical-align:top; font-size=11pt; }
-.navbottom  { text-align:left; vertical-align:bottom;  background-color: #C6EFF7;}
+.navtop    {
+  text-align:center; 
+  vertical-align:top;
+  font-size:12px;
+}
 
-.smallText { font-size:5px }
+.navbottom  { 
+  text-align:left; 
+  vertical-align:bottom;  
+  border-bottom: 1px solid #72859a;
+}
+
+.smallText { font-size:.5em }
 
 .plainLink { text-decoration: none; color: black;}
 
+input {
+  margin-left: 10px;
+}
+
+table {
+  width: 100%;
+  padding:5px;
+}
+
+
 table.nav    { 
-        border-width: 1px 1px 1px 1px;
-        border-spacing: 2px;
-        border-style: outset outset outset outset;
-        border-color: black black black black;
-        border-collapse: separate;
-        background-color: white;
+        border-bottom: 1px solid #72859a;
+        font-size:12px;
+        
 }
+
 table.nav th { 
-        border-width: 1px 1px 1px 1px;
         padding: 1px 1px 1px 1px;
-        border-style: inset inset inset inset;
-        border-color: white black white black;
-        background-color: white;
-        -moz-border-radius: 0px 0px 0px 0px;
 }
+
 table.nav td {
-        border-width: 0px 0px 0px 0px;
         padding: 0px 0px 0px 0px;
-        border-style: inset inset inset inset;
-        border-color: white white white white;
-        background-color: white;
-        -moz-border-radius: 0px 0px 0px 0px;
-        font-size:11pt;
         text-align:center;
 }
 
-
 table.id    { 
-        border-width: 1px 1px 1px 1px;
         border-spacing: 2px;
-        border-style: outset outset outset outset;
-        border-color: black black black black;
         border-collapse: separate;
-        background-color: #DEF763;
+        border-bottom: 1px solid #72859a;
+        background-color: #d0dee6;
+        font-size:12px;
 }
+
 table.id th { 
-        border-width: 1px 1px 1px 1px;
-        padding: 1px 1px 1px 1px;
-        border-style: inset inset inset inset;
-        border-color: white black white black;
-        background-color: #DEF763;
-        -moz-border-radius: 0px 0px 0px 0px;
+        padding: 1px;
 }
+
 table.id td {
-        border-width: 0px 0px 0px 0px;
         padding: 0px 0px 0px 0px;
-        border-style: inset inset inset inset;
-        border-color: white white white white;
-        background-color: #DEF763;
-        -moz-border-radius: 0px 0px 0px 0px;
-        font-size:10pt;
         text-align:left;
 }
 
 table.search    { 
-        border-width: 1px 1px 1px 1px;
-        border-spacing: 2px;
-        border-style: outset outset outset outset;
-        border-color: black black black black;
         border-collapse: separate;
-        background-color: #FFFFC6;
+        border-bottom: 1px solid #72859a;
+        background-color:#e2e2e2;
+        font-size:12px;
 }
 
 table.search th { 
-        border-width: 1px 1px 1px 1px;
-        padding: 1px 1px 1px 1px;
-        border-style: inset inset inset inset;
-        border-color: white black white black;
-        background-color: #FFFFC6;
-        -moz-border-radius: 0px 0px 0px 0px;
+        padding: 1px;
 }
+
 table.search td {
-        border-width: 0px 0px 0px 0px;
-        padding: 0px 0px 0px 0px;
-        border-style: inset inset inset inset;
-        border-color: white white white white;
-        background-color: #FFFFC6;
-        -moz-border-radius: 0px 0px 0px 0px;
-        font-size:11pt;
-  
+        padding: 0px 0px 0px 0px;  
 }
-
-
 
 table.display    { 
-        border-width: 1px 1px 1px 1px;
         border-spacing: 2px;
-        border-style: outset outset outset outset;
-        border-color: black black black black;
         border-collapse: separate;
-        background-color: #F7BDDE;
+        border-bottom: 1px solid #72859a;
+        background-color: #d0dee6;
+        font-size:12px;
 }
 
 table.display th { 
-        border-width: 1px 1px 1px 1px;
         padding: 1px 1px 1px 1px;
         border-style: inset inset inset inset;
         border-color: white black white black;
-        background-color: #F7BDDE;
-        -moz-border-radius: 0px 0px 0px 0px;
 }
+
 table.display td {
         border-width: 0px 0px 0px 0px;
         padding: 0px 0px 0px 0px;
         border-style: inset inset inset inset;
         border-color: white white white white;
-        background-color: #F7BDDE;
-        -moz-border-radius: 0px 0px 0px 0px;
-        font-size:11pt;
         text-align:left;
 }
 
+div#RightsCont {
+  padding-top: 5px;
+  background-color: #d0dee6;
+  font-size:12px;
+}
 
+#RightsReason table {
+  font-size:12px;
+}
+
+#Notes {
+  margin-left:10px;
+}
+
+#Notes textarea {
+  margin-top: 5px;
+}
+
+#SubmitForm {
+  height: 3em;
+  margin-top: 8px;
+}
 
 table.test    { 
-        border-width: 1px 1px 1px 1px;
-        border-spacing: 2px;
-        border-style: outset outset outset outset;
-        border-color: black black black black;
         border-collapse: separate;
-        background-color: #C6EFF7;
+        border-bottom: 1px solid #72859a;
+        background-color:#e2e2e2;
+        font-size:12px;
 }
 
 table.test th { 
-        border-width: 1px 1px 1px 1px;
-        padding: 1px 1px 1px 1px;
-        border-style: inset inset inset inset;
-        border-color: white black white black;
-        background-color: #C6EFF7;
-        -moz-border-radius: 0px 0px 0px 0px;
+        padding: 1px;
 }
+
 table.test td {
-        border-width: 0px 0px 0px 0px;
-        padding: 0px 0px 0px 0px;
-        border-style: inset inset inset inset;
-        border-color: white white white white;
-        background-color: #C6EFF7;
-        -moz-border-radius: 0px 0px 0px 0px;
-        font-size:11pt;
         text-align:left;
 }
 
-
-
-
+input#getDate {
+  border:2px solid #e2e2e2;
+  background-color: #e2e2e2;
 }
 
+table.bottomNav {
+  border-top: 1px solid #72859a;
+  padding-top: 8px;
+  font-size:12px;
+}
