@@ -23,11 +23,12 @@
           <a  href="javascript:popRenewalDate()" accesskey="d">Get Renewal Date:</a>
         </strong>
       </td>
-      <td><input type="text" name="regDate" value="[% regDate %]" size="8" READONLY/></td>
+      <td><input type="text"  id="getDate" name="regDate" value="[% regDate %]" size="8" READONLY/></td>
     </tr>
   </table>
 
-<font size="1pt"><br></font>
+  <div id="RightsCont">
+  <div id="RightsReason">
   <strong>&nbsp;Rights/Reason: </strong>
   <!-- &nbsp;&nbsp;<a href="/c/crms/help.html#rights" target="_blank">help</a> -->
   <br/>
@@ -70,8 +71,8 @@
       </td>
     </tr>
   </table>
-  
-<br>
+  </div>
+<div id="Notes">
   <strong>Notes: </strong>
   <select name="category">
     [% pres = {"Foreign Pub"    => "Foreign Pub",   "Language"        => "Language",
@@ -92,8 +93,8 @@
   <textarea name="comment" cols="20" rows="1">[% comm %]</textarea>
 
   
-  <br/>
-  <div style="padding: 8px;">
+  </div>
+  <div id="SubmitForm">
     <input style="float:left" type="submit" name="submit" value="Submit"  accesskey="s"> 
     <input style="float:left" type="submit" name="submit" value="Cancel"  accesskey="s"> 
 [% IF error %]
@@ -106,7 +107,8 @@
 [% END %]
 
   </div>
-        <table width="100%">
+  </div>
+        <table class="bottomNav" width="100%">
 	  <tr>
             <td style="float:left"><a style="float:right" href="/c/crms/help.html#rights" target="_blank">Help</a></td>
             <td align="center"><a href="/c/crms/usecases.mhtml" target="_blank">Use Cases</a></td>
