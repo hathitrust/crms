@@ -96,15 +96,12 @@
 [% wCatLink   = "http://www.worldcat.org/search?qt=worldcat_org_bks&fq=dt%3Abks&q=$encTitle" %]
 [% uscorLink  = "http://cocatalog.loc.gov/cgi-bin/Pwebrecon.cgi?DB=local&PAGE=First&Search_Arg=$encTitle" %]
 
+  <div id="ReviewPage">
   <div class="divbody">
     <div class="divNav">
       <div class="navtop"> 
+      <span>User: [% userName %]</span>
         <table class="nav" width="100%">
-          <tr>
-	    <td></td>	
-            <td>User: [% userName %]</td>
-	    <td></td>	
-          </tr>
 	  <tr>
             <td><a href="crms">Home</a></td>
             <td><a href="/c/crms/usecases.mhtml" target="_blank">Use Cases</a></td>
@@ -137,8 +134,12 @@
 
         <table class="search" width="100%">
           <tr>
-	    <td align="left">
-		<Strong align="left">Search:</Strong>&nbsp;&nbsp;&nbsp;<a href="[% ptLink %]"    target="topFrame" accesskey="h">HathiTrust</a>&nbsp;&nbsp;&nbsp;<a href="[% catLink %]"   target="topFrame" accesskey="m">Mirlyn</a>
+	    <td align="left" class="label">
+		<Strong align="left">Search:</Strong>
+		  </td>
+		
+		  <td align="left" class="links">
+		<a href="[% ptLink %]"    target="topFrame" accesskey="h">HathiTrust</a>&nbsp;&nbsp;&nbsp;<a href="[% catLink %]"   target="topFrame" accesskey="m">Mirlyn</a>
 	    </td>
           </tr>
 
@@ -151,8 +152,8 @@
 	  </tr>
 
           <tr>
-            <td align = "left">
-		<strong>Stanford:</strong>&nbsp;&nbsp;&nbsp;<a href="javascript:changeFrame2('[% titleLink %]' )" accesskey="t">Title</a>&nbsp;&nbsp;&nbsp;<a href="javascript:changeFrame2('[% authorLink %]')" accesskey="a">Author</a>&nbsp;&nbsp;&nbsp;<a href="javascript:changeFrame2('[% searchForm %]')" accesskey="q">Adv</a>
+            <td class="label" align = "left"><strong>Stanford:</strong></td>
+            <td class="links" align = "left"><a href="javascript:changeFrame2('[% titleLink %]' )" accesskey="t">Title</a>&nbsp;&nbsp;&nbsp;<a href="javascript:changeFrame2('[% authorLink %]')" accesskey="a">Author</a>&nbsp;&nbsp;&nbsp;<a href="javascript:changeFrame2('[% searchForm %]')" accesskey="q">Advance</a>
 	     </td>
 	  </tr>
 
@@ -235,5 +236,5 @@
       <iframe width="100%" height="0%"   id="bFrame"   name="bFrame"   src="[% titleLink %]"></iframe>
    </div>
  </div>
-
+</div>
 
