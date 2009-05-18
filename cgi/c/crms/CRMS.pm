@@ -246,6 +246,63 @@ sub AddItemToQueue
 }
 
 
+sub AddItemToQueueOrSetItemActive
+{
+    my $self     = shift;
+    my $id       = shift;
+    my $time     = shift;
+    my $status   = shift;
+    my $priority = shift;
+
+    ## skip if $id has been reviewed
+    if ( $self->IsItemInReviews( $id ) ) 
+    {  
+      my $sql = qq{UPDATE $CRMSGlobals::queueTable SET priority= $priority WHERE id='$id'};
+      $self->PrepareSubmitSql( $sql ); 
+      return 1;
+    }
+
+    my $record =  $self->GetRecordMetadata($id);
+
+    if ( $record eq '' ) { return  'item was not found in mirlyn';}
+    
+    ## pub date between 1923 and 1963
+    my $pub = $self->GetPublDate( $id, $record );
+    ## confirm date range and add check
+
+    #Only care about items between 1923 and 1963
+    if ( ( $pub >= '1923' ) && ( $pub <= '1963' ) )
+    {
+
+      ## no gov docs
+      if ( $self->IsGovDoc( $id, $record ) ) { $self->Logit( "skip fed doc: $id" ); return 'item is not a gov doc'; }
+      
+      #check 008 field postion 17 = "u" - this would indicate a us publication.
+      if ( ! $self->IsUSPub( $id, $record ) ) { $self->Logit( "skip not us doc: $id" ); return 'item is not a US pub'; }
+
+      #check FMT.
+      if ( ! $self->IsFormatBK( $id, $record ) ) { $self->Logit( "skip not fmt bk: $id" ); return 'item is not BK format'; }
+
+      ## check for item, warn if already exists, then update ???
+      my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub', $priority)};
+
+      $self->PrepareSubmitSql( $sql );
+
+      $self->UpdateTitle ( $id );
+
+      #Update the pub date in bibdata
+      $self->UpdatePubDate ( $id, $pub );
+
+      my $author = $self->GetEncAuthor ( $id );
+      $self->UpdateAuthor ( $id, $author );
+      
+      return 1;
+    }
+
+    return 'item is not in the range of 1923 to 1963';
+}
+
+
 sub GiveItemsInQueuePriority
 {
     my $self     = shift;
