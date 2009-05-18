@@ -124,7 +124,6 @@ if  (  $cgi->param('p') eq 'confirmReview' )
        $cgi->param('regDate',  $regDate);
        $cgi->param('editing',  $editing);
 
-
      }
      else
      {
@@ -167,10 +166,10 @@ if  ( (  $cgi->param('p') eq 'queueAdd' )  && ( $cgi->param('id') ) )
 
   # status is 0
   # priority is 2
-  my $status = $crms->AddItemToQueue( $id, $crms->GetTodaysDate(), 0, 2 );
+  my $status = $crms->AddItemToQueueOrSetItemActive( $id, $crms->GetTodaysDate(), 0, 2 );
   
   my $msg;
-  if ( $status )
+  if ( $status == 1 )
   {
     $cgi->delete_all();
     $cgi->param('p', 'review' );
@@ -178,7 +177,7 @@ if  ( (  $cgi->param('p') eq 'queueAdd' )  && ( $cgi->param('id') ) )
   }
   else
   {
-    $msg = qq{$id could not be added to the queue.};
+    $msg = qq{$id could not be added to the queue because $status.};
   }
 
   $cgi->param('addMsg', $msg );
