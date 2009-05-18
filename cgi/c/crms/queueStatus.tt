@@ -25,6 +25,7 @@
       (5) Number of volumes last added to queue:  [% crms.GetLastIdQueueCount () %]<br>
       (6) Total Number of reviews in active queue:  [% crms.GetTotalInActiveQueue () %]<br>
       (7) Total Volumes reviewed but not processed:  [% crms.GetTotalReviewedNotProcessed () %]<br>
+      (8) Last time queue status was processed:  [% crms.GetLastStatusProcessedTime () %]<br>
 
 <br>
 <br>

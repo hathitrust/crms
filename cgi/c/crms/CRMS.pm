@@ -546,7 +546,8 @@ my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::r
 	$prev_regNum = $regNum;
     }
 
-
+    my $sql  = qq{ INSERT INTO  processstatus VALUES ( )};
+    $self->PrepareSubmitSql( $sql );
 
 }
 
@@ -3098,6 +3099,17 @@ sub GetLastQueueTime
 
     return $latest_time;
 
+}
+
+sub GetLastStatusProcessedTime 
+{
+
+    my $self = shift;
+
+    my $sql  = qq{ SELECT max(time) from  processstatus };
+    my $last_time  = $self->SimpleSqlGet( $sql );
+    
+    return $last_time;
 }
 
 sub GetLastIdQueueCount
