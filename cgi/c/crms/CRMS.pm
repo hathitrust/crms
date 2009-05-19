@@ -2250,6 +2250,17 @@ sub GetEncAuthor
     return $au;
 }
 
+sub GetEncAuthorForReview
+{
+    my $self = shift;
+    my $bar  = shift;
+
+    my $au = $self->GetMarcDatafield ( $bar, 100, 'a');
+
+    $au =~ s,\',\\\',g; ## escape '
+    return $au;
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   get the metadata record (MARC21)
 ##  Parameters: barcode
