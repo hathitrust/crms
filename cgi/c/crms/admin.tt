@@ -1,3 +1,6 @@
+
+<div class="pages" id="admin">
+
 [% IF NOT crms.IsUserAdmin() %]
   <h3>You do not have access to this page</h3>
   [% STOP %]
@@ -27,4 +30,4 @@
 </div>
 
 [% INCLUDE footer.tt %]
-
+</div>

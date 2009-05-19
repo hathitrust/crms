@@ -1,3 +1,5 @@
+<div class="pages" id="userReviews">
+
 [% INCLUDE header.tt    %]
 [% INCLUDE homeLink.tt  %]
 
@@ -124,3 +126,4 @@
 
 
 [% INCLUDE footer.tt %]
+</div>
