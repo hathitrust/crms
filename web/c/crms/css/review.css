@@ -5,8 +5,17 @@
   line-height:1.1em;
 }
 
+.pages {
+  margin: 10px;
+  padding: 10px;
+}
 
-#ReviewPage {
+.pages table {
+  padding: 0;
+}
+
+h3 {
+  margin: 15px 0;
 }
 
 body {
