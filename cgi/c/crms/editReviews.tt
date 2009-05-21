@@ -5,7 +5,6 @@
 [% INCLUDE homeLink.tt  %]
 
 
-
 [% search1            = cgi.param('search1')        %]
 [% search1value       = cgi.param('search1value')   %]
 [% search2            = cgi.param('search2')        %]
