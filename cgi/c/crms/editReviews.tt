@@ -1,4 +1,4 @@
-<div class="pages" id="editReviews">
+
 
 
 [% INCLUDE header.tt    %]
@@ -129,4 +129,3 @@
 
 
 [% INCLUDE footer.tt %]
-</div>

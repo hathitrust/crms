@@ -1,9 +1,10 @@
 [% INCLUDE header.tt    %]
-[% INCLUDE adminNav.tt  %]
+
 
 [% IF NOT crms.IsUserAdmin() %]
-  <h3>You do not have access to this page</h3>
-  [% STOP %]
+[% INCLUDE homeLink.tt  %]
+[% ELSE %]
+[% INCLUDE adminNav.tt  %]
 [% END %]
 
 [% search1        = cgi.param('search1')        %]

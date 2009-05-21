@@ -1,0 +1,50 @@
+[% IF NOT crms.IsUserAdmin() %]
+  <h3>You do not have access to this page</h3>
+  [% STOP %]
+[% END %]
+
+[% INCLUDE header.tt    %]
+[% INCLUDE adminNav.tt  %]
+
+<hr width="25%" align="left"/>
+
+[% notprocessedcnt = crms.GetTotalReviewedNotProcessed () %]
+[% undcnt = crms.GetTotalUndInf () %]
+[% conflictcnt = crms.GetTotalConflict () %]
+[% finalcnt = crms.GetTotalWithFinalDetermination () %]
+[% totalactive = notprocessedcnt +  undcnt + conflictcnt + finalcnt %]
+
+<hr width="25%" align="left"/>
+<br>
+<strong>Queue Export Information</strong><br>
+      Last Time Queue was updated:  [% crms.GetLastQueueTime () %]<br>
+      Number of volumes last added to queue:  [% crms.GetLastIdQueueCount () %]<br>
+      Cumulative number of volumes in queue (ever*): [% crms.GetTotalEverInQueue() %]<br>
+<hr>
+Total Number of volumes in queue:  [% crms.GetQueueSize () %]<br>
+Number of volumes awaiting review: [% crms.GetTotalAwaitingReview () %]<br>
+<br>
+Number of active volumes: [% totalactive %]<br>
+
+
+&nbsp;&nbsp;&nbsp;Number of of unporcessed: [% notprocessedcnt  %]<br>
+&nbsp;&nbsp;&nbsp;Number matching und/nfi: [% undcnt  %]<br>
+&nbsp;&nbsp;&nbsp;Number conflicting:  [% conflictcnt  %]<br>
+&nbsp;&nbsp;&nbsp;Number final determinations/awaiting export: [% finalcnt  %]<br>
+
+<br>
+Last time reviews were processed: [% crms.GetLastStatusProcessedTime () %]<br>
+
+<br>
+Last time final determinations were exported:  [% crms.GetLastTimeExported () %]<br>
+Number of determinations last exported: [% crms.GetLastItemCountExported () %]<br>
+<hr>
+Cumulative number of determinatins exported (ever)*: [% crms.GetCumExportedCount () %]<br>
+Total number of legacy determinations: [% crms.GetTotalLegacyCount () %]<br>
+<br>
+Total number of legacy reviews: [% crms.GetTotalLegacyReviewCount () %]<br>
+Total number of historical reviews ( including legacy ): [% crms.GetTotalHistoricalReviewCount () %]<br>
+<br>
+*not including legacy data (reviews/determinations made prior to June 2009)
+
+[% INCLUDE footer.tt %]

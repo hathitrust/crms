@@ -428,8 +428,8 @@ sub SubmitReview
     if ( ! $self->ValidateReason( $reason ) )             { $self->Logit("reason check failed");      return 0; }
     if ( ! $self->CheckAttrReasonComb( $attr, $reason ) ) { $self->Logit("attr/reason check failed"); return 0; }
 
-    #if ( ! $self->ValidateSubmission($attr, $reason, $note, $regNum, $regDate, $user) ) { return 0; }
-
+    #remove any blancks from regNum
+    $regNum =~ s, ,,gs;
 
     ## do some sort of check for expert submissions
 
@@ -2915,6 +2915,8 @@ sub GetRegDate
 {
     my $self = shift;
     my $id   = shift;
+    
+    $id =~ s, ,,gs;
     my $sql  = qq{ SELECT DREG FROM $CRMSGlobals::stanfordTable WHERE ID = "$id" };
 
     return $self->SimpleSqlGet( $sql );
