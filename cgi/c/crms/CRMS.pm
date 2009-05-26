@@ -1368,16 +1368,6 @@ sub DetailInfoForReview
     return qq{<a href="$url" target="_blank">$id</a>};
 }
 
-sub DetailLegacyInfo
-{
-    my $self   = shift;
-    my $id     = shift;
-    my $user   = shift;
-    
-    my $url  = qq{/cgi/c/crms/crms?p=detailLegacyInfo&id=$id&user=$user};
-
-    return qq{<a href="$url" target="_blank">$id</a>};
-}
 
 sub GetStatus
 {
