@@ -717,7 +717,7 @@ sub MoveFromReviewsToLegacyReviews
     $self->Logit( "store $id in legacyreviews" );
 
 
-    my $sql = qq{REPLACE into $CRMSGlobals::legacyreviewsTable (id, time, user, attr, reason, note, regNum, expert, duration, hist, expertNote, regDate, copyDate, category, flaged) select id, time, user, attr, reason, note, regNum, expert, duration, hist, expertNote, regDate, copyDate, category, flaged from reviews where id='$id'};
+    my $sql = qq{REPLACE into $CRMSGlobals::legacyreviewsTable (id, time, user, attr, reason, note, regNum, expert, duration, hist, expertNote, regDate, copyDate, category, flagged) select id, time, user, attr, reason, note, regNum, expert, duration, hist, expertNote, regDate, copyDate, category, flagged from reviews where id='$id'};
     $self->PrepareSubmitSql( $sql );
 
     my $sql = qq{ UPDATE $CRMSGlobals::legacyreviewsTable set status=$status WHERE id = "$id" };
@@ -894,30 +894,30 @@ sub CreateSQL
     my $sql;
     if ( $type eq 'reviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status >= 0 };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status >= 0 };
     }
     elsif ( $type eq 'conflict' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
     }
     elsif ( $type eq 'legacyreviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, r.status, b.title, b.author FROM $CRMSGlobals::legacyreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0  };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flagged, r.status, b.title, b.author FROM $CRMSGlobals::legacyreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0  };
     }
     elsif ( $type eq 'undreviews' )
       {
-	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
     }
     elsif ( $type eq 'userreviews' )
       {
 	my $user = $self->get( "user" );
-	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
     }
     elsif ( $type eq 'editreviews' )
     {
 	my $user = $self->get( "user" );
 	my $yesterday = $self->GetYesterday();
-	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flaged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.hist, r.regDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
     }
 
     my ( $search1term, $search2term );
@@ -1056,7 +1056,7 @@ sub SearchAndDownload
         my $category   = $row->[11];
         my $hist       = $row->[12];
         my $regDate    = $row->[13];
-        my $flaged     = $row->[14];
+        my $flagged     = $row->[14];
         my $status     = $row->[15];
         my $title      = $row->[16];
         my $author     = $row->[17];
@@ -1065,37 +1065,37 @@ sub SearchAndDownload
 	{
 	  #for reviews
 	  #id, title, author, review date, attr, reason, category, note, flagged.
-	  $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note$flaged\n};
+	  $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note$flagged\n};
 	}
 	elsif ( $type eq 'editreviews' )
 	{
 	  #for editRevies
 	  #id, title, author, review date, attr, reason, category, note, flagged.
-	  $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note\t$flaged\n};
+	  $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note\t$flagged\n};
 	}
 	elsif ( $type eq 'undreviews' )
 	{
 	  #for und/nif
 	  #id, title, author, review date, status, user, attr, reason, category, note, flagged.
-	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$flaged\n}
+	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$flagged\n}
 	}
 	elsif ( $type eq 'conflict' )
 	{
 	  #for expert
 	  #id, title, author, review date, status, user, attr, reason, category, note, flagged.
-	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$flaged\n};
+	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$flagged\n};
 	}
 	elsif ( $type eq 'reviews' )
 	{
 	  #for adminReviews
 	  #id, title, author, review date, status, user, attr, reason, category, note, flagged.
-	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$flaged\n};
+	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$flagged\n};
 	}
 	elsif ( $type eq 'legacyreviews' )
 	{
 	  #for adminLegacyReviews
 	  #id, title, author, review date, status, user, attr, reason, category, note, flagged.
-	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$hist\t$user\t$attr\t$reason\t$category\t$note\t$flaged\n};
+	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$hist\t$user\t$attr\t$reason\t$category\t$note\t$flagged\n};
 	}
 
     }
@@ -1153,7 +1153,7 @@ sub GetReviewsRef
                      category   => $row->[11],
                      hist       => $row->[12],
                      regDate    => $row->[13],
-                     flaged     => $row->[14],
+                     flagged     => $row->[14],
                      status     => $row->[15],
                      title      => $row->[16],
                      author     => $row->[17]
@@ -1181,7 +1181,7 @@ sub GetLegacyReviewsRef
 
     if ( ! $order || $order eq "time" ) { $order = "time DESC "; }
 
-    my $sql = qq{ SELECT id, time, duration, user, attr, reason, note, regNum, expert, copyDate, expertNote, category, hist, regDate, flaged, status FROM $CRMSGlobals::legacyreviewsTable };
+    my $sql = qq{ SELECT id, time, duration, user, attr, reason, note, regNum, expert, copyDate, expertNote, category, hist, regDate, flagged, status FROM $CRMSGlobals::legacyreviewsTable };
 
     if    ( $user )                    { $sql .= qq{ WHERE user = "$user" };   }
 
@@ -1215,7 +1215,7 @@ sub GetLegacyReviewsRef
                      category   => $row->[11],
                      hist       => $row->[12],
                      regDate    => $row->[13],
-                     flaged     => $row->[14],
+                     flagged     => $row->[14],
                      status     => $row->[15]
                    };
         push( @{$return}, $item );

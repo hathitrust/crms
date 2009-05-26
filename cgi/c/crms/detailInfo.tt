@@ -31,7 +31,7 @@ More Information....&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="JavaScript:window.clo
 <tr><td>Expert Note</td><td>      [% review.expertNote %]</td></tr>
 </table>
 <BR><table  border="1">
-<tr><td>Flag Review</td><td> [% review.flaged %]</td></tr>
+<tr><td>Flag Review</td><td> [% review.flagged %]</td></tr>
 </table
   [% END %]
 <a href="JavaScript:window.close()">Close</a>

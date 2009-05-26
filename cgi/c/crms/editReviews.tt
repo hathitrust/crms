@@ -113,7 +113,7 @@
       <td>$review.reason</td>
       <td>$review.category</td>
       <td>$review.note</td>
-      <td>$review.flaged</td>
+      <td>$review.flagged</td>
     </tr>   
 
 
