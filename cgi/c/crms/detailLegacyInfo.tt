@@ -20,7 +20,7 @@ More Information....&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="JavaScript:window.clo
 <BR><table  border="1">
 <tr><td>Date</td><td>             [% review.time %]</td></tr>
 <tr><td>Review Status</td><td>    [% review.status %]</td></tr>
-<tr><td>History Status</td><td>   [% review.hist %]</td></tr>
+<tr><td>Legacy Status</td><td>    [% review.legacy %]</td></tr>
 </table>
 <BR><table  border="1">
 <tr><td>User</td><td>             [% review.user %]</td></tr>

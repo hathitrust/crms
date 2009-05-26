@@ -92,7 +92,7 @@
 [% prev_id        = '' %]
 
 <table BORDER="1" CELLPADDING="0" CELLSPACING="0">
-  <th>ID</th><th>Title</th><th>Author</th><th>date</th><th>status</th><th>hist(0,1)</th>
+  <th>ID</th><th>Title</th><th>Author</th><th>date</th><th>status</th><th>legacy(0,1)</th>
   <th>user</th><th>attr</th><th>reason</th><th>note category</th>
   <th>note</th><th>flagged</th>
   [% FOREACH review IN reviews %]
@@ -115,7 +115,7 @@
       <td>$review.author</td>
       <td>$review.time</td>
       <td>$review.status</td>
-      <td>$review.hist</td>
+      <td>$review.legacy</td>
       <td>$review.user</td>
       <td>$review.attr</td>
       <td>$review.reason</td>
