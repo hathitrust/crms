@@ -14,7 +14,7 @@
   || <a href="crms?p=adminUser">adminster user accounts</a>
   || <a href="crms?p=adminQueue">manage the queue</a> 
   || <a href="crms?p=adminReviews">view all active reviews</a>
-  || <a href="crms?p=adminLegacyReviews">view all historical reviews</a>
+  || <a href="crms?p=adminHistoricalReviews">view all historical reviews</a>
   || <a href="crms?p=adminUserRate">view user review rates</a> 
   || <a href="crms?p=queueStatus">queue status</a>
   || <a href="crms?p=queueStatus2">queue status2</a>

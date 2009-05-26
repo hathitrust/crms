@@ -1093,7 +1093,7 @@ sub SearchAndDownload
 	}
 	elsif ( $type eq 'legacyreviews' )
 	{
-	  #for adminLegacyReviews
+	  #for adminHistoricalReviews
 	  #id, title, author, review date, status, user, attr, reason, category, note, flagged.
 	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$flagged\n};
 	}
