@@ -2,6 +2,7 @@
     <OPTION VALUE="Identifier" SELECTED> Identifier
     <OPTION VALUE="Title"> Title
     <OPTION VALUE="Author"> Author
+    <OPTION VALUE="UserId"> UserId
     <OPTION VALUE="Attribute"> Attr Num Value
     <OPTION VALUE="Reason"> Rsn Num Value
     <OPTION VALUE="Legacy"> Legacy
@@ -17,6 +18,7 @@
     <OPTION VALUE="Identifier" SELECTED> Identifier
     <OPTION VALUE="Title"> Title
     <OPTION VALUE="Author"> Author
+    <OPTION VALUE="UserId"> UserId
     <OPTION VALUE="Attribute"> Attr Num Value
     <OPTION VALUE="Reason"> Rsn Num Value
     <OPTION VALUE="History"> History
