@@ -26,7 +26,7 @@
 [% ELSE %]          [% prev = 0 %] [% END %]
 
 
-[% Total = crms.GetReviewsCount(search1, search1value, op1, search2, search2value, since, 'legacyreviews') %]
+[% Total = crms.GetReviewsCount(search1, search1value, op1, search2, search2value, since, 'historicalreviews') %]
 [% IF Total > 25 %] [% last = ( Total - ( Total mod 25 ) )  %]
 [% ELSE %]          [% last = 0 %] [% END %]
 
@@ -75,7 +75,7 @@
 </form>
 <br/>
 
-[% reviews = crms.GetReviewsRef( order, direction, search1, search1value, op1, search2, search2value, since, offset, 'legacyreviews' ) %]
+[% reviews = crms.GetReviewsRef( order, direction, search1, search1value, op1, search2, search2value, since, offset, 'historicalreviews' ) %]
 
 <a href="?p=adminHistoricalReviews&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$prev">previous 25</a> || 
 <a href="?p=adminHistoricalReviews&id=$id&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$next">next 25</a> ||
@@ -84,7 +84,7 @@
 
 (found: $Total, page = $pagenum)
 
-<a href="?p=adminHistoricalReviews&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$prev&type=legacyreviews&download=1" target="_blank">download</a>
+<a href="?p=adminHistoricalReviews&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$prev&type=historicalreviews&download=1" target="_blank">download</a>
 
 [% active_color   = '#FFFFFF' %]	
 [% color_white    = '#FFFFFF' %]	
@@ -110,7 +110,7 @@
     [% END %]
 
     <tr BGCOLOR="[% active_color %]">
-      <td>[% crms.DetailInfo( review.id, review.user, 'legacyreviews' ) %]</td>
+      <td>[% crms.DetailInfo( review.id, review.user, 'historicalreviews' ) %]</td>
       <td>[% crms.LinkToPT( review.id ) %]</td>
       <td>$review.author</td>
       <td>$review.time</td>

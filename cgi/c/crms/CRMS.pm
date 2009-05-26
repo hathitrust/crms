@@ -584,7 +584,7 @@ sub SubmitHistReview
     $eNote = $self->get('dbh')->quote($eNote);
 
     ## all good, INSERT
-    my $sql = qq{REPLACE INTO $CRMSGlobals::legacyreviewsTable (id, user, time, attr, reason, copyDate, renNum, renDate, note, expertNote, legacy, category, status) } .
+    my $sql = qq{REPLACE INTO $CRMSGlobals::historicalreviewsTable (id, user, time, attr, reason, copyDate, renNum, renDate, note, expertNote, legacy, category, status) } .
               qq{VALUES('$id', '$user', '$date', '$attr', '$reason', '$cDate', '$renNum', '$renDate', $note, $eNote, 1, '$category', $status) };
 
     $self->PrepareSubmitSql( $sql );
@@ -663,7 +663,7 @@ sub ExportReviews
         my ($attr,$reason) = $self->GetFinalAttrReason($barcode); 
 
         print $fh "$barcode\t$attr\t$reason\t$user\t$src\n";
-        $self->MoveFromReviewsToLegacyReviews($barcode); ## DEBUG
+        $self->MoveFromReviewsToHistoricalReviews($barcode); ## DEBUG
         $self->RemoveFromQueue($barcode); ## DEBUG
 
 	$count = $count + 1;
@@ -707,20 +707,20 @@ sub RemoveFromQueue
 }
 
 
-sub MoveFromReviewsToLegacyReviews
+sub MoveFromReviewsToHistoricalReviews
 {
     my $self = shift;
     my $id   = shift;
 
     my $status = $self->GetStatus ( $id );
 
-    $self->Logit( "store $id in legacyreviews" );
+    $self->Logit( "store $id in historicalreviews" );
 
 
-    my $sql = qq{REPLACE into $CRMSGlobals::legacyreviewsTable (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, flagged) select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, flagged from reviews where id='$id'};
+    my $sql = qq{REPLACE into $CRMSGlobals::historicalreviewsTable (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, flagged) select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, flagged from reviews where id='$id'};
     $self->PrepareSubmitSql( $sql );
 
-    my $sql = qq{ UPDATE $CRMSGlobals::legacyreviewsTable set status=$status WHERE id = "$id" };
+    my $sql = qq{ UPDATE $CRMSGlobals::historicalreviewsTable set status=$status WHERE id = "$id" };
     $self->PrepareSubmitSql( $sql );
 
 
@@ -837,7 +837,7 @@ sub ConvertToSearchTerm
     elsif  ( $search eq 'UserId' ) { $new_search = qq{r.user}; }
     elsif  ( $search eq 'Status' ) 
     { 
-      if ( $type eq 'legacyreviews' ){ $new_search = qq{r.status};  }
+      if ( $type eq 'historicalreviews' ){ $new_search = qq{r.status};  }
       else { $new_search = qq{q.status};  }
     }
     elsif  ( $search eq 'Attribute' ) { $new_search = qq{r.attr}; }
@@ -900,9 +900,9 @@ sub CreateSQL
     {
       $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
     }
-    elsif ( $type eq 'legacyreviews' )
+    elsif ( $type eq 'historicalreviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.flagged, r.status, b.title, b.author FROM $CRMSGlobals::legacyreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0  };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.flagged, r.status, b.title, b.author FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0  };
     }
     elsif ( $type eq 'undreviews' )
       {
@@ -962,7 +962,7 @@ sub CreateSQL
     }
     if ( $order eq 'status' )
     {
-      if ( $type eq 'legacyreviews' )
+      if ( $type eq 'historicalreviews' )
       {
 	$sql .= qq{ ORDER BY r.$order $direction $limit_section };
       }
@@ -1032,7 +1032,7 @@ sub SearchAndDownload
 	{
 	  $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote\tflagged\n};
 	}
-	elsif ( $type eq 'legacyreviews' )
+	elsif ( $type eq 'historicalreviews' )
 	{
 	  $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tflagged\n};
 	}
@@ -1091,7 +1091,7 @@ sub SearchAndDownload
 	  #id, title, author, review date, status, user, attr, reason, category, note, flagged.
 	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$flagged\n};
 	}
-	elsif ( $type eq 'legacyreviews' )
+	elsif ( $type eq 'historicalreviews' )
 	{
 	  #for adminHistoricalReviews
 	  #id, title, author, review date, status, user, attr, reason, category, note, flagged.
@@ -1168,7 +1168,7 @@ sub GetReviewsRef
 }
 
 #Used for the detail display of legacy items.
-sub GetLegacyReviewsRef
+sub GetHistoricalReviewsRef
 {
     my $self    = shift;
     my $order   = shift;
@@ -1181,7 +1181,7 @@ sub GetLegacyReviewsRef
 
     if ( ! $order || $order eq "time" ) { $order = "time DESC "; }
 
-    my $sql = qq{ SELECT id, time, duration, user, attr, reason, note, renNum, expert, copyDate, expertNote, category, legacy, renDate, flagged, status FROM $CRMSGlobals::legacyreviewsTable };
+    my $sql = qq{ SELECT id, time, duration, user, attr, reason, note, renNum, expert, copyDate, expertNote, category, legacy, renDate, flagged, status FROM $CRMSGlobals::historicalreviewsTable };
 
     if    ( $user )                    { $sql .= qq{ WHERE user = "$user" };   }
 
@@ -1249,9 +1249,9 @@ sub GetReviewsCount
     {
       $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
     }
-    elsif ( $type eq 'legacyreviews' )
+    elsif ( $type eq 'historicalreviews' )
     {
-      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::legacyreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0  };
+      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0  };
     }
     elsif ( $type eq 'undreviews' )
       {
@@ -1387,7 +1387,7 @@ sub GetLegacyStatus
     my $self = shift;
     my $id   = shift;
 
-    my $sql  = qq{ SELECT status FROM $CRMSGlobals::legacyreviewsTable WHERE id = "$id"};
+    my $sql  = qq{ SELECT status FROM $CRMSGlobals::historicalreviewsTable WHERE id = "$id"};
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
     my $str  = $self->SimpleSqlGet( $sql );
 
@@ -3064,7 +3064,7 @@ sub GetTotalInHistoricalQueue
 {
     my $self = shift;
 
-    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::legacyreviewsTable };
+    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::historicalreviewsTable };
     my $count  = $self->SimpleSqlGet( $sql );
     
     if ($count) { return $count; }
@@ -3155,7 +3155,7 @@ sub GetTotalLegacyCount
 {
     my $self = shift;
 
-    my $sql  = qq{ SELECT count(distinct id) from $CRMSGlobals::legacyreviewsTable where legacy=1};
+    my $sql  = qq{ SELECT count(distinct id) from $CRMSGlobals::historicalreviewsTable where legacy=1};
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );  
 
     return $ref->[0]->[0];
@@ -3166,7 +3166,7 @@ sub GetTotalLegacyReviewCount
 {
     my $self = shift;
 
-    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::legacyreviewsTable where legacy=1};
+    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::historicalreviewsTable where legacy=1};
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );  
 
     return $ref->[0]->[0];
@@ -3177,7 +3177,7 @@ sub GetTotalHistoricalReviewCount
 {
     my $self = shift;
 
-    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::legacyreviewsTable};
+    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::historicalreviewsTable};
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );  
 
     return $ref->[0]->[0];
