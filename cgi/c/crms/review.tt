@@ -11,8 +11,8 @@
 [% navright  = cgi.param('navRight') %]
 [% crms.UpdateTitle %]
 
-[% regNum     = cgi.param('renNum') %]
-[% regDate    = cgi.param('regDate') %]
+[% renNum     = cgi.param('renNum') %]
+[% renDate    = cgi.param('renDate') %]
 [% comm       = cgi.param('comm') %]
 [% category   = cgi.param('category') %]
 [% select     = cgi.param('rights') %]
@@ -69,12 +69,12 @@
 [% title      = crms.GetTitle( barcode )                    %]
 [% encTitle   = crms.GetEncTitle( barcode ) | url           %]
 
-[% IF NOT regNum %] 
-[% regNum     = crms.GetRegNum( barcode, user )             %]
+[% IF NOT renNum %] 
+[% renNum     = crms.GetRenNum( barcode, user )             %]
 [% END %]
 
-[% IF NOT regDate %] 
-[% regDate    = crms.GetRegDate( regNum )                   %]
+[% IF NOT renDate %] 
+[% renDate    = crms.GetRenDate( renNum )                   %]
 [% END %] 
 
 [% crPage     = crms.GetCopyrightPage( barcode )            %]
@@ -224,7 +224,7 @@
       <div class="navbottom">
         [% comment = "" %] 
 
-        [% INCLUDE submitReviewForm.tt barcode = barcode, regNum   = regNum,   regDate = regDate,
+        [% INCLUDE submitReviewForm.tt barcode = barcode, renNum   = renNum,   renDate = renDate,
                                        comment = comment, copyDate = copyDate, comm    = comm,    
                                        category = category, editing = editing, error   = error,
                                        navright = navright, select = select %]

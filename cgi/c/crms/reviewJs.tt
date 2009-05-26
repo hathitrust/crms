@@ -55,7 +55,7 @@ function flipFrame2() {
 function popRenewalDate() {
     var req = null; 
     var id  = document.submitReview.renNum.value
-    var old = document.submitReview.regDate.value;
+    var old = document.submitReview.renDate.value;
  
     if (window.XMLHttpRequest)
     {
@@ -75,17 +75,17 @@ function popRenewalDate() {
 
     req.onreadystatechange = function()
     { 
-        document.submitReview.regDate.value = "searching...";
+        document.submitReview.renDate.value = "searching...";
         if(req.readyState == 4)
         {
             if(req.status == 200)
             {
-                document.submitReview.regDate.value= req.responseText;    
+                document.submitReview.renDate.value= req.responseText;    
             }    
             else    
             {
-                // document.submitReview.regDate.value = old;
-                document.submitReview.regDate.value = "";
+                // document.submitReview.renDate.value = old;
+                document.submitReview.renDate.value = "";
             }
         } 
     }; 

@@ -5,7 +5,7 @@
 [% rights     = cgi.param('rights')     %]
 [% reason     = cgi.param('reason')     %]
 [% renNum     = cgi.param('renNum')     %]
-[% regDate    = cgi.param('regDate')    %]
+[% renDate    = cgi.param('renDate')    %]
 [% exp        = cgi.param('exp')        %]
 [% comment    = cgi.param('comment')    %]
 [% category   = cgi.param('category')   %]
@@ -23,7 +23,7 @@
   <tr><td>Item:</td> <td>[% barcode %]</td><tr>
   <tr><td>Rights/Reason:</td> <td>[% rightsName %]/[% reasonName %]</td><tr>
   <tr><td>Renewal Number:</td> <td>[% renNum %]</td><tr>
-  <tr><td>Renewal Date:</td> <td>[% regDate %]</td><tr>
+  <tr><td>Renewal Date:</td> <td>[% renDate %]</td><tr>
   <tr><td>copy Date:</td> <td>[% copyDate %]</td><tr>
   <tr><td>Final:</td> <td>[% exp %]</td><tr>
   <tr><td>category:</td> <td>[% category %]</td><tr>
@@ -32,7 +32,7 @@
 
 <br />
 
-[% IF crms.ValidateSubmission(rights, reason, comment, category, renNum, regDate, user) %]
+[% IF crms.ValidateSubmission(rights, reason, comment, category, renNum, renDate, user) %]
   <div>
     <form name="submitReview" action="crms">
       <input type="hidden" name="p"          value="submitReview"> 
@@ -41,7 +41,7 @@
       <input type="hidden" name="rights"     value="[% rights     %]"/>
       <input type="hidden" name="reason"     value="[% reason     %]"/>
       <input type="hidden" name="renNum"     value="[% renNum     %]"/>
-      <input type="hidden" name="regDate"    value="[% regDate    %]"/>
+      <input type="hidden" name="renDate"    value="[% renDate    %]"/>
       <input type="hidden" name="exp"        value="[% exp        %]"/>
       <input type="hidden" name="comment"    value="[% comment    %]"/>
       <input type="hidden" name="category"   value="[% category   %]"/>

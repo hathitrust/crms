@@ -414,13 +414,13 @@ sub IsItemInReviews
 
 ## ----------------------------------------------------------------------------
 ##  Function:   submit review
-##  Parameters: id, user, attr, reason, note, stanford reg. number
+##  Parameters: id, user, attr, reason, note, stanford ren. number
 ##  Return:     1 || 0
 ## ----------------------------------------------------------------------------
 sub SubmitReview
 {
     my $self = shift;
-    my ($id, $user, $attr, $reason, $copyDate, $note, $regNum, $exp, $regDate, $category) = @_;
+    my ($id, $user, $attr, $reason, $copyDate, $note, $renNum, $exp, $renDate, $category) = @_;
 
     if ( ! $self->ChechForId( $id ) )                     { $self->Logit("id check failed");          return 0; }
     if ( ! $self->CheckReviewer( $user, $exp ) )          { $self->Logit("review check failed");      return 0; }
@@ -428,13 +428,13 @@ sub SubmitReview
     if ( ! $self->ValidateReason( $reason ) )             { $self->Logit("reason check failed");      return 0; }
     if ( ! $self->CheckAttrReasonComb( $attr, $reason ) ) { $self->Logit("attr/reason check failed"); return 0; }
 
-    #remove any blancks from regNum
-    $regNum =~ s, ,,gs;
+    #remove any blancks from renNum
+    $renNum =~ s, ,,gs;
 
     ## do some sort of check for expert submissions
 
-    my @fieldList = ("id", "user", "attr", "reason", "note", "regNum", "regDate", "category");
-    my @valueList = ($id,  $user,  $attr,  $reason,  $note,  $regNum,  $regDate, $category);
+    my @fieldList = ("id", "user", "attr", "reason", "note", "renNum", "renDate", "category");
+    my @valueList = ($id,  $user,  $attr,  $reason,  $note,  $renNum,  $renDate, $category);
 
     if ($exp)      { push(@fieldList, "expert");   push(@valueList, $exp); }
     if ($copyDate) { push(@fieldList, "copyDate"); push(@valueList, $copyDate); }
@@ -489,22 +489,22 @@ sub ProcessReviews
 
     my $yesterday = $self->GetYesterday();
  
-    #my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where revcnt = 2 and status = 0) AND time < "$yesterday"  order by id};
+    #my $sql = qq{SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where revcnt = 2 and status = 0) AND time < "$yesterday"  order by id};
 
-my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where revcnt = 2 and status = 0) order by id};
+my $sql = qq{SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where revcnt = 2 and status = 0) order by id};
 
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my $check_time   = 0;
-    my ( $prev_attr, $prev_reason, $prev_regDate, $prev_regNum );
+    my ( $prev_attr, $prev_reason, $prev_renDate, $prev_renNum );
     foreach my $row ( @{$ref} )
     {
         my $id      =  $row->[0];
 	my $user    = $row->[1];
 	my $attr    = $row->[2];
         my $reason  = $row->[3];
-	my $regNum  = $row->[4];
-        my $regDate = $row->[5];
+	my $renNum  = $row->[4];
+        my $renDate = $row->[5];
 
 	if ( $check_time )
 	{	  
@@ -520,7 +520,7 @@ my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::r
 	      #If they are ic/ren then the renal date and id must match
 	      if ( ( $attr == 2 ) && ( $reason == 7 ) )
 	      {
-		 if ( ( $regNum == $prev_regNum ) && ( $regDate == $prev_regDate ) )
+		 if ( ( $renNum == $prev_renNum ) && ( $renDate == $prev_renDate ) )
 		 {
 		   #Mark as 4
 		   $self->RegisterStatus( $id, 4 );	      
@@ -551,8 +551,8 @@ my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::r
 	$prev_attr = $attr;
 	$prev_reason = $reason;
 
-	$prev_regDate = $regDate;
-	$prev_regNum = $regNum;
+	$prev_renDate = $renDate;
+	$prev_renNum = $renNum;
     }
 
     my $sql  = qq{ INSERT INTO  processstatus VALUES ( )};
@@ -568,7 +568,7 @@ my $sql = qq{SELECT id, user, attr, reason, regNum, regDate FROM $CRMSGlobals::r
 sub SubmitHistReview
 {
     my $self = shift;
-    my ($id, $user, $date, $attr, $reason, $cDate, $regNum, $regDate, $note, $eNote, $category, $status) = @_;
+    my ($id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $eNote, $category, $status) = @_;
 
     ## change attr and reason back to numbers
     $attr   = $self->GetRightsNum( $attr );
@@ -584,8 +584,8 @@ sub SubmitHistReview
     $eNote = $self->get('dbh')->quote($eNote);
 
     ## all good, INSERT
-    my $sql = qq{REPLACE INTO $CRMSGlobals::legacyreviewsTable (id, user, time, attr, reason, copyDate, regNum, regDate, note, expertNote, legacy, category, status) } .
-              qq{VALUES('$id', '$user', '$date', '$attr', '$reason', '$cDate', '$regNum', '$regDate', $note, $eNote, 1, '$category', $status) };
+    my $sql = qq{REPLACE INTO $CRMSGlobals::legacyreviewsTable (id, user, time, attr, reason, copyDate, renNum, renDate, note, expertNote, legacy, category, status) } .
+              qq{VALUES('$id', '$user', '$date', '$attr', '$reason', '$cDate', '$renNum', '$renDate', $note, $eNote, 1, '$category', $status) };
 
     $self->PrepareSubmitSql( $sql );
 
@@ -717,7 +717,7 @@ sub MoveFromReviewsToLegacyReviews
     $self->Logit( "store $id in legacyreviews" );
 
 
-    my $sql = qq{REPLACE into $CRMSGlobals::legacyreviewsTable (id, time, user, attr, reason, note, regNum, expert, duration, legacy, expertNote, regDate, copyDate, category, flagged) select id, time, user, attr, reason, note, regNum, expert, duration, legacy, expertNote, regDate, copyDate, category, flagged from reviews where id='$id'};
+    my $sql = qq{REPLACE into $CRMSGlobals::legacyreviewsTable (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, flagged) select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, flagged from reviews where id='$id'};
     $self->PrepareSubmitSql( $sql );
 
     my $sql = qq{ UPDATE $CRMSGlobals::legacyreviewsTable set status=$status WHERE id = "$id" };
@@ -894,30 +894,30 @@ sub CreateSQL
     my $sql;
     if ( $type eq 'reviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.regDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status >= 0 };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status >= 0 };
     }
     elsif ( $type eq 'conflict' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.regDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
     }
     elsif ( $type eq 'legacyreviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.regDate, r.flagged, r.status, b.title, b.author FROM $CRMSGlobals::legacyreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0  };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.flagged, r.status, b.title, b.author FROM $CRMSGlobals::legacyreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0  };
     }
     elsif ( $type eq 'undreviews' )
       {
-	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.regDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
     }
     elsif ( $type eq 'userreviews' )
       {
 	my $user = $self->get( "user" );
-	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.regDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
     }
     elsif ( $type eq 'editreviews' )
     {
 	my $user = $self->get( "user" );
 	my $yesterday = $self->GetYesterday();
-	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.regNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.regDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
+	$sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.flagged, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
     }
 
     my ( $search1term, $search2term );
@@ -1049,13 +1049,13 @@ sub SearchAndDownload
         my $attr       = $self->GetRightsName($row->[4]);
         my $reason     = $self->GetReasonName($row->[5]);
         my $note       = $row->[6];
-        my $regNum     = $row->[7];
+        my $renNum     = $row->[7];
         my $expert     = $row->[8];
         my $copyDate   = $row->[9];
         my $expertNote = $row->[10];
         my $category   = $row->[11];
         my $legacy     = $row->[12];
-        my $regDate    = $row->[13];
+        my $renDate    = $row->[13];
         my $flagged     = $row->[14];
         my $status     = $row->[15];
         my $title      = $row->[16];
@@ -1146,13 +1146,13 @@ sub GetReviewsRef
                      attr       => $self->GetRightsName($row->[4]),
                      reason     => $self->GetReasonName($row->[5]),
                      note       => $row->[6],
-                     regNum     => $row->[7],
+                     renNum     => $row->[7],
                      expert     => $row->[8],
                      copyDate   => $row->[9],
                      expertNote => $row->[10],
                      category   => $row->[11],
                      legacy     => $row->[12],
-                     regDate    => $row->[13],
+                     renDate    => $row->[13],
                      flagged     => $row->[14],
                      status     => $row->[15],
                      title      => $row->[16],
@@ -1181,7 +1181,7 @@ sub GetLegacyReviewsRef
 
     if ( ! $order || $order eq "time" ) { $order = "time DESC "; }
 
-    my $sql = qq{ SELECT id, time, duration, user, attr, reason, note, regNum, expert, copyDate, expertNote, category, legacy, regDate, flagged, status FROM $CRMSGlobals::legacyreviewsTable };
+    my $sql = qq{ SELECT id, time, duration, user, attr, reason, note, renNum, expert, copyDate, expertNote, category, legacy, renDate, flagged, status FROM $CRMSGlobals::legacyreviewsTable };
 
     if    ( $user )                    { $sql .= qq{ WHERE user = "$user" };   }
 
@@ -1208,13 +1208,13 @@ sub GetLegacyReviewsRef
                      attr       => $self->GetRightsName($row->[4]),
                      reason     => $self->GetReasonName($row->[5]),
                      note       => $row->[6],
-                     regNum     => $row->[7],
+                     renNum     => $row->[7],
                      expert     => $row->[8],
                      copyDate   => $row->[9],
                      expertNote => $row->[10],
                      category   => $row->[11],
                      legacy     => $row->[12],
-                     regDate    => $row->[13],
+                     renDate    => $row->[13],
                      flagged     => $row->[14],
                      status     => $row->[15]
                    };
@@ -1744,26 +1744,26 @@ sub AddUser
 sub CheckRenDate
 {
   my $self = shift;
-  my $regNum = shift;
-  my $regDate = shift;
+  my $renNum = shift;
+  my $renDate = shift;
 
   my $errorMsg = '';
 
-  if ( $regDate )
+  if ( $renDate )
   {
-    if ( $regDate =~ /^\d{1,2}[A-Za-z]{3}\d{2}$/ )
+    if ( $renDate =~ /^\d{1,2}[A-Za-z]{3}\d{2}$/ )
     {
-      $regDate =~ s,\w{5}(.*),$1,;
-      $regDate = qq{19$regDate};
+      $renDate =~ s,\w{5}(.*),$1,;
+      $renDate = qq{19$renDate};
 
-      if ( $regDate < 1950 )
+      if ( $renDate < 1950 )
       {
-	$errorMsg .= qq{the ren date you have entered $regDate is before 1950, we should not be recording them.   };
+	$errorMsg .= qq{the ren date you have entered $renDate is before 1950, we should not be recording them.   };
       }
 	  
-      if ( ( $regDate >= 1950 )  && ( $regDate <= 1953 ) )
+      if ( ( $renDate >= 1950 )  && ( $renDate <= 1953 ) )
       {
-	if ( ( $regNum =~ m,^R\w{5}$, ) || ( $regNum =~ m,^R\w{6}$, ))
+	if ( ( $renNum =~ m,^R\w{5}$, ) || ( $renNum =~ m,^R\w{6}$, ))
 	{}
 	else
 	{
@@ -1771,9 +1771,9 @@ sub CheckRenDate
 	}
 
       }
-      if ( $regDate >= 1978 )
+      if ( $renDate >= 1978 )
       {
-	if ( $regNum =~ m,^RE\w{6}$, )
+	if ( $renNum =~ m,^RE\w{6}$, )
 	{}
 	else
 	{
@@ -1798,7 +1798,7 @@ sub CheckRenDate
 sub ValidateSubmission2
 {
     my $self = shift;
-    my ($attr, $reason, $note, $category, $regNum, $regDate, $user) = @_;
+    my ($attr, $reason, $note, $category, $renNum, $renDate, $user) = @_;
     my $errorMsg = "";
 
     ## check user
@@ -1816,37 +1816,37 @@ sub ValidateSubmission2
         $errorMsg .= qq{und/nfi must include note category and note text.   };
     }
 
-    ## ic/ren requires a reg number
-    if ( $attr == 2 && $reason == 7 && ( ( ! $regNum ) || ( ! $regDate ) )  ) 
+    ## ic/ren requires a ren number
+    if ( $attr == 2 && $reason == 7 && ( ( ! $renNum ) || ( ! $renDate ) )  ) 
     {
         $errorMsg .= qq{ic/ren must include renewal id and renewal date.  };
     }
     elsif ( $attr == 2 && $reason == 7 )
     {
-        $regDate =~ s,.*[A-Za-z](.*),$1,;
-        $regDate = qq{19$regDate};
+        $renDate =~ s,.*[A-Za-z](.*),$1,;
+        $renDate = qq{19$renDate};
 
-        if ( $regDate < 1950 )
+        if ( $renDate < 1950 )
         {
-           $errorMsg .= qq{renewal has expired; volume is pd.  date entered is $regDate };
+           $errorMsg .= qq{renewal has expired; volume is pd.  date entered is $renDate };
         }
     }
 
-    ## pd/ren requires a reg number
-    if ( $attr == 1 && $reason == 7 &&  ( ( $regNum ) || ( $regDate ) )  ) 
+    ## pd/ren requires a ren number
+    if ( $attr == 1 && $reason == 7 &&  ( ( $renNum ) || ( $renDate ) )  ) 
     {
         $errorMsg .= qq{pd/ren should not include renewal info.  };
     }
 
-    ## pd/ncn requires a reg number
-    if (  $attr == 1 && $reason == 2 && ( ( $regNum ) || ( $regDate ) ) ) 
+    ## pd/ncn requires a ren number
+    if (  $attr == 1 && $reason == 2 && ( ( $renNum ) || ( $renDate ) ) ) 
     {
         $errorMsg .= qq{pd/ncn should not include renewal info.  };
     }
 
 
-    ## pd/cdpp requires a reg number
-    if (  $attr == 1 && $reason == 9 && ( ( $regNum ) || ( $regDate )  ) )
+    ## pd/cdpp requires a ren number
+    if (  $attr == 1 && $reason == 9 && ( ( $renNum ) || ( $renDate )  ) )
     {
         $errorMsg .= qq{pd/cdpp should not include renewal info.  };
     }
@@ -1856,8 +1856,8 @@ sub ValidateSubmission2
         $errorMsg .= qq{pd/cdpp must include note category and note text.  };
     }
 
-    ## ic/cdpp requires a reg number
-    if (  $attr == 2 && $reason == 9 && ( ( $regNum ) || ( $regDate ) ) )
+    ## ic/cdpp requires a ren number
+    if (  $attr == 2 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
     {
         $errorMsg .= qq{ic/cdpp should not include renewal info.  };
     }
@@ -2785,7 +2785,7 @@ sub GetItemReviewDetails
     my $id   = shift;
     my $user = shift;
 
-    my $sql  = qq{ SELECT attr, reason, regNum, note FROM reviews WHERE id = "$id"};
+    my $sql  = qq{ SELECT attr, reason, renNum, note FROM reviews WHERE id = "$id"};
 
     ## if name, limit to just that users review details
     if ( $user ) { $sql .= qq{ AND user = "$user" }; }
@@ -2867,31 +2867,31 @@ sub GetCopyDate
 }
 
 ## ----------------------------------------------------------------------------
-##  Function:   get regNum (stanford reg num)
+##  Function:   get renNum (stanford ren num)
 ##  Parameters: id
-##  Return:     regNum
+##  Return:     renNum
 ## ----------------------------------------------------------------------------
-sub GetRegNum
+sub GetRenNum
 {
     my $self = shift;
     my $id   = shift;
     my $user = shift;
-    my $sql  = qq{ SELECT regNum FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
+    my $sql  = qq{ SELECT renNum FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
 
     if ( ! $self->IsUserExpert($user) ) { $sql .= qq{ AND user = "$user"}; }
 
     return $self->SimpleSqlGet( $sql );
 }
 
-sub GetRegNums
+sub GetRenNums
 {   
     my $self = shift;
     my $id   = shift;
     my $user = shift;
 
-    my $sql  = qq{SELECT regNum FROM $CRMSGlobals::reviewsTable WHERE id = "$id" };
+    my $sql  = qq{SELECT renNum FROM $CRMSGlobals::reviewsTable WHERE id = "$id" };
 
-    ## if not expert, limit to just that users regNums
+    ## if not expert, limit to just that users renNums
     if ( ! $self->IsUserExpert($user) ) { $sql .= qq{ AND user = "$user"}; }
 
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
@@ -2901,7 +2901,7 @@ sub GetRegNums
     return @return;
 }
 
-sub GetRegDate
+sub GetRenDate
 {
     my $self = shift;
     my $id   = shift;

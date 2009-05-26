@@ -14,7 +14,7 @@
     <tr>
       <td class="test" align="left" ><strong>Renewal ID: </strong></td>
       <td>
-        <input type="text" name="renNum" value="[% regNum %]" size="8" onBlur="javascript:popRenewalDate()"/>
+        <input type="text" name="renNum" value="[% renNum %]" size="8" onBlur="javascript:popRenewalDate()"/>
       </td>
     </tr>
     <tr>
@@ -23,7 +23,7 @@
           <a  href="javascript:popRenewalDate()" accesskey="d">Get Renewal Date:</a>
         </strong>
       </td>
-      <td><input type="text"  id="getDate" name="regDate" value="[% regDate %]" size="8" READONLY/></td>
+      <td><input type="text"  id="getDate" name="renDate" value="[% renDate %]" size="8" READONLY/></td>
     </tr>
   </table>
 

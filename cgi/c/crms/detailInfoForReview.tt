@@ -23,7 +23,7 @@ More Information....&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="JavaScript:window.clo
 <BR><table  border="1">
 <tr><td>User</td><td>             [% review.user %]</td></tr>
 <tr><td>Attr/Reason</td><td>      [% review.attr %]/[% review.reason %]</td></tr>
-<tr><td>Renewal Info</td><td>     [%  review.regDate %],[% review.regNum %] </td></tr>
+<tr><td>Renewal Info</td><td>     [%  review.renDate %],[% review.renNum %] </td></tr>
 <tr><td>Note Category</td><td>    [% review.category %]</td></tr>
 <tr><td>User Note</td><td>        [% review.note %]</td></tr>
 </table>

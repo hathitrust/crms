@@ -98,14 +98,14 @@ if  (  $cgi->param('p') eq 'confirmReview' )
     my $comment    = $cgi->param('comment');
     my $category   = $cgi->param('category');
     my $renNum     = $cgi->param('renNum');
-    my $regDate    = $cgi->param('regDate');
+    my $renDate    = $cgi->param('renDate');
     my $id         = $cgi->param('barcode');
     my $editing    = $cgi->param('editing');
     my $navright   = $cgi->param('navRight');
 
     my ( $rights, $reason ) = $crms->GetAttrReasonFromCode($EncRights);
 
-    my $errorMsg = $crms->ValidateSubmission2( $rights, $reason, $comment, $category, $renNum, $regDate, $user );
+    my $errorMsg = $crms->ValidateSubmission2( $rights, $reason, $comment, $category, $renNum, $renDate, $user );
   
     if ( $errorMsg )
     {
@@ -121,7 +121,7 @@ if  (  $cgi->param('p') eq 'confirmReview' )
        $cgi->param('comm',     $comment );
        $cgi->param('category', $category);
        $cgi->param('renNum',   $renNum );
-       $cgi->param('regDate',  $regDate);
+       $cgi->param('renDate',  $renDate);
        $cgi->param('editing',  $editing);
 
      }
@@ -133,7 +133,7 @@ if  (  $cgi->param('p') eq 'confirmReview' )
        my $expert;
        if ( $crms->IsUserExpert ( $user ) ) { $expert = 2; }
       
-       $crms->SubmitReview($id, $user, $rights, $reason, $copyDate, $comment, $renNum, $expert, $regDate, $category);
+       $crms->SubmitReview($id, $user, $rights, $reason, $copyDate, $comment, $renNum, $expert, $renDate, $category);
        if  ( $editing )
        {
 	 $cgi->delete_all();

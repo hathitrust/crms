@@ -5,13 +5,13 @@
 [% rights     = cgi.param('rights')     %]
 [% reason     = cgi.param('reason')     %]
 [% renNum     = cgi.param('renNum')     %]
-[% regDate    = cgi.param('regDate')    %]
+[% renDate    = cgi.param('renDate')    %]
 [% exp        = cgi.param('exp')        %]
 [% comment    = cgi.param('comment')    %]
 [% category   = cgi.param('category')   %]
 [% done       = cgi.param('done')       %]
 
-[% IF crms.SubmitReview( barcode, user, rights, reason, copyDate, comment, renNum, exp, regDate, category) %]
+[% IF crms.SubmitReview( barcode, user, rights, reason, copyDate, comment, renNum, exp, renDate, category) %]
   [% IF done %]
     <body onLoad="setTimeout('redirHome()', 2000)">
       <p>Thanks. Going Home...</p>
