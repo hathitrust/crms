@@ -172,7 +172,7 @@ sub LoadNewItems
     }
 
     #Record the update to the queue
-    my $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (itemcount ) values ($count)};
+    my $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source ) values ($count, 'RIGHTSDB')};
     $self->PrepareSubmitSql( $sql );
 
 }
@@ -304,6 +304,10 @@ sub AddItemToQueueOrSetItemActive
       my $author = $self->GetEncAuthor ( $id );
       $self->UpdateAuthor ( $id, $author );
       
+      my $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source ) values (1, 'ADMINUI')};
+      $self->PrepareSubmitSql( $sql );
+
+
       return 1;
     }
 
@@ -361,6 +365,9 @@ sub GiveItemsInQueuePriority
 
 	  my $author = $self->GetEncAuthor ( $id );
 	  $self->UpdateAuthor ( $id, $author );
+
+	  my $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source ) values (1, 'ADMINSCRIPT')};
+	  $self->PrepareSubmitSql( $sql );
 
       }
 	
@@ -3188,7 +3195,7 @@ sub GetLastQueueTime
 {
     my $self = shift;
 
-    my $sql  = qq{ SELECT max( time ) from $CRMSGlobals::queuerecordTable};
+    my $sql  = qq{ SELECT max( time ) from $CRMSGlobals::queuerecordTable where source = 'RIGHTSDB'};
     my $latest_time  = $self->SimpleSqlGet( $sql );
     
     #Keep only the date
@@ -3215,7 +3222,7 @@ sub GetLastIdQueueCount
 
     my $latest_time = $self->GetLastQueueTime();
 
-    my $sql  = qq{ SELECT itemcount from $CRMSGlobals::queuerecordTable where time like '$latest_time%'};
+    my $sql  = qq{ SELECT itemcount from $CRMSGlobals::queuerecordTable where time like '$latest_time%' AND source='RIGHTSDB'};
     my $latest_time  = $self->SimpleSqlGet( $sql );
     
     return $latest_time;
