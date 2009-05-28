@@ -141,7 +141,7 @@ sub SimpleSqlGet
 ##  Parameters: date
 ##  Return:     NOTHING, loads DB
 ## ----------------------------------------------------------------------------
-sub LoadNewItems
+sub LoadNewItemsBackup
 {
     my $self    = shift;
     my $start   = shift;
@@ -177,6 +177,106 @@ sub LoadNewItems
 
 }
 
+sub GetCandidatesTime
+{
+  my $self = shift;
+
+  my $sql = qq{select max(time) from candidates};
+  my $time  = $self->SimpleSqlGet( $sql );
+
+  return $time;
+  
+}
+
+
+sub LoadNewItemsInCandidates
+{
+    my $self    = shift;
+
+    my $start = $self->GetCandidatesTime();
+
+    my $msg = qq{Starting to load Candidate from rights table.\n};
+    $msg .= qq{The max timestamp in the cadidates table $start.\n};
+    print $msg;
+
+    my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time, attr, reason FROM rights WHERE time >= '$start' GROUP BY id};
+
+    my $ref = $self->get('sdr_dbh')->selectall_arrayref( $sql );
+
+    if ($self->get('verbose')) { print "found: " .  scalar( @{$ref} ) . ": $sql\n"; }
+
+    ## design note: if these were in the same DB we could just INSERT
+    ## into the new table, not SELECT then INSERT
+    my $inqueue;
+    foreach my $row ( @{$ref} ) 
+    { 
+      my $attr =  $row->[2];
+      my $reason =  $row->[3];
+
+      if ( ( $attr == 2 ) && ( $reason == 1 ) )
+      {	
+	$self->AddItemToCandidates( $row->[0], $row->[1], 0, 0 ); 
+      }
+    }
+
+    $msg = qq{All DONE updating candidates from rights.\n\n};
+    print $msg;
+
+    return 1;
+}
+
+
+sub LoadNewItems
+{
+    my $self    = shift;
+
+    my $queuesize = $self->GetQueueSize();
+
+    my $msg = qq{Starting to load queue from candidates.\n};
+    $msg .= qq{The queue has $queuesize items in it presently.\n};
+    print $msg;
+
+    if ( $queuesize < 800 )
+    {  
+      my $limitcount = 800 - $queuesize;
+      
+      my $sql = qq{SELECT id, time, pub_date, title, author from candidates where id not in ( select distinct id from reviews ) and id not in ( select distinct id from historicalreviews )order by time desc};
+
+      my $ref = $self->get('dbh')->selectall_arrayref( $sql );
+
+      if ($self->get('verbose')) { print "found: " .  scalar( @{$ref} ) . ": $sql\n"; }
+
+      ## design note: if these were in the same DB we could just INSERT
+      ## into the new table, not SELECT then INSERT
+      my $count = 0;
+      my $inqueue;
+      foreach my $row ( @{$ref} ) 
+      { 
+	my $pub_date = $row->[2];
+        my $title = $row->[3];
+        my $author = $row->[4];
+
+	my $inqueue = $self->AddItemToQueue( $row->[0], $row->[1], $pub_date, $title, $author, 0, 0 ); 
+	$count = $count + $inqueue;
+
+	if ( $count == $limitcount )
+	{
+	  goto FINISHED;
+	}
+      }
+
+    FINISHED:
+
+      #Record the update to the queue
+      my $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source ) values ($count, 'RIGHTSDB')};
+      $self->PrepareSubmitSql( $sql );
+    }
+
+    $msg = qq{All DONE loading queue from candidates.\n};
+    print $msg;
+
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   get the latest time from the queue
 ##  Parameters: NOTHING
@@ -192,27 +292,12 @@ sub GetUpdateTime
     return $ref[0] || '2000-01-01';
 }
 
-sub AddItemToQueue
+sub AddItemToCandidates
 {
     my $self     = shift;
     my $id       = shift;
     my $time     = shift;
-    my $status   = shift;
-    my $priority = shift;
 
-
-    ## give the existing item higher priority
-    if ( $self->IsItemInQueue( $id ) ) 
-    {  
-      my $sql = qq{UPDATE $CRMSGlobals::queueTable SET time='$time' WHERE id='$id'};
-      $self->PrepareSubmitSql( $sql ); 
-
-      #return 0 because item was not added.
-      return 0;
-    }
-
-    ## skip if $id has been reviewed
-    if ( $self->IsItemInReviews( $id ) ) { return 0; }
 
     my $record =  $self->GetRecordMetadata($id);
 
@@ -233,22 +318,61 @@ sub AddItemToQueue
       #check FMT.
       if ( ! $self->IsFormatBK( $id, $record ) ) { $self->Logit( "skip not fmt bk: $id" ); return 0; }
 
+      my $author = $self->GetEncAuthor ( $id );
+      ## my $ti   = $self->GetMarcDatafield( $id, "245", "a");
+      my $title   = $self->GetRecordTitleBc2Meta( $id );
+      $title  =~ s,\',\\',gs;
 
-      my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub', $priority)};
+      my $sql = qq{REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub', '$title', '$author')};
 
       $self->PrepareSubmitSql( $sql );
-      
-      $self->UpdateTitle ( $id );
-      
-      #Update the pub date in bibdata
-      $self->UpdatePubDate ( $id, $pub );
-
-      my $author = $self->GetEncAuthor ( $id );
-      $self->UpdateAuthor ( $id, $author );
       
       return 1;
 
     }
+
+    return 0;
+}
+
+
+sub AddItemToQueue
+{
+    my $self     = shift;
+    my $id       = shift;
+    my $time     = shift;
+    my $pub_date = shift;
+    my $title    = shift; 
+    my $author   = shift;
+    my $status   = shift;
+    my $priority = shift;
+
+
+    ## give the existing item higher priority
+    if ( $self->IsItemInQueue( $id ) ) 
+    {  
+      my $sql = qq{UPDATE $CRMSGlobals::queueTable SET time='$time' WHERE id='$id'};
+      $self->PrepareSubmitSql( $sql ); 
+
+      #return 0 because item was not added.
+      return 0;
+    }
+
+    my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub_date', $priority)};
+
+    $self->PrepareSubmitSql( $sql );
+      
+    $self->UpdateTitle ( $id, $title );
+      
+    #Update the pub date in bibdata
+    $self->UpdatePubDate ( $id, $pub_date );
+    
+    if ( ! $author )
+    {
+      $author = $self->GetEncAuthor ( $id );
+    }
+    $self->UpdateAuthor ( $id, $author );
+      
+    return 1;
 
     return 0;
 }
@@ -454,7 +578,6 @@ sub SubmitReview
     $self->PrepareSubmitSql( $sql );
 
     if ( $exp ) { $self->SetExpertReviewCnt( $id, $user );  }
-    else        { $self->IncrementRevCount( $id ); }
 
     $self->EndTimer( $id, $user );
     $self->UnlockItem( $id, $user );
@@ -476,34 +599,18 @@ sub SetExpertReviewCnt
 
 }
 
-sub IncrementRevCount
+sub GetOtherReview 
 {
     my $self = shift;
     my $id   = shift;
+    my $user = shift;
 
-    my $sql  = qq{ SELECT revcnt from $CRMSGlobals::queueTable  where id="$id"};
-    my $newCount  = $self->SimpleSqlGet( $sql );
-    $newCount = $newCount + 1;
-    
-    my $sql = qq{ UPDATE $CRMSGlobals::queueTable set revcnt=$newCount WHERE id = "$id" };
-    $self->PrepareSubmitSql( $sql );
 
-}
-
-sub ProcessReviews
-{
-    my $self = shift;
-
-    my $yesterday = $self->GetYesterday();
- 
-    #my $sql = qq{SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where revcnt = 2 and status = 0) AND time < "$yesterday"  order by id};
-
-my $sql = qq{SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where revcnt = 2 and status = 0) order by id};
+    my $sql = qq{SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable WHERE id="$id" and user != "$user"};
 
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
-    my $check_time   = 0;
-    my ( $prev_attr, $prev_reason, $prev_renDate, $prev_renNum );
+
     foreach my $row ( @{$ref} )
     {
         my $id      =  $row->[0];
@@ -513,21 +620,45 @@ my $sql = qq{SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::r
 	my $renNum  = $row->[4];
         my $renDate = $row->[5];
 
-	if ( $check_time )
-	{	  
-	  if ( ( $attr == $prev_attr ) && ( $reason == $prev_reason ) )
-	  {
-	    #If both und/nfi them status is 3
-	    if ( ( $attr == 5 ) && ( $reason == 8 ) )
-	    {
+        return ( $user, $attr, $reason, $renNum, $renDate );
+   }
+
+}
+
+sub ProcessReviews
+{
+    my $self = shift;
+
+    my $yesterday = $self->GetYesterday();
+ 
+    my $sql = qq{SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where status = 0) group by id having count(*) = 2};
+
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    foreach my $row ( @{$ref} )
+    {
+        my $id      =  $row->[0];
+	my $user    = $row->[1];
+	my $attr    = $row->[2];
+        my $reason  = $row->[3];
+	my $renNum  = $row->[4];
+        my $renDate = $row->[5];
+
+        my ( $other_user, $other_attr, $other_reason, $other_renDate, $other_renNum ) = $self->GetOtherReview ( $id, $user );
+
+	if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
+	{
+           #If both und/nfi them status is 3
+	   if ( ( $attr == 5 ) && ( $reason == 8 ) )
+	   {
 	      $self->RegisterStatus( $id, 3 );	      
-	    }
-	    else #Mark as 4 - two that agree
-	    {
+	   }
+	   else #Mark as 4 - two that agree
+	   {
 	      #If they are ic/ren then the renal date and id must match
 	      if ( ( $attr == 2 ) && ( $reason == 7 ) )
 	      {
-		 if ( ( $renNum == $prev_renNum ) && ( $renDate == $prev_renDate ) )
+		 if ( ( $renNum == $other_renNum ) && ( $renDate == $other_renDate ) )
 		 {
 		   #Mark as 4
 		   $self->RegisterStatus( $id, 4 );	      
@@ -548,24 +679,14 @@ my $sql = qq{SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::r
 	  {
 	    $self->RegisterStatus( $id, 2 );	      
 	  }
-
-	  $check_time = 0;
-	}
-	else
-	{
-	  $check_time = 1;
-	}
-	$prev_attr = $attr;
-	$prev_reason = $reason;
-
-	$prev_renDate = $renDate;
-	$prev_renNum = $renNum;
     }
 
     my $sql  = qq{ INSERT INTO  processstatus VALUES ( )};
     $self->PrepareSubmitSql( $sql );
 
 }
+
+
 
 ## ----------------------------------------------------------------------------
 ##  Function:   submit historical review  (from excel SS)   
@@ -724,7 +845,7 @@ sub MoveFromReviewsToHistoricalReviews
     $self->Logit( "store $id in historicalreviews" );
 
 
-    my $sql = qq{REPLACE into $CRMSGlobals::historicalreviewsTable (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, flagged) select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, flagged from reviews where id='$id'};
+    my $sql = qq{REPLACE into $CRMSGlobals::historicalreviewsTable (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, flagged) select id, time, user, attr, reason, note, renNum, expert, duration, 0, expertNote, renDate, copyDate, category, flagged from reviews where id='$id'};
     $self->PrepareSubmitSql( $sql );
 
     my $sql = qq{ UPDATE $CRMSGlobals::historicalreviewsTable set status=$status WHERE id = "$id" };
@@ -1300,7 +1421,7 @@ sub GetReviewsCount
 
     if ( ( $search1value ne "" ) && ( $search2value ne "" ) )
     {
-      { $sql .= qq{ AND ( $search1term  $op1  $search2term };   }
+      { $sql .= qq{ AND ( $search1term  $op1  $search2term ) };   }
     }
     elsif ( $search1value ne "" )
     {
@@ -2141,13 +2262,18 @@ sub GetPubDate
 
 sub UpdateTitle
 {
-    my $self = shift;
-    my $id   = shift;
+    my $self  = shift;
+    my $id    = shift;
+    my $title = shift;
 
-    ## my $ti   = $self->GetMarcDatafield( $id, "245", "a");
-    my $ti   = $self->GetRecordTitleBc2Meta( $id );
+    
+    if ( ! $title )
+    {
+      ## my $ti   = $self->GetMarcDatafield( $id, "245", "a");
+      my $title   = $self->GetRecordTitleBc2Meta( $id );
+    }
 
-    my $tiq  = $self->get("dbh")->quote( $ti );
+    my $tiq  = $self->get("dbh")->quote( $title );
 
     my $sql  = qq{ SELECT count(*) from bibdata where id="$id"};
     my $count  = $self->SimpleSqlGet( $sql );
@@ -2162,7 +2288,7 @@ sub UpdateTitle
        $self->PrepareSubmitSql( $sql );
     }
 
-    return $ti; 
+    return $title; 
 }
 
 
@@ -2194,6 +2320,7 @@ sub UpdateAuthor
     my $id   = shift;
     my $author = shift;
 
+    $author =~ s,\',\\',gs;
     my $sql  = qq{ SELECT count(*) from bibdata where id="$id"};
     my $count  = $self->SimpleSqlGet( $sql );
     if ( $count == 1 )
@@ -2696,8 +2823,8 @@ sub GetNextItemForReview
     my $barcode;
 
     #Find items reviewed once by some other user
-    my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND status = 0 AND revcnt = 1 and expcnt = 0 AND id not in ( };
-    $sql   .= qq{ SELECT distinct id from $CRMSGlobals::reviewsTable where user = '$name' ) };
+    my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND status = 0 AND expcnt = 0 AND id in ( };
+    $sql   .= qq{ SELECT distinct id from $CRMSGlobals::reviewsTable where user != '$name' ) };
     $sql   .= qq{ ORDER BY priority DESC, pub_date ASC, time DESC LIMIT 1 };
 
     $barcode = $self->SimpleSqlGet( $sql );
@@ -2709,7 +2836,7 @@ sub GetNextItemForReview
         
         #Get the 1st available item that has never been reviewed.
         my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND } .
-                  qq{ status = 0 AND revcnt = 0 and expcnt = 0 and pub_date >= $nextPubDate ORDER BY priority DESC, pub_date ASC, time DESC LIMIT 1 };
+                  qq{ status = 0 AND expcnt = 0 AND id not in ( SELECT distinct id from $CRMSGlobals::reviewsTable ) and pub_date >= $nextPubDate ORDER BY priority DESC, pub_date ASC, time DESC LIMIT 1 };
 
         my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
