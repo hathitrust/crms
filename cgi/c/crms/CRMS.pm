@@ -2824,8 +2824,10 @@ sub GetNextItemForReview
 
     #Find items reviewed once by some other user
     my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND status = 0 AND expcnt = 0 AND id in ( };
-    $sql   .= qq{ SELECT distinct id from $CRMSGlobals::reviewsTable where user != '$name' ) };
+    $sql   .= qq{ SELECT distinct id from $CRMSGlobals::reviewsTable where user != '$name' and id in (select id from reviews group by id having count(*) = 1) ) };
     $sql   .= qq{ ORDER BY priority DESC, pub_date ASC, time DESC LIMIT 1 };
+
+    print $sql;
 
     $barcode = $self->SimpleSqlGet( $sql );
     if ( $self->get("verbose") ) { $self->Logit("once: $sql"); }
@@ -2837,6 +2839,8 @@ sub GetNextItemForReview
         #Get the 1st available item that has never been reviewed.
         my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND } .
                   qq{ status = 0 AND expcnt = 0 AND id not in ( SELECT distinct id from $CRMSGlobals::reviewsTable ) and pub_date >= $nextPubDate ORDER BY priority DESC, pub_date ASC, time DESC LIMIT 1 };
+
+        print $sql;
 
         my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
