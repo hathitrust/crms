@@ -26,16 +26,10 @@ getopts('vhu:', \%opts);
 
 my $help     = $opts{'h'};
 my $verbose  = $opts{'v'};
-#to create a range of time to get from rights db
-#my $start   = $opts{'u'};
-#my $stop    = $opts{'s'};
-
-my $start   = '2009-03-01 09:30:26';
-my $stop    = '2009-03-07 09:30:26';
 
 if ( $help ) 
 { 
-    die "USAGE: $0 [-u start_time (2007-09-13 09:30:26) -u stop_time (2007-09-13 09:30:26)] " .
+    die "USAGE: $0 " .
         "\n\t[-h (this help message)] " .
         "\n\t[-v (verbose)]\n"; 
 }
@@ -48,7 +42,16 @@ my $crms = CRMS->new(
     dev          =>   $DLPS_DEV,
 );
 
+#Set the statuses as needed.
+$crms->ProcessReviews ( );
+
 ## get new items and load the queue table
-$crms->LoadNewItems( $start, $stop );
+my $status = $crms->LoadNewItemsInCandidates ();
+
+if ( $status )
+{
+   $crms->LoadNewItems ();
+}
+
 
 
