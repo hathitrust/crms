@@ -189,14 +189,27 @@ sub GetCandidatesTime
 }
 
 
+sub GetCandidatesSize
+{
+  my $self = shift;
+
+  my $sql = qq{select count(*) from candidates};
+  my $size  = $self->SimpleSqlGet( $sql );
+
+  return $size;
+  
+}
+
+
 sub LoadNewItemsInCandidates
 {
     my $self    = shift;
 
     my $start = $self->GetCandidatesTime();
+    my $size = $self->GetCandidatesSize();
 
     my $msg = qq{Starting to load Candidate from rights table.\n};
-    $msg .= qq{The max timestamp in the cadidates table $start.\n};
+    $msg .= qq{The max timestamp in the cadidates table $start, and the size is $size\n};
     print $msg;
 
     my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time, attr, reason FROM rights WHERE time >= '$start' GROUP BY id};
@@ -219,7 +232,8 @@ sub LoadNewItemsInCandidates
       }
     }
 
-    $msg = qq{All DONE updating candidates from rights.\n\n};
+    my $size = $self->GetCandidatesSize();
+    $msg = qq{All DONE updating candidates from rights.  The cadidate now has $size rows.\n\n};
     print $msg;
 
     return 1;
@@ -780,7 +794,7 @@ sub ExportReviews
 
     my $user  = "crms";
     my $time  = $self->GetTodaysDate();
-    my $fh    = $self->GetExportFh();
+    my ( $fh, $file )    = $self->GetExportFh();
     my $user  = "crms";
     my $src   = "null";
     my $count = 0;
@@ -802,6 +816,53 @@ sub ExportReviews
     my $sql  = qq{ INSERT INTO  $CRMSGlobals::exportrecordTable (itemcount) VALUES ( $count )};
     $self->PrepareSubmitSql( $sql );
 
+    $self->EmailReport ( $count, $file );	
+
+}
+
+sub EmailReport
+{
+  my $self    = shift;
+  my $count   = shift;
+  my $file    = shift;
+
+  my $subject = qq{$count voulmes exported to rights dbreport to rithts db};
+  my $to = qq{annekz\@umich.edu};
+
+  #use Mail::Sender;
+  #my $sender = new Mail::Sender
+  #  {smtp => 'mail.umdl.umich.edu', from => 'annekz@umich.edu'};
+  #$sender->MailFile({to => $to,
+  #		     subject => $subject,
+  #		     msg => "See attachment.",
+  #		     file => $file});
+  #$sender->Close;
+
+}
+
+sub GetNumberExportedFromCandidates
+{
+  my $self = shift;
+
+
+  my $sql  = qq{ SELECT count(distinct id) from historicalreviews where legacy= 0 and id in (select id from candidates)};
+  my $count  = $self->SimpleSqlGet( $sql );
+    
+  if ($count) { return $count; }
+  return 0;
+
+}
+
+sub GetNumberExportedNotFromCandidates
+{
+  my $self = shift;
+
+  my $sql  = qq{ SELECT count(distinct id) from historicalreviews where legacy= 0 and id not in (select id from candidates)};
+  my $count  = $self->SimpleSqlGet( $sql );
+    
+  if ($count) { return $count; }
+  return 0;
+
 
 }
 
@@ -818,7 +879,7 @@ sub GetExportFh
 
     open ( my $fh, ">", $out ) || die "failed to open exported file ($out): $! \n";
 
-    return $fh;
+    return ( $fh, $out );
 }
 
 sub RemoveFromQueue
@@ -1825,6 +1886,202 @@ sub GetUserData
     return $return;
 }
 
+sub GetRange
+{
+  my $self = shift;
+ 
+  my $sql  = qq{ SELECT max( time ) from reveiws};
+  my $reviews_max  = $self->SimpleSqlGet( $sql );
+
+  my $sql  = qq{ SELECT min( time ) from reveiws};
+  my $reviews_min  = $self->SimpleSqlGet( $sql );
+
+  my $sql  = qq{ SELECT max( time ) from historicalreveiws where legacy=0};
+  my $historicalreviews_max  = $self->SimpleSqlGet( $sql );
+
+  my $sql  = qq{ SELECT min( time ) from historicalreveiws where legacy=0};
+  my $historicalreviews_min  = $self->SimpleSqlGet( $sql );
+
+  my $max = $reviews_max;
+  if ( $historicalreviews_max > $reviews_max ) { $max = $historicalreviews_max; }
+
+  my $min = $reviews_min;
+  if ( $historicalreviews_min < $reviews_min ) { $min = $historicalreviews_min; }
+  
+  my $max_year = $max;
+  $max_year =~ s,(.*?)\-.*,$1,;
+
+  my $max_month = $max;
+  $max_month =~ s,.*?\-(.*?)\-.*,$1,;
+
+
+  my $min_year = $min;
+  $min_year =~ s,(.*?)\-.*,$1,;
+
+  my $min_month = $min;
+  $min_month =~ s,.*?\-(.*?)\-.*,$1,;
+
+
+  return ( $max_year, $max_month, $min_year, $min_month );
+
+}
+
+
+sub GetMonthStats
+{
+  my $self = shift;
+  my $user = shift;
+  my $start_date = shift;
+
+  my $sql;
+
+  $sql  = qq{ SELECT count(*) FROM reviews WHERE user='$user' and time like '$start_date%'};
+  my $total_reviews   = $self->SimpleSqlGet( $sql );
+
+  $sql  = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and time like '$start_date%'};
+  my $total_hist   = $self->SimpleSqlGet( $sql );
+
+  $total_reviews = $total_reviews + $total_hist;
+
+  #pd/ren
+  $sql  = qq{ SELECT count(*) FROM reviews WHERE user='$user' and attr=1 and reason=7 and time like '$start_date%'};
+  my $total_reviews   = $self->SimpleSqlGet( $sql );
+
+  $sql  = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=1 and reason=7 and time like '$start_date%'};
+  my $total_hist   = $self->SimpleSqlGet( $sql );
+
+  my $total_pd_ren = $total_reviews + $total_hist;
+
+  #pd/ncn
+  $sql  = qq{ SELECT count(*) FROM reviews WHERE user='$user' and attr=1 and reason=2 and time like '$start_date%'};
+  my $total_reviews   = $self->SimpleSqlGet( $sql );
+
+  $sql  = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=1 and reason=2 and time like '$start_date%'};
+  my $total_hist   = $self->SimpleSqlGet( $sql );
+
+  my $total_pd_cnn = $total_reviews + $total_hist;
+
+  #pd/cdpp
+  $sql  = qq{ SELECT count(*) FROM reviews WHERE user='$user' and attr=1 and reason=9 and time like '$start_date%'};
+  my $total_reviews   = $self->SimpleSqlGet( $sql );
+
+  $sql  = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=1 and reason=9 and time like '$start_date%'};
+  my $total_hist   = $self->SimpleSqlGet( $sql );
+
+  my $total_pd_cdpp = $total_reviews + $total_hist;
+
+  #ic/ren
+  $sql  = qq{ SELECT count(*) FROM reviews WHERE user='$user' and attr=2 and reason=7 and time like '$start_date%'};
+  my $total_reviews   = $self->SimpleSqlGet( $sql );
+
+  $sql  = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=2 and reason=7 and time like '$start_date%'};
+  my $total_hist   = $self->SimpleSqlGet( $sql );
+
+  my $total_ic_ren = $total_reviews + $total_hist;
+
+  #ic/cdpp
+  $sql  = qq{ SELECT count(*) FROM reviews WHERE user='$user' and attr=2 and reason=9 and time like '$start_date%'};
+  my $total_reviews   = $self->SimpleSqlGet( $sql );
+
+  $sql  = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=2 and reason=9 and time like '$start_date%'};
+  my $total_hist   = $self->SimpleSqlGet( $sql );
+
+  my $total_ic_cdpp = $total_reviews + $total_hist;
+
+  #und/nfi
+  $sql  = qq{ SELECT count(*) FROM reviews WHERE user='$user' and attr=5 and reason=8 and time like '$start_date%'};
+  my $total_reviews   = $self->SimpleSqlGet( $sql );
+
+  $sql  = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=5 and reason=8 and time like '$start_date%'};
+  my $total_hist   = $self->SimpleSqlGet( $sql );
+
+  my $total_und_nfi = $total_reviews + $total_hist;
+
+
+  #time reviewing ( in minutes ) - not including out lines 
+  $sql  = qq{ SELECT duration FROM reviews WHERE user='$user' and time like '$start_date%' and duration <= '00:05:00'};
+  my $total_reviews   = $self->SimpleSqlGet( $sql );
+
+  $sql  = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and time like '$start_date%' and duration <= '00:05:00'};
+  my $total_hist   = $self->SimpleSqlGet( $sql );
+
+  my $total_time = $total_reviews + $total_hist;
+
+  #convert to minutes:
+  my $min = $total_time;
+  $min =~ s,.*?:(.*?):.*,$1,;
+
+  my $sec = $total_time;
+  $sec =~ s,.*?:(.*?):.*,$1,;
+
+  my $total_reviewing = (($min*60) + $sec)/60;
+
+  
+  #total outliers
+  $sql  = qq{ SELECT count(*) FROM reviews WHERE user='$user' and time like '$start_date%' and duration > '00:05:00'};
+  my $total_reviews   = $self->SimpleSqlGet( $sql );
+
+  $sql  = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and time like '$start_date%' and duration > '00:05:00'};
+  my $total_hist   = $self->SimpleSqlGet( $sql );
+
+  my $total_outliers = $total_reviews + $total_hist;
+
+
+  my $time_per_review = ($total_time/($total_reviews - $total_outliers));
+
+  my $reviews_per_hour = (60/$time_per_review);
+
+  retun ( $total_reviews, $total_pd_ren, $total_pd_cnn, $total_pd_cdpp, $total_ic_ren, $total_ic_cdpp, $total_und_nfi, $total_reviewing, $time_per_review, $reviews_per_hour, $total_outliers );
+
+  my $report = qq{};
+
+
+
+   
+
+
+}
+
+
+sub GetUserReport
+{
+    my $self = shift;
+    my $user  = shift;
+
+    my ( $max_year, $max_month, $min_year, $min_month ) = $self->GetRange();
+
+
+    my $go = 1;
+    my $max_date = qq{$max_year-$max_month};
+    while ( $go )
+    {
+      my $statDate = qq{$min_year-$min_month};
+      my $report .= $self->GetMonthStats ( $user, $statDate );
+
+
+      $min_month = $min_month + 1;
+      if ( $min_month == 13 )
+      {
+	$min_month = '01';
+        $min_year = $min_year + 1;
+      }
+
+      if ( $min_month < 10 )
+      {
+	$min_month = qq{0$min_month};
+      }
+
+      my $new_test_date = {$min_year-$min_month};
+      if ( $new_test_date > $max_date )
+      {
+	$go = 0;
+      }
+    }
+     
+
+    return;
+}
+
 
 
 sub GetUserTypes
@@ -2827,8 +3084,6 @@ sub GetNextItemForReview
     $sql   .= qq{ SELECT distinct id from $CRMSGlobals::reviewsTable where user != '$name' and id in (select id from reviews group by id having count(*) = 1) ) };
     $sql   .= qq{ ORDER BY priority DESC, pub_date ASC, time DESC LIMIT 1 };
 
-
-
     $barcode = $self->SimpleSqlGet( $sql );
     if ( $self->get("verbose") ) { $self->Logit("once: $sql"); }
 
@@ -2839,8 +3094,6 @@ sub GetNextItemForReview
         #Get the 1st available item that has never been reviewed.
         my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND } .
                   qq{ status = 0 AND expcnt = 0 AND id not in ( SELECT distinct id from $CRMSGlobals::reviewsTable ) and pub_date >= $nextPubDate ORDER BY priority DESC, pub_date ASC, time DESC LIMIT 1 };
-
-
 
         my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -3203,6 +3456,29 @@ sub GetTotalInHistoricalQueue
     my $self = shift;
 
     my $sql  = qq{ SELECT count(*) from $CRMSGlobals::historicalreviewsTable };
+    my $count  = $self->SimpleSqlGet( $sql );
+    
+    if ($count) { return $count; }
+    return 0;
+}
+
+
+sub GetReviewsWith4Status
+{
+    my $self = shift;
+
+    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::reviewsTable where id in ( select id from queue where status = 4)};
+    my $count  = $self->SimpleSqlGet( $sql );
+    
+    if ($count) { return $count; }
+    return 0;
+}
+
+sub GetReviewsWith5Status
+{
+    my $self = shift;
+
+    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::reviewsTable where id in ( select id from queue where status = 5)};
     my $count  = $self->SimpleSqlGet( $sql );
     
     if ($count) { return $count; }

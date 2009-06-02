@@ -1,7 +1,4 @@
-[% IF NOT crms.IsUserAdmin() %]
-  <h3>You do not have access to this page</h3>
-  [% STOP %]
-[% END %]
+
 
 [% INCLUDE header.tt    %]
 [% INCLUDE adminNav.tt  %]
@@ -23,6 +20,10 @@
 <hr>
 Total Number of volumes in queue:  [% crms.GetQueueSize () %]<br>
 Number of volumes awaiting review: [% crms.GetTotalAwaitingReview () %]<br>
+
+&nbsp;&nbsp;&nbsp;Number of actuve reviews with status of 4: [% crms.GetReviewsWith4Status () %]<br>
+&nbsp;&nbsp;&nbsp;Number of active reviews with sattus of 5: [% crms.GetReviewsWith5Status () %]<br>
+
 <br>
 Number of active volumes: [% totalactive %]<br>
 
@@ -38,8 +39,17 @@ Last time reviews were processed: [% crms.GetLastStatusProcessedTime () %]<br>
 <br>
 Last time final determinations were exported:  [% crms.GetLastTimeExported () %]<br>
 Number of determinations last exported: [% crms.GetLastItemCountExported () %]<br>
+
+
+
+
 <hr>
 Cumulative number of determinatins exported (ever)*: [% crms.GetCumExportedCount () %]<br>
+
+&nbsp;&nbsp;&nbsp;Number exported from cadidates table: [% crms.GetNumberExportedFromCandidates () %]<br>
+&nbsp;&nbsp;&nbsp;Number exported not from candidates table: [% crms.GetNumberExportedNotFromCandidates () %]<br>
+
+
 Total number of legacy determinations: [% crms.GetTotalLegacyCount () %]<br>
 <br>
 Total number of legacy reviews: [% crms.GetTotalLegacyReviewCount () %]<br>

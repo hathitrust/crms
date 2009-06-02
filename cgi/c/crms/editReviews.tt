@@ -31,7 +31,7 @@
 [% ELSE %]          [% pagenum = 1 %] [% END %]
 
 <hr width="25%" align="left"/>
-<h3>edit unprocessed reviews ( that are less than 24 hours old ): </h3>
+<h3>edit unprocessed reviews: </h3>
     
 
 <form>
