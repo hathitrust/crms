@@ -19,6 +19,8 @@
       Cumulative number of volumes in queue (ever*): [% crms.GetTotalEverInQueue() %]<br>
 <hr>
 Total Number of volumes in queue:  [% crms.GetQueueSize () %]<br>
+Total Number of volumes in candidates:  [% crms.GetCandidatesSize () %]<br>
+<br>
 Number of volumes awaiting review: [% crms.GetTotalAwaitingReview () %]<br>
 
 &nbsp;&nbsp;&nbsp;Number of actuve reviews with status of 4: [% crms.GetReviewsWith4Status () %]<br>
