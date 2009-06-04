@@ -21,37 +21,63 @@ use CRMS;
 use Getopt::Std;
 use LWP::UserAgent;
 
-my %opts;
-getopts('vhu:', \%opts);
 
-my $help     = $opts{'h'};
-my $verbose  = $opts{'v'};
+sub ReportMsg
+{
+  my ( $msg ) = @_;
 
-if ( $help ) 
-{ 
-    die "USAGE: $0 " .
-        "\n\t[-h (this help message)] " .
-        "\n\t[-v (verbose)]\n"; 
+  my $newtime = scalar (localtime(time()));
+
+  $msg = qq{$newtime : $msg};
+  print "$msg","\n";
+
 }
+
 
 my $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/update_log.txt",
-    configFile   =>   'crms.cfg',
-    verbose      =>   $verbose,
+    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
+    verbose      =>   0,
     root         =>   $DLXSROOT,
     dev          =>   $DLPS_DEV,
 );
 
+my $msg = qq{Starting to Process the statuses. \n};
+&ReportMsg ( $msg );
+
 #Set the statuses as needed.
 $crms->ProcessReviews ( );
+
+$msg = qq{DONE Processing the statuses. \n};
+&ReportMsg ( $msg );
+
+my $msg = qq{Starting to Clearing Queue and export.  You should receinve a separate email when this completes. \n};
+&ReportMsg ( $msg );
+## get new items and load the queue table
+my $rc = $crms->ClearQueueAndExport();
+my $msg = qq{DONE Clearing Queue and Exporting. Starting to Load New Items into candidates.\n};
+&ReportMsg ( $msg );
 
 ## get new items and load the queue table
 my $status = $crms->LoadNewItemsInCandidates ();
 
+my $msg = qq{DONE Loading new items into candidates.\n};
+&ReportMsg ( $msg );
+
+
 if ( $status )
 {
+   my $msg = qq{Starting to Load new itmes into queue.\n};
+   &ReportMsg ( $msg );
+
    $crms->LoadNewItems ();
+
+   my $msg = qq{DONE loading new items into queue.\n};
+   &ReportMsg ( $msg );
+
 }
+my $msg = qq{All DONE with nightly script.\n};
+&ReportMsg ( $msg );
 
 
 
