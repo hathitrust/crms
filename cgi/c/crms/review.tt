@@ -105,7 +105,7 @@
         <table class="nav" width="100%">
 	  <tr>
             <td><a href="crms?p=confirmReview&submit=Cancel&barcode=[% barcode %]">Home</a></td>
-            <td><a href="/c/crms/usecases.mhtml" target="_blank">Use Cases</a></td>
+            <td><a href="/c/crms/UseCases.html" target="_blank">Use Cases</a></td>
             <td><a href="crms?p=Logout">Logout</a></td>
           </tr>
         </table>

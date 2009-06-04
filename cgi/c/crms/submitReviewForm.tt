@@ -111,7 +111,7 @@
         <table class="bottomNav" width="100%">
 	  <tr>
             <td style="float:left"><a style="float:right" href="/c/crms/help.html#rights" target="_blank">Help</a></td>
-            <td align="center"><a href="/c/crms/usecases.mhtml" target="_blank">Use Cases</a></td>
+            <td align="center"><a href="/c/crms/UseCases.html" target="_blank">Use Cases</a></td>
             <td align="right"><a href="crms?p=Logout">Logout</a></td>
           </tr>
         </table>

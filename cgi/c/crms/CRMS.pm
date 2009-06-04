@@ -1,4 +1,3 @@
-
 package CRMS;
 
 ## ----------------------------------------------------------------------------
@@ -829,14 +828,14 @@ sub EmailReport
   my $subject = qq{$count voulmes exported to rights dbreport to rithts db};
   my $to = qq{annekz\@umich.edu};
 
-  #use Mail::Sender;
-  #my $sender = new Mail::Sender
-  #  {smtp => 'mail.umdl.umich.edu', from => 'annekz@umich.edu'};
-  #$sender->MailFile({to => $to,
-  #		     subject => $subject,
-  #		     msg => "See attachment.",
-  #		     file => $file});
-  #$sender->Close;
+  use Mail::Sender;
+  my $sender = new Mail::Sender
+    {smtp => 'mail.umdl.umich.edu', from => 'annekz@umich.edu'};
+  $sender->MailFile({to => $to,
+  		     subject => $subject,
+  		     msg => "See attachment.",
+  		     file => $file});
+  $sender->Close;
 
 }
 
@@ -1890,16 +1889,16 @@ sub GetRange
 {
   my $self = shift;
  
-  my $sql  = qq{ SELECT max( time ) from reveiws};
+  my $sql  = qq{ SELECT max( time ) from reviews};
   my $reviews_max  = $self->SimpleSqlGet( $sql );
 
-  my $sql  = qq{ SELECT min( time ) from reveiws};
+  my $sql  = qq{ SELECT min( time ) from reviews};
   my $reviews_min  = $self->SimpleSqlGet( $sql );
 
-  my $sql  = qq{ SELECT max( time ) from historicalreveiws where legacy=0};
+  my $sql  = qq{ SELECT max( time ) from historicalreviews where legacy=0};
   my $historicalreviews_max  = $self->SimpleSqlGet( $sql );
 
-  my $sql  = qq{ SELECT min( time ) from historicalreveiws where legacy=0};
+  my $sql  = qq{ SELECT min( time ) from historicalreviews where legacy=0};
   my $historicalreviews_min  = $self->SimpleSqlGet( $sql );
 
   my $max = $reviews_max;
@@ -1926,12 +1925,13 @@ sub GetRange
 
 }
 
-
 sub GetMonthStats
 {
   my $self = shift;
   my $user = shift;
   my $start_date = shift;
+
+  my $dbh  = $self->get( 'dbh' );
 
   my $sql;
 
@@ -1941,7 +1941,7 @@ sub GetMonthStats
   $sql  = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and time like '$start_date%'};
   my $total_hist   = $self->SimpleSqlGet( $sql );
 
-  $total_reviews = $total_reviews + $total_hist;
+  my $total_reviews_toreport = $total_reviews + $total_hist;
 
   #pd/ren
   $sql  = qq{ SELECT count(*) FROM reviews WHERE user='$user' and attr=1 and reason=7 and time like '$start_date%'};
@@ -1998,23 +1998,46 @@ sub GetMonthStats
   my $total_und_nfi = $total_reviews + $total_hist;
 
 
+  my $total_time = 0;
   #time reviewing ( in minutes ) - not including out lines 
   $sql  = qq{ SELECT duration FROM reviews WHERE user='$user' and time like '$start_date%' and duration <= '00:05:00'};
-  my $total_reviews   = $self->SimpleSqlGet( $sql );
 
-  $sql  = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and time like '$start_date%' and duration <= '00:05:00'};
+  my $rows = $dbh->selectall_arrayref( $sql );
+
+  foreach my $row ( @{$rows} )
+  {
+    my $duration = $row->[0];
+    #convert to minutes:
+    my $min = $duration;
+    $min =~ s,.*?:(.*?):.*,$1,;
+    
+    
+    my $sec = $duration;
+    $sec =~ s,.*?:(.*?):.*,$1,;
+
+    $total_time = $total_time + $sec + (60*$min);
+  }
+
+  $sql  = qq{ SELECT duration FROM historicalreviews WHERE user='$user' and legacy=0 and time like '$start_date%' and duration <= '00:05:00'};
   my $total_hist   = $self->SimpleSqlGet( $sql );
 
-  my $total_time = $total_reviews + $total_hist;
+  my $rows = $dbh->selectall_arrayref( $sql );
 
-  #convert to minutes:
-  my $min = $total_time;
-  $min =~ s,.*?:(.*?):.*,$1,;
+  foreach my $row ( @{$rows} )
+  {
+    my $duration = $row->[0];
+    #convert to minutes:
+    my $min = $duration;
+    $min =~ s,.*?:(.*?):.*,$1,;
+    
+    
+    my $sec = $duration;
+    $sec =~ s,.*?:(.*?):.*,$1,;
 
-  my $sec = $total_time;
-  $sec =~ s,.*?:(.*?):.*,$1,;
+    $total_time = $total_time + $sec + (60*$min);
+  }
 
-  my $total_reviewing = (($min*60) + $sec)/60;
+  $total_time = $total_time/60;
 
   
   #total outliers
@@ -2026,38 +2049,257 @@ sub GetMonthStats
 
   my $total_outliers = $total_reviews + $total_hist;
 
+  my $time_per_review = 0;
+  if ( $total_reviews_toreport - $total_outliers > 0)
+  {  $time_per_review = ($total_time/($total_reviews_toreport - $total_outliers));}
+  
+  my $reviews_per_hour = 0;
+  if ( $time_per_review > 0 )
+  { $reviews_per_hour = (60/$time_per_review);}
 
-  my $time_per_review = ($total_time/($total_reviews - $total_outliers));
+  my $year = $start_date;
+  $year =~ s,(.*)\-.*,$1,;
+  my $month = $start_date;
+  $month =~ s,.*\-(.*),$1,;
+  
+  my $sql  = qq{ INSERT INTO userstats (user, month, year, monthyear, total_reviews, total_pd_ren, total_pd_cnn, total_pd_cdpp, total_ic_ren, total_ic_cdpp, total_und_nfi, total_time, time_per_review, reviews_per_hour, total_outliers) VALUES ('$user', '$month', '$year', '$start_date', $total_reviews_toreport, $total_pd_ren, $total_pd_cnn, $total_pd_cdpp, $total_ic_ren, $total_ic_cdpp, $total_und_nfi, $total_time, $time_per_review, $reviews_per_hour, $total_outliers )};
 
-  my $reviews_per_hour = (60/$time_per_review);
-
-  retun ( $total_reviews, $total_pd_ren, $total_pd_cnn, $total_pd_cdpp, $total_ic_ren, $total_ic_cdpp, $total_und_nfi, $total_reviewing, $time_per_review, $reviews_per_hour, $total_outliers );
-
-  my $report = qq{};
-
-
-
-   
-
+  $self->PrepareSubmitSql( $sql );
 
 }
 
 
-sub GetUserReport
+sub GetTheYear
+{
+
+   my $self = shift;
+
+   my $newtime = scalar localtime(time());
+   my $year = substr($newtime, 20, 4);
+
+   return $year;	
+	
+}
+
+sub CreateStatsReport
+{	
+   my $self = shift;
+   my $user = shift;
+
+   my $dbh = $self->get( 'dbh' );
+
+   my $year = $self->GetTheYear ();	
+   my $lastYear = $year - 1;
+
+   my $min = qq{$lastYear-07};
+   my $max = qq{$year-06};
+   #find out how many distinct months there are
+   my $sql = qq{SELECT distinct monthyear from userstats where monthyear >= '$min' and monthyear <= '$max'};
+   
+   my $rows = $dbh->selectall_arrayref( $sql );
+
+   my @statdates;
+   my $datecount = 0;
+   foreach my $row ( @{$rows} )
+   {
+      push ( @statdates, $row->[0] );
+      $datecount = $datecount + 1;
+   }	
+
+   my ( @outrow0, @outrow1, @outrow2, @outrow3, @outrow4, @outrow5, @outrow6, @outrow7, @outrow8, @outrow9, @outrow10 );
+   foreach my $date ( @statdates )
+   {
+
+     my $sql = qq{SELECT total_reviews, total_pd_ren, total_pd_cnn, total_pd_cdpp, total_ic_ren, total_ic_cdpp, total_und_nfi, total_time, time_per_review, reviews_per_hour, total_outliers from userstats where monthyear='$date' and user='$user'};
+   
+     my $rows = $dbh->selectall_arrayref( $sql );
+
+     foreach my $row ( @{$rows} )
+     {
+        push ( @outrow0,  $row->[0]  );	
+        push ( @outrow1,  $row->[1]  );	
+        push ( @outrow2,  $row->[2]  );	
+        push ( @outrow3,  $row->[3]  );	
+        push ( @outrow4,  $row->[4]  );	
+        push ( @outrow5,  $row->[5]  );	
+        push ( @outrow6,  $row->[6]  );	
+        push ( @outrow7,  $row->[7]  );	
+        push ( @outrow8,  $row->[8]  );	
+        push ( @outrow9,  $row->[9]  );	
+        push ( @outrow10, $row->[10] );	
+     }
+   }	
+
+   my $report = qq{<table><tr><td>$user</td>};
+   foreach my $date ( @statdates )
+   {	
+      $report .= qq{<td>$date</td>};
+   }
+   $report .= qq{</tr>\n};	
+  
+   $report .= qq{<tr><td>Total Reviews</td>};
+   my $count = 0;
+   while ( $count < $datecount )
+   {
+       $report .= qq{<td>$outrow0[$count]</td>};
+       $count = $count + 1;
+   }
+   $report .= qq{</tr>};
+
+   $report .= qq{<tr><td>PD-REN</td>};
+   my $count = 0;
+   while ( $count < $datecount )
+   {
+       $report .= qq{<td>$outrow1[$count]</td>};
+       $count = $count + 1;
+   }
+   $report .= qq{</tr>};
+
+   $report .= qq{<tr><td>PD-NCN</td>};
+   my $count = 0;
+   while ( $count < $datecount )
+   {
+       $report .= qq{<td>$outrow2[$count]</td>};
+       $count = $count + 1;
+   }
+   $report .= qq{</tr>};
+
+   $report .= qq{<tr><td>PD-CDPP</td>};
+   my $count = 0;
+   while ( $count < $datecount )
+   {
+       $report .= qq{<td>$outrow3[$count]</td>};
+       $count = $count + 1;
+   }
+   $report .= qq{</tr>};
+
+   $report .= qq{<tr><td>IC-REN</td>};
+   my $count = 0;
+   while ( $count < $datecount )
+   {
+       $report .= qq{<td>$outrow4[$count]</td>};
+       $count = $count + 1;
+   }
+   $report .= qq{</tr>};
+
+   $report .= qq{<tr><td>IC-CDPP</td>};
+   my $count = 0;
+   while ( $count < $datecount )
+   {
+       $report .= qq{<td>$outrow5[$count]</td>};
+       $count = $count + 1;
+   }
+   $report .= qq{</tr>};
+
+   $report .= qq{<tr><td>UND-NFI</td>};
+   my $count = 0;
+   while ( $count < $datecount )
+   {
+       $report .= qq{<td>$outrow6[$count]</td>};
+       $count = $count + 1;
+   }
+   $report .= qq{</tr>};
+
+   $report .= qq{<tr><td>Time Reviewing (minutes)</td>};
+   my $count = 0;
+   while ( $count < $datecount )
+   {
+       $report .= qq{<td>$outrow7[$count]</td>};
+       $count = $count + 1;
+   }
+   $report .= qq{</tr>};
+
+   $report .= qq{<tr><td>Time per Review (minutes)</td>};
+   my $count = 0;
+   while ( $count < $datecount )
+   {
+       $report .= qq{<td>$outrow8[$count]</td>};
+       $count = $count + 1;
+   }
+   $report .= qq{</tr>};
+
+   $report .= qq{<tr><td>Reviews per Hour</td>};
+   my $count = 0;
+   while ( $count < $datecount )
+   {
+       $report .= qq{<td>$outrow9[$count]</td>};
+       $count = $count + 1;
+   }
+   $report .= qq{</tr>};
+
+   $report .= qq{<tr><td>Outlier Reviews</td>};
+   my $count = 0;
+   while ( $count < $datecount )
+   {
+       $report .= qq{<td>$outrow10[$count]</td>};
+       $count = $count + 1;
+   }	
+   $report .= qq{</tr></table>};
+  
+   return $report;	
+	
+}	
+
+
+sub CreateThisMonthsStats
 {
     my $self = shift;
-    my $user  = shift;
+
+    my $dbh = $self->get( 'dbh' );
+
+    my $rows = $dbh->selectall_arrayref( "SELECT distinct id FROM users" );
+
+    my @users;
+    foreach my $row ( @{$rows} )
+    {
+      push ( @users, $row->[0] );
+    }
 
     my ( $max_year, $max_month, $min_year, $min_month ) = $self->GetRange();
 
+    my $max_date = qq{$max_year-$max_month};
+
+    my $sql = qq{DELETE from userstats where monthyear='$max_date'};
+    $self->PrepareSubmitSql( $sql ); 
+
+
+    foreach my $user ( @users )
+    {
+      $self->GetMonthStats ( $user, $max_date );
+    }
+    
+}
+
+
+
+sub CreateInitialStats
+{
+    my $self = shift;
+
+    my $dbh = $self->get( 'dbh' );
+
+    my $sql = qq{DELETE from userstats};
+    $self->PrepareSubmitSql( $sql ); 
+
+    my $rows = $dbh->selectall_arrayref( "SELECT distinct id FROM users" );
+
+    my @users;
+    foreach my $row ( @{$rows} )
+    {
+      push ( @users, $row->[0] );
+    }
+
+    my ( $max_year, $max_month, $min_year, $min_month ) = $self->GetRange();
 
     my $go = 1;
     my $max_date = qq{$max_year-$max_month};
     while ( $go )
     {
       my $statDate = qq{$min_year-$min_month};
-      my $report .= $self->GetMonthStats ( $user, $statDate );
-
+      foreach my $user ( @users )
+      {
+        $self->GetMonthStats ( $user, $statDate );
+      }
 
       $min_month = $min_month + 1;
       if ( $min_month == 13 )
@@ -2071,16 +2313,15 @@ sub GetUserReport
 	$min_month = qq{0$min_month};
       }
 
-      my $new_test_date = {$min_year-$min_month};
-      if ( $new_test_date > $max_date )
+      my $new_test_date = qq{$min_year-$min_month};
+      if ( $new_test_date gt $max_date )
       {
 	$go = 0;
       }
     }
      
-
-    return;
 }
+
 
 
 
@@ -2093,7 +2334,7 @@ sub GetUserTypes
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my @return;
-    foreach ( @{$ref} ) { push @return, $_->[0]; }
+    foreach ( @{$ref} ) { push (@return, $_->[0]); }
     return @return;
 }
 

@@ -8,26 +8,11 @@
 
 <hr width="25%" align="left"/>
 
-<h3>click to edit users</h3>
 
-<table class="allReviews">
-  <th>user</th>
-  <th>last month</th>
-  <th>ave in that month</th>
-  <th>last 24 hrs</th>
-  <th>ave in last 24 hrs</th>
-
-  [% users = crms.GetUserData() %]
+ [% users = crms.GetUserData() %]
   [% FOREACH id IN users.keys.sort %]
-    <tr>
-      <td>[% id %]</td>
-      <td>[% crms.GetReviewerCount( id ) %]</td>
-      <td>[% crms.GetReviewerPace( id ) %]/record</td>
-      <td>[% crms.GetReviewerCount( id, yesterday() ) %]</td>
-      <td>[% crms.GetReviewerPace( id, yesterday() ) %]/record</td>
-    </tr>
+    [% crms.CreateStatsReport( id ) %]
   [% END %]
-</table>
 
 [% INCLUDE footer.tt %]
 
