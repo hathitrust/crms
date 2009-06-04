@@ -252,8 +252,10 @@ sub LoadNewItems
     if ( $queuesize < 800 )
     {  
       my $limitcount = 800 - $queuesize;
+
+      my $twodaysago = $self->TwoDaysAgo();
       
-      my $sql = qq{SELECT id, time, pub_date, title, author from candidates where id not in ( select distinct id from reviews ) and id not in ( select distinct id from historicalreviews )order by time desc};
+      my $sql = qq{SELECT id, time, pub_date, title, author from candidates where id not in ( select distinct id from reviews ) and id not in ( select distinct id from historicalreviews ) and time <= '$twodaysago' order by time desc};
 
       my $ref = $self->get('dbh')->selectall_arrayref( $sql );
 
@@ -1010,6 +1012,36 @@ sub GetYesterday
     my $yesterday = qq{$year-$month-$day};
 
     return $yesterday;
+}
+
+
+sub TwoDaysAgo
+{
+    my $self    = shift;
+
+    my $newtime = scalar localtime(time() - ( 24 * 60 * 60 * 2 ));
+    my $year = substr($newtime, 20, 4);
+    my %months = (
+                  "Jan" => "01",
+                  "Feb" => "02",
+                  "Mar" => "03",
+                  "Apr" => "04",
+                  "May" => "05",
+                  "Jun" => "06",
+                  "Jul" => "07",
+                  "Aug" => "08",
+                  "Sep" => "09",
+                  "Oct" => "10",
+                  "Nov" => "11",
+                  "Dec" => "12",
+                 );
+    my $month = $months{substr ($newtime,4, 3)};
+    my $day = substr($newtime, 8, 2);
+    $day =~ s, ,0,g;
+   
+    my $towdaysago = qq{$year-$month-$day};
+
+    return $towdaysago;
 }
 
 
@@ -2823,7 +2855,7 @@ sub UpdateAuthor
     my $count  = $self->SimpleSqlGet( $sql );
     if ( $count == 1 )
     {
-       my $sql  = qq{ UPDATE bibdata set author='$author' where id="$id"};
+       my $sql  = qq{ UPDATE bibdata set author="$author" where id="$id"};
        $self->PrepareSubmitSql( $sql );
     }
     else
