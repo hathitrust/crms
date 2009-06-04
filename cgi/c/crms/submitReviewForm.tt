@@ -79,7 +79,8 @@
                "Misc"           => "Misc",          "Missing"         => "Missing",
                "Reprint"        => "Reprint",       "Series/Serial"   => "Series/Serial",
                "Collection"     => "Collection",    "Translation"     => "Translation",
-               "Wrong Record"   => "Wrong Record",  ""               => "none"} 
+               "Wrong Record"   => "Wrong Record",  "Date"            => "Date",
+               ""               => "none"} 
     %]
 
     [% FOREACH pre IN pres.sort %]

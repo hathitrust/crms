@@ -3719,7 +3719,7 @@ sub GetReviewsWith5Status
 {
     my $self = shift;
 
-    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::reviewsTable where id in ( select id from queue where status = 5)};
+    my $sql  = qq{ SELECT count(distinct id) from $CRMSGlobals::reviewsTable where id in ( select id from queue where status = 5)};
     my $count  = $self->SimpleSqlGet( $sql );
     
     if ($count) { return $count; }
