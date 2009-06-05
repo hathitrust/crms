@@ -217,7 +217,7 @@ sub LoadNewItems
 
       my $twodaysago = $self->TwoDaysAgo();
       
-      my $sql = qq{SELECT id, time, pub_date, title, author from candidates where id not in ( select distinct id from reviews ) and id not in ( select distinct id from historicalreviews ) and time <= '$twodaysago' and id not like 'uc1%' order by time desc};
+      my $sql = qq{SELECT id, time, pub_date, title, author from candidates where id not in ( select distinct id from reviews ) and id not in ( select distinct id from historicalreviews ) order by time desc};
 
       my $ref = $self->get('dbh')->selectall_arrayref( $sql );
 
@@ -501,6 +501,7 @@ sub TranslateCategory
     elsif ( $category eq 'LANG' ) { return 'Language'; }
     elsif ( $category eq 'MISC' ) { return 'Misc'; }
     elsif ( $category eq 'MISSING' ) { return 'Missing'; }
+    elsif ( $category eq 'DATE' ) { return 'Date'; }
     elsif ( $category eq 'REPRINT FROM' ) { return 'Reprint'; }
     elsif ( $category eq 'SERIES' ) { return 'Series/Serial'; }
     elsif ( $category eq 'TRANS' ) { return 'Translation'; }
