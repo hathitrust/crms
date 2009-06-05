@@ -21,7 +21,7 @@
     <OPTION VALUE="UserId"> UserId
     <OPTION VALUE="Attribute"> Attr Num Value
     <OPTION VALUE="Reason"> Rsn Num Value
-    <OPTION VALUE="History"> History
+    <OPTION VALUE="Legacy"> Legacy
     <OPTION VALUE="NoteCategory"> NoteCategory
   </SELECT>
   <input type="text"  name="search2value"/><br/>
