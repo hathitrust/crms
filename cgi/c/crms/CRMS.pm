@@ -2011,7 +2011,7 @@ sub GetMonthStats
     
     
     my $sec = $duration;
-    $sec =~ s,.*?:(.*?):.*,$1,;
+    $sec =~ s,.*?:.*?:(.*),$1,;
 
     $total_time = $total_time + $sec + (60*$min);
   }
@@ -2030,7 +2030,7 @@ sub GetMonthStats
     
     
     my $sec = $duration;
-    $sec =~ s,.*?:(.*?):.*,$1,;
+    $sec =~ s,.*?:.*?:(.*),$1,;
 
     $total_time = $total_time + $sec + (60*$min);
   }
