@@ -160,10 +160,9 @@ sub LoadNewItemsInCandidates
     my $self    = shift;
 
     my $start = $self->GetCandidatesTime();
-    my $size = $self->GetCandidatesSize();
+    my $start_size = $self->GetCandidatesSize();
 
-    my $msg = qq{Starting to load Candidate from rights table.\n};
-    $msg .= qq{The max timestamp in the cadidates table $start, and the size is $size\n};
+    my $msg = qq{Before load, the max timestamp in the cadidates table $start, and the size is $start_size\n};
     print $msg;
 
     my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time, attr, reason FROM rights WHERE time >= '$start' GROUP BY id};
@@ -186,9 +185,18 @@ sub LoadNewItemsInCandidates
       }
     }
 
-    my $size = $self->GetCandidatesSize();
-    $msg = qq{All DONE updating candidates from rights.  The cadidate now has $size rows.\n\n};
+    my $end_size = $self->GetCandidatesSize();
+
+    $msg = qq{After load, the cadidate has $end_size rows.\n\n};
     print $msg;
+
+    my $diff = $start_size - $end_size;
+
+    #Record the update to the queue
+    my $sql = qq{INSERT INTO candidatesrecord ( addedamount ) values ( $diff )};
+    $self->PrepareSubmitSql( $sql );
+
+
 
     return 1;
 }
@@ -200,8 +208,7 @@ sub LoadNewItems
 
     my $queuesize = $self->GetQueueSize();
 
-    my $msg = qq{Starting to load queue from candidates.\n};
-    $msg .= qq{The queue has $queuesize items in it presently.\n};
+    my $msg = qq{Before load, the queue has $queuesize volumes.\n};
     print $msg;
 
     if ( $queuesize < 800 )
@@ -242,9 +249,6 @@ sub LoadNewItems
       $self->PrepareSubmitSql( $sql );
     }
 
-    $msg = qq{All DONE loading queue from candidates.\n};
-    print $msg;
-
 }
 
 ## ----------------------------------------------------------------------------
@@ -275,7 +279,7 @@ sub AddItemToCandidates
     my $pub = $self->GetPublDate( $id, $record );
     ## confirm date range and add check
 
-    #Only care about items between 1923 and 1963
+    #Only care about volumes between 1923 and 1963
     if ( ( $pub >= '1923' ) && ( $pub <= '1963' ) )
     {
 
@@ -378,7 +382,7 @@ sub AddItemToQueueOrSetItemActive
     my $pub = $self->GetPublDate( $id, $record );
     ## confirm date range and add check
 
-    #Only care about items between 1923 and 1963
+    #Only care about volumes between 1923 and 1963
     if ( ( $pub >= '1923' ) && ( $pub <= '1963' ) )
     {
 
@@ -432,7 +436,7 @@ sub GiveItemsInQueuePriority
     my $pub = $self->GetPublDate( $id, $record );
     ## confirm date range and add check
 
-    #Only care about items between 1923 and 1963
+    #Only care about volumes between 1923 and 1963
     if ( ( $pub >= '1923' ) && ( $pub <= '1963' ) )
     {
 
@@ -3743,6 +3747,31 @@ sub GetTotalAwaitingReview
 }
 
 
+sub GetLastLoadSizeToCandidates
+{
+    my $self = shift;
+
+    my $sql  = qq{SELECT addedamount from candidatesrecord order by time DESC LIMIT 1};
+    my $count  = $self->SimpleSqlGet( $sql );
+    
+    if ($count) { return $count; }
+    return 0;
+
+}
+
+sub GetLastLoadTimeToCandidates
+{
+    my $self = shift;
+
+    my $sql  = qq{SELECT max(time) from candidatesrecord};
+    my $time  = $self->SimpleSqlGet( $sql );
+    
+    if ($time) { return $time; }
+    return 'no data available';
+
+}
+
+
 sub GetTotalExported
 {
     my $self = shift;
@@ -3754,6 +3783,7 @@ sub GetTotalExported
     return 0;
 
 }
+
 
 sub GetTotalEverInQueue
 {

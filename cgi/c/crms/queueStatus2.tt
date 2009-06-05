@@ -20,6 +20,7 @@
 <hr>
 Total Number of volumes in queue:  [% crms.GetQueueSize () %]<br>
 Total Number of volumes in candidates:  [% crms.GetCandidatesSize () %]<br>
+Total Number of volumes last added to candidates:  [% crms.GetLastLoadSizeToCandidates () %], on  [% crms.GetLastLoadTimeToCandidates () %]<br>
 <br>
 Number of volumes awaiting review: [% crms.GetTotalAwaitingReview () %]<br>
 
