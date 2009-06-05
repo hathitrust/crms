@@ -51,17 +51,17 @@ $crms->ProcessReviews ( );
 $msg = qq{DONE Processing the statuses. \n};
 &ReportMsg ( $msg );
 
-my $msg = qq{Starting to Clearing Queue and export.  You should receinve a separate email when this completes. \n};
+my $msg = qq{Starting to create export for the rights db.  You should receive a separate email when this completes. \n};
 &ReportMsg ( $msg );
 ## get new items and load the queue table
 my $rc = $crms->ClearQueueAndExport();
-my $msg = qq{DONE Clearing Queue and Exporting. Starting to Load New Items into candidates.\n};
+my $msg = qq{DONE Exporting. Starting to Load New volumes into candidates.\n};
 &ReportMsg ( $msg );
 
 ## get new items and load the queue table
 my $status = $crms->LoadNewItemsInCandidates ();
 
-my $msg = qq{DONE Loading new items into candidates.\n};
+my $msg = qq{DONE Loading new volumes into candidates.\n};
 &ReportMsg ( $msg );
 
 
@@ -72,7 +72,7 @@ if ( $status )
 
    $crms->LoadNewItems ();
 
-   my $msg = qq{DONE loading new items into queue.\n};
+   my $msg = qq{DONE loading new volumes into queue.\n};
    &ReportMsg ( $msg );
 
 }
