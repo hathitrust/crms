@@ -14,6 +14,7 @@
   <a href="crms?p=review">review</a> ||
   <a href="crms?p=editReviews">edit unprocessed reviews</a> ||
   <a href="crms?p=adminHistoricalReviews">view all historical reviews</a> ||
+  <a href="crms?p=userRate">view your review rate</a> ||
 
   [% IF crms.IsUserAdmin %]
     <a href="crms?p=admin">admin menu</a> ||

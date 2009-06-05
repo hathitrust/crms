@@ -14,5 +14,6 @@
     [% crms.CreateStatsReport( id ) %]
   [% END %]
 
+
 [% INCLUDE footer.tt %]
 

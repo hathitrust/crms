@@ -130,51 +130,6 @@ sub SimpleSqlGet
     return $ref->[0]->[0];
 }
 
-## ----------------------------------------------------------------------------
-##  Function:   get a list of new barcodes (mdp.123456789) since a given date
-##              1) 008:28 not equal ‘f’
-##              2) Select records that meet criteria in (1), and have an mdp id 
-##                 in call_no_2, and whose item statistic date is in the range
-##                 that Greg requests.  
-##              3) record has NOT been sent previously
-##  Parameters: date
-##  Return:     NOTHING, loads DB
-## ----------------------------------------------------------------------------
-sub LoadNewItemsBackup
-{
-    my $self    = shift;
-    my $start   = shift;
-    my $stop    = shift;
-
-    if ( ! $start ) { $start = $self->GetUpdateTime(); }
-
-    my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time, attr, reason FROM rights WHERE time >= '$start' AND time <= '$stop' GROUP BY id};
-
-    my $ref = $self->get('sdr_dbh')->selectall_arrayref( $sql );
-
-    if ($self->get('verbose')) { print "found: " .  scalar( @{$ref} ) . ": $sql\n"; }
-
-    ## design note: if these were in the same DB we could just INSERT
-    ## into the new table, not SELECT then INSERT
-    my $count = 0;
-    my $inqueue;
-    foreach my $row ( @{$ref} ) 
-    { 
-      my $attr =  $row->[2];
-      my $reason =  $row->[3];
-
-      if ( ( $attr == 2 ) && ( $reason == 1 ) )
-      {	
-	my $inqueue = $self->AddItemToQueue( $row->[0], $row->[1], 0, 0 ); 
-	$count = $count + $inqueue;
-      }
-    }
-
-    #Record the update to the queue
-    my $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source ) values ($count, 'RIGHTSDB')};
-    $self->PrepareSubmitSql( $sql );
-
-}
 
 sub GetCandidatesTime
 {
@@ -255,7 +210,7 @@ sub LoadNewItems
 
       my $twodaysago = $self->TwoDaysAgo();
       
-      my $sql = qq{SELECT id, time, pub_date, title, author from candidates where id not in ( select distinct id from reviews ) and id not in ( select distinct id from historicalreviews ) and time <= '$twodaysago' order by time desc};
+      my $sql = qq{SELECT id, time, pub_date, title, author from candidates where id not in ( select distinct id from reviews ) and id not in ( select distinct id from historicalreviews ) and time <= '$twodaysago' and id not like 'uc1%' order by time desc};
 
       my $ref = $self->get('dbh')->selectall_arrayref( $sql );
 
@@ -384,6 +339,12 @@ sub AddItemToQueue
     if ( ! $author )
     {
       $author = $self->GetEncAuthor ( $id );
+
+    }
+    else
+    {
+      $author =~ s,\',\\\',g; ## escape '
+      $author =~ s,\",\\\",g; ## escape "
     }
     $self->UpdateAuthor ( $id, $author );
       
@@ -2850,7 +2811,6 @@ sub UpdateAuthor
     my $id   = shift;
     my $author = shift;
 
-    $author =~ s,\',\\',gs;
     my $sql  = qq{ SELECT count(*) from bibdata where id="$id"};
     my $count  = $self->SimpleSqlGet( $sql );
     if ( $count == 1 )
@@ -2911,6 +2871,7 @@ sub GetEncAuthor
     my $au = $self->GetMarcDatafieldAuthor( $bar );
 
     $au =~ s,\',\\\',g; ## escape '
+    $au =~ s,\",\\\",g; ## escape "
     return $au;
 }
 
