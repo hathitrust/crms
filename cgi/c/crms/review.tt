@@ -154,7 +154,7 @@
 
           <tr>
             <td class="label" align = "left"><strong>Stanford:</strong></td>
-            <td class="links" align = "left"><a href="javascript:changeFrame2('[% titleLink %]' )" accesskey="t">Title</a>&nbsp;&nbsp;&nbsp;<a href="javascript:changeFrame2('[% authorLink %]')" accesskey="a">Author</a>&nbsp;&nbsp;&nbsp;<a href="javascript:changeFrame2('[% searchForm %]')" accesskey="q">Advance</a>
+            <td class="links" align = "left"><a href="javascript:changeFrame2('[% titleLink %]' )" accesskey="t">Title</a>&nbsp;&nbsp;&nbsp;<a href="javascript:changeFrame2('[% authorLink %]')" accesskey="a">Author</a>&nbsp;&nbsp;&nbsp;<a href="javascript:changeFrame2('[% searchForm %]')" accesskey="q">Advanced</a>
 	     </td>
 	  </tr>
 
