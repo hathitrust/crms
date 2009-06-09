@@ -1,0 +1,42 @@
+##
+## RDIST CRMS Distribution File
+##
+
+# Destination Production Servers
+#   (Note: -m option _must_ be used to specify server to use
+#
+NASDCMR       = ( nas-dcmr.umdl.umich.edu )
+NASHATCHER    = ( nas-hatcher.umdl.umich.edu )
+
+ALLHOSTS = ( ${NASDCMR} ${NASHATCHER} )
+
+# File Directories to be released (source)
+
+BIN_src          = ( /l1/stagebib/bin/c/crms )
+CGI_src          = ( /l1/stagebib/cgi/c/crms )
+WEB_src          = ( /l1/stagebib/web/c/crms )
+
+# File Directories to be released (destination)
+
+BIN_dest         = ( /l1/bin/c/crms )
+CGI_dest         = ( /l1/cgi/c/crms )
+WEB_dest         = ( /l1/web/c/crms )
+
+# do an rdist -oremove on CGI
+( ${BIN_src} ) -> ( ${ALLHOSTS} )
+        install ${BIN_dest};
+        except_pat ( CVS );
+        # notify dlps-release@umich.edu ;
+
+# do an rdist -oremove on CGI
+( ${CGI_src} ) -> ( ${ALLHOSTS} )
+        install -oremove ${CGI_dest};
+        except_pat ( CVS );
+        # notify dlps-release@umich.edu ;
+
+# do NOT do an rdist -oremove on WEB
+( ${WEB_src} ) -> ( ${ALLHOSTS} )
+        install ${WEB_dest};
+        except_pat ( CVS );
+        # notify dlps-release@umich.edu ;
+
