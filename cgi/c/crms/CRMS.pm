@@ -639,7 +639,7 @@ sub ProcessReviews
 	      #If they are ic/ren then the renal date and id must match
 	      if ( ( $attr == 2 ) && ( $reason == 7 ) )
 	      {
-		 if ( ( $renNum == $other_renNum ) && ( $renDate == $other_renDate ) )
+		 if ( ( $renNum eq $other_renNum ) && ( $renDate eq $other_renDate ) )
 		 {
 		   #Mark as 4
 		   $self->RegisterStatus( $id, 4 );	      
