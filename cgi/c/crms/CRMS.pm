@@ -2433,18 +2433,18 @@ sub HasItemBeenReviewedByTwoReviewers
       my $sql  = qq{ SELECT count(*) from $CRMSGlobals::reviewsTable where id ='$id' and user != '$user'};
       my $count  = $self->SimpleSqlGet( $sql );
     
-      if ($count >= 2 ) { $msg = qq{This volume has been reviewed already by 2 reviwers, please do not backpage into the review page.}; }
+      if ($count >= 2 ) { $msg = qq{This volume does not need to be reviewed.  Two reviewers or an expert have already reviewed it. Please Cancel.}; }
 
 
       my $sql  = qq{ SELECT count(*) from $CRMSGlobals::queueTable where id ='$id' and status != 0};
       my $count  = $self->SimpleSqlGet( $sql );
     
-      if ($count >= 1 ) { $msg .= qq{This item has been processed already,please do not backpage into the review page.}; }
+      if ($count >= 1 ) { $msg = qq{This item has been processed already.  Please Cancel.}; }
 
       my $sql  = qq{ SELECT count(*) from $CRMSGlobals::historicalreviewsTable where id ='$id'};
       my $count  = $self->SimpleSqlGet( $sql );
     
-      if ($count >= 1 ) { $msg .= qq{This volume has been already been exported, please do not backpage into the review page.}; }
+      if ($count >= 1 ) { $msg = qq{This volume has been already been exported.  Please Cancel.}; }
 
     }
     return $msg;
