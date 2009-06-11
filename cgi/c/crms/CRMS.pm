@@ -1056,6 +1056,7 @@ sub CreateSQL
     my $type               = shift;
     my $limit              = shift;
 
+    my $PageSize = $self->GetPageSize ();
   
     $search1 = $self->ConvertToSearchTerm ( $search1, $type );
     $search2 = $self->ConvertToSearchTerm ( $search2, $type );
@@ -1144,7 +1145,7 @@ sub CreateSQL
     my $limit_section = '';
     if ( $limit )
     {
-      $limit_section = qq{LIMIT $offset, 25};
+      $limit_section = qq{LIMIT $offset, $PageSize};
     }
     if ( $order eq 'status' )
     {
@@ -1363,6 +1364,8 @@ sub GetHistoricalReviewsRef
     my $since   = shift;
     my $offset  = shift;
     
+    my $PageSize = $self->GetPageSize ();
+
     if ( ! $offset ) { $offset = 0; }
 
     if ( ! $order || $order eq "time" ) { $order = "time DESC "; }
@@ -1377,7 +1380,7 @@ sub GetHistoricalReviewsRef
     if    ( $id && ($user || $since) ) { $sql .= qq{ AND   id = "$id" }; }
     elsif ( $id )                      { $sql .= qq{ WHERE id = "$id" }; }
 
-    $sql .= qq{ ORDER BY $order LIMIT $offset, 25 };
+    $sql .= qq{ ORDER BY $order LIMIT $offset, $PageSize };
 
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -3918,6 +3921,14 @@ sub GetLastIdQueueCount
     my $latest_time  = $self->SimpleSqlGet( $sql );
     
     return $latest_time;
+
+}
+
+sub GetPageSize
+{
+    my $self = shift;
+
+    return 20;
 
 }
 

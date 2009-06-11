@@ -15,20 +15,21 @@
 [% order              = cgi.param('order')          %]
 [% direction          = cgi.param('direction')      %]
 [% offset             = cgi.param('offset')         %]
+[% pagesize           = crms.GetPageSize()          %]
 
 [% IF NOT offset %] [% offset = 0 %] [% END %]
 
-[% IF offset > 0 %] [% next = offset + 25 %]
-[% ELSE %]          [% next = 25 %] [% END %]
+[% IF offset > 0 %] [% next = offset + pagesize %]
+[% ELSE %]          [% next = pagesize %] [% END %]
 
-[% IF offset > 0 %] [% prev = offset - 25 %]
+[% IF offset > 0 %] [% prev = offset - pagesize %]
 [% ELSE %]          [% prev = 0 %] [% END %]
 
 [% Total = crms.GetReviewsCount(search1, search1value, op1, search2, search2value, since, 'conflict') %]
-[% IF Total > 25 %] [% last = ( Total - ( Total mod 25 ) )  %]
+[% IF Total > pagesize %] [% last = ( Total - ( Total mod pagesize ) )  %]
 [% ELSE %]          [% last = 0 %] [% END %]
 
-[% IF offset >= 25 %] [% pagenum = offset / 25  + 1 %]
+[% IF offset >= pagesize %] [% pagenum = offset / pagesize  + 1 %]
 [% ELSE %]          [% pagenum = 1 %] [% END %]
 
 
@@ -76,8 +77,8 @@
 
 [% reviews = crms.GetReviewsRef( order, direction, search1, search1value, op1, search2, search2value, since, offset, 'conflict' ) %]
 
-<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$prev">previous 25</a> || 
-<a href="?p=expert&id=$id&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$next">next 25</a> ||
+<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$prev">previous [% pagesize %]</a> || 
+<a href="?p=expert&id=$id&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$next">next [% pagesize %]</a> ||
 <a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=0">first page</a> ||
 <a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$last">last page</a>
 
@@ -131,7 +132,7 @@
   [% END %]
 </table>
 
-<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$prev">previous 25</a> || 
-<a href="?p=expert&id=$id&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$next">next 25</a>
+<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$prev">previous [% pagesize %]</a> || 
+<a href="?p=expert&id=$id&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$next">next [% pagesize %]</a>
 
 [% INCLUDE footer.tt %]
