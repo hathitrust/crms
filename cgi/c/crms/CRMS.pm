@@ -2728,6 +2728,9 @@ sub GetEncTitle
 
     my $ti = $self->GetTitle( $bar );
 
+    #good for the title
+    $ti =~ s,(.*\w).*,$1,;
+
     $ti =~ s,\',\\\',g; ## escape '
     return $ti;
 }
@@ -2741,6 +2744,9 @@ sub GetTitle
     my $ti   = $self->SimpleSqlGet( $sql );
 
     if ( $ti eq "" ) { $ti = $self->UpdateTitle($id); }
+
+    #good for the title
+    $ti =~ s,(.*\w).*,$1,;
 
     return $ti;
 }
@@ -2887,7 +2893,21 @@ sub GetEncAuthorForReview
 
     my $au = $self->GetMarcDatafield ( $bar, 100, 'a');
 
+    $au =~ s,(.*[A-Za-z]).*,$1,;
+
     $au =~ s,\',\\\',g; ## escape '
+    return $au;
+}
+
+sub GetAuthorForReview
+{
+    my $self = shift;
+    my $bar  = shift;
+
+    my $au = $self->GetMarcDatafield ( $bar, 100, 'a');
+
+    $au =~ s,(.*[A-Za-z]).*,$1,;
+
     return $au;
 }
 
