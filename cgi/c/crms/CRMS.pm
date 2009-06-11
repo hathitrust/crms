@@ -2421,6 +2421,36 @@ sub CheckRenDate
 }
 
 
+sub HasItemBeenReviewedByTwoReviewers
+{
+    my $self = shift;
+    my $id   = shift;
+    my $user = shift;
+
+    my $msg = '0';
+    if ( $self->IsUserReviewer( $user ) )
+    {
+      my $sql  = qq{ SELECT count(*) from $CRMSGlobals::reviewsTable where id ='$id' and user != '$user'};
+      my $count  = $self->SimpleSqlGet( $sql );
+    
+      if ($count >= 2 ) { $msg = qq{This volume has been reviewed already by 2 reviwers, please do not backpage into the review page.}; }
+
+
+      my $sql  = qq{ SELECT count(*) from $CRMSGlobals::queueTable where id ='$id' and status != 0};
+      my $count  = $self->SimpleSqlGet( $sql );
+    
+      if ($count >= 1 ) { $msg .= qq{This item has been processed already,please do not backpage into the review page.}; }
+
+      my $sql  = qq{ SELECT count(*) from $CRMSGlobals::historicalreviewsTable where id ='$id'};
+      my $count  = $self->SimpleSqlGet( $sql );
+    
+      if ($count >= 1 ) { $msg .= qq{This volume has been already been exported, please do not backpage into the review page.}; }
+
+    }
+    return $msg;
+
+}
+
 
 sub ValidateSubmission2
 {

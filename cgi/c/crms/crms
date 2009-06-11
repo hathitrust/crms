@@ -105,14 +105,24 @@ if  (  $cgi->param('p') eq 'confirmReview' )
 
     my ( $rights, $reason ) = $crms->GetAttrReasonFromCode($EncRights);
 
+    my $errorMsg1 = $crms->HasItemBeenReviewedByTwoReviewers ( $id, $user );
+
+
     my $errorMsg = $crms->ValidateSubmission2( $rights, $reason, $comment, $category, $renNum, $renDate, $user );
   
-    if ( $errorMsg )
+    if ( ( $errorMsg ) || ( $errorMsg1 ) )
     {
        #clear the cgi
        $cgi->delete_all();
        $cgi->param('p', 'review' );
-       $cgi->param('errorMsg', $errorMsg );
+       if ( $errorMsg1 )
+       {
+	 $cgi->param('errorMsg', $errorMsg1 );
+       }
+       else
+       {
+	 $cgi->param('errorMsg', $errorMsg );
+       }
        $cgi->param('barcode', $id );
        $cgi->param('navRight', $navright );
 
