@@ -1,4 +1,4 @@
-#!/l/local/bin/perl
+#!../../../bin/symlinks/perl
 
 my ($DLXSROOT, $DLPS_DEV);
 BEGIN { $DLXSROOT = $ENV{'DLXSROOT'}; $DLPS_DEV = $ENV{'DLPS_DEV'}; }
@@ -8,6 +8,8 @@ use CGI;
 use CRMS;
 use Template;
 use POSIX;
+
+# !/l/local/bin/perl
 
 my $user = $ENV{'REMOTE_USER'};
 
