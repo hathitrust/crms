@@ -98,7 +98,7 @@ sub ConnectToSdrDb
     my $db_passwd = $CRMSGlobals::mysqlMdpPasswd;
     my $db_server = $CRMSGlobals::mysqlMdpServerDev;
 
-    if ( ! $self->get( 'dev' ) ) { $db_server = $CRMSGlobals::mysqlServer; }
+    if ( ! $self->get( 'dev' ) ) { $db_server = $CRMSGlobals::mysqlMdpServer; }
 
     if ($self->get('verbose')) { $self->Logit( "DBI:mysql:mdp:$db_server, $db_user, [passwd]" ); }
 
