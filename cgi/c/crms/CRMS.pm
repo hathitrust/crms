@@ -625,7 +625,7 @@ sub ProcessReviews
 	my $renNum  = $row->[4];
         my $renDate = $row->[5];
 
-        my ( $other_user, $other_attr, $other_reason, $other_renDate, $other_renNum ) = $self->GetOtherReview ( $id, $user );
+        my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate ) = $self->GetOtherReview ( $id, $user );
 
 	if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
 	{
