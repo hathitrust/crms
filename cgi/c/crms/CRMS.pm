@@ -898,7 +898,7 @@ sub GetFinalAttrReason
 
     ## order by expert so that if there is an expert review, return that one
     my $sql = qq{SELECT attr, reason FROM $CRMSGlobals::reviewsTable WHERE id = "$id" } .
-              qq{ORDER BY expert, time DESC LIMIT 1};
+              qq{ORDER BY expert DESC, time DESC LIMIT 1};
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );  
 
     if ( ! $ref->[0]->[0] )
