@@ -190,7 +190,7 @@ sub LoadNewItemsInCandidates
     $msg = qq{After load, the cadidate has $end_size rows.\n\n};
     print $msg;
 
-    my $diff = $start_size - $end_size;
+    my $diff = $end_size - $start_size;
 
     #Record the update to the queue
     my $sql = qq{INSERT INTO candidatesrecord ( addedamount ) values ( $diff )};
@@ -1424,6 +1424,13 @@ sub GetReviewsCount
     my $search2value   = shift;
     my $since          = shift;
     my $type           = shift;
+    my $volumes        = shift;
+
+    my $countExpression = qq{*};
+    if ( $volumes )
+      {
+	$countExpression = qq{distinct r.id};
+      }
 
     $search1 = $self->ConvertToSearchTerm ( $search1, $type );
     $search2 = $self->ConvertToSearchTerm ( $search2, $type );
@@ -1432,30 +1439,30 @@ sub GetReviewsCount
     my $sql;
     if ( $type eq 'reviews' )
     {
-      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status >= 0 };
+      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status >= 0 };
     }
     elsif ( $type eq 'conflict' )
     {
-      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
+      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
     }
     elsif ( $type eq 'historicalreviews' )
     {
-      $sql = qq{ SELECT count(*) FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0  };
+      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0  };
     }
     elsif ( $type eq 'undreviews' )
       {
-	$sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
+	$sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
     }
     elsif ( $type eq 'userreviews' )
       {
 	my $user = $self->get( "user" );
-	$sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
+	$sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
     }
     elsif ( $type eq 'editreviews' )
     {
 	my $user = $self->get( "user" );
 	my $yesterday = $self->GetYesterday();
-	$sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
+	$sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
 	
     }
 
@@ -1494,6 +1501,7 @@ sub GetReviewsCount
     }
 
     if ( $since ) { $sql .= qq{ AND r.time >= "$since" }; }
+
 
     return $self->SimpleSqlGet( $sql );
 }
@@ -3755,27 +3763,19 @@ sub GetTotalInHistoricalQueue
 }
 
 
-sub GetReviewsWith4Status
+sub GetReviewsWithStatusNubmer
 {
     my $self = shift;
+    my $status = shift;
 
-    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::reviewsTable where id in ( select id from queue where status = 4)};
+    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::queueTable where status = $status};
     my $count  = $self->SimpleSqlGet( $sql );
     
     if ($count) { return $count; }
     return 0;
 }
 
-sub GetReviewsWith5Status
-{
-    my $self = shift;
 
-    my $sql  = qq{ SELECT count(distinct id) from $CRMSGlobals::reviewsTable where id in ( select id from queue where status = 5)};
-    my $count  = $self->SimpleSqlGet( $sql );
-    
-    if ($count) { return $count; }
-    return 0;
-}
 
 
 sub GetTotalReviewedNotProcessed

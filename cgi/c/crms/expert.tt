@@ -25,7 +25,8 @@
 [% IF offset > 0 %] [% prev = offset - pagesize %]
 [% ELSE %]          [% prev = 0 %] [% END %]
 
-[% Total = crms.GetReviewsCount(search1, search1value, op1, search2, search2value, since, 'conflict') %]
+[% TotalVolumes = crms.GetReviewsCount(search1, search1value, op1, search2, search2value, since, 'conflict', 1) %]
+[% Total        = crms.GetReviewsCount(search1, search1value, op1, search2, search2value, since, 'conflict') %]
 [% IF Total > pagesize %] [% last = ( Total - ( Total mod pagesize ) )  %]
 [% ELSE %]          [% last = 0 %] [% END %]
 
@@ -82,7 +83,7 @@
 <a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=0">first page</a> ||
 <a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$last">last page</a>
 
-(found: $Total, page = $pagenum)
+(found: $Total reviews/$TotalVolumes volumes, page = $pagenum)
 
 <a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$prev&type=conflict&download=1" target="_blank">download</a>
 

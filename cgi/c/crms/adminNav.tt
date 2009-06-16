@@ -12,7 +12,6 @@
   [% ELSIF page == "undReviews"          %] > und/nfi items
   [% ELSIF page == "expert"              %] > expert review
   [% ELSIF page == "queueStatus"         %] > queue status
-  [% ELSIF page == "queueStatus2"        %] > queue status2
   [% ELSIF page == "queueAdd"            %] > add to queue
   [% ELSIF page == "adminEditUser"       %] > <a href="?p=adminUser">adminster user accounts</a> 
                                                 > edit user
