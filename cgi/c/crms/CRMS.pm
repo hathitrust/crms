@@ -165,7 +165,7 @@ sub LoadNewItemsInCandidates
     my $msg = qq{Before load, the max timestamp in the cadidates table $start, and the size is $start_size\n};
     print $msg;
 
-    my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time, attr, reason FROM rights WHERE time >= '$start' GROUP BY id};
+    my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time, attr, reason FROM rights WHERE time >= '$start' GROUP BY id order by time asc};
 
     my $ref = $self->get('sdr_dbh')->selectall_arrayref( $sql );
 
