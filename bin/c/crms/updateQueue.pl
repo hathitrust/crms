@@ -3,17 +3,14 @@
 my $DLXSROOT;
 my $DLPS_DEV;
 
-BEGIN
-{
-    unshift( @INC, '/l1/dev/blancoj/cgi/c/crms' );
-}
-
 
 
 BEGIN 
 { 
     $DLXSROOT = $ENV{'DLXSROOT'}; 
     $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+    my $toinclude = qq{$DLXSROOT/cgi/c/crms};
+    unshift( @INC, $toinclude );
 }
 
 use strict;
