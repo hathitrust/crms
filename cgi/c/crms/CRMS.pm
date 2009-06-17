@@ -1839,6 +1839,21 @@ sub IsUserReviewer
     return 0;
 }
 
+sub IsUserReviewerExpert
+{
+    my $self = shift;
+    my $user = shift;
+
+    if ( ! $user ) { $user = $self->get( "user" ); }
+
+    my $sql  = qq{ SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' AND type = 2 };
+    my $name = $self->SimpleSqlGet( $sql );
+
+    if ($name) { return 1; }
+
+    return 0;
+}
+
 sub IsUserExpert
 {
     my $self = shift;
@@ -2436,7 +2451,7 @@ sub HasItemBeenReviewedByTwoReviewers
     my $user = shift;
 
     my $msg = '0';
-    if ( $self->IsUserReviewer( $user ) )
+    if ( ! $self->IsUserReviewerExpert( $user ) )
     {
       my $sql  = qq{ SELECT count(*) from $CRMSGlobals::reviewsTable where id ='$id' and user != '$user'};
       my $count  = $self->SimpleSqlGet( $sql );
