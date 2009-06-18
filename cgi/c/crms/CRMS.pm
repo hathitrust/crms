@@ -42,6 +42,8 @@ sub new
     $self->set( 'user',        $args{'user'} );
 
     $self->set( 'dbh',         $self->ConnectToDb() );
+    $self->set( 'dbhP',         $self->ConnectToDbForTesting() );
+
     $self->set( 'sdr_dbh',     $self->ConnectToSdrDb() );
 
     $self;
@@ -86,6 +88,23 @@ sub ConnectToDb
     return $dbh;
 }
 
+sub ConnectToDbForTesting
+{
+    my $self      = shift;
+    my $db_user   = $CRMSGlobals::mysqlUser;
+    my $db_passwd = $CRMSGlobals::mysqlPasswd;
+    my $db_server = $CRMSGlobals::mysqlServerDev;
+
+    $db_server = $CRMSGlobals::mysqlServer;
+
+    my $dbh = DBI->connect( "DBI:mysql:crms:$db_server", $db_user, $db_passwd,
+              { RaiseError => 1, AutoCommit => 1 } ) || die "Cannot connect: $DBI::errstr";
+
+    $dbh->{mysql_auto_reconnect} = 1;
+
+    return $dbh;
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   connect to the development mysql DB
 ##  Parameters: nothing
@@ -118,6 +137,17 @@ sub PrepareSubmitSql
     my $sth = $self->get( 'dbh' )->prepare( $sql );
     eval { $sth->execute(); };
     if ($@) { $self->Logit("sql failed ($sql): " . $sth->errstr); }
+    return 1;
+}
+
+
+sub PrepareSubmitSqlForTesting
+{
+    my $self = shift;
+    my $sql  = shift;
+
+    my $sth = $self->get( 'dbhP' )->prepare( $sql );
+    eval { $sth->execute(); };
     return 1;
 }
 
@@ -154,6 +184,36 @@ sub GetCandidatesSize
   
 }
 
+
+sub MoveToProdDBCandidates
+  {
+
+  my $self = shift;
+
+    my $sql = qq{select id, time, pub_date, title, author from candidates};
+
+    my $ref = $self->get('dbh')->selectall_arrayref( $sql );
+
+    ## design note: if these were in the same DB we could just INSERT
+    ## into the new table, not SELECT then INSERT
+    my $count = 0;
+    my $inqueue;
+    foreach my $row ( @{$ref} ) 
+      { 
+	my $id       = $row->[0];
+	my $time     = $row->[1];
+	my $pub_date = $row->[2];
+	my $title    = $row->[3];
+	$title =~ s,\',\\',gs;
+	my $author   = $row->[4];
+	$author =~ s,\',\\',gs;
+
+	my $sql = qq{insert into candidates values ('$id', '$time', '$pub_date', '$title', '$author')};
+
+	$self->PrepareSubmitSqlForTesting( $sql );
+
+      }
+}
 
 sub LoadNewItemsInCandidates
 {
@@ -1236,10 +1296,14 @@ sub SearchAndDownload
         my $attr       = $self->GetRightsName($row->[4]);
         my $reason     = $self->GetReasonName($row->[5]);
         my $note       = $row->[6];
+	$note =~ s,\n, ,gs;
+	$note =~ s,\t, ,gs;
         my $renNum     = $row->[7];
         my $expert     = $row->[8];
         my $copyDate   = $row->[9];
         my $expertNote = $row->[10];
+	$expertNote =~ s,\n, ,gs;
+	$expertNote =~ s,\t, ,gs;
         my $category   = $row->[11];
         my $legacy     = $row->[12];
         my $renDate    = $row->[13];
