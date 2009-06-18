@@ -39,7 +39,7 @@
 <form>
   <input type="hidden" name="p" value="editReviews"/>
   Restrict selection (<a  href="/c/crms/keys.html" target="_blank">Search Help</a>):<br/>
-[% INCLUDE selection.tt  %]
+[% INCLUDE selectionUnprocessed.tt  %]
 
 
   Since:   <input type="text"  name="since" value="[% since %]"/>
