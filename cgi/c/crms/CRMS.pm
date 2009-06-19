@@ -923,6 +923,44 @@ sub RemoveFromQueue
 }
 
 
+sub PrepareForTesting
+{
+    my $self = shift;
+
+    my $sql = qq{ DELETE FROM $CRMSGlobals::queueTable};
+    $self->PrepareSubmitSql( $sql );
+
+    my $sql = qq{ DELETE FROM bibdata where id not in ( select id from historicalreviews where legacy = 1)};
+    $self->PrepareSubmitSql( $sql );
+
+    my $sql = qq{ DELETE FROM candidatesrecord};
+    $self->PrepareSubmitSql( $sql );
+
+    my $sql = qq{ DELETE FROM exportrecord};
+    $self->PrepareSubmitSql( $sql );
+
+    my $sql = qq{ DELETE FROM reviews};
+    $self->PrepareSubmitSql( $sql );
+
+    my $sql = qq{ DELETE FROM processstatus};
+    $self->PrepareSubmitSql( $sql );
+
+    my $sql = qq{ DELETE FROM userstats};
+    $self->PrepareSubmitSql( $sql );
+
+    my $sql = qq{ DELETE FROM queuerecord};
+    $self->PrepareSubmitSql( $sql );
+
+    my $sql = qq{ DELETE FROM timer};
+    $self->PrepareSubmitSql( $sql );
+
+    my $sql = qq{ DELETE FROM historicalreviews where legacy=0};
+    $self->PrepareSubmitSql( $sql );
+
+    return 1;
+}
+
+
 sub MoveFromReviewsToHistoricalReviews
 {
     my $self = shift;
@@ -1297,12 +1335,14 @@ sub SearchAndDownload
         my $reason     = $self->GetReasonName($row->[5]);
         my $note       = $row->[6];
 	$note =~ s,\n, ,gs;
+	$note =~ s,\r, ,gs;
 	$note =~ s,\t, ,gs;
         my $renNum     = $row->[7];
         my $expert     = $row->[8];
         my $copyDate   = $row->[9];
         my $expertNote = $row->[10];
 	$expertNote =~ s,\n, ,gs;
+	$expertNote =~ s,\r, ,gs;
 	$expertNote =~ s,\t, ,gs;
         my $category   = $row->[11];
         my $legacy     = $row->[12];
