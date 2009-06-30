@@ -8,6 +8,8 @@
 [% reviews = crms.GetReviewsRef( 'id', 'DESC', 'Identifier', id, 'AND', 'UserId', user, '', '', page ) %]
 More Information....&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="JavaScript:window.close()">Close</a>
 
+[% IF NOT reviews %] <BR>NO INFO AVAILABLE [% END %]
+
 [% FOREACH review IN reviews %]
 <table border="1">
 <tr><td>ID</td><td>               [% review.id %] </td></tr>

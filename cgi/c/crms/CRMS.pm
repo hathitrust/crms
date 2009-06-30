@@ -737,7 +737,7 @@ sub ProcessReviews
 sub SubmitHistReview
 {
     my $self = shift;
-    my ($id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $eNote, $category, $status) = @_;
+    my ($id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $eNote, $category, $status, $title) = @_;
 
     ## change attr and reason back to numbers
     $attr   = $self->GetRightsNum( $attr );
@@ -759,7 +759,7 @@ sub SubmitHistReview
     $self->PrepareSubmitSql( $sql );
 
     #Now load this info into the bibdata table.
-    $self->UpdateTitle ( $id );
+    $self->UpdateTitle ( $id, $title );
 
     #Update the pub date in bibdata
     my $pub = $self->GetPublDate( $id );
@@ -2568,11 +2568,6 @@ sub HasItemBeenReviewedByTwoReviewers
     
       if ($count >= 1 ) { $msg = qq{This item has been processed already.  Please Cancel.}; }
 
-      my $sql  = qq{ SELECT count(*) from $CRMSGlobals::historicalreviewsTable where id ='$id'};
-      my $count  = $self->SimpleSqlGet( $sql );
-    
-      if ($count >= 1 ) { $msg = qq{This volume has been already been exported.  Please Cancel.}; }
-
     }
     return $msg;
 
@@ -2932,10 +2927,11 @@ sub UpdateTitle
     if ( ! $title )
     {
       ## my $ti   = $self->GetMarcDatafield( $id, "245", "a");
-      my $title   = $self->GetRecordTitleBc2Meta( $id );
+      $title   = $self->GetRecordTitleBc2Meta( $id );
     }
 
-    my $tiq  = $self->get("dbh")->quote( $title );
+    #This is the problem.
+    my $tiq  = $self->get('dbh')->quote( $title );
 
     my $sql  = qq{ SELECT count(*) from bibdata where id="$id"};
     my $count  = $self->SimpleSqlGet( $sql );
@@ -3051,7 +3047,30 @@ sub GetEncAuthorForReview
     my $self = shift;
     my $bar  = shift;
 
-    my $au = $self->GetMarcDatafield ( $bar, 100, 'a');
+    my $au;
+    #100, 110, 111, 130, 700, 710, 
+    $au = $self->GetMarcDatafield ( $bar, 100, 'a');
+
+    if ( ! $au )
+    {
+      $au = $self->GetMarcDatafield ( $bar, 110, 'a');
+    }
+    if ( ! $au )
+    {
+      $au = $self->GetMarcDatafield ( $bar, 111, 'a');
+    }
+    if ( ! $au )
+    {
+      $au = $self->GetMarcDatafield ( $bar, 130, 'a');
+    }
+    if ( ! $au )
+    {
+      $au = $self->GetMarcDatafield ( $bar, 700, 'a');
+    }
+    if ( ! $au )
+    {
+      $au = $self->GetMarcDatafield ( $bar, 710, 'a');
+    }
 
     $au =~ s,(.*[A-Za-z]).*,$1,;
 
@@ -3065,6 +3084,28 @@ sub GetAuthorForReview
     my $bar  = shift;
 
     my $au = $self->GetMarcDatafield ( $bar, 100, 'a');
+
+
+    if ( ! $au )
+    {
+      $au = $self->GetMarcDatafield ( $bar, 110, 'a');
+    }
+    if ( ! $au )
+    {
+      $au = $self->GetMarcDatafield ( $bar, 111, 'a');
+    }
+    if ( ! $au )
+    {
+      $au = $self->GetMarcDatafield ( $bar, 130, 'a');
+    }
+    if ( ! $au )
+    {
+      $au = $self->GetMarcDatafield ( $bar, 700, 'a');
+    }
+    if ( ! $au )
+    {
+      $au = $self->GetMarcDatafield ( $bar, 710, 'a');
+    }
 
     $au =~ s,(.*[A-Za-z]).*,$1,;
 
