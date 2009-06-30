@@ -11,7 +11,7 @@
               reviewer => reviewer, expert => expert,
               admin    => admin,    delete => delete } %]
 
-  [% IF crms.AddUser( args ) %]  <h3>Add/Edi user:</h3>
+  [% IF crms.AddUser( args ) %]  <h3>Add/Edit user:</h3>
   [% ELSE %]                     <h3>ERROR adding [% id %]</h3>
   [% END  %]
 
