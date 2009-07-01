@@ -2217,10 +2217,10 @@ sub CreateStatsReport
    my $dbh = $self->get( 'dbh' );
 
    my $year = $self->GetTheYear ();	
-   my $lastYear = $year - 1;
+   my $nextYear = $year + 1;
 
-   my $min = qq{$lastYear-07};
-   my $max = qq{$year-06};
+   my $min = qq{$year-07};
+   my $max = qq{$nextYear-06};
    #find out how many distinct months there are
    my $sql = qq{SELECT distinct monthyear from userstats where monthyear >= '$min' and monthyear <= '$max'};
    
