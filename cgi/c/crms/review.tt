@@ -118,12 +118,12 @@
           </tr>
           <tr>
             <td>
-	        <strong>Title:</strong>[% title %]
+	        <strong>Title:</strong> [% title %]
             </td>
           </tr>
           <tr>
             <td>
-	        <strong>Author:</strong>[% author %]<br/>
+	        <strong>Author:</strong> [% author %]<br/>
             </td>
           </tr>
           <tr>
