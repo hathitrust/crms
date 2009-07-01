@@ -2197,7 +2197,7 @@ sub GetMonthStats
 }
 
 
-sub GetTheYear
+sub GetTheYearMonth
 {
 
    my $self = shift;
@@ -2205,7 +2205,23 @@ sub GetTheYear
    my $newtime = scalar localtime(time());
    my $year = substr($newtime, 20, 4);
 
-   return $year;	
+    my %months = (
+                  "Jan" => "01",
+                  "Feb" => "02",
+                  "Mar" => "03",
+                  "Apr" => "04",
+                  "May" => "05",
+                  "Jun" => "06",
+                  "Jul" => "07",
+                  "Aug" => "08",
+                  "Sep" => "09",
+                  "Oct" => "10",
+                  "Nov" => "11",
+                  "Dec" => "12",
+                 );
+    my $month = $months{substr ($newtime,4, 3)};
+
+   return ( $year, $month );	
 	
 }
 
@@ -2216,11 +2232,26 @@ sub CreateStatsReport
 
    my $dbh = $self->get( 'dbh' );
 
-   my $year = $self->GetTheYear ();	
-   my $nextYear = $year + 1;
+   my ( $year, $month ) = $self->GetTheYearMonth ();	
 
-   my $min = qq{$year-07};
-   my $max = qq{$nextYear-06};
+   my ( $min, $max );
+
+   if ( $month ge '07' )
+   {
+     my $nextYear = $year + 1;
+
+     $min = qq{$year-07};
+     $max = qq{$nextYear-06};
+   }
+   else
+   {
+     my $lastYear = $year + 1;
+
+     $min = qq{$lastYear-07};
+     $max = qq{$year-06};
+
+   }
+
    #find out how many distinct months there are
    my $sql = qq{SELECT distinct monthyear from userstats where monthyear >= '$min' and monthyear <= '$max'};
    
