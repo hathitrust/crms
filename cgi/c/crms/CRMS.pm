@@ -605,6 +605,7 @@ sub SubmitReview
 
     ## do some sort of check for expert submissions
 
+    $note =~ s,\',\\',gs;
     my @fieldList = ("id", "user", "attr", "reason", "note", "renNum", "renDate", "category");
     my @valueList = ($id,  $user,  $attr,  $reason,  $note,  $renNum,  $renDate, $category);
 
