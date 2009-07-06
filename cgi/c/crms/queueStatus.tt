@@ -6,6 +6,7 @@
 <hr width="25%" align="left"/>
 
 [% notprocessedcnt = crms.GetTotalReviewedNotProcessed () %]
+[% reportstring  = crms.GetUnProcessCounts () %]
 [% undcnt = crms.GetTotalUndInf () %]
 [% conflictcnt = crms.GetTotalConflict () %]
 [% finalcnt = crms.GetTotalWithFinalDetermination () %]
@@ -34,7 +35,9 @@ Number of volumes awaiting review: [% crms.GetTotalAwaitingReview () %]<br>
 Number of active volumes: [% totalactive %]<br>
 
 
-&nbsp;&nbsp;&nbsp;Number of of unprocessed: [% notprocessedcnt  %]<br>
+&nbsp;&nbsp;&nbsp;Number of unprocessed: [% notprocessedcnt  %]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[% reportstring %]<br>
+
 &nbsp;&nbsp;&nbsp;Number matching und/nfi: [% undcnt  %]<br>
 &nbsp;&nbsp;&nbsp;Number conflicting:  [% conflictcnt  %]<br>
 &nbsp;&nbsp;&nbsp;Number final determinations/awaiting export: [% finalcnt  %]<br>

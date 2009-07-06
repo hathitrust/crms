@@ -728,6 +728,75 @@ sub ProcessReviews
 
 }
 
+sub GetUnProcessCounts
+{
+    my $self = shift;
+
+    my $yesterday = $self->GetYesterday();
+ 
+    my $sql = qq{SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where status = 0) group by id having count(*) = 2};
+
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+
+    my $reviewonlycnt = 0;
+    my $matchcnt = 0;
+    my $conflictcnt = 0;
+    my $undcnt = 0;
+
+    foreach my $row ( @{$ref} )
+    {
+        my $id      =  $row->[0];
+	my $user    = $row->[1];
+	my $attr    = $row->[2];
+        my $reason  = $row->[3];
+	my $renNum  = $row->[4];
+        my $renDate = $row->[5];
+
+        my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate ) = $self->GetOtherReview ( $id, $user );
+
+	if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
+	{
+           #If both und/nfi them status is 3
+	   if ( ( $attr == 5 ) && ( $reason == 8 ) )
+	   {
+	       $undcnt = $undcnt + 1;	      
+	   }
+	   else #Mark as 4 - two that agree
+	   {
+	      #If they are ic/ren then the renal date and id must match
+	      if ( ( $attr == 2 ) && ( $reason == 7 ) )
+	      {
+		 if ( ( $renNum eq $other_renNum ) && ( $renDate eq $other_renDate ) )
+		 {
+		   #Mark as 4
+		   $matchcnt = $matchcnt + 1;
+		 }
+		 else
+		 {
+		   #Mark as 2
+		   $conflictcnt = $conflictcnt + 1;
+		 }
+	      }
+	      else #all other cases mark as 4
+	      {
+		$matchcnt = $matchcnt + 1;
+	      }
+	    }
+	  }
+	  else #Mark as 2 - two that disagree 
+	  {
+	    $conflictcnt = $conflictcnt + 1;
+	  }
+    }
+
+    $reviewonlycnt = $self->GetTotalReviewedNotProcessed () - $matchcnt - $conflictcnt - $undcnt;
+
+    my $out = qq{ 1 reviews =>$reviewonlycnt, mathches => $matchcnt, conflicts => $conflictcnt, und/nfi => $undcnt };
+    return $out;
+
+}
+
 
 
 ## ----------------------------------------------------------------------------
