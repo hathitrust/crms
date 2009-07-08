@@ -1697,8 +1697,9 @@ sub LinkToPT
     my $id   = shift;
     my $ti   = $self->GetTitle( $id );
     
-    ## my $url  = 'http://babel.hathitrust.org/cgi/pt?attr=1&id=';
-    my $url  = '/cgi/m/mdp/pt?skin=crms;attr=1;id=';
+    my $url  = 'http://babel.hathitrust.org/cgi/pt?attr=1&id=';
+    #This url was used for testing.
+    #my $url  = '/cgi/m/mdp/pt?skin=crms;attr=1;id=';
 
     return qq{<a href="$url$id" target="_blank">$ti</a>};
 }
