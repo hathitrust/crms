@@ -160,6 +160,15 @@ sub SimpleSqlGet
     return $ref->[0]->[0];
 }
 
+sub SimpleSqlGetForTesting
+{
+    my $self = shift;
+    my $sql  = shift;
+
+    my $ref  = $self->get('dbhP')->selectall_arrayref( $sql );
+    return $ref->[0]->[0];
+}
+
 
 sub GetCandidatesTime
 {
@@ -214,6 +223,84 @@ sub MoveToProdDBCandidates
 
       }
 }
+
+
+sub DeDup
+  {
+
+  my $self = shift;
+
+    my $sql = qq{select distinct id from duplicates};
+
+    my $ref = $self->get('dbh')->selectall_arrayref( $sql );
+
+    ## design note: if these were in the same DB we could just INSERT
+    ## into the new table, not SELECT then INSERT
+    my $count = 0;
+    my $msg;
+    foreach my $row ( @{$ref} ) 
+      { 
+	my $id       = $row->[0];
+
+      my $sql  = qq{ SELECT count(*) from candidates where id="mdp.$id"};
+      my $incan  = $self->SimpleSqlGet( $sql );
+      
+      if ( $incan == 1 )
+	{
+	  my $sql = qq{ DELETE FROM candidates WHERE id = "mdp.$id" };
+	  $self->PrepareSubmitSql( $sql );
+
+            $count = $count + 1;
+        }
+      else
+	{
+	  $msg .= qq{$id\n};
+	}
+      }
+
+  print $count;
+
+}
+
+
+
+sub DeDupProd
+  {
+
+  my $self = shift;
+
+    my $sql = qq{select distinct id from duplicates};
+
+    my $ref = $self->get('dbhP')->selectall_arrayref( $sql );
+
+    ## design note: if these were in the same DB we could just INSERT
+    ## into the new table, not SELECT then INSERT
+    my $count = 0;
+    my $msg;
+    foreach my $row ( @{$ref} ) 
+      { 
+	my $id       = $row->[0];
+
+      my $sql  = qq{ SELECT count(*) from candidates where id="mdp.$id"};
+      my $incan  = $self->SimpleSqlGetForTesting( $sql );
+      
+      if ( $incan == 1 )
+	{
+	  my $sql = qq{ DELETE FROM candidates WHERE id = "mdp.$id" };
+	  $self->PrepareSubmitSqlForTesting( $sql );
+
+            $count = $count + 1;
+        }
+      else
+	{
+	  $msg .= qq{$id\n};
+	}
+      }
+
+  print $count;
+
+}
+
 
 sub LoadNewItemsInCandidates
 {
@@ -902,6 +989,14 @@ sub ExportReviews
         my ($attr,$reason) = $self->GetFinalAttrReason($barcode); 
 
         print $fh "$barcode\t$attr\t$reason\t$user\t$src\n";
+
+	my $sql  = qq{ INSERT INTO  exportdata (time, id, attr, reason, user )VALUES ('$time', '$barcode', '$attr', '$reason', '$user' )};
+	$self->PrepareSubmitSql( $sql );
+
+	my $sql  = qq{ INSERT INTO  exportdataBckup (time, id, attr, reason, user )VALUES ('$time', '$barcode', '$attr', '$reason', '$user' )};
+	$self->PrepareSubmitSql( $sql );
+
+
         $self->MoveFromReviewsToHistoricalReviews($barcode); ## DEBUG
         $self->RemoveFromQueue($barcode); ## DEBUG
 
