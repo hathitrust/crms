@@ -2777,6 +2777,8 @@ sub ValidateSubmission2
     my ($attr, $reason, $note, $category, $renNum, $renDate, $user) = @_;
     my $errorMsg = "";
 
+    my $noteError = 0;
+
     ## check user
     if ( ! $self->IsUserReviewer( $user ) )
     {
@@ -2790,6 +2792,7 @@ sub ValidateSubmission2
     if ( $attr == 5 && $reason == 8 && ( ( ! $note ) || ( ! $category ) )  )
     {
         $errorMsg .= qq{und/nfi must include note category and note text.   };
+        $noteError = 1;
     }
 
     ## ic/ren requires a ren number
@@ -2830,6 +2833,7 @@ sub ValidateSubmission2
     if ( $attr == 1 && $reason == 9 && ( ( ! $note ) || ( ! $category )  )  ) 
     {
         $errorMsg .= qq{pd/cdpp must include note category and note text.  };
+        $noteError = 1;
     }
 
     ## ic/cdpp requires a ren number
@@ -2841,6 +2845,20 @@ sub ValidateSubmission2
     if ( $attr == 2 && $reason == 9 && ( ( ! $note )  || ( ! $category ) )  ) 
     {
         $errorMsg .= qq{ic/cdpp must include note category and note text.  };
+        $noteError = 1;
+    }
+
+    if ( $noteError == 0 )
+    {
+      if ( ( $category )  && ( ! $note ) )
+	{
+	  $errorMsg .= qq{must include a note if there is a category.  };
+	}
+      elsif ( ( $note ) && ( ! $category ) )
+	{
+          $errorMsg .= qq{must include a category if there is a note.  };
+	}
+
     }
 
 
