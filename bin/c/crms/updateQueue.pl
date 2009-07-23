@@ -60,7 +60,7 @@ my $rc = $crms->ClearQueueAndExport();
 #it will process all files in the rights_dir of the form *.rights and move them to the
 #/l1/prep/c/crms/archive
 my $host = `hostname`;
-if ( $host =~ m,dlsp11\..*, )
+if ( $host =~ m,dlps11\..*, )
 {
   my $msg = qq{Calling Jessica's script to populate the rights db.\n};
   &ReportMsg ( $msg );
