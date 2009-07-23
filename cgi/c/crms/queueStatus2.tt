@@ -1,0 +1,63 @@
+
+
+[% INCLUDE header.tt    %]
+[% INCLUDE adminNav.tt  %]
+
+<hr width="25%" align="left"/>
+
+[% notprocessedcnt = crms.GetTotalReviewedNotProcessed () %]
+[% undcnt = crms.GetTotalUndInf () %]
+[% conflictcnt = crms.GetTotalConflict () %]
+[% finalcnt = crms.GetTotalWithFinalDetermination () %]
+[% totalactive = notprocessedcnt +  undcnt + conflictcnt + finalcnt %]
+
+<hr width="25%" align="left"/>
+<br>
+<strong>Queue Export Information</strong><br>
+      Last Time Queue was updated:  [% crms.GetLastQueueTime () %]<br>
+      Number of volumes last added to queue:  [% crms.GetLastIdQueueCount () %]<br>
+      Cumulative number of volumes in queue (ever*): [% crms.GetTotalEverInQueue() %]<br>
+<hr>
+Total Number of volumes in queue:  [% crms.GetQueueSize () %]<br>
+Total Number of volumes in candidates:  [% crms.GetCandidatesSize () %]<br>
+Total Number of volumes last added to candidates:  [% crms.GetLastLoadSizeToCandidates () %], on  [% crms.GetLastLoadTimeToCandidates () %]<br>
+<br>
+Number of volumes awaiting review: [% crms.GetTotalAwaitingReview () %]<br>
+
+&nbsp;&nbsp;&nbsp;Number of actuve reviews with status of 4: [% crms.GetReviewsWith4Status () %]<br>
+&nbsp;&nbsp;&nbsp;Number of active reviews with sattus of 5: [% crms.GetReviewsWith5Status () %]<br>
+
+<br>
+Number of active volumes: [% totalactive %]<br>
+
+
+&nbsp;&nbsp;&nbsp;Number of of unporcessed: [% notprocessedcnt  %]<br>
+&nbsp;&nbsp;&nbsp;Number matching und/nfi: [% undcnt  %]<br>
+&nbsp;&nbsp;&nbsp;Number conflicting:  [% conflictcnt  %]<br>
+&nbsp;&nbsp;&nbsp;Number final determinations/awaiting export: [% finalcnt  %]<br>
+
+<br>
+Last time reviews were processed: [% crms.GetLastStatusProcessedTime () %]<br>
+
+<br>
+Last time final determinations were exported:  [% crms.GetLastTimeExported () %]<br>
+Number of determinations last exported: [% crms.GetLastItemCountExported () %]<br>
+
+
+
+
+<hr>
+Cumulative number of determinatins exported (ever)*: [% crms.GetCumExportedCount () %]<br>
+
+&nbsp;&nbsp;&nbsp;Number exported from cadidates table: [% crms.GetNumberExportedFromCandidates () %]<br>
+&nbsp;&nbsp;&nbsp;Number exported not from candidates table: [% crms.GetNumberExportedNotFromCandidates () %]<br>
+
+
+Total number of legacy determinations: [% crms.GetTotalLegacyCount () %]<br>
+<br>
+Total number of legacy reviews: [% crms.GetTotalLegacyReviewCount () %]<br>
+Total number of historical reviews ( including legacy ): [% crms.GetTotalHistoricalReviewCount () %]<br>
+<br>
+*not including legacy data (reviews/determinations made prior to June 2009)
+
+[% INCLUDE footer.tt %]
