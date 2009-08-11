@@ -10,8 +10,8 @@
   </SELECT>
   <input type="text"  name="search1value"/>
   <SELECT NAME="op1">
-    <OPTION SELECTED> OR
-    <OPTION> AND
+    <OPTION SELECTED> AND
+    <OPTION> OR
   </SELECT>
 <br/>
   <SELECT NAME="search2">
