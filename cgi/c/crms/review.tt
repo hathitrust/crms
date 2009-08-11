@@ -16,8 +16,9 @@
 [% comm       = cgi.param('comm') %]
 [% category   = cgi.param('category') %]
 [% select     = cgi.param('rights') %]
+[% mag        = cgi.param('mag') %]
 
-
+[% SET mag = 100 IF !mag %]
 
 [% IF inBarcode %]
   [% isEdit = 1 %]
@@ -92,18 +93,18 @@
 [% titleLink  = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/process?clauseMapped(title)=$encTitle" %]
 [% searchForm = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/modify?clauseMapped(title)=$encTitle&clauseMapped(author)=$encAuthor" %]
 [%# ptLink     = "/cgi/m/mdp/pt?skin=crms;id=$barcode;page=root;view=image;size=75;attr=1" #%]
-[% ptLink     = "https://babel.hathitrust.org/cgi/pt?skin=crms;id=$barcode;page=root;view=image;size=75;attr=1" %]
-[% catLink    = "http://mirlyn.lib.umich.edu/F?func=find-b&find_code=MDN&local_base=MIU01_PUB&request=$barcode" %]
+[% ptLink     = "https://babel.hathitrust.org/cgi/pt?skin=crms;id=$barcode;page=root;view=image;size=$mag;attr=1" %]
+[% catLink    = "http://mirlyn-classic.lib.umich.edu/F?func=find-b&find_code=MDN&local_base=MIU01_PUB&request=$barcode" %]
 [% wCatLink   = "http://www.worldcat.org/search?qt=worldcat_org_bks&fq=dt%3Abks&q=$encTitle" %]
 [% uscorLink  = "http://cocatalog.loc.gov/cgi-bin/Pwebrecon.cgi?DB=local&PAGE=First&Search_Arg=$encTitle" %]
 
-  <div id="ReviewPage">
+<div id="ReviewPage">
   <div class="divbody">
     <div class="divNav">
       <div class="navtop"> 
-      <span>User: [% userName %]</span>
+        <span>User: [% userName %]</span>
         <table class="nav" width="100%">
-	  <tr>
+          <tr>
             <td><a href="crms?p=confirmReview&submit=Cancel&barcode=[% barcode %]">Home</a></td>
             <td><a href="/c/crms/UseCases.html" target="_blank">Use Cases</a></td>
             <td><a href="crms?p=Logout">Logout</a></td>
@@ -111,131 +112,48 @@
         </table>
 
         <table class="id" width="100%">
-          <tr>
-            <td>
-               <strong>ID:</strong> <tt>[% barcode %]</tt>
-	     </td>
-          </tr>
-          <tr>
-            <td>
-	        <strong>Title:</strong> [% title %]
-            </td>
-          </tr>
-          <tr>
-            <td>
-	        <strong>Author:</strong> [% author %]<br/>
-            </td>
-          </tr>
-          <tr>
-            <td>
-            <strong>Pub Date:</strong> [% pub_date %] <br/>
-            </td>
-          </tr>
+          <tr><td><strong>ID:</strong> <tt>[% barcode %]</tt>   </td></tr>
+          <tr><td><strong>Title:</strong> [% title %]           </td></tr>
+          <tr><td><strong>Author:</strong> [% author %]    <br/></td></tr>
+          <tr><td><strong>Pub Date:</strong> [% pub_date %]<br/></td></tr>
         </table>
 
         <table class="search" width="100%">
           <tr>
-	    <td align="left" class="label">
-		<Strong align="left">Search:</Strong>
-		  </td>
-		
-		  <td align="left" class="links">
-		<a href="[% ptLink %]"    target="topFrame" accesskey="h">HathiTrust</a>&nbsp;&nbsp;&nbsp;<a href="[% catLink %]"   target="topFrame" accesskey="m">Mirlyn</a>
-	    </td>
+	          <td align="left" class="label"><Strong align="left">Search:</Strong></td>
+		        <td align="left" class="links">
+		          <a href="[% ptLink %]" target="topFrame" accesskey="h">HathiTrust</a>&nbsp;&nbsp;&nbsp;
+              <a href="[% catLink %]" target="topFrame" accesskey="m" title="Mirlyn Classic">Mirlyn</a>
+	          </td>
           </tr>
-
+          <tr><td align="left"/></tr>
+          <tr><td align="left"/></tr>
           <tr>
-            <td align = "left"></td>
-	  </tr>
-
-          <tr>
-            <td align = "left"></td>
-	  </tr>
-
-          <tr>
-            <td class="label" align = "left"><strong>Stanford:</strong></td>
-            <td class="links" align = "left"><a href="javascript:changeFrame2('[% titleLink %]' )" accesskey="t">Title</a>&nbsp;&nbsp;&nbsp;<a href="javascript:changeFrame2('[% authorLink %]')" accesskey="a">Author</a>&nbsp;&nbsp;&nbsp;<a href="javascript:changeFrame2('[% searchForm %]')" accesskey="q">Advanced</a>
-	     </td>
-	  </tr>
-
-        </table>
-
-
-	<table class="display" width="100%">
-          <tr>
-	    <td class="display" align="left" colspan="3">
-	       <strong>Display Options:</strong>
-            </td>
-          </tr>
-          <tr>
-            <td class="display" align="left" >
-	       &nbsp;&nbsp;&nbsp;Toggle:
-	    </td>
-            <td class="display" align="center" >
-               <a href="javascript:flipFrame()"  accesskey="p">Full/Split</a>
-	    </td>
-            <td class="display" align="center" >
-     
-	    </td>
-            <td class="display" align="center" >
-                <a href="javascript:flipFrame2()" accesskey="o">Views</a>	
-	    </td>
-          </tr>
-
-          <tr>
-            <td class="display" align="center" >
-	    </td>
-            <td class="display" align="center" >
-	    </td>
-            <td class="display" align="center" >
-	    </td>
-            <td class="display" align="center" >
-	    </td>
-          </tr>
-
-          <tr>
-            <td class="display" align="center" >
-	    </td>
-            <td class="display" align="center" >
-	    </td>
-            <td class="display" align="center" >
-	    </td>
-            <td class="display" align="center" >
-	    </td>
-          </tr>
-
-
-          <tr>
-            <td class="display" align="left" >
-	       &nbsp;&nbsp;&nbsp;Review Pane:
-	    </td>
-            <td class="display" align="center" >
-                <a href="crms?p=review&navRight=0" >Left</a>	
-	    </td>
-            <td class="display" align="center" >
-     
-	    </td>
-            <td class="display" align="center" >
-               <a href="crms?p=review&navRight=1"  >Right</a>
-	    </td>
-          </tr>
+            <td class="label" align ="left"><strong>Stanford:</strong></td>
+            <td class="links" align ="left">
+              <a href="javascript:changeFrame2('[% titleLink %]' )" accesskey="t">Title</a>&nbsp;&nbsp;&nbsp;
+              <a href="javascript:changeFrame2('[% authorLink %]')" accesskey="a">Author</a>&nbsp;&nbsp;&nbsp;
+              <a href="javascript:changeFrame2('[% searchForm %]')" accesskey="q">Advanced</a>
+	          </td>
+	        </tr>
         </table>
 
       </div>
       <div class="navbottom">
+      
         [% comment = "" %] 
 
         [% INCLUDE submitReviewForm.tt barcode = barcode, renNum   = renNum,   renDate = renDate,
                                        comment = comment, copyDate = copyDate, comm    = comm,    
                                        category = category, editing = editing, error   = error,
-                                       navright = navright, select = select %]
+                                       navright = navright, select = select, mag = mag %]
       </div>
     </div>
     [%# the frame (Stanford, HT, Cat...) %]
-    <div class="divFrame">
+    <div class="divFrame" id="divFrame">
       <iframe width="100%" height="400%" id="topFrame" name="topFrame" src="[% ptLink %]"></iframe>
       <iframe width="100%" height="0%"   id="bFrame"   name="bFrame"   src="[% titleLink %]"></iframe>
-   </div>
- </div>
+    </div>
+  </div>
 </div>
 

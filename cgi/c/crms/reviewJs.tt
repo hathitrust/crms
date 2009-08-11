@@ -6,11 +6,15 @@ function redirExpert() { window.location = "crms?p=expert" }
 
 function changeFrame(url) {
     document.getElementById("bFrame").src      = url;
+    document.getElementById("topFrame").width = "100%";
+    document.getElementById("bFrame").width = "100%";
     document.getElementById("bFrame").height   = "50%";
     document.getElementById("topFrame").height = "50%";
 }
 function changeFrame2(url) {
     document.getElementById("bFrame").src      = url;
+    document.getElementById("topFrame").width = "100%";
+    document.getElementById("bFrame").width = "100%";
     document.getElementById("bFrame").height   = "100%";
     document.getElementById("topFrame").height = "0%";
 }
@@ -27,14 +31,22 @@ function closeFrame() {
     document.getElementById("bFrame").height   = "0%";
 }
 function flipFrame() {
+    var top = document.getElementById("topFrame");
+    var bottom = document.getElementById("bFrame");
+    var div = document.getElementById("divFrame");
     topSize= (document.getElementById("bFrame").height);
+    div.insertBefore(top, bottom);
     if ( topSize == "0%")
     {
+        document.getElementById("topFrame").width = "100%";
+        document.getElementById("bFrame").width = "100%";
         document.getElementById("topFrame").height = "50%";
         document.getElementById("bFrame").height   = "50%";
     }
     else
     {
+        document.getElementById("topFrame").width = "100%";
+        document.getElementById("bFrame").width = "100%";
         document.getElementById("topFrame").height = "100%";
         document.getElementById("bFrame").height   = "0%";
     }
@@ -43,19 +55,45 @@ function flipFrame2() {
     topSize= (document.getElementById("topFrame").height);
     if ( topSize == "100%")
     {
+        document.getElementById("topFrame").width = "100%";
+        document.getElementById("bFrame").width = "100%";
         document.getElementById("topFrame").height = "0%";
         document.getElementById("bFrame").height   = "100%";
     }
     else
     {
+        document.getElementById("topFrame").width = "100%";
+        document.getElementById("bFrame").width = "100%";
         document.getElementById("topFrame").height = "100%";
         document.getElementById("bFrame").height   = "0%";
     }    
 }
+function flipHorizontal() {
+    var top = document.getElementById("topFrame");
+    var bottom = document.getElementById("bFrame");
+    var div = document.getElementById("divFrame");
+    topSize = top.width;
+    if ( topSize == "100%")
+    {
+        div.insertBefore(bottom, top);
+        top.width = "49%";
+        bottom.width   = "49%";
+        top.height = "100%";
+        bottom.height   = "100%";
+    }
+    else
+    {
+        div.insertBefore(top, bottom);
+        top.width = "100%";
+        bottom.width = "100%";
+        top.height = "100%";
+        bottom.height   = "0%";
+    }
+}
 function popRenewalDate() {
     var req = null; 
     var id  = document.submitReview.renNum.value
-    var old = document.submitReview.renDate.value;
+    //var old = document.submitReview.renDate.value;
  
     if (window.XMLHttpRequest)
     {
@@ -126,7 +164,59 @@ var color = hp.checked? "red" : "red";
 hp.style.color = color;
 } 
 
+function VerifyCategory()
+{
+  var rights = document.getElementsByName("rights");
+  var sel = GetCheckedValue(rights);
+  if (sel == "7")
+  {
+    return (confirm('Please confirm that this is a non-US publication from 1869-1908.'));
+  }
+  return true;
+}
 
+// return the value of the radio button that is checked
+// return an empty string if none are checked, or
+// there are no radio buttons
+function GetCheckedValue(radioObj)
+{
+  if (!radioObj) return "";
+  var radioLength = radioObj.length;
+  if (radioLength == undefined)
+    if (radioObj.checked) return radioObj.value;
+    else return "";
+  for(var i = 0; i < radioLength; i++)
+  {
+    if(radioObj[i].checked) return radioObj[i].value;
+  }
+  return "";
+}
+
+function zoom()
+{
+  mag=document.submitReview.mag.options[document.submitReview.mag.selectedIndex].value;
+  insertParam('mag', mag);
+}
+
+function insertParam(key, value)
+{
+  key = escape(key);
+  value = escape(value);
+  var kvp = document.location.search.substr(1).split('&');
+  var i=kvp.length; var x; while(i--) 
+  {
+    x = kvp[i].split('=');
+    if (x[0]==key)
+    {
+      x[1] = value;
+      kvp[i] = x.join('=');
+      break;
+    }
+  }
+  if(i<0) {kvp[kvp.length] = [key,value].join('=');}
+  //this will reload the page, it's likely better to store this until finished
+  document.location.search = kvp.join('&'); 
+}
 //-->
 </script>
 
