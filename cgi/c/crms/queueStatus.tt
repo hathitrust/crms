@@ -25,11 +25,11 @@ Total Number of volumes last added to candidates:  [% crms.GetLastLoadSizeToCand
 <br>
 Number of volumes awaiting review: [% crms.GetTotalAwaitingReview () %]<br>
 
-&nbsp;&nbsp;&nbsp;Number of active reviews with status of 0: [% crms.GetReviewsWithStatusNubmer (0) %]<br>
-&nbsp;&nbsp;&nbsp;Number of active reviews with status of 2: [% crms.GetReviewsWithStatusNubmer (2) %]<br>
-&nbsp;&nbsp;&nbsp;Number of active reviews with status of 3: [% crms.GetReviewsWithStatusNubmer (3) %]<br>
-&nbsp;&nbsp;&nbsp;Number of active reviews with status of 4: [% crms.GetReviewsWithStatusNubmer (4) %]<br>
-&nbsp;&nbsp;&nbsp;Number of active reviews with status of 5: [% crms.GetReviewsWithStatusNubmer (5) %]<br>
+&nbsp;&nbsp;&nbsp;Number of active reviews with status of 0: [% crms.GetReviewsWithStatusNumber (0) %]<br>
+&nbsp;&nbsp;&nbsp;Number of active reviews with status of 2: [% crms.GetReviewsWithStatusNumber (2) %]<br>
+&nbsp;&nbsp;&nbsp;Number of active reviews with status of 3: [% crms.GetReviewsWithStatusNumber (3) %]<br>
+&nbsp;&nbsp;&nbsp;Number of active reviews with status of 4: [% crms.GetReviewsWithStatusNumber (4) %]<br>
+&nbsp;&nbsp;&nbsp;Number of active reviews with status of 5: [% crms.GetReviewsWithStatusNumber (5) %]<br>
 
 <br>
 Number of active volumes: [% totalactive %]<br>
