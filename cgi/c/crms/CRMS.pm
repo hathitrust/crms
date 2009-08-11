@@ -879,7 +879,7 @@ sub GetUnProcessCounts
 
     $reviewonlycnt = $self->GetTotalReviewedNotProcessed () - $matchcnt - $conflictcnt - $undcnt;
 
-    my $out = qq{ 1 reviews =>$reviewonlycnt, mathches => $matchcnt, conflicts => $conflictcnt, und/nfi => $undcnt };
+    my $out = qq{ 1 reviews =>$reviewonlycnt, matches => $matchcnt, conflicts => $conflictcnt, und/nfi => $undcnt };
     return $out;
 
 }
@@ -968,7 +968,7 @@ sub ClearQueueAndExport
 ##  Function:   create a tab file of reviews to be loaded into the rights table
 ##              barcode | attr | reason | user | null  
 ##              mdp.123 | ic   | ren    | crms | null
-##  Parameters: NONE
+##  Parameters: A reference to a list of barcodes
 ##  Return:     1 || 0
 ## ----------------------------------------------------------------------------
 sub ExportReviews
@@ -1018,7 +1018,7 @@ sub EmailReport
   my $count   = shift;
   my $file    = shift;
 
-  my $subject = qq{$count voulmes exported to rights dbreport to rithts db};
+  my $subject = qq{$count volumes exported to rights db};
   my $to = qq{annekz\@umich.edu};
 
   use Mail::Sender;
@@ -1136,7 +1136,7 @@ sub MoveFromReviewsToHistoricalReviews
     $self->Logit( "store $id in historicalreviews" );
 
 
-    my $sql = qq{REPLACE into $CRMSGlobals::historicalreviewsTable (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, flagged) select id, time, user, attr, reason, note, renNum, expert, duration, 0, expertNote, renDate, copyDate, category, flagged from reviews where id='$id'};
+    my $sql = qq{INSERT into $CRMSGlobals::historicalreviewsTable (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, flagged) select id, time, user, attr, reason, note, renNum, expert, duration, 0, expertNote, renDate, copyDate, category, flagged from reviews where id='$id'};
     $self->PrepareSubmitSql( $sql );
 
     my $sql = qq{ UPDATE $CRMSGlobals::historicalreviewsTable set status=$status WHERE id = "$id" };
@@ -1318,7 +1318,7 @@ sub CreateSQL
 
     my $type               = shift;
     my $limit              = shift;
-
+    
     my $PageSize = $self->GetPageSize ();
   
     $search1 = $self->ConvertToSearchTerm ( $search1, $type );
@@ -1456,7 +1456,7 @@ sub SearchAndDownload
 
 
     my $sql =  $self->CreateSQL ( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $since,$offset, $type, $limit );
-
+    
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my $buffer;
@@ -1926,10 +1926,12 @@ sub GetAttrReasonCom
     my $in   = shift;
  
     my %codes = (1 => "pd/ncn", 2 => "pd/ren",  3 => "pd/cdpp",
-                 4 => "ic/ren", 5 => "ic/cdpp", 6 => "und/nfi" );
+                 4 => "ic/ren", 5 => "ic/cdpp", 6 => "und/nfi",
+                 7 => "pdus/cdpp");
 
     my %str   = ("pd/ncn" => 1, "pd/ren"  => 2, "pd/cdpp" => 3,
-                 "ic/ren" => 4, "ic/cdpp" => 5, "und/nfi" => 6);
+                 "ic/ren" => 4, "ic/cdpp" => 5, "und/nfi" => 6,
+                 "pdus/cdpp" => 7);
 
     if ( $in =~ m/\d/ ) { return $codes{$in}; }
     else                { return $str{$in};   }
@@ -1946,6 +1948,7 @@ sub GetAttrReasonFromCode
     elsif ( $code eq "4" ) { return (2,7); }
     elsif ( $code eq "5" ) { return (2,9); }
     elsif ( $code eq "6" ) { return (5,8); }
+    elsif ( $code eq "7" ) { return (9,9); }
 }
 
 sub GetReviewComment
@@ -2281,6 +2284,16 @@ sub GetMonthStats
   my $total_hist   = $self->SimpleSqlGet( $sql );
 
   my $total_ic_cdpp = $total_reviews + $total_hist;
+  
+  #pdus/cdpp
+  $sql  = qq{ SELECT count(*) FROM reviews WHERE user='$user' and attr=9 and reason=9 and time like '$start_date%'};
+  my $total_reviews   = $self->SimpleSqlGet( $sql );
+
+  $sql  = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=9 and reason=9 and time like '$start_date%'};
+  my $total_hist   = $self->SimpleSqlGet( $sql );
+
+  my $total_pdus_cdpp = $total_reviews + $total_hist;
+
 
   #und/nfi
   $sql  = qq{ SELECT count(*) FROM reviews WHERE user='$user' and attr=5 and reason=8 and time like '$start_date%'};
@@ -2355,8 +2368,7 @@ sub GetMonthStats
   $year =~ s,(.*)\-.*,$1,;
   my $month = $start_date;
   $month =~ s,.*\-(.*),$1,;
-  
-  my $sql  = qq{ INSERT INTO userstats (user, month, year, monthyear, total_reviews, total_pd_ren, total_pd_cnn, total_pd_cdpp, total_ic_ren, total_ic_cdpp, total_und_nfi, total_time, time_per_review, reviews_per_hour, total_outliers) VALUES ('$user', '$month', '$year', '$start_date', $total_reviews_toreport, $total_pd_ren, $total_pd_cnn, $total_pd_cdpp, $total_ic_ren, $total_ic_cdpp, $total_und_nfi, $total_time, $time_per_review, $reviews_per_hour, $total_outliers )};
+  my $sql  = qq{ INSERT INTO userstats (user, month, year, monthyear, total_reviews, total_pd_ren, total_pd_cnn, total_pd_cdpp, total_pdus_cdpp, total_ic_ren, total_ic_cdpp, total_und_nfi, total_time, time_per_review, reviews_per_hour, total_outliers) VALUES ('$user', '$month', '$year', '$start_date', $total_reviews_toreport, $total_pd_ren, $total_pd_cnn, $total_pd_cdpp, $total_pdus_cdpp, $total_ic_ren, $total_ic_cdpp, $total_und_nfi, $total_time, $time_per_review, $reviews_per_hour, $total_outliers )};
 
   $self->PrepareSubmitSql( $sql );
 
@@ -2415,11 +2427,9 @@ sub CreateStatsReport
 
      $min = qq{$lastYear-07};
      $max = qq{$year-06};
-
    }
-
    #find out how many distinct months there are
-   my $sql = qq{SELECT distinct monthyear from userstats where monthyear >= '$min' and monthyear <= '$max'};
+   my $sql = qq{SELECT DISTINCT monthyear FROM userstats WHERE monthyear >= '$min' AND monthyear <= '$max'};
    
    my $rows = $dbh->selectall_arrayref( $sql );
 
@@ -2427,144 +2437,160 @@ sub CreateStatsReport
    my $datecount = 0;
    foreach my $row ( @{$rows} )
    {
-      push ( @statdates, $row->[0] );
-      $datecount = $datecount + 1;
-   }	
-
-   my ( @outrow0, @outrow1, @outrow2, @outrow3, @outrow4, @outrow5, @outrow6, @outrow7, @outrow8, @outrow9, @outrow10 );
+     push ( @statdates, $row->[0] );
+     $datecount = $datecount + 1;
+   }
+   my @outrows;
+   for (my $i = 0; $i < 12; $i++)
+   {
+     my @ary = ();
+     push( @outrows, \@ary );
+   }
+   my $padded = sprintf('%-*s', 8, ($user eq 'all')? "$user-$year (by month)":$user);
+   my $report = qq{<table class="userRate" id="userRateTable"><tr align="left"><th>User:&nbsp;<code>$padded</code></th><th>Total&nbsp;$year</th>};
    foreach my $date ( @statdates )
    {
+     my $sql = qq{SELECT total_reviews, total_pd_ren, total_pd_cnn, total_pd_cdpp, total_pdus_cdpp, total_ic_ren, total_ic_cdpp, total_und_nfi, total_time, time_per_review, reviews_per_hour, total_outliers from userstats where monthyear='$date' and user='$user'};
+     if ($user eq 'all')
+     {
+       $sql = qq{SELECT SUM(total_reviews), SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp), SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_time), AVG(time_per_review), AVG(reviews_per_hour), SUM(total_outliers) FROM userstats WHERE monthyear='$date'};
+     }
+     my $rows = $dbh->selectall_arrayref( $sql );
 
-     my $sql = qq{SELECT total_reviews, total_pd_ren, total_pd_cnn, total_pd_cdpp, total_ic_ren, total_ic_cdpp, total_und_nfi, total_time, time_per_review, reviews_per_hour, total_outliers from userstats where monthyear='$date' and user='$user'};
+     foreach my $row ( @{$rows} )
+     {
+       for (my $i = 0; $i < 12; $i++)
+       {
+         push( @{$outrows[$i]}, $row->[$i] );
+       }
+       last;
+     }
+     $report .= qq{<th>$date</th>};
+   }
+   $report .= qq{</tr>\n};
+   my @titles = ('Total&nbsp;Reviews', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'ic/ren', 'ic/cdpp', 'und/nfi',
+                 'Time&nbsp;Reviewing&nbsp;(minutes)', 'Time&nbsp;per&nbsp;Review&nbsp;(minutes)',
+		 'Reviews&nbsp;per&nbsp;Hour', 'Outlier&nbsp;Reviews');
+   my $totalTotalRevs = 0;
+   if ($user eq 'all')
+   {
+     $titles[8] = 'Average&nbsp;Time&nbsp;per&nbsp;Review&nbsp;(minutes)';
+     $titles[9] = 'Average&nbsp;Reviews&nbsp;per&nbsp;Hour';
+   }
+   # Add up the total of field 0 in the inner loop, so we only do it on the first iteration
+   for (my $i = 0; $i < 12; $i++)
+   {
+       my $total = 0;
+       my $row = $outrows[$i];
+       my $bold = ($i == 0 || $i > 7);
+       my $round = ($i == 9 || $i == 10);
+       my $total = 0;
+       my $titleline = sprintf("<td>%s$titles[$i]%s</td>", ($bold)? '<b>':"<font color='#004600'>&nbsp;&nbsp;", ($bold)? '</b>':'</font>');
+       my $dataline = '';
+       for (my $j = 0; $j < $datecount; $j++)
+       {
+           my $totalRevs = $outrows[0][$j];
+           $totalTotalRevs += $totalRevs if $i == 0;
+           my $n = @{$row}[$j];
+           $total += $n;
+           $n = sprintf('%.1f', $n) if $round;
+           $n = sprintf("<font color='#004600'>%d&nbsp;(%.1f%)</font>", $n, $totalRevs ? ($n / $totalRevs * 100.0) : 0.0) unless $bold;
+           $dataline .= qq{<td>$n</td>};
+       }
+       $total /= $datecount if $i == 9 or $i == 10;
+       $total = sprintf('%.1f', $total) if $round;
+       $total = sprintf("<font color='#004600'>%d&nbsp;(%.1f%)</font>", $total, $totalTotalRevs ? ($total / $totalTotalRevs * 100.0) : 0.0) unless $bold;
+       $report .= qq{<tr>$titleline<td>$total</td>$dataline</tr>\n};
+   }
+   $report .= qq{</table>};
+   return $report;
+}
+
+
+sub CreateYearlyReport
+{
+   my $self = shift;
+
+   my $dbh = $self->get( 'dbh' );	
+   
+   my ( $year, $month ) = $self->GetTheYearMonth ();
+   my $min = $year;
+   my $max = 0;
+   
+   #find out how many distinct years there are
+   my $sql = qq{SELECT DISTINCT month, year FROM userstats};
+   
+   my $rows = $dbh->selectall_arrayref( $sql );
+
+   foreach my $row ( @{$rows} )
+   {
+     my $month = $row->[0];
+     my $year = $row->[1];
+     # Change it into 'fiscal year'
+     $year = ($month ge '07')? $year : $year-1;
+     $min = $year if $year < $min;
+     $max = $year if $year > $max;
+   }
+   my $nyears = $max - $min + 1;
+   my @outrows;
+   for (my $i = 0; $i < 12; $i++)
+   {
+     my @ary = ();
+     push( @outrows, \@ary );
+   }
+   my $padded = sprintf("%-*s", 8, 'All-Project (by year)');
+   my $report = qq{<table class="userRate" id="userRateTable"><tr align="left"><th>User:&nbsp;<code>$padded</code></th><th>Grand&nbsp;Total</th>};
+   for ($year = $min; $year <= $max; $year++)
+   {
+     my $start = qq{$year-07};
+     my $end = sprintf('%s-06', $year+1);
+     my $sql = qq{SELECT SUM(total_reviews), SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp), SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_time), AVG(time_per_review), AVG(reviews_per_hour), SUM(total_outliers) FROM userstats WHERE monthyear >= '$start' AND monthyear <= '$end'};
    
      my $rows = $dbh->selectall_arrayref( $sql );
 
      foreach my $row ( @{$rows} )
      {
-        push ( @outrow0,  $row->[0]  );	
-        push ( @outrow1,  $row->[1]  );	
-        push ( @outrow2,  $row->[2]  );	
-        push ( @outrow3,  $row->[3]  );	
-        push ( @outrow4,  $row->[4]  );	
-        push ( @outrow5,  $row->[5]  );	
-        push ( @outrow6,  $row->[6]  );	
-        push ( @outrow7,  $row->[7]  );	
-        push ( @outrow8,  $row->[8]  );	
-        push ( @outrow9,  $row->[9]  );	
-        push ( @outrow10, $row->[10] );	
+       for (my $i = 0; $i < 12; $i++)
+       {
+         push( @{$outrows[$i]}, $row->[$i] );
+       }
+       last;
      }
-   }	
-
-   my $report = qq{<table><tr><td>$user</td>};
-   foreach my $date ( @statdates )
-   {	
-      $report .= qq{<td>$date</td>};
+     $report .= qq{<th>$year</th>};
    }
-   $report .= qq{</tr>\n};	
-  
-   $report .= qq{<tr><td>Total Reviews</td>};
-   my $count = 0;
-   while ( $count < $datecount )
+   $report .= qq{</tr>\n};
+   my @titles = ('Total&nbsp;Reviews', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'ic/ren', 'ic/cdpp', 'und/nfi',
+                 'Time&nbsp;Reviewing&nbsp;(minutes)', 'Average&nbsp;Time&nbsp;per&nbsp;Review&nbsp;(minutes)',
+		 'Average&nbsp;Reviews&nbsp;per&nbsp;Hour', 'Outlier&nbsp;Reviews');
+   my $totalTotalRevs = 0;
+   # Add up the total of field 0 in the inner loop, so we only do it on the first iteration
+   for (my $i = 0; $i < 12; $i++)
    {
-       $report .= qq{<td>$outrow0[$count]</td>};
-       $count = $count + 1;
+       my $total = 0;
+       my $row = $outrows[$i];
+       my $bold = ($i == 0 || $i > 7);
+       my $round = ($i == 9 || $i == 10);
+       my $total = 0;
+       my $titleline .= sprintf("<td>%s$titles[$i]%s</td>", ($bold)? '<b>':"<font color='#004600'>&nbsp;&nbsp;", ($bold)? '</b>':'</font>');
+       my $dataline = '';
+       for (my $j = 0; $j < $nyears; $j++)
+       {
+           my $totalRevs = $outrows[0][$j];
+           $totalTotalRevs += $totalRevs if $i == 0;
+           my $n = @{$row}[$j];
+           $total += $n;
+           $n = sprintf('%.1f', $n) if $round;
+           $n = sprintf("<font color='#004600'>%d&nbsp;(%.1f%)</font>", $n, $totalRevs ? ($n / $totalRevs * 100.0) : 0.0) unless $bold;
+           $dataline .= qq{<td>$n</td>};
+       }
+       $total /= $nyears if $i == 9 or $i == 10;
+       $total = sprintf('%.1f', $total) if $round;
+       $total = sprintf("<font color='#004600'>%d&nbsp;(%.1f%)</font>", $total, $totalTotalRevs ? ($total / $totalTotalRevs * 100.0) : 0.0) unless $bold;
+       $report .= qq{<tr>$titleline<td>$total</td>$dataline</tr>\n};
    }
-   $report .= qq{</tr>};
-
-   $report .= qq{<tr><td>PD-REN</td>};
-   my $count = 0;
-   while ( $count < $datecount )
-   {
-       $report .= qq{<td>$outrow1[$count]</td>};
-       $count = $count + 1;
-   }
-   $report .= qq{</tr>};
-
-   $report .= qq{<tr><td>PD-NCN</td>};
-   my $count = 0;
-   while ( $count < $datecount )
-   {
-       $report .= qq{<td>$outrow2[$count]</td>};
-       $count = $count + 1;
-   }
-   $report .= qq{</tr>};
-
-   $report .= qq{<tr><td>PD-CDPP</td>};
-   my $count = 0;
-   while ( $count < $datecount )
-   {
-       $report .= qq{<td>$outrow3[$count]</td>};
-       $count = $count + 1;
-   }
-   $report .= qq{</tr>};
-
-   $report .= qq{<tr><td>IC-REN</td>};
-   my $count = 0;
-   while ( $count < $datecount )
-   {
-       $report .= qq{<td>$outrow4[$count]</td>};
-       $count = $count + 1;
-   }
-   $report .= qq{</tr>};
-
-   $report .= qq{<tr><td>IC-CDPP</td>};
-   my $count = 0;
-   while ( $count < $datecount )
-   {
-       $report .= qq{<td>$outrow5[$count]</td>};
-       $count = $count + 1;
-   }
-   $report .= qq{</tr>};
-
-   $report .= qq{<tr><td>UND-NFI</td>};
-   my $count = 0;
-   while ( $count < $datecount )
-   {
-       $report .= qq{<td>$outrow6[$count]</td>};
-       $count = $count + 1;
-   }
-   $report .= qq{</tr>};
-
-   $report .= qq{<tr><td>Time Reviewing (minutes)</td>};
-   my $count = 0;
-   while ( $count < $datecount )
-   {
-       $report .= qq{<td>$outrow7[$count]</td>};
-       $count = $count + 1;
-   }
-   $report .= qq{</tr>};
-
-   $report .= qq{<tr><td>Time per Review (minutes)</td>};
-   my $count = 0;
-   while ( $count < $datecount )
-   {
-       $report .= qq{<td>$outrow8[$count]</td>};
-       $count = $count + 1;
-   }
-   $report .= qq{</tr>};
-
-   $report .= qq{<tr><td>Reviews per Hour</td>};
-   my $count = 0;
-   while ( $count < $datecount )
-   {
-       $report .= qq{<td>$outrow9[$count]</td>};
-       $count = $count + 1;
-   }
-   $report .= qq{</tr>};
-
-   $report .= qq{<tr><td>Outlier Reviews</td>};
-   my $count = 0;
-   while ( $count < $datecount )
-   {
-       $report .= qq{<td>$outrow10[$count]</td>};
-       $count = $count + 1;
-   }	
-   $report .= qq{</tr></table>};
-  
-   return $report;	
-	
-}	
-
+   $report .= qq{</table>};
+   return $report;
+}
 
 sub CreateThisMonthsStats
 {
@@ -2861,7 +2887,22 @@ sub ValidateSubmission2
 
     }
 
-
+    ## pdus/cdpp requires a note and a 'Foreign' note category, and must not have a ren number
+    if ($attr == 9 && $reason == 9)
+    {
+      if (( $renNum ) || ( $renDate ))
+      {
+        $errorMsg .= qq{rights/reason conflicts with renewal info.  };
+      }
+      if (( !$note ) || ( !$category )) 
+      {
+        $errorMsg .= qq{note category/note text required.  };
+      }
+      if ($category ne 'Foreign Pub')
+      {
+        $errorMsg .= qq{rights/reason requires note category "Foreign Pub".  };
+      }
+    }
     return $errorMsg;
 }
 
@@ -4138,7 +4179,7 @@ sub GetTotalInHistoricalQueue
 }
 
 
-sub GetReviewsWithStatusNubmer
+sub GetReviewsWithStatusNumber
 {
     my $self = shift;
     my $status = shift;
@@ -4416,5 +4457,39 @@ sub OutputZipFile
     return;
 
 }
-1;
 
+# Returns the names of all tables in the DB.
+sub GetAllTables
+{
+  my $self = shift;
+  
+  my @tables = ();
+  my $ref = $self->get('dbh')->selectall_arrayref("SHOW TABLES");
+  foreach my $row ( @{$ref} )
+  {
+    push(@tables, $row->[0]);
+  }
+  return @tables;
+}
+
+sub HTMLDescribeTable
+{
+  my $self = shift;
+  my $tableName = shift;
+  
+  my $html = '<table id="userRateTable">';
+  my $sql = "SHOW FULL COLUMNS FROM $tableName";
+  my $ref = $self->get('dbh')->selectall_arrayref($sql);
+  foreach my $row ( @{$ref} )
+  {
+    $html .= "<tr>";
+    foreach my $col ( @{$row} )
+    {
+      $html .= "<td>$col</td>\n"; 
+    }
+    $html .= "</tr>\n";
+  }
+  $html .= "</table>";
+}
+
+1;
