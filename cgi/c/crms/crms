@@ -104,11 +104,11 @@ if  (  $cgi->param('p') eq 'confirmReview' )
     my $id         = $cgi->param('barcode');
     my $editing    = $cgi->param('editing');
     my $navright   = $cgi->param('navRight');
+    my $mag        = $cgi->param('mag');
 
     my ( $rights, $reason ) = $crms->GetAttrReasonFromCode($EncRights);
 
     my $errorMsg1 = $crms->HasItemBeenReviewedByTwoReviewers ( $id, $user );
-
 
     my $errorMsg = $crms->ValidateSubmission2( $rights, $reason, $comment, $category, $renNum, $renDate, $user );
   
@@ -135,7 +135,7 @@ if  (  $cgi->param('p') eq 'confirmReview' )
        $cgi->param('renNum',   $renNum );
        $cgi->param('renDate',  $renDate);
        $cgi->param('editing',  $editing);
-
+       $cgi->param('mag',      $mag);
      }
      else
      {
@@ -165,6 +165,7 @@ if  (  $cgi->param('p') eq 'confirmReview' )
 	 $cgi->delete_all();
 	 $cgi->param('p', 'review' );
 	 $cgi->param('navRight', $navright );
+         $cgi->param('mag', $mag);
        }
 
      }
