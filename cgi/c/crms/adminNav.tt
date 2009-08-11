@@ -1,20 +1,20 @@
 <div>
-  <a href="crms">home</a> > <a href="crms?p=admin">admin</a>
+  <a href="crms">home</a> &gt; <a href="crms?p=admin">admin</a>
 
   [% page = cgi.param("p") %]
 
-  [% IF    page == "adminUser"           %] > adminster user accounts
-  [% ELSIF page == "adminQueue"          %] > manage the queue
-  [% ELSIF page == "adminReview"         %] > view all active reviews
-  [% ELSIF page == "undReviews"          %] > und/nfi items
-  [% ELSIF page == "adminLegacyReview"   %] > view all historical reviews
-  [% ELSIF page == "adminUserRate"       %] > view user review rates
-  [% ELSIF page == "undReviews"          %] > und/nfi items
-  [% ELSIF page == "expert"              %] > expert review
-  [% ELSIF page == "queueStatus"         %] > queue status
-  [% ELSIF page == "queueAdd"            %] > add to queue
-  [% ELSIF page == "adminEditUser"       %] > <a href="?p=adminUser">adminster user accounts</a> 
-                                                > edit user
+  [% IF    page == "adminUser"           %] &gt; adminster user accounts
+  [% ELSIF page == "adminQueue"          %] &gt; manage the queue
+  [% ELSIF page == "adminReview"         %] &gt; view all active reviews
+  [% ELSIF page == "undReviews"          %] &gt; und/nfi items
+  [% ELSIF page == "adminLegacyReview"   %] &gt; view all historical reviews
+  [% ELSIF page == "adminUserRate"       %] &gt; view user review rates
+  [% ELSIF page == "undReviews"          %] &gt; und/nfi items
+  [% ELSIF page == "expert"              %] &gt; expert review
+  [% ELSIF page == "queueStatus"         %] &gt; queue status
+  [% ELSIF page == "queueAdd"            %] &gt; add to queue
+  [% ELSIF page == "adminEditUser"       %] &gt; <a href="?p=adminUser">adminster user accounts</a> 
+                                                &gt; edit user
   [% END %]
 
 </div>
