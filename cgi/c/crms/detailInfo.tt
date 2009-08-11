@@ -6,9 +6,15 @@
 
 
 [% reviews = crms.GetReviewsRef( 'id', 'DESC', 'Identifier', id, 'AND', 'UserId', user, '', '', page ) %]
-More Information....&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="JavaScript:window.close()">Close</a>
-
-[% IF NOT reviews %] <BR>NO INFO AVAILABLE [% END %]
+[% IF NOT reviews.size %]
+  [% #Fall back to all reviews in the case that page is 'conflict' and conflict is resolved %]
+  [% reviews = crms.GetReviewsRef( 'id', 'DESC', 'Identifier', id, 'AND', 'UserId', user, '', '', 'reviews' ) %]
+[% END %]
+[% IF NOT reviews.size %]
+  <b>Review has been processed and is no longer accessible from this view.</b><br/>
+[% ELSE %]
+  <a href="JavaScript:window.close()">Close</a>
+[% END %]
 
 [% FOREACH review IN reviews %]
 <table border="1">
@@ -17,22 +23,22 @@ More Information....&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="JavaScript:window.clo
 <tr><td>Author</td><td>           [% crms.GetEncAuthor ( review.id ) %]</td></tr>
 <tr><td>Pub Date</td><td>         [% crms.GetPubDate( review.id ) %]</td></tr>
 </table>
-<BR><table  border="1">   
+<br/><table  border="1">   
 <tr><td>Date</td><td>             [% review.time %]</td></tr>
 <tr><td>Review Status</td><td>    [% crms.GetStatus( review.id ) %]</td></tr>
 <tr><td>Legacy Status</td><td>    [% review.legacy %]</td></tr>
 </table>
-<BR><table  border="1">
+<br/><table  border="1">
 <tr><td>User</td><td>             [% review.user %]</td></tr>
 <tr><td>Attr/Reason</td><td>      [% review.attr %]/[% review.reason %]</td></tr>
 <tr><td>Renewal Info</td><td>     [%  review.renDate %],[% review.renNum %] </td></tr>
 <tr><td>Note Category</td><td>    [% review.category %]</td></tr>
 <tr><td>User Note</td><td>        [% review.note %]</td></tr>
 </table>
-<BR><table  border="1">
+<br/><table  border="1">
 <tr><td>Expert Note</td><td>      [% review.expertNote %]</td></tr>
 </table>
-<BR><table  border="1">
+<br/><table  border="1">
 <tr><td>Flag Review</td><td> [% review.flagged %]</td></tr>
 </table
   [% END %]
