@@ -7,13 +7,16 @@
 [% INCLUDE adminNav.tt  %]
 
 <hr width="25%" align="left"/>
-
-
+ [% crms.CreateYearlyReport() %]
+ <br/><br/>
+ [% crms.CreateStatsReport( 'all' ) %]
+ <br/><br/>
  [% users = crms.GetUserData() %]
-  [% FOREACH id IN users.keys.sort %]
-    [% crms.CreateStatsReport( id ) %]
-  [% END %]
-
+ [% FOREACH id IN users.keys.sort %]
+   [% crms.CreateStatsReport( id ) %]
+   <br/><br/>
+ [% END %]
+ 
 
 [% INCLUDE footer.tt %]
 
