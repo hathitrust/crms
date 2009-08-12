@@ -16,7 +16,7 @@
 [% comm       = cgi.param('comm') %]
 [% category   = cgi.param('category') %]
 [% select     = cgi.param('rights') %]
-[% mag        = cgi.param('mag') %]
+[% mag        = cgi.cookie('mag') %]
 
 [% SET mag = 100 IF !mag %]
 
@@ -94,14 +94,16 @@
 [% searchForm = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/modify?clauseMapped(title)=$encTitle&clauseMapped(author)=$encAuthor" %]
 [%# ptLink     = "/cgi/m/mdp/pt?skin=crms;id=$barcode;page=root;view=image;size=75;attr=1" #%]
 [% ptLink     = "https://babel.hathitrust.org/cgi/pt?skin=crms;id=$barcode;page=root;view=image;size=$mag;attr=1" %]
-[% catLink    = "http://mirlyn-classic.lib.umich.edu/F?func=find-b&find_code=MDN&local_base=MIU01_PUB&request=$barcode" %]
+[% sysID = crms.BarcodeToId(barcode) %]
+[% catLink    = "http://mirlyn.lib.umich.edu/Record/$sysID" %]
+[% catcLink   = "http://mirlyn-classic.lib.umich.edu/F?func=find-b&find_code=MDN&local_base=MIU01_PUB&request=$barcode" %]
 [% wCatLink   = "http://www.worldcat.org/search?qt=worldcat_org_bks&fq=dt%3Abks&q=$encTitle" %]
 [% uscorLink  = "http://cocatalog.loc.gov/cgi-bin/Pwebrecon.cgi?DB=local&PAGE=First&Search_Arg=$encTitle" %]
 
-<div id="ReviewPage">
+
   <div class="divbody">
     <div class="divNav">
-      <div class="navtop"> 
+      <div class="navtop">
         <span>User: [% userName %]</span>
         <table class="nav" width="100%">
           <tr>
@@ -120,22 +122,18 @@
 
         <table class="search" width="100%">
           <tr>
-	          <td align="left" class="label"><Strong align="left">Search:</Strong></td>
-		        <td align="left" class="links">
-		          <a href="[% ptLink %]" target="topFrame" accesskey="h">HathiTrust</a>&nbsp;&nbsp;&nbsp;
-              <a href="[% catLink %]" target="topFrame" accesskey="m" title="Mirlyn Classic">Mirlyn</a>
-	          </td>
+            <td align="left" class="label"><Strong align="left">Search:</Strong></td>
+            <td align="center" class="links"><a href="[% ptLink %]" target="topFrame" accesskey="h" title="HathiTrust">Hathi</a></td>
+            <td align="center" class="links"><a href="[% catLink %]" target="topFrame" accesskey="m" title="Mirlyn VuFind">Mirlyn</a></td>
+            <td align="center" class="links"><a href="[% catcLink %]" target="topFrame" accesskey="c" title="Mirlyn Classic">Mirlyn C</a></td>
           </tr>
-          <tr><td align="left"/></tr>
-          <tr><td align="left"/></tr>
+          <tr/><tr/>
           <tr>
-            <td class="label" align ="left"><strong>Stanford:</strong></td>
-            <td class="links" align ="left">
-              <a href="javascript:changeFrame2('[% titleLink %]' )" accesskey="t">Title</a>&nbsp;&nbsp;&nbsp;
-              <a href="javascript:changeFrame2('[% authorLink %]')" accesskey="a">Author</a>&nbsp;&nbsp;&nbsp;
-              <a href="javascript:changeFrame2('[% searchForm %]')" accesskey="q">Advanced</a>
-	          </td>
-	        </tr>
+            <td align ="left" class="label"><strong>Stanford:</strong></td>
+            <td align ="center" class="links"><a href="javascript:changeFrame2('[% titleLink %]' )" accesskey="t">Title</a></td>
+            <td align ="center" class="links"><a href="javascript:changeFrame2('[% authorLink %]')" accesskey="a">Author</a></td>
+            <td align ="center" class="links"><a href="javascript:changeFrame2('[% searchForm %]')" accesskey="q">Advanced</a></td>
+          </tr>
         </table>
 
       </div>
@@ -151,9 +149,9 @@
     </div>
     [%# the frame (Stanford, HT, Cat...) %]
     <div class="divFrame" id="divFrame">
-      <iframe width="100%" height="400%" id="topFrame" name="topFrame" src="[% ptLink %]"></iframe>
-      <iframe width="100%" height="0%"   id="bFrame"   name="bFrame"   src="[% titleLink %]"></iframe>
+      <iframe frameborder="0" width="100%" height="400%" id="topFrame" name="topFrame" src="[% ptLink %]"></iframe>
+      <iframe frameborder="0" width="100%" height="0%"   id="bFrame"   name="bFrame"   src="[% titleLink %]"></iframe>
     </div>
   </div>
-</div>
+
 
