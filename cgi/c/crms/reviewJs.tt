@@ -185,37 +185,27 @@ function GetCheckedValue(radioObj)
   if (radioLength == undefined)
     if (radioObj.checked) return radioObj.value;
     else return "";
-  for(var i = 0; i < radioLength; i++)
+  for (var i = 0; i < radioLength; i++)
   {
     if(radioObj[i].checked) return radioObj[i].value;
   }
   return "";
 }
 
-function zoom()
+function zoom(selector)
 {
-  mag=document.submitReview.mag.options[document.submitReview.mag.selectedIndex].value;
-  insertParam('mag', mag);
+  mag = selector.options[selector.selectedIndex].value;
+  setCookie('mag',mag,7);
+  document.location.search = document.location.search;
+  document.getElementById('topFrame').contentWindow.location.reload(true);
 }
 
-function insertParam(key, value)
+function setCookie(name,value,expiredays)
 {
-  key = escape(key);
-  value = escape(value);
-  var kvp = document.location.search.substr(1).split('&');
-  var i=kvp.length; var x; while(i--) 
-  {
-    x = kvp[i].split('=');
-    if (x[0]==key)
-    {
-      x[1] = value;
-      kvp[i] = x.join('=');
-      break;
-    }
-  }
-  if(i<0) {kvp[kvp.length] = [key,value].join('=');}
-  //this will reload the page, it's likely better to store this until finished
-  document.location.search = kvp.join('&'); 
+  var exdate = new Date();
+  exdate.setDate(exdate.getDate()+expiredays);
+  document.cookie = name + "=" + escape(value)+
+    ((expiredays==null) ? "" : ";expires="+exdate.toGMTString());
 }
 //-->
 </script>

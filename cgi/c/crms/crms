@@ -59,7 +59,7 @@ if ( ( $new_user ) )
   $user = $new_user;
 
   $crms = CRMS->new(
-	logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
+        logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
         configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
         verbose      =>   0,
         root         =>   $DLXSROOT,
@@ -74,7 +74,7 @@ elsif  (  $cgi->param('changeuser') == 1 )
   $user = $new_user;
 
   $crms = CRMS->new(
-	logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
+        logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
         configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
         verbose      =>   0,
         root         =>   $DLXSROOT,
@@ -104,7 +104,6 @@ if  (  $cgi->param('p') eq 'confirmReview' )
     my $id         = $cgi->param('barcode');
     my $editing    = $cgi->param('editing');
     my $navright   = $cgi->param('navRight');
-    my $mag        = $cgi->param('mag');
 
     my ( $rights, $reason ) = $crms->GetAttrReasonFromCode($EncRights);
 
@@ -114,63 +113,52 @@ if  (  $cgi->param('p') eq 'confirmReview' )
   
     if ( ( $errorMsg ) || ( $errorMsg1 ) )
     {
-       #clear the cgi
-       $cgi->delete_all();
-       $cgi->param('p', 'review' );
-       if ( $errorMsg1 )
-       {
-	 $cgi->param('errorMsg', $errorMsg1 );
-       }
-       else
-       {
-	 $cgi->param('errorMsg', $errorMsg );
-       }
-       $cgi->param('barcode', $id );
-       $cgi->param('navRight', $navright );
+      #clear the cgi
+      $cgi->delete_all();
+      $cgi->param('p', 'review' );
+      if ( $errorMsg1 )
+      {
+        $cgi->param('errorMsg', $errorMsg1 );
+      }
+      else
+      {
+        $cgi->param('errorMsg', $errorMsg );
+      }
+      $cgi->param('barcode', $id );
+      $cgi->param('navRight', $navright );
 
-       $cgi->param('rights',   $EncRights);
-       $cgi->param('reason',   $reason);
-       $cgi->param('comm',     $comment );
-       $cgi->param('category', $category);
-       $cgi->param('renNum',   $renNum );
-       $cgi->param('renDate',  $renDate);
-       $cgi->param('editing',  $editing);
-       $cgi->param('mag',      $mag);
-     }
-     else
-     {
-       #Process the submission, and go on to the next itme
-       my $id     = $cgi->param('barcode');
-       my $copyDate;
-       my $expert;
-       if ( $crms->IsUserExpert ( $user ) ) { $expert = 2; }
-      
-       $crms->SubmitReview($id, $user, $rights, $reason, $copyDate, $comment, $renNum, $expert, $renDate, $category);
-       if  ( $editing )
-       {
-	 $cgi->delete_all();
+      $cgi->param('rights',   $EncRights);
+      $cgi->param('reason',   $reason);
+      $cgi->param('comm',     $comment );
+      $cgi->param('category', $category);
+      $cgi->param('renNum',   $renNum );
+      $cgi->param('renDate',  $renDate);
+      $cgi->param('editing',  $editing);
+    }
+    else
+    {
+      #Process the submission, and go on to the next itme
+      my $id     = $cgi->param('barcode');
+      my $copyDate;
+      my $expert;
+      if ( $crms->IsUserExpert ( $user ) ) { $expert = 2; }
 
-	 my $output = qq(
-			 <script type="text/javascript"
-			 language="JavaScript">
-			 window.close();
-			 </script>
-			);
-
-	 print "Content-type: text/html\n\n";
-	 print $output;
-       }
-       else
-       {
-	 $cgi->delete_all();
-	 $cgi->param('p', 'review' );
-	 $cgi->param('navRight', $navright );
-         $cgi->param('mag', $mag);
-       }
-
-     }
+      $crms->SubmitReview($id, $user, $rights, $reason, $copyDate, $comment, $renNum, $expert, $renDate, $category);
+      if  ( $editing )
+      {
+        $cgi->delete_all();
+        my $output = qq(<script type="text/javascript" language="JavaScript">window.close();</script>);
+        print "Content-type: text/html\n\n";
+        print $output;
+      }
+      else
+      {
+        $cgi->delete_all();
+        $cgi->param('p', 'review' );
+        $cgi->param('navRight', $navright );
+      }
+    }
   }
-
 }
 
 if  ( (  $cgi->param('p') eq 'queueAdd' )  && ( $cgi->param('id') ) )
