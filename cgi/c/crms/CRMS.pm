@@ -3433,7 +3433,7 @@ sub BarcodeToId
     if ( $barcodeID->{$barcode} ne "" ) { return $barcodeID->{$barcode}; }
 
     my $url = $bc2metaUrl . "?id=$barcode" . "&no_meta=1";
-
+    
     my $ua = LWP::UserAgent->new;
     $ua->timeout( 1000 ); 
     my $req = HTTP::Request->new( GET => $url );
@@ -3442,9 +3442,10 @@ sub BarcodeToId
     if ( ! $res->is_success ) { $self->Logit( "$url failed: ".$res->message() ); return; }
 
     $res->content =~ m,<doc_number>\s*(\d+)\s*</doc_number>,s;
+    
     my $id = $1;
     if ( $id eq "" ) { return; }  ## error or not found
-    $id = "MIU01-" . $id;
+    #$id = "MIU01-" . $id;
 
     $barcodeID->{$barcode} = $id;   ## put into cache
     return $id;
