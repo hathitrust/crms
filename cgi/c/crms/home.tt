@@ -15,7 +15,7 @@
   <a href="crms?p=editReviews">edit unprocessed reviews</a> ||
   <a href="crms?p=adminHistoricalReviews">view all historical reviews</a> ||
   <a href="crms?p=userRate">view your review rate</a> ||
-
+  <a href="/c/crms/UseCases.html" target="_blank">use cases</a> ||
   [% IF crms.IsUserAdmin %]
     <a href="crms?p=admin">admin menu</a> ||
   [% END %]
