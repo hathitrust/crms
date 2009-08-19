@@ -13,7 +13,7 @@
 .style9 {
 	color: #0000FF;
 	font-weight: bold;
-	font-size: large;
+	font-size: x-large;
 }
 .style10 {
 	color: #800000;
@@ -23,7 +23,11 @@
 	font-size: small;
 	color: #FFFFFF;
 }
-.style18 {color: #800000; font-weight: bold; font-size: large; }
+.style18 {
+	color: #800000;
+	font-weight: bold;
+	font-size: x-large;
+}
 .style19 {
 	font-size: small;
 	font-style: italic;
@@ -35,40 +39,69 @@ body {
 }
 .style23 {color: #000000}
 .style25 {color: #FF0000; font-weight: bold; }
-table {
-  background: #FFFFCC;
-  border: solid 1px #000000;
-  border-collapse: collapse;
+.style26 {
+	font-size: large
 }
-td {
-  border: solid 1px #000000;
-}
-th {
-  border: solid 1px #000000;
-}
+.style35 {color: #000000; font-weight: bold; }
+.style36 {color: #000000; font-size: medium;}
+.style37 {font-size: medium}
+.style39 {color: #000000; font-style: italic; }
 -->
 </style>
 </head>
 
 <body>
 <p align="center" class="style1">Use Cases for CRMS</p>
-<p align="center" class="style19"> (rev. June 4, 2009)</p>
+<p align="center" class="style19"> (rev. August 19, 2009)</p>
+<table width="850" align="center" class="style26">
+  <tr>
+    <th width="840" scope="col"><div align="left" class="style26">Note: <span class="style8"><span class="style23">Stanford University's</span> <span class="style39">Copyright Renewal Database</span></span> covers renewals for Class A materials only. These materials have a registration number with the letter A as a prefix. The database does not include renewals for all other Classes (B-M) of materials. See chart below for more information on Stanford's coverage.</div></th>
+  </tr>
+</table>
+<p align="left" class="style26">&nbsp;</p>
+<table width="850" border="1" align="center" bordercolor="#FFFFFF">
+  <tr>
+    <th width="120" bgcolor="#FFFFFF" class="style35" scope="col">Renewal Class</th>
+    <th width="70" bgcolor="#FFFFFF" class="style35" scope="col"><center>
+      Covered?
+    </center></th>
+    <th width="638" bgcolor="#FFFFFF" class="style35" scope="col">Description of Materials</th>
+  </tr>
+  <tr>
+    <td bgcolor="#00FF00" class="style26"><center>
+      <span class="style36">Class A</span>
+    </center>    </td>
+    <td bgcolor="#00FF00" class="style26"><center>
+      <span class="style36">Yes</span>
+    </center>    </td>
+    <td bgcolor="#00FF00"><div align="left" class="style26">Monographic books and pamphlets</div></td>
+  </tr>
+  <tr>
+    <td bgcolor="#FF0000" class="style26"><center>
+      <span class="style37">Classes B thru M</span>
+    </center>    </td>
+    <td bgcolor="#FF0000" class="style26"><center>
+      <span class="style37">No</span>
+    </center>    </td>
+    <td bgcolor="#FF0000" class="style26">Serials/periodicals; contributions to periodicals,  addresses for oral delivery (i.e., lectures, sermons, speeches); dramatic works  (i.e. plays), musical works; music scores; maps and atlases; and works of art,  which includes art reproductions, scientific and technical drawings,  photographic works, prints, and pictorial illustrations</td>
+  </tr>
+</table>
+<p align="left" class="style26">&nbsp;</p>
 <p align="center" class="style9">Standard Use Cases</p>
-<table width="807" align="center">
+<table width="900" border="1" align="center" bordercolor="#000000" bgcolor="#FFFFCC">
   <tr bgcolor="#0000FF">
     <th width="30" bgcolor="#0000FF" scope="col"><span class="style14"> Case No.</span></th>
     <th width="272" scope="col"><center>
       <span class="style21">Standard Use Case</span>
-    </center>
-    </th>
+    </center></th>
     <th width="50" scope="col"><center class="style22">
       <span class="style14">Attribute</span>
     </center></th>
-    <th width="40" scope="col"><center class="style22">
+    <th width="50" scope="col"><center class="style22">
       <span class="style14">Reason</span>
     </center></th>
-    <th width="222" scope="col"><span class="style21">Comments on Notes Field</span></th>
-    <th width="153" scope="col"><span class="style21">Notes Examples</span></th>
+    <th width="229" scope="col"><span class="style21">Comments on Notes Field</span></th>
+    <th width="229" scope="col"><span class="style21">Notes Examples</span></th>
   </tr>
   <tr>
     <th bgcolor="#0000FF" scope="row"><span class="style22">1</span></th>
@@ -134,7 +167,7 @@ th {
   </tr>
   <tr>
     <th bgcolor="#0000FF" scope="row"><span class="style22">5</span></th>
-    <td><div align="left">Title page/verso  indicates <span class="style8"><b>publication date</b></span> is after 1963  and it was published in the US  </div></td>
+    <td><div align="left">Title page/verso  indicates <span class="style8"><b>publication date</b></span> is after 1963  and it was published in the US </div></td>
     <td><center>
       ic
     </center></td>
@@ -156,7 +189,9 @@ th {
       ren
     </center></td>
     <td>Include renewal number and date in appropriate  fields. Note earlier edition was renewed </td>
-    <td>MISC: Prev. ed renewed </td>
+    <td><center>
+      MISC: Prev. ed renewed 
+    </center></td>
   </tr>
   <tr>
     <th bgcolor="#0000FF" scope="row"><span class="style22">7</span></th>
@@ -190,20 +225,8 @@ th {
   </tr>
   <tr>
     <th bgcolor="#0000FF" scope="row"><span class="style22">9</span></th>
-    <td><div align="left">Title page/verso  indicates <span class="style25">a portion of the work was reprinted</span> from another publication. </div></td>
-    <td><center>
-      und<span class="style8">*</span>
-    </center></td>
-    <td><center>
-      nfi
-    </center></td>
-    <td><p>Note the title of the portion reprinted and any renewal info found for new title.</p>
-    <p><span class="style8">*</span>See case no. 14s for <span class="style25">whole reprint</span>.</p></td>
-    <td>REPRINT:  A study in fire department cost allocation</td>
-  </tr>
-  <tr>
-    <th bgcolor="#0000FF" scope="row"><span class="style22">10</span></th>
-    <td><div align="left">Title page/verso indicates this work was previously  published outside the US; pub date of foreign work is pre-1909</div></td>
+    <td><p align="left">Title  page/verso indicates this work was previously published outside the US; pub  date of foreign work is <b>1868 or earlier</b></p>
+    </td>
     <td><center>
       pd
     </center></td>
@@ -211,11 +234,23 @@ th {
       cdpp
     </center></td>
     <td>Note country and date</td>
-    <td>FOREIGN PUB: Great Britain (1869)</td>
+    <td>FOREIGN PUB: France (1856)</td>
+  </tr>
+  <tr>
+    <th bgcolor="#0000FF" scope="row"><span class="style22">10</span></th>
+    <td><div align="left">Title page/verso indicates this work was previously  published outside the US; pub date of foreign work is <b>between 1869-1908</b> (inclusive)</div></td>
+    <td><center>
+      pdus
+    </center></td>
+    <td><center>
+      cdpp
+    </center></td>
+    <td>Note country and date</td>
+    <td>FOREIGN PUB: Great Britain (1887)</td>
   </tr>
   <tr>
     <th bgcolor="#0000FF" scope="row"><span class="style22">11</span></th>
-    <td><div align="left">Title page/verso indicates this work was  previously published outside the US; pub date of foreign work is 1909 or later</div></td>
+    <td><div align="left">Title page/verso indicates this work was  previously published outside the US; pub date of foreign work is <b>1909 or later</b></div></td>
     <td><center>
       ic
     </center></td>
@@ -255,15 +290,15 @@ th {
   </tr>
   <tr>
     <th bgcolor="#0000FF" scope="row"><span class="style22">14</span></th>
-    <td><p align="left">Title page/verso indicates work is unpublished</p>    </td>
+    <td><p align="left">Title page/verso indicates work is <span class="style25">unpublished</span></p></td>
     <td><center>
       und<span class="style8">*</span>
     </center></td>
     <td><center>
       nfi
     </center></td>
-    <td><p>Note “Misc: Unpublished?” and include  reasoning/text </p>
-    <p><span class="style8">*</span>Anne  will review these case by case </p></td>
+    <td><p>Note “MISC: Unpublished?” and include  reasoning/text </p>
+        <p><span class="style8">*</span>Anne  will review these case by case </p></td>
     <td>MISC: Unpublished? This is not a publication.</td>
   </tr>
   <tr>
@@ -275,61 +310,60 @@ th {
     <td><center>
       nfi
     </center></td>
-    <td><p>Note “Misc.: Unpublished?” and include reasoning</p>
-    <p><span class="style8">*<span class="style23">A</span></span>lso see  case no.14</p></td>
-    <td><p>MISC: Unpublished? Original typescript?</p>    </td>
+    <td><p>Note &quot;MISC: Unpublished?&quot; and include reasoning</p>
+        <p><span class="style8">*<span class="style23">A</span></span>lso see  case no.13</p></td>
+    <td><p>MISC: Unpublished? Original typescript?</p></td>
   </tr>
   <tr>
     <th bgcolor="#0000FF" scope="row"><span class="style22">16</span></th>
     <td><p align="left">Missing<span class="style8">*</span> or unreadable  (blurry) title page/verso</p>
-      <div align="left"><span class="style8">*</span>if can’t locate within first 20 pages</div></td>
+        <div align="left"><span class="style8">*</span>if can’t locate within first 20 pages</div></td>
     <td><center>
       und
     </center></td>
     <td><center>
       nfi
     </center></td>
-    <td>Note missing and what is missing (or unreadable).</td>
-    <td><p>MISSING: tp/verso  <br />
-          </p>
-      <p>MISSING: tp/verso unreadable</p>    </td>
+    <td>Note MISSING and what is missing (or unreadable).</td>
+    <td><p>MISSING: tp/verso <br />
+    </p>
+        <p>MISSING: tp/verso unreadable</p></td>
   </tr>
   <tr>
     <th bgcolor="#0000FF" scope="row"><span class="style22">17</span></th>
-    <td><div align="left">If language of item is other than English and  not comprehensible by Checker (meaning: not able to determine place of pub and  copyright date due to lang)</div></td>
+    <td><div align="left">If language of item is other than English and  not comprehensible by Checker (meaning: not able to determine place of publication and  copyright date due to language)</div></td>
     <td><center>
       und
     </center></td>
     <td><center>
       nfi
     </center></td>
-    <td>Note language (and cite language if you can  determine it –hint check Mirlyn record). </td>
+    <td>Note LANGUAGE (and cite language if you can  determine it –hint check Mirlyn record). </td>
     <td><p>LANGUAGE: German<br />
-          </p>
-      <p>LANGUAGE: unknown</p>    </td>
+    </p>
+        <p>LANGUAGE: unknown</p></td>
   </tr>
 </table>
 <p align="center" class="style10">&nbsp;</p>
 <p align="center" class="style18">Special Use Cases</p>
 <center>
-  <table width="807">
+  <table width="900" border="1" bordercolor="#000000" bgcolor="#FFFFCC">
     <caption>&nbsp;
     </caption>
     <tr bgcolor="#990000">
       <th width="30" bgcolor="#990000" scope="col">        <span class="style14">Case No.</span>      </th>
-      <th width="160" scope="col">        
+      <th width="170" scope="col">        
         <center>
           <span class="style21">Special Use Case</span>
-        </center>
-        </th>
-      <th width="205" scope="col">        
+        </center>        </th>
+      <th width="222" scope="col">        
         <center>
           <span class="style21">Instructions</span>
         </center>      </th>
-      <th width="215" scope="col">        <center>
+      <th width="222" scope="col">        <center>
         <span class="style21">Comments on Note Field</span>
       </center>      </th>
-      <th width="163" scope="col">        <center>
+      <th width="222" scope="col">        <center spry:hover="style21" class="style21">
         Notes Examples
       </center>      </th>
     </tr>
@@ -337,38 +371,46 @@ th {
       <th bgcolor="#990000" scope="row"><span class="style22">1s</span></th>
       <td><div align="left">Title page/verso says (literally) “published  simultaneously” in another country</div></td>
       <td><p align="left">Consider US work and  check for Copyright notice, renewal (Use Cases 1/2/3 above)</p></td>
-      <td><div align="left">Note Country and pub is simultaneous</div></td>
+      <td><div align="left">Note MISC and  the country plus that the pub is simultaneous</div></td>
       <td><div align="left">MISC: British pub simultaneous</div></td>
     </tr>
     <tr>
       <th bgcolor="#990000" scope="row"><span class="style22">2s</span></th>
       <td><div align="left">Title page/verso indicates work is a translation  of a foreign publication</div></td>
-      <td><div align="left">Treat as foreign pub (Use Cases 10/11/12 above)  but note as translation</div></td>
-      <td><div align="left">Note Translation and place of original pub (foreign  title if known)</div></td>
+      <td><div align="left">Treat as foreign pub (Use Cases 9/10/11/12 above)  but note as translation</div></td>
+      <td><div align="left">Note TRANSLATION and place of original pub (foreign  title if known)</div></td>
       <td><div align="left">TRANSLATION: Spain “San  Cristobal de la Habana”</div></td>
     </tr>
     <tr>
       <th bgcolor="#990000" scope="row"><span class="style22">3s</span></th>
-      <td><div align="left">The work is a <span class="style8"><b>University of Michigan</b></span> dissertation</div></td>
-      <td><div align="left">Ignore requirement for copyright notice – just  check for renewal</div></td>
-      <td>        <center>
-        N/A      
+      <td><div align="left">Title page/verso indicates work is a <span class="style25">Dissertation or Thesis</span></div></td>
+      <td><div align="left">Check for renewal. If renewed, code <b>ic/ren</b>. If no renewal, code <b>und/nfi</b> and make a note.</div></td>
+      <td>        
+        <div align="left" class="style37">Note DISSERTATION/THESIS; if not renewed, note &quot;no renewal,&quot; and also note whether there is or is not a copyright notice.</div></td>
+      <td>        
+        <div align="left">
+          <p>DISSERTATION/THESIS: no renewal; no copyright notice</p>
+          <p>DISSERTATION/THESIS: no renewal; includes copyright notice</p>
+      </div></td>
+    </tr>
+    <tr>
+      <th bgcolor="#990000" scope="row"><span class="style22">4s</span></th>
+      <td><div align="left">Title page/verso indicates work is part of a  numbered Monographic Series</div></td>
+      <td><div align="left">
+        <p>Check books for copyright notice and renewal of  monograph title. Series receives no special treatment.</p>
+        <p>When reviewing numbered series, be watchful for any indication that the work might be copyrighteed as a <b>Serial/Periodical</b> (see case no. 6s) or is a <b>Collection </b>of works (i.e., articles) that could be separately copyrighted (see case no. 7s). </p>
+        </div></td>
+      <td><center>
+        N/A
       </center></td>
-      <td>        <center>
+      <td><center>
         N/A
       </center></td>
     </tr>
     <tr>
-      <th bgcolor="#990000" scope="row"><span class="style22">4s</span></th>
-      <td><div align="left">Title page/verso indicates work is part of an  numbered Monographic Series</div></td>
-      <td><div align="left">Check books for copyright notice and renewal of  monograph title as usual. If renewed code <b>ic/ren</b>.  If no notice or not renewed, code <b>und/nfi.  </b> </div></td>
-      <td><div align="left">Note  title of Series and series number</div></td>
-      <td><div align="left">SERIES/SERIAL: Annals of the American Academy of  Political and Science v. 216</div></td>
-    </tr>
-    <tr>
       <th bgcolor="#990000" scope="row"><span class="style22">5s</span></th>
       <td><div align="left">Title page/verso indicates work is part of an  unnumbered Monographic Series</div></td>
-      <td><div align="left">Check for copyright notice and renewal of  monograph title. Don’t worry about series title.</div></td>
+      <td><div align="left">Check for copyright notice and renewal of  monograph title. Series receives no special treatment.</div></td>
       <td>        <center>
         N/A      
       </center></td>
@@ -378,24 +420,44 @@ th {
     </tr>
     <tr>
       <th bgcolor="#990000" scope="row"><span class="style22">6s</span></th>
-      <td><div align="left">Title page/verso indicates work is a Serial,  i.e., extracted volume cataloged as a monograph</div></td>
-      <td>        <div align="left">Code these <b>und/nfi.</b>
-        </div></td>
-      <td>        <div align="left">Note serial info: (title of  serial, vol. and issue, if known.). Note if item is also a collection of  articles, etc.
+      <td><div align="left">Title page/verso indicates work is a <span class="style8"><b>Serial/Periodical</b></span>,  (i.e.,an extracted volume cataloged as a monograph)</div></td>
+      <td>        <div align="left">
+        <p>This material will use terms like Bulletin, Journal, or Magazine to indicate that it's a <b>Serial/Periodical </b>that was cataloged as a monograph. Code these <b>und/nfi </b>and make a note.</p>
+        <p>These are what are known as &quot;Non-Class A&quot; materials (see note at top of Use Cases).  </p>
       </div></td>
-      <td><div align="left">SERIES/SERIAL: Assoc. of Casualty and Surety Co.; ED 14, no. 3</div></td>
+      <td>        <div align="left">Note all serial info (when known): title of  serial; vol. and issue; and date. 
+      </div></td>
+      <td><div align="left">SERIES/SERIAL: Assoc. of Casualty and Surety Co.; ED 14, no. 3, 1953</div></td>
     </tr>
     <tr>
       <th bgcolor="#990000" scope="row"><span class="style22">7s</span></th>
-      <td><div align="left">Title page/verso indicates collection of  materials or contains additional copyrighted material</div></td>
-      <td><div align="left">Check for renewal of primary piece/collection  title. If renewed, code <b>ic/ren</b>. If not renewed, code <b>und/nfi</b> (except  architectural works which weren’t covered under copyright laws until 1990).</div></td>
-      <td><p align="left">Note Collection and type  of works and any info on tp/verso about copyright of individual works. </p>
-        <div align="left">Possible eg’s: Artwork, Trade or Society Papers,  Poetry, Plays</div></td>
+      <td><div align="left">Title page/verso indicates a <span class="style8"><b>Collection</b></span> of  material that includes (or could include) separately copyrighted material</div></td>
+      <td><div align="left">
+        <p>Check for renewal of primary piece/collection  title. If renewed, code <b>ic/ren</b>. If not renewed, code <b>und/nfi</b> (except  architectural works which weren’t covered under copyright laws until 1990). </p>
+        <p>These are what are known as &quot;Non-Class A&quot; materials (see note at top of Use Cases).</p>
+        <p><i>See case no. 6s for a complete Serial/Periodical</i></p>
+      </div></td>
+      <td><p align="left">Note COLLECTION and type  of works and any info on tp/verso about copyright of individual works. </p>
+        <p align="left">Examples of collections: Artwork,   Lectures, Proceedings, Poetry, Plays, and Maps or Atlases.</p>
+      <p align="left">&nbsp;</p></td>
       <td><p align="left">COLLECTION: articles  from Foreign Affairs</p>
-      <p align="left">COLLECTION:  reproductions of copyrighted artwork</p></td>
+      <p align="left">COLLECTION:  reproductions of copyrighted artwork</p>
+      <p align="left">&nbsp;</p></td>
     </tr>
     <tr>
       <th bgcolor="#990000" scope="row"><span class="style22">8s</span></th>
+      <td>Title  page/verso indicates work is a <strong>standalone</strong> lecture, sermon, speech, play, or poem</td>
+      <td><p>Check for renewal. If renewed, code <strong>ic/ren</strong>. If  not renewed, code <strong>und/nfi </strong>and  make a note.</p>
+        <p>These are what are known as “Non-Class A” materials  (see note at top of Use Cases).</p>
+      <em>See case no. 7s for a Collection of works</em></td>
+      <td><p>Note MISC for any standalone piece of Non-Class A  material. </p>
+      Examples: Lecture, Play,  Poem, Sermon, or Speech.</td>
+      <td><center>
+        MISC: Play
+      </center></td>
+    </tr>
+    <tr>
+      <th bgcolor="#990000" scope="row"><span class="style22">9s</span></th>
       <td><div align="left">Title page/verso includes statement regarding  international copyright, e.g., reference to Berne Convention or International  Copyright Union</div></td>
       <td><div align="left">Look for evidence that work was previously  published outside the U.S., otherwise, ignore</div></td>
       <td>        <center>
@@ -406,7 +468,7 @@ th {
       </center></td>
     </tr>
     <tr>
-      <th bgcolor="#990000" scope="row"><span class="style22">9s</span></th>
+      <th bgcolor="#990000" scope="row"><span class="style22">10s</span></th>
       <td><div align="left">Title page/verso includes copyright statement  referencing U.S. Alien Property Custodian</div></td>
       <td><div align="left">Consider these non-US works </div></td>
       <td>        <center>
@@ -417,48 +479,56 @@ th {
       </center></td>
     </tr>
     <tr>
-      <th bgcolor="#990000" scope="row"><span class="style22">10s</span></th>
+      <th bgcolor="#990000" scope="row"><span class="style22">11s</span></th>
       <td><div align="left">Barcode does not match bibliographic information</div></td>
       <td><div align="left">Code these <b>und/nfi </b>and report to: MDPCorrections@umich.edu</div></td>
       <td><div align="left">Note that wrong bib record is attached to the work and that you reported it.</div></td>
       <td><div align="left">WRONG RECORD: Wrong bib record attached to work;  reported</div></td>
     </tr>
     <tr>
-      <th bgcolor="#990000" scope="row"><span class="style22">11s</span></th>
+      <th bgcolor="#990000" scope="row"><span class="style22">12s</span></th>
       <td><div align="left">Photocopy, e.g., Univ. Microfilms</div></td>
       <td><div align="left">Base on date of original work, because a  photocopy is just a copy</div></td>
       <td><div align="left">Give original date of publication</div></td>
       <td><div align="left">MISC: Orig. pub date 1950</div></td>
     </tr>
     <tr>
-      <th bgcolor="#990000" scope="row"><span class="style22">12s</span></th>
+      <th bgcolor="#990000" scope="row"><span class="style22">13s</span></th>
       <td><div align="left">UN Documents</div></td>
-      <td><div align="left">Most not in copyright but some are, and status can  be difficult to determine. Confirm published in US and if yes, check for  copyright notice AND renewal. If you find BOTH, make it <strong>und/nfi</strong> and note what was found. </div></td>
-      <td><div align="left">Note “Misc” and that it is or appears to be a “UN  Doc.” Report presence of copyright notice and anything you find in  Stanford database. Anne will look at these case by case. &nbsp;&nbsp;<br />      
+      <td><div align="left">Most not in copyright but some are, and status can  be difficult to determine. Confirm published in US and if yes, check for  copyright notice <b>and</b> renewal. If you find BOTH, make it <strong>und/nfi</strong> and note what was found. </div></td>
+      <td><div align="left">Note MISC and that it is or appears to be a “UN  Doc.” Report presence of copyright notice and anything you find in  Stanford database. Anne will look at these case by case. &nbsp;&nbsp;<br />      
       </div></td>
       <td><div align="left">MISC: UN Doc (copyright notice/renewal found) &nbsp;<br />
       </div></td>
     </tr>
     <tr>
-      <th height="152" bgcolor="#990000" scope="row"><span class="style22">13s</span></th>
-      <td><div align="left">US Government Documents (normally it states  published by the GPO – Government Publishing Office - though some published by  depts.)</div></td>
-      <td><p align="left">Gov  Docs are just checked like other works. </p>
-      <p align="left">But if it looks like a Gov Doc and it has a  copyright notice and renewal, code it <b>und/nfi </b>and add the renewal info. &nbsp;</p></td>
-      <td><p>If <strong>und/nfi </strong>(either because of renewal or checker  uncertainty),<strong> </strong>make a “Misc” note questioning its copyright status.</p>      </td>
-      <td><p>MISC: US Gov Doc? </p>
-      MISC: US Gov DOC with renewal?</td>
+      <th height="152" bgcolor="#990000" scope="row"><span class="style22">14s</span></th>
+      <td><div align="left">US Government Documents - publisher is the GPO (Government Printing Office) or a US Federal Government Agency</div></td>
+      <td><p align="left">Check for copyright notice only. If there is no copyright notice, code it <b>pd/ncn</b>. </p>
+        <p align="left" class="style8"><b>Important Note: ignore series, serial, proceedings, etc.</b></p>
+      <p align="left">If it looks like a US Gov Doc but it has a  copyright notice, code it <b>und/nfi.</b></p></td>
+      <td><p align="left">If <strong>und/nfi </strong>(because it includes a copyright notice, make a MISC note questioning its copyright status.</p>      </td>
+      <td><p>MISC: US Gov Doc with copyright notice? </p>
+      </td>
     </tr>
     <tr>
-      <th bgcolor="#990000" scope="row"><span class="style22">14s</span></th>
-      <td><div align="left">Title  page/verso indicates <span class="style8"><b>whole work is a straight reprint</b></span> of a previously published work  (NOT a new edition, e.g., updated version of the original, and/or with a new  preface or intro added).</div></td>
+      <th bgcolor="#990000" scope="row"><span class="style22">15s</span></th>
+      <td>Title page/verso  indicates <span class="style25">a portion of the work was reprinted</span> from another publication. </td>
+      <td><p align="left">Check for renewal of primary piece. If renewed, code <b>ic/ren</b>. If not renewed, code <b>und/nfi</b>. In either case, make a note.</p>
+      <p align="left"><i>See case no. 16s for <span class="style23"><b>whole reprints.</b></span> </i></p></td>
+      <td>Note REPRINT and cite title(s) of reprinted material included. </td>
+      <td>REPRINT: The Cowboy Prayer </td>
+    </tr>
+    <tr>
+      <th bgcolor="#990000" scope="row"><span class="style22">16s</span></th>
+      <td><p>Title  page/verso indicates <span class="style8"><b>whole work is a straight reprint</b></span> of a previously published work  (NOT a new edition, e.g., updated version of the original, and/or with a new  preface or intro added).</p>        </td>
       <td><p align="left">Use  the original publication to make a determination.</p>
-        <p align="left">See case no. 9 for <span class="style8"><b>partial reprints.</b></span> <br />
-      </p></td>
+      <p align="left"><i>See case no. 15s for <span class="style23"><b>partial reprints.</b></span> </i></p></td>
       <td><center>
-        N/A
+        N/A 
       </center></td>
       <td><center>
-        N/A
+        N/A 
       </center></td>
     </tr>
   </table>
