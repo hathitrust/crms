@@ -8,18 +8,19 @@
 
 [% INCLUDE header.tt    %]
 [% INCLUDE adminNav.tt  %]
+<hr width="25%" align="left"/>
+<br/>
 
 <div>
-  <hr width="25%" align="left"/>
-  || <a href="crms?p=adminUser">adminster user accounts</a>
+  || <a href="crms?p=adminUser">administer user accounts</a>
   || <a href="crms?p=adminQueue">manage the queue</a> 
   || <a href="crms?p=adminReviews">view all active reviews</a>
   || <a href="crms?p=adminHistoricalReviews">view all historical reviews</a>
   || <a href="crms?p=adminUserRate">view user review rates</a> 
   || <a href="crms?p=queueStatus">queue status</a>
   ||
-<br> 
-<br> 
+<br/> 
+<br/> 
   || <a href="crms?p=expert">expert review</a> 
   || <a href="crms?p=undReviews">und/nfi items</a>
   || <a href="crms?p=queueAdd">add to queue</a>  
