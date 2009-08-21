@@ -47,7 +47,7 @@
       <td class="display" align="left">&nbsp;&nbsp;&nbsp;Size:</td>
       <td colspan="2">
         <select onchange="zoom(this);">
-        [% percents = [50,75,100,125,150] %]
+        [% percents = [50,75,100,125,150,200] %]
         [% FOREACH p IN percents %]
           [% IF p == mag %]
             <option value="[% p %]" selected="selected">[% "$p%" %]</option>
