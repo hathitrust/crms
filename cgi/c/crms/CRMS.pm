@@ -28,11 +28,11 @@ sub new
 
     my $errors = [];
     $self->set( 'errors', $errors );
-
+    
     require $args{'configFile'};
-
-    $self->set( 'bc2metaUrl', q{http://mirlyn.lib.umich.edu/cgi-bin/bc2meta} );
-    $self->set( 'oaiBaseUrl', q{http://mirlyn.lib.umich.edu/OAI} );
+    
+    $self->set( 'bc2metaUrl',  $CRMSGlobals::bc2metaUrl );
+    $self->set( 'oaiBaseUrl',  $CRMSGlobals::oaiBaseUrl );
     $self->set( 'verbose',     $args{'verbose'});
     $self->set( 'parser',      XML::LibXML->new() );
     $self->set( 'barcodeID',   {} );
@@ -122,9 +122,15 @@ sub ConnectToSdrDb
     if ($self->get('verbose')) { $self->Logit( "DBI:mysql:mdp:$db_server, $db_user, [passwd]" ); }
 
     my $sdr_dbh   = DBI->connect( "DBI:mysql:mdp:$db_server", $db_user, $db_passwd,
-              { RaiseError => 1, AutoCommit => 1 } ) || die "Cannot connect: $DBI::errstr";
-
-    $sdr_dbh->{mysql_auto_reconnect} = 1;
+              { RaiseError => 1, AutoCommit => 1 } );
+    if ($sdr_dbh)
+    {
+      $sdr_dbh->{mysql_auto_reconnect} = 1;
+    }
+    else
+    {
+      $self->SetError($DBI::errstr);
+    }
 
     return $sdr_dbh;
 }
@@ -472,7 +478,7 @@ sub AddItemToQueue
     if ( $self->IsItemInQueue( $id ) ) 
     {  
       my $sql = qq{UPDATE $CRMSGlobals::queueTable SET time='$time' WHERE id='$id'};
-      $self->PrepareSubmitSql( $sql ); 
+      $self->PrepareSubmitSql( $sql );
 
       #return 0 because item was not added.
       return 0;
@@ -1951,6 +1957,21 @@ sub GetAttrReasonFromCode
     elsif ( $code eq "7" ) { return (9,9); }
 }
 
+sub GetCodeFromAttrReason
+{
+    my $self = shift;
+    my $attr = shift;
+    my $reason = shift;
+
+    if ($attr == 1 and $reason == 2) { return 1; }
+    if ($attr == 1 and $reason == 7) { return 2; }
+    if ($attr == 1 and $reason == 9) { return 3; }
+    if ($attr == 2 and $reason == 7) { return 4; }
+    if ($attr == 2 and $reason == 9) { return 5; }
+    if ($attr == 5 and $reason == 8) { return 6; }
+    if ($attr == 9 and $reason == 9) { return 7; }
+}
+
 sub GetReviewComment
 {
     my $self = shift;
@@ -2397,10 +2418,354 @@ sub GetTheYearMonth
                   "Nov" => "11",
                   "Dec" => "12",
                  );
-    my $month = $months{substr ($newtime,4, 3)};
+   my $month = $months{substr ($newtime,4, 3)};
 
-   return ( $year, $month );	
-	
+   return ( $year, $month );
+}
+
+# Convert a yearmonth-type string, e.g. '2009-08' to English: 'August 2009'
+# Pass 1 as a second parameter to leave it long, otherwise truncates to 3-char abbreviation
+sub YearMonthToEnglish
+{
+  my $self = shift;
+  my $yearmonth = shift;
+  my $long = shift;
+  my %months = (  '01' => 'January',
+                  '02' => 'February',
+                  '03' => 'March',
+                  '04' => 'April',
+                  '05' => 'May',
+                  '06' => 'June',
+                  '07' => 'July',
+                  '08' => 'August',
+                  '09' => 'September',
+                  '10' => 'October',
+                  '11' => 'November',
+                  '12' => 'December'
+                );
+  my ($year, $month) = split('-', $yearmonth);
+  $month = $months{$month};
+  return (($long)? $month:substr($month,0,3)).' '.$year;
+}
+
+# Returns a pair of date strings e.g. ('2008-07','2009-06') for the current fiscal year.
+sub GetFiscalYear
+{
+  my $self = shift;
+  my $ym = shift;
+  my @range = $self->GetAllMonthsInFiscalYear($ym);
+  return ($range[0], $range[-1]);
+}
+
+# Returns an array of date strings e.g. ('2008-07'...'2009-06') for the (current if no param) fiscal year.
+sub GetAllMonthsInFiscalYear
+{
+  my $self = shift;
+  my $ym = shift;
+  my ( $year, $month );
+  if ($ym) { ($year, $month) = split('-', $ym); }
+  else { ($year, $month) = $self->GetTheYearMonth(); }
+  my $startYear = ($month ge '07')? $year:$year-1;
+  my $endYear = ($month ge '07')? $year+1:$year;
+  my @range = ();
+  for my $m (7..12) { push(@range, sprintf("$startYear-%.2d", $m)); }
+  for my $m (1..6) { push(@range, sprintf("$endYear-%.2d", $m)); }
+  return @range;
+}
+
+# Returns an array of date strings e.g. ('2008-07','2009-07') with start month of all fiscal years for which we have data.
+sub GetAllFiscalYears
+{
+  my $self = shift;
+  my $dbh = $self->get( 'dbh' );
+  my $min = $self->SimpleSqlGet("SELECT min(time) from $CRMSGlobals::historicalreviewsTable WHERE legacy != 1");
+  my $max = $self->SimpleSqlGet("SELECT max(time) from $CRMSGlobals::historicalreviewsTable WHERE legacy != 1");
+  $min = substr($min,0,7);
+  $max = substr($max,0,7);
+  my ($minstart,$minend) = $self->GetFiscalYear($min);
+  my ($maxstart,$maxend) = $self->GetFiscalYear($max);
+  $minstart = substr($minstart, 0, 4);
+  $maxstart = substr($maxstart, 0, 4);
+  my @range = ();
+  for (my $y = $minstart; $y < $maxend; $y++)
+  {
+    push(@range, $y);
+  }
+  return @range;
+}
+
+
+sub CreateExportData
+{
+  my $self = shift;
+  my $cumulative = shift;
+  my $doCurrentMonth = shift;
+  my $dbh = $self->get( 'dbh' );
+  my $now = join('-', $self->GetTheYearMonth());
+  my @statdates = ($cumulative)? $self->GetAllFiscalYears() : $self->GetAllMonthsInFiscalYear();
+  my $y1 = substr($statdates[0],0,4);
+  my $y2 = substr($statdates[-1],0,4);
+  my $label = ($cumulative)? "Project Cumulative $y1-" : "Fiscal Cumulative $y1-$y2";
+  my $report = "$label\nCategories,Grand Total";
+  my %stats = ();
+  my @usedates = ();
+  foreach my $date (@statdates)
+  {
+    last if $date gt $now;
+    last if $date eq $now and !$doCurrentMonth;
+    push @usedates, $date;
+    $report .= ",$date";
+    my %cats = ('pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pdus/cdpp' => 0, 'ic/ren' => 0, 'ic/cdpp' => 0,
+                'All PD' => 0, 'All IC' => 0);
+    my $mintime = $date . '-01 00:00:00';
+    my $maxtime = $date . '-31 23:59:59';
+    if ($cumulative)
+    {
+      my ($y,$m) = split('-', $date);
+      $mintime = "$y-$m-01 00:00:00";
+      $maxtime = sprintf('%d-06-31 23:59:59', int($y)+1);
+    }
+    my $sql = qq{SELECT attr,reason FROM $CRMSGlobals::historicalreviewsTable h1 WHERE time=(SELECT max(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id = h2.id) AND (status=4 OR status=5) AND legacy=0 AND time >= '$mintime' AND time <= '$maxtime'};
+    my $rows = $dbh->selectall_arrayref( $sql );
+    foreach my $row ( @{$rows} )
+    {
+      my $attr = int($row->[0]);
+      my $reason = int($row->[1]);
+      my $code = $self->GetCodeFromAttrReason($attr, $reason);
+      my $cat = $self->GetAttrReasonCom($code);
+      $cat = 'All UND/NFI' if $cat eq 'und/nfi';
+      if (exists $cats{$cat} or $cat eq 'All UND/NFI')
+      {
+        $cats{$cat}++;
+        my $allkey = 'All ' . uc substr($cat,0,2);
+        $cats{$allkey}++ if exists $cats{$allkey};
+      }
+    }
+    for my $cat (keys %cats)
+    {
+      $stats{$cat}{$date} = $cats{$cat};
+    }
+  }
+  $report .= "\n";
+  my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'All IC', 'ic/ren', 'ic/cdpp', 'All UND/NFI', 'Total');
+  my %monthTotals = ();
+  foreach my $date (@usedates)
+  {
+    $monthTotals{$date} = $stats{'All PD'}{$date} + $stats{'All IC'}{$date} + $stats{'All UND/NFI'}{$date};
+  }
+  foreach my $title (@titles)
+  {
+    $report .= $title;
+    my $total = 0;
+    foreach my $date (@usedates)
+    {
+      my $n = 0;
+      if ($title eq 'Total') { $n = $monthTotals{$date}; }
+      else { $n = $stats{$title}{$date}; }
+      $total += $n;
+    }
+    $report .= ',' . $total;
+    foreach my $date (@usedates)
+    {
+      my $n = 0;
+      
+      if ($title eq 'Total') { $n = $monthTotals{$date}; }
+      else { $n = $stats{$title}{$date}; }
+      $report .= ',' . $n;
+    }
+    $report .= "\n";
+  }
+  return $report;
+}
+
+# Type arg is 0 for Monthly Breakdown, 1 for Total Determinations, 2 for cumulative (pie)
+# FIXME: make sure that type 1 is getting grand total
+sub CreateExportGraph
+{
+  my $self = shift;
+  my $type = int shift;
+  my $data = $self->CreateExportData($type == 2,0);
+  my @lines = split m/\n/, $data;
+  my $title = shift @lines;
+  $title =~ s/Fiscal\sCumulative/Monthly Breakdown/ if $type == 0;
+  $title =~ s/Fiscal\sCumulative/Total Determinations/ if $type == 1;
+  my @dates = split(',', shift @lines);
+  # Shift off the Categories and GT headers
+  shift @dates; shift @dates;
+  # Now the data is just the categories and numbers...
+  my @titles = ($type == 1)? ('Total'):('All PD','All IC','All UND/NFI');
+  my %titleh = ('All PD' => $lines[0],'All IC' => $lines[5],'All UND/NFI' => $lines[8],'Total' => $lines[9]);
+  my @elements = ();
+  my %colors = ('All PD' => '#22BB00', 'All IC' => '#0088FF', 'All UND/NFI' => '#FF2200');
+  my %totals = ('All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0);
+  my $ceiling = 100;
+  my @totalline = split ',',$titleh{'Total'};
+  my $gt = $totalline[1];
+  my @monthtotals = @totalline[2,-1];
+  foreach my $title (@titles)
+  {
+    # Extract the total,n1,n2... data
+    my @line = split(',',$titleh{$title});
+    shift @line;
+    my $total = int(shift @line);
+    $totals{$title} = $total;
+    foreach my $n (@line) { $ceiling = int($n) if int($n) > $ceiling && $type == 1; }
+    my $color = $colors{$title};
+    my $attrs = sprintf('"dot-style":{"type":"solid-dot","dot-size":3,"colour":"%s"},"text":"%s","colour":"%s","on-show":{"type":"pop-up","cascade":1,"delay":0.2}',
+                        $color, $title, $color);
+    my @vals = @line;
+    if ($type == 0)
+    {
+      for (my $i = 0; $i < scalar @line; $i++) { $line[$i] = 100.0*$line[$i]/$monthtotals[$i]; }
+      @vals = map(sprintf('{"value":%.1f,"tip":"%.1f%%"}', $_, $_),@line);
+    }
+    push @elements, sprintf('{"type":"line","values":[%s],%s}', join(',',@vals), $attrs);
+  }
+  # Round ceil up to nearest hundred
+  $ceiling = 100 * POSIX::ceil($ceiling/100.0) if $type == 1;
+  my $report = sprintf('{"bg_colour":"#FFFFFF","title":{"text":"%s","style":"{color:#000000;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"},"elements":[',$title);
+  if ($type == 2)
+  {
+    my @colorlist = ($colors{'All PD'}, $colors{'All IC'}, $colors{'All UND/NFI'});
+    my @vals = ();
+    map(push(@vals,sprintf('{"value":%s,"label":"%s\n%.1f%%"}', $totals{$_}, $_, 100.0*$totals{$_}/$gt)),@titles);
+    $report .= sprintf('{"type":"pie","start-angle":35,"animate":[{"type":"fade"}],"gradient-fill":true,"colours":["%s"],"values":[%s]}]',
+                       join('","',@colorlist),join(',',@vals));
+  }
+  else
+  {
+    @dates = map $self->YearMonthToEnglish($_), @dates;
+    $report .= sprintf('%s]',join ',', @elements);
+    $report .= sprintf(',"y_axis":{"max":%d,"steps":%d,"colour":"#C0C0C0","grid-colour":"#C0C0C0"%s}',
+                       $ceiling, $ceiling/10, ($type == 0)? ',"labels":{"text":"#val#%"}':'');
+    $report .= sprintf(',"x_axis":{"colour":"#C0C0C0","grid-colour":"#C0C0C0","labels":{"labels":["%s"],"rotate":40}}',
+                       join('","',@dates));
+  }
+  $report .= '}';
+  return $report;
+}
+
+# Create an HTML table for the whole fiscal year's exports, month by month.
+# If cumulative, columns are fiscal years, not months.
+sub CreateExportReport
+{
+  my $self = shift;
+  my $cumulative = shift;
+  my $dbh = $self->get( 'dbh' );
+  my $now = join('-', $self->GetTheYearMonth());
+  my @statdates = ($cumulative)? $self->GetAllFiscalYears() : $self->GetAllMonthsInFiscalYear();
+  my $y1 = substr($statdates[0],0,4);
+  my $y2 = substr($statdates[-1],0,4);
+  my $label = ($cumulative)? "Project Cumulative $y1-" : "Fiscal Cumulative: $y1-$y2";
+  my $report = "<h3 style='margin-left:20px'>$label</h3>\n<table class='exportStats'>\n";
+  $report .= qq{<tr><th align="left">Categories</th><th>Grand&nbsp;Total</th>};
+  my %stats = ();
+  my %warnings = ();
+  foreach my $date ( @statdates )
+  {
+    last if $date gt $now;
+    my $english = $self->YearMonthToEnglish($date);
+    if ($cumulative)
+    {
+      my $thisyear = substr($date,2,2);
+      $english = sprintf("'$thisyear-'%2.d&nbsp;Total", int($thisyear)+1);
+    }
+    $report .= "<th>$english</th>";
+    my %cats = ('pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pdus/cdpp' => 0, 'ic/ren' => 0, 'ic/cdpp' => 0,
+                'All PD' => 0, 'All IC' => 0);
+    my $mintime = $date . '-01 00:00:00';
+    my $maxtime = $date . '-31 23:59:59';
+    if ($cumulative)
+    {
+      my ($y,$m) = split('-', $date);
+      $mintime = "$y-$m-01 00:00:00";
+      $maxtime = sprintf('%d-06-31 23:59:59', int($y)+1);
+    }
+    my $sql = qq{SELECT attr,reason FROM $CRMSGlobals::historicalreviewsTable h1 WHERE time=(SELECT max(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id = h2.id) AND (status=4 OR status=5) AND legacy=0 AND time >= '$mintime' AND time <= '$maxtime'};
+    my $rows = $dbh->selectall_arrayref( $sql );
+    foreach my $row ( @{$rows} )
+    {
+      my $attr = int($row->[0]);
+      my $reason = int($row->[1]);
+      my $code = $self->GetCodeFromAttrReason($attr, $reason);
+      my $cat = $self->GetAttrReasonCom($code);
+      $cat = 'All UND/NFI' if $cat eq 'und/nfi';
+      if (exists $cats{$cat} or $cat eq 'All UND/NFI')
+      {
+        $cats{$cat}++;
+        my $allkey = 'All ' . uc substr($cat,0,2);
+        $cats{$allkey}++ if exists $cats{$allkey};
+      }
+      else
+      {
+        $warnings{"unknown attr/reason '$attr/$reason'"} = 1;
+      }
+    }
+    for my $cat (keys %cats)
+    {
+      $stats{$cat}{$date} = $cats{$cat};
+    }
+  }
+  $report .= "</tr>\n";
+  my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'All IC', 'ic/ren', 'ic/cdpp', 'All UND/NFI', 'Total');
+  my %monthTotals = ();
+  foreach my $date (@statdates)
+  {
+    last if $date gt $now;
+    $monthTotals{$date} = $stats{'All PD'}{$date} + $stats{'All IC'}{$date} + $stats{'All UND/NFI'}{$date};
+  }
+  foreach my $title (@titles)
+  {
+    my $class = ('All' eq substr($title,0,3))? ' class="major"':'';
+    my $align = ($title eq 'Total')? 'right':'left';
+    my $indented = $title;
+    $indented = '&nbsp;&nbsp;&nbsp;&nbsp;' . $indented unless 'All' eq substr($title,0,3) or 'Total' eq $title;
+    $report .= "<tr><th align='$align'><span$class>$indented</span></th>\n";
+    my $total = 0;
+    my $of = 0.0;
+    my $pct = '';
+    foreach my $date (@statdates)
+    {
+      last if $date gt $now;
+      my $n = 0;
+      if ($title eq 'Total') { $n = $monthTotals{$date}; }
+      else
+      {
+        if ('All' eq substr($title,0,3)) { $of += $monthTotals{$date}; }
+        else { $of += $stats{'All '.uc substr($title,0,2)}{$date}; }
+        $n = $stats{$title}{$date};
+      }
+      $total += $n;
+    }
+    eval{$pct = 100.0*$total/$of};
+    $pct = ($title eq 'Total')? '':sprintf('&nbsp;(%.1f%%)', $pct);
+    $total = "<b>$total</b>" if $title eq 'Total';
+    $indented = $total;
+    $indented = '&nbsp;&nbsp;&nbsp;&nbsp;' . $indented unless 'All' eq substr($title,0,3) or 'Total' eq $title;
+    $report .= sprintf("<td$class%s>$indented$pct</td>", ('Total' eq $title)? ' style="text-align:center"':'');
+    foreach my $date (@statdates)
+    {
+      last if $date gt $now;
+      my $n = 0;
+      my $pct = '';
+      if ($title eq 'Total') { $n = '<b>' . $monthTotals{$date} . '</b>'; }
+      else
+      {
+        $n = $stats{$title}{$date};
+        if ('All' eq substr($title,0,3)) { $of = $monthTotals{$date}; }
+        else { $of = $stats{'All '.uc substr($title,0,2)}{$date}; }
+        eval{$pct = 100.0*$n/$of};
+        $pct = sprintf('&nbsp;(%.1f%%)', $pct);
+      }
+      $indented = $n;
+      $indented = '&nbsp;&nbsp;&nbsp;&nbsp;' . $indented unless 'All' eq substr($title,0,3) or 'Total' eq $title;
+      $report .= sprintf("<td$class%s>$indented$pct</td>", ('Total' eq $title)? ' style="text-align:center"':'');
+    }
+    $report .= '</tr>';
+  }
+  $report .= qq{</table>\n};
+  $report .= sprintf('<h3><span class="red">%s</span></h3>', join('<br/>', sort keys %warnings));
+  return $report;
 }
 
 sub CreateStatsReport
@@ -2412,22 +2777,8 @@ sub CreateStatsReport
 
    my ( $year, $month ) = $self->GetTheYearMonth ();	
 
-   my ( $min, $max );
+   my ( $min, $max ) = $self->GetFiscalYear();
 
-   if ( $month ge '07' )
-   {
-     my $nextYear = $year + 1;
-
-     $min = qq{$year-07};
-     $max = qq{$nextYear-06};
-   }
-   else
-   {
-     my $lastYear = $year + 1;
-
-     $min = qq{$lastYear-07};
-     $max = qq{$year-06};
-   }
    #find out how many distinct months there are
    my $sql = qq{SELECT DISTINCT monthyear FROM userstats WHERE monthyear >= '$min' AND monthyear <= '$max'};
    
@@ -2470,7 +2821,7 @@ sub CreateStatsReport
    $report .= qq{</tr>\n};
    my @titles = ('Total&nbsp;Reviews', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'ic/ren', 'ic/cdpp', 'und/nfi',
                  'Time&nbsp;Reviewing&nbsp;(minutes)', 'Time&nbsp;per&nbsp;Review&nbsp;(minutes)',
-		 'Reviews&nbsp;per&nbsp;Hour', 'Outlier&nbsp;Reviews');
+                 'Reviews&nbsp;per&nbsp;Hour', 'Outlier&nbsp;Reviews');
    my $totalTotalRevs = 0;
    if ($user eq 'all')
    {
@@ -2484,7 +2835,6 @@ sub CreateStatsReport
        my $row = $outrows[$i];
        my $bold = ($i == 0 || $i > 7);
        my $round = ($i == 9 || $i == 10);
-       my $total = 0;
        my $titleline = sprintf("<td>%s$titles[$i]%s</td>", ($bold)? '<b>':"<font color='#004600'>&nbsp;&nbsp;", ($bold)? '</b>':'</font>');
        my $dataline = '';
        for (my $j = 0; $j < $datecount; $j++)
@@ -2561,7 +2911,7 @@ sub CreateYearlyReport
    $report .= qq{</tr>\n};
    my @titles = ('Total&nbsp;Reviews', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'ic/ren', 'ic/cdpp', 'und/nfi',
                  'Time&nbsp;Reviewing&nbsp;(minutes)', 'Average&nbsp;Time&nbsp;per&nbsp;Review&nbsp;(minutes)',
-		 'Average&nbsp;Reviews&nbsp;per&nbsp;Hour', 'Outlier&nbsp;Reviews');
+                 'Average&nbsp;Reviews&nbsp;per&nbsp;Hour', 'Outlier&nbsp;Reviews');
    my $totalTotalRevs = 0;
    # Add up the total of field 0 in the inner loop, so we only do it on the first iteration
    for (my $i = 0; $i < 12; $i++)
@@ -2570,7 +2920,6 @@ sub CreateYearlyReport
        my $row = $outrows[$i];
        my $bold = ($i == 0 || $i > 7);
        my $round = ($i == 9 || $i == 10);
-       my $total = 0;
        my $titleline .= sprintf("<td>%s$titles[$i]%s</td>", ($bold)? '<b>':"<font color='#004600'>&nbsp;&nbsp;", ($bold)? '</b>':'</font>');
        my $dataline = '';
        for (my $j = 0; $j < $nyears; $j++)
@@ -3261,7 +3610,7 @@ sub GetRecordTitleBc2Meta
     if ( $self->get( 'marcData' ) ne "" ) { return $self->get( 'marcData' ); }
 
     my $parser = $self->get( 'parser' );
-    my $url    = "http://mirlyn.lib.umich.edu/cgi-bin/bc2meta?id=$id";
+    my $url    = $self->get( 'bc2metaUrl' ) . '?id=' . $id;
     my $ua     = LWP::UserAgent->new;
 
     $ua->timeout( 1000 );
@@ -3387,9 +3736,9 @@ sub GetRecordMetadata
     if ( $self->get( $bar ) ne "" ) { return $self->get( $bar ); }
 
     #my $sysId = $self->BarcodeToId( $barcode );
-    #my $url   = "http://mirlyn.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
-    #my $url    = "http://mirlyn.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
-    my $url    = qq{http://mirlyn.lib.umich.edu/cgi-bin/bc2meta?id=$barcode&schema=marcxml};
+    #my $url   = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
+    #my $url    = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
+    my $url    = $self->get( 'bc2metaUrl' ) .'?id=' . $barcode . '&schema=marcxml';
     my $ua     = LWP::UserAgent->new;
 
     if ($self->get("verbose")) { $self->Logit( "GET: $url" ); }
