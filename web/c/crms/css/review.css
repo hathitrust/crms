@@ -5,6 +5,10 @@
   line-height:1.1em;
 }
 
+code {
+  font-family:Courier, 'Courier New', Monaco, monospace;
+}
+
 .pages {
   margin: 10px;
   padding: 10px;
@@ -182,17 +186,48 @@ table.bottomNav {
 table.userRate {
   border-top: 1px solid;
   border-bottom: 1px solid;
-  width: 100px;
-  padding-right:20px;
+  width:100px;
+  padding:20px;
 }
 
 table.userRate td,th {
   padding-right:20px;
 }
 
+table.exportStats {
+  width:100px;
+  padding:0px;
+  border-collapse:collapse;
+  border-spacing:0px;
+  border:1px solid #000000;
+  margin-left:20px;
+}
+
+table.exportStats td {
+  border:1px solid #000000;
+  padding:4px 20px 2px 6px;
+}
+
+table.exportStats th {
+  border:1px solid #000000;
+  padding:4px 20px 2px 6px;
+  background-color:#000000;
+  color:#FFFFFF;
+}
+
+span.major {
+  color:#82CAFA;
+}
+
+td.major {
+  background-color:#82CAFA;
+  color:#000000;
+  font-weight:bold;
+}
+
 textarea {
 	width: 97%;
 	height: 60px;
-	border: 1px solid #72859a;
+	border: 1px solid #72859A;
 }
 
