@@ -4,76 +4,118 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>CRMS Keys Help</title>
-    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css" />
+<style type="text/css">
+* {
+  font-family: helvetica;
+  line-height:1.1em;
+}
+
+code {
+  font-family:Courier, 'Courier New', Monaco, monospace;
+}
+
+td {
+  font-weight:normal;
+  text-align:left;
+}
+
+table.subtable {
+  padding:0px 20px 0px 0px;
+  margin: 12px;
+  border-collapse:collapse;
+  border-spacing:0px;
+}
+
+table.subtable th {
+  text-align:left;
+  vertical-align:top;
+  padding:0px 10px 0px 10px;
+  width:5%;
+}
+
+table.subtable td {
+  text-align:left;
+  vertical-align:top;
+  padding:0px 10px 1px 10px;
+  border-left:1px solid #000000;
+}
+
+td.codes {
+  font-family:Courier, 'Courier New', Monaco, monospace;
+  width:5%;
+}
+
+</style>
   </head>
   <body>
+  <img src="/c/crms/crms.jpg"/>
+  <br/><br/>
 <table cellspacing="0" cellpadding="4" align="left">
 <tr>
-<td><font size="3">
-    <strong>Status</strong>
-    <br/>0 - not reviewed yet or awaiting processing
-    <br/>2 - reviewed by two persons that disagree
-    <br/>3 - reviewed by two persons - both <code>und/nfi</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <br/>4 - reviewed by 2 persons that agree
-    <br/>5 - reviewed by expert
-    <br/> 
+<td>
+    <table class="subtable">
+    <th colspan="2" style="padding-bottom:8px;">Status</strong>
+    <tr><th>0</th><td>not reviewed yet or awaiting processing</td></tr>
+    <tr><th>2</th><td>reviewed by two persons that disagree</td></tr>
+    <tr><th>3</th><td>reviewed by two persons - both <code>und/nfi</code></td></tr>
+    <tr><th>4</th><td>reviewed by 2 persons that agree</td></tr>
+    <tr><th>5</th><td>reviewed by expert</td></tr>
+    </table>
     <br/>
     <br/>
-    <strong>Legacy</strong>
-    <br/>0 - not legacy review
-    <br/>1 - legacy review ( pre-CRMS )
-    <br/>
-    </font></td>
-<td><font size="3">
-    <strong>Attribute Nunerical Values</strong>
-    <br/>  1 -  pd    | public domain
-    <br/>  2 - ic     | in copyright
-    <br/>  3 - opb    | out-of-print and brittle (implies in-copyright)
-    <br/>  4 - orph   | copyright-orphaned (implies in-copyright)
-    <br/>  6 - umall  | available to UM affiliates and walk-in patrons (all campuses)
-    <br/>  7 - world  | available to everyone in the world
-    <br/>  5 - und    | undetermined copyright status
-    <br/>  8 - nobody | available to nobody; blocked for all users
-    <br/>  9 - pdus   | public domain only when viewed in the US
-</font></td>
+    <table class="subtable">
+    <th colspan="2" style="padding-bottom:8px;">Legacy</strong>
+    <tr><th>0</th><td>not legacy review</td></tr>
+    <tr><th>1</th><td>legacy review (pre-CRMS)</td></tr>
+    </table>
+</td>
+<td>
+    <table class="subtable">
+    <th colspan="2" style="padding-bottom:8px;">Status</strong>
+    <tr><th>1</th><td class="codes">pd</td>    <td>public domain</td></tr>
+    <tr><th>2</th><td class="codes">ic</td>    <td>in copyright</td></tr>
+    <tr><th>3</th><td class="codes">opb</td>   <td>out-of-print and brittle (implies in-copyright)</td></tr>
+    <tr><th>4</th><td class="codes">orph</td>  <td>copyright-orphaned (implies in-copyright)</td></tr>
+    <tr><th>6</th><td class="codes">umall</td> <td>available to UM affiliates and walk-in patrons (all campuses)</td></tr>
+    <tr><th>7</th><td class="codes">world</td> <td>available to everyone in the world</td></tr>
+    <tr><th>5</th><td class="codes">und</td>   <td>undetermined copyright status</td></tr>
+    <tr><th>8</th><td class="codes">nobody</td><td>available to nobody; blocked for all users</td></tr>
+    <tr><th>9</th><td class="codes">pdus</td>  <td>public domain only when viewed in the US</td></tr>
+    </table>
+</td>
 </tr>
-</table>
-<br/>
-<table cellspacing="0" cellpadding="4" width="0" align="left">
 <tr>
-<td align="left" width="0"><font size="3">
-    <strong>Reasons Numerical Values</strong>
-    <br/>  1 | bib  | bibliographically-derived by automatic processes
-    <br/> 2 | ncn  | no printed copyright notice
-    <br/>  3 | con  | contractual agreement with copyright holder on file
-    <br/>  4 | ddd  | due diligence documentation on file
-    <br/>  5 | man  | manual access control override; see note for details
-    <br/>  6 | pvt  | private personal information visible
-    <br/>  7 | ren  | copyright renewal research was conducted
-    <br/>  8 | nfi  | needs further investigation 
-    <br/>  9 | cdpp | title page or version contain copyright date and/or place 
-    <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;of publication information not in bib record
-    <br/> 10 | cip  | condition review and in-print status research was 
-    <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;conducted
-    <br/> 11 | unp  | unpublished work
-</font></td>
-<td align="left" width="0"><font size="3">
-    <strong>Categories</strong>
-    <br/>Collection
-    <br/>Date
-    <br/>Dissertation/Thesis
-    <br/>Foreign Publication
-    <br/>Language
-    <br/>Miscellaneous
-    <br/>Missing
-    <br/>Reprint Form
-    <br/>Series/Serial
-    <br/>Translation
-    <br/>Wrong Record
-    <br/>
-    <br/>
-    <br/>
-</font></td>
+<td>
+    <table class="subtable">
+    <th colspan="3" style="padding-bottom:8px;">Reasons Numerical Values</strong>
+    <tr><th>1</th> <td class="codes">bib</td> <td>bibliographically-derived by automatic processes</td></tr>
+    <tr><th>2</th> <td class="codes">ncn</td> <td>no printed copyright notice</td></tr>
+    <tr><th>3</th> <td class="codes">con</td> <td>contractual agreement with copyright holder on file</td></tr>
+    <tr><th>4</th> <td class="codes">ddd</td> <td>due diligence documentation on file</td></tr>
+    <tr><th>5</th> <td class="codes">man</td> <td>manual access control override; see note for details</td></tr>
+    <tr><th>6</th> <td class="codes">pvt</td> <td>private personal information visible</td></tr>
+    <tr><th>7</th> <td class="codes">ren</td> <td>copyright renewal research was conducted</td></tr>
+    <tr><th>8</th> <td class="codes">nfi</td> <td>needs further investigation</td></tr>
+    <tr><th>9</th> <td class="codes">cdpp</td><td>title page or version contain copyright date and/or <br/>place of publication information not in bib record</td></tr>
+    <tr><th>10</th><td class="codes">cip</td> <td>condition review and in-print status research was conducted</td></tr>
+    <tr><th>11</th><td class="codes">unp</td> <td>unpublished work</td></tr>
+    </table>
+</td>
+<td>
+    <table class="subtable">
+    <th style="padding-bottom:8px;">Categories</th>
+    <tr><td style="border-left:0px">Collection</td></tr>
+    <tr><td style="border-left:0px">Date</td></tr>
+    <tr><td style="border-left:0px">Dissertation/Thesis</td></tr>
+    <tr><td style="border-left:0px">Foreign Publication</td></tr>
+    <tr><td style="border-left:0px">Language</td></tr>
+    <tr><td style="border-left:0px">Miscellaneous</td></tr>
+    <tr><td style="border-left:0px">Missing</td></tr>
+    <tr><td style="border-left:0px">Reprint Form</td></tr>
+    <tr><td style="border-left:0px">Series/Serial</td></tr>
+    <tr><td style="border-left:0px">Translation</td></tr>
+    <tr><td style="border-left:0px">Wrong Record</td></tr>
+</td>
 </tr>
 </table>
 </body>
