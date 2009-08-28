@@ -26,10 +26,16 @@ function init()
 }
   </script>
   </head>
-  <body onload="init()"> 
-    <FONT SIZE="5"><Strong>Hello [% crms.GetUserName %] </strong></FONT>
+  <body onload="init()">
+  <div class="pages" id="homePage">
+    <img src="/c/crms/crms.jpg"/>
+    <br/><br/>
+    <font size="5"><strong>Hello [% crms.GetUserName %] </strong></font>
     <a href="crms?p=Logout"> Logout</a>
-
+    [% FOREACH error IN crms.GetErrors %]
+      <strong>ERROR: [% error %]</strong>
+      <br/>
+    [% END %]
 <br/>
 <br/>
 
