@@ -3,18 +3,18 @@
 
   [% page = cgi.param("p") %]
 
-  [% IF    page == "adminUser"           %] &gt; administer user accounts
-  [% ELSIF page == "adminQueue"          %] &gt; manage the queue
-  [% ELSIF page == "adminReview"         %] &gt; view all active reviews
-  [% ELSIF page == "undReviews"          %] &gt; und/nfi items
-  [% ELSIF page == "adminLegacyReview"   %] &gt; view all historical reviews
-  [% ELSIF page == "adminUserRate"       %] &gt; view user review rates
-  [% ELSIF page == "undReviews"          %] &gt; und/nfi items
-  [% ELSIF page == "expert"              %] &gt; expert review
-  [% ELSIF page == "queueStatus"         %] &gt; queue status
-  [% ELSIF page == "queueAdd"            %] &gt; add to queue
-  [% ELSIF page == "adminEditUser"       %] &gt; <a href="?p=adminUser">administer user accounts</a> 
-                                                &gt; edit user
+  [% IF    page == "adminUser"             %] &gt; administer user accounts
+  [% ELSIF page == "adminQueue"            %] &gt; manage the queue
+  [% ELSIF page == "adminReviews"          %] &gt; view all active reviews
+  [% ELSIF page == "undReviews"            %] &gt; und/nfi items
+  [% ELSIF page == "adminHistoricalReviews"%] &gt; view all historical reviews
+  [% ELSIF page == "adminUserRate"         %] &gt; view user review rates
+  [% ELSIF page == "expert"                %] &gt; expert review
+  [% ELSIF page == "queueStatus"           %] &gt; queue status
+  [% ELSIF page == "queueAdd"              %] &gt; add to queue
+  [% ELSIF page == "adminEditUser"         %] &gt; <a href="?p=adminUser">administer user accounts</a> 
+                                                  &gt; edit user
+  [% ELSIF page == "exportStats"           %] &gt; export statistics
   [% END %]
 
 </div>
