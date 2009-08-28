@@ -1,0 +1,84 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Strict//EN">
+<html>
+  <head>
+    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css" />
+    <title>[% title %]</title>
+
+    <script language="JavaScript" src="/c/crms/swfobject.js"></script>
+    <script language="javascript">
+
+// For Open Flash Charts Data
+function findSWF(id)
+{
+  if (navigator.appName.indexOf("Microsoft")!= -1) return window[id];
+  else return document[id];
+}
+
+function SetOFCData(json,name)
+{
+  swf = findSWF(name);
+  x = swf.load(json);
+}
+
+function DoChart(cumulative,id)
+{
+  var url = "/cgi/c/crms/getExportStats?c=" + cumulative;
+  var req = null;
+  if (window.XMLHttpRequest) req = new XMLHttpRequest();
+  else if (window.ActiveXObject) 
+  {
+    try {
+      req = new ActiveXObject("Msxml2.XMLHTTP");
+    } catch (e)
+    {
+      try {
+        req = new ActiveXObject("Microsoft.XMLHTTP");
+      } catch (e) {}
+    }
+  }
+  req.onreadystatechange = function()
+  {
+    if (req.readyState == 4)
+    {
+      if (req.status == 200) SetOFCData(req.responseText, id);
+    }
+  };
+  req.open("GET", url, true);
+  req.send(null);
+}
+
+swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "400", "300", "9.0.0",
+                   "expressInstall.swf", {"data-file":"/cgi/c/crms/getExportStats?type=0"});
+swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "400", "300", "9.0.0",
+                   "expressInstall.swf", {"data-file":"/cgi/c/crms/getExportStats?type=1"});
+swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "400", "300", "9.0.0",
+                   "expressInstall.swf", {"data-file":"/cgi/c/crms/getExportStats?type=2"});
+</script>
+  </head>
+  <body>
+    <div class="pages" id="homePage">
+    <img src="/c/crms/crms.jpg"/><br/><br/>
+    <font size="5"><strong>Hello [% crms.GetUserName %]</strong></font>
+    <a href="crms?p=Logout"> Logout</a>
+<br/><br/>
+
+[% INCLUDE adminNav.tt  %]
+<br/>
+<h2 style="margin-left:390px">Statistics for Exported Determinations</h2>
+
+[% crms.CreateExportReport() %]
+
+[% crms.CreateExportReport(1) %]
+
+<br/>
+<table style="margin-left:20px; padding:0px; width:800px; height:600px border-collapse:collapse">
+<tr>
+  <td><div id="chart0"/></td>
+  <td><div id="chart1"/></td>
+<tr>
+  <td colspan="2"><div id="chart2"/></td>
+</tr>
+</table>
+
+[% INCLUDE footer.tt %]
+
