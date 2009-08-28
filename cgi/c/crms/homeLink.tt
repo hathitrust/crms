@@ -1,2 +1,8 @@
-<div><a href="crms">home</a/</div>
+<div><a href="crms">home</a>
+  [% page = cgi.param("p") %]
+
+  [% IF    page == "editReviews"           %] &gt; edit reviews
+  [% ELSIF page == "userRate"              %] &gt; view your review rate
+  [% END %]
+</div>
 
