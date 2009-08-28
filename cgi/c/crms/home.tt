@@ -1,6 +1,3 @@
-
-<div class="pages" id="homePage">
-
 [% INCLUDE header.tt %]
 [% checkin = cgi.param('checkin') %]
 
