@@ -1,6 +1,3 @@
-
-<div class="pages" id="admin">
-
 [% IF NOT crms.IsUserAdmin() %]
   <h3>You do not have access to this page</h3>
   [% STOP %]
@@ -18,17 +15,14 @@
   || <a href="crms?p=adminHistoricalReviews">view all historical reviews</a>
   || <a href="crms?p=adminUserRate">view user review rates</a> 
   || <a href="crms?p=queueStatus">queue status</a>
+  || <a href="crms?p=exportStats">export statistics</a>
   ||
 <br/> 
 <br/> 
   || <a href="crms?p=expert">expert review</a> 
   || <a href="crms?p=undReviews">und/nfi items</a>
   || <a href="crms?p=queueAdd">add to queue</a>  
-
   ||
-
-
 </div>
 
 [% INCLUDE footer.tt %]
-</div>
