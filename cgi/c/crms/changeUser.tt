@@ -1,12 +1,13 @@
--------------------------------
-
+  <br/>
+  <hr width="25%">
+  <br/>
   <form action="crms">
-    <input type="hidden" name="p" value=""/>
+    <input type="hidden" name="p" value="admin"/>
     <input type="hidden" name="changeuser" value="1"/>
 
-    Change to User (enter id): 
+    <label>Change to User (id):</label>
     <input type="text" name="newuser"/>
  
-    <br/><input type="submit"  value="Submit"/>
+    <br/><input type="submit" value="Submit"/>
   </form>
 
