@@ -48,11 +48,11 @@ function DoChart(cumulative,id)
 }
 
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":"/cgi/c/crms/getExportStats?type=0"});
+                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=0")});
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":"/cgi/c/crms/getExportStats?type=1"});
+                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=1")});
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":"/cgi/c/crms/getExportStats?type=2"});
+                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=2")});
 </script>
   </head>
   <body>
@@ -70,8 +70,8 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "400", "300", "9.0.
 
 [% crms.CreateExportReport(1) %]
 
-<br/>
-<table style="margin-left:20px; padding:0px; width:800px; height:600px border-collapse:collapse">
+<br/><br/>
+<table style="background-color:#000000; padding:0px; width:800px; height:600px; border-collapse:collapse">
 <tr>
   <td><div id="chart0"/></td>
   <td><div id="chart1"/></td>
