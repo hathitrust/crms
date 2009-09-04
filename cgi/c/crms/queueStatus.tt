@@ -20,6 +20,10 @@
       Cumulative number of volumes in queue (ever*): [% crms.GetTotalEverInQueue() %]<br>
 <hr>
 Total Number of volumes in queue:  [% crms.GetQueueSize () %]<br>
+[% priorities = crms.GetQueuePriorities() %]
+[% FOREACH p IN priorities %]
+  &nbsp;&nbsp;&nbsp;[% p %]<br/>
+[% END %]
 Total Number of volumes in candidates:  [% crms.GetCandidatesSize () %]<br>
 Total Number of volumes last added to candidates:  [% crms.GetLastLoadSizeToCandidates () %], on  [% crms.GetLastLoadTimeToCandidates () %]<br>
 <br>
