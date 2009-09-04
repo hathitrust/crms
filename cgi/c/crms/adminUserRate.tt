@@ -1,5 +1,5 @@
 [% IF NOT crms.IsUserAdmin() %]
-  <h3>You do not have access to this page</h3>
+  [% INCLUDE denied.tt  %]
   [% STOP %]
 [% END %]
 
@@ -7,13 +7,13 @@
 [% INCLUDE adminNav.tt  %]
 
 <hr width="25%" align="left"/>
- [% crms.CreateYearlyReport() %]
+ [% crms.CreateStatsReport('all',1) %]
  <br/><br/>
- [% crms.CreateStatsReport( 'all' ) %]
+ [% crms.CreateStatsReport('all',0) %]
  <br/><br/>
  [% users = crms.GetUserData() %]
  [% FOREACH id IN users.keys.sort %]
-   [% crms.CreateStatsReport( id ) %]
+   [% crms.CreateStatsReport(id,0) %]
    <br/><br/>
  [% END %]
  
