@@ -3,30 +3,8 @@
   <head>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css" />
     <title>[% title %]</title>
-    <script language="javascript">
-// Colorizes all the userRateTable type tables in the document
-function init()
-{
-  var colors = ["#CCFFFF", "#FFFFFF"];
-  var tables = document.body.getElementsByTagName("table");
-  var ntables = tables.length;
-  for (var i = 0; i < ntables; i++)
-  {
-    var table = tables[i];
-    if (table.id == "userRateTable")
-    {
-      var nrows = table.rows.length;
-      for (var j = 0; j < nrows; j++)
-      {
-        var tr = table.rows[j];
-        tr.style.backgroundColor = colors[j % 2];
-      }
-    }
-  }
-}
-  </script>
   </head>
-  <body onload="init()">
+  <body>
   <div class="pages" id="homePage">
     <img src="/c/crms/crms.jpg"/>
     <br/><br/>
