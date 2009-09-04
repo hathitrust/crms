@@ -20,7 +20,7 @@
     [% id = '' %]
   [% END %]
 [% END %]
-
+  <br/>
   <form action="crms">
     <input type="hidden" name="p" value="adminEditUser"/>
     <input type="hidden" name="add" value="1"/>
