@@ -39,7 +39,7 @@
 <tr><td>Expert Note</td><td>      [% review.expertNote %]</td></tr>
 </table>
 <br/><table  border="1">
-<tr><td>Flag Review</td><td> [% review.flagged %]</td></tr>
+<tr><td>Priority</td><td> [% review.priority %]</td></tr>
 </table
   [% END %]
 <a href="JavaScript:window.close()">Close</a>

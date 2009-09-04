@@ -1,10 +1,10 @@
 [% INCLUDE header.tt    %]
 
 
-[% IF NOT crms.IsUserAdmin() %]
-[% INCLUDE homeLink.tt  %]
-[% ELSE %]
+[% IF crms.IsUserAdmin() %]
 [% INCLUDE adminNav.tt  %]
+[% ELSE %]
+[% INCLUDE homeLink.tt  %]
 [% END %]
 
 [% search1        = cgi.param('search1')        %]
@@ -61,7 +61,7 @@
   <label><input type="radio" name="order" value="status" 
     [% order == 'status' ? 'checked="1"' : '' %] />status</label>
   <label><input type="radio" name="order" value="category" 
-    [% order == 'category' ? 'checked="1"' : '' %] />note category</label>
+    [% order == 'category' ? 'checked="1"' : '' %] />note&nbsp;category</label>
   <br/>
 
   Direction:   
@@ -94,8 +94,11 @@
 
 <table BORDER="1" CELLPADDING="0" CELLSPACING="0">
   <th>ID</th><th>Title</th><th>Author</th><th>date</th><th>status</th><th>legacy(0,1)</th>
-  <th>user</th><th>attr</th><th>reason</th><th>note category</th>
-  <th>note</th><th>flagged</th>
+  <th>user</th><th>attr</th><th>reason</th><th>note&nbsp;category</th>
+  <th>note</th>
+[% IF crms.IsUserAdmin() %]
+  <th>priority</th>
+[% END %]
   [% FOREACH review IN reviews %]
 
     [% IF prev_id == '' %]   
@@ -122,7 +125,9 @@
       <td>$review.reason</td>
       <td>$review.category</td>
       <td>$review.note</td>
-      <td>$review.flagged</td>
+    [% IF crms.IsUserAdmin() %]
+      <td>$review.priority</td>
+    [% END %]
     </tr>
 
     [% prev_id = review.id %]

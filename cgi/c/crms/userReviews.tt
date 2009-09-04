@@ -34,7 +34,7 @@
 <form>
   <input type="hidden" name="p" value="userReviews"/>
   Restrict selection (<a  href="/c/crms/keys.html" target="_blank">Search Help</a>):<br/>
-[% INCLUDE selectionUserReviews.tt  %]
+[% INCLUDE selection.tt  %]
 
   Since:   <input type="text"  name="since" value="[% since %]"/>
            <span class="smallText">(YYYY-MM-DD)</span><br/>
@@ -84,9 +84,12 @@
 [% prev_id        = '' %]
 
 <table BORDER="1" CELLPADDING="0" CELLSPACING="0">
-  <th>ID</th><th>Title</th><th>Author</th><th>review date</th><th>status</th>
-  <th>attr</th><th>reason</th><th>note category</th>
-  <th>note</th><th>flagged</th>
+  <th>ID</th><th>Title</th><th>Author</th><th>review&nbsp;date</th><th>status</th>
+  <th>attr</th><th>reason</th><th>note&nbsp;category</th>
+  <th>note</th>
+[% IF crms.IsUserAdmin() %]
+  <th>priority</th>
+[% END %]
   [% FOREACH review IN reviews %]
 
     [% IF prev_id == '' %]   
@@ -111,7 +114,9 @@
       <td>$review.reason</td>
       <td>$review.category</td>
       <td>$review.note</td>
-      <td>$review.flagged</td>
+    [% IF crms.IsUserAdmin() %]
+      <td>$review.priority</td>
+    [% END %]
     </tr>
 
     [% prev_id = review.id %]
