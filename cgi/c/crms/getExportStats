@@ -16,11 +16,21 @@ my $crms = CRMS->new(logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
                      dev          =>   $DLPS_DEV,
                      user         =>   $user);
 
-my $data = $crms->CreateExportGraph($cgi->param('type'));
-
-if ( $data eq "" ) { print $cgi->header( -status => "400" ); }
+my $type = $cgi->param('type');
+my $data = '';
+my $c = $cgi->param('c'); # Class or cumulative
+if ($type eq 'graph')
+{
+  $data = $crms->CreateExportGraph($c);
+}
 else
 {
-    print $cgi->header();
+  $data = $crms->CreateExportData("\t",$c);
+}
+
+if ( $data eq '' ) { print $cgi->header( -status => "400" ); }
+else
+{
+    print $cgi->header(-type => 'text/plain', -charset => 'utf-8');
     print $data;
 }
