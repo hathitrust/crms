@@ -1,29 +1,46 @@
-  <SELECT NAME="search1">
-    <OPTION VALUE="Identifier" SELECTED> Identifier
-    <OPTION VALUE="Title"> Title
-    <OPTION VALUE="Author"> Author
-    <OPTION VALUE="UserId"> UserId
-    <OPTION VALUE="Status"> Status
-    <OPTION VALUE="Attribute"> Attr Num Value
-    <OPTION VALUE="Reason"> Rsn Num Value
-    <OPTION VALUE="Legacy"> Legacy
-    <OPTION VALUE="NoteCategory"> NoteCategory
-  </SELECT>
+[% page = cgi.param("p") %]
+[% adm = crms.IsUserAdmin() %]
+
+  <select name="search1">
+    <option value="Identifier" selected="selected"> Identifier
+    <option value="Title"> Title </option>
+    <option value="Author"> Author </option>
+  [% IF page != 'userReviews' && page != 'editReviews' %]
+    <option value="UserId"> UserId </option>
+  [% END %]
+  [% IF page == 'adminReviews' %]
+    <option value="Status"> Status </option>
+  [% END %]
+    <option value="Attribute"> Attr Num Value </option>
+    <option value="Reason"> Rsn Num Value </option>
+    <option value="Legacy"> Legacy </option>
+    <option value="NoteCategory"> NoteCategory </option>
+  [% IF adm %]
+    <option value="Priority"> Priority </option>
+  [% END %]
+  </select>
   <input type="text"  name="search1value"/>
-  <SELECT NAME="op1">
-    <OPTION SELECTED> AND
-    <OPTION> OR
-  </SELECT>
+  <select name="op1">
+    <option selected="selected"> AND
+    <option> OR
+  </select>
 <br/>
-  <SELECT NAME="search2">
-    <OPTION VALUE="Identifier" SELECTED> Identifier
-    <OPTION VALUE="Title"> Title
-    <OPTION VALUE="Author"> Author
-    <OPTION VALUE="UserId"> UserId
-    <OPTION VALUE="Status"> Status
-    <OPTION VALUE="Attribute"> Attr Num Value
-    <OPTION VALUE="Reason"> Rsn Num Value
-    <OPTION VALUE="Legacy"> Legacy
-    <OPTION VALUE="NoteCategory"> NoteCategory
-  </SELECT>
+  <select name="search2">
+    <option value="Identifier" selected="selected"> Identifier </option>
+    <option value="Title"> Title </option>
+    <option value="Author"> Author </option>
+  [% IF page != 'userReviews' && page != 'editReviews' %]
+    <option value="UserId"> UserId </option>
+  [% END %]
+  [% IF page == 'adminReviews' %]
+    <option value="Status"> Status </option>
+  [% END %]
+    <option value="Attribute"> Attr Num Value </option>
+    <option value="Reason"> Rsn Num Value </option>
+    <option value="Legacy"> Legacy </option>
+    <option value="NoteCategory"> NoteCategory </option>
+  [% IF adm %]
+    <option value="Priority"> Priority </option>
+  [% END %]
+  </select>
   <input type="text"  name="search2value"/><br/>
