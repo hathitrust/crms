@@ -2534,7 +2534,7 @@ sub CreateExportData
     push @usedates, $date;
     $report .= "$delimiter$date";
     my %cats = ('pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pdus/cdpp' => 0, 'ic/ren' => 0, 'ic/cdpp' => 0,
-                'All PD' => 0, 'All IC' => 0);
+                'All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0);
     my $mintime = $date . '-01 00:00:00';
     my $maxtime = $date . '-31 23:59:59';
     if ($cumulative)
@@ -2767,19 +2767,16 @@ sub CreateStatsData
   my $report = "$label\nCategories,Grand Total";
   my %stats = ();
   my @usedates = ();
+  my $earliest = '';
+  my $latest = '';
   my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'All IC', 'ic/ren', 'ic/cdpp', 'All UND/NFI', 'Total',
-                'Time Reviewing (mins)', '__Average__Time per Review (mins)','__Average__Reviews per Hour', 'Outlier Reviews');
+                'Time Reviewing (mins)', 'Time per Review (mins)','Reviews per Hour', 'Outlier Reviews');
   foreach my $date (@statdates)
   {
     last if $date gt $now;
     last if $date eq $now and !$doCurrentMonth;
     push @usedates, $date;
     $report .= ",$date";
-    my %cats = ('All PD' => 0, 'pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pdus/cdpp' => 0,
-                'All IC' => 0, 'ic/ren' => 0, 'ic/cdpp' => 0,
-                'All UND/NFI' => 0,
-                'Time Reviewing (mins)' => 0, '__Average__Time per Review (mins)' => 0,
-                '__Average__Reviews per Hour' => 0, 'Outlier Reviews' => 0);
     my $mintime = $date;
     my $maxtime = $date;
     if ($cumulative)
@@ -2788,89 +2785,81 @@ sub CreateStatsData
       $mintime = "$y-$m";
       $maxtime = sprintf('%d-06', int($y)+1);
     }
-    my $sql = qq{SELECT total_pd_ren, total_pd_cnn, total_pd_cdpp, total_pdus_cdpp, total_ic_ren, total_ic_cdpp, total_und_nfi, total_reviews, total_time, time_per_review, reviews_per_hour, total_outliers from userstats where monthyear >= '$mintime' AND monthyear <= '$maxtime' and user='$user'};
-    if ($user eq 'all')
-    {
-      $sql = qq{SELECT SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp), SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), SUM(total_time), AVG(time_per_review), AVG(reviews_per_hour), SUM(total_outliers) FROM userstats WHERE monthyear >= '$mintime' AND monthyear <= '$maxtime'};
-    }
-    
+    $earliest = $mintime if $earliest eq '' or $mintime lt $earliest;
+    $latest = $maxtime if $latest eq '' or $maxtime gt $latest;
+    my $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
+                 SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
+                 SUM(total_ic_ren) + SUM(total_ic_cdpp),
+                 SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), SUM(total_time),
+                 SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
+                 (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
+                 FROM userstats WHERE monthyear >= '$mintime' AND monthyear <= '$maxtime'};
+    $sql .= " AND user='$user'" if $user ne 'all';
     my $rows = $dbh->selectall_arrayref( $sql );
     foreach my $row ( @{$rows} )
     {
       my $i = 0;
-      my @newrow = ($row->[0]+$row->[1]+$row->[2]+$row->[3], $row->[0], $row->[1], $row->[2], $row->[3],
-                    $row->[4]+$row->[5], $row->[4], $row->[5],
-                    $row->[6], $row->[7], $row->[8], $row->[9], $row->[10], $row->[11]);
       foreach my $title (@titles)
       {
-        if ('All' ne substr($title,0,3) || $title eq 'All UND/NFI')
-        {
-          my $n = $newrow[$i];
-          $cats{$title} += $n;
-          my $allkey = 'All ' . uc substr($title,0,2);
-          $cats{$allkey} += $n if exists $cats{$allkey};
-        }
+        $stats{$title}{$date} = $row->[$i];
         $i++;
       }
     }
-    for my $cat (keys %cats)
-    {
-      $stats{$cat}{$date} = $cats{$cat};
-    }
   }
   $report .= "\n";
-  my %monthTotals = ();
-  my %catTotals = ('All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0);
-  my $gt = 0;
-  foreach my $date (@usedates)
+  my %totals = ('All PD' => 0, 'pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pdus/cdpp' => 0,
+                'All IC' => 0, 'ic/ren' => 0, 'ic/cdpp' => 0, 'All UND/NFI' => 0, 'Total' => 0,
+                'Time Reviewing (mins)' => 0, 'Time per Review (mins)' => 0,
+                'Reviews per Hour' => 0, 'Outlier Reviews' => 0);
+  my $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
+               SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
+               SUM(total_ic_ren) + SUM(total_ic_cdpp),
+               SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), SUM(total_time),
+               SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
+               (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
+               FROM userstats WHERE monthyear >= '$earliest' AND monthyear <= '$latest'};
+  $sql .= " AND user='$user'" if $user ne 'all';
+  my $rows = $dbh->selectall_arrayref( $sql );
+  foreach my $row ( @{$rows} )
   {
-    my $monthTotal = $stats{'All PD'}{$date} + $stats{'All IC'}{$date} + $stats{'All UND/NFI'}{$date};
-    $catTotals{'All PD'} += $stats{'All PD'}{$date};
-    $catTotals{'All IC'} += $stats{'All IC'}{$date};
-    $catTotals{'All UND/NFI'} += $stats{'All UND/NFI'}{$date};
-    $monthTotals{$date} = $monthTotal;
-    $gt += $monthTotal;
+    my $i = 0;
+    foreach my $title (@titles)
+    {
+      $totals{$title} = $row->[$i];
+      $i++;
+    }
   }
   my %majors = ('All PD' => 1, 'All IC' => 1, 'All UND/NFI' => 1);
-  my %minors = ('Time Reviewing (mins)' => 1, '__Average__Time per Review (mins)' => 1,
-                '__Average__Reviews per Hour' => 1, 'Outlier Reviews' => 1);
+  my %minors = ('Time Reviewing (mins)' => 1, 'Time per Review (mins)' => 1,
+                'Reviews per Hour' => 1, 'Outlier Reviews' => 1);
   foreach my $title (@titles)
   {
     $report .= $title;
-    my $total = 0;
-    foreach my $date (@usedates)
-    {
-      my $n = 0;
-      if ($title eq 'Total') { $n = $monthTotals{$date}; }
-      else { $n = $stats{$title}{$date}; }
-      $total += $n;
-    }
-    my $of = 0;
+    my $of = $totals{'Total'};
+    my $n = $totals{$title};
+    $n = 0 unless $n;
     if ($title ne 'Total' && $doPercent && !exists$minors{$title})
     {
-      $of = $gt;
       if (substr($title,0,3) ne 'All')
       {
         my $allcat = 'All ' . uc substr($title,0,2);
-        $of = $catTotals{$allcat};
+        $of = $totals{$allcat};
       }
-      my $pct = eval { 100.0*$total/$of; };
+      my $pct = eval { 100.0*$n/$of; };
       $pct = 0.0 unless $pct;
-      $total = sprintf("$total:%.1f", $pct);
+      $n = sprintf("$n:%.1f", $pct);
     }
-    $total = sprintf('%.1f', $total) if int($total) != $total;
-    $report .= ',' . $total;
+    $n = sprintf('%.1f', $n) if $n =~ m/^\d*\.\d+$/i;
+    $report .= ',' . $n;
     foreach my $date (@usedates)
     {
-      my $n = 0;
-      if ($title eq 'Total') { $n = $monthTotals{$date}; }
-      else
+      $n = $stats{$title}{$date};
+      $n = 0 if !$n;
+      if ($title ne 'Total')
       {
-        $n = $stats{$title}{$date};
-        $n = 0 if !$n;
         if ($doPercent && !exists$minors{$title})
         {
-          $of = $monthTotals{$date};
+          $of = $stats{'Total'}{$date};
           if (substr($title,0,3) ne 'All')
           {
             my $allcat = 'All ' . uc substr($title,0,2);
@@ -2882,13 +2871,11 @@ sub CreateStatsData
         }
       }
       $n = 0 if !$n;
-      $n = sprintf('%.1f', $n) if int($n) != $n;
+      $n = sprintf('%.1f', $n) if $n =~ m/^\d*\.\d+$/i;
       $report .= ',' . $n;
     }
     $report .= "\n";
   }
-  my $avg = ($cumulative)? 'Average ':'';
-  $report =~ s/__Average__/$avg/g;
   return $report;
 }
 
