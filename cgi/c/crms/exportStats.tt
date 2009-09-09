@@ -78,7 +78,17 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "400", "300", "9.0.
 <tr>
   <td colspan="2"><div id="chart2"/></td>
 </tr>
+<tr bgcolor="white"><td colspan="2">
+<span class="smallishText">
+* Note: The CRMS Project Cumulative table and graph represent the current breakdown of all final determinations exported
+to the rights database since the CRMS version 1.0 was released (July 10, 2009).
+They do not include legacy determinations (determinations done pre-CRMS).
+If a volume that has been reviewed using the CRMS is subsequently re-queued/re-reviewed,
+the subsequent determination is counted as an additional determination (these occurrences should be rare).
+</span>
+</td></tr>
 </table>
+
 
 [% INCLUDE footer.tt %]
 
