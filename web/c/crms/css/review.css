@@ -47,6 +47,8 @@ body {
 
 .smallText { font-size:.5em }
 
+.smallishText { font-size:.8em }
+
 .plainLink { text-decoration: none; color: black;}
 
 input {
