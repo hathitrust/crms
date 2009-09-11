@@ -8,9 +8,7 @@
   [% IF page != 'userReviews' && page != 'editReviews' %]
     <option value="UserId"> UserId </option>
   [% END %]
-  [% IF page == 'adminReviews' %]
     <option value="Status"> Status </option>
-  [% END %]
     <option value="Attribute"> Attr Num Value </option>
     <option value="Reason"> Rsn Num Value </option>
     <option value="Legacy"> Legacy </option>
@@ -32,9 +30,7 @@
   [% IF page != 'userReviews' && page != 'editReviews' %]
     <option value="UserId"> UserId </option>
   [% END %]
-  [% IF page == 'adminReviews' %]
     <option value="Status"> Status </option>
-  [% END %]
     <option value="Attribute"> Attr Num Value </option>
     <option value="Reason"> Rsn Num Value </option>
     <option value="Legacy"> Legacy </option>
