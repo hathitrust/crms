@@ -1,0 +1,44 @@
+[% IF NOT crms.IsUserAdmin() %]
+  [% INCLUDE denied.tt  %]
+  [% STOP %]
+[% END %]
+
+[% INCLUDE header.tt    %]
+[% INCLUDE adminNav.tt  %]
+
+<hr width="25%" align="left"/>
+
+
+<br/><br/>
+<form>
+  Sanity check the database:
+  <input type="hidden" name="p" value="debug"/>
+  <input type="hidden" name="sanityCheck" value="1"/>
+  <input type="submit" value="Do it!"/>
+</form>
+
+<form>
+  Process today's reviews: (<b>Avoid doing if Moses is here!</b>)
+  <input type="hidden" name="p" value="debug"/>
+  <input type="hidden" name="processReviews" value="1"/>
+  <input type="submit" value="Do it!"/>
+</form>
+
+[% IF cgi.param('sanityCheck') %]
+  [% crms.SanityCheckDB() %]
+  <table class="exportStats">
+  <tr><th>Table</th><th>Explanation</th><th>Value</th></tr>
+  [% FOREACH error IN crms.GetErrors %]
+    [% e = error.split(':\s*') %]
+    <td class='debugTab'>[% e.0.replace('\s','&nbsp;') %]</td>
+    <td class='debugExpl'>[% e.1.replace('\s','&nbsp;') %]</td>
+    <td class='debugVal'>[% e.2.replace('\s','&nbsp;') %]</td></tr>
+  [% END %]
+  </table>
+[% END %]
+
+[% IF cgi.param('processReviews') %]
+  [% crms.crms.ClearQueueAndExport() %]
+[% END %]
+
+[% INCLUDE footer.tt %]
