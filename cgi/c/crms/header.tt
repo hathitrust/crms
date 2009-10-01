@@ -1,12 +1,13 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Strict//EN">
 <html>
   <head>
-    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
     <title>[% title %]</title>
   </head>
   <body>
   <div class="pages" id="homePage">
-    <img src="/c/crms/crms.jpg"/>
+    <img src="/c/crms/crms.png" alt="CRMS Logo"/><div id="version">Version 1.3</div>
     <br/><br/>
     <font size="5"><strong>Hello [% crms.GetUserName %] </strong></font>
     <a href="crms?p=Logout"> Logout</a>
