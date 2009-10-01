@@ -12,7 +12,7 @@ use POSIX;
 # !/l/local/bin/perl
 
 my $user = $ENV{'REMOTE_USER'};
-
+my $ru = $ENV{'REMOTE_USER'};
 my $cgi  = new CGI;
 my $crms = CRMS->new(
         logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
@@ -23,7 +23,7 @@ my $crms = CRMS->new(
         user         =>   $user,
         );
 
-if  (  $cgi->param('p') eq 'Logout' )  
+if  ( $cgi->param('p') eq 'Logout' )
 {
   #Remove all locks for this user.
   $crms->UnlockAllItemsForUser( $user );
@@ -47,13 +47,11 @@ if  (  $cgi->param('p') eq 'Logout' )
   # redirect to central weblogin server
   print( "Location: $central$query_string\n\n" );
 
-  
   exit ( 0 );
-
 }
 
 
-my $new_user = $crms->GetAliasUserName( $user );  
+my $new_user = $crms->GetAliasUserName( $user );
 if ( ( $new_user ) )
 {
   $user = $new_user;
@@ -67,20 +65,30 @@ if ( ( $new_user ) )
         user         =>   $user,
         );
 }
-elsif  (  $cgi->param('changeuser') == 1 )  
+if  (  $cgi->param('changeuser') == 1 )  
 {
-  my $new_user = $cgi->param('newuser');
-  $crms->ChangeAliasUserName($user, $new_user);  
-  $user = $new_user;
+  $new_user = $cgi->param('newuser');
+  if ($crms->GetUserName($new_user))
+  {
+    if ($new_user eq $ru)
+    {
+      $crms->ChangeAliasUserName($ru, '');
+    }
+    else
+    {
+      $crms->ChangeAliasUserName($user, $new_user);
+    }
+    $user = $new_user;
 
-  $crms = CRMS->new(
-        logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
-        configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
-        verbose      =>   0,
-        root         =>   $DLXSROOT,
-        dev          =>   $DLPS_DEV,
-        user         =>   $user,
-        );
+    $crms = CRMS->new(
+          logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
+          configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
+          verbose      =>   0,
+          root         =>   $DLXSROOT,
+          dev          =>   $DLPS_DEV,
+          user         =>   $user,
+          );
+  }
 }
 
 
@@ -137,7 +145,7 @@ if  (  $cgi->param('p') eq 'confirmReview' )
     }
     else
     {
-      #Process the submission, and go on to the next itme
+      #Process the submission, and go on to the next item
       my $id     = $cgi->param('barcode');
       my $copyDate;
       my $expert;
@@ -235,7 +243,7 @@ my $config =
 if ( ! $crms->GetUserName($user) )
 {
     print $cgi->header( -status => "403 Forbidden" ) .
-          "<h2>Forbidden</h2>";
+          "<h2>Forbidden</h2> (unknown user '$user')";
     exit;
 }
 
@@ -254,7 +262,17 @@ my $page  = $cgi->param('p');
 my $input = $page . ".tt";
 if ( ! -f $input ) { $input = "home.tt"; }
 
-## print $cgi->header( -charset => 'iso-8859-1', "cache-control" => 'private' );
+
 print $cgi->header( -charset => 'utf-8', "cache-control" => 'private' );
 $tt->process($input, $vars) || die $tt->error();
+if ($cgi->param('debug'))
+{
+  print '<br/><br/>';
+  eval {
+    foreach my $k (keys %ENV)
+    {
+      printf "$k: %s<br/>\n", $ENV{$k};
+    }
+  }
+}
 
