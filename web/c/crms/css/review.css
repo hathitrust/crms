@@ -191,6 +191,7 @@ table.exportStats {
   border-collapse:collapse;
   border-spacing:0px;
   border:1px solid #000000;
+  background-color:white;
 }
 
 table.exportStats td {
@@ -199,7 +200,6 @@ table.exportStats td {
 }
 
 table.exportStats th {
-  border:1px solid #000000;
   padding:4px 20px 2px 6px;
   background-color:#000000;
   color:#FFFFFF;
@@ -226,8 +226,38 @@ td.minor {
   font-weight:bold;
 }
 
+td.total {
+  background-color:#A0FEAE;
+  color:#000000;
+  font-weight:bold;
+}
+
+span.total {
+  color:#A0FEAE;
+}
+
 textarea {
 	width: 97%;
 	height: 60px;
 	border: 1px solid #72859A;
 }
+
+#version {
+  font-size:.75em;
+  position:absolute;
+  top:20px;
+  right:20px;
+}
+
+td.debugTab {
+  color:black;
+}
+
+td.debugExpl {
+  color:red;
+}
+
+td.debugVal {
+  color:red;
+}
+
