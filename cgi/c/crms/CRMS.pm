@@ -2650,8 +2650,8 @@ sub CreateExportGraph
   my %totals = ('All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0);
   my $ceiling = 100;
   my @totalline = split ',',$titleh{'Total'};
-  my $gt = $totalline[1];
-  my @monthtotals = @totalline[2,-1];
+  shift @totalline;
+  my $gt = shift @totalline;
   foreach my $title (@titles)
   {
     # Extract the total,n1,n2... data
@@ -2667,7 +2667,12 @@ sub CreateExportGraph
     my @vals = @line;
     if ($type == 0)
     {
-      for (my $i = 0; $i < scalar @line; $i++) { $line[$i] = 100.0*$line[$i]/$monthtotals[$i]; }
+      for (my $i = 0; $i < scalar @line; $i++)
+      {
+        my $pct = 0.0;
+        eval { $pct = 100.0*$line[$i]/$totalline[$i]; };
+        $line[$i] = $pct;
+      }
       @vals = map(sprintf('{"value":%.1f,"tip":"%.1f%%"}', $_, $_),@line);
     }
     push @elements, sprintf('{"type":"line","values":[%s],%s}', join(',',@vals), $attrs);
