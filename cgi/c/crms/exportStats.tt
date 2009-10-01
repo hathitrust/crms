@@ -1,12 +1,13 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Strict//EN">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="Content-type" content="text/html;charset=utf-8"/>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css" />
     <title>[% title %]</title>
-
-    <script language="JavaScript" src="/c/crms/swfobject.js"></script>
-    <script language="javascript">
-
+    <script type="text/javascript" src="/c/crms/swfobject.js"></script>
+    <script type="text/javascript">
+<!--
 // For Open Flash Charts Data
 function findSWF(id)
 {
@@ -53,11 +54,12 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "400", "300", "9.0.
                    "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=1")});
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "400", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=2")});
+// --> 
 </script>
   </head>
   <body>
     <div class="pages" id="homePage">
-    <img src="/c/crms/crms.jpg"/><br/><br/>
+    <img src="/c/crms/crms.png" alt="CRMS Logo"/><br/><br/>
     <font size="5"><strong>Hello [% crms.GetUserName %]</strong></font>
     <a href="crms?p=Logout"> Logout</a>
 <br/><br/>
@@ -67,28 +69,28 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "400", "300", "9.0.
 <h2 style="margin-left:390px">Statistics for Exported Determinations</h2>
 
 [% crms.CreateExportReport() %]
-
 [% crms.CreateExportReport(1) %]
 
 <br/><br/>
-<table style="background-color:#000000; padding:0px; width:800px; height:600px; border-collapse:collapse">
-<tr>
+<table style="padding:0px; width:800px; height:600px; border-collapse:collapse">
+<tr style="background-color:#000000;">
   <td><div id="chart0"/></td>
   <td><div id="chart1"/></td>
-<tr>
-  <td colspan="2"><div id="chart2"/></td>
 </tr>
-<tr bgcolor="white"><td colspan="2">
-<span class="smallishText">
-* Note: The CRMS Project Cumulative table and graph represent the current breakdown of all final determinations exported
-to the rights database since the CRMS version 1.0 was released (July 10, 2009).
-They do not include legacy determinations (determinations done pre-CRMS).
-If a volume that has been reviewed using the CRMS is subsequently re-queued/re-reviewed,
-the subsequent determination is counted as an additional determination (these occurrences should be rare).
-</span>
-</td></tr>
+<tr style="background-color:#000000;">
+  <td style="background-color:#000000;" colspan="2"><div id="chart2"/></td>
+</tr>
+<tr style="background-color:transparent;">
+  <td style="padding-top:10px;" colspan="2">
+  <span class="smallishText">
+  * Note: The CRMS Project Cumulative table and graph represent the current breakdown of all final determinations exported
+  to the rights database since the CRMS version 1.0 was released (July 10, 2009).
+  They do not include legacy determinations (determinations done pre-CRMS).
+  If a volume that has been reviewed using the CRMS is subsequently re-queued/re-reviewed,
+  the subsequent determination is counted as an additional determination (these occurrences should be rare).
+  </span>
+  </td>
+</tr>
 </table>
 
-
 [% INCLUDE footer.tt %]
-
