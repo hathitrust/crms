@@ -7,16 +7,33 @@
 [% INCLUDE adminNav.tt  %]
 
 <hr width="25%" align="left"/>
- [% crms.CreateStatsReport('all',1) %]
- <br/><br/>
- [% crms.CreateStatsReport('all',0) %]
- <br/><br/>
- [% users = crms.GetUserData() %]
- [% FOREACH id IN users.keys.sort %]
-   [% crms.CreateStatsReport(id,0) %]
-   <br/><br/>
- [% END %]
+[% crms.CreateStatsReport('all',1, 1) %]
+<br/><br/>
+[% crms.CreateStatsReport('all',0, 1) %]
+<br/><br/>
+[% users = crms.GetUserData() %]
+[% keys = users.keys %]
+
+[% PERL # I deserve to be punched in the nose for writing this ugly code %]
+use List::Util;
+my $users = $stash->get('users');
+my @keys = keys %{$users};
+@keys = sort
+{
+  my $a2 = scalar grep m/2/, @{$users->{$a}->{'types'}};
+  my $b2 = scalar grep m/2/, @{$users->{$b}->{'types'}};
+  $a2 cmp $b2
+  ||
+  $a cmp $b
+} @keys;
+$stash->set('keys',\@keys);
+[% END %]
+
+[% FOREACH id IN keys %]
+  [% IF id.match('rereview') %][% NEXT %][% END %]
+  [% IF 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
+  [% crms.CreateStatsReport(id, 0, 1) %]
+  <br/><br/>
+[% END %]
  
-
 [% INCLUDE footer.tt %]
-
