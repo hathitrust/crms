@@ -3,7 +3,7 @@
 
 [% user = crms.get('user') %]
 
-[% crms.CreateStatsReport( user ) %]
+[% crms.CreateStatsReport( user, 0, 0 ) %]
 
 [% INCLUDE footer.tt %]
 
