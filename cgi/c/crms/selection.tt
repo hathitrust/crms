@@ -1,42 +1,69 @@
 [% page = cgi.param("p") %]
+[% op1 = cgi.param("op1") %]
+[% search1 = cgi.param("search1") %]
+[% search2 = cgi.param("search2") %]
+[% search1value = cgi.param("search1value") %]
+[% search2value = cgi.param("search2value") %]
+[% since = cgi.param('since') %]
+[% order = cgi.param('order') %]
 [% adm = crms.IsUserAdmin() %]
-
-  <select name="search1">
-    <option value="Identifier" selected="selected"> Identifier
-    <option value="Title"> Title </option>
-    <option value="Author"> Author </option>
-  [% IF page != 'userReviews' && page != 'editReviews' %]
-    <option value="UserId"> UserId </option>
-  [% END %]
-    <option value="Status"> Status </option>
-    <option value="Attribute"> Attr Num Value </option>
-    <option value="Reason"> Rsn Num Value </option>
-    <option value="Legacy"> Legacy </option>
-    <option value="NoteCategory"> NoteCategory </option>
-  [% IF adm %]
-    <option value="Priority"> Priority </option>
-  [% END %]
-  </select>
-  <input type="text"  name="search1value"/>
+<form>
+<input type="hidden" name="p" value="$page"/>
+Restrict selection (<a  href="/c/crms/keys.html" target="_blank">Search Help</a>):<br/>
+[% crms.ReviewSearchMenu(page, 'search1', search1) %]
+<input type="text"  name="search1value" value="[% search1value %]"/>
   <select name="op1">
-    <option selected="selected"> AND
-    <option> OR
+  [% IF op1 == 'AND' %]
+    <option selected="selected"> AND </option>
+  [% ELSE %]
+    <option> AND </option>
+  [% END %]
+  [% IF op1 == 'OR' %]
+    <option selected="selected"> OR </option>
+  [% ELSE %]
+    <option> OR </option>
+  [% END %]
   </select>
 <br/>
-  <select name="search2">
-    <option value="Identifier" selected="selected"> Identifier </option>
-    <option value="Title"> Title </option>
-    <option value="Author"> Author </option>
-  [% IF page != 'userReviews' && page != 'editReviews' %]
-    <option value="UserId"> UserId </option>
-  [% END %]
-    <option value="Status"> Status </option>
-    <option value="Attribute"> Attr Num Value </option>
-    <option value="Reason"> Rsn Num Value </option>
-    <option value="Legacy"> Legacy </option>
-    <option value="NoteCategory"> NoteCategory </option>
-  [% IF adm %]
-    <option value="Priority"> Priority </option>
-  [% END %]
-  </select>
-  <input type="text"  name="search2value"/><br/>
+[% crms.ReviewSearchMenu(page, 'search2', search2) %]
+<input type="text" name="search2value" value="[% search2value %]"/>
+<br/>
+
+Since: <input type="text" name="since" value="[% since %]"/>
+       <span class="smallText">(YYYY-MM-DD)</span><br/>
+Order:
+  <label><input type="radio" name="order" value="id"
+    [% order == 'id' ? 'checked="checked"' : '' %]/>id</label>
+  <label><input type="radio" name="order" value="time"
+    [% order == 'time' ? 'checked="1"' : '' %]/>date</label>
+[% IF page != 'userReviews' %]
+  <label><input type="radio" name="order" value="user"
+    [% order == 'user' ? 'checked="1"' : '' %]/>user</label>
+[% END %]
+  <label><input type="radio" name="order" value="author"
+    [% order == 'author' ? 'checked="checked"' : '' %] />author</label>
+  <label><input type="radio" name="order" value="title"
+    [% order == 'title' ? 'checked="checked"' : '' %]/>title</label>
+  <label><input type="radio" name="order" value="attr"
+    [% order == 'attr' ? 'checked="checked"' : '' %]/>attr</label>
+[% IF page != 'editReviews' %]
+  <label><input type="radio" name="order" value="status"
+    [% order == 'status' ? 'checked="checked"' : '' %]/>status</label>
+[% END %]
+<label><input type="radio" name="order" value="category" 
+    [% order == 'category' ? 'checked="1"' : '' %]/>note&nbsp;category</label>
+[% IF adm %]
+  <label><input type="radio" name="order" value="priority" 
+    [% order == 'priority' ? 'checked="1"' : '' %]/>priority</label>
+[%END %]
+  <br/>
+
+Direction:   
+  <label><input type="radio" name="direction" value="ASC"   
+    [% direction == 'ASC' ? 'checked="1"' : '' %]   />ASC</label>
+  <label><input type="radio" name="direction" value="DESC" 
+    [% direction == 'DESC' ? 'checked="1"' : '' %] />DESC</label>
+
+<br/>
+<input type="submit" value="Submit"/>
+</form>
