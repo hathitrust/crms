@@ -86,7 +86,7 @@ my $msg = qq{DONE Loading new volumes into candidates.\n};
 
 if ( $status )
 {
-   my $msg = qq{Starting to Load new itmes into queue.\n};
+   my $msg = qq{Starting to Load new items into queue.\n};
    &ReportMsg ( $msg );
 
    $crms->LoadNewItems ();
