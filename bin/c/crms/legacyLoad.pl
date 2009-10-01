@@ -12,25 +12,21 @@ BEGIN
 use strict;
 use CRMS;
 use Getopt::Std;
+use Encode qw(from_to);
 
 my %opts;
-getopts('af:hnv', \%opts);
+getopts('hnv', \%opts);
 
 my $help       = $opts{'h'};
-my $verbose    = $opts{'v'};
-my $file       = $opts{'f'};
 my $noop       = $opts{'n'};
+my $verbose    = $opts{'v'};
 
-#For testing.
-#This is what's needed from file1
-#$file = qq{/l1/dev/blancoj/bin/c/crms/historical_data2/2007-12report_cleaned_v2.txt};
+if ( $help || scalar @ARGV < 1)
+{
+  die "USAGE: $0 [-h] [-n] [-v] tsv_file1 [tsv_file2...]\n\n";
+}
 
-#These two are what's needed for file2
-$file = qq{/l1/dev/blancoj/bin/c/crms/historical_data2/2007-12re-report_cleaned_v3.txt};
-$alt = 1;
-
-if ( $help || ! $file ) { die "USAGE: $0 -f csv_file [-h] [-n] [-v]\n\n"; }
-
+my $file = $ARGV[0];
 
 my $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/log_load_hist.txt",
@@ -40,140 +36,162 @@ my $crms = CRMS->new(
     dev          =>   $DLPS_DEV,
 );
 
-open my $fh, $file or die "failed to open $file: $@ \n";
-
-
-## This is the format for file 1... 12 columns
-## 0  Barcode
-## 1  Author
-## 2  Title
-## 3  Year
-## 4  Original Copyright date, if different
-## 5  Attribute
-## 6  Reason
-## 7  Copyright renewal date?
-## 8  Copyright renewal number?
-## 9  Date of check
-## 10 Checker
-## 11 Notes   - Note that the format for this is CATEGORY: text
-## 12 akz comments
-
-## This is the format for file 2 ( re-reports )... 19 columns
-## 0   Barcode
-## 1   Author
-## 2   Title
-## 3   Year
-## 4   Original Copyright date, if different
-## 13  Attribute
-## 14  Reason
-## 15  Copyright renewal date?
-## 16  Copyright renewal number?
-## 18  Date of check
-## 17  Checker
-##     Notes   - undef for file 2. ( always )
-## 12  akz comments
-
-## F code format
-## 11 F=US Docs
-## 12 Use to record questions or problems with und codes
-
-my $n = 0;
-my $line = (<$fh>);
-my @parts = split("\t", $line);
-
-foreach my $line ( <$fh> )
+foreach my $f (@ARGV)
 {
-  chomp $line;
-  my @parts     = split("\t", $line);
-  my $nparts = scalar @parts;
-  if ($nparts != 12 && $nparts != 19) die "Line " . $n+1 . "had $nparts fields; should be 12 or 19\n";
-  my $alt = ($nparts == 19) if $n == 0;
-  
-  my ( $id, $title, $year, $cDate, $attr, $reason, $renDate, 
-       $renNum, $date, $user, $note, $eNote, $category, $status );
-  next if $parts[0] =~ m/^Barcode/i;
-  # $alt indicates file 2 
-  if ( ! $alt )
+  ProcessFile($f);
+}
+
+sub ProcessFile
+{
+  my $f = shift;
+  open my $in, "<:raw", $f or die "failed to open $f: $! \n";
+  read $in, my $buf, -s $f; # one of many ways to slurp file.
+  close $in;
+  from_to($buf,'UTF-16','UTF-8');
+
+  my @lines = split m/\n+/, $buf;
+
+  # NOTE: The file must be exported from Excel as UTF-16 (no BOM is fine).
+
+  ## This is the format for file 1... 12 columns
+  ## 0  Barcode
+  ## 1  Author
+  ## 2  Title
+  ## 3  Year
+  ## 4  Original Copyright date, if different
+  ## 5  Attribute
+  ## 6  Reason
+  ## 7  Copyright renewal date?
+  ## 8  Copyright renewal number?
+  ## 9  Date of check
+  ## 10 Checker
+  ## 11 Notes   - Note that the format for this is CATEGORY: text
+  ## 12 akz comments
+
+  ## This is the format for file 2 ( re-reports )... 19 columns
+  ## 0   Barcode
+  ## 1   Author
+  ## 2   Title
+  ## 3   Year
+  ## 4   Original Copyright date, if different
+  ## 13  Attribute
+  ## 14  Reason
+  ## 15  Copyright renewal date?
+  ## 16  Copyright renewal number?
+  ## 18  Date of check
+  ## 17  Checker
+  ##     Notes   - undef for file 2. ( always )
+  ## 12  akz comments
+
+  ## F code format
+  ## 11 F=US Docs
+  ## 12 Use to record questions or problems with und codes
+
+  my $n = 0;
+  my $alt = 0;
+  foreach my $line (@lines)
   {
-    $id        = "mdp." . $parts[0];
-    $title     = $parts[2];
-    $year      = $parts[3];
-    $cDate     = $parts[4];
-    $attr      = $parts[5];
-    $reason    = $parts[6];
-    $renDate   = $parts[7];
-    $renNum    = $parts[8];
-    $date      = $parts[9];
-    $user      = $parts[10];
-    $note      = $parts[11];
-    $status    = 1;
-
-    #Remove starting and ending quotes
-    if ( $note =~ m/^\".*/ ) { $note =~ s/^\"(.*)/$1/; }
-    if ( $note =~ m/.*"$/ ) { $note =~ s/(.*)\"$/$1/; }
-
-    if ( $title =~ m/^\".*/ ) { $title =~ s/^\"(.*)/$1/; }
-    if ( $title =~ m/.*"$/ ) { $title =~ s/(.*)\"$/$1/; }
-    #Parse out the category.
-    if ( $note =~ m/.*?\:.*/ )
+    chomp $line;
+    $line =~ s/[\n\r]//g;
+    $line =~ s/\t+$//;
+    #print ">>$line<<\n";
+    # Split into parts with leading and trailing whitespace trimmed
+    my @parts = map {s/^\s+|\s+$//g;$_;} split("\t", $line);
+    next if $parts[0] =~ m/^Barcode/i;
+    my $nparts = scalar @parts;
+    printf "%s\n", join(',',@parts) if $verbose;
+    #if ($nparts > 19)
+    #{
+    #  printf("Error: line %d (%s) had $nparts fields; should be 12 or 19\n", $n+1, $parts[0]);
+    #  exit(1);
+    #}
+    if ($n == 0)
     {
-	    $category = $note;
-	    $category =~ s/(.*?)\:.*/$1/s; 
-	    $category = $crms->TranslateCategory( $category );
-	    $note =~ s/.*?\:(.*)/$1/s; 
-      if ( $note =~ m/^ +.*/ ) { $note =~ s/^ +(.*)/$1/; }
+      $alt = 1 if $nparts > 12;
+      printf("Doing a rereport? %s\n", ($alt)? 'yes':'no') if $verbose;
     }
-    $eNote     = $parts[12];
-  }
-  else
-  {
-    $id        = "mdp." . $parts[0];
-    $title     = $parts[2];
-    $year      = $parts[3];
-    $cDate     = $parts[4];
-    $attr      = $parts[13];
-    $reason    = $parts[14];
-    $renDate   = $parts[15];
-    $renNum    = $parts[16];
-    $date      = $parts[18];
-    $user      = $parts[17];
-    $note      = undef;
-    $eNote     = $parts[12];
-    $status    = 5;
+    my $j = 0;
+    my ( $id, $title, $year, $cDate, $attr, $reason, $renDate, 
+         $renNum, $date, $user, $note, $category, $status );
+    # $alt indicates file 2 
+    $id      = "mdp." . $parts[0];
+    $title   = $parts[2];
+    $year    = $parts[3];
+    $cDate   = $parts[4];
+    if ( ! $alt )
+    {
+      $attr      = $parts[5];
+      $reason    = $parts[6];
+      $renDate   = $parts[7];
+      $renNum    = $parts[8];
+      $date      = $parts[9];
+      $user      = $parts[10];
+      $note      = $parts[11];
+      $status    = 1;
 
-    #Remove starting and ending quotes
-    if ( $eNote =~ m/^\".*/ ) { $eNote =~ s/^\"(.*)/$1/; }
-    if ( $eNote =~ m/.*"$/ ) { $eNote =~ s/(.*)\"$/$1/; }
+      #Remove starting and ending quotes
+      if ( $note =~ m/^\".*/ ) { $note =~ s/^\"(.*)/$1/; }
+      if ( $note =~ m/.*"$/ ) { $note =~ s/(.*)\"$/$1/; }
+      $note =~ s/\"\"/`/g;
 
-    if ( $title =~ m/^\".*/ ) { $title =~ s/^\"(.*)/$1/; }
-    if ( $title =~ m/.*"$/ ) { $title =~ s/(.*)\"$/$1/; }
+      if ( $title =~ m/^\".*/ ) { $title =~ s/^\"(.*)/$1/; }
+      if ( $title =~ m/.*"$/ ) { $title =~ s/(.*)\"$/$1/; }
 
-  }
+      #Parse out the category.
+      if ( $note =~ m/.*?\:.*/ )
+      {
+	      $category = $note;
+	      $category =~ s/(.*?)\:.*/$1/s; 
+	      $category = $crms->TranslateCategory( $category );
+	      $note =~ s/.*?\:\s*(.*)/$1/s; 
+      }
+    }
+    else
+    {
+      $attr      = $parts[13];
+      $reason    = $parts[14];
+      $renDate   = $parts[15];
+      $renNum    = $parts[16];
+      $date      = $parts[18];
+      $user      = $parts[17];
+      $note      = $parts[12]; # Expert note
+      $status    = 5;
+      #Remove starting and ending quotes
+      if ( $note =~ m/^\".*/ ) { $note =~ s/^\"(.*)/$1/; }
+      if ( $note =~ m/.*"$/ ) { $note =~ s/(.*)\"$/$1/; }
+      $note =~ s/\"\"/`/g;
+      $category = 'Misc';
 
-  if ( $alt ) { undef $note; }  ## this is the F flag, not used
+      if ( $title =~ m/^\".*/ ) { $title =~ s/^\"(.*)/$1/; }
+      if ( $title =~ m/.*"$/ ) { $title =~ s/(.*)\"$/$1/; }
 
-  ## if ( scalar @parts > 14 ) { die "ERROR:$line \n"; }
-
-  if ( $verbose )
-  { 
-    print qq{$id, $user, $attr, $reason, $cDate, $renNum, $renDate, $note, $eNote, $category, $status, $title } . "\n"; 
-  }
-
-  if ( $id =~ m/\d/ )
-  {
-	  #date is comming in in this format MM/DD/YYYY, need to change to 
-	  #YYYY/MM/DD
-	  $date =  $crms->ChangeDateFormat( $date );
-	  my $rc = $crms->SubmitHistReview( $id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $eNote, $category, $status, $title, $noop );
-	  if ( ! $rc ) 
+    }
+	  #date is comming in in this format MM/DD/YYYY, need to change to
+	  #YYYY/MM/DD and time -- let's use noon just for kicks.
+	  $date = $crms->ChangeDateFormat( $date ) . ' 12:00:00';
+    # Rendate is in the yucky format DD-Mon-YY and we need it in the equally yucky format DDMonYY
+    $renDate =~ s/-//g;
+    if ( $verbose )
+    {
+      print "ID:    $id\n";
+      print "User:  $user\n";
+      print "Date:  $date\n";
+      print "Attr:  $attr\n";
+      print "Rsn:   $reason\n";
+      print "Cat:   $category\n";
+      print "RDate: $renDate\n";
+      print "R#:    $renNum\n";
+      print "Note:  $note\n";
+      printf("SubmitHistReview(%s)\n", join ', ', ($id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $category, $status));
+    }
+	  my $rc = $crms->SubmitHistReview($id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $category, $status, ($alt)? 2:0, $noop);
+    if ( ! $rc ) 
 	  {
 	    my $errors = $crms->GetErrors();
 	    map { print "$_\n"; } ( @{$errors} );
 	    die "Failed: $line \n";
 	  }
+    $n++;
   }
-  $n++;
+  printf "Done with $f: processed %d items\n", $n;
 }
-close $fh;
-
-printf "Done: processed %d items\n", $n if $verbose;
