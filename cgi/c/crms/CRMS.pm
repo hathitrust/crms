@@ -10,6 +10,9 @@ use LWP::UserAgent;
 use XML::LibXML;
 use POSIX qw(strftime);
 use DBI qw(:sql_types);
+use List::Util;
+
+#binmode(STDOUT, ":utf8"); #prints characters in utf8
 
 ## ----------------------------------------------------------------------------
 ##  Function:   new() for object
@@ -84,7 +87,9 @@ sub ConnectToDb
               { RaiseError => 1, AutoCommit => 1 } ) || die "Cannot connect: $DBI::errstr";
 
     $dbh->{mysql_auto_reconnect} = 1;
-
+    my $sql = qq{SET NAMES 'utf8';};
+    $dbh->do($sql);
+    
     return $dbh;
 }
 
@@ -101,7 +106,9 @@ sub ConnectToDbForTesting
               { RaiseError => 1, AutoCommit => 1 } ) || die "Cannot connect: $DBI::errstr";
 
     $dbh->{mysql_auto_reconnect} = 1;
-
+    my $sql = qq{SET NAMES 'utf8';};
+    $dbh->do($sql);
+    
     return $dbh;
 }
 
@@ -250,14 +257,14 @@ sub DeDup
 
     if ( $incan == 1 )
     {
-	    my $sql = qq{ DELETE FROM candidates WHERE id = "mdp.$id" };
-	    $self->PrepareSubmitSql( $sql );
+      my $sql = qq{ DELETE FROM candidates WHERE id = "mdp.$id" };
+      $self->PrepareSubmitSql( $sql );
 
       $count = $count + 1;
     }
     else
     {
-	    $msg .= qq{$id\n};
+      $msg .= qq{$id\n};
     }
   }
   print $count;
@@ -287,14 +294,14 @@ sub DeDupProd
       
       if ( $incan == 1 )
       {
-	      my $sql = qq{ DELETE FROM candidates WHERE id = "mdp.$id" };
-	      $self->PrepareSubmitSqlForTesting( $sql );
+        my $sql = qq{ DELETE FROM candidates WHERE id = "mdp.$id" };
+        $self->PrepareSubmitSqlForTesting( $sql );
 
         $count = $count + 1;
       }
       else
       {
-	      $msg .= qq{$id\n};
+        $msg .= qq{$id\n};
       }
     }
 
@@ -327,7 +334,7 @@ sub LoadNewItemsInCandidates
       my $reason =  $row->[3];
 
       if ( ( $attr == 2 ) && ( $reason == 1 ) )
-      {	
+      {
         $self->AddItemToCandidates( $row->[0], $row->[1], 0, 0 ); 
       }
     }
@@ -376,17 +383,17 @@ sub LoadNewItems
       my $inqueue;
       foreach my $row ( @{$ref} ) 
       { 
-	my $pub_date = $row->[2];
+        my $pub_date = $row->[2];
         my $title = $row->[3];
         my $author = $row->[4];
 
-	my $inqueue = $self->AddItemToQueue( $row->[0], $row->[1], $pub_date, $title, $author, 0, 0 ); 
-	$count = $count + $inqueue;
+        my $inqueue = $self->AddItemToQueue( $row->[0], $row->[1], $pub_date, $title, $author, 0, 0 ); 
+        $count = $count + $inqueue;
 
-	if ( $count == $limitcount )
-	{
-	  goto FINISHED;
-	}
+        if ( $count == $limitcount )
+        {
+          goto FINISHED;
+        }
       }
 
     FINISHED:
@@ -500,8 +507,6 @@ sub AddItemToQueue
     $self->UpdateAuthor ( $id, $author );
       
     return 1;
-
-    return 0;
 }
 
 
@@ -575,7 +580,7 @@ sub GiveItemsInQueuePriority
   my $priority = shift;
 
   ## skip if $id has been reviewed
-  if ( $self->IsItemInReviews( $id ) ) { return; }
+  #if ( $self->IsItemInReviews( $id ) ) { return; }
 
   my $record =  $self->GetRecordMetadata($id);
 
@@ -587,10 +592,10 @@ sub GiveItemsInQueuePriority
   if ( ( $pub >= '1923' ) && ( $pub <= '1963' ) )
   {
     ## no gov docs
-    if ( $self->IsGovDoc( $id, $record ) ) { $self->Logit( "skip fed doc: $id" ); return; }
+    if ( $self->IsGovDoc( $id, $record ) ) { $self->Logit( "skip fed doc: $id" ); return 0; }
 
     #check 008 field postion 17 = "u" - this would indicate a us publication.
-    if ( ! $self->IsUSPub( $id, $record ) ) { $self->Logit( "skip not us doc: $id" ); return; }
+    if ( ! $self->IsUSPub( $id, $record ) ) { $self->Logit( "skip not us doc: $id" ); return 0; }
 
     #check FMT.
     if ( ! $self->IsFormatBK( $id, $record ) ) { $self->Logit( "skip not fmt bk: $id" ); return 0; }
@@ -622,6 +627,7 @@ sub GiveItemsInQueuePriority
       # We see if there is another ADMINSCRIPT entry for the current time; if so increment.
       # If not, add a new one.
       $sql = qq{SELECT itemcount FROM $CRMSGlobals::queuerecordTable WHERE time='$time' AND source='ADMINSCRIPT' LIMIT 1};
+      
       my $itemcount = $self->SimpleSqlGet($sql);
       if ($itemcount)
       {
@@ -630,11 +636,13 @@ sub GiveItemsInQueuePriority
       }
       else
       {
-        $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (time, itemcount, source ) values ($time, 1, 'ADMINSCRIPT')};
+        $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (time, itemcount, source) values ('$time', 1, 'ADMINSCRIPT')};
       }
+      
       $self->PrepareSubmitSql( $sql );
     }
   }
+  return 1;
 }
 
 sub IsItemInQueue
@@ -666,8 +674,20 @@ sub TranslateCategory
     elsif ( $category eq 'TRANS' ) { return 'Translation'; }
     elsif ( $category eq 'WRONGREC' ) { return 'Wrong Record'; }
     elsif ( $category =~ m,FOREIGN PUB.*, ) { return 'Foreign Pub'; }
+    elsif ( $category eq 'DISS' ) { return 'Dissertation/Thesis'; }
     else  { return $category };
     
+}
+
+# Valid for DB reviews/historicalreviews
+sub IsValidCategory
+{
+  my $self = shift;
+  my $cat = shift;
+  
+  my %cats = ('Collection' => 1, 'Language' => 1, 'Misc' => 1, 'Missing' => 1, 'Date' => 1, 'Reprint' => 1,
+              'Series/Serial' => 1, 'Translation' => 1, 'Wrong Record' => 1, 'Foreign Pub' => 1, 'Dissertation/Thesis' => 1);
+  return exists $cats{$cat};
 }
 
 sub IsItemInReviews
@@ -693,30 +713,34 @@ sub SubmitReview
     my $self = shift;
     my ($id, $user, $attr, $reason, $copyDate, $note, $renNum, $exp, $renDate, $category) = @_;
 
-    if ( ! $self->CheckForId( $id ) )                     { $self->Logit("id check failed");          return 0; }
-    if ( ! $self->CheckReviewer( $user, $exp ) )          { $self->Logit("review check failed");      return 0; }
-    if ( ! $self->ValidateAttr( $attr ) )                 { $self->Logit("attr check failed");        return 0; }
-    if ( ! $self->ValidateReason( $reason ) )             { $self->Logit("reason check failed");      return 0; }
-    if ( ! $self->CheckAttrReasonComb( $attr, $reason ) ) { $self->Logit("attr/reason check failed"); return 0; }
+    if ( ! $self->CheckForId( $id ) )                         { $self->Logit("id check failed");          return 0; }
+    if ( ! $self->CheckReviewer( $user, $exp ) )              { $self->Logit("review check failed");      return 0; }
+    if ( ! $self->ValidateAttr( $attr ) )                     { $self->Logit("attr check failed");        return 0; }
+    if ( ! $self->ValidateReason( $reason ) )                 { $self->Logit("reason check failed");      return 0; }
+    if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->Logit("attr/reason check failed"); return 0; }
 
     #remove any blanks from renNum
-    $renNum =~ s, ,,gs;
+    $renNum =~ s/\s+//gs;
+    
+    # Javascript code inserts the string 'searching...' into the review text box.
+    # This in once case got submitted as the renDate in production
+    $renDate = '' if $renDate eq 'searching...';
 
     ## do some sort of check for expert submissions
 
-    $note =~ s,\',\\',gs;
+    $note = $self->get('dbh')->quote($note);
     
-    my $sql = qq{ SELECT priority FROM $CRMSGlobals::queueTable WHERE id='$id' LIMIT 1 };
-    my $priority = $self->SimpleSqlGet( $sql );
+    my $priority = $self->GetItemPriority( $id );
     
-    my @fieldList = ('id', 'user', 'attr', 'reason', 'note', 'renNum', 'renDate', 'category', 'priority');
-    my @valueList = ($id,  $user,  $attr,  $reason,  $note,  $renNum,  $renDate, $category, $priority);
+    my @fieldList = ('id', 'user', 'attr', 'reason', 'renNum', 'renDate', 'category', 'priority');
+    my @valueList = ($id,  $user,  $attr,  $reason,  $renNum,  $renDate, $category, $priority);
 
     if ($exp)      { push(@fieldList, "expert");   push(@valueList, $exp); }
     if ($copyDate) { push(@fieldList, "copyDate"); push(@valueList, $copyDate); }
+    if ($note)     { push(@fieldList, 'note'); }
     
-    $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (} . join(", ", @fieldList) . 
-           qq{) VALUES('} . join("', '", @valueList) . qq{')};
+    my $sql = "REPLACE INTO $CRMSGlobals::reviewsTable (" . join(', ', @fieldList) . 
+              ") VALUES('" . join("', '", @valueList) . sprintf("'%s)", ($note)? ", $note":'');
 
     if ( $self->get('verbose') ) { $self->Logit( $sql ); }
 
@@ -730,6 +754,14 @@ sub SubmitReview
     return 1;
 }
 
+sub GetItemPriority
+{
+  my $self = shift;
+  my $id = shift;
+  
+  my $sql = qq{ SELECT priority FROM $CRMSGlobals::queueTable WHERE id='$id' LIMIT 1 };
+  return $self->SimpleSqlGet( $sql );
+}
 
 sub SetExpertReviewCnt
 {
@@ -758,7 +790,7 @@ sub GetOtherReview
 
     foreach my $row ( @{$ref} )
     {
-        my $id      =  $row->[0];
+        my $id      = $row->[0];
         my $user    = $row->[1];
         my $attr    = $row->[2];
         my $reason  = $row->[3];
@@ -794,108 +826,42 @@ sub ProcessReviews
     if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
     {
       #If both und/nfi them status is 3
-	    if ( ( $attr == 5 ) && ( $reason == 8 ) )
-	    {
-	       $self->RegisterStatus( $id, 3 );	      
-	    }
-	    else #Mark as 4 - two that agree
-	    {
-	      #If they are ic/ren then the renal date and id must match
-	      if ( ( $attr == 2 ) && ( $reason == 7 ) )
-	      {
-	        if ( ( $renNum eq $other_renNum ) && ( $renDate eq $other_renDate ) )
-	        {
-		        #Mark as 4
-		        $self->RegisterStatus( $id, 4 );	      
-	        }
-	        else
-	        {
-		        #Mark as 2
-		        $self->RegisterStatus( $id, 2 );
-	        }
-	      }
-	      else #all other cases mark as 4
-	      {
-          $self->RegisterStatus( $id, 4 );	      
-	      }
-	    }
-	  }
-	  else #Mark as 2 - two that disagree 
-	  {
-	    $self->RegisterStatus( $id, 2 );	      
-	  }
-  }
-  my $sql  = qq{ INSERT INTO  processstatus VALUES ( )};
-  $self->PrepareSubmitSql( $sql );
-}
-
-sub GetUnProcessCounts
-{
-  my $self = shift;
-
-  my $yesterday = $self->GetYesterday();
-
-  my $sql = qq{SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where status = 0) group by id having count(*) = 2};
-
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-  my $reviewonlycnt = 0;
-  my $matchcnt = 0;
-  my $conflictcnt = 0;
-  my $undcnt = 0;
-
-  foreach my $row ( @{$ref} )
-  {
-    my $id      = $row->[0];
-    my $user    = $row->[1];
-    my $attr    = $row->[2];
-    my $reason  = $row->[3];
-    my $renNum  = $row->[4];
-    my $renDate = $row->[5];
-
-    my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate ) = $self->GetOtherReview ( $id, $user );
-
-    if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
-    {
-      #If both und/nfi them status is 3
       if ( ( $attr == 5 ) && ( $reason == 8 ) )
       {
-        $undcnt = $undcnt + 1;      
+         $self->RegisterStatus( $id, 3 );      
       }
       else #Mark as 4 - two that agree
       {
-        #If they are ic/ren then the renal date and id must match
+        #If they are ic/ren then the renewal date and id must match
         if ( ( $attr == 2 ) && ( $reason == 7 ) )
         {
+          $renNum =~ s/\s+//gs;
+          $other_renNum =~ s/\s+//gs;
           if ( ( $renNum eq $other_renNum ) && ( $renDate eq $other_renDate ) )
           {
             #Mark as 4
-            $matchcnt = $matchcnt + 1;
+            $self->RegisterStatus( $id, 4 );      
           }
           else
           {
             #Mark as 2
-            $conflictcnt = $conflictcnt + 1;
+            $self->RegisterStatus( $id, 2 );
           }
         }
         else #all other cases mark as 4
         {
-          $matchcnt = $matchcnt + 1;
+          $self->RegisterStatus( $id, 4 );      
         }
       }
     }
     else #Mark as 2 - two that disagree 
     {
-      $conflictcnt = $conflictcnt + 1;
+      $self->RegisterStatus( $id, 2 );      
     }
   }
-
-  $reviewonlycnt = $self->GetTotalReviewedNotProcessed () - $matchcnt - $conflictcnt - $undcnt;
-
-  my $out = qq{ 1 reviews =>$reviewonlycnt, matches => $matchcnt, conflicts => $conflictcnt, und/nfi => $undcnt };
-  return $out;
+  my $sql  = qq{ INSERT INTO processstatus VALUES ( )};
+  $self->PrepareSubmitSql( $sql );
 }
-
 
 
 ## ----------------------------------------------------------------------------
@@ -906,31 +872,78 @@ sub GetUnProcessCounts
 sub SubmitHistReview
 {
     my $self = shift;
-    my ($id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $eNote, $category, $status, $title, $noop) = @_;
+    my ($id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $category, $status, $expert, $noop) = @_;
 
     ## change attr and reason back to numbers
     $attr   = $self->GetRightsNum( $attr );
     $reason = $self->GetReasonNum( $reason );
 
-    if ( ! $self->ValidateAttr( $attr ) )                 { $self->Logit("attr check failed");        return 0; }
-    if ( ! $self->ValidateReason( $reason ) )             { $self->Logit("reason check failed");      return 0; }
-    if ( ! $self->CheckAttrReasonComb( $attr, $reason ) ) { $self->Logit("attr/reason check failed"); return 0; }
+    #if ( ! $self->ValidateAttr( $attr ) )                     { $self->Logit("attr check failed");        return 0; }
+    #if ( ! $self->ValidateReason( $reason ) )                 { $self->Logit("reason check failed");      return 0; }
+    if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->Logit("attr/reason check failed"); return 0; }
     
     ## do some sort of check for expert submissions
 
-    $note  = $self->get('dbh')->quote($note);
-    $eNote = $self->get('dbh')->quote($eNote);
-    
     if (!$noop)
     {
+      $note = $self->get('dbh')->quote($note);
+      
       ## all good, INSERT
-      my $sql = qq{REPLACE INTO $CRMSGlobals::historicalreviewsTable (id, user, time, attr, reason, copyDate, renNum, renDate, note, expertNote, legacy, category, status) } .
-                qq{VALUES('$id', '$user', '$date', '$attr', '$reason', '$cDate', '$renNum', '$renDate', $note, $eNote, 1, '$category', $status) };
+      my $sql = qq{REPLACE INTO $CRMSGlobals::historicalreviewsTable (id, user, time, attr, reason, copyDate, renNum, renDate, note, legacy, category, status, expert) } .
+                qq{VALUES('$id', '$user', '$date', '$attr', '$reason', '$cDate', '$renNum', '$renDate', $note, 1, '$category', $status, $expert) };
 
       $self->PrepareSubmitSql( $sql );
 
       #Now load this info into the bibdata table.
-      $self->UpdateTitle ( $id, $title );
+      $self->UpdateTitle ( $id );
+
+      #Update the pub date in bibdata
+      my $pub = $self->GetPublDate( $id );
+      $self->UpdatePubDate ( $id, $pub );
+
+      my $author = $self->GetEncAuthor ( $id );
+      $self->UpdateAuthor ( $id, $author );
+      
+      # Update status on status 1 item
+      if ($status == 5)
+      {
+        $sql = qq{UPDATE $CRMSGlobals::historicalreviewsTable SET status=$status WHERE id='$id'};
+        $self->PrepareSubmitSql( $sql );
+      }
+    }
+    return 1;
+}
+
+## ----------------------------------------------------------------------------
+##  Function:   submit a new active review  (single pd review from rights DB)   
+##  Parameters: Lots of them -- last one does the sanity checks but no db updates
+##  Return:     1 || 0
+## ----------------------------------------------------------------------------
+sub SubmitActiveReview
+{
+    my $self = shift;
+    my ($id, $user, $date, $attr, $reason, $noop) = @_;
+
+    ## change attr and reason back to numbers
+    $attr   = $self->GetRightsNum( $attr );
+    
+    if (!$attr) { $self->SetError( "bad attr: $attr" ); return 0; }
+    $reason = $self->GetReasonNum( $reason );
+    if (!$reason) { $self->SetError( "bad reason: $reason" ); return 0; }
+    if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->Logit("bad attr/reason $attr/$reason"); return 0; }
+    if ( ! $self->ValidateUser( $user ) )                     { $self->Logit("user $user does not exist");     return 0; }
+    ## do some sort of check for expert submissions
+
+    if (!$noop)
+    {
+      ## all good, INSERT
+      my $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, time, attr, reason, legacy, priority) } .
+                qq{VALUES('$id', '$user', '$date', '$attr', '$reason', 1, 1) };
+
+      $self->PrepareSubmitSql( $sql );
+
+      #Now load this info into the bibdata table.
+      $self->UpdateTitle ( $id );
 
       #Update the pub date in bibdata
       my $pub = $self->GetPublDate( $id );
@@ -942,6 +955,15 @@ sub SubmitHistReview
     return 1;
 }
 
+sub ValidateUser
+{
+  my $self = shift;
+  my $user = shift;
+  my $sql = "SELECT count(*) FROM users WHERE id='$user'";
+  return 1 if $self->SimpleSqlGet($sql) > 0;
+  $self->SetError( "user does not exist: $user" );
+  return 0;
+}
 
 sub ClearQueueAndExport
 {
@@ -998,24 +1020,22 @@ sub ExportReviews
     my $count = 0;
 
     foreach my $barcode ( @{$list} )
-      {
-        #The routine GetFinalAttrReason may need to change - jose
-        my ($attr,$reason) = $self->GetFinalAttrReason($barcode); 
+    {
+      #The routine GetFinalAttrReason may need to change - jose
+      my ($attr,$reason) = $self->GetFinalAttrReason($barcode); 
 
-        print $fh "$barcode\t$attr\t$reason\t$user\t$src\n";
+      print $fh "$barcode\t$attr\t$reason\t$user\t$src\n";
 
-        my $sql  = qq{ INSERT INTO  exportdata (time, id, attr, reason, user )VALUES ('$time', '$barcode', '$attr', '$reason', '$user' )};
-        $self->PrepareSubmitSql( $sql );
+      my $sql  = qq{ INSERT INTO  exportdata (time, id, attr, reason, user ) VALUES ('$time', '$barcode', '$attr', '$reason', '$user' )};
+      $self->PrepareSubmitSql( $sql );
 
-        my $sql  = qq{ INSERT INTO  exportdataBckup (time, id, attr, reason, user )VALUES ('$time', '$barcode', '$attr', '$reason', '$user' )};
-        $self->PrepareSubmitSql( $sql );
+      my $sql  = qq{ INSERT INTO  exportdataBckup (time, id, attr, reason, user ) VALUES ('$time', '$barcode', '$attr', '$reason', '$user' )};
+      $self->PrepareSubmitSql( $sql );
 
+      $self->MoveFromReviewsToHistoricalReviews($barcode); ## DEBUG
+      $self->RemoveFromQueue($barcode); ## DEBUG
 
-        $self->MoveFromReviewsToHistoricalReviews($barcode); ## DEBUG
-        $self->RemoveFromQueue($barcode); ## DEBUG
-
-        $count = $count + 1;
-
+      $count++;
     }
     close $fh;
 
@@ -1023,7 +1043,6 @@ sub ExportReviews
     $self->PrepareSubmitSql( $sql );
 
     $self->EmailReport ( $count, $file );
-
 }
 
 sub EmailReport
@@ -1039,11 +1058,10 @@ sub EmailReport
   my $sender = new Mail::Sender
     {smtp => 'mail.umdl.umich.edu', from => 'annekz@umich.edu'};
   $sender->MailFile({to => $to,
-  		     subject => $subject,
-  		     msg => "See attachment.",
-  		     file => $file});
+           subject => $subject,
+           msg => "See attachment.",
+           file => $file});
   $sender->Close;
-
 }
 
 sub GetNumberExportedFromCandidates
@@ -1051,25 +1069,22 @@ sub GetNumberExportedFromCandidates
   my $self = shift;
 
 
-  my $sql  = qq{ SELECT count(distinct id) from historicalreviews where legacy= 0 and id in (select id from candidates)};
+  my $sql  = qq{ SELECT count(DISTINCT id) FROM historicalreviews WHERE legacy=0 AND id IN (SELECT id FROM candidates)};
   my $count  = $self->SimpleSqlGet( $sql );
     
   if ($count) { return $count; }
   return 0;
-
 }
 
 sub GetNumberExportedNotFromCandidates
 {
   my $self = shift;
 
-  my $sql  = qq{ SELECT count(distinct id) from historicalreviews where legacy= 0 and id not in (select id from candidates)};
+  my $sql  = qq{ SELECT count(DISTINCT id) FROM historicalreviews WHERE legacy=0 AND id NOT IN (SELECT id FROM candidates)};
   my $count  = $self->SimpleSqlGet( $sql );
     
   if ($count) { return $count; }
   return 0;
-
-
 }
 
 sub GetExportFh
@@ -1150,7 +1165,7 @@ sub MoveFromReviewsToHistoricalReviews
     $self->Logit( "store $id in historicalreviews" );
 
 
-    my $sql = qq{INSERT into $CRMSGlobals::historicalreviewsTable (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority) select id, time, user, attr, reason, note, renNum, expert, duration, 0, expertNote, renDate, copyDate, category, priority from reviews where id='$id'};
+    my $sql = qq{INSERT into $CRMSGlobals::historicalreviewsTable (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority) select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority from reviews where id='$id'};
     $self->PrepareSubmitSql( $sql );
 
     my $sql = qq{ UPDATE $CRMSGlobals::historicalreviewsTable set status=$status WHERE id = "$id" };
@@ -1365,7 +1380,7 @@ sub CreateSQL
     }
     elsif ( $type eq 'historicalreviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.status, b.title, b.author FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0  };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.status, b.title, b.author FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0 };
     }
     elsif ( $type eq 'undreviews' )
     {
@@ -1436,13 +1451,13 @@ sub CreateSQL
     }
     elsif ( ( $order eq 'title' ) || ( $order eq 'author' ) )
     {
-      	$sql .= qq{ ORDER BY b.$order $direction $limit_section };
+       $sql .= qq{ ORDER BY b.$order $direction $limit_section };
     }
     else
     {
-      	$sql .= qq{ ORDER BY r.$order $direction $limit_section };
+       $sql .= qq{ ORDER BY r.$order $direction $limit_section };
     }
-
+    
     return $sql;
 }
 
@@ -1475,30 +1490,30 @@ sub SearchAndDownload
     my $buffer;
     if ( scalar @{$ref} != 0 )
     {
-	if ( $type eq 'userreviews')
-	{
-	  $buffer .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
-	}
-	elsif ( $type eq 'editreviews' )
-	{
-	  $buffer .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
-	}
-	elsif ( $type eq 'undreviews' )
-	{
-	  $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote}
-	}
-	elsif ( $type eq 'conflict' )
-	{
-	  $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote};
-	}
-	elsif ( $type eq 'reviews' )
-	{
-	  $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote};
-	}
-	elsif ( $type eq 'historicalreviews' )
-	{
-	  $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote};
-	}
+      if ( $type eq 'userreviews')
+      {
+        $buffer .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
+      }
+      elsif ( $type eq 'editreviews' )
+      {
+        $buffer .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
+      }
+      elsif ( $type eq 'undreviews' )
+      {
+        $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote}
+      }
+      elsif ( $type eq 'conflict' )
+      {
+        $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote};
+      }
+      elsif ( $type eq 'reviews' )
+      {
+        $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote};
+      }
+      elsif ( $type eq 'historicalreviews' )
+      {
+        $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote};
+      }
     }
     $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\tpriority":'');
     
@@ -1531,46 +1546,46 @@ sub SearchAndDownload
         my $title      = $row->[16];
         my $author     = $row->[17];
 
-	if ( $type eq 'userreviews')
-	{
-	  #for reviews
-	  #id, title, author, review date, attr, reason, category, note, priority.
-	  $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note};
-	}
-	elsif ( $type eq 'editreviews' )
-	{
-	  #for editRevies
-	  #id, title, author, review date, attr, reason, category, note, priority.
-	  $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note};
-	}
-	elsif ( $type eq 'undreviews' )
-	{
-	  #for und/nif
-	  #id, title, author, review date, status, user, attr, reason, category, note, priority.
-	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note}
-	}
-	elsif ( $type eq 'conflict' )
-	{
-	  #for expert
-	  #id, title, author, review date, status, user, attr, reason, category, note, priority.
-	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note};
-	}
-	elsif ( $type eq 'reviews' )
-	{
-	  #for adminReviews
-	  #id, title, author, review date, status, user, attr, reason, category, note, priority.
-	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note};
-	}
-	elsif ( $type eq 'historicalreviews' )
-	{
-	  #for adminHistoricalReviews
-	  #id, title, author, review date, status, user, attr, reason, category, note, priority.
-	  $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note};
-	}
-  $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\t$priority":'');
-    }
+        if ( $type eq 'userreviews')
+        {
+          #for reviews
+          #id, title, author, review date, attr, reason, category, note.
+          $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note};
+        }
+        elsif ( $type eq 'editreviews' )
+        {
+          #for editRevies
+          #id, title, author, review date, attr, reason, category, note.
+          $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note};
+        }
+        elsif ( $type eq 'undreviews' )
+        {
+          #for und/nif
+          #id, title, author, review date, status, user, attr, reason, category, note.
+          $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note}
+        }
+        elsif ( $type eq 'conflict' )
+        {
+          #for expert
+          #id, title, author, review date, status, user, attr, reason, category, note.
+          $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note};
+        }
+        elsif ( $type eq 'reviews' )
+        {
+          #for adminReviews
+          #id, title, author, review date, status, user, attr, reason, category, note.
+          $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note};
+        }
+        elsif ( $type eq 'historicalreviews' )
+        {
+          #for adminHistoricalReviews
+          #id, title, author, review date, status, user, attr, reason, category, note.
+          $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note};
+        }
+        $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\t$priority":'');
+      }
 
-    $self->DownloadSpreadSheet ( $buffer );
+      $self->DownloadSpreadSheet ( $buffer );
 
     if ( $buffer ) { return 1; }
     else { return 0; }
@@ -1598,9 +1613,10 @@ sub GetReviewsRef
     my $type               = shift;
 
     my $limit              = 1;
-
+    
+    
     my $sql =  $self->CreateSQL ( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $since, $offset, $type, $limit );
-
+    
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my $return = [];
@@ -1671,7 +1687,7 @@ sub GetHistoricalReviewsRef
     foreach my $row ( @{$ref} )
     {
         $row->[1] =~ s,(.*) .*,$1,;
-	
+  
         my $item = {
                      id         => $row->[0],
                      time       => $row->[1],
@@ -1734,19 +1750,18 @@ sub GetReviewsCount
     }
     elsif ( $type eq 'undreviews' )
     {
-	$sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
+      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
     }
     elsif ( $type eq 'userreviews' )
     {
-	my $user = $self->get( "user" );
-	$sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
+      my $user = $self->get( "user" );
+      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
     }
     elsif ( $type eq 'editreviews' )
     {
-	my $user = $self->get( "user" );
-	my $yesterday = $self->GetYesterday();
-	$sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
-	
+      my $user = $self->get( "user" );
+      my $yesterday = $self->GetYesterday();
+      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
     }
 
 
@@ -1896,7 +1911,7 @@ sub UsersAgreeOnReview
     my $self = shift;
     my $id   = shift;
 
-    ##Agree is when the attr adn reason match.
+    ##Agree is when the attr and reason match.
 
     my $sql   = qq{ SELECT id, attr, reason FROM $CRMSGlobals::reviewsTable where id = '$id' Group by id, attr, reason having count(*) = 2};
     my $ref   = $self->get( 'dbh' )->selectall_arrayref( $sql );
@@ -1927,11 +1942,15 @@ sub GetAttrReasonFromOtherUser
 }
 
 
-sub CheckAttrReasonComb 
+sub ValidateAttrReasonCombo
 {
-    my $self = shift;
-    my $in   = shift;
-
+    my $self    = shift;
+    my $attr    = shift;
+    my $reason  = shift;
+    
+    my $code = $self->GetCodeFromAttrReason($attr,$reason);
+    $self->SetError( "bad attr/reason: $attr/$reason" ) unless $code;
+    return $code;
 }
 
 sub GetAttrReasonCom
@@ -1987,7 +2006,7 @@ sub GetReviewComment
     my $user = shift;
 
     my $sql  = qq{ SELECT note FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    #my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
     my $str  = $self->SimpleSqlGet( $sql );
 
     return $str;
@@ -2001,7 +2020,7 @@ sub GetReviewCategory
     my $user = shift;
 
     my $sql  = qq{ SELECT category FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    #my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
     my $str  = $self->SimpleSqlGet( $sql );
 
     return $str;
@@ -2108,22 +2127,15 @@ sub ChangeDateFormat
     my $date = shift;
     
     #go from MM/DD/YYYY to YYYY-MM-DD
-
-    my $month = $date;
-    $month =~ s,(.*?)\/.*?\/.*,$1,;
-
-    my $day   = $date;
-    $day =~ s,.*?\/(.*?)\/.*,$1,;
-
-    my $year  = $date;
-    $year =~ s,.*?\/.*?\/(.*),$1,;
+    my ($month, $day, $year) = split '/', $date;
     
-    if ( $month < 10 ) { $month = qq{0$month}; }
-    if ( $day < 10 ) { $day   = qq{0$day}; }
+    $year  = qq{20$year} if $year < 100;
+    $month = qq{0$month} if $month < 10;
+    $day   = qq{0$day} if $day < 10;
 
-    my $value = qq{$year-$month-$day};
+    $date = join '-', ($year, $month, $day);
 
-    return $value;
+    return $date;
 }
 
 sub IsUserReviewer
@@ -2486,8 +2498,9 @@ sub GetAllFiscalYears
 {
   my $self = shift;
   my $dbh = $self->get( 'dbh' );
-  my $min = $self->SimpleSqlGet("SELECT min(time) from $CRMSGlobals::historicalreviewsTable WHERE legacy != 1");
-  my $max = $self->SimpleSqlGet("SELECT max(time) from $CRMSGlobals::historicalreviewsTable WHERE legacy != 1");
+  # FIXME: use the GetRange function
+  my $min = $self->SimpleSqlGet("SELECT MIN(time) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0 AND user NOT LIKE 'rereview%'");
+  my $max = $self->SimpleSqlGet("SELECT MAX(time) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0");
   $min = substr($min,0,7);
   $max = substr($max,0,7);
   my ($minstart,$minend) = $self->GetFiscalYear($min);
@@ -2535,7 +2548,9 @@ sub CreateExportData
       $mintime = "$y-$m-01 00:00:00";
       $maxtime = sprintf('%d-06-31 23:59:59', int($y)+1);
     }
-    my $sql = qq{SELECT attr,reason FROM $CRMSGlobals::historicalreviewsTable h1 WHERE time=(SELECT max(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id = h2.id) AND (status=4 OR status=5) AND legacy=0 AND time >= '$mintime' AND time <= '$maxtime'};
+    my $sql = qq{SELECT attr,reason FROM $CRMSGlobals::historicalreviewsTable h1 WHERE } . 
+              qq{ time=(SELECT max(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id) AND } .
+              qq{ (status=4 OR status=5) AND legacy=0 AND time >= '$mintime' AND time <= '$maxtime'};
     my $rows = $dbh->selectall_arrayref( $sql );
     foreach my $row ( @{$rows} )
     {
@@ -2623,7 +2638,7 @@ sub CreateExportGraph
   my $title = shift @lines;
   $title .= '*' if $type == 2;
   $title =~ s/Fiscal\sCumulative/Monthly Breakdown/ if $type == 0;
-  $title =~ s/Fiscal\sCumulative/Total Determinations/ if $type == 1;
+  $title =~ s/Fiscal\sCumulative/Monthly Totals/ if $type == 1;
   my @dates = split(',', shift @lines);
   # Shift off the Categories and GT headers
   shift @dates; shift @dates;
@@ -2646,6 +2661,7 @@ sub CreateExportGraph
     $totals{$title} = $total;
     foreach my $n (@line) { $ceiling = int($n) if int($n) > $ceiling && $type == 1; }
     my $color = $colors{$title};
+    $title = 'Monthly Totals' if $type == 1;
     my $attrs = sprintf('"dot-style":{"type":"solid-dot","dot-size":3,"colour":"%s"},"text":"%s","colour":"%s","on-show":{"type":"pop-up","cascade":1,"delay":0.2}',
                         $color, $title, $color);
     my @vals = @line;
@@ -2691,7 +2707,7 @@ sub CreateExportReport
   my $data = $self->CreateExportData(',', $cumulative, 1, 1);
   my @lines = split m/\n/, $data;
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
-  my $dllink = sprintf(qq{$nbsps<a target="_blank" href="/cgi/c/crms/getExportStats?type=text&c=%d">Download</a>}, $cumulative);
+  my $dllink = sprintf(qq{$nbsps<a target="_blank" href="/cgi/c/crms/getExportStats?type=text&amp;c=%d">Download</a>}, $cumulative);
   my $title = shift @lines;
   $title .= '*' if $cumulative;
   my $report = sprintf("<h3>%s$dllink</h3>\n<table class='exportStats'>\n<tr>\n", $title);
@@ -2720,7 +2736,7 @@ sub CreateExportReport
     {
       my ($n,$pct) = split ':', $item;
       $n =~ s/\s/&nbsp;/g;
-      $report .= sprintf("<td%s>%s%s$n%s%s</th>",
+      $report .= sprintf("<td%s>%s%s$n%s%s</td>",
                          ($major)? ' class="major"':($title eq 'Total')? ' style="text-align:center;"':'',
                          ($major)? '':$nbsps,
                          ($title eq 'Total')? '<b>':'',
@@ -2739,8 +2755,6 @@ sub CreateStatsData
   my $self = shift;
   my $user = shift;
   my $cumulative = shift;
-  my $doCurrentMonth = shift;
-  my $doPercent = shift;
   my $dbh = $self->get( 'dbh' );
   my $now = join('-', $self->GetTheYearMonth());
   my @statdates = ($cumulative)? $self->GetAllFiscalYears() : $self->GetAllMonthsInFiscalYear();
@@ -2753,15 +2767,12 @@ sub CreateStatsData
   my @usedates = ();
   my $earliest = '';
   my $latest = '';
-  my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'All IC', 'ic/ren', 'ic/cdpp', 'All UND/NFI', 'Total',
+  my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'All IC', 'ic/ren', 'ic/cdpp', 'All UND/NFI',
+                '__TOT__', '__TOTNE__', '__VAL__', '__MVAL__',
                 'Time Reviewing (mins)', 'Time per Review (mins)','Reviews per Hour', 'Outlier Reviews');
-  # FOR NEXT RELEASE
-  #my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'All IC', 'ic/ren', 'ic/cdpp', 'All UND/NFI', 'Total',
-  #              'Time Reviewing (mins)', 'Time per Review (mins)','Reviews per Hour', 'Outlier Reviews', 'Incorrect Reviews');
   foreach my $date (@statdates)
   {
     last if $date gt $now;
-    last if $date eq $now and !$doCurrentMonth;
     push @usedates, $date;
     $report .= ",$date";
     my $mintime = $date;
@@ -2778,7 +2789,7 @@ sub CreateStatsData
     my $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
                  SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
                  SUM(total_ic_ren) + SUM(total_ic_cdpp),
-                 SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), SUM(total_time),
+                 SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), 1,1,1, SUM(total_time),
                  SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                  (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
                  FROM userstats WHERE monthyear >= '$mintime' AND monthyear <= '$maxtime'};
@@ -2793,19 +2804,21 @@ sub CreateStatsData
         $i++;
       }
     }
-    # FOR NEXT RELEASE
-    #my @bad = $self->GetIncorrectReviews($user, "$mintime-01", "$maxtime-31");
-    #$stats{$titles[-1]}{$date} = scalar @bad;
+    my ($ok,$oktot) = $self->CountCorrectReviews($user, $mintime . '-01 00:00:00', $maxtime . '-31 23:59:59');
+    $stats{'__VAL__'}{$date} = $ok;
+    $stats{'__TOTNE__'}{$date} = $oktot;
+    $stats{'__MVAL__'}{$date} = $self->GetMedianCorrect($mintime . '-01 00:00:00', $maxtime . '-31 23:59:59');
   }
   $report .= "\n";
-  my %totals = ('All PD' => 0, 'pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pdus/cdpp' => 0,
-                'All IC' => 0, 'ic/ren' => 0, 'ic/cdpp' => 0, 'All UND/NFI' => 0, 'Total' => 0,
-                'Time Reviewing (mins)' => 0, 'Time per Review (mins)' => 0,
-                'Reviews per Hour' => 0, 'Outlier Reviews' => 0, 'Incorrect Reviews' => 0);
+  my %totals;
+  #my %totals = ('All PD' => 0, 'pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pdus/cdpp' => 0,
+  #              'All IC' => 0, 'ic/ren' => 0, 'ic/cdpp' => 0, 'All UND/NFI' => 0, 'Total' => 0,
+  #              'Time Reviewing (mins)' => 0, 'Time per Review (mins)' => 0,
+  #              'Reviews per Hour' => 0, 'Outlier Reviews' => 0, 'Validated Reviews' => 0);
   my $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
                SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
                SUM(total_ic_ren) + SUM(total_ic_cdpp),
-               SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), SUM(total_time),
+               SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), 1,1,1, SUM(total_time),
                SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
                FROM userstats WHERE monthyear >= '$earliest' AND monthyear <= '$latest'};
@@ -2820,43 +2833,58 @@ sub CreateStatsData
       $i++;
     }
   }
-  # FOR NEXT RELEASE
-  #my @bad = $self->GetIncorrectReviews($user, $earliest, $latest);
-  #$totals{$titles[-1]} = scalar @bad;
+  my ($ok,$oktot) = $self->CountCorrectReviews($user, $earliest . '-01 00:00:00', $latest . '-31 23:59:59');
+  $totals{'__VAL__'} = $ok;
+  $totals{'__TOTNE__'} = $oktot;
+  $totals{'__MVAL__'} = $self->GetMedianCorrect($earliest . '-01 00:00:00', $latest . '-31 23:59:59');
   my %majors = ('All PD' => 1, 'All IC' => 1, 'All UND/NFI' => 1);
   my %minors = ('Time Reviewing (mins)' => 1, 'Time per Review (mins)' => 1,
                 'Reviews per Hour' => 1, 'Outlier Reviews' => 1);
   foreach my $title (@titles)
   {
     $report .= $title;
-    my $of = $totals{'Total'};
+    my $of = $totals{'__TOT__'};
+    $of = $totals{'__TOTNE__'} if $title eq '__VAL__';
     my $n = $totals{$title};
     $n = 0 unless $n;
-    if ($title ne 'Total' && $doPercent && !exists$minors{$title})
+    if ($title eq '__MVAL__')
+    {
+      $n = sprintf('%.1f%%', $n);
+    }
+    elsif ($title ne '__TOT__' && !exists $minors{$title})
     {
       my $pct = eval { 100.0*$n/$of; };
       $pct = 0.0 unless $pct;
       $n = sprintf("$n:%.1f", $pct);
     }
-    $n = sprintf('%.1f', $n) if $n =~ m/^\d*\.\d+$/i;
+    else
+    {
+      $n = sprintf('%.1f', $n) if $n =~ m/^\d*\.\d+$/i;
+    }
     $report .= ',' . $n;
     foreach my $date (@usedates)
     {
       $n = $stats{$title}{$date};
       $n = 0 if !$n;
-      if ($title ne 'Total')
+      if ($title eq '__MVAL__')
       {
-        if ($doPercent && !exists$minors{$title})
-        {
-          $of = $stats{'Total'}{$date};
-          my $pct = eval { 100.0*$n/$of; };
-          $pct = 0.0 unless $pct;
-          $n = sprintf("$n:%.1f", $pct);
-        }
+        $n = sprintf('%.1f%%', $n);
+      }
+      elsif ($title ne '__TOT__' && !exists $minors{$title})
+      {
+        $of = $stats{'__TOT__'}{$date};
+        $of = $stats{'__TOTNE__'}{$date} if $title eq '__VAL__';
+        my $pct = eval { 100.0*$n/$of; };
+        $pct = 0.0 unless $pct;
+        $n = sprintf("$n:%.1f", $pct);
+      }
+      else
+      {
+        $n = sprintf('%.1f', $n) if $n =~ m/^\d*\.\d+$/i;
       }
       $n = 0 if !$n;
-      $n = sprintf('%.1f', $n) if $n =~ m/^\d*\.\d+$/i;
       $report .= ',' . $n;
+      #print "$user $title $n $of\n";
     }
     $report .= "\n";
   }
@@ -2868,7 +2896,8 @@ sub CreateStatsReport
   my $self = shift;
   my $user = shift;
   my $cumulative = shift;
-  my $data = $self->CreateStatsData($user, $cumulative, 1, 1);
+  my $suppressBreakdown = shift;
+  my $data = $self->CreateStatsData($user, $cumulative);
   my @lines = split m/\n/, $data;
   my $report = sprintf("<h3>%s</h3>\n<table class='exportStats'>\n<tr>\n", shift @lines);
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
@@ -2881,37 +2910,46 @@ sub CreateStatsReport
   $report .= "</tr>\n";
   my %majors = ('All PD' => 1, 'All IC' => 1, 'All UND/NFI' => 1);
   my %minors = ('Time Reviewing (mins)' => 1, 'Time per Review (mins)' => 1, 'Average Time per Review (mins)' => 1,
-                'Reviews per Hour' => 1, 'Average Reviews per Hour' => 1, 'Outlier Reviews' => 1,
-                'Incorrect Reviews' => 1);
+                'Reviews per Hour' => 1, 'Average Reviews per Hour' => 1, 'Outlier Reviews' => 1);
+  my $exp = $self->IsUserExpert($user);
   foreach my $line (@lines)
   {
-    $report .= '<tr>';
     my @items = split(',', $line);
-    my $i = 0;
     my $title = shift @items;
+    next if $title eq '__VAL__'  and ($exp);
+    next if $title eq '__MVAL__' and ($exp);
+    next if $title eq '__TOTNE__' and ($user ne 'all' and !$cumulative);
+    next if ($cumulative or $user eq 'all' or $suppressBreakdown) and !exists $majors{$title} and !exists $minors{$title} and $title !~ m/__.+?__/;
     my $class = (exists $majors{$title})? 'major':(exists $minors{$title})? 'minor':'';
+    $class = 'total' if $title =~ m/__.+?__/;
+    $report .= '<tr>';
     $title =~ s/\s/&nbsp;/g;
-    my $padding = ($class eq 'major' || $class eq 'minor' || $title eq 'Total')? '':$nbsps;
+    my $padding = ($class eq 'major' || $class eq 'minor' || $class eq 'total')? '':$nbsps;
     $report .= sprintf("<th%s><span%s>%s$title</span></th>",
-                       ($title eq 'Total')? ' style="text-align:right;"':'',
-                       ($class eq 'major')? ' class="major"':($class eq 'minor')? ' class="minor"':'',
+                       ($title =~ m/__.+?__/)? ' style="text-align:right;"':'',
+                       ($class)? " class='$class'":'',
                        $padding);
     foreach my $item (@items)
     {
       my ($n,$pct) = split ':', $item;
       $n =~ s/\s/&nbsp;/g;
-      $report .= sprintf("<td%s%s>%s%s$n%s%s</th>",
-                         ($class eq 'major')? ' class="major"':($class eq 'minor')? ' class="minor"':'',
-                         ($title eq 'Total' || $class eq 'minor')? ' style="text-align:center;"':'',
+      $report .= sprintf("<td%s%s>%s%s%s</th>",
+                         ($class)? " class='$class'":'',
+                         ($title =~ m/__.+?__/ || $class eq 'minor')? ' style="text-align:center;"':'',
                          $padding,
-                         ($title eq 'Total')? '<b>':'',
-                         ($title eq 'Total')? '</b>':'',
+                         ($title eq '__TOT__')? "<b>$n</b>":$n,
                          ($pct)? "&nbsp;($pct%)":'');
-      $i++;
     }
     $report .= "</tr>\n";
   }
   $report .= "</table>\n";
+  $report =~ s/__TOT__/All&nbsp;Reviews/;
+  my $netitle = 'Non-Expert&nbsp;Reviews' . (($cumulative || $user eq 'all')? '&nbsp;(Non-Expert&nbsp;Only)':'');
+  $report =~ s/__TOTNE__/Non-Expert&nbsp;Reviews/;
+  my $vtitle = 'Validated&nbsp;Reviews&nbsp;' . (($cumulative || $user eq 'all')? '(Non-Expert&nbsp;Only)':'');
+  $report =~ s/__VAL__/$vtitle/;
+  my $mvtitle = 'Median&nbsp;Validated&nbsp;&nbsp;' . (($cumulative || $user eq 'all')? '(Non-Expert&nbsp;Only)':'(All&nbsp;Reviewers)');
+  $report =~ s/__MVAL__/$mvtitle/;
   return $report;
 }
 
@@ -3228,10 +3266,11 @@ sub ValidateAttr
 {
     my $self    = shift;
     my $attr    = shift;
+    
     my $sdr_dbh = $self->get( 'sdr_dbh' );
 
     my $rows = $sdr_dbh->selectall_arrayref( "SELECT id FROM attributes" );
-
+    
     foreach my $row ( @{$rows} )
     {
         if ( $row->[0] eq $attr ) { return 1; }
@@ -3245,13 +3284,14 @@ sub ValidateReason
     my $self    = shift;
     my $reason  = shift;
     my $sdr_dbh = $self->get( 'sdr_dbh' );
-
+    
     my $rows = $sdr_dbh->selectall_arrayref( "SELECT id FROM reasons" );
     
     foreach my $row ( @{$rows} )
     {
         if ( $row->[0] eq $reason ) { return 1; }
     }
+    $self->SetError( "bad reason: $reason" );
     return 0;
 }
 
@@ -3415,7 +3455,7 @@ sub GetMarcDatafieldAuthor
     
 
     my $record  = $self->GetRecordMetadata($barcode);
-    if ( ! $record ) { $self->Logit( "failed in GetMarcDatafield: $barcode" ); }
+    if ( ! $record ) { $self->Logit( "failed in GetMarcDatafieldAuthor: $barcode" ); }
 
     my $data;
 
@@ -3503,23 +3543,22 @@ sub UpdateTitle
       $title   = $self->GetRecordTitleBc2Meta( $id );
     }
 
-    #This is the problem.
     my $tiq  = $self->get('dbh')->quote( $title );
 
     my $sql  = qq{ SELECT count(*) from bibdata where id="$id"};
     my $count  = $self->SimpleSqlGet( $sql );
+    
     if ( $count == 1 )
     {
-       my $sql  = qq{ UPDATE bibdata set title=$tiq where id="$id"};
-       $self->PrepareSubmitSql( $sql );
+       $sql  = qq{ UPDATE bibdata set title=$tiq where id="$id"};
     }
     else
     {
-       my $sql  = qq{ INSERT INTO bibdata (id, title, pub_date) VALUES ( "$id", $tiq, "")};
-       $self->PrepareSubmitSql( $sql );
+       $sql  = qq{ INSERT INTO bibdata (id, title, pub_date) VALUES ( "$id", $tiq, "")};
     }
-
-    return $title; 
+    $self->PrepareSubmitSql( $sql );
+    
+    return $title;
 }
 
 
@@ -3541,7 +3580,7 @@ sub UpdatePubDate
        my $sql  = qq{ INSERT INTO bibdata (id, title, pub_date) VALUES ( "$id", "", "$pub_date"};
        $self->PrepareSubmitSql( $sql );
     }
-
+    
 }
 
 
@@ -3550,17 +3589,18 @@ sub UpdateAuthor
     my $self = shift;
     my $id   = shift;
     my $author = shift;
-
+    
+    my $aiq  = $self->get('dbh')->quote( $author );
     my $sql  = qq{ SELECT count(*) from bibdata where id="$id"};
     my $count  = $self->SimpleSqlGet( $sql );
     if ( $count == 1 )
     {
-       my $sql  = qq{ UPDATE bibdata set author="$author" where id="$id"};
+       my $sql  = qq{ UPDATE bibdata set author=$aiq where id="$id"};
        $self->PrepareSubmitSql( $sql );
     }
     else
     {
-       my $sql  = qq{ INSERT INTO bibdata (id, title, pub_date, author) VALUES ( "$id", "", "", "$author" ) };
+       my $sql  = qq{ INSERT INTO bibdata (id, title, pub_date, author) VALUES ( "$id", "", "", $aiq ) };
        $self->PrepareSubmitSql( $sql );
     }
 
@@ -4119,51 +4159,40 @@ sub GetNextItemForReview
 {
     my $self = shift;
     my $name = shift;
-    my $barcode;
-
-    #Find items reviewed once by some other user
-    my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND status = 0 AND expcnt = 0 AND id in ( };
-    $sql   .= qq{ SELECT distinct id from $CRMSGlobals::reviewsTable where user != '$name' and id in (select id from reviews group by id having count(*) = 1) ) };
-    $sql   .= qq{ ORDER BY priority DESC, pub_date ASC, time DESC LIMIT 1 };
-
-    $barcode = $self->SimpleSqlGet( $sql );
-    if ( $self->get("verbose") ) { $self->Logit("once: $sql"); }
-
-    if ( ! $barcode ) 
+    
+    # Find items reviewed once by some other user.
+    # Exclude priority 1 some of the time, to 'fool' reviewers into not thinking everything is pd.
+    my $exclude1 = (rand() >= 0.33)? ' priority != 1 AND ':'';
+    my $sql = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE $exclude1 locked IS NULL AND status = 0 AND expcnt = 0 AND id IN } .
+              qq{ (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable WHERE user != '$name' AND id IN (SELECT id FROM reviews GROUP BY id HAVING count(*) = 1)) } .
+              qq{ ORDER BY priority DESC, time DESC LIMIT 1 };
+    
+    my $bar = $self->SimpleSqlGet( $sql );
+    if ( ! $bar )
     {
         my $nextPubDate = $self->GetNextPubYear();
         
-        # If there is a priority 2, do DESC on priority order. If priority 1, do ASC 20% of the time (to pick up
-        # a few priority 0 items if they exist. This is basically to 'fool' reviewers into not thinking everything is pd.
-        my $sort = 'DESC';
-        my $top = $self->TopPriority();
-        $sort = 'ASC' if $top == 1 and rand() <= 0.2;
         #Get the 1st available item that has never been reviewed.
-        my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND } .
-                  qq{ status = 0 AND expcnt = 0 AND id not in ( SELECT distinct id from $CRMSGlobals::reviewsTable ) and pub_date >= $nextPubDate ORDER BY priority $sort, pub_date ASC, time DESC LIMIT 1 };
-
-        my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-        $barcode = $self->SimpleSqlGet( $sql );
-
+        my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE $exclude1 locked is NULL AND } .
+                  qq{ status = 0 AND expcnt = 0 AND id NOT IN ( SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable ) AND pub_date >= $nextPubDate ORDER BY priority DESC, pub_date ASC, time DESC LIMIT 1 };
+        $bar = $self->SimpleSqlGet( $sql );
+        # Relax the date stuff if it fails
+        if (!$bar)
+        {
+          $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE locked is NULL AND } .
+                 qq{ status = 0 AND expcnt = 0 AND id NOT IN ( SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable ) ORDER BY priority DESC, pub_date ASC, time DESC LIMIT 1 };
+          $bar = $self->SimpleSqlGet( $sql );
+        }
     }
 
     ## lock before returning
-    if ( ! $self->LockItem( $barcode, $name ) ) 
+    if ( ! $self->LockItem( $bar, $name ) ) 
     { 
-        $self->Logit( "failed to lock $barcode for $name" );
+        $self->Logit( "failed to lock $bar for $name" );
         return;
     }
     
-    return $barcode;
-}
-
-sub TopPriority
-{
-  my $self = shift;
-  
-  my $sql = "SELECT max(priority) FROM $CRMSGlobals::queueTable";
-  return $self->SimpleSqlGet($sql);
+    return $bar;
 }
 
 sub GetQueuePriorities
@@ -4176,6 +4205,14 @@ sub GetQueuePriorities
   my @return;
   foreach (@{$ref}) { push @return, sprintf("%d priority %d", $_->[0], $_->[1]); }
   return @return;
+}
+
+sub GetTopPriority
+{
+  my $self = shift;
+  
+  my $sql = qq{SELECT max(priority) FROM queue};
+  return $self->SimpleSqlGet($sql);
 }
 
 sub GetNextPubYear
@@ -4279,40 +4316,50 @@ sub GetRightsName
 {
     my $self = shift;
     my $id   = shift;
-    my $sql  = qq{ SELECT name FROM attributes WHERE id = "$id" };
+    my %rights = (1 => 'pd', 2 => 'ic', 3 => 'opb', 4 => 'orph', 5 => 'und', 6 => 'umall', 7 => 'world', 8 => 'nobody', 9 => 'pdus');
+    return $rights{$id};
+    #my $sql  = qq{ SELECT name FROM attributes WHERE id = "$id" };
 
-    my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
-    return $ref->[0]->[0];
+    #my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
+    #return $ref->[0]->[0];
 }
 
 sub GetReasonName
 {
     my $self = shift;
     my $id   = shift;
-    my $sql  = qq{ SELECT name FROM reasons WHERE id = "$id" }; 
+    my %reasons = (1 => 'bib', 2 => 'ncn', 3 => 'con', 4 => 'ddd', 5 => 'man', 6 => 'pvt',
+                   7 => 'ren', 8 => 'nfi', 9 => 'cdpp', 10 => 'cip', 11 => 'unp');
+    return $reasons{$id};
+    #my $sql  = qq{ SELECT name FROM reasons WHERE id = "$id" }; 
 
-    my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
-    return $ref->[0]->[0];
+    #my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
+    #return $ref->[0]->[0];
 }
 
 sub GetRightsNum
 {
     my $self = shift;
     my $id   = shift;
-    my $sql  = qq{ SELECT id FROM attributes WHERE name = "$id" };
+    my %rights = ('pd' => 1, 'ic' => 2, 'opb' => 3, 'orph' => 4, 'und' => 5, 'umall' => 6, 'world' => 7, 'nobody' => 8, 'pdus' => 9);
+    return $rights{$id};
+    #my $sql  = qq{ SELECT id FROM attributes WHERE name = "$id" };
 
-    my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
-    return $ref->[0]->[0];
+    #my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
+    #return $ref->[0]->[0];
 }
 
 sub GetReasonNum
 {
     my $self = shift;
     my $id   = shift;
-    my $sql  = qq{ SELECT id FROM reasons WHERE name = "$id" };
+    my %reasons = ('bib' => 1, 'ncn' => 2, 'con' => 3, 'ddd' => 4, 'man' => 5, 'pvt' => 6,
+                   'ren' => 7, 'nfi' => 8, 'cdpp' => 9, 'cip' => 10, 'unp' => 11);
+    return $reasons{$id};
+    #my $sql  = qq{ SELECT id FROM reasons WHERE name = "$id" };
 
-    my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
-    return $ref->[0]->[0];
+    #my $ref  = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
+    #return $ref->[0]->[0];
 }
 
 sub GetCopyDate
@@ -4543,7 +4590,215 @@ sub GetReviewsWithStatusNumber
     return 0;
 }
 
+sub CreateQueueReport
+{
+  my $self = shift;
+  
+  my $report = '';
+  my $sql  = qq{ SELECT MAX(priority) FROM $CRMSGlobals::queueTable};
+  my $maxpri = $self->SimpleSqlGet( $sql );
+  my $priheaders = '';
+  foreach my $pri (0 .. $maxpri) { $priheaders .= "<th>Priority&nbsp;$pri</th>" };
+  $report .= "<table style='width:100px;'><tr style='vertical-align:top;'><td>\n";
+  $report .= "<table class='exportStats'>\n<th>Status</th><th>Total</th>$priheaders<tr/>\n";
+  foreach my $status (-1 .. 5)
+  {
+    my $statusClause = ($status == -1)? '':" WHERE STATUS=$status";
+    my $sql  = qq{ SELECT count(*) FROM $CRMSGlobals::queueTable $statusClause};
+    my $count  = $self->SimpleSqlGet( $sql );
+    $status = 'All' if $status == -1;
+    my $class = ($status eq 'All')?' class="total"':'';
+    $report .= sprintf("<tr><td%s>$status</td><td%s>$count</td>", $class, $class);
+    $sql  = "SELECT id FROM $CRMSGlobals::queueTable $statusClause";
+    $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri,$class);
+    $report .= "</tr>\n";
+  }
+  $sql  = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE status=0 AND id NOT IN (SELECT id FROM $CRMSGlobals::reviewsTable)};
+  my $count = $self->GetTotalAwaitingReview();
+  my $class = ' class="major"';
+  $report .= sprintf("<tr><td%s>Not&nbsp;Yet&nbsp;Active</td><td%s>$count</td>", $class, $class);
+  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri,$class);
+  $report .= "</table><br/><br/>\n";
+  $report .= "</td><td style='padding-left:20px'>\n";
+  $report .= "<table class='exportStats'>\n";
+  my $val = $self->GetLastQueueTime();
+  $val =~ s/\s/&nbsp;/g;
+  $report .= "<tr><th>Last&nbsp;Queue&nbsp;Update</td><td>$val</td></tr>\n";
+  $report .= sprintf("<tr><th>Volumes&nbsp;Last&nbsp;Added</td><td>%s</td></tr>\n", $self->GetLastIdQueueCount());
+  $report .= sprintf("<tr><th>Cumulative&nbsp;Volumes&nbsp;in&nbsp;Queue&nbsp;(ever*)</td><td>%s</td></tr>\n", $self->GetTotalEverInQueue());
+  $report .= sprintf("<tr><th>Volumes&nbsp;in&nbsp;Candidates</td><td>%s</td></tr>\n", $self->GetCandidatesSize());
+  $val = $self->GetLastLoadTimeToCandidates();
+  $val =~ s/\s/&nbsp;/g;
+  $report .= sprintf("<tr><th>Last&nbsp;Candidates&nbsp;Addition</td><td>%s&nbsp;on&nbsp;$val</td></tr>", $self->GetLastLoadSizeToCandidates());
+  $report .= "</table>\n";
+  $report .= "<span class='smallishText'>* Not including legacy data (reviews/determinations made prior to June 2009)</span>";
+  $report .= "</td></tr></table>\n";
+  return $report;
+}
 
+sub CreateDeterminationReport()
+{
+  my $self = shift;
+  
+  my $report = '';
+  $report .= "<table class='exportStats'>\n";
+  my ($count,$time) = $self->GetLastExport();
+  my $sql = "SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE status=4 AND DATE(time)=DATE(DATE_SUB('$time', INTERVAL 1 DAY))";
+  my $fours = $self->SimpleSqlGet($sql);
+  my $sql = "SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE status=5 AND DATE(time)=DATE(DATE_SUB('$time', INTERVAL 1 DAY))";
+  my $fives = $self->SimpleSqlGet($sql);
+  my $pct4 = 0;
+  my $pct5 = 0;
+  eval {$pct4 = 100.0*$fours/($fours+$fives);};
+  eval {$pct5 = 100.0*$fives/($fours+$fives);};
+  $time =~ s/\s/&nbsp;/g;
+  my $exported = $self->GetCumExportedCount();
+  my $legacy = $self->GetTotalLegacyCount();
+  $report .= "<tr><th>Last&nbsp;CRMS&nbsp;Export</td><td>$count&nbsp;on&nbsp;$time</td></tr>";
+  $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</td><td>$pct4%</td></tr>";
+  $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</td><td>$pct5%</td></tr>";
+  $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</td><td>%s</td></tr>", $exported);
+  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;Candidates</td><td>%s</td></tr>", $self->GetNumberExportedFromCandidates());
+  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;Elsewhere</td><td>%s</td></tr>", $self->GetNumberExportedNotFromCandidates());
+  $report .= sprintf("<tr><th>Total&nbsp;Legacy&nbsp;Determinations</td><td>%s</td></tr>", $legacy);
+  $report .= sprintf("<tr><th>Total&nbsp;Determinations</td><td>%s</td></tr>", $exported + $legacy);
+  $report .= "</table>\n";
+  return $report;
+}
+
+sub CreateAllReviewsReport
+{
+  my $self = shift;
+  
+  my $report = '';
+  $report .= "<table class='exportStats'>\n";
+  $report .= sprintf("<tr><th>CRMS&nbsp;Reviews</td><td>%s</td></tr>", $self->GetTotalNonLegacyReviewCount());
+  $report .= sprintf("<tr><th>Legacy&nbsp;Reviews</td><td>%s</td></tr>", $self->GetTotalLegacyReviewCount());
+  $report .= sprintf("<tr><th>Total&nbsp;Historical&nbsp;Reviews</td><td>%s</td></tr>", $self->GetTotalHistoricalReviewCount());
+  $report .= "</table>\n";
+  return $report;
+}
+
+sub CreateReviewReport
+{
+  my $self = shift;
+  my $dbh = $self->get( 'dbh' );
+  
+  my $report = '';
+  my $sql  = qq{ SELECT MAX(priority) FROM $CRMSGlobals::queueTable};
+  my $maxpri = $self->SimpleSqlGet( $sql );
+  my $priheaders = '';
+  foreach my $pri (0 .. $maxpri) { $priheaders .= "<th>Priority&nbsp;$pri</th>" };
+  $report .= "<table class='exportStats'>\n<th>Status</th><th>Total</th>$priheaders<tr/>\n";
+  my $notprocessedcnt = $self->GetTotalReviewedNotProcessed();
+  
+  my $undcnt = $self->GetTotalUndInf();
+  my $conflictcnt = $self->GetTotalConflict();
+  my $finalcnt = $self->GetTotalWithFinalDetermination();
+  my $totalactive = $notprocessedcnt +  $undcnt + $conflictcnt + $finalcnt;
+  $report .= "<tr><td class='total'>Active</td><td class='total'>$totalactive</td>";
+  my $sql  = qq{SELECT DISTINCT id FROM reviews};
+  $report .= $self->DoPriorityBreakdown($totalactive,$sql,$maxpri,' class="total"') . "</tr>\n";
+  
+  # Unprocessed
+  $report .= "<tr><td class='minor'>Unprocessed</td><td class='minor'>$notprocessedcnt</td>";
+  $sql  = qq{SELECT DISTINCT id FROM $CRMSGlobals::queueTable WHERE status=0 AND id IN (SELECT DISTINCT id FROM reviews)};
+  $report .= $self->DoPriorityBreakdown($notprocessedcnt,$sql,$maxpri,' class="minor"') . "</tr>\n";
+  
+  # Unprocessed - single review
+  $sql = <<END;
+    SELECT DISTINCT id FROM reviews h1 WHERE id IN (SELECT id FROM queue WHERE status=0) AND id NOT IN
+    (SELECT id FROM reviews h2 WHERE h1.id=h2.id AND h1.user!=h2.user)
+END
+  my $rows = $dbh->selectall_arrayref( $sql );
+  my $count  = scalar @{$rows};
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Single&nbsp;Review</td><td>$count</td>";
+  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+  
+  # Unprocessed - match
+  $sql = <<END;
+    SELECT DISTINCT id FROM reviews h1 WHERE id IN (SELECT id FROM queue WHERE status=0) AND id IN
+    (SELECT id FROM reviews h2 WHERE h1.id=h2.id AND h1.user!=h2.user AND
+     (h1.attr=h2.attr AND h1.reason=h2.reason AND
+      (h1.attr!=2 OR h1.reason!=7 OR
+       (replace(h1.renNum,'\t','')=replace(h2.renNum,'\t','') AND h1.renDate=h2.renDate))))
+END
+  my $rows = $dbh->selectall_arrayref( $sql );
+  $count  = scalar @{$rows};
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Matches</td><td>$count</td>";
+  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+  
+  # Unprocessed - conflict
+  $sql = <<END;
+    SELECT DISTINCT id FROM reviews h1 WHERE id IN (SELECT id FROM queue WHERE status=0) AND id IN
+    (SELECT id FROM reviews h2 WHERE h1.id=h2.id AND h1.user!=h2.user AND
+     (h1.attr!=h2.attr OR h1.reason!=h2.reason OR
+      (h1.attr=2 AND h1.reason=7 AND
+       (replace(h1.renNum,'\t','')!=replace(h2.renNum,'\t','') OR h1.renDate!=h2.renDate))))
+END
+  my $rows = $dbh->selectall_arrayref( $sql );
+  $count  = scalar @{$rows};
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Conflicts</td><td>$count</td>";
+  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+  
+  # Unprocessed - match
+  $sql = <<END;
+    SELECT DISTINCT id FROM reviews h1 WHERE id IN (SELECT id FROM queue WHERE status=0) AND id IN
+    (SELECT id FROM reviews h2 WHERE h1.id=h2.id AND h1.user!=h2.user AND
+     (h1.attr=h2.attr AND h1.reason=h2.reason AND h1.attr=5 AND h1.reason=8))
+END
+  my $rows = $dbh->selectall_arrayref( $sql );
+  $count  = scalar @{$rows};
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Matching&nbsp;<code>und/nfi</code></td><td>$count</td>";
+  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+  
+  # Processed
+  $sql = <<END;
+    SELECT DISTINCT id FROM reviews WHERE id IN (SELECT DISTINCT id FROM queue WHERE status!=0)
+END
+  my $rows = $dbh->selectall_arrayref( $sql );
+  $count  = scalar @{$rows};
+  $report .= "<tr><td class='minor'>Processed</td><td class='minor'>$count</td>";
+  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri,' class="minor"') . "</tr>\n";
+  
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Conflicts</td><td>$conflictcnt</td>";
+  $sql  = qq{SELECT id from $CRMSGlobals::queueTable WHERE status=2};
+  $report .= $self->DoPriorityBreakdown($conflictcnt,$sql,$maxpri) . "</tr>\n";
+
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Matching&nbsp;<code>und/nfi</code></td><td>$undcnt</td>";
+  $sql  = qq{SELECT id from $CRMSGlobals::queueTable WHERE status=3};
+  $report .= $self->DoPriorityBreakdown($undcnt,$sql,$maxpri) . "</tr>\n";
+
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Awaiting&nbsp;Export</td><td>$finalcnt</td>";
+  $sql  = qq{SELECT id from $CRMSGlobals::queueTable WHERE status=4 OR status=5};
+  $report .= $self->DoPriorityBreakdown($finalcnt,$sql,$maxpri) . "</tr>\n";
+  $report .= sprintf("<tr><td colspan='%d'><span class='smallishText'>Last processed %s</span></td></tr>\n", $maxpri+3, $self->GetLastStatusProcessedTime());
+  $report .= "</table>\n";
+  return $report;
+}
+
+sub DoPriorityBreakdown
+{
+  my $self = shift;
+  my $count = shift;
+  my $sql = shift;
+  my $max = shift;
+  my $class = shift;
+  my $dbh = $self->get( 'dbh' );
+  my @breakdown = map {'';} (0..$max);
+  $sql = "SELECT priority,COUNT(priority) FROM queue WHERE id IN ($sql) GROUP BY priority ORDER BY priority";
+  my $rows = $dbh->selectall_arrayref( $sql );
+  foreach my $row ( @{$rows} )
+  {
+    my $pri = $row->[0];
+    my $n = $row->[1];
+    my $pct = 0.0;
+    eval {$pct = $n/$count*100.0;};
+    #$breakdown[$pri] = sprintf('%d&nbsp;(%.1f%%)', $n, $pct);
+    $breakdown[$pri] = $n;
+  }
+  return join '',map {"<td$class>$_</td>"} @breakdown;
+}
 
 
 sub GetTotalReviewedNotProcessed
@@ -4618,25 +4873,14 @@ sub GetTotalEverInQueue
     return $total;
 }
 
-
-sub GetLastTimeExported
+sub GetLastExport
 {
     my $self = shift;
 
-    my $sql  = qq{ SELECT time from $CRMSGlobals::exportrecordTable order by 1 DESC LIMIT 1};
-    my $export_date  = $self->SimpleSqlGet( $sql );
-    
-    return $export_date;
-}
+    my $sql = "SELECT SUM(itemcount) AS s, MAX(time) AS mx, TIME FROM exportrecord GROUP BY DATE(time) HAVING s!=0 ORDER BY time DESC LIMIT 1";
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
-sub GetLastItemCountExported
-{
-    my $self = shift;
-
-    my $sql  = qq{ SELECT itemcount, time from $CRMSGlobals::exportrecordTable order by 2 DESC LIMIT 1};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );  
-
-    return $ref->[0]->[0];
+    return ($ref->[0]->[0], $ref->[0]->[1]);
 
 }
 
@@ -4645,7 +4889,7 @@ sub GetCumExportedCount
     my $self = shift;
 
     my $sql  = qq{ SELECT sum(itemcount) from $CRMSGlobals::exportrecordTable};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );  
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref->[0]->[0];
 
@@ -4656,10 +4900,19 @@ sub GetTotalLegacyCount
     my $self = shift;
 
     my $sql  = qq{ SELECT count(distinct id) from $CRMSGlobals::historicalreviewsTable where legacy=1};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );  
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref->[0]->[0];
+}
 
+sub GetTotalNonLegacyReviewCount
+{
+    my $self = shift;
+
+    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::historicalreviewsTable where legacy!=1};
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    return $ref->[0]->[0];
 }
 
 sub GetTotalLegacyReviewCount
@@ -4667,7 +4920,7 @@ sub GetTotalLegacyReviewCount
     my $self = shift;
 
     my $sql  = qq{ SELECT count(*) from $CRMSGlobals::historicalreviewsTable where legacy=1};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );  
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref->[0]->[0];
 
@@ -4678,7 +4931,7 @@ sub GetTotalHistoricalReviewCount
     my $self = shift;
 
     my $sql  = qq{ SELECT count(*) from $CRMSGlobals::historicalreviewsTable};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );  
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref->[0]->[0];
 
@@ -4698,7 +4951,7 @@ sub GetLastQueueTime
 
 }
 
-sub GetLastStatusProcessedTime 
+sub GetLastStatusProcessedTime
 {
 
     my $self = shift;
@@ -4810,6 +5063,21 @@ sub OutputZipFile
 
 }
 
+sub CountAllReviewsForUser
+{
+  my $self = shift;
+  my $user = shift;
+  
+  my $n = 0;
+  my $sql = "SELECT count(*) FROM reviews WHERE user='$user'";
+  $n += $self->SimpleSqlGet($sql);
+  $sql = "SELECT count(*) FROM historicalreviews WHERE user='$user'";
+  $n += $self->SimpleSqlGet($sql);
+  return $n;
+}
+
+# FIXME: this replace nonsense for tabs should be removed once we have DB sanity-checking
+# and can make sure junk like that is trimmed.
 sub IsReviewCorrect
 {
   my $self = shift;
@@ -4818,39 +5086,217 @@ sub IsReviewCorrect
   
   return 1 if $self->IsUserExpert($user);
   my $sql = <<END;
-    SELECT id FROM historicalreviews h1 WHERE h1.id='$id' AND h1.status=5 AND h1.attr!=5 AND h1.user='$user' AND h1.id IN
+    SELECT id FROM historicalreviews h1 WHERE id='$id' AND user='$user' AND status=5 AND id IN
     (SELECT id FROM historicalreviews h2 WHERE h1.id=h2.id AND h1.user!=h2.user AND
-    (h1.attr!=h2.attr OR h1.reason!=h2.reason) AND h2.user IN
-    (SELECT DISTINCT id FROM users u WHERE u.type=2))
+     (h1.attr!=h2.attr OR h1.reason!=h2.reason OR
+      (h1.attr=2 AND h1.reason=7 AND
+       (replace(h1.renNum,'\t','')!=replace(h2.renNum,'\t','') OR h1.renDate!=h2.renDate)))
+    AND h2.user IN
+    (SELECT DISTINCT id FROM users WHERE type=2 OR TYPE=3))
 END
   return ($self->SimpleSqlGet( $sql ))? 0:1;
 }
 
-sub GetIncorrectReviews
+sub CountCorrectReviews
 {
   my $self = shift;
   my $user = shift;
   my $start = shift;
   my $end = shift;
-  #print "GetIncorrectReviews($user,$start,$end)\n";
-  my $dbh = $self->get( 'dbh' );
-  my @bad = ();
-  return @bad if $self->IsUserExpert($user);
-  my $sql = <<END;
-    SELECT id FROM historicalreviews h1 WHERE h1.status=5 AND h1.attr!=5 AND h1.id IN
-    (SELECT id FROM historicalreviews h2 WHERE h1.id=h2.id AND h1.user!=h2.user AND
-    (h1.attr!=h2.attr OR h1.reason!=h2.reason) AND h2.user IN
-    (SELECT DISTINCT id FROM users u WHERE u.type=2))
+  #printf "CountCorrectReviews(%s)\n", join ', ', ($user,$start,$end);
+  my $type1Clause = sprintf(' AND user IN (%s)', join(',', map {"'$_'"} $self->GetType1Reviewers()));
+  my $startClause = ($start)? " AND time>='$start'":'';
+  my $endClause = ($end)? " AND time<='$end' ":'';
+  my $userClause = ($user eq 'all')? $type1Clause:" AND user='$user'";
+  my $sql = "SELECT count(id) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0 $startClause $endClause $userClause";
+  my $total = $self->SimpleSqlGet($sql);
+  #print "$sql => $total\n\n";
+  my $correct = $total;
+  if (!$self->IsUserExpert($user))
+  {
+    $sql = <<END;
+    SELECT count(id) FROM historicalreviews h1 WHERE status=5 AND legacy=0 $startClause $endClause $userClause AND id IN
+      (SELECT id FROM historicalreviews h2 WHERE h1.id=h2.id AND h1.user!=h2.user AND
+       (h1.attr!=h2.attr OR h1.reason!=h2.reason OR
+        (h1.attr=2 AND h1.reason=7 AND
+         (replace(h1.renNum,'\t','')!=replace(h2.renNum,'\t','') OR h1.renDate!=h2.renDate)))
+       AND h2.user IN
+        (SELECT DISTINCT id FROM users WHERE type=2 OR TYPE=3))
 END
-  $sql .= " AND h1.time>='$start'" if $start;
-  $sql .= " AND h1.time<='$end'" if $end;
-  $sql .= " AND h1.user='$user'" if $user ne 'all';
+    my $bad = $self->SimpleSqlGet($sql);
+    #print "$sql => $bad\n\n";
+    $correct -= $bad;
+  }
+  return ($correct,$total);
+}
+
+# Utility (I used it for debugging UTF-8 problems)
+sub HexDump
+{
+  $_ = shift;
+  my $offset = 0;
+  my(@array,$format);
+  foreach my $data (unpack("a16"x(length($_[0])/16)."a*",$_[0]))
+  {
+    my($len)=length($data);
+    if ($len == 16)
+    {
+      @array = unpack('N4', $data);
+      $format="0x%08x (%05d)   %08x %08x %08x %08x   %s\n";
+    }
+    else
+    {
+      @array = unpack('C*', $data);
+      $_ = sprintf "%2.2x", $_ for @array;
+      push(@array, '  ') while $len++ < 16;
+      $format="0x%08x (%05d)" .
+           "   %s%s%s%s %s%s%s%s %s%s%s%s %s%s%s%s   %s\n";
+    } 
+    $data =~ tr/\0-\37\177-\377/./;
+    printf $format,$offset,$offset,@array,$data;
+    $offset += 16;
+  }
+}
+
+# Gets only those reviewers that are not experts or admins
+sub GetType1Reviewers
+{
+  my $self = shift;
+  my $dbh = $self->get( 'dbh' );
+  my $sql = qq{SELECT DISTINCT id FROM users WHERE id NOT LIKE 'rereview%' AND id NOT IN (SELECT id FROM users WHERE type=2)};
+  return map {$_->[0]} @{$dbh->selectall_arrayref( $sql )};
+}
+
+sub GetMedianCorrect
+{
+  my $self = shift;
+  my $start = shift;
+  my $end = shift;
+  my @users = $self->GetType1Reviewers();
+  my @good = ();
+  foreach my $user (@users)
+  {
+    my ($ncorr,$total) = $self->CountCorrectReviews($user, $start, $end);
+    my $frac = 0.0;
+    eval { $frac = 100.0*$ncorr/$total; };
+    push @good, $frac;
+  }
+  @good = sort { $a <=> $b } @good; 
+  my $med = (scalar @good % 2 == 1)? $good[scalar @good / 2]  : ($good[(scalar @good / 2)-1] + $good[scalar @good / 2]) / 2;
+  return $med;
+}
+
+sub SanityCheckDB
+{
+  my $self = shift;
+  my $dbh = $self->get( 'dbh' );
+  my $vidRE = '[a-z]+\d?\.[a-zA-Z]?\d+';
+  my $rendateRE = '^\d\d?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\d\d$';
+  # ======== bibdata ========
+  my $table = 'bibdata';
+  # Volume ID must not have any spaces before, after, or in.
+  # MySQL years should be valid, but it stores a value of '0000' in case of illegal value entered.
+  my $sql = "SELECT id,pub_date FROM $table";
   my $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
-    push @bad, $row->[0];
+    $self->SetError(sprintf("$table: illegal volume id: '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
+    #$self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) if $row->[1] eq '0000';
   }
-  return @bad;
+  # ======== candidates ========
+  $table = 'candidates';
+  $sql = "SELECT id,pub_date FROM $table";
+  $rows = $dbh->selectall_arrayref( $sql );
+  foreach my $row ( @{$rows} )
+  {
+    $self->SetError(sprintf("$table: illegal volume id: '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
+    #$self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) if $row->[1] eq '0000';
+  }
+  # ======== exportdata/exportdataBckup ========
+  foreach $table ('exportdata','exportdataBckup')
+  {
+    # time must be in a format like 2009-07-16 07:00:02
+    # id must not be ill-formed
+    # attr/reason must be valid
+    # user must be crms
+    $sql = "SELECT time,id,attr,reason,user FROM $table";
+    $rows = $dbh->selectall_arrayref( $sql );
+    foreach my $row ( @{$rows} )
+    {
+      $self->SetError(sprintf("$table: illegal time for %s: '%s'", $row->[1], $row->[0])) unless $row->[0] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
+      $self->SetError(sprintf("$table: illegal volume id: '%s'", $row->[1])) unless $row->[1] =~ m/$vidRE/;
+      my $comb = $row->[2] . '/' . $row->[3];
+      $self->SetError(sprintf("$table: illegal attr/reason for %s: '%s'", $row->[1], $comb)) unless $self->GetAttrReasonCom($comb);
+      $self->SetError(sprintf("$table: illegal user for %s: '%s' (should be 'crms')", $row->[1])) unless $row->[4] eq 'crms';
+    }
+  }
+  # ======== exportrecord ========
+  $table = 'exportrecord';
+  $sql = "SELECT time FROM $table WHERE time='0000-00-00 00:00:00'";
+  $rows = $dbh->selectall_arrayref( $sql );
+  foreach my $row ( @{$rows} )
+  {
+    $self->SetError(sprintf("$table: illegal time: %s", $row->[0]));
+  }
+  # ======== historicalreviews ========
+  $table = 'historicalreviews';
+  $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,expertNote,renDate,copyDate,category,flagged,status,priority FROM $table";
+  $rows = $dbh->selectall_arrayref( $sql );
+  my %stati = (1=>1,4=>1,5=>1);
+  foreach my $row ( @{$rows} )
+  {
+    $self->SetError(sprintf("$table: illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
+    $self->SetError(sprintf("$table: illegal time for %s: '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
+    $self->SetError(sprintf("$table: illegal attr/reason for %s: '%s/%s'", $row->[0], $row->[3], $row->[4])) unless $self->GetCodeFromAttrReason($row->[3],$row->[4]);
+    $self->SetError(sprintf("$table: spaces in renNum for %s: '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
+    $self->SetError(sprintf("$table: bad renDate for %s: '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $row->[11] eq '' or $row->[11] =~ m/$rendateRE/;
+    $self->SetError(sprintf("$table: illegal copyDate for %s: '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $row->[12] =~ m/\d\d\d\d/;
+    $self->SetError(sprintf("$table: illegal category for %s: '%s'", $row->[0], $row->[13])) unless $row->[13] eq '' or $self->IsValidCategory($row->[13]);
+    $self->SetError(sprintf("$table: illegal status for %s: '%s'", $row->[0], $row->[15])) unless $stati{$row->[15]};
+  }
+  # ======== reviews ========
+  $table = 'reviews';
+  $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,expertNote,renDate,copyDate,category,flagged,priority FROM $table";
+  $rows = $dbh->selectall_arrayref( $sql );
+  my %stati = (1=>1,4=>1,5=>1);
+  foreach my $row ( @{$rows} )
+  {
+    $self->SetError(sprintf("$table: illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
+    $self->SetError(sprintf("$table: illegal time for %s: '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
+    $self->SetError(sprintf("$table: illegal attr/reason for %s: '%s/%s'", $row->[0], $row->[3], $row->[4])) unless $self->GetCodeFromAttrReason($row->[3],$row->[4]);
+    $self->SetError(sprintf("$table: spaces in renNum for %s: '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
+    $self->SetError(sprintf("$table: bad renDate for %s: '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $row->[11] eq '' or $row->[11] =~ m/$rendateRE/;
+    $self->SetError(sprintf("$table: illegal copyDate for %s: '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $row->[12] =~ m/\d\d\d\d/;
+    $self->SetError(sprintf("$table: illegal category for %s: '%s'", $row->[0], $row->[13])) unless $row->[13] eq '' or $self->IsValidCategory($row->[13]);
+  }
+}
+
+sub ReviewSearchMenu
+{
+  my $self = shift;
+  my $page = shift;
+  my $searchName = shift;
+  my $searchVal = shift;
+  
+  my @keys = ('Identifier','Title','Author','UserId','Status','Attribute',   'Reason',     'Legacy','NoteCategory','Priority');
+  my @labs = ('Identifier','Title','Author','UserId','Status','Attr Num Val','Rsn Num Val','Legacy','NoteCategory','Priority');
+  if (!$self->IsUserAdmin())
+  {
+    pop @keys;
+    pop @labs;
+  }
+  if ($page eq 'userReviews' || $page eq 'editReviews')
+  {
+    delete $keys[3];
+    delete $labs[3];
+  }
+  my $html = "<select name='$searchName'>\n";
+  foreach my $i (0 .. scalar @keys - 1)
+  {
+    $html .= sprintf("  <option value='%s'%s>%s</option>\n", $keys[$i], ($searchVal eq $keys[$i])? 'selected="selected"':'', $labs[$i]);
+  }
+  $html .= "</select>\n";
+  return $html;
 }
 
 1;
