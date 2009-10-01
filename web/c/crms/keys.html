@@ -4,24 +4,15 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>CRMS Keys Help</title>
+    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
 <style type="text/css">
-* {
-  font-family: helvetica;
-  line-height:1.1em;
-}
-
-code {
-  font-family:Courier, 'Courier New', Monaco, monospace;
-}
-
 td {
   text-align:left;
 }
 
 table.subtable {
   margin-top:0px;
-  padding:0px 20px 0px 0px;
-  margin: 12px;
+  margin: 10px 0px 10px 0px;
   border-collapse:collapse;
   border-spacing:0px;
 }
@@ -51,7 +42,8 @@ td.explanation {
 </style>
   </head>
   <body>
-  <img src="/c/crms/crms.jpg"/>
+  <div class="pages" id="homePage">
+  <img src="/c/crms/crms.png"/>
   <br/><br/>
 <table>
 <tr>
@@ -59,6 +51,7 @@ td.explanation {
     <table class="subtable">
     <th colspan="2" style="padding-bottom:8px;">Status</strong>
     <tr><th>0</th><td>not reviewed yet or awaiting processing</td></tr>
+    <tr><th>1</th><td>legacy review; reviewed by one person only</td></tr>
     <tr><th>2</th><td>reviewed by two persons that disagree</td></tr>
     <tr><th>3</th><td>reviewed by two persons - both <code>und/nfi</code></td></tr>
     <tr><th>4</th><td>reviewed by 2 persons that agree</td></tr>
@@ -78,9 +71,9 @@ td.explanation {
     <tr><th>2</th><td class="codes">ic</td>    <td>in copyright</td></tr>
     <tr><th>3</th><td class="codes">opb</td>   <td>out-of-print and brittle (implies in-copyright)</td></tr>
     <tr><th>4</th><td class="codes">orph</td>  <td>copyright-orphaned (implies in-copyright)</td></tr>
+    <tr><th>5</th><td class="codes">und</td>   <td>undetermined copyright status</td></tr>
     <tr><th>6</th><td class="codes">umall</td> <td>available to UM affiliates and walk-in patrons (all campuses)</td></tr>
     <tr><th>7</th><td class="codes">world</td> <td>available to everyone in the world</td></tr>
-    <tr><th>5</th><td class="codes">und</td>   <td>undetermined copyright status</td></tr>
     <tr><th>8</th><td class="codes">nobody</td><td>available to nobody; blocked for all users</td></tr>
     <tr><th>9</th><td class="codes">pdus</td>  <td>public domain only when viewed in the US</td></tr>
     </table>
@@ -132,5 +125,10 @@ td.explanation {
 <td/>
 </tr>
 </table>
+<br/>
+<p>Note: you can use an asterisk (*) in a search field as a wildcard that will match zero or more characters.<br/>
+Example: searching for volume id <code>wu.89*</code> will match wu.89090507310, wu.89092821453, etc....
+</p>
+</div>
 </body>
 </html>
