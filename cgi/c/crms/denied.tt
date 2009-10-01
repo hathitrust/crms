@@ -7,7 +7,7 @@
   </head>
   <body>
   <div class="pages" id="homePage">
-    <img src="/c/crms/crms.jpg"/>
+    <img src="/c/crms/crms.png"/>
     <br/><br/>
     <font size="5"><strong>Hello [% crms.GetUserName %] </strong></font>
     <a href="crms?p=Logout"> Logout</a>
@@ -18,6 +18,6 @@
 <br/>
 <br/>
 <h3>You do not have access to this page</h3>
-<strong>You will be redirected to the <a href="/cgi/c/crms/crms?p=home">home page</a>.</strong>
+<strong>You will be redirected to your <a href="/cgi/c/crms/crms?p=home">home page</a> in 5 seconds.</strong>
 </body>
 </html>
