@@ -192,6 +192,7 @@ table.exportStats {
   border-spacing:0px;
   border:1px solid #000000;
   background-color:white;
+  font-size:90%;
 }
 
 table.exportStats td {
@@ -200,7 +201,7 @@ table.exportStats td {
 }
 
 table.exportStats th {
-  padding:4px 20px 2px 6px;
+  padding:4px 6px 2px 6px;
   background-color:#000000;
   color:#FFFFFF;
   text-align:left;
