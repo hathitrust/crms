@@ -2951,9 +2951,9 @@ sub CreateStatsReport
   $report =~ s/__TOT__/All&nbsp;Reviews/;
   my $netitle = 'Non-Expert&nbsp;Reviews' . (($cumulative || $user eq 'all')? '&nbsp;(Non-Expert&nbsp;Only)':'');
   $report =~ s/__TOTNE__/Non-Expert&nbsp;Reviews/;
-  my $vtitle = 'Validated&nbsp;Reviews&nbsp;' . (($cumulative || $user eq 'all')? '(Non-Expert&nbsp;Only)':'');
+  my $vtitle = 'Validated&nbsp;Reviews&nbsp;and&nbsp;Rate' . (($cumulative || $user eq 'all')? '&nbsp;(Non-Expert&nbsp;Only)':'');
   $report =~ s/__VAL__/$vtitle/;
-  my $mvtitle = 'Median&nbsp;Validated&nbsp;&nbsp;' . (($cumulative || $user eq 'all')? '(Non-Expert&nbsp;Only)':'(All&nbsp;Reviewers)');
+  my $mvtitle = 'Median&nbsp;Validation&nbsp;Rate&nbsp;' . (($cumulative || $user eq 'all')? '(Non-Expert&nbsp;Only)':'(All&nbsp;Reviewers)');
   $report =~ s/__MVAL__/$mvtitle/;
   return $report;
 }
@@ -4660,8 +4660,8 @@ sub CreateDeterminationReport()
   my $exported = $self->GetCumExportedCount();
   my $legacy = $self->GetTotalLegacyCount();
   $report .= "<tr><th>Last&nbsp;CRMS&nbsp;Export</td><td>$count&nbsp;on&nbsp;$time</td></tr>";
-  $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</td><td>$pct4%</td></tr>";
-  $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</td><td>$pct5%</td></tr>";
+  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</td><td>$fours&nbsp;(%.1f%%)</td></tr>", $pct4);
+  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</td><td>$fives&nbsp;(%.1f%%)</td></tr>", $pct5);
   $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</td><td>%s</td></tr>", $exported);
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;Candidates</td><td>%s</td></tr>", $self->GetNumberExportedFromCandidates());
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;Elsewhere</td><td>%s</td></tr>", $self->GetNumberExportedNotFromCandidates());
