@@ -38,7 +38,7 @@
 [% END %]
 
 [% IF cgi.param('processReviews') %]
-  [% crms.crms.ClearQueueAndExport() %]
+  [% crms.ClearQueueAndExport() %]
 [% END %]
 
 [% INCLUDE footer.tt %]
