@@ -4648,9 +4648,9 @@ sub CreateDeterminationReport()
   my $report = '';
   $report .= "<table class='exportStats'>\n";
   my ($count,$time) = $self->GetLastExport();
-  my $sql = "SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE status=4 AND DATE(time)=DATE(DATE_SUB('$time', INTERVAL 1 DAY))";
+  my $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.id=h.id AND h.status=4 AND e.time='$time'";
   my $fours = $self->SimpleSqlGet($sql);
-  my $sql = "SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE status=5 AND DATE(time)=DATE(DATE_SUB('$time', INTERVAL 1 DAY))";
+  my $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.id=h.id AND h.status=5 AND e.time='$time'";
   my $fives = $self->SimpleSqlGet($sql);
   my $pct4 = 0;
   my $pct5 = 0;
@@ -4671,7 +4671,7 @@ sub CreateDeterminationReport()
   return $report;
 }
 
-sub CreateAllReviewsReport
+sub CreateHistoricalReviewsReport
 {
   my $self = shift;
   
@@ -4746,7 +4746,7 @@ END
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Conflicts</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
   
-  # Unprocessed - match
+  # Unprocessed - matching und/nfi
   $sql = <<END;
     SELECT DISTINCT id FROM reviews h1 WHERE id IN (SELECT id FROM queue WHERE status=0) AND id IN
     (SELECT id FROM reviews h2 WHERE h1.id=h2.id AND h1.user!=h2.user AND
@@ -4882,10 +4882,11 @@ sub GetLastExport
 {
     my $self = shift;
 
-    my $sql = "SELECT SUM(itemcount) AS s, MAX(time) AS mx, TIME FROM exportrecord GROUP BY DATE(time) HAVING s!=0 ORDER BY time DESC LIMIT 1";
+    my $sql = "SELECT itemcount,time FROM exportrecord WHERE itemcount>0 ORDER BY time DESC LIMIT 1";
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    return ($ref->[0]->[0], $ref->[0]->[1]);
+    my $count = $ref->[0]->[0];
+    my $time = $ref->[0]->[1];
+    return ($count,$time);
 
 }
 
@@ -4893,7 +4894,7 @@ sub GetCumExportedCount
 {
     my $self = shift;
 
-    my $sql  = qq{ SELECT sum(itemcount) from $CRMSGlobals::exportrecordTable};
+    my $sql  = qq{ SELECT SUM(itemcount) from $CRMSGlobals::exportrecordTable};
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref->[0]->[0];
@@ -4904,7 +4905,7 @@ sub GetTotalLegacyCount
 {
     my $self = shift;
 
-    my $sql  = qq{ SELECT count(distinct id) from $CRMSGlobals::historicalreviewsTable where legacy=1};
+    my $sql  = qq{ SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=1 AND priority!=1 };
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref->[0]->[0];
@@ -4914,7 +4915,7 @@ sub GetTotalNonLegacyReviewCount
 {
     my $self = shift;
 
-    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::historicalreviewsTable where legacy!=1};
+    my $sql  = qq{ SELECT COUNT(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy!=1};
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref->[0]->[0];
@@ -4924,7 +4925,7 @@ sub GetTotalLegacyReviewCount
 {
     my $self = shift;
 
-    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::historicalreviewsTable where legacy=1};
+    my $sql  = qq{ SELECT COUNT(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=1};
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref->[0]->[0];
@@ -4935,7 +4936,7 @@ sub GetTotalHistoricalReviewCount
 {
     my $self = shift;
 
-    my $sql  = qq{ SELECT count(*) from $CRMSGlobals::historicalreviewsTable};
+    my $sql  = qq{ SELECT COUNT(*) from $CRMSGlobals::historicalreviewsTable};
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref->[0]->[0];
@@ -5259,11 +5260,27 @@ sub SanityCheckDB
     $self->SetError(sprintf("$table: illegal category for %s: '%s'", $row->[0], $row->[13])) unless $row->[13] eq '' or $self->IsValidCategory($row->[13]);
     $self->SetError(sprintf("$table: illegal status for %s: '%s'", $row->[0], $row->[15])) unless $stati{$row->[15]};
   }
+  # ======== queue ========
+  $table = 'queue';
+  $sql = "SELECT id,time,status,locked,pub_date,priority,expcnt FROM $table";
+  $rows = $dbh->selectall_arrayref( $sql );
+  foreach my $row ( @{$rows} )
+  {
+    $self->SetError(sprintf("$table: illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
+    $self->SetError(sprintf("$table: illegal time for %s: '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
+    $self->SetError(sprintf("$table: illegal status for %s: '%s'", $row->[0], $row->[2])) unless $row->[2] == 0 or $row->[2] == 2;
+    if ($row->[2] == 2 || $row->[6])
+    {
+      $sql = sprintf("SELECT SUM(expert) FROM reviews WHERE id='%s'", $row->[0]);
+      my $sum = $self->SimpleSqlGet($sql);
+      $self->SetError(sprintf("$table: illegal status/expcnt for %s: '%s'/'%s' but there are no expert reviews", $row->[0], $row->[2])) unless $sum;
+    }
+    $self->SetError(sprintf("$table: bad pub_date for %s: '%s'", $row->[0], $row->[4])) unless $row->[4] =~ m/\d\d\d\d/;
+  }
   # ======== reviews ========
   $table = 'reviews';
   $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,expertNote,renDate,copyDate,category,flagged,priority FROM $table";
   $rows = $dbh->selectall_arrayref( $sql );
-  my %stati = (1=>1,4=>1,5=>1);
   foreach my $row ( @{$rows} )
   {
     $self->SetError(sprintf("$table: illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
@@ -5273,6 +5290,52 @@ sub SanityCheckDB
     $self->SetError(sprintf("$table: bad renDate for %s: '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $row->[11] eq '' or $row->[11] =~ m/$rendateRE/;
     $self->SetError(sprintf("$table: illegal copyDate for %s: '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $row->[12] =~ m/\d\d\d\d/;
     $self->SetError(sprintf("$table: illegal category for %s: '%s'", $row->[0], $row->[13])) unless $row->[13] eq '' or $self->IsValidCategory($row->[13]);
+  }
+}
+
+# At this point fixes leading/trailing spaces on renNum in reviews and historicalreviews.
+sub FixDB
+{
+  my $self = shift;
+  my $dbh = $self->get( 'dbh' );
+  # ======== historicalreviews ========
+  my $table = 'historicalreviews';
+  my $sql = "SELECT id,user,renNum FROM $table";
+  my $rows = $dbh->selectall_arrayref( $sql );
+  foreach my $row ( @{$rows} )
+  {
+    my $id = $row->[0];
+    my $user = $row->[1];
+    my $renNum = $row->[2];
+    my $stripped = $renNum;
+    $stripped =~ s/\s+//g;
+    if ($stripped ne $renNum)
+    {
+      $sql = "UPDATE $table SET renNum='$stripped' WHERE id='$id' AND user='$user'";
+      $sql = "UPDATE $table SET renNum=NULL WHERE id='$id' AND user='$user'" if $stripped eq '';
+      print "$sql\n";
+      $self->PrepareSubmitSql( $sql );
+    }
+  }
+  # ======== reviews ========
+  $table = 'reviews';
+  $sql = "SELECT id,renNum,user FROM $table";
+  $rows = $dbh->selectall_arrayref( $sql );
+  foreach my $row ( @{$rows} )
+  {
+    my $id = $row->[0];
+    my $user = $row->[1];
+    my $renNum = $row->[2];
+    #print "$id*$user*$renNum\n";
+    my $stripped = $renNum;
+    $stripped =~ s/\s+//g;
+    if ($stripped ne $renNum)
+    {
+      $sql = "UPDATE $table SET renNum='$stripped' WHERE id='$id' AND user='$user'";
+      $sql = "UPDATE $table SET renNum=NULL WHERE id='$id' AND user='$user'" if $stripped eq '';
+      print "$sql\n";
+      $self->PrepareSubmitSql( $sql );
+    }
   }
 }
 

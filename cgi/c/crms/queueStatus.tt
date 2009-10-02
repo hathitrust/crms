@@ -11,10 +11,10 @@
 [% crms.CreateReviewReport() %]<br/>
 </td>
 <td style='padding-left:20px'>
-<h2>Determinations</h2><br/>
+<h2>Final&nbsp;Determinations</h2><br/>
 [% crms.CreateDeterminationReport() %]<br/>
-<h2>Reviews</h2><br/>
-[% crms.CreateAllReviewsReport() %]
+<h2>Historical&nbsp;Reviews</h2><br/>
+[% crms.CreateHistoricalReviewsReport() %]
 </td></tr></table>
 
 [% INCLUDE footer.tt %]
