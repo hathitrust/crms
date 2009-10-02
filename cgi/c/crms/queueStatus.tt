@@ -7,7 +7,7 @@
 
 <table style="width:100px;">
 <tr style="vertical-align:top;"><td>
-<h2>Active Reviews</h2><br/>
+<h2>Active Volumes</h2><br/>
 [% crms.CreateReviewReport() %]<br/>
 </td>
 <td style='padding-left:20px'>
