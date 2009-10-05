@@ -4724,7 +4724,7 @@ END
   $sql = <<END;
     SELECT DISTINCT id FROM reviews h1 WHERE id IN (SELECT id FROM queue WHERE status=0) AND id IN
     (SELECT id FROM reviews h2 WHERE h1.id=h2.id AND h1.user!=h2.user AND
-     (h1.attr=h2.attr AND h1.reason=h2.reason AND
+     (h1.attr=h2.attr AND h1.reason=h2.reason AND (h1.attr!=2 OR h1.reason!=5) AND
       (h1.attr!=2 OR h1.reason!=7 OR
        (replace(h1.renNum,'\t','')=replace(h2.renNum,'\t','') AND h1.renDate=h2.renDate))))
 END
