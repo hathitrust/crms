@@ -5098,7 +5098,7 @@ sub IsReviewCorrect
       (h1.attr=2 AND h1.reason=7 AND
        (replace(h1.renNum,'\t','')!=replace(h2.renNum,'\t','') OR h1.renDate!=h2.renDate)))
     AND h2.user IN
-    (SELECT DISTINCT id FROM users WHERE type=2 OR TYPE=3))
+    (SELECT DISTINCT id FROM users WHERE type=2))
 END
   return ($self->SimpleSqlGet( $sql ))? 0:1;
 }
@@ -5127,7 +5127,7 @@ sub CountCorrectReviews
         (h1.attr=2 AND h1.reason=7 AND
          (replace(h1.renNum,'\t','')!=replace(h2.renNum,'\t','') OR h1.renDate!=h2.renDate)))
        AND h2.user IN
-        (SELECT DISTINCT id FROM users WHERE type=2 OR TYPE=3))
+        (SELECT DISTINCT id FROM users WHERE type=2))
 END
     my $bad = $self->SimpleSqlGet($sql);
     #print "$sql => $bad\n\n";
