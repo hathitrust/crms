@@ -5367,4 +5367,26 @@ sub ReviewSearchMenu
   return $html;
 }
 
+sub PageToEnglish
+{
+  my $self = shift;
+  my $page = shift;
+  my %pages = ('admin' => 'administrator page',
+               'adminEditUser' => 'administer user accounts',
+               'adminHistoricalReviews' => 'view all historical reviews',
+               'adminQueue' => 'manage the queue',
+               'adminReviews' => 'view all active reviews',
+               'adminUser' => 'administer user accounts',
+               'adminUserRate' => 'view user review rates',
+               'editReviews' => 'edit reviews',
+               'expert' => 'expert review',
+               'exportStats'  => 'export statistics',
+               'queueAdd' => 'add to queue',
+               'queueStatus' => 'queue status',
+               'undReviews' => 'und/nfi items',
+               'userRate' => 'view your review rate'
+              );
+  return $pages{$page} || 'home';
+}
+
 1;

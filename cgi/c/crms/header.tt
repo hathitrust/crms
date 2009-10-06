@@ -3,7 +3,17 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
-    <title>[% title %]</title>
+    [% page = cgi.param('p') %]
+    [% dev = crms.get('dev') %]
+    [% IF dev %]
+      [% fulltitle = title _ ' - ' _ 'Development' %]
+      [% IF dev != 1 %]
+        [% fulltitle = fulltitle _ ' (' _ dev _ ')' %]
+      [% ELSE %]
+      [% END %]
+    [% END %]
+    [% fulltitle = fulltitle _ ' - ' _ crms.PageToEnglish(page) %]
+    <title>[% fulltitle %]</title>
   </head>
   <body>
   <div class="pages" id="homePage">
