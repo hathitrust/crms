@@ -5,15 +5,15 @@
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
     [% page = cgi.param('p') %]
     [% dev = crms.get('dev') %]
+    [% fulltitle = title %]
     [% IF dev %]
-      [% fulltitle = title _ ' - ' _ 'Development' %]
+      [% fulltitle = fulltitle _ ' - ' _ 'Development' %]
       [% IF dev != 1 %]
         [% fulltitle = fulltitle _ ' (' _ dev _ ')' %]
       [% ELSE %]
       [% END %]
     [% END %]
-    [% fulltitle = fulltitle _ ' - ' _ crms.PageToEnglish(page) %]
-    <title>[% fulltitle %]</title>
+    <title>[% fulltitle %] - [% crms.PageToEnglish(page) %]</title>
   </head>
   <body>
   <div class="pages" id="homePage">
