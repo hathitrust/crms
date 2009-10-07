@@ -3595,6 +3595,11 @@ sub UpdateAuthor
     my $id   = shift;
     my $author = shift;
     
+    if ( !$author )
+    {
+      $author = $self->GetMarcDatafieldAuthor( $id );
+    }
+    
     my $aiq  = $self->get('dbh')->quote( $author );
     my $sql  = qq{ SELECT count(*) from bibdata where id="$id"};
     my $count  = $self->SimpleSqlGet( $sql );
@@ -4648,9 +4653,9 @@ sub CreateDeterminationReport()
   my $report = '';
   $report .= "<table class='exportStats'>\n";
   my ($count,$time) = $self->GetLastExport();
-  my $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.id=h.id AND h.status=4 AND e.time='$time'";
+  my $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.id=h.id AND h.status=4 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
   my $fours = $self->SimpleSqlGet($sql);
-  my $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.id=h.id AND h.status=5 AND e.time='$time'";
+  my $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.id=h.id AND h.status=5 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
   my $fives = $self->SimpleSqlGet($sql);
   my $pct4 = 0;
   my $pct5 = 0;
