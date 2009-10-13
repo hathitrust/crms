@@ -5389,9 +5389,23 @@ sub PageToEnglish
                'queueAdd' => 'add to queue',
                'queueStatus' => 'queue status',
                'undReviews' => 'und/nfi items',
-               'userRate' => 'view your review rate'
+               'userRate' => 'view your review rate',
+               'debug' => 'debug',
+               'rights' => 'rights query'
               );
   return $pages{$page} || 'home';
+}
+
+# Query the production rights database
+sub RightsQuery
+{
+  my $self = shift;
+  my $id = shift;
+  my ($namespace,$n) = split '\.', $id;
+  my $sql = 'SELECT a.name,rs.name,s.name,r.user,r.time,r.note FROM rights r, attributes a, reasons rs, sources s ' .
+            "WHERE r.namespace='$namespace' AND r.id='$n' AND s.id=r.source AND a.id=r.attr AND rs.id=r.reason " .
+            'ORDER BY r.time';
+  return $self->get('sdr_dbh')->selectall_arrayref($sql);
 }
 
 1;

@@ -10,18 +10,19 @@
 
 <div>
   || <a href="crms?p=adminUser">administer user accounts</a>
-  || <a href="crms?p=adminQueue">manage the queue</a> 
+  || <a href="crms?p=adminQueue">manage the queue</a>
   || <a href="crms?p=adminReviews">view all active reviews</a>
   || <a href="crms?p=adminHistoricalReviews">view all historical reviews</a>
-  || <a href="crms?p=adminUserRate">view user review rates</a> 
+  || <a href="crms?p=adminUserRate">view user review rates</a>
   || <a href="crms?p=queueStatus">queue status</a>
   || <a href="crms?p=exportStats">export statistics</a>
   ||
 <br/> 
 <br/> 
-  || <a href="crms?p=expert">expert review</a> 
+  || <a href="crms?p=expert">expert review</a>
   || <a href="crms?p=undReviews">und/nfi items</a>
-  || <a href="crms?p=queueAdd">add to queue</a>  
+  || <a href="crms?p=queueAdd">add to queue</a>
+  || <a href="crms?p=rights">query rights DB</a>
   ||
 </div>
 
