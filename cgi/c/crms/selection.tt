@@ -25,24 +25,25 @@
 <input type="hidden" name="p" value="$page"/>
 
 [% IF page != 'editReviews' && page != 'userReviews' %]
-  <h4>Currently searching by <i>[% vols? 'Volume' : 'Review' %]</i></h4>
+  <h4>Currently searching by <i><span id="volrevSpan">[% vols? 'Volume' : 'Review' %]</span></i></h4>
   <label for="vols">Search for volumes:</label>
   <input type="checkbox" id="vols" name="vols" [% vols? 'checked="checked"' : '' %]
-         onclick="document.getElementById('records').value = ((this.checked)? '10':'20');"/>
+         onclick="document.getElementById('records').value = ((this.checked)? '10':'20');
+                  document.getElementById('volrevSpan').innerHTML = ((this.checked)? 'Volume':'Review');">
 <br/><br/>
 [% END %]
 
 Restrict selection (<a href="/c/crms/keys.html" target="_blank" accesskey="h">Search Help</a>):<br/>
 
 [% crms.ReviewSearchMenu(page, 'search1', search1) %]
-<input type="text"  name="search1value" value="[% search1value %]"/>
+<input type="text"  id="search1value" name="search1value" value="[% search1value %]"/>
 <select name="op1">
   <option [% op1 == 'AND' ? 'selected="selected"':'' %]>AND</option>
   <option [% op1 == 'OR' ? 'selected="selected"':'' %]>OR</option>
 </select>
 <br/>
 [% crms.ReviewSearchMenu(page, 'search2', search2) %]
-<input type="text" name="search2value" value="[% search2value %]"/>
+<input type="text" id="search2value" name="search2value" value="[% search2value %]"/>
 <br/>
 <label for="since">Since:</label>
 <input type="text" id="since" name="since" value="$since" onclick="datePickerController.show('since');" onblur="datePickerController.hide('since');"/>
@@ -61,14 +62,15 @@ Restrict selection (<a href="/c/crms/keys.html" target="_blank" accesskey="h">Se
   <option value="id" [% order == 'id' ?  'selected="selected"':'' %]>Identifier</option>
   <option value="title" [% order == 'title' ? 'selected="selected"':'' %]/>Title</option>
   <option value="author" [% order == 'author' ? 'selected="selected"':'' %]/>Author</option>
-  <option value="id" [% order == 'time' ?  'selected="selected"':'' %]>Time</option>
-[% IF page != 'editReviews' && page != 'userReviews' %]
-  <option value="user" [% order == 'user' ?  'selected="selected"':'' %]>User</option>
-[% END %]
-  <option value="attr" [% order == 'attr' ? 'selected="selected"':'' %]/>Attr Num Val</option>
+  <option value="id" [% order == 'time' ?  'selected="selected"':'' %]>Date</option>
 [% IF page != 'editReviews' %]
   <option value="status" [% order == 'status' ? 'selected="selected"':'' %]/>Status</option>
 [% END %]
+[% IF page != 'editReviews' && page != 'userReviews' %]
+  <option value="user" [% order == 'user' ?  'selected="selected"':'' %]>User</option>
+[% END %]
+  <option value="attr" [% order == 'attr' ? 'selected="selected"':'' %]/>Attr Number</option>
+
   <option value="category" [% order == 'attr' ? 'selected="selected"':'' %]/>Note Category</option>
 [% IF adm %]
   <option value="priority" [% order == 'priority' ? 'selected="selected"':'' %]/>Priority</option>
@@ -121,6 +123,11 @@ Restrict selection (<a href="/c/crms/keys.html" target="_blank" accesskey="h">Se
 <label for="records">Display:</label><input size="3" type="text" id="records" name="records" value="[% recs %]"/> records per page.
 <br/>
 <input type="submit" value="Submit"/>
+<input type="button" value="Clear"
+       onclick="document.getElementById('since').value='';
+                document.getElementById('search1value').value='';
+                document.getElementById('search2value').value='';
+       "/>
 </form>
 </div>
 <br/>

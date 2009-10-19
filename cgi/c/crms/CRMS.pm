@@ -5421,8 +5421,8 @@ sub ReviewSearchMenu
   my $searchName = shift;
   my $searchVal = shift;
   
-  my @keys = ('Identifier','Title','Author','UserId','Status','Attribute',   'Reason',     'Legacy','NoteCategory','Priority');
-  my @labs = ('Identifier','Title','Author','UserId','Status','Attr Num Val','Rsn Num Val','Legacy','Note Category','Priority');
+  my @keys = ('Identifier','Title','Author','Status','UserId','Attribute',   'Reason',     'Legacy','NoteCategory','Priority');
+  my @labs = ('Identifier','Title','Author','Status','User',  'Attr Number','Rsn Number','Legacy','Note Category','Priority');
   if (!$self->IsUserAdmin())
   {
     pop @keys;
