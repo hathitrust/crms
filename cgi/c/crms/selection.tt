@@ -11,7 +11,7 @@
 [% recs = cgi.param('records')   %]
 [% adm = crms.IsUserAdmin() %]
 <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
-<link rel="stylesheet" type="text/css" href="/c/crms/datepicker.css"/>
+<link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
 [% recs = recs.replace('\D','') %]
 [% IF NOT recs %][% recs = (vols)? 10:20 %][% END %]
 
