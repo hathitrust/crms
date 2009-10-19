@@ -58,7 +58,7 @@
 
 [%# ## failed to get a barcode ## %]
 [% IF NOT barcode %] 
-  <h3>No barcode given. ([% barcode %])</h3>
+  <h3>Unable to find a volume ID to review</h3>
   [% STOP %]
 [% END %]
 
@@ -78,7 +78,7 @@
 [% renDate    = crms.GetRenDate( renNum )                   %]
 [% END %] 
 
-[% crPage     = crms.GetCopyrightPage( barcode )            %]
+[% #crPage     = crms.GetCopyrightPage( barcode )            %]
 
 [% IF NOT comm %] 
 [% comm       = crms.GetReviewComment( barcode, user )      %]
