@@ -1,4 +1,6 @@
-
 </div>
+[% FOREACH error IN crms.GetErrors %]
+  <strong>ERROR: [% error %]</strong><br/>
+[% END %]
 </body>
 </html>
