@@ -1,11 +1,12 @@
-
+[% INCLUDE header.tt %]
 
 [% id     = cgi.param('id')     %]
 [% user   = cgi.param('user')     %]
 [% page   = cgi.param('page')     %]
 
 
-[% reviews = crms.GetReviewsRef( 'id', 'DESC', 'Identifier', id, 'AND', 'UserId', user, '', '', page ) %]
+[% data = crms.GetReviewsRef( 'id', 'DESC', 'Identifier', id, 'AND', 'UserId', user, '', '', page ) %]
+[% reviews = data.rows %]
 [% IF NOT reviews.size %]
   [% #Fall back to all reviews in the case that page is 'conflict' and conflict is resolved %]
   [% reviews = crms.GetReviewsRef( 'id', 'DESC', 'Identifier', id, 'AND', 'UserId', user, '', '', 'reviews' ) %]
@@ -17,31 +18,31 @@
 [% END %]
 
 [% FOREACH review IN reviews %]
-<table border="1">
-<tr><td>ID</td><td>               [% review.id %] </td></tr>
-<tr><td>Title</td><td>            [% crms.LinkToPT( review.id )  %]</td></tr>
-<tr><td>Author</td><td>           [% crms.GetEncAuthor ( review.id ) %]</td></tr>
-<tr><td>Pub Date</td><td>         [% crms.GetPubDate( review.id ) %]</td></tr>
-</table>
-<br/><table  border="1">   
-<tr><td>Date</td><td>             [% review.time %]</td></tr>
-<tr><td>Review Status</td><td>    [% crms.GetStatus( review.id ) %]</td></tr>
-<tr><td>Legacy Status</td><td>    [% review.legacy %]</td></tr>
-</table>
-<br/><table  border="1">
-<tr><td>User</td><td>             [% review.user %]</td></tr>
-<tr><td>Attr/Reason</td><td>      [% review.attr %]/[% review.reason %]</td></tr>
-<tr><td>Renewal Info</td><td>     [%  review.renDate %],[% review.renNum %] </td></tr>
-<tr><td>Note Category</td><td>    [% review.category %]</td></tr>
-<tr><td>User Note</td><td>        [% review.note %]</td></tr>
-</table>
-<br/><table  border="1">
-<tr><td>Expert Note</td><td>      [% review.expertNote %]</td></tr>
-</table>
-<br/><table  border="1">
-<tr><td>Priority</td><td> [% review.priority %]</td></tr>
-</table
-  [% END %]
+  <table class="exportStats">
+  <tr><th>ID</th><td>                    [% review.id %] </td></tr>
+  <tr><th>Title</th><td>                 [% crms.LinkToPT( review.id )  %]</td></tr>
+  <tr><th>Author</th><td>                [% crms.GetEncAuthor ( review.id ) %]</td></tr>
+  <tr><th>Pub&nbsp;Date</th><td>         [% crms.GetPubDate( review.id ) %]</td></tr>
+  </table>
+  <br/>
+  <table class="exportStats">
+  <tr><th>Date</th><td>[% review.time %]</td></tr>
+  <tr><th>Review&nbsp;Status</th><td>    [% crms.GetStatus( review.id ) %]</td></tr>
+  <tr><th>Legacy&nbsp;Status</th><td>    [% review.legacy %]</td></tr>
+  </table>
+  <br/>
+  <table class="exportStats">
+  <tr><th>User</th><td>                  [% review.user %]</td></tr>
+  <tr><th>Attr/Reason</th><td>           [% review.attr %]/[% review.reason %]</td></tr>
+  <tr><th>Renewal&nbsp;Info</th><td>     [%  review.renDate %],[% review.renNum %]</td></tr>
+  <tr><th>Note&nbsp;Category</th><td>    [% review.category %]</td></tr>
+  <tr><th>User&nbsp;Note</th><td>        [% review.note %]</td></tr>
+  </table>
+  <br/>
+  <table class="exportStats">
+  <tr><th>Priority</th><td>              [% review.priority %]</td></tr>
+  </table>
+[% END %]
 <a href="JavaScript:window.close()">Close</a>
 
 

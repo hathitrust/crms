@@ -6,98 +6,11 @@
 [% INCLUDE header.tt    %]
 [% INCLUDE adminNav.tt  %]
 
-[% search1            = cgi.param('search1')        %]
-[% search1value       = cgi.param('search1value')   %]
-[% search2            = cgi.param('search2')        %]
-[% search2value       = cgi.param('search2value')   %]
-[% op1                = cgi.param('op1')            %]
-[% since              = cgi.param('since')          %]
-[% order              = cgi.param('order')          %]
-[% direction          = cgi.param('direction')      %]
-[% offset             = cgi.param('offset')         %]
-[% pagesize           = crms.GetPageSize()          %]
-
-[% IF NOT offset %] [% offset = 0 %] [% END %]
-
-[% IF offset > 0 %] [% next = offset + pagesize %]
-[% ELSE %]          [% next = pagesize %] [% END %]
-
-[% IF offset > 0 %] [% prev = offset - pagesize %]
-[% ELSE %]          [% prev = 0 %] [% END %]
-
-[% TotalVolumes = crms.GetReviewsCount(search1, search1value, op1, search2, search2value, since, 'conflict', 1) %]
-[% Total        = crms.GetReviewsCount(search1, search1value, op1, search2, search2value, since, 'conflict') %]
-[% IF Total > pagesize %] [% last = ( Total - ( Total mod pagesize ) )  %]
-[% ELSE %]          [% last = 0 %] [% END %]
-
-[% IF offset >= pagesize %] [% pagenum = offset / pagesize  + 1 %]
-[% ELSE %]          [% pagenum = 1 %] [% END %]
-
-
 <hr width="25%" align="left"/>
-<h3>reviews in conflict: </h3>
+<h2>Reviews in Conflict:</h2>
 
 [% INCLUDE selection.tt  %]
 
-<br/>
-
-[% reviews = crms.GetReviewsRef( order, direction, search1, search1value, op1, search2, search2value, since, offset, 'conflict' ) %]
-
-<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$prev">previous [% pagesize %]</a> || 
-<a href="?p=expert&id=$id&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$next">next [% pagesize %]</a> ||
-<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=0">first page</a> ||
-<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$last">last page</a>
-
-(found: $Total reviews/$TotalVolumes volumes, page = $pagenum)
-
-<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$prev&type=conflict&download=1" target="_blank">download</a>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="/c/crms/UseCases.html" target="_blank">Use Cases</a>
-[% active_color   = '#FFFFFF' %]	
-[% color_white    = '#FFFFFF' %]	
-[% color_gray     = '#FFFFC6' %]
-[% prev_id        = '' %]	
-
-<table BORDER="1" CELLPADDING="0" CELLSPACING="0">
-  <th>ID</th><th>Title</th><th>Author</th><th>review date</th><th>status</th>
-  <th>user</th><th>attr</th><th>reason</th><th>note category</th>
-  <th>note</th><th>priority</th>
-  [% FOREACH review IN reviews %]
-
-    [% IF prev_id == '' %]   
-    [% prev_id = review.id %]
-    [% END %]
-
-    [% IF prev_id != review.id %] 
-        [% IF active_color == color_gray  %]
-        [% active_color = color_white %]
-        [% ELSIF active_color == color_white %]
-        [% active_color = color_gray %]
-        [% END %]
-    [% END %]
-
-
-    <tr BGCOLOR="[% active_color %]">
-      <td>[% crms.DetailInfo( review.id, review.user, 'conflict' ) %]</td>
-      <td>[% crms.LinkToReview( review.id ) %]</td>
-      <td>$review.author</td>
-      <td>$review.time</td>
-      <td>$review.status</td>
-      <td>$review.user</td>
-      <td>$review.attr</td>
-      <td>$review.reason</td>
-      <td>$review.category</td>
-      <td>$review.note</td>
-      <td>$review.priority</td>
-    </tr>   
-
-
-
-    [% prev_id = review.id %]
-
-  [% END %]
-</table>
-
-<a href="?p=expert&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$prev">previous [% pagesize %]</a> || 
-<a href="?p=expert&id=$id&search1=$search1&search1value=$search1value&search2=$search2&search2value=$search2value&op1=$op1&since=$since&order=$order&direction=$direction&offset=$next">next [% pagesize %]</a>
+[% INCLUDE searchResults.tt  %]
 
 [% INCLUDE footer.tt %]

@@ -10,17 +10,26 @@
 
 
 <br/><br/>
-<form>
-  Sanity check the database:
+<form action="crms">
+  <b>Sanity check the database:</b><br/>
   <input type="hidden" name="p" value="debug"/>
   <input type="hidden" name="sanityCheck" value="1"/>
   <input type="submit" value="Do it!"/>
 </form>
 
-<form>
-  Process today's reviews: (<b>Avoid doing if Moses is here!</b>)
+<form action="crms">
+  <b>Process today's reviews:</b><br/>
+  <p class="smallishText">Only changes status of items in queue.
+  Does not try to move to historical or export determinations.</p>
   <input type="hidden" name="p" value="debug"/>
   <input type="hidden" name="processReviews" value="1"/>
+  <input type="submit" value="Do it!"/>
+</form>
+
+<form action="crms">
+  <b>List all bibdata entries with multibyte characters:</b><br/>
+  <input type="hidden" name="p" value="debug"/>
+  <input type="hidden" name="multibyte" value="1"/>
   <input type="submit" value="Do it!"/>
 </form>
 
@@ -38,7 +47,44 @@
 [% END %]
 
 [% IF cgi.param('processReviews') %]
-  [% crms.ClearQueueAndExport() %]
+  [% blah = crms.ProcessReviews() %]
+  [% FOREACH error IN crms.GetErrors %]
+    <p style="color:red;">[% error %]</p>
+  [% END %]
+[% END %]
+
+[% IF cgi.param('multibyte') %]
+  [% id = cgi.param('id') %]
+  [% IF id %]
+    [% blah = crms.UpdateAuthor(id) %]
+    [% blah = crms.UpdateTitle(id) %]
+    <h3>Fixed</h3>
+    <table class='exportStats'><tr><th>ID</th><th>Author</th><th>Title</th></tr>
+    [% sql = "SELECT author,title FROM bibdata WHERE id='$id'" %]
+    [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
+    [% FOREACH r IN ref %]
+      <tr><td>[% id %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td></tr>
+    [% END %]
+    </table><br/>
+  [% END %]  
+  [% sql = "SELECT id,author,title FROM bibdata WHERE LENGTH(title)!=CHAR_LENGTH(title) OR LENGTH(author)!=CHAR_LENGTH(author) OR author IS NULL OR title IS NULL" %]
+  [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
+  <h3>Need Fixed</h3>
+  <span class="smallishText">Found [% ref.size %] items.</span>
+  <table class='exportStats'><tr><th>ID</th><th>Author</th><th>Title</th><th>Fix</th></tr>
+  [% FOREACH r IN ref %]
+    <tr><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td>
+      <td><form>
+            <input type="hidden" name="p" value="debug"/>
+            <input type="hidden" name="multibyte" value="1"/>
+            <input type="hidden" name="id" value="[% r.0 %]"/>
+            <input type="submit" value=""/>
+          </form>
+      </td>
+    </tr>
+  [% END %]
+  </table>
 [% END %]
 
 [% INCLUDE footer.tt %]
+

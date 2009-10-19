@@ -33,26 +33,26 @@ function closeFrame() {
 function flipFrame() {
     var top = document.getElementById("topFrame");
     var bottom = document.getElementById("bFrame");
-    var div = document.getElementById("divFrame");
-    topSize= (document.getElementById("bFrame").height);
-    div.insertBefore(top, bottom);
+    //var div = document.getElementById("divFrame");
+    topSize= bottom.height;
+    //div.insertBefore(top, bottom);
     if ( topSize == "0%")
     {
-        document.getElementById("topFrame").width = "100%";
-        document.getElementById("bFrame").width = "100%";
-        document.getElementById("topFrame").height = "50%";
-        document.getElementById("bFrame").height   = "50%";
+        top.width = "100%";
+        bottom.width = "100%";
+        top.height = "50%";
+        bottom.height   = "50%";
     }
     else
     {
-        document.getElementById("topFrame").width = "100%";
-        document.getElementById("bFrame").width = "100%";
-        document.getElementById("topFrame").height = "100%";
-        document.getElementById("bFrame").height   = "0%";
+        top.width = "100%";
+        bottom.width = "100%";
+        top.height = "100%";
+        bottom.height   = "0%";
     }
 }
 function flipFrame2() {
-    topSize= (document.getElementById("topFrame").height);
+    topSize = (document.getElementById("topFrame").height);
     if ( topSize == "100%")
     {
         document.getElementById("topFrame").width = "100%";
@@ -67,28 +67,6 @@ function flipFrame2() {
         document.getElementById("topFrame").height = "100%";
         document.getElementById("bFrame").height   = "0%";
     }    
-}
-function flipHorizontal() {
-    var top = document.getElementById("topFrame");
-    var bottom = document.getElementById("bFrame");
-    var div = document.getElementById("divFrame");
-    topSize = top.width;
-    if ( topSize == "100%")
-    {
-        div.insertBefore(bottom, top);
-        top.width = "49%";
-        bottom.width   = "49%";
-        top.height = "100%";
-        bottom.height   = "100%";
-    }
-    else
-    {
-        div.insertBefore(top, bottom);
-        top.width = "100%";
-        bottom.width = "100%";
-        top.height = "100%";
-        bottom.height   = "0%";
-    }
 }
 function popRenewalDate() {
     var req = null; 
@@ -133,35 +111,33 @@ function popRenewalDate() {
 
 function ShowPopup(hoveritem)
 {
-hp = document.getElementById("hoverpopup");
+  hp = document.getElementById("hoverpopup");
 
-// Set position of hover-over popup
-hp.style.top = hoveritem.offsetTop + 18;
-hp.style.left = hoveritem.offsetLeft + 20;
+  // Set position of hover-over popup
+  hp.style.top = hoveritem.offsetTop + 18;
+  hp.style.left = hoveritem.offsetLeft + 20;
 
-// Set popup to visible
-hp.style.visibility = "Visible";
+  // Set popup to visible
+  hp.style.visibility = "Visible";
 }
 
 function HidePopup()
 {
-hp = document.getElementById("hoverpopup");
-hp.style.visibility = "Hidden";
+  hp = document.getElementById("hoverpopup");
+  hp.style.visibility = "Hidden";
 }
 
 function change()
 {
-hp = document.getElementById("test");
-hp.style.color = "blue";
-
+  hp = document.getElementById("test");
+  hp.style.color = "blue";
 }
 
 function toggle()  
 {  
-
-hp = document.getElementById(1);
-var color = hp.checked? "red" : "red"; 
-hp.style.color = color;
+  hp = document.getElementById(1);
+  var color = hp.checked? "red" : "red"; 
+  hp.style.color = color;
 } 
 
 function VerifyCategory()

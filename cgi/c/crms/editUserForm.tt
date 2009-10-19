@@ -37,13 +37,13 @@
 
     [% IF id %]
       <input type="checkbox" name="reviewer"
-        [% crms.IsUserReviewer(id) ? 'checked="1"' : '' %]
+        [% crms.IsUserReviewer(id) ? 'checked="checked"' : '' %]
         >reviewer (1)</input>
       <input type="checkbox" name="expert"
-        [% crms.IsUserExpert(id) ? 'checked="1"' : '' %]
+        [% crms.IsUserExpert(id) ? 'checked="checked"' : '' %]
         >expert (2)</input>
       <input type="checkbox" name="admin"
-        [% crms.IsUserAdmin(id) ? 'checked="1"' : '' %]
+        [% crms.IsUserAdmin(id) ? 'checked="checked"' : '' %]
         >admin (3)</input>
     [% ELSE %]
       <input type="checkbox" name="reviewer">reviewer (1)</input>

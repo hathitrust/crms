@@ -1,0 +1,174 @@
+[% search1        = cgi.param('search1')        %]
+[% search1value   = cgi.param('search1value')   %]
+[% search2        = cgi.param('search2')        %]
+[% search2value   = cgi.param('search2value')   %]
+[% op1            = cgi.param('op1')            %]
+[% since          = cgi.param('since')          %]
+[% order          = cgi.param('order')          %]
+[% direction      = cgi.param('direction')      %]
+[% offset         = cgi.param('offset')         %]
+[% p              = cgi.param('p')              %]
+[% vols           = cgi.param('vols')           %]
+[% pagesize       = cgi.param('records')        %]
+
+[% pagesize = pagesize.replace('\D','') %]
+[% IF NOT pagesize %][% pagesize = (vols)? 10:20 %][% END %]
+
+[% IF vols %]
+[% ref = crms.GetVolumesRef( order, direction, search1, search1value, op1, search2, search2value, since, offset, pagesize, p) %]
+[% ELSE %]
+[% ref = crms.GetReviewsRef( order, direction, search1, search1value, op1, search2, search2value, since, offset, pagesize, p) %]
+[% END %]
+[% TotalVolumes = ref.volumes %]
+[% Total = ref.reviews %]
+
+[% IF NOT Total %]
+<h4>No matching reviews found</h4>
+[% STOP %]
+[% END %]
+
+[% pagenum = ref.page %]
+[% of = ref.of %]
+[% reviews = ref.rows %]
+<p><b>Found $Total reviews for $TotalVolumes volumes, page $pagenum of $of</b></p>
+
+[% IF NOT offset %] [% offset = 0 %] [% END %]
+[% IF offset > 0 %] [% next = offset + pagesize %]
+[% ELSE %]          [% next = pagesize %] [% END %]
+[% IF offset > 0 %] [% prev = offset - pagesize %]
+[% ELSE %]          [% prev = 0 %] [% END %]
+
+[% whichtotal = (vols) ? TotalVolumes : Total %]
+[% IF whichtotal > pagesize %] [% last = (of - 1) * pagesize %]
+[% ELSE %]          [% last = 0 %] [% END %]
+
+[% doPrev = (offset > 0) %]
+[% doNext = (offset < last) %]
+[% doFirst = (offset != 0) %]
+[% doLast = (offset != last) %]
+
+[% IF doPrev %]
+<a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;since=$since&amp;order=$order&amp;direction=$direction&amp;offset=$prev&amp;vols=$vols&amp;records=$pagesize">
+[% ELSE %]
+<span class="disabledLink">
+[% END %]
+previous [% pagesize %]
+[% IF doPrev %]</a>[% ELSE %]</span>[% END %]
+&nbsp;||&nbsp;
+[% IF doNext %]
+<a href="?p=$p&amp;id=$id&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;since=$since&amp;order=$order&amp;direction=$direction&amp;offset=$next&amp;vols=$vols&amp;records=$pagesize">
+[% ELSE %]
+<span class="disabledLink">
+[% END %]
+next [% pagesize %]
+[% IF doNext %]</a>[% ELSE %]</span>[% END %]
+&nbsp;||&nbsp;
+[% IF doFirst %]
+<a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;since=$since&amp;order=$order&amp;direction=$direction&amp;offset=0&amp;vols=$vols&amp;records=$pagesize">
+[% ELSE %]
+<span class="disabledLink">
+[% END %]
+first page
+[% IF doFirst %]</a>[% ELSE %]</span>[% END %]
+&nbsp;||&nbsp;
+[% IF doLast %]
+<a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;since=$since&amp;order=$order&amp;direction=$direction&amp;offset=$last&amp;vols=$vols&amp;records=$pagesize">
+[% ELSE %]
+<span class="disabledLink">
+[% END %]
+last page
+[% IF doLast %]</a>[% ELSE %]</span>[% END %]
+
+[% IF Total > 0 %]
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;since=$since&amp;order=$order&amp;direction=$direction&amp;offset=$prev&amp;type=$p&amp;download=1" target="_blank">download</a>
+[% END %]
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="/c/crms/UseCases.html" target="_blank">Use Cases</a>
+[% color_white    = '#FFFFFF' %]
+[% IF vols %]
+[% color_gray     = '#B6D8B9' %] <!-- #99E3B9 is good too -->
+[% ELSE %]
+[% color_gray     = '#FEFCAE' %]
+[% END %]
+[% prev_id        = '' %]
+[% active_color   = color_white %]
+
+<table class="exportStats" style="width:100%;"><tr>
+  <th>ID</th>
+  <th>Title</th>
+  <th>Author</th>
+  <th>Date</th>
+  <th>Status</th>
+  [% IF p == 'adminHistoricalReviews' %]<th>Legacy</th>[% END %]
+  <th>User</th>
+  <th>Attr</th>
+  <th>Reason</th>
+  <th>Note&nbsp;Category</th>
+  <th>Note</th>
+  [% IF crms.IsUserAdmin() %]<th>Priority</th>[% END %]
+  [% IF p == 'adminHistoricalReviews' %]<th>Verdict</th>[% END %]
+  </tr>
+  [% FOREACH review IN ref.rows %]
+
+    [% IF prev_id == '' %][% prev_id = review.id %][% END %]
+
+    [% IF prev_id != review.id %] 
+      [% IF active_color == color_gray  %]
+        [% active_color = color_white %]
+      [% ELSIF active_color == color_white %]
+        [% active_color = color_gray %]
+      [% END %]
+    [% END %]
+
+    <tr style="background-color:[% active_color %];">
+      <td>[% crms.DetailInfo(review.id, review.user, p) %]</td>
+      [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' %]<td>[% crms.LinkToReview( review.id ) %]</td>
+      [% ELSE %]<td>[% crms.LinkToPT( review.id ) %]</td>[% END %]
+      <td>$review.author</td>
+      <td>$review.time</td>
+      <td>$review.status</td>
+      [% IF p == 'adminHistoricalReviews' %]<td>$review.legacy</td>[% END %]
+      <td>$review.user</td>
+      <td>$review.attr</td>
+      <td>$review.reason</td>
+      <td>$review.category</td>
+      <td>$review.note</td>
+      [% IF crms.IsUserAdmin() %]<td>$review.priority</td>[% END %]
+      [% IF p == 'adminHistoricalReviews' %]
+      <td align="center">
+        <img width="16" height="16" alt="Correctness" src="/c/crms/[% (review.status!=5 || crms.IsReviewCorrect(review.id,review.user))? 'CheckIcon.png':'XIcon.png'%]"/>
+      </td>
+      [% END %]
+    </tr>
+
+    [% prev_id = review.id %]
+
+  [% END %]
+</table>
+
+[% IF doPrev %]
+<a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;since=$since&amp;order=$order&amp;direction=$direction&amp;offset=$prev&amp;vols=$vols&amp;records=$pagesize">
+[% ELSE %]
+<span class="disabledLink">
+[% END %]
+previous [% pagesize %]
+[% IF doPrev %]</a>[% ELSE %]</span>[% END %]
+&nbsp;||&nbsp;
+[% IF doNext %]
+<a href="?p=$p&amp;id=$id&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;since=$since&amp;order=$order&amp;direction=$direction&amp;offset=$next&amp;vols=$vols&amp;records=$pagesize">
+[% ELSE %]
+<span class="disabledLink">
+[% END %]
+next [% pagesize %]
+[% IF doNext %]</a>[% ELSE %]</span>[% END %]
+
+[% IF of > 1 %]
+  <br/>
+  Jump to Page: ||
+  [% FOREACH pg IN [1 .. of] %]
+    <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;since=$since&amp;order=$order&amp;direction=$direction&amp;offset=[% (pg - 1) * pagesize %]&amp;vols=$vols&amp;records=$pagesize">
+    [% IF pg == pagenum %]<b>[% pg %]</b>[% ELSE %][% pg %][% END %]
+</a> || 
+  [% END %]
+[% END %]
+<!-- Icons courtesy of 	http://www.visualpharm.com -->

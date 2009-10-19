@@ -169,32 +169,6 @@ if  (  $cgi->param('p') eq 'confirmReview' )
   }
 }
 
-if  ( (  $cgi->param('p') eq 'queueAdd' )  && ( $cgi->param('id') ) )
-{
-  my $id = $cgi->param('id');
-
-  # status is 0
-  # priority is 2
-  my $status = $crms->AddItemToQueueOrSetItemActive( $id, $crms->GetTodaysDate(), 0, 2 );
-  
-  my $msg;
-  if ( $status == 1 )
-  {
-    $cgi->delete_all();
-    $cgi->param('p', 'review' );
-    $cgi->param('barcode', $id );
-  }
-  else
-  {
-    $msg = qq{$id could not be added to the queue because $status.};
-  }
-
-  $cgi->param('addMsg', $msg );
-  
-}
-
-
-
 if  (  $cgi->param('download')  )  
 {
 
@@ -237,6 +211,8 @@ my $config =
     INTERPOLATE  => 1,     ## expand "$var" in plain text
     POST_CHOMP   => 1,     ## cleanup whitespace
     EVAL_PERL    => 1,     ## evaluate Perl code blocks
+    ENCODING     => 'UTF-8',
+
 };
 
 ## make sure user known

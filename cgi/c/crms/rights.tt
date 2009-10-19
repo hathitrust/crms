@@ -7,12 +7,9 @@
 [% INCLUDE adminNav.tt  %]
 [% q = cgi.param('query') %]
 
-<hr width="25%" align="left"/>
-
-
-<br/><br/>
-<h3>Search Rights Database</h3>
-<form>
+<hr width="25%" align="left"/><br/>
+<h2>Search Rights Database</h2>
+<form action="crms">
   <p class="smallishText">Enter one volume id per line.</p>
   <input type="hidden" name="p" value="rights"/>
   <textarea name="query" cols="20" rows="10" style="width:33%; height:9em;"></textarea>
