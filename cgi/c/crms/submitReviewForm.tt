@@ -18,17 +18,12 @@
     <tr>
       <td class="display" align="left">&nbsp;&nbsp;&nbsp;Toggle:</td>
       <td class="display" align="center">
-        <a href="javascript:flipFrame()" accesskey="p">Full/Split</a>
+        <a href="javascript:flipFrame()" accesskey="f">Full/Split</a>
       </td>
       <td class="display"/>
       <td class="display">
         <a href="javascript:flipFrame2()" accesskey="o">Views</a>
       </td>
-      <!--
-      <td class="display">
-        <a href="javascript:flipHorizontal()" accesskey="q"><img title="Toggle Horizontal" width="16" height="16" border="0" src="/c/crms/toggleHorizontal.png"/></a>
-      </td>
-      -->
     </tr>
     <tr/>
     <tr/>
