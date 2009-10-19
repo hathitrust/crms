@@ -15,16 +15,17 @@ use Getopt::Std;
 use List::Util qw(shuffle);
 
 my %opts;
-getopts('hnu:v', \%opts);
+getopts('hnpu:v', \%opts);
 
-my $help      = $opts{'h'};
-my $noop      = $opts{'n'};
-my $user      = $opts{'u'};
-my $verbose   = $opts{'v'};
+my $help       = $opts{'h'};
+my $noop       = $opts{'n'};
+my $production = $opts{'p'};
+my $user       = $opts{'u'};
+my $verbose    = $opts{'v'};
 
 if ( $help || scalar @ARGV != 1 || !$user)
 {
-  die "USAGE: $0 [-h] [-n] [-v] -u rereport_user tsv_file\n\n";
+  die "USAGE: $0 [-h] [-n] [-p] [-v] -u rereport_user tsv_file\n\n";
 }
 my $file = $ARGV[0];
 
@@ -35,8 +36,9 @@ my $crms = CRMS->new(
     configFile   =>   'crms.cfg',
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
-    dev          =>   $DLPS_DEV,
+    dev          =>   !$production,
 );
+
 
 open my $fh, $file or die "failed to open $file: $@ \n";
 
@@ -107,6 +109,13 @@ printf("May: %d Jun: %d Aug: %d Oct: %d Dec: %d\n", scalar @May, scalar @Jun, sc
 @Oct = @Oct[(shuffle(0..$#Oct))[0..59]];
 @Dec = @Dec[(shuffle(0..$#Dec))[0..59]];
 printf("May: %d Jun: %d Aug: %d Oct: %d Dec: %d\n", scalar @May, scalar @Jun, scalar @Aug, scalar @Oct, scalar @Dec);
+$crms = CRMS->new(
+    logFile      =>   "$DLXSROOT/prep/c/crms/log_IDs.txt",
+    configFile   =>   'crms.cfg',
+    verbose      =>   $verbose,
+    root         =>   $DLXSROOT,
+    dev          =>   !$production,
+);
 my $cnt = 0;
 my %seen = ();
 my $now = $crms->GetTodaysDate();

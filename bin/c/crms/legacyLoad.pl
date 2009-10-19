@@ -15,15 +15,16 @@ use Getopt::Std;
 use Encode qw(from_to);
 
 my %opts;
-getopts('hnv', \%opts);
+getopts('hnpv', \%opts);
 
 my $help       = $opts{'h'};
 my $noop       = $opts{'n'};
+my $production = $opts{'p'};
 my $verbose    = $opts{'v'};
 
 if ( $help || scalar @ARGV < 1)
 {
-  die "USAGE: $0 [-h] [-n] [-v] tsv_file1 [tsv_file2...]\n\n";
+  die "USAGE: $0 [-h] [-n] [-p] [-v] tsv_file1 [tsv_file2...]\n\n";
 }
 
 my $file = $ARGV[0];
@@ -33,7 +34,7 @@ my $crms = CRMS->new(
     configFile   =>   'crms.cfg',
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
-    dev          =>   $DLPS_DEV,
+    dev          =>   !$production,
 );
 
 foreach my $f (@ARGV)
@@ -48,7 +49,7 @@ sub ProcessFile
   read $in, my $buf, -s $f; # one of many ways to slurp file.
   close $in;
   from_to($buf,'UTF-16','UTF-8');
-
+  $buf =~ s/\s+$//s;
   my @lines = split m/\n+/, $buf;
 
   # NOTE: The file must be exported from Excel as UTF-16 (no BOM is fine).
