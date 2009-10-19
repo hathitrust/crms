@@ -27,11 +27,25 @@ body {
 }
 
 
-.divbody   { float:left; width:99%;}
+.divbody {
+  float:left;
+  width:99%;
+}
 
-.divNav    { float:left; width:210px;}
+.divNav {
+  float:left;
+  width:210px;
+}
 
-.divFrame  { float:left; height:100%; border-left: 1px solid #72859a; position:absolute; left:210px; right:0px; top:0px;}
+.divFrame {
+  float:left;
+  height:100%;
+  border-left: 1px solid #72859a;
+  position:absolute;
+  left:210px;
+  right:0px;
+  top:0px;
+}
 
 .navtop    {
   text-align:center; 
@@ -49,6 +63,15 @@ body {
 
 .smallishText { font-size:.8em }
 
+.greeting {
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+.disabledLink {
+  color:#444444;
+}
+
 .plainLink { text-decoration: none; color: black;}
 
 input {
@@ -57,13 +80,13 @@ input {
 
 table {
   width: 100%;
-  padding:5px;
+  padding: 5px;
 }
 
 
 table.nav { 
   border-bottom: 1px solid #72859a;
-  font-size:12px;
+  font-size: 12px;
         
 }
 
@@ -262,3 +285,9 @@ td.debugVal {
   color:red;
 }
 
+hr {
+  border:0;
+  color:#000000;
+  background-color:#000000;
+  height:1px;
+}
