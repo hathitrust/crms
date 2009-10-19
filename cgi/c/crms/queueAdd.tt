@@ -6,35 +6,58 @@
 [% INCLUDE header.tt    %]
 [% INCLUDE adminNav.tt  %]
 
-[% addmsg    = cgi.param('addMsg')   %]
+[% ids = cgi.param('ids') %]
+[% pri = cgi.param('priority') %]
+[% override = cgi.param('override') %]
+[% IF NOT pri %][% pri = 2 %][% END %]
 
-<hr width="25%" align="left"/>
+<hr width="25%" align="left"/><br/>
+<h2>Add Volumes to the Queue:</h2>
+These items will take priority in the review process.
 
-
-<strong>Add a volume to the queue: </strong>
-This item will take priority in the review process.
-<blockquote>
-
-</blockquote>
-
-<form>
+<form action="crms">
+  <p class="smallishText">Enter one volume id per line.</p>
   <input type="hidden" name="p" value="queueAdd"/>
-
-
-
-  barcode:   <input type="text"  name="id" value=""/>
-<br/>
-
-<hr width="25%" align="left"/>
+  <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;"></textarea><br/>
+  <select name="priority">
+  [% IF pri == '2' %]
+    <option selected="selected" calue="2">Priority 2</option>
+  [% ELSE %]
+    <option>Priority 2</option>
+  [% END %]
+  [% IF pri == '3' %]
+    <option selected="selected" value="3">Priority 3</option>
+  [% ELSE %]
+    <option>Priority 3</option>
+  [% END %]
+  </select>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  Override Restrictions<input type="checkbox" name="override" [% override? 'checked="checked"' : '' %]/>
+  &nbsp;&nbsp;&nbsp;&nbsp;
   <input type="submit" value="Submit"/>
 </form>
-
-
-[% IF addmsg %]
-	<br>
-<FONT COLOR=red>[% addmsg %]
-    <br/>
+<br/>
+<p class="smallishText">Priority 2 can be be reviewed by anyone.<br/>
+Priority 3 can only be reviewed by an expert.<br/>
+<i>Override Restrictions</i> allows you to enter government documents, non-books, and items from before 1923 or after 1963.</p>
+<br/>
+[% IF ids && pri %]
+  [% adds = 0 %]
+  [% skips = 0 %]
+  [% FOREACH id IN ids.split %]
+    [% status = crms.AddItemToQueueOrSetItemActive(id, crms.GetTodaysDate(), 0, pri, override) %]
+    [% IF status %]
+      <p style="color:red"><b>Could not add $id to the queue because the $status</b></p>
+      [% skips = skips + 1 %]
+    [% ELSE %]
+      [% adds = adds + 1 %]
+    [% END %]
+  [% END %]
+  <p><b>Added $adds  volumes, skipped <span style="color:red;">$skips</span></b></p>
+  [% IF adds > 0 %]
+    <a href="?p=review">Continue to reviews</a>
+  [% END %]
 [% END %]
 
-
 [% INCLUDE footer.tt %]
+
