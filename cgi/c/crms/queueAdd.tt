@@ -21,16 +21,8 @@ These items will take priority in the review process.
   <input type="hidden" name="p" value="queueAdd"/>
   <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;"></textarea><br/>
   <select name="priority">
-  [% IF pri == '2' %]
-    <option selected="selected" calue="2">Priority 2</option>
-  [% ELSE %]
-    <option>Priority 2</option>
-  [% END %]
-  [% IF pri == '3' %]
-    <option selected="selected" value="3">Priority 3</option>
-  [% ELSE %]
-    <option>Priority 3</option>
-  [% END %]
+    <option value="2" [% (pri==2)? 'selected="selected"':'' %]>Priority 2</option>
+    <option value="3" [% (pri==3)? 'selected="selected"':'' %]>Priority 3</option>
   </select>
   &nbsp;&nbsp;&nbsp;&nbsp;
   Override Restrictions<input type="checkbox" name="override" [% override? 'checked="checked"' : '' %]/>
