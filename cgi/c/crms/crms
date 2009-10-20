@@ -11,7 +11,6 @@ use POSIX;
 
 # !/l/local/bin/perl
 
-my $user = $ENV{'REMOTE_USER'};
 my $ru = $ENV{'REMOTE_USER'};
 my $cgi  = new CGI;
 my $crms = CRMS->new(
@@ -20,77 +19,73 @@ my $crms = CRMS->new(
         verbose      =>   0,
         root         =>   $DLXSROOT,
         dev          =>   $DLPS_DEV,
-        user         =>   $user,
+        user         =>   $ru,
         );
+my $alias = $crms->GetAliasUserName( $ru );
 
 if  ( $cgi->param('p') eq 'Logout' )
 {
   #Remove all locks for this user.
-  $crms->UnlockAllItemsForUser( $user );
-
-  #Remove all alias users for this user:
-  $crms->ChangeAliasUserName($user, '');
-
-  # change 'central' to the url of your weblogin server.
-  my $central = "https://weblogin.umich.edu/cgi-bin/logout";
-  my $query_string = "";
-  
-  # expire and nullify service cookie
-  print( "Set-Cookie: $ENV{ COSIGN_SERVICE }=null; path=/; expires=Wednesday, 27-Jan-77 00:00:00 GMT; secure\n" );
-  
-  if ( $ENV{ QUERY_STRING } =~ m|^(https?://.*)$| ) {
-    $query_string = "?$1";
-  }
-
-  # perform any local cleanup here
-  
-  # redirect to central weblogin server
-  print( "Location: $central$query_string\n\n" );
-
-  exit ( 0 );
-}
-
-
-my $new_user = $crms->GetAliasUserName( $user );
-if ( ( $new_user ) )
-{
-  $user = $new_user;
-
-  $crms = CRMS->new(
-        logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
-        configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
-        verbose      =>   0,
-        root         =>   $DLXSROOT,
-        dev          =>   $DLPS_DEV,
-        user         =>   $user,
-        );
-}
-if  (  $cgi->param('changeuser') == 1 )  
-{
-  $new_user = $cgi->param('newuser');
-  if ($crms->GetUserName($new_user))
+  $crms->UnlockAllItemsForUser( $ru );
+  # If we're aliased, we don't log out, we just drop the alias.
+  if ($alias ne $ru)
   {
-    if ($new_user eq $ru)
+    $cgi->param('changeuser', 1);
+    $cgi->param('newuser', $ru);
+  }
+  else
+  {
+    #Remove all alias users for this user:
+    $crms->ChangeAliasUserName($ru, '');
+
+    # change 'central' to the url of your weblogin server.
+    my $central = "https://weblogin.umich.edu/cgi-bin/logout";
+    my $query_string = "";
+
+    # expire and nullify service cookie
+    print( "Set-Cookie: $ENV{ COSIGN_SERVICE }=null; path=/; expires=Wednesday, 27-Jan-77 00:00:00 GMT; secure\n" );
+
+    if ( $ENV{ QUERY_STRING } =~ m|^(https?://.*)$| ) {
+      $query_string = "?$1";
+    }
+
+    # perform any local cleanup here
+
+    # redirect to central weblogin server
+    print( "Location: $central$query_string\n\n" );
+
+    exit ( 0 );
+  }
+}
+
+if ( $cgi->param('changeuser') == 1 )  
+{
+  $alias = $cgi->param('newuser');
+  if ($crms->GetUserName($alias))
+  {
+    if ($alias eq $ru)
     {
       $crms->ChangeAliasUserName($ru, '');
     }
     else
     {
-      $crms->ChangeAliasUserName($user, $new_user);
+      $crms->ChangeAliasUserName($ru, $alias);
     }
-    $user = $new_user;
-
-    $crms = CRMS->new(
-          logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
-          configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
-          verbose      =>   0,
-          root         =>   $DLXSROOT,
-          dev          =>   $DLPS_DEV,
-          user         =>   $user,
-          );
   }
+  $cgi->delete_all();
 }
-
+my $user = ($alias)? $alias:$ru;
+if ($user ne $ru)
+{
+  $crms = CRMS->new(
+            logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
+            configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
+            verbose      =>   0,
+            root         =>   $DLXSROOT,
+            dev          =>   $DLPS_DEV,
+            user         =>   $user,
+            );
+}
 
 if  (  $cgi->param('p') eq 'confirmReview' )  
 {
