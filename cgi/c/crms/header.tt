@@ -3,8 +3,11 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
-    
     [% page = cgi.param('p') %]
+    [% IF page.search('(?i)reviews') || page == 'expert' %]
+    <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
+    [% END %]
+    
     [% dev = crms.get('dev') %]
     [% fulltitle = title %]
     [% IF dev %]
