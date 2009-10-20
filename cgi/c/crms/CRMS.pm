@@ -560,7 +560,7 @@ sub AddItemToQueueOrSetItemActive
   my $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source ) values (1, 'ADMINUI')};
   $self->PrepareSubmitSql( $sql );
   
-  return 0;
+  return 1;
 }
 
 # Used by the script loadIDs.pl to add and/or bump priority on a volume
