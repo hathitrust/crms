@@ -5,11 +5,12 @@
 [% page   = cgi.param('page')     %]
 
 
-[% data = crms.GetReviewsRef( 'id', 'DESC', 'Identifier', id, 'AND', 'UserId', user, '', '', page ) %]
+[% data = crms.GetReviewsRef( 'id', 'DESC', 'Identifier', id, 'AND', 'UserId', user, '', '', '', '', page ) %]
 [% reviews = data.rows %]
 [% IF NOT reviews.size %]
   [% #Fall back to all reviews in the case that page is 'conflict' and conflict is resolved %]
-  [% reviews = crms.GetReviewsRef( 'id', 'DESC', 'Identifier', id, 'AND', 'UserId', user, '', '', 'reviews' ) %]
+  [% data = crms.GetReviewsRef( 'id', 'DESC', 'Identifier', id, 'AND', 'UserId', user, '', '', '', '', 'reviews' ) %]
+  [% reviews = data.rows %]
 [% END %]
 [% IF NOT reviews.size %]
   <b>Review has been processed and is no longer accessible from this view.</b><br/>
@@ -26,7 +27,7 @@
   </table>
   <br/>
   <table class="exportStats">
-  <tr><th>Date</th><td>[% review.time %]</td></tr>
+  <tr><th>Date</th><td>                  [% review.time %]</td></tr>
   <tr><th>Review&nbsp;Status</th><td>    [% crms.GetStatus( review.id ) %]</td></tr>
   <tr><th>Legacy&nbsp;Status</th><td>    [% review.legacy %]</td></tr>
   </table>
@@ -39,9 +40,11 @@
   <tr><th>User&nbsp;Note</th><td>        [% review.note %]</td></tr>
   </table>
   <br/>
+[% IF crms.IsUserAdmin(user) %]
   <table class="exportStats">
   <tr><th>Priority</th><td>              [% review.priority %]</td></tr>
   </table>
+[% END %]
 [% END %]
 <a href="JavaScript:window.close()">Close</a>
 

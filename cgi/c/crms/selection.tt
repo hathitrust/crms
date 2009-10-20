@@ -4,14 +4,14 @@
 [% search2 = cgi.param("search2") %]
 [% search1value = cgi.param("search1value") %]
 [% search2value = cgi.param("search2value") %]
-[% since = cgi.param('since') %]
+[% startDate = cgi.param('startDate') %]
+[% endDate = cgi.param('endDate') %]
 [% order = cgi.param('order') %]
 [% dir = cgi.param('direction') %]
 [% vols = cgi.param('vols')   %]
 [% recs = cgi.param('records')   %]
 [% adm = crms.IsUserAdmin() %]
 <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
-<link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
 [% recs = recs.replace('\D','') %]
 [% IF NOT recs %][% recs = (vols)? 10:20 %][% END %]
 
@@ -20,7 +20,14 @@
   [% blah = cgi.param('direction', 'DESC') %]
 [% END %]
 <br/>
-<div style="border-style:solid;width:33%;border-width:0.1px;padding:10px;">
+<div style="position:relative;border-style:solid;width:33%;border-width:0.1px;padding:10px;">
+
+<a href="/c/crms/keys.html" target="_blank" accesskey="h">
+<span style="position:absolute;top:4px;right:4px">Search Help
+<img style="border:0px solid;" width="16" height="16" alt="Search Help" src="/c/crms/help.png"/>
+</span>
+</a>
+
 <form action="crms">
 <input type="hidden" name="p" value="$page"/>
 
@@ -29,11 +36,11 @@
   <label for="vols">Search for volumes:</label>
   <input type="checkbox" id="vols" name="vols" [% vols? 'checked="checked"' : '' %]
          onclick="document.getElementById('records').value = ((this.checked)? '10':'20');
-                  document.getElementById('volrevSpan').innerHTML = ((this.checked)? 'Volume':'Review');">
+                  document.getElementById('volrevSpan').innerHTML = ((this.checked)? 'Volume':'Review');"/>
 <br/><br/>
 [% END %]
 
-Restrict selection (<a href="/c/crms/keys.html" target="_blank" accesskey="h">Search Help</a>):<br/>
+Restrict selection:<br/>
 
 [% crms.ReviewSearchMenu(page, 'search1', search1) %]
 <input type="text"  id="search1value" name="search1value" value="[% search1value %]"/>
@@ -42,68 +49,53 @@ Restrict selection (<a href="/c/crms/keys.html" target="_blank" accesskey="h">Se
   <option [% op1 == 'OR' ? 'selected="selected"':'' %]>OR</option>
 </select>
 <br/>
+
 [% crms.ReviewSearchMenu(page, 'search2', search2) %]
 <input type="text" id="search2value" name="search2value" value="[% search2value %]"/>
 <br/>
-<label for="since">Since:</label>
-<input type="text" id="since" name="since" value="$since" onclick="datePickerController.show('since');" onblur="datePickerController.hide('since');"/>
+
+<label for="startDate">Start Date:</label>
+<input type="text" id="startDate" name="startDate" value="[% startDate %]" onclick="datePickerController.show('startDate');"
+       onblur="datePickerController.hide('startDate');"/>
 <script type="text/javascript">
 // <![CDATA[       
-  var opts = {                        
-          formElements:{"since":"Y-ds-m-ds-d"}
-  };        
+  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
   datePickerController.createDatePicker(opts);
 // ]]>
 </script>
 <span class="smallText">(YYYY-MM-DD)</span>
 <br/>
+<label for="endDate">End Date:</label>
+<input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
+       onblur="datePickerController.hide('endDate');"/>
+<script type="text/javascript">
+// <![CDATA[       
+  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };       
+  datePickerController.createDatePicker(opts);
+// ]]>
+</script>
+<span class="smallText">(YYYY-MM-DD)</span>
+<br/>
+
 <label for="order">Order:</label>
 <select id="order" name="order">
   <option value="id" [% order == 'id' ?  'selected="selected"':'' %]>Identifier</option>
-  <option value="title" [% order == 'title' ? 'selected="selected"':'' %]/>Title</option>
-  <option value="author" [% order == 'author' ? 'selected="selected"':'' %]/>Author</option>
-  <option value="id" [% order == 'time' ?  'selected="selected"':'' %]>Date</option>
+  <option value="title" [% order == 'title' ? 'selected="selected"':'' %]>Title</option>
+  <option value="author" [% order == 'author' ? 'selected="selected"':'' %]>Author</option>
+  <option value="date" [% order == 'time' ?  'selected="selected"':'' %]>Date</option>
 [% IF page != 'editReviews' %]
-  <option value="status" [% order == 'status' ? 'selected="selected"':'' %]/>Status</option>
+  <option value="status" [% order == 'status' ? 'selected="selected"':'' %]>Status</option>
 [% END %]
 [% IF page != 'editReviews' && page != 'userReviews' %]
   <option value="user" [% order == 'user' ?  'selected="selected"':'' %]>User</option>
 [% END %]
-  <option value="attr" [% order == 'attr' ? 'selected="selected"':'' %]/>Attr Number</option>
-
-  <option value="category" [% order == 'attr' ? 'selected="selected"':'' %]/>Note Category</option>
+  <option value="attr" [% order == 'attr' ? 'selected="selected"':'' %]>Attr Number</option>
+  <option value="reason" [% order == 'reason' ? 'selected="selected"':'' %]>Reason Number</option>
+  <option value="category" [% order == 'attr' ? 'selected="selected"':'' %]>Note Category</option>
 [% IF adm %]
-  <option value="priority" [% order == 'priority' ? 'selected="selected"':'' %]/>Priority</option>
+  <option value="priority" [% order == 'priority' ? 'selected="selected"':'' %]>Priority</option>
 [% END %]
 </select>
-
-<!--
-  <input type="radio" id="order" name="order" value="id"
-    [% order == 'id' ? 'checked="checked"' : '' %]/>id
-  <input type="radio" id="order" name="order" value="time"
-    [% order == 'time' ? 'checked="checked"' : '' %]/>date
-[% IF page != 'editReviews' && page != 'userReviews' %]
-  <input type="radio" id="order" name="order" value="user"
-    [% order == 'user' ? 'checked="checked"' : '' %]/>user
-[% END %]
-  <input type="radio" id="order" name="order" value="author"
-    [% order == 'author' ? 'checked="checked"' : '' %] />author
-  <input type="radio" id="order" name="order" value="title"
-    [% order == 'title' ? 'checked="checked"' : '' %]/>title
-  <input type="radio" id="order" name="order" value="attr"
-    [% order == 'attr' ? 'checked="checked"' : '' %]/>attr
-[% IF page != 'editReviews' %]
-  <input type="radio" id="order" name="order" value="status"
-    [% order == 'status' ? 'checked="checked"' : '' %]/>status
-[% END %]
-  <input type="radio" id="order" name="order" value="category" 
-    [% order == 'category' ? 'checked="checked"' : '' %]/>note&nbsp;category
-[% IF adm %]
-  <input type="radio" id="order" name="order" value="priority" 
-    [% order == 'priority' ? 'checked="checked"' : '' %]/>priority
-[% END %]
--->
-
 <br/>
 
 <label for="direction">Direction:</label>
@@ -112,19 +104,14 @@ Restrict selection (<a href="/c/crms/keys.html" target="_blank" accesskey="h">Se
   <option value="ASC"  [% dir == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
   <option value="DESC" [% dir == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
 </select>
-
-<!--
-  <label><input type="radio" id="direction" name="direction" value="ASC"   
-    [% dir == 'ASC' ? 'selected="selected"' : '' %]  />ASC</label>
-  <label><input type="radio" id="direction" name="direction" value="DESC" 
-    [% dir == 'DESC' ? 'selected="selected"' : '' %] />DESC</label>
--->
 <br/>
+
 <label for="records">Display:</label><input size="3" type="text" id="records" name="records" value="[% recs %]"/> records per page.
 <br/>
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"
-       onclick="document.getElementById('since').value='';
+       onclick="document.getElementById('startDate').value='';
+                document.getElementById('endDate').value='';
                 document.getElementById('search1value').value='';
                 document.getElementById('search2value').value='';
        "/>
