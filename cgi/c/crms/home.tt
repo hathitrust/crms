@@ -18,25 +18,20 @@
   [% END %]
 </div>
 
-<div>
-  <blockquote>
-    [% locked = crms.GetLockedItems() %]
-    [% IF locked %]
-      [% FOREACH item IN locked.keys %]
-        [% IF locked.${item}.locked == user %]
-          <strong>locked:</strong>
-          [% crms.GetTitle( item ) %]
-           (since: [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
-           [ <a href="crms?p=crms&checkin=[% item %]">unlock item</a> ]
-        [% END %]
-      [% END %]
-    [% ELSE %]
-      none
-    [% END %]
-  </blockquote>
 
-</div>
+[% locked = crms.GetLockedItems() %]
+[% IF locked %]
+  <div><blockquote>
+  [% FOREACH item IN locked.keys %]
+    [% IF locked.${item}.locked == user %]
+      <strong>locked:</strong>
+      [% crms.GetTitle( item ) %]
+      (since: [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
+      [ <a href="crms?p=crms&amp;checkin=[% item %]">unlock item</a> ]
+    [% END %]
+  [% END %]
+  </blockquote></div>
+[% END %]
+  
 
 [% INCLUDE footer.tt %]
-
-</div>
