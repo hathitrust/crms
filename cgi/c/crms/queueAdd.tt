@@ -16,7 +16,8 @@
 These items will take priority in the review process.
 
 <form action="crms">
-  <p class="smallishText">Enter one volume id per line.</p>
+  <p class="smallishText">Enter one volume id per line.
+  Entries that don't have a namespace will be given an <code>mdp.</code> prefix.</p>
   <input type="hidden" name="p" value="queueAdd"/>
   <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;"></textarea><br/>
   <select name="priority">
