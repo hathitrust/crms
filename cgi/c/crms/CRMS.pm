@@ -388,7 +388,7 @@ sub LoadNewItems
         my $author = $row->[4];
 
         my $inqueue = $self->AddItemToQueue( $row->[0], $row->[1], $pub_date, $title, $author, 0, 0 ); 
-        $count = $count + $inqueue;
+        $count += $inqueue;
 
         if ( $count == $limitcount )
         {
@@ -1336,7 +1336,8 @@ sub CreateSQL
     my $search2            = shift;
     my $search2value       = shift;
 
-    my $since              = shift;
+    my $startDate          = shift;
+    my $endDate            = shift;
     my $offset             = shift;
     my $pagesize           = shift;
     my $type               = shift;
@@ -1423,7 +1424,8 @@ sub CreateSQL
       { $sql .= qq{ AND $search2term  };   }
     }
 
-    if ( $since ) { $sql .= qq{ AND r.time >= "$since" }; }
+    if ( $startDate ) { $sql .= qq{ AND r.time >= "$startDate" }; }
+    if ( $endDate ) { $sql .= qq{ AND r.time <= "$endDate" }; }
 
     my $limit_section = '';
     if ( $limit )
@@ -1468,14 +1470,15 @@ sub SearchAndDownload
     my $search2            = shift;
     my $search2value       = shift;
 
-    my $since              = shift;
+    my $startDate          = shift;
+    my $endDate            = shift;
     my $offset             = shift;
 
     my $type               = shift;
     my $limit              = 0;
 
     my $isadmin = $self->IsUserAdmin();
-    my $sql =  $self->CreateSQL ( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $since, $offset, undef, $type, $limit );
+    my $sql =  $self->CreateSQL ( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate, $offset, undef, $type, $limit );
     
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -1598,15 +1601,16 @@ sub GetReviewsRef
     my $search2            = shift;
     my $search2Value       = shift;
 
-    my $since              = shift;
+    my $startDate          = shift;
+    my $endDate            = shift;
     my $offset             = shift;
     my $pagesize           = shift;
     my $page               = shift;
 
     my $limit              = 1;
-    
-    #print("GetReviewsRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$since','$offset','$pagesize','$page');<br/>\n");
-    my $sql =  $self->CreateSQL ( $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $since, $offset, $pagesize, $page, $limit );
+    $pagesize = 20 unless $pagesize;
+    #print("GetReviewsRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
+    my $sql =  $self->CreateSQL ( $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $offset, $pagesize, $page, $limit );
     #print "$sql\n";
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -1635,8 +1639,8 @@ sub GetReviewsRef
                    };
         push( @{$return}, $item );
     }
-    my $totalReviews = $self->GetReviewsCount($search1, $search1Value, $op1, $search2, $search2Value, $since, $page, 0);
-    my $totalVolumes = $self->GetReviewsCount($search1, $search1Value, $op1, $search2, $search2Value, $since, $page, 1);
+    my $totalReviews = $self->GetReviewsCount($search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $page, 0);
+    my $totalVolumes = $self->GetReviewsCount($search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $page, 1);
     my $n = POSIX::ceil($offset/$pagesize+1);
     my $of = POSIX::ceil($totalReviews/$pagesize);
     $n = 0 if $of == 0;
@@ -1660,12 +1664,14 @@ sub GetVolumesRef
   my $op1 = shift;
   my $search2  = shift;
   my $search2Value = shift;
-  my $since = shift;
+  my $startDate = shift;
+  my $endDate = shift;
   my $offset = shift;
   my $pagesize = shift;
   my $page = shift;
-  #print("GetVolumesRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$since','$offset','$pagesize','$page');<br/>\n");
+  #print("GetVolumesRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
   
+  $pagesize = 10 unless $pagesize;
   if (!$order)
   {
     $order = 'id';
@@ -1712,7 +1718,8 @@ sub GetVolumesRef
     $search2Value =~ s,\*,%,gs;
     $tester2 = ' LIKE ';
   }
-  push @rest, "r.time >= '$since'" if $since;
+  push @rest, "r.time >= '$startDate'" if $startDate;
+  push @rest, "r.time <= '$endDate'" if $endDate;
   push @rest, "$search1 $tester2 '$search1Value'" if $search1Value ne '';
   push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
   my $restrict = join(' AND ', @rest);
@@ -1763,7 +1770,7 @@ sub GetVolumesRef
     }
   }
   my $n = POSIX::ceil($offset/$pagesize+1);
-  my $of = POSIX::ceil($totalReviews/$pagesize);
+  my $of = POSIX::ceil($totalVolumes/$pagesize);
   $n = 0 if $of == 0;
   my $data = {'rows' => $return,
               'reviews' => $totalReviews,
@@ -1783,7 +1790,8 @@ sub GetReviewsCount
     my $op1            = shift;
     my $search2        = shift;
     my $search2value   = shift;
-    my $since          = shift;
+    my $startDate      = shift;
+    my $endDate        = shift;
     my $page           = shift;
     my $volumes        = shift;
 
@@ -1860,8 +1868,8 @@ sub GetReviewsCount
       { $sql .= qq{ AND $search2term  };   }
     }
 
-    if ( $since ) { $sql .= qq{ AND r.time >= "$since" }; }
-
+    if ( $startDate ) { $sql .= qq{ AND r.time >= "$startDate" }; }
+    if ( $endDate ) { $sql .= qq{ AND r.time <= "$endDate" }; }
 
     return $self->SimpleSqlGet( $sql );
 }
@@ -2559,7 +2567,7 @@ sub GetAllMonthsInFiscalYear
 sub GetAllFiscalYears
 {
   my $self = shift;
-  my $dbh = $self->get( 'dbh' );
+  
   # FIXME: use the GetRange function
   my $min = $self->SimpleSqlGet("SELECT MIN(time) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0 AND user NOT LIKE 'rereview%'");
   my $max = $self->SimpleSqlGet("SELECT MAX(time) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0");
@@ -3000,7 +3008,7 @@ sub CreateStatsReport
     {
       my ($n,$pct) = split ':', $item;
       $n =~ s/\s/&nbsp;/g;
-      $report .= sprintf("<td%s%s>%s%s%s</th>",
+      $report .= sprintf("<td%s%s>%s%s%s</td>",
                          ($class)? " class='$class'":'',
                          ($title =~ m/__.+?__/ || $class eq 'minor')? ' style="text-align:center;"':'',
                          $padding,
@@ -5105,7 +5113,7 @@ sub DownloadSpreadSheet
     if ($buffer)
     {
 
-      print &CGI::header(-type => 'text/plain',
+      print &CGI::header(-type => 'text/plain', -charset => 'utf-8'
                       );
 
       print $buffer;
@@ -5439,8 +5447,8 @@ sub ReviewSearchMenu
   my $searchName = shift;
   my $searchVal = shift;
   
-  my @keys = ('Identifier','Title','Author','Status','UserId','Attribute',   'Reason',     'Legacy','NoteCategory','Priority');
-  my @labs = ('Identifier','Title','Author','Status','User',  'Attr Number','Rsn Number','Legacy','Note Category','Priority');
+  my @keys = ('Identifier','Title','Author','Status','Legacy','UserId','Attribute',  'Reason',       'NoteCategory', 'Priority');
+  my @labs = ('Identifier','Title','Author','Status','Legacy','User',  'Attr Number','Reason Number','Note Category','Priority');
   if (!$self->IsUserAdmin())
   {
     pop @keys;
@@ -5448,8 +5456,8 @@ sub ReviewSearchMenu
   }
   if ($page eq 'userReviews' || $page eq 'editReviews')
   {
-    splice @keys, 3, 1;
-    splice @labs, 3, 1;
+    splice @keys, 5, 1;
+    splice @labs, 5, 1;
   }
   my $html = "<select name='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
