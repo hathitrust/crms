@@ -518,7 +518,8 @@ sub AddItemToQueueOrSetItemActive
   my $status   = shift;
   my $priority = shift;
   my $override = shift;
-
+  
+  $id = 'mdp.' . $id if $id =~ m/^\d+$/;
   ## give the existing item higher priority
   if ( $self->IsItemInQueue( $id ) ) 
   {  
@@ -4244,7 +4245,7 @@ sub GetNextItemForReview
     {
       # Find items reviewed once by some other user.
       # Exclude priority 1 some of the time, to 'fool' reviewers into not thinking everything is pd.
-      my $exclude3 = ($self->IsUserExpert($name))? '':'AND priority<3';
+      my $exclude3 = ($self->IsUserExpert($name))? '':'priority<3 AND';
       my $sql = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE $exclude1 $exclude3 locked IS NULL AND status = 0 AND expcnt = 0 AND id IN } .
                 qq{ (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable WHERE user != '$name' AND id IN (SELECT id FROM reviews GROUP BY id HAVING count(*) = 1)) } .
                 qq{ ORDER BY priority DESC, time DESC LIMIT 1 };
@@ -4589,6 +4590,15 @@ sub GetErrors
 {
     my $self = shift;
     return $self->get( 'errors' );
+}
+
+# The cgi footer prints all errors. If already processed and displayed, no need to repeat.
+sub ClearErrors
+{
+  my $self = shift;
+  
+  my $errors = [];
+  $self->set( 'errors', $errors );
 }
 
 sub GetQueueSize
@@ -5254,12 +5264,20 @@ sub GetMedianCorrect
   return $med;
 }
 
+# Is this a properly formatted RenDate?
+sub IsRenDate
+{
+  my $self = shift;
+  my $date = shift;
+  my $rendateRE = '^\d\d?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\d\d$';
+  return ($date eq '' || $date =~ m/$rendateRE/);
+}
+
 sub SanityCheckDB
 {
   my $self = shift;
   my $dbh = $self->get( 'dbh' );
   my $vidRE = '[a-z]+\d?\.[a-zA-Z]?\d+';
-  my $rendateRE = '^\d\d?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\d\d$';
   # ======== bibdata ========
   my $table = 'bibdata';
   # Volume ID must not have any spaces before, after, or in.
@@ -5319,7 +5337,7 @@ sub SanityCheckDB
     $self->SetError(sprintf("$table: illegal time for %s: '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
     $self->SetError(sprintf("$table: illegal attr/reason for %s: '%s/%s'", $row->[0], $row->[3], $row->[4])) unless $self->GetCodeFromAttrReason($row->[3],$row->[4]);
     $self->SetError(sprintf("$table: spaces in renNum for %s: '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
-    $self->SetError(sprintf("$table: bad renDate for %s: '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $row->[11] eq '' or $row->[11] =~ m/$rendateRE/;
+    $self->SetError(sprintf("$table: bad renDate for %s: '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $self->IsRenDate($row->[11]);
     $self->SetError(sprintf("$table: illegal copyDate for %s: '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $row->[12] =~ m/\d\d\d\d/;
     $self->SetError(sprintf("$table: illegal category for %s: '%s'", $row->[0], $row->[13])) unless $row->[13] eq '' or $self->IsValidCategory($row->[13]);
     $self->SetError(sprintf("$table: illegal status for %s: '%s'", $row->[0], $row->[15])) unless $stati{$row->[15]};
@@ -5352,7 +5370,7 @@ sub SanityCheckDB
     $self->SetError(sprintf("$table: illegal time for %s: '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
     $self->SetError(sprintf("$table: illegal attr/reason for %s: '%s/%s'", $row->[0], $row->[3], $row->[4])) unless $self->GetCodeFromAttrReason($row->[3],$row->[4]);
     $self->SetError(sprintf("$table: spaces in renNum for %s: '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
-    $self->SetError(sprintf("$table: bad renDate for %s: '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $row->[11] eq '' or $row->[11] =~ m/$rendateRE/;
+    $self->SetError(sprintf("$table: bad renDate for %s: '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $self->IsRenDate($row->[11]);
     $self->SetError(sprintf("$table: illegal copyDate for %s: '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $row->[12] =~ m/\d\d\d\d/;
     $self->SetError(sprintf("$table: illegal category for %s: '%s'", $row->[0], $row->[13])) unless $row->[13] eq '' or $self->IsValidCategory($row->[13]);
   }
