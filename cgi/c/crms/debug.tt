@@ -32,10 +32,10 @@
   <input type="hidden" name="multibyte" value="1"/>
   <input type="submit" value="Do it!"/>
 </form>
-
+<br/>
 [% IF cgi.param('sanityCheck') %]
   [% crms.SanityCheckDB() %]
-  <table class="exportStats">
+  <table class="exportStats"><h4>Database Problems</h4>
   <tr><th>Table</th><th>Explanation</th><th>Value</th></tr>
   [% FOREACH error IN crms.GetErrors %]
     [% e = error.split(':\s*') %]
@@ -43,6 +43,7 @@
     <td class='debugExpl'>[% e.1.replace('\s','&nbsp;') %]</td>
     <td class='debugVal'>[% e.2.replace('\s','&nbsp;') %]</td></tr>
   [% END %]
+  [% blah = crms.ClearErrors() %]
   </table>
 [% END %]
 
