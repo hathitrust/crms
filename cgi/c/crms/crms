@@ -177,13 +177,13 @@ if  (  $cgi->param('download')  )
     my $search2            = $cgi->param('search2');
     my $search2value       = $cgi->param('search2value');
 
-    my $since              = $cgi->param('since');
+    my $startDate          = $cgi->param('startDate');
+    my $endDate            = $cgi->param('endDate');
     my $offset             = $cgi->param('offset');
 
-    my $type               = $cgi->param('type');
+    my $type               = $cgi->param('p');
 
-
-    my $success = $crms->SearchAndDownload ( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $since, $offset, $type );
+    my $success = $crms->SearchAndDownload ( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate, $offset, $type );
 
     if ( $success )
     {
