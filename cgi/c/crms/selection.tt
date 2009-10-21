@@ -82,7 +82,7 @@ Restrict selection:<br/>
   <option value="id" [% order == 'id' ?  'selected="selected"':'' %]>Identifier</option>
   <option value="title" [% order == 'title' ? 'selected="selected"':'' %]>Title</option>
   <option value="author" [% order == 'author' ? 'selected="selected"':'' %]>Author</option>
-  <option value="date" [% order == 'time' ?  'selected="selected"':'' %]>Date</option>
+  <option value="time" [% order == 'time' ?  'selected="selected"':'' %]>Date</option>
 [% IF page != 'editReviews' %]
   <option value="status" [% order == 'status' ? 'selected="selected"':'' %]>Status</option>
 [% END %]
