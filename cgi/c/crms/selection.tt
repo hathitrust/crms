@@ -79,19 +79,19 @@ Restrict selection:<br/>
 
 <label for="order">Order:</label>
 <select id="order" name="order">
-  <option value="id" [% order == 'id' ?  'selected="selected"':'' %]>Identifier</option>
-  <option value="title" [% order == 'title' ? 'selected="selected"':'' %]>Title</option>
-  <option value="author" [% order == 'author' ? 'selected="selected"':'' %]>Author</option>
-  <option value="time" [% order == 'time' ?  'selected="selected"':'' %]>Date</option>
+  <option value="id"       [% order == 'id' ?  'selected="selected"':'' %]>Identifier</option>
+  <option value="title"    [% order == 'title' ? 'selected="selected"':'' %]>Title</option>
+  <option value="author"   [% order == 'author' ? 'selected="selected"':'' %]>Author</option>
+  <option value="time"     [% order == 'time' ?  'selected="selected"':'' %]>Date</option>
 [% IF page != 'editReviews' %]
-  <option value="status" [% order == 'status' ? 'selected="selected"':'' %]>Status</option>
+  <option value="status"   [% order == 'status' ? 'selected="selected"':'' %]>Status</option>
 [% END %]
 [% IF page != 'editReviews' && page != 'userReviews' %]
-  <option value="user" [% order == 'user' ?  'selected="selected"':'' %]>User</option>
+  <option value="user"     [% order == 'user' ?  'selected="selected"':'' %]>User</option>
 [% END %]
-  <option value="attr" [% order == 'attr' ? 'selected="selected"':'' %]>Attr Number</option>
-  <option value="reason" [% order == 'reason' ? 'selected="selected"':'' %]>Reason Number</option>
-  <option value="category" [% order == 'attr' ? 'selected="selected"':'' %]>Note Category</option>
+  <option value="attr"     [% order == 'attr' ? 'selected="selected"':'' %]>Attr Number</option>
+  <option value="reason"   [% order == 'reason' ? 'selected="selected"':'' %]>Reason Number</option>
+  <option value="category" [% order == 'category' ? 'selected="selected"':'' %]>Note Category</option>
 [% IF adm %]
   <option value="priority" [% order == 'priority' ? 'selected="selected"':'' %]>Priority</option>
 [% END %]
