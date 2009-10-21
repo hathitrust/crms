@@ -1720,7 +1720,7 @@ sub GetVolumesRef
   }
   push @rest, "r.time >= '$startDate'" if $startDate;
   push @rest, "r.time <= '$endDate'" if $endDate;
-  push @rest, "$search1 $tester2 '$search1Value'" if $search1Value ne '';
+  push @rest, "$search1 $tester1 '$search1Value'" if $search1Value ne '';
   push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
   my $restrict = join(' AND ', @rest);
   my $sql = "SELECT COUNT(r.id) FROM $table r, bibdata b$doQ WHERE $restrict";
