@@ -20,7 +20,7 @@
   [% blah = cgi.param('direction', 'DESC') %]
 [% END %]
 <br/>
-<div style="position:relative;border-style:solid;width:33%;border-width:0.1px;padding:10px;">
+<div style="position:relative;border-style:solid;width:32em;border-width:0.1px;padding:10px;">
 
 <a href="/c/crms/keys.html" target="_blank" accesskey="h">
 <span style="position:absolute;top:4px;right:4px">Search Help
