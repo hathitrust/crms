@@ -69,6 +69,7 @@
 [% encAuthor  = crms.GetEncAuthorForReview( barcode ) | url %]
 [% title      = crms.GetTitle( barcode )                    %]
 [% encTitle   = crms.GetEncTitle( barcode ) | url           %]
+[% priority   = crms.GetPriority( barcode )                 %]
 
 [% IF NOT renNum %] 
 [% renNum     = crms.GetRenNum( barcode, user )             %]
@@ -146,6 +147,18 @@
                                        category = category, editing = editing, error   = error,
                                        navright = navright, select = select, mag = mag %]
       </div>
+      [% IF crms.IsUserExpert(user) %]
+        <div class="navbottom">
+        <center>Priority [% priority %]<br/>
+        [% totalReviews = crms.GetReviewsCount('Identifier', barcode, '', '', '', '', '', 'adminHistoricalReviews', 0) %]
+        [% IF totalReviews > 0 %]
+          <a class="smallishText" href="?p=adminHistoricalReviews&amp;search1=Identifier&amp;search1value=$barcode" target="_blank">
+          [% totalReviews %] historical review[% (totalReviews > 1)? 's':'' %]
+          </a>
+        [% END %]
+        </center>
+        </div>
+      [% END %]
     </div>
     [%# the frame (Stanford, HT, Cat...) %]
     <div class="divFrame" id="divFrame">
