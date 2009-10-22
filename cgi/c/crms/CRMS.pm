@@ -7,7 +7,7 @@ package CRMS;
 
 BEGIN
 {
-  unshift( @INC, $ENV{'SDRROOT'} . '/lib' );
+  unshift( @INC, $ENV{'DLXSROOT'} . '/lib' );
 }
 use App::Debug::DUtils;
 BEGIN
