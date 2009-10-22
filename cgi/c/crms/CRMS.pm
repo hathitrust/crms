@@ -1586,8 +1586,6 @@ sub SearchAndDownload
 }
 
 
-
-
 sub GetReviewsRef
 {
     my $self               = shift;
@@ -1608,7 +1606,11 @@ sub GetReviewsRef
     my $page               = shift;
 
     my $limit              = 1;
-    $pagesize = 20 unless $pagesize;
+    $pagesize = 20 unless $pagesize > 0;
+    $offset = 0 unless $offset > 0;
+    my $totalReviews = $self->GetReviewsCount($search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $page, 0);
+    my $totalVolumes = $self->GetReviewsCount($search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $page, 1);
+    $offset = $totalReviews-($totalReviews % $pagesize) if $offset >= $totalReviews;
     #print("GetReviewsRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
     my $sql =  $self->CreateSQL ( $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $offset, $pagesize, $page, $limit );
     #print "$sql\n";
@@ -1639,8 +1641,6 @@ sub GetReviewsRef
                    };
         push( @{$return}, $item );
     }
-    my $totalReviews = $self->GetReviewsCount($search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $page, 0);
-    my $totalVolumes = $self->GetReviewsCount($search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $page, 1);
     my $n = POSIX::ceil($offset/$pagesize+1);
     my $of = POSIX::ceil($totalReviews/$pagesize);
     $n = 0 if $of == 0;
@@ -1671,7 +1671,8 @@ sub GetVolumesRef
   my $page = shift;
   #print("GetVolumesRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
   
-  $pagesize = 10 unless $pagesize;
+  $pagesize = 20 unless $pagesize > 0;
+  $offset = 0 unless $offset > 0;
   if (!$order)
   {
     $order = 'id';
@@ -1729,6 +1730,7 @@ sub GetVolumesRef
   $sql = "SELECT COUNT(DISTINCT r.id) FROM $table r, bibdata b$doQ WHERE $restrict";
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
+  $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   $sql = 'SELECT id FROM ' .
          "(SELECT r.id as id,count(r.id) AS cnt, $order2($order) AS ord FROM $table r, bibdata b$doQ WHERE $restrict GROUP BY r.id) " .
          "AS derived WHERE cnt>0 ORDER BY ord $dir LIMIT $offset, $pagesize";
