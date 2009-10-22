@@ -1724,7 +1724,7 @@ sub GetVolumesRef
   push @rest, "$search1 $tester1 '$search1Value'" if $search1Value ne '';
   push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
   my $restrict = join(' AND ', @rest);
-  my $sql = "SELECT COUNT(r.id) FROM $table r, bibdata b$doQ WHERE $restrict";
+  my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT r.id FROM $table r, bibdata b$doQ WHERE $restrict)";
   #print "$sql<br/>\n";
   my $totalReviews = $self->SimpleSqlGet($sql);
   $sql = "SELECT COUNT(DISTINCT r.id) FROM $table r, bibdata b$doQ WHERE $restrict";
@@ -3667,6 +3667,10 @@ sub UpdateAuthor
     my $id   = shift;
     my $author = shift;
     
+    if ($id eq '')
+    {
+      $self->SetError("Trying to update author for empty volume id!\n$tb") ;
+    }
     if ( !$author )
     {
       $author = $self->GetMarcDatafieldAuthor( $id );
@@ -3895,7 +3899,7 @@ sub GetPriority
   my $self = shift;
   my $bar = shift;
   
-  my $sql = qq{SELECT priority FROM $CRMSGlobals::queueTable WHERE id = '$bar'};
+  my $sql = qq{SELECT priority FROM $CRMSGlobals::queueTable WHERE id='$bar'};
   return $self->SimpleSqlGet( $sql );
 }
 
@@ -5506,5 +5510,6 @@ sub RightsQuery
             'ORDER BY r.time';
   return $self->get('sdr_dbh')->selectall_arrayref($sql);
 }
+
 
 1;
