@@ -3669,7 +3669,7 @@ sub UpdateAuthor
     
     if ($id eq '')
     {
-      $self->SetError("Trying to update author for empty volume id!\n$tb") ;
+      $self->SetError("Trying to update author for empty volume id!\n") ;
     }
     if ( !$author )
     {
