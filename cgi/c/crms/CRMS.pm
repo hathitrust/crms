@@ -5,6 +5,18 @@ package CRMS;
 ##
 ## ----------------------------------------------------------------------------
 
+BEGIN
+{
+  unshift( @INC, $ENV{'SDRROOT'} . '/lib' );
+}
+use App::Debug::DUtils;
+BEGIN
+{
+  if ($ENV{'DLPS_DEV'})
+  {
+    App::Debug::DUtils::setup_DebugScreen();
+  }
+}
 use strict;
 use LWP::UserAgent;
 use XML::LibXML;
@@ -560,7 +572,7 @@ sub AddItemToQueueOrSetItemActive
   my $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source ) values (1, 'ADMINUI')};
   $self->PrepareSubmitSql( $sql );
   
-  return 1;
+  return 0;
 }
 
 # Used by the script loadIDs.pl to add and/or bump priority on a volume
@@ -764,7 +776,7 @@ sub SetExpertReviewCnt
     my $sql = qq{ UPDATE $CRMSGlobals::queueTable set expcnt=1 WHERE id = "$id" };
     $self->PrepareSubmitSql( $sql );
 
-    #We have decided to register the expert decission right away.
+    #We have decided to register the expert decision right away.
     $self->RegisterExpertReview( $id );
 
 }
@@ -798,10 +810,10 @@ sub GetOtherReview
 sub ProcessReviews
 {
   my $self = shift;
-
+  print "ProcessReviews?\n";
   my $yesterday = $self->GetYesterday();
 
-  my $sql = qq{SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where status = 0) group by id having count(*) = 2};
+  my $sql = qq{SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where status = 0) group by id having count(*) >= 2};
 
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -813,7 +825,8 @@ sub ProcessReviews
     my $reason  = $row->[3];
     my $renNum  = $row->[4];
     my $renDate = $row->[5];
-
+    
+    print "$id<br/>\n";
     my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate ) = $self->GetOtherReview ( $id, $user );
 
     if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
@@ -2540,51 +2553,38 @@ sub YearMonthToEnglish
   return (($long)? $month:substr($month,0,3)).' '.$year;
 }
 
-# Returns a pair of date strings e.g. ('2008-07','2009-06') for the current fiscal year.
-sub GetFiscalYear
+# Returns a pair of date strings e.g. ('2009-01','2009-12') for the current year.
+sub GetYear
 {
   my $self = shift;
   my $ym = shift;
-  my @range = $self->GetAllMonthsInFiscalYear($ym);
+  my @range = $self->GetAllMonthsInYear($ym);
   return ($range[0], $range[-1]);
 }
 
-# Returns an array of date strings e.g. ('2008-07'...'2009-06') for the (current if no param) fiscal year.
-sub GetAllMonthsInFiscalYear
+# Returns an array of date strings e.g. ('2009-01'...'2009-12') for the (current if no param) year.
+sub GetAllMonthsInYear
 {
   my $self = shift;
   my $ym = shift;
   my ( $year, $month );
   if ($ym) { ($year, $month) = split('-', $ym); }
   else { ($year, $month) = $self->GetTheYearMonth(); }
-  my $startYear = ($month ge '07')? $year:$year-1;
-  my $endYear = ($month ge '07')? $year+1:$year;
-  my @range = ();
-  for my $m (7..12) { push(@range, sprintf("$startYear-%.2d", $m)); }
-  for my $m (1..6) { push(@range, sprintf("$endYear-%.2d", $m)); }
-  return @range;
+  my $start = ($year eq '2009')? 7:1;
+  return map sprintf("$year-%.2d", $_), ($start..12)
 }
 
-# Returns an array of date strings e.g. ('2008-07','2009-07') with start month of all fiscal years for which we have data.
-sub GetAllFiscalYears
+# Returns an array of date strings e.g. ('2009-01','2010-01') with start month of all years for which we have data.
+sub GetAllYears
 {
   my $self = shift;
   
   # FIXME: use the GetRange function
   my $min = $self->SimpleSqlGet("SELECT MIN(time) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0 AND user NOT LIKE 'rereview%'");
   my $max = $self->SimpleSqlGet("SELECT MAX(time) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0");
-  $min = substr($min,0,7);
-  $max = substr($max,0,7);
-  my ($minstart,$minend) = $self->GetFiscalYear($min);
-  my ($maxstart,$maxend) = $self->GetFiscalYear($max);
-  $minstart = substr($minstart, 0, 4);
-  $maxstart = substr($maxstart, 0, 4);
-  my @range = ();
-  for (my $y = $minstart; $y < $maxend; $y++)
-  {
-    push(@range, $y);
-  }
-  return @range;
+  $min = substr($min,0,4);
+  $max = substr($max,0,4);
+  return ($min..$max);
 }
 
 
@@ -2597,10 +2597,11 @@ sub CreateExportData
   my $doPercent = shift;
   my $dbh = $self->get( 'dbh' );
   my $now = join('-', $self->GetTheYearMonth());
-  my @statdates = ($cumulative)? $self->GetAllFiscalYears() : $self->GetAllMonthsInFiscalYear();
+  my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear();
   my $y1 = substr($statdates[0],0,4);
   my $y2 = substr($statdates[-1],0,4);
-  my $label = ($cumulative)? "CRMS Project Cumulative" : "Fiscal Cumulative $y1-$y2";
+  my $range = ($y1 eq $y2)? "$y1":"$y1-$y2";
+  my $label = ($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative" : "Yearly&nbsp;Cumulative $range";
   my $report = sprintf("$label\nCategories%sGrand Total", $delimiter);
   my %stats = ();
   my @usedates = ();
@@ -2614,12 +2615,6 @@ sub CreateExportData
                 'All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0);
     my $mintime = $date . '-01 00:00:00';
     my $maxtime = $date . '-31 23:59:59';
-    if ($cumulative)
-    {
-      my ($y,$m) = split('-', $date);
-      $mintime = "$y-$m-01 00:00:00";
-      $maxtime = sprintf('%d-06-31 23:59:59', int($y)+1);
-    }
     my $sql = qq{SELECT attr,reason FROM $CRMSGlobals::historicalreviewsTable h1 WHERE } . 
               qq{ time=(SELECT max(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id) AND } .
               qq{ (status=4 OR status=5) AND legacy=0 AND time >= '$mintime' AND time <= '$maxtime'};
@@ -2709,8 +2704,8 @@ sub CreateExportGraph
   my @lines = split m/\n/, $data;
   my $title = shift @lines;
   $title .= '*' if $type == 2;
-  $title =~ s/Fiscal\sCumulative/Monthly Breakdown/ if $type == 0;
-  $title =~ s/Fiscal\sCumulative/Monthly Totals/ if $type == 1;
+  $title =~ s/Cumulative/Monthly Breakdown/ if $type == 0;
+  $title =~ s/Cumulative/Monthly Totals/ if $type == 1;
   my @dates = split(',', shift @lines);
   # Shift off the Categories and GT headers
   shift @dates; shift @dates;
@@ -2774,8 +2769,8 @@ sub CreateExportGraph
   return $report;
 }
 
-# Create an HTML table for the whole fiscal year's exports, month by month.
-# If cumulative, columns are fiscal years, not months.
+# Create an HTML table for the whole year's exports, month by month.
+# If cumulative, columns are years, not months.
 sub CreateExportReport
 {
   my $self = shift;
@@ -2834,11 +2829,11 @@ sub CreateStatsData
   my $cumulative = shift;
   my $dbh = $self->get( 'dbh' );
   my $now = join('-', $self->GetTheYearMonth());
-  my @statdates = ($cumulative)? $self->GetAllFiscalYears() : $self->GetAllMonthsInFiscalYear();
+  my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear();
   my $y1 = substr($statdates[0],0,4);
   my $y2 = substr($statdates[-1],0,4);
   my $username = ($user eq 'all')? 'All Users':$self->GetUserName($user);
-  my $label = ($cumulative)? "$username: Cumulative $y1-" : "$username: Fiscal Cumulative $y1-$y2";
+  my $label = ($cumulative)? "$username: Cumulative $y1-" : "$username: Cumulative $y1";
   my $report = "$label\nCategories,Grand Total";
   my %stats = ();
   my @usedates = ();
@@ -2854,13 +2849,6 @@ sub CreateStatsData
     $report .= ",$date";
     my $mintime = $date;
     my $maxtime = $date;
-    if ($cumulative)
-    {
-      my ($y,$m) = split('-', $date);
-      $m = '07' unless $m;
-      $mintime = "$y-$m";
-      $maxtime = sprintf('%d-06', int($y)+1);
-    }
     $earliest = $mintime if $earliest eq '' or $mintime lt $earliest;
     $latest = $maxtime if $latest eq '' or $maxtime gt $latest;
     my $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
@@ -3899,7 +3887,7 @@ sub GetPriority
   my $self = shift;
   my $bar = shift;
   
-  my $sql = qq{SELECT priority FROM $CRMSGlobals::queueTable WHERE id='$bar'};
+  my $sql = qq{SELECT priority FROM $CRMSGlobals::queueTable WHERE id = '$bar'};
   return $self->SimpleSqlGet( $sql );
 }
 
@@ -5302,8 +5290,10 @@ sub SanityCheckDB
   {
     $self->SetError(sprintf("$table: illegal volume id: '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
     #$self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) if $row->[1] eq '0000';
-    $self->SetError(sprintf("$table: author encoding bad: '%s'", $row->[2])) if $self->Mojibake($row->[2]);
-    $self->SetError(sprintf("$table: title encoding bad: '%s'", $row->[3])) if $self->Mojibake($row->[3]);
+    $self->SetError(sprintf("$table: no author for %s: '%s'", $row->[0], $row->[2])) if $row->[2] eq '';
+    $self->SetError(sprintf("$table: no title for %s: '%s'", $row->[0], $row->[3])) if $row->[3] eq '';
+    $self->SetError(sprintf("$table: encoding bad for %s: '%s'", $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
+    $self->SetError(sprintf("$table: encoding bad for %s: '%s'", $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
   }
   # ======== candidates ========
   $table = 'candidates';
@@ -5398,52 +5388,6 @@ sub Mojibake
   my $text = shift;
   my $mojibake = '[ÊÃÄÅ¶¹¸]';
   return ($text =~ m/$mojibake/i);
-}
-
-# At this point fixes leading/trailing spaces on renNum in reviews and historicalreviews.
-sub FixDB
-{
-  my $self = shift;
-  my $dbh = $self->get( 'dbh' );
-  # ======== historicalreviews ========
-  my $table = 'historicalreviews';
-  my $sql = "SELECT id,user,renNum FROM $table";
-  my $rows = $dbh->selectall_arrayref( $sql );
-  foreach my $row ( @{$rows} )
-  {
-    my $id = $row->[0];
-    my $user = $row->[1];
-    my $renNum = $row->[2];
-    my $stripped = $renNum;
-    $stripped =~ s/\s+//g;
-    if ($stripped ne $renNum)
-    {
-      $sql = "UPDATE $table SET renNum='$stripped' WHERE id='$id' AND user='$user'";
-      $sql = "UPDATE $table SET renNum=NULL WHERE id='$id' AND user='$user'" if $stripped eq '';
-      #print "$sql\n";
-      $self->PrepareSubmitSql( $sql );
-    }
-  }
-  # ======== reviews ========
-  $table = 'reviews';
-  $sql = "SELECT id,renNum,user FROM $table";
-  $rows = $dbh->selectall_arrayref( $sql );
-  foreach my $row ( @{$rows} )
-  {
-    my $id = $row->[0];
-    my $user = $row->[1];
-    my $renNum = $row->[2];
-    #print "$id*$user*$renNum\n";
-    my $stripped = $renNum;
-    $stripped =~ s/\s+//g;
-    if ($stripped ne $renNum)
-    {
-      $sql = "UPDATE $table SET renNum='$stripped' WHERE id='$id' AND user='$user'";
-      $sql = "UPDATE $table SET renNum=NULL WHERE id='$id' AND user='$user'" if $stripped eq '';
-      #print "$sql\n";
-      $self->PrepareSubmitSql( $sql );
-    }
-  }
 }
 
 sub ReviewSearchMenu
