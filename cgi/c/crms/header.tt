@@ -21,7 +21,7 @@
   </head>
   <body>
   <div class="pages" id="homePage">
-    <img src="/c/crms/crms.png" alt="CRMS Logo"/><div id="version">Version 1.3.1</div>
+    <img src="/c/crms/crms.png" alt="CRMS Logo"/><div id="version">Version 1.3.2</div>
     <br/><br/>
     <span class="greeting">Hello [% crms.GetUserName() %]</span>
     <a href="crms?p=Logout"> Logout</a>
