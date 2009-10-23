@@ -810,7 +810,7 @@ sub GetOtherReview
 sub ProcessReviews
 {
   my $self = shift;
-  print "ProcessReviews?\n";
+  
   my $yesterday = $self->GetYesterday();
 
   my $sql = qq{SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where status = 0) group by id having count(*) >= 2};
@@ -826,7 +826,6 @@ sub ProcessReviews
     my $renNum  = $row->[4];
     my $renDate = $row->[5];
     
-    print "$id<br/>\n";
     my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate ) = $self->GetOtherReview ( $id, $user );
 
     if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
