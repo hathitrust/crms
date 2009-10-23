@@ -885,7 +885,7 @@ sub SubmitHistReview
 
     #if ( ! $self->ValidateAttr( $attr ) )                     { $self->Logit("attr check failed");        return 0; }
     #if ( ! $self->ValidateReason( $reason ) )                 { $self->Logit("reason check failed");      return 0; }
-    if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->Logit("attr/reason check failed"); return 0; }
+    if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->setError("attr/reason check failed"); return 0; }
     
     ## do some sort of check for expert submissions
 
@@ -2600,7 +2600,7 @@ sub CreateExportData
   my $y1 = substr($statdates[0],0,4);
   my $y2 = substr($statdates[-1],0,4);
   my $range = ($y1 eq $y2)? "$y1":"$y1-$y2";
-  my $label = ($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative" : "Yearly&nbsp;Cumulative $range";
+  my $label = ($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative" : "Cumulative $range";
   my $report = sprintf("$label\nCategories%sGrand Total", $delimiter);
   my %stats = ();
   my @usedates = ();
