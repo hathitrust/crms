@@ -26,18 +26,19 @@ my $alias = $crms->GetAliasUserName( $ru );
 if  ( $cgi->param('p') eq 'Logout' )
 {
   #Remove all locks for this user.
-  $crms->UnlockAllItemsForUser( $ru );
+  
   # If we're aliased, we don't log out, we just drop the alias.
-  if ($alias ne $ru)
+  
+  if ($alias && $alias ne $ru)
   {
+    $crms->UnlockAllItemsForUser( $alias );
     $cgi->param('changeuser', 1);
     $cgi->param('newuser', $ru);
   }
   else
   {
-    #Remove all alias users for this user:
-    $crms->ChangeAliasUserName($ru, '');
-
+    $crms->UnlockAllItemsForUser( $ru );
+    
     # change 'central' to the url of your weblogin server.
     my $central = "https://weblogin.umich.edu/cgi-bin/logout";
     my $query_string = "";
@@ -87,7 +88,7 @@ if ($user ne $ru)
             );
 }
 
-if  (  $cgi->param('p') eq 'confirmReview' )  
+if  ( $cgi->param('p') eq 'confirmReview' )  
 {
 
   if ($cgi->param( 'submit' ) eq 'Cancel')
