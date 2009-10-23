@@ -125,8 +125,8 @@
           <tr>
             <td align="left" class="label"><Strong align="left">Search:</Strong></td>
             <td align="center" class="links"><a href="[% ptLink %]" target="topFrame" accesskey="h" title="HathiTrust">Hathi</a></td>
-            <td align="center" class="links"><a href="[% catLink %]" target="topFrame" accesskey="m" title="Mirlyn VuFind">Mirlyn</a></td>
-            <td align="center" class="links"><a href="[% catcLink %]" target="topFrame" accesskey="c" title="Mirlyn Classic">Mirlyn C</a></td>
+            <td align="center" class="links"><a href="[% catLink %]" target="topFrame" accesskey="v" title="Mirlyn VuFind">Mirlyn</a></td>
+            <td align="center" class="links"><a href="[% catcLink %]" target="topFrame" accesskey="m" title="Mirlyn Classic">Mirlyn C</a></td>
           </tr>
           <tr/><tr/>
           <tr>
