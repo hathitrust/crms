@@ -95,7 +95,6 @@ sub ProcessFile
     chomp $line;
     $line =~ s/[\n\r]//g;
     $line =~ s/\t+$//;
-    #print ">>$line<<\n";
     # Split into parts with leading and trailing whitespace trimmed
     my @parts = map {s/^\s+|\s+$//g;$_;} split("\t", $line);
     next if $parts[0] =~ m/^Barcode/i;
@@ -172,6 +171,7 @@ sub ProcessFile
 	  $date = $crms->ChangeDateFormat( $date ) . ' 12:00:00';
     # Rendate is in the yucky format DD-Mon-YY and we need it in the equally yucky format DDMonYY
     $renDate =~ s/-//g;
+    die "Not a valid renewal date: $renDate" unless $crms->IsRenDate($renDate);
     if ( $verbose )
     {
       print "ID:    $id\n";
