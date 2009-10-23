@@ -95,6 +95,9 @@ Restrict selection:<br/>
 [% IF adm %]
   <option value="priority" [% order == 'priority' ? 'selected="selected"':'' %]>Priority</option>
 [% END %]
+[% IF page == 'adminHistoricalReviews' %]
+  <option value="validated" [% order == 'validated' ?  'selected="selected"':'' %]>Verdict</option>
+[% END %]
 </select>
 <br/>
 

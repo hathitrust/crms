@@ -131,7 +131,7 @@ last page
       [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' %]<td>[% crms.LinkToReview( review.id ) %]</td>
       [% ELSE %]<td>[% crms.LinkToPT( review.id ) %]</td>[% END %]
       <td>$review.author</td>
-      <td>$review.time</td>
+      <td>$review.date</td>
       <td>$review.status</td>
       [% IF p == 'adminHistoricalReviews' %]<td>$review.legacy</td>[% END %]
       <td>$review.user</td>
@@ -142,7 +142,7 @@ last page
       [% IF crms.IsUserAdmin() %]<td>$review.priority</td>[% END %]
       [% IF p == 'adminHistoricalReviews' %]
       <td align="center">
-        <img width="16" height="16" alt="Correctness" src="/c/crms/[% (review.status!=5 || crms.IsReviewCorrect(review.id,review.user))? 'CheckIcon.png':'XIcon.png'%]"/>
+        <img width="16" height="16" alt="Correctness" src="/c/crms/[% (review.validated)? 'CheckIcon.png':'XIcon.png'%]"/>
       </td>
       [% END %]
     </tr>
