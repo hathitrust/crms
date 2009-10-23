@@ -35,7 +35,8 @@
 <br/>
 [% IF cgi.param('sanityCheck') %]
   [% crms.SanityCheckDB() %]
-  <table class="exportStats"><h4>Database Problems</h4>
+  <h4>[% crms.GetErrors.size %] Items Need Fixed</h4>
+  <table class="exportStats">
   <tr><th>Table</th><th>Explanation</th><th>Value</th></tr>
   [% FOREACH error IN crms.GetErrors %]
     [% e = error.split(':\s*') %]
@@ -68,7 +69,7 @@
     [% END %]
     </table><br/>
   [% END %]  
-  [% sql = "SELECT id,author,title FROM bibdata WHERE LENGTH(title)!=CHAR_LENGTH(title) OR LENGTH(author)!=CHAR_LENGTH(author) OR author IS NULL OR title IS NULL" %]
+  [% sql = "SELECT id,author,title FROM bibdata WHERE LENGTH(title)!=CHAR_LENGTH(title) OR LENGTH(author)!=CHAR_LENGTH(author) OR author IS NULL OR title IS NULL OR author='' OR title='' ORDER BY author,title,id" %]
   [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
   <h3>Need Fixed</h3>
   <span class="smallishText">Found [% ref.size %] items.</span>
