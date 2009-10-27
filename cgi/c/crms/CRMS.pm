@@ -1768,7 +1768,9 @@ sub GetVolumesRef
     my $id = $row->[0];
     my $qrest = ($doQ)? ' AND r.id=q.id':'';
     $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
-           "r.category, r.legacy, r.renDate, r.priority, r.validated, $status, b.title, b.author FROM $table r, bibdata b$doQ ";
+           "r.category, r.legacy, r.renDate, r.priority, $status, b.title, b.author" .
+           (($page eq 'adminHistoricalReviews')? ', r.validated':' ') .
+           "FROM $table r, bibdata b$doQ ";
     $sql .= "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
     #print "$sql<br/>\n";
     my $ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );
@@ -1792,11 +1794,11 @@ sub GetVolumesRef
                   legacy     => $row->[12],
                   renDate    => $row->[13],
                   priority   => $row->[14],
-                  validated  => $row->[15],
-                  status     => $row->[16],
-                  title      => $row->[17],
-                  author     => $row->[18]
+                  status     => $row->[15],
+                  title      => $row->[16],
+                  author     => $row->[17]
                  };
+      ${$item}{'validated'} = $row->[18] if $page eq 'adminHistoricalReviews';
       push( @{$return}, $item );
     }
   }
