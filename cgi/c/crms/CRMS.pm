@@ -719,7 +719,7 @@ sub SubmitReview
     my ($id, $user, $attr, $reason, $copyDate, $note, $renNum, $exp, $renDate, $category) = @_;
 
     if ( ! $self->CheckForId( $id ) )                         { $self->Logit("id check failed");          return 0; }
-    if ( ! $self->CheckReviewer( $user, $exp ) )              { $self->Logit("review check failed");      return 0; }
+    if ( ! $self->CheckReviewer( $user, $exp ) )              { $self->Logit("reviewer check failed");    return 0; }
     if ( ! $self->ValidateAttr( $attr ) )                     { $self->Logit("attr check failed");        return 0; }
     if ( ! $self->ValidateReason( $reason ) )                 { $self->Logit("reason check failed");      return 0; }
     if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->Logit("attr/reason check failed"); return 0; }
@@ -740,8 +740,8 @@ sub SubmitReview
     my @fieldList = ('id', 'user', 'attr', 'reason', 'renNum', 'renDate', 'category', 'priority');
     my @valueList = ($id,  $user,  $attr,  $reason,  $renNum,  $renDate, $category, $priority);
 
-    if ($exp)      { push(@fieldList, "expert");   push(@valueList, $exp); }
-    if ($copyDate) { push(@fieldList, "copyDate"); push(@valueList, $copyDate); }
+    if ($exp)      { push(@fieldList, 'expert');   push(@valueList, $exp); }
+    if ($copyDate) { push(@fieldList, 'copyDate'); push(@valueList, $copyDate); }
     if ($note)     { push(@fieldList, 'note'); }
     
     my $sql = "REPLACE INTO $CRMSGlobals::reviewsTable (" . join(', ', @fieldList) . 
@@ -1388,30 +1388,30 @@ sub CreateSQL
     my $sql;
     if ( $type eq 'adminReviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.validated, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status >= 0 };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status >= 0 };
     }
     elsif ( $type eq 'expert' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.validated, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
     }
     elsif ( $type eq 'adminHistoricalReviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.validated, r.status, b.title, b.author FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0 };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.status, b.title, b.author, r.validated FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0 };
     }
     elsif ( $type eq 'undReviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.validated, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
     }
     elsif ( $type eq 'userReviews' )
     {
       my $user = $self->get( "user" );
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.validated, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
     }
     elsif ( $type eq 'editReviews' )
     {
       my $user = $self->get( "user" );
       my $yesterday = $self->GetYesterday();
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.validated, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
     }
 
     my ( $search1term, $search2term );
@@ -1660,11 +1660,11 @@ sub GetReviewsRef
                     legacy     => $row->[12],
                     renDate    => $row->[13],
                     priority   => $row->[14],
-                    validated  => $row->[15],
-                    status     => $row->[16],
-                    title      => $row->[17],
-                    author     => $row->[18]
+                    status     => $row->[15],
+                    title      => $row->[16],
+                    author     => $row->[17]
                    };
+        ${$item}{'validated'} = $row->[18] if $page eq 'adminHistoricalReviews';
         push( @{$return}, $item );
     }
     my $n = POSIX::ceil($offset/$pagesize+1);
