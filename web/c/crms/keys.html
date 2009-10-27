@@ -43,13 +43,13 @@ td.explanation {
   </head>
   <body>
   <div class="pages" id="homePage">
-  <img src="/c/crms/crms.png"/>
+  <img alt="CRMS logo" src="/c/crms/crms.png"/>
   <br/><br/>
 <table>
 <tr>
 <td>
     <table class="subtable">
-    <th colspan="2" style="padding-bottom:8px;">Status</strong>
+    <tr><th colspan="2" style="padding-bottom:8px;">Status</th></tr>
     <tr><th>0</th><td>not reviewed yet or awaiting processing</td></tr>
     <tr><th>1</th><td>legacy review; reviewed by one person only</td></tr>
     <tr><th>2</th><td>reviewed by two persons that disagree</td></tr>
@@ -59,14 +59,14 @@ td.explanation {
     </table>
     <br/>
     <table class="subtable">
-    <th colspan="2" style="padding-bottom:8px;">Legacy</strong>
+    <tr><th colspan="2" style="padding-bottom:8px;">Legacy</th></tr>
     <tr><th>0</th><td>not legacy review</td></tr>
     <tr><th>1</th><td>legacy review (pre-CRMS)</td></tr>
     </table>
 </td>
 <td>
     <table class="subtable">
-    <th colspan="3" style="padding-bottom:8px;">Attribute</strong>
+    <tr><th colspan="3" style="padding-bottom:8px;">Attribute</th></tr>
     <tr><th>1</th><td class="codes">pd</td>    <td>public domain</td></tr>
     <tr><th>2</th><td class="codes">ic</td>    <td>in copyright</td></tr>
     <tr><th>3</th><td class="codes">opb</td>   <td>out-of-print and brittle (implies in-copyright)</td></tr>
@@ -82,7 +82,7 @@ td.explanation {
 <tr>
 <td>
     <table class="subtable">
-    <th colspan="3" style="padding-bottom:8px;">Reason</strong>
+    <tr><th colspan="3" style="padding-bottom:8px;">Reason</th></tr>
     <tr><th>1</th> <td class="codes">bib</td> <td>bibliographically-derived by automatic processes</td></tr>
     <tr><th>2</th> <td class="codes">ncn</td> <td>no printed copyright notice</td></tr>
     <tr><th>3</th> <td class="codes">con</td> <td>contractual agreement with copyright holder on file</td></tr>
@@ -98,7 +98,7 @@ td.explanation {
 </td>
 <td>
     <table class="subtable">
-    <th style="padding-bottom:8px;">Note&nbsp;Categories</th>
+    <tr><th style="padding-bottom:8px;">Note&nbsp;Categories</th></tr>
     <tr><td style="border-left:0px">Collection</td></tr>
     <tr><td style="border-left:0px">Date</td></tr>
     <tr><td style="border-left:0px">Dissertation/Thesis</td></tr>
@@ -116,17 +116,18 @@ td.explanation {
 <tr>
 <td>
     <table class="subtable">
-    <th colspan="3" style="padding-bottom:8px;">Verdict</strong>
+    <tr><th colspan="3" style="padding-bottom:8px;">Verdict</th></tr>
     <tr><th>0</th> <td class="explanation">not&nbsp;validated</td> <td>expert reviewer disagreed</td></tr>
     <tr><th>1</th> <td class="explanation">validated</td> <td>no expert review, or expert agreed</td></tr>
     </table>
 </td>
 <td>
     <table class="subtable">
-    <th colspan="3" style="padding-bottom:8px;">Priority (Visible to Experts and Admins only)</strong>
+    <tr><th colspan="3" style="padding-bottom:8px;">Priority (Visible to Experts and Admins only)</th></tr>
     <tr><th>0</th> <td class="explanation">normal</td> <td>items added from the queue</td></tr>
     <tr><th>1</th> <td class="explanation">enhanced</td> <td>items loaded from a script</td></tr>
-    <tr><th>2</th> <td class="explanation">high</td> <td>items individually added by an admin</td></tr>
+    <tr><th>2</th> <td class="explanation">high</td> <td>items added by an admin</td></tr>
+    <tr><th>3</th> <td class="explanation">expert</td> <td>items added by an admin for expert review only</td></tr>
     </table>
 </td>
 </tr>
