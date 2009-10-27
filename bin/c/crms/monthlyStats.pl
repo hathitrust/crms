@@ -4,8 +4,6 @@ my $DLXSROOT;
 my $DLPS_DEV;
 
 
-
-
 BEGIN 
 { 
     $DLXSROOT = $ENV{'DLXSROOT'}; 
@@ -13,9 +11,6 @@ BEGIN
     my $toinclude = qq{$DLXSROOT/cgi/c/crms};
     unshift( @INC, $toinclude );
 }
-
-
-
 
 use strict;
 use CRMS;
@@ -43,9 +38,7 @@ my $crms = CRMS->new(
     dev          =>   $DLPS_DEV,
 );
 
-$crms->CreateThisMonthsStats ();
+$crms->UpdateStats();
 
-
-
-
+ReportMsg("Done with monthly stats");
 
