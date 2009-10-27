@@ -21,7 +21,9 @@ These items will take priority in the review process.
   <input type="hidden" name="p" value="queueAdd"/>
   <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;"></textarea><br/>
   <select name="priority">
-    <option value="2" [% (pri==2)? 'selected="selected"':'' %]>Priority 2</option>
+    <option value="0" [% (pri==0)? 'selected="selected"':'' %]>Priority 0</option>
+    <option value="1" [% (pri==1)? 'selected="selected"':'' %]>Priority 1</option>
+    <option value="2" [% (pri==2 || !pri)? 'selected="selected"':'' %]>Priority 2</option>
     <option value="3" [% (pri==3)? 'selected="selected"':'' %]>Priority 3</option>
   </select>
   &nbsp;&nbsp;&nbsp;&nbsp;
