@@ -1769,7 +1769,7 @@ sub GetVolumesRef
     my $qrest = ($doQ)? ' AND r.id=q.id':'';
     $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
            "r.category, r.legacy, r.renDate, r.priority, $status, b.title, b.author" .
-           (($page eq 'adminHistoricalReviews')? ', r.validated':' ') .
+           (($page eq 'adminHistoricalReviews')? ', r.validated ':' ') .
            "FROM $table r, bibdata b$doQ ";
     $sql .= "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
     #print "$sql<br/>\n";
@@ -1866,8 +1866,7 @@ sub GetReviewsCount
       my $yesterday = $self->GetYesterday();
       $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
     }
-    #print "$sql<br/>\n";
-
+    
     my ( $search1term, $search2term );
     if ( $search1value =~ m,.*\*.*, )
     {
@@ -1903,7 +1902,7 @@ sub GetReviewsCount
 
     if ( $startDate ) { $sql .= qq{ AND r.time >= "$startDate" }; }
     if ( $endDate ) { $sql .= qq{ AND r.time <= "$endDate" }; }
-
+    #print "$sql<br/>\n";
     return $self->SimpleSqlGet( $sql );
 }
 
