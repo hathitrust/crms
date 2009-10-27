@@ -149,15 +149,19 @@
       </div>
       [% IF crms.IsUserExpert(user) %]
         <div class="navbottom">
-        <center>Priority [% priority %]<br/>
+        <center>Priority [% priority %]
         [% totalReviews = crms.GetReviewsCount('Identifier', barcode, '', '', '', '', '', 'adminHistoricalReviews', 0) %]
         [% IF totalReviews > 0 %]
-          <a class="smallishText" href="?p=adminHistoricalReviews&amp;search1=Identifier&amp;search1value=$barcode" target="_blank">
-          [% totalReviews %] historical review[% (totalReviews > 1)? 's':'' %]
+          <br/><a class="smallishText" href="?p=adminHistoricalReviews&amp;search1=Identifier&amp;search1value=$barcode" target="_blank">
+          [% totalReviews %] historical review[% (totalReviews != 1)? 's':'' %]
           </a>
         [% END %]
-        </center>
-        </div>
+        [% totalReviews = crms.GetReviewsCount('Identifier', barcode, '', '', '', '', '', 'adminReviews', 0) %]
+        [% IF totalReviews > 0 %]
+          <br/><a class="smallishText" href="?p=adminReviews&amp;search1=Identifier&amp;search1value=$barcode" target="_blank">
+          [% totalReviews %] active review[% (totalReviews != 1)? 's':'' %]
+          </a>
+        [% END %]
       [% END %]
     </div>
     [%# the frame (Stanford, HT, Cat...) %]
