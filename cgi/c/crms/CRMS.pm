@@ -549,7 +549,7 @@ sub AddItemToQueueOrSetItemActive
   {
     ## pub date between 1923 and 1963
     
-    if ( ( $pub < '1923' ) || ( $pub > '1963' ) ) { $self->Logit( "skip fed doc: $id" ); return 'item is a gov doc'; }
+    if ( ( $pub < '1923' ) || ( $pub > '1963' ) ) { $self->Logit( "skip outside 1923-1963 doc: $id" ); return 'item is not in the range 1923-1963'; }
     ## no gov docs
     if ( $self->IsGovDoc( $id, $record ) ) { $self->Logit( "skip fed doc: $id" ); return 'item is a gov doc'; }
     #check 008 field postion 17 = "u" - this would indicate a us publication.
@@ -2342,10 +2342,10 @@ sub GetRange
   my $historicalreviews_min  = $self->SimpleSqlGet( $sql );
 
   my $max = $reviews_max;
-  if ( $historicalreviews_max > $reviews_max ) { $max = $historicalreviews_max; }
+  if ( $historicalreviews_max ge $reviews_max ) { $max = $historicalreviews_max; }
 
   my $min = $reviews_min;
-  if ( $historicalreviews_min < $reviews_min ) { $min = $historicalreviews_min; }
+  if ( $historicalreviews_min lt $reviews_min ) { $min = $historicalreviews_min; }
   
   my $max_year = $max;
   $max_year =~ s,(.*?)\-.*,$1,;
@@ -2359,8 +2359,7 @@ sub GetRange
 
   my $min_month = $min;
   $min_month =~ s,.*?\-(.*?)\-.*,$1,;
-
-
+  
   return ( $max_year, $max_month, $min_year, $min_month );
 
 }
@@ -2512,7 +2511,7 @@ sub GetMonthStats
   my $month = $start_date;
   $month =~ s,.*\-(.*),$1,;
   my $sql  = qq{ INSERT INTO userstats (user, month, year, monthyear, total_reviews, total_pd_ren, total_pd_cnn, total_pd_cdpp, total_pdus_cdpp, total_ic_ren, total_ic_cdpp, total_und_nfi, total_time, time_per_review, reviews_per_hour, total_outliers) VALUES ('$user', '$month', '$year', '$start_date', $total_reviews_toreport, $total_pd_ren, $total_pd_cnn, $total_pd_cdpp, $total_pdus_cdpp, $total_ic_ren, $total_ic_cdpp, $total_und_nfi, $total_time, $time_per_review, $reviews_per_hour, $total_outliers )};
-
+  
   $self->PrepareSubmitSql( $sql );
 
 }
@@ -2849,8 +2848,9 @@ sub CreateStatsData
   my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear();
   my $y1 = substr($statdates[0],0,4);
   my $y2 = substr($statdates[-1],0,4);
+  my $range = ($y1 eq $y2)? "$y1":"$y1-$y2";
   my $username = ($user eq 'all')? 'All Users':$self->GetUserName($user);
-  my $label = ($cumulative)? "$username: Cumulative $y1-" : "$username: Cumulative $y1";
+  my $label = "$username: " . (($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative":"Cumulative $range");
   my $report = "$label\nCategories,Grand Total";
   my %stats = ();
   my @usedates = ();
@@ -2864,8 +2864,8 @@ sub CreateStatsData
     last if $date gt $now;
     push @usedates, $date;
     $report .= ",$date";
-    my $mintime = $date;
-    my $maxtime = $date;
+    my $mintime = $date . (($cumulative)? '-01':'');
+    my $maxtime = $date . (($cumulative)? '-12':'');
     $earliest = $mintime if $earliest eq '' or $mintime lt $earliest;
     $latest = $maxtime if $latest eq '' or $maxtime gt $latest;
     my $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
@@ -2876,6 +2876,7 @@ sub CreateStatsData
                  (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
                  FROM userstats WHERE monthyear >= '$mintime' AND monthyear <= '$maxtime'};
     $sql .= " AND user='$user'" if $user ne 'all';
+    #print "$sql<br/>\n";
     my $rows = $dbh->selectall_arrayref( $sql );
     foreach my $row ( @{$rows} )
     {
@@ -3035,38 +3036,9 @@ sub CreateStatsReport
   return $report;
 }
 
-sub CreateThisMonthsStats
-{
-    my $self = shift;
-
-    my $dbh = $self->get( 'dbh' );
-
-    my $rows = $dbh->selectall_arrayref( "SELECT distinct id FROM users" );
-
-    my @users;
-    foreach my $row ( @{$rows} )
-    {
-      push ( @users, $row->[0] );
-    }
-
-    my ( $max_year, $max_month, $min_year, $min_month ) = $self->GetRange();
-
-    my $max_date = qq{$max_year-$max_month};
-
-    my $sql = qq{DELETE from userstats where monthyear='$max_date'};
-    $self->PrepareSubmitSql( $sql );
 
 
-    foreach my $user ( @users )
-    {
-      $self->GetMonthStats ( $user, $max_date );
-    }
-    
-}
-
-
-
-sub CreateInitialStats
+sub UpdateStats
 {
     my $self = shift;
 
@@ -3075,13 +3047,7 @@ sub CreateInitialStats
     my $sql = qq{DELETE from userstats};
     $self->PrepareSubmitSql( $sql );
 
-    my $rows = $dbh->selectall_arrayref( "SELECT distinct id FROM users" );
-
-    my @users;
-    foreach my $row ( @{$rows} )
-    {
-      push ( @users, $row->[0] );
-    }
+    my @users = map {$_->[0]} @{$dbh->selectall_arrayref( "SELECT distinct id FROM users" )};
 
     my ( $max_year, $max_month, $min_year, $min_month ) = $self->GetRange();
 
@@ -3090,15 +3056,16 @@ sub CreateInitialStats
     while ( $go )
     {
       my $statDate = qq{$min_year-$min_month};
+      
       foreach my $user ( @users )
       {
-        $self->GetMonthStats ( $user, $statDate );
+        $self->GetMonthStats( $user, $statDate );
       }
 
       $min_month = $min_month + 1;
       if ( $min_month == 13 )
       {
-        $min_month = '01';
+        $min_month = 1;
         $min_year = $min_year + 1;
       }
 
