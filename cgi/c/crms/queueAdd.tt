@@ -48,7 +48,7 @@ Priority 3 can only be reviewed by an expert.<br/>
       [% adds = adds + 1 %]
     [% END %]
   [% END %]
-  <p><b>Added $adds  volumes, skipped <span style="color:red;">$skips</span></b></p>
+  <p><b>Added $adds  volume[% (adds == 1)? '':'s' %], skipped $skips</b></p>
   [% IF adds > 0 %]
     <a href="?p=review">Continue to reviews</a>
   [% END %]
