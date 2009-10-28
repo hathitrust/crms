@@ -1530,7 +1530,7 @@ sub SearchAndDownload
       }
       elsif ( $type eq 'adminHistoricalReviews' )
       {
-        $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote};
+        $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated};
       }
     }
     $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\tpriority":'');
@@ -1563,7 +1563,7 @@ sub SearchAndDownload
         my $status     = $row->[15];
         my $title      = $row->[16];
         my $author     = $row->[17];
-
+        
         if ( $type eq 'userReviews')
         {
           #for reviews
@@ -1596,8 +1596,9 @@ sub SearchAndDownload
         }
         elsif ( $type eq 'adminHistoricalReviews' )
         {
-          #id, title, author, review date, status, user, attr, reason, category, note.
-          $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note};
+          my $validated = $row->[18];
+          #id, title, author, review date, status, user, attr, reason, category, note, validated
+          $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated};
         }
         $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\t$priority":'');
       }
