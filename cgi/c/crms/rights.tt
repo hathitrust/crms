@@ -22,7 +22,7 @@
     [% IF rows.size() == 0 %][% CONTINUE %][% END %]
     <br/>
     <table class="exportStats" style="width:33%;">
-    <tr><td colspan="6" class="major" style="text-align:center;">[% id %]</th></tr>
+    <tr><th colspan="6" class="major" style="text-align:center;">[% id %]</th></tr>
     <tr><th>Attr</th><th>Reason</th><th>Source</th><th>User</th><th>Time</th><th>Note</th></tr>
     [% FOREACH r IN rows %]
       <td>[% r.0 %]</td>
