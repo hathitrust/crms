@@ -1467,8 +1467,8 @@ sub CreateSQL
       { $sql .= qq{ AND $search2term  };   }
     }
 
-    if ( $startDate ) { $sql .= qq{ AND r.time >= "$startDate" }; }
-    if ( $endDate ) { $sql .= qq{ AND r.time <= "$endDate" }; }
+    if ( $startDate ) { $sql .= qq{ AND r.time >= "$startDate 00:00:00" }; }
+    if ( $endDate ) { $sql .= qq{ AND r.time <= "$endDate 23:59:59" }; }
 
     my $limit_section = '';
     if ( $limit )
@@ -1921,8 +1921,8 @@ sub GetReviewsCount
       { $sql .= qq{ AND $search2term  };   }
     }
 
-    if ( $startDate ) { $sql .= qq{ AND r.time >= "$startDate" }; }
-    if ( $endDate ) { $sql .= qq{ AND r.time <= "$endDate" }; }
+    if ( $startDate ) { $sql .= qq{ AND r.time >= "$startDate 00:00:00" }; }
+    if ( $endDate ) { $sql .= qq{ AND r.time <= "$endDate 23:59:59" }; }
     #print "$sql<br/>\n";
     return $self->SimpleSqlGet( $sql );
 }
@@ -2460,6 +2460,7 @@ sub GetMonthStats
 
   #und/nfi
   $sql  = qq{ SELECT count(*) FROM reviews WHERE user='$user' and attr=5 and reason=8 and time like '$start_date%'};
+  print "$sql\n" if $user eq 'sgueva';
   my $total_reviews   = $self->SimpleSqlGet( $sql );
 
   $sql  = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=5 and reason=8 and time like '$start_date%'};
@@ -2469,7 +2470,7 @@ sub GetMonthStats
 
 
   my $total_time = 0;
-  #time reviewing ( in minutes ) - not including out lines 
+  #time reviewing ( in minutes ) - not including outliers 
   $sql  = qq{ SELECT duration FROM reviews WHERE user='$user' and time like '$start_date%' and duration <= '00:05:00'};
 
   my $rows = $dbh->selectall_arrayref( $sql );
