@@ -19,7 +19,7 @@ These items will take priority in the review process.
   <p class="smallishText">Enter one volume id per line.
   Entries that don't have a namespace will be given an <code>mdp.</code> prefix.</p>
   <input type="hidden" name="p" value="queueAdd"/>
-  <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;"></textarea><br/>
+  <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;">[% ids %]</textarea><br/>
   <select name="priority">
     <option value="0" [% (pri==0)? 'selected="selected"':'' %]>Priority 0</option>
     <option value="1" [% (pri==1)? 'selected="selected"':'' %]>Priority 1</option>
@@ -39,17 +39,39 @@ Priority 3 can only be reviewed by an expert.<br/>
 [% IF ids && pri %]
   [% adds = 0 %]
   [% skips = 0 %]
+  [% already  = 0 %]
+  <table class="exportStats" style="width:33%;">
   [% FOREACH id IN ids.split %]
+    [% IF id.match('^\d+$') %][% id = 'mdp.' _ id %][% END %]
+    [% id = id.remove('(^\s+)|(\s+$)') %]
     [% status = crms.AddItemToQueueOrSetItemActive(id, crms.GetTodaysDate(), 0, pri, override) %]
-    [% IF status %]
-      <p style="color:red"><b>Could not add $id to the queue because the $status</b></p>
+    <tr><th style="width:10em;"><span class="major">[% id %]</span></th>
+    [% IF status == 0 %]
+      [% vs = '' %]
+      [% IF override %]
+        [% vs = crms.GetViolations(id) %]
+        [% IF vs %][% vs = '(' _ vs _ ')' %][% END %]
+      [% END %]
+      [% adds = adds + 1 %]
+      <td>OK $vs</td>
+    [% ELSIF status == 1 %]
+      <td>Already in queue; changed priority to $pri</td>
+      [% already = already + 1 %]
+    [% ELSIF status == 2 %]
+      <td>Already processed</td>
+      [% skips = skips + 1 %]
+    [% ELSIF status == 3 %]
+      <td>Already in queue with the same priority</td>
       [% skips = skips + 1 %]
     [% ELSE %]
-      [% adds = adds + 1 %]
+      <td style="color:red">Could not add: $status</td>
+      [% skips = skips + 1 %]
     [% END %]
   [% END %]
-  <p><b>Added $adds  volume[% (adds == 1)? '':'s' %], skipped $skips</b></p>
-  [% IF adds > 0 %]
+  </table>
+  <br/>
+  <p><b>Added $adds volume[% (adds == 1)? '':'s' %], skipped $skips, modified $already</b></p>
+  [% IF adds > 0 || already > 0 %]
     <a href="?p=review">Continue to reviews</a>
   [% END %]
 [% END %]

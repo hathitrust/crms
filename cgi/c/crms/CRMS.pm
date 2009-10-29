@@ -521,7 +521,8 @@ sub AddItemToQueue
     return 1;
 }
 
-
+# Returns 0 if no error, 1 if in queue and changed priority, 2 if in queue but processed,
+#  3 if in queue with same priority, string for error message.
 sub AddItemToQueueOrSetItemActive
 {
   my $self     = shift;
@@ -531,31 +532,28 @@ sub AddItemToQueueOrSetItemActive
   my $priority = shift;
   my $override = shift;
   
-  $id = 'mdp.' . $id if $id =~ m/^\d+$/;
-  ## give the existing item higher priority
+  ## give the existing item higher or lower priority
   if ( $self->IsItemInQueue( $id ) ) 
-  {  
-    my $sql = qq{UPDATE $CRMSGlobals::queueTable SET priority=$priority WHERE id='$id'};
+  {
+    return 3 if $self->GetItemPriority($id) == $priority;
+    my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable WHERE id='$id' AND status=0";
+    my $count = $self->SimpleSqlGet($sql);
+    return 2 if $count == 0;
+    $sql = qq{UPDATE $CRMSGlobals::queueTable SET priority=$priority WHERE id='$id'};
     $self->PrepareSubmitSql( $sql );
-    return 0;
+    return 1;
   }
 
   my $record =  $self->GetRecordMetadata($id);
 
   if ( $record eq '' ) { return  'item was not found in Mirlyn';}
   my $pub = $self->GetPublDate( $id, $record );
-  
+  my @errs = ();
   if (!$override)
   {
-    ## pub date between 1923 and 1963
+    my $v = $self->GetViolations($id);
     
-    if ( ( $pub < '1923' ) || ( $pub > '1963' ) ) { $self->Logit( "skip outside 1923-1963 doc: $id" ); return 'item is not in the range 1923-1963'; }
-    ## no gov docs
-    if ( $self->IsGovDoc( $id, $record ) ) { $self->Logit( "skip fed doc: $id" ); return 'item is a gov doc'; }
-    #check 008 field postion 17 = "u" - this would indicate a us publication.
-    if ( ! $self->IsUSPub( $id, $record ) ) { $self->Logit( "skip not us doc: $id" ); return 'item is not a US pub'; }
-    #check FMT.
-    if ( ! $self->IsFormatBK( $id, $record ) ) { $self->Logit( "skip not fmt bk: $id" ); return 'item is not BK format'; }
+    return $v if $v;
   }
   my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub', $priority)};
 
@@ -573,6 +571,28 @@ sub AddItemToQueueOrSetItemActive
   $self->PrepareSubmitSql( $sql );
   
   return 0;
+}
+
+# Returns a 4-char string in the format 'dgub' (hey, it's Tibetan!) where the fields stand for
+# date, govt, us, book. For each constraint, it is capitalized if the constraint is violated.
+# Returns 0 if record can't be found.
+sub GetViolations
+{
+  my $self     = shift;
+  my $id       = shift;
+  
+  my $record =  $self->GetRecordMetadata($id);
+  return 'not found in Mirlyn' if $record eq '';
+  
+  my @errs = ();
+  my $pub = $self->GetPublDate( $id, $record );
+   
+  push @errs, 'not in range 1923-1963' if ($pub < '1923' || $pub > '1963');
+  push @errs, 'gov doc' if $self->IsGovDoc( $id, $record );
+  push @errs, 'foreign pub' unless $self->IsUSPub( $id, $record );
+  push @errs, 'non-BK format' unless $self->IsFormatBK( $id, $record );
+  
+  return join('; ', @errs);
 }
 
 # Used by the script loadIDs.pl to add and/or bump priority on a volume
