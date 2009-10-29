@@ -59,7 +59,7 @@ Priority 3 can only be reviewed by an expert.<br/>
       [% already = already + 1 %]
     [% ELSIF status == 2 %]
       <td>Already has a <a href="?p=adminReviews&amp;search1=Identifier&amp;search1value=$id" target="_blank">review</a>; changed priority to $pri</td>
-      [% skips = skips + 1 %]
+      [% already = already + 1 %]
     [% ELSIF status == 3 %]
       <td>Already in queue with the same priority</td>
       [% skips = skips + 1 %]
