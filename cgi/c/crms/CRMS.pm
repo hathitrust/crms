@@ -2460,7 +2460,7 @@ sub GetMonthStats
 
   #und/nfi
   $sql  = qq{ SELECT count(*) FROM reviews WHERE user='$user' and attr=5 and reason=8 and time like '$start_date%'};
-  print "$sql\n" if $user eq 'sgueva';
+  
   my $total_reviews   = $self->SimpleSqlGet( $sql );
 
   $sql  = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=5 and reason=8 and time like '$start_date%'};
