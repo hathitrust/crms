@@ -5409,13 +5409,13 @@ sub ReviewSearchMenu
   my @labs = ('Identifier','Title','Author','Status','Legacy','User',  'Attr Number','Reason Number','Note Category','Priority', 'Verdict');
   if ($page ne 'adminHistoricalReviews')
   {
-    splice @keys, 11, 1;
-    splice @labs, 11, 1;
+    splice @keys, 10, 1;
+    splice @labs, 10, 1;
   }
   if (!$self->IsUserAdmin())
   {
-    splice @keys, 10, 1;
-    splice @labs, 10, 1;
+    splice @keys, 9, 1;
+    splice @labs, 9, 1;
   }
   if ($page eq 'userReviews' || $page eq 'editReviews')
   {
