@@ -521,7 +521,7 @@ sub AddItemToQueue
     return 1;
 }
 
-# Returns 0 if no error, 1 if in queue and changed priority, 2 if in queue but processed,
+# Returns 0 if no error, 1 if in queue and changed priority, 2 if in queue and reviewed but changed priority,
 #  3 if in queue with same priority, string for error message.
 sub AddItemToQueueOrSetItemActive
 {
@@ -536,12 +536,11 @@ sub AddItemToQueueOrSetItemActive
   if ( $self->IsItemInQueue( $id ) ) 
   {
     return 3 if $self->GetItemPriority($id) == $priority;
-    my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable WHERE id='$id' AND status=0";
+    my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::reviewsTable WHERE id='$id'";
     my $count = $self->SimpleSqlGet($sql);
-    return 2 if $count == 0;
     $sql = qq{UPDATE $CRMSGlobals::queueTable SET priority=$priority WHERE id='$id'};
     $self->PrepareSubmitSql( $sql );
-    return 1;
+    return ($count > 0)? 2:1;
   }
 
   my $record =  $self->GetRecordMetadata($id);
