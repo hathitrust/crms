@@ -86,6 +86,9 @@ Restrict selection:<br/>
 [% IF page != 'editReviews' %]
   <option value="status"   [% order == 'status' ? 'selected="selected"':'' %]>Status</option>
 [% END %]
+[% IF page == 'adminHistoricalReviews' %]
+  <option value="legacy"   [% order == 'legacy' ? 'selected="selected"':'' %]>Legacy</option>
+[% END %]
 [% IF page != 'editReviews' && page != 'userReviews' %]
   <option value="user"     [% order == 'user' ?  'selected="selected"':'' %]>User</option>
 [% END %]
