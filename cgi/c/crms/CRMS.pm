@@ -5308,7 +5308,7 @@ sub SanityCheckDB
   {
     $self->SetError(sprintf("$table: illegal volume id: '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
     #$self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) if $row->[1] eq '0000';
-    $self->SetError(sprintf("$table: no author for %s: '%s'", $row->[0], $row->[2])) if $row->[2] eq '';
+    #$self->SetError(sprintf("$table: no author for %s: '%s'", $row->[0], $row->[2])) if $row->[2] eq '';
     $self->SetError(sprintf("$table: no title for %s: '%s'", $row->[0], $row->[3])) if $row->[3] eq '';
     $self->SetError(sprintf("$table: encoding bad for %s: '%s'", $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
     $self->SetError(sprintf("$table: encoding bad for %s: '%s'", $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
