@@ -8,59 +8,54 @@
 
 <hr width="25%" align="left"/>
 
-
 <br/><br/>
+<table class='exportStats'>
+<tr>
+<th>Sanity&nbsp;check&nbsp;the&nbsp;database</th>
+<td>
 <form action="crms">
-  <b>Sanity check the database:</b><br/>
   <input type="hidden" name="p" value="debug"/>
   <input type="hidden" name="sanityCheck" value="1"/>
   <input type="submit" value="Do it!"/>
 </form>
+</td>
+</tr>
 
+[% # Disable this in production -- too dangerous %]
+[% IF crms.get('dev') %]
+<tr>
+<th>Process&nbsp;today's&nbsp;reviews
+<span class="total">
+Only changes status of items in queue. Does not try to move to historical or export determinations.
+</span>
+</th>
+<td>
 <form action="crms">
-  <b>Process today's reviews:</b><br/>
-  <p class="smallishText">Only changes status of items in queue.
-  Does not try to move to historical or export determinations.</p>
   <input type="hidden" name="p" value="debug"/>
   <input type="hidden" name="processReviews" value="1"/>
   <input type="submit" value="Do it!"/>
 </form>
+</td>
+</tr>
+[% END %]
 
+<tr>
+<th>List&nbsp;encoded&nbsp;bibdata&nbsp;entries</th>
+<td>
 <form action="crms">
-  <b>List all bibdata entries with multibyte characters:</b><br/>
   <input type="hidden" name="p" value="debug"/>
   <input type="hidden" name="multibyte" value="1"/>
   <input type="submit" value="Do it!"/>
 </form>
+</td></tr>
+</table>
 <br/>
 [% IF cgi.param('sanityCheck') %]
-  [% crms.SanityCheckDB() %]
-  <h4>[% crms.GetErrors.size %] Items Need Fixed</h4>
-  <table class="exportStats">
-  <tr><th>Table</th><th>Explanation</th><th>Value</th></tr>
-  [% FOREACH error IN crms.GetErrors %]
-    [% e = error.split(':\s*') %]
-    <td class='debugTab'>[% e.0.replace('\s','&nbsp;') %]</td>
-    <td class='debugExpl'>[% e.1.replace('\s','&nbsp;') %]</td>
-    <td class='debugVal'>[% e.2.replace('\s','&nbsp;') %]</td></tr>
-  [% END %]
-  [% blah = crms.ClearErrors() %]
-  </table>
-[% END %]
-
-[% IF cgi.param('processReviews') %]
-  [% blah = crms.ProcessReviews() %]
-  [% FOREACH error IN crms.GetErrors %]
-    <p style="color:red;">[% error %]</p>
-  [% END %]
-[% END %]
-
-[% IF cgi.param('multibyte') %]
   [% id = cgi.param('id') %]
   [% IF id %]
     [% blah = crms.UpdateAuthor(id) %]
     [% blah = crms.UpdateTitle(id) %]
-    <h3>Fixed</h3>
+    <h4>Tried to Fix:</h4>
     <table class='exportStats'><tr><th>ID</th><th>Author</th><th>Title</th></tr>
     [% sql = "SELECT author,title FROM bibdata WHERE id='$id'" %]
     [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
@@ -68,22 +63,51 @@
       <tr><td>[% id %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td></tr>
     [% END %]
     </table><br/>
-  [% END %]  
-  [% sql = "SELECT id,author,title FROM bibdata WHERE LENGTH(title)!=CHAR_LENGTH(title) OR LENGTH(author)!=CHAR_LENGTH(author) OR author IS NULL OR title IS NULL OR author='' OR title='' ORDER BY author,title,id" %]
-  [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
-  <h3>Need Fixed</h3>
-  <span class="smallishText">Found [% ref.size %] items.</span>
-  <table class='exportStats'><tr><th>ID</th><th>Author</th><th>Title</th><th>Fix</th></tr>
-  [% FOREACH r IN ref %]
-    <tr><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td>
-      <td><form>
-            <input type="hidden" name="p" value="debug"/>
-            <input type="hidden" name="multibyte" value="1"/>
-            <input type="hidden" name="id" value="[% r.0 %]"/>
-            <input type="submit" value=""/>
-          </form>
-      </td>
+  [% END %]
+  [% crms.SanityCheckDB() %]
+  <h4>[% crms.GetErrors.size %] Items Need Fixed</h4>
+  <table class="exportStats">
+  <tr><th>Table</th><th>Explanation</th><th>Value</th><th>Fix</th></tr>
+  [% FOREACH error IN crms.GetErrors %]
+    <tr>
+    [% e = error.split(':\s*') %]
+    <td class='debugTab'>[% e.0.replace('\s','&nbsp;') %]</td>
+    <td class='debugExpl'>[% e.1.replace('\s','&nbsp;') %]</td>
+    <td class='debugVal'>[% e.2.replace('\s','&nbsp;') %]</td>
+    <td>
+      [% id = e.1.match('.+?(\w+\.\d+)').0 %]
+      [% IF e.0 == 'bibdata' && id %]
+      <form action="crms">
+      <input type="hidden" name="p" value="debug"/>
+      <input type="hidden" name="sanityCheck" value="1"/>
+      <input type="hidden" name="id" value="[% id %]"/>
+      <input type="submit" value=""/>
+      </form>
+      [% END %]
+    </td>
     </tr>
+  [% END %]
+  [% blah = crms.ClearErrors() %]
+  </table>
+[% END %]
+
+[% # Disable this in production -- too dangerous %]
+[% IF crms.get('dev') %]
+  [% IF cgi.param('processReviews') %]
+    [% blah = crms.ProcessReviews() %]
+    [% FOREACH error IN crms.GetErrors %]
+      <p style="color:red;">[% error %]</p>
+    [% END %]
+  [% END %]
+[% END %]
+
+[% IF cgi.param('multibyte') %]
+  [% sql = "SELECT id,author,title FROM bibdata WHERE LENGTH(title)!=CHAR_LENGTH(title) OR LENGTH(author)!=CHAR_LENGTH(author) ORDER BY author,title,id" %]
+  [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
+  <h4>[% ref.size %] Items Need Fixed</h4>
+  <table class='exportStats'><tr><th>ID</th><th>Author</th><th>Title</th></tr>
+  [% FOREACH r IN ref %]
+    <tr><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td></tr>
   [% END %]
   </table>
 [% END %]
