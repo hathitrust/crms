@@ -3606,7 +3606,11 @@ sub UpdateTitle
     my $id    = shift;
     my $title = shift;
 
-    
+    if ($id eq '')
+    {
+      $self->SetError("Trying to update title for empty volume id!\n");
+      $self->Logit("$0: trying to update title for empty volume id!\n");
+    }
     if ( ! $title )
     {
       ## my $ti   = $self->GetMarcDatafield( $id, "245", "a");
@@ -3637,7 +3641,12 @@ sub UpdatePubDate
     my $self = shift;
     my $id   = shift;
     my $pub_date = shift;
-
+    
+    if ($id eq '')
+    {
+      $self->SetError("Trying to update pub date for empty volume id!\n");
+      $self->Logit("$0: trying to update pub date for empty volume id!\n");
+    }
     my $sql  = qq{ SELECT count(*) from bibdata where id="$id"};
     my $count  = $self->SimpleSqlGet( $sql );
     if ( $count == 1 )
@@ -3662,7 +3671,8 @@ sub UpdateAuthor
     
     if ($id eq '')
     {
-      $self->SetError("Trying to update author for empty volume id!\n") ;
+      $self->SetError("Trying to update author for empty volume id!\n");
+      $self->Logit("$0: trying to update author for empty volume id!\n");
     }
     if ( !$author )
     {
