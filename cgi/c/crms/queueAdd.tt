@@ -9,7 +9,7 @@
 [% ids = cgi.param('ids') %]
 [% pri = cgi.param('priority') %]
 [% override = cgi.param('override') %]
-[% IF NOT pri %][% pri = 2 %][% END %]
+[% IF NOT pri %][% pri = 0 %][% END %]
 
 <hr width="25%" align="left"/><br/>
 <h2>Add Volumes to the Queue:</h2>
@@ -23,7 +23,7 @@ These items will take priority in the review process.
   <select name="priority">
     <option value="0" [% (pri==0)? 'selected="selected"':'' %]>Priority 0</option>
     <option value="1" [% (pri==1)? 'selected="selected"':'' %]>Priority 1</option>
-    <option value="2" [% (pri==2 || !pri)? 'selected="selected"':'' %]>Priority 2</option>
+    <option value="2" [% (pri==2)? 'selected="selected"':'' %]>Priority 2</option>
     <option value="3" [% (pri==3)? 'selected="selected"':'' %]>Priority 3</option>
   </select>
   &nbsp;&nbsp;&nbsp;&nbsp;
@@ -36,7 +36,7 @@ These items will take priority in the review process.
 Priority 3 can only be reviewed by an expert.<br/>
 <i>Override Restrictions</i> allows you to enter government documents, non-books, and items from before 1923 or after 1963.</p>
 <br/>
-[% IF ids && pri %]
+[% IF ids %]
   [% adds = 0 %]
   [% skips = 0 %]
   [% already  = 0 %]
