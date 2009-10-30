@@ -540,6 +540,8 @@ sub AddItemToQueueOrSetItemActive
     my $count = $self->SimpleSqlGet($sql);
     $sql = qq{UPDATE $CRMSGlobals::queueTable SET priority=$priority WHERE id='$id'};
     $self->PrepareSubmitSql( $sql );
+    $sql = qq{UPDATE $CRMSGlobals::reviewsTable SET priority=$priority WHERE id='$id'};
+    $self->PrepareSubmitSql( $sql );
     return ($count > 0)? 2:1;
   }
 
@@ -1453,15 +1455,15 @@ sub CreateSQL
       $search2term = qq{$search2 = '$search2value'};
     }
 
-    if ( ( $search1value ne "" ) && ( $search2value ne "" ) )
+    if ( ( $search1value ne '' ) && ( $search2value ne '' ) )
     {
       { $sql .= qq{ AND ( $search1term  $op1  $search2term ) };   }
     }
-    elsif ( $search1value ne "" )
+    elsif ( $search1value ne '' )
     {
       { $sql .= qq{ AND $search1term  };   }
     }
-    elsif (  $search2value ne "" )
+    elsif (  $search2value ne '' )
     {
       { $sql .= qq{ AND $search2term  };   }
     }
@@ -1907,15 +1909,15 @@ sub GetReviewsCount
       $search2term = qq{$search2 = '$search2value'};
     }
 
-    if ( ( $search1value ne "" ) && ( $search2value ne "" ) )
+    if ( ( $search1value ne '' ) && ( $search2value ne '' ) )
     {
       { $sql .= qq{ AND ( $search1term  $op1  $search2term ) };   }
     }
-    elsif ( $search1value ne "" )
+    elsif ( $search1value ne '' )
     {
       { $sql .= qq{ AND $search1term  };   }
     }
-    elsif (  $search2value ne "" )
+    elsif (  $search2value ne '' )
     {
       { $sql .= qq{ AND $search2term  };   }
     }
@@ -2208,7 +2210,7 @@ sub GetUserName
     my $sql  = qq{SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' LIMIT 1};
     my $name = $self->SimpleSqlGet( $sql );
 
-    if ( $name ne "" ) { return $name; }
+    if ( $name ne '' ) { return $name; }
 
     return 0;
 }
@@ -2224,7 +2226,7 @@ sub GetAliasUserName
     my $sql  = qq{SELECT alias FROM $CRMSGlobals::usersTable WHERE id = '$user' LIMIT 1};
     my $name = $self->SimpleSqlGet( $sql );
 
-    if ( $name ne "" ) { return $name; }
+    if ( $name ne '' ) { return $name; }
 
     return 0;
 }
@@ -2327,7 +2329,7 @@ sub GetUserData
     my $dbh  = $self->get( 'dbh' );
 
     my $sql  = qq{SELECT id, name, type FROM $CRMSGlobals::usersTable };
-    if ( $id ne "" ) { $sql .= qq{ WHERE id = "$id"; } }
+    if ( $id ne '' ) { $sql .= qq{ WHERE id = "$id"; } }
 
     my $ref  = $dbh->selectall_arrayref( $sql );
 
@@ -3226,7 +3228,7 @@ sub ValidateSubmission2
 {
     my $self = shift;
     my ($attr, $reason, $note, $category, $renNum, $renDate, $user) = @_;
-    my $errorMsg = "";
+    my $errorMsg = '';
 
     my $noteError = 0;
 
@@ -3581,7 +3583,7 @@ sub GetTitle
     my $sql  = qq{ SELECT title FROM bibdata WHERE id = "$id" };
     my $ti   = $self->SimpleSqlGet( $sql );
 
-    if ( $ti eq "" ) { $ti = $self->UpdateTitle($id); }
+    if ( $ti eq '' ) { $ti = $self->UpdateTitle($id); }
 
     #good for the title
     $ti =~ s,(.*\w).*,$1,;
@@ -3628,7 +3630,7 @@ sub UpdateTitle
     }
     else
     {
-       $sql  = qq{ INSERT INTO bibdata (id, title, pub_date) VALUES ( "$id", $tiq, "")};
+       $sql  = qq{ INSERT INTO bibdata (id, title, pub_date) VALUES ( "$id", $tiq, '')};
     }
     $self->PrepareSubmitSql( $sql );
     
@@ -3656,7 +3658,7 @@ sub UpdatePubDate
     }
     else
     {
-       my $sql  = qq{ INSERT INTO bibdata (id, title, pub_date) VALUES ( "$id", "", "$pub_date"};
+       my $sql  = qq{ INSERT INTO bibdata (id, title, pub_date) VALUES ( "$id", '', "$pub_date"};
        $self->PrepareSubmitSql( $sql );
     }
     
@@ -3689,7 +3691,7 @@ sub UpdateAuthor
     }
     else
     {
-       my $sql  = qq{ INSERT INTO bibdata (id, title, pub_date, author) VALUES ( "$id", "", "", $aiq ) };
+       my $sql  = qq{ INSERT INTO bibdata (id, title, pub_date, author) VALUES ( "$id", '', '', $aiq ) };
        $self->PrepareSubmitSql( $sql );
     }
 
@@ -3704,7 +3706,7 @@ sub GetRecordTitleBc2Meta
     my $id   = shift;
 
     ## get from object if we have it
-    if ( $self->get( 'marcData' ) ne "" ) { return $self->get( 'marcData' ); }
+    if ( $self->get( 'marcData' ) ne '' ) { return $self->get( 'marcData' ); }
 
     my $parser = $self->get( 'parser' );
     my $url    = $self->get( 'bc2metaUrl' ) . '?id=' . $id;
@@ -3721,7 +3723,7 @@ sub GetRecordTitleBc2Meta
     if ($@) { $self->Logit( "failed to parse response:$@" ); return; }
 
     my $errorCode = $source->findvalue( "//*[name()='error']" );
-    if ( $errorCode ne "" )
+    if ( $errorCode ne '' )
     {
         $self->Logit( "$url \nfailed to get MARC for $id: $errorCode " . $res->content() );
         return;
@@ -3830,7 +3832,7 @@ sub GetRecordMetadata
     my ($ns,$bar)  = split(/\./, $barcode);
 
     ## get from object if we have it
-    if ( $self->get( $bar ) ne "" ) { return $self->get( $bar ); }
+    if ( $self->get( $bar ) ne '' ) { return $self->get( $bar ); }
 
     #my $sysId = $self->BarcodeToId( $barcode );
     #my $url   = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
@@ -3850,7 +3852,7 @@ sub GetRecordMetadata
     if ($@) { $self->Logit( "failed to parse ($url):$@" ); return; }
 
     my $errorCode = $source->findvalue( "//*[name()='error']" );
-    if ( $errorCode ne "" )
+    if ( $errorCode ne '' )
     {
         $self->Logit( "$url \nfailed to get MARC for $barcode: $errorCode " . $res->content() );
         return;
@@ -3876,7 +3878,7 @@ sub BarcodeToId
     my $barcodeID  = $self->get( 'barcodeID' );
 
     ## check the cache first
-    if ( $barcodeID->{$barcode} ne "" ) { return $barcodeID->{$barcode}; }
+    if ( $barcodeID->{$barcode} ne '' ) { return $barcodeID->{$barcode}; }
 
     my $url = $bc2metaUrl . "?id=$barcode" . "&no_meta=1";
     
@@ -3890,7 +3892,7 @@ sub BarcodeToId
     $res->content =~ m,<doc_number>\s*(\d+)\s*</doc_number>,s;
     
     my $id = $1;
-    if ( $id eq "" ) { return; }  ## error or not found
+    if ( $id eq '' ) { return; }  ## error or not found
     #$id = "MIU01-" . $id;
 
     $barcodeID->{$barcode} = $id;   ## put into cache
@@ -4184,51 +4186,6 @@ sub SetDuration
     $self->RemoveFromTimer( $id, $user );
 }
 
-sub GetReviewerPace
-{
-    my $self = shift;
-    my $user = shift;
-    my $date = shift;
-
-    if ( ! $user ) { $user = $self->get("user"); }
-
-    if ( ! $date ) 
-    {
-        $date = POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time - 2629743));
-        ## if ($self->get('verbose')) { $self->Logit( "date: $date"); }
-    }
-
-    my @items = $self->ItemsReviewedByUser( $user, $date );
-    my $count = scalar( @items );
-
-    my $totalTime;
-    foreach my $item ( @items ) 
-    { 
-        my $dur = $self->GetDuration( $item, $user );
-        my ($h,$m,$s) = split(":", $dur);
-        my $time = $s + ($m * 60) + ($h * 3660);
-        $totalTime += $time;
-    }
-
-    if ( ! $count ) { return 0; }
-
-    my $ave = int( ($totalTime / $count) + .5 );
-    ## if ($self->get('verbose')) { $self->Logit( "$totalTime / $count : $ave" ); }
-
-    if ( ! $ave ) { return 0; }
-
-    my ($h,$m) = (0,0);
-    while ($ave > 3660 ) { $h++; $ave -= 3660; }
-    while ($ave > 60 )   { $m++; $ave -= 60;   }
-
-    my $return;
-    if ( $h ) { $return .= "$h:"; }
-    if ( $m ) { $return .= sprintf("%02d",$m) .":"; }
-    $return .= sprintf("%02d",$ave);
-
-    return $return;
-}
-
 sub GetReviewerCount
 {
     my $self = shift;
@@ -4253,8 +4210,7 @@ sub GetNextItemForReview
     # If user is expert, get priority 3 (and higher?) items
     if ($self->IsUserExpert($name))
     {
-      my $sql = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND status = 0 AND expcnt = 0 AND id NOT IN } .
-                qq{ (SELECT DISTINCT id FROM reviews) ORDER BY priority DESC, time DESC LIMIT 1 };
+      my $sql = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority>=3 ORDER BY priority DESC, time DESC LIMIT 1 };
       $bar = $self->SimpleSqlGet( $sql );
     }
     my $exclude1 = (rand() >= 0.33)? 'priority != 1 AND':'';
@@ -4503,7 +4459,7 @@ sub GetRenNums
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my @return;
-    foreach ( @{$ref} ) { if ($_->[0] ne "") { push @return, $_->[0]; } }
+    foreach ( @{$ref} ) { if ($_->[0] ne '') { push @return, $_->[0]; } }
     return @return;
 }
 
@@ -5404,7 +5360,7 @@ sub Mojibake
 {
   my $self = shift;
   my $text = shift;
-  my $mojibake = '[ÊÃÄÅ¶¹¸]';
+  my $mojibake = '[ÊÃÄÅ¶¹¸©]';
   return ($text =~ m/$mojibake/i);
 }
 
