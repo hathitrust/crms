@@ -166,7 +166,7 @@
     </div>
     [%# the frame (Stanford, HT, Cat...) %]
     <div class="divFrame" id="divFrame">
-      <iframe frameborder="0" width="100%" height="400%" id="topFrame" name="topFrame" src="[% ptLink %]"></iframe>
+      <iframe frameborder="0" width="100%" height="100%" id="topFrame" name="topFrame" src="[% ptLink %]"></iframe>
       <iframe frameborder="0" width="100%" height="0%"   id="bFrame"   name="bFrame"   src="[% titleLink %]"></iframe>
     </div>
   </div>
