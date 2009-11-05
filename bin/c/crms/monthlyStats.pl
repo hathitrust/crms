@@ -31,7 +31,7 @@ sub ReportMsg
 
 
 my $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/update_log.txt",
+    logFile      =>   "$DLXSROOT/prep/c/crms/log_monthlyStats.txt",
     configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
     verbose      =>   0,
     root         =>   $DLXSROOT,
