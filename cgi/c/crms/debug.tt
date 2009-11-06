@@ -40,7 +40,7 @@ Only changes status of items in queue. Does not try to move to historical or exp
 [% END %]
 
 <tr>
-<th>List&nbsp;encoded&nbsp;bibdata&nbsp;entries</th>
+<th>List&nbsp;Unicode&nbsp;bibdata&nbsp;entries</th>
 <td>
 <form action="crms">
   <input type="hidden" name="p" value="debug"/>
@@ -55,12 +55,13 @@ Only changes status of items in queue. Does not try to move to historical or exp
   [% IF id %]
     [% blah = crms.UpdateAuthor(id) %]
     [% blah = crms.UpdateTitle(id) %]
+    [% blah = crms.UpdatePubDate(id) %]
     <h4>Tried to Fix:</h4>
-    <table class='exportStats'><tr><th>ID</th><th>Author</th><th>Title</th></tr>
-    [% sql = "SELECT author,title FROM bibdata WHERE id='$id'" %]
+    <table class='exportStats'><tr><th>ID</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th></tr>
+    [% sql = "SELECT author,title,pub_date FROM bibdata WHERE id='$id'" %]
     [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
     [% FOREACH r IN ref %]
-      <tr><td>[% id %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td></tr>
+      <tr><td>[% id %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td></tr>
     [% END %]
     </table><br/>
   [% END %]
@@ -75,7 +76,7 @@ Only changes status of items in queue. Does not try to move to historical or exp
     <td class='debugExpl'>[% e.1.replace('\s','&nbsp;') %]</td>
     <td class='debugVal'>[% e.2.replace('\s','&nbsp;') %]</td>
     <td>
-      [% id = e.1.match('.+?(\w+\.\d+)').0 %]
+      [% id = e.1.match('.+?(\w+\.[A-Za-z]?\d+)').0 %]
       [% IF e.0 == 'bibdata' && id %]
       <form action="crms">
       <input type="hidden" name="p" value="debug"/>
