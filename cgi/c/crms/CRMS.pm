@@ -3484,9 +3484,15 @@ sub UpdateTitle
     ## my $ti = $self->GetMarcDatafield( $id, "245", "a");
     $title = $self->GetRecordTitleBc2Meta( $id );
   }
-
+  if ($self->Mojibake($title))
+  {
+    $self->Logit("$0: Mojibake title <<$title>> for $id!\n");
+  }
   my $tiq = $self->get('dbh')->quote( $title );
-
+  if ($self->Mojibake($tiq))
+  {
+    $self->Logit("$0: Mojibake quoted title <<$tiq>> for $id!\n");
+  }
   my $sql = qq{ SELECT count(*) from bibdata WHERE id="$id"};
   my $count = $self->SimpleSqlGet( $sql );
   $sql = qq{ UPDATE bibdata SET title=$tiq WHERE id="$id"};
@@ -3539,9 +3545,15 @@ sub UpdateAuthor
   {
     $author = $self->GetMarcDatafieldAuthor( $id );
   }
-
+  if ($self->Mojibake($author))
+  {
+    $self->Logit("$0: Mojibake author <<$author>> for $id!\n");
+  }
   my $aiq = $self->get('dbh')->quote( $author );
-
+  if ($self->Mojibake($aiq))
+  {
+    $self->Logit("$0: Mojibake quoted author <<$aiq>> for $id!\n");
+  }
   my $sql = qq{ SELECT count(*) from bibdata where id="$id"};
   my $count = $self->SimpleSqlGet( $sql );
   my $sql = qq{ UPDATE bibdata set author=$aiq where id="$id"};
