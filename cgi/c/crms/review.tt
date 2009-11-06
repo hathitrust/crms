@@ -9,7 +9,6 @@
 [% inAdd     = cgi.param('add') %]
 [% editing   = cgi.param('editing') %]
 [% navright  = cgi.param('navRight') %]
-[% crms.UpdateTitle %]
 
 [% renNum     = cgi.param('renNum') %]
 [% renDate    = cgi.param('renDate') %]
