@@ -46,27 +46,22 @@ Priority 3 can only be reviewed by an expert.<br/>
     [% id = id.remove('(^\s+)|(\s+$)') %]
     [% status = crms.AddItemToQueueOrSetItemActive(id, crms.GetTodaysDate(), 0, pri, override) %]
     <tr><th style="width:10em;"><span class="major">[% id %]</span></th>
-    [% IF status == 0 %]
-      [% vs = '' %]
-      [% IF override %]
-        [% vs = crms.GetViolations(id) %]
-        [% IF vs %][% vs = '(' _ vs _ ')' %][% END %]
-      [% END %]
+    [% err = status.substr(0, 1) %]
+    [% status = status.substr(1, status.length()) %]
+    [% IF err == 0 %]
       [% adds = adds + 1 %]
-      <td>OK $vs</td>
-    [% ELSIF status == 1 %]
-      <td>Already in queue; changed priority to $pri</td>
-      [% already = already + 1 %]
-    [% ELSIF status == 2 %]
-      <td>Already has a <a href="?p=adminReviews&amp;search1=Identifier&amp;search1value=$id" target="_blank">review</a>; changed priority to $pri</td>
-      [% already = already + 1 %]
-    [% ELSIF status == 3 %]
-      <td>Already in queue with the same priority</td>
-      [% skips = skips + 1 %]
-    [% ELSE %]
+      <td>OK: $status</td>
+    [% ELSIF err == 1 %]
       <td style="color:red">Could not add: $status</td>
       [% skips = skips + 1 %]
+    [% ELSIF err == 2 %]
+      <td>Skipped: $status</td>
+      [% skips = skips + 1 %]
+    [% ELSIF err == 3 %]
+      <td>OK: $status</td>
+      [% already = already + 1 %]
     [% END %]
+    </tr>
   [% END %]
   </table>
   <br/>
