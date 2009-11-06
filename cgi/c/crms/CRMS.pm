@@ -520,8 +520,7 @@ sub AddItemToQueue
     return 1;
 }
 
-# Returns 0 if no error, 1 if in queue and changed priority, 2 if in queue and reviewed but changed priority,
-#  3 if in queue with same priority, string for error message.
+# Returns a status code (0=Add, 1=Error, 2=Skip, 3=Modify) followed by optional text.
 sub AddItemToQueueOrSetItemActive
 {
   my $self     = shift;
@@ -530,44 +529,64 @@ sub AddItemToQueueOrSetItemActive
   my $status   = shift;
   my $priority = shift;
   my $override = shift;
-  
+  my $stat = 0;
+  my @msgs = ();
   ## give the existing item higher or lower priority
   if ( $self->IsItemInQueue( $id ) )
   {
-    return 3 if $self->GetItemPriority($id) == $priority;
+    my $oldpri = $self->GetItemPriority($id);
     my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::reviewsTable WHERE id='$id'";
     my $count = $self->SimpleSqlGet($sql);
-    $sql = qq{UPDATE $CRMSGlobals::queueTable SET priority=$priority WHERE id='$id'};
-    $self->PrepareSubmitSql( $sql );
-    $sql = qq{UPDATE $CRMSGlobals::reviewsTable SET priority=$priority WHERE id='$id'};
-    $self->PrepareSubmitSql( $sql );
-    return ($count > 0)? 2:1;
+    if ($oldpri == $priority)
+    {
+      push @msgs, 'already in queue with the same priority';
+      $stat = 2;
+    }
+    else
+    {
+      $sql = qq{UPDATE $CRMSGlobals::queueTable SET priority=$priority WHERE id='$id'};
+      $self->PrepareSubmitSql( $sql );
+      push @msgs, "changed priority from $oldpri to $priority";
+      if ($count)
+      {
+        $sql = qq{UPDATE $CRMSGlobals::reviewsTable SET priority=$priority WHERE id='$id'};
+        $self->PrepareSubmitSql( $sql );
+      }
+      $stat = 3;
+    }
+    push @msgs, "already has a <a href='?p=adminReviews&amp;search1=Identifier&amp;search1value=$id' target='_blank'>review</a>" if $count;
   }
-
-  my $record =  $self->GetRecordMetadata($id);
-
-  return  'item was not found in Mirlyn' if $record eq '';
-  my @errs = ();
-  my $pub = $self->GetPublDate( $id, $record );
-  if (!$override)
+  else
   {
-    my $v = $self->GetViolations($id, $pub);
-    return $v if $v;
+    my $record =  $self->GetRecordMetadata($id);
+    if ($record eq '')
+    {
+      push @msgs, 'item was not found in Mirlyn';
+      $stat = 1;
+    }
+    else
+    {
+      my $pub = $self->GetPublDate( $id, $record );
+      my $v = $self->GetViolations($id, $pub);
+      push @msgs, $v if $v;
+      if ($v && !$override)
+      {
+        $stat = 1;
+      }
+      else
+      {
+        my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub', $priority)";
+        $self->PrepareSubmitSql( $sql );
+        $self->UpdateTitle( $id );
+        $self->UpdatePubDate( $id, $pub );
+        my $author = $self->GetEncAuthor( $id );
+        $self->UpdateAuthor ( $id, $author );
+        my $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source ) values (1, 'ADMINUI')};
+        $self->PrepareSubmitSql( $sql );
+      }
+    }
   }
-  my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub', $priority)";
-  $self->PrepareSubmitSql( $sql );
-
-  $self->UpdateTitle( $id );
-
-  $self->UpdatePubDate( $id, $pub );
-
-  my $author = $self->GetEncAuthor( $id );
-  $self->UpdateAuthor ( $id, $author );
-
-  my $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source ) values (1, 'ADMINUI')};
-  $self->PrepareSubmitSql( $sql );
-  
-  return 0;
+  return $stat . join '; ', @msgs;
 }
 
 # Returns a 4-char string in the format 'dgub' (hey, it's Tibetan!) where the fields stand for
@@ -4071,20 +4090,34 @@ sub GetNextItemForReview
     my $name = shift;
     
     my $bar;
-    # If user is expert, get priority 3 (and higher?) items
+    # If user is expert, get priority 3 (and higher?) items; regular joe users can look for priority 2s.
     if ($self->IsUserExpert($name))
     {
-      my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority>=3 ORDER BY priority DESC, time DESC LIMIT 1";
+      my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority>=2 ORDER BY priority DESC, time DESC LIMIT 1";
       $bar = $self->SimpleSqlGet( $sql );
+      #print "$sql<br/>\n";
     }
     my $exclude3 = ($self->IsUserExpert($name))? '':'q.priority<3 AND';
     if ( ! $bar )
     {
+      # Get priority 2 items
+      my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
+      my $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND q.priority=2 AND q.locked IS NULL AND " .
+                "q.status=0 AND q.expcnt=0 AND " .
+                "(q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) OR " .
+                " q.id IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable r WHERE r.user != '$name' AND r.id IN (SELECT id FROM reviews r2 GROUP BY r2.id HAVING count(*) = 1))) " .
+                "ORDER BY q.priority DESC, b.pub_date ASC, q.time DESC LIMIT 1";
+      $bar = $self->SimpleSqlGet( $sql );
+      #print "$sql<br/>\n";
+    }
+    if ( ! $bar )
+    {
       # Find items reviewed once by some other user.
-      my $sql = "SELECT id FROM $CRMSGlobals::queueTable q WHERE $exclude3 locked IS NULL AND q.status=0 AND q.expcnt=0 AND q.id IN " .
+      my $sql = "SELECT id FROM $CRMSGlobals::queueTable q WHERE $exclude3 q.locked IS NULL AND q.status=0 AND q.expcnt=0 AND q.id IN " .
                 "(SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable r WHERE r.user != '$name' AND r.id IN (SELECT id FROM reviews r2 GROUP BY r2.id HAVING count(*) = 1)) " .
                 "ORDER BY q.priority DESC, q.time DESC LIMIT 1";
       $bar = $self->SimpleSqlGet( $sql );
+      #print "$sql<br/>\n";
     }
     if ( ! $bar )
     {
@@ -4096,6 +4129,7 @@ sub GetNextItemForReview
                   "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) " .
                   "AND b.pub_date >= $nextPubDate ORDER BY q.priority DESC, b.pub_date ASC, q.time DESC LIMIT 1";
         $bar = $self->SimpleSqlGet( $sql );
+        #print "$sql<br/>\n";
         # Relax the date stuff if it fails
         if (!$bar)
         {
@@ -4103,6 +4137,7 @@ sub GetNextItemForReview
                  "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) " .
                  "ORDER BY q.priority DESC, b.pub_date ASC, q.time DESC LIMIT 1";
           $bar = $self->SimpleSqlGet( $sql );
+          #print "$sql<br/>\n";
         }
     }
 
