@@ -4,9 +4,10 @@
 [% user = crms.get('user') %]
 
 [% crms.CreateStatsReport( user, 0, 0 ) %]
-<br>
+<span class="smallishText">*Does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews.</span>
+<br/><br/>
 [% sql = "SELECT COUNT(*) FROM reviews WHERE user='$user'" %]
-<b>Reviews awaiting verdict: [% crms.SimpleSqlGet(sql) %]</b>
+<b>Reviews Awaiting Verdict: [% crms.SimpleSqlGet(sql) %]</b>
 
 [% INCLUDE footer.tt %]
 

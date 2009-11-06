@@ -2835,8 +2835,7 @@ sub CreateStatsReport
     $report .= "</tr>\n";
   }
   $report .= "</table>\n";
-  $report =~ s/__TOT__/All&nbsp;Historical&nbsp;Reviews/;
-  my $netitle = 'Non-Expert&nbsp;Reviews' . (($cumulative || $user eq 'all')? '&nbsp;(Non-Expert&nbsp;Only)':'');
+  $report =~ s/__TOT__/All&nbsp;Reviews*/;
   $report =~ s/__TOTNE__/Non-Expert&nbsp;Reviews/;
   my $vtitle = 'Validated&nbsp;Reviews&nbsp;&amp;&nbsp;Rate';
   $report =~ s/__VAL__/$vtitle/;

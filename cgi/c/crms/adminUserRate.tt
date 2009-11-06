@@ -35,5 +35,5 @@ $stash->set('keys',\@keys);
   [% crms.CreateStatsReport(id, 0, 1) %]
   <br/><br/>
 [% END %]
- 
+<span class="smallishText">*Does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews.</span>
 [% INCLUDE footer.tt %]
