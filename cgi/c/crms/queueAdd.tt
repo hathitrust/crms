@@ -27,14 +27,16 @@ These items will take priority in the review process.
     <option value="3" [% (pri==3)? 'selected="selected"':'' %]>Priority 3</option>
   </select>
   &nbsp;&nbsp;&nbsp;&nbsp;
-  Override Restrictions<input type="checkbox" name="override" [% override? 'checked="checked"' : '' %]/>
+  Override Restrictions (sets priority 4)<input type="checkbox" name="override" [% override? 'checked="checked"' : '' %]/>
   &nbsp;&nbsp;&nbsp;&nbsp;
   <input type="submit" value="Submit"/>
 </form>
 <br/>
 <p class="smallishText">Priority 2 can be be reviewed by anyone.<br/>
 Priority 3 can only be reviewed by an expert.<br/>
-<i>Override Restrictions</i> allows you to enter government documents, non-books, and items from before 1923 or after 1963.</p>
+Priority 4 can only be reviewed by Anne.<br/>
+<i>Override Restrictions</i> allows you to enter government documents, non-books, and items from before 1923 or after 1963.<br/>
+</p>
 <br/>
 [% IF ids %]
   [% adds = 0 %]

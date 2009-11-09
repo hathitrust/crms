@@ -531,6 +531,8 @@ sub AddItemToQueueOrSetItemActive
   my $override = shift;
   my $stat = 0;
   my @msgs = ();
+  
+  $priority = 4 if $override;
   ## give the existing item higher or lower priority
   if ( $self->IsItemInQueue( $id ) )
   {
@@ -4180,10 +4182,19 @@ sub GetNextItemForReview
     my $name = shift;
     
     my $bar;
-    # If user is expert, get priority 3 (and higher?) items; regular joe users can look for priority 2s.
-    if ($self->IsUserExpert($name))
+    
+    # Only Anne reviews priority 4
+    # FIXME: do something with user account table, not hardcode name.
+    if ($name eq 'annekz')
     {
-      my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority>=2 ORDER BY priority DESC, time DESC LIMIT 1";
+      my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority=4 ORDER BY priority DESC, time DESC LIMIT 1";
+      $bar = $self->SimpleSqlGet( $sql );
+      #print "$sql<br/>\n";
+    }
+    # If user is expert, get priority 3 (and higher?) items; regular joe users can look for priority 2s.
+    if (!$bar && $self->IsUserExpert($name))
+    {
+      my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority>=2 AND priority<4 ORDER BY priority DESC, time DESC LIMIT 1";
       $bar = $self->SimpleSqlGet( $sql );
       #print "$sql<br/>\n";
     }
