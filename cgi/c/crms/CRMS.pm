@@ -5,18 +5,18 @@ package CRMS;
 ##
 ## ----------------------------------------------------------------------------
 
-BEGIN
-{
-  unshift( @INC, $ENV{'DLXSROOT'} . '/lib' );
-}
-use App::Debug::DUtils;
-BEGIN
-{
-  if ($ENV{'DLPS_DEV'})
-  {
-    App::Debug::DUtils::setup_DebugScreen();
-  }
-}
+#BEGIN
+#{
+#  unshift( @INC, $ENV{'DLXSROOT'} . '/lib' );
+#}
+#use App::Debug::DUtils;
+#BEGIN
+#{
+#  if ($ENV{'DLPS_DEV'})
+#  {
+#    App::Debug::DUtils::setup_DebugScreen();
+#  }
+#}
 use strict;
 use LWP::UserAgent;
 use XML::LibXML;
