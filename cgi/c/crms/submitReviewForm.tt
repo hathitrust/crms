@@ -3,13 +3,13 @@
 [% END %]
 
 <form name="submitReview" action="crms" onsubmit="return VerifyCategory();">
-  <input type="hidden" name="p"        value="confirmReview"> 
-  <input type="hidden" name="barcode"  value="[% barcode %]"> 
-  <input type="hidden" name="user"     value="[% user %]"> 
-  <input type="hidden" name="confirm"  value="1"> 
-  <input type="hidden" name="editing"  value="[% editing %]"> 
-  <input type="hidden" name="navRight" value="[% navright %]"> 
-  <table class="display" width="100%">
+  <input type="hidden" name="p"        value="confirmReview"/> 
+  <input type="hidden" name="barcode"  value="[% barcode %]"/> 
+  <input type="hidden" name="user"     value="[% user %]"/> 
+  <input type="hidden" name="confirm"  value="1"/> 
+  <input type="hidden" name="editing"  value="[% editing %]"/> 
+  <input type="hidden" name="navRight" value="[% navright %]"/> 
+  <table class="display">
     <tr>
 	    <td class="display" align="left" colspan="3">
 	      <strong>Display Options:</strong>
@@ -25,19 +25,16 @@
         <a href="javascript:flipFrame2()" accesskey="o">Views</a>
       </td>
     </tr>
-    <tr/>
-    <tr/>
     <tr>
       <td class="display" align="left">&nbsp;&nbsp;&nbsp;Review Pane:</td>
       <td class="display" align="center">
-        <a href="crms?p=review&navRight=0">Left</a>	
+        <a href="crms?p=review&amp;navRight=0">Left</a>	
 	    </td>
       <td class="display" align="center"/>
       <td class="display" align="center">
-        <a href="crms?p=review&navRight=1">Right</a>
+        <a href="crms?p=review&amp;navRight=1">Right</a>
 	    </td>
     </tr>
-    <tr/>
     <tr>
       <td class="display" align="left">&nbsp;&nbsp;&nbsp;Size:</td>
       <td colspan="2">
@@ -57,11 +54,11 @@
     
   
   
-  <table class="test" width="100%">
+  <table class="test">
     <tr>
       <td class="test" align="left"><strong>Renewal ID: </strong></td>
       <td>
-        <input type="text" name="renNum" value="[% renNum %]" size="8" onBlur="javascript:popRenewalDate()"/>
+        <input type="text" name="renNum" value="[% renNum %]" size="8" onblur="javascript:popRenewalDate()"/>
       </td>
     </tr>
     <tr>
@@ -70,11 +67,11 @@
           <a  href="javascript:popRenewalDate()" accesskey="d">Get Renewal Date:</a>
         </strong>
       </td>
-      <td><input type="text"  id="getDate" name="renDate" value="[% renDate %]" size="8" READONLY/></td>
+      <td><input type="text"  id="getDate" name="renDate" value="[% renDate %]" size="8" readonly="readonly"/></td>
     </tr>
   </table>
 
-  <div id="RightsCont">
+  <div id="RightsCont" class="navbottom">
   <div id="RightsReason">
   <strong>&nbsp;Rights/Reason: </strong>
   <!-- &nbsp;&nbsp;<a href="/c/crms/help.html#rights" target="_blank">help</a> -->
@@ -86,45 +83,45 @@
   <table>
     <tr>
       <td>
-        <input type="radio" id="1" name="rights" value="1" accesskey="1"
+        <input type="radio" id="r1" name="rights" value="1" accesskey="1"
           [% IF select == "1" %] checked="checked"[% END %] />
-          <label for="1">[% keys.${"1"} %] (1)</label>
+          <label for="r1">[% keys.${"1"} %] (1)</label>
       </td>
       <td>
-        <input type="radio" id="4" name="rights" value="4" accesskey="4"
+        <input type="radio" id="r4" name="rights" value="4" accesskey="4"
           [% IF select == "4" %] checked="checked"[% END %] />
-          <label for="4">[% keys.${"4"} %] (4)</label>
+          <label for="r4">[% keys.${"4"} %] (4)</label>
       </td>
     </tr>
     <tr>
       <td>
-        <input type="radio" id="2" name="rights" value="2" accesskey="2"
+        <input type="radio" id="r2" name="rights" value="2" accesskey="2"
           [% IF select == "2" %] checked="checked"[% END %] />
-          <label for="2">[% keys.${"2"} %] (2)</label>
+          <label for="r2">[% keys.${"2"} %] (2)</label>
       </td>
       <td>
-        <input type="radio" id="5" name="rights" value="5" accesskey="5"
+        <input type="radio" id="r5" name="rights" value="5" accesskey="5"
           [% IF select == "5" %] checked="checked"[% END %] />
-          <label for="5">[% keys.${"5"} %] (5)</label>
+          <label for="r5">[% keys.${"5"} %] (5)</label>
       </td>
     </tr>
     <tr>
       <td>
-        <input type="radio" id="3" name="rights" value="3" accesskey="3"
+        <input type="radio" id="r3" name="rights" value="3" accesskey="3"
           [% IF select == "3" %] checked="checked"[% END %] />
-          <label for="3">[% keys.${"3"} %] (3)</label>
+          <label for="r3">[% keys.${"3"} %] (3)</label>
       </td>
       <td>
-        <input type="radio" id="6" name="rights" value="6" accesskey="6"
+        <input type="radio" id="r6" name="rights" value="6" accesskey="6"
           [% IF select == "6" %] checked="checked"[% END %] />
-          <label for="6">[% keys.${"6"} %] (6)</label>
+          <label for="r6">[% keys.${"6"} %] (6)</label>
       </td>
     </tr>
     <tr>
       <td>
-        <input type="radio" id="7" name="rights" value="7" accesskey="7"
+        <input type="radio" id="r7" name="rights" value="7" accesskey="7"
           [% IF select == "7" %] checked="checked"[% END %] />
-          <label for="7">[% keys.${"7"} %] (7)</label>
+          <label for="r7">[% keys.${"7"} %] (7)</label>
       </td>
     </tr>
   </table>
@@ -151,33 +148,25 @@
   </select>
   <textarea name="comment" cols="20" rows="1">[% comm %]</textarea>
   </div>
-  
   <div id="SubmitForm">
-    <input style="float:left" type="submit" name="submit" value="Submit" accesskey="s"> 
-    <input style="float:left" type="submit" name="submit" value="Cancel" accesskey="c" onclick="this.form.onsubmit=null;"> 
+    <input style="float:left" type="submit" name="submit" value="Submit" accesskey="s"/> 
+    <input style="float:left" type="submit" name="submit" value="Cancel" accesskey="c" onclick="this.form.onsubmit=null;"/> 
   </div>
 </div>
 
 [% IF error %]
-  <table class="ReviewError" width="100%">
+  <table class="ReviewError">
     <tr>
       <td class="test" align="left">
-        <font align="left" color="red"><strong>Error Message:</strong></font>
+        <strong style="color:red;">Error Message:</strong>
       </td>
     </tr>
     <tr>
       <td>
-	      <textarea>[% error %]</textarea>
+	      <textarea cols="20" rows="5">[% error %]</textarea>
       </td>
     </tr>
   </table>
 [% END %]
 
-<table class="bottomNav" width="100%">
-  <tr>
-    <td style="float:left"><a style="float:right" href="/c/crms/help.html#rights" target="_blank">Help</a></td>
-    <td align="center"><a href="/c/crms/UseCases.html" target="_blank">Use Cases</a></td>
-    <td align="right"><a href="crms?p=Logout">Logout</a></td>
-  </tr>
-</table>
 </form>
