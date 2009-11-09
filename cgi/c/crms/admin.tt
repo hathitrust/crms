@@ -15,6 +15,7 @@
   || <a href="crms?p=adminHistoricalReviews">view all historical reviews</a>
   || <a href="crms?p=adminUserRate">view user review rates</a>
   || <a href="crms?p=queueStatus">queue status</a>
+  || <a href="crms?p=queue">queue</a>
   || <a href="crms?p=exportStats">export statistics</a>
   ||
 <br/> 
