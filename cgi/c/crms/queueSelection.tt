@@ -1,0 +1,107 @@
+[% page = cgi.param("p") %]
+[% op1 = cgi.param("op1") %]
+[% search1 = cgi.param("search1") %]
+[% search2 = cgi.param("search2") %]
+[% search1value = cgi.param("search1value") %]
+[% search2value = cgi.param("search2value") %]
+[% startDate = cgi.param('startDate') %]
+[% endDate = cgi.param('endDate') %]
+[% order = cgi.param('order') %]
+[% dir = cgi.param('direction') %]
+[% recs = cgi.param('records')   %]
+<script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
+[% recs = recs.replace('\D','') %]
+[% IF NOT recs %][% recs = (vols)? 10:20 %][% END %]
+[% IF NOT search1value %]
+  [% search1 = 'Status' %]
+  [% search1value = 0 %]
+  [% blah = cgi.param('search1',search1) %]
+  [% blah = cgi.param('search1value',search1value) %]
+[% END %]
+
+[% IF NOT dir %]
+  [% dir = 'DESC' %]
+  [% blah = cgi.param('direction', 'DESC') %]
+[% END %]
+<br/>
+<div style="position:relative;border-style:solid;width:32em;border-width:0.1px;padding:10px;">
+
+<a href="/c/crms/keys.html" target="_blank" accesskey="h">
+<span style="position:absolute;top:4px;right:4px">Search Help
+<img style="border:0px solid;" width="16" height="16" alt="Search Help" src="/c/crms/help.png"/>
+</span>
+</a>
+
+<form action="crms">
+<input type="hidden" name="p" value="$page"/>
+
+Restrict selection:<br/>
+
+[% crms.QueueSearchMenu('search1', search1) %]
+<input type="text"  id="search1value" name="search1value" value="[% search1value %]"/>
+<select name="op1">
+  <option [% op1 == 'AND' ? 'selected="selected"':'' %]>AND</option>
+  <option [% op1 == 'OR' ? 'selected="selected"':'' %]>OR</option>
+</select>
+<br/>
+
+[% crms.QueueSearchMenu(page, 'search2', search2) %]
+<input type="text" id="search2value" name="search2value" value="[% search2value %]"/>
+<br/>
+
+<label for="startDate">Start Date:</label>
+<input type="text" id="startDate" name="startDate" value="[% startDate %]" onclick="datePickerController.show('startDate');"
+       onblur="datePickerController.hide('startDate');"/>
+<script type="text/javascript">
+// <![CDATA[
+  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
+  datePickerController.createDatePicker(opts);
+// ]]>
+</script>
+<span class="smallText">(YYYY-MM-DD)</span>
+<br/>
+<label for="endDate">End Date:</label>
+<input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
+       onblur="datePickerController.hide('endDate');"/>
+<script type="text/javascript">
+// <![CDATA[
+  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };       
+  datePickerController.createDatePicker(opts);
+// ]]>
+</script>
+<span class="smallText">(YYYY-MM-DD)</span>
+<br/>
+
+<label for="order">Order:</label>
+<select id="order" name="order">
+  <option value="id"       [% order == 'id' ?  'selected="selected"':'' %]>Identifier</option>
+  <option value="title"    [% order == 'title' ? 'selected="selected"':'' %]>Title</option>
+  <option value="author"   [% order == 'author' ? 'selected="selected"':'' %]>Author</option>
+  <option value="pub_date" [% order == 'pub_date' ? 'selected="selected"':'' %]>Pub&nbsp;Date</option>
+  <option value="time"     [% order == 'time' ?  'selected="selected"':'' %]>Date&nbsp;Added</option>
+  <option value="locked"   [% order == 'locked' ? 'selected="selected"':'' %]>Locked</option>
+  <option value="status"   [% order == 'status' ? 'selected="selected"':'' %]>Status</option>
+  <option value="priority" [% order == 'priority' ? 'selected="selected"':'' %]>Priority</option>
+</select>
+<br/>
+
+<label for="direction">Direction:</label>
+
+<select id="direction" name="direction">
+  <option value="ASC"  [% dir == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
+  <option value="DESC" [% dir == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
+</select>
+<br/>
+
+<label for="records">Display:</label><input size="3" type="text" id="records" name="records" value="[% recs %]"/> records per page.
+<br/>
+<input type="submit" value="Submit"/>
+<input type="button" value="Clear"
+       onclick="document.getElementById('startDate').value='';
+                document.getElementById('endDate').value='';
+                document.getElementById('search1value').value='';
+                document.getElementById('search2value').value='';
+       "/>
+</form>
+</div>
+<br/>
