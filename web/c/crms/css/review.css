@@ -128,7 +128,7 @@ table.search th {
 }
 
 table.search td {
-  padding: 0px 0px 0px 0px;  
+  padding-bottom: 4px;
 }
 
 table.display { 
@@ -143,6 +143,7 @@ table.display th {
   padding: 1px 1px 1px 1px;
   border-style: inset inset inset inset;
   border-color: white black white black;
+  width: 100%;
 }
 
 table.display td {
@@ -164,7 +165,7 @@ div#RightsCont {
 }
 
 table.ReviewError {
-  border-top: 1px solid #72859a;
+  border-bottom: 1px solid #72859a;
   background-color: #e2e2e2;
   font-size:12px;
 }
@@ -187,6 +188,7 @@ table.test {
   border-bottom: 1px solid #72859a;
   background-color:#e2e2e2;
   font-size:12px;
+  width: 100%;
 }
 
 table.test th { 
