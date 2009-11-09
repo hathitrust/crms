@@ -4093,7 +4093,7 @@ sub GetNextItemForReview
     # If user is expert, get priority 3 (and higher?) items; regular joe users can look for priority 2s.
     if ($self->IsUserExpert($name))
     {
-      my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority>2 ORDER BY priority DESC, time DESC LIMIT 1";
+      my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority>=2 ORDER BY priority DESC, time DESC LIMIT 1";
       $bar = $self->SimpleSqlGet( $sql );
       #print "$sql<br/>\n";
     }
