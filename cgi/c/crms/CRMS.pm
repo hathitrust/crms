@@ -1385,7 +1385,7 @@ sub CreateSQL
     }
     elsif ( $type eq 'adminHistoricalReviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.status, b.title, b.author, r.validated FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0 };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.status, b.title, b.author, b.pub_date, r.validated FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0 };
     }
     elsif ( $type eq 'undReviews' )
     {
@@ -1455,7 +1455,7 @@ sub CreateSQL
         $sql .= qq{ ORDER BY q.$order $direction $limit_section };
       }
     }
-    elsif ( ( $order eq 'title' ) || ( $order eq 'author' ) )
+    elsif ($order eq 'title' || $order eq 'author' || $order eq 'pub_date')
     {
        $sql .= qq{ ORDER BY b.$order $direction $limit_section };
     }
@@ -1519,7 +1519,7 @@ sub SearchAndDownload
       }
       elsif ( $type eq 'adminHistoricalReviews' )
       {
-        $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated};
+        $buffer .= qq{id\ttitle\tauthor\tpub date\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated};
       }
     }
     $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\tpriority":'');
@@ -1585,9 +1585,10 @@ sub SearchAndDownload
         }
         elsif ( $type eq 'adminHistoricalReviews' )
         {
-          my $validated = $row->[18];
+          my $pubdate = $row->[18];
+          my $validated = $row->[19];
           #id, title, author, review date, status, user, attr, reason, category, note, validated
-          $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated};
+          $buffer .= qq{$id\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated};
         }
         $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\t$priority":'');
       }
@@ -1626,7 +1627,7 @@ sub GetReviewsRef
     $offset = $totalReviews-($totalReviews % $pagesize) if $offset >= $totalReviews;
     #print("GetReviewsRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
     my $sql =  $self->CreateSQL ( $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $offset, $pagesize, $page, $limit );
-    #print "$sql\n";
+    #print "$sql<br/>\n";
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my $return = [];
@@ -1654,7 +1655,8 @@ sub GetReviewsRef
                     title      => $row->[16],
                     author     => $row->[17]
                    };
-        ${$item}{'validated'} = $row->[18] if $page eq 'adminHistoricalReviews';
+        ${$item}{'pubdate'} = $row->[18] if $page eq 'adminHistoricalReviews';
+        ${$item}{'validated'} = $row->[19] if $page eq 'adminHistoricalReviews';
         push( @{$return}, $item );
     }
     my $n = POSIX::ceil($offset/$pagesize+1);
@@ -1697,7 +1699,7 @@ sub GetVolumesRef
   $offset = 0 unless $offset;
   $search1 = $self->ConvertToSearchTerm( $search1, $page );
   $search2 = $self->ConvertToSearchTerm( $search2, $page );
-  if ($order eq 'author' || $order eq 'title') { $order = 'b.' . $order; }
+  if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
   else { $order = 'r.' . $order; }
   $search1 = 'r.id' unless $search1;
   my $order2 = ($dir eq 'ASC')? 'max':'min';
@@ -1759,6 +1761,7 @@ sub GetVolumesRef
     my $qrest = ($doQ)? ' AND r.id=q.id':'';
     $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
            "r.category, r.legacy, r.renDate, r.priority, $status, b.title, b.author" .
+           (($page eq 'adminHistoricalReviews')? ', b.pub_date ':' ') .
            (($page eq 'adminHistoricalReviews')? ', r.validated ':' ') .
            "FROM $table r, bibdata b$doQ ";
     $sql .= "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
@@ -1788,7 +1791,8 @@ sub GetVolumesRef
                   title      => $row->[16],
                   author     => $row->[17]
                  };
-      ${$item}{'validated'} = $row->[18] if $page eq 'adminHistoricalReviews';
+      ${$item}{'pubdate'} = $row->[18] if $page eq 'adminHistoricalReviews';
+      ${$item}{'validated'} = $row->[19] if $page eq 'adminHistoricalReviews';
       push( @{$return}, $item );
     }
   }
@@ -5361,22 +5365,27 @@ sub ReviewSearchMenu
   my $searchName = shift;
   my $searchVal = shift;
   
-  my @keys = ('Identifier','Title','Author','Status','Legacy','UserId','Attribute',  'Reason',       'NoteCategory', 'Priority', 'Validated');
-  my @labs = ('Identifier','Title','Author','Status','Legacy','User',  'Attr Number','Reason Number','Note Category','Priority', 'Verdict');
+  my @keys = ('Identifier','Title','Author','PubDate', 'Status','Legacy','UserId','Attribute',  'Reason',       'NoteCategory', 'Priority', 'Validated');
+  my @labs = ('Identifier','Title','Author','Pub Date','Status','Legacy','User',  'Attr Number','Reason Number','Note Category','Priority', 'Verdict');
   if ($page ne 'adminHistoricalReviews')
+  {
+    splice @keys, 11, 1;
+    splice @labs, 11, 1;
+  }
+  if (!$self->IsUserAdmin())
   {
     splice @keys, 10, 1;
     splice @labs, 10, 1;
   }
-  if (!$self->IsUserAdmin())
-  {
-    splice @keys, 9, 1;
-    splice @labs, 9, 1;
-  }
   if ($page eq 'userReviews' || $page eq 'editReviews')
   {
-    splice @keys, 5, 1;
-    splice @labs, 5, 1;
+    splice @keys, 6, 1;
+    splice @labs, 6, 1;
+  }
+  if ($page ne 'adminHistoricalReviews')
+  {
+    splice @keys, 3, 1;
+    splice @labs, 3, 1;
   }
   my $html = "<select name='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)

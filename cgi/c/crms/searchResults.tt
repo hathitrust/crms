@@ -102,7 +102,8 @@ last page
   <th>ID</th>
   <th>Title</th>
   <th>Author</th>
-  <th>Date</th>
+  [% IF p == 'adminHistoricalReviews' %]<th>Pub&nbsp;Date</th>[% END %]
+  <th>Review&nbsp;Date</th>
   <th>Status</th>
   [% IF p == 'adminHistoricalReviews' %]<th>Legacy</th>[% END %]
   <th>User</th>
@@ -131,6 +132,7 @@ last page
       [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' %]<td>[% crms.LinkToReview( review.id ) %]</td>
       [% ELSE %]<td>[% crms.LinkToPT( review.id ) %]</td>[% END %]
       <td>$review.author</td>
+      [% IF p == 'adminHistoricalReviews' %]<td>$review.pubdate</td>[% END %]
       <td>$review.date</td>
       <td>$review.status</td>
       [% IF p == 'adminHistoricalReviews' %]<td>$review.legacy</td>[% END %]
