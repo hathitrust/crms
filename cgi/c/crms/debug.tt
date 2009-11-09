@@ -113,5 +113,11 @@ Only changes status of items in queue. Does not try to move to historical or exp
   </table>
 [% END %]
 
+<h2>CRMS Object</h2>
+<table class="exportStats">
+[% FOREACH key IN crms.keys() %]
+<tr><td>[% key %]</td><td>[% crms.get(key) %]</td></tr>
+[% END %]
+</table>
 [% INCLUDE footer.tt %]
 
