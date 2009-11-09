@@ -4,7 +4,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
     [% page = cgi.param('p') %]
-    [% IF page.search('(?i)reviews') || page == 'expert' %]
+    [% IF page.search('(?i)reviews') || page == 'expert' || page == 'queue' %]
     <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
     [% END %]
     
@@ -21,7 +21,7 @@
   </head>
   <body>
   <div class="pages" id="homePage">
-    <img src="/c/crms/crms.png" alt="CRMS Logo"/><div id="version">Version 1.3.2</div>
+    <img src="/c/crms/crms.png" alt="CRMS Logo"/><div id="version">Version 1.3.3</div>
     <br/><br/>
     <span class="greeting">Hello [% crms.GetUserName() %]</span>
     <a href="crms?p=Logout"> Logout</a>
