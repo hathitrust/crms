@@ -1312,7 +1312,7 @@ sub ConvertToSearchTerm
     elsif ( $search eq 'Status' )
     {
       if ( $page eq 'adminHistoricalReviews' ) { $new_search = 'r.status'; }
-      else { $new_search = 'q.status';  }
+      else { $new_search = 'q.status'; }
     }
     elsif ( $search eq 'Attribute' ) { $new_search = 'r.attr'; }
     elsif ( $search eq 'Reason' ) { $new_search = 'r.reason'; }
@@ -1320,8 +1320,15 @@ sub ConvertToSearchTerm
     elsif ( $search eq 'Legacy' ) { $new_search = 'r.legacy'; }
     elsif ( $search eq 'Title' ) { $new_search = 'b.title'; }
     elsif ( $search eq 'Author' ) { $new_search = 'b.author'; }
-    elsif ( $search eq 'Priority' ) { $new_search = 'r.priority'; }
+    elsif ( $search eq 'Priority' )
+    {
+      if ( $page eq 'queue' ) { $new_search = 'q.priority'; }
+      else { $new_search = 'r.priority'; }
+    }
     elsif ( $search eq 'Validated' ) { $new_search = 'r.validated'; }
+    elsif ( $search eq 'PubDate' ) { $new_search = 'b.pub_date'; }
+    elsif ( $search eq 'Locked' ) { $new_search = 'q.locked'; }
+    elsif ( $search eq 'ExpertCount' ) { $new_search = 'q.expcnt'; }
     
     return $new_search;
 }
@@ -1795,6 +1802,89 @@ sub GetVolumesRef
   return $data;
 }
 
+sub GetQueueRef
+{
+  my $self = shift;
+  my $order = shift;
+  my $dir = shift;
+  my $search1 = shift;
+  my $search1Value = shift;
+  my $op1 = shift;
+  my $search2 = shift;
+  my $search2Value = shift;
+  my $startDate = shift;
+  my $endDate = shift;
+  my $offset = shift;
+  my $pagesize = shift;
+  #print("GetQueueRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize');<br/>\n");
+  
+  $pagesize = 20 unless $pagesize > 0;
+  $offset = 0 unless $offset > 0;
+  $order = 'id' unless $order;
+  $offset = 0 unless $offset;
+  $search1 = $self->ConvertToSearchTerm( $search1, 'queue' );
+  $search2 = $self->ConvertToSearchTerm( $search2, 'queue' );
+  if ($order eq 'author' || $order eq 'title') { $order = 'b.' . $order; }
+  else { $order = 'q.' . $order; }
+  my @rest = ('q.id=b.id');
+  my $tester1 = '=';
+  my $tester2 = '=';
+  if ( $search1Value =~ m,.*\*.*, )
+  {
+    $search1Value =~ s,\*,%,gs;
+    $tester1 = ' LIKE ';
+  }
+  if ( $search2Value =~ m,.*\*.*, )
+  {
+    $search2Value =~ s,\*,%,gs;
+    $tester2 = ' LIKE ';
+  }
+  push @rest, "q.time >= '$startDate'" if $startDate;
+  push @rest, "q.time <= '$endDate'" if $endDate;
+  push @rest, "$search1 $tester1 '$search1Value'" if $search1Value ne '';
+  push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
+  my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
+  my $sql = "SELECT COUNT(q.id) FROM queue q, bibdata b $restrict";
+  #print "$sql<br/>\n";
+  my $totalVolumes = $self->SimpleSqlGet($sql);
+  $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
+  my $return = ();
+  $sql = 'SELECT q.id, q.time, q.status, q.locked, b.pub_date, q.priority, q.expcnt, b.title, b.author ' .
+         "FROM queue q, bibdata b $restrict ORDER BY $order $dir LIMIT $offset, $pagesize";
+  #print "$sql<br/>\n";
+  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  foreach my $row ( @{$ref} )
+  {
+    my $id = $row->[0];
+    my $date = $row->[1];
+    $date =~ s/(.*) .*/$1/;
+    $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id'";
+    #print "$sql<br/>\n";
+    my $reviews = $self->SimpleSqlGet($sql);
+    my $item = {id         => $id,
+                time       => $row->[1],
+                date       => $date,
+                status     => $row->[2],
+                locked     => $row->[3],
+                pubdate    => $row->[4],
+                priority   => $row->[5],
+                expcnt     => $row->[6],
+                title      => $row->[7],
+                author     => $row->[8],
+                reviews    => $reviews
+               };
+    push( @{$return}, $item );
+  }
+  my $n = POSIX::ceil($offset/$pagesize+1);
+  my $of = POSIX::ceil($totalVolumes/$pagesize);
+  $n = 0 if $of == 0;
+  my $data = {'rows' => $return,
+              'volumes' => $totalVolumes,
+              'page' => $n,
+              'of' => $of
+             };
+  return $data;
+}
 
 sub GetReviewsCount
 {
@@ -5277,6 +5367,23 @@ sub ReviewSearchMenu
     splice @keys, 5, 1;
     splice @labs, 5, 1;
   }
+  my $html = "<select name='$searchName'>\n";
+  foreach my $i (0 .. scalar @keys - 1)
+  {
+    $html .= sprintf(qq{  <option value="%s"%s>%s</option>\n}, $keys[$i], ($searchVal eq $keys[$i])? ' selected="selected"':'', $labs[$i]);
+  }
+  $html .= "</select>\n";
+  return $html;
+}
+
+sub QueueSearchMenu
+{
+  my $self = shift;
+  my $searchName = shift;
+  my $searchVal = shift;
+  
+  my @keys = ('Identifier','Title','Author','PubDate', 'Status','Locked','Priority','ExpertCount');
+  my @labs = ('Identifier','Title','Author','Pub Date','Status','Locked','Priority','Expert');
   my $html = "<select name='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
