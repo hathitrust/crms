@@ -18,6 +18,12 @@
   [% blah = cgi.param('search1',search1) %]
   [% blah = cgi.param('search1value',search1value) %]
 [% END %]
+[% IF NOT search2value %]
+  [% search2 = 'Reviews' %]
+  [% search2value = 0 %]
+  [% blah = cgi.param('search2',search2) %]
+  [% blah = cgi.param('search2value',search2value) %]
+[% END %]
 
 [% IF NOT dir %]
   [% dir = 'DESC' %]
@@ -45,7 +51,7 @@ Restrict selection:<br/>
 </select>
 <br/>
 
-[% crms.QueueSearchMenu(page, 'search2', search2) %]
+[% crms.QueueSearchMenu('search2', search2) %]
 <input type="text" id="search2value" name="search2value" value="[% search2value %]"/>
 <br/>
 
@@ -82,6 +88,7 @@ Restrict selection:<br/>
   <option value="locked"   [% order == 'locked' ? 'selected="selected"':'' %]>Locked</option>
   <option value="status"   [% order == 'status' ? 'selected="selected"':'' %]>Status</option>
   <option value="priority" [% order == 'priority' ? 'selected="selected"':'' %]>Priority</option>
+  <option value="reviews"  [% order == 'reviews' ? 'selected="selected"':'' %]>Reviews</option>
 </select>
 <br/>
 

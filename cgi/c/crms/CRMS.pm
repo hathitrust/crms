@@ -1331,7 +1331,10 @@ sub ConvertToSearchTerm
     elsif ( $search eq 'PubDate' ) { $new_search = 'b.pub_date'; }
     elsif ( $search eq 'Locked' ) { $new_search = 'q.locked'; }
     elsif ( $search eq 'ExpertCount' ) { $new_search = 'q.expcnt'; }
-    
+    elsif ( $search eq 'Reviews' )
+    {
+      $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)';
+    }
     return $new_search;
 }
 
@@ -1831,6 +1834,7 @@ sub GetQueueRef
   $search1 = $self->ConvertToSearchTerm( $search1, 'queue' );
   $search2 = $self->ConvertToSearchTerm( $search2, 'queue' );
   if ($order eq 'author' || $order eq 'title') { $order = 'b.' . $order; }
+  elsif ($order eq 'reviews') { $order = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)'; }
   else { $order = 'q.' . $order; }
   my @rest = ('q.id=b.id');
   my $tester1 = '=';
@@ -1850,7 +1854,7 @@ sub GetQueueRef
   push @rest, "$search1 $tester1 '$search1Value'" if $search1Value ne '';
   push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
-  my $sql = "SELECT COUNT(q.id) FROM queue q, bibdata b $restrict";
+  my $sql = "SELECT COUNT(q.id) FROM queue q, bibdata b $restrict\n";
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
@@ -5402,8 +5406,8 @@ sub QueueSearchMenu
   my $searchName = shift;
   my $searchVal = shift;
   
-  my @keys = ('Identifier','Title','Author','PubDate', 'Status','Locked','Priority','ExpertCount');
-  my @labs = ('Identifier','Title','Author','Pub Date','Status','Locked','Priority','Expert');
+  my @keys = ('Identifier','Title','Author','PubDate', 'Status','Locked','Priority','Reviews','ExpertCount');
+  my @labs = ('Identifier','Title','Author','Pub Date','Status','Locked','Priority','Reviews','Expert Reviews');
   my $html = "<select name='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
