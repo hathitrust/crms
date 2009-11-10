@@ -90,10 +90,10 @@ last page
   <th>ID</th>
   <th>Title</th>
   <th>Author</th>
-  <th>Date</th>
+  <th>Pub&nbsp;Date</th>
+  <th>Date&nbsp;Added</th>
   <th>Status</th>
   <th>Locked</th>
-  <th>Pub&nbsp;Date</th>
   <th>Priority</th>
   <th>Reviews</th>
   <th>Expert&nbsp;Reviews</th>
@@ -114,10 +114,10 @@ last page
       <td>$item.id</td>
       <td>[% crms.LinkToPT( item.id )  %]</td>
       <td>$item.author</td>
+      <td>$item.pubdate</td>
       <td>$item.date</td>
       <td>$item.status</td>
       <td>$item.locked</td>
-      <td>$item.pubdate</td>
       <td>$item.priority</td>
       <td>$item.reviews</td>
       <td>$item.expcnt</td>
