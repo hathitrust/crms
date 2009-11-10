@@ -2000,7 +2000,7 @@ sub LinkToPT
     my $id   = shift;
     my $ti   = $self->GetTitle( $id );
     
-    my $url = 'http://babel.hathitrust.org/cgi/pt?attr=1&amp;id=';
+    my $url = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=';
     #This url was used for testing.
     #my $url = '/cgi/m/mdp/pt?skin=crms;attr=1;id=';
 
