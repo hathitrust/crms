@@ -184,9 +184,16 @@ if  (  $cgi->param('download')  )
     my $offset             = $cgi->param('offset');
 
     my $type               = $cgi->param('p');
-
-    my $success = $crms->SearchAndDownload ( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate, $offset, $type );
-
+    
+    my $success;
+    if ($type eq 'queue')
+    {
+      $success = $crms->SearchAndDownloadQueue( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate, $offset );
+    }
+    else
+    {
+      $success = $crms->SearchAndDownload( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate, $offset, $type );
+    }
     if ( $success )
     {
       exit;

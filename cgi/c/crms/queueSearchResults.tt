@@ -19,7 +19,7 @@
 [% END %]
 
 
-[% ref = crms.GetQueueRef( order, direction, search1, search1value, op1, search2, search2value, startDate, endDate, offset, pagesize, p) %]
+[% ref = crms.GetQueueRef( order, direction, search1, search1value, op1, search2, search2value, startDate, endDate, offset, pagesize, 0) %]
 
 [% total = ref.volumes %]
 
@@ -76,6 +76,10 @@ first page
 last page
 [% IF doLast %]</a>[% ELSE %]</span>[% END %]
 
+[% IF total > 0 %]
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;direction=$direction&amp;offset=$prev&amp;type=$p&amp;download=1" target="_blank">download</a>
+[% END %]
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="/c/crms/UseCases.html" target="_blank">Use Cases</a>
 [% color_white    = '#FFFFFF' %]

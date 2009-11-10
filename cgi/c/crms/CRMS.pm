@@ -1473,7 +1473,6 @@ sub CreateSQL
 
 sub SearchAndDownload
 {
-
     my $self               = shift;
     my $order              = shift;
     my $direction          = shift;
@@ -1596,12 +1595,33 @@ sub SearchAndDownload
         $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\t$priority":'');
       }
 
-      $self->DownloadSpreadSheet ( $buffer );
+      $self->DownloadSpreadSheet( $buffer );
 
     if ( $buffer ) { return 1; }
     else { return 0; }
 }
 
+sub SearchAndDownloadQueue
+{
+  my $self = shift;
+  my $order = shift;
+  my $dir = shift;
+  my $search1 = shift;
+  my $search1Value = shift;
+  my $op1 = shift;
+  my $search2 = shift;
+  my $search2Value = shift;
+  my $startDate = shift;
+  my $endDate = shift;
+  my $offset = shift;
+  my $pagesize = shift;
+  my $download = shift;
+  
+  my $buffer = $self->GetQueueRef($order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $offset, $pagesize, 1);
+  $self->DownloadSpreadSheet( $buffer );
+  if ( $buffer ) { return 1; }
+  else { return 0; }
+}
 
 sub GetReviewsRef
 {
@@ -1825,7 +1845,8 @@ sub GetQueueRef
   my $endDate = shift;
   my $offset = shift;
   my $pagesize = shift;
-  #print("GetQueueRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize');<br/>\n");
+  my $download = shift;
+  #print("GetQueueRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$download');<br/>\n");
   
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
@@ -1863,6 +1884,7 @@ sub GetQueueRef
          "FROM queue q, bibdata b $restrict ORDER BY $order $dir LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  my $data = join "\t", ('ID','Title','Author','Pub Date','Date Added','Status','Locked','Priority','Reviews','Expert Reviews');
   foreach my $row ( @{$ref} )
   {
     my $id = $row->[0];
@@ -1884,15 +1906,20 @@ sub GetQueueRef
                 reviews    => $reviews
                };
     push( @{$return}, $item );
+    $data .= sprintf("\n$id\t%s\t%s\t%s\t$date\t%s\t%s\t%s\t$reviews\t%s",
+                     $row->[7], $row->[8], $row->[4], $row->[2], $row->[3], $row->[5], $row->[6]);
   }
-  my $n = POSIX::ceil($offset/$pagesize+1);
-  my $of = POSIX::ceil($totalVolumes/$pagesize);
-  $n = 0 if $of == 0;
-  my $data = {'rows' => $return,
-              'volumes' => $totalVolumes,
-              'page' => $n,
-              'of' => $of
-             };
+  if (!$download)
+  {
+    my $n = POSIX::ceil($offset/$pagesize+1);
+    my $of = POSIX::ceil($totalVolumes/$pagesize);
+    $n = 0 if $of == 0;
+    $data = {'rows' => $return,
+             'volumes' => $totalVolumes,
+             'page' => $n,
+             'of' => $of
+            };
+  }
   return $data;
 }
 
