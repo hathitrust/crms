@@ -3238,7 +3238,7 @@ sub HasItemBeenReviewedByTwoReviewers
     my $msg = '0';
     if ( $self->IsUserExpert( $user ) )
     {
-      my $sql = qq{ SELECT expcount FROM $CRMSGlobals::queueTable WHERE id='$id' };
+      my $sql = qq{ SELECT expcnt FROM $CRMSGlobals::queueTable WHERE id='$id' };
       my $count = $self->SimpleSqlGet( $sql );
       if ($count > 0 )
       {
