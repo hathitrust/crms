@@ -2399,21 +2399,6 @@ sub IsUserReviewer
     return 0;
 }
 
-sub IsUserReviewerExpert
-{
-    my $self = shift;
-    my $user = shift;
-
-    if ( ! $user ) { $user = $self->get( "user" ); }
-
-    my $sql = qq{ SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' AND type = 2 };
-    my $name = $self->SimpleSqlGet( $sql );
-
-    if ($name) { return 1; }
-
-    return 0;
-}
-
 sub IsUserExpert
 {
     my $self = shift;
@@ -3251,22 +3236,27 @@ sub HasItemBeenReviewedByTwoReviewers
     my $user = shift;
 
     my $msg = '0';
-    if ( ! $self->IsUserReviewerExpert( $user ) )
+    if ( $self->IsUserExpert( $user ) )
+    {
+      my $sql = qq{ SELECT expcount FROM $CRMSGlobals::queueTable WHERE id='$id' };
+      my $count = $self->SimpleSqlGet( $sql );
+      if ($count > 0 )
+      {
+        $msg = 'This volume does not need to be reviewed. An expert has already reviewed it. Please Cancel.';
+      }
+    }
+    else
     {
       my $sql = qq{ SELECT count(*) from $CRMSGlobals::reviewsTable where id ='$id' and user != '$user'};
       my $count = $self->SimpleSqlGet( $sql );
-    
       if ($count >= 2 )
       {
-        $msg = qq{This volume does not need to be reviewed. Two reviewers or an expert have already reviewed it. Please Cancel.};
+        $msg = 'This volume does not need to be reviewed. Two reviewers or an expert have already reviewed it. Please Cancel.';
       }
-
-      $sql = qq{ SELECT count(*) from $CRMSGlobals::queueTable where id ='$id' and status != 0};
-      $count = $self->SimpleSqlGet( $sql );
-    
-      if ($count >= 1 ) { $msg = qq{This item has been processed already. Please Cancel.}; }
-
     }
+    my $sql = qq{ SELECT count(*) from $CRMSGlobals::queueTable where id ='$id' and status != 0};
+    my $count = $self->SimpleSqlGet( $sql );
+    if ($count >= 1 ) { $msg = qq{This item has been processed already. Please Cancel.}; }
     return $msg;
 }
 
