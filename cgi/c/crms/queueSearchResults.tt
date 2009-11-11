@@ -80,7 +80,7 @@
 
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="/c/crms/UseCases.html" target="_blank">Use Cases</a>
   [% color_white    = '#FFFFFF' %]
-  [% color_gray     = '#B6D8B9' %] <!-- #99E3B9 is good too -->
+  [% color_gray     = '#C6C4F1' %]
   [% prev_id        = '' %]
   [% active_color   = color_white %]
 
