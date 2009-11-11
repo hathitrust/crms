@@ -602,7 +602,7 @@ sub GetViolations
   
   my $record =  $self->GetRecordMetadata($id);
   return 'not found in Mirlyn' if $record eq '';
-  
+  $pub = $self->GetPublDate( $id, $record ) unless $pub;
   my @errs = ();
   push @errs, 'not in range 1923-1963' if ($pub < '1923' || $pub > '1963');
   push @errs, 'gov doc' if $self->IsGovDoc( $id, $record );
@@ -4139,8 +4139,10 @@ sub UnlockAllItemsForUser
 sub GetLockedItems
 {
     my $self = shift;
+    my $user = shift;
     
-    my $sql = qq{SELECT id, locked FROM $CRMSGlobals::queueTable WHERE locked IS NOT NULL};
+    my $restrict = ($user)? "= '$user'":'IS NOT NULL';
+    my $sql = qq{SELECT id, locked FROM $CRMSGlobals::queueTable WHERE locked $restrict};
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my $return = {};
