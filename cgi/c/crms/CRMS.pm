@@ -1380,7 +1380,7 @@ sub CreateSQL
     my $sql;
     if ( $type eq 'adminReviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status >= 0 };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id };
     }
     elsif ( $type eq 'expert' )
     {
@@ -1388,7 +1388,7 @@ sub CreateSQL
     }
     elsif ( $type eq 'adminHistoricalReviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.status, b.title, b.author, b.pub_date, r.validated FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0 };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.status, b.title, b.author, b.pub_date, r.validated FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id };
     }
     elsif ( $type eq 'undReviews' )
     {
@@ -1407,25 +1407,33 @@ sub CreateSQL
     }
 
     my ( $search1term, $search2term );
-    if ( $search1value =~ m,.*\*.*, )
+    if ( $search1value =~ m/.*\*.*/ )
     {
-      $search1value =~ s,\*,%,gs;
-      $search1term = qq{$search1 like '$search1value'};
+      $search1value =~ s/\*/%/gs;
+      $search1term = qq{$search1 LIKE '$search1value'};
     }
     else
     {
       $search1term = qq{$search1 = '$search1value'};
     }
-    if ( $search2value =~ m,.*\*.*, )
+    if ( $search2value =~ m/.*\*.*/ )
     {
-      $search2value =~ s,\*,%,gs;
-      $search2term = qq{$search2 like '$search2value'};
+      $search2value =~ s/\*/%/gs;
+      $search2term = qq{$search2 LIKE '$search2value'};
     }
     else
     {
       $search2term = qq{$search2 = '$search2value'};
     }
-
+    if ( $search1value =~ m/([<>]=?)\s*(\d+)\s*/ )
+    {
+      $search1term = "$search1 $1 $2";
+    }
+    if ( $search2value =~ m/([<>]=?)\s*(\d+)\s*/ )
+    {
+      $search2term = "$search2 $1 $2";
+    }
+    
     if ( ( $search1value ne '' ) && ( $search2value ne '' ) )
     {
       { $sql .= qq{ AND ( $search1term  $op1  $search2term ) };   }
@@ -1649,7 +1657,7 @@ sub GetReviewsRef
     my $totalVolumes = $self->GetReviewsCount($search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $page, 1);
     $offset = $totalReviews-($totalReviews % $pagesize) if $offset >= $totalReviews;
     #print("GetReviewsRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
-    my $sql =  $self->CreateSQL ( $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $offset, $pagesize, $page, $limit );
+    my $sql =  $self->CreateSQL( $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $offset, $pagesize, $page, $limit );
     #print "$sql<br/>\n";
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -1750,15 +1758,25 @@ sub GetVolumesRef
   }
   my $tester1 = '=';
   my $tester2 = '=';
-  if ( $search1Value =~ m,.*\*.*, )
+  if ( $search1Value =~ m/.*\*.*/ )
   {
-    $search1Value =~ s,\*,%,gs;
+    $search1Value =~ s/\*/%/gs;
     $tester1 = ' LIKE ';
   }
-  if ( $search2Value =~ m,.*\*.*, )
+  if ( $search2Value =~ m/.*\*.*/ )
   {
-    $search2Value =~ s,\*,%,gs;
+    $search2Value =~ s/\*/%/gs;
     $tester2 = ' LIKE ';
+  }
+  if ( $search1Value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  {
+    $search1Value = $2;
+    $tester1 = $1;
+  }
+  if ( $search2Value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  {
+    $search2Value = $2;
+    $tester2 = $1;
   }
   push @rest, "r.time >= '$startDate'" if $startDate;
   push @rest, "r.time <= '$endDate'" if $endDate;
@@ -1860,15 +1878,25 @@ sub GetQueueRef
   my @rest = ('q.id=b.id');
   my $tester1 = '=';
   my $tester2 = '=';
-  if ( $search1Value =~ m,.*\*.*, )
+  if ( $search1Value =~ m/.*\*.*/ )
   {
-    $search1Value =~ s,\*,%,gs;
+    $search1Value =~ s/\*/%/gs;
     $tester1 = ' LIKE ';
   }
-  if ( $search2Value =~ m,.*\*.*, )
+  if ( $search2Value =~ m/.*\*.*/ )
   {
-    $search2Value =~ s,\*,%,gs;
+    $search2Value =~ s/\*/%/gs;
     $tester2 = ' LIKE ';
+  }
+  if ( $search1Value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  {
+    $search1Value = $2;
+    $tester1 = $1;
+  }
+  if ( $search2Value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  {
+    $search2Value = $2;
+    $tester2 = $1;
   }
   push @rest, "q.time >= '$startDate'" if $startDate;
   push @rest, "q.time <= '$endDate'" if $endDate;
@@ -1949,7 +1977,7 @@ sub GetReviewsCount
     my $sql;
     if ( $page eq 'adminReviews' )
     {
-      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND q.status >= 0 };
+      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id };
     }
     elsif ( $page eq 'expert' ) # Conflicts
     {
@@ -1957,7 +1985,7 @@ sub GetReviewsCount
     }
     elsif ( $page eq 'adminHistoricalReviews' )
     {
-      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id AND r.status >= 0  };
+      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id };
     }
     elsif ( $page eq 'undReviews' )
     {
@@ -1979,7 +2007,7 @@ sub GetReviewsCount
     if ( $search1value =~ m,.*\*.*, )
     {
       $search1value =~ s,\*,%,gs;
-      $search1term = qq{$search1 like '$search1value'};
+      $search1term = qq{$search1 LIKE '$search1value'};
     }
     else
     {
@@ -1988,13 +2016,20 @@ sub GetReviewsCount
     if ( $search2value =~ m,.*\*.*, )
     {
       $search2value =~ s,\*,%,gs;
-      $search2term = qq{$search2 like '$search2value'};
+      $search2term = qq{$search2 LIKE '$search2value'};
     }
     else
     {
       $search2term = qq{$search2 = '$search2value'};
     }
-
+    if ( $search1value =~ m/([<>]=?)\s*(\d+)\s*/ )
+    {
+      $search1term = "$search1 $1 $2";
+    }
+    if ( $search2value =~ m/([<>]=?)\s*(\d+)\s*/ )
+    {
+      $search2term = "$search2 $1 $2";
+    }
     if ( ( $search1value ne '' ) && ( $search2value ne '' ) )
     {
       { $sql .= qq{ AND ( $search1term  $op1  $search2term ) };   }
