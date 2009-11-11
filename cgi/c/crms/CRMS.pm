@@ -57,7 +57,7 @@ sub new
     $self->set( 'user',        $args{'user'} );
 
     $self->set( 'dbh',         $self->ConnectToDb() );
-    $self->set( 'dbhP',         $self->ConnectToDbForTesting() );
+    $self->set( 'dbhP',        $self->ConnectToDbForTesting() );
 
     $self->set( 'sdr_dbh',     $self->ConnectToSdrDb() );
 
@@ -1907,9 +1907,10 @@ sub GetQueueRef
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
+  my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   my $return = ();
   $sql = 'SELECT q.id, q.time, q.status, q.locked, b.pub_date, q.priority, q.expcnt, b.title, b.author ' .
-         "FROM queue q, bibdata b $restrict ORDER BY $order $dir LIMIT $offset, $pagesize";
+         "FROM queue q, bibdata b $restrict ORDER BY $order $dir $limit";
   #print "$sql<br/>\n";
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
   my $data = join "\t", ('ID','Title','Author','Pub Date','Date Added','Status','Locked','Priority','Reviews','Expert Reviews');
