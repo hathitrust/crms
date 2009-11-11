@@ -1309,7 +1309,10 @@ sub ConvertToSearchTerm
     my $page           = shift;
 
     my $new_search = $search;
-    if    ( $search eq 'Identifier' ) { $new_search = 'r.id'; }
+    if    ( $search eq 'Identifier' )
+    {
+      $new_search = ($page eq 'queue')? 'q.id':'r.id';
+    }
     elsif ( $search eq 'UserId' ) { $new_search = 'r.user'; }
     elsif ( $search eq 'Status' )
     {
