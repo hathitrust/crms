@@ -19,16 +19,14 @@
 </div>
 
 
-[% locked = crms.GetLockedItems() %]
-[% IF locked %]
+[% locked = crms.GetLockedItems(user) %]
+[% IF locked.size %]
   <div><blockquote>
   [% FOREACH item IN locked.keys %]
-    [% IF locked.${item}.locked == user %]
-      <strong>locked:</strong>
-      [% crms.GetTitle( item ) %]
-      (since: [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
-      [ <a href="crms?p=crms&amp;checkin=[% item %]">unlock item</a> ]
-    [% END %]
+    <strong>locked:</strong>
+    [% crms.GetTitle( item ) %]
+    (since: [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
+    [ <a href="crms?p=crms&amp;checkin=[% item %]">unlock item</a> ]
   [% END %]
   </blockquote></div>
 [% END %]

@@ -12,7 +12,7 @@
 [% users = crms.GetUserData() %]
 [% FOREACH user IN users.keys.sort %]
   <div>
-    <a href="crms?p=adminEditUser&id=[% users.${user}.id %]">[% users.${user}.name %] 
+    <a href="crms?p=adminEditUser&amp;id=[% users.${user}.id %]">[% users.${user}.name %] 
     ([% users.${user}.types.sort.join(", ") %])([% users.${user}.id %])</a>
   </div>
 [% END %]
