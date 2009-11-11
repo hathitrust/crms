@@ -75,9 +75,10 @@ Priority 4 can only be reviewed by Anne.<br/>
 [% sql = "SELECT q.id,b.author,b.title,q.priority FROM queue q, bibdata b WHERE q.id=b.id AND q.priority>=2 ORDER BY q.priority DESC, b.author ASC" %]
 [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
 <h4>[% ref.size %] Outstanding High-priority Items</h4>
-<table class="exportStats" style="width:66%"><tr><th>ID</th><th>Author</th><th>Title</th><th>Priority</th></tr>
+<table class="exportStats" style="width:66%"><tr><th>ID</th><th>Author</th><th>Title</th><th>Priority</th><th>Issues</th></tr>
 [% FOREACH r IN ref %]
-  <tr><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td><td>[% r.3 %]</td></tr>
+  [% vs = crms.GetViolations(r.0) %]
+  <tr><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td><td>[% r.3 %]</td><td>[% vs %]</td></tr>
 [% END %]
 </table>
 
