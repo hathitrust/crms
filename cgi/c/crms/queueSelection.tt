@@ -76,6 +76,7 @@ Restrict selection:<br/>
   <option value="locked"   [% order == 'locked' ? 'selected="selected"':'' %]>Locked</option>
   <option value="priority" [% order == 'priority' ? 'selected="selected"':'' %]>Priority</option>
   <option value="reviews"  [% order == 'reviews' ? 'selected="selected"':'' %]>Reviews</option>
+  <option value="expcnt"   [% order == 'expcnt' ? 'selected="selected"':'' %]>Expert Reviews</option>
 </select>
 <br/>
 
