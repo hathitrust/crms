@@ -27,7 +27,25 @@ body {
 <hr />
 <h2>Interface Notes</h2>
 <ul>
-  <li>Currently, the CRMS is only compatible with Firefox 3.x browser.</li>
+  <li>Currently, the CRMS is only known to be fully compatible with Firefox 3.x browser.</li>
+  <li>Safari and Internet Explorer can be used, but for security reasons will generate an error on the HathiTrust frame unless:
+  <ul>
+    <li>The user has previously logged in to <a href="https://babel.hathitrust.org/">HathiTrust</a>.</li>
+    <li>(IE only) the user lowers IE's security level.</li>
+  </ul></li>
+  <li>Internet Explorer can open help, use cases, etc. popup windows as windows rather than tabs. To fix:
+  <ol>
+    <li>Go to Tools -> Internet Options -> General</li>
+    <li>Click on the "Settings" button under "Tabs".</li>
+    <li>Find the "When a pop-up is encountered:" section and click "Always open pop-ups in a new tab".</li>
+  </ol></li>
+  <li>Safari for Mac does this too. To fix (on Safari 3.1 and later at least):
+  <ol>
+    <li>Run the Console application at /Applications/Utilities/Console.</li>
+    <li>Paste in the command "<code>defaults write com.apple.Safari TargetedClicksCreateTabs -bool true</code>" and hit return.</li>
+    <li>Restart Safari.</li>
+  </ol></li>
+  <li>Google Chrome <i>seems</i> compatible and will be undergoing continuing tests.</li>
 </ul>
 <ul>
   <li><i>The zoom feature within Firefox can create misalignment of the review interface.</i> If your interface looks strangly aligned,
