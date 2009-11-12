@@ -38,15 +38,15 @@ Priority 4 can only be reviewed by Anne.<br/>
 <i>Override Restrictions</i> allows you to enter government documents, non-books, and items from before 1923 or after 1963.<br/>
 </p>
 <br/>
+[% adds = 0 %]
+[% skips = 0 %]
+[% already  = 0 %]
 [% IF ids %]
-  [% adds = 0 %]
-  [% skips = 0 %]
-  [% already  = 0 %]
   <table class="exportStats" style="width:33%;">
   [% FOREACH id IN ids.split %]
     [% IF id.match('^\d+$') %][% id = 'mdp.' _ id %][% END %]
     [% id = id.remove('(^\s+)|(\s+$)') %]
-    [% status = crms.AddItemToQueueOrSetItemActive(id, crms.GetTodaysDate(), 0, pri, override) %]
+    [% status = crms.AddItemToQueueOrSetItemActive(id, pri, override) %]
     <tr><th style="width:10em;"><span class="major">[% id %]</span></th>
     [% err = status.substr(0, 1) %]
     [% status = status.substr(1, status.length()) %]
@@ -67,20 +67,35 @@ Priority 4 can only be reviewed by Anne.<br/>
   [% END %]
   <tr><td colspan="2" style="text-align:right"><b>Added $adds volume[% (adds == 1)? '':'s' %], skipped $skips, modified $already</b></td></tr>
   </table>
-  [% IF adds > 0 || already > 0 %]
-    <a href="?p=review">Continue to reviews</a>
-  [% END %]
 [% END %]
 <br/>
-[% sql = "SELECT q.id,b.title,b.author,q.priority,DATE(q.time),q.status FROM queue q, bibdata b WHERE q.id=b.id AND q.priority>=2 ORDER BY q.priority DESC, b.author ASC" %]
+
+<a href="?p=review">Continue to Reviews</a>
+&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="?p=queue">Go to Queue</a>
+&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="?p=adminReviews">Go to Active Reviews</a><br/>
+
+[% sql = "SELECT q.id,b.title,b.author,q.pub_date,DATE(q.time),q.status,q.priority FROM queue q, bibdata b WHERE q.id=b.id AND q.priority>=2 ORDER BY q.priority DESC, b.author ASC" %]
 [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
-<h4>[% ref.size %] Outstanding High-priority Items</h4>
-<table class="exportStats" style="width:66%"><tr><th>ID</th><th>Author</th><th>Title</th><th>Priority</th><th>Added</th><th>Status</th><th>Issues</th></tr>
-[% FOREACH r IN ref %]
-  [% vs = crms.GetViolations(r.0) %]
-  <tr><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td><td>[% r.3 %]</td><td>[% r.4 %]</td><td>[% r.5 %]</td><td>[% vs %]</td></tr>
+[% IF ref.size > 0 %]
+  <br/>
+  <h4>[% ref.size %] High-priority Item[% (ref.size == 1)? '':'s' %]</h4>
+  <table class="exportStats" style="width:auto;"><tr><th>ID</th><th>Title</th><th>Author</th><th>Pub&nbsp;Date</th><th>Added</th><th>Status</th><th>Priority</th><th>Issues</th></tr>
+  [% FOREACH r IN ref %]
+    [% vs = crms.GetViolations(r.0) %]
+    <tr><td>
+    [% IF r.5 > 0 %]
+      <a href="/cgi/c/crms/crms?p=adminReviews&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
+    [% ELSE %]
+      <a href="/cgi/c/crms/crms?p=queue&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
+    [% END %]
+    [% r.0 %]</a></td>
+    <td>[% r.1 %]</td>
+    <td>[% r.2 %]</td><td>[% r.3 %]</td><td>[% r.4 %]</td><td>[% r.5 %]</td><td>[% r.6 %]</td><td>[% vs %]</td></tr>
+  [% END %]
+  </table>
 [% END %]
-</table>
 
 [% INCLUDE footer.tt %]
 
