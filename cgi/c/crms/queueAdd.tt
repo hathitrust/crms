@@ -65,7 +65,7 @@ Priority 4 can only be reviewed by Anne.<br/>
     [% END %]
     </tr>
   [% END %]
-  <tr><td colspan="2" style="text-align:right"><b>Added $adds volume[% (adds == 1)? '':'s' %], skipped $skips, modified $already</b></td></tr>
+  <tr><td colspan="2"><b>Added $adds volume[% (adds == 1)? '':'s' %], skipped $skips, modified $already</b></td></tr>
   </table>
 [% END %]
 <br/>
