@@ -72,8 +72,8 @@ Restrict selection:<br/>
   <option value="author"   [% order == 'author' ? 'selected="selected"':'' %]>Author</option>
   <option value="pub_date" [% order == 'pub_date' ? 'selected="selected"':'' %]>Pub&nbsp;Date</option>
   <option value="time"     [% order == 'time' ?  'selected="selected"':'' %]>Date&nbsp;Added</option>
-  <option value="locked"   [% order == 'locked' ? 'selected="selected"':'' %]>Locked</option>
   <option value="status"   [% order == 'status' ? 'selected="selected"':'' %]>Status</option>
+  <option value="locked"   [% order == 'locked' ? 'selected="selected"':'' %]>Locked</option>
   <option value="priority" [% order == 'priority' ? 'selected="selected"':'' %]>Priority</option>
   <option value="reviews"  [% order == 'reviews' ? 'selected="selected"':'' %]>Reviews</option>
 </select>
