@@ -525,8 +525,6 @@ sub AddItemToQueueOrSetItemActive
 {
   my $self     = shift;
   my $id       = shift;
-  my $time     = shift;
-  my $status   = shift;
   my $priority = shift;
   my $override = shift;
   my $stat = 0;
@@ -577,7 +575,7 @@ sub AddItemToQueueOrSetItemActive
       }
       else
       {
-        my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub', $priority)";
+        my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, status, pub_date, priority) VALUES ('$id', 0, '$pub', $priority)";
         $self->PrepareSubmitSql( $sql );
         $self->UpdateTitle( $id );
         $self->UpdatePubDate( $id, $pub );
