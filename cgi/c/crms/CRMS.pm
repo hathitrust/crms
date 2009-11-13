@@ -4055,7 +4055,8 @@ sub LockItem
 
     ## if already locked for this user, that's OK
     if ( $self->IsLockedForUser( $id, $name ) ) { return 1; }
-
+    # Not locked for user, maybe someone else
+    if ($self->IsLocked($id)) { return 0; }
     ## can only have 1 item locked at a time
     my $locked = $self->HasLockedItem( $name );
 
