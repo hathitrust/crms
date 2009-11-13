@@ -3233,33 +3233,33 @@ sub CheckRenDate
 
 sub HasItemBeenReviewedByTwoReviewers
 {
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
 
-    my $msg = '0';
-    if ( $self->IsUserExpert( $user ) )
-    {
-      my $sql = qq{ SELECT expcnt FROM $CRMSGlobals::queueTable WHERE id='$id' };
-      my $count = $self->SimpleSqlGet( $sql );
-      if ($count > 0 )
-      {
-        $msg = 'This volume does not need to be reviewed. An expert has already reviewed it. Please Cancel.';
-      }
-    }
-    else
-    {
-      my $sql = qq{ SELECT count(*) from $CRMSGlobals::reviewsTable where id ='$id' and user != '$user'};
-      my $count = $self->SimpleSqlGet( $sql );
-      if ($count >= 2 )
-      {
-        $msg = 'This volume does not need to be reviewed. Two reviewers or an expert have already reviewed it. Please Cancel.';
-      }
-    }
-    my $sql = qq{ SELECT count(*) from $CRMSGlobals::queueTable where id ='$id' and status != 0};
+  my $msg = '0';
+  if ( $self->IsUserExpert( $user ) )
+  {
+    my $sql = qq{ SELECT expcnt FROM $CRMSGlobals::queueTable WHERE id='$id' };
     my $count = $self->SimpleSqlGet( $sql );
-    if ($count >= 1 ) { $msg = qq{This item has been processed already. Please Cancel.}; }
-    return $msg;
+    if ($count > 0 )
+    {
+      $msg = 'This volume does not need to be reviewed. An expert has already reviewed it. Please Cancel.';
+    }
+  }
+  else
+  {
+    my $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable WHERE id ='$id' AND user != '$user'};
+    my $count = $self->SimpleSqlGet( $sql );
+    if ($count >= 2 )
+    {
+      $msg = 'This volume does not need to be reviewed. Two reviewers or an expert have already reviewed it. Please Cancel.';
+    }
+    $sql = qq{ SELECT count(*) FROM $CRMSGlobals::queueTable WHERE id ='$id' AND status=0};
+    $count = $self->SimpleSqlGet( $sql );
+    if ($count >= 1 ) { $msg = 'This item has been processed already. Please Cancel.'; }
+  }
+  return $msg;
 }
 
 
