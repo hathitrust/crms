@@ -4252,14 +4252,14 @@ sub GetNextItemForReview
     # FIXME: do something with user account table, not hardcode name.
     if ($name eq 'annekz')
     {
-      my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority=4 ORDER BY priority DESC, time DESC LIMIT 1";
+      my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority=4 ORDER BY priority DESC, time ASC LIMIT 1";
       $bar = $self->SimpleSqlGet( $sql );
       #print "$sql<br/>\n";
     }
     # If user is expert, get priority 3 (and higher?) items; regular joe users can look for priority 2s.
     if (!$bar && $self->IsUserExpert($name))
     {
-      my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority>=2 AND priority<4 ORDER BY priority DESC, time DESC LIMIT 1";
+      my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority>=2 AND priority<4 ORDER BY priority DESC, time ASC LIMIT 1";
       $bar = $self->SimpleSqlGet( $sql );
       #print "$sql<br/>\n";
     }
@@ -4271,7 +4271,7 @@ sub GetNextItemForReview
                 "q.status=0 AND q.expcnt=0 AND " .
                 "(q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) OR " .
                 " q.id IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable r WHERE r.user != '$name' AND r.id IN (SELECT id FROM reviews r2 GROUP BY r2.id HAVING count(*) = 1))) " .
-                "ORDER BY q.priority DESC, b.pub_date ASC, q.time DESC LIMIT 1";
+                "ORDER BY q.priority DESC, b.pub_date ASC, q.time ASC LIMIT 1";
       $bar = $self->SimpleSqlGet( $sql );
       #print "$sql<br/>\n";
     }
@@ -4280,7 +4280,7 @@ sub GetNextItemForReview
       # Find items reviewed once by some other user.
       my $sql = "SELECT id FROM $CRMSGlobals::queueTable q WHERE $exclude3 q.locked IS NULL AND q.status=0 AND q.expcnt=0 AND q.id IN " .
                 "(SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable r WHERE r.user != '$name' AND r.id IN (SELECT id FROM reviews r2 GROUP BY r2.id HAVING count(*) = 1)) " .
-                "ORDER BY q.priority DESC, q.time DESC LIMIT 1";
+                "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
       $bar = $self->SimpleSqlGet( $sql );
       #print "$sql<br/>\n";
     }
@@ -4292,7 +4292,7 @@ sub GetNextItemForReview
         my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
         my $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND $exclude1 $exclude3 q.locked IS NULL AND " .
                   "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) " .
-                  "AND b.pub_date >= $nextPubDate ORDER BY q.priority DESC, b.pub_date ASC, q.time DESC LIMIT 1";
+                  "AND b.pub_date >= $nextPubDate ORDER BY q.priority DESC, b.pub_date ASC, q.time ASC LIMIT 1";
         $bar = $self->SimpleSqlGet( $sql );
         #print "$sql<br/>\n";
         # Relax the date stuff if it fails
@@ -4300,7 +4300,7 @@ sub GetNextItemForReview
         {
           $sql = "SELECT id FROM $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id $exclude3 AND q.locked IS NULL AND " .
                  "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) " .
-                 "ORDER BY q.priority DESC, b.pub_date ASC, q.time DESC LIMIT 1";
+                 "ORDER BY q.priority DESC, b.pub_date ASC, q.time ASC LIMIT 1";
           $bar = $self->SimpleSqlGet( $sql );
           #print "$sql<br/>\n";
         }
