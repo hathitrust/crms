@@ -90,12 +90,18 @@ if ($user ne $ru)
 
 if  ( $cgi->param('p') eq 'confirmReview' )  
 {
-
+  my $editing    = $cgi->param('editing');
   if ($cgi->param( 'submit' ) eq 'Cancel')
   {
     my $id         = $cgi->param('barcode');
     $crms->UnlockItem( $id, $user);
     $cgi->delete_all();
+    if ( $editing )
+    {
+      my $output = qq(<script type="text/javascript" language="JavaScript">window.close();</script>);
+      print "Content-type: text/html\n\n";
+      print $output;
+    }
   }
   else
   {
@@ -106,12 +112,11 @@ if  ( $cgi->param('p') eq 'confirmReview' )
     my $renNum     = $cgi->param('renNum');
     my $renDate    = $cgi->param('renDate');
     my $id         = $cgi->param('barcode');
-    my $editing    = $cgi->param('editing');
     my $navright   = $cgi->param('navRight');
 
     my ( $rights, $reason ) = $crms->GetAttrReasonFromCode($EncRights);
 
-    my $errorMsg1 = $crms->HasItemBeenReviewedByTwoReviewers ( $id, $user );
+    my $errorMsg1 = $crms->HasItemBeenReviewedByTwoReviewers( $id, $user );
 
     my $errorMsg = $crms->ValidateSubmission2( $rights, $reason, $comment, $category, $renNum, $renDate, $user );
   
@@ -148,16 +153,15 @@ if  ( $cgi->param('p') eq 'confirmReview' )
       if ( $crms->IsUserExpert ( $user ) ) { $expert = 2; }
 
       $crms->SubmitReview($id, $user, $rights, $reason, $copyDate, $comment, $renNum, $expert, $renDate, $category);
-      if  ( $editing )
+      $cgi->delete_all();
+      if ( $editing )
       {
-        $cgi->delete_all();
         my $output = qq(<script type="text/javascript" language="JavaScript">window.close();</script>);
         print "Content-type: text/html\n\n";
         print $output;
       }
       else
       {
-        $cgi->delete_all();
         $cgi->param('p', 'review' );
         $cgi->param('navRight', $navright );
       }
