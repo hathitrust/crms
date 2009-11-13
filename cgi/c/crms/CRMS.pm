@@ -4047,6 +4047,7 @@ sub PreviouslyReviewed
     return 0;
 }
 
+# Returns 0 on success, error message on error.
 sub LockItem
 {
     my $self = shift;
@@ -4054,25 +4055,17 @@ sub LockItem
     my $name = shift;
 
     ## if already locked for this user, that's OK
-    if ( $self->IsLockedForUser( $id, $name ) ) { return 1; }
+    if ( $self->IsLockedForUser( $id, $name ) ) { return 0; }
     # Not locked for user, maybe someone else
-    if ($self->IsLocked($id)) { return 0; }
+    if ($self->IsLocked($id)) { return 'Item has already been locked by another user'; }
     ## can only have 1 item locked at a time
     my $locked = $self->HasLockedItem( $name );
-
-    if ( $locked eq $id ) { return 1; }  ## already locked
-    if ( $locked )
-    {
-        ## user has something locked already
-        ## add some error handling
-        return 0;
-    }
-
+    if ( $locked eq $id ) { return 0; }  ## already locked
+    if ( $locked ) { return 'You already have a locked item'; }
     my $sql = qq{UPDATE $CRMSGlobals::queueTable SET locked = "$name" WHERE id = "$id"};
-    if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
-
+    $self->PrepareSubmitSql( $sql );
     $self->StartTimer( $id, $name );
-    return 1;
+    return 0;
 }
 
 sub UnlockItem
@@ -4308,9 +4301,10 @@ sub GetNextItemForReview
     }
 
     ## lock before returning
-    if ( ! $self->LockItem( $bar, $name ) )
+    my $err = $self->LockItem( $bar, $name );
+    if ($err != 0)
     {
-        $self->Logit( "failed to lock $bar for $name" );
+        $self->Logit( "failed to lock $bar for $name: $err" );
         return;
     }
     
