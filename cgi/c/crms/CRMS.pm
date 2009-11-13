@@ -1732,6 +1732,7 @@ sub GetVolumesRef
   $search1 = $self->ConvertToSearchTerm( $search1, $page );
   $search2 = $self->ConvertToSearchTerm( $search2, $page );
   if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
+  elsif ($order eq 'status' && $page ne 'adminHistoricalReviews') { $order = 'q.' . $order; }
   else { $order = 'r.' . $order; }
   $search1 = 'r.id' unless $search1;
   my $order2 = ($dir eq 'ASC')? 'max':'min';
