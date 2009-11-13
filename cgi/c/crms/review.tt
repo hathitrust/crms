@@ -25,25 +25,19 @@
     <h3>Too late, can't edit your review for this item.</h3>
     [% STOP %]
   [% END %]
-  [% IF NOT crms.LockItem(inBarcode, user) %] 
-    <h3>One item at a time please.</h3>
-
- [% locked = crms.GetLockedItems() %]
+  [% err = crms.LockItem(inBarcode, user) %]
+  [% IF err != 0 %]
+    <h3>[% err %].</h3>
+    [% locked = crms.GetLockedItems(user) %]
     [% IF locked %]
       [% FOREACH item IN locked.keys %]
-        [% IF locked.${item}.locked == user %]
-          <strong>locked:</strong>
-          [% crms.GetTitle( item ) %]
-           (since: [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
-           [ <a href="crms?p=crms&amp;checkin=[% item %]">unlock item</a> ]
-        [% END %]
+         <strong>locked:</strong>
+         [% crms.GetTitle( item ) %]
+         (since: [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
+         [ <a href="crms?p=crms&amp;checkin=[% item %]">unlock item</a> ]
       [% END %]
-    [% ELSE %]
-      none
     [% END %]
-
-
-
+    <br/><a href="JavaScript:window.close()">Close</a>
     [% STOP %]
   [% END %]
 [% END %]
@@ -165,24 +159,6 @@
             </a></td></tr>
           [% END %]
           </table>
-        [% END %]
-      </div>
-      <div class="navbottom">
-      [% sql = "SELECT expcnt FROM queue WHERE id='$barcode'" %]
-        [% count = crms.SimpleSqlGet(sql) %]
-        [% IF count > 0 %]
-          <table class="ReviewError">
-          <tr>
-            <td class="test" align="left">
-              <strong style="color:red;">Error:</strong>
-            </td>
-          </tr>
-          <tr>
-            <td>
-	            <textarea cols="20" rows="7">An expert has already reviewed this item. Please Cancel and, if possible, reload the page that sent you here.</textarea>
-            </td>
-          </tr>
-        </table>
         [% END %]
       </div>
     </div>
