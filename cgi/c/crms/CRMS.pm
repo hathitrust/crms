@@ -3236,9 +3236,7 @@ sub HasItemBeenReviewedByTwoReviewers
   my $msg = '0';
   if ( $self->IsUserExpert( $user ) )
   {
-    my $sql = qq{ SELECT expcnt FROM $CRMSGlobals::queueTable WHERE id='$id' };
-    my $count = $self->SimpleSqlGet( $sql );
-    if ($count > 0 )
+    if ($self->HasItemBeenReviewedByAnotherExpert($id,$user) && $self->GetItemPriority($id) == 0)
     {
       $msg = 'This volume does not need to be reviewed. An expert has already reviewed it. Please Cancel.';
     }
