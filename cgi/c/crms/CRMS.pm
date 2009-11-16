@@ -2119,7 +2119,6 @@ sub GetStatus
     my $id   = shift;
 
     my $sql = qq{ SELECT status FROM $CRMSGlobals::queueTable WHERE id = "$id"};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
     my $str = $self->SimpleSqlGet( $sql );
 
     return $str;
@@ -2132,7 +2131,6 @@ sub GetLegacyStatus
     my $id   = shift;
 
     my $sql = qq{ SELECT status FROM $CRMSGlobals::historicalreviewsTable WHERE id = "$id"};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
     my $str = $self->SimpleSqlGet( $sql );
 
     return $str;
@@ -2146,7 +2144,6 @@ sub ItemWasReviewedByOtherUser
     my $user   = shift;
 
     my $sql = qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user != "$user" AND id = "$id"};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
     my $found = $self->SimpleSqlGet( $sql );
 
     if ($found) { return 1; }
@@ -2162,7 +2159,6 @@ sub UsersAgreeOnReview
     ##Agree is when the attr and reason match.
 
     my $sql = qq{ SELECT id, attr, reason FROM $CRMSGlobals::reviewsTable where id = '$id' Group by id, attr, reason having count(*) = 2};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
     my $found = $self->SimpleSqlGet( $sql );
 
     if ($found) { return 1; }
@@ -4227,6 +4223,21 @@ sub GetReviewerCount
     my $date = shift;
  
     return scalar( $self->ItemsReviewedByUser( $user, $date ) );
+}
+
+sub HasItemBeenReviewedByAnotherExpert
+{
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
+  
+  if ($self->GetStatus($id) == 5)
+  {
+    my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::reviewsTable WHERE id='$id' AND user='$user'";
+    my $count = $self->SimpleSqlGet($sql);
+    return ($count)? 0:1;
+  }
+  return 0;
 }
 
 ## ----------------------------------------------------------------------------

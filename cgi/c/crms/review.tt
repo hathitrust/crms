@@ -33,8 +33,10 @@
       [% FOREACH item IN locked.keys %]
          <strong>locked:</strong>
          [% crms.GetTitle( item ) %]
-         (since: [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
-         [ <a href="crms?p=crms&amp;checkin=[% item %]">unlock item</a> ]
+         (since [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
+         [% IF user == locked.${item}.locked %]
+           [ <a href="crms?p=crms&amp;checkin=[% item %]">unlock item</a> ]
+        [% END %]
       [% END %]
     [% END %]
     <br/><a href="JavaScript:window.close()">Close</a>
@@ -131,7 +133,12 @@
 
       </div>
       <div class="navbottom">
-        [% comment = "" %] 
+        [% comment = "" %]
+        [% IF crms.IsUserExpert(user) && editing %]
+          [% IF crms.HasItemBeenReviewedByAnotherExpert(barcode,user) %]
+            [% error = "An expert has already reviewed this volume." %]
+          [% END %]
+        [% END %]
         [% INCLUDE submitReviewForm.tt barcode = barcode, renNum   = renNum,   renDate = renDate,
                                        comment = comment, copyDate = copyDate, comm    = comm,    
                                        category = category, editing = editing, error   = error,
