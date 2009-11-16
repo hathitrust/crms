@@ -83,7 +83,7 @@
 [% END %] 
 
 [%# links to PT, stanford DB search, or Mirlyn catalog %]
-[% authorLink = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/process?clauseMapped(author)=$encAuthor" %]
+[% authorLink = "http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$encAuthor" %]
 [% titleLink  = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/process?clauseMapped(title)=$encTitle" %]
 [% searchForm = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/modify?clauseMapped(title)=$encTitle&amp;clauseMapped(author)=$encAuthor" %]
 [%# ptLink     = "/cgi/m/mdp/pt?skin=crms;id=$barcode;page=root;view=image;size=75;attr=1" #%]
