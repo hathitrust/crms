@@ -136,7 +136,7 @@
         [% comment = "" %]
         [% IF crms.IsUserExpert(user) && editing %]
           [% IF crms.HasItemBeenReviewedByAnotherExpert(barcode,user) %]
-            [% error = "An expert has already reviewed this volume." %]
+            [% error = "An expert has already reviewed this volume. Please cancel." %]
           [% END %]
         [% END %]
         [% INCLUDE submitReviewForm.tt barcode = barcode, renNum   = renNum,   renDate = renDate,
