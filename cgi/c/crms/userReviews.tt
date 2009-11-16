@@ -1,7 +1,8 @@
 [% INCLUDE header.tt    %]
 [% INCLUDE homeLink.tt  %]
 
-<h3>Search Your Previously Processed Reviews</h3>
+<hr width="25%" align="left"/><br/>
+<h2>Search Your Previously Processed Reviews</h2>
 <span class="smallishText">To access/edit your recent reviews, go <a href="/cgi/c/crms/crms?p=editReviews">here</a></span><br/><br/>
 
 [% INCLUDE selection.tt  %]
