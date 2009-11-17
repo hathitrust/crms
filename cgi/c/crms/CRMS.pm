@@ -3271,54 +3271,57 @@ sub ValidateSubmission2
         $errorMsg .= qq{Not a reviewer.  };
     }
 
-    if ( ( ! $attr ) || ( ! $reason ) )   { $errorMsg .= qq{rights/reason designation required.  }; }
+    if ( ( ! $attr ) || ( ! $reason ) )
+    {
+      $errorMsg .= 'rights/reason designation required.';
+    }
 
 
     ## und/nfi
     if ( $attr == 5 && $reason == 8 && ( ( ! $note ) || ( ! $category ) )  )
     {
-        $errorMsg .= qq{und/nfi must include note category and note text.   };
+        $errorMsg .= 'und/nfi must include note category and note text.';
         $noteError = 1;
     }
 
     ## ic/ren requires a ren number
     if ( $attr == 2 && $reason == 7 && ( ( ! $renNum ) || ( ! $renDate ) )  )
     {
-        $errorMsg .= qq{ic/ren must include renewal id and renewal date.  };
+        $errorMsg .= 'ic/ren must include renewal id and renewal date.';
     }
     elsif ( $attr == 2 && $reason == 7 )
     {
         $renDate =~ s,.*[A-Za-z](.*),$1,;
-        $renDate = qq{19$renDate};
+        $renDate = '19' . $renDate;
 
         if ( $renDate < 1950 )
         {
-           $errorMsg .= qq{renewal has expired; volume is pd.  date entered is $renDate };
+           $errorMsg .= "renewal has expired; volume is pd. date entered is $renDate";
         }
     }
 
     ## pd/ren requires a ren number
     if ( $attr == 1 && $reason == 7 &&  ( ( $renNum ) || ( $renDate ) )  )
     {
-        $errorMsg .= qq{pd/ren should not include renewal info.  };
+        $errorMsg .= 'pd/ren should not include renewal info.';
     }
 
     ## pd/ncn requires a ren number
     if (  $attr == 1 && $reason == 2 && ( ( $renNum ) || ( $renDate ) ) )
     {
-        $errorMsg .= qq{pd/ncn should not include renewal info.  };
+        $errorMsg .= 'pd/ncn should not include renewal info.';
     }
 
 
     ## pd/cdpp requires a ren number
     if (  $attr == 1 && $reason == 9 && ( ( $renNum ) || ( $renDate )  ) )
     {
-        $errorMsg .= qq{pd/cdpp should not include renewal info.  };
+        $errorMsg .= 'pd/cdpp should not include renewal info.';
     }
 
     if ( $attr == 1 && $reason == 9 && ( ( ! $note ) || ( ! $category )  )  )
     {
-        $errorMsg .= qq{pd/cdpp must include note category and note text.  };
+        $errorMsg .= 'pd/cdpp must include note category and note text.';
         $noteError = 1;
     }
 
@@ -3330,37 +3333,36 @@ sub ValidateSubmission2
 
     if ( $attr == 2 && $reason == 9 && ( ( ! $note )  || ( ! $category ) )  )
     {
-        $errorMsg .= qq{ic/cdpp must include note category and note text.  };
+        $errorMsg .= 'ic/cdpp must include note category and note text.';
         $noteError = 1;
     }
 
     if ( $noteError == 0 )
     {
       if ( ( $category )  && ( ! $note ) )
-  {
-    $errorMsg .= qq{must include a note if there is a category.  };
-  }
+      {
+        $errorMsg .= 'must include a note if there is a category.';
+      }
       elsif ( ( $note ) && ( ! $category ) )
-  {
-          $errorMsg .= qq{must include a category if there is a note.  };
-  }
-
+      {
+        $errorMsg .= 'must include a category if there is a note.';
+      }
     }
 
-    ## pdus/cdpp requires a note and a 'Foreign' note category, and must not have a ren number
+    ## pdus/cdpp requires a note and a 'Foreign' or 'Translation' category, and must not have a ren number
     if ($attr == 9 && $reason == 9)
     {
       if (( $renNum ) || ( $renDate ))
       {
-        $errorMsg .= qq{rights/reason conflicts with renewal info.  };
+        $errorMsg .= 'rights/reason conflicts with renewal info.';
       }
       if (( !$note ) || ( !$category ))
       {
-        $errorMsg .= qq{note category/note text required.  };
+        $errorMsg .= 'note category/note text required.';
       }
-      if ($category ne 'Foreign Pub')
+      if ($category ne 'Foreign Pub' && $category ne 'Translation')
       {
-        $errorMsg .= qq{rights/reason requires note category "Foreign Pub".  };
+        $errorMsg .= 'pdus/cdpp requires note category "Foreign Pub" or "Translation".';
       }
     }
     return $errorMsg;

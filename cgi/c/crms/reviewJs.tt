@@ -146,7 +146,7 @@ function VerifyCategory()
   var sel = GetCheckedValue(rights);
   if (sel == "7")
   {
-    return (confirm('Please confirm that this is a non-US publication from 1869-1908.'));
+    return (confirm('Please confirm that this work is, or is derived from, a non-US publication from 1869-1908.'));
   }
   return true;
 }
