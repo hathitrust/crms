@@ -381,8 +381,6 @@ sub LoadNewItems
     {
       my $limitcount = 800 - $queuesize;
 
-      my $twodaysago = $self->TwoDaysAgo();
-      
       my $sql = qq{SELECT id, time, pub_date, title, author from candidates where id not in ( select distinct id from reviews ) and id not in ( select distinct id from historicalreviews ) order by time desc};
 
       my $ref = $self->get('dbh')->selectall_arrayref( $sql );
@@ -1288,16 +1286,6 @@ sub GetYesterday
   my $yd = $self->SimpleSqlGet('SELECT DATE_SUB(NOW(), INTERVAL 1 DAY)');
   return substr($yd, 0, 10);
 }
-
-
-sub TwoDaysAgo
-{
-  my $self = shift;
-  
-  my $tda = $self->SimpleSqlGet('SELECT DATE_SUB(NOW(), INTERVAL 2 DAY)');
-  return substr($tda, 0, 10);
-}
-
 
 
 sub ConvertToSearchTerm
@@ -5332,12 +5320,15 @@ sub SanityCheckDB
   }
   # ======== candidates ========
   $table = 'candidates';
-  $sql = "SELECT id,pub_date FROM $table";
+  $sql = "SELECT id,pub_date,author,title FROM $table";
   $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
     $self->SetError(sprintf("$table: illegal volume id: '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
     $self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) if $row->[1] eq '0000';
+    $self->SetError(sprintf("$table: no title for %s: '%s'", $row->[0], $row->[3])) if $row->[3] eq '';
+    $self->SetError(sprintf("$table: author encoding bad for %s: '%s'", $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
+    $self->SetError(sprintf("$table: title encoding bad for %s: '%s'", $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
   }
   # ======== exportdata/exportdataBckup ========
   foreach $table ('exportdata','exportdataBckup')
