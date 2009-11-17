@@ -3249,7 +3249,7 @@ sub HasItemBeenReviewedByTwoReviewers
     {
       $msg = 'This volume does not need to be reviewed. Two reviewers or an expert have already reviewed it. Please Cancel.';
     }
-    $sql = qq{ SELECT count(*) FROM $CRMSGlobals::queueTable WHERE id ='$id' AND status=0};
+    $sql = qq{ SELECT count(*) FROM $CRMSGlobals::queueTable WHERE id ='$id' AND status!=0 };
     $count = $self->SimpleSqlGet( $sql );
     if ($count >= 1 ) { $msg = 'This item has been processed already. Please Cancel.'; }
   }
@@ -5327,8 +5327,8 @@ sub SanityCheckDB
     $self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) if $row->[1] eq '0000';
     #$self->SetError(sprintf("$table: no author for %s: '%s'", $row->[0], $row->[2])) if $row->[2] eq '';
     $self->SetError(sprintf("$table: no title for %s: '%s'", $row->[0], $row->[3])) if $row->[3] eq '';
-    $self->SetError(sprintf("$table: encoding bad for %s: '%s'", $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
-    $self->SetError(sprintf("$table: encoding bad for %s: '%s'", $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
+    $self->SetError(sprintf("$table: author encoding bad for %s: '%s'", $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
+    $self->SetError(sprintf("$table: title encoding bad for %s: '%s'", $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
   }
   # ======== candidates ========
   $table = 'candidates';
