@@ -23,7 +23,7 @@ my $crms = CRMS->new(
         );
 my $alias = $crms->GetAliasUserName( $ru );
 
-if  ( $cgi->param('p') eq 'Logout' )
+if ( $cgi->param('p') eq 'Logout' )
 {
   #Remove all locks for this user.
   
@@ -55,7 +55,7 @@ if  ( $cgi->param('p') eq 'Logout' )
     # redirect to central weblogin server
     print( "Location: $central$query_string\n\n" );
 
-    exit ( 0 );
+    exit( 0 );
   }
 }
 
@@ -88,7 +88,7 @@ if ($user ne $ru)
             );
 }
 
-if  ( $cgi->param('p') eq 'confirmReview' )  
+if ( $cgi->param('p') eq 'confirmReview' )  
 {
   my $editing    = $cgi->param('editing');
   if ($cgi->param( 'submit' ) eq 'Cancel')
@@ -150,7 +150,7 @@ if  ( $cgi->param('p') eq 'confirmReview' )
       my $id     = $cgi->param('barcode');
       my $copyDate;
       my $expert;
-      if ( $crms->IsUserExpert ( $user ) ) { $expert = 2; }
+      if ( $crms->IsUserExpert( $user ) ) { $expert = 2; }
 
       $crms->SubmitReview($id, $user, $rights, $reason, $copyDate, $comment, $renNum, $expert, $renDate, $category);
       $cgi->delete_all();
@@ -170,7 +170,7 @@ if  ( $cgi->param('p') eq 'confirmReview' )
 }
 
 
-if  (  $cgi->param('download')  )  
+if ( $cgi->param('download') )  
 {
 
     my $order              = $cgi->param('order');
