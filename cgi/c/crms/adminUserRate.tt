@@ -30,7 +30,7 @@ $stash->set('keys',\@keys);
 [% END %]
 
 [% FOREACH id IN keys %]
-  [% IF id.match('rereview') %][% NEXT %][% END %]
+  [% IF id.match('rereport') %][% NEXT %][% END %]
   [% IF 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
   [% crms.CreateStatsReport(id, 0, 1) %]
   <br/><br/>
