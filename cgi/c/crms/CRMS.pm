@@ -381,7 +381,7 @@ sub LoadNewItems
     {
       my $limitcount = 800 - $queuesize;
 
-      my $sql = qq{SELECT id, time, pub_date, title, author from candidates where id not in ( select distinct id from reviews ) and id not in ( select distinct id from historicalreviews ) order by time desc};
+      my $sql = qq{SELECT id, time, pub_date, title, author FROM candidates WHERE id NOT IN (SELECT DISTINCT id FROM reviews) AND id NOT IN (SELECT DISTINCT id FROM historicalreviews) ORDER BY time DESC};
 
       my $ref = $self->get('dbh')->selectall_arrayref( $sql );
 
@@ -456,12 +456,12 @@ sub AddItemToCandidates
       #check FMT.
       if ( ! $self->IsFormatBK( $id, $record ) ) { $self->Logit( "skip not fmt bk: $id" ); return 0; }
 
-      my $author = $self->GetEncAuthor ( $id );
+      my $author = $self->GetEncAuthor( $id );
       ## my $ti = $self->GetMarcDatafield( $id, "245", "a");
       my $title = $self->GetRecordTitleBc2Meta( $id );
-      $title =~ s,\',\\',gs;
-
-      my $sql = qq{REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub', '$title', '$author')};
+      $title = $self->get('dbh')->quote($title);
+      
+      my $sql = "REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub-01-01', $title, '$author')";
 
       $self->PrepareSubmitSql( $sql );
       
@@ -472,7 +472,7 @@ sub AddItemToCandidates
     return 0;
 }
 
-
+# Expects the pub_date to be already in 19XX-01-01 format
 sub AddItemToQueue
 {
     my $self     = shift;
@@ -494,8 +494,7 @@ sub AddItemToQueue
       #return 0 because item was not added.
       return 0;
     }
-
-    my $sql = qq{INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub_date', $priority)};
+    my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, $pub_date, $priority)";
 
     $self->PrepareSubmitSql( $sql );
       
@@ -573,7 +572,7 @@ sub AddItemToQueueOrSetItemActive
       }
       else
       {
-        my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, status, pub_date, priority) VALUES ('$id', 0, '$pub', $priority)";
+        my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, status, pub_date, priority) VALUES ('$id', 0, '$pub-01-01', $priority)";
         $self->PrepareSubmitSql( $sql );
         $self->UpdateTitle( $id );
         $self->UpdatePubDate( $id, $pub );
@@ -646,7 +645,7 @@ sub GiveItemsInQueuePriority
     }
     else
     {
-      $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub', $priority)";
+      $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub-01-01', $priority)";
 
       $self->PrepareSubmitSql( $sql );
 
@@ -1317,7 +1316,7 @@ sub ConvertToSearchTerm
       else { $new_search = 'r.priority'; }
     }
     elsif ( $search eq 'Validated' ) { $new_search = 'r.validated'; }
-    elsif ( $search eq 'PubDate' ) { $new_search = 'b.pub_date'; }
+    elsif ( $search eq 'PubDate' ) { $new_search = 'YEAR(b.pub_date)'; }
     elsif ( $search eq 'Locked' ) { $new_search = 'q.locked'; }
     elsif ( $search eq 'ExpertCount' ) { $new_search = 'q.expcnt'; }
     elsif ( $search eq 'Reviews' )
@@ -1377,7 +1376,7 @@ sub CreateSQL
     }
     elsif ( $type eq 'adminHistoricalReviews' )
     {
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.status, b.title, b.author, b.pub_date, r.validated FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.status, b.title, b.author, YEAR(b.pub_date), r.validated FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id };
     }
     elsif ( $type eq 'undReviews' )
     {
@@ -1792,7 +1791,7 @@ sub GetVolumesRef
     my $qrest = ($doQ)? ' AND r.id=q.id':'';
     $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
            "r.category, r.legacy, r.renDate, r.priority, $status, b.title, b.author" .
-           (($page eq 'adminHistoricalReviews')? ', b.pub_date ':' ') .
+           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date) ':' ') .
            (($page eq 'adminHistoricalReviews')? ', r.validated ':' ') .
            "FROM $table r, bibdata b$doQ ";
     $sql .= "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
@@ -1899,7 +1898,7 @@ sub GetQueueRef
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   my $return = ();
-  $sql = 'SELECT q.id, q.time, q.status, q.locked, b.pub_date, q.priority, q.expcnt, b.title, b.author ' .
+  $sql = 'SELECT q.id, q.time, q.status, q.locked, YEAR(b.pub_date), q.priority, q.expcnt, b.title, b.author ' .
          "FROM queue q, bibdata b $restrict ORDER BY $order $dir $limit";
   #print "$sql<br/>\n";
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
@@ -3630,7 +3629,7 @@ sub UpdateTitle
   my $self  = shift;
   my $id    = shift;
   my $title = shift;
-
+  
   if ($id eq '')
   {
     $self->SetError("Trying to update title for empty volume id!\n");
@@ -3650,7 +3649,7 @@ sub UpdateTitle
   {
     $self->Logit("$0: Mojibake quoted title <<$tiq>> for $id!\n");
   }
-  my $sql = qq{ SELECT count(*) from bibdata WHERE id="$id"};
+  my $sql = qq{ SELECT count(*) FROM bibdata WHERE id="$id"};
   my $count = $self->SimpleSqlGet( $sql );
   $sql = qq{ UPDATE bibdata SET title=$tiq WHERE id="$id"};
   if (!$count)
@@ -3658,10 +3657,19 @@ sub UpdateTitle
     $sql = qq{ INSERT INTO bibdata (id, title, pub_date) VALUES ( "$id", $tiq, '')};
   }
   $self->PrepareSubmitSql( $sql );
-
   return $title;
 }
 
+sub UpdateCandidatesTitle
+{
+  my $self = shift;
+  my $id   = shift;
+  
+  my $title = $self->GetRecordTitleBc2Meta( $id );
+  my $tiq = $self->get('dbh')->quote( $title );
+  my $sql = qq{ UPDATE candidates SET title=$tiq WHERE id="$id"};
+  $self->PrepareSubmitSql( $sql );
+}
 
 sub UpdatePubDate
 {
@@ -3675,17 +3683,26 @@ sub UpdatePubDate
     $self->Logit("$0: trying to update pub date for empty volume id!\n");
   }
   $date = $self->GetPublDate($id) unless $date;
-  my $sql = qq{ SELECT count(*) from bibdata WHERE id="$id"};
+  my $sql = qq{ SELECT count(*) FROM bibdata WHERE id="$id"};
   my $count = $self->SimpleSqlGet( $sql );
-  $sql = qq{ UPDATE bibdata SET pub_date="$date" WHERE id="$id"};
+  $sql = "UPDATE bibdata SET pub_date='$date-01-01' WHERE id='$id'";
   if (!$count)
   {
-    $sql = qq{ INSERT INTO bibdata (id, title, pub_date) VALUES ("$id", '', "$date")};
+    $sql = "INSERT INTO bibdata (id, title, pub_date) VALUES ('$id', '', '$date-01-01')";
   }
   $self->PrepareSubmitSql( $sql );
   return $date;
 }
 
+sub UpdateCandidatesPubDate
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $date = $self->GetPublDate($id);
+  my $sql = "UPDATE candidates SET pub_date='$date-01-01' WHERE id='$id'";
+  $self->PrepareSubmitSql( $sql );
+}
 
 sub UpdateAuthor
 {
@@ -3711,9 +3728,9 @@ sub UpdateAuthor
   {
     $self->Logit("$0: Mojibake quoted author <<$aiq>> for $id!\n");
   }
-  my $sql = qq{ SELECT count(*) from bibdata where id="$id"};
+  my $sql = qq{ SELECT count(*) FROM bibdata where id="$id"};
   my $count = $self->SimpleSqlGet( $sql );
-  my $sql = qq{ UPDATE bibdata set author=$aiq where id="$id"};
+  my $sql = qq{ UPDATE bibdata SET author=$aiq where id="$id"};
   if (!$count )
   {
     $sql = qq{ INSERT INTO bibdata (id, title, pub_date, author) VALUES ( "$id", '', '', $aiq ) };
@@ -3722,13 +3739,25 @@ sub UpdateAuthor
   return $author;
 }
 
+sub UpdateCandidatesAuthor
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $author = $self->GetMarcDatafieldAuthor( $id );
+  my $aiq = $self->get('dbh')->quote( $author );
+  my $sql = qq{ UPDATE candidates SET author=$aiq WHERE id="$id"};
+  $self->PrepareSubmitSql( $sql );
+}
+
 
 ## use for now because the API is slow...
 sub GetRecordTitleBc2Meta
 {
     my $self = shift;
     my $id   = shift;
-
+    
+    $id = lc $id;
     ## get from object if we have it
     if ( $self->get( 'marcData' ) ne '' ) { return $self->get( 'marcData' ); }
 
@@ -3852,16 +3881,17 @@ sub GetRecordMetadata
     my $parser     = $self->get( 'parser' );
     
     if ( ! $barcode ) { $self->Logit( "no barcode given: $barcode" ); return 0; }
-
+    $barcode = lc $barcode;
     my ($ns,$bar) = split(/\./, $barcode);
 
     ## get from object if we have it
-    if ( $self->get( $bar ) ne '' ) { return $self->get( $bar ); }
+    if ( $self->get( $barcode ) ne '' ) { return $self->get( $barcode ); }
 
     #my $sysId = $self->BarcodeToId( $barcode );
     #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
     #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
     my $url = $self->get( 'bc2metaUrl' ) .'?id=' . $barcode . '&schema=marcxml';
+    
     my $ua = LWP::UserAgent->new;
 
     if ($self->get("verbose")) { $self->Logit( "GET: $url" ); }
@@ -3884,7 +3914,7 @@ sub GetRecordMetadata
 
     #my ($record) = $source->findnodes( "//record" );
     my ($record) = $source->findnodes( "." );
-    $self->set( $bar, $record );
+    $self->set( $barcode, $record );
 
     return $record;
 }
@@ -4279,7 +4309,7 @@ sub GetNextItemForReview
     }
     if ( ! $bar )
     {
-        my $nextPubDate = $self->GetNextPubYear();
+        my $nextPubDate = $self->GetNextPubYear() . '-01-01';
         # Get the 1st available item that has never been reviewed.
         # Exclude priority 1 some of the time, to 'fool' reviewers into not thinking everything is pd.
         my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
@@ -5303,6 +5333,7 @@ sub SanityCheckDB
   my $self = shift;
   my $dbh = $self->get( 'dbh' );
   my $vidRE = '[a-z]+\d?\.[a-zA-Z]?\d+';
+  my $pdRE = '\d\d\d\d-\d\d-\d\d';
   # ======== bibdata ========
   my $table = 'bibdata';
   # Volume ID must not have any spaces before, after, or in.
@@ -5312,7 +5343,8 @@ sub SanityCheckDB
   foreach my $row ( @{$rows} )
   {
     $self->SetError(sprintf("$table: illegal volume id: '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) if $row->[1] eq '0000';
+    $self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) unless $row->[1] =~ m/$pdRE/;
+    $self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) if $row->[1] eq '0000-01-01';
     #$self->SetError(sprintf("$table: no author for %s: '%s'", $row->[0], $row->[2])) if $row->[2] eq '';
     $self->SetError(sprintf("$table: no title for %s: '%s'", $row->[0], $row->[3])) if $row->[3] eq '';
     $self->SetError(sprintf("$table: author encoding bad for %s: '%s'", $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
@@ -5325,7 +5357,8 @@ sub SanityCheckDB
   foreach my $row ( @{$rows} )
   {
     $self->SetError(sprintf("$table: illegal volume id: '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) if $row->[1] eq '0000';
+    $self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) unless $row->[1] =~ m/$pdRE/;
+    $self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) if $row->[1] eq '0000-01-01';
     $self->SetError(sprintf("$table: no title for %s: '%s'", $row->[0], $row->[3])) if $row->[3] eq '';
     $self->SetError(sprintf("$table: author encoding bad for %s: '%s'", $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
     $self->SetError(sprintf("$table: title encoding bad for %s: '%s'", $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
@@ -5375,7 +5408,7 @@ sub SanityCheckDB
   }
   # ======== queue ========
   $table = 'queue';
-  $sql = "SELECT id,time,status,locked,pub_date,priority,expcnt FROM $table";
+  $sql = "SELECT id,time,status,locked,priority,expcnt FROM $table";
   $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
@@ -5388,7 +5421,6 @@ sub SanityCheckDB
       my $sum = $self->SimpleSqlGet($sql);
       $self->SetError(sprintf("$table: illegal status/expcnt for %s: '%s'/'%s' but there are no expert reviews", $row->[0], $row->[2])) unless $sum;
     }
-    $self->SetError(sprintf("$table: illegal pub_date for %s: '%s'", $row->[0], $row->[4])) unless $row->[4] =~ m/\d\d\d\d/;
   }
   # ======== reviews ========
   $table = 'reviews';
