@@ -252,6 +252,7 @@ $tt->process($input, $vars) || die $tt->error();
 if ($cgi->param('debug'))
 {
   print '<br/><br/>';
+  printf '<b>%s</b><br/>', `hostname`;
   eval {
     foreach my $k (keys %ENV)
     {
