@@ -377,9 +377,9 @@ sub LoadNewItems
     my $msg = qq{Before load, the queue has $queuesize volumes.\n};
     print $msg;
 
-    if ( $queuesize < 800 )
+    if ( $queuesize < $CRMSGlobals::queueSize )
     {
-      my $limitcount = 800 - $queuesize;
+      my $limitcount = $CRMSGlobals::queueSize - $queuesize;
 
       my $sql = qq{SELECT id, time, pub_date, title, author FROM candidates WHERE id NOT IN (SELECT DISTINCT id FROM reviews) AND id NOT IN (SELECT DISTINCT id FROM historicalreviews) ORDER BY time DESC};
 
@@ -437,7 +437,7 @@ sub AddItemToCandidates
     my $time     = shift;
 
 
-    my $record =  $self->GetRecordMetadata($id);
+    my $record = $self->GetRecordMetadata($id);
 
     ## pub date between 1923 and 1963
     my $pub = $self->GetPublDate( $id, $record );
@@ -456,23 +456,23 @@ sub AddItemToCandidates
       #check FMT.
       if ( ! $self->IsFormatBK( $id, $record ) ) { $self->Logit( "skip not fmt bk: $id" ); return 0; }
 
-      my $author = $self->GetEncAuthor( $id );
-      ## my $ti = $self->GetMarcDatafield( $id, "245", "a");
+      my $au = $self->GetMarcDatafieldAuthor( $id );
+      $au = $self->get('dbh')->quote($au);
+      
       my $title = $self->GetRecordTitleBc2Meta( $id );
       $title = $self->get('dbh')->quote($title);
       
-      my $sql = "REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub-01-01', $title, '$author')";
+      my $sql = "REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub-01-01', $title, $au)";
 
       $self->PrepareSubmitSql( $sql );
       
       return 1;
-
     }
-
     return 0;
 }
 
-# Expects the pub_date to be already in 19XX-01-01 format
+# Expects the pub_date to be already in 19XX-01-01 format.
+# Returns 1 if item was added, 0 if not added because it was already in the queue.
 sub AddItemToQueue
 {
     my $self     = shift;
@@ -484,14 +484,11 @@ sub AddItemToQueue
     my $status   = shift;
     my $priority = shift;
 
-
     ## give the existing item higher priority
     if ( $self->IsItemInQueue( $id ) )
     {
       my $sql = qq{UPDATE $CRMSGlobals::queueTable SET time='$time' WHERE id='$id'};
       $self->PrepareSubmitSql( $sql );
-
-      #return 0 because item was not added.
       return 0;
     }
     my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, $pub_date, $priority)";
@@ -499,21 +496,9 @@ sub AddItemToQueue
     $self->PrepareSubmitSql( $sql );
       
     $self->UpdateTitle( $id, $title );
-      
-    #Update the pub date in bibdata
     $self->UpdatePubDate( $id, $pub_date );
+    $self->UpdateAuthor( $id );
     
-    if ( ! $author )
-    {
-      $author = $self->GetEncAuthor ( $id );
-    }
-    else
-    {
-      $author =~ s,\',\\\',g; ## escape '
-      $author =~ s,\",\\\",g; ## escape "
-    }
-    $self->UpdateAuthor ( $id, $author );
-      
     return 1;
 }
 
@@ -574,10 +559,11 @@ sub AddItemToQueueOrSetItemActive
       {
         my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, status, pub_date, priority) VALUES ('$id', 0, '$pub-01-01', $priority)";
         $self->PrepareSubmitSql( $sql );
+        
         $self->UpdateTitle( $id );
         $self->UpdatePubDate( $id, $pub );
-        my $author = $self->GetEncAuthor( $id );
-        $self->UpdateAuthor ( $id, $author );
+        $self->UpdateAuthor ( $id );
+        
         my $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source ) values (1, 'ADMINUI')};
         $self->PrepareSubmitSql( $sql );
       }
@@ -649,13 +635,11 @@ sub GiveItemsInQueuePriority
 
       $self->PrepareSubmitSql( $sql );
 
-      $self->UpdateTitle ( $id );
+      $self->UpdateTitle( $id );
 
-      #Update the pub date in bibdata
-      $self->UpdatePubDate ( $id, $pub );
+      $self->UpdatePubDate( $id, $pub );
 
-      my $author = $self->GetEncAuthor ( $id );
-      $self->UpdateAuthor ( $id, $author );
+      $self->UpdateAuthor( $id );
 
       # Accumulate counts for items added at the 'same time'.
       # Otherwise queuerecord will have a zillion kabillion single-item entries when importing
@@ -779,7 +763,16 @@ sub SubmitReview
 
     $self->PrepareSubmitSql( $sql );
 
-    if ( $exp ) { $self->SetExpertReviewCnt( $id, $user );  }
+    if ( $exp )
+    {
+      my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET expcnt=1 WHERE id="$id" };
+      $self->PrepareSubmitSql( $sql );
+      my $qstatus = $self->SimpleSqlGet("SELECT status FROM queue WHERE id='$id'");
+      # FIXME: need to check all other review of this group and see if all are und/nfi
+      my $status = ($attr == 5 && $reason == 8 && $qstatus == 3)? 6:5;
+      #We have decided to register the expert decision right away.
+      $self->RegisterStatus($id, $status);
+    }
 
     $self->EndTimer( $id, $user );
     $self->UnlockItem( $id, $user );
@@ -796,18 +789,6 @@ sub GetItemPriority
   return $self->SimpleSqlGet( $sql );
 }
 
-sub SetExpertReviewCnt
-{
-    my $self = shift;
-    my $id   = shift;
-
-    my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET expcnt=1 WHERE id = "$id" };
-    $self->PrepareSubmitSql( $sql );
-
-    #We have decided to register the expert decision right away.
-    $self->RegisterExpertReview( $id );
-
-}
 
 sub GetOtherReview
 {
@@ -838,10 +819,9 @@ sub GetOtherReview
 sub ProcessReviews
 {
   my $self = shift;
-  
-  my $yesterday = $self->GetYesterday();
 
-  my $sql = qq{SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable WHERE id IN ( SELECT id from $CRMSGlobals::queueTable where status = 0) group by id having count(*) >= 2};
+  my $sql = "SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable " .
+            "WHERE id IN ( SELECT id FROM $CRMSGlobals::queueTable WHERE status=0) GROUP BY id HAVING count(*) >= 2";
 
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -854,7 +834,7 @@ sub ProcessReviews
     my $renNum  = $row->[4];
     my $renDate = $row->[5];
     
-    my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate ) = $self->GetOtherReview ( $id, $user );
+    my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate ) = $self->GetOtherReview( $id, $user );
 
     if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
     {
@@ -930,8 +910,7 @@ sub SubmitHistReview
       #Now load this info into the bibdata table.
       $self->UpdateTitle( $id );
       $self->UpdatePubDate( $id );
-      my $author = $self->GetEncAuthor( $id );
-      $self->UpdateAuthor( $id, $author );
+      $self->UpdateAuthor( $id );
       
       # Update status on status 1 item
       if ($status == 5)
@@ -974,8 +953,7 @@ sub SubmitActiveReview
       #Now load this info into the bibdata table.
       $self->UpdateTitle( $id );
       $self->UpdatePubDate( $id );
-      my $author = $self->GetEncAuthor( $id );
-      $self->UpdateAuthor( $id, $author );
+      $self->UpdateAuthor( $id );
     }
     return 1;
 }
@@ -1241,7 +1219,7 @@ sub GetFinalAttrReason
 sub GetExpertRevItems
 {
     my $self = shift;
-    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status = 5 };
+    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status=5 OR status=6};
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref;
@@ -1250,22 +1228,12 @@ sub GetExpertRevItems
 sub GetDoubleRevItemsInAgreement
 {
     my $self = shift;
-    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status = 4 };
+    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status=4 };
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref;
 }
 
-
-sub RegisterExpertReview
-{
-    my $self = shift;
-    my $id   = shift;
-
-    my $sql  = qq{UPDATE $CRMSGlobals::queueTable SET status = 5 WHERE id = "$id"};
-
-    $self->PrepareSubmitSql( $sql );
-}
 
 sub RegisterStatus
 {
@@ -2594,7 +2562,7 @@ sub CreateExportData
     my $maxtime = $date . '-31 23:59:59';
     my $sql = qq{SELECT attr,reason FROM $CRMSGlobals::historicalreviewsTable h1 WHERE } .
               qq{ time=(SELECT max(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id) AND } .
-              qq{ (status=4 OR status=5) AND legacy=0 AND time >= '$mintime' AND time <= '$maxtime'};
+              qq{ (status=4 OR status=5 OR status=6) AND legacy=0 AND time >= '$mintime' AND time <= '$maxtime'};
     my $rows = $dbh->selectall_arrayref( $sql );
     foreach my $row ( @{$rows} )
     {
@@ -3184,7 +3152,7 @@ sub CheckRenDate
 
       if ( $renDate < 1950 )
       {
-        $errorMsg .= qq{the ren date you have entered $renDate is before 1950, we should not be recording them.   };
+        $errorMsg .= "The Ren Date you have entered ($renDate) is before 1950; we should not be recording them.";
       }
       if ( ( $renDate >= 1950 )  && ( $renDate <= 1953 ) )
       {
@@ -3192,7 +3160,7 @@ sub CheckRenDate
         {}
         else
         {
-          $errorMsg .= qq{Ren Number format is not correct for item in  1950 - 1953 range.   };
+          $errorMsg .= 'Ren number format is not correct for item in  1950 - 1953 range.';
         }
       }
       if ( $renDate >= 1978 )
@@ -3201,13 +3169,13 @@ sub CheckRenDate
         {}
         else
         {
-          $errorMsg .= qq{Ren Number format is not correct for item with Ren Date >= 1978.   };
+          $errorMsg .= 'Ren Number format is not correct for item with Ren Date >= 1978.';
         }
       }
     }
     else
     {
-      $errorMsg .= qq{Ren Date is not of the right format, for example 17Dec73.   };
+      $errorMsg .= 'Ren Date is not of the right format, for example 17Dec73.';
     }
   }
   return $errorMsg;
@@ -3472,8 +3440,13 @@ sub GetPublDate
     ## my $xpath = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
     my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
     my $leader  = $record->findvalue( $xpath );
+    my $pubDateType = substr($leader, 6, 1);
     my $pubDate = substr($leader, 7, 4);
-
+    # On questionable pub date, try date 2 field.
+    if ($pubDateType eq 'q' && ($pubDate eq '||||' || $pubDate eq '####'))
+    {
+      $pubDate = substr($leader, 11, 4);
+    }
     return $pubDate;
 }
 
@@ -3547,7 +3520,6 @@ sub GetMarcDatafieldAuthor
     #After talking to Tim, the author info is in the 1XX field
     #Margrte told me that the only 1xx fields are: 100, 110, 111, 130. 700, 710
     
-
     my $record = $self->GetRecordMetadata($barcode);
     if ( ! $record ) { $self->Logit( "failed in GetMarcDatafieldAuthor: $barcode" ); }
 
@@ -3758,8 +3730,6 @@ sub GetRecordTitleBc2Meta
     my $id   = shift;
     
     $id = lc $id;
-    ## get from object if we have it
-    if ( $self->get( 'marcData' ) ne '' ) { return $self->get( 'marcData' ); }
 
     my $parser = $self->get( 'parser' );
     my $url    = $self->get( 'bc2metaUrl' ) . '?id=' . $id;
@@ -3804,34 +3774,8 @@ sub GetEncAuthorForReview
     my $self = shift;
     my $bar  = shift;
 
-    my $au;
-    #100, 110, 111, 130, 700, 710
-    $au = $self->GetMarcDatafield ( $bar, 100, 'a');
-
-    if ( ! $au )
-    {
-      $au = $self->GetMarcDatafield ( $bar, 110, 'a');
-    }
-    if ( ! $au )
-    {
-      $au = $self->GetMarcDatafield ( $bar, 111, 'a');
-    }
-    if ( ! $au )
-    {
-      $au = $self->GetMarcDatafield ( $bar, 130, 'a');
-    }
-    if ( ! $au )
-    {
-      $au = $self->GetMarcDatafield ( $bar, 700, 'a');
-    }
-    if ( ! $au )
-    {
-      $au = $self->GetMarcDatafield ( $bar, 710, 'a');
-    }
-
-    $au =~ s,(.*[A-Za-z]).*,$1,;
-
-    $au =~ s,\',\\\',g; ## escape '
+    my $au = $self->GetAuthorForReview($bar);
+    $au =~ s/\'/\\\'/g; ## escape '
     return $au;
 }
 
@@ -3840,28 +3784,26 @@ sub GetAuthorForReview
     my $self = shift;
     my $bar  = shift;
 
-    my $au = $self->GetMarcDatafield ( $bar, 100, 'a');
-
-
+    my $au = $self->GetMarcDatafield( $bar, 100, 'a');
     if ( ! $au )
     {
-      $au = $self->GetMarcDatafield ( $bar, 110, 'a');
+      $au = $self->GetMarcDatafield( $bar, 110, 'a');
     }
     if ( ! $au )
     {
-      $au = $self->GetMarcDatafield ( $bar, 111, 'a');
+      $au = $self->GetMarcDatafield( $bar, 111, 'a');
     }
     if ( ! $au )
     {
-      $au = $self->GetMarcDatafield ( $bar, 130, 'a');
+      $au = $self->GetMarcDatafield( $bar, 130, 'a');
     }
     if ( ! $au )
     {
-      $au = $self->GetMarcDatafield ( $bar, 700, 'a');
+      $au = $self->GetMarcDatafield( $bar, 700, 'a');
     }
     if ( ! $au )
     {
-      $au = $self->GetMarcDatafield ( $bar, 710, 'a');
+      $au = $self->GetMarcDatafield( $bar, 710, 'a');
     }
 
     $au =~ s,(.*[A-Za-z]).*,$1,;
@@ -4005,7 +3947,7 @@ sub IsLockedForUser
     my $id   = shift;
     my $name = shift;
 
-    my $sql = qq{SELECT locked FROM $CRMSGlobals::queueTable WHERE id = "$id"};
+    my $sql = "SELECT locked FROM $CRMSGlobals::queueTable WHERE id='$id'";
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     if ( scalar @{$ref} )
@@ -4031,13 +3973,13 @@ sub RemoveOldLocks
         my $user = $lockedRef->{$item}->{locked};
         my $since = $self->ItemLockedSince($id, $user);
 
-        my $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE id = "$id" AND "$time" >= time };
+        my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE id='$id' AND '$time'>=time";
         my $old = $self->SimpleSqlGet($sql);
 
         if ( $old )
         {
             $self->Logit( "REMOVING OLD LOCK:\t$id, $user: $since | $time" );
-            $self->UnlockItem( $id, $user);
+            $self->UnlockItem( $id, $user );
         }
     }
 }
@@ -4051,10 +3993,9 @@ sub PreviouslyReviewed
     ## expert reviewers can edit any time
     if ( $self->IsUserExpert( $user ) ) { return 0; }
 
-    my $limit = $self->GetYesterdaysDate();
+    my $limit = $self->GetYesterday();
 
-    my $sql = qq{SELECT id FROM $CRMSGlobals::reviewsTable WHERE id = "$id" } .
-              qq{ AND user = "$user" AND time < "$limit" };
+    my $sql = "SELECT id FROM $CRMSGlobals::reviewsTable WHERE id='$id' AND user='$user' AND time<'$limit'";
     my $found = $self->SimpleSqlGet( $sql );
 
     if ($found) { return 1; }
@@ -4249,7 +4190,8 @@ sub HasItemBeenReviewedByAnotherExpert
   my $id   = shift;
   my $user = shift;
   
-  if ($self->GetStatus($id) == 5)
+  my $stat = $self->GetStatus($id) ;
+  if ($stat == 5 || $stat == 6)
   {
     my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::reviewsTable WHERE id='$id' AND user='$user'";
     my $count = $self->SimpleSqlGet($sql);
@@ -4581,11 +4523,6 @@ sub GetPrevDate
     return "$p[5]-$p[4]-$p[3] $p[2]:$p[1]:$p[0]";
 }
 
-sub GetYesterdaysDate
-{
-    my $self = shift;
-    return $self->GetPrevDate();
-}
 
 sub GetTodaysDate
 {
@@ -4799,12 +4736,16 @@ sub CreateDeterminationReport()
   my ($count,$time) = $self->GetLastExport();
   my $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.id=h.id AND h.status=4 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
   my $fours = $self->SimpleSqlGet($sql);
-  my $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.id=h.id AND h.status=5 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
+  $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.id=h.id AND h.status=5 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
   my $fives = $self->SimpleSqlGet($sql);
+  $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.id=h.id AND h.status=6 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
+  my $sixes = $self->SimpleSqlGet($sql);
   my $pct4 = 0;
   my $pct5 = 0;
-  eval {$pct4 = 100.0*$fours/($fours+$fives);};
-  eval {$pct5 = 100.0*$fives/($fours+$fives);};
+  my $pct6 = 0;
+  eval {$pct4 = 100.0*$fours/($fours+$fives+$sixes);};
+  eval {$pct5 = 100.0*$fives/($fours+$fives+$sixes);};
+  eval {$pct6 = 100.0*$sixes/($fours+$fives+$sixes);};
   $time =~ s/\s/&nbsp;/g;
   my $legacy = $self->GetTotalLegacyCount();
   my $cand = $self->GetNumberExportedFromCandidates();
@@ -4813,6 +4754,7 @@ sub CreateDeterminationReport()
   $report .= "<tr><th>Last&nbsp;CRMS&nbsp;Export</td><td>$count&nbsp;on&nbsp;$time</td></tr>";
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</td><td>$fours&nbsp;(%.1f%%)</td></tr>", $pct4);
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</td><td>$fives&nbsp;(%.1f%%)</td></tr>", $pct5);
+  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6</td><td>$sixes&nbsp;(%.1f%%)</td></tr>", $pct6);
   $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</td><td>%s</td></tr>", $exported);
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;Candidates</td><td>%s</td></tr>", $cand);
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;Elsewhere</td><td>%s</td></tr>", $noncand);
@@ -5342,13 +5284,15 @@ sub SanityCheckDB
   my $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
-    $self->SetError(sprintf("$table: illegal volume id: '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) unless $row->[1] =~ m/$pdRE/;
-    $self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) if $row->[1] eq '0000-01-01';
-    #$self->SetError(sprintf("$table: no author for %s: '%s'", $row->[0], $row->[2])) if $row->[2] eq '';
-    $self->SetError(sprintf("$table: no title for %s: '%s'", $row->[0], $row->[3])) if $row->[3] eq '';
-    $self->SetError(sprintf("$table: author encoding bad for %s: '%s'", $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
-    $self->SetError(sprintf("$table: title encoding bad for %s: '%s'", $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
+    $self->SetError(sprintf("$table __ illegal volume id__ '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
+    $self->SetError(sprintf("$table __ illegal pub_date for %s__ %s", $row->[0], $row->[1])) unless $row->[1] =~ m/$pdRE/;
+    $self->SetError(sprintf("$table __ illegal pub_date for %__ %s", $row->[0], $row->[1])) if $row->[1] eq '0000-01-01';
+    #$self->SetError(sprintf("$table __ no author for %s__ '%s'", $row->[0], $row->[2])) if $row->[2] eq '';
+    $self->SetError(sprintf("$table __ no title for %s__ '%s'", $row->[0], $row->[3])) if $row->[3] eq '';
+    $self->SetError(sprintf("$table __ author encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
+    $self->SetError(sprintf("$table __ title encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
+    $self->SetError(sprintf("$table __ author encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2])) if $row->[2] =~ m/.*?\?\?.*/;
+    $self->SetError(sprintf("$table __ title encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3])) if $row->[3] =~ m/.*?\?\?.*/;
   }
   # ======== candidates ========
   $table = 'candidates';
@@ -5356,12 +5300,14 @@ sub SanityCheckDB
   $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
-    $self->SetError(sprintf("$table: illegal volume id: '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) unless $row->[1] =~ m/$pdRE/;
-    $self->SetError(sprintf("$table: illegal pub_date for %s: %s", $row->[0], $row->[1])) if $row->[1] eq '0000-01-01';
-    $self->SetError(sprintf("$table: no title for %s: '%s'", $row->[0], $row->[3])) if $row->[3] eq '';
-    $self->SetError(sprintf("$table: author encoding bad for %s: '%s'", $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
-    $self->SetError(sprintf("$table: title encoding bad for %s: '%s'", $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
+    $self->SetError(sprintf("$table __ illegal volume id__ '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
+    $self->SetError(sprintf("$table __ illegal pub_date for %s__ %s", $row->[0], $row->[1])) unless $row->[1] =~ m/$pdRE/;
+    $self->SetError(sprintf("$table __ illegal pub_date for %s__ %s", $row->[0], $row->[1])) if $row->[1] eq '0000-01-01';
+    $self->SetError(sprintf("$table __ no title for %s__ '%s'", $row->[0], $row->[3])) if $row->[3] eq '';
+    $self->SetError(sprintf("$table __ author encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
+    $self->SetError(sprintf("$table __ title encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
+    $self->SetError(sprintf("$table __ author encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2])) if $row->[2] =~ m/.*?\?\?.*/;
+    $self->SetError(sprintf("$table __ title encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3])) if $row->[3] =~ m/.*?\?\?.*/;
   }
   # ======== exportdata/exportdataBckup ========
   foreach $table ('exportdata','exportdataBckup')
@@ -5374,11 +5320,11 @@ sub SanityCheckDB
     $rows = $dbh->selectall_arrayref( $sql );
     foreach my $row ( @{$rows} )
     {
-      $self->SetError(sprintf("$table: illegal time for %s: '%s'", $row->[1], $row->[0])) unless $row->[0] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
-      $self->SetError(sprintf("$table: illegal volume id: '%s'", $row->[1])) unless $row->[1] =~ m/$vidRE/;
+      $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[1], $row->[0])) unless $row->[0] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
+      $self->SetError(sprintf("$table __ illegal volume id__ '%s'", $row->[1])) unless $row->[1] =~ m/$vidRE/;
       my $comb = $row->[2] . '/' . $row->[3];
-      $self->SetError(sprintf("$table: illegal attr/reason for %s: '%s'", $row->[1], $comb)) unless $self->GetAttrReasonCom($comb);
-      $self->SetError(sprintf("$table: illegal user for %s: '%s' (should be 'crms')", $row->[1])) unless $row->[4] eq 'crms';
+      $self->SetError(sprintf("$table __ illegal attr/reason for %s__ '%s'", $row->[1], $comb)) unless $self->GetAttrReasonCom($comb);
+      $self->SetError(sprintf("$table __ illegal user for %s__ '%s' (should be 'crms')", $row->[1])) unless $row->[4] eq 'crms';
     }
   }
   # ======== exportrecord ========
@@ -5387,7 +5333,7 @@ sub SanityCheckDB
   $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
-    $self->SetError(sprintf("$table: illegal time: %s", $row->[0]));
+    $self->SetError(sprintf("$table __ illegal time__ %s", $row->[0]));
   }
   # ======== historicalreviews ========
   $table = 'historicalreviews';
@@ -5396,14 +5342,14 @@ sub SanityCheckDB
   my %stati = (1=>1,4=>1,5=>1);
   foreach my $row ( @{$rows} )
   {
-    $self->SetError(sprintf("$table: illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table: illegal time for %s: '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
-    $self->SetError(sprintf("$table: illegal attr/reason for %s: '%s/%s'", $row->[0], $row->[3], $row->[4])) unless $self->GetCodeFromAttrReason($row->[3],$row->[4]);
-    $self->SetError(sprintf("$table: spaces in renNum for %s: '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
-    $self->SetError(sprintf("$table: illegal renDate for %s: '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $self->IsRenDate($row->[11]);
-    $self->SetError(sprintf("$table: illegal copyDate for %s: '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $row->[12] =~ m/\d\d\d\d/;
-    $self->SetError(sprintf("$table: illegal category for %s: '%s'", $row->[0], $row->[13])) unless $row->[13] eq '' or $self->IsValidCategory($row->[13]);
-    $self->SetError(sprintf("$table: illegal status for %s: '%s'", $row->[0], $row->[15])) unless $stati{$row->[15]};
+    $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
+    $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
+    $self->SetError(sprintf("$table __ illegal attr/reason for %s__ '%s/%s'", $row->[0], $row->[3], $row->[4])) unless $self->GetCodeFromAttrReason($row->[3],$row->[4]);
+    $self->SetError(sprintf("$table __ spaces in renNum for %s__ '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
+    $self->SetError(sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $self->IsRenDate($row->[11]);
+    $self->SetError(sprintf("$table __ illegal copyDate for %s__ '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $row->[12] =~ m/\d\d\d\d/;
+    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[13])) unless $row->[13] eq '' or $self->IsValidCategory($row->[13]);
+    $self->SetError(sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[15])) unless $stati{$row->[15]};
     # FIXME: make sure there are no status 5 items that are not reviewed by an expert
   }
   # ======== queue ========
@@ -5412,14 +5358,14 @@ sub SanityCheckDB
   $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
-    $self->SetError(sprintf("$table: illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table: illegal time for %s: '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
-    $self->SetError(sprintf("$table: illegal status for %s: '%s'", $row->[0], $row->[2])) unless $row->[2] >= 0 and $row->[2] <= 5;
+    $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
+    $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
+    $self->SetError(sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[2])) unless $row->[2] >= 0 and $row->[2] <= 5;
     if ($row->[2] == 5 || $row->[6])
     {
       $sql = sprintf("SELECT SUM(expert) FROM reviews WHERE id='%s'", $row->[0]);
       my $sum = $self->SimpleSqlGet($sql);
-      $self->SetError(sprintf("$table: illegal status/expcnt for %s: '%s'/'%s' but there are no expert reviews", $row->[0], $row->[2])) unless $sum;
+      $self->SetError(sprintf("$table __ illegal status/expcnt for %s__ '%s'/'%s' but there are no expert reviews", $row->[0], $row->[2])) unless $sum;
     }
   }
   # ======== reviews ========
@@ -5428,13 +5374,13 @@ sub SanityCheckDB
   $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
-    $self->SetError(sprintf("$table: illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table: illegal time for %s: '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
-    $self->SetError(sprintf("$table: illegal attr/reason for %s: '%s/%s'", $row->[0], $row->[3], $row->[4])) unless $self->GetCodeFromAttrReason($row->[3],$row->[4]);
-    $self->SetError(sprintf("$table: spaces in renNum for %s: '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
-    $self->SetError(sprintf("$table: illegal renDate for %s: '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $self->IsRenDate($row->[11]);
-    $self->SetError(sprintf("$table: illegal copyDate for %s: '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $row->[12] =~ m/\d\d\d\d/;
-    $self->SetError(sprintf("$table: illegal category for %s: '%s'", $row->[0], $row->[13])) unless $row->[13] eq '' or $self->IsValidCategory($row->[13]);
+    $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
+    $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
+    $self->SetError(sprintf("$table __ illegal attr/reason for %s__ '%s/%s'", $row->[0], $row->[3], $row->[4])) unless $self->GetCodeFromAttrReason($row->[3],$row->[4]);
+    $self->SetError(sprintf("$table __ spaces in renNum for %s__ '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
+    $self->SetError(sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $self->IsRenDate($row->[11]);
+    $self->SetError(sprintf("$table __ illegal copyDate for %s__ '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $row->[12] =~ m/\d\d\d\d/;
+    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[13])) unless $row->[13] eq '' or $self->IsValidCategory($row->[13]);
   }
   # FIXME: make sure there are no und/nfi pairs with status other than 3
 }
