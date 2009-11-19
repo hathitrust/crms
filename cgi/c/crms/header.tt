@@ -26,6 +26,7 @@
     <div style="clear:both;">
     <span class="greeting">Hello [% crms.GetUserName() %]</span>
     <a href="crms?p=Logout"> Logout</a>
+    </div>
 <br/>
 <br/>
 
