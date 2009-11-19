@@ -52,13 +52,21 @@ Only changes status of items in queue. Does not try to move to historical or exp
 <br/>
 [% IF cgi.param('sanityCheck') %]
   [% id = cgi.param('id') %]
+  [% cand = cgi.param('candidates') %]
   [% IF id %]
-    [% blah = crms.UpdateAuthor(id) %]
-    [% blah = crms.UpdateTitle(id) %]
-    [% blah = crms.UpdatePubDate(id) %]
+    [% IF cand %]
+      [% blah = crms.UpdateCandidatesAuthor(id) %]
+      [% blah = crms.UpdateCandidatesTitle(id) %]
+      [% blah = crms.UpdateCandidatesPubDate(id) %]
+    [% ELSE %]
+      [% blah = crms.UpdateAuthor(id) %]
+      [% blah = crms.UpdateTitle(id) %]
+      [% blah = crms.UpdatePubDate(id) %]
+    [% END %]
     <h4>Tried to Fix:</h4>
     <table class='exportStats'><tr><th>ID</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th></tr>
-    [% sql = "SELECT author,title,pub_date FROM bibdata WHERE id='$id'" %]
+    [% which = (cand)? 'candidates':'bibdata' %]
+    [% sql = "SELECT author,title,pub_date FROM $which WHERE id='$id'" %]
     [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
     [% FOREACH r IN ref %]
       <tr><td>[% id %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td></tr>
@@ -71,19 +79,22 @@ Only changes status of items in queue. Does not try to move to historical or exp
   <tr><th>Table</th><th>Explanation</th><th>Value</th><th>Fix</th></tr>
   [% FOREACH error IN crms.GetErrors %]
     <tr>
-    [% e = error.split(':\s*') %]
+    [% e = error.split('\s*__\s*') %]
     <td class='debugTab'>[% e.0.replace('\s','&nbsp;') %]</td>
     <td class='debugExpl'>[% e.1.replace('\s','&nbsp;') %]</td>
     <td class='debugVal'>[% e.2.replace('\s','&nbsp;') %]</td>
     <td>
       [% id = e.1.match('.+?(\w+\.[A-Za-z]?\d+)').0 %]
-      [% IF e.0 == 'bibdata' && id %]
-      <form action="crms">
-      <input type="hidden" name="p" value="debug"/>
-      <input type="hidden" name="sanityCheck" value="1"/>
-      <input type="hidden" name="id" value="[% id %]"/>
-      <input type="submit" value=""/>
-      </form>
+      [% IF (e.0 == 'bibdata' || e.0 == 'candidates') && id %]
+        <form action="crms">
+        <input type="hidden" name="p" value="debug"/>
+        [% IF e.0 == 'candidates' %]
+          <input type="hidden" name="candidates" value="1"/>
+        [% END %]
+        <input type="hidden" name="sanityCheck" value="1"/>
+        <input type="hidden" name="id" value="[% id %]"/>
+        <input type="submit" value=""/>
+        </form>
       [% END %]
     </td>
     </tr>
