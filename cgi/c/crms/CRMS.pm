@@ -20,6 +20,7 @@ package CRMS;
 use strict;
 use LWP::UserAgent;
 use XML::LibXML;
+use Date::Calc qw(:all);
 use POSIX qw(strftime);
 use DBI qw(:sql_types);
 use List::Util;
@@ -2557,10 +2558,11 @@ sub CreateExportData
     push @usedates, $date;
     $report .= "$delimiter$date";
     my %cats = ('pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pdus/cdpp' => 0, 'ic/ren' => 0, 'ic/cdpp' => 0,
-                'All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0);
+                'All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0,
+                'Status 4' => 0, 'Status 6' => 0, 'Status 6' => 0);
     my $mintime = $date . '-01 00:00:00';
     my $maxtime = $date . '-31 23:59:59';
-    my $sql = qq{SELECT attr,reason FROM $CRMSGlobals::historicalreviewsTable h1 WHERE } .
+    my $sql = qq{SELECT attr,reason,status FROM $CRMSGlobals::historicalreviewsTable h1 WHERE } .
               qq{ time=(SELECT max(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id) AND } .
               qq{ (status=4 OR status=5 OR status=6) AND legacy=0 AND time >= '$mintime' AND time <= '$maxtime'};
     my $rows = $dbh->selectall_arrayref( $sql );
@@ -2568,6 +2570,7 @@ sub CreateExportData
     {
       my $attr = int($row->[0]);
       my $reason = int($row->[1]);
+      my $status = int($row->[2]);
       my $code = $self->GetCodeFromAttrReason($attr, $reason);
       my $cat = $self->GetAttrReasonCom($code);
       $cat = 'All UND/NFI' if $cat eq 'und/nfi';
@@ -2577,6 +2580,8 @@ sub CreateExportData
         my $allkey = 'All ' . uc substr($cat,0,2);
         $cats{$allkey}++ if exists $cats{$allkey};
       }
+      $cat = 'Status '.$status;
+      $cats{$cat}++;
     }
     for my $cat (keys %cats)
     {
@@ -2584,7 +2589,8 @@ sub CreateExportData
     }
   }
   $report .= "\n";
-  my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'All IC', 'ic/ren', 'ic/cdpp', 'All UND/NFI', 'Total');
+  my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'All IC', 'ic/ren', 'ic/cdpp', 'All UND/NFI', 'Total',
+                'Status 4', 'Status 5', 'Status 6');
   my %monthTotals = ();
   my %catTotals = ('All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0);
   my $gt = 0;
@@ -2645,6 +2651,10 @@ sub CreateExportGraph
 {
   my $self = shift;
   my $type = int shift;
+  my $start = shift;
+  my $end = shift;
+  
+  return $self->CreateExportStatusGraph($start, $end) if $type == 3;
   my $data = $self->CreateExportData(',', $type == 2, $type == 2);
   my @lines = split m/\n/, $data;
   my $title = shift @lines;
@@ -2714,6 +2724,78 @@ sub CreateExportGraph
   return $report;
 }
 
+sub CreateExportStatusGraph
+{
+  my $self  = shift;
+  my $start = shift;
+  my $end   = shift;
+  my $type = 0;
+  my $report = '';
+  
+  my $title = 'Final Determinations by Expert Effort';
+  my @titles = ('4','5','6');
+  my @elements = ();
+  my %colors = ('4' => '#22BB00', '5' => '#FF2200', '6' => '#0088FF');
+  my @dates = $self->GetWorkingDaysInRange($start, $end);
+  my $ceiling = 0;
+  foreach my $title (@titles)
+  {
+    my @line = ();
+    my $color = $colors{$title};
+    my $attrs = sprintf('"dot-style":{"type":"solid-dot","dot-size":3,"colour":"%s"},"text":"Status %s","colour":"%s","on-show":{"type":"pop-up","cascade":1,"delay":0.2}',
+                        $color, $title, $color);
+    foreach my $date (@dates)
+    {
+      my $sql = "SELECT MAX(time) AS max FROM historicalreviews WHERE status=$title GROUP BY id";
+      my $rows = $self->get('dbh')->selectall_arrayref($sql);
+      my $n = 0;
+      foreach my $row (@{$rows})
+      {
+        my $t = $row->[0];
+        $n++ if $t =~ m/$date.*/;
+      }
+      push @line, $n;
+      $ceiling = $n if $n > $ceiling;
+    }
+    my @vals = map(sprintf('{"value":%d}', $_),@line);
+    push @elements, sprintf('{"type":"line","values":[%s],%s}', join(',',@vals), $attrs);
+  }
+  my $report = sprintf('{"bg_colour":"#000000","title":{"text":"%s","style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"},"elements":[',$title);
+  $report .= sprintf('%s]',join ',', @elements);
+  $report .= sprintf(',"y_axis":{"max":%d,"steps":10,"colour":"#888888","grid-colour":"#888888"%s}',
+                     $ceiling,
+                     ',"labels":{"colour":"#FFFFFF"}');
+  $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}',
+                     join('","',@dates));
+  $report .= '}';
+  return $report;
+}
+
+sub GetWorkingDaysInRange
+{
+  my $self  = shift;
+  my $start = shift;
+  my $end   = shift;
+  
+  my ($y,$m,$d) = Today();
+  my $today = join '-', ($y,$m,$d);
+  if (!$start || !$end)
+  {
+    $start = join '-', ($y,$m,1);
+    $end = join '-', ($y,$m,Days_in_Month($y, $m));
+  }
+  my @days = ();
+  while ($start le $end)
+  {
+    my ($y,$m,$d) = split '-', $start;
+    my $dow = Day_of_Week($y, $m, $d);
+    push @days, $start if $dow <= 5;
+    $start = $self->SimpleSqlGet("SELECT DATE_ADD('$start', INTERVAL 1 DAY)");
+    last if $start gt $today;
+  }
+  return @days;
+}
+
 # Create an HTML table for the whole year's exports, month by month.
 # If cumulative, columns are years, not months.
 sub CreateExportReport
@@ -2747,14 +2829,14 @@ sub CreateExportReport
     my $padding = ($major)? '':$nbsps;
     $report .= sprintf("<th%s><span%s>%s$title</span></th>",
       ($title eq 'Total')? ' style="text-align:right;"':'',
-      ($major)? ' class="major"':'',
+      ($major)? ' class="major"':(($title =~ m/Status.+/)? ' class="minor"':''),
       ($major)? '':$nbsps);
     foreach my $item (@items)
     {
       my ($n,$pct) = split ':', $item;
       $n =~ s/\s/&nbsp;/g;
       $report .= sprintf("<td%s>%s%s$n%s%s</td>",
-                         ($major)? ' class="major"':($title eq 'Total')? ' style="text-align:center;"':'',
+                         ($major)? ' class="major"':($title eq 'Total')? ' style="text-align:center;"':(($title =~ m/Status.+/)? ' class="minor"':''),
                          ($major)? '':$nbsps,
                          ($title eq 'Total')? '<b>':'',
                          ($title eq 'Total')? '</b>':'',

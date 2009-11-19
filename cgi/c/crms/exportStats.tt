@@ -54,6 +54,8 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "400", "300", "9.0.
                    "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=1")});
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "400", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=2")});
+swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart3", "400", "300", "9.0.0",
+                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=3")});
 // --> 
 </script>
   </head>
@@ -78,7 +80,8 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "400", "300", "9.0.
   <td><div id="chart1"/></td>
 </tr>
 <tr style="background-color:#000000;">
-  <td style="background-color:#000000;" colspan="2"><div id="chart2"/></td>
+  <td><div id="chart2"/></td>
+  <td><div id="chart3"/></td>
 </tr>
 <tr style="background-color:transparent;">
   <td style="padding-top:10px;" colspan="2">

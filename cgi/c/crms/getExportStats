@@ -21,7 +21,9 @@ my $data = '';
 my $c = $cgi->param('c'); # Class or cumulative
 if ($type eq 'graph')
 {
-  $data = $crms->CreateExportGraph($c);
+  my $start = $cgi->param('start');
+  my $end = $cgi->param('start');
+  $data = $crms->CreateExportGraph($c, $start, $end);
 }
 else
 {
