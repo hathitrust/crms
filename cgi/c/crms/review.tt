@@ -155,9 +155,9 @@
           <tr><td><span style="font-size:1.1em">Priority [% priority %]</span></td></tr>
           [% totalReviews = crms.GetReviewsCount('Identifier', barcode, '', '', '', '', '', 'adminHistoricalReviews', 0) %]
           [% IF totalReviews > 0 %]
-            <br/><a class="smallishText" href="?p=adminHistoricalReviews&amp;search1=Identifier&amp;search1value=$barcode" target="_blank">
+            <tr><td><a class="smallishText" href="?p=adminHistoricalReviews&amp;search1=Identifier&amp;search1value=$barcode" target="_blank">
             [% totalReviews %] historical review[% (totalReviews != 1)? 's':'' %]
-            </a>
+            </a></td></tr>
           [% END %]
           [% totalReviews = crms.GetReviewsCount('Identifier', barcode, '', '', '', '', '', 'adminReviews', 0) %]
           [% IF totalReviews > 0 %]
