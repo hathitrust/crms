@@ -332,7 +332,7 @@ sub LoadNewItemsInCandidates
     my $msg = qq{Before load, the max timestamp in the cadidates table $start, and the size is $start_size\n};
     print $msg;
 
-    my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time, attr, reason FROM rights WHERE time >= '$start' GROUP BY id order by time asc};
+    my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time, attr, reason FROM rights WHERE time >= '$start' GROUP BY id ORDER BY time ASC};
 
     my $ref = $self->get('sdr_dbh')->selectall_arrayref( $sql );
 
@@ -343,12 +343,22 @@ sub LoadNewItemsInCandidates
     my $inqueue;
     foreach my $row ( @{$ref} )
     {
-      my $attr =  $row->[2];
-      my $reason =  $row->[3];
+      my $id     = $row->[0];
+      my $time   = $row->[1];
+      my $attr   = $row->[2];
+      my $reason = $row->[3];
 
       if ( ( $attr == 2 ) && ( $reason == 1 ) )
       {
-        $self->AddItemToCandidates( $row->[0], $row->[1], 0, 0 );
+        my $lang = $self->GetPubLanguage($id);
+        if ('eng' ne $lang && '###' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
+        {
+          print "Skipping non-English language $id: $lang\n";
+        }
+        else
+        {
+          $self->AddItemToCandidates( $id, $time, 0, 0 );
+        }
       }
     }
 
@@ -3530,6 +3540,25 @@ sub GetPublDate
       $pubDate = substr($leader, 11, 4);
     }
     return $pubDate;
+}
+
+sub GetPubLanguage
+{
+    my $self    = shift;
+    my $barcode = shift;
+    my $record  = shift;
+
+    if ( ! $record )
+    {
+      $record = $self->GetRecordMetadata($barcode);
+    }
+
+    if ( ! $record ) { return 0; }
+
+    ## my $xpath = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
+    my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
+    my $leader  = $record->findvalue( $xpath );
+    return substr($leader, 35, 3);
 }
 
 sub GetMarcFixfield
