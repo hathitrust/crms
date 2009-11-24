@@ -385,40 +385,38 @@ sub LoadNewItems
 
     my $queuesize = $self->GetQueueSize();
 
-    my $msg = qq{Before load, the queue has $queuesize volumes.\n};
-    print $msg;
-
+    print "Before load, the queue has $queuesize volumes.\n";
+    
+    my $y = 1923 + int(rand(40));
     if ( $queuesize < $CRMSGlobals::queueSize )
     {
       my $limitcount = $CRMSGlobals::queueSize - $queuesize;
-
-      my $sql = qq{SELECT id, time, pub_date, title, author FROM candidates WHERE id NOT IN (SELECT DISTINCT id FROM reviews) AND id NOT IN (SELECT DISTINCT id FROM historicalreviews) ORDER BY time DESC};
-
-      my $ref = $self->get('dbh')->selectall_arrayref( $sql );
-
-      if ($self->get('verbose')) { print "found: " .  scalar( @{$ref} ) . ": $sql\n"; }
-
-      ## design note: if these were in the same DB we could just INSERT
-      ## into the new table, not SELECT then INSERT
+      return unless $limitcount > 0;
+      
       my $count = 0;
-      my $inqueue;
-      foreach my $row ( @{$ref} )
+      while (1)
       {
-        my $pub_date = $row->[2];
-        my $title = $row->[3];
-        my $author = $row->[4];
-
-        my $inqueue = $self->AddItemToQueue( $row->[0], $row->[1], $pub_date, $title, $author, 0, 0 );
-        $count += $inqueue;
-
-        if ( $count == $limitcount )
+        my $sql = 'SELECT id, time, pub_date, title, author FROM candidates WHERE id NOT IN (SELECT DISTINCT id FROM queue) ' .
+                  'AND id NOT IN (SELECT DISTINCT id FROM reviews) AND id NOT IN (SELECT DISTINCT id FROM historicalreviews) ' .
+                  'ORDER BY pub_date ASC, time DESC';
+        my $ref = $self->get('dbh')->selectall_arrayref( $sql );
+        my $row = $ref->[0];
+        foreach my $row (@{$ref})
         {
-          goto FINISHED;
+          my $pub_date = $row->[2];
+          next if $pub_date ne "$y-01-01";
+          my $id = $row->[0];
+          my $time = $row->[1];
+          my $title = $row->[3];
+          my $author = $row->[4];
+          my $inqueue = $self->AddItemToQueue( $id, $time, $pub_date, $title, $author, 0, 0 );
+          $count += $inqueue;
+          last if $count >= $limitcount;
+          $y++;
+          $y = 1923 if $y > 1963;
         }
+        last if $count >= $limitcount;
       }
-
-    FINISHED:
-
       #Record the update to the queue
       my $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source ) values ($count, 'RIGHTSDB')};
       $self->PrepareSubmitSql( $sql );
@@ -502,7 +500,7 @@ sub AddItemToQueue
       $self->PrepareSubmitSql( $sql );
       return 0;
     }
-    my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, $pub_date, $priority)";
+    my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, priority) VALUES ('$id', '$time', $status, $priority)";
 
     $self->PrepareSubmitSql( $sql );
       
