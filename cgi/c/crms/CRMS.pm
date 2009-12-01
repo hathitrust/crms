@@ -382,12 +382,10 @@ sub LoadNewItems
     my $self = shift;
 
     my $queuesize = $self->GetQueueSize();
-
     print "Before load, the queue has $queuesize volumes.\n";
-    
-    my $y = 1923 + int(rand(40));
-    if ( $queuesize < $CRMSGlobals::queueSize )
+    if ($queuesize < $CRMSGlobals::queueSize)
     {
+      my $y = 1923 + int(rand(40));
       my $limitcount = $CRMSGlobals::queueSize - $queuesize;
       return unless $limitcount > 0;
       
@@ -414,7 +412,7 @@ sub LoadNewItems
             next;
           }
           $self->AddItemToQueue( $id, $time, $pub_date, $title, $author, 0, 0 );
-          print "Added to queue: $id: $pub_date\n";
+          printf "Added to queue: $id published %s\n", substr($pub_date, 0, 4);
           $count++;
           last if $count >= $limitcount;
           $y++;
@@ -449,7 +447,6 @@ sub AddItemToCandidates
     my $self     = shift;
     my $id       = shift;
     my $time     = shift;
-
 
     my $record = $self->GetRecordMetadata($id);
 
@@ -1848,7 +1845,7 @@ sub GetQueueRef
   $offset = 0 unless $offset;
   $search1 = $self->ConvertToSearchTerm( $search1, 'queue' );
   $search2 = $self->ConvertToSearchTerm( $search2, 'queue' );
-  if ($order eq 'author' || $order eq 'title') { $order = 'b.' . $order; }
+  if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
   elsif ($order eq 'reviews') { $order = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)'; }
   else { $order = 'q.' . $order; }
   my @rest = ('q.id=b.id');
@@ -4372,21 +4369,20 @@ sub GetNextItemForReview
     }
     if ( ! $bar )
     {
-        my $nextPubDate = $self->GetNextPubYear() . '-01-01';
         # Get the 1st available item that has never been reviewed.
         # Exclude priority 1 some of the time, to 'fool' reviewers into not thinking everything is pd.
         my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
         my $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND $exclude1 $exclude3 q.locked IS NULL AND " .
                   "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) " .
-                  "AND b.pub_date >= $nextPubDate ORDER BY q.priority DESC, b.pub_date ASC, q.time ASC LIMIT 1";
+                  "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
         $bar = $self->SimpleSqlGet( $sql );
         #print "$sql<br/>\n";
-        # Relax the date stuff if it fails
+        # Relax the priority 1 stuff if it fails
         if (!$bar)
         {
           $sql = "SELECT id FROM $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id $exclude3 AND q.locked IS NULL AND " .
                  "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) " .
-                 "ORDER BY q.priority DESC, b.pub_date ASC, q.time ASC LIMIT 1";
+                 "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
           $bar = $self->SimpleSqlGet( $sql );
           #print "$sql<br/>\n";
         }
