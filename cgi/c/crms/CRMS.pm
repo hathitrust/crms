@@ -2166,13 +2166,13 @@ sub GetAttrReasonCom
     my $self = shift;
     my $in   = shift;
  
-    my %codes = (1 => "pd/ncn", 2 => "pd/ren",  3 => "pd/cdpp",
-                 4 => "ic/ren", 5 => "ic/cdpp", 6 => "und/nfi",
-                 7 => "pdus/cdpp");
+    my %codes = (1 => 'pd/ncn', 2 => 'pd/ren',  3 => 'pd/cdpp',
+                 4 => 'ic/ren', 5 => 'ic/cdpp', 6 => 'und/nfi',
+                 7 => 'pdus/cdpp');
 
-    my %str   = ("pd/ncn" => 1, "pd/ren"  => 2, "pd/cdpp" => 3,
-                 "ic/ren" => 4, "ic/cdpp" => 5, "und/nfi" => 6,
-                 "pdus/cdpp" => 7);
+    my %str   = ('pd/ncn' => 1, 'pd/ren'  => 2, 'pd/cdpp' => 3,
+                 'ic/ren' => 4, 'ic/cdpp' => 5, 'und/nfi' => 6,
+                 'pdus/cdpp' => 7);
 
     if ( $in =~ m/\d/ ) { return $codes{$in}; }
     else                { return $str{$in};   }
@@ -2183,13 +2183,13 @@ sub GetAttrReasonFromCode
     my $self = shift;
     my $code = shift;
 
-    if    ( $code eq "1" ) { return (1,2); }
-    elsif ( $code eq "2" ) { return (1,7); }
-    elsif ( $code eq "3" ) { return (1,9); }
-    elsif ( $code eq "4" ) { return (2,7); }
-    elsif ( $code eq "5" ) { return (2,9); }
-    elsif ( $code eq "6" ) { return (5,8); }
-    elsif ( $code eq "7" ) { return (9,9); }
+    if    ( $code eq '1' ) { return (1,2); }
+    elsif ( $code eq '2' ) { return (1,7); }
+    elsif ( $code eq '3' ) { return (1,9); }
+    elsif ( $code eq '4' ) { return (2,7); }
+    elsif ( $code eq '5' ) { return (2,9); }
+    elsif ( $code eq '6' ) { return (5,8); }
+    elsif ( $code eq '7' ) { return (9,9); }
 }
 
 sub GetCodeFromAttrReason
@@ -2786,10 +2786,10 @@ sub GetWorkingDaysInRange
   my $end   = shift;
   
   my ($y,$m,$d) = Today();
-  my $today = join '-', ($y,$m,$d);
+  my $today = join '-', ($y,sprintf('%02d',$m),sprintf('%02d',$d));
   if (!$start || !$end)
   {
-    $start = join '-', ($y,$m,1);
+    $start = join '-', ($y,$m,'01');
     $end = join '-', ($y,$m,Days_in_Month($y, $m));
   }
   my @days = ();
