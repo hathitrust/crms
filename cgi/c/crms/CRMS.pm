@@ -5403,7 +5403,7 @@ sub SanityCheckDB
   {
     $self->SetError(sprintf("$table __ illegal volume id__ '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
     $self->SetError(sprintf("$table __ illegal pub_date for %s__ %s", $row->[0], $row->[1])) unless $row->[1] =~ m/$pdRE/;
-    $self->SetError(sprintf("$table __ illegal pub_date for %__ %s", $row->[0], $row->[1])) if $row->[1] eq '0000-01-01';
+    $self->SetError(sprintf("$table __ illegal pub_date for %s__ %s", $row->[0], $row->[1])) if $row->[1] eq '0000-01-01';
     #$self->SetError(sprintf("$table __ no author for %s__ '%s'", $row->[0], $row->[2])) if $row->[2] eq '';
     $self->SetError(sprintf("$table __ no title for %s__ '%s'", $row->[0], $row->[3])) if $row->[3] eq '';
     $self->SetError(sprintf("$table __ author encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
@@ -5456,7 +5456,7 @@ sub SanityCheckDB
   $table = 'historicalreviews';
   $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,expertNote,renDate,copyDate,category,flagged,status,priority FROM $table";
   $rows = $dbh->selectall_arrayref( $sql );
-  my %stati = (1=>1,4=>1,5=>1);
+  my %stati = (1=>1,4=>1,5=>1,6=>1);
   foreach my $row ( @{$rows} )
   {
     $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
