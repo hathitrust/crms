@@ -135,9 +135,13 @@ td.explanation {
 </tr>
 </table>
 <br/>
-<p>Note: you can use an asterisk (*) in a search field as a wildcard that will match zero or more characters.<br/>
+<p><b>Note:</b> you can use an asterisk (*) in a search field as a wildcard that will match zero or more characters.<br/>
 Example: searching for volume id <code>wu.89*</code> will match wu.89090507310, wu.89092821453, etc....<br/>
 Example: searching for title <code>*trigonometric*</code> will match "Natural trigonometric functions to seven decimal places for every ten seconds of arc"
+</p><br/>
+<p><b>Note:</b> you can use the <b>&lt;</b>, <b>&lt;=</b>, <b>&gt;</b>, <b>&gt;=</b>, and <b>!=</b> operators before a numeric expression.<br/>
+Example: searching for pub date <code>&lt;=1923</code> will retrieve all volumes published in 1923 or before.<br/>
+Example: searching for pub date <code>!=1923</code> will retrieve all volumes except those published in 1923.<br/>
 </p><br/>
 <p>
 Searching by <b>review</b> is the search functionality from version 1.0 of the system -- volumes will be grouped together only when ordering
