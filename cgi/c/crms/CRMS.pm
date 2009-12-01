@@ -373,8 +373,6 @@ sub LoadNewItemsInCandidates
     my $sql = qq{INSERT INTO candidatesrecord ( addedamount ) values ( $diff )};
     $self->PrepareSubmitSql( $sql );
 
-
-
     return 1;
 }
 
@@ -398,7 +396,7 @@ sub LoadNewItems
       {
         my $sql = 'SELECT id, time, pub_date, title, author FROM candidates WHERE id NOT IN (SELECT DISTINCT id FROM queue) ' .
                   'AND id NOT IN (SELECT DISTINCT id FROM reviews) AND id NOT IN (SELECT DISTINCT id FROM historicalreviews) ' .
-                  'ORDER BY pub_date ASC, time DESC';
+                  'AND id NOT IN (SELECT DISTINCT id FROM queue) ORDER BY pub_date ASC, time DESC';
         my $ref = $self->get('dbh')->selectall_arrayref( $sql );
         my $row = $ref->[0];
         foreach my $row (@{$ref})
@@ -409,8 +407,15 @@ sub LoadNewItems
           my $time = $row->[1];
           my $title = $row->[3];
           my $author = $row->[4];
-          my $inqueue = $self->AddItemToQueue( $id, $time, $pub_date, $title, $author, 0, 0 );
-          $count += $inqueue;
+          my $lang = $self->GetPubLanguage($id);
+          if ('eng' ne $lang && '###' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
+          {
+            print "Skipping non-English language $id: $lang\n";
+            next;
+          }
+          $self->AddItemToQueue( $id, $time, $pub_date, $title, $author, 0, 0 );
+          print "Added to queue: $id: $pub_date\n";
+          $count++;
           last if $count >= $limitcount;
           $y++;
           $y = 1923 if $y > 1963;
@@ -418,11 +423,11 @@ sub LoadNewItems
         last if $count >= $limitcount;
       }
       #Record the update to the queue
-      my $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source ) values ($count, 'RIGHTSDB')};
+      my $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES ($count, 'RIGHTSDB')";
       $self->PrepareSubmitSql( $sql );
     }
-
 }
+
 
 ## ----------------------------------------------------------------------------
 ##  Function:   get the latest time from the queue
@@ -1390,11 +1395,11 @@ sub CreateSQL
     {
       $search2term = qq{$search2 = '$search2value'};
     }
-    if ( $search1value =~ m/([<>]=?)\s*(\d+)\s*/ )
+    if ( $search1value =~ m/([<>!]=?)\s*(\d+)\s*/ )
     {
       $search1term = "$search1 $1 $2";
     }
-    if ( $search2value =~ m/([<>]=?)\s*(\d+)\s*/ )
+    if ( $search2value =~ m/([<>!]=?)\s*(\d+)\s*/ )
     {
       $search2term = "$search2 $1 $2";
     }
@@ -1561,6 +1566,7 @@ sub SearchAndDownload
         elsif ( $type eq 'adminHistoricalReviews' )
         {
           my $pubdate = $row->[18];
+          $pubdate = '?' unless $pubdate;
           my $validated = $row->[19];
           #id, title, author, review date, status, user, attr, reason, category, note, validated
           $buffer .= qq{$id\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated};
@@ -1651,7 +1657,9 @@ sub GetReviewsRef
                     title      => $row->[16],
                     author     => $row->[17]
                    };
-        ${$item}{'pubdate'} = $row->[18] if $page eq 'adminHistoricalReviews';
+        my $pubdate = $row->[18];
+        $pubdate = '?' unless $pubdate;
+        ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
         ${$item}{'validated'} = $row->[19] if $page eq 'adminHistoricalReviews';
         push( @{$return}, $item );
     }
@@ -1734,12 +1742,12 @@ sub GetVolumesRef
     $search2Value =~ s/\*/%/gs;
     $tester2 = ' LIKE ';
   }
-  if ( $search1Value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  if ( $search1Value =~ m/([<>!]=?)\s*(\d+)\s*/ )
   {
     $search1Value = $2;
     $tester1 = $1;
   }
-  if ( $search2Value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  if ( $search2Value =~ m/([<>!]=?)\s*(\d+)\s*/ )
   {
     $search2Value = $2;
     $tester2 = $1;
@@ -1798,7 +1806,9 @@ sub GetVolumesRef
                   title      => $row->[16],
                   author     => $row->[17]
                  };
-      ${$item}{'pubdate'} = $row->[18] if $page eq 'adminHistoricalReviews';
+      my $pubdate = $row->[18];
+      $pubdate = '?' unless $pubdate;
+      ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
       ${$item}{'validated'} = $row->[19] if $page eq 'adminHistoricalReviews';
       push( @{$return}, $item );
     }
@@ -1854,12 +1864,12 @@ sub GetQueueRef
     $search2Value =~ s/\*/%/gs;
     $tester2 = ' LIKE ';
   }
-  if ( $search1Value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  if ( $search1Value =~ m/([<>!]=?)\s*(\d+)\s*/ )
   {
     $search1Value = $2;
     $tester1 = $1;
   }
-  if ( $search2Value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  if ( $search2Value =~ m/([<>!]=?)\s*(\d+)\s*/ )
   {
     $search2Value = $2;
     $tester2 = $1;
@@ -1885,6 +1895,8 @@ sub GetQueueRef
     my $id = $row->[0];
     my $date = $row->[1];
     $date =~ s/(.*) .*/$1/;
+    my $pubdate = $row->[4];
+    $pubdate = '?' unless $pubdate;
     $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id'";
     #print "$sql<br/>\n";
     my $reviews = $self->SimpleSqlGet($sql);
@@ -1893,7 +1905,7 @@ sub GetQueueRef
                 date       => $date,
                 status     => $row->[2],
                 locked     => $row->[3],
-                pubdate    => $row->[4],
+                pubdate    => $pubdate,
                 priority   => $row->[5],
                 expcnt     => $row->[6],
                 title      => $row->[7],
@@ -1989,11 +2001,11 @@ sub GetReviewsCount
     {
       $search2term = qq{$search2 = '$search2value'};
     }
-    if ( $search1value =~ m/([<>]=?)\s*(\d+)\s*/ )
+    if ( $search1value =~ m/([<>!]=?)\s*(\d+)\s*/ )
     {
       $search1term = "$search1 $1 $2";
     }
-    if ( $search2value =~ m/([<>]=?)\s*(\d+)\s*/ )
+    if ( $search2value =~ m/([<>!]=?)\s*(\d+)\s*/ )
     {
       $search2term = "$search2 $1 $2";
     }
@@ -3699,9 +3711,9 @@ sub GetPubDate
     my $self = shift;
     my $id   = shift;
 
-    my $sql = qq{ SELECT pub_date FROM bibdata WHERE id="$id" };
+    my $sql = qq{ SELECT YEAR(pub_date) FROM bibdata WHERE id="$id" };
     my $date = $self->SimpleSqlGet( $sql );
-
+    $date = 'unknown' unless $date;
     return $date;
 }
 
