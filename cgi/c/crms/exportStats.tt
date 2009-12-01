@@ -3,50 +3,26 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-type" content="text/html;charset=utf-8"/>
-    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css" />
+    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
+    <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
     <title>[% title %]</title>
+    <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
     <script type="text/javascript" src="/c/crms/swfobject.js"></script>
     <script type="text/javascript">
 <!--
-// For Open Flash Charts Data
-function findSWF(id)
+function gup( name )
 {
-  if (navigator.appName.indexOf("Microsoft")!= -1) return window[id];
-  else return document[id];
+  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+  var regexS = "[\\?&]"+name+"=([^&#]*)";
+  var regex = new RegExp( regexS );
+  var results = regex.exec( window.location.href );
+  if (results == null) return "";
+  else return results[1];
 }
 
-function SetOFCData(json,name)
-{
-  swf = findSWF(name);
-  x = swf.load(json);
-}
-
-function DoChart(cumulative,id)
-{
-  var url = "/cgi/c/crms/getExportStats?c=" + cumulative;
-  var req = null;
-  if (window.XMLHttpRequest) req = new XMLHttpRequest();
-  else if (window.ActiveXObject) 
-  {
-    try {
-      req = new ActiveXObject("Msxml2.XMLHTTP");
-    } catch (e)
-    {
-      try {
-        req = new ActiveXObject("Microsoft.XMLHTTP");
-      } catch (e) {}
-    }
-  }
-  req.onreadystatechange = function()
-  {
-    if (req.readyState == 4)
-    {
-      if (req.status == 200) SetOFCData(req.responseText, id);
-    }
-  };
-  req.open("GET", url, true);
-  req.send(null);
-}
+var start = gup("startDate");
+var end = gup("endDate");
+var url3 = escape("/cgi/c/crms/getExportStats?type=graph&c=3&startDate="+start+"&endDate="+end)
 
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "400", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=0")});
@@ -55,7 +31,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "400", "300", "9.0.
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "400", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=2")});
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart3", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=3")});
+                   "expressInstall.swf", {"data-file":url3});
 // --> 
 </script>
   </head>
@@ -95,5 +71,34 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart3", "400", "300", "9.0.
   </td>
 </tr>
 </table>
-
+<br/>
+<h4>Restrict Expert Effort Dates</h4>
+<div style="position:relative;border-style:solid;width:32em;border-width:1px;padding:10px;">
+<form action="crms">
+<label for="startDate">Start Date:</label>
+<input type="text" id="startDate" name="startDate" value="[% startDate %]" onclick="datePickerController.show('startDate');"
+       onblur="datePickerController.hide('startDate');"/>
+<script type="text/javascript">
+// <![CDATA[
+  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
+  datePickerController.createDatePicker(opts);
+// ]]>
+</script>
+<span class="smallText">(YYYY-MM-DD)</span>
+<br/>
+<label for="endDate">End Date:</label>
+<input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
+       onblur="datePickerController.hide('endDate');"/>
+<script type="text/javascript">
+// <![CDATA[
+  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };       
+  datePickerController.createDatePicker(opts);
+// ]]>
+</script>
+<span class="smallText">(YYYY-MM-DD)</span>
+<input type="submit" title="Use this Range"/>
+<input type="hidden" name="p" value="exportStats"/>
+</form>
+</div>
+<br/>
 [% INCLUDE footer.tt %]
