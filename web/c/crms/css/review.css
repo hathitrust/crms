@@ -236,7 +236,7 @@ span.major {
   color:#82CAFA;
 }
 
-td.major {
+td.major,tr.major {
   background-color:#82CAFA;
   color:#000000;
   font-weight:bold;
@@ -246,13 +246,13 @@ span.minor {
   color:#FEFCAE;
 }
 
-td.minor {
+td.minor,tr.minor {
   background-color:#FEFCAE;
   color:#000000;
   font-weight:bold;
 }
 
-td.total {
+td.total,tr.total {
   background-color:#A0FEAE;
   color:#000000;
   font-weight:bold;
@@ -292,4 +292,69 @@ hr {
   color:#000000;
   background-color:#000000;
   height:1px;
+}
+
+/* Begin Suckerfish menu styles */
+#suckerfish, #suckerfish ul {
+	float: left;
+	
+	list-style: none;
+	line-height: 1;
+	background: white;
+	font-weight: bold;
+	padding: 0;
+	border: 1px solid #82CAFA;
+	margin: 0 0 1em 0;
+}
+
+#suckerfish a {
+	display: block;
+	width: 10em;
+	w\idth: 6em;
+	color: black;
+	text-decoration: none;
+	padding: 0.25em 2em 0.25em 1em;
+}
+
+#suckerfish li {
+	float: left;
+	padding: 0;
+	width: 10em;
+}
+
+#suckerfish li ul {
+	position: absolute;
+	left: -999em;
+	height: auto;
+	width: 14.4em;
+	w\idth: 13.9em;
+	font-weight: normal;
+	border-width: 1px;
+	margin: 0;
+}
+
+#suckerfish li li {
+	padding-right: 1em;
+	width: 13em
+}
+
+#suckerfish li ul a {
+	width: 13em;
+	w\idth: 9em;
+}
+
+#suckerfish li ul ul {
+	margin: -1.75em 0 0 14em;
+}
+
+#suckerfish li:hover ul ul, #suckerfish li:hover ul ul ul, #suckerfish li.sfhover ul ul, #suckerfish li.sfhover ul ul ul {
+	left: -999em;
+}
+
+#suckerfish li:hover ul, #suckerfish li li:hover ul, #suckerfish li li li:hover ul, #suckerfish li.sfhover ul, #suckerfish li li.sfhover ul, #suckerfish li li li.sfhover ul {
+	left: auto;
+}
+
+#suckerfish li:hover, #suckerfish li.sfhover {
+	background: #82CAFA;
 }
