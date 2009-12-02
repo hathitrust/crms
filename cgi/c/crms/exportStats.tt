@@ -4,34 +4,16 @@
   <head>
     <meta http-equiv="Content-type" content="text/html;charset=utf-8"/>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
-    <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
     <title>[% title %]</title>
-    <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
     <script type="text/javascript" src="/c/crms/swfobject.js"></script>
     <script type="text/javascript">
 <!--
-function gup( name )
-{
-  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
-  var regexS = "[\\?&]"+name+"=([^&#]*)";
-  var regex = new RegExp( regexS );
-  var results = regex.exec( window.location.href );
-  if (results == null) return "";
-  else return results[1];
-}
-
-var start = gup("startDate");
-var end = gup("endDate");
-var url3 = escape("/cgi/c/crms/getExportStats?type=graph&c=3&startDate="+start+"&endDate="+end)
-
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "400", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=0")});
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "400", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=1")});
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "400", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=2")});
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart3", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":url3});
 // --> 
 </script>
   </head>
@@ -57,7 +39,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart3", "400", "300", "9.0.
 </tr>
 <tr style="background-color:#000000;">
   <td><div id="chart2"/></td>
-  <td><div id="chart3"/></td>
+  <td/>
 </tr>
 <tr style="background-color:transparent;">
   <td style="padding-top:10px;" colspan="2">
@@ -71,34 +53,5 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart3", "400", "300", "9.0.
   </td>
 </tr>
 </table>
-<br/>
-<h4>Restrict Expert Effort Dates</h4>
-<div style="position:relative;border-style:solid;width:32em;border-width:1px;padding:10px;">
-<form action="crms">
-<label for="startDate">Start Date:</label>
-<input type="text" id="startDate" name="startDate" value="[% startDate %]" onclick="datePickerController.show('startDate');"
-       onblur="datePickerController.hide('startDate');"/>
-<script type="text/javascript">
-// <![CDATA[
-  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
-  datePickerController.createDatePicker(opts);
-// ]]>
-</script>
-<span class="smallText">(YYYY-MM-DD)</span>
-<br/>
-<label for="endDate">End Date:</label>
-<input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
-       onblur="datePickerController.hide('endDate');"/>
-<script type="text/javascript">
-// <![CDATA[
-  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };       
-  datePickerController.createDatePicker(opts);
-// ]]>
-</script>
-<span class="smallText">(YYYY-MM-DD)</span>
-<input type="submit" title="Use this Range"/>
-<input type="hidden" name="p" value="exportStats"/>
-</form>
-</div>
 <br/>
 [% INCLUDE footer.tt %]
