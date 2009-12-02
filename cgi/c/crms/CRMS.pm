@@ -408,10 +408,10 @@ sub LoadNewItems
           my $lang = $self->GetPubLanguage($id);
           if ('eng' ne $lang && '###' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
           {
-            print "Skipping non-English language $id: $lang\n";
+            print "Skip non-English $id: '$lang'\n";
             next;
           }
-          $self->AddItemToQueue( $id, $time, $pub_date, $title, $author, 0, 0 );
+          $self->AddItemToQueue( $id, $pub_date, $title, $author );
           printf "Added to queue: $id published %s\n", substr($pub_date, 0, 4);
           $count++;
           last if $count >= $limitcount;
@@ -482,34 +482,27 @@ sub AddItemToCandidates
     return 0;
 }
 
+# Plain vanilla code for adding an item with status 0, priority 0
 # Expects the pub_date to be already in 19XX-01-01 format.
 # Returns 1 if item was added, 0 if not added because it was already in the queue.
 sub AddItemToQueue
 {
     my $self     = shift;
     my $id       = shift;
-    my $time     = shift;
     my $pub_date = shift;
     my $title    = shift;
     my $author   = shift;
-    my $status   = shift;
-    my $priority = shift;
-
-    ## give the existing item higher priority
-    if ( $self->IsItemInQueue( $id ) )
-    {
-      my $sql = qq{UPDATE $CRMSGlobals::queueTable SET time='$time' WHERE id='$id'};
-      $self->PrepareSubmitSql( $sql );
-      return 0;
-    }
-    my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, priority) VALUES ('$id', '$time', $status, $priority)";
-
-    $self->PrepareSubmitSql( $sql );
-      
-    $self->UpdateTitle( $id, $title );
-    $self->UpdatePubDate( $id, $pub_date );
-    $self->UpdateAuthor( $id );
     
+    if ( ! $self->IsItemInQueue( $id ) )
+    {
+      # queue table has priority and status default to 0, time to current timestamp.
+      my $sql = "INSERT INTO $CRMSGlobals::queueTable (id) VALUES ('$id')";
+      $self->PrepareSubmitSql( $sql );
+
+      $self->UpdateTitle( $id, $title );
+      $self->UpdatePubDate( $id, $pub_date );
+      $self->UpdateAuthor( $id, $author );
+    }
     return 1;
 }
 
@@ -537,12 +530,12 @@ sub AddItemToQueueOrSetItemActive
     }
     else
     {
-      $sql = qq{UPDATE $CRMSGlobals::queueTable SET priority=$priority WHERE id='$id'};
+      $sql = "UPDATE $CRMSGlobals::queueTable SET priority=$priority,time=NOW() WHERE id='$id'";
       $self->PrepareSubmitSql( $sql );
       push @msgs, "changed priority from $oldpri to $priority";
       if ($count)
       {
-        $sql = qq{UPDATE $CRMSGlobals::reviewsTable SET priority=$priority WHERE id='$id'};
+        $sql = "UPDATE $CRMSGlobals::reviewsTable SET priority=$priority,time=NOW() WHERE id='$id'";
         $self->PrepareSubmitSql( $sql );
       }
       $stat = 3;
@@ -568,14 +561,14 @@ sub AddItemToQueueOrSetItemActive
       }
       else
       {
-        my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, status, pub_date, priority) VALUES ('$id', 0, '$pub-01-01', $priority)";
+        my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, pub_date, priority) VALUES ('$id', '$pub-01-01', $priority)";
         $self->PrepareSubmitSql( $sql );
         
         $self->UpdateTitle( $id );
         $self->UpdatePubDate( $id, $pub );
         $self->UpdateAuthor ( $id );
         
-        my $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source ) values (1, 'ADMINUI')};
+        my $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES (1, 'ADMINUI')";
         $self->PrepareSubmitSql( $sql );
       }
     }
@@ -647,9 +640,7 @@ sub GiveItemsInQueuePriority
       $self->PrepareSubmitSql( $sql );
 
       $self->UpdateTitle( $id );
-
       $self->UpdatePubDate( $id, $pub );
-
       $self->UpdateAuthor( $id );
 
       # Accumulate counts for items added at the 'same time'.
@@ -3542,7 +3533,7 @@ sub GetPublDate
     my $pubDateType = substr($leader, 6, 1);
     my $pubDate = substr($leader, 7, 4);
     # On questionable pub date, try date 2 field.
-    if ($pubDateType eq 'q' && ($pubDate eq '||||' || $pubDate eq '####'))
+    if ($pubDateType eq 'q' && ($pubDate eq '||||' || $pubDate eq '####' || $pubDate eq '^^^^'))
     {
       $pubDate = substr($leader, 11, 4);
     }
@@ -3929,6 +3920,14 @@ sub GetAuthorForReview
     return $au;
 }
 
+sub MetadataURL
+{
+  my $self = shift;
+  my $id   = shift;
+  
+  return $self->get( 'bc2metaUrl' ) .'?id=' . $id . '&schema=marcxml';
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   get the metadata record (MARC21)
 ##  Parameters: barcode
@@ -3950,7 +3949,7 @@ sub GetRecordMetadata
     #my $sysId = $self->BarcodeToId( $barcode );
     #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
     #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
-    my $url = $self->get( 'bc2metaUrl' ) .'?id=' . $barcode . '&schema=marcxml';
+    my $url = $self->MetadataURL($barcode);
     
     my $ua = LWP::UserAgent->new;
 
@@ -5391,25 +5390,27 @@ sub SanityCheckDB
 {
   my $self = shift;
   my $dbh = $self->get( 'dbh' );
-  my $vidRE = '[a-z]+\d?\.[a-zA-Z]?\d+';
+  my $vidRE = '^[a-z]+\d?\.[a-zA-Z]?\d+$';
   my $pdRE = '\d\d\d\d-\d\d-\d\d';
   # ======== bibdata ========
   my $table = 'bibdata';
   # Volume ID must not have any spaces before, after, or in.
-  # MySQL years should be valid, but it stores a value of '0000' in case of illegal value entered.
+  # MySQL years should be valid, but it stores a value of '0000-00-00' in case of illegal value entered.
   my $sql = "SELECT id,pub_date,author,title FROM $table";
   my $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
+    my $md = $self->MetadataURL($row->[0]);
+    $md =~ s/&/&amp;/g;
     $self->SetError(sprintf("$table __ illegal volume id__ '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
     $self->SetError(sprintf("$table __ illegal pub_date for %s__ %s", $row->[0], $row->[1])) unless $row->[1] =~ m/$pdRE/;
-    $self->SetError(sprintf("$table __ illegal pub_date for %s__ %s", $row->[0], $row->[1])) if $row->[1] eq '0000-01-01';
+    $self->SetError(sprintf("$table __ illegal pub_date for <a href='%s' target='_blank'>%s</a>__ %s", $md, $row->[0], $row->[1])) if substr($row->[1], 0, 4) eq '0000';
     #$self->SetError(sprintf("$table __ no author for %s__ '%s'", $row->[0], $row->[2])) if $row->[2] eq '';
-    $self->SetError(sprintf("$table __ no title for %s__ '%s'", $row->[0], $row->[3])) if $row->[3] eq '';
-    $self->SetError(sprintf("$table __ author encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
-    $self->SetError(sprintf("$table __ title encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
-    $self->SetError(sprintf("$table __ author encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2])) if $row->[2] =~ m/.*?\?\?.*/;
-    $self->SetError(sprintf("$table __ title encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3])) if $row->[3] =~ m/.*?\?\?.*/;
+    $self->SetError(sprintf("$table __ no title for <a href='%s' target='_blank'>%s</a>__ '%s'", $md, $row->[0], $row->[3])) if $row->[3] eq '';
+    $self->SetError(sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
+    $self->SetError(sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
+    $self->SetError(sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2])) if $row->[2] =~ m/.*?\?\?.*/;
+    $self->SetError(sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3])) if $row->[3] =~ m/.*?\?\?.*/;
   }
   # ======== candidates ========
   $table = 'candidates';
@@ -5417,14 +5418,16 @@ sub SanityCheckDB
   $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
+    my $md = $self->MetadataURL($row->[0]);
+    $md =~ s/&/&amp;/g;
     $self->SetError(sprintf("$table __ illegal volume id__ '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
     $self->SetError(sprintf("$table __ illegal pub_date for %s__ %s", $row->[0], $row->[1])) unless $row->[1] =~ m/$pdRE/;
-    $self->SetError(sprintf("$table __ illegal pub_date for %s__ %s", $row->[0], $row->[1])) if $row->[1] eq '0000-01-01';
+    $self->SetError(sprintf("$table __ illegal pub_date for <a href='%s' target='_blank'>%s</a>__ %s", $md, $row->[0], $row->[1])) if substr($row->[1], 0, 4) eq '0000';
     $self->SetError(sprintf("$table __ no title for %s__ '%s'", $row->[0], $row->[3])) if $row->[3] eq '';
-    $self->SetError(sprintf("$table __ author encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
-    $self->SetError(sprintf("$table __ title encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
-    $self->SetError(sprintf("$table __ author encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2])) if $row->[2] =~ m/.*?\?\?.*/;
-    $self->SetError(sprintf("$table __ title encoding (%s) bad for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3])) if $row->[3] =~ m/.*?\?\?.*/;
+    $self->SetError(sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
+    $self->SetError(sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
+    $self->SetError(sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2])) if $row->[2] =~ m/.*?\?\?.*/;
+    $self->SetError(sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3])) if $row->[3] =~ m/.*?\?\?.*/;
   }
   # ======== exportdata/exportdataBckup ========
   foreach $table ('exportdata','exportdataBckup')
