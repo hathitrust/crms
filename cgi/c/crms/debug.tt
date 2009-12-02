@@ -7,7 +7,6 @@
 [% INCLUDE adminNav.tt  %]
 
 <hr width="25%" align="left"/>
-<br/>Current pubyear: [% crms.SimpleSqlGet('select pubyear from pubyearcycle') %]
 <br/><br/>
 <table class='exportStats'>
 <tr>
@@ -75,14 +74,15 @@ Only changes status of items in queue. Does not try to move to historical or exp
   [% END %]
   [% crms.SanityCheckDB() %]
   <h4>[% crms.GetErrors.size %] Items Need Fixed</h4>
-  <table class="exportStats">
+  <table class="exportStats" style='width:100%;'>
   <tr><th>Table</th><th>Explanation</th><th>Value</th><th>Fix</th></tr>
+  [% class = 1 %]
   [% FOREACH error IN crms.GetErrors %]
-    <tr>
+    <tr class='[% (class)? 'total':'major' %]'>
     [% e = error.split('\s*__\s*') %]
-    <td class='debugTab'>[% e.0.replace('\s','&nbsp;') %]</td>
-    <td class='debugExpl'>[% e.1.replace('\s','&nbsp;') %]</td>
-    <td class='debugVal'>[% e.2.replace('\s','&nbsp;') %]</td>
+    <td>[% e.0 %]</td>
+    <td>[% e.1 %]</td>
+    <td>[% e.2.replace('\s','&nbsp;') %]</td>
     <td>
       [% id = e.1.match('.+?(\w+\.[A-Za-z]?\d+)').0 %]
       [% IF (e.0 == 'bibdata' || e.0 == 'candidates') && id %]
@@ -98,6 +98,7 @@ Only changes status of items in queue. Does not try to move to historical or exp
       [% END %]
     </td>
     </tr>
+    [% class = (class)? 0:1 %]
   [% END %]
   [% blah = crms.ClearErrors() %]
   </table>
