@@ -2659,10 +2659,8 @@ sub CreateExportGraph
 {
   my $self = shift;
   my $type = int shift;
-  my $start = shift;
-  my $end = shift;
   
-  return $self->CreateExportStatusGraph($start, $end) if $type == 3;
+  return $self->CreateExportStatusGraph() if $type == 3;
   my $data = $self->CreateExportData(',', $type == 2, $type == 2);
   my @lines = split m/\n/, $data;
   my $title = shift @lines;
@@ -2732,19 +2730,57 @@ sub CreateExportGraph
   return $report;
 }
 
+
+sub CreateExportStatusReport
+{
+  my $self = shift;
+  my @titles = ('4','5','6');
+  my ($y,$m) = $self->GetTheYearMonth();
+  my @dates = $self->GetWorkingDaysInRange();
+  my $report = sprintf("<h2>Final&nbsp;Determinations&nbsp;Breakdown&nbsp;%s</h2><br/>\n", $self->YearMonthToEnglish("$y-$m"));
+  $report .= "<table class='exportStats'>\n";
+  $report .= "<tr><th/><th colspan='3'><span class='major'>Totals</span></th><th colspan='3'><span class='total'>Percentages</span></th></tr>\n";
+  $report .= "<tr><th>Date</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th></tr>\n";
+  foreach my $date (@dates)
+  {
+    my ($y,$m,$d) = split '-', $date;
+    my @line = (0,0,0,0,0,0);
+    my $sql = "SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE time>'$date 00:00:00' AND time<'$date 23:59:59';";
+    my $total = $self->SimpleSqlGet($sql);
+    for (my $i=0; $i < 3; $i++)
+    {
+      my $title = $titles[$i];
+      $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable h1 WHERE " .
+             "status=$title AND legacy=0 AND time>'$date 00:00:00' AND time<'$date 23:59:59' AND " .
+             "time=(SELECT MAX(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id)";
+      my $count = $self->SimpleSqlGet($sql);
+      $line[$i] = $count;
+      my $pct = 0.0;
+      eval {$pct = 100.0*$count/$total;};
+      $line[$i+3] = sprintf('%.1f%%', $pct);
+    }
+    $report .= sprintf('<tr><th>%s-%s</th>', $m, $d);
+    for (my $i=0; $i < 6; $i++)
+    {
+      $report .= sprintf("<td class='%s'%s>%s</td>", ($i<3)? 'major':'total',($i==2)?' style="border-right:double 6px black"':'', $line[$i]);
+    }
+    $report .= "</tr>\n";
+  }
+  $report .= "</table>\n";
+  return $report;
+}
+
+
 sub CreateExportStatusGraph
 {
   my $self  = shift;
-  my $start = shift;
-  my $end   = shift;
-  my $type = 0;
-  my $report = '';
   
+  my $report = '';
+  my @dates = $self->GetAllMonthsInYear();
   my $title = 'Final Determinations by Expert Effort';
   my @titles = ('4','5','6');
   my @elements = ();
   my %colors = ('4' => '#22BB00', '5' => '#FF2200', '6' => '#0088FF');
-  my @dates = $self->GetWorkingDaysInRange($start, $end);
   my $ceiling = 0;
   foreach my $title (@titles)
   {
@@ -2754,27 +2790,23 @@ sub CreateExportStatusGraph
                         $color, $title, $color);
     foreach my $date (@dates)
     {
-      my $sql = "SELECT MAX(time) AS max FROM historicalreviews WHERE status=$title GROUP BY id";
-      my $rows = $self->get('dbh')->selectall_arrayref($sql);
-      my $n = 0;
-      foreach my $row (@{$rows})
-      {
-        my $t = $row->[0];
-        $n++ if $t =~ m/$date.*/;
-      }
-      push @line, $n;
-      $ceiling = $n if $n > $ceiling;
+      my $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable h1 WHERE " .
+                "status=$title AND legacy=0 AND time>'$date-01 00:00:00' AND time<'$date-31 23:59:59' AND " .
+                "time=(SELECT MAX(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id)";
+      my $count = $self->SimpleSqlGet($sql);
+      push @line, $count;
+      $ceiling = $count if $count > $ceiling;
     }
     my @vals = map(sprintf('{"value":%d}', $_),@line);
     push @elements, sprintf('{"type":"line","values":[%s],%s}', join(',',@vals), $attrs);
   }
+  # Round ceil up to nearest hundred
+  $ceiling = 100 * POSIX::ceil($ceiling/100.0);
   my $report = sprintf('{"bg_colour":"#000000","title":{"text":"%s","style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"},"elements":[',$title);
   $report .= sprintf('%s]',join ',', @elements);
-  $report .= sprintf(',"y_axis":{"max":%d,"steps":10,"colour":"#888888","grid-colour":"#888888"%s}',
-                     $ceiling,
-                     ',"labels":{"colour":"#FFFFFF"}');
+  $report .= sprintf(',"y_axis":{"max":%d,"colour":"#888888","grid-colour":"#888888","labels":{"colour":"#FFFFFF"}}',$ceiling);
   $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}',
-                     join('","',@dates));
+                     join('","',map {$self->YearMonthToEnglish($_)} @dates));
   $report .= '}';
   return $report;
 }
@@ -3053,7 +3085,6 @@ sub CreateStatsReport
   $report =~ s/__MVAL__/$mvtitle/;
   return $report;
 }
-
 
 
 sub UpdateStats
@@ -5510,7 +5541,7 @@ sub Mojibake
 {
   my $self = shift;
   my $text = shift;
-  my $mojibake = '[ÊÃÄÅ¶¹¸©]';
+  my $mojibake = '[ÊÃÄÅ¶¹¸©×]';
   return ($text =~ m/$mojibake/i);
 }
 
@@ -5590,7 +5621,8 @@ sub PageToEnglish
                'userReviews' => 'view your processed reviews',
                'debug' => 'debug',
                'rights' => 'rights query',
-               'queue' => 'queue query'
+               'queue' => 'queue query',
+               'determinationStats' => 'determination stats'
               );
   return $pages{$page} || 'home';
 }
