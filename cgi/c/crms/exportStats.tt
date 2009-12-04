@@ -4,7 +4,17 @@
   <head>
     <meta http-equiv="Content-type" content="text/html;charset=utf-8"/>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
-    <title>[% title %]</title>
+    [% page = cgi.param('p') %]
+    [% dev = crms.get('dev') %]
+    [% fulltitle = title %]
+    [% IF dev %]
+      [% fulltitle = fulltitle _ ' - ' _ 'Development' %]
+      [% IF dev != 1 %]
+        [% fulltitle = fulltitle _ ' (' _ dev _ ')' %]
+      [% ELSE %]
+      [% END %]
+    [% END %]
+    <title>[% fulltitle %] - [% crms.PageToEnglish(page) %]</title>
     <script type="text/javascript" src="/c/crms/swfobject.js"></script>
     <script type="text/javascript">
 <!--
