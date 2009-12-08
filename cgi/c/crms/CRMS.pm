@@ -2667,7 +2667,6 @@ sub CreateExportGraph
   my $self = shift;
   my $type = int shift;
   
-  return $self->CreateExportStatusGraph() if $type == 3;
   my $data = $self->CreateExportData(',', $type == 2, $type == 2);
   my @lines = split m/\n/, $data;
   my $title = shift @lines;
@@ -2784,6 +2783,7 @@ sub CreateExportStatusGraph
   
   my $report = '';
   my @dates = $self->GetAllMonthsInYear();
+  pop @dates; # Don't show current month
   my $title = 'Final Determinations by Expert Effort';
   my @titles = ('4','5','6');
   my @elements = ();
