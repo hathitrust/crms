@@ -2541,7 +2541,7 @@ sub GetAllYears
   my $self = shift;
   
   # FIXME: use the GetRange function
-  my $min = $self->SimpleSqlGet("SELECT MIN(time) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0 AND user NOT LIKE 'rereview%'");
+  my $min = $self->SimpleSqlGet("SELECT MIN(time) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0 AND user NOT LIKE 'rereport%'");
   my $max = $self->SimpleSqlGet("SELECT MAX(time) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0");
   $min = substr($min,0,4);
   $max = substr($max,0,4);
@@ -5395,7 +5395,7 @@ sub GetType1Reviewers
 {
   my $self = shift;
   my $dbh = $self->get( 'dbh' );
-  my $sql = 'SELECT DISTINCT id FROM users WHERE id NOT LIKE "rereview%" AND id NOT IN (SELECT id FROM users WHERE type=2)';
+  my $sql = 'SELECT DISTINCT id FROM users WHERE id NOT LIKE "rereport%" AND id NOT IN (SELECT id FROM users WHERE type=2)';
   return map {$_->[0]} @{$dbh->selectall_arrayref( $sql )};
 }
 
