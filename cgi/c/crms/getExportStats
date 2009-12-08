@@ -23,7 +23,8 @@ if ($type eq 'graph')
 {
   my $start = $cgi->param('startDate');
   my $end = $cgi->param('endDate');
-  $data = $crms->CreateExportGraph($c, $start, $end);
+  if ($c == 3) { $data = $crms->CreateExportStatusGraph(); }
+  else { $data = $crms->CreateExportGraph($c, $start, $end); }
 }
 else
 {
