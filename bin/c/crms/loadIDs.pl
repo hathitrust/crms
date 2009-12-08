@@ -12,7 +12,6 @@ BEGIN
 use strict;
 use CRMS;
 use Getopt::Std;
-use List::Util qw(shuffle);
 
 my %opts;
 getopts('hnpu:v', \%opts);
@@ -61,54 +60,37 @@ open my $fh, $file or die "failed to open $file: $@ \n";
 ## 	39015028120130<tab>ic<tab>ren<tab>2007-10-03 12:20:49
 my $cnt = 0;
 my $linen = 1;
-my @May=();
-my @Jun=();
-my @Aug=();
-my @Oct=();
-my @Dec=();
-my %bar2Data = ();
+my %ids=();
 my $sql = "SELECT count(*) FROM users WHERE id='$user'";
 my $cnt = $crms->SimpleSqlGet($sql);
 if (!$cnt)
 {
   $sql = "INSERT INTO users (name,type,id) VALUES ('Rereport User',1,'$user')";
+  print "$sql\n" if $verbose;
   $crms->PrepareSubmitSql($sql);
 }
 foreach my $line ( <$fh> )
 {
   chomp $line;
-  next if $line eq '';
+  next if $line =~ m/^\s*$/;
   my ($id,$attr,$reason,$time) = split(m/\t/, $line, 4);
   $id = 'mdp.' . $id;
-  if ($attr ne 'pd' || $reason ne 'ncn')
-  {
-    #print "$linen) ignoring $id ($attr/$reason)\n" if $verbose;
-  }
-  else
+  if ($attr eq 'pd' && ($reason eq 'ncn' || $reason eq 'ren'))
   {
     my ($y,$m,$blah) = split '-', $time;
-    if ($y eq '2007' && ($m eq '05' || $m eq '06' || $m eq '08' || $m eq '10' || $m eq '12'))
+    if ($y eq '2007' && ($m eq '05' || $m eq '06'))
     {
       # Filter out gov docs
-      my $record =  $crms->GetRecordMetadata($id);
-      if ($crms->IsGovDoc( $id, $record )) { print "Skipping gov't doc $id $m/$y\n"; next; }
-      $bar2Data{$id} = join '__', ($attr,$reason,$time);
-      push @May, $id if $m eq '05';
-      push @Jun, $id if $m eq '06';
-      push @Aug, $id if $m eq '08';
-      push @Oct, $id if $m eq '10';
-      push @Dec, $id if $m eq '12';
+      #my $record =  $crms->GetRecordMetadata($id);
+      #if ($crms->IsGovDoc( $id, $record )) { print "Skipping gov't doc $id $m/$y\n"; next; }
+      next if $id eq 'mdp.39015001540890';
+      $ids{$id} = join '__', ($attr,$reason,$time);
     }
   }
   $linen++;
 }
-printf("May: %d Jun: %d Aug: %d Oct: %d Dec: %d\n", scalar @May, scalar @Jun, scalar @Aug, scalar @Oct, scalar @Dec);
-@May = @May[(shuffle(0..$#May))[0..8]];
-@Jun = @Jun[(shuffle(0..$#Jun))[0..50]];
-@Aug = @Aug[(shuffle(0..$#Aug))[0..59]];
-@Oct = @Oct[(shuffle(0..$#Oct))[0..59]];
-@Dec = @Dec[(shuffle(0..$#Dec))[0..59]];
-printf("May: %d Jun: %d Aug: %d Oct: %d Dec: %d\n", scalar @May, scalar @Jun, scalar @Aug, scalar @Oct, scalar @Dec);
+close $fh;
+
 $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/log_IDs.txt",
     configFile   =>   'crms.cfg',
@@ -116,14 +98,26 @@ $crms = CRMS->new(
     root         =>   $DLXSROOT,
     dev          =>   !$production,
 );
+$sql = "SELECT COUNT(*) FROM queue WHERE priority=1";
+my $already = $crms->SimpleSqlGet($sql);
 my $cnt = 0;
-my %seen = ();
 my $now = $crms->GetTodaysDate();
-foreach my $id ((@May,@Jun,@Aug,@Oct,@Dec))
+foreach my $id (keys %ids)
 {
-  die "Duplicate barcode $id!" if exists($seen{$id});
-  $seen{$id} = 1;
-  my ($attr,$reason,$time) = split '__', $bar2Data{$id};
+  #last if 1000 == $cnt + $already;
+  $sql = "SELECT COUNT(*) FROM queue WHERE id='$id' AND priority=1";
+  if ($crms->SimpleSqlGet($sql))
+  {
+    print "$id has already been rereviewed\n" if $verbose;
+    next;
+  }
+  $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id' AND priority=1";
+  if ($crms->SimpleSqlGet($sql))
+  {
+    print "$id is already in the queue for rereview\n" if $verbose;
+    next;
+  }
+  my ($attr,$reason,$time) = split '__', $ids{$id};
   printf "%d) updating $id ($attr/$reason) $time\n", $cnt+1 if $verbose;
   $crms->SubmitActiveReview($id, $user, $time, $attr, $reason, $noop);
   my $r = $crms->GetErrors();
@@ -136,6 +130,5 @@ foreach my $id ((@May,@Jun,@Aug,@Oct,@Dec))
   }
   $cnt++;
 }
-print "Processed $cnt items\n";
-close $fh;
+print "Added $cnt items\n";
 
