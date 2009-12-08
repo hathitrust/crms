@@ -20,6 +20,7 @@ package CRMS;
 use strict;
 use LWP::UserAgent;
 use XML::LibXML;
+use Encode;
 use Date::Calc qw(:all);
 use POSIX qw(strftime);
 use DBI qw(:sql_types);
@@ -329,10 +330,9 @@ sub LoadNewItemsInCandidates
     my $start = $self->GetCandidatesTime();
     my $start_size = $self->GetCandidatesSize();
 
-    my $msg = qq{Before load, the max timestamp in the cadidates table $start, and the size is $start_size\n};
-    print $msg;
+    print "Before load, the max timestamp in the candidates table $start, and the size is $start_size\n";
 
-    my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time, attr, reason FROM rights WHERE time >= '$start' GROUP BY id ORDER BY time ASC};
+    my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time, attr, reason FROM rights WHERE time > '$start' GROUP BY id ORDER BY time ASC};
 
     my $ref = $self->get('sdr_dbh')->selectall_arrayref( $sql );
 
@@ -363,12 +363,17 @@ sub LoadNewItemsInCandidates
     }
 
     my $end_size = $self->GetCandidatesSize();
-
-    $msg = qq{After load, the cadidate has $end_size rows.\n\n};
-    print $msg;
-
     my $diff = $end_size - $start_size;
-
+    
+    my $r = $self->GetErrors();
+    if ( defined $r )
+    {
+      printf "There were %d errors%s\n", scalar @{$r}, (scalar @{$r})? ':':'.';
+      map {print "  $_\n";} @{$r};
+    }
+    
+    print "After load, the cadidate has $end_size rows. Added $diff\n\n";
+    
     #Record the update to the queue
     my $sql = qq{INSERT INTO candidatesrecord ( addedamount ) values ( $diff )};
     $self->PrepareSubmitSql( $sql );
@@ -406,7 +411,7 @@ sub LoadNewItems
           my $title = $row->[3];
           my $author = $row->[4];
           my $lang = $self->GetPubLanguage($id);
-          if ('eng' ne $lang && '###' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
+          if ('eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
           {
             print "Skip non-English $id: '$lang'\n";
             next;
@@ -469,9 +474,11 @@ sub AddItemToCandidates
 
       my $au = $self->GetMarcDatafieldAuthor( $id );
       $au = $self->get('dbh')->quote($au);
+      $self->SetError("UTF-8 check failed for quoted author: $au") unless utf8::is_utf8($au);
       
       my $title = $self->GetRecordTitleBc2Meta( $id );
       $title = $self->get('dbh')->quote($title);
+      $self->SetError("UTF-8 check failed for quoted author: $title") unless utf8::is_utf8($title);
       
       my $sql = "REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub-01-01', $title, $au)";
 
@@ -3992,8 +3999,11 @@ sub GetRecordMetadata
     if ( ! $res->is_success ) { $self->Logit( "$url failed: ".$res->message() ); return; }
 
     my $source;
-    eval { $source = $parser->parse_string( $res->content() ); };
-    if ($@) { $self->Logit( "failed to parse ($url):$@" ); return; }
+    eval {
+      my $content = Encode::decode('utf8', $res->content());
+      $source = $parser->parse_string( $content );
+    };
+    if ($@) { $self->SetError( "failed to parse ($url):$@" ); return; }
 
     my $errorCode = $source->findvalue( "//*[name()='error']" );
     if ( $errorCode ne '' )
@@ -5422,7 +5432,7 @@ sub SanityCheckDB
   my $self = shift;
   my $dbh = $self->get( 'dbh' );
   my $vidRE = '^[a-z]+\d?\.[a-zA-Z]?\d+$';
-  my $pdRE = '\d\d\d\d-\d\d-\d\d';
+  my $pdRE = '^\d\d\d\d-\d\d-\d\d$';
   # ======== bibdata ========
   my $table = 'bibdata';
   # Volume ID must not have any spaces before, after, or in.
@@ -5511,7 +5521,7 @@ sub SanityCheckDB
   {
     $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
     $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
-    $self->SetError(sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[2])) unless $row->[2] >= 0 and $row->[2] <= 5;
+    $self->SetError(sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[2])) unless $row->[2] >= 0 and $row->[2] <= 6;
     if ($row->[2] == 5 || $row->[6])
     {
       $sql = sprintf("SELECT SUM(expert) FROM reviews WHERE id='%s'", $row->[0]);
@@ -5541,7 +5551,7 @@ sub Mojibake
 {
   my $self = shift;
   my $text = shift;
-  my $mojibake = '[ÊÃÄÅ¶¹¸©×]';
+  my $mojibake = '[ÊÃÄÅ¶¹¸©×«»§¼¡±]';
   return ($text =~ m/$mojibake/i);
 }
 
