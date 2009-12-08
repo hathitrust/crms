@@ -5390,12 +5390,12 @@ sub HexDump
   return $dump;
 }
 
-# Gets only those reviewers that are not experts or admins
+# Gets only those reviewers that are not experts
 sub GetType1Reviewers
 {
   my $self = shift;
   my $dbh = $self->get( 'dbh' );
-  my $sql = qq{SELECT DISTINCT id FROM users WHERE id NOT LIKE 'rereview%' AND id NOT IN (SELECT id FROM users WHERE type=2)};
+  my $sql = 'SELECT DISTINCT id FROM users WHERE id NOT LIKE "rereview%" AND id NOT IN (SELECT id FROM users WHERE type=2)';
   return map {$_->[0]} @{$dbh->selectall_arrayref( $sql )};
 }
 
@@ -5409,6 +5409,7 @@ sub GetMedianCorrect
   foreach my $user (@users)
   {
     my ($ncorr,$total) = $self->CountCorrectReviews($user, $start, $end);
+    next unless $total;
     my $frac = 0.0;
     eval { $frac = 100.0*$ncorr/$total; };
     push @good, $frac;
