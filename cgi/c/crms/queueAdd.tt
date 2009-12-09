@@ -76,7 +76,7 @@ Priority 4 can only be reviewed by Anne.<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;
 <a href="?p=adminReviews">Go to Active Reviews</a><br/>
 
-[% sql = "SELECT q.id,b.title,b.author,q.pub_date,DATE(q.time),q.status,q.priority FROM queue q, bibdata b WHERE q.id=b.id AND q.priority>=2 ORDER BY q.priority DESC, b.author ASC" %]
+[% sql = "SELECT q.id,b.title,b.author,b.pub_date,DATE(q.time),q.status,q.priority FROM queue q, bibdata b WHERE q.id=b.id AND q.priority>=2 ORDER BY q.priority DESC, b.author ASC" %]
 [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
 [% IF ref.size > 0 %]
   <br/>
