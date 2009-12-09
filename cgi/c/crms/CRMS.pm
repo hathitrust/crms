@@ -2798,14 +2798,19 @@ sub CreateExportStatusGraph
     foreach my $date (@dates)
     {
       my $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable h1 WHERE " .
-                "status=$title AND legacy=0 AND time>'$date-01 00:00:00' AND time<'$date-31 23:59:59' AND " .
+                "legacy=0 AND time>'$date-01 00:00:00' AND time<'$date-31 23:59:59' AND " .
                 "time=(SELECT MAX(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id)";
+      my $total = $self->SimpleSqlGet($sql);
+      $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable h1 WHERE " .
+             "status=$title AND legacy=0 AND time>'$date-01 00:00:00' AND time<'$date-31 23:59:59' AND " .
+             "time=(SELECT MAX(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id)";
       my $count = $self->SimpleSqlGet($sql);
-      push @line, $count;
+      my $pct = 0.0;
+      eval {$pct = 100.0*$count/$total;};
+      push @line, sprintf('{"value":%d,"tip":"%d (%.1f%%)"}', $count, $count, $pct);
       $ceiling = $count if $count > $ceiling;
     }
-    my @vals = map(sprintf('{"value":%d}', $_),@line);
-    push @elements, sprintf('{"type":"line","values":[%s],%s}', join(',',@vals), $attrs);
+    push @elements, sprintf('{"type":"line","values":[%s],%s}', join(',',@line), $attrs);
   }
   # Round ceil up to nearest hundred
   $ceiling = 100 * POSIX::ceil($ceiling/100.0);
