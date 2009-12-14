@@ -474,7 +474,7 @@ sub AddItemToCandidates
 
       my $au = $self->GetMarcDatafieldAuthor( $id );
       $au = $self->get('dbh')->quote($au);
-      $self->SetError("UTF-8 check failed for quoted author: $au") unless utf8::is_utf8($au);
+      $self->SetError("UTF-8 check failed for quoted author: $au") unless $au eq '' or utf8::is_utf8($au);
       
       my $title = $self->GetRecordTitleBc2Meta( $id );
       $title = $self->get('dbh')->quote($title);
@@ -642,7 +642,7 @@ sub GiveItemsInQueuePriority
     }
     else
     {
-      $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, pub_date, priority) VALUES ('$id', '$time', $status, '$pub-01-01', $priority)";
+      $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, priority) VALUES ('$id', '$time', $status, $priority)";
 
       $self->PrepareSubmitSql( $sql );
 
