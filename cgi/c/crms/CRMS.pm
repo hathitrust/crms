@@ -692,11 +692,11 @@ sub TranslateCategory
     my $category = shift;
 
     if    ( $category eq 'COLLECTION' ) { return 'Collection'; }
-    elsif ( $category eq 'LANG' ) { return 'Language'; }
+    elsif ( $category =~ m/LANG.*/ ) { return 'Language'; }
     elsif ( $category eq 'MISC' ) { return 'Misc'; }
     elsif ( $category eq 'MISSING' ) { return 'Missing'; }
     elsif ( $category eq 'DATE' ) { return 'Date'; }
-    elsif ( $category eq 'REPRINT FROM' ) { return 'Reprint'; }
+    elsif ( $category =~ m/REPRINT.*/ ) { return 'Reprint'; }
     elsif ( $category eq 'SERIES' ) { return 'Series/Serial'; }
     elsif ( $category eq 'TRANS' ) { return 'Translation'; }
     elsif ( $category eq 'WRONGREC' ) { return 'Wrong Record'; }
