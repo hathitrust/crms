@@ -4,8 +4,8 @@ my $DLXSROOT;
 my $DLPS_DEV;
 BEGIN 
 { 
-    $DLXSROOT = $ENV{'DLXSROOT'}; 
-    $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+    $DLXSROOT = $ENV{'DLXSROOT'};
+    $DLPS_DEV = $ENV{'DLPS_DEV'};
     unshift ( @INC, $ENV{'DLXSROOT'} . "/cgi/c/crms/" );
 }
 
@@ -140,10 +140,11 @@ sub ProcessFile
       #Parse out the category.
       if ( $note =~ m/.*?\:.*/ )
       {
-	      $category = $note;
-	      $category =~ s/(.*?)\:.*/$1/s; 
-	      $category = $crms->TranslateCategory( $category );
-	      $note =~ s/.*?\:\s*(.*)/$1/s; 
+        $category = $note;
+        $category =~ s/(.*?)\:.*/$1/s;
+        die "Can't translate $category!" if $category eq $crms->TranslateCategory( $category );
+        $category = $crms->TranslateCategory( $category );
+        $note =~ s/.*?\:\s*(.*)/$1/s;
       }
     }
     else
@@ -166,9 +167,9 @@ sub ProcessFile
       if ( $title =~ m/.*"$/ ) { $title =~ s/(.*)\"$/$1/; }
 
     }
-	  #date is comming in in this format MM/DD/YYYY, need to change to
-	  #YYYY/MM/DD and time -- let's use noon just for kicks.
-	  $date = $crms->ChangeDateFormat( $date ) . ' 12:00:00';
+    #date is comming in in this format MM/DD/YYYY, need to change to
+    #YYYY/MM/DD and time -- let's use noon just for kicks.
+    $date = $crms->ChangeDateFormat( $date ) . ' 12:00:00';
     # Rendate is in the yucky format DD-Mon-YY and we need it in the equally yucky format DDMonYY
     $renDate =~ s/-//g;
     die "Not a valid renewal date: $renDate" unless $crms->IsRenDate($renDate);
@@ -185,13 +186,13 @@ sub ProcessFile
       print "Note:  $note\n";
       printf("SubmitHistReview(%s)\n", join ', ', ($id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $category, $status));
     }
-	  my $rc = $crms->SubmitHistReview($id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $category, $status, ($alt)? 2:0, $noop);
+    my $rc = $crms->SubmitHistReview($id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $category, $status, ($alt)? 2:0, $noop);
     if ( ! $rc ) 
-	  {
-	    my $errors = $crms->GetErrors();
-	    map { print "$_\n"; } ( @{$errors} );
-	    die "Failed: $line \n";
-	  }
+    {
+      my $errors = $crms->GetErrors();
+      map { print "$_\n"; } ( @{$errors} );
+      die "Failed: $line \n";
+    }
     $n++;
   }
   printf "Done with $f: processed %d items\n", $n;
