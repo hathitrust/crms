@@ -24,7 +24,7 @@ use Encode;
 use Date::Calc qw(:all);
 use POSIX qw(strftime);
 use DBI qw(:sql_types);
-use List::Util;
+use List::Util qw(min max);
 
 binmode(STDOUT, ":utf8"); #prints characters in utf8
 
@@ -387,48 +387,47 @@ sub LoadNewItems
     my $self = shift;
 
     my $queuesize = $self->GetQueueSize();
+    my $sql = 'SELECT COUNT(id) FROM queue WHERE priority=0';
+    my $priZeroSize = $self->SimpleSqlGet($sql);
     print "Before load, the queue has $queuesize volumes.\n";
-    if ($queuesize < $CRMSGlobals::queueSize)
+    my $needed = max($CRMSGlobals::queueSize - $queuesize, 300 - $priZeroSize);
+    printf "Need $needed items (max of %d and %d).\n", $CRMSGlobals::queueSize - $queuesize, 300 - $priZeroSize;
+    return if $needed <= 0;
+    my $count = 0;
+    my $y = 1923 + int(rand(40));
+    while (1)
     {
-      my $y = 1923 + int(rand(40));
-      my $limitcount = $CRMSGlobals::queueSize - $queuesize;
-      return unless $limitcount > 0;
-      
-      my $count = 0;
-      while (1)
+      $sql = 'SELECT id, time, pub_date, title, author FROM candidates WHERE id NOT IN (SELECT DISTINCT id FROM queue) ' .
+             'AND id NOT IN (SELECT DISTINCT id FROM reviews) AND id NOT IN (SELECT DISTINCT id FROM historicalreviews) ' .
+             'AND id NOT IN (SELECT DISTINCT id FROM queue) ORDER BY pub_date ASC, time DESC';
+      my $ref = $self->get('dbh')->selectall_arrayref( $sql );
+      my $row = $ref->[0];
+      foreach my $row (@{$ref})
       {
-        my $sql = 'SELECT id, time, pub_date, title, author FROM candidates WHERE id NOT IN (SELECT DISTINCT id FROM queue) ' .
-                  'AND id NOT IN (SELECT DISTINCT id FROM reviews) AND id NOT IN (SELECT DISTINCT id FROM historicalreviews) ' .
-                  'AND id NOT IN (SELECT DISTINCT id FROM queue) ORDER BY pub_date ASC, time DESC';
-        my $ref = $self->get('dbh')->selectall_arrayref( $sql );
-        my $row = $ref->[0];
-        foreach my $row (@{$ref})
+        my $pub_date = $row->[2];
+        next if $pub_date ne "$y-01-01";
+        my $id = $row->[0];
+        my $time = $row->[1];
+        my $title = $row->[3];
+        my $author = $row->[4];
+        my $lang = $self->GetPubLanguage($id);
+        if ('eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
         {
-          my $pub_date = $row->[2];
-          next if $pub_date ne "$y-01-01";
-          my $id = $row->[0];
-          my $time = $row->[1];
-          my $title = $row->[3];
-          my $author = $row->[4];
-          my $lang = $self->GetPubLanguage($id);
-          if ('eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
-          {
-            print "Skip non-English $id: '$lang'\n";
-            next;
-          }
-          $self->AddItemToQueue( $id, $pub_date, $title, $author );
-          printf "Added to queue: $id published %s\n", substr($pub_date, 0, 4);
-          $count++;
-          last if $count >= $limitcount;
-          $y++;
-          $y = 1923 if $y > 1963;
+          print "Skip non-English $id: '$lang'\n";
+          next;
         }
-        last if $count >= $limitcount;
+        $self->AddItemToQueue( $id, $pub_date, $title, $author );
+        printf "Added to queue: $id published %s\n", substr($pub_date, 0, 4);
+        $count++;
+        last if $count >= $needed;
+        $y++;
+        $y = 1923 if $y > 1963;
       }
-      #Record the update to the queue
-      my $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES ($count, 'RIGHTSDB')";
-      $self->PrepareSubmitSql( $sql );
+      last if $count >= $needed;
     }
+    #Record the update to the queue
+    my $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES ($count, 'RIGHTSDB')";
+    $self->PrepareSubmitSql( $sql );
 }
 
 
