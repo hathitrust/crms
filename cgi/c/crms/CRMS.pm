@@ -4854,7 +4854,7 @@ sub CreateQueueReport
   foreach my $pri (0 .. $maxpri) { $priheaders .= "<th>Priority&nbsp;$pri</th>" };
   $report .= "<table style='width:100px;'><tr style='vertical-align:top;'><td>\n";
   $report .= "<table class='exportStats'>\n<th>Status</th><th>Total</th>$priheaders<tr/>\n";
-  foreach my $status (-1 .. 5)
+  foreach my $status (-1 .. 6)
   {
     my $statusClause = ($status == -1)? '':" WHERE STATUS=$status";
     my $sql = qq{ SELECT count(*) FROM $CRMSGlobals::queueTable $statusClause};
