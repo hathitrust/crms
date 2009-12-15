@@ -69,6 +69,7 @@ if (!$cnt)
   print "$sql\n" if $verbose;
   $crms->PrepareSubmitSql($sql);
 }
+my %yms;
 foreach my $line ( <$fh> )
 {
   chomp $line;
@@ -78,6 +79,8 @@ foreach my $line ( <$fh> )
   if ($attr eq 'pd' && ($reason eq 'ncn' || $reason eq 'ren'))
   {
     my ($y,$m,$blah) = split '-', $time;
+    $yms{"$y-$m"} = 0 unless $yms{"$y-$m"};
+    $yms{"$y-$m"}++;
     if ($y eq '2007' && ($m eq '05' || $m eq '06'))
     {
       # Filter out gov docs
@@ -129,6 +132,10 @@ foreach my $id (keys %ids)
     die 'Error: '.join(", ", @{$r}) if scalar @{$r};
   }
   $cnt++;
+}
+foreach my $ym (sort keys %yms)
+{
+  printf "$ym: %s volumes\n", $yms{$ym};
 }
 print "Added $cnt items\n";
 
