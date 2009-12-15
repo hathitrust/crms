@@ -190,7 +190,7 @@ sub ProcessFile
     if ( ! $rc ) 
     {
       my $errors = $crms->GetErrors();
-      map { print "$_\n"; } ( @{$errors} );
+      map { print "Error: $_\n"; } ( @{$errors} );
       die "Failed: $line \n";
     }
     $n++;
