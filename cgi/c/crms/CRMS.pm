@@ -902,8 +902,10 @@ sub SubmitHistReview
 
     #if ( ! $self->ValidateAttr( $attr ) )                     { $self->Logit("attr check failed");        return 0; }
     #if ( ! $self->ValidateReason( $reason ) )                 { $self->Logit("reason check failed");      return 0; }
-    if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->setError("attr/reason check failed"); return 0; }
-    
+    if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->SetError('attr/reason check failed'); return 0; }
+    # FIXME: using annekz is a hack, but is needed since 'esaran' is not in the users table.
+    my $err = $self->ValidateSubmission2($attr, $reason, $note, $category, $renNum, $renDate, 'annekz');
+    if ($err) { $self->SetError($err); return 0; }
     ## do some sort of check for expert submissions
 
     if (!$noop)
@@ -3344,7 +3346,7 @@ sub HasItemBeenReviewedByTwoReviewers
   return $msg;
 }
 
-
+# Returns an error message, or an empty string if no error.
 sub ValidateSubmission2
 {
     my $self = shift;
@@ -3356,7 +3358,7 @@ sub ValidateSubmission2
     ## check user
     if ( ! $self->IsUserReviewer( $user ) )
     {
-        $errorMsg .= qq{Not a reviewer.  };
+        $errorMsg .= 'Not a reviewer.';
     }
 
     if ( ( ! $attr ) || ( ! $reason ) )
