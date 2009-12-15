@@ -35,6 +35,8 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "800", "300", "9.0.
 <br/>
 
 [% crms.CreateExportStatusReport() %]
+<br/>
+[% crms.CreateExportReport(0, 1) %]
 
 <br/><br/>
 <table style="padding:0px; width:800px; height:300px; border-collapse:collapse">

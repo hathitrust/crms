@@ -2553,11 +2553,12 @@ sub GetAllYears
 
 sub CreateExportData
 {
-  my $self = shift;
-  my $delimiter = shift;
-  my $cumulative = shift;
+  my $self           = shift;
+  my $delimiter      = shift;
+  my $cumulative     = shift;
   my $doCurrentMonth = shift;
-  my $doPercent = shift;
+  my $doPercent      = shift;
+  
   my $dbh = $self->get( 'dbh' );
   my $now = join('-', $self->GetTheYearMonth());
   my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear();
@@ -2743,9 +2744,10 @@ sub CreateExportStatusReport
 {
   my $self = shift;
   my @titles = ('4','5','6');
-  my ($y,$m) = $self->GetTheYearMonth();
+  my ($year,$month) = $self->GetTheYearMonth();
   my @dates = $self->GetWorkingDaysInRange();
-  my $report = sprintf("<h2>Final&nbsp;Determinations&nbsp;Breakdown&nbsp;%s</h2><br/>\n", $self->YearMonthToEnglish("$y-$m"));
+  push @dates, 'Total';
+  my $report = sprintf("<h3>Final&nbsp;Determinations&nbsp;Breakdown&nbsp;%s</h3>\n", $self->YearMonthToEnglish("$year-$month"));
   $report .= "<table class='exportStats'>\n";
   $report .= "<tr><th/><th colspan='3'><span class='major'>Totals</span></th><th colspan='3'><span class='total'>Percentages</span></th></tr>\n";
   $report .= "<tr><th>Date</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th></tr>\n";
@@ -2753,24 +2755,36 @@ sub CreateExportStatusReport
   {
     my ($y,$m,$d) = split '-', $date;
     my @line = (0,0,0,0,0,0);
-    my $sql = "SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE time>'$date 00:00:00' AND time<'$date 23:59:59';";
+    my $date1 = $date;
+    my $date2 = $date;
+    if ($date eq 'Total')
+    {
+      $date1 = "$year-$month-01";
+      $date2 = "$year-$month-31";
+    }
+    my $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable h1 WHERE " .
+              "legacy=0 AND time>='$date1 00:00:00' AND time<='$date2 23:59:59' AND " .
+              "time=(SELECT MAX(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id)";
+    #print "$sql<br/>\n";
     my $total = $self->SimpleSqlGet($sql);
     for (my $i=0; $i < 3; $i++)
     {
       my $title = $titles[$i];
       $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable h1 WHERE " .
-             "status=$title AND legacy=0 AND time>'$date 00:00:00' AND time<'$date 23:59:59' AND " .
+             "status=$title AND legacy=0 AND time>='$date1 00:00:00' AND time<='$date2 23:59:59' AND " .
              "time=(SELECT MAX(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id)";
+      #print "$sql<br/>\n";
       my $count = $self->SimpleSqlGet($sql);
       $line[$i] = $count;
       my $pct = 0.0;
       eval {$pct = 100.0*$count/$total;};
       $line[$i+3] = sprintf('%.1f%%', $pct);
     }
-    $report .= sprintf('<tr><th>%s-%s</th>', $m, $d);
+    $report .= ($date eq 'Total')? '<tr><th class="minor"><span class="minor">Total</span></th>':sprintf('<tr><th>%s-%s</th>', $m, $d);
     for (my $i=0; $i < 6; $i++)
     {
-      $report .= sprintf("<td class='%s'%s>%s</td>", ($i<3)? 'major':'total',($i==2)?' style="border-right:double 6px black"':'', $line[$i]);
+      my $class = ($date eq 'Total')? 'minor':($i<3)? 'major':'total';
+      $report .= sprintf("<td class='$class'%s>%s</td>",($i==2)?' style="border-right:double 6px black"':'', $line[$i]);
     }
     $report .= "</tr>\n";
   }
@@ -2809,16 +2823,14 @@ sub CreateExportStatusGraph
       my $count = $self->SimpleSqlGet($sql);
       my $pct = 0.0;
       eval {$pct = 100.0*$count/$total;};
-      push @line, sprintf('{"value":%d,"tip":"%d (%.1f%%)"}', $count, $count, $pct);
+      push @line, sprintf('{"value":%d,"tip":"%.1f%% (%d)"}', $pct, $pct, $count);
       $ceiling = $count if $count > $ceiling;
     }
     push @elements, sprintf('{"type":"line","values":[%s],%s}', join(',',@line), $attrs);
   }
-  # Round ceil up to nearest hundred
-  $ceiling = 100 * POSIX::ceil($ceiling/100.0);
   my $report = sprintf('{"bg_colour":"#000000","title":{"text":"%s","style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"},"elements":[',$title);
   $report .= sprintf('%s]',join ',', @elements);
-  $report .= sprintf(',"y_axis":{"max":%d,"colour":"#888888","grid-colour":"#888888","labels":{"colour":"#FFFFFF"}}',$ceiling);
+  $report .= ',"y_axis":{"max":100,"steps":10,"colour":"#888888","grid-colour":"#888888","labels":{"text":"#val#%","colour":"#FFFFFF"}}';
   $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}',
                      join('","',map {$self->YearMonthToEnglish($_)} @dates));
   $report .= '}';
@@ -2854,13 +2866,16 @@ sub GetWorkingDaysInRange
 # If cumulative, columns are years, not months.
 sub CreateExportReport
 {
-  my $self = shift;
+  my $self       = shift;
   my $cumulative = shift;
+  my $just456    = shift;
+  
   my $dbh = $self->get( 'dbh' );
   my $data = $self->CreateExportData(',', $cumulative, 1, 1);
   my @lines = split m/\n/, $data;
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
   my $dllink = sprintf(qq{$nbsps<a target="_blank" href="/cgi/c/crms/getExportStats?type=text&amp;c=%d">Download</a>}, $cumulative);
+  $dllink = '' if $just456;
   my $title = shift @lines;
   $title .= '*' if $cumulative;
   my $report = sprintf("<h3>%s$dllink</h3>\n<table class='exportStats'>\n<tr>\n", $title);
@@ -2874,13 +2889,14 @@ sub CreateExportReport
   my %majors = ('All PD' => 1, 'All IC' => 1, 'All UND/NFI' => 1);
   foreach my $line (@lines)
   {
-    $report .= '<tr>';
     my @items = split(',', $line);
     my $i = 0;
     $title = shift @items;
+    next if $just456 and $title !~ m/Status.+/;
     my $major = exists $majors{$title};
     $title =~ s/\s/&nbsp;/g;
     my $padding = ($major)? '':$nbsps;
+    $report .= '<tr>';
     $report .= sprintf("<th%s><span%s>%s$title</span></th>",
       ($title eq 'Total')? ' style="text-align:right;"':'',
       ($major)? ' class="major"':(($title =~ m/Status.+/)? ' class="minor"':''),
@@ -5640,7 +5656,7 @@ sub PageToEnglish
                'debug' => 'debug',
                'rights' => 'rights query',
                'queue' => 'queue query',
-               'determinationStats' => 'determination stats'
+               'determinationStats' => 'determinations breakdown'
               );
   return $pages{$page} || 'home';
 }
