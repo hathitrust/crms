@@ -34,6 +34,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "800", "300", "9.0.
 <br/><br/>
 
 [% INCLUDE adminNav.tt %]
+[% p = cgi.param('p') %]
 [% startDate = cgi.param('startDate') %]
 [% endDate = cgi.param('endDate') %]
 <br/>
@@ -71,6 +72,8 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "800", "300", "9.0.
 </form>
 </div>
 <br/>
+
+<a href="?p=$p&amp;startDate=$startDate&amp;endDate=$endDate&amp;download=1" target="_blank">Download</a>
 
 [% crms.CreateExportStatusReport(startDate, endDate) %]
 <br/>

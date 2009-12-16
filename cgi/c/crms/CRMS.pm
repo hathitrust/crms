@@ -1576,6 +1576,18 @@ sub SearchAndDownload
     else { return 0; }
 }
 
+sub SearchAndDownloadDeterminationStats
+{
+  my $self = shift;
+  my $startDate = shift;
+  my $endDate = shift;
+  
+  my $buffer = $self->CreateExportStatusData("\t", $startDate, $endDate);
+  $self->DownloadSpreadSheet( $buffer );
+  if ( $buffer ) { return 1; }
+  else { return 0; }
+} 
+
 sub SearchAndDownloadQueue
 {
   my $self = shift;
@@ -2739,13 +2751,13 @@ sub CreateExportGraph
 }
 
 
-sub CreateExportStatusReport
+sub CreateExportStatusData
 {
-  my $self  = shift;
-  my $start = shift;
-  my $end   = shift;
+  my $self      = shift;
+  my $delimiter = shift;
+  my $start     = shift;
+  my $end       = shift;
   
-  my @titles = ('4','5','6');
   my ($year,$month) = $self->GetTheYearMonth();
   my $titleDate = $self->YearMonthToEnglish("$year-$month");
   my $justThisMonth = (!$start && !$end);
@@ -2763,14 +2775,12 @@ sub CreateExportStatusReport
   #$start = $dates[0];
   #$end = $dates[-1];
   push @dates, 'Total';
-  my $report = "<h3>Final&nbsp;Determinations&nbsp;Breakdown&nbsp;$titleDate</h3>\n";
-  $report .= "<table class='exportStats'>\n";
-  $report .= "<tr><th/><th colspan='4'><span class='major'>Counts</span></th><th colspan='3'><span class='total'>Percentages</span></th></tr>\n";
-  $report .= "<tr><th>Date</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th><th>Total</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th></tr>\n";
+  my $report = "Final Determinations Breakdown $titleDate\n";
+  my @titles = ('Date','Status 4','Status 5','Status 6','Total','Status 4','Status 5','Status 6');
+  $report .= join($delimiter, @titles) . "\n";
   foreach my $date (@dates)
   {
     my ($y,$m,$d) = split '-', $date;
-    my @line = (0,0,0,0,0,0);
     my $date1 = $date;
     my $date2 = $date;
     if ($date eq 'Total')
@@ -2783,9 +2793,10 @@ sub CreateExportStatusReport
               "time=(SELECT MAX(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id)";
     #print "$sql<br/>\n";
     my $total = $self->SimpleSqlGet($sql);
+    my @line = (0,0,0,$total,0,0,0);
     for (my $i=0; $i < 3; $i++)
     {
-      my $title = $titles[$i];
+      my $title = $i+4;
       $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable h1 WHERE " .
              "status=$title AND legacy=0 AND time>='$date1 00:00:00' AND time<='$date2 23:59:59' AND " .
              "time=(SELECT MAX(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id)";
@@ -2794,14 +2805,40 @@ sub CreateExportStatusReport
       $line[$i] = $count;
       my $pct = 0.0;
       eval {$pct = 100.0*$count/$total;};
-      $line[$i+3] = sprintf('%.1f%%', $pct);
+      $line[$i+4] = sprintf('%.1f%%', $pct);
     }
+    $report .= ($date eq 'Total')? 'Total':"$m-$d";
+    $report .= $delimiter . join($delimiter, @line) . "\n";
+  }
+  return $report;
+}
+
+sub CreateExportStatusReport
+{
+  my $self     = shift;
+  my $start    = shift;
+  my $end      = shift;
+  
+  my $data = $self->CreateExportStatusData("\t", $start, $end);
+  my @lines = split "\n", $data;
+  my $title = shift @lines;
+  $title =~ s/\s/&nbsp;/g;
+  my $report = "<h3>$title</h3>\n";
+  $report .= "<table class='exportStats'>\n";
+  $report .= "<tr><th/><th colspan='4'><span class='major'>Counts</span></th><th colspan='3'><span class='total'>Percentages</span></th></tr>\n";
+  shift @lines; # titles
+  $report .= "<tr><th>Date</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th><th>Total</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th></tr>\n";
+  foreach my $line (@lines)
+  {
+    my @line = split "\t", $line;
+    my $date = shift @line;
+    my ($y,$m,$d) = split '-', $date;
     $report .= ($date eq 'Total')? '<tr><th class="minor"><span class="minor">Total</span></th>':sprintf('<tr><th>%s-%s</th>', $m, $d);
-    for (my $i=0; $i < 6; $i++)
+    for (my $i=0; $i < 7; $i++)
     {
-      my $class = ($date eq 'Total')? 'minor':($i<3)? 'major':'total';
-      $report .= sprintf("<td class='$class'>%s</td>\n", $line[$i]);
-      $report .= "<td class='minor' style='border-right:double 6px black'>$total</td>\n" if $i==2;
+      my $class = ($date eq 'Total' || $i == 3)? 'minor':($i<3)? 'major':'total';
+      my $style = ($i==3)? 'style="border-right:double 6px black"':'';
+      $report .= sprintf("<td class='$class'$style>%s</td>\n", $line[$i]);
     }
     $report .= "</tr>\n";
   }
@@ -2904,6 +2941,7 @@ sub CreateExportReport
   }
   $report .= "</tr>\n";
   my %majors = ('All PD' => 1, 'All IC' => 1, 'All UND/NFI' => 1);
+  my $titleline = '';
   foreach my $line (@lines)
   {
     my @items = split(',', $line);
@@ -2913,8 +2951,7 @@ sub CreateExportReport
     my $major = exists $majors{$title};
     $title =~ s/\s/&nbsp;/g;
     my $padding = ($major)? '':$nbsps;
-    $report .= '<tr>';
-    $report .= sprintf("<th%s><span%s>%s$title</span></th>",
+    my $newline = sprintf("<tr><th%s><span%s>%s$title</span></th>",
       ($title eq 'Total')? ' style="text-align:right;"':'',
       ($major)? ' class="major"':(($title =~ m/Status.+/)? ' class="minor"':''),
       ($major)? '':$nbsps);
@@ -2922,7 +2959,7 @@ sub CreateExportReport
     {
       my ($n,$pct) = split ':', $item;
       $n =~ s/\s/&nbsp;/g;
-      $report .= sprintf("<td%s>%s%s$n%s%s</td>",
+      $newline .= sprintf("<td%s>%s%s$n%s%s</td>",
                          ($major)? ' class="major"':($title eq 'Total')? ' style="text-align:center;"':(($title =~ m/Status.+/)? ' class="minor"':''),
                          ($major)? '':$nbsps,
                          ($title eq 'Total')? '<b>':'',
@@ -2930,8 +2967,11 @@ sub CreateExportReport
                          ($pct)? "&nbsp;($pct%)":'');
       $i++;
     }
-    $report .= "</tr>\n";
+    $newline .= "</tr>\n";
+    if ($title eq 'Total' && $just456) { $titleline = $newline; }
+    else { $report .= $newline; }
   }
+  $report .= $titleline if $just456;
   $report .= "</table>\n";
   return $report;
 }

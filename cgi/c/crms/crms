@@ -194,6 +194,10 @@ if ( $cgi->param('download') )
     {
       $success = $crms->SearchAndDownloadQueue( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate, $offset );
     }
+    elsif ($type eq 'determinationStats')
+    {
+      $success = $crms->SearchAndDownloadDeterminationStats( $startDate, $endDate );
+    }
     else
     {
       $success = $crms->SearchAndDownload( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate, $offset, $type );
