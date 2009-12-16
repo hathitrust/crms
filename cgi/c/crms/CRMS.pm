@@ -2747,16 +2747,21 @@ sub CreateExportStatusReport
   
   my @titles = ('4','5','6');
   my ($year,$month) = $self->GetTheYearMonth();
-  my @dates = $self->GetWorkingDaysInRange($start, $end);
   my $titleDate = $self->YearMonthToEnglish("$year-$month");
-  push @dates, $start unless scalar @dates;
-  if ($start || $end)
+  my $justThisMonth = (!$start && !$end);
+  $start = "$year-$month-01" unless $start;
+  $end = "$year-$month-31" unless $end;
+  ($start,$end) = ($end,$start) if $end lt $start;
+  $start = '2009-07-01' if $start lt '2009-07-01';
+  my @dates = $self->GetWorkingDaysInRange($start, $end);
+  #push @dates, $start unless scalar @dates;
+  if (!$justThisMonth)
   {
     $titleDate = sprintf("%s to %s", $dates[0], $dates[-1]);
     $titleDate = $dates[0] if $start eq $end;
   }
-  $start = $dates[0];
-  $end = $dates[-1];
+  #$start = $dates[0];
+  #$end = $dates[-1];
   push @dates, 'Total';
   my $report = "<h3>Final&nbsp;Determinations&nbsp;Breakdown&nbsp;$titleDate</h3>\n";
   $report .= "<table class='exportStats'>\n";
@@ -2770,8 +2775,8 @@ sub CreateExportStatusReport
     my $date2 = $date;
     if ($date eq 'Total')
     {
-      $date1 = "$start";
-      $date2 = "$end";
+      $date1 = $start;
+      $date2 = $end;
     }
     my $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable h1 WHERE " .
               "legacy=0 AND time>='$date1 00:00:00' AND time<='$date2 23:59:59' AND " .
