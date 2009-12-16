@@ -477,7 +477,7 @@ sub AddItemToCandidates
       
       my $title = $self->GetRecordTitleBc2Meta( $id );
       $title = $self->get('dbh')->quote($title);
-      $self->SetError("UTF-8 check failed for quoted author: $title") unless utf8::is_utf8($title);
+      $self->SetError("UTF-8 check failed for quoted title: $title") unless $title eq '' or utf8::is_utf8($title);
       
       my $sql = "REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub-01-01', $title, $au)";
 
@@ -2748,8 +2748,8 @@ sub CreateExportStatusReport
   push @dates, 'Total';
   my $report = sprintf("<h3>Final&nbsp;Determinations&nbsp;Breakdown&nbsp;%s</h3>\n", $self->YearMonthToEnglish("$year-$month"));
   $report .= "<table class='exportStats'>\n";
-  $report .= "<tr><th/><th colspan='3'><span class='major'>Totals</span></th><th colspan='3'><span class='total'>Percentages</span></th></tr>\n";
-  $report .= "<tr><th>Date</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th></tr>\n";
+  $report .= "<tr><th/><th colspan='4'><span class='major'>Counts</span></th><th colspan='3'><span class='total'>Percentages</span></th></tr>\n";
+  $report .= "<tr><th>Date</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th><th>Total</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th></tr>\n";
   foreach my $date (@dates)
   {
     my ($y,$m,$d) = split '-', $date;
@@ -2783,7 +2783,8 @@ sub CreateExportStatusReport
     for (my $i=0; $i < 6; $i++)
     {
       my $class = ($date eq 'Total')? 'minor':($i<3)? 'major':'total';
-      $report .= sprintf("<td class='$class'%s>%s</td>",($i==2)?' style="border-right:double 6px black"':'', $line[$i]);
+      $report .= sprintf("<td class='$class'>%s</td>\n", $line[$i]);
+      $report .= "<td class='minor' style='border-right:double 6px black'>$total</td>\n" if $i==2;
     }
     $report .= "</tr>\n";
   }
@@ -2798,7 +2799,7 @@ sub CreateExportStatusGraph
   
   my $report = '';
   my @dates = $self->GetAllMonthsInYear();
-  pop @dates; # Don't show current month
+  #pop @dates; # Don't show current month
   my $title = 'Final Determinations by Expert Effort';
   my @titles = ('4','5','6');
   my @elements = ();
@@ -2891,7 +2892,7 @@ sub CreateExportReport
     my @items = split(',', $line);
     my $i = 0;
     $title = shift @items;
-    next if $just456 and $title !~ m/Status.+/;
+    next if $just456 and ($title !~ m/Status.+/ and $title !~ /Total/);
     my $major = exists $majors{$title};
     $title =~ s/\s/&nbsp;/g;
     my $padding = ($major)? '':$nbsps;
@@ -3523,8 +3524,7 @@ sub IsGovDoc
     my $barcode = shift;
     my $record  = shift;
 
-    if ( ! $record ) { $self->Logit( "failed in IsGovDoc: $barcode" ); }
-
+    if ( ! $record ) { $self->SetError( "failed in IsGovDoc: $barcode" ); return 1; }
     my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
     my $leader  = $record->findvalue( $xpath );
     my $doc     = substr($leader, 28, 1);
