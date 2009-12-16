@@ -2741,12 +2741,24 @@ sub CreateExportGraph
 
 sub CreateExportStatusReport
 {
-  my $self = shift;
+  my $self  = shift;
+  my $start = shift;
+  my $end   = shift;
+  
   my @titles = ('4','5','6');
   my ($year,$month) = $self->GetTheYearMonth();
-  my @dates = $self->GetWorkingDaysInRange();
+  my @dates = $self->GetWorkingDaysInRange($start, $end);
+  my $titleDate = $self->YearMonthToEnglish("$year-$month");
+  push @dates, $start unless scalar @dates;
+  if ($start || $end)
+  {
+    $titleDate = sprintf("%s to %s", $dates[0], $dates[-1]);
+    $titleDate = $dates[0] if $start eq $end;
+  }
+  $start = $dates[0];
+  $end = $dates[-1];
   push @dates, 'Total';
-  my $report = sprintf("<h3>Final&nbsp;Determinations&nbsp;Breakdown&nbsp;%s</h3>\n", $self->YearMonthToEnglish("$year-$month"));
+  my $report = "<h3>Final&nbsp;Determinations&nbsp;Breakdown&nbsp;$titleDate</h3>\n";
   $report .= "<table class='exportStats'>\n";
   $report .= "<tr><th/><th colspan='4'><span class='major'>Counts</span></th><th colspan='3'><span class='total'>Percentages</span></th></tr>\n";
   $report .= "<tr><th>Date</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th><th>Total</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th></tr>\n";
@@ -2758,8 +2770,8 @@ sub CreateExportStatusReport
     my $date2 = $date;
     if ($date eq 'Total')
     {
-      $date1 = "$year-$month-01";
-      $date2 = "$year-$month-31";
+      $date1 = "$start";
+      $date2 = "$end";
     }
     my $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable h1 WHERE " .
               "legacy=0 AND time>='$date1 00:00:00' AND time<='$date2 23:59:59' AND " .
