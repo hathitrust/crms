@@ -10,10 +10,16 @@
 [% dir = cgi.param('direction') %]
 [% vols = cgi.param('vols')   %]
 [% recs = cgi.param('records')   %]
-[% adm = crms.IsUserAdmin() %]
 <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
 [% recs = recs.replace('\D','') %]
-[% IF NOT recs %][% recs = (vols)? 10:20 %][% END %]
+[% adm = crms.IsUserAdmin() %]
+
+[% vrecs = cgi.cookie('vrecs') or 10 %]
+[% nvrecs = cgi.cookie('recs') or 20 %]
+[% IF NOT recs %]
+  [% recs = (vols)? vrecs : nvrecs %]
+  [% blah = cgi.param('records', recs) %]
+[% END %]
 
 [% IF NOT dir %]
   [% dir = 'DESC' %]
@@ -35,7 +41,7 @@
   <h4>Currently searching by <i><span id="volrevSpan">[% vols? 'Volume' : 'Review' %]</span></i></h4>
   <label for="vols">Search for volumes:</label>
   <input type="checkbox" id="vols" name="vols" [% vols? 'checked="checked"' : '' %]
-         onclick="document.getElementById('records').value = ((this.checked)? '10':'20');
+         onclick="document.getElementById('records').value = ((this.checked)? '[% vrecs %]':'[% nvrecs %]');
                   document.getElementById('volrevSpan').innerHTML = ((this.checked)? 'Volume':'Review');"/>
 <br/><br/>
 [% END %]
@@ -115,7 +121,11 @@ Restrict selection:<br/>
 </select>
 <br/>
 
-<label for="records">Display:</label><input size="3" type="text" id="records" name="records" value="[% recs %]"/> records per page.
+<label for="records">Display:</label>
+<input size="3" type="text" id="records" name="records" value="[% recs %]"
+       onblur="setCookie((document.getElementById('vols').checked)? 'vrecs':'recs',this.value,31);"
+/>
+records per page.
 <br/>
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"

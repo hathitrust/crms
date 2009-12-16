@@ -11,7 +11,11 @@
 [% recs = cgi.param('records')   %]
 <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
 [% recs = recs.replace('\D','') %]
-[% IF NOT recs %][% recs = (vols)? 10:20 %][% END %]
+[% IF NOT recs %]
+  [% recs = cgi.cookie('recs') or 20 %]
+  [% blah = cgi.param('records', recs) %]
+[% END %]
+
 [% IF NOT dir %]
   [% dir = 'DESC' %]
   [% blah = cgi.param('direction', 'DESC') %]
@@ -88,7 +92,11 @@ Restrict selection:<br/>
 </select>
 <br/>
 
-<label for="records">Display:</label><input size="3" type="text" id="records" name="records" value="[% recs %]"/> records per page.
+<label for="records">Display:</label>
+<input size="3" type="text" id="records" name="records" value="[% recs %]"
+       onblur="setCookie('recs',this.value,31);"
+/>
+records per page.
 <br/>
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"

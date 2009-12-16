@@ -175,14 +175,6 @@ function zoom(selector)
   document.location.search = document.location.search;
   document.getElementById('topFrame').contentWindow.location.reload(true);
 }
-
-function setCookie(name,value,expiredays)
-{
-  var exdate = new Date();
-  exdate.setDate(exdate.getDate()+expiredays);
-  document.cookie = name + "=" + escape(value)+
-    ((expiredays==null) ? "" : ";expires="+exdate.toGMTString());
-}
 //-->
 </script>
 
