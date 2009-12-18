@@ -473,11 +473,11 @@ sub AddItemToCandidates
 
       my $au = $self->GetMarcDatafieldAuthor( $id );
       $au = $self->get('dbh')->quote($au);
-      $self->SetError("UTF-8 check failed for quoted author: $au") unless $au eq '' or utf8::is_utf8($au);
+      $self->SetError("$id: UTF-8 check failed for quoted author: '$au'") unless $au eq "''" or utf8::is_utf8($au);
       
       my $title = $self->GetRecordTitleBc2Meta( $id );
       $title = $self->get('dbh')->quote($title);
-      $self->SetError("UTF-8 check failed for quoted title: $title") unless $title eq '' or utf8::is_utf8($title);
+      $self->SetError("$id: UTF-8 check failed for quoted title: '$title'") unless $title eq "''" or utf8::is_utf8($title);
       
       my $sql = "REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub-01-01', $title, $au)";
 
@@ -614,7 +614,7 @@ sub GiveItemsInQueuePriority
   ## skip if $id has been reviewed
   #if ( $self->IsItemInReviews( $id ) ) { return; }
 
-  my $record =  $self->GetRecordMetadata($id);
+  my $record = $self->GetRecordMetadata($id);
 
   ## pub date between 1923 and 1963
   my $pub = $self->GetPublDate( $id, $record );
@@ -624,13 +624,13 @@ sub GiveItemsInQueuePriority
   if ( ( $pub >= '1923' ) && ( $pub <= '1963' ) )
   {
     ## no gov docs
-    if ( $self->IsGovDoc( $id, $record ) ) { $self->Logit( "skip fed doc: $id" ); return 0; }
+    if ( $self->IsGovDoc( $id, $record ) ) { $self->SetError( "skip fed doc: $id" ); return 0; }
 
     #check 008 field postion 17 = "u" - this would indicate a us publication.
-    if ( ! $self->IsUSPub( $id, $record ) ) { $self->Logit( "skip not us doc: $id" ); return 0; }
+    if ( ! $self->IsUSPub( $id, $record ) ) { $self->SetError( "skip not us doc: $id" ); return 0; }
 
     #check FMT.
-    if ( ! $self->IsFormatBK( $id, $record ) ) { $self->Logit( "skip not fmt bk: $id" ); return 0; }
+    if ( ! $self->IsFormatBK( $id, $record ) ) { $self->SetError( "skip not fmt bk: $id" ); return 0; }
 
     my $sql = qq{ SELECT count(*) from $CRMSGlobals::queueTable where id="$id"};
     my $count = $self->SimpleSqlGet( $sql );
@@ -670,6 +670,7 @@ sub GiveItemsInQueuePriority
       $self->PrepareSubmitSql( $sql );
     }
   }
+  else { $self->SetError( "skip bad date ($pub): $id" ); return 0; }
   return 1;
 }
 
@@ -4455,55 +4456,56 @@ sub GetNextItemForReview
     if ($name eq 'annekz')
     {
       my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority=4 ORDER BY priority DESC, time ASC LIMIT 1";
-      $bar = $self->SimpleSqlGet( $sql );
       #print "$sql<br/>\n";
+      $bar = $self->SimpleSqlGet( $sql );
     }
     # If user is expert, get priority 3 (and higher?) items; regular joe users can look for priority 2s.
     if (!$bar && $self->IsUserExpert($name))
     {
       my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority>=2 AND priority<4 ORDER BY priority DESC, time ASC LIMIT 1";
-      $bar = $self->SimpleSqlGet( $sql );
       #print "$sql<br/>\n";
+      $bar = $self->SimpleSqlGet( $sql );
     }
     my $exclude3 = ($self->IsUserExpert($name))? '':'q.priority<3 AND';
     if ( ! $bar )
     {
       # Get priority 2 items
-      my $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND q.priority=2 AND q.locked IS NULL AND " .
+      my $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q WHERE q.priority=2 AND q.locked IS NULL AND " .
                 "q.status=0 AND q.expcnt=0 AND " .
                 "(q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) OR " .
                 " q.id IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable r WHERE r.user != '$name' AND r.id IN (SELECT id FROM reviews r2 GROUP BY r2.id HAVING count(*) = 1))) " .
-                "ORDER BY q.priority DESC, b.pub_date ASC, q.time ASC LIMIT 1";
-      $bar = $self->SimpleSqlGet( $sql );
+                "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
       #print "$sql<br/>\n";
+      $bar = $self->SimpleSqlGet( $sql );
     }
     if ( ! $bar )
     {
       # Find items reviewed once by some other user.
-      my $sql = "SELECT id FROM $CRMSGlobals::queueTable q WHERE $exclude3 q.locked IS NULL AND q.status=0 AND q.expcnt=0 AND q.id IN " .
-                "(SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable r WHERE r.user != '$name' AND r.id IN (SELECT id FROM reviews r2 GROUP BY r2.id HAVING count(*) = 1)) " .
+      # Exclude priority 1 some of the time, to 'fool' reviewers into not thinking everything is pd.
+      my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
+      my $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q, $CRMSGlobals::reviewsTable r WHERE $exclude1 $exclude3 q.locked IS NULL AND q.id=r.id AND q.status=0 AND q.expcnt=0 AND " .
+                "r.user!='$name' AND q.id IN (SELECT id FROM reviews r2 WHERE r2.id=q.id GROUP BY r2.id HAVING count(*)=1) " .
                 "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
-      $bar = $self->SimpleSqlGet( $sql );
       #print "$sql<br/>\n";
+      $bar = $self->SimpleSqlGet( $sql );
     }
     if ( ! $bar )
     {
         # Get the 1st available item that has never been reviewed.
-        # Exclude priority 1 some of the time, to 'fool' reviewers into not thinking everything is pd.
-        my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
-        my $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND $exclude1 $exclude3 q.locked IS NULL AND " .
+        
+        my $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q WHERE $exclude3 q.locked IS NULL AND " .
                   "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) " .
                   "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
-        $bar = $self->SimpleSqlGet( $sql );
         #print "$sql<br/>\n";
+        $bar = $self->SimpleSqlGet( $sql );
         # Relax the priority 1 stuff if it fails
         if (!$bar)
         {
-          $sql = "SELECT id FROM $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id $exclude3 AND q.locked IS NULL AND " .
+          $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q WHERE q.locked IS NULL AND $exclude3 " .
                  "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) " .
                  "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
-          $bar = $self->SimpleSqlGet( $sql );
           #print "$sql<br/>\n";
+          $bar = $self->SimpleSqlGet( $sql );
         }
     }
 
