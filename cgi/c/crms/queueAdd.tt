@@ -52,7 +52,7 @@ Priority 4 can only be reviewed by Anne.<br/>
     [% status = status.substr(1, status.length()) %]
     [% IF err == 0 %]
       [% adds = adds + 1 %]
-      <td>OK: $status</td>
+      <td>OK[% ($status)? ": $status":'' %]</td>
     [% ELSIF err == 1 %]
       <td style="color:red">Could not add: $status</td>
       [% skips = skips + 1 %]
