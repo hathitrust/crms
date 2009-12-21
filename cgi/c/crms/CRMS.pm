@@ -372,7 +372,7 @@ sub LoadNewItemsInCandidates
       map {print "  $_\n";} @{$r};
     }
     
-    print "After load, the cadidate has $end_size rows. Added $diff\n\n";
+    print "After load, candidates has $end_size rows. Added $diff\n\n";
     
     #Record the update to the queue
     my $sql = qq{INSERT INTO candidatesrecord ( addedamount ) values ( $diff )};
