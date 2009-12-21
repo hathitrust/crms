@@ -2808,7 +2808,7 @@ sub CreateExportStatusData
       eval {$pct = 100.0*$count/$total;};
       $line[$i+4] = sprintf('%.1f%%', $pct);
     }
-    $report .= ($date eq 'Total')? 'Total':"$m-$d";
+    $report .= $date;
     $report .= $delimiter . join($delimiter, @line) . "\n";
   }
   return $report;
@@ -2834,7 +2834,7 @@ sub CreateExportStatusReport
     my @line = split "\t", $line;
     my $date = shift @line;
     my ($y,$m,$d) = split '-', $date;
-    $report .= ($date eq 'Total')? '<tr><th class="minor"><span class="minor">Total</span></th>':sprintf('<tr><th>%s-%s</th>', $m, $d);
+    $report .= ($date eq 'Total')? '<tr><th class="minor"><span class="minor">Total</span></th>':"<tr><th>$date</th>";
     for (my $i=0; $i < 7; $i++)
     {
       my $class = ($date eq 'Total' || $i == 3)? 'minor':($i<3)? 'major':'total';
