@@ -567,7 +567,7 @@ sub AddItemToQueueOrSetItemActive
       }
       else
       {
-        my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, pub_date, priority) VALUES ('$id', '$pub-01-01', $priority)";
+        my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, priority) VALUES ('$id', $priority)";
         $self->PrepareSubmitSql( $sql );
         
         $self->UpdateTitle( $id );
@@ -4456,15 +4456,15 @@ sub GetNextItemForReview
     if ($name eq 'annekz')
     {
       my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority=4 ORDER BY priority DESC, time ASC LIMIT 1";
-      #print "$sql<br/>\n";
       $bar = $self->SimpleSqlGet( $sql );
+      #print "$sql<br/>\n";
     }
     # If user is expert, get priority 3 (and higher?) items; regular joe users can look for priority 2s.
     if (!$bar && $self->IsUserExpert($name))
     {
       my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority>=2 AND priority<4 ORDER BY priority DESC, time ASC LIMIT 1";
-      #print "$sql<br/>\n";
       $bar = $self->SimpleSqlGet( $sql );
+      #print "$sql<br/>\n";
     }
     my $exclude3 = ($self->IsUserExpert($name))? '':'q.priority<3 AND';
     if ( ! $bar )
@@ -4475,38 +4475,28 @@ sub GetNextItemForReview
                 "(q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) OR " .
                 " q.id IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable r WHERE r.user != '$name' AND r.id IN (SELECT id FROM reviews r2 GROUP BY r2.id HAVING count(*) = 1))) " .
                 "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
-      #print "$sql<br/>\n";
       $bar = $self->SimpleSqlGet( $sql );
+      #print "$sql<br/>\n";
     }
     if ( ! $bar )
     {
       # Find items reviewed once by some other user.
       # Exclude priority 1 some of the time, to 'fool' reviewers into not thinking everything is pd.
       my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
-      my $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q, $CRMSGlobals::reviewsTable r WHERE $exclude1 $exclude3 q.locked IS NULL AND q.id=r.id AND q.status=0 AND q.expcnt=0 AND " .
-                "r.user!='$name' AND q.id IN (SELECT id FROM reviews r2 WHERE r2.id=q.id GROUP BY r2.id HAVING count(*)=1) " .
+      my $sql = "SELECT id FROM $CRMSGlobals::queueTable q WHERE $exclude1 $exclude3 q.locked IS NULL AND q.status=0 AND q.expcnt=0 AND q.id IN " .
+                "(SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable r WHERE r.user != '$name' AND r.id IN (SELECT id FROM reviews r2 GROUP BY r2.id HAVING count(*) = 1)) " .
                 "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
-      #print "$sql<br/>\n";
       $bar = $self->SimpleSqlGet( $sql );
+      #print "$sql<br/>\n";
     }
     if ( ! $bar )
     {
-        # Get the 1st available item that has never been reviewed.
-        
-        my $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q WHERE $exclude3 q.locked IS NULL AND " .
-                  "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) " .
-                  "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
-        #print "$sql<br/>\n";
-        $bar = $self->SimpleSqlGet( $sql );
-        # Relax the priority 1 stuff if it fails
-        if (!$bar)
-        {
-          $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q WHERE q.locked IS NULL AND $exclude3 " .
-                 "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) " .
-                 "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
-          #print "$sql<br/>\n";
-          $bar = $self->SimpleSqlGet( $sql );
-        }
+      # Get the 1st available item that has never been reviewed.
+      my $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q WHERE $exclude3 q.locked IS NULL AND " .
+                "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) " .
+                "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
+      $bar = $self->SimpleSqlGet( $sql );
+      #print "$sql<br/>\n";
     }
 
     ## lock before returning
