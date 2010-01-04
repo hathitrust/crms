@@ -18,18 +18,6 @@ use Getopt::Std;
 use LWP::UserAgent;
 
 
-sub ReportMsg
-{
-  my ( $msg ) = @_;
-
-  my $newtime = scalar (localtime(time()));
-
-  $msg = qq{$newtime : $msg};
-  print "$msg","\n";
-
-}
-
-
 my $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/log_monthlyStats.txt",
     configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
@@ -39,6 +27,8 @@ my $crms = CRMS->new(
 );
 
 $crms->UpdateStats();
-
-ReportMsg("Done with monthly stats");
-
+my $r = $crms->GetErrors();
+foreach my $err (@{$r})
+{
+  print "Error: $err\n";
+}
