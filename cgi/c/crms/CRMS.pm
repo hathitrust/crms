@@ -567,7 +567,7 @@ sub AddItemToQueueOrSetItemActive
       }
       else
       {
-        my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, priority) VALUES ('$id', $priority)";
+        my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, priority, source) VALUES ('$id', $priority, 'adminui')";
         $self->PrepareSubmitSql( $sql );
         
         $self->UpdateTitle( $id );
@@ -610,6 +610,7 @@ sub GiveItemsInQueuePriority
   my $time     = shift;
   my $status   = shift;
   my $priority = shift;
+  my $source   = shift;
 
   ## skip if $id has been reviewed
   #if ( $self->IsItemInReviews( $id ) ) { return; }
@@ -641,7 +642,7 @@ sub GiveItemsInQueuePriority
     }
     else
     {
-      $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, priority) VALUES ('$id', '$time', $status, $priority)";
+      $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, priority, source) VALUES ('$id', '$time', $status, $priority, $source)";
 
       $self->PrepareSubmitSql( $sql );
 
@@ -775,11 +776,13 @@ sub SubmitReview
       my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET expcnt=1 WHERE id="$id" };
       $self->PrepareSubmitSql( $sql );
       my $qstatus = $self->SimpleSqlGet("SELECT status FROM queue WHERE id='$id'");
-      # FIXME: need to check all other review of this group and see if all are und/nfi
+      # FIXME: need to check all other reviews of this group and see if all are und/nfi
       my $status = ($attr == 5 && $reason == 8 && $qstatus == 3)? 6:5;
       #We have decided to register the expert decision right away.
       $self->RegisterStatus($id, $status);
     }
+    
+    $self->CheckPendingStatus($id);
 
     $self->EndTimer( $id, $user );
     $self->UnlockItem( $id, $user );
@@ -828,8 +831,7 @@ sub ProcessReviews
   my $self = shift;
 
   my $sql = "SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable " .
-            "WHERE id IN ( SELECT id FROM $CRMSGlobals::queueTable WHERE status=0) GROUP BY id HAVING count(*) >= 2";
-
+            "GROUP BY id HAVING count(*) >= 2";
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
   foreach my $row ( @{$ref} )
@@ -886,6 +888,67 @@ sub ProcessReviews
   $self->PrepareSubmitSql( $sql );
 }
 
+sub CheckPendingStatus
+{
+  my $self = shift;
+  my $id   = shift;
+  
+  my $sql = "SELECT id, user, attr, reason, renNum, renDate FROM reviews WHERE id='$id'";
+  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  if (scalar @{$ref} > 1)
+  {
+    my $row = @{$ref}[0];
+    my $id      = $row->[0];
+    my $user    = $row->[1];
+    my $attr    = $row->[2];
+    my $reason  = $row->[3];
+    my $renNum  = $row->[4];
+    my $renDate = $row->[5];
+    
+    my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate ) = $self->GetOtherReview( $id, $user );
+
+    if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
+    {
+      #If both und/nfi them status is 3
+      if ( ( $attr == 5 ) && ( $reason == 8 ) )
+      {
+         $self->RegisterPendingStatus( $id, 3 );
+      }
+      else #Mark as 4 - two that agree
+      {
+        #If they are ic/ren then the renewal date and id must match
+        if ( ( $attr == 2 ) && ( $reason == 7 ) )
+        {
+          $renNum =~ s/\s+//gs;
+          $other_renNum =~ s/\s+//gs;
+          if ( ( $renNum eq $other_renNum ) && ( $renDate eq $other_renDate ) )
+          {
+            #Mark as 4
+            $self->RegisterPendingStatus( $id, 4 );
+          }
+          else
+          {
+            #Mark as 2
+            $self->RegisterPendingStatus( $id, 2 );
+          }
+        }
+        else #all other cases mark as 4
+        {
+          $self->RegisterPendingStatus( $id, 4 );
+        }
+      }
+    }
+    else #Mark as 2 - two that disagree
+    {
+      $self->RegisterPendingStatus( $id, 2 );
+    }
+  }
+  elsif (scalar @{$ref} == 1) #Mark as 1: just single review
+  {
+    $self->RegisterPendingStatus( $id, 1 );
+  }
+}
+
 
 ## ----------------------------------------------------------------------------
 ##  Function:   submit historical review  (from excel SS)
@@ -914,8 +977,8 @@ sub SubmitHistReview
       $note = $self->get('dbh')->quote($note);
       
       ## all good, INSERT
-      my $sql = qq{REPLACE INTO $CRMSGlobals::historicalreviewsTable (id, user, time, attr, reason, copyDate, renNum, renDate, note, legacy, category, status, expert) } .
-                qq{VALUES('$id', '$user', '$date', '$attr', '$reason', '$cDate', '$renNum', '$renDate', $note, 1, '$category', $status, $expert) };
+      my $sql = 'REPLACE INTO historicalreviews (id, user, time, attr, reason, copyDate, renNum, renDate, note, legacy, category, status, expert, source) ' .
+                qq{VALUES('$id', '$user', '$date', '$attr', '$reason', '$cDate', '$renNum', '$renDate', $note, 1, '$category', $status, $expert, 'legacy') };
 
       $self->PrepareSubmitSql( $sql );
 
@@ -1080,28 +1143,6 @@ sub EmailReport
   $sender->Close;
 }
 
-sub GetNumberExportedFromCandidates
-{
-  my $self = shift;
-
-  my $sql = qq{ SELECT count(DISTINCT id) FROM historicalreviews WHERE legacy=0 AND id IN (SELECT id FROM candidates)};
-  my $count = $self->SimpleSqlGet( $sql );
-
-  if ($count) { return $count; }
-  return 0;
-}
-
-sub GetNumberExportedNotFromCandidates
-{
-  my $self = shift;
-
-  my $sql = qq{ SELECT count(DISTINCT id) FROM historicalreviews WHERE legacy=0 AND id NOT IN (SELECT id FROM candidates)};
-  my $count = $self->SimpleSqlGet( $sql );
-
-  if ($count) { return $count; }
-  return 0;
-}
-
 sub GetExportFh
 {
     my $self = shift;
@@ -1188,12 +1229,17 @@ sub MoveFromReviewsToHistoricalReviews
 
     $self->Logit( "store $id in historicalreviews" );
 
-    my $sql = qq{INSERT into $CRMSGlobals::historicalreviewsTable (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority) select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority from reviews where id='$id'};
+    my $sql = 'INSERT into historicalreviews (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority) ' .
+              "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority from reviews where id='$id'";
     $self->PrepareSubmitSql( $sql );
 
-    $sql = qq{ UPDATE $CRMSGlobals::historicalreviewsTable set status=$status WHERE id = "$id" };
+    $sql = qq{ UPDATE $CRMSGlobals::historicalreviewsTable set status=$status WHERE id="$id" };
     $self->PrepareSubmitSql( $sql );
-
+    
+    $sql = "SELECT source FROM queue WHERE id='$id'";
+    my $source = $self->SimpleSqlGet($sql);
+    $sql = qq{ UPDATE $CRMSGlobals::historicalreviewsTable set source='$source' WHERE id="$id" };
+    $self->PrepareSubmitSql( $sql );
 
     $self->Logit( "remove $id from reviews" );
 
@@ -1262,7 +1308,18 @@ sub RegisterStatus
     my $id     = shift;
     my $status = shift;
 
-    my $sql = qq{UPDATE $CRMSGlobals::queueTable SET status = $status WHERE id = "$id"};
+    my $sql = qq{UPDATE $CRMSGlobals::queueTable SET status=$status WHERE id="$id"};
+
+    $self->PrepareSubmitSql( $sql );
+}
+
+sub RegisterPendingStatus
+{
+    my $self   = shift;
+    my $id     = shift;
+    my $status = shift;
+
+    my $sql = "UPDATE $CRMSGlobals::queueTable SET pending_status=$status WHERE id='$id'";
 
     $self->PrepareSubmitSql( $sql );
 }
@@ -4857,40 +4914,6 @@ sub GetQueueSize
 }
 
 
-sub GetTotalUndInf
-{
-    my $self = shift;
-
-    my $sql = qq{ SELECT count(*) from $CRMSGlobals::queueTable where status= 3};
-    my $count = $self->SimpleSqlGet( $sql );
-    
-    if ($count) { return $count; }
-    return 0;
-}
-
-sub GetTotalWithFinalDetermination
-{
-    my $self = shift;
-
-    my $sql = qq{ SELECT count(*) from $CRMSGlobals::queueTable where status= 4 OR status = 5};
-    my $count = $self->SimpleSqlGet( $sql );
-    
-    if ($count) { return $count; }
-    return 0;
-}
-
-sub GetTotalConflict
-{
-    my $self = shift;
-
-    my $sql = qq{ SELECT count(*) from $CRMSGlobals::queueTable where status= 2};
-    my $count = $self->SimpleSqlGet( $sql );
-    
-    if ($count) { return $count; }
-    return 0;
-}
-
-
 sub GetTotalInActiveQueue
 {
     my $self = shift;
@@ -4994,16 +5017,31 @@ sub CreateDeterminationReport()
   eval {$pct6 = 100.0*$sixes/($fours+$fives+$sixes);};
   $time =~ s/\s/&nbsp;/g;
   my $legacy = $self->GetTotalLegacyCount();
-  my $cand = $self->GetNumberExportedFromCandidates();
-  my $noncand = $self->GetNumberExportedNotFromCandidates();
-  my $exported = $cand + $noncand;
+  my %sources;
+  $sql = 'SELECT source, COUNT(DISTINCT id) FROM historicalreviews WHERE legacy=0 GROUP BY source';
+  my $rows = $self->get('dbh')->selectall_arrayref($sql);
+  foreach my $row ( @{$rows} )
+  {
+    $sources{ $row->[0] } = $row->[1];
+  }
+  #my $cand = $self->GetNumberExportedFromCandidates();
+  #my $noncand = $self->GetNumberExportedNotFromCandidates();
+  #my $exported = $cand + $noncand;
+  #my $exported = $self->SimpleSqlGet('SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE legacy=0');
+  my $exported = 0;
+  map {$exported += $sources{$_}} keys %sources;
   $report .= "<tr><th>Last&nbsp;CRMS&nbsp;Export</td><td>$count&nbsp;on&nbsp;$time</td></tr>";
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</td><td>$fours&nbsp;(%.1f%%)</td></tr>", $pct4);
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</td><td>$fives&nbsp;(%.1f%%)</td></tr>", $pct5);
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6</td><td>$sixes&nbsp;(%.1f%%)</td></tr>", $pct6);
   $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</td><td>%s</td></tr>", $exported);
-  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;Candidates</td><td>%s</td></tr>", $cand);
-  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;Elsewhere</td><td>%s</td></tr>", $noncand);
+  foreach my $source (keys %sources)
+  {
+    #my $n = $self->SimpleSqlGet("SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE source='$source' AND legacy=0");
+    my $n = $sources{$source};
+    $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;$source</td><td>$n</td></tr>";
+  }
+  #$report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;Elsewhere</td><td>%s</td></tr>", $noncand);
   $report .= sprintf("<tr><th>Total&nbsp;Legacy&nbsp;Determinations</td><td>%s</td></tr>", $legacy);
   $report .= sprintf("<tr><th>Total&nbsp;Determinations</td><td>%s</td></tr>", $exported + $legacy);
   $report .= "</table>\n";
@@ -5034,88 +5072,72 @@ sub CreateReviewReport
   my $priheaders = '';
   foreach my $pri (0 .. $maxpri) { $priheaders .= "<th>Priority&nbsp;$pri</th>" };
   $report .= "<table class='exportStats'>\n<th>Status</th><th>Total</th>$priheaders<tr/>\n";
-  my $notprocessedcnt = $self->GetTotalReviewedNotProcessed();
   
-  my $undcnt = $self->GetTotalUndInf();
-  my $conflictcnt = $self->GetTotalConflict();
-  my $finalcnt = $self->GetTotalWithFinalDetermination();
-  my $totalactive = $notprocessedcnt +  $undcnt + $conflictcnt + $finalcnt;
-  $report .= "<tr><td class='total'>Active</td><td class='total'>$totalactive</td>";
-  my $sql = qq{SELECT DISTINCT id FROM reviews};
-  $report .= $self->DoPriorityBreakdown($totalactive,$sql,$maxpri,' class="total"') . "</tr>\n";
-  
-  # Unprocessed
-  $report .= "<tr><td class='minor'>Unprocessed</td><td class='minor'>$notprocessedcnt</td>";
-  $sql = qq{SELECT DISTINCT id FROM $CRMSGlobals::queueTable WHERE status=0 AND id IN (SELECT DISTINCT id FROM reviews)};
-  $report .= $self->DoPriorityBreakdown($notprocessedcnt,$sql,$maxpri,' class="minor"') . "</tr>\n";
-  
-  # Unprocessed - single review
-  $sql = <<END;
-    SELECT DISTINCT id FROM reviews h1 WHERE id IN (SELECT id FROM queue WHERE status=0) AND id NOT IN
-    (SELECT id FROM reviews h2 WHERE h1.id=h2.id AND h1.user!=h2.user)
-END
+  my $sql = 'SELECT DISTINCT id FROM reviews';
   my $rows = $dbh->selectall_arrayref( $sql );
   my $count = scalar @{$rows};
+  $report .= "<tr><td class='total'>Active</td><td class='total'>$count</td>";
+  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri,' class="total"') . "</tr>\n";
+  
+  # Unprocessed
+  $sql = 'SELECT id FROM queue WHERE status=0 AND pending_status>0';
+  $rows = $dbh->selectall_arrayref( $sql );
+  $count = scalar @{$rows};
+  $report .= "<tr><td class='minor'>Unprocessed</td><td class='minor'>$count</td>";
+  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri,' class="minor"') . "</tr>\n";
+  
+  # Unprocessed - single review
+  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=1";
+  $rows = $dbh->selectall_arrayref( $sql );
+  $count = scalar @{$rows};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Single&nbsp;Review</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
   
   # Unprocessed - match
-  $sql = <<END;
-    SELECT DISTINCT id FROM reviews h1 WHERE id IN (SELECT id FROM queue WHERE status=0) AND id IN
-    (SELECT id FROM reviews h2 WHERE h1.id=h2.id AND h1.user!=h2.user AND
-     (h1.attr=h2.attr AND h1.reason=h2.reason AND (h1.attr!=5 OR h1.reason!=8) AND
-      (h1.attr!=2 OR h1.reason!=7 OR
-       (replace(h1.renNum,'\t','')=replace(h2.renNum,'\t','') AND h1.renDate=h2.renDate))))
-END
+  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=4";
   my $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Matches</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
   
   # Unprocessed - conflict
-  $sql = <<END;
-    SELECT DISTINCT id FROM reviews h1 WHERE id IN (SELECT id FROM queue WHERE status=0) AND id IN
-    (SELECT id FROM reviews h2 WHERE h1.id=h2.id AND h1.user!=h2.user AND
-     (h1.attr!=h2.attr OR h1.reason!=h2.reason OR
-      (h1.attr=2 AND h1.reason=7 AND
-       (replace(h1.renNum,'\t','')!=replace(h2.renNum,'\t','') OR h1.renDate!=h2.renDate))))
-END
-  my $rows = $dbh->selectall_arrayref( $sql );
+  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=2";
+  $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Conflicts</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
   
   # Unprocessed - matching und/nfi
-  $sql = <<END;
-    SELECT DISTINCT id FROM reviews h1 WHERE id IN (SELECT id FROM queue WHERE status=0) AND id IN
-    (SELECT id FROM reviews h2 WHERE h1.id=h2.id AND h1.user!=h2.user AND
-     (h1.attr=h2.attr AND h1.reason=h2.reason AND h1.attr=5 AND h1.reason=8))
-END
-  my $rows = $dbh->selectall_arrayref( $sql );
+  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=3";
+  $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Matching&nbsp;<code>und/nfi</code></td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
   
   # Processed
-  $sql = <<END;
-    SELECT DISTINCT id FROM reviews WHERE id IN (SELECT DISTINCT id FROM queue WHERE status!=0)
-END
-  my $rows = $dbh->selectall_arrayref( $sql );
+  $sql = 'SELECT DISTINCT r.id FROM reviews r INNER JOIN queue q ON r.id=q.id WHERE q.status!=0';
+  $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td class='minor'>Processed</td><td class='minor'>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri,' class="minor"') . "</tr>\n";
   
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Conflicts</td><td>$conflictcnt</td>";
-  $sql = qq{SELECT id from $CRMSGlobals::queueTable WHERE status=2};
-  $report .= $self->DoPriorityBreakdown($conflictcnt,$sql,$maxpri) . "</tr>\n";
+  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=2";
+  $rows = $dbh->selectall_arrayref( $sql );
+  $count = scalar @{$rows};
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Conflicts</td><td>$count</td>";
+  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
 
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Matching&nbsp;<code>und/nfi</code></td><td>$undcnt</td>";
-  $sql = qq{SELECT id from $CRMSGlobals::queueTable WHERE status=3};
-  $report .= $self->DoPriorityBreakdown($undcnt,$sql,$maxpri) . "</tr>\n";
+  $sql = 'SELECT id from queue WHERE status=3';
+  $rows = $dbh->selectall_arrayref( $sql );
+  $count = scalar @{$rows};
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Matching&nbsp;<code>und/nfi</code></td><td>$count</td>";
+  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
 
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Awaiting&nbsp;Export</td><td>$finalcnt</td>";
-  $sql = qq{SELECT id from $CRMSGlobals::queueTable WHERE status=4 OR status=5};
-  $report .= $self->DoPriorityBreakdown($finalcnt,$sql,$maxpri) . "</tr>\n";
+  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=4 OR status=5";
+  $rows = $dbh->selectall_arrayref( $sql );
+  $count = scalar @{$rows};
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Awaiting&nbsp;Export</td><td>$count</td>";
+  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
   $report .= sprintf("<tr><td colspan='%d'><span class='smallishText'>Last processed %s</span></td></tr>\n", $maxpri+3, $self->GetLastStatusProcessedTime());
   $report .= "</table>\n";
   return $report;
@@ -5145,17 +5167,6 @@ sub DoPriorityBreakdown
 }
 
 
-sub GetTotalReviewedNotProcessed
-{
-    my $self = shift;
-
-    my $sql = qq{ SELECT count(distinct id) from $CRMSGlobals::reviewsTable where id in ( select id from $CRMSGlobals::queueTable where status = 0)};
-    my $count = $self->SimpleSqlGet( $sql );
-    
-    if ($count) { return $count; }
-    return 0;
-}
-
 sub GetTotalAwaitingReview
 {
     my $self = shift;
@@ -5172,7 +5183,7 @@ sub GetLastLoadSizeToCandidates
 {
     my $self = shift;
 
-    my $sql = qq{SELECT addedamount from candidatesrecord order by time DESC LIMIT 1};
+    my $sql = 'SELECT addedamount FROM candidatesrecord ORDER BY time DESC LIMIT 1';
     my $count = $self->SimpleSqlGet( $sql );
     
     if ($count) { return $count; }
