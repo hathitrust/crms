@@ -1047,9 +1047,9 @@ sub ExportReviews
       my $sql = qq{ INSERT INTO  exportdataBckup (time, id, attr, reason, user ) VALUES ('$time', '$barcode', '$attr', '$reason', '$user' )};
       $self->PrepareSubmitSql( $sql );
 
-      $self->MoveFromReviewsToHistoricalReviews($barcode); ## DEBUG
-      $self->RemoveFromQueue($barcode); ## DEBUG
-
+      $self->MoveFromReviewsToHistoricalReviews($barcode);
+      $self->RemoveFromQueue($barcode);
+      $self->RemoveFromCandidates($barcode);
       $count++;
     }
     close $fh;
@@ -1125,10 +1125,19 @@ sub RemoveFromQueue
 
     $self->Logit( "remove $id from queue" );
 
-    my $sql = qq{ DELETE FROM $CRMSGlobals::queueTable WHERE id = "$id" };
+    my $sql = qq{ DELETE FROM $CRMSGlobals::queueTable WHERE id="$id" };
     $self->PrepareSubmitSql( $sql );
 
     return 1;
+}
+
+sub RemoveFromCandidates
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $sql = qq{ DELETE FROM candidates WHERE id="$id" };
+  $self->PrepareSubmitSql( $sql );
 }
 
 
@@ -2573,13 +2582,22 @@ sub CreateExportData
   my $doPercent      = shift;
   
   my $dbh = $self->get( 'dbh' );
-  my $now = join('-', $self->GetTheYearMonth());
-  my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear();
+  my ($y,$m) = $self->GetTheYearMonth();
+  # If not doing current month, and current month is January, there is no data.
+  # So we need to bump now to December of last year.
+  if (!$cumulative && !$doCurrentMonth && $m eq '01')
+  {
+    $y--;
+    $m = '12';
+    $doCurrentMonth = 1;
+  }
+  my $now = "$y-$m";
+  my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear($now);
   my $y1 = substr($statdates[0],0,4);
   my $y2 = substr($statdates[-1],0,4);
   my $range = ($y1 eq $y2)? "$y1":"$y1-$y2";
   my $label = ($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative" : "Cumulative $range";
-  my $report = sprintf("$label\nCategories%sGrand Total", $delimiter);
+  my $report = sprintf("$label\nCategories%s%s", $delimiter, ($cumulative)? 'Grand Total':"Total $y");
   my %stats = ();
   my @usedates = ();
   foreach my $date (@statdates)
