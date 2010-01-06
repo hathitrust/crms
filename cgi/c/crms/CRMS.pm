@@ -739,11 +739,11 @@ sub SubmitReview
     my $self = shift;
     my ($id, $user, $attr, $reason, $copyDate, $note, $renNum, $exp, $renDate, $category) = @_;
 
-    if ( ! $self->CheckForId( $id ) )                         { $self->Logit("id check failed");          return 0; }
-    if ( ! $self->CheckReviewer( $user, $exp ) )              { $self->Logit("reviewer check failed");    return 0; }
-    if ( ! $self->ValidateAttr( $attr ) )                     { $self->Logit("attr check failed");        return 0; }
-    if ( ! $self->ValidateReason( $reason ) )                 { $self->Logit("reason check failed");      return 0; }
-    if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->Logit("attr/reason check failed"); return 0; }
+    if ( ! $self->CheckForId( $id ) )                         { $self->SetError("id ($id) check failed");                    return 0; }
+    if ( ! $self->CheckReviewer( $user, $exp ) )              { $self->SetError("reviewer ($user) check failed");            return 0; }
+    if ( ! $self->ValidateAttr( $attr ) )                     { $self->SetError("attr ($attr) check failed");                return 0; }
+    if ( ! $self->ValidateReason( $reason ) )                 { $self->SetError("reason ($reason) check failed");            return 0; }
+    if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->SetError("attr/reason ($attr/$reason) check failed"); return 0; }
 
     #remove any blanks from renNum
     $renNum =~ s/\s+//gs;
@@ -751,8 +751,6 @@ sub SubmitReview
     # Javascript code inserts the string 'searching...' into the review text box.
     # This in once case got submitted as the renDate in production
     $renDate = '' if $renDate eq 'searching...';
-
-    ## do some sort of check for expert submissions
 
     $note = $self->get('dbh')->quote($note);
     
@@ -881,7 +879,10 @@ sub ProcessReviews
       $self->RegisterStatus( $id, 2 );
     }
   }
-  my $sql = qq{ INSERT INTO processstatus VALUES ( )};
+  # Clear out all the locks
+  my $sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
+  $self->PrepareSubmitSql( $sql );
+  my $sql = 'INSERT INTO processstatus VALUES ( )';
   $self->PrepareSubmitSql( $sql );
 }
 
@@ -4200,8 +4201,7 @@ sub RemoveOldLocks
     my $self = shift;
     my $time = shift;
 
-    if (! $time)  { $time = 86400; }
-
+    # By default, GetPrevDate() returns the date/time 24 hours ago.
     my $time = $self->GetPrevDate($time);
 
     my $lockedRef = $self->GetLockedItems();
@@ -4255,7 +4255,7 @@ sub LockItem
     my $locked = $self->HasLockedItem( $name );
     if ( $locked eq $id ) { return 0; }  ## already locked
     if ( $locked ) { return 'You already have a locked item'; }
-    my $sql = qq{UPDATE $CRMSGlobals::queueTable SET locked = "$name" WHERE id = "$id"};
+    my $sql = qq{UPDATE $CRMSGlobals::queueTable SET locked="$name" WHERE id="$id"};
     $self->PrepareSubmitSql( $sql );
     $self->StartTimer( $id, $name );
     return 0;
@@ -4267,13 +4267,14 @@ sub UnlockItem
     my $id   = shift;
     my $user = shift;
 
-    if ( ! $self->IsLocked( $id ) ) { return 0; }
+    #if ( ! $self->IsLocked( $id ) ) { return 0; }
 
-    my $sql = qq{UPDATE $CRMSGlobals::queueTable SET locked = NULL  WHERE id = "$id"};
-    if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
+    my $sql = qq{UPDATE $CRMSGlobals::queueTable SET locked=NULL WHERE id="$id"};
+    $self->PrepareSubmitSql($sql);
+    #if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
 
     $self->RemoveFromTimer( $id, $user );
-    $self->Logit( "unlocking $id" );
+    #$self->Logit( "unlocking $id" );
     return 1;
 }
 
@@ -4284,11 +4285,11 @@ sub UnlockItemEvenIfNotLocked
     my $id   = shift;
     my $user = shift;
 
-    my $sql = qq{UPDATE $CRMSGlobals::queueTable SET locked = NULL  WHERE id = "$id"};
+    my $sql = qq{UPDATE $CRMSGlobals::queueTable SET locked=NULL WHERE id="$id"};
     if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
 
     $self->RemoveFromTimer( $id, $user );
-    $self->Logit( "unlocking $id" );
+    #$self->Logit( "unlocking $id" );
     return 1;
 }
 
@@ -4298,7 +4299,7 @@ sub UnlockAllItemsForUser
     my $self = shift;
     my $user = shift;
 
-    my $sql = qq{SELECT id  FROM $CRMSGlobals::timerTable WHERE user= "$user"};
+    my $sql = qq{SELECT id FROM $CRMSGlobals::timerTable WHERE user="$user"};
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     my $return = {};
@@ -4306,12 +4307,12 @@ sub UnlockAllItemsForUser
     {
         my $id = $row->[0];
    
-        my $sql = qq{UPDATE $CRMSGlobals::queueTable SET locked = NULL  WHERE id = "$id"};
+        my $sql = qq{UPDATE $CRMSGlobals::queueTable SET locked=NULL WHERE id="$id"};
         $self->PrepareSubmitSql( $sql );
     }
 
     ## clear entry in table
-    my $sql = qq{ DELETE FROM $CRMSGlobals::timerTable WHERE  user = "$user" };
+    my $sql = qq{ DELETE FROM $CRMSGlobals::timerTable WHERE user="$user" };
     $self->PrepareSubmitSql( $sql );
 }
 
@@ -4341,7 +4342,7 @@ sub ItemLockedSince
     my $id   = shift;
     my $user = shift;
 
-    my $sql = qq{SELECT start_time FROM $CRMSGlobals::timerTable WHERE id = "$id" and user = "$user"};
+    my $sql = qq{SELECT start_time FROM $CRMSGlobals::timerTable WHERE id="$id" AND user="$user"};
     return $self->SimpleSqlGet( $sql );
 }
 
@@ -4455,36 +4456,35 @@ sub GetNextItemForReview
     # FIXME: do something with user account table, not hardcode name.
     if ($name eq 'annekz')
     {
-      my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority=4 ORDER BY priority DESC, time ASC LIMIT 1";
+      my $sql = "SELECT id FROM queue WHERE locked IS NULL AND expcnt=0 AND priority>=4 ORDER BY priority DESC, time ASC LIMIT 1";
       $bar = $self->SimpleSqlGet( $sql );
       #print "$sql<br/>\n";
     }
-    # If user is expert, get priority 3 (and higher?) items; regular joe users can look for priority 2s.
+    # If user is expert, get priority 3 items.
     if (!$bar && $self->IsUserExpert($name))
     {
-      my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NULL AND expcnt=0 AND priority>=2 AND priority<4 ORDER BY priority DESC, time ASC LIMIT 1";
+      my $sql = "SELECT id FROM queue WHERE locked IS NULL AND expcnt=0 AND priority=3 ORDER BY time ASC LIMIT 1";
+      $bar = $self->SimpleSqlGet( $sql );
+      #print "$sql<br/>\n";
+    }
+    if ( ! $bar )
+    {
+      # Get priority 2 items that have not been reviewed yet
+      my $sql = "SELECT q.id FROM queue q WHERE q.priority=2 AND q.locked IS NULL AND " .
+                "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM reviews) " .
+                "ORDER BY q.time ASC LIMIT 1";
       $bar = $self->SimpleSqlGet( $sql );
       #print "$sql<br/>\n";
     }
     my $exclude3 = ($self->IsUserExpert($name))? '':'q.priority<3 AND';
     if ( ! $bar )
     {
-      # Get priority 2 items
-      my $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q WHERE q.priority=2 AND q.locked IS NULL AND " .
-                "q.status=0 AND q.expcnt=0 AND " .
-                "(q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) OR " .
-                " q.id IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable r WHERE r.user != '$name' AND r.id IN (SELECT id FROM reviews r2 GROUP BY r2.id HAVING count(*) = 1))) " .
-                "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
-      $bar = $self->SimpleSqlGet( $sql );
-      #print "$sql<br/>\n";
-    }
-    if ( ! $bar )
-    {
-      # Find items reviewed once by some other user.
+      # Find items reviewed once by some other user, preferring priority 2.
       # Exclude priority 1 some of the time, to 'fool' reviewers into not thinking everything is pd.
       my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
-      my $sql = "SELECT id FROM $CRMSGlobals::queueTable q WHERE $exclude1 $exclude3 q.locked IS NULL AND q.status=0 AND q.expcnt=0 AND q.id IN " .
-                "(SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable r WHERE r.user != '$name' AND r.id IN (SELECT id FROM reviews r2 GROUP BY r2.id HAVING count(*) = 1)) " .
+      my $sql = "SELECT q.id FROM queue q INNER JOIN reviews r ON q.id=r.id INNER JOIN " .
+                "(SELECT id FROM reviews GROUP BY id HAVING count(*)=1) AS r2 ON r.id=r2.id " .
+                "WHERE $exclude1 $exclude3 q.locked IS NULL AND q.status=0 AND q.expcnt=0 AND r.user!='$name' " .
                 "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
       $bar = $self->SimpleSqlGet( $sql );
       #print "$sql<br/>\n";
