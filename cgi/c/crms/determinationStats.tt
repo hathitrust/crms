@@ -35,6 +35,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "800", "300", "9.0.
 
 [% INCLUDE adminNav.tt %]
 [% p = cgi.param('p') %]
+[% monthly = cgi.param('monthly') %]
 [% startDate = cgi.param('startDate') %]
 [% endDate = cgi.param('endDate') %]
 <br/>
@@ -64,6 +65,8 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "800", "300", "9.0.
 </script>
 <span class="smallText">(YYYY-MM-DD)</span>
 <br/>
+Just show monthly totals<input type="checkbox" name="monthly" id="monthly" [% monthly? 'checked="checked"' : '' %]/>
+<br/>
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"
        onclick="document.getElementById('startDate').value='';
@@ -72,10 +75,10 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "800", "300", "9.0.
 </form>
 </div>
 <br/>
+[% monthlyParm = (monthly)? "monthly='on'&amp;":'' %]
+<a href="?p=$p&amp;startDate=$startDate&amp;endDate=$endDate&amp;[% monthlyParm %]download=1" target="_blank">Download</a>
 
-<a href="?p=$p&amp;startDate=$startDate&amp;endDate=$endDate&amp;download=1" target="_blank">Download</a>
-
-[% crms.CreateExportStatusReport(startDate, endDate) %]
+[% crms.CreateExportStatusReport(startDate, endDate, monthly) %]
 <br/>
 [% crms.CreateExportReport(0, 1) %]
 

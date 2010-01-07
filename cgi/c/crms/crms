@@ -196,7 +196,8 @@ if ( $cgi->param('download') )
     }
     elsif ($type eq 'determinationStats')
     {
-      $success = $crms->SearchAndDownloadDeterminationStats( $startDate, $endDate );
+      my $monthly = $cgi->param('monthly');
+      $success = $crms->SearchAndDownloadDeterminationStats( $startDate, $endDate, $monthly );
     }
     else
     {

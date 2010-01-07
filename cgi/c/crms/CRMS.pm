@@ -1646,11 +1646,12 @@ sub SearchAndDownload
 
 sub SearchAndDownloadDeterminationStats
 {
-  my $self = shift;
+  my $self      = shift;
   my $startDate = shift;
-  my $endDate = shift;
+  my $endDate   = shift;
+  my $monthly   = shift;
   
-  my $buffer = $self->CreateExportStatusData("\t", $startDate, $endDate);
+  my $buffer = $self->CreateExportStatusData("\t", $startDate, $endDate, $monthly);
   $self->DownloadSpreadSheet( $buffer );
   if ( $buffer ) { return 1; }
   else { return 0; }
@@ -2834,6 +2835,7 @@ sub CreateExportStatusData
   my $delimiter = shift;
   my $start     = shift;
   my $end       = shift;
+  my $monthly   = shift;
   
   my ($year,$month) = $self->GetTheYearMonth();
   my $titleDate = $self->YearMonthToEnglish("$year-$month");
@@ -2842,8 +2844,20 @@ sub CreateExportStatusData
   $end = "$year-$month-31" unless $end;
   ($start,$end) = ($end,$start) if $end lt $start;
   $start = '2009-07-01' if $start lt '2009-07-01';
-  my @dates = $self->GetWorkingDaysInRange($start, $end);
-  #push @dates, $start unless scalar @dates;
+  my @justdates = $self->GetWorkingDaysInRange($start, $end);
+  my @dates = ();
+  my $currmonth = 0;
+  foreach my $date (@justdates)
+  {
+    my ($y,$m,$d) = split '-', $date;
+    if ($m ne $currmonth && $currmonth)
+    {
+      push @dates, 'Total';
+    }
+    $currmonth = $m;
+    push @dates, $date;
+  }
+  push @dates, 'Total';
   if (!$justThisMonth)
   {
     $titleDate = sprintf("%s to %s", $dates[0], $dates[-1]);
@@ -2851,10 +2865,12 @@ sub CreateExportStatusData
   }
   #$start = $dates[0];
   #$end = $dates[-1];
-  push @dates, 'Total';
+  
   my $report = "Final Determinations Breakdown $titleDate\n";
   my @titles = ('Date','Status 4','Status 5','Status 6','Total','Status 4','Status 5','Status 6');
   $report .= join($delimiter, @titles) . "\n";
+  my $currmonth;
+  my $curryear;
   foreach my $date (@dates)
   {
     my ($y,$m,$d) = split '-', $date;
@@ -2862,8 +2878,15 @@ sub CreateExportStatusData
     my $date2 = $date;
     if ($date eq 'Total')
     {
-      $date1 = $start;
-      $date2 = $end;
+      $date .= sprintf(' %s', $self->YearMonthToEnglish("$curryear-$currmonth"));
+      $date1 = "$curryear-$currmonth-01";
+      $date2 = "$curryear-$currmonth-31";
+    }
+    else
+    {
+      $currmonth = $m;
+      $curryear = $y;
+      next if $monthly;
     }
     my $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable h1 WHERE " .
               "legacy=0 AND time>='$date1 00:00:00' AND time<='$date2 23:59:59' AND " .
@@ -2895,8 +2918,9 @@ sub CreateExportStatusReport
   my $self     = shift;
   my $start    = shift;
   my $end      = shift;
+  my $monthly  = shift;
   
-  my $data = $self->CreateExportStatusData("\t", $start, $end);
+  my $data = $self->CreateExportStatusData("\t", $start, $end, $monthly);
   my @lines = split "\n", $data;
   my $title = shift @lines;
   $title =~ s/\s/&nbsp;/g;
@@ -2910,10 +2934,11 @@ sub CreateExportStatusReport
     my @line = split "\t", $line;
     my $date = shift @line;
     my ($y,$m,$d) = split '-', $date;
-    $report .= ($date eq 'Total')? '<tr><th class="minor"><span class="minor">Total</span></th>':"<tr><th>$date</th>";
+    $date =~ s/\s/&nbsp;/g;
+    $report .= (substr($date,0,5) eq 'Total')? "<tr><th class='minor'><span class='minor'>$date</span></th>":"<tr><th>$date</th>";
     for (my $i=0; $i < 7; $i++)
     {
-      my $class = ($date eq 'Total' || $i == 3)? 'minor':($i<3)? 'major':'total';
+      my $class = (substr($date,0,5) eq 'Total' || $i == 3)? 'minor':($i<3)? 'major':'total';
       my $style = ($i==3)? 'style="border-right:double 6px black"':'';
       $report .= sprintf("<td class='$class'$style>%s</td>\n", $line[$i]);
     }
@@ -2929,6 +2954,8 @@ sub CreateExportStatusGraph
   my $self  = shift;
   
   my $report = '';
+  my ($y,$m) = $self->GetTheYearMonth();
+  my $now = "$y-$m";
   my @dates = $self->GetAllMonthsInYear();
   #pop @dates; # Don't show current month
   my $title = 'Final Determinations by Expert Effort';
@@ -2936,13 +2963,19 @@ sub CreateExportStatusGraph
   my @elements = ();
   my %colors = ('4' => '#22BB00', '5' => '#FF2200', '6' => '#0088FF');
   my $ceiling = 0;
+  my @usedates = ();
+  foreach my $date (@dates)
+  {
+    last if $date gt $now;
+    push @usedates, $date;
+  }
   foreach my $title (@titles)
   {
     my @line = ();
     my $color = $colors{$title};
     my $attrs = sprintf('"dot-style":{"type":"solid-dot","dot-size":3,"colour":"%s"},"text":"Status %s","colour":"%s","on-show":{"type":"pop-up","cascade":1,"delay":0.2}',
                         $color, $title, $color);
-    foreach my $date (@dates)
+    foreach my $date (@usedates)
     {
       my $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable h1 WHERE " .
                 "legacy=0 AND time>'$date-01 00:00:00' AND time<'$date-31 23:59:59' AND " .
@@ -2963,7 +2996,7 @@ sub CreateExportStatusGraph
   $report .= sprintf('%s]',join ',', @elements);
   $report .= ',"y_axis":{"max":100,"steps":10,"colour":"#888888","grid-colour":"#888888","labels":{"text":"#val#%","colour":"#FFFFFF"}}';
   $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}',
-                     join('","',map {$self->YearMonthToEnglish($_)} @dates));
+                     join('","',map {$self->YearMonthToEnglish($_)} @usedates));
   $report .= '}';
   return $report;
 }
