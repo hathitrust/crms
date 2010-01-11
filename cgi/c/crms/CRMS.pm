@@ -4996,7 +4996,7 @@ sub CreateQueueReport
   my $priheaders = '';
   foreach my $pri (0 .. $maxpri) { $priheaders .= "<th>Priority&nbsp;$pri</th>" };
   $report .= "<table style='width:100px;'><tr style='vertical-align:top;'><td>\n";
-  $report .= "<table class='exportStats'>\n<th>Status</th><th>Total</th>$priheaders<tr/>\n";
+  $report .= "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
   foreach my $status (-1 .. 6)
   {
     my $statusClause = ($status == -1)? '':" WHERE STATUS=$status";
@@ -5014,18 +5014,18 @@ sub CreateQueueReport
   my $class = ' class="major"';
   $report .= sprintf("<tr><td%s>Not&nbsp;Yet&nbsp;Active</td><td%s>$count</td>", $class, $class);
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri,$class);
-  $report .= "</table><br/><br/>\n";
+  $report .= "</tr></table><br/><br/>\n";
   $report .= "</td><td style='padding-left:20px'>\n";
   $report .= "<table class='exportStats'>\n";
   my $val = $self->GetLastQueueTime();
   $val =~ s/\s/&nbsp;/g;
-  $report .= "<tr><th>Last&nbsp;Queue&nbsp;Update</td><td>$val</td></tr>\n";
-  $report .= sprintf("<tr><th>Volumes&nbsp;Last&nbsp;Added</td><td>%s</td></tr>\n", $self->GetLastIdQueueCount());
-  $report .= sprintf("<tr><th>Cumulative&nbsp;Volumes&nbsp;in&nbsp;Queue&nbsp;(ever*)</td><td>%s</td></tr>\n", $self->GetTotalEverInQueue());
-  $report .= sprintf("<tr><th>Volumes&nbsp;in&nbsp;Candidates</td><td>%s</td></tr>\n", $self->GetCandidatesSize());
+  $report .= "<tr><th>Last&nbsp;Queue&nbsp;Update</th><td>$val</td></tr>\n";
+  $report .= sprintf("<tr><th>Volumes&nbsp;Last&nbsp;Added</th><td>%s</td></tr>\n", $self->GetLastIdQueueCount());
+  $report .= sprintf("<tr><th>Cumulative&nbsp;Volumes&nbsp;in&nbsp;Queue&nbsp;(ever*)</th><td>%s</td></tr>\n", $self->GetTotalEverInQueue());
+  $report .= sprintf("<tr><th>Volumes&nbsp;in&nbsp;Candidates</th><td>%s</td></tr>\n", $self->GetCandidatesSize());
   $val = $self->GetLastLoadTimeToCandidates();
   $val =~ s/\s/&nbsp;/g;
-  $report .= sprintf("<tr><th>Last&nbsp;Candidates&nbsp;Addition</td><td>%s&nbsp;on&nbsp;$val</td></tr>", $self->GetLastLoadSizeToCandidates());
+  $report .= sprintf("<tr><th>Last&nbsp;Candidates&nbsp;Addition</th><td>%s&nbsp;on&nbsp;$val</td></tr>", $self->GetLastLoadSizeToCandidates());
   $report .= "</table>\n";
   $report .= "<span class='smallishText'>* Not including legacy data (reviews/determinations made prior to June 2009)</span>";
   $report .= "</td></tr></table>\n";
@@ -5066,20 +5066,20 @@ sub CreateDeterminationReport()
   #my $exported = $self->SimpleSqlGet('SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE legacy=0');
   my $exported = 0;
   map {$exported += $sources{$_}} keys %sources;
-  $report .= "<tr><th>Last&nbsp;CRMS&nbsp;Export</td><td>$count&nbsp;on&nbsp;$time</td></tr>";
-  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</td><td>$fours&nbsp;(%.1f%%)</td></tr>", $pct4);
-  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</td><td>$fives&nbsp;(%.1f%%)</td></tr>", $pct5);
-  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6</td><td>$sixes&nbsp;(%.1f%%)</td></tr>", $pct6);
-  $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</td><td>%s</td></tr>", $exported);
+  $report .= "<tr><th>Last&nbsp;CRMS&nbsp;Export</th><td>$count&nbsp;on&nbsp;$time</td></tr>";
+  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</th><td>$fours&nbsp;(%.1f%%)</td></tr>", $pct4);
+  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</th><td>$fives&nbsp;(%.1f%%)</td></tr>", $pct5);
+  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6</th><td>$sixes&nbsp;(%.1f%%)</td></tr>", $pct6);
+  $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</th><td>%s</td></tr>", $exported);
   foreach my $source (keys %sources)
   {
     #my $n = $self->SimpleSqlGet("SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE source='$source' AND legacy=0");
     my $n = $sources{$source};
-    $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;$source</td><td>$n</td></tr>";
+    $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;$source</th><td>$n</td></tr>";
   }
   #$report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;Elsewhere</td><td>%s</td></tr>", $noncand);
-  $report .= sprintf("<tr><th>Total&nbsp;Legacy&nbsp;Determinations</td><td>%s</td></tr>", $legacy);
-  $report .= sprintf("<tr><th>Total&nbsp;Determinations</td><td>%s</td></tr>", $exported + $legacy);
+  $report .= sprintf("<tr><th>Total&nbsp;Legacy&nbsp;Determinations</th><td>%s</td></tr>", $legacy);
+  $report .= sprintf("<tr><th>Total&nbsp;Determinations</th><td>%s</td></tr>", $exported + $legacy);
   $report .= "</table>\n";
   return $report;
 }
@@ -5090,9 +5090,9 @@ sub CreateHistoricalReviewsReport
   
   my $report = '';
   $report .= "<table class='exportStats'>\n";
-  $report .= sprintf("<tr><th>CRMS&nbsp;Reviews</td><td>%s</td></tr>", $self->GetTotalNonLegacyReviewCount());
-  $report .= sprintf("<tr><th>Legacy&nbsp;Reviews</td><td>%s</td></tr>", $self->GetTotalLegacyReviewCount());
-  $report .= sprintf("<tr><th>Total&nbsp;Historical&nbsp;Reviews</td><td>%s</td></tr>", $self->GetTotalHistoricalReviewCount());
+  $report .= sprintf("<tr><th>CRMS&nbsp;Reviews</th><td>%s</td></tr>\n", $self->GetTotalNonLegacyReviewCount());
+  $report .= sprintf("<tr><th>Legacy&nbsp;Reviews</th><td>%s</td></tr>\n", $self->GetTotalLegacyReviewCount());
+  $report .= sprintf("<tr><th>Total&nbsp;Historical&nbsp;Reviews</th><td>%s</td></tr>\n", $self->GetTotalHistoricalReviewCount());
   $report .= "</table>\n";
   return $report;
 }
@@ -5107,7 +5107,7 @@ sub CreateReviewReport
   my $maxpri = $self->SimpleSqlGet( $sql );
   my $priheaders = '';
   foreach my $pri (0 .. $maxpri) { $priheaders .= "<th>Priority&nbsp;$pri</th>" };
-  $report .= "<table class='exportStats'>\n<th>Status</th><th>Total</th>$priheaders<tr/>\n";
+  $report .= "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
   
   my $sql = 'SELECT DISTINCT id FROM reviews';
   my $rows = $dbh->selectall_arrayref( $sql );
