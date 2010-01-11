@@ -847,7 +847,7 @@ sub ProcessReviews
 
     if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
     {
-      #If both und/nfi them status is 3
+      #If both und/nfi then status is 3
       if ( ( $attr == 5 ) && ( $reason == 8 ) )
       {
          $self->RegisterStatus( $id, 3 );
@@ -909,7 +909,7 @@ sub CheckPendingStatus
 
     if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
     {
-      #If both und/nfi them status is 3
+      #If both und/nfi then status is 3
       if ( ( $attr == 5 ) && ( $reason == 8 ) )
       {
          $self->RegisterPendingStatus( $id, 3 );
@@ -1024,7 +1024,10 @@ sub SubmitActiveReview
                 qq{VALUES('$id', '$user', '$date', '$attr', '$reason', 1, 1) };
 
       $self->PrepareSubmitSql( $sql );
-
+      
+      $sql = "UPDATE queue SET pending_status=1 WHERE id='$id'";
+      $self->PrepareSubmitSql( $sql );
+      
       #Now load this info into the bibdata table.
       $self->UpdateTitle( $id );
       $self->UpdatePubDate( $id );
@@ -4593,7 +4596,7 @@ sub GetNextItemForReview
       my $sql = "SELECT q.id FROM queue q INNER JOIN reviews r ON q.id=r.id INNER JOIN " .
                 "(SELECT id FROM reviews GROUP BY id HAVING count(*)=1) AS r2 ON r.id=r2.id " .
                 "WHERE $exclude1 $exclude3 q.locked IS NULL AND q.status=0 AND q.expcnt=0 AND r.user!='$name' " .
-                "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
+                "ORDER BY q.priority DESC, q.time ASC, q.id DESC LIMIT 1";
       $bar = $self->SimpleSqlGet( $sql );
       #print "$sql<br/>\n";
     }
