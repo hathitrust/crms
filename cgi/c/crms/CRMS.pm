@@ -642,7 +642,7 @@ sub GiveItemsInQueuePriority
     }
     else
     {
-      $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, priority, source) VALUES ('$id', '$time', $status, $priority, $source)";
+      $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, priority, source) VALUES ('$id', '$time', $status, $priority, '$source')";
 
       $self->PrepareSubmitSql( $sql );
 
