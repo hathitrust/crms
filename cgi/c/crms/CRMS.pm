@@ -4596,9 +4596,11 @@ sub GetNextItemForReview
       my $sql = "SELECT q.id FROM queue q INNER JOIN reviews r ON q.id=r.id INNER JOIN " .
                 "(SELECT id FROM reviews GROUP BY id HAVING count(*)=1) AS r2 ON r.id=r2.id " .
                 "WHERE $exclude1 $exclude3 q.locked IS NULL AND q.status=0 AND q.expcnt=0 AND r.user!='$name' " .
-                "ORDER BY q.priority DESC, q.time ASC, q.id DESC LIMIT 1";
-      $bar = $self->SimpleSqlGet( $sql );
+                "ORDER BY q.priority DESC, q.time ASC";
       #print "$sql<br/>\n";
+      my $rows = $self->get('dbh')->selectall_arrayref($sql);
+      my $idx = ($exclude1 eq '')? (rand scalar @{$rows}):0;
+      $bar = $rows->[$idx]->[0];
     }
     if ( ! $bar )
     {
