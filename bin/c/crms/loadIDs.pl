@@ -70,6 +70,8 @@ if (!$cnt)
   $crms->PrepareSubmitSql($sql);
 }
 my %yms;
+my %counts = ('date' => 0, 'not us' => 0, 'not bk' => 0, 'already' => 0, 'err' => 0,
+              'gov' => 0, 'pd/ren' => 0, 'pd/ncn' => 0);
 foreach my $line ( <$fh> )
 {
   chomp $line;
@@ -79,28 +81,68 @@ foreach my $line ( <$fh> )
   if ($attr eq 'pd' && ($reason eq 'ncn' || $reason eq 'ren'))
   {
     my ($y,$m,$blah) = split '-', $time;
-    $yms{"$y-$m"} = 0 unless $yms{"$y-$m"};
-    $yms{"$y-$m"}++;
-    if ($y eq '2007' && ($m eq '05' || $m eq '06'))
+    my $sql = "SELECT COUNT(id) FROM historicalreviews WHERE id='$id' AND user='rereport01'";
+    my $count = $crms->SimpleSqlGet($sql);
+    if ($count)
     {
-      # Filter out gov docs
-      #my $record =  $crms->GetRecordMetadata($id);
-      #if ($crms->IsGovDoc( $id, $record )) { print "Skipping gov't doc $id $m/$y\n"; next; }
-      next if $id eq 'mdp.39015001540890';
-      $ids{$id} = join '__', ($attr,$reason,$time);
+      $counts{'not bk'}++;
+      print "Skipping non-us doc $id\n";
+      next;
     }
+    else
+    {
+      $yms{"$y-$m"} = 0 unless $yms{"$y-$m"};
+      $yms{"$y-$m"}++;
+    }
+    # Filter out gov docs
+    #print "$id\n";
+    my $record =  $crms->GetRecordMetadata($id);
+    if (!$record)
+    {
+      $counts{'err'}++;
+      print "Can't get metadata for $id; skipping.\n";
+      next;
+    }
+    my $pub = $crms->GetPublDate( $id, $record );
+  
+    if ( ( $pub lt '1923' ) || ( $pub gt '1963' ) )
+    {
+      $counts{'date'}++;
+      print "Skipping item from $pub $id\n";
+      next;
+    }
+    if ($crms->IsGovDoc( $id, $record ))
+    {
+      $counts{'gov'}++;
+      print "Skipping gov't doc $id\n";
+      next;
+    }
+    if ( !$crms->IsUSPub( $id, $record ) )
+    {
+      $counts{'not us'}++;
+      print "Skipping non-us doc $id\n";
+      next;
+    }
+    if ( ! $crms->IsFormatBK( $id, $record ) )
+    {
+      $counts{'not bk'}++;
+      print "Skipping non-us doc $id\n";
+      next;
+    }
+    #next if $id eq 'mdp.39015001540890';
+    $ids{$id} = join '__', ($attr,$reason,$time);
   }
   $linen++;
 }
 close $fh;
-
-$crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/log_IDs.txt",
-    configFile   =>   'crms.cfg',
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   !$production,
-);
+$crms->ClearErrors();
+#$crms = CRMS->new(
+#    logFile      =>   "$DLXSROOT/prep/c/crms/log_IDs.txt",
+#    configFile   =>   'crms.cfg',
+#    verbose      =>   $verbose,
+#    root         =>   $DLXSROOT,
+#    dev          =>   !$production,
+#);
 $sql = "SELECT COUNT(*) FROM queue WHERE priority=1";
 my $already = $crms->SimpleSqlGet($sql);
 my $cnt = 0;
@@ -111,26 +153,44 @@ foreach my $id (keys %ids)
   $sql = "SELECT COUNT(*) FROM queue WHERE id='$id' AND priority=1";
   if ($crms->SimpleSqlGet($sql))
   {
-    print "$id has already been rereviewed\n" if $verbose;
+    print "$id is already in the queue for rereview\n" if $verbose;
+    $counts{'already'}++;
     next;
   }
-  $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id' AND priority=1";
+  $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id' AND user='$user'";
   if ($crms->SimpleSqlGet($sql))
   {
-    print "$id is already in the queue for rereview\n" if $verbose;
+    print "$id has already been rereviewed\n" if $verbose;
+    $counts{'already'}++;
+    next;
+  }
+  $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id' AND user LIKE 'rereport%'";
+  if ($crms->SimpleSqlGet($sql))
+  {
+    print "$id has already been rereviewed (historical)\n" if $verbose;
+    $counts{'already'}++;
     next;
   }
   my ($attr,$reason,$time) = split '__', $ids{$id};
   printf "%d) updating $id ($attr/$reason) $time\n", $cnt+1 if $verbose;
-  $crms->SubmitActiveReview($id, $user, $time, $attr, $reason, $noop);
-  my $r = $crms->GetErrors();
-  die 'Error: '.join(", ", @{$r}) if scalar @{$r};
   if (!$noop)
   {
-    $crms->GiveItemsInQueuePriority($id, $now, 0, 1);
-    $r = $crms->GetErrors();
-    die 'Error: '.join(", ", @{$r}) if scalar @{$r};
+    $crms->GiveItemsInQueuePriority($id, $now, 0, 1, 'rereport');
+    my $r = $crms->GetErrors();
+    if (scalar @{$r})
+    {
+      $counts{'err'}++;
+      printf "Error: %s\n", join("; ", @{$r});
+    }
+    $crms->ClearErrors();
+    next if scalar @{$r};
+    $counts{"$attr/$reason"}++;
   }
+  $crms->SubmitActiveReview($id, $user, $time, $attr, $reason, $noop);
+  my $r = $crms->GetErrors();
+  printf "Error: %s\n", join("; ", @{$r}) if scalar @{$r};
+  $crms->ClearErrors();
+  next if scalar @{$r};
   $cnt++;
 }
 foreach my $ym (sort keys %yms)
@@ -138,4 +198,8 @@ foreach my $ym (sort keys %yms)
   printf "$ym: %s volumes\n", $yms{$ym};
 }
 print "Added $cnt items\n";
+foreach my $reason (sort keys %counts)
+{
+  printf "$reason: %s volumes\n", $counts{$reason};
+}
 
