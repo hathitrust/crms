@@ -830,8 +830,8 @@ sub ProcessReviews
 {
   my $self = shift;
 
-  my $sql = "SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable " .
-            "GROUP BY id HAVING count(*) >= 2";
+  my $sql = 'SELECT id, user, attr, reason, renNum, renDate FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) ' .
+            'GROUP BY id HAVING count(*) = 2';
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
   foreach my $row ( @{$ref} )
@@ -3733,7 +3733,6 @@ sub IsFormatBK
     my $xpath   = q{//*[local-name()='controlfield' and @tag='FMT']};
     my $leader  = $record->findvalue( $xpath );
     my $doc     = $leader;
- 
     if ( $doc eq "BK" ) { return 1; }
 
     return 0;
