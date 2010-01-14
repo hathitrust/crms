@@ -5152,7 +5152,7 @@ sub CreateReviewReport
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
   
   # Processed
-  $sql = 'SELECT DISTINCT r.id FROM reviews r INNER JOIN queue q ON r.id=q.id WHERE q.status!=0';
+  $sql = 'SELECT id FROM queue WHERE status!=0';
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td class='minor'>Processed</td><td class='minor'>$count</td>";
@@ -5170,7 +5170,7 @@ sub CreateReviewReport
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Matching&nbsp;<code>und/nfi</code></td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
 
-  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=4 OR status=5";
+  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=4 OR status=5 OR status=6";
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Awaiting&nbsp;Export</td><td>$count</td>";
