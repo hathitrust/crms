@@ -1440,7 +1440,7 @@ sub CreateSQL
     {
       my $user = $self->get( "user" );
       my $yesterday = $self->GetYesterday();
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" AND q.status=0 };
     }
 
     my ( $search1term, $search2term );
@@ -1832,8 +1832,8 @@ sub GetVolumesRef
     $search2Value = $2;
     $tester2 = $1;
   }
-  push @rest, "r.time >= '$startDate'" if $startDate;
-  push @rest, "r.time <= '$endDate'" if $endDate;
+  push @rest, "date(r.time) >= '$startDate'" if $startDate;
+  push @rest, "date(r.time) <= '$endDate'" if $endDate;
   push @rest, "$search1 $tester1 '$search1Value'" if $search1Value ne '';
   push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
   my $restrict = join(' AND ', @rest);
@@ -2059,7 +2059,7 @@ sub GetReviewsCount
     {
       my $user = $self->get( "user" );
       my $yesterday = $self->GetYesterday();
-      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" };
+      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" AND q.status=0 };
     }
     
     my ( $search1term, $search2term );
