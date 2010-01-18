@@ -1,7 +1,10 @@
 <div>
-  <a href="crms">home</a> &gt; <a href="crms?p=admin">admin</a>
+  <a href="crms">home</a>
 
   [% page = cgi.param("p") %]
+  [% IF page != "admin" %]
+    &gt; <a href="crms?p=admin">admin</a>
+  [% END %]
   &gt; [% crms.PageToEnglish(page) %]
   
 </div>
