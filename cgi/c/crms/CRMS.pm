@@ -1440,7 +1440,9 @@ sub CreateSQL
     {
       my $user = $self->get( "user" );
       my $yesterday = $self->GetYesterday();
-      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" AND q.status=0 };
+      # Experts need to see stuff with any status; non-expert should only see stuff that hasn't been processed yet.
+      my $restrict = ($self->IsUserExpert($user))? '':'AND q.status=0';
+      $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" $restrict };
     }
 
     my ( $search1term, $search2term );
@@ -1810,6 +1812,14 @@ sub GetVolumesRef
   {
     push @rest, 'q.status=2';
   }
+  # This should not happen; active reviews page does not have a checkbox!
+  elsif ( $page eq 'editReviews' )
+  {
+    my $user = $self->get( 'user' );
+    my $yesterday = $self->GetYesterday();
+    push @rest, "r.time >= '$yesterday'";
+    push @rest, 'q.status=0' unless $self->IsUserExpert($user);
+  }
   my $tester1 = '=';
   my $tester2 = '=';
   if ( $search1Value =~ m/.*\*.*/ )
@@ -2059,7 +2069,8 @@ sub GetReviewsCount
     {
       my $user = $self->get( "user" );
       my $yesterday = $self->GetYesterday();
-      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" AND q.status=0 };
+      my $restrict = ($self->IsUserExpert($user))? '':'AND q.status=0';
+      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" $restrict };
     }
     
     my ( $search1term, $search2term );
