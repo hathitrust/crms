@@ -2912,6 +2912,7 @@ sub CreateExportStatusData
   my $start     = shift;
   my $end       = shift;
   my $monthly   = shift;
+  my $title     = shift;
   
   my ($year,$month) = $self->GetTheYearMonth();
   my $titleDate = $self->YearMonthToEnglish("$year-$month");
@@ -2937,14 +2938,15 @@ sub CreateExportStatusData
   }
   if (!$justThisMonth)
   {
-    $titleDate = sprintf("%s to %s", $self->YearMonthToEnglish(substr($dates[0],0,7)), $self->YearMonthToEnglish(substr($dates[-1],0,7)));
-    $titleDate = $dates[0] if $start eq $end;
+    my $startEng = $self->YearMonthToEnglish(substr($dates[0],0,7));
+    my $endEng = $self->YearMonthToEnglish(substr($dates[-1],0,7));
+    $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
   }
   push @dates, 'Total';
   #$start = $dates[0];
   #$end = $dates[-1];
   
-  my $report = "Final Determinations Breakdown $titleDate\n";
+  my $report = ($title)? "$title\n":"Final Determinations Breakdown $titleDate\n";
   my @titles = ('Date','Status 4','Status 5','Status 6','Total','Status 4','Status 5','Status 6');
   $report .= join($delimiter, @titles) . "\n";
   my $currmonth;
@@ -3009,10 +3011,11 @@ sub CreateExportStatusReport
   my $start    = shift;
   my $end      = shift;
   my $monthly  = shift;
+  my $title    = shift;
   
-  my $data = $self->CreateExportStatusData("\t", $start, $end, $monthly);
+  my $data = $self->CreateExportStatusData("\t", $start, $end, $monthly, $title);
   my @lines = split "\n", $data;
-  my $title = shift @lines;
+  $title = shift @lines;
   $title =~ s/\s/&nbsp;/g;
   my $url = sprintf("<a href='?p=determinationStats&amp;startDate=$start&amp;endDate=$end&amp;%sdownload=1&amp;target=_blank'>Download</a>",($monthly)?'monthly=on&amp;':'');
   my $report = "<h3>$title&nbsp;&nbsp;&nbsp;&nbsp;$url</h3>\n";
@@ -3063,15 +3066,15 @@ sub CreateExportStatusReport
 
 sub CreateExportStatusGraph
 {
-  my $self  = shift;
-  my $start = shift;
-  my $end   = shift;
+  my $self    = shift;
+  my $start   = shift;
+  my $end     = shift;
   my $monthly = shift;
+  my $title   = shift;
   
-  my $data = $self->CreateExportStatusData("\t", $start, $end, $monthly);
-  
+  my $data = $self->CreateExportStatusData("\t", $start, $end, $monthly, $title);
   my @lines = split "\n", $data;
-  my $title = shift @lines;
+  $title = shift @lines;
   shift @lines;
   my $report = '';
   

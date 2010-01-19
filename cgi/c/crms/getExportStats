@@ -25,7 +25,8 @@ if ($type eq 'graph')
   my $start = $cgi->param('startDate');
   my $end = $cgi->param('endDate');
   my $monthly = $cgi->param('monthly');
-  if ($c == 3) { $data = $crms->CreateExportStatusGraph($start,$end,$monthly); }
+  my $title = $cgi->param('title');
+  if ($c == 3) { $data = $crms->CreateExportStatusGraph($start,$end,$monthly,$title); }
   else { $data = $crms->CreateExportGraph($c, $year); }
 }
 else
