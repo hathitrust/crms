@@ -8,10 +8,15 @@
 function toggleVisibility(id)
 {
   var me = document.getElementById(id);
-  //if (me.style.visibility=="hidden") {me.style.visibility="visible";}
-  //else {me.style.visibility="hidden";}
-  if (me.style.display!="none") {me.style.display="none";}
-  else {me.style.display="";}
+  if (me == null)
+  {
+    //alert("Can't get " + id);
+  }
+  else
+  {
+    if (me.style.display!="none") {me.style.display="none";}
+    else {me.style.display="";}
+  }
 }
 -->
 </script>

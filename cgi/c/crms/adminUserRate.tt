@@ -28,6 +28,15 @@ unshift @keys, 'all';
 $stash->set('keys',\@keys);
 [% END %]
 
+[% onclicks = '' %]
+[% FOREACH id IN keys %]
+  [% IF id.match('rereport') %][% NEXT %][% END %]
+  [% IF 0 == crms.CountAllReviewsForUser(id) && id != 'all' %][% NEXT %][% END %]
+  [% onclicks = onclicks _ "toggleVisibility(\"$id\");" %]
+[% END %]
+<a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
+   onclick='[% onclicks %]'>Toggle All</a><br/><br/>
+
 [% FOREACH id IN keys %]
   [% IF id.match('rereport') %][% NEXT %][% END %]
   [% IF 0 == crms.CountAllReviewsForUser(id) && id != 'all' %][% NEXT %][% END %]
