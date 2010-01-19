@@ -53,7 +53,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart4", "400", "300", "9.0.
     <td style="padding-left:60px;"><div id="chart2"/></td>
   </tr>
   <tr>
-    <td colspan="2">
+    <td colspan="2" style="padding-top:12px;">
       <span class="smallishText">
   * Note: The CRMS Project Cumulative table and graph represent the current breakdown of all final determinations exported
   to the rights database since the CRMS version 1.0 was released (July 10, 2009).
