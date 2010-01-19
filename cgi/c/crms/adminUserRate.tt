@@ -7,9 +7,7 @@
 [% INCLUDE adminNav.tt  %]
 
 <hr width="25%" align="left"/>
-[% crms.CreateStatsReport('all',1, 1) %]
-<br/><br/>
-[% crms.CreateStatsReport('all',0, 1) %]
+[% crms.CreateStatsReport('all', 1, 1) %]
 <br/><br/>
 [% users = crms.GetUserData() %]
 [% keys = users.keys %]
@@ -26,13 +24,21 @@ my @keys = keys %{$users};
   ||
   $a cmp $b
 } @keys;
+unshift @keys, 'all';
 $stash->set('keys',\@keys);
 [% END %]
 
 [% FOREACH id IN keys %]
   [% IF id.match('rereport') %][% NEXT %][% END %]
-  [% IF 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
-  [% crms.CreateStatsReport(id, 0, 1) %]
+  [% IF 0 == crms.CountAllReviewsForUser(id) && id != 'all' %][% NEXT %][% END %]
+  [% crms.CreateStatsReport(id, 0, 1, year) %]
+  <br/><br/>
+  <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
+     id="[% id %]a" onclick='toggleVisibility("[% id %]");'>Show 2009</a><br/>
+  <div id="[% id %]" style="display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;">
+  [% crms.CreateStatsReport(id, 0, 1, 2009) %]
+  <br/>
+  </div>
   <br/><br/>
 [% END %]
 <span class="smallishText">*Does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews.</span>

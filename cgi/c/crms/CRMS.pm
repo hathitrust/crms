@@ -2557,6 +2557,12 @@ sub GetRange
 
 }
 
+sub GetTheYear
+{
+  my $self = shift;
+  
+  return ($self->GetTheYearMonth())[0];
+}
 
 sub GetTheYearMonth
 {
@@ -2610,25 +2616,24 @@ sub YearMonthToEnglish
   return (($long)? $month:substr($month,0,3)).' '.$year;
 }
 
-# Returns a pair of date strings e.g. ('2009-01','2009-12') for the current year.
-sub GetYear
-{
-  my $self = shift;
-  my $ym = shift;
-  my @range = $self->GetAllMonthsInYear($ym);
-  return ($range[0], $range[-1]);
-}
 
 # Returns an array of date strings e.g. ('2009-01'...'2009-12') for the (current if no param) year.
 sub GetAllMonthsInYear
 {
   my $self = shift;
-  my $ym = shift;
-  my ( $year, $month );
-  if ($ym) { ($year, $month) = split('-', $ym); }
-  else { ($year, $month) = $self->GetTheYearMonth(); }
+  my $year = shift;
+  
+  my ($currYear, $currMonth) = $self->GetTheYearMonth();
+  $year = $currYear unless $year;
   my $start = ($year eq '2009')? 7:1;
-  return map sprintf("$year-%.2d", $_), ($start..12)
+  my @months = ();
+  foreach my $m ($start..12)
+  {
+    my $ym = sprintf("$year-%.2d", $m);
+    last if $ym gt "$currYear-$currMonth";
+    push @months, $ym;
+  }
+  return @months;
 }
 
 # Returns an array of date strings e.g. ('2009-01','2010-01') with start month of all years for which we have data.
@@ -2652,29 +2657,27 @@ sub CreateExportData
   my $cumulative     = shift;
   my $doCurrentMonth = shift;
   my $doPercent      = shift;
+  my $year           = shift;
   
   my $dbh = $self->get( 'dbh' );
+  $year = ($self->GetTheYearMonth())[0] unless $year;
   my ($y,$m) = $self->GetTheYearMonth();
   # If not doing current month, and current month is January, there is no data.
   # So we need to bump now to December of last year.
-  if (!$cumulative && !$doCurrentMonth && $m eq '01')
+  if (!$cumulative && !$doCurrentMonth && $m eq '01' && $y eq $year)
   {
-    $y--;
+    $year--;
     $m = '12';
     $doCurrentMonth = 1;
   }
-  my $now = "$y-$m";
-  my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear($now);
-  my $y1 = substr($statdates[0],0,4);
-  my $y2 = substr($statdates[-1],0,4);
-  my $range = ($y1 eq $y2)? "$y1":"$y1-$y2";
-  my $label = ($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative" : "Cumulative $range";
-  my $report = sprintf("$label\nCategories%s%s", $delimiter, ($cumulative)? 'Grand Total':"Total $y");
+  my $now = "$year-$m";
+  my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear($year);
+  my $label = ($cumulative)? "CRMS Project Cumulative" : "Cumulative $year";
+  my $report = sprintf("$label\nCategories%s%s", $delimiter, ($cumulative)? 'Grand Total':"Total $year");
   my %stats = ();
   my @usedates = ();
   foreach my $date (@statdates)
   {
-    last if $date gt $now;
     last if $date eq $now and !$doCurrentMonth;
     push @usedates, $date;
     $report .= "$delimiter$date";
@@ -2767,13 +2770,73 @@ sub CreateExportData
   return $report;
 }
 
+# Create an HTML table for the whole year's exports, month by month.
+# If cumulative, columns are years, not months.
+sub CreateExportReport
+{
+  my $self       = shift;
+  my $cumulative = shift;
+  my $just456    = shift;
+  my $year       = shift;
+  
+  my $dbh = $self->get( 'dbh' );
+  my $data = $self->CreateExportData(',', $cumulative, 1, 1, $year);
+  my @lines = split m/\n/, $data;
+  my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
+  my $title = shift @lines;
+  $title .= '*' if $cumulative;
+  my $report = sprintf("<table class='exportStats'>\n<tr>\n", $title);
+  foreach my $th (split ',', shift @lines)
+  {
+    $th = $self->YearMonthToEnglish($th) if $th =~ m/^\d.*/;
+    $th =~ s/\s/&nbsp;/g;
+    $report .= sprintf("<th%s>$th</th>\n", ($th ne 'Categories')? ' style="text-align:center;"':'');
+  }
+  $report .= "</tr>\n";
+  my %majors = ('All PD' => 1, 'All IC' => 1, 'All UND/NFI' => 1);
+  my $titleline = '';
+  foreach my $line (@lines)
+  {
+    my @items = split(',', $line);
+    my $i = 0;
+    $title = shift @items;
+    next if $just456 and ($title !~ m/Status.+/ and $title !~ /Total/);
+    my $major = exists $majors{$title};
+    $title =~ s/\s/&nbsp;/g;
+    my $padding = ($major)? '':$nbsps;
+    my $newline = sprintf("<tr><th%s><span%s>%s$title</span></th>",
+      ($title eq 'Total')? ' style="text-align:right;"':'',
+      ($major)? ' class="major"':(($title =~ m/Status.+/)? ' class="minor"':''),
+      ($major)? '':$nbsps);
+    foreach my $item (@items)
+    {
+      my ($n,$pct) = split ':', $item;
+      $n =~ s/\s/&nbsp;/g;
+      $newline .= sprintf("<td%s>%s%s$n%s%s</td>",
+                         ($major)? ' class="major"':($title eq 'Total')? ' style="text-align:center;"':(($title =~ m/Status.+/)? ' class="minor"':''),
+                         ($major)? '':$nbsps,
+                         ($title eq 'Total')? '<b>':'',
+                         ($title eq 'Total')? '</b>':'',
+                         ($pct)? "&nbsp;($pct%)":'');
+      $i++;
+    }
+    $newline .= "</tr>\n";
+    if ($title eq 'Total' && $just456) { $titleline = $newline; }
+    else { $report .= $newline; }
+  }
+  $report .= $titleline if $just456;
+  $report .= "</table>\n";
+  return $report;
+}
+
 # Type arg is 0 for Monthly Breakdown, 1 for Total Determinations, 2 for cumulative (pie)
 sub CreateExportGraph
 {
   my $self = shift;
   my $type = int shift;
+  my $year = shift;
   
-  my $data = $self->CreateExportData(',', $type == 2, $type == 2);
+  my $data = $self->CreateExportData(',', $type == 2, $type == 2, 0, $year);
   my @lines = split m/\n/, $data;
   my $title = shift @lines;
   $title .= '*' if $type == 2;
@@ -2858,7 +2921,9 @@ sub CreateExportStatusData
   $end = "$year-$month-31" unless $end;
   ($start,$end) = ($end,$start) if $end lt $start;
   $start = '2009-07-01' if $start lt '2009-07-01';
-  my @justdates = $self->GetWorkingDaysInRange($start, $end);
+  my $sql = "SELECT DISTINCT(DATE(time)) FROM exportdata WHERE DATE(time)>='$start' AND DATE(time)<='$end'";
+  #print "$sql<br/>\n";
+  my @justdates = map {$_->[0];} @{$self->get('dbh')->selectall_arrayref( $sql )};
   my @dates = ();
   my $currmonth = 0;
   foreach my $date (@justdates)
@@ -2871,12 +2936,12 @@ sub CreateExportStatusData
     $currmonth = $m;
     push @dates, $date;
   }
-  push @dates, 'Total';
   if (!$justThisMonth)
   {
-    $titleDate = sprintf("%s to %s", $dates[0], $dates[-1]);
+    $titleDate = sprintf("%s to %s", $self->YearMonthToEnglish(substr($dates[0],0,7)), $self->YearMonthToEnglish(substr($dates[-1],0,7)));
     $titleDate = $dates[0] if $start eq $end;
   }
+  push @dates, 'Total';
   #$start = $dates[0];
   #$end = $dates[-1];
   
@@ -2885,6 +2950,7 @@ sub CreateExportStatusData
   $report .= join($delimiter, @titles) . "\n";
   my $currmonth;
   my $curryear;
+  my @totals = (0,0,0);
   foreach my $date (@dates)
   {
     my ($y,$m,$d) = split '-', $date;
@@ -2902,27 +2968,38 @@ sub CreateExportStatusData
       $curryear = $y;
       next if $monthly;
     }
-    my $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable h1 WHERE " .
-              "legacy=0 AND time>='$date1 00:00:00' AND time<='$date2 23:59:59' AND " .
-              "time=(SELECT MAX(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id)";
-    #print "$sql<br/>\n";
-    my $total = $self->SimpleSqlGet($sql);
-    my @line = (0,0,0,$total,0,0,0);
+    my @line = (0,0,0,0,0,0,0);
     for (my $i=0; $i < 3; $i++)
     {
       my $title = $i+4;
-      $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable h1 WHERE " .
-             "status=$title AND legacy=0 AND time>='$date1 00:00:00' AND time<='$date2 23:59:59' AND " .
-             "time=(SELECT MAX(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id)";
+      $sql = 'SELECT count(DISTINCT e.id) FROM exportdata e INNER JOIN historicalreviews r ON e.id=r.id WHERE ' .
+             "date(e.time) >= '$date1' AND date(e.time) <= '$date2' AND r.status=$title";
       #print "$sql<br/>\n";
       my $count = $self->SimpleSqlGet($sql);
       $line[$i] = $count;
+      $totals[$i] += $count;
+    }
+    $line[3] = $line[0] + $line[1] + $line[2];
+    for (my $i=0; $i < 3; $i++)
+    {
       my $pct = 0.0;
-      eval {$pct = 100.0*$count/$total;};
+      eval {$pct = 100.0*$line[$i]/$line[3];};
       $line[$i+4] = sprintf('%.1f%%', $pct);
     }
     $report .= $date;
     $report .= $delimiter . join($delimiter, @line) . "\n";
+  }
+  if ($monthly && !$justThisMonth)
+  {
+    my $gt = $totals[0] + $totals[1] + $totals[2];
+    push @totals, $gt;
+    for (my $i=0; $i < 3; $i++)
+    {
+      my $pct = 0.0;
+      eval {$pct = 100.0*$totals[$i]/$gt;};
+      push @totals, sprintf('%.1f%%', $pct);
+    }
+    $report .= 'Total' . $delimiter . join($delimiter, @totals) . "\n";
   }
   return $report;
 }
@@ -2949,12 +3026,33 @@ sub CreateExportStatusReport
     my $date = shift @line;
     my ($y,$m,$d) = split '-', $date;
     $date =~ s/\s/&nbsp;/g;
-    $report .= (substr($date,0,5) eq 'Total')? "<tr><th class='minor'><span class='minor'>$date</span></th>":"<tr><th>$date</th>";
+    #<tr><th style="text-align:right;"><span>&nbsp;&nbsp;&nbsp;&nbsp;Total</span></th><td style="text-align:center;">&nbsp;&nbsp;&nbsp;&nbsp;<b>467</b></td><td style="text-align:center;">
+    if ($date eq 'Total')
+    {
+      $report .= '<tr><th style="text-align:right;">Total</th>';
+    }
+    elsif (substr($date,0,5) eq 'Total')
+    {
+      $report .= "<tr><th class='minor'><span class='minor'>$date</span></th>"
+    }
+    else
+    {
+      $report .= "<tr><th>$date</th>";
+    }
     for (my $i=0; $i < 7; $i++)
     {
-      my $class = (substr($date,0,5) eq 'Total' || $i == 3)? 'minor':($i<3)? 'major':'total';
+      my $class = '';
       my $style = ($i==3)? 'style="border-right:double 6px black"':'';
-      $report .= sprintf("<td class='$class'$style>%s</td>\n", $line[$i]);
+      if ($date ne 'Total' && (substr($date,0,5) eq 'Total' || $i == 3))
+      {
+        $class = 'class="minor"';
+      }
+      elsif ($date ne 'Total')
+      {
+        $class = 'class="total"';
+        $class = 'class="major"' if $i < 3;
+      }
+      $report .= sprintf("<td $class $style>%s</td>\n", $line[$i]);
     }
     $report .= "</tr>\n";
   }
@@ -2966,154 +3064,64 @@ sub CreateExportStatusReport
 sub CreateExportStatusGraph
 {
   my $self  = shift;
+  my $start = shift;
+  my $end   = shift;
+  my $monthly = shift;
   
+  my $data = $self->CreateExportStatusData("\t", $start, $end, $monthly);
+  
+  my @lines = split "\n", $data;
+  my $title = shift @lines;
+  shift @lines;
   my $report = '';
-  my ($y,$m) = $self->GetTheYearMonth();
-  my $now = "$y-$m";
-  my @dates = $self->GetAllMonthsInYear();
-  #pop @dates; # Don't show current month
-  my $title = 'Final Determinations by Expert Effort';
-  my @titles = ('4','5','6');
-  my @elements = ();
-  my %colors = ('4' => '#22BB00', '5' => '#FF2200', '6' => '#0088FF');
-  my $ceiling = 0;
+  
   my @usedates = ();
-  foreach my $date (@dates)
+  my @stati = (4,5,6);
+  my @elements = ();
+  my %colors = (4 => '#22BB00', 5 => '#FF2200', 6 => '#0088FF');
+  foreach my $status (@stati)
   {
-    last if $date gt $now;
-    push @usedates, $date;
-  }
-  foreach my $title (@titles)
-  {
-    my @line = ();
-    my $color = $colors{$title};
+    my @vals = ();
+    my $color = $colors{$status};
     my $attrs = sprintf('"dot-style":{"type":"solid-dot","dot-size":3,"colour":"%s"},"text":"Status %s","colour":"%s","on-show":{"type":"pop-up","cascade":1,"delay":0.2}',
-                        $color, $title, $color);
-    foreach my $date (@usedates)
+                        $color, $status, $color);
+    foreach my $line (@lines)
     {
-      my $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable h1 WHERE " .
-                "legacy=0 AND time>'$date-01 00:00:00' AND time<'$date-31 23:59:59' AND " .
-                "time=(SELECT MAX(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id)";
-      my $total = $self->SimpleSqlGet($sql);
-      $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable h1 WHERE " .
-             "status=$title AND legacy=0 AND time>'$date-01 00:00:00' AND time<'$date-31 23:59:59' AND " .
-             "time=(SELECT MAX(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id)";
-      my $count = $self->SimpleSqlGet($sql);
-      my $pct = 0.0;
-      eval {$pct = 100.0*$count/$total;};
-      push @line, sprintf('{"value":%d,"tip":"%.1f%% (%d)"}', $pct, $pct, $count);
-      $ceiling = $count if $count > $ceiling;
+      my @line = split "\t", $line;
+      my $date = shift @line;
+      next if $date eq 'Total';
+      $date =~ s/Total\s//;
+      push @usedates, $date if $status == 4;
+      my $count = $line[$status-4];
+      my $pct = $line[$status];
+      $pct =~ s/%//;
+      push @vals, sprintf('{"value":%d,"tip":"%.1f%% (%d)"}', $pct, $pct, $count);
+      
     }
-    push @elements, sprintf('{"type":"line","values":[%s],%s}', join(',',@line), $attrs);
+    push @elements, sprintf('{"type":"line","values":[%s],%s}', join(',',@vals), $attrs);
   }
   my $report = sprintf('{"bg_colour":"#000000","title":{"text":"%s","style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"},"elements":[',$title);
   $report .= sprintf('%s]',join ',', @elements);
   $report .= ',"y_axis":{"max":100,"steps":10,"colour":"#888888","grid-colour":"#888888","labels":{"text":"#val#%","colour":"#FFFFFF"}}';
-  $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}',
-                     join('","',map {$self->YearMonthToEnglish($_)} @usedates));
+  $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}', join('","',@usedates));
   $report .= '}';
   return $report;
 }
 
-sub GetWorkingDaysInRange
-{
-  my $self  = shift;
-  my $start = shift;
-  my $end   = shift;
-  
-  my ($y,$m,$d) = Today();
-  my $today = join '-', ($y,sprintf('%02d',$m),sprintf('%02d',$d));
-  if (!$start || !$end)
-  {
-    $start = join '-', ($y,$m,'01');
-    $end = join '-', ($y,$m,Days_in_Month($y, $m));
-  }
-  my @days = ();
-  while ($start le $end)
-  {
-    my ($y,$m,$d) = split '-', $start;
-    my $dow = Day_of_Week($y, $m, $d);
-    push @days, $start if $dow <= 5;
-    $start = $self->SimpleSqlGet("SELECT DATE_ADD('$start', INTERVAL 1 DAY)");
-    last if $start gt $today;
-  }
-  return @days;
-}
-
-# Create an HTML table for the whole year's exports, month by month.
-# If cumulative, columns are years, not months.
-sub CreateExportReport
-{
-  my $self       = shift;
-  my $cumulative = shift;
-  my $just456    = shift;
-  
-  my $dbh = $self->get( 'dbh' );
-  my $data = $self->CreateExportData(',', $cumulative, 1, 1);
-  my @lines = split m/\n/, $data;
-  my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
-  my $dllink = sprintf(qq{$nbsps<a target="_blank" href="/cgi/c/crms/getExportStats?type=text&amp;c=%d">Download</a>}, $cumulative);
-  $dllink = '' if $just456;
-  my $title = shift @lines;
-  $title .= '*' if $cumulative;
-  my $report = sprintf("<h3>%s$dllink</h3>\n<table class='exportStats'>\n<tr>\n", $title);
-  foreach my $th (split ',', shift @lines)
-  {
-    $th = $self->YearMonthToEnglish($th) if $th =~ m/^\d.*/;
-    $th =~ s/\s/&nbsp;/g;
-    $report .= sprintf("<th%s>$th</th>\n", ($th ne 'Categories')? ' style="text-align:center;"':'');
-  }
-  $report .= "</tr>\n";
-  my %majors = ('All PD' => 1, 'All IC' => 1, 'All UND/NFI' => 1);
-  my $titleline = '';
-  foreach my $line (@lines)
-  {
-    my @items = split(',', $line);
-    my $i = 0;
-    $title = shift @items;
-    next if $just456 and ($title !~ m/Status.+/ and $title !~ /Total/);
-    my $major = exists $majors{$title};
-    $title =~ s/\s/&nbsp;/g;
-    my $padding = ($major)? '':$nbsps;
-    my $newline = sprintf("<tr><th%s><span%s>%s$title</span></th>",
-      ($title eq 'Total')? ' style="text-align:right;"':'',
-      ($major)? ' class="major"':(($title =~ m/Status.+/)? ' class="minor"':''),
-      ($major)? '':$nbsps);
-    foreach my $item (@items)
-    {
-      my ($n,$pct) = split ':', $item;
-      $n =~ s/\s/&nbsp;/g;
-      $newline .= sprintf("<td%s>%s%s$n%s%s</td>",
-                         ($major)? ' class="major"':($title eq 'Total')? ' style="text-align:center;"':(($title =~ m/Status.+/)? ' class="minor"':''),
-                         ($major)? '':$nbsps,
-                         ($title eq 'Total')? '<b>':'',
-                         ($title eq 'Total')? '</b>':'',
-                         ($pct)? "&nbsp;($pct%)":'');
-      $i++;
-    }
-    $newline .= "</tr>\n";
-    if ($title eq 'Total' && $just456) { $titleline = $newline; }
-    else { $report .= $newline; }
-  }
-  $report .= $titleline if $just456;
-  $report .= "</table>\n";
-  return $report;
-}
 
 sub CreateStatsData
 {
-  my $self = shift;
-  my $user = shift;
+  my $self       = shift;
+  my $user       = shift;
   my $cumulative = shift;
+  my $year       = shift;
+
   my $dbh = $self->get( 'dbh' );
-  my $now = join('-', $self->GetTheYearMonth());
-  my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear();
-  my $y1 = substr($statdates[0],0,4);
-  my $y2 = substr($statdates[-1],0,4);
-  my $range = ($y1 eq $y2)? "$y1":"$y1-$y2";
+  $year = ($self->GetTheYearMonth())[0] unless $year;
+  my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear($year);
   my $username = ($user eq 'all')? 'All Users':$self->GetUserName($user);
-  my $label = "$username: " . (($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative":"Cumulative $range");
-  my $report = "$label\nCategories,Grand Total";
+  my $label = "$username: " . (($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative":"Cumulative $year");
+  my $report = sprintf("$label\nCategories,Project Total%s", (!$cumulative)? ",Total $year":'');
   my %stats = ();
   my @usedates = ();
   my $earliest = '';
@@ -3123,7 +3131,6 @@ sub CreateStatsData
                 'Time Reviewing (mins)', 'Time per Review (mins)','Reviews per Hour', 'Outlier Reviews');
   foreach my $date (@statdates)
   {
-    last if $date gt $now;
     push @usedates, $date;
     $report .= ",$date";
     my $mintime = $date . (($cumulative)? '-01':'');
@@ -3156,10 +3163,6 @@ sub CreateStatsData
   }
   $report .= "\n";
   my %totals;
-  #my %totals = ('All PD' => 0, 'pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pdus/cdpp' => 0,
-  #              'All IC' => 0, 'ic/ren' => 0, 'ic/cdpp' => 0, 'All UND/NFI' => 0, 'Total' => 0,
-  #              'Time Reviewing (mins)' => 0, 'Time per Review (mins)' => 0,
-  #              'Reviews per Hour' => 0, 'Outlier Reviews' => 0, 'Validated Reviews' => 0);
   my $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
                SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
                SUM(total_ic_ren) + SUM(total_ic_cdpp),
@@ -3168,6 +3171,7 @@ sub CreateStatsData
                (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
                FROM userstats WHERE monthyear >= '$earliest' AND monthyear <= '$latest'};
   $sql .= " AND user='$user'" if $user ne 'all';
+  #print "$sql<br/>\n";
   my $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
@@ -3182,12 +3186,65 @@ sub CreateStatsData
   $totals{'__VAL__'} = $ok;
   $totals{'__TOTNE__'} = $oktot;
   $totals{'__MVAL__'} = $self->GetMedianCorrect($earliest . '-01 00:00:00', $latest . '-31 23:59:59');
+  # Project totals
+  my %ptotals;
+  if (!$cumulative)
+  {
+    $earliest = '2009-07';
+    $latest = '3000-01';
+    $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
+               SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
+               SUM(total_ic_ren) + SUM(total_ic_cdpp),
+               SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), 1,1,1, SUM(total_time),
+               SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
+               (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
+               FROM userstats WHERE monthyear >= '$earliest'};
+    $sql .= " AND user='$user'" if $user ne 'all';
+    #print "$sql<br/>\n";
+    my $rows = $dbh->selectall_arrayref( $sql );
+    foreach my $row ( @{$rows} )
+    {
+      my $i = 0;
+      foreach my $title (@titles)
+      {
+        $ptotals{$title} = $row->[$i];
+        $i++;
+      }
+    }
+    my ($ok,$oktot) = $self->CountCorrectReviews($user, $earliest . '-01 00:00:00', $latest . '-31 23:59:59');
+    $ptotals{'__VAL__'} = $ok;
+    $ptotals{'__TOTNE__'} = $oktot;
+    $ptotals{'__MVAL__'} = $self->GetMedianCorrect($earliest . '-01 00:00:00', $latest . '-31 23:59:59');
+  }
+  
   my %majors = ('All PD' => 1, 'All IC' => 1, 'All UND/NFI' => 1);
   my %minors = ('Time Reviewing (mins)' => 1, 'Time per Review (mins)' => 1,
                 'Reviews per Hour' => 1, 'Outlier Reviews' => 1);
   foreach my $title (@titles)
   {
     $report .= $title;
+    if (!$cumulative)
+    {
+      my $of = $ptotals{'__TOT__'};
+      $of = $ptotals{'__TOTNE__'} if $title eq '__VAL__';
+      my $n = $ptotals{$title};
+      $n = 0 unless $n;
+      if ($title eq '__MVAL__')
+      {
+        $n = sprintf('%.1f%%', $n);
+      }
+      elsif ($title ne '__TOT__' && !exists $minors{$title})
+      {
+        my $pct = eval { 100.0*$n/$of; };
+        $pct = 0.0 unless $pct;
+        $n = sprintf("$n:%.1f", $pct);
+      }
+      else
+      {
+        $n = sprintf('%.1f', $n) if $n =~ m/^\d*\.\d+$/i;
+      }
+      $report .= ',' . $n;
+    }
     my $of = $totals{'__TOT__'};
     $of = $totals{'__TOTNE__'} if $title eq '__VAL__';
     my $n = $totals{$title};
@@ -3238,13 +3295,15 @@ sub CreateStatsData
 
 sub CreateStatsReport
 {
-  my $self = shift;
-  my $user = shift;
-  my $cumulative = shift;
+  my $self              = shift;
+  my $user              = shift;
+  my $cumulative        = shift;
   my $suppressBreakdown = shift;
-  my $data = $self->CreateStatsData($user, $cumulative);
+  my $year              = shift;
+  
+  my $data = $self->CreateStatsData($user, $cumulative, $year);
   my @lines = split m/\n/, $data;
-  my $report = sprintf("<h3>%s</h3>\n<table class='exportStats'>\n<tr>\n", shift @lines);
+  my $report = sprintf("<span style='font-size:1.3em;'><!--NAME--><b>%s</b></span><!--LINK-->\n<br/><table class='exportStats'>\n<tr>\n", shift @lines);
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
   foreach my $th (split ',', shift @lines)
   {

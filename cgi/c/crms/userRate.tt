@@ -1,13 +1,19 @@
 [% INCLUDE header.tt    %]
 [% INCLUDE homeLink.tt  %]
 
+<hr width="25%" align="left"/>
 [% user = crms.get('user') %]
 
-[% crms.CreateStatsReport( user, 0, 0 ) %]
+[% crms.CreateStatsReport( user, 0, 0, year ) %]
 <span class="smallishText">*Does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews.</span>
 <br/><br/>
 [% sql = "SELECT COUNT(*) FROM reviews WHERE user='$user'" %]
 <b>Reviews Awaiting Verdict: [% crms.SimpleSqlGet(sql) %]</b>
-
+<br/><br/>
+<a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;" id="[% user %]a" onclick='toggleVisibility("[% user %]");'>Show 2009</a><br/>
+<div id="[% user %]" style="display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;">
+[% crms.CreateStatsReport(id, 0, 1, 2009) %]
+<br/>
+</div>
 [% INCLUDE footer.tt %]
 
