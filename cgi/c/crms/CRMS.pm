@@ -2564,6 +2564,13 @@ sub GetTheYear
   return ($self->GetTheYearMonth())[0];
 }
 
+sub GetTheMonth
+{
+  my $self = shift;
+  
+  return ($self->GetTheYearMonth())[1];
+}
+
 sub GetTheYearMonth
 {
 
@@ -2662,14 +2669,6 @@ sub CreateExportData
   my $dbh = $self->get( 'dbh' );
   $year = ($self->GetTheYearMonth())[0] unless $year;
   my ($y,$m) = $self->GetTheYearMonth();
-  # If not doing current month, and current month is January, there is no data.
-  # So we need to bump now to December of last year.
-  if (!$cumulative && !$doCurrentMonth && $m eq '01' && $y eq $year)
-  {
-    $year--;
-    $m = '12';
-    $doCurrentMonth = 1;
-  }
   my $now = "$year-$m";
   my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear($year);
   my $label = ($cumulative)? "CRMS Project Cumulative" : "Cumulative $year";
@@ -3015,7 +3014,8 @@ sub CreateExportStatusReport
   my @lines = split "\n", $data;
   my $title = shift @lines;
   $title =~ s/\s/&nbsp;/g;
-  my $report = "<h3>$title</h3>\n";
+  my $url = sprintf("<a href='?p=determinationStats&amp;startDate=$start&amp;endDate=$end&amp;%sdownload=1&amp;target=_blank'>Download</a>",($monthly)?'monthly=on&amp;':'');
+  my $report = "<h3>$title&nbsp;&nbsp;&nbsp;&nbsp;$url</h3>\n";
   $report .= "<table class='exportStats'>\n";
   $report .= "<tr><th/><th colspan='4'><span class='major'>Counts</span></th><th colspan='3'><span class='total'>Percentages</span></th></tr>\n";
   shift @lines; # titles
@@ -3090,6 +3090,7 @@ sub CreateExportStatusGraph
       my @line = split "\t", $line;
       my $date = shift @line;
       next if $date eq 'Total';
+      next if $date =~ m/Total/ and !$monthly;
       $date =~ s/Total\s//;
       push @usedates, $date if $status == 4;
       my $count = $line[$status-4];
