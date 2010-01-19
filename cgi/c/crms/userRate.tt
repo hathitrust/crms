@@ -1,7 +1,7 @@
 [% INCLUDE header.tt    %]
 [% INCLUDE homeLink.tt  %]
 
-<hr width="25%" align="left"/>
+<hr width="25%" align="left"/><br/>
 [% user = crms.get('user') %]
 
 [% crms.CreateStatsReport( user, 0, 0, year ) %]
