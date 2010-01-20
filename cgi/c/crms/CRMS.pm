@@ -2683,19 +2683,18 @@ sub CreateExportData
     my %cats = ('pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pdus/cdpp' => 0, 'ic/ren' => 0, 'ic/cdpp' => 0,
                 'All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0,
                 'Status 4' => 0, 'Status 6' => 0, 'Status 6' => 0);
-    my $mintime = $date . '-01 00:00:00';
-    my $maxtime = $date . '-31 23:59:59';
-    my $sql = qq{SELECT attr,reason,status FROM $CRMSGlobals::historicalreviewsTable h1 WHERE } .
-              qq{ time=(SELECT max(h2.time) FROM $CRMSGlobals::historicalreviewsTable h2 WHERE h1.id=h2.id) AND } .
-              qq{ (status=4 OR status=5 OR status=6) AND legacy=0 AND time >= '$mintime' AND time <= '$maxtime'};
+    my $mintime = $date . (($cumulative)? '-01-01 00:00:00':'-01 00:00:00');
+    my $maxtime = $date . (($cumulative)? '-12-31 00:00:00':'-31 23:59:59');
+    my $sql = "SELECT e.id,e.time,e.attr,e.reason FROM exportdata e WHERE e.time >= '$mintime' AND e.time <= '$maxtime'";
+    #print "$sql<br/>\n";
     my $rows = $dbh->selectall_arrayref( $sql );
     foreach my $row ( @{$rows} )
     {
-      my $attr = int($row->[0]);
-      my $reason = int($row->[1]);
-      my $status = int($row->[2]);
-      my $code = $self->GetCodeFromAttrReason($attr, $reason);
-      my $cat = $self->GetAttrReasonCom($code);
+      my $id = $row->[0];
+      my $time = $row->[1];
+      my $attr = $row->[2];
+      my $reason = $row->[3];
+      my $cat = "$attr/$reason";
       $cat = 'All UND/NFI' if $cat eq 'und/nfi';
       if (exists $cats{$cat} or $cat eq 'All UND/NFI')
       {
@@ -2703,8 +2702,15 @@ sub CreateExportData
         my $allkey = 'All ' . uc substr($cat,0,2);
         $cats{$allkey}++ if exists $cats{$allkey};
       }
-      $cat = 'Status '.$status;
-      $cats{$cat}++;
+      $sql = "SELECT status FROM historicalreviews WHERE id='$id' AND time < '$time' AND time >= '$mintime' AND time <= '$maxtime'";
+      #print "$sql<br/>\n";
+      my $rows2 = $dbh->selectall_arrayref( $sql );
+      foreach my $row2 ( @{$rows2} )
+      {
+        my $status = $row2->[0];
+        $cats{'Status '.$status}++;
+        last;
+      }
     }
     for my $cat (keys %cats)
     {
