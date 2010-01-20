@@ -101,7 +101,7 @@ Only changes status of items in queue. Does not try to move to historical or exp
     [% class = (class)? 0:1 %]
   [% END %]
   [% blah = crms.ClearErrors() %]
-  </table>
+  </table><br/>
 [% END %]
 
 [% # Disable this in production -- too dangerous %]
