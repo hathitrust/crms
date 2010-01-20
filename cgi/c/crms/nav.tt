@@ -1,0 +1,44 @@
+<div>
+<ul id="suckerfish">
+	<li><a href="#">Reviewer</a>
+		<ul>
+			<li><a href="crms">Home</a></li>
+			<li><a href="crms?p=review">Review</a></li>
+			<li><a href="crms?p=editReviews">Edit&nbsp;Unprocessed&nbsp;Reviews</a></li>
+			<li><a href="crms?p=adminHistoricalReviews">View&nbsp;Historical&nbsp;Reviews</a></li>
+      <li><a href="crms?p=userRate">View&nbsp;Your&nbsp;Review&nbsp;Rate</a></li>
+      <li><a href="/c/crms/UseCases.html" target="_blank">Use&nbsp;Cases</a></li>
+		</ul>
+	</li>
+  [% IF crms.IsUserAdmin %]
+	<li><a href="#">Admin</a>
+		<ul>
+			<li><a href="#"><b>Expert</b></a>
+        <ul>
+          <li><a href="crms?p=expert">Expert&nbsp;Review</a></li>
+          <li><a href="crms?p=undReviews"><code>und/nfi</code>&nbsp;Items</a></li>
+        </ul>
+      </li>
+      <li><a href="#"><b>Queue</b></a>
+        <ul>
+          <li><a href="crms?p=queue">Queue&nbsp;Search</a></li>
+          <li><a href="crms?p=queueStatus">Queue&nbsp;Status</a></li>
+          <li><a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a></li>
+          <li><a href="crms?p=adminQueue">Manage&nbsp;Queue</a></li>
+        </ul>
+      </li>
+      <li><a href="#"><b>Users</b></a>
+        <ul>
+          <li><a href="crms?p=adminUser">Administer&nbsp;Accounts</a></li>
+          <li><a href="crms?p=adminUserRate">View&nbsp;Review&nbsp;Rates</a></li>
+        </ul>
+      </li>
+      <li><a href="crms?p=adminReviews">View&nbsp;All&nbsp;Active&nbsp;Reviews</a></li>
+      <li><a href="crms?p=exportStats">Export&nbsp;Statistics</a></li>
+      <li><a href="crms?p=determinationStats">Determinations&nbsp;Breakdown</a></li>
+      <li><a href="crms?p=rights">Query&nbsp;Rights&nbsp;DB</a></li>
+		</ul>
+	</li>
+  [% END %]
+</ul>
+</div><br/><br/><br/>
