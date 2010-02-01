@@ -5867,5 +5867,42 @@ sub RightsQuery
   return $self->get('sdr_dbh')->selectall_arrayref($sql);
 }
 
+# Returns a reference to an array with (time,status,message,and 1/0 for whether it is using the canned messages)
+sub GetSystemStatus
+{
+  my $self = shift;
+  
+  my $sql = 'SELECT time,status,message FROM systemstatus LIMIT 1';
+  my @vals = @{@{$self->get('dbh')->selectall_arrayref($sql)}[0]};
+  $vals[1] = 'normal' unless $vals[1];
+  $vals[2] = '' unless $vals[2];
+  push @vals, 0;
+  if ($vals[2] eq '')
+  {
+    if ($vals[1] eq 'down')
+    {
+      $vals[2] = 'The CRMS is down until further notice.';
+      $vals[3] = 1;
+    }
+    elsif ($vals[1] eq 'partial')
+    {
+      $vals[2] = 'The CRMS has limited functionality. The review and admin add to queue pages are disabled.';
+      $vals[3] = 1;
+    }
+  }
+  return \@vals;
+}
+
+sub SetSystemStatus
+{
+  my $self   = shift;
+  my $status = shift;
+  my $msg    = shift;
+  
+  my $sql = 'DELETE FROM systemstatus';
+  $self->PrepareSubmitSql($sql);
+  $sql = "INSERT INTO systemstatus (status,message) VALUES ('$status','$msg')";
+  $self->PrepareSubmitSql($sql);
+}
 
 1;

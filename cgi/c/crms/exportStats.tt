@@ -1,48 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <meta http-equiv="Content-type" content="text/html;charset=utf-8"/>
-    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
-    [% page = cgi.param('p') %]
-    [% dev = crms.get('dev') %]
-    [% fulltitle = title %]
-    [% IF dev %]
-      [% fulltitle = fulltitle _ ' - ' _ 'Development' %]
-      [% IF dev != 1 %]
-        [% fulltitle = fulltitle _ ' (' _ dev _ ')' %]
-      [% ELSE %]
-      [% END %]
-    [% END %]
-    <title>[% fulltitle %] - [% crms.PageToEnglish(page) %]</title>
-    <script type="text/javascript" src="/c/crms/swfobject.js"></script>
-    <script type="text/javascript">
-<!--
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=0")});
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=1&year=2010")});
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=2&year=2010")});
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart3", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=0&year=2009")});
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart4", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=1&year=2009")});
-// -->
-</script>
-  </head>
-  <body>
-    <div class="pages" id="homePage">
-    <div style="float:left; margin-right:10em;"><img src="/c/crms/crms.png" alt="CRMS Logo"/></div>
-    [%# INCLUDE nav.tt %]
-    <div id="version">Version 1.3.8</div>
-    <br/><br/>
-    <div style="clear:both;">
-    <span class="greeting">Hello [% crms.GetUserName() %]</span>
-    <a href="crms?p=Logout"> Logout</a>
-    </div>
-<br/><br/>
-
+[% INCLUDE header.tt %]
 [% INCLUDE adminNav.tt  %]
 <br/>
 <h2 style="margin-left:390px">Statistics for Exported Determinations</h2>

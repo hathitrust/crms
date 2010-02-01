@@ -1,7 +1,6 @@
-[% INCLUDE headerReview.tt %]
+[% INCLUDE header.tt %]
 
 [% error    = cgi.param('errorMsg')   %]
-
 
 [% expert    = 0 %]
 [% isEdit    = 0 %]

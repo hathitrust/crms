@@ -119,7 +119,10 @@ if ( $cgi->param('p') eq 'confirmReview' )
     my $errorMsg1 = $crms->HasItemBeenReviewedByTwoReviewers( $id, $user );
 
     my $errorMsg = $crms->ValidateSubmission2( $rights, $reason, $comment, $category, $renNum, $renDate, $user );
-  
+    
+    my $stat = $crms->GetSystemStatus();
+    # Actually, this never gets displayed, but that's OK
+    $errorMsg1 = 'The CRMS is not currently accepting reviews. Please Cancel.' if $stat->[0] != 'normal';
     if ( ( $errorMsg ) || ( $errorMsg1 ) )
     {
       #clear the cgi

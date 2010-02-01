@@ -20,8 +20,32 @@ function toggleVisibility(id)
 }
 -->
     </script>
-    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
+    [% IF cgi.param('navRight') %]
+      <link rel="stylesheet" type="text/css" href="/c/crms/css/reviewRight.css"/>
+    [% ELSE %]
+      <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
+    [% END %]
     [% page = cgi.param('p') %]
+    [% IF page == 'exportStats' %]
+      <script type="text/javascript" src="/c/crms/swfobject.js"></script>
+      <script type="text/javascript">
+<!--
+swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "400", "300", "9.0.0",
+                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=0")});
+swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "400", "300", "9.0.0",
+                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=1&year=2010")});
+swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "400", "300", "9.0.0",
+                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=2&year=2010")});
+swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart3", "400", "300", "9.0.0",
+                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=0&year=2009")});
+swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart4", "400", "300", "9.0.0",
+                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=1&year=2009")});
+// -->
+      </script>
+    [% END %]
+    [% IF page == 'review' %]
+      [% INCLUDE reviewJs.tt %]
+    [% END %]
     [% IF page.search('(?i)reviews') || page == 'expert' || page == 'queue' %]
     <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
     [% END %]
@@ -31,13 +55,15 @@ function toggleVisibility(id)
       [% fulltitle = fulltitle _ ' - ' _ 'Development' %]
       [% IF dev != 1 %]
         [% fulltitle = fulltitle _ ' (' _ dev _ ')' %]
-      [% ELSE %]
       [% END %]
     [% END %]
     <title>[% fulltitle %] - [% crms.PageToEnglish(page) %]</title>
   </head>
   <body>
-  <div class="pages" id="homePage">
+[% r = crms.GetSystemStatus() %]
+
+[% IF page != 'review' %]
+    <div class="pages" id="homePage">
     <div style="float:left; margin-right:10em;"><img src="/c/crms/crms.png" alt="CRMS Logo"/></div>
     [% INCLUDE nav.tt %]
     <div id="version">Version 1.3.8</div>
@@ -45,7 +71,27 @@ function toggleVisibility(id)
     <div style="clear:both;">
     <span class="greeting">Hello [% crms.GetUserName() %]</span>
     <a href="crms?p=Logout"> Logout</a>
-    </div>
-<br/>
-<br/>
-
+    </div><br/><br/>
+[% ELSE %]
+    <div id="homePage">
+[% END %]
+[% # Don't display the notice if this is the review page and situation normal %]
+[% IF r.2 && (page != 'review' || r.1 != 'normal') %]
+  [% blah = r.2.replace('\s','&nbsp;') %]
+  <table style="text-align:center;width:654px;height:115px;border:1px solid #000000;font-size:1.8em;background-color:#FFFFFF;position:absolute;top:20px;left:20px;">
+  <tr><td>[% r.2 %]</td></tr>
+  </table>
+[% END %]
+[% IF r.1 != 'normal' %]
+  [% page = cgi.param('p') %]
+  [% IF page != 'debug' %]
+    [% IF r.1 == 'down' %]
+      [% INCLUDE footer.tt %]
+      [% STOP %]
+    [% END %]
+    [% IF r.1 == 'partial' && (page == 'queueAdd' || page == 'review') %]
+      [% INCLUDE footer.tt %]
+      [% STOP %]
+    [% END %]
+  [% END %]
+[% END %]

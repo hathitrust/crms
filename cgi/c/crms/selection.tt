@@ -64,7 +64,7 @@ Restrict selection:<br/>
 <input type="text" id="startDate" name="startDate" value="[% startDate %]" onclick="datePickerController.show('startDate');"
        onblur="datePickerController.hide('startDate');"/>
 <script type="text/javascript">
-// <![CDATA[       
+// <![CDATA[
   var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
   datePickerController.createDatePicker(opts);
 // ]]>
@@ -75,7 +75,7 @@ Restrict selection:<br/>
 <input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
        onblur="datePickerController.hide('endDate');"/>
 <script type="text/javascript">
-// <![CDATA[       
+// <![CDATA[
   var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };       
   datePickerController.createDatePicker(opts);
 // ]]>

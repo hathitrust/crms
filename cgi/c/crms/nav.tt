@@ -37,7 +37,8 @@
       <li><a href="crms?p=exportStats">Export&nbsp;Statistics</a></li>
       <li><a href="crms?p=determinationStats">Determinations&nbsp;Breakdown</a></li>
       <li><a href="crms?p=rights">Query&nbsp;Rights&nbsp;DB</a></li>
-		</ul>
+      <li><a href="crms?p=debug">The&nbsp;Secret&nbsp;Debug&nbsp;Page</a></li>
+    </ul>
 	</li>
   [% END %]
 </ul>
