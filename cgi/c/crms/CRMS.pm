@@ -690,7 +690,7 @@ sub IsItemInQueue
 sub TranslateCategory
 {
     my $self     = shift;
-    my $category = shift;
+    my $category = uc shift;
 
     if    ( $category eq 'COLLECTION' ) { return 'Collection'; }
     elsif ( $category =~ m/LANG.*/ ) { return 'Language'; }
@@ -968,7 +968,7 @@ sub SubmitHistReview
     #if ( ! $self->ValidateReason( $reason ) )                 { $self->Logit("reason check failed");      return 0; }
     if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->SetError('attr/reason check failed'); return 0; }
     # FIXME: using annekz is a hack, but is needed since 'esaran' is not in the users table.
-    my $err = $self->ValidateSubmission2($attr, $reason, $note, $category, $renNum, $renDate, 'annekz');
+    my $err = $self->ValidateSubmissionHistorical($attr, $reason, $note, $category, $renNum, $renDate);
     if ($err) { $self->SetError($err); return 0; }
     ## do some sort of check for expert submissions
 
@@ -3656,7 +3656,7 @@ sub ValidateSubmission2
         }
     }
 
-    ## pd/ren requires a ren number
+    ## pd/ren should not have a ren number or date
     if ( $attr == 1 && $reason == 7 &&  ( ( $renNum ) || ( $renDate ) )  )
     {
         $errorMsg .= 'pd/ren should not include renewal info.';
@@ -3724,6 +3724,96 @@ sub ValidateSubmission2
     return $errorMsg;
 }
 
+# Returns an error message, or an empty string if no error.
+# Relaxes constraints on ic/ren needing renewal id and date
+sub ValidateSubmissionHistorical
+{
+    my $self = shift;
+    my ($attr, $reason, $note, $category, $renNum, $renDate) = @_;
+    my $errorMsg = '';
+
+    my $noteError = 0;
+
+    if ( ( ! $attr ) || ( ! $reason ) )
+    {
+      $errorMsg .= 'rights/reason designation required.';
+    }
+
+
+    ## und/nfi
+    if ( $attr == 5 && $reason == 8 && ( ( ! $note ) || ( ! $category ) )  )
+    {
+        $errorMsg .= 'und/nfi must include note category and note text.';
+        $noteError = 1;
+    }
+
+    ## pd/ren should not have a ren number or date
+    #if ( $attr == 1 && $reason == 7 &&  ( ( $renNum ) || ( $renDate ) )  )
+    #{
+    #    $errorMsg .= 'pd/ren should not include renewal info.';
+    #}
+
+    ## pd/ncn requires a ren number
+    if (  $attr == 1 && $reason == 2 && ( ( $renNum ) || ( $renDate ) ) )
+    {
+        $errorMsg .= 'pd/ncn should not include renewal info.';
+    }
+
+
+    ## pd/cdpp requires a ren number
+    if (  $attr == 1 && $reason == 9 && ( ( $renNum ) || ( $renDate )  ) )
+    {
+        $errorMsg .= 'pd/cdpp should not include renewal info.';
+    }
+
+    if ( $attr == 1 && $reason == 9 && ( ( ! $note ) || ( ! $category )  )  )
+    {
+        $errorMsg .= 'pd/cdpp must include note category and note text.';
+        $noteError = 1;
+    }
+
+    ## ic/cdpp requires a ren number
+    if (  $attr == 2 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
+    {
+        $errorMsg .= qq{ic/cdpp should not include renewal info.  };
+    }
+
+    if ( $attr == 2 && $reason == 9 && ( ( ! $note )  || ( ! $category ) )  )
+    {
+        $errorMsg .= 'ic/cdpp must include note category and note text.';
+        $noteError = 1;
+    }
+
+    if ( $noteError == 0 )
+    {
+      if ( ( $category )  && ( ! $note ) )
+      {
+        $errorMsg .= 'must include a note if there is a category.';
+      }
+      elsif ( ( $note ) && ( ! $category ) )
+      {
+        $errorMsg .= 'must include a category if there is a note.';
+      }
+    }
+
+    ## pdus/cdpp requires a note and a 'Foreign' or 'Translation' category, and must not have a ren number
+    if ($attr == 9 && $reason == 9)
+    {
+      if (( $renNum ) || ( $renDate ))
+      {
+        $errorMsg .= 'rights/reason conflicts with renewal info.';
+      }
+      if (( !$note ) || ( !$category ))
+      {
+        $errorMsg .= 'note category/note text required.';
+      }
+      if ($category ne 'Foreign Pub' && $category ne 'Translation')
+      {
+        $errorMsg .= 'pdus/cdpp requires note category "Foreign Pub" or "Translation".';
+      }
+    }
+    return $errorMsg;
+}
 
 sub ValidateAttr
 {
