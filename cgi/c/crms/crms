@@ -122,7 +122,8 @@ if ( $cgi->param('p') eq 'confirmReview' )
     
     my $stat = $crms->GetSystemStatus();
     # Actually, this never gets displayed, but that's OK
-    $errorMsg1 = 'The CRMS is not currently accepting reviews. Please Cancel.' if $stat->[0] != 'normal';
+    my $status = $stat->[0];
+    $errorMsg1 = "The CRMS is not currently accepting reviews (status '$status'). Please Cancel." if $stat->[1] != 'normal';
     if ( ( $errorMsg ) || ( $errorMsg1 ) )
     {
       #clear the cgi
