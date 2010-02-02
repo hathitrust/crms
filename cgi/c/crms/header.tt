@@ -65,7 +65,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart4", "400", "300", "9.0.
 [% IF page != 'review' %]
     <div class="pages" id="homePage">
     <div style="float:left; margin-right:10em;"><img src="/c/crms/crms.png" alt="CRMS Logo"/></div>
-    [% INCLUDE nav.tt %]
+    [%# INCLUDE nav.tt %]
     <div id="version">Version 1.3.8</div>
     <br/><br/>
     <div style="clear:both;">
