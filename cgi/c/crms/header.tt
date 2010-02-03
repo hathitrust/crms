@@ -26,6 +26,10 @@ function toggleVisibility(id)
       <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
     [% END %]
     [% page = cgi.param('p') %]
+    [% IF page == 'review' %][% INCLUDE reviewJs.tt %][% END %]
+    [% IF page.search('(?i)reviews') || page == 'expert' || page == 'queue'  || page == 'determinationStats' %]
+      <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
+    [% END %]
     [% IF page == 'exportStats' %]
       <script type="text/javascript" src="/c/crms/swfobject.js"></script>
       <script type="text/javascript">
@@ -43,11 +47,32 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart4", "400", "300", "9.0.
 // -->
       </script>
     [% END %]
-    [% IF page == 'review' %]
-      [% INCLUDE reviewJs.tt %]
-    [% END %]
-    [% IF page.search('(?i)reviews') || page == 'expert' || page == 'queue' %]
-    <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
+    [% IF page == 'determinationStats' %]
+      <script type="text/javascript" src="/c/crms/swfobject.js"></script>
+      <script type="text/javascript">
+<!--
+function gup( name )
+{
+  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+  var regexS = "[\\?&]"+name+"=([^&#]*)";
+  var regex = new RegExp( regexS );
+  var results = regex.exec( window.location.href );
+  if( results == null )
+    return "";
+  else
+    return results[1];
+}
+start = gup('startDate');
+end = gup('endDate');
+monthly = gup('monthly');
+str = "/cgi/c/crms/getExportStats?type=graph&c=3&startDate=" + start + "&endDate=" + end + "&monthly=" + monthly;
+swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "800", "300", "9.0.0",
+                   "expressInstall.swf", {"data-file":escape(str)});
+str = "/cgi/c/crms/getExportStats?type=graph&c=3&startDate=2009-0101&endDate=0&monthly=1&title=Project Determinations Breakdown";
+swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.0",
+                   "expressInstall.swf", {"data-file":escape(str)});
+// -->
+      </script>
     [% END %]
     [% dev = crms.get('dev') %]
     [% fulltitle = title %]
@@ -79,17 +104,22 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart4", "400", "300", "9.0.
 [% IF r.2 && (page != 'review' || r.1 != 'normal') %]
   [% blah = r.2.replace('\s','&nbsp;') %]
   <table style="text-align:center;width:654px;height:115px;border:1px solid #000000;font-size:1.8em;background-color:#FFFFFF;position:absolute;top:20px;left:20px;">
-  <tr><td>[% r.2 %]</td></tr>
+  <tr><td>[% r.2 %]
+   [% IF page == 'review' %]&nbsp;&nbsp;&nbsp;<a href="crms">Home</a>[% END %]
+   <br/><span style="font-size:0.5em;">Status last modified [% r.0 %]</span>
+  </td></tr>
   </table>
 [% END %]
 [% IF r.1 != 'normal' %]
   [% page = cgi.param('p') %]
   [% IF page != 'debug' %]
     [% IF r.1 == 'down' %]
+      [% IF page == 'queueAdd' %]|| <a href="crms?p=admin">Admin page</a> ||[% END %]
       [% INCLUDE footer.tt %]
       [% STOP %]
     [% END %]
     [% IF r.1 == 'partial' && (page == 'queueAdd' || page == 'review') %]
+      [% IF page == 'queueAdd' %]|| <a href="crms?p=admin">Admin page</a> ||[% END %]
       [% INCLUDE footer.tt %]
       [% STOP %]
     [% END %]
