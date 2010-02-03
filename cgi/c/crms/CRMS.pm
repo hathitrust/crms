@@ -2980,7 +2980,7 @@ sub CreateExportStatusData
     {
       my $title = $i+4;
       $sql = 'SELECT count(DISTINCT e.id) FROM exportdata e INNER JOIN historicalreviews r ON e.id=r.id WHERE ' .
-             "date(e.time) >= '$date1' AND date(e.time) <= '$date2' AND r.status=$title";
+             "r.legacy=0 AND date(e.time)>='$date1' AND date(e.time)<='$date2' AND r.status=$title";
       #print "$sql<br/>\n";
       my $count = $self->SimpleSqlGet($sql);
       $line[$i] = $count;
@@ -5957,27 +5957,30 @@ sub RightsQuery
   return $self->get('sdr_dbh')->selectall_arrayref($sql);
 }
 
-# Returns a reference to an array with (time,status,message,and 1/0 for whether it is using the canned messages)
+# Returns a reference to an array with (time,status,message)
 sub GetSystemStatus
 {
   my $self = shift;
   
+  my @vals = ('forever','normal','');
   my $sql = 'SELECT time,status,message FROM systemstatus LIMIT 1';
-  my @vals = @{@{$self->get('dbh')->selectall_arrayref($sql)}[0]};
-  $vals[1] = 'normal' unless $vals[1];
-  $vals[2] = '' unless $vals[2];
-  push @vals, 0;
-  if ($vals[2] eq '')
+  my $r = $self->get('dbh')->selectall_arrayref($sql);
+  my $row = $r->[0];
+  if ($row)
   {
-    if ($vals[1] eq 'down')
+    $vals[0] = $row->[0] if $row->[0];
+    $vals[1] = $row->[1] if $row->[1];;
+    $vals[2] = $row->[2] if $row->[2];
+    if ($vals[2] eq '')
     {
-      $vals[2] = 'The CRMS is down until further notice.';
-      $vals[3] = 1;
-    }
-    elsif ($vals[1] eq 'partial')
-    {
-      $vals[2] = 'The CRMS has limited functionality. The review and admin add to queue pages are disabled.';
-      $vals[3] = 1;
+      if ($vals[1] eq 'down')
+      {
+        $vals[2] = 'The CRMS is currently unavailable until further notice.';
+      }
+      elsif ($vals[1] eq 'partial')
+      {
+        $vals[2] = 'The CRMS has limited functionality. The review and admin add to queue pages are disabled.';
+      }
     }
   }
   return \@vals;
@@ -5991,7 +5994,8 @@ sub SetSystemStatus
   
   my $sql = 'DELETE FROM systemstatus';
   $self->PrepareSubmitSql($sql);
-  $sql = "INSERT INTO systemstatus (status,message) VALUES ('$status','$msg')";
+  $msg = $self->get('dbh')->quote($msg);
+  my $sql = "INSERT INTO systemstatus (status,message) VALUES ('$status',$msg)";
   $self->PrepareSubmitSql($sql);
 }
 
