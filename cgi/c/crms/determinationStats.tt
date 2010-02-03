@@ -1,60 +1,10 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <meta http-equiv="Content-type" content="text/html;charset=utf-8"/>
-    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
-    <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
-    [% page = cgi.param('p') %]
-    [% dev = crms.get('dev') %]
-    [% fulltitle = title %]
-    [% IF dev %]
-      [% fulltitle = fulltitle _ ' - ' _ 'Development' %]
-      [% IF dev != 1 %]
-        [% fulltitle = fulltitle _ ' (' _ dev _ ')' %]
-      [% ELSE %]
-      [% END %]
-    [% END %]
-    <title>[% fulltitle %] - [% crms.PageToEnglish(page) %]</title>
-    <script type="text/javascript" src="/c/crms/swfobject.js"></script>
-    <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
-    <script type="text/javascript">
-<!--
-function gup( name )
-{
-  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
-  var regexS = "[\\?&]"+name+"=([^&#]*)";
-  var regex = new RegExp( regexS );
-  var results = regex.exec( window.location.href );
-  if( results == null )
-    return "";
-  else
-    return results[1];
-}
-start = gup('startDate');
-end = gup('endDate');
-monthly = gup('monthly');
-str = "/cgi/c/crms/getExportStats?type=graph&c=3&startDate=" + start + "&endDate=" + end + "&monthly=" + monthly;
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "800", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape(str)});
-str = "/cgi/c/crms/getExportStats?type=graph&c=3&startDate=2009-0101&endDate=0&monthly=1&title=Project Determinations Breakdown";
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape(str)});
-// --> 
-    </script>
-  </head>
-  <body>
-    <div class="pages" id="homePage">
-    <img src="/c/crms/crms.png" alt="CRMS Logo"/><br/><br/>
-    <font size="5"><strong>Hello [% crms.GetUserName %]</strong></font>
-    <a href="crms?p=Logout"> Logout</a>
-<br/><br/>
-
+[% INCLUDE header.tt %]
 [% INCLUDE adminNav.tt %]
-[% p = cgi.param('p') %]
+[% page = cgi.param('p') %]
 [% monthly = cgi.param('monthly') %]
 [% startDate = cgi.param('startDate') %]
 [% endDate = cgi.param('endDate') %]
+<script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
 <br/>
 
 <div style="position:relative;border-style:solid;width:32em;border-width:1px;padding:10px;">
