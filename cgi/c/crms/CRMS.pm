@@ -2942,7 +2942,7 @@ sub CreateExportStatusData
     $currmonth = $m;
     push @dates, $date;
   }
-  if (!$justThisMonth)
+  if (scalar @dates && !$justThisMonth)
   {
     my $startEng = $self->YearMonthToEnglish(substr($dates[0],0,7));
     my $endEng = $self->YearMonthToEnglish(substr($dates[-1],0,7));
@@ -5963,7 +5963,7 @@ sub GetSystemStatus
   my $self = shift;
   
   my @vals = ('forever','normal','');
-  my $sql = 'SELECT time,status,message FROM systemstatus LIMIT 1';
+  my $sql = 'SELECT DATE_FORMAT(time, "%a, %M %e, %Y at %l:%i %p"),status,message FROM systemstatus LIMIT 1';
   my $r = $self->get('dbh')->selectall_arrayref($sql);
   my $row = $r->[0];
   if ($row)
@@ -5979,7 +5979,7 @@ sub GetSystemStatus
       }
       elsif ($vals[1] eq 'partial')
       {
-        $vals[2] = 'The CRMS has limited functionality. The review and admin add to queue pages are disabled.';
+        $vals[2] = 'The CRMS has limited functionality. The "review" and "add to queue" (administrators only) pages are currently disabled until further notice.';
       }
     }
   }
