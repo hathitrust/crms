@@ -71,7 +71,7 @@
     </tr>
   </table>
 
-  <div id="RightsCont" class="navbottom">
+  <div id="RightsCont" class="rightscont">
   <div id="RightsReason">
   <strong>&nbsp;Rights/Reason: </strong>
   <!-- &nbsp;&nbsp;<a href="/c/crms/help.html#rights" target="_blank">help</a> -->
