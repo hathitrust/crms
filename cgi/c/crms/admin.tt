@@ -25,9 +25,7 @@
   || <a href="crms?p=queueAdd">add to queue</a>
   || <a href="crms?p=rights">query rights DB</a>
   || <a href="crms?p=determinationStats">determinations&nbsp;breakdown</a>
-  [% IF crms.IsUserAdmin(user) %]
   || <a href="crms?p=debug">the&nbsp;secret&nbsp;debug&nbsp;page</a>
-  [% END %]
   ||
 </div>
 
