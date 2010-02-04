@@ -131,7 +131,7 @@
         </table>
 
       </div>
-      <div class="navbottom">
+      <div class="navbottom" style="border-collapse:collapse;">
         [% comment = "" %]
         [% IF crms.IsUserExpert(user) && editing %]
           [% IF crms.HasItemBeenReviewedByAnotherExpert(barcode,user) %]
@@ -150,7 +150,7 @@
           </tr>
         </table>
         [% IF crms.IsUserExpert(user) %]
-          <table class="nav" style="border-bottom:0px">
+          <table class="nav">
           <tr><td><span style="font-size:1.1em">Priority [% priority %]</span></td></tr>
           [% totalReviews = crms.GetReviewsCount('Identifier', barcode, '', '', '', '', '', 'adminHistoricalReviews', 0) %]
           [% IF totalReviews > 0 %]
@@ -166,6 +166,12 @@
           [% END %]
           </table>
         [% END %]
+        [% status = crms.GetSystemStatus() %]
+        [% IF status.2 %]
+          <table class="nav">
+          <tr><td><span style="font-size:1.3em;font-weight:bold;color:#990000;">[% status.2 %]</span></td></tr>
+          </table>
+        [% END %]
       </div>
     </div>
     [%# the frame (Stanford, HT, Cat...) %]
@@ -173,6 +179,6 @@
       <iframe frameborder="0" width="100%" height="100%" id="topFrame" name="topFrame" src="[% ptLink %]"></iframe>
       <iframe frameborder="0" width="100%" height="0%"   id="bFrame"   name="bFrame"   src="[% titleLink %]"></iframe>
     </div>
-
+  </div>
 
 [% INCLUDE footer.tt %]
