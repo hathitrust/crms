@@ -94,6 +94,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
     <div id="version">Version 1.3.8</div>
     <br/><br/>
     <div style="clear:both;">
+    [% IF r.2 %]<br/>[% END %]
     <span class="greeting">Hello [% crms.GetUserName() %]</span>
     <a href="crms?p=Logout"> Logout</a>
     </div><br/><br/>
@@ -103,7 +104,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
 [% # Don't display the notice if this is the review page and situation normal %]
 [% IF r.2 && (page != 'review' || r.1 != 'normal') %]
   [% blah = r.2.replace('\s','&nbsp;') %]
-  <table style="text-align:center;width:654px;height:115px;border:1px solid #000000;font-size:1.8em;background-color:#FFFFFF;position:absolute;top:20px;left:20px;">
+  <table style="text-align:center;width:654px;height:115px;border:1px solid #AA0000;font-size:1.8em;background-color:#EEEEFF;position:absolute;top:20px;left:20px;">
   <tr><td>[% r.2 %]
    [% IF page == 'review' %]&nbsp;&nbsp;&nbsp;<a href="crms">Home</a>[% END %]
    <br/><span style="font-size:0.5em;">Status last modified [% r.0 %]</span>
@@ -115,6 +116,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
   [% IF page != 'debug' %]
     [% IF r.1 == 'down' %]
       [% IF page == 'queueAdd' %]|| <a href="crms?p=admin">Admin page</a> ||[% END %]
+      [% IF crms.IsUserExpert(user) %]|| <a href="crms?p=debug">The Secret Debug Page</a> ||[% END %]
       [% INCLUDE footer.tt %]
       [% STOP %]
     [% END %]
