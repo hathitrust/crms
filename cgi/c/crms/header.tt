@@ -102,7 +102,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
     <div id="homePage">
 [% END %]
 [% # Don't display the notice if this is the review page and situation normal %]
-[% IF r.2 && (page != 'review' || r.1 != 'normal') %]
+[% IF r.2 && (page != 'review' || r.1 != 'normal') && page != 'debug' %]
   [% blah = r.2.replace('\s','&nbsp;') %]
   <table style="padding:6px;width:820px;height:115px;border:1px solid #AA0000;background-color:#EEEEFF;position:absolute;top:20px;left:20px;">
   <tr><td>
