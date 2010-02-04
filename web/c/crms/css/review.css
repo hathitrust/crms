@@ -55,8 +55,14 @@ body {
 
 .navbottom  {
   text-align:left; 
-  vertical-align:bottom;  
+  vertical-align:bottom;
+}
+
+.rightscont  {
+  text-align:left; 
+  vertical-align:bottom;
   border-bottom: 1px solid #72859a;
+  border-collapse:collapse;
 }
 
 .smallText { font-size:.5em }
