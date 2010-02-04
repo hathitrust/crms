@@ -104,10 +104,12 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
 [% # Don't display the notice if this is the review page and situation normal %]
 [% IF r.2 && (page != 'review' || r.1 != 'normal') %]
   [% blah = r.2.replace('\s','&nbsp;') %]
-  <table style="text-align:center;width:654px;height:115px;border:1px solid #AA0000;font-size:1.8em;background-color:#EEEEFF;position:absolute;top:20px;left:20px;">
-  <tr><td>[% r.2 %]
+  <table style="padding:6px;width:820px;height:115px;border:1px solid #AA0000;background-color:#EEEEFF;position:absolute;top:20px;left:20px;">
+  <tr><td>
+   [% status = (r.1 == 'normal')? 'normal':((r.1 == 'down')? 'unavailable':'partially available') %]
+   <span style="font-size:1.4em;text-align:center;">System status is <b>[% status %]</b>; last modified [% r.0 %]</span><br/><br/>
+   <span style="font-size:1.1em;">[% r.2 %]</span>
    [% IF page == 'review' %]&nbsp;&nbsp;&nbsp;<a href="crms">Home</a>[% END %]
-   <br/><span style="font-size:0.5em;">Status last modified [% r.0 %]</span>
   </td></tr>
   </table>
 [% END %]
