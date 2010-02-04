@@ -118,7 +118,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
   [% IF page != 'debug' %]
     [% IF r.1 == 'down' %]
       [% IF page == 'queueAdd' %]|| <a href="crms?p=admin">Admin page</a> ||[% END %]
-      [% IF crms.IsUserExpert(user) %]|| <a href="crms?p=debug">The Secret Debug Page</a> ||[% END %]
+      [% IF crms.IsUserAdmin(user) %]|| <a href="crms?p=debug">The Secret Debug Page</a> ||[% END %]
       [% INCLUDE footer.tt %]
       [% STOP %]
     [% END %]
