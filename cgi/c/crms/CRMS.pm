@@ -3137,7 +3137,7 @@ sub CreateStatsData
   my $earliest = '';
   my $latest = '';
   my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'All IC', 'ic/ren', 'ic/cdpp', 'All UND/NFI',
-                '__TOT__', '__TOTNE__', '__VAL__', '__MVAL__',
+                '__TOT__', '__TOTNE__', '__VAL__', '__AVAL__', '__MVAL__',
                 'Time Reviewing (mins)', 'Time per Review (mins)','Reviews per Hour', 'Outlier Reviews');
   foreach my $date (@statdates)
   {
@@ -3169,6 +3169,7 @@ sub CreateStatsData
     my ($ok,$oktot) = $self->CountCorrectReviews($user, $mintime . '-01 00:00:00', $maxtime . '-31 23:59:59');
     $stats{'__VAL__'}{$date} = $ok;
     $stats{'__TOTNE__'}{$date} = $oktot;
+    $stats{'__AVAL__'}{$date} = $self->GetAverageCorrect($mintime . '-01 00:00:00', $maxtime . '-31 23:59:59');
     $stats{'__MVAL__'}{$date} = $self->GetMedianCorrect($mintime . '-01 00:00:00', $maxtime . '-31 23:59:59');
   }
   $report .= "\n";
@@ -3195,6 +3196,7 @@ sub CreateStatsData
   my ($ok,$oktot) = $self->CountCorrectReviews($user, $earliest . '-01 00:00:00', $latest . '-31 23:59:59');
   $totals{'__VAL__'} = $ok;
   $totals{'__TOTNE__'} = $oktot;
+  $totals{'__AVAL__'} = $self->GetAverageCorrect($earliest . '-01 00:00:00', $latest . '-31 23:59:59');
   $totals{'__MVAL__'} = $self->GetMedianCorrect($earliest . '-01 00:00:00', $latest . '-31 23:59:59');
   # Project totals
   my %ptotals;
@@ -3224,6 +3226,7 @@ sub CreateStatsData
     my ($ok,$oktot) = $self->CountCorrectReviews($user, $earliest . '-01 00:00:00', $latest . '-31 23:59:59');
     $ptotals{'__VAL__'} = $ok;
     $ptotals{'__TOTNE__'} = $oktot;
+    $ptotals{'__AVAL__'} = $self->GetAverageCorrect($earliest . '-01 00:00:00', $latest . '-31 23:59:59');
     $ptotals{'__MVAL__'} = $self->GetMedianCorrect($earliest . '-01 00:00:00', $latest . '-31 23:59:59');
   }
   
@@ -3239,7 +3242,7 @@ sub CreateStatsData
       $of = $ptotals{'__TOTNE__'} if $title eq '__VAL__';
       my $n = $ptotals{$title};
       $n = 0 unless $n;
-      if ($title eq '__MVAL__')
+      if ($title eq '__MVAL__' || $title eq '__AVAL__')
       {
         $n = sprintf('%.1f%%', $n);
       }
@@ -3259,7 +3262,7 @@ sub CreateStatsData
     $of = $totals{'__TOTNE__'} if $title eq '__VAL__';
     my $n = $totals{$title};
     $n = 0 unless $n;
-    if ($title eq '__MVAL__')
+    if ($title eq '__MVAL__' || $title eq '__AVAL__')
     {
       $n = sprintf('%.1f%%', $n);
     }
@@ -3278,7 +3281,7 @@ sub CreateStatsData
     {
       $n = $stats{$title}{$date};
       $n = 0 if !$n;
-      if ($title eq '__MVAL__')
+      if ($title eq '__MVAL__' || $title eq '__AVAL__')
       {
         $n = sprintf('%.1f%%', $n);
       }
@@ -3332,6 +3335,7 @@ sub CreateStatsReport
     my $title = shift @items;
     next if $title eq '__VAL__'  and ($exp);
     next if $title eq '__MVAL__' and ($exp);
+    next if $title eq '__AVAL__' and ($exp);
     next if $title eq '__TOTNE__' and ($user ne 'all' and !$cumulative);
     next if ($cumulative or $user eq 'all' or $suppressBreakdown) and !exists $majors{$title} and !exists $minors{$title} and $title !~ m/__.+?__/;
     my $class = (exists $majors{$title})? 'major':(exists $minors{$title})? 'minor':'';
@@ -3363,6 +3367,8 @@ sub CreateStatsReport
   $report =~ s/__VAL__/$vtitle/;
   my $mvtitle = 'Median&nbsp;Validation&nbsp;Rate';
   $report =~ s/__MVAL__/$mvtitle/;
+  my $avtitle = 'Average&nbsp;Validation&nbsp;Rate';
+  $report =~ s/__AVAL__/$avtitle/;
   return $report;
 }
 
@@ -5644,25 +5650,26 @@ END
 
 sub CountCorrectReviews
 {
-  my $self = shift;
-  my $user = shift;
+  my $self  = shift;
+  my $user  = shift;
   my $start = shift;
-  my $end = shift;
-  #printf "CountCorrectReviews(%s)\n", join ', ', ($user,$start,$end);
+  my $end   = shift;
+  
   my $type1Clause = sprintf(' AND user IN (%s)', join(',', map {"'$_'"} $self->GetType1Reviewers()));
   my $startClause = ($start)? " AND time>='$start'":'';
   my $endClause = ($end)? " AND time<='$end' ":'';
   my $userClause = ($user eq 'all')? $type1Clause:" AND user='$user'";
   my $sql = "SELECT count(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0 $startClause $endClause $userClause";
   my $total = $self->SimpleSqlGet($sql);
-  #print "$sql => $total\n\n";
+  #print "$sql => $total\n";
   my $correct = $total;
   if (!$self->IsUserExpert($user))
   {
     my $sql = "SELECT count(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0 AND validated=1 $startClause $endClause $userClause";
     $correct = $self->SimpleSqlGet($sql);
-    #print "$sql => $correct\n\n";
+    #print "$sql => $correct\n";
   }
+  #printf "CountCorrectReviews(%s): $correct of $total\n", join ', ', ($user,$start,$end);
   return ($correct,$total);
 }
 
@@ -5706,11 +5713,35 @@ sub GetType1Reviewers
   return map {$_->[0]} @{$dbh->selectall_arrayref( $sql )};
 }
 
+sub GetAverageCorrect
+{
+  my $self  = shift;
+  my $start = shift;
+  my $end   = shift;
+  
+  my @users = $self->GetType1Reviewers();
+  my $tot = 0.0;
+  my $n = 0;
+  foreach my $user (@users)
+  {
+    my ($ncorr,$total) = $self->CountCorrectReviews($user, $start, $end);
+    next unless $total;
+    my $frac = 0.0;
+    eval { $frac = 100.0*$ncorr/$total; };
+    #print " $user: $frac\n";
+    $tot += $frac;
+    $n++;
+  }
+  #printf "%s to %s: $tot/$n = %f\n", $start, $end, $tot/$n;
+  return $tot / $n;
+}
+
 sub GetMedianCorrect
 {
-  my $self = shift;
+  my $self  = shift;
   my $start = shift;
-  my $end = shift;
+  my $end   = shift;
+  
   my @users = $self->GetType1Reviewers();
   my @good = ();
   foreach my $user (@users)
