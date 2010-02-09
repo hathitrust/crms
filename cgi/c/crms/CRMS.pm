@@ -3150,7 +3150,7 @@ sub CreateStatsData
     my $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
                  SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
                  SUM(total_ic_ren) + SUM(total_ic_cdpp),
-                 SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), 1,1,1, SUM(total_time),
+                 SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), 1,1,1,1, SUM(total_time),
                  SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                  (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
                  FROM userstats WHERE monthyear >= '$mintime' AND monthyear <= '$maxtime'};
