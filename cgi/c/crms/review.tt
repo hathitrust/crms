@@ -169,7 +169,7 @@
         [% status = crms.GetSystemStatus() %]
         [% IF status.2 %]
           <table class="nav">
-          <tr><td><span style="font-size:1.3em;font-weight:bold;color:#990000;">[% status.2 %]</span></td></tr>
+          <tr><td style="text-align:left;"><span style="font-size:1.3em;font-weight:bold;color:#990000;">[% status.2 %]</span></td></tr>
           </table>
         [% END %]
       </div>
