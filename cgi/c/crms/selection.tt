@@ -1,9 +1,12 @@
 [% page = cgi.param("p") %]
 [% op1 = cgi.param("op1") %]
+[% op2 = cgi.param("op2") %]
 [% search1 = cgi.param("search1") %]
 [% search2 = cgi.param("search2") %]
+[% search3 = cgi.param("search3") %]
 [% search1value = cgi.param("search1value") %]
 [% search2value = cgi.param("search2value") %]
+[% search3value = cgi.param("search3value") %]
 [% startDate = cgi.param('startDate') %]
 [% endDate = cgi.param('endDate') %]
 [% order = cgi.param('order') %]
@@ -53,11 +56,21 @@ Restrict selection:<br/>
 <select name="op1">
   <option [% op1 == 'AND' ? 'selected="selected"':'' %]>AND</option>
   <option [% op1 == 'OR' ? 'selected="selected"':'' %]>OR</option>
+  <option [% op1 == 'NOT' ? 'selected="selected"':'' %]>NOT</option>
 </select>
 <br/>
 
 [% crms.ReviewSearchMenu(page, 'search2', search2) %]
 <input type="text" id="search2value" name="search2value" value="[% search2value %]"/>
+<select name="op2">
+  <option [% op2 == 'AND' ? 'selected="selected"':'' %]>AND</option>
+  <option [% op2 == 'OR' ? 'selected="selected"':'' %]>OR</option>
+  <option [% op2 == 'NOT' ? 'selected="selected"':'' %]>NOT</option>
+</select>
+<br/>
+
+[% crms.ReviewSearchMenu(page, 'search3', search3) %]
+<input type="text" id="search3value" name="search3value" value="[% search3value %]"/>
 <br/>
 
 <label for="startDate">Start Date:</label>
