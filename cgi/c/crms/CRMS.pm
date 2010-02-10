@@ -1097,7 +1097,6 @@ sub ExportReviews
     my $time = $self->GetTodaysDate();
     my ( $fh, $file ) = $self->GetExportFh();
     my $user = "crms";
-    my $src = "null";
     my $count = 0;
 
     foreach my $barcode ( @{$list} )
@@ -1105,15 +1104,19 @@ sub ExportReviews
       #The routine GetFinalAttrReason may need to change - jose
       my ($attr,$reason) = $self->GetFinalAttrReason($barcode);
 
-      print $fh "$barcode\t$attr\t$reason\t$user\t$src\n";
-
-      my $sql = qq{ INSERT INTO  exportdata (time, id, attr, reason, user ) VALUES ('$time', '$barcode', '$attr', '$reason', '$user' )};
+      print $fh "$barcode\t$attr\t$reason\t$user\tnull\n";
+      
+      my $src = $self->SimleSqlGet("SELECT source FROM reviews WHERE id='$barcode' ORDER BY time DESC LIMIT 1");
+      
+      my $sql = qq{ INSERT INTO  exportdata (time, id, attr, reason, user, source ) VALUES ('$time', '$barcode', '$attr', '$reason', '$user', '$src' )};
+      $self->PrepareSubmitSql( $sql );
+      
+      my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata');
+      
+      $sql = qq{ INSERT INTO exportdataBckup (time, id, attr, reason, user, source ) VALUES ('$time', '$barcode', '$attr', '$reason', '$user', '$src' )};
       $self->PrepareSubmitSql( $sql );
 
-      my $sql = qq{ INSERT INTO  exportdataBckup (time, id, attr, reason, user ) VALUES ('$time', '$barcode', '$attr', '$reason', '$user' )};
-      $self->PrepareSubmitSql( $sql );
-
-      $self->MoveFromReviewsToHistoricalReviews($barcode);
+      $self->MoveFromReviewsToHistoricalReviews($barcode,$gid);
       $self->RemoveFromQueue($barcode);
       $self->RemoveFromCandidates($barcode);
       $count++;
@@ -1227,7 +1230,8 @@ sub MoveFromReviewsToHistoricalReviews
 {
     my $self = shift;
     my $id   = shift;
-
+    my $gid  = shift;
+    
     my $status = $self->GetStatus ( $id );
 
     $self->Logit( "store $id in historicalreviews" );
@@ -1236,21 +1240,21 @@ sub MoveFromReviewsToHistoricalReviews
               "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority from reviews where id='$id'";
     $self->PrepareSubmitSql( $sql );
 
-    $sql = qq{ UPDATE $CRMSGlobals::historicalreviewsTable set status=$status WHERE id="$id" };
+    $sql = "UPDATE historicalreviews SET status=$status WHERE id='$id'";
     $self->PrepareSubmitSql( $sql );
     
     $sql = "SELECT source FROM queue WHERE id='$id'";
     my $source = $self->SimpleSqlGet($sql);
-    $sql = qq{ UPDATE $CRMSGlobals::historicalreviewsTable set source='$source' WHERE id="$id" };
+    $sql = "UPDATE historicalreviews SET source='$source', gid='$gid' WHERE id='$id'";
     $self->PrepareSubmitSql( $sql );
 
     $self->Logit( "remove $id from reviews" );
 
-    $sql = qq{ DELETE FROM $CRMSGlobals::reviewsTable WHERE id = "$id" };
+    $sql = qq{ DELETE FROM $CRMSGlobals::reviewsTable WHERE id="$id" };
     $self->PrepareSubmitSql( $sql );
     
     # Update correctness/validation
-    $sql = "SELECT user,time FROM historicalreviews WHERE id='$id'";
+    $sql = "SELECT user,time FROM historicalreviews WHERE id='$id' AND gid='$gid'";
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
     foreach my $row ( @{$ref} )
     {
@@ -1258,7 +1262,7 @@ sub MoveFromReviewsToHistoricalReviews
       my $time = $row->[1];
       if (!$self->IsReviewCorrect($id, $user, $time))
       {
-        $sql = "UPDATE historicalreviews SET validated=0 WHERE id='$id' AND user='$user' AND time='$time'";
+        $sql = "UPDATE historicalreviews SET validated=0 WHERE id='$id' AND user='$user' AND time='$time' AND gid='$gid'";
         $self->PrepareSubmitSql( $sql );
       }
     }
@@ -1383,11 +1387,15 @@ sub CreateSQL
 
     my $search1            = shift;
     my $search1value       = shift;
-    my $op1                = shift;
+    my $op1                = shift or 'AND';
 
     my $search2            = shift;
     my $search2value       = shift;
-
+    my $op2                = shift or 'AND';
+    
+    my $search3            = shift;
+    my $search3value       = shift;
+    
     my $startDate          = shift;
     my $endDate            = shift;
     my $offset             = shift;
@@ -1397,6 +1405,7 @@ sub CreateSQL
 
     $search1 = $self->ConvertToSearchTerm( $search1, $type );
     $search2 = $self->ConvertToSearchTerm( $search2, $type );
+    $search3 = $self->ConvertToSearchTerm( $search3, $type );
 
     if ( ! $offset ) { $offset = 0; }
 
@@ -1445,7 +1454,8 @@ sub CreateSQL
       $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" $restrict };
     }
 
-    my ( $search1term, $search2term );
+    #my %opposites = {'<'=>'>', '>'=>'<'};
+    my ($search1term, $search2term, $search3term);
     if ( $search1value =~ m/.*\*.*/ )
     {
       $search1value =~ s/\*/%/gs;
@@ -1458,34 +1468,58 @@ sub CreateSQL
     if ( $search2value =~ m/.*\*.*/ )
     {
       $search2value =~ s/\*/%/gs;
-      $search2term = qq{$search2 LIKE '$search2value'};
+      $search2term = sprintf("$search2 %sLIKE '$search2value'", ($op1 eq 'NOT')? 'NOT ':'');
     }
     else
     {
-      $search2term = qq{$search2 = '$search2value'};
+      $search2term = sprintf("$search2 %s= '$search2value'", ($op1 eq 'NOT')? '!':'');
     }
-    if ( $search1value =~ m/([<>!]=?)\s*(\d+)\s*/ )
+
+    if ( $search3value =~ m/.*\*.*/ )
+    {
+      $search3value =~ s/\*/%/gs;
+      $search3term = sprintf("$search3 %sLIKE '$search3value'", ($op2 eq 'NOT')? 'NOT ':'');
+    }
+    else
+    {
+      $search3term = sprintf("$search3 %s= '$search3value'", ($op2 eq 'NOT')? '!':'');
+    }
+
+    if ( $search1value =~ m/([<>]=?)\s*(\d+)\s*/ )
     {
       $search1term = "$search1 $1 $2";
     }
-    if ( $search2value =~ m/([<>!]=?)\s*(\d+)\s*/ )
+    if ( $search2value =~ m/([<>]=?)\s*(\d+)\s*/ )
     {
-      $search2term = "$search2 $1 $2";
+      my $op = $1;
+      $op =~ y/<>/></ if $op1 eq 'NOT';
+      $search2term = "$search2 $op $2";
     }
-    
-    if ( ( $search1value ne '' ) && ( $search2value ne '' ) )
+    if ( $search3value =~ m/([<>]=?)\s*(\d+)\s*/ )
     {
-      { $sql .= qq{ AND ( $search1term  $op1  $search2term ) };   }
+      my $op = $1;
+      $op =~ y/<>/></ if $op1 eq 'NOT';
+      $search3term = "$search3 $op $2";
     }
-    elsif ( $search1value ne '' )
+    my $searches = '';
+    if ( $search1value ne '' )
     {
-      { $sql .= qq{ AND $search1term  };   }
+      $searches .= " AND ($search1term";
     }
-    elsif (  $search2value ne '' )
+    else
     {
-      { $sql .= qq{ AND $search2term  };   }
+      $searches .= " AND (1";
     }
-
+    if ( $search2value ne '' )
+    {
+      $searches .= sprintf(" %s $search2term", ($op1 eq 'NOT')? 'AND':$op1);
+    }
+    if ( $search3value ne '' )
+    {
+      $searches .= sprintf(" %s $search3term", ($op2 eq 'NOT')? 'AND':$op2);
+    }
+    $searches .= ') ' if $searches;
+    $sql .= $searches;
     if ( $startDate ) { $sql .= qq{ AND r.time >= "$startDate 00:00:00" }; }
     if ( $endDate ) { $sql .= qq{ AND r.time <= "$endDate 23:59:59" }; }
 
@@ -1526,11 +1560,14 @@ sub SearchAndDownload
 
     my $search1            = shift;
     my $search1value       = shift;
-    my $op1                = shift;
+    my $op1                = shift or 'AND';
 
     my $search2            = shift;
     my $search2value       = shift;
-
+    my $op2                = shift or 'AND';
+    
+    my $search3            = shift;
+    my $search3value       = shift;
     my $startDate          = shift;
     my $endDate            = shift;
     my $offset             = shift;
@@ -1539,7 +1576,7 @@ sub SearchAndDownload
     my $limit              = 0;
 
     my $isadmin = $self->IsUserAdmin();
-    my $sql =  $self->CreateSQL( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate, $offset, undef, $type, $limit );
+    my $sql =  $self->CreateSQL( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $offset, undef, $type, $limit );
     
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -1692,10 +1729,14 @@ sub GetReviewsRef
 
     my $search1            = shift;
     my $search1Value       = shift;
-    my $op1                = shift;
+    my $op1                = shift or 'AND';
 
     my $search2            = shift;
     my $search2Value       = shift;
+    my $op2                = shift or 'AND';
+    
+    my $search3            = shift;
+    my $search3Value       = shift;
 
     my $startDate          = shift;
     my $endDate            = shift;
@@ -1706,11 +1747,11 @@ sub GetReviewsRef
     my $limit              = 1;
     $pagesize = 20 unless $pagesize > 0;
     $offset = 0 unless $offset > 0;
-    my $totalReviews = $self->GetReviewsCount($search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $page, 0);
-    my $totalVolumes = $self->GetReviewsCount($search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $page, 1);
+    my $totalReviews = $self->GetReviewsCount($search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $page, 0);
+    my $totalVolumes = $self->GetReviewsCount($search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $page, 1);
     $offset = $totalReviews-($totalReviews % $pagesize) if $offset >= $totalReviews;
     #print("GetReviewsRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
-    my $sql =  $self->CreateSQL( $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $offset, $pagesize, $page, $limit );
+    my $sql =  $self->CreateSQL( $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $offset, $pagesize, $page, $limit );
     #print "$sql<br/>\n";
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -1764,10 +1805,13 @@ sub GetVolumesRef
   my $order = shift;
   my $dir = shift;
   my $search1 = shift;
-  my $search1Value = shift;
-  my $op1 = shift;
+  my $search1value = shift;
+  my $op1 = shift or 'AND';
   my $search2 = shift;
-  my $search2Value = shift;
+  my $search2value = shift;
+  my $op2 = shift or 'AND';
+  my $search3 = shift;
+  my $search3value = shift;
   my $startDate = shift;
   my $endDate = shift;
   my $offset = shift;
@@ -1785,6 +1829,7 @@ sub GetVolumesRef
   $offset = 0 unless $offset;
   $search1 = $self->ConvertToSearchTerm( $search1, $page );
   $search2 = $self->ConvertToSearchTerm( $search2, $page );
+  $search3 = $self->ConvertToSearchTerm( $search3, $page );
   if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
   elsif ($order eq 'status' && $page ne 'adminHistoricalReviews') { $order = 'q.' . $order; }
   else { $order = 'r.' . $order; }
@@ -1820,32 +1865,74 @@ sub GetVolumesRef
     push @rest, "r.time >= '$yesterday'";
     push @rest, 'q.status=0' unless $self->IsUserExpert($user);
   }
-  my $tester1 = '=';
-  my $tester2 = '=';
-  if ( $search1Value =~ m/.*\*.*/ )
+  #my %opposites = {'<'=>'>', '>'=>'<'};
+  my ($search1term, $search2term, $search3term);
+  if ( $search1value =~ m/.*\*.*/ )
   {
-    $search1Value =~ s/\*/%/gs;
-    $tester1 = ' LIKE ';
+    $search1value =~ s/\*/%/gs;
+    $search1term = qq{$search1 LIKE '$search1value'};
   }
-  if ( $search2Value =~ m/.*\*.*/ )
+  else
   {
-    $search2Value =~ s/\*/%/gs;
-    $tester2 = ' LIKE ';
+    $search1term = qq{$search1 = '$search1value'};
   }
-  if ( $search1Value =~ m/([<>!]=?)\s*(\d+)\s*/ )
+  if ( $search2value =~ m/.*\*.*/ )
   {
-    $search1Value = $2;
-    $tester1 = $1;
+    $search2value =~ s/\*/%/gs;
+    $search2term = sprintf("$search2 %sLIKE '$search2value'", ($op1 eq 'NOT')? 'NOT':'');
   }
-  if ( $search2Value =~ m/([<>!]=?)\s*(\d+)\s*/ )
+  else
   {
-    $search2Value = $2;
-    $tester2 = $1;
+    $search2term = sprintf("$search2 %s= '$search2value'", ($op1 eq 'NOT')? '!':'');
   }
+
+  if ( $search3value =~ m/.*\*.*/ )
+  {
+    $search3value =~ s/\*/%/gs;
+    $search3term = sprintf("$search3 %sLIKE '$search3value'", ($op2 eq 'NOT')? 'NOT':'');
+  }
+  else
+  {
+    $search3term = sprintf("$search3 %s= '$search3value'", ($op2 eq 'NOT')? '!':'');
+  }
+
+  if ( $search1value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  {
+    $search1term = "$search1 $1 $2";
+  }
+  if ( $search2value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  {
+    my $op = $1;
+    $op =~ y/<>/></ if $op1 eq 'NOT';
+    $search2term = "$search2 $op $2";
+  }
+  if ( $search3value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  {
+    my $op = $1;
+    $op =~ y/<>/></ if $op1 eq 'NOT';
+    $search3term = "$search3 $op $2";
+  }
+  my $searches = '';
+  if ( $search1value ne '' )
+  {
+    $searches .= "($search1term";
+  }
+  else
+  {
+    $searches .= "(1";
+  }
+  if ( $search2value ne '' )
+  {
+    $searches .= sprintf(" %s $search2term", ($op1 eq 'NOT')? 'AND':$op1);
+  }
+  if ( $search3value ne '' )
+  {
+    $searches .= sprintf(" %s $search3term", ($op2 eq 'NOT')? 'AND':$op2);
+  }
+  $searches .= ')';
+  push @rest, $searches;
   push @rest, "date(r.time) >= '$startDate'" if $startDate;
   push @rest, "date(r.time) <= '$endDate'" if $endDate;
-  push @rest, "$search1 $tester1 '$search1Value'" if $search1Value ne '';
-  push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
   my $restrict = join(' AND ', @rest);
   my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT r.id FROM $table r, bibdata b$doQ WHERE $restrict)";
   #print "$sql<br/>\n";
@@ -1866,10 +1953,9 @@ sub GetVolumesRef
     my $qrest = ($doQ)? ' AND r.id=q.id':'';
     $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
            "r.category, r.legacy, r.renDate, r.priority, $status, b.title, b.author" .
-           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date) ':' ') .
-           (($page eq 'adminHistoricalReviews')? ', r.validated ':' ') .
-           "FROM $table r, bibdata b$doQ ";
-    $sql .= "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
+           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
+           "FROM $table r, bibdata b$doQ " .
+           "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
     #print "$sql<br/>\n";
     my $ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );
     foreach my $row ( @{$ref2} )
@@ -2025,97 +2111,21 @@ sub GetReviewsCount
     my $self           = shift;
     my $search1        = shift;
     my $search1value   = shift;
-    my $op1            = shift;
+    my $op1            = shift or 'AND';
     my $search2        = shift;
     my $search2value   = shift;
+    my $op2            = shift or 'AND';
+    my $search3        = shift;
+    my $search3value   = shift;
     my $startDate      = shift;
     my $endDate        = shift;
     my $page           = shift;
     my $volumes        = shift;
 
-    my $countExpression = qq{*};
-    if ( $volumes )
-    {
-      $countExpression = qq{distinct r.id};
-    }
-
-    $search1 = $self->ConvertToSearchTerm( $search1, $page );
-    $search2 = $self->ConvertToSearchTerm( $search2, $page );
-
-
-    my $sql;
-    if ( $page eq 'adminReviews' )
-    {
-      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id };
-    }
-    elsif ( $page eq 'expert' ) # Conflicts
-    {
-      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
-    }
-    elsif ( $page eq 'adminHistoricalReviews' )
-    {
-      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id };
-    }
-    elsif ( $page eq 'undReviews' )
-    {
-      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
-    }
-    elsif ( $page eq 'userReviews' )
-    {
-      my $user = $self->get( "user" );
-      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
-    }
-    elsif ( $page eq 'editReviews' )
-    {
-      my $user = $self->get( "user" );
-      my $yesterday = $self->GetYesterday();
-      my $restrict = ($self->IsUserExpert($user))? '':'AND q.status=0';
-      $sql = qq{ SELECT count($countExpression) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" $restrict };
-    }
-    
-    my ( $search1term, $search2term );
-    if ( $search1value =~ m,.*\*.*, )
-    {
-      $search1value =~ s,\*,%,gs;
-      $search1term = qq{$search1 LIKE '$search1value'};
-    }
-    else
-    {
-      $search1term = qq{$search1 = '$search1value'};
-    }
-    if ( $search2value =~ m,.*\*.*, )
-    {
-      $search2value =~ s,\*,%,gs;
-      $search2term = qq{$search2 LIKE '$search2value'};
-    }
-    else
-    {
-      $search2term = qq{$search2 = '$search2value'};
-    }
-    if ( $search1value =~ m/([<>!]=?)\s*(\d+)\s*/ )
-    {
-      $search1term = "$search1 $1 $2";
-    }
-    if ( $search2value =~ m/([<>!]=?)\s*(\d+)\s*/ )
-    {
-      $search2term = "$search2 $1 $2";
-    }
-    if ( ( $search1value ne '' ) && ( $search2value ne '' ) )
-    {
-      { $sql .= qq{ AND ( $search1term  $op1  $search2term ) };   }
-    }
-    elsif ( $search1value ne '' )
-    {
-      { $sql .= qq{ AND $search1term  };   }
-    }
-    elsif (  $search2value ne '' )
-    {
-      { $sql .= qq{ AND $search2term  };   }
-    }
-
-    if ( $startDate ) { $sql .= qq{ AND r.time >= "$startDate 00:00:00" }; }
-    if ( $endDate ) { $sql .= qq{ AND r.time <= "$endDate 23:59:59" }; }
-    #print "$sql<br/>\n";
+    my $countExpression = ($volumes)? 'COUNT(DISTINCT r.id)':'COUNT(*)';
+    my $sql =  $self->CreateSQL( undef, 'ASC', $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, 0, undef, $page, undef );
+    $sql =~ s/(SELECT\s+).+?(FROM.+)/$1 $countExpression $2/;
+    #print "$sql\n<br/>";
     return $self->SimpleSqlGet( $sql );
 }
 
@@ -2649,8 +2659,8 @@ sub GetAllYears
   my $self = shift;
   
   # FIXME: use the GetRange function
-  my $min = $self->SimpleSqlGet("SELECT MIN(time) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0 AND user NOT LIKE 'rereport%'");
-  my $max = $self->SimpleSqlGet("SELECT MAX(time) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0");
+  my $min = $self->SimpleSqlGet('SELECT MIN(time) FROM exportdata');
+  my $max = $self->SimpleSqlGet('SELECT MAX(time) FROM exportdata');
   $min = substr($min,0,4);
   $max = substr($max,0,4);
   return ($min..$max);
@@ -2663,20 +2673,43 @@ sub CreateExportData
   my $delimiter      = shift;
   my $cumulative     = shift;
   my $doCurrentMonth = shift;
+  my $start          = shift;
+  my $end            = shift;
   my $doPercent      = shift;
-  my $year           = shift;
   
   my $dbh = $self->get( 'dbh' );
-  $year = ($self->GetTheYearMonth())[0] unless $year;
-  my ($y,$m) = $self->GetTheYearMonth();
-  my $now = "$year-$m";
-  my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear($year);
-  my $label = ($cumulative)? "CRMS Project Cumulative" : "Cumulative $year";
-  my $report = sprintf("$label\nCategories%s%s", $delimiter, ($cumulative)? 'Grand Total':"Total $year");
+  my ($year,$month) = $self->GetTheYearMonth();
+  my $now = "$year-$month";
+  #my $titleDate = $self->YearMonthToEnglish("$year-$month");
+  $start = "$year-01" unless $start;
+  $end = "$year-12" unless $end;
+  ($start,$end) = ($end,$start) if $end lt $start;
+  $start = '2009-07' if $start lt '2009-07';
+  my @dates;
+  if ($cumulative)
+  {
+    @dates = $self->GetAllYears();
+  }
+  else
+  {
+    my $sql = "SELECT DISTINCT(DATE_FORMAT(time,'%Y-%m')) FROM exportdata WHERE DATE_FORMAT(time,'%Y-%m')>='$start' AND DATE_FORMAT(time,'%Y-%m')<='$end' ORDER BY time ASC";
+    #print "$sql<br/>\n";
+    @dates = map {$_->[0];} @{$self->get('dbh')->selectall_arrayref( $sql )};
+  }
+  my $titleDate = '';
+  if (!$cumulative)
+  {
+    my $startEng = substr($dates[0],0,4);
+    my $endEng = substr($dates[-1],0,4);
+    $titleDate = ($startEng eq $endEng)? $startEng:"$startEng-$endEng";
+  }
+  my $label = ($cumulative)? 'CRMS Project Cumulative' : "Cumulative $titleDate";
+  my $report = sprintf("$label\nCategories%s%s", $delimiter, ($cumulative)? 'Grand Total':'Total');
   my %stats = ();
   my @usedates = ();
-  foreach my $date (@statdates)
+  foreach my $date (@dates)
   {
+    #print "$date\n";
     last if $date eq $now and !$doCurrentMonth;
     push @usedates, $date;
     $report .= "$delimiter$date";
@@ -2685,15 +2718,20 @@ sub CreateExportData
                 'Status 4' => 0, 'Status 6' => 0, 'Status 6' => 0);
     my $mintime = $date . (($cumulative)? '-01-01 00:00:00':'-01 00:00:00');
     my $maxtime = $date . (($cumulative)? '-12-31 00:00:00':'-31 23:59:59');
-    my $sql = "SELECT e.id,e.time,e.attr,e.reason FROM exportdata e WHERE e.time >= '$mintime' AND e.time <= '$maxtime'";
+    my $sql = 'SELECT e.gid,e.time,e.attr,e.reason,h.status FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid WHERE ' .
+              "e.time>='$mintime' AND e.time<='$maxtime' ORDER BY e.gid";
     #print "$sql<br/>\n";
     my $rows = $dbh->selectall_arrayref( $sql );
+    my $lastid = undef;
     foreach my $row ( @{$rows} )
     {
       my $id = $row->[0];
+      next if $id eq $lastid;
+      $lastid = $id;
       my $time = $row->[1];
       my $attr = $row->[2];
       my $reason = $row->[3];
+      my $status = $row->[4];
       my $cat = "$attr/$reason";
       $cat = 'All UND/NFI' if $cat eq 'und/nfi';
       if (exists $cats{$cat} or $cat eq 'All UND/NFI')
@@ -2702,15 +2740,7 @@ sub CreateExportData
         my $allkey = 'All ' . uc substr($cat,0,2);
         $cats{$allkey}++ if exists $cats{$allkey};
       }
-      $sql = "SELECT status FROM historicalreviews WHERE id='$id' AND time < '$time' AND time >= '$mintime' AND time <= '$maxtime'";
-      #print "$sql<br/>\n";
-      my $rows2 = $dbh->selectall_arrayref( $sql );
-      foreach my $row2 ( @{$rows2} )
-      {
-        my $status = $row2->[0];
-        $cats{'Status '.$status}++;
-        last;
-      }
+      $cats{'Status '.$status}++;
     }
     for my $cat (keys %cats)
     {
@@ -2781,11 +2811,12 @@ sub CreateExportReport
 {
   my $self       = shift;
   my $cumulative = shift;
-  my $just456    = shift;
   my $year       = shift;
   
+  my ($y,$m) = $self->GetTheYearMonth();
+  $year = $y unless $year;
   my $dbh = $self->get( 'dbh' );
-  my $data = $self->CreateExportData(',', $cumulative, 1, 1, $year);
+  my $data = $self->CreateExportData(',', $cumulative, 1, "$year-01", "$year-12", 1);
   my @lines = split m/\n/, $data;
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
   my $title = shift @lines;
@@ -2805,7 +2836,7 @@ sub CreateExportReport
     my @items = split(',', $line);
     my $i = 0;
     $title = shift @items;
-    next if $just456 and ($title !~ m/Status.+/ and $title !~ /Total/);
+    #next if $just456 and ($title !~ m/Status.+/ and $title !~ /Total/);
     my $major = exists $majors{$title};
     $title =~ s/\s/&nbsp;/g;
     my $padding = ($major)? '':$nbsps;
@@ -2826,10 +2857,11 @@ sub CreateExportReport
       $i++;
     }
     $newline .= "</tr>\n";
-    if ($title eq 'Total' && $just456) { $titleline = $newline; }
-    else { $report .= $newline; }
+    #if ($title eq 'Total' && $just456) { $titleline = $newline; }
+    #else
+    { $report .= $newline; }
   }
-  $report .= $titleline if $just456;
+  #$report .= $titleline if $just456;
   $report .= "</table>\n";
   return $report;
 }
@@ -2837,17 +2869,21 @@ sub CreateExportReport
 # Type arg is 0 for Monthly Breakdown, 1 for Total Determinations, 2 for cumulative (pie)
 sub CreateExportGraph
 {
-  my $self = shift;
-  my $type = int shift;
-  my $year = shift;
+  my $self  = shift;
+  my $type  = int shift;
+  my $start = shift;
+  my $end   = shift;
   
-  my $data = $self->CreateExportData(',', $type == 2, $type == 2, 0, $year);
+  my $data = $self->CreateExportData(',', $type == 2, 0, $start, $end);
+  #printf "CreateExportData(',', %d, 0, $start, $end)\n", ($type == 2);
+  #print "$data\n";
   my @lines = split m/\n/, $data;
   my $title = shift @lines;
   $title .= '*' if $type == 2;
   $title =~ s/Cumulative/Monthly Breakdown/ if $type == 0;
   $title =~ s/Cumulative/Monthly Totals/ if $type == 1;
   my @dates = split(',', shift @lines);
+  #printf "%d dates\n", scalar @dates;
   # Shift off the Categories and GT headers
   shift @dates; shift @dates;
   # Now the data is just the categories and numbers...
@@ -2862,6 +2898,7 @@ sub CreateExportGraph
   my $gt = shift @totalline;
   foreach my $title (@titles)
   {
+    #print "$title\n";
     # Extract the total,n1,n2... data
     my @line = split(',',$titleh{$title});
     shift @line;
@@ -2907,6 +2944,8 @@ sub CreateExportGraph
                        join('","',@dates));
   }
   $report .= '}';
+  #$report .= sprintf "CreateExportData(',', %d, 0, $start, $end)\n", ($type == 2);
+  #$report .= $data;
   return $report;
 }
 
@@ -2976,15 +3015,11 @@ sub CreateExportStatusData
       next if $monthly;
     }
     my @line = (0,0,0,0,0,0,0);
+    my @stati = $self->GetStatusBreakdown($date1, $date2);
     for (my $i=0; $i < 3; $i++)
     {
-      my $title = $i+4;
-      $sql = 'SELECT count(DISTINCT e.id) FROM exportdata e INNER JOIN historicalreviews r ON e.id=r.id WHERE ' .
-             "r.legacy=0 AND date(e.time)>='$date1' AND date(e.time)<='$date2' AND r.status=$title";
-      #print "$sql<br/>\n";
-      my $count = $self->SimpleSqlGet($sql);
-      $line[$i] = $count;
-      $totals[$i] += $count;
+      $line[$i] = $stati[$i];
+      $totals[$i] += $stati[$i];
     }
     $line[3] = $line[0] + $line[1] + $line[2];
     for (my $i=0; $i < 3; $i++)
@@ -3009,6 +3044,23 @@ sub CreateExportStatusData
     $report .= 'Total' . $delimiter . join($delimiter, @totals) . "\n";
   }
   return $report;
+}
+
+sub GetStatusBreakdown
+{
+  my $self  = shift;
+  my $start = shift;
+  my $end   = shift;
+  
+  my @counts = ();
+  foreach my $status (4..6)
+  {
+    my $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r ON e.gid=r.gid WHERE ' .
+             "r.legacy=0 AND date(e.time)>='$start' AND date(e.time)<='$end' AND r.status=$status";
+    #print "$sql<br/>\n";
+    push @counts, $self->SimpleSqlGet($sql);
+  }
+  return @counts;
 }
 
 sub CreateExportStatusReport
@@ -5194,7 +5246,7 @@ sub CreateQueueReport
   $report .= "</tr></table><br/><br/>\n";
   $report .= "</td><td style='padding-left:20px'>\n";
   $report .= "<table class='exportStats'>\n";
-  my $val = $self->GetLastQueueTime();
+  my $val = $self->GetLastQueueTime(1);
   $val =~ s/\s/&nbsp;/g;
   $report .= "<tr><th>Last&nbsp;Queue&nbsp;Update</th><td>$val</td></tr>\n";
   $report .= sprintf("<tr><th>Volumes&nbsp;Last&nbsp;Added</th><td>%s</td></tr>\n", $self->GetLastIdQueueCount());
@@ -5216,11 +5268,11 @@ sub CreateDeterminationReport()
   my $report = '';
   $report .= "<table class='exportStats'>\n";
   my ($count,$time) = $self->GetLastExport();
-  my $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.id=h.id AND h.status=4 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
+  my $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=4 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
   my $fours = $self->SimpleSqlGet($sql);
-  $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.id=h.id AND h.status=5 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
+  $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=5 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
   my $fives = $self->SimpleSqlGet($sql);
-  $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.id=h.id AND h.status=6 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
+  $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=6 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
   my $sixes = $self->SimpleSqlGet($sql);
   my $pct4 = 0;
   my $pct5 = 0;
@@ -5231,18 +5283,13 @@ sub CreateDeterminationReport()
   $time =~ s/\s/&nbsp;/g;
   my $legacy = $self->GetTotalLegacyCount();
   my %sources;
-  $sql = 'SELECT source, COUNT(DISTINCT id) FROM historicalreviews WHERE legacy=0 GROUP BY source';
+  $sql = 'SELECT src,COUNT(gid) FROM exportdata WHERE src IS NOT NULL GROUP BY src';
   my $rows = $self->get('dbh')->selectall_arrayref($sql);
   foreach my $row ( @{$rows} )
   {
     $sources{ $row->[0] } = $row->[1];
   }
-  #my $cand = $self->GetNumberExportedFromCandidates();
-  #my $noncand = $self->GetNumberExportedNotFromCandidates();
-  #my $exported = $cand + $noncand;
-  #my $exported = $self->SimpleSqlGet('SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE legacy=0');
-  my $exported = 0;
-  map {$exported += $sources{$_}} keys %sources;
+  my $exported = $self->SimpleSqlGet('SELECT COUNT(DISTINCT gid) FROM exportdata');
   $report .= "<tr><th>Last&nbsp;CRMS&nbsp;Export</th><td>$count&nbsp;on&nbsp;$time</td></tr>";
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</th><td>$fours&nbsp;(%.1f%%)</td></tr>", $pct4);
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</th><td>$fives&nbsp;(%.1f%%)</td></tr>", $pct5);
@@ -5250,7 +5297,6 @@ sub CreateDeterminationReport()
   $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</th><td>%s</td></tr>", $exported);
   foreach my $source (keys %sources)
   {
-    #my $n = $self->SimpleSqlGet("SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE source='$source' AND legacy=0");
     my $n = $sources{$source};
     $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;$source</th><td>$n</td></tr>";
   }
@@ -5408,7 +5454,7 @@ sub GetLastLoadTimeToCandidates
 {
     my $self = shift;
 
-    my $sql = qq{SELECT max(time) from candidatesrecord};
+    my $sql = qq{SELECT DATE_FORMAT(MAX(time), "%a, %M %e, %Y at %l:%i %p") from candidatesrecord};
     my $time = $self->SimpleSqlGet( $sql );
     
     if ($time) { return $time; }
@@ -5444,8 +5490,10 @@ sub GetTotalEverInQueue
 sub GetLastExport
 {
     my $self = shift;
-
-    my $sql = "SELECT itemcount,time FROM exportrecord WHERE itemcount>0 ORDER BY time DESC LIMIT 1";
+    my $readable = shift;
+    
+    my $what = ($readable)? 'DATE_FORMAT(time, "%a, %M %e, %Y at %l:%i %p")':'time';
+    my $sql = "SELECT itemcount,$what FROM exportrecord WHERE itemcount>0 ORDER BY time DESC LIMIT 1";
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
     my $count = $ref->[0]->[0];
     my $time = $ref->[0]->[1];
@@ -5481,40 +5529,35 @@ sub GetTotalLegacyReviewCount
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref->[0]->[0];
-
 }
 
 sub GetTotalHistoricalReviewCount
 {
     my $self = shift;
 
-    my $sql = qq{ SELECT COUNT(*) from $CRMSGlobals::historicalreviewsTable};
+    my $sql = qq{ SELECT COUNT(*) FROM $CRMSGlobals::historicalreviewsTable};
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref->[0]->[0];
-
 }
 
 sub GetLastQueueTime
 {
-    my $self = shift;
-
-    my $sql = qq{ SELECT max( time ) from $CRMSGlobals::queuerecordTable where source = 'RIGHTSDB'};
+    my $self     = shift;
+    my $readable = shift;
+    
+    my $what = ($readable)? 'DATE_FORMAT(MAX(time), "%a, %M %e, %Y at %l:%i %p")':'MAX(time)';
+    my $sql = qq{ SELECT $what FROM $CRMSGlobals::queuerecordTable WHERE source='RIGHTSDB'};
     my $latest_time = $self->SimpleSqlGet( $sql );
     
-    #Keep only the date
-    #$latest_time =~ s,(.*) .*,$1,;
-
     return $latest_time;
-
 }
 
 sub GetLastStatusProcessedTime
 {
-
     my $self = shift;
 
-    my $sql = qq{ SELECT max(time) from  processstatus };
+    my $sql = qq{ SELECT DATE_FORMAT(MAX(time), "%a, %M %e, %Y at %l:%i %p") FROM processstatus };
     my $last_time = $self->SimpleSqlGet( $sql );
     
     return $last_time;
@@ -5526,11 +5569,10 @@ sub GetLastIdQueueCount
 
     my $latest_time = $self->GetLastQueueTime();
 
-    my $sql = qq{ SELECT itemcount from $CRMSGlobals::queuerecordTable where time like '$latest_time%' AND source='RIGHTSDB'};
+    my $sql = qq{ SELECT itemcount FROM $CRMSGlobals::queuerecordTable where time like '$latest_time%' AND source='RIGHTSDB'};
     my $latest_time = $self->SimpleSqlGet( $sql );
     
     return $latest_time;
-
 }
 
 sub DownloadSpreadSheetBkup
@@ -5816,7 +5858,8 @@ sub SanityCheckDB
     # id must not be ill-formed
     # attr/reason must be valid
     # user must be crms
-    $sql = "SELECT time,id,attr,reason,user FROM $table";
+    # src must not be NULL
+    $sql = "SELECT time,id,attr,reason,user,src FROM $table";
     $rows = $dbh->selectall_arrayref( $sql );
     foreach my $row ( @{$rows} )
     {
@@ -5825,6 +5868,7 @@ sub SanityCheckDB
       my $comb = $row->[2] . '/' . $row->[3];
       $self->SetError(sprintf("$table __ illegal attr/reason for %s__ '%s'", $row->[1], $comb)) unless $self->GetAttrReasonCom($comb);
       $self->SetError(sprintf("$table __ illegal user for %s__ '%s' (should be 'crms')", $row->[1])) unless $row->[4] eq 'crms';
+      $self->SetError(sprintf("$table __ NULL src for %s__ ", $row->[1])) unless $row->[4];
     }
   }
   # ======== exportrecord ========
