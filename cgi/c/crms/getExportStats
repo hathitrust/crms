@@ -18,20 +18,19 @@ my $crms = CRMS->new(logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
 
 my $type = $cgi->param('type');
 my $data = '';
-my $year = $cgi->param('year');
 my $c = $cgi->param('c'); # Class or cumulative
+my $start = $cgi->param('startDate');
+my $end = $cgi->param('endDate');
 if ($type eq 'graph')
 {
-  my $start = $cgi->param('startDate');
-  my $end = $cgi->param('endDate');
   my $monthly = $cgi->param('monthly');
   my $title = $cgi->param('title');
   if ($c == 3) { $data = $crms->CreateExportStatusGraph($start,$end,$monthly,$title); }
-  else { $data = $crms->CreateExportGraph($c, $year); }
+  else { $data = $crms->CreateExportGraph($c, $start, $end); }
 }
 else
 {
-  $data = $crms->CreateExportData("\t", $c, 1, 0, $year);
+  $data = $crms->CreateExportData("\t", $c, 1, $start, $end);
 }
 
 if ( $data eq '' ) { print $cgi->header( -status => "400" ); }
