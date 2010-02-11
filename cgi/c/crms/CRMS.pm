@@ -1106,7 +1106,7 @@ sub ExportReviews
 
       print $fh "$barcode\t$attr\t$reason\t$user\tnull\n";
       
-      my $src = $self->SimleSqlGet("SELECT source FROM reviews WHERE id='$barcode' ORDER BY time DESC LIMIT 1");
+      my $src = $self->SimlpeSqlGet("SELECT source FROM reviews WHERE id='$barcode' ORDER BY time DESC LIMIT 1");
       
       my $sql = qq{ INSERT INTO  exportdata (time, id, attr, reason, user, source ) VALUES ('$time', '$barcode', '$attr', '$reason', '$user', '$src' )};
       $self->PrepareSubmitSql( $sql );
