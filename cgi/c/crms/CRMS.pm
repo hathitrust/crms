@@ -1232,20 +1232,14 @@ sub MoveFromReviewsToHistoricalReviews
     my $id   = shift;
     my $gid  = shift;
     
-    my $status = $self->GetStatus ( $id );
-
     $self->Logit( "store $id in historicalreviews" );
-
-    my $sql = 'INSERT into historicalreviews (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority) ' .
-              "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority from reviews where id='$id'";
-    $self->PrepareSubmitSql( $sql );
-
-    $sql = "UPDATE historicalreviews SET status=$status WHERE id='$id'";
-    $self->PrepareSubmitSql( $sql );
     
-    $sql = "SELECT source FROM queue WHERE id='$id'";
+    my $sql = "SELECT source FROM queue WHERE id='$id'";
     my $source = $self->SimpleSqlGet($sql);
-    $sql = "UPDATE historicalreviews SET source='$source', gid='$gid' WHERE id='$id'";
+    my $status = $self->GetStatus( $id );
+    
+    $sql = 'INSERT into historicalreviews (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, source, status, gid) ' .
+           "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, $source, $status, $gid from reviews where id='$id'";
     $self->PrepareSubmitSql( $sql );
 
     $self->Logit( "remove $id from reviews" );
@@ -1254,7 +1248,7 @@ sub MoveFromReviewsToHistoricalReviews
     $self->PrepareSubmitSql( $sql );
     
     # Update correctness/validation
-    $sql = "SELECT user,time FROM historicalreviews WHERE id='$id' AND gid='$gid'";
+    $sql = "SELECT user,time FROM historicalreviews WHERE gid='$gid'";
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
     foreach my $row ( @{$ref} )
     {
@@ -2717,11 +2711,11 @@ sub CreateExportData
                 'All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0,
                 'Status 4' => 0, 'Status 6' => 0, 'Status 6' => 0);
     my $mintime = $date . (($cumulative)? '-01-01 00:00:00':'-01 00:00:00');
-    my $maxtime = $date . (($cumulative)? '-12-31 00:00:00':'-31 23:59:59');
+    my $maxtime = $date . (($cumulative)? '-12-31 23:59:59':'-31 23:59:59');
     my $sql = 'SELECT e.gid,e.time,e.attr,e.reason,h.status FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid WHERE ' .
               "e.time>='$mintime' AND e.time<='$maxtime' ORDER BY e.gid";
-    #print "$sql<br/>\n";
     my $rows = $dbh->selectall_arrayref( $sql );
+    #printf "$sql : %d items<br/>\n", scalar @{$rows};
     my $lastid = undef;
     foreach my $row ( @{$rows} )
     {
@@ -5280,7 +5274,6 @@ sub CreateDeterminationReport()
   eval {$pct4 = 100.0*$fours/($fours+$fives+$sixes);};
   eval {$pct5 = 100.0*$fives/($fours+$fives+$sixes);};
   eval {$pct6 = 100.0*$sixes/($fours+$fives+$sixes);};
-  $time =~ s/\s/&nbsp;/g;
   my $legacy = $self->GetTotalLegacyCount();
   my %sources;
   $sql = 'SELECT src,COUNT(gid) FROM exportdata WHERE src IS NOT NULL GROUP BY src';
@@ -5289,6 +5282,8 @@ sub CreateDeterminationReport()
   {
     $sources{ $row->[0] } = $row->[1];
   }
+  ($count,$time) = $self->GetLastExport(1);
+  $time =~ s/\s/&nbsp;/g;
   my $exported = $self->SimpleSqlGet('SELECT COUNT(DISTINCT gid) FROM exportdata');
   $report .= "<tr><th>Last&nbsp;CRMS&nbsp;Export</th><td>$count&nbsp;on&nbsp;$time</td></tr>";
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</th><td>$fours&nbsp;(%.1f%%)</td></tr>", $pct4);
