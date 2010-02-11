@@ -1108,12 +1108,12 @@ sub ExportReviews
       
       my $src = $self->SimpleSqlGet("SELECT source FROM reviews WHERE id='$barcode' ORDER BY time DESC LIMIT 1");
       
-      my $sql = qq{ INSERT INTO  exportdata (time, id, attr, reason, user, source ) VALUES ('$time', '$barcode', '$attr', '$reason', '$user', '$src' )};
+      my $sql = qq{ INSERT INTO  exportdata (time, id, attr, reason, user, src ) VALUES ('$time', '$barcode', '$attr', '$reason', '$user', '$src' )};
       $self->PrepareSubmitSql( $sql );
       
       my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata');
       
-      $sql = qq{ INSERT INTO exportdataBckup (time, id, attr, reason, user, source ) VALUES ('$time', '$barcode', '$attr', '$reason', '$user', '$src' )};
+      $sql = qq{ INSERT INTO exportdataBckup (time, id, attr, reason, user, src ) VALUES ('$time', '$barcode', '$attr', '$reason', '$user', '$src' )};
       $self->PrepareSubmitSql( $sql );
 
       $self->MoveFromReviewsToHistoricalReviews($barcode,$gid);
