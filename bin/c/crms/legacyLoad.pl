@@ -142,7 +142,7 @@ sub ProcessFile
       {
         $category = $note;
         $category =~ s/(.*?)\:.*/$1/s;
-        die "Can't translate $category!" if $category eq $crms->TranslateCategory( $category );
+        die "Can't translate $category!" if (uc $category) eq $crms->TranslateCategory( $category );
         $category = $crms->TranslateCategory( $category );
         $note =~ s/.*?\:\s*(.*)/$1/s;
       }
