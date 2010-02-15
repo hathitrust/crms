@@ -5807,7 +5807,7 @@ sub SanityCheckDB
 {
   my $self = shift;
   my $dbh = $self->get( 'dbh' );
-  my $vidRE = '^[a-z]+\d?\.[a-zA-Z]?\d+$';
+  my $vidRE = '^[a-z]+\d?\.[a-zA-Z]?[a-zA-Z0-9]+$';
   my $pdRE = '^\d\d\d\d-\d\d-\d\d$';
   # ======== bibdata ========
   my $table = 'bibdata';
