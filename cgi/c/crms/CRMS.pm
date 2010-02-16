@@ -2710,10 +2710,16 @@ sub CreateExportData
     my %cats = ('pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pdus/cdpp' => 0, 'ic/ren' => 0, 'ic/cdpp' => 0,
                 'All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0,
                 'Status 4' => 0, 'Status 6' => 0, 'Status 6' => 0);
+    my $lastDay;
+    if (!$cumulative)
+    {
+      my ($year,$month) = split '-', $date;
+      $lastDay = Days_in_Month($year,$month);
+    }
     my $mintime = $date . (($cumulative)? '-01-01 00:00:00':'-01 00:00:00');
-    my $maxtime = $date . (($cumulative)? '-12-31 23:59:59':'-31 23:59:59');
-    my $sql = 'SELECT e.gid,e.time,e.attr,e.reason,h.status FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid WHERE ' .
-              "e.time>='$mintime' AND e.time<='$maxtime' ORDER BY e.gid";
+    my $maxtime = $date . (($cumulative)? '-12-31 23:59:59':"-$lastDay 23:59:59");
+    my $sql = 'SELECT e.gid,e.time,e.attr,e.reason,h.status,e.id FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid WHERE ' .
+              "e.time>='$mintime' AND e.time<='$maxtime' ORDER BY e.gid ASC, h.time DESC";
     my $rows = $dbh->selectall_arrayref( $sql );
     #printf "$sql : %d items<br/>\n", scalar @{$rows};
     my $lastid = undef;
@@ -2726,6 +2732,7 @@ sub CreateExportData
       my $attr = $row->[2];
       my $reason = $row->[3];
       my $status = $row->[4];
+      my $bar = $row->[5];
       my $cat = "$attr/$reason";
       $cat = 'All UND/NFI' if $cat eq 'und/nfi';
       if (exists $cats{$cat} or $cat eq 'All UND/NFI')
@@ -2955,7 +2962,8 @@ sub CreateExportStatusData
   my $titleDate = $self->YearMonthToEnglish("$year-$month");
   my $justThisMonth = (!$start && !$end);
   $start = "$year-$month-01" unless $start;
-  $end = "$year-$month-31" unless $end;
+  my $lastDay = Days_in_Month($year,$month);
+  $end = "$year-$month-$lastDay" unless $end;
   ($start,$end) = ($end,$start) if $end lt $start;
   $start = '2009-07-01' if $start lt '2009-07-01';
   my $sql = "SELECT DISTINCT(DATE(time)) FROM exportdata WHERE DATE(time)>='$start' AND DATE(time)<='$end'";
@@ -2998,7 +3006,8 @@ sub CreateExportStatusData
     {
       $date .= sprintf(' %s', $self->YearMonthToEnglish("$curryear-$currmonth"));
       $date1 = "$curryear-$currmonth-01";
-      $date2 = "$curryear-$currmonth-31";
+      my $lastDay = Days_in_Month($curryear,$currmonth);
+      $date2 = "$curryear-$currmonth-$lastDay";
     }
     else
     {
@@ -3210,11 +3219,15 @@ sub CreateStatsData
         $i++;
       }
     }
-    my ($ok,$oktot) = $self->CountCorrectReviews($user, $mintime . '-01 00:00:00', $maxtime . '-31 23:59:59');
+    my ($year,$month) = split '-', $maxtime;
+    my $lastDay = Days_in_Month($year,$month);
+    $mintime .= '-01 00:00:00';
+    $maxtime .= "-$lastDay 23:59:59";
+    my ($ok,$oktot) = $self->CountCorrectReviews($user, $mintime, $maxtime);
     $stats{'__VAL__'}{$date} = $ok;
     $stats{'__TOTNE__'}{$date} = $oktot;
-    $stats{'__AVAL__'}{$date} = $self->GetAverageCorrect($mintime . '-01 00:00:00', $maxtime . '-31 23:59:59');
-    $stats{'__MVAL__'}{$date} = $self->GetMedianCorrect($mintime . '-01 00:00:00', $maxtime . '-31 23:59:59');
+    $stats{'__AVAL__'}{$date} = $self->GetAverageCorrect($mintime, $maxtime);
+    $stats{'__MVAL__'}{$date} = $self->GetMedianCorrect($mintime, $maxtime);
   }
   $report .= "\n";
   my %totals;
@@ -3237,11 +3250,15 @@ sub CreateStatsData
       $i++;
     }
   }
-  my ($ok,$oktot) = $self->CountCorrectReviews($user, $earliest . '-01 00:00:00', $latest . '-31 23:59:59');
+  my ($year,$month) = split '-', $latest;
+  my $lastDay = Days_in_Month($year,$month);
+  $earliest .= '-01 00:00:00';
+  $latest .= "-$lastDay 23:59:59";
+  my ($ok,$oktot) = $self->CountCorrectReviews($user, $earliest, $latest);
   $totals{'__VAL__'} = $ok;
   $totals{'__TOTNE__'} = $oktot;
-  $totals{'__AVAL__'} = $self->GetAverageCorrect($earliest . '-01 00:00:00', $latest . '-31 23:59:59');
-  $totals{'__MVAL__'} = $self->GetMedianCorrect($earliest . '-01 00:00:00', $latest . '-31 23:59:59');
+  $totals{'__AVAL__'} = $self->GetAverageCorrect($earliest, $latest);
+  $totals{'__MVAL__'} = $self->GetMedianCorrect($earliest, $latest);
   # Project totals
   my %ptotals;
   if (!$cumulative)
@@ -3267,11 +3284,11 @@ sub CreateStatsData
         $i++;
       }
     }
-    my ($ok,$oktot) = $self->CountCorrectReviews($user, $earliest . '-01 00:00:00', $latest . '-31 23:59:59');
+    my ($ok,$oktot) = $self->CountCorrectReviews($user, $earliest, $latest);
     $ptotals{'__VAL__'} = $ok;
     $ptotals{'__TOTNE__'} = $oktot;
-    $ptotals{'__AVAL__'} = $self->GetAverageCorrect($earliest . '-01 00:00:00', $latest . '-31 23:59:59');
-    $ptotals{'__MVAL__'} = $self->GetMedianCorrect($earliest . '-01 00:00:00', $latest . '-31 23:59:59');
+    $ptotals{'__AVAL__'} = $self->GetAverageCorrect($earliest, $latest);
+    $ptotals{'__MVAL__'} = $self->GetMedianCorrect($earliest, $latest);
   }
   
   my %majors = ('All PD' => 1, 'All IC' => 1, 'All UND/NFI' => 1);
