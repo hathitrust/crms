@@ -53,7 +53,7 @@ Restrict selection:<br/>
 
 [% crms.ReviewSearchMenu(page, 'search1', search1) %]
 <input type="text"  id="search1value" name="search1value" value="[% search1value %]"/>
-<select name="op1">
+<select name="op1" id="op1">
   <option [% op1 == 'AND' ? 'selected="selected"':'' %]>AND</option>
   <option [% op1 == 'OR' ? 'selected="selected"':'' %]>OR</option>
   <option [% op1 == 'NOT' ? 'selected="selected"':'' %]>NOT</option>
@@ -62,7 +62,7 @@ Restrict selection:<br/>
 
 [% crms.ReviewSearchMenu(page, 'search2', search2) %]
 <input type="text" id="search2value" name="search2value" value="[% search2value %]"/>
-<select name="op2">
+<select name="op2" id="op2">
   <option [% op2 == 'AND' ? 'selected="selected"':'' %]>AND</option>
   <option [% op2 == 'OR' ? 'selected="selected"':'' %]>OR</option>
   <option [% op2 == 'NOT' ? 'selected="selected"':'' %]>NOT</option>
@@ -142,10 +142,13 @@ records per page.
 <br/>
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"
-       onclick="document.getElementById('startDate').value='';
+       onclick="selMenuItem('op1','AND');
+                selMenuItem('op2','AND');
+                document.getElementById('startDate').value='';
                 document.getElementById('endDate').value='';
                 document.getElementById('search1value').value='';
                 document.getElementById('search2value').value='';
+                document.getElementById('search3value').value='';
        "/>
 </form>
 </div>

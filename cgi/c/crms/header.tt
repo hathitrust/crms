@@ -18,6 +18,26 @@ function toggleVisibility(id)
     else {me.style.display="";}
   }
 }
+
+function selMenuItem(id, value)
+{
+  var me = document.getElementById(id);
+  if (me == null)
+  {
+    //alert("Can't get " + id);
+  }
+  else
+  {
+    for (var i = 0; i < me.length; i++)
+    {
+      if (me.options[i].value == value)
+      {
+        me.selectedIndex = i;
+        break;
+      }
+    }
+  }
+}
 -->
     </script>
     [% IF cgi.param('navRight') %]
