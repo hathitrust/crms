@@ -40,10 +40,6 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
                    "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=0&startDate=2009-07")});
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "800", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=1&startDate=2009-07")});
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart3", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=0")});
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart4", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("/cgi/c/crms/getExportStats?type=graph&c=1")});
 // -->
       </script>
     [% END %]

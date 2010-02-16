@@ -2671,10 +2671,10 @@ sub CreateExportData
   my $end            = shift;
   my $doPercent      = shift;
   
+  #print "CreateExportData('$delimiter', $cumulative, $doCurrentMonth, '$start', '$end')<br/>\n";
   my $dbh = $self->get( 'dbh' );
   my ($year,$month) = $self->GetTheYearMonth();
   my $now = "$year-$month";
-  #my $titleDate = $self->YearMonthToEnglish("$year-$month");
   $start = "$year-01" unless $start;
   $end = "$year-12" unless $end;
   ($start,$end) = ($end,$start) if $end lt $start;
@@ -2805,12 +2805,10 @@ sub CreateExportReport
 {
   my $self       = shift;
   my $cumulative = shift;
-  my $year       = shift;
+  my $start      = shift;
+  my $end        = shift;
   
-  my ($y,$m) = $self->GetTheYearMonth();
-  $year = $y unless $year;
-  my $dbh = $self->get( 'dbh' );
-  my $data = $self->CreateExportData(',', $cumulative, 1, "$year-01", "$year-12", 1);
+  my $data = $self->CreateExportData(',', $cumulative, 1, $start, $end, 1);
   my @lines = split m/\n/, $data;
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
   my $title = shift @lines;
@@ -3956,6 +3954,36 @@ sub IsFormatBK
     my $leader  = $record->findvalue( $xpath );
     my $doc     = $leader;
     if ( $doc eq "BK" ) { return 1; }
+
+    return 0;
+}
+
+# This is code from Tim for normalizing the 260 subfield for U.S. cities.
+sub Blah
+{
+  my $suba = 'Austin, Tex.,';
+  $suba =~ tr/A-Za-z / /c;
+  $suba = lc($suba);
+  $suba =~ s/ and / /;
+  $suba =~ s/ etc / /;
+  $suba =~ s/ dc / /;
+  $suba =~ s/\s+/ /g;
+  $suba =~ s/^\s*(.*?)\s*$/$1/;
+  print "$suba\n";
+}
+
+sub IsThesis
+{
+    my $self    = shift;
+    my $barcode = shift;
+    my $record  = shift;
+
+    if ( ! $record ) { $self->Logit( "failed in IsThesis: $barcode" ); }
+
+    my $xpath = qq{//*[local-name()='datafield' and \@tag='502']/*[local-name()='subfield'  and \@code='a']};
+    my $leader  = $record->findvalue( $xpath );
+    my $doc     = $leader;
+    if ($doc =~ m/thes(e|i)s/i || $doc =~ m/diss/i) { return 1; }
 
     return 0;
 }
