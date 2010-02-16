@@ -1448,72 +1448,7 @@ sub CreateSQL
       $sql = qq{ SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" $restrict };
     }
 
-    #my %opposites = {'<'=>'>', '>'=>'<'};
-    my ($search1term, $search2term, $search3term);
-    if ( $search1value =~ m/.*\*.*/ )
-    {
-      $search1value =~ s/\*/%/gs;
-      $search1term = qq{$search1 LIKE '$search1value'};
-    }
-    else
-    {
-      $search1term = qq{$search1 = '$search1value'};
-    }
-    if ( $search2value =~ m/.*\*.*/ )
-    {
-      $search2value =~ s/\*/%/gs;
-      $search2term = sprintf("$search2 %sLIKE '$search2value'", ($op1 eq 'NOT')? 'NOT ':'');
-    }
-    else
-    {
-      $search2term = sprintf("$search2 %s= '$search2value'", ($op1 eq 'NOT')? '!':'');
-    }
-
-    if ( $search3value =~ m/.*\*.*/ )
-    {
-      $search3value =~ s/\*/%/gs;
-      $search3term = sprintf("$search3 %sLIKE '$search3value'", ($op2 eq 'NOT')? 'NOT ':'');
-    }
-    else
-    {
-      $search3term = sprintf("$search3 %s= '$search3value'", ($op2 eq 'NOT')? '!':'');
-    }
-
-    if ( $search1value =~ m/([<>]=?)\s*(\d+)\s*/ )
-    {
-      $search1term = "$search1 $1 $2";
-    }
-    if ( $search2value =~ m/([<>]=?)\s*(\d+)\s*/ )
-    {
-      my $op = $1;
-      $op =~ y/<>/></ if $op1 eq 'NOT';
-      $search2term = "$search2 $op $2";
-    }
-    if ( $search3value =~ m/([<>]=?)\s*(\d+)\s*/ )
-    {
-      my $op = $1;
-      $op =~ y/<>/></ if $op1 eq 'NOT';
-      $search3term = "$search3 $op $2";
-    }
-    my $searches = '';
-    if ( $search1value ne '' )
-    {
-      $searches .= " AND ($search1term";
-    }
-    else
-    {
-      $searches .= " AND (1";
-    }
-    if ( $search2value ne '' )
-    {
-      $searches .= sprintf(" %s $search2term", ($op1 eq 'NOT')? 'AND':$op1);
-    }
-    if ( $search3value ne '' )
-    {
-      $searches .= sprintf(" %s $search3term", ($op2 eq 'NOT')? 'AND':$op2);
-    }
-    $searches .= ') ' if $searches;
-    $sql .= $searches;
+    $sql .= sprintf(' AND %s', $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value));
     if ( $startDate ) { $sql .= qq{ AND r.time >= "$startDate 00:00:00" }; }
     if ( $endDate ) { $sql .= qq{ AND r.time <= "$endDate 23:59:59" }; }
 
@@ -1541,10 +1476,79 @@ sub CreateSQL
     {
        $sql .= qq{ ORDER BY r.$order $direction $limit_section };
     }
-    
     return $sql;
 }
 
+sub SearchTermsToSQL
+{
+  my $self = shift;
+  my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value) = @_;
+  my ($search1term, $search2term, $search3term);
+  if ( $search1value =~ m/.*\*.*/ )
+  {
+    $search1value =~ s/\*/%/gs;
+    $search1term = qq{$search1 LIKE '$search1value'};
+  }
+  else
+  {
+    $search1term = qq{$search1 = '$search1value'};
+  }
+  if ( $search2value =~ m/.*\*.*/ )
+  {
+    $search2value =~ s/\*/%/gs;
+    $search2term = sprintf("$search2 %sLIKE '$search2value'", ($op1 eq 'NOT')? 'NOT ':'');
+  }
+  else
+  {
+    $search2term = sprintf("$search2 %s= '$search2value'", ($op1 eq 'NOT')? '!':'');
+  }
+
+  if ( $search3value =~ m/.*\*.*/ )
+  {
+    $search3value =~ s/\*/%/gs;
+    $search3term = sprintf("$search3 %sLIKE '$search3value'", ($op2 eq 'NOT')? 'NOT ':'');
+  }
+  else
+  {
+    $search3term = sprintf("$search3 %s= '$search3value'", ($op2 eq 'NOT')? '!':'');
+  }
+
+  if ( $search1value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  {
+    $search1term = "$search1 $1 $2";
+  }
+  if ( $search2value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  {
+    my $op = $1;
+    $op =~ y/<>/></ if $op1 eq 'NOT';
+    $search2term = "$search2 $op $2";
+  }
+  if ( $search3value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  {
+    my $op = $1;
+    $op =~ y/<>/></ if $op1 eq 'NOT';
+    $search3term = "$search3 $op $2";
+  }
+  my $searches = '';
+  if ( $search1value ne '' )
+  {
+    $searches .= sprintf(" (%s$search1term", ($op1 eq 'OR')?'(':'');
+  }
+  else
+  {
+    $searches .= sprintf(" (%s1", ($op1 eq 'OR')?'(':'');
+  }
+  if ( $search2value ne '' )
+  {
+    $searches .= sprintf(" %s %s$search2term%s", ($op1 eq 'NOT')? 'AND':$op1, ($op2 eq 'OR')?'(':'', ($op1 eq 'OR')?')':'');
+  }
+  if ( $search3value ne '' )
+  {
+    $searches .= sprintf(" %s $search3term%s", ($op2 eq 'NOT')? 'AND':$op2, ($op2 eq 'OR')?')':'');
+  }
+  $searches .= ') ';
+  return $searches;
+}
 
 sub SearchAndDownload
 {
@@ -1859,72 +1863,7 @@ sub GetVolumesRef
     push @rest, "r.time >= '$yesterday'";
     push @rest, 'q.status=0' unless $self->IsUserExpert($user);
   }
-  #my %opposites = {'<'=>'>', '>'=>'<'};
-  my ($search1term, $search2term, $search3term);
-  if ( $search1value =~ m/.*\*.*/ )
-  {
-    $search1value =~ s/\*/%/gs;
-    $search1term = qq{$search1 LIKE '$search1value'};
-  }
-  else
-  {
-    $search1term = qq{$search1 = '$search1value'};
-  }
-  if ( $search2value =~ m/.*\*.*/ )
-  {
-    $search2value =~ s/\*/%/gs;
-    $search2term = sprintf("$search2 %sLIKE '$search2value'", ($op1 eq 'NOT')? 'NOT':'');
-  }
-  else
-  {
-    $search2term = sprintf("$search2 %s= '$search2value'", ($op1 eq 'NOT')? '!':'');
-  }
-
-  if ( $search3value =~ m/.*\*.*/ )
-  {
-    $search3value =~ s/\*/%/gs;
-    $search3term = sprintf("$search3 %sLIKE '$search3value'", ($op2 eq 'NOT')? 'NOT':'');
-  }
-  else
-  {
-    $search3term = sprintf("$search3 %s= '$search3value'", ($op2 eq 'NOT')? '!':'');
-  }
-
-  if ( $search1value =~ m/([<>]=?)\s*(\d+)\s*/ )
-  {
-    $search1term = "$search1 $1 $2";
-  }
-  if ( $search2value =~ m/([<>]=?)\s*(\d+)\s*/ )
-  {
-    my $op = $1;
-    $op =~ y/<>/></ if $op1 eq 'NOT';
-    $search2term = "$search2 $op $2";
-  }
-  if ( $search3value =~ m/([<>]=?)\s*(\d+)\s*/ )
-  {
-    my $op = $1;
-    $op =~ y/<>/></ if $op1 eq 'NOT';
-    $search3term = "$search3 $op $2";
-  }
-  my $searches = '';
-  if ( $search1value ne '' )
-  {
-    $searches .= "($search1term";
-  }
-  else
-  {
-    $searches .= "(1";
-  }
-  if ( $search2value ne '' )
-  {
-    $searches .= sprintf(" %s $search2term", ($op1 eq 'NOT')? 'AND':$op1);
-  }
-  if ( $search3value ne '' )
-  {
-    $searches .= sprintf(" %s $search3term", ($op2 eq 'NOT')? 'AND':$op2);
-  }
-  $searches .= ')';
-  push @rest, $searches;
+  push @rest, $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
   push @rest, "date(r.time) >= '$startDate'" if $startDate;
   push @rest, "date(r.time) <= '$endDate'" if $endDate;
   my $restrict = join(' AND ', @rest);
