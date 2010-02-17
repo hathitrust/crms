@@ -1476,6 +1476,7 @@ sub CreateSQL
     {
        $sql .= qq{ ORDER BY r.$order $direction $limit_section };
     }
+    #print "$sql<br/>\n";
     return $sql;
 }
 
@@ -1486,7 +1487,7 @@ sub SearchTermsToSQL
   my ($search1term, $search2term, $search3term);
   if ( $search1value =~ m/.*\*.*/ )
   {
-    $search1value =~ s/\*/%/gs;
+    $search1value =~ s/\*/_____/gs;
     $search1term = qq{$search1 LIKE '$search1value'};
   }
   else
@@ -1495,7 +1496,7 @@ sub SearchTermsToSQL
   }
   if ( $search2value =~ m/.*\*.*/ )
   {
-    $search2value =~ s/\*/%/gs;
+    $search2value =~ s/\*/_____/gs;
     $search2term = sprintf("$search2 %sLIKE '$search2value'", ($op1 eq 'NOT')? 'NOT ':'');
   }
   else
@@ -1505,7 +1506,7 @@ sub SearchTermsToSQL
 
   if ( $search3value =~ m/.*\*.*/ )
   {
-    $search3value =~ s/\*/%/gs;
+    $search3value =~ s/\*/_____/gs;
     $search3term = sprintf("$search3 %sLIKE '$search3value'", ($op2 eq 'NOT')? 'NOT ':'');
   }
   else
@@ -1547,6 +1548,7 @@ sub SearchTermsToSQL
     $searches .= sprintf(" %s $search3term%s", ($op2 eq 'NOT')? 'AND':$op2, ($op2 eq 'OR')?')':'');
   }
   $searches .= ') ';
+  $searches =~ s/_____/%/g;
   return $searches;
 }
 
@@ -5946,7 +5948,7 @@ sub ReviewSearchMenu
     splice @keys, 3, 1;
     splice @labs, 3, 1;
   }
-  my $html = "<select name='$searchName'>\n";
+  my $html = "<select name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
     $html .= sprintf(qq{  <option value="%s"%s>%s</option>\n}, $keys[$i], ($searchVal eq $keys[$i])? ' selected="selected"':'', $labs[$i]);
