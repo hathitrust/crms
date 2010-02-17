@@ -97,7 +97,7 @@ Restrict selection:<br/>
 <br/>
 
 <label for="order">Order:</label>
-<select id="order" name="order">
+<select name="order" id="order">
   <option value="id"       [% order == 'id' ?  'selected="selected"':'' %]>Identifier</option>
   <option value="title"    [% order == 'title' ? 'selected="selected"':'' %]>Title</option>
   <option value="author"   [% order == 'author' ? 'selected="selected"':'' %]>Author</option>
@@ -144,6 +144,11 @@ records per page.
 <input type="button" value="Clear"
        onclick="selMenuItem('op1','AND');
                 selMenuItem('op2','AND');
+                selMenuItem('search1','Identifier');
+                selMenuItem('search2','Identifier');
+                selMenuItem('search3','Identifier');
+                selMenuItem('order','id');
+                selMenuItem('direction','ASC');
                 document.getElementById('startDate').value='';
                 document.getElementById('endDate').value='';
                 document.getElementById('search1value').value='';
