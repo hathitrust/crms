@@ -3958,10 +3958,14 @@ sub IsThesis
     if ( ! $record ) { $self->Logit( "failed in IsThesis: $barcode" ); }
 
     my $xpath = qq{//*[local-name()='datafield' and \@tag='502']/*[local-name()='subfield'  and \@code='a']};
-    my $leader  = $record->findvalue( $xpath );
-    my $doc     = $leader;
-    if ($doc =~ m/thes(e|i)s/i || $doc =~ m/diss/i) { return 1; }
-
+    my $doc  = $record->findvalue( $xpath );
+    return 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
+    my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='500']");
+    foreach my $node ($nodes->get_nodelist())
+    {
+      $doc = $node->findvalue("./*[local-name()='subfield' and \@code='a']");
+      return 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
+    }
     return 0;
 }
 
