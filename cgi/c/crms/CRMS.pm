@@ -3954,19 +3954,22 @@ sub IsThesis
     my $self    = shift;
     my $barcode = shift;
     my $record  = shift;
-
-    if ( ! $record ) { $self->Logit( "failed in IsThesis: $barcode" ); }
-
-    my $xpath = qq{//*[local-name()='datafield' and \@tag='502']/*[local-name()='subfield'  and \@code='a']};
-    my $doc  = $record->findvalue( $xpath );
-    return 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
-    my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='500']");
-    foreach my $node ($nodes->get_nodelist())
-    {
-      $doc = $node->findvalue("./*[local-name()='subfield' and \@code='a']");
-      return 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
-    }
-    return 0;
+    
+    my $is = 0;
+    if ( ! $record ) { $self->SetError( "failed in IsThesis($barcode)" ); }
+    eval {
+      my $xpath = qq{//*[local-name()='datafield' and \@tag='502']/*[local-name()='subfield'  and \@code='a']};
+      my $doc  = $record->findvalue( $xpath );
+      $is = 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
+      my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='500']");
+      foreach my $node ($nodes->get_nodelist())
+      {
+        $doc = $node->findvalue("./*[local-name()='subfield' and \@code='a']");
+        $is = 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
+      }
+    };
+    $self->SetError("failed in IsThesis($barcode): $@") if $@;
+    return $is;
 }
 
 ## ----------------------------------------------------------------------------
