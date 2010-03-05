@@ -22,6 +22,8 @@ use LWP::UserAgent;
 use XML::LibXML;
 use Encode;
 use Date::Calc qw(:all);
+use Date::Calendar;
+use Date::Calendar::Profiles qw( $Profiles );
 use POSIX qw(strftime);
 use DBI qw(:sql_types);
 use List::Util qw(min max);
@@ -742,6 +744,21 @@ sub IsItemInReviews
     return 0;
 }
 
+# Used by experts to approve a review made by a reviewer.
+sub CloneReview
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $user   = shift;
+  
+  my $sql = "SELECT attr,reason FROM reviews WHERE id='$id'";
+  my $rows = $self->get('dbh')->selectall_arrayref($sql);
+  foreach my $row (@{$rows})
+  {
+    $self->SubmitReview($id,$user,$row->[0],$row->[1],undef,undef,undef,1,undef,'Expert Accepted',1);
+    last;
+  }
+}
 
 ## ----------------------------------------------------------------------------
 ##  Function:   submit review
@@ -751,7 +768,7 @@ sub IsItemInReviews
 sub SubmitReview
 {
     my $self = shift;
-    my ($id, $user, $attr, $reason, $copyDate, $note, $renNum, $exp, $renDate, $category) = @_;
+    my ($id, $user, $attr, $reason, $copyDate, $note, $renNum, $exp, $renDate, $category, $auto, $question, $noinval) = @_;
 
     if ( ! $self->CheckForId( $id ) )                         { $self->SetError("id ($id) check failed");                    return 0; }
     if ( ! $self->CheckReviewer( $user, $exp ) )              { $self->SetError("reviewer ($user) check failed");            return 0; }
@@ -770,8 +787,8 @@ sub SubmitReview
     
     my $priority = $self->GetItemPriority( $id );
     
-    my @fieldList = ('id', 'user', 'attr', 'reason', 'renNum', 'renDate', 'category', 'priority');
-    my @valueList = ($id,  $user,  $attr,  $reason,  $renNum,  $renDate, $category, $priority);
+    my @fieldList = ('id', 'user', 'attr', 'reason', 'renNum', 'renDate', 'category', 'priority', 'auto');
+    my @valueList = ($id,  $user,  $attr,  $reason,  $renNum,  $renDate, $category, $priority, $auto);
 
     if ($exp)      { push(@fieldList, 'expert');   push(@valueList, $exp); }
     if ($copyDate) { push(@fieldList, 'copyDate'); push(@valueList, $copyDate); }
@@ -781,7 +798,7 @@ sub SubmitReview
               ") VALUES('" . join("', '", @valueList) . sprintf("'%s)", ($note)? ", $note":'');
 
     if ( $self->get('verbose') ) { $self->Logit( $sql ); }
-
+    #print "$sql<br/>\n";
     $self->PrepareSubmitSql( $sql );
 
     if ( $exp )
@@ -789,7 +806,6 @@ sub SubmitReview
       my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET expcnt=1 WHERE id="$id" };
       $self->PrepareSubmitSql( $sql );
       my $qstatus = $self->SimpleSqlGet("SELECT status FROM queue WHERE id='$id'");
-      # FIXME: need to check all other reviews of this group and see if all are und/nfi
       my $status = ($attr == 5 && $reason == 8 && $qstatus == 3)? 6:5;
       #We have decided to register the expert decision right away.
       $self->RegisterStatus($id, $status);
@@ -1134,15 +1150,17 @@ sub ExportReviews
     # Update correctness/validation now that everything is in historical
     foreach my $id ( @{$list} )
     {
-      my $sql = "SELECT user,time FROM historicalreviews WHERE id='$id'";
+      my $sql = "SELECT user,time,validated FROM historicalreviews WHERE id='$id'";
       my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
       foreach my $row ( @{$ref} )
       {
         my $user = $row->[0];
         my $time = $row->[1];
-        if (!$self->IsReviewCorrect($id, $user, $time))
+        my $val  = $row->[2];
+        my $val2 = $self->IsReviewCorrect($id, $user, $time);
+        if ($val != $val2)
         {
-          $sql = "UPDATE historicalreviews SET validated=0 WHERE id='$id' AND user='$user' AND time='$time'";
+          $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$time'";
           $self->PrepareSubmitSql( $sql );
         }
       }
@@ -1262,8 +1280,8 @@ sub MoveFromReviewsToHistoricalReviews
     my $source = $self->SimpleSqlGet($sql);
     my $status = $self->GetStatus( $id );
     
-    $sql = 'INSERT into historicalreviews (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, source, status, gid) ' .
-           "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, '$source', $status, $gid from reviews where id='$id'";
+    $sql = 'INSERT into historicalreviews (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, source, status, gid, auto) ' .
+           "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, '$source', $status, $gid, auto from reviews where id='$id'";
     $self->PrepareSubmitSql( $sql );
 
     $self->Logit( "remove $id from reviews" );
@@ -1342,6 +1360,38 @@ sub GetYesterday
   
   my $yd = $self->SimpleSqlGet('SELECT DATE_SUB(NOW(), INTERVAL 1 DAY)');
   return substr($yd, 0, 10);
+}
+
+sub TwoWorkingDays
+{
+  my $self     = shift;
+  my $readable = shift;
+  
+  my $time = $self->GetTodaysDate();
+  my $cal = Date::Calendar->new( $Profiles->{'US'} );
+  my @parts = split '-', $time;
+  my $date = $cal->add_delta_workdays($parts[0],$parts[1],$parts[2],2);
+  # Returned format is YYYYMMDD
+  $date = sprintf '%s-%s-%s', substr($date,0,4), substr($date,4,2), substr($date,6,2);
+  return ($readable)? $self->FormatDate($date):$date;
+}
+
+sub FormatDate
+{
+  my $self = shift;
+  my $date = shift;
+  
+  my $sql = "SELECT DATE_FORMAT('$date', '%a, %M %e, %Y')";
+  return $self->SimpleSqlGet( $sql );
+}
+
+sub FormatTime
+{
+  my $self = shift;
+  my $time = shift;
+  
+  my $sql = "SELECT DATE_FORMAT('$time', '%a, %M %e, %Y at %l:%i %p')";
+  return $self->SimpleSqlGet( $sql );
 }
 
 
@@ -1460,6 +1510,7 @@ sub CreateSQL
     }
     my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
     $sql .= " AND $terms" if $terms;
+    
     if ( $startDate ) { $sql .= qq{ AND r.time >= "$startDate 00:00:00" }; }
     if ( $endDate ) { $sql .= qq{ AND r.time <= "$endDate 23:59:59" }; }
 
@@ -3891,7 +3942,7 @@ sub IsGovDoc
     my $barcode = shift;
     my $record  = shift;
 
-    if ( ! $record ) { $self->SetError( "failed in IsGovDoc: $barcode" ); return 1; }
+    if ( ! $record ) { $self->SetError("no record in IsGovDoc: $barcode"); return 1; }
     my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
     my $leader  = $record->findvalue( $xpath );
     my $doc     = substr($leader, 28, 1);
@@ -3907,7 +3958,7 @@ sub IsUSPub
     my $barcode = shift;
     my $record  = shift;
 
-    if ( ! $record ) { $self->Logit( "failed in IsUSPub: $barcode" ); }
+    if ( ! $record ) { $self->SetError("no record in IsUSPub: $barcode"); return 1; }
 
     my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
     my $leader  = $record->findvalue( $xpath );
@@ -3935,10 +3986,126 @@ sub IsFormatBK
     return 0;
 }
 
-# This is code from Tim for normalizing the 260 subfield for U.S. cities.
-sub Blah
+sub IsThesis
 {
-  my $suba = 'Austin, Tex.,';
+  my $self    = shift;
+  my $barcode = shift;
+  my $record  = shift;
+
+  my $is = 0;
+  if ( ! $record ) { $self->SetError("no record in IsThesis($barcode)"); return 0; }
+  eval {
+    my $xpath = "//*[local-name()='datafield' and \@tag='502']/*[local-name()='subfield'  and \@code='a']";
+    my $doc  = $record->findvalue( $xpath );
+    $is = 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
+    my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='500']");
+    foreach my $node ($nodes->get_nodelist())
+    {
+      $doc = $node->findvalue("./*[local-name()='subfield' and \@code='a']");
+      $is = 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
+    }
+  };
+  $self->SetError("failed in IsThesis($barcode): $@") if $@;
+  return $is;
+}
+
+# Translations: 041, first indicator=1, $a=eng, $h= (original
+# language code); Translation (or variations thereof in 500(a) note field.
+sub IsTranslation
+{
+  my $self    = shift;
+  my $barcode = shift;
+  my $record  = shift;
+
+  my $is = 0;
+  if ( ! $record ) { $self->SetError("no record in IsTranslation($barcode)"); return 0; }
+  eval {
+    my $xpath = "//*[local-name()='datafield' and \@tag='041' and \@ind1='1']/*[local-name()='subfield' and \@code='a']";
+    my $lang  = $record->findvalue( $xpath );
+    $xpath = "//*[local-name()='datafield' and \@tag='041' and \@ind1='1']/*[local-name()='subfield' and \@code='h']";
+    my $orig  = $record->findvalue( $xpath );
+    if ($lang && $orig)
+    {
+      $is = 1 if $lang eq 'eng' and $orig ne 'eng';
+    }
+    if (!$is && $lang)
+    {
+      # some uc volumes have no 'h' but instead concatenate everything in 'a'
+      $is = 1 if length($lang) > 3 and substr($lang,0,3) eq 'eng';
+    }
+    if (!$is)
+    {
+      my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='500']");
+      foreach my $node ($nodes->get_nodelist())
+      {
+        my $doc = $node->findvalue("./*[local-name()='subfield' and \@code='a']");
+        $is = 1 if $doc =~ m/translat(ion|ed)/i;
+      }
+    }
+  };
+  $self->SetError("failed in IsTranslation($barcode): $@") if $@;
+  return $is;
+}
+
+# - Foreign ? use method used for bib extraction to detect
+# second/foreign place of pub. From Tim?s documentation:
+# Check of 260 field for multiple subfield a:
+# If PubPlace 17 eq ?u?, and the 260 field contains multiple subfield
+# a?s, then the data in each subfield a is normalized and matched
+# against a list of known US cities.  If any of the subfield a?s are not
+# in the list, then the mult_260a_non_us flag is set.
+# Note: it is assumed this has passed the IsUSPub() check.
+sub IsForeignPub
+{
+  my $self    = shift;
+  my $barcode = shift;
+  my $record  = shift;
+
+  my $is = 0;
+  if ( ! $record ) { $self->SetError("no record in IsForeignPub($barcode)"); return 0; }
+  eval {
+    my $xpath = "//*[local-name()='controlfield' and \@tag='008']";
+    my $where  = $record->findvalue( $xpath );
+    if (substr($where,17,1) eq 'u')
+    {
+      my @nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='260']/*[local-name()='subfield' and \@code='a']")->get_nodelist();
+      return if scalar @nodes == 1;
+      foreach my $node (@nodes)
+      {
+        $where = $self->Normalize($node->textContent);
+        my $cities = $self->get('cities');
+        $cities = $self->ReadCities() unless $cities;
+        if ($cities !~ m/==$where==/i)
+        {
+          $is = 1;
+          last;
+        }
+      }
+    }
+  };
+  $self->SetError("failed in IsForeignPub($barcode): $@") if $@;
+  return $is;
+}
+
+sub ReadCities
+{
+  my $self = shift;
+  
+  my $in = $self->get('root') . "/prep/c/crms/us_cities.txt";
+  open (FH, '<', $in) || $self->SetError("Could not open $in");
+  my $cities = '';
+  while( <FH> ) { chomp; $cities .= "==$_=="; }
+  close FH;
+  $self->set('cities',$cities);
+  return $cities;
+}
+
+# This is code from Tim for normalizing the 260 subfield for U.S. cities.
+sub Normalize
+{
+  my $self = shift;
+  my $suba = shift;
+  
   $suba =~ tr/A-Za-z / /c;
   $suba = lc($suba);
   $suba =~ s/ and / /;
@@ -3946,30 +4113,7 @@ sub Blah
   $suba =~ s/ dc / /;
   $suba =~ s/\s+/ /g;
   $suba =~ s/^\s*(.*?)\s*$/$1/;
-  print "$suba\n";
-}
-
-sub IsThesis
-{
-    my $self    = shift;
-    my $barcode = shift;
-    my $record  = shift;
-    
-    my $is = 0;
-    if ( ! $record ) { $self->SetError( "failed in IsThesis($barcode)" ); }
-    eval {
-      my $xpath = qq{//*[local-name()='datafield' and \@tag='502']/*[local-name()='subfield'  and \@code='a']};
-      my $doc  = $record->findvalue( $xpath );
-      $is = 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
-      my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='500']");
-      foreach my $node ($nodes->get_nodelist())
-      {
-        $doc = $node->findvalue("./*[local-name()='subfield' and \@code='a']");
-        $is = 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
-      }
-    };
-    $self->SetError("failed in IsThesis($barcode): $@") if $@;
-    return $is;
+  return $suba;
 }
 
 ## ----------------------------------------------------------------------------
@@ -5504,11 +5648,11 @@ sub GetLastExport
     my $self = shift;
     my $readable = shift;
     
-    my $what = ($readable)? 'DATE_FORMAT(time, "%a, %M %e, %Y at %l:%i %p")':'time';
-    my $sql = "SELECT itemcount,$what FROM exportrecord WHERE itemcount>0 ORDER BY time DESC LIMIT 1";
+    my $sql = "SELECT itemcount,time FROM exportrecord WHERE itemcount>0 ORDER BY time DESC LIMIT 1";
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
     my $count = $ref->[0]->[0];
     my $time = $ref->[0]->[1];
+    $time = $self->FormatTime($time) if $readable;
     return ($count,$time);
 
 }
@@ -5558,21 +5702,19 @@ sub GetLastQueueTime
     my $self     = shift;
     my $readable = shift;
     
-    my $what = ($readable)? 'DATE_FORMAT(MAX(time), "%a, %M %e, %Y at %l:%i %p")':'MAX(time)';
-    my $sql = qq{ SELECT $what FROM $CRMSGlobals::queuerecordTable WHERE source='RIGHTSDB'};
-    my $latest_time = $self->SimpleSqlGet( $sql );
-    
-    return $latest_time;
+    my $sql = qq{ SELECT MAX(time) FROM $CRMSGlobals::queuerecordTable WHERE source='RIGHTSDB'};
+    my $time = $self->SimpleSqlGet( $sql );
+    $time = $self->FormatTime($time) if $readable;
+    return $time;
 }
 
 sub GetLastStatusProcessedTime
 {
     my $self = shift;
 
-    my $sql = qq{ SELECT DATE_FORMAT(MAX(time), "%a, %M %e, %Y at %l:%i %p") FROM processstatus };
-    my $last_time = $self->SimpleSqlGet( $sql );
-    
-    return $last_time;
+    my $sql = qq{ SELECT MAX(time) FROM processstatus };
+    my $time = $self->SimpleSqlGet( $sql );
+    return $self->FormatTime($time);
 }
 
 sub GetLastIdQueueCount
@@ -5595,7 +5737,7 @@ sub DownloadSpreadSheetBkup
     if ($buffer)
     {
 
-      my $ZipDir = qq{/tmp/out};
+      my $ZipDir = '/tmp/out';
       `chmod 777 $ZipDir`;
       `rm -rf $ZipDir`;
       my $file = qq{$ZipDir\.zip};
@@ -5699,7 +5841,7 @@ sub IsReviewCorrect
   my $renDate = $row->[3];
   #print "user $user $attr $reason $renNum $renDate\n";
   # Get the most recent expert review
-  $sql = "SELECT attr,reason,renNum,renDate FROM historicalreviews WHERE id='$id' AND expert>0 ORDER BY time DESC LIMIT 1";
+  $sql = "SELECT attr,reason,renNum,renDate,user FROM historicalreviews WHERE id='$id' AND expert>0 ORDER BY time DESC";
   $r = $self->get('dbh')->selectall_arrayref($sql);
   return 1 unless scalar @{$r};
   $row = $r->[0];
@@ -5707,11 +5849,21 @@ sub IsReviewCorrect
   my $ereason = $row->[1];
   my $erenNum = $row->[2];
   my $erenDate = $row->[3];
-  #print "expert $eattr $ereason $erenNum $erenDate\n";
-  return 0 if $attr != $eattr or $reason != $ereason;
-  if ($attr == 2 && $reason == 7)
+  my $euser = $row->[4];
+  #print "expert ($euser) $eattr $ereason $erenNum $erenDate\n";
+  #print "$user $attr $reason $renNum $renDate\n";
+  if ($attr != $eattr || $reason != $ereason)
   {
-    return 0 if $renNum ne $erenNum or $renDate ne $erenDate;
+    #print ("$attr != $eattr || $reason != $ereason\n");
+    return 0;
+  }
+  if ($eattr == 2 && $ereason == 7 && $attr == 2 && $reason == 7)
+  {
+    #print "$renNum ne $erenNum || $renDate ne $erenDate\n";
+    if ($renNum ne $erenNum || $renDate ne $erenDate)
+    {
+      return 0;
+    }
   }
   return 1;
 }
@@ -5904,7 +6056,8 @@ sub SanityCheckDB
   foreach my $row ( @{$rows} )
   {
     $self->SetError(sprintf("$table __ Nonmatching id for gid %s__ %s vs %s", $row->[0], $row->[1], $row->[2])) if $row->[1] ne $row->[2];
-    $self->SetError(sprintf("$table __ Nonmatching src for gid %s__ %s vs%s", $row->[0], $row->[3], $row->[4])) if $row->[3] ne $row->[4];
+    # In one unusual case the below can happen: nonmatching sources.
+    #$self->SetError(sprintf("$table __ Nonmatching src for gid %s__ %s vs%s", $row->[0], $row->[3], $row->[4])) if $row->[3] ne $row->[4];
   }
   # ======== exportrecord ========
   $table = 'exportrecord';
@@ -5980,7 +6133,7 @@ sub Mojibake
 {
   my $self = shift;
   my $text = shift;
-  my $mojibake = '[ÊÃÄÅ¶¹¸©×«»§¼¡±]';
+  my $mojibake = '[ÊÃÄÅ¶¹¸©×«»§¼¡±]';
   return ($text =~ m/$mojibake/i);
 }
 
@@ -6084,13 +6237,13 @@ sub GetSystemStatus
   my $self = shift;
   
   my @vals = ('forever','normal','');
-  my $sql = 'SELECT DATE_FORMAT(time, "%a, %M %e, %Y at %l:%i %p"),status,message FROM systemstatus LIMIT 1';
+  my $sql = 'SELECT time,status,message FROM systemstatus LIMIT 1';
   my $r = $self->get('dbh')->selectall_arrayref($sql);
   my $row = $r->[0];
   if ($row)
   {
-    $vals[0] = $row->[0] if $row->[0];
-    $vals[1] = $row->[1] if $row->[1];;
+    $vals[0] = $self->FormatTime($row->[0]) if $row->[0];
+    $vals[1] = $row->[1] if $row->[1];
     $vals[2] = $row->[2] if $row->[2];
     if ($vals[2] eq '')
     {
