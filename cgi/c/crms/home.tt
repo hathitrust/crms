@@ -17,7 +17,12 @@
     <a href="crms?p=admin">admin menu</a> ||
   [% END %]
 </div>
-
+<br/>
+[% IF crms.IsUserExpert %]
+<div> || <a href="crms?p=undReviews">provisional matches</a> ||
+  <a href="crms?p=expert">conflicts</a> ||
+</div>
+[% END %]
 
 [% locked = crms.GetLockedItems(user) %]
 [% IF locked.size %]
