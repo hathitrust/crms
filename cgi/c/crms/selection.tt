@@ -141,20 +141,7 @@ Restrict selection:<br/>
 records per page.
 <br/>
 <input type="submit" value="Submit"/>
-<input type="button" value="Clear"
-       onclick="selMenuItem('op1','AND');
-                selMenuItem('op2','AND');
-                selMenuItem('search1','Identifier');
-                selMenuItem('search2','Identifier');
-                selMenuItem('search3','Identifier');
-                selMenuItem('order','id');
-                selMenuItem('direction','ASC');
-                document.getElementById('startDate').value='';
-                document.getElementById('endDate').value='';
-                document.getElementById('search1value').value='';
-                document.getElementById('search2value').value='';
-                document.getElementById('search3value').value='';
-       "/>
+<input type="reset" value="Clear"/>
 </form>
 </div>
 <br/>
