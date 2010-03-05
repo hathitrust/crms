@@ -10,14 +10,18 @@
 <h3>click to edit users</h3>
 
 [% users = crms.GetUserData() %]
-[% FOREACH user IN users.keys.sort %]
-  <div>
-    <a href="crms?p=adminEditUser&amp;id=[% users.${user}.id %]">[% users.${user}.name %] 
-    ([% users.${user}.types.sort.join(", ") %])([% users.${user}.id %])</a>
-  </div>
-[% END %]
+<table class="exportStats">
+  <tr><th>Name</th><th>Privileges</th><th>ID</th></tr>
+  [% FOREACH user IN users.keys.sort %]
+    <tr>
+      <td><a href="crms?p=adminEditUser&amp;id=[% users.${user}.id %]">[% users.${user}.name.replace('\s','&nbsp;') %]</a></td>
+      <td>[% users.${user}.types.sort.join(", ") %]</td>
+      <td>[% users.${user}.id %]</td>
+    </tr>
+  [% END %]
+</table>
 
-<hr width="25%" align="left"/>
+
 
 [% INCLUDE editUserForm.tt %]
 
