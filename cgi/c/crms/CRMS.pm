@@ -1023,8 +1023,23 @@ sub SubmitHistReview
       # Update status on status 1 item
       if ($status == 5)
       {
-        $sql = qq{UPDATE $CRMSGlobals::historicalreviewsTable SET status=$status WHERE id='$id'};
+        $sql = qq{UPDATE $CRMSGlobals::historicalreviewsTable SET status=$status WHERE id='$id' AND gid IS NULL};
         $self->PrepareSubmitSql( $sql );
+      }
+      # Update validation on all items with this id
+      $sql = "SELECT user,time,validated FROM historicalreviews WHERE id='$id'";
+      my $ref = $self->get('dbh')->selectall_arrayref($sql);
+      foreach my $row (@{$ref})
+      {
+        $user = $row->[0];
+        $date = $row->[1];
+        my $val  = $row->[2];
+        my $val2 = $self->IsReviewCorrect($id, $user, $time);
+        if ($val != $val2)
+        {
+          $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$time'";
+          $self->PrepareSubmitSql( $sql );
+        }
       }
     }
     return 1;
