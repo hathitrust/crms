@@ -20,8 +20,8 @@
   ||
 <br/> 
 <br/> 
-  || <a href="crms?p=expert">expert review</a>
-  || <a href="crms?p=undReviews">und/nfi items</a>
+  || <a href="crms?p=expert">conflicts</a>
+  || <a href="crms?p=undReviews">provisional matches</a>
   || <a href="crms?p=queueAdd">add to queue</a>
   || <a href="crms?p=rights">query rights DB</a>
   || <a href="crms?p=determinationStats">determinations&nbsp;breakdown</a>
