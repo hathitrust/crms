@@ -1034,10 +1034,10 @@ sub SubmitHistReview
         $user = $row->[0];
         $date = $row->[1];
         my $val  = $row->[2];
-        my $val2 = $self->IsReviewCorrect($id, $user, $time);
+        my $val2 = $self->IsReviewCorrect($id, $user, $date);
         if ($val != $val2)
         {
-          $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$time'";
+          $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$date'";
           $self->PrepareSubmitSql( $sql );
         }
       }
