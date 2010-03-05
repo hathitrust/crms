@@ -755,7 +755,7 @@ sub CloneReview
   my $rows = $self->get('dbh')->selectall_arrayref($sql);
   foreach my $row (@{$rows})
   {
-    $self->SubmitReview($id,$user,$row->[0],$row->[1],undef,undef,undef,1,undef,'Expert Accepted',1);
+    $self->SubmitReview($id,$user,$row->[0],$row->[1],undef,undef,undef,1,undef,'Expert Accepted');
     last;
   }
 }
@@ -768,7 +768,7 @@ sub CloneReview
 sub SubmitReview
 {
     my $self = shift;
-    my ($id, $user, $attr, $reason, $copyDate, $note, $renNum, $exp, $renDate, $category, $auto, $question, $noinval) = @_;
+    my ($id, $user, $attr, $reason, $copyDate, $note, $renNum, $exp, $renDate, $category, $question, $noinval) = @_;
 
     if ( ! $self->CheckForId( $id ) )                         { $self->SetError("id ($id) check failed");                    return 0; }
     if ( ! $self->CheckReviewer( $user, $exp ) )              { $self->SetError("reviewer ($user) check failed");            return 0; }
@@ -787,8 +787,8 @@ sub SubmitReview
     
     my $priority = $self->GetItemPriority( $id );
     
-    my @fieldList = ('id', 'user', 'attr', 'reason', 'renNum', 'renDate', 'category', 'priority', 'auto');
-    my @valueList = ($id,  $user,  $attr,  $reason,  $renNum,  $renDate, $category, $priority, $auto);
+    my @fieldList = ('id', 'user', 'attr', 'reason', 'renNum', 'renDate', 'category', 'priority');
+    my @valueList = ($id,  $user,  $attr,  $reason,  $renNum,  $renDate, $category, $priority);
 
     if ($exp)      { push(@fieldList, 'expert');   push(@valueList, $exp); }
     if ($copyDate) { push(@fieldList, 'copyDate'); push(@valueList, $copyDate); }
@@ -1280,8 +1280,8 @@ sub MoveFromReviewsToHistoricalReviews
     my $source = $self->SimpleSqlGet($sql);
     my $status = $self->GetStatus( $id );
     
-    $sql = 'INSERT into historicalreviews (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, source, status, gid, auto) ' .
-           "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, '$source', $status, $gid, auto from reviews where id='$id'";
+    $sql = 'INSERT into historicalreviews (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, source, status, gid) ' .
+           "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, '$source', $status, $gid from reviews where id='$id'";
     $self->PrepareSubmitSql( $sql );
 
     $self->Logit( "remove $id from reviews" );
