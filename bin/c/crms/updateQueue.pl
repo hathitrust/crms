@@ -3,8 +3,6 @@
 my $DLXSROOT;
 my $DLPS_DEV;
 
-
-
 BEGIN 
 { 
     $DLXSROOT = $ENV{'DLXSROOT'}; 
@@ -22,15 +20,15 @@ use LWP::UserAgent;
 
 sub ReportMsg
 {
-  my ( $msg ) = @_;
-
+  my $msg = shift;
   my $newtime = scalar (localtime(time()));
-
-  $msg = qq{$newtime : $msg};
-  print "$msg","\n";
-
+  print "$newtime: $msg\n";
 }
 
+my %opts;
+getopts('cq', \%opts);
+my $skipCandidates = $opts{'c'};
+my $skipQueue = $opts{'q'};
 
 my $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/update_log.txt",
@@ -40,63 +38,40 @@ my $crms = CRMS->new(
     dev          =>   $DLPS_DEV,
 );
 
+ReportMsg("Starting to Process the statuses.\n");
+$crms->ProcessReviews();
+ReportMsg("DONE Processing the statuses.\n");
 
-my $msg = qq{Starting to Process the statuses. \n};
-&ReportMsg ( $msg );
-
-#Set the statuses as needed.
-$crms->ProcessReviews ( );
-
-$msg = qq{DONE Processing the statuses. \n};
-&ReportMsg ( $msg );
-
-my $msg = qq{Starting to create export for the rights db.  You should receive a separate email when this completes. \n};
-&ReportMsg ( $msg );
+ReportMsg("Starting to create export for the rights db. You should receive a separate email when this completes.\n");
 ## get new items and load the queue table
 my $rc = $crms->ClearQueueAndExport();
-
-
 #only run this on dlps11
 #it will process all files in the rights_dir of the form *.rights and move them to the
 #/l1/prep/c/crms/archive
 my $host = `hostname`;
 if ( $host =~ m,dlps11\..*, )
 {
-  my $msg = qq{Calling Jessica's script to populate the rights db.\n};
-  &ReportMsg ( $msg );
-
+  ReportMsg("Calling Jessica's script to populate the rights db.\n");
   my $out = `/l/local/bin/perl /l1/bin/g/groove/populate_rights_data.pl --rights_dir=/l1/prep/c/crms --archive=/l1/prep/c/crms/archive/`;
-
-  my $msg = qq{DONE calling Jessica's script to populate the rights db.  This is the output:\n $out\n};
-  &ReportMsg ( $msg );
+  ReportMsg("DONE calling Jessica's script to populate the rights db. This is the output:\n $out\n");
 }
 
-my $msg = qq{DONE Exporting. Starting to Load New volumes into candidates.\n};
-&ReportMsg ( $msg );
-
-
-
-
-## get new items and load the queue table
-my $status = $crms->LoadNewItemsInCandidates ();
-
-my $msg = qq{DONE Loading new volumes into candidates.\n};
-&ReportMsg ( $msg );
-
-
-if ( $status )
+my $status = 1;
+# The testsuite can safely skip this often time-consuming project.
+if ($skipCandidates) { ReportMsg("-c flag set; skipping candidates load."); }
+else
 {
-   my $msg = qq{Starting to Load new items into queue.\n};
-   &ReportMsg ( $msg );
-
-   $crms->LoadNewItems ();
-
-   my $msg = qq{DONE loading new volumes into queue.\n};
-   &ReportMsg ( $msg );
-
+  ReportMsg("Starting to Load New volumes into candidates.\n");
+  ## get new items and load the queue table
+  $status = $crms->LoadNewItemsInCandidates();
+  ReportMsg("DONE Loading new volumes into candidates.\n");
 }
-my $msg = qq{All DONE with nightly script.\n};
-&ReportMsg ( $msg );
 
-
-
+if ($skipQueue) { ReportMsg("-q flag set; skipping queue load."); }
+elsif ($status)
+{
+   ReportMsg("Starting to Load new items into queue.\n");
+   $crms->LoadNewItems();
+   ReportMsg("DONE loading new volumes into queue.\n");
+}
+ReportMsg("All DONE with nightly script.\n");
