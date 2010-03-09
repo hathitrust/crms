@@ -26,7 +26,7 @@ WEB_dest         = ( /l1/web/c/crms )
 ( ${BIN_src} ) -> ( ${ALLHOSTS} )
         install ${BIN_dest};
         except_pat ( CVS );
-        except ( test.pl db_test.sql );
+        except ( testsuite.pl db_test.sql );
         # notify dlps-release@umich.edu ;
 
 # do an rdist -oremove on CGI
