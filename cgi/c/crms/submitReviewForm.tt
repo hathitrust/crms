@@ -3,12 +3,12 @@
 [% END %]
 
 <form name="submitReview" action="crms" onsubmit="return VerifyCategory();">
-  <input type="hidden" name="p"        value="confirmReview"/> 
-  <input type="hidden" name="barcode"  value="[% barcode %]"/> 
-  <input type="hidden" name="user"     value="[% user %]"/> 
-  <input type="hidden" name="confirm"  value="1"/> 
-  <input type="hidden" name="editing"  value="[% editing %]"/> 
-  <input type="hidden" name="navRight" value="[% navright %]"/> 
+  <input type="hidden" name="p"        value="confirmReview"/>
+  <input type="hidden" name="barcode"  value="[% barcode %]"/>
+  <input type="hidden" name="user"     value="[% user %]"/>
+  <input type="hidden" name="confirm"  value="1"/>
+  <input type="hidden" name="editing"  value="[% editing %]"/>
+  <input type="hidden" name="navRight" value="[% navright %]"/>
   <table class="display">
     <tr>
 	    <td class="display" align="left" colspan="3">
@@ -132,9 +132,11 @@
     [% pres = {"Foreign Pub"    => "Foreign Pub",   "Language"        => "Language",
                "Misc"           => "Misc",          "Missing"         => "Missing",
                "Reprint"        => "Reprint",       "Series/Serial"   => "Series/Serial",
-               "Collection"     => "Collection",    "Translation"     => "Translation",
+               "Inserts"        => "Inserts",       "Translation"     => "Translation",
                "Wrong Record"   => "Wrong Record",  "Date"            => "Date",
                "Dissertation/Thesis" => "Dissertation/Thesis",
+               "Non-Class A"    => "Non-Class A",   "Expert Note"     => "Expert Note",
+               "Edition"        => "Edition",       "Multiple Dates"  => "Multiple Dates",
                ""               => "none"} 
     %]
 
@@ -152,6 +154,13 @@
     <input style="float:left" type="submit" name="submit" value="Submit" accesskey="s"/> 
     <input style="float:left" type="submit" name="submit" value="Cancel" accesskey="c" onclick="this.form.onsubmit=null;"/> 
   </div>
+  <table>
+  [% IF crms.IsUserExpert(user) %]
+    <tr><td style="text-align:center;"><input type="checkbox" name="swiss" [% (swiss)? 'checked="checked"':'' %]/>
+      &nbsp;Do not invalidate other reviews for this volume
+    </td></tr>
+  [% END %]
+  </table>
 </div>
 
 [% IF error %]

@@ -93,7 +93,7 @@ if ( $cgi->param('p') eq 'confirmReview' )
   my $editing    = $cgi->param('editing');
   if ($cgi->param( 'submit' ) eq 'Cancel')
   {
-    my $id         = $cgi->param('barcode');
+    my $id = $cgi->param('barcode');
     $crms->UnlockItem( $id, $user);
     $cgi->delete_all();
     if ( $editing )
@@ -113,6 +113,8 @@ if ( $cgi->param('p') eq 'confirmReview' )
     my $renDate    = $cgi->param('renDate');
     my $id         = $cgi->param('barcode');
     my $navright   = $cgi->param('navRight');
+    my $question   = $cgi->param('question');
+    my $swiss      = $cgi->param('swiss');
 
     my ( $rights, $reason ) = $crms->GetAttrReasonFromCode($EncRights);
 
@@ -147,16 +149,18 @@ if ( $cgi->param('p') eq 'confirmReview' )
       $cgi->param('renNum',   $renNum );
       $cgi->param('renDate',  $renDate);
       $cgi->param('editing',  $editing);
+      $cgi->param('question', $question);
+      $cgi->param('swiss',    $swiss);
     }
     else
     {
       #Process the submission, and go on to the next item
-      my $id     = $cgi->param('barcode');
+      my $id = $cgi->param('barcode');
       my $copyDate;
       my $expert;
       if ( $crms->IsUserExpert( $user ) ) { $expert = 2; }
 
-      $crms->SubmitReview($id, $user, $rights, $reason, $copyDate, $comment, $renNum, $expert, $renDate, $category);
+      $crms->SubmitReview($id, $user, $rights, $reason, $copyDate, $comment, $renNum, $expert, $renDate, $category, $swiss, $question);
       $cgi->delete_all();
       if ( $editing )
       {

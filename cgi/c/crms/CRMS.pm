@@ -768,14 +768,16 @@ sub CloneReview
 sub SubmitReview
 {
     my $self = shift;
-    my ($id, $user, $attr, $reason, $copyDate, $note, $renNum, $exp, $renDate, $category, $question, $noinval) = @_;
+    my ($id, $user, $attr, $reason, $copyDate, $note, $renNum, $exp, $renDate, $category, $swiss, $question) = @_;
 
     if ( ! $self->CheckForId( $id ) )                         { $self->SetError("id ($id) check failed");                    return 0; }
     if ( ! $self->CheckReviewer( $user, $exp ) )              { $self->SetError("reviewer ($user) check failed");            return 0; }
     if ( ! $self->ValidateAttr( $attr ) )                     { $self->SetError("attr ($attr) check failed");                return 0; }
     if ( ! $self->ValidateReason( $reason ) )                 { $self->SetError("reason ($reason) check failed");            return 0; }
     if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->SetError("attr/reason ($attr/$reason) check failed"); return 0; }
-
+    
+    $swiss = 1 if $swiss;
+    $question = 1 if $question;
     #remove any blanks from renNum
     $renNum =~ s/\s+//gs;
     
@@ -789,8 +791,14 @@ sub SubmitReview
     
     my @fieldList = ('id', 'user', 'attr', 'reason', 'renNum', 'renDate', 'category', 'priority');
     my @valueList = ($id,  $user,  $attr,  $reason,  $renNum,  $renDate, $category, $priority);
-
-    if ($exp)      { push(@fieldList, 'expert');   push(@valueList, $exp); }
+    
+    if ($exp)
+    {
+      push(@fieldList, 'expert');
+      push(@valueList, $exp);
+      push(@fieldList, 'swiss');
+      push(@valueList, $swiss);
+    }
     if ($copyDate) { push(@fieldList, 'copyDate'); push(@valueList, $copyDate); }
     if ($note)     { push(@fieldList, 'note'); }
     
@@ -803,7 +811,7 @@ sub SubmitReview
 
     if ( $exp )
     {
-      my $sql = qq{ UPDATE $CRMSGlobals::queueTable SET expcnt=1 WHERE id="$id" };
+      my $sql = "UPDATE $CRMSGlobals::queueTable SET expcnt=1 WHERE id='$id'";
       $self->PrepareSubmitSql( $sql );
       my $qstatus = $self->SimpleSqlGet("SELECT status FROM queue WHERE id='$id'");
       my $status = ($attr == 5 && $reason == 8 && $qstatus == 3)? 6:5;
@@ -1295,8 +1303,8 @@ sub MoveFromReviewsToHistoricalReviews
     my $source = $self->SimpleSqlGet($sql);
     my $status = $self->GetStatus( $id );
     
-    $sql = 'INSERT into historicalreviews (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, source, status, gid) ' .
-           "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, '$source', $status, $gid from reviews where id='$id'";
+    $sql = 'INSERT into historicalreviews (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, source, status, gid, swiss) ' .
+           "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, '$source', $status, $gid, swiss from reviews where id='$id'";
     $self->PrepareSubmitSql( $sql );
 
     $self->Logit( "remove $id from reviews" );
@@ -1496,24 +1504,24 @@ sub CreateSQL
     my $sql;
     if ( $type eq 'adminReviews' )
     {
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id };
+      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id };
     }
     elsif ( $type eq 'expert' )
     {
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
+      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
     }
     elsif ( $type eq 'adminHistoricalReviews' )
     {
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.status, b.title, b.author, YEAR(b.pub_date), r.validated FROM bibdata b INNER JOIN $CRMSGlobals::historicalreviewsTable r ON r.id=b.id };
+      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated FROM bibdata b INNER JOIN $CRMSGlobals::historicalreviewsTable r ON r.id=b.id };
     }
     elsif ( $type eq 'undReviews' )
     {
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
+      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
     }
     elsif ( $type eq 'userReviews' )
     {
       my $user = $self->get( "user" );
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
+      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
     }
     elsif ( $type eq 'editReviews' )
     {
@@ -1521,7 +1529,7 @@ sub CreateSQL
       my $yesterday = $self->GetYesterday();
       # Experts need to see stuff with any status; non-expert should only see stuff that hasn't been processed yet.
       my $restrict = ($self->IsUserExpert($user))? '':'AND q.status=0';
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" $restrict };
+      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" $restrict };
     }
     my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
     $sql .= " AND $terms" if $terms;
@@ -1826,9 +1834,10 @@ sub SearchAndDownload
         my $legacy     = $row->[12];
         my $renDate    = $row->[13];
         my $priority   = $row->[14];
-        my $status     = $row->[15];
-        my $title      = $row->[16];
-        my $author     = $row->[17];
+        my $swiss      = $row->[15];
+        my $status     = $row->[16];
+        my $title      = $row->[17];
+        my $author     = $row->[18];
         
         if ( $type eq 'userReviews')
         {
@@ -1972,14 +1981,15 @@ sub GetReviewsRef
                     legacy     => $row->[12],
                     renDate    => $row->[13],
                     priority   => $row->[14],
-                    status     => $row->[15],
-                    title      => $row->[16],
-                    author     => $row->[17]
+                    swiss      => $row->[15],
+                    status     => $row->[16],
+                    title      => $row->[17],
+                    author     => $row->[18]
                    };
-        my $pubdate = $row->[18];
+        my $pubdate = $row->[19];
         $pubdate = '?' unless $pubdate;
         ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
-        ${$item}{'validated'} = $row->[19] if $page eq 'adminHistoricalReviews';
+        ${$item}{'validated'} = $row->[20] if $page eq 'adminHistoricalReviews';
         push( @{$return}, $item );
     }
     my $n = POSIX::ceil($offset/$pagesize+1);
@@ -2090,7 +2100,7 @@ sub GetVolumesRef
     my $id = $row->[0];
     my $qrest = ($doQ)? ' AND r.id=q.id':'';
     $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
-           "r.category, r.legacy, r.renDate, r.priority, $status, b.title, b.author" .
+           "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
            (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
            "FROM $table r, bibdata b$doQ " .
            "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
@@ -2116,14 +2126,15 @@ sub GetVolumesRef
                   legacy     => $row->[12],
                   renDate    => $row->[13],
                   priority   => $row->[14],
-                  status     => $row->[15],
-                  title      => $row->[16],
-                  author     => $row->[17]
+                  swiss      => $row->[15],
+                  status     => $row->[16],
+                  title      => $row->[17],
+                  author     => $row->[18]
                  };
-      my $pubdate = $row->[18];
+      my $pubdate = $row->[19];
       $pubdate = '?' unless $pubdate;
       ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
-      ${$item}{'validated'} = $row->[19] if $page eq 'adminHistoricalReviews';
+      ${$item}{'validated'} = $row->[20] if $page eq 'adminHistoricalReviews';
       push( @{$return}, $item );
     }
   }
@@ -2234,7 +2245,7 @@ sub GetVolumesRefWide
     my $id = $row->[0];
     my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
     $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
-           "r.category, r.legacy, r.renDate, r.priority, $status, b.title, b.author" .
+           "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
            (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
            "FROM $top INNER JOIN $table r ON b.id=r.id " .
            "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
@@ -2260,14 +2271,15 @@ sub GetVolumesRefWide
                   legacy     => $row->[12],
                   renDate    => $row->[13],
                   priority   => $row->[14],
-                  status     => $row->[15],
-                  title      => $row->[16],
-                  author     => $row->[17]
+                  swiss      => $row->[15],
+                  status     => $row->[16],
+                  title      => $row->[17],
+                  author     => $row->[18]
                  };
-      my $pubdate = $row->[18];
+      my $pubdate = $row->[19];
       $pubdate = '?' unless $pubdate;
       ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
-      ${$item}{'validated'} = $row->[19] if $page eq 'adminHistoricalReviews';
+      ${$item}{'validated'} = $row->[20] if $page eq 'adminHistoricalReviews';
       push( @{$return}, $item );
     }
   }
@@ -6119,14 +6131,18 @@ sub IsReviewCorrect
   my $user = shift;
   my $time = shift;
   
+  # Has there ever been a swiss review for this volume?
+  my $sql = "SELECT COUNT(id) FROM historicalreviews WHERE id='$id' AND swiss=1";
+  my $swiss = $self->SimpleSqlGet($sql);
   # Get the review
-  my $sql = "SELECT attr,reason,renNum,renDate FROM historicalreviews WHERE id='$id' AND user='$user' AND time='$time'";
+  $sql = "SELECT attr,reason,renNum,renDate,expert FROM historicalreviews WHERE id='$id' AND user='$user' AND time='$time'";
   my $r = $self->get('dbh')->selectall_arrayref($sql);
   my $row = $r->[0];
   my $attr = $row->[0];
   my $reason = $row->[1];
   my $renNum = $row->[2];
   my $renDate = $row->[3];
+  my $expert = $row->[4];
   #print "user $user $attr $reason $renNum $renDate\n";
   # Get the most recent expert review
   $sql = "SELECT attr,reason,renNum,renDate,user FROM historicalreviews WHERE id='$id' AND expert>0 ORDER BY time DESC";
@@ -6143,14 +6159,14 @@ sub IsReviewCorrect
   if ($attr != $eattr || $reason != $ereason)
   {
     #print ("$attr != $eattr || $reason != $ereason\n");
-    return 0;
+    return ($swiss && !$expert)? 2:0;
   }
   if ($eattr == 2 && $ereason == 7 && $attr == 2 && $reason == 7)
   {
     #print "$renNum ne $erenNum || $renDate ne $erenDate\n";
     if ($renNum ne $erenNum || $renDate ne $erenDate)
     {
-      return 0;
+      return ($swiss && !$expert)? 2:0;
     }
   }
   return 1;
@@ -6168,7 +6184,7 @@ sub CountCorrectReviews
   my $startClause = ($start)? " AND time>='$start'":'';
   my $endClause = ($end)? " AND time<='$end' ":'';
   my $userClause = ($user eq 'all')? $type1Clause:" AND user='$user'";
-  my $sql = "SELECT count(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0 $startClause $endClause $userClause";
+  my $sql = "SELECT count(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0 AND validated!=2 $startClause $endClause $userClause";
   my $total = $self->SimpleSqlGet($sql);
   #print "$sql => $total<br/>\n";
   my $correct = $total;

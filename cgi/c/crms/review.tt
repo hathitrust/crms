@@ -2,7 +2,6 @@
 
 [% error    = cgi.param('errorMsg')   %]
 
-[% expert    = 0 %]
 [% isEdit    = 0 %]
 [% inBarcode = cgi.param('barcode') %]
 [% inAdd     = cgi.param('add') %]
@@ -14,6 +13,8 @@
 [% comm       = cgi.param('comm') %]
 [% category   = cgi.param('category') %]
 [% select     = cgi.param('rights') %]
+[% question   = cgi.param('question') %]
+[% swiss      = cgi.param('swiss') %]
 [% mag        = cgi.cookie('mag') %]
 
 [% SET mag = 100 IF !mag %]
@@ -141,7 +142,8 @@
         [% INCLUDE submitReviewForm.tt barcode = barcode, renNum   = renNum,   renDate = renDate,
                                        comment = comment, copyDate = copyDate, comm    = comm,    
                                        category = category, editing = editing, error   = error,
-                                       navright = navright, select = select, mag = mag %]
+                                       navright = navright, select = select, mag = mag,
+                                       question = question, swiss = swiss %]
         <table class="nav">
           <tr>
             <td><a href="/c/crms/help.html#rights" target="_blank">Help</a></td>
