@@ -144,13 +144,23 @@ Example: searching for pub date <code>&lt;=1923</code> will retrieve all volumes
 </p><br/>
 <p><b>Note:</b> OR takes precedence over AND and NOT when you use all three search fields. So <b>x AND y OR z</b> is interpreted as
 <b>x AND (y OR z)</b>.</p><br/>
-<p>
-Searching by <b>review</b> is the search functionality from version 1.0 of the system -- volumes will be grouped together only when ordering
-by Identifier.<br/>
-Searching by <b>volume</b> will find reviews that meet the search criteria <b>and</b> any other reviews for that volume;
-ordering/sorting is done on the reviews that meet the search criteria, not the additional ones.<br/>
-Searching by volume always keeps reviews for the same volume together.
-</p>
+
+<ul>
+<li>Searching by <b>review</b> is the search functionality from version 1.0 of the system -- volumes will be grouped together only when ordering
+by Identifier.</li>
+<li>Searching by <b>volume</b> retrieves volumes for which any single review matches the search criteria;
+ordering/sorting is done on the review that meets the search criteria, not the additional ones.</li>
+<li>Searching by <b>volume</b>, and clicking on the "Search across reviews (wide)" checkbox does a <b>wide</b> search:
+in which volumes are retrieved if <i>any</i> of the reviews match;
+ordering/sorting is done on the minimum or maximum values for the sort term, of the reviews that meet the search criteria.</li>
+<li>Searching by volume always keeps reviews for the same volume together.</li>
+<li>Examples:
+  <ul>
+  <li>To search for <i>all volumes for which one or more of its reviews is pd/ren</i>: use <b>narrow</b> search.</li>
+  <li>To search for <i>all volumes whach have a review by Anne and another review by Greg</i>: use <b>wide</b> search.</li>
+  </ul>
+</li>
+</ul>
 </div>
 </body>
 </html>
