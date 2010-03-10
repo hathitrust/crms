@@ -11,8 +11,9 @@
 [% endDate = cgi.param('endDate') %]
 [% order = cgi.param('order') %]
 [% dir = cgi.param('direction') %]
-[% vols = cgi.param('vols')   %]
-[% recs = cgi.param('records')   %]
+[% vols = cgi.param('vols') %]
+[% wide = cgi.param('wide') %]
+[% recs = cgi.param('records') %]
 <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
 [% recs = recs.replace('\D','') %]
 [% adm = crms.IsUserAdmin() %]
@@ -45,7 +46,10 @@
   <label for="vols">Search for volumes:</label>
   <input type="checkbox" id="vols" name="vols" [% vols? 'checked="checked"' : '' %]
          onclick="document.getElementById('records').value = ((this.checked)? '[% vrecs %]':'[% nvrecs %]');
-                  document.getElementById('volrevSpan').innerHTML = ((this.checked)? 'Volume':'Review');"/>
+                  document.getElementById('volrevSpan').innerHTML = ((this.checked)? 'Volume':'Review');
+                  this.form.wide.disabled = !this.checked;"/><br/>
+  <label for="wide">Search across reviews (wide):</label>
+  <input type="checkbox" id="wide" name="wide" [% wide? 'checked="checked"' : '' %] [% vols? '':'disabled="disabled"' %]/>
 <br/><br/>
 [% END %]
 
