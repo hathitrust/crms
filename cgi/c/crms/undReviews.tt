@@ -1,4 +1,4 @@
-[% IF NOT crms.IsUserAdmin() %]
+[% IF NOT crms.IsUserExpert() %]
   [% INCLUDE denied.tt  %]
   [% STOP %]
 [% END %]
@@ -6,8 +6,18 @@
 [% INCLUDE header.tt    %]
 [% INCLUDE adminNav.tt  %]
 
-<hr width="25%" align="left"/>
-<h2>Matching <code>und/nfi</code> Reviews:</h2>
+[% approve = cgi.param('approve') %]
+[% IF approve %]
+  [% FOREACH param IN cgi.param %]
+    [% matches = param.match('(vol_)(.+)') %]
+    [% IF matches.0 == 'vol_' %]
+      [% crms.CloneReview(matches.1, user) %]
+    [% END %]
+  [% END %]
+[% END %]
+
+<hr width="25%" align="left"/><br/>
+<h2>Provisional Matches:</h2>
 
 [% INCLUDE selection.tt  %]
 
