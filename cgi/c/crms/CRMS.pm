@@ -1439,7 +1439,7 @@ sub ConvertToSearchTerm
       else { $new_search = 'r.priority'; }
     }
     elsif ( $search eq 'Validated' ) { $new_search = 'r.validated'; }
-    elsif ( $search eq 'PubDate' ) { $new_search = 'YEAR(b.pub_date)'; }
+    elsif ( $search eq 'PubDate' ) { $new_search = 'b.pub_date'; }
     elsif ( $search eq 'Locked' ) { $new_search = 'q.locked'; }
     elsif ( $search eq 'ExpertCount' ) { $new_search = 'q.expcnt'; }
     elsif ( $search eq 'Reviews' )
@@ -1504,7 +1504,7 @@ sub CreateSQL
     }
     elsif ( $type eq 'adminHistoricalReviews' )
     {
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.status, b.title, b.author, YEAR(b.pub_date), r.validated FROM $CRMSGlobals::historicalreviewsTable r, bibdata b  WHERE r.id = b.id };
+      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.status, b.title, b.author, YEAR(b.pub_date), r.validated FROM bibdata b INNER JOIN $CRMSGlobals::historicalreviewsTable r ON r.id=b.id };
     }
     elsif ( $type eq 'undReviews' )
     {
@@ -1561,6 +1561,9 @@ sub SearchTermsToSQL
   my $self = shift;
   my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value) = @_;
   my ($search1term, $search2term, $search3term);
+  $search1 = "YEAR($search1)" if $search1 =~ /pub_date/;
+  $search2 = "YEAR($search2)" if $search2 =~ /pub_date/;
+  $search3 = "YEAR($search3)" if $search3 =~ /pub_date/;
   if ( $search1value =~ m/.*\*.*/ )
   {
     $search1value =~ s/\*/_____/gs;
@@ -1623,6 +1626,121 @@ sub SearchTermsToSQL
   $tmpl =~ s/_____/%/g;
   #print "$tmpl<br/>\n";
   return $tmpl;
+}
+
+sub SearchTermsToSQLWide
+{
+  my $self = shift;
+  my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table) = @_;
+  # Pull down search 2 if no search 1
+  if (!$search1value)
+  {
+    $search1 = $search2;
+    $op1 = $op2;
+    $search2 = $search3;
+    $search1value = $search2value;
+    $search2value = $search3value;
+    $search3value = undef;
+  }
+  # Pull down search 3 if no search 2
+  if (!$search2value)
+  {
+    $search2 = $search3;
+    $search2value = $search3value;
+    $search3value = undef;
+  }
+  my %pref2table = ('b'=>'bibdata','r'=>$table,'q'=>'queue');
+  my $table1 = $pref2table{substr $search1,0,1};
+  my $table2 = $pref2table{substr $search2,0,1};
+  my $table3 = $pref2table{substr $search3,0,1};
+  my ($search1term,$search2term,$search3term);
+  my $search1_ = ($search1 =~ m/pub_date/)? "YEAR($search1)":$search1;
+  my $search2_ = ($search2 =~ m/pub_date/)? "YEAR($search2)":$search2;
+  my $search3_ = ($search3 =~ m/pub_date/)? "YEAR($search3)":$search3;
+  if ( $search1value =~ m/.*\*.*/ )
+  {
+    $search1term = qq{$search1_ LIKE '$search1value'};
+  }
+  elsif ($search1value)
+  {
+    $search1term = qq{$search1_ = '$search1value'};
+  }
+  if ( $search2value =~ m/.*\*.*/ )
+  {
+    $search2term = sprintf("$search2_ %sLIKE '$search2value'", ($op1 eq 'NOT')? 'NOT ':'');
+  }
+  elsif ($search2value)
+  {
+    $search2term = sprintf("$search2_ %s= '$search2value'", ($op1 eq 'NOT')? '!':'');
+  }
+  if ( $search3value =~ m/.*\*.*/ )
+  {
+    $search3term = sprintf("$search3_ %sLIKE '$search3value'", ($op2 eq 'NOT')? 'NOT ':'');
+  }
+  elsif ($search3value)
+  {
+    $search3term = sprintf("$search3_ %s= '$search3value'", ($op2 eq 'NOT')? '!':'');
+  }
+  if ( $search1value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  {
+    $search1term = "$search1_ $1 $2";
+  }
+  if ( $search2value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  {
+    my $op = $1;
+    $op =~ y/<>/></ if $op1 eq 'NOT';
+    $search2term = "$search2_ $op $2";
+  }
+  if ( $search3value =~ m/([<>]=?)\s*(\d+)\s*/ )
+  {
+    my $op = $1;
+    $op =~ y/<>/></ if $op1 eq 'NOT';
+    $search3term = "$search3_ $op $2";
+  }
+  $op1 = 'AND' if $op1 eq 'NOT';
+  $op2 = 'AND' if $op2 eq 'NOT';
+  my $joins = '';
+  my @rest = ();
+  my $did2 = 0;
+  if ($search1term)
+  {
+    $search1term =~ s/[a-z]\./t1./;
+    if ($op1 eq 'AND' || !$search2term)
+    {
+      $joins = "INNER JOIN $table1 t1 ON t1.id=r.id";
+      push @rest, $search1term;
+    }
+    else
+    {
+      $search2term =~ s/[a-z]\./t2./;
+      $joins = "INNER JOIN (SELECT t1.id FROM $table1 t1 WHERE $search1term UNION SELECT t2.id FROM $table2 t2 WHERE $search2term) AS or1 ON or1.id=r.id";
+      $did2 = 1;
+    }
+  }
+  my $did3 = 0;
+  if ($search2term && !$did2)
+  {
+    $search2term =~ s/[a-z]\./t2./;
+    if ($op2 eq 'AND' || !$search3term)
+    {
+      $joins .= " INNER JOIN $table2 t2 ON t2.id=r.id";
+      push @rest, $search2term;
+    }
+    else
+    {
+      $search3term =~ s/[a-z]\./t3./;
+      $joins .= " INNER JOIN (SELECT t2.id FROM $table2 t2 WHERE $search2term UNION SELECT t3.id FROM $table3 t3 WHERE $search3term) AS or2 ON or2.id=r.id";
+      $did3 = 1;
+    }
+  }
+  if ($search3term && !$did3)
+  {
+    $search3term =~ s/[a-z]\./t3./;
+    $joins .= " INNER JOIN $table3 t3 ON t3.id=r.id";
+    push @rest, $search3term;
+  }
+  #foreach $_ (@rest) { print "R: $_<br/>\n"; }
+  return ($joins,@rest);
 }
 
 sub SearchAndDownload
@@ -1975,6 +2093,150 @@ sub GetVolumesRef
            "r.category, r.legacy, r.renDate, r.priority, $status, b.title, b.author" .
            (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
            "FROM $table r, bibdata b$doQ " .
+           "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
+    #print "$sql<br/>\n";
+    my $ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    foreach my $row ( @{$ref2} )
+    {
+      my $date = $row->[1];
+      $date =~ s/(.*) .*/$1/;
+      my $item = {id         => $row->[0],
+                  time       => $row->[1],
+                  date       => $date,
+                  duration   => $row->[2],
+                  user       => $row->[3],
+                  attr       => $self->GetRightsName($row->[4]),
+                  reason     => $self->GetReasonName($row->[5]),
+                  note       => $row->[6],
+                  renNum     => $row->[7],
+                  expert     => $row->[8],
+                  copyDate   => $row->[9],
+                  expertNote => $row->[10],
+                  category   => $row->[11],
+                  legacy     => $row->[12],
+                  renDate    => $row->[13],
+                  priority   => $row->[14],
+                  status     => $row->[15],
+                  title      => $row->[16],
+                  author     => $row->[17]
+                 };
+      my $pubdate = $row->[18];
+      $pubdate = '?' unless $pubdate;
+      ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
+      ${$item}{'validated'} = $row->[19] if $page eq 'adminHistoricalReviews';
+      push( @{$return}, $item );
+    }
+  }
+  my $n = POSIX::ceil($offset/$pagesize+1);
+  my $of = POSIX::ceil($totalVolumes/$pagesize);
+  $n = 0 if $of == 0;
+  my $data = {'rows' => $return,
+              'reviews' => $totalReviews,
+              'volumes' => $totalVolumes,
+              'page' => $n,
+              'of' => $of
+             };
+  return $data;
+}
+
+sub GetVolumesRefWide
+{
+  my $self         = shift;
+  my $order        = shift;
+  my $dir          = shift;
+  my $search1      = shift;
+  my $search1value = shift;
+  my $op1          = shift or 'AND';
+  my $search2      = shift;
+  my $search2value = shift;
+  my $op2          = shift or 'AND';
+  my $search3      = shift;
+  my $search3value = shift;
+  my $startDate    = shift;
+  my $endDate      = shift;
+  my $offset       = shift;
+  my $pagesize     = shift;
+  my $page         = shift;
+  #print("GetVolumesRefWide('$order','$dir','$search1','$search1value','$op1','$search2','$search2value','$op2','$search3','$search3value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
+  
+  $pagesize = 20 unless $pagesize > 0;
+  $offset = 0 unless $offset > 0;
+  if (!$order)
+  {
+    $order = 'id';
+    $order = 'time' if $page eq 'userReviews' or $page eq 'editReviews';
+  }
+  $offset = 0 unless $offset;
+  $search1 = $self->ConvertToSearchTerm( $search1, $page );
+  $search2 = $self->ConvertToSearchTerm( $search2, $page );
+  $search3 = $self->ConvertToSearchTerm( $search3, $page );
+  if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
+  elsif ($order eq 'status' && $page ne 'adminHistoricalReviews') { $order = 'q.' . $order; }
+  else { $order = 'r.' . $order; }
+  $search1 = 'r.id' unless $search1;
+  my $order2 = ($dir eq 'ASC')? 'max':'min';
+  my @rest = ();
+  my $table = 'reviews';
+  my $top = 'bibdata b';
+  my $status = 'r.status';
+  if ($page eq 'adminHistoricalReviews')
+  {
+    $table = 'historicalreviews';
+  }
+  else
+  {
+    push @rest, 'r.id=q.id';
+    $top = 'queue q INNER JOIN bibdata b ON q.id=b.id';
+    $status = 'q.status';
+  }
+  if ($page eq 'undReviews')
+  {
+    push @rest, 'q.status=3';
+  }
+  elsif ($page eq 'expert')
+  {
+    push @rest, 'q.status=2';
+  }
+  # This should not happen; active reviews page does not have a checkbox!
+  elsif ( $page eq 'editReviews' )
+  {
+    my $user = $self->get( 'user' );
+    my $yesterday = $self->GetYesterday();
+    push @rest, "r.time >= '$yesterday'";
+    push @rest, 'q.status=0' unless $self->IsUserAdmin($user);
+  }
+  my ($joins,@rest2) = $self->SearchTermsToSQLWide($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table);
+  push @rest, @rest2;
+  push @rest, "date(r.time) >= '$startDate'" if $startDate;
+  push @rest, "date(r.time) <= '$endDate'" if $endDate;
+  my $restrict = join(' AND ', @rest);
+  $restrict = 'WHERE '.$restrict if $restrict;
+  my $sql = "SELECT COUNT(r.id) FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict";
+  #print "$sql<br/>\n";
+  my $totalReviews = $self->SimpleSqlGet($sql);
+  $sql = "SELECT COUNT(DISTINCT r.id) FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict";
+  #print "$sql<br/>\n";
+  my $totalVolumes = $self->SimpleSqlGet($sql);
+  $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
+  $sql = "SELECT r.id as id, $order2($order) AS ord FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict GROUP BY r.id " .
+         "ORDER BY ord $dir LIMIT $offset, $pagesize";
+  #print "$sql<br/>\n";
+  my $ref = undef;
+  eval { $ref = $self->get( 'dbh' )->selectall_arrayref( $sql ); };
+  if ($@)
+  {
+    $self->SetError("SQL failed: '$sql' ($@)");
+    return;
+  }
+  my $return = ();
+  foreach my $row ( @{$ref} )
+  {
+    my $id = $row->[0];
+    my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
+    $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
+           "r.category, r.legacy, r.renDate, r.priority, $status, b.title, b.author" .
+           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
+           "FROM $top INNER JOIN $table r ON b.id=r.id " .
            "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
     #print "$sql<br/>\n";
     my $ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );
@@ -4055,6 +4317,17 @@ sub IsTranslation
       {
         my $doc = $node->findvalue("./*[local-name()='subfield' and \@code='a']");
         $is = 1 if $doc =~ m/translat(ion|ed)/i;
+      }
+    }
+    if (!$is)
+    {
+      $xpath = "//*[local-name()='datafield' and \@tag='245']/*[local-name()='subfield' and \@code='c']";
+      my $doc  = $record->findvalue( $xpath );
+      if ($doc =~ m/translat(ion|ed)/i)
+      {
+        $is = 1;
+        #$in245++;
+        #print "245c: $id has '$doc'\n";
       }
     }
   };
