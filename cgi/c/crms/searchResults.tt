@@ -140,7 +140,8 @@ function CheckAll(box,formid)
     <th>Note</th>
     [% IF crms.IsUserAdmin() %]<th>Priority</th>[% END %]
     [% IF p == 'adminHistoricalReviews' %]<th>Verdict</th>[% END %]
-    [% IF p == 'undReviews' || p == 'expert' %]<th>Select</th>[% END %]
+    [% IF crms.IsUserAdmin() %]<th>Swiss</th>[% END %]
+    [% IF p == 'undReviews' %]<th>Select</th>[% END %]
     </tr>
     [% FOREACH review IN ref.rows %]
       [% first = 0 %]
@@ -174,13 +175,15 @@ function CheckAll(box,formid)
         <td>$review.note</td>
         [% IF crms.IsUserAdmin() %]<td>$review.priority</td>[% END %]
         [% IF p == 'adminHistoricalReviews' %]
-        <td align="center">
-          <img width="16" height="16" alt="Correctness" src="/c/crms/[% (review.validated)? 'CheckIcon.png':'XIcon.png'%]"/>
-        </td>
+          <td align="center">
+            [% icon = (review.validated)? ((review.validated == 2)? 'MinusIcon.png':'CheckIcon.png'):'XIcon.png' %]
+            <img width="16" height="16" alt="Correctness" src="/c/crms/[% icon %]"/>
+          </td>
         [% END %]
-        [% IF p == 'undReviews' || p == 'expert' %]
+        [% IF crms.IsUserAdmin() %]<td>$review.swiss</td>[% END %]
+        [% IF p == 'undReviews' %]
         <td align="center">
-          [% IF p == 'undReviews' && first %]
+          [% IF first %]
             <input type="checkbox" name="vol_[% review.id %]"/>
           [% END %]
         </td>
