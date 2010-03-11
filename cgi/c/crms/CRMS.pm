@@ -332,6 +332,229 @@ sub DeDupProd
   print $count;
 }
 
+sub ProcessReviews
+{
+  my $self = shift;
+  
+  my $start_size = $self->GetCandidatesSize();
+  my $sql = 'SELECT id, user, attr, reason, renNum, renDate FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) ' .
+            'GROUP BY id HAVING count(*) = 2';
+  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  
+  foreach my $row ( @{$ref} )
+  {
+    my $id      = $row->[0];
+    my $user    = $row->[1];
+    my $attr    = $row->[2];
+    my $reason  = $row->[3];
+    my $renNum  = $row->[4];
+    my $renDate = $row->[5];
+    
+    my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate ) = $self->GetOtherReview( $id, $user );
+
+    if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
+    {
+      #If both und/nfi then status is 3
+      if ( ( $attr == 5 ) && ( $reason == 8 ) )
+      {
+         $self->RegisterStatus( $id, 3 );
+      }
+      else #Mark as 4 - two that agree
+      {
+        #If they are ic/ren then the renewal date and id must match
+        if ( ( $attr == 2 ) && ( $reason == 7 ) )
+        {
+          $renNum =~ s/\s+//gs;
+          $other_renNum =~ s/\s+//gs;
+          if ( ( $renNum eq $other_renNum ) && ( $renDate eq $other_renDate ) )
+          {
+            #Mark as 4
+            $self->RegisterStatus( $id, 4 );
+          }
+          else
+          {
+            #Mark as 2
+            $self->RegisterStatus( $id, 2 );
+          }
+        }
+        else #all other cases mark as 4
+        {
+          $self->RegisterStatus( $id, 4 );
+        }
+      }
+    }
+    else #Mark as 2 - two that disagree
+    {
+      $self->RegisterStatus( $id, 2 );
+    }
+  }
+  # Clear out all the locks
+  my $sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
+  $self->PrepareSubmitSql( $sql );
+  my $sql = 'INSERT INTO processstatus VALUES ( )';
+  $self->PrepareSubmitSql( $sql );
+}
+
+sub ClearQueueAndExport
+{
+    my $self = shift;
+
+    my $eCount = 0;
+    my $dCount = 0;
+    my $export = [];
+
+    ## get items > 2, clear these
+    my $expert = $self->GetExpertRevItems();
+    foreach my $row ( @{$expert} )
+    {
+        my $id = $row->[0];
+        push( @{$export}, $id );
+        $eCount++;
+    }
+
+    ## get items = 2 and see if they agree
+    my $double = $self->GetDoubleRevItemsInAgreement();
+    foreach my $row ( @{$double} )
+    {
+        my $id = $row->[0];
+        push( @{$export}, $id );
+        $dCount++;
+    }
+
+    $self->ExportReviews( $export );
+    
+    ## report back
+    $self->Logit( "expert reviewed items removed from queue ($eCount)" );
+    $self->Logit( "double reviewed items removed from queue ($dCount)" );
+
+    return ("twice reviewed removed: $dCount, expert reviewed reemoved: $eCount");
+}
+
+## ----------------------------------------------------------------------------
+##  Function:   create a tab file of reviews to be loaded into the rights table
+##              barcode | attr | reason | user | null
+##              mdp.123 | ic   | ren    | crms | null
+##  Parameters: A reference to a list of barcodes
+##  Return:     1 || 0
+## ----------------------------------------------------------------------------
+sub ExportReviews
+{
+    my $self = shift;
+    my $list = shift;
+
+    my $user = "crms";
+    my $time = $self->GetTodaysDate();
+    my ( $fh, $file ) = $self->GetExportFh();
+    my $user = "crms";
+    my $count = 0;
+    my $start_size = $self->GetCandidatesSize();
+
+    foreach my $id ( @{$list} )
+    {
+      #The routine GetFinalAttrReason may need to change - jose
+      my ($attr,$reason) = $self->GetFinalAttrReason($id);
+
+      print $fh "$id\t$attr\t$reason\t$user\tnull\n";
+      
+      my $src = $self->SimpleSqlGet("SELECT source FROM queue WHERE id='$id' ORDER BY time DESC LIMIT 1");
+      
+      my $sql = qq{ INSERT INTO  exportdata (time, id, attr, reason, user, src ) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src' )};
+      $self->PrepareSubmitSql( $sql );
+      
+      my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata');
+      
+      $sql = qq{ INSERT INTO exportdataBckup (time, id, attr, reason, user, src ) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src' )};
+      $self->PrepareSubmitSql( $sql );
+
+      $self->MoveFromReviewsToHistoricalReviews($id,$gid);
+      $self->RemoveFromQueue($id);
+      $self->RemoveFromCandidates($id);
+      $count++;
+    }
+    close $fh;
+    
+    # Update correctness/validation now that everything is in historical
+    foreach my $id ( @{$list} )
+    {
+      my $sql = "SELECT user,time,validated FROM historicalreviews WHERE id='$id'";
+      my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+      foreach my $row ( @{$ref} )
+      {
+        my $user = $row->[0];
+        my $time = $row->[1];
+        my $val  = $row->[2];
+        my $val2 = $self->IsReviewCorrect($id, $user, $time);
+        if ($val != $val2)
+        {
+          $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$time'";
+          $self->PrepareSubmitSql( $sql );
+        }
+      }
+    }
+    my $sql = qq{ INSERT INTO  $CRMSGlobals::exportrecordTable (itemcount) VALUES ( $count )};
+    $self->PrepareSubmitSql( $sql );
+    
+    printf "After export, removed %d volumes from candidates.\n", $start_size-$self->GetCandidatesSize();
+    eval { $self->EmailReport ( $count, $file ); };
+    $self->SetError("EmailReport() failed: $@") if $@;
+}
+
+sub EmailReport
+{
+  my $self    = shift;
+  my $count   = shift;
+  my $file    = shift;
+
+  my $subject = sprintf('%s%d volumes exported to rights db', ($self->get('dev'))? 'CRMS Dev: ':'', $count);
+
+  use Mail::Sender;
+  my $sender = new Mail::Sender
+    {smtp => 'mail.umdl.umich.edu',
+     from => $CRMSGlobals::exportEmailFrom};
+  $sender->MailFile({to => $CRMSGlobals::exportEmailTo,
+           subject => $subject,
+           msg => "See attachment.",
+           file => $file});
+  $sender->Close;
+}
+
+sub GetExportFh
+{
+    my $self = shift;
+    my $date = $self->GetTodaysDate();
+    $date    =~ s/:/_/g;
+    $date    =~ s/ /_/g;
+ 
+    my $out = $self->get('root') . "/prep/c/crms/crms_" . $date . ".rights";
+
+    if ( -f $out ) { die "file already exists: $out \n"; }
+
+    open ( my $fh, ">", $out ) || die "failed to open exported file ($out): $! \n";
+
+    return ( $fh, $out );
+}
+
+sub RemoveFromQueue
+{
+    my $self = shift;
+    my $id   = shift;
+
+    $self->Logit( "remove $id from queue" );
+
+    my $sql = qq{ DELETE FROM $CRMSGlobals::queueTable WHERE id="$id" };
+    $self->PrepareSubmitSql( $sql );
+
+    return 1;
+}
+
+sub RemoveFromCandidates
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $sql = qq{ DELETE FROM candidates WHERE id="$id" };
+  $self->PrepareSubmitSql( $sql );
+}
 
 sub LoadNewItemsInCandidates
 {
@@ -399,7 +622,7 @@ sub LoadNewItems
     my $queuesize = $self->GetQueueSize();
     my $sql = 'SELECT COUNT(id) FROM queue WHERE priority=0';
     my $priZeroSize = $self->SimpleSqlGet($sql);
-    print "Before load, the queue has $queuesize volumes.\n";
+    printf "Before load, the queue has %d volumes.\n", $queuesize+$priZeroSize;
     my $needed = max($CRMSGlobals::queueSize - $queuesize, 300 - $priZeroSize);
     printf "Need $needed items (max of %d and %d).\n", $CRMSGlobals::queueSize - $queuesize, 300 - $priZeroSize;
     return if $needed <= 0;
@@ -863,68 +1086,6 @@ sub GetOtherReview
 
 }
 
-sub ProcessReviews
-{
-  my $self = shift;
-
-  my $sql = 'SELECT id, user, attr, reason, renNum, renDate FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) ' .
-            'GROUP BY id HAVING count(*) = 2';
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-  foreach my $row ( @{$ref} )
-  {
-    my $id      = $row->[0];
-    my $user    = $row->[1];
-    my $attr    = $row->[2];
-    my $reason  = $row->[3];
-    my $renNum  = $row->[4];
-    my $renDate = $row->[5];
-    
-    my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate ) = $self->GetOtherReview( $id, $user );
-
-    if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
-    {
-      #If both und/nfi then status is 3
-      if ( ( $attr == 5 ) && ( $reason == 8 ) )
-      {
-         $self->RegisterStatus( $id, 3 );
-      }
-      else #Mark as 4 - two that agree
-      {
-        #If they are ic/ren then the renewal date and id must match
-        if ( ( $attr == 2 ) && ( $reason == 7 ) )
-        {
-          $renNum =~ s/\s+//gs;
-          $other_renNum =~ s/\s+//gs;
-          if ( ( $renNum eq $other_renNum ) && ( $renDate eq $other_renDate ) )
-          {
-            #Mark as 4
-            $self->RegisterStatus( $id, 4 );
-          }
-          else
-          {
-            #Mark as 2
-            $self->RegisterStatus( $id, 2 );
-          }
-        }
-        else #all other cases mark as 4
-        {
-          $self->RegisterStatus( $id, 4 );
-        }
-      }
-    }
-    else #Mark as 2 - two that disagree
-    {
-      $self->RegisterStatus( $id, 2 );
-    }
-  }
-  # Clear out all the locks
-  my $sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
-  $self->PrepareSubmitSql( $sql );
-  my $sql = 'INSERT INTO processstatus VALUES ( )';
-  $self->PrepareSubmitSql( $sql );
-}
-
 sub CheckPendingStatus
 {
   my $self = shift;
@@ -1090,166 +1251,6 @@ sub SubmitActiveReview
       $self->UpdateAuthor( $id );
     }
     return 1;
-}
-
-
-sub ClearQueueAndExport
-{
-    my $self = shift;
-
-    my $eCount = 0;
-    my $dCount = 0;
-    my $export = [];
-
-    ## get items > 2, clear these
-    my $expert = $self->GetExpertRevItems();
-    foreach my $row ( @{$expert} )
-    {
-        my $id = $row->[0];
-        push( @{$export}, $id );
-        $eCount++;
-    }
-
-    ## get items = 2 and see if they agree
-    my $double = $self->GetDoubleRevItemsInAgreement();
-    foreach my $row ( @{$double} )
-    {
-        my $id = $row->[0];
-        push( @{$export}, $id );
-        $dCount++;
-    }
-
-    $self->ExportReviews( $export );
-    
-    ## report back
-    $self->Logit( "expert reviewed items removed from queue ($eCount)" );
-    $self->Logit( "double reviewed items removed from queue ($dCount)" );
-
-    return ("twice reviewed removed: $dCount, expert reviewed reemoved: $eCount");
-}
-
-## ----------------------------------------------------------------------------
-##  Function:   create a tab file of reviews to be loaded into the rights table
-##              barcode | attr | reason | user | null
-##              mdp.123 | ic   | ren    | crms | null
-##  Parameters: A reference to a list of barcodes
-##  Return:     1 || 0
-## ----------------------------------------------------------------------------
-sub ExportReviews
-{
-    my $self = shift;
-    my $list = shift;
-
-    my $user = "crms";
-    my $time = $self->GetTodaysDate();
-    my ( $fh, $file ) = $self->GetExportFh();
-    my $user = "crms";
-    my $count = 0;
-
-    foreach my $id ( @{$list} )
-    {
-      #The routine GetFinalAttrReason may need to change - jose
-      my ($attr,$reason) = $self->GetFinalAttrReason($id);
-
-      print $fh "$id\t$attr\t$reason\t$user\tnull\n";
-      
-      my $src = $self->SimpleSqlGet("SELECT source FROM queue WHERE id='$id' ORDER BY time DESC LIMIT 1");
-      
-      my $sql = qq{ INSERT INTO  exportdata (time, id, attr, reason, user, src ) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src' )};
-      $self->PrepareSubmitSql( $sql );
-      
-      my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata');
-      
-      $sql = qq{ INSERT INTO exportdataBckup (time, id, attr, reason, user, src ) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src' )};
-      $self->PrepareSubmitSql( $sql );
-
-      $self->MoveFromReviewsToHistoricalReviews($id,$gid);
-      $self->RemoveFromQueue($id);
-      $self->RemoveFromCandidates($id);
-      $count++;
-    }
-    close $fh;
-    
-    # Update correctness/validation now that everything is in historical
-    foreach my $id ( @{$list} )
-    {
-      my $sql = "SELECT user,time,validated FROM historicalreviews WHERE id='$id'";
-      my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-      foreach my $row ( @{$ref} )
-      {
-        my $user = $row->[0];
-        my $time = $row->[1];
-        my $val  = $row->[2];
-        my $val2 = $self->IsReviewCorrect($id, $user, $time);
-        if ($val != $val2)
-        {
-          $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$time'";
-          $self->PrepareSubmitSql( $sql );
-        }
-      }
-    }
-    my $sql = qq{ INSERT INTO  $CRMSGlobals::exportrecordTable (itemcount) VALUES ( $count )};
-    $self->PrepareSubmitSql( $sql );
-
-    eval { $self->EmailReport ( $count, $file ); };
-    $self->SetError("EmailReport() failed: $@") if $@;
-}
-
-sub EmailReport
-{
-  my $self    = shift;
-  my $count   = shift;
-  my $file    = shift;
-
-  my $subject = sprintf('%s%d volumes exported to rights db', ($self->get('dev'))? 'CRMS Dev: ':'', $count);
-
-  use Mail::Sender;
-  my $sender = new Mail::Sender
-    {smtp => 'mail.umdl.umich.edu',
-     from => $CRMSGlobals::exportEmailFrom};
-  $sender->MailFile({to => $CRMSGlobals::exportEmailTo,
-           subject => $subject,
-           msg => "See attachment.",
-           file => $file});
-  $sender->Close;
-}
-
-sub GetExportFh
-{
-    my $self = shift;
-    my $date = $self->GetTodaysDate();
-    $date    =~ s/:/_/g;
-    $date    =~ s/ /_/g;
- 
-    my $out = $self->get('root') . "/prep/c/crms/crms_" . $date . ".rights";
-
-    if ( -f $out ) { die "file already exists: $out \n"; }
-
-    open ( my $fh, ">", $out ) || die "failed to open exported file ($out): $! \n";
-
-    return ( $fh, $out );
-}
-
-sub RemoveFromQueue
-{
-    my $self = shift;
-    my $id   = shift;
-
-    $self->Logit( "remove $id from queue" );
-
-    my $sql = qq{ DELETE FROM $CRMSGlobals::queueTable WHERE id="$id" };
-    $self->PrepareSubmitSql( $sql );
-
-    return 1;
-}
-
-sub RemoveFromCandidates
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $sql = qq{ DELETE FROM candidates WHERE id="$id" };
-  $self->PrepareSubmitSql( $sql );
 }
 
 
@@ -1533,7 +1534,6 @@ sub CreateSQL
     }
     my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
     $sql .= " AND $terms" if $terms;
-    
     if ( $startDate ) { $sql .= qq{ AND r.time >= "$startDate 00:00:00" }; }
     if ( $endDate ) { $sql .= qq{ AND r.time <= "$endDate 23:59:59" }; }
 
