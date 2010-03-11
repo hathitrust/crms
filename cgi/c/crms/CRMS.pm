@@ -1667,6 +1667,7 @@ sub SearchTermsToSQLWide
   my $search3_ = ($search3 =~ m/pub_date/)? "YEAR($search3)":$search3;
   if ( $search1value =~ m/.*\*.*/ )
   {
+    $search1value =~ s/\*/%/gs;
     $search1term = qq{$search1_ LIKE '$search1value'};
   }
   elsif ($search1value)
@@ -1675,6 +1676,7 @@ sub SearchTermsToSQLWide
   }
   if ( $search2value =~ m/.*\*.*/ )
   {
+    $search2value =~ s/\*/%/gs;
     $search2term = sprintf("$search2_ %sLIKE '$search2value'", ($op1 eq 'NOT')? 'NOT ':'');
   }
   elsif ($search2value)
@@ -1683,6 +1685,7 @@ sub SearchTermsToSQLWide
   }
   if ( $search3value =~ m/.*\*.*/ )
   {
+    $search2value =~ s/\*/%/gs;
     $search3term = sprintf("$search3_ %sLIKE '$search3value'", ($op2 eq 'NOT')? 'NOT ':'');
   }
   elsif ($search3value)
@@ -1710,22 +1713,31 @@ sub SearchTermsToSQLWide
   my $joins = '';
   my @rest = ();
   my $did2 = 0;
+  my $did3 = 0;
   if ($search1term)
   {
     $search1term =~ s/[a-z]\./t1./;
+    
     if ($op1 eq 'AND' || !$search2term)
     {
       $joins = "INNER JOIN $table1 t1 ON t1.id=r.id";
       push @rest, $search1term;
     }
-    else
+    elsif ($op2 ne 'OR' || !$search3term)
     {
       $search2term =~ s/[a-z]\./t2./;
       $joins = "INNER JOIN (SELECT t1.id FROM $table1 t1 WHERE $search1term UNION SELECT t2.id FROM $table2 t2 WHERE $search2term) AS or1 ON or1.id=r.id";
       $did2 = 1;
     }
+    else
+    {
+      $search2term =~ s/[a-z]\./t2./;
+      $search3term =~ s/[a-z]\./t3./;
+      $joins = "INNER JOIN (SELECT t1.id FROM $table1 t1 WHERE $search1term UNION SELECT t2.id FROM $table2 t2 WHERE $search2term UNION SELECT t3.id FROM $table3 t3 WHERE $search3term) AS or1 ON or1.id=r.id";
+      $did2 = 1;
+      $did3 = 1;
+    }
   }
-  my $did3 = 0;
   if ($search2term && !$did2)
   {
     $search2term =~ s/[a-z]\./t2./;
@@ -2222,7 +2234,7 @@ sub GetVolumesRefWide
   push @rest, "date(r.time) <= '$endDate'" if $endDate;
   my $restrict = join(' AND ', @rest);
   $restrict = 'WHERE '.$restrict if $restrict;
-  my $sql = "SELECT COUNT(r.id) FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict";
+  my $sql = "SELECT COUNT(DISTINCT r.id, r.user,r.time) FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict";
   #print "$sql<br/>\n";
   my $totalReviews = $self->SimpleSqlGet($sql);
   $sql = "SELECT COUNT(DISTINCT r.id) FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict";
