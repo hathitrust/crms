@@ -1630,7 +1630,7 @@ sub CreateSQLForVolumes
   elsif ($order eq 'status' && $page ne 'adminHistoricalReviews') { $order = 'q.' . $order; }
   else { $order = 'r.' . $order; }
   $search1 = 'r.id' unless $search1;
-  my $order2 = ($dir eq 'ASC')? 'max':'min';
+  my $order2 = ($dir eq 'ASC')? 'min':'max';
   my @rest = ('r.id=b.id');
   my $table = 'reviews';
   my $doQ = '';
@@ -1673,9 +1673,8 @@ sub CreateSQLForVolumes
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
-  $sql = 'SELECT id FROM ' .
-         "(SELECT r.id as id,count(r.id) AS cnt, $order2($order) AS ord FROM $table r, bibdata b$doQ WHERE $restrict GROUP BY r.id) " .
-         "AS derived WHERE cnt>0 ORDER BY ord $dir LIMIT $offset, $pagesize";
+  $sql = "SELECT r.id as id, $order2($order) AS ord FROM $table r, bibdata b$doQ WHERE $restrict GROUP BY r.id " .
+         "ORDER BY ord $dir LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
   my $n = POSIX::ceil($offset/$pagesize+1);
   my $of = POSIX::ceil($totalVolumes/$pagesize);
@@ -1719,7 +1718,7 @@ sub CreateSQLForVolumesWide
   elsif ($order eq 'status' && $page ne 'adminHistoricalReviews') { $order = 'q.' . $order; }
   else { $order = 'r.' . $order; }
   $search1 = 'r.id' unless $search1;
-  my $order2 = ($dir eq 'ASC')? 'max':'min';
+  my $order2 = ($dir eq 'ASC')? 'min':'max';
   my @rest = ();
   my $table = 'reviews';
   my $top = 'bibdata b';
@@ -1875,8 +1874,9 @@ sub SearchTermsToSQLWide
   my $search3_ = ($search3 =~ m/pub_date/)? "YEAR($search3)":$search3;
   if ( $search1value =~ m/.*\*.*/ )
   {
-    $search1value =~ s/\*/%/gs;
+    $search1value =~ s/\*/_____/gs;
     $search1term = qq{$search1_ LIKE '$search1value'};
+    $search1term =~ s/_____/%/g;
   }
   elsif ($search1value)
   {
@@ -1884,8 +1884,9 @@ sub SearchTermsToSQLWide
   }
   if ( $search2value =~ m/.*\*.*/ )
   {
-    $search2value =~ s/\*/%/gs;
+    $search2value =~ s/\*/_____/gs;
     $search2term = sprintf("$search2_ %sLIKE '$search2value'", ($op1 eq 'NOT')? 'NOT ':'');
+    $search2term =~ s/_____/%/g;
   }
   elsif ($search2value)
   {
@@ -1893,8 +1894,9 @@ sub SearchTermsToSQLWide
   }
   if ( $search3value =~ m/.*\*.*/ )
   {
-    $search2value =~ s/\*/%/gs;
+    $search3value =~ s/\*/_____/gs;
     $search3term = sprintf("$search3_ %sLIKE '$search3value'", ($op2 eq 'NOT')? 'NOT ':'');
+    $search3term =~ s/_____/%/g;
   }
   elsif ($search3value)
   {
@@ -1913,7 +1915,7 @@ sub SearchTermsToSQLWide
   if ( $search3value =~ m/([<>]=?)\s*(\d+)\s*/ )
   {
     my $op = $1;
-    $op =~ y/<>/></ if $op1 eq 'NOT';
+    $op =~ y/<>/></ if $op2 eq 'NOT';
     $search3term = "$search3_ $op $2";
   }
   $op1 = 'AND' if $op1 eq 'NOT';
@@ -2210,7 +2212,7 @@ sub GetReviewsRef
     my $limit              = 1;
     $pagesize = 20 unless $pagesize > 0;
     $offset = 0 unless $offset > 0;
-    #print("GetReviewsRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$op2','$search3','$search3Value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
+    #print("GetReviewsRef('$page','$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$op2','$search3','$search3Value','$startDate','$endDate','$offset','$pagesize');<br/>\n");
     my ($sql,$totalReviews,$totalVolumes) = $self->CreateSQLForReviews($page, $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $offset, $pagesize, $limit);
     #print "$sql<br/>\n";
     my $ref = undef;
