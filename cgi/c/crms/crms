@@ -181,38 +181,42 @@ if ( $cgi->param('p') eq 'confirmReview' )
 if ( $cgi->param('download') )  
 {
 
-    my $order              = $cgi->param('order');
-    my $direction          = $cgi->param('direction');
+    my $order            = $cgi->param('order');
+    my $dir              = $cgi->param('direction');
 
-    my $search1            = $cgi->param('search1');
-    my $search1value       = $cgi->param('search1value');
-    my $op1                = $cgi->param('op1');
+    my $search1          = $cgi->param('search1');
+    my $search1value     = $cgi->param('search1value');
+    my $op1              = $cgi->param('op1');
 
-    my $search2            = $cgi->param('search2');
-    my $search2value       = $cgi->param('search2value');
-    my $op2                = $cgi->param('op2');
+    my $search2          = $cgi->param('search2');
+    my $search2value     = $cgi->param('search2value');
+    my $op2              = $cgi->param('op2');
 
-    my $search3            = $cgi->param('search3');
-    my $search3value       = $cgi->param('search3value');
-    my $startDate          = $cgi->param('startDate');
-    my $endDate            = $cgi->param('endDate');
-    my $offset             = $cgi->param('offset');
-
-    my $type               = $cgi->param('p');
+    my $search3          = $cgi->param('search3');
+    my $search3value     = $cgi->param('search3value');
+    my $startDate        = $cgi->param('startDate');
+    my $endDate          = $cgi->param('endDate');
+    my $offset           = $cgi->param('offset');
+    
+    my $vols             = $cgi->param('vols');
+    my $wide             = $cgi->param('wide');
+    
+    my $page             = $cgi->param('p');
     
     my $success;
-    if ($type eq 'queue')
+    if ($page eq 'queue')
     {
-      $success = $crms->SearchAndDownloadQueue( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate, $offset );
+      $success = $crms->SearchAndDownloadQueue( $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate, $offset );
     }
-    elsif ($type eq 'determinationStats')
+    elsif ($page eq 'determinationStats')
     {
       my $monthly = $cgi->param('monthly');
       $success = $crms->SearchAndDownloadDeterminationStats( $startDate, $endDate, $monthly );
     }
     else
     {
-      $success = $crms->SearchAndDownload( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $offset, $type );
+      eval{$success = $crms->SearchAndDownload( $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $offset, $vols, $wide );
+      };
     }
     if ( $success )
     {

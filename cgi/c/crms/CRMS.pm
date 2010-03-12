@@ -1460,7 +1460,25 @@ sub ConvertToSearchTerm
 
 sub CreateSQL
 {
+  my $self = shift;
+  my $vols = shift;
+  my $wide = shift;
+  
+  if ($vols)
+  {
+    return $self->CreateSQLForVolumesWide(@_) if $wide;
+    return $self->CreateSQLForVolumes(@_);
+  }
+  else
+  {
+    return $self->CreateSQLForReviews(@_);
+  }
+}
+
+sub CreateSQLForReviews
+{
     my $self               = shift;
+    my $page               = shift;
     my $order              = shift;
     my $direction          = shift;
 
@@ -1479,16 +1497,16 @@ sub CreateSQL
     my $endDate            = shift;
     my $offset             = shift;
     my $pagesize           = shift;
-    my $type               = shift;
     my $limit              = shift;
 
-    $search1 = $self->ConvertToSearchTerm( $search1, $type );
-    $search2 = $self->ConvertToSearchTerm( $search2, $type );
-    $search3 = $self->ConvertToSearchTerm( $search3, $type );
+    $search1 = $self->ConvertToSearchTerm( $search1, $page );
+    $search2 = $self->ConvertToSearchTerm( $search2, $page );
+    $search3 = $self->ConvertToSearchTerm( $search3, $page );
 
     if ( ! $offset ) { $offset = 0; }
-
-    if ( ( $type eq 'userReviews' ) || ( $type eq 'editReviews' ) )
+    $pagesize = 20 unless $pagesize > 0;
+    
+    if ( ( $page eq 'userReviews' ) || ( $page eq 'editReviews' ) )
     {
       if ( ! $order || $order eq "time" ) { $order = "time"; }
     }
@@ -1503,28 +1521,28 @@ sub CreateSQL
     }
 
     my $sql;
-    if ( $type eq 'adminReviews' )
+    if ( $page eq 'adminReviews' )
     {
       $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id };
     }
-    elsif ( $type eq 'expert' )
+    elsif ( $page eq 'expert' )
     {
       $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
     }
-    elsif ( $type eq 'adminHistoricalReviews' )
+    elsif ( $page eq 'adminHistoricalReviews' )
     {
       $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated FROM bibdata b INNER JOIN $CRMSGlobals::historicalreviewsTable r ON r.id=b.id };
     }
-    elsif ( $type eq 'undReviews' )
+    elsif ( $page eq 'undReviews' )
     {
       $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
     }
-    elsif ( $type eq 'userReviews' )
+    elsif ( $page eq 'userReviews' )
     {
       my $user = $self->get( "user" );
       $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
     }
-    elsif ( $type eq 'editReviews' )
+    elsif ( $page eq 'editReviews' )
     {
       my $user = $self->get( "user" );
       my $yesterday = $self->GetYesterday();
@@ -1544,7 +1562,7 @@ sub CreateSQL
     }
     if ( $order eq 'status' )
     {
-      if ( $type eq 'adminHistoricalReviews' )
+      if ( $page eq 'adminHistoricalReviews' )
       {
         $sql .= qq{ ORDER BY r.$order $direction $limit_section };
       }
@@ -1561,7 +1579,197 @@ sub CreateSQL
     {
        $sql .= qq{ ORDER BY r.$order $direction $limit_section };
     }
-    return $sql;
+    #print "$sql<br/>\n";
+    my $countSql = $sql;
+    $countSql =~ s/(SELECT\s+).+?(FROM.+)/$1 COUNT(*) $2/i;
+    #print "$countSql<br/>\n";
+    my $totalReviews = $self->SimpleSqlGet($countSql);
+    $countSql = $sql;
+    $countSql =~ s/(SELECT\s?).+?(FROM.+)/$1 COUNT(DISTINCT r.id) $2/i;
+    #print "$countSql<br/>\n";
+    my $totalVolumes = $self->SimpleSqlGet($countSql);
+    my $n = POSIX::ceil($offset/$pagesize+1);
+    my $of = POSIX::ceil($totalVolumes/$pagesize);
+    $n = 0 if $of == 0;
+    return ($sql,$totalReviews,$totalVolumes,$n,$of);
+}
+
+sub CreateSQLForVolumes
+{
+  my $self         = shift;
+  my $page         = shift;
+  my $order        = shift;
+  my $dir          = shift;
+  my $search1      = shift;
+  my $search1value = shift;
+  my $op1          = shift or 'AND';
+  my $search2      = shift;
+  my $search2value = shift;
+  my $op2          = shift or 'AND';
+  my $search3      = shift;
+  my $search3value = shift;
+  my $startDate    = shift;
+  my $endDate      = shift;
+  my $offset       = shift;
+  my $pagesize     = shift;
+
+  #print("CreateSQLForVolumes('$order','$dir','$search1','$search1value','$op1','$search2','$search2value','$op2','$search3','$search3value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
+  
+  $pagesize = 20 unless $pagesize > 0;
+  $offset = 0 unless $offset > 0;
+  if (!$order)
+  {
+    $order = 'id';
+    $order = 'time' if $page eq 'userReviews' or $page eq 'editReviews';
+  }
+  $offset = 0 unless $offset;
+  $search1 = $self->ConvertToSearchTerm( $search1, $page );
+  $search2 = $self->ConvertToSearchTerm( $search2, $page );
+  $search3 = $self->ConvertToSearchTerm( $search3, $page );
+  if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
+  elsif ($order eq 'status' && $page ne 'adminHistoricalReviews') { $order = 'q.' . $order; }
+  else { $order = 'r.' . $order; }
+  $search1 = 'r.id' unless $search1;
+  my $order2 = ($dir eq 'ASC')? 'max':'min';
+  my @rest = ('r.id=b.id');
+  my $table = 'reviews';
+  my $doQ = '';
+  my $status = 'r.status';
+  if ($page eq 'adminHistoricalReviews')
+  {
+    $table = 'historicalreviews';
+  }
+  else
+  {
+    push @rest, 'r.id=q.id';
+    $doQ = ', queue q';
+    $status = 'q.status';
+  }
+  if ($page eq 'undReviews')
+  {
+    push @rest, 'q.status=3';
+  }
+  elsif ($page eq 'expert')
+  {
+    push @rest, 'q.status=2';
+  }
+  # This should not happen; active reviews page does not have a checkbox!
+  elsif ( $page eq 'editReviews' )
+  {
+    my $user = $self->get( 'user' );
+    my $yesterday = $self->GetYesterday();
+    push @rest, "r.time >= '$yesterday'";
+    push @rest, 'q.status=0' unless $self->IsUserExpert($user);
+  }
+  my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
+  push @rest, $terms if $terms;
+  push @rest, "date(r.time) >= '$startDate'" if $startDate;
+  push @rest, "date(r.time) <= '$endDate'" if $endDate;
+  my $restrict = join(' AND ', @rest);
+  my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT r.id FROM $table r, bibdata b$doQ WHERE $restrict)";
+  #print "$sql<br/>\n";
+  my $totalReviews = $self->SimpleSqlGet($sql);
+  my $sql = "SELECT COUNT(DISTINCT r.id) FROM $table r, bibdata b$doQ WHERE $restrict";
+  #print "$sql<br/>\n";
+  my $totalVolumes = $self->SimpleSqlGet($sql);
+  $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
+  $sql = 'SELECT id FROM ' .
+         "(SELECT r.id as id,count(r.id) AS cnt, $order2($order) AS ord FROM $table r, bibdata b$doQ WHERE $restrict GROUP BY r.id) " .
+         "AS derived WHERE cnt>0 ORDER BY ord $dir LIMIT $offset, $pagesize";
+  #print "$sql<br/>\n";
+  my $n = POSIX::ceil($offset/$pagesize+1);
+  my $of = POSIX::ceil($totalVolumes/$pagesize);
+  $n = 0 if $of == 0;
+  return ($sql,$totalReviews,$totalVolumes,$n,$of);
+}
+
+sub CreateSQLForVolumesWide
+{
+  my $self         = shift;
+  my $page         = shift;
+  my $order        = shift;
+  my $dir          = shift;
+  my $search1      = shift;
+  my $search1value = shift;
+  my $op1          = shift or 'AND';
+  my $search2      = shift;
+  my $search2value = shift;
+  my $op2          = shift or 'AND';
+  my $search3      = shift;
+  my $search3value = shift;
+  my $startDate    = shift;
+  my $endDate      = shift;
+  my $offset       = shift;
+  my $pagesize     = shift;
+  
+  #print("GetVolumesRefWide('$order','$dir','$search1','$search1value','$op1','$search2','$search2value','$op2','$search3','$search3value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
+  
+  $pagesize = 20 unless $pagesize > 0;
+  $offset = 0 unless $offset > 0;
+  if (!$order)
+  {
+    $order = 'id';
+    $order = 'time' if $page eq 'userReviews' or $page eq 'editReviews';
+  }
+  $offset = 0 unless $offset;
+  $search1 = $self->ConvertToSearchTerm( $search1, $page );
+  $search2 = $self->ConvertToSearchTerm( $search2, $page );
+  $search3 = $self->ConvertToSearchTerm( $search3, $page );
+  if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
+  elsif ($order eq 'status' && $page ne 'adminHistoricalReviews') { $order = 'q.' . $order; }
+  else { $order = 'r.' . $order; }
+  $search1 = 'r.id' unless $search1;
+  my $order2 = ($dir eq 'ASC')? 'max':'min';
+  my @rest = ();
+  my $table = 'reviews';
+  my $top = 'bibdata b';
+  my $status = 'r.status';
+  if ($page eq 'adminHistoricalReviews')
+  {
+    $table = 'historicalreviews';
+  }
+  else
+  {
+    push @rest, 'r.id=q.id';
+    $top = 'queue q INNER JOIN bibdata b ON q.id=b.id';
+    $status = 'q.status';
+  }
+  if ($page eq 'undReviews')
+  {
+    push @rest, 'q.status=3';
+  }
+  elsif ($page eq 'expert')
+  {
+    push @rest, 'q.status=2';
+  }
+  # This should not happen; active reviews page does not have a checkbox!
+  elsif ( $page eq 'editReviews' )
+  {
+    my $user = $self->get( 'user' );
+    my $yesterday = $self->GetYesterday();
+    push @rest, "r.time >= '$yesterday'";
+    push @rest, 'q.status=0' unless $self->IsUserAdmin($user);
+  }
+  my ($joins,@rest2) = $self->SearchTermsToSQLWide($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table);
+  push @rest, @rest2;
+  push @rest, "date(r.time) >= '$startDate'" if $startDate;
+  push @rest, "date(r.time) <= '$endDate'" if $endDate;
+  my $restrict = join(' AND ', @rest);
+  $restrict = 'WHERE '.$restrict if $restrict;
+  my $sql = "SELECT COUNT(DISTINCT r.id, r.user,r.time) FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict";
+  #print "$sql<br/>\n";
+  my $totalReviews = $self->SimpleSqlGet($sql);
+  my $sql = "SELECT COUNT(DISTINCT r.id) FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict";
+  #print "$sql<br/>\n";
+  my $totalVolumes = $self->SimpleSqlGet($sql);
+  $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
+  $sql = "SELECT r.id as id, $order2($order) AS ord FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict GROUP BY r.id " .
+         "ORDER BY ord $dir LIMIT $offset, $pagesize";
+  #print "$sql<br/>\n";
+  my $n = POSIX::ceil($offset/$pagesize+1);
+  my $of = POSIX::ceil($totalVolumes/$pagesize);
+  $n = 0 if $of == 0;
+  return ($sql,$totalReviews,$totalVolumes,$n,$of);
 }
 
 sub SearchTermsToSQL
@@ -1765,137 +1973,180 @@ sub SearchTermsToSQLWide
 
 sub SearchAndDownload
 {
-    my $self               = shift;
-    my $order              = shift;
-    my $direction          = shift;
+    my $self           = shift;
+    my $page           = shift;
+    my $order          = shift;
+    my $dir            = shift;
 
-    my $search1            = shift;
-    my $search1value       = shift;
-    my $op1                = shift or 'AND';
+    my $search1        = shift;
+    my $search1value   = shift;
+    my $op1            = shift or 'AND';
 
-    my $search2            = shift;
-    my $search2value       = shift;
-    my $op2                = shift or 'AND';
+    my $search2        = shift;
+    my $search2value   = shift;
+    my $op2            = shift or 'AND';
     
-    my $search3            = shift;
-    my $search3value       = shift;
-    my $startDate          = shift;
-    my $endDate            = shift;
-    my $offset             = shift;
+    my $search3        = shift;
+    my $search3value   = shift;
+    my $startDate      = shift;
+    my $endDate        = shift;
+    my $offset         = shift;
 
-    my $type               = shift;
-    my $limit              = 0;
+    my $vols           = shift;
+    my $wide           = shift;
 
-    my $isadmin = $self->IsUserAdmin();
-    my $sql =  $self->CreateSQL( $order, $direction, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $offset, undef, $type, $limit );
+    my $table ='reviews';
+    my $top = 'bibdata b';
+    my $status = 'r.status';
+    if ($page eq 'adminHistoricalReviews')
+    {
+      $table = 'historicalreviews';
+    }
+    else
+    {
+      $top = 'queue q INNER JOIN bibdata b ON q.id=b.id';
+      $status = 'q.status';
+    }
+    my ($sql,$totalReviews,$totalVolumes,$n,$of) =  $self->CreateSQL( $vols, $wide, $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $offset, undef, 0 );
     
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
-    my $buffer;
-    if ( scalar @{$ref} != 0 )
+    my $buffer = '';
+    if ( scalar @{$ref} == 0 )
     {
-      if ( $type eq 'userReviews')
+      $buffer = 'No Results Found.';
+    }
+    else
+    {
+      if ( $page eq 'userReviews')
       {
         $buffer .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
       }
-      elsif ( $type eq 'editReviews' )
+      elsif ( $page eq 'editReviews' )
       {
         $buffer .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
       }
-      elsif ( $type eq 'undReviews' )
+      elsif ( $page eq 'undReviews' )
       {
         $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote}
       }
-      elsif ( $type eq 'expert' )
+      elsif ( $page eq 'expert' )
       {
         $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote};
       }
-      elsif ( $type eq 'adminReviews' )
+      elsif ( $page eq 'adminReviews' )
       {
         $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote};
       }
-      elsif ( $type eq 'adminHistoricalReviews' )
+      elsif ( $page eq 'adminHistoricalReviews' )
       {
         $buffer .= qq{id\ttitle\tauthor\tpub date\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated};
       }
-    }
-    $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\tpriority":'');
-    
-    foreach my $row ( @{$ref} )
-    {
-        $row->[1] =~ s,(.*) .*,$1,;
-        
-        my $id         = $row->[0];
-        my $time       = $row->[1];
-        my $duration   = $row->[2];
-        my $user       = $row->[3];
-        my $attr       = $self->GetRightsName($row->[4]);
-        my $reason     = $self->GetReasonName($row->[5]);
-        my $note       = $row->[6];
-        $note =~ s,\n, ,gs;
-        $note =~ s,\r, ,gs;
-        $note =~ s,\t, ,gs;
-        my $renNum     = $row->[7];
-        my $expert     = $row->[8];
-        my $copyDate   = $row->[9];
-        my $expertNote = $row->[10];
-        $expertNote =~ s,\n, ,gs;
-        $expertNote =~ s,\r, ,gs;
-        $expertNote =~ s,\t, ,gs;
-        my $category   = $row->[11];
-        my $legacy     = $row->[12];
-        my $renDate    = $row->[13];
-        my $priority   = $row->[14];
-        my $swiss      = $row->[15];
-        my $status     = $row->[16];
-        my $title      = $row->[17];
-        my $author     = $row->[18];
-        
-        if ( $type eq 'userReviews')
+      $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\tpriority":'');
+      if ($vols)
+      {
+        foreach my $row ( @{$ref} )
         {
-          #for reviews
-          #id, title, author, review date, attr, reason, category, note.
-          $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note};
+          my $id = $row->[0];
+          my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
+          $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
+                 "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
+                 (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
+                 "FROM $top INNER JOIN $table r ON b.id=r.id " .
+                 "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
+          #print "$sql<br/>\n";
+           my $ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );
+           $buffer .= $self->UnpackResults($page, $ref2);
         }
-        elsif ( $type eq 'editReviews' )
-        {
-          #for editRevies
-          #id, title, author, review date, attr, reason, category, note.
-          $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note};
-        }
-        elsif ( $type eq 'undReviews' )
-        {
-          #for und/nif
-          #id, title, author, review date, status, user, attr, reason, category, note.
-          $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note}
-        }
-        elsif ( $type eq 'expert' )
-        {
-          #for expert
-          #id, title, author, review date, status, user, attr, reason, category, note.
-          $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note};
-        }
-        elsif ( $type eq 'adminReviews' )
-        {
-          #for adminReviews
-          #id, title, author, review date, status, user, attr, reason, category, note.
-          $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note};
-        }
-        elsif ( $type eq 'adminHistoricalReviews' )
-        {
-          my $pubdate = $row->[18];
-          $pubdate = '?' unless $pubdate;
-          my $validated = $row->[19];
-          #id, title, author, review date, status, user, attr, reason, category, note, validated
-          $buffer .= qq{$id\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated};
-        }
-        $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\t$priority":'');
       }
-
-      $self->DownloadSpreadSheet( $buffer );
-
+      else
+      {
+        $buffer .= $self->UnpackResults($page, $ref);
+      }
+    }
+    $self->DownloadSpreadSheet( $buffer );
     if ( $buffer ) { return 1; }
     else { return 0; }
+}
+
+sub UnpackResults
+{
+  my $self = shift;
+  my $page = shift;
+  my $ref  = shift;
+  
+  my $buffer = '';
+  foreach my $row ( @{$ref} )
+  {
+    $row->[1] =~ s,(.*) .*,$1,;
+
+    my $id         = $row->[0];
+    my $time       = $row->[1];
+    my $duration   = $row->[2];
+    my $user       = $row->[3];
+    my $attr       = $self->GetRightsName($row->[4]);
+    my $reason     = $self->GetReasonName($row->[5]);
+    my $note       = $row->[6];
+    $note =~ s,\n, ,gs;
+    $note =~ s,\r, ,gs;
+    $note =~ s,\t, ,gs;
+    my $renNum     = $row->[7];
+    my $expert     = $row->[8];
+    my $copyDate   = $row->[9];
+    my $expertNote = $row->[10];
+    $expertNote =~ s,\n, ,gs;
+    $expertNote =~ s,\r, ,gs;
+    $expertNote =~ s,\t, ,gs;
+    my $category   = $row->[11];
+    my $legacy     = $row->[12];
+    my $renDate    = $row->[13];
+    my $priority   = $row->[14];
+    my $swiss      = $row->[15];
+    my $status     = $row->[16];
+    my $title      = $row->[17];
+    my $author     = $row->[18];
+
+    if ( $page eq 'userReviews')
+    {
+      #for reviews
+      #id, title, author, review date, attr, reason, category, note.
+      $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note};
+    }
+    elsif ( $page eq 'editReviews' )
+    {
+      #for editRevies
+      #id, title, author, review date, attr, reason, category, note.
+      $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note};
+    }
+    elsif ( $page eq 'undReviews' )
+    {
+      #for und/nif
+      #id, title, author, review date, status, user, attr, reason, category, note.
+      $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note}
+    }
+    elsif ( $page eq 'expert' )
+    {
+      #for expert
+      #id, title, author, review date, status, user, attr, reason, category, note.
+      $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note};
+    }
+    elsif ( $page eq 'adminReviews' )
+    {
+      #for adminReviews
+      #id, title, author, review date, status, user, attr, reason, category, note.
+      $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note};
+    }
+    elsif ( $page eq 'adminHistoricalReviews' )
+    {
+      my $pubdate = $row->[18];
+      $pubdate = '?' unless $pubdate;
+      my $validated = $row->[19];
+      #id, title, author, review date, status, user, attr, reason, category, note, validated
+      $buffer .= qq{$id\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated};
+    }
+    $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\t$priority":'');
+  }
+  return $buffer;
 }
 
 sub SearchAndDownloadDeterminationStats
@@ -1936,6 +2187,7 @@ sub SearchAndDownloadQueue
 sub GetReviewsRef
 {
     my $self               = shift;
+    my $page               = shift;
     my $order              = shift;
     my $dir                = shift;
 
@@ -1954,16 +2206,12 @@ sub GetReviewsRef
     my $endDate            = shift;
     my $offset             = shift;
     my $pagesize           = shift;
-    my $page               = shift;
 
     my $limit              = 1;
     $pagesize = 20 unless $pagesize > 0;
     $offset = 0 unless $offset > 0;
-    my $totalReviews = $self->GetReviewsCount($search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $page, 0);
-    my $totalVolumes = $self->GetReviewsCount($search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $page, 1);
-    $offset = $totalReviews-($totalReviews % $pagesize) if $offset >= $totalReviews;
     #print("GetReviewsRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$op2','$search3','$search3Value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
-    my $sql =  $self->CreateSQL( $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $offset, $pagesize, $page, $limit );
+    my ($sql,$totalReviews,$totalVolumes) = $self->CreateSQLForReviews($page, $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $offset, $pagesize, $limit);
     #print "$sql<br/>\n";
     my $ref = undef;
     eval { $ref = $self->get( 'dbh' )->selectall_arrayref( $sql ); };
@@ -2019,41 +2267,18 @@ sub GetReviewsRef
 
 sub GetVolumesRef
 {
-  my $self         = shift;
-  my $order        = shift;
-  my $dir          = shift;
-  my $search1      = shift;
-  my $search1value = shift;
-  my $op1          = shift or 'AND';
-  my $search2      = shift;
-  my $search2value = shift;
-  my $op2          = shift or 'AND';
-  my $search3      = shift;
-  my $search3value = shift;
-  my $startDate    = shift;
-  my $endDate      = shift;
-  my $offset       = shift;
-  my $pagesize     = shift;
-  my $page         = shift;
-  #print("GetVolumesRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
-  
-  $pagesize = 20 unless $pagesize > 0;
-  $offset = 0 unless $offset > 0;
-  if (!$order)
+  my $self = shift;
+  my $page = $_[0];
+  my $order = $_[1];
+  my $dir = $_[2];
+  my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQLForVolumes(@_);
+  my $ref = undef;
+  eval { $ref = $self->get( 'dbh' )->selectall_arrayref( $sql ); };
+  if ($@)
   {
-    $order = 'id';
-    $order = 'time' if $page eq 'userReviews' or $page eq 'editReviews';
+    $self->SetError("SQL failed: '$sql' ($@)");
+    return;
   }
-  $offset = 0 unless $offset;
-  $search1 = $self->ConvertToSearchTerm( $search1, $page );
-  $search2 = $self->ConvertToSearchTerm( $search2, $page );
-  $search3 = $self->ConvertToSearchTerm( $search3, $page );
-  if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
-  elsif ($order eq 'status' && $page ne 'adminHistoricalReviews') { $order = 'q.' . $order; }
-  else { $order = 'r.' . $order; }
-  $search1 = 'r.id' unless $search1;
-  my $order2 = ($dir eq 'ASC')? 'max':'min';
-  my @rest = ('r.id=b.id');
   my $table = 'reviews';
   my $doQ = '';
   my $status = 'r.status';
@@ -2063,48 +2288,8 @@ sub GetVolumesRef
   }
   else
   {
-    push @rest, 'r.id=q.id';
     $doQ = ', queue q';
     $status = 'q.status';
-  }
-  if ($page eq 'undReviews')
-  {
-    push @rest, 'q.status=3';
-  }
-  elsif ($page eq 'expert')
-  {
-    push @rest, 'q.status=2';
-  }
-  # This should not happen; active reviews page does not have a checkbox!
-  elsif ( $page eq 'editReviews' )
-  {
-    my $user = $self->get( 'user' );
-    my $yesterday = $self->GetYesterday();
-    push @rest, "r.time >= '$yesterday'";
-    push @rest, 'q.status=0' unless $self->IsUserExpert($user);
-  }
-  my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
-  push @rest, $terms if $terms;
-  push @rest, "date(r.time) >= '$startDate'" if $startDate;
-  push @rest, "date(r.time) <= '$endDate'" if $endDate;
-  my $restrict = join(' AND ', @rest);
-  my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT r.id FROM $table r, bibdata b$doQ WHERE $restrict)";
-  #print "$sql<br/>\n";
-  my $totalReviews = $self->SimpleSqlGet($sql);
-  $sql = "SELECT COUNT(DISTINCT r.id) FROM $table r, bibdata b$doQ WHERE $restrict";
-  #print "$sql<br/>\n";
-  my $totalVolumes = $self->SimpleSqlGet($sql);
-  $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
-  $sql = 'SELECT id FROM ' .
-         "(SELECT r.id as id,count(r.id) AS cnt, $order2($order) AS ord FROM $table r, bibdata b$doQ WHERE $restrict GROUP BY r.id) " .
-         "AS derived WHERE cnt>0 ORDER BY ord $dir LIMIT $offset, $pagesize";
-  #print "$sql<br/>\n";
-  my $ref = undef;
-  eval { $ref = $self->get( 'dbh' )->selectall_arrayref( $sql ); };
-  if ($@)
-  {
-    $self->SetError("SQL failed: '$sql' ($@)");
-    return;
   }
   my $return = ();
   foreach my $row ( @{$ref} )
@@ -2150,9 +2335,6 @@ sub GetVolumesRef
       push( @{$return}, $item );
     }
   }
-  my $n = POSIX::ceil($offset/$pagesize+1);
-  my $of = POSIX::ceil($totalVolumes/$pagesize);
-  $n = 0 if $of == 0;
   my $data = {'rows' => $return,
               'reviews' => $totalReviews,
               'volumes' => $totalVolumes,
@@ -2164,42 +2346,12 @@ sub GetVolumesRef
 
 sub GetVolumesRefWide
 {
-  my $self         = shift;
-  my $order        = shift;
-  my $dir          = shift;
-  my $search1      = shift;
-  my $search1value = shift;
-  my $op1          = shift or 'AND';
-  my $search2      = shift;
-  my $search2value = shift;
-  my $op2          = shift or 'AND';
-  my $search3      = shift;
-  my $search3value = shift;
-  my $startDate    = shift;
-  my $endDate      = shift;
-  my $offset       = shift;
-  my $pagesize     = shift;
-  my $page         = shift;
-  #print("GetVolumesRefWide('$order','$dir','$search1','$search1value','$op1','$search2','$search2value','$op2','$search3','$search3value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
+  my $self = shift;
+  my $page = $_[0];
+  my $order = $_[1];
+  my $dir = $_[2];
   
-  $pagesize = 20 unless $pagesize > 0;
-  $offset = 0 unless $offset > 0;
-  if (!$order)
-  {
-    $order = 'id';
-    $order = 'time' if $page eq 'userReviews' or $page eq 'editReviews';
-  }
-  $offset = 0 unless $offset;
-  $search1 = $self->ConvertToSearchTerm( $search1, $page );
-  $search2 = $self->ConvertToSearchTerm( $search2, $page );
-  $search3 = $self->ConvertToSearchTerm( $search3, $page );
-  if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
-  elsif ($order eq 'status' && $page ne 'adminHistoricalReviews') { $order = 'q.' . $order; }
-  else { $order = 'r.' . $order; }
-  $search1 = 'r.id' unless $search1;
-  my $order2 = ($dir eq 'ASC')? 'max':'min';
-  my @rest = ();
-  my $table = 'reviews';
+  my $table ='reviews';
   my $top = 'bibdata b';
   my $status = 'r.status';
   if ($page eq 'adminHistoricalReviews')
@@ -2208,42 +2360,10 @@ sub GetVolumesRefWide
   }
   else
   {
-    push @rest, 'r.id=q.id';
     $top = 'queue q INNER JOIN bibdata b ON q.id=b.id';
     $status = 'q.status';
   }
-  if ($page eq 'undReviews')
-  {
-    push @rest, 'q.status=3';
-  }
-  elsif ($page eq 'expert')
-  {
-    push @rest, 'q.status=2';
-  }
-  # This should not happen; active reviews page does not have a checkbox!
-  elsif ( $page eq 'editReviews' )
-  {
-    my $user = $self->get( 'user' );
-    my $yesterday = $self->GetYesterday();
-    push @rest, "r.time >= '$yesterday'";
-    push @rest, 'q.status=0' unless $self->IsUserAdmin($user);
-  }
-  my ($joins,@rest2) = $self->SearchTermsToSQLWide($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table);
-  push @rest, @rest2;
-  push @rest, "date(r.time) >= '$startDate'" if $startDate;
-  push @rest, "date(r.time) <= '$endDate'" if $endDate;
-  my $restrict = join(' AND ', @rest);
-  $restrict = 'WHERE '.$restrict if $restrict;
-  my $sql = "SELECT COUNT(DISTINCT r.id, r.user,r.time) FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict";
-  #print "$sql<br/>\n";
-  my $totalReviews = $self->SimpleSqlGet($sql);
-  $sql = "SELECT COUNT(DISTINCT r.id) FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict";
-  #print "$sql<br/>\n";
-  my $totalVolumes = $self->SimpleSqlGet($sql);
-  $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
-  $sql = "SELECT r.id as id, $order2($order) AS ord FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict GROUP BY r.id " .
-         "ORDER BY ord $dir LIMIT $offset, $pagesize";
-  #print "$sql<br/>\n";
+  my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQLForVolumesWide(@_);
   my $ref = undef;
   eval { $ref = $self->get( 'dbh' )->selectall_arrayref( $sql ); };
   if ($@)
@@ -2295,9 +2415,6 @@ sub GetVolumesRefWide
       push( @{$return}, $item );
     }
   }
-  my $n = POSIX::ceil($offset/$pagesize+1);
-  my $of = POSIX::ceil($totalVolumes/$pagesize);
-  $n = 0 if $of == 0;
   my $data = {'rows' => $return,
               'reviews' => $totalReviews,
               'volumes' => $totalVolumes,
@@ -2415,6 +2532,7 @@ sub GetQueueRef
 sub GetReviewsCount
 {
     my $self           = shift;
+    my $page           = shift;
     my $search1        = shift;
     my $search1value   = shift;
     my $op1            = shift or 'AND';
@@ -2425,14 +2543,10 @@ sub GetReviewsCount
     my $search3value   = shift;
     my $startDate      = shift;
     my $endDate        = shift;
-    my $page           = shift;
     my $volumes        = shift;
 
-    my $countExpression = ($volumes)? 'COUNT(DISTINCT r.id)':'COUNT(*)';
-    my $sql =  $self->CreateSQL( undef, 'ASC', $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, 0, undef, $page, undef );
-    $sql =~ s/(SELECT\s?).+?(FROM.+)/$1 $countExpression $2/;
-    #print "$sql\n<br/>";
-    return $self->SimpleSqlGet( $sql );
+    my ($sql,$totalReviews,$totalVolumes) = $self->CreateSQL( $page, undef, 'ASC', $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, 0, undef, undef );
+    return $totalReviews;
 }
 
 
@@ -4452,7 +4566,7 @@ sub GetPublDate
     my $pubDateType = substr($leader, 6, 1);
     my $pubDate = substr($leader, 7, 4);
     # On questionable pub date, try date 2 field.
-    if ($pubDateType eq 'q' && ($pubDate eq '||||' || $pubDate eq '####' || $pubDate eq '^^^^'))
+    if ($pubDateType eq 'q' || ($pubDate eq '||||' || $pubDate eq '####' || $pubDate eq '^^^^'))
     {
       $pubDate = substr($leader, 11, 4);
     }
