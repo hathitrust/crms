@@ -38,12 +38,12 @@ function CheckAll(box,formid)
 
 [% IF vols %]
   [% IF wide %]
-    [% ref = crms.GetVolumesRefWide( order, direction, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize, p) %]
+    [% ref = crms.GetVolumesRefWide(p, order, direction, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize) %]
   [% ELSE %]
-    [% ref = crms.GetVolumesRef( order, direction, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize, p) %]
+    [% ref = crms.GetVolumesRef(p, order, direction, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize) %]
   [% END %]
 [% ELSE %]
-  [% ref = crms.GetReviewsRef( order, direction, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize, p) %]
+  [% ref = crms.GetReviewsRef(p, order, direction, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize) %]
 [% END %]
 [% TotalVolumes = ref.volumes %]
 [% Total = ref.reviews %]
@@ -102,7 +102,7 @@ function CheckAll(box,formid)
   [% IF doLast %]</a>[% ELSE %]</span>[% END %]
 
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;op1=$op1&amp;search2=$search2&amp;search2value=$search2value&amp;op2=$op2&amp;search3=$search3&amp;search3value=$search3value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;direction=$direction&amp;offset=$prev&amp;type=$p&amp;download=1" target="_blank">download</a>
+  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;op1=$op1&amp;search2=$search2&amp;search2value=$search2value&amp;op2=$op2&amp;search3=$search3&amp;search3value=$search3value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;direction=$direction&amp;offset=$prev&amp;vols=$vols&amp;wide=$wide&amp;download=1" target="_blank">download</a>
 
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="/c/crms/UseCases.html" target="_blank">Use Cases</a>
   [% color_white    = '#FFFFFF' %]
