@@ -154,13 +154,13 @@
         [% IF crms.IsUserExpert(user) %]
           <table class="nav">
           <tr><td><span style="font-size:1.1em">Priority [% priority %]</span></td></tr>
-          [% totalReviews = crms.GetReviewsCount('adminHistoricalReviews', 'Identifier', barcode, '', '', '', '', '', '', '', '', 0) %]
+          [% totalReviews = crms.GetReviewsCount('adminHistoricalReviews', 'Identifier', barcode) %]
           [% IF totalReviews > 0 %]
             <tr><td><a class="smallishText" href="?p=adminHistoricalReviews&amp;search1=Identifier&amp;search1value=$barcode" target="_blank">
             [% totalReviews %] historical review[% (totalReviews != 1)? 's':'' %]
             </a></td></tr>
           [% END %]
-          [% totalReviews = crms.GetReviewsCount('adminReviews', 'Identifier', barcode, '', '', '', '', '', '', '', '', 0) %]
+          [% totalReviews = crms.GetReviewsCount('adminReviews', 'Identifier', barcode) %]
           [% IF totalReviews > 0 %]
             <tr><td><a class="smallishText" href="?p=adminReviews&amp;search1=Identifier&amp;search1value=$barcode" target="_blank">
             [% totalReviews %] active review[% (totalReviews != 1)? 's':'' %]
