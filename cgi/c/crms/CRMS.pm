@@ -2424,6 +2424,27 @@ sub GetVolumesRefWide
   return $data;
 }
 
+sub GetReviewsCount
+{
+    my $self           = shift;
+    my $page           = shift;
+    my $search1        = shift;
+    my $search1value   = shift;
+    my $op1            = shift or 'AND';
+    my $search2        = shift;
+    my $search2value   = shift;
+    my $op2            = shift or 'AND';
+    my $search3        = shift;
+    my $search3value   = shift;
+    my $startDate      = shift;
+    my $endDate        = shift;
+    my $vols           = shift;
+    my $wide           = shift;
+
+    my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQL($vols, $wide, $page, undef, 'ASC', $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, 0, undef, undef );
+    return $totalReviews;
+}
+
 sub GetQueueRef
 {
   my $self         = shift;
@@ -2527,26 +2548,6 @@ sub GetQueueRef
             };
   }
   return $data;
-}
-
-sub GetReviewsCount
-{
-    my $self           = shift;
-    my $page           = shift;
-    my $search1        = shift;
-    my $search1value   = shift;
-    my $op1            = shift or 'AND';
-    my $search2        = shift;
-    my $search2value   = shift;
-    my $op2            = shift or 'AND';
-    my $search3        = shift;
-    my $search3value   = shift;
-    my $startDate      = shift;
-    my $endDate        = shift;
-    my $volumes        = shift;
-
-    my ($sql,$totalReviews,$totalVolumes) = $self->CreateSQL( $page, undef, 'ASC', $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, 0, undef, undef );
-    return $totalReviews;
 }
 
 
