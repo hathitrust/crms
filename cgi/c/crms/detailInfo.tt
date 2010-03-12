@@ -5,11 +5,11 @@
 [% page   = cgi.param('page')     %]
 
 
-[% data = crms.GetReviewsRef( 'id', 'DESC', 'Identifier', id, 'AND', 'UserId', user, '', '', '', '', '', '', '', page ) %]
+[% data = crms.GetReviewsRef(page, 'id', 'DESC', 'Identifier', id, 'AND', 'UserId', user, '', '', '', '', '', '', '') %]
 [% reviews = data.rows %]
 [% IF NOT reviews.size %]
   [% #Fall back to all reviews in the case that page is 'conflict' and conflict is resolved %]
-  [% data = crms.GetReviewsRef( 'id', 'DESC', 'Identifier', id, 'AND', 'UserId', user, '', '', '', '', '', '', '', 'adminReviews' ) %]
+  [% data = crms.GetReviewsRef('adminReviews', 'id', 'DESC', 'Identifier', id, 'AND', 'UserId', user, '', '', '', '', '', '', '') %]
   [% reviews = data.rows %]
 [% END %]
 [% IF NOT reviews.size %]
