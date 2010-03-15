@@ -214,7 +214,7 @@ wu.89081504193 cwilcox 0
 wu.89081504193 dfulmer 1
 mdp.39015001429169 annekz 1
 mdp.39015001429169 cwilcox 1
-mdp.39015001429169 dfulmer 0
+mdp.39015001429169 dfulmer 2
 uc1.b18463 annekz 1
 uc1.b18463 cwilcox 0
 uc1.b18463 dfulmer 1
@@ -440,25 +440,26 @@ if ($phase1)
     my $id = $row->[0];
     my $priority = $row->[1];
     print "$id ($priority)\n" if $verbose;
-    # Anne will do both priority 4 items as pd/ren (1/7)
+    # annekz reviews 2 priority 4 items as pd/ren (1/7)
     if ($priority == 4)
     {
       $crms->SubmitReview($id, 'annekz', 1, 7, undef, undef, undef, 1, undef, undef);
     }
-    # We'll have greg do these as ic/ren (2/7)
+    # gnichols123 reviews 2 priority 3 items as ic/ren (2/7)
     elsif ($priority == 3)
     {
       $crms->SubmitReview($id, 'gnichols123', 2, 7, undef, undef, undef, 1, undef, undef);
     }
     # All 50 rereport02 items are pd/ncn (1/2)
-    # We'll have dfulmer do the first 10 as conflicts (ic/ren [1/7]) and the remaining 40 agreeing
+    # dfulmer reviews the first 10 as conflicts (ic/ren [1/7]) and the remaining 40 agreeing
     elsif ($priority == 1)
     {
       my $reason = ($n1 < 10)? 7:2;
       $crms->SubmitReview($id, 'dfulmer', 1, $reason, undef, undef, undef, 0, undef, undef);
       $n1++;
     }
-    # First 5 are matching und/nfi (5/8)
+    # All priority 0 items are reviewed by cwilcox and (if a second review) dfulmer
+    # First 5 priority 0 are matching und/nfi (5/8)
     # Next 5 are single review pd/ren (1/7) by cwilcox
     # Next 10 are pd/ren vs ic/ren
     # Next 20 are pd/ren in agreement
@@ -538,7 +539,8 @@ if ($phase1)
 if ($phase2)
 {
   print "Beginning phase 2 (review processing)\n";
-  $crms->ProcessReviews();
+  system('./updateQueue.pl -cq') == 0 or die "updateQueue.pl failed: $?";
+  system('./monthlyStats.pl') == 0 or die "monthlyStats.pl failed: $?";
   # At the end of phase 2, here are the status breakdowns:
   # Stat | Count
   # 0    | 5 (priority 0 single reviews)
@@ -576,13 +578,15 @@ if ($phase2)
 
 if ($phase3)
 {
-  print "Beginning phase 3 (expert and und/nfi review)\n";
+  print "Beginning phase 3 (conflict and provisional reviews)\n";
   my $sql = "SELECT id FROM queue WHERE status=2 ORDER BY id ASC";
   my $r = $crms->get('dbh')->selectall_arrayref($sql);
+  my $swiss = 1;
   foreach my $row (@{$r})
   {
     my $id = $row->[0];
-    $crms->SubmitReview($id, 'annekz', 1, 7, undef, undef, undef, 1, undef, undef);
+    $crms->SubmitReview($id, 'annekz', 1, 7, undef, undef, undef, 1, undef, undef, $swiss);
+    $swiss = 0;
   }
   $sql = "SELECT id FROM queue WHERE status=3 ORDER BY id ASC";
   my $r = $crms->get('dbh')->selectall_arrayref($sql);
@@ -657,8 +661,8 @@ if ($phase4)
   Verify($crms->GetTotalNonLegacyReviewCount(),230,'Wrong number of CRMS historical reviews');
   Verify($crms->GetTotalLegacyReviewCount(),100,'Wrong number of legacy reviews');
   Verify($crms->GetTotalHistoricalReviewCount(),330,'Wrong number of historical reviews');
-  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),83.6,'Wrong avg validation rate');
-  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),83.6,'Wrong median validation rate');
+  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),84.1,'Wrong avg validation rate');
+  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),84.1,'Wrong median validation rate');
   VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE validated=1 AND legacy=0 AND user="cwilcox"',35,'Wrong number of validated reviews for cwilcox');
   VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE legacy=0 AND user="cwilcox"',45,'Wrong number of reviews for cwilcox');
   VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE validated=1 AND legacy=0 AND user="dfulmer"',85,'Wrong number of validated reviews for dfulmer');
