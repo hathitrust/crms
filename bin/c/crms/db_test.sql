@@ -198,7 +198,7 @@ CREATE TABLE `historicalreviews` (
   `validated` tinyint(4) NOT NULL default '1',
   `source` varchar(32) NOT NULL default 'candidates',
   `gid` bigint(20) default NULL,
-  `auto` tinyint(1) NOT NULL default '0',
+  `swiss` tinyint(1) NOT NULL default '0',
   PRIMARY KEY  (`id`,`time`,`user`),
   KEY `status_idx` (`status`),
   KEY `attr_idx` (`attr`),
@@ -365,7 +365,7 @@ CREATE TABLE `reviews` (
   `category` varchar(32) default NULL,
   `flagged` varchar(32) default NULL,
   `priority` tinyint(4) NOT NULL default '0',
-  `auto` tinyint(1) NOT NULL default '0',
+  `swiss` tinyint(1) NOT NULL default '0',
   PRIMARY KEY  (`id`,`user`),
   KEY `attr_idx` (`attr`),
   KEY `reason_idx` (`reason`)
