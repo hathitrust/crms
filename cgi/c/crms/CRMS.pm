@@ -1460,19 +1460,12 @@ sub ConvertToSearchTerm
 
 sub CreateSQL
 {
-  my $self = shift;
-  my $vols = shift;
-  my $wide = shift;
+  my $self  = shift;
+  my $stype = shift;
   
-  if ($vols)
-  {
-    return $self->CreateSQLForVolumesWide(@_) if $wide;
-    return $self->CreateSQLForVolumes(@_);
-  }
-  else
-  {
-    return $self->CreateSQLForReviews(@_);
-  }
+  return $self->CreateSQLForVolumesWide(@_) if $stype eq 'volumes';
+  return $self->CreateSQLForVolumes(@_) if $stype eq 'groups';
+  return $self->CreateSQLForReviews(@_);
 }
 
 sub CreateSQLForReviews
@@ -1480,15 +1473,15 @@ sub CreateSQLForReviews
     my $self               = shift;
     my $page               = shift;
     my $order              = shift;
-    my $direction          = shift;
+    my $dir                = shift;
 
     my $search1            = shift;
     my $search1value       = shift;
-    my $op1                = shift or 'AND';
+    my $op1                = shift;
 
     my $search2            = shift;
     my $search2value       = shift;
-    my $op2                = shift or 'AND';
+    my $op2                = shift;
     
     my $search3            = shift;
     my $search3value       = shift;
@@ -1502,7 +1495,7 @@ sub CreateSQLForReviews
     $search1 = $self->ConvertToSearchTerm( $search1, $page );
     $search2 = $self->ConvertToSearchTerm( $search2, $page );
     $search3 = $self->ConvertToSearchTerm( $search3, $page );
-
+    $dir = 'DESC' unless $dir;
     if ( ! $offset ) { $offset = 0; }
     $pagesize = 20 unless $pagesize > 0;
     
@@ -1513,11 +1506,6 @@ sub CreateSQLForReviews
     else
     {
       if ( ! $order || $order eq "id" ) { $order = "id"; }
-    }
-
-    if ( ! $direction )
-    {
-      $direction = 'DESC';
     }
 
     my $sql;
@@ -1564,20 +1552,20 @@ sub CreateSQLForReviews
     {
       if ( $page eq 'adminHistoricalReviews' )
       {
-        $sql .= qq{ ORDER BY r.$order $direction $limit_section };
+        $sql .= qq{ ORDER BY r.$order $dir $limit_section };
       }
       else
       {
-        $sql .= qq{ ORDER BY q.$order $direction $limit_section };
+        $sql .= qq{ ORDER BY q.$order $dir $limit_section };
       }
     }
     elsif ($order eq 'title' || $order eq 'author' || $order eq 'pub_date')
     {
-       $sql .= qq{ ORDER BY b.$order $direction $limit_section };
+       $sql .= qq{ ORDER BY b.$order $dir $limit_section };
     }
     else
     {
-       $sql .= qq{ ORDER BY r.$order $direction $limit_section };
+       $sql .= qq{ ORDER BY r.$order $dir $limit_section };
     }
     #print "$sql<br/>\n";
     my $countSql = $sql;
@@ -1602,10 +1590,10 @@ sub CreateSQLForVolumes
   my $dir          = shift;
   my $search1      = shift;
   my $search1value = shift;
-  my $op1          = shift or 'AND';
+  my $op1          = shift;
   my $search2      = shift;
   my $search2value = shift;
-  my $op2          = shift or 'AND';
+  my $op2          = shift;
   my $search3      = shift;
   my $search3value = shift;
   my $startDate    = shift;
@@ -1614,7 +1602,7 @@ sub CreateSQLForVolumes
   my $pagesize     = shift;
 
   #print("CreateSQLForVolumes('$order','$dir','$search1','$search1value','$op1','$search2','$search2value','$op2','$search3','$search3value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
-  
+  $dir = 'DESC' unless $dir;
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
   if (!$order)
@@ -1690,10 +1678,10 @@ sub CreateSQLForVolumesWide
   my $dir          = shift;
   my $search1      = shift;
   my $search1value = shift;
-  my $op1          = shift or 'AND';
+  my $op1          = shift;
   my $search2      = shift;
   my $search2value = shift;
-  my $op2          = shift or 'AND';
+  my $op2          = shift;
   my $search3      = shift;
   my $search3value = shift;
   my $startDate    = shift;
@@ -1702,7 +1690,7 @@ sub CreateSQLForVolumesWide
   my $pagesize     = shift;
   
   #print("GetVolumesRefWide('$order','$dir','$search1','$search1value','$op1','$search2','$search2value','$op2','$search3','$search3value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
-  
+  $dir = 'DESC' unless $dir;
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
   if (!$order)
@@ -1776,6 +1764,8 @@ sub SearchTermsToSQL
   my $self = shift;
   my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value) = @_;
   my ($search1term, $search2term, $search3term);
+  $op1 = 'AND' unless $op1;
+  $op2 = 'AND' unless $op2;
   $search1 = "YEAR($search1)" if $search1 =~ /pub_date/;
   $search2 = "YEAR($search2)" if $search2 =~ /pub_date/;
   $search3 = "YEAR($search3)" if $search3 =~ /pub_date/;
@@ -1847,6 +1837,8 @@ sub SearchTermsToSQLWide
 {
   my $self = shift;
   my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table) = @_;
+  $op1 = 'AND' unless $op1;
+  $op2 = 'AND' unless $op2;
   # Pull down search 2 if no search 1
   if (!$search1value)
   {
@@ -1977,16 +1969,16 @@ sub SearchAndDownload
 {
     my $self           = shift;
     my $page           = shift;
-    my $order          = shift;
+    my $order          = shift ;
     my $dir            = shift;
 
     my $search1        = shift;
     my $search1value   = shift;
-    my $op1            = shift or 'AND';
+    my $op1            = shift;
 
     my $search2        = shift;
     my $search2value   = shift;
-    my $op2            = shift or 'AND';
+    my $op2            = shift;
     
     my $search3        = shift;
     my $search3value   = shift;
@@ -1994,8 +1986,7 @@ sub SearchAndDownload
     my $endDate        = shift;
     my $offset         = shift;
 
-    my $vols           = shift;
-    my $wide           = shift;
+    my $stype          = shift;
 
     my $table ='reviews';
     my $top = 'bibdata b';
@@ -2009,7 +2000,8 @@ sub SearchAndDownload
       $top = 'queue q INNER JOIN bibdata b ON q.id=b.id';
       $status = 'q.status';
     }
-    my ($sql,$totalReviews,$totalVolumes,$n,$of) =  $self->CreateSQL( $vols, $wide, $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $offset, undef, 0 );
+    
+    my ($sql,$totalReviews,$totalVolumes,$n,$of) =  $self->CreateSQL( $stype, $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $offset, undef, 0 );
     
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -2045,7 +2037,11 @@ sub SearchAndDownload
         $buffer .= qq{id\ttitle\tauthor\tpub date\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated};
       }
       $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\tpriority":'');
-      if ($vols)
+      if ($stype eq 'reviews')
+      {
+        $buffer .= $self->UnpackResults($page, $ref);
+      }
+      else
       {
         foreach my $row ( @{$ref} )
         {
@@ -2057,13 +2053,16 @@ sub SearchAndDownload
                  "FROM $top INNER JOIN $table r ON b.id=r.id " .
                  "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
           #print "$sql<br/>\n";
-           my $ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );
-           $buffer .= $self->UnpackResults($page, $ref2);
+          my $ref2;
+          eval{$ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );};
+          if ($@)
+          {
+            $self->SetError("SQL failed: '$sql' ($@)");
+            $self->DownloadSpreadSheet( "order <<$order>>\nSQL failed: '$sql' ($@)" );
+            return 0;
+          }
+          $buffer .= $self->UnpackResults($page, $ref2);
         }
-      }
-      else
-      {
-        $buffer .= $self->UnpackResults($page, $ref);
       }
     }
     $self->DownloadSpreadSheet( $buffer );
@@ -2195,11 +2194,11 @@ sub GetReviewsRef
 
     my $search1            = shift;
     my $search1Value       = shift;
-    my $op1                = shift or 'AND';
+    my $op1                = shift;
 
     my $search2            = shift;
     my $search2Value       = shift;
-    my $op2                = shift or 'AND';
+    my $op2                = shift;
     
     my $search3            = shift;
     my $search3Value       = shift;
@@ -2428,23 +2427,22 @@ sub GetVolumesRefWide
 
 sub GetReviewsCount
 {
-    my $self           = shift;
-    my $page           = shift;
-    my $search1        = shift;
-    my $search1value   = shift;
-    my $op1            = shift or 'AND';
-    my $search2        = shift;
-    my $search2value   = shift;
-    my $op2            = shift or 'AND';
-    my $search3        = shift;
-    my $search3value   = shift;
-    my $startDate      = shift;
-    my $endDate        = shift;
-    my $vols           = shift;
-    my $wide           = shift;
+  my $self           = shift;
+  my $page           = shift;
+  my $search1        = shift;
+  my $search1value   = shift;
+  my $op1            = shift;
+  my $search2        = shift;
+  my $search2value   = shift;
+  my $op2            = shift;
+  my $search3        = shift;
+  my $search3value   = shift;
+  my $startDate      = shift;
+  my $endDate        = shift;
+  my $stype          = shift;
 
-    my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQL($vols, $wide, $page, undef, 'ASC', $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, 0, undef, undef );
-    return $totalReviews;
+  my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQL($stype, $page, undef, 'ASC', $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, 0, undef, undef );
+  return $totalReviews;
 }
 
 sub GetQueueRef

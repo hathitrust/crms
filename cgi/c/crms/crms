@@ -198,8 +198,7 @@ if ( $cgi->param('download') )
     my $endDate          = $cgi->param('endDate');
     my $offset           = $cgi->param('offset');
     
-    my $vols             = $cgi->param('vols');
-    my $wide             = $cgi->param('wide');
+    my $stype            = $cgi->param('stype');
     
     my $page             = $cgi->param('p');
     
@@ -215,8 +214,7 @@ if ( $cgi->param('download') )
     }
     else
     {
-      eval{$success = $crms->SearchAndDownload( $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $offset, $vols, $wide );
-      };
+      $success = $crms->SearchAndDownload( $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $offset, $stype );
     }
     if ( $success )
     {
