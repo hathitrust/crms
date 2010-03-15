@@ -140,27 +140,28 @@ Example: searching for volume id <code>wu.89*</code> will match wu.89090507310, 
 Example: searching for title <code>*trigonometric*</code> will match "Natural trigonometric functions to seven decimal places for every ten seconds of arc"
 </p><br/>
 <p><b>Note:</b> you can use the <b>&lt;</b>, <b>&lt;=</b>, <b>&gt;</b>, and <b>&gt;=</b> operators before a numeric expression.<br/>
-Example: searching for pub date <code>&lt;=1923</code> will retrieve all volumes published before or in 1923.<br/>
+Example: searching for pub date <code>&lt;=1924</code> will retrieve all volumes published before or in 1924.<br/>
 </p><br/>
 <p><b>Note:</b> OR takes precedence over AND and NOT when you use all three search fields. So <b>x AND y OR z</b> is interpreted as
 <b>x AND (y OR z)</b>.</p><br/>
 
+<br/><h3>The Search Types</h3>
 <ul>
-<li>Searching by <b>review</b> is the search functionality from version 1.0 of the system -- volumes will be grouped together only when ordering
+<li>Searching for <b>Reviews</b> is the search functionality from version 1.0 of the system -- volumes will be grouped together only when ordering
 by Identifier.</li>
-<li>Searching by <b>volume</b> retrieves volumes for which any single review matches the search criteria;
-ordering/sorting is done on the review that meets the search criteria, not the additional ones.</li>
-<li>Searching by <b>volume</b>, and clicking on the "Search across reviews (wide)" checkbox does a <b>wide</b> search:
-in which volumes are retrieved if <i>any</i> of the reviews match;
-ordering/sorting is done on the minimum or maximum values for the sort term, of the reviews that meet the search criteria.</li>
-<li>Searching by volume always keeps reviews for the same volume together.</li>
-<li>Examples:
-  <ul>
-  <li>To search for <i>all volumes for which one or more of its reviews is pd/ren</i>: use <b>narrow</b> search.</li>
-  <li>To search for <i>all volumes whach have a review by Anne and another review by Greg</i>: use <b>wide</b> search.</li>
-  </ul>
-</li>
+<li>Searching for <b>Volumes with Reviews</b> retrieves volumes for which any single review matches all of the search criteria;
+volumes are sorted on the minimum value (for Ascending) or maximum (for Descending), and then the individual
+reviews are sorted. Reviews for the same volume are always grouped together when you search in this manner.</li>
+<li>Searching for <b>Volumes</b> retrieves volumes if <i>any</i> of the reviews match; sorting is done as above.
+Reviews for the same volume are always grouped together when you search in this manner.</li>
 </ul>
+
+<br/><h3>Search Type Examples</h3>
+<ul>
+<li>To search for <i>all volumes for which one or more of its reviews is pd/ren</i>: select <b>Volumes with Reviews</b></li>
+<li>To search for <i>all volumes whach have a review by Anne and another review by Greg</i>: select <b>Volumes</b></li>
+</ul>
+<br/>Typically, <b>Volumes</b> will return the same number of volumes, or more, compared to <b>Volumes with Reviews</b>.
 </div>
 </body>
 </html>
