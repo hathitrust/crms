@@ -953,7 +953,7 @@ sub IsValidCategory
   
   my %cats = ('Insert' => 1, 'Language' => 1, 'Misc' => 1, 'Missing' => 1, 'Date' => 1, 'Reprint' => 1,
               'Periodical' => 1, 'Translation' => 1, 'Wrong Record' => 1, 'Foreign Pub' => 1, 'Dissertation/Thesis' => 1,
-              'Expert Note' => 1, 'Non-Class A' => 1, 'Edition' => 1);
+              'Expert Note' => 1, 'Non-Class A' => 1, 'Edition' => 1, 'US Gov Doc' => 1);
   return exists $cats{$cat};
 }
 
@@ -4189,12 +4189,15 @@ sub ValidateSubmission2
         $errorMsg .= 'ic/cdpp must include note category and note text.';
         $noteError = 1;
     }
-
+    
     if ( $noteError == 0 )
     {
       if ( ( $category )  && ( ! $note ) )
       {
-        $errorMsg .= 'must include a note if there is a category.';
+        if ($category ne 'US Gov Doc')
+        {
+          $errorMsg .= 'must include a note if there is a category.';
+        }
       }
       elsif ( ( $note ) && ( ! $category ) )
       {
@@ -4217,6 +4220,12 @@ sub ValidateSubmission2
       {
         $errorMsg .= 'pdus/cdpp requires note category "Foreign Pub" or "Translation".';
       }
+    }
+    
+    ## US Gov Doc requires pd/ncn
+    if ($category eq 'US Gov Doc' && ($attr != 1 || $reason != 2))
+    {
+      $errorMsg = 'note category only permitted with pd/ncn';
     }
     return $errorMsg;
 }
