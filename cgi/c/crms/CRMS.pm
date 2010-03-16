@@ -925,18 +925,19 @@ sub IsItemInQueue
     return 0;
 }
 
+# Translates pre-CRMS, for legacyLoad.pl.
 sub TranslateCategory
 {
     my $self     = shift;
     my $category = uc shift;
 
-    if    ( $category eq 'COLLECTION' ) { return 'Collection'; }
+    if    ( $category eq 'COLLECTION' ) { return 'Insert'; }
     elsif ( $category =~ m/LANG.*/ ) { return 'Language'; }
     elsif ( $category eq 'MISC' ) { return 'Misc'; }
     elsif ( $category eq 'MISSING' ) { return 'Missing'; }
     elsif ( $category eq 'DATE' ) { return 'Date'; }
     elsif ( $category =~ m/REPRINT.*/ ) { return 'Reprint'; }
-    elsif ( $category eq 'SERIES' ) { return 'Series/Serial'; }
+    elsif ( $category eq 'SERIES' ) { return 'Periodical'; }
     elsif ( $category eq 'TRANS' ) { return 'Translation'; }
     elsif ( $category eq 'WRONGREC' ) { return 'Wrong Record'; }
     elsif ( $category =~ m,FOREIGN PUB.*, ) { return 'Foreign Pub'; }
@@ -950,8 +951,9 @@ sub IsValidCategory
   my $self = shift;
   my $cat = shift;
   
-  my %cats = ('Collection' => 1, 'Language' => 1, 'Misc' => 1, 'Missing' => 1, 'Date' => 1, 'Reprint' => 1,
-              'Series/Serial' => 1, 'Translation' => 1, 'Wrong Record' => 1, 'Foreign Pub' => 1, 'Dissertation/Thesis' => 1);
+  my %cats = ('Insert' => 1, 'Language' => 1, 'Misc' => 1, 'Missing' => 1, 'Date' => 1, 'Reprint' => 1,
+              'Periodical' => 1, 'Translation' => 1, 'Wrong Record' => 1, 'Foreign Pub' => 1, 'Dissertation/Thesis' => 1,
+              'Expert Note' => 1, 'Non-Class A' => 1, 'Edition' => 1);
   return exists $cats{$cat};
 }
 
