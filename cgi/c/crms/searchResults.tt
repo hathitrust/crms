@@ -141,7 +141,7 @@ function CheckAll(box,formid)
     <th>Note</th>
     [% IF crms.IsUserAdmin() %]<th>Priority</th>[% END %]
     [% IF p == 'adminHistoricalReviews' %]<th>Verdict</th>[% END %]
-    [% IF crms.IsUserAdmin() %]<th>Swiss</th>[% END %]
+    [% IF crms.IsUserExpert() %]<th>Swiss</th>[% END %]
     [% IF p == 'undReviews' %]<th>Select</th>[% END %]
     </tr>
     [% FOREACH review IN ref.rows %]
@@ -181,7 +181,7 @@ function CheckAll(box,formid)
             <img width="16" height="16" alt="Correctness" src="/c/crms/[% icon %]"/>
           </td>
         [% END %]
-        [% IF crms.IsUserAdmin() %]<td>$review.swiss</td>[% END %]
+        [% IF crms.IsUserExpert() %]<td>$review.swiss</td>[% END %]
         [% IF p == 'undReviews' %]
         <td align="center">
           [% IF first %]
