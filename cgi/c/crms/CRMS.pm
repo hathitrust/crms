@@ -1987,7 +1987,8 @@ sub SearchAndDownload
     my $offset         = shift;
 
     my $stype          = shift;
-
+    
+    $stype = 'reviews' unless $stype;
     my $table ='reviews';
     my $top = 'bibdata b';
     my $status = 'r.status';
