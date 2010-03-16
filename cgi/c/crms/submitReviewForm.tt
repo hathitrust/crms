@@ -136,7 +136,7 @@
                "Wrong Record"   => "Wrong Record",  "Date"            => "Date",
                "Dissertation/Thesis" => "Dissertation/Thesis",
                "Non-Class A"    => "Non-Class A",   "Expert Note"     => "Expert Note",
-               ""               => "none"} 
+               "Edition"        => "Edition",       ""                => "none"} 
     %]
 
     [% FOREACH pre IN pres.sort %]
