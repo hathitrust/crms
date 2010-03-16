@@ -19,6 +19,9 @@
 [% vols = (stype == 'volumes' || stype == 'groups') %]
 [% IF NOT pagesize %][% pagesize = (vols)? 10:20 %][% END %]
 
+[% IF !order %][% order = 'id' %][% END %]
+[% IF !dir %][% dir = 'DESC' %][% END %]
+
 <script type="text/Javascript">
 <!--
 function CheckAll(box,formid)
