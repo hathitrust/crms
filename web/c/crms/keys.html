@@ -135,25 +135,21 @@ td.explanation {
 </tr>
 </table>
 <br/>
-<p><b>Note:</b> you can use an asterisk (*) in a search field as a wildcard that will match zero or more characters.<br/>
-Example: searching for volume id <code>wu.89*</code> will match wu.89090507310, wu.89092821453, etc....<br/>
-Example: searching for title <code>*trigonometric*</code> will match "Natural trigonometric functions to seven decimal places for every ten seconds of arc"
-</p><br/>
-<p><b>Note:</b> you can use the <b>&lt;</b>, <b>&lt;=</b>, <b>&gt;</b>, and <b>&gt;=</b> operators before a numeric expression.<br/>
-Example: searching for pub date <code>&lt;=1924</code> will retrieve all volumes published before or in 1924.<br/>
-</p><br/>
-<p><b>Note:</b> OR takes precedence over AND and NOT when you use all three search fields. So <b>x AND y OR z</b> is interpreted as
-<b>x AND (y OR z)</b>.</p><br/>
 
 <br/><h3>The Search Types</h3>
 <ul>
-<li>Searching for <b>Reviews</b> is the search functionality from version 1.0 of the system -- volumes will be grouped together only when ordering
-by Identifier.</li>
-<li>Searching for <b>Volumes with Reviews</b> retrieves volumes for which any single review matches all of the search criteria;
-volumes are sorted on the minimum value (for Ascending) or maximum (for Descending), and then the individual
-reviews are sorted. Reviews for the same volume are always grouped together when you search in this manner.</li>
-<li>Searching for <b>Volumes</b> retrieves volumes if <i>any</i> of the reviews match; sorting is done as above.
-Reviews for the same volume are always grouped together when you search in this manner.</li>
+<li>Searching for <b>Reviews</b> simply finds individual reviews that match all of the search parameters.
+It does not display other reviews for that volume, unless they also match the criteria.
+<ul><li>Reviews for the same volume are grouped together only when ordering by Identifier.</li>
+</ul></li>
+<li>Searching for <b>Volumes with Reviews</b> retrieves volumes for which any single review matches all of the search criteria.
+<ul><li>Reviews for the same volume are always grouped together.</li>
+<li>Volumes are sorted on the minimum "order" value (for Ascending) or maximum (for Descending), and then the individual reviews are sorted.</li>
+</ul></li>
+<li>Searching for <b>Volumes</b> retrieves volumes whose reviews -- taken together -- match the search criteria.
+<ul><li>Reviews for the same volume are always grouped together.</li>
+<li>Sorting is done as as for <b>Volumes with Reviews</b>.</li>
+</ul></li>
 </ul>
 
 <br/><h3>Search Type Examples</h3>
@@ -162,6 +158,21 @@ Reviews for the same volume are always grouped together when you search in this 
 <li>To search for <i>all volumes whach have a review by Anne and another review by Greg</i>: select <b>Volumes</b></li>
 </ul>
 <br/>Typically, <b>Volumes</b> will return the same number of volumes, or more, compared to <b>Volumes with Reviews</b>.
+<br/>You will usually use <b>Volumes</b> when you are searching for different values for the same category (like the Anne and Greg example above).
+
+<br/><h3>Notes</h3>
+<ul>
+<li>You can use an asterisk (*) in a search field as a wildcard that will match zero or more characters.
+<ul>
+<li>Example: searching for volume id <code>wu.89*</code> will match wu.89090507310, wu.89092821453, etc....</li>
+<li>Example: searching for title <code>*trigonometric*</code> will match "Natural trigonometric functions to seven decimal places for every ten seconds of arc"</li>
+</ul></li>
+<li>You can use the <b>&lt;</b>, <b>&lt;=</b>, <b>&gt;</b>, and <b>&gt;=</b> operators before a numeric expression.
+<ul><li>Example: searching for pub date <code>&lt;=1924</code> will retrieve all volumes published before or in 1924.</li>
+</ul></li>
+<li>OR takes precedence over AND and NOT when you use all three search fields. So <b>x AND y OR z</b> is interpreted as
+<b>x AND (y OR z)</b>.</li>
+</ul>
 </div>
 </body>
 </html>
