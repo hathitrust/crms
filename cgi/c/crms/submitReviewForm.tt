@@ -132,7 +132,7 @@
     [% pres = {"Foreign Pub"    => "Foreign Pub",   "Language"        => "Language",
                "Misc"           => "Misc",          "Missing"         => "Missing",
                "Reprint"        => "Reprint",       "Periodical"      => "Periodical",
-               "Insert"         => "Insert",        "Translation"     => "Translation",
+               "Insert(s)"      => "Insert(s)",     "Translation"     => "Translation",
                "Wrong Record"   => "Wrong Record",  "Date"            => "Date",
                "Dissertation/Thesis" => "Dissertation/Thesis",
                "Non-Class A"    => "Non-Class A",   "Expert Note"     => "Expert Note",

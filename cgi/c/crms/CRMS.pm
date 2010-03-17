@@ -931,7 +931,7 @@ sub TranslateCategory
     my $self     = shift;
     my $category = uc shift;
 
-    if    ( $category eq 'COLLECTION' ) { return 'Insert'; }
+    if    ( $category eq 'COLLECTION' ) { return 'Insert(s)'; }
     elsif ( $category =~ m/LANG.*/ ) { return 'Language'; }
     elsif ( $category eq 'MISC' ) { return 'Misc'; }
     elsif ( $category eq 'MISSING' ) { return 'Missing'; }
@@ -951,7 +951,7 @@ sub IsValidCategory
   my $self = shift;
   my $cat = shift;
   
-  my %cats = ('Insert' => 1, 'Language' => 1, 'Misc' => 1, 'Missing' => 1, 'Date' => 1, 'Reprint' => 1,
+  my %cats = ('Insert(s)' => 1, 'Language' => 1, 'Misc' => 1, 'Missing' => 1, 'Date' => 1, 'Reprint' => 1,
               'Periodical' => 1, 'Translation' => 1, 'Wrong Record' => 1, 'Foreign Pub' => 1, 'Dissertation/Thesis' => 1,
               'Expert Note' => 1, 'Non-Class A' => 1, 'Edition' => 1, 'US Gov Doc' => 1);
   return exists $cats{$cat};
