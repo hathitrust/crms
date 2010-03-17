@@ -44,15 +44,13 @@
   <label for="stype">Search for:</label>
   <select name="stype" id="stype">
     <option [% stype == 'reviews' ? 'selected="selected"':'' %] value='reviews'>Reviews</option>
-    <option [% stype == 'groups' ? 'selected="selected"':'' %] value='groups'>Volumes with Reviews</option>
+    <option [% stype == 'groups' ? 'selected="selected"':'' %] value='groups'>Volumes with at least one review</option>
     <option [% stype == 'volumes' ? 'selected="selected"':'' %] value='volumes'>Volumes</option>
   </select>&nbsp;where
   <br/>
 [% ELSE %]
 Search for Reviews where<br/>
 [% END %]
-
-[% #Restrict selection:<br/> %]
 
 [% crms.ReviewSearchMenu(page, 'search1', search1) %]
 <input type="text"  id="search1value" name="search1value" value="[% search1value %]"/>
