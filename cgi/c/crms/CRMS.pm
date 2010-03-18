@@ -953,7 +953,7 @@ sub IsValidCategory
   
   my %cats = ('Insert(s)' => 1, 'Language' => 1, 'Misc' => 1, 'Missing' => 1, 'Date' => 1, 'Reprint' => 1,
               'Periodical' => 1, 'Translation' => 1, 'Wrong Record' => 1, 'Foreign Pub' => 1, 'Dissertation/Thesis' => 1,
-              'Expert Note' => 1, 'Non-Class A' => 1, 'Edition' => 1, 'US Gov Doc' => 1);
+              'Expert Note' => 1, 'Not Class A' => 1, 'Edition' => 1, 'US Gov Doc' => 1);
   return exists $cats{$cat};
 }
 
@@ -1457,6 +1457,7 @@ sub ConvertToSearchTerm
     {
       $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)';
     }
+    elsif ( $search eq 'Swiss' ) { $new_search = 'r.swiss'; }
     return $new_search;
 }
 
@@ -1521,7 +1522,7 @@ sub CreateSQLForReviews
     }
     elsif ( $page eq 'adminHistoricalReviews' )
     {
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated FROM bibdata b INNER JOIN $CRMSGlobals::historicalreviewsTable r ON r.id=b.id };
+      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated FROM bibdata b, $CRMSGlobals::historicalreviewsTable r WHERE r.id=b.id };
     }
     elsif ( $page eq 'undReviews' )
     {
@@ -4159,10 +4160,10 @@ sub ValidateSubmission2
         $errorMsg .= 'pd/ren should not include renewal info.';
     }
 
-    ## pd/ncn requires a ren number
-    if (  $attr == 1 && $reason == 2 && ( ( $renNum ) || ( $renDate ) ) )
+    ## pd/ncn requires a ren number unless Gov Doc
+    if (  $attr == 1 && $reason == 2 && ( ( ! $renNum ) || ( ! $renDate ) ) )
     {
-        $errorMsg .= 'pd/ncn should not include renewal info.';
+        $errorMsg .= 'pd/ncn must include renewal id and renewal date.' unless $category eq 'US Gov Doc';
     }
 
 
@@ -6587,8 +6588,13 @@ sub ReviewSearchMenu
   my $searchName = shift;
   my $searchVal = shift;
   
-  my @keys = ('Identifier','Title','Author','PubDate', 'Status','Legacy','UserId','Attribute',  'Reason',       'NoteCategory', 'Priority', 'Validated');
-  my @labs = ('Identifier','Title','Author','Pub Date','Status','Legacy','User',  'Attr Number','Reason Number','Note Category','Priority', 'Verdict');
+  my @keys = ('Identifier','Title','Author','PubDate', 'Status','Legacy','UserId','Attribute',  'Reason',       'NoteCategory', 'Priority', 'Validated', 'Swiss');
+  my @labs = ('Identifier','Title','Author','Pub Date','Status','Legacy','User',  'Attr Number','Reason Number','Note Category','Priority', 'Verdict', 'Swiss');
+  if (!$self->IsUserExpert())
+  {
+    splice @keys, 12, 1;
+    splice @labs, 12, 1;
+  }
   if ($page ne 'adminHistoricalReviews')
   {
     splice @keys, 11, 1;
