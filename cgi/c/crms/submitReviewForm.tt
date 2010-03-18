@@ -117,6 +117,7 @@
           <label for="r6">[% keys.${"6"} %] (6)</label>
       </td>
     </tr>
+    [% IF crms.IsUserExpert(user) %]
     <tr>
       <td>
         <input type="radio" id="r7" name="rights" value="7" accesskey="7"
@@ -124,6 +125,7 @@
           <label for="r7">[% keys.${"7"} %] (7)</label>
       </td>
     </tr>
+    [% END %]
   </table>
 </div>
 <div id="Notes">
@@ -135,7 +137,7 @@
                "Insert(s)"      => "Insert(s)",     "Translation"     => "Translation",
                "Wrong Record"   => "Wrong Record",  "Date"            => "Date",
                "Dissertation/Thesis" => "Dissertation/Thesis",
-               "Non-Class A"    => "Non-Class A",   "Expert Note"     => "Expert Note",
+               "Not Class A"    => "Not Class A",   "Expert Note"     => "Expert Note",
                "Edition"        => "Edition",       "US Gov Doc"      => "US Gov Doc",
                ""               => "none"} 
     %]
