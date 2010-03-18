@@ -124,6 +124,9 @@ Search for Reviews where<br/>
 [% IF page == 'adminHistoricalReviews' %]
   <option value="validated" [% order == 'validated' ?  'selected="selected"':'' %]>Verdict</option>
 [% END %]
+[% IF crms.IsUserExpert(user) %]
+  <option value="swiss" [% order == 'swiss' ?  'selected="selected"':'' %]>Swiss</option>
+[% END %]
 </select>
 <br/>
 
