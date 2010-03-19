@@ -1256,44 +1256,6 @@ sub SubmitActiveReview
 }
 
 
-sub PrepareForTesting
-{
-    my $self = shift;
-
-    my $sql = qq{ DELETE FROM $CRMSGlobals::queueTable};
-    $self->PrepareSubmitSql( $sql );
-
-    my $sql = qq{ DELETE FROM bibdata where id not in ( select id from historicalreviews where legacy = 1)};
-    $self->PrepareSubmitSql( $sql );
-
-    my $sql = qq{ DELETE FROM candidatesrecord};
-    $self->PrepareSubmitSql( $sql );
-
-    my $sql = qq{ DELETE FROM exportrecord};
-    $self->PrepareSubmitSql( $sql );
-
-    my $sql = qq{ DELETE FROM reviews};
-    $self->PrepareSubmitSql( $sql );
-
-    my $sql = qq{ DELETE FROM processstatus};
-    $self->PrepareSubmitSql( $sql );
-
-    my $sql = qq{ DELETE FROM userstats};
-    $self->PrepareSubmitSql( $sql );
-
-    my $sql = qq{ DELETE FROM queuerecord};
-    $self->PrepareSubmitSql( $sql );
-
-    my $sql = qq{ DELETE FROM timer};
-    $self->PrepareSubmitSql( $sql );
-
-    my $sql = qq{ DELETE FROM historicalreviews where legacy=0};
-    $self->PrepareSubmitSql( $sql );
-
-    return 1;
-}
-
-
 sub MoveFromReviewsToHistoricalReviews
 {
     my $self = shift;
