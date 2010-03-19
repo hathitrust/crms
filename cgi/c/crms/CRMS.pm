@@ -1360,7 +1360,7 @@ sub TwoWorkingDays
   my @parts = split '-', $time;
   my $date = $cal->add_delta_workdays($parts[0],$parts[1],$parts[2],2);
   # Returned format is YYYYMMDD
-  $date = sprintf '%s-%s-%s', substr($date,0,4), substr($date,4,2), substr($date,6,2);
+  $date = sprintf '%s-%s-%s 23:59:59', substr($date,0,4), substr($date,4,2), substr($date,6,2);
   return ($readable)? $self->FormatDate($date):$date;
 }
 
