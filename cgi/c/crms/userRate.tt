@@ -4,7 +4,7 @@
 <hr width="25%" align="left"/><br/>
 [% user = crms.get('user') %]
 
-[% crms.CreateStatsReport( user, 0, 0, year ) %]
+[% crms.CreateStatsReport( user, 0, 0 ) %]
 <span class="smallishText">*Does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews.</span>
 <br/><br/>
 [% sql = "SELECT COUNT(*) FROM reviews WHERE user='$user'" %]
