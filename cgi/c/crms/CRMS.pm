@@ -1535,10 +1535,12 @@ sub CreateSQLForReviews
     #print "$sql<br/>\n";
     my $countSql = $sql;
     $countSql =~ s/(SELECT\s+).+?(FROM.+)/$1 COUNT(*) $2/i;
+    $countSql =~ s/(LIMIT\s\d+(,\s*\d+)?)//;
     #print "$countSql<br/>\n";
     my $totalReviews = $self->SimpleSqlGet($countSql);
     $countSql = $sql;
     $countSql =~ s/(SELECT\s?).+?(FROM.+)/$1 COUNT(DISTINCT r.id) $2/i;
+    $countSql =~ s/(LIMIT\s\d+(,\s*\d+)?)//;
     #print "$countSql<br/>\n";
     my $totalVolumes = $self->SimpleSqlGet($countSql);
     my $n = POSIX::ceil($offset/$pagesize+1);
