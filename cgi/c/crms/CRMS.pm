@@ -6724,7 +6724,7 @@ sub PageToEnglish
                'exportStats' => 'export statistics',
                'queueAdd' => 'add to queue',
                'queueStatus' => 'queue status',
-               'undReviews' => 'und/nfi items',
+               'undReviews' => 'provisional matches',
                'userRate' => 'view your review rate',
                'userReviews' => 'view your processed reviews',
                'debug' => 'debug',
