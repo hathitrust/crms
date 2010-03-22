@@ -171,7 +171,7 @@ inu.30000083470769 dfulmer 1
 inu.30000083470769 gnichols123 1
 mdp.39015001455685 annekz 1
 mdp.39015001455685 cwilcox 1
-mdp.39015001455685 dfulmer 0
+mdp.39015001455685 dfulmer 2
 uc1.b3146845 annekz 1
 uc1.b3146845 cwilcox 0
 uc1.b3146845 dfulmer 1
@@ -212,9 +212,6 @@ mdp.39015084474140 dfulmer 1
 wu.89081504193 annekz 1
 wu.89081504193 cwilcox 0
 wu.89081504193 dfulmer 1
-mdp.39015001429169 annekz 1
-mdp.39015001429169 cwilcox 1
-mdp.39015001429169 dfulmer 2
 uc1.b18463 annekz 1
 uc1.b18463 cwilcox 0
 uc1.b18463 dfulmer 1
@@ -435,6 +432,7 @@ if ($phase1)
   my $r = $crms->get('dbh')->selectall_arrayref($sql);
   my $n0 = 0;
   my $n1 = 0;
+  my $q = 1;
   foreach my $row (@{$r})
   {
     my $id = $row->[0];
@@ -477,8 +475,10 @@ if ($phase1)
       }
       elsif ($n0 < 20)
       {
-        $crms->SubmitReview($id, 'cwilcox', 1, 7, undef, undef, undef, 0, undef, undef);
+        
+        $crms->SubmitReview($id, 'cwilcox', 1, 7, undef, undef, undef, 0, undef, undef, undef, $q);
         $crms->SubmitReview($id, 'dfulmer', 2, 7, undef, undef, undef, 0, undef, undef);
+        $q = undef;
       }
       elsif ($n0 < 40)
       {
@@ -507,14 +507,14 @@ if ($phase1)
   # 4    | 60 (40 priority 1, 20 priority 0)
   # 5    | 5 (priority 3/4 items)
   # 6    | 0 (not yet!)
-  my %stati = (0=>0,1=>5,2=>30,3=>5,4=>60,5=>5,6=>0);
+  my %stati = (0=>0,1=>6,2=>29,3=>5,4=>60,5=>5,6=>0);
   foreach my $status (sort keys %stati)
   {
     my $sql = "SELECT COUNT(*) FROM queue WHERE pending_status=$status";
-    #print "$sql\n";
+    print "$sql\n" if $verbose;
     my $count = $crms->SimpleSqlGet($sql);
     my $should = $stati{$status};
-    Complain("Pending status $status has $count, should have $should") unless $count == $should;
+    Complain("Pending status $status has $count, should have $should in queue") unless $count == $should;
   }
   VerifySQL('SELECT COUNT(*) FROM queue WHERE status>0',5,'Wrong number of queue nonzero status items.');
   VerifySQL('SELECT COUNT(*) FROM queue WHERE status=0',100,'Wrong number of queue status zero items.');
@@ -539,27 +539,27 @@ if ($phase1)
 if ($phase2)
 {
   print "Beginning phase 2 (review processing)\n";
-  system('./updateQueue.pl -cq') == 0 or die "updateQueue.pl failed: $?";
-  system('./monthlyStats.pl') == 0 or die "monthlyStats.pl failed: $?";
+  $crms->ProcessReviews();
   # At the end of phase 2, here are the status breakdowns:
   # Stat | Count
-  # 0    | 5 (priority 0 single reviews)
-  # 2    | 30 (10 priority 1, 20 priority 0)
+  # 0    | 6 (5 priority 0 single reviews and one hold)
+  # 2    | 29 (10 priority 1, 19 priority 0)
   # 3    | 5 (priority 0)
   # 4    | 60 (40 priority 1, 20 priority 0)
   # 5    | 5 (priority 3/4 items)
   # 6    | 0 (not yet!)
-  my %stati = (0=>5,2=>30,3=>5,4=>60,5=>5,6=>0);
+  my %stati = (0=>6,2=>29,3=>5,4=>60,5=>5,6=>0);
   foreach my $status (sort keys %stati)
   {
-    my $sql = "SELECT COUNT(*) FROM queue WHERE status=$status";
+    my $sql = "SELECT COUNT(id) FROM queue WHERE status=$status";
     my $count = $crms->SimpleSqlGet($sql);
     my $should = $stati{$status};
-    Complain("Status $status has $count, should have $should") unless $count == $should;
+    Complain("Status $status has $count, should have $should in queue") unless $count == $should;
   }
-  VerifySQL('SELECT COUNT(*) FROM queue WHERE status>0',100,'Wrong number of queue nonzero status items.');
-  VerifySQL('SELECT COUNT(*) FROM queue WHERE status=0',5,'Wrong number of queue status zero items.');
+  VerifySQL('SELECT COUNT(*) FROM queue WHERE status>0',99,'Wrong number of queue nonzero status items.');
+  VerifySQL('SELECT COUNT(*) FROM queue WHERE status=0',6,'Wrong number of queue status zero items.');
   VerifySQL('SELECT COUNT(*) FROM queue',105,'Wrong number of items in queue.');
+  VerifySQL('SELECT COUNT(*) FROM reviews WHERE hold IS NOT NULL',1,'Wrong number of held reviews.');
   VerifySQL('SELECT COUNT(*) FROM reviews',200,'Wrong number of items in reviews.');
   Verify($crms->GetTotalAwaitingReview(),0,'Wrong number awaiting review');
   Verify($crms->GetTotalNonLegacyReviewCount(),0,'Wrong number of CRMS historical reviews');
@@ -597,22 +597,22 @@ if ($phase3)
   }
   # At the end of phase 3, here are the status breakdowns:
   # Stat | Count
-  # 0    | 5 (priority 0 single reviews)
+  # 0    | 6 (5 priority 0 single reviews and a hold)
   # 4    | 60 (40 priority 1, 20 priority 0)
-  # 5    | 35 (priority 3/4 items)
+  # 5    | 34 (priority 3/4 items)
   # 6    | 5
-  my %stati = (0=>5,4=>60,5=>35,6=>5);
+  my %stati = (0=>6,4=>60,5=>34,6=>5);
   foreach my $status (sort keys %stati)
   {
     my $sql = "SELECT COUNT(*) FROM queue WHERE status=$status";
     my $count = $crms->SimpleSqlGet($sql);
     my $should = $stati{$status};
-    Complain("Status $status has $count, should have $should") unless $count == $should;
+    Complain("Status $status has $count, should have $should in queue") unless $count == $should;
   }
-  VerifySQL('SELECT COUNT(*) FROM queue WHERE status>0',100,'Wrong number of queue nonzero status items.');
-  VerifySQL('SELECT COUNT(*) FROM queue WHERE status=0',5,'Wrong number of queue status zero items.');
+  VerifySQL('SELECT COUNT(*) FROM queue WHERE status>0',99,'Wrong number of queue nonzero status items.');
+  VerifySQL('SELECT COUNT(*) FROM queue WHERE status=0',6,'Wrong number of queue status zero items.');
   VerifySQL('SELECT COUNT(*) FROM queue',105,'Wrong number of items in queue.');
-  VerifySQL('SELECT COUNT(*) FROM reviews',235,'Wrong number of items in reviews.');
+  VerifySQL('SELECT COUNT(*) FROM reviews',234,'Wrong number of items in reviews.');
   Verify($crms->GetTotalAwaitingReview(),0,'Wrong number awaiting review');
   Verify($crms->GetTotalNonLegacyReviewCount(),0,'Wrong number of CRMS historical reviews');
   Verify($crms->GetTotalLegacyReviewCount(),100,'Wrong number of legacy reviews');
@@ -635,38 +635,39 @@ if ($phase4)
   system('./monthlyStats.pl') == 0 or die "monthlyStats.pl failed: $?";
   my $sql = 'SELECT COUNT(*) FROM queue';
   my $count = $crms->SimpleSqlGet($sql);
-  my $should = 5;
+  my $should = 6;
   Complain("Queue has $count, should have $should") unless $count == $should;
-  my %stati = (0=>5);
+  my %stati = (0=>6);
   foreach my $status (sort keys %stati)
   {
     $sql = "SELECT COUNT(*) FROM queue WHERE status=$status";
     $count = $crms->SimpleSqlGet($sql);
-    my $should = $stati{$status};
-    Complain("Status $status has $count, should have $should") unless $count == $should;
+    $should = $stati{$status};
+    Complain("Status $status has $count, should have $should in queue") unless $count == $should;
   }
-  %stati = (4=>120,5=>103,6=>15);
+  %stati = (4=>120,5=>100,6=>15);
   foreach my $status (sort keys %stati)
   {
     $sql = "SELECT COUNT(*) FROM historicalreviews WHERE status=$status";
     $count = $crms->SimpleSqlGet($sql);
-    my $should = $stati{$status};
-    Complain("Status $status has $count, should have $should") unless $count == $should;
+    $should = $stati{$status};
+    Complain("Status $status has $count, should have $should in historical") unless $count == $should;
   }
   VerifySQL('SELECT COUNT(*) FROM queue WHERE status>0',0,'Wrong number of queue nonzero status items.');
-  VerifySQL('SELECT COUNT(*) FROM queue WHERE status=0',5,'Wrong number of queue status zero items.');
-  VerifySQL('SELECT COUNT(*) FROM queue',5,'Wrong number of items in queue');
-  VerifySQL('SELECT COUNT(*) FROM reviews',5,'Wrong number of items in reviews');
+  VerifySQL('SELECT COUNT(*) FROM queue WHERE status=0',6,'Wrong number of queue status zero items.');
+  VerifySQL('SELECT COUNT(*) FROM queue',6,'Wrong number of items in queue');
+  VerifySQL('SELECT COUNT(*) FROM reviews',7,'Wrong number of items in reviews');
   Verify($crms->GetTotalAwaitingReview(),0,'Wrong number awaiting review');
-  Verify($crms->GetTotalNonLegacyReviewCount(),230,'Wrong number of CRMS historical reviews');
+  Verify($crms->GetTotalNonLegacyReviewCount(),227,'Wrong number of CRMS historical reviews');
   Verify($crms->GetTotalLegacyReviewCount(),100,'Wrong number of legacy reviews');
-  Verify($crms->GetTotalHistoricalReviewCount(),330,'Wrong number of historical reviews');
-  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),84.1,'Wrong avg validation rate');
-  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),84.1,'Wrong median validation rate');
-  VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE validated=1 AND legacy=0 AND user="cwilcox"',35,'Wrong number of validated reviews for cwilcox');
-  VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE legacy=0 AND user="cwilcox"',45,'Wrong number of reviews for cwilcox');
+  Verify($crms->GetTotalHistoricalReviewCount(),327,'Wrong number of historical reviews');
+  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),84.3,'Wrong avg validation rate');
+  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),84.3,'Wrong median validation rate');
+  VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE validated=1 AND legacy=0 AND user="cwilcox"',34,'Wrong number of validated reviews for cwilcox');
+  VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE legacy=0 AND user="cwilcox"',44,'Wrong number of historical reviews for cwilcox');
   VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE validated=1 AND legacy=0 AND user="dfulmer"',85,'Wrong number of validated reviews for dfulmer');
-  VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE legacy=0 AND user="dfulmer"',95,'Wrong number of reviews for dfulmer');
+  VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE validated=2 AND legacy=0 AND user="dfulmer"',1,'Wrong number of swiss validations for dfulmer');
+  VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE legacy=0 AND user="dfulmer"',94,'Wrong number of historical reviews for dfulmer');
   $crms->SanityCheckDB();
   my $r = $crms->GetErrors();
   foreach my $w (@{$r})
@@ -686,13 +687,54 @@ if ($phase4)
 
 if ($phase5)
 {
-  print "Beginning phase 5 (expert review invalidating prev expert)\n";
+  print "Beginning phase 5 (miscellaneous tests)\n";
   my $id = 'wu.89081504193';
   my $result = $crms->AddItemToQueueOrSetItemActive($id,2);
   Verify(substr($result,0,1),0,"AddItemToQueueOrSetItemActive returned $result");
   $crms->SubmitReview($id, 'gnichols123', 5, 8, undef, undef, undef, 1, undef, undef);
-  system('./updateQueue.pl -cq') == 0 or die "updateQueue.pl failed: $?";
+  my @unds = (
+# theses: 5/10 detected
+'uc1.b195517',
+'uc1.b50667',
+'uc1.b54721',
+'uc1.b184716',
+'uc1.b50734',
+'uc1.b185423',
+'uc1.b3508360',
+'mdp.39015018634736',
+'mdp.39015028711136',
+'uc1.b50741',
+# translations: 7/10 detected
+'mdp.39015009791065',
+'uc1.b598359',
+'uc1.b3140728',
+'uc1.b537045',
+'mdp.39015019996290',
+'uc1.b3758654',
+'inu.32000001196858',
+'mdp.39015027602708',
+'mdp.39015003708909',
+'mdp.39015051388794',
+# foreign: 2/9 detected
+'uc1.b3148827',
+'uc1.b512888',
+'uc1.b3439351',
+'mdp.39015074910343',
+'wu.89080453830',
+'mdp.39015008800891',
+'uc1.b537834',
+'mdp.39015071135993',
+'uc1.b163247');
+  foreach my $id (@unds)
+  {
+    my $result = $crms->AddItemToCandidates( $id, $crms->GetTodaysDate(), 0, 0 );
+    Verify($result,1,"AddItemToCandidates failed for $result");
+  }
+  system('./updateQueue.pl') == 0 or die "updateQueue.pl failed: $?";
   system('./monthlyStats.pl') == 0 or die "monthlyStats.pl failed: $?";
+  VerifySQL("SELECT COUNT(id) FROM und WHERE src='dissertation'",5,"Wrong und count for theses");
+  VerifySQL("SELECT COUNT(id) FROM und WHERE src='translation'",7,"Wrong und count for translations");
+  VerifySQL("SELECT COUNT(id) FROM und WHERE src='foreign'",2,"Wrong und count for foreign pubs");
   my %valid = ('annekz'=>0,'gnichols123'=>1,'dfulmer'=>0,'cwilcox'=>1);
   foreach my $user (keys %valid)
   {
