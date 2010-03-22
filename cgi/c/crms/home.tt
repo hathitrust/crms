@@ -36,5 +36,6 @@
   </blockquote></div>
 [% END %]
   
+[% crms.HoldReport(user) %]
 
 [% INCLUDE footer.tt %]
