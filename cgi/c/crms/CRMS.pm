@@ -4581,7 +4581,7 @@ sub ReadCities
 {
   my $self = shift;
   
-  my $in = $self->get('root') . "/prep/c/crms/us_cities.txt";
+  my $in = $self->get('root') . "/bin/c/crms/us_cities.txt";
   open (FH, '<', $in) || $self->SetError("Could not open $in");
   my $cities = '';
   while( <FH> ) { chomp; $cities .= "==$_=="; }
