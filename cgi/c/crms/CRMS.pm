@@ -337,7 +337,7 @@ sub ProcessReviews
   my $self = shift;
   
   my $start_size = $self->GetCandidatesSize();
-  my $sql = 'SELECT id, user, attr, reason, renNum, renDate FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) ' .
+  my $sql = 'SELECT id, user, attr, reason, renNum, renDate, hold FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) ' .
             'GROUP BY id HAVING count(*) = 2';
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
   
@@ -349,9 +349,14 @@ sub ProcessReviews
     my $reason  = $row->[3];
     my $renNum  = $row->[4];
     my $renDate = $row->[5];
+    my $hold    = $row->[6];
     
-    my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate ) = $self->GetOtherReview( $id, $user );
-
+    next if $hold and $self->GetTodaysDate() lt $hold;
+    
+    my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold ) = $self->GetOtherReview( $id, $user );
+    print "$other_hold\n" if $other_hold;
+    next if $other_hold and $self->GetTodaysDate() lt $other_hold;
+    
     if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
     {
       #If both und/nfi then status is 3
@@ -393,6 +398,74 @@ sub ProcessReviews
   $self->PrepareSubmitSql( $sql );
   my $sql = 'INSERT INTO processstatus VALUES ( )';
   $self->PrepareSubmitSql( $sql );
+}
+
+sub CheckPendingStatus
+{
+  my $self = shift;
+  my $id   = shift;
+  
+  my $sql = "SELECT id, user, attr, reason, renNum, renDate, hold FROM reviews WHERE id='$id'";
+  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  if (scalar @{$ref} > 1)
+  {
+    my $row = @{$ref}[0];
+    my $id      = $row->[0];
+    my $user    = $row->[1];
+    my $attr    = $row->[2];
+    my $reason  = $row->[3];
+    my $renNum  = $row->[4];
+    my $renDate = $row->[5];
+    my $hold    = $row->[6];
+    
+    return if $hold and $self->GetTodaysDate() lt $hold;
+    
+    my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold ) = $self->GetOtherReview( $id, $user );
+    return if $other_hold and $self->GetTodaysDate() lt $other_hold;
+
+    if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
+    {
+      #If both und/nfi then status is 3
+      if ( ( $attr == 5 ) && ( $reason == 8 ) )
+      {
+         $self->RegisterPendingStatus( $id, 3 );
+      }
+      else #Mark as 4 - two that agree
+      {
+        #If they are ic/ren then the renewal date and id must match
+        if ( ( $attr == 2 ) && ( $reason == 7 ) )
+        {
+          $renNum =~ s/\s+//gs;
+          $other_renNum =~ s/\s+//gs;
+          if ( ( $renNum eq $other_renNum ) && ( $renDate eq $other_renDate ) )
+          {
+            #Mark as 4
+            $self->RegisterPendingStatus( $id, 4 );
+          }
+          else
+          {
+            #Mark as 2
+            $self->RegisterPendingStatus( $id, 2 );
+          }
+        }
+        else #all other cases mark as 4
+        {
+          $self->RegisterPendingStatus( $id, 4 );
+        }
+      }
+    }
+    else #Mark as 2 - two that disagree
+    {
+      $self->RegisterPendingStatus( $id, 2 );
+    }
+  }
+  elsif (scalar @{$ref} == 1) #Mark as 1: just single review unless it's a status 5 already.
+  {
+    $sql = "SELECT status FROM queue WHERE id='$id'";
+    my $status = $self->SimpleSqlGet($sql);
+    $status = 1 unless $status;
+    $self->RegisterPendingStatus( $id, $status );
+  }
 }
 
 sub ClearQueueAndExport
@@ -571,8 +644,7 @@ sub LoadNewItemsInCandidates
 
     if ($self->get('verbose')) { print "found: " .  scalar( @{$ref} ) . ": $sql\n"; }
 
-    ## design note: if these were in the same DB we could just INSERT
-    ## into the new table, not SELECT then INSERT
+    my %und = ();
     my $inqueue;
     foreach my $row ( @{$ref} )
     {
@@ -583,18 +655,43 @@ sub LoadNewItemsInCandidates
 
       if ( ( $attr == 2 ) && ( $reason == 1 ) )
       {
-        my $lang = $self->GetPubLanguage($id);
-        if ('eng' ne $lang && '###' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
+        my $record = $self->GetRecordMetadata($id);
+        my $lang = $self->GetPubLanguage($id, $record);
+        if ('eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
         {
-          print "Skipping non-English language $id: $lang\n";
+          print "Skip non-English $id -- will insert into und table\n";
+          $und{$id} = 'language';
+          next;
         }
-        else
+        if ($self->IsThesis($id, $record))
         {
-          $self->AddItemToCandidates( $id, $time, 0, 0 );
+          print "Skip dissertation $id -- will insert into und table\n";
+          $und{$id} = 'dissertation';
+          next;
         }
+        if ($self->IsTranslation($id, $record))
+        {
+          print "Skip translation $id -- will insert into und table\n";
+          $und{$id} = 'translation';
+          next;
+        }
+        if ($self->IsForeignPub($id, $record))
+        {
+          print "Skip foreign pub $id -- will insert into und table\n";
+          $und{$id} = 'foreign';
+          next;
+        }
+        $self->AddItemToCandidates( $id, $time, 0, 0 );
       }
     }
-
+    foreach my $id (keys %und)
+    {
+      my $src = $und{$id};
+      $sql = "INSERT INTO und (id,src) VALUES ('$id','$src')";
+      $self->PrepareSubmitSql( $sql );
+      $sql = "DELETE FROM candidates WHERE id='$id'";
+      $self->PrepareSubmitSql( $sql );
+    }
     my $end_size = $self->GetCandidatesSize();
     my $diff = $end_size - $start_size;
     
@@ -605,7 +702,7 @@ sub LoadNewItemsInCandidates
       map {print "  $_\n";} @{$r};
     }
     
-    print "After load, candidates has $end_size rows. Added $diff\n\n";
+    print "After load, candidates has $end_size items. Added $diff.\n\n";
     
     #Record the update to the queue
     my $sql = qq{INSERT INTO candidatesrecord ( addedamount ) values ( $diff )};
@@ -628,25 +725,55 @@ sub LoadNewItems
     return if $needed <= 0;
     my $count = 0;
     my $y = 1923 + int(rand(40));
+    my %und = ();
     while (1)
     {
       $sql = 'SELECT id, time, pub_date, title, author FROM candidates WHERE id NOT IN (SELECT DISTINCT id FROM queue) ' .
              'AND id NOT IN (SELECT DISTINCT id FROM reviews) AND id NOT IN (SELECT DISTINCT id FROM historicalreviews) ' .
-             'AND id NOT IN (SELECT DISTINCT id FROM queue) ORDER BY pub_date ASC, time DESC';
+             'AND id NOT IN (SELECT DISTINCT id FROM queue) AND id NOT IN (SELECT DISTINCT id FROM und) ' .
+             'ORDER BY pub_date ASC, time DESC';
       my $ref = $self->get('dbh')->selectall_arrayref( $sql );
-      my $row = $ref->[0];
+      #printf "%d results\n", scalar @{$ref};
+      # This can happen in the testsuite.
+      last unless scalar @{$ref};
+      my $oldcount = $count;
       foreach my $row (@{$ref})
       {
-        my $pub_date = $row->[2];
-        next if $pub_date ne "$y-01-01";
         my $id = $row->[0];
+        my $pub_date = $row->[2];
+        #print "Trying $id ($pub_date) against $y\n";
+        next if $pub_date ne "$y-01-01";
         my $time = $row->[1];
         my $title = $row->[3];
         my $author = $row->[4];
-        my $lang = $self->GetPubLanguage($id);
+        my $record = $self->GetRecordMetadata($id);
+        my $src = undef;
+        if ($self->IsThesis($id, $record))
+        {
+          print "Skip dissertation $id -- will insert into und table\n";
+          $src = 'dissertation' unless $src;
+        }
+        if ($self->IsForeignPub($id, $record))
+        {
+          print "Skip foreign pub $id -- will insert into und table\n";
+          $src = 'foreign' unless $src;
+        }
+        if ($self->IsTranslation($id, $record))
+        {
+          print "Skip translation $id -- will insert into und table\n";
+          $src = 'translation' unless $src;
+        }
+        my $lang = $self->GetPubLanguage($id, $record);
         if ('eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
         {
-          print "Skip non-English $id: '$lang'\n";
+          print "Skip non-English $id ($lang) -- will insert into und table\n";
+          $src = 'language' unless $src;
+        }
+        if ($src)
+        {
+          $und{$id} = $src;
+          $sql = "INSERT INTO und (id,src) VALUES ('$id','$src')";
+          $self->PrepareSubmitSql( $sql );
           next;
         }
         $self->AddItemToQueue( $id, $pub_date, $title, $author );
@@ -656,11 +783,22 @@ sub LoadNewItems
         $y++;
         $y = 1923 if $y > 1963;
       }
+      if ($oldcount == $count)
+      {
+        $y++;
+        $y = 1923 if $y > 1963;
+      }
       last if $count >= $needed;
     }
     #Record the update to the queue
     my $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES ($count, 'RIGHTSDB')";
     $self->PrepareSubmitSql( $sql );
+    foreach my $id (keys %und)
+    {
+      my $src = $und{$id};
+      $sql = "DELETE FROM candidates WHERE id='$id'";
+      $self->PrepareSubmitSql( $sql );
+    }
 }
 
 
@@ -1025,6 +1163,7 @@ sub SubmitReview
       push(@valueList, $swiss);
     }
     if ($copyDate) { push(@fieldList, 'copyDate'); push(@valueList, $copyDate); }
+    if ($question) { push(@fieldList, 'hold'); push(@valueList, $self->TwoWorkingDays()); }
     if ($note)     { push(@fieldList, 'note'); }
     
     my $sql = "REPLACE INTO $CRMSGlobals::reviewsTable (" . join(', ', @fieldList) .
@@ -1069,7 +1208,7 @@ sub GetOtherReview
     my $user = shift;
 
 
-    my $sql = qq{SELECT id, user, attr, reason, renNum, renDate FROM $CRMSGlobals::reviewsTable WHERE id="$id" and user != "$user"};
+    my $sql = qq{SELECT id, user, attr, reason, renNum, renDate, hold FROM $CRMSGlobals::reviewsTable WHERE id="$id" and user != "$user"};
 
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
@@ -1082,74 +1221,11 @@ sub GetOtherReview
         my $reason  = $row->[3];
         my $renNum  = $row->[4];
         my $renDate = $row->[5];
+        my $hold    = $row->[6];
 
-        return ( $user, $attr, $reason, $renNum, $renDate );
+        return ( $user, $attr, $reason, $renNum, $renDate, $hold );
    }
 
-}
-
-sub CheckPendingStatus
-{
-  my $self = shift;
-  my $id   = shift;
-  
-  my $sql = "SELECT id, user, attr, reason, renNum, renDate FROM reviews WHERE id='$id'";
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-  if (scalar @{$ref} > 1)
-  {
-    my $row = @{$ref}[0];
-    my $id      = $row->[0];
-    my $user    = $row->[1];
-    my $attr    = $row->[2];
-    my $reason  = $row->[3];
-    my $renNum  = $row->[4];
-    my $renDate = $row->[5];
-    
-    my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate ) = $self->GetOtherReview( $id, $user );
-
-    if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
-    {
-      #If both und/nfi then status is 3
-      if ( ( $attr == 5 ) && ( $reason == 8 ) )
-      {
-         $self->RegisterPendingStatus( $id, 3 );
-      }
-      else #Mark as 4 - two that agree
-      {
-        #If they are ic/ren then the renewal date and id must match
-        if ( ( $attr == 2 ) && ( $reason == 7 ) )
-        {
-          $renNum =~ s/\s+//gs;
-          $other_renNum =~ s/\s+//gs;
-          if ( ( $renNum eq $other_renNum ) && ( $renDate eq $other_renDate ) )
-          {
-            #Mark as 4
-            $self->RegisterPendingStatus( $id, 4 );
-          }
-          else
-          {
-            #Mark as 2
-            $self->RegisterPendingStatus( $id, 2 );
-          }
-        }
-        else #all other cases mark as 4
-        {
-          $self->RegisterPendingStatus( $id, 4 );
-        }
-      }
-    }
-    else #Mark as 2 - two that disagree
-    {
-      $self->RegisterPendingStatus( $id, 2 );
-    }
-  }
-  elsif (scalar @{$ref} == 1) #Mark as 1: just single review unless it's a status 5 already.
-  {
-    $sql = "SELECT status FROM queue WHERE id='$id'";
-    my $status = $self->SimpleSqlGet($sql);
-    $status = 1 unless $status;
-    $self->RegisterPendingStatus( $id, $status );
-  }
 }
 
 
@@ -1312,11 +1388,9 @@ sub GetExpertRevItems
 
 sub GetDoubleRevItemsInAgreement
 {
-    my $self = shift;
-    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status=4 };
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    return $ref;
+  my $self = shift;
+  my $sql  = 'SELECT id FROM queue WHERE status=4 AND id NOT IN (SELECT id FROM reviews WHERE CURDATE()>hold)';
+  return $self->get( 'dbh' )->selectall_arrayref( $sql );
 }
 
 
@@ -1476,7 +1550,7 @@ sub CreateSQLForReviews
     my $sql;
     if ( $page eq 'adminReviews' )
     {
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id };
+      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id };
     }
     elsif ( $page eq 'expert' )
     {
@@ -1501,7 +1575,7 @@ sub CreateSQLForReviews
       my $yesterday = $self->GetYesterday();
       # Experts need to see stuff with any status; non-expert should only see stuff that hasn't been processed yet.
       my $restrict = ($self->IsUserExpert($user))? '':'AND q.status=0';
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND r.time >= "$yesterday" $restrict };
+      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND (r.time >= "$yesterday" OR r.hold IS NOT NULL) $restrict };
     }
     my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
     $sql .= " AND $terms" if $terms;
@@ -2018,6 +2092,7 @@ sub SearchAndDownload
           $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
                  "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
                  (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
+                 (($page eq 'adminReviews' || $page eq 'editReviews')? ', r.hold ':' ') .
                  "FROM $top INNER JOIN $table r ON b.id=r.id " .
                  "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
           #print "$sql<br/>\n";
@@ -2026,7 +2101,7 @@ sub SearchAndDownload
           if ($@)
           {
             $self->SetError("SQL failed: '$sql' ($@)");
-            $self->DownloadSpreadSheet( "order <<$order>>\nSQL failed: '$sql' ($@)" );
+            $self->DownloadSpreadSheet( "SQL failed: '$sql' ($@)" );
             return 0;
           }
           $buffer .= $self->UnpackResults($page, $ref2);
@@ -2219,6 +2294,7 @@ sub GetReviewsRef
         $pubdate = '?' unless $pubdate;
         ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
         ${$item}{'validated'} = $row->[20] if $page eq 'adminHistoricalReviews';
+        ${$item}{'hold'} = $row->[19] if $page eq 'adminReviews' or $page eq 'editReviews';
         push( @{$return}, $item );
     }
     my $n = POSIX::ceil($offset/$pagesize+1);
@@ -2268,6 +2344,7 @@ sub GetVolumesRef
     $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
            (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
+           (($page eq 'adminReviews')? ', r.hold ':' ') .
            "FROM $table r, bibdata b$doQ " .
            "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
     #print "$sql<br/>\n";
@@ -2301,6 +2378,7 @@ sub GetVolumesRef
       $pubdate = '?' unless $pubdate;
       ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
       ${$item}{'validated'} = $row->[20] if $page eq 'adminHistoricalReviews';
+      ${$item}{'hold'} = $row->[19] if $page eq 'adminReviews' or $page eq 'editReviews';
       push( @{$return}, $item );
     }
   }
@@ -2348,6 +2426,7 @@ sub GetVolumesRefWide
     $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
            (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
+           (($page eq 'adminReviews')? ', r.hold ':' ') .
            "FROM $top INNER JOIN $table r ON b.id=r.id " .
            "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
     #print "$sql<br/>\n";
@@ -2381,6 +2460,7 @@ sub GetVolumesRefWide
       $pubdate = '?' unless $pubdate;
       ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
       ${$item}{'validated'} = $row->[20] if $page eq 'adminHistoricalReviews';
+      ${$item}{'hold'} = $row->[19] if $page eq 'adminReviews' or $page eq 'editReviews';
       push( @{$return}, $item );
     }
   }
@@ -3585,7 +3665,7 @@ sub CreateStatsData
   my $earliest = '';
   my $latest = '';
   my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'All IC', 'ic/ren', 'ic/cdpp', 'All UND/NFI',
-                '__TOT__', '__TOTNE__', '__VAL__', '__AVAL__', '__MVAL__',
+                '__TOT__', '__TOTNE__', '__NEUT__', '__VAL__', '__AVAL__', '__MVAL__',
                 'Time Reviewing (mins)', 'Time per Review (mins)','Reviews per Hour', 'Outlier Reviews');
   foreach my $date (@statdates)
   {
@@ -3618,9 +3698,10 @@ sub CreateStatsData
     my $lastDay = Days_in_Month($year,$month);
     $mintime .= '-01 00:00:00';
     $maxtime .= "-$lastDay 23:59:59";
-    my ($ok,$oktot) = $self->CountCorrectReviews($user, $mintime, $maxtime);
+    my ($ok,$oktot,$neut) = $self->CountCorrectReviews($user, $mintime, $maxtime);
     $stats{'__VAL__'}{$date} = $ok;
     $stats{'__TOTNE__'}{$date} = $oktot;
+    $stats{'__NEUT__'}{$date} = $neut;
     $stats{'__AVAL__'}{$date} = $self->GetAverageCorrect($mintime, $maxtime);
     $stats{'__MVAL__'}{$date} = $self->GetMedianCorrect($mintime, $maxtime);
   }
@@ -3649,9 +3730,10 @@ sub CreateStatsData
   my $lastDay = Days_in_Month($year,$month);
   $earliest .= '-01 00:00:00';
   $latest .= "-$lastDay 23:59:59";
-  my ($ok,$oktot) = $self->CountCorrectReviews($user, $earliest, $latest);
+  my ($ok,$oktot,$neut) = $self->CountCorrectReviews($user, $earliest, $latest);
   $totals{'__VAL__'} = $ok;
   $totals{'__TOTNE__'} = $oktot;
+  $totals{'__NEUT__'} = $neut;
   $totals{'__AVAL__'} = $self->GetAverageCorrect($earliest, $latest);
   $totals{'__MVAL__'} = $self->GetMedianCorrect($earliest, $latest);
   # Project totals
@@ -3679,9 +3761,10 @@ sub CreateStatsData
         $i++;
       }
     }
-    my ($ok,$oktot) = $self->CountCorrectReviews($user, $earliest, $latest);
+    my ($ok,$oktot,$neut) = $self->CountCorrectReviews($user, $earliest, $latest);
     $ptotals{'__VAL__'} = $ok;
     $ptotals{'__TOTNE__'} = $oktot;
+    $ptotals{'__NEUT__'} = $neut;
     $ptotals{'__AVAL__'} = $self->GetAverageCorrect($earliest, $latest);
     $ptotals{'__MVAL__'} = $self->GetMedianCorrect($earliest, $latest);
   }
@@ -3702,7 +3785,7 @@ sub CreateStatsData
       {
         $n = sprintf('%.1f%%', $n);
       }
-      elsif ($title ne '__TOT__' && !exists $minors{$title})
+      elsif ($title ne '__TOT__' && $title ne '__NEUT__' && !exists $minors{$title})
       {
         my $pct = eval { 100.0*$n/$of; };
         $pct = 0.0 unless $pct;
@@ -3722,7 +3805,7 @@ sub CreateStatsData
     {
       $n = sprintf('%.1f%%', $n);
     }
-    elsif ($title ne '__TOT__' && !exists $minors{$title})
+    elsif ($title ne '__TOT__' && $title ne '__NEUT__' && !exists $minors{$title})
     {
       my $pct = eval { 100.0*$n/$of; };
       $pct = 0.0 unless $pct;
@@ -3741,7 +3824,7 @@ sub CreateStatsData
       {
         $n = sprintf('%.1f%%', $n);
       }
-      elsif ($title ne '__TOT__' && !exists $minors{$title})
+      elsif ($title ne '__TOT__' && $title ne '__NEUT__' && !exists $minors{$title})
       {
         $of = $stats{'__TOT__'}{$date};
         $of = $stats{'__TOTNE__'}{$date} if $title eq '__VAL__';
@@ -3792,6 +3875,7 @@ sub CreateStatsReport
     next if $title eq '__VAL__'  and ($exp);
     next if $title eq '__MVAL__' and ($exp);
     next if $title eq '__AVAL__' and ($exp);
+    next if $title eq '__NEUT__' and ($exp);
     next if $title eq '__TOTNE__' and ($user ne 'all' and !$cumulative);
     next if ($cumulative or $user eq 'all' or $suppressBreakdown) and !exists $majors{$title} and !exists $minors{$title} and $title !~ m/__.+?__/;
     my $class = (exists $majors{$title})? 'major':(exists $minors{$title})? 'minor':'';
@@ -3825,6 +3909,8 @@ sub CreateStatsReport
   $report =~ s/__MVAL__/$mvtitle/;
   my $avtitle = 'Average&nbsp;Validation&nbsp;Rate';
   $report =~ s/__AVAL__/$avtitle/;
+  my $ntitle = 'Neutral&nbsp;Reviews';
+  $report =~ s/__NEUT__/$ntitle/;
   return $report;
 }
 
@@ -5812,6 +5898,18 @@ sub CreateQueueReport
   $val = $self->GetLastLoadTimeToCandidates();
   $val =~ s/\s/&nbsp;/g;
   $report .= sprintf("<tr><th>Last&nbsp;Candidates&nbsp;Addition</th><td>%s&nbsp;on&nbsp;$val</td></tr>", $self->GetLastLoadSizeToCandidates());
+  $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und');
+  if ($count)
+  {
+    $report .= "<tr><th>Items&nbsp;Filtered&nbsp;as&nbsp;Likely&nbsp;<code>und</code></th><td>$count</td></tr>\n";
+    my $ref = $self->get('dbh')->selectall_arrayref('SELECT src,COUNT(src) FROM und GROUP BY src ORDER BY src');
+    foreach my $row (@{ $ref})
+    {
+      my $src = $row->[0];
+      $count = $row->[1];
+      $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$count</td></tr>\n";
+    }
+  }
   $report .= "</table>\n";
   $report .= "<span class='smallishText'>* Not including legacy data (reviews/determinations made prior to June 2009)</span>";
   $report .= "</td></tr></table>\n";
@@ -6288,18 +6386,23 @@ sub CountCorrectReviews
   my $startClause = ($start)? " AND time>='$start'":'';
   my $endClause = ($end)? " AND time<='$end' ":'';
   my $userClause = ($user eq 'all')? $type1Clause:" AND user='$user'";
-  my $sql = "SELECT count(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0 AND validated!=2 $startClause $endClause $userClause";
-  my $total = $self->SimpleSqlGet($sql);
   #print "$sql => $total<br/>\n";
-  my $correct = $total;
-  if (!$self->IsUserExpert($user))
+  my $correct = 0;
+  my $incorrect = 0;
+  my $neutral = 0;
+  my $sql = "SELECT validated,COUNT(id) FROM historicalreviews WHERE legacy=0 $startClause $endClause $userClause GROUP BY validated";
+  my $ref = $self->get('dbh')->selectall_arrayref($sql);
+  foreach my $row ( @{$ref} )
   {
-    my $sql = "SELECT count(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=0 AND validated=1 $startClause $endClause $userClause";
-    $correct = $self->SimpleSqlGet($sql);
-    #print "$sql => $correct<br/>\n";
+    my $val = $row->[0];
+    my $cnt = $row->[1];
+    $incorrect = $cnt if $val == 0;
+    $correct = $cnt if $val == 1;
+    $neutral = $cnt if $val == 2;
   }
+  my $total = $correct + $incorrect;
   #printf "CountCorrectReviews(%s): $correct of $total<br/>\n", join ', ', ($user,$start,$end);
-  return ($correct,$total);
+  return ($correct,$total,$neutral);
 }
 
 
@@ -6684,6 +6787,32 @@ sub SetSystemStatus
   $msg = $self->get('dbh')->quote($msg);
   my $sql = "INSERT INTO systemstatus (status,message) VALUES ('$status',$msg)";
   $self->PrepareSubmitSql($sql);
+}
+
+sub HoldReport
+{
+  my $self = shift;
+  my $user = shift;
+  
+  my $report = '';
+  my $sql = "SELECT r.id,b.author,r.hold FROM reviews r INNER JOIN bibdata b ON r.id=b.id WHERE r.user='$user' AND r.hold IS NOT NULL";
+  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  if (scalar @{$ref})
+  {
+    $report .= "<h4>You have outstanding questions on the following items:</h4><br/>\n";
+    $report .= "<table class='exportStats' style='width:50%;'><tr><th>ID</th><th>Author</th><th>Title</th><th>Process&nbsp;After</th></tr>\n";
+  }
+  foreach my $row ( @{$ref} )
+  {
+    my $id = $row->[0];
+    my $a = $row->[1];
+    my $t = $self->LinkToReview($row->[0]);
+    my $h = $self->FormatDate($row->[2]);
+    $h =~ s/\s/&nbsp;/g;
+    $report .= "<tr><td>$id</td><td>$a</td><td>$t</td><td>$h</td></tr>\n";
+  }
+  $report .= '</table>' if length $report;
+  return $report;
 }
 
 1;
