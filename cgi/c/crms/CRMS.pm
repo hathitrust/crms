@@ -1091,7 +1091,7 @@ sub IsValidCategory
   
   my %cats = ('Insert(s)' => 1, 'Language' => 1, 'Misc' => 1, 'Missing' => 1, 'Date' => 1, 'Reprint' => 1,
               'Periodical' => 1, 'Translation' => 1, 'Wrong Record' => 1, 'Foreign Pub' => 1, 'Dissertation/Thesis' => 1,
-              'Expert Note' => 1, 'Not Class A' => 1, 'Edition' => 1, 'US Gov Doc' => 1);
+              'Expert Note' => 1, 'Not Class A' => 1, 'Edition' => 1, 'US Gov Doc' => 1, 'Expert Accepted' => 1);
   return exists $cats{$cat};
 }
 
