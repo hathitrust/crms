@@ -161,17 +161,43 @@ if ( $cgi->param('p') eq 'confirmReview' )
       if ( $crms->IsUserExpert( $user ) ) { $expert = 2; }
 
       $crms->SubmitReview($id, $user, $rights, $reason, $copyDate, $comment, $renNum, $expert, $renDate, $category, $swiss, $question);
-      $cgi->delete_all();
-      if ( $editing )
+      my $ref = $crms->GetErrors();
+      if ($ref && $ref->[0])
       {
-        my $output = qq(<script type="text/javascript" language="JavaScript">window.close();</script>);
-        print "Content-type: text/html\n\n";
-        print $output;
+        $errorMsg1 = $ref->[0];
+        #clear the cgi
+        $cgi->delete_all();
+        $cgi->param('p', 'review' );
+        $cgi->param('errorMsg', $errorMsg1 );
+        $cgi->param('barcode', $id );
+        $cgi->param('navRight', $navright );
+        $cgi->param('blah', 'bleh' );
+
+        $cgi->param('rights',   $EncRights);
+        $cgi->param('reason',   $reason);
+        $cgi->param('comm',     $comment );
+        $cgi->param('category', $category);
+        $cgi->param('renNum',   $renNum );
+        $cgi->param('renDate',  $renDate);
+        $cgi->param('editing',  $editing);
+        $cgi->param('question', $question);
+        $cgi->param('swiss',    $swiss);
+        $crms->ClearErrors();
       }
       else
       {
-        $cgi->param('p', 'review' );
-        $cgi->param('navRight', $navright );
+        $cgi->delete_all();
+        if ( $editing )
+        {
+          my $output = qq(<script type="text/javascript" language="JavaScript">window.close();</script>);
+          print "Content-type: text/html\n\n";
+          print $output;
+        }
+        else
+        {
+          $cgi->param('p', 'review' );
+          $cgi->param('navRight', $navright );
+        }
       }
     }
   }
