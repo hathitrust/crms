@@ -81,6 +81,7 @@ Restrict selection:<br/>
   <option value="priority" [% order == 'priority' ? 'selected="selected"':'' %]>Priority</option>
   <option value="reviews"  [% order == 'reviews' ? 'selected="selected"':'' %]>Reviews</option>
   <option value="expcnt"   [% order == 'expcnt' ? 'selected="selected"':'' %]>Expert Reviews</option>
+  <option value="holds"    [% order == 'holds' ? 'selected="selected"':'' %]>Held Reviews</option>
 </select>
 <br/>
 
@@ -100,11 +101,16 @@ records per page.
 <br/>
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"
-       onclick="document.getElementById('startDate').value='';
+       onclick="selMenuItem('op1','AND');
+                selMenuItem('search1','Identifier');
+                selMenuItem('search2','Identifier');
+                selMenuItem('order','id');
+                selMenuItem('direction','DESC');
+                document.getElementById('startDate').value='';
                 document.getElementById('endDate').value='';
                 document.getElementById('search1value').value='';
-                document.getElementById('search2value').value='';
-       "/>
+                document.getElementById('search2value').value='';"
+/>
 </form>
 </div>
 <br/>
