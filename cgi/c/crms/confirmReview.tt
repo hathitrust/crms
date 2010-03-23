@@ -20,14 +20,14 @@
 [% reasonName = crms.GetReasonName(reason)         %]
 
 <table border="1">
-  <tr><td>Item:</td> <td>[% barcode %]</td><tr>
-  <tr><td>Rights/Reason:</td> <td>[% rightsName %]/[% reasonName %]</td><tr>
-  <tr><td>Renewal Number:</td> <td>[% renNum %]</td><tr>
-  <tr><td>Renewal Date:</td> <td>[% renDate %]</td><tr>
-  <tr><td>copy Date:</td> <td>[% copyDate %]</td><tr>
-  <tr><td>Final:</td> <td>[% exp %]</td><tr>
-  <tr><td>category:</td> <td>[% category %]</td><tr>
-  <tr><td>comment:</td> <td>[% comment %]</td><tr>
+  <tr><td>Item:</td> <td>[% barcode %]</td></tr>
+  <tr><td>Rights/Reason:</td> <td>[% rightsName %]/[% reasonName %]</td></tr>
+  <tr><td>Renewal Number:</td> <td>[% renNum %]</td></tr>
+  <tr><td>Renewal Date:</td> <td>[% renDate %]</td></tr>
+  <tr><td>copy Date:</td> <td>[% copyDate %]</td></tr>
+  <tr><td>Final:</td> <td>[% exp %]</td></tr>
+  <tr><td>category:</td> <td>[% category %]</td></tr>
+  <tr><td>comment:</td> <td>[% comment %]</td></tr>
 </table>
 
 <br />
