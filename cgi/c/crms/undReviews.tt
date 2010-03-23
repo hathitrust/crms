@@ -11,7 +11,7 @@
   [% FOREACH param IN cgi.param %]
     [% matches = param.match('(vol_)(.+)') %]
     [% IF matches.0 == 'vol_' %]
-      [% crms.CloneReview(matches.1, user) %]
+      [% ok = crms.CloneReview(matches.1, user) %]
     [% END %]
   [% END %]
 [% END %]
