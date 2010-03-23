@@ -169,6 +169,7 @@ sub PrepareSubmitSql
     {
       $self->SetError("sql failed ($sql): " . $sth->errstr);
       $self->Logit("sql failed ($sql): " . $sth->errstr);
+      return 0;
     }
     return 1;
 }
@@ -1116,11 +1117,7 @@ sub CloneReview
   
   my $sql = "SELECT attr,reason FROM reviews WHERE id='$id'";
   my $rows = $self->get('dbh')->selectall_arrayref($sql);
-  foreach my $row (@{$rows})
-  {
-    $self->SubmitReview($id,$user,$row->[0],$row->[1],undef,undef,undef,1,undef,'Expert Accepted');
-    last;
-  }
+  my $result = $self->SubmitReview($id,$user,$rows->[0]->[0],$rows->[0]->[1],undef,undef,undef,1,undef,'Expert Accepted');
 }
 
 ## ----------------------------------------------------------------------------
@@ -1139,7 +1136,6 @@ sub SubmitReview
     if ( ! $self->ValidateReason( $reason ) )                 { $self->SetError("reason ($reason) check failed");            return 0; }
     if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->SetError("attr/reason ($attr/$reason) check failed"); return 0; }
     
-    $swiss = 1 if $swiss;
     $question = 1 if $question;
     #remove any blanks from renNum
     $renNum =~ s/\s+//gs;
@@ -1148,47 +1144,50 @@ sub SubmitReview
     # This in once case got submitted as the renDate in production
     $renDate = '' if $renDate eq 'searching...';
 
-    $note = $self->get('dbh')->quote($note);
+    $note = ($note)? $self->get('dbh')->quote($note):'NULL';
     
     my $priority = $self->GetItemPriority( $id );
     
-    my @fieldList = ('id', 'user', 'attr', 'reason', 'renNum', 'renDate', 'category', 'priority');
-    my @valueList = ($id,  $user,  $attr,  $reason,  $renNum,  $renDate, $category, $priority);
+    my $hold = 'NULL';
+    $hold = "'" . $self->TwoWorkingDays() . "'" if $question;
+
+    my @fieldList = ('id', 'user', 'attr', 'reason', 'note', 'renNum', 'renDate', 'category', 'priority', 'hold');
+    my @valueList = ("'$id'",  "'$user'",  $attr,  $reason,  $note, ($renNum)? "'$renNum'":'NULL',  ($renDate)? "'$renDate'":'NULL',
+                     ($category)? "'$category'":'NULL', $priority, $hold);
     
     if ($exp)
     {
+      $swiss = ($swiss)? 1:0;
       push(@fieldList, 'expert');
-      push(@valueList, $exp);
+      push(@valueList, 1);
       push(@fieldList, 'swiss');
       push(@valueList, $swiss);
     }
-    if ($copyDate) { push(@fieldList, 'copyDate'); push(@valueList, $copyDate); }
-    if ($question) { push(@fieldList, 'hold'); push(@valueList, $self->TwoWorkingDays()); }
-    if ($note)     { push(@fieldList, 'note'); }
+    if ($copyDate) { push(@fieldList, 'copyDate'); push(@valueList, "'$copyDate'"); }
     
-    my $sql = "REPLACE INTO $CRMSGlobals::reviewsTable (" . join(', ', @fieldList) .
-              ") VALUES('" . join("', '", @valueList) . sprintf("'%s)", ($note)? ", $note":'');
+    my $sql = sprintf("REPLACE INTO $CRMSGlobals::reviewsTable (%s) VALUES (%s)", join(',', @fieldList), join(",", @valueList));
 
     if ( $self->get('verbose') ) { $self->Logit( $sql ); }
-    #print "$sql<br/>\n";
-    $self->PrepareSubmitSql( $sql );
-
-    if ( $exp )
-    {
-      my $sql = "UPDATE $CRMSGlobals::queueTable SET expcnt=1 WHERE id='$id'";
-      $self->PrepareSubmitSql( $sql );
-      my $qstatus = $self->SimpleSqlGet("SELECT status FROM queue WHERE id='$id'");
-      my $status = ($attr == 5 && $reason == 8 && $qstatus == 3)? 6:5;
-      #We have decided to register the expert decision right away.
-      $self->RegisterStatus($id, $status);
-    }
     
-    $self->CheckPendingStatus($id);
+    my $result = $self->PrepareSubmitSql( $sql );
+    if ($result)
+    {
+      if ( $exp )
+      {
+        my $sql = "UPDATE $CRMSGlobals::queueTable SET expcnt=1 WHERE id='$id'";
+        $result = $self->PrepareSubmitSql( $sql );
+        my $qstatus = $self->SimpleSqlGet("SELECT status FROM queue WHERE id='$id'");
+        my $status = ($attr == 5 && $reason == 8 && $qstatus == 3)? 6:5;
+        #We have decided to register the expert decision right away.
+        $self->RegisterStatus($id, $status);
+      }
 
-    $self->EndTimer( $id, $user );
-    $self->UnlockItem( $id, $user );
+      $self->CheckPendingStatus($id);
 
-    return 1;
+      $self->EndTimer( $id, $user );
+      $self->UnlockItem( $id, $user );
+    }
+    return $result;
 }
 
 sub GetItemPriority
@@ -1494,6 +1493,10 @@ sub ConvertToSearchTerm
       $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)';
     }
     elsif ( $search eq 'Swiss' ) { $new_search = 'r.swiss'; }
+    elsif ( $search eq 'Holds' )
+    {
+      $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold IS NOT NULL)';
+    }
     return $new_search;
 }
 
@@ -2518,6 +2521,7 @@ sub GetQueueRef
   $search2 = $self->ConvertToSearchTerm( $search2, 'queue' );
   if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
   elsif ($order eq 'reviews') { $order = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)'; }
+  elsif ($order eq 'holds') { $order = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold IS NOT NULL)'; }
   else { $order = 'q.' . $order; }
   my @rest = ('q.id=b.id');
   my $tester1 = '=';
@@ -2556,8 +2560,15 @@ sub GetQueueRef
   $sql = 'SELECT q.id, q.time, q.status, q.locked, YEAR(b.pub_date), q.priority, q.expcnt, b.title, b.author ' .
          "FROM queue q, bibdata b $restrict ORDER BY $order $dir $limit";
   #print "$sql<br/>\n";
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-  my $data = join "\t", ('ID','Title','Author','Pub Date','Date Added','Status','Locked','Priority','Reviews','Expert Reviews');
+  my $ref = undef;
+  eval {
+    $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  };
+  if ($@)
+  {
+    $self->SetError($@);
+  }
+  my $data = join "\t", ('ID','Title','Author','Pub Date','Date Added','Status','Locked','Priority','Reviews','Expert Reviews','Holds');
   foreach my $row ( @{$ref} )
   {
     my $id = $row->[0];
@@ -2568,6 +2579,9 @@ sub GetQueueRef
     $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id'";
     #print "$sql<br/>\n";
     my $reviews = $self->SimpleSqlGet($sql);
+    $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id' AND hold IS NOT NULL";
+    #print "$sql<br/>\n";
+    my $holds = $self->SimpleSqlGet($sql);
     my $item = {id         => $id,
                 time       => $row->[1],
                 date       => $date,
@@ -2578,11 +2592,15 @@ sub GetQueueRef
                 expcnt     => $row->[6],
                 title      => $row->[7],
                 author     => $row->[8],
-                reviews    => $reviews
+                reviews    => $reviews,
+                holds      => $holds
                };
     push( @{$return}, $item );
-    $data .= sprintf("\n$id\t%s\t%s\t%s\t$date\t%s\t%s\t%s\t$reviews\t%s",
-                     $row->[7], $row->[8], $row->[4], $row->[2], $row->[3], $row->[5], $row->[6]);
+    if ($download)
+    {
+      $data .= sprintf("\n$id\t%s\t%s\t%s\t$date\t%s\t%s\t%s\t$reviews\t%s\t$holds",
+                       $row->[7], $row->[8], $row->[4], $row->[2], $row->[3], $row->[5], $row->[6]);
+    }
   }
   if (!$download)
   {
@@ -6697,9 +6715,9 @@ sub QueueSearchMenu
   my $searchName = shift;
   my $searchVal = shift;
   
-  my @keys = ('Identifier','Title','Author','PubDate', 'Status','Locked','Priority','Reviews','ExpertCount');
-  my @labs = ('Identifier','Title','Author','Pub Date','Status','Locked','Priority','Reviews','Expert Reviews');
-  my $html = "<select name='$searchName'>\n";
+  my @keys = ('Identifier','Title','Author','PubDate', 'Status','Locked','Priority','Reviews','ExpertCount','Holds');
+  my @labs = ('Identifier','Title','Author','Pub Date','Status','Locked','Priority','Reviews','Expert Reviews','Held Reviews');
+  my $html = "<select name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
     $html .= sprintf(qq{  <option value="%s"%s>%s</option>\n}, $keys[$i], ($searchVal eq $keys[$i])? ' selected="selected"':'', $labs[$i]);
