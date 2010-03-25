@@ -475,7 +475,7 @@ sub ClearQueueAndExport
     my $eCount = 0;
     my $dCount = 0;
     my $export = [];
-
+   
     ## get items > 2, clear these
     my $expert = $self->GetExpertRevItems();
     foreach my $row ( @{$expert} )
@@ -1585,6 +1585,10 @@ sub CreateSQLForReviews
     {
       $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id };
     }
+    elsif ( $page eq 'holds' )
+    {
+      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id AND q.id = r.id AND r.hold IS NOT NULL };
+    }
     elsif ( $page eq 'expert' )
     {
       $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
@@ -1595,7 +1599,7 @@ sub CreateSQLForReviews
     }
     elsif ( $page eq 'undReviews' )
     {
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id  AND q.id = r.id AND q.status = 3 };
+      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id AND q.id = r.id AND q.status = 3 };
     }
     elsif ( $page eq 'userReviews' )
     {
@@ -1612,8 +1616,9 @@ sub CreateSQLForReviews
     }
     my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
     $sql .= " AND $terms" if $terms;
-    if ( $startDate ) { $sql .= qq{ AND r.time >= "$startDate 00:00:00" }; }
-    if ( $endDate ) { $sql .= qq{ AND r.time <= "$endDate 23:59:59" }; }
+    my $which = ($page eq 'holds')? 'r.hold':'r.time';
+    if ( $startDate ) { $sql .= qq{ AND $which >= "$startDate 00:00:00" }; }
+    if ( $endDate ) { $sql .= qq{ AND $which <= "$endDate 23:59:59" }; }
 
     my $limit_section = '';
     if ( $limit )
@@ -2103,9 +2108,9 @@ sub SearchAndDownload
       {
         $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote};
       }
-      elsif ( $page eq 'adminReviews' )
+      elsif ( $page eq 'adminReviews' || $page eq 'holds' )
       {
-        $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote};
+        $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote\tswiss\thold thru};
       }
       elsif ( $page eq 'adminHistoricalReviews' )
       {
@@ -2182,7 +2187,8 @@ sub UnpackResults
     my $status     = $row->[16];
     my $title      = $row->[17];
     my $author     = $row->[18];
-
+    my $hold       = $row->[19];
+    
     if ( $page eq 'userReviews')
     {
       #for reviews
@@ -2193,7 +2199,7 @@ sub UnpackResults
     {
       #for editRevies
       #id, title, author, review date, attr, reason, category, note.
-      $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note};
+      $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note\t$hold};
     }
     elsif ( $page eq 'undReviews' )
     {
@@ -2207,11 +2213,11 @@ sub UnpackResults
       #id, title, author, review date, status, user, attr, reason, category, note.
       $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note};
     }
-    elsif ( $page eq 'adminReviews' )
+    elsif ( $page eq 'adminReviews' || $page eq 'holds' )
     {
       #for adminReviews
       #id, title, author, review date, status, user, attr, reason, category, note.
-      $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note};
+      $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$swiss\t$hold};
     }
     elsif ( $page eq 'adminHistoricalReviews' )
     {
@@ -2328,7 +2334,7 @@ sub GetReviewsRef
         $pubdate = '?' unless $pubdate;
         ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
         ${$item}{'validated'} = $row->[20] if $page eq 'adminHistoricalReviews';
-        ${$item}{'hold'} = $row->[19] if $page eq 'adminReviews' or $page eq 'editReviews';
+        ${$item}{'hold'} = $row->[19] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds';
         push( @{$return}, $item );
     }
     my $n = POSIX::ceil($offset/$pagesize+1);
@@ -6708,7 +6714,7 @@ sub ReviewSearchMenu
               'Reason',       'NoteCategory', 'Priority', 'Validated', 'Swiss', 'Hold Thru');
   my @labs = ('Identifier','Title','Author','Pub Date','Status','Legacy','User',  'Attr Number',
               'Reason Number','Note Category','Priority', 'Verdict',   'Swiss', 'Hold Thru');
-  if ($page ne 'adminReviews' && $page ne 'editReviews')
+  if ($page ne 'adminReviews' && $page ne 'editReviews' && $page ne 'holds')
   {
     splice @keys, 13, 2;
     splice @labs, 13, 2;
@@ -6856,7 +6862,7 @@ sub HoldSummary
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
   if (scalar @{$ref})
   {
-    $report .= "<table class='exportStats' style='width:50%;'><tr><th>ID</th><th>Author</th><th>Title</th><th>Process&nbsp;After</th></tr>\n";
+    $report .= "<table class='exportStats' style='width:50%;'><tr><th>ID</th><th>Author</th><th>Title</th><th>Hold&nbsp;Thru</th></tr>\n";
   }
   foreach my $row ( @{$ref} )
   {
@@ -6893,7 +6899,7 @@ sub HoldReport
       $report .= "<tr><td>$user</td><td>$id</td><td>$a</td><td>$t</td><td>$h</td></tr>\n";
     }
   }
-  $report = "<table class='exportStats' style='width:50%;'><tr><th>User</th><th>ID</th><th>Author</th><th>Title</th><th>Process&nbsp;After</th></tr>\n" .
+  $report = "<table class='exportStats' style='width:50%;'><tr><th>User</th><th>ID</th><th>Author</th><th>Title</th><th>Hold&nbsp;Thru</th></tr>\n" .
             $report . '</table>' if length $report;
   return $report;
 }

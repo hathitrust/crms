@@ -1,18 +1,16 @@
-[% IF NOT crms.IsUserAdmin() %]
+[% IF NOT crms.IsUserExpert() %]
   [% INCLUDE denied.tt  %]
   [% STOP %]
 [% END %]
 
 [% INCLUDE header.tt    %]
 [% INCLUDE adminNav.tt  %]
-<hr width="25%" align="left"/><br/>
-<h2>User Holds:</h2><br/>
 
-[% rep = crms.HoldReport(user) %]
-[% IF rep %]
-$rep
-[% ELSE %]
-<strong>There are no items on hold</strong><br/>
-[% END %]
+<hr width="25%" align="left"/><br/>
+<h2>Held Reviews:</h2>
+
+[% INCLUDE selection.tt  %]
+
+[% INCLUDE searchResults.tt  %]
 
 [% INCLUDE footer.tt %]

@@ -47,7 +47,7 @@ function selMenuItem(id, value)
     [% END %]
     [% page = cgi.param('p') %]
     [% IF page == 'review' %][% INCLUDE reviewJs.tt %][% END %]
-    [% IF page.search('(?i)reviews') || page == 'expert' || page == 'queue'  || page == 'determinationStats' %]
+    [% IF page.search('(?i)reviews') || page == 'expert' || page == 'queue'  || page == 'determinationStats' || page == 'holds' %]
       <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
     [% END %]
     [% IF page == 'exportStats' %]
