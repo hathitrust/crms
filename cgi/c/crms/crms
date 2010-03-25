@@ -208,7 +208,7 @@ if ( $cgi->param('download') )
 {
 
     my $order            = $cgi->param('order');
-    my $dir              = $cgi->param('direction');
+    my $dir              = $cgi->param('dir');
 
     my $search1          = $cgi->param('search1');
     my $search1value     = $cgi->param('search1value');
