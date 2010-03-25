@@ -65,7 +65,7 @@ td.explanation {
     <tr><th>1</th> <td class="explanation">enhanced</td> <td>items loaded from a script</td></tr>
     <tr><th>2</th> <td class="explanation">high</td> <td>items added by an admin</td></tr>
     <tr><th>3</th> <td class="explanation">expert</td> <td>items added by an admin for expert review only</td></tr>
-    <tr><th>4</th> <td class="explanation">override</td> <td>items outside 1923-1963, gov docs, etc. added by an admin for Anne's review only</td></tr>
+    <tr><th>4</th> <td class="explanation">override</td> <td>items outside 1923-1963, gov docs, etc., added and reviewed by Anne only</td></tr>
     </table>
 </td>
 </tr>
@@ -78,14 +78,23 @@ td.explanation {
     <tr><th>Locked</th><td>the user id of the person reviewing the volume, otherwise empty</td></tr>
     <tr><th>Reviews</th><td>the number of reviews (non-historical) for the item</td></tr>
     <tr><th>Expert&nbsp;Reviews</th><td>1 if there is an expert review, 0 otherwise</td></tr>
+    <tr><th>Holds</th><td>The number of reviewers that are holding the item to ask a question</td></tr>
     </table>
 </td></tr>
 </table>
-<br/>
-<p>Note: you can use an asterisk (*) in a search field as a wildcard that will match zero or more characters.<br/>
-Example: searching for volume id <code>wu.89*</code> will match wu.89090507310, wu.89092821453, etc....<br/>
-Example: searching for title <code>*trigonometric*</code> will match "Natural trigonometric functions to seven decimal places for every ten seconds of arc"
-</p><br/>
+<h3>Notes</h3>
+<ul>
+<li>You can use an asterisk (*) in a search field as a wildcard that will match zero or more characters.
+<ul>
+<li>Example: searching for volume id <code>wu.89*</code> will match wu.89090507310, wu.89092821453, etc....</li>
+<li>Example: searching for title <code>*trigonometric*</code> will match "Natural trigonometric functions to seven decimal places for every ten seconds of arc"</li>
+</ul></li>
+<li>You can use the <b>&lt;</b>, <b>&lt;=</b>, <b>&gt;</b>, and <b>&gt;=</b> operators before a numeric expression.
+<ul><li>Example: searching for pub date <code>&lt;=1924</code> will retrieve all volumes published before or in 1924.</li>
+</ul></li>
+<li>OR takes precedence over AND and NOT when you use all three search fields. So <b>x AND y OR z</b> is interpreted as
+<b>x AND (y OR z)</b>.</li>
+</ul>
 
 </div>
 </body>
