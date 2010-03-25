@@ -81,7 +81,7 @@ Restrict selection:<br/>
   <option value="priority" [% order == 'priority' ? 'selected="selected"':'' %]>Priority</option>
   <option value="reviews"  [% order == 'reviews' ? 'selected="selected"':'' %]>Reviews</option>
   <option value="expcnt"   [% order == 'expcnt' ? 'selected="selected"':'' %]>Expert Reviews</option>
-  <option value="holds"    [% order == 'holds' ? 'selected="selected"':'' %]>Held Reviews</option>
+  <option value="holds"    [% order == 'holds' ? 'selected="selected"':'' %]>Holds</option>
 </select>
 <br/>
 
