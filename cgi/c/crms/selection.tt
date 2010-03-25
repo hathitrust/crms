@@ -10,7 +10,7 @@
 [% startDate = cgi.param('startDate') %]
 [% endDate = cgi.param('endDate') %]
 [% order = cgi.param('order') %]
-[% dir = cgi.param('direction') %]
+[% dir = cgi.param('dir') %]
 [% stype = cgi.param('stype') %]
 [% recs = cgi.param('records') %]
 <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
@@ -26,7 +26,7 @@
 
 [% IF NOT dir %]
   [% dir = 'DESC' %]
-  [% blah = cgi.param('direction', 'DESC') %]
+  [% blah = cgi.param('dir', 'DESC') %]
 [% END %]
 <br/>
 <div style="position:relative;border-style:solid;width:32em;border-width:1px;padding:10px;">
@@ -127,12 +127,15 @@ Search for Reviews where<br/>
 [% IF crms.IsUserExpert(user) %]
   <option value="swiss" [% order == 'swiss' ?  'selected="selected"':'' %]>Swiss</option>
 [% END %]
+[% IF page == 'editReviews' || page == 'adminReviews' %]
+  <option value="hold" [% order == 'hold' ?  'selected="selected"':'' %]>Hold Thru</option>
+[% END %]
 </select>
 <br/>
 
-<label for="direction">Direction:</label>
+<label for="dir">Direction:</label>
 
-<select id="direction" name="direction">
+<select id="dir" name="dir">
   <option value="ASC"  [% dir == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
   <option value="DESC" [% dir == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
 </select>
@@ -152,7 +155,7 @@ records per page.
                 selMenuItem('search2','Identifier');
                 selMenuItem('search3','Identifier');
                 selMenuItem('order','id');
-                selMenuItem('direction','DESC');
+                selMenuItem('dir','DESC');
                 document.getElementById('startDate').value='';
                 document.getElementById('endDate').value='';
                 document.getElementById('search1value').value='';

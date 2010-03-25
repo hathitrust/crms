@@ -143,7 +143,9 @@ function CheckAll(box,formid)
     [% IF p == 'adminHistoricalReviews' %]<th>Verdict</th>[% END %]
     [% IF crms.IsUserExpert() %]<th>Swiss</th>[% END %]
     [% IF p == 'undReviews' %]<th>Select</th>[% END %]
-    [% IF p == 'adminReviews' || p == 'editReviews' %]<th>Hold&nbsp;Thru</th>[% END %]
+    [% IF p == 'adminReviews' || p == 'editReviews' %]
+      <th>Hold&nbsp;Thru</th>
+    [% END %]
     </tr>
     [% FOREACH review IN ref.rows %]
       [% first = 0 %]
@@ -190,7 +192,9 @@ function CheckAll(box,formid)
           [% END %]
         </td>
         [% END %]
-        [% IF p == 'adminReviews' || p == 'editReviews' %]<td>$review.hold</td>[% END %]
+        [% IF p == 'adminReviews' || p == 'editReviews' %]
+          <td>$review.hold</td>
+        [% END %]
       </tr>
       [% prev_id = review.id %]
     [% END %]
