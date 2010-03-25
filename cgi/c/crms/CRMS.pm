@@ -355,7 +355,6 @@ sub ProcessReviews
     next if $hold and $self->GetTodaysDate() lt $hold;
     
     my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold ) = $self->GetOtherReview( $id, $user );
-    print "$other_hold\n" if $other_hold;
     next if $other_hold and $self->GetTodaysDate() lt $other_hold;
     
     if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
@@ -1149,8 +1148,11 @@ sub SubmitReview
     my $priority = $self->GetItemPriority( $id );
     
     my $hold = 'NULL';
-    $hold = "'" . $self->TwoWorkingDays() . "'" if $question;
-
+    
+    if ($question)
+    {
+      $hold = "'" . $self->HoldExpiry($id, $user, 0) . "'";
+    }
     my @fieldList = ('id', 'user', 'attr', 'reason', 'note', 'renNum', 'renDate', 'category', 'priority', 'hold');
     my @valueList = ("'$id'",  "'$user'",  $attr,  $reason,  $note, ($renNum)? "'$renNum'":'NULL',  ($renDate)? "'$renDate'":'NULL',
                      ($category)? "'$category'":'NULL', $priority, $hold);
@@ -1400,7 +1402,8 @@ sub RegisterStatus
     my $status = shift;
 
     my $sql = qq{UPDATE $CRMSGlobals::queueTable SET status=$status WHERE id="$id"};
-
+    $self->PrepareSubmitSql( $sql );
+    $sql = qq{UPDATE $CRMSGlobals::reviewsTable SET hold=NULL WHERE id="$id"};
     $self->PrepareSubmitSql( $sql );
 }
 
@@ -1423,10 +1426,31 @@ sub GetYesterday
   return substr($yd, 0, 10);
 }
 
-sub TwoWorkingDays
+sub HoldForItem
 {
   my $self     = shift;
+  my $id       = shift;
+  my $user     = shift;
+  
+  my $exp = $self->SimpleSqlGet("SELECT hold FROM reviews WHERE id='$id' AND user='$user'");
+  return $exp;
+}
+
+sub HoldExpiry
+{
+  my $self     = shift;
+  my $id       = shift;
+  my $user     = shift;
   my $readable = shift;
+  
+  my $exp = $self->HoldForItem($id,$user);
+  $exp = $self->TwoWorkingDays() unless $exp;
+  return ($readable)? $self->FormatDate($exp):$exp;
+}
+
+sub TwoWorkingDays
+{
+  my $self = shift;
   
   my $time = $self->GetTodaysDate();
   my $cal = Date::Calendar->new( $Profiles->{'US'} );
@@ -1434,7 +1458,7 @@ sub TwoWorkingDays
   my $date = $cal->add_delta_workdays($parts[0],$parts[1],$parts[2],2);
   # Returned format is YYYYMMDD
   $date = sprintf '%s-%s-%s 23:59:59', substr($date,0,4), substr($date,4,2), substr($date,6,2);
-  return ($readable)? $self->FormatDate($date):$date;
+  return $date;
 }
 
 sub FormatDate
@@ -1496,6 +1520,10 @@ sub ConvertToSearchTerm
     elsif ( $search eq 'Holds' )
     {
       $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold IS NOT NULL)';
+    }
+    elsif ( $search eq 'Hold Thru' )
+    {
+      $new_search = 'r.hold';
     }
     return $new_search;
 }
@@ -2079,7 +2107,7 @@ sub SearchAndDownload
       }
       elsif ( $page eq 'adminHistoricalReviews' )
       {
-        $buffer .= qq{id\ttitle\tauthor\tpub date\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated};
+        $buffer .= qq{id\ttitle\tauthor\tpub date\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated\tswiss};
       }
       $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\tpriority":'');
       if ($stype eq 'reviews')
@@ -2095,7 +2123,7 @@ sub SearchAndDownload
           $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
                  "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
                  (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
-                 (($page eq 'adminReviews' || $page eq 'editReviews')? ', r.hold ':' ') .
+                 (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
                  "FROM $top INNER JOIN $table r ON b.id=r.id " .
                  "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
           #print "$sql<br/>\n";
@@ -2185,11 +2213,11 @@ sub UnpackResults
     }
     elsif ( $page eq 'adminHistoricalReviews' )
     {
-      my $pubdate = $row->[18];
+      my $pubdate = $row->[19];
       $pubdate = '?' unless $pubdate;
-      my $validated = $row->[19];
+      my $validated = $row->[20];
       #id, title, author, review date, status, user, attr, reason, category, note, validated
-      $buffer .= qq{$id\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated};
+      $buffer .= qq{$id\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated\t$swiss};
     }
     $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\t$priority":'');
   }
@@ -2257,6 +2285,7 @@ sub GetReviewsRef
     my $limit              = 1;
     $pagesize = 20 unless $pagesize > 0;
     $offset = 0 unless $offset > 0;
+    
     #print("GetReviewsRef('$page','$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$op2','$search3','$search3Value','$startDate','$endDate','$offset','$pagesize');<br/>\n");
     my ($sql,$totalReviews,$totalVolumes) = $self->CreateSQLForReviews($page, $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $offset, $pagesize, $limit);
     #print "$sql<br/>\n";
@@ -2347,7 +2376,7 @@ sub GetVolumesRef
     $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
            (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
-           (($page eq 'adminReviews')? ', r.hold ':' ') .
+           (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
            "FROM $table r, bibdata b$doQ " .
            "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
     #print "$sql<br/>\n";
@@ -2429,7 +2458,7 @@ sub GetVolumesRefWide
     $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
            (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
-           (($page eq 'adminReviews')? ', r.hold ':' ') .
+           (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
            "FROM $top INNER JOIN $table r ON b.id=r.id " .
            "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
     #print "$sql<br/>\n";
@@ -4279,11 +4308,11 @@ sub ValidateSubmission2
     {
       if (( $renNum ) || ( $renDate ))
       {
-        $errorMsg .= 'rights/reason conflicts with renewal info.';
+        $errorMsg .= 'pdus/cdpp should not include renewal info .';
       }
       if (( !$note ) || ( !$category ))
       {
-        $errorMsg .= 'note category/note text required.';
+        $errorMsg .= 'pdus/cdpp must include note category/note text.';
       }
       if ($category ne 'Foreign Pub' && $category ne 'Translation')
       {
@@ -5231,7 +5260,7 @@ sub PreviouslyReviewed
 
     my $limit = $self->GetYesterday();
 
-    my $sql = "SELECT id FROM $CRMSGlobals::reviewsTable WHERE id='$id' AND user='$user' AND time<'$limit'";
+    my $sql = "SELECT id FROM $CRMSGlobals::reviewsTable WHERE id='$id' AND user='$user' AND time<'$limit' AND hold IS NULL";
     my $found = $self->SimpleSqlGet( $sql );
 
     if ($found) { return 1; }
@@ -6673,8 +6702,15 @@ sub ReviewSearchMenu
   my $searchName = shift;
   my $searchVal = shift;
   
-  my @keys = ('Identifier','Title','Author','PubDate', 'Status','Legacy','UserId','Attribute',  'Reason',       'NoteCategory', 'Priority', 'Validated', 'Swiss');
-  my @labs = ('Identifier','Title','Author','Pub Date','Status','Legacy','User',  'Attr Number','Reason Number','Note Category','Priority', 'Verdict', 'Swiss');
+  my @keys = ('Identifier','Title','Author','PubDate', 'Status','Legacy','UserId','Attribute',
+              'Reason',       'NoteCategory', 'Priority', 'Validated', 'Swiss', 'Hold Thru');
+  my @labs = ('Identifier','Title','Author','Pub Date','Status','Legacy','User',  'Attr Number',
+              'Reason Number','Note Category','Priority', 'Verdict',   'Swiss', 'Hold Thru');
+  if ($page ne 'adminReviews' && $page ne 'editReviews')
+  {
+    splice @keys, 13, 2;
+    splice @labs, 13, 2;
+  }
   if (!$self->IsUserExpert())
   {
     splice @keys, 12, 1;
@@ -6716,7 +6752,7 @@ sub QueueSearchMenu
   my $searchVal = shift;
   
   my @keys = ('Identifier','Title','Author','PubDate', 'Status','Locked','Priority','Reviews','ExpertCount','Holds');
-  my @labs = ('Identifier','Title','Author','Pub Date','Status','Locked','Priority','Reviews','Expert Reviews','Held Reviews');
+  my @labs = ('Identifier','Title','Author','Pub Date','Status','Locked','Priority','Reviews','Expert Reviews','Holds');
   my $html = "<select name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
@@ -6748,7 +6784,8 @@ sub PageToEnglish
                'debug' => 'debug',
                'rights' => 'rights query',
                'queue' => 'queue query',
-               'determinationStats' => 'determinations breakdown'
+               'determinationStats' => 'determinations breakdown',
+               'holds' => 'user holds'
               );
   return $pages{$page} || 'home';
 }
@@ -6807,17 +6844,16 @@ sub SetSystemStatus
   $self->PrepareSubmitSql($sql);
 }
 
-sub HoldReport
+sub HoldSummary
 {
   my $self = shift;
   my $user = shift;
   
   my $report = '';
-  my $sql = "SELECT r.id,b.author,r.hold FROM reviews r INNER JOIN bibdata b ON r.id=b.id WHERE r.user='$user' AND r.hold IS NOT NULL";
+  my $sql = "SELECT r.id,b.author,r.hold FROM reviews r INNER JOIN bibdata b ON r.id=b.id WHERE r.user='$user' AND r.hold IS NOT NULL ORDER BY r.hold ASC, r.id ASC";
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
   if (scalar @{$ref})
   {
-    $report .= "<h4>You have outstanding questions on the following items:</h4><br/>\n";
     $report .= "<table class='exportStats' style='width:50%;'><tr><th>ID</th><th>Author</th><th>Title</th><th>Process&nbsp;After</th></tr>\n";
   }
   foreach my $row ( @{$ref} )
@@ -6830,6 +6866,33 @@ sub HoldReport
     $report .= "<tr><td>$id</td><td>$a</td><td>$t</td><td>$h</td></tr>\n";
   }
   $report .= '</table>' if length $report;
+  return $report;
+}
+
+sub HoldReport
+{
+  my $self = shift;
+  
+  my $report = '';
+  my $sql = 'SELECT DISTINCT id FROM users ORDER BY id ASC';
+  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  foreach my $row ( @{$ref} )
+  {
+    my $user = $row->[0];
+    $sql = "SELECT r.id,b.author,b.title,r.hold FROM reviews r INNER JOIN bibdata b ON r.id=b.id WHERE r.user='$user' AND r.hold IS NOT NULL ORDER BY r.hold ASC, r.id ASC";
+    my $ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    foreach my $row2 ( @{$ref2} )
+    {
+      my $id = $self->DetailInfoForReview($row2->[0], $user, 'editReviews');
+      my $a = $row2->[1];
+      my $t = $row2->[2];
+      my $h = $self->FormatDate($row2->[3]);
+      $h =~ s/\s/&nbsp;/g;
+      $report .= "<tr><td>$user</td><td>$id</td><td>$a</td><td>$t</td><td>$h</td></tr>\n";
+    }
+  }
+  $report = "<table class='exportStats' style='width:50%;'><tr><th>User</th><th>ID</th><th>Author</th><th>Title</th><th>Process&nbsp;After</th></tr>\n" .
+            $report . '</table>' if length $report;
   return $report;
 }
 
