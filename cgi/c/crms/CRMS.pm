@@ -515,10 +515,9 @@ sub ExportReviews
     my $self = shift;
     my $list = shift;
 
-    my $user = "crms";
+    my $user = 'crms';
     my $time = $self->GetTodaysDate();
     my ( $fh, $file ) = $self->GetExportFh();
-    my $user = "crms";
     my $count = 0;
     my $start_size = $self->GetCandidatesSize();
 
@@ -1178,10 +1177,13 @@ sub SubmitReview
       {
         my $sql = "UPDATE $CRMSGlobals::queueTable SET expcnt=1 WHERE id='$id'";
         $result = $self->PrepareSubmitSql( $sql );
-        my $qstatus = $self->SimpleSqlGet("SELECT status FROM queue WHERE id='$id'");
-        my $status = ($attr == 5 && $reason == 8 && $qstatus == 3)? 6:5;
-        #We have decided to register the expert decision right away.
-        $self->RegisterStatus($id, $status);
+        if (!$question)
+        {
+          my $qstatus = $self->SimpleSqlGet("SELECT status FROM queue WHERE id='$id'");
+          my $status = ($attr == 5 && $reason == 8 && $qstatus == 3)? 6:5;
+          #We have decided to register the expert decision right away.
+          $self->RegisterStatus($id, $status);
+        }
       }
 
       $self->CheckPendingStatus($id);
@@ -1381,7 +1383,7 @@ sub GetFinalAttrReason
 sub GetExpertRevItems
 {
     my $self = shift;
-    my $sql  = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE status=5 OR status=6};
+    my $sql  = 'SELECT id FROM queue WHERE (status=5 OR status=6) AND id NOT IN (SELECT id FROM reviews WHERE CURDATE()>hold)';
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref;

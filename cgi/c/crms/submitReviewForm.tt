@@ -161,7 +161,7 @@
     <tr><td style="text-align:center;"><input type="checkbox" name="swiss" [% (swiss)? 'checked="checked"':'' %]/>
       &nbsp;Do not invalidate other reviews for this volume
     </td></tr>
-  [% ELSE %]
+  [% END %]
     <tr><td style="text-align:center;">
       [% question = crms.HoldForItem(barcode,user) %]
       <input type="checkbox" name="question" [% (question)? 'checked="checked"':'' %] onclick="toggleVisibility('expiry');"/>&nbsp;Hold for Question
@@ -171,7 +171,6 @@
     <tr><td><span class="smallishText">Questioned reviews will be held unprocessed for 2 working days.
             It is up to you to get in touch with an expert.</span>
     </td></tr>
-  [% END %]
   </table>
 </div>
 
