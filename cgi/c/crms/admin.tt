@@ -27,6 +27,10 @@
   || <a href="crms?p=determinationStats">determinations&nbsp;breakdown</a>
   || <a href="crms?p=debug">the&nbsp;secret&nbsp;debug&nbsp;page</a>
   ||
+<br/>
+<br/>
+  || <a href="crms?p=holds">holds</a>
+  ||
 </div>
 
 [% INCLUDE footer.tt %]
