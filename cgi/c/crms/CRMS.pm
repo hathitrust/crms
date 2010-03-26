@@ -337,11 +337,10 @@ sub ProcessReviews
 {
   my $self = shift;
   
-  my $start_size = $self->GetCandidatesSize();
   my $sql = 'SELECT id, user, attr, reason, renNum, renDate, hold FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) ' .
             'GROUP BY id HAVING count(*) = 2';
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-  
+  my $today = $self->GetTodaysDate();
   foreach my $row ( @{$ref} )
   {
     my $id      = $row->[0];
@@ -352,10 +351,10 @@ sub ProcessReviews
     my $renDate = $row->[5];
     my $hold    = $row->[6];
     
-    next if $hold and $self->GetTodaysDate() lt $hold;
+    next if $hold and $today lt $hold;
     
     my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold ) = $self->GetOtherReview( $id, $user );
-    next if $other_hold and $self->GetTodaysDate() lt $other_hold;
+    next if $other_hold and $today lt $other_hold;
     
     if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
     {
@@ -393,6 +392,10 @@ sub ProcessReviews
       $self->RegisterStatus( $id, 2 );
     }
   }
+  $sql = "UPDATE reviews SET hold=NULL WHERE hold<'$today'";
+  $self->PrepareSubmitSql( $sql );
+  $sql = "UPDATE reviews SET sticky_hold=NULL WHERE sticky_hold<'$today'";
+  $self->PrepareSubmitSql( $sql );
   # Clear out all the locks
   my $sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
   $self->PrepareSubmitSql( $sql );
@@ -1134,7 +1137,6 @@ sub SubmitReview
     if ( ! $self->ValidateReason( $reason ) )                 { $self->SetError("reason ($reason) check failed");            return 0; }
     if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->SetError("attr/reason ($attr/$reason) check failed"); return 0; }
     
-    $question = 1 if $question;
     #remove any blanks from renNum
     $renNum =~ s/\s+//gs;
     
@@ -1150,11 +1152,24 @@ sub SubmitReview
     
     if ($question)
     {
-      $hold = "'" . $self->HoldExpiry($id, $user, 0) . "'";
+      $hold = $self->get('dbh')->quote($self->HoldExpiry($id, $user, 0));
     }
+    
     my @fieldList = ('id', 'user', 'attr', 'reason', 'note', 'renNum', 'renDate', 'category', 'priority', 'hold');
     my @valueList = ("'$id'",  "'$user'",  $attr,  $reason,  $note, ($renNum)? "'$renNum'":'NULL',  ($renDate)? "'$renDate'":'NULL',
                      ($category)? "'$category'":'NULL', $priority, $hold);
+    
+    if (!$question)
+    {
+      # Stash their hold if they are cancelling it
+      my $oldhold = $self->SimpleSqlGet("SELECT hold FROM reviews WHERE id='$id' AND user='$user'");
+      if ($oldhold)
+      {
+        push(@fieldList, 'sticky_hold');
+        push(@valueList, "'$oldhold'");
+      }
+    }
+    
     
     if ($exp)
     {
@@ -1177,13 +1192,10 @@ sub SubmitReview
       {
         my $sql = "UPDATE $CRMSGlobals::queueTable SET expcnt=1 WHERE id='$id'";
         $result = $self->PrepareSubmitSql( $sql );
-        if (!$question)
-        {
-          my $qstatus = $self->SimpleSqlGet("SELECT status FROM queue WHERE id='$id'");
-          my $status = ($attr == 5 && $reason == 8 && $qstatus == 3)? 6:5;
-          #We have decided to register the expert decision right away.
-          $self->RegisterStatus($id, $status);
-        }
+        my $qstatus = $self->SimpleSqlGet("SELECT status FROM queue WHERE id='$id'");
+        my $status = ($attr == 5 && $reason == 8 && $qstatus == 3)? 6:5;
+        #We have decided to register the expert decision right away.
+        $self->RegisterStatus($id, $status);
       }
 
       $self->CheckPendingStatus($id);
@@ -1405,8 +1417,6 @@ sub RegisterStatus
 
     my $sql = qq{UPDATE $CRMSGlobals::queueTable SET status=$status WHERE id="$id"};
     $self->PrepareSubmitSql( $sql );
-    $sql = qq{UPDATE $CRMSGlobals::reviewsTable SET hold=NULL WHERE id="$id"};
-    $self->PrepareSubmitSql( $sql );
 }
 
 sub RegisterPendingStatus
@@ -1438,6 +1448,16 @@ sub HoldForItem
   return $exp;
 }
 
+sub StickyHoldForItem
+{
+  my $self     = shift;
+  my $id       = shift;
+  my $user     = shift;
+  
+  my $exp = $self->SimpleSqlGet("SELECT sticky_hold FROM reviews WHERE id='$id' AND user='$user'");
+  return $exp;
+}
+
 sub HoldExpiry
 {
   my $self     = shift;
@@ -1446,6 +1466,7 @@ sub HoldExpiry
   my $readable = shift;
   
   my $exp = $self->HoldForItem($id,$user);
+  $exp = $self->StickyHoldForItem($id,$user) unless $exp;
   $exp = $self->TwoWorkingDays() unless $exp;
   return ($readable)? $self->FormatDate($exp):$exp;
 }
