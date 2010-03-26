@@ -17,6 +17,10 @@
 [% recs = recs.replace('\D','') %]
 [% adm = crms.IsUserAdmin() %]
 
+[% IF page == 'holds' %]
+  [% IF !order %][% order = 'hold' %][% END %]
+[% END %]
+
 [% vrecs = cgi.cookie('vrecs') or 10 %]
 [% nvrecs = cgi.cookie('recs') or 20 %]
 [% IF NOT recs %]
@@ -96,6 +100,10 @@ Search for Reviews where<br/>
 </script>
 <span class="smallText">(YYYY-MM-DD)</span>
 <br/>
+
+[% IF page == 'holds' %]
+<span class="smallishText">Date range applies to hold thru date, not review date.</span><br/><br/>
+[% END %]
 
 <label for="order">Order by:</label>
 <select name="order" id="order">
