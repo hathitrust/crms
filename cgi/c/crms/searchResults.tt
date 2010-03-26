@@ -21,6 +21,7 @@
 
 [% IF p == 'holds' %]
   [% IF !order %][% order = 'hold' %][% END %]
+  [% IF !dir %][% dir = 'ASC' %][% END %]
 [% END %]
 
 [% IF !order %][% order = 'id' %][% END %]

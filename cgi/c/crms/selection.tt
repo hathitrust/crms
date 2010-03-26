@@ -19,6 +19,7 @@
 
 [% IF page == 'holds' %]
   [% IF !order %][% order = 'hold' %][% END %]
+  [% IF !dir %][% dir = 'ASC' %][% END %]
 [% END %]
 
 [% vrecs = cgi.cookie('vrecs') or 10 %]
