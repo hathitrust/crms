@@ -3860,7 +3860,7 @@ sub CreateStatsData
       {
         $n = sprintf('%.1f%%', $n);
       }
-      elsif ($title ne '__TOT__' && $title ne '__NEUT__' && !exists $minors{$title})
+      elsif ($title ne '__TOT__' && !exists $minors{$title})
       {
         my $pct = eval { 100.0*$n/$of; };
         $pct = 0.0 unless $pct;
@@ -3880,7 +3880,7 @@ sub CreateStatsData
     {
       $n = sprintf('%.1f%%', $n);
     }
-    elsif ($title ne '__TOT__' && $title ne '__NEUT__' && !exists $minors{$title})
+    elsif ($title ne '__TOT__' && !exists $minors{$title})
     {
       my $pct = eval { 100.0*$n/$of; };
       $pct = 0.0 unless $pct;
@@ -3899,7 +3899,7 @@ sub CreateStatsData
       {
         $n = sprintf('%.1f%%', $n);
       }
-      elsif ($title ne '__TOT__' && $title ne '__NEUT__' && !exists $minors{$title})
+      elsif ($title ne '__TOT__' && !exists $minors{$title})
       {
         $of = $stats{'__TOT__'}{$date};
         $of = $stats{'__TOTNE__'}{$date} if $title eq '__VAL__';
@@ -3984,7 +3984,7 @@ sub CreateStatsReport
   $report =~ s/__MVAL__/$mvtitle/;
   my $avtitle = 'Average&nbsp;Validation&nbsp;Rate';
   $report =~ s/__AVAL__/$avtitle/;
-  my $ntitle = 'Neutral&nbsp;Reviews';
+  my $ntitle = 'Neutral&nbsp;Reviews&nbsp;&amp;&nbsp;Rate';
   $report =~ s/__NEUT__/$ntitle/;
   return $report;
 }
@@ -6457,7 +6457,7 @@ sub CountCorrectReviews
     $correct = $cnt if $val == 1;
     $neutral = $cnt if $val == 2;
   }
-  my $total = $correct + $incorrect;
+  my $total = $correct + $incorrect + $neutral;
   #printf "CountCorrectReviews(%s): $correct of $total<br/>\n", join ', ', ($user,$start,$end);
   return ($correct,$total,$neutral);
 }
