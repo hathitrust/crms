@@ -844,11 +844,11 @@ sub AddItemToCandidates
       #check FMT.
       if ( ! $self->IsFormatBK( $id, $record ) ) { $self->Logit( "skip not fmt bk: $id" ); return 0; }
 
-      my $au = $self->GetMarcDatafieldAuthor( $id );
+      my $au = $self->GetMarcDatafieldAuthor( $id, $record );
       $au = $self->get('dbh')->quote($au);
       $self->SetError("$id: UTF-8 check failed for quoted author: '$au'") unless $au eq "''" or utf8::is_utf8($au);
       
-      my $title = $self->GetRecordTitleBc2Meta( $id );
+      my $title = $self->GetRecordTitleBc2Meta( $id, $record );
       $title = $self->get('dbh')->quote($title);
       $self->SetError("$id: UTF-8 check failed for quoted title: '$title'") unless $title eq "''" or utf8::is_utf8($title);
       
@@ -1874,7 +1874,7 @@ sub SearchTermsToSQL
     $search1value =~ s/\*/_____/gs;
     $search1term = qq{$search1 LIKE '$search1value'};
   }
-  elsif ($search1value)
+  elsif (length $search1value)
   {
     $search1term = qq{$search1 = '$search1value'};
   }
@@ -1883,7 +1883,7 @@ sub SearchTermsToSQL
     $search2value =~ s/\*/_____/gs;
     $search2term = sprintf("$search2 %sLIKE '$search2value'", ($op1 eq 'NOT')? 'NOT ':'');
   }
-  elsif ($search2value)
+  elsif (length $search2value)
   {
     $search2term = sprintf("$search2 %s= '$search2value'", ($op1 eq 'NOT')? '!':'');
   }
@@ -1893,7 +1893,7 @@ sub SearchTermsToSQL
     $search3value =~ s/\*/_____/gs;
     $search3term = sprintf("$search3 %sLIKE '$search3value'", ($op2 eq 'NOT')? 'NOT ':'');
   }
-  elsif ($search3value)
+  elsif (length $search3value)
   {
     $search3term = sprintf("$search3 %s= '$search3value'", ($op2 eq 'NOT')? '!':'');
   }
@@ -1920,10 +1920,10 @@ sub SearchTermsToSQL
   $tmpl = '((__1__ __op1__ __2__) __op2__ __3__)' if ($op1 eq 'OR' && $op2 ne 'OR');
   $tmpl = '(__1__ __op1__ (__2__ __op2__ __3__))' if ($op2 eq 'OR' && $op1 ne 'OR');
   $tmpl =~ s/__1__/$search1term/;
-  $op1 = '' unless $search1term and $search2term;
+  $op1 = '' unless length $search1term and length $search2term;
   $tmpl =~ s/__op1__/$op1/;
   $tmpl =~ s/__2__/$search2term/;
-  $op2 = '' unless $search2term and $search3term;
+  $op2 = '' unless length $search2term and length $search3term;
   $tmpl =~ s/__op2__/$op2/;
   $tmpl =~ s/__3__/$search3term/;
   $tmpl =~ s/\(\s*\)//g;
@@ -1940,7 +1940,7 @@ sub SearchTermsToSQLWide
   $op1 = 'AND' unless $op1;
   $op2 = 'AND' unless $op2;
   # Pull down search 2 if no search 1
-  if (!$search1value)
+  if (!length $search1value)
   {
     $search1 = $search2;
     $op1 = $op2;
@@ -1950,7 +1950,7 @@ sub SearchTermsToSQLWide
     $search3value = undef;
   }
   # Pull down search 3 if no search 2
-  if (!$search2value)
+  if (!length $search2value)
   {
     $search2 = $search3;
     $search2value = $search3value;
@@ -1967,12 +1967,12 @@ sub SearchTermsToSQLWide
   if ( $search1value =~ m/.*\*.*/ )
   {
     $search1value =~ s/\*/_____/gs;
-    $search1term = qq{$search1_ LIKE '$search1value'};
+    $search1term = "$search1_ LIKE '$search1value'";
     $search1term =~ s/_____/%/g;
   }
-  elsif ($search1value)
+  elsif (length $search1value)
   {
-    $search1term = qq{$search1_ = '$search1value'};
+    $search1term = "$search1_ = '$search1value'";
   }
   if ( $search2value =~ m/.*\*.*/ )
   {
@@ -1980,7 +1980,7 @@ sub SearchTermsToSQLWide
     $search2term = sprintf("$search2_ %sLIKE '$search2value'", ($op1 eq 'NOT')? 'NOT ':'');
     $search2term =~ s/_____/%/g;
   }
-  elsif ($search2value)
+  elsif (length $search2value)
   {
     $search2term = sprintf("$search2_ %s= '$search2value'", ($op1 eq 'NOT')? '!':'');
   }
@@ -1990,7 +1990,7 @@ sub SearchTermsToSQLWide
     $search3term = sprintf("$search3_ %sLIKE '$search3value'", ($op2 eq 'NOT')? 'NOT ':'');
     $search3term =~ s/_____/%/g;
   }
-  elsif ($search3value)
+  elsif (length $search3value)
   {
     $search3term = sprintf("$search3_ %s= '$search3value'", ($op2 eq 'NOT')? '!':'');
   }
@@ -2016,16 +2016,15 @@ sub SearchTermsToSQLWide
   my @rest = ();
   my $did2 = 0;
   my $did3 = 0;
-  if ($search1term)
+  if (length $search1term)
   {
     $search1term =~ s/[a-z]\./t1./;
-    
-    if ($op1 eq 'AND' || !$search2term)
+    if ($op1 eq 'AND' || !length $search2term)
     {
       $joins = "INNER JOIN $table1 t1 ON t1.id=r.id";
       push @rest, $search1term;
     }
-    elsif ($op2 ne 'OR' || !$search3term)
+    elsif ($op2 ne 'OR' || !length $search3term)
     {
       $search2term =~ s/[a-z]\./t2./;
       $joins = "INNER JOIN (SELECT t1.id FROM $table1 t1 WHERE $search1term UNION SELECT t2.id FROM $table2 t2 WHERE $search2term) AS or1 ON or1.id=r.id";
@@ -2040,10 +2039,10 @@ sub SearchTermsToSQLWide
       $did3 = 1;
     }
   }
-  if ($search2term && !$did2)
+  if (length $search2term && !$did2)
   {
     $search2term =~ s/[a-z]\./t2./;
-    if ($op2 eq 'AND' || !$search3term)
+    if ($op2 eq 'AND' || !length $search3term)
     {
       $joins .= " INNER JOIN $table2 t2 ON t2.id=r.id";
       push @rest, $search2term;
@@ -2055,7 +2054,7 @@ sub SearchTermsToSQLWide
       $did3 = 1;
     }
   }
-  if ($search3term && !$did3)
+  if (length $search3term && !$did3)
   {
     $search3term =~ s/[a-z]\./t3./;
     $joins .= " INNER JOIN $table3 t3 ON t3.id=r.id";
@@ -4798,11 +4797,11 @@ sub GetMarcDatafieldAuthor
 {
     my $self    = shift;
     my $barcode = shift;
-
+    my $record  = shift;
+    
     #After talking to Tim, the author info is in the 1XX field
     #Margrte told me that the only 1xx fields are: 100, 110, 111, 130. 700, 710
-    
-    my $record = $self->GetRecordMetadata($barcode);
+    $record = $self->GetRecordMetadata($barcode) unless $record;
     if ( ! $record ) { $self->Logit( "failed in GetMarcDatafieldAuthor: $barcode" ); }
 
     my $data;
@@ -5010,34 +5009,16 @@ sub UpdateCandidatesAuthor
 ## use for now because the API is slow...
 sub GetRecordTitleBc2Meta
 {
-    my $self = shift;
-    my $id   = shift;
+    my $self   = shift;
+    my $id     = shift;
+    my $record = shift;
     
     $id = lc $id;
-
-    my $parser = $self->get( 'parser' );
-    my $url    = $self->get( 'bc2metaUrl' ) . '?id=' . $id;
-    my $ua     = LWP::UserAgent->new;
-
-    $ua->timeout( 1000 );
-    my $req = HTTP::Request->new( GET => $url );
-    my $res = $ua->request( $req );
-
-    if ( ! $res->is_success ) { $self->Logit( "$url failed: ".$res->message() ); return; }
-
-    my $source;
-    eval { $source = $parser->parse_string( $res->content() ); };
-    if ($@) { $self->Logit( "failed to parse response:$@" ); return; }
-
-    my $errorCode = $source->findvalue( "//*[name()='error']" );
-    if ( $errorCode ne '' )
-    {
-        $self->Logit( "$url \nfailed to get MARC for $id: $errorCode " . $res->content() );
-        return;
-    }
-
-    my ($title) = $source->findvalue( '/present/record/metadata/oai_marc/varfield[@id="245"]/subfield[@label="a"]' );
-
+    $record = $self->GetRecordMetadata($id) unless $record;
+    my $xpath = "//*[local-name()='datafield' and \@tag='245']/*[local-name()='subfield' and \@code='a']";
+    my $title = '';
+    eval{ $title = $record->findvalue( $xpath ); };
+    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
     return $title;
 }
 
