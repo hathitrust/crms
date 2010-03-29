@@ -1395,7 +1395,7 @@ sub GetFinalAttrReason
 sub GetExpertRevItems
 {
     my $self = shift;
-    my $sql  = 'SELECT id FROM queue WHERE (status=5 OR status=6) AND id NOT IN (SELECT id FROM reviews WHERE CURDATE()>hold)';
+    my $sql  = 'SELECT id FROM queue WHERE (status=5 OR status=6) AND id NOT IN (SELECT id FROM reviews WHERE CURDATE()<hold)';
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref;
@@ -1404,7 +1404,7 @@ sub GetExpertRevItems
 sub GetDoubleRevItemsInAgreement
 {
   my $self = shift;
-  my $sql  = 'SELECT id FROM queue WHERE status=4 AND id NOT IN (SELECT id FROM reviews WHERE CURDATE()>hold)';
+  my $sql  = 'SELECT id FROM queue WHERE status=4';
   return $self->get( 'dbh' )->selectall_arrayref( $sql );
 }
 
