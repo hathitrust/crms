@@ -150,7 +150,6 @@ mdp.39015065683149 annekz 1
 mdp.39015023082301 annekz 1
 inu.32000009454499 annekz 1
 mdp.39015071455961 gnichols123 1
-inu.32000009270911 annekz 1
 inu.32000003495613 cwilcox 1
 inu.32000003495613 dfulmer 1
 inu.32000003495613 gnichols123 1
@@ -433,6 +432,7 @@ if ($phase1)
   my $n0 = 0;
   my $n1 = 0;
   my $q = 1;
+  my $eq = 1;
   foreach my $row (@{$r})
   {
     my $id = $row->[0];
@@ -441,7 +441,8 @@ if ($phase1)
     # annekz reviews 2 priority 4 items as pd/ren (1/7)
     if ($priority == 4)
     {
-      $crms->SubmitReview($id, 'annekz', 1, 7, undef, undef, undef, 1, undef, undef);
+      $crms->SubmitReview($id, 'annekz', 1, 7, undef, undef, undef, 1, undef, undef, undef, $eq);
+      $eq = 0;
     }
     # gnichols123 reviews 2 priority 3 items as ic/ren (2/7)
     elsif ($priority == 3)
@@ -559,7 +560,7 @@ if ($phase2)
   VerifySQL('SELECT COUNT(*) FROM queue WHERE status>0',99,'Wrong number of queue nonzero status items.');
   VerifySQL('SELECT COUNT(*) FROM queue WHERE status=0',6,'Wrong number of queue status zero items.');
   VerifySQL('SELECT COUNT(*) FROM queue',105,'Wrong number of items in queue.');
-  VerifySQL('SELECT COUNT(*) FROM reviews WHERE hold IS NOT NULL',1,'Wrong number of held reviews.');
+  VerifySQL('SELECT COUNT(*) FROM reviews WHERE hold IS NOT NULL',2,'Wrong number of held reviews.');
   VerifySQL('SELECT COUNT(*) FROM reviews',200,'Wrong number of items in reviews.');
   Verify($crms->GetTotalAwaitingReview(),0,'Wrong number awaiting review');
   Verify($crms->GetTotalNonLegacyReviewCount(),0,'Wrong number of CRMS historical reviews');
@@ -635,7 +636,7 @@ if ($phase4)
   system('./monthlyStats.pl') == 0 or die "monthlyStats.pl failed: $?";
   my $sql = 'SELECT COUNT(*) FROM queue';
   my $count = $crms->SimpleSqlGet($sql);
-  my $should = 6;
+  my $should = 7;
   Complain("Queue has $count, should have $should") unless $count == $should;
   my %stati = (0=>6);
   foreach my $status (sort keys %stati)
@@ -645,7 +646,7 @@ if ($phase4)
     $should = $stati{$status};
     Complain("Status $status has $count, should have $should in queue") unless $count == $should;
   }
-  %stati = (4=>120,5=>100,6=>15);
+  %stati = (4=>120,5=>99,6=>15);
   foreach my $status (sort keys %stati)
   {
     $sql = "SELECT COUNT(*) FROM historicalreviews WHERE status=$status";
@@ -653,14 +654,14 @@ if ($phase4)
     $should = $stati{$status};
     Complain("Status $status has $count, should have $should in historical") unless $count == $should;
   }
-  VerifySQL('SELECT COUNT(*) FROM queue WHERE status>0',0,'Wrong number of queue nonzero status items.');
+  VerifySQL('SELECT COUNT(*) FROM queue WHERE status>0',1,'Wrong number of queue nonzero status items.');
   VerifySQL('SELECT COUNT(*) FROM queue WHERE status=0',6,'Wrong number of queue status zero items.');
-  VerifySQL('SELECT COUNT(*) FROM queue',6,'Wrong number of items in queue');
-  VerifySQL('SELECT COUNT(*) FROM reviews',7,'Wrong number of items in reviews');
+  VerifySQL('SELECT COUNT(*) FROM queue',7,'Wrong number of items in queue');
+  VerifySQL('SELECT COUNT(*) FROM reviews',8,'Wrong number of items in reviews');
   Verify($crms->GetTotalAwaitingReview(),0,'Wrong number awaiting review');
-  Verify($crms->GetTotalNonLegacyReviewCount(),227,'Wrong number of CRMS historical reviews');
+  Verify($crms->GetTotalNonLegacyReviewCount(),226,'Wrong number of CRMS historical reviews');
   Verify($crms->GetTotalLegacyReviewCount(),100,'Wrong number of legacy reviews');
-  Verify($crms->GetTotalHistoricalReviewCount(),327,'Wrong number of historical reviews');
+  Verify($crms->GetTotalHistoricalReviewCount(),326,'Wrong number of historical reviews');
   Verify(sprintf('%.1f',$crms->GetAverageCorrect()),84.3,'Wrong avg validation rate');
   Verify(sprintf('%.1f',$crms->GetAverageCorrect()),84.3,'Wrong median validation rate');
   VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE validated=1 AND legacy=0 AND user="cwilcox"',34,'Wrong number of validated reviews for cwilcox');
