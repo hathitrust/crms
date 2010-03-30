@@ -392,14 +392,14 @@ sub ProcessReviews
       $self->RegisterStatus( $id, 2 );
     }
   }
-  $sql = "UPDATE reviews SET hold=NULL WHERE hold<'$today'";
+  $sql = "UPDATE reviews SET hold=NULL, time=time WHERE hold<'$today'";
   $self->PrepareSubmitSql( $sql );
-  $sql = "UPDATE reviews SET sticky_hold=NULL WHERE sticky_hold<'$today'";
+  $sql = "UPDATE reviews SET sticky_hold=NULL, time=time WHERE sticky_hold<'$today'";
   $self->PrepareSubmitSql( $sql );
   # Clear out all the locks
-  my $sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
+  $sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
   $self->PrepareSubmitSql( $sql );
-  my $sql = 'INSERT INTO processstatus VALUES ( )';
+  $sql = 'INSERT INTO processstatus VALUES ( )';
   $self->PrepareSubmitSql( $sql );
 }
 
