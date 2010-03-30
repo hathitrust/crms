@@ -82,7 +82,7 @@ my $n = scalar keys %und;
 foreach my $id (keys %und)
 {
   my $src = $und{$id};
-  print "$id ($src) -> und table\n" if $verbose;
+  print "$id ($src) -> und\n";
   my $sql = "REPLACE INTO und (id,src) VALUES ('$id','$src')";
   $crms->PrepareSubmitSql( $sql ) unless $noop;
   $sql = "DELETE FROM candidates WHERE id='$id'";
