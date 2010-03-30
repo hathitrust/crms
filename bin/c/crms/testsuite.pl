@@ -662,8 +662,8 @@ if ($phase4)
   Verify($crms->GetTotalNonLegacyReviewCount(),226,'Wrong number of CRMS historical reviews');
   Verify($crms->GetTotalLegacyReviewCount(),100,'Wrong number of legacy reviews');
   Verify($crms->GetTotalHistoricalReviewCount(),326,'Wrong number of historical reviews');
-  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),84.3,'Wrong avg validation rate');
-  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),84.3,'Wrong median validation rate');
+  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),83.8,'Wrong avg validation rate');
+  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),83.8,'Wrong median validation rate');
   VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE validated=1 AND legacy=0 AND user="cwilcox"',34,'Wrong number of validated reviews for cwilcox');
   VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE legacy=0 AND user="cwilcox"',44,'Wrong number of historical reviews for cwilcox');
   VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE validated=1 AND legacy=0 AND user="dfulmer"',85,'Wrong number of validated reviews for dfulmer');
