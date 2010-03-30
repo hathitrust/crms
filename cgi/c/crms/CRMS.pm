@@ -689,7 +689,7 @@ sub LoadNewItemsInCandidates
     foreach my $id (keys %und)
     {
       my $src = $und{$id};
-      $sql = "INSERT INTO und (id,src) VALUES ('$id','$src')";
+      $sql = "REPLACE INTO und (id,src) VALUES ('$id','$src')";
       $self->PrepareSubmitSql( $sql );
       $sql = "DELETE FROM candidates WHERE id='$id'";
       $self->PrepareSubmitSql( $sql );
