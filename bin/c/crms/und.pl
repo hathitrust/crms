@@ -34,7 +34,7 @@ my $file = $ARGV[0];
 
 my $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/und_hist.txt",
-    configFile   =>   'crms.cfg',
+    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
     dev          =>   $DLPS_DEV
