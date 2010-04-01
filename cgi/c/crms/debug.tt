@@ -79,7 +79,7 @@
 </form>
 <br/>
 <p class="smallishText">Status <i>down</i> disables all pages but this one and displays the standard message:
-"The CRMS is currently unavailable until further notice.".<br/>
+"The CRMS is currently unavailable until further notice."<br/>
 Status <i>partial</i> disables the review and add to queue pages and displays the standard message:
 "The CRMS has limited functionality. The 'review' and 'add to queue' (administrators only) pages are currently disabled until further notice."<br/>
 To display a custom message, or override the standard ones (<i>down</i>/<i>partial</i>), fill in the text above.<br/>
