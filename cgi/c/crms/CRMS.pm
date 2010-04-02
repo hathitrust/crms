@@ -646,7 +646,7 @@ sub LoadNewItemsInCandidates
 
     if ($self->get('verbose')) { print "found: " .  scalar( @{$ref} ) . ": $sql\n"; }
 
-    my %und = ();
+    my @und = ();
     my $inqueue;
     foreach my $row ( @{$ref} )
     {
@@ -657,40 +657,29 @@ sub LoadNewItemsInCandidates
 
       if ( ( $attr == 2 ) && ( $reason == 1 ) )
       {
+        my $src = undef;
         my $record = $self->GetRecordMetadata($id);
         my $lang = $self->GetPubLanguage($id, $record);
         if ('eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
         {
-          print "Skip non-English $id -- will insert into und table\n";
-          $und{$id} = 'language';
-          next;
+          $src = 'language';
         }
-        if ($self->IsThesis($id, $record))
+        if ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
+        if ($self->IsTranslation($id, $record)) { $src = 'translation'; }
+        if ($self->IsForeignPub($id, $record)) { $src = 'foreign'; }
+        if ($src)
         {
-          print "Skip dissertation $id -- will insert into und table\n";
-          $und{$id} = 'dissertation';
-          next;
-        }
-        if ($self->IsTranslation($id, $record))
-        {
-          print "Skip translation $id -- will insert into und table\n";
-          $und{$id} = 'translation';
-          next;
-        }
-        if ($self->IsForeignPub($id, $record))
-        {
-          print "Skip foreign pub $id -- will insert into und table\n";
-          $und{$id} = 'foreign';
+          print "Skip $id ($src) -- inserting in und table\n";
+          $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src','$time')";
+          $self->PrepareSubmitSql( $sql );
+          push @und, $id;
           next;
         }
         $self->AddItemToCandidates( $id, $time, 0, 0 );
       }
     }
-    foreach my $id (keys %und)
+    foreach my $id (@und)
     {
-      my $src = $und{$id};
-      $sql = "REPLACE INTO und (id,src) VALUES ('$id','$src')";
-      $self->PrepareSubmitSql( $sql );
       $sql = "DELETE FROM candidates WHERE id='$id'";
       $self->PrepareSubmitSql( $sql );
     }
@@ -727,7 +716,7 @@ sub LoadNewItems
     return if $needed <= 0;
     my $count = 0;
     my $y = 1923 + int(rand(40));
-    my %und = ();
+    my @und = ();
     while (1)
     {
       $sql = 'SELECT id, time, pub_date, title, author FROM candidates WHERE id NOT IN (SELECT DISTINCT id FROM queue) ' .
@@ -750,31 +739,19 @@ sub LoadNewItems
         my $author = $row->[4];
         my $record = $self->GetRecordMetadata($id);
         my $src = undef;
-        if ($self->IsThesis($id, $record))
-        {
-          print "Skip dissertation $id -- will insert into und table\n";
-          $src = 'dissertation' unless $src;
-        }
-        if ($self->IsForeignPub($id, $record))
-        {
-          print "Skip foreign pub $id -- will insert into und table\n";
-          $src = 'foreign' unless $src;
-        }
-        if ($self->IsTranslation($id, $record))
-        {
-          print "Skip translation $id -- will insert into und table\n";
-          $src = 'translation' unless $src;
-        }
         my $lang = $self->GetPubLanguage($id, $record);
         if ('eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
         {
-          print "Skip non-English $id ($lang) -- will insert into und table\n";
           $src = 'language' unless $src;
         }
+        elsif ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
+        elsif ($self->IsForeignPub($id, $record)) { $src = 'foreign'; }
+        elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
         if ($src)
         {
-          $und{$id} = $src;
-          $sql = "INSERT INTO und (id,src) VALUES ('$id','$src')";
+          print "Skip $id ($src) -- inserting in und table\n";
+          push @und, $id;
+          $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src','$time')";
           $self->PrepareSubmitSql( $sql );
           next;
         }
@@ -795,9 +772,8 @@ sub LoadNewItems
     #Record the update to the queue
     my $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES ($count, 'RIGHTSDB')";
     $self->PrepareSubmitSql( $sql );
-    foreach my $id (keys %und)
+    foreach my $id (@und)
     {
-      my $src = $und{$id};
       $sql = "DELETE FROM candidates WHERE id='$id'";
       $self->PrepareSubmitSql( $sql );
     }
