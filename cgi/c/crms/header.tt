@@ -107,7 +107,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
     <div class="pages" id="homePage">
     <div style="float:left; margin-right:10em;"><img src="/c/crms/crms.png" alt="CRMS Logo"/></div>
     [%# INCLUDE nav.tt %]
-    <div id="version">Version 1.6</div>
+    <div id="version">Version 1.6.1</div>
     <br/><br/>
     <div style="clear:both;">
     [% IF r.2 %]<br/>[% END %]
@@ -133,7 +133,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
   [% page = cgi.param('p') %]
   [% IF page != 'debug' %]
     [% IF r.1 == 'down' %]
-      [% IF page == 'queueAdd' %]|| <a href="crms?p=admin">Admin page</a> ||[% END %]
+      [% IF page == 'queueAdd' %]|| <a href="crms?p=admin">Admin Page</a> ||[% END %]
       [% IF crms.IsUserAdmin() %]|| <a href="crms?p=debug">The Secret Debug Page</a> ||[% END %]
       [% INCLUDE footer.tt %]
       [% STOP %]
