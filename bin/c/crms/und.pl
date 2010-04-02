@@ -43,13 +43,15 @@ my $done = 0;
 my $of = 0;
 $SIG{ALRM} = sub { print "Signal received!\n" if $verbose; $done = 1;};
 my %und = ();
+my %times = ();
 alarm($time);
-my $sql = 'SELECT id FROM candidates WHERE checked=0';
+my $sql = 'SELECT id,time FROM candidates WHERE checked=0';
 my $ref = $crms->get('dbh')->selectall_arrayref($sql);
 foreach my $row ( @{$ref} )
 {
   last if $done;
   my $id = $row->[0];
+  my $time = $row->[1];
   $of++;
   print "Checking $id\n" if $verbose;
   my $record = $crms->GetRecordMetadata($id);
@@ -57,21 +59,25 @@ foreach my $row ( @{$ref} )
   if ('eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
   {
     $und{$id} = 'language';
+    $times{$id} = $time;
     next;
   }
   if ($crms->IsThesis($id, $record))
   {
     $und{$id} = 'dissertation';
+    $times{$id} = $time;
     next;
   }
   if ($crms->IsTranslation($id, $record))
   {
     $und{$id} = 'translation';
+    $times{$id} = $time;
     next;
   }
   if ($crms->IsForeignPub($id, $record))
   {
     $und{$id} = 'foreign';
+    $times{$id} = $time;
     next;
   }
   $sql = "UPDATE candidates SET checked=1 WHERE id='$id'";
@@ -82,8 +88,9 @@ my $n = scalar keys %und;
 foreach my $id (keys %und)
 {
   my $src = $und{$id};
+  my $time = $times{$id};
   print "$id ($src) -> und\n";
-  my $sql = "REPLACE INTO und (id,src) VALUES ('$id','$src')";
+  my $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src','$time')";
   $crms->PrepareSubmitSql( $sql ) unless $noop;
   $sql = "DELETE FROM candidates WHERE id='$id'";
   $crms->PrepareSubmitSql( $sql ) unless $noop;
