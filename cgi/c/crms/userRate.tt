@@ -2,7 +2,8 @@
 [% INCLUDE homeLink.tt  %]
 
 <hr width="25%" align="left"/><br/>
-[% user = crms.get('user') %]
+[% user = cgi.param('user') %]
+[% IF !user %][% user = crms.get('user') %][% END %]
 
 [% crms.CreateStatsReport( user, 0, 0 ) %]
 <span class="smallishText">*Does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews.</span>
