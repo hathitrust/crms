@@ -38,7 +38,7 @@
   
 [% summary = crms.HoldSummary(user) %]
 [% IF summary %]
-<h4>You have outstanding questions on the following items:</h4><br/>
+<br/><h4>You have outstanding questions on the following items:</h4><br/>
 $summary
 [% END %]
 
