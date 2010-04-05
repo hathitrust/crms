@@ -61,7 +61,6 @@ sub new
     $self->set( 'user',        $args{'user'} );
 
     $self->set( 'dbh',         $self->ConnectToDb() );
-    $self->set( 'dbhP',        $self->ConnectToDbForTesting() );
 
     $self->set( 'sdr_dbh',     $self->ConnectToSdrDb() );
 
@@ -94,12 +93,20 @@ sub ConnectToDb
     my $db_user   = $CRMSGlobals::mysqlUser;
     my $db_passwd = $CRMSGlobals::mysqlPasswd;
     my $db_server = $CRMSGlobals::mysqlServerDev;
+    my $db        = 'crms';
+    my $dev       = $self->get('dev');
     
-    if ( ! $self->get( 'dev' ) ) { $db_server = $CRMSGlobals::mysqlServer; }
-
+    if ( !$dev )
+    {
+      $db_server = $CRMSGlobals::mysqlServer;
+    }
+    elsif ($dev eq 'crmstest')
+    {
+      $db = 'crmstest';
+    }
     if ($self->get('verbose')) { $self->Logit( "DBI:mysql:crms:$db_server, $db_user, [passwd]" ); }
 
-    my $dbh = DBI->connect( "DBI:mysql:crms:$db_server", $db_user, $db_passwd,
+    my $dbh = DBI->connect( "DBI:mysql:$db:$db_server", $db_user, $db_passwd,
               { RaiseError => 1, AutoCommit => 1 } ) || die "Cannot connect: $DBI::errstr";
     $dbh->{mysql_enable_utf8} = 1;
     $dbh->{mysql_auto_reconnect} = 1;
@@ -109,24 +116,6 @@ sub ConnectToDb
     return $dbh;
 }
 
-sub ConnectToDbForTesting
-{
-    my $self      = shift;
-    my $db_user   = $CRMSGlobals::mysqlUser;
-    my $db_passwd = $CRMSGlobals::mysqlPasswd;
-    my $db_server = $CRMSGlobals::mysqlServerDev;
-
-    $db_server = $CRMSGlobals::mysqlServer;
-
-    my $dbh = DBI->connect( "DBI:mysql:crms:$db_server", $db_user, $db_passwd,
-              { RaiseError => 1, AutoCommit => 1 } ) || die "Cannot connect: $DBI::errstr";
-    $dbh->{mysql_enable_utf8} = 1;
-    $dbh->{mysql_auto_reconnect} = 1;
-    my $sql = qq{SET NAMES 'utf8';};
-    $dbh->do($sql);
-    
-    return $dbh;
-}
 
 ## ----------------------------------------------------------------------------
 ##  Function:   connect to the development mysql DB
@@ -175,16 +164,6 @@ sub PrepareSubmitSql
 }
 
 
-sub PrepareSubmitSqlForTesting
-{
-    my $self = shift;
-    my $sql  = shift;
-
-    my $sth = $self->get( 'dbhP' )->prepare( $sql );
-    eval { $sth->execute(); };
-    return 1;
-}
-
 sub SimpleSqlGet
 {
     my $self = shift;
@@ -201,15 +180,6 @@ sub SimpleSqlGet
       $self->Logit("sql failed ($sql): " . $@);
     }
     return $val;
-}
-
-sub SimpleSqlGetForTesting
-{
-    my $self = shift;
-    my $sql  = shift;
-
-    my $ref = $self->get('dbhP')->selectall_arrayref( $sql );
-    return $ref->[0]->[0];
 }
 
 
@@ -234,34 +204,6 @@ sub GetCandidatesSize
 
   return $size;
   
-}
-
-
-sub MoveToProdDBCandidates
-{
-  my $self = shift;
-
-  my $sql = qq{select id, time, pub_date, title, author from candidates};
-  my $ref = $self->get('dbh')->selectall_arrayref( $sql );
-
-  ## design note: if these were in the same DB we could just INSERT
-  ## into the new table, not SELECT then INSERT
-  my $count = 0;
-  my $inqueue;
-  foreach my $row ( @{$ref} )
-  {
-    my $id       = $row->[0];
-    my $time     = $row->[1];
-    my $pub_date = $row->[2];
-    my $title    = $row->[3];
-    $title =~ s,\',\\',gs;
-    my $author   = $row->[4];
-    $author =~ s,\',\\',gs;
-
-    my $sql = qq{insert into candidates values ('$id', '$time', '$pub_date', '$title', '$author')};
-
-    $self->PrepareSubmitSqlForTesting( $sql );
-  }
 }
 
 
@@ -299,40 +241,6 @@ sub DeDup
 }
 
 
-sub DeDupProd
-{
-
-  my $self = shift;
-
-  my $sql = qq{select distinct id from duplicates};
-  my $ref = $self->get('dbhP')->selectall_arrayref( $sql );
-
-  ## design note: if these were in the same DB we could just INSERT
-  ## into the new table, not SELECT then INSERT
-  my $count = 0;
-  my $msg;
-  foreach my $row ( @{$ref} )
-  {
-    my $id = $row->[0];
-
-    my $sql = qq{ SELECT count(*) from candidates where id="mdp.$id"};
-    my $incan = $self->SimpleSqlGetForTesting( $sql );
-
-    if ( $incan == 1 )
-    {
-      my $sql = qq{ DELETE FROM candidates WHERE id = "mdp.$id" };
-      $self->PrepareSubmitSqlForTesting( $sql );
-
-      $count = $count + 1;
-    }
-    else
-    {
-      $msg .= qq{$id\n};
-    }
-  }
-  print $count;
-}
-
 sub ProcessReviews
 {
   my $self = shift;
@@ -358,11 +266,16 @@ sub ProcessReviews
     
     if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
     {
-      #If both und/nfi then status is 3
-      if ( ( $attr == 5 ) && ( $reason == 8 ) )
+      # If one or more reviewers are non-advanced mark as provisional match
+      if ( (!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
       {
          $self->RegisterStatus( $id, 3 );
       }
+      # Matching und/nfi
+      #elsif ( ( $attr == 5 ) && ( $reason == 8 )  )
+      #{
+      #   $self->RegisterStatus( $id, 3 );
+      #}
       else #Mark as 4 - two that agree
       {
         #If they are ic/ren then the renewal date and id must match
@@ -428,11 +341,16 @@ sub CheckPendingStatus
 
     if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
     {
-      #If both und/nfi then status is 3
-      if ( ( $attr == 5 ) && ( $reason == 8 ) )
+      # If one or more reviewers are non-advanced mark as provisional match
+      if ( (!$self->IsUserAdvanced($user)) || (!$self->IsUserAdvanced($other_user)))
       {
          $self->RegisterPendingStatus( $id, 3 );
       }
+      #If both und/nfi then status is 3
+      #elsif ( ( $attr == 5 ) && ( $reason == 8 ) )
+      #{
+      #   $self->RegisterPendingStatus( $id, 3 );
+      #}
       else #Mark as 4 - two that agree
       {
         #If they are ic/ren then the renewal date and id must match
@@ -526,7 +444,6 @@ sub ExportReviews
 
     foreach my $id ( @{$list} )
     {
-      #The routine GetFinalAttrReason may need to change - jose
       my ($attr,$reason) = $self->GetFinalAttrReason($id);
 
       print $fh "$id\t$attr\t$reason\t$user\tnull\n";
@@ -750,7 +667,7 @@ sub LoadNewItems
         if ($src)
         {
           print "Skip $id ($src) -- inserting in und table\n";
-          push @und, $id;
+          push @und, $src;
           $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src','$time')";
           $self->PrepareSubmitSql( $sql );
           next;
@@ -872,9 +789,9 @@ sub AddItemToQueueOrSetItemActive
   my $stat = 0;
   my @msgs = ();
   $priority = 4 if $override;
-  if ($override && 'annekz' ne $self->get('user'))
+  if ($override && $self->IsUserSuperAdmin())
   {
-    push @msgs, 'Only a superuser can set priority 4';
+    push @msgs, 'Only a super admin can set priority 4';
     $stat = 1;
   }
   ## give the existing item higher or lower priority
@@ -1058,6 +975,9 @@ sub TranslateCategory
     elsif ( $category eq 'WRONGREC' ) { return 'Wrong Record'; }
     elsif ( $category =~ m,FOREIGN PUB.*, ) { return 'Foreign Pub'; }
     elsif ( $category eq 'DISS' ) { return 'Dissertation/Thesis'; }
+    elsif ( $category eq 'EDITION' ) { return 'Edition'; }
+    elsif ( $category eq 'NOT CLASS A' ) { return 'Not Class A'; }
+    elsif ( $category eq 'PERIODICAL' ) { return 'Periodical'; }
     else  { return $category };
 }
 
@@ -1086,6 +1006,7 @@ sub IsItemInReviews
 }
 
 # Used by experts to approve a review made by a reviewer.
+# Returns an error message.
 sub CloneReview
 {
   my $self   = shift;
@@ -1094,7 +1015,9 @@ sub CloneReview
   
   my $sql = "SELECT attr,reason FROM reviews WHERE id='$id'";
   my $rows = $self->get('dbh')->selectall_arrayref($sql);
+  return "Could not approve review for $id because it is locked by another user." if $self->IsLockedForOtherUser($id, $user);
   my $result = $self->SubmitReview($id,$user,$rows->[0]->[0],$rows->[0]->[1],undef,undef,undef,1,undef,'Expert Accepted');
+  return ($result)? '':"Could not approve review for $id";
 }
 
 ## ----------------------------------------------------------------------------
@@ -1134,7 +1057,13 @@ sub SubmitReview
     my @fieldList = ('id', 'user', 'attr', 'reason', 'note', 'renNum', 'renDate', 'category', 'priority', 'hold');
     my @valueList = ("'$id'",  "'$user'",  $attr,  $reason,  $note, ($renNum)? "'$renNum'":'NULL',  ($renDate)? "'$renDate'":'NULL',
                      ($category)? "'$category'":'NULL', $priority, $hold);
-    
+    my $sql = "SELECT duration FROM reviews WHERE user='$user' AND id='$id'";
+    my $dur = $self->SimpleSqlGet($sql);
+    if ($dur)
+    {
+      push(@fieldList, 'duration');
+      push(@valueList, "'$dur'");
+    }
     if (!$question)
     {
       # Stash their hold if they are cancelling it
@@ -1156,12 +1085,11 @@ sub SubmitReview
       push(@valueList, $swiss);
     }
     if ($copyDate) { push(@fieldList, 'copyDate'); push(@valueList, "'$copyDate'"); }
-    
-    my $sql = sprintf("REPLACE INTO $CRMSGlobals::reviewsTable (%s) VALUES (%s)", join(',', @fieldList), join(",", @valueList));
 
+    my $sql = sprintf("REPLACE INTO $CRMSGlobals::reviewsTable (%s) VALUES (%s)", join(',', @fieldList), join(",", @valueList));
     if ( $self->get('verbose') ) { $self->Logit( $sql ); }
-    
     my $result = $self->PrepareSubmitSql( $sql );
+
     if ($result)
     {
       if ( $exp )
@@ -1238,18 +1166,22 @@ sub SubmitHistReview
     #if ( ! $self->ValidateReason( $reason ) )                 { $self->Logit("reason check failed");      return 0; }
     if ( ! $self->CheckReviewer( $user, $expert ) )           { $self->SetError("reviewer ($user) check failed"); return 0; }
     if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->SetError('attr/reason check failed');      return 0; }
-    # FIXME: using annekz is a hack, but is needed since 'esaran' is not in the users table.
+    
     my $err = $self->ValidateSubmissionHistorical($attr, $reason, $note, $category, $renNum, $renDate);
     if ($err) { $self->SetError($err); return 0; }
     ## do some sort of check for expert submissions
-
+    
+    my $sql = "SELECT COUNT(id) FROM historicalreviews WHERE id='$id' AND status=5";
+    my $count = $self->SimpleSqlGet($sql);
+    $status = 5 if $count;
+    print "$id has a status 5 review; bumping to status 5\n" if $count;
     if (!$noop)
     {
       $note = $self->get('dbh')->quote($note);
       
       ## all good, INSERT
-      my $sql = 'REPLACE INTO historicalreviews (id, user, time, attr, reason, copyDate, renNum, renDate, note, legacy, category, status, expert, source) ' .
-                qq{VALUES('$id', '$user', '$date', '$attr', '$reason', '$cDate', '$renNum', '$renDate', $note, 1, '$category', $status, $expert, 'legacy') };
+      $sql = 'REPLACE INTO historicalreviews (id, user, time, attr, reason, copyDate, renNum, renDate, note, legacy, category, status, expert, source) ' .
+             "VALUES('$id', '$user', '$date', '$attr', '$reason', '$cDate', '$renNum', '$renDate', $note, 1, '$category', $status, $expert, 'legacy')";
 
       $self->PrepareSubmitSql( $sql );
 
@@ -1478,6 +1410,18 @@ sub FormatTime
   return $self->SimpleSqlGet( $sql );
 }
 
+sub ChangeDateFormat
+{
+  my $self = shift;
+  my $date = shift;
+
+  my ($month, $day, $year) = split '/', $date;
+  $year  = qq{20$year} if $year < 100;
+  $month = qq{0$month} if $month < 10;
+  $day   = qq{0$day} if $day < 10;
+  $date = join '-', ($year, $month, $day);
+  return $date;
+}
 
 sub ConvertToSearchTerm
 {
@@ -2901,152 +2845,108 @@ sub CheckReviewer
     my $self = shift;
     my $user = shift;
     my $exp  = shift;
-    my $dbh  = $self->get( 'dbh' );
-
-    my $sql = qq{SELECT type FROM $CRMSGlobals::usersTable WHERE id = '$user'};
-    my $rows = $dbh->selectall_arrayref( $sql );
-
-    if ( $exp )
-    {
-        foreach ( @{$rows} ) { if ($_->[0] == 2) { return 1; } }
-    }
-    else
-    {
-        foreach ( @{$rows} ) { if ($_->[0] == 1 || $_->[0] == 2) { return 1; } }
-    }
-    return 0;
+    
+    my $isReviewer = 1;
+    my $isAdvanced = $self->IsUserAdvanced($user);
+    my $isExpert = $self->IsUserExpert($user);
+    return $isExpert if $exp;
+    return $isReviewer or $isExpert;
 }
 
 sub GetUserName
 {
-    my $self = shift;
-    my $user = shift;
+  my $self = shift;
+  my $user = shift;
 
-    if ( ! $user ) { $user = $self->get( "user" ); }
-
-    my $sql = qq{SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' LIMIT 1};
-    my $name = $self->SimpleSqlGet( $sql );
-
-    if ( $name ne '' ) { return $name; }
-
-    return 0;
+  $user = $self->get('user') unless $user;
+  my $sql = "SELECT name FROM sresu WHERE id='$user'";
+  return $self->SimpleSqlGet( $sql );
 }
 
 
 sub GetAliasUserName
 {
-    my $self = shift;
-    my $user = shift;
+  my $self = shift;
+  my $user = shift;
 
-    if ( ! $user ) { $user = $self->get( "user" ); }
-
-    my $sql = qq{SELECT alias FROM $CRMSGlobals::usersTable WHERE id = '$user' LIMIT 1};
-    my $name = $self->SimpleSqlGet( $sql );
-
-    if ( $name ne '' ) { return $name; }
-
-    return 0;
+  $user = $self->get('user') unless $user;
+  my $sql = "SELECT alias FROM sresu WHERE id='$user'";
+  return $self->SimpleSqlGet( $sql );
 }
 
 sub ChangeAliasUserName
 {
-    my $self = shift;
-    my $user = shift;
-    my $new_user = shift;
+  my $self     = shift;
+  my $user     = shift;
+  my $new_user = shift;
 
-    if ( ! $user ) { $user = $self->get( "user" ); }
-
-    my $sql = qq{UPDATE $CRMSGlobals::usersTable set alias = '$new_user' WHERE id = '$user'};
-    $self->PrepareSubmitSql( $sql );
-
-
-}
-
-sub ChangeDateFormat
-{
-    my $self = shift;
-    my $date = shift;
-    
-    #go from MM/DD/YYYY to YYYY-MM-DD
-    my ($month, $day, $year) = split '/', $date;
-    
-    $year  = qq{20$year} if $year < 100;
-    $month = qq{0$month} if $month < 10;
-    $day   = qq{0$day} if $day < 10;
-
-    $date = join '-', ($year, $month, $day);
-
-    return $date;
+  $user = $self->get('user') unless $user;
+  my $sql = "UPDATE sresu SET alias='$new_user' WHERE id='$user'";
+  $self->PrepareSubmitSql( $sql );
 }
 
 sub IsUserReviewer
 {
-    my $self = shift;
-    my $user = shift;
+  my $self = shift;
+  my $user = shift;
 
-    if ( ! $user ) { $user = $self->get( "user" ); }
+  $user = $self->get('user') unless $user;
+  my $sql = "SELECT reviewer FROM sresu WHERE id='$user'";
+  return $self->SimpleSqlGet( $sql );
+}
 
-    my $sql = qq{ SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' AND type = 1 };
-    my $name = $self->SimpleSqlGet( $sql );
+sub IsUserAdvanced
+{
+  my $self = shift;
+  my $user = shift;
 
-    if ($name) { return 1; }
-
-    return 0;
+  $user = $self->get('user') unless $user;
+  my $sql = "SELECT advanced FROM sresu WHERE id='$user'";
+  return $self->SimpleSqlGet( $sql );
 }
 
 sub IsUserExpert
 {
-    my $self = shift;
-    my $user = shift;
+  my $self = shift;
+  my $user = shift;
 
-    if ( ! $user ) { $user = $self->get( "user" ); }
-
-    my $sql = qq{ SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' AND type = 2 };
-    my $name = $self->SimpleSqlGet( $sql );
-
-    if ($name) { return 1; }
-
-    return 0;
+  $user = $self->get('user') unless $user;
+  my $sql = "SELECT expert FROM sresu WHERE id='$user'";
+  return $self->SimpleSqlGet( $sql );
 }
 
 sub IsUserAdmin
 {
-    my $self = shift;
-    my $user = shift;
+  my $self = shift;
+  my $user = shift;
 
-    if ( ! $user ) { $user = $self->get( "user" ); }
-    
-    my $sql = qq{ SELECT name FROM $CRMSGlobals::usersTable WHERE id = '$user' AND type = 3 };
-    my $name = $self->SimpleSqlGet( $sql );
-    
-    if ( $name ) { return 1; }
-    
-    return 0;
+  $user = $self->get('user') unless $user;
+  my $sql = "SELECT (admin OR superadmin) FROM sresu WHERE id='$user'";
+  return $self->SimpleSqlGet( $sql );
 }
 
-sub GetUserData
+sub IsUserSuperAdmin
 {
-    my $self = shift;
-    my $id   = shift;
-    my $dbh  = $self->get( 'dbh' );
+  my $self = shift;
+  my $user = shift;
 
-    my $sql = qq{SELECT id, name, type FROM $CRMSGlobals::usersTable };
-    if ( $id ne '' ) { $sql .= qq{ WHERE id = "$id"; } }
+  $user = $self->get('user') unless $user;
+  my $sql = "SELECT superadmin FROM sresu WHERE id='$user'";
+  return $self->SimpleSqlGet( $sql );
+}
 
-    my $ref = $dbh->selectall_arrayref( $sql );
-
-    my %userTypes;
-    foreach my $r ( @{$ref} ) { push @{$userTypes{$r->[0]}}, $r->[2]; }
-
-    my $return;
-    foreach my $r ( @{$ref} )
-    {
-       $return->{$r->[0]} = {'name'  => $r->[1],
-                             'id'    => $r->[0],
-                             'types' => $userTypes{$r->[0]}};
-    }
-
-    return $return;
+# If order, orders by privilege level from low to high
+sub GetUsers
+{
+  my $self  = shift;
+  my $order = shift;
+  
+  my $dbh  = $self->get( 'dbh' );
+  $order = ($order)? 'ORDER BY advanced+expert+admin+superadmin ASC, name ASC':'ORDER BY name ASC';
+  my $sql = "SELECT id FROM sresu $order";
+  my $ref = $dbh->selectall_arrayref( $sql );
+  my @users = map { $_->[0]; } @{ $ref };
+  return \@users;
 }
 
 sub GetRange
@@ -3975,7 +3875,7 @@ sub UpdateStats
     my $sql = qq{DELETE from userstats};
     $self->PrepareSubmitSql( $sql );
 
-    my @users = map {$_->[0]} @{$dbh->selectall_arrayref( "SELECT distinct id FROM users" )};
+    my $users = $self->GetUsers();
 
     my ( $max_year, $max_month, $min_year, $min_month ) = $self->GetRange();
 
@@ -3985,7 +3885,7 @@ sub UpdateStats
     {
       my $statDate = qq{$min_year-$min_month};
       
-      foreach my $user ( @users )
+      foreach my $user ( @{ $users } )
       {
         $self->GetMonthStats( $user, $statDate );
       }
@@ -4092,46 +3992,36 @@ sub GetMonthStats
   $self->PrepareSubmitSql( $sql );
 }
 
-
-sub GetUserTypes
+sub DeleteUser
 {
-    my $self = shift;
-    my $name = shift;
-
-    my $sql = qq{SELECT type FROM $CRMSGlobals::usersTable WHERE id = "$name"};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    my @return;
-    foreach ( @{$ref} ) { push (@return, $_->[0]); }
-    return @return;
+  my $self = shift;
+  my $id   = shift;
+  
+  my $sql = "DELETE FROM sresu WHERE id='$id'";
+  $self->PrepareSubmitSql($sql);
 }
 
 sub AddUser
 {
-    my $self = shift;
-    my $args = shift;
-
-    my $dSql = qq|DELETE FROM $CRMSGlobals::usersTable WHERE id = "$args->{'id'}"|;
-    $self->PrepareSubmitSql( $dSql );
-
-    if ( $args->{'delete'} ) { return 1; }  ## stop at deleting
-
-    my $sql = qq|REPLACE INTO $CRMSGlobals::usersTable SET id = "$args->{'id'}" | .
-              qq|, name = "$args->{'name'}"|;
-
-    if ( $args->{'reviewer'} )
-    {
-        $self->PrepareSubmitSql( $sql . qq{, type = 1} );
-    }
-    if ( $args->{'expert'} )
-    {
-        $self->PrepareSubmitSql( $sql . qq{, type = 2} );
-    }
-    if ( $args->{'admin'} )
-    {
-        $self->PrepareSubmitSql( $sql . qq{, type = 3} );
-    }
-
+    my $self       = shift;
+    my $id         = shift;
+    my $name       = shift;
+    my $reviewer   = shift;
+    my $advanced   = shift;
+    my $expert     = shift;
+    my $admin      = shift;
+    my $superadmin = shift;
+    
+    $reviewer = ($reviewer)? 1:0;
+    $advanced = ($advanced)? 1:0;
+    $expert = ($expert)? 1:0;
+    $admin = ($admin)? 1:0;
+    $superadmin = ($superadmin)? 1:0;
+    $name = $self->SimpleSqlGet("SELECT name FROM sresu WHERE id='$id'") unless $name;
+    my $sql = "REPLACE INTO sresu (id,name,reviewer,advanced,expert,admin,superadmin)" .
+              " VALUES ('$id','$name',$reviewer,$advanced,$expert,$admin,$superadmin)";
+    #print "$sql<br/>\n";
+    $self->PrepareSubmitSql($sql);
     return 1;
 }
 
@@ -4188,7 +4078,7 @@ sub HasItemBeenReviewedByTwoReviewers
   my $id   = shift;
   my $user = shift;
 
-  my $msg = '0';
+  my $msg = '';
   if ( $self->IsUserExpert( $user ) )
   {
     if ($self->HasItemBeenReviewedByAnotherExpert($id,$user) && $self->GetItemPriority($id) == 0)
@@ -4215,13 +4105,15 @@ sub HasItemBeenReviewedByTwoReviewers
 sub ValidateSubmission2
 {
     my $self = shift;
-    my ($attr, $reason, $note, $category, $renNum, $renDate, $user) = @_;
+    my ($id, $user, $attr, $reason, $note, $category, $renNum, $renDate) = @_;
     my $errorMsg = '';
 
     my $noteError = 0;
-
+    
+    ## Someone else has the item locked?
+    $errorMsg = 'This item has been locked by another reviewer. Please Cancel.' if $self->IsLockedForOtherUser($id);
     ## check user
-    if ( ! $self->IsUserReviewer( $user ) )
+    if ( ! $self->IsUserReviewer( $user ) && ! $self->IsUserAdvanced( $user ))
     {
         $errorMsg .= 'Not a reviewer.';
     }
@@ -5209,6 +5101,24 @@ sub IsLockedForUser
     return 0;
 }
 
+sub IsLockedForOtherUser
+{
+    my $self = shift;
+    my $id   = shift;
+    my $user = shift;
+    
+    $user = $self->get('user') unless $user;
+    my $sql = "SELECT locked FROM $CRMSGlobals::queueTable WHERE id='$id'";
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+
+    if ( scalar @{$ref} )
+    {
+      my $lock = $ref->[0]->[0];
+      if ( $lock && $lock ne $user ) { return 1; }
+    }
+    return 0;
+}
+
 sub RemoveOldLocks
 {
     my $self = shift;
@@ -5421,7 +5331,7 @@ sub SetDuration
     if ( ! $dur ) { return; }
 
     ## insert time
-    $sql = qq{ UPDATE $CRMSGlobals::reviewsTable SET duration = "$dur" WHERE user = "$user" AND id = "$id" };
+    $sql = "UPDATE reviews SET duration=ADDTIME(duration,'$dur') WHERE user='$user' AND id='$id'";
 
     $self->PrepareSubmitSql( $sql );
     $self->RemoveFromTimer( $id, $user );
@@ -5466,8 +5376,7 @@ sub GetNextItemForReview
     my $bar;
     
     # Only Anne reviews priority 4
-    # FIXME: do something with user account table, not hardcode name.
-    if ($name eq 'annekz')
+    if ($self->IsUserSuperAdmin($name))
     {
       my $sql = "SELECT id FROM queue WHERE locked IS NULL AND expcnt=0 AND priority>=4 ORDER BY priority DESC, time ASC LIMIT 1";
       $bar = $self->SimpleSqlGet( $sql );
@@ -5523,6 +5432,24 @@ sub GetNextItemForReview
     }
     
     return $bar;
+}
+
+sub GetTrainingMode
+{
+  my $self = shift;
+  
+  my $sql = 'SELECT train FROM mode';
+  return ($self->SimpleSqlGet($sql))? 1:0;
+}
+
+sub SetTrainingMode
+{
+  my $self  = shift;
+  my $train = shift;
+  
+  $train = ($train)? 1:0;
+  my $sql = "UPDATE mode SET train=$train";
+  return $self->SimpleSqlGet($sql);
 }
 
 sub GetQueuePriorities
@@ -5927,7 +5854,9 @@ sub CreateQueueReport
   $report .= "<tr><th>Last&nbsp;Queue&nbsp;Update</th><td>$val</td></tr>\n";
   $report .= sprintf("<tr><th>Volumes&nbsp;Last&nbsp;Added</th><td>%s</td></tr>\n", ($self->GetLastIdQueueCount() or 0));
   $report .= sprintf("<tr><th>Cumulative&nbsp;Volumes&nbsp;in&nbsp;Queue&nbsp;(ever*)</th><td>%s</td></tr>\n", ($self->GetTotalEverInQueue() or 0));
-  $report .= sprintf("<tr><th>Volumes&nbsp;in&nbsp;Candidates</th><td>%s</td></tr>\n", $self->GetCandidatesSize());
+  my $sql = 'SELECT COUNT(*) FROM candidates WHERE checked=1';
+  my $checked = $self->SimpleSqlGet($sql);
+  $report .= sprintf("<tr><th>Volumes&nbsp;in&nbsp;Candidates</th><td>%s (%d <code>und</code> checked)</td></tr>\n", $self->GetCandidatesSize(), $checked);
   $val = $self->GetLastLoadTimeToCandidates();
   $val =~ s/\s/&nbsp;/g;
   $report .= sprintf("<tr><th>Last&nbsp;Candidates&nbsp;Addition</th><td>%s&nbsp;on&nbsp;$val</td></tr>", $self->GetLastLoadSizeToCandidates());
@@ -6040,28 +5969,28 @@ sub CreateReviewReport
   $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=1";
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Single&nbsp;Review</td><td>$count</td>";
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Single&nbsp;Review</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
   
   # Unprocessed - match
   $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=4";
   my $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Matches</td><td>$count</td>";
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Matches</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
   
   # Unprocessed - conflict
   $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=2";
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Conflicts</td><td>$count</td>";
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflicts</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
   
   # Unprocessed - matching und/nfi
   $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=3";
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Matching&nbsp;<code>und/nfi</code></td><td>$count</td>";
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Matches</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
   
   # Processed
@@ -6074,19 +6003,19 @@ sub CreateReviewReport
   $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=2";
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Conflicts</td><td>$count</td>";
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflicts</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
 
   $sql = 'SELECT id from queue WHERE status=3';
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Matching&nbsp;<code>und/nfi</code></td><td>$count</td>";
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Matches</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
 
   $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=4 OR status=5 OR status=6";
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Awaiting&nbsp;Export</td><td>$count</td>";
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Awaiting&nbsp;Export</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
   $report .= sprintf("<tr><td colspan='%d'><span class='smallishText'>Last processed %s</span></td></tr>\n", $maxpri+3, $self->GetLastStatusProcessedTime());
   $report .= "</table>\n";
@@ -6474,7 +6403,7 @@ sub GetType1Reviewers
 {
   my $self = shift;
   my $dbh = $self->get( 'dbh' );
-  my $sql = 'SELECT DISTINCT id FROM users WHERE id NOT LIKE "rereport%" AND id NOT IN (SELECT id FROM users WHERE type=2)';
+  my $sql = 'SELECT id FROM sresu WHERE id NOT LIKE "rereport%" AND expert=0 AND admin=0 AND superadmin=0';
   return map {$_->[0]} @{$dbh->selectall_arrayref( $sql )};
 }
 
@@ -6840,7 +6769,8 @@ sub HoldSummary
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
   if (scalar @{$ref})
   {
-    $report .= "<table class='exportStats' style='width:50%;'><tr><th>ID</th><th>Author</th><th>Title</th><th>Hold&nbsp;Thru</th></tr>\n";
+    $report .= "<table class='exportStats' style='width:50%;'>";
+    $report .= "<tr><th>ID</th><th>Author</th><th>Title</th><th>Hold&nbsp;Thru</th></tr>\n";
   }
   foreach my $row ( @{$ref} )
   {
@@ -6855,31 +6785,5 @@ sub HoldSummary
   return $report;
 }
 
-sub HoldReport
-{
-  my $self = shift;
-  
-  my $report = '';
-  my $sql = 'SELECT DISTINCT id FROM users ORDER BY id ASC';
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-  foreach my $row ( @{$ref} )
-  {
-    my $user = $row->[0];
-    $sql = "SELECT r.id,b.author,b.title,r.hold FROM reviews r INNER JOIN bibdata b ON r.id=b.id WHERE r.user='$user' AND r.hold IS NOT NULL ORDER BY r.hold ASC, r.id ASC";
-    my $ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    foreach my $row2 ( @{$ref2} )
-    {
-      my $id = $self->DetailInfoForReview($row2->[0], $user, 'editReviews');
-      my $a = $row2->[1];
-      my $t = $row2->[2];
-      my $h = $self->FormatDate($row2->[3]);
-      $h =~ s/\s/&nbsp;/g;
-      $report .= "<tr><td>$user</td><td>$id</td><td>$a</td><td>$t</td><td>$h</td></tr>\n";
-    }
-  }
-  $report = "<table class='exportStats' style='width:50%;'><tr><th>User</th><th>ID</th><th>Author</th><th>Title</th><th>Hold&nbsp;Thru</th></tr>\n" .
-            $report . '</table>' if length $report;
-  return $report;
-}
 
 1;
