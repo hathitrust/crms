@@ -1122,7 +1122,7 @@ sub GetStatusForExpertReview
   if ($qstatus == 3 || $qstatus == 5 || $qstatus == 6)
   {
     # If provisional match, see if the expert agreed with both of existing non-expert review. If so, status 6.
-    my $sql = "SELECT attr,reason FROM reviews WHERE id='$id' AND user IN (SELECT id FROM sresu WHERE expert=0)";
+    my $sql = "SELECT attr,reason FROM reviews WHERE id='$id' AND user IN (SELECT id FROM users WHERE expert=0)";
     my $ref = $self->get('dbh')->selectall_arrayref($sql);
     if (scalar @{ $ref } >= 2)
     {
@@ -2888,7 +2888,7 @@ sub GetUserName
   my $user = shift;
 
   $user = $self->get('user') unless $user;
-  my $sql = "SELECT name FROM sresu WHERE id='$user'";
+  my $sql = "SELECT name FROM users WHERE id='$user'";
   return $self->SimpleSqlGet( $sql );
 }
 
@@ -2899,7 +2899,7 @@ sub GetAliasUserName
   my $user = shift;
 
   $user = $self->get('user') unless $user;
-  my $sql = "SELECT alias FROM sresu WHERE id='$user'";
+  my $sql = "SELECT alias FROM users WHERE id='$user'";
   return $self->SimpleSqlGet( $sql );
 }
 
@@ -2910,7 +2910,7 @@ sub ChangeAliasUserName
   my $new_user = shift;
 
   $user = $self->get('user') unless $user;
-  my $sql = "UPDATE sresu SET alias='$new_user' WHERE id='$user'";
+  my $sql = "UPDATE users SET alias='$new_user' WHERE id='$user'";
   $self->PrepareSubmitSql( $sql );
 }
 
@@ -2920,7 +2920,7 @@ sub IsUserReviewer
   my $user = shift;
 
   $user = $self->get('user') unless $user;
-  my $sql = "SELECT reviewer FROM sresu WHERE id='$user'";
+  my $sql = "SELECT reviewer FROM users WHERE id='$user'";
   return $self->SimpleSqlGet( $sql );
 }
 
@@ -2930,7 +2930,7 @@ sub IsUserAdvanced
   my $user = shift;
 
   $user = $self->get('user') unless $user;
-  my $sql = "SELECT advanced FROM sresu WHERE id='$user'";
+  my $sql = "SELECT advanced FROM users WHERE id='$user'";
   return $self->SimpleSqlGet( $sql );
 }
 
@@ -2940,7 +2940,7 @@ sub IsUserExpert
   my $user = shift;
 
   $user = $self->get('user') unless $user;
-  my $sql = "SELECT expert FROM sresu WHERE id='$user'";
+  my $sql = "SELECT expert FROM users WHERE id='$user'";
   return $self->SimpleSqlGet( $sql );
 }
 
@@ -2950,7 +2950,7 @@ sub IsUserAdmin
   my $user = shift;
 
   $user = $self->get('user') unless $user;
-  my $sql = "SELECT (admin OR superadmin) FROM sresu WHERE id='$user'";
+  my $sql = "SELECT (admin OR superadmin) FROM users WHERE id='$user'";
   return $self->SimpleSqlGet( $sql );
 }
 
@@ -2960,7 +2960,7 @@ sub IsUserSuperAdmin
   my $user = shift;
 
   $user = $self->get('user') unless $user;
-  my $sql = "SELECT superadmin FROM sresu WHERE id='$user'";
+  my $sql = "SELECT superadmin FROM users WHERE id='$user'";
   return $self->SimpleSqlGet( $sql );
 }
 
@@ -2972,7 +2972,7 @@ sub GetUsers
   
   my $dbh  = $self->get( 'dbh' );
   $order = ($order)? 'ORDER BY advanced+expert+admin+superadmin ASC, name ASC':'ORDER BY name ASC';
-  my $sql = "SELECT id FROM sresu $order";
+  my $sql = "SELECT id FROM users $order";
   my $ref = $dbh->selectall_arrayref( $sql );
   my @users = map { $_->[0]; } @{ $ref };
   return \@users;
@@ -4026,7 +4026,7 @@ sub DeleteUser
   my $self = shift;
   my $id   = shift;
   
-  my $sql = "DELETE FROM sresu WHERE id='$id'";
+  my $sql = "DELETE FROM users WHERE id='$id'";
   $self->PrepareSubmitSql($sql);
 }
 
@@ -4046,8 +4046,8 @@ sub AddUser
     $expert = ($expert)? 1:0;
     $admin = ($admin)? 1:0;
     $superadmin = ($superadmin)? 1:0;
-    $name = $self->SimpleSqlGet("SELECT name FROM sresu WHERE id='$id'") unless $name;
-    my $sql = "REPLACE INTO sresu (id,name,reviewer,advanced,expert,admin,superadmin)" .
+    $name = $self->SimpleSqlGet("SELECT name FROM users WHERE id='$id'") unless $name;
+    my $sql = "REPLACE INTO users (id,name,reviewer,advanced,expert,admin,superadmin)" .
               " VALUES ('$id','$name',$reviewer,$advanced,$expert,$admin,$superadmin)";
     #print "$sql<br/>\n";
     $self->PrepareSubmitSql($sql);
@@ -6432,7 +6432,7 @@ sub GetType1Reviewers
 {
   my $self = shift;
   my $dbh = $self->get( 'dbh' );
-  my $sql = 'SELECT id FROM sresu WHERE id NOT LIKE "rereport%" AND expert=0 AND admin=0 AND superadmin=0';
+  my $sql = 'SELECT id FROM users WHERE id NOT LIKE "rereport%" AND expert=0 AND admin=0 AND superadmin=0';
   return map {$_->[0]} @{$dbh->selectall_arrayref( $sql )};
 }
 
