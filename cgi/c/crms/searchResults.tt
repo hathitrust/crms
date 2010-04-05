@@ -166,11 +166,13 @@ function CheckAll(box,formid)
           [% active_color = color_gray %]
         [% END %]
       [% END %]
-
       <tr style="background-color:[% active_color %];">
-        [% IF p == 'editReviews' %]<td>[% crms.DetailInfoForReview(review.id, review.user, p) %]</td>
-        [% ELSE %]<td>[% crms.DetailInfo(review.id, review.user, p) %]</td>[% END %]
-        [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' %]<td>[% crms.LinkToReview( review.id ) %]</td>
+        [% IF p == 'editReviews' %]<td>[% crms.DetailInfoForReview(review.id, review.user, p) %]
+        [% ELSE %]<td><span style="white-space:nowrap;">[% crms.DetailInfo(review.id, review.user, p) %][% END %]
+        [% IF (p == 'expert' || p == 'undReviews' || p == 'editReviews') && crms.IsLockedForOtherUser(review.id) %]
+          <img width="16" height="16" alt="Locked" src="/c/crms/Lock.png"/>
+        [% END %]</span></td>
+        [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' %]<td>[% (crms.IsLockedForOtherUser(review.id))? review.title : crms.LinkToReview(review.id) %]</td>
         [% ELSE %]<td>[% crms.LinkToPT( review.id ) %]</td>[% END %]
         <td>$review.author</td>
         [% IF p == 'adminHistoricalReviews' %]<td>$review.pubdate</td>[% END %]
@@ -192,7 +194,7 @@ function CheckAll(box,formid)
         [% IF crms.IsUserExpert() %]<td>$review.swiss</td>[% END %]
         [% IF p == 'undReviews' %]
         <td align="center">
-          [% IF first %]
+          [% IF first && !crms.IsLockedForOtherUser(review.id) %]
             <input type="checkbox" name="vol_[% review.id %]"/>
           [% END %]
         </td>
