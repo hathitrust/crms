@@ -120,7 +120,7 @@ if ( $cgi->param('p') eq 'confirmReview' )
 
     my $errorMsg1 = $crms->HasItemBeenReviewedByTwoReviewers( $id, $user );
 
-    my $errorMsg = $crms->ValidateSubmission2( $rights, $reason, $comment, $category, $renNum, $renDate, $user );
+    my $errorMsg = $crms->ValidateSubmission2( $id, $user, $rights, $reason, $comment, $category, $renNum, $renDate );
     
     my $stat = $crms->GetSystemStatus();
     # Actually, this never gets displayed, but that's OK
