@@ -5,27 +5,101 @@
 
 [% INCLUDE header.tt    %]
 [% INCLUDE adminNav.tt  %]
+[% id         = cgi.param('id')         %]
+[% add        = cgi.param('add')        %]
+[% name       = cgi.param('name')       %]
+[% reviewer   = cgi.param('reviewer')   %]
+[% advanced   = cgi.param('advanced')   %]
+[% expert     = cgi.param('expert')     %]
+[% admin      = cgi.param('admin')      %]
+[% superadmin = cgi.param('superadmin') %]
+[% delete     = cgi.param('delete')     %]
 
-<hr width="25%" align="left"/>
-<h3>click to edit users</h3>
+[% icon = '<img width="16" height="16" alt="Check" src="/c/crms/CheckIcon.png"/>' %]
+<hr width="25%" align="left"/><br/>
+<h2>Users:</h2>
 
-[% users = crms.GetUserData() %]
+[% IF add %]
+  [% IF delete %]
+    [% IF id %]
+      [% blah = crms.DeleteUser(id) %]
+      <h3>[% id %] was deleted</h3>
+      [% id = '' %]
+    [% END %]
+  [% ELSE %]
+    [% blah = crms.AddUser(id,name,reviewer,advanced,expert,admin,superadmin) %]
+  [% END %]
+[% END %]
+
+[% users = crms.GetUsers() %]
 <table class="exportStats">
-  <tr><th>Name</th><th>Privileges</th><th>ID</th></tr>
-  [% FOREACH user IN users.keys.sort %]
-    <tr>
-      <td><a href="crms?p=adminEditUser&amp;id=[% users.${user}.id %]">[% users.${user}.name.replace('\s','&nbsp;') %]</a></td>
-      <td>[% users.${user}.types.sort.join(", ") %]</td>
-      <td>[% users.${user}.id %]</td>
+  <tr><th>Name</th><th>ID</th><th>Reviewer</th><th>Advanced</th><th>Expert</th><th>Admin</th><th>Super&nbsp;Admin</th><th>Change&nbsp;To</th></tr>
+  [% FOREACH user IN users %]
+    <tr [% id == user ? 'class="total"':''%]>
+      <td><a href="crms?p=userRate&amp;user=[% user %]" target="_blank">[% crms.GetUserName(user).replace('\s','&nbsp;') %]</a></td>
+      <td>[% user %]</td>
+      <td style="text-align:center">[% IF crms.IsUserReviewer(user) %][% icon %][% END %]</td>
+      <td style="text-align:center">[% IF crms.IsUserAdvanced(user) %][% icon %][% END %]</td>
+      <td style="text-align:center">[% IF crms.IsUserExpert(user) %][% icon %][% END %]</td>
+      <td style="text-align:center">[% IF crms.IsUserAdmin(user) %][% icon %][% END %]</td>
+      <td style="text-align:center">[% IF crms.IsUserSuperAdmin(user) %][% icon %][% END %]</td>
+      [% meSuper = crms.IsUserSuperAdmin() %]
+      [% super = crms.IsUserSuperAdmin(user) %]
+      <td>
+        [% IF (meSuper || !super) && user != crms.get('user') %]
+        <form action="crms">
+          <input type="hidden" name="changeuser" value="1"/>
+          <input type="hidden" name="newuser" value="[% user %]"/>
+          <input type="submit" value="Go"/>
+        </form>
+        [% END %]
+      </td>
     </tr>
   [% END %]
 </table>
+<br/>
 
-
-
-[% INCLUDE editUserForm.tt %]
-
-[% INCLUDE changeUser.tt %]
+<h4>Add or Edit a User:</h4>
+<div style="position:relative;border-style:solid;width:38em;border-width:1px;padding:10px;">
+  <form action="crms">
+    <input type="hidden" name="p" value="adminUser"/>
+    <input type="hidden" name="add" value="1"/>
+    <label for="namefield" style="float:left;width:4em">Name:</label>
+    <input id="namefield" type="text" name="name" value="[% (id)? crms.GetUserName(id):'' %]"/><br/> 
+    <label for="idfield" style="float:left;width:4em">ID:</label>
+    <input id="idfield" type="text" name="id" value="[% id %]"/><br/>
+    <br/>
+    <input type="checkbox" name="reviewer"
+      [% IF id %]
+        [% crms.IsUserReviewer(id) ? 'checked="checked"' : '' %]
+      [% END %]
+      /> Reviewer
+    <input type="checkbox" name="advanced"
+      [% IF id %]
+        [% crms.IsUserAdvanced(id) ? 'checked="checked"' : '' %]
+      [% END %]
+      /> Advanced Reviewer
+    <input type="checkbox" name="expert"
+      [% IF id %]
+        [% crms.IsUserExpert(id) ? 'checked="checked"' : '' %]
+      [% END %]
+      /> Expert
+    <input type="checkbox" name="admin"
+      [% IF id %]
+        [% crms.IsUserAdmin(id) ? 'checked="checked"' : '' %]
+      [% END %]
+      /> Admin
+    <input type="checkbox" name="superadmin"
+      [% IF id %]
+        [% crms.IsUserSuperAdmin(id) ? 'checked="checked"' : '' %]
+      [% END %]
+      [% crms.IsUserSuperAdmin() ? '' : 'disabled="disabled"' %]
+      /> Super Admin
+    
+  
+    <br/><br/><input type="checkbox" name="delete"/> Delete user
+    <br/><br/><input type="submit"  value="Submit"/>
+  </form>
+</div>
 
 [% INCLUDE footer.tt %]
-
