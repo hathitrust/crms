@@ -34,7 +34,6 @@
   [% END %]
 
 
-<hr width="25%" align="left"/>
-some other stuff...
+
 
 [% INCLUDE footer.tt %]
