@@ -1096,8 +1096,7 @@ sub SubmitReview
       {
         my $sql = "UPDATE $CRMSGlobals::queueTable SET expcnt=1 WHERE id='$id'";
         $result = $self->PrepareSubmitSql( $sql );
-        my $qstatus = $self->SimpleSqlGet("SELECT status FROM queue WHERE id='$id'");
-        my $status = ($attr == 5 && $reason == 8 && $qstatus == 3)? 6:5;
+        my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason);
         #We have decided to register the expert decision right away.
         $self->RegisterStatus($id, $status);
       }
@@ -1108,6 +1107,36 @@ sub SubmitReview
       $self->UnlockItem( $id, $user );
     }
     return $result;
+}
+
+sub GetStatusForExpertReview
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $user   = shift;
+  my $attr   = shift;
+  my $reason = shift;
+  
+  my $status = 5;
+  my $qstatus = $self->SimpleSqlGet("SELECT status FROM queue WHERE id='$id'");
+  if ($qstatus == 3 || $qstatus == 5 || $qstatus == 6)
+  {
+    # If provisional match, see if the expert agreed with both of existing non-expert review. If so, status 6.
+    my $sql = "SELECT attr,reason FROM reviews WHERE id='$id' AND user IN (SELECT id FROM sresu WHERE expert=0)";
+    my $ref = $self->get('dbh')->selectall_arrayref($sql);
+    if (scalar @{ $ref } >= 2)
+    {
+      my $attr1 = $ref->[0]->[0];
+      my $reason1 = $ref->[0]->[1];
+      my $attr2 = $ref->[1]->[0];
+      my $reason2 = $ref->[1]->[1];
+      if ($attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1)
+      {
+        $status = 6;
+      }
+    }
+  }
+  return $status;
 }
 
 sub GetItemPriority
