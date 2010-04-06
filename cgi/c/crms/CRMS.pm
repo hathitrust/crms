@@ -581,9 +581,9 @@ sub LoadNewItemsInCandidates
         {
           $src = 'language';
         }
-        if ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
-        if ($self->IsTranslation($id, $record)) { $src = 'translation'; }
-        if ($self->IsForeignPub($id, $record)) { $src = 'foreign'; }
+        elsif ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
+        elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
+        elsif ($self->IsForeignPub($id, $record)) { $src = 'foreign'; }
         if ($src)
         {
           print "Skip $id ($src) -- inserting in und table\n";
@@ -655,6 +655,7 @@ sub LoadNewItems
         my $title = $row->[3];
         my $author = $row->[4];
         my $record = $self->GetRecordMetadata($id);
+        # FIXME: this can probably be eliminated since candidates is completely filtered.
         my $src = undef;
         my $lang = $self->GetPubLanguage($id, $record);
         if ('eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
