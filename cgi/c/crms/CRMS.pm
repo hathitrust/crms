@@ -5884,16 +5884,14 @@ sub CreateQueueReport
   $report .= "<tr><th>Last&nbsp;Queue&nbsp;Update</th><td>$val</td></tr>\n";
   $report .= sprintf("<tr><th>Volumes&nbsp;Last&nbsp;Added</th><td>%s</td></tr>\n", ($self->GetLastIdQueueCount() or 0));
   $report .= sprintf("<tr><th>Cumulative&nbsp;Volumes&nbsp;in&nbsp;Queue&nbsp;(ever*)</th><td>%s</td></tr>\n", ($self->GetTotalEverInQueue() or 0));
-  my $sql = 'SELECT COUNT(*) FROM candidates WHERE checked=1';
-  my $checked = $self->SimpleSqlGet($sql);
-  $report .= sprintf("<tr><th>Volumes&nbsp;in&nbsp;Candidates</th><td>%s (%d <code>und</code> checked)</td></tr>\n", $self->GetCandidatesSize(), $checked);
+  $report .= sprintf("<tr><th>Volumes&nbsp;in&nbsp;Candidates</th><td>%s</td></tr>\n", $self->GetCandidatesSize());
   $val = $self->GetLastLoadTimeToCandidates();
   $val =~ s/\s/&nbsp;/g;
   $report .= sprintf("<tr><th>Last&nbsp;Candidates&nbsp;Addition</th><td>%s&nbsp;on&nbsp;$val</td></tr>", $self->GetLastLoadSizeToCandidates());
   $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und');
   if ($count)
   {
-    $report .= "<tr><th>Items&nbsp;Filtered&nbsp;as&nbsp;Likely&nbsp;<code>und</code></th><td>$count</td></tr>\n";
+    $report .= "<tr><th>Items&nbsp;Filtered&nbsp;as&nbsp;Likely&nbsp;<code>und</code>**</th><td>$count</td></tr>\n";
     my $ref = $self->get('dbh')->selectall_arrayref('SELECT src,COUNT(src) FROM und GROUP BY src ORDER BY src');
     foreach my $row (@{ $ref})
     {
@@ -5903,7 +5901,8 @@ sub CreateQueueReport
     }
   }
   $report .= "</table>\n";
-  $report .= "<span class='smallishText'>* Not including legacy data (reviews/determinations made prior to June 2009)</span>";
+  $report .= '<span class="smallishText">* Not including legacy data (reviews/determinations made prior to June 2009).</span><br/>';
+  $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count above.</span>';
   $report .= "</td></tr></table>\n";
   return $report;
 }
