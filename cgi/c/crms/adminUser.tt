@@ -5,6 +5,9 @@
 
 [% INCLUDE header.tt    %]
 [% INCLUDE adminNav.tt  %]
+
+<h2>Users:</h2>
+
 [% id         = cgi.param('id')         %]
 [% add        = cgi.param('add')        %]
 [% name       = cgi.param('name')       %]
@@ -16,8 +19,6 @@
 [% delete     = cgi.param('delete')     %]
 
 [% icon = '<img width="16" height="16" alt="Check" src="/c/crms/CheckIcon.png"/>' %]
-<hr width="25%" align="left"/><br/>
-<h2>Users:</h2>
 
 [% IF add %]
   [% IF delete %]

@@ -6,7 +6,6 @@
 [% INCLUDE header.tt    %]
 [% INCLUDE adminNav.tt  %]
 
-<hr width="25%" align="left"/><br/>
 <h2>Queue:</h2>
 
 [% INCLUDE queueSelection.tt  %]

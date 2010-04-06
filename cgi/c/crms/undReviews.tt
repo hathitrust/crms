@@ -17,7 +17,6 @@
   [% END %]
 [% END %]
 
-<hr width="25%" align="left"/><br/>
 <h2>Provisional Matches:</h2>
 
 [% INCLUDE selection.tt  %]

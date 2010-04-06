@@ -12,8 +12,7 @@
 [% INCLUDE header.tt    %]
 [% INCLUDE adminNav.tt  %]
 
-<hr width="25%" align="left"/>
-<br/><br/>
+<br/>
 <table class='exportStats'>
 <tr>
 <th>Sanity&nbsp;check&nbsp;the&nbsp;database</th>

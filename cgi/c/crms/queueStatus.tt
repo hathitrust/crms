@@ -1,8 +1,7 @@
 [% INCLUDE header.tt    %]
 [% INCLUDE adminNav.tt  %]
 
-<br/>
-<h2>Queue</h2><br/>
+<h2>Queue Status:</h2><br/>
 [% crms.CreateQueueReport() %]<br/>
 
 <table style="width:100px;">

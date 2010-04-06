@@ -1,7 +1,6 @@
 [% INCLUDE header.tt    %]
 [% INCLUDE homeLink.tt  %]
 
-<hr width="25%" align="left"/><br/>
 <h2>Edit Unprocessed Reviews:</h2>
     
 [% INCLUDE selection.tt  %]

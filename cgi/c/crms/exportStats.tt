@@ -1,6 +1,6 @@
 [% INCLUDE header.tt %]
 [% INCLUDE adminNav.tt  %]
-<br/>
+
 <h2 style="margin-left:390px">Statistics for Exported Determinations</h2>
 <h3>CRMS&nbsp;Project&nbsp;Cumulative*&nbsp;&nbsp;&nbsp;&nbsp;<a target="_blank" href="/cgi/c/crms/getExportStats?type=text&amp;c=1">Download</a></h3>
 <table style="width:100px;">

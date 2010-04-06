@@ -11,7 +11,6 @@
 [% override = cgi.param('override') %]
 [% IF NOT pri %][% pri = 0 %][% END %]
 
-<hr width="25%" align="left"/><br/>
 <h2>Add Volumes to the Queue:</h2>
 These items will take priority in the review process.
 

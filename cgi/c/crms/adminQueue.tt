@@ -6,8 +6,6 @@
 [% INCLUDE header.tt    %]
 [% INCLUDE adminNav.tt  %]
 
-<hr width="25%" align="left"/>
-
 [% IF cgi.param('clear') %] [% crms.RemoveOldLocks() %][% END %]
 
 <div>

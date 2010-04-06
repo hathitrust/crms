@@ -6,7 +6,6 @@
 [% INCLUDE homeLink.tt  %]
 [% END %]
 
-<hr width="25%" align="left"/><br/>
 <h2>Active Reviews:</h2>
 
 [% INCLUDE selection.tt  %]

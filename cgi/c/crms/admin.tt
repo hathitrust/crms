@@ -5,8 +5,6 @@
 
 [% INCLUDE header.tt    %]
 [% INCLUDE adminNav.tt  %]
-<hr width="25%" align="left"/>
-<br/>
 
 <div>
   || <a href="crms?p=adminUser">administer user accounts</a>
