@@ -3422,54 +3422,32 @@ sub CreateExportStatusData
   $end = "$year-$month-$lastDay" unless $end;
   ($start,$end) = ($end,$start) if $end lt $start;
   $start = '2009-07-01' if $start lt '2009-07-01';
-  my $sql = "SELECT DISTINCT(DATE(time)) FROM exportdata WHERE DATE(time)>='$start' AND DATE(time)<='$end'";
+  my $what = 'DATE(time)';
+  $what = 'DATE_FORMAT(time, "%Y-%m")' if $monthly;
+  my $sql = "SELECT DISTINCT($what) FROM exportdata WHERE DATE(time)>='$start' AND DATE(time)<='$end'";
   #print "$sql<br/>\n";
-  my @justdates = map {$_->[0];} @{$self->get('dbh')->selectall_arrayref( $sql )};
-  my @dates = ();
-  my $currmonth = 0;
-  foreach my $date (@justdates)
-  {
-    my ($y,$m,$d) = split '-', $date;
-    if ($m ne $currmonth && $currmonth)
-    {
-      push @dates, 'Total';
-    }
-    $currmonth = $m;
-    push @dates, $date;
-  }
+  my @dates = map {$_->[0];} @{$self->get('dbh')->selectall_arrayref( $sql )};
   if (scalar @dates && !$justThisMonth)
   {
     my $startEng = $self->YearMonthToEnglish(substr($dates[0],0,7));
     my $endEng = $self->YearMonthToEnglish(substr($dates[-1],0,7));
     $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
   }
-  push @dates, 'Total';
-  #$start = $dates[0];
-  #$end = $dates[-1];
-  
   my $report = ($title)? "$title\n":"Final Determinations Breakdown $titleDate\n";
   my @titles = ('Date','Status 4','Status 5','Status 6','Total','Status 4','Status 5','Status 6');
   $report .= join($delimiter, @titles) . "\n";
-  my $currmonth;
-  my $curryear;
   my @totals = (0,0,0);
   foreach my $date (@dates)
   {
     my ($y,$m,$d) = split '-', $date;
     my $date1 = $date;
     my $date2 = $date;
-    if ($date eq 'Total')
+    if ($monthly)
     {
-      $date .= sprintf(' %s', $self->YearMonthToEnglish("$curryear-$currmonth"));
-      $date1 = "$curryear-$currmonth-01";
-      my $lastDay = Days_in_Month($curryear,$currmonth);
-      $date2 = "$curryear-$currmonth-$lastDay";
-    }
-    else
-    {
-      $currmonth = $m;
-      $curryear = $y;
-      next if $monthly;
+      $date1 = "$date-01";
+      my $lastDay = Days_in_Month($y,$m);
+      $date2 = "$date-$lastDay";
+      $date = $self->YearMonthToEnglish($date);
     }
     my @line = (0,0,0,0,0,0,0);
     my @stati = $self->GetStatusBreakdown($date1, $date2);
@@ -3488,18 +3466,15 @@ sub CreateExportStatusData
     $report .= $date;
     $report .= $delimiter . join($delimiter, @line) . "\n";
   }
-  if ($monthly && !$justThisMonth)
+  my $gt = $totals[0] + $totals[1] + $totals[2];
+  push @totals, $gt;
+  for (my $i=0; $i < 3; $i++)
   {
-    my $gt = $totals[0] + $totals[1] + $totals[2];
-    push @totals, $gt;
-    for (my $i=0; $i < 3; $i++)
-    {
-      my $pct = 0.0;
-      eval {$pct = 100.0*$totals[$i]/$gt;};
-      push @totals, sprintf('%.1f%%', $pct);
-    }
-    $report .= 'Total' . $delimiter . join($delimiter, @totals) . "\n";
+    my $pct = 0.0;
+    eval {$pct = 100.0*$totals[$i]/$gt;};
+    push @totals, sprintf('%.1f%%', $pct);
   }
+  $report .= 'Total' . $delimiter . join($delimiter, @totals) . "\n";
   return $report;
 }
 
@@ -3514,6 +3489,7 @@ sub GetStatusBreakdown
   {
     my $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r ON e.gid=r.gid WHERE ' .
              "r.legacy=0 AND date(e.time)>='$start' AND date(e.time)<='$end' AND r.status=$status";
+    #$sql .= ' AND (r.priority=0 OR r.priority=2) AND r.legacy=0';
     #print "$sql<br/>\n";
     push @counts, $self->SimpleSqlGet($sql);
   }
@@ -3549,10 +3525,10 @@ sub CreateExportStatusReport
     {
       $report .= '<tr><th style="text-align:right;">Total</th>';
     }
-    elsif (substr($date,0,5) eq 'Total')
-    {
-      $report .= "<tr><th class='minor'><span class='minor'>$date</span></th>"
-    }
+    #elsif (substr($date,0,5) eq 'Total')
+    #{
+    #  $report .= "<tr><th class='minor'><span class='minor'>$date</span></th>"
+    #}
     else
     {
       $report .= "<tr><th>$date</th>";
@@ -3561,7 +3537,7 @@ sub CreateExportStatusReport
     {
       my $class = '';
       my $style = ($i==3)? 'style="border-right:double 6px black"':'';
-      if ($date ne 'Total' && (substr($date,0,5) eq 'Total' || $i == 3))
+      if ($i == 3 && $date ne 'Total')
       {
         $class = 'class="minor"';
       }
