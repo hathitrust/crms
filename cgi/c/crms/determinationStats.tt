@@ -1,7 +1,6 @@
 [% INCLUDE header.tt %]
 [% INCLUDE adminNav.tt %]
 [% page = cgi.param('p') %]
-[% monthly = cgi.param('monthly') %]
 [% startDate = cgi.param('startDate') %]
 [% endDate = cgi.param('endDate') %]
 <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
@@ -32,8 +31,6 @@
 </script>
 <span class="smallText">(YYYY-MM-DD)</span>
 <br/>
-Just show monthly totals<input type="checkbox" name="monthly" id="monthly" [% monthly? 'checked="checked"' : '' %]/>
-<br/>
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"
        onclick="document.getElementById('startDate').value='';
@@ -43,7 +40,7 @@ Just show monthly totals<input type="checkbox" name="monthly" id="monthly" [% mo
 </div>
 <br/>
 
-[% crms.CreateExportStatusReport(startDate, endDate, monthly) %]
+[% crms.CreateExportStatusReport(startDate, endDate, 0) %]
 <br/><br/><br/>
 <table style="padding:0px; width:800px; height:300px; border-collapse:collapse">
 <tr style="background-color:#000000;"><td><div id="chart0"/></td></tr>
