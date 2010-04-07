@@ -26,6 +26,9 @@
     [% STOP %]
   [% END %]
   [% err = crms.LockItem(inBarcode, user) %]
+  [% IF !err && crms.IsUserExpert(user) && crms.HasItemBeenReviewedByAnotherExpert(inBarcode,user) %]
+      [% err = 'Item has already been reviewed by another expert.' %]
+  [% END %]
   [% IF err != 0 %]
     <h3>[% err %].</h3>
     [% locked = crms.GetLockedItems(user) %]

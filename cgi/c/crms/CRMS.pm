@@ -4111,7 +4111,7 @@ sub HasItemBeenReviewedByTwoReviewers
   my $msg = '';
   if ( $self->IsUserExpert( $user ) )
   {
-    if ($self->HasItemBeenReviewedByAnotherExpert($id,$user) && $self->GetItemPriority($id) == 0)
+    if ($self->HasItemBeenReviewedByAnotherExpert($id,$user))
     {
       $msg = 'This volume does not need to be reviewed. An expert has already reviewed it. Please Cancel.';
     }
