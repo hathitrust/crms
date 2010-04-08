@@ -27,6 +27,7 @@
   [% END %]
   [% IF crms.IsUserExpert(user) && crms.HasItemBeenReviewedByAnotherExpert(inBarcode,user) %]
     <h3>Item has already been reviewed by another expert.</h3>
+    <br/><a href="JavaScript:window.close()">Close</a>
     [% STOP %]
   [% END %]
   [% err = crms.LockItem(inBarcode, user) %]
