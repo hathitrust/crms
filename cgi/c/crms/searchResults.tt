@@ -126,8 +126,6 @@ function CheckAll(box,formid)
     <input type="hidden" name="approve" value="1"/>
     [% IF p == 'undReviews' %]
       <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
-    [% ELSIF p == 'expert' %]
-      <input type="reset" value="Deselect All"/>&nbsp;&nbsp;&nbsp;&nbsp;
     [% END %]
     <input type="submit" value="Approve All Selected Volumes"/><br/><br/>
   [% END %]
