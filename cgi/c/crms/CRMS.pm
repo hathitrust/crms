@@ -1017,6 +1017,7 @@ sub CloneReview
   my $sql = "SELECT attr,reason FROM reviews WHERE id='$id'";
   my $rows = $self->get('dbh')->selectall_arrayref($sql);
   return "Could not approve review for $id because it is locked by another user." if $self->IsLockedForOtherUser($id, $user);
+  return "Could not approve review for $id because it has already been reviewed by an expert." if $self->HasItemBeenReviewedByAnotherExpert($id,$user);
   my $result = $self->SubmitReview($id,$user,$rows->[0]->[0],$rows->[0]->[1],undef,undef,undef,1,undef,'Expert Accepted');
   return ($result)? '':"Could not approve review for $id";
 }
@@ -5440,22 +5441,35 @@ sub GetNextItemForReview
     return $bar;
 }
 
+sub GetNextItemFromTrainingQueue
+{
+  my $self = shift;
+  
+  my $id = undef;
+  if ($self->GetTrainingMode())
+  {
+    $id = $self->SimpleSqlGet('SELECT q.id FROM training_queue q INNER JOIN mode m ON q.seq=m.seq');
+  }
+  return $id
+}
+
 sub GetTrainingMode
 {
   my $self = shift;
   
-  my $sql = 'SELECT train FROM mode';
-  return ($self->SimpleSqlGet($sql))? 1:0;
+  my $train = 0;
+  if ($self->get('dev'))
+  {
+    $train = 1 if $self->SimpleSqlGet('SELECT train FROM mode');
+  }
+  return $train;
 }
 
-sub SetTrainingMode
+sub ToggleTrainingMode
 {
   my $self  = shift;
-  my $train = shift;
-  
-  $train = ($train)? 1:0;
-  my $sql = "UPDATE mode SET train=$train";
-  return $self->SimpleSqlGet($sql);
+
+  $self->PrepareSubmitSql('UPDATE mode SET train=(!train)');
 }
 
 sub GetQueuePriorities
