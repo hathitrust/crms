@@ -33,7 +33,7 @@ These items will take priority in the review process.
 <br/>
 <p class="smallishText">Priority 2 can be be reviewed by anyone.<br/>
 Priority 3 can only be reviewed by an expert.<br/>
-Priority 4 can only be reviewed by Anne.<br/>
+Priority 4 can only be reviewed by a super admin.<br/>
 <i>Override Restrictions</i> allows you to enter government documents, non-books, and items from before 1923 or after 1963.<br/>
 </p>
 <br/>
