@@ -1014,11 +1014,14 @@ sub CloneReview
   my $id     = shift;
   my $user   = shift;
   
-  my $sql = "SELECT attr,reason FROM reviews WHERE id='$id'";
-  my $rows = $self->get('dbh')->selectall_arrayref($sql);
+  my $result = $self->LockItem($id, $user);
+  return $result if $result;
   return "Could not approve review for $id because it is locked by another user." if $self->IsLockedForOtherUser($id, $user);
   return "Could not approve review for $id because it has already been reviewed by an expert." if $self->HasItemBeenReviewedByAnotherExpert($id,$user);
-  my $result = $self->SubmitReview($id,$user,$rows->[0]->[0],$rows->[0]->[1],undef,undef,undef,1,undef,'Expert Accepted');
+  my $sql = "SELECT attr,reason FROM reviews WHERE id='$id'";
+  my $rows = $self->get('dbh')->selectall_arrayref($sql);
+  $result = $self->SubmitReview($id,$user,$rows->[0]->[0],$rows->[0]->[1],undef,undef,undef,1,undef,'Expert Accepted');
+  $self->UnlockItem($id, $user);
   return ($result)? '':"Could not approve review for $id";
 }
 
