@@ -3127,7 +3127,7 @@ sub CreateExportData
   my $end            = shift;
   my $doPercent      = shift;
   
-  #print "CreateExportData('$delimiter', $cumulative, $doCurrentMonth, '$start', '$end')<br/>\n";
+  #print "CreateExportData('$delimiter', $cumulative, $doCurrentMonth, '$start', '$end', '$doPercent')<br/>\n";
   my $dbh = $self->get( 'dbh' );
   my ($year,$month) = $self->GetTheYearMonth();
   my $now = "$year-$month";
