@@ -1020,7 +1020,7 @@ sub CloneReview
   {
     $result = "Could not approve review for $id because you already reviewed it.";
   }
-  if ($self->IsLockedForOtherUser($id, $user))
+  elsif ($self->IsLockedForOtherUser($id, $user))
   {
     $result = "Could not approve review for $id because it is locked by another user.";
   }
@@ -1033,9 +1033,10 @@ sub CloneReview
     my $sql = "SELECT attr,reason FROM reviews WHERE id='$id'";
     my $rows = $self->get('dbh')->selectall_arrayref($sql);
     $result = $self->SubmitReview($id,$user,$rows->[0]->[0],$rows->[0]->[1],undef,undef,undef,1,undef,'Expert Accepted');
+    $result = ($result == 0)? "Could not approve review for $id":undef;
   }
   $self->UnlockItem($id, $user);
-  return ($result)? '':"Could not approve review for $id";
+  return $result;
 }
 
 ## ----------------------------------------------------------------------------
@@ -5397,7 +5398,7 @@ sub HasItemBeenReviewedByUser
   
   my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::reviewsTable WHERE id='$id' AND user='$user'";
   my $count = $self->SimpleSqlGet($sql);
-  return ($count)? 0:1;
+  return ($count)? 1:0;
 }
 
 ## ----------------------------------------------------------------------------
