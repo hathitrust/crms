@@ -1,9 +1,15 @@
 [% INCLUDE header.tt %]
 [% checkin = cgi.param('checkin') %]
+[% checkinAll = cgi.param("checkinAll") %]
 
 [% IF checkin %]
   [% IF crms.UnlockItem( checkin, user ) %]
-  [% ELSE %] <h3>ERROR checking in [% checkin %]</h3>
+  [% ELSE %] <h3>ERROR unlocking [% checkin %]</h3>
+  [% END  %]
+[% END %]
+[% IF checkinAll %]
+  [% IF crms.UnlockAllItemsForUser( user ) %]
+  [% ELSE %] <h3>ERROR unlocking all</h3>
   [% END  %]
 [% END %]
 
@@ -31,9 +37,10 @@
     <strong>locked:</strong>
     [% crms.GetTitle( item ) %]
     (since: [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
-    [ <a href="crms?p=crms&amp;checkin=[% item %]">unlock item</a> ]
+    [<a href="crms?p=crms&amp;checkin=[% item %]">unlock item</a>]<br/>
   [% END %]
   </blockquote></div>
+  [<a href="crms?p=crms&amp;checkinAll=1">Unlock All Items</a>]<br/>
 [% END %]
   
 [% summary = crms.HoldSummary(user) %]
