@@ -111,7 +111,11 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
     <div class="pages" id="homePage">
     <div style="float:left; margin-right:10em;"><img src="/c/crms/crms.png" alt="CRMS Logo"/></div>
     [%# INCLUDE nav.tt %]
-    <div id="version">Version 1.7</div>
+    <div id="version">Version 1.7
+    [% IF crms.GetTrainingMode() %]
+      <br/>Training Mode
+    [% END %]
+    </div>
     <br/><br/>
     <div style="clear:both;">
     [% IF r.2 %]<br/>[% END %]
