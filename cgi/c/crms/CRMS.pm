@@ -1016,11 +1016,24 @@ sub CloneReview
   
   my $result = $self->LockItem($id, $user);
   return $result if $result;
-  return "Could not approve review for $id because it is locked by another user." if $self->IsLockedForOtherUser($id, $user);
-  return "Could not approve review for $id because it has already been reviewed by an expert." if $self->HasItemBeenReviewedByAnotherExpert($id,$user);
-  my $sql = "SELECT attr,reason FROM reviews WHERE id='$id'";
-  my $rows = $self->get('dbh')->selectall_arrayref($sql);
-  $result = $self->SubmitReview($id,$user,$rows->[0]->[0],$rows->[0]->[1],undef,undef,undef,1,undef,'Expert Accepted');
+  if ($self->HasItemBeenReviewedByUser($id, $user))
+  {
+    $result = "Could not approve review for $id because you already reviewed it.";
+  }
+  if ($self->IsLockedForOtherUser($id, $user))
+  {
+    $result = "Could not approve review for $id because it is locked by another user.";
+  }
+  elsif ($self->HasItemBeenReviewedByAnotherExpert($id,$user))
+  {
+    $result = "Could not approve review for $id because it has already been reviewed by an expert.";
+  }
+  else
+  {
+    my $sql = "SELECT attr,reason FROM reviews WHERE id='$id'";
+    my $rows = $self->get('dbh')->selectall_arrayref($sql);
+    $result = $self->SubmitReview($id,$user,$rows->[0]->[0],$rows->[0]->[1],undef,undef,undef,1,undef,'Expert Accepted');
+  }
   $self->UnlockItem($id, $user);
   return ($result)? '':"Could not approve review for $id";
 }
@@ -5176,19 +5189,23 @@ sub PreviouslyReviewed
 # Returns 0 on success, error message on error.
 sub LockItem
 {
-    my $self = shift;
-    my $id   = shift;
-    my $name = shift;
+    my $self     = shift;
+    my $id       = shift;
+    my $name     = shift;
+    my $override = shift;
 
     ## if already locked for this user, that's OK
     if ( $self->IsLockedForUser( $id, $name ) ) { return 0; }
     # Not locked for user, maybe someone else
     if ($self->IsLocked($id)) { return 'Item has already been locked by another user'; }
-    ## can only have 1 item locked at a time
-    my $locked = $self->HasLockedItem( $name );
-    if ( $locked eq $id ) { return 0; }  ## already locked
-    if ( $locked ) { return 'You already have a locked item'; }
-    my $sql = qq{UPDATE $CRMSGlobals::queueTable SET locked="$name" WHERE id="$id"};
+    ## can only have 1 item locked at a time (unless override)
+    if (!$override)
+    {
+      my $locked = $self->HasLockedItem( $name );
+      return 0 if $locked eq $id; ## already locked
+      return "You already have a locked item ($locked)." if $locked;
+    }
+    my $sql = "UPDATE $CRMSGlobals::queueTable SET locked='$name' WHERE id='$id'";
     $self->PrepareSubmitSql( $sql );
     $self->StartTimer( $id, $name );
     return 0;
@@ -5202,7 +5219,7 @@ sub UnlockItem
 
     #if ( ! $self->IsLocked( $id ) ) { return 0; }
 
-    my $sql = qq{UPDATE $CRMSGlobals::queueTable SET locked=NULL WHERE id="$id"};
+    my $sql = qq{UPDATE $CRMSGlobals::queueTable SET locked=NULL WHERE id="$id" AND locked="$user"};
     $self->PrepareSubmitSql($sql);
     #if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
 
@@ -5370,6 +5387,17 @@ sub HasItemBeenReviewedByAnotherExpert
     return ($count)? 0:1;
   }
   return 0;
+}
+
+sub HasItemBeenReviewedByUser
+{
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
+  
+  my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::reviewsTable WHERE id='$id' AND user='$user'";
+  my $count = $self->SimpleSqlGet($sql);
+  return ($count)? 0:1;
 }
 
 ## ----------------------------------------------------------------------------
