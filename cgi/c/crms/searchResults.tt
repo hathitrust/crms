@@ -123,11 +123,12 @@ function CheckAll(box,formid)
     <br/><br/>
     <form action="crms" id="checks">
     <input type="hidden" name="p" value="$p"/>
-    <input type="hidden" name="approve" value="1"/>
+    <!--<input type="hidden" name="approve" value="1"/>-->
     [% IF p == 'undReviews' %]
       <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
     [% END %]
-    <input type="submit" value="Approve All Selected Volumes"/><br/><br/>
+    <input type="submit" name="approve" value="Approve All Selected Volumes"/>
+    <input type="submit" name="lock" value="Lock All Selected Volumes"/><br/><br/>
   [% END %]
   <table class="exportStats" style="width:100%;"><tr>
     <th>ID</th>
