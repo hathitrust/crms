@@ -1,13 +1,10 @@
 [% INCLUDE header.tt %]
 
-[% error    = cgi.param('errorMsg')   %]
-
-[% isEdit    = 0 %]
-[% inBarcode = cgi.param('barcode') %]
-[% inAdd     = cgi.param('add') %]
-[% editing   = cgi.param('editing') %]
-[% navright  = cgi.param('navRight') %]
-
+[% error      = cgi.param('errorMsg')   %]
+[% barcode    = cgi.param('barcode') %]
+[% inAdd      = cgi.param('add') %]
+[% editing    = cgi.param('editing') %]
+[% navright   = cgi.param('navRight') %]
 [% renNum     = cgi.param('renNum') %]
 [% renDate    = cgi.param('renDate') %]
 [% comm       = cgi.param('comm') %]
@@ -19,18 +16,17 @@
 
 [% SET mag = 100 IF !mag %]
 
-[% IF inBarcode %]
-  [% isEdit = 1 %]
-  [% IF crms.PreviouslyReviewed(inBarcode, user) %]
+[% IF barcode && editing %]
+  [% IF crms.PreviouslyReviewed(barcode, user) %]
     <h3>Too late, can't edit your review for this item.</h3>
     [% STOP %]
   [% END %]
-  [% IF crms.IsUserExpert(user) && crms.HasItemBeenReviewedByAnotherExpert(inBarcode,user) %]
+  [% IF crms.IsUserExpert(user) && crms.HasItemBeenReviewedByAnotherExpert(barcode,user) %]
     <h3>Item has already been reviewed by another expert.</h3>
     <br/><a href="JavaScript:window.close()">Close</a>
     [% STOP %]
   [% END %]
-  [% err = crms.LockItem(inBarcode, user) %]
+  [% err = crms.LockItem(barcode, user) %]
   [% IF err != 0 %]
     <h3>[% err %].</h3>
     [% locked = crms.GetLockedItems(user) %]
@@ -54,17 +50,19 @@
   [% STOP %]
 [% END %]
 
-[%# ## Get locked item or new one from queue ## %]
-[% IF crms.HasLockedItem(user) %]
-  [% barcode = crms.GetLockedItem( user ) %]
-[% ELSE %]
-  [% barcode = crms.GetNextItemForReview( user ) %]
-[% END %]
+[% IF !editing %]
+  [%# ## Get locked item or new one from queue ## %]
+  [% IF crms.HasLockedItem(user) %]
+    [% barcode = crms.GetLockedItem( user ) %]
+  [% ELSE %]
+    [% barcode = crms.GetNextItemForReview( user ) %]
+  [% END %]
 
-[%# ## failed to get a barcode ## %]
-[% IF NOT barcode %] 
-  <h3>Unable to find a volume ID to review</h3>
-  [% STOP %]
+  [%# ## failed to get a barcode ## %]
+  [% IF NOT barcode %] 
+    <h3>Unable to find a volume ID to review</h3>
+    [% STOP %]
+  [% END %]
 [% END %]
 
 [% userName   = crms.GetUserName( user )                 %]
