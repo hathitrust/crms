@@ -1014,7 +1014,7 @@ sub CloneReview
   my $id     = shift;
   my $user   = shift;
   
-  my $result = $self->LockItem($id, $user);
+  my $result = $self->LockItem($id, $user, 1);
   return $result if $result;
   if ($self->HasItemBeenReviewedByUser($id, $user))
   {
@@ -6748,6 +6748,7 @@ sub PageToEnglish
                'userRate' => 'view your review rate',
                'userReviews' => 'view your processed reviews',
                'debug' => 'debug',
+               'review' => 'review',
                'rights' => 'rights query',
                'queue' => 'queue query',
                'determinationStats' => 'determinations breakdown',
