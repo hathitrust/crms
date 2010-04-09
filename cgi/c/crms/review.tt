@@ -26,7 +26,7 @@
     <br/><a href="JavaScript:window.close()">Close</a>
     [% STOP %]
   [% END %]
-  [% err = crms.LockItem(barcode, user) %]
+  [% err = crms.LockItem(barcode, user, crms.IsUserExpert(user)) %]
   [% IF err != 0 %]
     <h3>[% err %].</h3>
     [% locked = crms.GetLockedItems(user) %]
