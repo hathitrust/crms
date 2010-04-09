@@ -123,12 +123,25 @@ function CheckAll(box,formid)
     <br/><br/>
     <form action="crms" id="checks">
     <input type="hidden" name="p" value="$p"/>
-    <!--<input type="hidden" name="approve" value="1"/>-->
+    <input type="hidden" name="search1" value="$search1"/>
+    <input type="hidden" name="search1value" value="$search1value"/>
+    <input type="hidden" name="search2" value="$search2"/>
+    <input type="hidden" name="search2value" value="$search2value"/>
+    <input type="hidden" name="op1" value="$op1"/>
+    <input type="hidden" name="startDate" value="$startDate"/>
+    <input type="hidden" name="endDate" value="$endDate"/>
+    <input type="hidden" name="order" value="$order"/>
+    <input type="hidden" name="dir" value="$dir"/>
+    <input type="hidden" name="vols" value="$vols"/>
+    <input type="hidden" name="records" value="$pagesize"/>
+    <input type="hidden" name="stype" value="$stype"/>
+    <input type="hidden" name="offset" value="$offset"/>
     [% IF p == 'undReviews' %]
       <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
     [% END %]
-    <input type="submit" name="approve" value="Approve All Selected Volumes"/>
-    <input type="submit" name="lock" value="Lock All Selected Volumes"/><br/><br/>
+    <input type="submit" name="approve" value="Approve Selected Volumes"/>
+    <input type="submit" name="lock" value="Lock Selected Volumes"/>
+    <input type="submit" name="unlock" value="Unlock Selected Volumes"/><br/><br/>
   [% END %]
   <table class="exportStats" style="width:100%;"><tr>
     <th>ID</th>
@@ -168,9 +181,14 @@ function CheckAll(box,formid)
       <tr style="background-color:[% active_color %];">
         [% IF p == 'editReviews' %]<td>[% crms.DetailInfoForReview(review.id, review.user, p) %]
         [% ELSE %]<td><span style="white-space:nowrap;">[% crms.DetailInfo(review.id, review.user, p) %][% END %]
-        [% IF (p == 'expert' || p == 'undReviews' || p == 'editReviews') && crms.IsLockedForOtherUser(review.id) %]
-          <img width="16" height="16" alt="Locked" src="/c/crms/Lock.png"/>
-        [% END %]</span></td>
+        [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' %]
+          [% IF crms.IsLockedForOtherUser(review.id) %]
+            <img width="16" height="16" alt="Locked" src="/c/crms/OtherLock.png"/>
+          [% ELSIF crms.IsLockedForUser(review.id, user) %]
+            <img width="16" height="16" alt="Locked by me" src="/c/crms/Lock.png"/>
+          [% END %]
+        [% END %]
+        </span></td>
         [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' %]<td>[% (crms.IsLockedForOtherUser(review.id))? review.title : crms.LinkToReview(review.id) %]</td>
         [% ELSE %]<td>[% crms.LinkToPT( review.id ) %]</td>[% END %]
         <td>$review.author</td>
@@ -242,6 +260,7 @@ function CheckAll(box,formid)
     <input type="hidden" name="dir" value="$dir"/>
     <input type="hidden" name="vols" value="$vols"/>
     <input type="hidden" name="records" value="$pagesize"/>
+    <input type="hidden" name="stype" value="$stype"/>
     <input size="3" type="text" id="jump" name="jump" value="[% pagenum %]"/>
     &nbsp;&nbsp;&nbsp;&nbsp;||
     [% min = pagenum - 10 %]

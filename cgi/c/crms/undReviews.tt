@@ -35,9 +35,22 @@
       [% END %]
     [% END %]
   [% END %]
+[% ELSIF cgi.param('unlock') %]
+  [% FOREACH param IN cgi.param %]
+    [% matches = param.match('(vol_)(.+)') %]
+    [% IF matches.0 == 'vol_' %]
+      [% msg = crms.UnlockItem(matches.1, user) %]
+      [% IF msg != 1 %]
+        <span style='color:red;'>ERROR on [% matches.1 %]: [% msg %]</span><br/>
+      [% ELSE %]
+        <span>Unlocked [% matches.1 %]</span><br/>
+        [% n = n + 1 %]
+      [% END %]
+    [% END %]
+  [% END %]
 [% END %]
 
-[% IF cgi.param('approve') || cgi.param('lock') %]
+[% IF cgi.param('approve') || cgi.param('lock') || cgi.param('unlock') %]
 <h4>Modified [% n %] item[% (n == 1)? '':'s' %]</h4>
 [% END %]
 
