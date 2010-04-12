@@ -5,33 +5,100 @@
 
 [% INCLUDE header.tt    %]
 [% INCLUDE adminNav.tt  %]
+[% p = cgi.param('p')   %]
 
-[% IF cgi.param('clear') %] [% crms.RemoveOldLocks() %][% END %]
+<script type="text/Javascript">
+<!--
+function CheckAll(box,formid)
+{
+	var aa=document.getElementById(formid);
+	for (var i=0; i < aa.elements.length; i++) 
+	{
+	  aa.elements[i].checked = box.checked;
+	}
+}
+-->
+</script>
 
-<div>
-  <blockquote><a href="?p=adminQueue&amp;clear=1">clear old locks</a></blockquote>
-</div>
+<h2>Queue Administration:</h2><br/>
 
-<hr width="25%" align="left"/>
-<strong>items that are locked (click to unlock): </strong>
+<blockquote><a href="?p=adminQueue&amp;clear=1">Clear old locks</a></blockquote><br/>
 
-
-  [% locked = crms.GetLockedItems() %]
-  [% IF locked.size %]
-    <blockquote>
-    [% FOREACH item IN locked.keys %]
-      <div>
-       <a href="crms?p=unlockItem&amp;id=[% item %]">[% crms.GetTitle( item ) %]</a> 
-       ([% locked.${item}.locked %], since: 
-         [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
-      </div>
+[% IF cgi.param('clear') %]
+  [% crms.RemoveOldLocks() %]
+[% ELSIF cgi.param('reset') %]
+  [% blah = crms.PrepareSubmitSql('UPDATE mode SET seq=0') %]
+[% ELSIF cgi.param('unlockSel') %]
+  [% FOREACH param IN cgi.param %]
+    [% matches = param.match('(vol_)(.+)') %]
+    [% IF matches.0 == 'vol_' %]
+      [% ok = crms.UnlockItemEvenIfNotLocked(matches.1) %]
+      [% IF ok %]
+        <span>Unlocked [% matches.1 %]</span><br/>
+      [% ELSE %]
+        <span style='color:red;'>Could not unlock [% matches.1 %]</span><br/>
+      [% END %]
     [% END %]
-    </blockquote>
-  [% ELSE %]
-    none
   [% END %]
+[% ELSIF cgi.param('toggle') %]
+  [% blah = crms.ToggleTrainingMode() %]
+[% ELSIF cgi.param('unlock') %]
+  [% ok = crms.UnlockItemEvenIfNotLocked(cgi.param('unlock')) %]
+  [% IF ok %]
+    <span>Unlocked [% cgi.param('unlock') %]</span><br/>
+  [% ELSE %]
+    <span style='color:red;'>Could not unlock [% cgi.param('unlock') %]</span><br/>
+  [% END %]
+[% END %]
 
 
 
+[% locked = crms.GetLockedItems() %]
+[% IF locked.size %]
+  <br/><form action="crms" id="checks">
+  <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
+  <input type="hidden" name="p" value="adminQueue"/>
+  <input type="submit" name="unlockSel" value="Unlock Selected Volumes"/>
+  <table class="exportStats" style="width:55%">
+  <tr><th colspan="6" style="text-align:center;"><span class="major">Locked Items</span></th></tr>
+  <tr><th>ID</th><th>Title</th><th>Locked&nbsp;For</th><th>Since</th><th>Select</th><th>Unlock</th></tr>
+  [% FOREACH item IN locked.keys %]
+    <tr>
+      <td>[% item %]</td>
+      <td>[% crms.GetTitle( item ) %]</td>
+      <td style="text-align:center">[% locked.${item}.locked %]</td>
+      [% when = crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %]
+      [% when = crms.FormatTime(when, 1) %]
+      <td style="text-align:center">[% when.replace('\s', '&nbsp;') %]</td>
+      <td style="text-align:center"><input type="checkbox" name="vol_[% item %]"/></td>
+      <td style="text-align:center">
+        <a href="crms?p=adminQueue&amp;unlock=[% item %]">do it</a>  
+      </td>
+    </tr>
+  [% END %]
+</table>
+</form>
+<br/>
+[% ELSE %]
+  <strong>There are no locked items.</strong>
+[% END %]
+
+[% dev = crms.get('dev') %]
+[% IF dev == 'moseshll' %]
+  <br/><br/><br/>
+  [% train = crms.SimpleSqlGet('SELECT train FROM mode') %]
+  [% seq = crms.SimpleSqlGet('SELECT seq FROM mode') %]
+  <h4>Training Queue: [% (train)? 'ON':'OFF' %]</h4>
+  <div style="position:relative;border-style:solid;width:25%;border-width:1px;padding:10px;">
+  <form action="crms">
+    <input type="hidden" name="p" value="$p"/>
+    [% IF train %]
+      Sequence: [% seq %]<br/>
+      <input type="submit" name="reset" value="Reset Sequence"/>
+    [% END %]
+    <input type="submit" name="toggle" value="[% (train)? 'Stop':'Start' %] Training"/>
+  </form>
+  </div>
+[% END %]
 
 [% INCLUDE footer.tt %]
