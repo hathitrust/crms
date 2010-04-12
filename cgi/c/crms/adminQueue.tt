@@ -3,6 +3,10 @@
   [% STOP %]
 [% END %]
 
+[% IF cgi.param('toggle') %]
+  [% blah = crms.ToggleTrainingMode() %]
+[% END %]
+
 [% INCLUDE header.tt    %]
 [% INCLUDE adminNav.tt  %]
 [% p = cgi.param('p')   %]
@@ -20,9 +24,7 @@ function CheckAll(box,formid)
 -->
 </script>
 
-<h2>Queue Administration:</h2><br/>
-
-<blockquote><a href="?p=adminQueue&amp;clear=1">Clear old locks</a></blockquote><br/>
+<h2>Queue Administration:</h2><br/><br/>
 
 [% IF cgi.param('clear') %]
   [% crms.RemoveOldLocks() %]
@@ -40,8 +42,6 @@ function CheckAll(box,formid)
       [% END %]
     [% END %]
   [% END %]
-[% ELSIF cgi.param('toggle') %]
-  [% blah = crms.ToggleTrainingMode() %]
 [% ELSIF cgi.param('unlock') %]
   [% ok = crms.UnlockItemEvenIfNotLocked(cgi.param('unlock')) %]
   [% IF ok %]
@@ -55,10 +55,11 @@ function CheckAll(box,formid)
 
 [% locked = crms.GetLockedItems() %]
 [% IF locked.size %]
-  <br/><form action="crms" id="checks">
+  <blockquote><a href="?p=adminQueue&amp;clear=1">Clear old locks</a></blockquote><br/>
+  <form action="crms" id="checks">
   <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
   <input type="hidden" name="p" value="adminQueue"/>
-  <input type="submit" name="unlockSel" value="Unlock Selected Volumes"/>
+  <input type="submit" name="unlockSel" value="Unlock Selected Volumes"/><br/><br/>
   <table class="exportStats" style="width:55%">
   <tr><th colspan="6" style="text-align:center;"><span class="major">Locked Items</span></th></tr>
   <tr><th>ID</th><th>Title</th><th>Locked&nbsp;For</th><th>Since</th><th>Select</th><th>Unlock</th></tr>
@@ -80,11 +81,11 @@ function CheckAll(box,formid)
 </form>
 <br/>
 [% ELSE %]
-  <strong>There are no locked items.</strong>
+  <strong>There are no locked items.</strong><br/>
 [% END %]
 
 [% dev = crms.get('dev') %]
-[% IF dev == 'moseshll' %]
+[% IF dev == 'moseshll' || dev == 'crmstest' %]
   <br/><br/><br/>
   [% train = crms.SimpleSqlGet('SELECT train FROM mode') %]
   [% seq = crms.SimpleSqlGet('SELECT seq FROM mode') %]
