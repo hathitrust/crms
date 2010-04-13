@@ -78,7 +78,7 @@ CREATE TABLE `candidatesrecord` (
 
 /*!40000 ALTER TABLE `candidatesrecord` DISABLE KEYS */;
 LOCK TABLES `candidatesrecord` WRITE;
-INSERT INTO `candidatesrecord` VALUES ('2010-02-02 14:17:48',3000),('2010-02-23 11:59:48',1),('2010-02-23 12:09:28',1),('2010-03-05 13:18:56',1),('2010-03-18 18:26:21',1),('2010-03-22 13:56:10',1),('2010-03-29 13:48:12',1);
+INSERT INTO `candidatesrecord` VALUES ('2010-02-02 14:17:48',3000),('2010-02-23 11:59:48',1),('2010-02-23 12:09:28',1),('2010-03-05 13:18:56',1),('2010-03-18 18:26:21',1),('2010-03-22 13:56:10',1),('2010-03-29 13:48:12',1),('2010-04-13 17:48:47',1),('2010-04-13 17:52:32',1),('2010-04-13 17:53:40',1);
 UNLOCK TABLES;
 /*!40000 ALTER TABLE `candidatesrecord` ENABLE KEYS */;
 
@@ -470,7 +470,8 @@ DROP TABLE IF EXISTS `systemstatus`;
 CREATE TABLE `systemstatus` (
   `time` timestamp NOT NULL default CURRENT_TIMESTAMP,
   `status` varchar(32) default NULL,
-  `message` text
+  `message` text,
+  `train` tinyint(1) NOT NULL default '0'
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 --
@@ -480,7 +481,7 @@ CREATE TABLE `systemstatus` (
 
 /*!40000 ALTER TABLE `systemstatus` DISABLE KEYS */;
 LOCK TABLES `systemstatus` WRITE;
-INSERT INTO `systemstatus` VALUES ('2010-02-23 12:10:31','normal','I am working on the test set, so the database is wonky. Please, no reviews.');
+INSERT INTO `systemstatus` VALUES ('2010-02-23 12:10:31','normal','I am working on the test set, so the database is wonky. Please, no reviews.',0);
 UNLOCK TABLES;
 /*!40000 ALTER TABLE `systemstatus` ENABLE KEYS */;
 
@@ -508,6 +509,36 @@ UNLOCK TABLES;
 /*!40000 ALTER TABLE `timer` ENABLE KEYS */;
 
 --
+-- Table structure for table `training_queue`
+--
+
+DROP TABLE IF EXISTS `training_queue`;
+CREATE TABLE `training_queue` (
+  `id` varchar(32) NOT NULL default '',
+  `time` timestamp NOT NULL default CURRENT_TIMESTAMP,
+  `status` int(1) default '0',
+  `pending_status` int(1) NOT NULL default '0',
+  `locked` varchar(32) default NULL,
+  `priority` int(1) default '0',
+  `expcnt` int(11) default '0',
+  `source` varchar(32) NOT NULL default 'candidates',
+  `seq` int(11) NOT NULL auto_increment,
+  PRIMARY KEY  (`seq`),
+  UNIQUE KEY `id` (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `training_queue`
+--
+
+
+/*!40000 ALTER TABLE `training_queue` DISABLE KEYS */;
+LOCK TABLES `training_queue` WRITE;
+INSERT INTO `training_queue` VALUES ('mdp.39015070433845','2010-04-13 14:19:06',0,1,NULL,0,0,'adminui',1),('mdp.39015069796111','2010-04-13 15:09:58',0,1,NULL,0,0,'adminui',2);
+UNLOCK TABLES;
+/*!40000 ALTER TABLE `training_queue` ENABLE KEYS */;
+
+--
 -- Table structure for table `und`
 --
 
@@ -515,6 +546,7 @@ DROP TABLE IF EXISTS `und`;
 CREATE TABLE `und` (
   `id` varchar(32) NOT NULL default '',
   `src` varchar(32) NOT NULL default '',
+  `time` timestamp NOT NULL default CURRENT_TIMESTAMP,
   PRIMARY KEY  (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
@@ -534,11 +566,15 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
-  `name` mediumtext NOT NULL,
-  `type` tinyint(4) NOT NULL default '0',
   `id` varchar(12) NOT NULL default '',
+  `name` mediumtext NOT NULL,
+  `reviewer` tinyint(1) NOT NULL default '1',
+  `advanced` tinyint(1) NOT NULL default '0',
+  `expert` tinyint(1) NOT NULL default '0',
+  `admin` tinyint(1) NOT NULL default '0',
+  `superadmin` tinyint(1) NOT NULL default '0',
   `alias` varchar(12) default NULL,
-  PRIMARY KEY  (`id`,`type`)
+  PRIMARY KEY  (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 --
@@ -548,7 +584,7 @@ CREATE TABLE `users` (
 
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
 LOCK TABLES `users` WRITE;
-INSERT INTO `users` VALUES ('Dennis McWhinnie',1,'dmcw',''),('Chris Wilcox',1,'cwilcox','cwilcox123'),('David Fulmer',1,'dfulmer',''),('Senovia Guevara',1,'sgueva',''),('Judy Ahronheim',3,'jaheim','jaheim123'),('Greg Nichols',1,'gnichols','gnichols123'),('Greg Nichols',3,'gnichols','gnichols123'),('Anne Karle-Zenith',1,'annekz',''),('Anne Karle-Zenith',2,'annekz',''),('Anne Karle-Zenith',3,'annekz',''),('Moses User',1,'moseshll123',NULL),('Anne non-expert',3,'annekz-ne',NULL),('Greg Expert',3,'gnichols123',NULL),('Greg Expert',2,'gnichols123',NULL),('Greg Expert',1,'gnichols123',NULL),('Moses Hall',1,'moseshll',''),('Judy Expert',2,'jaheim123',NULL),('Rereport User',1,'rereport02',NULL),('Judy Expert',1,'jaheim123',NULL),('Judy Expert',3,'jaheim123',NULL),('Moses Hall',3,'moseshll',''),('Moses Hall',2,'moseshll',''),('Rereport User',1,'rereport01',NULL),('Judy Ahronheim',1,'jaheim','jaheim123'),('Anne non-expert',1,'annekz-ne',NULL),('Dennis McWhinnie',3,'dmcw',''),('Chris Wilcox',3,'cwilcox','cwilcox123'),('Dennis Expert',3,'dmcw123',NULL),('Dennis Expert',2,'dmcw123',NULL),('Dennis Expert',1,'dmcw123',NULL),('Chris Expert',3,'cwilcox123',NULL),('Chris Expert',2,'cwilcox123',NULL),('Chris Expert',1,'cwilcox123',NULL);
+INSERT INTO `users` VALUES ('annekz','Anne Karle-Zenith',1,1,1,1,1,NULL),('annekz-ne','Anne non-expert',1,1,0,1,0,NULL),('cwilcox','Chris Wilcox',1,1,0,1,0,NULL),('cwilcox123','Chris Expert',1,1,1,1,0,NULL),('dfulmer','David Fulmer',1,1,0,0,0,NULL),('dmcw','Dennis McWhinnie',1,1,0,0,0,NULL),('gnichols','Greg Nichols',1,1,0,1,0,'gnichols123'),('gnichols123','Greg Expert',1,1,1,1,0,NULL),('jaheim','Judy Ahronheim',1,1,0,1,0,NULL),('jaheim123','Judy Expert',1,1,1,1,0,NULL),('moseshll','Moses Hall',0,0,1,1,0,NULL),('moseshll123','Moses User',1,1,0,0,0,NULL),('rereport01','Rereport User',1,0,0,0,0,NULL),('rereport02','Rereport User',1,0,0,0,0,NULL),('sgueva','Senovia Guevara',1,1,0,0,0,NULL),('rose','Rose Tyler',1,0,0,0,0,NULL),('doc','The Doctor',1,0,0,0,0,NULL);
 UNLOCK TABLES;
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 

@@ -16,18 +16,7 @@ use Term::ANSIColor qw(:constants);
 
 $Term::ANSIColor::AUTORESET = 1;
 
-# This generates the data below
-#print "my \$data = <<END
-#my $sql = "SELECT id,user,validated FROM historicalreviews";
-#my $r = $crms->get('dbh')->selectall_arrayref($sql);
-#foreach my $row (@{$r})
-#{
-#  my $id = $row->[0];
-#  my $user = $row->[1];
-#  my $val = $row->[2];
-#  print "$id $user $val\n";
-#}
-#print "END\n";
+
 
 my $finalStats = <<END;
 CRMS Project Cumulative
@@ -150,24 +139,12 @@ mdp.39015065683149 annekz 1
 mdp.39015023082301 annekz 1
 inu.32000009454499 annekz 1
 mdp.39015071455961 gnichols123 1
-inu.32000003495613 cwilcox 1
-inu.32000003495613 dfulmer 1
-inu.32000003495613 gnichols123 1
 mdp.39015001587149 annekz 1
 mdp.39015001587149 cwilcox 1
 mdp.39015001587149 dfulmer 0
-inu.32000002913582 cwilcox 1
-inu.32000002913582 dfulmer 1
-inu.32000002913582 gnichols123 1
-inu.30000093904526 cwilcox 1
-inu.30000093904526 dfulmer 1
-inu.30000093904526 gnichols123 1
-uc1.b3480039 annekz 1
-uc1.b3480039 cwilcox 0
-uc1.b3480039 dfulmer 1
-inu.30000083470769 cwilcox 1
-inu.30000083470769 dfulmer 1
-inu.30000083470769 gnichols123 1
+uc1.b3480039 doc 1
+uc1.b3480039 gnichols123 1
+uc1.b3480039 rose 1
 mdp.39015001455685 annekz 1
 mdp.39015001455685 cwilcox 1
 mdp.39015001455685 dfulmer 2
@@ -180,24 +157,21 @@ mdp.39015002586306 dfulmer 0
 mdp.39015002835653 annekz 1
 mdp.39015002835653 cwilcox 1
 mdp.39015002835653 dfulmer 0
-uc1.b3496576 annekz 1
-uc1.b3496576 cwilcox 0
-uc1.b3496576 dfulmer 1
-uc1.b3843865 annekz 1
-uc1.b3843865 cwilcox 0
-uc1.b3843865 dfulmer 1
-inu.30000081677589 cwilcox 1
-inu.30000081677589 dfulmer 1
-inu.30000081677589 gnichols123 1
+uc1.b3496576 doc 0
+uc1.b3496576 gnichols123 1
+uc1.b3496576 rose 0
+uc1.b3843865 doc 0
+uc1.b3843865 gnichols123 1
+uc1.b3843865 rose 0
 mdp.39015002153669 annekz 1
 mdp.39015002153669 cwilcox 1
 mdp.39015002153669 dfulmer 0
 mdp.39015001871287 annekz 1
 mdp.39015001871287 cwilcox 1
 mdp.39015001871287 dfulmer 0
-wu.89081503401 annekz 1
-wu.89081503401 cwilcox 0
-wu.89081503401 dfulmer 1
+wu.89081503401 doc 0
+wu.89081503401 gnichols123 1
+wu.89081503401 rose 0
 mdp.39015081950209 annekz 1
 mdp.39015081950209 cwilcox 0
 mdp.39015081950209 dfulmer 1
@@ -208,9 +182,9 @@ mdp.39015002012329 gnichols123 1
 mdp.39015084474140 annekz 1
 mdp.39015084474140 cwilcox 0
 mdp.39015084474140 dfulmer 1
-wu.89081504193 annekz 1
-wu.89081504193 cwilcox 0
-wu.89081504193 dfulmer 1
+wu.89081504193 doc 0
+wu.89081504193 gnichols123 1
+wu.89081504193 rose 0
 uc1.b18463 annekz 1
 uc1.b18463 cwilcox 0
 uc1.b18463 dfulmer 1
@@ -254,12 +228,20 @@ mdp.39015005411536 annekz 1
 mdp.39015005411536 dfulmer 1
 mdp.39015005411536 rereport02 0
 wu.89086255353 annekz 1
+inu.32000003495613 cwilcox 1
+inu.32000003495613 dfulmer 1
 mdp.39015056952164 cwilcox 1
-mdp.39015056952164 dfulmer 1
+mdp.39015056952164 doc 1
+inu.32000002913582 cwilcox 1
+inu.32000002913582 dfulmer 1
+inu.30000093904526 cwilcox 1
+inu.30000093904526 dfulmer 1
 mdp.39015039837557 cwilcox 1
 mdp.39015039837557 dfulmer 1
 mdp.39015079843242 cwilcox 1
-mdp.39015079843242 dfulmer 1
+mdp.39015079843242 doc 1
+inu.30000083470769 cwilcox 1
+inu.30000083470769 dfulmer 1
 mdp.39015045987669 cwilcox 1
 mdp.39015045987669 dfulmer 1
 mdp.39015005024750 cwilcox 1
@@ -271,21 +253,23 @@ mdp.39015008655618 dfulmer 1
 mdp.39015043592511 cwilcox 1
 mdp.39015043592511 dfulmer 1
 mdp.39015064064036 cwilcox 1
-mdp.39015064064036 dfulmer 1
+mdp.39015064064036 doc 1
 mdp.39015049881074 cwilcox 1
 mdp.39015049881074 dfulmer 1
+inu.30000081677589 cwilcox 1
+inu.30000081677589 dfulmer 1
 mdp.39015036889858 cwilcox 1
 mdp.39015036889858 dfulmer 1
 mdp.39015027559288 cwilcox 1
 mdp.39015027559288 dfulmer 1
 mdp.39015069451147 cwilcox 1
-mdp.39015069451147 dfulmer 1
+mdp.39015069451147 doc 1
 mdp.39015011352450 cwilcox 1
 mdp.39015011352450 dfulmer 1
 mdp.39015031324406 cwilcox 1
 mdp.39015031324406 dfulmer 1
 mdp.39015068215824 cwilcox 1
-mdp.39015068215824 dfulmer 1
+mdp.39015068215824 doc 1
 mdp.39015056668489 cwilcox 1
 mdp.39015056668489 dfulmer 1
 mdp.39015004919166 cwilcox 1
@@ -378,9 +362,10 @@ END
 
 
 my %opts;
-getopts('dhv12345', \%opts);
+getopts('dghv12345', \%opts);
 
 my $load     = $opts{'d'};
+my $generate = $opts{'g'};
 my $help     = $opts{'h'};
 my $verbose  = $opts{'v'};
 my $phase1   = $opts{'1'};
@@ -391,7 +376,7 @@ my $phase5   = $opts{'5'};
 
 if ( $help )
 {
-  die "USAGE: $0 [-d] [-h] [-v] [-1] [-2] [-3] [-4] [-5]\n\n";
+  die "USAGE: $0 [-d] [-g] [-h] [-v] [-1] [-2] [-3] [-4] [-5]\n\n";
 }
 
 my $logfile = "$DLXSROOT/prep/c/crms/tester_log.txt";
@@ -438,7 +423,7 @@ if ($phase1)
     my $id = $row->[0];
     my $priority = $row->[1];
     print "$id ($priority)\n" if $verbose;
-    # annekz reviews 2 priority 4 items as pd/ren (1/7)
+    # annekz reviews 3 priority 4 items as pd/ren (1/7)
     if ($priority == 4)
     {
       $crms->SubmitReview($id, 'annekz', 1, 7, undef, undef, undef, 1, undef, undef, undef, $eq);
@@ -465,31 +450,40 @@ if ($phase1)
     # Next 10 are one und/nfi vs pd/ren
     else
     {
-      if ($n0 < 5)
+      if ($n0 < 5) # 5 ps 4
       {
         $crms->SubmitReview($id, 'cwilcox', 5, 8, undef, undef, undef, 0, undef, undef);
         $crms->SubmitReview($id, 'dfulmer', 5, 8, undef, undef, undef, 0, undef, undef);
       }
-      elsif ($n0 < 10)
+      elsif ($n0 < 10) # 5 ps 1
       {
         $crms->SubmitReview($id, 'cwilcox', 1, 7, undef, undef, undef, 0, undef, undef);
       }
-      elsif ($n0 < 20)
+      elsif ($n0 < 20) # 1 ps 1, 9 ps 2
       {
-        
         $crms->SubmitReview($id, 'cwilcox', 1, 7, undef, undef, undef, 0, undef, undef, undef, $q);
         $crms->SubmitReview($id, 'dfulmer', 2, 7, undef, undef, undef, 0, undef, undef);
         $q = undef;
       }
-      elsif ($n0 < 40)
+      elsif ($n0 < 35) # 15 ps 4
       {
         $crms->SubmitReview($id, 'cwilcox', 1, 7, undef, undef, undef, 0, undef, undef);
         $crms->SubmitReview($id, 'dfulmer', 1, 7, undef, undef, undef, 0, undef, undef);
       }
-      else
+      elsif ($n0 < 40) # 5 ps 4
+      {
+        $crms->SubmitReview($id, 'cwilcox', 1, 7, undef, undef, undef, 0, undef, undef);
+        $crms->SubmitReview($id, 'doc', 1, 7, undef, undef, undef, 0, undef, undef);
+      }
+      elsif ($n0 < 45) # 5 ps 2
       {
         $crms->SubmitReview($id, 'cwilcox', 5, 8, undef, undef, undef, 0, undef, undef);
         $crms->SubmitReview($id, 'dfulmer', 1, 7, undef, undef, undef, 0, undef, undef);
+      }
+      else # 5 ps 3
+      {
+        $crms->SubmitReview($id, 'rose', 1, 7, undef, undef, undef, 0, undef, undef);
+        $crms->SubmitReview($id, 'doc', 1, 7, undef, undef, undef, 0, undef, undef);
       }
       $n0++;
     }
@@ -502,13 +496,13 @@ if ($phase1)
   # At the end of phase 1, here are the pending status breakdowns:
   # Stat | Count
   # 0    | 0 (everything should get reviewed)
-  # 1    | 5 (priority 0 single reviews)
-  # 2    | 30 (10 priority 1, 20 priority 0)
+  # 1    | 6 (priority 0 single reviews)
+  # 2    | 24 (10 priority 1, 14 priority 0)
   # 3    | 5 (priority 0)
-  # 4    | 60 (40 priority 1, 20 priority 0)
+  # 4    | 65 (40 priority 1, 20 priority 0)
   # 5    | 5 (priority 3/4 items)
   # 6    | 0 (not yet!)
-  my %stati = (0=>0,1=>6,2=>29,3=>5,4=>60,5=>5,6=>0);
+  my %stati = (0=>0,1=>6,2=>24,3=>5,4=>65,5=>5,6=>0);
   foreach my $status (sort keys %stati)
   {
     my $sql = "SELECT COUNT(*) FROM queue WHERE pending_status=$status";
@@ -549,7 +543,7 @@ if ($phase2)
   # 4    | 60 (40 priority 1, 20 priority 0)
   # 5    | 5 (priority 3/4 items)
   # 6    | 0 (not yet!)
-  my %stati = (0=>6,2=>29,3=>5,4=>60,5=>5,6=>0);
+  my %stati = (0=>6,1=>0,2=>24,3=>5,4=>65,5=>5,6=>0);
   foreach my $status (sort keys %stati)
   {
     my $sql = "SELECT COUNT(id) FROM queue WHERE status=$status";
@@ -591,18 +585,27 @@ if ($phase3)
   }
   $sql = "SELECT id FROM queue WHERE status=3 ORDER BY id ASC";
   my $r = $crms->get('dbh')->selectall_arrayref($sql);
+  my $clone = 1;
   foreach my $row (@{$r})
   {
     my $id = $row->[0];
-    $crms->SubmitReview($id, 'gnichols123', 5, 8, undef, undef, undef, 1, undef, undef);
+    if ($clone)
+    {
+      $crms->CloneReview($id, 'gnichols123');
+    }
+    else
+    {
+      $crms->SubmitReview($id, 'gnichols123', 5, 8, undef, undef, undef, 1, undef, undef);
+    }
+    $clone = undef;
   }
   # At the end of phase 3, here are the status breakdowns:
   # Stat | Count
   # 0    | 6 (5 priority 0 single reviews and a hold)
-  # 4    | 60 (40 priority 1, 20 priority 0)
-  # 5    | 34 (priority 3/4 items)
-  # 6    | 5
-  my %stati = (0=>6,4=>60,5=>34,6=>5);
+  # 4    | 65 (45 priority 1, 20 priority 0)
+  # 5    | 33 (5 priority 3/4 items, 28 priority 0)
+  # 6    | 1 from the cloned review
+  my %stati = (0=>6,4=>65,5=>33,6=>1);
   foreach my $status (sort keys %stati)
   {
     my $sql = "SELECT COUNT(*) FROM queue WHERE status=$status";
@@ -613,7 +616,7 @@ if ($phase3)
   VerifySQL('SELECT COUNT(*) FROM queue WHERE status>0',99,'Wrong number of queue nonzero status items.');
   VerifySQL('SELECT COUNT(*) FROM queue WHERE status=0',6,'Wrong number of queue status zero items.');
   VerifySQL('SELECT COUNT(*) FROM queue',105,'Wrong number of items in queue.');
-  VerifySQL('SELECT COUNT(*) FROM reviews',234,'Wrong number of items in reviews.');
+  VerifySQL('SELECT COUNT(*) FROM reviews',229,'Wrong number of items in reviews.');
   Verify($crms->GetTotalAwaitingReview(),0,'Wrong number awaiting review');
   Verify($crms->GetTotalNonLegacyReviewCount(),0,'Wrong number of CRMS historical reviews');
   Verify($crms->GetTotalLegacyReviewCount(),100,'Wrong number of legacy reviews');
@@ -646,7 +649,7 @@ if ($phase4)
     $should = $stati{$status};
     Complain("Status $status has $count, should have $should in queue") unless $count == $should;
   }
-  %stati = (4=>120,5=>99,6=>15);
+  %stati = (4=>130,5=>96,6=>3);
   foreach my $status (sort keys %stati)
   {
     $sql = "SELECT COUNT(*) FROM historicalreviews WHERE status=$status";
@@ -659,16 +662,16 @@ if ($phase4)
   VerifySQL('SELECT COUNT(*) FROM queue',7,'Wrong number of items in queue');
   VerifySQL('SELECT COUNT(*) FROM reviews',8,'Wrong number of items in reviews');
   Verify($crms->GetTotalAwaitingReview(),0,'Wrong number awaiting review');
-  Verify($crms->GetTotalNonLegacyReviewCount(),226,'Wrong number of CRMS historical reviews');
+  Verify($crms->GetTotalNonLegacyReviewCount(),221,'Wrong number of CRMS historical reviews');
   Verify($crms->GetTotalLegacyReviewCount(),100,'Wrong number of legacy reviews');
-  Verify($crms->GetTotalHistoricalReviewCount(),326,'Wrong number of historical reviews');
-  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),83.8,'Wrong avg validation rate');
-  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),83.8,'Wrong median validation rate');
+  Verify($crms->GetTotalHistoricalReviewCount(),321,'Wrong number of historical reviews');
+  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),56.4,'Wrong avg validation rate');
+  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),56.4,'Wrong median validation rate');
   VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE validated=1 AND legacy=0 AND user="cwilcox"',34,'Wrong number of validated reviews for cwilcox');
-  VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE legacy=0 AND user="cwilcox"',44,'Wrong number of historical reviews for cwilcox');
-  VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE validated=1 AND legacy=0 AND user="dfulmer"',85,'Wrong number of validated reviews for dfulmer');
+  VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE legacy=0 AND user="cwilcox"',39,'Wrong number of historical reviews for cwilcox');
+  VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE validated=1 AND legacy=0 AND user="dfulmer"',75,'Wrong number of validated reviews for dfulmer');
   VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE validated=2 AND legacy=0 AND user="dfulmer"',1,'Wrong number of swiss validations for dfulmer');
-  VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE legacy=0 AND user="dfulmer"',94,'Wrong number of historical reviews for dfulmer');
+  VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE legacy=0 AND user="dfulmer"',84,'Wrong number of historical reviews for dfulmer');
   $crms->SanityCheckDB();
   my $r = $crms->GetErrors();
   foreach my $w (@{$r})
@@ -692,7 +695,17 @@ if ($phase5)
   my $id = 'wu.89081504193';
   my $result = $crms->AddItemToQueueOrSetItemActive($id,2);
   Verify(substr($result,0,1),0,"AddItemToQueueOrSetItemActive returned $result");
-  $crms->SubmitReview($id, 'gnichols123', 5, 8, undef, undef, undef, 1, undef, undef);
+  $crms->SubmitReview($id, 'annekz', 1, 7, undef, undef, undef, 1, undef, undef);
+  system('./updateQueue.pl') == 0 or die "updateQueue.pl failed: $?";
+  system('./monthlyStats.pl') == 0 or die "monthlyStats.pl failed: $?";
+  VerifySQL("SELECT COUNT(id) FROM und WHERE src='dissertation'",5,"Wrong und count for theses");
+  VerifySQL("SELECT COUNT(id) FROM und WHERE src='translation'",7,"Wrong und count for translations");
+  VerifySQL("SELECT COUNT(id) FROM und WHERE src='foreign'",2,"Wrong und count for foreign pubs");
+  my %valid = ('annekz'=>1,'gnichols123'=>0,'rose'=>1,'doc'=>1);
+  foreach my $user (keys %valid)
+  {
+    VerifySQL("SELECT validated FROM historicalreviews WHERE id='$id' AND user='$user'",$valid{$user},"Wrong validation for $user: $id");
+  }
   my @unds = (
 # theses: 5/10 detected
 'uc1.b195517',
@@ -726,20 +739,10 @@ if ($phase5)
 'uc1.b537834',
 'mdp.39015071135993',
 'uc1.b163247');
-  foreach my $id (@unds)
+  foreach $id (@unds)
   {
     my $result = $crms->AddItemToCandidates( $id, $crms->GetTodaysDate(), 0, 0 );
     Verify($result,1,"AddItemToCandidates failed for $result");
-  }
-  system('./updateQueue.pl') == 0 or die "updateQueue.pl failed: $?";
-  system('./monthlyStats.pl') == 0 or die "monthlyStats.pl failed: $?";
-  VerifySQL("SELECT COUNT(id) FROM und WHERE src='dissertation'",5,"Wrong und count for theses");
-  VerifySQL("SELECT COUNT(id) FROM und WHERE src='translation'",7,"Wrong und count for translations");
-  VerifySQL("SELECT COUNT(id) FROM und WHERE src='foreign'",2,"Wrong und count for foreign pubs");
-  my %valid = ('annekz'=>0,'gnichols123'=>1,'dfulmer'=>0,'cwilcox'=>1);
-  foreach my $user (keys %valid)
-  {
-    VerifySQL("SELECT validated FROM historicalreviews WHERE id='$id' AND user='$user'",$valid{$user},"Wrong validation for $user");
   }
   my $stats = $crms->CreateExportData("\t", 1, 1);
   Verify($stats,$finalStats,'Final stats mismatch');
