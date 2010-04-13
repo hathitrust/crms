@@ -266,7 +266,7 @@ sub ProcessReviews
     
     if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
     {
-      # If one or more reviewers are non-advanced mark as provisional match
+      # If both reviewers are non-advanced mark as provisional match
       if ( (!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
       {
          $self->RegisterStatus( $id, 3 );
@@ -341,8 +341,8 @@ sub CheckPendingStatus
 
     if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
     {
-      # If one or more reviewers are non-advanced mark as provisional match
-      if ( (!$self->IsUserAdvanced($user)) || (!$self->IsUserAdvanced($other_user)))
+      # If both reviewers are non-advanced mark as provisional match
+      if ( (!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
       {
          $self->RegisterPendingStatus( $id, 3 );
       }
