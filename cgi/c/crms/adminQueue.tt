@@ -24,12 +24,12 @@ function CheckAll(box,formid)
 -->
 </script>
 
-<h2>Queue Administration:</h2><br/><br/>
+<h2>[% (crms.GetTrainingMode())? "Training ":"" %]Queue Administration:</h2><br/><br/>
 
 [% IF cgi.param('clear') %]
   [% crms.RemoveOldLocks() %]
 [% ELSIF cgi.param('reset') %]
-  [% blah = crms.PrepareSubmitSql('UPDATE mode SET seq=0') %]
+  [% blah = crms.PrepareSubmitSql('DELETE FROM reviews WHERE id IN (SELECT id FROM training_queue)') %]
 [% ELSIF cgi.param('unlockSel') %]
   [% FOREACH param IN cgi.param %]
     [% matches = param.match('(vol_)(.+)') %]
@@ -87,8 +87,8 @@ function CheckAll(box,formid)
 [% dev = crms.get('dev') %]
 [% IF dev == 'moseshll' || dev == 'crmstest' %]
   <br/><br/><br/>
-  [% train = crms.SimpleSqlGet('SELECT train FROM mode') %]
-  [% seq = crms.SimpleSqlGet('SELECT seq FROM mode') %]
+  [% train = crms.SimpleSqlGet('SELECT train FROM systemstatus') %]
+  [% seq = crms.NextSeq() %]
   <h4>Training Queue: [% (train)? 'ON':'OFF' %]</h4>
   <div style="position:relative;border-style:solid;width:25%;border-width:1px;padding:10px;">
   <form action="crms">

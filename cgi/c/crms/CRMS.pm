@@ -5505,6 +5505,14 @@ sub ToggleTrainingMode
   $self->PrepareSubmitSql('UPDATE systemstatus SET train=(!train)');
 }
 
+sub NextSeq
+{
+  my $self  = shift;
+
+  my $sql = 'SELECT seq FROM training_queue WHERE locked IS NULL AND id NOT IN (SELECT DISTINCT id FROM reviews) ORDER BY seq ASC LIMIT 1';
+  return $self->SimpleSqlGet($sql);
+}
+
 sub GetQueuePriorities
 {
   my $self = shift;
