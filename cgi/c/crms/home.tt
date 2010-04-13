@@ -1,17 +1,17 @@
 [% INCLUDE header.tt %]
-[% checkin = cgi.param('checkin') %]
-[% checkinAll = cgi.param("checkinAll") %]
 
-[% IF checkin %]
-  [% IF crms.UnlockItem( checkin, user ) %]
-  [% ELSE %] <h3>ERROR unlocking [% checkin %]</h3>
-  [% END  %]
-[% END %]
-[% IF checkinAll %]
-  [% IF crms.UnlockAllItemsForUser( user ) %]
-  [% ELSE %] <h3>ERROR unlocking all</h3>
-  [% END  %]
-[% END %]
+<script type="text/Javascript">
+<!--
+function CheckAll(box,formid)
+{
+	var aa=document.getElementById(formid);
+	for (var i=0; i < aa.elements.length; i++) 
+	{
+	  aa.elements[i].checked = box.checked;
+	}
+}
+-->
+</script>
 
 <div>|| <a href="crms">home</a> || 
   <a href="crms?p=review">review</a> ||
@@ -30,19 +30,54 @@
 </div>
 [% END %]
 
+[% IF cgi.param('unlockSel') %]
+<br/>
+  [% FOREACH param IN cgi.param %]
+    [% matches = param.match('(vol_)(.+)') %]
+    [% IF matches.0 == 'vol_' %]
+      [% ok = crms.UnlockItemEvenIfNotLocked(matches.1) %]
+      [% IF ok %]
+        <span>Unlocked [% matches.1 %]</span><br/>
+      [% ELSE %]
+        <<span style='color:red;'>Could not unlock [% matches.1 %]</span><br/>
+      [% END %]
+    [% END %]
+  [% END %]
+[% ELSIF cgi.param('unlock') %]
+  [% ok = crms.UnlockItemEvenIfNotLocked(cgi.param('unlock')) %]
+  [% IF ok %]
+    <span>Unlocked [% cgi.param('unlock') %]</span><br/>
+  [% ELSE %]
+    <span style='color:red;'>Could not unlock [% cgi.param('unlock') %]</span><br/>
+  [% END %]
+[% END %]
+ 
 [% locked = crms.GetLockedItems(user) %]
 [% IF locked.size %]
-  <div><blockquote>
+  <br/><br/><form action="crms" id="checks">
+  <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
+  <input type="submit" name="unlockSel" value="Unlock Selected Volumes"/><br/><br/>
+  <table class="exportStats" style="width:55%">
+  <tr><th colspan="6" style="text-align:center;"><span class="major">Your Locked Items</span></th></tr>
+  <tr><th>ID</th><th>Title</th><th>Since</th><th>Select</th><th>Unlock</th></tr>
   [% FOREACH item IN locked.keys %]
-    <strong>locked:</strong>
-    [% crms.GetTitle( item ) %]
-    (since: [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
-    [<a href="crms?p=crms&amp;checkin=[% item %]">unlock item</a>]<br/>
+    <tr>
+      <td>[% item %]</td>
+      <td>[% crms.GetTitle( item ) %]</td>
+      [% when = crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %]
+      [% when = crms.FormatTime(when, 1) %]
+      <td style="text-align:center">[% when.replace('\s', '&nbsp;') %]</td>
+      <td style="text-align:center"><input type="checkbox" name="vol_[% item %]"/></td>
+      <td style="text-align:center">
+        <a href="crms?unlock=[% item %]">do it</a>  
+      </td>
+    </tr>
   [% END %]
-  </blockquote></div>
-  [<a href="crms?p=crms&amp;checkinAll=1">Unlock All Items</a>]<br/>
+</table>
+</form>
+<br/>
 [% END %]
-  
+ 
 [% summary = crms.HoldSummary(user) %]
 [% IF summary %]
 <br/><h4>You have outstanding questions on the following items:</h4><br/>
