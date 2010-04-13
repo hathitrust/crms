@@ -5480,7 +5480,8 @@ sub GetNextItemFromTrainingQueue
   my $id = undef;
   if ($self->GetTrainingMode())
   {
-    $id = $self->SimpleSqlGet('SELECT q.id FROM training_queue q INNER JOIN mode m ON q.seq=m.seq');
+    my $sql = 'SELECT id FROM training_queue WHERE locked IS NULL AND id NOT IN (SELECT DISTINCT id FROM reviews) ORDER BY seq ASC LIMIT 1';
+    $id = $self->SimpleSqlGet($sql);
   }
   return $id
 }
@@ -5492,7 +5493,7 @@ sub GetTrainingMode
   my $train = 0;
   if ($self->get('dev'))
   {
-    $train = 1 if $self->SimpleSqlGet('SELECT train FROM mode');
+    $train = 1 if $self->SimpleSqlGet('SELECT train FROM systemstatus');
   }
   return $train;
 }
@@ -5501,7 +5502,7 @@ sub ToggleTrainingMode
 {
   my $self  = shift;
 
-  $self->PrepareSubmitSql('UPDATE mode SET train=(!train)');
+  $self->PrepareSubmitSql('UPDATE systemstatus SET train=(!train)');
 }
 
 sub GetQueuePriorities
