@@ -161,6 +161,12 @@
         </table>
         [% IF crms.IsUserExpert(user) %]
           <table class="nav">
+          [% status = crms.GetStatus(barcode) %]
+          [% IF status == 3 %]
+            <tr><td><span style="font-size:1.1em">Provisional Match</span></td></tr>
+          [% ELSIF status == 2 %]
+            <tr><td><span style="font-size:1.1em">Conflict</span></td></tr>
+          [% END %]
           <tr><td><span style="font-size:1.1em">Priority [% priority %]</span></td></tr>
           [% totalReviews = crms.GetReviewsCount('adminHistoricalReviews', 'Identifier', barcode) %]
           [% IF totalReviews > 0 %]
