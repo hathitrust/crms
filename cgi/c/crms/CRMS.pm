@@ -271,11 +271,6 @@ sub ProcessReviews
       {
          $self->RegisterStatus( $id, 3 );
       }
-      # Matching und/nfi
-      #elsif ( ( $attr == 5 ) && ( $reason == 8 )  )
-      #{
-      #   $self->RegisterStatus( $id, 3 );
-      #}
       else #Mark as 4 - two that agree
       {
         #If they are ic/ren then the renewal date and id must match
@@ -346,11 +341,6 @@ sub CheckPendingStatus
       {
          $self->RegisterPendingStatus( $id, 3 );
       }
-      #If both und/nfi then status is 3
-      #elsif ( ( $attr == 5 ) && ( $reason == 8 ) )
-      #{
-      #   $self->RegisterPendingStatus( $id, 3 );
-      #}
       else #Mark as 4 - two that agree
       {
         #If they are ic/ren then the renewal date and id must match
@@ -389,9 +379,11 @@ sub CheckPendingStatus
   }
 }
 
+# If fromcgi is set, don't try to create the export file.
 sub ClearQueueAndExport
 {
-    my $self = shift;
+    my $self     = shift;
+    my $fromcgi  = shift;
 
     my $eCount = 0;
     my $dCount = 0;
@@ -415,7 +407,7 @@ sub ClearQueueAndExport
         $dCount++;
     }
 
-    $self->ExportReviews( $export );
+    $self->ExportReviews( $export, $fromcgi );
     
     ## report back
     $self->Logit( "expert reviewed items removed from queue ($eCount)" );
@@ -433,28 +425,31 @@ sub ClearQueueAndExport
 ## ----------------------------------------------------------------------------
 sub ExportReviews
 {
-    my $self = shift;
-    my $list = shift;
+    my $self    = shift;
+    my $list    = shift;
+    my $fromcgi = shift;
+
+    my $count = 0;
+
 
     my $user = 'crms';
     my $time = $self->GetTodaysDate();
-    my ( $fh, $file ) = $self->GetExportFh();
-    my $count = 0;
+    my ( $fh, $file ) = $self->GetExportFh() unless $fromcgi;
     my $start_size = $self->GetCandidatesSize();
 
     foreach my $id ( @{$list} )
     {
       my ($attr,$reason) = $self->GetFinalAttrReason($id);
 
-      print $fh "$id\t$attr\t$reason\t$user\tnull\n";
-      
+      print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $fromcgi;
+
       my $src = $self->SimpleSqlGet("SELECT source FROM queue WHERE id='$id' ORDER BY time DESC LIMIT 1");
-      
+
       my $sql = qq{ INSERT INTO  exportdata (time, id, attr, reason, user, src ) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src' )};
       $self->PrepareSubmitSql( $sql );
-      
+
       my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata');
-      
+
       $sql = qq{ INSERT INTO exportdataBckup (time, id, attr, reason, user, src ) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src' )};
       $self->PrepareSubmitSql( $sql );
 
@@ -463,8 +458,7 @@ sub ExportReviews
       $self->RemoveFromCandidates($id);
       $count++;
     }
-    close $fh;
-    
+    close $fh unless $fromcgi;
     # Update correctness/validation now that everything is in historical
     foreach my $id ( @{$list} )
     {
@@ -485,10 +479,13 @@ sub ExportReviews
     }
     my $sql = qq{ INSERT INTO  $CRMSGlobals::exportrecordTable (itemcount) VALUES ( $count )};
     $self->PrepareSubmitSql( $sql );
-    
-    printf "After export, removed %d volumes from candidates.\n", $start_size-$self->GetCandidatesSize();
-    eval { $self->EmailReport ( $count, $file ); };
-    $self->SetError("EmailReport() failed: $@") if $@;
+
+    if (!$fromcgi)
+    {
+      printf "After export, removed %d volumes from candidates.\n", $start_size-$self->GetCandidatesSize();
+      eval { $self->EmailReport ( $count, $file ); };
+      $self->SetError("EmailReport() failed: $@") if $@;
+    }
 }
 
 sub EmailReport

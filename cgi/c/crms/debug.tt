@@ -30,7 +30,7 @@
 <tr>
 <th>Process&nbsp;today's&nbsp;reviews
   <span class="total">
-  Only changes status of items in queue. Does not try to move to historical or export determinations.
+  Does not export determinations, add items to candidates/queue, or send email.
   </span>
 </th>
 <td>
@@ -144,6 +144,7 @@ To display a custom message, or override the standard ones (<i>down</i>/<i>parti
 [% IF crms.get('dev') %]
   [% IF cgi.param('processReviews') %]
     [% blah = crms.ProcessReviews() %]
+    [% blah = crms.ClearQueueAndExport(1) %]
     [% FOREACH error IN crms.GetErrors %]
       <p style="color:red;">[% error %]</p>
     [% END %]
