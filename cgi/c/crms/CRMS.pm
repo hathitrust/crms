@@ -379,7 +379,7 @@ sub CheckPendingStatus
   }
 }
 
-# If fromcgi is set, don't try to create the export file.
+# If fromcgi is set, don't try to create the export file, print stuff, or send mail.
 sub ClearQueueAndExport
 {
     my $self     = shift;
@@ -430,8 +430,6 @@ sub ExportReviews
     my $fromcgi = shift;
 
     my $count = 0;
-
-
     my $user = 'crms';
     my $time = $self->GetTodaysDate();
     my ( $fh, $file ) = $self->GetExportFh() unless $fromcgi;
@@ -6068,12 +6066,33 @@ sub CreateReviewReport
   $count = scalar @{$rows};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Matches</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
-
+  
   $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=4 OR status=5 OR status=6";
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Awaiting&nbsp;Export</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+  
+  if ($count > 0)
+  {
+    $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=4";
+    $rows = $dbh->selectall_arrayref( $sql );
+    $count = scalar @{$rows};
+    $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</td><td>$count</td>";
+    $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+
+    $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=5";
+    $rows = $dbh->selectall_arrayref( $sql );
+    $count = scalar @{$rows};
+    $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</td><td>$count</td>";
+    $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+
+    $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=6";
+    $rows = $dbh->selectall_arrayref( $sql );
+    $count = scalar @{$rows};
+    $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6</td><td>$count</td>";
+    $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+  }
   $report .= sprintf("<tr><td colspan='%d'><span class='smallishText'>Last processed %s</span></td></tr>\n", $maxpri+3, $self->GetLastStatusProcessedTime());
   $report .= "</table>\n";
   return $report;
@@ -6088,7 +6107,7 @@ sub DoPriorityBreakdown
   my $class = shift;
   my $dbh = $self->get( 'dbh' );
   my @breakdown = map {'';} (0..$max);
-  $sql = "SELECT priority,COUNT(priority) FROM queue WHERE id IN ($sql) GROUP BY priority ORDER BY priority";
+  $sql = "SELECT priority,COUNT(priority) FROM queue WHERE id IN ($sql) GROUP BY priority ORDER BY priority ASC";
   my $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
