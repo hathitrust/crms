@@ -27,6 +27,7 @@ function CheckAll(box,formid)
 [% IF crms.IsUserExpert %]
 <div> || <a href="crms?p=undReviews">provisional matches</a> ||
   <a href="crms?p=expert">conflicts</a> ||
+  <a href="crms?p=adminUser">user accounts</a> ||
 </div>
 [% END %]
 
@@ -39,7 +40,7 @@ function CheckAll(box,formid)
       [% IF ok %]
         <span>Unlocked [% matches.1 %]</span><br/>
       [% ELSE %]
-        <<span style='color:red;'>Could not unlock [% matches.1 %]</span><br/>
+        <span style='color:red;'>Could not unlock [% matches.1 %]</span><br/>
       [% END %]
     [% END %]
   [% END %]

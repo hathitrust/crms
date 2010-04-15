@@ -1,4 +1,4 @@
-[% IF NOT crms.IsUserAdmin() %]
+[% IF NOT (crms.IsUserExpert() || crms.IsUserAdmin())  %]
   [% INCLUDE denied.tt  %]
   [% STOP %]
 [% END %]
@@ -60,15 +60,18 @@
 </table>
 <br/>
 
+[% IF crms.IsUserAdmin() %]
 <h4>Add or Edit a User:</h4>
 <div style="position:relative;border-style:solid;width:38em;border-width:1px;padding:10px;">
   <form action="crms">
     <input type="hidden" name="p" value="adminUser"/>
     <input type="hidden" name="add" value="1"/>
+    <table>
     <label for="namefield" style="float:left;width:4em">Name:</label>
     <input id="namefield" type="text" name="name" value="[% (id)? crms.GetUserName(id):'' %]"/><br/> 
     <label for="idfield" style="float:left;width:4em">ID:</label>
     <input id="idfield" type="text" name="id" value="[% id %]"/><br/>
+    </table>
     <br/>
     <input type="checkbox" name="reviewer"
       [% IF id %]
@@ -96,11 +99,10 @@
       [% END %]
       [% crms.IsUserSuperAdmin() ? '' : 'disabled="disabled"' %]
       /> Super Admin
-    
-  
     <br/><br/><input type="checkbox" name="delete"/> Delete user
     <br/><br/><input type="submit"  value="Submit"/>
   </form>
 </div>
+[% END %]
 
 [% INCLUDE footer.tt %]

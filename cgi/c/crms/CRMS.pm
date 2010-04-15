@@ -6773,7 +6773,7 @@ sub PageToEnglish
                'adminHistoricalReviews' => 'view all historical reviews',
                'adminQueue' => 'manage the queue',
                'adminReviews' => 'view all active reviews',
-               'adminUser' => 'administer user accounts',
+               'adminUser' => 'user accounts',
                'adminUserRate' => 'view user review rates',
                'editReviews' => 'edit reviews',
                'expert' => 'expert review',
