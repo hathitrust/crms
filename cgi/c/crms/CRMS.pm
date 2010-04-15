@@ -785,7 +785,7 @@ sub AddItemToQueueOrSetItemActive
   my $stat = 0;
   my @msgs = ();
   $priority = 4 if $override;
-  if ($override && $self->IsUserSuperAdmin())
+  if ($override && !$self->IsUserSuperAdmin())
   {
     push @msgs, 'Only a super admin can set priority 4';
     $stat = 1;
@@ -2906,6 +2906,16 @@ sub GetUserName
   return $self->SimpleSqlGet( $sql );
 }
 
+sub GetUserKerberosID
+{
+  my $self = shift;
+  my $user = shift;
+
+  $user = $self->get('user') unless $user;
+  my $sql = "SELECT kerberos FROM users WHERE id='$user'";
+  return $self->SimpleSqlGet( $sql );
+}
+
 
 sub GetAliasUserName
 {
@@ -2934,9 +2944,37 @@ sub SameUser
   my $u1   = shift;
   my $u2   = shift;
   
-  $u1 =~ s/([A-Za-z]).*/$1/;
-  $u2 =~ s/([A-Za-z]).*/$1/;
+  $u1 =~ s/([A-Za-z]*).*/$1/;
+  $u2 =~ s/([A-Za-z]*).*/$1/;
   return $u1 eq $u2;
+}
+
+sub CanChangeToUser
+{
+  my $self = shift;
+  my $me   = shift;
+  my $him  = shift;
+  
+  return 0 if $me eq $him;
+  return 0 unless $self->IsUserAdmin($me) or $self->SameUser($me, $him);
+  return 1 if $self->SameUser($me, $him);
+  my $sql = "SELECT reviewer,advanced,expert,admin,superadmin FROM users WHERE id='$me'";
+  my $ref1 = $self->get('dbh')->selectall_arrayref($sql);
+  $ref1 = $ref1->[0];
+  $sql = "SELECT reviewer,advanced,expert,admin,superadmin FROM users WHERE id='$him'";
+  my $ref2 = $self->get('dbh')->selectall_arrayref($sql);
+  $ref2 = $ref2->[0];
+  return 0 if $ref2->[4] and not $ref1->[4];
+  return 1 if $ref1->[4];
+  return 0 if $ref2->[3] and not $ref1->[3];
+  return 1 if $ref1->[3];
+  return 0 if $ref2->[2] and not $ref1->[2];
+  return 1 if $ref1->[2];
+  return 0 if $ref2->[1] and not $ref1->[1];
+  return 1 if $ref1->[1];
+  return 0 if $ref2->[0] and not $ref1->[0];
+  return 1 if $ref1->[0];
+  return 1;
 }
 
 sub IsUserReviewer
@@ -4035,12 +4073,14 @@ sub AddUser
 {
     my $self       = shift;
     my $id         = shift;
+    my $kerberos   = shift;
     my $name       = shift;
     my $reviewer   = shift;
     my $advanced   = shift;
     my $expert     = shift;
     my $admin      = shift;
     my $superadmin = shift;
+    my $note       = shift;
     
     $reviewer = ($reviewer)? 1:0;
     $advanced = ($advanced)? 1:0;
@@ -4048,8 +4088,8 @@ sub AddUser
     $admin = ($admin)? 1:0;
     $superadmin = ($superadmin)? 1:0;
     $name = $self->SimpleSqlGet("SELECT name FROM users WHERE id='$id'") unless $name;
-    my $sql = "REPLACE INTO users (id,name,reviewer,advanced,expert,admin,superadmin)" .
-              " VALUES ('$id','$name',$reviewer,$advanced,$expert,$admin,$superadmin)";
+    my $sql = "REPLACE INTO users (id,kerberos,name,reviewer,advanced,expert,admin,superadmin,note)" .
+              " VALUES ('$id','$kerberos','$name',$reviewer,$advanced,$expert,$admin,$superadmin,'$note')";
     #print "$sql<br/>\n";
     $self->PrepareSubmitSql($sql);
     return 1;

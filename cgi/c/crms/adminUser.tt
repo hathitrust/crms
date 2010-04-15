@@ -9,6 +9,7 @@
 <h2>Users:</h2>
 
 [% id         = cgi.param('id')         %]
+[% kerberos   = cgi.param('kerberos')   %]
 [% add        = cgi.param('add')        %]
 [% name       = cgi.param('name')       %]
 [% reviewer   = cgi.param('reviewer')   %]
@@ -16,41 +17,43 @@
 [% expert     = cgi.param('expert')     %]
 [% admin      = cgi.param('admin')      %]
 [% superadmin = cgi.param('superadmin') %]
+[% note       = cgi.param('note') %]
 [% delete     = cgi.param('delete')     %]
 
 [% icon = '<img width="16" height="16" alt="Check" src="/c/crms/CheckIcon.png"/>' %]
 
-[% IF add %]
-  [% IF delete %]
-    [% IF id %]
-      [% blah = crms.DeleteUser(id) %]
-      <h3>[% id %] was deleted</h3>
-      [% id = '' %]
+[% IF crms.IsUserAdmin() %]
+  [% IF add %]
+    [% IF delete %]
+      [% IF id %]
+        [% blah = crms.DeleteUser(id) %]
+        <h3>[% id %] was deleted</h3>
+        [% id = '' %]
+      [% END %]
+    [% ELSE %]
+      [% blah = crms.AddUser(id,kerberos,name,reviewer,advanced,expert,admin,superadmin,note) %]
     [% END %]
-  [% ELSE %]
-    [% blah = crms.AddUser(id,name,reviewer,advanced,expert,admin,superadmin) %]
   [% END %]
 [% END %]
 
 [% users = crms.GetUsers() %]
 <table class="exportStats">
-  <tr><th>Name</th><th>ID</th><th>Reviewer</th><th>Advanced</th><th>Expert</th><th>Admin</th><th>Super&nbsp;Admin</th><th>Change&nbsp;To</th></tr>
-  [% FOREACH user IN users %]
-    <tr [% id == user ? 'class="total"':''%]>
-      <td><a href="crms?p=userRate&amp;user=[% user %]" target="_blank">[% crms.GetUserName(user).replace('\s','&nbsp;') %]</a></td>
-      <td>[% user %]</td>
-      <td style="text-align:center">[% IF crms.IsUserReviewer(user) %][% icon %][% END %]</td>
-      <td style="text-align:center">[% IF crms.IsUserAdvanced(user) %][% icon %][% END %]</td>
-      <td style="text-align:center">[% IF crms.IsUserExpert(user) %][% icon %][% END %]</td>
-      <td style="text-align:center">[% IF crms.IsUserAdmin(user) %][% icon %][% END %]</td>
-      <td style="text-align:center">[% IF crms.IsUserSuperAdmin(user) %][% icon %][% END %]</td>
-      [% meSuper = crms.IsUserSuperAdmin() %]
-      [% super = crms.IsUserSuperAdmin(user) %]
+  <tr><th>Name</th><th>ID</th><th>Kerberos&nbsp;ID</th><th>Reviewer</th><th>Advanced</th><th>Expert</th><th>Admin</th><th>Super&nbsp;Admin</th><th>Change&nbsp;To</th></tr>
+  [% FOREACH userid IN users %]
+    <tr [% id == userid ? 'class="total"':''%]>
+      <td><a href="crms?p=userRate&amp;user=[% userid %]" target="_blank">[% crms.GetUserName(userid).replace('\s','&nbsp;') %]</a></td>
+      <td>[% userid %]</td>
+      <td>[% crms.GetUserKerberosID(userid) %]</td>
+      <td style="text-align:center">[% IF crms.IsUserReviewer(userid) %][% icon %][% END %]</td>
+      <td style="text-align:center">[% IF crms.IsUserAdvanced(userid) %][% icon %][% END %]</td>
+      <td style="text-align:center">[% IF crms.IsUserExpert(userid) %][% icon %][% END %]</td>
+      <td style="text-align:center">[% IF crms.IsUserAdmin(userid) %][% icon %][% END %]</td>
+      <td style="text-align:center">[% IF crms.IsUserSuperAdmin(userid) %][% icon %][% END %]</td>
       <td>
-        [% IF (meSuper || !super || crms.SameUser(user,crms.get('user'))) && user != crms.get('user') %]
+        [% IF crms.CanChangeToUser(user,userid) %]
         <form action="crms">
           <input type="hidden" name="changeuser" value="1"/>
-          <input type="hidden" name="newuser" value="[% user %]"/>
+          <input type="hidden" name="newuser" value="[% userid %]"/>
           <input type="submit" value="Go"/>
         </form>
         [% END %]
@@ -67,10 +70,28 @@
     <input type="hidden" name="p" value="adminUser"/>
     <input type="hidden" name="add" value="1"/>
     <table>
-    <label for="namefield" style="float:left;width:4em">Name:</label>
-    <input id="namefield" type="text" name="name" value="[% (id)? crms.GetUserName(id):'' %]"/><br/> 
-    <label for="idfield" style="float:left;width:4em">ID:</label>
-    <input id="idfield" type="text" name="id" value="[% id %]"/><br/>
+    <tr>
+      <td>
+        <label for="namefield" style="float:left;width:5em">Name:</label>
+        <input id="namefield" type="text" name="name" value="[% (id)? crms.GetUserName(id):'' %]"/>
+      </td>
+      <td rowspan="3">
+        <label for="notefield" style="float:left;width:4em">Note:</label>
+        <textarea name="note" id="notefield" rows="3" cols="20"></textarea>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <label for="idfield" style="float:left;width:5em">ID:</label>
+        <input id="idfield" type="text" name="id" value="[% id %]"/>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <label for="kerbfield" style="float:left;width:5em">Kerberos&nbsp;ID:</label>
+        <input id="kerbfield" type="text" name="kerberos" value="[% kerberos %]"/>
+      </td>
+    </tr>
     </table>
     <br/>
     <input type="checkbox" name="reviewer"
