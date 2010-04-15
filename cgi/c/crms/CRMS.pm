@@ -2928,6 +2928,17 @@ sub ChangeAliasUserName
   $self->PrepareSubmitSql( $sql );
 }
 
+sub SameUser
+{
+  my $self = shift;
+  my $u1   = shift;
+  my $u2   = shift;
+  
+  $u1 =~ s/([A-Za-z]).*/$1/;
+  $u2 =~ s/([A-Za-z]).*/$1/;
+  return $u1 eq $u2;
+}
+
 sub IsUserReviewer
 {
   my $self = shift;

@@ -47,7 +47,7 @@
       [% meSuper = crms.IsUserSuperAdmin() %]
       [% super = crms.IsUserSuperAdmin(user) %]
       <td>
-        [% IF (meSuper || !super) && user != crms.get('user') %]
+        [% IF (meSuper || !super || crms.SameUser(user,crms.get('user'))) && user != crms.get('user') %]
         <form action="crms">
           <input type="hidden" name="changeuser" value="1"/>
           <input type="hidden" name="newuser" value="[% user %]"/>
