@@ -1,4 +1,4 @@
-[% IF NOT crms.IsUserAdmin() %]
+[% IF NOT crms.IsUserSuperAdmin() %]
   [% INCLUDE denied.tt  %]
   [% STOP %]
 [% END %]
@@ -163,11 +163,13 @@ To display a custom message, or override the standard ones (<i>down</i>/<i>parti
   </table>
 [% END %]
 
-<h3>CRMS&nbsp;Object</h3>
-<table class="exportStats" style="width:30%;">
-[% FOREACH key IN crms.keys() %]
-<tr><td>[% key %]</td><td>[% crms.get(key) %]</td></tr>
+[% IF cgi.param('debug') %]
+  <h3>CRMS&nbsp;Object</h3>
+  <table class="exportStats" style="width:30%;">
+  [% FOREACH key IN crms.keys() %]
+  <tr><td>[% key %]</td><td>[% crms.get(key) %]</td></tr>
+  [% END %]
+  </table>
 [% END %]
-</table>
 [% INCLUDE footer.tt %]
 
