@@ -1225,14 +1225,15 @@ sub SubmitHistReview
       $self->PrepareSubmitSql( $sql );
 
       #Now load this info into the bibdata table.
-      $self->UpdateTitle( $id );
-      $self->UpdatePubDate( $id );
-      $self->UpdateAuthor( $id );
+      my $record = $self->GetRecordMetadata($id);
+      $self->UpdateTitle( $id, undef, $record );
+      $self->UpdatePubDate( $id, undef, $record );
+      $self->UpdateAuthor( $id, undef, $record );
       
       # Update status on status 1 item
       if ($status == 5)
       {
-        $sql = qq{UPDATE $CRMSGlobals::historicalreviewsTable SET status=$status WHERE id='$id' AND legacy=1 AND gid IS NULL};
+        $sql = "UPDATE $CRMSGlobals::historicalreviewsTable SET status=$status WHERE id='$id' AND legacy=1 AND gid IS NULL";
         $self->PrepareSubmitSql( $sql );
       }
       # Update validation on all items with this id
@@ -2850,6 +2851,17 @@ sub GetReviewCategory
     return $str;
 }
 
+sub GetReviewSwiss
+{
+    my $self = shift;
+    my $id   = shift;
+    my $user = shift;
+
+    my $sql = qq{ SELECT swiss FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
+    
+    return $self->SimpleSqlGet( $sql );
+}
+
 
 sub GetAttrReasonCode
 {
@@ -4266,7 +4278,7 @@ sub ValidateSubmission2
     {
       if ( ( $category )  && ( ! $note ) )
       {
-        if ($category ne 'US Gov Doc')
+        if ($category ne 'US Gov Doc' && $category ne 'Expert Accepted')
         {
           $errorMsg .= 'must include a note if there is a category.';
         }
@@ -4825,9 +4837,10 @@ sub GetPubDate
 
 sub UpdateTitle
 {
-  my $self  = shift;
-  my $id    = shift;
-  my $title = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $title  = shift;
+  my $record = shift;
   
   if ($id eq '')
   {
@@ -4837,7 +4850,7 @@ sub UpdateTitle
   if ( ! $title )
   {
     ## my $ti = $self->GetMarcDatafield( $id, "245", "a");
-    $title = $self->GetRecordTitleBc2Meta( $id );
+    $title = $self->GetRecordTitleBc2Meta( $id, $record );
   }
   if ($self->Mojibake($title))
   {
@@ -4874,16 +4887,17 @@ sub UpdateCandidatesTitle
 
 sub UpdatePubDate
 {
-  my $self = shift;
-  my $id   = shift;
-  my $date = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $date   = shift;
+  my $record = shift;
 
   if ($id eq '')
   {
     $self->SetError("Trying to update pub date for empty volume id!\n");
     $self->Logit("$0: trying to update pub date for empty volume id!\n");
   }
-  $date = $self->GetPublDate($id) unless $date;
+  $date = $self->GetPublDate($id, $record) unless $date;
   my $sql = qq{ SELECT count(*) FROM bibdata WHERE id="$id"};
   my $count = $self->SimpleSqlGet( $sql );
   $sql = "UPDATE bibdata SET pub_date='$date-01-01' WHERE id='$id'";
@@ -4910,16 +4924,14 @@ sub UpdateAuthor
   my $self   = shift;
   my $id     = shift;
   my $author = shift;
-
+  my $record = shift;
+  
   if ($id eq '')
   {
     $self->SetError("Trying to update author for empty volume id!\n");
     $self->Logit("$0: trying to update author for empty volume id!\n");
   }
-  if ( !$author )
-  {
-    $author = $self->GetMarcDatafieldAuthor( $id );
-  }
+  $author = $self->GetMarcDatafieldAuthor( $id, $record ) unless $author;
   if ($self->Mojibake($author))
   {
     $self->Logit("$0: Mojibake author <<$author>> for $id!\n");

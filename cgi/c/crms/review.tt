@@ -63,6 +63,8 @@
     <h3>Unable to find a volume ID to review</h3>
     [% STOP %]
   [% END %]
+[% ELSE %]
+
 [% END %]
 
 [% userName   = crms.GetUserName( user )                 %]
@@ -82,14 +84,16 @@
 [% renDate    = crms.GetRenDate( renNum )                   %]
 [% END %] 
 
-[% #crPage     = crms.GetCopyrightPage( barcode )            %]
-
 [% IF NOT comm %] 
 [% comm       = crms.GetReviewComment( barcode, user )      %]
 [% END %] 
 
 [% IF NOT category %] 
 [% category   = crms.GetReviewCategory( barcode, user )      %]
+[% END %]
+
+[% IF NOT swiss %] 
+[% swiss   = crms.GetReviewSwiss( barcode, user )      %]
 [% END %] 
 
 [%# links to PT, stanford DB search, or Mirlyn catalog %]

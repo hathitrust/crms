@@ -141,7 +141,10 @@
                "Edition"        => "Edition",       "US Gov Doc"      => "US Gov Doc",
                ""               => "none"} 
     %]
-
+    [% IF category == "Expert Accepted" %]
+      [% pre = "Expert Accepted" %]
+      [% pres.$pre = "Expert Accepted" %]
+    [% END %]
     [% FOREACH pre IN pres.sort %]
       [% IF pre == category %]
         <option value="[% pre %]" selected="selected">[% pres.${pre} %]</option>
