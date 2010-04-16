@@ -38,7 +38,7 @@
 
 [% users = crms.GetUsers() %]
 <table class="exportStats">
-  <tr><th>Name</th><th>ID</th><th>Kerberos&nbsp;ID</th><th>Reviewer</th><th>Advanced</th><th>Expert</th><th>Admin</th><th>Super&nbsp;Admin</th><th>Change&nbsp;To</th></tr>
+  <tr><th>Name</th><th>ID</th><th>Kerberos&nbsp;ID</th><th>Reviewer</th><th>Advanced</th><th>Expert</th><th>Admin</th><th>Super&nbsp;Admin</th><th>Note</th><th>Change&nbsp;To</th></tr>
   [% FOREACH userid IN users %]
     <tr [% id == userid ? 'class="total"':''%]>
       <td><a href="crms?p=userRate&amp;user=[% userid %]" target="_blank">[% crms.GetUserName(userid).replace('\s','&nbsp;') %]</a></td>
@@ -49,6 +49,8 @@
       <td style="text-align:center">[% IF crms.IsUserExpert(userid) %][% icon %][% END %]</td>
       <td style="text-align:center">[% IF crms.IsUserAdmin(userid) %][% icon %][% END %]</td>
       <td style="text-align:center">[% IF crms.IsUserSuperAdmin(userid) %][% icon %][% END %]</td>
+      [% note = crms.GetUserNote(userid) %]
+      <td style="text-align:center">[% note.replace('\s','&nbsp;') %]</td>
       <td>
         [% IF crms.CanChangeToUser(user,userid) %]
         <form action="crms">
@@ -72,24 +74,24 @@
     <table>
     <tr>
       <td>
-        <label for="namefield" style="float:left;width:5em">Name:</label>
-        <input id="namefield" type="text" name="name" value="[% (id)? crms.GetUserName(id):'' %]"/>
+        <label for="idfield" style="float:left;width:5.5em">ID:</label>
+        <input id="idfield" type="text" name="id" value="[% id %]"/>
       </td>
       <td rowspan="3">
         <label for="notefield" style="float:left;width:4em">Note:</label>
-        <textarea name="note" id="notefield" rows="3" cols="20"></textarea>
+        <textarea name="note" id="notefield" rows="3" cols="20">[% (id)? crms.GetUserNote(id):'' %]</textarea>
       </td>
     </tr>
     <tr>
       <td>
-        <label for="idfield" style="float:left;width:5em">ID:</label>
-        <input id="idfield" type="text" name="id" value="[% id %]"/>
+        <label for="kerbfield" style="float:left;width:5.5em">Kerberos&nbsp;ID:</label>
+        <input id="kerbfield" type="text" name="kerberos" value="[% (id)? crms.GetUserKerberosID(id):'' %]"/>
       </td>
     </tr>
     <tr>
       <td>
-        <label for="kerbfield" style="float:left;width:5em">Kerberos&nbsp;ID:</label>
-        <input id="kerbfield" type="text" name="kerberos" value="[% kerberos %]"/>
+        <label for="namefield" style="float:left;width:5.5em">Name:</label>
+        <input id="namefield" type="text" name="name" value="[% (id)? crms.GetUserName(id):'' %]"/>
       </td>
     </tr>
     </table>
@@ -124,6 +126,8 @@
     <br/><br/><input type="submit"  value="Submit"/>
   </form>
 </div>
+<span class="smallishText">Note: you can leave the name, kerberos, and note fields blank and the corresponding fields will be unchanged
+in the user's record.</span>
 [% END %]
 
 [% INCLUDE footer.tt %]

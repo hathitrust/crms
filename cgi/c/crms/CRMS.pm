@@ -2906,6 +2906,16 @@ sub GetUserName
   return $self->SimpleSqlGet( $sql );
 }
 
+sub GetUserNote
+{
+  my $self = shift;
+  my $user = shift;
+
+  $user = $self->get('user') unless $user;
+  my $sql = "SELECT note FROM users WHERE id='$user'";
+  return $self->SimpleSqlGet( $sql );
+}
+
 sub GetUserKerberosID
 {
   my $self = shift;
@@ -2944,8 +2954,8 @@ sub SameUser
   my $u1   = shift;
   my $u2   = shift;
   
-  $u1 =~ s/([A-Za-z]*).*/$1/;
-  $u2 =~ s/([A-Za-z]*).*/$1/;
+  $u1 = $self->SimpleSqlGet("SELECT kerberos FROM users WHERE id='$u1'");
+  $u2 = $self->SimpleSqlGet("SELECT kerberos FROM users WHERE id='$u2'");
   return $u1 eq $u2;
 }
 
@@ -4087,7 +4097,9 @@ sub AddUser
     $expert = ($expert)? 1:0;
     $admin = ($admin)? 1:0;
     $superadmin = ($superadmin)? 1:0;
+    $kerberos = $self->SimpleSqlGet("SELECT kerberos FROM users WHERE id='$id'") unless $kerberos;
     $name = $self->SimpleSqlGet("SELECT name FROM users WHERE id='$id'") unless $name;
+    $note = $self->SimpleSqlGet("SELECT note FROM users WHERE id='$id'") unless $note;
     my $sql = "REPLACE INTO users (id,kerberos,name,reviewer,advanced,expert,admin,superadmin,note)" .
               " VALUES ('$id','$kerberos','$name',$reviewer,$advanced,$expert,$admin,$superadmin,'$note')";
     #print "$sql<br/>\n";
