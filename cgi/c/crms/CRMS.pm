@@ -1214,16 +1214,12 @@ sub SubmitHistReview
     if ($err) { $self->SetError($err); return 0; }
     ## do some sort of check for expert submissions
     
-    my $sql = "SELECT COUNT(id) FROM historicalreviews WHERE id='$id' AND status=5";
-    my $count = $self->SimpleSqlGet($sql);
-    $status = 5 if $count;
-    print "$id has a status 5 review; bumping to status 5\n" if $count;
     if (!$noop)
     {
       $note = $self->get('dbh')->quote($note);
       
       ## all good, INSERT
-      $sql = 'REPLACE INTO historicalreviews (id, user, time, attr, reason, copyDate, renNum, renDate, note, legacy, category, status, expert, source) ' .
+      my $sql = 'REPLACE INTO historicalreviews (id, user, time, attr, reason, copyDate, renNum, renDate, note, legacy, category, status, expert, source) ' .
              "VALUES('$id', '$user', '$date', '$attr', '$reason', '$cDate', '$renNum', '$renDate', $note, 1, '$category', $status, $expert, 'legacy')";
 
       $self->PrepareSubmitSql( $sql );
@@ -1236,7 +1232,7 @@ sub SubmitHistReview
       # Update status on status 1 item
       if ($status == 5)
       {
-        $sql = qq{UPDATE $CRMSGlobals::historicalreviewsTable SET status=$status WHERE id='$id' AND gid IS NULL};
+        $sql = qq{UPDATE $CRMSGlobals::historicalreviewsTable SET status=$status WHERE id='$id' AND legacy=1 AND gid IS NULL};
         $self->PrepareSubmitSql( $sql );
       }
       # Update validation on all items with this id
