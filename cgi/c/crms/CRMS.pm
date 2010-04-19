@@ -6715,6 +6715,17 @@ sub SanityCheckDB
       $self->SetError(sprintf("$table __ no expert review for status %s %s__ ", $row->[1], $row->[0]));
     }
   }
+  $sql = "SELECT id,status FROM historicalreviews WHERE legacy=1 AND user NOT LIKE 'rereport%' AND user!='annekz' AND status>3";
+  $rows = $dbh->selectall_arrayref($sql);
+  foreach my $row ( @{$rows} )
+  {
+    my $id = $row->[0];
+    $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id' AND legacy=1 AND user='annekz'";
+    if (!$self->SimpleSqlGet($sql))
+    {
+      $self->SetError(sprintf("$table __ bad status for legacy %s__ %s", $id, $row->[1]));
+    }
+  }
   # ======== queue ========
   $table = 'queue';
   $sql = "SELECT id,time,status,locked,priority,expcnt FROM $table";
