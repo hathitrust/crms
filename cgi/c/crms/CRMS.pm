@@ -3599,24 +3599,21 @@ sub CreateExportStatusReport
     my @line = split "\t", $line;
     my $date = shift @line;
     my ($y,$m,$d) = split '-', $date;
+    my $extra = ($date eq '2010-04-20' || $date eq 'Apr 2010')? 'background-color:#C9A8FF;':'';
     $date =~ s/\s/&nbsp;/g;
     #<tr><th style="text-align:right;"><span>&nbsp;&nbsp;&nbsp;&nbsp;Total</span></th><td style="text-align:center;">&nbsp;&nbsp;&nbsp;&nbsp;<b>467</b></td><td style="text-align:center;">
     if ($date eq 'Total')
     {
-      $report .= '<tr><th style="text-align:right;">Total</th>';
+      $report .= "<tr><th style='text-align:right;$extra'>Total</th>";
     }
-    #elsif (substr($date,0,5) eq 'Total')
-    #{
-    #  $report .= "<tr><th class='minor'><span class='minor'>$date</span></th>"
-    #}
     else
     {
-      $report .= "<tr><th>$date</th>";
+      $report .= "<tr><th>$date" . (($extra)? '*':'') . '</th>';
     }
     for (my $i=0; $i < 7; $i++)
     {
       my $class = '';
-      my $style = ($i==3)? 'style="border-right:double 6px black"':'';
+      my $style = ($i==3)? "style='border-right:double 6px black;$extra'":($extra)? "style='$extra'":'';
       if ($i == 3 && $date ne 'Total')
       {
         $class = 'class="minor"';
@@ -3666,12 +3663,12 @@ sub CreateExportStatusGraph
       next if $date eq 'Total';
       next if $date =~ m/Total/ and !$monthly;
       $date =~ s/Total\s//;
+      my $extra = ($date eq '2010-04-20' || $date eq 'Apr 2010')? ',"type":"star","dot-size":5,"colour":"#FFFFFF","hollow":false':'';
       push @usedates, $date if $status == 4;
       my $count = $line[$status-4];
       my $pct = $line[$status];
       $pct =~ s/%//;
-      push @vals, sprintf('{"value":%d,"tip":"%.1f%% (%d)"}', $pct, $pct, $count);
-      
+      push @vals, sprintf('{"value":%d,"tip":"%.1f%% (%d)"%s}', $pct, $pct, $count, $extra);
     }
     push @elements, sprintf('{"type":"line","values":[%s],%s}', join(',',@vals), $attrs);
   }
@@ -5993,8 +5990,8 @@ sub CreateQueueReport
     foreach my $row (@{ $ref})
     {
       my $src = $row->[0];
-      $count = $row->[1];
-      $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$count</td></tr>\n";
+      my $n = $row->[1];
+      $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$n&nbsp;(%0.1f%%)</td></tr>\n", 100.0*$n/$count);
     }
   }
   $report .= "</table>\n";
