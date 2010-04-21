@@ -2,6 +2,14 @@
 [% INCLUDE adminNav.tt  %]
 
 <h2 style="margin-left:390px">Statistics for Exported Determinations</h2>
+<br/>
+<div style="width:32em;">
+<span class="smallishText" style="width:45%;">
+Note: we stopped using status 6 for expert-validated <code>und/nfi</code> reviews from advanced
+reviewers after April 19, 2010.
+</span>
+</div>
+
 <h3>CRMS&nbsp;Project&nbsp;Cumulative*&nbsp;&nbsp;&nbsp;&nbsp;<a target="_blank" href="/cgi/c/crms/getExportStats?type=text&amp;c=1">Download</a></h3>
 <table style="width:100px;">
   <tr>
