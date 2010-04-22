@@ -31,7 +31,11 @@
         [% id = '' %]
       [% END %]
     [% ELSE %]
-      [% blah = crms.AddUser(id,kerberos,name,reviewer,advanced,expert,admin,superadmin,note) %]
+      [% IF id %]
+        [% blah = crms.AddUser(id,kerberos,name,reviewer,advanced,expert,admin,superadmin,note) %]
+      [% ELSE %]
+        <h3 style="color:red;">No user ID provided</h3>
+      [% END %]
     [% END %]
   [% END %]
 [% END %]
@@ -74,7 +78,7 @@
     <table>
     <tr>
       <td>
-        <label for="idfield" style="float:left;width:5.5em">ID:</label>
+        <label for="idfield" style="float:left;width:5.5em">ID: <span class="smallishText" style="color:red;">(required)</span></label>
         <input id="idfield" type="text" name="id" value="[% id %]"/>
       </td>
       <td rowspan="3">
