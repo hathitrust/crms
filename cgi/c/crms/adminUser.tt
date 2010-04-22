@@ -79,55 +79,34 @@
     <tr>
       <td>
         <label for="idfield" style="float:left;width:5.5em">ID: <span class="smallishText" style="color:red;">(required)</span></label>
-        <input id="idfield" type="text" name="id" value="[% id %]"/>
+        <input id="idfield" type="text" name="id"/>
       </td>
       <td rowspan="3">
         <label for="notefield" style="float:left;width:4em">Note:</label>
-        <textarea name="note" id="notefield" rows="3" cols="20">[% (id)? crms.GetUserNote(id):'' %]</textarea>
+        <textarea name="note" id="notefield" rows="3" cols="20"></textarea>
       </td>
     </tr>
     <tr>
       <td>
         <label for="kerbfield" style="float:left;width:5.5em">Kerberos&nbsp;ID:</label>
-        <input id="kerbfield" type="text" name="kerberos" value="[% (id)? crms.GetUserKerberosID(id):'' %]"/>
+        <input id="kerbfield" type="text" name="kerberos"/>
       </td>
     </tr>
     <tr>
       <td>
         <label for="namefield" style="float:left;width:5.5em">Name:</label>
-        <input id="namefield" type="text" name="name" value="[% (id)? crms.GetUserName(id):'' %]"/>
+        <input id="namefield" type="text" name="name"/>
       </td>
     </tr>
     </table>
     <br/>
-    <input type="checkbox" name="reviewer"
-      [% IF id %]
-        [% crms.IsUserReviewer(id) ? 'checked="checked"' : '' %]
-      [% END %]
-      /> Reviewer
-    <input type="checkbox" name="advanced"
-      [% IF id %]
-        [% crms.IsUserAdvanced(id) ? 'checked="checked"' : '' %]
-      [% END %]
-      /> Advanced Reviewer
-    <input type="checkbox" name="expert"
-      [% IF id %]
-        [% crms.IsUserExpert(id) ? 'checked="checked"' : '' %]
-      [% END %]
-      /> Expert
-    <input type="checkbox" name="admin"
-      [% IF id %]
-        [% crms.IsUserAdmin(id) ? 'checked="checked"' : '' %]
-      [% END %]
-      /> Admin
-    <input type="checkbox" name="superadmin"
-      [% IF id %]
-        [% crms.IsUserSuperAdmin(id) ? 'checked="checked"' : '' %]
-      [% END %]
-      [% crms.IsUserSuperAdmin() ? '' : 'disabled="disabled"' %]
-      /> Super Admin
+    <input type="checkbox" name="reviewer"/> Reviewer
+    <input type="checkbox" name="advanced"/> Advanced Reviewer
+    <input type="checkbox" name="expert"/> Expert
+    <input type="checkbox" name="admin"/> Admin
+    <input type="checkbox" name="superadmin"[% crms.IsUserSuperAdmin()? '' : 'disabled="disabled"' %]/> Super Admin
     <br/><br/><input type="checkbox" name="delete"/> Delete user
-    <br/><br/><input type="submit"  value="Submit"/>
+    <br/><br/><input type="submit" value="Submit"/>
   </form>
 </div>
 <span class="smallishText">Note: you can leave the name, kerberos, and note fields blank and the corresponding fields will be unchanged
