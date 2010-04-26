@@ -4663,8 +4663,7 @@ sub GetPublDate
     {
       $record = $self->GetRecordMetadata($barcode);
     }
-
-    if ( ! $record ) { return 0; }
+    return unless $record;
 
     ## my $xpath = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
     my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
@@ -4672,9 +4671,15 @@ sub GetPublDate
     my $pubDateType = substr($leader, 6, 1);
     my $pubDate = substr($leader, 7, 4);
     # On questionable pub date, try date 2 field.
-    if ($pubDateType eq 'q' || ($pubDate eq '||||' || $pubDate eq '####' || $pubDate eq '^^^^'))
+    if ($pubDateType eq 'q' || $pubDate =~ m/[|#^]/ || !$pubDate)
     {
       $pubDate = substr($leader, 11, 4);
+    }
+    if ($pubDate =~ m/[|#^]/ || !$pubDate)
+    {
+      $xpath = "//*[local-name()='datafield' and \@tag='260']/*[local-name()='subfield' and \@code='c']";
+      $pubDate = $record->findvalue( $xpath );
+      $pubDate =~ s/.*?(\d\d\d\d).*//g;
     }
     return $pubDate;
 }
@@ -4805,43 +4810,52 @@ sub GetMarcDatafieldAuthor
 
 sub GetEncTitle
 {
-    my $self = shift;
-    my $bar  = shift;
+  my $self = shift;
+  my $bar  = shift;
 
-    my $ti = $self->GetTitle( $bar );
-
-    #good for the title
-    $ti =~ s,(.*\w).*,$1,;
-
-    $ti =~ s,\',\\\',g; ## escape '
-    return $ti;
+  my $ti = $self->GetTitle( $bar );
+  #good for the title
+  $ti =~ s,(.*\w).*,$1,;
+  $ti =~ s,\',\\\',g; ## escape '
+  return $ti;
 }
 
 sub GetTitle
 {
-    my $self = shift;
-    my $id   = shift;
+  my $self = shift;
+  my $id   = shift;
 
-    my $sql = qq{ SELECT title FROM bibdata WHERE id="$id" };
-    my $ti = $self->SimpleSqlGet( $sql );
+  my $ti = $self->SimpleSqlGet("SELECT title FROM bibdata WHERE id='$id'");
+  $ti = $self->UpdateTitle($id) unless $ti;
+  $ti =~ s,(.*\w).*,$1,;
+  return $ti;
+}
 
-    if ( $ti eq '' ) { $ti = $self->UpdateTitle($id); }
+## use for now because the API is slow...
+sub GetRecordTitleBc2Meta
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
 
-    #good for the title
-    $ti =~ s,(.*\w).*,$1,;
-
-    return $ti;
+  $id = lc $id;
+  $record = $self->GetRecordMetadata($id) unless $record;
+  my $xpath = "//*[local-name()='datafield' and \@tag='245']/*[local-name()='subfield' and \@code='a']";
+  my $title = '';
+  eval{ $title = $record->findvalue( $xpath ); };
+  if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
+  return $title;
 }
 
 sub GetPubDate
 {
-    my $self = shift;
-    my $id   = shift;
+  my $self = shift;
+  my $id   = shift;
 
-    my $sql = qq{ SELECT YEAR(pub_date) FROM bibdata WHERE id="$id" };
-    my $date = $self->SimpleSqlGet( $sql );
-    $date = 'unknown' unless $date;
-    return $date;
+  my $sql = "SELECT YEAR(pub_date) FROM bibdata WHERE id='$id'";
+  my $date = $self->SimpleSqlGet($sql);
+  $date = $self->UpdatePubDate($id) unless $date;
+  return $date;
 }
 
 sub UpdateTitle
@@ -4890,8 +4904,7 @@ sub UpdateCandidatesTitle
   
   my $title = $self->GetRecordTitleBc2Meta( $id );
   my $tiq = $self->get('dbh')->quote( $title );
-  my $sql = qq{ UPDATE candidates SET title=$tiq WHERE id="$id"};
-  $self->PrepareSubmitSql( $sql );
+  $self->PrepareSubmitSql("UPDATE candidates SET title=$tiq WHERE id='$id'");
 }
 
 sub UpdatePubDate
@@ -4907,7 +4920,7 @@ sub UpdatePubDate
     $self->Logit("$0: trying to update pub date for empty volume id!\n");
   }
   $date = $self->GetPublDate($id, $record) unless $date;
-  my $sql = qq{ SELECT count(*) FROM bibdata WHERE id="$id"};
+  my $sql = "SELECT COUNT(*) FROM bibdata WHERE id='$id'";
   my $count = $self->SimpleSqlGet( $sql );
   $sql = "UPDATE bibdata SET pub_date='$date-01-01' WHERE id='$id'";
   if (!$count)
@@ -4972,75 +4985,35 @@ sub UpdateCandidatesAuthor
   $self->PrepareSubmitSql( $sql );
 }
 
-
-## use for now because the API is slow...
-sub GetRecordTitleBc2Meta
-{
-    my $self   = shift;
-    my $id     = shift;
-    my $record = shift;
-    
-    $id = lc $id;
-    $record = $self->GetRecordMetadata($id) unless $record;
-    my $xpath = "//*[local-name()='datafield' and \@tag='245']/*[local-name()='subfield' and \@code='a']";
-    my $title = '';
-    eval{ $title = $record->findvalue( $xpath ); };
-    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
-    return $title;
-}
-
 sub GetEncAuthor
 {
-    my $self = shift;
-    my $bar  = shift;
+  my $self = shift;
+  my $bar  = shift;
 
-    my $au = $self->GetMarcDatafieldAuthor( $bar );
-
-    $au =~ s,\',\\\',g; ## escape '
-    $au =~ s,\",\\\",g; ## escape "
-    return $au;
+  my $au = $self->GetEncAuthorForReview($bar);
+  $au =~ s,\",\\\",g; ## escape "
+  return $au;
 }
 
 sub GetEncAuthorForReview
 {
-    my $self = shift;
-    my $bar  = shift;
+  my $self = shift;
+  my $bar  = shift;
 
-    my $au = $self->GetAuthorForReview($bar);
-    $au =~ s/\'/\\\'/g; ## escape '
-    return $au;
+  my $au = $self->GetAuthorForReview($bar);
+  $au =~ s/\'/\\\'/g; ## escape '
+  return $au;
 }
 
 sub GetAuthorForReview
 {
-    my $self = shift;
-    my $bar  = shift;
+  my $self = shift;
+  my $bar  = shift;
 
-    my $au = $self->GetMarcDatafield( $bar, 100, 'a');
-    if ( ! $au )
-    {
-      $au = $self->GetMarcDatafield( $bar, 110, 'a');
-    }
-    if ( ! $au )
-    {
-      $au = $self->GetMarcDatafield( $bar, 111, 'a');
-    }
-    if ( ! $au )
-    {
-      $au = $self->GetMarcDatafield( $bar, 130, 'a');
-    }
-    if ( ! $au )
-    {
-      $au = $self->GetMarcDatafield( $bar, 700, 'a');
-    }
-    if ( ! $au )
-    {
-      $au = $self->GetMarcDatafield( $bar, 710, 'a');
-    }
-
-    $au =~ s,(.*[A-Za-z]).*,$1,;
-
-    return $au;
+  my $au = $self->SimpleSqlGet("SELECT author FROM bibdata WHERE id='$bar'");
+  $au = $self->UpdateAuthor($bar) unless $au;
+  $au =~ s,(.*[A-Za-z]).*,$1,;
+  return $au;
 }
 
 sub MetadataURL
@@ -6055,7 +6028,7 @@ sub CreateDeterminationReport()
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6</th><td>$sixes&nbsp;(%.1f%%)</td></tr>", $pct6);
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;7</th><td>$sevens&nbsp;(%.1f%%)</td></tr>", $pct7);
   $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</th><td>%s</td></tr>", $exported);
-  foreach my $source (keys %sources)
+  foreach my $source (sort keys %sources)
   {
     my $n = $sources{$source};
     $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;$source</th><td>$n</td></tr>";
@@ -6639,7 +6612,7 @@ sub SanityCheckDB
   my $self = shift;
   my $dbh = $self->get( 'dbh' );
   my $vidRE = '^[a-z]+\d?\.[a-zA-Z]?[a-zA-Z0-9]+$';
-  my $pdRE = '^\d\d\d\d-\d\d-\d\d$';
+  my $pdRE = '^[1-9]\d\d\d-\d\d-\d\d$';
   # ======== bibdata ========
   my $table = 'bibdata';
   # Volume ID must not have any spaces before, after, or in.
@@ -6651,8 +6624,7 @@ sub SanityCheckDB
     my $md = $self->MetadataURL($row->[0]);
     $md =~ s/&/&amp;/g;
     $self->SetError(sprintf("$table __ illegal volume id__ '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table __ illegal pub_date for %s__ %s", $row->[0], $row->[1])) unless $row->[1] =~ m/$pdRE/;
-    $self->SetError(sprintf("$table __ illegal pub_date for <a href='%s' target='_blank'>%s</a>__ %s", $md, $row->[0], $row->[1])) if substr($row->[1], 0, 4) eq '0000';
+    $self->SetError(sprintf("$table __ illegal pub_date for <a href='%s' target='_blank'>%s</a>__ %s", $md, $row->[0], $row->[1])) unless $row->[1] =~ m/$pdRE/;
     #$self->SetError(sprintf("$table __ no author for %s__ '%s'", $row->[0], $row->[2])) if $row->[2] eq '';
     $self->SetError(sprintf("$table __ no title for <a href='%s' target='_blank'>%s</a>__ '%s'", $md, $row->[0], $row->[3])) if $row->[3] eq '';
     $self->SetError(sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
@@ -6669,8 +6641,7 @@ sub SanityCheckDB
     my $md = $self->MetadataURL($row->[0]);
     $md =~ s/&/&amp;/g;
     $self->SetError(sprintf("$table __ illegal volume id__ '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table __ illegal pub_date for %s__ %s", $row->[0], $row->[1])) unless $row->[1] =~ m/$pdRE/;
-    $self->SetError(sprintf("$table __ illegal pub_date for <a href='%s' target='_blank'>%s</a>__ %s", $md, $row->[0], $row->[1])) if substr($row->[1], 0, 4) eq '0000';
+    $self->SetError(sprintf("$table __ illegal pub_date for <a href='%s' target='_blank'>%s</a>__ %s", $md, $row->[0], $row->[1])) unless $row->[1] =~ m/$pdRE/;
     $self->SetError(sprintf("$table __ no title for %s__ '%s'", $row->[0], $row->[3])) if $row->[3] eq '';
     $self->SetError(sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
     $self->SetError(sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
