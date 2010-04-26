@@ -5964,12 +5964,12 @@ sub CreateQueueReport
   foreach my $pri (0 .. $maxpri) { $priheaders .= "<th>Priority&nbsp;$pri</th>" };
   $report .= "<table style='width:100px;'><tr style='vertical-align:top;'><td>\n";
   $report .= "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
-  foreach my $status (0 .. 7)
+  foreach my $status (-1 .. 7)
   {
-    my $statusClause = ($status == 0)? '':" WHERE STATUS=$status";
+    my $statusClause = ($status == -1)? '':" WHERE STATUS=$status";
     my $sql = qq{ SELECT count(*) FROM $CRMSGlobals::queueTable $statusClause};
     my $count = $self->SimpleSqlGet( $sql );
-    $status = 'All' if $status == 0;
+    $status = 'All' if $status == -1;
     my $class = ($status eq 'All')?' class="total"':'';
     $report .= sprintf("<tr><td%s>$status</td><td%s>$count</td>", $class, $class);
     $sql = "SELECT id FROM $CRMSGlobals::queueTable $statusClause";
