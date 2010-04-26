@@ -40,14 +40,6 @@
 </div>
 <br/>
 
-<div style="width:32em;">
-<span class="smallishText" style="width:45%;">
-Note: dates marked with a star and <span style="background-color:#C9A8FF;">shading</span> indicate
-that we stopped using status 6 for expert-validated <code>und/nfi</code> reviews from advanced
-reviewers after April 19, 2010.
-</span>
-</div>
-
 [% crms.CreateExportStatusReport(startDate, endDate, 0) %]
 <br/><br/><br/>
 <table style="padding:0px; width:800px; height:300px; border-collapse:collapse">
