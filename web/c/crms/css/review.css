@@ -25,6 +25,11 @@ body {
   margin-top: 3px;
 }
 
+a:link {color:#185EAC;}    /* unvisited link */
+a:visited {color:#185EAC;} /* visited link */
+a:hover {color:#1B75DA;}   /* mouse over link */
+a:active {color:#1B75DA;}  /* selected link */
+color:#185EAC;
 
 .divbody {
   float:left;
@@ -247,6 +252,24 @@ td.major,tr.major {
   font-weight:bold;
 }
 
+span.red {
+  color:#FB5252;
+}
+
+span.orange {
+  color:#EB9747;
+}
+
+td.purple,tr.purple {
+  background-color:#D2B4DA;
+  color:#000000;
+  font-weight:bold;
+}
+
+span.purple {
+  color:#D2B4DA;
+}
+
 span.minor {
   color:#FEFCAE;
 }
@@ -265,6 +288,32 @@ td.total,tr.total {
 
 span.total {
   color:#A0FEAE;
+}
+
+table.mainnav {
+  width:35%;
+  border-collapse:collapse;
+  border-spacing:0px;
+  border:2px solid #000000;
+  background-color:white;
+  font-size:100%;
+}
+
+table.mainnav td {
+  border:2px solid #000000;
+  border-collapse:collapse;
+  padding:1em;
+  background-color:#E4E4E2;
+  text-align:left;
+}
+
+table.mainnav th {
+  border:2px solid #000000;
+  border-collapse:collapse;
+  padding:4px 6px 2px 1em;
+  background-color:#000000;
+  color:#FFFFFF;
+  text-align:left;
 }
 
 textarea {
@@ -302,20 +351,20 @@ hr {
 /* Begin Suckerfish menu styles */
 #suckerfish, #suckerfish ul {
 	float: left;
-	
 	list-style: none;
 	line-height: 1;
 	background: white;
 	font-weight: bold;
 	padding: 0;
-	border: 1px solid #82CAFA;
+	border: 1px solid #000000;
 	margin: 0 0 1em 0;
+  z-index:200;
 }
 
 #suckerfish a {
 	display: block;
-	width: 10em;
-	w\idth: 6em;
+	width: 8em;
+	w\idth: 2em;
 	color: black;
 	text-decoration: none;
 	padding: 0.25em 2em 0.25em 1em;
@@ -324,14 +373,14 @@ hr {
 #suckerfish li {
 	float: left;
 	padding: 0;
-	width: 10em;
+	width: 5em;
 }
 
 #suckerfish li ul {
 	position: absolute;
 	left: -999em;
 	height: auto;
-	width: 14.4em;
+	width: 13.4em;
 	w\idth: 13.9em;
 	font-weight: normal;
 	border-width: 1px;
@@ -345,7 +394,7 @@ hr {
 
 #suckerfish li ul a {
 	width: 13em;
-	w\idth: 9em;
+	w\idth: 10.9em;
 }
 
 #suckerfish li ul ul {
@@ -361,5 +410,5 @@ hr {
 }
 
 #suckerfish li:hover, #suckerfish li.sfhover {
-	background: #82CAFA;
+	background: #6AC6F1;
 }
