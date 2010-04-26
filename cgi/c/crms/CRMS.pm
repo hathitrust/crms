@@ -968,12 +968,14 @@ sub TranslateCategory
     elsif ( $category =~ m/REPRINT.*/ ) { return 'Reprint'; }
     elsif ( $category eq 'SERIES' ) { return 'Periodical'; }
     elsif ( $category eq 'TRANS' ) { return 'Translation'; }
-    elsif ( $category eq 'WRONGREC' ) { return 'Wrong Record'; }
+    elsif ( $category eq 'WRONGREC' ||  $category eq 'WRONG RECORD' ) { return 'Wrong Record'; }
     elsif ( $category =~ m,FOREIGN PUB.*, ) { return 'Foreign Pub'; }
     elsif ( $category eq 'DISS' ) { return 'Dissertation/Thesis'; }
     elsif ( $category eq 'EDITION' ) { return 'Edition'; }
     elsif ( $category eq 'NOT CLASS A' ) { return 'Not Class A'; }
     elsif ( $category eq 'PERIODICAL' ) { return 'Periodical'; }
+    elsif ( $category eq 'US GOV DOC' ) { return 'US Gov Doc'; }
+    elsif ( $category eq 'INSERT' ) { return 'Insert(s)'; }
     else  { return $category };
 }
 
@@ -1066,6 +1068,8 @@ sub SubmitReview
     if ($question)
     {
       $hold = $self->get('dbh')->quote($self->HoldExpiry($id, $user, 0));
+      my $sql = "INSERT INTO note (note) VALUES ('hold from $user on $id')";
+      $self->PrepareSubmitSql($sql);
     }
     
     my @fieldList = ('id', 'user', 'attr', 'reason', 'note', 'renNum', 'renDate', 'category', 'priority', 'hold');
@@ -1133,9 +1137,9 @@ sub GetStatusForExpertReview
   
   my $status = 5;
   my $qstatus = $self->SimpleSqlGet("SELECT status FROM queue WHERE id='$id'");
-  if ($qstatus == 3 || $qstatus == 5 || $qstatus == 6)
+  if ($qstatus == 3 || $qstatus == 5 || $qstatus == 7)
   {
-    # If provisional match, see if the expert agreed with both of existing non-expert review. If so, status 6.
+    # If provisional match, see if the expert agreed with both of existing non-expert reviews. If so, status 7.
     my $sql = "SELECT attr,reason FROM reviews WHERE id='$id' AND user IN (SELECT id FROM users WHERE expert=0)";
     my $ref = $self->get('dbh')->selectall_arrayref($sql);
     if (scalar @{ $ref } >= 2)
@@ -1146,7 +1150,7 @@ sub GetStatusForExpertReview
       my $reason2 = $ref->[1]->[1];
       if ($attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1)
       {
-        $status = 6;
+        $status = 7;
       }
     }
   }
@@ -1343,7 +1347,7 @@ sub GetFinalAttrReason
 sub GetExpertRevItems
 {
     my $self = shift;
-    my $sql  = 'SELECT id FROM queue WHERE (status=5 OR status=6) AND id NOT IN (SELECT id FROM reviews WHERE CURDATE()<hold)';
+    my $sql  = 'SELECT id FROM queue WHERE (status>=5) AND id NOT IN (SELECT id FROM reviews WHERE CURDATE()<hold)';
     my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
     return $ref;
@@ -1567,6 +1571,11 @@ sub CreateSQLForReviews
       $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id };
     }
     elsif ( $page eq 'holds' )
+    {
+      my $user = $self->get( "user" );
+      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id AND q.id = r.id AND r.user='$user' AND r.hold IS NOT NULL };
+    }
+    elsif ( $page eq 'adminHolds' )
     {
       $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id AND q.id = r.id AND r.hold IS NOT NULL };
     }
@@ -3245,7 +3254,7 @@ sub CreateExportData
     $report .= "$delimiter$date";
     my %cats = ('pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pdus/cdpp' => 0, 'ic/ren' => 0, 'ic/cdpp' => 0,
                 'All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0,
-                'Status 4' => 0, 'Status 6' => 0, 'Status 6' => 0);
+                'Status 4' => 0, 'Status 5' => 0, 'Status 6' => 0, 'Status 7' => 0);
     my $lastDay;
     if (!$cumulative)
     {
@@ -3286,7 +3295,7 @@ sub CreateExportData
   }
   $report .= "\n";
   my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'All IC', 'ic/ren', 'ic/cdpp', 'All UND/NFI', 'Total',
-                'Status 4', 'Status 5', 'Status 6');
+                'Status 4', 'Status 5', 'Status 6', 'Status 7');
   my %monthTotals = ();
   my %catTotals = ('All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0);
   my $gt = 0;
@@ -3514,9 +3523,9 @@ sub CreateExportStatusData
     $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
   }
   my $report = ($title)? "$title\n":"Final Determinations Breakdown $titleDate\n";
-  my @titles = ('Date','Status 4','Status 5','Status 6','Total','Status 4','Status 5','Status 6');
+  my @titles = ('Date','Status 4','Status 5','Status 6','Status 7','Total','Status 4','Status 5','Status 6','Status 7');
   $report .= join($delimiter, @titles) . "\n";
-  my @totals = (0,0,0);
+  my @totals = (0,0,0,0);
   foreach my $date (@dates)
   {
     my ($y,$m,$d) = split '-', $date;
@@ -3529,26 +3538,26 @@ sub CreateExportStatusData
       $date2 = "$date-$lastDay";
       $date = $self->YearMonthToEnglish($date);
     }
-    my @line = (0,0,0,0,0,0,0);
+    my @line = (0,0,0,0,0,0,0,0,0);
     my @stati = $self->GetStatusBreakdown($date1, $date2);
-    for (my $i=0; $i < 3; $i++)
+    for (my $i=0; $i < 4; $i++)
     {
       $line[$i] = $stati[$i];
       $totals[$i] += $stati[$i];
     }
-    $line[3] = $line[0] + $line[1] + $line[2];
-    for (my $i=0; $i < 3; $i++)
+    $line[4] = $line[0] + $line[1] + $line[2] + $line[3];
+    for (my $i=0; $i < 4; $i++)
     {
       my $pct = 0.0;
-      eval {$pct = 100.0*$line[$i]/$line[3];};
-      $line[$i+4] = sprintf('%.1f%%', $pct);
+      eval {$pct = 100.0*$line[$i]/$line[4];};
+      $line[$i+5] = sprintf('%.1f%%', $pct);
     }
     $report .= $date;
     $report .= $delimiter . join($delimiter, @line) . "\n";
   }
-  my $gt = $totals[0] + $totals[1] + $totals[2];
+  my $gt = $totals[0] + $totals[1] + $totals[2] + $totals[3];
   push @totals, $gt;
-  for (my $i=0; $i < 3; $i++)
+  for (my $i=0; $i < 4; $i++)
   {
     my $pct = 0.0;
     eval {$pct = 100.0*$totals[$i]/$gt;};
@@ -3565,7 +3574,7 @@ sub GetStatusBreakdown
   my $end   = shift;
   
   my @counts = ();
-  foreach my $status (4..6)
+  foreach my $status (4..7)
   {
     my $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r ON e.gid=r.gid WHERE ' .
              "r.legacy=0 AND date(e.time)>='$start' AND date(e.time)<='$end' AND r.status=$status";
@@ -3588,40 +3597,40 @@ sub CreateExportStatusReport
   my @lines = split "\n", $data;
   $title = shift @lines;
   $title =~ s/\s/&nbsp;/g;
-  my $url = sprintf("<a href='?p=determinationStats&amp;startDate=$start&amp;endDate=$end&amp;%sdownload=1&amp;target=_blank'>Download</a>",($monthly)?'monthly=on&amp;':'');
+  my $url = sprintf("<a href='?p=determinationStats&amp;startDate=$start&amp;endDate=$end&amp;%sdownload=1' target='_blank'>Download</a>",($monthly)?'monthly=on&amp;':'');
   my $report = "<h3>$title&nbsp;&nbsp;&nbsp;&nbsp;$url</h3>\n";
   $report .= "<table class='exportStats'>\n";
-  $report .= "<tr><th/><th colspan='4'><span class='major'>Counts</span></th><th colspan='3'><span class='total'>Percentages</span></th></tr>\n";
+  $report .= "<tr><th/><th colspan='5'><span class='major'>Counts</span></th><th colspan='4'><span class='total'>Percentages</span></th></tr>\n";
   shift @lines; # titles
-  $report .= "<tr><th>Date</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th><th>Total</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th></tr>\n";
+  $report .= '<tr><th>Date</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th><th>Status&nbsp;7</th><th>Total</th>';
+  $report .= "<th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th><th>Status&nbsp;7</th></tr>\n";
   foreach my $line (@lines)
   {
     my @line = split "\t", $line;
     my $date = shift @line;
     my ($y,$m,$d) = split '-', $date;
-    my $extra = ($date eq '2010-04-20' || $date eq 'Apr 2010')? 'background-color:#C9A8FF;':'';
     $date =~ s/\s/&nbsp;/g;
     #<tr><th style="text-align:right;"><span>&nbsp;&nbsp;&nbsp;&nbsp;Total</span></th><td style="text-align:center;">&nbsp;&nbsp;&nbsp;&nbsp;<b>467</b></td><td style="text-align:center;">
     if ($date eq 'Total')
     {
-      $report .= "<tr><th style='text-align:right;$extra'>Total</th>";
+      $report .= "<tr><th style='text-align:right;'>Total</th>";
     }
     else
     {
-      $report .= "<tr><th>$date" . (($extra)? '*':'') . '</th>';
+      $report .= "<tr><th>$date</th>";
     }
-    for (my $i=0; $i < 7; $i++)
+    for (my $i=0; $i < 9; $i++)
     {
       my $class = '';
-      my $style = ($i==3)? "style='border-right:double 6px black;$extra'":($extra)? "style='$extra'":'';
-      if ($i == 3 && $date ne 'Total')
+      my $style = ($i==4)? "style='border-right:double 6px black;'":'';
+      if ($i == 4 && $date ne 'Total')
       {
         $class = 'class="minor"';
       }
       elsif ($date ne 'Total')
       {
         $class = 'class="total"';
-        $class = 'class="major"' if $i < 3;
+        $class = 'class="major"' if $i < 4;
       }
       $report .= sprintf("<td $class $style>%s</td>\n", $line[$i]);
     }
@@ -3647,10 +3656,9 @@ sub CreateExportStatusGraph
   my $report = '';
   
   my @usedates = ();
-  my @stati = (4,5,6);
   my @elements = ();
-  my %colors = (4 => '#22BB00', 5 => '#FF2200', 6 => '#0088FF');
-  foreach my $status (@stati)
+  my %colors = (4 => '#22BB00', 5 => '#FF2200', 6 => '#0088FF', 7 => '#C9A8FF');
+  foreach my $status (sort keys %colors)
   {
     my @vals = ();
     my $color = $colors{$status};
@@ -3663,12 +3671,11 @@ sub CreateExportStatusGraph
       next if $date eq 'Total';
       next if $date =~ m/Total/ and !$monthly;
       $date =~ s/Total\s//;
-      my $extra = ($date eq '2010-04-20' || $date eq 'Apr 2010')? ',"type":"star","dot-size":5,"colour":"#FFFFFF","hollow":false':'';
       push @usedates, $date if $status == 4;
       my $count = $line[$status-4];
-      my $pct = $line[$status];
+      my $pct = $line[$status+1];
       $pct =~ s/%//;
-      push @vals, sprintf('{"value":%d,"tip":"%.1f%% (%d)"%s}', $pct, $pct, $count, $extra);
+      push @vals, sprintf('{"value":%d,"tip":"%.1f%% (%d)"}', $pct, $pct, $count);
     }
     push @elements, sprintf('{"type":"line","values":[%s],%s}', join(',',@vals), $attrs);
   }
@@ -3687,19 +3694,20 @@ sub CreateStatsData
   my $user       = shift;
   my $cumulative = shift;
   my $year       = shift;
+  my $inval      = shift;
 
   my $dbh = $self->get( 'dbh' );
   $year = ($self->GetTheYearMonth())[0] unless $year;
   my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear($year);
   my $username = ($user eq 'all')? 'All Users':$self->GetUserName($user);
-  my $label = "$username: " . (($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative":"Cumulative $year");
+  my $label = "$username: " . (($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative":$year);
   my $report = sprintf("$label\nCategories,Project Total%s", (!$cumulative)? ",Total $year":'');
   my %stats = ();
   my @usedates = ();
   my $earliest = '';
   my $latest = '';
-  my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'All IC', 'ic/ren', 'ic/cdpp', 'All UND/NFI',
-                '__TOT__', '__TOTNE__', '__NEUT__', '__VAL__', '__AVAL__', '__MVAL__',
+  my @titles = ('PD Reviews', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'IC Reviews', 'ic/ren', 'ic/cdpp', 'UND/NFI Reviews',
+                '__TOT__', '__TOTNE__', '__NEUT__', '__VAL__', '__AVAL__',
                 'Time Reviewing (mins)', 'Time per Review (mins)','Reviews per Hour', 'Outlier Reviews');
   foreach my $date (@statdates)
   {
@@ -3712,7 +3720,7 @@ sub CreateStatsData
     my $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
                  SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
                  SUM(total_ic_ren) + SUM(total_ic_cdpp),
-                 SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), 1,1,1,1,1, SUM(total_time),
+                 SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), 1,1,1,1,SUM(total_time),
                  SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                  (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
                  FROM userstats WHERE monthyear >= '$mintime' AND monthyear <= '$maxtime'};
@@ -3732,19 +3740,18 @@ sub CreateStatsData
     my $lastDay = Days_in_Month($year,$month);
     $mintime .= '-01 00:00:00';
     $maxtime .= "-$lastDay 23:59:59";
-    my ($ok,$oktot,$neut) = $self->CountCorrectReviews($user, $mintime, $maxtime);
-    $stats{'__VAL__'}{$date} = $ok;
-    $stats{'__TOTNE__'}{$date} = $oktot;
-    $stats{'__NEUT__'}{$date} = $neut;
-    $stats{'__AVAL__'}{$date} = $self->GetAverageCorrect($mintime, $maxtime);
-    $stats{'__MVAL__'}{$date} = $self->GetMedianCorrect($mintime, $maxtime);
+    my ($correct,$incorrect,$neutral) = $self->CountCorrectReviews($user, $mintime, $maxtime);
+    $stats{'__VAL__'}{$date} = ($inval)? $incorrect:$correct;
+    $stats{'__TOTNE__'}{$date} = $correct + $incorrect + $neutral;
+    $stats{'__NEUT__'}{$date} = $neutral;
+    $stats{'__AVAL__'}{$date} = ($inval)? $self->GetAverageIncorrect($mintime, $maxtime):$self->GetAverageCorrect($mintime, $maxtime);
   }
   $report .= "\n";
   my %totals;
   my $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
                SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
                SUM(total_ic_ren) + SUM(total_ic_cdpp),
-               SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), 1,1,1,1,1, SUM(total_time),
+               SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), 1,1,1,1, SUM(total_time),
                SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
                FROM userstats WHERE monthyear >= '$earliest' AND monthyear <= '$latest'};
@@ -3760,16 +3767,16 @@ sub CreateStatsData
       $i++;
     }
   }
+  foreach my $title ('__VAL__','__TOTNE__','__NEUT__')
+  {
+    $totals{$title} = 0;
+    map { $totals{$title} += $stats{$title}{$_} } keys %{$stats{$title}};
+  }
   my ($year,$month) = split '-', $latest;
   my $lastDay = Days_in_Month($year,$month);
   $earliest .= '-01 00:00:00';
   $latest .= "-$lastDay 23:59:59";
-  my ($ok,$oktot,$neut) = $self->CountCorrectReviews($user, $earliest, $latest);
-  $totals{'__VAL__'} = $ok;
-  $totals{'__TOTNE__'} = $oktot;
-  $totals{'__NEUT__'} = $neut;
-  $totals{'__AVAL__'} = $self->GetAverageCorrect($earliest, $latest);
-  $totals{'__MVAL__'} = $self->GetMedianCorrect($earliest, $latest);
+  $totals{'__AVAL__'} = ($inval)? $self->GetAverageIncorrect($earliest, $latest):$self->GetAverageCorrect($earliest, $latest);
   # Project totals
   my %ptotals;
   if (!$cumulative)
@@ -3779,7 +3786,7 @@ sub CreateStatsData
     $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
                SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
                SUM(total_ic_ren) + SUM(total_ic_cdpp),
-               SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), 1,1,1,1,1, SUM(total_time),
+               SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), 1,1,1,1, SUM(total_time),
                SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
                FROM userstats WHERE monthyear >= '$earliest'};
@@ -3795,15 +3802,14 @@ sub CreateStatsData
         $i++;
       }
     }
-    my ($ok,$oktot,$neut) = $self->CountCorrectReviews($user, $earliest, $latest);
-    $ptotals{'__VAL__'} = $ok;
-    $ptotals{'__TOTNE__'} = $oktot;
-    $ptotals{'__NEUT__'} = $neut;
-    $ptotals{'__AVAL__'} = $self->GetAverageCorrect($earliest, $latest);
-    $ptotals{'__MVAL__'} = $self->GetMedianCorrect($earliest, $latest);
+    my ($correct,$incorrect,$neutral) = $self->CountCorrectReviews($user, $earliest, $latest);
+    $ptotals{'__VAL__'} = ($inval)? $incorrect:$correct;
+    $ptotals{'__TOTNE__'} = $correct + $incorrect + $neutral;
+    $ptotals{'__NEUT__'} = $neutral;
+    $ptotals{'__AVAL__'} = ($inval)? $self->GetAverageIncorrect($earliest, $latest):$self->GetAverageCorrect($earliest, $latest);
   }
   
-  my %majors = ('All PD' => 1, 'All IC' => 1, 'All UND/NFI' => 1);
+  my %majors = ('PD Reviews' => 1, 'IC Reviews' => 1, 'UND/NFI Reviews' => 1);
   my %minors = ('Time Reviewing (mins)' => 1, 'Time per Review (mins)' => 1,
                 'Reviews per Hour' => 1, 'Outlier Reviews' => 1);
   foreach my $title (@titles)
@@ -3886,8 +3892,9 @@ sub CreateStatsReport
   my $cumulative        = shift;
   my $suppressBreakdown = shift;
   my $year              = shift;
+  my $inval             = shift;
   
-  my $data = $self->CreateStatsData($user, $cumulative, $year);
+  my $data = $self->CreateStatsData($user, $cumulative, $year, $inval);
   my @lines = split m/\n/, $data;
   my $report = sprintf("<span style='font-size:1.3em;'><!--NAME--><b>%s</b></span><!--LINK-->\n<br/><table class='exportStats'>\n<tr>\n", shift @lines);
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
@@ -3898,7 +3905,7 @@ sub CreateStatsReport
     $report .= sprintf("<th%s>$th</th>\n", ($th ne 'Categories')? ' style="text-align:center;"':'');
   }
   $report .= "</tr>\n";
-  my %majors = ('All PD' => 1, 'All IC' => 1, 'All UND/NFI' => 1);
+  my %majors = ('PD Reviews' => 1, 'IC Reviews' => 1, 'UND/NFI Reviews' => 1, '__TOT__' => 1);
   my %minors = ('Time Reviewing (mins)' => 1, 'Time per Review (mins)' => 1, 'Average Time per Review (mins)' => 1,
                 'Reviews per Hour' => 1, 'Average Reviews per Hour' => 1, 'Outlier Reviews' => 1);
   my $exp = $self->IsUserExpert($user);
@@ -3913,14 +3920,16 @@ sub CreateStatsReport
     next if $title eq '__TOTNE__' and ($user ne 'all' and !$cumulative);
     next if ($cumulative or $user eq 'all' or $suppressBreakdown) and !exists $majors{$title} and !exists $minors{$title} and $title !~ m/__.+?__/;
     my $class = (exists $majors{$title})? 'major':(exists $minors{$title})? 'minor':'';
-    $class = 'total' if $title =~ m/__.+?__/;
+    $class = 'total' if $title =~ m/__.+?__/ and $title ne '__TOT__';
     $report .= '<tr>';
-    $title =~ s/\s/&nbsp;/g;
+    my $title2 = $title;
+    $title2 =~ s/\s/&nbsp;/g;
     my $padding = ($class eq 'major' || $class eq 'minor' || $class eq 'total')? '':$nbsps;
-    $report .= sprintf("<th%s><span%s>%s$title</span></th>",
-                       ($title =~ m/__.+?__/)? ' style="text-align:right;"':'',
-                       ($class)? " class='$class'":'',
-                       $padding);
+    my $style = '';
+    $style = ' style="text-align:right;"' if $class eq 'total';
+    $class = 'purple' if $title eq '__AVAL__';
+    $title2 = $nbsps . $title2 if $title eq '__AVAL__';
+    $report .= sprintf("<th$style><span%s>$padding$title2</span></th>", ($class)? " class='$class'":'');
     foreach my $item (@items)
     {
       my ($n,$pct) = split ':', $item;
@@ -3935,13 +3944,13 @@ sub CreateStatsReport
     $report .= "</tr>\n";
   }
   $report .= "</table>\n";
-  $report =~ s/__TOT__/All&nbsp;Reviews*/;
+  $report =~ s/__TOT__/Total&nbsp;Reviews*/;
   $report =~ s/__TOTNE__/Non-Expert&nbsp;Reviews/;
   my $vtitle = 'Validated&nbsp;Reviews&nbsp;&amp;&nbsp;Rate';
+  $vtitle = 'Invalidated&nbsp;Reviews&nbsp;&amp;&nbsp;Rate' if $inval;
   $report =~ s/__VAL__/$vtitle/;
-  my $mvtitle = 'Median&nbsp;Validation&nbsp;Rate';
-  $report =~ s/__MVAL__/$mvtitle/;
   my $avtitle = 'Average&nbsp;Validation&nbsp;Rate';
+  $avtitle = 'Average&nbsp;Invalidation&nbsp;Rate' if $inval;
   $report =~ s/__AVAL__/$avtitle/;
   my $ntitle = 'Neutral&nbsp;Reviews&nbsp;&amp;&nbsp;Rate';
   $report =~ s/__NEUT__/$ntitle/;
@@ -4375,7 +4384,10 @@ sub ValidateSubmissionHistorical
     {
       if ( ( $category )  && ( ! $note ) )
       {
-        $errorMsg .= 'must include a note if there is a category.';
+        if ($category ne 'US Gov Doc' && $category ne 'Expert Accepted')
+        {
+          $errorMsg .= 'must include a note if there is a category.';
+        }
       }
       elsif ( ( $note ) && ( ! $category ) )
       {
@@ -5444,7 +5456,7 @@ sub HasItemBeenReviewedByAnotherExpert
   my $user = shift;
   
   my $stat = $self->GetStatus($id) ;
-  if ($stat == 5 || $stat == 6)
+  if ($stat == 5 || $stat == 7)
   {
     my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::reviewsTable WHERE id='$id' AND user='$user'";
     my $count = $self->SimpleSqlGet($sql);
@@ -6014,12 +6026,16 @@ sub CreateDeterminationReport()
   my $fives = $self->SimpleSqlGet($sql);
   $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=6 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
   my $sixes = $self->SimpleSqlGet($sql);
+  $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=7 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
+  my $sevens = $self->SimpleSqlGet($sql);
   my $pct4 = 0;
   my $pct5 = 0;
   my $pct6 = 0;
-  eval {$pct4 = 100.0*$fours/($fours+$fives+$sixes);};
-  eval {$pct5 = 100.0*$fives/($fours+$fives+$sixes);};
-  eval {$pct6 = 100.0*$sixes/($fours+$fives+$sixes);};
+  my $pct7 = 0;
+  eval {$pct4 = 100.0*$fours/($fours+$fives+$sixes+$sevens);};
+  eval {$pct5 = 100.0*$fives/($fours+$fives+$sixes+$sevens);};
+  eval {$pct6 = 100.0*$sixes/($fours+$fives+$sixes+$sevens);};
+  eval {$pct7 = 100.0*$sevens/($fours+$fives+$sixes+$sevens);};
   my $legacy = $self->GetTotalLegacyCount();
   my %sources;
   $sql = 'SELECT src,COUNT(gid) FROM exportdata WHERE src IS NOT NULL GROUP BY src';
@@ -6037,6 +6053,7 @@ sub CreateDeterminationReport()
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</th><td>$fours&nbsp;(%.1f%%)</td></tr>", $pct4);
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</th><td>$fives&nbsp;(%.1f%%)</td></tr>", $pct5);
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6</th><td>$sixes&nbsp;(%.1f%%)</td></tr>", $pct6);
+  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;7</th><td>$sevens&nbsp;(%.1f%%)</td></tr>", $pct7);
   $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</th><td>%s</td></tr>", $exported);
   foreach my $source (keys %sources)
   {
@@ -6135,7 +6152,7 @@ sub CreateReviewReport
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Matches</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
   
-  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=4 OR status=5 OR status=6";
+  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=4 OR status=5 OR status=6 OR status=7";
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Awaiting&nbsp;Export</td><td>$count</td>";
@@ -6159,6 +6176,12 @@ sub CreateReviewReport
     $rows = $dbh->selectall_arrayref( $sql );
     $count = scalar @{$rows};
     $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6</td><td>$count</td>";
+    $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+    
+    $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=7";
+    $rows = $dbh->selectall_arrayref( $sql );
+    $count = scalar @{$rows};
+    $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;7</td><td>$count</td>";
     $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
   }
   $report .= sprintf("<tr><td colspan='%d'><span class='smallishText'>Last processed %s</span></td></tr>\n", $maxpri+3, $self->GetLastStatusProcessedTime());
@@ -6453,7 +6476,7 @@ sub IsReviewCorrect
   my $expert = $row->[4];
   #print "user $user $attr $reason $renNum $renDate\n";
   # Get the most recent expert review
-  $sql = "SELECT attr,reason,renNum,renDate,user FROM historicalreviews WHERE id='$id' AND expert>0 ORDER BY time DESC";
+  $sql = "SELECT attr,reason,renNum,renDate,user,category FROM historicalreviews WHERE id='$id' AND expert>0 ORDER BY time DESC";
   $r = $self->get('dbh')->selectall_arrayref($sql);
   return 1 unless scalar @{$r};
   $row = $r->[0];
@@ -6462,6 +6485,7 @@ sub IsReviewCorrect
   my $erenNum = $row->[2];
   my $erenDate = $row->[3];
   my $euser = $row->[4];
+  my $ecat = $row->[5];
   #print "expert ($euser) $eattr $ereason $erenNum $erenDate\n";
   #print "$user $attr $reason $renNum $renDate\n";
   if ($attr != $eattr || $reason != $ereason)
@@ -6474,6 +6498,7 @@ sub IsReviewCorrect
     #print "$renNum ne $erenNum || $renDate ne $erenDate\n";
     if ($renNum ne $erenNum || $renDate ne $erenDate)
     {
+      return 1 if $ecat eq 'Expert Accepted';
       return ($swiss && !$expert)? 2:0;
     }
   }
@@ -6488,10 +6513,13 @@ sub CountCorrectReviews
   my $start = shift;
   my $end   = shift;
   
-  my $type1Clause = sprintf(' AND user IN (%s)', join(',', map {"'$_'"} $self->GetType1Reviewers()));
   my $startClause = ($start)? " AND time>='$start'":'';
   my $endClause = ($end)? " AND time<='$end' ":'';
-  my $userClause = ($user eq 'all')? $type1Clause:" AND user='$user'";
+  my $userClause = " AND user='$user'";
+  if ($user eq 'all')
+  {
+    $userClause = sprintf(' AND user IN (%s)', join(',', map {"'$_'"} $self->GetType1Reviewers()));
+  }
   #print "$sql => $total<br/>\n";
   my $correct = 0;
   my $incorrect = 0;
@@ -6506,9 +6534,7 @@ sub CountCorrectReviews
     $correct = $cnt if $val == 1;
     $neutral = $cnt if $val == 2;
   }
-  my $total = $correct + $incorrect + $neutral;
-  #printf "CountCorrectReviews(%s): $correct of $total<br/>\n", join ', ', ($user,$start,$end);
-  return ($correct,$total,$neutral);
+  return ($correct,$incorrect,$neutral);
 }
 
 
@@ -6547,7 +6573,7 @@ sub GetType1Reviewers
 {
   my $self = shift;
   my $dbh = $self->get( 'dbh' );
-  my $sql = 'SELECT id FROM users WHERE id NOT LIKE "rereport%" AND expert=0 AND admin=0 AND superadmin=0';
+  my $sql = 'SELECT id FROM users WHERE id NOT LIKE "rereport%" AND (reviewer=1 OR advanced=1) AND expert=0 AND superadmin=0';
   return map {$_->[0]} @{$dbh->selectall_arrayref( $sql )};
 }
 
@@ -6562,39 +6588,41 @@ sub GetAverageCorrect
   my $n = 0;
   foreach my $user (@users)
   {
-    my ($ncorr,$total) = $self->CountCorrectReviews($user, $start, $end);
+    my ($correct,$incorrect,$neutral) = $self->CountCorrectReviews($user, $start, $end);
+    my $total = $correct + $incorrect + $neutral;
     next unless $total;
-    my $frac = 0.0;
-    eval { $frac = 100.0*$ncorr/$total; };
+    my $frac = 100.0*$correct/$total;
     #print " $user: $frac\n";
     $tot += $frac;
     $n++;
   }
-  #printf "%s to %s: $tot/$n = %f\n", $start, $end, $tot/$n;
   my $pct = 0.0;
   eval {$pct = $tot/$n;};
   return $pct;
 }
 
-sub GetMedianCorrect
+sub GetAverageIncorrect
 {
   my $self  = shift;
   my $start = shift;
   my $end   = shift;
   
   my @users = $self->GetType1Reviewers();
-  my @good = ();
+  my $tot = 0.0;
+  my $n = 0;
   foreach my $user (@users)
   {
-    my ($ncorr,$total) = $self->CountCorrectReviews($user, $start, $end);
+    my ($correct,$incorrect,$neutral) = $self->CountCorrectReviews($user, $start, $end);
+    my $total = $correct + $incorrect + $neutral;
     next unless $total;
-    my $frac = 0.0;
-    eval { $frac = 100.0*$ncorr/$total; };
-    push @good, $frac;
+    my $frac = 100.0*$incorrect/$total;
+    #print " $user: $frac<br/>\n";
+    $tot += $frac;
+    $n++;
   }
-  @good = sort { $a <=> $b } @good;
-  my $med = (scalar @good % 2 == 1)? $good[scalar @good / 2]  : ($good[(scalar @good / 2)-1] + $good[scalar @good / 2]) / 2;
-  return $med;
+  my $pct = 0.0;
+  eval {$pct = $tot/$n;};
+  return $pct;
 }
 
 # Is this a properly formatted RenDate?
@@ -6688,7 +6716,7 @@ sub SanityCheckDB
   $table = 'historicalreviews';
   $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,expertNote,renDate,copyDate,category,flagged,status,priority FROM $table";
   $rows = $dbh->selectall_arrayref( $sql );
-  my %stati = (1=>1,4=>1,5=>1,6=>1);
+  my %stati = (1=>1,4=>1,5=>1,6=>1,7=>1);
   foreach my $row ( @{$rows} )
   {
     $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
@@ -6699,7 +6727,7 @@ sub SanityCheckDB
     $self->SetError(sprintf("$table __ illegal copyDate for %s__ '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $row->[12] =~ m/\d\d\d\d/;
     $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[13])) unless $row->[13] eq '' or $self->IsValidCategory($row->[13]);
     $self->SetError(sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[15])) unless $stati{$row->[15]};
-    $sql = "SELECT id,status FROM $table WHERE expert>0 AND status!=5 AND status!=6";
+    $sql = "SELECT id,status FROM $table WHERE expert>0 AND status<5";
     $rows = $dbh->selectall_arrayref( $sql );
     foreach my $row ( @{$rows} )
     {
@@ -6731,7 +6759,7 @@ sub SanityCheckDB
   {
     $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
     $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
-    $self->SetError(sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[2])) unless $row->[2] >= 0 and $row->[2] <= 6;
+    $self->SetError(sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[2])) unless $row->[2] >= 0 and $row->[2] <= 7;
     if ($row->[2] == 5 || $row->[6])
     {
       $sql = sprintf("SELECT SUM(expert) FROM reviews WHERE id='%s'", $row->[0]);
@@ -6915,31 +6943,25 @@ sub SetSystemStatus
   $self->PrepareSubmitSql($sql);
 }
 
-sub HoldSummary
+sub CountUserHolds
 {
   my $self = shift;
   my $user = shift;
   
   my $report = '';
-  my $sql = "SELECT r.id,b.author,r.hold FROM reviews r INNER JOIN bibdata b ON r.id=b.id WHERE r.user='$user' AND r.hold IS NOT NULL ORDER BY r.hold ASC, r.id ASC";
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-  if (scalar @{$ref})
-  {
-    $report .= "<table class='exportStats' style='width:50%;'>";
-    $report .= "<tr><th>ID</th><th>Author</th><th>Title</th><th>Hold&nbsp;Thru</th></tr>\n";
-  }
-  foreach my $row ( @{$ref} )
-  {
-    my $id = $row->[0];
-    my $a = $row->[1];
-    my $t = $self->LinkToReview($row->[0]);
-    my $h = $self->FormatDate($row->[2]);
-    $h =~ s/\s/&nbsp;/g;
-    $report .= "<tr><td>$id</td><td>$a</td><td>$t</td><td>$h</td></tr>\n";
-  }
-  $report .= '</table>' if length $report;
-  return $report;
+  my $sql = "SELECT COUNT(*) FROM reviews WHERE user='$user' AND hold IS NOT NULL";
+  return $self->SimpleSqlGet($sql);
 }
 
+sub WhereAmI
+{
+  my $self = shift;
+  
+  my $dev = $self->get('dev');
+  return undef unless $dev;
+  return 'Training Area' if $dev eq 'crmstest';
+  return 'Moses Dev' if $dev eq 'moseshll';
+  return 'Dev';
+}
 
 1;
