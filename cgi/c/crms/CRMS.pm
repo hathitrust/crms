@@ -3061,7 +3061,7 @@ sub GetUsers
   my $order = shift;
   
   my $dbh  = $self->get( 'dbh' );
-  $order = ($order)? 'ORDER BY advanced+expert+admin+superadmin ASC, name ASC':'ORDER BY name ASC';
+  $order = ($order)? 'ORDER BY expert ASC, name ASC':'ORDER BY name ASC';
   my $sql = "SELECT id FROM users $order";
   my $ref = $dbh->selectall_arrayref( $sql );
   my @users = map { $_->[0]; } @{ $ref };
@@ -3072,17 +3072,17 @@ sub GetRange
 {
   my $self = shift;
  
-  my $sql = qq{ SELECT max( time ) from reviews};
-  my $reviews_max = $self->SimpleSqlGet( $sql );
+  my $sql = 'SELECT MAX(time) FROM reviews WHERE legacy=0';
+  my $reviews_max = $self->SimpleSqlGet($sql);
 
-  $sql = qq{ SELECT min( time ) from reviews};
-  my $reviews_min = $self->SimpleSqlGet( $sql );
+  $sql = 'SELECT MIN(time) FROM reviews WHERE legacy=0';
+  my $reviews_min = $self->SimpleSqlGet($sql);
 
-  $sql = qq{ SELECT max( time ) from historicalreviews where legacy=0};
-  my $historicalreviews_max = $self->SimpleSqlGet( $sql );
+  $sql = 'SELECT MAX(time) FROM historicalreviews WHERE legacy=0';
+  my $historicalreviews_max = $self->SimpleSqlGet($sql);
 
-  $sql = qq{ SELECT min( time ) from historicalreviews where legacy=0};
-  my $historicalreviews_min = $self->SimpleSqlGet( $sql );
+  $sql = 'SELECT MIN(time) FROM historicalreviews WHERE legacy=0';
+  my $historicalreviews_min = $self->SimpleSqlGet($sql);
 
   my $max = $reviews_max;
   if ( $historicalreviews_max ge $reviews_max ) { $max = $historicalreviews_max; }
@@ -3709,6 +3709,7 @@ sub CreateStatsData
   my @titles = ('PD Reviews', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'IC Reviews', 'ic/ren', 'ic/cdpp', 'UND/NFI Reviews',
                 '__TOT__', '__TOTNE__', '__NEUT__', '__VAL__', '__AVAL__',
                 'Time Reviewing (mins)', 'Time per Review (mins)','Reviews per Hour', 'Outlier Reviews');
+  my $which = ($inval)? 'total_incorrect':'total_correct';
   foreach my $date (@statdates)
   {
     push @usedates, $date;
@@ -3717,13 +3718,14 @@ sub CreateStatsData
     my $maxtime = $date . (($cumulative)? '-12':'');
     $earliest = $mintime if $earliest eq '' or $mintime lt $earliest;
     $latest = $maxtime if $latest eq '' or $maxtime gt $latest;
-    my $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
-                 SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
-                 SUM(total_ic_ren) + SUM(total_ic_cdpp),
-                 SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), 1,1,1,1,SUM(total_time),
-                 SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
-                 (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
-                 FROM userstats WHERE monthyear >= '$mintime' AND monthyear <= '$maxtime'};
+    my $sql = "SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
+               SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
+               SUM(total_ic_ren) + SUM(total_ic_cdpp),
+               SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews),
+               SUM(total_correct) + SUM(total_incorrect) + SUM(total_neutral), SUM(total_neutral), SUM($which), 1, SUM(total_time),
+               SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
+               (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
+               FROM userstats WHERE monthyear >= '$mintime' AND monthyear <= '$maxtime'";
     $sql .= " AND user='$user'" if $user ne 'all';
     #print "$sql<br/>\n";
     my $rows = $dbh->selectall_arrayref( $sql );
@@ -3740,11 +3742,17 @@ sub CreateStatsData
     my $lastDay = Days_in_Month($year,$month);
     $mintime .= '-01 00:00:00';
     $maxtime .= "-$lastDay 23:59:59";
-    my ($correct,$incorrect,$neutral) = $self->CountCorrectReviews($user, $mintime, $maxtime);
-    $stats{'__VAL__'}{$date} = ($inval)? $incorrect:$correct;
-    $stats{'__TOTNE__'}{$date} = $correct + $incorrect + $neutral;
-    $stats{'__NEUT__'}{$date} = $neutral;
-    $stats{'__AVAL__'}{$date} = ($inval)? $self->GetAverageIncorrect($mintime, $maxtime):$self->GetAverageCorrect($mintime, $maxtime);
+    if ($user eq 'all')
+    {
+      my $sql = sprintf "SELECT COUNT(*) FROM historicalreviews WHERE user IN (%s) AND time>='$mintime' AND time<='$maxtime'",
+                join(',', map {"'$_'"} $self->GetType1Reviewers());
+      $stats{'__TOTNE__'}{$date} = $self->SimpleSqlGet($sql);
+    }
+    #my ($correct,$incorrect,$neutral) = $self->CountCorrectReviews($user, $mintime, $maxtime);
+    #$stats{'__VAL__'}{$date} = ($inval)? $incorrect:$correct;
+    #$stats{'__TOTNE__'}{$date} = $correct + $incorrect + $neutral;
+    #$stats{'__NEUT__'}{$date} = $neutral;
+    $stats{'__AVAL__'}{$date} = $self->GetAverageValidation($inval, $mintime, $maxtime);
   }
   $report .= "\n";
   my %totals;
@@ -3776,7 +3784,7 @@ sub CreateStatsData
   my $lastDay = Days_in_Month($year,$month);
   $earliest .= '-01 00:00:00';
   $latest .= "-$lastDay 23:59:59";
-  $totals{'__AVAL__'} = ($inval)? $self->GetAverageIncorrect($earliest, $latest):$self->GetAverageCorrect($earliest, $latest);
+  $totals{'__AVAL__'} = $self->GetAverageValidation($inval, $earliest, $latest);
   # Project totals
   my %ptotals;
   if (!$cumulative)
@@ -3786,7 +3794,8 @@ sub CreateStatsData
     $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
                SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
                SUM(total_ic_ren) + SUM(total_ic_cdpp),
-               SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews), 1,1,1,1, SUM(total_time),
+               SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews),
+               SUM(total_correct) + SUM(total_incorrect) + SUM(total_neutral), SUM(total_neutral), SUM($which), 1, SUM(total_time),
                SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
                FROM userstats WHERE monthyear >= '$earliest'};
@@ -3802,11 +3811,17 @@ sub CreateStatsData
         $i++;
       }
     }
-    my ($correct,$incorrect,$neutral) = $self->CountCorrectReviews($user, $earliest, $latest);
-    $ptotals{'__VAL__'} = ($inval)? $incorrect:$correct;
-    $ptotals{'__TOTNE__'} = $correct + $incorrect + $neutral;
-    $ptotals{'__NEUT__'} = $neutral;
-    $ptotals{'__AVAL__'} = ($inval)? $self->GetAverageIncorrect($earliest, $latest):$self->GetAverageCorrect($earliest, $latest);
+    if ($user eq 'all')
+    {
+      my $sql = sprintf "SELECT COUNT(*) FROM historicalreviews WHERE user IN (%s) AND time>='$earliest' AND time<='$latest'",
+                join(',', map {"'$_'"} $self->GetType1Reviewers());
+      $ptotals{'__TOTNE__'} = $self->SimpleSqlGet($sql);
+    }
+    #my ($correct,$incorrect,$neutral) = $self->CountCorrectReviews($user, $earliest, $latest);
+    #$ptotals{'__VAL__'} = ($inval)? $incorrect:$correct;
+    #$ptotals{'__TOTNE__'} = $correct + $incorrect + $neutral;
+    #$ptotals{'__NEUT__'} = $neutral;
+    $ptotals{'__AVAL__'} = $self->GetAverageValidation($inval, $earliest, $latest);
   }
   
   my %majors = ('PD Reviews' => 1, 'IC Reviews' => 1, 'UND/NFI Reviews' => 1);
@@ -3960,46 +3975,34 @@ sub CreateStatsReport
 
 sub UpdateStats
 {
-    my $self = shift;
+  my $self = shift;
 
-    my $dbh = $self->get( 'dbh' );
-
-    my $sql = qq{DELETE from userstats};
-    $self->PrepareSubmitSql( $sql );
-
-    my $users = $self->GetUsers();
-
-    my ( $max_year, $max_month, $min_year, $min_month ) = $self->GetRange();
-
-    my $go = 1;
-    my $max_date = qq{$max_year-$max_month};
-    while ( $go )
+  my $dbh = $self->get( 'dbh' );
+  my $sql = 'DELETE from userstats';
+  $self->PrepareSubmitSql( $sql );
+  my $users = $self->GetUsers();
+  my ( $max_year, $max_month, $min_year, $min_month ) = $self->GetRange();
+  my $max_date = "$max_year-$max_month";
+  while ( 1 )
+  {
+    my $statDate = "$min_year-$min_month";
+    foreach my $user ( @{ $users } )
     {
-      my $statDate = qq{$min_year-$min_month};
-      
-      foreach my $user ( @{ $users } )
-      {
-        $self->GetMonthStats( $user, $statDate );
-      }
-
-      $min_month = $min_month + 1;
-      if ( $min_month == 13 )
-      {
-        $min_month = 1;
-        $min_year = $min_year + 1;
-      }
-
-      if ( $min_month < 10 )
-      {
-        $min_month = qq{0$min_month};
-      }
-
-      my $new_test_date = qq{$min_year-$min_month};
-      if ( $new_test_date gt $max_date )
-      {
-        $go = 0;
-      }
+      $self->GetMonthStats( $user, $statDate );
     }
+    $min_month = $min_month + 1;
+    if ( $min_month == 13 )
+    {
+      $min_month = 1;
+      $min_year = $min_year + 1;
+    }
+    if ( $min_month < 10 )
+    {
+      $min_month = '0' . $min_month;
+    }
+    my $new_test_date = "$min_year-$min_month";
+    last if $new_test_date gt $max_date;
+  }
 }
 
 
@@ -4011,41 +4014,41 @@ sub GetMonthStats
 
   my $dbh = $self->get( 'dbh' );
 
-  my $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and time like '$start_date%'};
+  my $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND time LIKE '$start_date%'};
   my $total_reviews_toreport = $self->SimpleSqlGet( $sql );
 
   #pd/ren
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=1 and reason=7 and time like '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=1 AND reason=7 AND time LIKE '$start_date%'};
   my $total_pd_ren = $self->SimpleSqlGet( $sql );
 
   #pd/ncn
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=1 and reason=2 and time like '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=1 AND reason=2 AND time LIKE '$start_date%'};
   my $total_pd_cnn = $self->SimpleSqlGet( $sql );
 
   #pd/cdpp
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=1 and reason=9 and time like '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=1 AND reason=9 AND time LIKE '$start_date%'};
   my $total_pd_cdpp = $self->SimpleSqlGet( $sql );
 
   #ic/ren
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=2 and reason=7 and time like '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=2 AND reason=7 AND time LIKE '$start_date%'};
   my $total_ic_ren = $self->SimpleSqlGet( $sql );
 
   #ic/cdpp
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=2 and reason=9 and time like '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=2 AND reason=9 AND time LIKE '$start_date%'};
   my $total_ic_cdpp = $self->SimpleSqlGet( $sql );
 
   #pdus/cdpp
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=9 and reason=9 and time like '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=9 AND reason=9 AND time LIKE '$start_date%'};
   my $total_pdus_cdpp = $self->SimpleSqlGet( $sql );
 
   #und/nfi
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and attr=5 and reason=8 and time like '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=5 AND reason=8 AND time LIKE '$start_date%'};
   my $total_und_nfi = $self->SimpleSqlGet( $sql );
 
   my $total_time = 0;
   
   #time reviewing ( in minutes ) - not including outliers
-  $sql = qq{ SELECT duration FROM historicalreviews WHERE user='$user' and legacy=0 and time like '$start_date%' and duration <= '00:05:00'};
+  $sql = qq{ SELECT duration FROM historicalreviews WHERE user='$user' AND legacy=0 AND time LIKE '$start_date%' AND duration <= '00:05:00'};
   my $rows = $dbh->selectall_arrayref( $sql );
 
   foreach my $row ( @{$rows} )
@@ -4064,23 +4067,30 @@ sub GetMonthStats
   $total_time = $total_time/60;
 
   #total outliers
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' and legacy=0 and time like '$start_date%' and duration > '00:05:00'};
+  $sql = "SELECT COUNT(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND time LIKE '$start_date%' AND duration>'00:05:00'";
   my $total_outliers = $self->SimpleSqlGet( $sql );
 
   my $time_per_review = 0;
   if ( $total_reviews_toreport - $total_outliers > 0)
-  {  $time_per_review = ($total_time/($total_reviews_toreport - $total_outliers));}
-  
+  {
+    $time_per_review = ($total_time/($total_reviews_toreport - $total_outliers));
+  }
   my $reviews_per_hour = 0;
   if ( $time_per_review > 0 )
-  { $reviews_per_hour = (60/$time_per_review);}
-
-  my $year = $start_date;
-  $year =~ s,(.*)\-.*,$1,;
-  my $month = $start_date;
-  $month =~ s,.*\-(.*),$1,;
-  my $sql = qq{ INSERT INTO userstats (user, month, year, monthyear, total_reviews, total_pd_ren, total_pd_cnn, total_pd_cdpp, total_pdus_cdpp, total_ic_ren, total_ic_cdpp, total_und_nfi, total_time, time_per_review, reviews_per_hour, total_outliers) VALUES ('$user', '$month', '$year', '$start_date', $total_reviews_toreport, $total_pd_ren, $total_pd_cnn, $total_pd_cdpp, $total_pdus_cdpp, $total_ic_ren, $total_ic_cdpp, $total_und_nfi, $total_time, $time_per_review, $reviews_per_hour, $total_outliers )};
-  
+  {
+    $reviews_per_hour = (60/$time_per_review);
+  }
+  my ($year,$month) = split '-', $start_date;
+  my $lastDay = Days_in_Month($year,$month);
+  my $mintime = "$start_date-01 00:00:00";
+  my $maxtime = "$start_date-$lastDay 23:59:59";
+  my ($total_correct,$total_incorrect,$total_neutral) = $self->CountCorrectReviews($user, $mintime, $maxtime);
+  my $sql = 'INSERT INTO userstats (user, month, year, monthyear, total_reviews, total_pd_ren, total_pd_cnn, total_pd_cdpp, ' .
+            'total_pdus_cdpp, total_ic_ren, total_ic_cdpp, total_und_nfi, total_time, time_per_review, reviews_per_hour, ' .
+            'total_outliers, total_correct, total_incorrect, total_neutral) ' .
+            "VALUES ('$user', '$month', '$year', '$start_date', $total_reviews_toreport, $total_pd_ren, $total_pd_cnn, $total_pd_cdpp, " .
+            "$total_pdus_cdpp, $total_ic_ren, $total_ic_cdpp, $total_und_nfi, $total_time, $time_per_review, $reviews_per_hour, " .
+            "$total_outliers, $total_correct, $total_incorrect, $total_neutral)";
   $self->PrepareSubmitSql( $sql );
 }
 
@@ -6550,45 +6560,30 @@ sub GetType1Reviewers
   return map {$_->[0]} @{$dbh->selectall_arrayref( $sql )};
 }
 
-sub GetAverageCorrect
+# $inval is whether to get average correct (0) or incorrect (1)
+sub GetAverageValidation
 {
   my $self  = shift;
+  my $inval = shift;
   my $start = shift;
   my $end   = shift;
   
   my @users = $self->GetType1Reviewers();
   my $tot = 0.0;
   my $n = 0;
+  $start = substr($start,0,7);
+  $end = substr($end,0,7);
   foreach my $user (@users)
   {
-    my ($correct,$incorrect,$neutral) = $self->CountCorrectReviews($user, $start, $end);
-    my $total = $correct + $incorrect + $neutral;
+    #my ($correct,$incorrect,$neutral) = $self->CountCorrectReviews($user, $start, $end);
+    #my $total = $correct + $incorrect + $neutral;
+    my $sql = 'SELECT SUM(total_reviews),SUM(total_correct),SUM(total_incorrect),SUM(total_neutral) FROM userstats ' .
+              "WHERE user='$user' AND monthyear>='$start' AND monthyear<='$end'";
+    my $ref = $self->get('dbh')->selectall_arrayref($sql);
+    my $row = $ref->[0];
+    my ($total,$correct,$incorrect,$neutral) = @{ $row };
     next unless $total;
-    my $frac = 100.0*$correct/$total;
-    #print " $user: $frac\n";
-    $tot += $frac;
-    $n++;
-  }
-  my $pct = 0.0;
-  eval {$pct = $tot/$n;};
-  return $pct;
-}
-
-sub GetAverageIncorrect
-{
-  my $self  = shift;
-  my $start = shift;
-  my $end   = shift;
-  
-  my @users = $self->GetType1Reviewers();
-  my $tot = 0.0;
-  my $n = 0;
-  foreach my $user (@users)
-  {
-    my ($correct,$incorrect,$neutral) = $self->CountCorrectReviews($user, $start, $end);
-    my $total = $correct + $incorrect + $neutral;
-    next unless $total;
-    my $frac = 100.0*$incorrect/$total;
+    my $frac = 100.0*(($inval)? $incorrect:$correct)/$total;
     #print " $user: $frac<br/>\n";
     $tot += $frac;
     $n++;
