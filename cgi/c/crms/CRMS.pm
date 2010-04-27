@@ -879,9 +879,6 @@ sub GiveItemsInQueuePriority
   my $priority = shift;
   my $source   = shift;
 
-  ## skip if $id has been reviewed
-  #if ( $self->IsItemInReviews( $id ) ) { return; }
-
   my $record = $self->GetRecordMetadata($id);
 
   ## pub date between 1923 and 1963
@@ -968,7 +965,7 @@ sub TranslateCategory
     elsif ( $category =~ m/REPRINT.*/ ) { return 'Reprint'; }
     elsif ( $category eq 'SERIES' ) { return 'Periodical'; }
     elsif ( $category eq 'TRANS' ) { return 'Translation'; }
-    elsif ( $category eq 'WRONGREC' ||  $category eq 'WRONG RECORD' ) { return 'Wrong Record'; }
+    elsif ( $category =~ m/^WRONG.+/ ) { return 'Wrong Record'; }
     elsif ( $category =~ m,FOREIGN PUB.*, ) { return 'Foreign Pub'; }
     elsif ( $category eq 'DISS' ) { return 'Dissertation/Thesis'; }
     elsif ( $category eq 'EDITION' ) { return 'Edition'; }
@@ -989,18 +986,6 @@ sub IsValidCategory
               'Periodical' => 1, 'Translation' => 1, 'Wrong Record' => 1, 'Foreign Pub' => 1, 'Dissertation/Thesis' => 1,
               'Expert Note' => 1, 'Not Class A' => 1, 'Edition' => 1, 'US Gov Doc' => 1, 'Expert Accepted' => 1);
   return exists $cats{$cat};
-}
-
-sub IsItemInReviews
-{
-    my $self = shift;
-    my $bar  = shift;
-
-    my $sql = qq{SELECT id FROM $CRMSGlobals::reviewsTable WHERE id = '$bar'};
-    my $id = $self->SimpleSqlGet( $sql );
-
-    if ($id) { return 1; }
-    return 0;
 }
 
 # Used by experts to approve a review made by a reviewer.
@@ -4372,11 +4357,11 @@ sub ValidateSubmissionHistorical
         $errorMsg .= 'pd/cdpp should not include renewal info.';
     }
 
-    if ( $attr == 1 && $reason == 9 && ( ( ! $note ) || ( ! $category )  )  )
-    {
-        $errorMsg .= 'pd/cdpp must include note category and note text.';
-        $noteError = 1;
-    }
+    #if ( $attr == 1 && $reason == 9 && ( ( ! $note ) || ( ! $category )  )  )
+    #{
+    #    $errorMsg .= 'pd/cdpp must include note category and note text.';
+    #    $noteError = 1;
+    #}
 
     ## ic/cdpp requires a ren number
     if (  $attr == 2 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
