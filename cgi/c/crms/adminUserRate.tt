@@ -18,7 +18,7 @@
   [% onclicks = onclicks _ "toggleVisibility(\"$id\");" %]
 [% END %]
 <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
-   onclick='[% onclicks %]'>Toggle All</a><br/><br/>
+   onclick='[% onclicks %]'>Toggle All 2009</a><br/><br/>
 
 [% FOREACH id IN users %]
   [% IF id.match('rereport') %][% NEXT %][% END %]
