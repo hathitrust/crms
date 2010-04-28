@@ -1,5 +1,5 @@
 [% INCLUDE header.tt %]
-[% INCLUDE adminNav.tt  %]
+[% INCLUDE adminNav.tt %]
 
 <h2 style="margin-left:390px">Statistics for Exported Determinations</h2>
 <br/>
@@ -7,7 +7,9 @@
 <h3>CRMS&nbsp;Project&nbsp;Cumulative*&nbsp;&nbsp;&nbsp;&nbsp;<a target="_blank" href="/cgi/c/crms/getExportStats?type=text&amp;c=1">Download</a></h3>
 <table style="width:100px;">
   <tr>
-    <td>[% crms.CreateExportReport(1) %]</td>
+    <td>[% report = crms.CreateExportReport(1) %]
+        [% report.replace('Status&nbsp;6','Status&nbsp;6**') %]
+    </td>
     <td style="padding-left:60px;"><div id="chart0"/></td>
   </tr>
   <tr>
@@ -18,6 +20,9 @@
   They do not include legacy determinations (determinations done pre-CRMS).
   If a volume that has been reviewed using the CRMS is subsequently re-queued/re-reviewed,
   the subsequent determination is counted as an additional determination (these occurrences should be rare).
+      </span><br/><br/>
+      <span class="smallishText">
+      ** Note: Status 6 no longer in use as of 4/19/2010.
       </span>
     </td>
   </tr>
@@ -27,11 +32,16 @@
 <table style="padding:0px; width:800px; height:600px; border-collapse:collapse">
 <tr style="background-color:#000000;"><td><div id="chart1"/></td></tr>
 <tr style="background-color:#000000;"><td><div id="chart2"/></td></tr>
-</table>
+</table><br/>
 <h3>Exported&nbsp;Determinations&nbsp;2010&nbsp;&nbsp;&nbsp;&nbsp;
   <a target="_blank" href="/cgi/c/crms/getExportStats?type=text&amp;c=0&amp;startDate=2010-01&amp;endDate=2010-12">Download</a></h3>
-[% crms.CreateExportReport() %]
-<br/><br/>
+[% report = crms.CreateExportReport() %]
+[% report.replace('Status&nbsp;6','Status&nbsp;6**') %]
+<br/>
+<span class="smallishText">
+      ** Note: Status 6 no longer in use as of 4/19/2010.
+      </span>
+<br/>
 <h3>Exported&nbsp;Determinations&nbsp;2009&nbsp;&nbsp;&nbsp;&nbsp;
   <a target="_blank" href="/cgi/c/crms/getExportStats?type=text&amp;c=0&amp;startDate=2009-01&amp;endDate=2009-12">Download</a></h3>
 [% crms.CreateExportReport(0, '2009-07', '2009-12') %]

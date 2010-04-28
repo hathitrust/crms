@@ -1,5 +1,6 @@
 [% INCLUDE header.tt %]
 [% INCLUDE adminNav.tt %]
+
 [% page = cgi.param('p') %]
 [% startDate = cgi.param('startDate') %]
 [% endDate = cgi.param('endDate') %]
@@ -46,9 +47,10 @@
 <tr style="background-color:#000000;"><td><div id="chart0"/></td></tr>
 </table>
 <br/>
-
 [% crms.CreateExportStatusReport('2009-07-01' 0, 1, 'Project Determinations Breakdown') %]
-<br/><br/><br/>
+<br/>
+<span class="smallishText">Note: Status 6 no longer in use as of 4/19/2010.</span>
+<br/><br/>
 <table style="padding:0px; width:800px; height:300px; border-collapse:collapse">
 <tr style="background-color:#000000;"><td><div id="chart1"/></td></tr>
 </table>
