@@ -1,5 +1,4 @@
 [% INCLUDE header.tt    %]
-[% INCLUDE homeLink.tt  %]
 
 [% user = cgi.param('user') %]
 [% IF !user %][% user = crms.get('user') %][% END %]

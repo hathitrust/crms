@@ -1,5 +1,4 @@
 [% INCLUDE header.tt    %]
-[% INCLUDE homeLink.tt  %]
 
 <h2>Edit Unprocessed Reviews:</h2>
     

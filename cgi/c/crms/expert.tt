@@ -3,8 +3,7 @@
   [% STOP %]
 [% END %]
 
-[% INCLUDE header.tt    %]
-[% INCLUDE adminNav.tt  %]
+[% INCLUDE header.tt %]
 
 <h2>Reviews in Conflict:</h2>
 

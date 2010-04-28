@@ -1,12 +1,6 @@
-[% IF NOT crms.IsUserExpert() %]
-  [% INCLUDE denied.tt  %]
-  [% STOP %]
-[% END %]
-
 [% INCLUDE header.tt    %]
-[% INCLUDE adminNav.tt  %]
 
-<h2>Held Reviews:</h2>
+<h2>[% IF NOT crms.IsUserAdmin() %]My [% END %]Held Reviews:</h2>
 
 [% INCLUDE selection.tt  %]
 

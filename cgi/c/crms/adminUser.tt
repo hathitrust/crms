@@ -3,8 +3,8 @@
   [% STOP %]
 [% END %]
 
-[% INCLUDE header.tt    %]
-[% INCLUDE adminNav.tt  %]
+[% INCLUDE header.tt %]
+
 
 <h2>Users:</h2>
 

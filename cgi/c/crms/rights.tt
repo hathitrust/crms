@@ -4,7 +4,6 @@
 [% END %]
 
 [% INCLUDE header.tt    %]
-[% INCLUDE adminNav.tt  %]
 [% q = cgi.param('query') %]
 
 <h2>Search Rights Database</h2>

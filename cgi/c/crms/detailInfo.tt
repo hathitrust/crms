@@ -22,8 +22,8 @@
   <table class="exportStats">
   <tr><th>ID</th><td>                    [% review.id %] </td></tr>
   <tr><th>Title</th><td>                 [% crms.LinkToPT( review.id )  %]</td></tr>
-  <tr><th>Author</th><td>                [% crms.GetEncAuthor ( review.id ) %]</td></tr>
-  <tr><th>Pub&nbsp;Date</th><td>         [% crms.GetPubDate( review.id ) %]</td></tr>
+  <tr><th>Author</th><td>                [% crms.GetEncAuthor( review.id ) %]</td></tr>
+  <tr><th>Pub&nbsp;Date</th><td>         [% crms.GetPubDate( review.id ) or 'unknown' %]</td></tr>
   </table>
   <br/>
   <table class="exportStats">
@@ -35,7 +35,7 @@
   <table class="exportStats">
   <tr><th>User</th><td>                  [% review.user %]</td></tr>
   <tr><th>Attr/Reason</th><td>           [% review.attr %]/[% review.reason %]</td></tr>
-  <tr><th>Renewal&nbsp;Info</th><td>     [%  review.renDate %],[% review.renNum %]</td></tr>
+  <tr><th>Renewal&nbsp;Info</th><td>     [% review.renDate %],[% review.renNum %]</td></tr>
   <tr><th>Note&nbsp;Category</th><td>    [% review.category %]</td></tr>
   <tr><th>User&nbsp;Note</th><td>        [% review.note %]</td></tr>
   </table>

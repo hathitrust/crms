@@ -3,13 +3,7 @@
   [% STOP %]
 [% END %]
 
-[% IF cgi.param('toggle') %]
-  [% blah = crms.ToggleTrainingMode() %]
-[% END %]
-
-[% INCLUDE header.tt    %]
-[% INCLUDE adminNav.tt  %]
-[% p = cgi.param('p')   %]
+[% INCLUDE header.tt %]
 
 <script type="text/Javascript">
 <!--
@@ -28,8 +22,6 @@ function CheckAll(box,formid)
 
 [% IF cgi.param('clear') %]
   [% crms.RemoveOldLocks() %]
-[% ELSIF cgi.param('reset') %]
-  [% blah = crms.PrepareSubmitSql('DELETE FROM reviews WHERE id IN (SELECT id FROM training_queue)') %]
 [% ELSIF cgi.param('unlockSel') %]
   [% FOREACH param IN cgi.param %]
     [% matches = param.match('(vol_)(.+)') %]
@@ -82,24 +74,6 @@ function CheckAll(box,formid)
 <br/>
 [% ELSE %]
   <strong>There are no locked items.</strong><br/>
-[% END %]
-
-[% dev = crms.get('dev') %]
-[% IF dev == 'moseshll' || dev == 'crmstest' %]
-  <br/><br/><br/>
-  [% train = crms.SimpleSqlGet('SELECT train FROM systemstatus') %]
-  [% seq = crms.NextSeq() %]
-  <h4>Training Queue: [% (train)? 'ON':'OFF' %]</h4>
-  <div style="position:relative;border-style:solid;width:25%;border-width:1px;padding:10px;">
-  <form action="crms">
-    <input type="hidden" name="p" value="$p"/>
-    [% IF train %]
-      Sequence: [% seq %]<br/>
-      <input type="submit" name="reset" value="Reset Sequence"/>
-    [% END %]
-    <input type="submit" name="toggle" value="[% (train)? 'Stop':'Start' %] Training"/>
-  </form>
-  </div>
 [% END %]
 
 [% INCLUDE footer.tt %]

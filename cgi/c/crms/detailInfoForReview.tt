@@ -22,8 +22,8 @@
   <table class="exportStats">
   <tr><th>ID</th><td>                    [% review.id %] </td></tr>
   <tr><th>Title</th><td>                 [% crms.LinkToReview( review.id )  %]</td></tr>
-  <tr><th>Author</th><td>                [% crms.GetEncAuthor ( review.id ) %]</td></tr>
-  <tr><th>Pub&nbsp;Date</th><td>         [% crms.GetPubDate( review.id ) %]</td></tr>
+  <tr><th>Author</th><td>                [% crms.GetEncAuthor( review.id ) %]</td></tr>
+  <tr><th>Pub&nbsp;Date</th><td>         [% crms.GetPubDate( review.id ) or 'unnknown' %]</td></tr>
   </table>
   <br/>
   <table class="exportStats">

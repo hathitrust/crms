@@ -1,11 +1,5 @@
 [% INCLUDE header.tt    %]
 
-[% IF crms.IsUserAdmin() %]
-[% INCLUDE adminNav.tt  %]
-[% ELSE %]
-[% INCLUDE homeLink.tt  %]
-[% END %]
-
 <h2>Active Reviews:</h2>
 
 [% INCLUDE selection.tt  %]

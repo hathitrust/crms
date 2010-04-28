@@ -4,9 +4,8 @@
 [% END %]
 
 [% INCLUDE header.tt    %]
-[% INCLUDE adminNav.tt  %]
 
-<h2>Queue:</h2>
+<h2>[% (crms.GetTrainingMode())? "Training ":"" %]Queue:</h2>
 
 [% INCLUDE queueSelection.tt  %]
 

@@ -47,7 +47,7 @@ function selMenuItem(id, value)
     [% END %]
     [% page = cgi.param('p') %]
     [% IF page == 'review' %][% INCLUDE reviewJs.tt %][% END %]
-    [% IF page.search('(?i)reviews') || page == 'expert' || page == 'queue'  || page == 'determinationStats' || page == 'holds' %]
+    [% IF page.search('(?i)reviews') || page == 'expert' || page == 'queue'  || page == 'determinationStats' || page == 'holds' || page == 'adminHolds' %]
       <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
     [% END %]
     [% IF page == 'exportStats' %]
@@ -90,38 +90,32 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
 // -->
       </script>
     [% END %]
-    [% dev = crms.get('dev') %]
-    [% fulltitle = title %]
-    [% IF dev %]
-      [% IF dev == 'crmstest' %]
-        [% fulltitle = 'CRMS Training Area' %]
-      [% ELSE %]
-        [% fulltitle = fulltitle _ ' - ' _ 'Development' %]
-        [% IF dev != 1 %]
-          [% fulltitle = fulltitle _ ' (' _ dev _ ')' %]
-        [% END %]
-      [% END %]
-    [% END %]
-    <title>[% fulltitle %] - [% crms.PageToEnglish(page) %]</title>
+    [% where = crms.WhereAmI %]
+    [% IF where %][% title = title _ ' - ' _ where %][% END %]
+    <title>[% title %] - [% crms.PageToEnglish(page) %]</title>
   </head>
   <body>
 [% r = crms.GetSystemStatus() %]
 
 [% IF page != 'review' %]
     <div class="pages" id="homePage">
-    <div style="float:left; margin-right:10em;"><img src="/c/crms/crms.png" alt="CRMS Logo"/></div>
-    [%# INCLUDE nav.tt %]
-    <div id="version">Version 1.7.1
-    [% IF crms.GetTrainingMode() %]
-      <br/>Training Mode
-    [% END %]
+    <div style="float:left; margin-right:4em;">
+      <a href="crms">
+        <img src="/c/crms/crms.png" width="654" height="115" alt="CRMS Logo" style="border:0px solid;"/>
+      </a>
+    </div>
+    [% INCLUDE nav.tt %]
+    <div id="version">Version 1.8
+    [% IF crms.GetTrainingMode() %]<br/>Training Mode[% END %]
     </div>
     <br/><br/>
     <div style="clear:both;">
-    [% IF r.2 %]<br/>[% END %]
-    <span class="greeting">Hello [% crms.GetUserName() %]</span>
-    <a href="crms?p=Logout"> Logout</a>
-    </div><br/><br/>
+      [% IF r.2 %]<br/>[% END %]
+      <span class="greeting">Hello [% crms.GetUserName() %]</span>
+      <a href="crms?p=Logout"> Logout</a>
+      [% IF where %]&nbsp;&nbsp;&nbsp;&nbsp;<span class="greeting" style="color:#185EAC;">Current location: $where</span>[% END %]
+    </div>
+    <br/><br/>
 [% ELSE %]
     <div id="homePage">
 [% END %]

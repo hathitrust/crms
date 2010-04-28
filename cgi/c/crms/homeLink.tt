@@ -1,7 +1,0 @@
-<div><a href="crms">home</a>
-
-  [% page = cgi.param("p") %]
-  &gt; [% crms.PageToEnglish(page) %]
-  <hr width="25%" align="left"/><br/>
-</div>
-

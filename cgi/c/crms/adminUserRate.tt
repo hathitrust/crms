@@ -4,7 +4,6 @@
 [% END %]
 
 [% INCLUDE header.tt    %]
-[% INCLUDE adminNav.tt  %]
 
 [% crms.CreateStatsReport('all', 1, 1, 0, 1) %]
 <br/><br/>

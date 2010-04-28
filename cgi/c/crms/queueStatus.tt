@@ -1,9 +1,8 @@
-[% INCLUDE header.tt    %]
-[% INCLUDE adminNav.tt  %]
+[% INCLUDE header.tt   %]
 
-<h2>Queue Status:</h2><br/>
-[% crms.CreateQueueReport() %]<br/>
-
+<h2>[% (crms.GetTrainingMode())? "Training ":"" %]Queue Status:</h2><br/>
+[% crms.CreateQueueReport() %]
+<br/>
 <table style="width:100px;">
 <tr style="vertical-align:top;"><td>
 <h2>Active Volumes</h2><br/>

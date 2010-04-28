@@ -1,45 +1,58 @@
+[% r = crms.IsUserReviewer || crms.IsUserAdvanced || crms.IsUserExpert %]
+[% e = crms.IsUserExpert %]
+[% a = crms.IsUserAdmin %]
+[% s = crms.IsUserSuperAdmin %]
+
 <div>
 <ul id="suckerfish">
-	<li><a href="#">Reviewer</a>
-		<ul>
-			<li><a href="crms">Home</a></li>
-			<li><a href="crms?p=review">Review</a></li>
-			<li><a href="crms?p=editReviews">Edit&nbsp;Unprocessed&nbsp;Reviews</a></li>
-			<li><a href="crms?p=adminHistoricalReviews">View&nbsp;Historical&nbsp;Reviews</a></li>
-      <li><a href="crms?p=userRate">View&nbsp;Your&nbsp;Review&nbsp;Rate</a></li>
-      <li><a href="/c/crms/UseCases.html" target="_blank">Use&nbsp;Cases</a></li>
-		</ul>
-	</li>
-  [% IF crms.IsUserAdmin %]
-	<li><a href="#">Admin</a>
-		<ul>
-			<li><a href="#"><b>Expert</b></a>
-        <ul>
-          <li><a href="crms?p=expert">Expert&nbsp;Review</a></li>
-          <li><a href="crms?p=undReviews"><code>und/nfi</code>&nbsp;Items</a></li>
-        </ul>
-      </li>
-      <li><a href="#"><b>Queue</b></a>
-        <ul>
-          <li><a href="crms?p=queue">Queue&nbsp;Search</a></li>
-          <li><a href="crms?p=queueStatus">Queue&nbsp;Status</a></li>
-          <li><a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a></li>
-          <li><a href="crms?p=adminQueue">Manage&nbsp;Queue</a></li>
-        </ul>
-      </li>
-      <li><a href="#"><b>Users</b></a>
-        <ul>
-          <li><a href="crms?p=adminUser">Administer&nbsp;Accounts</a></li>
-          <li><a href="crms?p=adminUserRate">View&nbsp;Review&nbsp;Rates</a></li>
-        </ul>
-      </li>
-      <li><a href="crms?p=adminReviews">View&nbsp;All&nbsp;Active&nbsp;Reviews</a></li>
-      <li><a href="crms?p=exportStats">Export&nbsp;Statistics</a></li>
-      <li><a href="crms?p=determinationStats">Determinations&nbsp;Breakdown</a></li>
-      <li><a href="crms?p=rights">Query&nbsp;Rights&nbsp;DB</a></li>
-      <li><a href="crms?p=debug">The&nbsp;Secret&nbsp;Debug&nbsp;Page</a></li>
-    </ul>
-	</li>
-  [% END %]
+[% IF cgi.param('p') %]
+<li><a href="crms" style="color:#185EAC;">Home</a></li>
+[% END %]
+<li><a href="#">Review</a>
+  <ul>
+    [% IF r %]<li><a href="crms?p=review">Review</a></li>                               [% END %]
+    [% IF e %]<li><a href="crms?p=undReviews">Provisional&nbsp;Matches</a></li>         [% END %]
+    [% IF e %]<li><a href="crms?p=expert">Conflicts</a></li>                            [% END %]
+              <li><a href="crms?p=editReviews">My&nbsp;Unprocessed&nbsp;Reviews</a></li>
+              <li><a href="crms?p=holds">My Held Reviews</a></li>
+  </ul>
+</li>
+<li><a href="#">Search</a>
+  <ul>
+                        <li><a href="crms?p=adminHistoricalReviews">Historical&nbsp;Reviews</a></li>
+    [% IF e || a || s %]<li><a href="crms?p=adminReviews">Active&nbsp;Reviews</a></li>              [% END %]
+    [% IF e || a || s %]<li><a href="crms?p=adminHolds">Held&nbsp;Reviews</a></li>                  [% END %]
+    [% IF e || a || s %]<li><a href="crms?p=queue">Queue</a></li>                                   [% END %]
+  </ul>
+</li>
+<li><a href="#">Docs</a>
+  <ul>
+    <li><a href="/c/crms/UseCases.html" target="_blank">Determination&nbsp;Guidelines</a></li>
+    <li><a href="/c/crms/UseCases.html" target="_blank">Decision&nbsp;Tree</a></li>
+    <li><a href="/c/crms/UseCases.html" target="_blank">Use&nbsp;Cases</a></li>
+    <li><a href="/c/crms/keys.html" target="_blank">Search&nbsp;Help</a></li>
+  </ul>
+</li>
+<li><a href="#">Stats</a>
+  <ul>
+                        <li><a href="crms?p=userRate">My&nbsp;Review&nbsp;Stats</a></li>
+    [% IF e || a || s %]<li><a href="crms?p=adminUserRate">All&nbsp;Review&nbsp;Stats</a></li>        [% END %]
+    [% IF e || a || s %]<li><a href="crms?p=queueStatus">Queue&nbsp;Status</a></li>                   [% END %]
+    [% IF e || a || s %]<li><a href="crms?p=determinationStats">Determinations&nbsp;Breakdown</a></li>[% END %]
+    [% IF e || a || s %]<li><a href="crms?p=exportStats">Export&nbsp;Stats</a></li>              [% END %]
+  </ul>
+</li>
+[% IF e || a || s %]
+<li><a href="#">Admin</a>
+  <ul>
+          <li><a href="crms?p=adminUser">User&nbsp;Accounts</a></li>
+          <li><a href="crms?p=rights">Query&nbsp;Rights&nbsp;DB</a></li>
+[% IF a %]<li><a href="crms?p=adminQueue">Manage&nbsp;the&nbsp;Queue</a></li>[% END %]
+[% IF a %]<li><a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a></li>      [% END %]
+[% IF a %]<li><a href="crms?p=systemStatus">System&nbsp;Status</a></li>      [% END %]
+[% IF s %]<li><a href="crms?p=debug">System Administration</a></li>          [% END %]
+  </ul>
+</li>
+[% END %]
 </ul>
-</div><br/><br/><br/>
+</div>

@@ -1,5 +1,4 @@
 [% INCLUDE header.tt %]
-[% INCLUDE adminNav.tt %]
 
 <h2 style="margin-left:390px">Statistics for Exported Determinations</h2>
 <br/>

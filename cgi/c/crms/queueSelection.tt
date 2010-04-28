@@ -82,6 +82,9 @@ Restrict selection:<br/>
   <option value="reviews"  [% order == 'reviews' ? 'selected="selected"':'' %]>Reviews</option>
   <option value="expcnt"   [% order == 'expcnt' ? 'selected="selected"':'' %]>Expert Reviews</option>
   <option value="holds"    [% order == 'holds' ? 'selected="selected"':'' %]>Holds</option>
+[% IF crms.GetTrainingMode() %]
+  <option value="seq"      [% order == 'seq' ? 'selected="selected"':'' %]>Sequence</option>
+[% END %]
 </select>
 <br/>
 

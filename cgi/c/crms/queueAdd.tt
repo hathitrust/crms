@@ -4,39 +4,48 @@
 [% END %]
 
 [% INCLUDE header.tt    %]
-[% INCLUDE adminNav.tt  %]
 
+[% train = crms.GetTrainingMode() %]
 [% ids = cgi.param('ids') %]
 [% pri = cgi.param('priority') %]
 [% override = cgi.param('override') %]
 [% IF NOT pri %][% pri = 0 %][% END %]
 
-<h2>Add Volumes to the [% (crms.GetTrainingMode())? "Training ":"" %]Queue:</h2>
+<h2>Add Volumes to the [% (train)? "Training ":"" %]Queue:</h2>
+[% IF !train %]
 These items will take priority in the review process.
+[% END %]
 
 <form action="crms">
   <p class="smallishText">Enter one volume id per line.
   Entries that don't have a namespace will be given an <code>mdp.</code> prefix.</p>
   <input type="hidden" name="p" value="queueAdd"/>
   <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;">[% ids %]</textarea><br/>
-  <select name="priority">
-    <option value="0" [% (pri==0)? 'selected="selected"':'' %]>Priority 0</option>
-    <option value="1" [% (pri==1)? 'selected="selected"':'' %]>Priority 1</option>
-    <option value="2" [% (pri==2)? 'selected="selected"':'' %]>Priority 2</option>
-    <option value="3" [% (pri==3)? 'selected="selected"':'' %]>Priority 3</option>
-  </select>
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  Override Restrictions (sets priority 4)
-  <input type="checkbox" name="override" [% (crms.IsUserSuperAdmin())? '':'disabled="disabled"' %] [% override? 'checked="checked"':'' %]/>
+  [% IF !train %]
+    <select name="priority">
+      <option value="0" [% (pri==0)? 'selected="selected"':'' %]>Priority 0</option>
+      <option value="1" [% (pri==1)? 'selected="selected"':'' %]>Priority 1</option>
+      <option value="2" [% (pri==2)? 'selected="selected"':'' %]>Priority 2</option>
+      <option value="3" [% (pri==3)? 'selected="selected"':'' %]>Priority 3</option>
+    </select>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    Override Restrictions (sets priority 4)
+    <input type="checkbox" name="override" [% (crms.IsUserSuperAdmin())? '':'disabled="disabled"' %] [% override? 'checked="checked"':'' %]/>
+  [% END %]
   &nbsp;&nbsp;&nbsp;&nbsp;
   <input type="submit" value="Submit"/>
+  [% IF train %]
+    <input type="submit" name="delete" value="Delete"/>
+  [% END %]
 </form>
 <br/>
-<p class="smallishText">Priority 2 can be be reviewed by anyone.<br/>
-Priority 3 can only be reviewed by an expert.<br/>
-Priority 4 can only be added or reviewed by a super admin.<br/>
-<i>Override Restrictions</i> allows you to enter government documents, non-books, and items from before 1923 or after 1963.<br/>
-</p>
+[% IF !train %]
+  <p class="smallishText">Priority 2 can be be reviewed by anyone.<br/>
+  Priority 3 can only be reviewed by an expert.<br/>
+  Priority 4 can only be added or reviewed by a super admin.<br/>
+  <i>Override Restrictions</i> allows you to enter government documents, non-books, and items from before 1923 or after 1963.<br/>
+  </p>
+[% END %]
 <br/>
 [% adds = 0 %]
 [% skips = 0 %]
@@ -46,7 +55,15 @@ Priority 4 can only be added or reviewed by a super admin.<br/>
   [% FOREACH id IN ids.split %]
     [% IF id.match('^\d+$') %][% id = 'mdp.' _ id %][% END %]
     [% id = id.remove('(^\s+)|(\s+$)') %]
-    [% status = crms.AddItemToQueueOrSetItemActive(id, pri, override) %]
+    [% IF cgi.param("delete") %]
+      [% IF crms.RemoveFromQueue(id) %]
+        [% status = "0" %]
+      [% ELSE %]
+        [% status = "2Volume is not in the training queue." %]
+      [% END %]
+    [% ELSE %]
+      [% status = crms.AddItemToQueueOrSetItemActive(id, pri, override) %]
+    [% END %]
     <tr><th style="width:10em;"><span class="major">[% id %]</span></th>
     [% err = status.substr(0, 1) %]
     [% status = status.substr(1, status.length()) %]
@@ -65,7 +82,8 @@ Priority 4 can only be added or reviewed by a super admin.<br/>
     [% END %]
     </tr>
   [% END %]
-  <tr><td colspan="2"><b>Added $adds volume[% (adds == 1)? '':'s' %], skipped $skips, modified $already</b></td></tr>
+  [% action = (cgi.param("delete"))? "Deleted":"Added" %]
+  <tr><td colspan="2"><b>$action $adds volume[% (adds == 1)? '':'s' %], skipped $skips, modified $already</b></td></tr>
   </table>
 [% END %]
 <br/>
@@ -76,25 +94,27 @@ Priority 4 can only be added or reviewed by a super admin.<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;
 <a href="?p=adminReviews">Go to Active Reviews</a><br/>
 
-[% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.status,q.priority FROM queue q, bibdata b WHERE q.id=b.id AND q.priority>=2 ORDER BY q.priority DESC, b.author ASC" %]
-[% ref  = crms.get("dbh").selectall_arrayref(sql) %]
-[% IF ref.size > 0 %]
-  <br/>
-  <h4>[% ref.size %] High-priority Item[% (ref.size == 1)? '':'s' %]</h4>
-  <table class="exportStats" style="width:auto;"><tr><th>ID</th><th>Title</th><th>Author</th><th>Pub&nbsp;Date</th><th>Added</th><th>Status</th><th>Priority</th><th>Issues</th></tr>
-  [% FOREACH r IN ref %]
-    [% vs = crms.GetViolations(r.0) %]
-    <tr><td>
-    [% IF r.5 > 0 %]
-      <a href="/cgi/c/crms/crms?p=adminReviews&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
-    [% ELSE %]
-      <a href="/cgi/c/crms/crms?p=queue&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
+[% IF !train %]
+  [% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.status,q.priority FROM queue q, bibdata b WHERE q.id=b.id AND q.priority>=2 ORDER BY q.priority DESC, b.author ASC" %]
+  [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
+  [% IF ref.size > 0 %]
+    <br/>
+    <h4>[% ref.size %] High-priority Item[% (ref.size == 1)? '':'s' %]</h4>
+    <table class="exportStats" style="width:auto;"><tr><th>ID</th><th>Title</th><th>Author</th><th>Pub&nbsp;Date</th><th>Added</th><th>Status</th><th>Priority</th><th>Issues</th></tr>
+    [% FOREACH r IN ref %]
+      [% vs = crms.GetViolations(r.0) %]
+      <tr><td>
+      [% IF r.5 > 0 %]
+        <a href="/cgi/c/crms/crms?p=adminReviews&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
+      [% ELSE %]
+        <a href="/cgi/c/crms/crms?p=queue&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
+      [% END %]
+      [% r.0 %]</a></td>
+      <td>[% r.1 %]</td>
+      <td>[% r.2 %]</td><td>[% r.3 %]</td><td>[% r.4 %]</td><td>[% r.5 %]</td><td>[% r.6 %]</td><td>[% vs %]</td></tr>
     [% END %]
-    [% r.0 %]</a></td>
-    <td>[% r.1 %]</td>
-    <td>[% r.2 %]</td><td>[% r.3 %]</td><td>[% r.4 %]</td><td>[% r.5 %]</td><td>[% r.6 %]</td><td>[% vs %]</td></tr>
+    </table>
   [% END %]
-  </table>
 [% END %]
 
 [% INCLUDE footer.tt %]

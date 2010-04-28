@@ -1,9 +1,0 @@
-[% INCLUDE header.tt    %]
-[% INCLUDE adminNav.tt  %]
-
-[% id = cgi.param('id')         %]
-[% IF crms.UnlockItem(id, user) %]  <h3>[% id %] has been unlocked.</h3>
-[% ELSE %]                          <h3>ERROR unlocking [% id %]</h3>     
-[% END  %]
-
-[% INCLUDE footer.tt %]
