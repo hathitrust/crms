@@ -44,7 +44,7 @@ function CheckAll(box,formid)
 [% s = crms.IsUserSuperAdmin %]
 
 <table class="mainnav">
-<tr><th><span class="minor">Review</span></th><th><span class="major">Search</span></th></tr>
+<tr><th><span class="minor">Review</span></th><th><span class="major">Search/Browse</span></th></tr>
 <tr>
 <td>
 [% IF r %]<a href="crms?p=review">Review</a><br/>                      [% END %]
