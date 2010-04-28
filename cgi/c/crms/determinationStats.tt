@@ -41,8 +41,11 @@
 </div>
 <br/>
 
-[% crms.CreateExportStatusReport(startDate, endDate, 0) %]
-<br/><br/><br/>
+[% report = crms.CreateExportStatusReport(startDate, endDate, 0) %]
+[% report.replace('Status&nbsp;6','Status&nbsp;6*') %]
+<br/>
+<span class="smallishText">* Note: Status 6 no longer in use as of 4/19/2010.</span>
+<br/><br/>
 <table style="padding:0px; width:800px; height:300px; border-collapse:collapse">
 <tr style="background-color:#000000;"><td><div id="chart0"/></td></tr>
 </table>
