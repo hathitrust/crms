@@ -5939,17 +5939,19 @@ sub CreateQueueReport
     my $count = $self->SimpleSqlGet( $sql );
     $status = 'All' if $status == -1;
     my $class = ($status eq 'All')?' class="total"':'';
-    $report .= sprintf("<tr><td%s>$status</td><td%s>$count</td>", $class, $class);
+    $class = ' style="background-color:#999999;"' if $status == 6;
+    $report .= sprintf("<tr><td%s>$status%s</td><td%s>$count</td>", $class, ($status == 6)? '*':'', $class);
     $sql = "SELECT id FROM $CRMSGlobals::queueTable $statusClause";
     $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri,$class);
     $report .= "</tr>\n";
   }
-  $sql = qq{ SELECT id FROM $CRMSGlobals::queueTable WHERE status=0 AND id NOT IN (SELECT id FROM $CRMSGlobals::reviewsTable)};
+  $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE status=0 AND id NOT IN (SELECT id FROM $CRMSGlobals::reviewsTable)";
   my $count = $self->GetTotalAwaitingReview();
   my $class = ' class="major"';
   $report .= sprintf("<tr><td%s>Not&nbsp;Yet&nbsp;Active</td><td%s>$count</td>", $class, $class);
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri,$class);
-  $report .= "</tr></table><br/><br/>\n";
+  $report .= "</tr></table>\n";
+  $report .= "<span class='smallishText'>* Note: Status 6 no longer in use as of 4/19/2010.</span><br/><br/>\n";
   $report .= "</td><td style='padding-left:20px'>\n";
   $report .= "<table class='exportStats'>\n";
   my $val = $self->GetLastQueueTime(1);
@@ -6020,7 +6022,7 @@ sub CreateDeterminationReport()
   $report .= "<tr><th>Last&nbsp;CRMS&nbsp;Export</th><td>$count&nbsp;on&nbsp;$time</td></tr>";
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</th><td>$fours&nbsp;(%.1f%%)</td></tr>", $pct4);
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</th><td>$fives&nbsp;(%.1f%%)</td></tr>", $pct5);
-  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6</th><td>$sixes&nbsp;(%.1f%%)</td></tr>", $pct6);
+  $report .= sprintf("<tr><th style='color:#999999;'>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6*</th><td style='background-color:#999999;'>$sixes&nbsp;(%.1f%%)</td></tr>", $pct6);
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;7</th><td>$sevens&nbsp;(%.1f%%)</td></tr>", $pct7);
   $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</th><td>%s</td></tr>", $exported);
   foreach my $source (sort keys %sources)
@@ -6032,6 +6034,7 @@ sub CreateDeterminationReport()
   $report .= sprintf("<tr><th>Total&nbsp;Legacy&nbsp;Determinations</th><td>%s</td></tr>", $legacy);
   $report .= sprintf("<tr><th>Total&nbsp;Determinations</th><td>%s</td></tr>", $exported + $legacy);
   $report .= "</table>\n";
+  $report .= "<span class='smallishText'>* Note: Status 6 no longer in use as of 4/19/2010.</span><br/><br/>\n";
   return $report;
 }
 
