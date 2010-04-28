@@ -412,3 +412,37 @@ hr {
 #suckerfish li:hover, #suckerfish li.sfhover {
 	background: #6AC6F1;
 }
+
+#suckerfish li[class=home]:hover, #suckerfish li[class=home].sfhover {
+	background: #FFFFFF;
+  color:#1B75DA;
+}
+
+#suckerfish li[class=home] a span {
+  color:#185EAC;
+}
+
+#suckerfish li[class=home]:hover a span {
+  color:#1B75DA;
+}
+
+#suckerfish li[class=total] li:hover, #suckerfish li[class=total]:hover, #suckerfish li[class=total].sfhover {
+	background: #A0FEAE;
+}
+
+#suckerfish li[class=major] li:hover, #suckerfish li[class=major]:hover, #suckerfish li[class=major].sfhover {
+	background: #82CAFA;
+}
+
+#suckerfish li[class=minor] li:hover, #suckerfish li[class=minor]:hover, #suckerfish li[class=minor].sfhover {
+	background: #FEFCAE;
+}
+
+#suckerfish li[class=red] li:hover, #suckerfish li[class=red]:hover, #suckerfish li[class=red].sfhover {
+	background: #FB5252;
+}
+
+#suckerfish li[class=orange] li:hover, #suckerfish li[class=orange]:hover, #suckerfish li[class=orange].sfhover {
+	background: #EB9747;
+}
+
