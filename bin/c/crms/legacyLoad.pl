@@ -130,12 +130,12 @@ sub ProcessFile
       $status    = 1;
 
       #Remove starting and ending quotes
-      if ( $note =~ m/^\".*/ ) { $note =~ s/^\"(.*)/$1/; }
-      if ( $note =~ m/.*"$/ ) { $note =~ s/(.*)\"$/$1/; }
+      if ( $note =~ m/^\".*/ ) { $note =~ s/^\"+(.*)/$1/; }
+      if ( $note =~ m/.*?"$/ ) { $note =~ s/(.*?)\"+$/$1/; }
       $note =~ s/\"\"/`/g;
 
-      if ( $title =~ m/^\".*/ ) { $title =~ s/^\"(.*)/$1/; }
-      if ( $title =~ m/.*"$/ ) { $title =~ s/(.*)\"$/$1/; }
+      if ( $title =~ m/^\".*/ ) { $title =~ s/^\"+(.*)/$1/g; }
+      if ( $title =~ m/.*?"$/ ) { $title =~ s/(.*?)\"+$/$1/; }
 
       #Parse out the category.
       if ( $note =~ m/.*?\:.*/ )
@@ -145,6 +145,13 @@ sub ProcessFile
         die "Can't translate $category!" if (uc $category) eq $crms->TranslateCategory( $category );
         $category = $crms->TranslateCategory( $category );
         $note =~ s/.*?\:\s*(.*)/$1/s;
+      }
+      elsif ($note)
+      {
+        $category = $note;
+        $note = undef;
+        die "Can't translate $category!" if (uc $category) eq $crms->TranslateCategory( $category );
+        $category = $crms->TranslateCategory( $category );
       }
     }
     else
