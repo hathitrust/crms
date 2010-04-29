@@ -1121,19 +1121,22 @@ sub GetStatusForExpertReview
   my $reason = shift;
   
   my $status = 5;
-  my $qstatus = $self->SimpleSqlGet("SELECT status FROM queue WHERE id='$id'");
-  if ($qstatus == 3 || $qstatus == 5 || $qstatus == 7)
+  my $pstatus = $self->SimpleSqlGet("SELECT pending_status FROM queue WHERE id='$id'");
+  if ($pstatus == 3)
   {
     # If provisional match, see if the expert agreed with both of existing non-expert reviews. If so, status 7.
-    my $sql = "SELECT attr,reason FROM reviews WHERE id='$id' AND user IN (SELECT id FROM users WHERE expert=0)";
+    my $sql = "SELECT attr,reason,user FROM reviews WHERE id='$id' AND user IN (SELECT id FROM users WHERE expert=0)";
     my $ref = $self->get('dbh')->selectall_arrayref($sql);
     if (scalar @{ $ref } >= 2)
     {
-      my $attr1 = $ref->[0]->[0];
+      my $attr1   = $ref->[0]->[0];
       my $reason1 = $ref->[0]->[1];
-      my $attr2 = $ref->[1]->[0];
+      my $user1   = $ref->[0]->[2];
+      my $attr2   = $ref->[1]->[0];
       my $reason2 = $ref->[1]->[1];
-      if ($attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1)
+      my $user2   = $ref->[1]->[2];
+      if ($attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1 &&
+         (!$self->IsUserAdvanced($user1)) && (!$self->IsUserAdvanced($user2)))
       {
         $status = 7;
       }
