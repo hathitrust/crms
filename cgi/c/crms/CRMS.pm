@@ -1041,7 +1041,7 @@ sub SubmitReview
     
     # Javascript code inserts the string 'searching...' into the review text box.
     # This in once case got submitted as the renDate in production
-    $renDate = '' if $renDate eq 'searching...';
+    $renDate = '' if $renDate =~ m/searching.*/i;
 
     $note = ($note)? $self->get('dbh')->quote($note):'NULL';
     
