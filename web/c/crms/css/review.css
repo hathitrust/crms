@@ -38,7 +38,7 @@ color:#185EAC;
 
 .divNav {
   float:left;
-  width:210px;
+  width:235px;
 }
 
 .divFrame {
@@ -46,7 +46,7 @@ color:#185EAC;
   height:100%;
   border-left: 1px solid #72859a;
   position:absolute;
-  left:210px;
+  left:235px;
   right:0px;
   top:0px;
 }

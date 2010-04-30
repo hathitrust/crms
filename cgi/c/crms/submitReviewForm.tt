@@ -8,36 +8,17 @@
   <input type="hidden" name="user"     value="[% user %]"/>
   <input type="hidden" name="confirm"  value="1"/>
   <input type="hidden" name="editing"  value="[% editing %]"/>
-  <input type="hidden" name="navRight" value="[% navright %]"/>
   <table class="display">
     <tr>
-	    <td class="display" align="left" colspan="3">
+	    <td class="display" align="left" colspan="4">
 	      <strong>Display Options:</strong>
       </td>
     </tr>
+    <tr><td colspan="4"></tr>
+    <tr><td colspan="4"></tr>
     <tr>
-      <td class="display" align="left">&nbsp;&nbsp;&nbsp;Toggle:</td>
-      <td class="display" align="center">
-        <a href="javascript:flipFrame()" accesskey="f">Full/Split</a>
-      </td>
-      <td class="display"/>
-      <td class="display">
-        <a href="javascript:flipFrame2()" accesskey="o">Views</a>
-      </td>
-    </tr>
-    <tr>
-      <td class="display" align="left">&nbsp;&nbsp;&nbsp;Review Pane:</td>
-      <td class="display" align="center">
-        <a href="crms?p=review&amp;navRight=0">Left</a>	
-	    </td>
-      <td class="display" align="center"/>
-      <td class="display" align="center">
-        <a href="crms?p=review&amp;navRight=1">Right</a>
-	    </td>
-    </tr>
-    <tr>
-      <td class="display" align="left">&nbsp;&nbsp;&nbsp;Size:</td>
-      <td colspan="2">
+      <td class="display" align="left">Size:</td>
+      <td>
         <select onchange="zoom(this);">
         [% percents = [50,75,100,125,150,200] %]
         [% FOREACH p IN percents %]
@@ -49,28 +30,27 @@
         [% END %]
         </select>
       </td>
+      <td class="display" align="left">&nbsp;&nbsp;&nbsp;Toggle:</td>
+      <td class="display">
+        <a href="javascript:flipFrame()" accesskey="o">Views</a>
+      </td>
     </tr>
   </table>
-    
-  
-  
   <table class="test">
     <tr>
-      <td class="test" align="left"><strong>Renewal ID: </strong></td>
+      <td class="test"><strong>Renewal&nbsp;ID:</strong></td>
       <td>
         <input type="text" name="renNum" value="[% renNum %]" size="8" onblur="javascript:popRenewalDate()"/>
       </td>
     </tr>
     <tr>
-      <td class="test" align="left" >
-        <strong>
-          <a  href="javascript:popRenewalDate()" accesskey="d">Get Renewal Date:</a>
-        </strong>
+      <td class="test" align="left" style="margin:0px;padding:0px;">
+        <input type="button" value="Get Renewal Date" onclick="popRenewalDate();" accesskey="d"
+               style="margin:0px;padding:0px;background-color:#d0dee6;"/>
       </td>
       <td><input type="text"  id="getDate" name="renDate" value="[% renDate %]" size="8" readonly="readonly"/></td>
     </tr>
   </table>
-
   <div id="RightsCont" class="rightscont">
   <div id="RightsReason">
   <strong>&nbsp;Rights/Reason: </strong>

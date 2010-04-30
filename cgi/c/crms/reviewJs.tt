@@ -30,28 +30,8 @@ function closeFrame() {
     document.getElementById("topFrame").height = "100%";
     document.getElementById("bFrame").height   = "0%";
 }
+
 function flipFrame() {
-    var top = document.getElementById("topFrame");
-    var bottom = document.getElementById("bFrame");
-    //var div = document.getElementById("divFrame");
-    topSize= bottom.height;
-    //div.insertBefore(top, bottom);
-    if ( topSize == "0%")
-    {
-        top.width = "100%";
-        bottom.width = "100%";
-        top.height = "50%";
-        bottom.height   = "50%";
-    }
-    else
-    {
-        top.width = "100%";
-        bottom.width = "100%";
-        top.height = "100%";
-        bottom.height   = "0%";
-    }
-}
-function flipFrame2() {
     topSize = (document.getElementById("topFrame").height);
     if ( topSize == "100%")
     {
@@ -91,7 +71,7 @@ function popRenewalDate() {
 
     req.onreadystatechange = function()
     { 
-        document.submitReview.renDate.value = "searching...";
+        document.submitReview.renDate.value = "Searching...";
         if(req.readyState == 4)
         {
             if(req.status == 200)

@@ -112,7 +112,6 @@ if ( $cgi->param('p') eq 'confirmReview' )
     my $renNum     = $cgi->param('renNum');
     my $renDate    = $cgi->param('renDate');
     my $id         = $cgi->param('barcode');
-    my $navright   = $cgi->param('navRight');
     my $question   = $cgi->param('question');
     my $swiss      = $cgi->param('swiss');
 
@@ -140,7 +139,6 @@ if ( $cgi->param('p') eq 'confirmReview' )
         $cgi->param('errorMsg', $errorMsg );
       }
       $cgi->param('barcode', $id );
-      $cgi->param('navRight', $navright );
 
       $cgi->param('rights',   $EncRights);
       $cgi->param('reason',   $reason);
@@ -170,7 +168,6 @@ if ( $cgi->param('p') eq 'confirmReview' )
         $cgi->param('p', 'review' );
         $cgi->param('errorMsg', $errorMsg1 );
         $cgi->param('barcode', $id );
-        $cgi->param('navRight', $navright );
         $cgi->param('blah', 'bleh' );
 
         $cgi->param('rights',   $EncRights);
@@ -196,7 +193,6 @@ if ( $cgi->param('p') eq 'confirmReview' )
         else
         {
           $cgi->param('p', 'review' );
-          $cgi->param('navRight', $navright );
         }
       }
     }

@@ -4,7 +4,6 @@
 [% barcode    = cgi.param('barcode') %]
 [% inAdd      = cgi.param('add') %]
 [% editing    = cgi.param('editing') %]
-[% navright   = cgi.param('navRight') %]
 [% renNum     = cgi.param('renNum') %]
 [% renDate    = cgi.param('renDate') %]
 [% comm       = cgi.param('comm') %]
@@ -154,8 +153,7 @@
         [% INCLUDE submitReviewForm.tt barcode = barcode, renNum   = renNum,   renDate = renDate,
                                        comment = comment, copyDate = copyDate, comm    = comm,    
                                        category = category, editing = editing, error   = error,
-                                       navright = navright, select = select, mag = mag,
-                                       question = question, swiss = swiss %]
+                                       select = select, mag = mag, question = question, swiss = swiss %]
         <table class="nav">
           <tr>
             <td><a href="/c/crms/help.html#rights" target="_blank">Help</a></td>
