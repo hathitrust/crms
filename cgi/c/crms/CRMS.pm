@@ -971,7 +971,6 @@ sub TranslateCategory
     elsif ( $category eq 'EDITION' ) { return 'Edition'; }
     elsif ( $category eq 'NOT CLASS A' ) { return 'Not Class A'; }
     elsif ( $category eq 'PERIODICAL' ) { return 'Periodical'; }
-    elsif ( $category eq 'US GOV DOC' ) { return 'US Gov Doc'; }
     elsif ( $category eq 'INSERT' ) { return 'Insert(s)'; }
     else  { return $category };
 }
@@ -984,7 +983,7 @@ sub IsValidCategory
   
   my %cats = ('Insert(s)' => 1, 'Language' => 1, 'Misc' => 1, 'Missing' => 1, 'Date' => 1, 'Reprint' => 1,
               'Periodical' => 1, 'Translation' => 1, 'Wrong Record' => 1, 'Foreign Pub' => 1, 'Dissertation/Thesis' => 1,
-              'Expert Note' => 1, 'Not Class A' => 1, 'Edition' => 1, 'US Gov Doc' => 1, 'Expert Accepted' => 1);
+              'Expert Note' => 1, 'Not Class A' => 1, 'Edition' => 1, 'Expert Accepted' => 1);
   return exists $cats{$cat};
 }
 
@@ -4250,7 +4249,7 @@ sub ValidateSubmission2
     ## pd/ncn requires a ren number unless Gov Doc
     if (  $attr == 1 && $reason == 2 && ( ( ! $renNum ) || ( ! $renDate ) ) )
     {
-        $errorMsg .= 'pd/ncn must include renewal id and renewal date.' unless $category eq 'US Gov Doc';
+        $errorMsg .= 'pd/ncn must include renewal id and renewal date.';
     }
 
 
@@ -4282,7 +4281,7 @@ sub ValidateSubmission2
     {
       if ( ( $category )  && ( ! $note ) )
       {
-        if ($category ne 'US Gov Doc' && $category ne 'Expert Accepted')
+        if ($category ne 'Expert Accepted')
         {
           $errorMsg .= 'must include a note if there is a category.';
         }
@@ -4308,12 +4307,6 @@ sub ValidateSubmission2
       {
         $errorMsg .= 'pdus/cdpp requires note category "Foreign Pub" or "Translation".';
       }
-    }
-    
-    ## US Gov Doc requires pd/ncn
-    if ($category eq 'US Gov Doc' && ($attr != 1 || $reason != 2))
-    {
-      $errorMsg = 'note category only permitted with pd/ncn';
     }
     return $errorMsg;
 }
