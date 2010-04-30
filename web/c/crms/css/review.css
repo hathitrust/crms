@@ -342,6 +342,20 @@ hr {
   height:1px;
 }
 
+#select select {
+  font-size:.9em;
+  padding:.14em;
+}
+
+#select input {
+  font-size:.9em;
+}
+
+#select * {
+  margin-bottom:.5em;
+}
+
+
 /* ================================================================ 
 This copyright notice must be untouched at all times.
  
