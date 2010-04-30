@@ -138,8 +138,7 @@
                "Wrong Record"   => "Wrong Record",  "Date"            => "Date",
                "Dissertation/Thesis" => "Dissertation/Thesis",
                "Not Class A"    => "Not Class A",   "Expert Note"     => "Expert Note",
-               "Edition"        => "Edition",       "US Gov Doc"      => "US Gov Doc",
-               ""               => "none"} 
+               "Edition"        => "Edition",       ""               => "none"} 
     %]
     [% IF category == "Expert Accepted" %]
       [% pre = "Expert Accepted" %]
