@@ -4754,7 +4754,7 @@ sub GetMarcDatafield
     $record = $self->GetRecordMetadata($barcode) unless $record;
     if ( ! $record ) { $self->Logit( "failed in GetMarcDatafield: $barcode" ); }
 
-    my $xpath = qq{//*[local-name()='datafield' and \@tag='$field']} .
+    my $xpath = qq{//*[local-name()='datafield' and \@tag='$field'][1]} .
                 qq{/*[local-name()='subfield'  and \@code='$code']};
     my $data;
     eval{ $data = $record->findvalue( $xpath ); };
