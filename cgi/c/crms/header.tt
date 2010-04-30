@@ -99,30 +99,30 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
 
 [% IF page != 'review' %]
     <div class="pages" id="homePage">
-    <div style="float:left; margin-right:4em;">
+    <div style="height:80px;border-bottom:1px solid black;margin:0px;padding:0px;">
       <a href="crms">
-        <img src="/c/crms/crms.png" width="654" height="115" alt="CRMS Logo" style="border:0px solid;"/>
+        <img src="/c/crms/crms.png" width="455" height="80" alt="CRMS Logo" style="float:left;border:0px solid;margin-right:4em;"/>
       </a>
+      <div style="text-align:right;">
+        <span class="smallishText">Version 1.8
+          [% IF crms.GetTrainingMode() %]<br/>Training Mode[% END %]<br/>
+        </span>
+        <span class="greeting">Hello [% crms.GetUserName() %]</span>
+        <a href="crms?p=Logout"> Logout</a><br/>
+        [% IF where %]<span class="greeting" style="color:#185EAC;">Current location: $where</span>[% END %]
+      </div>
     </div>
-    [% INCLUDE nav.tt %]
-    <div id="version">Version 1.8
-    [% IF crms.GetTrainingMode() %]<br/>Training Mode[% END %]
+    <div style="border-bottom:1 px solid black;">
+      [% INCLUDE nav.tt %]
     </div>
-    <br/><br/>
-    <div style="clear:both;">
-      [% IF r.2 %]<br/>[% END %]
-      <span class="greeting">Hello [% crms.GetUserName() %]</span>
-      <a href="crms?p=Logout"> Logout</a>
-      [% IF where %]&nbsp;&nbsp;&nbsp;&nbsp;<span class="greeting" style="color:#185EAC;">Current location: $where</span>[% END %]
-    </div>
-    <br/><br/>
+    <br/><br/><br/>
 [% ELSE %]
     <div id="homePage">
 [% END %]
 [% # Don't display the notice if this is the review page and situation normal %]
 [% IF r.2 && (page != 'review' || r.1 != 'normal') %]
   [% blah = r.2.replace('\s','&nbsp;') %]
-  <table style="padding:6px;width:820px;height:115px;border:1px solid #AA0000;background-color:#EEEEFF;position:absolute;top:20px;left:20px;">
+  <table style="width:820px;height:80px;border-left:1px solid black;border-top:1px solid black;border-right:1px solid black;background-color:#EEEEFF;position:absolute;top:20px;left:20px;">
   <tr><td>
    [% status = (r.1 == 'normal')? 'normal':((r.1 == 'down')? 'unavailable':'partially available') %]
    <span style="font-size:1.4em;text-align:center;">System status is <b>[% status %]</b>; last modified [% r.0 %]</span><br/><br/>
