@@ -4375,7 +4375,7 @@ sub ValidateSubmissionHistorical
     {
       if ( ( $category )  && ( ! $note ) )
       {
-        if ($category ne 'US Gov Doc' && $category ne 'Expert Accepted')
+        if ($category ne 'Expert Accepted')
         {
           $errorMsg .= 'must include a note if there is a category.';
         }
