@@ -4749,61 +4749,43 @@ sub GetMarcDatafield
     my $barcode = shift;
     my $field   = shift;
     my $code    = shift;
+    my $record  = shift;
 
-    my $record = $self->GetRecordMetadata($barcode);
+    $record = $self->GetRecordMetadata($barcode) unless $record;
     if ( ! $record ) { $self->Logit( "failed in GetMarcDatafield: $barcode" ); }
 
     my $xpath = qq{//*[local-name()='datafield' and \@tag='$field']} .
                 qq{/*[local-name()='subfield'  and \@code='$code']};
-
     my $data;
     eval{ $data = $record->findvalue( $xpath ); };
     if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
     
-    return $data
+    return $data;
 }
 
 sub GetMarcDatafieldAuthor
 {
-    my $self    = shift;
-    my $barcode = shift;
-    my $record  = shift;
+    my $self   = shift;
+    my $id     = shift;
+    my $record = shift;
     
     #After talking to Tim, the author info is in the 1XX field
     #Margrte told me that the only 1xx fields are: 100, 110, 111, 130. 700, 710
-    $record = $self->GetRecordMetadata($barcode) unless $record;
-    if ( ! $record ) { $self->Logit( "failed in GetMarcDatafieldAuthor: $barcode" ); }
-
-    my $data;
-
-    my $xpath = qq{//*[local-name()='datafield' and \@tag='100']};
-    eval{ $data .= $record->findvalue( $xpath ); };
-    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
-
-    my $xpath = qq{//*[local-name()='datafield' and \@tag='110']};
-    eval{ $data .= $record->findvalue( $xpath ); };
-    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
-
-    my $xpath = qq{//*[local-name()='datafield' and \@tag='111']};
-    eval{ $data .= $record->findvalue( $xpath ); };
-    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
-
-    my $xpath = qq{//*[local-name()='datafield' and \@tag='130']};
-    eval{ $data .= $record->findvalue( $xpath ); };
-    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
-
-    my $xpath = qq{//*[local-name()='datafield' and \@tag='700']};
-    eval{ $data .= $record->findvalue( $xpath ); };
-    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
-
-    my $xpath = qq{//*[local-name()='datafield' and \@tag='710']};
-    eval{ $data .= $record->findvalue( $xpath ); };
-    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
-
-   
-    $data =~ s,\n,,gs;
-
-    return $data
+    $record = $self->GetRecordMetadata($id) unless $record;
+    if ( ! $record ) { $self->Logit( "failed in GetMarcDatafieldAuthor: $id" ); }
+    my $data = $self->GetMarcDatafield($id,'100','a',$record);
+    if (!$data)
+    {
+      $data = $self->GetMarcDatafield($id,'110','a',$record);
+      $data .= $self->GetMarcDatafield($id,'110','b',$record) if $data;
+      $data = $self->GetMarcDatafield($id,'111','a',$record) unless $data;
+      $data = $self->GetMarcDatafield($id,'130','a',$record) unless $data;
+      $data = $self->GetMarcDatafield($id,'700','a',$record) unless $data;
+      $data = $self->GetMarcDatafield($id,'710','a',$record) unless $data;
+    }
+    $data =~ s/\n+//gs;
+    $data =~ s/[\s,\.]+$//g;
+    return $data;
 }
 
 sub GetEncTitle
