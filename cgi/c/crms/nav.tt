@@ -21,9 +21,9 @@
             <dd><a href="crms?p=holds">My Held Reviews</a></dd>
 </dl> 
 </li> 
-<li><span>Search</span>
+<li><span>Search/Browse&nbsp;</span>
 <dl class="major">
-	<dt><a>Search</a></dt>
+	<dt><a>Search/Browse&nbsp;</a></dt>
 	                    <dd><a href="crms?p=adminHistoricalReviews">Historical&nbsp;Reviews</a></dd>
   [% IF e || a || s %]<dd><a href="crms?p=adminReviews">Active&nbsp;Reviews</a></dd>              [% END %]
   [% IF e || a || s %]<dd><a href="crms?p=adminHolds">Held&nbsp;Reviews</a></dd>                  [% END %]
@@ -37,6 +37,7 @@
   <dd><a href="/c/crms/UseCases.html" target="_blank">Decision&nbsp;Tree</a></dd>
   <dd><a href="/c/crms/UseCases.html" target="_blank">Use&nbsp;Cases</a></dd>
   <dd><a href="/c/crms/keys.html" target="_blank">Search&nbsp;Help</a></dd>
+  <dd><a href="/c/crms/userlevels.html" target="_blank">User&nbsp;Levels</a></dd>
 </dl> 
 </li>
 <li><span>Stats/Reports&nbsp;</span> 
@@ -62,10 +63,5 @@
 </dl> 
 </li>
 [% END %]
-<li><span>Contact&nbsp;Us</span>
-<dl class="mailto">
-	<dt><a href="mailto:crms-experts@umich.edu?subject=CRMS Sux!!!">Contact&nbsp;Us</a></dt>
-</dl>
-</li>
 </ul> 
 
