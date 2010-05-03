@@ -29,7 +29,10 @@ a:link {color:#185EAC;}    /* unvisited link */
 a:visited {color:#185EAC;} /* visited link */
 a:hover {color:#1B75DA;}   /* mouse over link */
 a:active {color:#1B75DA;}  /* selected link */
-color:#185EAC;
+a.header:link {color:#82CAFA;text-decoration:none;}
+a.header:visited {color:#82CAFA;text-decoration:none;}
+a.header:hover {color:#A0DAFF;text-decoration:none;}
+a.header:active {color:#82CAFA;text-decoration:none;}
 
 .divbody {
   float:left;
