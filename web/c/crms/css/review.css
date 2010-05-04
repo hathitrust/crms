@@ -120,7 +120,7 @@ table.id {
   font-size:12px;
 }
 
-table.id th { 
+table.id th {
   padding: 1px;
 }
 
@@ -136,11 +136,13 @@ table.search {
   font-size:12px;
 }
 
-table.search th { 
+table.search th {
+  text-align:left;
   padding: 1px;
 }
 
 table.search td {
+  text-align:left;
   padding-bottom: 4px;
 }
 
@@ -168,7 +170,7 @@ table.display td {
 }
 
 div#RightsCont {
-  padding-top: 5px;
+  padding-top: 15px;
   background-color: #d0dee6;
   font-size:12px;
 }
@@ -381,8 +383,8 @@ border-collapse:collapse;}
 #menu dt {background: white; border-left:1px solid black;border-right:1px solid black;margin:0; font-size:1.1em; float:left;}
 #menu dd {display:none;border-left:1px solid black;border-right:1px solid black; clear:left; margin:0; padding:0; color:#fff; font-size: 1em; text-align:left;}
 
-#menu dt a, #menu dt a:visited {background:white; color:black; text-decoration:none; border-bottom:1px solid black; display:block; padding: 5px 10px; font-weight:bold;}
-#menu dd a, #menu dd a:visited {background:white; color:black; text-decoration:none; border-bottom:1px solid black; display:block; padding: 5px 10px;}
+#menu dt a, #menu dt a:visited {background:white; color:black; text-decoration:none; border:1px solid black; margin:-1px; display:block; padding: 5px 10px; font-weight:bold;}
+#menu dd a, #menu dd a:visited {background:white; color:black; text-decoration:none; border:1px solid black; margin:-1px; display:block; padding: 5px 10px;}
 
 /*#menu li a:hover {border:0;}*/
  
@@ -399,3 +401,4 @@ border-collapse:collapse;}
 #menu dl[class=minor] a:hover   {background: #FEFCAE;}
 #menu dl[class=orange] a:hover  {background: #EB9747;}
 #menu dl[class=red] a:hover     {background: #FB5252;}
+
