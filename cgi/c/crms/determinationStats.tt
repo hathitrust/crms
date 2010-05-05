@@ -4,44 +4,55 @@
 [% page = cgi.param('p') %]
 [% startDate = cgi.param('startDate') %]
 [% endDate = cgi.param('endDate') %]
+[% priority = cgi.param('priority') %]
+[% IF NOT priority.defined %][% priority = "All" %][% END %]
 <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
 <br/>
 
 <div style="position:relative;border-style:solid;width:32em;border-width:1px;padding:10px;">
-<form action="crms">
+<form id="select" action="crms">
 <input type="hidden" name="p" value="$page"/>
-<label for="startDate">Start Date:</label>
+<label for="startDate" style="width:5em;float:left;">Start Date:</label>
 <input type="text" id="startDate" name="startDate" value="[% startDate %]" onclick="datePickerController.show('startDate');"
        onblur="datePickerController.hide('startDate');"/>
 <script type="text/javascript">
-// <![CDATA[       
+// <![CDATA[
   var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
   datePickerController.createDatePicker(opts);
 // ]]>
 </script>
 <span class="smallText">(YYYY-MM-DD)</span>
 <br/>
-<label for="endDate">End Date:</label>
+<label for="endDate" style="width:5em;float:left;">End Date:</label>
 <input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
        onblur="datePickerController.hide('endDate');"/>
 <script type="text/javascript">
-// <![CDATA[       
+// <![CDATA[
   var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };       
   datePickerController.createDatePicker(opts);
 // ]]>
 </script>
 <span class="smallText">(YYYY-MM-DD)</span>
 <br/>
+<label for="priority" style="width:5em;float:left;">Priority:</label>
+&nbsp;&nbsp;<select name="priority" id="priority">
+  <option [% (priority == "All")? 'selected="selected"':'' %]>All</option>
+  <option [% (priority == "0")? 'selected="selected"':'' %]>0</option>
+  <option [% (priority == "1")? 'selected="selected"':'' %]>1</option>
+  <option [% (priority == "2")? 'selected="selected"':'' %]>2</option>
+</select>
+<br/>
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"
        onclick="document.getElementById('startDate').value='';
                 document.getElementById('endDate').value='';
+                document.getElementById('priority').value='All';
        "/>
 </form>
 </div>
 <br/>
 
-[% report = crms.CreateExportStatusReport(startDate, endDate, 0) %]
+[% report = crms.CreateExportStatusReport(startDate, endDate, 0, undef, priority) %]
 [% report.replace('Status&nbsp;6','Status&nbsp;6*') %]
 <br/>
 <span class="smallishText">* Note: Status 6 no longer in use as of 4/19/2010.</span>

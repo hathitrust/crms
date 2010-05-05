@@ -2214,8 +2214,9 @@ sub SearchAndDownloadDeterminationStats
   my $startDate = shift;
   my $endDate   = shift;
   my $monthly   = shift;
+  my $priority  = shift;
   
-  my $buffer = $self->CreateExportStatusData("\t", $startDate, $endDate, $monthly);
+  my $buffer = $self->CreateExportStatusData("\t", $startDate, $endDate, $monthly, undef, $priority);
   $self->DownloadSpreadSheet( $buffer );
   if ( $buffer ) { return 1; }
   else { return 0; }
@@ -3489,6 +3490,7 @@ sub CreateExportStatusData
   my $end       = shift;
   my $monthly   = shift;
   my $title     = shift;
+  my $priority  = shift;
   
   my ($year,$month) = $self->GetTheYearMonth();
   my $titleDate = $self->YearMonthToEnglish("$year-$month");
@@ -3526,7 +3528,7 @@ sub CreateExportStatusData
       $date = $self->YearMonthToEnglish($date);
     }
     my @line = (0,0,0,0,0,0,0,0,0);
-    my @stati = $self->GetStatusBreakdown($date1, $date2);
+    my @stati = $self->GetStatusBreakdown($date1, $date2, $priority);
     for (my $i=0; $i < 4; $i++)
     {
       $line[$i] = $stati[$i];
@@ -3556,15 +3558,17 @@ sub CreateExportStatusData
 
 sub GetStatusBreakdown
 {
-  my $self  = shift;
-  my $start = shift;
-  my $end   = shift;
+  my $self     = shift;
+  my $start    = shift;
+  my $end      = shift;
+  my $priority = shift;
   
   my @counts = ();
+  my $priorityClause = ($priority =~ m/\d/)? "AND priority=$priority":'';
   foreach my $status (4..7)
   {
     my $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r ON e.gid=r.gid WHERE ' .
-             "r.legacy=0 AND date(e.time)>='$start' AND date(e.time)<='$end' AND r.status=$status";
+             "r.legacy=0 AND date(e.time)>='$start' AND date(e.time)<='$end' AND r.status=$status $priorityClause";
     #$sql .= ' AND (r.priority=0 OR r.priority=2) AND r.legacy=0';
     #print "$sql<br/>\n";
     push @counts, $self->SimpleSqlGet($sql);
@@ -3579,12 +3583,14 @@ sub CreateExportStatusReport
   my $end      = shift;
   my $monthly  = shift;
   my $title    = shift;
+  my $priority = shift;
   
-  my $data = $self->CreateExportStatusData("\t", $start, $end, $monthly, $title);
+  $priority = undef if $priority eq 'All';
+  my $data = $self->CreateExportStatusData("\t", $start, $end, $monthly, $title, $priority);
   my @lines = split "\n", $data;
   $title = shift @lines;
   $title =~ s/\s/&nbsp;/g;
-  my $url = sprintf("<a href='?p=determinationStats&amp;startDate=$start&amp;endDate=$end&amp;%sdownload=1' target='_blank'>Download</a>",($monthly)?'monthly=on&amp;':'');
+  my $url = sprintf("<a href='?p=determinationStats&amp;startDate=$start&amp;endDate=$end&amp;%sdownload=1&amp;priority=$priority' target='_blank'>Download</a>",($monthly)?'monthly=on&amp;':'');
   my $report = "<h3>$title&nbsp;&nbsp;&nbsp;&nbsp;$url</h3>\n";
   $report .= "<table class='exportStats'>\n";
   $report .= "<tr><th/><th colspan='5'><span class='major'>Counts</span></th><th colspan='4'><span class='total'>Percentages</span></th></tr>\n";
@@ -3630,13 +3636,14 @@ sub CreateExportStatusReport
 
 sub CreateExportStatusGraph
 {
-  my $self    = shift;
-  my $start   = shift;
-  my $end     = shift;
-  my $monthly = shift;
-  my $title   = shift;
+  my $self     = shift;
+  my $start    = shift;
+  my $end      = shift;
+  my $monthly  = shift;
+  my $title    = shift;
+  my $priority = shift;
   
-  my $data = $self->CreateExportStatusData("\t", $start, $end, $monthly, $title);
+  my $data = $self->CreateExportStatusData("\t", $start, $end, $monthly, $title, $priority);
   my @lines = split "\n", $data;
   $title = shift @lines;
   shift @lines;
@@ -4246,10 +4253,11 @@ sub ValidateSubmission2
         $errorMsg .= 'pd/ren should not include renewal info.';
     }
 
-    ## pd/ncn requires a ren number unless Gov Doc
+    ## pd/ncn requires a ren number
+    ## superadmin-added stuff after 1963 doesn't need this
     if (  $attr == 1 && $reason == 2 && ( ( ! $renNum ) || ( ! $renDate ) ) )
     {
-        $errorMsg .= 'pd/ncn must include renewal id and renewal date.';
+        $errorMsg .= 'pd/ncn must include renewal id and renewal date.' unless $self->IsUserSuperAdmin($user);
     }
 
 
@@ -5519,10 +5527,11 @@ sub GetTrainingMode
   return $train;
 }
 
-sub ToggleTrainingMode
+sub ToggleSequentialMode
 {
   my $self  = shift;
-
+  
+  # FIXME: change DB to reflect change from 'train(ing)' to 'sequential'.
   $self->PrepareSubmitSql('UPDATE systemstatus SET train=(!train)');
 }
 
@@ -6572,7 +6581,7 @@ sub SanityCheckDB
 {
   my $self = shift;
   my $dbh = $self->get( 'dbh' );
-  my $vidRE = '^[a-z]+\d?\.[a-zA-Z]?[a-zA-Z0-9]+$';
+  my $vidRE = '^[a-z]+\d?\..+';
   my $pdRE = '^[1-9]\d\d\d-\d\d-\d\d$';
   # ======== bibdata ========
   my $table = 'bibdata';

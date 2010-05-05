@@ -21,12 +21,13 @@ my $data = '';
 my $c = $cgi->param('c'); # Class or cumulative
 my $start = $cgi->param('startDate');
 my $end = $cgi->param('endDate');
+my $priority = $cgi->param('priority');
 if ($type eq 'graph')
 {
   my $monthly = $cgi->param('monthly');
   my $title = $cgi->param('title');
-  if ($c == 3) { $data = $crms->CreateExportStatusGraph($start,$end,$monthly,$title); }
-  else { $data = $crms->CreateExportGraph($c, $start, $end); }
+  if ($c == 3) { $data = $crms->CreateExportStatusGraph($start, $end, $monthly, $title, $priority); }
+  else { $data = $crms->CreateExportGraph($c, $start, $end, undef, $priority); }
 }
 else
 {

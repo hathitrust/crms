@@ -90,7 +90,7 @@ if ($user ne $ru)
 
 if ( $cgi->param('p') eq 'confirmReview' )  
 {
-  my $editing    = $cgi->param('editing');
+  my $editing = $cgi->param('editing');
   if ($cgi->param( 'submit' ) eq 'Cancel')
   {
     my $id = $cgi->param('barcode');
@@ -232,7 +232,8 @@ if ( $cgi->param('download') )
     elsif ($page eq 'determinationStats')
     {
       my $monthly = $cgi->param('monthly');
-      $success = $crms->SearchAndDownloadDeterminationStats( $startDate, $endDate, $monthly );
+      my $priority = $cgi->param('priority');
+      $success = $crms->SearchAndDownloadDeterminationStats( $startDate, $endDate, $monthly, $priority );
     }
     else
     {
