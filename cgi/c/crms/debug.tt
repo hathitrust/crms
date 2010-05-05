@@ -136,7 +136,7 @@
 [% IF cgi.param('multibyte') %]
   [% sql = "SELECT id,author,title FROM bibdata WHERE LENGTH(title)!=CHAR_LENGTH(title) OR LENGTH(author)!=CHAR_LENGTH(author) ORDER BY author,title,id" %]
   [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
-  <h4>[% ref.size %] Items Need Fixed</h4>
+  <h4>[% ref.size %] Items</h4>
   <table class='exportStats'><tr><th>ID</th><th>Author</th><th>Title</th></tr>
   [% FOREACH r IN ref %]
     <tr><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td></tr>
