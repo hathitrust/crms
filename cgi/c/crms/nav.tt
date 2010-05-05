@@ -26,17 +26,17 @@
 	<dt><a>Search/Browse&nbsp;</a></dt>
 	                    <dd><a href="crms?p=adminHistoricalReviews">Historical&nbsp;Reviews</a></dd>
   [% IF e || a || s %]<dd><a href="crms?p=adminReviews">Active&nbsp;Reviews</a></dd>              [% END %]
-  [% IF e || a || s %]<dd><a href="crms?p=adminHolds">Held&nbsp;Reviews</a></dd>                  [% END %]
-  [% IF e || a || s %]<dd><a href="crms?p=queue">Queue</a></dd>                                   [% END %]
+  [% IF e || a || s %]<dd><a href="crms?p=adminHolds">All&nbsp;Held&nbsp;Reviews</a></dd>         [% END %]
+  [% IF e || a || s %]<dd><a href="crms?p=queue">Volumes&nbsp;in&nbsp;Queue</a></dd>              [% END %]
 </dl> 
 </li> 
 <li><span>Documentation&nbsp;&nbsp;</span>
 <dl class="total">
 	<dt><a>Documentation&nbsp;&nbsp;</a></dt> 
-	<dd><a>Determination&nbsp;Guidelines&nbsp;(Updated&nbsp;Version&nbsp;Coming&nbsp;Soon)</a></dd>
+	<dd><a>Determination&nbsp;Guidelines</a></dd>
   <dd><a href="/c/crms/pdf/DecisionTree.pdf" target="_blank">Decision&nbsp;Tree</a></dd>
-  <dd><a>Decision&nbsp;Tree&nbsp;Help&nbsp;(Coming&nbsp;Soon)</a></dd>
-  <dd><a href="/c/crms/UseCases.html" target="_blank">Use&nbsp;Cases&nbsp;(Updated&nbsp;Version&nbsp;Coming&nbsp;Soon)</a></dd>
+  <dd><a>Decision&nbsp;Tree&nbsp;Help</a></dd>
+  <dd><a href="/c/crms/UseCases.html" target="_blank">Use&nbsp;Cases</a></dd>
   <dd><a href="/c/crms/pdf/ReviewerHelp.pdf" target="_blank">Reviewer&nbsp;Help</a></dd>
   <dd><a href="/c/crms/keys.html" target="_blank">Search&nbsp;Help</a></dd>
   [% IF e || a || s %]<dd><a href="/c/crms/pdf/UserLevelsPrivileges.pdf" target="_blank">User&nbsp;Levels/Privileges</a></dd>[% END %]
@@ -57,11 +57,11 @@
 <dl class="red">
 	<dt><a>Administrative</a></dt> 
 	          <dd><a href="crms?p=adminUser">User&nbsp;Accounts</a></dd>
-            <dd><a href="crms?p=rights">Query&nbsp;Rights&nbsp;DB</a></dd>
-  [% IF a %]<dd><a href="crms?p=adminQueue">Manage&nbsp;the&nbsp;Queue</a></dd>[% END %]
-  [% IF a %]<dd><a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a></dd>      [% END %]
-  [% IF a %]<dd><a href="crms?p=systemStatus">System&nbsp;Status</a></dd>      [% END %]
-  [% IF s %]<dd><a href="crms?p=debug">System&nbsp;Administration</a></dd>     [% END %]
+            <dd><a href="crms?p=rights">Query&nbsp;Rights&nbsp;Database</a></dd>
+  [% IF a || s %]<dd><a href="crms?p=adminQueue">All&nbsp;Locked&nbsp;Volumes</a></dd>[% END %]
+  [% IF a || s %]<dd><a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a></dd>        [% END %]
+  [% IF a || s %]<dd><a href="crms?p=systemStatus">System&nbsp;Status</a></dd>        [% END %]
+  [% IF s %]<dd><a href="crms?p=debug">System&nbsp;Administration</a></dd>            [% END %]
 </dl> 
 </li>
 [% END %]

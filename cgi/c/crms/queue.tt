@@ -3,9 +3,10 @@
   [% STOP %]
 [% END %]
 
-[% INCLUDE header.tt    %]
+[% INCLUDE header.tt %]
 
-<h2>[% (crms.GetTrainingMode())? "Training ":"" %]Queue:</h2>
+<h2>Volumes in [% (crms.GetTrainingMode())? "Training ":"" %]Queue:</h2>
+<span class="smallishText">*includes both active and inactive volumes</span>
 
 [% INCLUDE queueSelection.tt  %]
 

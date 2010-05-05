@@ -55,29 +55,28 @@ function CheckAll(box,formid)
 </td>
 <td>
                     <a href="crms?p=adminHistoricalReviews">Historical&nbsp;Reviews</a><br/>
-[% IF e || a || s %]<a href="crms?p=adminReviews">Active&nbsp;Reviews</a><br/>                   [% END %]
-[% IF e || a || s %]<a href="crms?p=adminHolds">Held&nbsp;Reviews</a><br/>                       [% END %]
-[% IF e || a || s %]<a href="crms?p=queue">Volumes&nbsp;in&nbsp;Queue</a>*<br/>
-                    <span class="smallishText">*includes both active and inactive volumes</span>[% END %]
+[% IF e || a || s %]<a href="crms?p=adminReviews">Active&nbsp;Reviews</a><br/>              [% END %]
+[% IF e || a || s %]<a href="crms?p=adminHolds">All&nbsp;Held&nbsp;Reviews</a><br/>         [% END %]
+[% IF e || a || s %]<a href="crms?p=queue">Volumes&nbsp;in&nbsp;Queue</a>                   [% END %]
 
 </td>
 </tr>
 <tr><th><span class="total">Documentation</span></th><th><span class="orange">Stats/Reports</span></th></tr>
 <tr>
 <td>
-<a>Determination&nbsp;Guidelines&nbsp;(Updated&nbsp;Version&nbsp;Coming&nbsp;Soon)</a><br/>
+<a>Determination&nbsp;Guidelines</a><br/>
 <a href="/c/crms/pdf/DecisionTree.pdf" target="_blank">Decision&nbsp;Tree</a><br/>
-<a>Decision&nbsp;Tree&nbsp;Help&nbsp;(Coming&nbsp;Soon)</a><br/>
-<a href="/c/crms/UseCases.html" target="_blank">Use&nbsp;Cases&nbsp;(Updated&nbsp;Version&nbsp;Coming&nbsp;Soon)</a><br/>
+<a>Decision&nbsp;Tree&nbsp;Help</a><br/>
+<a href="/c/crms/UseCases.html" target="_blank">Use&nbsp;Cases</a><br/>
 <a href="/c/crms/pdf/ReviewerHelp.pdf" target="_blank">Reviewer&nbsp;Help</a><br/>
 <a href="/c/crms/keys.html" target="_blank">Search&nbsp;Help</a><br/>
 [% IF e || a || s %]<a href="/c/crms/pdf/UserLevelsPrivileges.pdf" target="_blank">User&nbsp;Levels/Privileges</a><br/>[% END %]
 </td>
 <td>
                     <a href="crms?p=userRate">My&nbsp;Review&nbsp;Stats</a><br/>
-[% IF e || a || s %]<a href="crms?p=adminUserRate">Review&nbsp;Stats</a>&nbsp;(all&nbsp;users)<br/>[% END %]
-[% IF e || a || s %]<a href="crms?p=queueStatus">Queue&nbsp;Status</a><br/>                        [% END %]
-[% IF e || a || s %]<a href="crms?p=determinationStats">Determinations&nbsp;Breakdown</a><br/>     [% END %]
+[% IF e || a || s %]<a href="crms?p=adminUserRate">All&nbsp;Review&nbsp;Stats</a><br/>        [% END %]
+[% IF e || a || s %]<a href="crms?p=queueStatus">Queue&nbsp;Status</a><br/>                   [% END %]
+[% IF e || a || s %]<a href="crms?p=determinationStats">Determinations&nbsp;Breakdown</a><br/>[% END %]
 [% IF e || a || s %]<a href="crms?p=exportStats">Export&nbsp;Stats</a><br/>                   [% END %]
 </td></tr>
 [% IF e || a || s %]
@@ -85,11 +84,11 @@ function CheckAll(box,formid)
 <tr>
 <td colspan="2">
           <a href="crms?p=adminUser">User&nbsp;Accounts</a><br/>
-          <a href="crms?p=rights">Query&nbsp;Rights&nbsp;DB</a><br/>
-[% IF a %]<a href="crms?p=adminQueue">Manage&nbsp;the&nbsp;Queue</a><br/>[% END %]
-[% IF a %]<a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a><br/>      [% END %]
-[% IF a %]<a href="crms?p=systemStatus">System&nbsp;Status</a><br/>      [% END %]
-[% IF s %]<a href="crms?p=debug">System&nbsp;Administration</a><br/>      [% END %]
+          <a href="crms?p=rights">Query&nbsp;Rights&nbsp;Database</a><br/>
+[% IF a || s %]<a href="crms?p=adminQueue">All&nbsp;Locked&nbsp;Volumes</a><br/>[% END %]
+[% IF a || s %]<a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a><br/>        [% END %]
+[% IF a || s %]<a href="crms?p=systemStatus">System&nbsp;Status</a><br/>        [% END %]
+[% IF s %]<a href="crms?p=debug">System&nbsp;Administration</a><br/>            [% END %]
 </td></tr>
 [% END %]
 </table>

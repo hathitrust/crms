@@ -6805,29 +6805,33 @@ sub PageToEnglish
 {
   my $self = shift;
   my $page = shift;
-  my %pages = ('admin' => 'administrator page',
-               'adminEditUser' => 'administer user accounts',
-               'adminHistoricalReviews' => 'view all historical reviews',
-               'adminQueue' => 'manage the queue',
-               'adminReviews' => 'view all active reviews',
+  
+  return 'home' unless $page;
+  my %pages = ('adminEditUser' => 'user accounts',
+               'adminHistoricalReviews' => 'historical reviews',
+               'adminHolds' => 'all held reviews',
+               'adminQueue' => 'all locked volumes',
+               'adminReviews' => 'active reviews',
                'adminUser' => 'user accounts',
-               'adminUserRate' => 'view user review rates',
-               'editReviews' => 'edit reviews',
-               'expert' => 'expert review',
-               'exportStats' => 'export statistics',
+               'adminUserRate' => 'all review stats',
+               'contact' => 'contact us',
+               'debug' => 'system administration',
+               'determinationStats' => 'determinations breakdown',
+               'editReviews' => 'my unprocessed reviews',
+               'expert' => 'conflicts',
+               'exportStats' => 'export stats',
+               'holds' => 'my held reviews',
+               'queue' => 'volumes in queue',
                'queueAdd' => 'add to queue',
                'queueStatus' => 'queue status',
-               'undReviews' => 'provisional matches',
-               'userRate' => 'view your review rate',
-               'userReviews' => 'view your processed reviews',
-               'debug' => 'debug',
                'review' => 'review',
-               'rights' => 'rights query',
-               'queue' => 'queue query',
-               'determinationStats' => 'determinations breakdown',
-               'holds' => 'user holds'
+               'rights' => 'query rights database',
+               'systemStatus' => 'system status',
+               'undReviews' => 'provisional matches',
+               'userRate' => 'my review stats',
+               'userReviews' => 'my processed reviews',
               );
-  return $pages{$page} || 'home';
+  return $pages{$page};
 }
 
 # Query the production rights database

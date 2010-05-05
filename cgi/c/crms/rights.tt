@@ -6,7 +6,7 @@
 [% INCLUDE header.tt    %]
 [% q = cgi.param('query') %]
 
-<h2>Search Rights Database</h2>
+<h2>Query Rights Database:</h2>
 <form action="crms">
   <p class="smallishText">Enter one volume id per line.</p>
   <input type="hidden" name="p" value="rights"/>

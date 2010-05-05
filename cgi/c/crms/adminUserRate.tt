@@ -5,6 +5,9 @@
 
 [% INCLUDE header.tt    %]
 
+<h2>All Review Stats:</h2>
+
+<br/>
 [% crms.CreateStatsReport('all', 1, 1, 0, 1) %]
 <br/><br/>
 [% users = crms.GetUsers(1) %]

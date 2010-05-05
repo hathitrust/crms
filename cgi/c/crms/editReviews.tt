@@ -1,6 +1,6 @@
 [% INCLUDE header.tt    %]
 
-<h2>Edit Unprocessed Reviews:</h2>
+<h2>My Unprocessed Reviews:</h2>
     
 [% INCLUDE selection.tt  %]
 

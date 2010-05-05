@@ -5,7 +5,7 @@
 
 [% INCLUDE header.tt %]
 
-<h2>System Adminstration:</h2>
+<h2>System Administration:</h2>
 
 <br/>
 

@@ -1,6 +1,6 @@
-[% INCLUDE header.tt    %]
+[% INCLUDE header.tt %]
 
-<h2>[% IF NOT crms.IsUserAdmin() %]My [% END %]Held Reviews:</h2>
+<h2>My Held Reviews:</h2>
 
 [% INCLUDE selection.tt  %]
 

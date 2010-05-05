@@ -5,6 +5,8 @@
 
 [% INCLUDE header.tt %]
 
+<h2>All Locked Items</h2>
+
 <script type="text/Javascript">
 <!--
 function CheckAll(box,formid)
@@ -17,8 +19,6 @@ function CheckAll(box,formid)
 }
 -->
 </script>
-
-<h2>[% (crms.GetTrainingMode())? "Training ":"" %]Queue Administration:</h2><br/><br/>
 
 [% IF cgi.param('clear') %]
   [% crms.RemoveOldLocks() %]
@@ -44,7 +44,7 @@ function CheckAll(box,formid)
 [% END %]
 
 
-
+<br/><br/>
 [% locked = crms.GetLockedItems() %]
 [% IF locked.size %]
   <blockquote><a href="?p=adminQueue&amp;clear=1">Clear old locks</a></blockquote><br/>
