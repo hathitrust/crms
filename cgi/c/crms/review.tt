@@ -66,33 +66,33 @@
 
 [% END %]
 
-[% userName   = crms.GetUserName( user )                 %]
-[% pub_date   = crms.GetPublDate( barcode )              %]
-[% copyDate   = crms.GetCopyDate( barcode, user )        %]
-[% author     = crms.GetAuthorForReview( barcode )       %]
-[% encAuthor  = crms.GetEncAuthorForReview( barcode )    %]
-[% title      = crms.GetTitle( barcode )                 %]
-[% encTitle   = crms.GetEncTitle( barcode )              %]
-[% priority   = crms.GetPriority( barcode )              %]
+[% userName  = crms.GetUserName( user )              %]
+[% pub_date  = crms.GetPublDate( barcode )           %]
+[% copyDate  = crms.GetCopyDate( barcode, user )     %]
+[% author    = crms.GetAuthorForReview( barcode )    %]
+[% encAuthor = crms.GetEncAuthorForReview( barcode ) %]
+[% title     = crms.GetTitle( barcode )              %]
+[% encTitle  = crms.GetEncTitle( barcode )           %]
+[% priority  = crms.GetPriority( barcode )           %]
 
 [% IF NOT renNum %] 
-[% renNum     = crms.GetRenNum( barcode, user )             %]
+[% renNum = crms.GetRenNum( barcode, user ) %]
 [% END %]
 
 [% IF NOT renDate %] 
-[% renDate    = crms.GetRenDate( renNum )                   %]
+[% renDate = crms.GetRenDate( renNum ) %]
 [% END %] 
 
 [% IF NOT comm %] 
-[% comm       = crms.GetReviewComment( barcode, user )      %]
+[% comm = crms.GetReviewComment( barcode, user ) %]
 [% END %] 
 
 [% IF NOT category %] 
-[% category   = crms.GetReviewCategory( barcode, user )      %]
+[% category = crms.GetReviewCategory( barcode, user ) %]
 [% END %]
 
 [% IF NOT swiss %] 
-[% swiss   = crms.GetReviewSwiss( barcode, user )      %]
+[% swiss = crms.GetReviewSwiss( barcode, user ) %]
 [% END %] 
 
 [%# links to PT, stanford DB search, or Mirlyn catalog %]
@@ -107,15 +107,26 @@
 [% #wCatLink   = "http://www.worldcat.org/search?qt=worldcat_org_bks&amp;fq=dt%3Abks&amp;q=$encTitle" %]
 [% #uscorLink  = "http://cocatalog.loc.gov/cgi-bin/Pwebrecon.cgi?DB=local&amp;PAGE=First&amp;Search_Arg=$encTitle" %]
 
-
   <div class="divbody">
     <div class="divNav">
       <div class="navtop">
-        <span>User: [% userName %]</span>
         <table class="nav">
           <tr>
+            <td><img src="/c/crms/crmsblue.png" alt="CRMS Logo" width="42" height="32"/></td>
+            <td><b>Hello [% userName %]</b></td>
+            <td/>
+          </tr>
+          <tr>
             <td><a href="crms?p=confirmReview&amp;submit=Cancel&amp;barcode=[% barcode %]">Home</a></td>
-            <td><a href="/c/crms/UseCases.html" target="_blank">Use Cases</a></td>
+            <td>
+              <select class="review" onchange="if (this.selectedIndex > 0) window.open(this.options[this.selectedIndex].value, '_blank');this.selectedIndex=0;">
+                <option>Select Help Topic</option>
+                <option value="/c/crms/help.html#rights">Reviewer Help</option>
+                <option value="/c/crms/UseCases.html">Use Cases</option>
+                <option value="/c/crms/tree.html">Decision Tree</option>
+              </select>
+              <!--<a href="/c/crms/UseCases.html" target="_blank">Use Cases</a>-->
+            </td>
             <td><a href="crms?p=Logout">Logout</a></td>
           </tr>
         </table>
@@ -129,16 +140,37 @@
 
         <table class="search">
           <tr>
-            <td align="left" class="label"><strong>Search:</strong></td>
-            <td align="center" class="links"><a href="[% ptLink %]" target="topFrame" accesskey="h" title="HathiTrust">Hathi</a></td>
-            <td align="center" class="links"><a href="[% catLink %]" target="topFrame" accesskey="v" title="Mirlyn VuFind">Mirlyn</a></td>
-            <td align="center" class="links"><a href="[% catcLink %]" target="topFrame" accesskey="m" title="Mirlyn Classic">Mirlyn C</a></td>
+            <th>Search 1:</th>
+            <td>
+              <select class="review" id="search1Select" onchange="changeFrame1();" style="float:right;">
+                <option value="[% ptLink %]" selected="selected">HathiTrust</option>
+                <option value="[% catLink %]">Mirlyn</option>
+                <option value="[% catcLink %]">Mirlyn Classic</option>
+                <option value="[% titleLink %]">Stanford Title</option>
+                <option value="[% authorLink %]">Stanford Author</option>
+                <option value="[% searchForm %]">Stanford Advanced</option>
+              </select>
+            </td>
           </tr>
           <tr>
-            <td align ="left" class="label"><strong>Stanford:</strong></td>
-            <td align ="center" class="links"><a href="javascript:changeFrame2('[% titleLink %]' )" accesskey="t">Title</a></td>
-            <td align ="center" class="links"><a href="javascript:changeFrame2('[% authorLink %]')" accesskey="a">Author</a></td>
-            <td align ="center" class="links"><a href="javascript:changeFrame2('[% searchForm %]')" accesskey="q">Advanced</a></td>
+            <th>Search 2:</th>
+            <td>
+              <select class="review" id="search2Select" onchange="changeFrame2();" style="float:right;">
+                <option value="[% ptLink %]">HathiTrust</option>
+                <option value="[% catLink %]">Mirlyn</option>
+                <option value="[% catcLink %]">Mirlyn Classic</option>
+                <option value="[% titleLink %]">Stanford Title</option>
+                <option value="[% authorLink %]">Stanford Author</option>
+                <option value="[% searchForm %]" selected="selected">Stanford Advanced</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" style="margin:0px;padding:0px;">
+               <input type="button" class="reviewblue" value="Toggle View" onclick="flipFrame();" accesskey="o"
+               style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
+            </td>
+            <td/>
           </tr>
         </table>
 
@@ -154,13 +186,13 @@
                                        comment = comment, copyDate = copyDate, comm    = comm,    
                                        category = category, editing = editing, error   = error,
                                        select = select, mag = mag, question = question, swiss = swiss %]
-        <table class="nav">
+        <!--<table class="nav">
           <tr>
             <td><a href="/c/crms/help.html#rights" target="_blank">Help</a></td>
             <td><a href="/c/crms/UseCases.html" target="_blank">Use Cases</a></td>
             <td><a href="crms?p=Logout">Logout</a></td>
           </tr>
-        </table>
+        </table>-->
         [% IF crms.IsUserExpert(user) %]
           <table class="nav">
           [% status = crms.GetStatus(barcode) %]

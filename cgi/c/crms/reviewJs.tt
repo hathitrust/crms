@@ -4,7 +4,25 @@ function redirHome()   { window.location = "crms" }
 function redirReview() { window.location = "crms?p=review" }
 function redirExpert() { window.location = "crms?p=expert" }
 
-function changeFrame(url) {
+function changeFrame1() {
+  var sel = document.getElementById("search1Select");
+  var url = sel.options[sel.selectedIndex].value;
+  if (document.getElementById("topFrame").src != url)
+  {
+    document.getElementById("topFrame").src = url;
+  }
+}
+
+function changeFrame2() {
+  var sel = document.getElementById("search2Select");
+  var url = sel.options[sel.selectedIndex].value;
+  if (document.getElementById("bFrame").src != url)
+  {
+    document.getElementById("bFrame").src = url;
+  }
+}
+
+/*function changeFrame(url) {
     document.getElementById("bFrame").src      = url;
     document.getElementById("topFrame").width = "100%";
     document.getElementById("bFrame").width = "100%";
@@ -17,7 +35,7 @@ function changeFrame2(url) {
     document.getElementById("bFrame").width = "100%";
     document.getElementById("bFrame").height   = "100%";
     document.getElementById("topFrame").height = "0%";
-}
+}*/
 function openFrame() {
     document.getElementById("topFrame").height = "50%";
     document.getElementById("bFrame").height   = "50%";

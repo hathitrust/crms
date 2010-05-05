@@ -14,12 +14,12 @@
 	      <strong>Display Options:</strong>
       </td>
     </tr>
-    <tr><td colspan="4"></tr>
-    <tr><td colspan="4"></tr>
+    <tr><td colspan="4"/></tr>
+    <tr><td colspan="4"/></tr>
     <tr>
       <td class="display" align="left">Size:</td>
       <td>
-        <select onchange="zoom(this);">
+        <select class="review" onchange="zoom(this);">
         [% percents = [50,75,100,125,150,200] %]
         [% FOREACH p IN percents %]
           [% IF p == mag %]
@@ -29,10 +29,6 @@
           [% END %]
         [% END %]
         </select>
-      </td>
-      <td class="display" align="left">&nbsp;&nbsp;&nbsp;Toggle:</td>
-      <td class="display">
-        <a href="javascript:flipFrame()" accesskey="o">Views</a>
       </td>
     </tr>
   </table>
@@ -45,21 +41,20 @@
     </tr>
     <tr>
       <td class="test" align="left" style="margin:0px;padding:0px;">
-        <input type="button" value="Get Renewal Date" onclick="popRenewalDate();" accesskey="d"
-               style="margin:0px;padding:0px;background-color:#d0dee6;"/>
+        <input type="button" value="Get Renewal Date" onclick="popRenewalDate();" accesskey="d" class="reviewblue"
+               style="margin:0px;padding:1px;background-color:#d0dee6;"/>
       </td>
       <td><input type="text"  id="getDate" name="renDate" value="[% renDate %]" size="8" readonly="readonly"/></td>
     </tr>
   </table>
   <div id="RightsCont" class="rightscont">
   <div id="RightsReason">
-  <strong>&nbsp;Rights/Reason: </strong>
+  <strong style="margin-left:10px">Rights/Reason: </strong>
   <!-- &nbsp;&nbsp;<a href="/c/crms/help.html#rights" target="_blank">help</a> -->
   <br/>
     [% keys = {"1" => "pd/ncn", "2" => "pd/ren",  "3" => "pd/cdpp",
                "4" => "ic/ren", "5" => "ic/cdpp", "6" => "und/nfi",
                "7" => "pdus/cdpp"} %]
-
   <table>
     <tr>
       <td>
@@ -110,7 +105,7 @@
 </div>
 <div id="Notes">
   <strong>Notes: </strong>
-  <select name="category">
+  <select class="review" name="category">
     [% pres = {"Foreign Pub"    => "Foreign Pub",   "Language"        => "Language",
                "Misc"           => "Misc",          "Missing"         => "Missing",
                "Reprint"        => "Reprint",       "Periodical"      => "Periodical",
@@ -135,24 +130,46 @@
   <textarea name="comment" cols="20" rows="1">[% comm %]</textarea>
   </div>
   <div id="SubmitForm">
-    <input style="float:left" type="submit" name="submit" value="Submit" accesskey="s"/> 
-    <input style="float:left" type="submit" name="submit" value="Cancel" accesskey="c" onclick="this.form.onsubmit=null;"/> 
+  <table>
+    <tr>
+      <td><input class="review" type="submit" name="submit" value="Submit" accesskey="s"/></td>
+      <td style="padding-left:2em;"><input class="review" type="submit" name="submit" value="Cancel" accesskey="c" onclick="this.form.onsubmit=null;"/></td>
+    </tr>
+  </table>
   </div>
   <table>
   [% IF crms.IsUserExpert(user) %]
-    <tr><td style="text-align:center;"><input type="checkbox" name="swiss" [% (swiss)? 'checked="checked"':'' %]/>
-      &nbsp;Do not invalidate other reviews for this volume
-    </td></tr>
+    <tr>
+      <td style="text-align:left;" width="28px">
+        <input type="checkbox" name="swiss" [% (swiss)? 'checked="checked"':'' %]/>
+      </td>
+      <td>
+        Do not invalidate other reviews<br/>for this volume
+      </td>
+    </tr>
+    <tr/><tr/>
   [% END %]
-    <tr><td style="text-align:center;">
-      [% question = crms.HoldForItem(barcode,user) %]
-      <input type="checkbox" name="question" [% (question)? 'checked="checked"':'' %] onclick="toggleVisibility('expiry');"/>&nbsp;Hold for Question
-    </td></tr>
-    <tr><td><span class="smallishText" id="expiry" [% (question)? '':'style="display:none;"' %]>Hold will expire at the end of the day on [% crms.HoldExpiry(barcode,user,1) %].</span>
-    </td></tr>
-    <tr><td><span class="smallishText">Questioned reviews will be held unprocessed for 2 working days.
-            It is up to you to get in touch with an expert.</span>
-    </td></tr>
+    <tr>
+      <td style="text-align:left;">
+        [% question = crms.HoldForItem(barcode,user) %]
+        <input type="checkbox" name="question" [% (question)? 'checked="checked"':'' %] onclick="toggleVisibility('expiry');"/>
+      </td>
+      <td>Hold for Question</td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <span class="smallishText" id="expiry" [% (question)? '':'style="display:none;"' %]>
+          Hold will expire at the end of the day<br/>on [% crms.HoldExpiry(barcode,user,1) %].
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <span class="smallishText">Questioned reviews will be held unprocessed for 2 working days.
+            It is up to you to get in touch with an expert.
+        </span>
+      </td>
+    </tr>
   </table>
 </div>
 
