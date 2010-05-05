@@ -121,11 +121,10 @@
             <td>
               <select class="review" onchange="if (this.selectedIndex > 0) window.open(this.options[this.selectedIndex].value, '_blank');this.selectedIndex=0;">
                 <option>Select Help Topic</option>
-                <option value="/c/crms/help.html#rights">Reviewer Help</option>
+                <option value="/c/crms/pdf/ReviewerHelp.pdf">Reviewer Help</option>
                 <option value="/c/crms/UseCases.html">Use Cases</option>
-                <option value="/c/crms/tree.html">Decision Tree</option>
+                <option value="/c/crms/pdf/DecisionTree.pdf">Decision Tree</option>
               </select>
-              <!--<a href="/c/crms/UseCases.html" target="_blank">Use Cases</a>-->
             </td>
             <td><a href="crms?p=Logout">Logout</a></td>
           </tr>

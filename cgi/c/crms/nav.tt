@@ -33,11 +33,13 @@
 <li><span>Documentation&nbsp;&nbsp;</span>
 <dl class="total">
 	<dt><a>Documentation&nbsp;&nbsp;</a></dt> 
-	<dd><a href="/c/crms/UseCases.html" target="_blank">Determination&nbsp;Guidelines</a></dd>
-  <dd><a href="/c/crms/tree.html" target="_blank">Decision&nbsp;Tree</a></dd>
-  <dd><a href="/c/crms/UseCases.html" target="_blank">Use&nbsp;Cases</a></dd>
+	<dd><a>Determination&nbsp;Guidelines&nbsp;(Updated&nbsp;Version&nbsp;Coming&nbsp;Soon)</a></dd>
+  <dd><a href="/c/crms/pdf/DecisionTree.pdf" target="_blank">Decision&nbsp;Tree</a></dd>
+  <dd><a>Decision&nbsp;Tree&nbsp;Help&nbsp;(Coming&nbsp;Soon)</a></dd>
+  <dd><a href="/c/crms/UseCases.html" target="_blank">Use&nbsp;Cases&nbsp;(Updated&nbsp;Version&nbsp;Coming&nbsp;Soon)</a></dd>
+  <dd><a href="/c/crms/pdf/ReviewerHelp.pdf" target="_blank">Reviewer&nbsp;Help</a></dd>
   <dd><a href="/c/crms/keys.html" target="_blank">Search&nbsp;Help</a></dd>
-  [% IF e || a || s %]<dd><a href="/c/crms/userlevels.html" target="_blank">User&nbsp;Levels</a></dd>[% END %]
+  [% IF e || a || s %]<dd><a href="/c/crms/pdf/UserLevelsPrivileges.pdf" target="_blank">User&nbsp;Levels/Privileges</a></dd>[% END %]
 </dl> 
 </li>
 <li><span>Stats/Reports&nbsp;</span> 
