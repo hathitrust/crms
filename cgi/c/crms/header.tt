@@ -77,7 +77,8 @@ function gup( name )
 start = gup('startDate');
 end = gup('endDate');
 monthly = gup('monthly');
-str = "/cgi/c/crms/getExportStats?type=graph&c=3&startDate=" + start + "&endDate=" + end + "&monthly=" + monthly;
+priority = gup('priority');
+str = "/cgi/c/crms/getExportStats?type=graph&c=3&startDate=" + start + "&endDate=" + end + "&monthly=" + monthly + "&priority=" + priority;
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "800", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape(str)});
 str = "/cgi/c/crms/getExportStats?type=graph&c=3&startDate=2009-0101&endDate=0&monthly=1&title=Project Determinations Breakdown";
@@ -95,17 +96,33 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
 
 [% IF page != 'review' %]
     <div class="pages" id="homePage">
-    <div style="height:80px;border-bottom:1px solid black;margin:0px;padding-bottom:6px;">
+    <div style="height:82px;border-bottom:1px solid black;margin:0px;padding-bottom:6px;">
       <a href="crms">
         <img src="/c/crms/crms.png" width="455" height="80" alt="CRMS Logo" style="float:left;border:0px solid;margin-right:4em;"/>
       </a>
-      <div style="text-align:right;">
-        <span class="smallishText">Version 1.8
-          [% IF crms.GetTrainingMode() %]<br/>Training Mode[% END %]<br/>
-        </span>
-        <span class="greeting">Hello [% crms.GetUserName() %]</span>
-        <a href="crms?p=Logout"> Logout</a><br/>
-        [% IF where %]<span class="greeting" style="color:#185EAC;">Current location: $where</span>[% END %]
+      <div style="float:right;">
+        <table class="exportStats">
+          <tr>
+            <th nowrap="nowrap" style="text-align:right;">Hello&nbsp;[% crms.GetUserName().replace(" ","&nbsp;") %]</th>
+          </tr>
+          <tr>
+            <th style="text-align:right;">
+              <a href="crms?p=Logout" class="header">Logout</a>&nbsp;&nbsp;&nbsp;
+              <a href="crms?p=contact" class="header">Contact&nbsp;Us</a>
+            </th>
+          </tr>
+          <tr>
+           <th style="text-align:right;">CRMS&nbsp;Version&nbsp;1.8</th>
+          </tr>
+          [% IF where %]
+            <tr>
+              <th style="text-align:right;">
+                Location:&nbsp;[% where.replace(" ","&nbsp;") %]
+                <!--[% IF crms.GetTrainingMode() %]&nbsp;&mdash;&nbsp;<span class="minor">Sequential&nbsp;Mode</span>[% END %]-->
+              </th>
+            </tr>
+          [% END %]
+        </table>
       </div>
     </div>
     <div style="border-bottom:1 px solid black;">
