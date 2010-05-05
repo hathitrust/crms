@@ -29,10 +29,10 @@ a:link {color:#185EAC;}    /* unvisited link */
 a:visited {color:#185EAC;} /* visited link */
 a:hover {color:#1B75DA;}   /* mouse over link */
 a:active {color:#1B75DA;}  /* selected link */
-a.header:link {color:#82CAFA;text-decoration:none;}
-a.header:visited {color:#82CAFA;text-decoration:none;}
-a.header:hover {color:#A0DAFF;text-decoration:none;}
-a.header:active {color:#82CAFA;text-decoration:none;}
+a.header:link    {color:#82CAFA;}
+a.header:visited {color:#82CAFA;}
+a.header:hover   {color:#A0DAFF;}
+a.header:active  {color:#82CAFA;}
 
 .divbody {
   float:left;
@@ -74,7 +74,7 @@ a.header:active {color:#82CAFA;text-decoration:none;}
 
 .smallText { font-size:.5em }
 
-.smallishText { font-size:.8em }
+.smallishText { font-size:.9em }
 
 .greeting {
   font-size: 1.5em;
@@ -360,6 +360,31 @@ hr {
   margin-bottom:.5em;
 }
 
+select.review {
+  padding:2px;
+  font-size:1em;
+}
+
+select.review option {
+  padding-top:1px;
+  padding-bottom:1px;
+  font-size:1em;
+}
+
+input.reviewblue {
+  padding-left:3px;
+  padding-right:3px;
+  font-size:1em;
+  font-weight:bold;
+  color:#185EAC;
+}
+
+input.review {
+  padding-left:3px;
+  padding-right:3px;
+  font-size:1em;
+  font-weight:bold;
+}
 
 /* ================================================================ 
 This copyright notice must be untouched at all times.
