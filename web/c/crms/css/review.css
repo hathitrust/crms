@@ -413,17 +413,17 @@ border-collapse:collapse;}
 
 /*#menu li a:hover {border:0;}*/
  
-#menu li:hover dd, #menu li a:hover dd {display:block;}
+#menu li:hover dd, #menu li.sfhover dd, #menu li a:hover dd, #menu li a.sfhover dd {display:block;}
 #menu li:hover dl, #menu li a:hover dl {}
 #menu li:hover dt a, #menu li a:hover dt a, #menu dd a:hover {background: white; color:black;}
 
-#menu dl[class=home] dt a:hover {background-color:white;color:#185EAC;}
-#menu dl[class=home] dt a       {background-color:white;color:#1B75DA;}
-#menu dl[class=mailto] dt a:hover {background-color:white;color:#000000;}
-#menu dl[class=mailto] dt a       {background-color:white;color:#6F7073;}
-#menu dl[class=total] a:hover   {background: #A0FEAE;}
-#menu dl[class=major] a:hover   {background: #82CAFA;}
-#menu dl[class=minor] a:hover   {background: #FEFCAE;}
-#menu dl[class=orange] a:hover  {background: #EB9747;}
-#menu dl[class=red] a:hover     {background: #FB5252;}
+#menu dl[class=home] dt a:hover, #menu dl[class=home] dt a.sfhover     {background-color:white;color:#185EAC;}
+#menu dl[class=home] dt a                                              {background-color:white;color:#1B75DA;}
+#menu dl[class=mailto] dt a:hover, #menu dl[class=mailto] dt a.sfhover {background-color:white;color:#000000;}
+#menu dl[class=mailto] dt a                                            {background-color:white;color:#6F7073;}
+#menu dl[class=total] a:hover, #menu dl[class=total] a.sfhover         {background: #A0FEAE;}
+#menu dl[class=major] a:hover, #menu dl[class=major] a.sfhover         {background: #82CAFA;}
+#menu dl[class=minor] a:hover, #menu dl[class=minor] a.sfhover         {background: #FEFCAE;}
+#menu dl[class=orange] a:hover, #menu dl[class=orange] a.sfhover       {background: #EB9747;}
+#menu dl[class=red] a:hover, #menu dl[class=red] a.sfhover             {background: #FB5252;}
 
