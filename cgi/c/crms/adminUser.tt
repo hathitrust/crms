@@ -6,7 +6,8 @@
 [% INCLUDE header.tt %]
 
 
-<h2>User Accounts (<a href="/c/crms/pdf/UserLevelsPrivileges.pdf" target="_blank">Documentation</a>):</h2><br/>
+<h2>User Accounts:</h2>
+<a href="/c/crms/pdf/UserLevelsPrivileges.pdf" target="_blank">Explanation of User Levels/Privileges</a><br/><br/>
 
 [% id         = cgi.param('id')         %]
 [% kerberos   = cgi.param('kerberos')   %]
