@@ -1,5 +1,6 @@
 [% INCLUDE header.tt %]
-[% INCLUDE adminNav.tt %]
+
+<h2>Determinations Breakdown:</h2>
 
 [% page = cgi.param('p') %]
 [% startDate = cgi.param('startDate') %]
