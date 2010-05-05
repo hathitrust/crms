@@ -10,7 +10,7 @@
 [% END %]
 
 [% IF cgi.param('toggle') %]
-  [% blah = crms.ToggleTrainingMode() %]
+  [% blah = crms.ToggleSequentialMode() %]
 [% ELSIF cgi.param('reset') %]
   [% blah = crms.PrepareSubmitSql('DELETE FROM reviews WHERE id IN (SELECT id FROM training_queue)') %]
 [% END %]
@@ -53,7 +53,7 @@ To display a custom message, or override the standard ones (<i>down</i>/<i>parti
   <br/><br/><br/>
   [% train = crms.SimpleSqlGet('SELECT train FROM systemstatus') %]
   [% seq = crms.NextSeq() %]
-  <h4>Training Queue: [% (train)? 'ON':'OFF' %]</h4>
+  <h4>Sequential Mode: [% (train)? 'ON':'OFF' %]</h4>
   <div style="position:relative;border-style:solid;width:25%;border-width:1px;padding:10px;">
   <form action="crms">
     <input type="hidden" name="p" value="systemStatus"/>
@@ -61,7 +61,7 @@ To display a custom message, or override the standard ones (<i>down</i>/<i>parti
       Sequence: [% seq %]<br/>
       <input type="submit" name="reset" value="Reset Sequence"/>
     [% END %]
-    <input type="submit" name="toggle" value="[% (train)? 'Stop':'Start' %] Training"/>
+    <input type="submit" name="toggle" value="[% (train)? 'Stop':'Start' %] Sequential Mode"/>
   </form>
   </div>
 [% END %]
