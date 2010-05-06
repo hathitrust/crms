@@ -37,7 +37,7 @@
   <dd><a href="/c/crms/pdf/DecisionTree.pdf" target="_blank">Decision&nbsp;Tree</a></dd>
   <dd><a>Decision&nbsp;Tree&nbsp;Help</a></dd>
   <dd><a href="/c/crms/UseCases.html" target="_blank">Use&nbsp;Cases</a></dd>
-  <dd><a href="/c/crms/pdf/ReviewerHelp.pdf" target="_blank">Reviewer&nbsp;Help</a></dd>
+  <dd><a href="/c/crms/pdf/InterfaceHelp.pdf#zoom=100" target="_blank">Review&nbsp;Interface&nbsp;Help</a></dd>
   <dd><a href="/c/crms/keys.html" target="_blank">Search&nbsp;Help</a></dd>
   [% IF e || a || s %]<dd><a href="/c/crms/pdf/UserLevelsPrivileges.pdf" target="_blank">User&nbsp;Levels/Privileges</a></dd>[% END %]
 </dl> 
