@@ -6,7 +6,7 @@
 [% INCLUDE header.tt    %]
 
 <h2>All Review Stats:</h2>
-
+<a>Review&nbsp;Stats&nbsp;Help</a><br/>
 <br/>
 [% crms.CreateStatsReport('all', 1, 1, 0, 1) %]
 <br/><br/>
