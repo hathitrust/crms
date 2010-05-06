@@ -77,7 +77,7 @@ function CheckAll(box,formid)
 <td>
                     <a href="crms?p=userRate">My&nbsp;Review&nbsp;Stats</a><br/>
 [% IF e || a || s %]<a href="crms?p=adminUserRate">All&nbsp;Review&nbsp;Stats</a><br/>        [% END %]
-[% IF e || a || s %]<a href="crms?p=queueStatus">Queue&nbsp;Status</a><br/>                   [% END %]
+[% IF e || a || s %]<a href="crms?p=queueStatus">System&nbsp;Summary</a><br/>                 [% END %]
 [% IF e || a || s %]<a href="crms?p=determinationStats">Determinations&nbsp;Breakdown</a><br/>[% END %]
 [% IF e || a || s %]<a href="crms?p=exportStats">Export&nbsp;Stats</a><br/>                   [% END %]
 </td></tr>
@@ -87,10 +87,10 @@ function CheckAll(box,formid)
 <td colspan="2">
           <a href="crms?p=adminUser">User&nbsp;Accounts</a><br/>
           <a href="crms?p=rights">Query&nbsp;Rights&nbsp;Database</a><br/>
-[% IF a || s %]<a href="crms?p=adminQueue">All&nbsp;Locked&nbsp;Volumes</a><br/>[% END %]
-[% IF a || s %]<a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a><br/>        [% END %]
-[% IF a || s %]<a href="crms?p=systemStatus">System&nbsp;Status</a><br/>        [% END %]
-[% IF s %]<a href="crms?p=debug">System&nbsp;Administration</a><br/>            [% END %]
+[% IF a || s %]<a href="crms?p=adminQueue">All&nbsp;Locked&nbsp;Volumes</a><br/> [% END %]
+[% IF a || s %]<a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a><br/>         [% END %]
+[% IF a || s %]<a href="crms?p=systemStatus">Set&nbsp;System&nbsp;Status</a><br/>[% END %]
+[% IF s %]<a href="crms?p=debug">System&nbsp;Administration</a><br/>             [% END %]
 </td></tr>
 [% END %]
 </table>

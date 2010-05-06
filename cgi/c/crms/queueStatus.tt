@@ -1,18 +1,21 @@
 [% INCLUDE header.tt   %]
 
-<h2>[% (crms.GetTrainingMode())? "Training ":"" %]Queue Status:</h2><br/>
+<h2>System Summary:</h2><br/>
+
 [% crms.CreateQueueReport() %]
 <br/>
+
 <table style="width:100px;">
-<tr style="vertical-align:top;"><td>
-<h2>Active Volumes</h2><br/>
-[% crms.CreateReviewReport() %]<br/>
-</td>
-<td style='padding-left:20px'>
-<h2>Final&nbsp;Determinations</h2><br/>
-[% crms.CreateDeterminationReport() %]<br/><br/>
-<h2>Historical&nbsp;Reviews</h2><br/>
-[% crms.CreateHistoricalReviewsReport() %]
-</td></tr></table>
+  <tr style="vertical-align:top;"><td>
+  <h3>Active Volumes</h3>
+  [% crms.CreateReviewReport() %]<br/>
+  </td>
+  <td style='padding-left:40px'>
+  <h3>Final&nbsp;Determinations</h3>
+  [% crms.CreateDeterminationReport() %]<br/><br/>
+  <h3>Historical&nbsp;Reviews</h3>
+  [% crms.CreateHistoricalReviewsReport() %]
+  </td></tr>
+</table>
 
 [% INCLUDE footer.tt %]

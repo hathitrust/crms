@@ -58,7 +58,7 @@
   [% END %]
 
   [%# ## failed to get a barcode ## %]
-  [% IF NOT barcode %] 
+  [% IF NOT barcode %]
     <h3>Unable to find a volume ID to review</h3>
     [% STOP %]
   [% END %]
@@ -75,25 +75,25 @@
 [% encTitle  = crms.GetEncTitle( barcode )           %]
 [% priority  = crms.GetPriority( barcode )           %]
 
-[% IF NOT renNum %] 
+[% IF NOT renNum %]
 [% renNum = crms.GetRenNum( barcode, user ) %]
 [% END %]
 
-[% IF NOT renDate %] 
+[% IF NOT renDate %]
 [% renDate = crms.GetRenDate( renNum ) %]
-[% END %] 
+[% END %]
 
-[% IF NOT comm %] 
+[% IF NOT comm %]
 [% comm = crms.GetReviewComment( barcode, user ) %]
-[% END %] 
+[% END %]
 
-[% IF NOT category %] 
+[% IF NOT category %]
 [% category = crms.GetReviewCategory( barcode, user ) %]
 [% END %]
 
-[% IF NOT swiss %] 
+[% IF NOT swiss %]
 [% swiss = crms.GetReviewSwiss( barcode, user ) %]
-[% END %] 
+[% END %]
 
 [%# links to PT, stanford DB search, or Mirlyn catalog %]
 [% authorLink = "http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$encAuthor" %]
@@ -112,21 +112,24 @@
       <div class="navtop">
         <table class="nav">
           <tr>
-            <td><img src="/c/crms/crmsblue.png" alt="CRMS Logo" width="42" height="32"/></td>
-            <td><b>Hello [% userName %]</b></td>
-            <td/>
+            <td rowspan="2"><img src="/c/crms/crmsblue.png" alt="CRMS Logo" width="52" height="40"/></td>
+            <td style="text-align:left;"><b>Hello [% userName %]</b></td>
           </tr>
           <tr>
-            <td><a href="crms?p=confirmReview&amp;submit=Cancel&amp;barcode=[% barcode %]">Home</a></td>
-            <td>
+            <td style="text-align:left;"><a href="crms?p=confirmReview&amp;submit=Cancel&amp;barcode=[% barcode %]">Home</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="crms?p=Logout">Logout</a></td>
+          </tr>
+          <tr><td/></tr><tr><td/></tr><tr><td/></tr>
+          <tr>
+            <td colspan="2">
               <select class="review" onchange="if (this.selectedIndex > 0) window.open(this.options[this.selectedIndex].value, '_blank');this.selectedIndex=0;">
-                <option>Select Help Topic</option>
-                <option value="/c/crms/pdf/ReviewerHelp.pdf">Reviewer Help</option>
-                <option value="/c/crms/UseCases.html">Use Cases</option>
+                <option>Select Help Documentation</option>
                 <option value="/c/crms/pdf/DecisionTree.pdf">Decision Tree</option>
+                <option disabled="disabled">Decision Tree Help</option>
+                <option disabled="disabled">Determination Guidelines</option>
+                <option value="/c/crms/UseCases.html">Use Cases</option>
+                <option value="/c/crms/pdf/InterfaceHelp.pdf">Review Interface Help</option>
               </select>
             </td>
-            <td><a href="crms?p=Logout">Logout</a></td>
           </tr>
         </table>
 
@@ -181,7 +184,7 @@
           [% END %]
         [% END %]
         [% INCLUDE submitReviewForm.tt barcode = barcode, renNum   = renNum,   renDate = renDate,
-                                       comment = comment, copyDate = copyDate, comm    = comm,    
+                                       comment = comment, copyDate = copyDate, comm    = comm,
                                        category = category, editing = editing, error   = error,
                                        select = select, mag = mag, question = question, swiss = swiss %]
         <!--<table class="nav">

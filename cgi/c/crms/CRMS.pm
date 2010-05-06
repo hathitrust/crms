@@ -5913,11 +5913,12 @@ sub CreateQueueReport
   my $self = shift;
   
   my $report = '';
-  my $sql = qq{ SELECT MAX(priority) FROM $CRMSGlobals::queueTable};
+  my $sql = "SELECT MAX(priority) FROM $CRMSGlobals::queueTable";
   my $maxpri = $self->SimpleSqlGet( $sql );
   my $priheaders = '';
   foreach my $pri (0 .. $maxpri) { $priheaders .= "<th>Priority&nbsp;$pri</th>" };
   $report .= "<table style='width:100px;'><tr style='vertical-align:top;'><td>\n";
+  $report .= "<h3>Volumes in Queue</h3>\n";
   $report .= "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
   foreach my $status (-1 .. 7)
   {
@@ -5938,8 +5939,10 @@ sub CreateQueueReport
   $report .= sprintf("<tr><td%s>Not&nbsp;Yet&nbsp;Active</td><td%s>$count</td>", $class, $class);
   $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri,$class);
   $report .= "</tr></table>\n";
-  $report .= "<span class='smallishText'>* Note: Status 6 no longer in use as of 4/19/2010.</span><br/><br/>\n";
-  $report .= "</td><td style='padding-left:20px'>\n";
+  $report .= "<span class='smallishText'>Note: includes both active and inactive volumes.</span><br/>\n";
+  $report .= "<span class='smallishText'>* Status 6 no longer in use as of 4/19/2010.</span><br/><br/>\n";
+  $report .= "</td><td style='padding-left:80px'>\n";
+  $report .= "<h3>Other System Stats</h3>\n";
   $report .= "<table class='exportStats'>\n";
   my $val = $self->GetLastQueueTime(1);
   $val =~ s/\s/&nbsp;/g;
@@ -6021,7 +6024,7 @@ sub CreateDeterminationReport()
   $report .= sprintf("<tr><th>Total&nbsp;Legacy&nbsp;Determinations</th><td>%s</td></tr>", $legacy);
   $report .= sprintf("<tr><th>Total&nbsp;Determinations</th><td>%s</td></tr>", $exported + $legacy);
   $report .= "</table>\n";
-  $report .= "<span class='smallishText'>* Note: Status 6 no longer in use as of 4/19/2010.</span><br/><br/>\n";
+  $report .= "<span class='smallishText'>* Note: Status 6 no longer in use as of 4/19/2010.</span>\n";
   return $report;
 }
 
@@ -6823,7 +6826,7 @@ sub PageToEnglish
                'holds' => 'my held reviews',
                'queue' => 'volumes in queue',
                'queueAdd' => 'add to queue',
-               'queueStatus' => 'queue status',
+               'queueStatus' => 'system summary',
                'review' => 'review',
                'rights' => 'query rights database',
                'systemStatus' => 'system status',
