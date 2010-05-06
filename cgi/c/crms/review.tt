@@ -97,7 +97,7 @@
 
 [%# links to PT, stanford DB search, or Mirlyn catalog %]
 [% authorLink = "http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$encAuthor" %]
-[% titleLink  = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/process?clauseMapped(title)=$encTitle" %]
+[% titleLink = "http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$encTitle" %]
 [% searchForm = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/modify?clauseMapped(title)=$encTitle&amp;clauseMapped(author)=$encAuthor" %]
 [% #FIXME: skin=crms has no effect w/ babel.hathitrust.org %]
 [% ptLink   = "https://babel.hathitrust.org/cgi/pt?skin=crms;id=$barcode;page=root;view=image;size=$mag;attr=1" %]
@@ -158,9 +158,9 @@
                 <option value="[% ptLink %]">HathiTrust</option>
                 <option value="[% catLink %]">Mirlyn</option>
                 <option value="[% catcLink %]">Mirlyn Classic</option>
-                <option value="[% titleLink %]">Stanford Title</option>
+                <option value="[% titleLink %]" selected="selected">Stanford Title</option>
                 <option value="[% authorLink %]">Stanford Author</option>
-                <option value="[% searchForm %]" selected="selected">Stanford Advanced</option>
+                <option value="[% searchForm %]">Stanford Advanced</option>
               </select>
             </td>
           </tr>
@@ -172,7 +172,6 @@
             <td/>
           </tr>
         </table>
-
       </div>
       <div class="navbottom" style="border-collapse:collapse;">
         [% comment = "" %]
