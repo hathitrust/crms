@@ -3921,6 +3921,8 @@ sub CreateStatsReport
   my $year              = shift;
   my $inval             = shift;
   
+  # FIXME: remove this param completely?
+  $suppressBreakdown = 1;
   my $data = $self->CreateStatsData($user, $cumulative, $year, $inval);
   my @lines = split m/\n/, $data;
   my $report = sprintf("<span style='font-size:1.3em;'><!--NAME--><b>%s</b></span><!--LINK-->\n<br/><table class='exportStats'>\n<tr>\n", shift @lines);
