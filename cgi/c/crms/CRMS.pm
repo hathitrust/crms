@@ -5535,6 +5535,14 @@ sub GetNextItemFromTrainingQueue
   return $id
 }
 
+# FIXME: 1.8/1.9 compatibility hack.
+sub GetSequentialMode
+{
+  my $self = shift;
+  
+  return $self->GetTrainingMode();
+}
+
 sub GetTrainingMode
 {
   my $self = shift;
