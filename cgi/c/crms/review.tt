@@ -68,7 +68,6 @@
 
 [% userName  = crms.GetUserName( user )              %]
 [% pub_date  = crms.GetPublDate( barcode )           %]
-[% copyDate  = crms.GetCopyDate( barcode, user )     %]
 [% author    = crms.GetAuthorForReview( barcode )    %]
 [% encAuthor = crms.GetEncAuthorForReview( barcode ) %]
 [% title     = crms.GetTitle( barcode )              %]
@@ -197,17 +196,10 @@
           [% error = "An expert has already reviewed this volume. Please cancel." %]
         [% END %]
       [% END %]
-      [% INCLUDE submitReviewForm.tt barcode = barcode, renNum   = renNum,   renDate = renDate,
-                                     comment = comment, copyDate = copyDate, comm    = comm,
-                                     category = category, editing = editing, error   = error,
-                                     select = select, mag = mag, question = question, swiss = swiss %]
-      <!--<table class="nav">
-        <tr>
-          <td><a href="/c/crms/help.html#rights" target="_blank">Help</a></td>
-          <td><a href="/c/crms/UseCases.html" target="_blank">Use Cases</a></td>
-          <td><a href="crms?p=Logout">Logout</a></td>
-        </tr>
-      </table>-->
+      [% INCLUDE submitReviewForm.tt barcode  = barcode,  renNum   = renNum,  renDate  = renDate,
+                                     comment  = comment,  comm     = comm,    category = category,
+                                     editing  = editing,  error    = error,   select   = select,
+                                     mag      = mag,      question = question, swiss   = swiss %]
       [% IF crms.IsUserExpert(user) %]
         <table class="nav">
         [% status = crms.GetStatus(barcode) %]
