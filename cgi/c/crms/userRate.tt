@@ -1,7 +1,7 @@
 [% INCLUDE header.tt    %]
 
 <h2>My Review Stats:</h2>
-<a>Review&nbsp;Stats&nbsp;Help</a><br/>
+<a href="/c/crms/pdf/ReviewStatsHelp.pdf" target="_blank">Review&nbsp;Stats&nbsp;Help</a><br/>
 
 [% user = cgi.param('user') %]
 [% IF !user %][% user = crms.get('user') %][% END %]
