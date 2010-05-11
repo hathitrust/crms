@@ -3056,6 +3056,24 @@ sub GetUsers
   return \@users;
 }
 
+sub IsUserIncarnationExpertOrHigher
+{
+  my $self = shift;
+  my $user = shift;
+  
+  $user = $self->get('user') unless $user;
+  my $max = 0;
+  my $sql = "SELECT id FROM users WHERE kerberos IN (SELECT DISTINCT kerberos FROM users WHERE id='$user')";
+  my $ref = $self->get('dbh')->selectall_arrayref($sql);
+  foreach my $row (@{$ref})
+  {
+    my $id = $row->[0];
+    return 1 if $self->IsUserExpert($id);
+    return 1 if $self->IsUserAdmin($id);
+  }
+  return 0;
+}
+
 sub GetRange
 {
   my $self = shift;

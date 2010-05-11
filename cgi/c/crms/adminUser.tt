@@ -1,4 +1,4 @@
-[% IF NOT (crms.IsUserExpert() || crms.IsUserAdmin())  %]
+[% IF NOT crms.IsUserIncarnationExpertOrHigher() %]
   [% INCLUDE denied.tt  %]
   [% STOP %]
 [% END %]

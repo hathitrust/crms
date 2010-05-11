@@ -42,6 +42,7 @@ function CheckAll(box,formid)
 [% e = crms.IsUserExpert %]
 [% a = crms.IsUserAdmin %]
 [% s = crms.IsUserSuperAdmin %]
+[% i = crms.IsUserIncarnationExpertOrHigher %]
 
 <table class="mainnav">
 <tr><th><span class="minor">Review</span></th><th><span class="major">Search/Browse</span></th></tr>
@@ -81,16 +82,16 @@ function CheckAll(box,formid)
 [% IF e || a || s %]<a href="crms?p=determinationStats">Determinations&nbsp;Breakdown</a><br/>[% END %]
 [% IF e || a || s %]<a href="crms?p=exportStats">Export&nbsp;Stats</a><br/>                   [% END %]
 </td></tr>
-[% IF e || a || s %]
+[% IF e || a || s || i %]
 <tr><th colspan="2"><span class="red">Administrative</span></th></tr>
 <tr>
 <td colspan="2">
-          <a href="crms?p=adminUser">User&nbsp;Accounts</a><br/>
-          <a href="crms?p=rights">Query&nbsp;Rights&nbsp;Database</a><br/>
-[% IF a || s %]<a href="crms?p=adminQueue">All&nbsp;Locked&nbsp;Volumes</a><br/> [% END %]
-[% IF a || s %]<a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a><br/>         [% END %]
-[% IF a || s %]<a href="crms?p=systemStatus">Set&nbsp;System&nbsp;Status</a><br/>[% END %]
-[% IF s %]<a href="crms?p=debug">System&nbsp;Administration</a><br/>             [% END %]
+                    <a href="crms?p=adminUser">User&nbsp;Accounts</a><br/>
+[% IF e || a || s %]<a href="crms?p=rights">Query&nbsp;Rights&nbsp;Database</a><br/>  [% END %]
+[% IF a || s %]     <a href="crms?p=adminQueue">All&nbsp;Locked&nbsp;Volumes</a><br/> [% END %]
+[% IF a || s %]     <a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a><br/>         [% END %]
+[% IF a || s %]     <a href="crms?p=systemStatus">Set&nbsp;System&nbsp;Status</a><br/>[% END %]
+[% IF s %]          <a href="crms?p=debug">System&nbsp;Administration</a><br/>        [% END %]
 </td></tr>
 [% END %]
 </table>
@@ -102,7 +103,7 @@ function CheckAll(box,formid)
   <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
   <input type="submit" name="unlockSel" value="Unlock Selected Volumes"/><br/><br/>
   <table class="exportStats" style="width:55%">
-  <tr><th colspan="6" style="text-align:center;"><span class="major">Your Locked Items</span></th></tr>
+  <tr><th colspan="6" style="text-align:center;"><span class="major">Your&nbsp;Locked&nbsp;Items</span></th></tr>
   <tr><th>ID</th><th>Title</th><th>Since</th><th>Select</th><th>Unlock</th></tr>
   [% FOREACH item IN locked.keys %]
     <tr>
