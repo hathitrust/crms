@@ -136,9 +136,7 @@ function CheckAll(box,formid)
     <input type="hidden" name="records" value="$pagesize"/>
     <input type="hidden" name="stype" value="$stype"/>
     <input type="hidden" name="offset" value="$offset"/>
-    [% IF p == 'undReviews' %]
-      <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
-    [% END %]
+    <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
     <input type="submit" name="approve" value="Approve Selected Volumes"/>
     <input type="submit" name="lock" value="Lock Selected Volumes"/>
     <input type="submit" name="unlock" value="Unlock Selected Volumes"/><br/><br/>
@@ -179,8 +177,14 @@ function CheckAll(box,formid)
         [% END %]
       [% END %]
       <tr style="background-color:[% active_color %];">
-        [% IF p == 'editReviews' %]<td>[% crms.DetailInfoForReview(review.id, review.user, p) %]
-        [% ELSE %]<td><span style="white-space:nowrap;">[% crms.DetailInfo(review.id, review.user, p) %][% END %]
+        <td>
+        [% IF p == 'editReviews' || p == 'holds' %]
+          [% crms.DetailInfoForReview(review.id, review.user, p) %]
+        [% ELSE %]
+          <span style="white-space:nowrap;">
+          [% crms.DetailInfo(review.id, review.user, p) %]
+          </span>
+        [% END %]
         [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' %]
           [% IF crms.IsLockedForOtherUser(review.id) %]
             <img width="16" height="16" alt="Locked" src="/c/crms/OtherLock.png"/>
@@ -188,9 +192,14 @@ function CheckAll(box,formid)
             <img width="16" height="16" alt="Locked by me" src="/c/crms/Lock.png"/>
           [% END %]
         [% END %]
-        </span></td>
-        [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' %]<td>[% (crms.IsLockedForOtherUser(review.id))? review.title : crms.LinkToReview(review.id) %]</td>
-        [% ELSE %]<td>[% crms.LinkToPT( review.id ) %]</td>[% END %]
+        </td>
+        <td>
+        [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' || p == 'holds' %]
+          [% (crms.IsLockedForOtherUser(review.id))? review.title : crms.LinkToReview(review.id) %]
+        [% ELSE %]
+          [% crms.LinkToPT( review.id ) %]
+        [% END %]
+        </td>
         <td>$review.author</td>
         [% IF p == 'adminHistoricalReviews' %]<td>$review.pubdate</td>[% END %]
         <td>$review.date</td>
