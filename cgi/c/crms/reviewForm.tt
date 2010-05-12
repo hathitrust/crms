@@ -1,7 +1,0 @@
-<div>enter a barcode to review:
-  <form name="review" action="crms">
-    <input type="hidden" name="p" value="review" />
-    <input type="text"   name="barcode"/>
-    <input type="submit" value="Review">
-  </form>
-</div>
