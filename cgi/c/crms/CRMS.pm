@@ -5520,14 +5520,19 @@ sub GetNextItemForReview
     # Find items reviewed once by some other user, preferring priority 2.
     # Exclude priority 1 some of the time, to 'fool' reviewers into not thinking everything is pd.
     my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
+    #my $sql = "SELECT q.id FROM queue q INNER JOIN reviews r ON q.id=r.id INNER JOIN " .
+    #          "(SELECT id FROM reviews GROUP BY id HAVING count(*)=1) AS r2 ON r.id=r2.id " .
+    #          "WHERE $exclude1 $exclude3 q.locked IS NULL AND q.status=0 AND q.expcnt=0 AND r.user!='$name' " .
+    #          "ORDER BY q.priority DESC, q.time ASC";
+    #print "$sql<br/>\n";
+    #my $rows = $self->get('dbh')->selectall_arrayref($sql);
+    #my $idx = ($exclude1 eq '')? (rand scalar @{$rows}):0;
+    #$bar = $rows->[$idx]->[0];
     my $sql = "SELECT q.id FROM queue q INNER JOIN reviews r ON q.id=r.id INNER JOIN " .
               "(SELECT id FROM reviews GROUP BY id HAVING count(*)=1) AS r2 ON r.id=r2.id " .
               "WHERE $exclude1 $exclude3 q.locked IS NULL AND q.status=0 AND q.expcnt=0 AND r.user!='$name' " .
-              "ORDER BY q.priority DESC, q.time ASC";
-    #print "$sql<br/>\n";
-    my $rows = $self->get('dbh')->selectall_arrayref($sql);
-    my $idx = ($exclude1 eq '')? (rand scalar @{$rows}):0;
-    $bar = $rows->[$idx]->[0];
+              "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
+    $bar = $self->SimpleSqlGet( $sql );
   }
   if ( ! $bar )
   {
