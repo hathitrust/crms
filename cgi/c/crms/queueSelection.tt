@@ -25,13 +25,13 @@
   [% blah = cgi.param('dir', 'DESC') %]
 [% END %]
 <br/>
-<div style="position:relative;border-style:solid;width:32em;border-width:1px;padding:10px;">
+<div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
 
-<a href="/c/crms/qkeys.html" target="_blank" accesskey="h">
-<span style="position:absolute;top:4px;right:4px">Search Help
-<img style="border:0px solid;" width="16" height="16" alt="Search Help" src="/c/crms/help.png"/>
-</span>
-</a>
+<div style="position:absolute;top:4px;right:4px">
+  <a href="/c/crms/pdf/ReviewSearchHelp.pdf" target="_blank" accesskey="h">Search&nbsp;Help</a> /
+  <a href="/c/crms/pdf/ReviewSearchTerms.pdf" target="_blank">Terms</a>
+  <img style="border:0px solid;" width="16" height="16" alt="Search Help" src="/c/crms/help.png"/>
+</div>
 
 <form id="select" action="crms">
 <input type="hidden" name="p" value="$page"/>
