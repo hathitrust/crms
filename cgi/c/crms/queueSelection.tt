@@ -73,7 +73,7 @@ Restrict selection:<br/>
 <span class="smallText">(YYYY-MM-DD)</span>
 <br/>
 
-<label for="order">Order:</label>
+<label for="order">Order by:</label>
 <select id="order" name="order">
   <option value="id"        [% order == 'id' ?  'selected="selected"':'' %]>Identifier</option>
   <option value="title"     [% order == 'title' ? 'selected="selected"':'' %]>Title</option>
