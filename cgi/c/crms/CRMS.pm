@@ -5891,7 +5891,7 @@ sub CreateQueueReport
   my @pris = map {$_->[0]} @{ $dbh->selectall_arrayref('SELECT DISTINCT priority FROM queue ORDER BY priority ASC') };
   foreach my $pri (@pris)
   {
-    $pri = $self->StriDpecimal($pri);
+    $pri = $self->StripDecimal($pri);
     $priheaders .= "<th>Priority&nbsp;$pri</th>"
   }
   $report .= "<table style='width:100px;'><tr style='vertical-align:top;'><td>\n";
