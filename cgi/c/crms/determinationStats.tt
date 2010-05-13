@@ -37,10 +37,11 @@
 <br/>
 <label for="priority" style="width:5em;float:left;">Priority:</label>
 &nbsp;&nbsp;<select name="priority" id="priority">
-  <option [% (priority == "All")? 'selected="selected"':'' %]>All</option>
-  <option [% (priority == "0")? 'selected="selected"':'' %]>0</option>
-  <option [% (priority == "1")? 'selected="selected"':'' %]>1</option>
-  <option [% (priority == "2")? 'selected="selected"':'' %]>2</option>
+[% pris = crms.get('dbh').selectall_arrayref("SELECT DISTINCT priority FROM historicalreviews") %]
+[% FOREACH pri IN pris %]
+  [% pri = crms.StripDecimal(pri.0) %]
+  <option [% (priority == pri)? 'selected="selected"':'' %]>$pri</option>
+[% END %]
 </select>
 <br/>
 <input type="submit" value="Submit"/>
