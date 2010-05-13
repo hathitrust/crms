@@ -5507,8 +5507,8 @@ sub GetNextItemForReview
   }
   if ( ! $bar )
   {
-    # Get priority > 1 items that have not been reviewed yet
-    my $sql = "SELECT q.id FROM queue q WHERE q.priority>1 AND q.locked IS NULL AND " .
+    # Get priority 2 items that have not been reviewed yet
+    my $sql = "SELECT q.id FROM queue q WHERE q.priority=2 AND q.locked IS NULL AND " .
               "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM reviews) " .
               "ORDER BY q.time ASC LIMIT 1";
     $bar = $self->SimpleSqlGet( $sql );
