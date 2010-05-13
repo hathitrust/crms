@@ -8,7 +8,11 @@
 [% endDate = cgi.param('endDate') %]
 [% order = cgi.param('order') %]
 [% dir = cgi.param('dir') %]
-[% recs = cgi.param('records')   %]
+[% recs = cgi.param('records') %]
+[% IF crms.InTrainingArea() && ! order %]
+  [% order = "presented" %]
+  [% blah = cgi.param("order","presented") %]
+[% END %]
 <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
 [% recs = recs.replace('\D','') %]
 [% IF NOT recs %]
@@ -71,20 +75,18 @@ Restrict selection:<br/>
 
 <label for="order">Order:</label>
 <select id="order" name="order">
-  <option value="id"       [% order == 'id' ?  'selected="selected"':'' %]>Identifier</option>
-  <option value="title"    [% order == 'title' ? 'selected="selected"':'' %]>Title</option>
-  <option value="author"   [% order == 'author' ? 'selected="selected"':'' %]>Author</option>
-  <option value="pub_date" [% order == 'pub_date' ? 'selected="selected"':'' %]>Pub&nbsp;Date</option>
-  <option value="time"     [% order == 'time' ?  'selected="selected"':'' %]>Date&nbsp;Added</option>
-  <option value="status"   [% order == 'status' ? 'selected="selected"':'' %]>Status</option>
-  <option value="locked"   [% order == 'locked' ? 'selected="selected"':'' %]>Locked</option>
-  <option value="priority" [% order == 'priority' ? 'selected="selected"':'' %]>Priority</option>
-  <option value="reviews"  [% order == 'reviews' ? 'selected="selected"':'' %]>Reviews</option>
-  <option value="expcnt"   [% order == 'expcnt' ? 'selected="selected"':'' %]>Expert Reviews</option>
-  <option value="holds"    [% order == 'holds' ? 'selected="selected"':'' %]>Holds</option>
-[% IF crms.GetTrainingMode() %]
-  <option value="seq"      [% order == 'seq' ? 'selected="selected"':'' %]>Sequence</option>
-[% END %]
+  <option value="id"        [% order == 'id' ?  'selected="selected"':'' %]>Identifier</option>
+  <option value="title"     [% order == 'title' ? 'selected="selected"':'' %]>Title</option>
+  <option value="author"    [% order == 'author' ? 'selected="selected"':'' %]>Author</option>
+  <option value="pub_date"  [% order == 'pub_date' ? 'selected="selected"':'' %]>Pub&nbsp;Date</option>
+  <option value="time"      [% order == 'time' ?  'selected="selected"':'' %]>Date&nbsp;Added</option>
+  <option value="status"    [% order == 'status' ? 'selected="selected"':'' %]>Status</option>
+  <option value="locked"    [% order == 'locked' ? 'selected="selected"':'' %]>Locked</option>
+  <option value="priority"  [% order == 'priority' ? 'selected="selected"':'' %]>Priority</option>
+  <option value="reviews"   [% order == 'reviews' ? 'selected="selected"':'' %]>Reviews</option>
+  <option value="expcnt"    [% order == 'expcnt' ? 'selected="selected"':'' %]>Expert Reviews</option>
+  <option value="holds"     [% order == 'holds' ? 'selected="selected"':'' %]>Holds</option>
+  <option value="presented" [% order == 'presented' ? 'selected="selected"':'' %]>Order Presented</option>
 </select>
 <br/>
 

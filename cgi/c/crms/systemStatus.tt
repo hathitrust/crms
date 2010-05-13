@@ -9,10 +9,11 @@
   [% blah = crms.SetSystemStatus(status,msg) %]
 [% END %]
 
-[% IF cgi.param('toggle') %]
-  [% blah = crms.ToggleSequentialMode() %]
-[% ELSIF cgi.param('reset') %]
-  [% blah = crms.PrepareSubmitSql('DELETE FROM reviews WHERE id IN (SELECT id FROM training_queue)') %]
+
+[% IF cgi.param('reload') %]
+  [% blah = crms.ReloadTrainingQueue() %]
+[% ELSIF cgi.param('clear') %]
+  [% blah = crms.ClearTrainingQueue() %]
 [% END %]
 
 [% INCLUDE header.tt %]
@@ -48,22 +49,40 @@ To display a custom message, or override the standard ones (<i>down</i>/<i>parti
 </p>
 <br/>
 
-[% dev = crms.get('dev') %]
-[% IF dev == 'moseshll' || dev == 'crmstest' %]
-  <br/><br/><br/>
-  [% train = crms.SimpleSqlGet('SELECT train FROM systemstatus') %]
-  [% seq = crms.NextSeq() %]
-  <h4>Sequential Mode: [% (train)? 'ON':'OFF' %]</h4>
+
+[% IF crms.IsTrainingArea() %]
+  <br/><br/>
+  [% n = crms.SimpleSqlGet("SELECT COUNT(*) FROM training_queue") %]
+  <h4>Training Queue: [% n %] Item[% (n==1)? '':'s' %]</h4>
   <div style="position:relative;border-style:solid;width:25%;border-width:1px;padding:10px;">
   <form action="crms">
     <input type="hidden" name="p" value="systemStatus"/>
-    [% IF train %]
-      Sequence: [% seq %]<br/>
-      <input type="submit" name="reset" value="Reset Sequence"/>
-    [% END %]
-    <input type="submit" name="toggle" value="[% (train)? 'Stop':'Start' %] Sequential Mode"/>
+    <input type="submit" name="reload" value="Reload Training Queue"/>
+    <input type="submit" name="clear" value="Clear Training Queue"/>
+    <input type="submit" name="show" value="Show Items"/>
   </form>
   </div>
+[% IF cgi.param('show') %]
+  <br/>
+  [% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date) FROM training_queue q, bibdata b WHERE q.id=b.id" %]
+  [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
+  [% IF ref.size > 0 %]
+    <table class="exportStats" style="width:auto;"><tr><th>ID</th><th>Title</th><th>Author</th><th>Pub&nbsp;Date</th></tr>
+    [% FOREACH r IN ref %]
+      <tr><td>
+      [% IF r.5 > 0 %]
+        <a href="/cgi/c/crms/crms?p=adminReviews&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
+      [% ELSE %]
+        <a href="/cgi/c/crms/crms?p=queue&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
+      [% END %]
+      [% r.0 %]</a></td>
+      <td>[% r.1 %]</td>
+      <td>[% r.2 %]</td><td>[% r.3 %]</td></tr>
+    [% END %]
+    </table>
+  [% END %]
+[% END %]  
+
 [% END %]
 
 [% INCLUDE footer.tt %]

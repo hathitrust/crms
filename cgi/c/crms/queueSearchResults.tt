@@ -96,9 +96,6 @@
     <th>Reviews</th>
     <th>Expert&nbsp;Reviews</th>
     <th>Holds</th>
-    [% IF crms.GetTrainingMode() %]
-    <th>Sequence</th>
-    [% END %]
     </tr>
     [% FOREACH item IN ref.rows %]
 
@@ -124,9 +121,6 @@
         <td>$item.reviews</td>
         <td>$item.expcnt</td>
         <td>$item.holds</td>
-        [% IF crms.GetTrainingMode() %]
-        <td>$item.seq</td>
-        [% END %]
       </tr>
 
       [% prev_id = item.id %]

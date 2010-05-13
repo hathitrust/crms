@@ -781,7 +781,10 @@ sub AddItemToQueueOrSetItemActive
   my $id       = shift;
   my $priority = shift;
   my $override = shift;
+  my $train    = shift;
+  my $src      = shift;
   
+  $src = 'adminui' unless $src;
   my $stat = 0;
   my @msgs = ();
   $priority = 4 if $override;
@@ -793,7 +796,7 @@ sub AddItemToQueueOrSetItemActive
   ## give the existing item higher or lower priority
   elsif ( $self->IsItemInQueue( $id ) )
   {
-    my $oldpri = $self->GetItemPriority($id);
+    my $oldpri = $self->GetPriority($id);
     my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::reviewsTable WHERE id='$id'";
     my $count = $self->SimpleSqlGet($sql);
     if ($oldpri == $priority)
@@ -834,17 +837,21 @@ sub AddItemToQueueOrSetItemActive
       }
       else
       {
-        my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, priority, source) VALUES ('$id', $priority, 'adminui')";
+        my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, priority, source) VALUES ('$id', $priority, '$src')";
         $self->PrepareSubmitSql( $sql );
         
         $self->UpdateTitle( $id );
         $self->UpdatePubDate( $id, $pub );
         $self->UpdateAuthor ( $id );
         
-        my $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES (1, 'adminui')";
+        my $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES (1, '$src')";
         $self->PrepareSubmitSql( $sql );
       }
     }
+  }
+  if ($stat != 1 && $train && $self->IsTrainingArea())
+  {
+    $self->PrepareSubmitSql("INSERT INTO training_queue (id) VALUES ('$id')");
   }
   return $stat . join '; ', @msgs;
 }
@@ -867,6 +874,38 @@ sub GetViolations
   push @errs, 'foreign pub' unless $self->IsUSPub( $id, $record );
   push @errs, 'non-BK format' unless $self->IsFormatBK( $id, $record );
   return join('; ', @errs);
+}
+
+sub ClearTrainingQueue
+{
+  my $self = shift;
+  
+  my $sql = 'SELECT id FROM training_queue';
+  my $ref = $self->get('dbh')->selectall_arrayref($sql);
+  foreach my $row ( @{$ref} )
+  {
+    my $id = $row->[0];
+    $self->PrepareSubmitSql("DELETE FROM reviews WHERE id='$id'");
+    $self->PrepareSubmitSql("DELETE FROM queue WHERE id='$id'");
+    $self->PrepareSubmitSql("DELETE FROM historicalreviews WHERE id='$id'");
+  }
+  $self->PrepareSubmitSql('DELETE FROM training_queue');
+}
+
+sub ReloadTrainingQueue
+{
+  my $self = shift;
+  
+  my $sql = 'SELECT id FROM training_queue';
+  my $ref = $self->get('dbh')->selectall_arrayref($sql);
+  foreach my $row ( @{$ref} )
+  {
+    my $id = $row->[0];
+    $self->PrepareSubmitSql("DELETE FROM reviews WHERE id='$id'");
+    $self->PrepareSubmitSql("DELETE FROM queue WHERE id='$id'");
+    $self->PrepareSubmitSql("DELETE FROM historicalreviews WHERE id='$id'");
+    $self->AddItemToQueueOrSetItemActive($id, 2, 0);
+  }
 }
 
 # Used by the script loadIDs.pl to add and/or bump priority on a volume
@@ -1028,7 +1067,7 @@ sub CloneReview
 sub SubmitReview
 {
     my $self = shift;
-    my ($id, $user, $attr, $reason, $copyDate, $note, $renNum, $exp, $renDate, $category, $swiss, $question) = @_;
+    my ($id, $user, $attr, $reason, $note, $renNum, $exp, $renDate, $category, $swiss, $question) = @_;
 
     if ( ! $self->CheckForId( $id ) )                         { $self->SetError("id ($id) check failed");                    return 0; }
     if ( ! $self->CheckReviewer( $user, $exp ) )              { $self->SetError("reviewer ($user) check failed");            return 0; }
@@ -1045,7 +1084,7 @@ sub SubmitReview
 
     $note = ($note)? $self->get('dbh')->quote($note):'NULL';
     
-    my $priority = $self->GetItemPriority( $id );
+    my $priority = $self->GetPriority( $id );
     
     my $hold = 'NULL';
     
@@ -1086,7 +1125,6 @@ sub SubmitReview
       push(@fieldList, 'swiss');
       push(@valueList, $swiss);
     }
-    if ($copyDate) { push(@fieldList, 'copyDate'); push(@valueList, "'$copyDate'"); }
 
     my $sql = sprintf("REPLACE INTO $CRMSGlobals::reviewsTable (%s) VALUES (%s)", join(',', @fieldList), join(",", @valueList));
     if ( $self->get('verbose') ) { $self->Logit( $sql ); }
@@ -1144,41 +1182,35 @@ sub GetStatusForExpertReview
   return $status;
 }
 
-sub GetItemPriority
+sub GetPriority
 {
   my $self = shift;
   my $id = shift;
   
-  my $sql = qq{ SELECT priority FROM $CRMSGlobals::queueTable WHERE id='$id' LIMIT 1 };
-  return $self->SimpleSqlGet( $sql );
+  my $sql = "SELECT priority FROM queue WHERE id='$id'";
+  return $self->StripDecimal($self->SimpleSqlGet($sql));
 }
 
 
 sub GetOtherReview
 {
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
 
-
-    my $sql = qq{SELECT id, user, attr, reason, renNum, renDate, hold FROM $CRMSGlobals::reviewsTable WHERE id="$id" and user != "$user"};
-
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-
-    foreach my $row ( @{$ref} )
-    {
-        my $id      = $row->[0];
-        my $user    = $row->[1];
-        my $attr    = $row->[2];
-        my $reason  = $row->[3];
-        my $renNum  = $row->[4];
-        my $renDate = $row->[5];
-        my $hold    = $row->[6];
-
-        return ( $user, $attr, $reason, $renNum, $renDate, $hold );
-   }
-
+  my $sql = qq{SELECT id, user, attr, reason, renNum, renDate, hold FROM $CRMSGlobals::reviewsTable WHERE id="$id" and user != "$user"};
+  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  foreach my $row ( @{$ref} )
+  {
+    my $id      = $row->[0];
+    my $user    = $row->[1];
+    my $attr    = $row->[2];
+    my $reason  = $row->[3];
+    my $renNum  = $row->[4];
+    my $renDate = $row->[5];
+    my $hold    = $row->[6];
+    return ( $user, $attr, $reason, $renNum, $renDate, $hold );
+  }
 }
 
 
@@ -1190,7 +1222,7 @@ sub GetOtherReview
 sub SubmitHistReview
 {
     my $self = shift;
-    my ($id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $category, $status, $expert, $noop) = @_;
+    my ($id, $user, $date, $attr, $reason, $renNum, $renDate, $note, $category, $status, $expert, $noop) = @_;
 
     ## change attr and reason back to numbers
     $attr = $self->GetRightsNum( $attr );
@@ -1210,8 +1242,8 @@ sub SubmitHistReview
       $note = $self->get('dbh')->quote($note);
       
       ## all good, INSERT
-      my $sql = 'REPLACE INTO historicalreviews (id, user, time, attr, reason, copyDate, renNum, renDate, note, legacy, category, status, expert, source) ' .
-             "VALUES('$id', '$user', '$date', '$attr', '$reason', '$cDate', '$renNum', '$renDate', $note, 1, '$category', $status, $expert, 'legacy')";
+      my $sql = 'REPLACE INTO historicalreviews (id, user, time, attr, reason, renNum, renDate, note, legacy, category, status, expert, source) ' .
+             "VALUES('$id', '$user', '$date', '$attr', '$reason', '$renNum', '$renDate', $note, 1, '$category', $status, $expert, 'legacy')";
 
       $self->PrepareSubmitSql( $sql );
 
@@ -2022,109 +2054,108 @@ sub SearchTermsToSQLWide
 
 sub SearchAndDownload
 {
-    my $self           = shift;
-    my $page           = shift;
-    my $order          = shift ;
-    my $dir            = shift;
+  my $self           = shift;
+  my $page           = shift;
+  my $order          = shift ;
+  my $dir            = shift;
 
-    my $search1        = shift;
-    my $search1value   = shift;
-    my $op1            = shift;
+  my $search1        = shift;
+  my $search1value   = shift;
+  my $op1            = shift;
 
-    my $search2        = shift;
-    my $search2value   = shift;
-    my $op2            = shift;
-    
-    my $search3        = shift;
-    my $search3value   = shift;
-    my $startDate      = shift;
-    my $endDate        = shift;
-    my $offset         = shift;
+  my $search2        = shift;
+  my $search2value   = shift;
+  my $op2            = shift;
 
-    my $stype          = shift;
-    
-    $stype = 'reviews' unless $stype;
-    my $table ='reviews';
-    my $top = 'bibdata b';
-    my $status = 'r.status';
-    if ($page eq 'adminHistoricalReviews')
+  my $search3        = shift;
+  my $search3value   = shift;
+  my $startDate      = shift;
+  my $endDate        = shift;
+  my $offset         = shift;
+
+  my $stype          = shift;
+
+  $stype = 'reviews' unless $stype;
+  my $table ='reviews';
+  my $top = 'bibdata b';
+  my $status = 'r.status';
+  if ($page eq 'adminHistoricalReviews')
+  {
+    $table = 'historicalreviews';
+  }
+  else
+  {
+    $top = 'queue q INNER JOIN bibdata b ON q.id=b.id';
+    $status = 'q.status';
+  }
+
+  my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQL($stype, $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $offset, undef, 0 );
+
+  my $ref = $self->get('dbh')->selectall_arrayref( $sql );
+
+  my $buffer = '';
+  if ( scalar @{$ref} == 0 )
+  {
+    $buffer = 'No Results Found.';
+  }
+  else
+  {
+    if ( $page eq 'userReviews')
     {
-      $table = 'historicalreviews';
+      $buffer .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
+    }
+    elsif ( $page eq 'editReviews' )
+    {
+      $buffer .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
+    }
+    elsif ( $page eq 'undReviews' )
+    {
+      $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote}
+    }
+    elsif ( $page eq 'expert' )
+    {
+      $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote};
+    }
+    elsif ( $page eq 'adminReviews' || $page eq 'holds' )
+    {
+      $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote\tswiss\thold thru};
+    }
+    elsif ( $page eq 'adminHistoricalReviews' )
+    {
+      $buffer .= qq{id\ttitle\tauthor\tpub date\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated\tswiss};
+    }
+    $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\tpriority":'');
+    if ($stype eq 'reviews')
+    {
+      $buffer .= $self->UnpackResults($page, $ref);
     }
     else
     {
-      $top = 'queue q INNER JOIN bibdata b ON q.id=b.id';
-      $status = 'q.status';
-    }
-    
-    my ($sql,$totalReviews,$totalVolumes,$n,$of) =  $self->CreateSQL( $stype, $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $offset, undef, 0 );
-    
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    my $buffer = '';
-    if ( scalar @{$ref} == 0 )
-    {
-      $buffer = 'No Results Found.';
-    }
-    else
-    {
-      if ( $page eq 'userReviews')
+      foreach my $row ( @{$ref} )
       {
-        $buffer .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
-      }
-      elsif ( $page eq 'editReviews' )
-      {
-        $buffer .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
-      }
-      elsif ( $page eq 'undReviews' )
-      {
-        $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote}
-      }
-      elsif ( $page eq 'expert' )
-      {
-        $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote};
-      }
-      elsif ( $page eq 'adminReviews' || $page eq 'holds' )
-      {
-        $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote\tswiss\thold thru};
-      }
-      elsif ( $page eq 'adminHistoricalReviews' )
-      {
-        $buffer .= qq{id\ttitle\tauthor\tpub date\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated\tswiss};
-      }
-      $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\tpriority":'');
-      if ($stype eq 'reviews')
-      {
-        $buffer .= $self->UnpackResults($page, $ref);
-      }
-      else
-      {
-        foreach my $row ( @{$ref} )
+        my $id = $row->[0];
+        my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
+        $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
+               "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
+               (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
+               (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
+               "FROM $top INNER JOIN $table r ON b.id=r.id " .
+               "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
+        #print "$sql<br/>\n";
+        my $ref2;
+        eval{$ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );};
+        if ($@)
         {
-          my $id = $row->[0];
-          my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
-          $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
-                 "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
-                 (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
-                 (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
-                 "FROM $top INNER JOIN $table r ON b.id=r.id " .
-                 "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
-          #print "$sql<br/>\n";
-          my $ref2;
-          eval{$ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );};
-          if ($@)
-          {
-            $self->SetError("SQL failed: '$sql' ($@)");
-            $self->DownloadSpreadSheet( "SQL failed: '$sql' ($@)" );
-            return 0;
-          }
-          $buffer .= $self->UnpackResults($page, $ref2);
+          $self->SetError("SQL failed: '$sql' ($@)");
+          $self->DownloadSpreadSheet( "SQL failed: '$sql' ($@)" );
+          return 0;
         }
+        $buffer .= $self->UnpackResults($page, $ref2);
       }
     }
-    $self->DownloadSpreadSheet( $buffer );
-    if ( $buffer ) { return 1; }
-    else { return 0; }
+  }
+  $self->DownloadSpreadSheet( $buffer );
+  return ($buffer)? 1:0;
 }
 
 sub UnpackResults
@@ -2536,6 +2567,11 @@ sub GetQueueRef
   if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
   elsif ($order eq 'reviews') { $order = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)'; }
   elsif ($order eq 'holds') { $order = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold IS NOT NULL)'; }
+  elsif ($order eq 'presented')
+  {
+    $order = sprintf "q.priority $dir, q.time %s", ($dir eq 'DESC')? 'ASC':'DESC';
+    $dir = '';
+  }
   else { $order = 'q.' . $order; }
   my @rest = ('q.id=b.id');
   my $tester1 = '=';
@@ -5112,14 +5148,6 @@ sub BarcodeToId
     return $id;
 }
 
-sub GetPriority
-{
-  my $self = shift;
-  my $bar = shift;
-  
-  my $sql = qq{SELECT priority FROM $CRMSGlobals::queueTable WHERE id = '$bar'};
-  return $self->SimpleSqlGet( $sql );
-}
 
 sub HasLockedItem
 {
@@ -5458,159 +5486,67 @@ sub HasItemBeenReviewedByUser
 ## ----------------------------------------------------------------------------
 sub GetNextItemForReview
 {
-    my $self = shift;
-    my $name = shift;
-    
-    my $bar;
-    
-    # Only Anne reviews priority 4
-    if ($self->IsUserSuperAdmin($name))
-    {
-      my $sql = "SELECT id FROM queue WHERE locked IS NULL AND expcnt=0 AND priority>=4 ORDER BY priority DESC, time ASC LIMIT 1";
-      $bar = $self->SimpleSqlGet( $sql );
-      #print "$sql<br/>\n";
-    }
-    # If user is expert, get priority 3 items.
-    if (!$bar && $self->IsUserExpert($name))
-    {
-      my $sql = "SELECT id FROM queue WHERE locked IS NULL AND expcnt=0 AND priority=3 ORDER BY time ASC LIMIT 1";
-      $bar = $self->SimpleSqlGet( $sql );
-      #print "$sql<br/>\n";
-    }
-    if ( ! $bar )
-    {
-      # Get priority 2 items that have not been reviewed yet
-      my $sql = "SELECT q.id FROM queue q WHERE q.priority=2 AND q.locked IS NULL AND " .
-                "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM reviews) " .
-                "ORDER BY q.time ASC LIMIT 1";
-      $bar = $self->SimpleSqlGet( $sql );
-      #print "$sql<br/>\n";
-    }
-    my $exclude3 = ($self->IsUserExpert($name))? '':'q.priority<3 AND';
-    if ( ! $bar )
-    {
-      # Find items reviewed once by some other user, preferring priority 2.
-      # Exclude priority 1 some of the time, to 'fool' reviewers into not thinking everything is pd.
-      my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
-      my $sql = "SELECT q.id FROM queue q INNER JOIN reviews r ON q.id=r.id INNER JOIN " .
-                "(SELECT id FROM reviews GROUP BY id HAVING count(*)=1) AS r2 ON r.id=r2.id " .
-                "WHERE $exclude1 $exclude3 q.locked IS NULL AND q.status=0 AND q.expcnt=0 AND r.user!='$name' " .
-                "ORDER BY q.priority DESC, q.time ASC";
-      #print "$sql<br/>\n";
-      my $rows = $self->get('dbh')->selectall_arrayref($sql);
-      my $idx = ($exclude1 eq '')? (rand scalar @{$rows}):0;
-      $bar = $rows->[$idx]->[0];
-    }
-    if ( ! $bar )
-    {
-      # Get the 1st available item that has never been reviewed.
-      my $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q WHERE $exclude3 q.locked IS NULL AND " .
-                "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) " .
-                "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
-      $bar = $self->SimpleSqlGet( $sql );
-      #print "$sql<br/>\n";
-    }
-
-    ## lock before returning
-    my $err = $self->LockItem( $bar, $name );
-    if ($err != 0)
-    {
-        $self->Logit( "failed to lock $bar for $name: $err" );
-        return;
-    }
-    
-    return $bar;
-}
-
-sub GetNextItemFromTrainingQueue
-{
   my $self = shift;
-  
-  my $id = undef;
-  if ($self->GetTrainingMode())
+  my $name = shift;
+
+  my $bar;
+
+  # Only Anne reviews priority 4
+  if ($self->IsUserSuperAdmin($name))
   {
-    my $sql = 'SELECT id FROM training_queue WHERE locked IS NULL AND id NOT IN (SELECT DISTINCT id FROM reviews) ORDER BY seq ASC LIMIT 1';
-    $id = $self->SimpleSqlGet($sql);
+    my $sql = "SELECT id FROM queue WHERE locked IS NULL AND expcnt=0 AND priority>=4 ORDER BY priority DESC, time ASC LIMIT 1";
+    $bar = $self->SimpleSqlGet( $sql );
+    #print "$sql<br/>\n";
   }
-  return $id
-}
-
-# FIXME: 1.8/1.9 compatibility hack.
-sub GetSequentialMode
-{
-  my $self = shift;
-  
-  return $self->GetTrainingMode();
-}
-
-sub GetTrainingMode
-{
-  my $self = shift;
-  
-  my $train = 0;
-  if ($self->get('dev'))
+  # If user is expert, get priority 3 items.
+  if (!$bar && $self->IsUserExpert($name))
   {
-    $train = 1 if $self->SimpleSqlGet('SELECT train FROM systemstatus');
+    my $sql = "SELECT id FROM queue WHERE locked IS NULL AND expcnt=0 AND priority=3 ORDER BY time ASC LIMIT 1";
+    $bar = $self->SimpleSqlGet( $sql );
+    #print "$sql<br/>\n";
   }
-  return $train;
+  if ( ! $bar )
+  {
+    # Get priority > 1 items that have not been reviewed yet
+    my $sql = "SELECT q.id FROM queue q WHERE q.priority>1 AND q.locked IS NULL AND " .
+              "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM reviews) " .
+              "ORDER BY q.time ASC LIMIT 1";
+    $bar = $self->SimpleSqlGet( $sql );
+    #print "$sql<br/>\n";
+  }
+  my $exclude3 = ($self->IsUserExpert($name))? '':'q.priority<3 AND';
+  if ( ! $bar )
+  {
+    # Find items reviewed once by some other user, preferring priority 2.
+    # Exclude priority 1 some of the time, to 'fool' reviewers into not thinking everything is pd.
+    my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
+    my $sql = "SELECT q.id FROM queue q INNER JOIN reviews r ON q.id=r.id INNER JOIN " .
+              "(SELECT id FROM reviews GROUP BY id HAVING count(*)=1) AS r2 ON r.id=r2.id " .
+              "WHERE $exclude1 $exclude3 q.locked IS NULL AND q.status=0 AND q.expcnt=0 AND r.user!='$name' " .
+              "ORDER BY q.priority DESC, q.time ASC";
+    #print "$sql<br/>\n";
+    my $rows = $self->get('dbh')->selectall_arrayref($sql);
+    my $idx = ($exclude1 eq '')? (rand scalar @{$rows}):0;
+    $bar = $rows->[$idx]->[0];
+  }
+  if ( ! $bar )
+  {
+    # Get the 1st available item that has never been reviewed.
+    my $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q WHERE $exclude3 q.locked IS NULL AND " .
+              "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) " .
+              "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
+    $bar = $self->SimpleSqlGet( $sql );
+    #print "$sql<br/>\n";
+  }
+  ## lock before returning
+  my $err = $self->LockItem( $bar, $name );
+  if ($err != 0)
+  {
+    $self->Logit( "failed to lock $bar for $name: $err" );
+    return;
+  }
+  return $bar;
 }
-
-sub ToggleSequentialMode
-{
-  my $self  = shift;
-  
-  # FIXME: change DB to reflect change from 'train(ing)' to 'sequential'.
-  $self->PrepareSubmitSql('UPDATE systemstatus SET train=(!train)');
-}
-
-sub NextSeq
-{
-  my $self  = shift;
-
-  my $sql = 'SELECT seq FROM training_queue WHERE locked IS NULL AND id NOT IN (SELECT DISTINCT id FROM reviews) ORDER BY seq ASC LIMIT 1';
-  return $self->SimpleSqlGet($sql);
-}
-
-sub GetQueuePriorities
-{
-  my $self = shift;
-  
-  my $sql = qq{SELECT count(priority),priority FROM queue GROUP BY priority ASC};
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-  my @return;
-  foreach (@{$ref}) { push @return, sprintf("%d priority %d", $_->[0], $_->[1]); }
-  return @return;
-}
-
-sub GetTopPriority
-{
-  my $self = shift;
-  
-  my $sql = qq{SELECT max(priority) FROM queue};
-  return $self->SimpleSqlGet($sql);
-}
-
-sub GetNextPubYear
-{
-    my $self = shift;
-
-    my $sql = qq{ SELECT pubyear from pubyearcycle};
-    #my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    my $year = $self->SimpleSqlGet( $sql );
-
-    my $nextyear = $year + 1;
-    if ( $nextyear > 1963 )
-    {
-      $nextyear = 1923;
-    }
-
-    my $sql = qq{update pubyearcycle set pubyear=$nextyear};
-    $self->PrepareSubmitSql( $sql );
-
-    return $year;
-}
-
 
 
 sub ItemsReviewedByUser
@@ -5936,15 +5872,28 @@ sub GetReviewsWithStatusNumber
     return 0;
 }
 
+sub StripDecimal
+{
+  my $self = shift;
+  my $dec  = shift;
+  
+  $dec =~ s/(\.[1-9]+)0+/$1/g;
+  $dec =~ s/\.0*$//;
+  return $dec;
+}
+
 sub CreateQueueReport
 {
   my $self = shift;
-  
+  my $dbh = $self->get( 'dbh' );
   my $report = '';
-  my $sql = "SELECT MAX(priority) FROM $CRMSGlobals::queueTable";
-  my $maxpri = $self->SimpleSqlGet( $sql );
   my $priheaders = '';
-  foreach my $pri (0 .. $maxpri) { $priheaders .= "<th>Priority&nbsp;$pri</th>" };
+  my @pris = map {$_->[0]} @{ $dbh->selectall_arrayref('SELECT DISTINCT priority FROM queue ORDER BY priority ASC') };
+  foreach my $pri (@pris)
+  {
+    $pri = $self->StriDpecimal($pri);
+    $priheaders .= "<th>Priority&nbsp;$pri</th>"
+  }
   $report .= "<table style='width:100px;'><tr style='vertical-align:top;'><td>\n";
   $report .= "<h3>Volumes in Queue</h3>\n";
   $report .= "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
@@ -5958,14 +5907,14 @@ sub CreateQueueReport
     $class = ' style="background-color:#999999;"' if $status == 6;
     $report .= sprintf("<tr><td%s>$status%s</td><td%s>$count</td>", $class, ($status == 6)? '*':'', $class);
     $sql = "SELECT id FROM $CRMSGlobals::queueTable $statusClause";
-    $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri,$class);
+    $report .= $self->DoPriorityBreakdown($sql,$class,@pris);
     $report .= "</tr>\n";
   }
-  $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE status=0 AND id NOT IN (SELECT id FROM $CRMSGlobals::reviewsTable)";
+  my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE status=0 AND id NOT IN (SELECT id FROM $CRMSGlobals::reviewsTable)";
   my $count = $self->GetTotalAwaitingReview();
   my $class = ' class="major"';
   $report .= sprintf("<tr><td%s>Not&nbsp;Yet&nbsp;Active</td><td%s>$count</td>", $class, $class);
-  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri,$class);
+  $report .= $self->DoPriorityBreakdown($sql,$class,@pris);
   $report .= "</tr></table>\n";
   $report .= "<span class='smallishText'>Note: includes both active and inactive volumes.</span><br/>\n";
   $report .= "<span class='smallishText'>* Status 6 no longer in use as of 4/19/2010.</span><br/><br/>\n";
@@ -6052,7 +6001,7 @@ sub CreateDeterminationReport()
   $report .= sprintf("<tr><th>Total&nbsp;Legacy&nbsp;Determinations</th><td>%s</td></tr>", $legacy);
   $report .= sprintf("<tr><th>Total&nbsp;Determinations</th><td>%s</td></tr>", $exported + $legacy);
   $report .= "</table>\n";
-  $report .= "<span class='smallishText'>* Note: Status 6 no longer in use as of 4/19/2010.</span>\n";
+  $report .= "<span class='smallishText'>* Status 6 no longer in use as of 4/19/2010.</span>\n";
   return $report;
 }
 
@@ -6075,77 +6024,80 @@ sub CreateReviewReport
   my $dbh = $self->get( 'dbh' );
   
   my $report = '';
-  my $sql = qq{ SELECT MAX(priority) FROM $CRMSGlobals::queueTable};
-  my $maxpri = $self->SimpleSqlGet( $sql );
   my $priheaders = '';
-  foreach my $pri (0 .. $maxpri) { $priheaders .= "<th>Priority&nbsp;$pri</th>" };
+  my @pris = map {$_->[0]} @{ $dbh->selectall_arrayref('SELECT DISTINCT priority FROM queue ORDER BY priority ASC') };
+  foreach my $pri (@pris)
+  {
+    $pri = $self->StripDecimal($pri);
+    $priheaders .= "<th>Priority&nbsp;$pri</th>"
+  }
   $report .= "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
   
   my $sql = 'SELECT DISTINCT id FROM reviews';
   my $rows = $dbh->selectall_arrayref( $sql );
   my $count = scalar @{$rows};
   $report .= "<tr><td class='total'>Active</td><td class='total'>$count</td>";
-  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri,' class="total"') . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($sql,' class="total"',@pris) . "</tr>\n";
   
   # Unprocessed
   $sql = 'SELECT id FROM queue WHERE status=0 AND pending_status>0';
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td class='minor'>Unprocessed</td><td class='minor'>$count</td>";
-  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri,' class="minor"') . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($sql,' class="minor"',@pris) . "</tr>\n";
   
   # Unprocessed - single review
   $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=1";
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Single&nbsp;Review</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
   
   # Unprocessed - match
   $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=4";
   my $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Matches</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
   
   # Unprocessed - conflict
   $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=2";
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflicts</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
   
   # Unprocessed - matching und/nfi
   $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=3";
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Matches</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
   
   # Processed
   $sql = 'SELECT id FROM queue WHERE status!=0';
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td class='minor'>Processed</td><td class='minor'>$count</td>";
-  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri,' class="minor"') . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($sql,' class="minor"',@pris) . "</tr>\n";
   
   $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=2";
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflicts</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
 
   $sql = 'SELECT id from queue WHERE status=3';
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Matches</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
   
   $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=4 OR status=5 OR status=6 OR status=7";
   $rows = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$rows};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Awaiting&nbsp;Export</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
   
   if ($count > 0)
   {
@@ -6153,52 +6105,45 @@ sub CreateReviewReport
     $rows = $dbh->selectall_arrayref( $sql );
     $count = scalar @{$rows};
     $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</td><td>$count</td>";
-    $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+    $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
 
     $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=5";
     $rows = $dbh->selectall_arrayref( $sql );
     $count = scalar @{$rows};
     $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</td><td>$count</td>";
-    $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+    $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
 
     $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=6";
     $rows = $dbh->selectall_arrayref( $sql );
     $count = scalar @{$rows};
     $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6</td><td>$count</td>";
-    $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+    $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
     
     $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=7";
     $rows = $dbh->selectall_arrayref( $sql );
     $count = scalar @{$rows};
     $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;7</td><td>$count</td>";
-    $report .= $self->DoPriorityBreakdown($count,$sql,$maxpri) . "</tr>\n";
+    $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
   }
-  $report .= sprintf("<tr><td colspan='%d'><span class='smallishText'>Last processed %s</span></td></tr>\n", $maxpri+3, $self->GetLastStatusProcessedTime());
+  $report .= sprintf("<tr><td colspan='%d'><span class='smallishText'>Last processed %s</span></td></tr>\n", 2+scalar @pris, $self->GetLastStatusProcessedTime());
   $report .= "</table>\n";
   return $report;
 }
 
 sub DoPriorityBreakdown
 {
-  my $self = shift;
-  my $count = shift;
-  my $sql = shift;
-  my $max = shift;
+  my $self  = shift;
+  my $sql   = shift;
   my $class = shift;
-  my $dbh = $self->get( 'dbh' );
-  my @breakdown = map {'';} (0..$max);
-  $sql = "SELECT priority,COUNT(priority) FROM queue WHERE id IN ($sql) GROUP BY priority ORDER BY priority ASC";
-  my $rows = $dbh->selectall_arrayref( $sql );
-  foreach my $row ( @{$rows} )
+  
+  my %breakdown;
+  foreach my $pri (@_)
   {
-    my $pri = $row->[0];
-    my $n = $row->[1];
-    my $pct = 0.0;
-    eval {$pct = $n/$count*100.0;};
-    #$breakdown[$pri] = sprintf('%d&nbsp;(%.1f%%)', $n, $pct);
-    $breakdown[$pri] = $n;
+    my $sql2 = "SELECT COUNT(*) FROM queue WHERE priority=$pri AND id IN ($sql)";
+    $breakdown{$pri} = $self->SimpleSqlGet($sql2);
   }
-  return join '',map {"<td$class>$_</td>"} @breakdown;
+  my $ret = join '',map {sprintf "<td$class>%s</td>", $breakdown{$_}} sort keys %breakdown;
+  return $ret;
 }
 
 
@@ -6939,5 +6884,14 @@ sub WhereAmI
   return 'Moses Dev' if $dev eq 'moseshll';
   return 'Dev';
 }
+
+sub IsTrainingArea
+{
+  my $self = shift;
+  
+  my $where = $self->WhereAmI();
+  return ($where eq 'Training Area' || $where eq 'Moses Dev');
+}
+
 
 1;
