@@ -1052,7 +1052,7 @@ sub CloneReview
   {
     my $sql = "SELECT attr,reason FROM reviews WHERE id='$id'";
     my $rows = $self->get('dbh')->selectall_arrayref($sql);
-    $result = $self->SubmitReview($id,$user,$rows->[0]->[0],$rows->[0]->[1],undef,undef,undef,1,undef,'Expert Accepted');
+    $result = $self->SubmitReview($id,$user,$rows->[0]->[0],$rows->[0]->[1],undef,undef,1,undef,'Expert Accepted');
     $result = ($result == 0)? "Could not approve review for $id":undef;
   }
   $self->UnlockItem($id, $user);
@@ -2569,7 +2569,7 @@ sub GetQueueRef
   elsif ($order eq 'holds') { $order = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold IS NOT NULL)'; }
   elsif ($order eq 'presented')
   {
-    $order = sprintf "q.priority $dir, q.time %s", ($dir eq 'DESC')? 'ASC':'DESC';
+    $order = sprintf "q.priority $dir, (SELECT COUNT(*) FROM reviews WHERE id=q.id) DESC, q.status DESC, q.time %s", ($dir eq 'DESC')? 'ASC':'DESC';
     $dir = '';
   }
   else { $order = 'q.' . $order; }
@@ -5487,70 +5487,47 @@ sub HasItemBeenReviewedByUser
 sub GetNextItemForReview
 {
   my $self = shift;
-  my $name = shift;
-
-  my $bar;
-
-  # Only Anne reviews priority 4
-  if ($self->IsUserSuperAdmin($name))
+  my $user = shift;
+  
+  my $id = undef;
+  eval{
+  
+  my $exclude = 'q.priority<3 AND';
+  if ($self->IsUserSuperAdmin($user))
   {
-    my $sql = "SELECT id FROM queue WHERE locked IS NULL AND expcnt=0 AND priority>=4 ORDER BY priority DESC, time ASC LIMIT 1";
-    $bar = $self->SimpleSqlGet( $sql );
-    #print "$sql<br/>\n";
+    # Only Anne reviews priority 4
+    $exclude = '';
   }
   # If user is expert, get priority 3 items.
-  if (!$bar && $self->IsUserExpert($name))
+  elsif ($self->IsUserExpert($user))
   {
-    my $sql = "SELECT id FROM queue WHERE locked IS NULL AND expcnt=0 AND priority=3 ORDER BY time ASC LIMIT 1";
-    $bar = $self->SimpleSqlGet( $sql );
-    #print "$sql<br/>\n";
+    $exclude = 'q.priority<4 AND';
   }
-  if ( ! $bar )
+  my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
+  my $sql = "SELECT q.id FROM queue q WHERE $exclude $exclude1 q.expcnt=0 AND q.locked IS NULL " .
+            'ORDER BY q.priority DESC, (SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) DESC, q.time ASC';
+  #print "$sql<br/>\n";
+  my $ref = $self->get('dbh')->selectall_arrayref($sql);
+  foreach my $row ( @{$ref} )
   {
-    # Get priority 2 items that have not been reviewed yet
-    my $sql = "SELECT q.id FROM queue q WHERE q.priority=2 AND q.locked IS NULL AND " .
-              "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM reviews) " .
-              "ORDER BY q.time ASC LIMIT 1";
-    $bar = $self->SimpleSqlGet( $sql );
-    #print "$sql<br/>\n";
-  }
-  my $exclude3 = ($self->IsUserExpert($name))? '':'q.priority<3 AND';
-  if ( ! $bar )
-  {
-    # Find items reviewed once by some other user, preferring priority 2.
-    # Exclude priority 1 some of the time, to 'fool' reviewers into not thinking everything is pd.
-    my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
-    #my $sql = "SELECT q.id FROM queue q INNER JOIN reviews r ON q.id=r.id INNER JOIN " .
-    #          "(SELECT id FROM reviews GROUP BY id HAVING count(*)=1) AS r2 ON r.id=r2.id " .
-    #          "WHERE $exclude1 $exclude3 q.locked IS NULL AND q.status=0 AND q.expcnt=0 AND r.user!='$name' " .
-    #          "ORDER BY q.priority DESC, q.time ASC";
-    #print "$sql<br/>\n";
-    #my $rows = $self->get('dbh')->selectall_arrayref($sql);
-    #my $idx = ($exclude1 eq '')? (rand scalar @{$rows}):0;
-    #$bar = $rows->[$idx]->[0];
-    my $sql = "SELECT q.id FROM queue q INNER JOIN reviews r ON q.id=r.id INNER JOIN " .
-              "(SELECT id FROM reviews GROUP BY id HAVING count(*)=1) AS r2 ON r.id=r2.id " .
-              "WHERE $exclude1 $exclude3 q.locked IS NULL AND q.status=0 AND q.expcnt=0 AND r.user!='$name' " .
-              "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
-    $bar = $self->SimpleSqlGet( $sql );
-  }
-  if ( ! $bar )
-  {
-    # Get the 1st available item that has never been reviewed.
-    my $sql = "SELECT q.id FROM $CRMSGlobals::queueTable q WHERE $exclude3 q.locked IS NULL AND " .
-              "q.status=0 AND q.expcnt=0 AND q.id NOT IN (SELECT DISTINCT id FROM $CRMSGlobals::reviewsTable) " .
-              "ORDER BY q.priority DESC, q.time ASC LIMIT 1";
-    $bar = $self->SimpleSqlGet( $sql );
-    #print "$sql<br/>\n";
+    my $id2 = $row->[0];
+    $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user='$user'";
+    next if $self->SimpleSqlGet($sql);
+    $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id2'";
+    next if $self->SimpleSqlGet($sql) > 1;
+    $id = $id2;
+    last;
   }
   ## lock before returning
-  my $err = $self->LockItem( $bar, $name );
+  my $err = $self->LockItem( $id, $user );
   if ($err != 0)
   {
-    $self->Logit( "failed to lock $bar for $name: $err" );
+    $self->Logit( "failed to lock $id for $user: $err" );
     return;
   }
-  return $bar;
+  };
+  $self->SetError($@) if $@;
+  return $id;
 }
 
 
