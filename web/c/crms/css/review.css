@@ -386,6 +386,28 @@ input.review {
   font-weight:bold;
 }
 
+a.tip {
+  position:relative; /*this is the key*/
+  z-index:24;
+  text-decoration:none
+}
+
+a.tip:hover {z-index:25;}
+
+a.tip span{display:none;}
+
+a.tip:hover span {
+  padding:.5em;
+  display:block;
+  position:absolute;
+  top:1em; left:1em; width:30em;
+  border:1px solid #000000;
+  text-align:left;
+  color:#000000;
+  background-color:#FFFFFF;
+}
+
+
 /* ================================================================ 
 This copyright notice must be untouched at all times.
  
