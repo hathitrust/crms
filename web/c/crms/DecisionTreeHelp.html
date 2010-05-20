@@ -1,0 +1,596 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>Decision Tree Help</title>
+<style type="text/css">
+<!--table {}
+.font0
+	{color:black;
+	font-size:11.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:none;
+	font-family:Calibri, sans-serif;}
+.font6
+	{color:black;
+	font-size:11.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:none;
+	font-family:Calibri, sans-serif;}
+.font7
+	{color:black;
+	font-size:11.0pt;
+	font-weight:700;
+	font-style:normal;
+	text-decoration:none;
+	font-family:Calibri;}
+.font11
+	{color:black;
+	font-size:11.0pt;
+	font-weight:400;
+	font-style:italic;
+	text-decoration:none;
+	font-family:Calibri, sans-serif;}
+.font12
+	{color:black;
+	font-size:11.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:underline;
+	text-underline-style:single;
+	font-family:Calibri, sans-serif;}
+.font13
+	{color:#DD0806;
+	font-size:11.0pt;
+	font-weight:700;
+	font-style:normal;
+	text-decoration:none;
+	font-family:Calibri, sans-serif;}
+.font14
+	{color:black;
+	font-size:11.0pt;
+	font-weight:700;
+	font-style:normal;
+	text-decoration:none;
+	font-family:Calibri;}
+.font15
+	{color:black;
+	font-size:12.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:none;
+	font-family:Calibri, sans-serif;}
+.font16
+	{color:black;
+	font-size:11.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:underline;
+	text-underline-style:single;
+	font-family:Calibri, sans-serif;}
+.font17
+	{color:black;
+	font-size:12.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:none;
+	font-family:Calibri, sans-serif;}
+.style16
+	{color:#0000D4;
+	font-size:11.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:underline;
+	text-underline-style:single;
+	font-family:Calibri, sans-serif;}
+a:link
+	{color:#0000D4;
+	font-size:11.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:underline;
+	text-underline-style:single;
+	font-family:Calibri, sans-serif;}
+a:visited
+	{color:#993366;
+	font-size:11.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:underline;
+	text-underline-style:single;
+	font-family:Calibri, sans-serif;}
+.style0
+	{text-align:general;
+	vertical-align:bottom;
+	white-space:nowrap;
+	color:black;
+	font-size:11.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:none;
+	font-family:Calibri, sans-serif;
+	border:none;}
+td
+	{padding:0.5em;
+	color:black;
+	font-size:11.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:none;
+	font-family:Calibri, sans-serif;
+	text-align:general;
+	vertical-align:bottom;
+	border:none;
+	white-space:nowrap;}
+.xl24
+	{vertical-align:top;
+	border:.5pt solid windowtext;
+	white-space:normal;}
+.xl25
+	{font-weight:700;
+	font-family:Calibri;
+	vertical-align:top;
+	white-space:normal;}
+.xl26
+	{vertical-align:top;
+	white-space:normal;}
+.xl27
+	{color:#0000D4;
+	text-decoration:underline;
+	text-underline-style:single;}
+.xl28
+	{font-size:14.0pt;
+	font-weight:700;
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	background:silver;
+	white-space:normal;}
+.xl29
+	{font-size:12.0pt;
+	font-weight:700;
+	text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	background:#99CCFF;
+	white-space:normal;}
+.xl30
+	{text-align:center;
+	vertical-align:middle;
+	border:.5pt solid windowtext;
+	white-space:normal;}
+.xl31
+	{text-align:left;
+	vertical-align:top;
+	white-space:normal;}
+.xl32
+	{text-align:left;
+	vertical-align:top;
+	border:.5pt solid windowtext;
+	white-space:normal;}
+.xl33
+	{font-size:12.0pt;
+	text-align:left;
+	vertical-align:top;
+	border:.5pt solid windowtext;
+	white-space:normal;}
+ruby
+	{ruby-align:left;}
+rt
+	{color:windowtext;
+	font-size:8.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:none;
+	font-family:Verdana;
+	display:none;}
+-->
+</style>
+</head>
+
+<body>
+<h2>Decision Tree Help  <span class="smallishText">ver. 5/20/10 </span></h2>
+<a href="/c/crms/pdf/DecisionTreeHelp.pdf">Printable PDF Version</a><br/><br/>
+<table style="border:1px solid black;border-collapse:collapse;">
+ <tr class="xl25" >
+  <td  class="xl29" ><a name="Print_Area">Step</a></td>
+  <td class="xl29" >Sequence of Copyright Investigation</td>
+  <td class="xl29" >Description</td>
+  <td class="xl29" style="width:20%">Explanation</td>
+  <td class="xl29" >Instructions</td>
+  <td class="xl29" >Instructions for<br/>
+   Note Text</td>
+  <td class="xl29" >Note Text Examples</td>
+  <td class="xl29" >Examples in Historical Reviews</td>
+ </tr>
+ <tr >
+  <td  class="xl28" >1</td>
+  <td class="xl30" >Wrong Record </td>
+  <td class="xl24" >Digitized work is linked from wrong bib record.
+  Check to make sure bibliographic info/Catalog record matches Info on
+  digitized work, e.g., title page, verso, etc.  (Note: if date of volume is
+  different than date on piece, but title matches, it could the work is part of
+  a multi-volume set - see Publication Date)</td>
+  <td class="xl24" >URL for the digitized work somehow got associated
+  with the wrong bibliographic record and must be corrected.</td>
+  <td class="xl24" >1. Code: <font class="font7">und/nfi<br/>
+  </font><font
+  class="font6">Note Category: </font><font class="font7">Wrong Record<br/>
+  <br/>
+  </font><font
+  class="font0">2. report problem to mdpCorrections@umich.edu. </font></td>
+  <td class="xl24" >Note that problem was reported and include info on
+  mismatch, including the title or other information that appears on the
+  digitized piece/page images.</td>
+  <td class="xl24" ><font class="font6">•</font><font class="font0">Title
+  page: Jacqueline by Th. Bentzon (Mme. Blanc) - reported to
+  MDPCorrections.<br/>
+  </font><font class="font6">•</font><font class="font0">Images
+  of a book by Wilhelm Pieck entitled &quot;Deutschland unter dem
+  Hitlerfaschismus.&quot; Reported.</font></td>
+  <td class="xl24" ><a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=uc1.b30173;attr=1">uc1.b30173</a>  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015010463845;attr=1">mdp.39015010463845</a>
+  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015003684076;attr=1">mdp.39015003684076</a></td>
+ </tr>
+ <tr >
+  <td  class="xl28" >2</td>
+  <td class="xl30" >Language/Script</td>
+  <td class="xl24" >Language or script not comprehensible to reviewer</td>
+  <td class="xl24" >If reviewer can't read/understand text we cannot
+  make a reliable determination.</td>
+  <td class="xl24" >Code: <font class="font7">und/nfi <br/>
+  </font><font
+  class="font6">Note Category:</font><font class="font7"> Language</font></td>
+  <td class="xl24" >Note language if known (check Mirlyn or HT Catalog
+  Record for info)</td>
+  <td class="xl24" >German; <br/>
+  Arabic</td>
+  <td class="xl24" ><a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=wu.89101488328;attr=1">wu.89101488328</a> <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=wu.89099316341;attr=1">wu.89099316341</a></td>
+</tr>
+ <tr >
+  <td  class="xl28" >3</td>
+  <td class="xl30" >Missing Pages/Illegibility</td>
+  <td class="xl24" >Portions or all of title page and/or verso are
+  either not present or not readable (e.g., blurry).</td>
+  <td class="xl24" >Missing info could exclude or obscure relevant
+  publication or copyright information.</td>
+  <td class="xl24" >Code: <font class="font7">und/nfi<br/>
+  </font><font
+  class="font0">Note Category: </font><font class="font7">Missing</font></td>
+  <td class="xl24" >Note missing or illegible item </td>
+  <td class="xl24" >tp;<br/>
+  tp/verso; <br/>
+  full title page</td>
+  <td class="xl24" ><a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=wu.89104411277;attr=1">wu.89104411277</a> <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=uc1.b3875160;attr=1">uc1.b3875160</a></td>
+ </tr>
+ <tr >
+  <td  class="xl28" >4</td>
+  <td class="xl30" >Dissertation or Thesis</td>
+  <td class="xl24" >Work is an original, photocopy of original,  or
+  published version of a thesis or dissertation submitted by author in
+  fulfillment of degree requirements. </td>
+  <td class="xl24" >Dissertations and Theses often involve questionable 
+  publication status. </td>
+  <td class="xl24" >Code:<font class="font7"> und/nfi<br/>
+  </font><font
+  class="font6">Note Category:</font><font class="font7"> Dissertation/Thesis</font></td>
+  <td class="xl24" >Note if includes copyright notice on piece; check
+  Stanford database and note if renewal found</td>
+  <td class="xl24" >•Includes notice/no renewal;<br/>
+  •No copyright notice; no renewal</td>
+  <td class="xl24" ><a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015031328100;attr=1">mdp.39015031328100</a> <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=uc1.b50795;attr=1">uc1.b50795</a></td>
+ </tr>
+ <tr >
+  <td  class="xl28" >5</td>
+  <td class="xl30" >Periodical</td>
+  <td class="xl24" >Info on cover/title page/verso indicates work is a
+  serial publication or periodical, possibly an extracted volume cataloged as a
+  monograph. Terms to watch out for: Journal; Magazine; Bulletin. Look for some
+  indication of periodicity (e.g., seasons, months, years). The presence of a
+  number on a work, by itself, does not qualify the work as a periodical (e.g.,
+  numbered monographic series are not likely to be registered/qualify as
+  periodicals for purposes of copyright review.</td>
+  <td class="xl24" >Periodicals can include separately copyrighted
+  works. Also works registered and renewed as periodicals (or contributions to
+  periodicals) would not be not included in the Stanford Renewal Database.</td>
+  <td class="xl24" >Code: <font class="font7">und/nfi<br/>
+  </font><font
+  class="font6">Note Category: </font><font class="font7">Periodical</font></td>
+  <td class="xl24" >Note title, vol., issue, date (if known), and any
+  other pertinent details</td>
+  <td class="xl24" >•R.N.: May 1948 v.11, no.8;<br/>
+  •American Antiquity v.22 no.4 pt.2 1957; <br/>
+  •Reprinted from The Modern Language Journal Vol. XII, No. 7, April,
+  1928;<br/>
+  •Reprinted from the Chicago Daily News - 1941, dispatches</td>
+  <td class="xl24" ><a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=uc2.ark:/13960/t9474pt3x;attr=1">uc2.ark:/13960/t9474pt3x</a> <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=wu.89058375668;attr=1">wu.89058375668</a> 
+  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=wu.89053908281;attr=1">wu.89053908281</a>  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=wu.89005534557;attr=1">wu.89005534557</a></td>
+</tr>
+ <tr >
+  <td  class="xl28" >6</td>
+  <td class="xl30" >Foreign Work</td>
+  <td class="xl24" >Evidence that work in hand is a foreign publication
+  (primary place of publication on piece is not US); or  was first/previously
+  published outside US.</td>
+  <td class="xl24" >Foreign works are not necessarily subject to US
+  copyright formalities and require additional information to properly assess
+  status. </td>
+  <td class="xl24" >Code: <font class="font7">und/nfi<br/>
+  </font><font
+  class="font6">Note Category: </font><font class="font7">Foreign Pub</font></td>
+  <td class="xl24" >Note country and date of publication (if known), and
+  any other pertinent details</td>
+  <td class="xl24" ><font class="font6">•</font><font class="font0">London -
+  1922; <br/>
+  </font><font class="font6">•</font><font class="font0">Basel, 1961;
+  3rd manuscript version first published in Florence, Italy 1928; <br/>
+  </font><font
+  class="font6">•</font><font class="font0">Looks like possible previous UK
+  ed.;<br/>
+  </font><font class="font6">•</font><font class="font0">Prev. ed.(s):
+  Toronto? 1919? and UK 1914?--p.xii; <br/>
+  </font><font class="font6">•</font><font
+  class="font0">1957, Munich Hanns Reich Verlag.</font></td>
+  <td class="xl24" ><a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=inu.30000005339159;attr=1">inu.30000005339159</a>  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015000839905;attr=1">mdp.39015000839905</a> 
+  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=wu.89096217401;attr=1">wu.89096217401</a> <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015030046281;attr=1">mdp.39015030046281</a></td>
+ </tr>
+ <tr >
+  <td  class="xl28" >7</td>
+  <td class="xl30" >Translation</td>
+  <td class="xl24" >Work is an English translation of a work originally
+  published in a different language possibly first /previously outside the
+  United States.</td>
+  <td class="xl24" >Translations are complex because they involve
+  assessing the status of the various underlying works, one or more of which is
+  likely to be a foreign work (see above)</td>
+  <td class="xl24" >Code: <font class="font7">und/nfi<br/>
+  </font><font
+  class="font6">Note Category: </font><font class="font7">Translation</font></td>
+  <td class="xl24" >Note original country, language, date of
+  publication, title of original work (if known), and any other pertinent
+  details</td>
+  <td class="xl24" ><font class="font6">•</font><font class="font0">France /
+  1911?; <br/>
+  </font><font class="font6">•</font><font class="font0">From
+  Russian. Date: 1916-1917.;<br/>
+  </font><font class="font6">•</font><font
+  class="font0">&quot;I have made new translations of all passages which I have
+  quoted from Nietzsche's writings and from the letters of his
+  friends.&quot;--Pref. note;<br/>
+  </font><font class="font6">•</font><font
+  class="font0">from Hungarian, original publ. in 1941 or after?--p.12</font></td>
+  <td class="xl24" ><a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015026765795;attr=1">mdp.39015026765795</a>  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015008505136;attr=1">mdp.39015008505136</a> 
+  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015026467715;attr=1">mdp.39015026467715</a>  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=uc1.b136205;attr=1">uc1.b136205</a>  </td>
+ </tr>
+ <tr >
+  <td  class="xl28" >8</td>
+  <td class="xl30" >Publication Date pre-1923</td>
+  <td class="xl24" >Title page/verso or other frontmatter indicates work
+  was published prior to 1923 (in the US). Note: if there is only a copyright
+  date listed, and no date of publication, consider the copyright date as date
+  of publication. </td>
+  <td class="xl24" >Works published prior to 1923 in the US are in the
+  public domain</td>
+  <td class="xl24" >Code:<font class="font7"> pd/cdpp<br/>
+  </font><font
+  class="font6">Note Category: </font><font class="font7">Date</font></td>
+  <td class="xl24" >Note actual publication date as printed on the
+  piece. (If there is only a copyright date, cite the copyright date.  Use
+  &quot;c&quot; in front of copyright date. See example.)</td>
+  <td class="xl24" ><font class="font6">•</font><font class="font0">pub 1912
+  / 1919 printing; <br/>
+  </font><font class="font6">•</font><font class="font0">c1917;
+  1921 only date on pub; </font></td>
+  <td class="xl24" ><a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=uc2.ark:/13960/t59c6xv9r;attr=1">uc2.ark:/13960/t59c6xv9r</a> 
+  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=uc2.ark:/13960/t2n58j74p;attr=1">uc2.ark:/13960/t2n58j74p</a>  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=wu.89100443472;attr=1">wu.89100443472</a>  </td>
+ </tr>
+ <tr >
+  <td  class="xl28" >9</td>
+  <td class="xl30" >Publication Date post-1963 </td>
+  <td class="xl24" >Title page/verso or other frontmatter indicates work
+  was published 1964 or later. This situation may also  arise when a volume is
+  part of a multivolume set (all on one bib record), as the date displayed will
+  be for the first volume in the set, so the volume being reviewed may have a
+  later publication date outside the range of 1923-1963.  Note: if there is
+  only a copyright date listed, and no date of publication, consider the
+  copyright date as date of publication. </td>
+  <td class="xl24" >Works published after 1963 in the US are not subject
+  to the renewal requirement, so should be considered in copyright. </td>
+  <td class="xl24" >Code: <font class="font7">ic/cdpp<br/>
+  </font><font
+  class="font6">Note Category:</font><font class="font7">Date</font></td>
+  <td class="xl24" >Note actual publication date as printed on the
+  piece. (If there is only a copyright date, cite the copyright date.) If the
+  work is part of a multivolume set, note the volume number. Use &quot;c&quot;
+  in front of copyright date. See example.</td>
+  <td class="xl24" >•1966 pub;<br/>
+  •1990; c1973 (v.14)</td>
+  <td class="xl24" ><a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015039456721;attr=1">mdp.39015039456721</a>  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=inu.30000000233266;attr=1">inu.30000000233266</a>  </td>
+ </tr>
+ <tr >
+  <td  class="xl28" >10</td>
+  <td class="xl30" >Not Class A* </td>
+  <td class="xl24" >Work is a standalone work or includes such works
+  that would not be in the Stanford Renewal Database. Examine title page, title
+  page. Verso , preface, and introduction for indication that work is or
+  includes any of the following:serials/periodicals; contributions to
+  periodicals (articles), addresses for oral delivery (i.e. lectures, sermons,
+  speeches); dramatic works (i.e. plays), musical works; music scores; song
+  lyrics, maps and atlases; and works of art, which includes art reproductions,
+  scientific and technical drawings, photographic works, prints, and pictorial
+  illustrations (*I created separate document - can we link to it?)</td>
+  <td class="xl24" >We cannot determine whether the copyright was
+  renewed if it is a work that would not be included in the Stanford database.</td>
+  <td class="xl24" >Code: <font class="font7">und/nfi<br/>
+  </font><font
+  class="font6">Note Category: </font><font class="font7">Not Class A</font></td>
+  <td class="xl24" >Note type of material</td>
+  <td class="xl24" >play; <br/>
+  opera libretto; play/musical; <br/>
+  lecture</td>
+  <td class="xl24" ><a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=inu.30000004427906;attr=1">inu.30000004427906</a>  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015009771133;attr=1">mdp.39015009771133</a> 
+  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015070678175;attr=1">mdp.39015070678175</a>  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=wu.89007250111;attr=1">wu.89007250111</a></td>
+ </tr>
+ <tr >
+  <td  class="xl28" >11</td>
+  <td class="xl30" >Inserts</td>
+  <td class="xl24" >Work is a collection of works, or includes works
+  likely to be separately  copyrighted (Class A or Not Class A). Examples might
+  include works previously published in other works, credited photos, items for
+  which permission was granted to include, edited work with works by multiple
+  authors, conference/symposium proceedings, art publications. Note: it is
+  understood there may be some overlap here with the use of &quot;Not Class
+  A.&quot;</td>
+  <td class="xl24" >We would not be able to determine the status without
+  checking copyright in all the underlying works. </td>
+  <td class="xl24" >Code: <font class="font7">und/nfi<br/>
+  </font><font
+  class="font6">Note Category: </font><font class="font7">Inserts</font></td>
+  <td class="xl24" >Note type of works, and if info about works was
+  found somewhere other than tp/verso/toc, indicate where it was found (e.g., 
+  foreward, preface or intro) <font class="font13">and please include page number</font>
+  <font class="font6">(you do not need to copy the text into the note field - just summarize please)</font></td>
+  <td class="xl24" >poems;  multiple authors; acknowledgments on the
+  first page of each selection;  photo credits on the copyright page;
+  acknowledgment of works used by permission of the publishers:
+  &quot;Expression'Gymnastics,&quot; by Rudolf Bode, published by A. S. Barnes
+  &amp;  Co. ...</td>
+  <td class="xl24" ><a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015059417793;attr=1">mdp.39015059417793</a>  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=inu.30000005347871;attr=1">inu.30000005347871</a> 
+  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=inu.30000001739402;attr=1">inu.30000001739402</a>  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015006580081;attr=1">mdp.39015006580081</a></td>
+ </tr>
+ <tr >
+  <td  class="xl28" >12</td>
+  <td class="xl30" >Work based on previous work: no new material added
+  (Reprint)</td>
+  <td class="xl24" >title page/verso indicates the whole work is a
+  straight reprint or photocopy (e.g., microfilm facsimile) of a previously
+  published work (straight reprint = no new material added to original
+  publication such as updated intro, preface, notes, etc.)</td>
+  <td class="xl24" >We can base our determination on copyright status of
+  original work and ignore the date when the reprint/photocopy was produced.</td>
+  <td class="xl24" >1. If original is pre-1923:<br/>
+  Code:<font
+  class="font7"> pd/cdpp</font><font class="font0">; <br/>
+  Note Category: </font><font
+  class="font7">Reprint<br/>
+  <br/>
+  </font><font class="font0">2. If original date
+  is unclear: Code: </font><font class="font7">und/nfi<br/>
+  </font><font
+  class="font6">NoteCategory:</font><font class="font7"> Reprint<br/>
+   <br/>
+  </font><font
+  class="font6">3. If original date is 1923-1963, check for renewal  of original
+  work and code </font><font class="font7">ic/ren </font><font class="font6">or </font><font
+  class="font7">pd/ren </font><font class="font11">(See step 15 and 16</font><font
+  class="font7">); Reprint </font><font class="font12">(NOTE: If you notice at this
+  point that the  previously published work is a periodical, translation,
+  foreign work, Not Class A, etc. - follow appropriate instructions above.)</font></td>
+  <td class="xl24" >Note original date of publication (or in absence of
+  pub date, copyright date) if known; please also note if work is a
+  photocopy/facsimile </td>
+  <td class="xl24" >Orig pub 1892; Reprinted from 1846 ed.; Reprint of
+  1899 pub;  straight reprint of a 1947 work - no renewal for the original.</td>
+  <td class="xl24" ><a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=uc1.b4406347;attr=1">uc1.b4406347</a>  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015064375572;attr=1">mdp.39015064375572</a> 
+  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015005398162;attr=1">mdp.39015005398162</a>  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015042766553;attr=1">mdp.39015042766553</a></td>
+ </tr>
+ <tr >
+  <td  class="xl28" >13</td>
+  <td class="xl30" >Work based on previous work: new material added
+  (Edition)</td>
+  <td class="xl24" >T.p/verso indicate work is a new edition of a
+  previously published work (not necessarily with the same title), or there is
+  indication that the work is based on an earlier work and new material (e.g.,
+  introduction, preface, forward) has been added or the contents has been
+  updated or revised.</td>
+  <td class="xl24" >We must base our final determination on the renewal
+  status of both the original work and the new work</td>
+  <td class="xl24" >1. Check for renewal of work in hand, if renewal is
+  found, enter renewal id and date, code <font class="font7">ic/ren.<br/>
+  </font><font
+  class="font0">2. If renewal not found for work in hand, check for renewal of
+  any works published previously (but no earlier than 1923) upon which the work
+  in hand is based.     a) If no renewal found, code </font><font class="font7">pd/ren.<br/>
+   </font><font
+  class="font6">b) If renewal is found for previous work, </font>
+<font class="font0">enter renewal ID, get date, code</font><font
+  class="font7"> ic/ren; Edition. <br/>
+  </font><font class="font6">(Renewals in
+  works published </font><font class="font7">subsequent</font><font class="font6">
+  to work in hand are irrelevant to status of the earlier work so can be
+  ignored.) (</font><font class="font12">NOTE: If you notice at this point that
+  the  previously published work is a periodical, translation, foreign work,
+  Not Class A, etc. - follow appropriate instructions above.</font><font
+  class="font6">)</font></td>
+  <td class="xl32" >N/A except in the case of 2b, note that renewal is
+  for a previous edition or work and provide pub date of work for which a
+  renewal was found.</td>
+  <td class="xl32" >Example for case 2a: original 1921, no renewal for
+  1924 edition;<br/>
+  &nbsp;Examples for case 2b: &nbsp;1942 edition renewed; previous edition
+  (1925) renewed; renewal identified for 1951 edition; &nbsp;copyright is for
+  the &quot;Fighting Forces ed&quot; c1945 ; &nbsp;&nbsp;&nbsp;</td>
+  <td class="xl32" >&nbsp;1. <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=inu.30000005070887;attr=1">inu.30000005070887</a> (ic/ren work in
+  hand)<br/>
+  2a. <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015018604119;attr=1">mdp.39015018604119</a> (pd no renewal for workin hand or earlier
+  work)<br/>
+  2b. <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=uc1.b4339538;attr=1">uc1.b4339538</a> &nbsp;<a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015069594177;attr=1">mdp.39015069594177</a> &nbsp;<a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=wu.89102054061;attr=1">wu.89102054061</a>
+  &nbsp;</td>
+ </tr>
+ <tr >
+  <td  class="xl28" >14</td>
+  <td class="xl30" >No Renewal in Stanford DB</td>
+  <td class="xl24" >No matching renewal record was located in the
+  Stanford Renewal Database for the work in hand, or where applicable, for an
+  earlier work upon which the work in hand is based. Note: renewal date must be
+   1950 or later</td>
+  <td class="xl24" >If copyright in the work in hand, and where
+  applicable, the corresponding underlying work , were not renewed, the work is
+  in the public domain</td>
+  <td class="xl31" >Check Stanford Renewal Database for renewal. If not
+  found code <font class="font14">pd/ren. </font><font class="font0">If renewal is
+  found, check for copyright notice (see step 16). &nbsp;Note: renewal date
+  must be &nbsp;1950 or later &nbsp;</font></td>
+  <td class="xl24" >N/A</td>
+  <td class="xl24" >N/A</td>
+  <td class="xl24" ><a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=inu.30000007165057;attr=1">inu.30000007165057</a><br/>
+  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=mdp.39015001338576;attr=1">mdp.39015001338576</a><br/>
+  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=inu.30000007100302;attr=1">inu.30000007100302</a></td>
+ </tr>
+ <tr >
+  <td  class="xl28" >15</td>
+  <td class="xl30" >Renewal found in Stanford DB; check for copyright
+  notice as last resort</td>
+  <td class="xl24" >Renewal located for work in hand but there is no
+  copyright notice visible anywhere on the piece. <br/>
+  <br/>
+  The copyright notice <font
+  class="font16">must have</font><font class="font0"> the symbol © or the word
+  Copyright (or its abbreviation Copr.) followed by the date, and the name of
+  the copyright holder.</font></td>
+  <td class="xl24" >If the work was renewed but there is no copyright
+  notice visible on the digitized volume, the work is in the public domain.</td>
+  <td class="xl24" >Check for presence of copyright notice, which is
+  most often displayed on the tp verso, but if not found, check carefully all
+  front matter including first page of text. (<font class="font12">NOTE: if it
+  seems that pages are missing from frontmatter, follow instructions for
+  Missing/step 1</font><font class="font0">).<br/>
+  1. If notice found, enter renewal ID and date (</font><font
+  class="font11">see step 16 above)</font><font class="font6">, code </font><font
+  class="font7">ic/ren.<br/>
+  </font><font class="font6">2. If no copyright notice
+  found, </font><font class="font0">code </font><font class="font7">pd/ncn</font></td>
+  <td class="xl24" >N/A</td>
+  <td class="xl24" >N/A</td>
+  <td class="xl33" >1. <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=inu.30000007112182">inu.30000007112182</a><br/>
+  <a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=inu.30000007091303">inu.30000007091303</a>
+  <font class="font15"> &nbsp;&nbsp;(renewal located and includes notice)</font><br/>
+  2.<a href="https://babel.hathitrust.org/cgi/pt?attr=1;id=inu.30000007136504">inu.30000007136504</a><br/>
+  <font class="font15"> (renewal located but not copyright notice on piece)</font></td>
+ </tr>
+</table>
+
+</body>
+
+</html>
