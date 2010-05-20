@@ -61,59 +61,75 @@
   </form>
 </td></tr>
 </table>
+<br/><br/>
+<h4>Update Bibliographic Data</h4>
+<form action="crms">
+  <p class="smallishText">Enter one volume id per line.
+  Entries that don't have a namespace will be given an <code>mdp.</code> prefix.</p>
+  <input type="hidden" name="p" value="debug"/>
+  <input type="hidden" name="fix" value="1"/>
+  <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;">[% ids %]</textarea><br/>
+  <input type="submit" value="Submit"/>
+</form>
 <br/>
 
-[% IF cgi.param('sanityCheck') %]
-  [% id = cgi.param('id') %]
+[% IF cgi.param('fix') %]
+  <h4>Tried to Fix:</h4>
+  <table class='exportStats' style="width:45em;"><tr><th>ID</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th></tr>
+  [% ids = cgi.param('ids') %]
   [% cand = cgi.param('candidates') %]
-  [% IF id %]
-    [% IF cand %]
-      [% blah = crms.UpdateCandidatesAuthor(id) %]
-      [% blah = crms.UpdateCandidatesTitle(id) %]
-      [% blah = crms.UpdateCandidatesPubDate(id) %]
-    [% ELSE %]
-      [% blah = crms.UpdateAuthor(id) %]
-      [% blah = crms.UpdateTitle(id) %]
-      [% blah = crms.UpdatePubDate(id) %]
+  [% which = (cand)? 'candidates':'bibdata' %]
+  [% IF ids %]
+    [% FOREACH id IN ids.split %]
+      [% IF id.match('^\d+$') %][% id = 'mdp.' _ id %][% END %]
+      [% id = id.remove('(^\s+)|(\s+$)') %]
+      [% IF cand %]
+        [% blah = crms.UpdateCandidatesAuthor(id) %]
+        [% blah = crms.UpdateCandidatesTitle(id) %]
+        [% blah = crms.UpdateCandidatesPubDate(id) %]
+      [% ELSE %]
+        [% blah = crms.UpdateAuthor(id) %]
+        [% blah = crms.UpdateTitle(id) %]
+        [% blah = crms.UpdatePubDate(id) %]
+      [% END %]
+      [% sql = "SELECT author,title,YEAR(pub_date) FROM $which WHERE id='$id'" %]
+      [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
+      [% FOREACH r IN ref %]
+        <tr><td>[% id %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td></tr>
+        [% LAST %]
+      [% END %]
     [% END %]
-    <h4>Tried to Fix:</h4>
-    <table class='exportStats'><tr><th>ID</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th></tr>
-    [% which = (cand)? 'candidates':'bibdata' %]
-    [% sql = "SELECT author,title,pub_date FROM $which WHERE id='$id'" %]
-    [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
-    [% FOREACH r IN ref %]
-      <tr><td>[% id %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td></tr>
-    [% END %]
-    </table><br/>
-  [% ELSE %]
-    [% crms.SanityCheckDB() %]
-    <h4>[% crms.GetErrors.size %] Items Need Fixed</h4>
-    <table class="exportStats" style='width:100%;'>
-    <tr><th>Table</th><th>Explanation</th><th>Value</th><th>Fix</th></tr>
-    [% class = 1 %]
-    [% FOREACH error IN crms.GetErrors %]
-      <tr class='[% (class)? 'total':'major' %]'>
-      [% e = error.split('\s*__\s*') %]
-      <td>[% e.0 %]</td>
-      <td>[% e.1 %]</td>
-      <td>[% e.2.replace('\s','&nbsp;') %]</td>
-      <td>
-        [% id = e.1.match('.+?(\w+\.[A-Za-z]?\d+)').0 %]
-        [% IF (e.0 == 'bibdata' || e.0 == 'candidates') && id %]
-          <form action="crms">
-          <input type="hidden" name="p" value="debug"/>
-          [% IF e.0 == 'candidates' %]
-            <input type="hidden" name="candidates" value="1"/>
-          [% END %]
-          <input type="hidden" name="sanityCheck" value="1"/>
-          <input type="hidden" name="id" value="[% id %]"/>
-          <input type="submit" value=""/>
-          </form>
+  [% END %]
+[% END %]
+
+[% IF cgi.param('sanityCheck') %]
+  [% crms.SanityCheckDB() %]
+  <h4>[% crms.GetErrors.size %] Items Need Fixed</h4>
+  <table class="exportStats" style='width:100%;'>
+  <tr><th>Table</th><th>Explanation</th><th>Value</th><th>Fix</th></tr>
+  [% class = 1 %]
+  [% FOREACH error IN crms.GetErrors %]
+    <tr class='[% (class)? 'purple':'major' %]'>
+    [% e = error.split('\s*__\s*') %]
+    <td>[% e.0 %]</td>
+    <td>[% e.1 %]</td>
+    <td>[% e.2.replace('\s','&nbsp;') %]</td>
+    <td>
+      [% id = e.1.match('.+?(\w+\.[A-Za-z]?\d+)').0 %]
+      [% IF (e.0 == 'bibdata' || e.0 == 'candidates') && id %]
+        <form action="crms">
+        <input type="hidden" name="p" value="debug"/>
+        [% IF e.0 == 'candidates' %]
+          <input type="hidden" name="candidates" value="1"/>
         [% END %]
-      </td>
-      </tr>
-      [% class = (class)? 0:1 %]
-    [% END %]
+        <input type="hidden" name="fix" value="1"/>
+        <input type="hidden" name="ids" value="[% id %]"/>
+        <input type="submit" value=""/>
+        </form>
+      [% END %]
+    </td>
+    </tr>
+    [% class = (class)? 0:1 %]
   [% END %]
   [% blah = crms.ClearErrors() %]
   </table><br/>
