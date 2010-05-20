@@ -47,10 +47,24 @@
       <td><input type="text" id="getDate" name="renDate" value="[% renDate %]" size="8" readonly="readonly"/></td>
     </tr>
   </table>
-  <div id="RightsCont" class="rightscont">
-  <div id="RightsReason">
-  <strong style="margin-left:10px">Rights/Reason: </strong>
-  <!-- &nbsp;&nbsp;<a href="/c/crms/help.html#rights" target="_blank">help</a> -->
+<div id="RightsCont" class="rightscont">
+<div id="RightsReason" style="position:relative;">
+  <div style="position:absolute;top:0px;right:1em;">
+    <a class="tip" href="#">
+      <img style="border:0px solid;" width="16" height="16" alt="Search Help" src="/c/crms/help.png"/>
+      <span>
+      <b>pd/ncn</b> - public domain/no printed copyright notice<br/>
+      <b>pd/ren</b> - public domain/copyright was not renewed<br/>
+      <b>pd/cdpp</b> - public domain/copyright date and/or place of publication*<br/>
+      <b>ic/ren</b> - in copyright/copyright was renewed<br/>
+      <b>ic/cdpp</b> - in copyright/copyright date and/or place of publication*<br/>
+      <b>und/nfi</b> - undetermined/needs further investigation<br/>
+      <br/>
+      * Information on piece differs from what is in bib record,<br/>&nbsp;&nbsp;i.e., pre-1923 US work (pd); post-1963 US work (ic).
+      </span>
+    </a>
+  </div>
+  <strong style="margin-left:10px">Rights/Reason:</strong>
   <br/>
     [% keys = {"1" => "pd/ncn", "2" => "pd/ren",  "3" => "pd/cdpp",
                "4" => "ic/ren", "5" => "ic/cdpp", "6" => "und/nfi",
