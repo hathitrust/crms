@@ -124,6 +124,7 @@
               <option>Select Help Documentation</option>
               <option value="/c/crms/pdf/DecisionTree.pdf">Decision Tree</option>
               <option value="/c/crms/DecisionTreeHelp.html">Decision Tree Help</option>
+              <option value="/c/crms/pdf/NotClassA.pdf">Not&nbsp;Class&nbsp;A&nbsp;Help</option>
               <option value="/c/crms/pdf/CRMS-Guidelines.pdf">Determination Guidelines</option>
               <option value="/c/crms/UseCases.html">Use Cases</option>
               <option value="/c/crms/pdf/InterfaceHelp.pdf">Review Interface Help</option>
