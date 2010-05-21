@@ -36,7 +36,8 @@
 	<dt><a>Documentation&nbsp;&nbsp;</a></dt>
                  <dd><a href="/c/crms/pdf/DecisionTree.pdf" target="_blank">Decision&nbsp;Tree</a></dd>
                  <dd><a href="/c/crms/DecisionTreeHelp.html" target="_blank">Decision&nbsp;Tree&nbsp;Help</a></dd>
-	               <dd><a href="/c/crms/pdf/CRMS-Guidelines.pdf" target="_blank">Determination&nbsp;Guidelines</a></dd>
+	               <dd><a href="/c/crms/pdf/NotClassA.pdf" target="_blank">Not&nbsp;Class&nbsp;A&nbsp;Help</a></dd>
+                 <dd><a href="/c/crms/pdf/CRMS-Guidelines.pdf" target="_blank">Determination&nbsp;Guidelines</a></dd>
                  <dd><a href="/c/crms/UseCases.html" target="_blank">Use&nbsp;Cases</a></dd>
   [% IF a || s %]<dd><a href="/c/crms/pdf/InterfaceHelp.pdf#zoom=100" target="_blank">Review&nbsp;Interface&nbsp;Help</a></dd>[% END %]
   [% IF a || s %]<dd><a href="/c/crms/pdf/ReviewSearchHelp.pdf" target="_blank">Review&nbsp;Search&nbsp;Help</a></dd>         [% END %]
