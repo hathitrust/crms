@@ -5491,40 +5491,40 @@ sub GetNextItemForReview
   
   my $id = undef;
   eval{
-  
-  my $exclude = 'q.priority<3 AND';
-  if ($self->IsUserSuperAdmin($user))
-  {
-    # Only Anne reviews priority 4
-    $exclude = '';
-  }
-  # If user is expert, get priority 3 items.
-  elsif ($self->IsUserExpert($user))
-  {
-    $exclude = 'q.priority<4 AND';
-  }
-  my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
-  my $sql = "SELECT q.id FROM queue q WHERE $exclude $exclude1 q.expcnt=0 AND q.locked IS NULL " .
-            'ORDER BY q.priority DESC, (SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) DESC, q.time ASC';
-  #print "$sql<br/>\n";
-  my $ref = $self->get('dbh')->selectall_arrayref($sql);
-  foreach my $row ( @{$ref} )
-  {
-    my $id2 = $row->[0];
-    $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user='$user'";
-    next if $self->SimpleSqlGet($sql);
-    $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id2'";
-    next if $self->SimpleSqlGet($sql) > 1;
-    $id = $id2;
-    last;
-  }
-  ## lock before returning
-  my $err = $self->LockItem( $id, $user );
-  if ($err != 0)
-  {
-    $self->Logit( "failed to lock $id for $user: $err" );
-    return;
-  }
+    my $exclude = 'q.priority<3 AND';
+    if ($self->IsUserSuperAdmin($user))
+    {
+      # Only Anne reviews priority 4
+      $exclude = '';
+    }
+    # If user is expert, get priority 3 items.
+    elsif ($self->IsUserExpert($user))
+    {
+      $exclude = 'q.priority<4 AND';
+    }
+    my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
+    my $sql = "SELECT q.id FROM queue q WHERE $exclude $exclude1 q.expcnt=0 AND q.locked IS NULL " .
+              'ORDER BY (SELECT q.priority!=1 AND (SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)=1) DESC, ' .
+              'q.priority DESC, (SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) DESC, q.time ASC';
+    #print "$sql<br/>\n";
+    my $ref = $self->get('dbh')->selectall_arrayref($sql);
+    foreach my $row ( @{$ref} )
+    {
+      my $id2 = $row->[0];
+      $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user='$user'";
+      next if $self->SimpleSqlGet($sql);
+      $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id2'";
+      next if $self->SimpleSqlGet($sql) > 1;
+      $id = $id2;
+      last;
+    }
+    ## lock before returning
+    my $err = $self->LockItem( $id, $user );
+    if ($err != 0)
+    {
+      $self->Logit( "failed to lock $id for $user: $err" );
+      return;
+    }
   };
   $self->SetError($@) if $@;
   return $id;
