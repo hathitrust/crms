@@ -67,9 +67,10 @@ function CheckAll(box,formid)
 <td>
                <a href="/c/crms/pdf/DecisionTree.pdf" target="_blank">Decision&nbsp;Tree</a><br/>
                <a href="/c/crms/DecisionTreeHelp.html" target="_blank">Decision&nbsp;Tree&nbsp;Help</a><br/>
+               <a href="/c/crms/pdf/NotClassA.pdf" target="_blank">Not&nbsp;Class&nbsp;A&nbsp;Help</a>
                <a href="/c/crms/pdf/CRMS-Guidelines.pdf" target="_blank">Determination&nbsp;Guidelines</a><br/>
                <a href="/c/crms/pdf/NotClassA.pdf" target="_blank">Not&nbsp;Class&nbsp;A&nbsp;Help</a><br/>
-               <a href="/c/crms/UseCases.html" target="_blank">Use&nbsp;Cases</a><br/>
+               
 [% IF a || s %]<a href="/c/crms/pdf/InterfaceHelp.pdf#zoom=100" target="_blank">Review&nbsp;Interface&nbsp;Help</a><br/>[% END %]
 [% IF a || s %]<a href="/c/crms/pdf/ReviewSearchHelp.pdf" target="_blank">Review&nbsp;Search&nbsp;Help</a><br/>         [% END %]
 [% IF a || s %]<a href="/c/crms/pdf/ReviewSearchTerms.pdf" target="_blank">Review&nbsp;Search&nbsp;Terms</a><br/>       [% END %]
