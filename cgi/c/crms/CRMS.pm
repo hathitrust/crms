@@ -2997,7 +2997,7 @@ sub SameUser
   
   $u1 = $self->SimpleSqlGet("SELECT kerberos FROM users WHERE id='$u1'");
   $u2 = $self->SimpleSqlGet("SELECT kerberos FROM users WHERE id='$u2'");
-  return $u1 eq $u2;
+  return $u1 eq $u2 and $u1 ne '';
 }
 
 sub CanChangeToUser
@@ -3098,8 +3098,7 @@ sub IsUserIncarnationExpertOrHigher
   my $user = shift;
   
   $user = $self->get('user') unless $user;
-  my $max = 0;
-  my $sql = "SELECT id FROM users WHERE kerberos IN (SELECT DISTINCT kerberos FROM users WHERE id='$user')";
+  my $sql = "SELECT id FROM users WHERE kerberos!='' AND kerberos IN (SELECT DISTINCT kerberos FROM users WHERE id='$user')";
   my $ref = $self->get('dbh')->selectall_arrayref($sql);
   foreach my $row (@{$ref})
   {
