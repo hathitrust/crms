@@ -5504,7 +5504,8 @@ sub GetNextItemForReview
     }
     my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
     my $sql = "SELECT q.id FROM queue q WHERE $exclude $exclude1 q.expcnt=0 AND q.locked IS NULL " .
-              'ORDER BY (SELECT q.priority!=1 AND (SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)=1) DESC, ' .
+              'ORDER BY (SELECT q.priority>=2) DESC,' . 
+              '(SELECT q.priority!=1 AND (SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)=1) DESC, ' .
               'q.priority DESC, (SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) DESC, q.time ASC';
     #print "$sql<br/>\n";
     my $ref = $self->get('dbh')->selectall_arrayref($sql);
