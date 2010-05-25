@@ -889,6 +889,7 @@ sub IsTrainingQueueLoaded
 
   my $sql = 'SELECT id FROM training_queue';
   my $ref = $self->get('dbh')->selectall_arrayref($sql);
+  return 0 unless scalar @{$ref};
   foreach my $row ( @{$ref} )
   {
     my $id = $row->[0];
@@ -5849,9 +5850,9 @@ sub CreateQueueReport
   $val =~ s/\s/&nbsp;/g;
   $report .= sprintf("<tr><th>Last&nbsp;Candidates&nbsp;Addition</th><td>%s&nbsp;on&nbsp;$val</td></tr>", $self->GetLastLoadSizeToCandidates());
   $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und');
+  $report .= "<tr><th>Items&nbsp;Filtered&nbsp;as&nbsp;Likely&nbsp;<code>und</code>**</th><td>$count</td></tr>\n";
   if ($count)
   {
-    $report .= "<tr><th>Items&nbsp;Filtered&nbsp;as&nbsp;Likely&nbsp;<code>und</code>**</th><td>$count</td></tr>\n";
     my $ref = $self->get('dbh')->selectall_arrayref('SELECT src,COUNT(src) FROM und GROUP BY src ORDER BY src');
     foreach my $row (@{ $ref})
     {
