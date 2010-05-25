@@ -6721,5 +6721,27 @@ sub IsTrainingArea
   return ($where eq 'Training Area' || $where eq 'Moses Dev');
 }
 
+sub ResetButton
+{
+  my $self = shift;
+
+  return unless $self->IsTrainingArea();
+  my $in = $self->get('root') . "/bin/c/crms/traininghist.txt";
+  open (FH, '<', $in) || $self->SetError("Could not open $in");
+  my %ids = [];
+  while( <FH> ) { chomp; $ids{$_}=1; }
+  close FH;
+  my $sql = "SELECT DISTINCT id FROM historicalreviews";
+  my $ref = $self->get('dbh')->selectall_arrayref($sql);
+  foreach my $row ( @{$ref} )
+  {
+    my $id = $row->[0];
+    next if $ids{$id};
+    $sql = "DELETE FROM historicalreviews WHERE id='$id'";
+    $self->PrepareSubmitSql($sql);
+  }
+  $self->PrepareSubmitSql("DELETE FROM reviews");
+  $self->PrepareSubmitSql("UPDATE queue SET status=0,pending_status=0");
+}
 
 1;

@@ -36,7 +36,22 @@
   </form>
 </td>
 </tr>
+[% # Disable this everywhere but training %]
+[% IF crms.IsTrainingArea() %]
+  <tr>
+    <th>Reset Training Area
+      <span class="total">Remove all active reviews and all historical reviews not in the original 32,595.</span>
+    </th>
+    <td>
+      <form action="crms">
+        <input type="hidden" name="p" value="debug"/>
+        <input type="hidden" name="resetButton" value="1"/>
+        <input type="submit" value="Do it!"/>
+      </form>
+    </td>
+  </tr>
 </table>
+[% END %]
 [% END %]
 
 <br/><br/>
@@ -146,6 +161,13 @@
     [% FOREACH error IN crms.GetErrors %]
       <p style="color:red;">[% error %]</p>
     [% END %]
+  [% END %]
+[% END %]
+
+[% # Disable this everywhere but training %]
+[% IF crms.IsTrainingArea() %]
+  [% IF cgi.param('resetButton') %]
+    [% blah = crms.ResetButton() %]
   [% END %]
 [% END %]
 
