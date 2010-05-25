@@ -12,8 +12,8 @@
 
 [% IF cgi.param('reload') %]
   [% blah = crms.ReloadTrainingQueue() %]
-[% ELSIF cgi.param('clear') %]
-  [% blah = crms.ClearTrainingQueue() %]
+[% ELSIF cgi.param('unload') %]
+  [% blah = crms.UnloadTrainingQueue() %]
 [% END %]
 
 [% INCLUDE header.tt %]
@@ -44,8 +44,8 @@ function limitText(limitField, limitCount, limitNum)
   <input type="hidden" name="p" value="systemStatus"/>
   <input type="hidden" name="setStatus" value="1"/>
   <textarea name="msg" cols="20" rows="3" style="width:33%;" 
-            onKeyDown="limitText(this.form.msg,this.form.countdown,150);" 
-            onKeyUp="limitText(this.form.msg,this.form.countdown,150);">[% msg %]</textarea><br/>
+            onkeydown="limitText(this.form.msg,this.form.countdown,150);" 
+            onkeyup="limitText(this.form.msg,this.form.countdown,150);">[% msg %]</textarea><br/>
   <label for="statussel">Set system status:</label>
   <select id="statussel" name="status">
     <option value="normal" [% (status=='normal'||!status)? 'selected="selected"':'' %]>Normal</option>
@@ -67,50 +67,61 @@ To display a custom message, or override the standard ones (<i>down</i>/<i>parti
 [% IF crms.IsTrainingArea() %]
   <br/><br/>
   [% n = crms.SimpleSqlGet("SELECT COUNT(*) FROM training_queue") %]
-  <h4>Training Queue: [% n %] Item[% (n==1)? '':'s' %]</h4>
-  <div style="position:relative;border-style:solid;width:25%;border-width:1px;padding:10px;">
-  <form action="crms">
-    <input type="hidden" name="p" value="systemStatus"/>
-    <table>
-      <tr>
-        <td><input type="submit" name="reload" value="Reload Training Queue"/></td>
-        <td><input type="submit" name="clear" value="Clear Training Queue"/></td>
-      </tr>
-      <tr>
-        <td><input type="submit" name="show" value="Show Items"/></td>
-        <td><input type="submit" name="showids" value="Show IDs Only"/></td>
-      </tr>
-    </table>
-  </form>
-  </div>
-[% IF cgi.param('show') || cgi.param('showids') %]
-  <br/>
-  [% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date) FROM training_queue q, bibdata b WHERE q.id=b.id ORDER BY q.seq ASC" %]
-  [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
-  [% IF ref.size > 0 %]
-    [% IF cgi.param('show') %]
-      <table class="exportStats" style="width:auto;"><tr><th>ID</th><th>Title</th><th>Author</th><th>Pub&nbsp;Date</th><th>Reviews</th></tr>
-      [% FOREACH r IN ref %]
-        <tr><td>
-        [% IF r.5 > 0 %]
-          <a href="/cgi/c/crms/crms?p=adminReviews&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
-        [% ELSE %]
-          <a href="/cgi/c/crms/crms?p=queue&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
-        [% END %]
-        [% id = r.0 %]
-        [% r.0 %]</a></td>
-        <td>[% r.1 %]</td>
-        <td>[% r.2 %]</td><td>[% r.3 %]</td>
-        [% sql = "SELECT COUNT(*) FROM reviews WHERE id='" _ id _ "'" %]
-        <td>[% crms.SimpleSqlGet(sql) %]</td></tr>
-      [% END %]
+  <h4>Training Queue: [% n %] Item[% (n==1)? '':'s' %]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status: [% (crms.IsTrainingQueueLoaded())? '':'<span style="color:red;">not</span> ' %] loaded</h4>
+  [% IF n>0 %]
+    <div style="position:relative;border-style:solid;width:25%;border-width:1px;padding:10px;">
+    <form action="crms">
+      <input type="hidden" name="p" value="systemStatus"/>
+      <table>
+        <tr>
+          <td><input type="submit" name="reload" value="Reload Training Queue"/></td>
+          <td><input type="submit" name="unload" value="Unload Training Queue"/></td>
+        </tr>
+        <tr>
+          <td><input type="submit" name="show" value="Show Items"/></td>
+          <td><input type="submit" name="showids" value="Show IDs Only"/></td>
+        </tr>
       </table>
-    [% ELSE %]
-      [% FOREACH r IN ref %][% r.0 %]<br/>[% END %]
+    </form>
+    </div><br/>
+    <span class="smallishText">
+      <i>Reload Training Queue</i> inserts all training queue items in the queue as priority 2,
+      and deletes any existing reviews for the items. Use when ready to demo.<br/>
+      <i>Unload Training Queue</i> removes all training queue items from the queue and deletes any existing reviews.
+      Use when you want trainees to work on their own.<br/>
+      <i>Show Items</i> displays the training queue items in a table, in order of presentation.<br/>
+      <i>Unload Training Queue</i> displays just the training queue volume ids, in order of presentation, for easy copy-paste operations.<br/>
+      </span>
+    [% IF cgi.param('show') || cgi.param('showids') %]
+      <br/>
+      [% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date) FROM training_queue q, bibdata b WHERE q.id=b.id ORDER BY q.seq ASC" %]
+      [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
+      [% IF ref.size > 0 %]
+        [% IF cgi.param('show') %]
+          <table class="exportStats" style="width:auto;"><tr><th>ID</th><th>Title</th><th>Author</th><th>Pub&nbsp;Date</th><th>Reviews</th></tr>
+          [% FOREACH r IN ref %]
+            <tr><td>
+            [% id = r.0 %]
+            [% sql = "SELECT COUNT(*) FROM reviews WHERE id='" _ id _ "'" %]
+            [% revs = crms.SimpleSqlGet(sql) %]
+            [% IF revs > 0 %]
+              <a href="/cgi/c/crms/crms?p=adminReviews&amp;search1=Identifier&amp;search1value=[% id %]" target="_blank">
+            [% ELSE %]
+              <a href="/cgi/c/crms/crms?p=queue&amp;search1=Identifier&amp;search1value=[% id %]" target="_blank">
+            [% END %]
+            [% id %]</a></td>
+            <td>[% cgi.escapeHTML(r.1) %]</td>
+            <td>[% cgi.escapeHTML(r.2) %]</td>
+            <td>[% cgi.escapeHTML(r.3) %]</td>
+            <td>[% revs %]</td></tr>
+          [% END %]
+          </table>
+        [% ELSE %]
+          [% FOREACH r IN ref %][% r.0 %]<br/>[% END %]
+        [% END %]
+      [% END %]
     [% END %]
   [% END %]
-[% END %]
-
 [% END %]
 
 [% INCLUDE footer.tt %]

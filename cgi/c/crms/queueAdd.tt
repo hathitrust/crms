@@ -45,15 +45,16 @@ Priority 4 can only be added or reviewed by a super admin.<br/>
 </p>
 
 [% IF crms.IsTrainingArea() && training %]
-  [% blah = crms.ClearTrainingQueue() %]
+  [% blah = crms.UnloadTrainingQueue() %]
+  [% blah = crms.PrepareSubmitSql("DELETE FROM training_queue") %]
 [% END %]
 
 <br/>
 [% adds = 0 %]
 [% skips = 0 %]
 [% already = 0 %]
-<table class="exportStats" style="width:33%;">
 [% IF ids %]
+  <table class="exportStats" style="width:33%;">
   [% FOREACH id IN ids.split %]
     [% IF id.match('^\d+$') %][% id = 'mdp.' _ id %][% END %]
     [% id = id.remove('(^\s+)|(\s+$)') %]
@@ -77,9 +78,9 @@ Priority 4 can only be added or reviewed by a super admin.<br/>
     </tr>
   [% END %]
   [% action = (cgi.param("delete"))? "Deleted":"Added" %]
-  <tr><td colspan="2"><b>$action $adds volume[% (adds == 1)? '':'s' %], skipped $skips, modified $already</b></td></tr>
+  <tr><td colspan="2"><b>$action $adds volume[% (adds == 1)? '':'s' %], skipped $skips, modified $already</b></td></tr></table>
 [% END %]
-</table>
+
 <br/>
 
 <a href="?p=review">Continue to Reviews</a>
@@ -88,12 +89,17 @@ Priority 4 can only be added or reviewed by a super admin.<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;
 <a href="?p=adminReviews">Go to Active Reviews</a><br/>
 
-
-[% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.status,q.priority FROM queue q, bibdata b WHERE q.id=b.id AND q.priority>=2 ORDER BY q.priority DESC, q.time ASC" %]
+[% IF crms.IsTrainingArea %]
+  [% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.status,q.priority FROM queue q, training_queue tq, bibdata b WHERE q.id=b.id AND tq.id=q.id ORDER BY tq.seq ASC" %]
+  [% type = "Training Queue" %]
+[% ELSE %]
+  [% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.status,q.priority FROM queue q, bibdata b WHERE q.id=b.id AND q.priority>=2 ORDER BY q.priority DESC" %]
+  [% type = "High-priority" %]
+[% END %]
 [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
 [% IF ref.size > 0 %]
   <br/>
-  <h4>[% ref.size %] High-priority Item[% (ref.size == 1)? '':'s' %]</h4>
+  <h4>[% ref.size %] [% type %] Item[% (ref.size == 1)? '':'s' %]</h4>
   <table class="exportStats" style="width:auto;"><tr><th>ID</th><th>Title</th><th>Author</th><th>Pub&nbsp;Date</th><th>Added</th><th>Status</th><th>Priority</th><th>Issues</th></tr>
   [% FOREACH r IN ref %]
     [% vs = crms.GetViolations(r.0) %]
@@ -104,9 +110,13 @@ Priority 4 can only be added or reviewed by a super admin.<br/>
       <a href="/cgi/c/crms/crms?p=queue&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
     [% END %]
     [% r.0 %]</a></td>
-    <td>[% r.1 %]</td>
-    [% priority = crms.StripDecimal(r.6) %]
-    <td>[% r.2 %]</td><td>[% r.3 %]</td><td>[% r.4 %]</td><td>[% r.5 %]</td><td>$priority</td><td>[% vs %]</td></tr>
+    <td>[% cgi.escapeHTML(r.1) %]</td>
+    <td>[% cgi.escapeHTML(r.2) %]</td>
+    <td>[% r.3 %]</td>
+    <td>[% r.4 %]</td>
+    <td>[% r.5 %]</td>
+    <td>[% crms.StripDecimal(r.6) %]</td>
+    <td>[% vs %]</td></tr>
   [% END %]
   </table>
 [% END %]
