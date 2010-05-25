@@ -825,10 +825,10 @@ sub AddItemToQueueOrSetItemActive
       }
     }
   }
-  if ($stat != 1 && $train && $self->IsTrainingArea())
-  {
-    $self->PrepareSubmitSql("INSERT INTO training_queue (id) VALUES ('$id')");
-  }
+  #if ($stat != 1 && $train && $self->IsTrainingArea())
+  #{
+  #  $self->PrepareSubmitSql("INSERT INTO training_queue (id) VALUES ('$id')");
+  #}
   return $stat . join '; ', @msgs;
 }
 

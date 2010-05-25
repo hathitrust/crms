@@ -8,7 +8,7 @@
 [% ids = cgi.param('ids') %]
 [% pri = cgi.param('priority') %]
 [% override = cgi.param('override') %]
-[% training = cgi.param('training') %]
+[% training = 0 #cgi.param('training') %]
 [% IF NOT pri %][% pri = 0 %][% END %]
 
 <h2>Add Volumes to the Queue:</h2>
@@ -29,7 +29,7 @@ These items will take priority in the review process.
   Override Restrictions (sets priority 4)
   <input type="checkbox" name="override" [% (crms.IsUserSuperAdmin())? '':'disabled="disabled"' %][% override? 'checked="checked"':'' %]/>
   &nbsp;&nbsp;&nbsp;
-[% IF crms.IsTrainingArea() %]
+[% IF 0 #crms.IsTrainingArea() %]
   Make Training Queue
   <input type="checkbox" name="training" [% (crms.IsUserSuperAdmin())? '':'disabled="disabled"' %][% training? 'checked="checked"':'' %]/>
   &nbsp;&nbsp;&nbsp;
@@ -44,10 +44,12 @@ Priority 4 can only be added or reviewed by a super admin.<br/>
 <i>Override Restrictions</i> allows you to enter government documents, non-books, and items from before 1923 or after 1963.<br/>
 </p>
 
-[% IF crms.IsTrainingArea() && training %]
+
+[% IF 0 #crms.IsTrainingArea() && training %]
   [% blah = crms.UnloadTrainingQueue() %]
   [% blah = crms.PrepareSubmitSql("DELETE FROM training_queue") %]
 [% END %]
+
 
 <br/>
 [% adds = 0 %]
@@ -89,9 +91,9 @@ Priority 4 can only be added or reviewed by a super admin.<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;
 <a href="?p=adminReviews">Go to Active Reviews</a><br/>
 
-[% IF crms.IsTrainingArea %]
-  [% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.status,q.priority FROM queue q, training_queue tq, bibdata b WHERE q.id=b.id AND tq.id=q.id ORDER BY tq.seq ASC" %]
-  [% type = "Training Queue" %]
+[% IF 0 #crms.IsTrainingArea %]
+  [%# sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.status,q.priority FROM queue q, training_queue tq, bibdata b WHERE q.id=b.id AND tq.id=q.id ORDER BY tq.seq ASC" %]
+  [%# type = "Training Queue" %]
 [% ELSE %]
   [% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.status,q.priority FROM queue q, bibdata b WHERE q.id=b.id AND q.priority>=2 ORDER BY q.priority DESC" %]
   [% type = "High-priority" %]

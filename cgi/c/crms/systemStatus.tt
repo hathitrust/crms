@@ -64,7 +64,7 @@ To display a custom message, or override the standard ones (<i>down</i>/<i>parti
 <br/>
 
 
-[% IF crms.IsTrainingArea() %]
+[% IF 0 #crms.IsTrainingArea() %]
   <br/><br/>
   [% n = crms.SimpleSqlGet("SELECT COUNT(*) FROM training_queue") %]
   <h4>Training Queue: [% n %] Item[% (n==1)? '':'s' %]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status: [% (crms.IsTrainingQueueLoaded())? '':'<span style="color:red;">not</span> ' %] loaded</h4>
