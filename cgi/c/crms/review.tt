@@ -123,7 +123,7 @@
             <select class="review" onchange="if (this.selectedIndex > 0) window.open(this.options[this.selectedIndex].value, '_blank');this.selectedIndex=0;">
               <option>Select Help Documentation</option>
               <option value="/c/crms/pdf/DecisionTree.pdf">Decision Tree</option>
-              <option value="/c/crms/DecisionTreeHelp.html">Decision Tree Help</option>
+              <option value="/c/crms/pdf/DecisionTreeHelp.pdf">Decision Tree Help</option>
               <option value="/c/crms/pdf/NotClassA.pdf">Not&nbsp;Class&nbsp;A&nbsp;Help</option>
               <option value="/c/crms/pdf/StanfordHelp.pdf">Stanford&nbsp;Renewal&nbsp;Database&nbsp;Help</option>
               <option value="/c/crms/pdf/CRMS-Guidelines.pdf">Determination Guidelines</option>
