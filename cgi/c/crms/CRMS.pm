@@ -6741,7 +6741,7 @@ sub ResetButton
     $self->PrepareSubmitSql($sql);
   }
   $self->PrepareSubmitSql("DELETE FROM reviews");
-  $self->PrepareSubmitSql("UPDATE queue SET status=0,pending_status=0");
+  $self->PrepareSubmitSql("UPDATE queue SET status=0,pending_status=0,expcnt=0");
 }
 
 1;
