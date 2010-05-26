@@ -40,7 +40,7 @@
 [% IF crms.IsTrainingArea() %]
   <tr>
     <th>Reset Training Area
-      <span class="total">Remove all active reviews and all historical reviews not in the original 32,595.</span>
+      <span class="total">Remove all active reviews and all historical reviews not in the original training set (32,559).</span>
     </th>
     <td>
       <form action="crms">
