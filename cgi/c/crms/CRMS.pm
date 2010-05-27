@@ -462,14 +462,15 @@ sub ExportReviews
     }
 }
 
+# Send email (to Anne) with rights export data.
 sub EmailReport
 {
   my $self    = shift;
   my $count   = shift;
   my $file    = shift;
-
-  my $subject = sprintf('%s%d volumes exported to rights db', ($self->get('dev'))? 'CRMS Dev: ':'', $count);
-
+  
+  my $where = ($self->WhereAmI() or 'Prod');
+  my $subject = sprintf('CRMS %s: %d volumes exported to rights db', $where, $count);
   use Mail::Sender;
   my $sender = new Mail::Sender
     {smtp => 'mail.umdl.umich.edu',
@@ -483,31 +484,26 @@ sub EmailReport
 
 sub GetExportFh
 {
-    my $self = shift;
-    my $date = $self->GetTodaysDate();
-    $date    =~ s/:/_/g;
-    $date    =~ s/ /_/g;
- 
-    my $out = $self->get('root') . "/prep/c/crms/crms_" . $date . ".rights";
+  my $self = shift;
+  my $date = $self->GetTodaysDate();
+  $date    =~ s/:/_/g;
+  $date    =~ s/ /_/g;
 
-    if ( -f $out ) { die "file already exists: $out \n"; }
-
-    open ( my $fh, ">", $out ) || die "failed to open exported file ($out): $! \n";
-
-    return ( $fh, $out );
+  my $out = $self->get('root') . "/prep/c/crms/crms_" . $date . ".rights";
+  if ( -f $out ) { die "file already exists: $out \n"; }
+  open ( my $fh, ">", $out ) || die "failed to open exported file ($out): $! \n";
+  return ( $fh, $out );
 }
 
 sub RemoveFromQueue
 {
-    my $self = shift;
-    my $id   = shift;
+  my $self = shift;
+  my $id   = shift;
 
-    $self->Logit( "remove $id from queue" );
-
-    my $sql = qq{ DELETE FROM $CRMSGlobals::queueTable WHERE id="$id" };
-    $self->PrepareSubmitSql( $sql );
-
-    return 1;
+  $self->Logit( "remove $id from queue" );
+  my $sql = "DELETE FROM $CRMSGlobals::queueTable WHERE id='$id'";
+  $self->PrepareSubmitSql( $sql );
+  return 1;
 }
 
 sub RemoveFromCandidates
@@ -515,7 +511,7 @@ sub RemoveFromCandidates
   my $self = shift;
   my $id   = shift;
 
-  my $sql = qq{ DELETE FROM candidates WHERE id="$id" };
+  my $sql = "DELETE FROM candidates WHERE id='$id'";
   $self->PrepareSubmitSql( $sql );
 }
 
@@ -6589,6 +6585,7 @@ sub ReviewSearchMenu
   return $html;
 }
 
+# Generates HTML to get the field type menu on the Volumes in Queue page.
 sub QueueSearchMenu
 {
   my $self = shift;
@@ -6606,6 +6603,7 @@ sub QueueSearchMenu
   return $html;
 }
 
+# This is used for the HTML page title.
 sub PageToEnglish
 {
   my $self = shift;
@@ -6643,7 +6641,8 @@ sub PageToEnglish
 sub RightsQuery
 {
   my $self = shift;
-  my $id = shift;
+  my $id   = shift;
+  
   my ($namespace,$n) = split m/\./, $id;
   my $sql = 'SELECT a.name,rs.name,s.name,r.user,r.time,r.note FROM rights r, attributes a, reasons rs, sources s ' .
             "WHERE r.namespace='$namespace' AND r.id='$n' AND s.id=r.source AND a.id=r.attr AND rs.id=r.reason " .
@@ -6680,6 +6679,7 @@ sub GetSystemStatus
   return \@vals;
 }
 
+# Sets the status name {normal/down/partial} and the banner message to display in CRMS header.tt.
 sub SetSystemStatus
 {
   my $self   = shift;
@@ -6692,6 +6692,7 @@ sub SetSystemStatus
   $self->PrepareSubmitSql($sql);
 }
 
+# How many items for this user have outstanding questions.
 sub CountUserHolds
 {
   my $self = shift;
@@ -6708,7 +6709,7 @@ sub WhereAmI
 
   my $dev = $self->get('dev');
   return unless $dev;
-  return 'Training Area' if $dev eq 'crmstest';
+  return 'Training' if $dev eq 'crmstest';
   return 'Moses Dev' if $dev eq 'moseshll';
   return 'Dev';
 }
@@ -6718,9 +6719,11 @@ sub IsTrainingArea
   my $self = shift;
 
   my $where = $self->WhereAmI();
-  return ($where eq 'Training Area' || $where eq 'Moses Dev');
+  return ($where eq 'Training' || $where eq 'Moses Dev');
 }
 
+# Used only in training, this removes all reviews, removes all historical reviews not in the
+# list of "official" historical review items, and resets all queue items status 0.
 sub ResetButton
 {
   my $self = shift;
