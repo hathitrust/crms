@@ -39,7 +39,7 @@
 	               <dd><a href="/c/crms/pdf/NotClassA.pdf" target="_blank">Not&nbsp;Class&nbsp;A&nbsp;Help</a></dd>
                  <dd><a href="/c/crms/pdf/StanfordHelp.pdf" target="_blank">Stanford&nbsp;Renewal&nbsp;Database&nbsp;Help</a></dd>
                  <dd><a href="/c/crms/pdf/CRMS-Guidelines.pdf" target="_blank">Determination&nbsp;Guidelines</a></dd>
-  [% IF a || s %]<dd><a href="/c/crms/pdf/InterfaceHelp.pdf#zoom=100" target="_blank">Review&nbsp;Interface&nbsp;Help</a></dd>    [% END %]
+                 <dd><a href="/c/crms/pdf/InterfaceHelp.pdf#zoom=100" target="_blank">Review&nbsp;Interface&nbsp;Help</a></dd>
   [% IF a || s %]<dd><a href="/c/crms/pdf/ReviewSearchHelp.pdf" target="_blank">Review&nbsp;Search&nbsp;Help</a></dd>             [% END %]
   [% IF a || s %]<dd><a href="/c/crms/pdf/ReviewSearchTerms.pdf" target="_blank">Review&nbsp;Search&nbsp;Terms</a></dd>           [% END %]
   [% IF a || s %]<dd><a href="/c/crms/pdf/ReviewStatsHelp.pdf" target="_blank">Review&nbsp;Stats&nbsp;Help</a></dd>               [% END %]
