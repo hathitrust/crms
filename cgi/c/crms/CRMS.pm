@@ -2708,41 +2708,13 @@ sub DetailInfoForReview
 
 sub GetStatus
 {
-    my $self = shift;
-    my $id   = shift;
+  my $self = shift;
+  my $id   = shift;
 
-    my $sql = qq{ SELECT status FROM $CRMSGlobals::queueTable WHERE id = "$id"};
-    my $str = $self->SimpleSqlGet( $sql );
-
-    return $str;
-
+  my $sql = "SELECT status FROM $CRMSGlobals::queueTable WHERE id='$id'";
+  return $self->SimpleSqlGet( $sql );
 }
 
-sub GetLegacyStatus
-{
-    my $self = shift;
-    my $id   = shift;
-
-    my $sql = qq{ SELECT status FROM $CRMSGlobals::historicalreviewsTable WHERE id = "$id"};
-    my $str = $self->SimpleSqlGet( $sql );
-
-    return $str;
-
-}
-
-sub ItemWasReviewedByOtherUser
-{
-    my $self   = shift;
-    my $id     = shift;
-    my $user   = shift;
-
-    my $sql = qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user != "$user" AND id = "$id"};
-    my $found = $self->SimpleSqlGet( $sql );
-
-    if ($found) { return 1; }
-    return 0;
-
-}
 
 sub UsersAgreeOnReview
 {
@@ -5401,15 +5373,6 @@ sub SetDuration
     $self->RemoveFromTimer( $id, $user );
 }
 
-sub GetReviewerCount
-{
-    my $self = shift;
-    my $user = shift;
-    my $date = shift;
- 
-    return scalar( $self->ItemsReviewedByUser( $user, $date ) );
-}
-
 sub HasItemBeenReviewedByAnotherExpert
 {
   my $self = shift;
@@ -5462,20 +5425,18 @@ sub GetNextItemForReview
       $exclude = 'q.priority<4 AND';
     }
     my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
-    my $trainOrd = ($self->IsTrainingArea())? '(SELECT seq FROM training_queue tq WHERE tq.id=q.id) ASC,':'';
-    my $sql = "SELECT q.id FROM queue q WHERE $exclude $exclude1 q.expcnt=0 AND q.locked IS NULL " .
-              'ORDER BY (SELECT q.priority>=2) DESC,' . $trainOrd .
-              '(SELECT q.priority!=1 AND (SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)=1) DESC, ' .
-              'q.priority DESC, (SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) DESC, q.time ASC';
+    my $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt FROM queue q ' .
+              "WHERE $exclude $exclude1 q.expcnt=0 AND q.locked IS NULL " .
+              'ORDER BY q.priority DESC, cnt DESC, q.time ASC';
     #print "$sql<br/>\n";
     my $ref = $self->get('dbh')->selectall_arrayref($sql);
     foreach my $row ( @{$ref} )
     {
       my $id2 = $row->[0];
+      my $cnt = $row->[1];
+      next if $cnt > 1;
       $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user='$user'";
       next if $self->SimpleSqlGet($sql);
-      $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id2'";
-      next if $self->SimpleSqlGet($sql) > 1;
       $id = $id2;
       last;
     }
@@ -5489,44 +5450,6 @@ sub GetNextItemForReview
   }
   return $id;
 }
-
-
-sub ItemsReviewedByUser
-{
-    my $self  = shift;
-    my $user  = shift;
-    my $since = shift;
-    my $until = shift;
-
-    if ( ! $user ) { $user = $self->get("user"); }
-
-    my $sql .= qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$user" };
-
-    ## if date, restrict to just items since that date
-    if    ( $since ) { $sql .= qq{ AND time >= "$since" GROUP BY id ORDER BY time DESC }; }
-    elsif ( $until ) { $sql .= qq{ AND time <  "$until" GROUP BY id ORDER BY time DESC LIMIT 20 }; }
-
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    my @return;
-    foreach (@{$ref}) { push @return, $_->[0]; }
-    return @return;
-}
-
-sub ItemWasReviewedByUser
-{
-    my $self  = shift;
-    my $user  = shift;
-    my $id    = shift;
-
-    my $sql = qq{ SELECT id FROM $CRMSGlobals::reviewsTable WHERE user = "$user" AND id = "$id"};
-    #my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    my $found = $self->SimpleSqlGet( $sql );
-
-    if ($found) { return 1; }
-    return 0;
-}
-
 
 
 sub GetItemReviewDetails
