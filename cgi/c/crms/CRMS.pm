@@ -6646,7 +6646,8 @@ sub IsTrainingArea
 }
 
 # Used only in training, this removes all reviews, removes all historical reviews not in the
-# list of "official" historical review items, and resets all queue items status 0.
+# list of "official" historical review items, removes all queue items not priority 0,
+# and resets all remaining queue items to status 0.
 sub ResetButton
 {
   my $self = shift;
@@ -6662,12 +6663,17 @@ sub ResetButton
   foreach my $row ( @{$ref} )
   {
     my $id = $row->[0];
-    next if $ids{$id};
-    $sql = "DELETE FROM historicalreviews WHERE id='$id'";
+    my $delRecent = '';
+    if ($ids{$id})
+    {
+      $delRecent = "AND time>'2010-06-01 00:00:00'";
+    }
+    $sql = "DELETE FROM historicalreviews WHERE id='$id' $delRecent";
     $self->PrepareSubmitSql($sql);
   }
-  $self->PrepareSubmitSql("DELETE FROM reviews");
-  $self->PrepareSubmitSql("UPDATE queue SET status=0,pending_status=0,expcnt=0");
+  $self->PrepareSubmitSql('DELETE FROM reviews');
+  $self->PrepareSubmitSql('DELETE FROM queue WHERE priority>0');
+  $self->PrepareSubmitSql('UPDATE queue SET status=0,pending_status=0,expcnt=0');
 }
 
 1;
