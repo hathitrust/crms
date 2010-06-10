@@ -22,6 +22,7 @@ function VerifyNuke()
 -->
 </script>
 
+
 [% # Disable this in production -- too dangerous %]
 [% IF crms.get('dev') %]
 <table class='exportStats'>
@@ -57,6 +58,13 @@ function VerifyNuke()
 [% IF crms.IsTrainingArea() %]
 <form action="crms" onsubmit="return VerifyNuke();">
 <table class='exportStats'>
+  [% IF cgi.param('resetButton') %]
+    [% nuke = cgi.param('nuke') %]
+    [%# blah = crms.ResetButton(nuke) %]
+    <tr><th colspan="2"><span class="red">
+      [% (nuke)? "<strong>Training Site has been nuked.</strong>":"<strong>Training Site has been reset.</strong>" %]
+    </span></th></tr>
+  [% END %]
   <tr><th class="total" colspan="2">Reset Training Area</th></tr>
   <tr>
     <td>
@@ -198,14 +206,6 @@ function VerifyNuke()
     [% IF level == 2 %]
       [% blah = crms.ClearQueueAndExport(1) %]
     [% END %]
-  [% END %]
-[% END %]
-
-[% # Disable this everywhere but training %]
-[% IF crms.IsTrainingArea() %]
-  [% IF cgi.param('resetButton') %]
-    [% nuke = cgi.param('nuke') %]
-    [% blah = crms.ResetButton(nuke) %]
   [% END %]
 [% END %]
 
