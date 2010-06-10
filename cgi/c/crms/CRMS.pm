@@ -3064,38 +3064,17 @@ sub GetRange
 {
   my $self = shift;
  
-  my $sql = 'SELECT MAX(time) FROM reviews WHERE legacy=0';
-  my $reviews_max = $self->SimpleSqlGet($sql);
-
-  $sql = 'SELECT MIN(time) FROM reviews WHERE legacy=0';
-  my $reviews_min = $self->SimpleSqlGet($sql);
-
-  $sql = 'SELECT MAX(time) FROM historicalreviews WHERE legacy=0';
-  my $historicalreviews_max = $self->SimpleSqlGet($sql);
-
-  $sql = 'SELECT MIN(time) FROM historicalreviews WHERE legacy=0';
-  my $historicalreviews_min = $self->SimpleSqlGet($sql);
-
-  my $max = $reviews_max;
-  if ( $historicalreviews_max ge $reviews_max ) { $max = $historicalreviews_max; }
-
-  my $min = $reviews_min;
-  if ( $historicalreviews_min lt $reviews_min ) { $min = $historicalreviews_min; }
-  
+  my $max = $self->SimpleSqlGet('SELECT MAX(time) FROM historicalreviews WHERE legacy=0');
+  my $min = $self->SimpleSqlGet('SELECT MIN(time) FROM historicalreviews WHERE legacy=0');
   my $max_year = $max;
   $max_year =~ s,(.*?)\-.*,$1,;
-
   my $max_month = $max;
   $max_month =~ s,.*?\-(.*?)\-.*,$1,;
-
   my $min_year = $min;
   $min_year =~ s,(.*?)\-.*,$1,;
-
   my $min_month = $min;
   $min_month =~ s,.*?\-(.*?)\-.*,$1,;
-  
-  return ( $max_year, $max_month, $min_year, $min_month );
-
+  return ($max_year, $max_month, $min_year, $min_month);
 }
 
 sub GetTheYear
@@ -6645,14 +6624,15 @@ sub IsTrainingArea
   return ($where eq 'Training' || $where eq 'Moses Dev');
 }
 
-# Used only in training, this removes all reviews, removes all historical reviews not in the
-# list of "official" historical review items, removes all queue items not priority 0,
-# and resets all remaining queue items to status 0.
+
 sub ResetButton
 {
   my $self = shift;
+  my $nuke = shift;
 
   return unless $self->IsTrainingArea();
+  $self->ProcessReviews();
+  $self->ClearQueueAndExport(1);
   my $in = $self->get('root') . "/bin/c/crms/traininghist.txt";
   open (FH, '<', $in) || $self->SetError("Could not open $in");
   my %ids = [];
@@ -6663,17 +6643,27 @@ sub ResetButton
   foreach my $row ( @{$ref} )
   {
     my $id = $row->[0];
-    my $delRecent = '';
+    # If vol in official set, delete recent reviews > priority 0 unless nuking, in which case delete anything recent.
+    my $restrict = '';
     if ($ids{$id})
     {
-      $delRecent = "AND time>'2010-06-01 00:00:00'";
+      $restrict = ' AND time>"2010-06-01 00:00:00"';
+      $restrict .= ' AND priority>0' unless $nuke;
     }
-    $sql = "DELETE FROM historicalreviews WHERE id='$id' $delRecent";
+    # If not in list, delete if nuking or not recent priority 0.
+    else
+    {
+      $restrict = ' AND time<="2010-06-01 00:00:00" OR (time>"2010-06-01 00:00:00" AND priority>0)' unless $nuke;
+    }
+    $sql = "DELETE FROM historicalreviews WHERE id='$id' $restrict";
     $self->PrepareSubmitSql($sql);
   }
-  $self->PrepareSubmitSql('DELETE FROM reviews');
-  $self->PrepareSubmitSql('DELETE FROM queue WHERE priority>0');
-  $self->PrepareSubmitSql('UPDATE queue SET status=0,pending_status=0,expcnt=0');
+  $sql = ($nuke)? 'DELETE FROM reviews':'DELETE FROM reviews WHERE priority>0';
+  $self->PrepareSubmitSql($sql);
+  $sql = 'DELETE FROM queue WHERE priority>0 AND id NOT IN (SELECT DISTINCT id FROM reviews)';
+  $self->PrepareSubmitSql($sql);
+  $sql = 'UPDATE queue SET status=0,pending_status=0,expcnt=0 WHERE id NOT IN (SELECT DISTINCT id FROM reviews)';
+  $self->PrepareSubmitSql($sql);
 }
 
 1;

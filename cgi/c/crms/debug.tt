@@ -6,8 +6,21 @@
 [% INCLUDE header.tt %]
 
 <h2>System Administration:</h2>
-
 <br/>
+
+<script type="text/Javascript">
+<!--
+function VerifyNuke()
+{
+  var nuke = document.getElementById("nuke");
+  if (nuke.checked)
+  {
+    return (confirm('Please confirm you want to remove ALL historical reviews done by new personnel.'));
+  }
+  return true;
+}
+-->
+</script>
 
 [% # Disable this in production -- too dangerous %]
 [% IF crms.get('dev') %]
@@ -36,22 +49,49 @@
   </form>
 </td>
 </tr>
+</table>
+<br/>
+[% END %]
+
 [% # Disable this everywhere but training %]
 [% IF crms.IsTrainingArea() %]
+<form action="crms" onsubmit="return VerifyNuke();">
+<table class='exportStats'>
+  <tr><th class="total" colspan="2">Reset Training Area</th></tr>
   <tr>
-    <th>Reset Training Area
-      <span class="total">Remove all active reviews and all historical reviews not in the original training set (32,559).</span>
-    </th>
     <td>
-      <form action="crms">
-        <input type="hidden" name="p" value="debug"/>
-        <input type="hidden" name="resetButton" value="1"/>
-        <input type="submit" value="Do it!"/>
-      </form>
+      <input type="hidden" name="p" value="debug"/>
+      <input type="hidden" name="resetButton" value="1"/>
+      <input type="submit" value="Do it!"/>
+    </td>
+    <td nowrap="nowrap"><input type="checkbox" id="nuke" name="nuke"/>&nbsp;Reset&nbsp;<b>Everything</b></td>
+  </tr>
+  <tr>
+    <td nowrap="nowrap" colspan="2">
+      <p>When the training site is reset, CRMS does the following, in order:</p>
+      <ol>
+      <li>Processes reviews and moves to historical.</li>
+      <li>Removes all historical reviews for volumes not in the "master list", or with priority > 0.</li>
+      <li>Removes all reviews with priority > 0.</li>
+      <li>Removes all queue items with priority > 0.</li>
+      <li>Resets all unreviewed queue items to status 0.</li>
+      </ol>
     </td>
   </tr>
-[% END %]
+  <tr>
+    <td nowrap="nowrap" colspan="2">
+      <p>When the training site is reset using "Reset <b>Everything</b>", CRMS does the following, in order:</p>
+      <ol>
+      <li>Processes reviews and moves to historical.</li>
+      <li>Removes all historical reviews for volumes not in the "master list".</li>
+      <li>Removes all reviews.</li>
+      <li>Removes all queue items with priority > 0.</li>
+      <li>Resets all unreviewed queue items to status 0.</li>
+      </ol>
+    </td>
+  </tr>
 </table>
+</form>
 [% END %]
 
 <br/><br/>
@@ -158,16 +198,14 @@
     [% IF level == 2 %]
       [% blah = crms.ClearQueueAndExport(1) %]
     [% END %]
-    [% FOREACH error IN crms.GetErrors %]
-      <p style="color:red;">[% error %]</p>
-    [% END %]
   [% END %]
 [% END %]
 
 [% # Disable this everywhere but training %]
 [% IF crms.IsTrainingArea() %]
   [% IF cgi.param('resetButton') %]
-    [% blah = crms.ResetButton() %]
+    [% nuke = cgi.param('nuke') %]
+    [% blah = crms.ResetButton(nuke) %]
   [% END %]
 [% END %]
 
