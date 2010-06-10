@@ -58,13 +58,11 @@
   </tr>
   <tr>
     <td nowrap="nowrap" colspan="2">
-      <p>When the training site is reset, CRMS does the following, in order:</p>
-      <ol>
-      <li>Processes reviews and moves to historical.</li>
+      <p>When the training site is reset, CRMS does the following:</p>
+      <ul>
       <li>Removes all active reviews with priority > 0.</li>
       <li>Removes all queue items with priority > 0.</li>
-      <li>Resets all unreviewed queue items to status 0.</li>
-      </ol>
+      </ul>
     </td>
   </tr>
 </table>

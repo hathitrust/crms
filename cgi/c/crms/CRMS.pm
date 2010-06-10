@@ -6630,8 +6630,8 @@ sub ResetButton
   my $self = shift;
 
   return unless $self->IsTrainingArea();
-  $self->ProcessReviews();
-  $self->ClearQueueAndExport(1);
+  #$self->ProcessReviews();
+  #$self->ClearQueueAndExport(1);
   #my $sql = 'DELETE FROM historicalreviews WHERE time>"2010-06-01 00:00:00" AND priority>0';
   #$self->PrepareSubmitSql($sql);
   my $sql = 'DELETE FROM reviews WHERE priority>0';
