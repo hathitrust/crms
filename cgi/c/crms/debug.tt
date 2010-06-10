@@ -60,7 +60,7 @@ function VerifyNuke()
 <table class='exportStats'>
   [% IF cgi.param('resetButton') %]
     [% nuke = cgi.param('nuke') %]
-    [%# blah = crms.ResetButton(nuke) %]
+    [% blah = crms.ResetButton(nuke) %]
     <tr><th colspan="2"><span class="red">
       [% (nuke)? "<strong>Training Site has been nuked.</strong>":"<strong>Training Site has been reset.</strong>" %]
     </span></th></tr>
