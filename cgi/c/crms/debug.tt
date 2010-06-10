@@ -8,20 +8,6 @@
 <h2>System Administration:</h2>
 <br/>
 
-<script type="text/Javascript">
-<!--
-function VerifyNuke()
-{
-  var nuke = document.getElementById("nuke");
-  if (nuke.checked)
-  {
-    return (confirm('Please confirm you want to remove ALL historical reviews done by new personnel.'));
-  }
-  return true;
-}
--->
-</script>
-
 
 [% # Disable this in production -- too dangerous %]
 [% IF crms.get('dev') %]
@@ -56,43 +42,26 @@ function VerifyNuke()
 
 [% # Disable this everywhere but training %]
 [% IF crms.IsTrainingArea() %]
-<form action="crms" onsubmit="return VerifyNuke();">
+<form action="crms">
 <table class='exportStats'>
   [% IF cgi.param('resetButton') %]
-    [% nuke = cgi.param('nuke') %]
-    [% blah = crms.ResetButton(nuke) %]
-    <tr><th colspan="2"><span class="red">
-      [% (nuke)? "<strong>Training Site has been nuked.</strong>":"<strong>Training Site has been reset.</strong>" %]
-    </span></th></tr>
+    [% blah = crms.ResetButton() %]
+    <tr><th colspan="2"><span class="red"><strong>Training Site has been reset.</strong></span></th></tr>
   [% END %]
-  <tr><th class="total" colspan="2">Reset Training Area</th></tr>
   <tr>
+    <th class="total">Reset Training Area</th>
     <td>
       <input type="hidden" name="p" value="debug"/>
       <input type="hidden" name="resetButton" value="1"/>
       <input type="submit" value="Do it!"/>
     </td>
-    <td nowrap="nowrap"><input type="checkbox" id="nuke" name="nuke"/>&nbsp;Reset&nbsp;<b>Everything</b></td>
   </tr>
   <tr>
     <td nowrap="nowrap" colspan="2">
       <p>When the training site is reset, CRMS does the following, in order:</p>
       <ol>
       <li>Processes reviews and moves to historical.</li>
-      <li>Removes all historical reviews for volumes not in the "master list", or with priority > 0.</li>
-      <li>Removes all reviews with priority > 0.</li>
-      <li>Removes all queue items with priority > 0.</li>
-      <li>Resets all unreviewed queue items to status 0.</li>
-      </ol>
-    </td>
-  </tr>
-  <tr>
-    <td nowrap="nowrap" colspan="2">
-      <p>When the training site is reset using "Reset <b>Everything</b>", CRMS does the following, in order:</p>
-      <ol>
-      <li>Processes reviews and moves to historical.</li>
-      <li>Removes all historical reviews for volumes not in the "master list".</li>
-      <li>Removes all reviews.</li>
+      <li>Removes all active reviews with priority > 0.</li>
       <li>Removes all queue items with priority > 0.</li>
       <li>Resets all unreviewed queue items to status 0.</li>
       </ol>

@@ -6478,10 +6478,10 @@ sub ReviewSearchMenu
     splice @keys, 3, 1;
     splice @labs, 3, 1;
   }
-  my $html = "<select name='$searchName' id='$searchName'>\n";
+  my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
-    $html .= sprintf(qq{  <option value="%s"%s>%s</option>\n}, $keys[$i], ($searchVal eq $keys[$i])? ' selected="selected"':'', $labs[$i]);
+    $html .= sprintf("  <option value='%s'%s>%s</option>\n", $keys[$i], ($searchVal eq $keys[$i])? ' selected="selected"':'', $labs[$i]);
   }
   $html .= "</select>\n";
   return $html;
@@ -6496,10 +6496,10 @@ sub QueueSearchMenu
   
   my @keys = qw(Identifier Title Author PubDate Status Locked Priority Reviews ExpertCount Holds);
   my @labs = ('Identifier','Title','Author','Pub Date','Status','Locked','Priority','Reviews','Expert Reviews','Holds');
-  my $html = "<select name='$searchName' id='$searchName'>\n";
+  my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
-    $html .= sprintf(qq{  <option value="%s"%s>%s</option>\n}, $keys[$i], ($searchVal eq $keys[$i])? ' selected="selected"':'', $labs[$i]);
+    $html .= sprintf("  <option value='%s'%s>%s</option>\n", $keys[$i], ($searchVal eq $keys[$i])? ' selected="selected"':'', $labs[$i]);
   }
   $html .= "</select>\n";
   return $html;
@@ -6628,37 +6628,13 @@ sub IsTrainingArea
 sub ResetButton
 {
   my $self = shift;
-  my $nuke = shift;
 
   return unless $self->IsTrainingArea();
   $self->ProcessReviews();
   $self->ClearQueueAndExport(1);
-  my $in = $self->get('root') . "/bin/c/crms/traininghist.txt";
-  open (FH, '<', $in) || $self->SetError("Could not open $in");
-  my %ids = [];
-  while( <FH> ) { chomp; $ids{$_}=1; }
-  close FH;
-  my $sql = "SELECT DISTINCT id FROM historicalreviews";
-  my $ref = $self->get('dbh')->selectall_arrayref($sql);
-  foreach my $row ( @{$ref} )
-  {
-    my $id = $row->[0];
-    # If vol in official set, delete recent reviews > priority 0 unless nuking, in which case delete anything recent.
-    my $restrict = '';
-    if ($ids{$id})
-    {
-      $restrict = ' AND time>"2010-06-01 00:00:00"';
-      $restrict .= ' AND priority>0' unless $nuke;
-    }
-    # If not in list, delete if nuking or not recent priority 0.
-    else
-    {
-      $restrict = ' AND time<="2010-06-01 00:00:00" OR (time>"2010-06-01 00:00:00" AND priority>0)' unless $nuke;
-    }
-    $sql = "DELETE FROM historicalreviews WHERE id='$id' $restrict";
-    $self->PrepareSubmitSql($sql);
-  }
-  $sql = ($nuke)? 'DELETE FROM reviews':'DELETE FROM reviews WHERE priority>0';
+  #my $sql = 'DELETE FROM historicalreviews WHERE time>"2010-06-01 00:00:00" AND priority>0';
+  #$self->PrepareSubmitSql($sql);
+  my $sql = 'DELETE FROM reviews WHERE priority>0';
   $self->PrepareSubmitSql($sql);
   $sql = 'DELETE FROM queue WHERE priority>0 AND id NOT IN (SELECT DISTINCT id FROM reviews)';
   $self->PrepareSubmitSql($sql);
