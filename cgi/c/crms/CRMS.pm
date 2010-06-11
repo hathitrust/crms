@@ -3444,7 +3444,12 @@ sub CreateExportGraph
   {
     my @colorlist = ($colors{'All PD'}, $colors{'All IC'}, $colors{'All UND/NFI'});
     my @vals = ();
-    map(push(@vals,sprintf('{"value":%s,"label":"%s\n%.1f%%"}', $totals{$_}, $_, 100.0*$totals{$_}/$gt)),@titles);
+    foreach my $title (@titles)
+    {
+      my $pct = 0.0;
+      eval { $pct = 100.0 * $totals{$title} / $gt; };
+      push(@vals,sprintf('{"value":%s,"label":"%s\n%.1f%%"}', $totals{$title}, $title, $pct));
+    }
     $report .= sprintf('{"type":"pie","start-angle":35,"animate":[{"type":"fade"}],"gradient-fill":true,"colours":["%s"],"values":[%s]}]',
                        join('","',@colorlist),join(',',@vals));
   }
