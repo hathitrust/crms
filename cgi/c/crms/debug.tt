@@ -65,8 +65,8 @@
       <p>When volumes added to queue are cleared, CRMS does the following:</p>
       <ul>
       <li>Removes all active reviews with priority > 0.</li>
-      <li>Removes all queue items with priority > 0.</li>
-      <li>Resets all remaining queue items to status 0.</li>
+      <li>Removes all volumes in the queue with priority > 0.</li>
+      <li>Resets all remaining volumes in the queue to status 0.</li>
       </ul>
     </td>
   </tr>
@@ -85,8 +85,8 @@
       <p>When active reviews are cleared, CRMS does the following:</p>
       <ul>
       <li>Removes all active reviews.</li>
-      <li>Removes all queue items with priority > 0.</li>
-      <li>Resets all remaining queue items to status 0.</li>
+      <li>Removes all volumes in the queue with priority > 0.</li>
+      <li>Resets all remaining volumes in the queue to status 0.</li>
       </ul>
     </td>
   </tr>
