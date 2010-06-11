@@ -51,7 +51,7 @@
     <tr><th colspan="2"><span class="red"><strong>[% note %].</strong></span></th></tr>
   [% END %]
   <tr>
-    <th class="total">Clear Volumes Added to Queue</th>
+    <th class="total">Clear Active Volumes with Priority &gt; 0</th>
     <td>
       <form action="crms">
       <input type="hidden" name="p" value="debug"/>
@@ -62,16 +62,15 @@
   </tr>
   <tr>
     <td nowrap="nowrap" colspan="2">
-      <p>When volumes added to queue are cleared, CRMS does the following:</p>
+      <p>When these volumes are cleared, CRMS does the following:</p>
       <ul>
-      <li>Removes all active reviews with priority > 0.</li>
-      <li>Removes all volumes in the queue with priority > 0.</li>
-      <li>Resets all remaining volumes in the queue to status 0.</li>
+      <li>Removes all active reviews with priority &gt; 0.</li>
+      <li>Removes all volumes with priority &gt; 0 from the queue.</li>
       </ul>
     </td>
   </tr>
   <tr>
-    <th class="total">Clear Active Reviews</th>
+    <th class="total">Clear Active Reviews with Status 0-3</th>
     <td>
       <form action="crms">
       <input type="hidden" name="p" value="debug"/>
@@ -82,11 +81,10 @@
   </tr>
   <tr>
     <td nowrap="nowrap" colspan="2">
-      <p>When active reviews are cleared, CRMS does the following:</p>
+      <p>When these active reviews are cleared, CRMS does the following:</p>
       <ul>
-      <li>Removes all active reviews.</li>
-      <li>Removes all volumes in the queue with priority > 0.</li>
-      <li>Resets all remaining volumes in the queue to status 0.</li>
+      <li>Removes all active volumes with status 0-3 from queue.</li>
+      <li>Deletes all active reviews with status 0-3.</li>
       </ul>
     </td>
   </tr>

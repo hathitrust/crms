@@ -6631,13 +6631,22 @@ sub ResetButton
   my $nuke = shift;
 
   return unless $self->IsTrainingArea();
-  my $restrict = ($nuke)? '':'WHERE priority>0';
-  my $sql = "DELETE FROM reviews $restrict";
-  $self->PrepareSubmitSql($sql);
-  $sql = "DELETE FROM queue WHERE priority>0";
-  $self->PrepareSubmitSql($sql);
-  $sql = 'UPDATE queue SET status=0,pending_status=0,expcnt=0 WHERE id NOT IN (SELECT DISTINCT id FROM reviews)';
-  $self->PrepareSubmitSql($sql);
+  if ($nuke)
+  {
+    my $ref = $self->get('dbh')->selectall_arrayref('SELECT id FROM queue WHERE status<4 AND id IN (SELECT DISTINCT id FROM reviews)');
+    foreach my $row ( @{$ref} )
+    {
+      my $id = $row->[0];
+      $self->PrepareSubmitSql("DELETE FROM queue WHERE id='$id'");
+      $self->PrepareSubmitSql("DELETE FROM reviews WHERE id='$id'");
+    }
+  }
+  else
+  {
+    $self->PrepareSubmitSql('DELETE FROM reviews WHERE priority>0');
+    $self->PrepareSubmitSql('DELETE FROM queue WHERE priority>0');
+  }
+  $self->PrepareSubmitSql('UPDATE queue SET status=0,pending_status=0,expcnt=0 WHERE id NOT IN (SELECT DISTINCT id FROM reviews)');
 }
 
 1;
