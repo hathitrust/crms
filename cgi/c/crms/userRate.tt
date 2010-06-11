@@ -1,23 +1,25 @@
 [% INCLUDE header.tt    %]
-
-<h2>My Review Stats:</h2>
-<a href="/c/crms/pdf/ReviewStatsHelp.pdf" target="_blank">Review&nbsp;Stats&nbsp;Help</a><br/>
-
 [% user = cgi.param('user') %]
 [% IF !user %][% user = crms.get('user') %][% END %]
 
+<h2>My Review Stats:</h2>
+<a href="/c/crms/pdf/ReviewStatsHelp.pdf" target="_blank">Review&nbsp;Stats&nbsp;Help</a><br/>
 <br/>
-[% crms.CreateStatsReport( user, 0, 0 ) %]
-<span class="smallishText">*Does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews.</span>
-<br/><br/>
-[% sql = "SELECT COUNT(*) FROM reviews WHERE user='$user'" %]
-<b>Reviews Awaiting Verdict: [% crms.SimpleSqlGet(sql) %]</b>
-<br/><br/>
-<a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
-   id="[% user %]a" onclick='toggleVisibility("[% user %]");'>Show 2009</a><br/>
-<div id="[% user %]" style="display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;">
-[% crms.CreateStatsReport(user, 0, 1, 2009) %]
-<br/>
-</div>
+[% IF crms.GetTotalHistoricalReviewCount() %]
+  [% crms.CreateStatsReport( user, 0, 0 ) %]
+  <span class="smallishText">*Does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews.</span>
+  <br/><br/>
+  [% sql = "SELECT COUNT(*) FROM reviews WHERE user='$user'" %]
+  <b>Reviews Awaiting Verdict: [% crms.SimpleSqlGet(sql) %]</b>
+  <br/><br/>
+  <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
+     id="[% user %]a" onclick='toggleVisibility("[% user %]");'>Show 2009</a><br/>
+  <div id="[% user %]" style="display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;">
+  [% crms.CreateStatsReport(user, 0, 1, 2009) %]
+  <br/>
+  </div>
+[% ELSE %]
+  There are no historical reviews at this time.
+[% END %]
 [% INCLUDE footer.tt %]
 
