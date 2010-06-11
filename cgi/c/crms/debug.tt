@@ -42,31 +42,55 @@
 
 [% # Disable this everywhere but training %]
 [% IF crms.IsTrainingArea() %]
-<form action="crms">
+
 <table class='exportStats'>
-  [% IF cgi.param('resetButton') %]
-    [% blah = crms.ResetButton() %]
-    <tr><th colspan="2"><span class="red"><strong>Training Site has been reset.</strong></span></th></tr>
+  [% level = cgi.param('resetButton') %]
+  [% IF level %]
+    [% blah = crms.ResetButton(level - 1) %]
+    [% note = (level == 1)? 'Volumes added to queue have been cleared':'Active reviews have been cleared' %]
+    <tr><th colspan="2"><span class="red"><strong>[% note %].</strong></span></th></tr>
   [% END %]
   <tr>
-    <th class="total">Reset Training Area</th>
+    <th class="total">Clear Volumes Added to Queue</th>
     <td>
+      <form action="crms">
       <input type="hidden" name="p" value="debug"/>
       <input type="hidden" name="resetButton" value="1"/>
       <input type="submit" value="Do it!"/>
+      </form>
     </td>
   </tr>
   <tr>
     <td nowrap="nowrap" colspan="2">
-      <p>When the training site is reset, CRMS does the following:</p>
+      <p>When volumes added to queue are cleared, CRMS does the following:</p>
       <ul>
       <li>Removes all active reviews with priority > 0.</li>
       <li>Removes all queue items with priority > 0.</li>
+      <li>Resets all remaining queue items to status 0.</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th class="total">Clear Active Reviews</th>
+    <td>
+      <form action="crms">
+      <input type="hidden" name="p" value="debug"/>
+      <input type="hidden" name="resetButton" value="2"/>
+      <input type="submit" value="Do it!"/>
+      </form>
+    </td>
+  </tr>
+  <tr>
+    <td nowrap="nowrap" colspan="2">
+      <p>When active reviews are cleared, CRMS does the following:</p>
+      <ul>
+      <li>Removes all active reviews.</li>
+      <li>Removes all queue items with priority > 0.</li>
+      <li>Resets all remaining queue items to status 0.</li>
       </ul>
     </td>
   </tr>
 </table>
-</form>
 [% END %]
 
 <br/><br/>

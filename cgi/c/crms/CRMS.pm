@@ -3163,7 +3163,7 @@ sub GetAllMonthsInYear
   return @months;
 }
 
-# Returns an array of date strings e.g. ('2009-01','2010-01') with start month of all years for which we have data.
+# Returns an array of year strings e.g. ('2009','2010') for all years for which we have data.
 sub GetAllYears
 {
   my $self = shift;
@@ -6628,15 +6628,13 @@ sub IsTrainingArea
 sub ResetButton
 {
   my $self = shift;
+  my $nuke = shift;
 
   return unless $self->IsTrainingArea();
-  #$self->ProcessReviews();
-  #$self->ClearQueueAndExport(1);
-  #my $sql = 'DELETE FROM historicalreviews WHERE time>"2010-06-01 00:00:00" AND priority>0';
-  #$self->PrepareSubmitSql($sql);
-  my $sql = 'DELETE FROM reviews WHERE priority>0';
+  my $restrict = ($nuke)? '':'WHERE priority>0';
+  my $sql = "DELETE FROM reviews $restrict";
   $self->PrepareSubmitSql($sql);
-  $sql = 'DELETE FROM queue WHERE priority>0 AND id NOT IN (SELECT DISTINCT id FROM reviews)';
+  $sql = "DELETE FROM queue WHERE priority>0";
   $self->PrepareSubmitSql($sql);
   $sql = 'UPDATE queue SET status=0,pending_status=0,expcnt=0 WHERE id NOT IN (SELECT DISTINCT id FROM reviews)';
   $self->PrepareSubmitSql($sql);
