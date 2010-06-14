@@ -3168,12 +3168,17 @@ sub GetAllYears
 {
   my $self = shift;
   
+  my @list = ();
   # FIXME: use the GetRange function
   my $min = $self->SimpleSqlGet('SELECT MIN(time) FROM exportdata');
   my $max = $self->SimpleSqlGet('SELECT MAX(time) FROM exportdata');
-  $min = substr($min,0,4);
-  $max = substr($max,0,4);
-  return ($min..$max);
+  if ($min && $max)
+  {
+    $min = substr($min,0,4);
+    $max = substr($max,0,4);
+    @list = ($min..$max);
+  }
+  return @list;
 }
 
 
@@ -3989,6 +3994,7 @@ sub GetMonthStats
   my $user = shift;
   my $start_date = shift;
 
+  return unless $start_date;
   my $dbh = $self->get( 'dbh' );
 
   my $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND time LIKE '$start_date%'};
