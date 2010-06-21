@@ -19,7 +19,7 @@
     <tr>
       <td class="display" align="left">Size:</td>
       <td>
-        <select class="review" onchange="zoom(this);">
+        <select title="PageTurner Size" class="review" onchange="zoom(this);">
         [% percents = [50,75,100,125,150,200] %]
         [% FOREACH p IN percents %]
           [% IF p == mag %]
@@ -34,9 +34,10 @@
   </table>
   <table class="test">
     <tr>
-      <td class="test"><strong>Renewal&nbsp;ID:</strong></td>
+      <td class="test"><strong><label for="renewalField">Renewal&nbsp;ID: </label></strong></td>
       <td>
-        <input type="text" name="renNum" value="[% renNum %]" size="8" onblur="javascript:popRenewalDate()"/>
+        <input id="renewalField" title="Renewal ID" type="text" name="renNum"
+               value="[% renNum %]" size="8" onblur="javascript:popRenewalDate()"/>
       </td>
     </tr>
     <tr>
@@ -44,23 +45,26 @@
         <input type="button" value="Get Renewal Date" onclick="popRenewalDate();" accesskey="d" class="reviewblue"
                style="margin:0px;padding:1px;background-color:#d0dee6;"/>
       </td>
-      <td><input type="text" id="getDate" name="renDate" value="[% renDate %]" size="8" readonly="readonly"/></td>
+      <td>
+        <input type="text" title="Stanford Renewal Date" id="getDate" name="renDate"
+               value="[% renDate %]" size="8" readonly="readonly"/>
+      </td>
     </tr>
   </table>
 <div id="RightsCont" class="rightscont">
 <div id="RightsReason" style="position:relative;">
   <div style="position:absolute;top:0px;right:1em;">
     <a class="tip" href="#">
-      <img style="border:0px solid;" width="16" height="16" alt="Search Help" src="/c/crms/help.png"/>
+      <img style="border:0px solid;" width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
       <span>
-      <b>pd/ncn</b> - public domain/no printed copyright notice<br/>
-      <b>pd/ren</b> - public domain/copyright was not renewed<br/>
-      <b>pd/cdpp</b> - public domain/copyright date and/or place of publication*<br/>
-      <b>ic/ren</b> - in copyright/copyright was renewed<br/>
-      <b>ic/cdpp</b> - in copyright/copyright date and/or place of publication*<br/>
-      <b>und/nfi</b> - undetermined/needs further investigation<br/>
+      <strong>pd/ncn</strong> - public domain/no printed copyright notice<br/>
+      <strong>pd/ren</strong> - public domain/copyright was not renewed<br/>
+      <strong>pd/cdpp</strong> - public domain/publication date* on piece is pre-1923 (US work)<br/>
+      <strong>ic/ren</strong> - in copyright/copyright was renewed<br/>
+      <strong>ic/cdpp</strong> - in copyright/publication date* on piece is post-1963 (US work)<br/>
+      <strong>und/nfi</strong> - undetermined/needs further investigation<br/>
       <br/>
-      * Information on piece differs from what is in bib record,<br/>&nbsp;&nbsp;i.e., pre-1923 US work (pd); post-1963 US work (ic).
+      * if no publication date listed on piece, use copyright date
       </span>
     </a>
   </div>
@@ -118,8 +122,8 @@
   </table>
 </div>
 <div id="Notes">
-  <strong>Notes: </strong>
-  <select class="review" name="category">
+  <strong><label for="noteMenu">Notes: </label></strong>
+  <select id="noteMenu" class="review" name="category">
     [% pres = {"Foreign Pub"    => "Foreign Pub",   "Language"        => "Language",
                "Misc"           => "Misc",          "Missing"         => "Missing",
                "Reprint"        => "Reprint",       "Periodical"      => "Periodical",
@@ -141,7 +145,7 @@
       [% END %]
     [% END %]
   </select>
-  <textarea name="comment" cols="20" rows="1">[% comm %]</textarea>
+  <textarea title="Note Text" name="comment" cols="20" rows="1">[% comm %]</textarea>
   </div>
   <div id="SubmitForm">
   <table>
@@ -155,20 +159,18 @@
   [% IF crms.IsUserExpert(user) %]
     <tr>
       <td style="text-align:left;" width="28">
-        <input type="checkbox" name="swiss" [% (swiss)? 'checked="checked"':'' %]/>
+        <input type="checkbox" id="swiss" name="swiss" [% (swiss)? 'checked="checked"':'' %]/>
       </td>
-      <td>
-        Do not invalidate other reviews<br/>for this volume
-      </td>
+      <td><label for="swiss">Do not invalidate other reviews<br/>for this volume</label></td>
     </tr>
     <tr><td/><td/></tr><tr><td/><td/></tr>
   [% END %]
     <tr>
       <td style="text-align:left;">
         [% question = crms.HoldForItem(barcode,user) %]
-        <input type="checkbox" name="question" [% (question)? 'checked="checked"':'' %] onclick="toggleVisibility('expiry');"/>
+        <input type="checkbox" id="question" name="question" [% (question)? 'checked="checked"':'' %] onclick="toggleVisibility('expiry');"/>
       </td>
-      <td>Hold for Question</td>
+      <td><label for="question">Hold for Question</label></td>
     </tr>
     <tr>
       <td colspan="2">
