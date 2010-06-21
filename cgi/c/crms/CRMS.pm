@@ -292,67 +292,70 @@ sub CheckPendingStatus
   my $self = shift;
   my $id   = shift;
   
-  my $sql = "SELECT id, user, attr, reason, renNum, renDate, hold FROM reviews WHERE id='$id'";
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-  if (scalar @{$ref} > 1)
+  my $sql = "SELECT status FROM queue WHERE id='$id'";
+  my $status = $self->SimpleSqlGet($sql);
+  my $pstatus = $status;
+  if (!$status)
   {
-    my $row = @{$ref}[0];
-    my $id      = $row->[0];
-    my $user    = $row->[1];
-    my $attr    = $row->[2];
-    my $reason  = $row->[3];
-    my $renNum  = $row->[4];
-    my $renDate = $row->[5];
-    my $hold    = $row->[6];
-    
-    return if $hold and $self->GetTodaysDate() lt $hold;
-    
-    my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold ) = $self->GetOtherReview( $id, $user );
-    return if $other_hold and $self->GetTodaysDate() lt $other_hold;
+    $sql = "SELECT id, user, attr, reason, renNum, renDate FROM reviews WHERE id='$id' AND expert!=1";
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    if (scalar @{$ref} > 1)
+    {
+      my $row = @{$ref}[0];
+      my $user    = $row->[0];
+      my $attr    = $row->[1];
+      my $reason  = $row->[2];
+      my $renNum  = $row->[3];
+      my $renDate = $row->[4];
+      $row = @{$ref}[1];
+      my $other_user    = $row->[0];
+      my $other_attr    = $row->[1];
+      my $other_reason  = $row->[2];
+      my $other_renNum  = $row->[3];
+      my $other_renDate = $row->[4];
 
-    if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
-    {
-      # If both reviewers are non-advanced mark as provisional match
-      if ( (!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+      if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
       {
-         $self->RegisterPendingStatus( $id, 3 );
-      }
-      else #Mark as 4 - two that agree
-      {
-        #If they are ic/ren then the renewal date and id must match
-        if ( ( $attr == 2 ) && ( $reason == 7 ) )
+        # If both reviewers are non-advanced mark as provisional match
+        if ( (!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
         {
-          $renNum =~ s/\s+//gs;
-          $other_renNum =~ s/\s+//gs;
-          if ( ( $renNum eq $other_renNum ) && ( $renDate eq $other_renDate ) )
+           $pstatus = 3;
+        }
+        else #Mark as 4 - two that agree
+        {
+          #If they are ic/ren then the renewal date and id must match
+          if ( ( $attr == 2 ) && ( $reason == 7 ) )
           {
-            #Mark as 4
-            $self->RegisterPendingStatus( $id, 4 );
+            $renNum =~ s/\s+//gs;
+            $other_renNum =~ s/\s+//gs;
+            if ( ( $renNum eq $other_renNum ) && ( $renDate eq $other_renDate ) )
+            {
+              #Mark as 4
+              $pstatus = 4;
+            }
+            else
+            {
+              #Mark as 2
+              $pstatus = 2;
+            }
           }
-          else
+          else #all other cases mark as 4
           {
-            #Mark as 2
-            $self->RegisterPendingStatus( $id, 2 );
+            $pstatus = 4;
           }
         }
-        else #all other cases mark as 4
-        {
-          $self->RegisterPendingStatus( $id, 4 );
-        }
+      }
+      else #Mark as 2 - two that disagree
+      {
+        $pstatus = 2;
       }
     }
-    else #Mark as 2 - two that disagree
+    elsif (scalar @{$ref} == 1) #Mark as 1: just single review unless it's a status 5/7 already.
     {
-      $self->RegisterPendingStatus( $id, 2 );
+      $pstatus = 1 unless $status;
     }
   }
-  elsif (scalar @{$ref} == 1) #Mark as 1: just single review unless it's a status 5 already.
-  {
-    $sql = "SELECT status FROM queue WHERE id='$id'";
-    my $status = $self->SimpleSqlGet($sql);
-    $status = 1 unless $status;
-    $self->RegisterPendingStatus( $id, $status );
-  }
+  $self->RegisterPendingStatus( $id, $pstatus );
 }
 
 # If fromcgi is set, don't try to create the export file, print stuff, or send mail.
@@ -1115,7 +1118,8 @@ sub SubmitReview
   {
     if ( $exp )
     {
-      $sql = "UPDATE $CRMSGlobals::queueTable SET expcnt=1 WHERE id='$id'";
+      my $expcnt = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id' AND expert=1");
+      $sql = "UPDATE $CRMSGlobals::queueTable SET expcnt=$expcnt WHERE id='$id'";
       $result = $self->PrepareSubmitSql( $sql );
       my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason);
       #We have decided to register the expert decision right away.
@@ -1137,25 +1141,20 @@ sub GetStatusForExpertReview
   my $reason = shift;
   
   my $status = 5;
-  my $pstatus = $self->SimpleSqlGet("SELECT pending_status FROM queue WHERE id='$id'");
-  if ($pstatus == 3)
+  # See if it's a provisional match and expert agreed with both of existing non-advanced reviews. If so, status 7.
+  my $sql = "SELECT attr,reason,user FROM reviews WHERE id='$id' AND user IN (SELECT id FROM users WHERE expert=0 AND advanced=0)";
+  my $ref = $self->get('dbh')->selectall_arrayref($sql);
+  if (scalar @{ $ref } >= 2)
   {
-    # If provisional match, see if the expert agreed with both of existing non-expert reviews. If so, status 7.
-    my $sql = "SELECT attr,reason,user FROM reviews WHERE id='$id' AND user IN (SELECT id FROM users WHERE expert=0)";
-    my $ref = $self->get('dbh')->selectall_arrayref($sql);
-    if (scalar @{ $ref } >= 2)
+    my $attr1   = $ref->[0]->[0];
+    my $reason1 = $ref->[0]->[1];
+    my $user1   = $ref->[0]->[2];
+    my $attr2   = $ref->[1]->[0];
+    my $reason2 = $ref->[1]->[1];
+    my $user2   = $ref->[1]->[2];
+    if ($attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1)
     {
-      my $attr1   = $ref->[0]->[0];
-      my $reason1 = $ref->[0]->[1];
-      my $user1   = $ref->[0]->[2];
-      my $attr2   = $ref->[1]->[0];
-      my $reason2 = $ref->[1]->[1];
-      my $user2   = $ref->[1]->[2];
-      if ($attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1 &&
-         (!$self->IsUserAdvanced($user1)) && (!$self->IsUserAdvanced($user2)))
-      {
-        $status = 7;
-      }
+      $status = 7;
     }
   }
   return $status;
@@ -1164,7 +1163,7 @@ sub GetStatusForExpertReview
 sub GetPriority
 {
   my $self = shift;
-  my $id = shift;
+  my $id   = shift;
   
   my $sql = "SELECT priority FROM queue WHERE id='$id'";
   return $self->StripDecimal($self->SimpleSqlGet($sql));
@@ -1177,7 +1176,7 @@ sub GetOtherReview
   my $id   = shift;
   my $user = shift;
 
-  my $sql = qq{SELECT id, user, attr, reason, renNum, renDate, hold FROM $CRMSGlobals::reviewsTable WHERE id="$id" and user != "$user"};
+  my $sql = "SELECT id,user,attr,reason,renNum,renDate,hold FROM $CRMSGlobals::reviewsTable WHERE id='$id' AND user!='$user'";
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
   foreach my $row ( @{$ref} )
   {
@@ -1264,91 +1263,89 @@ sub SubmitHistReview
 ## ----------------------------------------------------------------------------
 sub SubmitActiveReview
 {
-    my $self = shift;
-    my ($id, $user, $date, $attr, $reason, $noop) = @_;
+  my $self = shift;
+  my ($id, $user, $date, $attr, $reason, $noop) = @_;
 
-    ## change attr and reason back to numbers
-    $attr = $self->GetRightsNum( $attr );
-    
-    if (!$attr) { $self->SetError( "bad attr: $attr" ); return 0; }
-    $reason = $self->GetReasonNum( $reason );
-    if (!$reason) { $self->SetError( "bad reason: $reason" ); return 0; }
-    if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->Logit("bad attr/reason $attr/$reason");    return 0; }
-    if ( ! $self->CheckReviewer( $user, 0 ) )                 { $self->SetError("reviewer ($user) check failed"); return 0; }
-    ## do some sort of check for expert submissions
+  ## change attr and reason back to numbers
+  $attr = $self->GetRightsNum( $attr );
 
-    if (!$noop)
-    {
-      ## all good, INSERT
-      my $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, time, attr, reason, legacy, priority) } .
-                qq{VALUES('$id', '$user', '$date', '$attr', '$reason', 1, 1) };
+  if (!$attr) { $self->SetError( "bad attr: $attr" ); return 0; }
+  $reason = $self->GetReasonNum( $reason );
+  if (!$reason) { $self->SetError( "bad reason: $reason" ); return 0; }
+  if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->Logit("bad attr/reason $attr/$reason");    return 0; }
+  if ( ! $self->CheckReviewer( $user, 0 ) )                 { $self->SetError("reviewer ($user) check failed"); return 0; }
+  ## do some sort of check for expert submissions
 
-      $self->PrepareSubmitSql( $sql );
-      
-      $sql = "UPDATE queue SET pending_status=1 WHERE id='$id'";
-      $self->PrepareSubmitSql( $sql );
-      
-      #Now load this info into the bibdata table.
-      $self->UpdateTitle( $id );
-      $self->UpdatePubDate( $id );
-      $self->UpdateAuthor( $id );
-    }
-    return 1;
+  if (!$noop)
+  {
+    ## all good, INSERT
+    my $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, time, attr, reason, legacy, priority) } .
+              qq{VALUES('$id', '$user', '$date', '$attr', '$reason', 1, 1) };
+
+    $self->PrepareSubmitSql( $sql );
+
+    $sql = "UPDATE queue SET pending_status=1 WHERE id='$id'";
+    $self->PrepareSubmitSql( $sql );
+
+    #Now load this info into the bibdata table.
+    $self->UpdateTitle( $id );
+    $self->UpdatePubDate( $id );
+    $self->UpdateAuthor( $id );
+  }
+  return 1;
 }
 
 
 sub MoveFromReviewsToHistoricalReviews
 {
-    my $self = shift;
-    my $id   = shift;
-    my $gid  = shift;
-    
-    $self->Logit( "store $id in historicalreviews" );
-    
-    my $sql = "SELECT source FROM queue WHERE id='$id'";
-    my $source = $self->SimpleSqlGet($sql);
-    my $status = $self->GetStatus( $id );
-    
-    $sql = 'INSERT into historicalreviews (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, source, status, gid, swiss) ' .
-           "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, '$source', $status, $gid, swiss from reviews where id='$id'";
-    $self->PrepareSubmitSql( $sql );
+  my $self = shift;
+  my $id   = shift;
+  my $gid  = shift;
 
-    $self->Logit( "remove $id from reviews" );
+  $self->Logit( "store $id in historicalreviews" );
 
-    $sql = "DELETE FROM $CRMSGlobals::reviewsTable WHERE id='$id'";
-    $self->PrepareSubmitSql( $sql );
-    
-    return 1;
+  my $sql = "SELECT source FROM queue WHERE id='$id'";
+  my $source = $self->SimpleSqlGet($sql);
+  my $status = $self->GetStatus( $id );
+
+  $sql = 'INSERT into historicalreviews (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, source, status, gid, swiss) ' .
+         "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, '$source', $status, $gid, swiss from reviews where id='$id'";
+  $self->PrepareSubmitSql( $sql );
+
+  $self->Logit( "remove $id from reviews" );
+
+  $sql = "DELETE FROM $CRMSGlobals::reviewsTable WHERE id='$id'";
+  $self->PrepareSubmitSql( $sql );
+
+  return 1;
 }
 
 
 sub GetFinalAttrReason
 {
-    my $self = shift;
-    my $id   = shift;
+  my $self = shift;
+  my $id   = shift;
 
-    ## order by expert so that if there is an expert review, return that one
-    my $sql = qq{SELECT attr, reason FROM $CRMSGlobals::reviewsTable WHERE id = "$id" } .
-              qq{ORDER BY expert DESC, time DESC LIMIT 1};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  ## order by expert so that if there is an expert review, return that one
+  my $sql = qq{SELECT attr, reason FROM $CRMSGlobals::reviewsTable WHERE id = "$id" } .
+            qq{ORDER BY expert DESC, time DESC LIMIT 1};
+  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
-    if ( ! $ref->[0]->[0] )
-    {
-        $self->Logit( "$id not found in review table" );
-    }
-
-    my $attr   = $self->GetRightsName( $ref->[0]->[0] );
-    my $reason = $self->GetReasonName( $ref->[0]->[1] );
-    return ($attr, $reason);
+  if ( ! $ref->[0]->[0] )
+  {
+      $self->Logit( "$id not found in review table" );
+  }
+  my $attr   = $self->GetRightsName( $ref->[0]->[0] );
+  my $reason = $self->GetReasonName( $ref->[0]->[1] );
+  return ($attr, $reason);
 }
 
 sub GetExpertRevItems
 {
-    my $self = shift;
-    my $sql  = 'SELECT id FROM queue WHERE (status>=5) AND id NOT IN (SELECT id FROM reviews WHERE CURDATE()<hold)';
-    my $ref  = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  my $self = shift;
 
-    return $ref;
+  my $sql  = 'SELECT id FROM queue WHERE (status>=5) AND id NOT IN (SELECT id FROM reviews WHERE CURDATE()<hold)';
+  return $self->get( 'dbh' )->selectall_arrayref( $sql );
 }
 
 sub GetDoubleRevItemsInAgreement
@@ -1361,23 +1358,22 @@ sub GetDoubleRevItemsInAgreement
 
 sub RegisterStatus
 {
-    my $self   = shift;
-    my $id     = shift;
-    my $status = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $status = shift;
 
-    my $sql = qq{UPDATE $CRMSGlobals::queueTable SET status=$status WHERE id="$id"};
-    $self->PrepareSubmitSql( $sql );
+  my $sql = "UPDATE $CRMSGlobals::queueTable SET status=$status WHERE id='$id'";
+  $self->PrepareSubmitSql( $sql );
 }
 
 sub RegisterPendingStatus
 {
-    my $self   = shift;
-    my $id     = shift;
-    my $status = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $status = shift;
 
-    my $sql = "UPDATE $CRMSGlobals::queueTable SET pending_status=$status WHERE id='$id'";
-
-    $self->PrepareSubmitSql( $sql );
+  my $sql = "UPDATE $CRMSGlobals::queueTable SET pending_status=$status WHERE id='$id'";
+  $self->PrepareSubmitSql( $sql );
 }
 
 sub GetYesterday
@@ -2663,8 +2659,6 @@ sub LinkToPT
     my $ti   = $self->GetTitle( $id );
     
     my $url = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=';
-    #This url was used for testing.
-    #my $url = '/cgi/m/mdp/pt?skin=crms;attr=1;id=';
 
     return qq{<a href="$url$id" target="_blank">$ti</a>};
 }
