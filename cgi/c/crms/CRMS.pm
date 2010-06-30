@@ -617,23 +617,31 @@ sub LoadNewItemsInCandidates
       }
       my $src = undef;
       my $record = $self->GetRecordMetadata($id);
-      my $lang = $self->GetPubLanguage($id, $record);
-      if ('eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
+      ## pub date between 1923 and 1963
+      my $pub = $self->GetPublDate($id, $record);
+      # Only care about volumes between 1923 and 1963
+      if ($pub >= '1923' && $pub <= '1963')
       {
-        $src = 'language';
+        if ($self->IsGovDoc( $id, $record )) { $self->Logit( "skip fed doc: $id" ); next; }
+        if (!$self->IsFormatBK( $id, $record )) { $self->Logit( "skip not fmt bk: $id" ); next; }
+        my $lang = $self->GetPubLanguage($id, $record);
+        if ('eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
+        {
+          $src = 'language';
+        }
+        elsif ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
+        elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
+        elsif ($self->IsForeignPub($id, $record)) { $src = 'foreign'; }
+        if ($src)
+        {
+          print "Skip $id ($src) -- inserting in und table\n";
+          $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src','$time')";
+          $self->PrepareSubmitSql( $sql );
+          push @und, $id;
+          next;
+        }
+        $self->AddItemToCandidates($id, $time, $pub, $record);
       }
-      elsif ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
-      elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
-      elsif ($self->IsForeignPub($id, $record)) { $src = 'foreign'; }
-      if ($src)
-      {
-        print "Skip $id ($src) -- inserting in und table\n";
-        $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src','$time')";
-        $self->PrepareSubmitSql( $sql );
-        push @und, $id;
-        next;
-      }
-      $self->AddItemToCandidates( $id, $time, 0, 0 );
     }
   }
   foreach my $id (@und)
@@ -665,34 +673,19 @@ sub AddItemToCandidates
   my $self     = shift;
   my $id       = shift;
   my $time     = shift;
-
-  my $record = $self->GetRecordMetadata($id);
-
-  ## pub date between 1923 and 1963
-  my $pub = $self->GetPublDate( $id, $record );
-  ## confirm date range and add check
-
-  #Only care about volumes between 1923 and 1963
-  if ( ( $pub >= '1923' ) && ( $pub <= '1963' ) )
-  {
-    if ( $self->IsGovDoc( $id, $record ) ) { $self->Logit( "skip fed doc: $id" ); return 0; }
-    if ( ! $self->IsFormatBK( $id, $record ) ) { $self->Logit( "skip not fmt bk: $id" ); return 0; }
-
-    my $au = $self->GetMarcDatafieldAuthor( $id, $record );
-    $au = $self->get('dbh')->quote($au);
-    $self->SetError("$id: UTF-8 check failed for quoted author: '$au'") unless $au eq "''" or utf8::is_utf8($au);
-
-    my $title = $self->GetRecordTitleBc2Meta( $id, $record );
-    $title = $self->get('dbh')->quote($title);
-    $self->SetError("$id: UTF-8 check failed for quoted title: '$title'") unless $title eq "''" or utf8::is_utf8($title);
-
-    my $sql = "REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub-01-01', $title, $au)";
-
-    $self->PrepareSubmitSql( $sql );
-
-    return 1;
-  }
-  return 0;
+  my $pub      = shift;
+  my $record   = shift;
+  
+  $record = $self->GetRecordMetadata($id) unless $record;
+  $pub = $self->GetPublDate($id, $record) unless $pub;
+  my $au = $self->GetMarcDatafieldAuthor( $id, $record );
+  $au = $self->get('dbh')->quote($au);
+  $self->SetError("$id: UTF-8 check failed for quoted author: '$au'") unless $au eq "''" or utf8::is_utf8($au);
+  my $title = $self->GetRecordTitleBc2Meta( $id, $record );
+  $title = $self->get('dbh')->quote($title);
+  $self->SetError("$id: UTF-8 check failed for quoted title: '$title'") unless $title eq "''" or utf8::is_utf8($title);
+  my $sql = "REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub-01-01', $title, $au)";
+  $self->PrepareSubmitSql( $sql );
 }
 
 
