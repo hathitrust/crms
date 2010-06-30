@@ -358,6 +358,76 @@ sub CheckPendingStatus
   $self->RegisterPendingStatus( $id, $pstatus );
 }
 
+# Calculates the status or pending_status that should be assigned to a volume if processed.
+# Can return 1 (single review) only when $pending is defined.
+# Note this does not apply to any expert-level stati (5 and 7).
+sub CalculateVolumeStatus
+{
+  my $self    = shift;
+  my $id      = shift;
+  my $pending = shift;
+  
+  my $status = 0;
+  my $sql = "SELECT id, user, attr, reason, renNum, renDate FROM reviews WHERE id='$id' AND expert!=1";
+  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  if (scalar @{$ref} > 1)
+  {
+    my $row = @{$ref}[0];
+    my $user    = $row->[0];
+    my $attr    = $row->[1];
+    my $reason  = $row->[2];
+    my $renNum  = $row->[3];
+    my $renDate = $row->[4];
+    $row = @{$ref}[1];
+    my $other_user    = $row->[0];
+    my $other_attr    = $row->[1];
+    my $other_reason  = $row->[2];
+    my $other_renNum  = $row->[3];
+    my $other_renDate = $row->[4];
+
+    if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
+    {
+      # If both reviewers are non-advanced mark as provisional match
+      if ( (!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+      {
+         $status = 3;
+      }
+      else #Mark as 4 - two that agree
+      {
+        #If they are ic/ren then the renewal date and id must match
+        if ( ( $attr == 2 ) && ( $reason == 7 ) )
+        {
+          $renNum =~ s/\s+//gs;
+          $other_renNum =~ s/\s+//gs;
+          if ( ( $renNum eq $other_renNum ) && ( $renDate eq $other_renDate ) )
+          {
+            #Mark as 4
+            $status = 4;
+          }
+          else
+          {
+            #Mark as 2
+            $status = 2;
+          }
+        }
+        else #all other cases mark as 4
+        {
+          $status = 4;
+        }
+      }
+    }
+    else #Mark as 2 - two that disagree
+    {
+      $status = 2;
+    }
+  }
+  elsif (1 == scalar @{$ref} && $pending)
+  {
+    $status = 1;
+  }
+  return $status;
+}
+
 # If fromcgi is set, don't try to create the export file, print stuff, or send mail.
 sub ClearQueueAndExport
 {
@@ -506,7 +576,6 @@ sub RemoveFromQueue
   $self->Logit( "remove $id from queue" );
   my $sql = "DELETE FROM $CRMSGlobals::queueTable WHERE id='$id'";
   $self->PrepareSubmitSql( $sql );
-  return 1;
 }
 
 sub RemoveFromCandidates
@@ -524,26 +593,28 @@ sub LoadNewItemsInCandidates
 
   my $start = $self->GetCandidatesTime();
   my $start_size = $self->GetCandidatesSize();
-
   print "Before load, the max timestamp in the candidates table $start, and the size is $start_size\n";
-
-  my $sql = qq{SELECT CONCAT(namespace, '.', id) AS id, MAX(time) AS time, attr, reason FROM rights WHERE time > '$start' GROUP BY id ORDER BY time ASC};
-
-  my $ref = $self->get('sdr_dbh')->selectall_arrayref( $sql );
-
-  if ($self->get('verbose')) { print "found: " .  scalar( @{$ref} ) . ": $sql\n"; }
-
   my @und = ();
-  my $inqueue;
+  my $sdrdbh = $self->get('sdr_dbh');
+  my $sql = "SELECT namespace, id FROM rights WHERE time>'$start' GROUP BY namespace, id";
+  my $ref = $sdrdbh->selectall_arrayref( $sql );
   foreach my $row ( @{$ref} )
   {
-    my $id     = $row->[0];
-    my $time   = $row->[1];
-    my $attr   = $row->[2];
-    my $reason = $row->[3];
-
-    if ( ( $attr == 2 ) && ( $reason == 1 ) )
+    my $ns   = $row->[0];
+    my $id   = $row->[1];
+    $sql = "SELECT attr, reason, time FROM rights WHERE namespace='$ns' AND id='$id' ORDER BY time DESC LIMIT 1";
+    my $ref2 = $sdrdbh->selectall_arrayref( $sql );
+    my $attr   = $ref2->[0]->[0];
+    my $reason = $ref2->[0]->[1];
+    my $time   = $ref2->[0]->[2];
+    if ( $attr == 2 && $reason == 1 )
     {
+      $id = $ns . '.' . $id;
+      if ($self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'") > 0)
+      {
+        print "Skip $id -- already in historical reviews\n";
+        next;
+      }
       my $src = undef;
       my $record = $self->GetRecordMetadata($id);
       my $lang = $self->GetPubLanguage($id, $record);
@@ -587,6 +658,41 @@ sub LoadNewItemsInCandidates
   $self->PrepareSubmitSql( $sql );
 
   return 1;
+}
+
+sub AddItemToCandidates
+{
+  my $self     = shift;
+  my $id       = shift;
+  my $time     = shift;
+
+  my $record = $self->GetRecordMetadata($id);
+
+  ## pub date between 1923 and 1963
+  my $pub = $self->GetPublDate( $id, $record );
+  ## confirm date range and add check
+
+  #Only care about volumes between 1923 and 1963
+  if ( ( $pub >= '1923' ) && ( $pub <= '1963' ) )
+  {
+    if ( $self->IsGovDoc( $id, $record ) ) { $self->Logit( "skip fed doc: $id" ); return 0; }
+    if ( ! $self->IsFormatBK( $id, $record ) ) { $self->Logit( "skip not fmt bk: $id" ); return 0; }
+
+    my $au = $self->GetMarcDatafieldAuthor( $id, $record );
+    $au = $self->get('dbh')->quote($au);
+    $self->SetError("$id: UTF-8 check failed for quoted author: '$au'") unless $au eq "''" or utf8::is_utf8($au);
+
+    my $title = $self->GetRecordTitleBc2Meta( $id, $record );
+    $title = $self->get('dbh')->quote($title);
+    $self->SetError("$id: UTF-8 check failed for quoted title: '$title'") unless $title eq "''" or utf8::is_utf8($title);
+
+    my $sql = "REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub-01-01', $title, $au)";
+
+    $self->PrepareSubmitSql( $sql );
+
+    return 1;
+  }
+  return 0;
 }
 
 
@@ -681,48 +787,6 @@ sub GetUpdateTime
     my $sql = qq{SELECT MAX(time) FROM $CRMSGlobals::queueTable LIMIT 1};
     my @ref = $dbh->selectrow_array( $sql );
     return $ref[0] || '2000-01-01';
-}
-
-sub AddItemToCandidates
-{
-    my $self     = shift;
-    my $id       = shift;
-    my $time     = shift;
-
-    my $record = $self->GetRecordMetadata($id);
-
-    ## pub date between 1923 and 1963
-    my $pub = $self->GetPublDate( $id, $record );
-    ## confirm date range and add check
-
-    #Only care about volumes between 1923 and 1963
-    if ( ( $pub >= '1923' ) && ( $pub <= '1963' ) )
-    {
-
-      ## no gov docs
-      if ( $self->IsGovDoc( $id, $record ) ) { $self->Logit( "skip fed doc: $id" ); return 0; }
-      
-      #check 008 field postion 17 = "u" - this would indicate a us publication.
-      if ( ! $self->IsUSPub( $id, $record ) ) { $self->Logit( "skip not us doc: $id" ); return 0; }
-
-      #check FMT.
-      if ( ! $self->IsFormatBK( $id, $record ) ) { $self->Logit( "skip not fmt bk: $id" ); return 0; }
-
-      my $au = $self->GetMarcDatafieldAuthor( $id, $record );
-      $au = $self->get('dbh')->quote($au);
-      $self->SetError("$id: UTF-8 check failed for quoted author: '$au'") unless $au eq "''" or utf8::is_utf8($au);
-      
-      my $title = $self->GetRecordTitleBc2Meta( $id, $record );
-      $title = $self->get('dbh')->quote($title);
-      $self->SetError("$id: UTF-8 check failed for quoted title: '$title'") unless $title eq "''" or utf8::is_utf8($title);
-      
-      my $sql = "REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub-01-01', $title, $au)";
-
-      $self->PrepareSubmitSql( $sql );
-      
-      return 1;
-    }
-    return 0;
 }
 
 # Plain vanilla code for adding an item with status 0, priority 0
@@ -831,14 +895,13 @@ sub AddItemToQueueOrSetItemActive
   return $stat . join '; ', @msgs;
 }
 
-# Returns a 4-char string in the format 'dgub' (hey, it's Tibetan!) where the fields stand for
-# date, govt, us, book. For each constraint, it is capitalized if the constraint is violated.
-# Returns 0 if record can't be found.
+# Returns a semicolon-separated string of "violations" (unsuitability for CRMS) for a volume.
+# The optional $pub is for efficiency.
 sub GetViolations
 {
-  my $self     = shift;
-  my $id       = shift;
-  my $pub      = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $pub  = shift;
   
   my $record =  $self->GetRecordMetadata($id);
   return 'not found in Mirlyn' if $record eq '';
@@ -846,7 +909,7 @@ sub GetViolations
   my @errs = ();
   push @errs, 'not in range 1923-1963' if ($pub < '1923' || $pub > '1963');
   push @errs, 'gov doc' if $self->IsGovDoc( $id, $record );
-  push @errs, 'foreign pub' unless $self->IsUSPub( $id, $record );
+  push @errs, 'foreign pub' if $self->IsForeignPub( $id, $record );
   push @errs, 'non-BK format' unless $self->IsFormatBK( $id, $record );
   return join('; ', @errs);
 }
@@ -916,20 +979,15 @@ sub GiveItemsInQueuePriority
   #Only care about volumes between 1923 and 1963
   if ( ( $pub >= '1923' ) && ( $pub <= '1963' ) )
   {
-    ## no gov docs
     if ( $self->IsGovDoc( $id, $record ) ) { $self->SetError( "skip fed doc: $id" ); return 0; }
-
-    #check 008 field postion 17 = "u" - this would indicate a us publication.
-    if ( ! $self->IsUSPub( $id, $record ) ) { $self->SetError( "skip not us doc: $id" ); return 0; }
-
-    #check FMT.
+    if ( $self->IsForeignPub( $id, $record ) ) { $self->SetError( "skip foreign pub: $id" ); return 0; }
     if ( ! $self->IsFormatBK( $id, $record ) ) { $self->SetError( "skip not fmt bk: $id" ); return 0; }
 
-    my $sql = qq{ SELECT count(*) from $CRMSGlobals::queueTable where id="$id"};
+    my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable WHERE id='$id'";
     my $count = $self->SimpleSqlGet( $sql );
     if ( $count == 1 )
     {
-        $sql = qq{ UPDATE $CRMSGlobals::queueTable SET priority = 1 WHERE id = "$id" };
+        $sql = "UPDATE $CRMSGlobals::queueTable SET priority=1 WHERE id ='$id'";
         $self->PrepareSubmitSql( $sql );
     }
     else
@@ -984,7 +1042,7 @@ sub TranslateCategory
 
     if    ( $category eq 'COLLECTION' ) { return 'Insert(s)'; }
     elsif ( $category =~ m/LANG.*/ ) { return 'Language'; }
-    elsif ( $category eq 'MISC' ) { return 'Misc'; }
+    elsif ( $category =~ m/MISC.*/ ) { return 'Misc'; }
     elsif ( $category eq 'MISSING' ) { return 'Missing'; }
     elsif ( $category eq 'DATE' ) { return 'Date'; }
     elsif ( $category =~ m/REPRINT.*/ ) { return 'Reprint'; }
@@ -1121,7 +1179,7 @@ sub SubmitReview
       my $expcnt = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id' AND expert=1");
       $sql = "UPDATE $CRMSGlobals::queueTable SET expcnt=$expcnt WHERE id='$id'";
       $result = $self->PrepareSubmitSql( $sql );
-      my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason);
+      my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $renNum, $renDate, $category);
       #We have decided to register the expert decision right away.
       $self->RegisterStatus($id, $status);
     }
@@ -1134,27 +1192,39 @@ sub SubmitReview
 
 sub GetStatusForExpertReview
 {
-  my $self   = shift;
-  my $id     = shift;
-  my $user   = shift;
-  my $attr   = shift;
-  my $reason = shift;
+  my $self     = shift;
+  my $id       = shift;
+  my $user     = shift;
+  my $attr     = shift;
+  my $reason   = shift;
+  my $renNum   = shift;
+  my $renDate  = shift;
+  my $category = shift;
   
   my $status = 5;
   # See if it's a provisional match and expert agreed with both of existing non-advanced reviews. If so, status 7.
-  my $sql = "SELECT attr,reason,user FROM reviews WHERE id='$id' AND user IN (SELECT id FROM users WHERE expert=0 AND advanced=0)";
+  my $sql = "SELECT attr,reason,user,renNum,renDate FROM reviews WHERE id='$id' AND user IN (SELECT id FROM users WHERE expert=0 AND advanced=0)";
   my $ref = $self->get('dbh')->selectall_arrayref($sql);
   if (scalar @{ $ref } >= 2)
   {
-    my $attr1   = $ref->[0]->[0];
-    my $reason1 = $ref->[0]->[1];
-    my $user1   = $ref->[0]->[2];
-    my $attr2   = $ref->[1]->[0];
-    my $reason2 = $ref->[1]->[1];
-    my $user2   = $ref->[1]->[2];
+    my $attr1    = $ref->[0]->[0];
+    my $reason1  = $ref->[0]->[1];
+    my $user1    = $ref->[0]->[2];
+    my $attr2    = $ref->[1]->[0];
+    my $reason2  = $ref->[1]->[1];
+    my $user2    = $ref->[1]->[2];
     if ($attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1)
     {
       $status = 7;
+      # If they are ic/ren then the renewal date and id must match.
+      # But a cloned/dummy review will have no such info so we don't enforce this when category is 'Expert Accepted'.
+      if ($attr == 2 && $reason == 7)
+      {
+        my $renNum1  = $ref->[0]->[3];
+        $renNum1 =~ s/\s+//gs;
+        my $renDate1 = $ref->[0]->[4];
+        $status = 5 if ($renNum ne $renNum1 or $renDate ne $renDate1) and $category ne 'Expert Accepted';
+      }
     }
   }
   return $status;
@@ -2252,83 +2322,83 @@ sub SearchAndDownloadQueue
 
 sub GetReviewsRef
 {
-    my $self               = shift;
-    my $page               = shift;
-    my $order              = shift;
-    my $dir                = shift;
+  my $self               = shift;
+  my $page               = shift;
+  my $order              = shift;
+  my $dir                = shift;
 
-    my $search1            = shift;
-    my $search1Value       = shift;
-    my $op1                = shift;
+  my $search1            = shift;
+  my $search1Value       = shift;
+  my $op1                = shift;
 
-    my $search2            = shift;
-    my $search2Value       = shift;
-    my $op2                = shift;
-    
-    my $search3            = shift;
-    my $search3Value       = shift;
+  my $search2            = shift;
+  my $search2Value       = shift;
+  my $op2                = shift;
 
-    my $startDate          = shift;
-    my $endDate            = shift;
-    my $offset             = shift;
-    my $pagesize           = shift;
+  my $search3            = shift;
+  my $search3Value       = shift;
 
-    my $limit              = 1;
-    $pagesize = 20 unless $pagesize > 0;
-    $offset = 0 unless $offset > 0;
-    
-    #print("GetReviewsRef('$page','$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$op2','$search3','$search3Value','$startDate','$endDate','$offset','$pagesize');<br/>\n");
-    my ($sql,$totalReviews,$totalVolumes) = $self->CreateSQLForReviews($page, $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $offset, $pagesize, $limit);
-    #print "$sql<br/>\n";
-    my $ref = undef;
-    eval { $ref = $self->get( 'dbh' )->selectall_arrayref( $sql ); };
-    if ($@)
-    {
-      $self->SetError("SQL failed: '$sql' ($@)");
-      return;
-    }
-    my $return = [];
-    foreach my $row ( @{$ref} )
-    {
-        my $date = $row->[1];
-        $date =~ s/(.*) .*/$1/;
-        my $item = {id         => $row->[0],
-                    time       => $row->[1],
-                    date       => $date,
-                    duration   => $row->[2],
-                    user       => $row->[3],
-                    attr       => $self->GetRightsName($row->[4]),
-                    reason     => $self->GetReasonName($row->[5]),
-                    note       => $row->[6],
-                    renNum     => $row->[7],
-                    expert     => $row->[8],
-                    copyDate   => $row->[9],
-                    expertNote => $row->[10],
-                    category   => $row->[11],
-                    legacy     => $row->[12],
-                    renDate    => $row->[13],
-                    priority   => $self->StripDecimal($row->[14]),
-                    swiss      => $row->[15],
-                    status     => $row->[16],
-                    title      => $row->[17],
-                    author     => $row->[18]
-                   };
-        my $pubdate = $row->[19];
-        $pubdate = '?' unless $pubdate;
-        ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
-        ${$item}{'validated'} = $row->[20] if $page eq 'adminHistoricalReviews';
-        ${$item}{'hold'} = $row->[19] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds';
-        push( @{$return}, $item );
-    }
-    my $n = POSIX::ceil($offset/$pagesize+1);
-    my $of = POSIX::ceil($totalReviews/$pagesize);
-    $n = 0 if $of == 0;
-    my $data = {'rows' => $return,
-                'reviews' => $totalReviews,
-                'volumes' => $totalVolumes,
-                'page' => $n,
-                'of' => $of
-               };
+  my $startDate          = shift;
+  my $endDate            = shift;
+  my $offset             = shift;
+  my $pagesize           = shift;
+
+  my $limit              = 1;
+  $pagesize = 20 unless $pagesize > 0;
+  $offset = 0 unless $offset > 0;
+
+  #print("GetReviewsRef('$page','$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$op2','$search3','$search3Value','$startDate','$endDate','$offset','$pagesize');<br/>\n");
+  my ($sql,$totalReviews,$totalVolumes) = $self->CreateSQLForReviews($page, $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $offset, $pagesize, $limit);
+  #print "$sql<br/>\n";
+  my $ref = undef;
+  eval { $ref = $self->get( 'dbh' )->selectall_arrayref( $sql ); };
+  if ($@)
+  {
+    $self->SetError("SQL failed: '$sql' ($@)");
+    return;
+  }
+  my $return = [];
+  foreach my $row ( @{$ref} )
+  {
+      my $date = $row->[1];
+      $date =~ s/(.*) .*/$1/;
+      my $item = {id         => $row->[0],
+                  time       => $row->[1],
+                  date       => $date,
+                  duration   => $row->[2],
+                  user       => $row->[3],
+                  attr       => $self->GetRightsName($row->[4]),
+                  reason     => $self->GetReasonName($row->[5]),
+                  note       => $row->[6],
+                  renNum     => $row->[7],
+                  expert     => $row->[8],
+                  copyDate   => $row->[9],
+                  expertNote => $row->[10],
+                  category   => $row->[11],
+                  legacy     => $row->[12],
+                  renDate    => $row->[13],
+                  priority   => $self->StripDecimal($row->[14]),
+                  swiss      => $row->[15],
+                  status     => $row->[16],
+                  title      => $row->[17],
+                  author     => $row->[18]
+                 };
+      my $pubdate = $row->[19];
+      $pubdate = '?' unless $pubdate;
+      ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
+      ${$item}{'validated'} = $row->[20] if $page eq 'adminHistoricalReviews';
+      ${$item}{'hold'} = $row->[19] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds';
+      push( @{$return}, $item );
+  }
+  my $n = POSIX::ceil($offset/$pagesize+1);
+  my $of = POSIX::ceil($totalReviews/$pagesize);
+  $n = 0 if $of == 0;
+  my $data = {'rows' => $return,
+              'reviews' => $totalReviews,
+              'volumes' => $totalVolumes,
+              'page' => $n,
+              'of' => $of
+             };
   return $data;
 }
 
@@ -2644,59 +2714,54 @@ sub GetQueueRef
 
 sub LinkToStanford
 {
-    my $self = shift;
-    my $q    = shift;
+  my $self = shift;
+  my $q    = shift;
 
-    my $url = 'http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=';
-
-    return qq{<a href="$url$q">$q</a>};
+  my $url = 'http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=';
+  return qq{<a href="$url$q">$q</a>};
 }
 
 sub LinkToPT
 {
-    my $self = shift;
-    my $id   = shift;
-    my $ti   = $self->GetTitle( $id );
-    
-    my $url = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=';
+  my $self = shift;
+  my $id   = shift;
+  my $ti   = $self->GetTitle( $id );
 
-    return qq{<a href="$url$id" target="_blank">$ti</a>};
+  my $url = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=';
+  return qq{<a href="$url$id" target="_blank">$ti</a>};
 }
 
 sub LinkToReview
 {
-    my $self = shift;
-    my $id   = shift;
-    my $ti   = $self->GetTitle( $id );
-    
-    ## my $url = 'http://babel.hathitrust.org/cgi/pt?attr=1&id=';
-    my $url = qq{/cgi/c/crms/crms?p=review;barcode=$id;editing=1};
+  my $self = shift;
+  my $id   = shift;
+  my $ti   = $self->GetTitle( $id );
 
-    return qq{<a href="$url" target="_blank">$ti</a>};
+  ## my $url = 'http://babel.hathitrust.org/cgi/pt?attr=1&id=';
+  my $url = qq{/cgi/c/crms/crms?p=review;barcode=$id;editing=1};
+  return qq{<a href="$url" target="_blank">$ti</a>};
 }
 
 sub DetailInfo
 {
-    my $self   = shift;
-    my $id     = shift;
-    my $user   = shift;
-    my $page   = shift;
-    
-    my $url = qq{/cgi/c/crms/crms?p=detailInfo&amp;id=$id&amp;user=$user&amp;page=$page};
+  my $self   = shift;
+  my $id     = shift;
+  my $user   = shift;
+  my $page   = shift;
 
-    return qq{<a href="$url" target="_blank">$id</a>};
+  my $url = qq{/cgi/c/crms/crms?p=detailInfo&amp;id=$id&amp;user=$user&amp;page=$page};
+  return qq{<a href="$url" target="_blank">$id</a>};
 }
 
 sub DetailInfoForReview
 {
-    my $self   = shift;
-    my $id     = shift;
-    my $user   = shift;
-    my $page   = shift;
-    
-    my $url = qq{/cgi/c/crms/crms?p=detailInfoForReview&amp;id=$id&amp;user=$user&amp;page=$page};
+  my $self   = shift;
+  my $id     = shift;
+  my $user   = shift;
+  my $page   = shift;
 
-    return qq{<a href="$url" target="_blank">$id</a>};
+  my $url = qq{/cgi/c/crms/crms?p=detailInfoForReview&amp;id=$id&amp;user=$user&amp;page=$page};
+  return qq{<a href="$url" target="_blank">$id</a>};
 }
 
 
@@ -2712,174 +2777,161 @@ sub GetStatus
 
 sub UsersAgreeOnReview
 {
-    my $self = shift;
-    my $id   = shift;
+  my $self = shift;
+  my $id   = shift;
 
-    ##Agree is when the attr and reason match.
-
-    my $sql = qq{ SELECT id, attr, reason FROM $CRMSGlobals::reviewsTable where id = '$id' Group by id, attr, reason having count(*) = 2};
-    my $found = $self->SimpleSqlGet( $sql );
-
-    if ($found) { return 1; }
-    return 0;
-
+  ##Agree is when the attr and reason match.
+  my $sql = qq{ SELECT id, attr, reason FROM $CRMSGlobals::reviewsTable where id = '$id' Group by id, attr, reason having count(*) = 2};
+  my $found = $self->SimpleSqlGet( $sql );
+  return ($found)? 1:0;
 }
 
 sub GetAttrReasonFromOtherUser
 {
-    my $self   = shift;
-    my $id     = shift;
-    my $name   = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $name   = shift;
 
-    my $sql = qq{SELECT attr, reason FROM $CRMSGlobals::reviewsTable WHERE id = "$id" and user != '$name'};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  my $sql = qq{SELECT attr, reason FROM $CRMSGlobals::reviewsTable WHERE id = "$id" and user != '$name'};
+  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
 
-    if ( ! $ref->[0]->[0] )
-    {
-        $self->Logit( "$id not found in review table" );
-    }
-
-    my $attr = $self->GetRightsName( $ref->[0]->[0] );
-    my $reason = $self->GetReasonName( $ref->[0]->[1] );
-    return ($attr, $reason);
+  if ( ! $ref->[0]->[0] )
+  {
+    $self->Logit( "$id not found in review table" );
+  }
+  my $attr = $self->GetRightsName( $ref->[0]->[0] );
+  my $reason = $self->GetReasonName( $ref->[0]->[1] );
+  return ($attr, $reason);
 }
 
 
 sub ValidateAttrReasonCombo
 {
-    my $self    = shift;
-    my $attr    = shift;
-    my $reason  = shift;
-    
-    my $code = $self->GetCodeFromAttrReason($attr,$reason);
-    $self->SetError( "bad attr/reason: $attr/$reason" ) unless $code;
-    return $code;
+  my $self    = shift;
+  my $attr    = shift;
+  my $reason  = shift;
+
+  my $code = $self->GetCodeFromAttrReason($attr,$reason);
+  $self->SetError( "bad attr/reason: $attr/$reason" ) unless $code;
+  return $code;
 }
 
 sub GetAttrReasonCom
 {
-    my $self = shift;
-    my $in   = shift;
- 
-    my %codes = (1 => 'pd/ncn', 2 => 'pd/ren',  3 => 'pd/cdpp',
-                 4 => 'ic/ren', 5 => 'ic/cdpp', 6 => 'und/nfi',
-                 7 => 'pdus/cdpp');
+  my $self = shift;
+  my $in   = shift;
 
-    my %str   = ('pd/ncn' => 1, 'pd/ren'  => 2, 'pd/cdpp' => 3,
-                 'ic/ren' => 4, 'ic/cdpp' => 5, 'und/nfi' => 6,
-                 'pdus/cdpp' => 7);
+  my %codes = (1 => 'pd/ncn', 2 => 'pd/ren',  3 => 'pd/cdpp',
+               4 => 'ic/ren', 5 => 'ic/cdpp', 6 => 'und/nfi',
+               7 => 'pdus/cdpp');
 
-    if ( $in =~ m/\d/ ) { return $codes{$in}; }
-    else                { return $str{$in};   }
+  my %str   = ('pd/ncn' => 1, 'pd/ren'  => 2, 'pd/cdpp' => 3,
+               'ic/ren' => 4, 'ic/cdpp' => 5, 'und/nfi' => 6,
+               'pdus/cdpp' => 7);
+
+  if ( $in =~ m/\d/ ) { return $codes{$in}; }
+  else                { return $str{$in};   }
 }
 
 sub GetAttrReasonFromCode
 {
-    my $self = shift;
-    my $code = shift;
+  my $self = shift;
+  my $code = shift;
 
-    if    ( $code eq '1' ) { return (1,2); }
-    elsif ( $code eq '2' ) { return (1,7); }
-    elsif ( $code eq '3' ) { return (1,9); }
-    elsif ( $code eq '4' ) { return (2,7); }
-    elsif ( $code eq '5' ) { return (2,9); }
-    elsif ( $code eq '6' ) { return (5,8); }
-    elsif ( $code eq '7' ) { return (9,9); }
+  if    ( $code eq '1' ) { return (1,2); }
+  elsif ( $code eq '2' ) { return (1,7); }
+  elsif ( $code eq '3' ) { return (1,9); }
+  elsif ( $code eq '4' ) { return (2,7); }
+  elsif ( $code eq '5' ) { return (2,9); }
+  elsif ( $code eq '6' ) { return (5,8); }
+  elsif ( $code eq '7' ) { return (9,9); }
 }
 
 sub GetCodeFromAttrReason
 {
-    my $self = shift;
-    my $attr = shift;
-    my $reason = shift;
+  my $self   = shift;
+  my $attr   = shift;
+  my $reason = shift;
 
-    if ($attr == 1 and $reason == 2) { return 1; }
-    if ($attr == 1 and $reason == 7) { return 2; }
-    if ($attr == 1 and $reason == 9) { return 3; }
-    if ($attr == 2 and $reason == 7) { return 4; }
-    if ($attr == 2 and $reason == 9) { return 5; }
-    if ($attr == 5 and $reason == 8) { return 6; }
-    if ($attr == 9 and $reason == 9) { return 7; }
+  if ($attr == 1 and $reason == 2) { return 1; }
+  if ($attr == 1 and $reason == 7) { return 2; }
+  if ($attr == 1 and $reason == 9) { return 3; }
+  if ($attr == 2 and $reason == 7) { return 4; }
+  if ($attr == 2 and $reason == 9) { return 5; }
+  if ($attr == 5 and $reason == 8) { return 6; }
+  if ($attr == 9 and $reason == 9) { return 7; }
 }
 
 sub GetReviewComment
 {
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
 
-    my $sql = qq{ SELECT note FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
-    #my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    my $str = $self->SimpleSqlGet( $sql );
-
-    return $str;
-
+  my $sql = qq{ SELECT note FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
+  #my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  return $self->SimpleSqlGet( $sql );
 }
 
 sub GetReviewCategory
 {
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
 
-    my $sql = qq{ SELECT category FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
-    #my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    my $str = $self->SimpleSqlGet( $sql );
-
-    return $str;
+  my $sql = qq{ SELECT category FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
+  #my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  my $str = $self->SimpleSqlGet( $sql );
+  return $str;
 }
 
 sub GetReviewSwiss
 {
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
 
-    my $sql = qq{ SELECT swiss FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
-    
-    return $self->SimpleSqlGet( $sql );
+  my $sql = qq{ SELECT swiss FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
+  return $self->SimpleSqlGet( $sql );
 }
 
 
 sub GetAttrReasonCode
 {
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
 
-    my $sql = qq{ SELECT attr, reason FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    my $rights = $self->GetRightsName( $ref->[0]->[0] );
-    my $reason = $self->GetReasonName( $ref->[0]->[1] );
-
-    return $self->GetAttrReasonCom( "$rights/$reason" );
+  my $sql = qq{ SELECT attr, reason FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
+  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  my $rights = $self->GetRightsName( $ref->[0]->[0] );
+  my $reason = $self->GetReasonName( $ref->[0]->[1] );
+  return $self->GetAttrReasonCom( "$rights/$reason" );
 }
 
 sub CheckForId
 {
-    my $self = shift;
-    my $id   = shift;
-    my $dbh  = $self->get( 'dbh' );
+  my $self = shift;
+  my $id   = shift;
+  my $dbh  = $self->get( 'dbh' );
 
-    ## just make sure the ID is in the queue
-    my $sql = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE id = '$id'};
-    my @rows = $dbh->selectrow_array( $sql );
-    
-    return scalar( @rows );
+  ## just make sure the ID is in the queue
+  my $sql = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE id = '$id'};
+  my @rows = $dbh->selectrow_array( $sql );
+  return scalar( @rows );
 }
 
 sub CheckReviewer
 {
-    my $self = shift;
-    my $user = shift;
-    my $exp  = shift;
-    
-    my $isReviewer = 1;
-    my $isAdvanced = $self->IsUserAdvanced($user);
-    my $isExpert = $self->IsUserExpert($user);
-    return $isExpert if $exp;
-    return $isReviewer or $isExpert;
+  my $self = shift;
+  my $user = shift;
+  my $exp  = shift;
+
+  my $isReviewer = 1;
+  my $isAdvanced = $self->IsUserAdvanced($user);
+  my $isExpert = $self->IsUserExpert($user);
+  return $isExpert if $exp;
+  return $isReviewer or $isExpert;
 }
 
 sub GetUserName
@@ -4431,62 +4483,41 @@ sub ValidateReason
 
 sub GetCopyrightPage
 {
-    my $self = shift;
-    my $id   = shift;
+  my $self = shift;
+  my $id   = shift;
 
-    ## this is a place holder.  The HT API should be able to do this soon.
+  ## this is a place holder.  The HT API should be able to do this soon.
 
-    return "7";
+  return "7";
 }
+
 
 sub IsGovDoc
 {
-    my $self    = shift;
-    my $barcode = shift;
-    my $record  = shift;
+  my $self    = shift;
+  my $barcode = shift;
+  my $record  = shift;
 
-    if ( ! $record ) { $self->SetError("no record in IsGovDoc: $barcode"); return 1; }
-    my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
-    my $leader  = $record->findvalue( $xpath );
-    my $doc     = substr($leader, 28, 1);
- 
-    if ( $doc eq "f" ) { return 1; }
-
-    return 0;
-}
-
-sub IsUSPub
-{
-    my $self    = shift;
-    my $barcode = shift;
-    my $record  = shift;
-
-    if ( ! $record ) { $self->SetError("no record in IsUSPub: $barcode"); return 1; }
-
-    my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
-    my $leader  = $record->findvalue( $xpath );
-    my $doc     = substr($leader, 17, 1);
- 
-    if ( $doc eq "u" ) { return 1; }
-
-    return 0;
+  if ( ! $record ) { $self->SetError("no record in IsGovDoc: $barcode"); return 1; }
+  my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
+  my $leader  = $record->findvalue( $xpath );
+  my $doc     = substr($leader, 28, 1);
+  return ($doc eq "f")? 1:0;
 }
 
 
 sub IsFormatBK
 {
-    my $self    = shift;
-    my $barcode = shift;
-    my $record  = shift;
+  my $self    = shift;
+  my $barcode = shift;
+  my $record  = shift;
 
-    if ( ! $record ) { $self->Logit( "failed in IsFormatBK: $barcode" ); }
+  if ( ! $record ) { $self->Logit( "failed in IsFormatBK: $barcode" ); }
 
-    my $xpath   = q{//*[local-name()='controlfield' and @tag='FMT']};
-    my $leader  = $record->findvalue( $xpath );
-    my $doc     = $leader;
-    if ( $doc eq "BK" ) { return 1; }
-
-    return 0;
+  my $xpath   = q{//*[local-name()='controlfield' and @tag='FMT']};
+  my $leader  = $record->findvalue( $xpath );
+  my $doc     = $leader;
+  return ($doc eq "BK")? 1:0;
 }
 
 sub IsThesis
@@ -4561,14 +4592,13 @@ sub IsTranslation
   return $is;
 }
 
-# - Foreign ? use method used for bib extraction to detect
-# second/foreign place of pub. From Tim?s documentation:
+# Use method used for bib extraction to detect
+# second/foreign place of pub. From Tim's documentation:
 # Check of 260 field for multiple subfield a:
-# If PubPlace 17 eq ?u?, and the 260 field contains multiple subfield
+# If PubPlace 17 eq 'u', and the 260 field contains multiple subfield
 # a?s, then the data in each subfield a is normalized and matched
 # against a list of known US cities.  If any of the subfield a?s are not
 # in the list, then the mult_260a_non_us flag is set.
-# Note: it is assumed this has passed the IsUSPub() check.
 sub IsForeignPub
 {
   my $self    = shift;
