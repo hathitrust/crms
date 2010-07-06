@@ -437,7 +437,7 @@ sub ClearQueueAndExport
     my $eCount = 0;
     my $dCount = 0;
     my $export = [];
-   
+
     ## get items > 2, clear these
     my $expert = $self->GetExpertRevItems();
     foreach my $row ( @{$expert} )
@@ -457,12 +457,27 @@ sub ClearQueueAndExport
     }
 
     $self->ExportReviews( $export, $fromcgi );
-    
+
     ## report back
     $self->Logit( "expert reviewed items removed from queue ($eCount)" );
     $self->Logit( "double reviewed items removed from queue ($dCount)" );
 
     return ("twice reviewed removed: $dCount, expert reviewed reemoved: $eCount");
+}
+
+sub GetExpertRevItems
+{
+  my $self = shift;
+
+  my $sql  = 'SELECT id FROM queue WHERE (status>=5) AND id NOT IN (SELECT id FROM reviews WHERE CURDATE()<hold)';
+  return $self->get( 'dbh' )->selectall_arrayref( $sql );
+}
+
+sub GetDoubleRevItemsInAgreement
+{
+  my $self = shift;
+  my $sql  = 'SELECT id FROM queue WHERE status=4';
+  return $self->get( 'dbh' )->selectall_arrayref( $sql );
 }
 
 ## ----------------------------------------------------------------------------
@@ -483,23 +498,16 @@ sub ExportReviews
     my $time = $self->GetTodaysDate();
     my ( $fh, $file ) = $self->GetExportFh() unless $fromcgi;
     my $start_size = $self->GetCandidatesSize();
-
     foreach my $id ( @{$list} )
     {
       my ($attr,$reason) = $self->GetFinalAttrReason($id);
-
       print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $fromcgi;
-
       my $src = $self->SimpleSqlGet("SELECT source FROM queue WHERE id='$id' ORDER BY time DESC LIMIT 1");
-
       my $sql = qq{ INSERT INTO  exportdata (time, id, attr, reason, user, src ) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src' )};
       $self->PrepareSubmitSql( $sql );
-
       my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata');
-
       $sql = qq{ INSERT INTO exportdataBckup (time, id, attr, reason, user, src ) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src' )};
       $self->PrepareSubmitSql( $sql );
-
       $self->MoveFromReviewsToHistoricalReviews($id,$gid);
       $self->RemoveFromQueue($id);
       $self->RemoveFromCandidates($id);
@@ -524,9 +532,8 @@ sub ExportReviews
         }
       }
     }
-    my $sql = qq{ INSERT INTO  $CRMSGlobals::exportrecordTable (itemcount) VALUES ( $count )};
+    my $sql = "INSERT INTO  $CRMSGlobals::exportrecordTable (itemcount) VALUES ($count)";
     $self->PrepareSubmitSql( $sql );
-
     if (!$fromcgi)
     {
       printf "After export, removed %d volumes from candidates.\n", $start_size-$self->GetCandidatesSize();
@@ -602,11 +609,7 @@ sub LoadNewItemsInCandidates
   {
     my $ns   = $row->[0];
     my $id   = $row->[1];
-    $sql = "SELECT attr, reason, time FROM rights WHERE namespace='$ns' AND id='$id' ORDER BY time DESC LIMIT 1";
-    my $ref2 = $sdrdbh->selectall_arrayref( $sql );
-    my $attr   = $ref2->[0]->[0];
-    my $reason = $ref2->[0]->[1];
-    my $time   = $ref2->[0]->[2];
+    my ($attr, $reason, $time) = $self->LatestRights($ns, $id);
     if ( $attr == 2 && $reason == 1 )
     {
       $id = $ns . '.' . $id;
@@ -668,6 +671,26 @@ sub LoadNewItemsInCandidates
   return 1;
 }
 
+# Returns the numeric attr, reason, and time of most recent rights DB entry for volume.
+sub LatestRights
+{
+  my $self      = shift;
+  my $namespace = shift;
+  my $id        = shift;
+  my $readable  = shift;
+  
+  my $sdrdbh = $self->get('sdr_dbh');
+  my $sql = "SELECT attr, reason, time FROM rights WHERE namespace='$namespace' AND id='$id' ORDER BY time DESC";
+  $sql = 'SELECT a.name,rs.name,r.time FROM rights r, attributes a, reasons rs ' .
+         "WHERE r.namespace='$namespace' AND r.id='$id' AND a.id=r.attr AND rs.id=r.reason " .
+         'ORDER BY r.time DESC' if $readable;
+  my $ref2 = $sdrdbh->selectall_arrayref( $sql );
+  my $attr   = $ref2->[0]->[0];
+  my $reason = $ref2->[0]->[1];
+  my $time   = $ref2->[0]->[2];
+  return ($attr, $reason, $time);
+}
+
 sub AddItemToCandidates
 {
   my $self     = shift;
@@ -707,7 +730,6 @@ sub LoadNewItems
   {
     $sql = 'SELECT id, time, pub_date, title, author FROM candidates WHERE id NOT IN (SELECT DISTINCT id FROM queue) ' .
            'AND id NOT IN (SELECT DISTINCT id FROM reviews) AND id NOT IN (SELECT DISTINCT id FROM historicalreviews) ' .
-           'AND id NOT IN (SELECT DISTINCT id FROM queue) AND id NOT IN (SELECT DISTINCT id FROM und) ' .
            'ORDER BY pub_date ASC, time DESC';
     my $ref = $self->get('dbh')->selectall_arrayref( $sql );
     #printf "%d results\n", scalar @{$ref};
@@ -723,25 +745,6 @@ sub LoadNewItems
       my $time = $row->[1];
       my $title = $row->[3];
       my $author = $row->[4];
-      my $record = $self->GetRecordMetadata($id);
-      # FIXME: this can probably be eliminated since candidates is completely filtered.
-      my $src = undef;
-      my $lang = $self->GetPubLanguage($id, $record);
-      if ('eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
-      {
-        $src = 'language' unless $src;
-      }
-      elsif ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
-      elsif ($self->IsForeignPub($id, $record)) { $src = 'foreign'; }
-      elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
-      if ($src)
-      {
-        print "Skip $id ($src) -- inserting in und table\n";
-        push @und, $src;
-        $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src','$time')";
-        $self->PrepareSubmitSql( $sql );
-        next;
-      }
       $self->AddItemToQueue( $id, $pub_date, $title, $author );
       printf "Added to queue: $id published %s\n", substr($pub_date, 0, 4);
       $count++;
@@ -813,7 +816,6 @@ sub AddItemToQueueOrSetItemActive
   my $id       = shift;
   my $priority = shift;
   my $override = shift;
-  my $train    = shift;
   my $src      = shift;
   
   $src = 'adminui' unless $src;
@@ -881,10 +883,6 @@ sub AddItemToQueueOrSetItemActive
       }
     }
   }
-  #if ($stat != 1 && $train && $self->IsTrainingArea())
-  #{
-  #  $self->PrepareSubmitSql("INSERT INTO training_queue (id) VALUES ('$id')");
-  #}
   return $stat . join '; ', @msgs;
 }
 
@@ -905,52 +903,6 @@ sub GetViolations
   push @errs, 'foreign pub' if $self->IsForeignPub( $id, $record );
   push @errs, 'non-BK format' unless $self->IsFormatBK( $id, $record );
   return join('; ', @errs);
-}
-
-sub UnloadTrainingQueue
-{
-  my $self = shift;
-
-  my $sql = 'SELECT id FROM training_queue';
-  my $ref = $self->get('dbh')->selectall_arrayref($sql);
-  foreach my $row ( @{$ref} )
-  {
-    my $id = $row->[0];
-    $self->PrepareSubmitSql("DELETE FROM reviews WHERE id='$id'");
-    $self->PrepareSubmitSql("DELETE FROM queue WHERE id='$id'");
-    $self->PrepareSubmitSql("DELETE FROM historicalreviews WHERE id='$id'");
-  }
-}
-
-sub ReloadTrainingQueue
-{
-  my $self = shift;
-
-  my $sql = 'SELECT id FROM training_queue';
-  my $ref = $self->get('dbh')->selectall_arrayref($sql);
-  foreach my $row ( @{$ref} )
-  {
-    my $id = $row->[0];
-    $self->PrepareSubmitSql("DELETE FROM reviews WHERE id='$id'");
-    $self->PrepareSubmitSql("DELETE FROM queue WHERE id='$id'");
-    $self->PrepareSubmitSql("DELETE FROM historicalreviews WHERE id='$id'");
-    $self->AddItemToQueueOrSetItemActive($id, 2, 0);
-  }
-}
-
-sub IsTrainingQueueLoaded
-{
-  my $self = shift;
-
-  my $sql = 'SELECT id FROM training_queue';
-  my $ref = $self->get('dbh')->selectall_arrayref($sql);
-  return 0 unless scalar @{$ref};
-  foreach my $row ( @{$ref} )
-  {
-    my $id = $row->[0];
-    return 0 unless $self->IsItemInQueue($id);
-  }
-  return 1;
 }
 
 # Used by the script loadIDs.pl to add and/or bump priority on a volume
@@ -1401,21 +1353,6 @@ sub GetFinalAttrReason
   my $attr   = $self->GetRightsName( $ref->[0]->[0] );
   my $reason = $self->GetReasonName( $ref->[0]->[1] );
   return ($attr, $reason);
-}
-
-sub GetExpertRevItems
-{
-  my $self = shift;
-
-  my $sql  = 'SELECT id FROM queue WHERE (status>=5) AND id NOT IN (SELECT id FROM reviews WHERE CURDATE()<hold)';
-  return $self->get( 'dbh' )->selectall_arrayref( $sql );
-}
-
-sub GetDoubleRevItemsInAgreement
-{
-  my $self = shift;
-  my $sql  = 'SELECT id FROM queue WHERE status=4';
-  return $self->get( 'dbh' )->selectall_arrayref( $sql );
 }
 
 
@@ -5340,15 +5277,13 @@ sub EndTimer
 
 sub RemoveFromTimer
 {
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
 
-    ## clear entry in table
-    my $sql = qq{ DELETE FROM timer WHERE id = "$id" and user = "$user" };
-    $self->PrepareSubmitSql( $sql );
-
-    return 1;
+  ## clear entry in table
+  my $sql = "DELETE FROM timer WHERE id='$id' AND user='$user'";
+  $self->PrepareSubmitSql( $sql );
 }
 
 sub GetDuration
@@ -5498,63 +5433,54 @@ sub IsThirdReview
 
 sub GetRightsName
 {
-    my $self = shift;
-    my $id   = shift;
-    my %rights = (1 => 'pd', 2 => 'ic', 3 => 'opb', 4 => 'orph', 5 => 'und', 6 => 'umall', 7 => 'world', 8 => 'nobody', 9 => 'pdus');
-    return $rights{$id};
-    #my $sql = qq{ SELECT name FROM attributes WHERE id = "$id" };
+  my $self = shift;
+  my $id   = shift;
+  my %rights = (1 => 'pd', 2 => 'ic', 3 => 'opb', 4 => 'orph', 5 => 'und', 6 => 'umall', 7 => 'world', 8 => 'nobody', 9 => 'pdus');
+  return $rights{$id};
+  #my $sql = qq{ SELECT name FROM attributes WHERE id = "$id" };
 
-    #my $ref = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
-    #return $ref->[0]->[0];
+  #my $ref = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
+  #return $ref->[0]->[0];
 }
 
 sub GetReasonName
 {
-    my $self = shift;
-    my $id   = shift;
-    my %reasons = (1 => 'bib', 2 => 'ncn', 3 => 'con', 4 => 'ddd', 5 => 'man', 6 => 'pvt',
-                   7 => 'ren', 8 => 'nfi', 9 => 'cdpp', 10 => 'cip', 11 => 'unp');
-    return $reasons{$id};
-    #my $sql = qq{ SELECT name FROM reasons WHERE id = "$id" };
+  my $self = shift;
+  my $id   = shift;
+  my %reasons = (1 => 'bib', 2 => 'ncn', 3 => 'con', 4 => 'ddd', 5 => 'man', 6 => 'pvt',
+                 7 => 'ren', 8 => 'nfi', 9 => 'cdpp', 10 => 'cip', 11 => 'unp');
+  return $reasons{$id};
+  #my $sql = qq{ SELECT name FROM reasons WHERE id = "$id" };
 
-    #my $ref = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
-    #return $ref->[0]->[0];
+  #my $ref = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
+  #return $ref->[0]->[0];
 }
 
 sub GetRightsNum
 {
-    my $self = shift;
-    my $id   = shift;
-    my %rights = ('pd' => 1, 'ic' => 2, 'opb' => 3, 'orph' => 4, 'und' => 5, 'umall' => 6, 'world' => 7, 'nobody' => 8, 'pdus' => 9);
-    return $rights{$id};
-    #my $sql = qq{ SELECT id FROM attributes WHERE name = "$id" };
+  my $self = shift;
+  my $id   = shift;
+  my %rights = ('pd' => 1, 'ic' => 2, 'opb' => 3, 'orph' => 4, 'und' => 5, 'umall' => 6, 'world' => 7, 'nobody' => 8, 'pdus' => 9);
+  return $rights{$id};
+  #my $sql = qq{ SELECT id FROM attributes WHERE name = "$id" };
 
-    #my $ref = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
-    #return $ref->[0]->[0];
+  #my $ref = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
+  #return $ref->[0]->[0];
 }
 
 sub GetReasonNum
 {
-    my $self = shift;
-    my $id   = shift;
-    my %reasons = ('bib' => 1, 'ncn' => 2, 'con' => 3, 'ddd' => 4, 'man' => 5, 'pvt' => 6,
-                   'ren' => 7, 'nfi' => 8, 'cdpp' => 9, 'cip' => 10, 'unp' => 11);
-    return $reasons{$id};
-    #my $sql = qq{ SELECT id FROM reasons WHERE name = "$id" };
+  my $self = shift;
+  my $id   = shift;
+  my %reasons = ('bib' => 1, 'ncn' => 2, 'con' => 3, 'ddd' => 4, 'man' => 5, 'pvt' => 6,
+                 'ren' => 7, 'nfi' => 8, 'cdpp' => 9, 'cip' => 10, 'unp' => 11);
+  return $reasons{$id};
+  #my $sql = qq{ SELECT id FROM reasons WHERE name = "$id" };
 
-    #my $ref = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
-    #return $ref->[0]->[0];
+  #my $ref = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
+  #return $ref->[0]->[0];
 }
 
-sub GetCopyDate
-{
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
-    my $sql = qq{ SELECT copyDate FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
-
-    return $self->SimpleSqlGet( $sql );
-}
 
 ## ----------------------------------------------------------------------------
 ##  Function:   get renNum (stanford ren num)
@@ -5563,61 +5489,41 @@ sub GetCopyDate
 ## ----------------------------------------------------------------------------
 sub GetRenNum
 {
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
-    my $sql = qq{ SELECT renNum FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
-
-    if ( ! $self->IsUserExpert($user) ) { $sql .= qq{ AND user = "$user"}; }
-
-    return $self->SimpleSqlGet( $sql );
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
+  
+  my $sql = qq{ SELECT renNum FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
+  return $self->SimpleSqlGet( $sql );
 }
 
-sub GetRenNums
-{
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
-
-    my $sql = qq{SELECT renNum FROM $CRMSGlobals::reviewsTable WHERE id = "$id" };
-
-    ## if not expert, limit to just that users renNums
-    if ( ! $self->IsUserExpert($user) ) { $sql .= qq{ AND user = "$user"}; }
-
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    my @return;
-    foreach ( @{$ref} ) { if ($_->[0] ne '') { push @return, $_->[0]; } }
-    return @return;
-}
 
 sub GetRenDate
 {
-    my $self = shift;
-    my $id   = shift;
-    
-    $id =~ s, ,,gs;
-    my $sql = qq{ SELECT DREG FROM $CRMSGlobals::stanfordTable WHERE ID = "$id" };
+  my $self = shift;
+  my $id   = shift;
 
-    return $self->SimpleSqlGet( $sql );
+  $id =~ s, ,,gs;
+  my $sql = qq{ SELECT DREG FROM $CRMSGlobals::stanfordTable WHERE ID = "$id" };
+  return $self->SimpleSqlGet( $sql );
 }
 
 sub GetPrevDate
 {
-    my $self = shift;
-    my $prev = shift;
+  my $self = shift;
+  my $prev = shift;
 
-    ## default 1 day (86,400 sec.)
-    if (! $prev) { $prev = 86400; }
- 
-    my @p = localtime( time() - $prev );
-    $p[3] = ($p[3]);
-    $p[4] = ($p[4]+1);
-    $p[5] = ($p[5]+1900);
-    foreach (0,1,2,3,4) { $p[$_] = sprintf("%0*d", "2", $p[$_]); }
+  ## default 1 day (86,400 sec.)
+  if (! $prev) { $prev = 86400; }
 
-    ## DB format (YYYY-MM-DD HH:MM:SS)
-    return "$p[5]-$p[4]-$p[3] $p[2]:$p[1]:$p[0]";
+  my @p = localtime( time() - $prev );
+  $p[3] = ($p[3]);
+  $p[4] = ($p[4]+1);
+  $p[5] = ($p[5]+1900);
+  foreach (0,1,2,3,4) { $p[$_] = sprintf("%0*d", "2", $p[$_]); }
+
+  ## DB format (YYYY-MM-DD HH:MM:SS)
+  return "$p[5]-$p[4]-$p[3] $p[2]:$p[1]:$p[0]";
 }
 
 
@@ -6386,7 +6292,7 @@ sub SanityCheckDB
   }
   # ======== historicalreviews ========
   $table = 'historicalreviews';
-  $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,expertNote,renDate,copyDate,category,flagged,status,priority FROM $table";
+  $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,expertNote,renDate,category,flagged,status,priority FROM $table";
   $rows = $dbh->selectall_arrayref( $sql );
   my %stati = (1=>1,4=>1,5=>1,6=>1,7=>1);
   foreach my $row ( @{$rows} )
@@ -6396,9 +6302,8 @@ sub SanityCheckDB
     $self->SetError(sprintf("$table __ illegal attr/reason for %s__ '%s/%s'", $row->[0], $row->[3], $row->[4])) unless $self->GetCodeFromAttrReason($row->[3],$row->[4]);
     $self->SetError(sprintf("$table __ spaces in renNum for %s__ '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
     $self->SetError(sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $self->IsRenDate($row->[11]);
-    $self->SetError(sprintf("$table __ illegal copyDate for %s__ '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $row->[12] =~ m/\d\d\d\d/;
-    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[13])) unless $row->[13] eq '' or $self->IsValidCategory($row->[13]);
-    $self->SetError(sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[15])) unless $stati{$row->[15]};
+    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $self->IsValidCategory($row->[13]);
+    $self->SetError(sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[14])) unless $stati{$row->[14]};
     $sql = "SELECT id,status FROM $table WHERE expert>0 AND status<5";
     $rows = $dbh->selectall_arrayref( $sql );
     foreach my $row ( @{$rows} )
@@ -6441,7 +6346,7 @@ sub SanityCheckDB
   }
   # ======== reviews ========
   $table = 'reviews';
-  $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,expertNote,renDate,copyDate,category,flagged,priority FROM $table";
+  $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,expertNote,renDate,category,flagged,priority FROM $table";
   $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
@@ -6450,10 +6355,8 @@ sub SanityCheckDB
     $self->SetError(sprintf("$table __ illegal attr/reason for %s__ '%s/%s'", $row->[0], $row->[3], $row->[4])) unless $self->GetCodeFromAttrReason($row->[3],$row->[4]);
     $self->SetError(sprintf("$table __ spaces in renNum for %s__ '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
     $self->SetError(sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $self->IsRenDate($row->[11]);
-    $self->SetError(sprintf("$table __ illegal copyDate for %s__ '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $row->[12] =~ m/\d\d\d\d/;
-    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[13])) unless $row->[13] eq '' or $self->IsValidCategory($row->[13]);
+    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $self->IsValidCategory($row->[13]);
   }
-  # FIXME: make sure there are no und/nfi pairs with status other than 3
 }
 
 # Looks for stuff that the DB thinks is UTF-8 but is actually ISO Latin-1 8991 Shift-JIS or whatever.
