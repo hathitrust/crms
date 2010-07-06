@@ -8,7 +8,6 @@
 [% ids = cgi.param('ids') %]
 [% pri = cgi.param('priority') %]
 [% override = cgi.param('override') %]
-[% training = 0 #cgi.param('training') %]
 [% IF NOT pri %][% pri = 0 %][% END %]
 
 <h2>Add Volumes to the Queue:</h2>
@@ -29,11 +28,6 @@ These items will take priority in the review process.
   Override Restrictions (sets priority 4)
   <input type="checkbox" name="override" [% (crms.IsUserSuperAdmin())? '':'disabled="disabled"' %][% override? 'checked="checked"':'' %]/>
   &nbsp;&nbsp;&nbsp;
-[% IF 0 #crms.IsTrainingArea() %]
-  Make Training Queue
-  <input type="checkbox" name="training" [% (crms.IsUserSuperAdmin())? '':'disabled="disabled"' %][% training? 'checked="checked"':'' %]/>
-  &nbsp;&nbsp;&nbsp;
-[% END %]
   <input type="submit" value="Submit"/>
 </form>
 <br/>
@@ -44,13 +38,6 @@ Priority 4 can only be added or reviewed by a super admin.<br/>
 <i>Override Restrictions</i> allows you to enter government documents, non-books, and items from before 1923 or after 1963.<br/>
 </p>
 
-
-[% IF 0 #crms.IsTrainingArea() && training %]
-  [% blah = crms.UnloadTrainingQueue() %]
-  [% blah = crms.PrepareSubmitSql("DELETE FROM training_queue") %]
-[% END %]
-
-
 <br/>
 [% adds = 0 %]
 [% skips = 0 %]
@@ -60,7 +47,7 @@ Priority 4 can only be added or reviewed by a super admin.<br/>
   [% FOREACH id IN ids.split %]
     [% IF id.match('^\d+$') %][% id = 'mdp.' _ id %][% END %]
     [% id = id.remove('(^\s+)|(\s+$)') %]
-    [% status = crms.AddItemToQueueOrSetItemActive(id, pri, override, training) %]
+    [% status = crms.AddItemToQueueOrSetItemActive(id, pri, override) %]
     <tr><th style="width:10em;"><span class="major">[% id %]</span></th>
     [% err = status.substr(0, 1) %]
     [% status = status.substr(1, status.length()) %]
