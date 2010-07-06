@@ -13,8 +13,20 @@ use strict;
 use CRMS;
 use Getopt::Std;
 
+my $usage = <<END;
+USAGE: $0 [-hnpv] -u rereport_user tsv_file
+
+Imports reviews for a rereview project from tsv_file; added reviews
+are by rereport_user.
+
+-h       Print this help message.
+-n       Do not update the database.
+-p       Run in production.
+-v       Be verbose.
+END
+
 my %opts;
-getopts('hnpu:v', \%opts);
+my $ok = getopts('hnpu:v', \%opts);
 
 my $help       = $opts{'h'};
 my $noop       = $opts{'n'};
@@ -22,9 +34,9 @@ my $production = $opts{'p'};
 my $user       = $opts{'u'};
 my $verbose    = $opts{'v'};
 
-if ( $help || scalar @ARGV != 1 || !$user)
+if ($help || scalar @ARGV != 1 || !$user || !$ok)
 {
-  die "USAGE: $0 [-h] [-n] [-p] [-v] -u rereport_user tsv_file\n\n";
+  die $usage;
 }
 my $file = $ARGV[0];
 
@@ -41,23 +53,6 @@ my $crms = CRMS->new(
 
 open my $fh, $file or die "failed to open $file: $@ \n";
 
-#Ignore ic/ren determinations (4805) and ic/cdpp (255); all pd/cdpp
-#(166) will need to be re-reviewed)
-#Moses will queue up a sample set of 240* pd/ncn (out of a total 2446)
-#determinations as initial reviews) in Dev - queueing for reviewing
-#will be random but roughly 2 not reviewed for every one already
-#reviewed once (there are still questions on how this will work). 
-#When ready put them in the queue in production, let EA staff review;
-#Anne & Greg review and calculate error rates and determine next steps-
-#COMPLETE BY 9/30/09
-#*60 june, 60 aug, 60 oct, 60 dec
-
-# This is for re-reviewing pd determinations from 2007. Ignores non-pd entries.
-# If item is already in queue table it will get priority set to 1,
-# otherwise an insert will be done in the queue table with prority set to 1.
-## This is the format for file; one record per line:
-##  barcode sans mdp <tab> attr <tab> reason <tab> original review date:
-## 	39015028120130<tab>ic<tab>ren<tab>2007-10-03 12:20:49
 my $cnt = 0;
 my $linen = 1;
 my %ids=();
@@ -125,7 +120,7 @@ foreach my $line ( <$fh> )
       print "Skipping gov't doc $id\n";
       next;
     }
-    if ( !$crms->IsUSPub( $id, $record ) )
+    if ( $crms->IsForeignPub( $id, $record ) )
     {
       $counts{'not us'}++;
       print "Skipping non-us doc $id\n";

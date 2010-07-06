@@ -17,10 +17,22 @@ use CRMS;
 use Getopt::Std;
 use LWP::UserAgent;
 
+my $usage = <<END;
+USAGE: $0 [-hp]
+
+Clears and recalculates user stats.
+
+-h       Print this help message.
+-p       Run in production.
+END
+
 my %opts;
-getopts('p', \%opts);
+getopts('hp', \%opts);
+my $help = $opts{'h'};
 my $dev = $DLPS_DEV;
-$dev = 0 if $opts{'p'};
+$dev = undef if $opts{'p'};
+
+die $usage if $help;
 
 my $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/log_monthlyStats.txt",

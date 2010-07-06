@@ -14,17 +14,29 @@ use CRMS;
 use Getopt::Std;
 use Encode qw(from_to);
 
+my $usage = <<END;
+USAGE: $0 [-hnpv] tsv_file1 [tsv_file2...]
+
+Imports the reviews in the argument tab-separated UTF-16 file(s)
+as legacy historical reviews.
+
+-h       Print this help message.
+-n       Do not update the database.
+-p       Run in production.
+-v       Be verbose.
+END
+
 my %opts;
-getopts('hnpv', \%opts);
+my $ok = getopts('hnpv', \%opts);
 
 my $help       = $opts{'h'};
 my $noop       = $opts{'n'};
 my $production = $opts{'p'};
 my $verbose    = $opts{'v'};
 
-if ( $help || scalar @ARGV < 1)
+if ($help || scalar @ARGV < 1 || !$ok)
 {
-  die "USAGE: $0 [-h] [-n] [-p] [-v] tsv_file1 [tsv_file2...]\n\n";
+  die $usage;
 }
 
 my $file = $ARGV[0];
@@ -36,6 +48,7 @@ my $crms = CRMS->new(
     root         =>   $DLXSROOT,
     dev          =>   !$production,
 );
+
 
 foreach my $f (@ARGV)
 {
@@ -138,13 +151,13 @@ sub ProcessFile
       if ( $title =~ m/.*?"$/ ) { $title =~ s/(.*?)\"+$/$1/; }
 
       #Parse out the category.
-      if ( $note =~ m/.*?\:.*/ )
+      if ( $note =~ m/.*?[:.].*/ )
       {
         $category = $note;
-        $category =~ s/(.*?)\:.*/$1/s;
+        $category =~ s/(.*?)[:.].*/$1/s;
         die "Can't translate $category!" if (uc $category) eq $crms->TranslateCategory( $category );
         $category = $crms->TranslateCategory( $category );
-        $note =~ s/.*?\:\s*(.*)/$1/s;
+        $note =~ s/.*?[:.]\s*(.*)/$1/s;
       }
       elsif ($note)
       {
@@ -191,9 +204,9 @@ sub ProcessFile
       print "RDate: $renDate\n";
       print "R#:    $renNum\n";
       print "Note:  $note\n";
-      printf("SubmitHistReview(%s)\n", join ', ', ($id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $category, $status));
+      printf("SubmitHistReview(%s)\n", join ', ', ($id, $user, $date, $attr, $reason, $renNum, $renDate, $note, $category, $status));
     }
-    my $rc = $crms->SubmitHistReview($id, $user, $date, $attr, $reason, $cDate, $renNum, $renDate, $note, $category, $status, ($alt)? 2:0, $noop);
+    my $rc = $crms->SubmitHistReview($id, $user, $date, $attr, $reason, $renNum, $renDate, $note, $category, $status, ($alt)? 2:0, $noop);
     if ( ! $rc ) 
     {
       my $errors = $crms->GetErrors();

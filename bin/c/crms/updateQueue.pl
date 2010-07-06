@@ -17,6 +17,15 @@ use CRMS;
 use Getopt::Std;
 use LWP::UserAgent;
 
+my $usage = <<END;
+USAGE: $0 [-chq]
+
+Processes reviews, exports determinations, updates candidates, and updates the queue.
+
+-c       Do not update candidates.
+-h       Print this help message.
+-q       Do not update queue.
+END
 
 sub ReportMsg
 {
@@ -26,9 +35,12 @@ sub ReportMsg
 }
 
 my %opts;
-getopts('cq', \%opts);
+getopts('chq', \%opts);
 my $skipCandidates = $opts{'c'};
+my $help = $opts{'h'};
 my $skipQueue = $opts{'q'};
+
+die $usage if $help;
 
 my $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/update_log.txt",
