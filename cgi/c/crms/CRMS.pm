@@ -6290,6 +6290,19 @@ sub SanityCheckDB
   {
     $self->SetError(sprintf("$table __ illegal time__ %s", $row->[0]));
   }
+  # ======== reviews ========
+  $table = 'reviews';
+  $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,expertNote,renDate,category,flagged,priority FROM $table";
+  $rows = $dbh->selectall_arrayref( $sql );
+  foreach my $row ( @{$rows} )
+  {
+    $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
+    $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
+    $self->SetError(sprintf("$table __ illegal attr/reason for %s__ '%s/%s'", $row->[0], $row->[3], $row->[4])) unless $self->GetCodeFromAttrReason($row->[3],$row->[4]);
+    $self->SetError(sprintf("$table __ spaces in renNum for %s__ '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
+    $self->SetError(sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $self->IsRenDate($row->[11]);
+    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $self->IsValidCategory($row->[12]);
+  }
   # ======== historicalreviews ========
   $table = 'historicalreviews';
   $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,expertNote,renDate,category,flagged,status,priority FROM $table";
@@ -6302,7 +6315,7 @@ sub SanityCheckDB
     $self->SetError(sprintf("$table __ illegal attr/reason for %s__ '%s/%s'", $row->[0], $row->[3], $row->[4])) unless $self->GetCodeFromAttrReason($row->[3],$row->[4]);
     $self->SetError(sprintf("$table __ spaces in renNum for %s__ '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
     $self->SetError(sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $self->IsRenDate($row->[11]);
-    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $self->IsValidCategory($row->[13]);
+    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $self->IsValidCategory($row->[12]);
     $self->SetError(sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[14])) unless $stati{$row->[14]};
     $sql = "SELECT id,status FROM $table WHERE expert>0 AND status<5";
     $rows = $dbh->selectall_arrayref( $sql );
@@ -6343,19 +6356,6 @@ sub SanityCheckDB
       my $sum = $self->SimpleSqlGet($sql);
       $self->SetError(sprintf("$table __ illegal status/expcnt for %s__ '%s'/'%s' but there are no expert reviews", $row->[0], $row->[2])) unless $sum;
     }
-  }
-  # ======== reviews ========
-  $table = 'reviews';
-  $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,expertNote,renDate,category,flagged,priority FROM $table";
-  $rows = $dbh->selectall_arrayref( $sql );
-  foreach my $row ( @{$rows} )
-  {
-    $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
-    $self->SetError(sprintf("$table __ illegal attr/reason for %s__ '%s/%s'", $row->[0], $row->[3], $row->[4])) unless $self->GetCodeFromAttrReason($row->[3],$row->[4]);
-    $self->SetError(sprintf("$table __ spaces in renNum for %s__ '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
-    $self->SetError(sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $self->IsRenDate($row->[11]);
-    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $self->IsValidCategory($row->[13]);
   }
 }
 
