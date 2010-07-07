@@ -297,7 +297,7 @@ sub CheckPendingStatus
   my $pstatus = $status;
   if (!$status)
   {
-    $sql = "SELECT id, user, attr, reason, renNum, renDate FROM reviews WHERE id='$id' AND expert!=1";
+    $sql = "SELECT id, user, attr, reason, renNum, renDate FROM reviews WHERE id='$id' AND expert IS NULL";
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
     if (scalar @{$ref} > 1)
     {
@@ -667,7 +667,6 @@ sub LoadNewItemsInCandidates
   #Record the update to the queue
   $sql = "INSERT INTO candidatesrecord ( addedamount ) values ( $diff )";
   $self->PrepareSubmitSql( $sql );
-
   return 1;
 }
 
@@ -698,7 +697,7 @@ sub AddItemToCandidates
   my $time     = shift;
   my $pub      = shift;
   my $record   = shift;
-  
+
   $record = $self->GetRecordMetadata($id) unless $record;
   $pub = $self->GetPublDate($id, $record) unless $pub;
   my $au = $self->GetMarcDatafieldAuthor( $id, $record );
@@ -770,43 +769,28 @@ sub LoadNewItems
 }
 
 
-## ----------------------------------------------------------------------------
-##  Function:   get the latest time from the queue
-##  Parameters: NOTHING
-##  Return:     date
-## ----------------------------------------------------------------------------
-sub GetUpdateTime
-{
-    my $self = shift;
-    my $dbh  = $self->get( 'dbh' );
-
-    my $sql = qq{SELECT MAX(time) FROM $CRMSGlobals::queueTable LIMIT 1};
-    my @ref = $dbh->selectrow_array( $sql );
-    return $ref[0] || '2000-01-01';
-}
-
 # Plain vanilla code for adding an item with status 0, priority 0
 # Expects the pub_date to be already in 19XX-01-01 format.
 # Returns 1 if item was added, 0 if not added because it was already in the queue.
 sub AddItemToQueue
 {
-    my $self     = shift;
-    my $id       = shift;
-    my $pub_date = shift;
-    my $title    = shift;
-    my $author   = shift;
-    
-    if ( ! $self->IsItemInQueue( $id ) )
-    {
-      # queue table has priority and status default to 0, time to current timestamp.
-      my $sql = "INSERT INTO $CRMSGlobals::queueTable (id) VALUES ('$id')";
-      $self->PrepareSubmitSql( $sql );
+  my $self     = shift;
+  my $id       = shift;
+  my $pub_date = shift;
+  my $title    = shift;
+  my $author   = shift;
 
-      $self->UpdateTitle( $id, $title );
-      $self->UpdatePubDate( $id, $pub_date );
-      $self->UpdateAuthor( $id, $author );
-    }
-    return 1;
+  if ( ! $self->IsItemInQueue( $id ) )
+  {
+    # queue table has priority and status default to 0, time to current timestamp.
+    my $sql = "INSERT INTO $CRMSGlobals::queueTable (id) VALUES ('$id')";
+    $self->PrepareSubmitSql( $sql );
+
+    $self->UpdateTitle( $id, $title );
+    $self->UpdatePubDate( $id, $pub_date );
+    $self->UpdateAuthor( $id, $author );
+  }
+  return 1;
 }
 
 # Returns a status code (0=Add, 1=Error, 2=Skip, 3=Modify) followed by optional text.
