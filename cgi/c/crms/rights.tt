@@ -3,14 +3,14 @@
   [% STOP %]
 [% END %]
 
-[% INCLUDE header.tt    %]
+[% INCLUDE header.tt %]
 [% q = cgi.param('query') %]
 
 <h2>Query Rights Database:</h2>
 <form action="crms">
-  <p class="smallishText">Enter one volume id per line.</p>
+  <label for="queryTA" class="smallishText">Enter one volume id per line.</label><br/>
   <input type="hidden" name="p" value="rights"/>
-  <textarea name="query" cols="20" rows="10" style="width:33%; height:9em;"></textarea>
+  <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;"></textarea>
   <input type="submit" value="Do it!"/>
 </form>
 
