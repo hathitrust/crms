@@ -297,7 +297,7 @@ sub CheckPendingStatus
   my $pstatus = $status;
   if (!$status)
   {
-    $sql = "SELECT id, user, attr, reason, renNum, renDate FROM reviews WHERE id='$id' AND expert IS NULL";
+    $sql = "SELECT user, attr, reason, renNum, renDate FROM reviews WHERE id='$id' AND expert IS NULL";
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
     if (scalar @{$ref} > 1)
     {
