@@ -603,14 +603,16 @@ sub LoadNewItemsInCandidates
   print "Before load, the max timestamp in the candidates table $start, and the size is $start_size\n";
   my @und = ();
   my $sdrdbh = $self->get('sdr_dbh');
-  my $sql = "SELECT namespace, id FROM rights WHERE time>'$start' GROUP BY namespace, id";
+  my $sql = "SELECT namespace,id,attr,reason,time FROM rights_current WHERE time>'$start' GROUP BY namespace, id";
   my $ref = $sdrdbh->selectall_arrayref( $sql );
   foreach my $row ( @{$ref} )
   {
-    my $ns   = $row->[0];
-    my $id   = $row->[1];
-    my ($attr, $reason, $time) = $self->LatestRights($ns, $id);
-    if ( $attr == 2 && $reason == 1 )
+    my $ns     = $row->[0];
+    my $id     = $row->[1];
+    my $attr   = $row->[2];
+    my $reason = $row->[3];
+    my $time   = $row->[4];
+    if ($attr == 2 && $reason == 1)
     {
       $id = $ns . '.' . $id;
       if ($self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'") > 0)
@@ -620,15 +622,15 @@ sub LoadNewItemsInCandidates
       }
       my $src = undef;
       my $record = $self->GetRecordMetadata($id);
-      ## pub date between 1923 and 1963
       my $pub = $self->GetPublDate($id, $record);
       # Only care about volumes between 1923 and 1963
       if ($pub >= '1923' && $pub <= '1963')
       {
-        if ($self->IsGovDoc( $id, $record )) { $self->Logit( "skip fed doc: $id" ); next; }
-        if (!$self->IsFormatBK( $id, $record )) { $self->Logit( "skip not fmt bk: $id" ); next; }
+        next if $self->IsGovDoc($id, $record);
+        next unless $self->IsFormatBK($id, $record);
         my $lang = $self->GetPubLanguage($id, $record);
-        if ('eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
+        if ('eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang &&
+            'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
         {
           $src = 'language';
         }
@@ -654,40 +656,17 @@ sub LoadNewItemsInCandidates
   }
   my $end_size = $self->GetCandidatesSize();
   my $diff = $end_size - $start_size;
-
   my $r = $self->GetErrors();
   if ( defined $r )
   {
     printf "There were %d errors%s\n", scalar @{$r}, (scalar @{$r})? ':':'.';
     map {print "  $_\n";} @{$r};
   }
-
   print "After load, candidates has $end_size items. Added $diff.\n\n";
-
   #Record the update to the queue
-  $sql = "INSERT INTO candidatesrecord ( addedamount ) values ( $diff )";
+  $sql = "INSERT INTO candidatesrecord (addedamount) VALUES ($diff)";
   $self->PrepareSubmitSql( $sql );
   return 1;
-}
-
-# Returns the numeric attr, reason, and time of most recent rights DB entry for volume.
-sub LatestRights
-{
-  my $self      = shift;
-  my $namespace = shift;
-  my $id        = shift;
-  my $readable  = shift;
-  
-  my $sdrdbh = $self->get('sdr_dbh');
-  my $sql = "SELECT attr, reason, time FROM rights WHERE namespace='$namespace' AND id='$id' ORDER BY time DESC";
-  $sql = 'SELECT a.name,rs.name,r.time FROM rights r, attributes a, reasons rs ' .
-         "WHERE r.namespace='$namespace' AND r.id='$id' AND a.id=r.attr AND rs.id=r.reason " .
-         'ORDER BY r.time DESC' if $readable;
-  my $ref2 = $sdrdbh->selectall_arrayref( $sql );
-  my $attr   = $ref2->[0]->[0];
-  my $reason = $ref2->[0]->[1];
-  my $time   = $ref2->[0]->[2];
-  return ($attr, $reason, $time);
 }
 
 sub AddItemToCandidates
@@ -4947,9 +4926,6 @@ sub GetRecordMetadata
     $barcode = lc $barcode;
     my ($ns,$bar) = split(/\./, $barcode);
 
-    ## get from object if we have it
-    if ( $self->get( $barcode ) ne '' ) { return $self->get( $barcode ); }
-
     #my $sysId = $self->BarcodeToId( $barcode );
     #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
     #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
@@ -4977,11 +4953,8 @@ sub GetRecordMetadata
         $self->Logit( "$url \nfailed to get MARC for $barcode: $errorCode " . $res->content() );
         return;
     }
-
     #my ($record) = $source->findnodes( "//record" );
     my ($record) = $source->findnodes( "." );
-    $self->set( $barcode, $record );
-
     return $record;
 }
 
@@ -6454,7 +6427,7 @@ sub PageToEnglish
   return $pages{$page};
 }
 
-# Query the production rights database
+# Query the production rights database. This returns an array ref of entries for the volume, oldest first.
 sub RightsQuery
 {
   my $self = shift;
@@ -6463,7 +6436,7 @@ sub RightsQuery
   my ($namespace,$n) = split m/\./, $id;
   my $sql = 'SELECT a.name,rs.name,s.name,r.user,r.time,r.note FROM rights r, attributes a, reasons rs, sources s ' .
             "WHERE r.namespace='$namespace' AND r.id='$n' AND s.id=r.source AND a.id=r.attr AND rs.id=r.reason " .
-            'ORDER BY r.time';
+            'ORDER BY r.time ASC';
   return $self->get('sdr_dbh')->selectall_arrayref($sql);
 }
 
