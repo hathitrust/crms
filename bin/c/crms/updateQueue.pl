@@ -57,16 +57,19 @@ ReportMsg("DONE Processing the statuses.\n");
 ReportMsg("Starting to create export for the rights db. You should receive a separate email when this completes.\n");
 ## get new items and load the queue table
 my $rc = $crms->ClearQueueAndExport();
+# Because of changes to the rights database, we're not doing this any more.
+# Presumably Aaron's code will scan for new export files without action needed on our part.
+
 #only run this on dlps11
 #it will process all files in the rights_dir of the form *.rights and move them to the
 #/l1/prep/c/crms/archive
-my $host = `hostname`;
-if ( $host =~ m,dlps11\..*, )
-{
-  ReportMsg("Calling Jessica's script to populate the rights db.\n");
-  my $out = `/l/local/bin/perl /l1/bin/g/groove/populate_rights_data.pl --rights_dir=/l1/prep/c/crms --archive=/l1/prep/c/crms/archive/`;
-  ReportMsg("DONE calling Jessica's script to populate the rights db. This is the output:\n $out\n");
-}
+#my $host = `hostname`;
+#if ( $host =~ m,dlps11\..*, )
+#{
+#  ReportMsg("Calling Jessica's script to populate the rights db.\n");
+#  my $out = `/l/local/bin/perl /l1/bin/g/groove/populate_rights_data.pl --rights_dir=/l1/prep/c/crms --archive=/l1/prep/c/crms/archive/`;
+#  ReportMsg("DONE calling Jessica's script to populate the rights db. This is the output:\n $out\n");
+#}
 
 my $status = 1;
 # The testsuite can safely skip this often time-consuming project.
