@@ -114,7 +114,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
             </th>
           </tr>
           <tr>
-           <th style="text-align:right;">CRMS&nbsp;Version&nbsp;2.0.1</th>
+           <th style="text-align:right;">CRMS&nbsp;Version&nbsp;2.0.2</th>
           </tr>
           [% IF where %]
             <tr>
