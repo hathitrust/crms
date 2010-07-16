@@ -183,40 +183,6 @@ sub GetCandidatesSize
 }
 
 
-sub DeDup
-{
-  my $self = shift;
-
-  my $sql = qq{select distinct id from duplicates};
-  my $ref = $self->get('dbh')->selectall_arrayref( $sql );
-
-  ## design note: if these were in the same DB we could just INSERT
-  ## into the new table, not SELECT then INSERT
-  my $count = 0;
-  my $msg;
-  foreach my $row ( @{$ref} )
-  {
-    my $id = $row->[0];
-
-    my $sql = qq{ SELECT count(*) from candidates where id="mdp.$id"};
-    my $incan = $self->SimpleSqlGet( $sql );
-
-    if ( $incan == 1 )
-    {
-      my $sql = qq{ DELETE FROM candidates WHERE id = "mdp.$id" };
-      $self->PrepareSubmitSql( $sql );
-
-      $count = $count + 1;
-    }
-    else
-    {
-      $msg .= qq{$id\n};
-    }
-  }
-  print $count;
-}
-
-
 sub ProcessReviews
 {
   my $self = shift;
@@ -656,17 +622,11 @@ sub LoadNewItemsInCandidates
   }
   my $end_size = $self->GetCandidatesSize();
   my $diff = $end_size - $start_size;
-  my $r = $self->GetErrors();
-  if ( defined $r )
-  {
-    printf "There were %d errors%s\n", scalar @{$r}, (scalar @{$r})? ':':'.';
-    map {print "  $_\n";} @{$r};
-  }
   print "After load, candidates has $end_size items. Added $diff.\n\n";
   #Record the update to the queue
   $sql = "INSERT INTO candidatesrecord (addedamount) VALUES ($diff)";
   $self->PrepareSubmitSql( $sql );
-  return 1;
+  return 1; # FIXME: this only ever returns 1
 }
 
 sub AddItemToCandidates
@@ -2620,6 +2580,7 @@ sub LinkToPT
   my $id   = shift;
   my $ti   = $self->GetTitle( $id );
 
+  $ti =~ s/&(?!amp;)/&amp;/g;
   my $url = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=';
   return qq{<a href="$url$id" target="_blank">$ti</a>};
 }
@@ -2630,6 +2591,7 @@ sub LinkToReview
   my $id   = shift;
   my $ti   = $self->GetTitle( $id );
 
+  $ti =~ s/&(?!amp;)/&amp;/g;
   ## my $url = 'http://babel.hathitrust.org/cgi/pt?attr=1&id=';
   my $url = qq{/cgi/c/crms/crms?p=review;barcode=$id;editing=1};
   return qq{<a href="$url" target="_blank">$ti</a>};
@@ -4701,8 +4663,8 @@ sub GetEncTitle
   my $bar  = shift;
 
   my $ti = $self->GetTitle( $bar );
-  #good for the title
-  $ti =~ s,(.*\w).*,$1,;
+  # Get rid of trailing punctuation
+  $ti =~ s/\s*[:\/,.;]\s*$//;
   $ti =~ s,\',\\\',g; ## escape '
   return $ti;
 }
@@ -4714,7 +4676,8 @@ sub GetTitle
 
   my $ti = $self->SimpleSqlGet("SELECT title FROM bibdata WHERE id='$id'");
   $ti = $self->UpdateTitle($id) unless $ti;
-  $ti =~ s,(.*\w).*,$1,;
+  # Get rid of trailing punctuation
+  $ti =~ s/\s*[:\/,.;]\s*$//;
   return $ti;
 }
 
@@ -5622,9 +5585,10 @@ sub CreateQueueReport
   my $class = ' class="major"';
   $report .= sprintf("<tr><td%s>Not&nbsp;Yet&nbsp;Active</td><td%s>$count</td>", $class, $class);
   $report .= $self->DoPriorityBreakdown($sql,$class,@pris);
-  $report .= "</tr></table>\n";
-  $report .= "<span class='smallishText'>Note: includes both active and inactive volumes.</span><br/>\n";
-  $report .= "<span class='smallishText'>* Status 6 no longer in use as of 4/19/2010.</span><br/><br/>\n";
+  $report .= "</tr>\n";
+  $report .= sprintf("<tr><td nowrap='nowrap' colspan='%d'><span class='smallishText'>Note: includes both active and inactive volumes.</span><br/>\n", 2+scalar @pris);
+  $report .= "<span class='smallishText'>* Status 6 no longer in use as of 4/19/2010.</span></td></tr>\n";
+  $report .= "</table>\n";
   $report .= "</td><td style='padding-left:80px'>\n";
   $report .= "<h3>Other System Stats</h3>\n";
   $report .= "<table class='exportStats'>\n";
@@ -5740,7 +5704,7 @@ sub CreateReviewReport
   }
   $report .= "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
   
-  my $sql = 'SELECT DISTINCT id FROM reviews';
+  my $sql = 'SELECT DISTINCT q.id FROM queue q INNER JOIN reviews r ON q.id=r.id';
   my $rows = $dbh->selectall_arrayref( $sql );
   my $count = scalar @{$rows};
   $report .= "<tr><td class='total'>Active</td><td class='total'>$count</td>";
