@@ -21,7 +21,7 @@
 [% FOREACH review IN reviews %]
   <table class="exportStats">
   <tr><th>ID</th><td>                    [% review.id %] </td></tr>
-  <tr><th>Title</th><td>                 [% crms.LinkToPT( review.id )  %]</td></tr>
+  <tr><th>Title</th><td>                 [% crms.LinkToPT( review.id ) %]</td></tr>
   <tr><th>Author</th><td>                [% crms.GetEncAuthor( review.id ) %]</td></tr>
   <tr><th>Pub&nbsp;Date</th><td>         [% crms.GetPubDate( review.id ) or 'unknown' %]</td></tr>
   </table>
