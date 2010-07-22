@@ -44,7 +44,6 @@ sub new
   $self->set( 'dev',        $args{'dev'} );
   $self->set( 'user',       $args{'user'} );
   $self->set( 'dbh',        $self->ConnectToDb() );
-  $self->set( 'sdr_dbh',    $self->ConnectToSdrDb() );
   return $self;
 }
 
@@ -94,7 +93,7 @@ sub ConnectToDb
             { RaiseError => 1, AutoCommit => 1 } ) || die "Cannot connect: $DBI::errstr";
   $dbh->{mysql_enable_utf8} = 1;
   $dbh->{mysql_auto_reconnect} = 1;
-  my $sql = qq{SET NAMES 'utf8';};
+  my $sql = "SET NAMES 'utf8';";
   $dbh->do($sql);
 
   return $dbh;
@@ -127,7 +126,20 @@ sub ConnectToSdrDb
   {
     $self->SetError($DBI::errstr);
   }
+  return $sdr_dbh;
+}
 
+# Gets cached dbh, or connects if no connection is made yet.
+sub GetSdrDb
+{
+  my $self = shift;
+  
+  my $sdr_dbh = $self->get('sdr_dbh');
+  if (!$sdr_dbh)
+  {
+    $sdr_dbh = $self->ConnectToSdrDb();
+    $self->set('sdr_dbh', $sdr_dbh);
+  }
   return $sdr_dbh;
 }
 
@@ -568,7 +580,7 @@ sub LoadNewItemsInCandidates
   my $start_size = $self->GetCandidatesSize();
   print "Before load, the max timestamp in the candidates table $start, and the size is $start_size\n";
   my @und = ();
-  my $sdrdbh = $self->get('sdr_dbh');
+  my $sdrdbh = $self->GetSdrDb();
   my $sql = "SELECT namespace,id,attr,reason,time FROM rights_current WHERE time>'$start' GROUP BY namespace, id";
   my $ref = $sdrdbh->selectall_arrayref( $sql );
   foreach my $row ( @{$ref} )
@@ -983,9 +995,8 @@ sub SubmitReview
 
   if ( ! $self->CheckForId( $id ) )                         { $self->SetError("id ($id) check failed");                    return 0; }
   if ( ! $self->CheckReviewer( $user, $exp ) )              { $self->SetError("reviewer ($user) check failed");            return 0; }
-  if ( ! $self->ValidateAttr( $attr ) )                     { $self->SetError("attr ($attr) check failed");                return 0; }
-  if ( ! $self->ValidateReason( $reason ) )                 { $self->SetError("reason ($reason) check failed");            return 0; }
-  if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->SetError("attr/reason ($attr/$reason) check failed"); return 0; }
+  # ValidateAttrReasonCombo sets error internally on fail.
+  if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { return 0; }
 
   #remove any blanks from renNum
   $renNum =~ s/\s+//gs;
@@ -1144,10 +1155,9 @@ sub SubmitHistReview
     $attr = $self->GetRightsNum( $attr );
     $reason = $self->GetReasonNum( $reason );
 
-    #if ( ! $self->ValidateAttr( $attr ) )                     { $self->Logit("attr check failed");        return 0; }
-    #if ( ! $self->ValidateReason( $reason ) )                 { $self->Logit("reason check failed");      return 0; }
     if ( ! $self->CheckReviewer( $user, $expert ) )           { $self->SetError("reviewer ($user) check failed"); return 0; }
-    if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->SetError('attr/reason check failed');      return 0; }
+    # ValidateAttrReasonCombo sets error internally on fail.
+    if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { return 0; }
     
     my $err = $self->ValidateSubmissionHistorical($attr, $reason, $note, $category, $renNum, $renDate);
     if ($err) { $self->SetError($err); return 0; }
@@ -4303,38 +4313,6 @@ sub ValidateSubmissionHistorical
     return $errorMsg;
 }
 
-sub ValidateAttr
-{
-    my $self    = shift;
-    my $attr    = shift;
-    
-    my $sdr_dbh = $self->get( 'sdr_dbh' );
-
-    my $rows = $sdr_dbh->selectall_arrayref( "SELECT id FROM attributes" );
-    
-    foreach my $row ( @{$rows} )
-    {
-        if ( $row->[0] eq $attr ) { return 1; }
-    }
-    $self->SetError( "bad attr: $attr" );
-    return 0;
-}
-
-sub ValidateReason
-{
-    my $self    = shift;
-    my $reason  = shift;
-    my $sdr_dbh = $self->get( 'sdr_dbh' );
-    
-    my $rows = $sdr_dbh->selectall_arrayref( "SELECT id FROM reasons" );
-    
-    foreach my $row ( @{$rows} )
-    {
-        if ( $row->[0] eq $reason ) { return 1; }
-    }
-    $self->SetError( "bad reason: $reason" );
-    return 0;
-}
 
 sub GetCopyrightPage
 {
@@ -4342,8 +4320,8 @@ sub GetCopyrightPage
   my $id   = shift;
 
   ## this is a place holder.  The HT API should be able to do this soon.
-
-  return "7";
+  ## FIXME: what is this for? Do we still need this.
+  return '7';
 }
 
 
@@ -4357,7 +4335,7 @@ sub IsGovDoc
   my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
   my $leader  = $record->findvalue( $xpath );
   my $doc     = substr($leader, 28, 1);
-  return ($doc eq "f")? 1:0;
+  return ($doc eq 'f')? 1:0;
 }
 
 
@@ -5355,50 +5333,39 @@ sub GetRightsName
 {
   my $self = shift;
   my $id   = shift;
+  
   my %rights = (1 => 'pd', 2 => 'ic', 3 => 'opb', 4 => 'orph', 5 => 'und', 6 => 'umall', 7 => 'world', 8 => 'nobody', 9 => 'pdus');
   return $rights{$id};
-  #my $sql = qq{ SELECT name FROM attributes WHERE id = "$id" };
-
-  #my $ref = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
-  #return $ref->[0]->[0];
 }
 
 sub GetReasonName
 {
   my $self = shift;
   my $id   = shift;
-  my %reasons = (1 => 'bib', 2 => 'ncn', 3 => 'con', 4 => 'ddd', 5 => 'man', 6 => 'pvt',
-                 7 => 'ren', 8 => 'nfi', 9 => 'cdpp', 10 => 'cip', 11 => 'unp');
+  
+  my %reasons = (1 => 'bib', 2 => 'ncn', 3 => 'con',   4 => 'ddd',  5 => 'man',  6 => 'pvt',
+                 7 => 'ren', 8 => 'nfi', 9 => 'cdpp', 10 => 'cip', 11 => 'unp', 12 => 'gfv');
   return $reasons{$id};
-  #my $sql = qq{ SELECT name FROM reasons WHERE id = "$id" };
-
-  #my $ref = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
-  #return $ref->[0]->[0];
 }
 
 sub GetRightsNum
 {
   my $self = shift;
   my $id   = shift;
-  my %rights = ('pd' => 1, 'ic' => 2, 'opb' => 3, 'orph' => 4, 'und' => 5, 'umall' => 6, 'world' => 7, 'nobody' => 8, 'pdus' => 9);
+  
+  my %rights = ('pd'    => 1, 'ic'    => 2, 'opb'    => 3, 'orph' => 4, 'und' => 5,
+                'umall' => 6, 'world' => 7, 'nobody' => 8, 'pdus' => 9);
   return $rights{$id};
-  #my $sql = qq{ SELECT id FROM attributes WHERE name = "$id" };
-
-  #my $ref = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
-  #return $ref->[0]->[0];
 }
 
 sub GetReasonNum
 {
   my $self = shift;
   my $id   = shift;
+  
   my %reasons = ('bib' => 1, 'ncn' => 2, 'con' => 3, 'ddd' => 4, 'man' => 5, 'pvt' => 6,
                  'ren' => 7, 'nfi' => 8, 'cdpp' => 9, 'cip' => 10, 'unp' => 11);
   return $reasons{$id};
-  #my $sql = qq{ SELECT id FROM reasons WHERE name = "$id" };
-
-  #my $ref = $self->get( 'sdr_dbh' )->selectall_arrayref($sql);
-  #return $ref->[0]->[0];
 }
 
 
@@ -5796,7 +5763,7 @@ sub CreateReviewReport
     $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;7</td><td>$count</td>";
     $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
   }
-  $report .= sprintf("<tr><td colspan='%d'><span class='smallishText'>Last processed %s</span></td></tr>\n", 2+scalar @pris, $self->GetLastStatusProcessedTime());
+  $report .= sprintf("<tr><td nowrap='nowrap' colspan='%d'><span class='smallishText'>Last processed %s</span></td></tr>\n", 2+scalar @pris, $self->GetLastStatusProcessedTime());
   $report .= "</table>\n";
   return $report;
 }
@@ -6398,10 +6365,13 @@ sub RightsQuery
   my $id   = shift;
   
   my ($namespace,$n) = split m/\./, $id;
-  my $sql = 'SELECT a.name,rs.name,s.name,r.user,r.time,r.note FROM rights r, attributes a, reasons rs, sources s ' .
+  my $sql = 'SELECT a.name,rs.name,s.name,r.user,r.time,r.note FROM rights_log r, attributes a, reasons rs, sources s ' .
             "WHERE r.namespace='$namespace' AND r.id='$n' AND s.id=r.source AND a.id=r.attr AND rs.id=r.reason " .
             'ORDER BY r.time ASC';
-  return $self->get('sdr_dbh')->selectall_arrayref($sql);
+  my $ref;
+  eval { $ref = $self->GetSdrDb()->selectall_arrayref($sql); };
+  $self->SetError("Rights query failed: $@") if $@;
+  return $ref;
 }
 
 # Returns a reference to an array with (time,status,message)
