@@ -604,6 +604,7 @@ sub LoadNewItemsInCandidates
       # Only care about volumes between 1923 and 1963
       if ($pub >= '1923' && $pub <= '1963')
       {
+        next if $self->IsForeignPub($id, $record);
         next if $self->IsGovDoc($id, $record);
         next unless $self->IsFormatBK($id, $record);
         my $lang = $self->GetPubLanguage($id, $record);
@@ -614,7 +615,7 @@ sub LoadNewItemsInCandidates
         }
         elsif ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
         elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
-        elsif ($self->IsForeignPub($id, $record)) { $src = 'foreign'; }
+        elsif ($self->IsReallyForeignPub($id, $record)) { $src = 'foreign'; }
         if ($src)
         {
           print "Skip $id ($src) -- inserting in und table\n";
@@ -4425,42 +4426,59 @@ sub IsTranslation
   return $is;
 }
 
-# Use method used for bib extraction to detect
+# Rejects anything with 008 15-17 that is not '**u' or 'us*'.
+# As a convenience (and for testing) returns undef for US titles and a string with the country code that failed.
+sub IsForeignPub
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
+
+  my $is = undef;
+  $record = $self->GetRecordMetadata($id) unless $record;
+  if ( ! $record ) { $self->SetError("no record in IsForeignPub($id)"); return undef; }
+  eval {
+    my $xpath = "//*[local-name()='controlfield' and \@tag='008']";
+    my $code  = substr($record->findvalue( $xpath ), 15, 3);
+    $is = $code if substr($code,2,1) ne 'u';
+  };
+  $self->SetError("failed in IsForeignPub($id): $@") if $@;
+  return $is;
+}
+
 # second/foreign place of pub. From Tim's documentation:
 # Check of 260 field for multiple subfield a:
 # If PubPlace 17 eq 'u', and the 260 field contains multiple subfield
 # a?s, then the data in each subfield a is normalized and matched
 # against a list of known US cities.  If any of the subfield a?s are not
 # in the list, then the mult_260a_non_us flag is set.
-sub IsForeignPub
+# As a convenience (and for testing) returns undef for US titles and a string with the city that failed.
+sub IsReallyForeignPub
 {
-  my $self    = shift;
-  my $barcode = shift;
-  my $record  = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
 
-  my $is = 0;
-  if ( ! $record ) { $self->SetError("no record in IsForeignPub($barcode)"); return 0; }
+  $record = $self->GetRecordMetadata($id) unless $record;
+  if ( ! $record ) { $self->SetError("no record in IsReallyForeignPub($id)"); return undef; }
+  my $is = $self->IsForeignPub($id, $record);
+  return $is if $is;
   eval {
-    my $xpath = "//*[local-name()='controlfield' and \@tag='008']";
-    my $where  = $record->findvalue( $xpath );
-    if (substr($where,17,1) eq 'u')
+    my @nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='260']/*[local-name()='subfield' and \@code='a']")->get_nodelist();
+    return if scalar @nodes == 1;
+    foreach my $node (@nodes)
     {
-      my @nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='260']/*[local-name()='subfield' and \@code='a']")->get_nodelist();
-      return if scalar @nodes == 1;
-      foreach my $node (@nodes)
+      my $where = $self->Normalize($node->textContent);
+      my $cities = $self->get('cities');
+      $cities = $self->ReadCities() unless $cities;
+      if ($cities !~ m/==$where==/i)
       {
-        $where = $self->Normalize($node->textContent);
-        my $cities = $self->get('cities');
-        $cities = $self->ReadCities() unless $cities;
-        if ($cities !~ m/==$where==/i)
-        {
-          $is = 1;
-          last;
-        }
+        $is = $where;
+        return;
       }
     }
   };
-  $self->SetError("failed in IsForeignPub($barcode): $@") if $@;
+  $self->SetError("failed in IsReallyForeignPub($id): $@") if $@;
   return $is;
 }
 
