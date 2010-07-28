@@ -4,90 +4,110 @@ my $DLXSROOT;
 my $DLPS_DEV;
 BEGIN 
 { 
-    $DLXSROOT = $ENV{'DLXSROOT'}; 
-    $DLPS_DEV = $ENV{'DLPS_DEV'}; 
-    require "crms.cfg";
+  $DLXSROOT = $ENV{'DLXSROOT'}; 
+  $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+
+  my $toinclude = qq{$DLXSROOT/cgi/c/crms};
+  unshift( @INC, $toinclude );
 }
 
 use strict;
-use DBI;
+use CRMS;
+use Getopt::Std;
 
-my %r;
-my %id;
-my $dbh = ConnectToDb();
 
-processFile( $ARGV[0] );
+my $usage = <<END;
+USAGE: ./loadSCRD.pl [-hnpt] FILE [FILE...]
 
-foreach my $id ( keys %id )
+Loads a downloaded copy of the Stanford Cpoyright Renewal Database
+into the CRMS database "stanford" table..
+
+-h       Print this help message.
+-n       Don't actually do anything, just simulate.
+-p       Run in production.
+-t       Run in training (overrides -p).
+END
+
+
+my %opts;
+getopts('hnpt', \%opts);
+my $help = $opts{'h'};
+my $noop = $opts{'n'};
+my $production = $opts{'p'};
+my $training = $opts{'t'};
+my $dev = 'moseshll';
+$dev = 0 if $production;
+$dev = 'crmstest' if $training;
+die $usage if $help;
+
+my $crms = CRMS->new(
+    logFile      =>   "$DLXSROOT/prep/c/crms/stanford_log.txt",
+    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
+    verbose      =>   0,
+    root         =>   $DLXSROOT,
+    dev          =>   $dev
+);
+
+my $filename;
+foreach $filename (@ARGV)
 {
-    if ( $id{$id} > 1 ) { print "$id $id{$id} \n"; }
+  print "Processing $filename\n";
+  processFile( $filename );
 }
-
-## foreach my $num ( 1..17 )
-## {
-##     my $f = "$DLXSROOT/prep/c/crms/slices/$num.xml";
-##     print $f . "\n";
-##     processFile( $f );
-## }
 
 sub processFile
 {
-    my $file   = shift;
-    open (my $fh, $file) || die "failed to open $file: $@ \n";
-
-    foreach my $line ( <$fh> )
+  my $file = shift;
+  open (my $fh, $file) || die "failed to open $file: $@ \n";
+  my ($id,$dreg);
+  foreach my $line ( <$fh> )
+  {
+    chomp $line;
+    if ( $line =~ m/^---/ && $id && $dreg)
     {
-        chomp $line;
-        if ( $line =~ /^---/ )
-        {
-            $id{$r{ID}}++;
-            addRecord();
-            %r = ();
-            next;
-        }
-
-        my ($tag,$val) = split(/\:/, $line, 2);
-        $tag =~ s/ //g;
-        $val =~ s/^ //g;
-        $val =~ s/"//g;
-
-        if ($tag eq "ID")   { $r{'ID'}   = $val; }
-        if ($tag eq "DREG") { $r{'DREG'} = $val; }
+      addRecord($id, $dreg);
+      next;
     }
-
-    close $fh;
+    my ($tag,$val) = split(/\:/, $line, 2);
+    $tag =~ s/\s+//gs;
+    $val =~ s/^ //g;
+    $val =~ s/"//g;
+    $val =~ s/\s+//gs;
+    #print "Tag <$tag> value <$val>\n";
+    if ($tag eq "ID")
+    {
+      $id = $val;
+      $id =~ s/(RE?\d+).*/$1/;
+      if ($id !~ m/^RE?\d+$/)
+      {
+        print "Bogus ID format: '$val' -- ignoring.\n";
+        $id = undef;
+      }
+    }
+    if ($tag eq "DREG")
+    {
+      $dreg = $val;
+      $dreg =~ s/(\d+[A-Za-z][A-Za-z][A-Za-z]\d\d).*/$1/;
+      if ($dreg !~ m/^\d+[A-Za-z][A-Za-z][A-Za-z]\d\d$/)
+      {
+        print "Bogus DREG format: '$val' -- ignoring.\n";
+        $dreg = undef;
+      }
+    }
+  }
+  close $fh;
 }
 
 sub addRecord
 {
-    my $sql = qq| REPLACE INTO stanford_small (ID, DREG) VALUES ("$r{ID}", "$r{DREG}") |;
-
-    my $sth = $dbh->prepare( $sql );
-    eval { $sth->execute(); };
-    if ($@) { die "failed Renewal: " . $sth->errstr; }
+  my $id = shift;
+  my $dreg = shift;
+  
+  my $sql = "REPLACE INTO stanford (ID, DREG) VALUES ('$id', '$dreg')";
+  if ($noop)
+  {
+    print "$filename $sql\n";
+    return;
+  }
+  $crms->PrepareSubmitSql($sql);
 }
-
-## ----------------------------------------------------------------------------
-##  Function:   connect to the mysql DB
-##  Parameters: nothing
-##  Return:     ref to DBI
-## ----------------------------------------------------------------------------
-sub ConnectToDb                         ## NOTHING || ref to DB
-{
-    my $db_user   = $CRMSGlobals::mysqlUser;
-    my $db_passwd = $CRMSGlobals::mysqlPasswd;
-    my $db_server = $CRMSGlobals::mysqlServerDev;
-
-    ## if ( ! $self->get( 'dev' ) ) { $db_server = $CRMSGlobals::mysqlServer; }
-
-    ## print "DBI:mysql:crms:$db_server, $db_user, [passwd]\n";
-
-    my $d = DBI->connect( "DBI:mysql:crms:$db_server", $db_user, $db_passwd,
-            { RaiseError => 1, AutoCommit => 1 } ) || die "Cannot connect: $DBI::errstr";
-
-    $d->{mysql_auto_reconnect} = 1;
-
-    return $d;
-}
-
-
