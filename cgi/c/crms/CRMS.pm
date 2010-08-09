@@ -581,51 +581,33 @@ sub LoadNewItemsInCandidates
   print "Before load, the max timestamp in the candidates table $start, and the size is $start_size\n";
   my @und = ();
   my $sdrdbh = $self->GetSdrDb();
-  my $sql = "SELECT namespace,id,attr,reason,time FROM rights_current WHERE time>'$start' GROUP BY namespace, id";
+  my $sql = "SELECT namespace,id,time FROM rights_current WHERE attr=2 AND reason=1 AND time>'$start' GROUP BY namespace, id";
   my $ref = $sdrdbh->selectall_arrayref( $sql );
   foreach my $row ( @{$ref} )
   {
-    my $ns     = $row->[0];
-    my $id     = $row->[1];
-    my $attr   = $row->[2];
-    my $reason = $row->[3];
-    my $time   = $row->[4];
-    if ($attr == 2 && $reason == 1)
+    my $id     = $row->[0] . '.' . $row->[1];
+    my $time   = $row->[2];
+    
+    $id = lc $id;
+    if ($self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'") > 0)
     {
-      $id = $ns . '.' . $id;
-      if ($self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'") > 0)
+      print "Skip $id -- already in historical reviews\n";
+      next;
+    }
+    my $record = $self->GetRecordMetadata($id);
+    my @errs = $self->GetViolations($id, $record);
+    if (scalar @errs == 0)
+    {
+      my $src = $self->ShouldVolumeGoInUndTable($id, $record);
+      if ($src)
       {
-        print "Skip $id -- already in historical reviews\n";
+        print "Skip $id ($src) -- inserting in und table\n";
+        $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src','$time')";
+        $self->PrepareSubmitSql( $sql );
+        push @und, $id;
         next;
       }
-      my $src = undef;
-      my $record = $self->GetRecordMetadata($id);
-      my $pub = $self->GetPublDate($id, $record);
-      # Only care about volumes between 1923 and 1963
-      if ($pub >= '1923' && $pub <= '1963')
-      {
-        next if $self->IsForeignPub($id, $record);
-        next if $self->IsGovDoc($id, $record);
-        next unless $self->IsFormatBK($id, $record);
-        my $lang = $self->GetPubLanguage($id, $record);
-        if ('eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang &&
-            'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
-        {
-          $src = 'language';
-        }
-        elsif ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
-        elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
-        elsif ($self->IsReallyForeignPub($id, $record)) { $src = 'foreign'; }
-        if ($src)
-        {
-          print "Skip $id ($src) -- inserting in und table\n";
-          $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src','$time')";
-          $self->PrepareSubmitSql( $sql );
-          push @und, $id;
-          next;
-        }
-        $self->AddItemToCandidates($id, $time, $pub, $record);
-      }
+      $self->AddItemToCandidates($id, $time, $record);
     }
   }
   foreach my $id (@und)
@@ -642,17 +624,60 @@ sub LoadNewItemsInCandidates
   return 1; # FIXME: this only ever returns 1
 }
 
+
+# Returns an array of error messages (reasons for unsuitability for CRMS) for a volume.
+# Used by candidates loading to ignore inappropriate items.
+# Used by Add to Queue page for filtering non-overrides.
+sub GetViolations
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
+
+  my @errs = ();
+  $record =  $self->GetRecordMetadata($id) unless $record;
+  if (!$record)
+  {
+    push @errs, 'not found in Mirlyn';
+  }
+  else
+  {
+    my $pub = $self->GetPublDate( $id, $record );
+    push @errs, "$pub not in range 1923-1963" if ($pub < 1923 || $pub > 1963);
+    push @errs, 'gov doc' if $self->IsGovDoc( $id, $record );
+    push @errs, 'foreign pub' if $self->IsForeignPub( $id, $record );
+    push @errs, 'non-BK format' unless $self->IsFormatBK( $id, $record );
+  }
+  return @errs;
+}
+
+# Returns a und table src code if the volume belongs in the und table instead of candidates.
+sub ShouldVolumeGoInUndTable
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
+
+  my $src = undef;
+  $record = $self->GetRecordMetadata($id) unless $record;
+  my $lang = $self->GetPubLanguage($id, $record);
+  if ('eng' ne $lang) { $src = 'language'; }
+  elsif ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
+  elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
+  elsif ($self->IsReallyForeignPub($id, $record)) { $src = 'foreign'; }
+  return $src;
+}
+
 sub AddItemToCandidates
 {
   my $self     = shift;
   my $id       = shift;
   my $time     = shift;
-  my $pub      = shift;
   my $record   = shift;
 
   $record = $self->GetRecordMetadata($id) unless $record;
-  $pub = $self->GetPublDate($id, $record) unless $pub;
-  my $au = $self->GetMarcDatafieldAuthor( $id, $record );
+  my $pub = $self->GetPublDate($id, $record);
+  my $au = $self->GetMarcDatafieldAuthor($id, $record);
   $au = $self->get('dbh')->quote($au);
   $self->SetError("$id: UTF-8 check failed for quoted author: '$au'") unless $au eq "''" or utf8::is_utf8($au);
   my $title = $self->GetRecordTitleBc2Meta( $id, $record );
@@ -662,26 +687,36 @@ sub AddItemToCandidates
   $self->PrepareSubmitSql( $sql );
 }
 
-
+# Load candidates into queue.
+# If the needed parameter is given, tries to make the total in the queue equal to needed.
+# (In other words if there are 500 and you tell it needed = 1000, it loads 500 more.)
+# Otherwise loads to the standard limit of 800, 300 Priority 0.
 sub LoadNewItems
 {
-  my $self = shift;
+  my $self   = shift;
+  my $needed = shift;
 
   my $queuesize = $self->GetQueueSize();
-  my $sql = 'SELECT COUNT(id) FROM queue WHERE priority=0';
-  my $priZeroSize = $self->SimpleSqlGet($sql);
+  my $priZeroSize = $self->GetQueueSize(0);
   printf "Before load, the queue has %d volumes.\n", $queuesize;
-  my $needed = max($CRMSGlobals::queueSize - $queuesize, 300 - $priZeroSize);
+  if ($needed)
+  {
+    $needed = $needed - $queuesize;
+    return if $needed < 0;
+  }
+  else
+  {
+    $needed = max($CRMSGlobals::queueSize - $queuesize, 300 - $priZeroSize);
+  }
   printf "Need $needed items (max of %d and %d).\n", $CRMSGlobals::queueSize - $queuesize, 300 - $priZeroSize;
   return if $needed <= 0;
   my $count = 0;
   my $y = 1923 + int(rand(40));
-  my @und = ();
   while (1)
   {
-    $sql = 'SELECT id, time, pub_date, title, author FROM candidates WHERE id NOT IN (SELECT DISTINCT id FROM queue) ' .
-           'AND id NOT IN (SELECT DISTINCT id FROM reviews) AND id NOT IN (SELECT DISTINCT id FROM historicalreviews) ' .
-           'ORDER BY pub_date ASC, time DESC';
+    my $sql = 'SELECT id, time, pub_date, title, author FROM candidates WHERE id NOT IN (SELECT DISTINCT id FROM queue) ' .
+              'AND id NOT IN (SELECT DISTINCT id FROM reviews) AND id NOT IN (SELECT DISTINCT id FROM historicalreviews) ' .
+              'ORDER BY pub_date ASC, time DESC';
     my $ref = $self->get('dbh')->selectall_arrayref( $sql );
     #printf "%d results\n", scalar @{$ref};
     # This can happen in the testsuite.
@@ -711,13 +746,8 @@ sub LoadNewItems
     last if $count >= $needed;
   }
   #Record the update to the queue
-  $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES ($count, 'RIGHTSDB')";
+  my $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES ($count, 'RIGHTSDB')";
   $self->PrepareSubmitSql( $sql );
-  foreach my $id (@und)
-  {
-    $sql = "DELETE FROM candidates WHERE id='$id'";
-    $self->PrepareSubmitSql( $sql );
-  }
 }
 
 
@@ -737,7 +767,6 @@ sub AddItemToQueue
     # queue table has priority and status default to 0, time to current timestamp.
     my $sql = "INSERT INTO $CRMSGlobals::queueTable (id) VALUES ('$id')";
     $self->PrepareSubmitSql( $sql );
-
     $self->UpdateTitle( $id, $title );
     $self->UpdatePubDate( $id, $pub_date );
     $self->UpdateAuthor( $id, $author );
@@ -790,62 +819,31 @@ sub AddItemToQueueOrSetItemActive
   }
   else
   {
-    my $record =  $self->GetRecordMetadata($id);
-    if ($record eq '')
+    my $record = $self->GetRecordMetadata($id); 
+    @msgs = $self->GetViolations($id, $record);
+    if (scalar @msgs && !$override)
     {
-      push @msgs, 'item was not found in Mirlyn';
       $stat = 1;
     }
     else
     {
-      my $pub = $self->GetPublDate( $id, $record );
-      my $v = $self->GetViolations($id, $pub);
-      push @msgs, $v if $v;
-      if ($v && !$override)
-      {
-        $stat = 1;
-      }
-      else
-      {
-        my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, priority, source) VALUES ('$id', $priority, '$src')";
-        $self->PrepareSubmitSql( $sql );
-        
-        $self->UpdateTitle( $id );
-        $self->UpdatePubDate( $id, $pub );
-        $self->UpdateAuthor ( $id );
-        
-        $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES (1, '$src')";
-        $self->PrepareSubmitSql( $sql );
-      }
+      my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, priority, source) VALUES ('$id', $priority, '$src')";
+      $self->PrepareSubmitSql( $sql );
+      $self->UpdateTitle( $id, undef, $record );
+      $self->UpdatePubDate( $id, undef, $record );
+      $self->UpdateAuthor ( $id, undef, $record );
+      $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES (1, '$src')";
+      $self->PrepareSubmitSql( $sql );
     }
   }
   return $stat . join '; ', @msgs;
-}
-
-# Returns a semicolon-separated string of "violations" (unsuitability for CRMS) for a volume.
-# The optional $pub is for efficiency.
-sub GetViolations
-{
-  my $self = shift;
-  my $id   = shift;
-  my $pub  = shift;
-  
-  my $record =  $self->GetRecordMetadata($id);
-  return 'not found in Mirlyn' if $record eq '';
-  $pub = $self->GetPublDate( $id, $record ) unless $pub;
-  my @errs = ();
-  push @errs, 'not in range 1923-1963' if ($pub < '1923' || $pub > '1963');
-  push @errs, 'gov doc' if $self->IsGovDoc( $id, $record );
-  push @errs, 'foreign pub' if $self->IsForeignPub( $id, $record );
-  push @errs, 'non-BK format' unless $self->IsFormatBK( $id, $record );
-  return join('; ', @errs);
 }
 
 # Used by the script loadIDs.pl to add and/or bump priority on a volume
 sub GiveItemsInQueuePriority
 {
   my $self     = shift;
-  my $id       = shift;
+  my $id       = lc shift;
   my $time     = shift;
   my $status   = shift;
   my $priority = shift;
@@ -1152,6 +1150,7 @@ sub SubmitHistReview
     my $self = shift;
     my ($id, $user, $date, $attr, $reason, $renNum, $renDate, $note, $category, $status, $expert, $noop) = @_;
 
+    $id = lc $id;
     ## change attr and reason back to numbers
     $attr = $self->GetRightsNum( $attr );
     $reason = $self->GetReasonNum( $reason );
@@ -1351,15 +1350,16 @@ sub HoldExpiry
   return ($readable)? $self->FormatDate($exp):$exp;
 }
 
+# Returned format is YYYYMMDD 23:59:59
 sub TwoWorkingDays
 {
   my $self = shift;
+  my $time = shift;
   
-  my $time = $self->GetTodaysDate();
+  $time = $self->GetTodaysDate() unless $time;
   my $cal = Date::Calendar->new( $Profiles->{'US'} );
   my @parts = split '-', $time;
   my $date = $cal->add_delta_workdays($parts[0],$parts[1],$parts[2],2);
-  # Returned format is YYYYMMDD
   $date = sprintf '%s-%s-%s 23:59:59', substr($date,0,4), substr($date,4,2), substr($date,6,2);
   return $date;
 }
@@ -1382,18 +1382,6 @@ sub FormatTime
   return $self->SimpleSqlGet( $sql );
 }
 
-sub ChangeDateFormat
-{
-  my $self = shift;
-  my $date = shift;
-
-  my ($month, $day, $year) = split '/', $date;
-  $year  = qq{20$year} if $year < 100;
-  $month = qq{0$month} if $month < 10;
-  $day   = qq{0$day} if $day < 10;
-  $date = join '-', ($year, $month, $day);
-  return $date;
-}
 
 sub ConvertToSearchTerm
 {
@@ -2588,7 +2576,7 @@ sub LinkToStanford
 sub LinkToPT
 {
   my $self = shift;
-  my $id   = shift;
+  my $id   = lc shift;
   my $ti   = $self->GetTitle( $id );
 
   $ti =~ s/&(?!amp;)/&amp;/g;
@@ -2640,17 +2628,6 @@ sub GetStatus
   return $self->SimpleSqlGet( $sql );
 }
 
-
-sub UsersAgreeOnReview
-{
-  my $self = shift;
-  my $id   = shift;
-
-  ##Agree is when the attr and reason match.
-  my $sql = qq{ SELECT id, attr, reason FROM $CRMSGlobals::reviewsTable where id = '$id' Group by id, attr, reason having count(*) = 2};
-  my $found = $self->SimpleSqlGet( $sql );
-  return ($found)? 1:0;
-}
 
 sub GetAttrReasonFromOtherUser
 {
@@ -2726,39 +2703,6 @@ sub GetCodeFromAttrReason
   if ($attr == 2 and $reason == 9) { return 5; }
   if ($attr == 5 and $reason == 8) { return 6; }
   if ($attr == 9 and $reason == 9) { return 7; }
-}
-
-sub GetReviewComment
-{
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift;
-
-  my $sql = qq{ SELECT note FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
-  #my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-  return $self->SimpleSqlGet( $sql );
-}
-
-sub GetReviewCategory
-{
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift;
-
-  my $sql = qq{ SELECT category FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
-  #my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-  my $str = $self->SimpleSqlGet( $sql );
-  return $str;
-}
-
-sub GetReviewSwiss
-{
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift;
-
-  my $sql = qq{ SELECT swiss FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
-  return $self->SimpleSqlGet( $sql );
 }
 
 
@@ -4051,7 +3995,7 @@ sub CheckRenDate
         {}
         else
         {
-          $errorMsg .= 'Ren number format is not correct for item in  1950 - 1953 range.';
+          $errorMsg .= 'Ren number format is not correct for item in 1950 - 1953 range.';
         }
       }
       if ( $renDate >= 1978 )
@@ -4315,17 +4259,6 @@ sub ValidateSubmissionHistorical
 }
 
 
-sub GetCopyrightPage
-{
-  my $self = shift;
-  my $id   = shift;
-
-  ## this is a place holder.  The HT API should be able to do this soon.
-  ## FIXME: what is this for? Do we still need this.
-  return '7';
-}
-
-
 sub IsGovDoc
 {
   my $self    = shift;
@@ -4363,7 +4296,7 @@ sub IsThesis
   my $is = 0;
   if ( ! $record ) { $self->SetError("no record in IsThesis($barcode)"); return 0; }
   eval {
-    my $xpath = "//*[local-name()='datafield' and \@tag='502']/*[local-name()='subfield'  and \@code='a']";
+    my $xpath = "//*[local-name()='datafield' and \@tag='502']/*[local-name()='subfield' and \@code='a']";
     my $doc  = $record->findvalue( $xpath );
     $is = 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
     my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='500']");
@@ -4518,33 +4451,16 @@ sub Normalize
 ## ----------------------------------------------------------------------------
 sub GetPublDate
 {
-    my $self    = shift;
-    my $barcode = shift;
-    my $record  = shift;
+  my $self    = shift;
+  my $barcode = shift;
+  my $record  = shift;
 
-    if ( ! $record )
-    {
-      $record = $self->GetRecordMetadata($barcode);
-    }
-    return unless $record;
-
-    ## my $xpath = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
-    my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
-    my $leader  = $record->findvalue( $xpath );
-    my $pubDateType = substr($leader, 6, 1);
-    my $pubDate = substr($leader, 7, 4);
-    # On questionable pub date, try date 2 field.
-    if ($pubDateType eq 'q' || $pubDate =~ m/[|#^]/ || !$pubDate)
-    {
-      $pubDate = substr($leader, 11, 4);
-    }
-    if ($pubDate =~ m/[|#^]/ || !$pubDate)
-    {
-      $xpath = "//*[local-name()='datafield' and \@tag='260']/*[local-name()='subfield' and \@code='c']";
-      $pubDate = $record->findvalue( $xpath );
-      $pubDate =~ s/.*?(\d\d\d\d).*//g;
-    }
-    return $pubDate;
+  $record = $self->GetRecordMetadata($barcode) unless $record;
+  return 'unknown' unless $record;
+  ## my $xpath = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
+  my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
+  my $leader  = $record->findvalue( $xpath );
+  return substr($leader, 7, 4);
 }
 
 sub GetPubLanguage
@@ -4553,11 +4469,7 @@ sub GetPubLanguage
     my $barcode = shift;
     my $record  = shift;
 
-    if ( ! $record )
-    {
-      $record = $self->GetRecordMetadata($barcode);
-    }
-
+    $record = $self->GetRecordMetadata($barcode) unless $record;
     if ( ! $record ) { return 0; }
 
     ## my $xpath = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
@@ -4732,12 +4644,12 @@ sub UpdateTitle
     $self->Logit("$0: Mojibake quoted title <<$tiq>> for $id!\n");
     $self->Logit($self->HexDump($tiq));
   }
-  my $sql = qq{ SELECT count(*) FROM bibdata WHERE id="$id"};
+  my $sql = "SELECT COUNT(*) FROM bibdata WHERE id='$id'";
   my $count = $self->SimpleSqlGet( $sql );
   $sql = qq{ UPDATE bibdata SET title=$tiq WHERE id="$id"};
   if (!$count)
   {
-    $sql = qq{ INSERT INTO bibdata (id, title, pub_date) VALUES ( "$id", $tiq, '')};
+    $sql = "INSERT INTO bibdata (id, title, pub_date) VALUES ('$id', $tiq, '')";
   }
   $self->PrepareSubmitSql( $sql );
   return $title;
@@ -5310,43 +5222,6 @@ sub GetNextItemForReview
 }
 
 
-sub GetItemReviewDetails
-{
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
-
-    my $sql = qq{ SELECT attr, reason, renNum, note FROM reviews WHERE id = "$id"};
-
-    ## if name, limit to just that users review details
-    if ( $user ) { $sql .= qq{ AND user = "$user" }; }
-
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    my @return;
-    foreach my $r ( @{$ref} )
-    {
-        my $str = $self->GetRightsName($r->[0]) ."/". $self->GetReasonName($r->[1]);
-        if ( $r->[2] ) { $str .= ", ". $self->LinkToStanford( $r->[2] ); }
-        if ( $r->[3] ) { $str .= ", $r->[3]"; }
-        push @return, $str;
-    }
-
-    return @return;
-}
-
-sub IsThirdReview
-{
-    my $self = shift;
-    my $id   = shift;
-
-    my $sql = qq{ SELECT count(id) FROM $CRMSGlobals::reviewsTable WHERE id = "$id"};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    if ( $ref->[0]->[0] > 1 ) { return 1; }
-    return 0;
-}
-
 sub GetRightsName
 {
   my $self = shift;
@@ -5510,23 +5385,16 @@ sub ClearErrors
 
 sub GetQueueSize
 {
-  my $self = shift;
+  my $self     = shift;
+  my $priority = shift;
 
-  my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable";
+  my $restrict = (defined $priority)? "WHERE priority=$priority":'';
+  my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable $restrict";
   return $self->SimpleSqlGet( $sql );
 }
 
 
-sub GetReviewsWithStatusNumber
-{
-  my $self = shift;
-  my $status = shift;
-
-  my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable WHERE status=$status";
-  return $self->SimpleSqlGet( $sql );
-}
-
-
+# Remove trailing zeroes and point-zeroes from a floating point format.
 sub StripDecimal
 {
   my $self = shift;
@@ -5842,60 +5710,53 @@ sub GetLastLoadTimeToCandidates
 
 sub GetTotalExported
 {
-    my $self = shift;
+  my $self = shift;
 
-    my $sql = qq{SELECT sum( itemcount ) from $CRMSGlobals::exportrecordTable};
-    my $count = $self->SimpleSqlGet( $sql );
-    
-    if ($count) { return $count; }
-    return 0;
-
+  my $sql = qq{SELECT sum( itemcount ) FROM $CRMSGlobals::exportrecordTable};
+  return $self->SimpleSqlGet( $sql );
 }
 
 
 sub GetTotalEverInQueue
 {
-    my $self = shift;
+  my $self = shift;
 
-    my $count_exported = $self->GetTotalExported();
-    my $count_queue = $self->GetQueueSize();
-    
-    my $total = $count_exported +  $count_queue;
-    return $total;
+  my $count_exported = $self->GetTotalExported();
+  my $count_queue = $self->GetQueueSize();
+  my $total = $count_exported +  $count_queue;
+  return $total;
 }
 
 sub GetLastExport
 {
-    my $self = shift;
-    my $readable = shift;
-    
-    my $sql = "SELECT itemcount,time FROM exportrecord WHERE itemcount>0 ORDER BY time DESC LIMIT 1";
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    my $count = $ref->[0]->[0];
-    my $time = $ref->[0]->[1];
-    $time = $self->FormatTime($time) if $readable;
-    return ($count,$time);
+  my $self = shift;
+  my $readable = shift;
+
+  my $sql = "SELECT itemcount,time FROM exportrecord WHERE itemcount>0 ORDER BY time DESC LIMIT 1";
+  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  my $count = $ref->[0]->[0];
+  my $time = $ref->[0]->[1];
+  $time = $self->FormatTime($time) if $readable;
+  return ($count,$time);
 
 }
 
 sub GetTotalLegacyCount
 {
-    my $self = shift;
+  my $self = shift;
 
-    my $sql = qq{ SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=1 AND priority!=1 };
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    return $ref->[0]->[0];
+  my $sql = qq{ SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=1 AND priority!=1 };
+  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  return $ref->[0]->[0];
 }
 
 sub GetTotalNonLegacyReviewCount
 {
-    my $self = shift;
+  my $self = shift;
 
-    my $sql = qq{ SELECT COUNT(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy!=1};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-    return $ref->[0]->[0];
+  my $sql = qq{ SELECT COUNT(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy!=1};
+  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  return $ref->[0]->[0];
 }
 
 sub GetTotalLegacyReviewCount
