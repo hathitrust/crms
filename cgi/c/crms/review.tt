@@ -83,15 +83,15 @@
 [% END %]
 
 [% IF NOT comm %]
-[% comm = crms.GetReviewComment( barcode, user ) %]
+[% comm = crms.GetReviewField( barcode, user, "note" ) %]
 [% END %]
 
 [% IF NOT category %]
-[% category = crms.GetReviewCategory( barcode, user ) %]
+[% category = crms.GetReviewField( barcode, user, "category" ) %]
 [% END %]
 
 [% IF NOT swiss %]
-[% swiss = crms.GetReviewSwiss( barcode, user ) %]
+[% swiss = crms.GetReviewField( barcode, user, "swiss" ) %]
 [% END %]
 
 [%# links to PT, stanford DB search, or Mirlyn catalog %]
@@ -112,7 +112,7 @@
       <table class="nav">
         <tr>
           <td rowspan="2"><img src="/c/crms/crmsblue.png" alt="CRMS Logo" width="52" height="40"/></td>
-          <td style="text-align:left;"><b>Hello [% userName %]</b></td>
+          <td style="text-align:left;"><strong>Hello [% userName %]</strong></td>
         </tr>
         <tr>
           <td style="text-align:left;"><a href="[% homeLink %]">Home</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="crms?p=Logout">Logout</a></td>
@@ -120,7 +120,8 @@
         <tr><td/></tr><tr><td/></tr><tr><td/></tr>
         <tr>
           <td colspan="2">
-            <select class="review" onchange="if (this.selectedIndex > 0) window.open(this.options[this.selectedIndex].value, '_blank');this.selectedIndex=0;">
+            <select title="Select Help Documentation" class="review"
+                    onchange="if (this.selectedIndex > 0) window.open(this.options[this.selectedIndex].value, '_blank');this.selectedIndex=0;">
               <option>Select Help Documentation</option>
               <option value="/c/crms/pdf/DecisionTree.pdf">Decision Tree</option>
               <option value="/c/crms/pdf/DecisionTreeHelp.pdf">Decision Tree Help</option>
@@ -144,7 +145,7 @@
         <tr>
           <th>Search 1:</th>
           <td>
-            <select class="review" id="search1Select" onchange="changeFrame1();" style="float:right;">
+            <select title="Search 1" class="review" id="search1Select" onchange="changeFrame1();" style="float:right;">
               <option id="ht1" value="[% ptLink %]" selected="selected">HathiTrust</option>
               <option id="m1" value="[% catLink %]">Mirlyn</option>
               <option id="mc1" value="[% catcLink %]">Mirlyn Classic</option>
@@ -157,7 +158,7 @@
         <tr>
           <th>Search 2:</th>
           <td>
-            <select class="review" id="search2Select" onchange="changeFrame2();" style="float:right;">
+            <select title="Search 2" class="review" id="search2Select" onchange="changeFrame2();" style="float:right;">
               <option value="[% ptLink %]">HathiTrust</option>
               <option value="[% catLink %]">Mirlyn</option>
               <option value="[% catcLink %]">Mirlyn Classic</option>
@@ -178,17 +179,17 @@
     </div>
     
     <a style="position:absolute;left:-999px;" href="#" accesskey="h"
-       onfocus="document.getElementById('search1Select').selectedIndex=0;changeFrame1();"></a>
+       onfocus="document.getElementById('search1Select').selectedIndex=0;changeFrame1();">.</a>
     <a style="position:absolute;left:-999px;" href="#" accesskey="v"
-       onfocus="document.getElementById('search1Select').selectedIndex=1;changeFrame1();"></a>
+       onfocus="document.getElementById('search1Select').selectedIndex=1;changeFrame1();">.</a>
     <a style="position:absolute;left:-999px;" href="#" accesskey="m"
-       onfocus="document.getElementById('search1Select').selectedIndex=2;changeFrame1();"></a>
+       onfocus="document.getElementById('search1Select').selectedIndex=2;changeFrame1();">.</a>
     <a style="position:absolute;left:-999px;" href="#" accesskey="t"
-       onfocus="document.getElementById('search2Select').selectedIndex=3;changeFrame2();"></a>
+       onfocus="document.getElementById('search2Select').selectedIndex=3;changeFrame2();">.</a>
     <a style="position:absolute;left:-999px;" href="#" accesskey="a"
-       onfocus="document.getElementById('search2Select').selectedIndex=4;changeFrame2();"></a>
+       onfocus="document.getElementById('search2Select').selectedIndex=4;changeFrame2();">.</a>
     <a style="position:absolute;left:-999px;" href="#" accesskey="q"
-       onfocus="document.getElementById('search2Select').selectedIndex=5;changeFrame2();"></a>
+       onfocus="document.getElementById('search2Select').selectedIndex=5;changeFrame2();">.</a>
     
     <div class="navbottom" style="border-collapse:collapse;">
       [% comment = "" %]
@@ -197,10 +198,10 @@
           [% error = "An expert has already reviewed this volume. Please cancel." %]
         [% END %]
       [% END %]
-      [% INCLUDE submitReviewForm.tt barcode  = barcode,  renNum   = renNum,  renDate  = renDate,
-                                     comment  = comment,  comm     = comm,    category = category,
-                                     editing  = editing,  error    = error,   select   = select,
-                                     mag      = mag,      question = question, swiss   = swiss %]
+      [% INCLUDE submitReviewForm.tt barcode  = barcode,  renNum   = renNum,   renDate  = renDate,
+                                     comm     = comm,    category  = category, editing  = editing,
+                                     error    = error,   select    = select,   mag      = mag,
+                                     question = question, swiss    = swiss %]
       [% IF crms.IsUserExpert(user) %]
         <table class="nav">
         [% status = crms.GetStatus(barcode) %]
