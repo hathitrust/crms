@@ -201,32 +201,25 @@ if ( $cgi->param('p') eq 'confirmReview' )
 
 if ( $cgi->param('download') )  
 {
-
     my $order            = $cgi->param('order');
     my $dir              = $cgi->param('dir');
-
     my $search1          = $cgi->param('search1');
     my $search1value     = $cgi->param('search1value');
     my $op1              = $cgi->param('op1');
-
     my $search2          = $cgi->param('search2');
     my $search2value     = $cgi->param('search2value');
     my $op2              = $cgi->param('op2');
-
     my $search3          = $cgi->param('search3');
     my $search3value     = $cgi->param('search3value');
     my $startDate        = $cgi->param('startDate');
     my $endDate          = $cgi->param('endDate');
-    my $offset           = $cgi->param('offset');
-    
     my $stype            = $cgi->param('stype');
-    
     my $page             = $cgi->param('p');
     
     my $success;
     if ($page eq 'queue')
     {
-      $success = $crms->SearchAndDownloadQueue( $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate, $offset );
+      $success = $crms->SearchAndDownloadQueue( $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate );
     }
     elsif ($page eq 'determinationStats')
     {
@@ -236,7 +229,7 @@ if ( $cgi->param('download') )
     }
     else
     {
-      $success = $crms->SearchAndDownload( $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $offset, $stype );
+      $success = $crms->SearchAndDownload( $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $stype );
     }
     if ( $success )
     {
