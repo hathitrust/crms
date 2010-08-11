@@ -1463,15 +1463,14 @@ sub CreateSQLForReviews
     my $endDate            = shift;
     my $offset             = shift;
     my $pagesize           = shift;
-    my $limit              = shift;
+    my $download           = shift;
 
     $search1 = $self->ConvertToSearchTerm( $search1, $page );
     $search2 = $self->ConvertToSearchTerm( $search2, $page );
     $search3 = $self->ConvertToSearchTerm( $search3, $page );
     $dir = 'DESC' unless $dir;
-    if ( ! $offset ) { $offset = 0; }
+    $offset = 0 unless $offset;
     $pagesize = 20 unless $pagesize > 0;
-    
     if ( ( $page eq 'userReviews' ) || ( $page eq 'editReviews' ) )
     {
       if ( ! $order || $order eq "time" ) { $order = "time"; }
@@ -1525,30 +1524,25 @@ sub CreateSQLForReviews
     my $which = ($page eq 'holds')? 'r.hold':'r.time';
     if ( $startDate ) { $sql .= qq{ AND $which >= "$startDate 00:00:00" }; }
     if ( $endDate ) { $sql .= qq{ AND $which <= "$endDate 23:59:59" }; }
-
-    my $limit_section = '';
-    if ( $limit )
-    {
-      $limit_section = qq{LIMIT $offset, $pagesize};
-    }
+    my $limit = ($download)? '':"LIMIT $offset, $pagesize";
     if ( $order eq 'status' )
     {
       if ( $page eq 'adminHistoricalReviews' )
       {
-        $sql .= qq{ ORDER BY r.$order $dir $limit_section };
+        $sql .= qq{ ORDER BY r.$order $dir $limit };
       }
       else
       {
-        $sql .= qq{ ORDER BY q.$order $dir $limit_section };
+        $sql .= qq{ ORDER BY q.$order $dir $limit };
       }
     }
     elsif ($order eq 'title' || $order eq 'author' || $order eq 'pub_date')
     {
-       $sql .= qq{ ORDER BY b.$order $dir $limit_section };
+       $sql .= qq{ ORDER BY b.$order $dir $limit };
     }
     else
     {
-       $sql .= qq{ ORDER BY r.$order $dir $limit_section };
+       $sql .= qq{ ORDER BY r.$order $dir $limit };
     }
     #print "$sql<br/>\n";
     my $countSql = $sql;
@@ -1585,6 +1579,7 @@ sub CreateSQLForVolumes
   my $endDate      = shift;
   my $offset       = shift;
   my $pagesize     = shift;
+  my $download     = shift;
 
   #print("CreateSQLForVolumes('$order','$dir','$search1','$search1value','$op1','$search2','$search2value','$op2','$search3','$search3value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
   $dir = 'DESC' unless $dir;
@@ -1645,9 +1640,10 @@ sub CreateSQLForVolumes
   $sql = "SELECT COUNT(DISTINCT r.id) FROM $table r, bibdata b$doQ WHERE $restrict";
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
+  my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   $sql = "SELECT r.id as id, $order2($order) AS ord FROM $table r, bibdata b$doQ WHERE $restrict GROUP BY r.id " .
-         "ORDER BY ord $dir LIMIT $offset, $pagesize";
+         "ORDER BY ord $dir $limit";
   #print "$sql<br/>\n";
   my $n = POSIX::ceil($offset/$pagesize+1);
   my $of = POSIX::ceil($totalVolumes/$pagesize);
@@ -1673,6 +1669,7 @@ sub CreateSQLForVolumesWide
   my $endDate      = shift;
   my $offset       = shift;
   my $pagesize     = shift;
+  my $download     = shift;
   
   #print("GetVolumesRefWide('$order','$dir','$search1','$search1value','$op1','$search2','$search2value','$op2','$search3','$search3value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
   $dir = 'DESC' unless $dir;
@@ -1728,15 +1725,17 @@ sub CreateSQLForVolumesWide
   push @rest, "date(r.time) <= '$endDate'" if $endDate;
   my $restrict = join(' AND ', @rest);
   $restrict = 'WHERE '.$restrict if $restrict;
-  my $sql = "SELECT COUNT(DISTINCT r.id, r.user,r.time) FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict";
+  #my $sql = "SELECT COUNT(r.id) FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict";
+  my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT DISTINCT r.id FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict)";
   #print "$sql<br/>\n";
   my $totalReviews = $self->SimpleSqlGet($sql);
   $sql = "SELECT COUNT(DISTINCT r.id) FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict";
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
+  my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   $sql = "SELECT r.id as id, $order2($order) AS ord FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict GROUP BY r.id " .
-         "ORDER BY ord $dir LIMIT $offset, $pagesize";
+         "ORDER BY ord $dir $limit";
   #print "$sql<br/>\n";
   my $n = POSIX::ceil($offset/$pagesize+1);
   my $of = POSIX::ceil($totalVolumes/$pagesize);
@@ -1953,23 +1952,18 @@ sub SearchAndDownload
 {
   my $self           = shift;
   my $page           = shift;
-  my $order          = shift ;
+  my $order          = shift;
   my $dir            = shift;
-
   my $search1        = shift;
   my $search1value   = shift;
   my $op1            = shift;
-
   my $search2        = shift;
   my $search2value   = shift;
   my $op2            = shift;
-
   my $search3        = shift;
   my $search3value   = shift;
   my $startDate      = shift;
   my $endDate        = shift;
-  my $offset         = shift;
-
   my $stype          = shift;
 
   $stype = 'reviews' unless $stype;
@@ -1986,8 +1980,8 @@ sub SearchAndDownload
     $status = 'q.status';
   }
 
-  my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQL($stype, $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $offset, undef, 0 );
-
+  my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQL($stype, $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, 0, 0, 1 );
+  
   my $ref = $self->get('dbh')->selectall_arrayref( $sql );
 
   my $buffer = '';
@@ -2162,11 +2156,8 @@ sub SearchAndDownloadQueue
   my $search2Value = shift;
   my $startDate = shift;
   my $endDate = shift;
-  my $offset = shift;
-  my $pagesize = shift;
-  my $download = shift;
   
-  my $buffer = $self->GetQueueRef($order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, $offset, $pagesize, 1);
+  my $buffer = $self->GetQueueRef($order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, 0, 0, 1);
   $self->DownloadSpreadSheet( $buffer );
   if ( $buffer ) { return 1; }
   else { return 0; }
@@ -2195,12 +2186,11 @@ sub GetReviewsRef
   my $offset             = shift;
   my $pagesize           = shift;
 
-  my $limit              = 1;
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
 
   #print("GetReviewsRef('$page','$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$op2','$search3','$search3Value','$startDate','$endDate','$offset','$pagesize');<br/>\n");
-  my ($sql,$totalReviews,$totalVolumes) = $self->CreateSQLForReviews($page, $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $offset, $pagesize, $limit);
+  my ($sql,$totalReviews,$totalVolumes) = $self->CreateSQLForReviews($page, $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $offset, $pagesize);
   #print "$sql<br/>\n";
   my $ref = undef;
   eval { $ref = $self->get( 'dbh' )->selectall_arrayref( $sql ); };
@@ -2434,7 +2424,7 @@ sub GetReviewsCount
   my $endDate        = shift;
   my $stype          = shift;
 
-  my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQL($stype, $page, undef, 'ASC', $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, 0, undef, undef );
+  my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQL($stype, $page, undef, 'ASC', $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $stype );
   return $totalReviews;
 }
 
@@ -4863,6 +4853,15 @@ sub BarcodeToId
     return $id;
 }
 
+sub GetReviewField
+{
+  my $self  = shift;
+  my $id    = shift;
+  my $user  = shift;
+  my $field = shift;
+
+  return $self->SimpleSqlGet("SELECT $field FROM reviews WHERE id='$id' AND user='$user' LIMIT 1");
+}
 
 sub HasLockedItem
 {
