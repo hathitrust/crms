@@ -78,7 +78,6 @@
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$prev&amp;type=$p&amp;download=1" target="_blank">download</a>
 
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="/c/crms/UseCases.html" target="_blank">Use Cases</a>
   [% color_white    = '#FFFFFF' %]
   [% color_gray     = '#C6C4F1' %]
   [% prev_id        = '' %]
@@ -161,7 +160,7 @@
     <input type="hidden" name="order" value="$order"/>
     <input type="hidden" name="dir" value="$dir"/>
     <input type="hidden" name="records" value="$pagesize"/>
-    <input size="3" type="text" id="jump" name="jump" value="[% pagenum %]"/>
+    <input title="Jump to Page" size="3" type="text" id="jump" name="jump" value="[% pagenum %]"/>
     &nbsp;&nbsp;&nbsp;&nbsp;||
     [% min = pagenum - 10 %]
     [% IF min < 1 %][% min = 1 %][% END %]
