@@ -2080,7 +2080,7 @@ sub UnpackResults
     my $category   = $row->[11];
     my $legacy     = $row->[12];
     my $renDate    = $row->[13];
-    my $priority   = $row->[14];
+    my $priority   = $self->StripDecimal($row->[14]);
     my $swiss      = $row->[15];
     my $status     = $row->[16];
     my $title      = $row->[17];
@@ -2536,7 +2536,7 @@ sub GetQueueRef
     if ($download)
     {
       $data .= sprintf("\n$id\t%s\t%s\t%s\t$date\t%s\t%s\t%s\t$reviews\t%s\t$holds",
-                       $row->[7], $row->[8], $row->[4], $row->[2], $row->[3], $row->[5], $row->[6]);
+                       $row->[7], $row->[8], $row->[4], $row->[2], $row->[3], $self->StripDecimal($row->[5]), $row->[6]);
     }
   }
   if (!$download)
