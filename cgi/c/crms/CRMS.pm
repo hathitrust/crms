@@ -665,6 +665,7 @@ sub ShouldVolumeGoInUndTable
   elsif ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
   elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
   elsif ($self->IsReallyForeignPub($id, $record)) { $src = 'foreign'; }
+  elsif ($self->IsProbableGovDoc($id, $record)) { $src = 'gov'; }
   return $src;
 }
 
@@ -850,57 +851,44 @@ sub GiveItemsInQueuePriority
   my $source   = shift;
 
   my $record = $self->GetRecordMetadata($id);
-
-  ## pub date between 1923 and 1963
-  my $pub = $self->GetPublDate( $id, $record );
-  ## confirm date range and add check
-
-  #Only care about volumes between 1923 and 1963
-  if ( ( $pub >= '1923' ) && ( $pub <= '1963' ) )
+  my @errs = $self->GetViolations($id, $record);
+  if (scalar @errs)
   {
-    if ( $self->IsGovDoc( $id, $record ) ) { $self->SetError( "skip fed doc: $id" ); return 0; }
-    if ( $self->IsForeignPub( $id, $record ) ) { $self->SetError( "skip foreign pub: $id" ); return 0; }
-    if ( ! $self->IsFormatBK( $id, $record ) ) { $self->SetError( "skip not fmt bk: $id" ); return 0; }
-
-    my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable WHERE id='$id'";
-    my $count = $self->SimpleSqlGet( $sql );
-    if ( $count == 1 )
+    $self->SetError(sprintf "$id: %s", join ';', @errs);
+    return 0;
+  }
+  my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable WHERE id='$id'";
+  my $count = $self->SimpleSqlGet( $sql );
+  if ( $count == 1 )
+  {
+    $sql = "UPDATE $CRMSGlobals::queueTable SET priority=1 WHERE id ='$id'";
+    $self->PrepareSubmitSql( $sql );
+  }
+  else
+  {
+    $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, priority, source) VALUES ('$id', '$time', $status, $priority, '$source')";
+    $self->PrepareSubmitSql( $sql );
+    $self->UpdateTitle( $id, undef, $record );
+    $self->UpdatePubDate( $id, undef, $record );
+    $self->UpdateAuthor( $id, undef, $record );
+    # Accumulate counts for items added at the 'same time'.
+    # Otherwise queuerecord will have a zillion kabillion single-item entries when importing
+    # e.g. 2007 reviews for reprocessing.
+    # We see if there is another ADMINSCRIPT entry for the current time; if so increment.
+    # If not, add a new one.
+    $sql = "SELECT itemcount FROM $CRMSGlobals::queuerecordTable WHERE time='$time' AND source='ADMINSCRIPT' LIMIT 1";
+    my $itemcount = $self->SimpleSqlGet($sql);
+    if ($itemcount)
     {
-        $sql = "UPDATE $CRMSGlobals::queueTable SET priority=1 WHERE id ='$id'";
-        $self->PrepareSubmitSql( $sql );
+      $itemcount++;
+      $sql = "UPDATE $CRMSGlobals::queuerecordTable SET itemcount=$itemcount WHERE time='$time' AND source='ADMINSCRIPT' LIMIT 1";
     }
     else
     {
-      $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, priority, source) VALUES ('$id', '$time', $status, $priority, '$source')";
-
-      $self->PrepareSubmitSql( $sql );
-
-      $self->UpdateTitle( $id );
-      $self->UpdatePubDate( $id, $pub );
-      $self->UpdateAuthor( $id );
-
-      # Accumulate counts for items added at the 'same time'.
-      # Otherwise queuerecord will have a zillion kabillion single-item entries when importing
-      # e.g. 2007 reviews for reprocessing.
-      # We see if there is another ADMINSCRIPT entry for the current time; if so increment.
-      # If not, add a new one.
-      $sql = qq{SELECT itemcount FROM $CRMSGlobals::queuerecordTable WHERE time='$time' AND source='ADMINSCRIPT' LIMIT 1};
-      
-      my $itemcount = $self->SimpleSqlGet($sql);
-      if ($itemcount)
-      {
-        $itemcount++;
-        $sql = qq{UPDATE $CRMSGlobals::queuerecordTable SET itemcount=$itemcount WHERE time='$time' AND source='ADMINSCRIPT' LIMIT 1};
-      }
-      else
-      {
-        $sql = qq{INSERT INTO $CRMSGlobals::queuerecordTable (time, itemcount, source) values ('$time', 1, 'ADMINSCRIPT')};
-      }
-      
-      $self->PrepareSubmitSql( $sql );
+      $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (time, itemcount, source) values ('$time', 1, 'ADMINSCRIPT')";
     }
+    $self->PrepareSubmitSql( $sql );
   }
-  else { $self->SetError( "skip bad date ($pub): $id" ); return 0; }
   return 1;
 }
 
@@ -2906,6 +2894,38 @@ sub IsUserIncarnationExpertOrHigher
   return 0;
 }
 
+# Default 'UM', can also be 'IU', 'UW', or 'UMN'
+sub GetUserAffiliation
+{
+  my $self = shift;
+  my $id   = shift;
+  
+  my @parts = split '@', $id;
+  if (scalar @parts > 1)
+  {
+    my $suff = $parts[1];
+    return 'IU' if $suff eq 'indiana.edu';
+    return 'UW' if $suff eq 'library.wisc.edu';
+    return 'UMN' if $suff eq 'umn.edu';
+  }
+  return 'UM';
+}
+
+sub GetUsersWithAffiliation
+{
+  my $self  = shift;
+  my $aff   = shift;
+  my $order = shift;
+  
+  my $users = $self->GetUsers($order);
+  my @ausers = ();
+  foreach my $user ( @{$users} )
+  {
+    push @ausers, $user if $aff eq $self->GetUserAffiliation($user);
+  }
+  return \@ausers;
+}
+
 sub GetRange
 {
   my $self = shift;
@@ -3950,6 +3970,10 @@ sub AddUser
     $expert = ($expert)? 1:0;
     $admin = ($admin)? 1:0;
     $superadmin = ($superadmin)? 1:0;
+    # Remove surrounding whitespace on user id, kerberos, and name.
+    $id =~ s/^\s*(.+?)\s*$/$1/;
+    $kerberos =~ s/^\s*(.+?)\s*$/$1/;
+    $name =~ s/^\s*(.+?)\s*$/$1/;
     $kerberos = $self->SimpleSqlGet("SELECT kerberos FROM users WHERE id='$id'") unless $kerberos;
     $name = $self->SimpleSqlGet("SELECT name FROM users WHERE id='$id'") unless $name;
     $note = $self->SimpleSqlGet("SELECT note FROM users WHERE id='$id'") unless $note;
@@ -4249,17 +4273,64 @@ sub ValidateSubmissionHistorical
 }
 
 
+# 008:28 is 'f' byte.
 sub IsGovDoc
 {
-  my $self    = shift;
-  my $barcode = shift;
-  my $record  = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
 
-  if ( ! $record ) { $self->SetError("no record in IsGovDoc: $barcode"); return 1; }
-  my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
-  my $leader  = $record->findvalue( $xpath );
-  my $doc     = substr($leader, 28, 1);
-  return ($doc eq 'f')? 1:0;
+  if ( ! $record ) { $self->SetError("no record in IsGovDoc: $id"); return 1; }
+  my $xpath  = q{//*[local-name()='controlfield' and @tag='008']};
+  my $leader = $record->findvalue( $xpath );
+  return (substr($leader, 28, 1) eq 'f');
+}
+
+# An item is a probable gov doc if one of the following is true. All are case insensitive.
+# Author begins with "United States" and 260 is blank
+# Author begins with "United States" and 260a begins with "([)Washington"
+# Author begins with "United States" and 260b begins with "U.S. G.P.O." or "U.S. Govt. Print. Off."
+# Author begins with "Library of Congress" and 260a begins with "Washington"
+# Title begins with "Code of Federal Regulations" and 260a begins with "Washington"
+# Author is blank and 260(a) begins with "([)Washington" and 260(b) begins with "U.S."
+# Author is blank and 260(a) begins with "([)Washington" and 260(b) begins with "G.P.O."
+# Author is blank and 260(b) includes "National Aeronautics and Space"
+# Author begins with "Federal Reserve Bank"
+# Author includes "Bureau of Mines"
+sub IsProbableGovDoc
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
+
+  if ( ! $record ) { $self->SetError("no record in IsProbableGovDoc: $id"); return 1; }
+  my $author = $self->GetMarcDatafieldAuthor($id, $record);
+  my $title = $self->GetRecordTitleBc2Meta($id, $record);
+  my $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='a']};
+  my $field260a = $record->findvalue( $xpath ) or '';
+  $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='b']};
+  my $field260b = $record->findvalue( $xpath ) or '';
+  $field260a =~ s/^\s*(.*?)\s*$/$1/;
+  $field260b =~ s/^\s*(.*?)\s*$/$1/;
+  if ($author =~ m/^united\s+states/i)
+  {
+    return 1 unless $field260a or $field260b;
+    return 1 if $field260a =~ m/^\[?washington/i;
+    return 1 if $field260b and ($field260b =~ m/^u\.s\.\s+g\.p\.o\./i or $field260b =~ m/^u\.s\.\s+govt\.\s+print\.\s+off\./i);
+  }
+  return 1 if $author =~ m/^library\s+of\s+congress/i and $field260a =~ m/^washington/i;
+  return 1 if $title =~ m/^code\s+of\s+federal\s+regulations/i and $field260a =~ m/^washington/i;
+  if (!$author)
+  {
+    return 1 if $field260a =~ m/^\[?washington/i and $field260b =~ m/^(u\.s\.|g\.p\.o\.)/i;
+    return 1 if $field260b and $field260b =~ m/national\s+aeronautics\s+and\s+space/i;
+  }
+  else
+  {
+    return 1 if $author =~ m/^federal\s+feserve\s+bank/i;
+    return 1 if $author =~ m/bureau\s+of\s+mines/i;
+  }
+  return 0;
 }
 
 
@@ -4455,104 +4526,104 @@ sub GetPublDate
 
 sub GetPubLanguage
 {
-    my $self    = shift;
-    my $barcode = shift;
-    my $record  = shift;
+  my $self    = shift;
+  my $barcode = shift;
+  my $record  = shift;
 
-    $record = $self->GetRecordMetadata($barcode) unless $record;
-    if ( ! $record ) { return 0; }
+  $record = $self->GetRecordMetadata($barcode) unless $record;
+  if ( ! $record ) { return 0; }
 
-    ## my $xpath = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
-    my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
-    my $leader  = $record->findvalue( $xpath );
-    return substr($leader, 35, 3);
+  ## my $xpath = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
+  my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
+  my $leader  = $record->findvalue( $xpath );
+  return substr($leader, 35, 3);
 }
 
 sub GetMarcFixfield
 {
-    my $self    = shift;
-    my $barcode = shift;
-    my $field   = shift;
+  my $self    = shift;
+  my $barcode = shift;
+  my $field   = shift;
 
-    my $record = $self->GetRecordMetadata($barcode);
-    if ( ! $record ) { $self->Logit( "failed in GetMarcFixfield: $barcode" ); }
+  my $record = $self->GetRecordMetadata($barcode);
+  if ( ! $record ) { $self->Logit( "failed in GetMarcFixfield: $barcode" ); }
 
-    my $xpath = qq{//*[local-name()='oai_marc']/*[local-name()='fixfield' and \@id='$field']};
-    return $record->findvalue( $xpath );
+  my $xpath = qq{//*[local-name()='oai_marc']/*[local-name()='fixfield' and \@id='$field']};
+  return $record->findvalue( $xpath );
 }
 
 sub GetMarcVarfield
 {
-    my $self    = shift;
-    my $barcode = shift;
-    my $field   = shift;
-    my $label   = shift;
-    
-    my $record = $self->GetRecordMetadata($barcode);
-    if ( ! $record ) { $self->Logit( "failed in GetMarcVarfield: $barcode" ); }
+  my $self    = shift;
+  my $barcode = shift;
+  my $field   = shift;
+  my $label   = shift;
 
-    my $xpath = qq{//*[local-name()='oai_marc']/*[local-name()='varfield' and \@id='$field']} .
-                qq{/*[local-name()='subfield' and \@label='$label']};
+  my $record = $self->GetRecordMetadata($barcode);
+  if ( ! $record ) { $self->Logit( "failed in GetMarcVarfield: $barcode" ); }
 
-    return $record->findvalue( $xpath );
+  my $xpath = qq{//*[local-name()='oai_marc']/*[local-name()='varfield' and \@id='$field']} .
+              qq{/*[local-name()='subfield' and \@label='$label']};
+
+  return $record->findvalue( $xpath );
 }
 
 sub GetMarcControlfield
 {
-    my $self    = shift;
-    my $barcode = shift;
-    my $field   = shift;
-    
-    my $record = $self->GetRecordMetadata($barcode);
-    if ( ! $record ) { $self->Logit( "failed in GetMarcControlfield: $barcode" ); }
+  my $self    = shift;
+  my $barcode = shift;
+  my $field   = shift;
 
-    my $xpath = qq{//*[local-name()='controlfield' and \@tag='$field']};
-    return $record->findvalue( $xpath );
+  my $record = $self->GetRecordMetadata($barcode);
+  if ( ! $record ) { $self->Logit( "failed in GetMarcControlfield: $barcode" ); }
+
+  my $xpath = qq{//*[local-name()='controlfield' and \@tag='$field']};
+  return $record->findvalue( $xpath );
 }
 
 sub GetMarcDatafield
 {
-    my $self    = shift;
-    my $barcode = shift;
-    my $field   = shift;
-    my $code    = shift;
-    my $record  = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $field  = shift;
+  my $code   = shift;
+  my $record = shift;
 
-    $record = $self->GetRecordMetadata($barcode) unless $record;
-    if ( ! $record ) { $self->Logit( "failed in GetMarcDatafield: $barcode" ); }
+  $record = $self->GetRecordMetadata($id) unless $record;
+  if ( ! $record ) { $self->Logit( "failed in GetMarcDatafield: $id" ); }
 
-    my $xpath = qq{//*[local-name()='datafield' and \@tag='$field'][1]} .
-                qq{/*[local-name()='subfield'  and \@code='$code']};
-    my $data;
-    eval{ $data = $record->findvalue( $xpath ); };
-    if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
-    
-    return $data;
+  my $xpath = qq{//*[local-name()='datafield' and \@tag='$field'][1]} .
+              qq{/*[local-name()='subfield'  and \@code='$code']};
+  my $data;
+  eval{ $data = $record->findvalue( $xpath ); };
+  if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
+  return $data;
 }
 
 sub GetMarcDatafieldAuthor
 {
-    my $self   = shift;
-    my $id     = shift;
-    my $record = shift;
-    
-    #After talking to Tim, the author info is in the 1XX field
-    #Margrte told me that the only 1xx fields are: 100, 110, 111, 130. 700, 710
-    $record = $self->GetRecordMetadata($id) unless $record;
-    if ( ! $record ) { $self->Logit( "failed in GetMarcDatafieldAuthor: $id" ); }
-    my $data = $self->GetMarcDatafield($id,'100','a',$record);
-    if (!$data)
-    {
-      $data = $self->GetMarcDatafield($id,'110','a',$record);
-      $data .= $self->GetMarcDatafield($id,'110','b',$record) if $data;
-      $data = $self->GetMarcDatafield($id,'111','a',$record) unless $data;
-      $data = $self->GetMarcDatafield($id,'130','a',$record) unless $data;
-      $data = $self->GetMarcDatafield($id,'700','a',$record) unless $data;
-      $data = $self->GetMarcDatafield($id,'710','a',$record) unless $data;
-    }
-    $data =~ s/\n+//gs;
-    $data =~ s/[\s,\.]+$//g;
-    return $data;
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
+
+  #After talking to Tim, the author info is in the 1XX field
+  #Margrte told me that the only 1xx fields are: 100, 110, 111, 130. 700, 710
+  $record = $self->GetRecordMetadata($id) unless $record;
+  if ( ! $record ) { $self->Logit( "failed in GetMarcDatafieldAuthor: $id" ); }
+  my $data = $self->GetMarcDatafield($id,'100','a',$record);
+  if (!$data)
+  {
+    $data = $self->GetMarcDatafield($id,'110','a',$record);
+    $data .= $self->GetMarcDatafield($id,'110','b',$record) if $data;
+    $data = $self->GetMarcDatafield($id,'111','a',$record) unless $data;
+    $data = $self->GetMarcDatafield($id,'130','a',$record) unless $data;
+    $data = $self->GetMarcDatafield($id,'700','a',$record) unless $data;
+    $data = $self->GetMarcDatafield($id,'710','a',$record) unless $data;
+  }
+  $data =~ s/\n+//gs;
+  $data =~ s/[\s,\.]+$//;
+  $data =~ s/^\s+//;
+  return $data;
 }
 
 sub GetEncTitle
@@ -4561,8 +4632,6 @@ sub GetEncTitle
   my $bar  = shift;
 
   my $ti = $self->GetTitle( $bar );
-  # Get rid of trailing punctuation
-  $ti =~ s/\s*[:\/,.;]\s*$//;
   $ti =~ s,\',\\\',g; ## escape '
   return $ti;
 }
@@ -4586,7 +4655,6 @@ sub GetRecordTitleBc2Meta
   my $id     = shift;
   my $record = shift;
 
-  $id = lc $id;
   $record = $self->GetRecordMetadata($id) unless $record;
   my $xpath = "//*[local-name()='datafield' and \@tag='245']/*[local-name()='subfield' and \@code='a']";
   my $title = '';
@@ -5953,14 +6021,13 @@ sub GetType1Reviewers
   return map {$_->[0]} @{$dbh->selectall_arrayref( $sql )};
 }
 
-# $inval is whether to get average correct (0) or incorrect (1)
 sub GetValidation
 {
   my $self  = shift;
   my $start = shift;
   my $end   = shift;
   
-  my $users = sprintf '"%s"', join '","',$self->GetType1Reviewers();
+  my $users = sprintf '"%s"', join '","', $self->GetType1Reviewers();
   $start = substr($start,0,7);
   $end = substr($end,0,7);
   my $sql = 'SELECT SUM(total_reviews),SUM(total_correct),SUM(total_incorrect),SUM(total_neutral) FROM userstats ' .
