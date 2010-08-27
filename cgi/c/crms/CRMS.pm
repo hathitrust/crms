@@ -665,8 +665,7 @@ sub ShouldVolumeGoInUndTable
   elsif ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
   elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
   elsif ($self->IsReallyForeignPub($id, $record)) { $src = 'foreign'; }
-  # This will be for version 2.0.7
-  #elsif ($self->IsProbableGovDoc($id, $record)) { $src = 'gov'; }
+  elsif ($self->IsProbableGovDoc($id, $record)) { $src = 'gov'; }
   return $src;
 }
 
