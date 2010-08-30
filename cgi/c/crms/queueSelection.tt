@@ -9,10 +9,7 @@
 [% order = cgi.param('order') %]
 [% dir = cgi.param('dir') %]
 [% recs = cgi.param('records') %]
-[% IF crms.InTrainingArea() && ! order %]
-  [% order = "presented" %]
-  [% blah = cgi.param("order","presented") %]
-[% END %]
+
 <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
 [% recs = recs.replace('\D','') %]
 [% IF NOT recs %]
@@ -38,15 +35,15 @@
 Restrict selection:<br/>
 
 [% crms.QueueSearchMenu('search1', search1) %]
-<input type="text"  id="search1value" name="search1value" value="[% search1value %]" size="30"/>
-<select name="op1">
+<input title="Value 1" type="text"  id="search1value" name="search1value" value="[% search1value %]" size="30"/>
+<select title="Boolean Option" name="op1">
   <option [% op1 == 'AND' ? 'selected="selected"':'' %]>AND</option>
   <option [% op1 == 'OR' ? 'selected="selected"':'' %]>OR</option>
 </select>
 <br/>
 
 [% crms.QueueSearchMenu('search2', search2) %]
-<input type="text" id="search2value" name="search2value" value="[% search2value %]" size="30"/>
+<input title="Value 2" type="text" id="search2value" name="search2value" value="[% search2value %]" size="30"/>
 <br/>
 
 <label for="startDate" style="width:5em;float:left;">Start Date:</label>

@@ -57,8 +57,8 @@ Search for Reviews where<br/>
 [% END %]
 
 [% crms.ReviewSearchMenu(page, 'search1', search1) %]
-<input type="text"  id="search1value" name="search1value" value="[% search1value %]" size="30"/>
-<select name="op1" id="op1">
+<input type="text" title="Value 1" id="search1value" name="search1value" value="[% search1value %]" size="30"/>
+<select title="Boolean Option" name="op1" id="op1">
   <option [% op1 == 'AND' ? 'selected="selected"':'' %]>AND</option>
   <option [% op1 == 'OR' ? 'selected="selected"':'' %]>OR</option>
   <option [% op1 == 'NOT' ? 'selected="selected"':'' %]>NOT</option>
@@ -66,8 +66,8 @@ Search for Reviews where<br/>
 <br/>
 
 [% crms.ReviewSearchMenu(page, 'search2', search2) %]
-<input type="text" id="search2value" name="search2value" value="[% search2value %]" size="30"/>
-<select name="op2" id="op2">
+<input title="Value 2" type="text" id="search2value" name="search2value" value="[% search2value %]" size="30"/>
+<select title="Boolean Option" name="op2" id="op2">
   <option [% op2 == 'AND' ? 'selected="selected"':'' %]>AND</option>
   <option [% op2 == 'OR' ? 'selected="selected"':'' %]>OR</option>
   <option [% op2 == 'NOT' ? 'selected="selected"':'' %]>NOT</option>
@@ -75,7 +75,7 @@ Search for Reviews where<br/>
 <br/>
 
 [% crms.ReviewSearchMenu(page, 'search3', search3) %]
-<input type="text" id="search3value" name="search3value" value="[% search3value %]" size="30"/>
+<input title="Value 3" type="text" id="search3value" name="search3value" value="[% search3value %]" size="30"/>
 <br/>
 
 <label for="startDate" style="width:5em;float:left;">Start Date:</label>

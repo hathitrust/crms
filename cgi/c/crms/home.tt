@@ -43,16 +43,19 @@ function CheckAll(box,formid)
 [% a = crms.IsUserAdmin %]
 [% s = crms.IsUserSuperAdmin %]
 [% i = crms.IsUserIncarnationExpertOrHigher %]
+[% iu = crms.CanUserSeeInstitutionalStats('IU') %]
+[% uw = crms.CanUserSeeInstitutionalStats('UW') %]
+[% umn = crms.CanUserSeeInstitutionalStats('UMN') %]
 
 <table class="mainnav">
 <tr><th><span class="minor">Review</span></th><th><span class="major">Search/Browse</span></th></tr>
 <tr>
 <td>
-[% IF r %]<a href="crms?p=review">Review</a><br/>                               [% END %]
-[% IF e %]<a href="crms?p=undReviews">Provisional&nbsp;Matches</a><br/>         [% END %]
-[% IF e %]<a href="crms?p=expert">Conflicts</a><br/>                            [% END %]
-          <a href="crms?p=editReviews">My&nbsp;Unprocessed&nbsp;Reviews</a><br/>
-          <a href="crms?p=holds">My Held Reviews</a><br/>
+[% IF r %]     <a href="crms?p=review">Review</a><br/>                               [% END %]
+[% IF e %]     <a href="crms?p=undReviews">Provisional&nbsp;Matches</a><br/>         [% END %]
+[% IF e %]     <a href="crms?p=expert">Conflicts</a><br/>                            [% END %]
+[% IF r || e %]<a href="crms?p=editReviews">My&nbsp;Unprocessed&nbsp;Reviews</a><br/>[% END %]
+[% IF r || e %]<a href="crms?p=holds">My Held Reviews</a><br/>                       [% END %]
 </td>
 <td>
                     <a href="crms?p=adminHistoricalReviews">Historical&nbsp;Reviews</a><br/>
@@ -77,11 +80,14 @@ function CheckAll(box,formid)
 [% IF a || s %]<a href="/c/crms/pdf/UserLevelsPrivileges.pdf" target="_blank">User&nbsp;Levels/Privileges</a><br/>      [% END %]
 </td>
 <td>
-                    <a href="crms?p=userRate">My&nbsp;Review&nbsp;Stats</a><br/>
-[% IF e || a || s %]<a href="crms?p=adminUserRate">All&nbsp;Review&nbsp;Stats</a><br/>        [% END %]
-[% IF e || a || s %]<a href="crms?p=queueStatus">System&nbsp;Summary</a><br/>                 [% END %]
-[% IF e || a || s %]<a href="crms?p=determinationStats">Determinations&nbsp;Breakdown</a><br/>[% END %]
-[% IF e || a || s %]<a href="crms?p=exportStats">Export&nbsp;Stats</a><br/>                   [% END %]
+[% IF r || e %]     <a href="crms?p=userRate">My&nbsp;Review&nbsp;Stats</a><br/>                   [% END %]
+[% IF e || a || s %]<a href="crms?p=adminUserRate">All&nbsp;Review&nbsp;Stats</a><br/>             [% END %]
+[% IF iu %]         <a href="crms?p=adminUserRateInst;inst=IU">IU&nbsp;Review&nbsp;Stats</a><br/>  [% END %]
+[% IF uw %]         <a href="crms?p=adminUserRateInst;inst=UW">UW&nbsp;Review&nbsp;Stats</a><br/>  [% END %]
+[% IF umn %]        <a href="crms?p=adminUserRateInst;inst=UMN">UMN&nbsp;Review&nbsp;Stats</a><br/>[% END %]
+[% IF e || a || s %]<a href="crms?p=queueStatus">System&nbsp;Summary</a><br/>                      [% END %]
+[% IF e || a || s %]<a href="crms?p=determinationStats">Determinations&nbsp;Breakdown</a><br/>     [% END %]
+[% IF e || a || s %]<a href="crms?p=exportStats">Export&nbsp;Stats</a><br/>                        [% END %]
 </td></tr>
 [% IF e || a || s || i %]
 <tr><th colspan="2"><span class="red">Administrative</span></th></tr>

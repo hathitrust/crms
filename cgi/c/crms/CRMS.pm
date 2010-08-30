@@ -583,6 +583,7 @@ sub LoadNewItemsInCandidates
   my $sdrdbh = $self->GetSdrDb();
   my $sql = "SELECT namespace,id,time FROM rights_current WHERE attr=2 AND reason=1 AND time>'$start' GROUP BY namespace, id";
   my $ref = $sdrdbh->selectall_arrayref( $sql );
+  printf "Checking %d possible additions to candidates\n", scalar @{ $ref };
   foreach my $row ( @{$ref} )
   {
     my $id     = $row->[0] . '.' . $row->[1];
@@ -601,7 +602,9 @@ sub LoadNewItemsInCandidates
       my $src = $self->ShouldVolumeGoInUndTable($id, $record);
       if ($src)
       {
-        print "Skip $id ($src) -- inserting in und table\n";
+        $sql = "SELECT COUNT(*) FROM und WHERE id='$id'";
+        my $already = (1 == $self->SimpleSqlGet($sql));
+        printf "Skip $id ($src) -- %s in und table\n", ($already)? 'updating':'inserting';
         $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src','$time')";
         $self->PrepareSubmitSql( $sql );
         push @und, $id;
@@ -610,6 +613,7 @@ sub LoadNewItemsInCandidates
       $self->AddItemToCandidates($id, $time, $record);
     }
   }
+  printf "Removing %d und volumes from candidates\n", scalar @und;
   foreach my $id (@und)
   {
     $sql = "DELETE FROM candidates WHERE id='$id'";
@@ -671,10 +675,10 @@ sub ShouldVolumeGoInUndTable
 
 sub AddItemToCandidates
 {
-  my $self     = shift;
-  my $id       = shift;
-  my $time     = shift;
-  my $record   = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $time   = shift;
+  my $record = shift;
 
   $record = $self->GetRecordMetadata($id) unless $record;
   my $pub = $self->GetPublDate($id, $record);
@@ -1338,7 +1342,7 @@ sub HoldExpiry
   return ($readable)? $self->FormatDate($exp):$exp;
 }
 
-# Returned format is YYYYMMDD 23:59:59
+# Returned format is YYYY-MM-DD 23:59:59
 sub TwoWorkingDays
 {
   my $self = shift;
@@ -2709,6 +2713,41 @@ sub CheckForId
   return scalar( @rows );
 }
 
+sub AddUser
+{
+  my $self       = shift;
+  my $id         = shift;
+  my $kerberos   = shift;
+  my $name       = shift;
+  my $reviewer   = shift;
+  my $advanced   = shift;
+  my $expert     = shift;
+  my $extadmin   = shift;
+  my $admin      = shift;
+  my $superadmin = shift;
+  my $note       = shift;
+
+  $reviewer = ($reviewer)? 1:0;
+  $advanced = ($advanced)? 1:0;
+  $expert = ($expert)? 1:0;
+  $extadmin = ($extadmin)? 1:0;
+  $admin = ($admin)? 1:0;
+  $superadmin = ($superadmin)? 1:0;
+  # Remove surrounding whitespace on user id, kerberos, and name.
+  $id =~ s/^\s*(.+?)\s*$/$1/;
+  $kerberos =~ s/^\s*(.+?)\s*$/$1/;
+  $name =~ s/^\s*(.+?)\s*$/$1/;
+  $kerberos = $self->SimpleSqlGet("SELECT kerberos FROM users WHERE id='$id'") unless $kerberos;
+  $name = $self->SimpleSqlGet("SELECT name FROM users WHERE id='$id'") unless $name;
+  $note = $self->SimpleSqlGet("SELECT note FROM users WHERE id='$id'") unless $note;
+  my $sql = "REPLACE INTO users (id,kerberos,name,reviewer,advanced,expert,extadmin,admin,superadmin,note)" .
+            " VALUES ('$id','$kerberos','$name',$reviewer,$advanced,$expert,$extadmin,$admin,$superadmin,'$note')";
+  #print "$sql<br/>\n";
+  $self->PrepareSubmitSql($sql);
+  return 1;
+}
+
+
 sub CheckReviewer
 {
   my $self = shift;
@@ -2843,6 +2882,16 @@ sub IsUserExpert
   return $self->SimpleSqlGet( $sql );
 }
 
+sub IsUserExtAdmin
+{
+  my $self = shift;
+  my $user = shift;
+
+  $user = $self->get('user') unless $user;
+  my $sql = "SELECT extadmin FROM users WHERE id='$user'";
+  return $self->SimpleSqlGet( $sql );
+}
+
 sub IsUserAdmin
 {
   my $self = shift;
@@ -2924,6 +2973,19 @@ sub GetUsersWithAffiliation
     push @ausers, $user if $aff eq $self->GetUserAffiliation($user);
   }
   return \@ausers;
+}
+
+sub CanUserSeeInstitutionalStats
+{
+  my $self = shift;
+  my $inst = shift;
+  my $user = shift;
+  
+  return 0 unless $inst;
+  $user = $self->get('user') unless $user;
+  return 1 if $self->IsUserExpert($user) or $self->IsUserAdmin($user);
+  my $aff = $self->GetUserAffiliation($user);
+  return $aff eq $inst and $self->IsUserExtAdmin($user);
 }
 
 sub GetRange
@@ -3547,11 +3609,23 @@ sub CreateStatsData
   my $cumulative = shift;
   my $year       = shift;
   my $inval      = shift;
-
+  
+  #print "CreateStatsData($user,$cumulative,$year,$inval)<br/>\n";
+  my $instusers = undef;
   my $dbh = $self->get( 'dbh' );
   $year = ($self->GetTheYearMonth())[0] unless $year;
   my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear($year);
-  my $username = ($user eq 'all')? 'All Users':$self->GetUserName($user);
+  my $username;
+  if ($user eq 'all') { $username = 'All Users'; }
+  elsif ('all__' eq substr $user, 0, 5)
+  {
+    my $inst = substr $user, 5;
+    #print "inst '$inst'<br/>\n";
+    $username = "All $inst Users";
+    $instusers = sprintf "'%s'", join "','", @{ $self->GetUsersWithAffiliation($inst) };
+  }
+  else { $username = $self->GetUserName($user) };
+  #print "username '$username', instusers $instusers<br/>\n";
   my $label = "$username: " . (($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative":$year);
   my $report = sprintf("$label\nCategories,Project Total%s", (!$cumulative)? ",Total $year":'');
   my %stats = ();
@@ -3578,7 +3652,8 @@ sub CreateStatsData
                SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
                FROM userstats WHERE monthyear >= '$mintime' AND monthyear <= '$maxtime'";
-    $sql .= " AND user='$user'" if $user ne 'all';
+    if ($instusers) { $sql .= " AND user IN ($instusers)"; }
+    elsif ($user ne 'all') { $sql .= " AND user='$user'"; }
     #print "$sql<br/>\n";
     my $rows = $dbh->selectall_arrayref( $sql );
     my $row = @{$rows}->[0];
@@ -3588,11 +3663,11 @@ sub CreateStatsData
       $stats{$title}{$date} = $row->[$i];
       $i++;
     }
-    my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($mintime, $maxtime);
+    my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($mintime, $maxtime, $instusers);
     #print "total $total correct $correct incorrect $incorrect neutral $neutral for $mintime to $maxtime<br/>\n";
     my $whichone = ($inval)? $incorrect:$correct;
     my $pct = eval{100.0*$whichone/$total;};
-    if ($user eq 'all')
+    if ($user eq 'all' || $instusers)
     {
       $stats{'__TOTNE__'}{$date} = $total;
       $stats{'__NEUT__'}{$date} = $neutral;
@@ -3610,7 +3685,8 @@ sub CreateStatsData
                SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
                FROM userstats WHERE monthyear >= '$earliest' AND monthyear <= '$latest'};
-  $sql .= " AND user='$user'" if $user ne 'all';
+  if ($instusers) { $sql .= " AND user IN ($instusers)"; }
+  elsif ($user ne 'all') { $sql .= " AND user='$user'"; }
   #print "$sql<br/>\n";
   my $rows = $dbh->selectall_arrayref( $sql );
   my $row = @{$rows}->[0];
@@ -3622,11 +3698,11 @@ sub CreateStatsData
   }
   my ($year,$month) = split '-', $latest;
   my $lastDay = Days_in_Month($year,$month);
-  my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, $latest);
+  my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, $latest, $instusers);
   #print "total $total correct $correct incorrect $incorrect neutral $neutral for $earliest to $latest<br/>\n";
   my $whichone = ($inval)? $incorrect:$correct;
   my $pct = eval{100.0*$whichone/$total;};
-  if ($user eq 'all')
+  if ($user eq 'all' || $instusers)
   {
     $totals{'__TOTNE__'} = $total;
     $totals{'__NEUT__'} = $neutral;
@@ -3638,7 +3714,6 @@ sub CreateStatsData
   if (!$cumulative)
   {
     $earliest = '2009-07';
-    $latest = '3000-01';
     $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
                SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
                SUM(total_ic_ren) + SUM(total_ic_cdpp),
@@ -3647,7 +3722,8 @@ sub CreateStatsData
                SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
                FROM userstats WHERE monthyear >= '$earliest'};
-    $sql .= " AND user='$user'" if $user ne 'all';
+    if ($instusers) { $sql .= " AND user IN ($instusers)"; }
+    elsif ($user ne 'all') { $sql .= " AND user='$user'"; }
     #print "$sql<br/>\n";
     my $rows = $dbh->selectall_arrayref( $sql );
     my $row = @{$rows}->[0];
@@ -3657,11 +3733,11 @@ sub CreateStatsData
       $ptotals{$title} = $row->[$i];
       $i++;
     }
-    my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, $latest);
+    my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, '3000-01', $instusers);
     #print "total $total correct $correct incorrect $incorrect neutral $neutral for $earliest to $latest for $user<br/>\n";
     my $whichone = ($inval)? $incorrect:$correct;
     my $pct = eval{100.0*$whichone/$total;};
-    if ($user eq 'all')
+    if ($user eq 'all' || $instusers)
     {
       $ptotals{'__TOTNE__'} = $total;
       $ptotals{'__NEUT__'} = $neutral;
@@ -3675,12 +3751,12 @@ sub CreateStatsData
                 'Reviews per Hour' => 1, 'Outlier Reviews' => 1);
   foreach my $title (@titles)
   {
-    next if $user eq 'all' and $title eq '__AVAL__';
+    next if ($instusers or $user eq 'all') and $title eq '__AVAL__';
     $report .= $title;
     if (!$cumulative)
     {
       my $of = $ptotals{'__TOT__'};
-      $of = $ptotals{'__TOTNE__'} if ($title eq '__VAL__' or $title eq '__NEUT__') and $user eq 'all';
+      $of = $ptotals{'__TOTNE__'} if ($title eq '__VAL__' or $title eq '__NEUT__') and ($user eq 'all' or $instusers);
       my $n = $ptotals{$title};
       $n = 0 unless $n;
       if ($title eq '__AVAL__')
@@ -3700,7 +3776,7 @@ sub CreateStatsData
       $report .= ',' . $n;
     }
     my $of = $totals{'__TOT__'};
-    $of = $totals{'__TOTNE__'} if ($title eq '__VAL__' or $title eq '__NEUT__') and $user eq 'all';
+    $of = $totals{'__TOTNE__'} if ($title eq '__VAL__' or $title eq '__NEUT__') and ($user eq 'all' or $instusers);
     my $n = $totals{$title};
     $n = 0 unless $n;
     if ($title eq '__AVAL__')
@@ -3729,7 +3805,7 @@ sub CreateStatsData
       elsif ($title ne '__TOT__' && !exists $minors{$title})
       {
         $of = $stats{'__TOT__'}{$date};
-        $of = $stats{'__TOTNE__'}{$date} if ($title eq '__VAL__' or $title eq '__NEUT__') and $user eq 'all';
+        $of = $stats{'__TOTNE__'}{$date} if ($title eq '__VAL__' or $title eq '__NEUT__') and ($user eq 'all' or $instusers);
         my $pct = eval { 100.0*$n/$of; } or 0.0;
         $n = sprintf("$n:%.1f", $pct);
       }
@@ -3780,8 +3856,8 @@ sub CreateStatsReport
     next if $title eq '__MVAL__' and ($exp);
     next if $title eq '__AVAL__' and ($exp);
     next if $title eq '__NEUT__' and ($exp);
-    next if $title eq '__TOTNE__' and ($user ne 'all' and !$cumulative);
-    next if ($cumulative or $user eq 'all' or $suppressBreakdown) and !exists $majors{$title} and !exists $minors{$title} and $title !~ m/__.+?__/;
+    next if $title eq '__TOTNE__' and ($user ne 'all' and $user !~ m/all__/ and !$cumulative);
+    next if ($cumulative or $user eq 'all' or $user !~ m/all__/ or $suppressBreakdown) and !exists $majors{$title} and !exists $minors{$title} and $title !~ m/__.+?__/;
     my $class = (exists $majors{$title})? 'major':(exists $minors{$title})? 'minor':'';
     $class = 'total' if $title =~ m/__.+?__/ and $title ne '__TOT__';
     $report .= '<tr>';
@@ -3952,37 +4028,6 @@ sub DeleteUser
   $self->PrepareSubmitSql($sql);
 }
 
-sub AddUser
-{
-    my $self       = shift;
-    my $id         = shift;
-    my $kerberos   = shift;
-    my $name       = shift;
-    my $reviewer   = shift;
-    my $advanced   = shift;
-    my $expert     = shift;
-    my $admin      = shift;
-    my $superadmin = shift;
-    my $note       = shift;
-    
-    $reviewer = ($reviewer)? 1:0;
-    $advanced = ($advanced)? 1:0;
-    $expert = ($expert)? 1:0;
-    $admin = ($admin)? 1:0;
-    $superadmin = ($superadmin)? 1:0;
-    # Remove surrounding whitespace on user id, kerberos, and name.
-    $id =~ s/^\s*(.+?)\s*$/$1/;
-    $kerberos =~ s/^\s*(.+?)\s*$/$1/;
-    $name =~ s/^\s*(.+?)\s*$/$1/;
-    $kerberos = $self->SimpleSqlGet("SELECT kerberos FROM users WHERE id='$id'") unless $kerberos;
-    $name = $self->SimpleSqlGet("SELECT name FROM users WHERE id='$id'") unless $name;
-    $note = $self->SimpleSqlGet("SELECT note FROM users WHERE id='$id'") unless $note;
-    my $sql = "REPLACE INTO users (id,kerberos,name,reviewer,advanced,expert,admin,superadmin,note)" .
-              " VALUES ('$id','$kerberos','$name',$reviewer,$advanced,$expert,$admin,$superadmin,'$note')";
-    #print "$sql<br/>\n";
-    $self->PrepareSubmitSql($sql);
-    return 1;
-}
 
 sub CheckRenDate
 {
@@ -4372,7 +4417,7 @@ sub IsThesis
 }
 
 # Translations: 041, first indicator=1, $a=eng, $h= (original
-# language code); Translation (or variations thereof in 500(a) note field.
+# language code); Translation (or variations thereof) in 500(a) note field.
 sub IsTranslation
 {
   my $self    = shift;
@@ -6026,8 +6071,9 @@ sub GetValidation
   my $self  = shift;
   my $start = shift;
   my $end   = shift;
+  my $users = shift;
   
-  my $users = sprintf '"%s"', join '","', $self->GetType1Reviewers();
+  $users = sprintf '"%s"', join '","', $self->GetType1Reviewers() unless $users;
   $start = substr($start,0,7);
   $end = substr($end,0,7);
   my $sql = 'SELECT SUM(total_reviews),SUM(total_correct),SUM(total_incorrect),SUM(total_neutral) FROM userstats ' .

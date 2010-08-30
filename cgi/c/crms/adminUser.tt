@@ -16,6 +16,7 @@
 [% reviewer   = cgi.param('reviewer')   %]
 [% advanced   = cgi.param('advanced')   %]
 [% expert     = cgi.param('expert')     %]
+[% extadmin   = cgi.param('extadmin')      %]
 [% admin      = cgi.param('admin')      %]
 [% superadmin = cgi.param('superadmin') %]
 [% note       = cgi.param('note') %]
@@ -33,7 +34,7 @@
       [% END %]
     [% ELSE %]
       [% IF id %]
-        [% blah = crms.AddUser(id,kerberos,name,reviewer,advanced,expert,admin,superadmin,note) %]
+        [% blah = crms.AddUser(id,kerberos,name,reviewer,advanced,expert,extadmin,admin,superadmin,note) %]
       [% ELSE %]
         <h3 style="color:red;">No user ID provided</h3>
       [% END %]
@@ -43,7 +44,10 @@
 
 [% users = crms.GetUsers() %]
 <table class="exportStats">
-  <tr><th>Name</th><th>ID</th><th>Kerberos&nbsp;ID</th><th>Reviewer</th><th>Advanced</th><th>Expert</th><th>Admin</th><th>Super&nbsp;Admin</th><th>Note</th><th>Change&nbsp;To</th></tr>
+  <tr>
+    <th>Name</th><th>ID</th><th>Kerberos&nbsp;ID</th><th>Reviewer</th><th>Advanced</th><th>Expert</th>
+    <th>Ext.&nbsp;Admin</th><th>Admin</th><th>Super&nbsp;Admin</th><th>Note</th><th>Change&nbsp;To</th>
+  </tr>
   [% FOREACH userid IN users %]
     <tr [% id == userid ? 'class="total"':''%]>
       <td><a href="crms?p=userRate&amp;user=[% userid %]" target="_blank">[% crms.GetUserName(userid).replace('\s','&nbsp;') %]</a></td>
@@ -52,6 +56,7 @@
       <td style="text-align:center">[% IF crms.IsUserReviewer(userid) %][% icon %][% END %]</td>
       <td style="text-align:center">[% IF crms.IsUserAdvanced(userid) %][% icon %][% END %]</td>
       <td style="text-align:center">[% IF crms.IsUserExpert(userid) %][% icon %][% END %]</td>
+      <td style="text-align:center">[% IF crms.IsUserExtAdmin(userid) %][% icon %][% END %]</td>
       <td style="text-align:center">[% IF crms.IsUserAdmin(userid) %][% icon %][% END %]</td>
       <td style="text-align:center">[% IF crms.IsUserSuperAdmin(userid) %][% icon %][% END %]</td>
       [% note = crms.GetUserNote(userid) %]
@@ -101,12 +106,20 @@
     </tr>
     </table>
     <br/>
-    <input type="checkbox" name="reviewer"/> Reviewer
-    <input type="checkbox" name="advanced"/> Advanced Reviewer
-    <input type="checkbox" name="expert"/> Expert
-    <input type="checkbox" name="admin"/> Admin
-    <input type="checkbox" name="superadmin"[% crms.IsUserSuperAdmin()? '' : 'disabled="disabled"' %]/> Super Admin
-    <br/><br/><input type="checkbox" name="delete"/> Delete user
+    <table>
+      <tr>
+        <td><input type="checkbox" name="reviewer" id="reviewerCB"/> <label for="reviewerCB">Reviewer</label></td>
+        <td><input type="checkbox" name="advanced" id="advancedCB"/> <label for="advancedCB">Advanced Reviewer</label></td>
+        <td><input type="checkbox" name="expert" id="expertCB"/> <label for="expertCB">Expert</label></td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" name="extadmin" id="extAdminCB"/> <label for="extAdminCB">Ext.&nbsp;Admin</label></td>
+        <td><input type="checkbox" name="admin" id="adminCB"/> <label for="adminCB">Admin</label></td>
+        <td><input type="checkbox" name="superadmin"[% crms.IsUserSuperAdmin()? '' : 'disabled="disabled"' %] id="superAdminCB"/>
+            <label for="superAdminCB">Super Admin</label></td>
+      </tr>
+    </table>
+    <br/><input type="checkbox" name="delete" id="deleteCB"/> <label for="deleteCB">Delete user</label>
     <br/><br/><input type="submit" value="Submit"/>
   </form>
 </div>
