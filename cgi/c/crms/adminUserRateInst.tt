@@ -1,0 +1,47 @@
+[% inst = cgi.param('inst') %]
+[% IF NOT crms.CanUserSeeInstitutionalStats(inst) %]
+  [% INCLUDE denied.tt  %]
+  [% STOP %]
+[% END %]
+
+[% INCLUDE header.tt %]
+
+<h2>[% inst %] Review Stats:</h2>
+<a href="/c/crms/pdf/ReviewStatsHelp.pdf" target="_blank">Review&nbsp;Stats&nbsp;Help</a><br/>
+<br/>
+[% IF crms.GetTotalHistoricalReviewCount() %]
+  [% crms.CreateStatsReport('all', 1, 1, 0, 1) %]
+  <br/><br/>
+  [% users = crms.GetUsersWithAffiliation(inst, 1) %]
+  [% users.unshift('all' _ '__' _ inst) %]
+  [% users.unshift('all') %]
+  [% onclicks = '' %]
+  [% FOREACH id IN users %]
+    [% IF id.match('rereport') %][% NEXT %][% END %]
+    [% IF id != 'all' && id.substr(0,5) != 'all__' && 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
+    [% onclicks = onclicks _ "toggleVisibility(\"$id\");" %]
+  [% END %]
+  [% IF 1 #NOT crms.IsTrainingArea() %]
+    <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
+       onclick='[% onclicks %]'>Toggle All 2009</a><br/><br/>
+  [% END %]
+  [% FOREACH id IN users %]
+    [% IF id.match('rereport') %][% NEXT %][% END %]
+    [% IF id != 'all' && id.substr(0,5) != 'all__' && 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
+    [% crms.CreateStatsReport(id, 0, 1, year, 1) %]
+    <br/><br/>
+    [% IF 1 #NOT crms.IsTrainingArea() %]
+      <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
+         id="[% id %]a" onclick='toggleVisibility("[% id %]");'>Show 2009</a><br/>
+      <div id="[% id %]" style="display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;">
+      [% crms.CreateStatsReport(id, 0, 1, 2009, 1) %]
+      <br/>
+      </div>
+      <br/><br/>
+    [% END %]
+  [% END %]
+  <span class="smallishText">*Does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews.</span>
+[% ELSE %]
+  There are no historical reviews at this time.
+[% END %]
+[% INCLUDE footer.tt %]
