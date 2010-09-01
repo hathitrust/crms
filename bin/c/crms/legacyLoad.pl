@@ -112,7 +112,7 @@ sub ProcessFile
     my @parts = map {s/^\s+|\s+$//g;$_;} split("\t", $line);
     next if $parts[0] =~ m/^Barcode/i;
     my $nparts = scalar @parts;
-    printf "%s\n", join(',',@parts) if $verbose;
+    printf "%s (%d parts)\n", join(',',@parts), $nparts if $verbose;
     #if ($nparts > 19)
     #{
     #  printf("Error: line %d (%s) had $nparts fields; should be 12 or 19\n", $n+1, $parts[0]);
@@ -188,8 +188,9 @@ sub ProcessFile
 
     }
     #date is comming in in this format MM/DD/YYYY, need to change to
-    #YYYY/MM/DD and time -- let's use noon just for kicks.
-    $date = $crms->ChangeDateFormat( $date ) . ' 12:00:00';
+    #YYYY-MM-DD and time -- let's use noon just for kicks.
+    $date = ChangeDateFormat( $date ) . ' 12:00:00';
+    die "Not a valid date: $date" unless $date =~ m/^\d\d\d\d-\d\d-\d\d\s\d\d:\d\d:\d\d$/;
     # Rendate is in the yucky format DD-Mon-YY and we need it in the equally yucky format DDMonYY
     $renDate =~ s/-//g;
     die "Not a valid renewal date: $renDate" unless $crms->IsRenDate($renDate);
@@ -216,4 +217,16 @@ sub ProcessFile
     $n++;
   }
   printf "Done with $f: processed %d items\n", $n;
+}
+
+sub ChangeDateFormat
+{
+  my $date = shift;
+
+  my ($month, $day, $year) = split '/', $date;
+  $year  = "20$year" if $year < 100;
+  $month = "0$month" if $month < 10;
+  $day   = "0$day" if $day < 10;
+  $date = join '-', ($year, $month, $day);
+  return $date;
 }
