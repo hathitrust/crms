@@ -71,22 +71,21 @@ my $rc = $crms->ClearQueueAndExport();
 #  ReportMsg("DONE calling Jessica's script to populate the rights db. This is the output:\n $out\n");
 #}
 
-my $status = 1;
 # The testsuite can safely skip this often time-consuming project.
 if ($skipCandidates) { ReportMsg("-c flag set; skipping candidates load."); }
 else
 {
   ReportMsg("Starting to Load New volumes into candidates.\n");
   ## get new items and load the queue table
-  $status = $crms->LoadNewItemsInCandidates();
+  $crms->LoadNewItemsInCandidates();
   ReportMsg("DONE Loading new volumes into candidates.\n");
 }
 
 if ($skipQueue) { ReportMsg("-q flag set; skipping queue load."); }
-elsif ($status)
+else
 {
-   ReportMsg("Starting to Load new items into queue.\n");
-   $crms->LoadNewItems();
-   ReportMsg("DONE loading new volumes into queue.\n");
+  ReportMsg("Starting to Load new items into queue.\n");
+  $crms->LoadNewItems();
+  ReportMsg("DONE loading new volumes into queue.\n");
 }
 ReportMsg("All DONE with nightly script.\n");
