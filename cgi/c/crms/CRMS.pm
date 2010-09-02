@@ -36,7 +36,7 @@ sub new
   $self->set( 'errors', $errors );
   require $args{'configFile'};
   $self->set( 'bc2metaUrl', $CRMSGlobals::bc2metaUrl );
-  $self->set( 'oaiBaseUrl', $CRMSGlobals::oaiBaseUrl );
+  #$self->set( 'oaiBaseUrl', $CRMSGlobals::oaiBaseUrl );
   $self->set( 'verbose',    $args{'verbose'});
   $self->set( 'parser',     XML::LibXML->new() );
   $self->set( 'barcodeID',  {} );
@@ -2051,7 +2051,10 @@ sub UnpackResults
   foreach my $row ( @{$ref} )
   {
     $row->[1] =~ s,(.*) .*,$1,;
-
+    for (my $i = 0; $i < scalar @{$row}; $i++)
+    {
+      $row->[$i] =~ s/[\n\r\t]+/ /gs;
+    }
     my $id         = $row->[0];
     my $time       = $row->[1];
     my $duration   = $row->[2];
@@ -2059,16 +2062,10 @@ sub UnpackResults
     my $attr       = $self->GetRightsName($row->[4]);
     my $reason     = $self->GetReasonName($row->[5]);
     my $note       = $row->[6];
-    $note =~ s,\n, ,gs;
-    $note =~ s,\r, ,gs;
-    $note =~ s,\t, ,gs;
     my $renNum     = $row->[7];
     my $expert     = $row->[8];
     my $copyDate   = $row->[9];
     my $expertNote = $row->[10];
-    $expertNote =~ s,\n, ,gs;
-    $expertNote =~ s,\r, ,gs;
-    $expertNote =~ s,\t, ,gs;
     my $category   = $row->[11];
     my $legacy     = $row->[12];
     my $renDate    = $row->[13];
@@ -2957,7 +2954,7 @@ sub GetUserAffiliation
     return 'UW' if $suff eq 'library.wisc.edu';
     return 'UMN' if $suff eq 'umn.edu';
   }
-  return 'UM';
+  return ($id =~ m/annekz/)? 'UM':'UM-ERAU';
 }
 
 sub GetUsersWithAffiliation
@@ -2985,7 +2982,7 @@ sub CanUserSeeInstitutionalStats
   $user = $self->get('user') unless $user;
   return 1 if $self->IsUserExpert($user) or $self->IsUserAdmin($user);
   my $aff = $self->GetUserAffiliation($user);
-  return $aff eq $inst and $self->IsUserExtAdmin($user);
+  return ($aff eq $inst && $self->IsUserExtAdmin($user));
 }
 
 sub GetRange
@@ -3604,11 +3601,12 @@ sub CreateExportStatusGraph
 
 sub CreateStatsData
 {
-  my $self       = shift;
-  my $user       = shift;
-  my $cumulative = shift;
-  my $year       = shift;
-  my $inval      = shift;
+  my $self        = shift;
+  my $user        = shift;
+  my $cumulative  = shift;
+  my $year        = shift;
+  my $inval       = shift;
+  my $nononexpert = shift;
   
   #print "CreateStatsData($user,$cumulative,$year,$inval)<br/>\n";
   my $instusers = undef;
@@ -3752,6 +3750,7 @@ sub CreateStatsData
   foreach my $title (@titles)
   {
     next if ($instusers or $user eq 'all') and $title eq '__AVAL__';
+    next if $title eq '__TOTNE__' and $nononexpert;
     $report .= $title;
     if (!$cumulative)
     {
@@ -3830,10 +3829,11 @@ sub CreateStatsReport
   my $suppressBreakdown = shift;
   my $year              = shift;
   my $inval             = shift;
+  my $nononexpert       = shift;
   
   # FIXME: remove this param completely?
   $suppressBreakdown = 1;
-  my $data = $self->CreateStatsData($user, $cumulative, $year, $inval);
+  my $data = $self->CreateStatsData($user, $cumulative, $year, $inval, $nononexpert);
   my @lines = split m/\n/, $data;
   my $report = sprintf("<span style='font-size:1.3em;'><!--NAME--><b>%s</b></span><!--LINK-->\n<br/><table class='exportStats'>\n<tr>\n", shift @lines);
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
