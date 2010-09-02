@@ -6329,6 +6329,7 @@ sub PageToEnglish
                'adminReviews' => 'active reviews',
                'adminUser' => 'user accounts',
                'adminUserRate' => 'all review stats',
+               'adminUserRateInst' => 'institutional review stats',
                'contact' => 'contact us',
                'debug' => 'system administration',
                'determinationStats' => 'determinations breakdown',
