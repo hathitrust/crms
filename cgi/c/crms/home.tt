@@ -82,7 +82,7 @@ function CheckAll(box,formid)
 <td>
 [% IF r || e %]     <a href="crms?p=userRate">My&nbsp;Review&nbsp;Stats</a><br/>                           [% END %]
 [% IF e || a || s %]<a href="crms?p=adminUserRate">All&nbsp;Review&nbsp;Stats</a><br/>                     [% END %]
-[% IF a || s %]     <a href="crms?p=adminUserRateInst;inst=UM-ERAU">UM-ERAU&nbsp;Review&nbsp;Stats</a><br/>[% END %]
+[% IF e || a || s %]<a href="crms?p=adminUserRateInst;inst=UM-ERAU">UM-ERAU&nbsp;Review&nbsp;Stats</a><br/>[% END %]
 [% IF iu %]         <a href="crms?p=adminUserRateInst;inst=IU">IU&nbsp;Review&nbsp;Stats</a><br/>          [% END %]
 [% IF umn %]        <a href="crms?p=adminUserRateInst;inst=UMN">UMN&nbsp;Review&nbsp;Stats</a><br/>        [% END %]
 [% IF uw %]         <a href="crms?p=adminUserRateInst;inst=UW">UW&nbsp;Review&nbsp;Stats</a><br/>          [% END %]
