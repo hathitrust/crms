@@ -6062,7 +6062,7 @@ sub GetType1Reviewers
 {
   my $self = shift;
   my $dbh = $self->get( 'dbh' );
-  my $sql = 'SELECT id FROM users WHERE id NOT LIKE "rereport%" AND (reviewer=1 OR advanced=1) AND expert=0 AND superadmin=0';
+  my $sql = 'SELECT id FROM users WHERE id NOT LIKE "rereport%" AND expert=0';
   return map {$_->[0]} @{$dbh->selectall_arrayref( $sql )};
 }
 
