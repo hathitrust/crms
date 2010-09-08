@@ -199,7 +199,7 @@ sub ProcessReviews
 {
   my $self = shift;
   
-  my $sql = 'SELECT id, user, attr, reason, renNum, renDate, hold FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) ' .
+  my $sql = 'SELECT id,user,attr,reason,hold FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) ' .
             'GROUP BY id HAVING count(*) = 2';
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
   my $today = $self->GetTodaysDate();
@@ -209,13 +209,13 @@ sub ProcessReviews
     my $user    = $row->[1];
     my $attr    = $row->[2];
     my $reason  = $row->[3];
-    my $renNum  = $row->[4];
-    my $renDate = $row->[5];
-    my $hold    = $row->[6];
+    my $hold    = $row->[4];
     
     next if $hold and $today lt $hold;
     
-    my ( $other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold ) = $self->GetOtherReview( $id, $user );
+    $sql = "SELECT user,attr,reason,hold FROM reviews WHERE id='$id' AND user!='$user'";
+    my $ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    my ($other_user, $other_attr, $other_reason, $other_hold) = @{ $ref2->[0] };
     next if $other_hold and $today lt $other_hold;
     
     if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
@@ -227,26 +227,7 @@ sub ProcessReviews
       }
       else #Mark as 4 - two that agree
       {
-        #If they are ic/ren then the renewal date and id must match
-        if ( ( $attr == 2 ) && ( $reason == 7 ) )
-        {
-          $renNum =~ s/\s+//gs;
-          $other_renNum =~ s/\s+//gs;
-          if ( ( $renNum eq $other_renNum ) && ( $renDate eq $other_renDate ) )
-          {
-            #Mark as 4
-            $self->RegisterStatus( $id, 4 );
-          }
-          else
-          {
-            #Mark as 2
-            $self->RegisterStatus( $id, 2 );
-          }
-        }
-        else #all other cases mark as 4
-        {
-          $self->RegisterStatus( $id, 4 );
-        }
+        $self->RegisterStatus( $id, 4 );
       }
     }
     else #Mark as 2 - two that disagree
@@ -275,7 +256,7 @@ sub CheckPendingStatus
   my $pstatus = $status;
   if (!$status)
   {
-    $sql = "SELECT user, attr, reason, renNum, renDate FROM reviews WHERE id='$id' AND expert IS NULL";
+    $sql = "SELECT user,attr,reason FROM reviews WHERE id='$id' AND expert IS NULL";
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
     if (scalar @{$ref} > 1)
     {
@@ -283,14 +264,10 @@ sub CheckPendingStatus
       my $user    = $row->[0];
       my $attr    = $row->[1];
       my $reason  = $row->[2];
-      my $renNum  = $row->[3];
-      my $renDate = $row->[4];
       $row = @{$ref}[1];
       my $other_user    = $row->[0];
       my $other_attr    = $row->[1];
       my $other_reason  = $row->[2];
-      my $other_renNum  = $row->[3];
-      my $other_renDate = $row->[4];
 
       if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
       {
@@ -301,26 +278,7 @@ sub CheckPendingStatus
         }
         else #Mark as 4 - two that agree
         {
-          #If they are ic/ren then the renewal date and id must match
-          if ( ( $attr == 2 ) && ( $reason == 7 ) )
-          {
-            $renNum =~ s/\s+//gs;
-            $other_renNum =~ s/\s+//gs;
-            if ( ( $renNum eq $other_renNum ) && ( $renDate eq $other_renDate ) )
-            {
-              #Mark as 4
-              $pstatus = 4;
-            }
-            else
-            {
-              #Mark as 2
-              $pstatus = 2;
-            }
-          }
-          else #all other cases mark as 4
-          {
-            $pstatus = 4;
-          }
+          $pstatus = 4;
         }
       }
       else #Mark as 2 - two that disagree
@@ -334,76 +292,6 @@ sub CheckPendingStatus
     }
   }
   $self->RegisterPendingStatus( $id, $pstatus );
-}
-
-# Calculates the status or pending_status that should be assigned to a volume if processed.
-# Can return 1 (single review) only when $pending is defined.
-# Note this does not apply to any expert-level stati (5 and 7).
-sub CalculateVolumeStatus
-{
-  my $self    = shift;
-  my $id      = shift;
-  my $pending = shift;
-  
-  my $status = 0;
-  my $sql = "SELECT id, user, attr, reason, renNum, renDate FROM reviews WHERE id='$id' AND expert!=1";
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-  if (scalar @{$ref} > 1)
-  {
-    my $row = @{$ref}[0];
-    my $user    = $row->[0];
-    my $attr    = $row->[1];
-    my $reason  = $row->[2];
-    my $renNum  = $row->[3];
-    my $renDate = $row->[4];
-    $row = @{$ref}[1];
-    my $other_user    = $row->[0];
-    my $other_attr    = $row->[1];
-    my $other_reason  = $row->[2];
-    my $other_renNum  = $row->[3];
-    my $other_renDate = $row->[4];
-
-    if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
-    {
-      # If both reviewers are non-advanced mark as provisional match
-      if ( (!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
-      {
-         $status = 3;
-      }
-      else #Mark as 4 - two that agree
-      {
-        #If they are ic/ren then the renewal date and id must match
-        if ( ( $attr == 2 ) && ( $reason == 7 ) )
-        {
-          $renNum =~ s/\s+//gs;
-          $other_renNum =~ s/\s+//gs;
-          if ( ( $renNum eq $other_renNum ) && ( $renDate eq $other_renDate ) )
-          {
-            #Mark as 4
-            $status = 4;
-          }
-          else
-          {
-            #Mark as 2
-            $status = 2;
-          }
-        }
-        else #all other cases mark as 4
-        {
-          $status = 4;
-        }
-      }
-    }
-    else #Mark as 2 - two that disagree
-    {
-      $status = 2;
-    }
-  }
-  elsif (1 == scalar @{$ref} && $pending)
-  {
-    $status = 1;
-  }
-  return $status;
 }
 
 # If fromcgi is set, don't try to create the export file, print stuff, or send mail.
@@ -1049,7 +937,7 @@ sub SubmitReview
       my $expcnt = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id' AND expert=1");
       $sql = "UPDATE $CRMSGlobals::queueTable SET expcnt=$expcnt WHERE id='$id'";
       $result = $self->PrepareSubmitSql( $sql );
-      my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $renNum, $renDate, $category);
+      my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $category);
       #We have decided to register the expert decision right away.
       $self->RegisterStatus($id, $status);
     }
@@ -1067,35 +955,19 @@ sub GetStatusForExpertReview
   my $user     = shift;
   my $attr     = shift;
   my $reason   = shift;
-  my $renNum   = shift;
-  my $renDate  = shift;
   my $category = shift;
   
   my $status = 5;
   # See if it's a provisional match and expert agreed with both of existing non-advanced reviews. If so, status 7.
-  my $sql = "SELECT attr,reason,user,renNum,renDate FROM reviews WHERE id='$id' AND user IN (SELECT id FROM users WHERE expert=0 AND advanced=0)";
+  my $sql = "SELECT attr,reason FROM reviews WHERE id='$id' AND user IN (SELECT id FROM users WHERE expert=0 AND advanced=0)";
   my $ref = $self->get('dbh')->selectall_arrayref($sql);
   if (scalar @{ $ref } >= 2)
   {
     my $attr1    = $ref->[0]->[0];
     my $reason1  = $ref->[0]->[1];
-    my $user1    = $ref->[0]->[2];
     my $attr2    = $ref->[1]->[0];
     my $reason2  = $ref->[1]->[1];
-    my $user2    = $ref->[1]->[2];
-    if ($attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1)
-    {
-      $status = 7;
-      # If they are ic/ren then the renewal date and id must match.
-      # But a cloned/dummy review will have no such info so we don't enforce this when category is 'Expert Accepted'.
-      if ($attr == 2 && $reason == 7)
-      {
-        my $renNum1  = $ref->[0]->[3];
-        $renNum1 =~ s/\s+//gs;
-        my $renDate1 = $ref->[0]->[4];
-        $status = 5 if ($renNum ne $renNum1 or $renDate ne $renDate1) and $category ne 'Expert Accepted';
-      }
-    }
+    $status = 7 if $attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1;
   }
   return $status;
 }
@@ -1107,28 +979,6 @@ sub GetPriority
   
   my $sql = "SELECT priority FROM queue WHERE id='$id'";
   return $self->StripDecimal($self->SimpleSqlGet($sql));
-}
-
-
-sub GetOtherReview
-{
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift;
-
-  my $sql = "SELECT id,user,attr,reason,renNum,renDate,hold FROM $CRMSGlobals::reviewsTable WHERE id='$id' AND user!='$user'";
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-  foreach my $row ( @{$ref} )
-  {
-    my $id      = $row->[0];
-    my $user    = $row->[1];
-    my $attr    = $row->[2];
-    my $reason  = $row->[3];
-    my $renNum  = $row->[4];
-    my $renDate = $row->[5];
-    my $hold    = $row->[6];
-    return ( $user, $attr, $reason, $renNum, $renDate, $hold );
-  }
 }
 
 
@@ -2555,24 +2405,23 @@ sub LinkToStanford
 sub LinkToPT
 {
   my $self = shift;
-  my $id   = lc shift;
-  my $ti   = $self->GetTitle( $id );
+  my $id   = shift;
 
+  my $ti = $self->GetTitle( $id );
   $ti =~ s/&(?!amp;)/&amp;/g;
   my $url = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=';
-  return qq{<a href="$url$id" target="_blank">$ti</a>};
+  return "<a href='$url$id' target='_blank'>$ti</a>";
 }
 
 sub LinkToReview
 {
   my $self = shift;
   my $id   = shift;
-  my $ti   = $self->GetTitle( $id );
 
+  my $ti   = $self->GetTitle( $id );
   $ti =~ s/&(?!amp;)/&amp;/g;
-  ## my $url = 'http://babel.hathitrust.org/cgi/pt?attr=1&id=';
-  my $url = qq{/cgi/c/crms/crms?p=review;barcode=$id;editing=1};
-  return qq{<a href="$url" target="_blank">$ti</a>};
+  my $url = "/cgi/c/crms/crms?p=review;barcode=$id;editing=1";
+  return "<a href='$url' target='_blank'>$ti</a>";
 }
 
 sub DetailInfo
@@ -2582,8 +2431,8 @@ sub DetailInfo
   my $user   = shift;
   my $page   = shift;
 
-  my $url = qq{/cgi/c/crms/crms?p=detailInfo&amp;id=$id&amp;user=$user&amp;page=$page};
-  return qq{<a href="$url" target="_blank">$id</a>};
+  my $url = "/cgi/c/crms/crms?p=detailInfo&amp;id=$id&amp;user=$user&amp;page=$page";
+  return "<a href='$url' target='_blank'>$id</a>";
 }
 
 sub DetailInfoForReview
@@ -2593,10 +2442,9 @@ sub DetailInfoForReview
   my $user   = shift;
   my $page   = shift;
 
-  my $url = qq{/cgi/c/crms/crms?p=detailInfoForReview&amp;id=$id&amp;user=$user&amp;page=$page};
-  return qq{<a href="$url" target="_blank">$id</a>};
+  my $url = "/cgi/c/crms/crms?p=detailInfoForReview&amp;id=$id&amp;user=$user&amp;page=$page";
+  return "<a href='$url' target='_blank'>$id</a>";
 }
-
 
 sub GetStatus
 {
@@ -2606,26 +2454,6 @@ sub GetStatus
   my $sql = "SELECT status FROM $CRMSGlobals::queueTable WHERE id='$id'";
   return $self->SimpleSqlGet( $sql );
 }
-
-
-sub GetAttrReasonFromOtherUser
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $name   = shift;
-
-  my $sql = qq{SELECT attr, reason FROM $CRMSGlobals::reviewsTable WHERE id = "$id" and user != '$name'};
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
-  if ( ! $ref->[0]->[0] )
-  {
-    $self->Logit( "$id not found in review table" );
-  }
-  my $attr = $self->GetRightsName( $ref->[0]->[0] );
-  my $reason = $self->GetReasonName( $ref->[0]->[1] );
-  return ($attr, $reason);
-}
-
 
 sub ValidateAttrReasonCombo
 {
@@ -2643,13 +2471,11 @@ sub GetAttrReasonCom
   my $self = shift;
   my $in   = shift;
 
-  my %codes = (1 => 'pd/ncn', 2 => 'pd/ren',  3 => 'pd/cdpp',
-               4 => 'ic/ren', 5 => 'ic/cdpp', 6 => 'und/nfi',
-               7 => 'pdus/cdpp');
+  my %codes = (1 => 'pd/ncn',  2 => 'pd/ren',  3 => 'pd/cdpp', 4 => 'ic/ren',
+               5 => 'ic/cdpp', 6 => 'und/nfi', 7 => 'pdus/cdpp');
 
-  my %str   = ('pd/ncn' => 1, 'pd/ren'  => 2, 'pd/cdpp' => 3,
-               'ic/ren' => 4, 'ic/cdpp' => 5, 'und/nfi' => 6,
-               'pdus/cdpp' => 7);
+  my %str   = ('pd/ncn' => 1,  'pd/ren'  => 2, 'pd/cdpp' => 3, 'ic/ren' => 4,
+               'ic/cdpp' => 5, 'und/nfi' => 6, 'pdus/cdpp' => 7);
 
   if ( $in =~ m/\d/ ) { return $codes{$in}; }
   else                { return $str{$in};   }
@@ -4242,94 +4068,92 @@ sub ValidateSubmission2
 # Relaxes constraints on ic/ren needing renewal id and date
 sub ValidateSubmissionHistorical
 {
-    my $self = shift;
-    my ($attr, $reason, $note, $category, $renNum, $renDate) = @_;
-    my $errorMsg = '';
+  my $self = shift;
+  my ($attr, $reason, $note, $category, $renNum, $renDate) = @_;
+  my $errorMsg = '';
 
-    my $noteError = 0;
+  my $noteError = 0;
 
-    if ( ( ! $attr ) || ( ! $reason ) )
+  if ( ( ! $attr ) || ( ! $reason ) )
+  {
+    $errorMsg .= 'rights/reason required.';
+  }
+
+  ## und/nfi
+  if ( $attr == 5 && $reason == 8 && ( ( ! $note ) || ( ! $category ) )  )
+  {
+      $errorMsg .= 'und/nfi must include note category and note text.';
+      $noteError = 1;
+  }
+
+  ## pd/ren should not have a ren number or date
+  #if ( $attr == 1 && $reason == 7 &&  ( ( $renNum ) || ( $renDate ) )  )
+  #{
+  #    $errorMsg .= 'pd/ren should not include renewal info.';
+  #}
+
+  ## pd/ncn requires a ren number
+  if (  $attr == 1 && $reason == 2 && ( ( $renNum ) || ( $renDate ) ) )
+  {
+      $errorMsg .= 'pd/ncn should not include renewal info.';
+  }
+
+  ## pd/cdpp requires a ren number
+  if (  $attr == 1 && $reason == 9 && ( ( $renNum ) || ( $renDate )  ) )
+  {
+      $errorMsg .= 'pd/cdpp should not include renewal info.';
+  }
+
+  #if ( $attr == 1 && $reason == 9 && ( ( ! $note ) || ( ! $category )  )  )
+  #{
+  #    $errorMsg .= 'pd/cdpp must include note category and note text.';
+  #    $noteError = 1;
+  #}
+
+  ## ic/cdpp requires a ren number
+  if (  $attr == 2 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
+  {
+      $errorMsg .= 'ic/cdpp should not include renewal info.';
+  }
+
+  if ( $attr == 2 && $reason == 9 && ( ( ! $note )  || ( ! $category ) )  )
+  {
+      $errorMsg .= 'ic/cdpp must include note category and note text.';
+      $noteError = 1;
+  }
+
+  if ( $noteError == 0 )
+  {
+    if ( ( $category )  && ( ! $note ) )
     {
-      $errorMsg .= 'rights/reason designation required.';
-    }
-
-
-    ## und/nfi
-    if ( $attr == 5 && $reason == 8 && ( ( ! $note ) || ( ! $category ) )  )
-    {
-        $errorMsg .= 'und/nfi must include note category and note text.';
-        $noteError = 1;
-    }
-
-    ## pd/ren should not have a ren number or date
-    #if ( $attr == 1 && $reason == 7 &&  ( ( $renNum ) || ( $renDate ) )  )
-    #{
-    #    $errorMsg .= 'pd/ren should not include renewal info.';
-    #}
-
-    ## pd/ncn requires a ren number
-    if (  $attr == 1 && $reason == 2 && ( ( $renNum ) || ( $renDate ) ) )
-    {
-        $errorMsg .= 'pd/ncn should not include renewal info.';
-    }
-
-
-    ## pd/cdpp requires a ren number
-    if (  $attr == 1 && $reason == 9 && ( ( $renNum ) || ( $renDate )  ) )
-    {
-        $errorMsg .= 'pd/cdpp should not include renewal info.';
-    }
-
-    #if ( $attr == 1 && $reason == 9 && ( ( ! $note ) || ( ! $category )  )  )
-    #{
-    #    $errorMsg .= 'pd/cdpp must include note category and note text.';
-    #    $noteError = 1;
-    #}
-
-    ## ic/cdpp requires a ren number
-    if (  $attr == 2 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
-    {
-        $errorMsg .= qq{ic/cdpp should not include renewal info.  };
-    }
-
-    if ( $attr == 2 && $reason == 9 && ( ( ! $note )  || ( ! $category ) )  )
-    {
-        $errorMsg .= 'ic/cdpp must include note category and note text.';
-        $noteError = 1;
-    }
-
-    if ( $noteError == 0 )
-    {
-      if ( ( $category )  && ( ! $note ) )
+      if ($category ne 'Expert Accepted')
       {
-        if ($category ne 'Expert Accepted')
-        {
-          $errorMsg .= 'must include a note if there is a category.';
-        }
-      }
-      elsif ( ( $note ) && ( ! $category ) )
-      {
-        $errorMsg .= 'must include a category if there is a note.';
+        $errorMsg .= 'must include a note if there is a category.';
       }
     }
-
-    ## pdus/cdpp requires a note and a 'Foreign' or 'Translation' category, and must not have a ren number
-    if ($attr == 9 && $reason == 9)
+    elsif ( ( $note ) && ( ! $category ) )
     {
-      if (( $renNum ) || ( $renDate ))
-      {
-        $errorMsg .= 'rights/reason conflicts with renewal info.';
-      }
-      if (( !$note ) || ( !$category ))
-      {
-        $errorMsg .= 'note category/note text required.';
-      }
-      if ($category ne 'Foreign Pub' && $category ne 'Translation')
-      {
-        $errorMsg .= 'pdus/cdpp requires note category "Foreign Pub" or "Translation".';
-      }
+      $errorMsg .= 'must include a category if there is a note.';
     }
-    return $errorMsg;
+  }
+
+  ## pdus/cdpp requires a note and a 'Foreign' or 'Translation' category, and must not have a ren number
+  if ($attr == 9 && $reason == 9)
+  {
+    if (( $renNum ) || ( $renDate ))
+    {
+      $errorMsg .= 'rights/reason conflicts with renewal info.';
+    }
+    if (( !$note ) || ( !$category ))
+    {
+      $errorMsg .= 'note category/note text required.';
+    }
+    if ($category ne 'Foreign Pub' && $category ne 'Translation')
+    {
+      $errorMsg .= 'pdus/cdpp requires note category "Foreign Pub" or "Translation".';
+    }
+  }
+  return $errorMsg;
 }
 
 
@@ -4376,6 +4200,7 @@ sub IsProbableGovDoc
   {
     return 1 unless $field260a or $field260b;
     return 1 if $field260a =~ m/^\[?washington/i;
+    print ".\n";
     return 1 if $field260b and ($field260b =~ m/^u\.s\.\s+g\.p\.o\./i or $field260b =~ m/^u\.s\.\s+govt\.\s+print\.\s+off\./i);
   }
   return 1 if $author =~ m/^library\s+of\s+congress/i and $field260a =~ m/^washington/i;
