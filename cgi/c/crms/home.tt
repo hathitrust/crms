@@ -74,10 +74,11 @@ function CheckAll(box,formid)
                <a href="/c/crms/pdf/StanfordHelp.pdf" target="_blank">Stanford&nbsp;Renewal&nbsp;Database&nbsp;Help</a><br/>
                <a href="/c/crms/pdf/CRMS-Guidelines.pdf" target="_blank">Determination&nbsp;Guidelines</a><br/>
                <a href="/c/crms/pdf/InterfaceHelp.pdf#zoom=100" target="_blank">Review&nbsp;Interface&nbsp;Help</a><br/>
-[% IF a || s %]<a href="/c/crms/pdf/ReviewSearchHelp.pdf" target="_blank">Review&nbsp;Search&nbsp;Help</a><br/>         [% END %]
-[% IF a || s %]<a href="/c/crms/pdf/ReviewSearchTerms.pdf" target="_blank">Review&nbsp;Search&nbsp;Terms</a><br/>       [% END %]
-[% IF a || s %]<a href="/c/crms/pdf/ReviewStatsHelp.pdf" target="_blank">Review&nbsp;Stats&nbsp;Help</a><br/>           [% END %]
-[% IF a || s %]<a href="/c/crms/pdf/UserLevelsPrivileges.pdf" target="_blank">User&nbsp;Levels/Privileges</a><br/>      [% END %]
+[% IF a || s %]<a href="/c/crms/pdf/ReviewSearchHelp.pdf" target="_blank">Review&nbsp;Search&nbsp;Help</a><br/>          [% END %]
+[% IF a || s %]<a href="/c/crms/pdf/ReviewSearchTerms.pdf" target="_blank">Review&nbsp;Search&nbsp;Terms</a><br/>        [% END %]
+[% IF a || s %]<a href="/c/crms/pdf/ReviewStatsHelp.pdf" target="_blank">Review&nbsp;Stats&nbsp;Help</a><br/>            [% END %]
+[% IF a || s %]<a href="/c/crms/pdf/AllReviewStatsHelp.pdf" target="_blank">All&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>[% END %]
+[% IF a || s %]<a href="/c/crms/pdf/UserLevelsPrivileges.pdf" target="_blank">User&nbsp;Levels/Privileges</a><br/>       [% END %]
 </td>
 <td>
 [% IF r || e %]     <a href="crms?p=userRate">My&nbsp;Review&nbsp;Stats</a><br/>                           [% END %]
