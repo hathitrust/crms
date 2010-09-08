@@ -3614,12 +3614,12 @@ sub CreateStatsData
   $year = ($self->GetTheYearMonth())[0] unless $year;
   my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear($year);
   my $username;
-  if ($user eq 'all') { $username = 'All Users'; }
+  if ($user eq 'all') { $username = 'All Reviewers'; }
   elsif ('all__' eq substr $user, 0, 5)
   {
     my $inst = substr $user, 5;
     #print "inst '$inst'<br/>\n";
-    $username = "All $inst Users";
+    $username = "All $inst Reviewers";
     $instusers = sprintf "'%s'", join "','", @{ $self->GetUsersWithAffiliation($inst) };
   }
   else { $username = $self->GetUserName($user) };
@@ -3665,6 +3665,11 @@ sub CreateStatsData
     #print "total $total correct $correct incorrect $incorrect neutral $neutral for $mintime to $maxtime<br/>\n";
     my $whichone = ($inval)? $incorrect:$correct;
     my $pct = eval{100.0*$whichone/$total;};
+    if ('all__' eq substr $user, 0, 5)
+    {
+      my ($total2,$correct2,$incorrect2,$neutral2) = $self->GetValidation($mintime, $maxtime);
+      $pct = eval{100.0*$incorrect2/$total2;};
+    }
     if ($user eq 'all' || $instusers)
     {
       $stats{'__TOTNE__'}{$date} = $total;
@@ -3700,6 +3705,11 @@ sub CreateStatsData
   #print "total $total correct $correct incorrect $incorrect neutral $neutral for $earliest to $latest<br/>\n";
   my $whichone = ($inval)? $incorrect:$correct;
   my $pct = eval{100.0*$whichone/$total;};
+  if ('all__' eq substr $user, 0, 5)
+  {
+    my ($total2,$correct2,$incorrect2,$neutral2) = $self->GetValidation($earliest, $latest);
+    $pct = eval{100.0*$incorrect2/$total2;};
+  }
   if ($user eq 'all' || $instusers)
   {
     $totals{'__TOTNE__'} = $total;
@@ -3735,6 +3745,11 @@ sub CreateStatsData
     #print "total $total correct $correct incorrect $incorrect neutral $neutral for $earliest to $latest for $user<br/>\n";
     my $whichone = ($inval)? $incorrect:$correct;
     my $pct = eval{100.0*$whichone/$total;};
+    if ('all__' eq substr $user, 0, 5)
+    {
+      my ($total2,$correct2,$incorrect2,$neutral2) = $self->GetValidation($earliest, $latest);
+      $pct = eval{100.0*$incorrect2/$total2;};
+    }
     if ($user eq 'all' || $instusers)
     {
       $ptotals{'__TOTNE__'} = $total;
@@ -3749,7 +3764,7 @@ sub CreateStatsData
                 'Reviews per Hour' => 1, 'Outlier Reviews' => 1);
   foreach my $title (@titles)
   {
-    next if ($instusers or $user eq 'all') and $title eq '__AVAL__';
+    next if ($user eq 'all') and $title eq '__AVAL__';
     next if $title eq '__TOTNE__' and $nononexpert;
     $report .= $title;
     if (!$cumulative)
