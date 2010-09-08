@@ -50,7 +50,7 @@ if (scalar @ARGV)
     die "Bad date format ($end); should be in the form e.g. 2010-08-29" unless $end =~ m/^\d\d\d\d-\d\d-\d\d$/;
   }
 }
-my $startSQL = " AND time>='$start 00:00:00'";
+my $startSQL = " AND time>'$start 00:00:00'";
 my $endSQL = " AND time<='$end 00:00:00'";
 my $sql = "SELECT id,time FROM und WHERE src='gov' $startSQL $endSQL ORDER BY id";
 #print "$sql\n";
@@ -77,7 +77,6 @@ foreach my $row ( @{$ref} )
   
   my $sysID = $crms->BarcodeToId($id);
   my $catLink = "http://mirlyn.lib.umich.edu/Record/$sysID/Details#tabs";
-  
   my $record = $crms->GetRecordMetadata($id);
   my $author = $crms->GetMarcDatafieldAuthor($id, $record);
   $author =~ s/&/&amp;/g;
