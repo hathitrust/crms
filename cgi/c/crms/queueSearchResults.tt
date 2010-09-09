@@ -27,7 +27,7 @@
   [% pagenum = ref.page %]
   [% of = ref.of %]
   [% items = ref.rows %]
-  <p><b>Found $total volumes, page $pagenum of $of</b></p>
+  <p><b>Found $total volume[% (total==1)? "":"s"%], page $pagenum of $of</b></p>
 
   [% IF NOT offset %] [% offset = 0 %] [% END %]
   [% IF offset > 0 %] [% next = offset + pagesize %]

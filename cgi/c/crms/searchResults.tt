@@ -58,7 +58,7 @@ function CheckAll(box,formid)
   [% pagenum = ref.page %]
   [% of = ref.of %]
   [% reviews = ref.rows %]
-  <p><b>Found $Total reviews for $TotalVolumes volumes, page $pagenum of $of</b></p>
+  <p><b>Found $Total review[% (Total==1)? "":"s"%] for $TotalVolumes volume[% (TotalVolumes==1)? "":"s"%], page $pagenum of $of</b></p>
 
   [% IF NOT offset %] [% offset = 0 %] [% END %]
   [% IF offset > 0 %] [% next = offset + pagesize %]
