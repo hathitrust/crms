@@ -39,7 +39,6 @@ sub new
   #$self->set( 'oaiBaseUrl', $CRMSGlobals::oaiBaseUrl );
   $self->set( 'verbose',    $args{'verbose'});
   $self->set( 'parser',     XML::LibXML->new() );
-  $self->set( 'barcodeID',  {} );
   $self->set( 'root',       $args{'root'} );
   $self->set( 'dev',        $args{'dev'} );
   $self->set( 'user',       $args{'user'} );
@@ -359,9 +358,9 @@ sub GetDoubleRevItemsInAgreement
 
 ## ----------------------------------------------------------------------------
 ##  Function:   create a tab file of reviews to be loaded into the rights table
-##              barcode | attr | reason | user | null
+##              vol id | attr | reason | user | null
 ##              mdp.123 | ic   | ren    | crms | null
-##  Parameters: A reference to a list of barcodes
+##  Parameters: A reference to a list of volume ids
 ##  Return:     1 || 0
 ## ----------------------------------------------------------------------------
 sub ExportReviews
@@ -2491,24 +2490,26 @@ sub LinkToStanford
 
 sub LinkToPT
 {
-  my $self = shift;
-  my $id   = shift;
+  my $self  = shift;
+  my $id    = shift;
+  my $title = shift;
 
-  my $ti = $self->GetTitle( $id );
-  $ti =~ s/&(?!amp;)/&amp;/g;
+  $title = $self->GetTitle( $id ) unless $title;
+  $title = CGI::EscapeHTML($title);
   my $url = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=';
-  return "<a href='$url$id' target='_blank'>$ti</a>";
+  return "<a href='$url$id' target='_blank'>$title</a>";
 }
 
 sub LinkToReview
 {
-  my $self = shift;
-  my $id   = shift;
+  my $self  = shift;
+  my $id    = shift;
+  my $title = shift;
 
-  my $ti   = $self->GetTitle( $id );
-  $ti =~ s/&(?!amp;)/&amp;/g;
+  $title = $self->GetTitle( $id ) unless $title;
+  $title = CGI::EscapeHTML($title);
   my $url = "/cgi/c/crms/crms?p=review;barcode=$id;editing=1";
-  return "<a href='$url' target='_blank'>$ti</a>";
+  return "<a href='$url' target='_blank'>$title</a>";
 }
 
 sub DetailInfo
@@ -4310,11 +4311,11 @@ sub IsProbableGovDoc
 
 sub IsFormatBK
 {
-  my $self    = shift;
-  my $barcode = shift;
-  my $record  = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
 
-  if ( ! $record ) { $self->Logit( "failed in IsFormatBK: $barcode" ); }
+  if ( ! $record ) { $self->Logit( "failed in IsFormatBK: $id" ); }
 
   my $xpath   = q{//*[local-name()='controlfield' and @tag='FMT']};
   my $leader  = $record->findvalue( $xpath );
@@ -4324,12 +4325,12 @@ sub IsFormatBK
 
 sub IsThesis
 {
-  my $self    = shift;
-  my $barcode = shift;
-  my $record  = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
 
   my $is = 0;
-  if ( ! $record ) { $self->SetError("no record in IsThesis($barcode)"); return 0; }
+  if ( ! $record ) { $self->SetError("no record in IsThesis($id)"); return 0; }
   eval {
     my $xpath = "//*[local-name()='datafield' and \@tag='502']/*[local-name()='subfield' and \@code='a']";
     my $doc  = $record->findvalue( $xpath );
@@ -4341,7 +4342,7 @@ sub IsThesis
       $is = 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
     }
   };
-  $self->SetError("failed in IsThesis($barcode): $@") if $@;
+  $self->SetError("failed in IsThesis($id): $@") if $@;
   return $is;
 }
 
@@ -4349,12 +4350,12 @@ sub IsThesis
 # language code); Translation (or variations thereof) in 500(a) note field.
 sub IsTranslation
 {
-  my $self    = shift;
-  my $barcode = shift;
-  my $record  = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
 
   my $is = 0;
-  if ( ! $record ) { $self->SetError("no record in IsTranslation($barcode)"); return 0; }
+  if ( ! $record ) { $self->SetError("no record in IsTranslation($id)"); return 0; }
   eval {
     my $xpath = "//*[local-name()='datafield' and \@tag='041' and \@ind1='1']/*[local-name()='subfield' and \@code='a']";
     my $lang  = $record->findvalue( $xpath );
@@ -4390,7 +4391,7 @@ sub IsTranslation
       }
     }
   };
-  $self->SetError("failed in IsTranslation($barcode): $@") if $@;
+  $self->SetError("failed in IsTranslation($id): $@") if $@;
   return $is;
 }
 
@@ -4481,16 +4482,16 @@ sub Normalize
 
 ## ----------------------------------------------------------------------------
 ##  Function:   get the publ date (260|c)for a specific vol.
-##  Parameters: barcode
+##  Parameters: volume id
 ##  Return:     date string
 ## ----------------------------------------------------------------------------
 sub GetPublDate
 {
-  my $self    = shift;
-  my $barcode = shift;
-  my $record  = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
 
-  $record = $self->GetRecordMetadata($barcode) unless $record;
+  $record = $self->GetRecordMetadata($id) unless $record;
   return 'unknown' unless $record;
   ## my $xpath = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
   my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
@@ -4500,11 +4501,11 @@ sub GetPublDate
 
 sub GetPubLanguage
 {
-  my $self    = shift;
-  my $barcode = shift;
-  my $record  = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
 
-  $record = $self->GetRecordMetadata($barcode) unless $record;
+  $record = $self->GetRecordMetadata($id) unless $record;
   if ( ! $record ) { return 0; }
 
   ## my $xpath = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
@@ -4515,12 +4516,12 @@ sub GetPubLanguage
 
 sub GetMarcFixfield
 {
-  my $self    = shift;
-  my $barcode = shift;
-  my $field   = shift;
+  my $self  = shift;
+  my $id    = shift;
+  my $field = shift;
 
-  my $record = $self->GetRecordMetadata($barcode);
-  if ( ! $record ) { $self->Logit( "failed in GetMarcFixfield: $barcode" ); }
+  my $record = $self->GetRecordMetadata($id);
+  if ( ! $record ) { $self->Logit( "failed in GetMarcFixfield: $id" ); }
 
   my $xpath = qq{//*[local-name()='oai_marc']/*[local-name()='fixfield' and \@id='$field']};
   return $record->findvalue( $xpath );
@@ -4528,13 +4529,13 @@ sub GetMarcFixfield
 
 sub GetMarcVarfield
 {
-  my $self    = shift;
-  my $barcode = shift;
-  my $field   = shift;
-  my $label   = shift;
+  my $self  = shift;
+  my $id    = shift;
+  my $field = shift;
+  my $label = shift;
 
-  my $record = $self->GetRecordMetadata($barcode);
-  if ( ! $record ) { $self->Logit( "failed in GetMarcVarfield: $barcode" ); }
+  my $record = $self->GetRecordMetadata($id);
+  if ( ! $record ) { $self->Logit( "failed in GetMarcVarfield: $id" ); }
 
   my $xpath = qq{//*[local-name()='oai_marc']/*[local-name()='varfield' and \@id='$field']} .
               qq{/*[local-name()='subfield' and \@label='$label']};
@@ -4544,12 +4545,12 @@ sub GetMarcVarfield
 
 sub GetMarcControlfield
 {
-  my $self    = shift;
-  my $barcode = shift;
-  my $field   = shift;
+  my $self  = shift;
+  my $id    = shift;
+  my $field = shift;
 
-  my $record = $self->GetRecordMetadata($barcode);
-  if ( ! $record ) { $self->Logit( "failed in GetMarcControlfield: $barcode" ); }
+  my $record = $self->GetRecordMetadata($id);
+  if ( ! $record ) { $self->Logit( "failed in GetMarcControlfield: $id" ); }
 
   my $xpath = qq{//*[local-name()='controlfield' and \@tag='$field']};
   return $record->findvalue( $xpath );
@@ -4816,83 +4817,74 @@ sub MetadataURL
 
 ## ----------------------------------------------------------------------------
 ##  Function:   get the metadata record (MARC21)
-##  Parameters: barcode
+##  Parameters: volume id
 ##  Return:     XML::LibXML record doc
 ## ----------------------------------------------------------------------------
 sub GetRecordMetadata
 {
-    my $self       = shift;
-    my $barcode    = shift;
-    my $parser     = $self->get( 'parser' );
-    
-    if ( ! $barcode ) { $self->Logit( "no barcode given: $barcode" ); return 0; }
-    $barcode = lc $barcode;
-    my ($ns,$bar) = split(/\./, $barcode);
+  my $self = shift;
+  my $id   = shift;
 
-    #my $sysId = $self->BarcodeToId( $barcode );
-    #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
-    #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
-    my $url = $self->MetadataURL($barcode);
-    
-    my $ua = LWP::UserAgent->new;
+  my $parser = $self->get( 'parser' );    
+  if ( ! $id ) { $self->Logit( "no volume id given: $id" ); return 0; }
+  $id = lc $id;
+  my ($ns,$bar) = split(/\./, $id);
 
-    if ($self->get("verbose")) { $self->Logit( "GET: $url" ); }
-    $ua->timeout( 1000 );
-    my $req = HTTP::Request->new( GET => $url );
-    my $res = $ua->request( $req );
+  #my $sysId = $self->BarcodeToId( $id );
+  #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
+  #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
+  my $url = $self->MetadataURL($id);
 
-    if ( ! $res->is_success ) { $self->Logit( "$url failed: ".$res->message() ); return; }
+  my $ua = LWP::UserAgent->new;
 
-    my $source;
-    eval {
-      my $content = Encode::decode('utf8', $res->content());
-      $source = $parser->parse_string( $content );
-    };
-    if ($@) { $self->SetError( "failed to parse ($url):$@" ); return; }
+  if ($self->get("verbose")) { $self->Logit( "GET: $url" ); }
+  $ua->timeout( 1000 );
+  my $req = HTTP::Request->new( GET => $url );
+  my $res = $ua->request( $req );
 
-    my $errorCode = $source->findvalue( "//*[name()='error']" );
-    if ( $errorCode ne '' )
-    {
-        $self->Logit( "$url \nfailed to get MARC for $barcode: $errorCode " . $res->content() );
-        return;
-    }
-    #my ($record) = $source->findnodes( "//record" );
-    my ($record) = $source->findnodes( "." );
-    return $record;
+  if ( ! $res->is_success ) { $self->Logit( "$url failed: ".$res->message() ); return; }
+
+  my $source;
+  eval {
+    my $content = Encode::decode('utf8', $res->content());
+    $source = $parser->parse_string( $content );
+  };
+  if ($@) { $self->SetError( "failed to parse ($url):$@" ); return; }
+
+  my $errorCode = $source->findvalue( "//*[name()='error']" );
+  if ( $errorCode ne '' )
+  {
+      $self->Logit( "$url \nfailed to get MARC for $id: $errorCode " . $res->content() );
+      return;
+  }
+  #my ($record) = $source->findnodes( "//record" );
+  my ($record) = $source->findnodes( "." );
+  return $record;
 }
 
 ## ----------------------------------------------------------------------------
-##  Function:   get the mirlyn ID for a given barcode
-##  Parameters: barcode
+##  Function:   get the mirlyn ID for a given volume id
+##  Parameters: volume id
 ##  Return:     ID
 ## ----------------------------------------------------------------------------
 sub BarcodeToId
 {
-    my $self       = shift;
-    my $barcode    = shift;
-    my $bc2metaUrl = $self->get( 'bc2metaUrl' );
-    my $barcodeID  = $self->get( 'barcodeID' );
+  my $self = shift;
+  my $id   = shift;
 
-    ## check the cache first
-    if ( $barcodeID->{$barcode} ne '' ) { return $barcodeID->{$barcode}; }
-
-    my $url = $bc2metaUrl . "?id=$barcode" . "&no_meta=1";
-    
-    my $ua = LWP::UserAgent->new;
-    $ua->timeout( 1000 );
-    my $req = HTTP::Request->new( GET => $url );
-    my $res = $ua->request( $req );
-
-    if ( ! $res->is_success ) { $self->Logit( "$url failed: ".$res->message() ); return; }
-
-    $res->content =~ m,<doc_number>\s*(\d+)\s*</doc_number>,s;
-    
-    my $id = $1;
-    if ( $id eq '' ) { return; }  ## error or not found
-    #$id = "MIU01-" . $id;
-
-    $barcodeID->{$barcode} = $id;   ## put into cache
-    return $id;
+  my $bc2metaUrl = $self->get( 'bc2metaUrl' );
+  my $url = $bc2metaUrl . "?id=$id" . "&no_meta=1";
+  my $ua = LWP::UserAgent->new;
+  $ua->timeout( 1000 );
+  my $req = HTTP::Request->new( GET => $url );
+  my $res = $ua->request( $req );
+  if ( ! $res->is_success )
+  {
+    $self->Logit( "$url failed: ".$res->message() );
+    return;
+  }
+  $res->content =~ m,<doc_number>\s*(\d+)\s*</doc_number>,s;
+  return $1;
 }
 
 sub GetReviewField
@@ -5215,7 +5207,7 @@ sub HasItemBeenReviewedByUser
 ##  Function:   get the next item to be reviewed (not something this user has
 ##              already reviewed)
 ##  Parameters: user name
-##  Return:     barcode
+##  Return:     volume id
 ## ----------------------------------------------------------------------------
 sub GetNextItemForReview
 {

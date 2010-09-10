@@ -110,7 +110,7 @@
 
       <tr style="background-color:[% active_color %];">
         <td>$item.id</td>
-        <td>[% crms.LinkToPT( item.id )  %]</td>
+        <td>[% crms.LinkToPT(item.id, item.title) %]</td>
         <td>[% cgi.escapeHTML(item.author) %]</td>
         <td>$item.pubdate</td>
         <td>$item.date</td>
