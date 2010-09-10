@@ -2495,7 +2495,7 @@ sub LinkToPT
   my $title = shift;
 
   $title = $self->GetTitle( $id ) unless $title;
-  $title = CGI::EscapeHTML($title);
+  $title = CGI::escapeHTML($title);
   my $url = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=';
   return "<a href='$url$id' target='_blank'>$title</a>";
 }
@@ -2507,7 +2507,7 @@ sub LinkToReview
   my $title = shift;
 
   $title = $self->GetTitle( $id ) unless $title;
-  $title = CGI::EscapeHTML($title);
+  $title = CGI::escapeHTML($title);
   my $url = "/cgi/c/crms/crms?p=review;barcode=$id;editing=1";
   return "<a href='$url' target='_blank'>$title</a>";
 }
