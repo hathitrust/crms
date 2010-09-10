@@ -176,13 +176,11 @@ function CheckAll(box,formid)
         [% END %]
       [% END %]
       <tr style="background-color:[% active_color %];">
-        <td>
+        <td nowrap="nowrap">
         [% IF p == 'editReviews' || p == 'holds' %]
           [% crms.DetailInfoForReview(review.id, review.user, p) %]
         [% ELSE %]
-          <span style="white-space:nowrap;">
           [% crms.DetailInfo(review.id, review.user, p) %]
-          </span>
         [% END %]
         [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' %]
           [% IF crms.IsLockedForOtherUser(review.id) %]
