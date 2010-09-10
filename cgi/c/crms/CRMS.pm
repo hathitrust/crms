@@ -198,10 +198,11 @@ sub GetCandidatesSize
 sub ProcessReviews
 {
   my $self = shift;
-  
-  my $sql = 'SELECT id,user,attr,reason,hold FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) ' .
+
+  my $dbh = $self->get( 'dbh' );
+  my $sql = 'SELECT id,user,attr,reason,renNum,renDate,hold FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) ' .
             'GROUP BY id HAVING count(*) = 2';
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  my $ref = $dbh->selectall_arrayref( $sql );
   my $today = $self->GetTodaysDate();
   foreach my $row ( @{$ref} )
   {
@@ -209,24 +210,34 @@ sub ProcessReviews
     my $user    = $row->[1];
     my $attr    = $row->[2];
     my $reason  = $row->[3];
-    my $hold    = $row->[4];
+    my $renNum  = $row->[4];
+    my $renDate = $row->[5];
+    my $hold    = $row->[6];
     
     next if $hold and $today lt $hold;
-    
-    $sql = "SELECT user,attr,reason,hold FROM reviews WHERE id='$id' AND user!='$user'";
-    my $ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );
-    my ($other_user, $other_attr, $other_reason, $other_hold) = @{ $ref2->[0] };
+    $sql = "SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id='$id' AND user!='$user'";
+    my $ref2 = $dbh->selectall_arrayref( $sql );
+    my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{ $ref2->[0] };
     next if $other_hold and $today lt $other_hold;
-    
-    if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
+    if ($attr == $other_attr)
     {
       # If both reviewers are non-advanced mark as provisional match
-      if ( (!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+      if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
       {
          $self->RegisterStatus( $id, 3 );
       }
       else #Mark as 4 - two that agree
       {
+        my $note = undef;
+        my $autoreason = 13;
+        my $doAuto = ($reason != $other_reason);
+        if ($attr == 2 && $reason == 7 && $other_reason == 7 && ($renNum ne $other_renNum || $renDate ne $other_renDate))
+        {
+          $note = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)', $renNum, $renDate, $other_renNum, $other_renDate;
+          $autoreason = $reason;
+          $doAuto = 1;
+        }
+        $self->SubmitReview($id,'autocrms',$attr,$autoreason,$note,undef,1,undef,'Attr Match',0,0) if $doAuto;
         $self->RegisterStatus( $id, 4 );
       }
     }
@@ -242,7 +253,7 @@ sub ProcessReviews
   # Clear out all the locks
   $sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
   $self->PrepareSubmitSql( $sql );
-  $sql = 'INSERT INTO processstatus VALUES ( )';
+  $sql = 'INSERT INTO processstatus VALUES ()';
   $self->PrepareSubmitSql( $sql );
 }
 
@@ -269,7 +280,7 @@ sub CheckPendingStatus
       my $other_attr    = $row->[1];
       my $other_reason  = $row->[2];
 
-      if ( ( $attr == $other_attr ) && ( $reason == $other_reason ) )
+      if ($attr == $other_attr)
       {
         # If both reviewers are non-advanced mark as provisional match
         if ( (!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
@@ -853,14 +864,22 @@ sub CloneReview
   }
   else
   {
-    my $sql = "SELECT attr,reason FROM reviews WHERE id='$id'";
+    my $note = undef;
+    my $sql = "SELECT attr,reason,renNum,renDate FROM reviews WHERE id='$id'";
     my $rows = $self->get('dbh')->selectall_arrayref($sql);
-    $result = $self->SubmitReview($id,$user,$rows->[0]->[0],$rows->[0]->[1],undef,undef,1,undef,'Expert Accepted');
+    my $attr = $rows->[0]->[0];
+    my $reason = $rows->[0]->[1];
+    if ($attr == 2 && $reason == 7 && ($rows->[0]->[2] ne $rows->[1]->[2] || $rows->[0]->[3] ne $rows->[1]->[3]))
+    {
+      $note = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)', $rows->[0]->[2], $rows->[0]->[3], $rows->[1]->[2], $rows->[1]->[3];
+    }
+    $result = $self->SubmitReview($id,$user,$attr,$reason,$note,undef,1,undef,'Expert Accepted');
     $result = ($result == 0)? "Could not approve review for $id":undef;
   }
   $self->UnlockItem($id, $user);
   return $result;
 }
+
 
 ## ----------------------------------------------------------------------------
 ##  Function:   submit review
@@ -877,6 +896,7 @@ sub SubmitReview
   # ValidateAttrReasonCombo sets error internally on fail.
   if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { return 0; }
 
+  my $dbh = $self->get('dbh');
   #remove any blanks from renNum
   $renNum =~ s/\s+//gs;
 
@@ -884,7 +904,7 @@ sub SubmitReview
   # This in once case got submitted as the renDate in production
   $renDate = '' if $renDate =~ m/searching.*/i;
 
-  $note = ($note)? $self->get('dbh')->quote($note):'NULL';
+  $note = ($note)? $dbh->quote($note):'NULL';
 
   my $priority = $self->GetPriority( $id );
 
@@ -892,7 +912,7 @@ sub SubmitReview
 
   if ($question)
   {
-    $hold = $self->get('dbh')->quote($self->HoldExpiry($id, $user, 0));
+    $hold = $dbh->quote($self->HoldExpiry($id, $user, 0));
     my $sql = "INSERT INTO note (note) VALUES ('hold from $user on $id')";
     $self->PrepareSubmitSql($sql);
   }
@@ -1592,17 +1612,63 @@ sub SearchTermsToSQL
   my ($search1term, $search2term, $search3term);
   $op1 = 'AND' unless $op1;
   $op2 = 'AND' unless $op2;
+  # Pull down search 2 if no search 1
+  if (!length $search1value)
+  {
+    $search1 = $search2;
+    $search2 = $search3;
+    $search1value = $search2value;
+    $search2value = $search3value;
+    $search3value = $search3 = undef;
+  }
+  # Pull down search 3 if no search 2
+  if (!length $search2value)
+  {
+    $search2 = $search3;
+    $search2value = $search3value;
+    $search3value = $search3 = undef;
+  }
   $search1 = "YEAR($search1)" if $search1 =~ /pub_date/;
   $search2 = "YEAR($search2)" if $search2 =~ /pub_date/;
   $search3 = "YEAR($search3)" if $search3 =~ /pub_date/;
+  if ($search1 eq 'r.attr' and $search1value !~ m/^\d+$/)
+  {
+    my $tmp = $self->GetRightsNum($search1value);
+    $search1value = $tmp if $tmp;
+  }
+  if ($search2 eq 'r.attr' and $search2value !~ m/^\d+$/)
+  {
+    my $tmp = $self->GetRightsNum($search2value);
+    $search2value = $tmp if $tmp;
+  }
+  if ($search3 eq 'r.attr' and $search3value !~ m/^\d+$/)
+  {
+    my $tmp = $self->GetRightsNum($search3value);
+    $search3value = $tmp if $tmp;
+  }
+  if ($search1 eq 'r.reason' and $search1value !~ m/^\d+$/)
+  {
+    my $tmp = $self->GetReasonNum($search1value);
+    $search1value = $tmp if $tmp;
+  }
+  if ($search2 eq 'r.reason' and $search2value !~ m/^\d+$/)
+  {
+    my $tmp = $self->GetReasonNum($search2value);
+    $search2value = $tmp if $tmp;
+  }
+  if ($search3 eq 'r.reason' and $search3value !~ m/^\d+$/)
+  {
+    my $tmp = $self->GetReasonNum($search3value);
+    $search3value = $tmp if $tmp;
+  }
   if ( $search1value =~ m/.*\*.*/ )
   {
     $search1value =~ s/\*/_____/gs;
-    $search1term = qq{$search1 LIKE '$search1value'};
+    $search1term = "$search1 LIKE '$search1value'";
   }
   elsif (length $search1value)
   {
-    $search1term = qq{$search1 = '$search1value'};
+    $search1term = "$search1 = '$search1value'";
   }
   if ( $search2value =~ m/.*\*.*/ )
   {
@@ -1665,22 +1731,51 @@ sub SearchTermsToSQLWide
   my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table) = @_;
   $op1 = 'AND' unless $op1;
   $op2 = 'AND' unless $op2;
+  if ($search1 eq 'r.attr' and $search1value !~ m/^\d+$/)
+  {
+    my $tmp = $self->GetRightsNum($search1value);
+    $search1value = $tmp if $tmp;
+  }
+  if ($search2 eq 'r.attr' and $search2value !~ m/^\d+$/)
+  {
+    my $tmp = $self->GetRightsNum($search2value);
+    $search2value = $tmp if $tmp;
+  }
+  if ($search3 eq 'r.attr' and $search3value !~ m/^\d+$/)
+  {
+    my $tmp = $self->GetRightsNum($search3value);
+    $search3value = $tmp if $tmp;
+  }
+  if ($search1 eq 'r.reason' and $search1value !~ m/^\d+$/)
+  {
+    my $tmp = $self->GetReasonNum($search1value);
+    $search1value = $tmp if $tmp;
+  }
+  if ($search2 eq 'r.reason' and $search2value !~ m/^\d+$/)
+  {
+    my $tmp = $self->GetReasonNum($search2value);
+    $search2value = $tmp if $tmp;
+  }
+  if ($search3 eq 'r.reason' and $search3value !~ m/^\d+$/)
+  {
+    my $tmp = $self->GetReasonNum($search3value);
+    $search3value = $tmp if $tmp;
+  }
   # Pull down search 2 if no search 1
   if (!length $search1value)
   {
     $search1 = $search2;
-    $op1 = $op2;
     $search2 = $search3;
     $search1value = $search2value;
     $search2value = $search3value;
-    $search3value = undef;
+    $search3value = $search3 = undef;
   }
   # Pull down search 3 if no search 2
   if (!length $search2value)
   {
     $search2 = $search3;
     $search2value = $search3value;
-    $search3value = undef;
+    $search3value = $search3 = undef;
   }
   my %pref2table = ('b'=>'bibdata','r'=>$table,'q'=>'queue');
   my $table1 = $pref2table{substr $search1,0,1};
@@ -2461,6 +2556,7 @@ sub ValidateAttrReasonCombo
   my $attr    = shift;
   my $reason  = shift;
 
+  return 13 if $reason == 13;
   my $code = $self->GetCodeFromAttrReason($attr,$reason);
   $self->SetError( "bad attr/reason: $attr/$reason" ) unless $code;
   return $code;
@@ -2517,7 +2613,7 @@ sub GetAttrReasonCode
   my $id   = shift;
   my $user = shift;
 
-  my $sql = qq{ SELECT attr, reason FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
+  my $sql = "SELECT attr, reason FROM reviews WHERE id='$id' AND user='$user'";
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
   my $rights = $self->GetRightsName( $ref->[0]->[0] );
   my $reason = $self->GetReasonName( $ref->[0]->[1] );
@@ -2577,11 +2673,12 @@ sub CheckReviewer
   my $user = shift;
   my $exp  = shift;
 
-  my $isReviewer = 1;
+  return 1 if $user eq 'autocrms';
+  my $isReviewer = $self->IsUserReviewer($user);
   my $isAdvanced = $self->IsUserAdvanced($user);
   my $isExpert = $self->IsUserExpert($user);
   return $isExpert if $exp;
-  return $isReviewer or $isExpert;
+  return ($isReviewer || $isAdvanced || $isExpert);
 }
 
 sub GetUserName
@@ -5188,8 +5285,9 @@ sub GetReasonName
   my $self = shift;
   my $id   = shift;
   
-  my %reasons = (1 => 'bib', 2 => 'ncn', 3 => 'con',   4 => 'ddd',  5 => 'man',  6 => 'pvt',
-                 7 => 'ren', 8 => 'nfi', 9 => 'cdpp', 10 => 'cip', 11 => 'unp', 12 => 'gfv');
+  my %reasons = ( 1 => 'bib', 2 => 'ncn', 3 => 'con',   4 => 'ddd',  5 => 'man',  6 => 'pvt',
+                  7 => 'ren', 8 => 'nfi', 9 => 'cdpp', 10 => 'cip', 11 => 'unp', 12 => 'gfv',
+                 13 => 'crms');
   return $reasons{$id};
 }
 
@@ -5208,8 +5306,9 @@ sub GetReasonNum
   my $self = shift;
   my $id   = shift;
   
-  my %reasons = ('bib' => 1, 'ncn' => 2, 'con' => 3, 'ddd' => 4, 'man' => 5, 'pvt' => 6,
-                 'ren' => 7, 'nfi' => 8, 'cdpp' => 9, 'cip' => 10, 'unp' => 11);
+  my %reasons = ('bib'  => 1, 'ncn' => 2, 'con'  => 3, 'ddd' => 4,  'man' => 5,  'pvt' => 6,
+                 'ren'  => 7, 'nfi' => 8, 'cdpp' => 9, 'cip' => 10, 'unp' => 11, 'gfv' => 12,
+                 'crms' => 13);
   return $reasons{$id};
 }
 
@@ -5787,7 +5886,7 @@ sub CountAllReviewsForUser
 sub IsReviewCorrect
 {
   my $self = shift;
-  my $id = shift;
+  my $id   = shift;
   my $user = shift;
   my $time = shift;
   
@@ -5795,41 +5894,22 @@ sub IsReviewCorrect
   my $sql = "SELECT COUNT(id) FROM historicalreviews WHERE id='$id' AND swiss=1";
   my $swiss = $self->SimpleSqlGet($sql);
   # Get the review
-  $sql = "SELECT attr,reason,renNum,renDate,expert FROM historicalreviews WHERE id='$id' AND user='$user' AND time='$time'";
+  $sql = "SELECT attr,reason,expert FROM historicalreviews WHERE id='$id' AND user='$user' AND time='$time'";
   my $r = $self->get('dbh')->selectall_arrayref($sql);
   my $row = $r->[0];
   my $attr = $row->[0];
   my $reason = $row->[1];
-  my $renNum = $row->[2];
-  my $renDate = $row->[3];
-  my $expert = $row->[4];
-  #print "user $user $attr $reason $renNum $renDate\n";
+  my $expert = $row->[2];
   # Get the most recent expert review
-  $sql = "SELECT attr,reason,renNum,renDate,user,category FROM historicalreviews WHERE id='$id' AND expert>0 ORDER BY time DESC";
+  $sql = "SELECT attr,reason FROM historicalreviews WHERE id='$id' AND expert>0 ORDER BY time DESC";
   $r = $self->get('dbh')->selectall_arrayref($sql);
   return 1 unless scalar @{$r};
   $row = $r->[0];
   my $eattr = $row->[0];
-  my $ereason = $row->[1];
-  my $erenNum = $row->[2];
-  my $erenDate = $row->[3];
-  my $euser = $row->[4];
-  my $ecat = $row->[5];
-  #print "expert ($euser) $eattr $ereason $erenNum $erenDate\n";
-  #print "$user $attr $reason $renNum $renDate\n";
-  if ($attr != $eattr || $reason != $ereason)
+  #my $ereason = $row->[1];
+  if ($attr != $eattr)
   {
-    #print ("$attr != $eattr || $reason != $ereason\n");
     return ($swiss && !$expert)? 2:0;
-  }
-  if ($eattr == 2 && $ereason == 7 && $attr == 2 && $reason == 7)
-  {
-    #print "$renNum ne $erenNum || $renDate ne $erenDate\n";
-    if ($renNum ne $erenNum || $renDate ne $erenDate)
-    {
-      return 1 if $ecat eq 'Expert Accepted';
-      return ($swiss && !$expert)? 2:0;
-    }
   }
   return 1;
 }
