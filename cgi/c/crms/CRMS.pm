@@ -1256,6 +1256,7 @@ sub ConvertToSearchTerm
     elsif ( $search eq 'Attribute' ) { $new_search = 'r.attr'; }
     elsif ( $search eq 'Reason' ) { $new_search = 'r.reason'; }
     elsif ( $search eq 'NoteCategory' ) { $new_search = 'r.category'; }
+    elsif ( $search eq 'Note' ) { $new_search = 'r.note'; }
     elsif ( $search eq 'Legacy' ) { $new_search = 'r.legacy'; }
     elsif ( $search eq 'Title' ) { $new_search = 'b.title'; }
     elsif ( $search eq 'Author' ) { $new_search = 'b.author'; }
@@ -6159,28 +6160,28 @@ sub ReviewSearchMenu
   my $searchVal = shift;
   
   my @keys = ('Identifier','Title','Author','PubDate', 'Status','Legacy','UserId','Attribute',
-              'Reason',       'NoteCategory', 'Priority', 'Validated', 'Swiss', 'Hold Thru');
+              'Reason', 'NoteCategory', 'Note', 'Priority', 'Validated', 'Swiss', 'Hold Thru');
   my @labs = ('Identifier','Title','Author','Pub Date','Status','Legacy','User',  'Attribute',
-              'Reason','Note Category','Priority', 'Verdict',   'Swiss', 'Hold Thru');
+              'Reason','Note Category', 'Note', 'Priority', 'Verdict',   'Swiss', 'Hold Thru');
   if ($page ne 'adminReviews' && $page ne 'editReviews' && $page ne 'holds')
   {
-    splice @keys, 13, 2;
-    splice @labs, 13, 2;
+    splice @keys, 14, 2;
+    splice @labs, 14, 2;
   }
   if (!$self->IsUserExpert())
+  {
+    splice @keys, 13, 1;
+    splice @labs, 13, 1;
+  }
+  if ($page ne 'adminHistoricalReviews')
   {
     splice @keys, 12, 1;
     splice @labs, 12, 1;
   }
-  if ($page ne 'adminHistoricalReviews')
+  if (!$self->IsUserAdmin())
   {
     splice @keys, 11, 1;
     splice @labs, 11, 1;
-  }
-  if (!$self->IsUserAdmin())
-  {
-    splice @keys, 10, 1;
-    splice @labs, 10, 1;
   }
   if ($page eq 'userReviews' || $page eq 'editReviews')
   {
