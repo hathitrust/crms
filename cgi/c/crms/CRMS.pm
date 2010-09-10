@@ -872,6 +872,8 @@ sub CloneReview
     {
       $note = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)', $rows->[0]->[2], $rows->[0]->[3], $rows->[1]->[2], $rows->[1]->[3];
     }
+    # If reasons mismatch, reason is 'crms'.
+    $reason = 'crms' if $rows->[0]->[1] ne $rows->[1]->[1];
     $result = $self->SubmitReview($id,$user,$attr,$reason,$note,undef,1,undef,'Expert Accepted');
     $result = ($result == 0)? "Could not approve review for $id":undef;
   }
@@ -956,7 +958,7 @@ sub SubmitReview
       my $expcnt = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id' AND expert=1");
       $sql = "UPDATE $CRMSGlobals::queueTable SET expcnt=$expcnt WHERE id='$id'";
       $result = $self->PrepareSubmitSql( $sql );
-      my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $category);
+      my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $category, $renNum, $renDate);
       #We have decided to register the expert decision right away.
       $self->RegisterStatus($id, $status);
     }
@@ -975,18 +977,32 @@ sub GetStatusForExpertReview
   my $attr     = shift;
   my $reason   = shift;
   my $category = shift;
+  my $renNum   = shift;
+  my $renDate  = shift;
   
+  return 7 if $category eq 'Expert Accepted';
   my $status = 5;
   # See if it's a provisional match and expert agreed with both of existing non-advanced reviews. If so, status 7.
-  my $sql = "SELECT attr,reason FROM reviews WHERE id='$id' AND user IN (SELECT id FROM users WHERE expert=0 AND advanced=0)";
+  my $sql = "SELECT attr,reason,renNum,renDate FROM reviews WHERE id='$id' AND user IN (SELECT id FROM users WHERE expert=0 AND advanced=0)";
   my $ref = $self->get('dbh')->selectall_arrayref($sql);
   if (scalar @{ $ref } >= 2)
   {
     my $attr1    = $ref->[0]->[0];
     my $reason1  = $ref->[0]->[1];
+    my $renNum1  = $ref->[0]->[2];
+    my $renDate1 = $ref->[0]->[3];
     my $attr2    = $ref->[1]->[0];
     my $reason2  = $ref->[1]->[1];
-    $status = 7 if $attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1;
+    my $renNum2  = $ref->[1]->[2];
+    my $renDate2 = $ref->[1]->[3];
+    if ($attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1)
+    {
+      $status = 7;
+      if ($attr1 == 2 && $reason1 == 7)
+      {
+        $status = 5 if ($renNum ne $renNum1 || $renNum ne $renNum2 || $renDate ne $renDate1 || $renDate ne $renDate2);
+      }
+    }
   }
   return $status;
 }
@@ -3527,6 +3543,7 @@ sub CreateStatsData
   
   #print "CreateStatsData($user,$cumulative,$year,$inval)<br/>\n";
   my $instusers = undef;
+  my $instusersne = undef;
   my $dbh = $self->get( 'dbh' );
   $year = ($self->GetTheYearMonth())[0] unless $year;
   my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear($year);
@@ -3537,7 +3554,9 @@ sub CreateStatsData
     my $inst = substr $user, 5;
     #print "inst '$inst'<br/>\n";
     $username = "All $inst Reviewers";
-    $instusers = sprintf "'%s'", join "','", @{ $self->GetUsersWithAffiliation($inst) };
+    my $affs = $self->GetUsersWithAffiliation($inst);
+    $instusers = sprintf "'%s'", join "','", @{ $affs };
+    $instusersne = sprintf "'%s'", join "','", map { ($self->IsUserExpert($_))? ():$_} @{ $affs };
   }
   else { $username = $self->GetUserName($user) };
   #print "username '$username', instusers $instusers<br/>\n";
@@ -3578,7 +3597,7 @@ sub CreateStatsData
       $stats{$title}{$date} = $row->[$i];
       $i++;
     }
-    my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($mintime, $maxtime, $instusers);
+    my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($mintime, $maxtime, $instusersne);
     #print "total $total correct $correct incorrect $incorrect neutral $neutral for $mintime to $maxtime<br/>\n";
     my $whichone = ($inval)? $incorrect:$correct;
     my $pct = eval{100.0*$whichone/$total;};
@@ -3618,7 +3637,7 @@ sub CreateStatsData
   }
   my ($year,$month) = split '-', $latest;
   my $lastDay = Days_in_Month($year,$month);
-  my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, $latest, $instusers);
+  my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, $latest, $instusersne);
   #print "total $total correct $correct incorrect $incorrect neutral $neutral for $earliest to $latest<br/>\n";
   my $whichone = ($inval)? $incorrect:$correct;
   my $pct = eval{100.0*$whichone/$total;};
@@ -3658,7 +3677,7 @@ sub CreateStatsData
       $ptotals{$title} = $row->[$i];
       $i++;
     }
-    my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, '3000-01', $instusers);
+    my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, '3000-01', $instusersne);
     #print "total $total correct $correct incorrect $incorrect neutral $neutral for $earliest to $latest for $user<br/>\n";
     my $whichone = ($inval)? $incorrect:$correct;
     my $pct = eval{100.0*$whichone/$total;};
@@ -5879,22 +5898,31 @@ sub IsReviewCorrect
   my $sql = "SELECT COUNT(id) FROM historicalreviews WHERE id='$id' AND swiss=1";
   my $swiss = $self->SimpleSqlGet($sql);
   # Get the review
-  $sql = "SELECT attr,reason,expert FROM historicalreviews WHERE id='$id' AND user='$user' AND time='$time'";
+  $sql = "SELECT attr,reason,renNum,renDate,expert FROM historicalreviews WHERE id='$id' AND user='$user' AND time='$time'";
   my $r = $self->get('dbh')->selectall_arrayref($sql);
   my $row = $r->[0];
-  my $attr = $row->[0];
-  my $reason = $row->[1];
-  my $expert = $row->[2];
-  # Get the most recent expert review
-  $sql = "SELECT attr,reason FROM historicalreviews WHERE id='$id' AND expert>0 ORDER BY time DESC";
+  my $attr    = $row->[0];
+  my $reason  = $row->[1];
+  my $renNum  = $row->[2];
+  my $renDate = $row->[3];
+  my $expert  = $row->[4];
+  # Get the most recent non-autocrms expert review
+  $sql = "SELECT attr,reason,renNum,renDate FROM historicalreviews WHERE id='$id' AND user!='autocrms' AND expert>0 ORDER BY time DESC";
   $r = $self->get('dbh')->selectall_arrayref($sql);
   return 1 unless scalar @{$r};
   $row = $r->[0];
-  my $eattr = $row->[0];
-  #my $ereason = $row->[1];
+  my $eattr    = $row->[0];
+  my $ereason  = $row->[1];
+  my $erenNum  = $row->[2];
+  my $erenDate = $row->[3];
   if ($attr != $eattr)
   {
     return ($swiss && !$expert)? 2:0;
+  }
+  if ($reason != $ereason ||
+      ($attr == 2 && $reason == 7 && ($renNum != $erenNum || $renDate != $erenDate)))
+  {
+    return 0;
   }
   return 1;
 }
