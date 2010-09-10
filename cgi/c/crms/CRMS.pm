@@ -1112,22 +1112,16 @@ sub MoveFromReviewsToHistoricalReviews
   my $id   = shift;
   my $gid  = shift;
 
-  $self->Logit( "store $id in historicalreviews" );
-
+  #$self->Logit( "store $id in historicalreviews" );
   my $sql = "SELECT source FROM queue WHERE id='$id'";
   my $source = $self->SimpleSqlGet($sql);
   my $status = $self->GetStatus( $id );
-
   $sql = 'INSERT into historicalreviews (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, source, status, gid, swiss) ' .
          "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, '$source', $status, $gid, swiss from reviews where id='$id'";
   $self->PrepareSubmitSql( $sql );
-
-  $self->Logit( "remove $id from reviews" );
-
-  $sql = "DELETE FROM $CRMSGlobals::reviewsTable WHERE id='$id'";
+  #$self->Logit( "remove $id from reviews" );
+  $sql = "DELETE FROM reviews WHERE id='$id'";
   $self->PrepareSubmitSql( $sql );
-
-  return 1;
 }
 
 
@@ -1137,13 +1131,11 @@ sub GetFinalAttrReason
   my $id   = shift;
 
   ## order by expert so that if there is an expert review, return that one
-  my $sql = qq{SELECT attr, reason FROM $CRMSGlobals::reviewsTable WHERE id = "$id" } .
-            qq{ORDER BY expert DESC, time DESC LIMIT 1};
+  my $sql = "SELECT attr,reason FROM reviews WHERE id='$id' ORDER BY expert DESC, time DESC LIMIT 1";
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
   if ( ! $ref->[0]->[0] )
   {
-      $self->Logit( "$id not found in review table" );
+    $self->SetError( "$id not found in review table" );
   }
   my $attr   = $self->GetRightsName( $ref->[0]->[0] );
   my $reason = $self->GetReasonName( $ref->[0]->[1] );
@@ -6176,8 +6168,8 @@ sub ReviewSearchMenu
   
   my @keys = ('Identifier','Title','Author','PubDate', 'Status','Legacy','UserId','Attribute',
               'Reason',       'NoteCategory', 'Priority', 'Validated', 'Swiss', 'Hold Thru');
-  my @labs = ('Identifier','Title','Author','Pub Date','Status','Legacy','User',  'Attr Number',
-              'Reason Number','Note Category','Priority', 'Verdict',   'Swiss', 'Hold Thru');
+  my @labs = ('Identifier','Title','Author','Pub Date','Status','Legacy','User',  'Attribute',
+              'Reason','Note Category','Priority', 'Verdict',   'Swiss', 'Hold Thru');
   if ($page ne 'adminReviews' && $page ne 'editReviews' && $page ne 'holds')
   {
     splice @keys, 13, 2;
