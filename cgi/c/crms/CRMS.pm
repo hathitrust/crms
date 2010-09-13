@@ -873,7 +873,7 @@ sub CloneReview
       $note = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)', $rows->[0]->[2], $rows->[0]->[3], $rows->[1]->[2], $rows->[1]->[3];
     }
     # If reasons mismatch, reason is 'crms'.
-    $reason = 'crms' if $rows->[0]->[1] ne $rows->[1]->[1];
+    $reason = 13 if $rows->[0]->[1] ne $rows->[1]->[1];
     $result = $self->SubmitReview($id,$user,$attr,$reason,$note,undef,1,undef,'Expert Accepted');
     $result = ($result == 0)? "Could not approve review for $id":undef;
   }
@@ -4310,7 +4310,6 @@ sub IsProbableGovDoc
   {
     return 1 unless $field260a or $field260b;
     return 1 if $field260a =~ m/^\[?washington/i;
-    print ".\n";
     return 1 if $field260b and ($field260b =~ m/^u\.s\.\s+g\.p\.o\./i or $field260b =~ m/^u\.s\.\s+govt\.\s+print\.\s+off\./i);
   }
   return 1 if $author =~ m/^library\s+of\s+congress/i and $field260a =~ m/^washington/i;
