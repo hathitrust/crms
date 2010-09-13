@@ -5897,7 +5897,7 @@ sub IsReviewCorrect
   my $sql = "SELECT COUNT(id) FROM historicalreviews WHERE id='$id' AND swiss=1";
   my $swiss = $self->SimpleSqlGet($sql);
   # Get the review
-  $sql = "SELECT attr,reason,renNum,renDate,expert FROM historicalreviews WHERE id='$id' AND user='$user' AND time='$time'";
+  $sql = "SELECT attr,reason,renNum,renDate,expert,status FROM historicalreviews WHERE id='$id' AND user='$user' AND time='$time'";
   my $r = $self->get('dbh')->selectall_arrayref($sql);
   my $row = $r->[0];
   my $attr    = $row->[0];
@@ -5905,8 +5905,11 @@ sub IsReviewCorrect
   my $renNum  = $row->[2];
   my $renDate = $row->[3];
   my $expert  = $row->[4];
+  my $status  = $row->[5];
+  # A non-expert with status 7 is protected rather like Swiss.
+  return 1 if ($status == 7 && !$expert);
   # Get the most recent non-autocrms expert review
-  $sql = "SELECT attr,reason,renNum,renDate FROM historicalreviews WHERE id='$id' AND user!='autocrms' AND expert>0 ORDER BY time DESC";
+  $sql = "SELECT attr,reason,renNum,renDate,category FROM historicalreviews WHERE id='$id' AND user!='autocrms' AND expert>0 ORDER BY time DESC";
   $r = $self->get('dbh')->selectall_arrayref($sql);
   return 1 unless scalar @{$r};
   $row = $r->[0];
