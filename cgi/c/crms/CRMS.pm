@@ -3526,13 +3526,14 @@ sub CreateExportStatusGraph
 sub CreateStatsData
 {
   my $self        = shift;
+  my $page        = shift;
   my $user        = shift;
   my $cumulative  = shift;
   my $year        = shift;
   my $inval       = shift;
   my $nononexpert = shift;
   
-  #print "CreateStatsData($user,$cumulative,$year,$inval)<br/>\n";
+  #print "CreateStatsData($page,$user,$cumulative,$year,$inval,$nononexpert)<br/>\n";
   my $instusers = undef;
   my $instusersne = undef;
   my $dbh = $self->get( 'dbh' );
@@ -3560,7 +3561,7 @@ sub CreateStatsData
   my @titles = ('PD Reviews', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'IC Reviews', 'ic/ren', 'ic/cdpp', 'UND/NFI Reviews',
                 '__TOT__', '__TOTNE__', '__NEUT__', '__VAL__', '__AVAL__',
                 'Time Reviewing (mins)', 'Time per Review (mins)','Reviews per Hour', 'Outlier Reviews');
-  my $which = ($inval)? 'total_incorrect':'total_correct';
+  my $which = ($inval)? 'SUM(total_incorrect)':($page eq 'userRate')? 'SUM(total_correct)+SUM(total_neutral)':'SUM(total_correct)';
   foreach my $date (@statdates)
   {
     push @usedates, $date;
@@ -3573,7 +3574,7 @@ sub CreateStatsData
                SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
                SUM(total_ic_ren) + SUM(total_ic_cdpp),
                SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews),
-               1, SUM(total_neutral), SUM($which), 1, SUM(total_time),
+               1, SUM(total_neutral), $which, 1, SUM(total_time),
                SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
                FROM userstats WHERE monthyear >= '$mintime' AND monthyear <= '$maxtime'";
@@ -3589,6 +3590,7 @@ sub CreateStatsData
       $i++;
     }
     my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($mintime, $maxtime, $instusersne);
+    $correct += $neutral if $page eq 'userRate';
     #print "total $total correct $correct incorrect $incorrect neutral $neutral for $mintime to $maxtime<br/>\n";
     my $whichone = ($inval)? $incorrect:$correct;
     my $pct = eval{100.0*$whichone/$total;};
@@ -3611,7 +3613,7 @@ sub CreateStatsData
                SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
                SUM(total_ic_ren) + SUM(total_ic_cdpp),
                SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews),
-               1, SUM(total_neutral), SUM($which), 1, SUM(total_time),
+               1, SUM(total_neutral), $which, 1, SUM(total_time),
                SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
                FROM userstats WHERE monthyear >= '$earliest' AND monthyear <= '$latest'};
@@ -3629,6 +3631,7 @@ sub CreateStatsData
   my ($year,$month) = split '-', $latest;
   my $lastDay = Days_in_Month($year,$month);
   my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, $latest, $instusersne);
+  $correct += $neutral if $page eq 'userRate';
   #print "total $total correct $correct incorrect $incorrect neutral $neutral for $earliest to $latest<br/>\n";
   my $whichone = ($inval)? $incorrect:$correct;
   my $pct = eval{100.0*$whichone/$total;};
@@ -3653,7 +3656,7 @@ sub CreateStatsData
                SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
                SUM(total_ic_ren) + SUM(total_ic_cdpp),
                SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews),
-               1, SUM(total_neutral), SUM($which), 1, SUM(total_time),
+               1, SUM(total_neutral), $which, 1, SUM(total_time),
                SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
                FROM userstats WHERE monthyear >= '$earliest'};
@@ -3669,6 +3672,7 @@ sub CreateStatsData
       $i++;
     }
     my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, '3000-01', $instusersne);
+    $correct += $neutral if $page eq 'userRate';
     #print "total $total correct $correct incorrect $incorrect neutral $neutral for $earliest to $latest for $user<br/>\n";
     my $whichone = ($inval)? $incorrect:$correct;
     my $pct = eval{100.0*$whichone/$total;};
@@ -3766,6 +3770,7 @@ sub CreateStatsData
 sub CreateStatsReport
 {
   my $self              = shift;
+  my $page              = shift;
   my $user              = shift;
   my $cumulative        = shift;
   my $suppressBreakdown = shift;
@@ -3775,7 +3780,7 @@ sub CreateStatsReport
   
   # FIXME: remove this param completely?
   $suppressBreakdown = 1;
-  my $data = $self->CreateStatsData($user, $cumulative, $year, $inval, $nononexpert);
+  my $data = $self->CreateStatsData($page, $user, $cumulative, $year, $inval, $nononexpert);
   my @lines = split m/\n/, $data;
   my $report = sprintf("<span style='font-size:1.3em;'><!--NAME--><b>%s</b></span><!--LINK-->\n<br/><table class='exportStats'>\n<tr>\n", shift @lines);
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
@@ -3794,10 +3799,10 @@ sub CreateStatsReport
   {
     my @items = split(',', $line);
     my $title = shift @items;
-    next if $title eq '__VAL__'  and ($exp);
+    next if $title eq '__VAL__' and ($exp);
     next if $title eq '__MVAL__' and ($exp);
     next if $title eq '__AVAL__' and ($exp);
-    next if $title eq '__NEUT__' and ($exp);
+    next if $title eq '__NEUT__' && ($exp || $page eq 'userRate');
     next if $title eq '__TOTNE__' and ($user ne 'all' and $user !~ m/all__/ and !$cumulative);
     next if ($cumulative or $user eq 'all' or $user !~ m/all__/ or $suppressBreakdown) and !exists $majors{$title} and !exists $minors{$title} and $title !~ m/__.+?__/;
     my $class = (exists $majors{$title})? 'major':(exists $minors{$title})? 'minor':'';
@@ -3829,9 +3834,11 @@ sub CreateStatsReport
   $report =~ s/__TOTNE__/Non-Expert&nbsp;Reviews/;
   my $vtitle = 'Validated&nbsp;Reviews&nbsp;&amp;&nbsp;Rate';
   $vtitle = 'Invalidated&nbsp;Reviews&nbsp;&amp;&nbsp;Rate' if $inval;
+  $vtitle = 'Valid&nbsp;Reviews&nbsp;&amp;&nbsp;Rate**' if $page eq 'userRate';
   $report =~ s/__VAL__/$vtitle/;
   my $avtitle = 'Validation&nbsp;Rate&nbsp;(all&nbsp;reviewers)';
   $avtitle = 'Invalidation&nbsp;Rate&nbsp;(all&nbsp;reviewers)' if $inval;
+  $avtitle = 'Validation&nbsp;Rate&nbsp;(all&nbsp;reviewers)**' if $page eq 'userRate';
   $report =~ s/__AVAL__/$avtitle/;
   my $ntitle = 'Neutral&nbsp;Reviews&nbsp;&amp;&nbsp;Rate';
   $report =~ s/__NEUT__/$ntitle/;
