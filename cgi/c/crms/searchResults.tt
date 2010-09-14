@@ -151,11 +151,12 @@ function CheckAll(box,formid)
     <th>User</th>
     <th>Attr</th>
     <th>Reason</th>
+    [% IF p == 'undReviews' %]<th>Renewal</th>[% END %]
     <th>Note&nbsp;Category</th>
     <th>Note</th>
     [% IF crms.IsUserAdmin() %]<th>Priority</th>[% END %]
     [% IF p == 'adminHistoricalReviews' %]<th>Verdict</th>[% END %]
-    [% IF crms.IsUserExpert() %]<th>Swiss</th>[% END %]
+    [% IF crms.IsUserExpert() && p != 'undReviews' && p != 'expert' %]<th>Swiss</th>[% END %]
     [% IF p == 'undReviews' %]<th>Select</th>[% END %]
     [% IF p == 'adminReviews' || p == 'editReviews' || p == 'holds' %]
       <th>Hold&nbsp;Thru</th>
@@ -205,6 +206,7 @@ function CheckAll(box,formid)
         <td>$review.user</td>
         <td>$review.attr</td>
         <td>$review.reason</td>
+        [% IF p == 'undReviews' %]<td>$review.renNum</td>[% END %]
         <td>$review.category</td>
         <td>[% cgi.escapeHTML(review.note) %]</td>
         [% IF crms.IsUserAdmin() %]<td>$review.priority</td>[% END %]
@@ -214,7 +216,7 @@ function CheckAll(box,formid)
             <img width="16" height="16" alt="Correctness" src="/c/crms/[% icon %]"/>
           </td>
         [% END %]
-        [% IF crms.IsUserExpert() %]<td>$review.swiss</td>[% END %]
+        [% IF crms.IsUserExpert() && p != 'undReviews' && p != 'expert' %]<td>$review.swiss</td>[% END %]
         [% IF p == 'undReviews' %]
         <td align="center">
           [% IF first && !crms.IsLockedForOtherUser(review.id) %]
