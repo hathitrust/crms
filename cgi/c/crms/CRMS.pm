@@ -3555,6 +3555,7 @@ sub CreateStatsData
   my $label = "$username: " . (($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative":$year);
   my $report = sprintf("$label\nCategories,Project Total%s", (!$cumulative)? ",Total $year":'');
   my %stats = ();
+  my %totals = ();
   my @usedates = ();
   my $earliest = '';
   my $latest = '';
@@ -3570,9 +3571,9 @@ sub CreateStatsData
     my $maxtime = $date . (($cumulative)? '-12':'');
     $earliest = $mintime if $earliest eq '' or $mintime lt $earliest;
     $latest = $maxtime if $latest eq '' or $maxtime gt $latest;
-    my $sql = "SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
+    my $sql = "SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp) + SUM(total_pd_crms),
                SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
-               SUM(total_ic_ren) + SUM(total_ic_cdpp),
+               SUM(total_ic_ren) + SUM(total_ic_cdpp) + SUM(total_ic_crms),
                SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews),
                1, SUM(total_neutral), $which, 1, SUM(total_time),
                SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
@@ -3587,6 +3588,7 @@ sub CreateStatsData
     foreach my $title (@titles)
     {
       $stats{$title}{$date} = $row->[$i];
+      $totals{$title} += $row->[$i];
       $i++;
     }
     my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($mintime, $maxtime, $instusersne);
@@ -3608,26 +3610,6 @@ sub CreateStatsData
     $stats{'__AVAL__'}{$date} = $pct;
   }
   $report .= "\n";
-  my %totals;
-  my $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
-               SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
-               SUM(total_ic_ren) + SUM(total_ic_cdpp),
-               SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews),
-               1, SUM(total_neutral), $which, 1, SUM(total_time),
-               SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
-               (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
-               FROM userstats WHERE monthyear >= '$earliest' AND monthyear <= '$latest'};
-  if ($instusers) { $sql .= " AND user IN ($instusers)"; }
-  elsif ($user ne 'all') { $sql .= " AND user='$user'"; }
-  #print "$sql<br/>\n";
-  my $rows = $dbh->selectall_arrayref( $sql );
-  my $row = @{$rows}->[0];
-  my $i = 0;
-  foreach my $title (@titles)
-  {
-    $totals{$title} = $row->[$i];
-    $i++;
-  }
   my ($year,$month) = split '-', $latest;
   my $lastDay = Days_in_Month($year,$month);
   my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, $latest, $instusersne);
@@ -3651,15 +3633,14 @@ sub CreateStatsData
   my %ptotals;
   if (!$cumulative)
   {
-    $earliest = '2009-07';
-    $sql = qq{SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp),
+    my $sql = "SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp) + SUM(total_pd_crms),
                SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
-               SUM(total_ic_ren) + SUM(total_ic_cdpp),
+               SUM(total_ic_ren) + SUM(total_ic_cdpp) + SUM(total_ic_crms),
                SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews),
                1, SUM(total_neutral), $which, 1, SUM(total_time),
                SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
-               FROM userstats WHERE monthyear >= '$earliest'};
+               FROM userstats WHERE monthyear >= '2009-07'";
     if ($instusers) { $sql .= " AND user IN ($instusers)"; }
     elsif ($user ne 'all') { $sql .= " AND user='$user'"; }
     #print "$sql<br/>\n";
@@ -3902,6 +3883,10 @@ sub GetMonthStats
   #pd/cdpp
   $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=1 AND reason=9 AND time LIKE '$start_date%'};
   my $total_pd_cdpp = $self->SimpleSqlGet( $sql );
+  
+  #pd/crms
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=1 AND reason=13 AND time LIKE '$start_date%'};
+  my $total_pd_crms = $self->SimpleSqlGet( $sql );
 
   #ic/ren
   $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=2 AND reason=7 AND time LIKE '$start_date%'};
@@ -3910,6 +3895,10 @@ sub GetMonthStats
   #ic/cdpp
   $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=2 AND reason=9 AND time LIKE '$start_date%'};
   my $total_ic_cdpp = $self->SimpleSqlGet( $sql );
+
+  #ic/crms
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=2 AND reason=13 AND time LIKE '$start_date%'};
+  my $total_ic_crms = $self->SimpleSqlGet( $sql );
 
   #pdus/cdpp
   $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=9 AND reason=9 AND time LIKE '$start_date%'};
@@ -3959,11 +3948,11 @@ sub GetMonthStats
   my $mintime = "$start_date-01 00:00:00";
   my $maxtime = "$start_date-$lastDay 23:59:59";
   my ($total_correct,$total_incorrect,$total_neutral) = $self->CountCorrectReviews($user, $mintime, $maxtime);
-  $sql = 'INSERT INTO userstats (user, month, year, monthyear, total_reviews, total_pd_ren, total_pd_cnn, total_pd_cdpp, ' .
-         'total_pdus_cdpp, total_ic_ren, total_ic_cdpp, total_und_nfi, total_time, time_per_review, reviews_per_hour, ' .
+  $sql = 'INSERT INTO userstats (user, month, year, monthyear, total_reviews, total_pd_ren, total_pd_cnn, total_pd_cdpp, total_pd_crms, ' .
+         'total_pdus_cdpp, total_ic_ren, total_ic_cdpp, total_ic_crms, total_und_nfi, total_time, time_per_review, reviews_per_hour, ' .
          'total_outliers, total_correct, total_incorrect, total_neutral) ' .
-         "VALUES ('$user', '$month', '$year', '$start_date', $total_reviews_toreport, $total_pd_ren, $total_pd_cnn, $total_pd_cdpp, " .
-         "$total_pdus_cdpp, $total_ic_ren, $total_ic_cdpp, $total_und_nfi, $total_time, $time_per_review, $reviews_per_hour, " .
+         "VALUES ('$user', '$month', '$year', '$start_date', $total_reviews_toreport, $total_pd_ren, $total_pd_cnn, $total_pd_cdpp, $total_pd_crms, " .
+         "$total_pdus_cdpp, $total_ic_ren, $total_ic_cdpp, $total_ic_crms, $total_und_nfi, $total_time, $time_per_review, $reviews_per_hour, " .
          "$total_outliers, $total_correct, $total_incorrect, $total_neutral)";
   $self->PrepareSubmitSql( $sql );
 }
