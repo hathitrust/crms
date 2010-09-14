@@ -5897,7 +5897,7 @@ sub IsReviewCorrect
   my $sql = "SELECT COUNT(id) FROM historicalreviews WHERE id='$id' AND swiss=1";
   my $swiss = $self->SimpleSqlGet($sql);
   # Get the review
-  $sql = "SELECT attr,reason,renNum,renDate,expert,status FROM historicalreviews WHERE id='$id' AND user='$user' AND time='$time'";
+  $sql = "SELECT attr,reason,renNum,renDate,expert,status FROM historicalreviews WHERE id='$id' AND user='$user' AND time LIKE '$time%'";
   my $r = $self->get('dbh')->selectall_arrayref($sql);
   my $row = $r->[0];
   my $attr    = $row->[0];
@@ -5922,7 +5922,7 @@ sub IsReviewCorrect
     return ($swiss && !$expert)? 2:0;
   }
   if ($reason != $ereason ||
-      ($attr == 2 && $reason == 7 && ($renNum != $erenNum || $renDate != $erenDate)))
+      ($attr == 2 && $reason == 7 && ($renNum ne $erenNum || $renDate ne $erenDate)))
   {
     return 0;
   }
