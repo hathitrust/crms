@@ -178,7 +178,7 @@ function CheckAll(box,formid)
       <tr style="background-color:[% active_color %];">
         <td nowrap="nowrap">
         [% IF p == 'editReviews' || p == 'holds' %]
-          [% crms.DetailInfoForReview(review.id, review.user, p) %]
+          [% crms.DetailInfo(review.id, review.user, p, 1) %]
         [% ELSE %]
           [% crms.DetailInfo(review.id, review.user, p) %]
         [% END %]

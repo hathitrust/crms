@@ -2535,19 +2535,10 @@ sub DetailInfo
   my $id     = shift;
   my $user   = shift;
   my $page   = shift;
+  my $review = shift;
 
   my $url = "/cgi/c/crms/crms?p=detailInfo&amp;id=$id&amp;user=$user&amp;page=$page";
-  return "<a href='$url' target='_blank'>$id</a>";
-}
-
-sub DetailInfoForReview
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $user   = shift;
-  my $page   = shift;
-
-  my $url = "/cgi/c/crms/crms?p=detailInfoForReview&amp;id=$id&amp;user=$user&amp;page=$page";
+  $url .= ';review=1' if $review;
   return "<a href='$url' target='_blank'>$id</a>";
 }
 
@@ -6267,6 +6258,7 @@ sub PageToEnglish
                'adminUserRateInst' => 'institutional review stats',
                'contact' => 'contact us',
                'debug' => 'system administration',
+               'detailInfo' => 'review detail',
                'determinationStats' => 'determinations breakdown',
                'editReviews' => 'my unprocessed reviews',
                'expert' => 'conflicts',
