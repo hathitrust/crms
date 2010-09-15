@@ -3610,6 +3610,12 @@ sub CreateStatsData
     $stats{'__AVAL__'}{$date} = $pct;
   }
   $report .= "\n";
+  $totals{'Time per Review (mins)'} = 0;
+  $totals{'Reviews per Hour'} = 0;
+  eval {
+    $totals{'Time per Review (mins)'} = $totals{'Time Reviewing (mins)'}/($totals{'__TOT__'}-$totals{'Outlier Reviews'});
+    $totals{'Reviews per Hour'} = ($totals{'__TOT__'}-$totals{'Outlier Reviews'})/$totals{'Time Reviewing (mins)'}*60.0;
+  };
   my ($year,$month) = split '-', $latest;
   my $lastDay = Days_in_Month($year,$month);
   my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, $latest, $instusersne);
@@ -3815,11 +3821,11 @@ sub CreateStatsReport
   $report =~ s/__TOTNE__/Non-Expert&nbsp;Reviews/;
   my $vtitle = 'Validated&nbsp;Reviews&nbsp;&amp;&nbsp;Rate';
   $vtitle = 'Invalidated&nbsp;Reviews&nbsp;&amp;&nbsp;Rate' if $inval;
-  $vtitle = 'Valid&nbsp;Reviews&nbsp;&amp;&nbsp;Rate**' if $page eq 'userRate';
+  $vtitle = 'Valid**&nbsp;Reviews&nbsp;&amp;&nbsp;Rate' if $page eq 'userRate';
   $report =~ s/__VAL__/$vtitle/;
   my $avtitle = 'Validation&nbsp;Rate&nbsp;(all&nbsp;reviewers)';
   $avtitle = 'Invalidation&nbsp;Rate&nbsp;(all&nbsp;reviewers)' if $inval;
-  $avtitle = 'Validation&nbsp;Rate&nbsp;(all&nbsp;reviewers)**' if $page eq 'userRate';
+  $avtitle = 'Validation**&nbsp;Rate&nbsp;(all&nbsp;reviewers)' if $page eq 'userRate';
   $report =~ s/__AVAL__/$avtitle/;
   my $ntitle = 'Neutral&nbsp;Reviews&nbsp;&amp;&nbsp;Rate';
   $report =~ s/__NEUT__/$ntitle/;
