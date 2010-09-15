@@ -23,7 +23,8 @@
   [% FOREACH id IN users %]
     [% IF id.match('rereport') %][% NEXT %][% END %]
     [% IF id != 'all' && id.substr(0,5) != 'all__' && 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
-    [% onclicks = onclicks _ "toggleVisibility(\"$id\");" %]
+    [% divid = id.replace('@','_') %]
+    [% onclicks = onclicks _ "toggleVisibility(\"$divid\");" %]
   [% END %]
   [% IF do2009 %]
     <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
@@ -35,9 +36,10 @@
     [% crms.CreateStatsReport(p, id, 0, 1, year, 1, nononexpert) %]
     <br/><br/>
     [% IF do2009 || id == 'all' %]
+      [% divid = id.replace('@','_') %]
       <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
-         id="[% id %]a" onclick='toggleVisibility("[% id %]");'>Show 2009</a><br/>
-      <div id="[% id %]" style="display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;">
+         onclick='toggleVisibility("[% divid %]");'>Show 2009</a><br/>
+      <div id="[% divid %]" style="display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;">
       [% crms.CreateStatsReport(p, id, 0, 1, 2009, 1, nononexpert) %]
       <br/>
       </div>
