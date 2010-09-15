@@ -12,7 +12,7 @@
   <span class="smallishText">*Note: does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews.</span><br/>
   [% IF !crms.IsUserExpert(user) %]
     <span class="smallishText">
-      **Note: "valid"/"validation rate" includes all reviews with verdict
+      **Note: Valid reviews/rates include all reviews with
       <img width="16" height="16" alt="Check" src="/c/crms/CheckIcon.png"/> or
       <img width="16" height="16" alt="Minus" src="/c/crms/MinusIcon.png"/>.
     </span>
