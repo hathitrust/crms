@@ -3652,9 +3652,9 @@ sub CreateStatsData
       $ptotals{$title} = $row->[$i];
       $i++;
     }
-    my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, '3000-01', $instusersne);
+    my ($total,$correct,$incorrect,$neutral) = $self->GetValidation('2009-07', '3000-01', $instusersne);
     $correct += $neutral if $page eq 'userRate';
-    #print "total $total correct $correct incorrect $incorrect neutral $neutral for $earliest to $latest for $user<br/>\n";
+    #print "project total $total correct $correct incorrect $incorrect neutral $neutral for $user<br/>\n";
     my $whichone = ($inval)? $incorrect:$correct;
     my $pct = eval{100.0*$whichone/$total;};
     if ('all__' eq substr $user, 0, 5)
@@ -6358,7 +6358,7 @@ sub IsTrainingArea
   my $self = shift;
 
   my $where = $self->WhereAmI();
-  return ($where eq 'Training' || $where eq 'Moses Dev');
+  return ($where eq 'Training');
 }
 
 
