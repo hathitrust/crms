@@ -5,16 +5,16 @@
 [% IF !user %][% user = crms.get('user') %][% END %]
 
 <h2>My Review Stats:</h2>
-<a href="/c/crms/pdf/ReviewStatsHelp.pdf" target="_blank">Review&nbsp;Stats&nbsp;Help</a><br/>
+<a href="/c/crms/pdf/MyReviewStatsHelp.pdf" target="_blank">My&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
 <br/>
 [% IF crms.GetTotalHistoricalReviewCount() %]
   [% crms.CreateStatsReport(p, user, 0, 0 ) %]
-  <span class="smallishText">*Note: does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews.</span><br/>
+  <span class="smallishText">*Note: does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews</span><br/>
   [% IF !crms.IsUserExpert(user) %]
     <span class="smallishText">
       **Note: Valid reviews/rates include all reviews with
       <img width="16" height="16" alt="Check" src="/c/crms/CheckIcon.png"/> or
-      <img width="16" height="16" alt="Minus" src="/c/crms/MinusIcon.png"/>.
+      <img width="16" height="16" alt="Minus" src="/c/crms/MinusIcon.png"/>
     </span>
   [% END %]
   <br/><br/>
