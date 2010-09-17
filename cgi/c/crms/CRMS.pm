@@ -5917,7 +5917,7 @@ sub IsReviewCorrect
   if ($reason != $ereason ||
       ($attr == 2 && $reason == 7 && ($renNum ne $erenNum || $renDate ne $erenDate)))
   {
-    return 0;
+    return ($swiss && !$expert)? 2:0;
   }
   return 1;
 }
