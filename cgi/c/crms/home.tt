@@ -40,6 +40,7 @@ function CheckAll(box,formid)
 
 [% r = crms.IsUserReviewer || crms.IsUserAdvancedReviewer || crms.IsUserExpert %]
 [% e = crms.IsUserExpert %]
+[% ea = crms.IsUserExtAdmin %]
 [% a = crms.IsUserAdmin %]
 [% s = crms.IsUserSuperAdmin %]
 [% i = crms.IsUserIncarnationExpertOrHigher %]
@@ -58,10 +59,10 @@ function CheckAll(box,formid)
 [% IF r || e %]<a href="crms?p=holds">My Held Reviews</a><br/>                       [% END %]
 </td>
 <td>
-                    <a href="crms?p=adminHistoricalReviews">Historical&nbsp;Reviews</a><br/>
-[% IF e || a || s %]<a href="crms?p=adminReviews">Active&nbsp;Reviews</a><br/>              [% END %]
-[% IF e || a || s %]<a href="crms?p=adminHolds">All&nbsp;Held&nbsp;Reviews</a><br/>         [% END %]
-[% IF e || a || s %]<a href="crms?p=queue">Volumes&nbsp;in&nbsp;Queue</a>                   [% END %]
+                          <a href="crms?p=adminHistoricalReviews">Historical&nbsp;Reviews</a><br/>
+[% IF e || a || s || ea %]<a href="crms?p=adminReviews">Active&nbsp;Reviews</a><br/>              [% END %]
+[% IF e || a || s || ea %]<a href="crms?p=adminHolds">All&nbsp;Held&nbsp;Reviews</a><br/>         [% END %]
+[% IF e || a || s %]      <a href="crms?p=queue">Volumes&nbsp;in&nbsp;Queue</a>                   [% END %]
 
 </td>
 </tr>

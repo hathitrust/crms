@@ -1,5 +1,6 @@
 [% r = crms.IsUserReviewer || crms.IsUserAdvanced || crms.IsUserExpert %]
 [% e = crms.IsUserExpert %]
+[% ea = crms.IsUserExtAdmin %]
 [% a = crms.IsUserAdmin %]
 [% s = crms.IsUserSuperAdmin %]
 [% i = crms.IsUserIncarnationExpertOrHigher %]
@@ -28,10 +29,10 @@
 <li><span>Search/Browse&nbsp;</span>
 <dl class="major">
 	<dt><a>Search/Browse&nbsp;</a></dt>
-	                    <dd><a href="crms?p=adminHistoricalReviews">Historical&nbsp;Reviews</a></dd>
-  [% IF e || a || s %]<dd><a href="crms?p=adminReviews">Active&nbsp;Reviews</a></dd>              [% END %]
-  [% IF e || a || s %]<dd><a href="crms?p=adminHolds">All&nbsp;Held&nbsp;Reviews</a></dd>         [% END %]
-  [% IF e || a || s %]<dd><a href="crms?p=queue">Volumes&nbsp;in&nbsp;Queue</a></dd>              [% END %]
+	                          <dd><a href="crms?p=adminHistoricalReviews">Historical&nbsp;Reviews</a></dd>
+  [% IF e || a || s || ea %]<dd><a href="crms?p=adminReviews">Active&nbsp;Reviews</a></dd>              [% END %]
+  [% IF e || a || s || ea %]<dd><a href="crms?p=adminHolds">All&nbsp;Held&nbsp;Reviews</a></dd>         [% END %]
+  [% IF e || a || s %]      <dd><a href="crms?p=queue">Volumes&nbsp;in&nbsp;Queue</a></dd>              [% END %]
 </dl>
 </li>
 <li><span>Documentation&nbsp;&nbsp;</span>
