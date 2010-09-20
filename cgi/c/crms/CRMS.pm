@@ -835,7 +835,7 @@ sub IsValidCategory
   
   my %cats = ('Insert(s)' => 1, 'Language' => 1, 'Misc' => 1, 'Missing' => 1, 'Date' => 1, 'Reprint' => 1,
               'Periodical' => 1, 'Translation' => 1, 'Wrong Record' => 1, 'Foreign Pub' => 1, 'Dissertation/Thesis' => 1,
-              'Expert Note' => 1, 'Not Class A' => 1, 'Edition' => 1, 'Expert Accepted' => 1);
+              'Expert Note' => 1, 'Not Class A' => 1, 'Edition' => 1, 'Expert Accepted' => 1, 'Attr Match' => 1);
   return exists $cats{$cat};
 }
 
@@ -6065,7 +6065,6 @@ sub SanityCheckDB
   # ======== exportdata ========
   # time must be in a format like 2009-07-16 07:00:02
   # id must not be ill-formed
-  # attr/reason must be valid
   # user must be crms
   # src must not be NULL
   $table = 'exportdata';
@@ -6075,8 +6074,6 @@ sub SanityCheckDB
   {
     $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[1], $row->[0])) unless $row->[0] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
     $self->SetError(sprintf("$table __ illegal volume id__ '%s'", $row->[1])) unless $row->[1] =~ m/$vidRE/;
-    my $comb = $row->[2] . '/' . $row->[3];
-    $self->SetError(sprintf("$table __ illegal attr/reason for %s__ '%s'", $row->[1], $comb)) unless $self->GetAttrReasonCom($comb);
     $self->SetError(sprintf("$table __ illegal user for %s__ '%s' (should be 'crms')", $row->[1])) unless $row->[4] eq 'crms';
     $self->SetError(sprintf("$table __ NULL src for %s__ ", $row->[1])) unless $row->[4];
   }
