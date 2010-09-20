@@ -6105,7 +6105,6 @@ sub SanityCheckDB
   {
     $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
     $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
-    $self->SetError(sprintf("$table __ illegal attr/reason for %s__ '%s/%s'", $row->[0], $row->[3], $row->[4])) unless $self->GetCodeFromAttrReason($row->[3],$row->[4]);
     $self->SetError(sprintf("$table __ spaces in renNum for %s__ '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
     $self->SetError(sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $self->IsRenDate($row->[11]);
     $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $self->IsValidCategory($row->[12]);
@@ -6119,17 +6118,10 @@ sub SanityCheckDB
   {
     $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
     $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
-    $self->SetError(sprintf("$table __ illegal attr/reason for %s__ '%s/%s'", $row->[0], $row->[3], $row->[4])) unless $self->GetCodeFromAttrReason($row->[3],$row->[4]);
     $self->SetError(sprintf("$table __ spaces in renNum for %s__ '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
     $self->SetError(sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $self->IsRenDate($row->[11]);
     $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $self->IsValidCategory($row->[12]);
     $self->SetError(sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[14])) unless $stati{$row->[14]};
-    $sql = "SELECT id,status FROM $table WHERE expert>0 AND status<5";
-    $rows = $dbh->selectall_arrayref( $sql );
-    foreach my $row ( @{$rows} )
-    {
-      $self->SetError(sprintf("$table __ bad status for expert-reviewed %s__ '%s'", $row->[0], $row->[1]));
-    }
     $sql = "SELECT id,status,gid,SUM(expert) AS ct FROM $table WHERE status=5 OR status=6 GROUP BY gid HAVING ct=0";
     $rows = $dbh->selectall_arrayref( $sql );
     foreach my $row ( @{$rows} )
