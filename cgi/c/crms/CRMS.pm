@@ -228,15 +228,32 @@ sub ProcessReviews
       else #Mark as 4 - two that agree
       {
         my $note = undef;
-        my $autoreason = 13;
-        my $doAuto = ($reason != $other_reason);
-        if ($attr == 2 && $reason == 7 && $other_reason == 7 && ($renNum ne $other_renNum || $renDate ne $other_renDate))
+        my $doAuto = undef;
+        if ($reason != $other_reason)
         {
-          $note = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)', $renNum, $renDate, $other_renNum, $other_renDate;
-          $autoreason = $reason;
           $doAuto = 1;
+          $reason = 13;
         }
-        $self->SubmitReview($id,'autocrms',$attr,$autoreason,$note,undef,1,undef,'Attr Match',0,0) if $doAuto;
+        elsif ($attr == 2 && $reason == 7 && $other_reason == 7 && ($renNum ne $other_renNum || $renDate ne $other_renDate))
+        {
+          $doAuto = 1;
+          $note = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)', $renNum, $renDate, $other_renNum, $other_renDate;
+        }
+        $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,'Attr Match',0,0) if $doAuto;
+        $self->RegisterStatus( $id, 4 );
+      }
+    }
+    # Do auto for ic vs und
+    elsif (($attr == 2 && $other_attr == 5) || ($attr == 5 && $other_attr == 2))
+    {
+      # If both reviewers are non-advanced mark as provisional match
+      if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+      {
+         $self->RegisterStatus( $id, 3 );
+      }
+      else #Mark as 4 - two that agree
+      {
+        $self->SubmitReview($id,'autocrms',5,13,undef,undef,1,undef,'Attr Default',0,0);
         $self->RegisterStatus( $id, 4 );
       }
     }
@@ -835,7 +852,7 @@ sub IsValidCategory
   
   my %cats = ('Insert(s)' => 1, 'Language' => 1, 'Misc' => 1, 'Missing' => 1, 'Date' => 1, 'Reprint' => 1,
               'Periodical' => 1, 'Translation' => 1, 'Wrong Record' => 1, 'Foreign Pub' => 1, 'Dissertation/Thesis' => 1,
-              'Expert Note' => 1, 'Not Class A' => 1, 'Edition' => 1, 'Expert Accepted' => 1, 'Attr Match' => 1);
+              'Expert Note' => 1, 'Not Class A' => 1, 'Edition' => 1, 'Expert Accepted' => 1, 'Attr Match' => 1, 'Attr Default' => 1);
   return exists $cats{$cat};
 }
 
@@ -2913,8 +2930,8 @@ sub GetRange
 {
   my $self = shift;
  
-  my $max = $self->SimpleSqlGet('SELECT MAX(time) FROM historicalreviews WHERE legacy=0');
-  my $min = $self->SimpleSqlGet('SELECT MIN(time) FROM historicalreviews WHERE legacy=0');
+  my $max = $self->SimpleSqlGet('SELECT MAX(time) FROM historicalreviews WHERE legacy!=1');
+  my $min = $self->SimpleSqlGet('SELECT MIN(time) FROM historicalreviews WHERE legacy!=1');
   my $max_year = $max;
   $max_year =~ s,(.*?)\-.*,$1,;
   my $max_month = $max;
@@ -3410,8 +3427,8 @@ sub GetStatusBreakdown
   foreach my $status (4..7)
   {
     my $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r ON e.gid=r.gid WHERE ' .
-             "r.legacy=0 AND date(e.time)>='$start' AND date(e.time)<='$end' AND r.status=$status $priorityClause";
-    #$sql .= ' AND (r.priority=0 OR r.priority=2) AND r.legacy=0';
+             "r.legacy!=1 AND date(e.time)>='$start' AND date(e.time)<='$end' AND r.status=$status $priorityClause";
+    #$sql .= ' AND (r.priority=0 OR r.priority=2) AND r.legacy!=1';
     #print "$sql<br/>\n";
     push @counts, $self->SimpleSqlGet($sql);
   }
@@ -3875,68 +3892,52 @@ sub GetMonthStats
   return unless $start_date;
   my $dbh = $self->get( 'dbh' );
 
-  my $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND time LIKE '$start_date%'};
+  my $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND time LIKE '$start_date%'};
   my $total_reviews_toreport = $self->SimpleSqlGet( $sql );
 
   #pd/ren
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=1 AND reason=7 AND time LIKE '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=1 AND reason=7 AND time LIKE '$start_date%'};
   my $total_pd_ren = $self->SimpleSqlGet( $sql );
 
   #pd/ncn
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=1 AND reason=2 AND time LIKE '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=1 AND reason=2 AND time LIKE '$start_date%'};
   my $total_pd_cnn = $self->SimpleSqlGet( $sql );
 
   #pd/cdpp
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=1 AND reason=9 AND time LIKE '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=1 AND reason=9 AND time LIKE '$start_date%'};
   my $total_pd_cdpp = $self->SimpleSqlGet( $sql );
   
   #pd/crms
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=1 AND reason=13 AND time LIKE '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=1 AND reason=13 AND time LIKE '$start_date%'};
   my $total_pd_crms = $self->SimpleSqlGet( $sql );
 
   #ic/ren
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=2 AND reason=7 AND time LIKE '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=2 AND reason=7 AND time LIKE '$start_date%'};
   my $total_ic_ren = $self->SimpleSqlGet( $sql );
 
   #ic/cdpp
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=2 AND reason=9 AND time LIKE '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=2 AND reason=9 AND time LIKE '$start_date%'};
   my $total_ic_cdpp = $self->SimpleSqlGet( $sql );
 
   #ic/crms
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=2 AND reason=13 AND time LIKE '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=2 AND reason=13 AND time LIKE '$start_date%'};
   my $total_ic_crms = $self->SimpleSqlGet( $sql );
 
   #pdus/cdpp
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=9 AND reason=9 AND time LIKE '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=9 AND reason=9 AND time LIKE '$start_date%'};
   my $total_pdus_cdpp = $self->SimpleSqlGet( $sql );
 
   #und/nfi
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND attr=5 AND reason=8 AND time LIKE '$start_date%'};
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=5 AND reason=8 AND time LIKE '$start_date%'};
   my $total_und_nfi = $self->SimpleSqlGet( $sql );
 
-  my $total_time = 0;
-  
   #time reviewing ( in minutes ) - not including outliers
-  $sql = qq{ SELECT duration FROM historicalreviews WHERE user='$user' AND legacy=0 AND time LIKE '$start_date%' AND duration <= '00:05:00'};
-  my $rows = $dbh->selectall_arrayref( $sql );
-
-  foreach my $row ( @{$rows} )
-  {
-    my $duration = $row->[0];
-    #convert to minutes:
-    my $min = $duration;
-    $min =~ s,.*?:(.*?):.*,$1,;
-    
-    my $sec = $duration;
-    $sec =~ s,.*?:.*?:(.*),$1,;
-    $sec += (60*$min);
-    $total_time += $sec;
-  }
-
-  $total_time = $total_time/60;
+  $sql = "SELECT SUM(TIME_TO_SEC(duration))/60.0 FROM historicalreviews WHERE
+          user='$user' AND legacy!=1 AND time LIKE '$start_date%' AND duration <= '00:05:00'";
+  my $total_time = $self->SimpleSqlGet( $sql );
 
   #total outliers
-  $sql = "SELECT COUNT(*) FROM historicalreviews WHERE user='$user' AND legacy=0 AND time LIKE '$start_date%' AND duration>'00:05:00'";
+  $sql = "SELECT COUNT(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND time LIKE '$start_date%' AND duration>'00:05:00'";
   my $total_outliers = $self->SimpleSqlGet( $sql );
 
   my $time_per_review = 0;
@@ -5899,6 +5900,7 @@ sub IsReviewCorrect
   my $renDate = $row->[3];
   my $expert  = $row->[4];
   my $status  = $row->[5];
+  #print "$attr, $reason, $renNum, $renDate, $expert, $swiss\n";
   # A non-expert with status 7 is protected rather like Swiss.
   return 1 if ($status == 7 && !$expert);
   # Get the most recent non-autocrms expert review
@@ -5910,6 +5912,7 @@ sub IsReviewCorrect
   my $ereason  = $row->[1];
   my $erenNum  = $row->[2];
   my $erenDate = $row->[3];
+  #print "$eattr, $ereason, $erenNum, $erenDate\n";
   if ($attr != $eattr)
   {
     return ($swiss && !$expert)? 2:0;
@@ -5941,7 +5944,7 @@ sub CountCorrectReviews
   my $correct = 0;
   my $incorrect = 0;
   my $neutral = 0;
-  my $sql = "SELECT validated,COUNT(id) FROM historicalreviews WHERE legacy=0 $startClause $endClause $userClause GROUP BY validated";
+  my $sql = "SELECT validated,COUNT(id) FROM historicalreviews WHERE legacy!=1 $startClause $endClause $userClause GROUP BY validated";
   my $ref = $self->get('dbh')->selectall_arrayref($sql);
   foreach my $row ( @{$ref} )
   {
