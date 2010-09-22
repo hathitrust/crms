@@ -308,6 +308,19 @@ sub CheckPendingStatus
           $pstatus = 4;
         }
       }
+      # Do auto for ic vs und
+      elsif (($attr == 2 && $other_attr == 5) || ($attr == 5 && $other_attr == 2))
+      {
+        # If both reviewers are non-advanced mark as provisional match
+        if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+        {
+           $pstatus = 3;
+        }
+        else #Mark as 4 - two that agree
+        {
+          $pstatus = 4;
+        }
+      }
       else #Mark as 2 - two that disagree
       {
         $pstatus = 2;
