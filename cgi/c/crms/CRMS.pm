@@ -314,7 +314,7 @@ sub CheckPendingStatus
         # If both reviewers are non-advanced mark as provisional match
         if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
         {
-           $pstatus = 3;
+          $pstatus = 3;
         }
         else #Mark as 4 - two that agree
         {
@@ -3641,7 +3641,7 @@ sub CreateStatsData
   }
   $report .= "\n";
   $totals{'Time per Review (mins)'} = 0;
-  $totals{'Reviews per Hour'} = 0;
+  $totals{'Reviews per Hour'} = 0.0;
   eval {
     $totals{'Time per Review (mins)'} = $totals{'Time Reviewing (mins)'}/($totals{'__TOT__'}-$totals{'Outlier Reviews'});
     $totals{'Reviews per Hour'} = ($totals{'__TOT__'}-$totals{'Outlier Reviews'})/$totals{'Time Reviewing (mins)'}*60.0;
@@ -3727,18 +3727,15 @@ sub CreateStatsData
       }
       elsif ($title ne '__TOT__' && !exists $minors{$title})
       {
-        my $pct = eval { 100.0*$n/$of; };
-        $pct = 0.0 unless $pct;
+        my $pct = eval { 100.0*$n/$of; } or 0.0;
         $n = sprintf("$n:%.1f", $pct);
       }
-      else
+      elsif ($title eq 'Time per Review (mins)' || $title eq 'Reviews per Hour')
       {
-        $n = sprintf('%.1f', $n) if $n =~ m/^\d*\.\d+$/i;
+        $n = sprintf('%.1f', $n) if $n > 0.0;
       }
       $report .= ',' . $n;
     }
-    my $of = $totals{'__TOT__'};
-    $of = $totals{'__TOTNE__'} if ($title eq '__VAL__' or $title eq '__NEUT__') and ($user eq 'all' or $instusers);
     my $n = $totals{$title};
     $n = 0 unless $n;
     if ($title eq '__AVAL__')
@@ -3747,13 +3744,14 @@ sub CreateStatsData
     }
     elsif ($title ne '__TOT__' && !exists $minors{$title})
     {
-      my $pct = eval { 100.0*$n/$of; };
-      $pct = 0.0 unless $pct;
+      my $of = $totals{'__TOT__'};
+      $of = $totals{'__TOTNE__'} if ($title eq '__VAL__' or $title eq '__NEUT__') and ($user eq 'all' or $instusers);
+      my $pct = eval { 100.0*$n/$of; } or 0.0;
       $n = sprintf("$n:%.1f", $pct);
     }
-    else
+    elsif ($title eq 'Time per Review (mins)' || $title eq 'Reviews per Hour')
     {
-      $n = sprintf('%.1f', $n) if $n =~ m/^\d*\.\d+$/i;
+      $n = sprintf('%.1f', $n) if $n > 0.0;
     }
     $report .= ',' . $n;
     foreach my $date (@usedates)
@@ -3766,14 +3764,14 @@ sub CreateStatsData
       }
       elsif ($title ne '__TOT__' && !exists $minors{$title})
       {
-        $of = $stats{'__TOT__'}{$date};
+        my $of = $stats{'__TOT__'}{$date};
         $of = $stats{'__TOTNE__'}{$date} if ($title eq '__VAL__' or $title eq '__NEUT__') and ($user eq 'all' or $instusers);
         my $pct = eval { 100.0*$n/$of; } or 0.0;
         $n = sprintf("$n:%.1f", $pct);
       }
-      else
+      elsif ($title eq 'Time per Review (mins)' || $title eq 'Reviews per Hour')
       {
-        $n = sprintf('%.1f', $n) if $n =~ m/^\d*\.\d+$/i;
+        $n = sprintf('%.1f', $n) if $n > 0.0;
       }
       $n = 0 unless $n;
       $report .= ',' . $n;
