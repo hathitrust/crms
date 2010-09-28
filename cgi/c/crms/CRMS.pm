@@ -3938,15 +3938,15 @@ sub GetMonthStats
   $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=9 AND reason=9 AND time LIKE '$start_date%'};
   my $total_pdus_cdpp = $self->SimpleSqlGet( $sql );
 
-  #und/nfi
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=5 AND reason=8 AND time LIKE '$start_date%'};
+  #und/nfi and und/crms
+  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=5 AND time LIKE '$start_date%'};
   my $total_und_nfi = $self->SimpleSqlGet( $sql );
 
   #time reviewing ( in minutes ) - not including outliers
-  $sql = "SELECT SUM(TIME_TO_SEC(duration))/60.0 FROM historicalreviews WHERE
+  $sql = "SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/60.0 FROM historicalreviews WHERE
           user='$user' AND legacy!=1 AND time LIKE '$start_date%' AND duration <= '00:05:00'";
   my $total_time = $self->SimpleSqlGet( $sql );
-
+  
   #total outliers
   $sql = "SELECT COUNT(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND time LIKE '$start_date%' AND duration>'00:05:00'";
   my $total_outliers = $self->SimpleSqlGet( $sql );
