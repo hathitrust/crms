@@ -3135,7 +3135,7 @@ sub CreateExportData
       my $bar = $row->[4];
       my $cat = "$attr/$reason";
       $cats{$cat}++;
-      my $allkey = 'All ' . uc $attr;
+      my $allkey = 'All ' . uc substr $attr, 0, ($attr eq 'und')? 3:2;
       $cats{$allkey}++;
       $cats{'Status '.$status}++;
     }
