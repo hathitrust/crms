@@ -3107,8 +3107,9 @@ sub CreateExportData
     last if $date eq $now and !$doCurrentMonth;
     push @usedates, $date;
     $report .= "$delimiter$date";
-    my %cats = ('pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pdus/cdpp' => 0, 'ic/ren' => 0, 'ic/cdpp' => 0,
-                'All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0,
+    my %cats = ('pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pd/crms' => 0, 'pdus/cdpp' => 0, 'ic/ren' => 0, 'ic/cdpp' => 0, 'ic/crms' => 0,
+                'und/nfi' => 0, 'und/crms' => 0,
+                'All PD' => 0, 'All IC' => 0, 'All UND' => 0,
                 'Status 4' => 0, 'Status 5' => 0, 'Status 6' => 0, 'Status 7' => 0);
     my $lastDay;
     if (!$cumulative)
@@ -3118,7 +3119,7 @@ sub CreateExportData
     }
     my $mintime = $date . (($cumulative)? '-01-01 00:00:00':'-01 00:00:00');
     my $maxtime = $date . (($cumulative)? '-12-31 23:59:59':"-$lastDay 23:59:59");
-    my $sql = 'SELECT e.gid,e.time,e.attr,e.reason,h.status,e.id FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid WHERE ' .
+    my $sql = 'SELECT e.gid,e.attr,e.reason,h.status,e.id FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid WHERE ' .
               "e.time>='$mintime' AND e.time<='$maxtime' ORDER BY e.gid ASC, h.time DESC";
     my $rows = $dbh->selectall_arrayref( $sql );
     #printf "$sql : %d items<br/>\n", scalar @{$rows};
@@ -3128,19 +3129,14 @@ sub CreateExportData
       my $id = $row->[0];
       next if $id eq $lastid;
       $lastid = $id;
-      my $time = $row->[1];
-      my $attr = $row->[2];
-      my $reason = $row->[3];
-      my $status = $row->[4];
-      my $bar = $row->[5];
+      my $attr = $row->[1];
+      my $reason = $row->[2];
+      my $status = $row->[3];
+      my $bar = $row->[4];
       my $cat = "$attr/$reason";
-      $cat = 'All UND/NFI' if $cat eq 'und/nfi';
-      if (exists $cats{$cat} or $cat eq 'All UND/NFI')
-      {
-        $cats{$cat}++;
-        my $allkey = 'All ' . uc substr($cat,0,2);
-        $cats{$allkey}++ if exists $cats{$allkey};
-      }
+      $cats{$cat}++;
+      my $allkey = 'All ' . uc $attr;
+      $cats{$allkey}++;
       $cats{'Status '.$status}++;
     }
     for my $cat (keys %cats)
@@ -3149,17 +3145,19 @@ sub CreateExportData
     }
   }
   $report .= "\n";
-  my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'All IC', 'ic/ren', 'ic/cdpp', 'All UND/NFI', 'Total',
+  my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pd/crms', 'pdus/cdpp',
+                'All IC', 'ic/ren', 'ic/cdpp', 'ic/crms',
+                'All UND', 'und/nfi', 'und/crms', 'Total',
                 'Status 4', 'Status 5', 'Status 6', 'Status 7');
   my %monthTotals = ();
-  my %catTotals = ('All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0);
+  my %catTotals = ('All PD' => 0, 'All IC' => 0, 'All UND' => 0);
   my $gt = 0;
   foreach my $date (@usedates)
   {
-    my $monthTotal = $stats{'All PD'}{$date} + $stats{'All IC'}{$date} + $stats{'All UND/NFI'}{$date};
+    my $monthTotal = $stats{'All PD'}{$date} + $stats{'All IC'}{$date} + $stats{'All UND'}{$date};
     $catTotals{'All PD'} += $stats{'All PD'}{$date};
     $catTotals{'All IC'} += $stats{'All IC'}{$date};
-    $catTotals{'All UND/NFI'} += $stats{'All UND/NFI'}{$date};
+    $catTotals{'All UND'} += $stats{'All UND'}{$date};
     $monthTotals{$date} = $monthTotal;
     $gt += $monthTotal;
   }
@@ -3228,7 +3226,7 @@ sub CreateExportReport
     $report .= sprintf("<th%s>$th</th>\n", ($th ne 'Categories')? ' style="text-align:center;"':'');
   }
   $report .= "</tr>\n";
-  my %majors = ('All PD' => 1, 'All IC' => 1, 'All UND/NFI' => 1);
+  my %majors = ('All PD' => 1, 'All IC' => 1, 'All UND' => 1);
   my $titleline = '';
   foreach my $line (@lines)
   {
@@ -3286,11 +3284,11 @@ sub CreateExportGraph
   # Shift off the Categories and GT headers
   shift @dates; shift @dates;
   # Now the data is just the categories and numbers...
-  my @titles = ($type == 1)? ('Total'):('All PD','All IC','All UND/NFI');
-  my %titleh = ('All PD' => $lines[0],'All IC' => $lines[5],'All UND/NFI' => $lines[8],'Total' => $lines[9]);
+  my @titles = ($type == 1)? ('Total'):('All PD','All IC','All UND');
+  my %titleh = ('All PD' => $lines[0],'All IC' => $lines[6],'All UND' => $lines[10],'Total' => $lines[13]);
   my @elements = ();
-  my %colors = ('All PD' => '#22BB00', 'All IC' => '#FF2200', 'All UND/NFI' => '#0088FF', 'Total' => '#FFFF00');
-  my %totals = ('All PD' => 0, 'All IC' => 0, 'All UND/NFI' => 0);
+  my %colors = ('All PD' => '#22BB00', 'All IC' => '#FF2200', 'All UND' => '#0088FF', 'Total' => '#FFFF00');
+  my %totals = ('All PD' => 0, 'All IC' => 0, 'All UND' => 0);
   my $ceiling = 100;
   my @totalline = split ',',$titleh{'Total'};
   shift @totalline;
@@ -3326,7 +3324,7 @@ sub CreateExportGraph
   my $report = sprintf('{"bg_colour":"#000000","title":{"text":"%s","style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"},"elements":[',$title);
   if ($type == 2)
   {
-    my @colorlist = ($colors{'All PD'}, $colors{'All IC'}, $colors{'All UND/NFI'});
+    my @colorlist = ($colors{'All PD'}, $colors{'All IC'}, $colors{'All UND'});
     my @vals = ();
     foreach my $title (@titles)
     {
