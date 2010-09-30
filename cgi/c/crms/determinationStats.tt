@@ -37,7 +37,7 @@
 <br/>
 <label for="priority" style="width:5em;float:left;">Priority:</label>
 &nbsp;&nbsp;<select name="priority" id="priority">
-[% pris = crms.get('dbh').selectall_arrayref("SELECT DISTINCT priority FROM historicalreviews") %]
+[% pris = crms.get('dbh').selectall_arrayref("SELECT DISTINCT priority FROM historicalreviews ORDER BY priority ASC") %]
 [% FOREACH pri IN pris %]
   [% pri = crms.StripDecimal(pri.0) %]
   <option [% (priority == pri)? 'selected="selected"':'' %]>$pri</option>
