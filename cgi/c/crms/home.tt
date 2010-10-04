@@ -98,6 +98,7 @@ function CheckAll(box,formid)
 <td colspan="2">
                     <a href="crms?p=adminUser">User&nbsp;Accounts</a><br/>
 [% IF e || a || s %]<a href="crms?p=rights">Query&nbsp;Rights&nbsp;Database</a><br/>  [% END %]
+[% IF e || a || s %]<a href="crms?p=retrieve">Retrieve&nbsp;Volume&nbsp;IDs</a><br/>  [% END %]
 [% IF a || s %]     <a href="crms?p=adminQueue">All&nbsp;Locked&nbsp;Volumes</a><br/> [% END %]
 [% IF a || s %]     <a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a><br/>         [% END %]
 [% IF a || s %]     <a href="crms?p=systemStatus">Set&nbsp;System&nbsp;Status</a><br/>[% END %]

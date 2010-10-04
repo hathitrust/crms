@@ -4884,6 +4884,45 @@ sub GetRecordMetadata
   return $record;
 }
 
+sub GetMirlynMetadata
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $parser = $self->get( 'parser' );    
+  if ( ! $id ) { $self->Logit( "no volume id given: $id" ); return 0; }
+  $id = lc $id;
+  my ($ns,$bar) = split(/\./, $id);
+
+  my $url = "http://mirlyn.lib.umich.edu/Record/$id.xml";
+
+  my $ua = LWP::UserAgent->new;
+
+  if ($self->get("verbose")) { $self->Logit( "GET: $url" ); }
+  $ua->timeout( 1000 );
+  my $req = HTTP::Request->new( GET => $url );
+  my $res = $ua->request( $req );
+
+  if ( ! $res->is_success ) { $self->Logit( "$url failed: ".$res->message() ); return; }
+
+  my $source;
+  eval {
+    my $content = Encode::decode('utf8', $res->content());
+    $source = $parser->parse_string( $content );
+  };
+  if ($@) { $self->SetError( "failed to parse ($url):$@" ); return; }
+
+  my $errorCode = $source->findvalue( "//*[name()='error']" );
+  if ( $errorCode ne '' )
+  {
+      $self->Logit( "$url \nfailed to get MARC for $id: $errorCode " . $res->content() );
+      return;
+  }
+  #my ($record) = $source->findnodes( "//record" );
+  my ($record) = $source->findnodes( "." );
+  return $record;
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   get the mirlyn ID for a given volume id
 ##  Parameters: volume id
@@ -6270,6 +6309,7 @@ sub PageToEnglish
                'queue' => 'volumes in queue',
                'queueAdd' => 'add to queue',
                'queueStatus' => 'system summary',
+               'retrieve' => 'retrieve volume ids',
                'review' => 'review',
                'rights' => 'query rights database',
                'systemStatus' => 'system status',
@@ -6283,17 +6323,58 @@ sub PageToEnglish
 # Query the production rights database. This returns an array ref of entries for the volume, oldest first.
 sub RightsQuery
 {
-  my $self = shift;
-  my $id   = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $latest = shift;
   
   my ($namespace,$n) = split m/\./, $id;
-  my $sql = 'SELECT a.name,rs.name,s.name,r.user,r.time,r.note FROM rights_log r, attributes a, reasons rs, sources s ' .
+  my $table = ($latest)? 'rights_current':'rights_log';
+  my $sql = "SELECT a.name,rs.name,s.name,r.user,r.time,r.note FROM $table r, attributes a, reasons rs, sources s " .
             "WHERE r.namespace='$namespace' AND r.id='$n' AND s.id=r.source AND a.id=r.attr AND rs.id=r.reason " .
             'ORDER BY r.time ASC';
   my $ref;
   eval { $ref = $self->GetSdrDb()->selectall_arrayref($sql); };
   $self->SetError("Rights query failed: $@") if $@;
   return $ref;
+}
+
+# Query Mirlyn holdings for this record id and return volume identifiers.
+sub VolumeIDsQuery
+{
+  my $self = shift;
+  my $rid  = shift;
+  
+  my @ids;
+  eval {
+    my $record = $self->GetMirlynMetadata($rid);
+    my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='974']");
+    foreach my $node ($nodes->get_nodelist())
+    {
+      my $id = $node->findvalue("./*[local-name()='subfield' and \@code='u']");
+      my $chron = $node->findvalue("./*[local-name()='subfield' and \@code='z']");
+      my $rights = $node->findvalue("./*[local-name()='subfield' and \@code='r']");
+      #print "$rights,$id,$chron<br/>\n";
+      push @ids, $id . '__' . $chron . '__' . (('pd' eq substr($rights, 0, 2))? 'Full View':'Search Only');
+    }
+  };
+  $self->SetError("Holdings query failed: $@") if $@;
+  return \@ids;
+}
+
+sub DownloadVolumeIDs
+{
+  my $self = shift;
+  my $rid  = shift;
+  
+  my $buffer = (join "\t", qw (ID Chron Rights Attr Reason Source User Time Note)) . "\n";
+  my $rows = $self->VolumeIDsQuery($rid);
+  foreach my $line (@{$rows})
+  {
+    my ($id,$chron,$rights) = split '__', $line;
+    $buffer .= (join "\t", (($id,$chron,$rights), @{$self->RightsQuery($id,1)->[0]})) . "\n";
+  }
+  $self->DownloadSpreadSheet($buffer);
+  return (1 == scalar @{$self->GetErrors()});
 }
 
 # Returns a reference to an array with (time,status,message)

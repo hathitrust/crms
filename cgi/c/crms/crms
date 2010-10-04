@@ -215,9 +215,14 @@ if ( $cgi->param('download') )
     my $endDate          = $cgi->param('endDate');
     my $stype            = $cgi->param('stype');
     my $page             = $cgi->param('p');
+    my $q                = $cgi->param('q');
+    my $success = 1;
     
-    my $success;
-    if ($page eq 'queue')
+    if ($page eq 'retrieve')
+    {
+      $crms->DownloadVolumeIDs($q)
+    }
+    elsif ($page eq 'queue')
     {
       $success = $crms->SearchAndDownloadQueue( $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate );
     }
