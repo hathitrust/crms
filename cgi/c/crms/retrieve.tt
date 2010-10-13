@@ -18,7 +18,11 @@
 [% IF q %]
   [% FOREACH id IN q.split %]
     [% ids = crms.VolumeIDsQuery(id) %]
-    [% IF ids.size() == 0 %][% CONTINUE %][% END %]
+    [% IF (NOT ids) || ids.size() == 0 %]
+      <br/><h4>No results for $id</h4>
+      [% blah = crms.ClearErrors() %]
+      [% NEXT %]
+    [% END %]
     <br/>
     <a href="?p=$p&amp;download=1;q=[% id %]" target="_blank">download</a>
     <br/>
