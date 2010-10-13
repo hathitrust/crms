@@ -27,6 +27,7 @@
   [% pagenum = ref.page %]
   [% of = ref.of %]
   [% items = ref.rows %]
+  <a name="results"></a>
   <p><b>Found $total volume[% (total==1)? "":"s"%], page $pagenum of $of</b></p>
 
   [% IF NOT offset %] [% offset = 0 %] [% END %]
@@ -42,9 +43,8 @@
   [% doNext = (offset < last) %]
   [% doFirst = (offset != 0) %]
   [% doLast = (offset != last) %]
-
   [% IF doPrev %]
-  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$prev&amp;records=$pagesize">
+  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$prev&amp;records=$pagesize#results">
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
@@ -52,7 +52,7 @@
   [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
   &nbsp;||&nbsp;
   [% IF doNext %]
-  <a href="?p=$p&amp;id=$id&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$next&amp;records=$pagesize">
+  <a href="?p=$p&amp;id=$id&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$next&amp;records=$pagesize#results">
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
@@ -60,7 +60,7 @@
   [% IF doNext %]</a>[% ELSE %]</span>[% END %]
   &nbsp;||&nbsp;
   [% IF doFirst %]
-  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=0&amp;records=$pagesize">
+  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=0&amp;records=$pagesize#results">
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
@@ -68,7 +68,7 @@
   [% IF doFirst %]</a>[% ELSE %]</span>[% END %]
   &nbsp;||&nbsp;
   [% IF doLast %]
-  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$last&amp;records=$pagesize">
+  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$last&amp;records=$pagesize#results">
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
@@ -128,7 +128,7 @@
   </table>
 
   [% IF doPrev %]
-  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$prev&amp;records=$pagesize">
+  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$prev&amp;records=$pagesize#results">
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
@@ -136,7 +136,7 @@
   [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
   &nbsp;||&nbsp;
   [% IF doNext %]
-  <a href="?p=$p&amp;id=$id&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$next&amp;records=$pagesize">
+  <a href="?p=$p&amp;id=$id&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$next&amp;records=$pagesize#results">
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
@@ -167,7 +167,7 @@
     [% max = pagenum + 10 %]
     [% IF max > of %][% max = of %][% END %]
     [% FOREACH pg IN [min .. max] %]
-      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=[% (pg - 1) * pagesize %]&amp;records=$pagesize">
+      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;search2=$search2&amp;search2value=$search2value&amp;op1=$op1&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=[% (pg - 1) * pagesize %]&amp;records=$pagesize#results">
       [% IF pg == pagenum %]<b>[% pg %]</b>[% ELSE %][% pg %][% END %]
   </a> || 
     [% END %]
