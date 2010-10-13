@@ -618,6 +618,8 @@ sub AddItemToCandidates
   $self->SetError("$id: UTF-8 check failed for quoted title: '$title'") unless $title eq "''" or utf8::is_utf8($title);
   my $sql = "REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub-01-01', $title, $au)";
   $self->PrepareSubmitSql( $sql );
+  # Update system table with aleph system id.
+  $self->BarcodeToId($id);
 }
 
 # Load candidates into queue.
@@ -631,7 +633,7 @@ sub LoadNewItems
 
   my $queuesize = $self->GetQueueSize();
   my $priZeroSize = $self->GetQueueSize(0);
-  printf "Before load, the queue has %d volumes.\n", $queuesize;
+  print "Before load, the queue has $queuesize volumes, $priZeroSize priority 0.\n";
   if ($needed)
   {
     $needed = $needed - $queuesize;
@@ -1062,7 +1064,7 @@ sub SubmitHistReview
     $attr = $self->GetRightsNum( $attr );
     $reason = $self->GetReasonNum( $reason );
 
-    if ( ! $self->CheckReviewer( $user, $expert ) )           { $self->SetError("reviewer ($user) check failed"); return 0; }
+    #if ( ! $self->CheckReviewer( $user, $expert ) )           { $self->SetError("reviewer ($user) check failed"); return 0; }
     # ValidateAttrReasonCombo sets error internally on fail.
     if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { return 0; }
     
@@ -1257,7 +1259,7 @@ sub TwoWorkingDays
   
   $time = $self->GetTodaysDate() unless $time;
   my $cal = Date::Calendar->new( $Profiles->{'US'} );
-  my @parts = split '-', $time;
+  my @parts = split '-', substr($time, 0, 10);
   my $date = $cal->add_delta_workdays($parts[0],$parts[1],$parts[2],2);
   $date = sprintf '%s-%s-%s 23:59:59', substr($date,0,4), substr($date,4,2), substr($date,6,2);
   return $date;
@@ -4848,23 +4850,19 @@ sub GetRecordMetadata
   my $id   = shift;
 
   my $parser = $self->get( 'parser' );    
-  if ( ! $id ) { $self->Logit( "no volume id given: $id" ); return 0; }
+  if ( ! $id ) { $self->SetError( "no volume id given: $id" ); return 0; }
   $id = lc $id;
-  my ($ns,$bar) = split(/\./, $id);
-
+  #my ($ns,$bar) = split(/\./, $id);
   #my $sysId = $self->BarcodeToId( $id );
   #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
   #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
   my $url = $self->MetadataURL($id);
-
   my $ua = LWP::UserAgent->new;
-
-  if ($self->get("verbose")) { $self->Logit( "GET: $url" ); }
   $ua->timeout( 1000 );
   my $req = HTTP::Request->new( GET => $url );
   my $res = $ua->request( $req );
 
-  if ( ! $res->is_success ) { $self->Logit( "$url failed: ".$res->message() ); return; }
+  if ( ! $res->is_success ) { $self->SetError( "$url failed: ".$res->message() ); return; }
 
   my $source;
   eval {
@@ -4876,7 +4874,7 @@ sub GetRecordMetadata
   my $errorCode = $source->findvalue( "//*[name()='error']" );
   if ( $errorCode ne '' )
   {
-      $self->Logit( "$url \nfailed to get MARC for $id: $errorCode " . $res->content() );
+      $self->SetError( "$url \nfailed to get MARC for $id: $errorCode " . $res->content() );
       return;
   }
   #my ($record) = $source->findnodes( "//record" );
@@ -4890,20 +4888,14 @@ sub GetMirlynMetadata
   my $id   = shift;
 
   my $parser = $self->get( 'parser' );    
-  if ( ! $id ) { $self->Logit( "no volume id given: $id" ); return 0; }
-  $id = lc $id;
-  my ($ns,$bar) = split(/\./, $id);
-
+  if ( ! $id ) { $self->SetError( "no volume id given: $id" ); return 0; }
   my $url = "http://mirlyn.lib.umich.edu/Record/$id.xml";
-
   my $ua = LWP::UserAgent->new;
-
-  if ($self->get("verbose")) { $self->Logit( "GET: $url" ); }
   $ua->timeout( 1000 );
   my $req = HTTP::Request->new( GET => $url );
   my $res = $ua->request( $req );
 
-  if ( ! $res->is_success ) { $self->Logit( "$url failed: ".$res->message() ); return; }
+  if ( ! $res->is_success ) { $self->SetError( "$url failed: ".$res->message() ); return; }
 
   my $source;
   eval {
@@ -4915,7 +4907,7 @@ sub GetMirlynMetadata
   my $errorCode = $source->findvalue( "//*[name()='error']" );
   if ( $errorCode ne '' )
   {
-      $self->Logit( "$url \nfailed to get MARC for $id: $errorCode " . $res->content() );
+      $self->SetError( "$url \nfailed to get MARC for $id: $errorCode " . $res->content() );
       return;
   }
   #my ($record) = $source->findnodes( "//record" );
@@ -4924,28 +4916,40 @@ sub GetMirlynMetadata
 }
 
 ## ----------------------------------------------------------------------------
-##  Function:   get the mirlyn ID for a given volume id
+##  Function:   get the mirlyn ID for a given volume id, locally of from aleph;
+##              updates local system table if necessary.
 ##  Parameters: volume id
-##  Return:     ID
+##  Return:     system id
 ## ----------------------------------------------------------------------------
 sub BarcodeToId
 {
   my $self = shift;
   my $id   = shift;
 
-  my $bc2metaUrl = $self->get( 'bc2metaUrl' );
-  my $url = $bc2metaUrl . "?id=$id" . "&no_meta=1";
-  my $ua = LWP::UserAgent->new;
-  $ua->timeout( 1000 );
-  my $req = HTTP::Request->new( GET => $url );
-  my $res = $ua->request( $req );
-  if ( ! $res->is_success )
+  my $sysid;
+  my $sql = "SELECT sysid FROM system WHERE id='$id'";
+  eval {
+    $sysid = $self->SimpleSqlGet($sql);
+  };
+  if (!$sysid)
   {
-    $self->Logit( "$url failed: ".$res->message() );
-    return;
+    my $bc2metaUrl = $self->get( 'bc2metaUrl' );
+    my $url = $bc2metaUrl . "?id=$id" . "&no_meta=1";
+    my $ua = LWP::UserAgent->new;
+    $ua->timeout( 1000 );
+    my $req = HTTP::Request->new( GET => $url );
+    my $res = $ua->request( $req );
+    if ( ! $res->is_success )
+    {
+      $self->SetError( $url . ' failed: ' . $res->message() );
+      return;
+    }
+    $res->content =~ m,<doc_number>\s*(\d+)\s*</doc_number>,s;
+    $sysid = $1;
+    $sql = "INSERT INTO system (id,sysid) VALUES ('$id','$sysid')";
+    $self->PrepareSubmitSql($sql);
   }
-  $res->content =~ m,<doc_number>\s*(\d+)\s*</doc_number>,s;
-  return $1;
+  return $sysid;
 }
 
 sub GetReviewField
