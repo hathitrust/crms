@@ -855,7 +855,7 @@ sub TranslateCategory
     elsif ( $category eq 'EDITION' ) { return 'Edition'; }
     elsif ( $category eq 'NOT CLASS A' ) { return 'Not Class A'; }
     elsif ( $category eq 'PERIODICAL' ) { return 'Periodical'; }
-    elsif ( $category eq 'INSERT' ) { return 'Insert(s)'; }
+    elsif ( $category =~ /INSERT.*/ ) { return 'Insert(s)'; }
     else  { return $category };
 }
 
@@ -1322,13 +1322,11 @@ sub ConvertToSearchTerm
       $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)';
     }
     elsif ( $search eq 'Swiss' ) { $new_search = 'r.swiss'; }
+    elsif ( $search eq 'Hold Thru' ) { $new_search = 'r.hold'; }
+    elsif ( $search eq 'SysID' ) { $new_search = 's.sysid'; }
     elsif ( $search eq 'Holds' )
     {
       $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold IS NOT NULL)';
-    }
-    elsif ( $search eq 'Hold Thru' )
-    {
-      $new_search = 'r.hold';
     }
     return $new_search;
 }
@@ -1402,7 +1400,7 @@ sub CreateSQLForReviews
     }
     elsif ( $page eq 'adminHistoricalReviews' )
     {
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated FROM bibdata b, $CRMSGlobals::historicalreviewsTable r WHERE r.id=b.id };
+      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated, s.sysid FROM bibdata b, system s, $CRMSGlobals::historicalreviewsTable r WHERE r.id=b.id AND r.id=s.id };
     }
     elsif ( $page eq 'undReviews' )
     {
@@ -1441,6 +1439,10 @@ sub CreateSQLForReviews
     elsif ($order eq 'title' || $order eq 'author' || $order eq 'pub_date')
     {
        $sql .= qq{ ORDER BY b.$order $dir $limit };
+    }
+    elsif ($order eq 'sysid')
+    {
+       $sql .= qq{ ORDER BY s.$order $dir $limit };
     }
     else
     {
@@ -1498,16 +1500,20 @@ sub CreateSQLForVolumes
   $search3 = $self->ConvertToSearchTerm( $search3, $page );
   if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
   elsif ($order eq 'status' && $page ne 'adminHistoricalReviews') { $order = 'q.' . $order; }
+  elsif ($order eq 'sysid') { $order = 's.' . $order; }
   else { $order = 'r.' . $order; }
   $search1 = 'r.id' unless $search1;
   my $order2 = ($dir eq 'ASC')? 'min':'max';
   my @rest = ('r.id=b.id');
   my $table = 'reviews';
   my $doQ = '';
+  my $doS = '';
   my $status = 'r.status';
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
+    push @rest, 'r.id=s.id';
+    $doS = ', system s';
   }
   else
   {
@@ -1536,15 +1542,15 @@ sub CreateSQLForVolumes
   push @rest, "date(r.time) >= '$startDate'" if $startDate;
   push @rest, "date(r.time) <= '$endDate'" if $endDate;
   my $restrict = join(' AND ', @rest);
-  my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT r.id FROM $table r, bibdata b$doQ WHERE $restrict)";
+  my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT r.id FROM $table r, bibdata b$doQ $doS WHERE $restrict)";
   #print "$sql<br/>\n";
   my $totalReviews = $self->SimpleSqlGet($sql);
-  $sql = "SELECT COUNT(DISTINCT r.id) FROM $table r, bibdata b$doQ WHERE $restrict";
+  $sql = "SELECT COUNT(DISTINCT r.id) FROM $table r, bibdata b$doQ $doS WHERE $restrict";
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
-  $sql = "SELECT r.id as id, $order2($order) AS ord FROM $table r, bibdata b$doQ WHERE $restrict GROUP BY r.id " .
+  $sql = "SELECT r.id as id, $order2($order) AS ord FROM $table r, bibdata b$doQ $doS WHERE $restrict GROUP BY r.id " .
          "ORDER BY ord $dir $limit";
   #print "$sql<br/>\n";
   my $n = POSIX::ceil($offset/$pagesize+1);
@@ -1588,6 +1594,7 @@ sub CreateSQLForVolumesWide
   $search3 = $self->ConvertToSearchTerm( $search3, $page );
   if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
   elsif ($order eq 'status' && $page ne 'adminHistoricalReviews') { $order = 'q.' . $order; }
+  elsif ($order eq 'sysid') { $order = 's.' . $order; }
   else { $order = 'r.' . $order; }
   $search1 = 'r.id' unless $search1;
   my $order2 = ($dir eq 'ASC')? 'min':'max';
@@ -1598,6 +1605,7 @@ sub CreateSQLForVolumesWide
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
+    $top = 'bibdata b INNER JOIN system s ON b.id=s.id';
   }
   else
   {
@@ -1817,7 +1825,7 @@ sub SearchTermsToSQLWide
     $search2value = $search3value;
     $search3value = $search3 = undef;
   }
-  my %pref2table = ('b'=>'bibdata','r'=>$table,'q'=>'queue');
+  my %pref2table = ('b'=>'bibdata','r'=>$table,'q'=>'queue','s'=>'system');
   my $table1 = $pref2table{substr $search1,0,1};
   my $table2 = $pref2table{substr $search2,0,1};
   my $table3 = $pref2table{substr $search3,0,1};
@@ -2060,6 +2068,7 @@ sub UnpackResults
     my $title      = $row->[17];
     my $author     = $row->[18];
     my $hold       = $row->[19];
+    my $sysid      = $row->[20];
     
     if ( $page eq 'userReviews')
     {
@@ -2203,6 +2212,7 @@ sub GetReviewsRef
       $pubdate = '?' unless $pubdate;
       ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
       ${$item}{'validated'} = $row->[20] if $page eq 'adminHistoricalReviews';
+      ${$item}{'sysid'} = $row->[21] if $page eq 'adminHistoricalReviews';
       ${$item}{'hold'} = $row->[19] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds';
       push( @{$return}, $item );
   }
@@ -2235,9 +2245,11 @@ sub GetVolumesRef
   }
   my $table = 'reviews';
   my $doQ = '';
+  my $doS = '';
   my $status = 'r.status';
   if ($page eq 'adminHistoricalReviews')
   {
+    $doS = ', system s';
     $table = 'historicalreviews';
   }
   else
@@ -2250,12 +2262,13 @@ sub GetVolumesRef
   {
     my $id = $row->[0];
     my $qrest = ($doQ)? ' AND r.id=q.id':'';
+    my $srest = ($doS)? ' AND r.id=s.id':'';
     $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
-           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
+           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ') .
            (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
-           "FROM $table r, bibdata b$doQ " .
-           "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
+           "FROM $table r, bibdata b$doQ $doS " .
+           "WHERE r.id='$id' AND r.id=b.id $qrest $srest ORDER BY $order $dir";
     #print "$sql<br/>\n";
     my $ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );
     foreach my $row ( @{$ref2} )
@@ -2287,6 +2300,7 @@ sub GetVolumesRef
       $pubdate = '?' unless $pubdate;
       ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
       ${$item}{'validated'} = $row->[20] if $page eq 'adminHistoricalReviews';
+      ${$item}{'sysid'} = $row->[21] if $page eq 'adminHistoricalReviews';
       ${$item}{'hold'} = $row->[19] if $page eq 'adminReviews' or $page eq 'editReviews';
       push( @{$return}, $item );
     }
@@ -2313,6 +2327,7 @@ sub GetVolumesRefWide
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
+    $top = 'system s INNER JOIN bibdata b ON s.id=b.id';
   }
   else
   {
@@ -2332,9 +2347,10 @@ sub GetVolumesRefWide
   {
     my $id = $row->[0];
     my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
+    my $qrest = ($page eq 'adminHistoricalReviews')? ' AND r.id=s.id':'';
     $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
-           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
+           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ') .
            (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
            "FROM $top INNER JOIN $table r ON b.id=r.id " .
            "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
@@ -2369,6 +2385,7 @@ sub GetVolumesRefWide
       $pubdate = '?' unless $pubdate;
       ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
       ${$item}{'validated'} = $row->[20] if $page eq 'adminHistoricalReviews';
+      ${$item}{'sysid'} = $row->[21] if $page eq 'adminHistoricalReviews';
       ${$item}{'hold'} = $row->[19] if $page eq 'adminReviews' or $page eq 'editReviews';
       push( @{$return}, $item );
     }
@@ -4928,9 +4945,7 @@ sub BarcodeToId
 
   my $sysid;
   my $sql = "SELECT sysid FROM system WHERE id='$id'";
-  eval {
-    $sysid = $self->SimpleSqlGet($sql);
-  };
+  $sysid = $self->SimpleSqlGet($sql);
   if (!$sysid)
   {
     my $bc2metaUrl = $self->get( 'bc2metaUrl' );
@@ -4946,8 +4961,11 @@ sub BarcodeToId
     }
     $res->content =~ m,<doc_number>\s*(\d+)\s*</doc_number>,s;
     $sysid = $1;
-    $sql = "INSERT INTO system (id,sysid) VALUES ('$id','$sysid')";
-    $self->PrepareSubmitSql($sql);
+    if ($sysid)
+    {
+      $sql = "INSERT INTO system (id,sysid) VALUES ('$id','$sysid')";
+      $self->PrepareSubmitSql($sql);
+    }
   }
   return $sysid;
 }
@@ -6227,13 +6245,19 @@ sub ReviewSearchMenu
   my $searchVal = shift;
   
   my @keys = ('Identifier','Title','Author','PubDate', 'Status','Legacy','UserId','Attribute',
-              'Reason', 'NoteCategory', 'Note', 'Priority', 'Validated', 'Swiss', 'Hold Thru');
+              'Reason', 'NoteCategory', 'Note', 'Priority', 'Validated', 'Swiss', 'Hold Thru', 'SysID');
   my @labs = ('Identifier','Title','Author','Pub Date','Status','Legacy','User',  'Attribute',
-              'Reason','Note Category', 'Note', 'Priority', 'Verdict',   'Swiss', 'Hold Thru');
+              'Reason','Note Category', 'Note', 'Priority', 'Verdict',   'Swiss', 'Hold Thru', 'System ID');
+  #if ($page ne 'adminHistoricalReviews' || !$self->IsUserExpert())
+  if (0)
+  {
+    splice @keys, 15, 1;
+    splice @labs, 15, 1;
+  }
   if ($page ne 'adminReviews' && $page ne 'editReviews' && $page ne 'holds')
   {
-    splice @keys, 14, 2;
-    splice @labs, 14, 2;
+    splice @keys, 14, 1;
+    splice @labs, 14, 1;
   }
   if (!$self->IsUserExpert())
   {
@@ -6358,7 +6382,8 @@ sub VolumeIDsQuery
       my $chron = $node->findvalue("./*[local-name()='subfield' and \@code='z']");
       my $rights = $node->findvalue("./*[local-name()='subfield' and \@code='r']");
       #print "$rights,$id,$chron<br/>\n";
-      push @ids, $id . '__' . $chron . '__' . (('pd' eq substr($rights, 0, 2))? 'Full View':'Search Only');
+      push @ids, $id . '__' . $chron . '__' .
+        (('pd' eq substr($rights, 0, 2) || 'world' eq $rights || 'umall' eq $rights)? 'Full View':'Search Only');
     }
   };
   $self->SetError("Holdings query failed: $@") if $@;

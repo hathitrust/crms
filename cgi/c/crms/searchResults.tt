@@ -16,6 +16,8 @@
 [% pagesize       = cgi.param('records')      %]
 [% jump           = cgi.param('jump')         %]
 [% pagesize = pagesize.replace('\D','')       %]
+
+[% showSysID = cgi.cookie('showSysID') %]
 [% vols = (stype == 'volumes' || stype == 'groups') %]
 [% IF NOT pagesize %][% pagesize = (vols)? 10:20 %][% END %]
 
@@ -111,7 +113,21 @@ function CheckAll(box,formid)
 
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;op1=$op1&amp;search2=$search2&amp;search2value=$search2value&amp;op2=$op2&amp;search3=$search3&amp;search3value=$search3value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$offset&amp;stype=$stype&amp;download=1" target="_blank">download</a>
-
+  
+  [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
+      <input type="checkbox" [% IF showSysID %]checked="checked"[% END %] id="sysIDCB"
+             onchange="setCookie('showSysID',(this.checked)?1:0,31);
+             var tbl  = document.getElementById('resultsTable');
+             var rows = tbl.getElementsByTagName('tr');
+             var vis = (this.checked)? 'table-cell':'none';
+             for (var row=0; row<rows.length;row++) {
+               var cels = rows[row].getElementsByTagName('td');
+               if (cels.length > 1) cels[1].style.display=vis;
+             }
+             document.getElementById('sysidth').style.display = vis;"/><label id="cblabel" for="sysIDCB">&nbsp;&nbsp;Show&nbsp;System&nbsp;ID</label>
+             
+  [% END %]
+  
   [% color_white    = '#FFFFFF' %]
   [% IF vols %]
   [% color_gray     = '#B6D8B9' %]
@@ -142,8 +158,11 @@ function CheckAll(box,formid)
     <input type="submit" name="lock" value="Lock Selected Volumes"/>
     <input type="submit" name="unlock" value="Unlock Selected Volumes"/><br/><br/>
   [% END %]
-  <table class="exportStats" style="width:100%;"><tr>
+  <table class="exportStats" style="width:100%;" id="resultsTable"><tr>
     <th>ID</th>
+    [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
+      <th nowrap="nowrap" id="sysidth" style="display:[% (showSysID)? 'table-cell':'none' %];">System&nbsp;ID</th>
+    [% END %]
     <th>Title</th>
     <th>Author</th>
     [% IF p == 'adminHistoricalReviews' %]<th>Pub&nbsp;Date</th>[% END %]
@@ -193,6 +212,11 @@ function CheckAll(box,formid)
           [% END %]
         [% END %]
         </td>
+        [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
+          <td style="display:[% (showSysID)? 'table-cell':'none' %];">
+            <a href="http://mirlyn.lib.umich.edu/Record/[% review.sysid %]/Details#tabs" target="_blank">$review.sysid</a>
+          </td>
+        [% END %]
         <td>
         [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' || p == 'holds' %]
           [% (crms.IsLockedForOtherUser(review.id))? review.title : crms.LinkToReview(review.id, review.title) %]
@@ -237,7 +261,7 @@ function CheckAll(box,formid)
     </form>
   [% END %]
 
-  <p><b>Found $Total reviews for $TotalVolumes volumes, page $pagenum of $of</b></p>
+  <p><b>Found $Total review[% (Total==1)? "":"s"%] for $TotalVolumes volume[% (TotalVolumes==1)? "":"s"%], page $pagenum of $of</b></p>
   [% IF doPrev %]
   <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;op1=$op1&amp;search2=$search2&amp;search2value=$search2value&amp;op2=$op2&amp;search3=$search3&amp;search3value=$search3value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$prev&amp;stype=$stype&amp;records=$pagesize#results">
   [% ELSE %]

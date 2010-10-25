@@ -19,7 +19,6 @@
 
 [% IF page == 'holds' %]
   [% IF !order %][% order = 'hold' %][% END %]
-  [% IF !dir %][% dir = 'ASC' %][% END %]
 [% END %]
 
 [% vrecs = cgi.cookie('vrecs') or 10 %]
@@ -30,8 +29,8 @@
 [% END %]
 
 [% IF NOT dir %]
-  [% dir = 'DESC' %]
-  [% blah = cgi.param('dir', 'DESC') %]
+  [% dir = 'ASC' %]
+  [% blah = cgi.param('dir', 'ASC') %]
 [% END %]
 <br/>
 <div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
@@ -123,8 +122,8 @@ Search for Reviews where<br/>
 [% IF page != 'editReviews' && page != 'userReviews' %]
   <option value="user"     [% order == 'user' ?  'selected="selected"':'' %]>User</option>
 [% END %]
-  <option value="attr"     [% order == 'attr' ? 'selected="selected"':'' %]>Attr Number</option>
-  <option value="reason"   [% order == 'reason' ? 'selected="selected"':'' %]>Reason Number</option>
+  <option value="attr"     [% order == 'attr' ? 'selected="selected"':'' %]>Attr</option>
+  <option value="reason"   [% order == 'reason' ? 'selected="selected"':'' %]>Reason</option>
   <option value="category" [% order == 'category' ? 'selected="selected"':'' %]>Note Category</option>
 [% IF adm %]
   <option value="priority" [% order == 'priority' ? 'selected="selected"':'' %]>Priority</option>
@@ -137,6 +136,9 @@ Search for Reviews where<br/>
 [% END %]
 [% IF page == 'editReviews' || page == 'adminReviews' || page == 'holds' %]
   <option value="hold" [% order == 'hold' ?  'selected="selected"':'' %]>Hold Thru</option>
+[% END %]
+[% IF crms.IsUserAdmin(user) && page == 'adminHistoricalReviews' %]
+  <option value="sysid" [% order == 'sysid' ?  'selected="selected"':'' %]>System ID</option>
 [% END %]
 </select>
 <br/>
