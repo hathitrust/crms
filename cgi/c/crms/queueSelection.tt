@@ -18,8 +18,8 @@
 [% END %]
 
 [% IF NOT dir %]
-  [% dir = 'DESC' %]
-  [% blah = cgi.param('dir', 'DESC') %]
+  [% dir = 'ASC' %]
+  [% blah = cgi.param('dir', 'ASC') %]
 [% END %]
 <br/>
 <div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
