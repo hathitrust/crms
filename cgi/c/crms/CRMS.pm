@@ -152,7 +152,6 @@ sub PrepareSubmitSql
   if ($@)
   {
     $self->SetError("sql failed ($sql): " . $sth->errstr);
-    $self->Logit("sql failed ($sql): " . $sth->errstr);
     return 0;
   }
   return 1;
@@ -301,7 +300,7 @@ sub CheckPendingStatus
         # If both reviewers are non-advanced mark as provisional match
         if ( (!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
         {
-           $pstatus = 3;
+          $pstatus = 3;
         }
         else #Mark as 4 - two that agree
         {
@@ -337,38 +336,37 @@ sub CheckPendingStatus
 # If fromcgi is set, don't try to create the export file, print stuff, or send mail.
 sub ClearQueueAndExport
 {
-    my $self     = shift;
-    my $fromcgi  = shift;
+  my $self     = shift;
+  my $fromcgi  = shift;
 
-    my $eCount = 0;
-    my $dCount = 0;
-    my $export = [];
-
-    ## get items > 2, clear these
-    my $expert = $self->GetExpertRevItems();
-    foreach my $row ( @{$expert} )
-    {
-        my $id = $row->[0];
-        push( @{$export}, $id );
-        $eCount++;
-    }
-
-    ## get items = 2 and see if they agree
-    my $double = $self->GetDoubleRevItemsInAgreement();
-    foreach my $row ( @{$double} )
-    {
-        my $id = $row->[0];
-        push( @{$export}, $id );
-        $dCount++;
-    }
-
-    $self->ExportReviews( $export, $fromcgi );
-
-    ## report back
-    $self->Logit( "expert reviewed items removed from queue ($eCount)" );
-    $self->Logit( "double reviewed items removed from queue ($dCount)" );
-
-    return ("twice reviewed removed: $dCount, expert reviewed reemoved: $eCount");
+  my $eCount = 0;
+  my $dCount = 0;
+  my $export = [];
+  ## get items > 2, clear these
+  my $expert = $self->GetExpertRevItems();
+  foreach my $row ( @{$expert} )
+  {
+    my $id = $row->[0];
+    push( @{$export}, $id );
+    $eCount++;
+  }
+  ## get items = 2 and see if they agree
+  my $double = $self->GetDoubleRevItemsInAgreement();
+  foreach my $row ( @{$double} )
+  {
+    my $id = $row->[0];
+    push( @{$export}, $id );
+    $dCount++;
+  }
+  ## Get ic/bib volumes for those system IDs that have no chron/enum info.
+  my $dups = $self->ReviewDuplicateVolumes($export, $fromcgi);
+  my $dupCount = scalar @{ $dups };
+  foreach my $id ( @{$dups} )
+  {
+    push( @{$export}, $id );
+  }
+  $self->ExportReviews( $export, $fromcgi );
+  return "Exported: $dCount double review, $eCount expert reviewed, $dupCount duplicates inheriting";
 }
 
 sub GetExpertRevItems
@@ -386,6 +384,64 @@ sub GetDoubleRevItemsInAgreement
   return $self->get( 'dbh' )->selectall_arrayref( $sql );
 }
 
+# For each volume to be exported, find all other volumes with the same sysid.
+# For each one that is still ic/bib and has not been in reviewed yet,
+# add a queue entry (if necessary) and a dummy review with the same rights.
+# Do not do this if any of the volumes has chron/enum info.
+sub ReviewDuplicateVolumes
+{
+  my $self    = shift;
+  my $export  = shift;
+  my $fromcgi = shift;
+  
+  my @dups = ();
+  foreach my $id ( @{$export} )
+  {
+    my $sysid = $self->BarcodeToId($id);
+    if (!$sysid)
+    {
+      $self->SetError("ReviewDuplicateVolumes: could not get system ID for $id");
+      next;
+    }
+    my ($attr,$reason) = $self->GetFinalAttrReason($id);
+    next unless ($attr && $reason);
+    $attr = $self->GetRightsNum($attr);
+    $reason = $self->GetReasonNum($reason);
+    my $rows = $self->VolumeIDsQuery($sysid);
+    my @iddups = ();
+    foreach my $line (@{$rows})
+    {
+      my ($id2,$chron2,$rights2) = split '__', $line;
+      if ($chron2)
+      {
+        @iddups = ();
+        last;
+      }
+      my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id,1)->[0]};
+      if ($id2 ne $id && $attr2 eq 'ic' && $reason2 eq 'bib')
+      {
+        next if 0 < $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2'");
+        push @iddups, $id2;
+      }
+    }
+    foreach my $id2 (@iddups)
+    {
+      my $record = $self->GetRecordMetadata($id2);
+      print "Updating queue and reviews for $id2 ($sysid from $id)\n" unless $fromcgi;
+      my $sql = "REPLACE INTO queue (id,locked,status,pending_status,expcnt,source) VALUES ('$id2','autocrms',5,5,1,'duplicate')";
+      $self->PrepareSubmitSql($sql);
+      my $note = "Record $sysid from $id";
+      my $result = $self->SubmitReview($id2,'autocrms',$attr,$reason,$note,undef,1,undef,'Duplicate',0,0);
+      $self->UpdateTitle($id2, undef, $record);
+      $self->UpdatePubDate($id2, undef, $record);
+      $self->UpdateAuthor($id2, undef, $record);
+      $self->PrepareSumbitSql("REPLACE INTO system (id,sysid) VALUES ('$id2','$sysid')");
+      push @dups, $id2;
+    }
+  }
+  return \@dups;
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   create a tab file of reviews to be loaded into the rights table
 ##              vol id | attr | reason | user | null
@@ -395,57 +451,57 @@ sub GetDoubleRevItemsInAgreement
 ## ----------------------------------------------------------------------------
 sub ExportReviews
 {
-    my $self    = shift;
-    my $list    = shift;
-    my $fromcgi = shift;
+  my $self    = shift;
+  my $list    = shift;
+  my $fromcgi = shift;
 
-    my $count = 0;
-    my $user = 'crms';
-    my $time = $self->GetTodaysDate();
-    my ( $fh, $file ) = $self->GetExportFh() unless $fromcgi;
-    my $start_size = $self->GetCandidatesSize();
-    foreach my $id ( @{$list} )
+  my $count = 0;
+  my $user = 'crms';
+  my $time = $self->GetTodaysDate();
+  my ( $fh, $file ) = $self->GetExportFh() unless $fromcgi;
+  my $start_size = $self->GetCandidatesSize();
+  foreach my $id ( @{$list} )
+  {
+    my ($attr,$reason) = $self->GetFinalAttrReason($id);
+    print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $fromcgi;
+    my $src = $self->SimpleSqlGet("SELECT source FROM queue WHERE id='$id' ORDER BY time DESC LIMIT 1");
+    my $sql = "INSERT INTO  exportdata (time, id, attr, reason, user, src) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src')";
+    $self->PrepareSubmitSql( $sql );
+    my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata');
+    $sql = "INSERT INTO exportdataBckup (time, id, attr, reason, user, src) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src')";
+    $self->PrepareSubmitSql( $sql );
+    $self->MoveFromReviewsToHistoricalReviews($id,$gid);
+    $self->RemoveFromQueue($id);
+    $self->RemoveFromCandidates($id);
+    $count++;
+  }
+  close $fh unless $fromcgi;
+  # Update correctness/validation now that everything is in historical
+  foreach my $id ( @{$list} )
+  {
+    my $sql = "SELECT user,time,validated FROM historicalreviews WHERE id='$id'";
+    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+    foreach my $row ( @{$ref} )
     {
-      my ($attr,$reason) = $self->GetFinalAttrReason($id);
-      print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $fromcgi;
-      my $src = $self->SimpleSqlGet("SELECT source FROM queue WHERE id='$id' ORDER BY time DESC LIMIT 1");
-      my $sql = qq{ INSERT INTO  exportdata (time, id, attr, reason, user, src ) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src' )};
-      $self->PrepareSubmitSql( $sql );
-      my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata');
-      $sql = qq{ INSERT INTO exportdataBckup (time, id, attr, reason, user, src ) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src' )};
-      $self->PrepareSubmitSql( $sql );
-      $self->MoveFromReviewsToHistoricalReviews($id,$gid);
-      $self->RemoveFromQueue($id);
-      $self->RemoveFromCandidates($id);
-      $count++;
-    }
-    close $fh unless $fromcgi;
-    # Update correctness/validation now that everything is in historical
-    foreach my $id ( @{$list} )
-    {
-      my $sql = "SELECT user,time,validated FROM historicalreviews WHERE id='$id'";
-      my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-      foreach my $row ( @{$ref} )
+      my $user = $row->[0];
+      my $time = $row->[1];
+      my $val  = $row->[2];
+      my $val2 = $self->IsReviewCorrect($id, $user, $time);
+      if ($val != $val2)
       {
-        my $user = $row->[0];
-        my $time = $row->[1];
-        my $val  = $row->[2];
-        my $val2 = $self->IsReviewCorrect($id, $user, $time);
-        if ($val != $val2)
-        {
-          $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$time'";
-          $self->PrepareSubmitSql( $sql );
-        }
+        $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$time'";
+        $self->PrepareSubmitSql( $sql );
       }
     }
-    my $sql = "INSERT INTO  $CRMSGlobals::exportrecordTable (itemcount) VALUES ($count)";
-    $self->PrepareSubmitSql( $sql );
-    if (!$fromcgi)
-    {
-      printf "After export, removed %d volumes from candidates.\n", $start_size-$self->GetCandidatesSize();
-      eval { $self->EmailReport ( $count, $file ); };
-      $self->SetError("EmailReport() failed: $@") if $@;
-    }
+  }
+  my $sql = "INSERT INTO  $CRMSGlobals::exportrecordTable (itemcount) VALUES ($count)";
+  $self->PrepareSubmitSql( $sql );
+  if (!$fromcgi)
+  {
+    printf "After export, removed %d volumes from candidates.\n", $start_size-$self->GetCandidatesSize();
+    eval { $self->EmailReport ( $count, $file ); };
+    $self->SetError("EmailReport() failed: $@") if $@;
+  }
 }
 
 # Send email (to Anne) with rights export data.
@@ -867,7 +923,8 @@ sub IsValidCategory
   
   my %cats = ('Insert(s)' => 1, 'Language' => 1, 'Misc' => 1, 'Missing' => 1, 'Date' => 1, 'Reprint' => 1,
               'Periodical' => 1, 'Translation' => 1, 'Wrong Record' => 1, 'Foreign Pub' => 1, 'Dissertation/Thesis' => 1,
-              'Expert Note' => 1, 'Not Class A' => 1, 'Edition' => 1, 'Expert Accepted' => 1, 'Attr Match' => 1, 'Attr Default' => 1);
+              'Expert Note' => 1, 'Not Class A' => 1, 'Edition' => 1,
+              'Expert Accepted' => 1, 'Attr Match' => 1, 'Attr Default' => 1, 'Duplicate' => 1);
   return exists $cats{$cat};
 }
 
@@ -881,6 +938,7 @@ sub CloneReview
   
   my $result = $self->LockItem($id, $user, 1);
   return $result if $result;
+  # SubmitReview unlocks it if it succeeds.
   if ($self->HasItemBeenReviewedByUser($id, $user))
   {
     $result = "Could not approve review for $id because you already reviewed it.";
@@ -909,7 +967,6 @@ sub CloneReview
     $result = $self->SubmitReview($id,$user,$attr,$reason,$note,undef,1,undef,'Expert Accepted');
     $result = ($result == 0)? "Could not approve review for $id":undef;
   }
-  $self->UnlockItem($id, $user);
   return $result;
 }
 
@@ -924,8 +981,8 @@ sub SubmitReview
   my $self = shift;
   my ($id, $user, $attr, $reason, $note, $renNum, $exp, $renDate, $category, $swiss, $question) = @_;
 
-  if ( ! $self->CheckForId( $id ) )                         { $self->SetError("id ($id) check failed");                    return 0; }
-  if ( ! $self->CheckReviewer( $user, $exp ) )              { $self->SetError("reviewer ($user) check failed");            return 0; }
+  if ( ! $self->CheckForId( $id ) )                         { $self->SetError("id ($id) check failed");         return 0; }
+  if ( ! $self->CheckReviewer( $user, $exp ) )              { $self->SetError("reviewer ($user) check failed"); return 0; }
   # ValidateAttrReasonCombo sets error internally on fail.
   if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { return 0; }
 
@@ -2801,8 +2858,8 @@ sub CanChangeToUser
   my $him  = shift;
   
   return 0 if $me eq $him;
-  return 0 unless $self->IsUserAdmin($me) or $self->SameUser($me, $him);
   return 1 if $self->SameUser($me, $him);
+  return 0 if not ($self->IsUserAdmin($me) && $self->WhereAmI());
   my $sql = "SELECT reviewer,advanced,expert,admin,superadmin FROM users WHERE id='$me'";
   my $ref1 = $self->get('dbh')->selectall_arrayref($sql);
   $ref1 = $ref1->[0];
@@ -4985,7 +5042,7 @@ sub HasLockedItem
   my $self = shift;
   my $name = shift;
 
-  my $sql = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE locked = "$name" LIMIT 1};
+  my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked='$name' LIMIT 1";
   my $id = $self->SimpleSqlGet( $sql );
   return ($id)? 1:0;
 }
@@ -4995,11 +5052,8 @@ sub GetLockedItem
   my $self = shift;
   my $name = shift;
 
-  my $sql = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE locked = "$name" LIMIT 1};
+  my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked='$name' LIMIT 1";
   my $id = $self->SimpleSqlGet( $sql );
-
-  $self->Logit( "Get locked item for $name: $id" );
-
   return $id;
 }
 
@@ -5008,7 +5062,7 @@ sub IsLocked
   my $self = shift;
   my $id   = shift;
 
-  my $sql = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NOT NULL AND id = "$id"};
+  my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NOT NULL AND id='$id'";
   return ($self->SimpleSqlGet( $sql ))? 1:0;
 }
 
@@ -5020,10 +5074,9 @@ sub IsLockedForUser
 
   my $sql = "SELECT locked FROM $CRMSGlobals::queueTable WHERE id='$id'";
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
   if ( scalar @{$ref} )
   {
-      if ( $ref->[0]->[0] eq $name ) { return 1; }
+    if ( $ref->[0]->[0] eq $name ) { return 1; }
   }
   return 0;
 }
@@ -5037,7 +5090,6 @@ sub IsLockedForOtherUser
   $user = $self->get('user') unless $user;
   my $sql = "SELECT locked FROM $CRMSGlobals::queueTable WHERE id='$id'";
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-
   if ( scalar @{$ref} )
   {
     my $lock = $ref->[0]->[0];
@@ -5053,20 +5105,17 @@ sub RemoveOldLocks
 
   # By default, GetPrevDate() returns the date/time 24 hours ago.
   $time = $self->GetPrevDate($time);
-
   my $lockedRef = $self->GetLockedItems();
   foreach my $item ( keys %{$lockedRef} )
   {
     my $id = $lockedRef->{$item}->{id};
     my $user = $lockedRef->{$item}->{locked};
     my $since = $self->ItemLockedSince($id, $user);
-
     my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE id='$id' AND '$time'>=time";
     my $old = $self->SimpleSqlGet($sql);
-
     if ( $old )
     {
-      $self->Logit( "REMOVING OLD LOCK:\t$id, $user: $since | $time" );
+      #$self->Logit( "REMOVING OLD LOCK:\t$id, $user: $since | $time" );
       $self->UnlockItem( $id, $user );
     }
   }
@@ -5117,17 +5166,11 @@ sub UnlockItem
   my $id   = shift;
   my $user = shift;
 
-  #if ( ! $self->IsLocked( $id ) ) { return 0; }
-
-  my $sql = qq{UPDATE $CRMSGlobals::queueTable SET locked=NULL WHERE id="$id" AND locked="$user"};
+  my $sql = "UPDATE $CRMSGlobals::queueTable SET locked=NULL WHERE id='$id' AND locked='$user'";
   $self->PrepareSubmitSql($sql);
-  #if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
-
   $self->RemoveFromTimer( $id, $user );
-  #$self->Logit( "unlocking $id" );
   return 1;
 }
-
 
 sub UnlockItemEvenIfNotLocked
 {
@@ -5135,21 +5178,18 @@ sub UnlockItemEvenIfNotLocked
   my $id   = shift;
   my $user = shift;
 
-  my $sql = qq{UPDATE $CRMSGlobals::queueTable SET locked=NULL WHERE id="$id"};
+  my $sql = "UPDATE $CRMSGlobals::queueTable SET locked=NULL WHERE id='$id'";
   if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
-
   $self->RemoveFromTimer( $id, $user );
-  #$self->Logit( "unlocking $id" );
   return 1;
 }
-
 
 sub UnlockAllItemsForUser
 {
   my $self = shift;
   my $user = shift;
 
-  my $sql = qq{SELECT id FROM $CRMSGlobals::timerTable WHERE user="$user"};
+  my $sql = "SELECT id FROM $CRMSGlobals::timerTable WHERE user='$user'";
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
   my $return = {};
   foreach my $row (@{$ref})
@@ -5165,58 +5205,52 @@ sub UnlockAllItemsForUser
 
 sub GetLockedItems
 {
-    my $self = shift;
-    my $user = shift;
-    
-    my $restrict = ($user)? "= '$user'":'IS NOT NULL';
-    my $sql = qq{SELECT id, locked FROM $CRMSGlobals::queueTable WHERE locked $restrict};
-    my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  my $self = shift;
+  my $user = shift;
 
-    my $return = {};
-    foreach my $row (@{$ref})
-    {
-        my $id = $row->[0];
-        my $lo = $row->[1];
-        $return->{$id} = {"id" => $id, "locked" => $lo};
-    }
-    if ( $self->get('verbose') ) { $self->Logit( "locked: " , join(", ", keys %{$return}) ); }
-    return $return;
+  my $restrict = ($user)? "='$user'":'IS NOT NULL';
+  my $sql = "SELECT id, locked FROM $CRMSGlobals::queueTable WHERE locked $restrict";
+  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  my $return = {};
+  foreach my $row (@{$ref})
+  {
+    my $id = $row->[0];
+    my $lo = $row->[1];
+    $return->{$id} = {'id' => $id, 'locked' => $lo};
+  }
+  return $return;
 }
 
 sub ItemLockedSince
 {
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
 
-    my $sql = qq{SELECT start_time FROM $CRMSGlobals::timerTable WHERE id="$id" AND user="$user"};
-    return $self->SimpleSqlGet( $sql );
+  my $sql = "SELECT start_time FROM timer WHERE id='$id' AND user='$user'";
+  return $self->SimpleSqlGet( $sql );
 }
 
 sub StartTimer
 {
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
-    
-    my $sql = qq{ REPLACE INTO timer SET start_time = NOW(), id = "$id", user = "$user" };
-    if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
 
-    $self->Logit( "start timer for $id, $user" );
+  my $sql = "REPLACE INTO timer SET start_time=NOW(), id='$id', user='$user'";
+  $self->PrepareSubmitSql($sql);
 }
 
 sub EndTimer
 {
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
 
-    my $sql = qq{ UPDATE timer SET end_time = NOW() WHERE id = "$id" and user = "$user" };
-    if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
-
-    ## add duration to reviews table
-    $self->SetDuration( $id, $user );
-    $self->Logit( "end timer for $id, $user" );
+  my $sql = "UPDATE timer SET end_time=NOW() WHERE id='$id' AND user='$user'";
+  if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
+  ## add duration to reviews table
+  $self->SetDuration( $id, $user );
 }
 
 sub RemoveFromTimer
@@ -5232,31 +5266,29 @@ sub RemoveFromTimer
 
 sub GetDuration
 {
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
 
-    my $sql = qq{ SELECT duration FROM $CRMSGlobals::reviewsTable WHERE user = "$user" AND id = "$id" };
-    return $self->SimpleSqlGet( $sql );
+  my $sql = "SELECT duration FROM $CRMSGlobals::reviewsTable WHERE user='$user' AND id='$id'";
+  return $self->SimpleSqlGet( $sql );
 }
 
 sub SetDuration
 {
-    my $self = shift;
-    my $id   = shift;
-    my $user = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
 
-    my $sql = qq{ SELECT TIMEDIFF((SELECT end_time   FROM timer where id = "$id" and user = "$user"),
-                                  (SELECT start_time FROM timer where id = "$id" and user = "$user")) };
-    my $dur = $self->SimpleSqlGet( $sql );
-
-    if ( ! $dur ) { return; }
-
+  my $sql = "SELECT TIMEDIFF(end_time,start_time) FROM timer where id='$id' AND user='$user'";
+  my $dur = $self->SimpleSqlGet( $sql );
+  if ($dur)
+  {
     ## insert time
     $sql = "UPDATE reviews SET duration=ADDTIME(duration,'$dur') WHERE user='$user' AND id='$id'";
-
     $self->PrepareSubmitSql( $sql );
-    $self->RemoveFromTimer( $id, $user );
+  }
+  $self->RemoveFromTimer( $id, $user );
 }
 
 sub HasItemBeenReviewedByAnotherExpert
@@ -5299,6 +5331,8 @@ sub GetNextItemForReview
   
   my $id = undef;
   eval{
+    my $sql = 'LOCK TABLES queue WRITE, queue AS q WRITE, reviews READ, reviews AS r READ, users READ, timer WRITE';
+    $self->PrepareSubmitSql($sql);
     my $exclude = 'q.priority<3 AND';
     if ($self->IsUserSuperAdmin($user))
     {
@@ -5311,32 +5345,35 @@ sub GetNextItemForReview
       $exclude = 'q.priority<4 AND';
     }
     my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
-    my $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt FROM queue q ' .
-              "WHERE $exclude $exclude1 q.expcnt=0 AND q.locked IS NULL " .
-              'ORDER BY q.priority DESC, cnt DESC, q.time ASC';
+    $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt FROM queue q ' .
+           "WHERE $exclude $exclude1 q.expcnt=0 AND q.locked IS NULL " .
+           'ORDER BY q.priority DESC, cnt DESC, q.time ASC';
     #print "$sql<br/>\n";
     my $ref = $self->get('dbh')->selectall_arrayref($sql);
     foreach my $row ( @{$ref} )
     {
       my $id2 = $row->[0];
       my $cnt = $row->[1];
-      next if $cnt > 1;
+      $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id2'";
+      next if 1 < $self->SimpleSqlGet($sql);
       $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user='$user'";
-      next if $self->SimpleSqlGet($sql);
-      $id = $id2;
-      last;
+      next if 0 < $self->SimpleSqlGet($sql);
+      my $err = $self->LockItem( $id2, $user );
+      if (!$err)
+      {
+        $id = $id2;
+        last;
+      }
     }
   };
   $self->SetError($@) if $@;
-  ## lock before returning
-  my $err = $self->LockItem( $id, $user );
-  if ($err != 0)
+  $self->PrepareSubmitSql('UNLOCK TABLES');
+  if (!$id)
   {
-    $self->SetError( "failed to lock $id for $user: $err" );
+    $self->SetError("Could not get a volume for $user to review.");
   }
   return $id;
 }
-
 
 sub GetRightsName
 {
@@ -5585,6 +5622,12 @@ sub CreateQueueReport
       $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$n&nbsp;(%0.1f%%)</td></tr>\n", 100.0*$n/$count);
     }
   }
+  $report .= sprintf "<tr><th>Current&nbsp;Host</th><td>%s</td></tr>\n", $self->Hostname();
+  my $delay = $self->ReplicationDelay();
+  my $alert = $delay >= 5;
+  $delay .= ' second' . (($delay == 1)? '':'s');
+  $delay = '<span style="color:#CC0000;font-weight:bold;">' . $delay . '</span>' if $alert;
+  $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay</td></tr>\n";
   $report .= "</table>\n";
   $report .= '<span class="smallishText">* Not including legacy data (reviews/determinations made prior to June 2009).</span><br/>';
   $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count above.</span>';
@@ -6349,6 +6392,7 @@ sub PageToEnglish
 }
 
 # Query the production rights database. This returns an array ref of entries for the volume, oldest first.
+# Returns: aref to aref of ($attr,$reason,$src,$usr,$time,$note)
 sub RightsQuery
 {
   my $self   = shift;
@@ -6362,19 +6406,19 @@ sub RightsQuery
             'ORDER BY r.time ASC';
   my $ref;
   eval { $ref = $self->GetSdrDb()->selectall_arrayref($sql); };
-  $self->SetError("Rights query failed: $@") if $@;
+  $self->SetError("Rights query for $id failed: $@") if $@;
   return $ref;
 }
 
-# Query Mirlyn holdings for this record id and return volume identifiers.
+# Query Mirlyn holdings for this system id and return volume identifiers.
 sub VolumeIDsQuery
 {
-  my $self = shift;
-  my $rid  = shift;
+  my $self  = shift;
+  my $sysid = shift;
   
   my @ids;
   eval {
-    my $record = $self->GetMirlynMetadata($rid);
+    my $record = $self->GetMirlynMetadata($sysid);
     my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='974']");
     foreach my $node ($nodes->get_nodelist())
     {
@@ -6386,17 +6430,17 @@ sub VolumeIDsQuery
         (('pd' eq substr($rights, 0, 2) || 'world' eq $rights || 'umall' eq $rights)? 'Full View':'Search Only');
     }
   };
-  $self->SetError("Holdings query failed: $@") if $@;
+  $self->SetError("Holdings query for $sysid failed: $@") if $@;
   return \@ids;
 }
 
 sub DownloadVolumeIDs
 {
-  my $self = shift;
-  my $rid  = shift;
+  my $self  = shift;
+  my $sysid = shift;
   
   my $buffer = (join "\t", qw (ID Chron Rights Attr Reason Source User Time Note)) . "\n";
-  my $rows = $self->VolumeIDsQuery($rid);
+  my $rows = $self->VolumeIDsQuery($sysid);
   foreach my $line (@{$rows})
   {
     my ($id,$chron,$rights) = split '__', $line;
@@ -6411,6 +6455,12 @@ sub GetSystemStatus
 {
   my $self = shift;
 
+  if (4 < $self->ReplicationDelay())
+  {
+    return ('a while ago',
+            'partial',
+            'Sorry, your request could not be completed due to heavy system load. Please try again a bit later.');
+  }
   my @vals = ('forever','normal','');
   my $sql = 'SELECT time,status,message FROM systemstatus LIMIT 1';
   my $r = $self->get('dbh')->selectall_arrayref($sql);
@@ -6464,10 +6514,12 @@ sub WhereAmI
   my $self = shift;
 
   my $dev = $self->get('dev');
-  return unless $dev;
-  return 'Training' if $dev eq 'crmstest';
-  return 'Moses Dev' if $dev eq 'moseshll';
-  return 'Dev';
+  if ($dev)
+  {
+    return 'Training' if $dev eq 'crmstest';
+    return 'Moses Dev' if $dev eq 'moseshll';
+    return 'Dev';
+  }
 }
 
 sub IsTrainingArea
@@ -6477,7 +6529,6 @@ sub IsTrainingArea
   my $where = $self->WhereAmI();
   return ($where eq 'Training');
 }
-
 
 sub ResetButton
 {
@@ -6501,6 +6552,24 @@ sub ResetButton
     $self->PrepareSubmitSql('DELETE FROM queue WHERE priority>0');
   }
   $self->PrepareSubmitSql('UPDATE queue SET status=0,pending_status=0,expcnt=0 WHERE id NOT IN (SELECT DISTINCT id FROM reviews)');
+}
+
+sub Hostname
+{
+  my $self = shift;
+
+  my $host = `hostname`;
+  chomp $host;
+  return $host;
+}
+
+sub ReplicationDelay
+{
+  my $self = shift;
+
+  my $host = $self->Hostname();
+  my $sql = "SELECT seconds FROM mysqlrep.delay WHERE client='$host'";
+  return $self->SimpleSqlGet($sql);
 }
 
 1;
