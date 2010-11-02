@@ -6457,13 +6457,14 @@ sub GetSystemStatus
 {
   my $self = shift;
 
+  my @vals = ('forever','normal','');
   if (4 < $self->ReplicationDelay())
   {
-    return ('a while ago',
-            'partial',
-            'Sorry, your request could not be completed due to heavy system load. Please try again a bit later.');
+    @vals = ('a while ago',
+             'partial',
+             'Sorry, your request could not be completed due to heavy system load. Please try again a bit later.');
+    return \@vals;
   }
-  my @vals = ('forever','normal','');
   my $sql = 'SELECT time,status,message FROM systemstatus LIMIT 1';
   my $r = $self->get('dbh')->selectall_arrayref($sql);
   my $row = $r->[0];
