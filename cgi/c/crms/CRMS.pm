@@ -414,13 +414,15 @@ sub ReviewDuplicateVolumes
       my ($id2,$chron2,$rights2) = split '__', $line;
       if ($chron2)
       {
+        print "Chron/enum info found for $sysid ($id); skipping\n";
         @iddups = ();
         last;
       }
       my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id,1)->[0]};
       if ($id2 ne $id && $attr2 eq 'ic' && $reason2 eq 'bib')
       {
-        next if 0 < $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2'");
+        next if $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2'");
+        next if $self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id2'");
         push @iddups, $id2;
       }
     }
@@ -435,7 +437,7 @@ sub ReviewDuplicateVolumes
       $self->UpdateTitle($id2, undef, $record);
       $self->UpdatePubDate($id2, undef, $record);
       $self->UpdateAuthor($id2, undef, $record);
-      $self->PrepareSumbitSql("REPLACE INTO system (id,sysid) VALUES ('$id2','$sysid')");
+      $self->PrepareSubmitSql("REPLACE INTO system (id,sysid) VALUES ('$id2','$sysid')");
       push @dups, $id2;
     }
   }
