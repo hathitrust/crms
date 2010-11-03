@@ -359,14 +359,15 @@ sub ClearQueueAndExport
     $dCount++;
   }
   ## Get ic/bib volumes for those system IDs that have no chron/enum info.
-  my $dups = $self->ReviewDuplicateVolumes($export, $fromcgi);
-  my $dupCount = scalar @{ $dups };
-  foreach my $id ( @{$dups} )
-  {
-    push( @{$export}, $id );
-  }
+  #my $dups = $self->ReviewDuplicateVolumes($export, $fromcgi);
+  #my $dupCount = scalar @{ $dups };
+  #foreach my $id ( @{$dups} )
+  #{
+  #  push( @{$export}, $id );
+  #}
   $self->ExportReviews( $export, $fromcgi );
-  return "Exported: $dCount double review, $eCount expert reviewed, $dupCount duplicates inheriting";
+  #return "Exported: $dCount double review, $eCount expert reviewed, $dupCount duplicates inheriting";
+  return "Exported: $dCount double review, $eCount expert reviewed\n";
 }
 
 sub GetExpertRevItems
@@ -6462,7 +6463,7 @@ sub GetSystemStatus
   {
     @vals = ('a while ago',
              'partial',
-             'Sorry, your request could not be completed due to heavy system load. Please try again a bit later.');
+             'Sorry, your request could not be completed due to heavy system load. Please try again in a minute or two.');
     return \@vals;
   }
   my $sql = 'SELECT time,status,message FROM systemstatus LIMIT 1';
