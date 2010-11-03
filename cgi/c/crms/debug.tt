@@ -193,7 +193,7 @@
   [% IF level %]
     [% blah = crms.ProcessReviews() %]
     [% IF level == 2 %]
-      [% blah = crms.ClearQueueAndExport(1) %]
+      <p>[% crms.ClearQueueAndExport(1) %]</p>
     [% END %]
   [% END %]
 [% END %]
