@@ -6,9 +6,9 @@ my $DLXSROOT;
 my $DLPS_DEV;
 BEGIN 
 { 
-    $DLXSROOT = $ENV{'DLXSROOT'}; 
-    $DLPS_DEV = $ENV{'DLPS_DEV'}; 
-    unshift ( @INC, $ENV{'DLXSROOT'} . "/cgi/c/crms/" );
+  $DLXSROOT = $ENV{'DLXSROOT'}; 
+  $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+  unshift ( @INC, $ENV{'DLXSROOT'} . "/cgi/c/crms/" );
 }
 
 use strict;
@@ -57,7 +57,7 @@ my $sql = "SELECT id,time FROM und WHERE src='gov' $startSQL $endSQL ORDER BY id
 my $ref = $dbh->selectall_arrayref($sql);
 if ($csv)
 {
-  print "ID\tTime\tAuthor\tTitle\tPub Date\tPub\n";
+  print "ID\tSys ID\tTime\tAuthor\tTitle\tPub Date\tPub\n";
 }
 else
 {
@@ -67,16 +67,17 @@ else
         "<title>Suspected gov docs from $start to $end</title>\n" .
         '</head><body>' .
         '<table border="1">' .
-        "<tr><th>#</th><th>ID</th><th>Time</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th><th>Pub</th></tr>\n";
+        "<tr><th>#</th><th>ID</th><th>Sys&nbsp;ID</th><th>Time</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th><th>Pub</th></tr>\n";
 }
 my $n = 1;
-foreach my $row ( @{$ref} )
+foreach my $row (@{$ref})
 {
   my $id = $row->[0];
   my $time = $row->[1];
   
-  my $sysID = $crms->BarcodeToId($id);
-  my $catLink = "http://mirlyn.lib.umich.edu/Record/$sysID/Details#tabs";
+  my $sysid = $crms->BarcodeToId($id);
+  my $catLink = "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
+  my $ptLink = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=' . $id;
   my $record = $crms->GetRecordMetadata($id);
   my $author = $crms->GetMarcDatafieldAuthor($id, $record);
   $author =~ s/&/&amp;/g;
@@ -91,14 +92,14 @@ foreach my $row ( @{$ref} )
   if ($csv)
   {
     $field260a =~ s/\t+/ /g;
-    print "$id\t$time\t$author\t$title\t$pub\t$field260a\n";
+    print "$id\t$sysid\t$time\t$author\t$title\t$pub\t$field260a\n";
   }
   else
   {
     $time =~ s/\s+/&nbsp;/g;
     $field260a =~ s/&/&amp;/g;
-    print "<tr><td>$n</td><td><a href='$catLink' target='_blank'>$id</a></td><td>$time</td>";
-    print "<td>$author</td><td>$title</td><td>$pub</td><td>$field260a</td></tr>\n";
+    print "<tr><td>$n</td><td><a href='$ptLink' target='_blank'>$id</a></td><td><a href='$catLink' target='_blank'>$sysid</a></td>";
+    print "<td>$time</td><td>$author</td><td>$title</td><td>$pub</td><td>$field260a</td></tr>\n";
   }
   $n++;
 }
