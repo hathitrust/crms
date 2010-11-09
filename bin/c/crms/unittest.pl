@@ -79,6 +79,15 @@ is($crms->IsReviewCorrect('uc1.b3763822','gnichols123','2009-11-04') ,1, 'Correc
 is($crms->IsReviewCorrect('uc1.b3763822','jaheim123','2009-11-04') ,0,   'Correctness: uc1.b3763822 4');
 is($crms->IsReviewCorrect('uc1.b3763822','annekz','2009-11-09') ,1,      'Correctness: uc1.b3763822 5');
 
+my $sql = "SELECT ID,DREG FROM stanford";
+my $ref = $crms->get('dbh')->selectall_arrayref($sql);
+foreach my $row (@{$ref})
+{
+  my $id = $row->[0];
+  my $dreg = $row->[1];
+  ok(('' eq $crms->CheckRenDate($dreg)),                                 "CheckRenDate($id)");
+}
+
 done_testing();
 
 my $r = $crms->GetErrors();
