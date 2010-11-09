@@ -107,12 +107,15 @@ function CheckAll(box,formid)
 [% END %]
 </table>
 
-
+[% sysStatus = crms.GetSystemStatus().1 %]
 [% locked = crms.GetLockedItems(user) %]
 [% IF locked.size %]
   <br/><br/><form action="crms" id="checks">
   <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
-  <input type="submit" name="unlockSel" value="Unlock Selected Volumes"/><br/><br/>
+  [% IF sysStatus == 'normal' %]
+    <input type="submit" name="unlockSel" value="Unlock Selected Volumes"/>
+  [% END %]
+  <br/><br/>
   <table class="exportStats" style="width:55%">
   <tr><th colspan="6" style="text-align:center;"><span class="major">Your&nbsp;Locked&nbsp;Items</span></th></tr>
   <tr><th>ID</th><th>Title</th><th>Since</th><th>Select</th><th>Unlock</th></tr>
@@ -125,7 +128,7 @@ function CheckAll(box,formid)
       <td style="text-align:center">[% when.replace('\s', '&nbsp;') %]</td>
       <td style="text-align:center"><input type="checkbox" name="vol_[% item %]"/></td>
       <td style="text-align:center">
-        <a href="crms?unlock=[% item %]">do it</a>
+        [% IF sysStatus == 'normal' %]<a href="crms?unlock=[% item %]">do it</a>[% END %]
       </td>
     </tr>
   [% END %]
