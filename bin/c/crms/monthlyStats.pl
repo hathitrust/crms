@@ -3,13 +3,12 @@
 my $DLXSROOT;
 my $DLPS_DEV;
 
-
 BEGIN 
 { 
-    $DLXSROOT = $ENV{'DLXSROOT'}; 
-    $DLPS_DEV = $ENV{'DLPS_DEV'}; 
-    my $toinclude = qq{$DLXSROOT/cgi/c/crms};
-    unshift( @INC, $toinclude );
+  $DLXSROOT = $ENV{'DLXSROOT'}; 
+  $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+  my $toinclude = qq{$DLXSROOT/cgi/c/crms};
+  unshift( @INC, $toinclude );
 }
 
 use strict;
