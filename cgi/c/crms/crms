@@ -26,9 +26,7 @@ my $alias = $crms->GetAliasUserName( $ru );
 if ( $cgi->param('p') eq 'Logout' )
 {
   #Remove all locks for this user.
-  
   # If we're aliased, we don't log out, we just drop the alias.
-  
   if ($alias && $alias ne $ru)
   {
     $crms->UnlockAllItemsForUser( $alias );
@@ -116,30 +114,19 @@ if ( $cgi->param('p') eq 'confirmReview' )
     my $swiss      = $cgi->param('swiss');
 
     my ( $rights, $reason ) = $crms->GetAttrReasonFromCode($EncRights);
-
-    my $errorMsg1 = $crms->HasItemBeenReviewedByTwoReviewers( $id, $user );
-
-    my $errorMsg = $crms->ValidateSubmission2( $id, $user, $rights, $reason, $comment, $category, $renNum, $renDate );
-    
+    my $errorMsg = $crms->HasItemBeenReviewedByTwoReviewers($id, $user);
+    $errorMsg = $crms->ValidateSubmission2($id, $user, $rights, $reason, $comment, $category, $renNum, $renDate) unless $errorMsg;
     my $stat = $crms->GetSystemStatus();
     # Actually, this never gets displayed, but that's OK
-    my $status = $stat->[0];
-    $errorMsg1 = "The CRMS is not currently accepting reviews (status '$status'). Please Cancel." if $stat->[1] != 'normal';
-    if ( ( $errorMsg ) || ( $errorMsg1 ) )
+    my $status = $stat->[1];
+    $errorMsg = "The CRMS is not currently accepting reviews (status '$status'). Please Cancel." if $stat->[1] ne 'normal';
+    if ($errorMsg)
     {
       #clear the cgi
       $cgi->delete_all();
       $cgi->param('p', 'review' );
-      if ( $errorMsg1 )
-      {
-        $cgi->param('errorMsg', $errorMsg1 );
-      }
-      else
-      {
-        $cgi->param('errorMsg', $errorMsg );
-      }
-      $cgi->param('barcode', $id );
-
+      $cgi->param('errorMsg', $errorMsg );
+      $cgi->param('barcode',  $id );
       $cgi->param('rights',   $EncRights);
       $cgi->param('reason',   $reason);
       $cgi->param('comm',     $comment );
@@ -161,14 +148,12 @@ if ( $cgi->param('p') eq 'confirmReview' )
       my $ref = $crms->GetErrors();
       if ($ref && $ref->[0])
       {
-        $errorMsg1 = $ref->[0];
+        $errorMsg = $ref->[0];
         #clear the cgi
         $cgi->delete_all();
         $cgi->param('p', 'review' );
-        $cgi->param('errorMsg', $errorMsg1 );
-        $cgi->param('barcode', $id );
-        $cgi->param('blah', 'bleh' );
-
+        $cgi->param('errorMsg', $errorMsg );
+        $cgi->param('barcode',  $id );
         $cgi->param('rights',   $EncRights);
         $cgi->param('reason',   $reason);
         $cgi->param('comm',     $comment );
@@ -201,45 +186,45 @@ if ( $cgi->param('p') eq 'confirmReview' )
 
 if ( $cgi->param('download') )  
 {
-    my $order            = $cgi->param('order');
-    my $dir              = $cgi->param('dir');
-    my $search1          = $cgi->param('search1');
-    my $search1value     = $cgi->param('search1value');
-    my $op1              = $cgi->param('op1');
-    my $search2          = $cgi->param('search2');
-    my $search2value     = $cgi->param('search2value');
-    my $op2              = $cgi->param('op2');
-    my $search3          = $cgi->param('search3');
-    my $search3value     = $cgi->param('search3value');
-    my $startDate        = $cgi->param('startDate');
-    my $endDate          = $cgi->param('endDate');
-    my $stype            = $cgi->param('stype');
-    my $page             = $cgi->param('p');
-    my $q                = $cgi->param('q');
-    my $success = 1;
-    
-    if ($page eq 'retrieve')
-    {
-      $crms->DownloadVolumeIDs($q)
-    }
-    elsif ($page eq 'queue')
-    {
-      $success = $crms->SearchAndDownloadQueue( $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate );
-    }
-    elsif ($page eq 'determinationStats')
-    {
-      my $monthly = $cgi->param('monthly');
-      my $priority = $cgi->param('priority');
-      $success = $crms->SearchAndDownloadDeterminationStats( $startDate, $endDate, $monthly, $priority );
-    }
-    else
-    {
-      $success = $crms->SearchAndDownload( $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $stype );
-    }
-    if ( $success )
-    {
-      exit;
-    }
+  my $order            = $cgi->param('order');
+  my $dir              = $cgi->param('dir');
+  my $search1          = $cgi->param('search1');
+  my $search1value     = $cgi->param('search1value');
+  my $op1              = $cgi->param('op1');
+  my $search2          = $cgi->param('search2');
+  my $search2value     = $cgi->param('search2value');
+  my $op2              = $cgi->param('op2');
+  my $search3          = $cgi->param('search3');
+  my $search3value     = $cgi->param('search3value');
+  my $startDate        = $cgi->param('startDate');
+  my $endDate          = $cgi->param('endDate');
+  my $stype            = $cgi->param('stype');
+  my $page             = $cgi->param('p');
+  my $q                = $cgi->param('q');
+  my $success = 1;
+
+  if ($page eq 'retrieve')
+  {
+    $crms->DownloadVolumeIDs($q)
+  }
+  elsif ($page eq 'queue')
+  {
+    $success = $crms->SearchAndDownloadQueue( $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate );
+  }
+  elsif ($page eq 'determinationStats')
+  {
+    my $monthly = $cgi->param('monthly');
+    my $priority = $cgi->param('priority');
+    $success = $crms->SearchAndDownloadDeterminationStats( $startDate, $endDate, $monthly, $priority );
+  }
+  else
+  {
+    $success = $crms->SearchAndDownload( $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $stype );
+  }
+  if ( $success )
+  {
+    exit;
+  }
 }
 
 
