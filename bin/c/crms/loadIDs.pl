@@ -14,15 +14,20 @@ use CRMS;
 use Getopt::Std;
 
 my $usage = <<END;
-USAGE: $0 [-hnpv] -u rereport_user tsv_file
+USAGE: $0 [-hnpv] -u user tsv_file
 
-Imports reviews for a rereview project from tsv_file; added reviews
-are by rereport_user.
+Imports reviews for a rereview project from tsv_file.
 
 -h       Print this help message.
 -n       Do not update the database.
 -p       Run in production.
+-u user  Add reviews by this user ID.
 -v       Be verbose.
+
+The tsv_file has one record per line (spacing added for clarity):
+
+volume id sans mdp <tab> attr <tab> reason <tab> original review date
+39015028120130     <tab>  ic  <tab> ren    <tab> 2007-10-03 12:20:49
 END
 
 my %opts;
