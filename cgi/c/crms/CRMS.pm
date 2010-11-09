@@ -1212,25 +1212,21 @@ sub SubmitActiveReview
   return 1;
 }
 
-
 sub MoveFromReviewsToHistoricalReviews
 {
   my $self = shift;
   my $id   = shift;
   my $gid  = shift;
 
-  #$self->Logit( "store $id in historicalreviews" );
   my $sql = "SELECT source FROM queue WHERE id='$id'";
   my $source = $self->SimpleSqlGet($sql);
   my $status = $self->GetStatus( $id );
-  $sql = 'INSERT into historicalreviews (id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, source, status, gid, swiss) ' .
-         "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, expertNote, renDate, copyDate, category, priority, '$source', $status, $gid, swiss from reviews where id='$id'";
+  $sql = 'INSERT into historicalreviews (id, time, user, attr, reason, note, renNum, expert, duration, legacy, renDate, category, priority, source, status, gid, swiss) ' .
+         "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, renDate, category, priority, '$source', $status, $gid, swiss from reviews where id='$id'";
   $self->PrepareSubmitSql( $sql );
-  #$self->Logit( "remove $id from reviews" );
   $sql = "DELETE FROM reviews WHERE id='$id'";
   $self->PrepareSubmitSql( $sql );
 }
-
 
 sub GetFinalAttrReason
 {
@@ -1248,7 +1244,6 @@ sub GetFinalAttrReason
   my $reason = $self->GetReasonName( $ref->[0]->[1] );
   return ($attr, $reason);
 }
-
 
 sub RegisterStatus
 {
@@ -1443,33 +1438,47 @@ sub CreateSQLForReviews
     my $sql;
     if ( $page eq 'adminReviews' )
     {
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id };
+      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+             'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
+             "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id";
     }
     elsif ( $page eq 'holds' )
     {
       my $user = $self->get( "user" );
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id AND q.id = r.id AND r.user='$user' AND r.hold IS NOT NULL };
+      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+             'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
+             "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND q.id=r.id AND r.user='$user' AND r.hold IS NOT NULL";
     }
     elsif ( $page eq 'adminHolds' )
     {
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id AND q.id = r.id AND r.hold IS NOT NULL };
+      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+             'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
+             "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND q.id=r.id AND r.hold IS NOT NULL";
     }
     elsif ( $page eq 'expert' )
     {
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id  AND ( q.status = 2 ) };
+      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+             'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author ' .
+             "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id  AND q.status=2 ";
     }
     elsif ( $page eq 'adminHistoricalReviews' )
     {
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated, s.sysid FROM bibdata b, system s, $CRMSGlobals::historicalreviewsTable r WHERE r.id=b.id AND r.id=s.id };
+      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+             'r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated, s.sysid '.
+             "FROM bibdata b, system s, $CRMSGlobals::historicalreviewsTable r WHERE r.id=b.id AND r.id=s.id";
     }
     elsif ( $page eq 'undReviews' )
     {
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = b.id AND q.id = r.id AND q.status = 3 };
+      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+             'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author ' .
+             "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND q.id=r.id AND q.status=3";
     }
     elsif ( $page eq 'userReviews' )
     {
       my $user = $self->get( "user" );
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND q.status > 0 };
+      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+             'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author ' .
+             "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id AND r.user='$user' AND q.status>0";
     }
     elsif ( $page eq 'editReviews' )
     {
@@ -1477,36 +1486,39 @@ sub CreateSQLForReviews
       my $yesterday = $self->GetYesterday();
       # Experts need to see stuff with any status; non-expert should only see stuff that hasn't been processed yet.
       my $restrict = ($self->IsUserExpert($user))? '':'AND q.status=0';
-      $sql = qq{SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id = r.id AND q.id = b.id AND r.user = '$user' AND (r.time >= "$yesterday" OR r.hold IS NOT NULL) $restrict };
+      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+             'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
+             "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id " .
+             "AND r.user='$user' AND (r.time>='$yesterday' OR r.hold IS NOT NULL) $restrict";
     }
     my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
     $sql .= " AND $terms" if $terms;
     my $which = ($page eq 'holds')? 'r.hold':'r.time';
-    if ( $startDate ) { $sql .= qq{ AND $which >= "$startDate 00:00:00" }; }
-    if ( $endDate ) { $sql .= qq{ AND $which <= "$endDate 23:59:59" }; }
+    if ( $startDate ) { $sql .= " AND $which >='$startDate 00:00:00' "; }
+    if ( $endDate ) { $sql .= " AND $which <='$endDate 23:59:59' "; }
     my $limit = ($download)? '':"LIMIT $offset, $pagesize";
     if ( $order eq 'status' )
     {
       if ( $page eq 'adminHistoricalReviews' )
       {
-        $sql .= qq{ ORDER BY r.$order $dir $limit };
+        $sql .= " ORDER BY r.$order $dir $limit ";
       }
       else
       {
-        $sql .= qq{ ORDER BY q.$order $dir $limit };
+        $sql .= " ORDER BY q.$order $dir $limit ";
       }
     }
     elsif ($order eq 'title' || $order eq 'author' || $order eq 'pub_date')
     {
-       $sql .= qq{ ORDER BY b.$order $dir $limit };
+       $sql .= " ORDER BY b.$order $dir $limit ";
     }
     elsif ($order eq 'sysid')
     {
-       $sql .= qq{ ORDER BY s.$order $dir $limit };
+       $sql .= " ORDER BY s.$order $dir $limit ";
     }
     else
     {
-       $sql .= qq{ ORDER BY r.$order $dir $limit };
+       $sql .= " ORDER BY r.$order $dir $limit ";
     }
     #print "$sql<br/>\n";
     my $countSql = $sql;
@@ -2071,7 +2083,7 @@ sub SearchAndDownload
       {
         my $id = $row->[0];
         my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
-        $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
+        $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
                "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
                (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
                (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
@@ -2117,18 +2129,16 @@ sub UnpackResults
     my $note       = $row->[6];
     my $renNum     = $row->[7];
     my $expert     = $row->[8];
-    my $copyDate   = $row->[9];
-    my $expertNote = $row->[10];
-    my $category   = $row->[11];
-    my $legacy     = $row->[12];
-    my $renDate    = $row->[13];
-    my $priority   = $self->StripDecimal($row->[14]);
-    my $swiss      = $row->[15];
-    my $status     = $row->[16];
-    my $title      = $row->[17];
-    my $author     = $row->[18];
-    my $hold       = $row->[19];
-    my $sysid      = $row->[20];
+    my $category   = $row->[9];
+    my $legacy     = $row->[10];
+    my $renDate    = $row->[11];
+    my $priority   = $self->StripDecimal($row->[12]);
+    my $swiss      = $row->[13];
+    my $status     = $row->[14];
+    my $title      = $row->[15];
+    my $author     = $row->[16];
+    my $hold       = $row->[17];
+    my $sysid      = $row->[18];
     
     if ( $page eq 'userReviews')
     {
@@ -2138,7 +2148,7 @@ sub UnpackResults
     }
     elsif ( $page eq 'editReviews' )
     {
-      #for editRevies
+      #for editReviews
       #id, title, author, review date, attr, reason, category, note.
       $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note\t$hold};
     }
@@ -2162,9 +2172,9 @@ sub UnpackResults
     }
     elsif ( $page eq 'adminHistoricalReviews' )
     {
-      my $pubdate = $row->[19];
+      my $pubdate = $row->[17];
       $pubdate = '?' unless $pubdate;
-      my $validated = $row->[20];
+      my $validated = $row->[18];
       #id, title, author, review date, status, user, attr, reason, category, note, validated
       $buffer .= qq{$id\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated\t$swiss};
     }
@@ -2257,23 +2267,21 @@ sub GetReviewsRef
                   note       => $row->[6],
                   renNum     => $row->[7],
                   expert     => $row->[8],
-                  copyDate   => $row->[9],
-                  expertNote => $row->[10],
-                  category   => $row->[11],
-                  legacy     => $row->[12],
-                  renDate    => $row->[13],
-                  priority   => $self->StripDecimal($row->[14]),
-                  swiss      => $row->[15],
-                  status     => $row->[16],
-                  title      => $row->[17],
-                  author     => $row->[18]
+                  category   => $row->[9],
+                  legacy     => $row->[10],
+                  renDate    => $row->[11],
+                  priority   => $self->StripDecimal($row->[12]),
+                  swiss      => $row->[13],
+                  status     => $row->[14],
+                  title      => $row->[15],
+                  author     => $row->[16]
                  };
-      my $pubdate = $row->[19];
+      my $pubdate = $row->[17];
       $pubdate = '?' unless $pubdate;
       ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
-      ${$item}{'validated'} = $row->[20] if $page eq 'adminHistoricalReviews';
-      ${$item}{'sysid'} = $row->[21] if $page eq 'adminHistoricalReviews';
-      ${$item}{'hold'} = $row->[19] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds';
+      ${$item}{'validated'} = $row->[18] if $page eq 'adminHistoricalReviews';
+      ${$item}{'sysid'} = $row->[19] if $page eq 'adminHistoricalReviews';
+      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds';
       push( @{$return}, $item );
   }
   my $n = POSIX::ceil($offset/$pagesize+1);
@@ -2323,7 +2331,7 @@ sub GetVolumesRef
     my $id = $row->[0];
     my $qrest = ($doQ)? ' AND r.id=q.id':'';
     my $srest = ($doS)? ' AND r.id=s.id':'';
-    $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
+    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
            (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ') .
            (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
@@ -2345,23 +2353,21 @@ sub GetVolumesRef
                   note       => $row->[6],
                   renNum     => $row->[7],
                   expert     => $row->[8],
-                  copyDate   => $row->[9],
-                  expertNote => $row->[10],
-                  category   => $row->[11],
-                  legacy     => $row->[12],
-                  renDate    => $row->[13],
-                  priority   => $self->StripDecimal($row->[14]),
-                  swiss      => $row->[15],
-                  status     => $row->[16],
-                  title      => $row->[17],
-                  author     => $row->[18]
+                  category   => $row->[9],
+                  legacy     => $row->[10],
+                  renDate    => $row->[11],
+                  priority   => $self->StripDecimal($row->[12]),
+                  swiss      => $row->[13],
+                  status     => $row->[14],
+                  title      => $row->[15],
+                  author     => $row->[16]
                  };
-      my $pubdate = $row->[19];
+      my $pubdate = $row->[17];
       $pubdate = '?' unless $pubdate;
       ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
-      ${$item}{'validated'} = $row->[20] if $page eq 'adminHistoricalReviews';
-      ${$item}{'sysid'} = $row->[21] if $page eq 'adminHistoricalReviews';
-      ${$item}{'hold'} = $row->[19] if $page eq 'adminReviews' or $page eq 'editReviews';
+      ${$item}{'validated'} = $row->[18] if $page eq 'adminHistoricalReviews';
+      ${$item}{'sysid'} = $row->[19] if $page eq 'adminHistoricalReviews';
+      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews';
       push( @{$return}, $item );
     }
   }
@@ -2408,7 +2414,7 @@ sub GetVolumesRefWide
     my $id = $row->[0];
     my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
     my $qrest = ($page eq 'adminHistoricalReviews')? ' AND r.id=s.id':'';
-    $sql = "SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, r.copyDate, r.expertNote, " .
+    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
            (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ') .
            (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
@@ -2430,23 +2436,21 @@ sub GetVolumesRefWide
                   note       => $row->[6],
                   renNum     => $row->[7],
                   expert     => $row->[8],
-                  copyDate   => $row->[9],
-                  expertNote => $row->[10],
-                  category   => $row->[11],
-                  legacy     => $row->[12],
-                  renDate    => $row->[13],
-                  priority   => $self->StripDecimal($row->[14]),
-                  swiss      => $row->[15],
-                  status     => $row->[16],
-                  title      => $row->[17],
-                  author     => $row->[18]
+                  category   => $row->[9],
+                  legacy     => $row->[10],
+                  renDate    => $row->[11],
+                  priority   => $self->StripDecimal($row->[12]),
+                  swiss      => $row->[13],
+                  status     => $row->[14],
+                  title      => $row->[15],
+                  author     => $row->[16]
                  };
-      my $pubdate = $row->[19];
+      my $pubdate = $row->[17];
       $pubdate = '?' unless $pubdate;
       ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
-      ${$item}{'validated'} = $row->[20] if $page eq 'adminHistoricalReviews';
-      ${$item}{'sysid'} = $row->[21] if $page eq 'adminHistoricalReviews';
-      ${$item}{'hold'} = $row->[19] if $page eq 'adminReviews' or $page eq 'editReviews';
+      ${$item}{'validated'} = $row->[18] if $page eq 'adminHistoricalReviews';
+      ${$item}{'sysid'} = $row->[19] if $page eq 'adminHistoricalReviews';
+      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews';
       push( @{$return}, $item );
     }
   }
@@ -5626,10 +5630,10 @@ sub CreateQueueReport
     }
   }
   $report .= sprintf "<tr><th>Current&nbsp;Host</th><td>%s</td></tr>\n", $self->Hostname();
-  my $delay = $self->ReplicationDelay();
+  my ($delay,$since) = $self->ReplicationDelay();
   my $alert = $delay >= 5;
   $delay .= ' second' . (($delay == 1)? '':'s');
-  $delay = '<span style="color:#CC0000;font-weight:bold;">' . $delay . '</span>' if $alert;
+  $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay since $since</span>" if $alert;
   $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay</td></tr>\n";
   $report .= "</table>\n";
   $report .= '<span class="smallishText">* Not including legacy data (reviews/determinations made prior to June 2009).</span><br/>';
@@ -5837,38 +5841,36 @@ sub DoPriorityBreakdown
 
 sub GetTotalAwaitingReview
 {
-    my $self = shift;
+  my $self = shift;
 
-    my $sql = qq{ SELECT count(distinct id) from $CRMSGlobals::queueTable where status=0 and id not in ( select id from $CRMSGlobals::reviewsTable)};
-    my $count = $self->SimpleSqlGet( $sql );
-    
-    if ($count) { return $count; }
-    return 0;
+  my $sql = qq{ SELECT count(distinct id) from $CRMSGlobals::queueTable where status=0 and id not in ( select id from $CRMSGlobals::reviewsTable)};
+  my $count = $self->SimpleSqlGet( $sql );
+
+  if ($count) { return $count; }
+  return 0;
 }
 
 
 sub GetLastLoadSizeToCandidates
 {
-    my $self = shift;
+  my $self = shift;
 
-    my $sql = 'SELECT addedamount FROM candidatesrecord ORDER BY time DESC LIMIT 1';
-    my $count = $self->SimpleSqlGet( $sql );
-    
-    if ($count) { return $count; }
-    return 0;
+  my $sql = 'SELECT addedamount FROM candidatesrecord ORDER BY time DESC LIMIT 1';
+  my $count = $self->SimpleSqlGet( $sql );
 
+  if ($count) { return $count; }
+  return 0;
 }
 
 sub GetLastLoadTimeToCandidates
 {
-    my $self = shift;
+  my $self = shift;
 
-    my $sql = qq{SELECT DATE_FORMAT(MAX(time), "%a, %M %e, %Y at %l:%i %p") from candidatesrecord};
-    my $time = $self->SimpleSqlGet( $sql );
-    
-    if ($time) { return $time; }
-    return 'no data available';
+  my $sql = qq{SELECT DATE_FORMAT(MAX(time), "%a, %M %e, %Y at %l:%i %p") from candidatesrecord};
+  my $time = $self->SimpleSqlGet( $sql );
 
+  if ($time) { return $time; }
+  return 'no data available';
 }
 
 
@@ -6215,19 +6217,19 @@ sub SanityCheckDB
   }
   # ======== reviews ========
   $table = 'reviews';
-  $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,expertNote,renDate,category,flagged,priority FROM $table";
+  $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,renDate,category FROM $table";
   $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
     $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
     $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
     $self->SetError(sprintf("$table __ spaces in renNum for %s__ '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
-    $self->SetError(sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $self->IsRenDate($row->[11]);
-    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $self->IsValidCategory($row->[12]);
+    $self->SetError(sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[10])) unless $self->IsRenDate($row->[10]);
+    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[12])) unless $row->[11] eq '' or $self->IsValidCategory($row->[11]);
   }
   # ======== historicalreviews ========
   $table = 'historicalreviews';
-  $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,expertNote,renDate,category,flagged,status,priority FROM $table";
+  $sql = "SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,renDate,category,status FROM $table";
   $rows = $dbh->selectall_arrayref( $sql );
   my %stati = (1=>1,4=>1,5=>1,6=>1,7=>1);
   foreach my $row ( @{$rows} )
@@ -6235,9 +6237,9 @@ sub SanityCheckDB
     $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
     $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
     $self->SetError(sprintf("$table __ spaces in renNum for %s__ '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
-    $self->SetError(sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[11])) unless $self->IsRenDate($row->[11]);
-    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[12])) unless $row->[12] eq '' or $self->IsValidCategory($row->[12]);
-    $self->SetError(sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[14])) unless $stati{$row->[14]};
+    $self->SetError(sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[10])) unless $self->IsRenDate($row->[10]);
+    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[11])) unless $row->[11] eq '' or $self->IsValidCategory($row->[11]);
+    $self->SetError(sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[12])) unless $stati{$row->[12]};
     $sql = "SELECT id,status,gid,SUM(expert) AS ct FROM $table WHERE status=5 OR status=6 GROUP BY gid HAVING ct=0";
     $rows = $dbh->selectall_arrayref( $sql );
     foreach my $row ( @{$rows} )
@@ -6459,11 +6461,14 @@ sub GetSystemStatus
   my $self = shift;
 
   my @vals = ('forever','normal','');
-  if (4 < $self->ReplicationDelay())
+  my ($delay,$since) = $self->ReplicationDelay();
+  if (4 < $delay)
   {
-    @vals = ('a while ago',
-             'partial',
-             'Sorry, your request could not be completed due to heavy system load. Please try again in a minute or two.');
+    @vals = ($since,
+             'delayed',
+             'The CRMS is currently experiencing delays. "Review" and "Add to Queue" pages may not be available. ' .
+             'Please try again in a few minutes. ' .
+             'Locked volumes may need to have reviews re-submitted.');
     return \@vals;
   }
   my $sql = 'SELECT time,status,message FROM systemstatus LIMIT 1';
@@ -6482,7 +6487,7 @@ sub GetSystemStatus
       }
       elsif ($vals[1] eq 'partial')
       {
-        $vals[2] = 'The CRMS has limited functionality. The "review" and "add to queue" (administrators only) pages are currently disabled until further notice.';
+        $vals[2] = 'The CRMS has limited functionality. "Review" and "Add to Queue" (administrators only) pages are currently disabled until further notice.';
       }
     }
   }
@@ -6572,8 +6577,10 @@ sub ReplicationDelay
   my $self = shift;
 
   my $host = $self->Hostname();
-  my $sql = "SELECT seconds FROM mysqlrep.delay WHERE client='$host'";
-  return $self->SimpleSqlGet($sql);
+  my $sql = "SELECT seconds,DATE_SUB(time, INTERVAL seconds SECOND) FROM mysqlrep.delay WHERE client='$host'";
+  my $ref = $self->get('dbh')->selectall_arrayref($sql);
+  my @return = ($ref->[0]->[0],$self->FormatTime($ref->[0]->[1]));
+  return @return;
 }
 
 1;
