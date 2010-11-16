@@ -8,10 +8,9 @@
     <td><h3>Other&nbsp;System&nbsp;Stats</h3>[% crms.CreateSystemReport() %]</td>
   </tr>
   <tr style="vertical-align:top;">
-    <td><h3>Active Volumes</h3>[% crms.CreateReviewReport() %]<br/></td>
-    <td><h3>Final&nbsp;Determinations</h3>[% crms.CreateDeterminationReport() %]<br/>
-     <h3>Historical&nbsp;Reviews</h3>
-     [% crms.CreateHistoricalReviewsReport() %]
+    <td><h3>Active Volumes</h3>[% crms.CreateReviewReport() %]</td>
+    <td><h3>Final&nbsp;Determinations</h3>[% crms.CreateDeterminationReport() %]
+        <h3>Historical&nbsp;Reviews</h3>[% crms.CreateHistoricalReviewsReport() %]
     </td>
   </tr>
 </table>
