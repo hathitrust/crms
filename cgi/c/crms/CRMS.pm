@@ -415,7 +415,7 @@ sub ReviewDuplicateVolumes
       my ($id2,$chron2,$rights2) = split '__', $line;
       if ($chron2)
       {
-        print "Chron/enum info found for $sysid ($id); skipping\n";
+        print "Chron/enum info found for $sysid ($id); skipping\n" unless $fromcgi;
         @iddups = ();
         last;
       }
@@ -5025,11 +5025,9 @@ sub BarcodeToId
     }
     $res->content =~ m,<doc_number>\s*(\d+)\s*</doc_number>,s;
     $sysid = $1;
-    if ($sysid)
-    {
-      $sql = "INSERT INTO system (id,sysid) VALUES ('$id','$sysid')";
-      $self->PrepareSubmitSql($sql);
-    }
+    my $value = ($sysid)? "'$sysid'":'NULL';
+    $sql = "REPLACE INTO system (id,sysid) VALUES ('$id',$value)";
+    $self->PrepareSubmitSql($sql);
   }
   return $sysid;
 }
@@ -5571,7 +5569,6 @@ sub CreateQueueReport
 {
   my $self = shift;
   my $dbh = $self->get( 'dbh' );
-  my $report = '';
   my $priheaders = '';
   my @pris = map {$_->[0]} @{ $dbh->selectall_arrayref('SELECT DISTINCT priority FROM queue ORDER BY priority ASC') };
   foreach my $pri (@pris)
@@ -5579,9 +5576,8 @@ sub CreateQueueReport
     $pri = $self->StripDecimal($pri);
     $priheaders .= "<th>Priority&nbsp;$pri</th>"
   }
-  $report .= "<table style='width:100px;'><tr style='vertical-align:top;'><td>\n";
-  $report .= "<h3>Volumes in Queue</h3>\n";
-  $report .= "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
+  
+  my $report = "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
   foreach my $status (-1 .. 7)
   {
     my $statusClause = ($status == -1)? '':" WHERE STATUS=$status";
@@ -5604,9 +5600,14 @@ sub CreateQueueReport
   $report .= sprintf("<tr><td nowrap='nowrap' colspan='%d'><span class='smallishText'>Note: includes both active and inactive volumes.</span><br/>\n", 2+scalar @pris);
   $report .= "<span class='smallishText'>* Status 6 no longer in use as of 4/19/2010.</span></td></tr>\n";
   $report .= "</table>\n";
-  $report .= "</td><td style='padding-left:80px'>\n";
-  $report .= "<h3>Other System Stats</h3>\n";
-  $report .= "<table class='exportStats'>\n";
+  return $report;
+}
+
+sub CreateSystemReport
+{
+  my $self = shift;
+
+  my $report = "<table class='exportStats'>\n";
   my $val = $self->GetLastQueueTime(1);
   $val =~ s/\s/&nbsp;/g;
   $val = 'Never' unless $val;
@@ -5617,7 +5618,7 @@ sub CreateQueueReport
   $val = $self->GetLastLoadTimeToCandidates();
   $val =~ s/\s/&nbsp;/g;
   $report .= sprintf("<tr><th>Last&nbsp;Candidates&nbsp;Addition</th><td>%s&nbsp;on&nbsp;$val</td></tr>", $self->GetLastLoadSizeToCandidates());
-  $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und');
+  my $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und');
   $report .= "<tr><th>Items&nbsp;Filtered**</th><td>$count</td></tr>\n";
   if ($count)
   {
@@ -5635,7 +5636,7 @@ sub CreateQueueReport
   $delay .= ' second' . (($delay == 1)? '':'s');
   $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay since $since</span>" if $alert;
   $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay</td></tr>\n";
-  $report .= "</table>\n";
+  $report .= '<tr><td colspan="2">';
   $report .= '<span class="smallishText">* Not including legacy data (reviews/determinations made prior to June 2009).</span><br/>';
   $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count above.</span>';
   $report .= "</td></tr></table>\n";
@@ -5689,11 +5690,10 @@ sub CreateDeterminationReport
     my $n = $sources{$source};
     $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;$source</th><td>$n</td></tr>";
   }
-  #$report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;Elsewhere</td><td>%s</td></tr>", $noncand);
   $report .= sprintf("<tr><th>Total&nbsp;Legacy&nbsp;Determinations</th><td>%s</td></tr>", $legacy);
   $report .= sprintf("<tr><th>Total&nbsp;Determinations</th><td>%s</td></tr>", $exported + $legacy);
+  $report .= "<tr><td colspan='2'><span class='smallishText'>* Status 6 no longer in use as of 4/19/2010.</span></td></tr>\n";
   $report .= "</table>\n";
-  $report .= "<span class='smallishText'>* Status 6 no longer in use as of 4/19/2010.</span>\n";
   return $report;
 }
 
@@ -5701,8 +5701,7 @@ sub CreateHistoricalReviewsReport
 {
   my $self = shift;
   
-  my $report = '';
-  $report .= "<table class='exportStats'>\n";
+  my $report = "<table class='exportStats'>\n";
   $report .= sprintf("<tr><th>CRMS&nbsp;Reviews</th><td>%s</td></tr>\n", $self->GetTotalNonLegacyReviewCount());
   $report .= sprintf("<tr><th>Legacy&nbsp;Reviews</th><td>%s</td></tr>\n", $self->GetTotalLegacyReviewCount());
   $report .= sprintf("<tr><th>Total&nbsp;Historical&nbsp;Reviews</th><td>%s</td></tr>\n", $self->GetTotalHistoricalReviewCount());

@@ -2,20 +2,18 @@
 
 <h2>System Summary:</h2><br/>
 
-[% crms.CreateQueueReport() %]
-<br/>
-
 <table style="width:100px;">
-  <tr style="vertical-align:top;"><td>
-  <h3>Active Volumes</h3>
-  [% crms.CreateReviewReport() %]<br/>
-  </td>
-  <td style='padding-left:40px'>
-  <h3>Final&nbsp;Determinations</h3>
-  [% crms.CreateDeterminationReport() %]<br/><br/>
-  <h3>Historical&nbsp;Reviews</h3>
-  [% crms.CreateHistoricalReviewsReport() %]
-  </td></tr>
+  <tr style="vertical-align:top;">
+    <td style="padding-right:80px;"><h3>Active&nbsp;Volumes</h3>[% crms.CreateQueueReport() %]</td>
+    <td><h3>Other&nbsp;System&nbsp;Stats</h3>[% crms.CreateSystemReport() %]</td>
+  </tr>
+  <tr style="vertical-align:top;">
+    <td><h3>Active Volumes</h3>[% crms.CreateReviewReport() %]<br/></td>
+    <td><h3>Final&nbsp;Determinations</h3>[% crms.CreateDeterminationReport() %]<br/>
+     <h3>Historical&nbsp;Reviews</h3>
+     [% crms.CreateHistoricalReviewsReport() %]
+    </td>
+  </tr>
 </table>
 
 [% INCLUDE footer.tt %]
