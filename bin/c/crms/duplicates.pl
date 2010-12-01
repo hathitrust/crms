@@ -6,9 +6,9 @@ my $DLXSROOT;
 my $DLPS_DEV;
 BEGIN 
 { 
-    $DLXSROOT = $ENV{'DLXSROOT'}; 
-    $DLPS_DEV = $ENV{'DLPS_DEV'}; 
-    unshift ( @INC, $ENV{'DLXSROOT'} . "/cgi/c/crms/" );
+  $DLXSROOT = $ENV{'DLXSROOT'}; 
+  $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+  unshift ( @INC, $ENV{'DLXSROOT'} . "/cgi/c/crms/" );
 }
 
 use strict;
@@ -25,7 +25,7 @@ multiple volumes, or conflicting determinations.
 -e       Report only on records with chron/enum information.
 -h       Print this help message.
 -i ID    Report only for volume ID (start and end dates are ignored).
--l       Generate hyperlinks in the TSV file for Excel.
+-l       Use legacy determinations instead of CRMS determinations.
 -n       Do not submit SQL for duplicates when -s flag is set.
 -p       Run in production.
 -r TYPE  Report on situations of type TYPE in {duplicate,conflict,crms_conflict,all}:
@@ -36,37 +36,39 @@ multiple volumes, or conflicting determinations.
 -s       For true duplicates, submit a review for unreviewed duplicate volumes.
 -S PATH  Emit a TSV summary (for duplicates) with ID, rights, reason.
 -t TYPE  Print a report of TYPE where TYPE={html,none,tsv}.
+-x       Generate hyperlinks in the TSV file for Excel.
 -v       Be verbose.
 END
 
 my %opts;
-getopts('aehi:lnpr:sS:t:v', \%opts);
+getopts('aehi:lnpr:sS:t:vx', \%opts);
 
 my $attrOnly   = $opts{'a'};
 my $enum       = $opts{'e'};
 my $help       = $opts{'h'};
 my $id         = $opts{'i'};
-my $link       = $opts{'l'};
+my $legacy     = $opts{'l'};
 my $noop       = $opts{'n'};
-my $production = $opts{'p'};
+$DLPS_DEV = undef if $opts{'p'};
 my $type       = $opts{'r'};
 my $submit     = $opts{'s'};
 my $summary    = $opts{'S'};
 my $report     = $opts{'t'} || 'none';
 my $verbose    = $opts{'v'};
+my $link       = $opts{'x'};
 
 my %reports = ('html'=>1,'none'=>1,'tsv'=>1);
 die "Bad value '$report' for -t flag" unless defined $reports{$report};
 my $summfh;
 if ($summary)
 {
-  open $summfh, $summary or die "failed to open summary file $summary: $@ \n";
+  open $summfh, '>', $summary or die "failed to open summary file $summary: $@ \n";
 }
 $type = 'duplicate' unless $type;
 my $start = $ARGV[0] or '';
 my $end   = $ARGV[1] or '';
 die "Start date format should be YYYY-MM-DD\n" if $start and $start !~ m/\d\d\d\d-\d\d-\d\d/;
-die "Start date format should be YYYY-MM-DD\n" if $end and $end !~ m/\d\d\d\d-\d\d-\d\d/;
+die "End date format should be YYYY-MM-DD\n" if $end and $end !~ m/\d\d\d\d-\d\d-\d\d/;
 if ($start > $end)
 {
   my $tmp = $start;
@@ -83,42 +85,9 @@ my $crms = CRMS->new(
     configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
-    dev          =>   !$production
+    dev          =>   $DLPS_DEV
 );
 
-
-sub HoldingsQueryForRecord
-{
-  my $id     = shift;
-  my $record = shift;
-  
-  my @ids = ();
-  eval {
-    #print "Mirlyn ID: $rid\n";
-    #printf "%s\n\n", $record->toString();
-    my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='974']");
-    foreach my $node ($nodes->get_nodelist())
-    {
-      my $id = $node->findvalue("./*[local-name()='subfield' and \@code='u']");
-      my $chron = $node->findvalue("./*[local-name()='subfield' and \@code='z']");
-      my $rights = $node->findvalue("./*[local-name()='subfield' and \@code='r']");
-      #print "$rights,$id,$chron<br/>\n";
-      push @ids, $id . '__' . $chron . '__' . (('pd' eq substr($rights, 0, 2))? 'Full View':'Search Only');
-    }
-    $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='MDP']");
-    foreach my $node ($nodes->get_nodelist())
-    {
-      my $id = $node->findvalue("./*[local-name()='subfield' and \@code='u']");
-      my $chron = $node->findvalue("./*[local-name()='subfield' and \@code='z']");
-      my $rights = $node->findvalue("./*[local-name()='subfield' and \@code='r']");
-      #print "$rights,$id,$chron<br/>\n";
-      push @ids, $id . '__' . $chron . '__' . (('pd' eq substr($rights, 0, 2))? 'Full View':'Search Only');
-    }
-  };
-  $crms->SetError("Holdings query for $id failed: $@") if $@;
-  @ids = sort @ids;
-  return \@ids;
-}
 
 sub Date1Field
 {
@@ -165,16 +134,17 @@ elsif ($report eq 'html')
 
 my %seen;
 my %counts;
-my $idsql = '';
+my $idsql = 'id IS NOT NULL';
 if ($id)
 {
-  $idsql = "WHERE id='$id'";
+  $idsql = "id='$id'";
   $start = undef;
   $end = undef;
 }
-my $startsql = ($start)? "WHERE time>='$start'":'';
+my $startsql = ($start)? "AND time>='$start'":'';
 my $endsql = ($end)? "AND time<'$end'":'';
-my $sql = "SELECT id,attr,reason,DATE(time),time,gid FROM exportdata $idsql $startsql $endsql ORDER BY time ASC";
+my $sql = "SELECT id,attr,reason,DATE(time),time FROM exportdata WHERE $idsql $startsql $endsql ORDER BY time ASC";
+$sql = "SELECT id,attr,reason,DATE(time),time FROM historicalreviews WHERE $idsql $startsql $endsql AND legacy=1 ORDER BY time ASC";
 my $ref = $crms->get('dbh')->selectall_arrayref($sql);
 #print "$sql\n";
 my $lastdate = '';
@@ -182,12 +152,18 @@ foreach my $row ( @{$ref} )
 {
   $id = $row->[0];
   next if $seen{$id};
+  next if $legacy and 0 < $crms->SimpleSqlGet("SELECT COUNT(*) FROM exportdata WHERE id='$id'");
   $seen{$id} = 1;
   my $attr = $row->[1];
   my $reason = $row->[2];
+  if ($legacy)
+  {
+    $attr = $crms->GetRightsName($attr);
+    $reason = $crms->GetReasonName($reason);
+  }
   my $date = $row->[3];
   my $time = $row->[4];
-  my $gid = $row->[5];
+  next if $legacy and 0 < $crms->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id' AND time>'$time'");
   $sql = "SELECT COUNT(*) FROM exportdata WHERE id='$id' AND time>'$time'";
   next if $crms->SimpleSqlGet($sql) > 0;
   my $rq = $crms->RightsQuery($id,1);
@@ -208,9 +184,10 @@ foreach my $row ( @{$ref} )
   }
   $lastdate = $date;
   my $sysid = $crms->BarcodeToId($id);
+  next unless $sysid;
   my $mrecord = $crms->GetMirlynMetadata($sysid);
-  my $holdings = HoldingsQueryForRecord($sysid, $mrecord);
-  next if 1 == scalar @{$holdings};
+  my $holdings = $crms->VolumeIDsQuery($sysid, $mrecord);
+  next unless scalar @{$holdings};
   my $record = $crms->GetRecordMetadata($id);
   my $date1 = Date1Field($id, $record);
   my $date2 = Date2Field($id, $record);
@@ -220,7 +197,7 @@ foreach my $row ( @{$ref} )
   my %attrs;
   $attrs{($attrOnly)? $attr:"$attr/$reason"} = 1;
   my $chron = '';
-  print "Original: $id, $attr, $reason\n" if $verbose and 1 < scalar @{$holdings};
+  print "Original: $id ($sysid) $attr/$reason\n" if $verbose and 1 < scalar @{$holdings};
   foreach my $holding (@{$holdings})
   {
     #print "$holding\n";
@@ -237,10 +214,13 @@ foreach my $row ( @{$ref} )
   }
   else
   {
-    next if ($chron && $chron !~ m/cop[\.y]/);
+    if ($chron && $chron !~ m/cop[\.y]/)
+    {
+      print "  Chron '$chron'; skipping.\n";
+      next;
+    }
   }
   my $catlink = "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
-  
   if ($report eq 'tsv')
   {
     push @lines, sprintf "$sysid\t$id\t$title\t$attr\t$reason\t$chron\t$date1\t$date2\t$date";
@@ -279,7 +259,7 @@ foreach my $row ( @{$ref} )
       if (!$ref2 || $ref3->[0]->[4] > $ref2->[0]->[4])
       {
         $ref2 = $ref3;
-        $user = $ref2->[0]->[2];
+        $user = $ref2->[0]->[3];
       }
       $attr2 = $ref2->[0]->[0];
       $reason2 = $ref2->[0]->[1];
@@ -290,7 +270,7 @@ foreach my $row ( @{$ref} )
         $conflict = 1 unless $attrs{($attrOnly)? $attr2:"$attr2/$reason2"};
         $attrs{($attrOnly)? $attr2:"$attr2/$reason2"} = 1;
       }
-      print "  Holding: $id2, $attr2, $reason2 ($user)\n" if $verbose;
+      print "  Holding: $id2, $attr2/$reason2 ($user)\n" if $verbose;
       my $record2 = $crms->GetRecordMetadata($id2);
       $title2 = $crms->GetRecordTitleBc2Meta($id2) unless $title2;
       my $date12 = Date1Field($id2, $record);
@@ -332,7 +312,7 @@ foreach my $row ( @{$ref} )
     {
       foreach my $id2 (keys %dups)
       {
-        print $summfh "$id2\t$attr\t$reason";
+        print $summfh "$id2\t$attr\t$reason\n";
       }
     }
     if ($submit && $situation eq 'duplicate' && !$enum)
@@ -369,7 +349,7 @@ print "</table></body></html>\n\n" if $report eq 'html';
 close $summfh if $summfh;
 foreach my $cat (sort keys %counts)
 {
-  #printf "Count for $cat: %d\n", $counts{$cat};
+  printf "Count for $cat: %d\n", $counts{$cat} if $verbose;
 }
 
 print "Warning: $_\n" for @{$crms->GetErrors()};

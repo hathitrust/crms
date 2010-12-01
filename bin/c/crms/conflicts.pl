@@ -119,6 +119,7 @@ foreach my $blah (@{$r})
     $val->{'count'}++;
     $val->{$are}++;
     $confs{$key} = $val;
+    #print "$id\n" if $key eq 'pd/ncn vs pd/ren' and $are eq 'und/nfi';
   }
 }
 printf "Checked %d exported determinations\n", scalar @{$r};

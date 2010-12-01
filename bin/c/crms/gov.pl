@@ -15,26 +15,33 @@ use strict;
 use CRMS;
 use Getopt::Std;
 
+my $usage = <<END;
+USAGE: $0 [-hptv] [start_date [end_date]]
+
+Reports on suspected gov docs in the und table.
+
+-h     Print this help message.
+-p     Run in production.
+-t     Generate a tab-separated report; default is HTML.
+-v     Be verbose.
+END
+
 my %opts;
-getopts('chpv', \%opts);
+getopts('hptv', \%opts);
 
-my $csv        = $opts{'c'};
-my $help       = $opts{'h'};
-my $production = $opts{'p'};
-my $verbose    = $opts{'v'};
+my $help     = $opts{'h'};
+$DLPS_DEV    = undef if $opts{'p'};
+my $tsv      = $opts{'t'};
+my $verbose  = $opts{'v'};
 
-
-if ($help)
-{
-  die "USAGE: $0 [-c] [-h] [-p] [-v] [start date] [end date]\n\n";
-}
+die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/gov_hist.txt",
     configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
-    dev          =>   !$production
+    dev          =>   $DLPS_DEV
 );
 
 my $dbh = $crms->get('dbh');
@@ -51,11 +58,11 @@ if (scalar @ARGV)
   }
 }
 my $startSQL = " AND time>'$start 00:00:00'";
-my $endSQL = " AND time<='$end 00:00:00'";
+my $endSQL = " AND time<='$end 23:59:59'";
 my $sql = "SELECT id,time FROM und WHERE src='gov' $startSQL $endSQL ORDER BY id";
 #print "$sql\n";
 my $ref = $dbh->selectall_arrayref($sql);
-if ($csv)
+if ($tsv)
 {
   print "ID\tSys ID\tTime\tAuthor\tTitle\tPub Date\tPub\n";
 }
@@ -89,7 +96,7 @@ foreach my $row (@{$ref})
   $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='b']};
   my $field260b = $record->findvalue( $xpath ) or '';
   $field260a .= ' ' . $field260b;
-  if ($csv)
+  if ($tsv)
   {
     $field260a =~ s/\t+/ /g;
     print "$id\t$sysid\t$time\t$author\t$title\t$pub\t$field260a\n";
@@ -103,7 +110,7 @@ foreach my $row (@{$ref})
   }
   $n++;
 }
-if (!$csv)
+if (!$tsv)
 {
   print "</table></body></html>\n\n";
 }

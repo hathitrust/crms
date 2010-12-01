@@ -38,6 +38,7 @@ my $help       = $opts{'h'};
 my $production = $opts{'p'};
 my $report     = $opts{'r'};
 my $verbose    = $opts{'v'};
+$DLPS_DEV = undef if $production;
 
 if ($help || !$ok)
 {
@@ -45,11 +46,11 @@ if ($help || !$ok)
 }
 
 my $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/diffcron_hist.txt",
+    logFile      =>   "$DLXSROOT/prep/c/crms/lagcron_hist.txt",
     configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
-    dev          =>   !$production,
+    dev          =>   $DLPS_DEV,
 );
 
 

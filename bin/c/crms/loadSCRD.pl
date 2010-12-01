@@ -106,7 +106,7 @@ sub addRecord
   my $sql = "REPLACE INTO stanford (ID, DREG) VALUES ('$id', '$dreg')";
   if ($noop)
   {
-    print "$filename $sql\n";
+    print "$filename: $sql\n";
     return;
   }
   $crms->PrepareSubmitSql($sql);

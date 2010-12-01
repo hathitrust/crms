@@ -362,10 +362,9 @@ END
 
 
 my %opts;
-getopts('dghv12345', \%opts);
+getopts('dhv12345', \%opts);
 
 my $load     = $opts{'d'};
-my $generate = $opts{'g'};
 my $help     = $opts{'h'};
 my $verbose  = $opts{'v'};
 my $phase1   = $opts{'1'};
@@ -376,7 +375,7 @@ my $phase5   = $opts{'5'};
 
 if ( $help )
 {
-  die "USAGE: $0 [-d] [-g] [-h] [-v] [-1] [-2] [-3] [-4] [-5]\n\n";
+  die "USAGE: $0 [-d] [-h] [-v] [-1] [-2] [-3] [-4] [-5]\n\n";
 }
 
 my $logfile = "$DLXSROOT/prep/c/crms/tester_log.txt";
@@ -519,8 +518,6 @@ if ($phase1)
   Verify($crms->GetTotalNonLegacyReviewCount(),0,'Wrong number of CRMS historical reviews');
   Verify($crms->GetTotalLegacyReviewCount(),100,'Wrong number of legacy reviews');
   Verify($crms->GetTotalHistoricalReviewCount(),100,'Wrong number of historical reviews');
-  Verify($crms->GetAverageCorrect(),0.0,'Wrong avg validation rate');
-  Verify($crms->GetMedianCorrect(),0.0,'Wrong median validation rate');
   $crms->SanityCheckDB();
   my $r = $crms->GetErrors();
   foreach my $w (@{$r})
@@ -560,8 +557,6 @@ if ($phase2)
   Verify($crms->GetTotalNonLegacyReviewCount(),0,'Wrong number of CRMS historical reviews');
   Verify($crms->GetTotalLegacyReviewCount(),100,'Wrong number of legacy reviews');
   Verify($crms->GetTotalHistoricalReviewCount(),100,'Wrong number of historical reviews');
-  Verify($crms->GetAverageCorrect(),0.0,'Wrong avg validation rate');
-  Verify($crms->GetMedianCorrect(),0.0,'Wrong median validation rate');
   $crms->SanityCheckDB();
   my $r = $crms->GetErrors();
   foreach my $w (@{$r})
@@ -621,8 +616,6 @@ if ($phase3)
   Verify($crms->GetTotalNonLegacyReviewCount(),0,'Wrong number of CRMS historical reviews');
   Verify($crms->GetTotalLegacyReviewCount(),100,'Wrong number of legacy reviews');
   Verify($crms->GetTotalHistoricalReviewCount(),100,'Wrong number of historical reviews');
-  Verify($crms->GetAverageCorrect(),0.0,'Wrong avg validation rate');
-  Verify($crms->GetMedianCorrect(),0.0,'Wrong median validation rate');
   $crms->SanityCheckDB();
   my $r = $crms->GetErrors();
   foreach my $w (@{$r})
@@ -665,8 +658,6 @@ if ($phase4)
   Verify($crms->GetTotalNonLegacyReviewCount(),221,'Wrong number of CRMS historical reviews');
   Verify($crms->GetTotalLegacyReviewCount(),100,'Wrong number of legacy reviews');
   Verify($crms->GetTotalHistoricalReviewCount(),321,'Wrong number of historical reviews');
-  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),56.4,'Wrong avg validation rate');
-  Verify(sprintf('%.1f',$crms->GetAverageCorrect()),56.4,'Wrong median validation rate');
   VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE validated=1 AND legacy=0 AND user="cwilcox"',34,'Wrong number of validated reviews for cwilcox');
   VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE legacy=0 AND user="cwilcox"',39,'Wrong number of historical reviews for cwilcox');
   VerifySQL('SELECT COUNT(*) FROM historicalreviews WHERE validated=1 AND legacy=0 AND user="dfulmer"',75,'Wrong number of validated reviews for dfulmer');
