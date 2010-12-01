@@ -13,8 +13,9 @@ BEGIN
 
 use strict;
 use CRMS;
-use Getopt::Std;
+use Getopt::Long qw(:config no_ignore_case bundling);
 
+my $rev = '$Revision$';
 my $usage = <<END;
 USAGE: $0 [-aehlnpstvw] [-S SUMMARY_PATH] [-t REPORT_TYPE] [-r TYPE] [-i ID] [start_date [end_date]]
 
@@ -24,47 +25,62 @@ multiple volumes, or conflicting determinations.
 -a       Use only attr mismatches to detect a conflict.
 -e       Report only on records with chron/enum information.
 -h       Print this help message.
--i ID    Report only for volume ID (start and end dates are ignored).
+-i ID    Report only for volume ID (start and end dates are ignored). May be repeated.
 -l       Use legacy determinations instead of CRMS determinations.
 -n       Do not submit SQL for duplicates when -s flag is set.
 -p       Run in production.
--r TYPE  Report on situations of type TYPE in {duplicate,conflict,crms_conflict,all}:
+-r TYPE  Print a report of TYPE where TYPE={html,none,tsv}.
+-s       For true duplicates, submit a review for unreviewed duplicate volumes.
+-S PATH  Emit a TSV summary (for duplicates) with ID, rights, reason.
+-t TYPE  Report on situations of type TYPE in {duplicate,conflict,crms_conflict}:
            duplicate:     >0 matching CRMS determinations, >0 ic/bib (default)
            conflict:      conflicting CRMS determinations, >0 ic/bib
            crms_conflict: conflicting CRMS determinations, no ic/bib
-           all:           all of the above
--s       For true duplicates, submit a review for unreviewed duplicate volumes.
--S PATH  Emit a TSV summary (for duplicates) with ID, rights, reason.
--t TYPE  Print a report of TYPE where TYPE={html,none,tsv}.
+         May be repeated.
 -x       Generate hyperlinks in the TSV file for Excel.
--v       Be verbose.
+-v       Be verbose. May be repeated.
 END
 
-my %opts;
-getopts('aehi:lnpr:sS:t:vx', \%opts);
+my $attrOnly;
+my $enum;
+my $help;
+my @ids;
+my $legacy;
+my $noop;
+my $production;
+my $report = 'none';
+my $submit;
+my $summary;
+my @types;
+my $verbose;
+my $link;
 
-my $attrOnly   = $opts{'a'};
-my $enum       = $opts{'e'};
-my $help       = $opts{'h'};
-my $id         = $opts{'i'};
-my $legacy     = $opts{'l'};
-my $noop       = $opts{'n'};
-$DLPS_DEV = undef if $opts{'p'};
-my $type       = $opts{'r'};
-my $submit     = $opts{'s'};
-my $summary    = $opts{'S'};
-my $report     = $opts{'t'} || 'none';
-my $verbose    = $opts{'v'};
-my $link       = $opts{'x'};
-
+GetOptions('a' => \$attrOnly,
+           'e' => \$enum,
+           'h|?' => \$help,
+           'i:s@' => \@ids,
+           'l' => \$legacy,
+           'n' => \$noop,
+           'p' => \$production,
+           'r:s' => \$report,
+           's' => \$submit,
+           'S' => \$summary,
+           't=s@' => \@types,
+           'x' => \$link,
+           'v+' => \$verbose);
+$DLPS_DEV = undef if $production;
+print "Verbosity $verbose\n" if $verbose;
 my %reports = ('html'=>1,'none'=>1,'tsv'=>1);
-die "Bad value '$report' for -t flag" unless defined $reports{$report};
+die "Bad value '$report' for -r flag" unless defined $reports{$report};
 my $summfh;
 if ($summary)
 {
   open $summfh, '>', $summary or die "failed to open summary file $summary: $@ \n";
 }
-$type = 'duplicate' unless $type;
+my %typesh;
+push @types, 'duplicate' unless scalar @types;
+$typesh{$_} = 1 for @types;
+
 my $start = $ARGV[0] or '';
 my $end   = $ARGV[1] or '';
 die "Start date format should be YYYY-MM-DD\n" if $start and $start !~ m/\d\d\d\d-\d\d-\d\d/;
@@ -135,22 +151,22 @@ elsif ($report eq 'html')
 my %seen;
 my %counts;
 my $idsql = 'id IS NOT NULL';
-if ($id)
+if (scalar @ids)
 {
-  $idsql = "id='$id'";
+  $idsql = sprintf "id IN ('%s')", join "','", @ids;
   $start = undef;
   $end = undef;
 }
 my $startsql = ($start)? "AND time>='$start'":'';
 my $endsql = ($end)? "AND time<'$end'":'';
 my $sql = "SELECT id,attr,reason,DATE(time),time FROM exportdata WHERE $idsql $startsql $endsql ORDER BY time ASC";
-$sql = "SELECT id,attr,reason,DATE(time),time FROM historicalreviews WHERE $idsql $startsql $endsql AND legacy=1 ORDER BY time ASC";
+$sql = "SELECT id,attr,reason,DATE(time),time FROM historicalreviews WHERE $idsql $startsql $endsql AND legacy=1 ORDER BY time ASC" if $legacy;
 my $ref = $crms->get('dbh')->selectall_arrayref($sql);
-#print "$sql\n";
+print "$sql\n" if $verbose >= 2;
 my $lastdate = '';
 foreach my $row ( @{$ref} )
 {
-  $id = $row->[0];
+  my $id = $row->[0];
   next if $seen{$id};
   next if $legacy and 0 < $crms->SimpleSqlGet("SELECT COUNT(*) FROM exportdata WHERE id='$id'");
   $seen{$id} = 1;
@@ -187,7 +203,7 @@ foreach my $row ( @{$ref} )
   next unless $sysid;
   my $mrecord = $crms->GetMirlynMetadata($sysid);
   my $holdings = $crms->VolumeIDsQuery($sysid, $mrecord);
-  next unless scalar @{$holdings};
+  next unless scalar @{$holdings} > 1;
   my $record = $crms->GetRecordMetadata($id);
   my $date1 = Date1Field($id, $record);
   my $date2 = Date2Field($id, $record);
@@ -197,7 +213,7 @@ foreach my $row ( @{$ref} )
   my %attrs;
   $attrs{($attrOnly)? $attr:"$attr/$reason"} = 1;
   my $chron = '';
-  print "Original: $id ($sysid) $attr/$reason\n" if $verbose and 1 < scalar @{$holdings};
+  print "Original: $id ($sysid) $attr/$reason\n" if $verbose;
   foreach my $holding (@{$holdings})
   {
     #print "$holding\n";
@@ -300,7 +316,7 @@ foreach my $row ( @{$ref} )
     $situation = 'duplicate';
   }
   print "  Situation '$situation'\n" if $verbose;
-  if (($situation eq $type || $type eq 'all') && 0 < scalar keys %dups)
+  if ($typesh{$situation} && 0 < scalar keys %dups)
   {
     foreach my $line (@lines)
     {
@@ -315,7 +331,8 @@ foreach my $row ( @{$ref} )
         print $summfh "$id2\t$attr\t$reason\n";
       }
     }
-    if ($submit && $situation eq 'duplicate' && !$enum)
+    #if ($submit && $situation eq 'duplicate' && !$enum)
+    if (0)
     {
       foreach my $id2 (keys %dups)
       {
