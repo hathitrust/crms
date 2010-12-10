@@ -433,8 +433,10 @@ sub ReviewDuplicateVolumes
       print "Updating queue and reviews for $id2 ($sysid from $id)\n" unless $fromcgi;
       my $sql = "REPLACE INTO queue (id,locked,status,pending_status,expcnt,source) VALUES ('$id2','autocrms',5,5,1,'duplicate')";
       $self->PrepareSubmitSql($sql);
-      my $note = "Record $sysid from $id";
-      my $result = $self->SubmitReview($id2,'autocrms',$attr,$reason,$note,undef,1,undef,'Duplicate',0,0);
+      my $note = "Source $id";
+      # Inherit swiss from the original review(s).
+      my $swiss = $self->SimpleSqlGet("SELECT MAX(swiss) FROM reviews WHERE id='$id'");
+      my $result = $self->SubmitReview($id2,'autocrms',$attr,$reason,$note,undef,1,undef,'Rights Inherited',$swiss,0);
       $self->UpdateTitle($id2, undef, $record);
       $self->UpdatePubDate($id2, undef, $record);
       $self->UpdateAuthor($id2, undef, $record);
@@ -2608,16 +2610,6 @@ sub GetQueueRef
   return $data;
 }
 
-
-sub LinkToStanford
-{
-  my $self = shift;
-  my $q    = shift;
-
-  my $url = 'http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=';
-  return qq{<a href="$url$q">$q</a>};
-}
-
 sub LinkToPT
 {
   my $self  = shift;
@@ -4706,6 +4698,7 @@ sub GetMarcDatafieldAuthor
   return $data;
 }
 
+# Removes paren/brace/brack and backslash-escape single quote
 sub GetEncTitle
 {
   my $self = shift;
@@ -4713,6 +4706,7 @@ sub GetEncTitle
 
   my $ti = $self->GetTitle( $bar );
   $ti =~ s,\',\\\',g; ## escape '
+  $ti =~ s/[()[\]{}]//g;
   return $ti;
 }
 
@@ -4800,7 +4794,7 @@ sub UpdateCandidatesTitle
   
   my $title = $self->GetRecordTitleBc2Meta( $id );
   my $tiq = $self->get('dbh')->quote( $title );
-  $self->PrepareSubmitSql("UPDATE candidates SET title=$tiq WHERE id='$id'");
+  $self->PrepareSubmitSql("UPDATE candidates SET title=$tiq,time=time WHERE id='$id'");
 }
 
 sub UpdatePubDate
@@ -4833,7 +4827,7 @@ sub UpdateCandidatesPubDate
   my $id   = shift;
 
   my $date = $self->GetPublDate($id);
-  my $sql = "UPDATE candidates SET pub_date='$date-01-01' WHERE id='$id'";
+  my $sql = "UPDATE candidates SET pub_date='$date-01-01',time=time WHERE id='$id'";
   $self->PrepareSubmitSql( $sql );
 }
 
@@ -4877,7 +4871,7 @@ sub UpdateCandidatesAuthor
 
   my $author = $self->GetMarcDatafieldAuthor( $id );
   my $aiq = $self->get('dbh')->quote( $author );
-  my $sql = qq{ UPDATE candidates SET author=$aiq WHERE id="$id"};
+  my $sql = "UPDATE candidates SET author=$aiq,time=time WHERE id='$id'";
   $self->PrepareSubmitSql( $sql );
 }
 
@@ -4888,6 +4882,7 @@ sub GetEncAuthor
 
   my $au = $self->GetEncAuthorForReview($bar);
   $au =~ s,\",\\\",g; ## escape "
+  $au =~ s/[()[\]{}]//g;
   return $au;
 }
 
@@ -6291,52 +6286,52 @@ sub ReviewSearchMenu
   my $searchName = shift;
   my $searchVal = shift;
   
-  my @keys = ('Identifier','Title','Author','PubDate', 'Status','Legacy','UserId','Attribute',
-              'Reason', 'NoteCategory', 'Note', 'Priority', 'Validated', 'Swiss', 'Hold Thru', 'SysID');
-  my @labs = ('Identifier','Title','Author','Pub Date','Status','Legacy','User',  'Attribute',
-              'Reason','Note Category', 'Note', 'Priority', 'Verdict',   'Swiss', 'Hold Thru', 'System ID');
-  #if ($page ne 'adminHistoricalReviews' || !$self->IsUserExpert())
-  if (0)
+  my @keys = ('Identifier','SysID',    'Title','Author','PubDate', 'Status','Legacy','UserId','Attribute',
+              'Reason', 'NoteCategory', 'Note', 'Priority', 'Validated', 'Swiss', 'Hold Thru');
+  my @labs = ('Identifier','System ID','Title','Author','Pub Date','Status','Legacy','User',  'Attribute',
+              'Reason','Note Category', 'Note', 'Priority', 'Verdict',   'Swiss', 'Hold Thru');
+  
+  if ($page ne 'adminReviews' && $page ne 'editReviews' && $page ne 'holds')
   {
     splice @keys, 15, 1;
     splice @labs, 15, 1;
   }
-  if ($page ne 'adminReviews' && $page ne 'editReviews' && $page ne 'holds')
+  if (!$self->IsUserExpert())
   {
     splice @keys, 14, 1;
     splice @labs, 14, 1;
   }
-  if (!$self->IsUserExpert())
+  if ($page ne 'adminHistoricalReviews')
   {
     splice @keys, 13, 1;
     splice @labs, 13, 1;
   }
-  if ($page ne 'adminHistoricalReviews')
+  if (!$self->IsUserAdmin())
   {
     splice @keys, 12, 1;
     splice @labs, 12, 1;
   }
-  if (!$self->IsUserAdmin())
-  {
-    splice @keys, 11, 1;
-    splice @labs, 11, 1;
-  }
   if ($page eq 'userReviews' || $page eq 'editReviews')
   {
-    splice @keys, 6, 1;
-    splice @labs, 6, 1;
+    splice @keys, 7, 1;
+    splice @labs, 7, 1;
   }
   if ($page ne 'adminHistoricalReviews')
   {
-    splice @keys, 3, 1;
-    splice @labs, 3, 1;
+    splice @keys, 4, 1;
+    splice @labs, 4, 1;
+  }
+  if ($page ne 'adminHistoricalReviews' || !($self->IsUserExpert() || $self->IsUserAdmin()))
+  {
+    splice @keys, 1, 1;
+    splice @labs, 1, 1;
   }
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
     $html .= sprintf("  <option value='%s'%s>%s</option>\n", $keys[$i], ($searchVal eq $keys[$i])? ' selected="selected"':'', $labs[$i]);
   }
-  $html .= "</select>\n";
+  $html .= '</select>';
   return $html;
 }
 
@@ -6417,12 +6412,13 @@ sub RightsQuery
 # Query Mirlyn holdings for this system id and return volume identifiers.
 sub VolumeIDsQuery
 {
-  my $self  = shift;
-  my $sysid = shift;
+  my $self   = shift;
+  my $sysid  = shift;
+  my $record = shift;
   
   my @ids;
   eval {
-    my $record = $self->GetMirlynMetadata($sysid);
+    $record = $self->GetMirlynMetadata($sysid) unless $record;
     my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='974']");
     foreach my $node ($nodes->get_nodelist())
     {
@@ -6431,6 +6427,16 @@ sub VolumeIDsQuery
       my $rights = $node->findvalue("./*[local-name()='subfield' and \@code='r']");
       #print "$rights,$id,$chron<br/>\n";
       push @ids, $id . '__' . $chron . '__' .
+        (('pd' eq substr($rights, 0, 2) || 'world' eq $rights || 'umall' eq $rights)? 'Full View':'Search Only');
+    }
+    $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='MDP']");
+    foreach my $node ($nodes->get_nodelist())
+    {
+      my $id2 = $node->findvalue("./*[local-name()='subfield' and \@code='u']");
+      my $chron = $node->findvalue("./*[local-name()='subfield' and \@code='z']");
+      my $rights = $node->findvalue("./*[local-name()='subfield' and \@code='r']");
+      #print "$rights,$id,$chron<br/>\n";
+      push @ids, $id2 . '__' . $chron . '__' .
         (('pd' eq substr($rights, 0, 2) || 'world' eq $rights || 'umall' eq $rights)? 'Full View':'Search Only');
     }
   };
@@ -6580,6 +6586,39 @@ sub ReplicationDelay
   my $ref = $self->get('dbh')->selectall_arrayref($sql);
   my @return = ($ref->[0]->[0],$self->FormatTime($ref->[0]->[1]));
   return @return;
+}
+
+# Places an und volume back in candidates unless it qualifies for the und table in some other way.
+sub RestoreUnd
+{
+  my $self    = shift;
+  my $id      = shift;
+  my $verbose = shift;
+
+  my $time = $self->SimpleSqlGet("SELECT time FROM und WHERE id='$id'");
+  my $src = $self->SimpleSqlGet("SELECT src FROM und WHERE id='$id'");
+  if ($time || $src)
+  {
+    my $src2 = $self->ShouldVolumeGoInUndTable($id);
+    if ($src2 && $src2 ne $src)
+    {
+      my $sql = "UPDATE und SET src='$src',time='$time' WHERE id='$id'";
+      print "$sql\n" if $verbose;
+      $self->PrepareSubmitSql($sql);
+    }
+    else
+    {
+      my $sql = "REPLACE INTO candidates (id,time) VALUES ('$id','$time')";
+      print "$sql\n" if $verbose;
+      $self->PrepareSubmitSql($sql);
+      $self->UpdateCandidatesTitle($id);
+      $self->UpdateCandidatesAuthor($id);
+      $self->UpdateCandidatesPubDate($id);
+      $sql = "DELETE FROM und WHERE id='$id'";
+      print "$sql\n" if $verbose;
+      $self->PrepareSubmitSql($sql);
+    }
+  }
 }
 
 1;
