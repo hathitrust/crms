@@ -15,7 +15,6 @@ use strict;
 use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 
-my $rev = '$Revision$';
 my $usage = <<END;
 USAGE: $0 [-aehlnpstvw] [-S SUMMARY_PATH] [-t REPORT_TYPE] [-r TYPE] [-i ID] [start_date [end_date]]
 
@@ -55,7 +54,7 @@ my @types;
 my $verbose;
 my $link;
 
-GetOptions('a' => \$attrOnly,
+die 'Terminating' unless GetOptions('a' => \$attrOnly,
            'e' => \$enum,
            'h|?' => \$help,
            'i:s@' => \@ids,
@@ -232,7 +231,7 @@ foreach my $row ( @{$ref} )
   {
     if ($chron && $chron !~ m/cop[\.y]/)
     {
-      print "  Chron '$chron'; skipping.\n";
+      print "  Chron '$chron'; skipping.\n" if $verbose;
       next;
     }
   }
