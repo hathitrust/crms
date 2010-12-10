@@ -107,6 +107,9 @@ Search for Reviews where<br/>
 <label for="order">Order by:</label>
 <select name="order" id="order">
   <option value="id"       [% order == 'id' ?  'selected="selected"':'' %]>Identifier</option>
+[% IF crms.IsUserAdmin(user) && page == 'adminHistoricalReviews' %]
+  <option value="sysid" [% order == 'sysid' ?  'selected="selected"':'' %]>System ID</option>
+[% END %]
   <option value="title"    [% order == 'title' ? 'selected="selected"':'' %]>Title</option>
   <option value="author"   [% order == 'author' ? 'selected="selected"':'' %]>Author</option>
 [% IF page == 'adminHistoricalReviews' %]
@@ -136,9 +139,6 @@ Search for Reviews where<br/>
 [% END %]
 [% IF page == 'editReviews' || page == 'adminReviews' || page == 'holds' %]
   <option value="hold" [% order == 'hold' ?  'selected="selected"':'' %]>Hold Thru</option>
-[% END %]
-[% IF crms.IsUserAdmin(user) && page == 'adminHistoricalReviews' %]
-  <option value="sysid" [% order == 'sysid' ?  'selected="selected"':'' %]>System ID</option>
 [% END %]
 </select>
 <br/>
