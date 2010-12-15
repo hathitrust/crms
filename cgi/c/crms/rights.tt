@@ -19,8 +19,17 @@
     [% rows = crms.RightsQuery(id) %]
     [% IF rows.size() == 0 %][% CONTINUE %][% END %]
     <br/>
+    [% sysid = crms.BarcodeToId(id) %]
+    [% syslink = "No System ID" %]
+    [% IF sysid %]
+       [% syslink = '<a style="color:white;" href="http://mirlyn.lib.umich.edu/Record/' _ sysid _ '/Details#tabs" target="_blank">' _ sysid _ "</a>" %]
+    [% END %]
     <table class="exportStats" style="width:33%;">
-    <tr><th colspan="6" class="major" style="text-align:center;">[% id %]</th></tr>
+    <tr>
+      <th colspan="6" class="major" style="text-align:center;">
+        [% id %] ([% syslink %])
+      </th>
+    </tr>
     <tr><th>Attr</th><th>Reason</th><th>Source</th><th>User</th><th>Time</th><th>Note</th></tr>
     [% FOREACH r IN rows %]
       <tr>
