@@ -3006,29 +3006,12 @@ sub CanUserSeeInstitutionalStats
   my $self = shift;
   my $inst = shift;
   my $user = shift;
-  
+
   return 0 unless $inst;
   $user = $self->get('user') unless $user;
   return 1 if $self->IsUserExpert($user) or $self->IsUserAdmin($user);
   my $aff = $self->GetUserAffiliation($user);
   return ($aff eq $inst && $self->IsUserExtAdmin($user));
-}
-
-sub GetRange
-{
-  my $self = shift;
- 
-  my $max = $self->SimpleSqlGet('SELECT MAX(time) FROM historicalreviews WHERE legacy!=1');
-  my $min = $self->SimpleSqlGet('SELECT MIN(time) FROM historicalreviews WHERE legacy!=1');
-  my $max_year = $max;
-  $max_year =~ s,(.*?)\-.*,$1,;
-  my $max_month = $max;
-  $max_month =~ s,.*?\-(.*?)\-.*,$1,;
-  my $min_year = $min;
-  $min_year =~ s,(.*?)\-.*,$1,;
-  my $min_month = $min;
-  $min_month =~ s,.*?\-(.*?)\-.*,$1,;
-  return ($max_year, $max_month, $min_year, $min_month);
 }
 
 sub GetTheYear
@@ -3047,51 +3030,48 @@ sub GetTheMonth
 
 sub GetTheYearMonth
 {
+  my $self = shift;
 
-   my $self = shift;
-
-   my $newtime = scalar localtime(time());
-   my $year = substr($newtime, 20, 4);
-
-    my %months = (
-                  "Jan" => "01",
-                  "Feb" => "02",
-                  "Mar" => "03",
-                  "Apr" => "04",
-                  "May" => "05",
-                  "Jun" => "06",
-                  "Jul" => "07",
-                  "Aug" => "08",
-                  "Sep" => "09",
-                  "Oct" => "10",
-                  "Nov" => "11",
-                  "Dec" => "12",
-                 );
-   my $month = $months{substr ($newtime,4, 3)};
-
-   return ( $year, $month );
+  my $newtime = scalar localtime(time());
+  my $year = substr($newtime, 20, 4);
+  my %months = ('Jan' => '01',
+                'Feb' => '02',
+                'Mar' => '03',
+                'Apr' => '04',
+                'May' => '05',
+                'Jun' => '06',
+                'Jul' => '07',
+                'Aug' => '08',
+                'Sep' => '09',
+                'Oct' => '10',
+                'Nov' => '11',
+                'Dec' => '12',
+               );
+  my $month = $months{substr ($newtime,4,3)};
+  return ($year, $month);
 }
 
 # Convert a yearmonth-type string, e.g. '2009-08' to English: 'August 2009'
 # Pass 1 as a second parameter to leave it long, otherwise truncates to 3-char abbreviation
 sub YearMonthToEnglish
 {
-  my $self = shift;
+  my $self      = shift;
   my $yearmonth = shift;
-  my $long = shift;
-  my %months = (  '01' => 'January',
-                  '02' => 'February',
-                  '03' => 'March',
-                  '04' => 'April',
-                  '05' => 'May',
-                  '06' => 'June',
-                  '07' => 'July',
-                  '08' => 'August',
-                  '09' => 'September',
-                  '10' => 'October',
-                  '11' => 'November',
-                  '12' => 'December'
-                );
+  my $long      = shift;
+
+  my %months = ('01' => 'January',
+                '02' => 'February',
+                '03' => 'March',
+                '04' => 'April',
+                '05' => 'May',
+                '06' => 'June',
+                '07' => 'July',
+                '08' => 'August',
+                '09' => 'September',
+                '10' => 'October',
+                '11' => 'November',
+                '12' => 'December'
+               );
   my ($year, $month) = split('-', $yearmonth);
   $month = $months{$month};
   return (($long)? $month:substr($month,0,3)).' '.$year;
@@ -3118,12 +3098,11 @@ sub GetAllMonthsInYear
 }
 
 # Returns an array of year strings e.g. ('2009','2010') for all years for which we have data.
-sub GetAllYears
+sub GetAllExportYears
 {
   my $self = shift;
   
   my @list = ();
-  # FIXME: use the GetRange function
   my $min = $self->SimpleSqlGet('SELECT MIN(time) FROM exportdata');
   my $max = $self->SimpleSqlGet('SELECT MAX(time) FROM exportdata');
   if ($min && $max)
@@ -3132,9 +3111,8 @@ sub GetAllYears
     $max = substr($max,0,4);
     @list = ($min..$max);
   }
-  return @list;
+  return \@list;
 }
-
 
 sub CreateExportData
 {
@@ -3157,13 +3135,13 @@ sub CreateExportData
   my @dates;
   if ($cumulative)
   {
-    @dates = $self->GetAllYears();
+    @dates = @{$self->GetAllExportYears()};
   }
   else
   {
     my $sql = "SELECT DISTINCT(DATE_FORMAT(time,'%Y-%m')) FROM exportdata WHERE DATE_FORMAT(time,'%Y-%m')>='$start' AND DATE_FORMAT(time,'%Y-%m')<='$end' ORDER BY time ASC";
     #print "$sql<br/>\n";
-    @dates = map {$_->[0];} @{$self->get('dbh')->selectall_arrayref( $sql )};
+    @dates = map {$_->[0];} @{$dbh->selectall_arrayref( $sql )};
   }
   my $titleDate = '';
   if (!$cumulative)
@@ -3285,9 +3263,10 @@ sub CreateExportReport
 {
   my $self       = shift;
   my $cumulative = shift;
-  my $start      = shift;
-  my $end        = shift;
-  
+  my $year       = shift;
+
+  my $start = $year . '-01';
+  my $end = $year . '-12';
   my $data = $self->CreateExportData(',', $cumulative, 1, $start, $end, 1);
   my @lines = split m/\n/, $data;
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
@@ -3308,7 +3287,6 @@ sub CreateExportReport
     my @items = split(',', $line);
     my $i = 0;
     $title = shift @items;
-    #next if $just456 and ($title !~ m/Status.+/ and $title !~ /Total/);
     my $major = exists $majors{$title};
     $title =~ s/\s/&nbsp;/g;
     my $padding = ($major)? '':$nbsps;
@@ -3329,11 +3307,8 @@ sub CreateExportReport
       $i++;
     }
     $newline .= "</tr>\n";
-    #if ($title eq 'Total' && $just456) { $titleline = $newline; }
-    #else
-    { $report .= $newline; }
+    $report .= $newline;
   }
-  #$report .= $titleline if $just456;
   $report .= "</table>\n";
   return $report;
 }
@@ -3625,6 +3600,35 @@ sub CreateExportStatusGraph
   return $report;
 }
 
+sub GetStatsYears
+{
+  my $self = shift;
+  my $user = shift;
+
+  my $usersql = '';
+  $user = '' if $user eq 'all';
+  if ($user)
+  {
+    if ('all__' eq substr $user, 0, 5)
+    {
+      my $inst = substr $user, 5;
+      my $affs = $self->GetUsersWithAffiliation($inst);
+      $usersql = sprintf "AND user IN ('%s')", join "','", @{$affs};
+    }
+    else
+    {
+      $usersql = "AND user='$user'";
+    }
+  }
+  my $sql = "SELECT DISTINCT year FROM userstats WHERE total_reviews>0 $usersql ORDER BY year DESC";
+  #print "$sql<br/>\n";
+  my $ref = $self->get('dbh')->selectall_arrayref($sql);
+  return unless scalar @{$ref};
+  my @years = map {$_->[0];} @{$ref};
+  # FIXME: remove this before we go in production!
+  unshift @years, '2011' unless $years[0] ge '2011';
+  return \@years;
+}
 
 sub CreateStatsData
 {
@@ -3641,7 +3645,7 @@ sub CreateStatsData
   my $instusersne = undef;
   my $dbh = $self->get( 'dbh' );
   $year = ($self->GetTheYearMonth())[0] unless $year;
-  my @statdates = ($cumulative)? $self->GetAllYears() : $self->GetAllMonthsInYear($year);
+  my @statdates = ($cumulative)? reverse @{$self->GetStatsYears()} : $self->GetAllMonthsInYear($year);
   my $username;
   if ($user eq 'all') { $username = 'All Reviewers'; }
   elsif ('all__' eq substr $user, 0, 5)
@@ -3650,8 +3654,8 @@ sub CreateStatsData
     #print "inst '$inst'<br/>\n";
     $username = "All $inst Reviewers";
     my $affs = $self->GetUsersWithAffiliation($inst);
-    $instusers = sprintf "'%s'", join "','", @{ $affs };
-    $instusersne = sprintf "'%s'", join "','", map { ($self->IsUserExpert($_))? ():$_} @{ $affs };
+    $instusers = sprintf "'%s'", join "','", @{$affs};
+    $instusersne = sprintf "'%s'", join "','", map {($self->IsUserExpert($_))? ():$_} @{$affs};
   }
   else { $username = $self->GetUserName($user) };
   #print "username '$username', instusers $instusers<br/>\n";
@@ -3662,8 +3666,7 @@ sub CreateStatsData
   my @usedates = ();
   my $earliest = '';
   my $latest = '';
-  my @titles = ('PD Reviews', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pdus/cdpp', 'IC Reviews', 'ic/ren', 'ic/cdpp', 'UND/NFI Reviews',
-                '__TOT__', '__TOTNE__', '__NEUT__', '__VAL__', '__AVAL__',
+  my @titles = ('PD Reviews', 'IC Reviews', 'UND/NFI Reviews', '__TOT__', '__TOTNE__', '__NEUT__', '__VAL__', '__AVAL__',
                 'Time Reviewing (mins)', 'Time per Review (mins)','Reviews per Hour', 'Outlier Reviews');
   my $which = ($inval)? 'SUM(total_incorrect)':($page eq 'userRate')? 'SUM(total_correct)+SUM(total_neutral)':'SUM(total_correct)';
   foreach my $date (@statdates)
@@ -3674,10 +3677,7 @@ sub CreateStatsData
     my $maxtime = $date . (($cumulative)? '-12':'');
     $earliest = $mintime if $earliest eq '' or $mintime lt $earliest;
     $latest = $maxtime if $latest eq '' or $maxtime gt $latest;
-    my $sql = "SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp) + SUM(total_pd_crms),
-               SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
-               SUM(total_ic_ren) + SUM(total_ic_cdpp) + SUM(total_ic_crms),
-               SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews),
+    my $sql = "SELECT SUM(total_pd), SUM(total_ic), SUM(total_und),SUM(total_reviews),
                1, SUM(total_neutral), $which, 1, SUM(total_time),
                SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
@@ -3696,7 +3696,7 @@ sub CreateStatsData
     }
     my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($mintime, $maxtime, $instusersne);
     $correct += $neutral if $page eq 'userRate';
-    #print "total $total correct $correct incorrect $incorrect neutral $neutral for $mintime to $maxtime<br/>\n";
+    #print "total $total correct $correct incorrect $incorrect neutral $neutral for $mintime to $maxtime ($instusersne)<br/>\n";
     my $whichone = ($inval)? $incorrect:$correct;
     my $pct = eval{100.0*$whichone/$total;};
     if ('all__' eq substr $user, 0, 5)
@@ -3719,11 +3719,13 @@ sub CreateStatsData
     $totals{'Time per Review (mins)'} = $totals{'Time Reviewing (mins)'}/($totals{'__TOT__'}-$totals{'Outlier Reviews'});
     $totals{'Reviews per Hour'} = ($totals{'__TOT__'}-$totals{'Outlier Reviews'})/$totals{'Time Reviewing (mins)'}*60.0;
   };
+  $latest = "$year-01" unless $latest;
+  $earliest = "$year-01" unless $earliest;
   my ($year,$month) = split '-', $latest;
   my $lastDay = Days_in_Month($year,$month);
   my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, $latest, $instusersne);
   $correct += $neutral if $page eq 'userRate';
-  #print "total $total correct $correct incorrect $incorrect neutral $neutral for $earliest to $latest<br/>\n";
+  #print "total $total correct $correct incorrect $incorrect neutral $neutral for $earliest to $latest ($instusersne)<br/>\n";
   my $whichone = ($inval)? $incorrect:$correct;
   my $pct = eval{100.0*$whichone/$total;};
   if ('all__' eq substr $user, 0, 5)
@@ -3742,10 +3744,7 @@ sub CreateStatsData
   my %ptotals;
   if (!$cumulative)
   {
-    my $sql = "SELECT SUM(total_pd_ren) + SUM(total_pd_cnn) + SUM(total_pd_cdpp) + SUM(total_pdus_cdpp) + SUM(total_pd_crms),
-               SUM(total_pd_ren), SUM(total_pd_cnn), SUM(total_pd_cdpp), SUM(total_pdus_cdpp),
-               SUM(total_ic_ren) + SUM(total_ic_cdpp) + SUM(total_ic_crms),
-               SUM(total_ic_ren), SUM(total_ic_cdpp), SUM(total_und_nfi), SUM(total_reviews),
+    my $sql = "SELECT SUM(total_pd),SUM(total_ic), SUM(total_und), SUM(total_reviews),
                1, SUM(total_neutral), $which, 1, SUM(total_time),
                SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),
                (SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)
@@ -3933,12 +3932,27 @@ sub CreateStatsReport
   return $report;
 }
 
+sub GetRange
+{
+  my $self = shift;
+
+  my $max = $self->SimpleSqlGet('SELECT MAX(time) FROM historicalreviews WHERE legacy!=1');
+  my $min = $self->SimpleSqlGet('SELECT MIN(time) FROM historicalreviews WHERE legacy!=1');
+  my $max_year = $max;
+  $max_year =~ s,(.*?)\-.*,$1,;
+  my $max_month = $max;
+  $max_month =~ s,.*?\-(.*?)\-.*,$1,;
+  my $min_year = $min;
+  $min_year =~ s,(.*?)\-.*,$1,;
+  my $min_month = $min;
+  $min_month =~ s,.*?\-(.*?)\-.*,$1,;
+  return ($max_year, $max_month, $min_year, $min_month);
+}
 
 sub UpdateStats
 {
   my $self = shift;
 
-  my $dbh = $self->get( 'dbh' );
   my $sql = 'DELETE from userstats';
   $self->PrepareSubmitSql( $sql );
   my $users = $self->GetUsers();
@@ -3957,10 +3971,7 @@ sub UpdateStats
       $min_month = 1;
       $min_year = $min_year + 1;
     }
-    if ( $min_month < 10 )
-    {
-      $min_month = '0' . $min_month;
-    }
+    $min_month = '0' . $min_month if $min_month < 10;
     my $new_test_date = "$min_year-$min_month";
     last if $new_test_date gt $max_date;
   }
@@ -3969,51 +3980,26 @@ sub UpdateStats
 
 sub GetMonthStats
 {
-  my $self = shift;
-  my $user = shift;
+  my $self       = shift;
+  my $user       = shift;
   my $start_date = shift;
 
   return unless $start_date;
-  my $dbh = $self->get( 'dbh' );
 
-  my $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND time LIKE '$start_date%'};
-  my $total_reviews_toreport = $self->SimpleSqlGet( $sql );
+  my $sql = "SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND time LIKE '$start_date%'";
+  my $total_reviews = $self->SimpleSqlGet( $sql );
 
-  #pd/ren
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=1 AND reason=7 AND time LIKE '$start_date%'};
-  my $total_pd_ren = $self->SimpleSqlGet( $sql );
+  #pd/pdus
+  $sql = "SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND (attr=1 OR attr=9) AND time LIKE '$start_date%'";
+  my $total_pd = $self->SimpleSqlGet( $sql );
 
-  #pd/ncn
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=1 AND reason=2 AND time LIKE '$start_date%'};
-  my $total_pd_cnn = $self->SimpleSqlGet( $sql );
+  #ic
+  $sql = "SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=2 AND time LIKE '$start_date%'";
+  my $total_ic = $self->SimpleSqlGet( $sql );
 
-  #pd/cdpp
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=1 AND reason=9 AND time LIKE '$start_date%'};
-  my $total_pd_cdpp = $self->SimpleSqlGet( $sql );
-  
-  #pd/crms
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=1 AND reason=13 AND time LIKE '$start_date%'};
-  my $total_pd_crms = $self->SimpleSqlGet( $sql );
-
-  #ic/ren
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=2 AND reason=7 AND time LIKE '$start_date%'};
-  my $total_ic_ren = $self->SimpleSqlGet( $sql );
-
-  #ic/cdpp
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=2 AND reason=9 AND time LIKE '$start_date%'};
-  my $total_ic_cdpp = $self->SimpleSqlGet( $sql );
-
-  #ic/crms
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=2 AND reason=13 AND time LIKE '$start_date%'};
-  my $total_ic_crms = $self->SimpleSqlGet( $sql );
-
-  #pdus/cdpp
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=9 AND reason=9 AND time LIKE '$start_date%'};
-  my $total_pdus_cdpp = $self->SimpleSqlGet( $sql );
-
-  #und/nfi and und/crms
-  $sql = qq{ SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=5 AND time LIKE '$start_date%'};
-  my $total_und_nfi = $self->SimpleSqlGet( $sql );
+  #und
+  $sql = "SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=5 AND time LIKE '$start_date%'";
+  my $total_und = $self->SimpleSqlGet( $sql );
 
   #time reviewing ( in minutes ) - not including outliers
   $sql = "SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/60.0 FROM historicalreviews WHERE
@@ -4025,9 +4011,9 @@ sub GetMonthStats
   my $total_outliers = $self->SimpleSqlGet( $sql );
 
   my $time_per_review = 0;
-  if ( $total_reviews_toreport - $total_outliers > 0)
+  if ( $total_reviews - $total_outliers > 0)
   {
-    $time_per_review = ($total_time/($total_reviews_toreport - $total_outliers));
+    $time_per_review = ($total_time/($total_reviews - $total_outliers));
   }
   my $reviews_per_hour = 0;
   if ( $time_per_review > 0 )
@@ -4039,12 +4025,13 @@ sub GetMonthStats
   my $mintime = "$start_date-01 00:00:00";
   my $maxtime = "$start_date-$lastDay 23:59:59";
   my ($total_correct,$total_incorrect,$total_neutral) = $self->CountCorrectReviews($user, $mintime, $maxtime);
-  $sql = 'INSERT INTO userstats (user, month, year, monthyear, total_reviews, total_pd_ren, total_pd_cnn, total_pd_cdpp, total_pd_crms, ' .
-         'total_pdus_cdpp, total_ic_ren, total_ic_cdpp, total_ic_crms, total_und_nfi, total_time, time_per_review, reviews_per_hour, ' .
+  $sql = 'INSERT INTO userstats (user, month, year, monthyear, total_reviews, total_pd, ' .
+         'total_ic, total_und, total_time, time_per_review, reviews_per_hour, ' .
          'total_outliers, total_correct, total_incorrect, total_neutral) ' .
-         "VALUES ('$user', '$month', '$year', '$start_date', $total_reviews_toreport, $total_pd_ren, $total_pd_cnn, $total_pd_cdpp, $total_pd_crms, " .
-         "$total_pdus_cdpp, $total_ic_ren, $total_ic_cdpp, $total_ic_crms, $total_und_nfi, $total_time, $time_per_review, $reviews_per_hour, " .
+         "VALUES ('$user', '$month', '$year', '$start_date', $total_reviews, $total_pd, " .
+         "$total_ic, $total_und, $total_time, $time_per_review, $reviews_per_hour, " .
          "$total_outliers, $total_correct, $total_incorrect, $total_neutral)";
+  #print "$sql\n";
   $self->PrepareSubmitSql( $sql );
 }
 
@@ -5977,15 +5964,22 @@ sub DownloadSpreadSheet
   }
 }
 
+sub CountReviewsForUser
+{
+  my $self = shift;
+  my $user = shift;
+
+  my $sql = "SELECT count(*) FROM reviews WHERE user='$user'";
+  return $self->SimpleSqlGet($sql);
+}
 
 sub CountAllReviewsForUser
 {
   my $self = shift;
   my $user = shift;
-  
-  my $n = 0;
+
   my $sql = "SELECT count(*) FROM reviews WHERE user='$user'";
-  $n += $self->SimpleSqlGet($sql);
+  my $n = $self->SimpleSqlGet($sql);
   $sql = "SELECT count(*) FROM historicalreviews WHERE user='$user'";
   $n += $self->SimpleSqlGet($sql);
   return $n;
