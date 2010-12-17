@@ -12,7 +12,6 @@
 <a href="/c/crms/pdf/AllReviewStatsHelp.pdf" target="_blank">All&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
 <br/>
 [% nononexpert = (inst != 'UM-ERAU') %]
-[% do2009 = (inst == 'UM-ERAU') %]
 [% IF crms.GetTotalHistoricalReviewCount() %]
   [% crms.CreateStatsReport(p, 'all', 1, 1, 0, 1, nononexpert) %]
   <br/><br/>
@@ -23,24 +22,31 @@
   [% FOREACH id IN users %]
     [% IF id.match('rereport') %][% NEXT %][% END %]
     [% IF id != 'all' && id.substr(0,5) != 'all__' && 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
-    [% divid = id.replace('@','_') %]
-    [% onclicks = onclicks _ "toggleVisibility(\"$divid\");" %]
+    [% years = crms.GetStatsYears(id) %]
+    [% year = years.shift() %]
+    [% FOREACH year IN years %]
+      [% divid = id.replace('@','_') _ '_' _ year %]
+      [% onclicks = onclicks _ "toggleVisibility(\"$divid\");" %]
+    [% END %]
   [% END %]
-  [% IF do2009 %]
+  [% IF NOT crms.IsTrainingArea() %]
     <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
-       onclick='[% onclicks %]'>Toggle All 2009</a><br/><br/>
+       onclick='[% onclicks %]'>Toggle All</a><br/><br/>
   [% END %]
   [% FOREACH id IN users %]
     [% IF id.match('rereport') %][% NEXT %][% END %]
     [% IF id != 'all' && id.substr(0,5) != 'all__' && 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
+    [% years = crms.GetStatsYears(id) %]
+    [% year = years.shift() %]
     [% crms.CreateStatsReport(p, id, 0, 1, year, 1, nononexpert) %]
     <br/><br/>
-    [% IF do2009 || id == 'all' %]
-      [% divid = id.replace('@','_') %]
+    [% IF crms.IsTrainingArea() %][% NEXT %][% END %]
+    [% FOREACH year IN years %]
+      [% divid = id.replace('@','_') _ '_' _ year %]
       <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
-         onclick='toggleVisibility("[% divid %]");'>Show 2009</a><br/>
+         onclick='toggleVisibility("[% divid %]");'>Show [% year %]</a><br/>
       <div id="[% divid %]" style="display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;">
-      [% crms.CreateStatsReport(p, id, 0, 1, 2009, 1, nononexpert) %]
+      [% crms.CreateStatsReport(p, id, 0, 1, year, 1) %]
       <br/>
       </div>
       <br/><br/>

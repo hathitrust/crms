@@ -7,8 +7,10 @@
 <h2>My Review Stats:</h2>
 <a href="/c/crms/pdf/MyReviewStatsHelp.pdf" target="_blank">My&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
 <br/>
-[% IF crms.GetTotalHistoricalReviewCount() %]
-  [% crms.CreateStatsReport(p, user, 0, 0 ) %]
+[% years = crms.GetStatsYears() %]
+[% IF years %]
+  [% thisyear = years.shift() %]
+  [% crms.CreateStatsReport(p, user, 0, 0, thisyear) %]
   <span class="smallishText">*Note: does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews</span><br/>
   [% IF !crms.IsUserExpert(user) %]
     <span class="smallishText">
@@ -18,16 +20,18 @@
     </span>
   [% END %]
   <br/><br/>
-  [% sql = "SELECT COUNT(*) FROM reviews WHERE user='$user'" %]
-  <b>Reviews Awaiting Verdict: [% crms.SimpleSqlGet(sql) %]</b>
+  <b>Reviews Awaiting Verdict: [% crms.CountReviewsForUser(user) %]</b>
   <br/><br/>
   [% IF NOT crms.IsTrainingArea() %]
     [% divid = user.replace('@','_') %]
-    <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
-       onclick='toggleVisibility("[% divid %]");'>Show 2009</a><br/>
-    <div id="[% divid %]" style="display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;">
-    [% crms.CreateStatsReport(p, user, 0, 1, 2009) %]
-    <br/></div>
+    [% FOR year IN years %]
+      <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
+         onclick='toggleVisibility("[% divid %]");'>Show $year</a><br/>
+      <div id="[% divid %]" style="display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;">
+      [% crms.CreateStatsReport(p, user, 0, 1, year) %]
+      <br/></div><br/>
+      [% divid = divid _ "_" %]
+    [% END %]
   [% END %]
 [% ELSE %]
   There are no historical reviews at this time.
