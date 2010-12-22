@@ -203,7 +203,7 @@ sub ProcessReviews
   my $ref = $dbh->selectall_arrayref( $sql );
   my $today = $self->GetTodaysDate();
   # Get the underlying system status, ignoring replication delays.
-  my $stat = @{$crms->GetSystemStatus(1)}->[0];
+  my $stat = @{$self->GetSystemStatus(1)}->[0];
   foreach my $row ( @{$ref} )
   {
     my $id      = $row->[0];
