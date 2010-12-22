@@ -202,6 +202,8 @@ sub ProcessReviews
             'GROUP BY id HAVING count(*) = 2';
   my $ref = $dbh->selectall_arrayref( $sql );
   my $today = $self->GetTodaysDate();
+  # Get the underlying system status, ignoring replication delays.
+  my $stat = @{$crms->GetSystemStatus(1)}->[0];
   foreach my $row ( @{$ref} )
   {
     my $id      = $row->[0];
@@ -213,6 +215,7 @@ sub ProcessReviews
     my $hold    = $row->[6];
     
     next if $hold and $today lt $hold;
+    next if $hold and $stat ne 'normal';
     $sql = "SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id='$id' AND user!='$user'";
     my $ref2 = $dbh->selectall_arrayref( $sql );
     my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{ $ref2->[0] };
@@ -6457,11 +6460,12 @@ sub DownloadVolumeIDs
 # Returns a reference to an array with (time,status,message)
 sub GetSystemStatus
 {
-  my $self = shift;
+  my $self    = shift;
+  my $nodelay = shift;
 
   my @vals = ('forever','normal','');
   my ($delay,$since) = $self->ReplicationDelay();
-  if (4 < $delay)
+  if (4 < $delay && !$nodelay)
   {
     @vals = ($since,
              'delayed',
