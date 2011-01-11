@@ -3632,8 +3632,8 @@ sub GetStatsYears
   my $ref = $self->get('dbh')->selectall_arrayref($sql);
   return unless scalar @{$ref};
   my @years = map {$_->[0];} @{$ref};
-  # FIXME: remove this before we go in production!
-  unshift @years, '2011' unless $years[0] ge '2011';
+  my $thisyear = $self->GetTheYear();
+  unshift @years, $thisyear unless $years[0] ge $thisyear;
   return \@years;
 }
 
@@ -5977,6 +5977,17 @@ sub CountReviewsForUser
   my $user = shift;
 
   my $sql = "SELECT count(*) FROM reviews WHERE user='$user'";
+  return $self->SimpleSqlGet($sql);
+}
+
+sub CountHistoricalReviewsForUser
+{
+  my $self = shift;
+  my $user = shift;
+  my $year = shift;
+
+  my $ysql = ($year)? "AND time LIKE '$year%'":'';
+  my $sql = "SELECT count(*) FROM historicalreviews WHERE user='$user' $ysql";
   return $self->SimpleSqlGet($sql);
 }
 

@@ -25,6 +25,7 @@
   [% IF NOT crms.IsTrainingArea() %]
     [% divid = user.replace('@','_') %]
     [% FOR year IN years %]
+      [% IF 0 == crms.CountHistoricalReviewsForUser(user,year) %][% NEXT %][% END %]
       <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
          onclick='toggleVisibility("[% divid %]");'>Show $year</a><br/>
       <div id="[% divid %]" style="display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;">

@@ -18,7 +18,7 @@
   [% onclicks = '' %]
   [% FOREACH id IN users %]
     [% IF id.match('rereport') %][% NEXT %][% END %]
-    [% IF 0 == crms.CountAllReviewsForUser(id) && id != 'all' %][% NEXT %][% END %]
+    [% IF 'all' != id && 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
     [% years = crms.GetStatsYears(id) %]
     [% year = years.shift() %]
     [% FOREACH year IN years %]
@@ -32,13 +32,14 @@
   [% END %]
   [% FOREACH id IN users %]
     [% IF id.match('rereport') %][% NEXT %][% END %]
-    [% IF 0 == crms.CountAllReviewsForUser(id) && id != 'all' %][% NEXT %][% END %]
     [% years = crms.GetStatsYears(id) %]
     [% year = years.shift() %]
+    [% IF 'all' != id && 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
     [% crms.CreateStatsReport(p, id, 0, 1, year, 1) %]
     <br/><br/>
     [% IF crms.IsTrainingArea() %][% NEXT %][% END %]
     [% FOREACH year IN years %]
+      [% IF 'all' != id && 0 == crms.CountHistoricalReviewsForUser(id,year) %][% NEXT %][% END %]
       [% divid = id.replace('@','_') _ '_' _ year %]
       <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
          onclick='toggleVisibility("[% divid %]");'>Show [% year %]</a><br/>
