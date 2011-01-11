@@ -21,6 +21,7 @@ USAGE: $0 [-hptv] [start_date [end_date]]
 Reports on suspected gov docs in the und table.
 
 -h     Print this help message.
+-m     Generate email-compatible HTML.
 -p     Run in production.
 -t     Generate a tab-separated report; default is HTML.
 -v     Be verbose.
@@ -30,6 +31,7 @@ my %opts;
 getopts('hptv', \%opts);
 
 my $help     = $opts{'h'};
+my $mail     = $opts{'m'};
 $DLPS_DEV    = undef if $opts{'p'};
 my $tsv      = $opts{'t'};
 my $verbose  = $opts{'v'};
@@ -68,8 +70,15 @@ if ($tsv)
 }
 else
 {
-  print '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' .
-        '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
+  if ($mail)
+  {
+    print "MIME-Version: 1.0\nContent-Type: text/html;\ncharset='utf-8'\nContent-Transfer-Encoding: quoted-printable\n";
+  }
+  else
+  {
+    print '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' . "\n";
+  }
+  print '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
         "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'/>\n" .
         "<title>Suspected gov docs from $start to $end</title>\n" .
         '</head><body>' .
