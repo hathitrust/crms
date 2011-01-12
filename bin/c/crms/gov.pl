@@ -121,13 +121,11 @@ foreach my $row (@{$ref})
   }
   $n++;
 }
-if (!$tsv)
-{
-  $report .= "</table></body></html>\n\n";
-}
+$report .= "</table></body></html>\n\n" unless $tsv;
 if (@mails)
 {
   use Mail::Sender;
+  $title = 'CRMS Dev: ' . $title if $DLPS_DEV;
   my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
                                   from => 'moseshll@clamato.umdl.umich.edu',
                                   on_errors => 'undef' }
