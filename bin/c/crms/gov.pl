@@ -13,28 +13,34 @@ BEGIN
 
 use strict;
 use CRMS;
-use Getopt::Std;
+use Getopt::Long;
 
 my $usage = <<END;
-USAGE: $0 [-hmptv] [start_date [end_date]]
+USAGE: $0 [-hptv] [-m MAIL_ADDR] [start_date [end_date]]
 
 Reports on suspected gov docs in the und table.
 
--h     Print this help message.
--m     Generate email-compatible HTML.
--p     Run in production.
--t     Generate a tab-separated report; default is HTML.
--v     Be verbose.
+-h       Print this help message.
+-m ADDR  Mail the report to ADDR. May be repeated for multiple addresses.
+-p       Run in production.
+-t       Generate a tab-separated report; default is HTML.
+-v       Be verbose.
 END
 
-my %opts;
-getopts('hmptv', \%opts);
+my $help;
+my @mails;
+my $production;
+my $tsv;
+my $verbose;
 
-my $help     = $opts{'h'};
-my $mail     = $opts{'m'};
-$DLPS_DEV    = undef if $opts{'p'};
-my $tsv      = $opts{'t'};
-my $verbose  = $opts{'v'};
+die 'Terminating' unless GetOptions('h|?' => \$help,
+           'm:s@' => \@mails,
+           'p' => \$production,
+           't' => \$tsv,
+           'v+' => \$verbose);
+$DLPS_DEV = undef if $production;
+print "Verbosity $verbose\n" if $verbose;
+my %reports = ('html'=>1,'none'=>1,'tsv'=>1);
 
 die "$usage\n\n" if $help;
 
@@ -64,23 +70,19 @@ my $endSQL = " AND time<='$end 23:59:59'";
 my $sql = "SELECT id,time FROM und WHERE src='gov' $startSQL $endSQL ORDER BY id";
 #print "$sql\n";
 my $ref = $dbh->selectall_arrayref($sql);
+my $report = '';
+my $title = "Suspected gov docs from $start to $end";
 if ($tsv)
 {
-  print "ID\tSys ID\tTime\tAuthor\tTitle\tPub Date\tPub\n";
+  $report .= "ID\tSys ID\tTime\tAuthor\tTitle\tPub Date\tPub\n";
 }
 else
 {
-  if ($mail)
-  {
-    print "MIME-Version: 1.0\nContent-Type: text/html;\ncharset='utf-8'\nContent-Transfer-Encoding: quoted-printable\n";
-  }
-  else
-  {
-    print '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' . "\n";
-  }
-  print '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
+  
+  $report .= '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' . "\n";
+  $report .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
         "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'/>\n" .
-        "<title>Suspected gov docs from $start to $end</title>\n" .
+        "<title>$title</title>\n" .
         '</head><body>' .
         '<table border="1">' .
         "<tr><th>#</th><th>ID</th><th>Sys&nbsp;ID</th><th>Time</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th><th>Pub</th></tr>\n";
@@ -108,25 +110,41 @@ foreach my $row (@{$ref})
   if ($tsv)
   {
     $field260a =~ s/\t+/ /g;
-    print "$id\t$sysid\t$time\t$author\t$title\t$pub\t$field260a\n";
+    $report .= "$id\t$sysid\t$time\t$author\t$title\t$pub\t$field260a\n";
   }
   else
   {
     $time =~ s/\s+/&nbsp;/g;
     $field260a =~ s/&/&amp;/g;
-    print "<tr><td>$n</td><td><a href='$ptLink' target='_blank'>$id</a></td><td><a href='$catLink' target='_blank'>$sysid</a></td>";
-    print "<td>$time</td><td>$author</td><td>$title</td><td>$pub</td><td>$field260a</td></tr>\n";
+    $report .= "<tr><td>$n</td><td><a href='$ptLink' target='_blank'>$id</a></td><td><a href='$catLink' target='_blank'>$sysid</a></td>";
+    $report .= "<td>$time</td><td>$author</td><td>$title</td><td>$pub</td><td>$field260a</td></tr>\n";
   }
   $n++;
 }
 if (!$tsv)
 {
-  print "</table></body></html>\n\n";
+  $report .= "</table></body></html>\n\n";
 }
-
-my $r = $crms->GetErrors();
-foreach my $w (@{$r})
+if (@mails)
 {
-  print "Warning: $w\n";
+  use Mail::Sender;
+  my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
+                                  from => 'moseshll@clamato.umdl.umich.edu',
+                                  on_errors => 'undef' }
+    or die "Error in mailing : $Mail::Sender::Error\n";
+  my $to = join ',', @mails;
+  my $ctype = ($tsv)? 'text/plain':'text/html';
+  $sender->Open({ to => $to,
+        subject => $title,
+        ctype => $ctype,
+        encoding => 'quoted-printable'
+ }) or die $Mail::Sender::Error,"\n";
+ $sender->SendEnc($report);
+ $sender->Close();
+}
+else
+{
+  print $report;
 }
 
+print "Warning: $_\n" for @{$crms->GetErrors()};
