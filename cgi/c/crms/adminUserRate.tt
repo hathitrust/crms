@@ -37,7 +37,6 @@
     [% IF 'all' != id && 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
     [% crms.CreateStatsReport(p, id, 0, 1, year, 1) %]
     <br/><br/>
-    [% IF crms.IsTrainingArea() %][% NEXT %][% END %]
     [% FOREACH year IN years %]
       [% IF 'all' != id && 0 == crms.CountHistoricalReviewsForUser(id,year) %][% NEXT %][% END %]
       [% divid = id.replace('@','_') _ '_' _ year %]

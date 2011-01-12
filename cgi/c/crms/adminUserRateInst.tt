@@ -40,7 +40,6 @@
     [% year = years.shift() %]
     [% crms.CreateStatsReport(p, id, 0, 1, year, 1, nononexpert) %]
     <br/><br/>
-    [% IF crms.IsTrainingArea() %][% NEXT %][% END %]
     [% FOREACH year IN years %]
       [% divid = id.replace('@','_') _ '_' _ year %]
       <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
