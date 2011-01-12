@@ -16,7 +16,7 @@ use CRMS;
 use Getopt::Std;
 
 my $usage = <<END;
-USAGE: $0 [-hptv] [start_date [end_date]]
+USAGE: $0 [-hmptv] [start_date [end_date]]
 
 Reports on suspected gov docs in the und table.
 
@@ -28,7 +28,7 @@ Reports on suspected gov docs in the und table.
 END
 
 my %opts;
-getopts('hptv', \%opts);
+getopts('hmptv', \%opts);
 
 my $help     = $opts{'h'};
 my $mail     = $opts{'m'};
