@@ -73,7 +73,7 @@
   [% IF e || a || s %]<dd><a href="crms?p=rights">Query&nbsp;Rights&nbsp;Database</a></dd>  [% END %]
   [% IF e || a || s %]<dd><a href="crms?p=retrieve">Retrieve&nbsp;Volume&nbsp;IDs</a></dd>  [% END %]
   [% IF a || s %]     <dd><a href="crms?p=adminQueue">All&nbsp;Locked&nbsp;Volumes</a></dd> [% END %]
-  [% IF a || s %]     <dd><a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a></dd>         [% END %]
+  [% IF e || a || s %]<dd><a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a></dd>         [% END %]
   [% IF a || s %]     <dd><a href="crms?p=systemStatus">Set&nbsp;System&nbsp;Status</a></dd>[% END %]
   [% IF s %]          <dd><a href="crms?p=debug">System&nbsp;Administration</a></dd>        [% END %]
 </dl>
