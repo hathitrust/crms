@@ -1151,12 +1151,12 @@ sub SubmitHistReview
 
       $self->PrepareSubmitSql( $sql );
 
-      #Now load this info into the bibdata table.
+      #Now load this info into the bibdata and system table.
       my $record = $self->GetRecordMetadata($id);
       $self->UpdateTitle( $id, undef, $record );
       $self->UpdatePubDate( $id, undef, $record );
       $self->UpdateAuthor( $id, undef, $record );
-      
+      $self->BarcodeToId( $id );
       # Update status on status 1 item
       if ($status == 5)
       {
@@ -1474,7 +1474,7 @@ sub CreateSQLForReviews
     {
       $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
              'r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated, s.sysid '.
-             "FROM bibdata b, system s, $CRMSGlobals::historicalreviewsTable r WHERE r.id=b.id AND r.id=s.id";
+             "FROM $CRMSGlobals::historicalreviewsTable r LEFT JOIN bibdata b ON r.id=b.id LEFT JOIN system s ON r.id=s.id WHERE r.id IS NOT NULL";
     }
     elsif ( $page eq 'undReviews' )
     {
@@ -1585,7 +1585,7 @@ sub CreateSQLForVolumes
   else { $order = 'r.' . $order; }
   $search1 = 'r.id' unless $search1;
   my $order2 = ($dir eq 'ASC')? 'min':'max';
-  my @rest = ('r.id=b.id');
+  my @rest = ();
   my $table = 'reviews';
   my $doQ = '';
   my $doS = '';
@@ -1593,13 +1593,11 @@ sub CreateSQLForVolumes
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
-    push @rest, 'r.id=s.id';
-    $doS = ', system s';
+    $doS = 'LEFT JOIN system s ON r.id=s.id';
   }
   else
   {
-    push @rest, 'r.id=q.id';
-    $doQ = ', queue q';
+    $doQ = 'INNER JOIN queue q ON r.id=q.id';
     $status = 'q.status';
   }
   if ($page eq 'undReviews')
@@ -1623,15 +1621,16 @@ sub CreateSQLForVolumes
   push @rest, "date(r.time) >= '$startDate'" if $startDate;
   push @rest, "date(r.time) <= '$endDate'" if $endDate;
   my $restrict = join(' AND ', @rest);
-  my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT r.id FROM $table r, bibdata b$doQ $doS WHERE $restrict)";
+  $restrict = 'WHERE '.$restrict if $restrict;
+  my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT r.id FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS $restrict)";
   #print "$sql<br/>\n";
   my $totalReviews = $self->SimpleSqlGet($sql);
-  $sql = "SELECT COUNT(DISTINCT r.id) FROM $table r, bibdata b$doQ $doS WHERE $restrict";
+  $sql = "SELECT COUNT(DISTINCT r.id) FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS $restrict";
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
-  $sql = "SELECT r.id as id, $order2($order) AS ord FROM $table r, bibdata b$doQ $doS WHERE $restrict GROUP BY r.id " .
+  $sql = "SELECT r.id as id, $order2($order) AS ord FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS $restrict GROUP BY r.id " .
          "ORDER BY ord $dir $limit";
   #print "$sql<br/>\n";
   my $n = POSIX::ceil($offset/$pagesize+1);
@@ -1686,7 +1685,7 @@ sub CreateSQLForVolumesWide
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
-    $top = 'bibdata b INNER JOIN system s ON b.id=s.id';
+    $top = 'bibdata b LEFT JOIN system s ON b.id=s.id';
   }
   else
   {
@@ -2326,26 +2325,24 @@ sub GetVolumesRef
   my $status = 'r.status';
   if ($page eq 'adminHistoricalReviews')
   {
-    $doS = ', system s';
+    $doS = 'LEFT JOIN system s ON r.id=s.id';
     $table = 'historicalreviews';
   }
   else
   {
-    $doQ = ', queue q';
+    $doQ = 'INNER JOIN queue q ON r.id=q.id';
     $status = 'q.status';
   }
   my $return = ();
   foreach my $row ( @{$ref} )
   {
     my $id = $row->[0];
-    my $qrest = ($doQ)? ' AND r.id=q.id':'';
-    my $srest = ($doS)? ' AND r.id=s.id':'';
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
            (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ') .
            (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
-           "FROM $table r, bibdata b$doQ $doS " .
-           "WHERE r.id='$id' AND r.id=b.id $qrest $srest ORDER BY $order $dir";
+           "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS " .
+           "WHERE r.id='$id' ORDER BY $order $dir";
     #print "$sql<br/>\n";
     my $ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );
     foreach my $row ( @{$ref2} )
@@ -2397,16 +2394,17 @@ sub GetVolumesRefWide
   my $dir = $_[2];
   
   my $table ='reviews';
-  my $top = 'bibdata b';
+  my $doQ = '';
+  my $doS = '';
   my $status = 'r.status';
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
-    $top = 'system s INNER JOIN bibdata b ON s.id=b.id';
+    $doS = 'INNER JOIN system s ON r.id=s.id';
   }
   else
   {
-    $top = 'queue q INNER JOIN bibdata b ON q.id=b.id';
+    $doQ = 'INNER JOIN queue q ON r.id=q.id';
     $status = 'q.status';
   }
   my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQLForVolumesWide(@_);
@@ -2421,14 +2419,12 @@ sub GetVolumesRefWide
   foreach my $row ( @{$ref} )
   {
     my $id = $row->[0];
-    my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
-    my $qrest = ($page eq 'adminHistoricalReviews')? ' AND r.id=s.id':'';
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
            (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ') .
            (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
-           "FROM $top INNER JOIN $table r ON b.id=r.id " .
-           "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
+           "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS" .
+           "WHERE r.id='$id' ORDER BY $order $dir";
     #print "$sql<br/>\n";
     my $ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );
     foreach my $row ( @{$ref2} )
@@ -4203,21 +4199,25 @@ sub ValidateSubmission2
     $errorMsg .= 'ic/cdpp must include note category and note text. ';
     $noteError = 1;
   }
-  ## pd/add can only be submitted by a superadmin and requires note and category
+  ## pd/add can only be submitted by an admin and requires note and category
   if ($attr == 1 && $reason == 14)
   {
-    if (!$self->IsUserSuperAdmin($user))
+    if (!$self->IsUserAdmin($user))
     {
-      $errorMsg .= 'pd/add requires superadmin privileges.';
+      $errorMsg .= 'pd/add requires admin privileges.';
     }
     elsif (( $renNum ) || ( $renDate ))
     {
       $errorMsg .= 'pd/add should not include renewal info. ';
     }
-    elsif (( !$note ) || ( !$category ))
+    if (( !$note ) || ( !$category ))
     {
       $errorMsg .= 'pd/add must include note category and note text. ';
       $noteError = 1;
+    }
+    elsif ($category ne 'Expert Note' && $category ne 'Foreign Pub' && $category ne 'Miscellaneous')
+    {
+      $errorMsg .= 'pd/add requires note category "Expert Note", "Foreign Pub" or "Misc". ';
     }
   }
   ## pdus/cdpp requires a note and a 'Foreign' or 'Translation' category, and must not have a ren number
@@ -4232,7 +4232,7 @@ sub ValidateSubmission2
       $errorMsg .= 'pdus/cdpp must include note category/note text. ';
       $noteError = 1;
     }
-    if ($category ne 'Foreign Pub' && $category ne 'Translation')
+    elsif ($category ne 'Foreign Pub' && $category ne 'Translation')
     {
       $errorMsg .= 'pdus/cdpp requires note category "Foreign Pub" or "Translation". ';
     }
@@ -4377,6 +4377,7 @@ sub IsProbableGovDoc
   my $id     = shift;
   my $record = shift;
 
+  $record = $self->GetRecordMetadata($id) unless $record;
   if ( ! $record ) { $self->SetError("no record in IsProbableGovDoc: $id"); return 1; }
   my $author = $self->GetMarcDatafieldAuthor($id, $record);
   my $title = $self->GetRecordTitleBc2Meta($id, $record);
@@ -4386,6 +4387,11 @@ sub IsProbableGovDoc
   my $field260b = $record->findvalue( $xpath ) or '';
   $field260a =~ s/^\s*(.*?)\s*$/$1/;
   $field260b =~ s/^\s*(.*?)\s*$/$1/;
+  # If there is an alphabetic character in 008:28 other than 'f', we accept it and say it is NOT probable
+  $xpath  = q{//*[local-name()='controlfield' and @tag='008']};
+  #my $leader = lc $record->findvalue( $xpath );
+  #my $code = substr($leader, 28, 1);
+  #return 0 if ($code =~ m/[a-z]/ && $code ne 'f');
   if ($author =~ m/^united\s+states/i)
   {
     return 1 unless $field260a or $field260b;
@@ -4415,7 +4421,6 @@ sub IsFormatBK
   my $record = shift;
 
   if ( ! $record ) { $self->Logit( "failed in IsFormatBK: $id" ); }
-
   my $xpath   = q{//*[local-name()='controlfield' and @tag='FMT']};
   my $leader  = $record->findvalue( $xpath );
   my $doc     = $leader;
@@ -4952,7 +4957,7 @@ sub GetRecordMetadata
   my $errorCode = $source->findvalue( "//*[name()='error']" );
   if ( $errorCode ne '' )
   {
-      $self->SetError( "$url \nfailed to get MARC for $id: $errorCode " . $res->content() );
+      $self->SetError("Failed to get MARC for $id: $errorCode ($url)");
       return;
   }
   #my ($record) = $source->findnodes( "//record" );
