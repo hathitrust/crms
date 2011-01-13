@@ -110,14 +110,14 @@
           <label for="r6">[% keys.${"6"} %] (6)</label>
       </td>
     </tr>
-    [% IF crms.IsUserExpert(user) %]
+    [% IF crms.IsUserExpert(user) || crms.IsUserAdmin(user) %]
     <tr>
       <td>
         <input type="radio" id="r7" name="rights" value="7" accesskey="7"
           [% IF select == "7" %] checked="checked"[% END %] />
           <label for="r7">[% keys.${"7"} %] (7)</label>
       </td>
-      [% IF crms.IsUserSuperAdmin(user) %]
+      [% IF crms.IsUserAdmin(user) %]
         <td>
           <input type="radio" id="r8" name="rights" value="8" accesskey="8"
             [% IF select == "8" %] checked="checked"[% END %] />
@@ -143,7 +143,7 @@
               "Expert Accepted" => "Expert Accepted"} 
     %]
     [% FOREACH nc IN ncs.sort %]
-      [%# IF nc == "Author Death Date" && !crms.IsUserSuperAdmin(user) %][%# NEXT %][%# END %]
+      [%# IF nc == "Author Death Date" && !crms.IsUserAdmin(user) %][%# NEXT %][%# END %]
       [% IF nc == "Expert Accepted" && category != "Expert Accepted" %][% NEXT %][% END %]
       [% IF nc == category %]
         <option value="[% nc %]" selected="selected">[% ncs.${nc} %]</option>
