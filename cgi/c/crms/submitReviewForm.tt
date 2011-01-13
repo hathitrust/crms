@@ -70,9 +70,9 @@
   </div>
   <strong style="margin-left:10px">Rights/Reason:</strong>
   <br/>
-    [% keys = {"1" => "pd/ncn", "2" => "pd/ren",  "3" => "pd/cdpp",
-               "4" => "ic/ren", "5" => "ic/cdpp", "6" => "und/nfi",
-               "7" => "pdus/cdpp"} %]
+    [% keys = {"1" => "pd/ncn",    "2" => "pd/ren",  "3" => "pd/cdpp",
+               "4" => "ic/ren",    "5" => "ic/cdpp", "6" => "und/nfi",
+               "7" => "pdus/cdpp", "8" => "pd/add"} %]
   <table>
     <tr>
       <td>
@@ -117,31 +117,38 @@
           [% IF select == "7" %] checked="checked"[% END %] />
           <label for="r7">[% keys.${"7"} %] (7)</label>
       </td>
+      [% IF crms.IsUserSuperAdmin(user) %]
+        <td>
+          <input type="radio" id="r8" name="rights" value="8" accesskey="8"
+            [% IF select == "8" %] checked="checked"[% END %] />
+            <label for="r8">[% keys.${"8"} %] (8)</label>
+        </td>
+      [% END %]
     </tr>
     [% END %]
+    
   </table>
 </div>
 <div id="Notes">
-  <strong><label for="noteMenu">Notes: </label></strong>
-  <select id="noteMenu" class="review" name="category">
-    [% pres = {"Foreign Pub"    => "Foreign Pub",   "Language"        => "Language",
-               "Misc"           => "Misc",          "Missing"         => "Missing",
-               "Reprint"        => "Reprint",       "Periodical"      => "Periodical",
-               "Insert(s)"      => "Insert(s)",     "Translation"     => "Translation",
-               "Wrong Record"   => "Wrong Record",  "Date"            => "Date",
-               "Dissertation/Thesis" => "Dissertation/Thesis",
-               "Not Class A"    => "Not Class A",   "Expert Note"     => "Expert Note",
-               "Edition"        => "Edition",       ""               => "none"} 
+  <strong><label for="catMenu">Notes: </label></strong>
+  <select id="catMenu" class="review" name="category">
+    [% ncs = {"Foreign Pub"    => "Foreign Pub",   "Language"        => "Language",
+              "Misc"           => "Misc",          "Missing"         => "Missing",
+              "Reprint"        => "Reprint",       "Periodical"      => "Periodical",
+              "Insert(s)"      => "Insert(s)",     "Translation"     => "Translation",
+              "Wrong Record"   => "Wrong Record",  "Date"            => "Date",
+              "Dissertation/Thesis" => "Dissertation/Thesis",
+              "Not Class A"    => "Not Class A",   "Expert Note"     => "Expert Note",
+              "Edition"        => "Edition",       ""               => "none",
+              "Expert Accepted" => "Expert Accepted"} 
     %]
-    [% IF category == "Expert Accepted" %]
-      [% pre = "Expert Accepted" %]
-      [% pres.$pre = "Expert Accepted" %]
-    [% END %]
-    [% FOREACH pre IN pres.sort %]
-      [% IF pre == category %]
-        <option value="[% pre %]" selected="selected">[% pres.${pre} %]</option>
+    [% FOREACH nc IN ncs.sort %]
+      [%# IF nc == "Author Death Date" && !crms.IsUserSuperAdmin(user) %][%# NEXT %][%# END %]
+      [% IF nc == "Expert Accepted" && category != "Expert Accepted" %][% NEXT %][% END %]
+      [% IF nc == category %]
+        <option value="[% nc %]" selected="selected">[% ncs.${nc} %]</option>
       [% ELSE %]
-        <option value="[% pre %]">[% pres.${pre} %]</option>
+        <option value="[% nc %]">[% ncs.${nc} %]</option>
       [% END %]
     [% END %]
   </select>

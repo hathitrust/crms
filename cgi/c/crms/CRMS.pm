@@ -2681,10 +2681,10 @@ sub GetAttrReasonCom
   my $in   = shift;
 
   my %codes = (1 => 'pd/ncn',  2 => 'pd/ren',  3 => 'pd/cdpp', 4 => 'ic/ren',
-               5 => 'ic/cdpp', 6 => 'und/nfi', 7 => 'pdus/cdpp');
+               5 => 'ic/cdpp', 6 => 'und/nfi', 7 => 'pdus/cdpp', 8 => 'pd/add');
 
   my %str   = ('pd/ncn' => 1,  'pd/ren'  => 2, 'pd/cdpp' => 3, 'ic/ren' => 4,
-               'ic/cdpp' => 5, 'und/nfi' => 6, 'pdus/cdpp' => 7);
+               'ic/cdpp' => 5, 'und/nfi' => 6, 'pdus/cdpp' => 7 , 'pd/add' => 8);
 
   if ( $in =~ m/\d/ ) { return $codes{$in}; }
   else                { return $str{$in};   }
@@ -2702,6 +2702,7 @@ sub GetAttrReasonFromCode
   elsif ( $code eq '5' ) { return (2,9); }
   elsif ( $code eq '6' ) { return (5,8); }
   elsif ( $code eq '7' ) { return (9,9); }
+  elsif ( $code eq '8' ) { return (1,14); }
 }
 
 sub GetCodeFromAttrReason
@@ -2717,6 +2718,7 @@ sub GetCodeFromAttrReason
   if ($attr == 2 and $reason == 9) { return 5; }
   if ($attr == 5 and $reason == 8) { return 6; }
   if ($attr == 9 and $reason == 9) { return 7; }
+  if ($attr == 1 and $reason == 14) { return 8; }
 }
 
 
@@ -3167,7 +3169,8 @@ sub CreateExportData
     last if $date eq $now and !$doCurrentMonth;
     push @usedates, $date;
     $report .= "$delimiter$date";
-    my %cats = ('pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pd/crms' => 0, 'pdus/cdpp' => 0, 'ic/ren' => 0, 'ic/cdpp' => 0, 'ic/crms' => 0,
+    my %cats = ('pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pd/crms' => 0, 'pd/add' => 0, 'pdus/cdpp' => 0,
+                'ic/ren' => 0, 'ic/cdpp' => 0, 'ic/crms' => 0,
                 'und/nfi' => 0, 'und/crms' => 0,
                 'All PD' => 0, 'All IC' => 0, 'All UND' => 0,
                 'Status 4' => 0, 'Status 5' => 0, 'Status 6' => 0, 'Status 7' => 0);
@@ -3205,7 +3208,7 @@ sub CreateExportData
     }
   }
   $report .= "\n";
-  my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pd/crms', 'pdus/cdpp',
+  my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pd/crms', 'pd/add', 'pdus/cdpp',
                 'All IC', 'ic/ren', 'ic/cdpp', 'ic/crms',
                 'All UND', 'und/nfi', 'und/crms', 'Total',
                 'Status 4', 'Status 5', 'Status 6', 'Status 7');
@@ -3342,7 +3345,7 @@ sub CreateExportGraph
   shift @dates; shift @dates;
   # Now the data is just the categories and numbers...
   my @titles = ($type == 1)? ('Total'):('All PD','All IC','All UND');
-  my %titleh = ('All PD' => $lines[0],'All IC' => $lines[6],'All UND' => $lines[10],'Total' => $lines[13]);
+  my %titleh = ('All PD' => $lines[0],'All IC' => $lines[7],'All UND' => $lines[11],'Total' => $lines[14]);
   my @elements = ();
   my %colors = ('All PD' => '#22BB00', 'All IC' => '#FF2200', 'All UND' => '#0088FF', 'Total' => '#FFFF00');
   my %totals = ('All PD' => 0, 'All IC' => 0, 'All UND' => 0);
@@ -4131,119 +4134,124 @@ sub HasItemBeenReviewedByTwoReviewers
 # Returns an error message, or an empty string if no error.
 sub ValidateSubmission2
 {
-    my $self = shift;
-    my ($id, $user, $attr, $reason, $note, $category, $renNum, $renDate) = @_;
-    my $errorMsg = '';
+  my $self = shift;
+  my ($id, $user, $attr, $reason, $note, $category, $renNum, $renDate) = @_;
+  my $errorMsg = '';
 
-    my $noteError = 0;
-    
-    ## Someone else has the item locked?
-    $errorMsg = 'This item has been locked by another reviewer. Please Cancel.' if $self->IsLockedForOtherUser($id);
-    ## check user
-    if ( ! $self->IsUserReviewer( $user ) && ! $self->IsUserAdvanced( $user ))
+  my $noteError = 0;
+
+  ## Someone else has the item locked?
+  $errorMsg = 'This item has been locked by another reviewer. Please Cancel.' if $self->IsLockedForOtherUser($id);
+  ## check user
+  if ( ! $self->IsUserReviewer( $user ) && ! $self->IsUserAdvanced( $user ))
+  {
+    $errorMsg .= 'Not a reviewer.';
+  }
+  if ( ( ! $attr ) || ( ! $reason ) )
+  {
+    $errorMsg .= 'rights/reason designation required.';
+  }
+  ## und/nfi
+  if ( $attr == 5 && $reason == 8 && ( ( ! $note ) || ( ! $category ) )  )
+  {
+    $errorMsg .= 'und/nfi must include note category and note text.';
+    $noteError = 1;
+  }
+  ## ic/ren requires a ren number
+  if ( $attr == 2 && $reason == 7 && ( ( ! $renNum ) || ( ! $renDate ) )  )
+  {
+    $errorMsg .= 'ic/ren must include renewal id and renewal date.';
+  }
+  elsif ( $attr == 2 && $reason == 7 )
+  {
+    $renDate =~ s,.*[A-Za-z](.*),$1,;
+    $renDate = '19' . $renDate;
+
+    if ( $renDate < 1950 )
     {
-        $errorMsg .= 'Not a reviewer.';
+      $errorMsg .= "renewal has expired; volume is pd. date entered is $renDate";
     }
-
-    if ( ( ! $attr ) || ( ! $reason ) )
+  }
+  ## pd/ren should not have a ren number or date
+  if ( $attr == 1 && $reason == 7 &&  ( ( $renNum ) || ( $renDate ) ) )
+  {
+    $errorMsg .= 'pd/ren should not include renewal info. ';
+  }
+  ## pd/ncn requires a ren number
+  ## superadmin-added stuff after 1963 doesn't need this
+  if (  $attr == 1 && $reason == 2 && ( ( !$renNum ) || ( !$renDate ) ) )
+  {
+    $errorMsg .= 'pd/ncn must include renewal id and renewal date. ' unless $self->IsUserSuperAdmin($user);
+  }
+  ## pd/cdpp requires a ren number
+  if (  $attr == 1 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
+  {
+    $errorMsg .= 'pd/cdpp should not include renewal info. ';
+  }
+  if ( $attr == 1 && $reason == 9 && ( ( !$note ) || ( !$category ) ) )
+  {
+    $errorMsg .= 'pd/cdpp must include note category and note text. ';
+    $noteError = 1;
+  }
+  ## ic/cdpp requires a ren number
+  if (  $attr == 2 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
+  {
+    $errorMsg .= 'ic/cdpp should not include renewal info. ';
+  }
+  if ( $attr == 2 && $reason == 9 && ( ( !$note )  || ( !$category ) ) )
+  {
+    $errorMsg .= 'ic/cdpp must include note category and note text. ';
+    $noteError = 1;
+  }
+  ## pd/add can only be submitted by a superadmin and requires note and category
+  if ($attr == 1 && $reason == 14)
+  {
+    if (!$self->IsUserSuperAdmin($user))
     {
-      $errorMsg .= 'rights/reason designation required.';
+      $errorMsg .= 'pd/add requires superadmin privileges.';
     }
-
-
-    ## und/nfi
-    if ( $attr == 5 && $reason == 8 && ( ( ! $note ) || ( ! $category ) )  )
+    elsif (( $renNum ) || ( $renDate ))
     {
-        $errorMsg .= 'und/nfi must include note category and note text.';
-        $noteError = 1;
+      $errorMsg .= 'pd/add should not include renewal info. ';
     }
-
-    ## ic/ren requires a ren number
-    if ( $attr == 2 && $reason == 7 && ( ( ! $renNum ) || ( ! $renDate ) )  )
+    elsif (( !$note ) || ( !$category ))
     {
-        $errorMsg .= 'ic/ren must include renewal id and renewal date.';
+      $errorMsg .= 'pd/add must include note category and note text. ';
+      $noteError = 1;
     }
-    elsif ( $attr == 2 && $reason == 7 )
+  }
+  ## pdus/cdpp requires a note and a 'Foreign' or 'Translation' category, and must not have a ren number
+  if ($attr == 9 && $reason == 9)
+  {
+    if (( $renNum ) || ( $renDate ))
     {
-        $renDate =~ s,.*[A-Za-z](.*),$1,;
-        $renDate = '19' . $renDate;
-
-        if ( $renDate < 1950 )
-        {
-           $errorMsg .= "renewal has expired; volume is pd. date entered is $renDate";
-        }
+      $errorMsg .= 'pdus/cdpp should not include renewal info. ';
     }
-
-    ## pd/ren should not have a ren number or date
-    if ( $attr == 1 && $reason == 7 &&  ( ( $renNum ) || ( $renDate ) )  )
+    if (( !$note ) || ( !$category ))
     {
-        $errorMsg .= 'pd/ren should not include renewal info.';
+      $errorMsg .= 'pdus/cdpp must include note category/note text. ';
+      $noteError = 1;
     }
-
-    ## pd/ncn requires a ren number
-    ## superadmin-added stuff after 1963 doesn't need this
-    if (  $attr == 1 && $reason == 2 && ( ( ! $renNum ) || ( ! $renDate ) ) )
+    if ($category ne 'Foreign Pub' && $category ne 'Translation')
     {
-        $errorMsg .= 'pd/ncn must include renewal id and renewal date.' unless $self->IsUserSuperAdmin($user);
+      $errorMsg .= 'pdus/cdpp requires note category "Foreign Pub" or "Translation". ';
     }
-
-
-    ## pd/cdpp requires a ren number
-    if (  $attr == 1 && $reason == 9 && ( ( $renNum ) || ( $renDate )  ) )
+  }
+  if ( $noteError == 0 )
+  {
+    if ( ( $category )  && ( !$note ) )
     {
-        $errorMsg .= 'pd/cdpp should not include renewal info.';
-    }
-
-    if ( $attr == 1 && $reason == 9 && ( ( ! $note ) || ( ! $category )  )  )
-    {
-        $errorMsg .= 'pd/cdpp must include note category and note text.';
-        $noteError = 1;
-    }
-
-    ## ic/cdpp requires a ren number
-    if (  $attr == 2 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
-    {
-        $errorMsg .= qq{ic/cdpp should not include renewal info.  };
-    }
-
-    if ( $attr == 2 && $reason == 9 && ( ( ! $note )  || ( ! $category ) )  )
-    {
-        $errorMsg .= 'ic/cdpp must include note category and note text.';
-        $noteError = 1;
-    }
-    
-    if ( $noteError == 0 )
-    {
-      if ( ( $category )  && ( ! $note ) )
+      if ($category ne 'Expert Accepted')
       {
-        if ($category ne 'Expert Accepted')
-        {
-          $errorMsg .= 'must include a note if there is a category.';
-        }
-      }
-      elsif ( ( $note ) && ( ! $category ) )
-      {
-        $errorMsg .= 'must include a category if there is a note.';
+        $errorMsg .= 'must include a note if there is a category. ';
       }
     }
-
-    ## pdus/cdpp requires a note and a 'Foreign' or 'Translation' category, and must not have a ren number
-    if ($attr == 9 && $reason == 9)
+    elsif ( ( $note ) && ( !$category ) )
     {
-      if (( $renNum ) || ( $renDate ))
-      {
-        $errorMsg .= 'pdus/cdpp should not include renewal info .';
-      }
-      if (( !$note ) || ( !$category ))
-      {
-        $errorMsg .= 'pdus/cdpp must include note category/note text.';
-      }
-      if ($category ne 'Foreign Pub' && $category ne 'Translation')
-      {
-        $errorMsg .= 'pdus/cdpp requires note category "Foreign Pub" or "Translation".';
-      }
+      $errorMsg .= 'must include a category if there is a note. ';
     }
-    return $errorMsg;
+  }
+  return $errorMsg;
 }
 
 # Returns an error message, or an empty string if no error.
@@ -5385,7 +5393,7 @@ sub GetReasonName
   
   my %reasons = ( 1 => 'bib', 2 => 'ncn', 3 => 'con',   4 => 'ddd',  5 => 'man',  6 => 'pvt',
                   7 => 'ren', 8 => 'nfi', 9 => 'cdpp', 10 => 'cip', 11 => 'unp', 12 => 'gfv',
-                 13 => 'crms');
+                 13 => 'crms', 14 => 'add');
   return $reasons{$id};
 }
 
@@ -5406,7 +5414,7 @@ sub GetReasonNum
   
   my %reasons = ('bib'  => 1, 'ncn' => 2, 'con'  => 3, 'ddd' => 4,  'man' => 5,  'pvt' => 6,
                  'ren'  => 7, 'nfi' => 8, 'cdpp' => 9, 'cip' => 10, 'unp' => 11, 'gfv' => 12,
-                 'crms' => 13);
+                 'crms' => 13, 'add' => 14);
   return $reasons{$id};
 }
 
