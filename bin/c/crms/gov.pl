@@ -184,7 +184,7 @@ if (@mails && 0<$n)
            "$start to $end. We believe these should have an 'f' inserted into the 008 MARC field. " .
            'Please notify the other addressees of any volumes that do not seem to meet these criteria. ' .
            "Note: in the current version there may be documents that have a non-blank 008:28 character other than 'f'. " .
-           'These should be left alone and reported.'; 
+           "These should be left alone and reported.\n\n"; 
   }
   $sender->SendEnc($txt);
   if ($report eq 'excel')
