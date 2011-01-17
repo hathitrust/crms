@@ -3402,8 +3402,6 @@ sub CreateExportGraph
                        join('","',@dates));
   }
   $report .= '}';
-  #$report .= sprintf "CreateExportData(',', %d, 0, $start, $end)\n", ($type == 2);
-  #$report .= $data;
   return $report;
 }
 
@@ -3424,8 +3422,6 @@ sub CreateExportStatusData
   $start = "$year-$month-01" unless $start;
   my $lastDay = Days_in_Month($year,$month);
   $end = "$year-$month-$lastDay" unless $end;
-  ($start,$end) = ($end,$start) if $end lt $start;
-  $start = '2009-07-01' if $start lt '2009-07-01';
   my $what = 'DATE(time)';
   $what = 'DATE_FORMAT(time, "%Y-%m")' if $monthly;
   my $sql = "SELECT DISTINCT($what) FROM exportdata WHERE DATE(time)>='$start' AND DATE(time)<='$end'";
@@ -3490,12 +3486,11 @@ sub GetStatusBreakdown
   my $priority = shift;
   
   my @counts = ();
-  my $priorityClause = ($priority =~ m/\d/)? "AND priority=$priority":'';
+  my $priorityClause = ($priority)? "AND r.priority=$priority":'';
   foreach my $status (4..7)
   {
     my $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r ON e.gid=r.gid WHERE ' .
-             "r.legacy!=1 AND date(e.time)>='$start' AND date(e.time)<='$end' AND r.status=$status $priorityClause";
-    #$sql .= ' AND (r.priority=0 OR r.priority=2) AND r.legacy!=1';
+             "r.legacy!=1 AND DATE(e.time)>='$start' AND DATE(e.time)<='$end' AND r.status=$status $priorityClause";
     #print "$sql<br/>\n";
     push @counts, $self->SimpleSqlGet($sql);
   }
@@ -4215,7 +4210,7 @@ sub ValidateSubmission2
       $errorMsg .= 'pd/add must include note category and note text. ';
       $noteError = 1;
     }
-    elsif ($category ne 'Expert Note' && $category ne 'Foreign Pub' && $category ne 'Miscellaneous')
+    elsif ($category ne 'Expert Note' && $category ne 'Foreign Pub' && $category ne 'Misc')
     {
       $errorMsg .= 'pd/add requires note category "Expert Note", "Foreign Pub" or "Misc". ';
     }
@@ -5867,9 +5862,8 @@ sub GetLastLoadTimeToCandidates
 {
   my $self = shift;
 
-  my $sql = qq{SELECT DATE_FORMAT(MAX(time), "%a, %M %e, %Y at %l:%i %p") from candidatesrecord};
+  my $sql = 'SELECT DATE_FORMAT(MAX(time), "%a, %M %e, %Y at %l:%i %p") FROM candidatesrecord';
   my $time = $self->SimpleSqlGet( $sql );
-
   if ($time) { return $time; }
   return 'no data available';
 }
