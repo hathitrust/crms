@@ -49,13 +49,15 @@ $DLPS_DEV = undef if $production;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
+my $configFile = "$DLXSROOT/bin/c/crms/crms.cfg";
 my $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/gov_hist.txt",
-    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
+    configFile   =>   $configFile,
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
     dev          =>   $DLPS_DEV
 );
+require $configFile;
 
 my %reports = ('html'=>1,'none'=>1,'tsv'=>1,'excel'=>1);
 die "Bad value '$report' for -r flag" unless defined $reports{$report};
@@ -161,43 +163,47 @@ if ($report eq 'html')
   $txt .= "</table></body></html>\n\n";
 }
 $workbook->close() if $report eq 'excel';
-if (@mails && 0<$n)
+
+if (@mails)
 {
-  use Mail::Sender;
-  $title = 'Dev: ' . $title if $DLPS_DEV;
-  my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                  from => 'moseshll@clamato.umdl.umich.edu',
-                                  on_errors => 'undef' }
-    or die "Error in mailing : $Mail::Sender::Error\n";
-  my $to = join ',', @mails;
-  my $ctype = ($report eq 'html')? 'text/html':'text/plain';
-  $sender->OpenMultipart({
-    to => $to,
-    subject => $title,
-    ctype => $ctype,
-    encoding => 'quoted-printable'
-    }) or die $Mail::Sender::Error,"\n";
-  $sender->Body();
-  if ($report eq 'excel')
+  if (1<$n)
   {
-    $txt = 'This is an automatically generated report on possible federal government docs from the period ' .
-           "$start to $end. We believe these should have an 'f' inserted into the 008 MARC field. " .
-           'Please notify the other addressees of any volumes that do not seem to meet these criteria. ' .
-           "Note: in the current version there may be documents that have a non-blank 008:28 character other than 'f'. " .
-           "These should be left alone and reported.\n\n"; 
+    use Mail::Sender;
+    $title = 'Dev: ' . $title if $DLPS_DEV;
+    my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
+                                    from => $CRMSGlobals::adminEmail,
+                                    on_errors => 'undef' }
+      or die "Error in mailing : $Mail::Sender::Error\n";
+    my $to = join ',', @mails;
+    my $ctype = ($report eq 'html')? 'text/html':'text/plain';
+    $sender->OpenMultipart({
+      to => $to,
+      subject => $title,
+      ctype => $ctype,
+      encoding => 'quoted-printable'
+      }) or die $Mail::Sender::Error,"\n";
+    $sender->Body();
+    if ($report eq 'excel')
+    {
+      $txt = 'This is an automatically generated report on possible federal government docs from the period ' .
+             "$start to $end. We believe these should have an 'f' inserted into the 008 MARC field. " .
+             'Please notify the other addressees of any volumes that do not seem to meet these criteria. ' .
+             "Note: in the current version there may be documents that have a non-blank 008:28 character other than 'f'. " .
+             "These should be left alone and reported.\n\n"; 
+    }
+    $sender->SendEnc($txt);
+    if ($report eq 'excel')
+    {
+      $sender->Attach({
+        description => 'Gov Report',
+        ctype => 'application/vnd.ms-excel',
+        encoding => 'Base64',
+        disposition => 'attachment; filename=*',
+        file => $excelpath
+        });
+    }
+    $sender->Close();
   }
-  $sender->SendEnc($txt);
-  if ($report eq 'excel')
-  {
-    $sender->Attach({
-      description => 'Gov Report',
-      ctype => 'application/vnd.ms-excel',
-      encoding => 'Base64',
-      disposition => 'attachment; filename=*',
-      file => $excelpath
-      });
-  }
-  $sender->Close();
 }
 else
 {
