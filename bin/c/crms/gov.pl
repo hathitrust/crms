@@ -38,7 +38,7 @@ my $production;
 my $report = 'html';
 my $verbose;
 
-Getopt::Long::Configure ("bundling");
+Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions('a' => \$all,
            'h|?' => \$help,
            'm:s@' => \@mails,
