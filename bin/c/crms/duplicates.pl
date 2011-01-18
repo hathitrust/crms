@@ -314,8 +314,8 @@ foreach my $row ( @{$ref} )
   {
     $situation = 'duplicate';
   }
-  print "  Situation '$situation'\n" if $verbose;
-  if ($typesh{$situation} && 0 < scalar keys %dups)
+  printf "  Situation '$situation' (%s lines)\n", scalar @lines if $verbose;
+  if ($typesh{$situation} && 1 < scalar @lines)
   {
     foreach my $line (@lines)
     {
