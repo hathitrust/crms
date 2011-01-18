@@ -1756,39 +1756,15 @@ sub SearchTermsToSQL
     $search2value = $search3value;
     $search3value = $search3 = undef;
   }
-  $search1 = "YEAR($search1)" if $search1 =~ /pub_date/;
-  $search2 = "YEAR($search2)" if $search2 =~ /pub_date/;
-  $search3 = "YEAR($search3)" if $search3 =~ /pub_date/;
-  if ($search1 eq 'r.attr' and $search1value !~ m/^\d+$/)
-  {
-    my $tmp = $self->GetRightsNum($search1value);
-    $search1value = $tmp if $tmp;
-  }
-  if ($search2 eq 'r.attr' and $search2value !~ m/^\d+$/)
-  {
-    my $tmp = $self->GetRightsNum($search2value);
-    $search2value = $tmp if $tmp;
-  }
-  if ($search3 eq 'r.attr' and $search3value !~ m/^\d+$/)
-  {
-    my $tmp = $self->GetRightsNum($search3value);
-    $search3value = $tmp if $tmp;
-  }
-  if ($search1 eq 'r.reason' and $search1value !~ m/^\d+$/)
-  {
-    my $tmp = $self->GetReasonNum($search1value);
-    $search1value = $tmp if $tmp;
-  }
-  if ($search2 eq 'r.reason' and $search2value !~ m/^\d+$/)
-  {
-    my $tmp = $self->GetReasonNum($search2value);
-    $search2value = $tmp if $tmp;
-  }
-  if ($search3 eq 'r.reason' and $search3value !~ m/^\d+$/)
-  {
-    my $tmp = $self->GetReasonNum($search3value);
-    $search3value = $tmp if $tmp;
-  }
+  $search1 = "YEAR($search1)" if $search1 eq 'pub_date';
+  $search2 = "YEAR($search2)" if $search2 eq 'pub_date';
+  $search3 = "YEAR($search3)" if $search3 eq 'pub_date';
+  $search1value = $self->GetRightsNum($search1value) if $search1 eq 'r.attr';
+  $search2value = $self->GetRightsNum($search2value) if $search2 eq 'r.attr';
+  $search3value = $self->GetRightsNum($search3value) if $search3 eq 'r.attr';
+  $search1value = $self->GetReasonNum($search1value) if $search1 eq 'r.reason';
+  $search2value = $self->GetReasonNum($search2value) if $search2 eq 'r.reason';
+  $search3value = $self->GetReasonNum($search3value) if $search3 eq 'r.reason';
   if ( $search1value =~ m/.*\*.*/ )
   {
     $search1value =~ s/\*/_____/gs;
@@ -1859,36 +1835,12 @@ sub SearchTermsToSQLWide
   my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table) = @_;
   $op1 = 'AND' unless $op1;
   $op2 = 'AND' unless $op2;
-  if ($search1 eq 'r.attr' and $search1value !~ m/^\d+$/)
-  {
-    my $tmp = $self->GetRightsNum($search1value);
-    $search1value = $tmp if $tmp;
-  }
-  if ($search2 eq 'r.attr' and $search2value !~ m/^\d+$/)
-  {
-    my $tmp = $self->GetRightsNum($search2value);
-    $search2value = $tmp if $tmp;
-  }
-  if ($search3 eq 'r.attr' and $search3value !~ m/^\d+$/)
-  {
-    my $tmp = $self->GetRightsNum($search3value);
-    $search3value = $tmp if $tmp;
-  }
-  if ($search1 eq 'r.reason' and $search1value !~ m/^\d+$/)
-  {
-    my $tmp = $self->GetReasonNum($search1value);
-    $search1value = $tmp if $tmp;
-  }
-  if ($search2 eq 'r.reason' and $search2value !~ m/^\d+$/)
-  {
-    my $tmp = $self->GetReasonNum($search2value);
-    $search2value = $tmp if $tmp;
-  }
-  if ($search3 eq 'r.reason' and $search3value !~ m/^\d+$/)
-  {
-    my $tmp = $self->GetReasonNum($search3value);
-    $search3value = $tmp if $tmp;
-  }
+  $search1value = $self->GetRightsNum($search1value) if $search1 eq 'r.attr';
+  $search2value = $self->GetRightsNum($search2value) if $search2 eq 'r.attr';
+  $search3value = $self->GetRightsNum($search3value) if $search3 eq 'r.attr';
+  $search1value = $self->GetReasonNum($search1value) if $search1 eq 'r.reason';
+  $search2value = $self->GetReasonNum($search2value) if $search2 eq 'r.reason';
+  $search3value = $self->GetReasonNum($search3value) if $search3 eq 'r.reason';
   # Pull down search 2 if no search 1
   if (!length $search1value)
   {
@@ -2162,7 +2114,7 @@ sub UnpackResults
     }
     elsif ( $page eq 'undReviews' )
     {
-      #for und/nif
+      #for und/nfi
       #id, title, author, review date, status, user, attr, reason, category, note.
       $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note}
     }
@@ -2198,8 +2150,17 @@ sub SearchAndDownloadDeterminationStats
   my $endDate   = shift;
   my $monthly   = shift;
   my $priority  = shift;
+  my $pre       = shift;
   
-  my $buffer = $self->CreateExportStatusData("\t", $startDate, $endDate, $monthly, undef, $priority);
+  my $buffer;
+  if ($pre)
+  {
+    $buffer = $self->CreatePreDeterminationsBreakdownData("\t", $startDate, $endDate, $monthly, undef, $priority);
+  }
+  else
+  {
+    $buffer = $self->CreateDeterminationsBreakdownData("\t", $startDate, $endDate, $monthly, undef, $priority);
+  }
   $self->DownloadSpreadSheet( $buffer );
   if ( $buffer ) { return 1; }
   else { return 0; }
@@ -3405,8 +3366,78 @@ sub CreateExportGraph
   return $report;
 }
 
+sub CreatePreDeterminationsBreakdownData
+{
+  my $self      = shift;
+  my $delimiter = shift;
+  my $start     = shift;
+  my $end       = shift;
+  my $monthly   = shift;
+  my $title     = shift;
 
-sub CreateExportStatusData
+  my ($year,$month) = $self->GetTheYearMonth();
+  my $titleDate = $self->YearMonthToEnglish("$year-$month");
+  my $justThisMonth = (!$start && !$end);
+  $start = "$year-$month-01" unless $start;
+  my $lastDay = Days_in_Month($year,$month);
+  $end = "$year-$month-$lastDay" unless $end;
+  my $what = 'date';
+  $what = 'DATE_FORMAT(date, "%Y-%m")' if $monthly;
+  my $sql = "SELECT DISTINCT($what) FROM determinationstats WHERE date>='$start' AND date<='$end'";
+  #print "$sql<br/>\n";
+  my @dates = map {$_->[0];} @{$self->get('dbh')->selectall_arrayref( $sql )};
+  if (scalar @dates && !$justThisMonth)
+  {
+    my $startEng = $self->YearMonthToEnglish(substr($dates[0],0,7));
+    my $endEng = $self->YearMonthToEnglish(substr($dates[-1],0,7));
+    $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
+  }
+  my $report = ($title)? "$title\n":"Preliminary Determinations Breakdown $titleDate\n";
+  my @titles = ('Date','Status 2','Status 3','Status 4','Total','Status 2','Status 3','Status 4');
+  $report .= join($delimiter, @titles) . "\n";
+  my @totals = (0,0,0);
+  foreach my $date (@dates)
+  {
+    my ($y,$m,$d) = split '-', $date;
+    my $date1 = $date;
+    my $date2 = $date;
+    if ($monthly)
+    {
+      $date1 = "$date-01";
+      my $lastDay = Days_in_Month($y,$m);
+      $date2 = "$date-$lastDay";
+      $date = $self->YearMonthToEnglish($date);
+    }
+    my $sql = "SELECT s2,s3,s4,s2+s3+s4 FROM determinationstats WHERE date LIKE '$date1%'";
+    my ($s2,$s3,$s4,$sum) = @{$self->get('dbh')->selectall_arrayref( $sql )->[0]};
+    my @line = ($s2,$s3,$s4,$sum,0,0,0,0,0);
+    next unless $sum > 0;
+    for (my $i=0; $i < 3; $i++)
+    {
+      $totals[$i] += $line[$i];
+    }
+    for (my $i=0; $i < 3; $i++)
+    {
+      my $pct = 0.0;
+      eval {$pct = 100.0*$line[$i]/$line[3];};
+      $line[$i+4] = sprintf('%.1f%%', $pct);
+    }
+    $report .= $date;
+    $report .= $delimiter . join($delimiter, @line) . "\n";
+  }
+  my $gt = $totals[0] + $totals[1] + $totals[2];
+  push @totals, $gt;
+  for (my $i=0; $i < 4; $i++)
+  {
+    my $pct = 0.0;
+    eval {$pct = 100.0*$totals[$i]/$gt;};
+    push @totals, sprintf('%.1f%%', $pct);
+  }
+  $report .= 'Total' . $delimiter . join($delimiter, @totals) . "\n";
+  return $report;
+}
+
+sub CreateDeterminationsBreakdownData
 {
   my $self      = shift;
   my $delimiter = shift;
@@ -3505,26 +3536,42 @@ sub CreateExportStatusReport
   my $monthly  = shift;
   my $title    = shift;
   my $priority = shift;
+  my $pre      = shift;
   
   $priority = undef if $priority eq 'All';
-  my $data = $self->CreateExportStatusData("\t", $start, $end, $monthly, $title, $priority);
+  my $data;
+  my $whichline = 4;
+  my $span1 = 5;
+  my $span2 = 4;
+  my $cols = 9;
+  if ($pre)
+  {
+    $data = $self->CreatePreDeterminationsBreakdownData("\t", $start, $end, $monthly, $title);
+    $whichline = 3;
+    $span1--;
+    $span2--;
+    $cols = 7;
+  }
+  else
+  {
+    $data = $self->CreateDeterminationsBreakdownData("\t", $start, $end, $monthly, $title, $priority);
+    $pre = 0;
+  }
   my @lines = split "\n", $data;
   $title = shift @lines;
   $title =~ s/\s/&nbsp;/g;
-  my $url = sprintf("<a href='?p=determinationStats&amp;startDate=$start&amp;endDate=$end&amp;%sdownload=1&amp;priority=$priority' target='_blank'>Download</a>",($monthly)?'monthly=on&amp;':'');
+  my $url = sprintf("<a href='?p=determinationStats&amp;startDate=$start&amp;endDate=$end&amp;%sdownload=1&amp;priority=$priority&amp;pre=$pre' target='_blank'>Download</a>",($monthly)?'monthly=on&amp;':'');
   my $report = "<h3>$title&nbsp;&nbsp;&nbsp;&nbsp;$url</h3>\n";
   $report .= "<table class='exportStats'>\n";
-  $report .= "<tr><th/><th colspan='5'><span class='major'>Counts</span></th><th colspan='4'><span class='total'>Percentages</span></th></tr>\n";
-  shift @lines; # titles
-  $report .= '<tr><th>Date</th><th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th><th>Status&nbsp;7</th><th>Total</th>';
-  $report .= "<th>Status&nbsp;4</th><th>Status&nbsp;5</th><th>Status&nbsp;6</th><th>Status&nbsp;7</th></tr>\n";
+  $report .= "<tr><th/><th colspan='$span1'><span class='major'>Counts</span></th><th colspan='$span2'><span class='total'>Percentages</span></th></tr>\n";
+  my $titles = shift @lines;
+  $report .= ('<tr>' . join('', map {s/\s/&nbsp;/g; "<th>$_</th>";} split("\t", $titles)) . '</tr>');
   foreach my $line (@lines)
   {
     my @line = split "\t", $line;
     my $date = shift @line;
     my ($y,$m,$d) = split '-', $date;
     $date =~ s/\s/&nbsp;/g;
-    #<tr><th style="text-align:right;"><span>&nbsp;&nbsp;&nbsp;&nbsp;Total</span></th><td style="text-align:center;">&nbsp;&nbsp;&nbsp;&nbsp;<b>467</b></td><td style="text-align:center;">
     if ($date eq 'Total')
     {
       $report .= "<tr><th style='text-align:right;'>Total</th>";
@@ -3533,18 +3580,18 @@ sub CreateExportStatusReport
     {
       $report .= "<tr><th>$date</th>";
     }
-    for (my $i=0; $i < 9; $i++)
+    for (my $i=0; $i < $cols; $i++)
     {
       my $class = '';
-      my $style = ($i==4)? "style='border-right:double 6px black;'":'';
-      if ($i == 4 && $date ne 'Total')
+      my $style = ($i==$whichline)? "style='border-right:double 6px black;'":'';
+      if ($i == $whichline && $date ne 'Total')
       {
         $class = 'class="minor"';
       }
       elsif ($date ne 'Total')
       {
         $class = 'class="total"';
-        $class = 'class="major"' if $i < 4;
+        $class = 'class="major"' if $i < $whichline;
       }
       $report .= sprintf("<td $class $style>%s</td>\n", $line[$i]);
     }
@@ -3563,8 +3610,9 @@ sub CreateExportStatusGraph
   my $monthly  = shift;
   my $title    = shift;
   my $priority = shift;
-  
-  my $data = $self->CreateExportStatusData("\t", $start, $end, $monthly, $title, $priority);
+
+  $priority = undef if $priority eq 'All';
+  my $data = $self->CreateDeterminationsBreakdownData("\t", $start, $end, $monthly, $title, $priority);
   my @lines = split "\n", $data;
   $title = shift @lines;
   shift @lines;
@@ -4034,6 +4082,27 @@ sub GetMonthStats
          "$total_outliers, $total_correct, $total_incorrect, $total_neutral)";
   #print "$sql\n";
   $self->PrepareSubmitSql( $sql );
+}
+
+sub UpdatePreDeterminationStats
+{
+  my $self = shift;
+
+  my $date = $self->SimpleSqlGet('SELECT DATE(NOW())');
+  my $sql = "SELECT COUNT(*) FROM determinationstats WHERE date='$date'";
+  if (0 == $self->SimpleSqlGet($sql))
+  {
+    $sql = "INSERT INTO determinationstats (date) VALUES ('$date')";
+    $self->PrepareSubmitSql($sql);
+  }
+  foreach my $status (2 .. 4)
+  {
+    $sql = "SELECT COUNT(*) FROM queue WHERE pending_status=$status";
+    my $cnt = $self->SimpleSqlGet($sql);
+    my $field = 's'.$status;
+    $sql = "UPDATE determinationstats SET $field=$cnt WHERE date='$date'";
+    $self->PrepareSubmitSql($sql);
+  }
 }
 
 sub DeleteUser
@@ -5873,7 +5942,7 @@ sub GetTotalExported
 {
   my $self = shift;
 
-  my $sql = qq{SELECT sum( itemcount ) FROM $CRMSGlobals::exportrecordTable};
+  my $sql = "SELECT SUM(itemcount) FROM $CRMSGlobals::exportrecordTable";
   return $self->SimpleSqlGet( $sql );
 }
 

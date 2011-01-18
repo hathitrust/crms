@@ -38,6 +38,7 @@
 <label for="priority" style="width:5em;float:left;">Priority:</label>
 &nbsp;&nbsp;<select name="priority" id="priority">
 [% pris = crms.get('dbh').selectall_arrayref("SELECT DISTINCT priority FROM historicalreviews ORDER BY priority ASC") %]
+<option [% (priority == pri)? 'selected="selected"':'' %]>All</option>
 [% FOREACH pri IN pris %]
   [% pri = crms.StripDecimal(pri.0) %]
   <option [% (priority == pri)? 'selected="selected"':'' %]>$pri</option>
@@ -53,6 +54,9 @@
 </form>
 </div>
 <br/>
+
+
+[% crms.CreateExportStatusReport(startDate, endDate, 0, undef, undef, 1) %]
 
 [% report = crms.CreateExportStatusReport(startDate, endDate, 0, undef, priority) %]
 [% report.replace('Status&nbsp;6','Status&nbsp;6*') %]

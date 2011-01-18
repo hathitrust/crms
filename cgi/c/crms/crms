@@ -215,7 +215,8 @@ if ( $cgi->param('download') )
   {
     my $monthly = $cgi->param('monthly');
     my $priority = $cgi->param('priority');
-    $success = $crms->SearchAndDownloadDeterminationStats( $startDate, $endDate, $monthly, $priority );
+    my $pre = $cgi->param('pre');
+    $success = $crms->SearchAndDownloadDeterminationStats( $startDate, $endDate, $monthly, $priority, $pre );
   }
   else
   {
