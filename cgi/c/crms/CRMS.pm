@@ -3409,6 +3409,7 @@ sub CreatePreDeterminationsBreakdownData
       $date = $self->YearMonthToEnglish($date);
     }
     my $sql = "SELECT s2,s3,s4,s2+s3+s4 FROM determinationstats WHERE date LIKE '$date1%'";
+    #print "$sql<br/>\n";
     my ($s2,$s3,$s4,$sum) = @{$self->get('dbh')->selectall_arrayref( $sql )->[0]};
     my @line = ($s2,$s3,$s4,$sum,0,0,0,0,0);
     next unless $sum > 0;
@@ -4097,7 +4098,7 @@ sub UpdatePreDeterminationStats
   }
   foreach my $status (2 .. 4)
   {
-    $sql = "SELECT COUNT(*) FROM queue WHERE pending_status=$status";
+    $sql = "SELECT COUNT(*) FROM queue WHERE syatus=0 AND pending_status=$status";
     my $cnt = $self->SimpleSqlGet($sql);
     my $field = 's'.$status;
     $sql = "UPDATE determinationstats SET $field=$cnt WHERE date='$date'";
