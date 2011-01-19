@@ -4098,7 +4098,7 @@ sub UpdatePreDeterminationStats
   }
   foreach my $status (2 .. 4)
   {
-    $sql = "SELECT COUNT(*) FROM queue WHERE syatus=0 AND pending_status=$status";
+    $sql = "SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=$status";
     my $cnt = $self->SimpleSqlGet($sql);
     my $field = 's'.$status;
     $sql = "UPDATE determinationstats SET $field=$cnt WHERE date='$date'";
