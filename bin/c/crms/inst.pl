@@ -83,8 +83,8 @@ foreach $inst (@insts)
   my $ref = $crms->get('dbh')->selectall_arrayref($sql);
   my $tot = $ref->[0]->[0];
   my ($iname,$mail,$fname) = split '__', $names{$inst};
-  #unshift @mails, $mail;
-  print "Note: not mailing to institutional users yet.\n";
+  unshift @mails, $mail;
+  #print "Note: not mailing to institutional users yet.\n";
   my $msg = "Monthly statistics for $iname CRMS Reviewers\n\n" .
             "Total Reviews: $tot\n" .
             "Validated PD Reviews: $rev\n" .
