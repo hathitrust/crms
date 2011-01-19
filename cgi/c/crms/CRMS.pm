@@ -2384,7 +2384,7 @@ sub GetVolumesRefWide
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
            (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ') .
            (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
-           "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS" .
+           "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS " .
            "WHERE r.id='$id' ORDER BY $order $dir";
     #print "$sql<br/>\n";
     my $ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );
