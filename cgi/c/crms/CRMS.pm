@@ -197,6 +197,7 @@ sub ProcessReviews
 {
   my $self = shift;
 
+  $self->UpdatePreDeterminationsBreakdown();
   my $dbh = $self->get( 'dbh' );
   my $sql = 'SELECT id,user,attr,reason,renNum,renDate,hold FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) ' .
             'GROUP BY id HAVING count(*) = 2';
@@ -275,6 +276,7 @@ sub ProcessReviews
   # Clear out all the locks
   $sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
   $self->PrepareSubmitSql( $sql );
+  $self->UpdateDeterminationsBreakdown();
   $sql = 'INSERT INTO processstatus VALUES ()';
   $self->PrepareSubmitSql( $sql );
 }
@@ -374,6 +376,7 @@ sub ClearQueueAndExport
   #}
   $self->ExportReviews( $export, $fromcgi );
   #return "Exported: $dCount double review, $eCount expert reviewed, $dupCount duplicates inheriting";
+  $self->UpdateExportStats();
   return "Exported: $dCount double review, $eCount expert reviewed\n";
 }
 
@@ -1429,6 +1432,7 @@ sub CreateSQLForReviews
     my $pagesize           = shift;
     my $download           = shift;
 
+    $order = $self->ConvertToSearchTerm( $order, $page );
     $search1 = $self->ConvertToSearchTerm( $search1, $page );
     $search2 = $self->ConvertToSearchTerm( $search2, $page );
     $search3 = $self->ConvertToSearchTerm( $search3, $page );
@@ -1472,9 +1476,11 @@ sub CreateSQLForReviews
     }
     elsif ( $page eq 'adminHistoricalReviews' )
     {
+      my $doS = 'LEFT JOIN system s ON r.id=s.id';
+      $doS = '' unless ($search1 . $search2 . $search3 . $order) =~ m/sysid/;
       $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-             'r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated, s.sysid '.
-             "FROM $CRMSGlobals::historicalreviewsTable r LEFT JOIN bibdata b ON r.id=b.id LEFT JOIN system s ON r.id=s.id WHERE r.id IS NOT NULL";
+             'r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated '.
+             "FROM $CRMSGlobals::historicalreviewsTable r LEFT JOIN bibdata b ON r.id=b.id $doS WHERE r.id IS NOT NULL";
     }
     elsif ( $page eq 'undReviews' )
     {
@@ -1506,6 +1512,8 @@ sub CreateSQLForReviews
     if ( $startDate ) { $sql .= " AND $which >='$startDate 00:00:00' "; }
     if ( $endDate ) { $sql .= " AND $which <='$endDate 23:59:59' "; }
     my $limit = ($download)? '':"LIMIT $offset, $pagesize";
+    if (0)
+    {
     if ( $order eq 'status' )
     {
       if ( $page eq 'adminHistoricalReviews' )
@@ -1529,6 +1537,8 @@ sub CreateSQLForReviews
     {
        $sql .= " ORDER BY r.$order $dir $limit ";
     }
+    }
+    $sql .= " ORDER BY $order $dir $limit ";
     #print "$sql<br/>\n";
     my $countSql = $sql;
     $countSql =~ s/(SELECT\s+).+?(FROM.+)/$1 COUNT(*) $2/i;
@@ -1579,10 +1589,7 @@ sub CreateSQLForVolumes
   $search1 = $self->ConvertToSearchTerm( $search1, $page );
   $search2 = $self->ConvertToSearchTerm( $search2, $page );
   $search3 = $self->ConvertToSearchTerm( $search3, $page );
-  if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
-  elsif ($order eq 'status' && $page ne 'adminHistoricalReviews') { $order = 'q.' . $order; }
-  elsif ($order eq 'sysid') { $order = 's.' . $order; }
-  else { $order = 'r.' . $order; }
+  $order = $self->ConvertToSearchTerm( $order, $page );
   $search1 = 'r.id' unless $search1;
   my $order2 = ($dir eq 'ASC')? 'min':'max';
   my @rest = ();
@@ -1593,7 +1600,7 @@ sub CreateSQLForVolumes
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
-    $doS = 'LEFT JOIN system s ON r.id=s.id';
+    $doS = 'LEFT JOIN system s ON r.id=s.id' if ($search1 . $search2 . $search3 . $order) =~ m/sysid/;
   }
   else
   {
@@ -1672,10 +1679,7 @@ sub CreateSQLForVolumesWide
   $search1 = $self->ConvertToSearchTerm( $search1, $page );
   $search2 = $self->ConvertToSearchTerm( $search2, $page );
   $search3 = $self->ConvertToSearchTerm( $search3, $page );
-  if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
-  elsif ($order eq 'status' && $page ne 'adminHistoricalReviews') { $order = 'q.' . $order; }
-  elsif ($order eq 'sysid') { $order = 's.' . $order; }
-  else { $order = 'r.' . $order; }
+  $order = $self->ConvertToSearchTerm( $order, $page );
   $search1 = 'r.id' unless $search1;
   my $order2 = ($dir eq 'ASC')? 'min':'max';
   my @rest = ();
@@ -1685,7 +1689,8 @@ sub CreateSQLForVolumesWide
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
-    $top = 'bibdata b LEFT JOIN system s ON b.id=s.id';
+    $top = 'bibdata b ';
+    $top .= 'LEFT JOIN system s ON b.id=s.id' if ($search1 . $search2 . $search3 . $order) =~ m/sysid/;
   }
   else
   {
@@ -2030,7 +2035,7 @@ sub SearchAndDownload
     }
     elsif ( $page eq 'adminHistoricalReviews' )
     {
-      $buffer .= qq{id\ttitle\tauthor\tpub date\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated\tswiss};
+      $buffer .= qq{id\tsystem id\ttitle\tauthor\tpub date\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated\tswiss};
     }
     $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\tpriority":'');
     if ($stype eq 'reviews')
@@ -2098,7 +2103,6 @@ sub UnpackResults
     my $title      = $row->[15];
     my $author     = $row->[16];
     my $hold       = $row->[17];
-    my $sysid      = $row->[18];
     
     if ( $page eq 'userReviews')
     {
@@ -2136,7 +2140,8 @@ sub UnpackResults
       $pubdate = '?' unless $pubdate;
       my $validated = $row->[18];
       #id, title, author, review date, status, user, attr, reason, category, note, validated
-      $buffer .= qq{$id\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated\t$swiss};
+      my $sysid = $self->SimpleSqlGet("SELECT sysid FROM system WHERE id='$id'");
+      $buffer .= qq{$id\t$sysid\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated\t$swiss};
     }
     $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\t$priority":'');
   }
@@ -2226,7 +2231,8 @@ sub GetReviewsRef
   {
       my $date = $row->[1];
       $date =~ s/(.*) .*/$1/;
-      my $item = {id         => $row->[0],
+      my $id = $row->[0];
+      my $item = {id         => $id,
                   time       => $row->[1],
                   date       => $date,
                   duration   => $row->[2],
@@ -2245,12 +2251,15 @@ sub GetReviewsRef
                   title      => $row->[15],
                   author     => $row->[16]
                  };
-      my $pubdate = $row->[17];
-      $pubdate = '?' unless $pubdate;
-      ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
-      ${$item}{'validated'} = $row->[18] if $page eq 'adminHistoricalReviews';
-      ${$item}{'sysid'} = $row->[19] if $page eq 'adminHistoricalReviews';
       ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds';
+      if ($page eq 'adminHistoricalReviews')
+      {
+        my $pubdate = $row->[17];
+        $pubdate = '?' unless $pubdate;
+        ${$item}{'pubdate'} = $pubdate;
+        ${$item}{'validated'} = $row->[18];
+        ${$item}{'sysid'} = $self->SimpleSqlGet("SELECT sysid FROM system WHERE id='$id'");
+      }
       push( @{$return}, $item );
   }
   my $n = POSIX::ceil($offset/$pagesize+1);
@@ -2329,12 +2338,15 @@ sub GetVolumesRef
                   title      => $row->[15],
                   author     => $row->[16]
                  };
-      my $pubdate = $row->[17];
-      $pubdate = '?' unless $pubdate;
-      ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
-      ${$item}{'validated'} = $row->[18] if $page eq 'adminHistoricalReviews';
-      ${$item}{'sysid'} = $row->[19] if $page eq 'adminHistoricalReviews';
-      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews';
+      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds';
+      if ($page eq 'adminHistoricalReviews')
+      {
+        my $pubdate = $row->[17];
+        $pubdate = '?' unless $pubdate;
+        ${$item}{'pubdate'} = $pubdate;
+        ${$item}{'validated'} = $row->[18];
+        ${$item}{'sysid'} = $self->SimpleSqlGet("SELECT sysid FROM system WHERE id='$id'");
+      }
       push( @{$return}, $item );
     }
   }
@@ -2411,12 +2423,15 @@ sub GetVolumesRefWide
                   title      => $row->[15],
                   author     => $row->[16]
                  };
-      my $pubdate = $row->[17];
-      $pubdate = '?' unless $pubdate;
-      ${$item}{'pubdate'} = $pubdate if $page eq 'adminHistoricalReviews';
-      ${$item}{'validated'} = $row->[18] if $page eq 'adminHistoricalReviews';
-      ${$item}{'sysid'} = $row->[19] if $page eq 'adminHistoricalReviews';
-      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews';
+      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds';
+      if ($page eq 'adminHistoricalReviews')
+      {
+        my $pubdate = $row->[17];
+        $pubdate = '?' unless $pubdate;
+        ${$item}{'pubdate'} = $pubdate;
+        ${$item}{'validated'} = $row->[18];
+        ${$item}{'sysid'} = $self->SimpleSqlGet("SELECT sysid FROM system WHERE id='$id'");
+      }
       push( @{$return}, $item );
     }
   }
@@ -3105,7 +3120,7 @@ sub CreateExportData
   }
   else
   {
-    my $sql = "SELECT DISTINCT(DATE_FORMAT(time,'%Y-%m')) FROM exportdata WHERE DATE_FORMAT(time,'%Y-%m')>='$start' AND DATE_FORMAT(time,'%Y-%m')<='$end' ORDER BY time ASC";
+    my $sql = "SELECT DISTINCT(DATE_FORMAT(date,'%Y-%m')) FROM exportstats WHERE DATE_FORMAT(date,'%Y-%m')>='$start' AND DATE_FORMAT(date,'%Y-%m')<='$end' ORDER BY date ASC";
     #print "$sql<br/>\n";
     @dates = map {$_->[0];} @{$dbh->selectall_arrayref( $sql )};
   }
@@ -3137,31 +3152,37 @@ sub CreateExportData
       my ($year,$month) = split '-', $date;
       $lastDay = Days_in_Month($year,$month);
     }
-    my $mintime = $date . (($cumulative)? '-01-01 00:00:00':'-01 00:00:00');
-    my $maxtime = $date . (($cumulative)? '-12-31 23:59:59':"-$lastDay 23:59:59");
-    my $sql = 'SELECT e.gid,e.attr,e.reason,h.status,e.id FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid WHERE ' .
-              "e.time>='$mintime' AND e.time<='$maxtime' ORDER BY e.gid ASC, h.time DESC";
-    my $rows = $dbh->selectall_arrayref( $sql );
-    #printf "$sql : %d items<br/>\n", scalar @{$rows};
-    my $lastid = undef;
-    foreach my $row ( @{$rows} )
-    {
-      my $id = $row->[0];
-      next if $id eq $lastid;
-      $lastid = $id;
-      my $attr = $row->[1];
-      my $reason = $row->[2];
-      my $status = $row->[3];
-      my $bar = $row->[4];
-      my $cat = "$attr/$reason";
-      $cats{$cat}++;
-      my $allkey = 'All ' . uc substr $attr, 0, ($attr eq 'und')? 3:2;
-      $cats{$allkey}++;
-      $cats{'Status '.$status}++;
-    }
+    my $sql = 'SELECT SUM(e.pd_ren),SUM(e.pd_ncn),SUM(e.pd_cdpp),SUM(e.pd_crms),SUM(e.pd_add),SUM(e.pdus_cdpp),' .
+               'SUM(e.ic_ren),SUM(e.ic_cdpp),SUM(e.ic_crms),SUM(e.und_nfi),SUM(e.und_crms),' .
+               'SUM(d.s4),SUM(d.s5),SUM(d.s6),SUM(d.s7) ' .
+               'FROM exportstats e INNER JOIN determinationsbreakdown d ON e.date=d.date WHERE ' .
+              "e.date LIKE '$date%'";
+    #print "$date: $sql<br/>\n";
+    my $ref = $dbh->selectall_arrayref( $sql );
+    #printf "$date: $sql : %d items<br/>\n", scalar @{$ref};
+    $stats{'pd/ren'}{$date}    += $ref->[0]->[0];
+    $stats{'pd/ncn'}{$date}    += $ref->[0]->[1];
+    $stats{'pd/cdpp'}{$date}   += $ref->[0]->[2];
+    $stats{'pd/crms'}{$date}   += $ref->[0]->[3];
+    $stats{'pd/add'}{$date}    += $ref->[0]->[4];
+    $stats{'pdus/cdpp'}{$date} += $ref->[0]->[5];
+    $stats{'ic/ren'}{$date}    += $ref->[0]->[6];
+    $stats{'ic/cdpp'}{$date}   += $ref->[0]->[7];
+    $stats{'ic/crms'}{$date}   += $ref->[0]->[8];
+    $stats{'und/nfi'}{$date}   += $ref->[0]->[9];
+    $stats{'und/crms'}{$date}  += $ref->[0]->[10];
+    $stats{'Status 4'}{$date}  += $ref->[0]->[11];
+    $stats{'Status 5'}{$date}  += $ref->[0]->[12];
+    $stats{'Status 6'}{$date}  += $ref->[0]->[13];
+    $stats{'Status 7'}{$date}  += $ref->[0]->[14];
     for my $cat (keys %cats)
     {
-      $stats{$cat}{$date} = $cats{$cat};
+      next if $cat =~ m/(All)|(Status)/;
+      my $attr = $cat;
+      $attr =~ s/(.+?)\/.*/$1/;
+      my $allkey = 'All ' . uc substr $attr, 0, ($attr eq 'und')? 3:2;
+      $stats{$allkey}{$date} += $stats{$cat}{$date};
+      #printf "\$stats{'$allkey'}{'$date'} += \$stats{'$cat'}{'$date'} (%d)<br>\n", $stats{$cat}{$date} if $cat =~ m/und/;
     }
   }
   $report .= "\n";
@@ -3383,7 +3404,7 @@ sub CreatePreDeterminationsBreakdownData
   $end = "$year-$month-$lastDay" unless $end;
   my $what = 'date';
   $what = 'DATE_FORMAT(date, "%Y-%m")' if $monthly;
-  my $sql = "SELECT DISTINCT($what) FROM determinationstats WHERE date>='$start' AND date<='$end'";
+  my $sql = "SELECT DISTINCT($what) FROM predeterminationsbreakdown WHERE date>='$start' AND date<='$end'";
   #print "$sql<br/>\n";
   my @dates = map {$_->[0];} @{$self->get('dbh')->selectall_arrayref( $sql )};
   if (scalar @dates && !$justThisMonth)
@@ -3408,7 +3429,7 @@ sub CreatePreDeterminationsBreakdownData
       $date2 = "$date-$lastDay";
       $date = $self->YearMonthToEnglish($date);
     }
-    my $sql = "SELECT s2,s3,s4,s2+s3+s4 FROM determinationstats WHERE date LIKE '$date1%'";
+    my $sql = "SELECT s2,s3,s4,s2+s3+s4 FROM predeterminationsbreakdown WHERE date LIKE '$date1%'";
     #print "$sql<br/>\n";
     my ($s2,$s3,$s4,$sum) = @{$self->get('dbh')->selectall_arrayref( $sql )->[0]};
     my @line = ($s2,$s3,$s4,$sum,0,0,0,0,0);
@@ -3446,17 +3467,17 @@ sub CreateDeterminationsBreakdownData
   my $end       = shift;
   my $monthly   = shift;
   my $title     = shift;
-  my $priority  = shift;
-  
+
+  #print "CreateDeterminationsBreakdownData('$delimiter','$start','$end','$monthly','$title')<br/>\n";
   my ($year,$month) = $self->GetTheYearMonth();
   my $titleDate = $self->YearMonthToEnglish("$year-$month");
   my $justThisMonth = (!$start && !$end);
   $start = "$year-$month-01" unless $start;
   my $lastDay = Days_in_Month($year,$month);
   $end = "$year-$month-$lastDay" unless $end;
-  my $what = 'DATE(time)';
-  $what = 'DATE_FORMAT(time, "%Y-%m")' if $monthly;
-  my $sql = "SELECT DISTINCT($what) FROM exportdata WHERE DATE(time)>='$start' AND DATE(time)<='$end'";
+  my $what = 'date';
+  $what = 'DATE_FORMAT(date, "%Y-%m")' if $monthly;
+  my $sql = "SELECT DISTINCT($what) FROM determinationsbreakdown WHERE date>='$start' AND date<='$end'";
   #print "$sql<br/>\n";
   my @dates = map {$_->[0];} @{$self->get('dbh')->selectall_arrayref( $sql )};
   if (scalar @dates && !$justThisMonth)
@@ -3465,10 +3486,10 @@ sub CreateDeterminationsBreakdownData
     my $endEng = $self->YearMonthToEnglish(substr($dates[-1],0,7));
     $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
   }
-  my $report = ($title)? "$title\n":"Final Determinations Breakdown $titleDate\n";
+  my $report = ($title)? "$title\n":"Determinations Breakdown $titleDate\n";
   my @titles = ('Date','Status 4','Status 5','Status 6','Status 7','Total','Status 4','Status 5','Status 6','Status 7');
   $report .= join($delimiter, @titles) . "\n";
-  my @totals = (0,0,0,0);
+  my @totals = (0,0,0);
   foreach my $date (@dates)
   {
     my ($y,$m,$d) = split '-', $date;
@@ -3476,19 +3497,20 @@ sub CreateDeterminationsBreakdownData
     my $date2 = $date;
     if ($monthly)
     {
-      $date1 = "$date-01";
+      $date1 = $date . '-01';
       my $lastDay = Days_in_Month($y,$m);
       $date2 = "$date-$lastDay";
       $date = $self->YearMonthToEnglish($date);
     }
-    my @line = (0,0,0,0,0,0,0,0,0);
-    my @stati = $self->GetStatusBreakdown($date1, $date2, $priority);
+    my $sql = "SELECT SUM(s4),SUM(s5),SUM(s6),SUM(s7),SUM(s4+s5+s6+s7) FROM determinationsbreakdown WHERE date>='$date1' AND date<='$date2'";
+    #print "$sql<br/>\n";
+    my ($s4,$s5,$s6,$s7,$sum) = @{$self->get('dbh')->selectall_arrayref( $sql )->[0]};
+    my @line = ($s4,$s5,$s6,$s7,$sum,0,0,0,0);
+    next unless $sum > 0;
     for (my $i=0; $i < 4; $i++)
     {
-      $line[$i] = $stati[$i];
-      $totals[$i] += $stati[$i];
+      $totals[$i] += $line[$i];
     }
-    $line[4] = $line[0] + $line[1] + $line[2] + $line[3];
     for (my $i=0; $i < 4; $i++)
     {
       my $pct = 0.0;
@@ -3498,7 +3520,7 @@ sub CreateDeterminationsBreakdownData
     $report .= $date;
     $report .= $delimiter . join($delimiter, @line) . "\n";
   }
-  my $gt = $totals[0] + $totals[1] + $totals[2] + $totals[3];
+  my $gt = $totals[0] + $totals[1] + $totals[2];
   push @totals, $gt;
   for (my $i=0; $i < 4; $i++)
   {
@@ -3510,36 +3532,15 @@ sub CreateDeterminationsBreakdownData
   return $report;
 }
 
-sub GetStatusBreakdown
-{
-  my $self     = shift;
-  my $start    = shift;
-  my $end      = shift;
-  my $priority = shift;
-  
-  my @counts = ();
-  my $priorityClause = ($priority)? "AND r.priority=$priority":'';
-  foreach my $status (4..7)
-  {
-    my $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r ON e.gid=r.gid WHERE ' .
-             "r.legacy!=1 AND DATE(e.time)>='$start' AND DATE(e.time)<='$end' AND r.status=$status $priorityClause";
-    #print "$sql<br/>\n";
-    push @counts, $self->SimpleSqlGet($sql);
-  }
-  return @counts;
-}
-
-sub CreateExportStatusReport
+sub CreateDeterminationsBreakdownReport
 {
   my $self     = shift;
   my $start    = shift;
   my $end      = shift;
   my $monthly  = shift;
   my $title    = shift;
-  my $priority = shift;
   my $pre      = shift;
-  
-  $priority = undef if $priority eq 'All';
+
   my $data;
   my $whichline = 4;
   my $span1 = 5;
@@ -3555,13 +3556,13 @@ sub CreateExportStatusReport
   }
   else
   {
-    $data = $self->CreateDeterminationsBreakdownData("\t", $start, $end, $monthly, $title, $priority);
+    $data = $self->CreateDeterminationsBreakdownData("\t", $start, $end, $monthly, $title);
     $pre = 0;
   }
   my @lines = split "\n", $data;
   $title = shift @lines;
   $title =~ s/\s/&nbsp;/g;
-  my $url = sprintf("<a href='?p=determinationStats&amp;startDate=$start&amp;endDate=$end&amp;%sdownload=1&amp;priority=$priority&amp;pre=$pre' target='_blank'>Download</a>",($monthly)?'monthly=on&amp;':'');
+  my $url = sprintf("<a href='?p=determinationStats&amp;startDate=$start&amp;endDate=$end&amp;%sdownload=1&amp;pre=$pre' target='_blank'>Download</a>",($monthly)?'monthly=on&amp;':'');
   my $report = "<h3>$title&nbsp;&nbsp;&nbsp;&nbsp;$url</h3>\n";
   $report .= "<table class='exportStats'>\n";
   $report .= "<tr><th/><th colspan='$span1'><span class='major'>Counts</span></th><th colspan='$span2'><span class='total'>Percentages</span></th></tr>\n";
@@ -3603,7 +3604,7 @@ sub CreateExportStatusReport
 }
 
 
-sub CreateExportStatusGraph
+sub CreateDeterminationsBreakdownGraph
 {
   my $self     = shift;
   my $start    = shift;
@@ -4085,26 +4086,57 @@ sub GetMonthStats
   $self->PrepareSubmitSql( $sql );
 }
 
-sub UpdatePreDeterminationStats
+sub UpdatePreDeterminationsBreakdown
 {
   my $self = shift;
-
-  my $date = $self->SimpleSqlGet('SELECT DATE(NOW())');
-  my $sql = "SELECT COUNT(*) FROM determinationstats WHERE date='$date'";
-  if (0 == $self->SimpleSqlGet($sql))
-  {
-    $sql = "INSERT INTO determinationstats (date) VALUES ('$date')";
-    $self->PrepareSubmitSql($sql);
-  }
-  foreach my $status (2 .. 4)
-  {
-    $sql = "SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=$status";
-    my $cnt = $self->SimpleSqlGet($sql);
-    my $field = 's'.$status;
-    $sql = "UPDATE determinationstats SET $field=$cnt WHERE date='$date'";
-    $self->PrepareSubmitSql($sql);
-  }
+ 
+  $self->PrepareSubmitSql('DELETE FROM predeterminationsbreakdown WHERE date=DATE(NOW())');
+  my $s2 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=2');
+  my $s3 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=3');
+  my $s4 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=4');
+  my $sql = "INSERT INTO predeterminationsbreakdown (date,s2,s3,s4) VALUES (DATE(NOW()),$s2,$s3,$s4)";
+  $self->PrepareSubmitSql($sql);
 }
+
+sub UpdateDeterminationsBreakdown
+{
+  my $self = shift;
+  my $date = shift;
+
+  $date = $self->SimpleSqlGet('SELECT CURDATE()') unless $date;
+  my @counts;
+  foreach my $status (4..7)
+  {
+    my $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r ON e.gid=r.gid WHERE ' .
+              "r.legacy!=1 AND DATE(e.time)='$date' AND r.status=$status";
+    push @counts, $self->SimpleSqlGet($sql);
+  }
+  my $sql = sprintf "REPLACE INTO determinationsbreakdown (date,s4,s5,s6,s7) VALUES ('$date',%s)", join ',', @counts;
+  $self->PrepareSubmitSql($sql);
+}
+
+sub UpdateExportStats
+{
+  my $self = shift;
+  my $date = shift;
+
+  my %counts;
+  $date = $self->SimpleSqlGet('SELECT CURDATE()') unless $date;
+  my $sql = "SELECT attr,reason FROM exportdata WHERE DATE(time)='$date'";
+  my $ref = $self->get('dbh')->selectall_arrayref( $sql );
+  foreach my $row (@{$ref})
+  {
+    my $attr = $row->[0];
+    my $reason = $row->[1];
+    $counts{$attr . '_' . $reason}++;
+  }
+  my @keys = keys %counts;
+  my @vals = map {$counts{$_}} @keys;
+  my $sql = sprintf "REPLACE INTO exportstats (date,%s) VALUES ('$date',%s)", join(',', @keys), join(',', @vals);
+  #printf "%d,%d $sql\n", scalar @keys, scalar @vals;
+  $self->PrepareSubmitSql($sql);
+}
+
 
 sub DeleteUser
 {
@@ -5641,28 +5673,29 @@ sub CreateQueueReport
   foreach my $pri (@pris)
   {
     $pri = $self->StripDecimal($pri);
-    $priheaders .= "<th>Priority&nbsp;$pri</th>"
+    $priheaders .= "<th>Priority&nbsp;$pri</th>";
   }
-  
   my $report = "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
   foreach my $status (-1 .. 7)
   {
     my $statusClause = ($status == -1)? '':" WHERE STATUS=$status";
-    my $sql = qq{ SELECT count(*) FROM $CRMSGlobals::queueTable $statusClause};
+    my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable $statusClause";
     my $count = $self->SimpleSqlGet( $sql );
     $status = 'All' if $status == -1;
     my $class = ($status eq 'All')?' class="total"':'';
     $class = ' style="background-color:#999999;"' if $status == 6;
     $report .= sprintf("<tr><td%s>$status%s</td><td%s>$count</td>", $class, ($status == 6)? '*':'', $class);
-    $sql = "SELECT id FROM $CRMSGlobals::queueTable $statusClause";
-    $report .= $self->DoPriorityBreakdown($sql,$class,@pris);
+    $sql = "SELECT priority FROM queue $statusClause";
+    my $ref = $dbh->selectall_arrayref($sql);
+    $report .= $self->DoPriorityBreakdown($ref,$class,@pris);
     $report .= "</tr>\n";
   }
-  my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE status=0 AND id NOT IN (SELECT id FROM $CRMSGlobals::reviewsTable)";
+  my $sql = "SELECT priority FROM queue WHERE status=0 AND id NOT IN (SELECT id FROM reviews)";
+  my $ref = $dbh->selectall_arrayref($sql);
   my $count = $self->GetTotalAwaitingReview();
   my $class = ' class="major"';
   $report .= sprintf("<tr><td%s>Not&nbsp;Yet&nbsp;Active</td><td%s>$count</td>", $class, $class);
-  $report .= $self->DoPriorityBreakdown($sql,$class,@pris);
+  $report .= $self->DoPriorityBreakdown($ref,$class,@pris);
   $report .= "</tr>\n";
   $report .= sprintf("<tr><td nowrap='nowrap' colspan='%d'><span class='smallishText'>Note: includes both active and inactive volumes.</span><br/>\n", 2+scalar @pris);
   $report .= "<span class='smallishText'>* Status 6 no longer in use as of 4/19/2010.</span></td></tr>\n";
@@ -5675,14 +5708,15 @@ sub CreateSystemReport
   my $self = shift;
 
   my $report = "<table class='exportStats'>\n";
-  my $val = $self->GetLastQueueTime(1);
-  $val =~ s/\s/&nbsp;/g;
-  $val = 'Never' unless $val;
-  $report .= "<tr><th>Last&nbsp;Queue&nbsp;Update</th><td>$val</td></tr>\n";
-  $report .= sprintf("<tr><th>Volumes&nbsp;Last&nbsp;Added</th><td>%s</td></tr>\n", ($self->GetLastIdQueueCount() or 0));
+  # Gets the (time,count) of last queue addition.
+  my ($time,$cnt) = $self->GetLastQueueInfo();
+  $time = 'Never' unless $time;
+  $time =~ s/\s/&nbsp;/g;
+  $report .= "<tr><th>Last&nbsp;Queue&nbsp;Update</th><td>$time</td></tr>\n";
+  $report .= "<tr><th>Volumes&nbsp;Last&nbsp;Added</th><td>$cnt</td></tr>\n";
   $report .= sprintf("<tr><th>Cumulative&nbsp;Volumes&nbsp;in&nbsp;Queue&nbsp;(ever*)</th><td>%s</td></tr>\n", ($self->GetTotalEverInQueue() or 0));
   $report .= sprintf("<tr><th>Volumes&nbsp;in&nbsp;Candidates</th><td>%s</td></tr>\n", $self->GetCandidatesSize());
-  $val = $self->GetLastLoadTimeToCandidates();
+  my $val = $self->GetLastLoadTimeToCandidates();
   $val =~ s/\s/&nbsp;/g;
   $report .= sprintf("<tr><th>Last&nbsp;Candidates&nbsp;Addition</th><td>%s&nbsp;on&nbsp;$val</td></tr>", $self->GetLastLoadSizeToCandidates());
   my $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und');
@@ -5791,116 +5825,120 @@ sub CreateReviewReport
   }
   $report .= "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
   
-  my $sql = 'SELECT DISTINCT q.id FROM queue q INNER JOIN reviews r ON q.id=r.id';
-  my $rows = $dbh->selectall_arrayref( $sql );
-  my $count = scalar @{$rows};
+  my $sql = 'SELECT priority FROM queue WHERE id IN (SELECT DISTINCT id FROM reviews)';
+  my $ref = $dbh->selectall_arrayref( $sql );
+  my $count = scalar @{$ref};
   $report .= "<tr><td class='total'>Active</td><td class='total'>$count</td>";
-  $report .= $self->DoPriorityBreakdown($sql,' class="total"',@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,' class="total"',@pris) . "</tr>\n";
   
   # Unprocessed
-  $sql = 'SELECT id FROM queue WHERE status=0 AND pending_status>0';
-  $rows = $dbh->selectall_arrayref( $sql );
-  $count = scalar @{$rows};
+  $sql = 'SELECT priority FROM queue WHERE status=0 AND pending_status>0';
+  $ref = $dbh->selectall_arrayref( $sql );
+  $count = scalar @{$ref};
   $report .= "<tr><td class='minor'>Unprocessed</td><td class='minor'>$count</td>";
-  $report .= $self->DoPriorityBreakdown($sql,' class="minor"',@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,' class="minor"',@pris) . "</tr>\n";
   
   # Unprocessed - single review
-  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=1";
-  $rows = $dbh->selectall_arrayref( $sql );
-  $count = scalar @{$rows};
+  $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=1';
+  $ref = $dbh->selectall_arrayref( $sql );
+  $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Single&nbsp;Review</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
   
   # Unprocessed - match
-  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=4";
-  $rows = $dbh->selectall_arrayref( $sql );
-  $count = scalar @{$rows};
+  $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=4';
+  $ref = $dbh->selectall_arrayref( $sql );
+  $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Matches</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
   
   # Unprocessed - conflict
-  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=2";
-  $rows = $dbh->selectall_arrayref( $sql );
-  $count = scalar @{$rows};
+  $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=2';
+  $ref = $dbh->selectall_arrayref( $sql );
+  $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflicts</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
   
   # Unprocessed - matching und/nfi
-  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=0 AND pending_status=3";
-  $rows = $dbh->selectall_arrayref( $sql );
-  $count = scalar @{$rows};
+  $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=3';
+  $ref = $dbh->selectall_arrayref( $sql );
+  $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Matches</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
   
   # Processed
-  $sql = 'SELECT id FROM queue WHERE status!=0';
-  $rows = $dbh->selectall_arrayref( $sql );
-  $count = scalar @{$rows};
+  $sql = 'SELECT priority FROM queue WHERE status!=0';
+  $ref = $dbh->selectall_arrayref( $sql );
+  $count = scalar @{$ref};
   $report .= "<tr><td class='minor'>Processed</td><td class='minor'>$count</td>";
-  $report .= $self->DoPriorityBreakdown($sql,' class="minor"',@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,' class="minor"',@pris) . "</tr>\n";
   
-  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=2";
-  $rows = $dbh->selectall_arrayref( $sql );
-  $count = scalar @{$rows};
+  $sql = "SELECT priority from $CRMSGlobals::queueTable WHERE status=2";
+  $ref = $dbh->selectall_arrayref( $sql );
+  $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflicts</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
 
-  $sql = 'SELECT id from queue WHERE status=3';
-  $rows = $dbh->selectall_arrayref( $sql );
-  $count = scalar @{$rows};
+  $sql = 'SELECT priority from queue WHERE status=3';
+  $ref = $dbh->selectall_arrayref( $sql );
+  $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Matches</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
   
-  $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=4 OR status=5 OR status=6 OR status=7";
-  $rows = $dbh->selectall_arrayref( $sql );
-  $count = scalar @{$rows};
+  $sql = "SELECT priority from $CRMSGlobals::queueTable WHERE status=4 OR status=5 OR status=6 OR status=7";
+  $ref = $dbh->selectall_arrayref( $sql );
+  $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Awaiting&nbsp;Export</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
   
   if ($count > 0)
   {
-    $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=4";
-    $rows = $dbh->selectall_arrayref( $sql );
-    $count = scalar @{$rows};
+    $sql = 'SELECT priority from queue WHERE status=4';
+    $ref = $dbh->selectall_arrayref( $sql );
+    $count = scalar @{$ref};
     $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</td><td>$count</td>";
-    $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
+    $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
 
-    $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=5";
-    $rows = $dbh->selectall_arrayref( $sql );
-    $count = scalar @{$rows};
+    $sql = 'SELECT priority from queue WHERE status=5';
+    $ref = $dbh->selectall_arrayref( $sql );
+    $count = scalar @{$ref};
     $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</td><td>$count</td>";
-    $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
+    $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
 
-    $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=6";
-    $rows = $dbh->selectall_arrayref( $sql );
-    $count = scalar @{$rows};
+    $sql = 'SELECT priority from queue WHERE status=6';
+    $ref = $dbh->selectall_arrayref( $sql );
+    $count = scalar @{$ref};
     $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6</td><td>$count</td>";
-    $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
+    $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
     
-    $sql = "SELECT id from $CRMSGlobals::queueTable WHERE status=7";
-    $rows = $dbh->selectall_arrayref( $sql );
-    $count = scalar @{$rows};
+    $sql = 'SELECT priority from queue WHERE status=7';
+    $ref = $dbh->selectall_arrayref( $sql );
+    $count = scalar @{$ref};
     $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;7</td><td>$count</td>";
-    $report .= $self->DoPriorityBreakdown($sql,undef,@pris) . "</tr>\n";
+    $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
   }
   $report .= sprintf("<tr><td nowrap='nowrap' colspan='%d'><span class='smallishText'>Last processed %s</span></td></tr>\n", 2+scalar @pris, $self->GetLastStatusProcessedTime());
   $report .= "</table>\n";
   return $report;
 }
 
+# Takes a selectall_arrayref ref in which each row has a priority as its first column
 sub DoPriorityBreakdown
 {
   my $self  = shift;
-  my $sql   = shift;
+  my $ref   = shift;
   my $class = shift;
   
   my %breakdown;
-  foreach my $pri (@_)
+  $breakdown{$_} = 0 for @_;
+  foreach my $row (@{$ref})
   {
-    my $sql2 = "SELECT COUNT(*) FROM queue WHERE priority=$pri AND id IN ($sql)";
-    $breakdown{$pri} = $self->SimpleSqlGet($sql2);
+    my $pri = $self->StripDecimal($row->[0]);
+    #print "Pri $pri<br/>\n";
+    $breakdown{$pri}++;
   }
   my $ret = join '',map {sprintf "<td$class>%s</td>", $breakdown{$_}} sort keys %breakdown;
+  #printf "%d priorities: %s <!-- $ret --><br/>\n"; scalar keys %breakdown, join ',', keys %breakdown;
   return $ret;
 }
 
@@ -5909,11 +5947,9 @@ sub GetTotalAwaitingReview
 {
   my $self = shift;
 
-  my $sql = qq{ SELECT count(distinct id) from $CRMSGlobals::queueTable where status=0 and id not in ( select id from $CRMSGlobals::reviewsTable)};
+  my $sql = 'SELECT COUNT(id) FROM queue WHERE status=0 AND id NOT IN (SELECT DISTINCT id FROM reviews)';
   my $count = $self->SimpleSqlGet( $sql );
-
-  if ($count) { return $count; }
-  return 0;
+  return ($count)? $count:0;
 }
 
 
@@ -5954,7 +5990,7 @@ sub GetTotalEverInQueue
 
   my $count_exported = $self->GetTotalExported();
   my $count_queue = $self->GetQueueSize();
-  my $total = $count_exported +  $count_queue;
+  my $total = $count_exported + $count_queue;
   return $total;
 }
 
@@ -5964,39 +6000,35 @@ sub GetLastExport
   my $readable = shift;
 
   my $sql = "SELECT itemcount,time FROM exportrecord WHERE itemcount>0 ORDER BY time DESC LIMIT 1";
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
+  my $ref = $self->get('dbh')->selectall_arrayref( $sql );
   my $count = $ref->[0]->[0];
   my $time = $ref->[0]->[1];
   $time = $self->FormatTime($time) if $readable;
   return ($count,$time);
-
 }
 
 sub GetTotalLegacyCount
 {
   my $self = shift;
 
-  my $sql = qq{ SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=1 AND priority!=1 };
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-  return $ref->[0]->[0];
+  my $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=1 AND priority!=1";
+  return $self->SimpleSqlGet( $sql );
 }
 
 sub GetTotalNonLegacyReviewCount
 {
   my $self = shift;
 
-  my $sql = qq{ SELECT COUNT(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy!=1};
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-  return $ref->[0]->[0];
+  my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy!=1";
+  return $self->SimpleSqlGet( $sql );
 }
 
 sub GetTotalLegacyReviewCount
 {
   my $self = shift;
 
-  my $sql = qq{ SELECT COUNT(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=1};
-  my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-  return $ref->[0]->[0];
+  my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=1";
+  return $self->SimpleSqlGet( $sql );
 }
 
 sub GetTotalHistoricalReviewCount
@@ -6007,15 +6039,16 @@ sub GetTotalHistoricalReviewCount
   return $self->SimpleSqlGet( $sql );
 }
 
-sub GetLastQueueTime
+# Gets the (time,count) of last queue addition.
+sub GetLastQueueInfo
 {
-  my $self     = shift;
-  my $readable = shift;
-
-  my $sql = "SELECT MAX(time) FROM $CRMSGlobals::queuerecordTable WHERE source='RIGHTSDB'";
-  my $time = $self->SimpleSqlGet( $sql );
-  $time = $self->FormatTime($time) if $readable;
-  return $time;
+  my $self = shift;
+  
+  my $sql = 'SELECT time,itemcount FROM queuerecord WHERE source="RIGHTSDB" ORDER BY time DESC LIMIT 1';
+  my $row = $self->get('dbh')->selectall_arrayref($sql)->[0];
+  my $time = $self->FormatTime($row->[0]);
+  my $cnt = $row->[1];
+  return ($time,$cnt);
 }
 
 sub GetLastStatusProcessedTime
@@ -6025,16 +6058,6 @@ sub GetLastStatusProcessedTime
   my $time = $self->SimpleSqlGet('SELECT MAX(time) FROM processstatus');
   return $self->FormatTime($time);
 }
-
-sub GetLastIdQueueCount
-{
-  my $self = shift;
-
-  my $latest_time = $self->GetLastQueueTime();
-  my $sql = "SELECT itemcount FROM $CRMSGlobals::queuerecordTable where time like '$latest_time%' AND source='RIGHTSDB'";
-  return $self->SimpleSqlGet( $sql );
-}
-
 
 sub DownloadSpreadSheet
 {

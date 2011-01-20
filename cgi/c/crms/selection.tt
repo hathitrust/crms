@@ -105,42 +105,7 @@ Search for Reviews where<br/>
 [% END %]
 
 <label for="order">Order by:</label>
-<select name="order" id="order">
-  <option value="id"       [% order == 'id' ?  'selected="selected"':'' %]>Identifier</option>
-[% IF crms.IsUserAdmin(user) && page == 'adminHistoricalReviews' %]
-  <option value="sysid" [% order == 'sysid' ?  'selected="selected"':'' %]>System ID</option>
-[% END %]
-  <option value="title"    [% order == 'title' ? 'selected="selected"':'' %]>Title</option>
-  <option value="author"   [% order == 'author' ? 'selected="selected"':'' %]>Author</option>
-[% IF page == 'adminHistoricalReviews' %]
-  <option value="pub_date"  [% order == 'pub_date' ? 'selected="selected"':'' %]>Pub Date</option>
-[% END %]
-  <option value="time"     [% order == 'time' ?  'selected="selected"':'' %]>Review Date</option>
-[% IF page != 'editReviews' %]
-  <option value="status"   [% order == 'status' ? 'selected="selected"':'' %]>Status</option>
-[% END %]
-[% IF page == 'adminHistoricalReviews' %]
-  <option value="legacy"   [% order == 'legacy' ? 'selected="selected"':'' %]>Legacy</option>
-[% END %]
-[% IF page != 'editReviews' && page != 'userReviews' %]
-  <option value="user"     [% order == 'user' ?  'selected="selected"':'' %]>User</option>
-[% END %]
-  <option value="attr"     [% order == 'attr' ? 'selected="selected"':'' %]>Attr</option>
-  <option value="reason"   [% order == 'reason' ? 'selected="selected"':'' %]>Reason</option>
-  <option value="category" [% order == 'category' ? 'selected="selected"':'' %]>Note Category</option>
-[% IF adm %]
-  <option value="priority" [% order == 'priority' ? 'selected="selected"':'' %]>Priority</option>
-[% END %]
-[% IF page == 'adminHistoricalReviews' %]
-  <option value="validated" [% order == 'validated' ?  'selected="selected"':'' %]>Verdict</option>
-[% END %]
-[% IF crms.IsUserExpert(user) %]
-  <option value="swiss" [% order == 'swiss' ?  'selected="selected"':'' %]>Swiss</option>
-[% END %]
-[% IF page == 'editReviews' || page == 'adminReviews' || page == 'holds' %]
-  <option value="hold" [% order == 'hold' ?  'selected="selected"':'' %]>Hold Thru</option>
-[% END %]
-</select>
+[% crms.ReviewSearchMenu(page, 'order', order) %]
 <br/>
 
 <label for="dir">Direction:</label>

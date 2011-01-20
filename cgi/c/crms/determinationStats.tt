@@ -5,8 +5,6 @@
 [% page = cgi.param('p') %]
 [% startDate = cgi.param('startDate') %]
 [% endDate = cgi.param('endDate') %]
-[% priority = cgi.param('priority') %]
-[% IF NOT priority.defined %][% priority = "All" %][% END %]
 <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
 <br/>
 
@@ -29,36 +27,24 @@
        onblur="datePickerController.hide('endDate');"/>
 <script type="text/javascript">
 // <![CDATA[
-  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };       
+  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };
   datePickerController.createDatePicker(opts);
 // ]]>
 </script>
 <span class="smallText">(YYYY-MM-DD)</span>
 <br/>
-<label for="priority" style="width:5em;float:left;">Priority:</label>
-&nbsp;&nbsp;<select name="priority" id="priority">
-[% pris = crms.get('dbh').selectall_arrayref("SELECT DISTINCT priority FROM historicalreviews ORDER BY priority ASC") %]
-<option [% (priority == pri)? 'selected="selected"':'' %]>All</option>
-[% FOREACH pri IN pris %]
-  [% pri = crms.StripDecimal(pri.0) %]
-  <option [% (priority == pri)? 'selected="selected"':'' %]>$pri</option>
-[% END %]
-</select>
-<br/>
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"
        onclick="document.getElementById('startDate').value='';
                 document.getElementById('endDate').value='';
-                document.getElementById('priority').value='All';
        "/>
 </form>
 </div>
 <br/>
 
 
-[% crms.CreateExportStatusReport(startDate, endDate, 0, undef, undef, 1) %]
-
-[% report = crms.CreateExportStatusReport(startDate, endDate, 0, undef, priority) %]
+[% crms.CreateDeterminationsBreakdownReport(startDate, endDate, 0, undef, 1) %]
+[% report = crms.CreateDeterminationsBreakdownReport(startDate, endDate, 0, undef) %]
 [% report.replace('Status&nbsp;6','Status&nbsp;6*') %]
 <br/>
 <span class="smallishText">* Note: Status 6 no longer in use as of 4/19/2010.</span>
@@ -67,7 +53,7 @@
 <tr style="background-color:#000000;"><td><div id="chart0"/></td></tr>
 </table>
 <br/>
-[% report = crms.CreateExportStatusReport('2009-07-01' 0, 1, 'Project Determinations Breakdown') %]
+[% report = crms.CreateDeterminationsBreakdownReport('2009-07-01' 0, 1, 'Project Determinations Breakdown') %]
 [% report.replace('Status&nbsp;6','Status&nbsp;6*') %]
 <br/>
 <span class="smallishText">* Note: Status 6 no longer in use as of 4/19/2010.</span>
