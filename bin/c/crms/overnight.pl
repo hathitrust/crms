@@ -17,13 +17,12 @@ use CRMS;
 use Getopt::Std;
 
 my $usage = <<END;
-USAGE: overnight.pl [-cdehmq]
+USAGE: overnight.pl [-cehmq]
 
 Processes reviews, exports determinations, updates candidates,
 updates the queue, and recalculates user stats.
 
 -c       Do not update candidates.
--d       Do not update pre-determination stats.
 -e       Do not process statuses or export determinations.
 -h       Print this help message.
 -m       Do not recalculate monthly stats.
@@ -34,7 +33,6 @@ END
 my %opts;
 getopts('cdehmq', \%opts);
 my $skipCandidates = $opts{'c'};
-my $skipPD = $opts{'d'};
 my $skipExport = $opts{'e'};
 my $help = $opts{'h'};
 my $skipMonthly = $opts{'m'};
@@ -48,14 +46,6 @@ my $crms = CRMS->new(
     root         =>   $DLXSROOT,
     dev          =>   $DLPS_DEV,
 );
-
-if ($skipPD) { ReportMsg("-d flag set; skipping pre-determination stats."); }
-else
-{
-  ReportMsg("Starting to calculate pre-determination stats.");
-  $crms->UpdatePreDeterminationStats();
-  ReportMsg("DONE calculating pre-determination stats.");
-}
 
 if ($skipExport) { ReportMsg("-e flag set; skipping queue processing and export."); }
 else
@@ -73,7 +63,7 @@ else
 {
   ReportMsg("Starting to load new volumes into candidates.");
   my $status = $crms->LoadNewItemsInCandidates();
-  ReportMsg("DONE Loading new volumes into candidates.");
+  ReportMsg("DONE loading new volumes into candidates.");
 }
 
 if ($skipQueue) { ReportMsg("-q flag set; skipping queue load."); }
