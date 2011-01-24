@@ -90,7 +90,7 @@ my $txt = '';
 my $title = "CRMS Suspected Gov Documents, $start to $end";
 my ($workbook,$worksheet);
 my $excelpath = sprintf('/l1/prep/c/crms/GovDocs_%s_to_%s.xls', $start, $end);
-my @cols= ('ID','Sys ID','Time','Author','Title','Pub Date','Pub');
+my @cols= ('#','ID','Sys ID','Time','Author','Title','Pub Date','Pub');
 if ($report eq 'html')
 {
   $txt .= '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' . "\n";
