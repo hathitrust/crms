@@ -26,7 +26,7 @@
   [% IF !dir %][% dir = 'ASC' %][% END %]
 [% END %]
 
-[% IF !order %][% order = 'id' %][% END %]
+[% IF !order %][% order = 'Identifier' %][% END %]
 [% IF !dir %][% dir = 'DESC' %][% END %]
 
 <script type="text/Javascript">
