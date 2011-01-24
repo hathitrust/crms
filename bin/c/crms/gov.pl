@@ -145,7 +145,7 @@ foreach my $row (@{$ref})
   elsif ($report eq 'tsv')
   {
     $field260a =~ s/\t+/ /g;
-    $txt .= "$id\t$sysid\t$time\t$author\t$title\t$pub\t$field260a\n";
+    $txt .= "$n\t$id\t$sysid\t$time\t$author\t$title\t$pub\t$field260a\n";
   }
   elsif ($report eq 'excel')
   {
