@@ -218,8 +218,8 @@ sub ProcessReviews
     next if $hold and $today lt $hold;
     if ($hold && $stat ne 'normal')
     {
-      #print "Not processing $id; it is held and the status is '$stat'\n";
-      #next;
+      print "Not processing $id for $user; it is held and the status is '$stat'\n";
+      next;
     }
     $sql = "SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id='$id' AND user!='$user'";
     my $ref2 = $dbh->selectall_arrayref( $sql );
