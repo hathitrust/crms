@@ -127,7 +127,7 @@
 
 [% IF cgi.param('fix') %]
   <h4>Tried to Fix:</h4>
-  <table class='exportStats' style="width:45em;"><tr><th>ID</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th></tr>
+  <table class='exportStats' style="width:45em;"><tr><th>ID</th><th>Sys&nbsp;ID</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th></tr>
   [% ids = cgi.param('ids') %]
   [% cand = cgi.param('candidates') %]
   [% which = (cand)? 'candidates':'bibdata' %]
@@ -144,10 +144,11 @@
         [% blah = crms.UpdateTitle(id) %]
         [% blah = crms.UpdatePubDate(id) %]
       [% END %]
+      [% sysid = crms.BarcodeToId(id) %]
       [% sql = "SELECT author,title,YEAR(pub_date) FROM $which WHERE id='$id'" %]
       [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
       [% FOREACH r IN ref %]
-        <tr><td>[% id %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td></tr>
+        <tr><td>[% id %]</td><td>[% sysid %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td></tr>
         [% LAST %]
       [% END %]
     [% END %]
