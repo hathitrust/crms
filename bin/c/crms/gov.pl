@@ -15,6 +15,7 @@ use strict;
 use CRMS;
 use Getopt::Long;
 use Spreadsheet::WriteExcel;
+use Encode;
 
 my $usage = <<END;
 USAGE: $0 [-ahptv] [-m MAIL_ADDR [-m MAIL_ADDR2...]] [start_date [end_date]]
@@ -180,7 +181,7 @@ if (@mails)
       to => $to,
       subject => $title,
       ctype => $ctype,
-      encoding => 'quoted-printable'
+      encoding => 'utf-8'
       }) or die $Mail::Sender::Error,"\n";
     $sender->Body();
     if ($report eq 'excel')
@@ -191,7 +192,8 @@ if (@mails)
              "Note: in the current version there may be documents that have a non-blank 008:28 character other than 'f'. " .
              "These should be left alone and reported.\n\n"; 
     }
-    $sender->SendEnc($txt);
+    my $bytes = encode('utf8', $txt);
+    $sender->SendEnc($bytes);
     if ($report eq 'excel')
     {
       $sender->Attach({
