@@ -229,7 +229,6 @@ if ( $cgi->param('download') )
 }
 
 
-
 if ( ! $user || ! $ENV{'HTTPS'} ) 
 {
     print $cgi->redirect( "https://$ENV{'HTTP_HOST'}$ENV{'SCRIPT_NAME'}" );
@@ -268,8 +267,7 @@ my $vars = {
 ## the default is home.tt in case a tt is not found
 my $page  = $cgi->param('p');
 my $input = $page . ".tt";
-if ( ! -f $input ) { $input = "home.tt"; }
-
+$input = 'home.tt' unless -f $input;
 
 print $cgi->header( -charset => 'utf-8', "cache-control" => 'private' );
 $tt->process($input, $vars) || die $tt->error();
