@@ -375,8 +375,8 @@ sub ClearQueueAndExport
   #  push( @{$export}, $id );
   #}
   $self->ExportReviews( $export, $fromcgi );
-  #return "Exported: $dCount double review, $eCount expert reviewed, $dupCount duplicates inheriting";
   $self->UpdateExportStats();
+  #return "Exported: $dCount double review, $eCount expert reviewed, $dupCount duplicates inheriting";
   return "Exported: $dCount double review, $eCount expert reviewed\n";
 }
 
@@ -1410,150 +1410,124 @@ sub CreateSQL
 
 sub CreateSQLForReviews
 {
-    my $self               = shift;
-    my $page               = shift;
-    my $order              = shift;
-    my $dir                = shift;
+  my $self               = shift;
+  my $page               = shift;
+  my $order              = shift;
+  my $dir                = shift;
 
-    my $search1            = shift;
-    my $search1value       = shift;
-    my $op1                = shift;
+  my $search1            = shift;
+  my $search1value       = shift;
+  my $op1                = shift;
 
-    my $search2            = shift;
-    my $search2value       = shift;
-    my $op2                = shift;
-    
-    my $search3            = shift;
-    my $search3value       = shift;
-    
-    my $startDate          = shift;
-    my $endDate            = shift;
-    my $offset             = shift;
-    my $pagesize           = shift;
-    my $download           = shift;
+  my $search2            = shift;
+  my $search2value       = shift;
+  my $op2                = shift;
 
-    $order = $self->ConvertToSearchTerm( $order, $page );
-    $search1 = $self->ConvertToSearchTerm( $search1, $page );
-    $search2 = $self->ConvertToSearchTerm( $search2, $page );
-    $search3 = $self->ConvertToSearchTerm( $search3, $page );
-    $dir = 'DESC' unless $dir;
-    $offset = 0 unless $offset;
-    $pagesize = 20 unless $pagesize > 0;
-    if ( ( $page eq 'userReviews' ) || ( $page eq 'editReviews' ) )
-    {
-      if ( ! $order || $order eq "time" ) { $order = "time"; }
-    }
-    else
-    {
-      if ( ! $order || $order eq "id" ) { $order = "id"; }
-    }
+  my $search3            = shift;
+  my $search3value       = shift;
 
-    my $sql;
-    if ( $page eq 'adminReviews' )
-    {
-      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-             'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
-             "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id";
-    }
-    elsif ( $page eq 'holds' )
-    {
-      my $user = $self->get( "user" );
-      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-             'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
-             "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND q.id=r.id AND r.user='$user' AND r.hold IS NOT NULL";
-    }
-    elsif ( $page eq 'adminHolds' )
-    {
-      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-             'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
-             "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND q.id=r.id AND r.hold IS NOT NULL";
-    }
-    elsif ( $page eq 'expert' )
-    {
-      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-             'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author ' .
-             "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id  AND q.status=2 ";
-    }
-    elsif ( $page eq 'adminHistoricalReviews' )
-    {
-      my $doS = 'LEFT JOIN system s ON r.id=s.id';
-      $doS = '' unless ($search1 . $search2 . $search3 . $order) =~ m/sysid/;
-      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-             'r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated '.
-             "FROM $CRMSGlobals::historicalreviewsTable r LEFT JOIN bibdata b ON r.id=b.id $doS WHERE r.id IS NOT NULL";
-    }
-    elsif ( $page eq 'undReviews' )
-    {
-      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-             'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author ' .
-             "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND q.id=r.id AND q.status=3";
-    }
-    elsif ( $page eq 'userReviews' )
-    {
-      my $user = $self->get( "user" );
-      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-             'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author ' .
-             "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id AND r.user='$user' AND q.status>0";
-    }
-    elsif ( $page eq 'editReviews' )
-    {
-      my $user = $self->get( "user" );
-      my $yesterday = $self->GetYesterday();
-      # Experts need to see stuff with any status; non-expert should only see stuff that hasn't been processed yet.
-      my $restrict = ($self->IsUserExpert($user))? '':'AND q.status=0';
-      $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-             'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
-             "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id " .
-             "AND r.user='$user' AND (r.time>='$yesterday' OR r.hold IS NOT NULL) $restrict";
-    }
-    my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
-    $sql .= " AND $terms" if $terms;
-    my $which = ($page eq 'holds')? 'r.hold':'r.time';
-    if ( $startDate ) { $sql .= " AND $which >='$startDate 00:00:00' "; }
-    if ( $endDate ) { $sql .= " AND $which <='$endDate 23:59:59' "; }
-    my $limit = ($download)? '':"LIMIT $offset, $pagesize";
-    if (0)
-    {
-    if ( $order eq 'status' )
-    {
-      if ( $page eq 'adminHistoricalReviews' )
-      {
-        $sql .= " ORDER BY r.$order $dir $limit ";
-      }
-      else
-      {
-        $sql .= " ORDER BY q.$order $dir $limit ";
-      }
-    }
-    elsif ($order eq 'title' || $order eq 'author' || $order eq 'pub_date')
-    {
-       $sql .= " ORDER BY b.$order $dir $limit ";
-    }
-    elsif ($order eq 'sysid')
-    {
-       $sql .= " ORDER BY s.$order $dir $limit ";
-    }
-    else
-    {
-       $sql .= " ORDER BY r.$order $dir $limit ";
-    }
-    }
-    $sql .= " ORDER BY $order $dir $limit ";
-    #print "$sql<br/>\n";
-    my $countSql = $sql;
-    $countSql =~ s/(SELECT\s+).+?(FROM.+)/$1 COUNT(*) $2/i;
-    $countSql =~ s/(LIMIT\s\d+(,\s*\d+)?)//;
-    #print "$countSql<br/>\n";
-    my $totalReviews = $self->SimpleSqlGet($countSql);
-    $countSql = $sql;
-    $countSql =~ s/(SELECT\s?).+?(FROM.+)/$1 COUNT(DISTINCT r.id) $2/i;
-    $countSql =~ s/(LIMIT\s\d+(,\s*\d+)?)//;
-    #print "$countSql<br/>\n";
-    my $totalVolumes = $self->SimpleSqlGet($countSql);
-    my $n = POSIX::ceil($offset/$pagesize+1);
-    my $of = POSIX::ceil($totalVolumes/$pagesize);
-    $n = 0 if $of == 0;
-    return ($sql,$totalReviews,$totalVolumes,$n,$of);
+  my $startDate          = shift;
+  my $endDate            = shift;
+  my $offset             = shift;
+  my $pagesize           = shift;
+  my $download           = shift;
+
+  $order = $self->ConvertToSearchTerm( $order, $page );
+  $search1 = $self->ConvertToSearchTerm( $search1, $page );
+  $search2 = $self->ConvertToSearchTerm( $search2, $page );
+  $search3 = $self->ConvertToSearchTerm( $search3, $page );
+  $dir = 'DESC' unless $dir;
+  $offset = 0 unless $offset;
+  $pagesize = 20 unless $pagesize > 0;
+  if ( ( $page eq 'userReviews' ) || ( $page eq 'editReviews' ) )
+  {
+    if ( ! $order || $order eq "time" ) { $order = "time"; }
+  }
+  else
+  {
+    if ( ! $order || $order eq "id" ) { $order = "id"; }
+  }
+
+  my $sql;
+  if ( $page eq 'adminReviews' )
+  {
+    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+           'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
+           "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id";
+  }
+  elsif ( $page eq 'holds' )
+  {
+    my $user = $self->get( "user" );
+    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+           'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
+           "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND q.id=r.id AND r.user='$user' AND r.hold IS NOT NULL";
+  }
+  elsif ( $page eq 'adminHolds' )
+  {
+    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+           'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
+           "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND q.id=r.id AND r.hold IS NOT NULL";
+  }
+  elsif ( $page eq 'expert' )
+  {
+    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+           'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author ' .
+           "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id  AND q.status=2 ";
+  }
+  elsif ( $page eq 'adminHistoricalReviews' )
+  {
+    my $doS = 'LEFT JOIN system s ON r.id=s.id';
+    $doS = '' unless ($search1 . $search2 . $search3 . $order) =~ m/sysid/;
+    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+           'r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated '.
+           "FROM $CRMSGlobals::historicalreviewsTable r LEFT JOIN bibdata b ON r.id=b.id $doS WHERE r.id IS NOT NULL";
+  }
+  elsif ( $page eq 'undReviews' )
+  {
+    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+           'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author ' .
+           "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND q.id=r.id AND q.status=3";
+  }
+  elsif ( $page eq 'userReviews' )
+  {
+    my $user = $self->get( "user" );
+    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+           'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author ' .
+           "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id AND r.user='$user' AND q.status>0";
+  }
+  elsif ( $page eq 'editReviews' )
+  {
+    my $user = $self->get( "user" );
+    my $yesterday = $self->GetYesterday();
+    # Experts need to see stuff with any status; non-expert should only see stuff that hasn't been processed yet.
+    my $restrict = ($self->IsUserExpert($user))? '':'AND q.status=0';
+    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
+           'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
+           "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id " .
+           "AND r.user='$user' AND (r.time>='$yesterday' OR r.hold IS NOT NULL) $restrict";
+  }
+  my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
+  $sql .= " AND $terms" if $terms;
+  my $which = ($page eq 'holds')? 'r.hold':'r.time';
+  if ( $startDate ) { $sql .= " AND $which >='$startDate 00:00:00' "; }
+  if ( $endDate ) { $sql .= " AND $which <='$endDate 23:59:59' "; }
+  my $limit = ($download)? '':"LIMIT $offset, $pagesize";
+  $sql .= " ORDER BY $order $dir $limit ";
+  #print "$sql<br/>\n";
+  my $countSql = $sql;
+  $countSql =~ s/(SELECT\s+).+?(FROM.+)/$1 COUNT(*) $2/i;
+  $countSql =~ s/(LIMIT\s\d+(,\s*\d+)?)//;
+  #print "$countSql<br/>\n";
+  my $totalReviews = $self->SimpleSqlGet($countSql);
+  $countSql = $sql;
+  $countSql =~ s/(SELECT\s?).+?(FROM.+)/$1 COUNT(DISTINCT r.id) $2/i;
+  $countSql =~ s/(LIMIT\s\d+(,\s*\d+)?)//;
+  #print "$countSql<br/>\n";
+  my $totalVolumes = $self->SimpleSqlGet($countSql);
+  my $n = POSIX::ceil($offset/$pagesize+1);
+  my $of = POSIX::ceil($totalVolumes/$pagesize);
+  $n = 0 if $of == 0;
+  return ($sql,$totalReviews,$totalVolumes,$n,$of);
 }
 
 sub CreateSQLForVolumes
@@ -2029,7 +2003,7 @@ sub SearchAndDownload
     {
       $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote};
     }
-    elsif ( $page eq 'adminReviews' || $page eq 'holds' )
+    elsif ( $page eq 'adminReviews' || $page eq 'adminHolds' )
     {
       $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote\tswiss\thold thru};
     }
@@ -2128,7 +2102,7 @@ sub UnpackResults
       #id, title, author, review date, status, user, attr, reason, category, note.
       $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note};
     }
-    elsif ( $page eq 'adminReviews' || $page eq 'holds' )
+    elsif ( $page eq 'adminReviews' || $page eq 'adminHolds' )
     {
       #for adminReviews
       #id, title, author, review date, status, user, attr, reason, category, note.
@@ -4132,8 +4106,8 @@ sub UpdateExportStats
   }
   my @keys = keys %counts;
   my @vals = map {$counts{$_}} @keys;
+  return unless scalar @keys;
   my $sql = sprintf "REPLACE INTO exportstats (date,%s) VALUES ('$date',%s)", join(',', @keys), join(',', @vals);
-  #printf "%d,%d $sql\n", scalar @keys, scalar @vals;
   $self->PrepareSubmitSql($sql);
 }
 
