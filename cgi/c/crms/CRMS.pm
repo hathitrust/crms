@@ -5418,7 +5418,8 @@ sub GetNextItemForReview
     {
       $exclude = 'q.priority<4 AND';
     }
-    my $exclude1 = (rand() >= 0.33)? 'q.priority!=1 AND':'';
+    # Exclude priority 1 if our d100 roll is 33+ or user is not advanced
+    my $exclude1 = (rand() >= 0.33 || !$self->IsUserAdvanced($user))? 'q.priority!=1 AND':'';
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt FROM queue q ' .
            "WHERE $exclude $exclude1 q.expcnt=0 AND q.locked IS NULL " .
            'ORDER BY q.priority DESC, cnt DESC, q.time ASC';
