@@ -2279,8 +2279,8 @@ sub GetVolumesRef
     my $id = $row->[0];
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
-           ($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ' .
-           ($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds'? ', DATE(r.hold) ':' ') .
+           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ') .
+           (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ', DATE(r.hold) ':' ') .
            "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS " .
            "WHERE r.id='$id' ORDER BY $order $dir";
     #print "$sql<br/>\n";
@@ -2364,8 +2364,8 @@ sub GetVolumesRefWide
     my $id = $row->[0];
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
-           ($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ' .
-           ($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ', DATE(r.hold) ':' ' .
+           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ') .
+           (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ', DATE(r.hold) ':' ') .
            "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS " .
            "WHERE r.id='$id' ORDER BY $order $dir";
     #print "$sql<br/>\n";
