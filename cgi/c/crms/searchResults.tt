@@ -21,13 +21,13 @@
 [% vols = (stype == 'volumes' || stype == 'groups') %]
 [% IF NOT pagesize %][% pagesize = (vols)? 10:20 %][% END %]
 
-[% IF p == 'holds' %]
-  [% IF !order %][% order = 'hold' %][% END %]
+[% IF p == 'holds' || p == 'adminHolds' %]
+  [% IF !order %][% order = 'Hold Thru' %][% END %]
   [% IF !dir %][% dir = 'ASC' %][% END %]
 [% END %]
 
 [% IF !order %][% order = 'Identifier' %][% END %]
-[% IF !dir %][% dir = 'DESC' %][% END %]
+[% IF !dir %][% dir = 'ASC' %][% END %]
 
 <script type="text/Javascript">
 <!--
@@ -179,7 +179,7 @@ function CheckAll(box,formid)
     [% IF p == 'adminHistoricalReviews' %]<th>Verdict</th>[% END %]
     [% IF crms.IsUserExpert() && p != 'undReviews' && p != 'expert' %]<th>Swiss</th>[% END %]
     [% IF p == 'undReviews' %]<th>Select</th>[% END %]
-    [% IF p == 'adminReviews' || p == 'editReviews' || p == 'holds' %]
+    [% IF p == 'adminReviews' || p == 'editReviews' || p == 'holds' || p == 'adminHolds' %]
       <th>Hold&nbsp;Thru</th>
     [% END %]
     </tr>
@@ -199,7 +199,7 @@ function CheckAll(box,formid)
       [% END %]
       <tr style="background-color:[% active_color %];">
         <td nowrap="nowrap">
-        [% IF p == 'editReviews' || p == 'holds' %]
+        [% IF p == 'editReviews' || p == 'adminHolds' %]
           [% crms.DetailInfo(review.id, review.user, p, 1) %]
         [% ELSE %]
           [% crms.DetailInfo(review.id, review.user, p) %]
@@ -250,7 +250,7 @@ function CheckAll(box,formid)
           [% END %]
         </td>
         [% END %]
-        [% IF p == 'adminReviews' || p == 'editReviews' || p == 'holds' %]
+        [% IF p == 'adminReviews' || p == 'editReviews' || p == 'holds' || p == 'adminHolds' %]
           <td>$review.hold</td>
         [% END %]
       </tr>

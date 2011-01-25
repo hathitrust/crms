@@ -2080,7 +2080,7 @@ sub UnpackResults
       #id, title, author, review date, attr, reason, category, note.
       $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note};
     }
-    elsif ( $page eq 'editReviews' )
+    elsif ( $page eq 'editReviews' || $page eq 'holds' )
     {
       #for editReviews
       #id, title, author, review date, attr, reason, category, note.
@@ -2221,7 +2221,7 @@ sub GetReviewsRef
                   title      => $row->[15],
                   author     => $row->[16]
                  };
-      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds';
+      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds' or $page eq 'adminHolds';
       if ($page eq 'adminHistoricalReviews')
       {
         my $pubdate = $row->[17];
@@ -2279,8 +2279,8 @@ sub GetVolumesRef
     my $id = $row->[0];
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
-           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ') .
-           (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
+           ($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ' .
+           ($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds'? ', DATE(r.hold) ':' ') .
            "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS " .
            "WHERE r.id='$id' ORDER BY $order $dir";
     #print "$sql<br/>\n";
@@ -2308,7 +2308,7 @@ sub GetVolumesRef
                   title      => $row->[15],
                   author     => $row->[16]
                  };
-      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds';
+      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds' or $page eq 'adminHolds';;
       if ($page eq 'adminHistoricalReviews')
       {
         my $pubdate = $row->[17];
@@ -2364,8 +2364,8 @@ sub GetVolumesRefWide
     my $id = $row->[0];
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
-           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ') .
-           (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
+           ($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ' .
+           ($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ', DATE(r.hold) ':' ' .
            "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS " .
            "WHERE r.id='$id' ORDER BY $order $dir";
     #print "$sql<br/>\n";
