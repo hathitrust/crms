@@ -204,7 +204,7 @@ sub ProcessReviews
   my $ref = $dbh->selectall_arrayref( $sql );
   my $today = $self->GetTodaysDate();
   # Get the underlying system status, ignoring replication delays.
-  my $stat = @{$self->GetSystemStatus(1)}->[0];
+  my $stat = @{$self->GetSystemStatus(1)}->[1];
   foreach my $row ( @{$ref} )
   {
     my $id      = $row->[0];
@@ -1354,49 +1354,53 @@ sub FormatTime
 
 sub ConvertToSearchTerm
 {
-    my $self           = shift;
-    my $search         = shift;
-    my $page           = shift;
+  my $self           = shift;
+  my $search         = shift;
+  my $page           = shift;
 
-    my $new_search = $search;
-    if    ( $search eq 'Identifier' )
-    {
-      $new_search = ($page eq 'queue')? 'q.id':'r.id';
-    }
-    elsif ( $search eq 'UserId' ) { $new_search = 'r.user'; }
-    elsif ( $search eq 'Status' )
-    {
-      if ( $page eq 'adminHistoricalReviews' ) { $new_search = 'r.status'; }
-      else { $new_search = 'q.status'; }
-    }
-    elsif ( $search eq 'Attribute' ) { $new_search = 'r.attr'; }
-    elsif ( $search eq 'Reason' ) { $new_search = 'r.reason'; }
-    elsif ( $search eq 'NoteCategory' ) { $new_search = 'r.category'; }
-    elsif ( $search eq 'Note' ) { $new_search = 'r.note'; }
-    elsif ( $search eq 'Legacy' ) { $new_search = 'r.legacy'; }
-    elsif ( $search eq 'Title' ) { $new_search = 'b.title'; }
-    elsif ( $search eq 'Author' ) { $new_search = 'b.author'; }
-    elsif ( $search eq 'Priority' )
-    {
-      if ( $page eq 'queue' ) { $new_search = 'q.priority'; }
-      else { $new_search = 'r.priority'; }
-    }
-    elsif ( $search eq 'Validated' ) { $new_search = 'r.validated'; }
-    elsif ( $search eq 'PubDate' ) { $new_search = 'b.pub_date'; }
-    elsif ( $search eq 'Locked' ) { $new_search = 'q.locked'; }
-    elsif ( $search eq 'ExpertCount' ) { $new_search = 'q.expcnt'; }
-    elsif ( $search eq 'Reviews' )
-    {
-      $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)';
-    }
-    elsif ( $search eq 'Swiss' ) { $new_search = 'r.swiss'; }
-    elsif ( $search eq 'Hold Thru' ) { $new_search = 'r.hold'; }
-    elsif ( $search eq 'SysID' ) { $new_search = 's.sysid'; }
-    elsif ( $search eq 'Holds' )
-    {
-      $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold IS NOT NULL)';
-    }
-    return $new_search;
+  my $new_search = $search;
+  if ( !$search || $search eq 'Identifier' )
+  {
+    $new_search = ($page eq 'queue')? 'q.id':'r.id';
+  }
+  if ( $search eq 'Time' )
+  {
+    $new_search = ($page eq 'queue')? 'q.time':'r.time';
+  }
+  elsif ( $search eq 'UserId' ) { $new_search = 'r.user'; }
+  elsif ( $search eq 'Status' )
+  {
+    if ( $page eq 'adminHistoricalReviews' ) { $new_search = 'r.status'; }
+    else { $new_search = 'q.status'; }
+  }
+  elsif ( $search eq 'Attribute' ) { $new_search = 'r.attr'; }
+  elsif ( $search eq 'Reason' ) { $new_search = 'r.reason'; }
+  elsif ( $search eq 'NoteCategory' ) { $new_search = 'r.category'; }
+  elsif ( $search eq 'Note' ) { $new_search = 'r.note'; }
+  elsif ( $search eq 'Legacy' ) { $new_search = 'r.legacy'; }
+  elsif ( $search eq 'Title' ) { $new_search = 'b.title'; }
+  elsif ( $search eq 'Author' ) { $new_search = 'b.author'; }
+  elsif ( $search eq 'Priority' )
+  {
+    if ( $page eq 'queue' ) { $new_search = 'q.priority'; }
+    else { $new_search = 'r.priority'; }
+  }
+  elsif ( $search eq 'Validated' ) { $new_search = 'r.validated'; }
+  elsif ( $search eq 'PubDate' ) { $new_search = 'b.pub_date'; }
+  elsif ( $search eq 'Locked' ) { $new_search = 'q.locked'; }
+  elsif ( $search eq 'ExpertCount' ) { $new_search = 'q.expcnt'; }
+  elsif ( $search eq 'Reviews' )
+  {
+    $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)';
+  }
+  elsif ( $search eq 'Swiss' ) { $new_search = 'r.swiss'; }
+  elsif ( $search eq 'Hold Thru' ) { $new_search = 'r.hold'; }
+  elsif ( $search eq 'SysID' ) { $new_search = 's.sysid'; }
+  elsif ( $search eq 'Holds' )
+  {
+    $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold IS NOT NULL)';
+  }
+  return $new_search;
 }
 
 sub CreateSQL
@@ -1440,15 +1444,6 @@ sub CreateSQLForReviews
   $dir = 'DESC' unless $dir;
   $offset = 0 unless $offset;
   $pagesize = 20 unless $pagesize > 0;
-  if ( ( $page eq 'userReviews' ) || ( $page eq 'editReviews' ) )
-  {
-    if ( ! $order || $order eq "time" ) { $order = "time"; }
-  }
-  else
-  {
-    if ( ! $order || $order eq "id" ) { $order = "id"; }
-  }
-
   my $sql;
   if ( $page eq 'adminReviews' )
   {
@@ -2254,7 +2249,7 @@ sub GetVolumesRef
 {
   my $self = shift;
   my $page = $_[0];
-  my $order = $_[1];
+  my $order = $self->ConvertToSearchTerm($_[1], $page);
   my $dir = $_[2];
   my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQLForVolumes(@_);
   my $ref = undef;
@@ -2338,7 +2333,7 @@ sub GetVolumesRefWide
 {
   my $self = shift;
   my $page = $_[0];
-  my $order = $_[1];
+  my $order = $self->ConvertToSearchTerm($_[1], $page);
   my $dir = $_[2];
   
   my $table ='reviews';
