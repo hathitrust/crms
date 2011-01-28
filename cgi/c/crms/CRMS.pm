@@ -5709,7 +5709,7 @@ sub CreateSystemReport
   $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay since $since</span>" if $alert;
   $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay</td></tr>\n";
   $report .= '<tr><td colspan="2">';
-  $report .= '<span class="smallishText">* Not including legacy data (reviews/determinations made prior to June 2009).</span><br/>';
+  $report .= '<span class="smallishText">* Not including legacy data (reviews/determinations made prior to July 2009).</span><br/>';
   $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count above.</span>';
   $report .= "</td></tr></table>\n";
   return $report;
