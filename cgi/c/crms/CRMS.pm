@@ -6478,7 +6478,7 @@ sub RightsQuery
   my $id     = shift;
   my $latest = shift;
   
-  my ($namespace,$n) = split m/\./, $id;
+  my ($namespace,$n) = split m/\./, $id, 2;
   my $table = ($latest)? 'rights_current':'rights_log';
   my $sql = "SELECT a.name,rs.name,s.name,r.user,r.time,r.note FROM $table r, attributes a, reasons rs, sources s " .
             "WHERE r.namespace='$namespace' AND r.id='$n' AND s.id=r.source AND a.id=r.attr AND rs.id=r.reason " .
