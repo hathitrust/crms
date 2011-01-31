@@ -218,10 +218,9 @@ sub ProcessReviews
     next if $hold and $today lt $hold;
     if ($hold && $stat ne 'normal')
     {
-      print "Not processing $id for $user: it is held and the system status is '$stat'\n";
+      print "Not processing $id for $user: it is held ($hold) and the system status is '$stat'\n";
       next;
     }
-    print "Processing $id for $user: it is not held and the system status is '$stat'\n";
     $sql = "SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id='$id' AND user!='$user'";
     my $ref2 = $dbh->selectall_arrayref( $sql );
     my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{ $ref2->[0] };
@@ -269,11 +268,9 @@ sub ProcessReviews
     {
       $self->RegisterStatus( $id, 2 );
     }
+    $sql = "UPDATE reviews SET hold=NULL,sticky_hold=NULL,time=time WHERE id='$id'";
+    $self->PrepareSubmitSql( $sql );
   }
-  $sql = "UPDATE reviews SET hold=NULL, time=time WHERE hold<'$today'";
-  $self->PrepareSubmitSql( $sql );
-  $sql = "UPDATE reviews SET sticky_hold=NULL, time=time WHERE sticky_hold<'$today'";
-  $self->PrepareSubmitSql( $sql );
   # Clear out all the locks
   $sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
   $self->PrepareSubmitSql( $sql );
@@ -817,7 +814,7 @@ sub AddItemToQueueOrSetItemActive
       push @msgs, "changed priority from $oldpri to $priority";
       if ($count)
       {
-        $sql = "UPDATE $CRMSGlobals::reviewsTable SET priority=$priority,time=NOW() WHERE id='$id'";
+        $sql = "UPDATE $CRMSGlobals::reviewsTable SET priority=$priority,time=time WHERE id='$id'";
         $self->PrepareSubmitSql( $sql );
       }
       $stat = 3;
@@ -5359,7 +5356,7 @@ sub SetDuration
   if ($dur)
   {
     ## insert time
-    $sql = "UPDATE reviews SET duration=ADDTIME(duration,'$dur') WHERE user='$user' AND id='$id'";
+    $sql = "UPDATE reviews SET duration=ADDTIME(duration,'$dur'),time=time WHERE user='$user' AND id='$id'";
     $self->PrepareSubmitSql( $sql );
   }
   $self->RemoveFromTimer( $id, $user );
