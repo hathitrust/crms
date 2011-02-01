@@ -78,7 +78,12 @@ if (scalar @ARGV)
 
 my $startSQL = '';
 my $endSQL = '';
-if (!$all)
+if ($all)
+{
+  $start = $crms->SimpleSqlGet('SELECT DATE(MIN(time)) FROM und WHERE src="gov"');
+  $end = $crms->SimpleSqlGet('SELECT DATE(MAX(time)) FROM und WHERE src="gov"');
+}
+else
 {
   $startSQL = " AND time>'$start 00:00:00'";
   $endSQL = " AND time<='$end 23:59:59'";
@@ -186,8 +191,8 @@ if (@mails)
     $sender->Body();
     if ($report eq 'excel')
     {
-      $txt = 'This is an automatically generated report on possible federal government docs from the period ' .
-             "$start to $end. We believe these should have an 'f' inserted into the 008 MARC field. " .
+      $txt = 'This is an automatically generated report on possible federal government docs from the previous ' .
+             "month. We believe these should have an 'f' inserted into the 008 MARC field. " .
              'Please notify the other addressees of any volumes that do not seem to meet these criteria. ' .
              "Note: in the current version there may be documents that have a non-blank 008:28 character other than 'f'. " .
              "These should be left alone and reported.\n\n"; 
