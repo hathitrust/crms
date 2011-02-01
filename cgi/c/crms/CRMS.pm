@@ -3600,6 +3600,11 @@ sub CreateDeterminationsBreakdownGraph
     my $color = $colors{$status};
     my $attrs = sprintf('"dot-style":{"type":"solid-dot","dot-size":3,"colour":"%s"},"text":"Status %s","colour":"%s","on-show":{"type":"pop-up","cascade":1,"delay":0.2}',
                         $color, $status, $color);
+    if (scalar @lines <= 1)
+    {
+      my $date = substr $self->GetTodaysDate(), 0, 10;
+      @lines = ("$date\t0\t0\t0\t0\t0.0%%\t0.0%\t0.0%%\t0.0%%");
+    }
     foreach my $line (@lines)
     {
       my @line = split "\t", $line;
