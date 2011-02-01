@@ -202,7 +202,7 @@
                                      comm     = comm,    category  = category, editing  = editing,
                                      error    = error,   select    = select,   mag      = mag,
                                      question = question, swiss    = swiss %]
-      [% IF crms.IsUserExpert(user) || crms.WhereAmI().match('Dev') %]
+      [% IF crms.IsUserExpert(user) #|| crms.WhereAmI().match('Dev') %]
         <table class="nav">
         [% status = crms.GetStatus(barcode) %]
         [% IF status == 3 %]
