@@ -16,12 +16,11 @@ use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 
 my $usage = <<END;
-USAGE: $0 [-aehlnpstvw] [-S SUMMARY_PATH] [-t REPORT_TYPE] [-r TYPE] [-i ID] [start_date [end_date]]
+USAGE: $0 [-ehlnpstvw] [-S SUMMARY_PATH] [-t REPORT_TYPE] [-r TYPE] [-i ID] [start_date [end_date]]
 
 Reports on CRMS determinations for volumes that have duplicates,
 multiple volumes, or conflicting determinations.
 
--a       Use only attr mismatches to detect a conflict.
 -e       Report only on records with chron/enum information.
 -h       Print this help message.
 -i ID    Report only for volume ID (start and end dates are ignored). May be repeated.
@@ -31,16 +30,17 @@ multiple volumes, or conflicting determinations.
 -r TYPE  Print a report of TYPE where TYPE={html,none,tsv}.
 -s       For true duplicates, submit a review for unreviewed duplicate volumes.
 -S PATH  Emit a TSV summary (for duplicates) with ID, rights, reason.
--t TYPE  Report on situations of type TYPE in {duplicate,conflict,crms_conflict}:
+-t TYPE  Report on situations of type TYPE:
            duplicate:     >0 matching CRMS determinations, >0 ic/bib (default)
            conflict:      conflicting CRMS determinations, >0 ic/bib
            crms_conflict: conflicting CRMS determinations, no ic/bib
+           resolvable:    partially conflicting CRMS determinations that can be resolved
+                          with a pd/crms, ic/crms, or und/crms determination, >0 ic/bib
          May be repeated.
 -x       Generate hyperlinks in the TSV file for Excel.
 -v       Be verbose. May be repeated.
 END
 
-my $attrOnly;
 my $enum;
 my $help;
 my @ids;
@@ -48,22 +48,21 @@ my $legacy;
 my $noop;
 my $production;
 my $report = 'none';
-my $submit;
+#my $submit;
 my $summary;
 my @types;
 my $verbose;
 my $link;
 
-die 'Terminating' unless GetOptions('a' => \$attrOnly,
-           'e' => \$enum,
+die 'Terminating' unless GetOptions('e' => \$enum,
            'h|?' => \$help,
            'i:s@' => \@ids,
            'l' => \$legacy,
            'n' => \$noop,
            'p' => \$production,
            'r:s' => \$report,
-           's' => \$submit,
-           'S' => \$summary,
+#           's' => \$submit,
+           'S:s' => \$summary,
            't=s@' => \@types,
            'x' => \$link,
            'v+' => \$verbose);
@@ -80,10 +79,10 @@ my %typesh;
 push @types, 'duplicate' unless scalar @types;
 $typesh{$_} = 1 for @types;
 
-my $start = $ARGV[0] or '';
-my $end   = $ARGV[1] or '';
-die "Start date format should be YYYY-MM-DD\n" if $start and $start !~ m/\d\d\d\d-\d\d-\d\d/;
-die "End date format should be YYYY-MM-DD\n" if $end and $end !~ m/\d\d\d\d-\d\d-\d\d/;
+my $start = $ARGV[0];
+my $end   = $ARGV[1];
+die "Start date format should be YYYY-MM-DD; you said '$start'\n" if $start and $start !~ m/\d\d\d\d-\d\d-\d\d/;
+die "End date format should be YYYY-MM-DD; you said '$end'\n" if $end and $end !~ m/\d\d\d\d-\d\d-\d\d/;
 if ($start > $end)
 {
   my $tmp = $start;
@@ -210,7 +209,9 @@ foreach my $row ( @{$ref} )
   $title =~ s/\t+/ /g;
   my @lines = ();
   my %attrs;
-  $attrs{($attrOnly)? $attr:"$attr/$reason"} = 1;
+  my %rights;
+  $attrs{$attr} = 1;
+  $rights{"$attr/$reason"} = 1;
   my $chron = '';
   print "Original: $id ($sysid) $attr/$reason\n" if $verbose;
   foreach my $holding (@{$holdings})
@@ -265,7 +266,6 @@ foreach my $row ( @{$ref} )
       next if $seen{$id2};
       $seen{$id2} = 1;
       my $title2;
-      $situation = 'duplicate' unless $situation;
       $sql = "SELECT attr,reason,time FROM exportdata WHERE id='$id2' ORDER BY time DESC LIMIT 1";
       my $ref2 = $crms->get('dbh')->selectall_arrayref($sql);
       my $user = 'crms';
@@ -282,8 +282,9 @@ foreach my $row ( @{$ref} )
       $date2 =~ s/(\d\d\d\d-\d\d-\d\d).*/$1/;
       if ($reason2 ne 'bib')
       {
-        $conflict = 1 unless $attrs{($attrOnly)? $attr2:"$attr2/$reason2"};
-        $attrs{($attrOnly)? $attr2:"$attr2/$reason2"} = 1;
+        $conflict = 1 unless $rights{"$attr2/$reason2"};
+        $attrs{$attr2} = 1;
+        $rights{"$attr2/$reason2"} = 1;
       }
       print "  Holding: $id2, $attr2/$reason2 ($user)\n" if $verbose;
       my $record2 = $crms->GetRecordMetadata($id2);
@@ -309,6 +310,9 @@ foreach my $row ( @{$ref} )
   if ($conflict)
   {
     $situation = ($icbib)? 'conflict':'crms_conflict';
+    my $n = scalar keys %attrs;
+    $situation = 'resolvable' if ($n == 1 || ($n == 2 && $attrs{'ic'} && $attrs{'und'}));
+    print "Situation is $situation; n is $n; icbib is $icbib\n" if $verbose;
   }
   elsif ($icbib && 0 < scalar keys %dups)
   {
