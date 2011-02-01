@@ -225,6 +225,11 @@ sub ProcessReviews
     my $ref2 = $dbh->selectall_arrayref( $sql );
     my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{ $ref2->[0] };
     next if $other_hold and $today lt $other_hold;
+    if ($other_hold && $stat ne 'normal')
+    {
+      print "Not processing $id for $user: it is held ($hold) and the system status is '$stat'\n";
+      next;
+    }
     if ($attr == $other_attr)
     {
       # If both reviewers are non-advanced mark as provisional match
@@ -4999,7 +5004,7 @@ sub GetRecordMetadata
   my $parser = $self->get( 'parser' );    
   if ( ! $id ) { $self->SetError( "no volume id given: $id" ); return 0; }
   $id = lc $id;
-  #my ($ns,$bar) = split(/\./, $id);
+  #my ($ns,$bar) = split(/\./, $id, 2);
   #my $sysId = $self->BarcodeToId( $id );
   #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
   #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
