@@ -387,7 +387,12 @@ sub GetExpertRevItems
 {
   my $self = shift;
 
-  my $sql  = 'SELECT id FROM queue WHERE (status>=5) AND id NOT IN (SELECT id FROM reviews WHERE CURDATE()<hold)';
+  my $sql  = 'SELECT id FROM queue WHERE status>=5 AND id NOT IN (SELECT id FROM reviews WHERE CURTIME()<hold)';
+  my $stat = @{$self->GetSystemStatus(1)}->[1];
+  if ($stat ne 'normal')
+  {
+    $sql  = 'SELECT id FROM queue WHERE status>=5 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)';
+  }
   return $self->get( 'dbh' )->selectall_arrayref( $sql );
 }
 
