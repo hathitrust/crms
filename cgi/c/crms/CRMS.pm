@@ -218,7 +218,7 @@ sub ProcessReviews
     next if $hold and $today lt $hold;
     if ($hold && $stat ne 'normal')
     {
-      print "Not processing $id for $user: it is held ($hold) and the system status is '$stat'\n";
+      print "Not processing $id for $user: it is held ($hold); system status is '$stat'\n";
       next;
     }
     $sql = "SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id='$id' AND user!='$user'";
@@ -227,7 +227,7 @@ sub ProcessReviews
     next if $other_hold and $today lt $other_hold;
     if ($other_hold && $stat ne 'normal')
     {
-      print "Not processing $id for $user: it is held ($hold) and the system status is '$stat'\n";
+      print "Not processing $id (2nd review) for $other_user: it is held ($other_hold); system status is '$stat'\n";
       next;
     }
     if ($attr == $other_attr)
