@@ -52,16 +52,15 @@ require $configFile;
 
 my $inst = uc $ARGV[0];
 $inst = 'UM-ERAU' unless $inst;
-my %names = ('UM-ERAU' => 'University of Michigan__jaheim@umich.edu__Judy',
+my %names = ('UM-ERAU' => 'UM Electronic Access Unit__jaheim@umich.edu__Judy',
              'IU'=>'Indiana University__shmichae@indiana.edu__Sherri',
              'UMN'=>'University of Minnesota__dewey002@umn.edu__Carla',
              'UW'=>'University of Wisconsin__izimmerman@library.wisc.edu__Irene');
 my @insts = ($inst);
 @insts = keys %names if $inst eq 'ALL';
-#my @mails = ('annekz@umich.edu','moseshll@umich.edu','gnichols@umich.edu');
-my @mails = ('moseshll@umich.edu');
 foreach $inst (@insts)
 {
+  my @mails = ('annekz@umich.edu','moseshll@umich.edu','gnichols@umich.edu');
   my $users = $crms->GetUsersWithAffiliation($inst);
   my $in = "('" . (join "','", @{$users}) . "')";
   my ($year,$month) = $crms->GetTheYearMonth();
@@ -69,6 +68,10 @@ foreach $inst (@insts)
   {
     $month = 12;
     $year--;
+  }
+  else
+  {
+    $month--;
   }
   $month = '0'.$month if $month =~ m/^\d$/;
   my $date = "$year-$month";
@@ -84,7 +87,6 @@ foreach $inst (@insts)
   my $tot = $ref->[0]->[0];
   my ($iname,$mail,$fname) = split '__', $names{$inst};
   unshift @mails, $mail;
-  #print "Note: not mailing to institutional users yet.\n";
   my $msg = "Monthly statistics for $iname CRMS Reviewers\n\n" .
             "Total Reviews: $tot\n" .
             "Validated PD Reviews: $rev\n" .
