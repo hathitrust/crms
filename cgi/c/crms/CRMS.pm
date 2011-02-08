@@ -799,7 +799,7 @@ sub AddItemToQueueOrSetItemActive
   my $priority = shift;
   my $override = shift;
   my $src      = shift;
-  
+
   $src = 'adminui' unless $src;
   my $stat = 0;
   my @msgs = ();
@@ -837,7 +837,7 @@ sub AddItemToQueueOrSetItemActive
   else
   {
     my $record = $self->GetRecordMetadata($id); 
-    @msgs = $self->GetViolations($id, $record);
+    @msgs = $self->GetViolations($id, $record, $priority);
     if (scalar @msgs && !$override)
     {
       $stat = 1;
