@@ -639,11 +639,13 @@ sub LoadNewItemsInCandidates
 # Returns an array of error messages (reasons for unsuitability for CRMS) for a volume.
 # Used by candidates loading to ignore inappropriate items.
 # Used by Add to Queue page for filtering non-overrides.
+# When used by an expert/admin to add to the queue, the date range becomes 1923-1977
 sub GetViolations
 {
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
+  my $self     = shift;
+  my $id       = shift;
+  my $record   = shift;
+  my $priority = shift;
 
   my @errs = ();
   $record =  $self->GetRecordMetadata($id) unless $record;
@@ -654,7 +656,8 @@ sub GetViolations
   else
   {
     my $pub = $self->GetPublDate( $id, $record );
-    push @errs, "$pub not in range 1923-1963" if ($pub < 1923 || $pub > 1963);
+    my $year = ($priority == 3 && $self->IsUserAdmin())? 1977:1963;
+    push @errs, "$pub not in range 1923-$year" if ($pub < 1923 || $pub > $year);
     push @errs, 'gov doc' if $self->IsGovDoc( $id, $record );
     push @errs, 'foreign pub' if $self->IsForeignPub( $id, $record );
     push @errs, 'non-BK format' unless $self->IsFormatBK( $id, $record );
@@ -1394,6 +1397,7 @@ sub ConvertToSearchTerm
   }
   elsif ( $search eq 'Validated' ) { $new_search = 'r.validated'; }
   elsif ( $search eq 'PubDate' ) { $new_search = 'b.pub_date'; }
+  elsif ( $search eq 'ReviewDate' ) { $new_search = 'r.time'; }
   elsif ( $search eq 'Locked' ) { $new_search = 'q.locked'; }
   elsif ( $search eq 'ExpertCount' ) { $new_search = 'q.expcnt'; }
   elsif ( $search eq 'Reviews' )
@@ -4214,7 +4218,7 @@ sub ValidateSubmission2
   my $errorMsg = '';
 
   my $noteError = 0;
-
+  my $hasren = ( $renNum && $renDate );
   ## Someone else has the item locked?
   $errorMsg = 'This item has been locked by another reviewer. Please Cancel.' if $self->IsLockedForOtherUser($id);
   ## check user
@@ -4226,37 +4230,63 @@ sub ValidateSubmission2
   {
     $errorMsg .= 'rights/reason designation required.';
   }
+  my $date = $self->GetPubDate($id);
   ## und/nfi
   if ( $attr == 5 && $reason == 8 && ( ( ! $note ) || ( ! $category ) )  )
   {
     $errorMsg .= 'und/nfi must include note category and note text.';
     $noteError = 1;
   }
-  ## ic/ren requires a ren number
-  if ( $attr == 2 && $reason == 7 && ( ( ! $renNum ) || ( ! $renDate ) )  )
+  ## ic/ren requires a nonexpired renewal if 1963 or earlier
+  if ( $attr == 2 && $reason == 7 )
   {
-    $errorMsg .= 'ic/ren must include renewal id and renewal date.';
-  }
-  elsif ( $attr == 2 && $reason == 7 )
-  {
-    $renDate =~ s,.*[A-Za-z](.*),$1,;
-    $renDate = '19' . $renDate;
-
-    if ( $renDate < 1950 )
+    if ($hasren)
     {
-      $errorMsg .= "renewal has expired; volume is pd. date entered is $renDate";
+      if ($date > 1963)
+      {
+        $errorMsg .= 'Renewal no longer required for works published after 1963. ';
+      }
+      else
+      {
+        $renDate =~ s,.*[A-Za-z](.*),$1,;
+        $renDate = '19' . $renDate;
+        if ( $renDate < 1950 )
+        {
+          $errorMsg .= "Renewal has expired; volume is pd. Date entered is $renDate. ";
+        }
+      }
+    }
+    else
+    {
+      $errorMsg .= 'ic/ren must include renewal id and renewal date. ';
     }
   }
-  ## pd/ren should not have a ren number or date
-  if ( $attr == 1 && $reason == 7 &&  ( ( $renNum ) || ( $renDate ) ) )
+  ## pd/ren should not have a ren number or date, and is not allowed for post-1963 works.
+  if ( $attr == 1 && $reason == 7 )
   {
-    $errorMsg .= 'pd/ren should not include renewal info. ';
+    if ($date > 1963)
+    {
+      $errorMsg .= 'Renewal no longer required for works published after 1963. ';
+    }
+    elsif ($hasren)
+    {
+      $errorMsg .= 'pd/ren should not include renewal info. ';
+    }
   }
   ## pd/ncn requires a ren number
-  ## superadmin-added stuff after 1963 doesn't need this
-  if (  $attr == 1 && $reason == 2 && ( ( !$renNum ) || ( !$renDate ) ) )
+  ## For non-admins, ren info is required.
+  ## For admins, ren info is required for 23-63 and disallowed for 64-77
+  if ($attr == 1 && $reason == 2)
   {
-    $errorMsg .= 'pd/ncn must include renewal id and renewal date. ' unless $self->IsUserSuperAdmin($user);
+    if ($self->IsUserAdmin($user))
+    {
+      $errorMsg .= 'Renewal no longer required for works published after 1963. ' if $hasren && $date > 1963;
+      $errorMsg .= 'pd/ncn must include renewal id and renewal date. ' unless $hasren && $date <= 1963;
+    }
+    else
+    {
+      $errorMsg .= 'pd/ncn must include renewal id and renewal date. ' unless $hasren;
+    }
   }
   ## pd/cdpp requires a ren number
   if (  $attr == 1 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
@@ -6376,49 +6406,55 @@ sub Mojibake
 
 sub ReviewSearchMenu
 {
-  my $self = shift;
-  my $page = shift;
+  my $self       = shift;
+  my $page       = shift;
   my $searchName = shift;
-  my $searchVal = shift;
+  my $searchVal  = shift;
+  my $order      = shift;
   
-  my @keys = ('Identifier','SysID',    'Title','Author','PubDate', 'Status','Legacy','UserId','Attribute',
+  my @keys = ('Identifier','SysID',    'Title','Author','PubDate', 'ReviewDate', 'Status','Legacy','UserId','Attribute',
               'Reason', 'NoteCategory', 'Note', 'Priority', 'Validated', 'Swiss', 'Hold Thru');
-  my @labs = ('Identifier','System ID','Title','Author','Pub Date','Status','Legacy','User',  'Attribute',
+  my @labs = ('Identifier','System ID','Title','Author','Pub Date','Review Date', 'Status','Legacy','User',  'Attribute',
               'Reason','Note Category', 'Note', 'Priority', 'Verdict',   'Swiss', 'Hold Thru');
   
   if ($page ne 'adminReviews' && $page ne 'editReviews' && $page ne 'holds')
   {
-    splice @keys, 15, 1;
-    splice @labs, 15, 1;
+    splice @keys, 16, 1; # Hold
+    splice @labs, 16, 1;
   }
   if (!$self->IsUserExpert())
   {
-    splice @keys, 14, 1;
-    splice @labs, 14, 1;
+    splice @keys, 15, 1; # Swiss
+    splice @labs, 15, 1;
   }
   if ($page ne 'adminHistoricalReviews')
   {
-    splice @keys, 13, 1;
-    splice @labs, 13, 1;
+    splice @keys, 14, 1;
+    splice @labs, 14, 1; # Validated
   }
   if (!$self->IsUserAdmin())
   {
-    splice @keys, 12, 1;
-    splice @labs, 12, 1;
-  }
-  if ($page eq 'userReviews' || $page eq 'editReviews')
-  {
-    splice @keys, 7, 1;
-    splice @labs, 7, 1;
+    splice @keys, 13, 1; # Priority
+    splice @labs, 13, 1;
   }
   if ($page ne 'adminHistoricalReviews')
   {
-    splice @keys, 4, 1;
+    splice @keys, 7, 1; # Legacy
+    splice @labs, 7, 1;
+  }
+  if (!$order)
+  {
+    splice @keys, 5, 1; # Review Date
+    splice @labs, 5, 1;
+  }
+  if ($page ne 'adminHistoricalReviews')
+  {
+    splice @keys, 4, 1; # Pub Date
     splice @labs, 4, 1;
   }
   if ($page ne 'adminHistoricalReviews' || !($self->IsUserExpert() || $self->IsUserAdmin()))
   {
-    splice @keys, 1, 1;
+    splice @keys, 1, 1; # Sys ID
     splice @labs, 1, 1;
   }
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
