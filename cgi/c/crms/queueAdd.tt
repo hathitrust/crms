@@ -20,7 +20,6 @@ These items will take priority in the review process.
   <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;">[% ids %]</textarea><br/>
   <select name="priority">
     <option value="0" [% (pri==0)? 'selected="selected"':'' %]>Priority 0</option>
-    <!--<option value="1" [% (pri==1)? 'selected="selected"':'' %]>Priority 1</option>-->
     <option value="2" [% (pri==2)? 'selected="selected"':'' %]>Priority 2</option>
     <option value="3" [% (pri==3)? 'selected="selected"':'' %]>Priority 3</option>
   </select>
@@ -35,7 +34,8 @@ These items will take priority in the review process.
 <p class="smallishText">Priority 2 can be be reviewed by anyone.<br/>
 Priority 3 can only be reviewed by an expert.<br/>
 Priority 4 can only be added or reviewed by a super admin.<br/>
-<i>Override Restrictions</i> allows you to enter government documents, non-books, and items from before 1923 or after 1963.<br/>
+<i>Override Restrictions</i> allows you to enter government documents,
+non-books, and items from before 1923 or after [% (crms.IsUserAdmin())? 1977:1963 %].<br/>
 </p>
 
 <br/>
@@ -86,7 +86,7 @@ Priority 4 can only be added or reviewed by a super admin.<br/>
   <table class="exportStats" style="width:auto;">
   <tr><th>ID</th><th>Title</th><th>Author</th><th>Pub&nbsp;Date</th><th>Added</th><th>Status</th><th>Priority</th><th>Issues</th><th>Historical&nbsp;Reviews</th></tr>
   [% FOREACH r IN ref %]
-    [% vs = crms.GetViolations(r.0) %]
+    [% vs = crms.GetViolations(r.0, undef, r.6) %]
     <tr><td>
     [% IF r.5 > 0 %]
       <a href="/cgi/c/crms/crms?p=adminReviews&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
