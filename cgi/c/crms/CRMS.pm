@@ -4280,8 +4280,8 @@ sub ValidateSubmission2
   {
     if ($self->IsUserAdmin($user))
     {
-      $errorMsg .= 'Renewal no longer required for works published after 1963. ' if $hasren && $date > 1963;
-      $errorMsg .= 'pd/ncn must include renewal id and renewal date. ' unless $hasren && $date <= 1963;
+      $errorMsg .= 'Renewal no longer required for works published after 1963. ' if $date > 1963 && $hasren;
+      $errorMsg .= 'pd/ncn must include renewal id and renewal date. ' if $date <= 1963 && !$hasren;
     }
     else
     {
