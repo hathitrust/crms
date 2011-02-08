@@ -804,7 +804,8 @@ sub AddItemToQueueOrSetItemActive
   my $stat = 0;
   my @msgs = ();
   $priority = 4 if $override;
-  if ($override && !$self->IsUserSuperAdmin())
+  my $super = $self->IsUserSuperAdmin();
+  if ($override && !$super)
   {
     push @msgs, 'Only a super admin can set priority 4';
     $stat = 1;
@@ -818,6 +819,11 @@ sub AddItemToQueueOrSetItemActive
     if ($oldpri == $priority)
     {
       push @msgs, 'already in queue with the same priority';
+      $stat = 2;
+    }
+    elsif ($oldpri > $priority && !$super)
+    {
+      push @msgs, 'already in queue with a higher priority';
       $stat = 2;
     }
     else
@@ -1487,7 +1493,7 @@ sub CreateSQLForReviews
     $doS = '' unless ($search1 . $search2 . $search3 . $order) =~ m/sysid/;
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
            'r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated '.
-           "FROM $CRMSGlobals::historicalreviewsTable r LEFT JOIN bibdata b ON r.id=b.id $doS WHERE r.id IS NOT NULL";
+           "FROM bibdata b RIGHT JOIN $CRMSGlobals::historicalreviewsTable r ON b.id=r.id $doS";
   }
   elsif ( $page eq 'undReviews' )
   {
@@ -5460,8 +5466,8 @@ sub GetNextItemForReview
     {
       $exclude = 'q.priority<4 AND';
     }
-    # Exclude priority 1 if our d100 roll is 33+ or user is not advanced
-    my $exclude1 = (rand() >= 0.33 || !$self->IsUserAdvanced($user))? 'q.priority!=1 AND':'';
+    # Exclude priority 1 if our d100 roll is over the P1 threshold or user is not advanced
+    my $exclude1 = (rand() >= $CRMSGlobals::priority1Frequency || !$self->IsUserAdvanced($user))? 'q.priority!=1 AND':'';
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt FROM queue q ' .
            "WHERE $exclude $exclude1 q.expcnt=0 AND q.locked IS NULL " .
            'ORDER BY q.priority DESC, cnt DESC, q.time ASC';
