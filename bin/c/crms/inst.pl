@@ -86,29 +86,25 @@ foreach $inst (@insts)
   my $ref = $crms->get('dbh')->selectall_arrayref($sql);
   my $tot = $ref->[0]->[0];
   my ($iname,$mail,$fname) = split '__', $names{$inst};
-  unshift @mails, $mail;
   my $msg = "Monthly statistics for $iname CRMS Reviewers\n\n" .
             "Total Reviews: $tot\n" .
             "Validated PD Reviews: $rev\n" .
             "Resulting # of volumes made available as full text in HathiTrust: $det\n\n" .
             'Note: This is an automatically generated message from the Copyright Review Management System.';
-  if (@mails)
-  {
-    my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                    from => $CRMSGlobals::adminEmail,
-                                    on_errors => 'undef' }
-      or die "Error in mailing : $Mail::Sender::Error\n";
-    my $to = join ',', @mails;
-    $sender->OpenMultipart({
-      to => $to,
-      subject => "$iname CRMS Statistics for $english",
-      ctype => 'text/plain',
-      encoding => 'quoted-printable'
-      }) or die $Mail::Sender::Error,"\n";
-    $sender->Body();
-    $sender->SendEnc($msg);
-    $sender->Close();
-  }
+  my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
+                                  from => $CRMSGlobals::adminEmail,
+                                  on_errors => 'undef' }
+    or die "Error in mailing : $Mail::Sender::Error\n";
+  $sender->OpenMultipart({
+    to => $mail,
+    cc => (join ',', @mails),
+    subject => "$iname CRMS Statistics for $english",
+    ctype => 'text/plain',
+    encoding => 'quoted-printable'
+    }) or die $Mail::Sender::Error,"\n";
+  $sender->Body();
+  $sender->SendEnc($msg);
+  $sender->Close();
 }
 
 print "Warning: $_\n" for @{$crms->GetErrors()};
