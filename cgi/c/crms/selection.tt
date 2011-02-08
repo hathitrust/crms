@@ -105,7 +105,7 @@ Search for Reviews where<br/>
 [% END %]
 
 <label for="order">Order by:</label>
-[% crms.ReviewSearchMenu(page, 'order', order) %]
+[% crms.ReviewSearchMenu(page, 'order', order, 1) %]
 <br/>
 
 <label for="dir">Direction:</label>
