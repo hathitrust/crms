@@ -92,7 +92,7 @@ Priority 3 can only be added or reviewed by an expert, admin, or superadmin.<br/
   <table class="exportStats" style="width:auto;">
   <tr><th>ID</th><th>Title</th><th>Author</th><th>Pub&nbsp;Date</th><th>Added</th><th>Status</th><th>Priority</th><th>Issues</th><th>Historical&nbsp;Reviews</th></tr>
   [% FOREACH r IN ref %]
-    [% vs = crms.GetViolations(r.0) %]
+    [% vs = crms.GetViolations(r.0, undef, r.6) %]
     <tr><td>
     [% IF r.5 > 0 %]
       <a href="/cgi/c/crms/crms?p=adminReviews&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
