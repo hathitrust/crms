@@ -603,8 +603,8 @@ sub LoadNewItemsInCandidates
       next;
     }
     my $record = $self->GetRecordMetadata($id);
-    my @errs = $self->GetViolations($id, $record);
-    if (scalar @errs == 0)
+    my $errs = $self->GetViolations($id, $record);
+    if (scalar @{$errs} == 0)
     {
       my $src = $self->ShouldVolumeGoInUndTable($id, $record);
       if ($src)
@@ -639,30 +639,32 @@ sub LoadNewItemsInCandidates
 # Returns an array of error messages (reasons for unsuitability for CRMS) for a volume.
 # Used by candidates loading to ignore inappropriate items.
 # Used by Add to Queue page for filtering non-overrides.
-# When used by an expert/admin to add to the queue, the date range becomes 1923-1977
+# When used by an expert/admin to add to the queue, the date range becomes 1923-1977 if override
 sub GetViolations
 {
   my $self     = shift;
   my $id       = shift;
   my $record   = shift;
   my $priority = shift;
+  my $override = shift;
 
+  $priority = 0 unless $priority;
   my @errs = ();
   $record =  $self->GetRecordMetadata($id) unless $record;
   if (!$record)
   {
     push @errs, 'not found in Mirlyn';
   }
-  else
+  elsif ($priority < 4 || !$override)
   {
     my $pub = $self->GetPublDate( $id, $record );
-    my $year = ($priority == 3 && $self->IsUserAdmin())? 1977:1963;
+    my $year = (($override && $priority == 3) || $priority == 4)? 1977:1963;
     push @errs, "$pub not in range 1923-$year" if ($pub < 1923 || $pub > $year);
     push @errs, 'gov doc' if $self->IsGovDoc( $id, $record );
     push @errs, 'foreign pub' if $self->IsForeignPub( $id, $record );
     push @errs, 'non-BK format' unless $self->IsFormatBK( $id, $record );
   }
-  return @errs;
+  return \@errs;
 }
 
 # Returns a und table src code if the volume belongs in the und table instead of candidates.
@@ -803,9 +805,8 @@ sub AddItemToQueueOrSetItemActive
   $src = 'adminui' unless $src;
   my $stat = 0;
   my @msgs = ();
-  $priority = 4 if $override;
   my $super = $self->IsUserSuperAdmin();
-  if ($override && !$super)
+  if ($priority == 4 && !$super)
   {
     push @msgs, 'Only a super admin can set priority 4';
     $stat = 1;
@@ -843,8 +844,8 @@ sub AddItemToQueueOrSetItemActive
   else
   {
     my $record = $self->GetRecordMetadata($id); 
-    @msgs = $self->GetViolations($id, $record, $priority);
-    if (scalar @msgs && !$override)
+    @msgs = @{ $self->GetViolations($id, $record, $priority, $override) };
+    if (scalar @msgs)
     {
       $stat = 1;
     }
@@ -873,10 +874,10 @@ sub GiveItemsInQueuePriority
   my $source   = shift;
 
   my $record = $self->GetRecordMetadata($id);
-  my @errs = $self->GetViolations($id, $record);
-  if (scalar @errs)
+  my $errs = $self->GetViolations($id, $record);
+  if (scalar @{$errs})
   {
-    $self->SetError(sprintf "$id: %s", join ';', @errs);
+    $self->SetError(sprintf "$id: %s", join ';', @{$errs});
     return 0;
   }
   my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable WHERE id='$id'";
@@ -1493,7 +1494,7 @@ sub CreateSQLForReviews
     $doS = '' unless ($search1 . $search2 . $search3 . $order) =~ m/sysid/;
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
            'r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated '.
-           "FROM bibdata b RIGHT JOIN $CRMSGlobals::historicalreviewsTable r ON b.id=r.id $doS";
+           "FROM bibdata b INNER JOIN $CRMSGlobals::historicalreviewsTable r ON b.id=r.id $doS";
   }
   elsif ( $page eq 'undReviews' )
   {

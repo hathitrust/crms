@@ -9,6 +9,7 @@
 [% pri = cgi.param('priority') %]
 [% override = cgi.param('override') %]
 [% IF NOT pri %][% pri = 0 %][% END %]
+[% super = crms.IsUserSuperAdmin() %]
 
 <h2>Add Volumes to the Queue:</h2>
 These items will take priority in the review process.
@@ -18,24 +19,29 @@ These items will take priority in the review process.
   Entries that don't have a namespace will be given an <code>mdp.</code> prefix.</p>
   <input type="hidden" name="p" value="queueAdd"/>
   <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;">[% ids %]</textarea><br/>
-  <select name="priority">
+  <select name="priority" onchange="document.getElementById('ORCheck').disabled=(this.selectedIndex==0||this.selectedIndex==1);">
     <option value="0" [% (pri==0)? 'selected="selected"':'' %]>Priority 0</option>
     <option value="2" [% (pri==2)? 'selected="selected"':'' %]>Priority 2</option>
     <option value="3" [% (pri==3)? 'selected="selected"':'' %]>Priority 3</option>
+    [% IF super %]<option value="4" [% (pri==4)? 'selected="selected"':'' %]>Priority 4</option>[% END %]
   </select>
   &nbsp;&nbsp;&nbsp;
-  Override Restrictions (sets priority 4)
-  <input type="checkbox" name="override" [% (crms.IsUserSuperAdmin())? '':'disabled="disabled"' %][% override? 'checked="checked"':'' %]/>
+  Override Restrictions
+  <input type="checkbox" id="ORCheck" name="override" [% (pri<=2)? 'disabled="disabled"':'' %][% override? 'checked="checked"':'' %]/>
   &nbsp;&nbsp;&nbsp;
   <input type="submit" value="Submit"/>
 </form>
 <br/>
 
-<p class="smallishText">Priority 2 can be be reviewed by anyone.<br/>
-Priority 3 can only be reviewed by an expert.<br/>
-Priority 4 can only be added or reviewed by a super admin.<br/>
-<i>Override Restrictions</i> allows you to enter government documents,
-non-books, and items from before 1923 or after [% (crms.IsUserAdmin())? 1977:1963 %].<br/>
+<p class="smallishText">Priority 2 can be added by an expert, admin, or superadmin and can be reviewed by anyone.<br/>
+Priority 3 can only be added or reviewed by an expert, admin, or superadmin.<br/>
+&nbsp;&nbsp;
+<i>Override Restrictions</i> allows you to add US books published 1964-1977.<br/>
+[% IF super %]
+  Priority 4 can only be added or reviewed by a super admin.<br/>
+&nbsp;&nbsp;<i>Override Restrictions</i> allows you to add any works in HathiTrust,
+  including government documents, non-books, and items from before 1923 or after 1977.<br/>
+[% END %]
 </p>
 
 <br/>
@@ -86,7 +92,7 @@ non-books, and items from before 1923 or after [% (crms.IsUserAdmin())? 1977:196
   <table class="exportStats" style="width:auto;">
   <tr><th>ID</th><th>Title</th><th>Author</th><th>Pub&nbsp;Date</th><th>Added</th><th>Status</th><th>Priority</th><th>Issues</th><th>Historical&nbsp;Reviews</th></tr>
   [% FOREACH r IN ref %]
-    [% vs = crms.GetViolations(r.0, undef, r.6) %]
+    [% vs = crms.GetViolations(r.0) %]
     <tr><td>
     [% IF r.5 > 0 %]
       <a href="/cgi/c/crms/crms?p=adminReviews&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
@@ -100,7 +106,7 @@ non-books, and items from before 1923 or after [% (crms.IsUserAdmin())? 1977:196
     <td>[% r.4 %]</td>
     <td>[% r.5 %]</td>
     <td>[% crms.StripDecimal(r.6) %]</td>
-    <td>[% vs %]</td>
+    <td>[% vs.join('; ') %]</td>
     [% sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='" _ r.0 _ "'" %]
     <td>[% crms.SimpleSqlGet(sql) %]</td>
   </tr>
