@@ -8,8 +8,10 @@
 [% ids = cgi.param('ids') %]
 [% pri = cgi.param('priority') %]
 [% override = cgi.param('override') %]
-[% IF NOT pri %][% pri = 0 %][% END %]
 [% super = crms.IsUserSuperAdmin() %]
+[% admin = crms.IsUserAdmin() %]
+[% IF NOT pri %][% pri = 0 %][% END %]
+[% IF NOT admin %][% override = 0 %][% END %]
 
 <h2>Add Volumes to the Queue:</h2>
 These items will take priority in the review process.
@@ -19,15 +21,21 @@ These items will take priority in the review process.
   Entries that don't have a namespace will be given an <code>mdp.</code> prefix.</p>
   <input type="hidden" name="p" value="queueAdd"/>
   <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;">[% ids %]</textarea><br/>
+  [% IF admin %]
   <select name="priority" onchange="document.getElementById('ORCheck').disabled=(this.selectedIndex==0||this.selectedIndex==1);">
+  [% ELSE %]
+  <select name="priority">
+  [% END %]
     <option value="0" [% (pri==0)? 'selected="selected"':'' %]>Priority 0</option>
     <option value="2" [% (pri==2)? 'selected="selected"':'' %]>Priority 2</option>
     <option value="3" [% (pri==3)? 'selected="selected"':'' %]>Priority 3</option>
     [% IF super %]<option value="4" [% (pri==4)? 'selected="selected"':'' %]>Priority 4</option>[% END %]
   </select>
   &nbsp;&nbsp;&nbsp;
+  [% IF admin %]
   Override Restrictions
   <input type="checkbox" id="ORCheck" name="override" [% (pri<=2)? 'disabled="disabled"':'' %][% override? 'checked="checked"':'' %]/>
+  [% END %]
   &nbsp;&nbsp;&nbsp;
   <input type="submit" value="Submit"/>
 </form>
@@ -35,8 +43,10 @@ These items will take priority in the review process.
 
 <p class="smallishText">Priority 2 can be added by an expert, admin, or superadmin and can be reviewed by anyone.<br/>
 Priority 3 can only be added or reviewed by an expert, admin, or superadmin.<br/>
+[% IF admin %]
 &nbsp;&nbsp;
 <i>Override Restrictions</i> allows you to add US books published 1964-1977.<br/>
+[% END %]
 [% IF super %]
   Priority 4 can only be added or reviewed by a super admin.<br/>
 &nbsp;&nbsp;<i>Override Restrictions</i> allows you to add any works in HathiTrust,
@@ -59,7 +69,8 @@ Priority 3 can only be added or reviewed by an expert, admin, or superadmin.<br/
     [% status = status.substr(1, status.length()) %]
     [% IF err == 0 %]
       [% adds = adds + 1 %]
-      <td nowrap="nowrap">OK[% ($status)? ": $status":'' %]</td>
+      [% status = crms.GetViolations(id).join('; ') %]
+      <td nowrap="nowrap">OK[% IF status.length() %]<span style='color:red;'> ($status)</span>[% END %]</td>
     [% ELSIF err == 1 %]
       <td nowrap="nowrap" style="color:red">Could not add: $status</td>
       [% skips = skips + 1 %]
