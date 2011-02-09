@@ -18,8 +18,9 @@ use Test::More;
 
 
 my %opts;
-getopts('pt', \%opts);
+getopts('rpt', \%opts);
 
+my $renDate = $opts{'d'};
 my $production = $opts{'p'};
 my $training = $opts{'t'};
 my $dev = 'moseshll';
@@ -70,7 +71,7 @@ is($crms->TwoWorkingDays('2010-07-30'), '2010-08-03 23:59:59',           '2 WDs 
 
 is($crms->GetUserAffiliation('hansone@indiana.edu'), 'IU',               'IU affiliation');
 is($crms->GetUserAffiliation('aseeger@library.wisc.edu'), 'UW',          'UW affiliation');
-is(scalar @{ $crms->GetUsersWithAffiliation('IU') }, 4,                  'IU affiliates count');
+is(scalar @{ $crms->GetUsersWithAffiliation('IU') }, 5,                  'IU affiliates count');
 is(scalar @{ $crms->GetUsersWithAffiliation('UW') }, 5,                  'UW affiliates count');
 
 is($crms->IsReviewCorrect('uc1.b3763822','dfulmer','2009-11-02') ,0,     'Correctness: uc1.b3763822 1');
@@ -79,14 +80,36 @@ is($crms->IsReviewCorrect('uc1.b3763822','gnichols123','2009-11-04') ,1, 'Correc
 is($crms->IsReviewCorrect('uc1.b3763822','jaheim123','2009-11-04') ,0,   'Correctness: uc1.b3763822 4');
 is($crms->IsReviewCorrect('uc1.b3763822','annekz','2009-11-09') ,1,      'Correctness: uc1.b3763822 5');
 
-my $sql = "SELECT ID,DREG FROM stanford";
-my $ref = $crms->get('dbh')->selectall_arrayref($sql);
-foreach my $row (@{$ref})
+my $record = $crms->GetRecordMetadata('mdp.39015011285692');
+is (scalar @{$crms->GetViolations('mdp.39015011285692',$record,0,0)}, 1,    'Violations: mdp.39015011285692 P0');
+is (scalar @{$crms->GetViolations('mdp.39015011285692',$record,1,0)}, 1,    'Violations: mdp.39015011285692 P1');
+is (scalar @{$crms->GetViolations('mdp.39015011285692',$record,2,0)}, 1,    'Violations: mdp.39015011285692 P2');
+is (scalar @{$crms->GetViolations('mdp.39015011285692',$record,3,0)}, 1,    'Violations: mdp.39015011285692 P3');
+is (scalar @{$crms->GetViolations('mdp.39015011285692',$record,3,1)}, 0,    'Violations: mdp.39015011285692 P3 1');
+is (scalar @{$crms->GetViolations('mdp.39015011285692',$record,4,0)}, 0,    'Violations: mdp.39015011285692 P4');
+is (scalar @{$crms->GetViolations('mdp.39015011285692',$record,4,1)}, 0,    'Violations: mdp.39015011285692 P4 1');
+
+$record = $crms->GetRecordMetadata('mdp.39015082195432');
+is (scalar @{$crms->GetViolations('mdp.39015082195432',$record,0,0)}, 3,    'Violations: mdp.39015082195432 P0');
+is (scalar @{$crms->GetViolations('mdp.39015082195432',$record,1,0)}, 3,    'Violations: mdp.39015082195432 P1');
+is (scalar @{$crms->GetViolations('mdp.39015082195432',$record,2,0)}, 3,    'Violations: mdp.39015082195432 P2');
+is (scalar @{$crms->GetViolations('mdp.39015082195432',$record,3,0)}, 3,    'Violations: mdp.39015082195432 P3');
+is (scalar @{$crms->GetViolations('mdp.39015082195432',$record,3,1)}, 3,    'Violations: mdp.39015082195432 P3 1');
+is (scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,0)}, 3,    'Violations: mdp.39015082195432 P4');
+is (scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,1)}, 0,    'Violations: mdp.39015082195432 P4 1');
+
+if ($renDate)
 {
-  my $id = $row->[0];
-  my $dreg = $row->[1];
-  ok(('' eq $crms->CheckRenDate($dreg)),                                 "CheckRenDate($id)");
+  my $sql = "SELECT ID,DREG FROM stanford";
+  my $ref = $crms->get('dbh')->selectall_arrayref($sql);
+  foreach my $row (@{$ref})
+  {
+    my $id = $row->[0];
+    my $dreg = $row->[1];
+    ok(('' eq $crms->CheckRenDate($dreg)),                                 "CheckRenDate($id)");
+  }
 }
+
 
 done_testing();
 
