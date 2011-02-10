@@ -839,7 +839,11 @@ sub AddItemToQueueOrSetItemActive
       }
       $stat = 3;
     }
-    push @msgs, "already has a <a href='?p=adminReviews&amp;search1=Identifier&amp;search1value=$id' target='_blank'>review</a>" if $count;
+    if ($count)
+    {
+      my $rlink = sprintf "already has $count <a href='?p=adminReviews&amp;search1=Identifier&amp;search1value=$id' target='_blank'>review%s</a>", ($count==1)? '':'s';
+      push @msgs, $rlink;
+    }
   }
   else
   {
@@ -1529,15 +1533,11 @@ sub CreateSQLForReviews
   $sql .= " ORDER BY $order $dir $limit ";
   #print "$sql<br/>\n";
   my $countSql = $sql;
-  $countSql =~ s/(SELECT\s+).+?(FROM.+)/$1 COUNT(*) $2/i;
+  $countSql =~ s/(SELECT\s+).+?(FROM.+)/$1 COUNT(r.id),COUNT(DISTINCT r.id) $2/i;
   $countSql =~ s/(LIMIT\s\d+(,\s*\d+)?)//;
-  #print "$countSql<br/>\n";
-  my $totalReviews = $self->SimpleSqlGet($countSql);
-  $countSql = $sql;
-  $countSql =~ s/(SELECT\s?).+?(FROM.+)/$1 COUNT(DISTINCT r.id) $2/i;
-  $countSql =~ s/(LIMIT\s\d+(,\s*\d+)?)//;
-  #print "$countSql<br/>\n";
-  my $totalVolumes = $self->SimpleSqlGet($countSql);
+  my $ref = $self->get('dbh')->selectall_arrayref($countSql);
+  my $totalReviews = $ref->[0]->[0];
+  my $totalVolumes = $ref->[0]->[1];
   my $n = POSIX::ceil($offset/$pagesize+1);
   my $of = POSIX::ceil($totalVolumes/$pagesize);
   $n = 0 if $of == 0;
