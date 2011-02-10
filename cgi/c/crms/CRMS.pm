@@ -4225,7 +4225,7 @@ sub ValidateSubmission2
   my $errorMsg = '';
 
   my $noteError = 0;
-  my $hasren = ( $renNum && $renDate );
+  my $hasren = ($renNum && $renDate);
   ## Someone else has the item locked?
   $errorMsg = 'This item has been locked by another reviewer. Please Cancel.' if $self->IsLockedForOtherUser($id);
   ## check user
@@ -4280,15 +4280,24 @@ sub ValidateSubmission2
       $errorMsg .= 'pd/ren should not include renewal info. ';
     }
   }
-  ## pd/ncn requires a ren number
+  ## pd/ncn requires a ren number in most cases
+  ## For superadmins, ren info is optional for 23-63 and disallowed for 64-77
+  ## For admins, ren info is optional only if Note and category 'Expert Note' for 23-63 and disallowed for 64-77
   ## For non-admins, ren info is required.
-  ## For admins, ren info is required for 23-63 and disallowed for 64-77
   if ($attr == 1 && $reason == 2)
   {
-    if ($self->IsUserAdmin($user))
+    if ($self->IsUserSuperAdmin($user))
     {
       $errorMsg .= 'Renewal no longer required for works published after 1963. ' if $date > 1963 && $hasren;
-      $errorMsg .= 'pd/ncn must include renewal id and renewal date. ' if $date <= 1963 && !$hasren;
+      #$errorMsg .= 'pd/ncn must include renewal id and renewal date. ' if $date <= 1963 && !$hasren;
+    }
+    elsif ($self->IsUserAdmin($user))
+    {
+      $errorMsg .= 'Renewal no longer required for works published after 1963. ' if $date > 1963 && $hasren;
+      if ($date <= 1963 && ($category ne 'Expert Note' || !$note) && !$hasren)
+      {
+        $errorMsg .= 'pd/ncn must include either renewal id and renewal date, or note category "Expert Note". ';
+      }
     }
     else
     {
