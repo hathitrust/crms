@@ -1,8 +1,0 @@
-[% page = cgi.param('p') %]
-</div>
-[% FOREACH error IN crms.GetErrors %]
-  [% IF page == 'adminHistoricalReviews' && error.match('MARC') %][% NEXT %][% END %]
-  <strong>ERROR: [% error %]</strong><br/>
-[% END %]
-</body>
-</html>
