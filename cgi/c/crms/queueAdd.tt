@@ -45,12 +45,12 @@ These items will take priority in the review process.
 Priority 3 can only be added or reviewed by an expert, admin, or superadmin.<br/>
 [% IF admin %]
 &nbsp;&nbsp;
-<i>Override Restrictions</i> allows you to add US books published 1964-1977.<br/>
+<i>Override Restrictions</i> allows admins and superadmins to add US books published 1964-1977.<br/>
 [% END %]
 [% IF super %]
   Priority 4 can only be added or reviewed by a super admin.<br/>
-&nbsp;&nbsp;<i>Override Restrictions</i> allows you to add any works in HathiTrust,
-  including government documents, non-books, and items from before 1923 or after 1977.<br/>
+&nbsp;&nbsp;<i>Override Restrictions</i> allows superadmins to add any works in HathiTrust, including<br/>
+&nbsp;&nbsp;government documents, foreign works, non-books, and items from before 1923 or after 1977.<br/>
 [% END %]
 </p>
 
