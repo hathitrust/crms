@@ -81,22 +81,50 @@ is($crms->IsReviewCorrect('uc1.b3763822','jaheim123','2009-11-04') ,0,   'Correc
 is($crms->IsReviewCorrect('uc1.b3763822','annekz','2009-11-09') ,1,      'Correctness: uc1.b3763822 5');
 
 my $record = $crms->GetRecordMetadata('mdp.39015011285692');
-is (scalar @{$crms->GetViolations('mdp.39015011285692',$record,0,0)}, 1,    'Violations: mdp.39015011285692 P0');
-is (scalar @{$crms->GetViolations('mdp.39015011285692',$record,1,0)}, 1,    'Violations: mdp.39015011285692 P1');
-is (scalar @{$crms->GetViolations('mdp.39015011285692',$record,2,0)}, 1,    'Violations: mdp.39015011285692 P2');
-is (scalar @{$crms->GetViolations('mdp.39015011285692',$record,3,0)}, 1,    'Violations: mdp.39015011285692 P3');
-is (scalar @{$crms->GetViolations('mdp.39015011285692',$record,3,1)}, 0,    'Violations: mdp.39015011285692 P3 1');
-is (scalar @{$crms->GetViolations('mdp.39015011285692',$record,4,0)}, 0,    'Violations: mdp.39015011285692 P4');
-is (scalar @{$crms->GetViolations('mdp.39015011285692',$record,4,1)}, 0,    'Violations: mdp.39015011285692 P4 1');
+is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,0,0)}, 1,    'Violations: mdp.39015011285692 P0');
+is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,1,0)}, 1,    'Violations: mdp.39015011285692 P1');
+is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,2,0)}, 1,    'Violations: mdp.39015011285692 P2');
+is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,3,0)}, 1,    'Violations: mdp.39015011285692 P3');
+is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,3,1)}, 0,    'Violations: mdp.39015011285692 P3 1');
+is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,4,0)}, 0,    'Violations: mdp.39015011285692 P4');
+is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,4,1)}, 0,    'Violations: mdp.39015011285692 P4 1');
 
 $record = $crms->GetRecordMetadata('mdp.39015082195432');
-is (scalar @{$crms->GetViolations('mdp.39015082195432',$record,0,0)}, 3,    'Violations: mdp.39015082195432 P0');
-is (scalar @{$crms->GetViolations('mdp.39015082195432',$record,1,0)}, 3,    'Violations: mdp.39015082195432 P1');
-is (scalar @{$crms->GetViolations('mdp.39015082195432',$record,2,0)}, 3,    'Violations: mdp.39015082195432 P2');
-is (scalar @{$crms->GetViolations('mdp.39015082195432',$record,3,0)}, 3,    'Violations: mdp.39015082195432 P3');
-is (scalar @{$crms->GetViolations('mdp.39015082195432',$record,3,1)}, 3,    'Violations: mdp.39015082195432 P3 1');
-is (scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,0)}, 3,    'Violations: mdp.39015082195432 P4');
-is (scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,1)}, 0,    'Violations: mdp.39015082195432 P4 1');
+is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,0,0)}, 3,    'Violations: mdp.39015082195432 P0');
+is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,1,0)}, 3,    'Violations: mdp.39015082195432 P1');
+is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,2,0)}, 3,    'Violations: mdp.39015082195432 P2');
+is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,3,0)}, 3,    'Violations: mdp.39015082195432 P3');
+is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,3,1)}, 3,    'Violations: mdp.39015082195432 P3 1');
+is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,0)}, 3,    'Violations: mdp.39015082195432 P4');
+is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,1)}, 0,    'Violations: mdp.39015082195432 P4 1');
+
+ok('Renewal no longer required for works published after 1963. ' eq
+   $crms->ValidateSubmission2('mdp.39015011285692','annekz',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin >63 +ren');
+ok('' eq
+   $crms->ValidateSubmission2('mdp.39015011285692','annekz',1,2,undef,undef,undef,undef),     'pd/ncn superadmin >63 -ren');
+ok('' eq
+   $crms->ValidateSubmission2('uc1.31822009761677','annekz',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin <63 +ren');
+ok('' eq
+   $crms->ValidateSubmission2('uc1.31822009761677','annekz',1,2,undef,undef,undef,undef),     'pd/ncn superadmin <63 -ren');
+
+ok('Renewal no longer required for works published after 1963. ' eq
+   $crms->ValidateSubmission2('mdp.39015011285692','gnichols123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin >63 +ren');
+ok('' eq
+   $crms->ValidateSubmission2('mdp.39015011285692','gnichols123',1,2,undef,undef,undef,undef),     'pd/ncn admin >63 -ren');
+ok('' eq
+   $crms->ValidateSubmission2('uc1.31822009761677','gnichols123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin <63 +ren -note');
+ok('pd/ncn must include either renewal id and renewal date, or note category "Expert Note". ' eq
+   $crms->ValidateSubmission2('uc1.31822009761677','gnichols123',1,2,undef,undef,undef,undef),     'pd/ncn admin <63 -ren -note');
+ok('' eq
+   $crms->ValidateSubmission2('uc1.31822009761677','gnichols123',1,2,'blah','Expert Note','R000','1Jan60'), 'pd/ncn admin <63 +ren +note');
+ok('' eq
+   $crms->ValidateSubmission2('uc1.31822009761677','gnichols123',1,2,'blah','Expert Note',undef,undef),     'pd/ncn admin <63 -ren +note');
+
+ok('' eq
+   $crms->ValidateSubmission2('uc1.31822009761677','dmcw123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn expert <63 +ren');
+ok('pd/ncn must include renewal id and renewal date. ' eq
+   $crms->ValidateSubmission2('uc1.31822009761677','dmcw123',1,2,undef,undef,undef,undef),     'pd/ncn expert <63 -ren');
+
 
 if ($renDate)
 {
