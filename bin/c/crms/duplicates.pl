@@ -365,15 +365,18 @@ foreach my $row ( @{$ref} )
   #print "For $id the situation is '$situation'\n" if $verbose;
 }
 
-print "</table></body></html>\n\n" if $report eq 'html';
+print "</table>\n" if $report eq 'html';
 close $summfh if $summfh;
+my $n = 0;
 foreach my $cat (sort keys %counts)
 {
-  printf "Count for $cat: %d\n", $counts{$cat} if $verbose;
+  printf "Count for $cat: %d\n", $counts{$cat} if scalar keys %counts > 0;
+  $n += $counts{$cat};
 }
+printf "Total System IDs: $n\n";
 
 print "Warning: $_\n" for @{$crms->GetErrors()};
 
 my $hashref = $crms->GetSdrDb()->{mysql_dbd_stats};
 printf "SDR Database OK reconnects: %d, bad reconnects: %d\n", $hashref->{'auto_reconnects_ok'}, $hashref->{'auto_reconnects_failed'} if $verbose;
-
+print "</body></html>\n\n" if $report eq 'html';
