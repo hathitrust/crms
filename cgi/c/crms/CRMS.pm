@@ -16,6 +16,7 @@ use Date::Calendar::Profiles qw( $Profiles );
 use POSIX qw(strftime);
 use DBI qw(:sql_types);
 use List::Util qw(min max);
+use JSON;
 
 binmode(STDOUT, ":utf8"); #prints characters in utf8
 
@@ -5057,6 +5058,7 @@ sub GetRecordMetadata
   my $self = shift;
   my $id   = shift;
 
+  return $self->GetMirlynMetadata($id);
   my $parser = $self->get( 'parser' );    
   if ( ! $id ) { $self->SetError( "no volume id given: $id" ); return 0; }
   $id = lc $id;
@@ -5124,8 +5126,8 @@ sub GetMirlynMetadata
 }
 
 ## ----------------------------------------------------------------------------
-##  Function:   get the mirlyn ID for a given volume id, locally of from aleph;
-##              updates local system table if necessary.
+##  Function:   get the mirlyn ID for a given volume id using the HT Bib API
+##              update local system table if necessary.
 ##  Parameters: volume id
 ##  Return:     system id
 ## ----------------------------------------------------------------------------
@@ -5139,8 +5141,7 @@ sub BarcodeToId
   $sysid = $self->SimpleSqlGet($sql);
   if (!$sysid)
   {
-    my $bc2metaUrl = $self->get( 'bc2metaUrl' );
-    my $url = $bc2metaUrl . "?id=$id" . "&no_meta=1";
+    my $url = "http://catalog.hathitrust.org/api/volumes/brief/htid/$id.json";
     my $ua = LWP::UserAgent->new;
     $ua->timeout( 1000 );
     my $req = HTTP::Request->new( GET => $url );
@@ -5150,8 +5151,12 @@ sub BarcodeToId
       $self->SetError( $url . ' failed: ' . $res->message() );
       return;
     }
-    $res->content =~ m,<doc_number>\s*(\d+)\s*</doc_number>,s;
-    $sysid = $1;
+    my $json = JSON->new;
+    printf "%s\n", $res->content;
+    my $records = $json->decode( $res->content )->{'records'};
+    return unless ref $records eq "HASH";
+    my @keys = keys %$records;
+    $sysid = $keys[0];
     my $value = ($sysid)? "'$sysid'":'NULL';
     $sql = "REPLACE INTO system (id,sysid) VALUES ('$id',$value)";
     $self->PrepareSubmitSql($sql);
