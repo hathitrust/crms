@@ -5058,7 +5058,8 @@ sub GetRecordMetadata
   my $self = shift;
   my $id   = shift;
 
-  return $self->GetMirlynMetadata($id);
+  my $sysid = $self->BarcodeToId($id);
+  return $self->GetMirlynMetadata($sysid);
   my $parser = $self->get( 'parser' );    
   if ( ! $id ) { $self->SetError( "no volume id given: $id" ); return 0; }
   $id = lc $id;
@@ -5136,7 +5137,7 @@ sub BarcodeToId
   my $self = shift;
   my $id   = shift;
 
-  my $sysid;
+  my $sysid = undef;
   my $sql = "SELECT sysid FROM system WHERE id='$id'";
   $sysid = $self->SimpleSqlGet($sql);
   if (!$sysid)
@@ -5152,14 +5153,15 @@ sub BarcodeToId
       return;
     }
     my $json = JSON->new;
-    printf "%s\n", $res->content;
     my $records = $json->decode( $res->content )->{'records'};
-    return unless ref $records eq "HASH";
-    my @keys = keys %$records;
-    $sysid = $keys[0];
-    my $value = ($sysid)? "'$sysid'":'NULL';
-    $sql = "REPLACE INTO system (id,sysid) VALUES ('$id',$value)";
-    $self->PrepareSubmitSql($sql);
+    if ('HASH' eq ref $records)
+    {
+      my @keys = keys %$records;
+      $sysid = $keys[0];
+      my $value = ($sysid)? "'$sysid'":'NULL';
+      $sql = "REPLACE INTO system (id,sysid) VALUES ('$id',$value)";
+      $self->PrepareSubmitSql($sql);
+    }
   }
   return $sysid;
 }
