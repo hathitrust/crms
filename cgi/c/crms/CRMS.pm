@@ -654,7 +654,7 @@ sub GetViolations
   $record =  $self->GetRecordMetadata($id) unless $record;
   if (!$record)
   {
-    push @errs, 'not found in Mirlyn';
+    push @errs, 'not found in HathiTrust';
   }
   elsif ($priority < 4 || !$override)
   {
