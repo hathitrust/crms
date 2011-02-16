@@ -6263,6 +6263,7 @@ sub SanityCheckDB
   my $dbh = $self->get( 'dbh' );
   my $vidRE = '^[a-z]+\d?\..+';
   my $pdRE = '^[1-9]\d\d\d-\d\d-\d\d$';
+  my @errs = ();
   # ======== bibdata ========
   my $table = 'bibdata';
   # Volume ID must not have any spaces before, after, or in.
@@ -6273,14 +6274,14 @@ sub SanityCheckDB
   {
     my $md = $self->MetadataURL($row->[0]);
     $md =~ s/&/&amp;/g;
-    $self->SetError(sprintf("$table __ illegal volume id__ '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table __ illegal pub_date for <a href='%s' target='_blank'>%s</a>__ %s", $md, $row->[0], $row->[1])) unless $row->[1] =~ m/$pdRE/;
-    #$self->SetError(sprintf("$table __ no author for %s__ '%s'", $row->[0], $row->[2])) if $row->[2] eq '';
-    $self->SetError(sprintf("$table __ no title for <a href='%s' target='_blank'>%s</a>__ '%s'", $md, $row->[0], $row->[3])) if $row->[3] eq '';
-    $self->SetError(sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
-    $self->SetError(sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
-    $self->SetError(sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2])) if $row->[2] =~ m/.*?\?\?.*/;
-    $self->SetError(sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3])) if $row->[3] =~ m/.*?\?\?.*/;
+    push @errs, sprintf("$table __ illegal volume id__ '%s'", $row->[0]) unless $row->[0] =~ m/$vidRE/;
+    push @errs, sprintf("$table __ illegal pub_date for <a href='%s' target='_blank'>%s</a>__ %s", $md, $row->[0], $row->[1]) unless $row->[1] =~ m/$pdRE/;
+    #push @errs, sprintf("$table __ no author for %s__ '%s'", $row->[0], $row->[2]) if $row->[2] eq '';
+    push @errs, sprintf("$table __ no title for <a href='%s' target='_blank'>%s</a>__ '%s'", $md, $row->[0], $row->[3]) if $row->[3] eq '';
+    push @errs, sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2]) if $self->Mojibake($row->[2]);
+    push @errs, sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3]) if $self->Mojibake($row->[3]);
+    push @errs, sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2]) if $row->[2] =~ m/.*?\?\?.*/;
+    push @errs, sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3]) if $row->[3] =~ m/.*?\?\?.*/;
   }
   # ======== candidates ========
   $table = 'candidates';
@@ -6290,13 +6291,13 @@ sub SanityCheckDB
   {
     my $md = $self->MetadataURL($row->[0]);
     $md =~ s/&/&amp;/g;
-    $self->SetError(sprintf("$table __ illegal volume id__ '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table __ illegal pub_date for <a href='%s' target='_blank'>%s</a>__ %s", $md, $row->[0], $row->[1])) unless $row->[1] =~ m/$pdRE/;
-    $self->SetError(sprintf("$table __ no title for %s__ '%s'", $row->[0], $row->[3])) if $row->[3] eq '';
-    $self->SetError(sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2])) if $self->Mojibake($row->[2]);
-    $self->SetError(sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3])) if $self->Mojibake($row->[3]);
-    $self->SetError(sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2])) if $row->[2] =~ m/.*?\?\?.*/;
-    $self->SetError(sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3])) if $row->[3] =~ m/.*?\?\?.*/;
+    push @errs, sprintf("$table __ illegal volume id__ '%s'", $row->[0]) unless $row->[0] =~ m/$vidRE/;
+    push @errs, sprintf("$table __ illegal pub_date for <a href='%s' target='_blank'>%s</a>__ %s", $md, $row->[0], $row->[1]) unless $row->[1] =~ m/$pdRE/;
+    push @errs, sprintf("$table __ no title for %s__ '%s'", $row->[0], $row->[3]) if $row->[3] eq '';
+    push @errs, sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2]) if $self->Mojibake($row->[2]);
+    push @errs, sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3]) if $self->Mojibake($row->[3]);
+    push @errs, sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2]) if $row->[2] =~ m/.*?\?\?.*/;
+    push @errs, sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3]) if $row->[3] =~ m/.*?\?\?.*/;
   }
   # ======== exportdata ========
   # time must be in a format like 2009-07-16 07:00:02
@@ -6308,19 +6309,19 @@ sub SanityCheckDB
   $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
-    $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[1], $row->[0])) unless $row->[0] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
-    $self->SetError(sprintf("$table __ illegal volume id__ '%s'", $row->[1])) unless $row->[1] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table __ illegal user for %s__ '%s' (should be 'crms')", $row->[1])) unless $row->[4] eq 'crms';
-    $self->SetError(sprintf("$table __ NULL src for %s__ ", $row->[1])) unless $row->[4];
+    push @errs, sprintf("$table __ illegal time for %s__ '%s'", $row->[1], $row->[0]) unless $row->[0] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
+    push @errs, sprintf("$table __ illegal volume id__ '%s'", $row->[1]) unless $row->[1] =~ m/$vidRE/;
+    push @errs, sprintf("$table __ illegal user for %s__ '%s' (should be 'crms')", $row->[1]) unless $row->[4] eq 'crms';
+    push @errs, sprintf("$table __ NULL src for %s__ ", $row->[1]) unless $row->[4];
   }
   # All gid/id must match gid/id in historicalreviews
   $sql = "SELECT e.gid,e.id,h.id,e.src,h.source FROM $table e INNER JOIN historicalreviews h ON e.gid=h.gid WHERE e.id!=h.id OR e.src!=h.source";
   $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
-    $self->SetError(sprintf("$table __ Nonmatching id for gid %s__ %s vs %s", $row->[0], $row->[1], $row->[2])) if $row->[1] ne $row->[2];
+    push @errs, sprintf("$table __ Nonmatching id for gid %s__ %s vs %s", $row->[0], $row->[1], $row->[2]) if $row->[1] ne $row->[2];
     # In one unusual case the below can happen: nonmatching sources.
-    #$self->SetError(sprintf("$table __ Nonmatching src for gid %s__ %s vs%s", $row->[0], $row->[3], $row->[4])) if $row->[3] ne $row->[4];
+    #push @errs, sprintf("$table __ Nonmatching src for gid %s__ %s vs%s", $row->[0], $row->[3], $row->[4]) if $row->[3] ne $row->[4];
   }
   # ======== exportrecord ========
   $table = 'exportrecord';
@@ -6328,7 +6329,7 @@ sub SanityCheckDB
   $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
-    $self->SetError(sprintf("$table __ illegal time__ %s", $row->[0]));
+    push @errs, sprintf("$table __ illegal time__ %s", $row->[0]);
   }
   # ======== reviews ========
   $table = 'reviews';
@@ -6336,11 +6337,11 @@ sub SanityCheckDB
   $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
-    $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
-    $self->SetError(sprintf("$table __ spaces in renNum for %s__ '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
-    $self->SetError(sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[10])) unless $self->IsRenDate($row->[10]);
-    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[12])) unless $row->[11] eq '' or $self->IsValidCategory($row->[11]);
+    push @errs, sprintf("$table __ illegal volume id '%s'", $row->[0]) unless $row->[0] =~ m/$vidRE/;
+    push @errs, sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1]) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
+    push @errs, sprintf("$table __ spaces in renNum for %s__ '%s'", $row->[0], $row->[6]) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
+    push @errs, sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[10]) unless $self->IsRenDate($row->[10]);
+    push @errs, sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[12]) unless $row->[11] eq '' or $self->IsValidCategory($row->[11]);
   }
   # ======== historicalreviews ========
   $table = 'historicalreviews';
@@ -6349,17 +6350,17 @@ sub SanityCheckDB
   my %stati = (1=>1,4=>1,5=>1,6=>1,7=>1);
   foreach my $row ( @{$rows} )
   {
-    $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
-    $self->SetError(sprintf("$table __ spaces in renNum for %s__ '%s'", $row->[0], $row->[6])) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
-    $self->SetError(sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[10])) unless $self->IsRenDate($row->[10]);
-    $self->SetError(sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[11])) unless $row->[11] eq '' or $self->IsValidCategory($row->[11]);
-    $self->SetError(sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[12])) unless $stati{$row->[12]};
+    push @errs, sprintf("$table __ illegal volume id '%s'", $row->[0]) unless $row->[0] =~ m/$vidRE/;
+    push @errs, sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1]) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
+    push @errs, sprintf("$table __ spaces in renNum for %s__ '%s'", $row->[0], $row->[6]) if $row->[6] =~ m/(^\s+.*)|(.*?\s+$)/;
+    push @errs, sprintf("$table __ illegal renDate for %s__ '%s' (should be like '14Oct70')", $row->[0], $row->[10]) unless $self->IsRenDate($row->[10]);
+    push @errs, sprintf("$table __ illegal category for %s__ '%s'", $row->[0], $row->[11]) unless $row->[11] eq '' or $self->IsValidCategory($row->[11]);
+    push @errs, sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[12]) unless $stati{$row->[12]};
     $sql = "SELECT id,status,gid,SUM(expert) AS ct FROM $table WHERE status=5 OR status=6 GROUP BY gid HAVING ct=0";
     $rows = $dbh->selectall_arrayref( $sql );
     foreach my $row ( @{$rows} )
     {
-      $self->SetError(sprintf("$table __ no expert review for status %s %s__ ", $row->[1], $row->[0]));
+      push @errs, sprintf("$table __ no expert review for status %s %s__ ", $row->[1], $row->[0]);
     }
   }
   $sql = "SELECT id,status FROM historicalreviews WHERE legacy=1 AND user NOT LIKE 'rereport%' AND user!='annekz' AND status>3";
@@ -6370,7 +6371,7 @@ sub SanityCheckDB
     $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id' AND legacy=1 AND user='annekz'";
     if (!$self->SimpleSqlGet($sql))
     {
-      $self->SetError(sprintf("$table __ bad status for legacy %s__ %s", $id, $row->[1]));
+      push @errs, sprintf("$table __ bad status for legacy %s__ %s", $id, $row->[1]);
     }
   }
   # ======== queue ========
@@ -6379,16 +6380,17 @@ sub SanityCheckDB
   $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
-    $self->SetError(sprintf("$table __ illegal volume id '%s'", $row->[0])) unless $row->[0] =~ m/$vidRE/;
-    $self->SetError(sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1])) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
-    $self->SetError(sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[2])) unless $row->[2] >= 0 and $row->[2] <= 7;
+    push @errs, sprintf("$table __ illegal volume id '%s'", $row->[0]) unless $row->[0] =~ m/$vidRE/;
+    push @errs, sprintf("$table __ illegal time for %s__ '%s'", $row->[0], $row->[1]) unless $row->[1] =~ m/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/;
+    push @errs, sprintf("$table __ illegal status for %s__ '%s'", $row->[0], $row->[2]) unless $row->[2] >= 0 and $row->[2] <= 7;
     if ($row->[2] == 5 || $row->[6])
     {
       $sql = sprintf("SELECT SUM(expert) FROM reviews WHERE id='%s'", $row->[0]);
       my $sum = $self->SimpleSqlGet($sql);
-      $self->SetError(sprintf("$table __ illegal status/expcnt for %s__ '%s'/'%s' but there are no expert reviews", $row->[0], $row->[2])) unless $sum;
+      push @errs, sprintf("$table __ illegal status/expcnt for %s__ '%s'/'%s' but there are no expert reviews", $row->[0], $row->[2]) unless $sum;
     }
   }
+  return \@errs;
 }
 
 # Looks for stuff that the DB thinks is UTF-8 but is actually ISO Latin-1 8991 Shift-JIS or whatever.

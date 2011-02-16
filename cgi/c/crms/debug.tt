@@ -156,12 +156,12 @@
 [% END %]
 
 [% IF cgi.param('sanityCheck') %]
-  [% crms.SanityCheckDB() %]
-  <h4>[% crms.GetErrors.size %] Items Need Fixed</h4>
+  [% errs = crms.SanityCheckDB() %]
+  <h4>[% errs.size %] Items Need Fixed</h4>
   <table class="exportStats" style='width:100%;'>
   <tr><th>Table</th><th>Explanation</th><th>Value</th><th>Fix</th></tr>
   [% class = 1 %]
-  [% FOREACH error IN crms.GetErrors %]
+  [% FOREACH error IN errs %]
     <tr class='[% (class)? 'purple':'major' %]'>
     [% e = error.split('\s*__\s*') %]
     <td>[% e.0 %]</td>
@@ -184,7 +184,6 @@
     </tr>
     [% class = (class)? 0:1 %]
   [% END %]
-  [% blah = crms.ClearErrors() %]
   </table><br/>
 [% END %]
 
