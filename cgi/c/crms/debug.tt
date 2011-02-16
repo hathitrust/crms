@@ -153,6 +153,7 @@
       [% END %]
     [% END %]
   [% END %]
+  </table>
 [% END %]
 
 [% IF cgi.param('sanityCheck') %]
