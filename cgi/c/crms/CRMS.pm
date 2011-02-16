@@ -5060,37 +5060,6 @@ sub GetRecordMetadata
 
   my $sysid = $self->BarcodeToId($id);
   return $self->GetMirlynMetadata($sysid);
-  my $parser = $self->get( 'parser' );    
-  if ( ! $id ) { $self->SetError( "no volume id given: $id" ); return 0; }
-  $id = lc $id;
-  #my ($ns,$bar) = split(/\./, $id, 2);
-  #my $sysId = $self->BarcodeToId( $id );
-  #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api/marc.xml/uid/$sysId";
-  #my $url = "http://mirlyn-aleph.lib.umich.edu/cgi-bin/api_josh/marc.xml/itemid/$bar";
-  my $url = $self->MetadataURL($id);
-  my $ua = LWP::UserAgent->new;
-  $ua->timeout( 1000 );
-  my $req = HTTP::Request->new( GET => $url );
-  my $res = $ua->request( $req );
-
-  if ( ! $res->is_success ) { $self->SetError( "$url failed: ".$res->message() ); return; }
-
-  my $source;
-  eval {
-    my $content = Encode::decode('utf8', $res->content());
-    $source = $parser->parse_string( $content );
-  };
-  if ($@) { $self->SetError( "failed to parse ($url):$@" ); return; }
-
-  my $errorCode = $source->findvalue( "//*[name()='error']" );
-  if ( $errorCode ne '' )
-  {
-      $self->SetError("Failed to get MARC for $id: $errorCode ($url)");
-      return;
-  }
-  #my ($record) = $source->findnodes( "//record" );
-  my ($record) = $source->findnodes( "." );
-  return $record;
 }
 
 sub GetMirlynMetadata
@@ -5099,7 +5068,7 @@ sub GetMirlynMetadata
   my $id   = shift;
 
   my $parser = $self->get( 'parser' );    
-  if ( ! $id ) { $self->SetError( "no volume id given: $id" ); return 0; }
+  if ( ! $id ) { $self->SetError( "no system id given: '$id'" ); return 0; }
   my $url = "http://mirlyn.lib.umich.edu/Record/$id.xml";
   my $ua = LWP::UserAgent->new;
   $ua->timeout( 1000 );
@@ -5122,7 +5091,7 @@ sub GetMirlynMetadata
       return;
   }
   #my ($record) = $source->findnodes( "//record" );
-  my ($record) = $source->findnodes( "." );
+  my ($record) = $source->findnodes( '.' );
   return $record;
 }
 
@@ -5657,10 +5626,13 @@ sub Logit
 ## ----------------------------------------------------------------------------
 sub SetError
 {
-    my $self   = shift;
-    my $error  = shift;
-    my $errors = $self->get( 'errors' );
-    push @{$errors}, $error;
+  my $self   = shift;
+  my $error  = shift;
+
+  $error .= "\n";
+  $error .= $self->StackTrace();
+  my $errors = $self->get( 'errors' );
+  push @{$errors}, $error;
 }
 
 sub GetErrors
@@ -6775,5 +6747,21 @@ sub RestoreUnd
     }
   }
 }
+
+sub StackTrace
+{
+  my $self = shift;
+  
+  my ( $path, $line, $subr );
+  my $max_depth = 30;
+  my $i = 1;
+  my $trace = "--- Begin stack trace ---\n";
+  while ( (my @call_details = (caller($i++))) && ($i<$max_depth) )
+  {
+    $trace = "$call_details[1] line $call_details[2] in function $call_details[3]";
+  }
+  return $trace . "--- End stack trace ---\n";
+}
+
 
 1;
