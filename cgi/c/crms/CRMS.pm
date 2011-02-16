@@ -5087,8 +5087,8 @@ sub GetMirlynMetadata
   my $errorCode = $source->findvalue( "//*[name()='error']" );
   if ( $errorCode ne '' )
   {
-      $self->SetError( "$url \nfailed to get MARC for $id: $errorCode " . $res->content() );
-      return;
+    $self->SetError( "$url \nfailed to get MARC for $id: $errorCode " . $res->content() );
+    return;
   }
   #my ($record) = $source->findnodes( "//record" );
   my ($record) = $source->findnodes( '.' );
@@ -6758,7 +6758,7 @@ sub StackTrace
   my $trace = "--- Begin stack trace ---\n";
   while ( (my @call_details = (caller($i++))) && ($i<$max_depth) )
   {
-    $trace = "$call_details[1] line $call_details[2] in function $call_details[3]";
+    $trace .= "$call_details[1] line $call_details[2] in function $call_details[3]\n";
   }
   return $trace . "--- End stack trace ---\n";
 }
