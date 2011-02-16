@@ -124,5 +124,5 @@ Priority 3 can only be added or reviewed by an expert, admin, or superadmin.<br/
   [% END %]
   </table>
 [% END %]
-
+[% blah = crms.ClearErrors() %]
 [% INCLUDE footer.tt %]

@@ -2,7 +2,7 @@
 </div>
 [% FOREACH error IN crms.GetErrors %]
   [% IF page == 'adminHistoricalReviews' && error.match('MARC') %][% NEXT %][% END %]
-  <strong>ERROR: [% error %]</strong><br/>
+  <strong>ERROR: [% error.replace('\n','<br/>') %]</strong><br/>
 [% END %]
 </body>
 </html>

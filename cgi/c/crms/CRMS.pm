@@ -5131,6 +5131,7 @@ sub BarcodeToId
       $sql = "REPLACE INTO system (id,sysid) VALUES ('$id',$value)";
       $self->PrepareSubmitSql($sql);
     }
+    else { $self->SetError( "HT Bib API found no system id for '$id'" ); }
   }
   return $sysid;
 }
