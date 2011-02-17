@@ -1497,9 +1497,11 @@ sub CreateSQLForReviews
   {
     my $doS = 'LEFT JOIN system s ON r.id=s.id';
     $doS = '' unless ($search1 . $search2 . $search3 . $order) =~ m/sysid/;
+    my $doB = 'LEFT JOIN bibdata b ON r.id=b.id';
+    $doB = '' unless ($search1 . $search2 . $search3 . $order) =~ m/^b\./;
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-           'r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, b.title, b.author, YEAR(b.pub_date), r.validated '.
-           "FROM bibdata b INNER JOIN $CRMSGlobals::historicalreviewsTable r ON b.id=r.id $doS";
+           'r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, r.validated '.
+           "FROM $CRMSGlobals::historicalreviewsTable r $doB $doS WHERE r.id IS NOT NULL";
   }
   elsif ( $page eq 'undReviews' )
   {
@@ -2043,6 +2045,7 @@ sub SearchAndDownload
                (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
                "FROM $top INNER JOIN $table r ON b.id=r.id " .
                "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
+        # FIXME: why is the AND r.id=b.id there? It's an inner join already.
         #print "$sql<br/>\n";
         my $ref2;
         eval{$ref2 = $self->get( 'dbh' )->selectall_arrayref( $sql );};
@@ -2243,11 +2246,13 @@ sub GetReviewsRef
       ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds' or $page eq 'adminHolds';
       if ($page eq 'adminHistoricalReviews')
       {
-        my $pubdate = $row->[17];
+        my $pubdate = $self->SimpleSqlGet("SELECT YEAR(pub_date) FROM bibdata WHERE id='$id'");
         $pubdate = '?' unless $pubdate;
         ${$item}{'pubdate'} = $pubdate;
-        ${$item}{'validated'} = $row->[18];
+        ${$item}{'author'} = $self->SimpleSqlGet("SELECT author FROM bibdata WHERE id='$id'");
+        ${$item}{'title'} = $self->SimpleSqlGet("SELECT title FROM bibdata WHERE id='$id'");
         ${$item}{'sysid'} = $self->SimpleSqlGet("SELECT sysid FROM system WHERE id='$id'");
+        ${$item}{'validated'} = $row->[15];
       }
       push( @{$return}, $item );
   }
@@ -4539,18 +4544,18 @@ sub IsProbableGovDoc
   return 0;
 }
 
-
 sub IsFormatBK
 {
   my $self   = shift;
   my $id     = shift;
   my $record = shift;
 
-  if ( ! $record ) { $self->Logit( "failed in IsFormatBK: $id" ); }
-  my $xpath   = q{//*[local-name()='controlfield' and @tag='FMT']};
-  my $leader  = $record->findvalue( $xpath );
-  my $doc     = $leader;
-  return ($doc eq "BK")? 1:0;
+  if ( ! $record ) { $self->Logit( "no record in IsFormatBK: $id" ); }
+  my $nodes = $record->findnodes(q{//*[local-name()='datafield' and @tag='970']});
+  foreach my $node ($nodes->get_nodelist())
+  {
+    return 1 if 'BK' eq $node->findvalue("./*[local-name()='subfield' and \@code='a']");
+  }
 }
 
 sub IsThesis
@@ -5067,32 +5072,42 @@ sub GetMirlynMetadata
   my $self = shift;
   my $id   = shift;
 
-  my $parser = $self->get( 'parser' );    
+  my $ns = 'http://www.loc.gov/MARC21/slim';
   if ( ! $id ) { $self->SetError( "no system id given: '$id'" ); return 0; }
-  my $url = "http://mirlyn.lib.umich.edu/Record/$id.xml";
+  my $url = "http://catalog.hathitrust.org/api/volumes/full/recordnumber/$id.json";
+  #print "$url\n";
   my $ua = LWP::UserAgent->new;
   $ua->timeout( 1000 );
   my $req = HTTP::Request->new( GET => $url );
   my $res = $ua->request( $req );
-
-  if ( ! $res->is_success ) { $self->SetError( "$url failed: ".$res->message() ); return; }
-
-  my $source;
-  eval {
-    my $content = Encode::decode('utf8', $res->content());
-    $source = $parser->parse_string( $content );
-  };
-  if ($@) { $self->SetError( "failed to parse ($url):$@" ); return; }
-
-  my $errorCode = $source->findvalue( "//*[name()='error']" );
-  if ( $errorCode ne '' )
+  if ( ! $res->is_success )
   {
-    $self->SetError( "$url \nfailed to get MARC for $id: $errorCode " . $res->content() );
+    $self->SetError( $url . ' failed: ' . $res->message() );
     return;
   }
-  #my ($record) = $source->findnodes( "//record" );
-  my ($record) = $source->findnodes( '.' );
-  return $record;
+  my $xml = undef;
+  my $json = JSON->new;
+  my $content = $res->content;
+  #print "$content\n";
+  my $records = $json->decode($content)->{'records'};
+  if ('HASH' eq ref $records)
+  {
+    my @keys = keys %$records;
+    $xml = $records->{$keys[0]}->{'marc-xml'};
+  }
+  else { $self->SetError( "HT Bib API found no data for '$id' (got '$content')" ); }
+  #print "\nXML:\n$xml\n\n";
+  my $parser = $self->get( 'parser' );    
+  my $source;
+  eval {
+    $content = Encode::decode('utf8', $content);
+    $source = $parser->parse_string( $xml );
+  };
+  if ($@) { $self->SetError( "failed to parse ($xml):$@" ); return; }
+  my $xpc = XML::LibXML::XPathContext->new($source);
+  $xpc->registerNs(ns => $ns);
+  my @records = $xpc->findnodes('//ns:record');
+  return $records[0];
 }
 
 ## ----------------------------------------------------------------------------
@@ -5122,7 +5137,9 @@ sub BarcodeToId
       return;
     }
     my $json = JSON->new;
-    my $records = $json->decode( $res->content )->{'records'};
+    my $content = $res->content;
+    #print "$content\n";
+    my $records = $json->decode($content)->{'records'};
     if ('HASH' eq ref $records)
     {
       my @keys = keys %$records;
@@ -5131,7 +5148,7 @@ sub BarcodeToId
       $sql = "REPLACE INTO system (id,sysid) VALUES ('$id',$value)";
       $self->PrepareSubmitSql($sql);
     }
-    else { $self->SetError( "HT Bib API found no system id for '$id'" ); }
+    else { $self->SetError( "HT Bib API found no system id for '$id' (got '$content')" ); }
   }
   return $sysid;
 }
