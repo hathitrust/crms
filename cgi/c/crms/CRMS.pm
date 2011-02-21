@@ -178,14 +178,6 @@ sub SimpleSqlGet
 }
 
 
-sub GetCandidatesTime
-{
-  my $self = shift;
-
-  return $self->SimpleSqlGet('SELECT max(time) FROM candidates');
-}
-
-
 sub GetCandidatesSize
 {
   my $self = shift;
@@ -534,7 +526,7 @@ sub EmailReport
   my $self    = shift;
   my $count   = shift;
   my $file    = shift;
-  
+
   my $where = ($self->WhereAmI() or 'Prod');
   my $subject = sprintf('CRMS %s: %d volumes exported to rights db', $where, $count);
   use Mail::Sender;
@@ -566,8 +558,8 @@ sub RemoveFromQueue
   my $self = shift;
   my $id   = shift;
 
-  $self->Logit( "remove $id from queue" );
-  my $sql = "DELETE FROM $CRMSGlobals::queueTable WHERE id='$id'";
+  #$self->Logit( "remove $id from queue" );
+  my $sql = "DELETE FROM queue WHERE id='$id'";
   $self->PrepareSubmitSql( $sql );
 }
 
@@ -584,9 +576,9 @@ sub LoadNewItemsInCandidates
 {
   my $self = shift;
 
-  my $start = $self->GetCandidatesTime();
+  my $start = $self->SimpleSqlGet('SELECT max(time) FROM candidates');
   my $start_size = $self->GetCandidatesSize();
-  print "Before load, the max timestamp in the candidates table $start, and the size is $start_size\n";
+  print "Before load, the max timestamp in the candidates table is $start, and the size is $start_size\n";
   my @und = ();
   my $sdrdbh = $self->GetSdrDb();
   my $sql = "SELECT namespace,id,time FROM rights_current WHERE attr=2 AND reason=1 AND time>'$start' GROUP BY namespace, id";
@@ -604,6 +596,12 @@ sub LoadNewItemsInCandidates
       next;
     }
     my $record = $self->GetRecordMetadata($id);
+    if (!$record)
+    {
+      $self->ClearErrors();
+      print "FIXME: don't know what to do about $id: no metadata available.\n";
+      next;
+    }
     my $errs = $self->GetViolations($id, $record);
     if (scalar @{$errs} == 0)
     {
@@ -5064,7 +5062,7 @@ sub GetRecordMetadata
   my $id   = shift;
 
   my $sysid = $self->BarcodeToId($id);
-  return $self->GetMirlynMetadata($sysid);
+  return $self->GetMirlynMetadata($sysid) if $sysid;
 }
 
 sub GetMirlynMetadata
@@ -5148,7 +5146,7 @@ sub BarcodeToId
       $sql = "REPLACE INTO system (id,sysid) VALUES ('$id',$value)";
       $self->PrepareSubmitSql($sql);
     }
-    else { $self->SetError( "HT Bib API found no system id for '$id' (got '$content')" ); }
+    else { $self->SetError("HT Bib API found no system id for '$id'\nReturned: '$content'\nURL: '$url'"); }
   }
   return $sysid;
 }
