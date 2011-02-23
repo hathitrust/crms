@@ -36,10 +36,7 @@ sub new
   my $errors = [];
   $self->set( 'errors', $errors );
   require $args{'configFile'};
-  $self->set( 'bc2metaUrl', $CRMSGlobals::bc2metaUrl );
-  #$self->set( 'oaiBaseUrl', $CRMSGlobals::oaiBaseUrl );
   $self->set( 'verbose',    $args{'verbose'});
-  $self->set( 'parser',     XML::LibXML->new() );
   $self->set( 'root',       $args{'root'} );
   $self->set( 'dev',        $args{'dev'} );
   $self->set( 'user',       $args{'user'} );
@@ -440,7 +437,7 @@ sub ReviewDuplicateVolumes
     }
     foreach my $id2 (@iddups)
     {
-      my $record = $self->GetRecordMetadata($id2);
+      my $record = $self->GetMetadata($id2);
       print "Updating queue and reviews for $id2 ($sysid from $id)\n" unless $fromcgi;
       my $sql = "REPLACE INTO queue (id,locked,status,pending_status,expcnt,source) VALUES ('$id2','autocrms',5,5,1,'duplicate')";
       $self->PrepareSubmitSql($sql);
@@ -451,7 +448,6 @@ sub ReviewDuplicateVolumes
       $self->UpdateTitle($id2, undef, $record);
       $self->UpdatePubDate($id2, undef, $record);
       $self->UpdateAuthor($id2, undef, $record);
-      $self->PrepareSubmitSql("REPLACE INTO system (id,sysid) VALUES ('$id2','$sysid')");
       push @dups, $id2;
     }
   }
@@ -576,54 +572,31 @@ sub LoadNewItemsInCandidates
 {
   my $self = shift;
 
+  $self->set('nosystem','nosystem');
   my $start = $self->SimpleSqlGet('SELECT max(time) FROM candidates');
   my $start_size = $self->GetCandidatesSize();
   print "Before load, the max timestamp in the candidates table is $start, and the size is $start_size\n";
-  my @und = ();
-  my $sdrdbh = $self->GetSdrDb();
-  my $sql = "SELECT namespace,id,time FROM rights_current WHERE attr=2 AND reason=1 AND time>'$start' GROUP BY namespace, id";
-  my $ref = $sdrdbh->selectall_arrayref( $sql );
-  printf "Checking %d possible additions to candidates\n", scalar @{ $ref };
+  my $sql = "SELECT id,time FROM und WHERE src='no meta'";
+  my $dbh = $self->get('dbh');
+  my $ref = $dbh->selectall_arrayref( $sql );
+  printf "Checking %d possible additions to candidates from und\n", scalar @{ $ref };
   foreach my $row ( @{$ref} )
   {
-    my $id     = $row->[0] . '.' . $row->[1];
-    my $time   = $row->[2];
+    my $id   = $row->[0];
+    my $time = $row->[1];
     
-    $id = lc $id;
-    if ($self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'") > 0)
-    {
-      print "Skip $id -- already in historical reviews\n";
-      next;
-    }
-    my $record = $self->GetRecordMetadata($id);
-    if (!$record)
-    {
-      $self->ClearErrors();
-      print "FIXME: don't know what to do about $id: no metadata available.\n";
-      next;
-    }
-    my $errs = $self->GetViolations($id, $record);
-    if (scalar @{$errs} == 0)
-    {
-      my $src = $self->ShouldVolumeGoInUndTable($id, $record);
-      if ($src)
-      {
-        $sql = "SELECT COUNT(*) FROM und WHERE id='$id'";
-        my $already = (1 == $self->SimpleSqlGet($sql));
-        printf "Skip $id ($src) -- %s in und table\n", ($already)? 'updating':'inserting';
-        $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src','$time')";
-        $self->PrepareSubmitSql( $sql );
-        push @und, $id;
-        next;
-      }
-      $self->AddItemToCandidates($id, $time, $record);
-    }
+    $self->CheckAndLoadItemIntoCandidates($id, $time);
   }
-  printf "Removing %d und volumes from candidates\n", scalar @und;
-  foreach my $id (@und)
+  $sql = "SELECT namespace,id,time FROM rights_current WHERE attr=2 AND reason=1 AND time>'$start' GROUP BY namespace, id";
+  $dbh = $self->GetSdrDb();
+  $ref = $dbh->selectall_arrayref( $sql );
+  printf "Checking %d possible additions to candidates from rights DB\n", scalar @{ $ref };
+  foreach my $row ( @{$ref} )
   {
-    $sql = "DELETE FROM candidates WHERE id='$id'";
-    $self->PrepareSubmitSql( $sql );
+    my $id   = $row->[0] . '.' . $row->[1];
+    my $time = $row->[2];
+    
+    $self->CheckAndLoadItemIntoCandidates($id, $time);
   }
   my $end_size = $self->GetCandidatesSize();
   my $diff = $end_size - $start_size;
@@ -631,9 +604,55 @@ sub LoadNewItemsInCandidates
   #Record the update to the queue
   $sql = "INSERT INTO candidatesrecord (addedamount) VALUES ($diff)";
   $self->PrepareSubmitSql( $sql );
+  $self->set('nosystem',undef);
   return 1; # FIXME: this only ever returns 1
 }
 
+# Adds a single volume to candidates if possible, putting it in the und table if not.
+sub CheckAndLoadItemIntoCandidates
+{
+  my $self = shift;
+  my $id   = lc shift;
+  my $time = shift;
+
+  if ($self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'") > 0)
+  {
+    print "Skip $id -- already in historical reviews\n";
+    return;
+  }
+  my $record = $self->GetMetadata($id);
+  if (!$record)
+  {
+    $self->ClearErrors();
+    print "No metadata yet for $id: will try again tomorrow.\n";
+    if (0 == $self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id'"))
+    {
+      my $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','no meta','$time')";
+      $self->PrepareSubmitSql( $sql );
+    }
+    return;
+  }
+  my $errs = $self->GetViolations($id, $record);
+  if (scalar @{$errs} == 0)
+  {
+    my $src = $self->ShouldVolumeGoInUndTable($id, $record);
+    if ($src)
+    {
+      my $sql = "SELECT COUNT(*) FROM und WHERE id='$id'";
+      my $already = (1 == $self->SimpleSqlGet($sql));
+      printf "Skip $id ($src) -- %s in und table\n", ($already)? 'updating':'inserting';
+      $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src','$time')";
+      $self->PrepareSubmitSql( $sql );
+      $sql = "DELETE FROM candidates WHERE id='$id'";
+      $self->PrepareSubmitSql( $sql );
+    }
+    else
+    {
+      $self->AddItemToCandidates($id, $time, $record);
+      $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
+    }
+  }
+}
 
 # Returns an array of error messages (reasons for unsuitability for CRMS) for a volume.
 # Used by candidates loading to ignore inappropriate items.
@@ -649,7 +668,7 @@ sub GetViolations
 
   $priority = 0 unless $priority;
   my @errs = ();
-  $record =  $self->GetRecordMetadata($id) unless $record;
+  $record =  $self->GetMetadata($id) unless $record;
   if (!$record)
   {
     push @errs, 'not found in HathiTrust';
@@ -674,7 +693,7 @@ sub ShouldVolumeGoInUndTable
   my $record = shift;
 
   my $src = undef;
-  $record = $self->GetRecordMetadata($id) unless $record;
+  $record = $self->GetMetadata($id) unless $record;
   my $lang = $self->GetPubLanguage($id, $record);
   if ('eng' ne $lang) { $src = 'language'; }
   elsif ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
@@ -691,18 +710,16 @@ sub AddItemToCandidates
   my $time   = shift;
   my $record = shift;
 
-  $record = $self->GetRecordMetadata($id) unless $record;
+  $record = $self->GetMetadata($id) unless $record;
   my $pub = $self->GetPublDate($id, $record);
-  my $au = $self->GetMarcDatafieldAuthor($id, $record);
+  my $au = $self->GetRecordAuthor($id, $record);
   $au = $self->get('dbh')->quote($au);
   $self->SetError("$id: UTF-8 check failed for quoted author: '$au'") unless $au eq "''" or utf8::is_utf8($au);
-  my $title = $self->GetRecordTitleBc2Meta( $id, $record );
+  my $title = $self->GetRecordTitle( $id, $record );
   $title = $self->get('dbh')->quote($title);
   $self->SetError("$id: UTF-8 check failed for quoted title: '$title'") unless $title eq "''" or utf8::is_utf8($title);
   my $sql = "REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub-01-01', $title, $au)";
   $self->PrepareSubmitSql( $sql );
-  # Update system table with aleph system id.
-  $self->BarcodeToId($id);
 }
 
 # Load candidates into queue.
@@ -789,6 +806,8 @@ sub AddItemToQueue
     $self->UpdatePubDate( $id, $pub_date );
     $self->UpdateAuthor( $id, $author );
   }
+  # Update system table with aleph system id.
+  $self->BarcodeToId($id);
   return 1;
 }
 
@@ -846,7 +865,7 @@ sub AddItemToQueueOrSetItemActive
   }
   else
   {
-    my $record = $self->GetRecordMetadata($id); 
+    my $record = $self->GetMetadata($id); 
     @msgs = @{ $self->GetViolations($id, $record, $priority, $override) };
     if (scalar @msgs)
     {
@@ -876,7 +895,7 @@ sub GiveItemsInQueuePriority
   my $priority = shift;
   my $source   = shift;
 
-  my $record = $self->GetRecordMetadata($id);
+  my $record = $self->GetMetadata($id);
   my $errs = $self->GetViolations($id, $record);
   if (scalar @{$errs})
   {
@@ -1176,7 +1195,7 @@ sub SubmitHistReview
       $self->PrepareSubmitSql( $sql );
 
       #Now load this info into the bibdata and system table.
-      my $record = $self->GetRecordMetadata($id);
+      my $record = $self->GetMetadata($id);
       $self->UpdateTitle( $id, undef, $record );
       $self->UpdatePubDate( $id, undef, $record );
       $self->UpdateAuthor( $id, undef, $record );
@@ -2590,6 +2609,7 @@ sub LinkToPT
   $title = $self->GetTitle( $id ) unless $title;
   $title = CGI::escapeHTML($title);
   my $url = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=';
+  $self->ClearErrors();
   return "<a href='$url$id' target='_blank'>$title</a>";
 }
 
@@ -2602,6 +2622,7 @@ sub LinkToReview
   $title = $self->GetTitle( $id ) unless $title;
   $title = CGI::escapeHTML($title);
   my $url = "/cgi/c/crms/crms?p=review;barcode=$id;editing=1";
+  $self->ClearErrors();
   return "<a href='$url' target='_blank'>$title</a>";
 }
 
@@ -4506,10 +4527,10 @@ sub IsProbableGovDoc
   my $id     = shift;
   my $record = shift;
 
-  $record = $self->GetRecordMetadata($id) unless $record;
+  $record = $self->GetMetadata($id) unless $record;
   if ( ! $record ) { $self->SetError("no record in IsProbableGovDoc: $id"); return 1; }
-  my $author = $self->GetMarcDatafieldAuthor($id, $record);
-  my $title = $self->GetRecordTitleBc2Meta($id, $record);
+  my $author = $self->GetRecordAuthor($id, $record);
+  my $title = $self->GetRecordTitle($id, $record);
   my $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='a']};
   my $field260a = $record->findvalue( $xpath ) or '';
   $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='b']};
@@ -4637,7 +4658,7 @@ sub IsForeignPub
   my $record = shift;
 
   my $is = undef;
-  $record = $self->GetRecordMetadata($id) unless $record;
+  $record = $self->GetMetadata($id) unless $record;
   if ( ! $record ) { $self->SetError("no record in IsForeignPub($id)"); return undef; }
   eval {
     my $xpath = "//*[local-name()='controlfield' and \@tag='008']";
@@ -4661,7 +4682,7 @@ sub IsReallyForeignPub
   my $id     = shift;
   my $record = shift;
 
-  $record = $self->GetRecordMetadata($id) unless $record;
+  $record = $self->GetMetadata($id) unless $record;
   if ( ! $record ) { $self->SetError("no record in IsReallyForeignPub($id)"); return undef; }
   my $is = $self->IsForeignPub($id, $record);
   return $is if $is;
@@ -4724,7 +4745,7 @@ sub GetPublDate
   my $id     = shift;
   my $record = shift;
 
-  $record = $self->GetRecordMetadata($id) unless $record;
+  $record = $self->GetMetadata($id) unless $record;
   return 'unknown' unless $record;
   ## my $xpath = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
   my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
@@ -4738,7 +4759,7 @@ sub GetPubLanguage
   my $id     = shift;
   my $record = shift;
 
-  $record = $self->GetRecordMetadata($id) unless $record;
+  $record = $self->GetMetadata($id) unless $record;
   if ( ! $record ) { return 0; }
 
   ## my $xpath = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
@@ -4753,7 +4774,7 @@ sub GetMarcFixfield
   my $id    = shift;
   my $field = shift;
 
-  my $record = $self->GetRecordMetadata($id);
+  my $record = $self->GetMetadata($id);
   if ( ! $record ) { $self->Logit( "failed in GetMarcFixfield: $id" ); }
 
   my $xpath = qq{//*[local-name()='oai_marc']/*[local-name()='fixfield' and \@id='$field']};
@@ -4767,7 +4788,7 @@ sub GetMarcVarfield
   my $field = shift;
   my $label = shift;
 
-  my $record = $self->GetRecordMetadata($id);
+  my $record = $self->GetMetadata($id);
   if ( ! $record ) { $self->Logit( "failed in GetMarcVarfield: $id" ); }
 
   my $xpath = qq{//*[local-name()='oai_marc']/*[local-name()='varfield' and \@id='$field']} .
@@ -4782,7 +4803,7 @@ sub GetMarcControlfield
   my $id    = shift;
   my $field = shift;
 
-  my $record = $self->GetRecordMetadata($id);
+  my $record = $self->GetMetadata($id);
   if ( ! $record ) { $self->Logit( "failed in GetMarcControlfield: $id" ); }
 
   my $xpath = qq{//*[local-name()='controlfield' and \@tag='$field']};
@@ -4797,7 +4818,7 @@ sub GetMarcDatafield
   my $code   = shift;
   my $record = shift;
 
-  $record = $self->GetRecordMetadata($id) unless $record;
+  $record = $self->GetMetadata($id) unless $record;
   if ( ! $record ) { $self->Logit( "failed in GetMarcDatafield: $id" ); }
 
   my $xpath = qq{//*[local-name()='datafield' and \@tag='$field'][1]} .
@@ -4808,7 +4829,7 @@ sub GetMarcDatafield
   return $data;
 }
 
-sub GetMarcDatafieldAuthor
+sub GetRecordAuthor
 {
   my $self   = shift;
   my $id     = shift;
@@ -4816,8 +4837,8 @@ sub GetMarcDatafieldAuthor
 
   #After talking to Tim, the author info is in the 1XX field
   #Margrte told me that the only 1xx fields are: 100, 110, 111, 130. 700, 710
-  $record = $self->GetRecordMetadata($id) unless $record;
-  if ( ! $record ) { $self->Logit( "failed in GetMarcDatafieldAuthor: $id" ); }
+  $record = $self->GetMetadata($id) unless $record;
+  if ( ! $record ) { $self->Logit( "failed in GetRecordAuthor: $id" ); }
   my $data = $self->GetMarcDatafield($id,'100','a',$record);
   if (!$data)
   {
@@ -4859,13 +4880,13 @@ sub GetTitle
 }
 
 ## use for now because the API is slow...
-sub GetRecordTitleBc2Meta
+sub GetRecordTitle
 {
   my $self   = shift;
   my $id     = shift;
   my $record = shift;
 
-  $record = $self->GetRecordMetadata($id) unless $record;
+  $record = $self->GetMetadata($id) unless $record;
   my $xpath = "//*[local-name()='datafield' and \@tag='245']/*[local-name()='subfield' and \@code='a']";
   my $title = '';
   eval{ $title = $record->findvalue( $xpath ); };
@@ -4899,7 +4920,7 @@ sub UpdateTitle
   if ( ! $title )
   {
     ## my $ti = $self->GetMarcDatafield( $id, "245", "a");
-    $title = $self->GetRecordTitleBc2Meta( $id, $record );
+    $title = $self->GetRecordTitle( $id, $record );
   }
   if ($self->Mojibake($title))
   {
@@ -4928,7 +4949,7 @@ sub UpdateCandidatesTitle
   my $self = shift;
   my $id   = shift;
   
-  my $title = $self->GetRecordTitleBc2Meta( $id );
+  my $title = $self->GetRecordTitle( $id );
   my $tiq = $self->get('dbh')->quote( $title );
   $self->PrepareSubmitSql("UPDATE candidates SET title=$tiq,time=time WHERE id='$id'");
 }
@@ -4979,7 +5000,7 @@ sub UpdateAuthor
     $self->SetError("Trying to update author for empty volume id!\n");
     $self->Logit("$0: trying to update author for empty volume id!\n");
   }
-  $author = $self->GetMarcDatafieldAuthor( $id, $record ) unless $author;
+  $author = $self->GetRecordAuthor( $id, $record ) unless $author;
   if ($self->Mojibake($author))
   {
     $self->Logit("$0: Mojibake author <<$author>> for $id!\n");
@@ -5005,7 +5026,7 @@ sub UpdateCandidatesAuthor
   my $self = shift;
   my $id   = shift;
 
-  my $author = $self->GetMarcDatafieldAuthor( $id );
+  my $author = $self->GetRecordAuthor( $id );
   my $aiq = $self->get('dbh')->quote( $author );
   my $sql = "UPDATE candidates SET author=$aiq,time=time WHERE id='$id'";
   $self->PrepareSubmitSql( $sql );
@@ -5043,37 +5064,21 @@ sub GetAuthorForReview
   return $au;
 }
 
-sub MetadataURL
-{
-  my $self = shift;
-  my $id   = shift;
-  
-  return $self->get( 'bc2metaUrl' ) .'?id=' . $id . '&schema=marcxml';
-}
-
 ## ----------------------------------------------------------------------------
 ##  Function:   get the metadata record (MARC21)
-##  Parameters: volume id
+##  Parameters: volume id or system id
 ##  Return:     XML::LibXML record doc
 ## ----------------------------------------------------------------------------
-sub GetRecordMetadata
+sub GetMetadata
 {
   my $self = shift;
   my $id   = shift;
 
-  my $sysid = $self->BarcodeToId($id);
-  return $self->GetMirlynMetadata($sysid) if $sysid;
-}
-
-sub GetMirlynMetadata
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $ns = 'http://www.loc.gov/MARC21/slim';
-  if ( ! $id ) { $self->SetError( "no system id given: '$id'" ); return 0; }
+  if ( ! $id ) { $self->SetError( "GetMetadata: no id given: '$id'" ); return; }
+  # If it has a period, it's a volume ID so transform it into a system ID.
+  $id = $self->BarcodeToId($id) if $id =~ m/\./;
+  return unless $id;
   my $url = "http://catalog.hathitrust.org/api/volumes/full/recordnumber/$id.json";
-  #print "$url\n";
   my $ua = LWP::UserAgent->new;
   $ua->timeout( 1000 );
   my $req = HTTP::Request->new( GET => $url );
@@ -5086,16 +5091,22 @@ sub GetMirlynMetadata
   my $xml = undef;
   my $json = JSON->new;
   my $content = $res->content;
-  #print "$content\n";
-  my $records = $json->decode($content)->{'records'};
-  if ('HASH' eq ref $records)
+  eval {
+    my $records = $json->decode($content)->{'records'};
+    if ('HASH' eq ref $records)
+    {
+      my @keys = keys %$records;
+      $xml = $records->{$keys[0]}->{'marc-xml'};
+    }
+    else { $self->SetError("HT Bib API found no data for '$id' (got '$content')"); return; }
+  };
+  if ($@) { $self->SetError( "failed to parse ($content):$@" ); return; }
+  my $parser = $self->get('parser');
+  if (!$parser)
   {
-    my @keys = keys %$records;
-    $xml = $records->{$keys[0]}->{'marc-xml'};
+    $parser = XML::LibXML->new();
+    $self->set('parser',$parser);
   }
-  else { $self->SetError( "HT Bib API found no data for '$id' (got '$content')" ); }
-  #print "\nXML:\n$xml\n\n";
-  my $parser = $self->get( 'parser' );    
   my $source;
   eval {
     $content = Encode::decode('utf8', $content);
@@ -5103,6 +5114,7 @@ sub GetMirlynMetadata
   };
   if ($@) { $self->SetError( "failed to parse ($xml):$@" ); return; }
   my $xpc = XML::LibXML::XPathContext->new($source);
+  my $ns = 'http://www.loc.gov/MARC21/slim';
   $xpc->registerNs(ns => $ns);
   my @records = $xpc->findnodes('//ns:record');
   return $records[0];
@@ -5143,8 +5155,11 @@ sub BarcodeToId
       my @keys = keys %$records;
       $sysid = $keys[0];
       my $value = ($sysid)? "'$sysid'":'NULL';
-      $sql = "REPLACE INTO system (id,sysid) VALUES ('$id',$value)";
-      $self->PrepareSubmitSql($sql);
+      if ($self->get('nosystem') ne 'nosystem')
+      {
+        $sql = "REPLACE INTO system (id,sysid) VALUES ('$id',$value)";
+        $self->PrepareSubmitSql($sql);
+      }
     }
     else { $self->SetError("HT Bib API found no system id for '$id'\nReturned: '$content'\nURL: '$url'"); }
   }
@@ -6287,16 +6302,14 @@ sub SanityCheckDB
   my $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
-    my $md = $self->MetadataURL($row->[0]);
-    $md =~ s/&/&amp;/g;
     push @errs, sprintf("$table __ illegal volume id__ '%s'", $row->[0]) unless $row->[0] =~ m/$vidRE/;
-    push @errs, sprintf("$table __ illegal pub_date for <a href='%s' target='_blank'>%s</a>__ %s", $md, $row->[0], $row->[1]) unless $row->[1] =~ m/$pdRE/;
+    push @errs, sprintf("$table __ illegal pub_date for %s__ %s", $row->[0], $row->[1]) unless $row->[1] =~ m/$pdRE/;
     #push @errs, sprintf("$table __ no author for %s__ '%s'", $row->[0], $row->[2]) if $row->[2] eq '';
-    push @errs, sprintf("$table __ no title for <a href='%s' target='_blank'>%s</a>__ '%s'", $md, $row->[0], $row->[3]) if $row->[3] eq '';
-    push @errs, sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2]) if $self->Mojibake($row->[2]);
-    push @errs, sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3]) if $self->Mojibake($row->[3]);
-    push @errs, sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2]) if $row->[2] =~ m/.*?\?\?.*/;
-    push @errs, sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3]) if $row->[3] =~ m/.*?\?\?.*/;
+    push @errs, sprintf("$table __ no title for %s__ '%s'", $row->[0], $row->[3]) if $row->[3] eq '';
+    push @errs, sprintf("$table __ author encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2]) if $self->Mojibake($row->[2]);
+    push @errs, sprintf("$table __ title encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3]) if $self->Mojibake($row->[3]);
+    push @errs, sprintf("$table __ author encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2]) if $row->[2] =~ m/.*?\?\?.*/;
+    push @errs, sprintf("$table __ title encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3]) if $row->[3] =~ m/.*?\?\?.*/;
   }
   # ======== candidates ========
   $table = 'candidates';
@@ -6304,15 +6317,13 @@ sub SanityCheckDB
   $rows = $dbh->selectall_arrayref( $sql );
   foreach my $row ( @{$rows} )
   {
-    my $md = $self->MetadataURL($row->[0]);
-    $md =~ s/&/&amp;/g;
     push @errs, sprintf("$table __ illegal volume id__ '%s'", $row->[0]) unless $row->[0] =~ m/$vidRE/;
-    push @errs, sprintf("$table __ illegal pub_date for <a href='%s' target='_blank'>%s</a>__ %s", $md, $row->[0], $row->[1]) unless $row->[1] =~ m/$pdRE/;
+    push @errs, sprintf("$table __ illegal pub_date for %s__ %s", $row->[0], $row->[1]) unless $row->[1] =~ m/$pdRE/;
     push @errs, sprintf("$table __ no title for %s__ '%s'", $row->[0], $row->[3]) if $row->[3] eq '';
-    push @errs, sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2]) if $self->Mojibake($row->[2]);
-    push @errs, sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3]) if $self->Mojibake($row->[3]);
-    push @errs, sprintf("$table __ author encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $md, $row->[0], $row->[2]) if $row->[2] =~ m/.*?\?\?.*/;
-    push @errs, sprintf("$table __ title encoding (%s) questionable for <a href='%s' target='_blank'>%s</a>__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $md, $row->[0], $row->[3]) if $row->[3] =~ m/.*?\?\?.*/;
+    push @errs, sprintf("$table __ author encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2]) if $self->Mojibake($row->[2]);
+    push @errs, sprintf("$table __ title encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3]) if $self->Mojibake($row->[3]);
+    push @errs, sprintf("$table __ author encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2]) if $row->[2] =~ m/.*?\?\?.*/;
+    push @errs, sprintf("$table __ title encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3]) if $row->[3] =~ m/.*?\?\?.*/;
   }
   # ======== exportdata ========
   # time must be in a format like 2009-07-16 07:00:02
@@ -6562,7 +6573,7 @@ sub VolumeIDsQuery
   
   my @ids;
   eval {
-    $record = $self->GetMirlynMetadata($sysid) unless $record;
+    $record = $self->GetMetadata($sysid) unless $record;
     my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='974']");
     foreach my $node ($nodes->get_nodelist())
     {
