@@ -55,7 +55,7 @@ foreach my $row ( @{$ref} )
   my $time = $row->[1];
   $of++;
   print "Checking $id\n" if $verbose;
-  my $record = $crms->GetRecordMetadata($id);
+  my $record = $crms->GetMetadata($id);
   if ($record)
   {
     my $lang = $crms->GetPubLanguage($id, $record);

@@ -199,10 +199,9 @@ foreach my $row ( @{$ref} )
   $lastdate = $date;
   my $sysid = $crms->BarcodeToId($id);
   next unless $sysid;
-  my $mrecord = $crms->GetMirlynMetadata($sysid);
-  my $holdings = $crms->VolumeIDsQuery($sysid, $mrecord);
+  my $record = $crms->GetMetadata($sysid);
+  my $holdings = $crms->VolumeIDsQuery($sysid, $record);
   next unless scalar @{$holdings} > 1;
-  my $record = $crms->GetRecordMetadata($id);
   my $date1 = Date1Field($id, $record);
   my $date2 = Date2Field($id, $record);
   my $title = $crms->GetTitle($id);
@@ -287,23 +286,23 @@ foreach my $row ( @{$ref} )
         $rights{"$attr2/$reason2"} = 1;
       }
       print "  Holding: $id2, $attr2/$reason2 ($user)\n" if $verbose;
-      my $record2 = $crms->GetRecordMetadata($id2);
-      $title2 = $crms->GetRecordTitleBc2Meta($id2) unless $title2;
-      my $date12 = Date1Field($id2, $record);
-      my $date22 = Date2Field($id2, $record);
+      #my $record2 = $crms->GetRecordMetadata($id2);
+      #$title2 = $crms->GetRecordTitleBc2Meta($id2) unless $title2;
+      #my $date12 = Date1Field($id2, $record);
+      #my $date22 = Date2Field($id2, $record);
       if ($attr2 eq 'ic' and $reason2 eq 'bib')
       {
         $icbib = 1;
-        $dups{$id2} = $record2;
+        $dups{$id2} = $record;
       }
       if ($report eq 'tsv')
       {
-        push @lines, "$sysid\t$id2\t$title2\t$attr2\t$reason2\t$chron2\t$date12\t$date22\t$date2";
+        push @lines, "$sysid\t$id2\t\t$attr2\t$reason2\t$chron2\t\t\t$date2";
       }
       elsif ($report eq 'html')
       {
         my $ptlink2 = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=' . $id2;
-        push @lines, "<tr><td><a href='$catlink' target='_blank'>$sysid</a></td><td><a href='$ptlink2' target='_blank'>$id2</a></td><td>$title2</td><td>$attr2</td><td>$reason2</td><td>$chron2</td><td>$date12</td><td>$date22</td><td>$date2</td>";
+        push @lines, "<tr><td><a href='$catlink' target='_blank'>$sysid</a></td><td><a href='$ptlink2' target='_blank'>$id2</a></td><td/><td>$attr2</td><td>$reason2</td><td>$chron2</td><td/><td/><td>$date2</td>";
       }
     }
   }

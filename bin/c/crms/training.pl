@@ -175,7 +175,7 @@ my $ref = $crms->get('dbh')->selectall_arrayref($sql);
 foreach my $row (@{$ref})
 {
   my $id = $row->[0];
-  my $record = $crms->GetRecordMetadata($id);
+  my $record = $crms->GetMetadata($id);
   $crms->UpdateTitle($id, undef, $record);
   $crms->UpdateAuthor($id, undef, $record);
   $crms->UpdatePubDate($id, undef, $record);

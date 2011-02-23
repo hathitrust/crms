@@ -129,10 +129,10 @@ foreach my $row (@{$ref})
   my $sysid = $crms->BarcodeToId($id);
   my $catLink = "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
   my $ptLink = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=' . $id;
-  my $record = $crms->GetRecordMetadata($id);
-  my $author = $crms->GetMarcDatafieldAuthor($id, $record);
+  my $record = $crms->GetMetadata($sysid);
+  my $author = $crms->GetRecordAuthor($id, $record);
   $author =~ s/&/&amp;/g;
-  my $title = $crms->GetRecordTitleBc2Meta($id, $record);
+  my $title = $crms->GetRecordTitle($id, $record);
   $title =~ s/&/&amp;/g;
   my $pub = $crms->GetPublDate($id, $record);
   my $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='a']};

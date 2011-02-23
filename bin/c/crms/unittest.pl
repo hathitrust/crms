@@ -80,7 +80,7 @@ is($crms->IsReviewCorrect('uc1.b3763822','gnichols123','2009-11-04') ,1, 'Correc
 is($crms->IsReviewCorrect('uc1.b3763822','jaheim123','2009-11-04') ,0,   'Correctness: uc1.b3763822 4');
 is($crms->IsReviewCorrect('uc1.b3763822','annekz','2009-11-09') ,1,      'Correctness: uc1.b3763822 5');
 
-my $record = $crms->GetRecordMetadata('mdp.39015011285692');
+my $record = $crms->GetMetadata('mdp.39015011285692');
 is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,0,0)}, 1,    'Violations: mdp.39015011285692 P0');
 is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,1,0)}, 1,    'Violations: mdp.39015011285692 P1');
 is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,2,0)}, 1,    'Violations: mdp.39015011285692 P2');
@@ -89,7 +89,7 @@ is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,3,1)}, 0,    'Viol
 is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,4,0)}, 0,    'Violations: mdp.39015011285692 P4');
 is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,4,1)}, 0,    'Violations: mdp.39015011285692 P4 1');
 
-$record = $crms->GetRecordMetadata('mdp.39015082195432');
+$record = $crms->GetMetadata('mdp.39015082195432');
 is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,0,0)}, 3,    'Violations: mdp.39015082195432 P0');
 is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,1,0)}, 3,    'Violations: mdp.39015082195432 P1');
 is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,2,0)}, 3,    'Violations: mdp.39015082195432 P2');

@@ -104,7 +104,7 @@ foreach my $line ( <$fh> )
     }
     # Filter out gov docs
     #print "$id\n";
-    my $record =  $crms->GetRecordMetadata($id);
+    my $record =  $crms->GetMetadata($id);
     if (!$record)
     {
       $counts{'err'}++;
