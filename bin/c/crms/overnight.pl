@@ -31,7 +31,7 @@ END
 
 
 my %opts;
-getopts('cdehmq', \%opts);
+getopts('cehmq', \%opts);
 my $skipCandidates = $opts{'c'};
 my $skipExport = $opts{'e'};
 my $help = $opts{'h'};
@@ -74,7 +74,7 @@ else
   ReportMsg("DONE loading new volumes into queue.");
 }
 
-if ($skipQueue) { ReportMsg("-m flag set; skipping monthly stats."); }
+if ($skipMonthly) { ReportMsg("-m flag set; skipping monthly stats."); }
 else
 {
   ReportMsg("Starting to update monthly stats.");
@@ -83,11 +83,9 @@ else
 }
 
 my $r = $crms->GetErrors();
-if ( defined $r )
-{
-  printf "There were %d errors%s\n", scalar @{$r}, (scalar @{$r})? ':':'.';
-  map {print "  $_\n";} @{$r};
-}
+printf "There were %d errors%s\n", scalar @{$r}, (scalar @{$r})? ':':'.';
+print "$_\n" for @{$r};
+
 ReportMsg("All DONE with nightly script.");
 
 
