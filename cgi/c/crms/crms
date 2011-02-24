@@ -218,6 +218,17 @@ if ( $cgi->param('download') )
     my $pre = $cgi->param('pre');
     $success = $crms->SearchAndDownloadDeterminationStats( $startDate, $endDate, $monthly, $priority, $pre );
   }
+  elsif ($page =~ m/userrate/i)
+  {
+    my $page        = $cgi->param('p');
+    my $user        = $cgi->param('user');
+    my $cumulative  = $cgi->param('cumulative');
+    my $year        = $cgi->param('year');
+    my $inval       = $cgi->param('inval');
+    my $nononexpert = $cgi->param('nne');
+    
+    $success = $crms->DownloadUserStats( $page, $user, $cumulative, $year, $inval, $nononexpert );
+  }
   else
   {
     $success = $crms->SearchAndDownload( $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $stype );

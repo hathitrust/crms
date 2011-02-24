@@ -3702,14 +3702,16 @@ sub GetStatsYears
 sub CreateStatsData
 {
   my $self        = shift;
+  my $delimiter   = shift;
   my $page        = shift;
   my $user        = shift;
   my $cumulative  = shift;
   my $year        = shift;
   my $inval       = shift;
   my $nononexpert = shift;
-  
-  #print "CreateStatsData($page,$user,$cumulative,$year,$inval,$nononexpert)<br/>\n";
+  my $dopercent   = shift;
+
+  #print "CreateStatsData($delimiter,$page,$user,$cumulative,$year,$inval,$nononexpert,$dopercent)<br/>\n";
   my $instusers = undef;
   my $instusersne = undef;
   my $dbh = $self->get( 'dbh' );
@@ -3729,7 +3731,7 @@ sub CreateStatsData
   else { $username = $self->GetUserName($user) };
   #print "username '$username', instusers $instusers<br/>\n";
   my $label = "$username: " . (($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative":$year);
-  my $report = sprintf("$label\nCategories,Project Total%s", (!$cumulative)? ",Total $year":'');
+  my $report = sprintf("$label\nCategories%sProject Total%s", $delimiter, (!$cumulative)? ($delimiter . "Total $year"):'');
   my %stats = ();
   my %totals = ();
   my @usedates = ();
@@ -3741,7 +3743,7 @@ sub CreateStatsData
   foreach my $date (@statdates)
   {
     push @usedates, $date;
-    $report .= ",$date";
+    $report .= $delimiter . $date;
     my $mintime = $date . (($cumulative)? '-01':'');
     my $maxtime = $date . (($cumulative)? '-12':'');
     $earliest = $mintime if $earliest eq '' or $mintime lt $earliest;
@@ -3869,13 +3871,13 @@ sub CreateStatsData
       elsif ($title ne '__TOT__' && !exists $minors{$title})
       {
         my $pct = eval { 100.0*$n/$of; } or 0.0;
-        $n = sprintf("$n:%.1f", $pct);
+        $n = sprintf("$n:%.1f", $pct) if $dopercent;
       }
       elsif ($title eq 'Time per Review (mins)' || $title eq 'Reviews per Hour')
       {
         $n = sprintf('%.1f', $n) if $n > 0.0;
       }
-      $report .= ',' . $n;
+      $report .= $delimiter . $n;
     }
     my $n = $totals{$title};
     $n = 0 unless $n;
@@ -3888,13 +3890,13 @@ sub CreateStatsData
       my $of = $totals{'__TOT__'};
       $of = $totals{'__TOTNE__'} if ($title eq '__VAL__' or $title eq '__NEUT__') and ($user eq 'all' or $instusers);
       my $pct = eval { 100.0*$n/$of; } or 0.0;
-      $n = sprintf("$n:%.1f", $pct);
+      $n = sprintf("$n:%.1f", $pct) if $dopercent;
     }
     elsif ($title eq 'Time per Review (mins)' || $title eq 'Reviews per Hour')
     {
       $n = sprintf('%.1f', $n) if $n > 0.0;
     }
-    $report .= ',' . $n;
+    $report .= $delimiter . $n;
     foreach my $date (@usedates)
     {
       $n = $stats{$title}{$date};
@@ -3908,14 +3910,14 @@ sub CreateStatsData
         my $of = $stats{'__TOT__'}{$date};
         $of = $stats{'__TOTNE__'}{$date} if ($title eq '__VAL__' or $title eq '__NEUT__') and ($user eq 'all' or $instusers);
         my $pct = eval { 100.0*$n/$of; } or 0.0;
-        $n = sprintf("$n:%.1f", $pct);
+        $n = sprintf("$n:%.1f", $pct) if $dopercent;
       }
       elsif ($title eq 'Time per Review (mins)' || $title eq 'Reviews per Hour')
       {
         $n = sprintf('%.1f', $n) if $n > 0.0;
       }
       $n = 0 unless $n;
-      $report .= ',' . $n;
+      $report .= $delimiter . $n;
       #print "$user $title $n $of\n";
     }
     $report .= "\n";
@@ -3936,10 +3938,23 @@ sub CreateStatsReport
   
   # FIXME: remove this param completely?
   $suppressBreakdown = 1;
-  my $data = $self->CreateStatsData($page, $user, $cumulative, $year, $inval, $nononexpert);
+  my $data = $self->CreateStatsData(',', $page, $user, $cumulative, $year, $inval, $nononexpert, 1);
   my @lines = split m/\n/, $data;
-  my $report = sprintf("<span style='font-size:1.3em;'><!--NAME--><b>%s</b></span><!--LINK-->\n<br/><table class='exportStats'>\n<tr>\n", shift @lines);
+  my $dllink = <<END;
+  <a href='crms?p=$page;download=1;user=$user;cumulative=$cumulative;year=$year;inval=$inval;nne=$nononexpert' target='_blank'>Download</a>
+  <a class='tip' href='#'>
+    <img style="border:0px solid;" width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
+    <span>
+    <b>To get the downloaded stats into a spreadsheet:</b><br/>
+      &#x2022; Select all of the text on the page and copy it<br/>
+      &#x2022; Switch to Excel<br/>
+      &#x2022; Choose the menu item <b>Edit &#x2192; Paste Special</b><br/>
+      &#x2022; Choose Unicode in the dialog box<br/>
+    </span>
+  </a>
+END
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
+  my $report = sprintf("<span style='font-size:1.3em;'><b>%s</b></span>$nbsps $dllink\n<br/><table class='exportStats'>\n<tr>\n", shift @lines);
   foreach my $th (split ',', shift @lines)
   {
     $th = $self->YearMonthToEnglish($th) if $th =~ m/^\d.*/;
@@ -3999,6 +4014,35 @@ sub CreateStatsReport
   my $ntitle = 'Neutral&nbsp;Reviews&nbsp;&amp;&nbsp;Rate';
   $report =~ s/__NEUT__/$ntitle/;
   return $report;
+}
+
+sub DownloadUserStats
+{
+  my $self        = shift;
+  my $page        = shift;
+  my $user        = shift;
+  my $cumulative  = shift;
+  my $year        = shift;
+  my $inval       = shift;
+  my $nononexpert = shift;
+  
+  my $report = $self->CreateStatsData("\t", $page, $user, $cumulative, $year, $inval, $nononexpert);
+  $report =~ s/(\d\d\d\d-\d\d)/$self->YearMonthToEnglish($&)/ge;
+  $report =~ s/&nbsp;/ /g;
+  $report =~ s/__TOT__/Total Reviews/;
+  $report =~ s/__TOTNE__/Non-Expert Reviews/;
+  my $vtitle = 'Validated Reviews & Rate';
+  $vtitle = 'Invalidated Reviews & Rate' if $inval;
+  $vtitle = 'Valid Reviews & Rate' if $page eq 'userRate';
+  $report =~ s/__VAL__/$vtitle/;
+  my $avtitle = 'Validation Rate (all reviewers)';
+  $avtitle = 'Invalidation Rate (all reviewers)' if $inval;
+  $avtitle = 'Validation Rate (all reviewers)' if $page eq 'userRate';
+  $report =~ s/__AVAL__/$avtitle/;
+  my $ntitle = 'Neutral Reviews & Rate';
+  $report =~ s/__NEUT__/$ntitle/;
+  $self->DownloadSpreadSheet( $report );
+  return ($report)? 1:0;
 }
 
 sub GetRange
