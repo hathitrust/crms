@@ -50,7 +50,7 @@ $start .= ' 00:00:00' if $start;
 $end   .= ' 23:59:59' if $end;
 
 my $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/duplicates_hist.txt",
+    logFile      =>   "$DLXSROOT/prep/c/crms/training_hist.txt",
     configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
