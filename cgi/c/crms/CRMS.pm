@@ -652,6 +652,10 @@ sub CheckAndLoadItemIntoCandidates
       $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
     }
   }
+  else
+  {
+    $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
+  }
 }
 
 # Returns an array of error messages (reasons for unsuitability for CRMS) for a volume.
@@ -3946,9 +3950,10 @@ sub CreateStatsReport
     <img style="border:0px solid;" width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
     <span>
     <b>To get the downloaded stats into a spreadsheet:</b><br/>
-      &#x2022; Select all of the text on the page and copy it<br/>
+      &#x2022; Click on the "Download" link (this will open a new page in your browser)<br/>
+      &#x2022; Select all of the text on the new page and copy it<br/>
       &#x2022; Switch to Excel<br/>
-      &#x2022; Choose the menu item <b>Edit &#x2192; Paste Special</b><br/>
+      &#x2022; Choose the menu item <b>Edit &#x2192; Paste Special...</b><br/>
       &#x2022; Choose Unicode in the dialog box<br/>
     </span>
   </a>
