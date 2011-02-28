@@ -16,7 +16,7 @@ use Date::Calendar::Profiles qw( $Profiles );
 use POSIX qw(strftime);
 use DBI qw(:sql_types);
 use List::Util qw(min max);
-use JSON;
+use JSON::XS;
 
 binmode(STDOUT, ":utf8"); #prints characters in utf8
 
@@ -1203,7 +1203,6 @@ sub SubmitHistReview
       $self->UpdateTitle( $id, undef, $record );
       $self->UpdatePubDate( $id, undef, $record );
       $self->UpdateAuthor( $id, undef, $record );
-      $self->BarcodeToId( $id );
       # Update status on status 1 item
       if ($status == 5)
       {
@@ -5125,6 +5124,7 @@ sub GetMetadata
 
   if ( ! $id ) { $self->SetError( "GetMetadata: no id given: '$id'" ); return; }
   # If it has a period, it's a volume ID so transform it into a system ID.
+  # FIXME: this is unnecessary; we should alter the URL based on the form of the id.
   $id = $self->BarcodeToId($id) if $id =~ m/\./;
   return unless $id;
   my $url = "http://catalog.hathitrust.org/api/volumes/full/recordnumber/$id.json";
@@ -5138,7 +5138,7 @@ sub GetMetadata
     return;
   }
   my $xml = undef;
-  my $json = JSON->new;
+  my $json = JSON::XS->new;
   my $content = $res->content;
   eval {
     my $records = $json->decode($content)->{'records'};
@@ -5195,7 +5195,7 @@ sub BarcodeToId
       $self->SetError( $url . ' failed: ' . $res->message() );
       return;
     }
-    my $json = JSON->new;
+    my $json = JSON::XS->new;
     my $content = $res->content;
     #print "$content\n";
     my $records = $json->decode($content)->{'records'};
