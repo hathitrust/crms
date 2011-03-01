@@ -193,9 +193,7 @@ if (@mails)
     {
       $txt = 'This is an automatically generated report on possible federal government docs from the previous ' .
              "month. We believe these should have an 'f' inserted into the 008 MARC field. " .
-             'Please notify the other addressees of any volumes that do not seem to meet these criteria. ' .
-             "Note: in the current version there may be documents that have a non-blank 008:28 character other than 'f'. " .
-             "These should be left alone and reported.\n\n"; 
+             "Please notify the other addressees of any volumes that do not seem to meet these criteria.\n"; 
     }
     my $bytes = encode('utf8', $txt);
     $sender->SendEnc($bytes);

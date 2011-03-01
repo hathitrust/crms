@@ -4587,9 +4587,9 @@ sub IsProbableGovDoc
   $field260b =~ s/^\s*(.*?)\s*$/$1/;
   # If there is an alphabetic character in 008:28 other than 'f', we accept it and say it is NOT probable
   $xpath  = q{//*[local-name()='controlfield' and @tag='008']};
-  #my $leader = lc $record->findvalue( $xpath );
-  #my $code = substr($leader, 28, 1);
-  #return 0 if ($code =~ m/[a-z]/ && $code ne 'f');
+  my $leader = lc $record->findvalue( $xpath );
+  my $code = substr($leader, 28, 1);
+  return 0 if ($code ne 'f' && $code =~ m/[a-z]/);
   if ($author =~ m/^united\s+states/i)
   {
     return 1 unless $field260a or $field260b;
