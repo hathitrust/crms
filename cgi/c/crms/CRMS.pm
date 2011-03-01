@@ -269,7 +269,6 @@ sub ProcessReviews
   # Clear out all the locks
   $sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
   $self->PrepareSubmitSql( $sql );
-  $self->UpdateDeterminationsBreakdown();
   $sql = 'INSERT INTO processstatus VALUES ()';
   $self->PrepareSubmitSql( $sql );
 }
@@ -369,6 +368,7 @@ sub ClearQueueAndExport
   #}
   $self->ExportReviews( $export, $fromcgi );
   $self->UpdateExportStats();
+  $self->UpdateDeterminationsBreakdown();
   #return "Exported: $dCount double review, $eCount expert reviewed, $dupCount duplicates inheriting";
   return "Exported: $dCount double review, $eCount expert reviewed\n";
 }
