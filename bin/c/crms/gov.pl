@@ -91,8 +91,9 @@ else
 my $sql = "SELECT id,time FROM und WHERE src='gov' $startSQL $endSQL ORDER BY id";
 #print "$sql\n";
 my $ref = $dbh->selectall_arrayref($sql);
+my $n = scalar @{$ref};
 my $txt = '';
-my $title = "CRMS Suspected Gov Documents, $start to $end";
+my $title = "CRMS Suspected Gov Documents, $start to $end ($n)";
 my ($workbook,$worksheet);
 my $excelpath = sprintf('/l1/prep/c/crms/GovDocs_%s_to_%s.xls', $start, $end);
 my @cols= ('#','ID','Sys ID','Time','Author','Title','Pub Date','Pub');
@@ -120,7 +121,6 @@ elsif ($report eq 'excel')
   $worksheet->write(0, 5, 'Pub Date');
   $worksheet->write(0, 6, 'Pub');
 }
-my $n = 1;
 foreach my $row (@{$ref})
 {
   my $id = $row->[0];
@@ -162,7 +162,6 @@ foreach my $row (@{$ref})
     $worksheet->write($n, 5, $pub);
     $worksheet->write($n, 6, $field260a);
   }
-  $n++;
 }
 if ($report eq 'html')
 {
@@ -172,7 +171,7 @@ $workbook->close() if $report eq 'excel';
 
 if (@mails)
 {
-  if (1<$n)
+  if ($n>0)
   {
     use Mail::Sender;
     $title = 'Dev: ' . $title if $DLPS_DEV;
