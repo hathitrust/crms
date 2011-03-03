@@ -729,7 +729,7 @@ sub AddItemToCandidates
 # Load candidates into queue.
 # If the needed parameter is given, tries to make the total in the queue equal to needed.
 # (In other words if there are 500 and you tell it needed = 1000, it loads 500 more.)
-# Otherwise loads to the standard limit of 800, 300 Priority 0.
+# Otherwise loads to the standard limit of 800, 500 Priority 0.
 sub LoadNewItems
 {
   my $self   = shift;
@@ -745,9 +745,9 @@ sub LoadNewItems
   }
   else
   {
-    $needed = max($CRMSGlobals::queueSize - $queuesize, 300 - $priZeroSize);
+    $needed = max($CRMSGlobals::queueSize - $queuesize, 500 - $priZeroSize);
   }
-  printf "Need $needed items (max of %d and %d).\n", $CRMSGlobals::queueSize - $queuesize, 300 - $priZeroSize;
+  printf "Need $needed items (max of %d and %d).\n", $CRMSGlobals::queueSize - $queuesize, 500 - $priZeroSize;
   return if $needed <= 0;
   my $count = 0;
   my $y = 1923 + int(rand(40));
