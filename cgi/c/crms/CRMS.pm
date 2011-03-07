@@ -5195,11 +5195,14 @@ sub BarcodeToId
       $self->SetError( $url . ' failed: ' . $res->message() );
       return;
     }
-    my $json = JSON::XS->new;
     my $content = $res->content;
-    #print "$content\n";
-    my $records = $json->decode($content)->{'records'};
-    if ('HASH' eq ref $records)
+    my $records = undef;
+    eval {
+      my $json = JSON::XS->new;
+      $records = $json->decode($content)->{'records'};
+    };
+    if ($@ || !$records) { $self->SetError( "failed to parse JSON for $id: $@" ); return; }
+    elsif ('HASH' eq ref $records)
     {
       my @keys = keys %$records;
       $sysid = $keys[0];
