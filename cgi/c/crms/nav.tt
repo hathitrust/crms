@@ -50,6 +50,8 @@
   [% IF a || s %]<dd><a href="/c/crms/pdf/AllReviewStatsHelp.pdf" target="_blank">All&nbsp;Review&nbsp;Stats&nbsp;Help</a></dd>   [% END %]
   [% IF a || s %]<dd><a href="/c/crms/pdf/UserLevelsPrivileges.pdf" target="_blank">User&nbsp;Levels/Privileges</a></dd>          [% END %]
   [% IF a || s %]<dd><a href="/c/crms/pdf/AdministrativeContacts.pdf" target="_blank">Administrative&nbsp;Contacts</a></dd>       [% END %]
+  [% IF a || s %]<dd><a href="/c/crms/pdf/SystemGeneratedReviews.pdf" target="_blank">System&nbsp;Generated&nbsp;Reviews</a></dd> [% END %]
+  [% IF a || s %]<dd><a href="/c/crms/pdf/CRMSStatusCodes.pdf" target="_blank">CRMS&nbsp;Status&nbsp;Codes</a></dd>               [% END %]
 </dl>
 </li>
 <li><span>Stats/Reports&nbsp;</span>

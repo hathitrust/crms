@@ -81,6 +81,8 @@ function CheckAll(box,formid)
 [% IF a || s %]<a href="/c/crms/pdf/AllReviewStatsHelp.pdf" target="_blank">All&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>   [% END %]
 [% IF a || s %]<a href="/c/crms/pdf/UserLevelsPrivileges.pdf" target="_blank">User&nbsp;Levels/Privileges</a><br/>          [% END %]
 [% IF a || s %]<a href="/c/crms/pdf/AdministrativeContacts.pdf" target="_blank">Administrative&nbsp;Contacts</a><br/>       [% END %]
+[% IF a || s %]<a href="/c/crms/pdf/SystemGeneratedReviews.pdf" target="_blank">System&nbsp;Generated&nbsp;Reviews</a><br/> [% END %]
+[% IF a || s %]<a href="/c/crms/pdf/CRMSStatusCodes.pdf" target="_blank">CRMS&nbsp;Status&nbsp;Codes</a><br/>               [% END %]
 </td>
 <td>
 [% IF r || e %]     <a href="crms?p=userRate">My&nbsp;Review&nbsp;Stats</a><br/>                           [% END %]
