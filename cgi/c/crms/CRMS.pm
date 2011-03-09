@@ -227,7 +227,7 @@ sub ProcessReviews
       {
          $self->RegisterStatus( $id, 3 );
       }
-      else #Mark as 4 - two that agree
+      else #Mark as 4 or 8 - two that agree
       {
         my $note = undef;
         my $doAuto = undef;
@@ -242,7 +242,7 @@ sub ProcessReviews
           $note = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)', $renNum, $renDate, $other_renNum, $other_renDate;
         }
         $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,'Attr Match',0,0) if $doAuto;
-        $self->RegisterStatus( $id, 4 );
+        $self->RegisterStatus( $id, ($doAuto)? 8:4 );
       }
     }
     # Do auto for ic vs und
@@ -253,10 +253,10 @@ sub ProcessReviews
       {
          $self->RegisterStatus( $id, 3 );
       }
-      else #Mark as 4 - two that agree
+      else #Mark as 8 - two that agree
       {
         $self->SubmitReview($id,'autocrms',5,13,undef,undef,1,undef,'Attr Default',0,0);
-        $self->RegisterStatus( $id, 4 );
+        $self->RegisterStatus( $id, 8 );
       }
     }
     else #Mark as 2 - two that disagree
@@ -283,7 +283,7 @@ sub CheckPendingStatus
   my $pstatus = $status;
   if (!$status)
   {
-    $sql = "SELECT user,attr,reason FROM reviews WHERE id='$id' AND expert IS NULL";
+    $sql = "SELECT user,attr,reason,renNum,renDate FROM reviews WHERE id='$id' AND expert IS NULL";
     my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
     if (scalar @{$ref} > 1)
     {
@@ -291,11 +291,14 @@ sub CheckPendingStatus
       my $user    = $row->[0];
       my $attr    = $row->[1];
       my $reason  = $row->[2];
+      my $renNum  = $row->[3];
+      my $renDate = $row->[4];
       $row = @{$ref}[1];
       my $other_user    = $row->[0];
       my $other_attr    = $row->[1];
       my $other_reason  = $row->[2];
-
+      my $other_renNum  = $row->[3];
+      my $other_renDate = $row->[4];
       if ($attr == $other_attr)
       {
         # If both reviewers are non-advanced mark as provisional match
@@ -303,9 +306,17 @@ sub CheckPendingStatus
         {
           $pstatus = 3;
         }
-        else #Mark as 4 - two that agree
+        else #Mark as 4 or 8 - two that agree
         {
           $pstatus = 4;
+          if ($reason != $other_reason)
+          {
+            $pstatus = 8;
+          }
+          elsif ($attr == 2 && $reason == 7 && $other_reason == 7 && ($renNum ne $other_renNum || $renDate ne $other_renDate))
+          {
+            $pstatus = 8;
+          }
         }
       }
       # Do auto for ic vs und
@@ -316,9 +327,9 @@ sub CheckPendingStatus
         {
           $pstatus = 3;
         }
-        else #Mark as 4 - two that agree
+        else #Mark as 8 - two that sort of agree
         {
-          $pstatus = 4;
+          $pstatus = 8;
         }
       }
       else #Mark as 2 - two that disagree
@@ -623,7 +634,7 @@ sub CheckAndLoadItemIntoCandidates
   my $record = $self->GetMetadata($id);
   if (!$record)
   {
-    $self->ClearErrors();
+    #$self->ClearErrors();
     print "No metadata yet for $id: will try again tomorrow.\n";
     if (0 == $self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id'"))
     {
@@ -3170,7 +3181,7 @@ sub CreateExportData
     }
     my $sql = 'SELECT SUM(e.pd_ren),SUM(e.pd_ncn),SUM(e.pd_cdpp),SUM(e.pd_crms),SUM(e.pd_add),SUM(e.pdus_cdpp),' .
                'SUM(e.ic_ren),SUM(e.ic_cdpp),SUM(e.ic_crms),SUM(e.und_nfi),SUM(e.und_crms),' .
-               'SUM(d.s4),SUM(d.s5),SUM(d.s6),SUM(d.s7) ' .
+               'SUM(d.s4),SUM(d.s5),SUM(d.s6),SUM(d.s7),SUM(d.s8) ' .
                'FROM exportstats e INNER JOIN determinationsbreakdown d ON e.date=d.date WHERE ' .
               "e.date LIKE '$date%'";
     #print "$date: $sql<br/>\n";
@@ -3191,6 +3202,7 @@ sub CreateExportData
     $stats{'Status 5'}{$date}  += $ref->[0]->[12];
     $stats{'Status 6'}{$date}  += $ref->[0]->[13];
     $stats{'Status 7'}{$date}  += $ref->[0]->[14];
+    $stats{'Status 8'}{$date}  += $ref->[0]->[15];
     for my $cat (keys %cats)
     {
       next if $cat =~ m/(All)|(Status)/;
@@ -3205,7 +3217,7 @@ sub CreateExportData
   my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pd/crms', 'pd/add', 'pdus/cdpp',
                 'All IC', 'ic/ren', 'ic/cdpp', 'ic/crms',
                 'All UND', 'und/nfi', 'und/crms', 'Total',
-                'Status 4', 'Status 5', 'Status 6', 'Status 7');
+                'Status 4', 'Status 5', 'Status 6', 'Status 7', 'Status 8');
   my %monthTotals = ();
   my %catTotals = ('All PD' => 0, 'All IC' => 0, 'All UND' => 0);
   my $gt = 0;
@@ -3448,7 +3460,7 @@ sub CreatePreDeterminationsBreakdownData
     my $sql = "SELECT s2,s3,s4,s2+s3+s4 FROM predeterminationsbreakdown WHERE date LIKE '$date1%'";
     #print "$sql<br/>\n";
     my ($s2,$s3,$s4,$sum) = @{$self->get('dbh')->selectall_arrayref( $sql )->[0]};
-    my @line = ($s2,$s3,$s4,$sum,0,0,0,0,0);
+    my @line = ($s2,$s3,$s4,$sum,0,0,0);
     next unless $sum > 0;
     for (my $i=0; $i < 3; $i++)
     {
@@ -3465,7 +3477,80 @@ sub CreatePreDeterminationsBreakdownData
   }
   my $gt = $totals[0] + $totals[1] + $totals[2];
   push @totals, $gt;
-  for (my $i=0; $i < 4; $i++)
+  for (my $i=0; $i < 3; $i++)
+  {
+    my $pct = 0.0;
+    eval {$pct = 100.0*$totals[$i]/$gt;};
+    push @totals, sprintf('%.1f%%', $pct);
+  }
+  $report .= 'Total' . $delimiter . join($delimiter, @totals) . "\n";
+  return $report;
+}
+
+# This has the status 8 info
+sub CreatePreDeterminationsBreakdownDataOld
+{
+  my $self      = shift;
+  my $delimiter = shift;
+  my $start     = shift;
+  my $end       = shift;
+  my $monthly   = shift;
+  my $title     = shift;
+
+  my ($year,$month) = $self->GetTheYearMonth();
+  my $titleDate = $self->YearMonthToEnglish("$year-$month");
+  my $justThisMonth = (!$start && !$end);
+  $start = "$year-$month-01" unless $start;
+  my $lastDay = Days_in_Month($year,$month);
+  $end = "$year-$month-$lastDay" unless $end;
+  my $what = 'date';
+  $what = 'DATE_FORMAT(date, "%Y-%m")' if $monthly;
+  my $sql = "SELECT DISTINCT($what) FROM predeterminationsbreakdown WHERE date>='$start' AND date<='$end'";
+  #print "$sql<br/>\n";
+  my @dates = map {$_->[0];} @{$self->get('dbh')->selectall_arrayref( $sql )};
+  if (scalar @dates && !$justThisMonth)
+  {
+    my $startEng = $self->YearMonthToEnglish(substr($dates[0],0,7));
+    my $endEng = $self->YearMonthToEnglish(substr($dates[-1],0,7));
+    $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
+  }
+  my $report = ($title)? "$title\n":"Preliminary Determinations Breakdown $titleDate\n";
+  my @titles = ('Date','Status 2','Status 3','Status 4','Status 8','Total','Status 2','Status 3','Status 4','Status 8');
+  $report .= join($delimiter, @titles) . "\n";
+  my @totals = (0,0,0,0);
+  foreach my $date (@dates)
+  {
+    my ($y,$m,$d) = split '-', $date;
+    my $date1 = $date;
+    my $date2 = $date;
+    if ($monthly)
+    {
+      $date1 = "$date-01";
+      my $lastDay = Days_in_Month($y,$m);
+      $date2 = "$date-$lastDay";
+      $date = $self->YearMonthToEnglish($date);
+    }
+    my $sql = "SELECT s2,s3,s4,s8,s2+s3+s4+s8 FROM predeterminationsbreakdown WHERE date LIKE '$date1%'";
+    #print "$sql<br/>\n";
+    my ($s2,$s3,$s4,$s8,$sum) = @{$self->get('dbh')->selectall_arrayref( $sql )->[0]};
+    my @line = ($s2,$s3,$s4,$s8,$sum,0,0,0,0,0);
+    next unless $sum > 0;
+    for (my $i=0; $i < 4; $i++)
+    {
+      $totals[$i] += $line[$i];
+    }
+    for (my $i=0; $i < 3; $i++)
+    {
+      my $pct = 0.0;
+      eval {$pct = 100.0*$line[$i]/$line[3];};
+      $line[$i+5] = sprintf('%.1f%%', $pct);
+    }
+    $report .= $date;
+    $report .= $delimiter . join($delimiter, @line) . "\n";
+  }
+  my $gt = $totals[0] + $totals[1] + $totals[2] + $totals[3];
+  push @totals, $gt;
+  for (my $i=0; $i < 5; $i++)
   {
     my $pct = 0.0;
     eval {$pct = 100.0*$totals[$i]/$gt;};
@@ -3503,9 +3588,9 @@ sub CreateDeterminationsBreakdownData
     $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
   }
   my $report = ($title)? "$title\n":"Determinations Breakdown $titleDate\n";
-  my @titles = ('Date','Status 4','Status 5','Status 6','Status 7','Total','Status 4','Status 5','Status 6','Status 7');
+  my @titles = ('Date','Status 4','Status 5','Status 6','Status 7','Status 8','Total','Status 4','Status 5','Status 6','Status 7','Status 8');
   $report .= join($delimiter, @titles) . "\n";
-  my @totals = (0,0,0);
+  my @totals = (0,0,0,0,0);
   foreach my $date (@dates)
   {
     my ($y,$m,$d) = split '-', $date;
@@ -3518,27 +3603,28 @@ sub CreateDeterminationsBreakdownData
       $date2 = "$date-$lastDay";
       $date = $self->YearMonthToEnglish($date);
     }
-    my $sql = "SELECT SUM(s4),SUM(s5),SUM(s6),SUM(s7),SUM(s4+s5+s6+s7) FROM determinationsbreakdown WHERE date>='$date1' AND date<='$date2'";
+    my $sql = 'SELECT SUM(s4),SUM(s5),SUM(s6),SUM(s7),SUM(s8),SUM(s4+s5+s6+s7+s8) ' .
+              "FROM determinationsbreakdown WHERE date>='$date1' AND date<='$date2'";
     #print "$sql<br/>\n";
-    my ($s4,$s5,$s6,$s7,$sum) = @{$self->get('dbh')->selectall_arrayref( $sql )->[0]};
-    my @line = ($s4,$s5,$s6,$s7,$sum,0,0,0,0);
+    my ($s4,$s5,$s6,$s7,$s8,$sum) = @{$self->get('dbh')->selectall_arrayref( $sql )->[0]};
+    my @line = ($s4,$s5,$s6,$s7,$s8,$sum,0,0,0,0);
     next unless $sum > 0;
-    for (my $i=0; $i < 4; $i++)
+    for (my $i=0; $i < 5; $i++)
     {
       $totals[$i] += $line[$i];
     }
-    for (my $i=0; $i < 4; $i++)
+    for (my $i=0; $i < 5; $i++)
     {
       my $pct = 0.0;
-      eval {$pct = 100.0*$line[$i]/$line[4];};
-      $line[$i+5] = sprintf('%.1f%%', $pct);
+      eval {$pct = 100.0*$line[$i]/$line[5];};
+      $line[$i+6] = sprintf('%.1f%%', $pct);
     }
     $report .= $date;
     $report .= $delimiter . join($delimiter, @line) . "\n";
   }
-  my $gt = $totals[0] + $totals[1] + $totals[2];
+  my $gt = $totals[0] + $totals[1] + $totals[2] + $totals[3] + $totals[4];
   push @totals, $gt;
-  for (my $i=0; $i < 4; $i++)
+  for (my $i=0; $i < 5; $i++)
   {
     my $pct = 0.0;
     eval {$pct = 100.0*$totals[$i]/$gt;};
@@ -3558,10 +3644,10 @@ sub CreateDeterminationsBreakdownReport
   my $pre      = shift;
 
   my $data;
-  my $whichline = 4;
-  my $span1 = 5;
-  my $span2 = 4;
-  my $cols = 9;
+  my $whichline = 5;
+  my $span1 = 6;
+  my $span2 = 5;
+  my $cols = 11;
   if ($pre)
   {
     $data = $self->CreatePreDeterminationsBreakdownData("\t", $start, $end, $monthly, $title);
@@ -3634,10 +3720,9 @@ sub CreateDeterminationsBreakdownGraph
   my @lines = split "\n", $data;
   $title = shift @lines;
   shift @lines;
-  
   my @usedates = ();
   my @elements = ();
-  my %colors = (4 => '#22BB00', 5 => '#FF2200', 6 => '#0088FF', 7 => '#C9A8FF');
+  my %colors = (4 => '#22BB00', 5 => '#FF2200', 6 => '#0088FF', 7 => '#C9A8FF', 8 => 'FFCC00');
   foreach my $status (sort keys %colors)
   {
     my @vals = ();
@@ -3647,7 +3732,7 @@ sub CreateDeterminationsBreakdownGraph
     if (scalar @lines <= 1)
     {
       my $date = substr $self->GetTodaysDate(), 0, 10;
-      @lines = ("$date\t0\t0\t0\t0\t0.0%%\t0.0%\t0.0%%\t0.0%%");
+      @lines = ("$date\t0\t0\t0\t0\t0\t0.0%\t0.0%\t0.0%\t0.0%\t0.0%");
     }
     foreach my $line (@lines)
     {
@@ -3658,7 +3743,7 @@ sub CreateDeterminationsBreakdownGraph
       $date =~ s/Total\s//;
       push @usedates, $date if $status == 4;
       my $count = $line[$status-4];
-      my $pct = $line[$status+1];
+      my $pct = $line[$status+2];
       $pct =~ s/%//;
       push @vals, sprintf('{"value":%d,"tip":"%.1f%% (%d)"}', $pct, $pct, $count);
     }
@@ -4155,12 +4240,13 @@ sub GetMonthStats
 sub UpdatePreDeterminationsBreakdown
 {
   my $self = shift;
- 
+
   $self->PrepareSubmitSql('DELETE FROM predeterminationsbreakdown WHERE date=DATE(NOW())');
-  my $s2 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=2');
-  my $s3 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=3');
-  my $s4 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=4');
-  my $sql = "INSERT INTO predeterminationsbreakdown (date,s2,s3,s4) VALUES (DATE(NOW()),$s2,$s3,$s4)";
+  my $s2 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=2 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
+  my $s3 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=3 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
+  my $s4 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=4 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
+  my $s8 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=8 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
+  my $sql = "INSERT INTO predeterminationsbreakdown (date,s2,s3,s4,s8) VALUES (DATE(NOW()),$s2,$s3,$s4,$s8)";
   $self->PrepareSubmitSql($sql);
 }
 
@@ -4171,13 +4257,13 @@ sub UpdateDeterminationsBreakdown
 
   $date = $self->SimpleSqlGet('SELECT CURDATE()') unless $date;
   my @counts;
-  foreach my $status (4..7)
+  foreach my $status (4..8)
   {
     my $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r ON e.gid=r.gid WHERE ' .
               "r.legacy!=1 AND DATE(e.time)='$date' AND r.status=$status";
     push @counts, $self->SimpleSqlGet($sql);
   }
-  my $sql = sprintf "REPLACE INTO determinationsbreakdown (date,s4,s5,s6,s7) VALUES ('$date',%s)", join ',', @counts;
+  my $sql = sprintf "REPLACE INTO determinationsbreakdown (date,s4,s5,s6,s7,s8) VALUES ('$date',%s)", join ',', @counts;
   $self->PrepareSubmitSql($sql);
 }
 
@@ -5123,11 +5209,9 @@ sub GetMetadata
   my $id   = shift;
 
   if ( ! $id ) { $self->SetError( "GetMetadata: no id given: '$id'" ); return; }
-  # If it has a period, it's a volume ID so transform it into a system ID.
-  # FIXME: this is unnecessary; we should alter the URL based on the form of the id.
-  $id = $self->BarcodeToId($id) if $id =~ m/\./;
-  return unless $id;
-  my $url = "http://catalog.hathitrust.org/api/volumes/full/recordnumber/$id.json";
+  # If it has a period, it's a volume ID
+  my $url = ($id =~ m/\./)? "http://catalog.hathitrust.org/api/volumes/full/htid/$id.json" :
+                            "http://catalog.hathitrust.org/api/volumes/full/recordnumber/$id.json";
   my $ua = LWP::UserAgent->new;
   $ua->timeout( 1000 );
   my $req = HTTP::Request->new( GET => $url );
@@ -5767,7 +5851,7 @@ sub CreateQueueReport
     $priheaders .= "<th>Priority&nbsp;$pri</th>";
   }
   my $report = "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
-  foreach my $status (-1 .. 7)
+  foreach my $status (-1 .. 8)
   {
     my $statusClause = ($status == -1)? '':" WHERE STATUS=$status";
     my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable $statusClause";
@@ -5850,14 +5934,19 @@ sub CreateDeterminationReport
   my $sixes = $self->SimpleSqlGet($sql);
   $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=7 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
   my $sevens = $self->SimpleSqlGet($sql);
+  $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=8 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
+  my $eights = $self->SimpleSqlGet($sql);
+  my $total = $fours+$fives+$sixes+$sevens+$eights;
   my $pct4 = 0;
   my $pct5 = 0;
   my $pct6 = 0;
   my $pct7 = 0;
-  eval {$pct4 = 100.0*$fours/($fours+$fives+$sixes+$sevens);};
-  eval {$pct5 = 100.0*$fives/($fours+$fives+$sixes+$sevens);};
-  eval {$pct6 = 100.0*$sixes/($fours+$fives+$sixes+$sevens);};
-  eval {$pct7 = 100.0*$sevens/($fours+$fives+$sixes+$sevens);};
+  my $pct8 = 0;
+  eval {$pct4 = 100.0*$fours/$total;};
+  eval {$pct5 = 100.0*$fives/$total;};
+  eval {$pct6 = 100.0*$sixes/$total;};
+  eval {$pct7 = 100.0*$sevens/$total;};
+  eval {$pct8 = 100.0*$eights/$total;};
   my $legacy = $self->GetTotalLegacyCount();
   my %sources;
   $sql = 'SELECT src,COUNT(gid) FROM exportdata WHERE src IS NOT NULL GROUP BY src';
@@ -5876,6 +5965,7 @@ sub CreateDeterminationReport
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</th><td>$fives&nbsp;(%.1f%%)</td></tr>", $pct5);
   $report .= sprintf("<tr><th style='color:#999999;'>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6*</th><td style='background-color:#999999;'>$sixes&nbsp;(%.1f%%)</td></tr>", $pct6);
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;7</th><td>$sevens&nbsp;(%.1f%%)</td></tr>", $pct7);
+  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;8</th><td>$eights&nbsp;(%.1f%%)</td></tr>", $pct8);
   $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</th><td>%s</td></tr>", $exported);
   foreach my $source (sort keys %sources)
   {
@@ -5940,21 +6030,28 @@ sub CreateReviewReport
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=4';
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Matches</td><td>$count</td>";
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Match</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
   
   # Unprocessed - conflict
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=2';
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflicts</td><td>$count</td>";
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflict</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
   
-  # Unprocessed - matching und/nfi
+  # Unprocessed - provisional match
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=3';
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Matches</td><td>$count</td>";
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Match</td><td>$count</td>";
+  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
+  
+  # Unprocessed - provisional match
+  $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=8';
+  $ref = $dbh->selectall_arrayref( $sql );
+  $count = scalar @{$ref};
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Auto&nbsp;Resolved</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
   
   # Processed
@@ -5967,16 +6064,16 @@ sub CreateReviewReport
   $sql = "SELECT priority from $CRMSGlobals::queueTable WHERE status=2";
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflicts</td><td>$count</td>";
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflict</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
 
   $sql = 'SELECT priority from queue WHERE status=3';
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Matches</td><td>$count</td>";
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Match</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
   
-  $sql = "SELECT priority from $CRMSGlobals::queueTable WHERE status=4 OR status=5 OR status=6 OR status=7";
+  $sql = "SELECT priority from $CRMSGlobals::queueTable WHERE status>=4";
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Awaiting&nbsp;Export</td><td>$count</td>";
@@ -5984,29 +6081,14 @@ sub CreateReviewReport
   
   if ($count > 0)
   {
-    $sql = 'SELECT priority from queue WHERE status=4';
-    $ref = $dbh->selectall_arrayref( $sql );
-    $count = scalar @{$ref};
-    $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</td><td>$count</td>";
-    $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
-
-    $sql = 'SELECT priority from queue WHERE status=5';
-    $ref = $dbh->selectall_arrayref( $sql );
-    $count = scalar @{$ref};
-    $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</td><td>$count</td>";
-    $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
-
-    $sql = 'SELECT priority from queue WHERE status=6';
-    $ref = $dbh->selectall_arrayref( $sql );
-    $count = scalar @{$ref};
-    $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6</td><td>$count</td>";
-    $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
-    
-    $sql = 'SELECT priority from queue WHERE status=7';
-    $ref = $dbh->selectall_arrayref( $sql );
-    $count = scalar @{$ref};
-    $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;7</td><td>$count</td>";
-    $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
+    for my $status (4..8)
+    {
+      $sql = "SELECT priority from queue WHERE status=$status";
+      $ref = $dbh->selectall_arrayref( $sql );
+      $count = scalar @{$ref};
+      $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;$status</td><td>$count</td>";
+      $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
+    }
   }
   $report .= sprintf("<tr><td nowrap='nowrap' colspan='%d'><span class='smallishText'>Last processed %s</span></td></tr>\n", 2+scalar @pris, $self->GetLastStatusProcessedTime());
   $report .= "</table>\n";
