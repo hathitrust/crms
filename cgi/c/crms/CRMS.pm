@@ -6051,7 +6051,7 @@ sub CreateReviewReport
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=8';
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Auto&nbsp;Resolved</td><td>$count</td>";
+  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Auto-Resolved</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
   
   # Processed
