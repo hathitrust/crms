@@ -187,6 +187,7 @@ sub ProcessReviews
 {
   my $self = shift;
 
+  $self->UpdatePreDeterminationsBreakdown();
   my $dbh = $self->get( 'dbh' );
   my $sql = 'SELECT id,user,attr,reason,renNum,renDate,hold FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) ' .
             'GROUP BY id HAVING count(*) = 2';
@@ -1322,7 +1323,6 @@ sub GetFinalAttrReason
   if ( ! $ref->[0]->[0] )
   {
     $self->SetError( "$id not found in review table" );
-    return;
   }
   my $attr   = $self->GetRightsName( $ref->[0]->[0] );
   my $reason = $self->GetReasonName( $ref->[0]->[1] );
@@ -1337,21 +1337,6 @@ sub RegisterStatus
 
   my $sql = "UPDATE $CRMSGlobals::queueTable SET status=$status WHERE id='$id'";
   $self->PrepareSubmitSql( $sql );
-  my %ofinterest = (2=>1,3=>1,4=>1,8=>1);
-  if ($ofinterest{$status})
-  {
-    my $col = 's'.$status;
-    $sql = "SELECT COUNT(*) FROM predeterminationsbreakdown WHERE date=DATE(NOW())";
-    if ($self->SimpleSqlGet($sql))
-    {
-      $sql = "UPDATE predeterminationsbreakdown SET $col=$col+1 WHERE date=DATE(NOW())";
-    }
-    else
-    {
-      $sql = "INSERT INTO predeterminationsbreakdown (date,$col) VALUES (DATE(NOW()),1)";
-    }
-    $self->PrepareSubmitSql( $sql );
-  }
 }
 
 sub RegisterPendingStatus
@@ -4197,18 +4182,18 @@ sub GetMonthStats
   $self->PrepareSubmitSql( $sql );
 }
 
-#sub UpdatePreDeterminationsBreakdown
-#{
-#  my $self = shift;
-#
-#  $self->PrepareSubmitSql('DELETE FROM predeterminationsbreakdown WHERE date=DATE(NOW())');
-#  my $s2 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=2 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
-#  my $s3 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=3 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
-#  my $s4 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=4 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
-#  my $s8 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=8 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
-#  my $sql = "INSERT INTO predeterminationsbreakdown (date,s2,s3,s4,s8) VALUES (DATE(NOW()),$s2,$s3,$s4,$s8)";
-#  $self->PrepareSubmitSql($sql);
-#}
+sub UpdatePreDeterminationsBreakdown
+{
+  my $self = shift;
+
+  $self->PrepareSubmitSql('DELETE FROM predeterminationsbreakdown WHERE date=DATE(NOW())');
+  my $s2 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=2 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
+  my $s3 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=3 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
+  my $s4 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=4 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
+  my $s8 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=8 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
+  my $sql = "INSERT INTO predeterminationsbreakdown (date,s2,s3,s4,s8) VALUES (DATE(NOW()),$s2,$s3,$s4,$s8)";
+  $self->PrepareSubmitSql($sql);
+}
 
 sub UpdateDeterminationsBreakdown
 {
