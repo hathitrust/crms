@@ -187,7 +187,6 @@ sub ProcessReviews
 {
   my $self = shift;
 
-  $self->UpdatePreDeterminationsBreakdown();
   my $dbh = $self->get( 'dbh' );
   my $sql = 'SELECT id,user,attr,reason,renNum,renDate,hold FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) ' .
             'GROUP BY id HAVING count(*) = 2';
@@ -351,9 +350,18 @@ sub ClearQueueAndExport
   my $self     = shift;
   my $fromcgi  = shift;
 
+  my $aCount = 0;
   my $eCount = 0;
   my $dCount = 0;
   my $export = [];
+  ## get status 8, clear these
+  my $auto = $self->GetAutoResolvedItems();
+  foreach my $row ( @{$auto} )
+  {
+    my $id = $row->[0];
+    push( @{$export}, $id );
+    $aCount++;
+  }
   ## get items > 2, clear these
   my $expert = $self->GetExpertRevItems();
   foreach my $row ( @{$expert} )
@@ -380,19 +388,25 @@ sub ClearQueueAndExport
   $self->ExportReviews( $export, $fromcgi );
   $self->UpdateExportStats();
   $self->UpdateDeterminationsBreakdown();
-  #return "Exported: $dCount double review, $eCount expert reviewed, $dupCount duplicates inheriting";
-  return "Exported: $dCount double review, $eCount expert reviewed\n";
+  return "Exported: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved\n";
+}
+
+sub GetAutoResolvedItems
+{
+  my $self = shift;
+  my $sql  = 'SELECT id FROM queue WHERE status=8';
+  return $self->get( 'dbh' )->selectall_arrayref( $sql );
 }
 
 sub GetExpertRevItems
 {
   my $self = shift;
 
-  my $sql  = 'SELECT id FROM queue WHERE status>=5 AND id NOT IN (SELECT id FROM reviews WHERE CURTIME()<hold)';
+  my $sql  = 'SELECT id FROM queue WHERE status>=5 AND status<8 AND id NOT IN (SELECT id FROM reviews WHERE CURTIME()<hold)';
   my $stat = @{$self->GetSystemStatus(1)}->[1];
   if ($stat ne 'normal')
   {
-    $sql  = 'SELECT id FROM queue WHERE status>=5 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)';
+    $sql  = 'SELECT id FROM queue WHERE status>=5 AND status<8 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)';
   }
   return $self->get( 'dbh' )->selectall_arrayref( $sql );
 }
@@ -590,13 +604,16 @@ sub LoadNewItemsInCandidates
   my $sql = "SELECT id,time FROM und WHERE src='no meta'";
   my $dbh = $self->get('dbh');
   my $ref = $dbh->selectall_arrayref( $sql );
-  printf "Checking %d possible additions to candidates from und\n", scalar @{ $ref };
-  foreach my $row ( @{$ref} )
+  if (scalar @{ $ref })
   {
-    my $id   = $row->[0];
-    my $time = $row->[1];
-    
-    $self->CheckAndLoadItemIntoCandidates($id, $time);
+    printf "Checking %d possible no-meta additions to candidates\n", scalar @{ $ref };
+    foreach my $row ( @{$ref} )
+    {
+      my $id   = $row->[0];
+      my $time = $row->[1];
+
+      $self->CheckAndLoadItemIntoCandidates($id, $time);
+    }
   }
   $sql = "SELECT namespace,id,time FROM rights_current WHERE attr=2 AND reason=1 AND time>'$start' GROUP BY namespace, id";
   $dbh = $self->GetSdrDb();
@@ -651,7 +668,7 @@ sub CheckAndLoadItemIntoCandidates
     {
       my $sql = "SELECT COUNT(*) FROM und WHERE id='$id'";
       my $already = (1 == $self->SimpleSqlGet($sql));
-      printf "Skip $id ($src) -- %s in und table\n", ($already)? 'updating':'inserting';
+      printf "Skip $id ($src) -- %s in filtered volumes\n", ($already)? 'updating':'inserting';
       $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src','$time')";
       $self->PrepareSubmitSql( $sql );
       $sql = "DELETE FROM candidates WHERE id='$id'";
@@ -1305,6 +1322,7 @@ sub GetFinalAttrReason
   if ( ! $ref->[0]->[0] )
   {
     $self->SetError( "$id not found in review table" );
+    return;
   }
   my $attr   = $self->GetRightsName( $ref->[0]->[0] );
   my $reason = $self->GetReasonName( $ref->[0]->[1] );
@@ -1319,6 +1337,21 @@ sub RegisterStatus
 
   my $sql = "UPDATE $CRMSGlobals::queueTable SET status=$status WHERE id='$id'";
   $self->PrepareSubmitSql( $sql );
+  my %ofinterest = (2=>1,3=>1,4=>1,8=>1);
+  if ($ofinterest{$status})
+  {
+    my $col = 's'.$status;
+    $sql = "SELECT COUNT(*) FROM predeterminationsbreakdown WHERE date=DATE(NOW())";
+    if ($self->SimpleSqlGet($sql))
+    {
+      $sql = "UPDATE predeterminationsbreakdown SET $col=$col+1 WHERE date=DATE(NOW())";
+    }
+    else
+    {
+      $sql = "INSERT INTO predeterminationsbreakdown (date,$col) VALUES (DATE(NOW()),1)";
+    }
+    $self->PrepareSubmitSql( $sql );
+  }
 }
 
 sub RegisterPendingStatus
@@ -3442,79 +3475,6 @@ sub CreatePreDeterminationsBreakdownData
     $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
   }
   my $report = ($title)? "$title\n":"Preliminary Determinations Breakdown $titleDate\n";
-  my @titles = ('Date','Status 2','Status 3','Status 4','Total','Status 2','Status 3','Status 4');
-  $report .= join($delimiter, @titles) . "\n";
-  my @totals = (0,0,0);
-  foreach my $date (@dates)
-  {
-    my ($y,$m,$d) = split '-', $date;
-    my $date1 = $date;
-    my $date2 = $date;
-    if ($monthly)
-    {
-      $date1 = "$date-01";
-      my $lastDay = Days_in_Month($y,$m);
-      $date2 = "$date-$lastDay";
-      $date = $self->YearMonthToEnglish($date);
-    }
-    my $sql = "SELECT s2,s3,s4,s2+s3+s4 FROM predeterminationsbreakdown WHERE date LIKE '$date1%'";
-    #print "$sql<br/>\n";
-    my ($s2,$s3,$s4,$sum) = @{$self->get('dbh')->selectall_arrayref( $sql )->[0]};
-    my @line = ($s2,$s3,$s4,$sum,0,0,0);
-    next unless $sum > 0;
-    for (my $i=0; $i < 3; $i++)
-    {
-      $totals[$i] += $line[$i];
-    }
-    for (my $i=0; $i < 3; $i++)
-    {
-      my $pct = 0.0;
-      eval {$pct = 100.0*$line[$i]/$line[3];};
-      $line[$i+4] = sprintf('%.1f%%', $pct);
-    }
-    $report .= $date;
-    $report .= $delimiter . join($delimiter, @line) . "\n";
-  }
-  my $gt = $totals[0] + $totals[1] + $totals[2];
-  push @totals, $gt;
-  for (my $i=0; $i < 3; $i++)
-  {
-    my $pct = 0.0;
-    eval {$pct = 100.0*$totals[$i]/$gt;};
-    push @totals, sprintf('%.1f%%', $pct);
-  }
-  $report .= 'Total' . $delimiter . join($delimiter, @totals) . "\n";
-  return $report;
-}
-
-# This has the status 8 info
-sub CreatePreDeterminationsBreakdownDataOld
-{
-  my $self      = shift;
-  my $delimiter = shift;
-  my $start     = shift;
-  my $end       = shift;
-  my $monthly   = shift;
-  my $title     = shift;
-
-  my ($year,$month) = $self->GetTheYearMonth();
-  my $titleDate = $self->YearMonthToEnglish("$year-$month");
-  my $justThisMonth = (!$start && !$end);
-  $start = "$year-$month-01" unless $start;
-  my $lastDay = Days_in_Month($year,$month);
-  $end = "$year-$month-$lastDay" unless $end;
-  my $what = 'date';
-  $what = 'DATE_FORMAT(date, "%Y-%m")' if $monthly;
-  my $sql = "SELECT DISTINCT($what) FROM predeterminationsbreakdown WHERE date>='$start' AND date<='$end'";
-  #print "$sql<br/>\n";
-  my @dates = map {$_->[0];} @{$self->get('dbh')->selectall_arrayref( $sql )};
-  if (scalar @dates && !$justThisMonth)
-  {
-    my $startEng = $self->YearMonthToEnglish(substr($dates[0],0,7));
-    my $endEng = $self->YearMonthToEnglish(substr($dates[-1],0,7));
-    $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
-  }
-  my $report = ($title)? "$title\n":"Preliminary Determinations Breakdown $titleDate\n";
   my @titles = ('Date','Status 2','Status 3','Status 4','Status 8','Total','Status 2','Status 3','Status 4','Status 8');
   $report .= join($delimiter, @titles) . "\n";
   my @totals = (0,0,0,0);
@@ -3533,13 +3493,13 @@ sub CreatePreDeterminationsBreakdownDataOld
     my $sql = "SELECT s2,s3,s4,s8,s2+s3+s4+s8 FROM predeterminationsbreakdown WHERE date LIKE '$date1%'";
     #print "$sql<br/>\n";
     my ($s2,$s3,$s4,$s8,$sum) = @{$self->get('dbh')->selectall_arrayref( $sql )->[0]};
-    my @line = ($s2,$s3,$s4,$s8,$sum,0,0,0,0,0);
+    my @line = ($s2,$s3,$s4,$s8,$sum,0,0,0,0);
     next unless $sum > 0;
     for (my $i=0; $i < 4; $i++)
     {
       $totals[$i] += $line[$i];
     }
-    for (my $i=0; $i < 3; $i++)
+    for (my $i=0; $i < 4; $i++)
     {
       my $pct = 0.0;
       eval {$pct = 100.0*$line[$i]/$line[3];};
@@ -3651,10 +3611,10 @@ sub CreateDeterminationsBreakdownReport
   if ($pre)
   {
     $data = $self->CreatePreDeterminationsBreakdownData("\t", $start, $end, $monthly, $title);
-    $whichline = 3;
+    $whichline = 4;
     $span1--;
     $span2--;
-    $cols = 7;
+    $cols = 9;
   }
   else
   {
@@ -4237,18 +4197,18 @@ sub GetMonthStats
   $self->PrepareSubmitSql( $sql );
 }
 
-sub UpdatePreDeterminationsBreakdown
-{
-  my $self = shift;
-
-  $self->PrepareSubmitSql('DELETE FROM predeterminationsbreakdown WHERE date=DATE(NOW())');
-  my $s2 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=2 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
-  my $s3 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=3 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
-  my $s4 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=4 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
-  my $s8 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=8 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
-  my $sql = "INSERT INTO predeterminationsbreakdown (date,s2,s3,s4,s8) VALUES (DATE(NOW()),$s2,$s3,$s4,$s8)";
-  $self->PrepareSubmitSql($sql);
-}
+#sub UpdatePreDeterminationsBreakdown
+#{
+#  my $self = shift;
+#
+#  $self->PrepareSubmitSql('DELETE FROM predeterminationsbreakdown WHERE date=DATE(NOW())');
+#  my $s2 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=2 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
+#  my $s3 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=3 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
+#  my $s4 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=4 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
+#  my $s8 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=8 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
+#  my $sql = "INSERT INTO predeterminationsbreakdown (date,s2,s3,s4,s8) VALUES (DATE(NOW()),$s2,$s3,$s4,$s8)";
+#  $self->PrepareSubmitSql($sql);
+#}
 
 sub UpdateDeterminationsBreakdown
 {
@@ -4363,13 +4323,13 @@ sub HasItemBeenReviewedByTwoReviewers
   }
   else
   {
-    my $sql = qq{ SELECT count(*) FROM $CRMSGlobals::reviewsTable WHERE id ='$id' AND user != '$user'};
+    my $sql = "SELECT count(*) FROM $CRMSGlobals::reviewsTable WHERE id ='$id' AND user != '$user'";
     my $count = $self->SimpleSqlGet( $sql );
     if ($count >= 2 )
     {
       $msg = 'This volume does not need to be reviewed. Two reviewers or an expert have already reviewed it. Please Cancel.';
     }
-    $sql = qq{ SELECT count(*) FROM $CRMSGlobals::queueTable WHERE id ='$id' AND status!=0 };
+    $sql = "SELECT count(*) FROM $CRMSGlobals::queueTable WHERE id ='$id' AND status!=0";
     $count = $self->SimpleSqlGet( $sql );
     if ($count >= 1 ) { $msg = 'This item has been processed already. Please Cancel.'; }
   }
