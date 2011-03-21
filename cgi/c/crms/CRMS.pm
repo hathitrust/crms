@@ -3487,7 +3487,7 @@ sub CreatePreDeterminationsBreakdownData
     for (my $i=0; $i < 4; $i++)
     {
       my $pct = 0.0;
-      eval {$pct = 100.0*$line[$i]/$line[3];};
+      eval {$pct = 100.0*$line[$i]/$line[4];};
       $line[$i+5] = sprintf('%.1f%%', $pct);
     }
     $report .= $date;
