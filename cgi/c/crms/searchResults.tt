@@ -234,7 +234,7 @@ function CheckAll(box,formid)
         <td>$review.reason</td>
         [% IF p == 'undReviews' %]<td>$review.renNum</td>[% END %]
         <td>$review.category</td>
-        <td>[% cgi.escapeHTML(review.note) %]</td>
+        <td>[% crms.LinkNoteText(cgi.escapeHTML(review.note)) %]</td>
         [% IF crms.IsUserAdmin() %]<td>$review.priority</td>[% END %]
         [% IF p == 'adminHistoricalReviews' %]
           <td align="center">

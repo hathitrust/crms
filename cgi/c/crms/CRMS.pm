@@ -187,90 +187,123 @@ sub ProcessReviews
 {
   my $self = shift;
 
-  $self->UpdatePreDeterminationsBreakdown();
+  my %stati;
   my $dbh = $self->get( 'dbh' );
-  my $sql = 'SELECT id,user,attr,reason,renNum,renDate,hold FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) ' .
-            'GROUP BY id HAVING count(*) = 2';
+  my $sql = 'SELECT id FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) GROUP BY id HAVING count(*) = 2';
   my $ref = $dbh->selectall_arrayref( $sql );
-  my $today = $self->GetTodaysDate();
   # Get the underlying system status, ignoring replication delays.
   my $stat = @{$self->GetSystemStatus(1)}->[1];
   foreach my $row ( @{$ref} )
   {
-    my $id      = $row->[0];
-    my $user    = $row->[1];
-    my $attr    = $row->[2];
-    my $reason  = $row->[3];
-    my $renNum  = $row->[4];
-    my $renDate = $row->[5];
-    my $hold    = $row->[6];
-    
-    next if $hold and $today lt $hold;
-    if ($hold && $stat ne 'normal')
+    my $id = $row->[0];
+    my $data = $self->CalcStatus($id, $stat);
+    my $status = $data->{'status'};
+    next unless $status > 0;
+    my $hold = $data->{'hold'};
+    if ($hold)
     {
-      print "Not processing $id for $user: it is held ($hold); system status is '$stat'\n";
+      print "Not processing $id for $hold: it is held; system status is '$stat'\n" if $stat ne 'normal';
       next;
     }
-    $sql = "SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id='$id' AND user!='$user'";
-    my $ref2 = $dbh->selectall_arrayref( $sql );
-    my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{ $ref2->[0] };
-    next if $other_hold and $today lt $other_hold;
-    if ($other_hold && $stat ne 'normal')
+    if ($status == 8)
     {
-      print "Not processing $id (2nd review) for $other_user: it is held ($other_hold); system status is '$stat'\n";
-      next;
+      my $attr = $data->{'status'};
+      my $reason = $data->{'reason'};
+      my $category = $data->{'category'};
+      my $note = $data->{'note'};
+      $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,"'$category'",0,0);
     }
-    if ($attr == $other_attr)
-    {
-      # If both reviewers are non-advanced mark as provisional match
-      if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
-      {
-         $self->RegisterStatus( $id, 3 );
-      }
-      else #Mark as 4 or 8 - two that agree
-      {
-        my $note = undef;
-        my $doAuto = undef;
-        if ($reason != $other_reason)
-        {
-          $doAuto = 1;
-          $reason = 13;
-        }
-        elsif ($attr == 2 && $reason == 7 && $other_reason == 7 && ($renNum ne $other_renNum || $renDate ne $other_renDate))
-        {
-          $doAuto = 1;
-          $note = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)', $renNum, $renDate, $other_renNum, $other_renDate;
-        }
-        $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,'Attr Match',0,0) if $doAuto;
-        $self->RegisterStatus( $id, ($doAuto)? 8:4 );
-      }
-    }
-    # Do auto for ic vs und
-    elsif (($attr == 2 && $other_attr == 5) || ($attr == 5 && $other_attr == 2))
-    {
-      # If both reviewers are non-advanced mark as provisional match
-      if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
-      {
-         $self->RegisterStatus( $id, 3 );
-      }
-      else #Mark as 8 - two that agree
-      {
-        $self->SubmitReview($id,'autocrms',5,13,undef,undef,1,undef,'Attr Default',0,0);
-        $self->RegisterStatus( $id, 8 );
-      }
-    }
-    else #Mark as 2 - two that disagree
-    {
-      $self->RegisterStatus( $id, 2 );
-    }
+    $self->RegisterStatus( $id, $status );
     $sql = "UPDATE reviews SET hold=NULL,sticky_hold=NULL,time=time WHERE id='$id'";
     $self->PrepareSubmitSql( $sql );
+    $stati{$status}++;
   }
   # Clear out all the locks
   $sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
   $self->PrepareSubmitSql( $sql );
   $sql = 'INSERT INTO processstatus VALUES ()';
   $self->PrepareSubmitSql( $sql );
+  my ($s2,$s3,$s4,$s8) = ($stati{2},$stati{3},$stati{4},$stati{8});
+  $self->PrepareSubmitSql('DELETE FROM predeterminationsbreakdown WHERE date=DATE(NOW())');
+  $sql = "INSERT INTO predeterminationsbreakdown (date,s2,s3,s4,s8) VALUES (DATE(NOW()),$s2,$s3,$s4,$s8)";
+  $self->PrepareSubmitSql($sql);
+}
+
+# Determines what status a given id should be based on existing reviews and system status.
+# Returns a hashref (status,attr,reason,category,note) where attr, reason, note are for status 8
+# autocrms dummy reviews.
+# In the case of a hold, there will be a 'hold' key pointing to the user with the hold.
+sub CalcStatus
+{
+  my $self = shift;
+  my $id   = shift;
+  my $stat = shift;
+
+  my %return;
+  my $dbh = $self->get( 'dbh' );
+  my $status = 0;
+  my $sql = "SELECT user,attr,reason,renNum,renDate,hold,NOW() FROM reviews WHERE id='$id'";
+  my $ref = $dbh->selectall_arrayref( $sql );
+  my ($user, $attr, $reason, $renNum, $renDate, $hold, $today) = @{ $ref->[0] };
+  $sql = "SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id='$id' AND user!='$user'";
+  $ref = $dbh->selectall_arrayref( $sql );
+  my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{ $ref->[0] };
+  if ($other_hold && ($today lt $other_hold || $stat ne 'normal'))
+  {
+    $return{'hold'} = $other_user;
+  }
+  elsif ($attr == $other_attr)
+  {
+    # If both reviewers are non-advanced mark as provisional match
+    if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+    {
+       $status = 3;
+    }
+    else #Mark as 4 or 8 - two that agree
+    {
+      if ($reason != $other_reason)
+      {
+        $status = 8;
+        $return{'attr'} = $attr;
+        $return{'reason'} = 13;
+        $return{'category'} = 'Attr Match';
+      }
+      elsif ($attr == 2 && $reason == 7 && $other_reason == 7 && ($renNum ne $other_renNum || $renDate ne $other_renDate))
+      {
+        $status = 8;
+        $return{'attr'} = $attr;
+        $return{'reason'} = $reason;
+        $return{'category'} = 'Attr Match';
+        $return{'note'} = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)', $renNum, $renDate, $other_renNum, $other_renDate;
+      }
+      else
+      {
+        $status = 4;
+      }
+    }
+  }
+  # Do auto for ic vs und
+  elsif (($attr == 2 && $other_attr == 5) || ($attr == 5 && $other_attr == 2))
+  {
+    # If both reviewers are non-advanced mark as provisional match
+    if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+    {
+       $status = 3;
+    }
+    else #Mark as 8 - two that agree
+    {
+      $status = 8;
+      $return{'attr'} = $attr;
+      $return{'reason'} = $reason;
+      $return{'category'} = 'Attr Default';
+    }
+  }
+  else #Mark as 2 - two that disagree
+  {
+    $status = 2;
+  }
+  $return{'status'} = $status;
+  return \%return;
 }
 
 sub CheckPendingStatus
@@ -417,67 +450,6 @@ sub GetDoubleRevItemsInAgreement
   my $self = shift;
   my $sql  = 'SELECT id FROM queue WHERE status=4';
   return $self->get( 'dbh' )->selectall_arrayref( $sql );
-}
-
-# For each volume to be exported, find all other volumes with the same sysid.
-# For each one that is still ic/bib and has not been in reviewed yet,
-# add a queue entry (if necessary) and a dummy review with the same rights.
-# Do not do this if any of the volumes has chron/enum info.
-sub ReviewDuplicateVolumes
-{
-  my $self    = shift;
-  my $export  = shift;
-  my $fromcgi = shift;
-  
-  my @dups = ();
-  foreach my $id ( @{$export} )
-  {
-    my $sysid = $self->BarcodeToId($id);
-    if (!$sysid)
-    {
-      $self->SetError("ReviewDuplicateVolumes: could not get system ID for $id");
-      next;
-    }
-    my ($attr,$reason) = $self->GetFinalAttrReason($id);
-    next unless ($attr && $reason);
-    $attr = $self->GetRightsNum($attr);
-    $reason = $self->GetReasonNum($reason);
-    my $rows = $self->VolumeIDsQuery($sysid);
-    my @iddups = ();
-    foreach my $line (@{$rows})
-    {
-      my ($id2,$chron2,$rights2) = split '__', $line;
-      if ($chron2)
-      {
-        print "Chron/enum info found for $sysid ($id); skipping\n" unless $fromcgi;
-        @iddups = ();
-        last;
-      }
-      my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id,1)->[0]};
-      if ($id2 ne $id && $attr2 eq 'ic' && $reason2 eq 'bib')
-      {
-        next if $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2'");
-        next if $self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id2'");
-        push @iddups, $id2;
-      }
-    }
-    foreach my $id2 (@iddups)
-    {
-      my $record = $self->GetMetadata($id2);
-      print "Updating queue and reviews for $id2 ($sysid from $id)\n" unless $fromcgi;
-      my $sql = "REPLACE INTO queue (id,locked,status,pending_status,expcnt,source) VALUES ('$id2','autocrms',5,5,1,'duplicate')";
-      $self->PrepareSubmitSql($sql);
-      my $note = "Source $id";
-      # Inherit swiss from the original review(s).
-      my $swiss = $self->SimpleSqlGet("SELECT MAX(swiss) FROM reviews WHERE id='$id'");
-      my $result = $self->SubmitReview($id2,'autocrms',$attr,$reason,$note,undef,1,undef,'Rights Inherited',$swiss,0);
-      $self->UpdateTitle($id2, undef, $record);
-      $self->UpdatePubDate($id2, undef, $record);
-      $self->UpdateAuthor($id2, undef, $record);
-      push @dups, $id2;
-    }
-  }
-  return \@dups;
 }
 
 ## ----------------------------------------------------------------------------
@@ -1201,60 +1173,58 @@ sub GetPriority
 ## ----------------------------------------------------------------------------
 sub SubmitHistReview
 {
-    my $self = shift;
-    my ($id, $user, $date, $attr, $reason, $renNum, $renDate, $note, $category, $status, $expert, $noop) = @_;
+  my $self = shift;
+  my ($id, $user, $time, $attr, $reason, $renNum, $renDate, $note, $category, $status, $expert, $legacy, $source, $gid, $noop) = @_;
 
-    $id = lc $id;
-    ## change attr and reason back to numbers
-    $attr = $self->GetRightsNum( $attr );
-    $reason = $self->GetReasonNum( $reason );
-
-    #if ( ! $self->CheckReviewer( $user, $expert ) )           { $self->SetError("reviewer ($user) check failed"); return 0; }
-    # ValidateAttrReasonCombo sets error internally on fail.
-    if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { return 0; }
-    
+  $id = lc $id;
+  $legacy = ($legacy)? 1:0;
+  $gid = 'NULL' unless $gid;
+  ## change attr and reason back to numbers
+  $attr = $self->GetRightsNum( $attr ) unless $attr =~ m/^\d+$/;
+  $reason = $self->GetReasonNum( $reason ) unless $reason =~ m/^\d+$/;
+  # ValidateAttrReasonCombo sets error internally on fail.
+  if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { return 0; }
+  if ($status != 9)
+  {
     my $err = $self->ValidateSubmissionHistorical($attr, $reason, $note, $category, $renNum, $renDate);
     if ($err) { $self->SetError($err); return 0; }
-    ## do some sort of check for expert submissions
-    
-    if (!$noop)
+  }
+  ## do some sort of check for expert submissions
+  if (!$noop)
+  {
+    $note = $self->get('dbh')->quote($note);
+    ## all good, INSERT
+    my $sql = 'REPLACE INTO historicalreviews (id, user, time, attr, reason, renNum, renDate, note, legacy, category, status, expert, source, gid) ' .
+           "VALUES('$id', '$user', '$time', '$attr', '$reason', '$renNum', '$renDate', $note, $legacy, '$category', $status, $expert, '$source', $gid)";
+    $self->PrepareSubmitSql( $sql );
+    #Now load this info into the bibdata and system table.
+    my $record = $self->GetMetadata($id);
+    $self->UpdateTitle( $id, undef, $record );
+    $self->UpdatePubDate( $id, undef, $record );
+    $self->UpdateAuthor( $id, undef, $record );
+    # Update status on status 1 item
+    if ($status == 5)
     {
-      $note = $self->get('dbh')->quote($note);
-      
-      ## all good, INSERT
-      my $sql = 'REPLACE INTO historicalreviews (id, user, time, attr, reason, renNum, renDate, note, legacy, category, status, expert, source) ' .
-             "VALUES('$id', '$user', '$date', '$attr', '$reason', '$renNum', '$renDate', $note, 1, '$category', $status, $expert, 'legacy')";
-
+      $sql = "UPDATE $CRMSGlobals::historicalreviewsTable SET status=$status WHERE id='$id' AND legacy=1 AND gid IS NULL";
       $self->PrepareSubmitSql( $sql );
-
-      #Now load this info into the bibdata and system table.
-      my $record = $self->GetMetadata($id);
-      $self->UpdateTitle( $id, undef, $record );
-      $self->UpdatePubDate( $id, undef, $record );
-      $self->UpdateAuthor( $id, undef, $record );
-      # Update status on status 1 item
-      if ($status == 5)
+    }
+    # Update validation on all items with this id
+    $sql = "SELECT user,time,validated FROM historicalreviews WHERE id='$id'";
+    my $ref = $self->get('dbh')->selectall_arrayref($sql);
+    foreach my $row (@{$ref})
+    {
+      $user = $row->[0];
+      $time = $row->[1];
+      my $val  = $row->[2];
+      my $val2 = $self->IsReviewCorrect($id, $user, $time);
+      if ($val != $val2)
       {
-        $sql = "UPDATE $CRMSGlobals::historicalreviewsTable SET status=$status WHERE id='$id' AND legacy=1 AND gid IS NULL";
+        $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$time'";
         $self->PrepareSubmitSql( $sql );
       }
-      # Update validation on all items with this id
-      $sql = "SELECT user,time,validated FROM historicalreviews WHERE id='$id'";
-      my $ref = $self->get('dbh')->selectall_arrayref($sql);
-      foreach my $row (@{$ref})
-      {
-        $user = $row->[0];
-        $date = $row->[1];
-        my $val  = $row->[2];
-        my $val2 = $self->IsReviewCorrect($id, $user, $date);
-        if ($val != $val2)
-        {
-          $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$date'";
-          $self->PrepareSubmitSql( $sql );
-        }
-      }
     }
-    return 1;
+  }
+  return 1;
 }
 
 ## ----------------------------------------------------------------------------
@@ -3199,7 +3169,7 @@ sub CreateExportData
     }
     my $sql = 'SELECT SUM(e.pd_ren),SUM(e.pd_ncn),SUM(e.pd_cdpp),SUM(e.pd_crms),SUM(e.pd_add),SUM(e.pdus_cdpp),' .
                'SUM(e.ic_ren),SUM(e.ic_cdpp),SUM(e.ic_crms),SUM(e.und_nfi),SUM(e.und_crms),' .
-               'SUM(d.s4),SUM(d.s5),SUM(d.s6),SUM(d.s7),SUM(d.s8) ' .
+               'SUM(d.s4),SUM(d.s5),SUM(d.s6),SUM(d.s7),SUM(d.s8),SUM(d.s9) ' .
                'FROM exportstats e INNER JOIN determinationsbreakdown d ON e.date=d.date WHERE ' .
               "e.date LIKE '$date%'";
     #print "$date: $sql<br/>\n";
@@ -3221,6 +3191,7 @@ sub CreateExportData
     $stats{'Status 6'}{$date}  += $ref->[0]->[13];
     $stats{'Status 7'}{$date}  += $ref->[0]->[14];
     $stats{'Status 8'}{$date}  += $ref->[0]->[15];
+    $stats{'Status 9'}{$date}  += $ref->[0]->[16];
     for my $cat (keys %cats)
     {
       next if $cat =~ m/(All)|(Status)/;
@@ -3235,7 +3206,7 @@ sub CreateExportData
   my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pd/crms', 'pd/add', 'pdus/cdpp',
                 'All IC', 'ic/ren', 'ic/cdpp', 'ic/crms',
                 'All UND', 'und/nfi', 'und/crms', 'Total',
-                'Status 4', 'Status 5', 'Status 6', 'Status 7', 'Status 8');
+                'Status 4', 'Status 5', 'Status 6', 'Status 7', 'Status 8', 'Status 9');
   my %monthTotals = ();
   my %catTotals = ('All PD' => 0, 'All IC' => 0, 'All UND' => 0);
   my $gt = 0;
@@ -3533,9 +3504,9 @@ sub CreateDeterminationsBreakdownData
     $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
   }
   my $report = ($title)? "$title\n":"Determinations Breakdown $titleDate\n";
-  my @titles = ('Date','Status 4','Status 5','Status 6','Status 7','Status 8','Total','Status 4','Status 5','Status 6','Status 7','Status 8');
+  my @titles = ('Date','Status 4','Status 5','Status 6','Status 7','Status 8','Status 9','Total','Status 4','Status 5','Status 6','Status 7','Status 8','Status 9');
   $report .= join($delimiter, @titles) . "\n";
-  my @totals = (0,0,0,0,0);
+  my @totals = (0,0,0,0,0,0);
   foreach my $date (@dates)
   {
     my ($y,$m,$d) = split '-', $date;
@@ -3548,28 +3519,28 @@ sub CreateDeterminationsBreakdownData
       $date2 = "$date-$lastDay";
       $date = $self->YearMonthToEnglish($date);
     }
-    my $sql = 'SELECT SUM(s4),SUM(s5),SUM(s6),SUM(s7),SUM(s8),SUM(s4+s5+s6+s7+s8) ' .
+    my $sql = 'SELECT SUM(s4),SUM(s5),SUM(s6),SUM(s7),SUM(s8),SUM(s9),SUM(s4+s5+s6+s7+s8+s9) ' .
               "FROM determinationsbreakdown WHERE date>='$date1' AND date<='$date2'";
     #print "$sql<br/>\n";
-    my ($s4,$s5,$s6,$s7,$s8,$sum) = @{$self->get('dbh')->selectall_arrayref( $sql )->[0]};
-    my @line = ($s4,$s5,$s6,$s7,$s8,$sum,0,0,0,0);
+    my ($s4,$s5,$s6,$s7,$s8,$s9,$sum) = @{$self->get('dbh')->selectall_arrayref( $sql )->[0]};
+    my @line = ($s4,$s5,$s6,$s7,$s8,$s9,$sum,0,0,0,0,0,0);
     next unless $sum > 0;
-    for (my $i=0; $i < 5; $i++)
+    for (my $i=0; $i < 6; $i++)
     {
       $totals[$i] += $line[$i];
     }
-    for (my $i=0; $i < 5; $i++)
+    for (my $i=0; $i < 6; $i++)
     {
       my $pct = 0.0;
-      eval {$pct = 100.0*$line[$i]/$line[5];};
-      $line[$i+6] = sprintf('%.1f%%', $pct);
+      eval {$pct = 100.0*$line[$i]/$line[6];};
+      $line[$i+7] = sprintf('%.1f%%', $pct);
     }
     $report .= $date;
     $report .= $delimiter . join($delimiter, @line) . "\n";
   }
-  my $gt = $totals[0] + $totals[1] + $totals[2] + $totals[3] + $totals[4];
+  my $gt = $totals[0] + $totals[1] + $totals[2] + $totals[3] + $totals[4] + $totals[5];
   push @totals, $gt;
-  for (my $i=0; $i < 5; $i++)
+  for (my $i=0; $i < 6; $i++)
   {
     my $pct = 0.0;
     eval {$pct = 100.0*$totals[$i]/$gt;};
@@ -3589,23 +3560,22 @@ sub CreateDeterminationsBreakdownReport
   my $pre      = shift;
 
   my $data;
-  my $whichline = 5;
-  my $span1 = 6;
-  my $span2 = 5;
-  my $cols = 11;
+  my $whichline = 6;
+  my $span1 = 7;
+  my $span2 = 6;
   if ($pre)
   {
     $data = $self->CreatePreDeterminationsBreakdownData("\t", $start, $end, $monthly, $title);
     $whichline = 4;
-    $span1--;
-    $span2--;
-    $cols = 9;
+    $span1 = 5;
+    $span2 = 4;
   }
   else
   {
     $data = $self->CreateDeterminationsBreakdownData("\t", $start, $end, $monthly, $title);
     $pre = 0;
   }
+  my $cols = $span1 + $span2;
   my @lines = split "\n", $data;
   $title = shift @lines;
   $title =~ s/\s/&nbsp;/g;
@@ -3667,7 +3637,7 @@ sub CreateDeterminationsBreakdownGraph
   shift @lines;
   my @usedates = ();
   my @elements = ();
-  my %colors = (4 => '#22BB00', 5 => '#FF2200', 6 => '#0088FF', 7 => '#C9A8FF', 8 => 'FFCC00');
+  my %colors = (4 => '#22BB00', 5 => '#FF2200', 6 => '#0088FF', 7 => '#C9A8FF', 8 => 'FFCC00', 9=>'FFFFFF');
   foreach my $status (sort keys %colors)
   {
     my @vals = ();
@@ -3677,7 +3647,7 @@ sub CreateDeterminationsBreakdownGraph
     if (scalar @lines <= 1)
     {
       my $date = substr $self->GetTodaysDate(), 0, 10;
-      @lines = ("$date\t0\t0\t0\t0\t0\t0.0%\t0.0%\t0.0%\t0.0%\t0.0%");
+      @lines = ("$date\t0\t0\t0\t0\t0\t0\t0\t0.0%\t0.0%\t0.0%\t0.0%\t0.0%\t0.0%");
     }
     foreach my $line (@lines)
     {
@@ -3688,7 +3658,7 @@ sub CreateDeterminationsBreakdownGraph
       $date =~ s/Total\s//;
       push @usedates, $date if $status == 4;
       my $count = $line[$status-4];
-      my $pct = $line[$status+2];
+      my $pct = $line[$status+3];
       $pct =~ s/%//;
       push @vals, sprintf('{"value":%d,"tip":"%.1f%% (%d)"}', $pct, $pct, $count);
     }
@@ -4182,19 +4152,6 @@ sub GetMonthStats
   $self->PrepareSubmitSql( $sql );
 }
 
-sub UpdatePreDeterminationsBreakdown
-{
-  my $self = shift;
-
-  $self->PrepareSubmitSql('DELETE FROM predeterminationsbreakdown WHERE date=DATE(NOW())');
-  my $s2 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=2 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
-  my $s3 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=3 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
-  my $s4 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=4 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
-  my $s8 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND pending_status=8 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)');
-  my $sql = "INSERT INTO predeterminationsbreakdown (date,s2,s3,s4,s8) VALUES (DATE(NOW()),$s2,$s3,$s4,$s8)";
-  $self->PrepareSubmitSql($sql);
-}
-
 sub UpdateDeterminationsBreakdown
 {
   my $self = shift;
@@ -4202,13 +4159,13 @@ sub UpdateDeterminationsBreakdown
 
   $date = $self->SimpleSqlGet('SELECT CURDATE()') unless $date;
   my @counts;
-  foreach my $status (4..8)
+  foreach my $status (4..9)
   {
     my $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r ON e.gid=r.gid WHERE ' .
               "r.legacy!=1 AND DATE(e.time)='$date' AND r.status=$status";
     push @counts, $self->SimpleSqlGet($sql);
   }
-  my $sql = sprintf "REPLACE INTO determinationsbreakdown (date,s4,s5,s6,s7,s8) VALUES ('$date',%s)", join ',', @counts;
+  my $sql = sprintf "REPLACE INTO determinationsbreakdown (date,s4,s5,s6,s7,s8,s9) VALUES ('$date',%s)", join ',', @counts;
   $self->PrepareSubmitSql($sql);
 }
 
@@ -6871,5 +6828,17 @@ sub StackTrace
   return $trace . "--- End stack trace ---\n";
 }
 
+sub LinkNoteText
+{
+  my $self = shift;
+  my $note = shift;
+
+  if ($note =~ m/See\sall\sreviews\sfor\sSys\s#(\d+)/)
+  {
+    my $url = "/cgi/c/crms/crms?p=adminHistoricalReviews;stype=reviews;search1=SysID;search1value=$1";
+    $note =~ s/(See\sall\sreviews\sfor\sSys\s#)(\d+)/$1<a href="$url" target="_blank">$2<\/a>/;
+  }
+  return $note;
+}
 
 1;
