@@ -9,7 +9,7 @@
 
 <h2>Retrieve Volume IDs:</h2>
 <form action="crms">
-  <label for="queryTA" class="smallishText">Enter one system id per line.</label><br/>
+  <label for="queryTA" class="smallishText">Enter one system id or volume id per line.</label><br/>
   <input type="hidden" name="p" value="retrieve"/>
   <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;">[% q %]</textarea>
   <input type="submit" value="Do it!"/>
@@ -23,6 +23,7 @@
       [% blah = crms.ClearErrors() %]
       [% NEXT %]
     [% END %]
+    [% IF id.search('\.') %][% id = crms.BarcodeToId(id) %][% END %]
     <br/>
     <a href="?p=$p&amp;download=1;q=[% id %]" target="_blank">download</a>
     <br/>
