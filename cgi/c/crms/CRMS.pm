@@ -187,7 +187,7 @@ sub ProcessReviews
 {
   my $self = shift;
 
-  my %stati;
+  my %stati = (2=>0,3=>0,4=>0,8=>0);
   my $dbh = $self->get( 'dbh' );
   my $sql = 'SELECT id FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) GROUP BY id HAVING count(*) = 2';
   my $ref = $dbh->selectall_arrayref( $sql );
