@@ -207,7 +207,7 @@ sub ProcessReviews
     }
     if ($status == 8)
     {
-      my $attr = $data->{'status'};
+      my $attr = $data->{'attr'};
       my $reason = $data->{'reason'};
       my $category = $data->{'category'};
       my $note = $data->{'note'};
