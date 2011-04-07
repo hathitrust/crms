@@ -207,7 +207,7 @@ sub ProcessFile
       print "Note:  $note\n";
       printf("SubmitHistReview(%s)\n", join ', ', ($id, $user, $date, $attr, $reason, $renNum, $renDate, $note, $category, $status));
     }
-    my $rc = $crms->SubmitHistReview($id, $user, $date, $attr, $reason, $renNum, $renDate, $note, $category, $status, ($alt)? 2:0, $noop);
+    my $rc = $crms->SubmitHistReview($id, $user, $date, $attr, $reason, $renNum, $renDate, $note, $category, $status, ($alt)? 2:0, 1, 'legacy', undef, $noop);
     if ( ! $rc ) 
     {
       my $errors = $crms->GetErrors();
