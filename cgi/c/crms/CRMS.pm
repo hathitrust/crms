@@ -3504,7 +3504,7 @@ sub CreateDeterminationsBreakdownData
     $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
   }
   my $report = ($title)? "$title\n":"Determinations Breakdown $titleDate\n";
-  my @titles = ('Date','Status 4','Status 5','Status 6','Status 7','Status 8','Status 9','Total','Status 4','Status 5','Status 6','Status 7','Status 8','Status 9');
+  my @titles = ('Date','Status 4','Status 5','Status 6','Status 7','Status 8','Subtotal','Status 9','Total','Status 4','Status 5','Status 6','Status 7','Status 8');
   $report .= join($delimiter, @titles) . "\n";
   my @totals = (0,0,0,0,0,0);
   foreach my $date (@dates)
@@ -3519,31 +3519,34 @@ sub CreateDeterminationsBreakdownData
       $date2 = "$date-$lastDay";
       $date = $self->YearMonthToEnglish($date);
     }
-    my $sql = 'SELECT SUM(s4),SUM(s5),SUM(s6),SUM(s7),SUM(s8),SUM(s9),SUM(s4+s5+s6+s7+s8+s9) ' .
+    my $sql = 'SELECT SUM(s4),SUM(s5),SUM(s6),SUM(s7),SUM(s8),SUM(s4+s5+s6+s7+s8),SUM(s9),SUM(s4+s5+s6+s7+s8+s9) ' .
               "FROM determinationsbreakdown WHERE date>='$date1' AND date<='$date2'";
     #print "$sql<br/>\n";
-    my ($s4,$s5,$s6,$s7,$s8,$s9,$sum) = @{$self->get('dbh')->selectall_arrayref( $sql )->[0]};
-    my @line = ($s4,$s5,$s6,$s7,$s8,$s9,$sum,0,0,0,0,0,0);
-    next unless $sum > 0;
-    for (my $i=0; $i < 6; $i++)
+    my ($s4,$s5,$s6,$s7,$s8,$sum1,$s9,$sum2) = @{$self->get('dbh')->selectall_arrayref( $sql )->[0]};
+    my @line = ($s4,$s5,$s6,$s7,$s8,$sum1,$s9,$sum2,0,0,0,0,0);
+    next unless $sum1 > 0;
+    for (my $i=0; $i < 5; $i++)
     {
       $totals[$i] += $line[$i];
     }
-    for (my $i=0; $i < 6; $i++)
+    $totals[5] += $line[6];
+    for (my $i=0; $i < 5; $i++)
     {
       my $pct = 0.0;
-      eval {$pct = 100.0*$line[$i]/$line[6];};
-      $line[$i+7] = sprintf('%.1f%%', $pct);
+      eval {$pct = 100.0*$line[$i]/$line[5];};
+      $line[$i+8] = sprintf('%.1f%%', $pct);
     }
     $report .= $date;
     $report .= $delimiter . join($delimiter, @line) . "\n";
   }
-  my $gt = $totals[0] + $totals[1] + $totals[2] + $totals[3] + $totals[4] + $totals[5];
-  push @totals, $gt;
-  for (my $i=0; $i < 6; $i++)
+  my $gt1 = $totals[0] + $totals[1] + $totals[2] + $totals[3] + $totals[4];
+  my $gt2 = $gt1 + $totals[5];
+  splice @totals, 5, 0, $gt1;
+  push @totals, $gt2;
+  for (my $i=0; $i < 5; $i++)
   {
     my $pct = 0.0;
-    eval {$pct = 100.0*$totals[$i]/$gt;};
+    eval {$pct = 100.0*$totals[$i]/$gt1;};
     push @totals, sprintf('%.1f%%', $pct);
   }
   $report .= 'Total' . $delimiter . join($delimiter, @totals) . "\n";
@@ -3560,13 +3563,13 @@ sub CreateDeterminationsBreakdownReport
   my $pre      = shift;
 
   my $data;
-  my $whichline = 6;
-  my $span1 = 7;
-  my $span2 = 6;
+  my %whichlines = (5=>1,7=>1);
+  my $span1 = 8;
+  my $span2 = 5;
   if ($pre)
   {
     $data = $self->CreatePreDeterminationsBreakdownData("\t", $start, $end, $monthly, $title);
-    $whichline = 4;
+    %whichlines = (4=>1);
     $span1 = 5;
     $span2 = 4;
   }
@@ -3602,15 +3605,15 @@ sub CreateDeterminationsBreakdownReport
     for (my $i=0; $i < $cols; $i++)
     {
       my $class = '';
-      my $style = ($i==$whichline)? "style='border-right:double 6px black;'":'';
-      if ($i == $whichline && $date ne 'Total')
+      my $style = ($i==max keys %whichlines)? "style='border-right:double 6px black;'":'';
+      if ($whichlines{$i} && $date ne 'Total')
       {
         $class = 'class="minor"';
       }
       elsif ($date ne 'Total')
       {
         $class = 'class="total"';
-        $class = 'class="major"' if $i < $whichline;
+        $class = 'class="major"' if $i < max keys %whichlines;
       }
       $report .= sprintf("<td $class $style>%s</td>\n", $line[$i]);
     }
@@ -3622,6 +3625,71 @@ sub CreateDeterminationsBreakdownReport
 
 
 sub CreateDeterminationsBreakdownGraph
+{
+  my $self     = shift;
+  my $start    = shift;
+  my $end      = shift;
+  my $monthly  = shift;
+  my $title    = shift;
+  my $percent  = shift;
+
+  my $data = $self->CreateDeterminationsBreakdownData("\t", $start, $end, $monthly, $title);
+  my @lines = split "\n", $data;
+  $title = shift @lines;
+  shift @lines;
+  my @usedates = ();
+  my @elements = ();
+  my $ceil = 100;
+  my %colors = (4 => '#22BB00', 5 => '#FF2200', 6 => '#0088FF', 7 => '#C9A8FF', 8 => 'FFCC00', 9=>'FFFFFF');
+  foreach my $status (sort keys %colors)
+  {
+    my @vals = ();
+    my $color = $colors{$status};
+    my $attrs = sprintf('"dot-style":{"type":"solid-dot","dot-size":3,"colour":"%s"},"text":"Status %s","colour":"%s","on-show":{"type":"pop-up","cascade":1,"delay":0.2}',
+                        $color, $status, $color);
+    next if $percent and $status == 9;
+    if (scalar @lines <= 1)
+    {
+      my $date = substr $self->GetTodaysDate(), 0, 10;
+      @lines = ("$date\t0\t0\t0\t0\t0\t0\t0\t0\t0.0%\t0.0%\t0.0%\t0.0%\t0.0%");
+    }
+    foreach my $line (@lines)
+    {
+      my @line = split "\t", $line;
+      my $date = shift @line;
+      next if $date eq 'Total';
+      next if $date =~ m/Total/ and !$monthly;
+      $date =~ s/Total\s//;
+      push @usedates, $date if $status == 4;
+      my $count = $line[$status-4];
+      $count = $line[$status-3] if $status == 9;
+      $ceil = $count if $count > $ceil;
+      my $val = sprintf('{"value":%d,"tip":"%d"}', $count, $count);
+      if ($percent)
+      {
+        my $pct = 100.0*$count/$line[5];
+        $val = sprintf('{"value":%.1f,"tip":"%.1f%% (%d)"}', $pct, $pct, $count);
+      }
+      push @vals, $val;
+    }
+    push @elements, sprintf('{"type":"line","values":[%s],%s}', join(',',@vals), $attrs);
+  }
+  $ceil = 100 * POSIX::ceil($ceil/100.0);
+  my $valfmt = '';
+  if ($percent)
+  {
+    $ceil = 100;
+    $valfmt = '"text":"#val#%",';
+  }
+  my $report = sprintf('{"bg_colour":"#000000","title":{"text":"%s","style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"},"elements":[',$title);
+  $report .= sprintf('%s]',join ',', @elements);
+  $report .= sprintf(',"y_axis":{"max":%d,"steps":%d,"colour":"#888888","grid-colour":"#888888","labels":{%s"colour":"#FFFFFF"}}', $ceil, $ceil/10, $valfmt);
+  $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}', join('","',@usedates));
+  $report .= '}';
+  return $report;
+}
+
+sub CreateDeterminationsBreakdownGraphOld
 {
   my $self     = shift;
   my $start    = shift;
@@ -5155,6 +5223,47 @@ sub GetMetadata
   return $records[0];
 }
 
+# Get the usRightsString field of the item record for the
+# given volume id from the HT Bib API.
+sub GetRightsString
+{
+  my $self = shift;
+  my $id   = shift;
+
+  if ( ! $id ) { $self->SetError( "GetMetadata: no id given: '$id'" ); return; }
+  # If it has a period, it's a volume ID
+  my $url = "http://catalog.hathitrust.org/api/volumes/brief/htid/$id.json";
+  my $ua = LWP::UserAgent->new;
+  $ua->timeout( 1000 );
+  my $req = HTTP::Request->new( GET => $url );
+  my $res = $ua->request( $req );
+  if ( ! $res->is_success )
+  {
+    $self->SetError( $url . ' failed: ' . $res->message() );
+    return;
+  }
+  my $rightsString = '';
+  my $json = JSON::XS->new;
+  my $content = $res->content;
+  eval {
+    my $items = $json->decode($content)->{'items'};
+    if ('ARRAY' eq ref $items)
+    {
+      foreach my $item (@{$items})
+      {
+        if ($item->{'htid'} eq $id)
+        {
+          $rightsString = $item->{'usRightsString'};
+          last;
+        }
+      }
+    }
+    else { $self->SetError("HT Bib API found no data for '$id' (got '$content')"); return; }
+  };
+  if ($@) { $self->SetError( "failed to parse ($content):$@" ); return; }
+  return $rightsString;
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   get the mirlyn ID for a given volume id using the HT Bib API
 ##              update local system table if necessary.
@@ -6606,7 +6715,7 @@ sub VolumeIDsQuery
   my $self   = shift;
   my $sysid  = shift;
   my $record = shift;
-  
+
   my @ids;
   eval {
     $record = $self->GetMetadata($sysid) unless $record;
@@ -6615,20 +6724,18 @@ sub VolumeIDsQuery
     {
       my $id = $node->findvalue("./*[local-name()='subfield' and \@code='u']");
       my $chron = $node->findvalue("./*[local-name()='subfield' and \@code='z']");
-      my $rights = $node->findvalue("./*[local-name()='subfield' and \@code='r']");
+      my $rights = $self->GetRightsString($id);
       #print "$rights,$id,$chron<br/>\n";
-      push @ids, $id . '__' . $chron . '__' .
-        (('pd' eq substr($rights, 0, 2) || 'world' eq $rights || 'umall' eq $rights)? 'Full View':'Search Only');
+      push @ids, $id . '__' . $chron . '__' . $rights;
     }
     $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='MDP']");
     foreach my $node ($nodes->get_nodelist())
     {
       my $id2 = $node->findvalue("./*[local-name()='subfield' and \@code='u']");
       my $chron = $node->findvalue("./*[local-name()='subfield' and \@code='z']");
-      my $rights = $node->findvalue("./*[local-name()='subfield' and \@code='r']");
+      my $rights = $self->GetRightsString($id2);
       #print "$rights,$id,$chron<br/>\n";
-      push @ids, $id2 . '__' . $chron . '__' .
-        (('pd' eq substr($rights, 0, 2) || 'world' eq $rights || 'umall' eq $rights)? 'Full View':'Search Only');
+      push @ids, $id2 . '__' . $chron . '__' . $rights;
     }
   };
   $self->SetError("Holdings query for $sysid failed: $@") if $@;

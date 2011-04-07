@@ -81,9 +81,11 @@ start = gup('startDate');
 end = gup('endDate');
 monthly = gup('monthly');
 priority = gup('priority');
-str = "/cgi/c/crms/getExportStats?type=graph&c=3&startDate=" + start + "&endDate=" + end + "&monthly=" + monthly + "&priority=" + priority;
-str = "/cgi/c/crms/getExportStats?type=graph&c=3&startDate=2009-0101&endDate=0&monthly=1&title=Project Determinations Breakdown";
+str = "/cgi/c/crms/getExportStats?type=graph&c=3&startDate=2009-01-01&endDate=0&monthly=1&title=Project Determinations Breakdown (by count)";
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "800", "300", "9.0.0",
+                   "expressInstall.swf", {"data-file":escape(str)});
+str = "/cgi/c/crms/getExportStats?type=graph&c=3&startDate=2009-01-01&endDate=0&monthly=1&title=Project Determinations Breakdown (by percentage)&percent=1";
+swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape(str)});
 // -->
       </script>
