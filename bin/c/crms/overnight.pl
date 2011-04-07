@@ -17,7 +17,7 @@ use CRMS;
 use Getopt::Std;
 
 my $usage = <<END;
-USAGE: overnight.pl [-cehmq]
+USAGE: overnight.pl [-cehmqt]
 
 Processes reviews, exports determinations, updates candidates,
 updates the queue, and recalculates user stats.
@@ -27,6 +27,7 @@ updates the queue, and recalculates user stats.
 -h       Print this help message.
 -m       Do not recalculate monthly stats.
 -q       Do not update queue.
+-t       Run in training.
 END
 
 
@@ -37,6 +38,7 @@ my $skipExport = $opts{'e'};
 my $help = $opts{'h'};
 my $skipMonthly = $opts{'m'};
 my $skipQueue = $opts{'q'};
+my $training = $opts{'t'};
 die $usage if $help;
 
 my $crms = CRMS->new(
@@ -44,7 +46,7 @@ my $crms = CRMS->new(
     configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
     verbose      =>   0,
     root         =>   $DLXSROOT,
-    dev          =>   $DLPS_DEV,
+    dev          =>   ($training)? 'crmstest':$DLPS_DEV
 );
 
 if ($skipExport) { ReportMsg("-e flag set; skipping queue processing and export."); }
