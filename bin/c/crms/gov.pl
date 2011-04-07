@@ -93,9 +93,16 @@ my $sql = "SELECT id,time FROM und WHERE src='gov' $startSQL $endSQL ORDER BY id
 my $ref = $dbh->selectall_arrayref($sql);
 my $n = scalar @{$ref};
 my $txt = '';
+$sql = 'SELECT DATE_FORMAT(MAX(time), "%M %Y") FROM und WHERE DATE(time)!=DATE(NOW()) AND src="gov"';
+my $month = $crms->SimpleSqlGet($sql);
 my $title = "CRMS Suspected Gov Documents, $start to $end ($n)";
+if ($all)
+{
+  $title = "CRMS Suspected Gov Documents, $month ($n)";
+}
 my ($workbook,$worksheet);
-my $excelpath = sprintf('/l1/prep/c/crms/GovDocs_%s_to_%s.xls', $start, $end);
+$month =~ s/\s+/_/g;
+my $excelpath = sprintf('/l1/prep/c/crms/GovDocs_%s.xls', $month);
 my @cols= ('#','ID','Sys ID','Time','Author','Title','Pub Date','Pub');
 if ($report eq 'html')
 {
@@ -113,19 +120,21 @@ elsif ($report eq 'excel')
 {
   $workbook  = Spreadsheet::WriteExcel->new($excelpath);
   $worksheet = $workbook->add_worksheet();
-  $worksheet->write(0, 0, 'ID');
-  $worksheet->write(0, 1, 'Sys ID');
-  $worksheet->write(0, 2, 'Time');
-  $worksheet->write(0, 3, 'Author');
-  $worksheet->write(0, 4, 'Title');
-  $worksheet->write(0, 5, 'Pub Date');
-  $worksheet->write(0, 6, 'Pub');
+  $worksheet->write_string(0, 0, 'ID');
+  $worksheet->write_string(0, 1, 'Sys ID');
+  $worksheet->write_string(0, 2, 'Time');
+  $worksheet->write_string(0, 3, 'Author');
+  $worksheet->write_string(0, 4, 'Title');
+  $worksheet->write_string(0, 5, 'Pub Date');
+  $worksheet->write_string(0, 6, 'Pub');
 }
+$n = 0;
 foreach my $row (@{$ref})
 {
   my $id = $row->[0];
   my $time = $row->[1];
   
+  $n++;
   my $sysid = $crms->BarcodeToId($id);
   my $catLink = "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
   my $ptLink = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=' . $id;
@@ -154,13 +163,13 @@ foreach my $row (@{$ref})
   }
   elsif ($report eq 'excel')
   {
-    $worksheet->write($n, 0, $id);
-    $worksheet->write($n, 1, $sysid);
-    $worksheet->write($n, 2, $time);
-    $worksheet->write($n, 3, $author);
-    $worksheet->write($n, 4, $title);
-    $worksheet->write($n, 5, $pub);
-    $worksheet->write($n, 6, $field260a);
+    $worksheet->write_string($n, 0, $id);
+    $worksheet->write_string($n, 1, $sysid);
+    $worksheet->write_string($n, 2, $time);
+    $worksheet->write_string($n, 3, $author);
+    $worksheet->write_string($n, 4, $title);
+    $worksheet->write_string($n, 5, $pub);
+    $worksheet->write_string($n, 6, $field260a);
   }
 }
 if ($report eq 'html')
