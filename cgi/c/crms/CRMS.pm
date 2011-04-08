@@ -211,7 +211,7 @@ sub ProcessReviews
       my $reason = $data->{'reason'};
       my $category = $data->{'category'};
       my $note = $data->{'note'};
-      $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,"'$category'",0,0);
+      $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,$category,0,0);
     }
     $self->RegisterStatus( $id, $status );
     $sql = "UPDATE reviews SET hold=NULL,sticky_hold=NULL,time=time WHERE id='$id'";
