@@ -294,7 +294,7 @@ sub CalcStatus
     {
       $status = 8;
       $return{'attr'} = $attr;
-      $return{'reason'} = $reason;
+      $return{'reason'} = 13;
       $return{'category'} = 'Attr Default';
     }
   }
