@@ -32,7 +32,7 @@ END
 
 
 my %opts;
-getopts('cehmq', \%opts);
+getopts('cehmqt', \%opts);
 my $skipCandidates = $opts{'c'};
 my $skipExport = $opts{'e'};
 my $help = $opts{'h'};
