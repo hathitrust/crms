@@ -290,10 +290,10 @@ sub CalcStatus
     {
        $status = 3;
     }
-    else #Mark as 8 - two that agree
+    else #Mark as 8 - two that agree as und/crms
     {
       $status = 8;
-      $return{'attr'} = $attr;
+      $return{'attr'} = 5;
       $return{'reason'} = 13;
       $return{'category'} = 'Attr Default';
     }
