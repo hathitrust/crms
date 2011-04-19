@@ -1486,31 +1486,26 @@ sub CreateSQLForReviews
   $dir = 'DESC' unless $dir;
   $offset = 0 unless $offset;
   $pagesize = 20 unless $pagesize > 0;
-  my $sql;
+  my $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,r.category,r.legacy,r.renDate,r.priority,r.swiss,';
   if ( $page eq 'adminReviews' )
   {
-    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-           'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
-           "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id";
+    $sql .= 'q.status,b.title,b.author,DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
   }
   elsif ( $page eq 'holds' )
   {
     my $user = $self->get( "user" );
-    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-           'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
-           "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND q.id=r.id AND r.user='$user' AND r.hold IS NOT NULL";
+    $sql .= 'q.status,b.title,b.author,DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= " AND r.user='$user' AND r.hold IS NOT NULL";
   }
   elsif ( $page eq 'adminHolds' )
   {
-    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-           'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
-           "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND q.id=r.id AND r.hold IS NOT NULL";
+    $sql .= 'q.status,b.title,b.author,DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= " AND r.hold IS NOT NULL";
   }
   elsif ( $page eq 'expert' )
   {
-    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-           'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author ' .
-           "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id  AND q.status=2 ";
+    $sql .= 'q.status,b.title,b.author,DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= ' AND q.status=2';
   }
   elsif ( $page eq 'adminHistoricalReviews' )
   {
@@ -1518,15 +1513,12 @@ sub CreateSQLForReviews
     $doS = '' unless ($search1 . $search2 . $search3 . $order) =~ m/sysid/;
     my $doB = 'LEFT JOIN bibdata b ON r.id=b.id';
     $doB = '' unless ($search1 . $search2 . $search3 . $order) =~ m/^b\./;
-    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-           'r.category, r.legacy, r.renDate, r.priority, r.swiss, r.status, r.validated '.
-           "FROM $CRMSGlobals::historicalreviewsTable r $doB $doS WHERE r.id IS NOT NULL";
+    $sql .= "r.status,r.validated FROM historicalreviews r $doB $doS WHERE r.id IS NOT NULL";
   }
   elsif ( $page eq 'undReviews' )
   {
-    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-           'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author ' .
-           "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=b.id AND q.id=r.id AND q.status=3";
+    $sql .= 'q.status,b.title,b.author,DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= ' AND q.status=3';
   }
   elsif ( $page eq 'userReviews' )
   {
@@ -1537,14 +1529,12 @@ sub CreateSQLForReviews
   }
   elsif ( $page eq 'editReviews' )
   {
-    my $user = $self->get( "user" );
+    my $user = $self->get('user');
     my $yesterday = $self->GetYesterday();
     # Experts need to see stuff with any status; non-expert should only see stuff that hasn't been processed yet.
     my $restrict = ($self->IsUserExpert($user))? '':'AND q.status=0';
-    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-           'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author, DATE(r.hold) ' .
-           "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id " .
-           "AND r.user='$user' AND (r.time>='$yesterday' OR r.hold IS NOT NULL) $restrict";
+    $sql .= 'q.status, b.title, b.author, DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id ' .
+            "AND r.user='$user' AND (r.time>='$yesterday' OR r.hold IS NOT NULL) $restrict";
   }
   my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
   $sql .= " AND $terms" if $terms;
@@ -2054,14 +2044,16 @@ sub SearchAndDownload
     }
     else
     {
+      $order = 'Identifier' if $order eq 'SysID';
+      $order = $self->ConvertToSearchTerm($order);
       foreach my $row ( @{$ref} )
       {
         my $id = $row->[0];
         my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
-        $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-               "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
-               (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated ':' ') .
-               (($page eq 'adminReviews' || $page eq 'editReviews')? ', DATE(r.hold) ':' ') .
+        $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,' .
+               "r.category,r.legacy,r.renDate,r.priority,r.swiss,$status," .
+               (($page eq 'adminHistoricalReviews')?
+                 'r.validated ':'b.title,b.author,r.hold ') .
                "FROM $top INNER JOIN $table r ON b.id=r.id " .
                "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
         # FIXME: why is the AND r.id=b.id there? It's an inner join already.
@@ -2111,7 +2103,7 @@ sub UnpackResults
     my $priority   = $self->StripDecimal($row->[12]);
     my $swiss      = $row->[13];
     my $status     = $row->[14];
-    my $title      = $row->[15];
+    my $title      = $row->[15]; # Validated in historical
     my $author     = $row->[16];
     my $hold       = $row->[17];
     
@@ -2147,9 +2139,11 @@ sub UnpackResults
     }
     elsif ( $page eq 'adminHistoricalReviews' )
     {
-      my $pubdate = $row->[17];
+      $author = $self->SimpleSqlGet("SELECT author FROM bibdata WHERE id='$id'");
+      $title = $self->SimpleSqlGet("SELECT title FROM bibdata WHERE id='$id'");
+      my $pubdate = $self->SimpleSqlGet("SELECT YEAR(pub_date) FROM bibdata WHERE id='$id'");
       $pubdate = '?' unless $pubdate;
-      my $validated = $row->[18];
+      my $validated = $row->[15];
       #id, title, author, review date, status, user, attr, reason, category, note, validated
       my $sysid = $self->SimpleSqlGet("SELECT sysid FROM system WHERE id='$id'");
       $buffer .= qq{$id\t$sysid\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated\t$swiss};
