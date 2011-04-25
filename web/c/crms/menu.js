@@ -1,5 +1,5 @@
 sfHover = function() {
-	var sfEls = document.getElementById("menu").getElementsByTagName("LI");
+	var sfEls = document.getElementById("menu").getElementsByTagName("li");
 	for (var i=0; i<sfEls.length; i++)
   {
 		sfEls[i].onmouseover=function()
