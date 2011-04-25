@@ -1,0 +1,283 @@
+[% page = cgi.param("p") %]
+[% search1 = cgi.param("search1") %]
+[% search1value = cgi.param("search1value") %]
+[% startDate = cgi.param('startDate') %]
+[% endDate = cgi.param('endDate') %]
+[% order = cgi.param('order') %]
+[% dir = cgi.param('dir') %]
+[% recs = cgi.param('records') %]
+[% n = cgi.param('n') %]
+[% pagesize = pagesize.replace('\D','') %]
+[% IF NOT pagesize %][% pagesize = 20 %][% END %]
+[% IF NOT search1 %][% search1 = 'src' %][% END %]
+[% IF NOT order %][% order = 'src' %][% END %]
+
+[% INCLUDE header.tt %]
+
+<h2>Volumes Inheriting Rights:</h2>
+
+<script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
+[% recs = recs.replace('\D','') %]
+[% IF NOT recs %]
+  [% recs = cgi.cookie('recs') or 20 %]
+  [% blah = cgi.param('records', recs) %]
+[% END %]
+
+[% IF NOT dir %]
+  [% dir = 'ASC' %]
+  [% blah = cgi.param('dir', 'ASC') %]
+[% END %]
+<br/>
+<div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
+
+<form id="select" action="crms">
+<input type="hidden" name="p" value="$page"/>
+
+Restrict selection:<br/>
+
+[% crms.InheritanceSelectionMenu('search1', search1, 1) %]
+<input title="Value 1" type="text"  id="search1value" name="search1value" value="[% search1value %]" size="30"/>
+<br/>
+<label for="startDate" style="width:5em;float:left;">Start Date:</label>
+<input type="text" id="startDate" name="startDate" value="[% startDate %]" onclick="datePickerController.show('startDate');"
+       onblur="datePickerController.hide('startDate');"/>
+<script type="text/javascript">
+// <![CDATA[
+  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
+  datePickerController.createDatePicker(opts);
+// ]]>
+</script>
+<span class="smallText">(YYYY-MM-DD)</span>
+<br/>
+<label for="endDate" style="width:5em;float:left;">End Date:</label>
+<input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
+       onblur="datePickerController.hide('endDate');"/>
+<script type="text/javascript">
+// <![CDATA[
+  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };       
+  datePickerController.createDatePicker(opts);
+// ]]>
+</script>
+<span class="smallText">(YYYY-MM-DD)</span>
+<br/>
+
+<label for="order">Order by:</label>
+[% crms.InheritanceSelectionMenu('order', order) %]
+<br/>
+
+<label for="dir">Direction:</label>
+
+<select id="dir" name="dir">
+  <option value="ASC"  [% dir == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
+  <option value="DESC" [% dir == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
+</select>
+<br/>
+
+<label for="records">Display:</label>
+<input size="3" type="text" id="records" name="records" value="[% recs %]"
+       onblur="setCookie('recs',this.value,31);"
+/>
+source volumes per page.
+<br/>
+<input type="submit" value="Submit"/>
+<input type="button" value="Clear"
+       onclick="selMenuItem('search1','src');
+                selMenuItem('order','src');
+                selMenuItem('dir','ASC');
+                document.getElementById('startDate').value='';
+                document.getElementById('endDate').value='';
+                document.getElementById('search1value').value='';"
+/>
+</form>
+</div>
+<br/>
+
+
+<script type="text/Javascript">
+<!--
+function CheckAll(box,formid)
+{
+	var aa=document.getElementById(formid);
+	for (var i=0; i < aa.elements.length; i++) 
+	{
+	  aa.elements[i].checked = box.checked;
+	}
+}
+
+function CountChecked(formid)
+{
+	var aa=document.getElementById(formid);
+  var n = 0;
+	for (var i=0; i < aa.elements.length; i++) 
+	{
+    var box2 = aa.elements[i];
+	  if (box2.checked) n++;
+	}
+  return n;
+}
+
+function VerifyDelete(formid)
+{
+  var n = CountChecked(formid)
+  if (n == 0) return 1;
+  var morph = (n == 1)? '':'s';
+  var demonstr = (n == 1)? 'this':'these ' + n;
+  return (confirm('Please confirm that you wish do delete ' + demonstr + ' volume' + morph + '. This action can not be undone.'));
+}
+-->
+</script>
+
+[% icnt = crms.GetTodaysInheritanceCount %]
+<h5>[% icnt %] volume[% (icnt==1)? '':'s' %] set to inherit rights</h5>
+<br/>
+[% ref = crms.GetDeletedInheritance %]
+[% IF ref.size() %]
+  <h5>Inheriting volumes deleted today:</h5>
+  [% FOREACH row IN ref %]
+    [% row.0 %]<br/>
+  [% END %]
+  <br/>
+[% END %]
+
+[% p = cgi.param('p') %]
+[% i = 0 %]
+[% IF cgi.param('inherit') %]
+  [% FOREACH param IN cgi.param %]
+    [% matches = param.match('(vol_)(.+)') %]
+    [% IF matches.0 == 'vol_' %]
+      [% res = crms.SubmitInheritance(matches.1) %]
+      [% IF res %]
+        <b><span style='color:red;'>[% res %]</span></b><br/>
+      [% ELSE %]
+        [% i = i + 1 %]
+      [% END %]
+    [% END %]
+  [% END %]
+[% ELSIF cgi.param('delete') %]
+  [% FOREACH param IN cgi.param %]
+    [% matches = param.match('(vol_)(.+)') %]
+    [% IF matches.0 == 'vol_' %]
+      [% res = crms.DeleteInheritance(matches.1) %]
+      [% IF res %]
+        <b><span style='color:red;'>[% res %]</span></b><br/>
+      [% ELSE %]
+        [% i = i + 1 %]
+      [% END %]
+    [% END %]
+  [% END %]
+[% END %]
+
+
+[% IF cgi.param('inherit') || cgi.param('delete') %]
+  <h4>Modified [% i %] item[% (i == 1)? '':'s' %]</h4><br/>
+[% END %]
+
+[% ref = crms.GetInheritanceRef(order,dir,search1,search1value,startDate,endDate,n,recs) %]
+[% inheriting = ref.inheriting %]
+[% source = ref.source %]
+[% IF inheriting > 0 %]
+  [% n = ref.n %]
+  [% of = ref.of %]
+  [% items = ref.rows %]
+  
+  <form action="crms" id="checks">
+    <input type="hidden" name="p" value="$p"/>
+    <input type="checkbox" id='all' onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
+    <input type="submit" name="inherit" value="Inherit from Selected Volumes"/>
+    <input type="submit" name="delete" value="Delete Selected Volumes" onclick="return VerifyDelete('checks');"/>
+    <br/><br/>
+    <p><b>Found $inheriting volume[% (inheriting==1)? "":"s"%] from $source source[% (source==1)? "":"s"%], page $n of $of</b></p>
+
+    [% doPrev = (n > 1) %]
+    [% doNext = (n < of) %]
+    [% IF doPrev %]
+      [% prev = n - 1 %]
+      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=$prev&amp;records=$pagesize">
+    [% ELSE %]
+      <span class="disabledLink">
+    [% END %]
+    previous [% pagesize %]
+    [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
+    &nbsp;||&nbsp;
+    [% IF doNext %]
+      [% next = n + 1 %]
+      <a href="?p=$p&amp;id=$id&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=$next&amp;records=$pagesize">
+    [% ELSE %]
+      <span class="disabledLink">
+    [% END %]
+    next [% pagesize %]
+    [% IF doNext %]</a>[% ELSE %]</span>[% END %]
+    &nbsp;||&nbsp;
+    [% IF doPrev %]
+      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=1&amp;records=$pagesize">
+    [% ELSE %]
+      <span class="disabledLink">
+    [% END %]
+    first page
+    [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
+    &nbsp;||&nbsp;
+    [% IF doNext %]
+      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=$of&amp;records=$pagesize">
+    [% ELSE %]
+      <span class="disabledLink">
+    [% END %]
+    last page
+    [% IF doNext %]</a>[% ELSE %]</span>[% END %]
+    
+    [% color_white  = '#FFFFFF' %]
+    [% color_gray   = '#FFCBCC' %]
+    [% prev_id      = '' %]
+    [% active_color = color_white %]
+    
+    <table class="exportStats" style="width:100%;" id="resultsTable">
+      <tr>
+        <th>Export&nbsp;Date</th>
+        <th>Source&nbsp;Volume<br/>(<span style="color:[% color_gray %];">historical</span>)</th>
+        <th>Volume&nbsp;Inheriting<br/>(<span style="color:[% color_gray %];">volume retrieval</span>)</th>
+        <th>System&nbsp;ID<br/>(<span style="color:[% color_gray %];">catalog</span>)</th>
+        <th>Rights</th>
+        <th>New&nbsp;Rights</th>
+        <th>Prior CRMS<br/>Review?</th>
+        <th>Access<br/>Change?</th>
+        <th style="text-align:center;">Title</th>
+        <th>Select</th>
+      </tr>
+      [% FOREACH review IN items %]
+        [% #first = 0 %]
+        [% IF prev_id == '' %]
+          [% prev_id = review.from %]
+          [% #first = 1 %]
+        [% END %]
+        [% IF prev_id != review.from %]
+          [% #first = 1 %]
+          [% IF active_color == color_gray  %]
+            [% active_color = color_white %]
+          [% ELSIF active_color == color_white %]
+            [% active_color = color_gray %]
+          [% END %]
+        [% END %]
+        <tr style="background-color:[% active_color %];">
+          <td>[% review.date %]</td>
+          <td><a href='[% crms.LinkToHistorical(review.sysid) %]'target='_blank'>[% review.from %]</a></td>
+          <td><a href='[% crms.LinkToRetrieve(review.inheriting) %]' target='_blank'>[% review.inheriting %]</a></td>
+          <td><a href='[% crms.LinkToCatalog(review.sysid) %]'target='_blank'>[% review.sysid %]</a></td>
+          <td>[% review.rights %]</td>
+          <td nowrap='nowrap'>[% review.newrights %]</td>
+          <td>[% (review.incrms==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
+          <td>[% (review.change==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
+          <td>[% review.title %]</td>
+          <td align="center">
+            [%# IF first %]
+              <input type="checkbox" name="vol_[% review.inheriting %]"/>
+            [%# END %]
+          </td>
+        </tr>
+        [% prev_id = review.from %]
+      [% END %]
+    </table>
+  </form>
+[% ELSE %]
+  <h4>No results found.</h4>
+[% END %]
+
+[% INCLUDE footer.tt %]

@@ -57,13 +57,13 @@ function CheckAll(box,formid)
 [% IF e %]     <a href="crms?p=expert">Conflicts</a><br/>                            [% END %]
 [% IF r || e %]<a href="crms?p=editReviews">My&nbsp;Unprocessed&nbsp;Reviews</a><br/>[% END %]
 [% IF r || e %]<a href="crms?p=holds">My Held Reviews</a><br/>                       [% END %]
+[% IF a || s %]<a href="crms?p=inherit">Rights&nbsp;Inheritance</a><br/>             [% END %]
 </td>
 <td>
                           <a href="crms?p=adminHistoricalReviews">Historical&nbsp;Reviews</a><br/>
 [% IF e || a || s || ea %]<a href="crms?p=adminReviews">Active&nbsp;Reviews</a><br/>              [% END %]
 [% IF e || a || s || ea %]<a href="crms?p=adminHolds">All&nbsp;Held&nbsp;Reviews</a><br/>         [% END %]
-[% IF e || a || s %]      <a href="crms?p=queue">Volumes&nbsp;in&nbsp;Queue</a>                   [% END %]
-
+[% IF e || a || s %]      <a href="crms?p=queue">Volumes&nbsp;in&nbsp;Queue</a><br/>              [% END %]
 </td>
 </tr>
 <tr><th><span class="total">Documentation</span></th><th><span class="orange">Stats/Reports</span></th></tr>

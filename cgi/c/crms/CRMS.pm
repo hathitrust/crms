@@ -423,6 +423,18 @@ sub ClearQueueAndExport
   $self->UpdateExportStats();
   $self->UpdateDeterminationsBreakdown();
   return "Exported: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved\n";
+  # Clear the deleted volumes
+  my $sql = 'SELECT COUNT(*) FROM inherit WHERE del=1';
+  my $dels = $self->SimpleSqlGet($sql);
+  if ($dels)
+  {
+    print "Deleted inheriting volumes to be removed: $dels\n" unless $fromcgi;
+    $self->PrepareSubmitSql('DELETE FROM inherit WHERE del=1');
+  }
+  else
+  {
+    print "No deleted inheriting volumes to remove.\n" unless $fromcgi;
+  }
 }
 
 sub GetAutoResolvedItems
@@ -436,12 +448,10 @@ sub GetExpertRevItems
 {
   my $self = shift;
 
-  my $sql  = 'SELECT id FROM queue WHERE status>=5 AND status<8 AND id NOT IN (SELECT id FROM reviews WHERE CURTIME()<hold)';
   my $stat = @{$self->GetSystemStatus(1)}->[1];
-  if ($stat ne 'normal')
-  {
-    $sql  = 'SELECT id FROM queue WHERE status>=5 AND status<8 AND id NOT IN (SELECT id FROM reviews WHERE hold IS NOT NULL)';
-  }
+  my $holdSQL = ($stat eq 'normal')? 'CURTIME()<hold':'hold IS NOT NULL';
+  my $sql  = 'SELECT id FROM queue WHERE ((status>=5 AND status<8) OR status=9) AND id NOT IN ' .
+             "(SELECT id FROM reviews WHERE $holdSQL)";
   return $self->get( 'dbh' )->selectall_arrayref( $sql );
 }
 
@@ -765,18 +775,26 @@ sub LoadNewItems
     foreach my $row (@{$ref})
     {
       my $id = $row->[0];
+      my $dup = $self->QueueHasVolumeOnSameRecord($id);
+      if ($dup)
+      {
+        print "Skipping $id: queue already has $dup which is on the same record\n";
+        next;
+      }
       my $pub_date = $row->[2];
       #print "Trying $id ($pub_date) against $y\n";
       next if $pub_date ne "$y-01-01";
       my $time = $row->[1];
       my $title = $row->[3];
       my $author = $row->[4];
-      $self->AddItemToQueue( $id, $pub_date, $title, $author );
-      printf "Added to queue: $id published %s\n", substr($pub_date, 0, 4);
-      $count++;
-      last if $count >= $needed;
-      $y++;
-      $y = 1923 if $y > 1963;
+      if ($self->AddItemToQueue( $id, $pub_date, $title, $author ))
+      {
+        printf "Added to queue: $id published %s\n", substr($pub_date, 0, 4);
+        $count++;
+        last if $count >= $needed;
+        $y++;
+        $y = 1923 if $y > 1963;
+      }
     }
     if ($oldcount == $count)
     {
@@ -790,6 +808,23 @@ sub LoadNewItems
   $self->PrepareSubmitSql( $sql );
 }
 
+# Return the volume id of the first queue volume with the same sysid as the id passed in, undef otherwise.
+sub QueueHasVolumeOnSameRecord
+{
+  my $self = shift;
+  my $id   = shift;
+  
+  my $rows = $self->VolumeIDsQuery($id);
+  foreach my $line (@{$rows})
+  {
+    my ($id2,$chron,$rights) = split '__', $line;
+    #next if $id eq $id2;
+    my $sql = "SELECT COUNT(*) FROM queue WHERE id='$id2'";
+    my $cnt = $self->SimpleSqlGet($sql);
+    return $id2 if $cnt;
+  }
+  return;
+}
 
 # Plain vanilla code for adding an item with status 0, priority 0
 # Expects the pub_date to be already in 19XX-01-01 format.
@@ -802,15 +837,13 @@ sub AddItemToQueue
   my $title    = shift;
   my $author   = shift;
 
-  if ( ! $self->IsItemInQueue( $id ) )
-  {
-    # queue table has priority and status default to 0, time to current timestamp.
-    my $sql = "INSERT INTO $CRMSGlobals::queueTable (id) VALUES ('$id')";
-    $self->PrepareSubmitSql( $sql );
-    $self->UpdateTitle( $id, $title );
-    $self->UpdatePubDate( $id, $pub_date );
-    $self->UpdateAuthor( $id, $author );
-  }
+  return 0 if $self->IsItemInQueue($id);
+  # queue table has priority and status default to 0, time to current timestamp.
+  my $sql = "INSERT INTO $CRMSGlobals::queueTable (id) VALUES ('$id')";
+  $self->PrepareSubmitSql( $sql );
+  $self->UpdateTitle( $id, $title );
+  $self->UpdatePubDate( $id, $pub_date );
+  $self->UpdateAuthor( $id, $author );
   # Update system table with aleph system id.
   $self->BarcodeToId($id);
   return 1;
@@ -837,35 +870,43 @@ sub AddItemToQueueOrSetItemActive
   ## give the existing item higher or lower priority
   elsif ( $self->IsItemInQueue( $id ) )
   {
-    my $oldpri = $self->GetPriority($id);
-    my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::reviewsTable WHERE id='$id'";
+    my $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id'";
     my $count = $self->SimpleSqlGet($sql);
-    if ($oldpri == $priority)
+    my $rlink = sprintf "already has $count <a href='?p=adminReviews;search1=Identifier;search1value=$id' target='_blank'>review%s</a>", ($count==1)? '':'s';
+    if ($src eq 'inheritance' && $count)
     {
-      push @msgs, 'already in queue with the same priority';
-      $stat = 2;
-    }
-    elsif ($oldpri > $priority && !$super)
-    {
-      push @msgs, 'already in queue with a higher priority';
-      $stat = 2;
+      push @msgs, $rlink;
+      $stat = 1;
     }
     else
     {
-      $sql = "UPDATE $CRMSGlobals::queueTable SET priority=$priority,time=NOW() WHERE id='$id'";
-      $self->PrepareSubmitSql( $sql );
-      push @msgs, "changed priority from $oldpri to $priority";
+      my $oldpri = $self->GetPriority($id);
+      if ($oldpri == $priority)
+      {
+        push @msgs, 'already in queue with the same priority';
+        $stat = 2;
+      }
+      elsif ($oldpri > $priority && !$super)
+      {
+        push @msgs, 'already in queue with a higher priority';
+        $stat = 2;
+      }
+      else
+      {
+        $sql = "UPDATE $CRMSGlobals::queueTable SET priority=$priority,time=NOW() WHERE id='$id'";
+        $self->PrepareSubmitSql( $sql );
+        push @msgs, "changed priority from $oldpri to $priority";
+        if ($count)
+        {
+          $sql = "UPDATE $CRMSGlobals::reviewsTable SET priority=$priority,time=time WHERE id='$id'";
+          $self->PrepareSubmitSql( $sql );
+        }
+        $stat = 3;
+      }
       if ($count)
       {
-        $sql = "UPDATE $CRMSGlobals::reviewsTable SET priority=$priority,time=time WHERE id='$id'";
-        $self->PrepareSubmitSql( $sql );
+        push @msgs, $rlink;
       }
-      $stat = 3;
-    }
-    if ($count)
-    {
-      my $rlink = sprintf "already has $count <a href='?p=adminReviews&amp;search1=Identifier&amp;search1value=$id' target='_blank'>review%s</a>", ($count==1)? '':'s';
-      push @msgs, $rlink;
     }
   }
   else
@@ -1099,7 +1140,6 @@ sub SubmitReview
   $sql = sprintf("REPLACE INTO $CRMSGlobals::reviewsTable (%s) VALUES (%s)", join(',', @fieldList), join(",", @valueList));
   if ( $self->get('verbose') ) { $self->Logit( $sql ); }
   my $result = $self->PrepareSubmitSql( $sql );
-
   if ($result)
   {
     if ( $exp )
@@ -1130,6 +1170,7 @@ sub GetStatusForExpertReview
   my $renDate  = shift;
   
   return 7 if $category eq 'Expert Accepted';
+  return 9 if $category eq 'Rights Inherited';
   my $status = 5;
   # See if it's a provisional match and expert agreed with both of existing non-advanced reviews. If so, status 7.
   my $sql = "SELECT attr,reason,renNum,renDate FROM reviews WHERE id='$id' AND user IN (SELECT id FROM users WHERE expert=0 AND advanced=0)";
@@ -2536,7 +2577,7 @@ sub GetQueueRef
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
-  my $return = ();
+  my @return = ();
   $sql = 'SELECT q.id, q.time, q.status, q.locked, YEAR(b.pub_date), q.priority, q.expcnt, b.title, b.author ' .
          "FROM queue q, bibdata b $restrict ORDER BY $order $dir $limit";
   #print "$sql<br/>\n";
@@ -2575,7 +2616,7 @@ sub GetQueueRef
                 reviews    => $reviews,
                 holds      => $holds
                };
-    push( @{$return}, $item );
+    push @return, $item;
     if ($download)
     {
       $data .= sprintf("\n$id\t%s\t%s\t%s\t$date\t%s\t%s\t%s\t$reviews\t%s\t$holds",
@@ -2587,7 +2628,7 @@ sub GetQueueRef
     my $n = POSIX::ceil($offset/$pagesize+1);
     my $of = POSIX::ceil($totalVolumes/$pagesize);
     $n = 0 if $of == 0;
-    $data = {'rows' => $return,
+    $data = {'rows' => \@return,
              'volumes' => $totalVolumes,
              'page' => $n,
              'of' => $of
@@ -2720,12 +2761,12 @@ sub CheckForId
 {
   my $self = shift;
   my $id   = shift;
-  my $dbh  = $self->get( 'dbh' );
 
+  my $dbh  = $self->get( 'dbh' );
   ## just make sure the ID is in the queue
-  my $sql = qq{SELECT id FROM $CRMSGlobals::queueTable WHERE id = '$id'};
+  my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE id='$id'";
   my @rows = $dbh->selectrow_array( $sql );
-  return scalar( @rows );
+  return scalar @rows;
 }
 
 sub AddUser
@@ -2760,6 +2801,15 @@ sub AddUser
   #print "$sql<br/>\n";
   $self->PrepareSubmitSql($sql);
   return 1;
+}
+
+sub DeleteUser
+{
+  my $self = shift;
+  my $id   = shift;
+  
+  my $sql = "DELETE FROM users WHERE id='$id'";
+  $self->PrepareSubmitSql($sql);
 }
 
 
@@ -4252,17 +4302,6 @@ sub UpdateExportStats
   my $sql = sprintf "REPLACE INTO exportstats (date,%s) VALUES ('$date',%s)", join(',', @keys), join(',', @vals);
   $self->PrepareSubmitSql($sql);
 }
-
-
-sub DeleteUser
-{
-  my $self = shift;
-  my $id   = shift;
-  
-  my $sql = "DELETE FROM users WHERE id='$id'";
-  $self->PrepareSubmitSql($sql);
-}
-
 
 sub CheckRenDate
 {
@@ -5856,7 +5895,7 @@ sub CreateQueueReport
     $priheaders .= "<th>Priority&nbsp;$pri</th>";
   }
   my $report = "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
-  foreach my $status (-1 .. 8)
+  foreach my $status (-1 .. 9)
   {
     my $statusClause = ($status == -1)? '':" WHERE STATUS=$status";
     my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable $statusClause";
@@ -5941,17 +5980,21 @@ sub CreateDeterminationReport
   my $sevens = $self->SimpleSqlGet($sql);
   $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=8 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
   my $eights = $self->SimpleSqlGet($sql);
-  my $total = $fours+$fives+$sixes+$sevens+$eights;
+  $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=9 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
+  my $nines = $self->SimpleSqlGet($sql);
+  my $total = $fours+$fives+$sixes+$sevens+$eights+$nines;
   my $pct4 = 0;
   my $pct5 = 0;
   my $pct6 = 0;
   my $pct7 = 0;
   my $pct8 = 0;
+  my $pct9 = 0;
   eval {$pct4 = 100.0*$fours/$total;};
   eval {$pct5 = 100.0*$fives/$total;};
   eval {$pct6 = 100.0*$sixes/$total;};
   eval {$pct7 = 100.0*$sevens/$total;};
   eval {$pct8 = 100.0*$eights/$total;};
+  eval {$pct9 = 100.0*$nines/$total;};
   my $legacy = $self->GetTotalLegacyCount();
   my %sources;
   $sql = 'SELECT src,COUNT(gid) FROM exportdata WHERE src IS NOT NULL GROUP BY src';
@@ -5971,6 +6014,7 @@ sub CreateDeterminationReport
   $report .= sprintf("<tr><th style='color:#999999;'>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6*</th><td style='background-color:#999999;'>$sixes&nbsp;(%.1f%%)</td></tr>", $pct6);
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;7</th><td>$sevens&nbsp;(%.1f%%)</td></tr>", $pct7);
   $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;8</th><td>$eights&nbsp;(%.1f%%)</td></tr>", $pct8);
+  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;9</th><td>$nines&nbsp;(%.1f%%)</td></tr>", $pct9);
   $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</th><td>%s</td></tr>", $exported);
   foreach my $source (sort keys %sources)
   {
@@ -6052,12 +6096,19 @@ sub CreateReviewReport
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Match</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
   
-  # Unprocessed - provisional match
+  # Unprocessed - auto-resolved
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=8';
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Auto-Resolved</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
+  
+  # Inheriting
+  $sql = 'SELECT COUNT(*) FROM inherit WHERE del!=1';
+  $count = $self->SimpleSqlGet($sql);
+  $report .= "<tr class='inherit'><td>Can Inherit</td><td>$count</td>";
+  $report .= "<td/>" for @pris;
+  $report .= '</tr>';
   
   # Processed
   $sql = 'SELECT priority FROM queue WHERE status!=0';
@@ -6086,7 +6137,7 @@ sub CreateReviewReport
   
   if ($count > 0)
   {
-    for my $status (4..8)
+    for my $status (4..9)
     {
       $sql = "SELECT priority from queue WHERE status=$status";
       $ref = $dbh->selectall_arrayref( $sql );
@@ -6670,6 +6721,7 @@ sub PageToEnglish
                'expert' => 'conflicts',
                'exportStats' => 'export stats',
                'holds' => 'my held reviews',
+               'inherit' => 'rights inheritance',
                'queue' => 'volumes in queue',
                'queueAdd' => 'add to queue',
                'queueStatus' => 'system summary',
@@ -6940,6 +6992,257 @@ sub LinkNoteText
     $note =~ s/(See\sall\sreviews\sfor\sSys\s#)(\d+)/$1<a href="$url" target="_blank">$2<\/a>/;
   }
   return $note;
+}
+
+sub InheritanceSelectionMenu
+{
+  my $self = shift;
+  my $searchName = shift;
+  my $searchVal = shift;
+  my $searchOnly = shift;
+  
+  my @keys = ('date','src','id','sysid','prior','change','title');
+  my @labs = ('Export Date','Source Volume','Volume Inheriting', 'System ID', 'Prior CRMS Review', 'Access Change', 'Title');
+  if ($searchOnly)
+  {
+    @keys = @keys[1..3];
+    @labs = @labs[1..3];
+  }
+  my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
+  foreach my $i (0 .. scalar @keys - 1)
+  {
+    $html .= sprintf("  <option value='%s'%s>%s</option>\n", $keys[$i], ($searchVal eq $keys[$i])? ' selected="selected"':'', $labs[$i]);
+  }
+  $html .= "</select>\n";
+  return $html;
+}
+
+
+sub ConvertToInheritanceSearchTerm
+{
+  my $self   = shift;
+  my $search = shift;
+
+  my $new_search = $search;
+  $new_search = 'DATE(e.time)' if $search eq 'date';
+  $new_search = 'e.id' if (!$search || $search eq 'src');
+  $new_search = 's.sysid' if $search eq 'sysid';
+  $new_search = 'i.id' if $search eq 'id';
+  $new_search = 'i.reason!=1' if $search eq 'prior';
+  $new_search = '(i.attr=1 && (e.attr="ic" || e.attr="und") || (e.attr="pd" && (i.attr=2 || i.attr=5)))' if $search eq 'change';
+  $new_search = 'b.title' if $search eq 'title';
+  return $new_search;
+}
+
+sub GetInheritanceRef
+{
+  my $self         = shift;
+  my $order        = shift;
+  my $dir          = shift;
+  my $search1      = shift;
+  my $search1Value = shift;
+  my $startDate    = shift;
+  my $endDate      = shift;
+  my $n            = shift;
+  my $pagesize     = shift;
+  my $download     = shift;
+  
+  $n = 1 unless $n;
+  #print("GetInheritanceRef('$order','$dir','$search1','$search1Value','$startDate','$endDate','$offset','$pagesize','$download');<br/>\n");
+  # these are 1-based
+  
+  $pagesize = 20 unless $pagesize > 0;
+  $order = 'id' unless $order;
+  $search1 = $self->ConvertToInheritanceSearchTerm($search1);
+  $order = $self->ConvertToInheritanceSearchTerm($order);
+  my @rest = ('i.del=0');
+  my $tester1 = '=';
+  my $tester2 = '=';
+  if ( $search1Value =~ m/.*\*.*/ )
+  {
+    $search1Value =~ s/\*/%/gs;
+    $tester1 = ' LIKE ';
+  }
+  if ( $search1Value =~ m/([<>!]=?)\s*(\d+)\s*/ )
+  {
+    $search1Value = $2;
+    $tester1 = $1;
+  }
+  my $doS = ($search1 eq 's.sysid' || $order eq 's.sysid')? ' LEFT JOIN system s ON s.id=e.id ':'';
+  push @rest, "i.time >= '$startDate'" if $startDate;
+  push @rest, "i.time <= '$endDate'" if $endDate;
+  push @rest, "$search1 $tester1 '$search1Value'" if $search1Value;
+  my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
+  my $sql = 'SELECT COUNT(DISTINCT e.id),COUNT(DISTINCT i.id) FROM inherit i ' .
+            'LEFT JOIN exportdata e ON i.gid=e.gid ' .
+            "LEFT JOIN bibdata b ON e.id=b.id $doS $restrict";
+  my $ref;
+  #print "$sql<br/>\n";
+  eval {
+    $ref = $self->get('dbh')->selectall_arrayref($sql);
+  };
+  if ($@)
+  {
+    $self->SetError($@);
+  }
+  my $totalVolumes = $ref->[0]->[0];
+  my $inheritingVolumes = $ref->[0]->[1];
+  my $of = POSIX::ceil($totalVolumes/$pagesize);
+  $n = $of if $n > $of;
+  my $first = ($n-1) * $pagesize + 1;
+  my $last = $first + $pagesize - 1;
+  #print "$n: $first-$last<br/>\n";
+  my $return = ();
+  $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time) FROM inherit i ' .
+         'LEFT JOIN exportdata e ON i.gid=e.gid ' .
+         "LEFT JOIN bibdata b ON e.id=b.id $doS $restrict ORDER BY $order $dir, e.id ASC";
+  #print "$sql<br/>\n";
+  $ref = undef;
+  eval {
+    $ref = $self->get('dbh')->selectall_arrayref($sql);
+  };
+  if ($@)
+  {
+    $self->SetError($@);
+  }
+  my $data = join "\t", ('ID','Title','Author','Pub Date','Date Added','Status','Locked','Priority','Reviews','Expert Reviews','Holds');
+  my $i = 0;
+  my @return = ();
+  my $currentSource = undef;
+  foreach my $row (@{$ref})
+  {
+    my $id2 = $row->[4];
+    if ($currentSource ne $id2)
+    {
+      $currentSource = $id2;
+      $i++;
+      #print "$i $currentSource<br/>\n";
+    }
+    next if $i < $first;
+    last if $i > $last;
+    my $id = $row->[0];
+    my $sysid = $self->BarcodeToId($id);
+    my $attr = $self->GetRightsName($row->[1]);
+    my $reason = $self->GetReasonName($row->[2]);
+    my $gid = $row->[3];
+    my $attr2 = $row->[5];
+    my $reason2 = $row->[6];
+    my $title = $row->[7];
+    my $date = $row->[8];
+    $title =~ s/&/&amp;/g;
+    my ($pd,$pdus,$icund) = (0,0,0);
+    $pd = 1 if ($attr eq 'pd' || $attr2 eq 'pd');
+    $pdus = 1 if ($attr eq 'pdus' || $attr2 eq 'pdus');
+    $icund = 1 if ($attr eq 'ic' || $attr2 eq 'ic');
+    $icund = 1 if ($attr eq 'und' || $attr2 eq 'und');
+    my $incrms = ($attr eq 'ic' && $reason eq 'bib')? undef:1;
+    my $change = (($pd == 1 && $icund == 1) || ($pd == 1 && $pdus == 1) || ($icund == 1 && $pdus == 1));
+    my %dic = ('i'=>$i,'inheriting'=>$id, 'sysid'=>$sysid, 'rights'=>"$attr/$reason", 'newrights'=>"$attr2/$reason2",
+               'incrms'=>$incrms, 'change'=>$change, 'from'=>$id2, 'title'=>$title, 'gid'=>$gid, 'date'=>$date);
+    push @return, \%dic;
+    if ($download)
+    {
+      #$data .= sprintf("\n$id\t%s\t%s\t%s\t$date\t%s\t%s\t%s\t$reviews\t%s\t$holds",
+      #                 $row->[7], $row->[8], $row->[4], $row->[2], $row->[3], $self->StripDecimal($row->[5]), $row->[6]);
+    }
+  }
+  if (!$download)
+  {
+    $data = {'rows' => \@return,
+             'source' => $totalVolumes,
+             'inheriting' => $inheritingVolumes,
+             'n' => $n,
+             'of' => $of
+            };
+    #print "Source ($totalVolumes) Inheriting ($inheritingVolumes) Page ($n) Of ($of)<br/>\n";
+  }
+  return $data;
+}
+
+sub DeleteInheritance
+{
+  my $self = shift;
+  my $id  = shift;
+  
+  $self->PrepareSubmitSql("UPDATE inherit SET del=1 WHERE id='$id'");
+  return 0;
+}
+
+sub GetDeletedInheritance
+{
+  my $self = shift;
+  my $id  = shift;
+  
+  my $sql = "SELECT id FROM inherit WHERE del=1";
+  return $self->get('dbh')->selectall_arrayref($sql);
+}
+
+sub SubmitInheritance
+{
+  my $self = shift;
+  my $id   = shift;
+  
+  my $sql = "SELECT e.attr,e.reason FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid WHERE i.id='$id'";
+  #print "$sql<br/>\n";
+  my $row = $self->get('dbh')->selectall_arrayref($sql)->[0];
+  my $attr = $self->GetRightsNum($row->[0]);
+  my $reason = $self->GetReasonNum($row->[1]);
+  my $category = 'Rights Inherited';
+  # Returns a status code (0=Add, 1=Error, 2=Skip, 3=Modify) followed by optional text.
+  my $res = $self->AddItemToQueueOrSetItemActive($id,0,0,'inheritance');
+  my $code = substr $res, 0, 1;
+  if ($code ne '0')
+  {
+    return $id . ': ' . substr $res, 1, length $res;
+  }
+  my $sysid = $self->BarcodeToId($id);
+  my $note = "See all reviews for Sys #$sysid";
+  #my ($id, $user, $attr, $reason, $note, $renNum, $exp, $renDate, $category, $swiss, $question) = @_;
+  # FIXME: determine whether to swiss
+  $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,$category,0,0);
+  $self->PrepareSubmitSql("DELETE FROM inherit WHERE id='$id'");
+  return 0;
+}
+
+sub GetTodaysInheritanceCount
+{
+  my $self = shift;
+
+  #my $sql = 'SELECT COUNT(*) FROM queue WHERE status=9 AND DATE(time)=DATE(NOW())';
+  my $sql = 'SELECT COUNT(*) FROM queue WHERE status=9';
+  $self->SimpleSqlGet($sql);
+}
+
+sub LinkToCatalog
+{
+  my $self  = shift;
+  my $sysid = shift;
+  
+  return "http://catalog.hathitrust.org/Record/$sysid";
+}
+
+sub LinkToHistorical
+{
+  my $self  = shift;
+  my $sysid = shift;
+  
+  return "/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid";
+}
+
+sub LinkToRetrieve
+{
+  my $self  = shift;
+  my $sysid = shift;
+  
+  return "/cgi/c/crms/crms?p=retrieve;query=$sysid";
+}
+
+sub LinkToMirlynDetails
+{
+  my $self  = shift;
+  my $sysid = shift;
+
+  return "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
 }
 
 1;

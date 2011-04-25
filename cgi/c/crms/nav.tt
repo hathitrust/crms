@@ -8,7 +8,7 @@
 [% uw = crms.CanUserSeeInstitutionalStats('UW') %]
 [% umn = crms.CanUserSeeInstitutionalStats('UMN') %]
 
-<ul id="menu" style="width=100%;">
+<ul id="menu" style="width:100%;">
 [% IF cgi.param('p') %]
 <li><span>Home</span>
 <dl class="home">
@@ -24,6 +24,7 @@
   [% IF e %]     <dd><a href="crms?p=expert">Conflicts</a></dd>                            [% END %]
   [% IF r || e %]<dd><a href="crms?p=editReviews">My&nbsp;Unprocessed&nbsp;Reviews</a></dd>[% END %]
   [% IF r || e %]<dd><a href="crms?p=holds">My Held Reviews</a></dd>                       [% END %]
+  [% IF a || s %]<dd><a href="crms?p=inherit">Rights&nbsp;Inheritance</a></dd>             [% END %]
 </dl>
 </li>
 <li><span>Search/Browse&nbsp;</span>
