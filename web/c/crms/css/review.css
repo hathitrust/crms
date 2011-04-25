@@ -285,6 +285,12 @@ td.minor,tr.minor {
   font-weight:bold;
 }
 
+td.inherit,tr.inherit {
+  background-color:#FFCBCC;
+  color:#000000;
+  font-weight:bold;
+}
+
 td.total,tr.total {
   background-color:#A0FEAE;
   color:#000000;
