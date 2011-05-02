@@ -127,6 +127,42 @@ function VerifyDelete(formid)
 -->
 </script>
 
+[% p = cgi.param('p') %]
+[% i = 0 %]
+[% IF cgi.param('inherit') %]
+  [% FOREACH param IN cgi.param %]
+    [% matches = param.match('(vol_)(.+)') %]
+    [% IF matches.0 == 'vol_' %]
+      [% res = crms.SubmitInheritance(matches.1) %]
+      [% IF res == 'skip' %]
+      [% ELSIF res %]
+        <b><span style='color:red;'>[% res %]</span></b><br/>
+      [% ELSE %]
+        <b>Approved [% matches.1 %]</b><br/>
+        [% i = i + 1 %]
+      [% END %]
+    [% END %]
+  [% END %]
+[% ELSIF cgi.param('delete') %]
+  [% FOREACH param IN cgi.param %]
+    [% matches = param.match('(vol_)(.+)') %]
+    [% IF matches.0 == 'vol_' %]
+      [% res = crms.DeleteInheritance(matches.1) %]
+      [% IF res == 'skip' %]
+      [% ELSIF res %]
+        <b><span style='color:red;'>[% res %]</span></b><br/>
+      [% ELSE %]
+        <b>Deleted [% matches.1 %]</b><br/>
+        [% i = i + 1 %]
+      [% END %]
+    [% END %]
+  [% END %]
+[% END %]
+[% IF cgi.param('inherit') || cgi.param('delete') %]
+  <h4>Modified [% i %] item[% (i == 1)? '':'s' %]</h4><br/>
+[% END %]
+
+
 [% icnt = crms.GetTodaysInheritanceCount %]
 <h5>[% icnt %] volume[% (icnt==1)? '':'s' %] set to inherit rights</h5>
 <br/>
@@ -139,38 +175,7 @@ function VerifyDelete(formid)
   <br/>
 [% END %]
 
-[% p = cgi.param('p') %]
-[% i = 0 %]
-[% IF cgi.param('inherit') %]
-  [% FOREACH param IN cgi.param %]
-    [% matches = param.match('(vol_)(.+)') %]
-    [% IF matches.0 == 'vol_' %]
-      [% res = crms.SubmitInheritance(matches.1) %]
-      [% IF res %]
-        <b><span style='color:red;'>[% res %]</span></b><br/>
-      [% ELSE %]
-        [% i = i + 1 %]
-      [% END %]
-    [% END %]
-  [% END %]
-[% ELSIF cgi.param('delete') %]
-  [% FOREACH param IN cgi.param %]
-    [% matches = param.match('(vol_)(.+)') %]
-    [% IF matches.0 == 'vol_' %]
-      [% res = crms.DeleteInheritance(matches.1) %]
-      [% IF res %]
-        <b><span style='color:red;'>[% res %]</span></b><br/>
-      [% ELSE %]
-        [% i = i + 1 %]
-      [% END %]
-    [% END %]
-  [% END %]
-[% END %]
 
-
-[% IF cgi.param('inherit') || cgi.param('delete') %]
-  <h4>Modified [% i %] item[% (i == 1)? '':'s' %]</h4><br/>
-[% END %]
 
 [% ref = crms.GetInheritanceRef(order,dir,search1,search1value,startDate,endDate,n,recs) %]
 [% inheriting = ref.inheriting %]
@@ -231,6 +236,7 @@ function VerifyDelete(formid)
     
     <table class="exportStats" style="width:100%;" id="resultsTable">
       <tr>
+        <th>#</th>
         <th>Export&nbsp;Date</th>
         <th>Source&nbsp;Volume<br/>(<span style="color:[% color_gray %];">historical</span>)</th>
         <th>Volume&nbsp;Inheriting<br/>(<span style="color:[% color_gray %];">volume retrieval</span>)</th>
@@ -240,6 +246,7 @@ function VerifyDelete(formid)
         <th>Prior CRMS<br/>Review?</th>
         <th>Access<br/>Change?</th>
         <th style="text-align:center;">Title</th>
+        <th>Queue Info</th>
         <th>Select</th>
       </tr>
       [% FOREACH review IN items %]
@@ -257,6 +264,7 @@ function VerifyDelete(formid)
           [% END %]
         [% END %]
         <tr style="background-color:[% active_color %];">
+          <td>[% review.j %]</td>
           <td>[% review.date %]</td>
           <td><a href='[% crms.LinkToHistorical(review.sysid) %]'target='_blank'>[% review.from %]</a></td>
           <td><a href='[% crms.LinkToRetrieve(review.inheriting) %]' target='_blank'>[% review.inheriting %]</a></td>
@@ -266,10 +274,9 @@ function VerifyDelete(formid)
           <td>[% (review.incrms==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
           <td>[% (review.change==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
           <td>[% review.title %]</td>
+          <td>[% review.summary %]</td>
           <td align="center">
-            [%# IF first %]
-              <input type="checkbox" name="vol_[% review.inheriting %]"/>
-            [%# END %]
+            <input type="checkbox" name="vol_[% review.inheriting %]"/>
           </td>
         </tr>
         [% prev_id = review.from %]

@@ -422,7 +422,6 @@ sub ClearQueueAndExport
   $self->ExportReviews( $export, $fromcgi );
   $self->UpdateExportStats();
   $self->UpdateDeterminationsBreakdown();
-  return "Exported: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved\n";
   # Clear the deleted volumes
   my $sql = 'SELECT COUNT(*) FROM inherit WHERE del=1';
   my $dels = $self->SimpleSqlGet($sql);
@@ -435,6 +434,7 @@ sub ClearQueueAndExport
   {
     print "No deleted inheriting volumes to remove.\n" unless $fromcgi;
   }
+  return "Exported: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved\n";
 }
 
 sub GetAutoResolvedItems
@@ -762,6 +762,7 @@ sub LoadNewItems
   return if $needed <= 0;
   my $count = 0;
   my $y = 1923 + int(rand(40));
+  my %recs = %{$self->GetQueueRecords()};
   while (1)
   {
     my $sql = 'SELECT id, time, pub_date, title, author FROM candidates WHERE id NOT IN (SELECT DISTINCT id FROM queue) ' .
@@ -775,10 +776,11 @@ sub LoadNewItems
     foreach my $row (@{$ref})
     {
       my $id = $row->[0];
-      my $dup = $self->QueueHasVolumeOnSameRecord($id);
+      my $sysid = $self->BarcodeToId($id);
+      my $dup = $recs{$sysid};
       if ($dup)
       {
-        print "Skipping $id: queue already has $dup which is on the same record\n";
+        print "Skipping $id: queue has $dup on record $sysid\n";
         next;
       }
       my $pub_date = $row->[2];
@@ -808,22 +810,21 @@ sub LoadNewItems
   $self->PrepareSubmitSql( $sql );
 }
 
-# Return the volume id of the first queue volume with the same sysid as the id passed in, undef otherwise.
-sub QueueHasVolumeOnSameRecord
+# Return a hash ref if sysid=>id of all volumes in the queue.
+sub GetQueueRecords
 {
   my $self = shift;
-  my $id   = shift;
-  
-  my $rows = $self->VolumeIDsQuery($id);
-  foreach my $line (@{$rows})
+
+  my %dict = ();
+  my $sql = 'SELECT id FROM queue';
+  my $ref = $self->get('dbh')->selectall_arrayref($sql);
+  foreach my $row (@{$ref})
   {
-    my ($id2,$chron,$rights) = split '__', $line;
-    #next if $id eq $id2;
-    my $sql = "SELECT COUNT(*) FROM queue WHERE id='$id2'";
-    my $cnt = $self->SimpleSqlGet($sql);
-    return $id2 if $cnt;
+    my $id = $row->[0];
+    my $sysid = $self->BarcodeToId($id);
+    $dict{$sysid} = $id if $sysid;
   }
-  return;
+  return \%dict;
 }
 
 # Plain vanilla code for adding an item with status 0, priority 0
@@ -872,41 +873,34 @@ sub AddItemToQueueOrSetItemActive
   {
     my $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id'";
     my $count = $self->SimpleSqlGet($sql);
-    my $rlink = sprintf "already has $count <a href='?p=adminReviews;search1=Identifier;search1value=$id' target='_blank'>review%s</a>", ($count==1)? '':'s';
-    if ($src eq 'inheritance' && $count)
+    my $oldpri = $self->GetPriority($id);
+    if ($oldpri == $priority)
     {
-      push @msgs, $rlink;
-      $stat = 1;
+      push @msgs, 'already in queue with the same priority';
+      $stat = 2;
+    }
+    elsif ($oldpri > $priority && !$super)
+    {
+      push @msgs, 'already in queue with a higher priority';
+      $stat = 2;
     }
     else
     {
-      my $oldpri = $self->GetPriority($id);
-      if ($oldpri == $priority)
-      {
-        push @msgs, 'already in queue with the same priority';
-        $stat = 2;
-      }
-      elsif ($oldpri > $priority && !$super)
-      {
-        push @msgs, 'already in queue with a higher priority';
-        $stat = 2;
-      }
-      else
-      {
-        $sql = "UPDATE $CRMSGlobals::queueTable SET priority=$priority,time=NOW() WHERE id='$id'";
-        $self->PrepareSubmitSql( $sql );
-        push @msgs, "changed priority from $oldpri to $priority";
-        if ($count)
-        {
-          $sql = "UPDATE $CRMSGlobals::reviewsTable SET priority=$priority,time=time WHERE id='$id'";
-          $self->PrepareSubmitSql( $sql );
-        }
-        $stat = 3;
-      }
+      $sql = "UPDATE $CRMSGlobals::queueTable SET priority=$priority,time=NOW() WHERE id='$id'";
+      $self->PrepareSubmitSql( $sql );
+      push @msgs, "changed priority from $oldpri to $priority";
       if ($count)
       {
-        push @msgs, $rlink;
+        $sql = "UPDATE $CRMSGlobals::reviewsTable SET priority=$priority,time=time WHERE id='$id'";
+        $self->PrepareSubmitSql( $sql );
       }
+      $stat = 3;
+    }
+    if ($count)
+    {
+      my $rlink = sprintf("already has $count <a href='?p=adminReviews;search1=Identifier;search1value=$id' target='_blank'>review%s</a>",
+                          ($count==1)? '':'s');
+      push @msgs, $rlink;
     }
   }
   else
@@ -2683,6 +2677,15 @@ sub GetStatus
 
   my $sql = "SELECT status FROM $CRMSGlobals::queueTable WHERE id='$id'";
   return $self->SimpleSqlGet( $sql );
+}
+
+sub IsVolumeInQueue
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $sql = "SELECT COUNT(id) FROM $CRMSGlobals::queueTable WHERE id='$id'";
+  return ($self->SimpleSqlGet($sql) > 0);
 }
 
 sub ValidateAttrReasonCombo
@@ -5465,7 +5468,7 @@ sub LockItem
   ## if already locked for this user, that's OK
   if ( $self->IsLockedForUser( $id, $name ) ) { return 0; }
   # Not locked for user, maybe someone else
-  if ($self->IsLocked($id)) { return 'Item has already been locked by another user'; }
+  if ($self->IsLocked($id)) { return 'Volume has been locked by another user'; }
   ## can only have 1 item locked at a time (unless override)
   if (!$override)
   {
@@ -6356,8 +6359,8 @@ sub IsReviewCorrect
   #print "$attr, $reason, $renNum, $renDate, $expert, $swiss\n";
   # A non-expert with status 7 is protected rather like Swiss.
   return 1 if ($status == 7 && !$expert);
-  # Get the most recent non-autocrms expert review
-  $sql = "SELECT attr,reason,renNum,renDate,category FROM historicalreviews WHERE id='$id' AND user!='autocrms' AND expert>0 ORDER BY time DESC";
+  # Get the most recent non-autocrms or s9 expert review
+  $sql = "SELECT attr,reason,renNum,renDate,category FROM historicalreviews WHERE id='$id' AND (user!='autocrms' OR status=9) AND expert>0 ORDER BY time DESC";
   $r = $self->get('dbh')->selectall_arrayref($sql);
   return 1 unless scalar @{$r};
   $row = $r->[0];
@@ -7050,7 +7053,6 @@ sub GetInheritanceRef
   $n = 1 unless $n;
   #print("GetInheritanceRef('$order','$dir','$search1','$search1Value','$startDate','$endDate','$offset','$pagesize','$download');<br/>\n");
   # these are 1-based
-  
   $pagesize = 20 unless $pagesize > 0;
   $order = 'id' unless $order;
   $search1 = $self->ConvertToInheritanceSearchTerm($search1);
@@ -7069,8 +7071,8 @@ sub GetInheritanceRef
     $tester1 = $1;
   }
   my $doS = ($search1 eq 's.sysid' || $order eq 's.sysid')? ' LEFT JOIN system s ON s.id=e.id ':'';
-  push @rest, "i.time >= '$startDate'" if $startDate;
-  push @rest, "i.time <= '$endDate'" if $endDate;
+  push @rest, "DATE(e.time) >= '$startDate'" if $startDate;
+  push @rest, "DATE(e.time) <= '$endDate'" if $endDate;
   push @rest, "$search1 $tester1 '$search1Value'" if $search1Value;
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
   my $sql = 'SELECT COUNT(DISTINCT e.id),COUNT(DISTINCT i.id) FROM inherit i ' .
@@ -7107,17 +7109,19 @@ sub GetInheritanceRef
   }
   my $data = join "\t", ('ID','Title','Author','Pub Date','Date Added','Status','Locked','Priority','Reviews','Expert Reviews','Holds');
   my $i = 0;
+  my $j = 0;
   my @return = ();
   my $currentSource = undef;
   foreach my $row (@{$ref})
   {
-    my $id2 = $row->[4];
+    my $id2 = $row->[4] || '';
     if ($currentSource ne $id2)
     {
       $currentSource = $id2;
       $i++;
       #print "$i $currentSource<br/>\n";
     }
+    $j++;
     next if $i < $first;
     last if $i > $last;
     my $id = $row->[0];
@@ -7137,8 +7141,19 @@ sub GetInheritanceRef
     $icund = 1 if ($attr eq 'und' || $attr2 eq 'und');
     my $incrms = ($attr eq 'ic' && $reason eq 'bib')? undef:1;
     my $change = (($pd == 1 && $icund == 1) || ($pd == 1 && $pdus == 1) || ($icund == 1 && $pdus == 1));
-    my %dic = ('i'=>$i,'inheriting'=>$id, 'sysid'=>$sysid, 'rights'=>"$attr/$reason", 'newrights'=>"$attr2/$reason2",
-               'incrms'=>$incrms, 'change'=>$change, 'from'=>$id2, 'title'=>$title, 'gid'=>$gid, 'date'=>$date);
+    my $summary = '';
+    if ($self->IsVolumeInQueue($id))
+    {
+      $summary = sprintf "in queue (P%s)", $self->GetPriority($id);
+      $sql = "SELECT user FROM reviews WHERE id='$id'";
+      my $ref2 = $self->get('dbh')->selectall_arrayref($sql);
+      my $users = join ', ', (map {$_->[0]} @{$ref2});
+      $summary .= "; reviewed by $users" if $users;
+      my $locked = $self->SimpleSqlGet("SELECT locked FROM queue WHERE id='$id'");
+      $summary .= "; locked for $locked" if $locked;
+    }
+    my %dic = ('i'=>$i, 'j'=>$j,'inheriting'=>$id, 'sysid'=>$sysid, 'rights'=>"$attr/$reason", 'newrights'=>"$attr2/$reason2",
+               'incrms'=>$incrms, 'change'=>$change, 'from'=>$id2, 'title'=>$title, 'gid'=>$gid, 'date'=>$date, 'summary'=>$summary);
     push @return, \%dic;
     if ($download)
     {
@@ -7163,7 +7178,9 @@ sub DeleteInheritance
 {
   my $self = shift;
   my $id  = shift;
-  
+
+  return 'skip' if $self->SimpleSqlGet("SELECT COUNT(*) FROM inherit WHERE id='$id' AND del=1");
+  return 'skip' unless $self->SimpleSqlGet("SELECT COUNT(*) FROM inherit WHERE id='$id'");
   $self->PrepareSubmitSql("UPDATE inherit SET del=1 WHERE id='$id'");
   return 0;
 }
@@ -7181,15 +7198,19 @@ sub SubmitInheritance
 {
   my $self = shift;
   my $id   = shift;
-  
-  my $sql = "SELECT e.attr,e.reason FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid WHERE i.id='$id'";
-  #print "$sql<br/>\n";
+
+  my $sql = "SELECT COUNT(*) FROM reviews r INNER JOIN queue q ON r.id=q.id WHERE r.id='$id' AND r.user='autocrms' AND q.status=9";
+  return 'skip' if $self->SimpleSqlGet($sql);
+  $sql = "SELECT e.attr,e.reason,i.attr,i.reason FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid WHERE i.id='$id'";
   my $row = $self->get('dbh')->selectall_arrayref($sql)->[0];
   my $attr = $self->GetRightsNum($row->[0]);
   my $reason = $self->GetReasonNum($row->[1]);
+  my $attr2 = $self->GetRightsName($row->[2]);
+  my $reason2 = $self->GetReasonName($row->[3]);
+  my $rights = "$attr2/$reason2";
   my $category = 'Rights Inherited';
-  # Returns a status code (0=Add, 1=Error, 2=Skip, 3=Modify) followed by optional text.
-  my $res = $self->AddItemToQueueOrSetItemActive($id,0,0,'inheritance');
+  # Returns a status code (0=Add, 1=Error) followed by optional text.
+  my $res = $self->AddInheritanceToQueue($id);
   my $code = substr $res, 0, 1;
   if ($code ne '0')
   {
@@ -7197,11 +7218,61 @@ sub SubmitInheritance
   }
   my $sysid = $self->BarcodeToId($id);
   my $note = "See all reviews for Sys #$sysid";
-  #my ($id, $user, $attr, $reason, $note, $renNum, $exp, $renDate, $category, $swiss, $question) = @_;
-  # FIXME: determine whether to swiss
-  $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,$category,0,0);
+  my $swiss = ($rights eq 'ic/bib')? 0:1;
+  $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,$category,$swiss);
   $self->PrepareSubmitSql("DELETE FROM inherit WHERE id='$id'");
   return 0;
+}
+
+# Returns a status code (0=Add, 1=Error) followed by optional text.
+sub AddInheritanceToQueue
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $stat = 0;
+  my @msgs = ();
+  if ($self->IsItemInQueue($id))
+  {
+    my $err = $self->LockItem($id, 'autocrms');
+    if ($err)
+    {
+      push @msgs, $err;
+      $stat = 1;
+    }
+    else
+    {
+      my $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id' AND user NOT LIKE 'rereport%'";
+      my $count = $self->SimpleSqlGet($sql);
+      if ($count)
+      {
+        my $rlink = sprintf "already has $count <a href='?p=adminReviews;search1=Identifier;search1value=$id' target='_blank'>review%s</a>", ($count==1)? '':'s';
+        push @msgs, $rlink;
+        $stat = 1;
+      }
+    }
+    $self->UnlockItem($id);
+  }
+  else
+  {
+    my $record = $self->GetMetadata($id);
+    @msgs = @{ $self->GetViolations($id, $record) };
+    if (scalar @msgs)
+    {
+      $stat = 1;
+    }
+    else
+    {
+      my $sql = "INSERT INTO queue (id, priority, source) VALUES ('$id', 0, 'inheritance')";
+      $self->PrepareSubmitSql($sql);
+      $self->UpdateTitle($id, undef, $record);
+      $self->UpdatePubDate($id, undef, $record);
+      $self->UpdateAuthor ($id, undef, $record);
+      $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES (1, 'inheritance')";
+      $self->PrepareSubmitSql($sql);
+    }
+  }
+  return $stat . join '; ', @msgs;
 }
 
 sub GetTodaysInheritanceCount
