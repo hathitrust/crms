@@ -7188,9 +7188,8 @@ sub DeleteInheritance
 sub GetDeletedInheritance
 {
   my $self = shift;
-  my $id  = shift;
-  
-  my $sql = "SELECT id FROM inherit WHERE del=1";
+
+  my $sql = 'SELECT id FROM inherit WHERE del=1';
   return $self->get('dbh')->selectall_arrayref($sql);
 }
 
@@ -7201,12 +7200,14 @@ sub SubmitInheritance
 
   my $sql = "SELECT COUNT(*) FROM reviews r INNER JOIN queue q ON r.id=q.id WHERE r.id='$id' AND r.user='autocrms' AND q.status=9";
   return 'skip' if $self->SimpleSqlGet($sql);
-  $sql = "SELECT e.attr,e.reason,i.attr,i.reason FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid WHERE i.id='$id'";
+  $sql = "SELECT e.attr,e.reason,i.attr,i.reason,i.gid FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid WHERE i.id='$id'";
   my $row = $self->get('dbh')->selectall_arrayref($sql)->[0];
   my $attr = $self->GetRightsNum($row->[0]);
   my $reason = $self->GetReasonNum($row->[1]);
   my $attr2 = $self->GetRightsName($row->[2]);
   my $reason2 = $self->GetReasonName($row->[3]);
+  my $gid = $row->[4];
+  return sprintf("$id (GID %s) is no longer available for inheritance (has it been processed?)", ($gid)? "$gid":'unknown') unless ($attr2 && $reason2);
   my $rights = "$attr2/$reason2";
   my $category = 'Rights Inherited';
   # Returns a status code (0=Add, 1=Error) followed by optional text.
@@ -7251,7 +7252,7 @@ sub AddInheritanceToQueue
         $stat = 1;
       }
     }
-    $self->UnlockItem($id);
+    $self->UnlockItem($id, 'autocrms');
   }
   else
   {
