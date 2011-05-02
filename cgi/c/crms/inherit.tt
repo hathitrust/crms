@@ -122,7 +122,7 @@ function VerifyDelete(formid)
   if (n == 0) return 1;
   var morph = (n == 1)? '':'s';
   var demonstr = (n == 1)? 'this':'these ' + n;
-  return (confirm('Please confirm that you wish do delete ' + demonstr + ' volume' + morph + '. This action can not be undone.'));
+  return (confirm('Please confirm that you wish to delete ' + demonstr + ' volume' + morph + '. This action can not be undone.'));
 }
 -->
 </script>
