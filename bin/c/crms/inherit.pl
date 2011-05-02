@@ -121,7 +121,7 @@ if (scalar keys %{$data{'chron'}})
     {
       $n++;
       my ($id2,$sysid) = split "\t", $line;
-      my $htCatLink = "http://catalog.hathitrust.org/Record/$b";
+      my $htCatLink = "http://catalog.hathitrust.org/Record/$sysid";
       my $retrLink = "https://quod.lib.umich.edu/cgi/c/crms/crms?p=retrieve;query=$sysid";
       my $histLink = "https://quod.lib.umich.edu/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid";
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td>" .
@@ -149,7 +149,7 @@ if (scalar keys %{$data{'unneeded'}})
     {
       $n++;
       my ($id2,$sysid,$c,$d,$e) = split "\t", $line;
-      my $htCatLink = "http://catalog.hathitrust.org/Record/$b";
+      my $htCatLink = "http://catalog.hathitrust.org/Record/$sysid";
       my $retrLink = "https://quod.lib.umich.edu/cgi/c/crms/crms?p=retrieve;query=$sysid";
       my $histLink = "https://quod.lib.umich.edu/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid";
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$e</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
@@ -175,7 +175,6 @@ if (scalar keys %{$data{'disallowed'}})
     {
       $n++;
       my ($id2,$sysid,$c,$d,$e,$note) = split "\t", $line;
-
       my $htCatLink = "http://catalog.hathitrust.org/Record/$sysid";
       my $retrLink = "https://quod.lib.umich.edu/cgi/c/crms/crms?p=retrieve;query=$sysid";
       my $histLink = "https://quod.lib.umich.edu/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid";
@@ -402,15 +401,18 @@ sub DuplicateVolumes
       }
       elsif ($id2 ne $id && !$data->{'chron'}->{$id})
       {
-        if ($crms->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2'"))
+        if ($crms->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%'"))
         {
+          my $user = $crms->SimpleSqlGet("SELECT user FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%' LIMIT 1");
           $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
-          $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$attr/$reason\t$id\tAlready has a review\n";
+          $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$attr/$reason\t$id\tHas an active review by $user\n";
           $data->{'disallowedsys'}->{$sysid} = 1;
         }
         elsif ($okatrr{"$attr2/$reason2"})
         {
-          if ($attr2 eq $attr && $reason2 ne 'bib')
+          # Always inherit onto a single-review priority 1
+          my $rereps = $crms->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user LIKE 'rereport%'");
+          if ($attr2 eq $attr && $reason2 ne 'bib' && $rereps == 0)
           {
             $data->{'unneeded'}->{$id} = '' unless $data->{'unneeded'}->{$id};
             $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$attr/$reason\t$id\n";
