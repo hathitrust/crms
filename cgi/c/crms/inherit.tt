@@ -168,7 +168,7 @@ function VerifyDelete(formid)
 <br/>
 [% ref = crms.GetDeletedInheritance %]
 [% IF ref.size() %]
-  <h5>Inheriting volumes deleted today:</h5>
+  <h5>Inheritance candidates deleted today:</h5>
   [% FOREACH row IN ref %]
     [% row.0 %]<br/>
   [% END %]
