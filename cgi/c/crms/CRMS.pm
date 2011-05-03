@@ -7220,6 +7220,7 @@ sub SubmitInheritance
   {
     return $id . ': ' . substr $res, 1, length $res;
   }
+  $self->PrepareSubmitSql("DELETE FROM reviews WHERE id='$id'");
   my $sysid = $self->BarcodeToId($id);
   my $note = "See all reviews for Sys #$sysid";
   my $swiss = ($rights eq 'ic/bib')? 0:1;
