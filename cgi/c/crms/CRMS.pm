@@ -7139,7 +7139,7 @@ sub GetInheritanceRef
     $pdus = 1 if ($attr eq 'pdus' || $attr2 eq 'pdus');
     $icund = 1 if ($attr eq 'ic' || $attr2 eq 'ic');
     $icund = 1 if ($attr eq 'und' || $attr2 eq 'und');
-    my $incrms = ($attr eq 'ic' && $reason eq 'bib')? undef:1;
+    my $incrms = (($attr eq 'ic' && $reason eq 'bib') || $reason eq 'gfv')? undef:1;
     my $change = (($pd == 1 && $icund == 1) || ($pd == 1 && $pdus == 1) || ($icund == 1 && $pdus == 1));
     my $summary = '';
     if ($self->IsVolumeInQueue($id))
@@ -7199,6 +7199,9 @@ sub SubmitInheritance
   my $id   = shift;
 
   my $sql = "SELECT COUNT(*) FROM reviews r INNER JOIN queue q ON r.id=q.id WHERE r.id='$id' AND r.user='autocrms' AND q.status=9";
+  return 'skip' if $self->SimpleSqlGet($sql);
+  # Check for a submit after reviews have been processed; WARNING this should not be done in production FIXME
+  $sql = "SELECT COUNT(*) FROM historicalreviews r WHERE r.id='$id' AND r.user='autocrms' AND r.status=9";
   return 'skip' if $self->SimpleSqlGet($sql);
   $sql = "SELECT e.attr,e.reason,i.attr,i.reason,i.gid FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid WHERE i.id='$id'";
   my $row = $self->get('dbh')->selectall_arrayref($sql)->[0];
