@@ -7223,7 +7223,7 @@ sub SubmitInheritance
   $self->PrepareSubmitSql("DELETE FROM reviews WHERE id='$id'");
   my $sysid = $self->BarcodeToId($id);
   my $note = "See all reviews for Sys #$sysid";
-  my $swiss = ($rights eq 'ic/bib')? 0:1;
+  my $swiss = ($self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'")>0)? 1:0;
   $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,$category,$swiss);
   $self->PrepareSubmitSql("DELETE FROM inherit WHERE id='$id'");
   return 0;
