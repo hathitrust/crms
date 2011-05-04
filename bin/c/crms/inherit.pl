@@ -95,10 +95,10 @@ if (scalar keys %{$data{'nodups'}})
     foreach my $line (@lines)
     {
       $n++;
-      my ($a,$b) = split "\t", $line;
-      my $htCatLink = "http://catalog.hathitrust.org/Record/$b";
-      my $retrLink = "https://quod.lib.umich.edu/cgi/c/crms/crms?p=retrieve;query=$b";
-      $txt .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$a</a></td><td><a href='$htCatLink' target='_blank'>$b</a></td></tr>\n";
+      my ($a,$sysid) = split "\t", $line;
+      my $htCatLink = $crms->LinkToCatalog($sysid);
+      my $retrLink = $crms->LinkToRetrieve($sysid);
+      $txt .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$a</a></td><td><a href='$htCatLink' target='_blank'>$sysid</a></td></tr>\n";
     }
   }
   $txt .= "</table>$delim";
@@ -121,9 +121,9 @@ if (scalar keys %{$data{'chron'}})
     {
       $n++;
       my ($id2,$sysid) = split "\t", $line;
-      my $htCatLink = "http://catalog.hathitrust.org/Record/$sysid";
-      my $retrLink = "https://quod.lib.umich.edu/cgi/c/crms/crms?p=retrieve;query=$sysid";
-      my $histLink = "https://quod.lib.umich.edu/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid";
+      my $htCatLink = $crms->LinkToCatalog($sysid);
+      my $retrLink = $crms->LinkToRetrieve($sysid);
+      my $histLink = $crms->LinkToHistorical($sysid);
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td>" .
               "<td><a href='$retrLink' target='_blank'>$id2</a></td>\n";
       $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$title</td></tr>\n";
@@ -149,9 +149,9 @@ if (scalar keys %{$data{'unneeded'}})
     {
       $n++;
       my ($id2,$sysid,$c,$d,$e) = split "\t", $line;
-      my $htCatLink = "http://catalog.hathitrust.org/Record/$sysid";
-      my $retrLink = "https://quod.lib.umich.edu/cgi/c/crms/crms?p=retrieve;query=$sysid";
-      my $histLink = "https://quod.lib.umich.edu/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid";
+      my $htCatLink = $crms->LinkToCatalog($sysid);
+      my $retrLink = $crms->LinkToRetrieve($sysid);
+      my $histLink = $crms->LinkToHistorical($sysid);
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$e</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
       $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$title</td></tr>\n";
     }
@@ -175,9 +175,9 @@ if (scalar keys %{$data{'disallowed'}})
     {
       $n++;
       my ($id2,$sysid,$c,$d,$e,$note) = split "\t", $line;
-      my $htCatLink = "http://catalog.hathitrust.org/Record/$sysid";
-      my $retrLink = "https://quod.lib.umich.edu/cgi/c/crms/crms?p=retrieve;query=$sysid";
-      my $histLink = "https://quod.lib.umich.edu/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid";
+      my $htCatLink = $crms->LinkToCatalog($sysid);
+      my $retrLink = $crms->LinkToRetrieve($sysid);
+      my $histLink = $crms->LinkToHistorical($sysid);
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
       $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$note</td><td>$title</td></tr>\n";
     }
@@ -205,15 +205,15 @@ if (scalar keys %{$data{'inherit'}})
       my ($id2,$sysid,$attr2,$reason2,$attr,$reason,$gid) = split "\t", $line;
       $n++;
       my $catLink = "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
-      my $htCatLink = "http://catalog.hathitrust.org/Record/$sysid";
-      my $histLink = "https://quod.lib.umich.edu/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid";
-      my $retrLink = "https://quod.lib.umich.edu/cgi/c/crms/crms?p=retrieve;query=$sysid";
+      my $htCatLink = $crms->LinkToCatalog($sysid);
+      my $histLink = $crms->LinkToHistorical($sysid);
+      my $retrLink = $crms->LinkToRetrieve($sysid);
       my ($pd,$pdus,$icund) = (0,0,0);
       $pd = 1 if ($attr eq 'pd' || $attr2 eq 'pd');
       $pdus = 1 if ($attr eq 'pdus' || $attr2 eq 'pdus');
       $icund = 1 if ($attr eq 'ic' || $attr2 eq 'ic');
       $icund = 1 if ($attr eq 'und' || $attr2 eq 'und');
-      my $incrms = ($attr2 eq 'ic' && $reason2 eq 'bib')? '':'&nbsp;&nbsp;&nbsp;&#x2713';
+      my $incrms = (($attr2 eq 'ic' && $reason2 eq 'bib') || $reason2 eq 'gfv')? '':'&nbsp;&nbsp;&nbsp;&#x2713';
       my $change = (($pd == 1 && $icund == 1) || ($pd == 1 && $pdus == 1) || ($icund == 1 && $pdus == 1));
       #print "$change from $pd and $icund ($attr,$attr2)\n";
       my $ar = "$attr/$reason";
@@ -240,26 +240,17 @@ $txt = $header . $delim . $txt;
 
 if ($insert)
 {
-  $txt .= '<h4>Now inserting inheritance data in dev</h4>';
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
-  $crms = CRMS->new(
-      logFile      =>   "$DLXSROOT/prep/c/crms/inherit_hist.txt",
-      configFile   =>   $configFile,
-      verbose      =>   $verbose,
-      root         =>   $DLXSROOT,
-      dev          =>   $DLPS_DEV
-  );
+  $txt .= '<h4>Now inserting inheritance data</h4>';
   foreach my $id (keys %{$data{'inherit'}})
   {
-    my $sql = "SELECT gid FROM exportdata WHERE id='$id' ORDER BY time DESC LIMIT 1";
-    my $gid2 = $crms->SimpleSqlGet($sql);
     my @lines = split "\n", $data{'inherit'}->{$id};
     foreach my $line (@lines)
     {
       my ($id2,$sysid,$attr2,$reason2,$attr,$reason,$gid) = split "\t", $line;
       $attr2 = $crms->GetRightsNum($attr2);
       $reason2 = $crms->GetReasonNum($reason2);
-      $sql = "REPLACE INTO inherit (id,attr,reason,gid) VALUES ('$id2',$attr2,$reason2,$gid2)";
+      my $sql = "REPLACE INTO inherit (id,attr,reason,gid) VALUES ('$id2',$attr2,$reason2,$gid)";
+      #print "$sql\n";
       $crms->PrepareSubmitSql($sql);
     }
   }
@@ -317,122 +308,11 @@ sub InheritanceReport
     $data{'total'}->{$id} = 1;
     $data{'totalsys'}->{$sysid} = 1;
     my $record = $crms->GetMetadata($sysid);
-    DuplicateVolumes($id,$gid,$sysid,$attr,$reason,\%data);
+    $crms->DuplicateVolumesFromExport($id,$gid,$sysid,$attr,$reason,\%data);
   }
   return \%data;
 }
 
 
-sub DuplicateVolumes
-{
-  my $id     = shift;
-  my $gid    = shift;
-  my $sysid  = shift;
-  my $attr   = shift;
-  my $reason = shift;
-  my $data   = shift;
 
-  my %okatrr = ('pd/ncn' => 1,
-                'pd/ren' => 1,
-                'pd/cdpp' => 1,
-                'pdus/cdpp' => 1,
-                'pd/crms' => 1,
-                'pd/add' => 1,
-                'ic/ren' => 1,
-                'ic/cdpp' => 1,
-                'ic/crms' => 1,
-                'und/nfi' => 1,
-                'und/crms' => 1,
-                'ic/bib' => 1);
-  my $rows = $crms->VolumeIDsQuery($sysid);
-  if (1 == scalar @{$rows})
-  {
-    $data->{'nodups'}->{$id} = '' unless $data->{'nodups'}->{$id};
-    $data->{'nodups'}->{$id} .= "$id\t$sysid\n";
-    $data->{'nodupssys'}->{$sysid} = 1;
-  }
-  else
-  {
-    # Get most recent CRMS determination for any volume on this record
-    # and see if it's more recent that what we're exporting.
-    my $candidate = $id;
-    my $candidateTime = $crms->SimpleSqlGet("SELECT MAX(time) FROM historicalreviews WHERE id='$id'");
-    my $sawchron = 0;
-    foreach my $line (@{$rows})
-    {
-      my ($id2,$chron2,$rights2) = split '__', $line;
-      $sawchron = 1 if $chron2;
-      next if $id eq $id2;
-      my $time = $crms->SimpleSqlGet("SELECT MAX(time) FROM historicalreviews WHERE id='$id2'");
-      if ($time && $time gt $candidateTime)
-      {
-        $candidate = $id2;
-        $candidateTime = $time;
-        #print "Candidate now $candidate, time $candidateTime (src id $id)\n";
-      }
-    }
-    foreach my $line (@{$rows})
-    {
-      my ($id2,$chron2,$rights2) = split '__', $line;
-      my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$crms->RightsQuery($id2,1)->[0]};
-      if ($sawchron)
-      {
-        $data->{'chron'}->{$id} = '' unless $data->{'chron'}->{$id};
-        $data->{'chron'}->{$id} .= "$id2\t$sysid\n";
-        $data->{'chronsys'}->{$sysid} = 1;
-        delete $data->{'unneeded'}->{$id};
-        delete $data->{'unneededsys'}->{$sysid};
-        delete $data->{'inherit'}->{$id};
-        delete $data->{'inheritsys'}->{$sysid};
-        delete $data->{'disallowed'}->{$id};
-        delete $data->{'disallowedsys'}->{$sysid};
-        return;
-      }
-      elsif ($candidate ne $id && $candidate ne $id2 && $id ne $id2)
-      {
-        $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
-        $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$attr/$reason\t$id\t$candidate has newer review ($candidateTime)\n";
-        $data->{'disallowedsys'}->{$sysid} = 1;
-        delete $data->{'unneeded'}->{$id};
-        delete $data->{'unneededsys'}->{$sysid};
-        delete $data->{'inherit'}->{$id};
-        delete $data->{'inheritsys'}->{$sysid};
-        #return;
-      }
-      elsif ($id2 ne $id && !$data->{'chron'}->{$id})
-      {
-        if ($crms->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%'"))
-        {
-          my $user = $crms->SimpleSqlGet("SELECT user FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%' LIMIT 1");
-          $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
-          $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$attr/$reason\t$id\tHas an active review by $user\n";
-          $data->{'disallowedsys'}->{$sysid} = 1;
-        }
-        elsif ($okatrr{"$attr2/$reason2"})
-        {
-          # Always inherit onto a single-review priority 1
-          my $rereps = $crms->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user LIKE 'rereport%'");
-          if ($attr2 eq $attr && $reason2 ne 'bib' && $rereps == 0)
-          {
-            $data->{'unneeded'}->{$id} = '' unless $data->{'unneeded'}->{$id};
-            $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$attr/$reason\t$id\n";
-            $data->{'unneededsys'}->{$sysid} = 1;
-          }
-          else
-          {
-            $data->{'inherit'}->{$id} = '' unless $data->{'inherit'}->{$id};
-            $data->{'inherit'}->{$id} .= "$id2\t$sysid\t$attr2\t$reason2\t$attr\t$reason\t$gid\n";
-            $data->{'inheritsys'}->{$sysid} = 1;
-          }
-        }
-        else
-        {
-          $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
-          $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$attr/$reason\t$id\tRights\n";
-          $data->{'disallowedsys'}->{$sysid} = 1;
-        }
-      }
-    }
-  }
-}
 
