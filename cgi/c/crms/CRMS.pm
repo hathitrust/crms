@@ -619,22 +619,31 @@ sub LoadNewItemsInCandidates
   return 1; # FIXME: this only ever returns 1
 }
 
-# Adds a single volume to candidates if possible, putting it in the und table if not.
+# Adds a single ic/bib volume to candidates if possible, putting it in the und table if not.
 sub CheckAndLoadItemIntoCandidates
 {
   my $self = shift;
   my $id   = lc shift;
   my $time = shift;
 
+  # If it was a gfv and it reverted to ic/bib, remove it from und, alert, and continue.
+  if ($self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id' AND src='gfv'") > 0)
+  {
+    print "Unfilter $id -- reverted from pdus/gfv\n";
+    my $sql = "DELETE FROM und WHERE id='$id'";
+    $self->PrepareSubmitSql($sql);
+  }
   if ($self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'") > 0)
   {
     print "Skip $id -- already in historical reviews\n";
     return;
   }
-  my $record = $self->GetMetadata($id);
+  my $sysid = $self->BarcodeToId($id);
+  my $record;
+  $record = $self->GetMetadata($sysid) if $sysid;
   if (!$record)
   {
-    #$self->ClearErrors();
+    $self->ClearErrors() if 2 == scalar keys %{$self->GetErrors()};
     print "No metadata yet for $id: will try again tomorrow.\n";
     if (0 == $self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id'"))
     {
@@ -659,6 +668,7 @@ sub CheckAndLoadItemIntoCandidates
     }
     else
     {
+      $self->CheckCandidateRightsInheritance($id, $sysid);
       $self->AddItemToCandidates($id, $time, $record);
       $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
     }
@@ -765,8 +775,11 @@ sub LoadNewItems
   my %recs = %{$self->GetQueueRecords()};
   while (1)
   {
-    my $sql = 'SELECT id, time, pub_date, title, author FROM candidates WHERE id NOT IN (SELECT DISTINCT id FROM queue) ' .
-              'AND id NOT IN (SELECT DISTINCT id FROM reviews) AND id NOT IN (SELECT DISTINCT id FROM historicalreviews) ' .
+    my $sql = 'SELECT id, time, pub_date, title, author FROM candidates ' .
+              'WHERE id NOT IN (SELECT DISTINCT id FROM inherit) ' .
+              'AND id NOT IN (SELECT DISTINCT id FROM queue) ' .
+              'AND id NOT IN (SELECT DISTINCT id FROM reviews) ' .
+              'AND id NOT IN (SELECT DISTINCT id FROM historicalreviews) ' .
               'ORDER BY pub_date ASC, time DESC';
     my $ref = $self->get('dbh')->selectall_arrayref( $sql );
     #printf "%d results\n", scalar @{$ref};
@@ -6022,7 +6035,7 @@ sub CreateDeterminationReport
   foreach my $source (sort keys %sources)
   {
     my $n = $sources{$source};
-    $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;$source</th><td>$n</td></tr>";
+    $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;%s</th><td>$n</td></tr>", $self->ExportSrcToEnglish($source));
   }
   $report .= sprintf("<tr><th>Total&nbsp;Legacy&nbsp;Determinations</th><td>%s</td></tr>", $legacy);
   $report .= sprintf("<tr><th>Total&nbsp;Determinations</th><td>%s</td></tr>", $exported + $legacy);
@@ -6347,7 +6360,7 @@ sub IsReviewCorrect
   my $sql = "SELECT COUNT(id) FROM historicalreviews WHERE id='$id' AND swiss=1";
   my $swiss = $self->SimpleSqlGet($sql);
   # Get the review
-  $sql = "SELECT attr,reason,renNum,renDate,expert,status FROM historicalreviews WHERE id='$id' AND user='$user' AND time LIKE '$time%'";
+  $sql = "SELECT attr,reason,renNum,renDate,expert,status,time FROM historicalreviews WHERE id='$id' AND user='$user' AND time LIKE '$time%'";
   my $r = $self->get('dbh')->selectall_arrayref($sql);
   my $row = $r->[0];
   my $attr    = $row->[0];
@@ -6356,11 +6369,12 @@ sub IsReviewCorrect
   my $renDate = $row->[3];
   my $expert  = $row->[4];
   my $status  = $row->[5];
+  my $time    = $row->[6];
   #print "$attr, $reason, $renNum, $renDate, $expert, $swiss\n";
   # A non-expert with status 7 is protected rather like Swiss.
   return 1 if ($status == 7 && !$expert);
-  # Get the most recent non-autocrms or s9 expert review
-  $sql = "SELECT attr,reason,renNum,renDate,category FROM historicalreviews WHERE id='$id' AND (user!='autocrms' OR status=9) AND expert>0 ORDER BY time DESC";
+  # Get the most recent non-autocrms expert review.
+  $sql = "SELECT attr,reason,renNum,renDate,user,swiss FROM historicalreviews WHERE id='$id' AND expert>0 AND time>'$time' ORDER BY time DESC";
   $r = $self->get('dbh')->selectall_arrayref($sql);
   return 1 unless scalar @{$r};
   $row = $r->[0];
@@ -6368,17 +6382,41 @@ sub IsReviewCorrect
   my $ereason  = $row->[1];
   my $erenNum  = $row->[2];
   my $erenDate = $row->[3];
-  #print "$eattr, $ereason, $erenNum, $erenDate\n";
+  my $euser    = $row->[4];
+  my $eswiss   = $row->[5];
+  #print "$eattr, $ereason, $erenNum, $erenDate, $euser\n";
   if ($attr != $eattr)
   {
-    return ($swiss && !$expert)? 2:0;
+    return (($swiss && !$expert) || ($eswiss && $euser eq 'autocrms'))? 2:0;
   }
   if ($reason != $ereason ||
       ($attr == 2 && $reason == 7 && ($renNum ne $erenNum || $renDate ne $erenDate)))
   {
-    return ($swiss && !$expert)? 2:0;
+    return (($swiss && !$expert) || ($eswiss && $euser eq 'autocrms'))? 2:0;
   }
   return 1;
+}
+
+sub UpdateCorrectness
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $sql = "SELECT user,time,validated FROM historicalreviews WHERE id='$id'";
+  my $r = $self->get('dbh')->selectall_arrayref($sql);
+  foreach my $row ( @{$r} )
+  {
+    my $user = $row->[0];
+    my $time = $row->[1];
+    my $val = $row->[2];
+    my $val2 = $self->IsReviewCorrect($id, $user, $time);
+    if ($val != $val2)
+    {
+      $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$time'";
+      #print "$sql\n";
+      $self->PrepareSubmitSql($sql);
+    }
+  }
 }
 
 
@@ -7095,7 +7133,7 @@ sub GetInheritanceRef
   my $last = $first + $pagesize - 1;
   #print "$n: $first-$last<br/>\n";
   my $return = ();
-  $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time) FROM inherit i ' .
+  $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time),i.src FROM inherit i ' .
          'LEFT JOIN exportdata e ON i.gid=e.gid ' .
          "LEFT JOIN bibdata b ON e.id=b.id $doS $restrict ORDER BY $order $dir, e.id ASC";
   #print "$sql<br/>\n";
@@ -7133,6 +7171,7 @@ sub GetInheritanceRef
     my $reason2 = $row->[6];
     my $title = $row->[7];
     my $date = $row->[8];
+    my $src = $row->[9];
     $title =~ s/&/&amp;/g;
     my ($pd,$pdus,$icund) = (0,0,0);
     $pd = 1 if ($attr eq 'pd' || $attr2 eq 'pd');
@@ -7152,8 +7191,9 @@ sub GetInheritanceRef
       my $locked = $self->SimpleSqlGet("SELECT locked FROM queue WHERE id='$id'");
       $summary .= "; locked for $locked" if $locked;
     }
-    my %dic = ('i'=>$i, 'j'=>$j,'inheriting'=>$id, 'sysid'=>$sysid, 'rights'=>"$attr/$reason", 'newrights'=>"$attr2/$reason2",
-               'incrms'=>$incrms, 'change'=>$change, 'from'=>$id2, 'title'=>$title, 'gid'=>$gid, 'date'=>$date, 'summary'=>$summary);
+    my %dic = ('i'=>$i, 'j'=>$j,'inheriting'=>$id, 'sysid'=>$sysid, 'rights'=>"$attr/$reason",
+               'newrights'=>"$attr2/$reason2", 'incrms'=>$incrms, 'change'=>$change, 'from'=>$id2,
+               'title'=>$title, 'gid'=>$gid, 'date'=>$date, 'summary'=>$summary, 'src'=>ucfirst $src);
     push @return, \%dic;
     if ($download)
     {
@@ -7268,7 +7308,7 @@ sub AddInheritanceToQueue
     }
     else
     {
-      my $sql = "INSERT INTO queue (id, priority, source) VALUES ('$id', 0, 'inheritance')";
+      my $sql = "INSERT INTO queue (id, priority, source) VALUES ('$id', 0, 'inherited')";
       $self->PrepareSubmitSql($sql);
       $self->UpdateTitle($id, undef, $record);
       $self->UpdatePubDate($id, undef, $record);
@@ -7319,6 +7359,177 @@ sub LinkToMirlynDetails
   my $sysid = shift;
 
   return "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
+}
+
+# Populates $data (a hash ref) with information about the duplication status of an exported determination.
+sub DuplicateVolumesFromExport
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $gid    = shift;
+  my $sysid  = shift;
+  my $attr   = shift;
+  my $reason = shift;
+  my $data   = shift;
+
+  my %okatrr = ('pd/ncn' => 1,
+                'pd/ren' => 1,
+                'pd/cdpp' => 1,
+                'pdus/cdpp' => 1,
+                'pd/crms' => 1,
+                'pd/add' => 1,
+                'ic/ren' => 1,
+                'ic/cdpp' => 1,
+                'ic/crms' => 1,
+                'und/nfi' => 1,
+                'und/crms' => 1,
+                'ic/bib' => 1);
+  my $rows = $self->VolumeIDsQuery($sysid);
+  if (1 == scalar @{$rows})
+  {
+    $data->{'nodups'}->{$id} = '' unless $data->{'nodups'}->{$id};
+    $data->{'nodups'}->{$id} .= "$id\t$sysid\n";
+    $data->{'nodupssys'}->{$sysid} = 1;
+  }
+  else
+  {
+    # Get most recent CRMS determination for any volume on this record
+    # and see if it's more recent that what we're exporting.
+    my $candidate = $id;
+    my $candidateTime = $self->SimpleSqlGet("SELECT MAX(time) FROM historicalreviews WHERE id='$id'");
+    my $sawchron = 0;
+    foreach my $line (@{$rows})
+    {
+      my ($id2,$chron2,$rights2) = split '__', $line;
+      $sawchron = 1 if $chron2;
+      next if $id eq $id2;
+      my $time = $self->SimpleSqlGet("SELECT MAX(time) FROM historicalreviews WHERE id='$id2'");
+      if ($time && $time gt $candidateTime)
+      {
+        $candidate = $id2;
+        $candidateTime = $time;
+      }
+    }
+    foreach my $line (@{$rows})
+    {
+      my ($id2,$chron2,$rights2) = split '__', $line;
+      my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id2,1)->[0]};
+      if ($sawchron)
+      {
+        $data->{'chron'}->{$id} = '' unless $data->{'chron'}->{$id};
+        $data->{'chron'}->{$id} .= "$id2\t$sysid\n";
+        $data->{'chronsys'}->{$sysid} = 1;
+        delete $data->{'unneeded'}->{$id};
+        delete $data->{'unneededsys'}->{$sysid};
+        delete $data->{'inherit'}->{$id};
+        delete $data->{'inheritsys'}->{$sysid};
+        delete $data->{'disallowed'}->{$id};
+        delete $data->{'disallowedsys'}->{$sysid};
+        return;
+      }
+      elsif ($candidate ne $id && $candidate ne $id2 && $id ne $id2)
+      {
+        $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
+        $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$attr/$reason\t$id\t$candidate has newer review ($candidateTime)\n";
+        $data->{'disallowedsys'}->{$sysid} = 1;
+        delete $data->{'unneeded'}->{$id};
+        delete $data->{'unneededsys'}->{$sysid};
+        delete $data->{'inherit'}->{$id};
+        delete $data->{'inheritsys'}->{$sysid};
+        #return;
+      }
+      elsif ($id2 ne $id && !$data->{'chron'}->{$id})
+      {
+        my $oldrights = "$attr2/$reason2";
+        if ($self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%'"))
+        {
+          my $user = $self->SimpleSqlGet("SELECT user FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%' LIMIT 1");
+          $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
+          $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$oldrights\t$id\tHas an active review by $user\n";
+          $data->{'disallowedsys'}->{$sysid} = 1;
+        }
+        elsif ($okatrr{$oldrights} || ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/))
+        {
+          # Always inherit onto a single-review priority 1
+          my $rereps = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user LIKE 'rereport%'");
+          if ($attr2 eq $attr && $reason2 ne 'bib' && $rereps == 0)
+          {
+            $data->{'unneeded'}->{$id} = '' unless $data->{'unneeded'}->{$id};
+            $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$oldrights\t$attr/$reason\t$id\n";
+            $data->{'unneededsys'}->{$sysid} = 1;
+          }
+          else
+          {
+            $data->{'inherit'}->{$id} = '' unless $data->{'inherit'}->{$id};
+            $data->{'inherit'}->{$id} .= "$id2\t$sysid\t$attr2\t$reason2\t$attr\t$reason\t$gid\n";
+            $data->{'inheritsys'}->{$sysid} = 1;
+          }
+        }
+        else
+        {
+          $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
+          $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$attr/$reason\t$id\tRights\n";
+          $data->{'disallowedsys'}->{$sysid} = 1;
+        }
+      }
+    }
+  }
+}
+
+# Finds the most recent CRMS exported determination for a non-chron duplicate
+# (if the given volume is non-chron) and adds it to inherit table.
+sub CheckCandidateRightsInheritance
+{
+  my $self  = shift;
+  my $id    = shift;
+  my $sysid = shift;
+
+  my $rows = $self->VolumeIDsQuery($sysid);
+  return if 1 == scalar @{$rows};
+  my $cand;
+  my $ctime;
+  foreach my $line (@{$rows})
+  {
+    my ($id2,$chron2,$rights2) = split '__', $line;
+    return if $chron2;
+    # Don't allow inheritance at all if this volume has chron info.
+    #return if $id2 eq $id and $chron2;
+    next if $id2 eq $id;
+    #next if $chron2;
+    my $sql = "SELECT attr,reason,gid,time FROM exportdata WHERE id='$id2' AND time>='2011-06-02 00:00:00' ORDER BY time DESC LIMIT 1";
+    my $ref = $self->get('dbh')->selectall_arrayref($sql);
+    foreach my $row ( @{$ref} )
+    {
+      my $sttr2   = $row->[0];
+      my $reason2 = $row->[1];
+      my $gid2    = $row->[2];
+      my $time2   = $row->[3];
+      $cand = $gid2 unless $cand;
+      $ctime = $time2 unless $ctime;
+      if ($time2 gt $ctime)
+      {
+        $cand = $gid2;
+        $ctime = $time2;
+      }
+    }
+  }
+  if ($cand)
+  {
+    my $sql = "INSERT INTO inherit (id,attr,reason,gid,src) VALUES ('$id',2,1,$cand,'candidates')";
+    $self->PrepareSubmitSql($sql);
+  }
+}
+
+sub ExportSrcToEnglish
+{
+  my $self = shift;
+  my $src  = shift;
+  
+  my %srces = ('adminui' => 'Added to Queue',
+               'rereport' => 'Rereports');
+  my $eng = $srces{$src};
+  $eng = ucfirst $src unless $eng;
+  return $eng;
 }
 
 1;
