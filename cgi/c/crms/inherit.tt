@@ -247,6 +247,7 @@ function VerifyDelete(formid)
         <th>Access<br/>Change?</th>
         <th style="text-align:center;">Title</th>
         <th>Queue Info</th>
+        <th>Source</th>
         <th>Select</th>
       </tr>
       [% FOREACH review IN items %]
@@ -275,6 +276,7 @@ function VerifyDelete(formid)
           <td>[% (review.change==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
           <td>[% review.title %]</td>
           <td>[% review.summary %]</td>
+          <td>[% review.src %]</td>
           <td align="center">
             <input type="checkbox" name="vol_[% review.inheriting %]"/>
           </td>
