@@ -643,7 +643,7 @@ sub CheckAndLoadItemIntoCandidates
   $record = $self->GetMetadata($sysid) if $sysid;
   if (!$record)
   {
-    $self->ClearErrors() if 2 == scalar @{$self->GetErrors()};
+    $self->ClearErrors() if 2 >= scalar @{$self->GetErrors()};
     print "No metadata yet for $id: will try again tomorrow.\n";
     if (0 == $self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id'"))
     {
@@ -7042,8 +7042,8 @@ sub InheritanceSelectionMenu
   my $searchVal = shift;
   my $searchOnly = shift;
   
-  my @keys = ('date','src','id','sysid','prior','change','title');
-  my @labs = ('Export Date','Source Volume','Volume Inheriting', 'System ID', 'Prior CRMS Review', 'Access Change', 'Title');
+  my @keys = ('date','src','id','sysid','prior','change','title','source');
+  my @labs = ('Export Date','Source Volume','Volume Inheriting', 'System ID', 'Prior CRMS Review', 'Access Change', 'Title', 'Source');
   if ($searchOnly)
   {
     @keys = @keys[1..3];
@@ -7072,6 +7072,7 @@ sub ConvertToInheritanceSearchTerm
   $new_search = 'i.reason!=1' if $search eq 'prior';
   $new_search = '(i.attr=1 && (e.attr="ic" || e.attr="und") || (e.attr="pd" && (i.attr=2 || i.attr=5)))' if $search eq 'change';
   $new_search = 'b.title' if $search eq 'title';
+  $new_search = 'i.src' if $search eq 'source';
   return $new_search;
 }
 
@@ -7496,7 +7497,7 @@ sub CheckCandidateRightsInheritance
     #return if $id2 eq $id and $chron2;
     next if $id2 eq $id;
     #next if $chron2;
-    my $sql = "SELECT attr,reason,gid,time FROM exportdata WHERE id='$id2' AND time>='2011-06-02 00:00:00' ORDER BY time DESC LIMIT 1";
+    my $sql = "SELECT attr,reason,gid,time FROM exportdata WHERE id='$id2' AND time>='2010-06-02 00:00:00' ORDER BY time DESC LIMIT 1";
     my $ref = $self->get('dbh')->selectall_arrayref($sql);
     foreach my $row ( @{$ref} )
     {
@@ -7517,6 +7518,10 @@ sub CheckCandidateRightsInheritance
   {
     my $sql = "INSERT INTO inherit (id,attr,reason,gid,src) VALUES ('$id',2,1,$cand,'candidates')";
     $self->PrepareSubmitSql($sql);
+    my $record = $self->GetMetadata($id);
+    $self->UpdateTitle($id, undef, $record);
+    $self->UpdatePubDate($id, undef, $record);
+    $self->UpdateAuthor($id, undef, $record);
   }
 }
 
