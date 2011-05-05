@@ -17,13 +17,14 @@ use Getopt::Long;
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-ahipv] [-m MAIL_ADDR [-m MAIL_ADDR2...]] [start_date [end_date]]
+USAGE: $0 [-achipv] [-m MAIL_ADDR [-m MAIL_ADDR2...]] [start_date [end_date]]
 
 Reports on the volumes that can inherit from this morning's export,
 or, if start_date is specified, exported after then and before end_date
 if it is specified.
 
 -a         Report on all exports, regardless of date range.
+-c         Report on recent addition to candidates.
 -h         Print this help message.
 -i         Insert entries in the dev inherit table.
 -m ADDR    Mail the report to ADDR. May be repeated for multiple addresses.
@@ -31,6 +32,7 @@ if it is specified.
 END
 
 my $all;
+my $candidates;
 my $help;
 my $insert;
 my @mails;
@@ -38,12 +40,14 @@ my $production;
 my $verbose;
 
 Getopt::Long::Configure ('bundling');
-die 'Terminating' unless GetOptions('a' => \$all,
-           'h|?' => \$help,
-           'i' => \$insert,
+die 'Terminating' unless GetOptions(
+           'a'    => \$all,
+           'c'    => \$candidates,
+           'h|?'  => \$help,
+           'i'    => \$insert,
            'm:s@' => \@mails,
-           'p' => \$production,
-           'v+' => \$verbose);
+           'p'    => \$production,
+           'v+'   => \$verbose);
 $DLPS_DEV = undef if $production;
 die "$usage\n\n" if $help;
 
@@ -71,11 +75,11 @@ if (scalar @ARGV)
     die "Bad date format ($end); should be in the form e.g. 2010-08-29" unless $end =~ m/^\d\d\d\d-\d\d-\d\d$/;
   }
 }
-my %data = %{InheritanceReport($start,$end)};
+my %data = %{($candidates)? CandidatesReport($start,$end):InheritanceReport($start,$end)};
 my $txt = '';
 my $dates = $start;
 $dates .= " to $end" if $end ne $start;
-my $title = "CRMS Inheritance, $dates";
+my $title = sprintf "CRMS%s Inheritance, $dates", ($candidates)?' Candidates':'';
 $txt .= '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' . "\n";
 $txt .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
         "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'/>\n" .
@@ -226,7 +230,7 @@ if (scalar keys %{$data{'inherit'}})
   $txt .= '</table>';
 }
 
-my $header = sprintf("Total # volumes w/ final determinations checked for inheritance from $dates: %d$delim", scalar keys %{$data{'total'}});
+my $header = sprintf("Total # volumes checked for inheritance from $dates: %d$delim", scalar keys %{$data{'total'}});
 $header .= sprintf("Total # unique Sys IDs: %d$delim$delim", scalar keys %{$data{'totalsys'}});
 $header .= sprintf("Volumes single copy: %d$delim$delim", scalar keys %{$data{'nodups'}});
 $header .= sprintf("Volumes w/ chron/enum: %d$delim$delim", scalar keys %{$data{'chron'}});
@@ -307,12 +311,30 @@ sub InheritanceReport
     my $sysid = $crms->BarcodeToId($id);
     $data{'total'}->{$id} = 1;
     $data{'totalsys'}->{$sysid} = 1;
-    my $record = $crms->GetMetadata($sysid);
     $crms->DuplicateVolumesFromExport($id,$gid,$sysid,$attr,$reason,\%data);
   }
   return \%data;
 }
 
+sub CandidatesReport
+{
+  my $start = shift;
+  my $end   = shift;
+
+  my %data = ();
+  my $sql = "SELECT id FROM candidates WHERE time>'$start 00:00:00' AND time<='$end 23:59:59' ORDER BY id";
+  #print "$sql\n";
+  my $ref = $dbh->selectall_arrayref($sql);
+  foreach my $row (@{$ref})
+  {
+    my $id = $row->[0];
+    my $sysid = $crms->BarcodeToId($id);
+    $data{'total'}->{$id} = 1;
+    $data{'totalsys'}->{$sysid} = 1;
+    $crms->DuplicateVolumesFromCandidates($id,$sysid,\%data);
+  }
+  return \%data;
+}
 
 
 
