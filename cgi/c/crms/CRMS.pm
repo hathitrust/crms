@@ -643,7 +643,7 @@ sub CheckAndLoadItemIntoCandidates
   $record = $self->GetMetadata($sysid) if $sysid;
   if (!$record)
   {
-    $self->ClearErrors() if 2 == scalar keys %{$self->GetErrors()};
+    $self->ClearErrors() if 2 == scalar @{$self->GetErrors()};
     print "No metadata yet for $id: will try again tomorrow.\n";
     if (0 == $self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id'"))
     {
