@@ -7134,7 +7134,7 @@ sub GetInheritanceRef
   my $return = ();
   $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time),i.src FROM inherit i ' .
          'LEFT JOIN exportdata e ON i.gid=e.gid ' .
-         "LEFT JOIN bibdata b ON i.id=b.id $doS $restrict ORDER BY $order $dir, e.id ASC LIMIT $offset, $pagesize";
+         "LEFT JOIN bibdata b ON e.id=b.id $doS $restrict ORDER BY $order $dir, e.id ASC LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
   $ref = undef;
   eval {
