@@ -7090,8 +7090,9 @@ sub GetInheritanceRef
   my $download     = shift;
   
   $n = 1 unless $n;
+  my $offset = 0;
+  $offset = ($n - 1) * $pagesize;
   #print("GetInheritanceRef('$order','$dir','$search1','$search1Value','$startDate','$endDate','$offset','$pagesize','$download');<br/>\n");
-  # these are 1-based
   $pagesize = 20 unless $pagesize > 0;
   $order = 'id' unless $order;
   $search1 = $self->ConvertToInheritanceSearchTerm($search1);
@@ -7128,15 +7129,12 @@ sub GetInheritanceRef
   }
   my $totalVolumes = $ref->[0]->[0];
   my $inheritingVolumes = $ref->[0]->[1];
-  my $of = POSIX::ceil($totalVolumes/$pagesize);
+  my $of = POSIX::ceil($inheritingVolumes/$pagesize);
   $n = $of if $n > $of;
-  my $first = ($n-1) * $pagesize + 1;
-  my $last = $first + $pagesize - 1;
-  #print "$n: $first-$last<br/>\n";
   my $return = ();
   $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time),i.src FROM inherit i ' .
          'LEFT JOIN exportdata e ON i.gid=e.gid ' .
-         "LEFT JOIN bibdata b ON e.id=b.id $doS $restrict ORDER BY $order $dir, e.id ASC";
+         "LEFT JOIN bibdata b ON i.id=b.id $doS $restrict ORDER BY $order $dir, e.id ASC LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
   $ref = undef;
   eval {
@@ -7147,8 +7145,7 @@ sub GetInheritanceRef
     $self->SetError($@);
   }
   my $data = join "\t", ('ID','Title','Author','Pub Date','Date Added','Status','Locked','Priority','Reviews','Expert Reviews','Holds');
-  my $i = 0;
-  my $j = 0;
+  my $i = $offset;
   my @return = ();
   my $currentSource = undef;
   foreach my $row (@{$ref})
@@ -7157,12 +7154,9 @@ sub GetInheritanceRef
     if ($currentSource ne $id2)
     {
       $currentSource = $id2;
-      $i++;
       #print "$i $currentSource<br/>\n";
     }
-    $j++;
-    next if $i < $first;
-    last if $i > $last;
+    $i++;
     my $id = $row->[0];
     my $sysid = $self->BarcodeToId($id);
     my $attr = $self->GetRightsName($row->[1]);
@@ -7192,7 +7186,7 @@ sub GetInheritanceRef
       my $locked = $self->SimpleSqlGet("SELECT locked FROM queue WHERE id='$id'");
       $summary .= "; locked for $locked" if $locked;
     }
-    my %dic = ('i'=>$i, 'j'=>$j,'inheriting'=>$id, 'sysid'=>$sysid, 'rights'=>"$attr/$reason",
+    my %dic = ('i'=>$i, 'inheriting'=>$id, 'sysid'=>$sysid, 'rights'=>"$attr/$reason",
                'newrights'=>"$attr2/$reason2", 'incrms'=>$incrms, 'change'=>$change, 'from'=>$id2,
                'title'=>$title, 'gid'=>$gid, 'date'=>$date, 'summary'=>$summary, 'src'=>ucfirst $src);
     push @return, \%dic;

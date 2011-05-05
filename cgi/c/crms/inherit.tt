@@ -77,7 +77,7 @@ Restrict selection:<br/>
 <input size="3" type="text" id="records" name="records" value="[% recs %]"
        onblur="setCookie('recs',this.value,31);"
 />
-source volumes per page.
+inheriting volumes per page.
 <br/>
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"
@@ -265,7 +265,7 @@ function VerifyDelete(formid)
           [% END %]
         [% END %]
         <tr style="background-color:[% active_color %];">
-          <td>[% review.j %]</td>
+          <td>[% review.i %]</td>
           <td>[% review.date %]</td>
           <td><a href='[% crms.LinkToHistorical(review.sysid) %]'target='_blank'>[% review.from %]</a></td>
           <td><a href='[% crms.LinkToRetrieve(review.inheriting) %]' target='_blank'>[% review.inheriting %]</a></td>
