@@ -668,7 +668,7 @@ sub CheckAndLoadItemIntoCandidates
     }
     else
     {
-      $self->CheckCandidateRightsInheritance($id, $sysid);
+      #$self->CheckCandidateRightsInheritance($id, $sysid);
       $self->AddItemToCandidates($id, $time, $record);
       $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
     }
@@ -7337,7 +7337,7 @@ sub LinkToHistorical
   my $self  = shift;
   my $sysid = shift;
   
-  return "/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid";
+  return "https://quod.lib.umich.edu/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid";
 }
 
 sub LinkToRetrieve
@@ -7345,7 +7345,7 @@ sub LinkToRetrieve
   my $self  = shift;
   my $sysid = shift;
   
-  return "/cgi/c/crms/crms?p=retrieve;query=$sysid";
+  return "https://quod.lib.umich.edu/cgi/c/crms/crms?p=retrieve;query=$sysid";
 }
 
 sub LinkToMirlynDetails
@@ -7467,6 +7467,99 @@ sub DuplicateVolumesFromExport
           $data->{'disallowedsys'}->{$sysid} = 1;
         }
       }
+    }
+  }
+}
+
+sub DuplicateVolumesFromCandidates
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $sysid  = shift;
+  my $data   = shift;
+
+  my %okatrr = ('pd/ncn' => 1,
+                'pd/ren' => 1,
+                'pd/cdpp' => 1,
+                'pdus/cdpp' => 1,
+                'pd/crms' => 1,
+                'pd/add' => 1,
+                'ic/ren' => 1,
+                'ic/cdpp' => 1,
+                'ic/crms' => 1,
+                'und/nfi' => 1,
+                'und/crms' => 1,
+                'ic/bib' => 1);
+  my $rows = $self->VolumeIDsQuery($sysid);
+  if (1 == scalar @{$rows})
+  {
+    $data->{'nodups'}->{$id} = '' unless $data->{'nodups'}->{$id};
+    $data->{'nodups'}->{$id} .= "$id\t$sysid\n";
+    $data->{'nodupssys'}->{$sysid} = 1;
+  }
+  else
+  {
+    my $cid = undef;
+    my $cgid = undef;
+    my $cattr = undef;
+    my $creason = undef;
+    my $ctime = undef;
+    my $sawchron = 0;
+    foreach my $line (@{$rows})
+    {
+      my ($id2,$chron2,$rights2) = split '__', $line;
+      $sawchron = 1 if $chron2;
+    }
+    foreach my $line (@{$rows})
+    {
+      my ($id2,$chron2,$rights2) = split '__', $line;
+      my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id2,1)->[0]};
+      if ($sawchron)
+      {
+        $data->{'chron'}->{$id} = '' unless $data->{'chron'}->{$id};
+        $data->{'chron'}->{$id} .= "$id2\t$sysid\n";
+        $data->{'chronsys'}->{$sysid} = 0 unless $data->{'chronsys'}->{$sysid};
+        $data->{'chronsys'}->{$sysid}++;
+        delete $data->{'unneeded'}->{$id};
+        delete $data->{'unneededsys'}->{$sysid};
+        delete $data->{'inherit'}->{$id};
+        delete $data->{'inheritsys'}->{$sysid};
+        delete $data->{'disallowed'}->{$id};
+        delete $data->{'disallowedsys'}->{$sysid};
+        return;
+      }
+      elsif ($id2 ne $id && !$data->{'chron'}->{$id})
+      {
+        my $sql = "SELECT attr,reason,gid,time FROM exportdata WHERE id='$id2' AND time>='2010-06-02 00:00:00' ORDER BY time DESC LIMIT 1";
+        my $ref = $self->get('dbh')->selectall_arrayref($sql);
+        foreach my $row ( @{$ref} )
+        {
+          my $sttr2   = $row->[0];
+          my $reason2 = $row->[1];
+          my $gid2    = $row->[2];
+          my $time2   = $row->[3];
+          if (!$ctime || $time2 gt $ctime)
+          {
+            $cid = $id2;
+            $cgid = $gid2;
+            $cattr = $attr2;
+            $creason = $reason2;
+            $ctime = $time2;
+          }
+        }
+      }
+    }
+    if ($cid)
+    {
+      $data->{'inherit'}->{$cid} = '' unless $data->{'inherit'}->{$cid};
+      $data->{'inherit'}->{$cid} .= "$id\t$sysid\tic\tbib\t$cattr\t$creason\t$cgid\n";
+      $data->{'inheritsys'}->{$sysid} = 1;
+    }
+    else
+    {
+      $data->{'unneeded'}->{$id} = '' unless $data->{'unneeded'}->{$id};
+      $data->{'unneeded'}->{$id} .= "$id\t$sysid\tic/bib\tN/A\tN/A\n";
+      $data->{'unneededsys'}->{$sysid} = 1;
     }
   }
 }
