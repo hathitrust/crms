@@ -79,7 +79,7 @@ my %data = %{($candidates)? CandidatesReport($start,$end):InheritanceReport($sta
 my $txt = '';
 my $dates = $start;
 $dates .= " to $end" if $end ne $start;
-my $title = sprintf "CRMS%s Inheritance, $dates", ($candidates)?' Candidates':'';
+my $title = sprintf "CRMS %s Inheritance, $dates", ($candidates)? 'Candidates':'Export';
 $txt .= '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' . "\n";
 $txt .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
         "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'/>\n" .
@@ -96,13 +96,31 @@ if (scalar keys %{$data{'nodups'}})
   foreach my $id (keys %{$data{'nodups'}})
   {
     my @lines = split "\n", $data{'nodups'}->{$id};
-    foreach my $line (@lines)
+    foreach my $sysid (@lines)
     {
       $n++;
-      my ($a,$sysid) = split "\t", $line;
       my $htCatLink = $crms->LinkToCatalog($sysid);
       my $retrLink = $crms->LinkToRetrieve($sysid);
-      $txt .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$a</a></td><td><a href='$htCatLink' target='_blank'>$sysid</a></td></tr>\n";
+      $txt .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$id</a></td><td><a href='$htCatLink' target='_blank'>$sysid</a></td></tr>\n";
+    }
+  }
+  $txt .= "</table>$delim";
+}
+if (scalar keys %{$data{'noexport'}})
+{
+  $txt .= "<h4>Volumes which had no duplicates with CRMS exports from June 2010</h4>\n";
+  $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked (<span style='color:blue;'>volume retrieval</span>)</th>" .
+          "<th>Sys ID (<span style='color:blue;'>catalog</span>)</th></tr>\n";
+  my $n = 0;
+  foreach my $id (keys %{$data{'noexport'}})
+  {
+    my @lines = split "\n", $data{'noexport'}->{$id};
+    foreach my $sysid (@lines)
+    {
+      $n++;
+      my $htCatLink = $crms->LinkToCatalog($sysid);
+      my $retrLink = $crms->LinkToRetrieve($sysid);
+      $txt .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$id</a></td><td><a href='$htCatLink' target='_blank'>$sysid</a></td></tr>\n";
     }
   }
   $txt .= "</table>$delim";
@@ -235,8 +253,16 @@ $header .= sprintf("Total # unique Sys IDs: %d$delim$delim", scalar keys %{$data
 $header .= sprintf("Volumes single copy: %d$delim$delim", scalar keys %{$data{'nodups'}});
 $header .= sprintf("Volumes w/ chron/enum: %d$delim$delim", scalar keys %{$data{'chron'}});
 $header .= sprintf("Volumes not allowed to inherit: %d$delim$delim", scalar keys %{$data{'disallowed'}});
-$header .= sprintf("Volumes checked, no inheritance needed: %d$delim", scalar keys %{$data{'unneeded'}});
-$header .= sprintf("Unique Sys IDs checked, no inheritance needed: %d$delim$delim", scalar keys %{$data{'unneededsys'}});
+if ($candidates)
+{
+  $header .= sprintf("Volumes checked, no duplicates with CRMS exports from June 2010: %d$delim", scalar keys %{$data{'noexport'}});
+  $header .= sprintf("Unique Sys IDs checked, no duplicates with CRMS exports from June 2010: %d$delim$delim", scalar keys %{$data{'noexportsys'}});
+}
+else
+{
+  $header .= sprintf("Volumes checked, no inheritance needed: %d$delim", scalar keys %{$data{'unneeded'}});
+  $header .= sprintf("Unique Sys IDs checked, no inheritance needed: %d$delim$delim", scalar keys %{$data{'unneededsys'}});
+}
 $header .= sprintf("Volumes checked - inheritance permitted: %d$delim", scalar keys %{$data{'inherit'}});
 $header .= sprintf("Unique Sys IDs w/ volumes inheriting rights: %d$delim", scalar keys %{$data{'inheritsys'}});
 $header .= sprintf("Volumes inheriting rights: %d$delim", scalar keys %{$data{'inheriting'}});
