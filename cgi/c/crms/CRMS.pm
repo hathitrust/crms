@@ -385,9 +385,18 @@ sub ClearQueueAndExport
   my $fromcgi  = shift;
 
   my $aCount = 0;
+  my $iCount = 0;
   my $eCount = 0;
   my $dCount = 0;
   my $export = [];
+  ## get items > 2, clear these
+  my $expert = $self->GetExpertRevItems();
+  foreach my $row ( @{$expert} )
+  {
+    my $id = $row->[0];
+    push( @{$export}, $id );
+    $eCount++;
+  }
   ## get status 8, clear these
   my $auto = $self->GetAutoResolvedItems();
   foreach my $row ( @{$auto} )
@@ -396,13 +405,13 @@ sub ClearQueueAndExport
     push( @{$export}, $id );
     $aCount++;
   }
-  ## get items > 2, clear these
-  my $expert = $self->GetExpertRevItems();
-  foreach my $row ( @{$expert} )
+  ## get status 9, clear these
+  my $inh = $self->GetInheritedItems();
+  foreach my $row ( @{$inh} )
   {
     my $id = $row->[0];
     push( @{$export}, $id );
-    $eCount++;
+    $iCount++;
   }
   ## get items = 2 and see if they agree
   my $double = $self->GetDoubleRevItemsInAgreement();
@@ -434,13 +443,13 @@ sub ClearQueueAndExport
   {
     print "No deleted inheriting volumes to remove.\n" unless $fromcgi;
   }
-  return "Exported: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved\n";
+  return "Exported: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved, $iCount inherited rights\n";
 }
 
-sub GetAutoResolvedItems
+sub GetDoubleRevItemsInAgreement
 {
   my $self = shift;
-  my $sql  = 'SELECT id FROM queue WHERE status=8';
+  my $sql  = 'SELECT id FROM queue WHERE status=4';
   return $self->get( 'dbh' )->selectall_arrayref( $sql );
 }
 
@@ -450,15 +459,22 @@ sub GetExpertRevItems
 
   my $stat = @{$self->GetSystemStatus(1)}->[1];
   my $holdSQL = ($stat eq 'normal')? 'CURTIME()<hold':'hold IS NOT NULL';
-  my $sql  = 'SELECT id FROM queue WHERE ((status>=5 AND status<8) OR status=9) AND id NOT IN ' .
+  my $sql  = 'SELECT id FROM queue WHERE (status>=5 AND status<8) AND id NOT IN ' .
              "(SELECT id FROM reviews WHERE $holdSQL)";
   return $self->get( 'dbh' )->selectall_arrayref( $sql );
 }
 
-sub GetDoubleRevItemsInAgreement
+sub GetAutoResolvedItems
 {
   my $self = shift;
-  my $sql  = 'SELECT id FROM queue WHERE status=4';
+  my $sql  = 'SELECT id FROM queue WHERE status=8';
+  return $self->get( 'dbh' )->selectall_arrayref( $sql );
+}
+
+sub GetInheritedItems
+{
+  my $self = shift;
+  my $sql  = 'SELECT id FROM queue WHERE status=9';
   return $self->get( 'dbh' )->selectall_arrayref( $sql );
 }
 
@@ -7383,7 +7399,7 @@ sub DuplicateVolumesFromExport
   if (1 == scalar @{$rows})
   {
     $data->{'nodups'}->{$id} = '' unless $data->{'nodups'}->{$id};
-    $data->{'nodups'}->{$id} .= "$id\t$sysid\n";
+    $data->{'nodups'}->{$id} .= "$sysid\n";
     $data->{'nodupssys'}->{$sysid} = 1;
   }
   else
@@ -7494,7 +7510,7 @@ sub DuplicateVolumesFromCandidates
   if (1 == scalar @{$rows})
   {
     $data->{'nodups'}->{$id} = '' unless $data->{'nodups'}->{$id};
-    $data->{'nodups'}->{$id} .= "$id\t$sysid\n";
+    $data->{'nodups'}->{$id} .= "$sysid\n";
     $data->{'nodupssys'}->{$sysid} = 1;
   }
   else
@@ -7557,9 +7573,9 @@ sub DuplicateVolumesFromCandidates
     }
     else
     {
-      $data->{'unneeded'}->{$id} = '' unless $data->{'unneeded'}->{$id};
-      $data->{'unneeded'}->{$id} .= "$id\t$sysid\tic/bib\tN/A\tN/A\n";
-      $data->{'unneededsys'}->{$sysid} = 1;
+      $data->{'noexport'}->{$id} = '' unless $data->{'noexport'}->{$id};
+      $data->{'noexport'}->{$id} .= "$sysid\n";
+      $data->{'noexportsys'}->{$sysid} = 1;
     }
   }
 }
