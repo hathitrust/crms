@@ -125,6 +125,27 @@ if (scalar keys %{$data{'noexport'}})
   }
   $txt .= "</table>$delim";
 }
+if (scalar keys %{$data{'already'}})
+{
+  $txt .= "<h4>Volumes which had duplicates already in candidates</h4>\n";
+  $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume</th>" .
+          '<th>Volume Checked<br/>(<span style="color:blue;">volume retrieval</span>)</th>' .
+          "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
+  my $n = 0;
+  foreach my $id (keys %{$data{'already'}})
+  {
+    my @lines = split "\n", $data{'already'}->{$id};
+    foreach my $line (@lines)
+    {
+      $n++;
+      my ($id2,$sysid) = split "\t", $line;
+      my $htCatLink = $crms->LinkToCatalog($sysid);
+      my $retrLink = $crms->LinkToRetrieve($sysid);
+      $txt .= "<tr><td>$n</td><td>$id2</td><td><a href='$retrLink' target='_blank'>$id</a></td><td><a href='$htCatLink' target='_blank'>$sysid</a></td></tr>\n";
+    }
+  }
+  $txt .= "</table>$delim";
+}
 if (scalar keys %{$data{'chron'}})
 {
   $txt .= "<h4>Volumes skipped because of chron/enum</h4>\n";
@@ -257,6 +278,8 @@ if ($candidates)
 {
   $header .= sprintf("Volumes checked, no duplicates with CRMS exports from June 2010: %d$delim", scalar keys %{$data{'noexport'}});
   $header .= sprintf("Unique Sys IDs checked, no duplicates with CRMS exports from June 2010: %d$delim$delim", scalar keys %{$data{'noexportsys'}});
+  $header .= sprintf("Volumes checked, duplicates already in candidates: %d$delim", scalar keys %{$data{'already'}});
+  $header .= sprintf("Unique Sys IDs checked, duplicates already in candidates: %d$delim$delim", scalar keys %{$data{'alreadysys'}});
 }
 else
 {

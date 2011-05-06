@@ -7546,21 +7546,31 @@ sub DuplicateVolumesFromCandidates
       }
       elsif ($id2 ne $id && !$data->{'chron'}->{$id})
       {
-        my $sql = "SELECT attr,reason,gid,time FROM exportdata WHERE id='$id2' AND time>='2010-06-02 00:00:00' ORDER BY time DESC LIMIT 1";
-        my $ref = $self->get('dbh')->selectall_arrayref($sql);
-        foreach my $row ( @{$ref} )
+        my $sql = "SELECT COUNT(*) FROM candidates WHERE id='$id2'";
+        if ($self->SimpleSqlGet($sql))
         {
-          my $sttr2   = $row->[0];
-          my $reason2 = $row->[1];
-          my $gid2    = $row->[2];
-          my $time2   = $row->[3];
-          if (!$ctime || $time2 gt $ctime)
+          $data->{'already'}->{$id} = '' unless $data->{'already'}->{$id};
+          $data->{'already'}->{$id} .= "$id2\t$sysid\n";
+          $data->{'alreadysys'}->{$sysid} = 1;
+        }
+        else
+        {
+          $sql = "SELECT attr,reason,gid,time FROM exportdata WHERE id='$id2' AND time>='2010-06-02 00:00:00' ORDER BY time DESC LIMIT 1";
+          my $ref = $self->get('dbh')->selectall_arrayref($sql);
+          foreach my $row ( @{$ref} )
           {
-            $cid = $id2;
-            $cgid = $gid2;
-            $cattr = $attr2;
-            $creason = $reason2;
-            $ctime = $time2;
+            my $sttr2   = $row->[0];
+            my $reason2 = $row->[1];
+            my $gid2    = $row->[2];
+            my $time2   = $row->[3];
+            if (!$ctime || $time2 gt $ctime)
+            {
+              $cid = $id2;
+              $cgid = $gid2;
+              $cattr = $attr2;
+              $creason = $reason2;
+              $ctime = $time2;
+            }
           }
         }
       }
