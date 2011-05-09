@@ -76,16 +76,16 @@ if (scalar @ARGV)
   }
 }
 my %data = %{($candidates)? CandidatesReport($start,$end):InheritanceReport($start,$end)};
-my $txt = '';
+
 my $dates = $start;
 $dates .= " to $end" if $end ne $start;
 my $title = sprintf "CRMS %s Inheritance, $dates", ($candidates)? 'Candidates':'Export';
-$txt .= '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' . "\n";
-$txt .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
+my $head = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' . "\n";
+$head .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
         "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'/>\n" .
         "<title>$title</title></head><body>\n";
+my $txt = '';
 $delim = "<br/>\n";
-
 
 if (scalar keys %{$data{'nodups'}})
 {
@@ -289,7 +289,7 @@ else
 $header .= sprintf("Volumes checked - inheritance permitted: %d$delim", scalar keys %{$data{'inherit'}});
 $header .= sprintf("Unique Sys IDs w/ volumes inheriting rights: %d$delim", scalar keys %{$data{'inheritsys'}});
 $header .= sprintf("Volumes inheriting rights: %d$delim", scalar keys %{$data{'inheriting'}});
-$txt = $header . $delim . $txt;
+$txt = $head . $header . $delim . $txt;
 
 if ($insert)
 {
