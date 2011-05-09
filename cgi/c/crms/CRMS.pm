@@ -699,13 +699,26 @@ sub Filter
   my $id   = shift;
   my $src  = shift;
   my $time = shift;
-  
+
   $time = $self->SimpleSqlGet("SELECT time FROM candidates WHERE id='$id'") unless $time;
   $time = ($time)? qq{'$time'}:'NULL';
   my $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src',$time)";
   $self->PrepareSubmitSql($sql);
   $sql = "DELETE FROM candidates WHERE id='$id'";
   $self->PrepareSubmitSql($sql);
+}
+
+sub Unfilter
+{
+  my $self = shift;
+  my $id   = shift;
+
+  if ($self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id'"))
+  {
+    my $time = $self->SimpleSqlGet("SELECT time FROM und WHERE id='$id'");
+    $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
+    $self->CheckAndLoadItemIntoCandidates($id, $time);
+  }
 }
 
 # Returns an array of error messages (reasons for unsuitability for CRMS) for a volume.
@@ -7246,6 +7259,8 @@ sub DeleteInheritance
   return 'skip' if $self->SimpleSqlGet("SELECT COUNT(*) FROM inherit WHERE id='$id' AND del=1");
   return 'skip' unless $self->SimpleSqlGet("SELECT COUNT(*) FROM inherit WHERE id='$id'");
   $self->PrepareSubmitSql("UPDATE inherit SET del=1 WHERE id='$id'");
+  $self->Unfilter($id);
+  $self->Unfilter($_) for $self->GetDuplicates($id);
   return 0;
 }
 
@@ -7553,8 +7568,6 @@ sub DuplicateVolumesFromCandidates
         delete $data->{'unneededsys'}->{$sysid};
         delete $data->{'inherit'}->{$id};
         delete $data->{'inheritsys'}->{$sysid};
-        delete $data->{'disallowed'}->{$id};
-        delete $data->{'disallowedsys'}->{$sysid};
         return;
       }
       elsif ($id2 ne $id && !$data->{'chron'}->{$id})
@@ -7651,6 +7664,22 @@ sub CheckCandidateRightsInheritance
   }
 }
 
+sub GetDuplicates
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my @dupes = ();
+  my $sysid = $self->BarcodeToId($id);
+  my $rows = $self->VolumeIDsQuery($sysid);
+  foreach my $line (@{$rows})
+  {
+    my ($id2,$chron2,$rights2) = split '__', $line;
+    push @dupes, $id2 if $id2 ne $id;
+  }
+  return @dupes;
+}
+
 sub ExportSrcToEnglish
 {
   my $self = shift;
@@ -7661,6 +7690,25 @@ sub ExportSrcToEnglish
   my $eng = $srces{$src};
   $eng = ucfirst $src unless $eng;
   return $eng;
+}
+
+# Prevent multiple volumes from getting in the queue.
+# If possible (if not already in queue) filter oldVol as src=duplicate
+# Otherwise filter (if possible) newVol.
+sub FilterCandidates
+{
+  my $self   = shift;
+  my $oldVol = shift;
+  my $newVol = shift;
+  
+  if ($self->SimpleSqlGet("SELECT COUNT(*) FROM queue WHERE id='$oldVol'") == 0)
+  {
+    $self->Filter($oldVol, 'duplicate');
+  }
+  elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM queue WHERE id='$newVol'") == 0)
+  {
+    $self->Filter($newVol, 'duplicate');
+  }
 }
 
 1;
