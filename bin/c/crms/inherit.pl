@@ -91,7 +91,7 @@ $delim = "<br/>\n";
 
 if (scalar keys %{$data{'nodups'}})
 {
-  $txt .= "<h4>Volumes which were single-copy</h4>\n";
+  $txt .= "<h4>Volumes single copy/no duplicates</h4>\n";
   $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume retrieval</span>)</th>" .
           "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
   my $n = 0;
@@ -110,7 +110,7 @@ if (scalar keys %{$data{'nodups'}})
 }
 if (scalar keys %{$data{'noexport'}})
 {
-  $txt .= "<h4>Volumes which had no duplicates with CRMS exports from June 2010</h4>\n";
+  $txt .= "<h4>Volumes checked, no duplicates with CRMS determination (from June 2010 or later)</h4>\n";
   $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume retrieval</span>)</th>" .
           "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
   my $n = 0;
@@ -129,7 +129,7 @@ if (scalar keys %{$data{'noexport'}})
 }
 if (scalar keys %{$data{'already'}})
 {
-  $txt .= "<h4>Volumes which had duplicates already in candidates</h4>\n";
+  $txt .= "<h4>Volumes checked, no duplicates with CRMS determination (from June 2010 or later), duplicate volume already in candidates</h4>\n";
   $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume</th>" .
           '<th>Volume Checked<br/>(<span style="color:blue;">volume retrieval</span>)</th>' .
           "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
@@ -236,7 +236,14 @@ if (scalar keys %{$data{'inherit'}})
               'Volume&nbsp;Inheriting<br/>(<span style="color:blue;">volume retrieval</span>)',
               'Sys ID<br/>(<span style="color:blue;">catalog</span>)','Rights','New Rights',
               'Prior CRMS Review?','Access Change?','Title');
-  $txt .= '<h4>Volumes for which inheritance was needed</h4>';
+  if ($candidates)
+  {
+    $txt .= '<h4>Volumes where a duplicate w/CRMS determination exists (from June 2010 or later) - inheritance permitted</h4>';
+  }
+  else
+  {
+    $txt .= '<h4>Volumes for which inheritance was permitted</h4>';
+  }
   $txt .= '<table border="1"><tr><th>' . join('</th><th>', @cols) . "</th></tr>\n";
   my $n = 0;
   foreach my $id (sort keys %{$data{'inherit'}})
