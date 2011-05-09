@@ -590,6 +590,8 @@ sub RemoveFromCandidates
 
   my $sql = "DELETE FROM candidates WHERE id='$id'";
   $self->PrepareSubmitSql( $sql );
+  $sql = "DELETE FROM und WHERE id='$id'";
+  $self->PrepareSubmitSql( $sql );
 }
 
 sub LoadNewItemsInCandidates
@@ -663,8 +665,7 @@ sub CheckAndLoadItemIntoCandidates
     print "No metadata yet for $id: will try again tomorrow.\n";
     if (0 == $self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id'"))
     {
-      my $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','no meta','$time')";
-      $self->PrepareSubmitSql( $sql );
+      $self->Filter($id, 'no meta', $time);
     }
     return;
   }
@@ -677,10 +678,7 @@ sub CheckAndLoadItemIntoCandidates
       my $sql = "SELECT COUNT(*) FROM und WHERE id='$id'";
       my $already = (1 == $self->SimpleSqlGet($sql));
       printf "Skip $id ($src) -- %s in filtered volumes\n", ($already)? 'updating':'inserting';
-      $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src','$time')";
-      $self->PrepareSubmitSql( $sql );
-      $sql = "DELETE FROM candidates WHERE id='$id'";
-      $self->PrepareSubmitSql( $sql );
+      $self->Filter($id, $src, $time);
     }
     else
     {
@@ -693,6 +691,21 @@ sub CheckAndLoadItemIntoCandidates
   {
     $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
   }
+}
+
+sub Filter
+{
+  my $self = shift;
+  my $id   = shift;
+  my $src  = shift;
+  my $time = shift;
+  
+  $time = $self->SimpleSqlGet("SELECT time FROM candidates WHERE id='$id'") unless $time;
+  $time = ($time)? qq{'$time'}:'NULL';
+  my $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src',$time)";
+  $self->PrepareSubmitSql($sql);
+  $sql = "DELETE FROM candidates WHERE id='$id'";
+  $self->PrepareSubmitSql($sql);
 }
 
 # Returns an array of error messages (reasons for unsuitability for CRMS) for a volume.
