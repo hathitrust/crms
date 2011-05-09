@@ -63,7 +63,9 @@ require $configFile;
 my $delim = "\n";
 print "Verbosity $verbose$delim" if $verbose;
 my $dbh = $crms->get('dbh');
-my $start = $crms->SimpleSqlGet('SELECT DATE(NOW())');
+my $sql = 'SELECT DATE(NOW())';
+$sql = 'SELECT DATE(DATE_SUB(NOW(),INTERVAL 1 DAY))' if $candidates;
+my $start = $crms->SimpleSqlGet($sql);
 my $end = $start;
 if (scalar @ARGV)
 {
@@ -90,8 +92,8 @@ $delim = "<br/>\n";
 if (scalar keys %{$data{'nodups'}})
 {
   $txt .= "<h4>Volumes which were single-copy</h4>\n";
-  $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked (<span style='color:blue;'>volume retrieval</span>)</th>" .
-          "<th>Sys ID (<span style='color:blue;'>catalog</span>)</th></tr>\n";
+  $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume retrieval</span>)</th>" .
+          "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
   my $n = 0;
   foreach my $id (keys %{$data{'nodups'}})
   {
@@ -109,8 +111,8 @@ if (scalar keys %{$data{'nodups'}})
 if (scalar keys %{$data{'noexport'}})
 {
   $txt .= "<h4>Volumes which had no duplicates with CRMS exports from June 2010</h4>\n";
-  $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked (<span style='color:blue;'>volume retrieval</span>)</th>" .
-          "<th>Sys ID (<span style='color:blue;'>catalog</span>)</th></tr>\n";
+  $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume retrieval</span>)</th>" .
+          "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
   my $n = 0;
   foreach my $id (keys %{$data{'noexport'}})
   {
