@@ -273,22 +273,32 @@ if (scalar keys %{$data{'inherit'}})
 
 my $header = sprintf("Total # volumes checked for inheritance from $dates: %d$delim", scalar keys %{$data{'total'}});
 $header .= sprintf("Total # unique Sys IDs: %d$delim$delim", scalar keys %{$data{'totalsys'}});
-$header .= sprintf("Volumes single copy: %d$delim$delim", scalar keys %{$data{'nodups'}});
+$header .= "<h4>No inheritance - Adding to candidates:</h4>$delim";
+$header .= sprintf("Volumes single copy/no duplicates: %d$delim$delim", scalar keys %{$data{'nodups'}});
 $header .= sprintf("Volumes w/ chron/enum: %d$delim$delim", scalar keys %{$data{'chron'}});
 $header .= sprintf("Volumes not allowed to inherit: %d$delim$delim", scalar keys %{$data{'disallowed'}});
 if ($candidates)
 {
-  $header .= sprintf("Volumes checked, no duplicates with CRMS exports from June 2010: %d$delim", scalar keys %{$data{'noexport'}});
-  $header .= sprintf("Unique Sys IDs checked, no duplicates with CRMS exports from June 2010: %d$delim$delim", scalar keys %{$data{'noexportsys'}});
-  $header .= sprintf("Volumes checked, duplicates already in candidates: %d$delim", scalar keys %{$data{'already'}});
-  $header .= sprintf("Unique Sys IDs checked, duplicates already in candidates: %d$delim$delim", scalar keys %{$data{'alreadysys'}});
+  $header .= sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later): %d$delim", scalar keys %{$data{'noexport'}});
+  $header .= sprintf("Unique Sys IDs checked, no duplicates with CRMS determination (from June 2010 or later): %d$delim$delim", scalar keys %{$data{'noexportsys'}});
+  $header .= "<h4>Filtered from candidates temporarily:</h4>$delim";
+  $header .= sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later), duplicate volume already in candidates: %d$delim", scalar keys %{$data{'already'}});
+  $header .= sprintf("Unique Sys IDs checked, duplicate volume already in candidates: %d$delim$delim", scalar keys %{$data{'alreadysys'}});
 }
 else
 {
   $header .= sprintf("Volumes checked, no inheritance needed: %d$delim", scalar keys %{$data{'unneeded'}});
   $header .= sprintf("Unique Sys IDs checked, no inheritance needed: %d$delim$delim", scalar keys %{$data{'unneededsys'}});
 }
-$header .= sprintf("Volumes checked - inheritance permitted: %d$delim", scalar keys %{$data{'inherit'}});
+$header .= "<h4>Inheritance Permitted - Not Adding to Candidates - Status 9 Review awaiting approval:</h4>$delim";
+if ($candidates)
+{
+  $header .= sprintf("Volumes checked - duplicate w/CRMS determination exists (from June 2010 or later) - inheritance permitted: %d$delim", scalar keys %{$data{'inherit'}});
+}
+else
+{
+  $header .= sprintf("Volumes checked - inheritance permitted: %d$delim", scalar keys %{$data{'inherit'}});
+}
 $header .= sprintf("Unique Sys IDs w/ volumes inheriting rights: %d$delim", scalar keys %{$data{'inheritsys'}});
 $header .= sprintf("Volumes inheriting rights: %d$delim", scalar keys %{$data{'inheriting'}});
 $txt = $head . $header . $delim . $txt;
@@ -296,6 +306,7 @@ $txt = $head . $header . $delim . $txt;
 if ($insert)
 {
   $txt .= '<h4>Now inserting inheritance data</h4>';
+  my $src = ($candidates)? 'candidates':'export';
   foreach my $id (keys %{$data{'inherit'}})
   {
     my @lines = split "\n", $data{'inherit'}->{$id};
@@ -304,9 +315,23 @@ if ($insert)
       my ($id2,$sysid,$attr2,$reason2,$attr,$reason,$gid) = split "\t", $line;
       $attr2 = $crms->GetRightsNum($attr2);
       $reason2 = $crms->GetReasonNum($reason2);
-      my $sql = "REPLACE INTO inherit (id,attr,reason,gid) VALUES ('$id2',$attr2,$reason2,$gid)";
+      my $sql = "REPLACE INTO inherit (id,attr,reason,gid,src) VALUES ('$id2',$attr2,$reason2,$gid,'$src')";
       #print "$sql\n";
       $crms->PrepareSubmitSql($sql);
+      $crms->Filter($id2) if $candidates;
+    }
+  }
+  if ($candidates)
+  {
+    $txt .= '<h4>Now filtering duplicates in candidates</h4>';
+    foreach my $id (keys %{$data{'already'}})
+    {
+      my @lines = split "\n", $data{'already'}->{$id};
+      foreach my $line (@lines)
+      {
+        my ($id2,$sysid) = split "\t", $line;
+        $crms->FilterCandidates($id2, $id);
+      }
     }
   }
 }
@@ -314,7 +339,7 @@ if ($insert)
 for (@{$crms->GetErrors()})
 {
   s/\n/<br\/>/g;
-  $txt .= "<i>Warning: $_</i><br/>\n" ;
+  $txt .= "<i>Warning: $_</i><br/>\n";
 }
 $txt .= "</body></html>\n\n";
 
