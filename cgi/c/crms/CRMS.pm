@@ -838,6 +838,7 @@ sub LoadNewItems
         print "Skipping $id: queue has $dup on record $sysid\n";
         next;
       }
+      $recs{$sysid} = 1;
       my $pub_date = $row->[2];
       #print "Trying $id ($pub_date) against $y\n";
       next if $pub_date ne "$y-01-01";
@@ -5996,16 +5997,28 @@ sub CreateSystemReport
   my $val = $self->GetLastLoadTimeToCandidates();
   $val =~ s/\s/&nbsp;/g;
   $report .= sprintf("<tr><th>Last&nbsp;Candidates&nbsp;Addition</th><td>%s&nbsp;on&nbsp;$val</td></tr>", $self->GetLastLoadSizeToCandidates());
-  my $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und');
-  $report .= "<tr><th>Items&nbsp;Filtered**</th><td>$count</td></tr>\n";
+  my $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE src!="no meta" AND src!="duplicate"');
+  $report .= "<tr><th>Volumes&nbsp;Filtered**</th><td>$count</td></tr>\n";
   if ($count)
   {
-    my $ref = $self->get('dbh')->selectall_arrayref('SELECT src,COUNT(src) FROM und GROUP BY src ORDER BY src');
+    my $ref = $self->get('dbh')->selectall_arrayref('SELECT src,COUNT(src) FROM und WHERE src!="no meta" AND src!="duplicate" GROUP BY src ORDER BY src');
     foreach my $row (@{ $ref})
     {
       my $src = $row->[0];
       my $n = $row->[1];
       $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$n&nbsp;(%0.1f%%)</td></tr>\n", 100.0*$n/$count);
+    }
+  }
+  my $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE src="no meta" OR src="duplicate"');
+  $report .= "<tr><th>Volumes&nbsp;Temporarily&nbsp;Filtered</th><td>$count</td></tr>\n";
+  if ($count)
+  {
+    my $ref = $self->get('dbh')->selectall_arrayref('SELECT src,COUNT(src) FROM und WHERE src="no meta" OR src="duplicate" GROUP BY src ORDER BY src');
+    foreach my $row (@{ $ref})
+    {
+      my $src = $row->[0];
+      my $n = $row->[1];
+      $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$n</td></tr>\n";
     }
   }
   $report .= sprintf "<tr><th>Current&nbsp;Host</th><td>%s</td></tr>\n", $self->Hostname();
