@@ -110,7 +110,7 @@ if (scalar keys %{$data{'nodups'}})
 }
 if (scalar keys %{$data{'noexport'}})
 {
-  $txt .= "<h4>Volumes checked, no duplicates with CRMS determination (from June 2010 or later)</h4>\n";
+  $txt .= "<h4>Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table</h4>\n";
   $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume retrieval</span>)</th>" .
           "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
   my $n = 0;
@@ -286,7 +286,7 @@ $header .= sprintf("Volumes w/ chron/enum: %d$delim$delim", scalar keys %{$data{
 $header .= sprintf("Volumes not allowed to inherit: %d$delim$delim", scalar keys %{$data{'disallowed'}});
 if ($candidates)
 {
-  $header .= sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later): %d$delim", scalar keys %{$data{'noexport'}});
+  $header .= sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table: %d$delim", scalar keys %{$data{'noexport'}});
   $header .= sprintf("Unique Sys IDs checked, no duplicates with CRMS determination (from June 2010 or later): %d$delim$delim", scalar keys %{$data{'noexportsys'}});
   $header .= "<h4>Filtered from candidates temporarily:</h4>$delim";
   $header .= sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later), duplicate volume already in candidates: %d$delim", scalar keys %{$data{'already'}});
