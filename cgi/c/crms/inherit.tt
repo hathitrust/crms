@@ -237,7 +237,7 @@ function VerifyDelete(formid)
         <th>#</th>
         <th>Export&nbsp;Date</th>
         <th>Source&nbsp;Volume<br/>(<span style="color:[% color_gray %];">historical</span>)</th>
-        <th>Volume&nbsp;Inheriting<br/>(<span style="color:[% color_gray %];">volume retrieval</span>)</th>
+        <th>Volume&nbsp;Inheriting<br/>(<span style="color:[% color_gray %];">volume tracking</span>)</th>
         <th>System&nbsp;ID<br/>(<span style="color:[% color_gray %];">catalog</span>)</th>
         <th>Rights</th>
         <th>New&nbsp;Rights</th>
