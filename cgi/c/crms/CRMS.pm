@@ -4724,7 +4724,8 @@ sub IsProbableGovDoc
   my $field260b = $record->findvalue( $xpath ) or '';
   $field260a =~ s/^\s*(.*?)\s*$/$1/;
   $field260b =~ s/^\s*(.*?)\s*$/$1/;
-  # If there is an alphabetic character in 008:28 other than 'f', we accept it and say it is NOT probable
+  # If there is an alphabetic character in 008:28 other than 'f',
+  # we accept it and say it is NOT probable
   $xpath  = q{//*[local-name()='controlfield' and @tag='008']};
   my $leader = lc $record->findvalue( $xpath );
   my $code = substr($leader, 28, 1);
@@ -4733,7 +4734,8 @@ sub IsProbableGovDoc
   {
     return 1 unless $field260a or $field260b;
     return 1 if $field260a =~ m/^\[?washington/i;
-    return 1 if $field260b and ($field260b =~ m/^u\.s\.\s+g\.p\.o\./i or $field260b =~ m/^u\.s\.\s+govt\.\s+print\.\s+off\./i);
+    return 1 if $field260b and $field260b =~ m/^u\.s\.\s+g\.p\.o\./i;
+    return 1 if $field260b and $field260b =~ m/^u\.s\.\s+govt\.\s+print\.\s+off\./i;
   }
   return 1 if $author =~ m/^library\s+of\s+congress/i and $field260a =~ m/^washington/i;
   return 1 if $title =~ m/^code\s+of\s+federal\s+regulations/i and $field260a =~ m/^washington/i;
@@ -4744,7 +4746,7 @@ sub IsProbableGovDoc
   }
   else
   {
-    return 1 if $author =~ m/^federal\s+feserve\s+bank/i;
+    return 1 if $author =~ m/^federal\s+reserve\s+bank/i;
     return 1 if $author =~ m/bureau\s+of\s+mines/i;
   }
   return 0;
@@ -7370,9 +7372,6 @@ sub SubmitInheritance
   my $id   = shift;
 
   my $sql = "SELECT COUNT(*) FROM reviews r INNER JOIN queue q ON r.id=q.id WHERE r.id='$id' AND r.user='autocrms' AND q.status=9";
-  return 'skip' if $self->SimpleSqlGet($sql);
-  # Check for a submit after reviews have been processed; WARNING this should not be done in production FIXME
-  $sql = "SELECT COUNT(*) FROM historicalreviews r WHERE r.id='$id' AND r.user='autocrms' AND r.status=9";
   return 'skip' if $self->SimpleSqlGet($sql);
   $sql = "SELECT e.attr,e.reason,i.attr,i.reason,i.gid FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid WHERE i.id='$id'";
   my $row = $self->get('dbh')->selectall_arrayref($sql)->[0];
