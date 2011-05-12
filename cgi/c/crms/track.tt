@@ -1,0 +1,47 @@
+[% IF NOT (crms.IsUserExpert() || crms.IsUserAdmin()) %]
+  [% INCLUDE denied.tt  %]
+  [% STOP %]
+[% END %]
+
+[% p = cgi.param('p') %]
+[% q = cgi.param('query') %]
+[% INCLUDE header.tt %]
+
+<h2>Track Volumes:</h2>
+<form action="crms">
+  <label for="queryTA" class="smallishText">Enter one system id or volume id per line.</label><br/>
+  <input type="hidden" name="p" value="[% p %]"/>
+  <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;">[% q %]</textarea>
+  <input type="submit" value="Do it!"/>
+</form>
+
+[% IF q %]
+  [% FOREACH id IN q.split %]
+    [% ids = crms.CRMSQuery(id) %]
+    [% IF (NOT ids) || ids.size() == 0 %]
+      <br/><h4>No results for $id</h4>
+      [% blah = crms.ClearErrors() %]
+      [% NEXT %]
+    [% END %]
+    [% IF id.search('\.') %]
+      [% id = crms.BarcodeToId(id) %]
+      [% blah = crms.ClearErrors() %]
+      [% IF NOT id %][% id = 'Unknown' %][% END %]
+    [% END %]
+    <br/>
+    <!--<a href="?p=$p&amp;download=1;q=[% id %]" target="_blank">download</a>-->
+    <br/>
+    <table class="exportStats">
+      <tr><th colspan="2" class="major" nowrap="nowrap">
+        [% catlink = crms.LinkToCatalog(id) %]
+        <a style="color:white;" href="[% catlink %]" target="_blank">$id</a>&nbsp;&nbsp;&nbsp;&nbsp;([% parts = ids.0.split('__') %][% parts.1 %])
+      </th></tr>
+      <tr><th>Volume id</th><th>CRMS status</th></tr>
+      <tr>
+        <td nowrap="nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% parts.0 %]<br/>[% END %]</td>
+        <td nowrap="nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% parts.2 %]<br/>[% END %]</td>
+      </tr>
+    </table>
+  [% END %]
+[% END %]
+[% INCLUDE footer.tt %]

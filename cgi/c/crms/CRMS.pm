@@ -894,7 +894,7 @@ sub AddItemToQueue
   my $title    = shift;
   my $author   = shift;
 
-  return 0 if $self->IsItemInQueue($id);
+  return 0 if $self->IsVolumeInQueue($id);
   # queue table has priority and status default to 0, time to current timestamp.
   my $sql = "INSERT INTO $CRMSGlobals::queueTable (id) VALUES ('$id')";
   $self->PrepareSubmitSql( $sql );
@@ -925,10 +925,10 @@ sub AddItemToQueueOrSetItemActive
     $stat = 1;
   }
   ## give the existing item higher or lower priority
-  elsif ( $self->IsItemInQueue( $id ) )
+  elsif ( $self->IsVolumeInQueue( $id ) )
   {
     my $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id'";
-    my $count = $self->SimpleSqlGet($sql);
+    my $n = $self->SimpleSqlGet($sql);
     my $oldpri = $self->GetPriority($id);
     if ($oldpri == $priority)
     {
@@ -945,17 +945,17 @@ sub AddItemToQueueOrSetItemActive
       $sql = "UPDATE $CRMSGlobals::queueTable SET priority=$priority,time=NOW() WHERE id='$id'";
       $self->PrepareSubmitSql( $sql );
       push @msgs, "changed priority from $oldpri to $priority";
-      if ($count)
+      if ($n)
       {
         $sql = "UPDATE $CRMSGlobals::reviewsTable SET priority=$priority,time=time WHERE id='$id'";
         $self->PrepareSubmitSql( $sql );
       }
       $stat = 3;
     }
-    if ($count)
+    if ($n)
     {
-      my $rlink = sprintf("already has $count <a href='?p=adminReviews;search1=Identifier;search1value=$id' target='_blank'>review%s</a>",
-                          ($count==1)? '':'s');
+      my $rlink = sprintf("already has $n <a href='?p=adminReviews;search1=Identifier;search1value=$id' target='_blank'>%s</a>",
+                          $self->Pluralize('review', $n));
       push @msgs, $rlink;
     }
   }
@@ -1031,15 +1031,6 @@ sub GiveItemsInQueuePriority
     $self->PrepareSubmitSql( $sql );
   }
   return 1;
-}
-
-sub IsItemInQueue
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable WHERE id='$id'";
-  return $self->SimpleSqlGet($sql);
 }
 
 # Translates pre-CRMS, for legacyLoad.pl.
@@ -6010,7 +6001,7 @@ sub CreateSystemReport
     }
   }
   my $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE src="no meta" OR src="duplicate"');
-  $report .= "<tr><th>Volumes&nbsp;Temporarily&nbsp;Filtered</th><td>$count</td></tr>\n";
+  $report .= "<tr><th>Volumes&nbsp;Temporarily&nbsp;Filtered**</th><td>$count</td></tr>\n";
   if ($count)
   {
     my $ref = $self->get('dbh')->selectall_arrayref('SELECT src,COUNT(src) FROM und WHERE src="no meta" OR src="duplicate" GROUP BY src ORDER BY src');
@@ -6024,7 +6015,7 @@ sub CreateSystemReport
   $report .= sprintf "<tr><th>Current&nbsp;Host</th><td>%s</td></tr>\n", $self->Hostname();
   my ($delay,$since) = $self->ReplicationDelay();
   my $alert = $delay >= 5;
-  $delay .= ' second' . (($delay == 1)? '':'s');
+  $delay .= $self->Pluralize(' second', $delay);
   $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay since $since</span>" if $alert;
   $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay</td></tr>\n";
   $report .= '<tr><td colspan="2">';
@@ -6369,6 +6360,15 @@ sub DownloadSpreadSheet
     print &CGI::header(-type => 'text/plain', -charset => 'utf-8');
     print $buffer;
   }
+}
+
+sub CountReviews
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $sql = "SELECT count(*) FROM reviews WHERE id='$id'";
+  return $self->SimpleSqlGet($sql);
 }
 
 sub CountReviewsForUser
@@ -6825,6 +6825,7 @@ sub PageToEnglish
                'review' => 'review',
                'rights' => 'query rights database',
                'systemStatus' => 'system status',
+               'track' => 'track volumes',
                'undReviews' => 'provisional matches',
                'userRate' => 'my review stats',
                'userReviews' => 'my processed reviews',
@@ -6898,6 +6899,84 @@ sub DownloadVolumeIDs
   }
   $self->DownloadSpreadSheet($buffer);
   return (1 == scalar @{$self->GetErrors()});
+}
+
+sub CRMSQuery
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my @ids;
+  my $sysid = $id;
+  $sysid = $self->BarcodeToId($sysid) if $id =~ m/\./;
+  my $title = $self->GetRecordTitle($id);
+  my $rows = $self->VolumeIDsQuery($id);
+  $rows = [ $id . '__blah__bleh' ] unless scalar @{$rows};
+  foreach my $line (@{$rows})
+  {
+    my ($id2,$chron2,$rights2) = split '__', $line;
+    my @stati = ();
+    my $inQ = $self->IsVolumeInQueue($id2);
+    if ($inQ)
+    {
+      my $status = $self->GetStatus($id2);
+      my $n = $self->CountReviews($id2);
+      my $reviews = $self->Pluralize('review', $n);
+      push @stati, "in Queue (status $status, $n $reviews)";
+    }
+    elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM candidates WHERE id='$id2'"))
+    {
+      push @stati, 'in Candidates';
+    }
+    elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id2' AND (src='no meta' OR src='duplicate')"))
+    {
+      my $src = $self->SimpleSqlGet("SELECT src FROM und WHERE id='$id2'");
+      push @stati, "temporarily filtered ($src)";
+    }
+    elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id2' AND src!='no meta' AND src!='duplicate'"))
+    {
+      my $src = $self->SimpleSqlGet("SELECT src FROM und WHERE id='$id2'");
+      push @stati, "filtered ($src)";
+    }
+    if ($self->SimpleSqlGet("SELECT COUNT(*) FROM exportdata WHERE id='$id2'"))
+    {
+      my $sql = "SELECT attr,reason,DATE(time),src FROM exportdata WHERE id='$id2' ORDER BY time DESC LIMIT 1";
+      my $ref = $self->get('dbh')->selectall_arrayref($sql);
+      my $a = $ref->[0]->[0];
+      my $r = $ref->[0]->[1];
+      my $t = $ref->[0]->[2];
+      my $src = $ref->[0]->[3];
+      #$t = $self->FormatDate($t);
+      my $action = ($src eq 'inherited')? ' (inherited)':'';
+      push @stati, "Exported$action $a/$r $t";
+    }
+    else
+    {
+      my $n = $self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id2' AND legacy=1");
+      my $reviews = $self->Pluralize('review', $n);
+      push @stati, "$n legacy $reviews" if $n;
+    }
+    if ($self->SimpleSqlGet("SELECT COUNT(*) FROM inherit WHERE id='$id2'"))
+    {
+      my $sql = "SELECT e.id,e.attr,e.reason FROM exportdata e INNER JOIN inherit i ON e.gid=i.gid WHERE i.id='$id2'";
+      my $ref = $self->get('dbh')->selectall_arrayref($sql);
+      my $src = $ref->[0]->[0];
+      my $a = $ref->[0]->[1];
+      my $r = $ref->[0]->[2];
+      push @stati, "inheriting $a/$r from $src";
+    }
+    push @ids, $id2 . '__' . $title . '__' . ucfirst join '; ', @stati;
+  }
+  return \@ids;
+}
+
+sub Pluralize
+{
+  my $self = shift;
+  my $word = shift;
+  my $n    = shift;
+  
+  return $word . (($n == 1)? '':'s');
 }
 
 # Returns a reference to an array with (time,status,message)
@@ -7329,7 +7408,7 @@ sub AddInheritanceToQueue
 
   my $stat = 0;
   my @msgs = ();
-  if ($self->IsItemInQueue($id))
+  if ($self->IsVolumeInQueue($id))
   {
     my $err = $self->LockItem($id, 'autocrms');
     if ($err)
@@ -7340,10 +7419,10 @@ sub AddInheritanceToQueue
     else
     {
       my $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id' AND user NOT LIKE 'rereport%'";
-      my $count = $self->SimpleSqlGet($sql);
-      if ($count)
+      my $n = $self->SimpleSqlGet($sql);
+      if ($n)
       {
-        my $rlink = sprintf "already has $count <a href='?p=adminReviews;search1=Identifier;search1value=$id' target='_blank'>review%s</a>", ($count==1)? '':'s';
+        my $rlink = sprintf "already has $n <a href='?p=adminReviews;search1=Identifier;search1value=$id' target='_blank'>%s</a>", $self->Pluralize('review',$n);
         push @msgs, $rlink;
         $stat = 1;
       }
@@ -7402,7 +7481,8 @@ sub LinkToRetrieve
   my $self  = shift;
   my $sysid = shift;
   
-  return "https://quod.lib.umich.edu/cgi/c/crms/crms?p=retrieve;query=$sysid";
+  #return "https://quod.lib.umich.edu/cgi/c/crms/crms?p=track;query=$sysid";
+  return "https://dev.umdl.umich.edu/cgi/c/crms/crms?p=track;query=$sysid";
 }
 
 sub LinkToMirlynDetails

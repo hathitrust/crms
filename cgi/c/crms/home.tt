@@ -14,7 +14,7 @@ function CheckAll(box,formid)
 </script>
 
 [% n = crms.CountUserHolds(user) %]
-[% IF n %]<h4>You have $n item[% (n == 1)? '':'s' %] on hold.</h4><br/>[% END %]
+[% IF n %]<h4>You have $n [% crms.Pluralize('volumes', n) %] on hold.</h4><br/>[% END %]
 
 [% IF cgi.param('unlockSel') %]
 <br/>
@@ -102,6 +102,7 @@ function CheckAll(box,formid)
                     <a href="crms?p=adminUser">User&nbsp;Accounts</a><br/>
 [% IF e || a || s %]<a href="crms?p=rights">Query&nbsp;Rights&nbsp;Database</a><br/>  [% END %]
 [% IF e || a || s %]<a href="crms?p=retrieve">Retrieve&nbsp;Volume&nbsp;IDs</a><br/>  [% END %]
+[% IF e || a || s %]<a href="crms?p=track">Track&nbsp;Volumes</a><br/>                [% END %]
 [% IF a || s %]     <a href="crms?p=adminQueue">All&nbsp;Locked&nbsp;Volumes</a><br/> [% END %]
 [% IF e || a || s %]<a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a><br/>         [% END %]
 [% IF a || s %]     <a href="crms?p=systemStatus">Set&nbsp;System&nbsp;Status</a><br/>[% END %]
