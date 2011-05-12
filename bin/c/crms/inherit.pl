@@ -92,7 +92,7 @@ $delim = "<br/>\n";
 if (scalar keys %{$data{'nodups'}})
 {
   $txt .= "<h4>Volumes single copy/no duplicates</h4>\n";
-  $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume retrieval</span>)</th>" .
+  $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th>" .
           "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
   my $n = 0;
   foreach my $id (keys %{$data{'nodups'}})
@@ -111,7 +111,7 @@ if (scalar keys %{$data{'nodups'}})
 if (scalar keys %{$data{'noexport'}})
 {
   $txt .= "<h4>Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table</h4>\n";
-  $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume retrieval</span>)</th>" .
+  $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th>" .
           "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
   my $n = 0;
   foreach my $id (keys %{$data{'noexport'}})
@@ -131,7 +131,7 @@ if (scalar keys %{$data{'already'}})
 {
   $txt .= "<h4>Volumes checked, no duplicates with CRMS determination (from June 2010 or later), duplicate volume already in candidates</h4>\n";
   $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume</th>" .
-          '<th>Volume Checked<br/>(<span style="color:blue;">volume retrieval</span>)</th>' .
+          '<th>Volume Checked<br/>(<span style="color:blue;">volume tracking</span>)</th>' .
           "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
   my $n = 0;
   foreach my $id (keys %{$data{'already'}})
@@ -152,7 +152,7 @@ if (scalar keys %{$data{'chron'}})
 {
   $txt .= "<h4>Volumes skipped because of chron/enum</h4>\n";
   $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style='color:blue;'>historical</span>)</th>" .
-          '<th>Volume Checked<br/>(<span style="color:blue;">volume retrieval</span>)</th>' .
+          '<th>Volume Checked<br/>(<span style="color:blue;">volume tracking</span>)</th>' .
           '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th>' .
           "<th>Title</th></tr>\n";
   my $n = 0;
@@ -180,7 +180,7 @@ if (scalar keys %{$data{'unneeded'}})
 {
   $txt .= "<h4>Volumes for which inheritance was unneeded</h4>\n";
   $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style='color:blue;'>historical</span>)</th>" .
-          '<th>Volume Checked<br/>(<span style="color:blue;">volume retrieval</span>)</th>' .
+          '<th>Volume Checked<br/>(<span style="color:blue;">volume tracking</span>)</th>' .
           '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th><th>Rights</th><th>New Rights</th>' .
           "<th>Title</th></tr>\n";
   my $n = 0;
@@ -207,7 +207,7 @@ if (scalar keys %{$data{'disallowed'}})
 {
   $txt .= "<h4>Volumes for which inheritance was not allowed</h4>\n";
   $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style='color:blue;'>historical</span>)</th>" .
-          "<th>Volume Checked<br/>(<span style='color:blue;'>volume retrieval</span>)</th><th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th>" .
+          "<th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th><th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th>" .
           "<th>Rights</th><th>New Rights</th><th>Why</th><th>Title</th></tr>\n";
   my $n = 0;
   foreach my $id (keys %{$data{'disallowed'}})
@@ -233,7 +233,7 @@ if (scalar keys %{$data{'disallowed'}})
 if (scalar keys %{$data{'inherit'}})
 {
   my @cols = ('#','Source&nbsp;Volume<br/>(<span style="color:blue;">historical</span>)',
-              'Volume&nbsp;Inheriting<br/>(<span style="color:blue;">volume retrieval</span>)',
+              'Volume&nbsp;Inheriting<br/>(<span style="color:blue;">volume tracking</span>)',
               'Sys ID<br/>(<span style="color:blue;">catalog</span>)','Rights','New Rights',
               'Prior CRMS Review?','Access Change?','Title');
   if ($candidates)
@@ -325,7 +325,7 @@ if ($insert)
       my $sql = "REPLACE INTO inherit (id,attr,reason,gid,src) VALUES ('$id2',$attr2,$reason2,$gid,'$src')";
       #print "$sql\n";
       $crms->PrepareSubmitSql($sql);
-      $crms->Filter($id2) if $candidates;
+      $crms->Filter($id2);
     }
   }
   if ($candidates)
