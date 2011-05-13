@@ -325,7 +325,7 @@ if ($insert)
       my $sql = "REPLACE INTO inherit (id,attr,reason,gid,src) VALUES ('$id2',$attr2,$reason2,$gid,'$src')";
       #print "$sql\n";
       $crms->PrepareSubmitSql($sql);
-      $crms->Filter($id2);
+      $crms->Filter($id2, 'duplicate');
     }
   }
   if ($candidates)
