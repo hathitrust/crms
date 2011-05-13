@@ -814,7 +814,7 @@ sub LoadNewItems
   return if $needed <= 0;
   my $count = 0;
   my $y = 1923 + int(rand(40));
-  my %recs = %{$self->GetQueueRecords()};
+  my %recs = $self->GetQueueRecords();
   while (1)
   {
     my $sql = 'SELECT id, time, pub_date, title, author FROM candidates ' .
@@ -833,12 +833,12 @@ sub LoadNewItems
       my $id = $row->[0];
       my $sysid = $self->BarcodeToId($id);
       my $dup = $recs{$sysid};
-      if ($dup)
+      if ($dup && !$self->DoesRecordHaveChron($sysid))
       {
-        print "Skipping $id: queue has $dup on record $sysid\n";
+        print "Filtering $id: queue has $dup on $sysid (no chron/enum)\n";
+        $self->Filter($id, 'duplicate');
         next;
       }
-      $recs{$sysid} = 1;
       my $pub_date = $row->[2];
       #print "Trying $id ($pub_date) against $y\n";
       next if $pub_date ne "$y-01-01";
@@ -852,6 +852,7 @@ sub LoadNewItems
         last if $count >= $needed;
         $y++;
         $y = 1923 if $y > 1963;
+        $recs{$sysid} = $id;
       }
     }
     if ($oldcount == $count)
@@ -880,7 +881,21 @@ sub GetQueueRecords
     my $sysid = $self->BarcodeToId($id);
     $dict{$sysid} = $id if $sysid;
   }
-  return \%dict;
+  return %dict;
+}
+
+sub DoesRecordHaveChron
+{
+  my $self  = shift;
+  my $sysid = shift;
+  
+  my $rows = $self->VolumeIDsQuery($sysid);
+  foreach my $line (@{$rows})
+  {
+    my ($id,$chron,$rights) = split '__', $line;
+    return 1 if $chron;
+  }
+  return 0;
 }
 
 # Plain vanilla code for adding an item with status 0, priority 0
@@ -6950,9 +6965,9 @@ sub CRMSQuery
       my $src = $ref->[0]->[3];
       #$t = $self->FormatDate($t);
       my $action = ($src eq 'inherited')? ' (inherited)':'';
-      push @stati, "Exported$action $a/$r $t";
+      push @stati, "exported$action $a/$r $t";
     }
-    else
+    #else
     {
       my $n = $self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id2' AND legacy=1");
       my $reviews = $self->Pluralize('review', $n);
