@@ -236,13 +236,14 @@ function VerifyDelete(formid)
       <tr>
         <th>#</th>
         <th>Export&nbsp;Date</th>
-        <th>Source&nbsp;Volume<br/>(<span style="color:[% color_gray %];">historical</span>)</th>
+        <th>Source&nbsp;Volume<br/>(<span style="color:[% color_gray %];">historical/SysID</span>)</th>
         <th>Volume&nbsp;Inheriting<br/>(<span style="color:[% color_gray %];">volume tracking</span>)</th>
         <th>System&nbsp;ID<br/>(<span style="color:[% color_gray %];">catalog</span>)</th>
         <th>Rights</th>
         <th>New&nbsp;Rights</th>
-        <th>Prior CRMS<br/>Review?</th>
         <th>Access<br/>Change?</th>
+        <th>Prior CRMS<br/>Determination?</th>
+        <th>Prior Status 5<br/>Determination?</th>
         <th style="text-align:center;">Title</th>
         <th>Queue Info</th>
         <th>Source</th>
@@ -270,8 +271,9 @@ function VerifyDelete(formid)
           <td><a href='[% crms.LinkToCatalog(review.sysid) %]'target='_blank'>[% review.sysid %]</a></td>
           <td>[% review.rights %]</td>
           <td nowrap='nowrap'>[% review.newrights %]</td>
-          <td>[% (review.incrms==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
           <td>[% (review.change==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
+          <td>[% (review.incrms==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
+          <td>[% (review.h5==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
           <td>[% review.title %]</td>
           <td>[% review.summary %]</td>
           <td>[% review.src %]</td>

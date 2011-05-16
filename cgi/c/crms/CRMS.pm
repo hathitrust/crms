@@ -6033,7 +6033,14 @@ sub CreateSystemReport
   $report .= sprintf "<tr><th>Current&nbsp;Host</th><td>%s</td></tr>\n", $self->Hostname();
   my ($delay,$since) = $self->ReplicationDelay();
   my $alert = $delay >= 5;
-  $delay .= $self->Pluralize(' second', $delay);
+  if ($delay == 999999)
+  {
+    $delay = 'Disabled';
+  }
+  else
+  {
+    $delay .= $self->Pluralize(' second', $delay);
+  }
   $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay since $since</span>" if $alert;
   $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay</td></tr>\n";
   $report .= '<tr><td colspan="2">';
@@ -7326,6 +7333,12 @@ sub GetInheritanceRef
     $icund = 1 if ($attr eq 'ic' || $attr2 eq 'ic');
     $icund = 1 if ($attr eq 'und' || $attr2 eq 'und');
     my $incrms = (($attr eq 'ic' && $reason eq 'bib') || $reason eq 'gfv')? undef:1;
+    my $h5 = undef;
+    if ($incrms)
+    {
+      my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id' AND time>='2010-06-01 00:00:00' AND status=5";
+      $h5 = 1 if $self->SimpleSqlGet($sql) > 0;
+    }
     my $change = (($pd == 1 && $icund == 1) || ($pd == 1 && $pdus == 1) || ($icund == 1 && $pdus == 1));
     my $summary = '';
     if ($self->IsVolumeInQueue($id))
@@ -7340,7 +7353,8 @@ sub GetInheritanceRef
     }
     my %dic = ('i'=>$i, 'inheriting'=>$id, 'sysid'=>$sysid, 'rights'=>"$attr/$reason",
                'newrights'=>"$attr2/$reason2", 'incrms'=>$incrms, 'change'=>$change, 'from'=>$id2,
-               'title'=>$title, 'gid'=>$gid, 'date'=>$date, 'summary'=>$summary, 'src'=>ucfirst $src);
+               'title'=>$title, 'gid'=>$gid, 'date'=>$date, 'summary'=>ucfirst $summary,
+               'src'=>ucfirst $src, 'h5'=>$h5);
     push @return, \%dic;
     if ($download)
     {
@@ -7356,7 +7370,6 @@ sub GetInheritanceRef
              'n' => $n,
              'of' => $of
             };
-    #print "Source ($totalVolumes) Inheriting ($inheritingVolumes) Page ($n) Of ($of)<br/>\n";
   }
   return $data;
 }
@@ -7560,7 +7573,6 @@ sub DuplicateVolumesFromExport
     foreach my $line (@{$rows})
     {
       my ($id2,$chron2,$rights2) = split '__', $line;
-      my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id2,1)->[0]};
       if ($sawchron)
       {
         $data->{'chron'}->{$id} = '' unless $data->{'chron'}->{$id};
@@ -7574,49 +7586,53 @@ sub DuplicateVolumesFromExport
         delete $data->{'disallowedsys'}->{$sysid};
         return;
       }
-      elsif ($candidate ne $id && $candidate ne $id2 && $id ne $id2)
+      else
       {
-        $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
-        $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$attr/$reason\t$id\t$candidate has newer review ($candidateTime)\n";
-        $data->{'disallowedsys'}->{$sysid} = 1;
-        delete $data->{'unneeded'}->{$id};
-        delete $data->{'unneededsys'}->{$sysid};
-        delete $data->{'inherit'}->{$id};
-        delete $data->{'inheritsys'}->{$sysid};
-        #return;
-      }
-      elsif ($id2 ne $id && !$data->{'chron'}->{$id})
-      {
-        my $oldrights = "$attr2/$reason2";
-        if ($self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%'"))
+        my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id2,1)->[0]};
+        if ($candidate ne $id && $candidate ne $id2 && $id ne $id2)
         {
-          my $user = $self->SimpleSqlGet("SELECT user FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%' LIMIT 1");
           $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
-          $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$oldrights\t$id\tHas an active review by $user\n";
+          $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$attr/$reason\t$id\t$candidate has newer review ($candidateTime)\n";
           $data->{'disallowedsys'}->{$sysid} = 1;
+          delete $data->{'unneeded'}->{$id};
+          delete $data->{'unneededsys'}->{$sysid};
+          delete $data->{'inherit'}->{$id};
+          delete $data->{'inheritsys'}->{$sysid};
+          #return;
         }
-        elsif ($okatrr{$oldrights} || ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/))
+        elsif ($id2 ne $id && !$data->{'chron'}->{$id})
         {
-          # Always inherit onto a single-review priority 1
-          my $rereps = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user LIKE 'rereport%'");
-          if ($attr2 eq $attr && $reason2 ne 'bib' && $rereps == 0)
+          my $oldrights = "$attr2/$reason2";
+          if ($self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%'"))
           {
-            $data->{'unneeded'}->{$id} = '' unless $data->{'unneeded'}->{$id};
-            $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$oldrights\t$attr/$reason\t$id\n";
-            $data->{'unneededsys'}->{$sysid} = 1;
+            my $user = $self->SimpleSqlGet("SELECT user FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%' LIMIT 1");
+            $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
+            $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$oldrights\t$id\tHas an active review by $user\n";
+            $data->{'disallowedsys'}->{$sysid} = 1;
+          }
+          elsif ($okatrr{$oldrights} || ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/))
+          {
+            # Always inherit onto a single-review priority 1
+            my $rereps = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user LIKE 'rereport%'");
+            if ($attr2 eq $attr && $reason2 ne 'bib' && $rereps == 0)
+            {
+              $data->{'unneeded'}->{$id} = '' unless $data->{'unneeded'}->{$id};
+              $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$oldrights\t$attr/$reason\t$id\n";
+              $data->{'unneededsys'}->{$sysid} = 1;
+            }
+            else
+            {
+              $data->{'inherit'}->{$id} = '' unless $data->{'inherit'}->{$id};
+              $data->{'inherit'}->{$id} .= "$id2\t$sysid\t$attr2\t$reason2\t$attr\t$reason\t$gid\n";
+              $data->{'inheritsys'}->{$sysid} = 1;
+            }
           }
           else
           {
-            $data->{'inherit'}->{$id} = '' unless $data->{'inherit'}->{$id};
-            $data->{'inherit'}->{$id} .= "$id2\t$sysid\t$attr2\t$reason2\t$attr\t$reason\t$gid\n";
-            $data->{'inheritsys'}->{$sysid} = 1;
+            $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
+            $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$attr/$reason\t$id\tRights\n";
+            $data->{'disallowedsys'}->{$sysid} = 1;
           }
-        }
-        else
-        {
-          $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
-          $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$attr/$reason\t$id\tRights\n";
-          $data->{'disallowedsys'}->{$sysid} = 1;
         }
       }
     }
