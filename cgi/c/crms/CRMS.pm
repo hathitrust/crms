@@ -701,6 +701,7 @@ sub Filter
   my $time = shift;
 
   $time = $self->SimpleSqlGet("SELECT time FROM candidates WHERE id='$id'") unless $time;
+  $time = $self->SimpleSqlGet("SELECT time FROM und WHERE id='$id'") unless $time;
   $time = ($time)? qq{'$time'}:'NULL';
   my $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src',$time)";
   $self->PrepareSubmitSql($sql);
