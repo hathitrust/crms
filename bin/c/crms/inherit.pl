@@ -96,7 +96,7 @@ $delim = "<br/>\n";
 
 if (scalar keys %{$data{'nodups'}})
 {
-  $txt .= "<h4>Volumes single copy/no duplicates</h4>\n";
+  $txt .= sprintf("<h4>Volumes single copy/no duplicates%s</h4>\n", ($candidates)? ' - No Inheritance/Adding to Candidates':'');
   $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th>" .
           "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
   my $n = 0;
@@ -115,7 +115,7 @@ if (scalar keys %{$data{'nodups'}})
 }
 if (scalar keys %{$data{'chron'}})
 {
-  $txt .= "<h4>Volumes skipped because of chron/enum</h4>\n";
+  $txt .= sprintf("<h4>Volumes skipped because of chron/enum%s</h4>\n", ($candidates)? ' - No Inheritance/Adding to Candidates':'');
   $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style='color:blue;'>historical/SysID</span>)</th>" .
           '<th>Volume Checked<br/>(<span style="color:blue;">volume tracking</span>)</th>' .
           '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th>' .
@@ -143,7 +143,7 @@ if (scalar keys %{$data{'chron'}})
 }
 if (scalar keys %{$data{'unneeded'}})
 {
-  $txt .= "<h4>Volumes for which inheritance was unneeded</h4>\n";
+  $txt .= sprintf("<h4>Volumes for which inheritance was unneeded</h4>\n", ($candidates)? ' - No Inheritance/Adding to Candidates':'');
   $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style='color:blue;'>historical/SysID</span>)</th>" .
           '<th>Volume Checked<br/>(<span style="color:blue;">volume tracking</span>)</th>' .
           '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th><th>Rights</th><th>New Rights</th>' .
@@ -196,7 +196,7 @@ if (scalar keys %{$data{'disallowed'}})
 }
 if (scalar keys %{$data{'noexport'}})
 {
-  $txt .= "<h4>Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table</h4>\n";
+  $txt .= "<h4>Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table - No Inheritance/Adding to Candidates</h4>\n";
   $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th>" .
           "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
   my $n = 0;
@@ -215,7 +215,7 @@ if (scalar keys %{$data{'noexport'}})
 }
 if (scalar keys %{$data{'already'}})
 {
-  $txt .= "<h4>Volumes checked, no duplicates with CRMS determination (from June 2010 or later), duplicate volume already in candidates</h4>\n";
+  $txt .= "<h4>Volumes checked, no duplicates with CRMS determination (from June 2010 or later), duplicate volume already in candidates - Filtered from candidates temporarily</h4>\n";
   $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume</th>" .
           '<th>Volume Checked<br/>(<span style="color:blue;">volume tracking</span>)</th>' .
           "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
@@ -240,15 +240,17 @@ if (scalar keys %{$data{'inherit'}})
   my @cols = ('#','Source&nbsp;Volume<br/>(<span style="color:blue;">historical/SysID</span>)',
               'Volume&nbsp;Inheriting<br/>(<span style="color:blue;">volume tracking</span>)',
               'Sys ID<br/>(<span style="color:blue;">catalog</span>)','Rights','New Rights',
-              'Access Change?','Prior CRMS Determination?','Prior Status 5?','Title');
+              'Access Change?');
   if ($candidates)
   {
-    $txt .= '<h4>Volumes where a duplicate w/CRMS determination exists (from June 2010 or later) - inheritance permitted</h4>';
+    $txt .= '<h4>Volumes where a duplicate w/CRMS determination exists (from June 2010 or later) - inheritance permitted -- Not Adding to Candidates - Status 9 Review awaiting approval</h4>';
   }
   else
   {
+    push @cols, ('Prior CRMS Determination?','Prior Status 5?');
     $txt .= '<h4>Volumes for which inheritance was permitted</h4>';
   }
+  push @cols, 'Title';
   $txt .= '<table border="1"><tr><th>' . join('</th><th>', @cols) . "</th></tr>\n";
   my $n = 0;
   foreach my $id (sort keys %{$data{'inherit'}})
@@ -282,8 +284,9 @@ if (scalar keys %{$data{'inherit'}})
       my $ar = "$attr/$reason";
       $change = ($change)? '&nbsp;&nbsp;&nbsp;&#x2713':'';
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
-      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$attr2/$reason2</td><td>$ar</td>" .
-              "<td>$change</td><td>$incrms</td><td>$h5</td><td>$title</td></tr>\n";
+      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$attr2/$reason2</td><td>$ar</td><td>$change</td>";
+      $txt .= "<td>$incrms</td><td>$h5</td>" unless $candidates;
+      $txt .= "<td>$title</td></tr>\n";
       $data{'inheriting'}->{$id2} = 1;
     }
   }
@@ -340,7 +343,7 @@ if ($insert)
       my $sql = "REPLACE INTO inherit (id,attr,reason,gid,src) VALUES ('$id2',$attr2,$reason2,$gid,'$src')";
       #print "$sql\n";
       $crms->PrepareSubmitSql($sql);
-      $crms->Filter($id2, 'duplicate');
+      $crms->Filter($id2, 'duplicate') if $crms->IsVolumeInCandidates($id2);
     }
   }
   if ($candidates)
