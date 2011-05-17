@@ -271,7 +271,7 @@ if (scalar keys %{$data{'inherit'}})
       $icund = 1 if ($attr eq 'ic' || $attr2 eq 'ic');
       $icund = 1 if ($attr eq 'und' || $attr2 eq 'und');
       my $incrms = (($attr2 eq 'ic' && $reason2 eq 'bib') || $reason2 eq 'gfv')? '':'&nbsp;&nbsp;&nbsp;&#x2713';
-      my $h5 = 0;
+      my $h5 = '';
       if ($incrms)
       {
         my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id2' AND time>='2010-06-01 00:00:00' AND status=5";
@@ -282,7 +282,8 @@ if (scalar keys %{$data{'inherit'}})
       my $ar = "$attr/$reason";
       $change = ($change)? '&nbsp;&nbsp;&nbsp;&#x2713':'';
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
-      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$attr2/$reason2</td><td>$ar</td><td>$change</td><td>$incrms</td><td>$h5</td><td>$title</td></tr>\n";
+      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$attr2/$reason2</td><td>$ar</td>" .
+              "<td>$change</td><td>$incrms</td><td>$h5</td><td>$title</td></tr>\n";
       $data{'inheriting'}->{$id2} = 1;
     }
   }
