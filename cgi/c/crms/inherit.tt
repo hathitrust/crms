@@ -36,7 +36,7 @@ Restrict selection:<br/>
 [% crms.InheritanceSelectionMenu('search1', search1, 1) %]
 <input title="Value 1" type="text"  id="search1value" name="search1value" value="[% search1value %]" size="30"/>
 <br/>
-<label for="startDate" style="width:5em;float:left;">Start Date:</label>
+<label for="startDate" style="width:8em;float:left;">Start Export Date:</label>
 <input type="text" id="startDate" name="startDate" value="[% startDate %]" onclick="datePickerController.show('startDate');"
        onblur="datePickerController.hide('startDate');"/>
 <script type="text/javascript">
@@ -47,7 +47,7 @@ Restrict selection:<br/>
 </script>
 <span class="smallText">(YYYY-MM-DD)</span>
 <br/>
-<label for="endDate" style="width:5em;float:left;">End Date:</label>
+<label for="endDate" style="width:8em;float:left;">End Export Date:</label>
 <input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
        onblur="datePickerController.hide('endDate');"/>
 <script type="text/javascript">
@@ -235,7 +235,8 @@ function VerifyDelete(formid)
     <table class="exportStats" style="width:100%;" id="resultsTable">
       <tr>
         <th>#</th>
-        <th>Export&nbsp;Date</th>
+        <th>Export Date</th>
+        <th>Inherit Date</th>
         <th>Source&nbsp;Volume<br/>(<span style="color:[% color_gray %];">historical/SysID</span>)</th>
         <th>Volume&nbsp;Inheriting<br/>(<span style="color:[% color_gray %];">volume tracking</span>)</th>
         <th>System&nbsp;ID<br/>(<span style="color:[% color_gray %];">catalog</span>)</th>
@@ -266,6 +267,7 @@ function VerifyDelete(formid)
         <tr style="background-color:[% active_color %];">
           <td>[% review.i %]</td>
           <td>[% review.date %]</td>
+          <td>[% review.idate %]</td>
           <td><a href='[% crms.LinkToHistorical(review.sysid) %]'target='_blank'>[% review.from %]</a></td>
           <td><a href='[% crms.LinkToRetrieve(review.inheriting) %]' target='_blank'>[% review.inheriting %]</a></td>
           <td><a href='[% crms.LinkToCatalog(review.sysid) %]'target='_blank'>[% review.sysid %]</a></td>

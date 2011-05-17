@@ -2742,6 +2742,15 @@ sub GetStatus
   return $self->SimpleSqlGet( $sql );
 }
 
+sub IsVolumeInCandidates
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $sql = "SELECT COUNT(id) FROM candidates WHERE id='$id'";
+  return ($self->SimpleSqlGet($sql) > 0);
+}
+
 sub IsVolumeInQueue
 {
   my $self = shift;
@@ -7201,12 +7210,12 @@ sub InheritanceSelectionMenu
   my $searchVal = shift;
   my $searchOnly = shift;
   
-  my @keys = ('date','src','id','sysid','prior','change','title','source');
-  my @labs = ('Export Date','Source Volume','Volume Inheriting', 'System ID', 'Prior CRMS Review', 'Access Change', 'Title', 'Source');
+  my @keys = ('date','idate','src','id','sysid','prior','change','title','source');
+  my @labs = ('Export Date','Inherit Date','Source Volume','Volume Inheriting', 'System ID', 'Prior CRMS Review', 'Access Change', 'Title', 'Source');
   if ($searchOnly)
   {
-    @keys = @keys[1..3];
-    @labs = @labs[1..3];
+    @keys = @keys[2..4];
+    @labs = @labs[2..4];
   }
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
@@ -7225,6 +7234,7 @@ sub ConvertToInheritanceSearchTerm
 
   my $new_search = $search;
   $new_search = 'DATE(e.time)' if $search eq 'date';
+  $new_search = 'DATE(i.time)' if $search eq 'idate';
   $new_search = 'e.id' if (!$search || $search eq 'src');
   $new_search = 's.sysid' if $search eq 'sysid';
   $new_search = 'i.id' if $search eq 'id';
@@ -7291,8 +7301,8 @@ sub GetInheritanceRef
   my $of = POSIX::ceil($inheritingVolumes/$pagesize);
   $n = $of if $n > $of;
   my $return = ();
-  $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time),i.src FROM inherit i ' .
-         'LEFT JOIN exportdata e ON i.gid=e.gid ' .
+  $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time),i.src,DATE(i.time) ' .
+         'FROM inherit i LEFT JOIN exportdata e ON i.gid=e.gid ' .
          "LEFT JOIN bibdata b ON e.id=b.id $doS $restrict ORDER BY $order $dir, e.id ASC LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
   $ref = undef;
@@ -7326,6 +7336,7 @@ sub GetInheritanceRef
     my $title = $row->[7];
     my $date = $row->[8];
     my $src = $row->[9];
+    my $idate = $row->[10]; # Date added to inherit table
     $title =~ s/&/&amp;/g;
     my ($pd,$pdus,$icund) = (0,0,0);
     $pd = 1 if ($attr eq 'pd' || $attr2 eq 'pd');
@@ -7354,7 +7365,7 @@ sub GetInheritanceRef
     my %dic = ('i'=>$i, 'inheriting'=>$id, 'sysid'=>$sysid, 'rights'=>"$attr/$reason",
                'newrights'=>"$attr2/$reason2", 'incrms'=>$incrms, 'change'=>$change, 'from'=>$id2,
                'title'=>$title, 'gid'=>$gid, 'date'=>$date, 'summary'=>ucfirst $summary,
-               'src'=>ucfirst $src, 'h5'=>$h5);
+               'src'=>ucfirst $src, 'h5'=>$h5, 'idate'=>$idate);
     push @return, \%dic;
     if ($download)
     {
@@ -7697,7 +7708,7 @@ sub DuplicateVolumesFromCandidates
       elsif ($id2 ne $id && !$data->{'chron'}->{$id})
       {
         my $sql = "SELECT COUNT(*) FROM candidates WHERE id='$id2'";
-        if ($self->SimpleSqlGet($sql))
+        if ($self->SimpleSqlGet($sql) && !$data->{'already'}->{$id2})
         {
           $data->{'already'}->{$id} = '' unless $data->{'already'}->{$id};
           $data->{'already'}->{$id} .= "$id2\t$sysid\n";
