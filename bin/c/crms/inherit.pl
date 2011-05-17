@@ -30,6 +30,7 @@ if it is specified.
 -i         Insert entries in the dev inherit table.
 -m ADDR    Mail the report to ADDR. May be repeated for multiple addresses.
 -p         Run in production.
+-q         Do not emit report (ignored if -m is used).
 -s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
 -v         Emit debugging information.
 END
@@ -40,6 +41,7 @@ my $help;
 my $insert;
 my @mails;
 my $production;
+my $quiet;
 my @singles;
 my $verbose;
 
@@ -51,6 +53,7 @@ die 'Terminating' unless GetOptions(
            'i'    => \$insert,
            'm:s@' => \@mails,
            'p'    => \$production,
+           'q'    => \$quiet,
            's:s@' => \@singles,
            'v+'   => \$verbose);
 $DLPS_DEV = undef if $production;
@@ -391,7 +394,7 @@ if (@mails)
 }
 else
 {
-  print "$txt\n";
+  print "$txt\n" unless $quiet;
 }
 
 
