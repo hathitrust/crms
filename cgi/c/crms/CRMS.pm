@@ -7600,7 +7600,8 @@ sub DuplicateVolumesFromExport
       else
       {
         my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id2,1)->[0]};
-        if ($candidate ne $id && $candidate ne $id2 && $id ne $id2)
+        next if $id eq $id2;
+        if ($candidate ne $id)
         {
           $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
           $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$attr/$reason\t$id\t$candidate has newer review ($candidateTime)\n";
