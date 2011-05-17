@@ -17,7 +17,7 @@ use CRMS;
 use Getopt::Std;
 
 my $usage = <<END;
-USAGE: overnight.pl [-cehmqt]
+USAGE: overnight.pl [-cehmpqt]
 
 Processes reviews, exports determinations, updates candidates,
 updates the queue, and recalculates user stats.
@@ -26,20 +26,23 @@ updates the queue, and recalculates user stats.
 -e       Do not process statuses or export determinations.
 -h       Print this help message.
 -m       Do not recalculate monthly stats.
+-p       Run in production.
 -q       Do not update queue.
 -t       Run in training.
 END
 
 
 my %opts;
-getopts('cehmqt', \%opts);
+getopts('cehmpqt', \%opts);
 my $skipCandidates = $opts{'c'};
 my $skipExport = $opts{'e'};
 my $help = $opts{'h'};
 my $skipMonthly = $opts{'m'};
+my $production = $opts{'p'};
 my $skipQueue = $opts{'q'};
 my $training = $opts{'t'};
 die $usage if $help;
+$DLPS_DEV = undef if $production;
 
 my $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/update_log.txt",
