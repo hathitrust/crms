@@ -703,6 +703,7 @@ sub Filter
   $time = $self->SimpleSqlGet("SELECT time FROM candidates WHERE id='$id'") unless $time;
   $time = $self->SimpleSqlGet("SELECT time FROM und WHERE id='$id'") unless $time;
   $time = ($time)? qq{'$time'}:'NULL';
+  return if $src eq 'duplicate' && $self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id'");
   my $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src',$time)";
   $self->PrepareSubmitSql($sql);
   $sql = "DELETE FROM candidates WHERE id='$id'";
@@ -7601,10 +7602,12 @@ sub DuplicateVolumesFromExport
       {
         my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id2,1)->[0]};
         next if $id eq $id2;
-        if ($candidate ne $id)
+        my $newrights = "$attr/$reason";
+        my $oldrights = "$attr2/$reason2";
+        if ($candidate ne $id && $attr2 ne $attr)
         {
           $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
-          $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$attr/$reason\t$id\t$candidate has newer review ($candidateTime)\n";
+          $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\t$candidate has newer review ($candidateTime)\n";
           $data->{'disallowedsys'}->{$sysid} = 1;
           delete $data->{'unneeded'}->{$id};
           delete $data->{'unneededsys'}->{$sysid};
@@ -7612,14 +7615,13 @@ sub DuplicateVolumesFromExport
           delete $data->{'inheritsys'}->{$sysid};
           #return;
         }
-        elsif ($id2 ne $id && !$data->{'chron'}->{$id})
+        elsif (!$data->{'chron'}->{$id})
         {
-          my $oldrights = "$attr2/$reason2";
           if ($self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%'"))
           {
             my $user = $self->SimpleSqlGet("SELECT user FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%' LIMIT 1");
             $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
-            $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$attr2/$reason2\t$oldrights\t$id\tHas an active review by $user\n";
+            $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tHas an active review by $user\n";
             $data->{'disallowedsys'}->{$sysid} = 1;
           }
           elsif ($okatrr{$oldrights} || ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/))
@@ -7629,7 +7631,7 @@ sub DuplicateVolumesFromExport
             if ($attr2 eq $attr && $reason2 ne 'bib' && $rereps == 0)
             {
               $data->{'unneeded'}->{$id} = '' unless $data->{'unneeded'}->{$id};
-              $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$oldrights\t$attr/$reason\t$id\n";
+              $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\n";
               $data->{'unneededsys'}->{$sysid} = 1;
             }
             else
@@ -7642,7 +7644,7 @@ sub DuplicateVolumesFromExport
           else
           {
             $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
-            $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$attr/$reason\t$id\tRights\n";
+            $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tRights\n";
             $data->{'disallowedsys'}->{$sysid} = 1;
           }
         }
