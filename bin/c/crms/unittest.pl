@@ -71,7 +71,7 @@ is($crms->TwoWorkingDays('2010-07-30'), '2010-08-03 23:59:59',           '2 WDs 
 
 is($crms->GetUserAffiliation('hansone@indiana.edu'), 'IU',               'IU affiliation');
 is($crms->GetUserAffiliation('aseeger@library.wisc.edu'), 'UW',          'UW affiliation');
-is(scalar @{ $crms->GetUsersWithAffiliation('IU') }, 5,                  'IU affiliates count');
+is(scalar @{ $crms->GetUsersWithAffiliation('IU') }, 6,                  'IU affiliates count');
 is(scalar @{ $crms->GetUsersWithAffiliation('UW') }, 5,                  'UW affiliates count');
 
 is($crms->IsReviewCorrect('uc1.b3763822','dfulmer','2009-11-02') ,0,     'Correctness: uc1.b3763822 1');
@@ -124,7 +124,10 @@ ok('' eq
    $crms->ValidateSubmission2('uc1.31822009761677','dmcw123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn expert <63 +ren');
 ok('pd/ncn must include renewal id and renewal date. ' eq
    $crms->ValidateSubmission2('uc1.31822009761677','dmcw123',1,2,undef,undef,undef,undef),     'pd/ncn expert <63 -ren');
-
+my $id = $crms->SimpleSqlGet('SELECT id FROM und WHERE src!="duplicate"');
+$crms->Filter($id, 'duplicate');
+my $src = $crms->SimpleSqlGet("SELECT src FROM und WHERE id='$id'");
+ok($src ne 'duplicate', "Filter($id) preserves src ($src)");
 
 if ($renDate)
 {
