@@ -331,7 +331,7 @@ $header .= sprintf("Unique Sys IDs w/ volumes inheriting rights: %d$delim", scal
 $header .= sprintf("Volumes inheriting rights: %d$delim", scalar keys %{$data{'inheriting'}});
 $txt = $head . $header . $delim . $txt;
 
-if ($insert)
+if ($insert && scalar keys %{$data{'inherit'}})
 {
   $txt .= '<h4>Now inserting inheritance data</h4>';
   my $src = ($candidates)? 'candidates':'export';
