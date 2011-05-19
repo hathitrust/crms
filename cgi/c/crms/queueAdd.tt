@@ -84,7 +84,7 @@ Priority 3 can only be added or reviewed by an expert, admin, or superadmin.<br/
     </tr>
   [% END %]
   [% action = (cgi.param("delete"))? "Deleted":"Added" %]
-  <tr><td colspan="2"><b>$action $adds volume[% (adds == 1)? '':'s' %], skipped $skips, modified $already</b></td></tr></table>
+  <tr><td colspan="2"><b>$action $adds [% crms.Pluralize("volume", adds) %], skipped $skips, modified $already</b></td></tr></table>
 [% END %]
 
 <br/>
@@ -99,7 +99,7 @@ Priority 3 can only be added or reviewed by an expert, admin, or superadmin.<br/
 [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
 [% IF ref.size > 0 %]
   <br/>
-  <h4>[% ref.size %] High-priority Item[% (ref.size == 1)? '':'s' %]</h4>
+  <h4>[% ref.size %] High-priority [% crms.Pluralize("Volume", ref.size) %]</h4>
   <table class="exportStats" style="width:auto;">
   <tr><th>ID</th><th>Title</th><th>Author</th><th>Pub&nbsp;Date</th><th>Added</th><th>Status</th><th>Priority</th><th>Issues</th><th>Historical&nbsp;Reviews</th></tr>
   [% FOREACH r IN ref %]
