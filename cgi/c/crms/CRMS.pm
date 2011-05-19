@@ -6461,8 +6461,9 @@ sub IsReviewCorrect
   my $status  = $row->[5];
   my $time    = $row->[6];
   #print "$attr, $reason, $renNum, $renDate, $expert, $swiss\n";
-  # A non-expert with status 7 is protected rather like Swiss.
+  # A non-expert with status 7/8 (9?) is protected rather like Swiss.
   return 1 if ($status == 7 && !$expert);
+  return 1 if ($status == 8 && !$expert);
   # Get the most recent non-autocrms expert review.
   $sql = "SELECT attr,reason,renNum,renDate,user,swiss FROM historicalreviews WHERE id='$id' AND expert>0 AND time>'$time' ORDER BY time DESC";
   $r = $self->get('dbh')->selectall_arrayref($sql);
@@ -6950,59 +6951,69 @@ sub CRMSQuery
   foreach my $line (@{$rows})
   {
     my ($id2,$chron2,$rights2) = split '__', $line;
-    my @stati = ();
-    my $inQ = $self->IsVolumeInQueue($id2);
-    if ($inQ)
-    {
-      my $status = $self->GetStatus($id2);
-      my $n = $self->CountReviews($id2);
-      my $reviews = $self->Pluralize('review', $n);
-      push @stati, "in Queue (status $status, $n $reviews)";
-    }
-    elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM candidates WHERE id='$id2'"))
-    {
-      push @stati, 'in Candidates';
-    }
-    elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id2' AND (src='no meta' OR src='duplicate')"))
-    {
-      my $src = $self->SimpleSqlGet("SELECT src FROM und WHERE id='$id2'");
-      push @stati, "temporarily filtered ($src)";
-    }
-    elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id2' AND src!='no meta' AND src!='duplicate'"))
-    {
-      my $src = $self->SimpleSqlGet("SELECT src FROM und WHERE id='$id2'");
-      push @stati, "filtered ($src)";
-    }
-    if ($self->SimpleSqlGet("SELECT COUNT(*) FROM exportdata WHERE id='$id2'"))
-    {
-      my $sql = "SELECT attr,reason,DATE(time),src FROM exportdata WHERE id='$id2' ORDER BY time DESC LIMIT 1";
-      my $ref = $self->get('dbh')->selectall_arrayref($sql);
-      my $a = $ref->[0]->[0];
-      my $r = $ref->[0]->[1];
-      my $t = $ref->[0]->[2];
-      my $src = $ref->[0]->[3];
-      #$t = $self->FormatDate($t);
-      my $action = ($src eq 'inherited')? ' (inherited)':'';
-      push @stati, "exported$action $a/$r $t";
-    }
-    #else
-    {
-      my $n = $self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id2' AND legacy=1");
-      my $reviews = $self->Pluralize('review', $n);
-      push @stati, "$n legacy $reviews" if $n;
-    }
-    if ($self->SimpleSqlGet("SELECT COUNT(*) FROM inherit WHERE id='$id2'"))
-    {
-      my $sql = "SELECT e.id,e.attr,e.reason FROM exportdata e INNER JOIN inherit i ON e.gid=i.gid WHERE i.id='$id2'";
-      my $ref = $self->get('dbh')->selectall_arrayref($sql);
-      my $src = $ref->[0]->[0];
-      my $a = $ref->[0]->[1];
-      my $r = $ref->[0]->[2];
-      push @stati, "inheriting $a/$r from $src";
-    }
-    push @ids, $id2 . '__' . $title . '__' . ucfirst join '; ', @stati;
+    
+    push @ids, $id2 . '__' . $title . '__' . $self->GetTrackingInfo($id2, 1);
   }
   return \@ids;
+}
+
+sub GetTrackingInfo
+{
+  my $self    = shift;
+  my $id      = shift;
+  my $inherit = shift;
+  
+  my @stati = ();
+  my $inQ = $self->IsVolumeInQueue($id);
+  if ($inQ)
+  {
+    my $status = $self->GetStatus($id);
+    my $n = $self->CountReviews($id);
+    my $reviews = $self->Pluralize('review', $n);
+    push @stati, "in Queue (status $status, $n $reviews)";
+  }
+  elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM candidates WHERE id='$id'"))
+  {
+    push @stati, 'in Candidates';
+  }
+  elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id' AND (src='no meta' OR src='duplicate')"))
+  {
+    my $src = $self->SimpleSqlGet("SELECT src FROM und WHERE id='$id'");
+    push @stati, "temporarily filtered ($src)";
+  }
+  elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id' AND src!='no meta' AND src!='duplicate'"))
+  {
+    my $src = $self->SimpleSqlGet("SELECT src FROM und WHERE id='$id'");
+    push @stati, "filtered ($src)";
+  }
+  if ($self->SimpleSqlGet("SELECT COUNT(*) FROM exportdata WHERE id='$id'"))
+  {
+    my $sql = "SELECT attr,reason,DATE(time),src FROM exportdata WHERE id='$id' ORDER BY time DESC LIMIT 1";
+    my $ref = $self->get('dbh')->selectall_arrayref($sql);
+    my $a = $ref->[0]->[0];
+    my $r = $ref->[0]->[1];
+    my $t = $ref->[0]->[2];
+    my $src = $ref->[0]->[3];
+    #$t = $self->FormatDate($t);
+    my $action = ($src eq 'inherited')? ' (inherited)':'';
+    push @stati, "exported$action $a/$r $t";
+  }
+  #else
+  {
+    my $n = $self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id' AND legacy=1");
+    my $reviews = $self->Pluralize('review', $n);
+    push @stati, "$n legacy $reviews" if $n;
+  }
+  if ($inherit && $self->SimpleSqlGet("SELECT COUNT(*) FROM inherit WHERE id='$id'"))
+  {
+    my $sql = "SELECT e.id,e.attr,e.reason FROM exportdata e INNER JOIN inherit i ON e.gid=i.gid WHERE i.id='$id'";
+    my $ref = $self->get('dbh')->selectall_arrayref($sql);
+    my $src = $ref->[0]->[0];
+    my $a = $ref->[0]->[1];
+    my $r = $ref->[0]->[2];
+    push @stati, "inheriting $a/$r from $src";
+  }
+  return ucfirst join '; ', @stati;
 }
 
 sub Pluralize
@@ -7211,13 +7222,16 @@ sub InheritanceSelectionMenu
   my $searchVal = shift;
   my $searchOnly = shift;
   
-  my @keys = ('date','idate','src','id','sysid','prior','change','title','source');
-  my @labs = ('Export Date','Inherit Date','Source Volume','Volume Inheriting', 'System ID', 'Prior CRMS Review', 'Access Change', 'Title', 'Source');
-  if ($searchOnly)
-  {
-    @keys = @keys[2..4];
-    @labs = @labs[2..4];
-  }
+  my @keys = ('date','idate','src','id','sysid','change','prior','prior5','title');
+  my @labs = ('Export Date','Inherit Date','Source Volume','Volume Inheriting','System ID','Access Change',
+              'Prior CRMS Determination','Prior Status 5 Determination','Title');
+  #if ($searchOnly)
+  #{
+  #  @keys = @keys[2..4];
+  #  @labs = @labs[2..4];
+  #}
+  push @keys, 'source';
+  push @labs, 'Source';
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
@@ -7239,8 +7253,9 @@ sub ConvertToInheritanceSearchTerm
   $new_search = 'e.id' if (!$search || $search eq 'src');
   $new_search = 's.sysid' if $search eq 'sysid';
   $new_search = 'i.id' if $search eq 'id';
-  $new_search = 'i.reason!=1' if $search eq 'prior';
   $new_search = '(i.attr=1 && (e.attr="ic" || e.attr="und") || (e.attr="pd" && (i.attr=2 || i.attr=5)))' if $search eq 'change';
+  $new_search = 'IF(i.reason!=1 && i.reason!=12,"1","0")' if $search eq 'prior';
+  $new_search = 'IF((SELECT COUNT(*) FROM historicalreviews WHERE id=i.id AND status=5)>1,"1","0")' if $search eq 'prior5';
   $new_search = 'b.title' if $search eq 'title';
   $new_search = 'i.src' if $search eq 'source';
   return $new_search;
@@ -7283,7 +7298,7 @@ sub GetInheritanceRef
   my $doS = ($search1 eq 's.sysid' || $order eq 's.sysid')? ' LEFT JOIN system s ON s.id=e.id ':'';
   push @rest, "DATE(e.time) >= '$startDate'" if $startDate;
   push @rest, "DATE(e.time) <= '$endDate'" if $endDate;
-  push @rest, "$search1 $tester1 '$search1Value'" if $search1Value;
+  push @rest, "$search1 $tester1 '$search1Value'" if $search1Value or $search1Value eq '0';
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
   my $sql = 'SELECT COUNT(DISTINCT e.id),COUNT(DISTINCT i.id) FROM inherit i ' .
             'LEFT JOIN exportdata e ON i.gid=e.gid ' .
