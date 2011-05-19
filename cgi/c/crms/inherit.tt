@@ -157,7 +157,7 @@ function VerifyDelete(formid)
   [% END %]
 [% END %]
 [% IF cgi.param('inherit') || cgi.param('delete') %]
-  <h4>Modified [% i %] item[% (i == 1)? '':'s' %]</h4><br/>
+  <h4>Modified [% i %] [% crms.Pluralize("item", i) %]</h4><br/>
 [% END %]
 
 
@@ -246,7 +246,7 @@ function VerifyDelete(formid)
         <th>Prior CRMS<br/>Determination?</th>
         <th>Prior Status 5<br/>Determination?</th>
         <th style="text-align:center;">Title</th>
-        <th>Queue Info</th>
+        <th>Tracking Info</th>
         <th>Source</th>
         <th>Select</th>
       </tr>
@@ -277,7 +277,7 @@ function VerifyDelete(formid)
           <td>[% (review.incrms==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
           <td>[% (review.h5==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
           <td>[% review.title %]</td>
-          <td>[% review.summary %]</td>
+          <td>[% crms.GetTrackingInfo(review.inheriting) %]</td>
           <td>[% review.src %]</td>
           <td align="center">
             <input type="checkbox" name="vol_[% review.inheriting %]"/>
