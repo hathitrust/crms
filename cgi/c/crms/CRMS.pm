@@ -7410,7 +7410,6 @@ sub DeleteInheritance
   return 'skip' unless $self->SimpleSqlGet("SELECT COUNT(*) FROM inherit WHERE id='$id'");
   $self->PrepareSubmitSql("UPDATE inherit SET del=1 WHERE id='$id'");
   $self->Unfilter($id);
-  $self->Unfilter($_) for $self->GetDuplicates($id);
   return 0;
 }
 
