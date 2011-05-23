@@ -243,8 +243,8 @@ function VerifyDelete(formid)
         <th>Rights</th>
         <th>New&nbsp;Rights</th>
         <th>Access<br/>Change?</th>
-        <th>Prior CRMS<br/>Determination?</th>
-        <th>Prior Status 5<br/>Determination?</th>
+        <th>Prior CRMS<br/>Determ?</th>
+        <th>Prior Status 5<br/>Determ?</th>
         <th style="text-align:center;">Title</th>
         <th>Tracking Info</th>
         <th>Source</th>
