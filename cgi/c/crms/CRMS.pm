@@ -7363,7 +7363,7 @@ sub GetInheritanceRef
     my $h5 = undef;
     if ($incrms)
     {
-      my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id' AND time>='2010-06-01 00:00:00' AND status=5";
+      my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id' AND status=5";
       $h5 = 1 if $self->SimpleSqlGet($sql) > 0;
     }
     my $change = (($pd == 1 && $icund == 1) || ($pd == 1 && $pdus == 1) || ($icund == 1 && $pdus == 1));
