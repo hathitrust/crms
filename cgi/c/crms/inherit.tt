@@ -286,6 +286,7 @@ function VerifyDelete(formid)
         [% prev_id = review.from %]
       [% END %]
     </table>
+    <p><b>Found $inheriting volume[% (inheriting==1)? "":"s"%] from $source source[% (source==1)? "":"s"%], page $n of $of</b></p>
     [% IF doPrev %]
       [% prev = n - 1 %]
       <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=$prev&amp;records=$recs">
