@@ -286,6 +286,39 @@ function VerifyDelete(formid)
         [% prev_id = review.from %]
       [% END %]
     </table>
+    [% IF doPrev %]
+      [% prev = n - 1 %]
+      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=$prev&amp;records=$recs">
+    [% ELSE %]
+      <span class="disabledLink">
+    [% END %]
+    previous [% recs %]
+    [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
+    &nbsp;||&nbsp;
+    [% IF doNext %]
+      [% next = n + 1 %]
+      <a href="?p=$p&amp;id=$id&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=$next&amp;records=$recs">
+    [% ELSE %]
+      <span class="disabledLink">
+    [% END %]
+    next [% recs %]
+    [% IF doNext %]</a>[% ELSE %]</span>[% END %]
+    &nbsp;||&nbsp;
+    [% IF doPrev %]
+      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=1&amp;records=$recs">
+    [% ELSE %]
+      <span class="disabledLink">
+    [% END %]
+    first page
+    [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
+    &nbsp;||&nbsp;
+    [% IF doNext %]
+      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=$of&amp;records=$recs">
+    [% ELSE %]
+      <span class="disabledLink">
+    [% END %]
+    last page
+    [% IF doNext %]</a>[% ELSE %]</span>[% END %]
   </form>
 [% ELSE %]
   <h4>No results found.</h4>
