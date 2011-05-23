@@ -6970,13 +6970,14 @@ sub GetTrackingInfo
     my $status = $self->GetStatus($id);
     my $n = $self->CountReviews($id);
     my $reviews = $self->Pluralize('review', $n);
-    push @stati, "in Queue (status $status, $n $reviews)";
+    my $pri = $self->GetPriority($id);
+    push @stati, "in Queue (P$pri, status $status, $n $reviews)";
   }
   elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM candidates WHERE id='$id'"))
   {
     push @stati, 'in Candidates';
   }
-  elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id' AND (src='no meta' OR src='duplicate')"))
+  if ($self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id' AND (src='no meta' OR src='duplicate')"))
   {
     my $src = $self->SimpleSqlGet("SELECT src FROM und WHERE id='$id'");
     push @stati, "temporarily filtered ($src)";
