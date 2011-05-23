@@ -128,6 +128,14 @@ my $id = $crms->SimpleSqlGet('SELECT id FROM und WHERE src!="duplicate"');
 $crms->Filter($id, 'duplicate');
 my $src = $crms->SimpleSqlGet("SELECT src FROM und WHERE id='$id'");
 ok($src ne 'duplicate', "Filter($id) preserves src ($src)");
+ok('volumes' eq $crms->Pluralize('volume',0), 'pluralize 0');
+ok('volume' eq $crms->Pluralize('volume',1), 'pluralize 1');
+ok('volumes' eq $crms->Pluralize('volume',2), 'pluralize 2');
+is($crms->IsReviewCorrect('chi.22682760','lnachreiner@library.wisc.edu','2010-11-02 14:45:00'), 1, 'status 8 validation 1');
+is($crms->IsReviewCorrect('chi.22682760','s-zuri@umn.edu','2010-11-02 14:02:51'), 1, 'status 8 validation 2');
+is($crms->IsReviewCorrect('coo.31924002832313','dfulmer','2011-01-13 12:00:37'), 1, 'status 8 validation 3');
+is($crms->IsReviewCorrect('coo.31924002832313','s-zuri@umn.edu','2011-01-13 11:13:57'), 1, 'status 8 validation 4');
+
 
 if ($renDate)
 {
