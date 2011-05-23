@@ -6461,7 +6461,7 @@ sub IsReviewCorrect
   my $status  = $row->[5];
   my $time    = $row->[6];
   #print "$attr, $reason, $renNum, $renDate, $expert, $swiss\n";
-  # A non-expert with status 7/8 (9?) is protected rather like Swiss.
+  # A non-expert with status 7/8 is protected rather like Swiss.
   return 1 if ($status == 7 && !$expert);
   return 1 if ($status == 8 && !$expert);
   # Get the most recent non-autocrms expert review.
@@ -7527,7 +7527,7 @@ sub LinkToHistorical
   my $self  = shift;
   my $sysid = shift;
   
-  return "https://quod.lib.umich.edu/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid";
+  return "/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid";
 }
 
 sub LinkToRetrieve
@@ -7535,8 +7535,7 @@ sub LinkToRetrieve
   my $self  = shift;
   my $sysid = shift;
   
-  #return "https://quod.lib.umich.edu/cgi/c/crms/crms?p=track;query=$sysid";
-  return "https://dev.umdl.umich.edu/cgi/c/crms/crms?p=track;query=$sysid";
+  return "/cgi/c/crms/crms?p=track;query=$sysid";
 }
 
 sub LinkToMirlynDetails
