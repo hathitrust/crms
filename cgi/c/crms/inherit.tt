@@ -22,8 +22,8 @@
 [% END %]
 
 [% IF NOT dir %]
-  [% dir = 'ASC' %]
-  [% blah = cgi.param('dir', 'ASC') %]
+  [% dir = 'DESC' %]
+  [% blah = cgi.param('dir', 'DESC') %]
 [% END %]
 <br/>
 <div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
@@ -173,8 +173,6 @@ function VerifyDelete(formid)
   <br/>
 [% END %]
 
-
-
 [% ref = crms.GetInheritanceRef(order,dir,search1,search1value,startDate,endDate,n,recs) %]
 [% inheriting = ref.inheriting %]
 [% source = ref.source %]
@@ -189,6 +187,9 @@ function VerifyDelete(formid)
     <input type="submit" name="inherit" value="Inherit from Selected Volumes"/>
     <input type="submit" name="delete" value="Delete Selected Volumes" onclick="return VerifyDelete('checks');"/>
     <br/><br/>
+    <span class="smallishText"><i>Note: Tracking Info only reports on events that are represented inside the CRMS.
+    Events that resulted in a CRMS-style determination but were done outside the CRMS and are not represented
+    as legacy reviews will not be reported here.</i></span>
     <p><b>Found $inheriting volume[% (inheriting==1)? "":"s"%] from $source source[% (source==1)? "":"s"%], page $n of $of</b></p>
 
     [% doPrev = (n > 1) %]
@@ -246,7 +247,7 @@ function VerifyDelete(formid)
         <th>Prior<br/>CRMS<br/>Determ?</th>
         <th>Prior<br/>Status 5<br/>Determ?</th>
         <th style="text-align:center;">Title</th>
-        <th>Tracking Info</th>
+        <th>Tracking Info (see note)</th>
         <th>Source</th>
         <th>Select</th>
       </tr>
