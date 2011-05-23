@@ -189,7 +189,9 @@ function VerifyDelete(formid)
     <br/><br/>
     <span class="smallishText"><i>Note: Tracking Info only reports on events that are represented inside the CRMS.
     Events that resulted in a CRMS-style determination but were done outside the CRMS and are not represented
-    as legacy reviews will not be reported here.</i></span>
+    as legacy reviews will not be reported here.<br/>
+    See the "Rights" and "Prior CRMS Determ" columns for additional information.
+    </i></span>
     <p><b>Found $inheriting volume[% (inheriting==1)? "":"s"%] from $source source[% (source==1)? "":"s"%], page $n of $of</b></p>
 
     [% doPrev = (n > 1) %]
