@@ -253,7 +253,7 @@ if (scalar keys %{$data{'inherit'}})
     push @cols, ('Prior CRMS Determination?','Prior Status 5?');
     $txt .= '<h4>Volumes for which inheritance was permitted</h4>';
   }
-  push @cols, 'Title';
+  push @cols, 'Title','Tracking';
   $txt .= '<table border="1"><tr><th>' . join('</th><th>', @cols) . "</th></tr>\n";
   my $n = 0;
   foreach my $id (sort keys %{$data{'inherit'}})
@@ -286,10 +286,11 @@ if (scalar keys %{$data{'inherit'}})
       #print "$change from $pd and $icund ($attr,$attr2)\n";
       my $ar = "$attr/$reason";
       $change = ($change)? '&nbsp;&nbsp;&nbsp;&#x2713':'';
+      my $tracking = $crms->GetTrackingInfo($id2);
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
       $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$attr2/$reason2</td><td>$ar</td><td>$change</td>";
       $txt .= "<td>$incrms</td><td>$h5</td>" unless $candidates;
-      $txt .= "<td>$title</td></tr>\n";
+      $txt .= "<td>$title</td><td>$tracking</td></tr>\n";
       $data{'inheriting'}->{$id2} = 1;
     }
   }
