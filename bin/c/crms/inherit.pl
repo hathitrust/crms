@@ -110,7 +110,7 @@ if (scalar keys %{$data{'nodups'}})
     {
       $n++;
       my $htCatLink = $crms->LinkToCatalog($sysid);
-      my $retrLink = $crms->LinkToRetrieve($sysid);
+      my $retrLink = $crms->LinkToRetrieve($sysid,1);
       $txt .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$id</a></td><td><a href='$htCatLink' target='_blank'>$sysid</a></td></tr>\n";
     }
   }
@@ -135,8 +135,8 @@ if (scalar keys %{$data{'chron'}})
       $n++;
       my ($id2,$sysid) = split "\t", $line;
       my $htCatLink = $crms->LinkToCatalog($sysid);
-      my $retrLink = $crms->LinkToRetrieve($sysid);
-      my $histLink = $crms->LinkToHistorical($sysid);
+      my $retrLink = $crms->LinkToRetrieve($sysid,1);
+      my $histLink = $crms->LinkToHistorical($sysid,1);
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td>" .
               "<td><a href='$retrLink' target='_blank'>$id2</a></td>\n";
       $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$title</td></tr>\n";
@@ -163,8 +163,8 @@ if (scalar keys %{$data{'unneeded'}})
       $n++;
       my ($id2,$sysid,$c,$d,$e) = split "\t", $line;
       my $htCatLink = $crms->LinkToCatalog($sysid);
-      my $retrLink = $crms->LinkToRetrieve($sysid);
-      my $histLink = $crms->LinkToHistorical($sysid);
+      my $retrLink = $crms->LinkToRetrieve($sysid,1);
+      my $histLink = $crms->LinkToHistorical($sysid,1);
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$e</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
       $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$title</td></tr>\n";
     }
@@ -189,8 +189,8 @@ if (scalar keys %{$data{'disallowed'}})
       $n++;
       my ($id2,$sysid,$c,$d,$e,$note) = split "\t", $line;
       my $htCatLink = $crms->LinkToCatalog($sysid);
-      my $retrLink = $crms->LinkToRetrieve($sysid);
-      my $histLink = $crms->LinkToHistorical($sysid);
+      my $retrLink = $crms->LinkToRetrieve($sysid,1);
+      my $histLink = $crms->LinkToHistorical($sysid,1);
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
       $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$note</td><td>$title</td></tr>\n";
     }
@@ -210,7 +210,7 @@ if (scalar keys %{$data{'noexport'}})
     {
       $n++;
       my $htCatLink = $crms->LinkToCatalog($sysid);
-      my $retrLink = $crms->LinkToRetrieve($sysid);
+      my $retrLink = $crms->LinkToRetrieve($sysid,1);
       $txt .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$id</a></td><td><a href='$htCatLink' target='_blank'>$sysid</a></td></tr>\n";
     }
   }
@@ -231,7 +231,7 @@ if (scalar keys %{$data{'already'}})
       $n++;
       my ($id2,$sysid) = split "\t", $line;
       my $htCatLink = $crms->LinkToCatalog($sysid);
-      my $retrLink = $crms->LinkToRetrieve($sysid);
+      my $retrLink = $crms->LinkToRetrieve($sysid,1);
       $txt .= "<tr><td>$n</td><td>$id2</td><td><a href='$retrLink' target='_blank'>$id</a></td><td><a href='$htCatLink' target='_blank'>$sysid</a></td></tr>\n";
     }
   }
@@ -250,7 +250,7 @@ if (scalar keys %{$data{'inherit'}})
   }
   else
   {
-    push @cols, ('Prior CRMS Determination?','Prior Status 5?');
+    push @cols, ('Prior<br/>CRMS<br/>Determ?','Prior<br/>Status 5<br/>Determ?');
     $txt .= '<h4>Volumes for which inheritance was permitted</h4>';
   }
   push @cols, 'Title','Tracking';
@@ -268,8 +268,8 @@ if (scalar keys %{$data{'inherit'}})
       $n++;
       my $catLink = "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
       my $htCatLink = $crms->LinkToCatalog($sysid);
-      my $histLink = $crms->LinkToHistorical($sysid);
-      my $retrLink = $crms->LinkToRetrieve($sysid);
+      my $histLink = $crms->LinkToHistorical($sysid,1);
+      my $retrLink = $crms->LinkToRetrieve($sysid,1);
       my ($pd,$pdus,$icund) = (0,0,0);
       $pd = 1 if ($attr eq 'pd' || $attr2 eq 'pd');
       $pdus = 1 if ($attr eq 'pdus' || $attr2 eq 'pdus');
@@ -279,7 +279,7 @@ if (scalar keys %{$data{'inherit'}})
       my $h5 = '';
       if ($incrms)
       {
-        my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id2' AND time>='2010-06-01 00:00:00' AND status=5";
+        my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id2' AND status=5";
         $h5 = '&nbsp;&nbsp;&nbsp;&#x2713' if $crms->SimpleSqlGet($sql);
       }
       my $change = (($pd == 1 && $icund == 1) || ($pd == 1 && $pdus == 1) || ($icund == 1 && $pdus == 1));

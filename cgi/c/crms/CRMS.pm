@@ -7103,6 +7103,22 @@ sub WhereAmI
   }
 }
 
+sub SelfURL
+{
+  my $self = shift;
+
+  my $url = 'https://';
+  my $dev = $self->get('dev');
+  if ($dev)
+  {
+    if ($dev eq 'crmstest') {$url .= 'crmstest.dev.umdl.umich.edu';}
+    elsif ($dev eq 'moseshll') {$url .= 'moseshll.dev.umdl.umich.edu';}
+    else {$url .= 'dev.umdl.umich.edu';}
+  }
+  else {$url .= 'quod.lib.umich.edu';}
+  return $url;
+}
+
 sub IsTrainingArea
 {
   my $self = shift;
@@ -7228,8 +7244,8 @@ sub InheritanceSelectionMenu
               'Prior CRMS Determination','Prior Status 5 Determination','Title');
   #if ($searchOnly)
   #{
-  #  @keys = @keys[2..4];
-  #  @labs = @labs[2..4];
+  #  @keys = @keys[2..8];
+  #  @labs = @labs[2..8];
   #}
   push @keys, 'source';
   push @labs, 'Source';
@@ -7271,11 +7287,13 @@ sub GetInheritanceRef
   my $search1Value = shift;
   my $startDate    = shift;
   my $endDate      = shift;
+  #my $dateType     = shift;
   my $n            = shift;
   my $pagesize     = shift;
   my $download     = shift;
   
   $n = 1 unless $n;
+  #$dateType = 'date' unless $dateType;
   my $offset = 0;
   $offset = ($n - 1) * $pagesize;
   #print("GetInheritanceRef('$order','$dir','$search1','$search1Value','$startDate','$endDate','$offset','$pagesize','$download');<br/>\n");
@@ -7297,8 +7315,10 @@ sub GetInheritanceRef
     $tester1 = $1;
   }
   my $doS = ($search1 eq 's.sysid' || $order eq 's.sysid')? ' LEFT JOIN system s ON s.id=e.id ':'';
-  push @rest, "DATE(e.time) >= '$startDate'" if $startDate;
-  push @rest, "DATE(e.time) <= '$endDate'" if $endDate;
+  #my $datesrc = ($dateType eq 'date')? 'DATE(e.time)':'DATE(i.time)';
+  my $datesrc = 'DATE(e.time)';
+  push @rest, "$datesrc >= '$startDate'" if $startDate;
+  push @rest, "$datesrc <= '$endDate'" if $endDate;
   push @rest, "$search1 $tester1 '$search1Value'" if $search1Value or $search1Value eq '0';
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
   my $sql = 'SELECT COUNT(DISTINCT e.id),COUNT(DISTINCT i.id) FROM inherit i ' .
@@ -7540,16 +7560,22 @@ sub LinkToHistorical
 {
   my $self  = shift;
   my $sysid = shift;
-  
-  return "/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid";
+  my $full  = shift;
+
+  my $url = "/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid";
+  $url = $self->SelfURL() . $url if $full;
+  return $url;
 }
 
 sub LinkToRetrieve
 {
   my $self  = shift;
   my $sysid = shift;
-  
-  return "/cgi/c/crms/crms?p=track;query=$sysid";
+  my $full  = shift;
+
+  my $url = "/cgi/c/crms/crms?p=track;query=$sysid";
+  $url = $self->SelfURL() . $url if $full;
+  return $url;
 }
 
 sub LinkToMirlynDetails
