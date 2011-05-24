@@ -7005,7 +7005,7 @@ sub GetTrackingInfo
     my $reviews = $self->Pluralize('review', $n);
     push @stati, "$n legacy $reviews" if $n;
   }
-  if ($inherit && $self->SimpleSqlGet("SELECT COUNT(*) FROM inherit WHERE id='$id'"))
+  if ($inherit && $self->SimpleSqlGet("SELECT COUNT(*) FROM inherit WHERE id='$id' AND del=0"))
   {
     my $sql = "SELECT e.id,e.attr,e.reason FROM exportdata e INNER JOIN inherit i ON e.gid=i.gid WHERE i.id='$id'";
     my $ref = $self->get('dbh')->selectall_arrayref($sql);
