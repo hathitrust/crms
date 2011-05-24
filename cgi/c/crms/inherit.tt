@@ -3,6 +3,7 @@
 [% search1value = cgi.param("search1value") %]
 [% startDate = cgi.param('startDate') %]
 [% endDate = cgi.param('endDate') %]
+[%# dateType = cgi.param('dateType') %]
 [% order = cgi.param('order') %]
 [% dir = cgi.param('dir') %]
 [% recs = cgi.param('records') %]
@@ -31,33 +32,50 @@
 <form id="select" action="crms">
 <input type="hidden" name="p" value="$page"/>
 
-Restrict selection:<br/>
+Restrict selection:
+<div style="position:absolute;top:0.5em;right:0.5em;">
+  <a class="tip" href="#">
+    <img style="border:0px solid;" width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
+    <span>
+    <strong>Access Change</strong> - Either <b>0</b> (unchecked) or <b>1</b> (checked)<br/>
+    <strong>Prior CRMS Determination</strong> - Either <b>0</b> (unchecked) or <b>1</b> (checked)<br/>
+    <strong>Prior Status 5 Determination</strong> - Either <b>0</b> (unchecked) or <b>1</b> (checked)<br/>
+    <strong>Source</strong> - Either <b>Candidates</b> or <b>Export</b><br/>
+    </span>
+  </a>
+</div>
+
+<br/>
 
 [% crms.InheritanceSelectionMenu('search1', search1, 1) %]
-<input title="Value 1" type="text"  id="search1value" name="search1value" value="[% search1value %]" size="30"/>
-<br/>
-<label for="startDate" style="width:8em;float:left;">Start Export Date:</label>
-<input type="text" id="startDate" name="startDate" value="[% startDate %]" onclick="datePickerController.show('startDate');"
-       onblur="datePickerController.hide('startDate');"/>
-<script type="text/javascript">
-// <![CDATA[
-  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
-  datePickerController.createDatePicker(opts);
-// ]]>
-</script>
-<span class="smallText">(YYYY-MM-DD)</span>
-<br/>
-<label for="endDate" style="width:8em;float:left;">End Export Date:</label>
-<input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
-       onblur="datePickerController.hide('endDate');"/>
-<script type="text/javascript">
-// <![CDATA[
-  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };       
-  datePickerController.createDatePicker(opts);
-// ]]>
-</script>
-<span class="smallText">(YYYY-MM-DD)</span>
-<br/>
+  <input title="Value 1" type="text"  id="search1value" name="search1value" value="[% search1value %]" size="30"/>
+  <br/>
+
+  <label for="startDate" style="width:8em;float:left;">Start Export Date:</label>
+  <input type="text" id="startDate" name="startDate" value="[% startDate %]" onclick="datePickerController.show('startDate');"
+         onblur="datePickerController.hide('startDate');"/>
+  <script type="text/javascript">
+  // <![CDATA[
+    var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
+    datePickerController.createDatePicker(opts);
+  // ]]>
+  </script>
+  <span class="smallText">(YYYY-MM-DD)</span>
+  <br/>
+  <label for="endDate" style="width:8em;float:left;">End Export Date:</label>
+  <input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
+         onblur="datePickerController.hide('endDate');"/>
+  <script type="text/javascript">
+  // <![CDATA[
+    var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };       
+    datePickerController.createDatePicker(opts);
+  // ]]>
+  </script>
+  <span class="smallText">(YYYY-MM-DD)</span>
+  <br/>
+
+<!--<input type="radio" name="dateType" value="date"/> Export Date<br/>-->
+<!--<input type="radio" name="dateType" value="idate" checked="checked"/> Inerit Date<br/>-->
 
 <label for="order">Order by:</label>
 [% crms.InheritanceSelectionMenu('order', order) %]
