@@ -7402,6 +7402,17 @@ sub GetInheritanceRef
   return $data;
 }
 
+sub IsFiltered
+{
+  my $self = shift;
+  my $id   = shift;
+  my $src  = shift;
+  
+  my $sql = "SELECT COUNT(*) FROM und WHERE id='$id'";
+  $sql .= " AND src='$src'" if $src;
+  return $self->SimpleSqlGet($sql);
+}
+
 sub DeleteInheritance
 {
   my $self = shift;
@@ -7410,7 +7421,9 @@ sub DeleteInheritance
   return 'skip' if $self->SimpleSqlGet("SELECT COUNT(*) FROM inherit WHERE id='$id' AND del=1");
   return 'skip' unless $self->SimpleSqlGet("SELECT COUNT(*) FROM inherit WHERE id='$id'");
   $self->PrepareSubmitSql("UPDATE inherit SET del=1 WHERE id='$id'");
-  $self->Unfilter($id);
+  # Only unfilter if the und src is 'duplicate' because duplicate filtration
+  # does not override other sources like gfv
+  $self->Unfilter($id) if $self->IsFiltered($id, 'duplicate');
   return 0;
 }
 
