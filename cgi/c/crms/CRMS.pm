@@ -7314,7 +7314,7 @@ sub GetInheritanceRef
     $search1Value = $2;
     $tester1 = $1;
   }
-  my $doS = ($search1 eq 's.sysid' || $order eq 's.sysid')? ' LEFT JOIN system s ON s.id=e.id ':'';
+  my $doS = ' LEFT JOIN system s ON s.id=e.id ';
   #my $datesrc = ($dateType eq 'date')? 'DATE(e.time)':'DATE(i.time)';
   my $datesrc = 'DATE(e.time)';
   push @rest, "$datesrc >= '$startDate'" if $startDate;
@@ -7340,7 +7340,7 @@ sub GetInheritanceRef
   my $return = ();
   $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time),i.src,DATE(i.time) ' .
          'FROM inherit i LEFT JOIN exportdata e ON i.gid=e.gid ' .
-         "LEFT JOIN bibdata b ON e.id=b.id $doS $restrict ORDER BY $order $dir, e.id ASC LIMIT $offset, $pagesize";
+         "LEFT JOIN bibdata b ON e.id=b.id $doS $restrict ORDER BY $order $dir, s.sysid ASC LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
   $ref = undef;
   eval {

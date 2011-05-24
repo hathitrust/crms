@@ -9,7 +9,7 @@
 [% recs = cgi.param('records') %]
 [% n = cgi.param('n') %]
 [% IF NOT search1 %][% search1 = 'src' %][% END %]
-[% IF NOT order %][% order = 'src' %][% END %]
+[% IF NOT order %][% order = 'idate' %][% END %]
 
 [% INCLUDE header.tt %]
 
