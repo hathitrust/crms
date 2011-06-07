@@ -656,12 +656,9 @@ sub CheckAndLoadItemIntoCandidates
     print "Skip $id -- already in historical reviews\n";
     return;
   }
-  my $sysid = $self->BarcodeToId($id);
-  my $record;
-  $record = $self->GetMetadata($sysid) if $sysid;
+  my $record = $self->GetMetadata($id);
   if (!$record)
   {
-    $self->ClearErrors() if 2 >= scalar @{$self->GetErrors()};
     print "No metadata yet for $id: will try again tomorrow.\n";
     if (0 == $self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id'"))
     {
@@ -682,7 +679,6 @@ sub CheckAndLoadItemIntoCandidates
     }
     else
     {
-      #$self->CheckCandidateRightsInheritance($id, $sysid);
       $self->AddItemToCandidates($id, $time, $record);
       $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
     }
@@ -5137,17 +5133,7 @@ sub UpdateTitle
     ## my $ti = $self->GetMarcDatafield( $id, "245", "a");
     $title = $self->GetRecordTitle( $id, $record );
   }
-  if ($self->Mojibake($title))
-  {
-    $self->Logit("$0: Mojibake title <<$title>> for $id!\n");
-    $self->Logit($self->HexDump($title));
-  }
   my $tiq = $self->get('dbh')->quote( $title );
-  if ($self->Mojibake($tiq))
-  {
-    $self->Logit("$0: Mojibake quoted title <<$tiq>> for $id!\n");
-    $self->Logit($self->HexDump($tiq));
-  }
   my $sql = "SELECT COUNT(*) FROM bibdata WHERE id='$id'";
   my $count = $self->SimpleSqlGet( $sql );
   $sql = qq{ UPDATE bibdata SET title=$tiq WHERE id="$id"};
@@ -5215,20 +5201,12 @@ sub UpdateAuthor
     $self->SetError("Trying to update author for empty volume id!\n");
     $self->Logit("$0: trying to update author for empty volume id!\n");
   }
-  $author = $self->GetRecordAuthor( $id, $record ) unless $author;
-  if ($self->Mojibake($author))
-  {
-    $self->Logit("$0: Mojibake author <<$author>> for $id!\n");
-  }
+  $author = $self->GetRecordAuthor($id, $record) unless $author;
   my $aiq = $self->get('dbh')->quote( $author );
-  if ($self->Mojibake($aiq))
-  {
-    $self->Logit("$0: Mojibake quoted author <<$aiq>> for $id!\n");
-  }
   my $sql = "SELECT count(*) FROM bibdata WHERE id='$id'";
   my $count = $self->SimpleSqlGet( $sql );
   $sql = "UPDATE bibdata SET author=$aiq WHERE id='$id'";
-  if (!$count )
+  if (!$count)
   {
     $sql = "INSERT INTO bibdata (id, title, pub_date, author) VALUES ('$id','','',$aiq)";
   }
@@ -5238,11 +5216,13 @@ sub UpdateAuthor
 
 sub UpdateCandidatesAuthor
 {
-  my $self = shift;
-  my $id   = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $author = shift;
+  my $record = shift;
 
-  my $author = $self->GetRecordAuthor( $id );
-  my $aiq = $self->get('dbh')->quote( $author );
+  $author = $self->GetRecordAuthor($id, $record) unless $author;
+  my $aiq = $self->get('dbh')->quote($author);
   my $sql = "UPDATE candidates SET author=$aiq,time=time WHERE id='$id'";
   $self->PrepareSubmitSql( $sql );
 }
@@ -6203,8 +6183,8 @@ sub CreateReviewReport
   # Inheriting
   $sql = 'SELECT COUNT(*) FROM inherit WHERE del!=1';
   $count = $self->SimpleSqlGet($sql);
-  $report .= "<tr class='inherit'><td>Can Inherit</td><td>$count</td>";
-  $report .= "<td/>" for @pris;
+  $report .= sprintf("<tr class='inherit'><td>Can Inherit</td><td colspan='%d'>$count</td>", 1+scalar @pris);
+  #$report .= "<td/>" for @pris;
   $report .= '</tr>';
   
   # Processed
@@ -6628,8 +6608,6 @@ sub SanityCheckDB
     push @errs, sprintf("$table __ illegal pub_date for %s__ %s", $row->[0], $row->[1]) unless $row->[1] =~ m/$pdRE/;
     #push @errs, sprintf("$table __ no author for %s__ '%s'", $row->[0], $row->[2]) if $row->[2] eq '';
     push @errs, sprintf("$table __ no title for %s__ '%s'", $row->[0], $row->[3]) if $row->[3] eq '';
-    push @errs, sprintf("$table __ author encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2]) if $self->Mojibake($row->[2]);
-    push @errs, sprintf("$table __ title encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3]) if $self->Mojibake($row->[3]);
     push @errs, sprintf("$table __ author encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2]) if $row->[2] =~ m/.*?\?\?.*/;
     push @errs, sprintf("$table __ title encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3]) if $row->[3] =~ m/.*?\?\?.*/;
   }
@@ -6642,8 +6620,6 @@ sub SanityCheckDB
     push @errs, sprintf("$table __ illegal volume id__ '%s'", $row->[0]) unless $row->[0] =~ m/$vidRE/;
     push @errs, sprintf("$table __ illegal pub_date for %s__ %s", $row->[0], $row->[1]) unless $row->[1] =~ m/$pdRE/;
     push @errs, sprintf("$table __ no title for %s__ '%s'", $row->[0], $row->[3]) if $row->[3] eq '';
-    push @errs, sprintf("$table __ author encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2]) if $self->Mojibake($row->[2]);
-    push @errs, sprintf("$table __ title encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3]) if $self->Mojibake($row->[3]);
     push @errs, sprintf("$table __ author encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[2]))?'utf-8':'ASCII', $row->[0], $row->[2]) if $row->[2] =~ m/.*?\?\?.*/;
     push @errs, sprintf("$table __ title encoding (%s) questionable for %s__ '%s'", (utf8::is_utf8($row->[3]))?'utf-8':'ASCII', $row->[0], $row->[3]) if $row->[3] =~ m/.*?\?\?.*/;
   }
@@ -6739,15 +6715,6 @@ sub SanityCheckDB
     }
   }
   return \@errs;
-}
-
-# Looks for stuff that the DB thinks is UTF-8 but is actually ISO Latin-1 8991 Shift-JIS or whatever.
-sub Mojibake
-{
-  my $self = shift;
-  my $text = shift;
-  my $mojibake = '[ÊÃÄÅ¶¹¸©×«»§¼¡±]';
-  return ($text =~ m/$mojibake/i);
 }
 
 sub ReviewSearchMenu
@@ -7013,6 +6980,18 @@ sub GetTrackingInfo
     my $a = $ref->[0]->[1];
     my $r = $ref->[0]->[2];
     push @stati, "inheriting $a/$r from $src";
+  }
+  if (0 == scalar @stati)
+  {
+    # See if it has a pre-CRMS determination.
+    my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
+    my %okattr = $self->AllCRMSRights();
+    my $rights = $attr.'/'.$reason;
+    if ($okattr{$rights} == 1)
+    {
+      $time =~ s/(\d\d\d\d-\d\d-\d\d).*/$1/;
+      push @stati, "Possible pre-legacy review ($rights $time by $usr)";
+    }
   }
   return ucfirst join '; ', @stati;
 }
@@ -7283,27 +7262,30 @@ sub GetInheritanceRef
   my $self         = shift;
   my $order        = shift;
   my $dir          = shift;
+  my $order2       = shift;
+  my $dir2         = shift;
   my $search1      = shift;
   my $search1Value = shift;
   my $startDate    = shift;
   my $endDate      = shift;
-  #my $dateType     = shift;
+  my $dateType     = shift;
   my $n            = shift;
   my $pagesize     = shift;
   my $download     = shift;
   
   $n = 1 unless $n;
-  #$dateType = 'date' unless $dateType;
+  $dateType = 'date' unless $dateType;
   my $offset = 0;
   $offset = ($n - 1) * $pagesize;
   #print("GetInheritanceRef('$order','$dir','$search1','$search1Value','$startDate','$endDate','$offset','$pagesize','$download');<br/>\n");
   $pagesize = 20 unless $pagesize > 0;
-  $order = 'id' unless $order;
+  $order = 'idate' unless $order;
+  $order2 = 'title' unless $order2;
   $search1 = $self->ConvertToInheritanceSearchTerm($search1);
   $order = $self->ConvertToInheritanceSearchTerm($order);
+  $order2 = $self->ConvertToInheritanceSearchTerm($order2);
   my @rest = ('i.del=0');
   my $tester1 = '=';
-  my $tester2 = '=';
   if ( $search1Value =~ m/.*\*.*/ )
   {
     $search1Value =~ s/\*/%/gs;
@@ -7315,8 +7297,7 @@ sub GetInheritanceRef
     $tester1 = $1;
   }
   my $doS = ' LEFT JOIN system s ON s.id=e.id ';
-  #my $datesrc = ($dateType eq 'date')? 'DATE(e.time)':'DATE(i.time)';
-  my $datesrc = 'DATE(e.time)';
+  my $datesrc = ($dateType eq 'date')? 'DATE(e.time)':'DATE(i.time)';
   push @rest, "$datesrc >= '$startDate'" if $startDate;
   push @rest, "$datesrc <= '$endDate'" if $endDate;
   push @rest, "$search1 $tester1 '$search1Value'" if $search1Value or $search1Value eq '0';
@@ -7338,9 +7319,9 @@ sub GetInheritanceRef
   my $of = POSIX::ceil($inheritingVolumes/$pagesize);
   $n = $of if $n > $of;
   my $return = ();
-  $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time),i.src,DATE(i.time) ' .
+  $sql = 'SELECT i.id,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time),i.src,DATE(i.time) ' .
          'FROM inherit i LEFT JOIN exportdata e ON i.gid=e.gid ' .
-         "LEFT JOIN bibdata b ON e.id=b.id $doS $restrict ORDER BY $order $dir, s.sysid ASC LIMIT $offset, $pagesize";
+         "LEFT JOIN bibdata b ON e.id=b.id $doS $restrict ORDER BY $order $dir, $order2 $dir2 LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
   $ref = undef;
   eval {
@@ -7353,28 +7334,21 @@ sub GetInheritanceRef
   my $data = join "\t", ('ID','Title','Author','Pub Date','Date Added','Status','Locked','Priority','Reviews','Expert Reviews','Holds');
   my $i = $offset;
   my @return = ();
-  my $currentSource = undef;
   foreach my $row (@{$ref})
   {
-    my $id2 = $row->[4] || '';
-    if ($currentSource ne $id2)
-    {
-      $currentSource = $id2;
-      #print "$i $currentSource<br/>\n";
-    }
     $i++;
     my $id = $row->[0];
     my $sysid = $self->BarcodeToId($id);
-    my $attr = $self->GetRightsName($row->[1]);
-    my $reason = $self->GetReasonName($row->[2]);
-    my $gid = $row->[3];
-    my $attr2 = $row->[5];
-    my $reason2 = $row->[6];
-    my $title = $row->[7];
-    my $date = $row->[8];
-    my $src = $row->[9];
-    my $idate = $row->[10]; # Date added to inherit table
+    my $gid = $row->[1];
+    my $id2 = $row->[2] || '';
+    my $attr2 = $row->[3];
+    my $reason2 = $row->[4];
+    my $title = $row->[5];
+    my $date = $row->[6];
+    my $src = $row->[7];
+    my $idate = $row->[8]; # Date added to inherit table
     $title =~ s/&/&amp;/g;
+    my ($attr,$reason,$src3,$usr3,$time3,$note3) = @{$self->RightsQuery($id,1)->[0]};
     my ($pd,$pdus,$icund) = (0,0,0);
     $pd = 1 if ($attr eq 'pd' || $attr2 eq 'pd');
     $pdus = 1 if ($attr eq 'pdus' || $attr2 eq 'pdus');
@@ -7422,12 +7396,32 @@ sub GetInheritanceRef
   return $data;
 }
 
+sub HasMissingOrWrongRecord
+{
+  my $self  = shift;
+  my $sysid = shift;
+
+  my $has = 0;
+  my $rows = $self->VolumeIDsQuery($sysid);
+  foreach my $line (@{$rows})
+  {
+    my ($id,$chron,$rights) = split '__', $line;
+    my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id' AND (category='Wrong Record' OR category='Missing')";
+    if ($self->SimpleSqlGet($sql) > 0)
+    {
+      $has = 1;
+      last;
+    }
+  }
+  return $has;
+}
+
 sub IsFiltered
 {
   my $self = shift;
   my $id   = shift;
   my $src  = shift;
-  
+
   my $sql = "SELECT COUNT(*) FROM und WHERE id='$id'";
   $sql .= " AND src='$src'" if $src;
   return $self->SimpleSqlGet($sql);
@@ -7610,6 +7604,8 @@ sub DuplicateVolumesFromExport
                 'und/crms' => 1,
                 'ic/bib' => 1);
   my $rows = $self->VolumeIDsQuery($sysid);
+  return if $data->{'seen'}->{$id};
+  $data->{'seen'}->{$id} = 1;
   if (1 == scalar @{$rows})
   {
     $data->{'nodups'}->{$id} = '' unless $data->{'nodups'}->{$id};
@@ -7655,6 +7651,12 @@ sub DuplicateVolumesFromExport
       {
         my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id2,1)->[0]};
         next if $id eq $id2;
+        # In case we have a more recent export that has not made it into the rights DB...
+        if ($self->SimpleSqlGet("SELECT COUNT(*) FROM exportdata WHERE id='$id2' AND time>='$time2'"))
+        {
+          my $sql = "SELECT attr,reason FROM exportdata WHERE id='$id2' ORDER BY time DESC LIMIT 1";
+          ($attr2,$reason2) = @{$self->get('dbh')->selectall_arrayref($sql)->[0]};
+        }
         my $newrights = "$attr/$reason";
         my $oldrights = "$attr2/$reason2";
         if ($candidate ne $id && $attr2 ne $attr)
@@ -7670,7 +7672,13 @@ sub DuplicateVolumesFromExport
         }
         elsif (!$data->{'chron'}->{$id})
         {
-          if ($self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%'"))
+          if ($data->{'seen'}->{$id2})
+          {
+            $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
+            $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\t$id2 has already been checked as an inheritance source\n";
+            $data->{'disallowedsys'}->{$sysid} = 1;
+          }
+          elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%'"))
           {
             my $user = $self->SimpleSqlGet("SELECT user FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%' LIMIT 1");
             $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
@@ -7706,14 +7714,11 @@ sub DuplicateVolumesFromExport
   }
 }
 
-sub DuplicateVolumesFromCandidates
+sub AllCRMSRights
 {
-  my $self   = shift;
-  my $id     = shift;
-  my $sysid  = shift;
-  my $data   = shift;
-
-  my %okatrr = ('pd/ncn' => 1,
+  my $self = shift;
+  
+  my %okattr = ('pd/ncn' => 1,
                 'pd/ren' => 1,
                 'pd/cdpp' => 1,
                 'pdus/cdpp' => 1,
@@ -7723,8 +7728,19 @@ sub DuplicateVolumesFromCandidates
                 'ic/cdpp' => 1,
                 'ic/crms' => 1,
                 'und/nfi' => 1,
-                'und/crms' => 1,
-                'ic/bib' => 1);
+                'und/crms' => 1);
+  return %okattr;
+}
+
+sub DuplicateVolumesFromCandidates
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $sysid  = shift;
+  my $data   = shift;
+
+  my %okattr = $self->AllCRMSRights();
+  $okattr{'ic/bib'} => 1;
   my $rows = $self->VolumeIDsQuery($sysid);
   if (1 == scalar @{$rows})
   {

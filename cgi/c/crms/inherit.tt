@@ -3,13 +3,19 @@
 [% search1value = cgi.param("search1value") %]
 [% startDate = cgi.param('startDate') %]
 [% endDate = cgi.param('endDate') %]
-[%# dateType = cgi.param('dateType') %]
+[% dateType = cgi.param('dateType') %]
 [% order = cgi.param('order') %]
 [% dir = cgi.param('dir') %]
+[% order2 = cgi.param('order2') %]
+[% dir2 = cgi.param('dir2') %]
 [% recs = cgi.param('records') %]
 [% n = cgi.param('n') %]
 [% IF NOT search1 %][% search1 = 'src' %][% END %]
+[% IF NOT dateType %][% dateType = 'date' %][% END %]
 [% IF NOT order %][% order = 'idate' %][% END %]
+[% IF NOT order2 %][% order2 = 'title' %][% END %]
+[% IF NOT dir %][% dir = 'DESC' %][% END %]
+[% IF NOT dir2 %][% dir2 = 'ASC' %][% END %]
 
 [% INCLUDE header.tt %]
 
@@ -48,44 +54,57 @@ Restrict selection:
 <br/>
 
 [% crms.InheritanceSelectionMenu('search1', search1, 1) %]
-  <input title="Value 1" type="text"  id="search1value" name="search1value" value="[% search1value %]" size="30"/>
-  <br/>
-
-  <label for="startDate" style="width:8em;float:left;">Start Export Date:</label>
-  <input type="text" id="startDate" name="startDate" value="[% startDate %]" onclick="datePickerController.show('startDate');"
-         onblur="datePickerController.hide('startDate');"/>
-  <script type="text/javascript">
-  // <![CDATA[
-    var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
-    datePickerController.createDatePicker(opts);
-  // ]]>
-  </script>
-  <span class="smallText">(YYYY-MM-DD)</span>
-  <br/>
-  <label for="endDate" style="width:8em;float:left;">End Export Date:</label>
-  <input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
-         onblur="datePickerController.hide('endDate');"/>
-  <script type="text/javascript">
-  // <![CDATA[
-    var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };       
-    datePickerController.createDatePicker(opts);
-  // ]]>
-  </script>
-  <span class="smallText">(YYYY-MM-DD)</span>
-  <br/>
-
-<!--<input type="radio" name="dateType" value="date"/> Export Date<br/>-->
-<!--<input type="radio" name="dateType" value="idate" checked="checked"/> Inerit Date<br/>-->
-
-<label for="order">Order by:</label>
-[% crms.InheritanceSelectionMenu('order', order) %]
+<input title="Value 1" type="text"  id="search1value" name="search1value" value="[% search1value %]" size="30"/>
 <br/>
 
-<label for="dir">Direction:</label>
+<table><tr>
+<td>
+<label for="startDate" style="width:6em;float:left;">Start Date:</label>
+<input type="text" id="startDate" name="startDate" value="[% startDate %]" onclick="datePickerController.show('startDate');"
+       onblur="datePickerController.hide('startDate');"/>
+<script type="text/javascript">
+// <![CDATA[
+  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
+  datePickerController.createDatePicker(opts);
+// ]]>
+</script>
+<span class="smallText">(YYYY-MM-DD)</span>
+<br/>
+<label for="endDate" style="width:6em;float:left;">End Date:</label>
+<input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
+       onblur="datePickerController.hide('endDate');"/>
+<script type="text/javascript">
+// <![CDATA[
+  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };       
+  datePickerController.createDatePicker(opts);
+// ]]>
+</script>
+<span class="smallText">(YYYY-MM-DD)</span>
+</td>
+<td>
+<input type="radio" name="dateType" value="date" [% dateType == 'date' ? 'checked="checked"':'' %]/> Export Date<br/>
+<input type="radio" name="dateType" value="idate" [% dateType == 'idate' ? 'checked="checked"':'' %]/> Inerit Date<br/>
+</td>
+</tr></table>
+
+
+
+
+<label for="order" style="width:8em;float:left;">Order by:</label>
+[% crms.InheritanceSelectionMenu('order', order) %]
 
 <select id="dir" name="dir">
   <option value="ASC"  [% dir == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
   <option value="DESC" [% dir == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
+</select>
+<br/>
+
+<label for="order2" style="width:8em;float:left;">Then order by:</label>
+[% crms.InheritanceSelectionMenu('order2', order2) %]
+
+<select id="dir2" name="dir2">
+  <option value="ASC"  [% dir2 == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
+  <option value="DESC" [% dir2 == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
 </select>
 <br/>
 
@@ -191,7 +210,7 @@ function VerifyDelete(formid)
   <br/>
 [% END %]
 
-[% ref = crms.GetInheritanceRef(order,dir,search1,search1value,startDate,endDate,n,recs) %]
+[% ref = crms.GetInheritanceRef(order,dir,order2,dir2,search1,search1value,startDate,endDate,dateType,n,recs) %]
 [% inheriting = ref.inheriting %]
 [% source = ref.source %]
 [% IF inheriting > 0 %]
@@ -205,11 +224,11 @@ function VerifyDelete(formid)
     <input type="submit" name="inherit" value="Inherit from Selected Volumes"/>
     <input type="submit" name="delete" value="Delete Selected Volumes" onclick="return VerifyDelete('checks');"/>
     <br/><br/>
-    <span class="smallishText"><i>Note: Tracking Info only reports on events that are represented inside the CRMS.
+    <!--<span class="smallishText"><i>Note: Tracking Info only reports on events that are represented inside the CRMS.
     Events that resulted in a CRMS-style determination but were done outside the CRMS and are not represented
     as legacy reviews will not be reported here.<br/>
     See the "Rights" and "Prior CRMS Determ" columns for additional information.
-    </i></span><br/><br/>
+    </i></span><br/><br/>-->
     <p><b>Found $inheriting volume[% (inheriting==1)? "":"s"%] from $source source[% (source==1)? "":"s"%], page $n of $of</b></p>
 
     [% doPrev = (n > 1) %]
@@ -266,6 +285,7 @@ function VerifyDelete(formid)
         <th>Access<br/>Change?</th>
         <th>Prior<br/>CRMS<br/>Determ?</th>
         <th>Prior<br/>Status 5<br/>Determ?</th>
+        <th>Missing/<br/>Wrong Record?</th>
         <th style="text-align:center;">Title</th>
         <th>Tracking Info (see note)</th>
         <th>Source</th>
@@ -297,6 +317,7 @@ function VerifyDelete(formid)
           <td>[% (review.change==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
           <td>[% (review.incrms==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
           <td>[% (review.h5==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
+          <td>[% (crms.HasMissingOrWrongRecord(review.sysid)>0)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
           <td>[% review.title %]</td>
           <td>[% crms.GetTrackingInfo(review.inheriting) %]</td>
           <td>[% review.src %]</td>
