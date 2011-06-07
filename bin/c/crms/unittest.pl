@@ -135,7 +135,9 @@ is($crms->IsReviewCorrect('chi.22682760','lnachreiner@library.wisc.edu','2010-11
 is($crms->IsReviewCorrect('chi.22682760','s-zuri@umn.edu','2010-11-02 14:02:51'), 1, 'status 8 validation 2');
 is($crms->IsReviewCorrect('coo.31924002832313','dfulmer','2011-01-13 12:00:37'), 1, 'status 8 validation 3');
 is($crms->IsReviewCorrect('coo.31924002832313','s-zuri@umn.edu','2011-01-13 11:13:57'), 1, 'status 8 validation 4');
-
+is($crms->IsFiltered('mdp.39015027953937','foreign'), 1, 'IsFiltered 1');
+is($crms->IsFiltered('mdp.39015027953937','duplicate'), 0, 'IsFiltered 2');
+is($crms->IsFiltered('mdp.39015027953937'), 1, 'IsFiltered 3');
 
 if ($renDate)
 {
