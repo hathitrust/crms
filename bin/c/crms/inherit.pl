@@ -13,7 +13,7 @@ BEGIN
 
 use strict;
 use CRMS;
-use Getopt::Long;
+use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 
 my $usage = <<END;
@@ -169,6 +169,7 @@ if (scalar keys %{$data{'unneeded'}})
       $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$title</td></tr>\n";
     }
   }
+  $data{'unneededcnt'} = $n;
   $txt .= "</table>$delim";
 }
 if (scalar keys %{$data{'disallowed'}})
@@ -195,6 +196,7 @@ if (scalar keys %{$data{'disallowed'}})
       $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$note</td><td>$title</td></tr>\n";
     }
   }
+  $data{'disallowedcnt'} = $n;
   $txt .= "</table>$delim";
 }
 if (scalar keys %{$data{'noexport'}})
@@ -253,7 +255,7 @@ if (scalar keys %{$data{'inherit'}})
     push @cols, ('Prior<br/>CRMS<br/>Determ?','Prior<br/>Status 5<br/>Determ?');
     $txt .= '<h4>Volumes for which inheritance was permitted</h4>';
   }
-  push @cols, 'Title','Tracking';
+  push @cols, 'Missing/Wrong Record?','Title','Tracking';
   $txt .= '<table border="1"><tr><th>' . join('</th><th>', @cols) . "</th></tr>\n";
   my $n = 0;
   foreach my $id (sort keys %{$data{'inherit'}})
@@ -282,6 +284,7 @@ if (scalar keys %{$data{'inherit'}})
         my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id2' AND status=5";
         $h5 = '&nbsp;&nbsp;&nbsp;&#x2713' if $crms->SimpleSqlGet($sql);
       }
+      my $miss = ($crms->HasMissingOrWrongRecord($sysid)>0)? '&nbsp;&nbsp;&nbsp;&#x2713;':'';
       my $change = (($pd == 1 && $icund == 1) || ($pd == 1 && $pdus == 1) || ($icund == 1 && $pdus == 1));
       #print "$change from $pd and $icund ($attr,$attr2)\n";
       my $ar = "$attr/$reason";
@@ -290,10 +293,10 @@ if (scalar keys %{$data{'inherit'}})
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
       $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$attr2/$reason2</td><td>$ar</td><td>$change</td>";
       $txt .= "<td>$incrms</td><td>$h5</td>" unless $candidates;
-      $txt .= "<td>$title</td><td>$tracking</td></tr>\n";
-      $data{'inheriting'}->{$id2} = 1;
+      $txt .= "<td>$miss</td><td>$title</td><td>$tracking</td></tr>\n";
     }
   }
+  $data{'inheritcnt'} = $n;
   $txt .= '</table>';
 }
 
@@ -316,9 +319,11 @@ if ($candidates)
 else
 {
   $header .= sprintf("Volumes checked, no inheritance needed: %d$delim", scalar keys %{$data{'unneeded'}});
-  $header .= sprintf("Unique Sys IDs checked, no inheritance needed: %d$delim$delim", scalar keys %{$data{'unneededsys'}});
+  $header .= sprintf("Unique Sys IDs checked, no inheritance needed: %d$delim", scalar keys %{$data{'unneededsys'}});
+  $header .= sprintf("Volumes not needing inheritance: %d$delim$delim", $data{'unneededcnt'});
 }
-$header .= sprintf("Volumes not allowed to inherit: %d$delim$delim", scalar keys %{$data{'disallowed'}});
+$header .= sprintf("Volumes checked, inheritance not permitted: %d$delim", scalar keys %{$data{'disallowed'}});
+$header .= sprintf("Volumes not allowed to inherit: %d$delim$delim", $data{'disallowedcnt'});
 if ($candidates)
 {
   $header .= "<h4>Inheritance Permitted - Not Adding to Candidates - Status 9 Review awaiting approval:</h4>$delim";
@@ -329,7 +334,7 @@ else
   $header .= sprintf("Volumes checked - inheritance permitted: %d$delim", scalar keys %{$data{'inherit'}});
 }
 $header .= sprintf("Unique Sys IDs w/ volumes inheriting rights: %d$delim", scalar keys %{$data{'inheritsys'}});
-$header .= sprintf("Volumes inheriting rights: %d$delim", scalar keys %{$data{'inheriting'}});
+$header .= sprintf("Volumes inheriting rights: %d$delim", $data{'inheritcnt'});
 $txt = $head . $header . $delim . $txt;
 
 if ($insert && scalar keys %{$data{'inherit'}})
