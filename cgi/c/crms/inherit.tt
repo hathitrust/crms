@@ -117,8 +117,10 @@ inheriting volumes per page.
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"
        onclick="selMenuItem('search1','src');
-                selMenuItem('order','src');
-                selMenuItem('dir','ASC');
+                selMenuItem('order','idate');
+                selMenuItem('order2','title');
+                selMenuItem('dir','DESC');
+                selMenuItem('dir2','ASC');
                 document.getElementById('startDate').value='';
                 document.getElementById('endDate').value='';
                 document.getElementById('search1value').value='';"
@@ -220,6 +222,16 @@ function VerifyDelete(formid)
   
   <form action="crms" id="checks">
     <input type="hidden" name="p" value="$p"/>
+    <input type="hidden" name="search1" value="$search1"/>
+    <input type="hidden" name="search1value" value="$search1value"/>
+    <input type="hidden" name="startDate" value="$startDate"/>
+    <input type="hidden" name="endDate" value="$endDate"/>
+    <input type="hidden" name="dateType" value="$dateType"/>
+    <input type="hidden" name="order" value="$order"/>
+    <input type="hidden" name="order2" value="$order2"/>
+    <input type="hidden" name="dir" value="$dir"/>
+    <input type="hidden" name="dir2" value="$dir2"/>
+    <input type="hidden" name="records" value="$pagesize"/>
     <input type="checkbox" id='all' onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
     <input type="submit" name="inherit" value="Inherit from Selected Volumes"/>
     <input type="submit" name="delete" value="Delete Selected Volumes" onclick="return VerifyDelete('checks');"/>
