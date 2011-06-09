@@ -24,13 +24,12 @@
       [% NEXT %]
     [% END %]
     [% IF id.search('\.') %]
-      [% id = crms.BarcodeToId(id) %]
+      [% sysid = crms.BarcodeToId(id) %]
       [% blah = crms.ClearErrors() %]
-      [% IF NOT id %][% id = 'Unknown' %][% END %]
+      [% IF NOT sysid %]<br/><h4>No results for $id</h4>[%NEXT %][% END %]
+      [% id = sysid %]
     [% END %]
-    <br/>
-    <!--<a href="?p=$p&amp;download=1;q=[% id %]" target="_blank">download</a>-->
-    <br/>
+    <br/><br/>
     <table class="exportStats">
       <tr><th colspan="2" class="major" nowrap="nowrap">
         [% catlink = crms.LinkToCatalog(id) %]
