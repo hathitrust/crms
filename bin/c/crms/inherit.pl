@@ -97,6 +97,20 @@ $head .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><he
 my $txt = '';
 $delim = "<br/>\n";
 
+if (scalar keys %{$data{'unavailable'}})
+{
+  $txt .= "<h4>Volumes which had no metadata available</h4>\n";
+  $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th></tr>\n";
+  my $n = 0;
+  foreach my $id (keys %{$data{'unavailable'}})
+  {
+    $n++;
+    my $retrLink = $crms->LinkToRetrieve($id,1);
+    $txt .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$id</a></td></tr>\n";
+    $crms->PrepareSubmitSql("REPLACE INTO unavailable (id) VALUES ('$id')");
+  }
+  $txt .= "</table>$delim";
+}
 if (scalar keys %{$data{'nodups'}})
 {
   $txt .= sprintf("<h4>Volumes single copy/no duplicates%s</h4>\n", ($candidates)? ' - No Inheritance/Adding to Candidates':'');
@@ -301,7 +315,8 @@ if (scalar keys %{$data{'inherit'}})
 }
 
 my $header = sprintf("Total # volumes checked for inheritance from $dates: %d$delim", scalar keys %{$data{'total'}});
-$header .= sprintf("Total # unique Sys IDs: %d$delim$delim", scalar keys %{$data{'totalsys'}});
+$header .= sprintf("Total # unique Sys IDs: %d$delim$delim", $crms->CountSystemIds(keys %{$data{'total'}}));
+$header .= sprintf("Volumes for which metadata was unavailable: %d$delim$delim", scalar keys %{$data{'unavailable'}});
 if ($candidates)
 {
   $header .= "<h4>No inheritance - Adding to candidates:</h4>$delim";
@@ -311,15 +326,15 @@ $header .= sprintf("Volumes w/ chron/enum: %d$delim$delim", scalar keys %{$data{
 if ($candidates)
 {
   $header .= sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table: %d$delim", scalar keys %{$data{'noexport'}});
-  $header .= sprintf("Unique Sys IDs checked, no duplicates with CRMS determination (from June 2010 or later): %d$delim$delim", scalar keys %{$data{'noexportsys'}});
+  $header .= sprintf("Unique Sys IDs checked, no duplicates with CRMS determination (from June 2010 or later): %d$delim$delim", $crms->CountSystemIds(keys %{$data{'noexport'}}));
   $header .= "<h4>Filtered from candidates temporarily:</h4>$delim";
   $header .= sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later), duplicate volume already in candidates: %d$delim", scalar keys %{$data{'already'}});
-  $header .= sprintf("Unique Sys IDs checked, duplicate volume already in candidates: %d$delim$delim", scalar keys %{$data{'alreadysys'}});
+  $header .= sprintf("Unique Sys IDs checked, duplicate volume already in candidates: %d$delim$delim", $crms->CountSystemIds(keys %{$data{'already'}}));
 }
 else
 {
   $header .= sprintf("Volumes checked, no inheritance needed: %d$delim", scalar keys %{$data{'unneeded'}});
-  $header .= sprintf("Unique Sys IDs checked, no inheritance needed: %d$delim", scalar keys %{$data{'unneededsys'}});
+  $header .= sprintf("Unique Sys IDs checked, no inheritance needed: %d$delim", $crms->CountSystemIds(keys %{$data{'unneeded'}}));
   $header .= sprintf("Volumes not needing inheritance: %d$delim$delim", $data{'unneededcnt'});
 }
 $header .= sprintf("Volumes checked, inheritance not permitted: %d$delim", scalar keys %{$data{'disallowed'}});
@@ -333,7 +348,7 @@ else
 {
   $header .= sprintf("Volumes checked - inheritance permitted: %d$delim", scalar keys %{$data{'inherit'}});
 }
-$header .= sprintf("Unique Sys IDs w/ volumes inheriting rights: %d$delim", scalar keys %{$data{'inheritsys'}});
+$header .= sprintf("Unique Sys IDs w/ volumes inheriting rights: %d$delim", $crms->CountSystemIds(keys %{$data{'inherit'}}));
 $header .= sprintf("Volumes inheriting rights: %d$delim", $data{'inheritcnt'});
 $txt = $head . $header . $delim . $txt;
 
@@ -411,7 +426,8 @@ sub InheritanceReport
   my $singles = shift;
 
   my %data = ();
-  my $sql = "SELECT id,gid,attr,reason FROM exportdata WHERE time>'$start 00:00:00' AND time<='$end 23:59:59' ORDER BY id";
+  my $sql = "SELECT id,gid,attr,reason FROM exportdata WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59') " .
+            'OR id IN (SELECT id FROM unavailable) ORDER BY time DESC';
   if ($singles && scalar @{$singles})
   {
     $sql = sprintf("SELECT id,gid,attr,reason FROM exportdata WHERE id in ('%s') ORDER BY id", join "','", @{$singles});
@@ -424,10 +440,16 @@ sub InheritanceReport
     my $attr = $row->[2];
     my $reason = $row->[3];
     my $sysid = $crms->BarcodeToId($id);
+    if (!$sysid)
+    {
+      $data{'unavailable'}->{$id} = 1;
+      $crms->ClearErrors();
+      next;
+    }
     $data{'total'}->{$id} = 1;
-    $data{'totalsys'}->{$sysid} = 1;
     $crms->DuplicateVolumesFromExport($id,$gid,$sysid,$attr,$reason,\%data);
   }
+  $crms->PrepareSubmitSql('DELETE FROM unavailable');
   return \%data;
 }
 
@@ -438,7 +460,8 @@ sub CandidatesReport
   my $singles = shift;
 
   my %data = ();
-  my $sql = "SELECT id FROM candidates WHERE time>'$start 00:00:00' AND time<='$end 23:59:59' ORDER BY id";
+  my $sql = "SELECT id FROM candidates WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59') " .
+            'OR id IN (SELECT id FROM unavailable) ORDER BY time DESC';
   if ($singles && scalar @{$singles})
   {
     $sql = sprintf("SELECT id FROM candidates WHERE id in ('%s') ORDER BY id", join "','", @{$singles});
@@ -449,9 +472,9 @@ sub CandidatesReport
     my $id = $row->[0];
     my $sysid = $crms->BarcodeToId($id);
     $data{'total'}->{$id} = 1;
-    $data{'totalsys'}->{$sysid} = 1;
     $crms->DuplicateVolumesFromCandidates($id,$sysid,\%data);
   }
+  $crms->PrepareSubmitSql('DELETE FROM unavailable');
   return \%data;
 }
 

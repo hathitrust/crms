@@ -896,6 +896,19 @@ sub DoesRecordHaveChron
   return 0;
 }
 
+sub CountSystemIds
+{
+  my $self = shift;
+  my @ids  = @_;
+
+  my %sysids;
+  foreach my $id (@ids)
+  {
+    $sysids{$self->BarcodeToId($id)} = 1;
+  }
+  return scalar keys %sysids;
+}
+
 # Plain vanilla code for adding an item with status 0, priority 0
 # Expects the pub_date to be already in 19XX-01-01 format.
 # Returns 1 if item was added, 0 if not added because it was already in the queue.
@@ -6914,7 +6927,6 @@ sub CRMSQuery
   $sysid = $self->BarcodeToId($sysid) if $id =~ m/\./;
   my $title = $self->GetRecordTitle($id);
   my $rows = $self->VolumeIDsQuery($id);
-  $rows = [ $id . '__blah__bleh' ] unless scalar @{$rows};
   foreach my $line (@{$rows})
   {
     my ($id2,$chron2,$rights2) = split '__', $line;
@@ -6984,7 +6996,13 @@ sub GetTrackingInfo
   if (0 == scalar @stati)
   {
     # See if it has a pre-CRMS determination.
-    my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
+    my $rq = $self->RightsQuery($id,1);
+    if (! scalar @{$rq})
+    {
+      $self->ClearErrors();
+      return;
+    }
+    my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
     my %okattr = $self->AllCRMSRights();
     my $rights = $attr.'/'.$reason;
     if ($okattr{$rights} == 1)
@@ -7604,13 +7622,18 @@ sub DuplicateVolumesFromExport
                 'und/crms' => 1,
                 'ic/bib' => 1);
   my $rows = $self->VolumeIDsQuery($sysid);
+  if (!scalar @{$rows})
+  {
+    $data->{'unavailable'}->{$id} = 1;
+    $self->ClearErrors();
+    return;
+  }
   return if $data->{'seen'}->{$id};
   $data->{'seen'}->{$id} = 1;
   if (1 == scalar @{$rows})
   {
     $data->{'nodups'}->{$id} = '' unless $data->{'nodups'}->{$id};
     $data->{'nodups'}->{$id} .= "$sysid\n";
-    $data->{'nodupssys'}->{$sysid} = 1;
   }
   else
   {
@@ -7638,13 +7661,9 @@ sub DuplicateVolumesFromExport
       {
         $data->{'chron'}->{$id} = '' unless $data->{'chron'}->{$id};
         $data->{'chron'}->{$id} .= "$id2\t$sysid\n";
-        $data->{'chronsys'}->{$sysid} = 1;
         delete $data->{'unneeded'}->{$id};
-        delete $data->{'unneededsys'}->{$sysid};
         delete $data->{'inherit'}->{$id};
-        delete $data->{'inheritsys'}->{$sysid};
         delete $data->{'disallowed'}->{$id};
-        delete $data->{'disallowedsys'}->{$sysid};
         return;
       }
       else
@@ -7663,11 +7682,8 @@ sub DuplicateVolumesFromExport
         {
           $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
           $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\t$candidate has newer review ($candidateTime)\n";
-          $data->{'disallowedsys'}->{$sysid} = 1;
           delete $data->{'unneeded'}->{$id};
-          delete $data->{'unneededsys'}->{$sysid};
           delete $data->{'inherit'}->{$id};
-          delete $data->{'inheritsys'}->{$sysid};
           #return;
         }
         elsif (!$data->{'chron'}->{$id})
@@ -7676,14 +7692,14 @@ sub DuplicateVolumesFromExport
           {
             $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
             $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\t$id2 has already been checked as an inheritance source\n";
-            $data->{'disallowedsys'}->{$sysid} = 1;
+            delete $data->{'unneeded'}->{$id};
+            delete $data->{'inherit'}->{$id};
           }
           elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%'"))
           {
             my $user = $self->SimpleSqlGet("SELECT user FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%' LIMIT 1");
             $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
             $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tHas an active review by $user\n";
-            $data->{'disallowedsys'}->{$sysid} = 1;
           }
           elsif ($okatrr{$oldrights} || ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/))
           {
@@ -7693,20 +7709,17 @@ sub DuplicateVolumesFromExport
             {
               $data->{'unneeded'}->{$id} = '' unless $data->{'unneeded'}->{$id};
               $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\n";
-              $data->{'unneededsys'}->{$sysid} = 1;
             }
             else
             {
               $data->{'inherit'}->{$id} = '' unless $data->{'inherit'}->{$id};
               $data->{'inherit'}->{$id} .= "$id2\t$sysid\t$attr2\t$reason2\t$attr\t$reason\t$gid\n";
-              $data->{'inheritsys'}->{$sysid} = 1;
             }
           }
           else
           {
             $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
             $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tRights\n";
-            $data->{'disallowedsys'}->{$sysid} = 1;
           }
         }
       }
@@ -7746,7 +7759,6 @@ sub DuplicateVolumesFromCandidates
   {
     $data->{'nodups'}->{$id} = '' unless $data->{'nodups'}->{$id};
     $data->{'nodups'}->{$id} .= "$sysid\n";
-    $data->{'nodupssys'}->{$sysid} = 1;
   }
   else
   {
@@ -7769,12 +7781,8 @@ sub DuplicateVolumesFromCandidates
       {
         $data->{'chron'}->{$id} = '' unless $data->{'chron'}->{$id};
         $data->{'chron'}->{$id} .= "$id2\t$sysid\n";
-        $data->{'chronsys'}->{$sysid} = 0 unless $data->{'chronsys'}->{$sysid};
-        $data->{'chronsys'}->{$sysid}++;
         delete $data->{'unneeded'}->{$id};
-        delete $data->{'unneededsys'}->{$sysid};
         delete $data->{'inherit'}->{$id};
-        delete $data->{'inheritsys'}->{$sysid};
         return;
       }
       elsif ($id2 ne $id && !$data->{'chron'}->{$id})
@@ -7784,7 +7792,6 @@ sub DuplicateVolumesFromCandidates
         {
           $data->{'already'}->{$id} = '' unless $data->{'already'}->{$id};
           $data->{'already'}->{$id} .= "$id2\t$sysid\n";
-          $data->{'alreadysys'}->{$sysid} = 1;
         }
         else
         {
@@ -7812,13 +7819,11 @@ sub DuplicateVolumesFromCandidates
     {
       $data->{'inherit'}->{$cid} = '' unless $data->{'inherit'}->{$cid};
       $data->{'inherit'}->{$cid} .= "$id\t$sysid\tic\tbib\t$cattr\t$creason\t$cgid\n";
-      $data->{'inheritsys'}->{$sysid} = 1;
     }
     else
     {
       $data->{'noexport'}->{$id} = '' unless $data->{'noexport'}->{$id};
       $data->{'noexport'}->{$id} .= "$sysid\n";
-      $data->{'noexportsys'}->{$sysid} = 1;
     }
   }
 }
