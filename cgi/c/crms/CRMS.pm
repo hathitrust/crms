@@ -7418,20 +7418,15 @@ sub HasMissingOrWrongRecord
 {
   my $self  = shift;
   my $sysid = shift;
+  my $rows  = shift;
 
-  my $has = 0;
-  my $rows = $self->VolumeIDsQuery($sysid);
+  $rows = $self->VolumeIDsQuery($sysid) unless $rows;
   foreach my $line (@{$rows})
   {
     my ($id,$chron,$rights) = split '__', $line;
     my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id' AND (category='Wrong Record' OR category='Missing')";
-    if ($self->SimpleSqlGet($sql) > 0)
-    {
-      $has = 1;
-      last;
-    }
+    return $id if ($self->SimpleSqlGet($sql) > 0);
   }
-  return $has;
 }
 
 sub IsFiltered
@@ -7628,101 +7623,88 @@ sub DuplicateVolumesFromExport
     $self->ClearErrors();
     return;
   }
-  return if $data->{'seen'}->{$id};
-  $data->{'seen'}->{$id} = 1;
   if (1 == scalar @{$rows})
   {
     $data->{'nodups'}->{$id} = '' unless $data->{'nodups'}->{$id};
     $data->{'nodups'}->{$id} .= "$sysid\n";
+    return;
   }
-  else
+  # Get most recent CRMS determination for any volume on this record
+  # and see if it's more recent that what we're exporting.
+  my $candidate = $id;
+  my $candidateTime = $self->SimpleSqlGet("SELECT MAX(time) FROM historicalreviews WHERE id='$id'");
+  foreach my $line (@{$rows})
   {
-    # Get most recent CRMS determination for any volume on this record
-    # and see if it's more recent that what we're exporting.
-    my $candidate = $id;
-    my $candidateTime = $self->SimpleSqlGet("SELECT MAX(time) FROM historicalreviews WHERE id='$id'");
-    my $sawchron = 0;
-    foreach my $line (@{$rows})
+    my ($id2,$chron2,$rights2) = split '__', $line;
+    if ($chron2)
     {
-      my ($id2,$chron2,$rights2) = split '__', $line;
-      $sawchron = 1 if $chron2;
-      next if $id eq $id2;
-      my $time = $self->SimpleSqlGet("SELECT MAX(time) FROM historicalreviews WHERE id='$id2'");
-      if ($time && $time gt $candidateTime)
-      {
-        $candidate = $id2;
-        $candidateTime = $time;
-      }
+      $data->{'chron'}->{$id} = "$id2\t$sysid\n";
+      delete $data->{'unneeded'}->{$id};
+      delete $data->{'inherit'}->{$id};
+      delete $data->{'disallowed'}->{$id};
+      return;
     }
-    foreach my $line (@{$rows})
+  }
+  my $wrong = $self->HasMissingOrWrongRecord($sysid, $rows);
+  foreach my $line (@{$rows})
+  {
+    my ($id2,$chron2,$rights2) = split '__', $line;
+    next if $id eq $id2;
+    my $time = $self->SimpleSqlGet("SELECT MAX(time) FROM historicalreviews WHERE id='$id2'");
+    if ($time && $time gt $candidateTime)
     {
-      my ($id2,$chron2,$rights2) = split '__', $line;
-      if ($sawchron)
+      $candidate = $id2;
+      $candidateTime = $time;
+    }
+    my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id2,1)->[0]};
+    # In case we have a more recent export that has not made it into the rights DB...
+    if ($self->SimpleSqlGet("SELECT COUNT(*) FROM exportdata WHERE id='$id2' AND time>='$time2'"))
+    {
+      my $sql = "SELECT attr,reason FROM exportdata WHERE id='$id2' ORDER BY time DESC LIMIT 1";
+      ($attr2,$reason2) = @{$self->get('dbh')->selectall_arrayref($sql)->[0]};
+    }
+    my $newrights = "$attr/$reason";
+    my $oldrights = "$attr2/$reason2";
+    if ($okatrr{$oldrights} || ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/))
+    {
+      # Always inherit onto a single-review priority 1
+      my $rereps = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user LIKE 'rereport%'");
+      if ($attr2 eq $attr && $reason2 ne 'bib' && $rereps == 0)
       {
-        $data->{'chron'}->{$id} = '' unless $data->{'chron'}->{$id};
-        $data->{'chron'}->{$id} .= "$id2\t$sysid\n";
+        $data->{'unneeded'}->{$id} = '' unless $data->{'unneeded'}->{$id};
+        $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\n";
+      }
+      elsif ($wrong)
+      {
+        $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
+        $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tMissing/Wrong Record on $wrong\n";
         delete $data->{'unneeded'}->{$id};
         delete $data->{'inherit'}->{$id};
-        delete $data->{'disallowed'}->{$id};
         return;
+      }
+      elsif ($candidate ne $id)
+      {
+        $data->{'disallowed'}->{$id} = "$id2\t$sysid\t$oldrights\t$newrights\t$id\t$candidate has newer review ($candidateTime)\n";
+        delete $data->{'unneeded'}->{$id};
+        delete $data->{'inherit'}->{$id};
+        return;
+      }
+      elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%'"))
+      {
+        my $user = $self->SimpleSqlGet("SELECT user FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%' LIMIT 1");
+        $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
+        $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tHas an active review by $user\n";
       }
       else
       {
-        my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id2,1)->[0]};
-        next if $id eq $id2;
-        # In case we have a more recent export that has not made it into the rights DB...
-        if ($self->SimpleSqlGet("SELECT COUNT(*) FROM exportdata WHERE id='$id2' AND time>='$time2'"))
-        {
-          my $sql = "SELECT attr,reason FROM exportdata WHERE id='$id2' ORDER BY time DESC LIMIT 1";
-          ($attr2,$reason2) = @{$self->get('dbh')->selectall_arrayref($sql)->[0]};
-        }
-        my $newrights = "$attr/$reason";
-        my $oldrights = "$attr2/$reason2";
-        if ($candidate ne $id && $attr2 ne $attr)
-        {
-          $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
-          $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\t$candidate has newer review ($candidateTime)\n";
-          delete $data->{'unneeded'}->{$id};
-          delete $data->{'inherit'}->{$id};
-          #return;
-        }
-        elsif (!$data->{'chron'}->{$id})
-        {
-          if ($data->{'seen'}->{$id2})
-          {
-            $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
-            $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\t$id2 has already been checked as an inheritance source\n";
-            delete $data->{'unneeded'}->{$id};
-            delete $data->{'inherit'}->{$id};
-          }
-          elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%'"))
-          {
-            my $user = $self->SimpleSqlGet("SELECT user FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%' LIMIT 1");
-            $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
-            $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tHas an active review by $user\n";
-          }
-          elsif ($okatrr{$oldrights} || ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/))
-          {
-            # Always inherit onto a single-review priority 1
-            my $rereps = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user LIKE 'rereport%'");
-            if ($attr2 eq $attr && $reason2 ne 'bib' && $rereps == 0)
-            {
-              $data->{'unneeded'}->{$id} = '' unless $data->{'unneeded'}->{$id};
-              $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\n";
-            }
-            else
-            {
-              $data->{'inherit'}->{$id} = '' unless $data->{'inherit'}->{$id};
-              $data->{'inherit'}->{$id} .= "$id2\t$sysid\t$attr2\t$reason2\t$attr\t$reason\t$gid\n";
-            }
-          }
-          else
-          {
-            $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
-            $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tRights\n";
-          }
-        }
+        $data->{'inherit'}->{$id} = '' unless $data->{'inherit'}->{$id};
+        $data->{'inherit'}->{$id} .= "$id2\t$sysid\t$attr2\t$reason2\t$attr\t$reason\t$gid\n";
       }
+    }
+    else
+    {
+      $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
+      $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tRights\n";
     }
   }
 }
@@ -7759,72 +7741,74 @@ sub DuplicateVolumesFromCandidates
   {
     $data->{'nodups'}->{$id} = '' unless $data->{'nodups'}->{$id};
     $data->{'nodups'}->{$id} .= "$sysid\n";
+    return;
   }
-  else
+  foreach my $line (@{$rows})
   {
-    my $cid = undef;
-    my $cgid = undef;
-    my $cattr = undef;
-    my $creason = undef;
-    my $ctime = undef;
-    my $sawchron = 0;
-    foreach my $line (@{$rows})
+    my ($id2,$chron2,$rights2) = split '__', $line;
+    if ($chron2)
     {
-      my ($id2,$chron2,$rights2) = split '__', $line;
-      $sawchron = 1 if $chron2;
+      $data->{'chron'}->{$id} = "$id2\t$sysid\n";
+      delete $data->{'unneeded'}->{$id};
+      delete $data->{'inherit'}->{$id};
+      delete $data->{'disallowed'}->{$id};
+      return;
     }
-    foreach my $line (@{$rows})
+  }
+  my $cid = undef;
+  my $cgid = undef;
+  my $cattr = undef;
+  my $creason = undef;
+  my $ctime = undef;
+  foreach my $line (@{$rows})
+  {
+    my ($id2,$chron2,$rights2) = split '__', $line;
+    my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id2,1)->[0]};
+    if ($chron2)
     {
-      my ($id2,$chron2,$rights2) = split '__', $line;
-      my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id2,1)->[0]};
-      if ($sawchron)
-      {
-        $data->{'chron'}->{$id} = '' unless $data->{'chron'}->{$id};
-        $data->{'chron'}->{$id} .= "$id2\t$sysid\n";
-        delete $data->{'unneeded'}->{$id};
-        delete $data->{'inherit'}->{$id};
-        return;
-      }
-      elsif ($id2 ne $id && !$data->{'chron'}->{$id})
-      {
-        my $sql = "SELECT COUNT(*) FROM candidates WHERE id='$id2'";
-        if ($self->SimpleSqlGet($sql) && !$data->{'already'}->{$id2})
-        {
-          $data->{'already'}->{$id} = '' unless $data->{'already'}->{$id};
-          $data->{'already'}->{$id} .= "$id2\t$sysid\n";
-        }
-        else
-        {
-          $sql = "SELECT attr,reason,gid,time FROM exportdata WHERE id='$id2' AND time>='2010-06-02 00:00:00' ORDER BY time DESC LIMIT 1";
-          my $ref = $self->get('dbh')->selectall_arrayref($sql);
-          foreach my $row ( @{$ref} )
-          {
-            my $sttr2   = $row->[0];
-            my $reason2 = $row->[1];
-            my $gid2    = $row->[2];
-            my $time2   = $row->[3];
-            if (!$ctime || $time2 gt $ctime)
-            {
-              $cid = $id2;
-              $cgid = $gid2;
-              $cattr = $attr2;
-              $creason = $reason2;
-              $ctime = $time2;
-            }
-          }
-        }
-      }
+      $data->{'chron'}->{$id} = "$id2\t$sysid\n";
+      delete $data->{'already'}->{$id};
+      delete $data->{'inherit'}->{$id};
+      delete $data->{'noexport'}->{$id};
+      return;
     }
-    if ($cid)
+    next if $id eq $id2;
+    my $sql = "SELECT COUNT(*) FROM candidates WHERE id='$id2'";
+    if ($self->SimpleSqlGet($sql) && !$data->{'already'}->{$id2})
     {
-      $data->{'inherit'}->{$cid} = '' unless $data->{'inherit'}->{$cid};
-      $data->{'inherit'}->{$cid} .= "$id\t$sysid\tic\tbib\t$cattr\t$creason\t$cgid\n";
+      $data->{'already'}->{$id} = '' unless $data->{'already'}->{$id};
+      $data->{'already'}->{$id} .= "$id2\t$sysid\n";
     }
     else
     {
-      $data->{'noexport'}->{$id} = '' unless $data->{'noexport'}->{$id};
-      $data->{'noexport'}->{$id} .= "$sysid\n";
+      $sql = "SELECT attr,reason,gid,time FROM exportdata WHERE id='$id2' AND time>='2010-06-02 00:00:00' ORDER BY time DESC LIMIT 1";
+      my $ref = $self->get('dbh')->selectall_arrayref($sql);
+      foreach my $row ( @{$ref} )
+      {
+        my $sttr2   = $row->[0];
+        my $reason2 = $row->[1];
+        my $gid2    = $row->[2];
+        my $time2   = $row->[3];
+        if (!$ctime || $time2 gt $ctime)
+        {
+          $cid = $id2;
+          $cgid = $gid2;
+          $cattr = $attr2;
+          $creason = $reason2;
+          $ctime = $time2;
+        }
+      }
     }
+  }
+  if ($cid)
+  {
+    $data->{'inherit'}->{$cid} = '' unless $data->{'inherit'}->{$cid};
+    $data->{'inherit'}->{$cid} .= "$cid\t$sysid\tic\tbib\t$cattr\t$creason\t$cgid\n";
+  }
+  else
+  {
+    $data->{'noexport'}->{$id} = '' unless $data->{'noexport'}->{$id};
+    $data->{'noexport'}->{$id} .= "$sysid\n";
   }
 }
 
