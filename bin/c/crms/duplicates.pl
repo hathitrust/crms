@@ -14,22 +14,22 @@ BEGIN
 use strict;
 use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
+use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-ehlnpstvw] [-S SUMMARY_PATH] [-t REPORT_TYPE] [-r TYPE] [-i ID] [start_date [end_date]]
+USAGE: $0 [-hlptvw] [-i ID] [-m MAIL_ADDR [-m MAIL_ADDR2...]] [-r TYPE]
+          [-s SUMMARY_PATH] [-t REPORT_TYPE] [start_date [end_date]]
 
 Reports on CRMS determinations for volumes that have duplicates,
 multiple volumes, or conflicting determinations.
 
--e       Report only on records with chron/enum information.
 -h       Print this help message.
 -i ID    Report only for volume ID (start and end dates are ignored). May be repeated.
 -l       Use legacy determinations instead of CRMS determinations.
--n       Do not submit SQL for duplicates when -s flag is set.
+-m ADDR  Mail the report to ADDR. May be repeated for multiple addresses.
 -p       Run in production.
 -r TYPE  Print a report of TYPE where TYPE={html,none,tsv}.
--s       For true duplicates, submit a review for unreviewed duplicate volumes.
--S PATH  Emit a TSV summary (for duplicates) with ID, rights, reason.
+-s PATH  Emit a TSV summary (for duplicates) with ID, rights, reason.
 -t TYPE  Report on situations of type TYPE:
            duplicate:     >0 matching CRMS determinations, >0 ic/bib (default)
            conflict:      conflicting CRMS determinations, >0 ic/bib
@@ -41,28 +41,24 @@ multiple volumes, or conflicting determinations.
 -v       Be verbose. May be repeated.
 END
 
-my $enum;
 my $help;
 my @ids;
 my $legacy;
-my $noop;
+my @mails;
 my $production;
 my $report = 'none';
-#my $submit;
 my $summary;
 my @types;
 my $verbose;
 my $link;
 
-die 'Terminating' unless GetOptions('e' => \$enum,
-           'h|?' => \$help,
+die 'Terminating' unless GetOptions('h|?' => \$help,
            'i:s@' => \@ids,
            'l' => \$legacy,
-           'n' => \$noop,
+           'm:s@' => \@mails,
            'p' => \$production,
            'r:s' => \$report,
-#           's' => \$submit,
-           'S:s' => \$summary,
+           's:s' => \$summary,
            't=s@' => \@types,
            'x' => \$link,
            'v+' => \$verbose);
@@ -129,22 +125,25 @@ sub Date2Field
   return $d;
 }
 
+my $txt = '';
+my $dates = $start;
+$dates .= " to $end" if $end ne $start;
+my $title = sprintf "CRMS %s Duplicates, $dates", join ',', map {ucfirst $_;} @types;
 if ($report eq 'tsv')
 {
-  print "System ID\tVolume ID\tTitle\tAttr\tReason\tChron/Enum\tDate 1\tDate 2\tTime of Determination\tSituation\n";
+  $txt .= "System ID\tVolume ID\tTitle\tAttr\tReason\tChron/Enum\tDate 1\tDate 2\tTime of Determination\tTracking\tType\n";
 }
 elsif ($report eq 'html')
 {
-  print "<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>\n" .
+  $txt .= "<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>\n" .
         '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
         "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'/>\n" .
-        "<title>Duplicate volumes with differing rights</title></head><body>\n" .
+        "<title>$title</title></head><body>\n" .
         "<table border='1'>\n" .
         '<tr><th>System&nbsp;ID</th><th>Volume&nbsp;ID</th><th>Title</th><th>Attr</th><th>Reason</th>' .
-        '<th>Chron/Enum</th><th>Date&nbsp;1</th><th>Date&nbsp;2</th><th>Export&nbsp;Date</th><th>Type</th></tr>' .
+        '<th>Chron/Enum</th><th>Date&nbsp;1</th><th>Date&nbsp;2</th><th>Export&nbsp;Date</th><th>Tracking</th><th>Type</th></tr>' .
         "\n";
 }
-
 
 my %seen;
 my %counts;
@@ -204,8 +203,8 @@ foreach my $row ( @{$ref} )
   next unless scalar @{$holdings} > 1;
   my $date1 = Date1Field($id, $record);
   my $date2 = Date2Field($id, $record);
-  my $title = $crms->GetTitle($id);
-  $title =~ s/\t+/ /g;
+  my $ti = $crms->GetRecordTitle($id, $record);
+  $ti =~ s/\t+/ /g;
   my @lines = ();
   my %attrs;
   my %rights;
@@ -223,27 +222,21 @@ foreach my $row ( @{$ref} )
       last;
     }
   }
-  if ($enum)
+  if ($chron)
   {
-    next unless $chron;
-  }
-  else
-  {
-    if ($chron && $chron !~ m/cop[\.y]/)
-    {
-      print "  Chron '$chron'; skipping.\n" if $verbose;
-      next;
-    }
+    print "  Chron '$chron'; skipping.\n" if $verbose;
+    next;
   }
   my $catlink = "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
+  my $tracking = $crms->GetTrackingInfo($id);
   if ($report eq 'tsv')
   {
-    push @lines, sprintf "$sysid\t$id\t$title\t$attr\t$reason\t$chron\t$date1\t$date2\t$date";
+    push @lines, sprintf "$sysid\t$id\t$ti\t$attr\t$reason\t$chron\t$date1\t$date2\t$date\t$tracking";
   }
   elsif ($report eq 'html')
   {
     my $ptlink = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=' . $id;
-    push @lines, "<tr><td><a href='$catlink' target='_blank'>$sysid</a></td><td><a href='$ptlink' target='_blank'>$id</a></td><td>$title</td><td>$attr</td><td>$reason</td><td>$chron</td><td>$date1</td><td>$date2</td><td>$date</td>";
+    push @lines, "<tr><td><a href='$catlink' target='_blank'>$sysid</a></td><td><a href='$ptlink' target='_blank'>$id</a></td><td>$ti</td><td>$attr</td><td>$reason</td><td>$chron</td><td>$date1</td><td>$date2</td><td>$date</td><td>$tracking</td>";
   }
   my $situation = '';
   my %dups = ();
@@ -253,7 +246,7 @@ foreach my $row ( @{$ref} )
   {
     my ($id2,$chron2,$hblah) = split '__', $holding;
     #print "ID2: $id2\n";
-    if ($chron2 && $chron2 !~ m/cop[\.y]/)
+    if ($chron2)
     {
       print "Bailing out on $id ($sysid) with chron\n" if $verbose;
       @lines = ();
@@ -264,7 +257,7 @@ foreach my $row ( @{$ref} )
     {
       next if $seen{$id2};
       $seen{$id2} = 1;
-      my $title2;
+      my $ti2;
       $sql = "SELECT attr,reason,time FROM exportdata WHERE id='$id2' ORDER BY time DESC LIMIT 1";
       my $ref2 = $crms->get('dbh')->selectall_arrayref($sql);
       my $user = 'crms';
@@ -295,14 +288,15 @@ foreach my $row ( @{$ref} )
         $icbib = 1;
         $dups{$id2} = $record;
       }
+      my $tracking2 = $crms->GetTrackingInfo($id2);
       if ($report eq 'tsv')
       {
-        push @lines, "$sysid\t$id2\t\t$attr2\t$reason2\t$chron2\t\t\t$date2";
+        push @lines, "$sysid\t$id2\t\t$attr2\t$reason2\t$chron2\t\t\t$date2\t$tracking2";
       }
       elsif ($report eq 'html')
       {
         my $ptlink2 = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=' . $id2;
-        push @lines, "<tr><td><a href='$catlink' target='_blank'>$sysid</a></td><td><a href='$ptlink2' target='_blank'>$id2</a></td><td/><td>$attr2</td><td>$reason2</td><td>$chron2</td><td/><td/><td>$date2</td>";
+        push @lines, "<tr><td><a href='$catlink' target='_blank'>$sysid</a></td><td><a href='$ptlink2' target='_blank'>$id2</a></td><td/><td>$attr2</td><td>$reason2</td><td>$chron2</td><td/><td/><td>$date2</td><td>$tracking2</td>";
       }
     }
   }
@@ -322,9 +316,9 @@ foreach my $row ( @{$ref} )
   {
     foreach my $line (@lines)
     {
-      print $line unless $report eq 'none';
-      print "\t$situation\n" if $report eq 'tsv';
-      print "<td>$situation</td></tr>\n" if $report eq 'html';
+      $txt .= $line unless $report eq 'none';
+      $txt .= "\t$situation\n" if $report eq 'tsv';
+      $txt .= "<td>$situation</td></tr>\n" if $report eq 'html';
     }
     if ($situation eq 'duplicate' && $summary)
     {
@@ -333,49 +327,49 @@ foreach my $row ( @{$ref} )
         print $summfh "$id2\t$attr\t$reason\n";
       }
     }
-    #if ($submit && $situation eq 'duplicate' && !$enum)
-    if (0)
-    {
-      foreach my $id2 (keys %dups)
-      {
-        my $record = $dups{$id2};
-        $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id2'";
-        next if $crms->SimpleSqlGet($sql) > 0;
-        $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id2'";
-        if ($crms->SimpleSqlGet($sql) > 0)
-        {
-          print "There is an historical review for $id2; what gives?\n";
-          next;
-        }
-        print "Updating queue and reviews for $id2 ($sysid from $id)\n" if $verbose;
-        next if $noop;
-        $sql = "REPLACE INTO queue (id,locked,status,pending_status,expcnt,source) VALUES ('$id2','autocrms',5,5,1,'duplicates')";
-        $crms->PrepareSubmitSql($sql);
-        my $note = "Record $sysid from $id";
-        my $result = $crms->SubmitReview($id2,'autocrms',$attr,$reason,$note,undef,1,undef,'Duplicate',0,0);
-        $crms->UpdateTitle($id2, undef, $record);
-        $crms->UpdatePubDate($id2, undef, $record);
-        $crms->UpdateAuthor($id2, undef, $record);
-        $crms->PrepareSubmitSql("REPLACE INTO system (id,sysid) VALUES ('$id2','$sysid')");
-      }
-    }
     $counts{$situation}++ if $situation;
   }
   #print "For $id the situation is '$situation'\n" if $verbose;
 }
 
-print "</table>\n" if $report eq 'html';
+$txt .= "</table>\n" if $report eq 'html';
 close $summfh if $summfh;
 my $n = 0;
 foreach my $cat (sort keys %counts)
 {
-  printf "Count for $cat: %d\n", $counts{$cat} if scalar keys %counts > 0;
+  $txt .= sprintf("Count for $cat: %d\n", $counts{$cat}) if scalar keys %counts > 0;
   $n += $counts{$cat};
 }
-printf "Total System IDs: $n\n";
+$txt .= "Total System IDs: $n\n";
 
 print "Warning: $_\n" for @{$crms->GetErrors()};
 
 my $hashref = $crms->GetSdrDb()->{mysql_dbd_stats};
 printf "SDR Database OK reconnects: %d, bad reconnects: %d\n", $hashref->{'auto_reconnects_ok'}, $hashref->{'auto_reconnects_failed'} if $verbose;
-print "</body></html>\n\n" if $report eq 'html';
+$txt .= "</body></html>\n\n" if $report eq 'html';
+if (@mails)
+{
+  use Mail::Sender;
+  $title = 'Dev: ' . $title if $DLPS_DEV;
+  my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
+                                  from => $CRMSGlobals::adminEmail,
+                                  on_errors => 'undef' }
+    or die "Error in mailing : $Mail::Sender::Error\n";
+  my $to = join ',', @mails;
+  my $ctype = 'text/html';
+  $sender->OpenMultipart({
+    to => $to,
+    subject => $title,
+    ctype => $ctype,
+    encoding => 'utf-8'
+    }) or die $Mail::Sender::Error,"\n";
+  $sender->Body();
+  my $bytes = encode('utf8', $txt);
+  $sender->SendEnc($bytes);
+  $sender->Close();
+}
+else
+{
+  print "$txt\n";# unless $quiet;
+}
+
