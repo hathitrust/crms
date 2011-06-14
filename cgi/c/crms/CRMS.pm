@@ -659,6 +659,7 @@ sub CheckAndLoadItemIntoCandidates
   my $record = $self->GetMetadata($id);
   if (!$record)
   {
+    $self->ClearErrors();
     print "No metadata yet for $id: will try again tomorrow.\n";
     if (0 == $self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id'"))
     {
