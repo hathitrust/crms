@@ -7645,18 +7645,19 @@ sub DuplicateVolumesFromExport
       delete $data->{'disallowed'}->{$id};
       return;
     }
-  }
-  my $wrong = $self->HasMissingOrWrongRecord($sysid, $rows);
-  foreach my $line (@{$rows})
-  {
-    my ($id2,$chron2,$rights2) = split '__', $line;
-    next if $id eq $id2;
     my $time = $self->SimpleSqlGet("SELECT MAX(time) FROM historicalreviews WHERE id='$id2'");
     if ($time && $time gt $candidateTime)
     {
       $candidate = $id2;
       $candidateTime = $time;
     }
+ 
+  }
+  my $wrong = $self->HasMissingOrWrongRecord($sysid, $rows);
+  foreach my $line (@{$rows})
+  {
+    my ($id2,$chron2,$rights2) = split '__', $line;
+    next if $id eq $id2;
     my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id2,1)->[0]};
     # In case we have a more recent export that has not made it into the rights DB...
     if ($self->SimpleSqlGet("SELECT COUNT(*) FROM exportdata WHERE id='$id2' AND time>='$time2'"))
