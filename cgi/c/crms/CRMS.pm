@@ -7009,7 +7009,7 @@ sub GetTrackingInfo
     if ($okattr{$rights} == 1)
     {
       $time =~ s/(\d\d\d\d-\d\d-\d\d).*/$1/;
-      push @stati, "Possible pre-legacy review ($rights $time by $usr)";
+      push @stati, "Pre-legacy review ($rights $time by $usr)";
     }
   }
   return ucfirst join '; ', @stati;
