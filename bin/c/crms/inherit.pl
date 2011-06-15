@@ -26,6 +26,7 @@ if it is specified.
 
 -a         Report on all exports, regardless of date range.
 -c         Report on recent addition to candidates.
+-C         Use 'cleanup' as the source.
 -h         Print this help message.
 -i         Insert entries in the dev inherit table.
 -m ADDR    Mail the report to ADDR. May be repeated for multiple addresses.
@@ -37,6 +38,7 @@ END
 
 my $all;
 my $candidates;
+my $cleanup;
 my $help;
 my $insert;
 my @mails;
@@ -49,6 +51,7 @@ Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
            'a'    => \$all,
            'c'    => \$candidates,
+           'C'    => \$cleanup,
            'h|?'  => \$help,
            'i'    => \$insert,
            'm:s@' => \@mails,
@@ -160,7 +163,7 @@ if (scalar keys %{$data{'chron'}})
 }
 if (scalar keys %{$data{'unneeded'}})
 {
-  $txt .= sprintf("<h4>Volumes for which inheritance was unneeded</h4>\n", ($candidates)? ' - No Inheritance/Adding to Candidates':'');
+  $txt .= sprintf("<h4>Volumes not needing inheritance</h4>\n", ($candidates)? ' - No Inheritance/Adding to Candidates':'');
   $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style='color:blue;'>historical/SysID</span>)</th>" .
           '<th>Volume Checked<br/>(<span style="color:blue;">volume tracking</span>)</th>' .
           '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th><th>Rights</th><th>New Rights</th>' .
@@ -188,7 +191,7 @@ if (scalar keys %{$data{'unneeded'}})
 }
 if (scalar keys %{$data{'disallowed'}})
 {
-  $txt .= "<h4>Volumes for which inheritance was not allowed</h4>\n";
+  $txt .= "<h4>Volumes not allowed to inherit</h4>\n";
   $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style='color:blue;'>historical/SysID</span>)</th>" .
           "<th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th><th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th>" .
           "<th>Rights</th><th>New Rights</th><th>Why</th><th>Title</th></tr>\n";
@@ -267,7 +270,7 @@ if (scalar keys %{$data{'inherit'}})
   else
   {
     push @cols, ('Prior<br/>CRMS<br/>Determ?','Prior<br/>Status 5<br/>Determ?');
-    $txt .= '<h4>Volumes for which inheritance was permitted</h4>';
+    $txt .= '<h4>Volumes inheriting rights</h4>';
   }
   push @cols, 'Missing/Wrong Record?','Title','Tracking';
   $txt .= '<table border="1"><tr><th>' . join('</th><th>', @cols) . "</th></tr>\n";
@@ -356,6 +359,7 @@ if ($insert && scalar keys %{$data{'inherit'}})
 {
   $txt .= '<h4>Now inserting inheritance data</h4>';
   my $src = ($candidates)? 'candidates':'export';
+  $src = 'cleanup' if $cleanup;
   foreach my $id (keys %{$data{'inherit'}})
   {
     my @lines = split "\n", $data{'inherit'}->{$id};
@@ -426,11 +430,12 @@ sub InheritanceReport
   my $singles = shift;
 
   my %data = ();
-  my $sql = "SELECT id,gid,attr,reason FROM exportdata WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59') " .
+  my %seen = ();
+  my $sql = "SELECT id,gid,attr,reason,time FROM exportdata WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59') " .
             'OR id IN (SELECT id FROM unavailable) ORDER BY time DESC';
   if ($singles && scalar @{$singles})
   {
-    $sql = sprintf("SELECT id,gid,attr,reason FROM exportdata WHERE id in ('%s') ORDER BY id", join "','", @{$singles});
+    $sql = sprintf("SELECT id,gid,attr,reason,time FROM exportdata WHERE id in ('%s') ORDER BY id", join "','", @{$singles});
   }
   my $ref = $dbh->selectall_arrayref($sql);
   foreach my $row (@{$ref})
@@ -439,6 +444,9 @@ sub InheritanceReport
     my $gid = $row->[1];
     my $attr = $row->[2];
     my $reason = $row->[3];
+    my $time = $row->[4];
+    next if $seen{$id};
+    $seen{$id} = $id;
     my $sysid = $crms->BarcodeToId($id);
     if (!$sysid)
     {
@@ -446,6 +454,9 @@ sub InheritanceReport
       $crms->ClearErrors();
       next;
     }
+    # When using date ranges, earlier export should not supersede later.
+    my $latest = $crms->SimpleSqlGet("SELECT time FROM exportdata WHERE id='$id' ORDER BY time DESC LIMIT 1");
+    next if $time lt $latest;
     $data{'total'}->{$id} = 1;
     $crms->DuplicateVolumesFromExport($id,$gid,$sysid,$attr,$reason,\%data);
   }
