@@ -7682,7 +7682,6 @@ sub DuplicateVolumesFromExport
         $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tMissing/Wrong Record on $wrong\n";
         delete $data->{'unneeded'}->{$id};
         delete $data->{'inherit'}->{$id};
-        return;
       }
       elsif ($candidate ne $id)
       {
