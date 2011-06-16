@@ -388,6 +388,23 @@ if ($insert && scalar keys %{$data{'inherit'}})
     }
   }
 }
+if ($insert && scalar keys %{$data{'disallowed'}})
+{
+  foreach my $id (keys %{$data{'disallowed'}})
+  {
+    my @lines = split "\n", $data{'disallowed'}->{$id};
+    foreach my $line (@lines)
+    {
+      my ($id2,$sysid,$oldrights,$newrights,$ignore,$note) = split "\t", $line;
+      if ($note =~ m/^Missing/ && $crms->IsFiltered($id2, 'duplicate'))
+      {
+        $txt .= "<h5>Unfiltering $id2</h5>\n";
+        $crms->Unfilter($id2) 
+      }
+    }
+  }
+  
+}
 
 for (@{$crms->GetErrors()})
 {
