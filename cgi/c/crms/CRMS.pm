@@ -7803,8 +7803,9 @@ sub DuplicateVolumesFromCandidates
   }
   if ($cid)
   {
+    my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id,1)->[0]};
     $data->{'inherit'}->{$cid} = '' unless $data->{'inherit'}->{$cid};
-    $data->{'inherit'}->{$cid} .= "$cid\t$sysid\tic\tbib\t$cattr\t$creason\t$cgid\n";
+    $data->{'inherit'}->{$cid} .= "$id\t$sysid\t$attr2\t$reason2\t$cattr\t$creason\t$cgid\n";
   }
   else
   {
