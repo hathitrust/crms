@@ -263,18 +263,21 @@ if (scalar keys %{$data{'inherit'}})
               'Volume&nbsp;Inheriting<br/>(<span style="color:blue;">volume tracking</span>)',
               'Sys ID<br/>(<span style="color:blue;">catalog</span>)','Rights','New Rights',
               'Access Change?');
+  my $autotxt = '';
   if ($candidates)
   {
-    $txt .= '<h4>Volumes where a duplicate w/CRMS determination exists (from June 2010 or later) - inheritance permitted -- Not Adding to Candidates - Status 9 Review awaiting approval</h4>';
+    $autotxt .= '<h4>Volumes where a duplicate w/CRMS determination exists (from June 2010 or later) - inheritance permitted -- Not Adding to Candidates - Status 9 Review awaiting approval</h4>';
   }
   else
   {
     push @cols, ('Prior<br/>CRMS<br/>Determ?','Prior<br/>Status 5<br/>Determ?');
-    $txt .= '<h4>Volumes inheriting rights</h4>';
+    $autotxt .= '<h4>Volumes inheriting rights automatically</h4>';
   }
   push @cols, 'Missing/Wrong Record?','Title','Tracking';
-  $txt .= '<table border="1"><tr><th>' . join('</th><th>', @cols) . "</th></tr>\n";
+  $autotxt .= '<table border="1"><tr><th>' . join('</th><th>', @cols) . "</th></tr>\n";
+  my $pendtxt = '<h4>Volumes inheriting rights pending approval</h4><table border="1"><tr><th>' . join('</th><th>', @cols) . "</th></tr>\n";
   my $n = 0;
+  my $npend = 0;
   foreach my $id (sort keys %{$data{'inherit'}})
   {
     my $record = $crms->GetMetadata($id);
@@ -284,7 +287,6 @@ if (scalar keys %{$data{'inherit'}})
     foreach my $line (@lines)
     {
       my ($id2,$sysid,$attr2,$reason2,$attr,$reason,$gid) = split "\t", $line;
-      $n++;
       my $catLink = "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
       my $htCatLink = $crms->LinkToCatalog($sysid);
       my $histLink = $crms->LinkToHistorical($sysid,1);
@@ -296,10 +298,20 @@ if (scalar keys %{$data{'inherit'}})
       $icund = 1 if ($attr eq 'und' || $attr2 eq 'und');
       my $incrms = (($attr2 eq 'ic' && $reason2 eq 'bib') || $reason2 eq 'gfv')? '':'&nbsp;&nbsp;&nbsp;&#x2713';
       my $h5 = '';
+      my $whichtxt = \$autotxt;
+      my $whichn;
       if ($incrms)
       {
         my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id2' AND status=5";
         $h5 = '&nbsp;&nbsp;&nbsp;&#x2713' if $crms->SimpleSqlGet($sql);
+        $whichtxt = \$pendtxt;
+        $npend++;
+        $whichn = $npend;
+      }
+      else
+      {
+        $n++;
+        $whichn = $n;
       }
       my $miss = ($crms->HasMissingOrWrongRecord($sysid)>0)? '&nbsp;&nbsp;&nbsp;&#x2713;':'';
       my $change = (($pd == 1 && $icund == 1) || ($pd == 1 && $pdus == 1) || ($icund == 1 && $pdus == 1));
@@ -307,14 +319,18 @@ if (scalar keys %{$data{'inherit'}})
       my $ar = "$attr/$reason";
       $change = ($change)? '&nbsp;&nbsp;&nbsp;&#x2713':'';
       my $tracking = $crms->GetTrackingInfo($id2);
-      $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
-      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$attr2/$reason2</td><td>$ar</td><td>$change</td>";
-      $txt .= "<td>$incrms</td><td>$h5</td>" unless $candidates;
-      $txt .= "<td>$miss</td><td>$title</td><td>$tracking</td></tr>\n";
+      $$whichtxt .= "<tr><td>$whichn</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
+      $$whichtxt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$attr2/$reason2</td><td>$ar</td><td>$change</td>";
+      $$whichtxt .= "<td>$incrms</td><td>$h5</td>" unless $candidates;
+      $$whichtxt .= "<td>$miss</td><td>$title</td><td>$tracking</td></tr>\n";
     }
   }
   $data{'inheritcnt'} = $n;
-  $txt .= '</table>';
+  $data{'pendinheritcnt'} = $npend;
+  $autotxt .= '</table>';
+  $pendtxt .= '</table>';
+  $txt .= $autotxt if $n;
+  $txt .= $pendtxt if $npend;
 }
 
 my $header = sprintf("Total # volumes checked for inheritance from $dates: %d$delim", scalar keys %{$data{'total'}});
@@ -352,7 +368,11 @@ else
   $header .= sprintf("Volumes checked - inheritance permitted: %d$delim", scalar keys %{$data{'inherit'}});
 }
 $header .= sprintf("Unique Sys IDs w/ volumes inheriting rights: %d$delim", $crms->CountSystemIds(keys %{$data{'inherit'}}));
-$header .= sprintf("Volumes inheriting rights: %d$delim", $data{'inheritcnt'});
+$header .= sprintf("Volumes inheriting rights automatically: %d$delim", $data{'inheritcnt'});
+if (!$candidates)
+{
+  $header .= sprintf("Volumes inheriting rights pending approval: %d$delim", $data{'pendinheritcnt'});
+}
 $txt = $head . $header . $delim . $txt;
 
 if ($insert && scalar keys %{$data{'inherit'}})
