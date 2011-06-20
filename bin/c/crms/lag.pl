@@ -68,7 +68,9 @@ if ($report)
   foreach my $row (@{$ref})
   {
     my ($time,$client,$secs) = @{$row};
-    printf "$time: $client $secs second%s\n", ($secs == 1)? '':'s';
+    my $status = $secs . ' ' . $crms->Pluralize('second', $secs);
+    $status = 'replication disabled' if $secs == 999999;
+    printf "$time: $client $status\n", 
   }
 }
 else
