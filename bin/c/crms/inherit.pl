@@ -141,7 +141,7 @@ if (scalar keys %{$data{'chron'}})
           '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th>' .
           "<th>Title</th></tr>\n";
   my $n = 0;
-  foreach my $id (sort keys %{$data{'chron'}})
+  foreach my $id (KeysSortedOnTitle($data{'chron'}))
   {
     my $record = $crms->GetMetadata($id);
     my $title = $crms->GetRecordTitle($id, $record);
@@ -169,7 +169,7 @@ if (scalar keys %{$data{'unneeded'}})
           '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th><th>Rights</th><th>New Rights</th>' .
           "<th>Title</th></tr>\n";
   my $n = 0;
-  foreach my $id (sort keys %{$data{'unneeded'}})
+  foreach my $id (KeysSortedOnTitle($data{'unneeded'}))
   {
     my $record = $crms->GetMetadata($id);
     my $title = $crms->GetRecordTitle($id, $record);
@@ -196,7 +196,7 @@ if (scalar keys %{$data{'disallowed'}})
           "<th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th><th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th>" .
           "<th>Rights</th><th>New Rights</th><th>Why</th><th>Title</th></tr>\n";
   my $n = 0;
-  foreach my $id (keys %{$data{'disallowed'}})
+  foreach my $id (KeysSortedOnTitle($data{'disallowed'}))
   {
     my $record = $crms->GetMetadata($id);
     my $title = $crms->GetRecordTitle($id, $record);
@@ -278,7 +278,7 @@ if (scalar keys %{$data{'inherit'}})
   my $pendtxt = '<h4>Volumes inheriting rights pending approval</h4><table border="1"><tr><th>' . join('</th><th>', @cols) . "</th></tr>\n";
   my $n = 0;
   my $npend = 0;
-  foreach my $id (sort keys %{$data{'inherit'}})
+  foreach my $id (KeysSortedOnTitle($data{'inherit'}))
   {
     my $record = $crms->GetMetadata($id);
     my $title = $crms->GetRecordTitle($id, $record);
@@ -296,14 +296,14 @@ if (scalar keys %{$data{'inherit'}})
       $pdus = 1 if ($attr eq 'pdus' || $attr2 eq 'pdus');
       $icund = 1 if ($attr eq 'ic' || $attr2 eq 'ic');
       $icund = 1 if ($attr eq 'und' || $attr2 eq 'und');
-      my $incrms = (($attr2 eq 'ic' && $reason2 eq 'bib') || $reason2 eq 'gfv')? '':'&nbsp;&nbsp;&nbsp;&#x2713';
+      my $incrms = (($attr2 eq 'ic' && $reason2 eq 'bib') || $reason2 eq 'gfv')? '':'&nbsp;&nbsp;&nbsp;&#x2713;';
       my $h5 = '';
       my $whichtxt = \$autotxt;
       my $whichn;
       if ($incrms)
       {
         my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id2' AND status=5";
-        $h5 = '&nbsp;&nbsp;&nbsp;&#x2713' if $crms->SimpleSqlGet($sql);
+        $h5 = '&nbsp;&nbsp;&nbsp;&#x2713;' if $crms->SimpleSqlGet($sql);
         $whichtxt = \$pendtxt;
         $npend++;
         $whichn = $npend;
@@ -317,7 +317,7 @@ if (scalar keys %{$data{'inherit'}})
       my $change = (($pd == 1 && $icund == 1) || ($pd == 1 && $pdus == 1) || ($icund == 1 && $pdus == 1));
       #print "$change from $pd and $icund ($attr,$attr2)\n";
       my $ar = "$attr/$reason";
-      $change = ($change)? '&nbsp;&nbsp;&nbsp;&#x2713':'';
+      $change = ($change)? '&nbsp;&nbsp;&nbsp;&#x2713;':'';
       my $tracking = $crms->GetTrackingInfo($id2);
       $$whichtxt .= "<tr><td>$whichn</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
       $$whichtxt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$attr2/$reason2</td><td>$ar</td><td>$change</td>";
@@ -474,6 +474,7 @@ sub InheritanceReport
   {
     $sql = sprintf("SELECT id,gid,attr,reason,time FROM exportdata WHERE id in ('%s') ORDER BY id", join "','", @{$singles});
   }
+  #print "$sql\n";
   my $ref = $dbh->selectall_arrayref($sql);
   foreach my $row (@{$ref})
   {
@@ -526,5 +527,17 @@ sub CandidatesReport
   return \%data;
 }
 
+sub KeysSortedOnTitle
+{
+  my $ref = shift;
 
+  return sort {
+    my $aa = lc $crms->GetRecordTitle($a);
+    my $ba = lc $crms->GetRecordTitle($b);
+    #print "'$aa' cmp '$ba'?\n";
+    $aa cmp $ba
+    ||
+    $a cmp $b;
+  } keys %{$ref};
+}
 
