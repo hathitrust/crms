@@ -52,12 +52,13 @@ function CheckAll(box,formid)
 <tr><th><span class="minor">Review</span></th><th><span class="major">Search/Browse</span></th></tr>
 <tr>
 <td>
-[% IF r %]     <a href="crms?p=review">Review</a><br/>                               [% END %]
-[% IF e %]     <a href="crms?p=undReviews">Provisional&nbsp;Matches</a><br/>         [% END %]
-[% IF e %]     <a href="crms?p=expert">Conflicts</a><br/>                            [% END %]
-[% IF r || e %]<a href="crms?p=editReviews">My&nbsp;Unprocessed&nbsp;Reviews</a><br/>[% END %]
-[% IF r || e %]<a href="crms?p=holds">My Held Reviews</a><br/>                       [% END %]
-[% IF a || s %]<a href="crms?p=inherit">Rights&nbsp;Inheritance</a><br/>             [% END %]
+[% IF r %]     <a href="crms?p=review">Review</a><br/>                                                    [% END %]
+[% IF e %]     <a href="crms?p=undReviews">Provisional&nbsp;Matches</a><br/>                              [% END %]
+[% IF e %]     <a href="crms?p=expert">Conflicts</a><br/>                                                 [% END %]
+[% IF r || e %]<a href="crms?p=editReviews">My&nbsp;Unprocessed&nbsp;Reviews</a><br/>                     [% END %]
+[% IF r || e %]<a href="crms?p=holds">My Held Reviews</a><br/>                                            [% END %]
+[% IF a || s %]<a href="crms?p=inherit;auto=1">Automatic&nbsp;Rights&nbsp;Inheritance</a><br/>            [% END %]
+[% IF a || s %]<a href="crms?p=inherit;auto=0">Rights&nbsp;Inheritance&nbsp;Pending&nbsp;Approval</a><br/>[% END %]
 </td>
 <td>
                           <a href="crms?p=adminHistoricalReviews">Historical&nbsp;Reviews</a><br/>

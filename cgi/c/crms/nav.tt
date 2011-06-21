@@ -19,12 +19,13 @@
 <li><span>Review</span>
 <dl class="minor">
 	<dt><a>Review</a></dt>
-	[% IF r %]     <dd><a href="crms?p=review">Review</a></dd>                               [% END %]
-  [% IF e %]     <dd><a href="crms?p=undReviews">Provisional&nbsp;Matches</a></dd>         [% END %]
-  [% IF e %]     <dd><a href="crms?p=expert">Conflicts</a></dd>                            [% END %]
-  [% IF r || e %]<dd><a href="crms?p=editReviews">My&nbsp;Unprocessed&nbsp;Reviews</a></dd>[% END %]
-  [% IF r || e %]<dd><a href="crms?p=holds">My Held Reviews</a></dd>                       [% END %]
-  [% IF a || s %]<dd><a href="crms?p=inherit">Rights&nbsp;Inheritance</a></dd>             [% END %]
+	[% IF r %]     <dd><a href="crms?p=review">Review</a></dd>                                                    [% END %]
+  [% IF e %]     <dd><a href="crms?p=undReviews">Provisional&nbsp;Matches</a></dd>                              [% END %]
+  [% IF e %]     <dd><a href="crms?p=expert">Conflicts</a></dd>                                                 [% END %]
+  [% IF r || e %]<dd><a href="crms?p=editReviews">My&nbsp;Unprocessed&nbsp;Reviews</a></dd>                     [% END %]
+  [% IF r || e %]<dd><a href="crms?p=holds">My Held Reviews</a></dd>                                            [% END %]
+  [% IF a || s %]<dd><a href="crms?p=inherit;auto=1">Automatic&nbsp;Rights&nbsp;Inheritance</a></dd>            [% END %]
+  [% IF a || s %]<dd><a href="crms?p=inherit;auto=0">Rights&nbsp;Inheritance&nbsp;Pending&nbsp;Approval</a></dd>[% END %]
 </dl>
 </li>
 <li><span>Search/Browse&nbsp;</span>
