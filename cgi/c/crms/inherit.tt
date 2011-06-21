@@ -1,4 +1,4 @@
-[% page = cgi.param("p") %]
+[% p = cgi.param("p") %]
 [% search1 = cgi.param("search1") %]
 [% search1value = cgi.param("search1value") %]
 [% startDate = cgi.param('startDate') %]
@@ -10,6 +10,7 @@
 [% dir2 = cgi.param('dir2') %]
 [% recs = cgi.param('records') %]
 [% n = cgi.param('n') %]
+[% auto = cgi.param('auto') %]
 [% IF NOT search1 %][% search1 = 'src' %][% END %]
 [% IF NOT dateType %][% dateType = 'date' %][% END %]
 [% IF NOT order %][% order = 'idate' %][% END %]
@@ -19,7 +20,7 @@
 
 [% INCLUDE header.tt %]
 
-<h2>Volumes Inheriting Rights:</h2>
+<h2>Volumes Inheriting Rights [% (auto)? 'Automatically':'Pending Approval' %]:</h2>
 
 <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
 [% recs = recs.replace('\D','') %]
@@ -36,7 +37,7 @@
 <div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
 
 <form id="select" action="crms">
-<input type="hidden" name="p" value="$page"/>
+<input type="hidden" name="p" value="$p"/>
 
 Restrict selection:
 <div style="position:absolute;top:0.5em;right:0.5em;">
@@ -164,7 +165,6 @@ function VerifyDelete(formid)
 -->
 </script>
 
-[% p = cgi.param('p') %]
 [% i = 0 %]
 [% IF cgi.param('inherit') %]
   [% FOREACH param IN cgi.param %]
@@ -212,7 +212,7 @@ function VerifyDelete(formid)
   <br/>
 [% END %]
 
-[% ref = crms.GetInheritanceRef(order,dir,order2,dir2,search1,search1value,startDate,endDate,dateType,n,recs) %]
+[% ref = crms.GetInheritanceRef(order,dir,order2,dir2,search1,search1value,startDate,endDate,dateType,n,recs,auto) %]
 [% inheriting = ref.inheriting %]
 [% source = ref.source %]
 [% IF inheriting > 0 %]
@@ -232,8 +232,11 @@ function VerifyDelete(formid)
     <input type="hidden" name="dir" value="$dir"/>
     <input type="hidden" name="dir2" value="$dir2"/>
     <input type="hidden" name="records" value="$pagesize"/>
+    <input type="hidden" name="auto" value="$auto"/>
     <input type="checkbox" id='all' onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
-    <input type="submit" name="inherit" value="Inherit from Selected Volumes"/>
+    [% IF !auto %]
+      <input type="submit" name="inherit" value="Inherit from Selected Volumes"/>
+    [% END %]
     <input type="submit" name="delete" value="Delete Selected Volumes" onclick="return VerifyDelete('checks');"/>
     <br/><br/>
     <!--<span class="smallishText"><i>Note: Tracking Info only reports on events that are represented inside the CRMS.
@@ -247,7 +250,7 @@ function VerifyDelete(formid)
     [% doNext = (n < of) %]
     [% IF doPrev %]
       [% prev = n - 1 %]
-      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=$prev&amp;records=$recs">
+      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=$prev&amp;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]
@@ -256,7 +259,7 @@ function VerifyDelete(formid)
     &nbsp;||&nbsp;
     [% IF doNext %]
       [% next = n + 1 %]
-      <a href="?p=$p&amp;id=$id&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=$next&amp;records=$recs">
+      <a href="?p=$p&amp;id=$id&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=$next&amp;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]
@@ -264,7 +267,7 @@ function VerifyDelete(formid)
     [% IF doNext %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
     [% IF doPrev %]
-      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=1&amp;records=$recs">
+      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=1&amp;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]
@@ -272,7 +275,7 @@ function VerifyDelete(formid)
     [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
     [% IF doNext %]
-      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=$of&amp;records=$recs">
+      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=$of&amp;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]
@@ -343,7 +346,7 @@ function VerifyDelete(formid)
     <p><b>Found $inheriting volume[% (inheriting==1)? "":"s"%] from $source source[% (source==1)? "":"s"%], page $n of $of</b></p>
     [% IF doPrev %]
       [% prev = n - 1 %]
-      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=$prev&amp;records=$recs">
+      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=$prev&amp;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]
@@ -352,7 +355,7 @@ function VerifyDelete(formid)
     &nbsp;||&nbsp;
     [% IF doNext %]
       [% next = n + 1 %]
-      <a href="?p=$p&amp;id=$id&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=$next&amp;records=$recs">
+      <a href="?p=$p&amp;id=$id&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=$next&amp;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]
@@ -360,7 +363,7 @@ function VerifyDelete(formid)
     [% IF doNext %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
     [% IF doPrev %]
-      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=1&amp;records=$recs">
+      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=1&amp;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]
@@ -368,7 +371,7 @@ function VerifyDelete(formid)
     [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
     [% IF doNext %]
-      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;n=$of&amp;records=$recs">
+      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=$of&amp;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]
