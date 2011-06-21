@@ -186,7 +186,7 @@ sub ProcessReviews
   my $self = shift;
 
   # Get the underlying system status, ignoring replication delays.
-  my $stat = @{$self->GetSystemStatus(1)}->[1];
+  my $stat = $self->GetSystemStatus(1)->[1];
   my $reason = '';
   # Don't do this if the system is down or if it is Sunday.
   if ($stat ne 'normal')
@@ -477,7 +477,7 @@ sub GetExpertRevItems
 {
   my $self = shift;
 
-  my $stat = @{$self->GetSystemStatus(1)}->[1];
+  my $stat = $self->GetSystemStatus(1)->[1];
   my $holdSQL = ($stat eq 'normal')? 'CURTIME()<hold':'hold IS NOT NULL';
   my $sql  = 'SELECT id FROM queue WHERE (status>=5 AND status<8) AND id NOT IN ' .
              "(SELECT id FROM reviews WHERE $holdSQL)";
