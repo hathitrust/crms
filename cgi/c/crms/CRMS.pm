@@ -10,9 +10,7 @@ use strict;
 use LWP::UserAgent;
 use XML::LibXML;
 use Encode;
-use Date::Calc qw(:all);
-use Date::Calendar;
-use Date::Calendar::Profiles qw( $Profiles );
+use Date::Calc;
 use POSIX qw(strftime);
 use DBI qw(:sql_types);
 use List::Util qw(min max);
@@ -187,12 +185,34 @@ sub ProcessReviews
 {
   my $self = shift;
 
+  # Get the underlying system status, ignoring replication delays.
+  my $stat = @{$self->GetSystemStatus(1)}->[1];
+  my $reason = '';
+  # Don't do this if the system is down or if it is Sunday.
+  if ($stat ne 'normal')
+  {
+    $reason = "system status is $stat";
+  }
+  elsif ($self->GetSystemVar('autoinherit') eq 'disabled')
+  {
+    $reason = 'automatic inheritance is disabled';
+  }
+  elsif (!$self->WasYesterdayWorkingDay())
+  {
+    $reason = 'yesterday was not a working day';
+  }
+  if ($reason eq '')
+  {
+    $self->AutoSubmitInheritances();
+  }
+  else
+  {
+    print "Not auto-submitting inheritances because $reason.\n";
+  }
   my %stati = (2=>0,3=>0,4=>0,8=>0);
   my $dbh = $self->get( 'dbh' );
   my $sql = 'SELECT id FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) GROUP BY id HAVING count(*) = 2';
   my $ref = $dbh->selectall_arrayref( $sql );
-  # Get the underlying system status, ignoring replication delays.
-  my $stat = @{$self->GetSystemStatus(1)}->[1];
   foreach my $row ( @{$ref} )
   {
     my $id = $row->[0];
@@ -814,6 +834,7 @@ sub LoadNewItems
   my $count = 0;
   my $y = 1923 + int(rand(40));
   my %recs = $self->GetQueueRecords();
+  my %dels = ();
   while (1)
   {
     my $sql = 'SELECT id, time, pub_date, title, author FROM candidates ' .
@@ -823,13 +844,19 @@ sub LoadNewItems
               'AND id NOT IN (SELECT DISTINCT id FROM historicalreviews) ' .
               'ORDER BY pub_date ASC, time DESC';
     my $ref = $self->get('dbh')->selectall_arrayref( $sql );
-    #printf "%d results\n", scalar @{$ref};
     # This can happen in the testsuite.
     last unless scalar @{$ref};
     my $oldcount = $count;
     foreach my $row (@{$ref})
     {
       my $id = $row->[0];
+      next if $dels{$id};
+      my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
+      if ('ic/bib' ne "$attr/$reason")
+      {
+        $dels{$id} = "$attr/$reason";
+        next;
+      }
       my $sysid = $self->BarcodeToId($id);
       my $dup = $recs{$sysid};
       if ($dup && !$self->DoesRecordHaveChron($sysid))
@@ -860,6 +887,11 @@ sub LoadNewItems
       $y = 1923 if $y > 1963;
     }
     last if $count >= $needed;
+  }
+  foreach my $id (keys %dels)
+  {
+    printf "$id rights is %s; deleting from candidates.", $dels{$id};
+    $self->PrepareSubmitSql("DELETE FROM candidates WHERE id='$id'");
   }
   #Record the update to the queue
   my $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES ($count, 'RIGHTSDB')";
@@ -1472,15 +1504,43 @@ sub HoldExpiry
 # Returned format is YYYY-MM-DD 23:59:59
 sub TwoWorkingDays
 {
+  use UMCalendar;
   my $self = shift;
   my $time = shift;
   
   $time = $self->GetTodaysDate() unless $time;
-  my $cal = Date::Calendar->new( $Profiles->{'US'} );
+  my $cal = Date::Calendar->new( $UMCalendar::UMCal );
   my @parts = split '-', substr($time, 0, 10);
   my $date = $cal->add_delta_workdays($parts[0],$parts[1],$parts[2],2);
   $date = sprintf '%s-%s-%s 23:59:59', substr($date,0,4), substr($date,4,2), substr($date,6,2);
   return $date;
+}
+
+sub WasYesterdayWorkingDay
+{
+  my $self = shift;
+  my $time = shift;
+
+  $time = $self->GetTodaysDate() unless $time;
+  my @parts = split '-', substr($time, 0, 10);
+  #printf "Add_Delta_Days(%s,%s,%s,-2)\n", $parts[0],$parts[1],$parts[2];
+  my ($y,$m,$d) = Date::Calc::Add_Delta_Days($parts[0],$parts[1],$parts[2],-1);
+  return $self->IsWorkingDay("$y-$m-$d");
+}
+
+# Today is a working day if today is one working day from yesterday
+sub IsWorkingDay
+{
+  use UMCalendar;
+  my $self = shift;
+  my $time = shift;
+
+  $time = $self->GetTodaysDate() unless $time;
+  my $cal = Date::Calendar->new( $UMCalendar::UMCal );
+  my @parts = split '-', substr($time, 0, 10);
+  my $is = ($cal->is_full($parts[0],$parts[1],$parts[2]))? 0:1;
+  #printf "is_work(%s,%s,%s) -> %d\n", $parts[0],$parts[1],$parts[2], $is;
+  return $is;
 }
 
 sub FormatDate
@@ -5284,6 +5344,7 @@ sub GetMetadata
   my $id   = shift;
 
   if ( ! $id ) { $self->SetError( "GetMetadata: no id given: '$id'" ); return; }
+  return $self->get($id) if $self->get($id);
   # If it has a period, it's a volume ID
   my $url = ($id =~ m/\./)? "http://catalog.hathitrust.org/api/volumes/full/htid/$id.json" :
                             "http://catalog.hathitrust.org/api/volumes/full/recordnumber/$id.json";
@@ -5325,6 +5386,7 @@ sub GetMetadata
   my $ns = 'http://www.loc.gov/MARC21/slim';
   $xpc->registerNs(ns => $ns);
   my @records = $xpc->findnodes('//ns:record');
+  $self->set($id,$records[0]);
   return $records[0];
 }
 
@@ -6047,6 +6109,7 @@ sub CreateSystemReport
   }
   $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay since $since</span>" if $alert;
   $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay</td></tr>\n";
+  $report .= sprintf "<tr><th>Automatic&nbsp;Inheritance</th><td>%s</td></tr>\n", ($self->GetSystemVar('autoinherit') eq 'disabled')?'Disabled':'Enabled';
   $report .= '<tr><td colspan="2">';
   $report .= '<span class="smallishText">* Not including legacy data (reviews/determinations made prior to July 2009).</span><br/>';
   $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count above.</span>';
@@ -7269,7 +7332,7 @@ sub ConvertToInheritanceSearchTerm
   $new_search = 's.sysid' if $search eq 'sysid';
   $new_search = 'i.id' if $search eq 'id';
   $new_search = '(i.attr=1 && (e.attr="ic" || e.attr="und") || (e.attr="pd" && (i.attr=2 || i.attr=5)))' if $search eq 'change';
-  $new_search = 'IF(i.reason!=1 && i.reason!=12,"1","0")' if $search eq 'prior';
+  $new_search = 'IF((i.attr=2 && i.reason=1) || i.reason=12,0,1)' if $search eq 'prior';
   $new_search = 'IF((SELECT COUNT(*) FROM historicalreviews WHERE id=i.id AND status=5)>1,"1","0")' if $search eq 'prior5';
   $new_search = 'b.title' if $search eq 'title';
   $new_search = 'i.src' if $search eq 'source';
@@ -7290,13 +7353,14 @@ sub GetInheritanceRef
   my $dateType     = shift;
   my $n            = shift;
   my $pagesize     = shift;
-  my $download     = shift;
-  
+  my $auto         = shift;
+
+  $self->UpdateInheritanceRights();
   $n = 1 unless $n;
   $dateType = 'date' unless $dateType;
   my $offset = 0;
   $offset = ($n - 1) * $pagesize;
-  #print("GetInheritanceRef('$order','$dir','$search1','$search1Value','$startDate','$endDate','$offset','$pagesize','$download');<br/>\n");
+  #print("GetInheritanceRef('$order','$dir','$search1','$search1Value','$startDate','$endDate','$offset','$pagesize','$auto');<br/>\n");
   $pagesize = 20 unless $pagesize > 0;
   $order = 'idate' unless $order;
   $order2 = 'title' unless $order2;
@@ -7320,6 +7384,8 @@ sub GetInheritanceRef
   push @rest, "$datesrc >= '$startDate'" if $startDate;
   push @rest, "$datesrc <= '$endDate'" if $endDate;
   push @rest, "$search1 $tester1 '$search1Value'" if $search1Value or $search1Value eq '0';
+  my $prior = $self->ConvertToInheritanceSearchTerm('prior');
+  push @rest, sprintf "$prior=%d", ($auto)? 0:1;
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
   my $sql = 'SELECT COUNT(DISTINCT e.id),COUNT(DISTINCT i.id) FROM inherit i ' .
             'LEFT JOIN exportdata e ON i.gid=e.gid ' .
@@ -7338,7 +7404,7 @@ sub GetInheritanceRef
   my $of = POSIX::ceil($inheritingVolumes/$pagesize);
   $n = $of if $n > $of;
   my $return = ();
-  $sql = 'SELECT i.id,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time),i.src,DATE(i.time) ' .
+  $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time),i.src,DATE(i.time) ' .
          'FROM inherit i LEFT JOIN exportdata e ON i.gid=e.gid ' .
          "LEFT JOIN bibdata b ON e.id=b.id $doS $restrict ORDER BY $order $dir, $order2 $dir2 LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
@@ -7358,16 +7424,18 @@ sub GetInheritanceRef
     $i++;
     my $id = $row->[0];
     my $sysid = $self->BarcodeToId($id);
-    my $gid = $row->[1];
-    my $id2 = $row->[2] || '';
-    my $attr2 = $row->[3];
-    my $reason2 = $row->[4];
-    my $title = $row->[5];
-    my $date = $row->[6];
-    my $src = $row->[7];
-    my $idate = $row->[8]; # Date added to inherit table
+    my $attr = $self->GetRightsName($row->[1]);
+    my $reason = $self->GetReasonName($row->[2]);
+    my $gid = $row->[3];
+    my $id2 = $row->[4] || '';
+    my $attr2 = $row->[5];
+    my $reason2 = $row->[6];
+    my $title = $row->[7];
+    my $date = $row->[8];
+    my $src = $row->[9];
+    my $idate = $row->[10]; # Date added to inherit table
     $title =~ s/&/&amp;/g;
-    my ($attr,$reason,$src3,$usr3,$time3,$note3) = @{$self->RightsQuery($id,1)->[0]};
+    #my ($attr,$reason,$src3,$usr3,$time3,$note3) = @{$self->RightsQuery($id,1)->[0]};
     my ($pd,$pdus,$icund) = (0,0,0);
     $pd = 1 if ($attr eq 'pd' || $attr2 eq 'pd');
     $pdus = 1 if ($attr eq 'pdus' || $attr2 eq 'pdus');
@@ -7397,13 +7465,13 @@ sub GetInheritanceRef
                'title'=>$title, 'gid'=>$gid, 'date'=>$date, 'summary'=>ucfirst $summary,
                'src'=>ucfirst $src, 'h5'=>$h5, 'idate'=>$idate);
     push @return, \%dic;
-    if ($download)
-    {
+    #if ($download)
+    #{
       #$data .= sprintf("\n$id\t%s\t%s\t%s\t$date\t%s\t%s\t%s\t$reviews\t%s\t$holds",
       #                 $row->[7], $row->[8], $row->[4], $row->[2], $row->[3], $self->StripDecimal($row->[5]), $row->[6]);
-    }
+    #}
   }
-  if (!$download)
+  #if (!$download)
   {
     $data = {'rows' => \@return,
              'source' => $totalVolumes,
@@ -7463,6 +7531,50 @@ sub GetDeletedInheritance
   return $self->get('dbh')->selectall_arrayref($sql);
 }
 
+sub UpdateInheritanceRights
+{
+  my $self = shift;
+
+  my $sql = 'SELECT id,attr,reason FROM inherit';
+  my $ref = $self->get('dbh')->selectall_arrayref($sql);
+  foreach my $row (@{$ref})
+  {
+    my $id = $row->[0];
+    my $a = $row->[1];
+    my $r = $row->[2];
+    my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
+    #$attr = 'world';
+    #$reason = 'man';
+    if ($self->GetRightsName($a) ne $attr || $self->GetReasonName($r) ne $reason)
+    {
+      $a = $self->GetRightsNum($attr);
+      $r = $self->GetReasonNum($reason);
+      my $sql = "UPDATE inherit SET attr=$a,reason=$r WHERE id='$id'";
+      #print "$sql<br/>\n";
+      $self->PrepareSubmitSql($sql);
+    }
+  }
+}
+
+sub AutoSubmitInheritances
+{
+  my $self = shift;
+
+  my $sql = 'SELECT id FROM inherit';
+  my $ref = $self->get('dbh')->selectall_arrayref($sql);
+  foreach my $row (@{$ref})
+  {
+    my $id = $row->[0];
+    my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
+    my $rights = "$attr/$reason";
+    if ($rights eq 'ic/bib' || $rights eq 'pdus/gfv')
+    {
+      print "Submitting inheritance for $id ($rights)\n";
+      $self->SubmitInheritance($id);
+    }
+  }
+}
+
 sub SubmitInheritance
 {
   my $self = shift;
@@ -7470,15 +7582,12 @@ sub SubmitInheritance
 
   my $sql = "SELECT COUNT(*) FROM reviews r INNER JOIN queue q ON r.id=q.id WHERE r.id='$id' AND r.user='autocrms' AND q.status=9";
   return 'skip' if $self->SimpleSqlGet($sql);
-  $sql = "SELECT e.attr,e.reason,i.attr,i.reason,i.gid FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid WHERE i.id='$id'";
+  $sql = "SELECT e.attr,e.reason,i.gid FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid WHERE i.id='$id'";
   my $row = $self->get('dbh')->selectall_arrayref($sql)->[0];
+  return "$id is no longer available for inheritance (has it been processed?)" unless $row;
   my $attr = $self->GetRightsNum($row->[0]);
   my $reason = $self->GetReasonNum($row->[1]);
-  my $attr2 = $self->GetRightsName($row->[2]);
-  my $reason2 = $self->GetReasonName($row->[3]);
-  my $gid = $row->[4];
-  return sprintf("$id (GID %s) is no longer available for inheritance (has it been processed?)", ($gid)? "$gid":'unknown') unless ($attr2 && $reason2);
-  my $rights = "$attr2/$reason2";
+  my $gid = $row->[2];
   my $category = 'Rights Inherited';
   # Returns a status code (0=Add, 1=Error) followed by optional text.
   my $res = $self->AddInheritanceToQueue($id);
@@ -7786,7 +7895,7 @@ sub DuplicateVolumesFromCandidates
       my $ref = $self->get('dbh')->selectall_arrayref($sql);
       foreach my $row ( @{$ref} )
       {
-        my $sttr2   = $row->[0];
+        my $attr2   = $row->[0];
         my $reason2 = $row->[1];
         my $gid2    = $row->[2];
         my $time2   = $row->[3];
@@ -7804,8 +7913,18 @@ sub DuplicateVolumesFromCandidates
   if ($cid)
   {
     my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id,1)->[0]};
-    $data->{'inherit'}->{$cid} = '' unless $data->{'inherit'}->{$cid};
-    $data->{'inherit'}->{$cid} .= "$id\t$sysid\t$attr2\t$reason2\t$cattr\t$creason\t$cgid\n";
+    if ('ic/bib' eq "$attr2/$reason2")
+    {
+      $data->{'inherit'}->{$cid} = '' unless $data->{'inherit'}->{$cid};
+      $data->{'inherit'}->{$cid} .= "$id\t$sysid\t$attr2\t$reason2\t$cattr\t$creason\t$cgid\n";
+    }
+    else
+    {
+      my $oldrights = "$attr2/$reason2";
+      my $newrights = "$cattr/$creason";
+      $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
+      $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tRights\n";
+    }
   }
   else
   {
@@ -7907,6 +8026,26 @@ sub FilterCandidates
   {
     $self->Filter($newVol, 'duplicate');
   }
+}
+
+sub GetSystemVar
+{
+  my $self = shift;
+  my $name = shift;
+
+  my $sql = "SELECT value FROM systemvars WHERE name='$name'";
+  return $self->SimpleSqlGet($sql);
+}
+
+sub SetSystemVar
+{
+  my $self  = shift;
+  my $name  = shift;
+  my $value = shift;
+
+  $value = $self->get('dbh')->quote($value);
+  my $sql = "REPLACE INTO systemvars (name,value) VALUES ('$name',$value)";
+  $self->PrepareSubmitSql($sql);
 }
 
 1;
