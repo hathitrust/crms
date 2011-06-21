@@ -68,6 +68,29 @@ is($crms->ShouldVolumeGoInUndTable('uc1.b79381'), 'foreign',             'foreig
 
 is($crms->TwoWorkingDays('2010-07-28'), '2010-07-30 23:59:59',           '2 WDs from Wed');
 is($crms->TwoWorkingDays('2010-07-30'), '2010-08-03 23:59:59',           '2 WDs from Fri');
+is($crms->TwoWorkingDays('2011-05-26'), '2011-05-31 23:59:59',           '2 WDs over Memorial 2011');
+is($crms->WasYesterdayWorkingDay('2011-05-30'), 0,                       'WD: Memorial 2011');
+is($crms->WasYesterdayWorkingDay('2011-05-29'), 0,                       'WD: Memorial 2011 - 1');
+is($crms->WasYesterdayWorkingDay('2011-05-31'), 0,                       'WD: Memorial 2011 + 1');
+is($crms->IsWorkingDay('2011-07-04'), 0,                                 'WD: Independence 2011');
+is($crms->IsWorkingDay('2011-07-03'), 0,                                 'WD: Independence 2011 - 1');
+is($crms->IsWorkingDay('2011-07-05'), 1,                                 'WD: Independence 2011 + 1');
+is($crms->IsWorkingDay('2011-09-05'), 0,                                 'WD: Labor 2011');
+is($crms->IsWorkingDay('2011-09-04'), 0,                                 'WD: Labor 2011 - 1');
+is($crms->IsWorkingDay('2011-09-06'), 1,                                 'WD: Labor 2011 + 1');
+is($crms->IsWorkingDay('2011-11-24'), 0,                                 'WD: Thanksgiving 2011');
+is($crms->IsWorkingDay('2011-11-23'), 1,                                 'WD: Thanksgiving 2011 - 1');
+is($crms->IsWorkingDay('2011-11-25'), 0,                                 'WD: Thanksgiving 2011 + 1');
+is($crms->IsWorkingDay('2011-12-26'), 0,                                 'WD: Christmas 2011');
+is($crms->IsWorkingDay('2011-12-25'), 0,                                 'WD: Christmas 2011 - 1');
+is($crms->IsWorkingDay('2011-12-27'), 0,                                 'WD: Season 1 2011');
+is($crms->IsWorkingDay('2011-12-28'), 0,                                 'WD: Season 2 2011');
+is($crms->IsWorkingDay('2011-12-29'), 0,                                 'WD: Season 3 2011');
+is($crms->IsWorkingDay('2011-12-30'), 0,                                 'WD: Season 4 2011');
+is($crms->IsWorkingDay('2012-01-02'), 0,                                 'WD: NY 2012');
+is($crms->IsWorkingDay('2012-01-01'), 0,                                 'WD: NY 2012 - 1');
+is($crms->IsWorkingDay('2012-01-03'), 1,                                 'WD: NY 2012 + 1');
+is($crms->IsWorkingDay('2012-01-04'), 1,                                 'WD: NY 2012 + 2');
 
 is($crms->GetUserAffiliation('hansone@indiana.edu'), 'IU',               'IU affiliation');
 is($crms->GetUserAffiliation('aseeger@library.wisc.edu'), 'UW',          'UW affiliation');
