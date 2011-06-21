@@ -6260,7 +6260,21 @@ sub CreateReviewReport
   # Inheriting
   $sql = 'SELECT COUNT(*) FROM inherit WHERE del!=1';
   $count = $self->SimpleSqlGet($sql);
-  $report .= sprintf("<tr class='inherit'><td>Can Inherit</td><td colspan='%d'>$count</td>", 1+scalar @pris);
+  $report .= sprintf("<tr class='inherit'><td>Can&nbsp;Inherit</td><td colspan='%d'>$count</td>", 1+scalar @pris);
+  #$report .= "<td/>" for @pris;
+  $report .= '</tr>';
+  
+  # Inheriting Automatically
+  $sql = 'SELECT COUNT(*) FROM inherit WHERE del!=1 AND ((attr=2 AND reason=1) OR reason=12)';
+  $count = $self->SimpleSqlGet($sql);
+  $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Automatically</td><td colspan='%d'>$count</td>", 1+scalar @pris);
+  #$report .= "<td/>" for @pris;
+  $report .= '</tr>';
+  
+  # Inheriting Pending Approval
+  $sql = 'SELECT COUNT(*) FROM inherit WHERE del!=1 AND ((attr!=2 OR reason!=1) AND reason!=12)';
+  $count = $self->SimpleSqlGet($sql);
+  $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Pending&nbsp;Approval</td><td colspan='%d'>$count</td>", 1+scalar @pris);
   #$report .= "<td/>" for @pris;
   $report .= '</tr>';
   
