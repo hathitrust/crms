@@ -129,7 +129,13 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
     <div>
       [% INCLUDE nav.tt %]
     </div>
-    <br/><br/><br/>
+    <br/><br/>
+    [% noauto = ('disabled' == crms.GetSystemVar('autoinherit')) %]
+    [% IF noauto %]
+      <span style="color:red;">Automatic Inheritance Processing is disabled.</span><br/><br/>
+    [% ELSE %]
+    <br/>
+    [% END %]
 [% ELSE %]
     <div id="homePage">
 [% END %]
