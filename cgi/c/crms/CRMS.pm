@@ -5779,7 +5779,7 @@ sub GetNextItemForReview
   
   my $id = undef;
   eval{
-    my $sql = 'LOCK TABLES queue WRITE, queue AS q WRITE, reviews READ, reviews AS r READ, users READ, timer WRITE';
+    my $sql = 'LOCK TABLES queue WRITE, queue AS q WRITE, reviews READ, reviews AS r READ, users READ, timer WRITE, systemvars READ';
     $self->PrepareSubmitSql($sql);
     my $exclude = 'q.priority<3 AND';
     if ($self->IsUserAdmin($user))
