@@ -8,7 +8,6 @@
 [% ids = cgi.param('ids') %]
 [% pri = cgi.param('priority') %]
 [% override = cgi.param('override') %]
-[% super = crms.IsUserSuperAdmin() %]
 [% admin = crms.IsUserAdmin() %]
 [% IF NOT pri %][% pri = 0 %][% END %]
 [% IF NOT admin %][% override = 0 %][% END %]
@@ -22,19 +21,19 @@ These items will take priority in the review process.
   <input type="hidden" name="p" value="queueAdd"/>
   <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;">[% ids %]</textarea><br/>
   [% IF admin %]
-  <select name="priority" onchange="document.getElementById('ORCheck').disabled=(this.selectedIndex==0||this.selectedIndex==1);">
+  <select name="priority" onchange="document.getElementById('ORCheck').disabled=(this.selectedIndex!=2);">
   [% ELSE %]
   <select name="priority">
   [% END %]
     <option value="0" [% (pri==0)? 'selected="selected"':'' %]>Priority 0</option>
     <option value="2" [% (pri==2)? 'selected="selected"':'' %]>Priority 2</option>
     <option value="3" [% (pri==3)? 'selected="selected"':'' %]>Priority 3</option>
-    [% IF super %]<option value="4" [% (pri==4)? 'selected="selected"':'' %]>Priority 4</option>[% END %]
+    [% IF admin %]<option value="4" [% (pri==4)? 'selected="selected"':'' %]>Priority 4</option>[% END %]
   </select>
   &nbsp;&nbsp;&nbsp;
   [% IF admin %]
   Override Restrictions
-  <input type="checkbox" id="ORCheck" name="override" [% (pri<=2)? 'disabled="disabled"':'' %][% override? 'checked="checked"':'' %]/>
+  <input type="checkbox" id="ORCheck" name="override" [% (pri!=3)? 'disabled="disabled"':'' %][% override? 'checked="checked"':'' %]/>
   [% END %]
   &nbsp;&nbsp;&nbsp;
   <input type="submit" value="Submit"/>
@@ -47,9 +46,8 @@ Priority 3 can only be added or reviewed by an expert, admin, or superadmin.<br/
 &nbsp;&nbsp;
 <i>Override Restrictions</i> allows admins and superadmins to add US books published 1964-1977.<br/>
 [% END %]
-[% IF super %]
-  Priority 4 can only be added or reviewed by a super admin.<br/>
-&nbsp;&nbsp;<i>Override Restrictions</i> allows superadmins to add any works in HathiTrust, including<br/>
+[% IF admin %]
+  Priority 4 only allows admins and superadmins to add any work in HathiTrust, including<br/>
 &nbsp;&nbsp;government documents, foreign works, non-books, and items from before 1923 or after 1977.<br/>
 [% END %]
 </p>
