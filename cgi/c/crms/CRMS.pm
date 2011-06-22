@@ -988,7 +988,7 @@ sub AddItemToQueueOrSetItemActive
       push @msgs, 'already in queue with the same priority';
       $stat = 2;
     }
-    elsif ($oldpri > $priority && !$super)
+    elsif ($oldpri > $priority && !$admin)
     {
       push @msgs, 'already in queue with a higher priority';
       $stat = 2;
