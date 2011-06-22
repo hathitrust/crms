@@ -185,6 +185,18 @@ sub ProcessReviews
 {
   my $self = shift;
 
+  # Clear the deleted inheritances, regardless of system status
+  my $sql = 'SELECT COUNT(*) FROM inherit WHERE del=1';
+  my $dels = $self->SimpleSqlGet($sql);
+  if ($dels)
+  {
+    print "Deleted inheriting volumes to be removed: $dels\n" unless $fromcgi;
+    $self->PrepareSubmitSql('DELETE FROM inherit WHERE del=1');
+  }
+  else
+  {
+    print "No deleted inheriting volumes to remove.\n" unless $fromcgi;
+  }
   # Get the underlying system status, ignoring replication delays.
   my $stat = $self->GetSystemStatus(1)->[1];
   my $reason = '';
@@ -451,18 +463,6 @@ sub ClearQueueAndExport
   $self->ExportReviews( $export, $fromcgi );
   $self->UpdateExportStats();
   $self->UpdateDeterminationsBreakdown();
-  # Clear the deleted volumes
-  my $sql = 'SELECT COUNT(*) FROM inherit WHERE del=1';
-  my $dels = $self->SimpleSqlGet($sql);
-  if ($dels)
-  {
-    print "Deleted inheriting volumes to be removed: $dels\n" unless $fromcgi;
-    $self->PrepareSubmitSql('DELETE FROM inherit WHERE del=1');
-  }
-  else
-  {
-    print "No deleted inheriting volumes to remove.\n" unless $fromcgi;
-  }
   return "Exported: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved, $iCount inherited rights\n";
 }
 
@@ -7574,14 +7574,14 @@ sub AutoSubmitInheritances
 {
   my $self = shift;
 
-  my $sql = 'SELECT id FROM inherit';
+  my $sql = 'SELECT id FROM inherit WHERE del=0';
   my $ref = $self->get('dbh')->selectall_arrayref($sql);
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
     my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
     my $rights = "$attr/$reason";
-    if ($rights eq 'ic/bib' || $rights eq 'pdus/gfv')
+    if ($rights eq 'ic/bib' || $reason eq 'gfv')
     {
       print "Submitting inheritance for $id ($rights)\n";
       $self->SubmitInheritance($id);
