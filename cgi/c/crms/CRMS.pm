@@ -972,6 +972,7 @@ sub AddItemToQueueOrSetItemActive
   my $stat = 0;
   my @msgs = ();
   my $admin = $self->IsUserAdmin();
+  $override = 1 if $priority == 4;
   if ($priority == 4 && !$admin)
   {
     push @msgs, 'Only an admin can set priority 4';
