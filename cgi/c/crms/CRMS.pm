@@ -10,7 +10,7 @@ use strict;
 use LWP::UserAgent;
 use XML::LibXML;
 use Encode;
-use Date::Calc;
+use Date::Calc qw(:all);
 use POSIX qw(strftime);
 use DBI qw(:sql_types);
 use List::Util qw(min max);
