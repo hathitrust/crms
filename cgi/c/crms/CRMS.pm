@@ -183,7 +183,8 @@ sub GetCandidatesSize
 
 sub ProcessReviews
 {
-  my $self = shift;
+  my $self    = shift;
+  my $fromcgi = shift;
 
   # Clear the deleted inheritances, regardless of system status
   my $sql = 'SELECT COUNT(*) FROM inherit WHERE del=1';
@@ -219,7 +220,7 @@ sub ProcessReviews
   }
   else
   {
-    print "Not auto-submitting inheritances because $reason.\n";
+    print "Not auto-submitting inheritances because $reason.\n" unless $fromcgi;
   }
   my %stati = (2=>0,3=>0,4=>0,8=>0);
   my $dbh = $self->get( 'dbh' );
@@ -234,7 +235,7 @@ sub ProcessReviews
     my $hold = $data->{'hold'};
     if ($hold)
     {
-      print "Not processing $id for $hold: it is held; system status is '$stat'\n" if $stat ne 'normal';
+      print "Not processing $id for $hold: it is held; system status is '$stat'\n" if $stat ne 'normal' and !$fromcgi;
       next;
     }
     if ($status == 8)
@@ -413,8 +414,8 @@ sub CheckPendingStatus
 # If fromcgi is set, don't try to create the export file, print stuff, or send mail.
 sub ClearQueueAndExport
 {
-  my $self     = shift;
-  my $fromcgi  = shift;
+  my $self    = shift;
+  my $fromcgi = shift;
 
   my $aCount = 0;
   my $iCount = 0;
@@ -5797,8 +5798,9 @@ sub GetNextItemForReview
     {
       $exclude = 'q.priority<4 AND';
     }
+    my $p1f = $self->GetPriority1Frequency();
     # Exclude priority 1 if our d100 roll is over the P1 threshold or user is not advanced
-    my $exclude1 = (rand() >= $CRMSGlobals::priority1Frequency || !$self->IsUserAdvanced($user))? 'q.priority!=1 AND':'';
+    my $exclude1 = (rand() >= $p1f || !$self->IsUserAdvanced($user))? 'q.priority!=1 AND':'';
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt FROM queue q ' .
            "WHERE $exclude $exclude1 q.expcnt=0 AND q.locked IS NULL " .
            'ORDER BY q.priority DESC, cnt DESC, q.time ASC';
@@ -5827,6 +5829,18 @@ sub GetNextItemForReview
     $self->SetError("Could not get a volume for $user to review.");
   }
   return $id;
+}
+
+sub GetPriority1Frequency
+{
+  my $self = shift;
+  
+  my $f = $CRMSGlobals::priority1Frequency;
+  eval {
+    my $sysf = $self->SimpleSqlGet('SELECT value FROM systemvars WHERE id="priority1Frequency"');
+    $f = $sysf if $sysf and $sysf >= 0.0 and $sysf < 1.0;
+  };
+  return $f;
 }
 
 sub GetRightsName
