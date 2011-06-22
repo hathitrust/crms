@@ -38,6 +38,7 @@
 
 <form id="select" action="crms">
 <input type="hidden" name="p" value="$p"/>
+<input type="hidden" name="auto" value="$auto"/>
 
 Restrict selection:
 <div style="position:absolute;top:0.5em;right:0.5em;">
