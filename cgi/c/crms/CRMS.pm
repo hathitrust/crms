@@ -971,10 +971,10 @@ sub AddItemToQueueOrSetItemActive
   $src = 'adminui' unless $src;
   my $stat = 0;
   my @msgs = ();
-  my $super = $self->IsUserSuperAdmin();
-  if ($priority == 4 && !$super)
+  my $admin = $self->IsUserAdmin();
+  if ($priority == 4 && !$admin)
   {
-    push @msgs, 'Only a super admin can set priority 4';
+    push @msgs, 'Only an admin can set priority 4';
     $stat = 1;
   }
   ## give the existing item higher or lower priority
