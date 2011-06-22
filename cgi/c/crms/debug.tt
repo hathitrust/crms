@@ -192,7 +192,7 @@
 [% IF crms.get('dev') %]
   [% level = cgi.param('processReviews') %]
   [% IF level %]
-    [% blah = crms.ProcessReviews() %]
+    [% blah = crms.ProcessReviews(1) %]
     [% IF level == 2 %]
       <p>[% crms.ClearQueueAndExport(1) %]</p>
     [% END %]

@@ -216,7 +216,7 @@ sub ProcessReviews
   }
   if ($reason eq '')
   {
-    $self->AutoSubmitInheritances();
+    $self->AutoSubmitInheritances($fromcgi);
   }
   else
   {
@@ -454,13 +454,6 @@ sub ClearQueueAndExport
     push( @{$export}, $id );
     $dCount++;
   }
-  ## Get ic/bib volumes for those system IDs that have no chron/enum info.
-  #my $dups = $self->ReviewDuplicateVolumes($export, $fromcgi);
-  #my $dupCount = scalar @{ $dups };
-  #foreach my $id ( @{$dups} )
-  #{
-  #  push( @{$export}, $id );
-  #}
   $self->ExportReviews( $export, $fromcgi );
   $self->UpdateExportStats();
   $self->UpdateDeterminationsBreakdown();
@@ -5788,9 +5781,9 @@ sub GetNextItemForReview
     my $sql = 'LOCK TABLES queue WRITE, queue AS q WRITE, reviews READ, reviews AS r READ, users READ, timer WRITE';
     $self->PrepareSubmitSql($sql);
     my $exclude = 'q.priority<3 AND';
-    if ($self->IsUserSuperAdmin($user))
+    if ($self->IsUserAdmin($user))
     {
-      # Only Anne reviews priority 4
+      # Only admin+ reviews P4+
       $exclude = '';
     }
     # If user is expert, get priority 3 items.
@@ -5837,7 +5830,7 @@ sub GetPriority1Frequency
   
   my $f = $CRMSGlobals::priority1Frequency;
   eval {
-    my $sysf = $self->SimpleSqlGet('SELECT value FROM systemvars WHERE id="priority1Frequency"');
+    my $sysf = $self->SimpleSqlGet('SELECT value FROM systemvars WHERE name="priority1Frequency"');
     $f = $sysf if $sysf and $sysf >= 0.0 and $sysf < 1.0;
   };
   return $f;
@@ -7586,7 +7579,8 @@ sub UpdateInheritanceRights
 
 sub AutoSubmitInheritances
 {
-  my $self = shift;
+  my $self    = shift;
+  my $fromcgi = shift;
 
   my $sql = 'SELECT id FROM inherit WHERE del=0';
   my $ref = $self->get('dbh')->selectall_arrayref($sql);
@@ -7597,7 +7591,7 @@ sub AutoSubmitInheritances
     my $rights = "$attr/$reason";
     if ($rights eq 'ic/bib' || $reason eq 'gfv')
     {
-      print "Submitting inheritance for $id ($rights)\n";
+      print "Submitting inheritance for $id ($rights)\n" unless $fromcgi;
       $self->SubmitInheritance($id);
     }
   }
