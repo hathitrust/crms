@@ -72,7 +72,7 @@
   <br/>
     [% keys = {"1" => "pd/ncn",    "2" => "pd/ren",  "3" => "pd/cdpp",
                "4" => "ic/ren",    "5" => "ic/cdpp", "6" => "und/nfi",
-               "7" => "pdus/cdpp", "8" => "pd/add"} %]
+               "7" => "pdus/cdpp", "8" => "pd/add",  "9" => "pd/exp"} %]
   <table>
     <tr>
       <td>
@@ -123,6 +123,13 @@
             [% IF select == "8" %] checked="checked"[% END %] />
             <label for="r8">[% keys.${"8"} %] (8)</label>
         </td>
+        </tr><tr>
+        <td>
+          <input type="radio" id="r9" name="rights" value="9" accesskey="9"
+            [% IF select == "9" %] checked="checked"[% END %] />
+            <label for="r9">[% keys.${"9"} %] (9)</label>
+        </td>
+        </tr>
       [% END %]
     </tr>
     [% END %]

@@ -2844,10 +2844,12 @@ sub GetAttrReasonCom
   my $in   = shift;
 
   my %codes = (1 => 'pd/ncn',  2 => 'pd/ren',  3 => 'pd/cdpp', 4 => 'ic/ren',
-               5 => 'ic/cdpp', 6 => 'und/nfi', 7 => 'pdus/cdpp', 8 => 'pd/add');
+               5 => 'ic/cdpp', 6 => 'und/nfi', 7 => 'pdus/cdpp', 8 => 'pd/add',
+               9 => 'pd/exp');
 
   my %str   = ('pd/ncn' => 1,  'pd/ren'  => 2, 'pd/cdpp' => 3, 'ic/ren' => 4,
-               'ic/cdpp' => 5, 'und/nfi' => 6, 'pdus/cdpp' => 7 , 'pd/add' => 8);
+               'ic/cdpp' => 5, 'und/nfi' => 6, 'pdus/cdpp' => 7 , 'pd/add' => 8,
+               'pd/exp' => 9);
 
   if ( $in =~ m/\d/ ) { return $codes{$in}; }
   else                { return $str{$in};   }
@@ -2866,6 +2868,7 @@ sub GetAttrReasonFromCode
   elsif ( $code eq '6' ) { return (5,8); }
   elsif ( $code eq '7' ) { return (9,9); }
   elsif ( $code eq '8' ) { return (1,14); }
+  elsif ( $code eq '9' ) { return (1,15); }
 }
 
 sub GetCodeFromAttrReason
@@ -2882,6 +2885,7 @@ sub GetCodeFromAttrReason
   if ($attr == 5 and $reason == 8) { return 6; }
   if ($attr == 9 and $reason == 9) { return 7; }
   if ($attr == 1 and $reason == 14) { return 8; }
+  if ($attr == 1 and $reason == 15) { return 9; }
 }
 
 
@@ -3341,7 +3345,7 @@ sub CreateExportData
     last if $date eq $now and !$doCurrentMonth;
     push @usedates, $date;
     $report .= "$delimiter$date";
-    my %cats = ('pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pd/crms' => 0, 'pd/add' => 0, 'pdus/cdpp' => 0,
+    my %cats = ('pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pd/crms' => 0, 'pd/add' => 0, 'pd/exp' => 0, 'pdus/cdpp' => 0,
                 'ic/ren' => 0, 'ic/cdpp' => 0, 'ic/crms' => 0,
                 'und/nfi' => 0, 'und/crms' => 0,
                 'All PD' => 0, 'All IC' => 0, 'All UND' => 0,
@@ -3352,7 +3356,7 @@ sub CreateExportData
       my ($year,$month) = split '-', $date;
       $lastDay = Days_in_Month($year,$month);
     }
-    my $sql = 'SELECT SUM(e.pd_ren),SUM(e.pd_ncn),SUM(e.pd_cdpp),SUM(e.pd_crms),SUM(e.pd_add),SUM(e.pdus_cdpp),' .
+    my $sql = 'SELECT SUM(e.pd_ren),SUM(e.pd_ncn),SUM(e.pd_cdpp),SUM(e.pd_crms),SUM(e.pd_add),SUM(e.pd_exp),SUM(e.pdus_cdpp),' .
                'SUM(e.ic_ren),SUM(e.ic_cdpp),SUM(e.ic_crms),SUM(e.und_nfi),SUM(e.und_crms),' .
                'SUM(d.s4),SUM(d.s5),SUM(d.s6),SUM(d.s7),SUM(d.s8),SUM(d.s9) ' .
                'FROM exportstats e INNER JOIN determinationsbreakdown d ON e.date=d.date WHERE ' .
@@ -3365,18 +3369,19 @@ sub CreateExportData
     $stats{'pd/cdpp'}{$date}   += $ref->[0]->[2];
     $stats{'pd/crms'}{$date}   += $ref->[0]->[3];
     $stats{'pd/add'}{$date}    += $ref->[0]->[4];
-    $stats{'pdus/cdpp'}{$date} += $ref->[0]->[5];
-    $stats{'ic/ren'}{$date}    += $ref->[0]->[6];
-    $stats{'ic/cdpp'}{$date}   += $ref->[0]->[7];
-    $stats{'ic/crms'}{$date}   += $ref->[0]->[8];
-    $stats{'und/nfi'}{$date}   += $ref->[0]->[9];
-    $stats{'und/crms'}{$date}  += $ref->[0]->[10];
-    $stats{'Status 4'}{$date}  += $ref->[0]->[11];
-    $stats{'Status 5'}{$date}  += $ref->[0]->[12];
-    $stats{'Status 6'}{$date}  += $ref->[0]->[13];
-    $stats{'Status 7'}{$date}  += $ref->[0]->[14];
-    $stats{'Status 8'}{$date}  += $ref->[0]->[15];
-    $stats{'Status 9'}{$date}  += $ref->[0]->[16];
+    $stats{'pd/exp'}{$date}    += $ref->[0]->[5];
+    $stats{'pdus/cdpp'}{$date} += $ref->[0]->[6];
+    $stats{'ic/ren'}{$date}    += $ref->[0]->[7];
+    $stats{'ic/cdpp'}{$date}   += $ref->[0]->[8];
+    $stats{'ic/crms'}{$date}   += $ref->[0]->[9];
+    $stats{'und/nfi'}{$date}   += $ref->[0]->[10];
+    $stats{'und/crms'}{$date}  += $ref->[0]->[11];
+    $stats{'Status 4'}{$date}  += $ref->[0]->[12];
+    $stats{'Status 5'}{$date}  += $ref->[0]->[13];
+    $stats{'Status 6'}{$date}  += $ref->[0]->[14];
+    $stats{'Status 7'}{$date}  += $ref->[0]->[15];
+    $stats{'Status 8'}{$date}  += $ref->[0]->[16];
+    $stats{'Status 9'}{$date}  += $ref->[0]->[17];
     for my $cat (keys %cats)
     {
       next if $cat =~ m/(All)|(Status)/;
@@ -3388,7 +3393,7 @@ sub CreateExportData
     }
   }
   $report .= "\n";
-  my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pd/crms', 'pd/add', 'pdus/cdpp',
+  my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pd/crms', 'pd/add', 'pd/exp', 'pdus/cdpp',
                 'All IC', 'ic/ren', 'ic/cdpp', 'ic/crms',
                 'All UND', 'und/nfi', 'und/crms', 'Total',
                 'Status 4', 'Status 5', 'Status 6', 'Status 7', 'Status 8', 'Status 9');
@@ -3525,7 +3530,7 @@ sub CreateExportGraph
   shift @dates; shift @dates;
   # Now the data is just the categories and numbers...
   my @titles = ($type == 1)? ('Total'):('All PD','All IC','All UND');
-  my %titleh = ('All PD' => $lines[0],'All IC' => $lines[7],'All UND' => $lines[11],'Total' => $lines[14]);
+  my %titleh = ('All PD' => $lines[0],'All IC' => $lines[8],'All UND' => $lines[12],'Total' => $lines[15]);
   my @elements = ();
   my %colors = ('All PD' => '#22BB00', 'All IC' => '#FF2200', 'All UND' => '#0088FF', 'Total' => '#FFFF00');
   my %totals = ('All PD' => 0, 'All IC' => 0, 'All UND' => 0);
@@ -4646,6 +4651,27 @@ sub ValidateSubmission2
     elsif ($category ne 'Expert Note' && $category ne 'Foreign Pub' && $category ne 'Misc')
     {
       $errorMsg .= 'pd/add requires note category "Expert Note", "Foreign Pub" or "Misc". ';
+    }
+  }
+  ## pd/exp can only be submitted by an admin and requires note and category
+  if ($attr == 1 && $reason == 15)
+  {
+    if (!$self->IsUserAdmin($user))
+    {
+      $errorMsg .= 'pd/exp requires admin privileges.';
+    }
+    elsif (( $renNum ) || ( $renDate ))
+    {
+      $errorMsg .= 'pd/exp should not include renewal info. ';
+    }
+    if (( !$note ) || ( !$category ))
+    {
+      $errorMsg .= 'pd/exp must include note category and note text. ';
+      $noteError = 1;
+    }
+    elsif ($category ne 'Expert Note' && $category ne 'Foreign Pub' && $category ne 'Misc')
+    {
+      $errorMsg .= 'pd/exp requires note category "Expert Note", "Foreign Pub" or "Misc". ';
     }
   }
   ## pdus/cdpp requires a note and a 'Foreign' or 'Translation' category, and must not have a ren number
@@ -5853,7 +5879,7 @@ sub GetReasonName
   
   my %reasons = ( 1 => 'bib', 2 => 'ncn', 3 => 'con',   4 => 'ddd',  5 => 'man',  6 => 'pvt',
                   7 => 'ren', 8 => 'nfi', 9 => 'cdpp', 10 => 'cip', 11 => 'unp', 12 => 'gfv',
-                 13 => 'crms', 14 => 'add');
+                 13 => 'crms', 14 => 'add', 15 => 'exp');
   return $reasons{$id};
 }
 
@@ -5874,7 +5900,7 @@ sub GetReasonNum
   
   my %reasons = ('bib'  => 1, 'ncn' => 2, 'con'  => 3, 'ddd' => 4,  'man' => 5,  'pvt' => 6,
                  'ren'  => 7, 'nfi' => 8, 'cdpp' => 9, 'cip' => 10, 'unp' => 11, 'gfv' => 12,
-                 'crms' => 13, 'add' => 14);
+                 'crms' => 13, 'add' => 14, 'exp' => 15);
   return $reasons{$id};
 }
 
@@ -6266,8 +6292,10 @@ sub CreateReviewReport
   $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
   
   # Inheriting
-  $sql = 'SELECT COUNT(*) FROM inherit WHERE del!=1';
-  $count = $self->SimpleSqlGet($sql);
+  $sql = 'SELECT COUNT(*) FROM queue WHERE status=9';
+  my $s9count = $self->SimpleSqlGet($sql);
+  $sql = 'SELECT COUNT(*) FROM inherit';
+  $count = $s9count + $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr class='inherit'><td>Can&nbsp;Inherit</td><td colspan='%d'>$count</td>", 1+scalar @pris);
   #$report .= "<td/>" for @pris;
   $report .= '</tr>';
@@ -6283,6 +6311,18 @@ sub CreateReviewReport
   $sql = 'SELECT COUNT(*) FROM inherit WHERE del!=1 AND ((attr!=2 OR reason!=1) AND reason!=12)';
   $count = $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Pending&nbsp;Approval</td><td colspan='%d'>$count</td>", 1+scalar @pris);
+  #$report .= "<td/>" for @pris;
+  $report .= '</tr>';
+  
+  # Approved
+  $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Approved</td><td colspan='%d'>$s9count</td>", 1+scalar @pris);
+  #$report .= "<td/>" for @pris;
+  $report .= '</tr>';
+  
+  # Deleted
+  $sql = 'SELECT COUNT(*) FROM inherit WHERE del=1';
+  $count = $self->SimpleSqlGet($sql);
+  $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Deleted</td><td colspan='%d'>$count</td>", 1+scalar @pris);
   #$report .= "<td/>" for @pris;
   $report .= '</tr>';
   
@@ -7685,7 +7725,10 @@ sub GetTodaysInheritanceCount
 
   #my $sql = 'SELECT COUNT(*) FROM queue WHERE status=9 AND DATE(time)=DATE(NOW())';
   my $sql = 'SELECT COUNT(*) FROM queue WHERE status=9';
-  $self->SimpleSqlGet($sql);
+  my $n = $self->SimpleSqlGet($sql);
+  $sql = 'SELECT COUNT(*) FROM inherit WHERE del=0 AND ((attr=2 AND reason=1) OR reason=12) ';
+  $n += $self->SimpleSqlGet($sql);
+  return $n;
 }
 
 sub LinkToCatalog
@@ -7743,6 +7786,7 @@ sub DuplicateVolumesFromExport
                 'pdus/cdpp' => 1,
                 'pd/crms' => 1,
                 'pd/add' => 1,
+                'pd/exp' => 1,
                 'ic/ren' => 1,
                 'ic/cdpp' => 1,
                 'ic/crms' => 1,
@@ -7852,6 +7896,7 @@ sub AllCRMSRights
                 'pdus/cdpp' => 1,
                 'pd/crms' => 1,
                 'pd/add' => 1,
+                'pd/exp' => 1,
                 'ic/ren' => 1,
                 'ic/cdpp' => 1,
                 'ic/crms' => 1,
