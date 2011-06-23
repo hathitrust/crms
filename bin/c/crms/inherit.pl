@@ -17,7 +17,7 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-achipv] [-s VOL_ID [-s VOL_ID2...]]
+USAGE: $0 [-acChipqv] [-s VOL_ID [-s VOL_ID2...]]
           [-m MAIL_ADDR [-m MAIL_ADDR2...]] [start_date [end_date]]
 
 Reports on the volumes that can inherit from this morning's export,
