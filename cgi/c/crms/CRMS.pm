@@ -7716,21 +7716,13 @@ sub AddInheritanceToQueue
   else
   {
     my $record = $self->GetMetadata($id);
-    @msgs = @{ $self->GetViolations($id, $record) };
-    if (scalar @msgs)
-    {
-      $stat = 1;
-    }
-    else
-    {
-      my $sql = "INSERT INTO queue (id, priority, source) VALUES ('$id', 0, 'inherited')";
-      $self->PrepareSubmitSql($sql);
-      $self->UpdateTitle($id, undef, $record);
-      $self->UpdatePubDate($id, undef, $record);
-      $self->UpdateAuthor ($id, undef, $record);
-      $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES (1, 'inheritance')";
-      $self->PrepareSubmitSql($sql);
-    }
+    my $sql = "INSERT INTO queue (id, priority, source) VALUES ('$id', 0, 'inherited')";
+    $self->PrepareSubmitSql($sql);
+    $self->UpdateTitle($id, undef, $record);
+    $self->UpdatePubDate($id, undef, $record);
+    $self->UpdateAuthor ($id, undef, $record);
+    $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES (1, 'inheritance')";
+    $self->PrepareSubmitSql($sql);
   }
   return $stat . join '; ', @msgs;
 }
@@ -7846,7 +7838,12 @@ sub DuplicateVolumesFromExport
     }
     my $newrights = "$attr/$reason";
     my $oldrights = "$attr2/$reason2";
-    if ($okattr{$oldrights} || ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/) || $oldrights =~ m/bib$/)
+    if ($oldrights eq 'pd/ncn')
+    {
+      $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
+      $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
+    }
+    elsif ($okattr{$oldrights} || ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/) || $oldrights =~ m/bib$/)
     {
       # Always inherit onto a single-review priority 1
       my $rereps = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user LIKE 'rereport%'");
@@ -7982,15 +7979,20 @@ sub DuplicateVolumesFromCandidates
   if ($cid)
   {
     my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id,1)->[0]};
-    if ('ic/bib' eq "$attr2/$reason2")
+    my $oldrights = "$attr2/$reason2";
+    my $newrights = "$cattr/$creason";
+    if ($oldrights eq 'pd/ncn')
+    {
+      $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
+      $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
+    }
+    elsif ($oldrights =~ m/bib$/)
     {
       $data->{'inherit'}->{$cid} = '' unless $data->{'inherit'}->{$cid};
       $data->{'inherit'}->{$cid} .= "$id\t$sysid\t$attr2\t$reason2\t$cattr\t$creason\t$cgid\n";
     }
     else
     {
-      my $oldrights = "$attr2/$reason2";
-      my $newrights = "$cattr/$creason";
       $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
       $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tRights\n";
     }
