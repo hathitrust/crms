@@ -91,6 +91,10 @@ is($crms->IsWorkingDay('2012-01-02'), 0,                                 'WD: NY
 is($crms->IsWorkingDay('2012-01-01'), 0,                                 'WD: NY 2012 - 1');
 is($crms->IsWorkingDay('2012-01-03'), 1,                                 'WD: NY 2012 + 1');
 is($crms->IsWorkingDay('2012-01-04'), 1,                                 'WD: NY 2012 + 2');
+is($crms->IsWorkingDay('2011-06-24'), 1,                                 'WD: a Saturday');
+is($crms->IsWorkingDay('2011-06-25'), 0,                                 'WD: a Saturday');
+is($crms->IsWorkingDay('2011-06-26'), 0,                                 'WD: a Sunday');
+is($crms->IsWorkingDay('2011-06-27'), 1,                                 'WD: a Monday');
 
 is($crms->GetUserAffiliation('hansone@indiana.edu'), 'IU',               'IU affiliation');
 is($crms->GetUserAffiliation('aseeger@library.wisc.edu'), 'UW',          'UW affiliation');
