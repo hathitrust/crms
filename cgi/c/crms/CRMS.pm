@@ -6994,6 +6994,18 @@ sub RightsQuery
   return $ref;
 }
 
+sub RightsDBAvailable
+{
+  my $self = shift;
+  
+  my $dbh = undef;
+  eval {
+    $dbh = $self->GetSdrDb();
+  };
+  $self->ClearErrors();
+  return ($dbh)? 1:0;
+}
+
 # Query Mirlyn holdings for this system id and return volume identifiers.
 sub VolumeIDsQuery
 {
@@ -7123,10 +7135,10 @@ sub GetTrackingInfo
   {
     # See if it has a pre-CRMS determination.
     my $rq = $self->RightsQuery($id,1);
-    if (! scalar @{$rq})
+    if (!$rq)
     {
       $self->ClearErrors();
-      return;
+      return 'Rights info unavailable';
     }
     my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
     my %okattr = $self->AllCRMSRights();
@@ -7604,9 +7616,13 @@ sub UpdateInheritanceRights
     my $id = $row->[0];
     my $a = $row->[1];
     my $r = $row->[2];
-    my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
-    #$attr = 'world';
-    #$reason = 'man';
+    my $rq = $self->RightsQuery($id,1);
+    if (!$rq)
+    {
+      $self->ClearErrors();
+      return;
+    }
+    my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
     if ($self->GetRightsName($a) ne $attr || $self->GetReasonName($r) ne $reason)
     {
       $a = $self->GetRightsNum($attr);
@@ -7780,19 +7796,7 @@ sub DuplicateVolumesFromExport
   my $reason = shift;
   my $data   = shift;
 
-  my %okatrr = ('pd/ncn' => 1,
-                'pd/ren' => 1,
-                'pd/cdpp' => 1,
-                'pdus/cdpp' => 1,
-                'pd/crms' => 1,
-                'pd/add' => 1,
-                'pd/exp' => 1,
-                'ic/ren' => 1,
-                'ic/cdpp' => 1,
-                'ic/crms' => 1,
-                'und/nfi' => 1,
-                'und/crms' => 1,
-                'ic/bib' => 1);
+  my %okattr = $self->AllCRMSRights();
   my $rows = $self->VolumeIDsQuery($sysid);
   if (!scalar @{$rows})
   {
@@ -7827,7 +7831,6 @@ sub DuplicateVolumesFromExport
       $candidate = $id2;
       $candidateTime = $time;
     }
- 
   }
   my $wrong = $self->HasMissingOrWrongRecord($sysid, $rows);
   foreach my $line (@{$rows})
@@ -7843,7 +7846,7 @@ sub DuplicateVolumesFromExport
     }
     my $newrights = "$attr/$reason";
     my $oldrights = "$attr2/$reason2";
-    if ($okatrr{$oldrights} || ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/))
+    if ($okattr{$oldrights} || ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/) || $oldrights =~ m/bib$/)
     {
       # Always inherit onto a single-review priority 1
       my $rereps = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user LIKE 'rereport%'");
@@ -7912,8 +7915,6 @@ sub DuplicateVolumesFromCandidates
   my $sysid  = shift;
   my $data   = shift;
 
-  my %okattr = $self->AllCRMSRights();
-  $okattr{'ic/bib'} => 1;
   my $rows = $self->VolumeIDsQuery($sysid);
   if (1 == scalar @{$rows})
   {
