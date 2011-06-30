@@ -7,43 +7,47 @@
 [% q = cgi.param('query') %]
 
 <h2>Query Rights Database:</h2>
-<form action="crms">
-  <label for="queryTA" class="smallishText">Enter one volume id per line.</label><br/>
-  <input type="hidden" name="p" value="rights"/>
-  <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;"></textarea>
-  <input type="submit" value="Do it!"/>
-</form>
 
-[% IF q %]
-  [% FOREACH id IN q.split %]
-    [% rows = crms.RightsQuery(id) %]
-    [% IF rows.size() == 0 %][% CONTINUE %][% END %]
-    <br/>
-    [% sysid = crms.BarcodeToId(id) %]
-    [% syslink = "No System ID" %]
-    [% IF sysid %]
-       [% syslink = '<a style="color:white;" href="http://mirlyn.lib.umich.edu/Record/' _ sysid _ '/Details#tabs" target="_blank">' _ sysid _ "</a>" %]
-    [% END %]
-    <table class="exportStats" style="width:33%;">
-    <tr>
-      <th colspan="6" class="major" style="text-align:center;">
-        [% id %] ([% syslink %])
-      </th>
-    </tr>
-    <tr><th>Attr</th><th>Reason</th><th>Source</th><th>User</th><th>Time</th><th>Note</th></tr>
-    [% FOREACH r IN rows %]
+[% IF NOT crms.RightsDBAvailable() %]
+<h3 style="color:red;">Warning: the rights database is not available.</h3>
+[% ELSE %]
+  <form action="crms">
+    <label for="queryTA" class="smallishText">Enter one volume id per line.</label><br/>
+    <input type="hidden" name="p" value="rights"/>
+    <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;"></textarea>
+    <input type="submit" value="Do it!"/>
+  </form>
+
+  [% IF q %]
+    [% FOREACH id IN q.split %]
+      [% rows = crms.RightsQuery(id) %]
+      [% IF rows.size() == 0 %][% CONTINUE %][% END %]
+      <br/>
+      [% sysid = crms.BarcodeToId(id) %]
+      [% syslink = "No System ID" %]
+      [% IF sysid %]
+         [% syslink = '<a style="color:white;" href="http://mirlyn.lib.umich.edu/Record/' _ sysid _ '/Details#tabs" target="_blank">' _ sysid _ "</a>" %]
+      [% END %]
+      <table class="exportStats" style="width:33%;">
       <tr>
-      <td>[% r.0 %]</td>
-      <td>[% r.1 %]</td>
-      <td>[% r.2 %]</td>
-      <td>[% r.3 %]</td>
-      <td>[% r.4.replace('\s','&nbsp;') %]</td>
-      <td>[% r.5 %]</td>
+        <th colspan="6" class="major" style="text-align:center;">
+          [% id %] ([% syslink %])
+        </th>
       </tr>
+      <tr><th>Attr</th><th>Reason</th><th>Source</th><th>User</th><th>Time</th><th>Note</th></tr>
+      [% FOREACH r IN rows %]
+        <tr>
+        <td>[% r.0 %]</td>
+        <td>[% r.1 %]</td>
+        <td>[% r.2 %]</td>
+        <td>[% r.3 %]</td>
+        <td>[% r.4.replace('\s','&nbsp;') %]</td>
+        <td>[% r.5 %]</td>
+        </tr>
+      [% END %]
+
+      </table>
     [% END %]
-    
-    </table>
   [% END %]
 [% END %]
-
 [% INCLUDE footer.tt %]
