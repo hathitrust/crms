@@ -7838,7 +7838,7 @@ sub DuplicateVolumesFromExport
     }
     my $newrights = "$attr/$reason";
     my $oldrights = "$attr2/$reason2";
-    if ($oldrights eq 'pd/ncn')
+    if ($newrights eq 'pd/ncn')
     {
       $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
       $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
@@ -7981,7 +7981,7 @@ sub DuplicateVolumesFromCandidates
     my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id,1)->[0]};
     my $oldrights = "$attr2/$reason2";
     my $newrights = "$cattr/$creason";
-    if ($oldrights eq 'pd/ncn')
+    if ($newrights eq 'pd/ncn')
     {
       $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
       $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
