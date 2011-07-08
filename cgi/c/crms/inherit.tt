@@ -256,7 +256,7 @@ function VerifyDelete(formid)
     [% doNext = (n < of) %]
     [% IF doPrev %]
       [% prev = n - 1 %]
-      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=$prev&amp;records=$recs;auto=$auto">
+      <a href="?p=$p;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=$prev;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]
@@ -265,7 +265,7 @@ function VerifyDelete(formid)
     &nbsp;||&nbsp;
     [% IF doNext %]
       [% next = n + 1 %]
-      <a href="?p=$p&amp;id=$id&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=$next&amp;records=$recs;auto=$auto">
+      <a href="?p=$p;id=$id;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=$next;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]
@@ -273,7 +273,7 @@ function VerifyDelete(formid)
     [% IF doNext %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
     [% IF doPrev %]
-      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=1&amp;records=$recs;auto=$auto">
+      <a href="?p=$p;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=1;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]
@@ -281,7 +281,7 @@ function VerifyDelete(formid)
     [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
     [% IF doNext %]
-      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=$of&amp;records=$recs;auto=$auto">
+      <a href="?p=$p;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=$of;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]
@@ -352,7 +352,7 @@ function VerifyDelete(formid)
     <p><b>Found $inheriting volume[% (inheriting==1)? "":"s"%] from $source source[% (source==1)? "":"s"%], page $n of $of</b></p>
     [% IF doPrev %]
       [% prev = n - 1 %]
-      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=$prev&amp;records=$recs;auto=$auto">
+      <a href="?p=$p;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=$prev;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]
@@ -361,7 +361,7 @@ function VerifyDelete(formid)
     &nbsp;||&nbsp;
     [% IF doNext %]
       [% next = n + 1 %]
-      <a href="?p=$p&amp;id=$id&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=$next&amp;records=$recs;auto=$auto">
+      <a href="?p=$p;id=$id;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=$next;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]
@@ -369,7 +369,7 @@ function VerifyDelete(formid)
     [% IF doNext %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
     [% IF doPrev %]
-      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=1&amp;records=$recs;auto=$auto">
+      <a href="?p=$p;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=1;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]
@@ -377,7 +377,7 @@ function VerifyDelete(formid)
     [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
     [% IF doNext %]
-      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;order2=$order2&amp;dir=$dir&amp;n=$of&amp;records=$recs;auto=$auto">
+      <a href="?p=$p;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=$of;records=$recs;auto=$auto">
     [% ELSE %]
       <span class="disabledLink">
     [% END %]

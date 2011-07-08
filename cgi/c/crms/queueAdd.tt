@@ -104,9 +104,9 @@ Priority 3 can only be added or reviewed by an expert, admin, or superadmin.<br/
     [% vs = crms.GetViolations(r.0, undef, r.6) %]
     <tr><td>
     [% IF r.5 > 0 %]
-      <a href="/cgi/c/crms/crms?p=adminReviews&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
+      <a href="/cgi/c/crms/crms?p=adminReviews;search1=Identifier;search1value=[% r.0 %]" target="_blank">
     [% ELSE %]
-      <a href="/cgi/c/crms/crms?p=queue&amp;search1=Identifier&amp;search1value=[% r.0 %]" target="_blank">
+      <a href="/cgi/c/crms/crms?p=queue;search1=Identifier;search1value=[% r.0 %]" target="_blank">
     [% END %]
     [% r.0 %]</a></td>
     <td>[% cgi.escapeHTML(r.1) %]</td>

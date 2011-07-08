@@ -50,7 +50,7 @@
   </tr>
   [% FOREACH userid IN users %]
     <tr [% id == userid ? 'class="total"':''%]>
-      <td><a href="crms?p=userRate&amp;user=[% userid %]" target="_blank">[% crms.GetUserName(userid).replace('\s','&nbsp;') %]</a></td>
+      <td><a href="crms?p=userRate;user=[% userid %]" target="_blank">[% crms.GetUserName(userid).replace('\s','&nbsp;') %]</a></td>
       <td>[% userid %]</td>
       <td>[% crms.GetUserKerberosID(userid) %]</td>
       <td style="text-align:center">[% IF crms.IsUserReviewer(userid) %][% icon %][% END %]</td>

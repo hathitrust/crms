@@ -235,7 +235,7 @@ foreach my $row ( @{$ref} )
   }
   elsif ($report eq 'html')
   {
-    my $ptlink = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=' . $id;
+    my $ptlink = 'https://babel.hathitrust.org/cgi/pt?attr=1;id=' . $id;
     push @lines, "<tr><td><a href='$catlink' target='_blank'>$sysid</a></td><td><a href='$ptlink' target='_blank'>$id</a></td><td>$ti</td><td>$attr</td><td>$reason</td><td>$chron</td><td>$date1</td><td>$date2</td><td>$date</td><td>$tracking</td>";
   }
   my $situation = '';
@@ -295,7 +295,7 @@ foreach my $row ( @{$ref} )
       }
       elsif ($report eq 'html')
       {
-        my $ptlink2 = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=' . $id2;
+        my $ptlink2 = 'https://babel.hathitrust.org/cgi/pt?attr=1;id=' . $id2;
         push @lines, "<tr><td><a href='$catlink' target='_blank'>$sysid</a></td><td><a href='$ptlink2' target='_blank'>$id2</a></td><td/><td>$attr2</td><td>$reason2</td><td>$chron2</td><td/><td/><td>$date2</td><td>$tracking2</td>";
       }
     }

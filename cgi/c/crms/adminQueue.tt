@@ -47,7 +47,7 @@ function CheckAll(box,formid)
 <br/><br/>
 [% locked = crms.GetLockedItems() %]
 [% IF locked.size %]
-  <blockquote><a href="?p=adminQueue&amp;clear=1">Clear old locks</a></blockquote><br/>
+  <blockquote><a href="?p=adminQueue;clear=1">Clear old locks</a></blockquote><br/>
   <form action="crms" id="checks">
   <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
   <input type="hidden" name="p" value="adminQueue"/>
@@ -65,7 +65,7 @@ function CheckAll(box,formid)
       <td style="text-align:center">[% when.replace('\s', '&nbsp;') %]</td>
       <td style="text-align:center"><input type="checkbox" name="vol_[% item %]"/></td>
       <td style="text-align:center">
-        <a href="crms?p=adminQueue&amp;unlock=[% item %]">do it</a>  
+        <a href="crms?p=adminQueue;unlock=[% item %]">do it</a>  
       </td>
     </tr>
   [% END %]

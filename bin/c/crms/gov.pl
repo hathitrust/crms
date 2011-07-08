@@ -137,7 +137,7 @@ foreach my $row (@{$ref})
   $n++;
   my $sysid = $crms->BarcodeToId($id);
   my $catLink = "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
-  my $ptLink = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=' . $id;
+  my $ptLink = 'https://babel.hathitrust.org/cgi/pt?attr=1;id=' . $id;
   my $record = $crms->GetMetadata($sysid);
   my $author = $crms->GetRecordAuthor($id, $record);
   $author =~ s/&/&amp;/g;

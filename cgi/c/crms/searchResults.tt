@@ -80,7 +80,7 @@ function CheckAll(box,formid)
   [% doLast = (offset != last) %]
 
   [% IF doPrev %]
-  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;op1=$op1&amp;search2=$search2&amp;search2value=$search2value&amp;op2=$op2&amp;search3=$search3&amp;search3value=$search3value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$prev&amp;stype=$stype&amp;records=$pagesize#results">
+  <a href="?p=$p;search1=$search1;search1value=$search1value;op1=$op1;search2=$search2;search2value=$search2value;op2=$op2;search3=$search3;search3value=$search3value;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=$prev;stype=$stype;records=$pagesize#results">
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
@@ -88,7 +88,7 @@ function CheckAll(box,formid)
   [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
   &nbsp;||&nbsp;
   [% IF doNext %]
-  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;op1=$op1&amp;search2=$search2&amp;search2value=$search2value&amp;op2=$op2&amp;search3=$search3&amp;search3value=$search3value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$next&amp;stype=$stype&amp;records=$pagesize#results">
+  <a href="?p=$p;search1=$search1;search1value=$search1value;op1=$op1;search2=$search2;search2value=$search2value;op2=$op2;search3=$search3;search3value=$search3value;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=$next;stype=$stype;records=$pagesize#results">
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
@@ -96,7 +96,7 @@ function CheckAll(box,formid)
   [% IF doNext %]</a>[% ELSE %]</span>[% END %]
   &nbsp;||&nbsp;
   [% IF doFirst %]
-  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;op1=$op1&amp;search2=$search2&amp;search2value=$search2value&amp;op2=$op2&amp;search3=$search3&amp;search3value=$search3value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=0&amp;stype=$stype&amp;records=$pagesize#results">
+  <a href="?p=$p;search1=$search1;search1value=$search1value;op1=$op1;search2=$search2;search2value=$search2value;op2=$op2;search3=$search3;search3value=$search3value;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=0;stype=$stype;records=$pagesize#results">
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
@@ -104,7 +104,7 @@ function CheckAll(box,formid)
   [% IF doFirst %]</a>[% ELSE %]</span>[% END %]
   &nbsp;||&nbsp;
   [% IF doLast %]
-  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;op1=$op1&amp;search2=$search2&amp;search2value=$search2value&amp;op2=$op2&amp;search3=$search3&amp;search3value=$search3value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$last&amp;stype=$stype&amp;records=$pagesize#results">
+  <a href="?p=$p;search1=$search1;search1value=$search1value;op1=$op1;search2=$search2;search2value=$search2value;op2=$op2;search3=$search3;search3value=$search3value;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=$last;stype=$stype;records=$pagesize#results">
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
@@ -112,7 +112,7 @@ function CheckAll(box,formid)
   [% IF doLast %]</a>[% ELSE %]</span>[% END %]
 
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;op1=$op1&amp;search2=$search2&amp;search2value=$search2value&amp;op2=$op2&amp;search3=$search3&amp;search3value=$search3value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$offset&amp;stype=$stype&amp;download=1" target="_blank">download</a>
+  <a href="?p=$p;search1=$search1;search1value=$search1value;op1=$op1;search2=$search2;search2value=$search2value;op2=$op2;search3=$search3;search3value=$search3value;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=$offset;stype=$stype;download=1" target="_blank">download</a>
   
   [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
       <input type="checkbox" [% IF showSysID %]checked="checked"[% END %] id="sysIDCB"
@@ -263,7 +263,7 @@ function CheckAll(box,formid)
 
   <p><b>Found $Total review[% (Total==1)? "":"s"%] for $TotalVolumes volume[% (TotalVolumes==1)? "":"s"%], page $pagenum of $of</b></p>
   [% IF doPrev %]
-  <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;op1=$op1&amp;search2=$search2&amp;search2value=$search2value&amp;op2=$op2&amp;search3=$search3&amp;search3value=$search3value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$prev&amp;stype=$stype&amp;records=$pagesize#results">
+  <a href="?p=$p;search1=$search1;search1value=$search1value;op1=$op1;search2=$search2;search2value=$search2value;op2=$op2;search3=$search3;search3value=$search3value;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=$prev;stype=$stype;records=$pagesize#results">
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
@@ -271,7 +271,7 @@ function CheckAll(box,formid)
   [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
   &nbsp;||&nbsp;
   [% IF doNext %]
-  <a href="?p=$p&amp;id=$id&amp;search1=$search1&amp;search1value=$search1value&amp;op1=$op1&amp;search2=$search2&amp;search2value=$search2value&amp;op2=$op2&amp;search3=$search3&amp;search3value=$search3value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=$next&amp;stype=$stype&amp;records=$pagesize#results">
+  <a href="?p=$p;id=$id;search1=$search1;search1value=$search1value;op1=$op1;search2=$search2;search2value=$search2value;op2=$op2;search3=$search3;search3value=$search3value;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=$next;stype=$stype;records=$pagesize#results">
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
@@ -301,7 +301,7 @@ function CheckAll(box,formid)
     [% max = pagenum + 10 %]
     [% IF max > of %][% max = of %][% END %]
     [% FOREACH pg IN [min .. max] %]
-      <a href="?p=$p&amp;search1=$search1&amp;search1value=$search1value&amp;op1=$op1&amp;search2=$search2&amp;search2value=$search2value&amp;op2=$op2&amp;search3=$search3&amp;search3value=$search3value&amp;startDate=$startDate&amp;endDate=$endDate&amp;order=$order&amp;dir=$dir&amp;offset=[% (pg - 1) * pagesize %]&amp;stype=$stype&amp;records=$pagesize#results">
+      <a href="?p=$p;search1=$search1;search1value=$search1value;op1=$op1;search2=$search2;search2value=$search2value;op2=$op2;search3=$search3;search3value=$search3value;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=[% (pg - 1) * pagesize %];stype=$stype;records=$pagesize#results">
       [% IF pg == pagenum %]<b>[% pg %]</b>[% ELSE %][% pg %][% END %]
   </a> || 
     [% END %]

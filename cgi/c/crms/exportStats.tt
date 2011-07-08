@@ -3,7 +3,7 @@
 <h2 style="margin-left:390px">Statistics for Exported Determinations</h2>
 <br/>
 
-<h3>CRMS&nbsp;Project&nbsp;Cumulative*&nbsp;&nbsp;&nbsp;&nbsp;<a target="_blank" href="/cgi/c/crms/getExportStats?type=text&amp;c=1">Download</a></h3>
+<h3>CRMS&nbsp;Project&nbsp;Cumulative*&nbsp;&nbsp;&nbsp;&nbsp;<a target="_blank" href="/cgi/c/crms/getExportStats?type=text;c=1">Download</a></h3>
 <table style="width:100px;">
   <tr>
     <td>[% report = crms.CreateExportReport(1) %]
@@ -37,7 +37,7 @@
 [% years = crms.GetAllExportYears() %]
 [% FOR year IN years.reverse() %]
   <h3>Exported&nbsp;Determinations&nbsp;$year&nbsp;&nbsp;&nbsp;&nbsp;
-    <a target="_blank" href="/cgi/c/crms/getExportStats?type=text&amp;c=0&amp;startDate=$year-01&amp;endDate=$year-12">Download</a></h3>
+    <a target="_blank" href="/cgi/c/crms/getExportStats?type=text;c=0;startDate=$year-01;endDate=$year-12">Download</a></h3>
   [% report = crms.CreateExportReport(0, year) %]
   [% IF year == '2010' %]
     [% report = report.replace('Status&nbsp;6','Status&nbsp;6**') %]
