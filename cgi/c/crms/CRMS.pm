@@ -2760,17 +2760,28 @@ sub GetQueueRef
   return $data;
 }
 
+sub PTAddress
+{
+  my $self = shift;
+  my $id   = shift;
+  
+  my $pt = 'babel.hathitrust.org';
+  my $syspt = $self->SimpleSqlGet('SELECT value FROM systemvars WHERE name="pt"');
+  $pt = $syspt if $syspt;
+  return 'https://' . $pt . '/cgi/pt?attr=1;id=' . $id;
+}
+
 sub LinkToPT
 {
   my $self  = shift;
   my $id    = shift;
   my $title = shift;
 
-  $title = $self->GetTitle( $id ) unless $title;
+  $title = $self->GetTitle($id) unless $title;
   $title = CGI::escapeHTML($title);
-  my $url = 'https://babel.hathitrust.org/cgi/pt?attr=1&amp;id=';
+  my $url = $self->PTAddress($id);
   $self->ClearErrors();
-  return "<a href='$url$id' target='_blank'>$title</a>";
+  return '<a href="' . $url . '" target="_blank">' . $title . '</a>';
 }
 
 sub LinkToReview
@@ -2794,7 +2805,7 @@ sub DetailInfo
   my $page   = shift;
   my $review = shift;
 
-  my $url = "/cgi/c/crms/crms?p=detailInfo&amp;id=$id&amp;user=$user&amp;page=$page";
+  my $url = "/cgi/c/crms/crms?p=detailInfo;id=$id;user=$user;page=$page";
   $url .= ';review=1' if $review;
   return "<a href='$url' target='_blank'>$id</a>";
 }
@@ -3772,7 +3783,7 @@ sub CreateDeterminationsBreakdownReport
   my @lines = split "\n", $data;
   $title = shift @lines;
   $title =~ s/\s/&nbsp;/g;
-  my $url = sprintf("<a href='?p=determinationStats&amp;startDate=$start&amp;endDate=$end&amp;%sdownload=1&amp;pre=$pre' target='_blank'>Download</a>",($monthly)?'monthly=on&amp;':'');
+  my $url = sprintf("<a href='?p=determinationStats;startDate=$start;endDate=$end;%sdownload=1;pre=$pre' target='_blank'>Download</a>",($monthly)?'monthly=on;':'');
   my $report = "<h3>$title&nbsp;&nbsp;&nbsp;&nbsp;$url</h3>\n";
   $report .= "<table class='exportStats'>\n";
   $report .= "<tr><th/><th colspan='$span1'><span class='major'>Counts</span></th><th colspan='$span2'><span class='total'>Percentages</span></th></tr>\n";
@@ -5131,7 +5142,7 @@ sub GetMarcDatafield
               qq{/*[local-name()='subfield'  and \@code='$code']};
   my $data;
   eval{ $data = $record->findvalue( $xpath ); };
-  if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
+  if ($@) { $self->Logit( "failed to parse metadata for $id: $@" ); }
   return $data;
 }
 
@@ -5180,12 +5191,9 @@ sub GetTitle
 
   my $ti = $self->SimpleSqlGet("SELECT title FROM bibdata WHERE id='$id'");
   $ti = $self->UpdateTitle($id) unless $ti;
-  # Get rid of trailing punctuation
-  $ti =~ s/\s*[:\/,.;]\s*$//;
   return $ti;
 }
 
-## use for now because the API is slow...
 sub GetRecordTitle
 {
   my $self   = shift;
@@ -5196,7 +5204,9 @@ sub GetRecordTitle
   my $xpath = "//*[local-name()='datafield' and \@tag='245']/*[local-name()='subfield' and \@code='a']";
   my $title = '';
   eval{ $title = $record->findvalue( $xpath ); };
-  if ($@) { $self->Logit( "failed to parse metadata: $@" ); }
+  if ($@) { $self->Logit( "failed to parse metadata for $id: $@" ); }
+  # Get rid of trailing punctuation
+  $title =~ s/\s*([:\/,;]*\s*)+$// if $title;
   return $title;
 }
 
@@ -5218,20 +5228,20 @@ sub UpdateTitle
   my $title  = shift;
   my $record = shift;
   
-  if ($id eq '')
+  if (!$id)
   {
     $self->SetError("Trying to update title for empty volume id!\n");
-    $self->Logit("$0: trying to update title for empty volume id!\n");
+    return;
   }
-  if ( ! $title )
+  if (!$title)
   {
-    ## my $ti = $self->GetMarcDatafield( $id, "245", "a");
-    $title = $self->GetRecordTitle( $id, $record );
+    $record = $self->GetMetadata($id) unless $record;
+    $title = $self->GetRecordTitle($id, $record);
   }
   my $tiq = $self->get('dbh')->quote( $title );
   my $sql = "SELECT COUNT(*) FROM bibdata WHERE id='$id'";
   my $count = $self->SimpleSqlGet( $sql );
-  $sql = qq{ UPDATE bibdata SET title=$tiq WHERE id="$id"};
+  $sql = "UPDATE bibdata SET title=$tiq WHERE id='$id'";
   if (!$count)
   {
     $sql = "INSERT INTO bibdata (id, title, pub_date) VALUES ('$id', $tiq, '')";
@@ -5257,12 +5267,16 @@ sub UpdatePubDate
   my $date   = shift;
   my $record = shift;
 
-  if ($id eq '')
+  if (!$id)
   {
     $self->SetError("Trying to update pub date for empty volume id!\n");
-    $self->Logit("$0: trying to update pub date for empty volume id!\n");
+    return;
   }
-  $date = $self->GetPublDate($id, $record) unless $date;
+  if (!$date)
+  {
+    $record = $self->GetMetadata($id) unless $record;
+    $date = $self->GetPublDate($id, $record);
+  }
   my $sql = "SELECT COUNT(*) FROM bibdata WHERE id='$id'";
   my $count = $self->SimpleSqlGet( $sql );
   $sql = "UPDATE bibdata SET pub_date='$date-01-01' WHERE id='$id'";
@@ -5291,12 +5305,16 @@ sub UpdateAuthor
   my $author = shift;
   my $record = shift;
   
-  if ($id eq '')
+  if (!$id)
   {
     $self->SetError("Trying to update author for empty volume id!\n");
-    $self->Logit("$0: trying to update author for empty volume id!\n");
+    return;
   }
-  $author = $self->GetRecordAuthor($id, $record) unless $author;
+  if (!$author)
+  {
+    $record = $self->GetMetadata($id) unless $record;
+    $author = $self->GetRecordAuthor($id, $record);
+  }
   my $aiq = $self->get('dbh')->quote( $author );
   my $sql = "SELECT count(*) FROM bibdata WHERE id='$id'";
   my $count = $self->SimpleSqlGet( $sql );
@@ -5390,7 +5408,7 @@ sub GetMetadata
     }
     else { $self->SetError("HT Bib API found no data for '$id' (got '$content')"); return; }
   };
-  if ($@) { $self->SetError( "failed to parse ($content):$@" ); return; }
+  if ($@) { $self->SetError( "failed to parse ($content) for $id:$@" ); return; }
   my $parser = $self->get('parser');
   if (!$parser)
   {
@@ -5402,7 +5420,7 @@ sub GetMetadata
     $content = Encode::decode('utf8', $content);
     $source = $parser->parse_string( $xml );
   };
-  if ($@) { $self->SetError( "failed to parse ($xml):$@" ); return; }
+  if ($@) { $self->SetError( "failed to parse ($xml) for $id: $@" ); return; }
   my $xpc = XML::LibXML::XPathContext->new($source);
   my $ns = 'http://www.loc.gov/MARC21/slim';
   $xpc->registerNs(ns => $ns);
@@ -5448,7 +5466,7 @@ sub GetRightsString
     }
     else { $self->SetError("HT Bib API found no data for '$id' (got '$content')"); return; }
   };
-  if ($@) { $self->SetError( "failed to parse ($content):$@" ); return; }
+  if ($@) { $self->SetError( "failed to parse ($content) for $id:$@" ); return; }
   return $rightsString;
 }
 
@@ -5548,11 +5566,7 @@ sub IsLockedForUser
 
   my $sql = "SELECT locked FROM $CRMSGlobals::queueTable WHERE id='$id'";
   my $ref = $self->get( 'dbh' )->selectall_arrayref( $sql );
-  if ( scalar @{$ref} )
-  {
-    if ( $ref->[0]->[0] eq $name ) { return 1; }
-  }
-  return 0;
+  return (scalar @{$ref} && $ref->[0]->[0] eq $name)? 1:0;
 }
 
 sub IsLockedForOtherUser
