@@ -95,7 +95,7 @@
 [%# links to PT, stanford DB search, or Mirlyn catalog %]
 [% authorLink = "http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$encAuthor" %]
 [% titleLink  = "http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$encTitle" %]
-[% searchForm = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/modify?clauseMapped(title)=$encTitle;clauseMapped(author)=$encAuthor" %]
+[% searchForm = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/modify?clauseMapped(title)=$encTitle&amp;clauseMapped(author)=$encAuthor" %]
 [% ptLink     = crms.PTAddress(barcode) _ ";skin=crms;page=root;view=image;size=$mag" %]
 [% sysID      = crms.BarcodeToId(barcode) %]
 [% catLink    = "http://mirlyn.lib.umich.edu/Record/$sysID" %]
