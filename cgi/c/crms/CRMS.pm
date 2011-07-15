@@ -4215,7 +4215,7 @@ sub CreateStatsReport
   my $dllink = <<END;
   <a href='crms?p=$page;download=1;user=$user;cumulative=$cumulative;year=$year;inval=$inval;nne=$nononexpert' target='_blank'>Download</a>
   <a class='tip' href='#'>
-    <img style="border:0px solid;" width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
+    <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
     <span>
     <b>To get the downloaded stats into a spreadsheet:</b><br/>
       &#x2022; Click on the "Download" link (this will open a new page in your browser)<br/>

@@ -32,7 +32,7 @@ a:active {color:#1B75DA;}  /* selected link */
 a.header:link    {color:#82CAFA;}
 a.header:visited {color:#82CAFA;}
 a.header:hover   {color:#A0DAFF;}
-a.header:active  {color:#82CAFA;}
+a.header:active  {color:#82CAFA;}tip
 
 .divbody {
   float:left;
@@ -395,7 +395,12 @@ input.review {
 a.tip {
   position:relative; /*this is the key*/
   z-index:24;
-  text-decoration:none
+  text-decoration:none;
+  border: 0 none;
+}
+
+a.tip img {
+  border: 0px solid;
 }
 
 a.tip:hover {z-index:25;}

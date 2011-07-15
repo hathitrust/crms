@@ -55,7 +55,7 @@
 <div id="RightsReason" style="position:relative;">
   <div style="position:absolute;top:0px;right:1em;">
     <a class="tip" href="#">
-      <img style="border:0px solid;" width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
+      <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
       <span>
       <strong>pd/ncn</strong> - public domain/no printed copyright notice<br/>
       <strong>pd/ren</strong> - public domain/copyright was not renewed<br/>
