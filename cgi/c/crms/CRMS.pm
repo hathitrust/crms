@@ -823,7 +823,7 @@ sub LoadNewItems
   {
     $needed = max($CRMSGlobals::queueSize - $queuesize, 500 - $priZeroSize);
   }
-  printf "Need $needed items (max of %d and %d).\n", $CRMSGlobals::queueSize - $queuesize, 500 - $priZeroSize;
+  printf "Need $needed volumes (max of %d and %d).\n", $CRMSGlobals::queueSize - $queuesize, 500 - $priZeroSize;
   return if $needed <= 0;
   my $count = 0;
   my $y = 1923 + int(rand(40));
@@ -831,11 +831,10 @@ sub LoadNewItems
   my %dels = ();
   while (1)
   {
-    my $sql = 'SELECT id, time, pub_date, title, author FROM candidates ' .
+    my $sql = 'SELECT id,time,pub_date,title, author FROM candidates ' .
               'WHERE id NOT IN (SELECT DISTINCT id FROM inherit) ' .
               'AND id NOT IN (SELECT DISTINCT id FROM queue) ' .
               'AND id NOT IN (SELECT DISTINCT id FROM reviews) ' .
-              'AND id NOT IN (SELECT DISTINCT id FROM historicalreviews) ' .
               'ORDER BY pub_date ASC, time DESC';
     my $ref = $self->get('dbh')->selectall_arrayref( $sql );
     # This can happen in the testsuite.
@@ -845,6 +844,10 @@ sub LoadNewItems
     {
       my $id = $row->[0];
       next if $dels{$id};
+      my $pub_date = $row->[2];
+      #print "Trying $id ($pub_date) against $y\n";
+      next if $pub_date ne "$y-01-01";
+      next if 0 < $self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'");
       my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
       if ('ic/bib' ne "$attr/$reason")
       {
@@ -859,13 +862,10 @@ sub LoadNewItems
         $self->Filter($id, 'duplicate');
         next;
       }
-      my $pub_date = $row->[2];
-      #print "Trying $id ($pub_date) against $y\n";
-      next if $pub_date ne "$y-01-01";
       my $time = $row->[1];
       my $title = $row->[3];
       my $author = $row->[4];
-      if ($self->AddItemToQueue( $id, $pub_date, $title, $author ))
+      if ($self->AddItemToQueue($id, $pub_date, $title, $author))
       {
         printf "Added to queue: $id published %s\n", substr($pub_date, 0, 4);
         $count++;
@@ -884,7 +884,7 @@ sub LoadNewItems
   }
   foreach my $id (keys %dels)
   {
-    printf "$id rights is %s; deleting from candidates.", $dels{$id};
+    printf "$id rights is %s; deleting from candidates.\n", $dels{$id};
     $self->PrepareSubmitSql("DELETE FROM candidates WHERE id='$id'");
   }
   #Record the update to the queue
@@ -5383,7 +5383,7 @@ sub GetMetadata
   my $id   = shift;
 
   if ( ! $id ) { $self->SetError( "GetMetadata: no id given: '$id'" ); return; }
-  return $self->get($id) if $self->get($id);
+  #return $self->get($id) if $self->get($id);
   # If it has a period, it's a volume ID
   my $url = ($id =~ m/\./)? "http://catalog.hathitrust.org/api/volumes/full/htid/$id.json" :
                             "http://catalog.hathitrust.org/api/volumes/full/recordnumber/$id.json";
@@ -5425,7 +5425,7 @@ sub GetMetadata
   my $ns = 'http://www.loc.gov/MARC21/slim';
   $xpc->registerNs(ns => $ns);
   my @records = $xpc->findnodes('//ns:record');
-  $self->set($id,$records[0]);
+  #$self->set($id,$records[0]);
   return $records[0];
 }
 
