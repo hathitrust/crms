@@ -144,10 +144,14 @@ foreach my $row (@{$ref})
   my $title = $crms->GetRecordTitle($id, $record);
   $title =~ s/&/&amp;/g;
   my $pub = $crms->GetPublDate($id, $record);
-  my $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='a']};
-  my $field260a = $record->findvalue( $xpath ) or '';
-  $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='b']};
-  my $field260b = $record->findvalue( $xpath ) or '';
+  my $field260a = '';
+  my $field260b = '';
+  eval {
+    my $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='a']};
+    $field260a = $record->findvalue( $xpath );
+    $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='b']};
+    $field260b = $record->findvalue( $xpath );
+  };
   $field260a .= ' ' . $field260b;
   if ($report eq 'html')
   {
