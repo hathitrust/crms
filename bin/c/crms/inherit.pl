@@ -313,7 +313,7 @@ if (scalar keys %{$data{'inherit'}})
         $n++;
         $whichn = $n;
       }
-      my $miss = ($crms->HasMissingOrWrongRecord($sysid)>0)? '&nbsp;&nbsp;&nbsp;&#x2713;':'';
+      my $miss = ($crms->HasMissingOrWrongRecord($id,$sysid)>0)? '&nbsp;&nbsp;&nbsp;&#x2713;':'';
       my $change = (($pd == 1 && $icund == 1) || ($pd == 1 && $pdus == 1) || ($icund == 1 && $pdus == 1));
       #print "$change from $pd and $icund ($attr,$attr2)\n";
       my $ar = "$attr/$reason";
@@ -472,9 +472,9 @@ sub InheritanceReport
             'OR id IN (SELECT id FROM unavailable) ORDER BY time DESC';
   if ($singles && scalar @{$singles})
   {
-    $sql = sprintf("SELECT id,gid,attr,reason,time FROM exportdata WHERE id in ('%s') ORDER BY id", join "','", @{$singles});
+    $sql = sprintf("SELECT id,gid,attr,reason,time FROM exportdata WHERE id in ('%s') ORDER BY time DESC", join "','", @{$singles});
   }
-  #print "$sql\n";
+  print "$sql\n" if $verbose > 1;
   my $ref = $dbh->selectall_arrayref($sql);
   foreach my $row (@{$ref})
   {
@@ -484,7 +484,6 @@ sub InheritanceReport
     my $reason = $row->[3];
     my $time = $row->[4];
     next if $seen{$id};
-    $seen{$id} = $id;
     my $sysid = $crms->BarcodeToId($id);
     if (!$sysid)
     {
@@ -494,7 +493,10 @@ sub InheritanceReport
     }
     # When using date ranges, earlier export should not supersede later.
     my $latest = $crms->SimpleSqlGet("SELECT time FROM exportdata WHERE id='$id' ORDER BY time DESC LIMIT 1");
+    print "$gid: $time lt $latest?\n";
     next if $time lt $latest;
+    # THIS is the export we're going to inherit from.
+    $seen{$id} = $id;
     $data{'total'}->{$id} = 1;
     $crms->DuplicateVolumesFromExport($id,$gid,$sysid,$attr,$reason,\%data);
   }
