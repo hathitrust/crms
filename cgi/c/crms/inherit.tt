@@ -338,7 +338,7 @@ function VerifyDelete(formid)
           <td>[% (review.change==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
           <td>[% (review.incrms==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
           <td>[% (review.h5==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
-          <td>[% (crms.HasMissingOrWrongRecord(review.sysid)>0)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
+          <td>[% (crms.HasMissingOrWrongRecord(review.inheriting,review.sysid)>0)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
           <td>[% review.title %]</td>
           <td>[% crms.GetTrackingInfo(review.inheriting) %]</td>
           <td>[% review.src %]</td>

@@ -5473,17 +5473,18 @@ sub GetRightsString
 ## ----------------------------------------------------------------------------
 ##  Function:   get the mirlyn ID for a given volume id using the HT Bib API
 ##              update local system table if necessary.
-##  Parameters: volume id
+##  Parameters: volume id, force to get from metadata bypassing system table
 ##  Return:     system id
 ## ----------------------------------------------------------------------------
 sub BarcodeToId
 {
-  my $self = shift;
-  my $id   = shift;
+  my $self  = shift;
+  my $id    = shift;
+  my $force = shift;
 
   my $sysid = undef;
   my $sql = "SELECT sysid FROM system WHERE id='$id'";
-  $sysid = $self->SimpleSqlGet($sql);
+  $sysid = $self->SimpleSqlGet($sql) unless $force;
   if (!$sysid)
   {
     my $url = "http://catalog.hathitrust.org/api/volumes/brief/htid/$id.json";
@@ -7574,16 +7575,21 @@ sub GetInheritanceRef
 sub HasMissingOrWrongRecord
 {
   my $self  = shift;
+  my $id    = shift;
   my $sysid = shift;
   my $rows  = shift;
 
   $rows = $self->VolumeIDsQuery($sysid) unless $rows;
   foreach my $line (@{$rows})
   {
-    my ($id,$chron,$rights) = split '__', $line;
-    my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id' AND (category='Wrong Record' OR category='Missing')";
-    return $id if ($self->SimpleSqlGet($sql) > 0);
+    my ($id2,$chron2,$rights2) = split '__', $line;
+    my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id2' AND (category='Wrong Record' OR category='Missing')";
+    return $id2 if ($self->SimpleSqlGet($sql) > 0);
   }
+  # In case source volume has been corrected for wrong record and is now on a new record,
+  # check it explicitly.
+  my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id' AND (category='Wrong Record' OR category='Missing')";
+  return $id if ($self->SimpleSqlGet($sql) > 0);
 }
 
 sub IsFiltered
@@ -7838,7 +7844,7 @@ sub DuplicateVolumesFromExport
       $candidateTime = $time;
     }
   }
-  my $wrong = $self->HasMissingOrWrongRecord($sysid, $rows);
+  my $wrong = $self->HasMissingOrWrongRecord($id, $sysid, $rows);
   foreach my $line (@{$rows})
   {
     my ($id2,$chron2,$rights2) = split '__', $line;
