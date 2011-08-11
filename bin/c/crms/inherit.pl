@@ -72,6 +72,8 @@ my $crms = CRMS->new(
 );
 require $configFile;
 my $delim = "\n";
+my $src = ($candidates)? 'candidates':'export';
+$src = 'cleanup' if $cleanup;
 print "Verbosity $verbose$delim" if $verbose;
 my $dbh = $crms->get('dbh');
 my $sql = 'SELECT DATE(NOW())';
@@ -110,7 +112,12 @@ if (scalar keys %{$data{'unavailable'}})
     $n++;
     my $retrLink = $crms->LinkToRetrieve($id,1);
     $txt .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$id</a></td></tr>\n";
-    $crms->PrepareSubmitSql("REPLACE INTO unavailable (id) VALUES ('$id')");
+    if ($insert)
+    {
+      $sql = "REPLACE INTO unavailable (id,src) VALUES ('$id','$src')";
+      print "$sql\n" if $verbose > 1;
+      $crms->PrepareSubmitSql($sql);
+    }
   }
   $txt .= "</table>$delim";
 }
@@ -378,8 +385,6 @@ $txt = $head . $header . $delim . $txt;
 if ($insert && scalar keys %{$data{'inherit'}})
 {
   $txt .= '<h4>Now inserting inheritance data</h4>';
-  my $src = ($candidates)? 'candidates':'export';
-  $src = 'cleanup' if $cleanup;
   foreach my $id (keys %{$data{'inherit'}})
   {
     my @lines = split "\n", $data{'inherit'}->{$id};
@@ -469,7 +474,7 @@ sub InheritanceReport
   my %data = ();
   my %seen = ();
   my $sql = "SELECT id,gid,attr,reason,time FROM exportdata WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59') " .
-            'OR id IN (SELECT id FROM unavailable) ORDER BY time DESC';
+            "OR id IN (SELECT id FROM unavailable WHERE src='$src') ORDER BY time DESC";
   if ($singles && scalar @{$singles})
   {
     $sql = sprintf("SELECT id,gid,attr,reason,time FROM exportdata WHERE id in ('%s') ORDER BY time DESC", join "','", @{$singles});
@@ -483,24 +488,33 @@ sub InheritanceReport
     my $attr = $row->[2];
     my $reason = $row->[3];
     my $time = $row->[4];
-    next if $seen{$id};
+    print "InheritanceReport: checking $id ($gid, $attr/$reason, $time)\n" if $verbose;
+    if ($seen{$id})
+    {
+      print "Already saw $id; skipping\n" if $verbose;
+      next;
+    }
     my $sysid = $crms->BarcodeToId($id);
     if (!$sysid)
     {
+      print "Metadata unavailable for $id; skipping\n" if $verbose;
       $data{'unavailable'}->{$id} = 1;
       $crms->ClearErrors();
       next;
     }
     # When using date ranges, earlier export should not supersede later.
     my $latest = $crms->SimpleSqlGet("SELECT time FROM exportdata WHERE id='$id' ORDER BY time DESC LIMIT 1");
-    print "$gid: $time lt $latest?\n";
-    next if $time lt $latest;
+    if ($time lt $latest)
+    {
+      print "Later export ($latest) for $id ($time); skipping\n" if $verbose;
+      next;
+    }
     # THIS is the export we're going to inherit from.
     $seen{$id} = $id;
     $data{'total'}->{$id} = 1;
     $crms->DuplicateVolumesFromExport($id,$gid,$sysid,$attr,$reason,\%data);
   }
-  $crms->PrepareSubmitSql('DELETE FROM unavailable');
+  $crms->PrepareSubmitSql("DELETE FROM unavailable WHERE src='$src'");
   return \%data;
 }
 
@@ -512,20 +526,29 @@ sub CandidatesReport
 
   my %data = ();
   my $sql = "SELECT id FROM candidates WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59') " .
-            'OR id IN (SELECT id FROM unavailable) ORDER BY time DESC';
+            "OR id IN (SELECT id FROM unavailable WHERE src='$src') ORDER BY time DESC";
   if ($singles && scalar @{$singles})
   {
     $sql = sprintf("SELECT id FROM candidates WHERE id in ('%s') ORDER BY id", join "','", @{$singles});
   }
+  print "$sql\n" if $verbose > 1;
   my $ref = $dbh->selectall_arrayref($sql);
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
+    print "CandidatesReport: checking $id\n" if $verbose;
     my $sysid = $crms->BarcodeToId($id);
+    if (!$sysid)
+    {
+      print "Metadata unavailable for $id; skipping\n" if $verbose;
+      $data{'unavailable'}->{$id} = 1;
+      $crms->ClearErrors();
+      next;
+    }
     $data{'total'}->{$id} = 1;
     $crms->DuplicateVolumesFromCandidates($id,$sysid,\%data);
   }
-  $crms->PrepareSubmitSql('DELETE FROM unavailable');
+  $crms->PrepareSubmitSql("DELETE FROM unavailable WHERE src='$src'");
   return \%data;
 }
 
