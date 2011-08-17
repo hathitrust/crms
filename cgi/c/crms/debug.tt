@@ -114,6 +114,7 @@
 </td></tr>
 </table>
 <br/><br/>
+[% ids = cgi.param('ids') %]
 <h4>Update Bibliographic Data</h4>
 <form action="crms">
   <p class="smallishText">Enter one volume id per line.
@@ -125,32 +126,30 @@
 </form>
 <br/>
 
-[% IF cgi.param('fix') %]
+[% IF cgi.param('fix') && ids %]
   <h4>Tried to Fix:</h4>
-  <table class='exportStats' style="width:45em;"><tr><th>ID</th><th>Sys&nbsp;ID</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th></tr>
-  [% ids = cgi.param('ids') %]
-  [% cand = cgi.param('candidates') %]
-  [% which = (cand)? 'candidates':'bibdata' %]
-  [% IF ids %]
-    [% FOREACH id IN ids.split %]
-      [% IF id.match('^\d+$') %][% id = 'mdp.' _ id %][% END %]
-      [% id = id.remove('(^\s+)|(\s+$)') %]
-      [% IF cand %]
-        [% blah = crms.UpdateCandidatesAuthor(id) %]
-        [% blah = crms.UpdateCandidatesTitle(id) %]
-        [% blah = crms.UpdateCandidatesPubDate(id) %]
-      [% ELSE %]
-        [% blah = crms.UpdateAuthor(id) %]
-        [% blah = crms.UpdateTitle(id) %]
-        [% blah = crms.UpdatePubDate(id) %]
-      [% END %]
-      [% sysid = crms.BarcodeToId(id) %]
-      [% sql = "SELECT author,title,YEAR(pub_date) FROM $which WHERE id='$id'" %]
-      [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
-      [% FOREACH r IN ref %]
-        <tr><td>[% id %]</td><td>[% sysid %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td></tr>
-        [% LAST %]
-      [% END %]
+  <table class="exportStats" style="width:33%">
+  <tr><th>ID</th><th>Sys&nbsp;ID</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th><th>Where</th></tr>
+  [% FOREACH id IN ids.split %]
+    [% cand = crms.SimpleSqlGet("SELECT COUNT(*) FROM candidates WHERE id='$id'") %]
+    [% bib = crms.SimpleSqlGet("SELECT COUNT(*) FROM bibdata WHERE id='$id'") %]
+    [% IF id.match('^\d+$') %][% id = 'mdp.' _ id %][% END %]
+    [% id = id.remove('(^\s+)|(\s+$)') %]
+    [% which = "bibdata" %]
+    [% IF cand %]
+      [% blah = crms.UpdateMetadata(id, 'candidates') %]
+      [% where = '<code>candidates</code>' %]
+      [% which = "candidates" %]
+    [% ELSIF bib %]
+      [% blah = crms.UpdateMetadata(id) %]
+      [% where = '<code>bibdata</code>' %]
+    [% END %]
+    [% sysid = crms.BarcodeToId(id) %]
+    [% sql = "SELECT author,title,YEAR(pub_date) FROM $which WHERE id='$id'" %]
+    [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
+    [% FOREACH r IN ref %]
+      <tr><td>[% id %]</td><td>[% sysid %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td><td>[% where %]</td></tr>
+      [% LAST %]
     [% END %]
   [% END %]
   </table>

@@ -175,11 +175,7 @@ my $ref = $crms->get('dbh')->selectall_arrayref($sql);
 foreach my $row (@{$ref})
 {
   my $id = $row->[0];
-  my $record = $crms->GetMetadata($id);
-  $crms->UpdateTitle($id, undef, $record);
-  $crms->UpdateAuthor($id, undef, $record);
-  $crms->UpdatePubDate($id, undef, $record);
-  $crms->BarcodeToId($id);
+  $crms->UpdateMetadata($id, 'bibdata', 1);
 }
 print "Added $n: $s4 status 4 and $s5 status 5\n";
 print "Warning: $_\n" for @{$crms->GetErrors()};
