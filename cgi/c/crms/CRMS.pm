@@ -966,6 +966,7 @@ sub AddItemToQueueOrSetItemActive
   my $override = shift;
   my $src      = shift;
 
+  $id = lc $id;
   $src = 'adminui' unless $src;
   my $stat = 0;
   my @msgs = ();
