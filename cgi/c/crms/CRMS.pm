@@ -949,11 +949,9 @@ sub AddItemToQueue
 
   return 0 if $self->IsVolumeInQueue($id);
   # queue table has priority and status default to 0, time to current timestamp.
-  my $sql = "INSERT INTO $CRMSGlobals::queueTable (id) VALUES ('$id')";
+  my $sql = "INSERT INTO queue (id) VALUES ('$id')";
   $self->PrepareSubmitSql( $sql );
-  $self->UpdateTitle( $id, $title );
-  $self->UpdatePubDate( $id, $pub_date );
-  $self->UpdateAuthor( $id, $author );
+  $self->UpdateMetadata($id, 'bibdata', 1);
   # Update system table with aleph system id.
   $self->BarcodeToId($id);
   return 1;
@@ -1023,11 +1021,9 @@ sub AddItemToQueueOrSetItemActive
     }
     else
     {
-      my $sql = "INSERT INTO $CRMSGlobals::queueTable (id, priority, source) VALUES ('$id', $priority, '$src')";
-      $self->PrepareSubmitSql( $sql );
-      $self->UpdateTitle( $id, undef, $record );
-      $self->UpdatePubDate( $id, undef, $record );
-      $self->UpdateAuthor ( $id, undef, $record );
+      my $sql = "INSERT INTO queue (id, priority, source) VALUES ('$id', $priority, '$src')";
+      $self->PrepareSubmitSql($sql);
+      $self->UpdateMetadata($id, 'bibdata', 1, $record);
       $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES (1, '$src')";
       $self->PrepareSubmitSql( $sql );
     }
@@ -1063,9 +1059,7 @@ sub GiveItemsInQueuePriority
   {
     $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, priority, source) VALUES ('$id', '$time', $status, $priority, '$source')";
     $self->PrepareSubmitSql( $sql );
-    $self->UpdateTitle( $id, undef, $record );
-    $self->UpdatePubDate( $id, undef, $record );
-    $self->UpdateAuthor( $id, undef, $record );
+    $self->UpdateMetadata($id, 'bibdata', 1, $record);
     # Accumulate counts for items added at the 'same time'.
     # Otherwise queuerecord will have a zillion kabillion single-item entries when importing
     # e.g. 2007 reviews for reprocessing.
@@ -1334,14 +1328,11 @@ sub SubmitHistReview
            "VALUES('$id', '$user', '$time', '$attr', '$reason', '$renNum', '$renDate', $note, $legacy, '$category', $status, $expert, '$source', $gid)";
     $self->PrepareSubmitSql( $sql );
     #Now load this info into the bibdata and system table.
-    my $record = $self->GetMetadata($id);
-    $self->UpdateTitle( $id, undef, $record );
-    $self->UpdatePubDate( $id, undef, $record );
-    $self->UpdateAuthor( $id, undef, $record );
+    $self->UpdateMetadata($id, 'bibdata', 1 );
     # Update status on status 1 item
     if ($status == 5)
     {
-      $sql = "UPDATE $CRMSGlobals::historicalreviewsTable SET status=$status WHERE id='$id' AND legacy=1 AND gid IS NULL";
+      $sql = "UPDATE historicalreviews SET status=$status WHERE id='$id' AND legacy=1 AND gid IS NULL";
       $self->PrepareSubmitSql( $sql );
     }
     # Update validation on all items with this id
@@ -1379,25 +1370,18 @@ sub SubmitActiveReview
   if (!$attr) { $self->SetError( "bad attr: $attr" ); return 0; }
   $reason = $self->GetReasonNum( $reason );
   if (!$reason) { $self->SetError( "bad reason: $reason" ); return 0; }
-  if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->Logit("bad attr/reason $attr/$reason");    return 0; }
-  if ( ! $self->CheckReviewer( $user, 0 ) )                 { $self->SetError("reviewer ($user) check failed"); return 0; }
-  ## do some sort of check for expert submissions
-
+  if (!$self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->SetError("bad attr/reason $attr/$reason"); return 0; }
+  if (!$self->CheckReviewer( $user, 0 ) )                 { $self->SetError("reviewer ($user) check failed"); return 0; }
   if (!$noop)
   {
     ## all good, INSERT
-    my $sql = qq{REPLACE INTO $CRMSGlobals::reviewsTable (id, user, time, attr, reason, legacy, priority) } .
-              qq{VALUES('$id', '$user', '$date', '$attr', '$reason', 1, 1) };
-
-    $self->PrepareSubmitSql( $sql );
-
+    my $sql = 'REPLACE INTO reviews (id, user, time, attr, reason, legacy, priority)' .
+              "VALUES('$id', '$user', '$date', '$attr', '$reason', 1, 1)";
+    $self->PrepareSubmitSql($sql);
     $sql = "UPDATE queue SET pending_status=1 WHERE id='$id'";
-    $self->PrepareSubmitSql( $sql );
-
+    $self->PrepareSubmitSql($sql);
     #Now load this info into the bibdata table.
-    $self->UpdateTitle( $id );
-    $self->UpdatePubDate( $id );
-    $self->UpdateAuthor( $id );
+    $self->UpdateMetadata($id, 'bibdata', 1);
   }
   return 1;
 }
@@ -1694,11 +1678,11 @@ sub CreateSQLForReviews
   elsif ( $page eq 'editReviews' )
   {
     my $user = $self->get('user');
-    my $yesterday = $self->GetYesterday();
+    my $today = $self->SimpleSqlGet('SELECT DATE(NOW())') . ' 00:00:00';
     # Experts need to see stuff with any status; non-expert should only see stuff that hasn't been processed yet.
     my $restrict = ($self->IsUserExpert($user))? '':'AND q.status=0';
     $sql .= 'q.status, b.title, b.author, DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id ' .
-            "AND r.user='$user' AND (r.time>='$yesterday' OR r.hold IS NOT NULL) $restrict";
+            "AND r.user='$user' AND (r.time>='$today' OR r.hold IS NOT NULL) $restrict";
   }
   my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
   $sql .= " AND $terms" if $terms;
@@ -5190,7 +5174,11 @@ sub GetTitle
   my $id   = shift;
 
   my $ti = $self->SimpleSqlGet("SELECT title FROM bibdata WHERE id='$id'");
-  $ti = $self->UpdateTitle($id) unless $ti;
+  if (!$ti)
+  {
+    $self->UpdateMetadata($id, 'bibdata', 1);
+    $ti = $self->SimpleSqlGet("SELECT title FROM bibdata WHERE id='$id'");
+  }
   return $ti;
 }
 
@@ -5217,135 +5205,20 @@ sub GetPubDate
 
   my $sql = "SELECT YEAR(pub_date) FROM bibdata WHERE id='$id'";
   my $date = $self->SimpleSqlGet($sql);
-  $date = $self->UpdatePubDate($id) unless $date;
-  return $date;
-}
-
-sub UpdateTitle
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $title  = shift;
-  my $record = shift;
-  
-  if (!$id)
-  {
-    $self->SetError("Trying to update title for empty volume id!\n");
-    return;
-  }
-  if (!$title)
-  {
-    $record = $self->GetMetadata($id) unless $record;
-    $title = $self->GetRecordTitle($id, $record);
-  }
-  my $tiq = $self->get('dbh')->quote( $title );
-  my $sql = "SELECT COUNT(*) FROM bibdata WHERE id='$id'";
-  my $count = $self->SimpleSqlGet( $sql );
-  $sql = "UPDATE bibdata SET title=$tiq WHERE id='$id'";
-  if (!$count)
-  {
-    $sql = "INSERT INTO bibdata (id, title, pub_date) VALUES ('$id', $tiq, '')";
-  }
-  $self->PrepareSubmitSql( $sql );
-  return $title;
-}
-
-sub UpdateCandidatesTitle
-{
-  my $self = shift;
-  my $id   = shift;
-  
-  my $title = $self->GetRecordTitle( $id );
-  my $tiq = $self->get('dbh')->quote( $title );
-  $self->PrepareSubmitSql("UPDATE candidates SET title=$tiq,time=time WHERE id='$id'");
-}
-
-sub UpdatePubDate
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $date   = shift;
-  my $record = shift;
-
-  if (!$id)
-  {
-    $self->SetError("Trying to update pub date for empty volume id!\n");
-    return;
-  }
   if (!$date)
   {
-    $record = $self->GetMetadata($id) unless $record;
-    $date = $self->GetPublDate($id, $record);
+    $self->UpdateMetadata($id, 'bibdata', 1);
+    $date = $self->SimpleSqlGet($sql);
   }
-  my $sql = "SELECT COUNT(*) FROM bibdata WHERE id='$id'";
-  my $count = $self->SimpleSqlGet( $sql );
-  $sql = "UPDATE bibdata SET pub_date='$date-01-01' WHERE id='$id'";
-  if (!$count)
-  {
-    $sql = "INSERT INTO bibdata (id, title, pub_date) VALUES ('$id', '', '$date-01-01')";
-  }
-  $self->PrepareSubmitSql( $sql );
   return $date;
-}
-
-sub UpdateCandidatesPubDate
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $date = $self->GetPublDate($id);
-  my $sql = "UPDATE candidates SET pub_date='$date-01-01',time=time WHERE id='$id'";
-  $self->PrepareSubmitSql( $sql );
-}
-
-sub UpdateAuthor
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $author = shift;
-  my $record = shift;
-  
-  if (!$id)
-  {
-    $self->SetError("Trying to update author for empty volume id!\n");
-    return;
-  }
-  if (!$author)
-  {
-    $record = $self->GetMetadata($id) unless $record;
-    $author = $self->GetRecordAuthor($id, $record);
-  }
-  my $aiq = $self->get('dbh')->quote( $author );
-  my $sql = "SELECT count(*) FROM bibdata WHERE id='$id'";
-  my $count = $self->SimpleSqlGet( $sql );
-  $sql = "UPDATE bibdata SET author=$aiq WHERE id='$id'";
-  if (!$count)
-  {
-    $sql = "INSERT INTO bibdata (id, title, pub_date, author) VALUES ('$id','','',$aiq)";
-  }
-  $self->PrepareSubmitSql( $sql );
-  return $author;
-}
-
-sub UpdateCandidatesAuthor
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $author = shift;
-  my $record = shift;
-
-  $author = $self->GetRecordAuthor($id, $record) unless $author;
-  my $aiq = $self->get('dbh')->quote($author);
-  my $sql = "UPDATE candidates SET author=$aiq,time=time WHERE id='$id'";
-  $self->PrepareSubmitSql( $sql );
 }
 
 sub GetEncAuthor
 {
   my $self = shift;
-  my $bar  = shift;
+  my $id   = shift;
 
-  my $au = $self->GetEncAuthorForReview($bar);
+  my $au = $self->GetEncAuthorForReview($id);
   $au =~ s,\",\\\",g; ## escape "
   $au =~ s/[()[\]{}]//g;
   return $au;
@@ -5354,20 +5227,24 @@ sub GetEncAuthor
 sub GetEncAuthorForReview
 {
   my $self = shift;
-  my $bar  = shift;
+  my $id   = shift;
 
-  my $au = $self->GetAuthorForReview($bar);
+  my $au = $self->GetAuthor($id);
   $au =~ s/\'/\\\'/g; ## escape '
   return $au;
 }
 
-sub GetAuthorForReview
+sub GetAuthor
 {
   my $self = shift;
-  my $bar  = shift;
+  my $id   = shift;
 
-  my $au = $self->SimpleSqlGet("SELECT author FROM bibdata WHERE id='$bar'");
-  $au = $self->UpdateAuthor($bar) unless $au;
+  my $au = $self->SimpleSqlGet("SELECT author FROM bibdata WHERE id='$id'");
+  if (!$au)
+  {
+    $self->UpdateMetadata($id, 'bibdata', 1);
+    $au = $self->SimpleSqlGet("SELECT author FROM bibdata WHERE id='$id'");
+  }
   $au =~ s,(.*[A-Za-z]).*,$1,;
   return $au;
 }
@@ -5427,6 +5304,46 @@ sub GetMetadata
   my @records = $xpc->findnodes('//ns:record');
   #$self->set($id,$records[0]);
   return $records[0];
+}
+
+# Update sysid and author,title,pubdate fields in bibdata/candidates (default bibdata).
+# Only updates existing rows (does not INSERT) unless the force param is set.
+sub UpdateMetadata
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $table  = shift;
+  my $force  = shift;
+  my $record = shift;
+
+  $table = 'bibdata' unless $table;
+  $table = 'bibdata' if $table ne 'candidates';
+  if (!$id)
+  {
+    $self->SetError("Trying to update $table metadata for empty volume id!\n");
+    return;
+  }
+  my $cnt = $self->SimpleSqlGet("SELECT COUNT(*) FROM $table WHERE id='$id'");
+  if ($cnt || $force)
+  {
+    $self->PrepareSubmitSql("INSERT INTO $table (id) VALUES ('$id')") unless $cnt;
+    my $sysid = $self->BarcodeToId($id, 1);
+    if ($sysid)
+    {
+      $record = $self->GetMetadata($id) unless $record;
+      my $title = $self->GetRecordTitle($id, $record);
+      my $author = $self->GetRecordAuthor($id, $record);
+      my $date = $self->GetPublDate($id, $record);
+      my $dbh = $self->get('dbh');
+      my $tiq = $dbh->quote($title);
+      my $aiq = $dbh->quote($author);
+      my $sql = "UPDATE $table SET author=$aiq,title=$tiq,pub_date='$date-01-01'__TIME__ WHERE id='$id'";
+      $sql =~ s/__TIME__/,time=time/g if $table eq 'candidates';
+      $sql =~ s/__TIME__//g;
+      #print "$sql\n";
+      $self->PrepareSubmitSql($sql);
+    }
+  }
 }
 
 # Get the usRightsString field of the item record for the
@@ -7344,9 +7261,7 @@ sub RestoreUnd
       my $sql = "REPLACE INTO candidates (id,time) VALUES ('$id','$time')";
       print "$sql\n" if $verbose;
       $self->PrepareSubmitSql($sql);
-      $self->UpdateCandidatesTitle($id);
-      $self->UpdateCandidatesAuthor($id);
-      $self->UpdateCandidatesPubDate($id);
+      $self->UpdateMetadata($id, 'candidates');
       $sql = "DELETE FROM und WHERE id='$id'";
       print "$sql\n" if $verbose;
       $self->PrepareSubmitSql($sql);
@@ -7735,12 +7650,9 @@ sub AddInheritanceToQueue
   }
   else
   {
-    my $record = $self->GetMetadata($id);
     my $sql = "INSERT INTO queue (id, priority, source) VALUES ('$id', 0, 'inherited')";
     $self->PrepareSubmitSql($sql);
-    $self->UpdateTitle($id, undef, $record);
-    $self->UpdatePubDate($id, undef, $record);
-    $self->UpdateAuthor ($id, undef, $record);
+    $self->UpdateMetadata($id);
     $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES (1, 'inheritance')";
     $self->PrepareSubmitSql($sql);
   }
@@ -8065,10 +7977,7 @@ sub CheckCandidateRightsInheritance
   {
     my $sql = "INSERT INTO inherit (id,attr,reason,gid,src) VALUES ('$id',2,1,$cand,'candidates')";
     $self->PrepareSubmitSql($sql);
-    my $record = $self->GetMetadata($id);
-    $self->UpdateTitle($id, undef, $record);
-    $self->UpdatePubDate($id, undef, $record);
-    $self->UpdateAuthor($id, undef, $record);
+    $self->UpdateMetadata($id, 'bibdata', 1);
   }
 }
 
