@@ -270,19 +270,13 @@ if (scalar keys %{$data{'inherit'}})
               'Volume&nbsp;Inheriting<br/>(<span style="color:blue;">volume tracking</span>)',
               'Sys ID<br/>(<span style="color:blue;">catalog</span>)','Rights','New Rights',
               'Access Change?');
-  my $autotxt = '';
-  if ($candidates)
-  {
-    $autotxt .= '<h4>Volumes where a duplicate w/CRMS determination exists (from June 2010 or later) - inheritance permitted -- Not Adding to Candidates - Status 9 Review awaiting approval</h4>';
-  }
-  else
-  {
-    push @cols, ('Prior<br/>CRMS<br/>Determ?','Prior<br/>Status 5<br/>Determ?');
-    $autotxt .= '<h4>Volumes inheriting rights automatically</h4>';
-  }
-  push @cols, 'Missing/Wrong Record?','Title','Tracking';
-  $autotxt .= '<table border="1"><tr><th>' . join('</th><th>', @cols) . "</th></tr>\n";
-  my $pendtxt = '<h4>Volumes inheriting rights pending approval</h4><table border="1"><tr><th>' . join('</th><th>', @cols) . "</th></tr>\n";
+  my $autotxt = ($candidates)?
+    '<h4>Volumes where a duplicate w/CRMS determination exists (from June 2010 or later) - inheritance permitted -- Not Adding to Candidates - Status 9 Review awaiting approval</h4>'
+    :
+    '<h4>Volumes inheriting rights automatically</h4>';
+  $autotxt .= '<table border="1"><tr><th>' . join('</th><th>', @cols) . "</th><th>Title</th><th>Tracking</th></tr>\n";
+  my $pendtxt = '<h4>Volumes inheriting rights pending approval</h4><table border="1"><tr><th>' . join('</th><th>', @cols) .
+                "</th><th>Prior<br/>CRMS<br/>Determ?</th><th>Prior<br/>Status 5<br/>Determ?</th><th>Title</th><th>Tracking</th></tr>\n";
   my $n = 0;
   my $npend = 0;
   foreach my $id (KeysSortedOnTitle($data{'inherit'}))
@@ -328,8 +322,8 @@ if (scalar keys %{$data{'inherit'}})
       my $tracking = $crms->GetTrackingInfo($id2);
       $$whichtxt .= "<tr><td>$whichn</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
       $$whichtxt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$attr2/$reason2</td><td>$ar</td><td>$change</td>";
-      $$whichtxt .= "<td>$incrms</td><td>$h5</td>" unless $candidates;
-      $$whichtxt .= "<td>$miss</td><td>$title</td><td>$tracking</td></tr>\n";
+      $$whichtxt .= "<td>$incrms</td><td>$h5</td>" if ($incrms && !$candidates);
+      $$whichtxt .= "<td>$title</td><td>$tracking</td></tr>\n";
     }
   }
   $data{'inheritcnt'} = $n;
