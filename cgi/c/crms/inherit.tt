@@ -51,16 +51,18 @@ Restrict selection:
     <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
     <span>
     <strong>Access Change</strong> - Either <b>0</b> (unchecked) or <b>1</b> (checked)<br/>
+  [% IF NOT auto %]
     <strong>Prior CRMS Determination</strong> - Either <b>0</b> (unchecked) or <b>1</b> (checked)<br/>
     <strong>Prior Status 5 Determination</strong> - Either <b>0</b> (unchecked) or <b>1</b> (checked)<br/>
-    <strong>Source</strong> - Either <b>Candidates</b> or <b>Export</b><br/>
+  [% END %]
+    <strong>Source</strong> - <b>Candidates</b>, <b>Export</b>, or <b>Cleanup</b><br/>
     </span>
   </a>
 </div>
 
 <br/>
 
-[% crms.InheritanceSelectionMenu('search1', search1, 1) %]
+[% crms.InheritanceSelectionMenu('search1', search1, auto) %]
 <input title="Value 1" type="text"  id="search1value" name="search1value" value="[% search1value %]" size="30"/>
 <br/>
 
@@ -98,7 +100,7 @@ Restrict selection:
 
 
 <label for="order" style="width:8em;float:left;">Order by:</label>
-[% crms.InheritanceSelectionMenu('order', order) %]
+[% crms.InheritanceSelectionMenu('order', order, auto) %]
 
 <select id="dir" name="dir">
   <option value="ASC"  [% dir == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
@@ -107,7 +109,7 @@ Restrict selection:
 <br/>
 
 <label for="order2" style="width:8em;float:left;">Then order by:</label>
-[% crms.InheritanceSelectionMenu('order2', order2) %]
+[% crms.InheritanceSelectionMenu('order2', order2, auto) %]
 
 <select id="dir2" name="dir2">
   <option value="ASC"  [% dir2 == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
@@ -304,9 +306,10 @@ function VerifyDelete(formid)
         <th>Rights</th>
         <th>New&nbsp;Rights</th>
         <th>Access<br/>Change?</th>
+      [% IF NOT auto %]
         <th>Prior<br/>CRMS<br/>Determ?</th>
         <th>Prior<br/>Status 5<br/>Determ?</th>
-        <th>Missing/<br/>Wrong Record?</th>
+      [% END %]
         <th style="text-align:center;">Title</th>
         <th>Tracking Info</th>
         <th>Source</th>
@@ -336,9 +339,10 @@ function VerifyDelete(formid)
           <td>[% review.rights %]</td>
           <td nowrap='nowrap'>[% review.newrights %]</td>
           <td>[% (review.change==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
+        [% IF NOT auto %]
           <td>[% (review.incrms==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
           <td>[% (review.h5==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
-          <td>[% (crms.HasMissingOrWrongRecord(review.inheriting,review.sysid)>0)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
+        [% END %]
           <td>[% review.title %]</td>
           <td>[% crms.GetTrackingInfo(review.inheriting) %]</td>
           <td>[% review.src %]</td>

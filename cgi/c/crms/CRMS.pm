@@ -7303,16 +7303,16 @@ sub InheritanceSelectionMenu
   my $self = shift;
   my $searchName = shift;
   my $searchVal = shift;
-  my $searchOnly = shift;
+  my $auto = shift;
   
   my @keys = ('date','idate','src','id','sysid','change','prior','prior5','title');
   my @labs = ('Export Date','Inherit Date','Source Volume','Volume Inheriting','System ID','Access Change',
               'Prior CRMS Determination','Prior Status 5 Determination','Title');
-  #if ($searchOnly)
-  #{
-  #  @keys = @keys[2..8];
-  #  @labs = @labs[2..8];
-  #}
+  if ($auto)
+  {
+    splice @keys, 6, 2;
+    splice @labs, 6, 2;
+  }
   push @keys, 'source';
   push @labs, 'Source';
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
