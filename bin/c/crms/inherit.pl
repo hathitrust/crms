@@ -28,7 +28,7 @@ if it is specified.
 -c         Report on recent addition to candidates.
 -C         Use 'cleanup' as the source.
 -h         Print this help message.
--i         Insert entries in the dev inherit table.
+-i         Insert entries in the inherit table.
 -m ADDR    Mail the report to ADDR. May be repeated for multiple addresses.
 -p         Run in production.
 -q         Do not emit report (ignored if -m is used).
@@ -94,7 +94,7 @@ my %data = %{($candidates)? CandidatesReport($start,$end,\@singles):InheritanceR
 
 my $dates = $start;
 $dates .= " to $end" if $end ne $start;
-my $title = sprintf "CRMS %s Inheritance, $dates", ($candidates)? 'Candidates':'Export';
+my $title = sprintf "CRMS %s %sInheritance, $dates", ($candidates)? 'Candidates':'Export', ($cleanup)? 'Cleanup ':'';
 my $head = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' . "\n";
 $head .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
         "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'/>\n" .
@@ -525,8 +525,10 @@ sub CandidatesReport
   my $singles = shift;
 
   my %data = ();
-  my $sql = "SELECT id FROM candidates WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59') " .
-            "OR id IN (SELECT id FROM unavailable WHERE src='$src') ORDER BY time DESC";
+  my $sql = "SELECT id,time FROM candidates WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59') " .
+            "OR id IN (SELECT id FROM unavailable WHERE src='$src') " .
+            "UNION DISTINCT SELECT id,time FROM und WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59') " .
+            "AND src!='no meta' ORDER BY time DESC";
   if ($singles && scalar @{$singles})
   {
     $sql = sprintf("SELECT id FROM candidates WHERE id in ('%s') ORDER BY id", join "','", @{$singles});
