@@ -130,7 +130,7 @@ sub GetSdrDb
   my $self = shift;
   
   my $sdr_dbh = $self->get('sdr_dbh');
-  if (!$sdr_dbh)
+  if (!$sdr_dbh || !$sdr_dbh->ping())
   {
     $sdr_dbh = $self->ConnectToSdrDb();
     $self->set('sdr_dbh', $sdr_dbh);
@@ -160,8 +160,14 @@ sub SimpleSqlGet
   my $sql  = shift;
 
   my $val = undef;
+  my $dbh = $self->get('dbh');
+  if (!$dbh || !$dbh->ping())
+  {
+    $self->ConnectToDb();
+    $dbh = $self->get('dbh');
+  }
   eval {
-    my $ref = $self->get('dbh')->selectall_arrayref( $sql );
+    my $ref = $dbh->selectall_arrayref( $sql );
     $val = $ref->[0]->[0];
   };
   if ($@)
@@ -7872,7 +7878,6 @@ sub DuplicateVolumesFromCandidates
   foreach my $line (@{$rows})
   {
     my ($id2,$chron2,$rights2) = split '__', $line;
-    my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id2,1)->[0]};
     if ($chron2)
     {
       $data->{'chron'}->{$id} = "$id2\t$sysid\n";
@@ -7911,7 +7916,16 @@ sub DuplicateVolumesFromCandidates
   }
   if ($cid)
   {
-    my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id,1)->[0]};
+    my ($attr2,$reason2,$src2,$usr2,$time2,$note2);
+    eval {
+      ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id,1)->[0]};
+    };
+    if ($@)
+    {
+      $data->{'unavailable'}->{$id} = 1;
+      $self->ClearErrors();
+      return;
+    }
     my $oldrights = "$attr2/$reason2";
     my $newrights = "$cattr/$creason";
     if ($newrights eq 'pd/ncn')
