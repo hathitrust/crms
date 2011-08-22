@@ -17,7 +17,7 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-acChipqv] [-s VOL_ID [-s VOL_ID2...]]
+USAGE: $0 [-acChipquv] [-s VOL_ID [-s VOL_ID2...]]
           [-m MAIL_ADDR [-m MAIL_ADDR2...]] [start_date [end_date]]
 
 Reports on the volumes that can inherit from this morning's export,
@@ -33,6 +33,7 @@ if it is specified.
 -p         Run in production.
 -q         Do not emit report (ignored if -m is used).
 -s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
+-u         Also report on recent additions to the und table (ignored if -c is not used).
 -v         Emit debugging information.
 END
 
@@ -45,6 +46,7 @@ my @mails;
 my $production;
 my $quiet;
 my @singles;
+my $und;
 my $verbose;
 
 Getopt::Long::Configure ('bundling');
@@ -58,6 +60,7 @@ die 'Terminating' unless GetOptions(
            'p'    => \$production,
            'q'    => \$quiet,
            's:s@' => \@singles,
+           'u'    => \$und,
            'v+'   => \$verbose);
 $DLPS_DEV = undef if $production;
 die "$usage\n\n" if $help;
@@ -422,7 +425,6 @@ if ($insert && scalar keys %{$data{'disallowed'}})
       }
     }
   }
-  
 }
 
 for (@{$crms->GetErrors()})
@@ -430,6 +432,9 @@ for (@{$crms->GetErrors()})
   s/\n/<br\/>/g;
   $txt .= "<i>Warning: $_</i><br/>\n";
 }
+my $hashref = $crms->GetSdrDb()->{mysql_dbd_stats};
+$txt .= sprintf "SDR Database OK reconnects: %d, bad reconnects: %d<br/>\n", $hashref->{'auto_reconnects_ok'}, $hashref->{'auto_reconnects_failed'};
+
 $txt .= "</body></html>\n\n";
 
 if (@mails)
@@ -520,19 +525,23 @@ sub CandidatesReport
 
   my %data = ();
   my $sql = "SELECT id,time FROM candidates WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59') " .
-            "OR id IN (SELECT id FROM unavailable WHERE src='$src') " .
-            "UNION DISTINCT SELECT id,time FROM und WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59') " .
-            "AND src!='no meta' ORDER BY time DESC";
+            "OR id IN (SELECT id FROM unavailable WHERE src='$src')";
+  $sql .= " UNION DISTINCT SELECT id,time FROM und WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59') AND src!='no meta'" if $und;
+  $sql .= ' ORDER BY time DESC';
   if ($singles && scalar @{$singles})
   {
-    $sql = sprintf("SELECT id FROM candidates WHERE id in ('%s') ORDER BY id", join "','", @{$singles});
+    $sql = sprintf("SELECT id FROM candidates WHERE id in ('%s')", join "','", @{$singles});
+    $sql .= sprintf(" UNION DISTINCT SELECT id FROM und WHERE id in ('%s')", join "','", @{$singles}) if $und;
+    $sql .= ' ORDER BY id';
   }
   print "$sql\n" if $verbose > 1;
   my $ref = $dbh->selectall_arrayref($sql);
+  my $of = scalar @{$ref};
+  my $n = 1;
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    print "CandidatesReport: checking $id\n" if $verbose;
+    print "CandidatesReport: checking $id ($n/$of)\n" if $verbose;
     my $sysid = $crms->BarcodeToId($id);
     if (!$sysid)
     {
@@ -543,6 +552,7 @@ sub CandidatesReport
     }
     $data{'total'}->{$id} = 1;
     $crms->DuplicateVolumesFromCandidates($id,$sysid,\%data);
+    $n++;
   }
   $crms->PrepareSubmitSql("DELETE FROM unavailable WHERE src='$src'");
   return \%data;
