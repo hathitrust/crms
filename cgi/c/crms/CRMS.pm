@@ -7729,10 +7729,10 @@ sub DuplicateVolumesFromExport
 
   my %okattr = $self->AllCRMSRights();
   my $rows = $self->VolumeIDsQuery($sysid);
+  $self->ClearErrors();
   if (!scalar @{$rows})
   {
     $data->{'unavailable'}->{$id} = 1;
-    $self->ClearErrors();
     return;
   }
   if (1 == scalar @{$rows})
