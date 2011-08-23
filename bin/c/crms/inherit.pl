@@ -565,6 +565,7 @@ sub KeysSortedOnTitle
   return sort {
     my $aa = lc $crms->GetRecordTitle($a);
     my $ba = lc $crms->GetRecordTitle($b);
+    $crms->ClearErrors();
     #print "'$aa' cmp '$ba'?\n";
     $aa cmp $ba
     ||
