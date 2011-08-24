@@ -56,7 +56,7 @@ my %confs = (
 
 
 my $sql = 'SELECT DISTINCT e.id,e.gid FROM exportdata e INNER JOIN historicalreviews r ON e.gid=r.gid WHERE r.status=5 AND r.time>="2010-05-01 00:00:00"';
-my $r = $crms->get('dbh')->selectall_arrayref($sql);
+my $r = $crms->GetDb()->selectall_arrayref($sql);
 my $n = 0;
 foreach my $blah (@{$r})
 {
@@ -73,7 +73,7 @@ foreach my $blah (@{$r})
   #my $rde = undef;
   $sql = "SELECT attr,reason,renDate,renNum,expert FROM historicalreviews WHERE gid='$gid' ORDER BY time ASC";
   #print "$sql\n";
-  my $r1 = $crms->get('dbh')->selectall_arrayref($sql);
+  my $r1 = $crms->GetDb()->selectall_arrayref($sql);
   my $exp = 0;
   my $same = 1;
   foreach my $row (@{$r1})

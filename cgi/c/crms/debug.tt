@@ -146,7 +146,7 @@
     [% END %]
     [% sysid = crms.BarcodeToId(id) %]
     [% sql = "SELECT author,title,YEAR(pub_date) FROM $which WHERE id='$id'" %]
-    [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
+    [% ref  = crms.GetDb().selectall_arrayref(sql) %]
     [% FOREACH r IN ref %]
       <tr><td>[% id %]</td><td>[% sysid %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td><td>[% where %]</td></tr>
       [% LAST %]
@@ -200,7 +200,7 @@
 
 [% IF cgi.param('multibyte') %]
   [% sql = "SELECT id,author,title FROM bibdata WHERE LENGTH(title)!=CHAR_LENGTH(title) OR LENGTH(author)!=CHAR_LENGTH(author) ORDER BY author,title,id" %]
-  [% ref  = crms.get("dbh").selectall_arrayref(sql) %]
+  [% ref  = crms.GetDb().selectall_arrayref(sql) %]
   <h4>[% ref.size %] Items</h4>
   <table class='exportStats'><tr><th>ID</th><th>Author</th><th>Title</th></tr>
   [% FOREACH r IN ref %]

@@ -412,7 +412,7 @@ if ($phase1)
 {
   print "Beginning phase 1 (initial reviews)\n";
   my $sql = "SELECT id,priority FROM queue ORDER BY priority DESC, id ASC";
-  my $r = $crms->get('dbh')->selectall_arrayref($sql);
+  my $r = $crms->GetDb()->selectall_arrayref($sql);
   my $n0 = 0;
   my $n1 = 0;
   my $q = 1;
@@ -570,7 +570,7 @@ if ($phase3)
 {
   print "Beginning phase 3 (conflict and provisional reviews)\n";
   my $sql = "SELECT id FROM queue WHERE status=2 ORDER BY id ASC";
-  my $r = $crms->get('dbh')->selectall_arrayref($sql);
+  my $r = $crms->GetDb()->selectall_arrayref($sql);
   my $swiss = 1;
   foreach my $row (@{$r})
   {
@@ -579,7 +579,7 @@ if ($phase3)
     $swiss = 0;
   }
   $sql = "SELECT id FROM queue WHERE status=3 ORDER BY id ASC";
-  my $r = $crms->get('dbh')->selectall_arrayref($sql);
+  my $r = $crms->GetDb()->selectall_arrayref($sql);
   my $clone = 1;
   foreach my $row (@{$r})
   {

@@ -62,7 +62,7 @@ my $crms = CRMS->new(
 );
 
 print "Verbosity $verbose\n" if $verbose;
-my $dbh = $crms->get('dbh');
+my $dbh = $crms->GetDb();
 my $start = $crms->SimpleSqlGet('SELECT DATE(NOW())');
 my $end = $start;
 if (scalar @ARGV)
@@ -84,7 +84,7 @@ if (@singles && scalar @singles)
   $sql = sprintf("SELECT id FROM $table WHERE id in ('%s') ORDER BY id", join "','", @singles);
 }
 print "$sql\n" if $verbose > 1;
-my $ref = $crms->get('dbh')->selectall_arrayref($sql);
+my $ref = $dbh->selectall_arrayref($sql);
 my $n = 0;
 foreach my $row (@{$ref})
 {

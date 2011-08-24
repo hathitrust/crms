@@ -26,7 +26,7 @@ my $crms = CRMS->new(
 # every 1000 is one minute so 60,000 is one hour.
 my $sql  = qq{ SELECT id, user  FROM timer where current_timestamp - start_time >= 60000};
 
-my $ref  = $crms->get( 'dbh' )->selectall_arrayref( $sql );
+my $ref  = $crms->GetDb()->selectall_arrayref( $sql );
 
 my @return;
 foreach my $r ( @{$ref} ) 

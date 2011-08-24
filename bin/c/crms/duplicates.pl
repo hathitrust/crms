@@ -158,7 +158,7 @@ my $startsql = ($start)? "AND time>='$start'":'';
 my $endsql = ($end)? "AND time<'$end'":'';
 my $sql = "SELECT id,attr,reason,DATE(time),time FROM exportdata WHERE $idsql $startsql $endsql ORDER BY time ASC";
 $sql = "SELECT id,attr,reason,DATE(time),time FROM historicalreviews WHERE $idsql $startsql $endsql AND legacy=1 ORDER BY time ASC" if $legacy;
-my $ref = $crms->get('dbh')->selectall_arrayref($sql);
+my $ref = $crms->GetDb()->selectall_arrayref($sql);
 print "$sql\n" if $verbose >= 2;
 my $lastdate = '';
 foreach my $row ( @{$ref} )
@@ -259,7 +259,7 @@ foreach my $row ( @{$ref} )
       $seen{$id2} = 1;
       my $ti2;
       $sql = "SELECT attr,reason,time FROM exportdata WHERE id='$id2' ORDER BY time DESC LIMIT 1";
-      my $ref2 = $crms->get('dbh')->selectall_arrayref($sql);
+      my $ref2 = $crms->GetDb()->selectall_arrayref($sql);
       my $user = 'crms';
       my $ref3 = $crms->RightsQuery($id2,1);
       # Rights database supersedes if newer than our export

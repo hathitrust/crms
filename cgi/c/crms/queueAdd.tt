@@ -94,7 +94,7 @@ Priority 3 can only be added or reviewed by an expert, admin, or superadmin.<br/
 <a href="?p=adminReviews">Go to Active Reviews</a><br/>
 
 [% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.status,q.priority FROM queue q, bibdata b WHERE q.id=b.id AND q.priority>=2 ORDER BY q.priority DESC" %]
-[% ref  = crms.get("dbh").selectall_arrayref(sql) %]
+[% ref  = crms.GetDb().selectall_arrayref(sql) %]
 [% IF ref.size > 0 %]
   <br/>
   <h4>[% ref.size %] High-priority [% crms.Pluralize("Volume", ref.size) %]</h4>

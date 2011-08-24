@@ -73,12 +73,13 @@ my $crms = CRMS->new(
     root         =>   $DLXSROOT,
     dev          =>   $DLPS_DEV
 );
+$crms->set('ping','yes');
 require $configFile;
 my $delim = "\n";
 my $src = ($candidates)? 'candidates':'export';
 $src = 'cleanup' if $cleanup;
 print "Verbosity $verbose$delim" if $verbose;
-my $dbh = $crms->get('dbh');
+my $dbh = $crms->GetDb();
 my $sql = 'SELECT DATE(NOW())';
 $sql = 'SELECT DATE(DATE_SUB(NOW(),INTERVAL 1 DAY))' if $candidates;
 my $start = $crms->SimpleSqlGet($sql);
@@ -472,11 +473,11 @@ sub InheritanceReport
 
   my %data = ();
   my %seen = ();
-  my $sql = "SELECT id,gid,attr,reason,time FROM exportdata WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59') " .
-            "OR id IN (SELECT id FROM unavailable WHERE src='$src') ORDER BY time DESC";
+  my $sql = "SELECT id,gid,attr,reason,time,src FROM exportdata WHERE src!='inherited' AND ((time>'$start 00:00:00' AND time<='$end 23:59:59') " .
+            "OR id IN (SELECT id FROM unavailable WHERE src='$src')) ORDER BY time DESC";
   if ($singles && scalar @{$singles})
   {
-    $sql = sprintf("SELECT id,gid,attr,reason,time FROM exportdata WHERE id in ('%s') ORDER BY time DESC", join "','", @{$singles});
+    $sql = sprintf("SELECT id,gid,attr,reason,time,src FROM exportdata WHERE id in ('%s') ORDER BY time DESC", join "','", @{$singles});
   }
   print "$sql\n" if $verbose > 1;
   my $ref = $dbh->selectall_arrayref($sql);
@@ -487,7 +488,8 @@ sub InheritanceReport
     my $attr = $row->[2];
     my $reason = $row->[3];
     my $time = $row->[4];
-    print "InheritanceReport: checking $id ($gid, $attr/$reason, $time)\n" if $verbose;
+    my $src = $row->[5];
+    print "InheritanceReport: checking $id ($gid, $attr/$reason, $time, $src)\n" if $verbose;
     if ($seen{$id})
     {
       print "Already saw $id; skipping\n" if $verbose;

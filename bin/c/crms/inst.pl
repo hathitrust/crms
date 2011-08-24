@@ -78,12 +78,12 @@ foreach $inst (@insts)
   my $english = $crms->YearMonthToEnglish($date,1);
   my $sql = 'SELECT COUNT(r.id),COUNT(DISTINCT e.id) FROM historicalreviews r INNER JOIN exportdata e ON r.gid=e.gid WHERE ' .
             "r.attr=1 AND e.attr='pd' AND r.validated!=0 AND r.time LIKE '$date%' AND r.user IN $in";
-  my $ref = $crms->get('dbh')->selectall_arrayref($sql);
+  my $ref = $crms->GetDb()->selectall_arrayref($sql);
   my $rev = $ref->[0]->[0];
   my $det = $ref->[0]->[1];
   $sql = 'SELECT COUNT(r.id) FROM historicalreviews r WHERE ' .
          "r.time LIKE '$date%' AND r.user IN $in";
-  my $ref = $crms->get('dbh')->selectall_arrayref($sql);
+  my $ref = $crms->GetDb()->selectall_arrayref($sql);
   my $tot = $ref->[0]->[0];
   my ($iname,$mail,$fname) = split '__', $names{$inst};
   my $msg = "Monthly statistics for $iname CRMS Reviewers\n\n" .

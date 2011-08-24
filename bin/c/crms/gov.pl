@@ -62,7 +62,7 @@ require $configFile;
 
 my %reports = ('html'=>1,'none'=>1,'tsv'=>1,'excel'=>1);
 die "Bad value '$report' for -r flag" unless defined $reports{$report};
-my $dbh = $crms->get('dbh');
+my $dbh = $crms->GetDb();
 my $start = $crms->SimpleSqlGet('SELECT DATE(DATE_SUB(NOW(), INTERVAL 1 DAY))');
 my $end = $start;
 if (scalar @ARGV)

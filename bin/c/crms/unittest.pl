@@ -173,7 +173,7 @@ ok($data{'inherit'}->{'uc1.$b467316'}, 'mdp.39015005203321 inherits from uc1.$b4
 if ($renDate)
 {
   my $sql = "SELECT ID,DREG FROM stanford";
-  my $ref = $crms->get('dbh')->selectall_arrayref($sql);
+  my $ref = $crms->GetDb()->selectall_arrayref($sql);
   foreach my $row (@{$ref})
   {
     $id = $row->[0];

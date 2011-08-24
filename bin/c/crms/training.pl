@@ -77,7 +77,7 @@ if ($verbose)
         '<th>Note</th><th>Validated</th><th>Importing</th></tr>' .
         "\n";
 }
-my $ref = $crms->get('dbh')->selectall_arrayref($sql);
+my $ref = $crms->GetDb()->selectall_arrayref($sql);
 my %seen;
 my $s4 = 0;
 my $s5 = 0;
@@ -104,7 +104,7 @@ foreach my $row (@{$ref})
     my %vals = (0=>'x',1=>'+',2=>'-');
     $sql = 'SELECT h.user,DATE(h.time),h.attr,h.reason,h.renDate,h.renNum,h.category,h.note,h.validated,h.status,b.author,b.title,YEAR(b.pub_date) ' .
            "FROM historicalreviews h INNER JOIN bibdata b ON h.id=b.id WHERE h.gid=$gid";
-    my $ref = $crms->get('dbh')->selectall_arrayref($sql);
+    my $ref = $crms->GetDb()->selectall_arrayref($sql);
     foreach my $row (@{$ref})
     {
       my $user2 = $row->[0];
@@ -134,7 +134,7 @@ foreach my $row (@{$ref})
   $s4++ if $status == 4;
   $s5++ if $status == 5;
   $sql = "SELECT attr,reason,renDate,renNum,category,note,duration FROM historicalreviews WHERE id='$id' AND user='$user' AND time='$time'";
-  my $ref2 = $crms->get('dbh')->selectall_arrayref($sql);
+  my $ref2 = $crms->GetDb()->selectall_arrayref($sql);
   $row = $ref2->[0];
   my $attr = $row->[0];
   my $reason = $row->[1];
@@ -146,7 +146,7 @@ foreach my $row (@{$ref})
   $renDate = (defined $renDate)? "'$renDate'":'NULL';
   $renNum = (defined $renNum)? "'$renNum'":'NULL';
   $category = (defined $category)? "'$category'":'NULL';
-  $note = (defined $note)? $crms->get('dbh')->quote($note):'NULL';
+  $note = (defined $note)? $crms->GetDb()->quote($note):'NULL';
   push @sqls, "INSERT INTO queue (id,time,pending_status) VALUES ('$id','$start',1)";
   push @sqls, 'INSERT INTO reviews (id,user,time,attr,reason,renDate,renNum,category,note,duration) ' .
               "VALUES ('$id','$user','$time',$attr,$reason,$renDate,$renNum,$category,$note,'$duration')";
@@ -171,7 +171,7 @@ foreach $sql (@sqls)
 }
 
 $sql = "SELECT id FROM queue WHERE id NOT IN (SELECT id FROM bibdata)";
-my $ref = $crms->get('dbh')->selectall_arrayref($sql);
+my $ref = $crms->GetDb()->selectall_arrayref($sql);
 foreach my $row (@{$ref})
 {
   my $id = $row->[0];
