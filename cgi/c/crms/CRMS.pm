@@ -535,8 +535,6 @@ sub ExportReviews
     my $sql = "INSERT INTO  exportdata (time, id, attr, reason, user, src) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src')";
     $self->PrepareSubmitSql( $sql );
     my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata');
-    $sql = "INSERT INTO exportdataBckup (time, id, attr, reason, user, src) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src')";
-    $self->PrepareSubmitSql( $sql );
     $self->MoveFromReviewsToHistoricalReviews($id,$gid);
     $self->RemoveFromQueue($id);
     $self->RemoveFromCandidates($id);
@@ -7871,18 +7869,6 @@ sub DuplicateVolumesFromCandidates
     $data->{'nodups'}->{$id} .= "$sysid\n";
     return;
   }
-  foreach my $line (@{$rows})
-  {
-    my ($id2,$chron2,$rights2) = split '__', $line;
-    if ($chron2)
-    {
-      $data->{'chron'}->{$id} = "$id2\t$sysid\n";
-      delete $data->{'unneeded'}->{$id};
-      delete $data->{'inherit'}->{$id};
-      delete $data->{'disallowed'}->{$id};
-      return;
-    }
-  }
   my $cid = undef;
   my $cgid = undef;
   my $cattr = undef;
@@ -7895,8 +7881,10 @@ sub DuplicateVolumesFromCandidates
     {
       $data->{'chron'}->{$id} = "$id2\t$sysid\n";
       delete $data->{'already'}->{$id};
+      delete $data->{'unneeded'}->{$id};
       delete $data->{'inherit'}->{$id};
       delete $data->{'noexport'}->{$id};
+      delete $data->{'disallowed'}->{$id};
       return;
     }
     next if $id eq $id2;
@@ -7941,10 +7929,16 @@ sub DuplicateVolumesFromCandidates
     }
     my $oldrights = "$attr2/$reason2";
     my $newrights = "$cattr/$creason";
+    my $wrong = $self->HasMissingOrWrongRecord($id, $sysid, $rows);
     if ($newrights eq 'pd/ncn')
     {
       $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
       $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
+    }
+    elsif ($wrong)
+    {
+      $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
+      $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tMissing/Wrong Record on $wrong\n";
     }
     elsif ($oldrights =~ m/bib$/)
     {
