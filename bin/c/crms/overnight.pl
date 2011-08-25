@@ -51,7 +51,7 @@ my $crms = CRMS->new(
     root         =>   $DLXSROOT,
     dev          =>   ($training)? 'crmstest':$DLPS_DEV
 );
-
+$crms->set('ping','yes');
 if ($skipExport) { ReportMsg("-e flag set; skipping queue processing and export."); }
 else
 {
