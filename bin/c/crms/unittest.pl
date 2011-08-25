@@ -165,10 +165,6 @@ is($crms->IsReviewCorrect('coo.31924002832313','s-zuri@umn.edu','2011-01-13 11:1
 is($crms->IsFiltered('mdp.39015027953937','foreign'), 1, 'IsFiltered 1');
 is($crms->IsFiltered('mdp.39015027953937','duplicate'), 0, 'IsFiltered 2');
 is($crms->IsFiltered('mdp.39015027953937'), 1, 'IsFiltered 3');
-my %data = ();
-$crms->DuplicateVolumesFromCandidates('mdp.39015005203321','000623956',\%data);
-ok($data{'inherit'}, 'mdp.39015005203321 inherits');
-ok($data{'inherit'}->{'uc1.$b467316'}, 'mdp.39015005203321 inherits from uc1.$b467316');
 
 if ($renDate)
 {
