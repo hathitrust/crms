@@ -200,33 +200,6 @@ if (scalar keys %{$data{'unneeded'}})
   $data{'unneededcnt'} = $n;
   $txt .= "</table>$delim";
 }
-if (scalar keys %{$data{'disallowed'}})
-{
-  $txt .= "<h4>Volumes not allowed to inherit</h4>\n";
-  $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style='color:blue;'>historical/SysID</span>)</th>" .
-          "<th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th><th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th>" .
-          "<th>Rights</th><th>New Rights</th><th>Why</th><th>Title</th></tr>\n";
-  my $n = 0;
-  foreach my $id (KeysSortedOnTitle($data{'disallowed'}))
-  {
-    my $record = $crms->GetMetadata($id);
-    my $title = $crms->GetRecordTitle($id, $record);
-    $title =~ s/&/&amp;/g;
-    my @lines = split "\n", $data{'disallowed'}->{$id};
-    foreach my $line (@lines)
-    {
-      $n++;
-      my ($id2,$sysid,$c,$d,$e,$note) = split "\t", $line;
-      my $htCatLink = $crms->LinkToCatalog($sysid);
-      my $retrLink = $crms->LinkToRetrieve($sysid,1);
-      my $histLink = $crms->LinkToHistorical($sysid,1);
-      $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
-      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$note</td><td>$title</td></tr>\n";
-    }
-  }
-  $data{'disallowedcnt'} = $n;
-  $txt .= "</table>$delim";
-}
 if (scalar keys %{$data{'noexport'}})
 {
   $txt .= "<h4>Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table - No Inheritance/Adding to Candidates</h4>\n";
@@ -267,7 +240,33 @@ if (scalar keys %{$data{'already'}})
   }
   $txt .= "</table>$delim";
 }
-
+if (scalar keys %{$data{'disallowed'}})
+{
+  $txt .= "<h4>Volumes not allowed to inherit</h4>\n";
+  $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style='color:blue;'>historical/SysID</span>)</th>" .
+          "<th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th><th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th>" .
+          "<th>Rights</th><th>New Rights</th><th>Why</th><th>Title</th></tr>\n";
+  my $n = 0;
+  foreach my $id (KeysSortedOnTitle($data{'disallowed'}))
+  {
+    my $record = $crms->GetMetadata($id);
+    my $title = $crms->GetRecordTitle($id, $record);
+    $title =~ s/&/&amp;/g;
+    my @lines = split "\n", $data{'disallowed'}->{$id};
+    foreach my $line (@lines)
+    {
+      $n++;
+      my ($id2,$sysid,$c,$d,$e,$note) = split "\t", $line;
+      my $htCatLink = $crms->LinkToCatalog($sysid);
+      my $retrLink = $crms->LinkToRetrieve($sysid,1);
+      my $histLink = $crms->LinkToHistorical($sysid,1);
+      $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
+      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$note</td><td>$title</td></tr>\n";
+    }
+  }
+  $data{'disallowedcnt'} = $n;
+  $txt .= "</table>$delim";
+}
 if (scalar keys %{$data{'inherit'}})
 {
   my @cols = ('#','Source&nbsp;Volume<br/>(<span style="color:blue;">historical/SysID</span>)',
