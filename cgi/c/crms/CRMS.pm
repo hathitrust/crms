@@ -7670,7 +7670,7 @@ sub AddInheritanceToQueue
   {
     my $sql = "INSERT INTO queue (id, priority, source) VALUES ('$id', 0, 'inherited')";
     $self->PrepareSubmitSql($sql);
-    $self->UpdateMetadata($id);
+    $self->UpdateMetadata($id, 'bibdata', 1);
     $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES (1, 'inheritance')";
     $self->PrepareSubmitSql($sql);
   }
@@ -7888,8 +7888,11 @@ sub DuplicateVolumesFromCandidates
       return;
     }
     next if $id eq $id2;
-    my $sql = "SELECT COUNT(*) FROM candidates WHERE id='$id2'";
-    if ($self->SimpleSqlGet($sql) && !$data->{'already'}->{$id2})
+    # id may be in und, so only apply this check if id is in candidates.
+    my $sql = "SELECT COUNT(*) FROM candidates WHERE id='$id'";
+    my $sql2 = "SELECT COUNT(*) FROM candidates WHERE id='$id2'";
+    if ($self->SimpleSqlGet($sql) && !$data->{'already'}->{$id2} &&
+        $self->SimpleSqlGet($sql2))
     {
       $data->{'already'}->{$id} = '' unless $data->{'already'}->{$id};
       $data->{'already'}->{$id} .= "$id2\t$sysid\n";
