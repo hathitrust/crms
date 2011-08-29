@@ -18,7 +18,8 @@ use Encode;
 
 my $usage = <<END;
 USAGE: $0 [-acChipquv] [-s VOL_ID [-s VOL_ID2...]]
-          [-m MAIL_ADDR [-m MAIL_ADDR2...]] [start_date [end_date]]
+          [-m MAIL_ADDR [-m MAIL_ADDR2...]] [-n TBL [-n TBL...]]
+          [start_date [end_date]]
 
 Reports on the volumes that can inherit from this morning's export,
 or, if start_date is specified, exported after then and before end_date
@@ -30,6 +31,9 @@ if it is specified.
 -h         Print this help message.
 -i         Insert entries in the inherit table.
 -m ADDR    Mail the report to ADDR. May be repeated for multiple addresses.
+-n TBL     Suppress table TBL (which is often huge in candidates cleanup),
+           where TBL is one of {nodups,chron,noexport}.
+           May be repeated for multiple tables.
 -p         Run in production.
 -q         Do not emit report (ignored if -m is used).
 -s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
@@ -43,6 +47,7 @@ my $cleanup;
 my $help;
 my $insert;
 my @mails;
+my @no;
 my $production;
 my $quiet;
 my @singles;
@@ -57,6 +62,7 @@ die 'Terminating' unless GetOptions(
            'h|?'  => \$help,
            'i'    => \$insert,
            'm:s@' => \@mails,
+           'n:s@' => \@no,
            'p'    => \$production,
            'q'    => \$quiet,
            's:s@' => \@singles,
@@ -64,6 +70,9 @@ die 'Terminating' unless GetOptions(
            'v+'   => \$verbose);
 $DLPS_DEV = undef if $production;
 die "$usage\n\n" if $help;
+
+my %no = ();
+$no{$_}=1 for @no;
 
 my $configFile = "$DLXSROOT/bin/c/crms/crms.cfg";
 my $crms = CRMS->new(
@@ -125,7 +134,7 @@ if (scalar keys %{$data{'unavailable'}})
   }
   $txt .= "</table>$delim";
 }
-if (scalar keys %{$data{'nodups'}})
+if (scalar keys %{$data{'nodups'}} && !$no{'nodups'})
 {
   $txt .= sprintf("<h4>Volumes single copy/no duplicates%s</h4>\n", ($candidates)? ' - No Inheritance/Adding to Candidates':'');
   $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th>" .
@@ -144,7 +153,7 @@ if (scalar keys %{$data{'nodups'}})
   }
   $txt .= "</table>$delim";
 }
-if (scalar keys %{$data{'chron'}})
+if (scalar keys %{$data{'chron'}} && !$no{'chron'})
 {
   $txt .= sprintf("<h4>Volumes skipped because of chron/enum%s</h4>\n", ($candidates)? ' - No Inheritance/Adding to Candidates':'');
   $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style='color:blue;'>historical/SysID</span>)</th>" .
@@ -200,7 +209,7 @@ if (scalar keys %{$data{'unneeded'}})
   $data{'unneededcnt'} = $n;
   $txt .= "</table>$delim";
 }
-if (scalar keys %{$data{'noexport'}})
+if (scalar keys %{$data{'noexport'}} && !$no{'noexport'})
 {
   $txt .= "<h4>Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table - No Inheritance/Adding to Candidates</h4>\n";
   $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th>" .
