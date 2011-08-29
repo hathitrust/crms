@@ -7943,7 +7943,7 @@ sub DuplicateVolumesFromCandidates
       $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
       $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tMissing/Wrong Record on $wrong\n";
     }
-    elsif ($oldrights =~ m/bib$/)
+    elsif ($oldrights =~ m/bib$/ || ($oldrights eq 'pdus/gfv' && $cattr =~ m/^pd/))
     {
       $data->{'inherit'}->{$cid} = '' unless $data->{'inherit'}->{$cid};
       $data->{'inherit'}->{$cid} .= "$id\t$sysid\t$attr2\t$reason2\t$cattr\t$creason\t$cgid\n";
