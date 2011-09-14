@@ -239,13 +239,6 @@ if ( $cgi->param('download') )
   }
 }
 
-
-if ( ! $user || ! $ENV{'HTTPS'} ) 
-{
-    print $cgi->redirect( "https://$ENV{'HTTP_HOST'}$ENV{'SCRIPT_NAME'}" );
-    exit;
-}
-
 ## config options for TT
 my $config = 
 {
@@ -280,7 +273,7 @@ my $page  = $cgi->param('p');
 my $input = $page . ".tt";
 $input = 'home.tt' unless -f $input;
 
-print $cgi->header( -charset => 'utf-8', "cache-control" => 'private' );
+print $cgi->header( -charset => 'utf-8', 'cache-control' => 'private' );
 $tt->process($input, $vars) || die $tt->error();
 if ($cgi->param('debug'))
 {
