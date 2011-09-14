@@ -871,6 +871,12 @@ sub LoadNewItems
         next;
       }
       my $sysid = $self->BarcodeToId($id);
+      if (!$sysid)
+      {
+        print "Filtering $id: can't get metadata for queue\n";
+        $self->Filter($id, 'no meta');
+        next;
+      }
       my $dup = $recs{$sysid};
       if ($dup && !$self->DoesRecordHaveChron($sysid))
       {
@@ -5164,12 +5170,13 @@ sub GetRecordAuthor
     $data = $self->GetMarcDatafield($id,'110','a',$record);
     $data .= $self->GetMarcDatafield($id,'110','b',$record) if $data;
     $data = $self->GetMarcDatafield($id,'111','a',$record) unless $data;
-    $data = $self->GetMarcDatafield($id,'130','a',$record) unless $data;
+    # 130 is for title
+    #$data = $self->GetMarcDatafield($id,'130','a',$record) unless $data;
     $data = $self->GetMarcDatafield($id,'700','a',$record) unless $data;
     $data = $self->GetMarcDatafield($id,'710','a',$record) unless $data;
   }
   $data =~ s/\n+//gs;
-  $data =~ s/[\s,\.]+$//;
+  $data =~ s/\s*[,:;]\s*$//;
   $data =~ s/^\s+//;
   return $data;
 }
@@ -8026,7 +8033,7 @@ sub ExportSrcToEnglish
 {
   my $self = shift;
   my $src  = shift;
-  
+
   my %srces = ('adminui' => 'Added to Queue',
                'rereport' => 'Rereports');
   my $eng = $srces{$src};
@@ -8042,7 +8049,7 @@ sub FilterCandidates
   my $self   = shift;
   my $oldVol = shift;
   my $newVol = shift;
-  
+
   if ($self->SimpleSqlGet("SELECT COUNT(*) FROM queue WHERE id='$oldVol'") == 0)
   {
     $self->Filter($oldVol, 'duplicate');
