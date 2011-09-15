@@ -6087,7 +6087,7 @@ sub CreateSystemReport
       $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$n</td></tr>\n";
     }
   }
-  $report .= sprintf "<tr><th>Current&nbsp;Host</th><td>%s</td></tr>\n", $self->Hostname();
+  my $host = $self->Hostname();
   my ($delay,$since) = $self->ReplicationDelay();
   my $alert = $delay >= 5;
   if ($delay == 999999)
@@ -6099,8 +6099,16 @@ sub CreateSystemReport
     $delay .= $self->Pluralize(' second', $delay);
   }
   $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay since $since</span>" if $alert;
-  $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay</td></tr>\n";
+  $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay on $host</td></tr>\n";
   $report .= sprintf "<tr><th>Automatic&nbsp;Inheritance</th><td>%s</td></tr>\n", ($self->GetSystemVar('autoinherit') eq 'disabled')?'Disabled':'Enabled';
+  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority=1.0') > 0)
+  {
+    my $p0 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND priority=0.0 AND pending_status>0');
+    my $p1 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND priority=1.0 AND pending_status>1');
+    my $pct = 0.0;
+    eval {$pct = sprintf('%.1f%%', 100.0 * $p1 / ($p0+$p1));};
+    $report .= "<tr><th>Priority&nbsp;1&nbsp;Frequency</th><td>$pct</td></tr>\n";
+  }
   $report .= '<tr><td colspan="2">';
   $report .= '<span class="smallishText">* Not including legacy data (reviews/determinations made prior to July 2009).</span><br/>';
   $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count above.</span>';
