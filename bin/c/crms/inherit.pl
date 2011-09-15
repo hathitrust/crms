@@ -19,7 +19,7 @@ use Encode;
 my $usage = <<END;
 USAGE: $0 [-acChipquv] [-s VOL_ID [-s VOL_ID2...]]
           [-m MAIL_ADDR [-m MAIL_ADDR2...]] [-n TBL [-n TBL...]]
-          [start_date [end_date]]
+          [start_date[ time] [end_date[ time]]]
 
 Reports on the volumes that can inherit from this morning's export,
 or, if start_date is specified, exported after then and before end_date
@@ -96,13 +96,15 @@ my $end = $start;
 if (scalar @ARGV)
 {
   $start = $ARGV[0];
-  die "Bad date format ($start); should be in the form e.g. 2010-08-29" unless $start =~ m/^\d\d\d\d-\d\d-\d\d$/;
+  die "Bad date format ($start); should be in the form e.g. 2010-08-29" unless $start =~ m/^\d\d\d\d-\d\d-\d\d(\s+\d\d:\d\d:\d\d)?$/;
   if (scalar @ARGV > 1)
   {
     $end = $ARGV[1];
-    die "Bad date format ($end); should be in the form e.g. 2010-08-29" unless $end =~ m/^\d\d\d\d-\d\d-\d\d$/;
+    die "Bad date format ($end); should be in the form e.g. 2010-08-29" unless $end =~ m/^\d\d\d\d-\d\d-\d\d(\s+\d\d:\d\d:\d\d)?$/;
   }
 }
+$start .= ' 00:00:00' unless $start =~ m/\d\d:\d\d:\d\d$/;
+$end .= ' 23:59:59' unless $end =~ m/\d\d:\d\d:\d\d$/;
 my %data = %{($candidates)? CandidatesReport($start,$end,\@singles):InheritanceReport($start,$end,\@singles)};
 
 my $dates = $start;
@@ -475,13 +477,13 @@ else
 
 sub InheritanceReport
 {
-  my $start = shift;
-  my $end   = shift;
+  my $start   = shift;
+  my $end     = shift;
   my $singles = shift;
 
   my %data = ();
   my %seen = ();
-  my $sql = "SELECT id,gid,attr,reason,time,src FROM exportdata WHERE src!='inherited' AND ((time>'$start 00:00:00' AND time<='$end 23:59:59') " .
+  my $sql = "SELECT id,gid,attr,reason,time,src FROM exportdata WHERE src!='inherited' AND ((time>'$start' AND time<='$end') " .
             "OR id IN (SELECT id FROM unavailable WHERE src='$src')) ORDER BY time DESC";
   if ($singles && scalar @{$singles})
   {
@@ -534,9 +536,9 @@ sub CandidatesReport
   my $singles = shift;
 
   my %data = ();
-  my $sql = "SELECT id,time FROM candidates WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59') " .
+  my $sql = "SELECT id,time FROM candidates WHERE (time>'$start' AND time<='$end') " .
             "OR id IN (SELECT id FROM unavailable WHERE src='$src')";
-  $sql .= " UNION DISTINCT SELECT id,time FROM und WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59') AND src!='no meta'" if $und;
+  $sql .= " UNION DISTINCT SELECT id,time FROM und WHERE (time>'$start' AND time<='$end') AND src!='no meta'" if $und;
   $sql .= ' ORDER BY time DESC';
   if ($singles && scalar @{$singles})
   {
