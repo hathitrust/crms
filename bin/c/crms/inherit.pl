@@ -32,7 +32,7 @@ if it is specified.
 -i         Insert entries in the inherit table.
 -m ADDR    Mail the report to ADDR. May be repeated for multiple addresses.
 -n TBL     Suppress table TBL (which is often huge in candidates cleanup),
-           where TBL is one of {nodups,chron,noexport}.
+           where TBL is one of {chron,nodups,noexport,unneeded}.
            May be repeated for multiple tables.
 -p         Run in production.
 -q         Do not emit report (ignored if -m is used).
@@ -163,10 +163,11 @@ if (scalar keys %{$data{'chron'}} && !$no{'chron'})
           '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th>' .
           "<th>Title</th></tr>\n";
   my $n = 0;
-  foreach my $id (KeysSortedOnTitle($data{'chron'}))
+  my $th = GetTitleHash($data{'chron'});
+  foreach my $id (KeysSortedOnTitle($data{'chron'}), $th)
   {
-    my $record = $crms->GetMetadata($id);
-    my $title = $crms->GetRecordTitle($id, $record);
+    #my $record = $crms->GetMetadata($id);
+    my $title = $th->{$id};
     $title =~ s/&/&amp;/g;
     my @lines = split "\n", $data{'chron'}->{$id};
     foreach my $line (@lines)
@@ -183,7 +184,7 @@ if (scalar keys %{$data{'chron'}} && !$no{'chron'})
   }
   $txt .= "</table>$delim";
 }
-if (scalar keys %{$data{'unneeded'}})
+if (scalar keys %{$data{'unneeded'}} && !$no{'unneeded'})
 {
   $txt .= sprintf("<h4>Volumes not needing inheritance</h4>\n", ($candidates)? ' - No Inheritance/Adding to Candidates':'');
   $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style='color:blue;'>historical/SysID</span>)</th>" .
@@ -191,10 +192,11 @@ if (scalar keys %{$data{'unneeded'}})
           '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th><th>Rights</th><th>New Rights</th>' .
           "<th>Title</th></tr>\n";
   my $n = 0;
-  foreach my $id (KeysSortedOnTitle($data{'unneeded'}))
+  my $th = GetTitleHash($data{'unneeded'});
+  foreach my $id (KeysSortedOnTitle($data{'unneeded'}, $th))
   {
-    my $record = $crms->GetMetadata($id);
-    my $title = $crms->GetRecordTitle($id, $record);
+    #my $record = $crms->GetMetadata($id);
+    my $title = $th->{$id};
     $title =~ s/&/&amp;/g;
     my @lines = split "\n", $data{'unneeded'}->{$id};
     foreach my $line (@lines)
@@ -258,10 +260,11 @@ if (scalar keys %{$data{'disallowed'}})
           "<th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th><th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th>" .
           "<th>Rights</th><th>New Rights</th><th>Why</th><th>Title</th></tr>\n";
   my $n = 0;
-  foreach my $id (KeysSortedOnTitle($data{'disallowed'}))
+  my $th = GetTitleHash($data{'disallowed'});
+  foreach my $id (KeysSortedOnTitle($data{'disallowed'}, $th))
   {
-    my $record = $crms->GetMetadata($id);
-    my $title = $crms->GetRecordTitle($id, $record);
+    #my $record = $crms->GetMetadata($id);
+    my $title = $th->{$id};
     $title =~ s/&/&amp;/g;
     my @lines = split "\n", $data{'disallowed'}->{$id};
     foreach my $line (@lines)
@@ -293,10 +296,11 @@ if (scalar keys %{$data{'inherit'}})
                 "</th><th>Prior<br/>CRMS<br/>Determ?</th><th>Prior<br/>Status 5<br/>Determ?</th><th>Title</th><th>Tracking</th></tr>\n";
   my $n = 0;
   my $npend = 0;
-  foreach my $id (KeysSortedOnTitle($data{'inherit'}))
+  my $th = GetTitleHash($data{'inherit'});
+  foreach my $id (KeysSortedOnTitle($data{'inherit'}, $th))
   {
-    my $record = $crms->GetMetadata($id);
-    my $title = $crms->GetRecordTitle($id, $record);
+    #my $record = $crms->GetMetadata($id);
+    my $title = $th->{$id};
     $title =~ s/&/&amp;/g;
     my @lines = split "\n", $data{'inherit'}->{$id};
     foreach my $line (@lines)
@@ -570,13 +574,23 @@ sub CandidatesReport
   return \%data;
 }
 
+sub GetTitleHash
+{
+  my $ref = shift;
+  
+  my %h = ();
+  $h{$_} = $crms->GetRecordTitle($_) for keys %{$ref};
+  return \%h;
+}
+
 sub KeysSortedOnTitle
 {
   my $ref = shift;
+  my $th  = shift;
 
   return sort {
-    my $aa = lc $crms->GetRecordTitle($a);
-    my $ba = lc $crms->GetRecordTitle($b);
+    my $aa = lc $th->{$a};
+    my $ba = lc $th->{$b};
     $crms->ClearErrors();
     #print "'$aa' cmp '$ba'?\n";
     $aa cmp $ba
