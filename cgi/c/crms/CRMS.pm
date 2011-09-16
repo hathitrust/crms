@@ -6031,7 +6031,7 @@ sub CreateQueueReport
     $report .= sprintf("<tr><td%s>$status%s</td><td%s>$count</td>", $class, ($status == 6)? '*':'', $class);
     $sql = "SELECT priority FROM queue $statusClause";
     my $ref = $dbh->selectall_arrayref($sql);
-    $report .= $self->DoPriorityBreakdown($ref,$class,@pris);
+    $report .= $self->DoPriorityBreakdown($ref,$class,\@pris);
     $report .= "</tr>\n";
   }
   my $sql = "SELECT priority FROM queue WHERE status=0 AND id NOT IN (SELECT id FROM reviews)";
@@ -6039,7 +6039,7 @@ sub CreateQueueReport
   my $count = $self->GetTotalAwaitingReview();
   my $class = ' class="major"';
   $report .= sprintf("<tr><td%s>Not&nbsp;Yet&nbsp;Active</td><td%s>$count</td>", $class, $class);
-  $report .= $self->DoPriorityBreakdown($ref,$class,@pris);
+  $report .= $self->DoPriorityBreakdown($ref,$class,\@pris);
   $report .= "</tr>\n";
   $report .= sprintf("<tr><td nowrap='nowrap' colspan='%d'><span class='smallishText'>Note: includes both active and inactive volumes.</span><br/>\n", 2+scalar @pris);
   $report .= "<span class='smallishText'>* Status 6 no longer in use as of 4/19/2010.</span></td></tr>\n";
@@ -6101,14 +6101,15 @@ sub CreateSystemReport
   $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay since $since</span>" if $alert;
   $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay on $host</td></tr>\n";
   $report .= sprintf "<tr><th>Automatic&nbsp;Inheritance</th><td>%s</td></tr>\n", ($self->GetSystemVar('autoinherit') eq 'disabled')?'Disabled':'Enabled';
-  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority=1.0') > 0)
-  {
-    my $p0 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND priority=0.0 AND pending_status>0');
-    my $p1 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND priority=1.0 AND pending_status>1');
-    my $pct = 0.0;
-    eval {$pct = sprintf('%.1f%%', 100.0 * $p1 / ($p0+$p1));};
-    $report .= "<tr><th>Priority&nbsp;1&nbsp;Frequency</th><td>$pct</td></tr>\n";
-  }
+  #if ($self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority=1.0') > 0)
+  #{
+  #  my $p0 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND priority=0.0 AND pending_status>0');
+  #  my $p1 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND priority=1.0 AND pending_status>1');
+  #  my $p1f = sprintf('%.1f%%', 100.0 * $self->GetPriority1Frequency());
+  #  my $pct = 0.0;
+  #  eval {$pct = sprintf('%.1f%%', 100.0 * $p1 / ($p0+$p1));};
+  #  $report .= "<tr><th>Priority&nbsp;1&nbsp;Frequency</th><td>$pct (target $p1f)</td></tr>\n";
+  #}
   $report .= '<tr><td colspan="2">';
   $report .= '<span class="smallishText">* Not including legacy data (reviews/determinations made prior to July 2009).</span><br/>';
   $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count above.</span>';
@@ -6119,64 +6120,77 @@ sub CreateSystemReport
 sub CreateDeterminationReport
 {
   my $self = shift;
-  
-  my $report = '';
-  $report .= "<table class='exportStats'>\n";
+
+  my $dbh = $self->GetDb();
   my ($count,$time) = $self->GetLastExport();
-  my $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=4 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
-  my $fours = $self->SimpleSqlGet($sql);
-  $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=5 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
-  my $fives = $self->SimpleSqlGet($sql);
-  $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=6 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
-  my $sixes = $self->SimpleSqlGet($sql);
-  $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=7 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
-  my $sevens = $self->SimpleSqlGet($sql);
-  $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=8 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
-  my $eights = $self->SimpleSqlGet($sql);
-  $sql = "SELECT count(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=9 AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
-  my $nines = $self->SimpleSqlGet($sql);
-  my $total = $fours+$fives+$sixes+$sevens+$eights+$nines;
-  my $pct4 = 0;
-  my $pct5 = 0;
-  my $pct6 = 0;
-  my $pct7 = 0;
-  my $pct8 = 0;
-  my $pct9 = 0;
-  eval {$pct4 = 100.0*$fours/$total;};
-  eval {$pct5 = 100.0*$fives/$total;};
-  eval {$pct6 = 100.0*$sixes/$total;};
-  eval {$pct7 = 100.0*$sevens/$total;};
-  eval {$pct8 = 100.0*$eights/$total;};
-  eval {$pct9 = 100.0*$nines/$total;};
+  my %cts = ();
+  my %pcts = ();
+  my $priheaders = '';
+  my $sql = 'SELECT DISTINCT h.priority FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid ' .
+            "WHERE e.time>=date_sub('$time', INTERVAL 1 MINUTE) ORDER BY h.priority ASC";
+  #print "$sql<br/>\n";
+  my @pris = map {$_->[0]} @{ $dbh->selectall_arrayref($sql) };
+  $sql = "SELECT COUNT(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
+  my $total = $self->SimpleSqlGet($sql);
+  foreach my $pri (@pris)
+  {
+    $pri = $self->StripDecimal($pri);
+    $priheaders .= "<th>Priority&nbsp;$pri</th>"
+  }
+  my $report = "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
+  foreach my $status (4 .. 9)
+  {
+    $sql = "SELECT COUNT(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=$status AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
+    my $ct = $self->SimpleSqlGet($sql);
+    my $pct = 0.0;
+    eval {$pct = 100.0*$ct/$total;};
+    $cts{$status} = $ct;
+    $pcts{$status} = $pct;
+  }
+  my $colspan = 1 + scalar @pris;
   my $legacy = $self->GetTotalLegacyCount();
   my %sources;
   $sql = 'SELECT src,COUNT(gid) FROM exportdata WHERE src IS NOT NULL GROUP BY src';
-  my $rows = $self->GetDb()->selectall_arrayref($sql);
+  my $rows = $dbh->selectall_arrayref($sql);
   foreach my $row ( @{$rows} )
   {
     $sources{ $row->[0] } = $row->[1];
   }
-  ($count,$time) = $self->GetLastExport(1);
-  $time =~ s/\s/&nbsp;/g;
+  my ($count2,$time2) = $self->GetLastExport(1);
+  $time2 =~ s/\s/&nbsp;/g;
   $count = 'None' unless $count;
-  $time = 'record' unless $time;
+  $time = 'record' unless $time2;
   my $exported = $self->SimpleSqlGet('SELECT COUNT(DISTINCT gid) FROM exportdata');
-  $report .= "<tr><th>Last&nbsp;CRMS&nbsp;Export</th><td>$count&nbsp;on&nbsp;$time</td></tr>";
-  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;4</th><td>$fours&nbsp;(%.1f%%)</td></tr>", $pct4);
-  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;5</th><td>$fives&nbsp;(%.1f%%)</td></tr>", $pct5);
-  $report .= sprintf("<tr><th style='color:#999999;'>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;6*</th><td style='background-color:#999999;'>$sixes&nbsp;(%.1f%%)</td></tr>", $pct6);
-  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;7</th><td>$sevens&nbsp;(%.1f%%)</td></tr>", $pct7);
-  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;8</th><td>$eights&nbsp;(%.1f%%)</td></tr>", $pct8);
-  $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;9</th><td>$nines&nbsp;(%.1f%%)</td></tr>", $pct9);
-  $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</th><td>%s</td></tr>", $exported);
+  $report .= "<tr><th>Last&nbsp;CRMS&nbsp;Export</th><td colspan='$colspan'>$time2</td></tr>";
+  foreach my $status (sort keys %cts)
+  {
+    my $thstyle = ($status == 6)? " style='color:#999999;'":'';
+    my $tdstyle = ($status == 6)? " style='background-color:#999999;'":'';
+    $report .= sprintf("<tr><th$thstyle>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;%d</th><td $tdstyle>%d&nbsp;(%.1f%%)</td>",
+                       $status, $cts{$status}, $pcts{$status});
+    $sql = 'SELECT h.priority,h.gid FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid ' .
+           "WHERE h.status=$status AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
+    my $ref = $dbh->selectall_arrayref($sql);
+    #print "$sql<br/>\n";
+    $report .= $self->DoPriorityBreakdown($ref, $tdstyle, \@pris, $cts{$status});
+    $report .= '</tr>';
+  }
+  $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Total</th><td>$count</td>";
+  $sql = 'SELECT h.priority,h.gid FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid ' .
+         "WHERE e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
+  my $ref = $dbh->selectall_arrayref($sql);
+  #print "$sql<br/>\n";
+  $report .= $self->DoPriorityBreakdown($ref, '', \@pris, $count);
+  $report .= '</tr>';
+  $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</th><td colspan='$colspan'>%s</td></tr>", $exported);
   foreach my $source (sort keys %sources)
   {
     my $n = $sources{$source};
-    $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;%s</th><td>$n</td></tr>", $self->ExportSrcToEnglish($source));
+    $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;%s</th><td colspan='$colspan'>$n</td></tr>", $self->ExportSrcToEnglish($source));
   }
-  $report .= sprintf("<tr><th>Total&nbsp;Legacy&nbsp;Determinations</th><td>%s</td></tr>", $legacy);
-  $report .= sprintf("<tr><th>Total&nbsp;Determinations</th><td>%s</td></tr>", $exported + $legacy);
-  $report .= "<tr><td colspan='2'><span class='smallishText'>* Status 6 no longer in use as of 4/19/2010.</span></td></tr>\n";
+  $report .= sprintf("<tr><th>Total&nbsp;Legacy&nbsp;Determinations</th><td colspan='$colspan'>%s</td></tr>", $legacy);
+  $report .= sprintf("<tr><th>Total&nbsp;Determinations</th><td colspan='$colspan'>%s</td></tr>", $exported + $legacy);
+  $report .= sprintf("<tr><td colspan='%d'><span class='smallishText'>* Status 6 no longer in use as of 4/19/2010.</span></td></tr>\n", $colspan+1);
   $report .= "</table>\n";
   return $report;
 }
@@ -6212,49 +6226,49 @@ sub CreateReviewReport
   my $ref = $dbh->selectall_arrayref( $sql );
   my $count = scalar @{$ref};
   $report .= "<tr><td class='total'>Active</td><td class='total'>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,' class="total"',@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,' class="total"',\@pris) . "</tr>\n";
   
   # Unprocessed
   $sql = 'SELECT priority FROM queue WHERE status=0 AND pending_status>0';
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
   $report .= "<tr><td class='minor'>Unprocessed</td><td class='minor'>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,' class="minor"',@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,' class="minor"',\@pris) . "</tr>\n";
   
   # Unprocessed - single review
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=1';
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Single&nbsp;Review</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
   
   # Unprocessed - match
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=4';
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Match</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
   
   # Unprocessed - conflict
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=2';
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflict</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
   
   # Unprocessed - provisional match
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=3';
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Match</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
   
   # Unprocessed - auto-resolved
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=8';
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Auto-Resolved</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
   
   # Inheriting
   $sql = 'SELECT COUNT(*) FROM queue WHERE status=9';
@@ -6296,25 +6310,25 @@ sub CreateReviewReport
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
   $report .= "<tr><td class='minor'>Processed</td><td class='minor'>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,' class="minor"',@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,' class="minor"',\@pris) . "</tr>\n";
   
-  $sql = "SELECT priority from $CRMSGlobals::queueTable WHERE status=2";
+  $sql = 'SELECT priority from queue WHERE status=2';
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflict</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,'',\@pris) . "</tr>\n";
 
   $sql = 'SELECT priority from queue WHERE status=3';
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Match</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,'',\@pris) . "</tr>\n";
   
-  $sql = "SELECT priority from $CRMSGlobals::queueTable WHERE status>=4";
+  $sql = 'SELECT priority from queue WHERE status>=4';
   $ref = $dbh->selectall_arrayref( $sql );
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Awaiting&nbsp;Export</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref,'',\@pris) . "</tr>\n";
   
   if ($count > 0)
   {
@@ -6324,7 +6338,7 @@ sub CreateReviewReport
       $ref = $dbh->selectall_arrayref( $sql );
       $count = scalar @{$ref};
       $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;$status</td><td>$count</td>";
-      $report .= $self->DoPriorityBreakdown($ref,undef,@pris) . "</tr>\n";
+      $report .= $self->DoPriorityBreakdown($ref,'',\@pris) . "</tr>\n";
     }
   }
   $report .= sprintf("<tr><td nowrap='nowrap' colspan='%d'><span class='smallishText'>Last processed %s</span></td></tr>\n", 2+scalar @pris, $self->GetLastStatusProcessedTime());
@@ -6338,18 +6352,39 @@ sub DoPriorityBreakdown
   my $self  = shift;
   my $ref   = shift;
   my $class = shift;
-  
+  my $pris  = shift;
+  my $total = shift;
+
   my %breakdown;
-  $breakdown{$_} = 0 for @_;
+  $breakdown{$_} = 0 for @{$pris};
+  my %h = ();
   foreach my $row (@{$ref})
   {
     my $pri = $self->StripDecimal($row->[0]);
+    if (scalar @{$row} > 1)
+    {
+      my $uvalue = $row->[1];
+      next if $h{$uvalue};
+      $h{$uvalue} = 1;
+    }
     #print "Pri $pri<br/>\n";
     $breakdown{$pri}++;
   }
-  my $ret = join '',map {sprintf "<td$class>%s</td>", $breakdown{$_}} sort keys %breakdown;
-  #printf "%d priorities: %s <!-- $ret --><br/>\n"; scalar keys %breakdown, join ',', keys %breakdown;
-  return $ret;
+  my $bd = '';
+  foreach my $key (sort keys %breakdown)
+  {
+    my $ct = $breakdown{$key};
+    my $pct = '';
+    if (defined $total)
+    {
+      $pct = 0.0;
+      eval {$pct = 100.0*$ct/$total;};
+      $pct = sprintf '&nbsp;(%.1f%%)', $pct;
+    }
+    $bd .= "<td$class>$ct$pct</td>";
+  }
+  #printf "%d priorities: %s <!-- $bd --><br/>\n"; scalar keys %breakdown, join ',', keys %breakdown;
+  return $bd;
 }
 
 
