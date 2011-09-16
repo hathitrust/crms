@@ -18,7 +18,7 @@ use Spreadsheet::WriteExcel;
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-ahipv] [-n N] [-r TYPE] [-s VOL_ID [-s VOL_ID2...]]
+USAGE: $0 [-ahiprv] [-n N] [-t TYPE] [-s VOL_ID [-s VOL_ID2...]]
           [-m MAIL_ADDR [-m MAIL_ADDR2...]]
 
 Creates a report of recent exports for the orphan works project.
@@ -29,10 +29,11 @@ Creates a report of recent exports for the orphan works project.
 -m ADDR    Mail the report to ADDR. May be repeated for multiple addresses.
 -n N       Export no more than N volumes. (Default is 3000.)
 -p         Run in production.
--r TYPE    Print a report of TYPE where TYPE={html,none,tsv,excel}.
+-r         Re-report on all volumes in the orphan table. (Ignore -a and -n flags.)
+-s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
+-t TYPE    Print a report of TYPE where TYPE={html,none,tsv,excel}.
            In the case of excel it will be created in place and
            attached to any outgoing mail. Default is excel.
--s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
 -v         Be verbose. May be repeated.
 END
 my $all;
@@ -41,8 +42,9 @@ my $insert;
 my @mails;
 my $n;
 my $production;
-my $report = 'excel';
+my $rereport;
 my @singles;
+my $type = 'excel';
 my $verbose;
 
 Getopt::Long::Configure ('bundling');
@@ -52,8 +54,9 @@ die 'Terminating' unless GetOptions('a' => \$all,
            'm:s@' => \@mails,
            'n:s' => \$n,
            'p' => \$production,
-           'r:s' => \$report,
+           'r' => \$rereport,
            's:s@' => \@singles,
+           't:s' => \$type,
            'v+' => \$verbose);
 $DLPS_DEV = undef if $production;
 print "Verbosity $verbose\n" if $verbose;
@@ -69,18 +72,19 @@ my $crms = CRMS->new(
 );
 $crms->set('ping','yes');
 require $configFile;
-
-my %reports = ('html'=>1,'none'=>1,'tsv'=>1,'excel'=>1);
-die "Bad value '$report' for -r flag" unless defined $reports{$report};
+my %metaissues = ();
+my %types = ('html'=>1,'none'=>1,'tsv'=>1,'excel'=>1);
+die "Bad value '$type' for -t flag" unless defined $types{$type};
 my $dbh = $crms->GetDb();
 $n = 3000 unless $n and $n > 0;
 my $sql = "SELECT id,gid FROM exportdata WHERE attr='ic' AND reason='ren'";
 if (@singles && scalar @singles)
 {
-  #$sql = sprintf("SELECT id,gid FROM exportdata WHERE attr='ic' AND id in ('%s')", join "','", @singles);
-  $sql = sprintf("SELECT id,gid FROM exportdata WHERE id in ('%s')", join "','", @singles);
+  #$sql = sprintf("SELECT id,gid,attr,reason FROM exportdata WHERE attr='ic' AND id in ('%s')", join "','", @singles);
+  $sql = sprintf("SELECT id,gid,attr,reason FROM exportdata WHERE id in ('%s')", join "','", @singles);
 }
 $sql .= ' AND src!="inherited" AND id NOT IN (SELECT id FROM orphan)';
+$sql = 'SELECT id FROM orphan WHERE id IN (SELECT id FROM exportdata)' if $rereport;
 $sql .= ' ORDER BY time DESC';
 print "$sql\n" if $verbose > 1;
 my $ref = $dbh->selectall_arrayref($sql);
@@ -89,13 +93,13 @@ my $txt = '';
 my $title = "CRMS Orphan Works Report $now";
 my ($workbook,$worksheet);
 my $excelpath = sprintf('/l1/prep/c/crms/OrphanCand_%s.xls', $now);
-my @cols= ('#', 'ID','Renewal #','Renewal Date','Title','Author Last Name','Author First Name','Author Dates',
+my @cols= ('#', 'HT ID','attr','reason','Renewal #','Renewal Date','Title','Author Last Name','Author First Name','Author Dates',
            'Publisher 1 Location','Publisher 1 Name','Publisher 1 Year',
            'Publisher 2 Location','Publisher 2 Name','Publisher 2 Year',
            'Publisher 3 Location','Publisher 3 Name','Publisher 3 Year',
            'Publisher 4 Location','Publisher 4 Name','Publisher 4 Year');
-my $pub1NameIdx = 8; # For sorting (# is prepended after the sort)
-if ($report eq 'html')
+my $pub1NameIdx = 10; # For sorting (# is prepended after the sort)
+if ($type eq 'html')
 {
   $txt .= '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' . "\n";
   $txt .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
@@ -103,11 +107,11 @@ if ($report eq 'html')
         "<title>$title</title>\n" .
         '</head><body><table border="1"><tr><th>' . join('</th><th>', @cols) . "</th></tr>\n";
 }
-elsif ($report eq 'tsv')
+elsif ($type eq 'tsv')
 {
   $txt .= join("\t", @cols) . "\n";
 }
-elsif ($report eq 'excel')
+elsif ($type eq 'excel')
 {
   $workbook  = Spreadsheet::WriteExcel->new($excelpath);
   $worksheet = $workbook->add_worksheet();
@@ -115,33 +119,61 @@ elsif ($report eq 'excel')
 }
 my $found = 0;
 my %seen = ();
-printf "%d volumes found, %s sought\n", scalar @{$ref}, ($all)?'all':$n if $verbose;
+$n = scalar @{$ref} if $all || $rereport;
+printf "%d volumes found, $n sought\n", scalar @{$ref} if $verbose;
 my @rows = ();
 foreach my $row (@{$ref})
 {
   my $id = $row->[0];
-  my $gid = $row->[1];
+  my ($gid,$attr,$reason);
+  if ($rereport)
+  {
+    $sql = "SELECT gid,attr,reason FROM exportdata WHERE id='$id' ORDER BY time DESC LIMIT 1";
+    ($gid,$attr,$reason) = @{$dbh->selectall_arrayref($sql)->[0]};
+  }
+  else
+  {
+    $gid = $row->[1];
+    $attr = $row->[2];
+    $reason = $row->[3];
+  }
   print "Record: $id ($gid)\n" if $verbose;
-  next if $seen{$id};
+  if ($seen{$id})
+  {
+    print "Already saw $id\n";
+    next;
+  }
   $sql = 'SELECT r.renNum,r.renDate FROM historicalreviews r INNER JOIN users u ON r.user=u.id ' .
          "WHERE r.gid=$gid AND r.renNum IS NOT NULL AND r.renDate IS NOT NULL " .
          'ORDER BY u.reviewer+(2*u.advanced)+(4*u.expert)+(8*u.admin)+(16*u.superadmin) DESC LIMIT 1';
-  print "$sql\n" if $verbose > 1;
   my $ref2 = $dbh->selectall_arrayref($sql);
-  next unless $ref2 && scalar @{$ref2};
+  printf "$sql; %d results\n", scalar @{$ref2} if $verbose > 1;
+  #next unless $ref2 && scalar @{$ref2};
   my ($attr,$reason,$src,$usr,$time,$note) = @{$crms->RightsQuery($id,1)->[0]};
-  next unless $attr eq 'ic';
+  if ($attr ne 'ic' && !$rereport)
+  {
+    print "Next 1\n";
+    next;
+  }
+  my $sysid = $crms->BarcodeToId($id);
+  my $record = $crms->GetMetadata($sysid);
+  if (!$sysid || !$record)
+  {
+    #print "Cannot get metadata for $id\n";
+    $crms->ClearErrors();
+    $metaissues{$id} = 1;
+    next;
+  }
   $seen{$id} = 1;
   $found++;
   printf "Found: $found of %s\n", ($all)?'all':$n if $verbose;
-  my ($renNum,$renDate) = @{$ref2->[0]};
-  my $sysid = $crms->BarcodeToId($id);
-  my $record = $crms->GetMetadata($sysid);
+  my ($renNum,$renDate) = ('','');
+  ($renNum,$renDate) = @{$ref2->[0]} if $ref2 && scalar @{$ref2};
   my $author = $crms->GetRecordAuthor($id, $record);
   my ($authlast,$authrest) = split m/,\s*/, $author, 2;
   my $title = $crms->GetRecordTitle($id, $record);
   my $dates = GetRecordAuthorDates($id, $record);
-  my @fields = ($id, $renNum, $renDate, $title, $authlast, $authrest, $dates);
+  my @fields = ($id, $attr, $reason, $renNum, $renDate, $title, $authlast, $authrest, $dates);
   my @pubs = (['','',''],['','',''],['','',''],['','','']);
   my $pubn = 0;
   my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='260']/*[local-name()='subfield']");
@@ -166,8 +198,12 @@ foreach my $row (@{$ref})
   push @fields, @{$pubs[$_]} for (0 .. 3);
   printf "Have %d pubs, %d fields\n", scalar @pubs, scalar @fields if $verbose > 1;
   push @rows, join '____', @fields;
-  $crms->PrepareSubmitSql("INSERT INTO orphan (id) VALUES ('$id')") if $insert;
-  last if !$all and $found >= $n;
+  $crms->PrepareSubmitSql("INSERT INTO orphan (id) VALUES ('$id')") if $insert and !$rereport;
+  if ($found >= $n and !$all and !$rereport)
+  {
+    print "I'm done! found $found n $n all $all rereport $rereport\n" if $verbose;
+    last;
+  }
 }
 $found = 0;
 foreach my $row (SortByPub(\@rows))
@@ -175,26 +211,26 @@ foreach my $row (SortByPub(\@rows))
   my @fields = split m/____/, $row;
   $found++;
   unshift @fields, $found;
-  if ($report eq 'html')
+  if ($type eq 'html')
   {
     $txt .= sprintf("<tr><td>%s</td></tr>\n", join '</td><td>', map {s/&/&amp;/g;$_;} @fields);
   }
-  elsif ($report eq 'tsv')
+  elsif ($type eq 'tsv')
   {
     $txt .= join "\t", @fields;
     #$txt .= join "\t", map {s/\s+/ /g;$_;} @fields;
     $txt .= "\n";
   }
-  elsif ($report eq 'excel')
+  elsif ($type eq 'excel')
   {
     $worksheet->write_string($found, $_, $fields[$_]) for (0 .. scalar @fields);
   }
 }
-if ($report eq 'html')
+if ($type eq 'html')
 {
   $txt .= "</table></body></html>\n\n";
 }
-$workbook->close() if $report eq 'excel';
+$workbook->close() if $type eq 'excel';
 
 if (@mails)
 {
@@ -205,7 +241,7 @@ if (@mails)
                                   on_errors => 'undef' }
     or die "Error in mailing : $Mail::Sender::Error\n";
   my $to = join ',', @mails;
-  my $ctype = ($report eq 'html')? 'text/html':'text/plain';
+  my $ctype = ($type eq 'html')? 'text/html':'text/plain';
   $sender->OpenMultipart({
     to => $to,
     subject => $title,
@@ -213,13 +249,13 @@ if (@mails)
     encoding => 'utf-8'
     }) or die $Mail::Sender::Error,"\n";
   $sender->Body();
-  if ($report eq 'excel')
+  if ($type eq 'excel')
   {
-    $txt = "Attached please find $found ic/ren volumes to be considered for the Orphan Works Project.\n"; 
+    $txt = "Attached please find $found volumes to be considered for the Orphan Works Project.\n"; 
   }
   my $bytes = encode('utf8', $txt);
   $sender->SendEnc($bytes);
-  if ($report eq 'excel')
+  if ($type eq 'excel')
   {
     $sender->Attach({
       description => 'Orphan Report',
@@ -235,7 +271,7 @@ else
 {
   print $txt;
 }
-
+print "Could not get metadata for $_\n" for sort keys %metaissues;
 print "Warning: $_\n" for @{$crms->GetErrors()};
 
 sub GetRecordAuthorDates
