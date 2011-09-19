@@ -306,6 +306,7 @@ if (scalar keys %{$data{'inherit'}})
     foreach my $line (@lines)
     {
       my ($id2,$sysid,$attr2,$reason2,$attr,$reason,$gid) = split "\t", $line;
+      print "$line\n" if $verbose > 1;
       my $catLink = "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
       my $htCatLink = $crms->LinkToCatalog($sysid);
       my $histLink = $crms->LinkToHistorical($sysid,1);
@@ -315,7 +316,7 @@ if (scalar keys %{$data{'inherit'}})
       $pdus = 1 if ($attr eq 'pdus' || $attr2 eq 'pdus');
       $icund = 1 if ($attr eq 'ic' || $attr2 eq 'ic');
       $icund = 1 if ($attr eq 'und' || $attr2 eq 'und');
-      my $incrms = (($attr2 eq 'ic' && $reason2 eq 'bib') || $reason2 eq 'gfv')? '':'&nbsp;&nbsp;&nbsp;&#x2713;';
+      my $incrms = ($reason2 eq 'bib' || $reason2 eq 'gfv')? '':'&nbsp;&nbsp;&nbsp;&#x2713;';
       my $h5 = '';
       my $whichtxt = \$autotxt;
       my $whichn;

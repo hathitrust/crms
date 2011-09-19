@@ -7404,7 +7404,7 @@ sub ConvertToInheritanceSearchTerm
   $new_search = 's.sysid' if $search eq 'sysid';
   $new_search = 'i.id' if $search eq 'id';
   $new_search = '(i.attr=1 && (e.attr="ic" || e.attr="und") || (e.attr="pd" && (i.attr=2 || i.attr=5)))' if $search eq 'change';
-  $new_search = 'IF((i.attr=2 && i.reason=1) || i.reason=12,0,1)' if $search eq 'prior';
+  $new_search = 'IF(i.reason=1 || i.reason=12,0,1)' if $search eq 'prior';
   $new_search = 'IF((SELECT COUNT(*) FROM historicalreviews WHERE id=i.id AND status=5)>0,1,0)' if $search eq 'prior5';
   $new_search = 'b.title' if $search eq 'title';
   $new_search = 'i.src' if $search eq 'source';
@@ -7648,10 +7648,9 @@ sub AutoSubmitInheritances
   {
     my $id = $row->[0];
     my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
-    my $rights = "$attr/$reason";
-    if ($rights eq 'ic/bib' || $reason eq 'gfv')
+    if ($reason eq 'bib' || $reason eq 'gfv')
     {
-      print "Submitting inheritance for $id ($rights)\n" unless $fromcgi;
+      print "Submitting inheritance for $id ($attr/$reason)\n" unless $fromcgi;
       $self->SubmitInheritance($id);
     }
   }
