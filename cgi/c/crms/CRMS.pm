@@ -7648,9 +7648,10 @@ sub AutoSubmitInheritances
   {
     my $id = $row->[0];
     my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
-    if ($reason eq 'bib' || $reason eq 'gfv')
+    my $rights = "$attr/$reason";
+    if ($rights eq 'ic/bib' || $reason eq 'gfv')
     {
-      print "Submitting inheritance for $id ($attr/$reason)\n" unless $fromcgi;
+      print "Submitting inheritance for $id ($rights)\n" unless $fromcgi;
       $self->SubmitInheritance($id);
     }
   }
@@ -7842,7 +7843,7 @@ sub DuplicateVolumesFromExport
       $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
       $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
     }
-    elsif ($okattr{$oldrights} || ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/) || $oldrights =~ m/bib$/)
+    elsif ($okattr{$oldrights} || ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/) || $oldrights eq 'ic/bib')
     {
       # Always inherit onto a single-review priority 1
       my $rereps = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user LIKE 'rereport%'");
@@ -7992,7 +7993,7 @@ sub DuplicateVolumesFromCandidates
       $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
       $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tMissing/Wrong Record on $wrong\n";
     }
-    elsif ($oldrights =~ m/bib$/ || ($oldrights eq 'pdus/gfv' && $cattr =~ m/^pd/))
+    elsif ($oldrights eq 'ic/bib' || ($oldrights eq 'pdus/gfv' && $cattr =~ m/^pd/))
     {
       $data->{'inherit'}->{$cid} = '' unless $data->{'inherit'}->{$cid};
       $data->{'inherit'}->{$cid} .= "$id\t$sysid\t$attr2\t$reason2\t$cattr\t$creason\t$cgid\n";
