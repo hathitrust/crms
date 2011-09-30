@@ -148,9 +148,9 @@ ok('' eq
    $crms->ValidateSubmission2('uc1.31822009761677','gnichols123',1,2,'blah','Expert Note',undef,undef),     'pd/ncn admin <63 -ren +note');
 
 ok('' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','dmcw123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn expert <63 +ren');
+   $crms->ValidateSubmission2('uc1.31822009761677','gnichols',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn expert <63 +ren');
 ok('pd/ncn must include renewal id and renewal date. ' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','dmcw123',1,2,undef,undef,undef,undef),     'pd/ncn expert <63 -ren');
+   $crms->ValidateSubmission2('uc1.31822009761677','gnichols',1,2,undef,undef,undef,undef),     'pd/ncn expert <63 -ren');
 my $id = $crms->SimpleSqlGet('SELECT id FROM und WHERE src!="duplicate"');
 $crms->Filter($id, 'duplicate');
 my $src = $crms->SimpleSqlGet("SELECT src FROM und WHERE id='$id'");
