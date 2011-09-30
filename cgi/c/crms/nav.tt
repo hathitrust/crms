@@ -4,9 +4,6 @@
 [% a = crms.IsUserAdmin %]
 [% s = crms.IsUserSuperAdmin %]
 [% i = crms.IsUserIncarnationExpertOrHigher %]
-[% iu = crms.CanUserSeeInstitutionalStats('IU') %]
-[% uw = crms.CanUserSeeInstitutionalStats('UW') %]
-[% umn = crms.CanUserSeeInstitutionalStats('UMN') %]
 
 <ul id="menu" style="width:100%;">
 [% IF cgi.param('p') %]
@@ -59,15 +56,16 @@
 <li><span>Stats/Reports&nbsp;</span>
 <dl class="orange">
 	<dt><a>Stats/Reports</a></dt>
-	[% IF r || e %]     <dd><a href="crms?p=userRate">My&nbsp;Review&nbsp;Stats</a></dd>                           [% END %]
-  [% IF e || a || s %]<dd><a href="crms?p=adminUserRate">All&nbsp;Review&nbsp;Stats</a></dd>                     [% END %]
-  [% IF e || a || s %]<dd><a href="crms?p=adminUserRateInst;inst=UM-ERAU">UM-ERAU&nbsp;Review&nbsp;Stats</a></dd>[% END %]
-  [% IF iu %]         <dd><a href="crms?p=adminUserRateInst;inst=IU">IU&nbsp;Review&nbsp;Stats</a></dd>          [% END %]
-  [% IF umn %]        <dd><a href="crms?p=adminUserRateInst;inst=UMN">UMN&nbsp;Review&nbsp;Stats</a></dd>        [% END %]
-  [% IF uw %]         <dd><a href="crms?p=adminUserRateInst;inst=UW">UW&nbsp;Review&nbsp;Stats</a></dd>          [% END %]
-  [% IF e || a || s %]<dd><a href="crms?p=queueStatus">System&nbsp;Summary</a></dd>                              [% END %]
-  [% IF e || a || s %]<dd><a href="crms?p=determinationStats">Determinations&nbsp;Breakdown</a></dd>             [% END %]
-  [% IF e || a || s %]<dd><a href="crms?p=exportStats">Export&nbsp;Stats</a></dd>                                [% END %]
+	[% IF r || e %]     <dd><a href="crms?p=userRate">My&nbsp;Review&nbsp;Stats</a></dd>                               [% END %]
+  [% IF e || a || s %]<dd><a href="crms?p=adminUserRate">All&nbsp;Review&nbsp;Stats</a></dd>                         [% END %]
+  [% affs = crms.GetAffiliations() %]
+  [% FOREACH aff IN affs %]
+    [% IF crms.CanUserSeeInstitutionalStats(aff) %]
+                      <dd><a href="crms?p=adminUserRateInst;inst=[% aff %]">[% aff %]&nbsp;Review&nbsp;Stats</a></dd>[% END %]
+  [% END %]
+  [% IF e || a || s %]<dd><a href="crms?p=queueStatus">System&nbsp;Summary</a></dd>                                  [% END %]
+  [% IF e || a || s %]<dd><a href="crms?p=determinationStats">Determinations&nbsp;Breakdown</a></dd>                 [% END %]
+  [% IF e || a || s %]<dd><a href="crms?p=exportStats">Export&nbsp;Stats</a></dd>                                    [% END %]
 </dl>
 </li>
 [% IF e || a || s || i %]

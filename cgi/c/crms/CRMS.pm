@@ -3173,6 +3173,20 @@ sub IsUserIncarnationExpertOrHigher
   return 0;
 }
 
+# FIXME: this should go in the database, but need mechanism for exclusing UM from
+# the institutional stats menu/nav.
+# Suggest CREATE TABLE institutions id, name, code, report BOOL
+# ex. 1, "Indiana University", "IU", TRUE
+#     2, "University of Michigan", "UM", FALSE
+# and link entries in the users table to the inst id.
+# FIXME: use the term institution or affiliation, not both.
+sub GetAffiliations
+{
+  my $self = shift;
+  
+  return ['UM-ERAU','COL','IU','UMN','UW'];
+}
+
 # Default 'UM', can also be 'IU', 'UW', or 'UMN'
 sub GetUserAffiliation
 {
@@ -3186,6 +3200,7 @@ sub GetUserAffiliation
     return 'IU' if $suff eq 'indiana.edu';
     return 'UW' if $suff eq 'library.wisc.edu';
     return 'UMN' if $suff eq 'umn.edu';
+    return 'COL' if $suff eq 'columbia.edu';
   }
   return ($id =~ m/annekz/)? 'UM':'UM-ERAU';
 }
