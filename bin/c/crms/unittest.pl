@@ -98,8 +98,10 @@ is($crms->IsWorkingDay('2011-06-27'), 1,                                 'WD: a 
 
 is($crms->GetUserAffiliation('hansone@indiana.edu'), 'IU',               'IU affiliation');
 is($crms->GetUserAffiliation('aseeger@library.wisc.edu'), 'UW',          'UW affiliation');
+is($crms->GetUserAffiliation('zl2114@columbia.edu'), 'COL',              'COL affiliation');
 is(scalar @{ $crms->GetUsersWithAffiliation('IU') }, 6,                  'IU affiliates count');
 is(scalar @{ $crms->GetUsersWithAffiliation('UW') }, 5,                  'UW affiliates count');
+is(scalar @{ $crms->GetUsersWithAffiliation('COL') }, 2,                 'COL affiliates count');
 
 is($crms->IsReviewCorrect('uc1.b3763822','dfulmer','2009-11-02') ,0,     'Correctness: uc1.b3763822 1');
 is($crms->IsReviewCorrect('uc1.b3763822','cwilcox','2009-11-03') ,1,     'Correctness: uc1.b3763822 2');
