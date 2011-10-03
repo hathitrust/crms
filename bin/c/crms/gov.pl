@@ -29,7 +29,7 @@ Reports on suspected gov docs in the und table.
 -r TYPE  Print a report of TYPE where TYPE={html,none,tsv,excel}.
          In the case of Excel it will be created in place and
          attached to any outgoing mail. Default is html.
--v       Be verbose.
+-v       Emit debugging information. May be repeated.
 END
 
 my $all;
@@ -89,7 +89,7 @@ else
   $endSQL = " AND time<='$end 23:59:59'";
 }
 my $sql = "SELECT id,time FROM und WHERE src='gov' $startSQL $endSQL ORDER BY id";
-#print "$sql\n";
+print "$sql\n" if $verbose>1;
 my $ref = $dbh->selectall_arrayref($sql);
 my $n = scalar @{$ref};
 my $txt = '';
