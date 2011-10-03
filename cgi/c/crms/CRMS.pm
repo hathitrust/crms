@@ -7289,7 +7289,7 @@ sub ResetButton
     foreach my $row ( @{$ref} )
     {
       my $id = $row->[0];
-      $self->PrepareSubmitSql("DELETE FROM queue WHERE id='$id'");
+      $self->RemoveFromQueue($id);
       $self->PrepareSubmitSql("DELETE FROM reviews WHERE id='$id'");
     }
   }
