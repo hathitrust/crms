@@ -127,6 +127,7 @@
               <option value="/c/crms/pdf/StanfordHelp.pdf">Stanford&nbsp;Renewal&nbsp;Database&nbsp;Help</option>
               <option value="/c/crms/pdf/CRMS-Guidelines.pdf">Determination Guidelines</option>
               <option value="/c/crms/pdf/InterfaceHelp.pdf">Review Interface Help</option>
+              <option value="https://webservices.itcs.umich.edu/mediawiki/CRMS%20Wiki/index.php/Main_Page">CRMS Wiki/FAQ</option>
             </select>
           </td>
         </tr>
