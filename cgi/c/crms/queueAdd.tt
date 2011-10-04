@@ -93,13 +93,14 @@ Priority 3 can only be added or reviewed by an expert, admin, or superadmin.<br/
 &nbsp;&nbsp;&nbsp;&nbsp;
 <a href="?p=adminReviews">Go to Active Reviews</a><br/>
 
-[% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.status,q.priority FROM queue q, bibdata b WHERE q.id=b.id AND q.priority>=2 ORDER BY q.priority DESC" %]
+[% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.added_by,q.status,q.priority FROM queue q, bibdata b WHERE q.id=b.id AND q.priority>=2 ORDER BY q.priority DESC" %]
 [% ref  = crms.GetDb().selectall_arrayref(sql) %]
 [% IF ref.size > 0 %]
   <br/>
   <h4>[% ref.size %] High-priority [% crms.Pluralize("Volume", ref.size) %]</h4>
   <table class="exportStats" style="width:auto;">
-  <tr><th>ID</th><th>Title</th><th>Author</th><th>Pub&nbsp;Date</th><th>Added</th><th>Status</th><th>Priority</th><th>Issues</th><th>Historical&nbsp;Reviews</th></tr>
+  <tr><th>ID</th><th>Title</th><th>Author</th><th>Pub&nbsp;Date</th><th>Added</th><th>Added&nbsp;By</th>
+  <th>Status</th><th>Priority</th><th>Issues</th><th>Historical&nbsp;Reviews</th></tr>
   [% FOREACH r IN ref %]
     [% vs = crms.GetViolations(r.0, undef, r.6) %]
     <tr><td>
@@ -114,7 +115,8 @@ Priority 3 can only be added or reviewed by an expert, admin, or superadmin.<br/
     <td>[% r.3 %]</td>
     <td>[% r.4 %]</td>
     <td>[% r.5 %]</td>
-    <td>[% crms.StripDecimal(r.6) %]</td>
+    <td>[% r.6 %]</td>
+    <td>[% crms.StripDecimal(r.7) %]</td>
     <td>[% vs.join('; ') %]</td>
     [% sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='" _ r.0 _ "'" %]
     <td>[% crms.SimpleSqlGet(sql) %]</td>

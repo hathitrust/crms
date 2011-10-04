@@ -987,12 +987,14 @@ sub AddItemToQueueOrSetItemActive
   my $priority = shift;
   my $override = shift;
   my $src      = shift;
+  my $user     = shift;
 
+  $user = $self->get('user') unless $user;
   $id = lc $id;
   $src = 'adminui' unless $src;
   my $stat = 0;
   my @msgs = ();
-  my $admin = $self->IsUserAdmin();
+  my $admin = $self->IsUserAdmin($user);
   $override = 1 if $priority == 4;
   if ($priority == 4 && !$admin)
   {
@@ -1050,6 +1052,11 @@ sub AddItemToQueueOrSetItemActive
       $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES (1, '$src')";
       $self->PrepareSubmitSql( $sql );
     }
+  }
+  if ($user && ($stat == 0 || $stat == 3))
+  {
+    my $sql = "UPDATE queue SET added_by='$user' WHERE id='$id'";
+    $self->PrepareSubmitSql($sql);
   }
   return $stat . join '; ', @msgs;
 }
