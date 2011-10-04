@@ -268,6 +268,12 @@ sub ProcessReviews
     $self->PrepareSubmitSql( $sql );
     $stati{$status}++;
   }
+  if (!$fromcgi)
+  {
+    my $p1 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority=1.0');
+    my $pother = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority!=1.0 AND status!=9');
+    printf "P1 mix is %.1f%% ($p1/$pother)\n", 100.0 * $p1 / $pother if $pother;
+  }
   # Clear out all the locks
   $sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
   $self->PrepareSubmitSql( $sql );
