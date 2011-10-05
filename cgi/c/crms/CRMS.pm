@@ -270,9 +270,9 @@ sub ProcessReviews
   }
   if (!$fromcgi)
   {
-    my $p1 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority=1.0');
-    my $pother = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority!=1.0 AND status!=9');
-    printf "P1 mix is %.1f%% ($p1/$pother)\n", 100.0 * $p1 / $pother if $pother;
+    my $p1 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority=1.0 AND status!=9');
+    my $pall = $p1 + $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority!=1.0 AND status!=9');
+    printf "P1 mix is %.1f%% ($p1/$pall)\n", 100.0 * $p1 / $pall if $pall;
   }
   # Clear out all the locks
   $sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
