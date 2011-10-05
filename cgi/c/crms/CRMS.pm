@@ -272,7 +272,7 @@ sub ProcessReviews
   {
     my $p1 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority=1.0 AND status!=9');
     my $pall = $p1 + $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority!=1.0 AND status!=9');
-    printf "P1 mix is %.1f%% ($p1/$pall)\n", 100.0 * $p1 / $pall if $pall;
+    printf "P1 mix is %.1f%% ($p1/$pall)\n", 100.0 * $p1 / $pall if $p1;
   }
   # Clear out all the locks
   $sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
