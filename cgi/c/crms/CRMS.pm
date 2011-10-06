@@ -270,8 +270,8 @@ sub ProcessReviews
   }
   if (!$fromcgi)
   {
-    my $p1 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority=1.0 AND status!=9');
-    my $pall = $p1 + $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority!=1.0 AND status!=9');
+    my $p1 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority=1.0 AND status>0 AND status<9');
+    my $pall = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status>0 AND status<9');
     printf "P1 mix is %.1f%% ($p1/$pall)\n", 100.0 * $p1 / $pall if $p1;
   }
   # Clear out all the locks
