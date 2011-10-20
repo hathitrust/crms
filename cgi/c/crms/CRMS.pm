@@ -795,12 +795,13 @@ sub ShouldVolumeGoInUndTable
 
   my $src = undef;
   $record = $self->GetMetadata($id) unless $record;
+  return $src unless $record;
   my $lang = $self->GetPubLanguage($id, $record);
-  if ('eng' ne $lang) { $src = 'language'; }
+  if ($self->IsProbableGovDoc($id, $record)) { $src = 'gov'; }
+  elsif ('eng' ne $lang) { $src = 'language'; }
   elsif ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
   elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
   elsif ($self->IsReallyForeignPub($id, $record)) { $src = 'foreign'; }
-  elsif ($self->IsProbableGovDoc($id, $record)) { $src = 'gov'; }
   return $src;
 }
 
@@ -1025,12 +1026,12 @@ sub AddItemToQueueOrSetItemActive
     }
     else
     {
-      $sql = "UPDATE $CRMSGlobals::queueTable SET priority=$priority,time=NOW() WHERE id='$id'";
+      $sql = "UPDATE queue SET priority=$priority,time=NOW() WHERE id='$id'";
       $self->PrepareSubmitSql( $sql );
       push @msgs, "changed priority from $oldpri to $priority";
       if ($n)
       {
-        $sql = "UPDATE $CRMSGlobals::reviewsTable SET priority=$priority,time=time WHERE id='$id'";
+        $sql = "UPDATE reviews SET priority=$priority,time=time WHERE id='$id'";
         $self->PrepareSubmitSql( $sql );
       }
       $stat = 3;
@@ -1221,7 +1222,9 @@ sub SubmitReview
   $renDate = '' if $renDate =~ m/searching.*/i;
 
   $note = ($note)? $dbh->quote($note):'NULL';
-
+  $renNum = ($renNum)? $dbh->quote($renNum):'NULL';
+  $renDate = ($renDate)? $dbh->quote($renDate):'NULL';
+  $category = ($category)? $dbh->quote($category):'NULL';
   my $priority = $self->GetPriority( $id );
 
   my $hold = 'NULL';
@@ -1234,8 +1237,7 @@ sub SubmitReview
   }
 
   my @fieldList = ('id', 'user', 'attr', 'reason', 'note', 'renNum', 'renDate', 'category', 'priority', 'hold');
-  my @valueList = ("'$id'",  "'$user'",  $attr,  $reason,  $note, ($renNum)? "'$renNum'":'NULL',  ($renDate)? "'$renDate'":'NULL',
-                   ($category)? "'$category'":'NULL', $priority, $hold);
+  my @valueList = ("'$id'",  "'$user'",  $attr,  $reason,  $note, $renNum, $renDate, $category, $priority, $hold);
   my $sql = "SELECT duration FROM reviews WHERE user='$user' AND id='$id'";
   my $dur = $self->SimpleSqlGet($sql);
   if ($dur)
@@ -1262,7 +1264,7 @@ sub SubmitReview
     push(@valueList, $swiss);
   }
 
-  $sql = sprintf("REPLACE INTO $CRMSGlobals::reviewsTable (%s) VALUES (%s)", join(',', @fieldList), join(",", @valueList));
+  $sql = sprintf("REPLACE INTO reviews (%s) VALUES (%s)", join(',', @fieldList), join(",", @valueList));
   if ( $self->get('verbose') ) { $self->Logit( $sql ); }
   my $result = $self->PrepareSubmitSql( $sql );
   if ($result)
@@ -1270,15 +1272,15 @@ sub SubmitReview
     if ( $exp )
     {
       my $expcnt = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id' AND expert=1");
-      $sql = "UPDATE $CRMSGlobals::queueTable SET expcnt=$expcnt WHERE id='$id'";
+      $sql = "UPDATE queue SET expcnt=$expcnt WHERE id='$id'";
       $result = $self->PrepareSubmitSql( $sql );
       my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $category, $renNum, $renDate);
       #We have decided to register the expert decision right away.
       $self->RegisterStatus($id, $status);
     }
     $self->CheckPendingStatus($id);
-    $self->EndTimer( $id, $user );
-    $self->UnlockItem( $id, $user );
+    $self->EndTimer($id, $user);
+    $self->UnlockItem($id, $user);
   }
   return $result;
 }
@@ -1678,7 +1680,7 @@ sub CreateSQLForReviews
   }
   elsif ( $page eq 'holds' )
   {
-    my $user = $self->get( "user" );
+    my $user = $self->get('user');
     $sql .= 'q.status,b.title,b.author,DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
     $sql .= " AND r.user='$user' AND r.hold IS NOT NULL";
   }
@@ -1861,10 +1863,10 @@ sub CreateSQLForVolumesWide
     $order = 'time' if $page eq 'userReviews' or $page eq 'editReviews';
   }
   $offset = 0 unless $offset;
-  $search1 = $self->ConvertToSearchTerm( $search1, $page );
-  $search2 = $self->ConvertToSearchTerm( $search2, $page );
-  $search3 = $self->ConvertToSearchTerm( $search3, $page );
-  $order = $self->ConvertToSearchTerm( $order, $page );
+  $search1 = $self->ConvertToSearchTerm($search1, $page);
+  $search2 = $self->ConvertToSearchTerm($search2, $page);
+  $search3 = $self->ConvertToSearchTerm($search3, $page);
+  $order = $self->ConvertToSearchTerm($order, $page);
   $search1 = 'r.id' unless $search1;
   my $order2 = ($dir eq 'ASC')? 'min':'max';
   my @rest = ();
@@ -1926,6 +1928,7 @@ sub CreateSQLForVolumesWide
 sub SearchTermsToSQL
 {
   my $self = shift;
+  my $dbh = $self->GetDb();
   my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value) = @_;
   my ($search1term, $search2term, $search3term);
   $op1 = 'AND' unless $op1;
@@ -1946,42 +1949,46 @@ sub SearchTermsToSQL
     $search2value = $search3value;
     $search3value = $search3 = undef;
   }
-  $search1 = "YEAR($search1)" if $search1 eq 'pub_date';
-  $search2 = "YEAR($search2)" if $search2 eq 'pub_date';
-  $search3 = "YEAR($search3)" if $search3 eq 'pub_date';
+  $search1 = "YEAR($search1)" if $search1 eq 'b.pub_date';
+  $search2 = "YEAR($search2)" if $search2 eq 'b.pub_date';
+  $search3 = "YEAR($search3)" if $search3 eq 'b.pub_date';
   $search1value = $self->GetRightsNum($search1value) if $search1 eq 'r.attr';
   $search2value = $self->GetRightsNum($search2value) if $search2 eq 'r.attr';
   $search3value = $self->GetRightsNum($search3value) if $search3 eq 'r.attr';
   $search1value = $self->GetReasonNum($search1value) if $search1 eq 'r.reason';
   $search2value = $self->GetReasonNum($search2value) if $search2 eq 'r.reason';
   $search3value = $self->GetReasonNum($search3value) if $search3 eq 'r.reason';
-  if ( $search1value =~ m/.*\*.*/ )
+  $search1value = $dbh->quote($search1value) if length $search1value;
+  $search2value = $dbh->quote($search2value) if length $search2value;
+  $search3value = $dbh->quote($search3value) if length $search3value;
+
+  if ($search1value =~ m/.*\*.*/)
   {
     $search1value =~ s/\*/_____/gs;
-    $search1term = "$search1 LIKE '$search1value'";
+    $search1term = "$search1 LIKE $search1value";
   }
   elsif (length $search1value)
   {
-    $search1term = "$search1 = '$search1value'";
+    $search1term = "$search1 = $search1value";
   }
   if ( $search2value =~ m/.*\*.*/ )
   {
     $search2value =~ s/\*/_____/gs;
-    $search2term = sprintf("$search2 %sLIKE '$search2value'", ($op1 eq 'NOT')? 'NOT ':'');
+    $search2term = sprintf("$search2 %sLIKE $search2value", ($op1 eq 'NOT')? 'NOT ':'');
   }
   elsif (length $search2value)
   {
-    $search2term = sprintf("$search2 %s= '$search2value'", ($op1 eq 'NOT')? '!':'');
+    $search2term = sprintf("$search2 %s= $search2value", ($op1 eq 'NOT')? '!':'');
   }
 
   if ( $search3value =~ m/.*\*.*/ )
   {
     $search3value =~ s/\*/_____/gs;
-    $search3term = sprintf("$search3 %sLIKE '$search3value'", ($op2 eq 'NOT')? 'NOT ':'');
+    $search3term = sprintf("$search3 %sLIKE $search3value", ($op2 eq 'NOT')? 'NOT ':'');
   }
   elsif (length $search3value)
   {
-    $search3term = sprintf("$search3 %s= '$search3value'", ($op2 eq 'NOT')? '!':'');
+    $search3term = sprintf("$search3 %s= $search3value", ($op2 eq 'NOT')? '!':'');
   }
 
   if ( $search1value =~ m/([<>]=?)\s*(\d+)\s*/ )
@@ -2022,6 +2029,7 @@ sub SearchTermsToSQL
 sub SearchTermsToSQLWide
 {
   my $self = shift;
+  my $dbh = $self->GetDb();
   my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table) = @_;
   $op1 = 'AND' unless $op1;
   $op2 = 'AND' unless $op2;
@@ -2052,54 +2060,57 @@ sub SearchTermsToSQLWide
   my $table2 = $pref2table{substr $search2,0,1};
   my $table3 = $pref2table{substr $search3,0,1};
   my ($search1term,$search2term,$search3term);
-  my $search1_ = ($search1 =~ m/pub_date/)? "YEAR($search1)":$search1;
-  my $search2_ = ($search2 =~ m/pub_date/)? "YEAR($search2)":$search2;
-  my $search3_ = ($search3 =~ m/pub_date/)? "YEAR($search3)":$search3;
+  $search1 = "YEAR($search1)" if $search1 eq 'b.pub_date';
+  $search1 = "YEAR($search2)" if $search2 eq 'b.pub_date';
+  $search1 = "YEAR($search3)" if $search3 eq 'b.pub_date';
+  $search1value = $dbh->quote($search1value) if length $search1value;
+  $search2value = $dbh->quote($search2value) if length $search2value;
+  $search3value = $dbh->quote($search3value) if length $search3value;
   if ( $search1value =~ m/.*\*.*/ )
   {
     $search1value =~ s/\*/_____/gs;
-    $search1term = "$search1_ LIKE '$search1value'";
+    $search1term = "$search1 LIKE $search1value";
     $search1term =~ s/_____/%/g;
   }
   elsif (length $search1value)
   {
-    $search1term = "$search1_ = '$search1value'";
+    $search1term = "$search1 = $search1value";
   }
   if ( $search2value =~ m/.*\*.*/ )
   {
     $search2value =~ s/\*/_____/gs;
-    $search2term = sprintf("$search2_ %sLIKE '$search2value'", ($op1 eq 'NOT')? 'NOT ':'');
+    $search2term = sprintf("$search2 %sLIKE $search2value", ($op1 eq 'NOT')? 'NOT ':'');
     $search2term =~ s/_____/%/g;
   }
   elsif (length $search2value)
   {
-    $search2term = sprintf("$search2_ %s= '$search2value'", ($op1 eq 'NOT')? '!':'');
+    $search2term = sprintf("$search2 %s= $search2value", ($op1 eq 'NOT')? '!':'');
   }
   if ( $search3value =~ m/.*\*.*/ )
   {
     $search3value =~ s/\*/_____/gs;
-    $search3term = sprintf("$search3_ %sLIKE '$search3value'", ($op2 eq 'NOT')? 'NOT ':'');
+    $search3term = sprintf("$search3 %sLIKE $search3value", ($op2 eq 'NOT')? 'NOT ':'');
     $search3term =~ s/_____/%/g;
   }
   elsif (length $search3value)
   {
-    $search3term = sprintf("$search3_ %s= '$search3value'", ($op2 eq 'NOT')? '!':'');
+    $search3term = sprintf("$search3 %s= $search3value", ($op2 eq 'NOT')? '!':'');
   }
   if ( $search1value =~ m/([<>]=?)\s*(\d+)\s*/ )
   {
-    $search1term = "$search1_ $1 $2";
+    $search1term = "$search1 $1 $2";
   }
   if ( $search2value =~ m/([<>]=?)\s*(\d+)\s*/ )
   {
     my $op = $1;
     $op =~ y/<>/></ if $op1 eq 'NOT';
-    $search2term = "$search2_ $op $2";
+    $search2term = "$search2 $op $2";
   }
   if ( $search3value =~ m/([<>]=?)\s*(\d+)\s*/ )
   {
     my $op = $1;
     $op =~ y/<>/></ if $op2 eq 'NOT';
-    $search3term = "$search3_ $op $2";
+    $search3term = "$search3 $op $2";
   }
   $op1 = 'AND' if $op1 eq 'NOT';
   $op2 = 'AND' if $op2 eq 'NOT';
@@ -4879,7 +4890,7 @@ sub IsProbableGovDoc
   my $record = shift;
 
   $record = $self->GetMetadata($id) unless $record;
-  if ( ! $record ) { $self->SetError("no record in IsProbableGovDoc: $id"); return 1; }
+  if ( ! $record ) { $self->SetError("no record in IsProbableGovDoc: $id"); return 0; }
   my $author = $self->GetRecordAuthor($id, $record);
   my $title = $self->GetRecordTitle($id, $record);
   my $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='a']};
@@ -5175,10 +5186,20 @@ sub GetMarcDatafield
   if ( ! $record ) { $self->Logit( "failed in GetMarcDatafield: $id" ); }
 
   my $xpath = qq{//*[local-name()='datafield' and \@tag='$field'][1]} .
-              qq{/*[local-name()='subfield'  and \@code='$code']};
+              qq{/*[local-name()='subfield'  and \@code='$code'][1]};
   my $data;
   eval{ $data = $record->findvalue( $xpath ); };
   if ($@) { $self->Logit( "failed to parse metadata for $id: $@" ); }
+  my $len = length $data;
+  if ($len && $len % 3 == 0)
+  {
+    my $s = $len / 3;
+    my $f1 = substr $data, 0, $s;
+    my $f2 = substr $data, $s, $s;
+    my $f3 = substr $data, 2*$s, $s;
+    #print "Warning: possible triplet from '$data' ($id)\n" if $f1 eq $f2 and $f2 eq $f3;
+    $data = $f1 if $f1 eq $f2 and $f2 eq $f3;
+  }
   return $data;
 }
 
@@ -5478,10 +5499,9 @@ sub BarcodeToId
     {
       my @keys = keys %$records;
       $sysid = $keys[0];
-      my $value = ($sysid)? "'$sysid'":'NULL';
-      if ($self->get('nosystem') ne 'nosystem')
+      if ($sysid && $self->get('nosystem') ne 'nosystem')
       {
-        $sql = "REPLACE INTO system (id,sysid) VALUES ('$id',$value)";
+        $sql = "REPLACE INTO system (id,sysid) VALUES ('$id','$sysid')";
         $self->PrepareSubmitSql($sql);
       }
     }
