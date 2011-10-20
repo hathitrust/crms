@@ -133,7 +133,6 @@
       [% END %]
     </tr>
     [% END %]
-    
   </table>
 </div>
 <div id="Notes">
@@ -152,6 +151,7 @@
     [% FOREACH nc IN ncs.sort %]
       [%# IF nc == "Author Death Date" && !crms.IsUserAdmin(user) %][%# NEXT %][%# END %]
       [% IF nc == "Expert Accepted" && category != "Expert Accepted" %][% NEXT %][% END %]
+      [% IF nc == "Expert Note" && (NOT crms.IsUserExpert(user)) && (NOT crms.IsUserAdmin(user)) %][% NEXT %][% END %]
       [% IF nc == category %]
         <option value="[% nc %]" selected="selected">[% ncs.${nc} %]</option>
       [% ELSE %]
