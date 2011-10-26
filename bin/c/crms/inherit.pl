@@ -163,7 +163,7 @@ if (scalar keys %{$data{'chron'}} && !$no{'chron'})
           '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th>' .
           "<th>Title</th></tr>\n";
   my $n = 0;
-  my $th = GetTitleHash($data{'chron'});
+  my $th = GetTitleHash($data{'chron'}, \%data);
   foreach my $id (KeysSortedOnTitle($data{'chron'}), $th)
   {
     #my $record = $crms->GetMetadata($id);
@@ -192,7 +192,7 @@ if (scalar keys %{$data{'unneeded'}} && !$no{'unneeded'})
           '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th><th>Rights</th><th>New Rights</th>' .
           "<th>Title</th></tr>\n";
   my $n = 0;
-  my $th = GetTitleHash($data{'unneeded'});
+  my $th = GetTitleHash($data{'unneeded'}, \%data);
   foreach my $id (KeysSortedOnTitle($data{'unneeded'}, $th))
   {
     #my $record = $crms->GetMetadata($id);
@@ -260,7 +260,7 @@ if (scalar keys %{$data{'disallowed'}})
           "<th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th><th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th>" .
           "<th>Rights</th><th>New Rights</th><th>Why</th><th>Title</th></tr>\n";
   my $n = 0;
-  my $th = GetTitleHash($data{'disallowed'});
+  my $th = GetTitleHash($data{'disallowed'}, \%data);
   foreach my $id (KeysSortedOnTitle($data{'disallowed'}, $th))
   {
     #my $record = $crms->GetMetadata($id);
@@ -296,7 +296,7 @@ if (scalar keys %{$data{'inherit'}})
                 "</th><th>Prior<br/>CRMS<br/>Determ?</th><th>Prior<br/>Status 5<br/>Determ?</th><th>Title</th><th>Tracking</th></tr>\n";
   my $n = 0;
   my $npend = 0;
-  my $th = GetTitleHash($data{'inherit'});
+  my $th = GetTitleHash($data{'inherit'}, \%data);
   foreach my $id (KeysSortedOnTitle($data{'inherit'}, $th))
   {
     #my $record = $crms->GetMetadata($id);
@@ -333,7 +333,6 @@ if (scalar keys %{$data{'inherit'}})
         $n++;
         $whichn = $n;
       }
-      my $miss = ($crms->HasMissingOrWrongRecord($id,$sysid)>0)? '&nbsp;&nbsp;&nbsp;&#x2713;':'';
       my $change = (($pd == 1 && $icund == 1) || ($pd == 1 && $pdus == 1) || ($icund == 1 && $pdus == 1));
       #print "$change from $pd and $icund ($attr,$attr2)\n";
       my $ar = "$attr/$reason";
@@ -354,7 +353,7 @@ if (scalar keys %{$data{'inherit'}})
 }
 
 my $header = sprintf("Total # volumes checked for inheritance from $dates: %d$delim", scalar keys %{$data{'total'}});
-$header .= sprintf("Total # unique Sys IDs: %d$delim$delim", $crms->CountSystemIds(keys %{$data{'total'}}));
+$header .= sprintf("Total # unique Sys IDs: %d$delim$delim", CountSystemIds(keys %{$data{'total'}}));
 $header .= sprintf("Volumes for which metadata was unavailable: %d$delim$delim", scalar keys %{$data{'unavailable'}});
 if ($candidates)
 {
@@ -365,15 +364,15 @@ $header .= sprintf("Volumes w/ chron/enum: %d$delim$delim", scalar keys %{$data{
 if ($candidates)
 {
   $header .= sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table: %d$delim", scalar keys %{$data{'noexport'}});
-  $header .= sprintf("Unique Sys IDs checked, no duplicates with CRMS determination (from June 2010 or later): %d$delim$delim", $crms->CountSystemIds(keys %{$data{'noexport'}}));
+  $header .= sprintf("Unique Sys IDs checked, no duplicates with CRMS determination (from June 2010 or later): %d$delim$delim", CountSystemIds(keys %{$data{'noexport'}}));
   $header .= "<h4>Filtered from candidates temporarily:</h4>$delim";
   $header .= sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later), duplicate volume already in candidates: %d$delim", scalar keys %{$data{'already'}});
-  $header .= sprintf("Unique Sys IDs checked, duplicate volume already in candidates: %d$delim$delim", $crms->CountSystemIds(keys %{$data{'already'}}));
+  $header .= sprintf("Unique Sys IDs checked, duplicate volume already in candidates: %d$delim$delim", CountSystemIds(keys %{$data{'already'}}));
 }
 else
 {
   $header .= sprintf("Volumes checked, no inheritance needed: %d$delim", scalar keys %{$data{'unneeded'}});
-  $header .= sprintf("Unique Sys IDs checked, no inheritance needed: %d$delim", $crms->CountSystemIds(keys %{$data{'unneeded'}}));
+  $header .= sprintf("Unique Sys IDs checked, no inheritance needed: %d$delim", CountSystemIds(keys %{$data{'unneeded'}}));
   $header .= sprintf("Volumes not needing inheritance: %d$delim$delim", $data{'unneededcnt'});
 }
 $header .= sprintf("Volumes checked, inheritance not permitted: %d$delim", scalar keys %{$data{'disallowed'}});
@@ -387,7 +386,7 @@ else
 {
   $header .= sprintf("Volumes checked - inheritance permitted: %d$delim", scalar keys %{$data{'inherit'}});
 }
-$header .= sprintf("Unique Sys IDs w/ volumes inheriting rights: %d$delim", $crms->CountSystemIds(keys %{$data{'inherit'}}));
+$header .= sprintf("Unique Sys IDs w/ volumes inheriting rights: %d$delim", CountSystemIds(keys %{$data{'inherit'}}));
 $header .= sprintf("Volumes inheriting rights automatically: %d$delim", $data{'inheritcnt'});
 if (!$candidates)
 {
@@ -510,8 +509,9 @@ sub InheritanceReport
       print "Already saw $id; skipping\n" if $verbose;
       next;
     }
-    my $sysid = $crms->BarcodeToId($id);
-    if (!$sysid)
+    my $sysid;
+    my $record = $crms->GetMetadata($id, \$sysid);
+    if (!$record)
     {
       print "Metadata unavailable for $id; skipping\n" if $verbose;
       $data{'unavailable'}->{$id} = 1;
@@ -528,7 +528,7 @@ sub InheritanceReport
     # THIS is the export we're going to inherit from.
     $seen{$id} = $id;
     $data{'total'}->{$id} = 1;
-    $crms->DuplicateVolumesFromExport($id,$gid,$sysid,$attr,$reason,\%data);
+    $crms->DuplicateVolumesFromExport($id, $gid, $sysid, $attr, $reason,\%data, $record);
   }
   $crms->PrepareSubmitSql("DELETE FROM unavailable WHERE src='$src'");
   return \%data;
@@ -559,8 +559,9 @@ sub CandidatesReport
   {
     my $id = $row->[0];
     print "CandidatesReport: checking $id ($n/$of)\n" if $verbose;
-    my $sysid = $crms->BarcodeToId($id);
-    if (!$sysid)
+    my $sysid;
+    my $record = $crms->GetMetadata($id, \$sysid);
+    if (!$record)
     {
       print "Metadata unavailable for $id; skipping\n" if $verbose;
       $data{'unavailable'}->{$id} = 1;
@@ -568,7 +569,7 @@ sub CandidatesReport
       next;
     }
     $data{'total'}->{$id} = 1;
-    $crms->DuplicateVolumesFromCandidates($id,$sysid,\%data);
+    $crms->DuplicateVolumesFromCandidates($id, $sysid, \%data, $record);
     $n++;
   }
   $crms->PrepareSubmitSql("DELETE FROM unavailable WHERE src='$src'");
@@ -577,10 +578,11 @@ sub CandidatesReport
 
 sub GetTitleHash
 {
-  my $ref = shift;
+  my $ref  = shift;
+  my $data = shift;
   
   my %h = ();
-  $h{$_} = $crms->GetRecordTitle($_) for keys %{$ref};
+  $h{$_} = $data->{'titles'}->{$_} for keys %{$ref};
   return \%h;
 }
 
@@ -598,5 +600,18 @@ sub KeysSortedOnTitle
     ||
     $a cmp $b;
   } keys %{$ref};
+}
+
+sub CountSystemIds
+{
+  my $self = shift;
+  my @ids  = @_;
+
+  my %sysids;
+  foreach my $id (@ids)
+  {
+    $sysids{$crms->BarcodeToId($id)} = 1;
+  }
+  return scalar keys %sysids;
 }
 
