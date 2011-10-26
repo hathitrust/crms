@@ -850,7 +850,6 @@ sub LoadNewItems
   return if $needed <= 0;
   my $count = 0;
   my $y = 1923 + int(rand(40));
-  my %recs = $self->GetQueueRecords();
   my %dels = ();
   while (1)
   {
@@ -877,15 +876,16 @@ sub LoadNewItems
         $dels{$id} = "$attr/$reason";
         next;
       }
-      my $sysid = $self->BarcodeToId($id);
-      if (!$sysid)
+      my $sysid;
+      my $record = $self->GetMetadata($id, \$sysid);
+      if (!$record)
       {
         print "Filtering $id: can't get metadata for queue\n";
         $self->Filter($id, 'no meta');
         next;
       }
-      my $dup = $recs{$sysid};
-      if ($dup && !$self->DoesRecordHaveChron($sysid))
+      my $dup = $self->IsRecordInQueue($sysid, $record);
+      if ($dup && !$self->DoesRecordHaveChron($sysid, $record))
       {
         print "Filtering $id: queue has $dup on $sysid (no chron/enum)\n";
         $self->Filter($id, 'duplicate');
@@ -901,7 +901,6 @@ sub LoadNewItems
         last if $count >= $needed;
         $y++;
         $y = 1923 if $y > 1963;
-        $recs{$sysid} = $id;
       }
     }
     if ($oldcount == $count)
@@ -921,48 +920,34 @@ sub LoadNewItems
   $self->PrepareSubmitSql( $sql );
 }
 
-# Return a hash ref if sysid=>id of all volumes in the queue.
-sub GetQueueRecords
+sub IsRecordInQueue
 {
-  my $self = shift;
+  my $self   = shift;
+  my $sysid  = shift;
+  my $record = shift;
 
-  my %dict = ();
-  my $sql = 'SELECT id FROM queue';
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
-  foreach my $row (@{$ref})
+  my $rows = $self->VolumeIDsQuery($sysid, $record);
+  foreach my $line (@{$rows})
   {
-    my $id = $row->[0];
-    my $sysid = $self->BarcodeToId($id);
-    $dict{$sysid} = $id if $sysid;
+    my ($id,$chron,$rights) = split '__', $line;
+    return $id if $self->SimpleSqlGet("SELECT COUNT(*) FROM queue WHERE id='$id'");
   }
-  return %dict;
+  return undef;
 }
 
 sub DoesRecordHaveChron
 {
-  my $self  = shift;
-  my $sysid = shift;
+  my $self   = shift;
+  my $sysid  = shift;
+  my $record = shift;
   
-  my $rows = $self->VolumeIDsQuery($sysid);
+  my $rows = $self->VolumeIDsQuery($sysid, $record);
   foreach my $line (@{$rows})
   {
     my ($id,$chron,$rights) = split '__', $line;
     return 1 if $chron;
   }
   return 0;
-}
-
-sub CountSystemIds
-{
-  my $self = shift;
-  my @ids  = @_;
-
-  my %sysids;
-  foreach my $id (@ids)
-  {
-    $sysids{$self->BarcodeToId($id)} = 1;
-  }
-  return scalar keys %sysids;
 }
 
 # Plain vanilla code for adding an item with status 0, priority 0
@@ -979,10 +964,8 @@ sub AddItemToQueue
   return 0 if $self->IsVolumeInQueue($id);
   # queue table has priority and status default to 0, time to current timestamp.
   my $sql = "INSERT INTO queue (id) VALUES ('$id')";
-  $self->PrepareSubmitSql( $sql );
+  $self->PrepareSubmitSql($sql);
   $self->UpdateMetadata($id, 'bibdata', 1);
-  # Update system table with aleph system id.
-  $self->BarcodeToId($id);
   return 1;
 }
 
@@ -5330,8 +5313,9 @@ sub GetAuthor
 ## ----------------------------------------------------------------------------
 sub GetMetadata
 {
-  my $self = shift;
-  my $id   = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $osysid = shift;
 
   if ( ! $id ) { $self->SetError( "GetMetadata: no id given: '$id'" ); return; }
   #return $self->get($id) if $self->get($id);
@@ -5355,6 +5339,7 @@ sub GetMetadata
     if ('HASH' eq ref $records)
     {
       my @keys = keys %$records;
+      $$osysid = $keys[0] if $osysid;
       $xml = $records->{$keys[0]}->{'marc-xml'};
     }
     else { $self->SetError("HT Bib API found no data for '$id' (got '$content')"); return; }
@@ -5418,6 +5403,7 @@ sub UpdateMetadata
       $self->PrepareSubmitSql($sql);
     }
   }
+  return $record;
 }
 
 # Get the usRightsString field of the item record for the
@@ -7109,10 +7095,10 @@ sub CRMSQuery
   my $id   = shift;
 
   my @ids;
-  my $sysid = $id;
-  $sysid = $self->BarcodeToId($sysid) if $id =~ m/\./;
-  my $title = $self->GetRecordTitle($id);
-  my $rows = $self->VolumeIDsQuery($id);
+  my $sysid;
+  my $record = $self->GetMetadata($id, \$sysid);
+  my $title = $self->GetRecordTitle($id, $record);
+  my $rows = $self->VolumeIDsQuery($id, $record);
   foreach my $line (@{$rows})
   {
     my ($id2,$chron2,$rights2) = split '__', $line;
@@ -7835,9 +7821,10 @@ sub DuplicateVolumesFromExport
   my $attr   = shift;
   my $reason = shift;
   my $data   = shift;
+  my $record = shift;
 
   my %okattr = $self->AllCRMSRights();
-  my $rows = $self->VolumeIDsQuery($sysid);
+  my $rows = $self->VolumeIDsQuery($sysid, $record);
   $self->ClearErrors();
   if (!scalar @{$rows})
   {
@@ -7846,10 +7833,10 @@ sub DuplicateVolumesFromExport
   }
   if (1 == scalar @{$rows})
   {
-    $data->{'nodups'}->{$id} = '' unless $data->{'nodups'}->{$id};
     $data->{'nodups'}->{$id} .= "$sysid\n";
     return;
   }
+  $data->{'titles'}->{$id} = $self->GetRecordTitle($id, $record);
   # Get most recent CRMS determination for any volume on this record
   # and see if it's more recent that what we're exporting.
   my $candidate = $id;
@@ -7888,7 +7875,6 @@ sub DuplicateVolumesFromExport
     my $oldrights = "$attr2/$reason2";
     if ($newrights eq 'pd/ncn')
     {
-      $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
       $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
     }
     elsif ($okattr{$oldrights} || ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/) || $oldrights eq 'ic/bib')
@@ -7897,12 +7883,10 @@ sub DuplicateVolumesFromExport
       my $rereps = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user LIKE 'rereport%'");
       if ($attr2 eq $attr && $reason2 ne 'bib' && $rereps == 0)
       {
-        $data->{'unneeded'}->{$id} = '' unless $data->{'unneeded'}->{$id};
         $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\n";
       }
       elsif ($wrong)
       {
-        $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
         $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tMissing/Wrong Record on $wrong\n";
         delete $data->{'unneeded'}->{$id};
         delete $data->{'inherit'}->{$id};
@@ -7917,18 +7901,15 @@ sub DuplicateVolumesFromExport
       elsif ($self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%'"))
       {
         my $user = $self->SimpleSqlGet("SELECT user FROM reviews WHERE id='$id2' AND user NOT LIKE 'rereport%' LIMIT 1");
-        $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
         $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tHas an active review by $user\n";
       }
       else
       {
-        $data->{'inherit'}->{$id} = '' unless $data->{'inherit'}->{$id};
         $data->{'inherit'}->{$id} .= "$id2\t$sysid\t$attr2\t$reason2\t$attr\t$reason\t$gid\n";
       }
     }
     else
     {
-      $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
       $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tRights\n";
     }
   }
@@ -7959,14 +7940,15 @@ sub DuplicateVolumesFromCandidates
   my $id     = shift;
   my $sysid  = shift;
   my $data   = shift;
+  my $record = shift;
 
-  my $rows = $self->VolumeIDsQuery($sysid);
+  my $rows = $self->VolumeIDsQuery($sysid, $record);
   if (1 == scalar @{$rows})
   {
-    $data->{'nodups'}->{$id} = '' unless $data->{'nodups'}->{$id};
     $data->{'nodups'}->{$id} .= "$sysid\n";
     return;
   }
+  $data->{'titles'}->{$id} = $self->GetRecordTitle($id, $record);
   my $cid = undef;
   my $cgid = undef;
   my $cattr = undef;
@@ -7992,7 +7974,6 @@ sub DuplicateVolumesFromCandidates
     if ($self->SimpleSqlGet($sql) && !$data->{'already'}->{$id2} &&
         $self->SimpleSqlGet($sql2))
     {
-      $data->{'already'}->{$id} = '' unless $data->{'already'}->{$id};
       $data->{'already'}->{$id} .= "$id2\t$sysid\n";
     }
     else
@@ -8033,28 +8014,23 @@ sub DuplicateVolumesFromCandidates
     my $wrong = $self->HasMissingOrWrongRecord($id, $sysid, $rows);
     if ($newrights eq 'pd/ncn')
     {
-      $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
       $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
     }
     elsif ($wrong)
     {
-      $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
       $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tMissing/Wrong Record on $wrong\n";
     }
     elsif ($oldrights eq 'ic/bib' || ($oldrights eq 'pdus/gfv' && $cattr =~ m/^pd/))
     {
-      $data->{'inherit'}->{$cid} = '' unless $data->{'inherit'}->{$cid};
       $data->{'inherit'}->{$cid} .= "$id\t$sysid\t$attr2\t$reason2\t$cattr\t$creason\t$cgid\n";
     }
     else
     {
-      $data->{'disallowed'}->{$id} = '' unless $data->{'disallowed'}->{$id};
       $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tRights\n";
     }
   }
   else
   {
-    $data->{'noexport'}->{$id} = '' unless $data->{'noexport'}->{$id};
     $data->{'noexport'}->{$id} .= "$sysid\n";
   }
 }
@@ -8110,7 +8086,8 @@ sub GetDuplicates
   my $id   = shift;
 
   my @dupes = ();
-  my $sysid = $self->BarcodeToId($id);
+  my $sysid;
+  my $record = $self->GetMetadata($id, \$sysid);
   my $rows = $self->VolumeIDsQuery($sysid);
   foreach my $line (@{$rows})
   {
