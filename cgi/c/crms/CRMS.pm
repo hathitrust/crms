@@ -440,44 +440,40 @@ sub ClearQueueAndExport
   my $self    = shift;
   my $fromcgi = shift;
 
-  my $aCount = 0;
-  my $iCount = 0;
-  my $eCount = 0;
-  my $dCount = 0;
   my $export = [];
   ## get items > 2, clear these
   my $expert = $self->GetExpertRevItems();
-  foreach my $row ( @{$expert} )
+  my $eCount = scalar @{$expert};
+  foreach my $row (@{$expert})
   {
     my $id = $row->[0];
-    push( @{$export}, $id );
-    $eCount++;
+    push(@{$export}, $id);
   }
   ## get status 8, clear these
   my $auto = $self->GetAutoResolvedItems();
-  foreach my $row ( @{$auto} )
+  my $aCount = scalar @{$auto};
+  foreach my $row (@{$auto})
   {
     my $id = $row->[0];
-    push( @{$export}, $id );
-    $aCount++;
+    push(@{$export}, $id);
   }
   ## get status 9, clear these
   my $inh = $self->GetInheritedItems();
-  foreach my $row ( @{$inh} )
+  my $iCount = scalar @{$inh};
+  foreach my $row (@{$inh})
   {
     my $id = $row->[0];
-    push( @{$export}, $id );
-    $iCount++;
+    push(@{$export}, $id);
   }
   ## get items = 2 and see if they agree
   my $double = $self->GetDoubleRevItemsInAgreement();
+  my $dCount = scalar @{$double};
   foreach my $row ( @{$double} )
   {
     my $id = $row->[0];
-    push( @{$export}, $id );
-    $dCount++;
+    push(@{$export}, $id);
   }
-  $self->ExportReviews( $export, $fromcgi );
+  $self->ExportReviews($export, $fromcgi);
   $self->UpdateExportStats();
   $self->UpdateDeterminationsBreakdown();
   return "Exported: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved, $iCount inherited rights\n";
@@ -1204,10 +1200,10 @@ sub SubmitReview
   # This in once case got submitted as the renDate in production
   $renDate = '' if $renDate =~ m/searching.*/i;
 
-  $note = ($note)? $dbh->quote($note):'NULL';
-  $renNum = ($renNum)? $dbh->quote($renNum):'NULL';
-  $renDate = ($renDate)? $dbh->quote($renDate):'NULL';
-  $category = ($category)? $dbh->quote($category):'NULL';
+  my $qnote = ($note)? $dbh->quote($note):'NULL';
+  my $qrenNum = ($renNum)? $dbh->quote($renNum):'NULL';
+  my $qrenDate = ($renDate)? $dbh->quote($renDate):'NULL';
+  my $qcategory = ($category)? $dbh->quote($category):'NULL';
   my $priority = $self->GetPriority( $id );
 
   my $hold = 'NULL';
@@ -1220,7 +1216,7 @@ sub SubmitReview
   }
 
   my @fieldList = ('id', 'user', 'attr', 'reason', 'note', 'renNum', 'renDate', 'category', 'priority', 'hold');
-  my @valueList = ("'$id'",  "'$user'",  $attr,  $reason,  $note, $renNum, $renDate, $category, $priority, $hold);
+  my @valueList = ("'$id'", "'$user'", $attr, $reason, $qnote, $qrenNum, $qrenDate, $qcategory, $priority, $hold);
   my $sql = "SELECT duration FROM reviews WHERE user='$user' AND id='$id'";
   my $dur = $self->SimpleSqlGet($sql);
   if ($dur)
