@@ -103,13 +103,12 @@ if (scalar @ARGV)
     die "Bad date format ($end); should be in the form e.g. 2010-08-29" unless $end =~ m/^\d\d\d\d-\d\d-\d\d(\s+\d\d:\d\d:\d\d)?$/;
   }
 }
-$start .= ' 00:00:00' unless $start =~ m/\d\d:\d\d:\d\d$/;
-$end .= ' 23:59:59' unless $end =~ m/\d\d:\d\d:\d\d$/;
-my %data = %{($candidates)? CandidatesReport($start,$end,\@singles):InheritanceReport($start,$end,\@singles)};
-
 my $dates = $start;
 $dates .= " to $end" if $end ne $start;
 my $title = sprintf "CRMS %s %sInheritance, $dates", ($candidates)? 'Candidates':'Export', ($cleanup)? 'Cleanup ':'';
+$start .= ' 00:00:00' unless $start =~ m/\d\d:\d\d:\d\d$/;
+$end .= ' 23:59:59' unless $end =~ m/\d\d:\d\d:\d\d$/;
+my %data = %{($candidates)? CandidatesReport($start,$end,\@singles):InheritanceReport($start,$end,\@singles)};
 my $head = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' . "\n";
 $head .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
         "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'/>\n" .
@@ -487,8 +486,8 @@ sub InheritanceReport
 
   my %data = ();
   my %seen = ();
-  my $sql = "SELECT id,gid,attr,reason,time,src FROM exportdata WHERE src!='inherited' AND ((time>'$start' AND time<='$end') " .
-            "OR id IN (SELECT id FROM unavailable WHERE src='$src')) ORDER BY time DESC";
+  my $sql = "SELECT id,gid,attr,reason,time,src FROM exportdata WHERE (src!='inherited' AND time>'$start' AND time<='$end') " .
+            "OR id IN (SELECT id FROM unavailable WHERE src='$src') ORDER BY time DESC";
   if ($singles && scalar @{$singles})
   {
     $sql = sprintf("SELECT id,gid,attr,reason,time,src FROM exportdata WHERE id in ('%s') ORDER BY time DESC", join "','", @{$singles});
