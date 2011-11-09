@@ -529,7 +529,7 @@ sub InheritanceReport
     $data{'total'}->{$id} = 1;
     $crms->DuplicateVolumesFromExport($id, $gid, $sysid, $attr, $reason,\%data, $record);
   }
-  $crms->PrepareSubmitSql("DELETE FROM unavailable WHERE src='$src'");
+  $crms->PrepareSubmitSql("DELETE FROM unavailable WHERE src='$src'") if $insert;
   return \%data;
 }
 
@@ -571,7 +571,7 @@ sub CandidatesReport
     $crms->DuplicateVolumesFromCandidates($id, $sysid, \%data, $record);
     $n++;
   }
-  $crms->PrepareSubmitSql("DELETE FROM unavailable WHERE src='$src'");
+  $crms->PrepareSubmitSql("DELETE FROM unavailable WHERE src='$src'") if $insert;
   return \%data;
 }
 
