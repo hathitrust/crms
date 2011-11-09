@@ -96,7 +96,8 @@ foreach my $row (@{$ref})
     my @errs = ();
     push @errs, 'in queue' if $crms->SimpleSqlGet("SELECT COUNT(*) FROM queue WHERE id='$id'");
     push @errs, 'in reviews' if $crms->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id'");
-    printf "$id: $attr/$reason ($usr) -- %s\n", (scalar @errs)? (join '; ', @errs):'can delete' if $verbose;
+    my $info = $crms->SimpleSqlGet(($und)?"SELECT src FROM und WHERE id='$id'":"SELECT time FROM candidates WHERE id='$id'");
+    printf "$id ($info): $attr/$reason ($usr) -- %s\n", (scalar @errs)? (join '; ', @errs):'can delete' if $verbose;
     next if scalar @errs;
     if ($delete)
     {
