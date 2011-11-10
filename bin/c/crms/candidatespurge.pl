@@ -89,6 +89,7 @@ my $n = 0;
 foreach my $row (@{$ref})
 {
   my $id = $row->[0];
+  print "$id\n" if $verbose >= 2;
   my ($attr,$reason,$src,$usr,$time,$note) = @{$crms->RightsQuery($id,1)->[0]};
   my $rights = "$attr/$reason";
   if ($rights ne 'ic/bib' && $rights ne 'pdus/gfv')
@@ -108,6 +109,8 @@ foreach my $row (@{$ref})
     $n++;
   }
 }
-printf "%s $n %s\n", ($delete)?'Deleted':'Found', $crms->Pluralize('volume', $n);
+printf "%s delete $n %s of %d\n", ($delete)?'Did':'Can',
+                           $crms->Pluralize('volume', $n),
+                           scalar @{$ref};
 print "Warning: $_\n" for @{$crms->GetErrors()};
 
