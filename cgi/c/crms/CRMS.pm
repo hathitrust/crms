@@ -2703,8 +2703,15 @@ sub GetQueueRef
   }
   push @rest, "q.time >= '$startDate'" if $startDate;
   push @rest, "q.time <= '$endDate'" if $endDate;
-  push @rest, "$search1 $tester1 '$search1Value'" if $search1Value ne '';
-  push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
+  if ($search1Value ne '' && $search2Value ne '')
+  {
+    push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
+  }
+  else
+  {
+    push @rest, "$search1 $tester1 '$search1Value'" if $search1Value ne '';
+    push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
+  }
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
   my $sql = "SELECT COUNT(q.id) FROM queue q, bibdata b $restrict\n";
   #print "$sql<br/>\n";
