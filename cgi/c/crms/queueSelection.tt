@@ -51,9 +51,10 @@ Restrict selection:<br/>
        onblur="datePickerController.hide('startDate');"/>
 <script type="text/javascript">
 // <![CDATA[
+  // FIXME: if we start using v6 of the datepicker, need to use "%Y-%m-%d" as the format
   var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
   datePickerController.createDatePicker(opts);
-// ]]>
+// ]]> 
 </script>
 <span class="smallText">(YYYY-MM-DD)</span>
 <br/>
