@@ -80,7 +80,6 @@ sub ConnectToDb
   elsif ($dev eq 'crmstest')
   {
     $db = 'crmstest';
-    $CRMSGlobals::queueSize = 1000;
   }
   if ($self->get('verbose')) { $self->Logit( "DBI:mysql:crms:$db_server, $db_user, [passwd]" ); }
 
@@ -561,7 +560,7 @@ sub ExportReviews
       }
     }
   }
-  my $sql = "INSERT INTO  $CRMSGlobals::exportrecordTable (itemcount) VALUES ($count)";
+  my $sql = "INSERT INTO exportrecord (itemcount) VALUES ($count)";
   $self->PrepareSubmitSql( $sql );
   if (!$fromcgi)
   {
@@ -583,8 +582,8 @@ sub EmailReport
   use Mail::Sender;
   my $sender = new Mail::Sender
     {smtp => 'mail.umdl.umich.edu',
-     from => $CRMSGlobals::exportEmailFrom};
-  $sender->MailFile({to => $CRMSGlobals::exportEmailTo,
+     from => $self->GetSystemVar('exportEmailFrom')};
+  $sender->MailFile({to => $self->GetSystemVar('exportEmailTo'),
            subject => $subject,
            msg => "See attachment.",
            file => $file});
@@ -832,6 +831,7 @@ sub LoadNewItems
 
   my $queuesize = $self->GetQueueSize();
   my $priZeroSize = $self->GetQueueSize(0);
+  my $targetQueueSize = $self->GetSystemVar('queueSize');
   print "Before load, the queue has $queuesize volumes, $priZeroSize priority 0.\n";
   if ($needed)
   {
@@ -840,9 +840,9 @@ sub LoadNewItems
   }
   else
   {
-    $needed = max($CRMSGlobals::queueSize - $queuesize, 500 - $priZeroSize);
+    $needed = max($targetQueueSize - $queuesize, 500 - $priZeroSize);
   }
-  printf "Need $needed volumes (max of %d and %d).\n", $CRMSGlobals::queueSize - $queuesize, 500 - $priZeroSize;
+  printf "Need $needed volumes (max of %d and %d).\n", $targetQueueSize - $queuesize, 500 - $priZeroSize;
   return if $needed <= 0;
   my $count = 0;
   my $y = 1923 + int(rand(40));
@@ -912,7 +912,7 @@ sub LoadNewItems
     $self->PrepareSubmitSql("DELETE FROM candidates WHERE id='$id'");
   }
   #Record the update to the queue
-  my $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES ($count, 'RIGHTSDB')";
+  my $sql = "INSERT INTO queuerecord (itemcount, source) VALUES ($count, 'RIGHTSDB')";
   $self->PrepareSubmitSql( $sql );
 }
 
@@ -1035,7 +1035,7 @@ sub AddItemToQueueOrSetItemActive
       my $sql = "INSERT INTO queue (id, priority, source) VALUES ('$id', $priority, '$src')";
       $self->PrepareSubmitSql($sql);
       $self->UpdateMetadata($id, 'bibdata', 1, $record);
-      $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES (1, '$src')";
+      $sql = "INSERT INTO queuerecord (itemcount, source) VALUES (1, '$src')";
       $self->PrepareSubmitSql( $sql );
     }
   }
@@ -1064,16 +1064,16 @@ sub GiveItemsInQueuePriority
     $self->SetError(sprintf "$id: %s", join ';', @{$errs});
     return 0;
   }
-  my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable WHERE id='$id'";
+  my $sql = "SELECT COUNT(*) FROM queue WHERE id='$id'";
   my $count = $self->SimpleSqlGet( $sql );
   if ( $count == 1 )
   {
-    $sql = "UPDATE $CRMSGlobals::queueTable SET priority=1 WHERE id ='$id'";
+    $sql = "UPDATE queue SET priority=1 WHERE id ='$id'";
     $self->PrepareSubmitSql( $sql );
   }
   else
   {
-    $sql = "INSERT INTO $CRMSGlobals::queueTable (id, time, status, priority, source) VALUES ('$id', '$time', $status, $priority, '$source')";
+    $sql = "INSERT INTO queue (id, time, status, priority, source) VALUES ('$id', '$time', $status, $priority, '$source')";
     $self->PrepareSubmitSql( $sql );
     $self->UpdateMetadata($id, 'bibdata', 1, $record);
     # Accumulate counts for items added at the 'same time'.
@@ -1081,16 +1081,16 @@ sub GiveItemsInQueuePriority
     # e.g. 2007 reviews for reprocessing.
     # We see if there is another ADMINSCRIPT entry for the current time; if so increment.
     # If not, add a new one.
-    $sql = "SELECT itemcount FROM $CRMSGlobals::queuerecordTable WHERE time='$time' AND source='ADMINSCRIPT' LIMIT 1";
+    $sql = "SELECT itemcount FROM queuerecord WHERE time='$time' AND source='ADMINSCRIPT' LIMIT 1";
     my $itemcount = $self->SimpleSqlGet($sql);
     if ($itemcount)
     {
       $itemcount++;
-      $sql = "UPDATE $CRMSGlobals::queuerecordTable SET itemcount=$itemcount WHERE time='$time' AND source='ADMINSCRIPT' LIMIT 1";
+      $sql = "UPDATE queuerecord SET itemcount=$itemcount WHERE time='$time' AND source='ADMINSCRIPT' LIMIT 1";
     }
     else
     {
-      $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (time, itemcount, source) values ('$time', 1, 'ADMINSCRIPT')";
+      $sql = "INSERT INTO queuerecord (time, itemcount, source) values ('$time', 1, 'ADMINSCRIPT')";
     }
     $self->PrepareSubmitSql( $sql );
   }
@@ -1443,7 +1443,7 @@ sub RegisterStatus
   my $id     = shift;
   my $status = shift;
 
-  my $sql = "UPDATE $CRMSGlobals::queueTable SET status=$status WHERE id='$id'";
+  my $sql = "UPDATE queue SET status=$status WHERE id='$id'";
   $self->PrepareSubmitSql( $sql );
 }
 
@@ -1453,7 +1453,7 @@ sub RegisterPendingStatus
   my $id     = shift;
   my $status = shift;
 
-  my $sql = "UPDATE $CRMSGlobals::queueTable SET pending_status=$status WHERE id='$id'";
+  my $sql = "UPDATE queue SET pending_status=$status WHERE id='$id'";
   $self->PrepareSubmitSql( $sql );
 }
 
@@ -1691,7 +1691,7 @@ sub CreateSQLForReviews
     my $user = $self->get( "user" );
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
            'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author ' .
-           "FROM $CRMSGlobals::reviewsTable r, $CRMSGlobals::queueTable q, bibdata b WHERE q.id=r.id AND q.id=b.id AND r.user='$user' AND q.status>0";
+           "FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id AND r.user='$user' AND q.status>0";
   }
   elsif ( $page eq 'editReviews' )
   {
@@ -2833,7 +2833,7 @@ sub GetStatus
   my $self = shift;
   my $id   = shift;
 
-  my $sql = "SELECT status FROM $CRMSGlobals::queueTable WHERE id='$id'";
+  my $sql = "SELECT status FROM queue WHERE id='$id'";
   return $self->SimpleSqlGet( $sql );
 }
 
@@ -2851,7 +2851,7 @@ sub IsVolumeInQueue
   my $self = shift;
   my $id   = shift;
 
-  my $sql = "SELECT COUNT(id) FROM $CRMSGlobals::queueTable WHERE id='$id'";
+  my $sql = "SELECT COUNT(id) FROM queue WHERE id='$id'";
   return ($self->SimpleSqlGet($sql) > 0);
 }
 
@@ -2938,7 +2938,7 @@ sub CheckForId
 
   my $dbh  = $self->GetDb();
   ## just make sure the ID is in the queue
-  my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE id='$id'";
+  my $sql = "SELECT id FROM queue WHERE id='$id'";
   my @rows = $dbh->selectrow_array( $sql );
   return scalar @rows;
 }
@@ -4556,13 +4556,13 @@ sub HasItemBeenReviewedByTwoReviewers
   }
   else
   {
-    my $sql = "SELECT count(*) FROM $CRMSGlobals::reviewsTable WHERE id ='$id' AND user != '$user'";
+    my $sql = "SELECT count(*) FROM reviews WHERE id ='$id' AND user != '$user'";
     my $count = $self->SimpleSqlGet( $sql );
     if ($count >= 2 )
     {
       $msg = 'This volume does not need to be reviewed. Two reviewers or an expert have already reviewed it. Please Cancel.';
     }
-    $sql = "SELECT count(*) FROM $CRMSGlobals::queueTable WHERE id ='$id' AND status!=0";
+    $sql = "SELECT count(*) FROM queue WHERE id ='$id' AND status!=0";
     $count = $self->SimpleSqlGet( $sql );
     if ($count >= 1 ) { $msg = 'This item has been processed already. Please Cancel.'; }
   }
@@ -5514,8 +5514,8 @@ sub HasLockedItem
   my $self = shift;
   my $name = shift;
 
-  my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked='$name' LIMIT 1";
-  my $id = $self->SimpleSqlGet( $sql );
+  my $sql = "SELECT id FROM queue WHERE locked='$name' LIMIT 1";
+  my $id = $self->SimpleSqlGet($sql);
   return ($id)? 1:0;
 }
 
@@ -5524,8 +5524,8 @@ sub GetLockedItem
   my $self = shift;
   my $name = shift;
 
-  my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked='$name' LIMIT 1";
-  my $id = $self->SimpleSqlGet( $sql );
+  my $sql = "SELECT id FROM queue WHERE locked='$name' LIMIT 1";
+  my $id = $self->SimpleSqlGet($sql);
   return $id;
 }
 
@@ -5534,8 +5534,8 @@ sub IsLocked
   my $self = shift;
   my $id   = shift;
 
-  my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE locked IS NOT NULL AND id='$id'";
-  return ($self->SimpleSqlGet( $sql ))? 1:0;
+  my $sql = "SELECT id FROM queue WHERE locked IS NOT NULL AND id='$id'";
+  return ($self->SimpleSqlGet($sql))? 1:0;
 }
 
 sub IsLockedForUser
@@ -5544,8 +5544,8 @@ sub IsLockedForUser
   my $id   = shift;
   my $name = shift;
 
-  my $sql = "SELECT locked FROM $CRMSGlobals::queueTable WHERE id='$id'";
-  my $ref = $self->GetDb()->selectall_arrayref( $sql );
+  my $sql = "SELECT locked FROM queue WHERE id='$id'";
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
   return (scalar @{$ref} && $ref->[0]->[0] eq $name)? 1:0;
 }
 
@@ -5556,12 +5556,12 @@ sub IsLockedForOtherUser
   my $user = shift;
 
   $user = $self->get('user') unless $user;
-  my $sql = "SELECT locked FROM $CRMSGlobals::queueTable WHERE id='$id'";
-  my $ref = $self->GetDb()->selectall_arrayref( $sql );
+  my $sql = "SELECT locked FROM queue WHERE id='$id'";
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
   if ( scalar @{$ref} )
   {
     my $lock = $ref->[0]->[0];
-    if ( $lock && $lock ne $user ) { return 1; }
+    if ($lock && $lock ne $user) { return 1; }
   }
   return 0;
 }
@@ -5574,12 +5574,12 @@ sub RemoveOldLocks
   # By default, GetPrevDate() returns the date/time 24 hours ago.
   $time = $self->GetPrevDate($time);
   my $lockedRef = $self->GetLockedItems();
-  foreach my $item ( keys %{$lockedRef} )
+  foreach my $item (keys %{$lockedRef})
   {
     my $id = $lockedRef->{$item}->{id};
     my $user = $lockedRef->{$item}->{locked};
     my $since = $self->ItemLockedSince($id, $user);
-    my $sql = "SELECT id FROM $CRMSGlobals::queueTable WHERE id='$id' AND '$time'>=time";
+    my $sql = "SELECT id FROM queue WHERE id='$id' AND '$time'>=time";
     my $old = $self->SimpleSqlGet($sql);
     if ( $old )
     {
@@ -5598,7 +5598,7 @@ sub PreviouslyReviewed
   ## expert reviewers can edit any time
   if ( $self->IsUserExpert( $user ) ) { return 0; }
   my $limit = $self->GetYesterday();
-  my $sql = "SELECT id FROM $CRMSGlobals::reviewsTable WHERE id='$id' AND user='$user' AND time<'$limit' AND hold IS NULL";
+  my $sql = "SELECT id FROM reviews WHERE id='$id' AND user='$user' AND time<'$limit' AND hold IS NULL";
   my $found = $self->SimpleSqlGet( $sql );
   return ($found)? 1:0;
 }
@@ -5622,7 +5622,7 @@ sub LockItem
     return 0 if $locked eq $id; ## already locked
     return "You already have a locked item ($locked)." if $locked;
   }
-  my $sql = "UPDATE $CRMSGlobals::queueTable SET locked='$name' WHERE id='$id'";
+  my $sql = "UPDATE queue SET locked='$name' WHERE id='$id'";
   $self->PrepareSubmitSql( $sql );
   $self->StartTimer( $id, $name );
   return 0;
@@ -5634,7 +5634,7 @@ sub UnlockItem
   my $id   = shift;
   my $user = shift;
 
-  my $sql = "UPDATE $CRMSGlobals::queueTable SET locked=NULL WHERE id='$id' AND locked='$user'";
+  my $sql = "UPDATE queue SET locked=NULL WHERE id='$id' AND locked='$user'";
   $self->PrepareSubmitSql($sql);
   $self->RemoveFromTimer( $id, $user );
   return 1;
@@ -5646,7 +5646,7 @@ sub UnlockItemEvenIfNotLocked
   my $id   = shift;
   my $user = shift;
 
-  my $sql = "UPDATE $CRMSGlobals::queueTable SET locked=NULL WHERE id='$id'";
+  my $sql = "UPDATE queue SET locked=NULL WHERE id='$id'";
   if ( ! $self->PrepareSubmitSql($sql) ) { return 0; }
   $self->RemoveFromTimer( $id, $user );
   return 1;
@@ -5657,17 +5657,17 @@ sub UnlockAllItemsForUser
   my $self = shift;
   my $user = shift;
 
-  my $sql = "SELECT id FROM $CRMSGlobals::timerTable WHERE user='$user'";
+  my $sql = "SELECT id FROM timer WHERE user='$user'";
   my $ref = $self->GetDb()->selectall_arrayref( $sql );
   my $return = {};
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    $sql = "UPDATE $CRMSGlobals::queueTable SET locked=NULL WHERE id='$id'";
+    $sql = "UPDATE queue SET locked=NULL WHERE id='$id'";
     $self->PrepareSubmitSql( $sql );
   }
   ## clear entry in table
-  $sql = "DELETE FROM $CRMSGlobals::timerTable WHERE user='$user'";
+  $sql = "DELETE FROM timer WHERE user='$user'";
   $self->PrepareSubmitSql( $sql );
 }
 
@@ -5677,7 +5677,7 @@ sub GetLockedItems
   my $user = shift;
 
   my $restrict = ($user)? "='$user'":'IS NOT NULL';
-  my $sql = "SELECT id, locked FROM $CRMSGlobals::queueTable WHERE locked $restrict";
+  my $sql = "SELECT id, locked FROM queue WHERE locked $restrict";
   my $ref = $self->GetDb()->selectall_arrayref( $sql );
   my $return = {};
   foreach my $row (@{$ref})
@@ -5738,7 +5738,7 @@ sub GetDuration
   my $id   = shift;
   my $user = shift;
 
-  my $sql = "SELECT duration FROM $CRMSGlobals::reviewsTable WHERE user='$user' AND id='$id'";
+  my $sql = "SELECT duration FROM reviews WHERE user='$user' AND id='$id'";
   return $self->SimpleSqlGet( $sql );
 }
 
@@ -5768,7 +5768,7 @@ sub HasItemBeenReviewedByAnotherExpert
   my $stat = $self->GetStatus($id) ;
   if ($stat == 5 || $stat == 7)
   {
-    my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::reviewsTable WHERE id='$id' AND user='$user'";
+    my $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id' AND user='$user'";
     my $count = $self->SimpleSqlGet($sql);
     return ($count)? 0:1;
   }
@@ -5781,7 +5781,7 @@ sub HasItemBeenReviewedByUser
   my $id   = shift;
   my $user = shift;
   
-  my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::reviewsTable WHERE id='$id' AND user='$user'";
+  my $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id' AND user='$user'";
   my $count = $self->SimpleSqlGet($sql);
   return ($count)? 1:0;
 }
@@ -5849,12 +5849,7 @@ sub GetPriority1Frequency
 {
   my $self = shift;
   
-  my $f = $CRMSGlobals::priority1Frequency;
-  eval {
-    my $sysf = $self->SimpleSqlGet('SELECT value FROM systemvars WHERE name="priority1Frequency"');
-    $f = $sysf if $sysf and $sysf >= 0.0 and $sysf < 1.0;
-  };
-  return $f;
+  return $self->GetSystemVar('priority1Frequency', '$_>=0.0 and $_<1.0', 0.3);
 }
 
 sub GetRightsName
@@ -5910,7 +5905,7 @@ sub GetRenNum
   my $id   = shift;
   my $user = shift;
   
-  my $sql = qq{ SELECT renNum FROM $CRMSGlobals::reviewsTable WHERE id = "$id" AND user = "$user"};
+  my $sql = "SELECT renNum FROM reviews WHERE id='$id' AND user='$user'";
   return $self->SimpleSqlGet( $sql );
 }
 
@@ -5921,7 +5916,7 @@ sub GetRenDate
   my $id   = shift;
 
   $id =~ s, ,,gs;
-  my $sql = qq{ SELECT DREG FROM $CRMSGlobals::stanfordTable WHERE ID = "$id" };
+  my $sql = "SELECT DREG FROM stanford WHERE ID='$id'";
   return $self->SimpleSqlGet( $sql );
 }
 
@@ -6029,8 +6024,8 @@ sub GetQueueSize
   my $priority = shift;
 
   my $restrict = (defined $priority)? "WHERE priority=$priority":'';
-  my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable $restrict";
-  return $self->SimpleSqlGet( $sql );
+  my $sql = "SELECT COUNT(*) FROM queue $restrict";
+  return $self->SimpleSqlGet($sql);
 }
 
 
@@ -6060,7 +6055,7 @@ sub CreateQueueReport
   foreach my $status (-1 .. 9)
   {
     my $statusClause = ($status == -1)? '':" WHERE STATUS=$status";
-    my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::queueTable $statusClause";
+    my $sql = "SELECT COUNT(*) FROM queue $statusClause";
     my $count = $self->SimpleSqlGet( $sql );
     $status = 'All' if $status == -1;
     my $class = ($status eq 'All')?' class="total"':'';
@@ -6137,16 +6132,8 @@ sub CreateSystemReport
   }
   $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay since $since</span>" if $alert;
   $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay on $host</td></tr>\n";
-  $report .= sprintf "<tr><th>Automatic&nbsp;Inheritance</th><td>%s</td></tr>\n", ($self->GetSystemVar('autoinherit') eq 'disabled')?'Disabled':'Enabled';
-  #if ($self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority=1.0') > 0)
-  #{
-  #  my $p0 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND priority=0.0 AND pending_status>0');
-  #  my $p1 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status=0 AND priority=1.0 AND pending_status>1');
-  #  my $p1f = sprintf('%.1f%%', 100.0 * $self->GetPriority1Frequency());
-  #  my $pct = 0.0;
-  #  eval {$pct = sprintf('%.1f%%', 100.0 * $p1 / ($p0+$p1));};
-  #  $report .= "<tr><th>Priority&nbsp;1&nbsp;Frequency</th><td>$pct (target $p1f)</td></tr>\n";
-  #}
+  $report .= sprintf "<tr><th>Automatic&nbsp;Inheritance</th><td>%s</td></tr>\n",
+    ($self->GetSystemVar('autoinherit') eq 'disabled')?'Disabled':'Enabled';
   $report .= '<tr><td colspan="2">';
   $report .= '<span class="smallishText">* Not including legacy data (reviews/determinations made prior to July 2009).</span><br/>';
   $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count above.</span>';
@@ -6461,7 +6448,7 @@ sub GetTotalExported
 {
   my $self = shift;
 
-  my $sql = "SELECT SUM(itemcount) FROM $CRMSGlobals::exportrecordTable";
+  my $sql = "SELECT SUM(itemcount) FROM exportrecord";
   return $self->SimpleSqlGet( $sql );
 }
 
@@ -6493,32 +6480,32 @@ sub GetTotalLegacyCount
 {
   my $self = shift;
 
-  my $sql = "SELECT COUNT(DISTINCT id) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=1 AND priority!=1";
-  return $self->SimpleSqlGet( $sql );
+  my $sql = "SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE legacy=1 AND priority!=1";
+  return $self->SimpleSqlGet($sql);
 }
 
 sub GetTotalNonLegacyReviewCount
 {
   my $self = shift;
 
-  my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy!=1";
-  return $self->SimpleSqlGet( $sql );
+  my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE legacy!=1';
+  return $self->SimpleSqlGet($sql);
 }
 
 sub GetTotalLegacyReviewCount
 {
   my $self = shift;
 
-  my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::historicalreviewsTable WHERE legacy=1";
-  return $self->SimpleSqlGet( $sql );
+  my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE legacy=1';
+  return $self->SimpleSqlGet($sql);
 }
 
 sub GetTotalHistoricalReviewCount
 {
   my $self = shift;
 
-  my $sql = "SELECT COUNT(*) FROM $CRMSGlobals::historicalreviewsTable";
-  return $self->SimpleSqlGet( $sql );
+  my $sql = 'SELECT COUNT(*) FROM historicalreviews';
+  return $self->SimpleSqlGet($sql);
 }
 
 # Gets the (time,count) of last queue addition.
@@ -7758,7 +7745,7 @@ sub AddInheritanceToQueue
     my $sql = "INSERT INTO queue (id, priority, source) VALUES ('$id', 0, 'inherited')";
     $self->PrepareSubmitSql($sql);
     $self->UpdateMetadata($id, 'bibdata', 1);
-    $sql = "INSERT INTO $CRMSGlobals::queuerecordTable (itemcount, source) VALUES (1, 'inheritance')";
+    $sql = "INSERT INTO queuerecord (itemcount, source) VALUES (1, 'inheritance')";
     $self->PrepareSubmitSql($sql);
   }
   return $stat . join '; ', @msgs;
@@ -8131,13 +8118,32 @@ sub FilterCandidates
   }
 }
 
+# Retrieves a system var from the DB if possible, otherwise use the value from the config file.
+# If ck is specified, it should be of the form "$_ >= 0 && $_ <= 100" which checks the DB value
+# and uses the config file value if the check is failed.
+# If default is specified, returns it if otherwise the return value would be undefined.
+# NOTE: do not use this mechanism for DB connection globals, infinite recursion will result.
 sub GetSystemVar
 {
-  my $self = shift;
-  my $name = shift;
+  my $self    = shift;
+  my $name    = shift;
+  my $ck      = shift;
+  my $default = shift;
 
   my $sql = "SELECT value FROM systemvars WHERE name='$name'";
-  return $self->SimpleSqlGet($sql);
+  my $var = $self->SimpleSqlGet($sql);
+  if ($var && $ck)
+  {
+    $_ = $var;
+    $var = undef unless (eval $ck);
+  }
+  if (!defined $var)
+  {
+    $var = eval '$CRMSGlobals::' . $name;
+    #$var = undef if $@;
+  }
+  $var = $default unless defined $var;
+  return $var;
 }
 
 sub SetSystemVar
