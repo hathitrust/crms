@@ -352,7 +352,7 @@ if (@mails)
   use Mail::Sender;
   $title = 'Dev: ' . $title if $DLPS_DEV;
   my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                  from => $CRMSGlobals::adminEmail,
+                                  from => $crms->GetSystemVar('adminEmail', undef, ''),
                                   on_errors => 'undef' }
     or die "Error in mailing : $Mail::Sender::Error\n";
   my $to = join ',', @mails;

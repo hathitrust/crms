@@ -50,15 +50,13 @@ $DLPS_DEV = undef if $production;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
-my $configFile = "$DLXSROOT/bin/c/crms/crms.cfg";
 my $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/gov_hist.txt",
-    configFile   =>   $configFile,
+    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
     dev          =>   $DLPS_DEV
 );
-require $configFile;
 
 my %reports = ('html'=>1,'none'=>1,'tsv'=>1,'excel'=>1);
 die "Bad value '$report' for -r flag" unless defined $reports{$report};
@@ -189,7 +187,7 @@ if (@mails)
     use Mail::Sender;
     $title = 'Dev: ' . $title if $DLPS_DEV;
     my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                    from => $CRMSGlobals::adminEmail,
+                                    from => $crms->GetSystemVar('adminEmail', undef, ''),
                                     on_errors => 'undef' }
       or die "Error in mailing : $Mail::Sender::Error\n";
     my $to = join ',', @mails;

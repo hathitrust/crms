@@ -17,38 +17,40 @@ use Getopt::Long;
 use Mail::Sender;
 
 my $usage = <<END;
-USAGE: $0 [-hpv]
+USAGE: $0 [-hpv] [-m MAIL_ADDR [-m MAIL_ADDR2...]] 
 
 Sends automatic monthly report of institutional stats for INST which can be in
 {UM-ERAU,IU,UMN,UW,ALL}. Default is UM-ERAU.
 
 -h       Print this help message.
+-m ADDR  Mail the report to ADDR in addition to the supervisor at the institution.
+         May be repeated for multiple addresses.
 -p       Run in production.
 -v       Be verbose.
 END
 
 my $help;
 my $inst;
+my @mails;
 my $production;
 my $verbose;
 
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions('h|?' => \$help,
+           'm:s@' => \@mails,
            'p' => \$production,
            'v+' => \$verbose);
 $DLPS_DEV = undef if $production;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
-my $configFile = "$DLXSROOT/bin/c/crms/crms.cfg";
 my $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/inst_hist.txt",
-    configFile   =>   $configFile,
+    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
     dev          =>   $DLPS_DEV
 );
-require $configFile;
 
 my $inst = uc $ARGV[0];
 $inst = 'UM-ERAU' unless $inst;
@@ -60,7 +62,6 @@ my @insts = ($inst);
 @insts = keys %names if $inst eq 'ALL';
 foreach $inst (@insts)
 {
-  my @mails = ('annekz@umich.edu','moseshll@umich.edu','gnichols@umich.edu');
   my $users = $crms->GetUsersWithAffiliation($inst);
   my $in = "('" . (join "','", @{$users}) . "')";
   my ($year,$month) = $crms->GetTheYearMonth();
@@ -92,7 +93,7 @@ foreach $inst (@insts)
             "Resulting # of volumes made available as full text in HathiTrust: $det\n\n" .
             'Note: This is an automatically generated message from the Copyright Review Management System.';
   my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                  from => $CRMSGlobals::adminEmail,
+                                  from => $crms->GetSystemVar('adminEmail', undef, ''),
                                   on_errors => 'undef' }
     or die "Error in mailing : $Mail::Sender::Error\n";
   $sender->OpenMultipart({

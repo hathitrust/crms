@@ -74,16 +74,14 @@ die "$usage\n\n" if $help;
 my %no = ();
 $no{$_}=1 for @no;
 
-my $configFile = "$DLXSROOT/bin/c/crms/crms.cfg";
 my $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/inherit_hist.txt",
-    configFile   =>   $configFile,
+    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
     dev          =>   $DLPS_DEV
 );
 $crms->set('ping','yes');
-require $configFile;
 my $delim = "\n";
 my $src = ($candidates)? 'candidates':'export';
 $src = 'cleanup' if $cleanup;
@@ -456,7 +454,7 @@ if (@mails)
   use Mail::Sender;
   $title = 'Dev: ' . $title if $DLPS_DEV;
   my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                  from => $CRMSGlobals::adminEmail,
+                                  from => $crms->GetSystemVar('adminEmail', undef, ''),
                                   on_errors => 'undef' }
     or die "Error in mailing : $Mail::Sender::Error\n";
   my $to = join ',', @mails;

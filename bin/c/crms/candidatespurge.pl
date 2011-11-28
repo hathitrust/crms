@@ -52,10 +52,9 @@ die 'Terminating' unless GetOptions(
 $DLPS_DEV = undef if $production;
 die "$usage\n\n" if $help;
 
-my $configFile = "$DLXSROOT/bin/c/crms/crms.cfg";
 my $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/inherit_hist.txt",
-    configFile   =>   $configFile,
+    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
     dev          =>   $DLPS_DEV
@@ -78,7 +77,10 @@ if (scalar @ARGV)
 
 my $table = ($und)? 'und':'candidates';
 my $sql = "SELECT id FROM $table";
-$sql .= " WHERE (time>'$start 00:00:00' AND time<='$end 23:59:59')" unless $all;
+my @restrict = ();
+push @restrict, 'src!="gov"' if $und;
+push @restrict, "(time>'$start 00:00:00' AND time<='$end 23:59:59')" unless $all;
+$sql .= ' WHERE ' . join ' ', @restrict if scalar @restrict;
 if (@singles && scalar @singles)
 {
   $sql = sprintf("SELECT id FROM $table WHERE id in ('%s') ORDER BY id", join "','", @singles);
@@ -109,7 +111,7 @@ foreach my $row (@{$ref})
     $n++;
   }
 }
-printf "%s delete $n %s of %d\n", ($delete)?'Did':'Can',
+printf "%s delete $n %s of %d from $table\n", ($delete)?'Did':'Can',
                            $crms->Pluralize('volume', $n),
                            scalar @{$ref};
 print "Warning: $_\n" for @{$crms->GetErrors()};
