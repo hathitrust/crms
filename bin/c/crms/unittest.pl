@@ -61,7 +61,7 @@ isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009265760'), 'gov',       'probab
 isnt($crms->ShouldVolumeGoInUndTable('uc1.31822016490500'), 'gov',       'probable Gov Doc 19'); # uncaught
 isnt($crms->ShouldVolumeGoInUndTable('uc1.31822020642872'), 'gov',       'probable Gov Doc 20'); # uncaught
 
-is($crms->ShouldVolumeGoInUndTable('mdp.39015028088733'), 'language',    'language to und');
+is($crms->ShouldVolumeGoInUndTable('mdp.39015071261104'), 'language',    'language to und');
 is($crms->ShouldVolumeGoInUndTable('uc1.b22139'), 'dissertation',        'dissertation to und');
 is($crms->ShouldVolumeGoInUndTable('mdp.39015004119445'), 'translation', 'translation to und');
 is($crms->ShouldVolumeGoInUndTable('uc1.b79381'), 'foreign',             'foreign to und');
@@ -101,7 +101,7 @@ is($crms->GetUserAffiliation('aseeger@library.wisc.edu'), 'UW',          'UW aff
 is($crms->GetUserAffiliation('zl2114@columbia.edu'), 'COL',              'COL affiliation');
 is(scalar @{ $crms->GetUsersWithAffiliation('IU') }, 6,                  'IU affiliates count');
 is(scalar @{ $crms->GetUsersWithAffiliation('UW') }, 5,                  'UW affiliates count');
-is(scalar @{ $crms->GetUsersWithAffiliation('COL') }, 2,                 'COL affiliates count');
+is(scalar @{ $crms->GetUsersWithAffiliation('COL') }, 1,                 'COL affiliates count');
 
 is($crms->IsReviewCorrect('uc1.b3763822','dfulmer','2009-11-02') ,0,     'Correctness: uc1.b3763822 1');
 is($crms->IsReviewCorrect('uc1.b3763822','cwilcox','2009-11-03') ,1,     'Correctness: uc1.b3763822 2');
@@ -128,26 +128,26 @@ is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,0)}, 3,    'Viol
 is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,1)}, 0,    'Violations: mdp.39015082195432 P4 1');
 
 ok('Renewal no longer required for works published after 1963. ' eq
-   $crms->ValidateSubmission2('mdp.39015011285692','annekz',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin >63 +ren');
+   $crms->ValidateSubmission2('mdp.39015011285692','moseshll',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin >63 +ren');
 ok('' eq
-   $crms->ValidateSubmission2('mdp.39015011285692','annekz',1,2,undef,undef,undef,undef),     'pd/ncn superadmin >63 -ren');
+   $crms->ValidateSubmission2('mdp.39015011285692','moseshll',1,2,undef,undef,undef,undef),     'pd/ncn superadmin >63 -ren');
 ok('' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','annekz',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin <63 +ren');
+   $crms->ValidateSubmission2('uc1.31822009761677','moseshll',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin <63 +ren');
 ok('' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','annekz',1,2,undef,undef,undef,undef),     'pd/ncn superadmin <63 -ren');
+   $crms->ValidateSubmission2('uc1.31822009761677','moseshll',1,2,undef,undef,undef,undef),     'pd/ncn superadmin <63 -ren');
 
 ok('Renewal no longer required for works published after 1963. ' eq
-   $crms->ValidateSubmission2('mdp.39015011285692','gnichols123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin >63 +ren');
+   $crms->ValidateSubmission2('mdp.39015011285692','jaheim123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin >63 +ren');
 ok('' eq
-   $crms->ValidateSubmission2('mdp.39015011285692','gnichols123',1,2,undef,undef,undef,undef),     'pd/ncn admin >63 -ren');
+   $crms->ValidateSubmission2('mdp.39015011285692','jaheim123',1,2,undef,undef,undef,undef),     'pd/ncn admin >63 -ren');
 ok('' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','gnichols123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin <63 +ren -note');
+   $crms->ValidateSubmission2('uc1.31822009761677','jaheim123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin <63 +ren -note');
 ok('pd/ncn must include either renewal id and renewal date, or note category "Expert Note". ' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','gnichols123',1,2,undef,undef,undef,undef),     'pd/ncn admin <63 -ren -note');
+   $crms->ValidateSubmission2('uc1.31822009761677','jaheim123',1,2,undef,undef,undef,undef),     'pd/ncn admin <63 -ren -note');
 ok('' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','gnichols123',1,2,'blah','Expert Note','R000','1Jan60'), 'pd/ncn admin <63 +ren +note');
+   $crms->ValidateSubmission2('uc1.31822009761677','jaheim123',1,2,'blah','Expert Note','R000','1Jan60'), 'pd/ncn admin <63 +ren +note');
 ok('' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','gnichols123',1,2,'blah','Expert Note',undef,undef),     'pd/ncn admin <63 -ren +note');
+   $crms->ValidateSubmission2('uc1.31822009761677','jaheim123',1,2,'blah','Expert Note',undef,undef),     'pd/ncn admin <63 -ren +note');
 
 ok('' eq
    $crms->ValidateSubmission2('uc1.31822009761677','gnichols',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn expert <63 +ren');
@@ -161,12 +161,25 @@ ok('volumes' eq $crms->Pluralize('volume',0), 'pluralize 0');
 ok('volume' eq $crms->Pluralize('volume',1), 'pluralize 1');
 ok('volumes' eq $crms->Pluralize('volume',2), 'pluralize 2');
 is($crms->IsReviewCorrect('chi.22682760','lnachreiner@library.wisc.edu','2010-11-02 14:45:00'), 1, 'status 8 validation 1');
-is($crms->IsReviewCorrect('chi.22682760','s-zuri@umn.edu','2010-11-02 14:02:51'), 1, 'status 8 validation 2');
-is($crms->IsReviewCorrect('coo.31924002832313','dfulmer','2011-01-13 12:00:37'), 1, 'status 8 validation 3');
-is($crms->IsReviewCorrect('coo.31924002832313','s-zuri@umn.edu','2011-01-13 11:13:57'), 1, 'status 8 validation 4');
-is($crms->IsFiltered('mdp.39015027953937','foreign'), 1, 'IsFiltered 1');
-is($crms->IsFiltered('mdp.39015027953937','duplicate'), 0, 'IsFiltered 2');
-is($crms->IsFiltered('mdp.39015027953937'), 1, 'IsFiltered 3');
+is($crms->IsReviewCorrect('chi.22682760','s-zuri@umn.edu','2010-11-02 14:02:51'), 1,               'status 8 validation 2');
+is($crms->IsReviewCorrect('coo.31924002832313','dfulmer','2011-01-13 12:00:37'), 1,                'status 8 validation 3');
+is($crms->IsReviewCorrect('coo.31924002832313','s-zuri@umn.edu','2011-01-13 11:13:57'), 1,         'status 8 validation 4');
+is($crms->IsFiltered('mdp.39015027953937','foreign'), 1,                                           'IsFiltered 1');
+is($crms->IsFiltered('mdp.39015027953937','duplicate'), 0,                                         'IsFiltered 2');
+is($crms->IsFiltered('mdp.39015027953937'), 1,                                                     'IsFiltered 3');
+$crms->PrepareSubmitSql('INSERT INTO systemvars (name,value) VALUES ("blah", "1")');
+$crms->PrepareSubmitSql('INSERT INTO systemvars (name,value) VALUES ("bleh", "2")');
+is($crms->GetSystemVar('blah'), 1,                                                                 'GetSystemVar 1');
+is($crms->GetSystemVar('bleh'), 2,                                                                 'GetSystemVar 2');
+is($crms->GetSystemVar('bleh','$_<2'), undef,                                                      'GetSystemVar 3');
+ok(defined $crms->GetSystemVar('priority1Frequency'),                                              'GetSystemVar 4');
+is($crms->GetSystemVar('spam'), undef,                                                             'GetSystemVar 5');
+$crms->PrepareSubmitSql('INSERT INTO systemvars (name,value) VALUES ("spam", "1.0")');
+is($crms->GetSystemVar('spam', '$_>=0.0 and $_<1.0'), undef,                                       'GetSystemVar 6');
+is($crms->GetSystemVar('spam', '$_>=0.0 and $_<1.0', .25), .25,                                    'GetSystemVar 7');
+is($crms->GetSystemVar('span', '$_>=0.0 and $_<1.0'), undef,                                       'GetSystemVar 8');
+is($crms->GetSystemVar('span', '$_>=0.0 and $_<1.0', .25), .25,                                    'GetSystemVar 9');
+$crms->PrepareSubmitSql('DELETE FROM systemvars WHERE name="blah" OR name="bleh" OR name="spam"');
 
 if ($renDate)
 {
