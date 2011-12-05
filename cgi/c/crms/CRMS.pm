@@ -59,6 +59,13 @@ sub set
   $self->{$key} = $val;
 }
 
+sub Version
+{
+  my $self = shift;
+  
+  return '3.3.6';
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   connect to the mysql DB
 ##  Parameters: nothing
@@ -570,7 +577,7 @@ sub ExportReviews
   }
 }
 
-# Send email (to Anne) with rights export data.
+# Send email (to Greg) with rights export data.
 sub EmailReport
 {
   my $self    = shift;
@@ -578,16 +585,19 @@ sub EmailReport
   my $file    = shift;
 
   my $where = ($self->WhereAmI() or 'Prod');
-  my $subject = sprintf('CRMS %s: %d volumes exported to rights db', $where, $count);
-  use Mail::Sender;
-  my $sender = new Mail::Sender
-    {smtp => 'mail.umdl.umich.edu',
-     from => $self->GetSystemVar('exportEmailFrom')};
-  $sender->MailFile({to => $self->GetSystemVar('exportEmailTo'),
-           subject => $subject,
-           msg => "See attachment.",
-           file => $file});
-  $sender->Close;
+  if ($where eq 'Prod')
+  {
+    my $subject = sprintf('CRMS %s: %d volumes exported to rights db', $where, $count);
+    use Mail::Sender;
+    my $sender = new Mail::Sender
+      {smtp => 'mail.umdl.umich.edu',
+       from => $self->GetSystemVar('exportEmailFrom')};
+    $sender->MailFile({to => $self->GetSystemVar('exportEmailTo'),
+             subject => $subject,
+             msg => "See attachment.",
+             file => $file});
+    $sender->Close;
+  }
 }
 
 sub GetExportFh
@@ -1024,7 +1034,7 @@ sub AddItemToQueueOrSetItemActive
   }
   else
   {
-    my $record = $self->GetMetadata($id); 
+    my $record = $self->GetMetadata($id);
     @msgs = @{ $self->GetViolations($id, $record, $priority, $override) };
     if (scalar @msgs)
     {
@@ -2801,6 +2811,21 @@ sub LinkToPT
   $self->ClearErrors();
   return '<a href="' . $url . '" target="_blank">' . $title . '</a>';
 }
+
+#sub LinkToGoogleCCE
+#{
+#  my $self   = shift;
+#  my $author = shift;
+#  my $title  = shift;
+#  my $year   = shift;
+#
+#  $author =~ s/\W+/+/g;
+#  $title =~ s/\W+/+/g;
+#  $title =~ s/\++$//g;
+#  my $url = 'http://books.google.com/books?hl=en&uid=4556442065221187955&sourceid=catalog-of-copyright-entries&' .
+#            "q=$author+$title&btnG=Search";
+#  return '<a href="' . $url . '" target="_blank">' . 'Google&nbsp;CCE&#x2026;' . '</a>';
+#}
 
 sub LinkToReview
 {
