@@ -12,6 +12,7 @@
 [% question   = cgi.param('question') %]
 [% swiss      = cgi.param('swiss') %]
 [% mag        = cgi.cookie('mag') %]
+[% expert     = crms.IsUserExpert(user) %]
 
 [% SET mag = 100 IF !mag %]
 
@@ -20,12 +21,12 @@
     <h3>Too late, can't edit your review for this item.</h3>
     [% STOP %]
   [% END %]
-  [% IF crms.IsUserExpert(user) && crms.HasItemBeenReviewedByAnotherExpert(barcode,user) %]
+  [% IF expert && crms.HasItemBeenReviewedByAnotherExpert(barcode,user) %]
     <h3>Item has already been reviewed by another expert.</h3>
     <br/><a href="JavaScript:window.close()">Close</a>
     [% STOP %]
   [% END %]
-  [% err = crms.LockItem(barcode, user, crms.IsUserExpert(user)) %]
+  [% err = crms.LockItem(barcode, user, expert) %]
   [% IF err != 0 %]
     <h3>[% err %].</h3>
     [% locked = crms.GetLockedItems(user) %]
@@ -44,7 +45,7 @@
   [% END %]
 [% END %]
 
-[% IF (! crms.IsUserReviewer()) && (! crms.IsUserAdvanced()) && (! crms.IsUserExpert()) %]
+[% IF (!crms.IsUserReviewer()) && (!crms.IsUserAdvanced()) && (!expert) %]
   <h3>You are not authorized to review volumes.</h3>
   [% STOP %]
 [% END %]
@@ -64,13 +65,14 @@
   [% STOP %]
 [% END %]
 
-[% userName  = crms.GetUserName( user )              %]
-[% pub_date  = crms.GetPublDate( barcode )           %]
-[% author    = crms.GetAuthor( barcode )    %]
-[% encAuthor = crms.GetEncAuthorForReview( barcode ) %]
-[% title     = crms.GetTitle( barcode )              %]
-[% encTitle  = crms.GetEncTitle( barcode )           %]
-[% priority  = crms.GetPriority( barcode )           %]
+[% status    = crms.GetStatus(barcode)             %]
+[% userName  = crms.GetUserName(user)              %]
+[% pub_date  = crms.GetPublDate(barcode)           %]
+[% author    = crms.GetAuthor(barcode)             %]
+[% encAuthor = crms.GetEncAuthorForReview(barcode) %]
+[% title     = crms.GetTitle(barcode)              %]
+[% encTitle  = crms.GetEncTitle(barcode)           %]
+[% priority  = crms.GetPriority(barcode)           %]
 
 [% IF NOT renNum %]
 [% renNum = crms.GetRenNum( barcode, user ) %]
@@ -182,7 +184,8 @@
           </td>
         </tr>
         <tr>
-          <td colspan="2" style="margin:0px;padding:0px;">
+          <td>[% IF expert %][%# crms.LinkToGoogleCCE(author, title, pub_date) %][% END %]</td>
+          <td style="margin:0px;padding:0px;">
              <input type="button" class="reviewblue" value="Toggle View" onclick="flipFrame();" accesskey="o"
              style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
           </td>
@@ -206,7 +209,7 @@
     
     <div class="navbottom" style="border-collapse:collapse;">
       [% comment = "" %]
-      [% IF crms.IsUserExpert(user) && editing %]
+      [% IF expert && editing %]
         [% IF crms.HasItemBeenReviewedByAnotherExpert(barcode,user) %]
           [% error = "An expert has already reviewed this volume. Please cancel." %]
         [% END %]
@@ -214,10 +217,10 @@
       [% INCLUDE submitReviewForm.tt barcode  = barcode,  renNum   = renNum,   renDate  = renDate,
                                      comm     = comm,    category  = category, editing  = editing,
                                      error    = error,   select    = select,   mag      = mag,
-                                     question = question, swiss    = swiss %]
-      [% IF crms.IsUserExpert(user) #|| crms.WhereAmI().match('Dev') %]
+                                     question = question, swiss    = swiss,    expert   = expert,
+                                     status   = status %]
+      [% IF expert %]
         <table class="nav">
-        [% status = crms.GetStatus(barcode) %]
         [% IF status == 3 %]
           <tr><td><span style="font-size:1.1em;color:red;">Provisional Match</span></td></tr>
         [% ELSIF status == 2 %]
