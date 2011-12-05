@@ -110,7 +110,7 @@
           <label for="r6">[% keys.${"6"} %] (6)</label>
       </td>
     </tr>
-    [% IF crms.IsUserExpert(user) || crms.IsUserAdmin(user) %]
+    [% IF expert || crms.IsUserAdmin(user) %]
     <tr>
       <td>
         <input type="radio" id="r7" name="rights" value="7" accesskey="7"
@@ -145,13 +145,13 @@
               "Wrong Record"   => "Wrong Record",  "Date"            => "Date",
               "Dissertation/Thesis" => "Dissertation/Thesis",
               "Not Class A"    => "Not Class A",   "Expert Note"     => "Expert Note",
-              "Edition"        => "Edition",       ""               => "none",
+              "Edition"        => "Edition",       ""                => "none",
               "Expert Accepted" => "Expert Accepted"} 
     %]
     [% FOREACH nc IN ncs.sort %]
       [%# IF nc == "Author Death Date" && !crms.IsUserAdmin(user) %][%# NEXT %][%# END %]
       [% IF nc == "Expert Accepted" && category != "Expert Accepted" %][% NEXT %][% END %]
-      [% IF nc == "Expert Note" && (NOT crms.IsUserExpert(user)) && (NOT crms.IsUserAdmin(user)) %][% NEXT %][% END %]
+      [% IF nc == "Expert Note" && (NOT expert) && (NOT crms.IsUserAdmin(user)) %][% NEXT %][% END %]
       [% IF nc == category %]
         <option value="[% nc %]" selected="selected">[% ncs.${nc} %]</option>
       [% ELSE %]
@@ -170,10 +170,11 @@
   </table>
   </div>
   <table>
-  [% IF crms.IsUserExpert(user) %]
+  [% IF expert %]
     <tr>
+      [% checked = ((swiss) || ((status == 2 || status == 3) && crms.GetSystemVar('swissByDefault'))) %]
       <td style="text-align:left;" width="28">
-        <input type="checkbox" id="swiss" name="swiss" [% (swiss)? 'checked="checked"':'' %]/>
+        <input type="checkbox" id="swiss" name="swiss" [% (checked)? 'checked="checked"':'' %]/>
       </td>
       <td><label for="swiss">Do not invalidate other reviews<br/>for this volume</label></td>
     </tr>
