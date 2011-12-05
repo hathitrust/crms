@@ -99,7 +99,7 @@ foreach $inst (@insts)
   $sender->OpenMultipart({
     to => $mail,
     cc => (join ',', @mails),
-    subject => "$iname CRMS Statistics for $english",
+    subject => "CRMS Prod: $iname Statistics for $english",
     ctype => 'text/plain',
     encoding => 'quoted-printable'
     }) or die $Mail::Sender::Error,"\n";
