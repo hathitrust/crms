@@ -94,24 +94,35 @@
 <br/><br/>
 <table class='exportStats'>
 <tr>
-<th>Sanity&nbsp;check&nbsp;the&nbsp;database</th>
-<td>
-  <form action="crms">
-    <input type="hidden" name="p" value="debug"/>
-    <input type="hidden" name="sanityCheck" value="1"/>
-    <input type="submit" value="Do it!"/>
-  </form>
-</td>
+  <th>Sanity&nbsp;check&nbsp;the&nbsp;database</th>
+  <td>
+    <form action="crms">
+      <input type="hidden" name="p" value="debug"/>
+      <input type="hidden" name="sanityCheck" value="1"/>
+      <input type="submit" value="Do it!"/>
+    </form>
+  </td>
 </tr>
 <tr>
-<th>List&nbsp;Unicode&nbsp;bibdata&nbsp;entries</th>
-<td>
-  <form action="crms">
-    <input type="hidden" name="p" value="debug"/>
-    <input type="hidden" name="multibyte" value="1"/>
-    <input type="submit" value="Do it!"/>
-  </form>
-</td></tr>
+  <th>List&nbsp;Unicode&nbsp;bibdata&nbsp;entries</th>
+  <td>
+    <form action="crms">
+      <input type="hidden" name="p" value="debug"/>
+      <input type="hidden" name="multibyte" value="1"/>
+      <input type="submit" value="Do it!"/>
+    </form>
+  </td>
+</tr>
+<tr>
+  <th>List&nbsp;System&nbsp;variables</th>
+  <td>
+    <form action="crms">
+      <input type="hidden" name="p" value="debug"/>
+      <input type="hidden" name="systemvars" value="1"/>
+      <input type="submit" value="Do it!"/>
+    </form>
+  </td>
+</tr>
 </table>
 <br/><br/>
 [% ids = cgi.param('ids') %]
@@ -208,6 +219,17 @@
   <table class='exportStats'><tr><th>ID</th><th>Author</th><th>Title</th></tr>
   [% FOREACH r IN ref %]
     <tr><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td></tr>
+  [% END %]
+  </table>
+[% END %]
+
+[% IF cgi.param('systemvars') %]
+  [% sql = "SELECT name,value FROM systemvars ORDER BY name" %]
+  [% ref  = crms.GetDb().selectall_arrayref(sql) %]
+  <h4>System Variables</h4>
+  <table class='exportStats'><tr><th>Name</th><th>Value</th></tr>
+  [% FOREACH r IN ref %]
+    <tr><td>[% r.0 %]</td><td>[% r.1 %]</td></tr>
   [% END %]
   </table>
 [% END %]
