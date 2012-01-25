@@ -25,11 +25,11 @@ my $alias = $crms->GetAliasUserName( $ru );
 
 if ( $cgi->param('p') eq 'Logout' )
 {
-  #Remove all locks for this user.
+  # Remove all locks for this user.
   # If we're aliased, we don't log out, we just drop the alias.
   if ($alias && $alias ne $ru)
   {
-    $crms->UnlockAllItemsForUser( $alias );
+    $crms->UnlockAllItemsForUser($alias);
     $cgi->param('changeuser', 1);
     $cgi->param('newuser', $ru);
   }
@@ -84,6 +84,14 @@ if ($user ne $ru)
             dev          =>   $DLPS_DEV,
             user         =>   $user,
             );
+}
+
+## make sure user known
+if (!$crms->GetUserName($user))
+{
+  print $cgi->header( -status => "403 Forbidden" ) .
+        "<h2>Forbidden</h2> (unknown user '$user')";
+  exit;
 }
 
 if ( $cgi->param('p') eq 'confirmReview' )  
@@ -170,9 +178,8 @@ if ( $cgi->param('p') eq 'confirmReview' )
         $cgi->delete_all();
         if ( $editing )
         {
-          my $output = qq(<script type="text/javascript" language="JavaScript">window.close();</script>);
           print "Content-type: text/html\n\n";
-          print $output;
+          print '<script type="text/javascript" language="JavaScript">window.close();</script>';
         }
         else
         {
@@ -250,17 +257,9 @@ my $config =
 
 };
 
-## make sure user known
-if ( ! $crms->GetUserName($user) )
-{
-    print $cgi->header( -status => "403 Forbidden" ) .
-          "<h2>Forbidden</h2> (unknown user '$user')";
-    exit;
-}
-
 my $tt   = Template->new( $config );
 my $vars = {
-    title     => "CRMS",
+    title     => $crms->System(),
     crms      => $crms,
     cgi       => $cgi,
     user      => $user,

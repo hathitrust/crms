@@ -90,7 +90,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
 // -->
       </script>
     [% END %]
-    [% where = crms.WhereAmI %]
+    [% where = crms.WhereAmI() %]
     [% IF where %][% title = title _ ' - ' _ where %][% END %]
     <title>[% title %] - [% crms.PageToEnglish(page) %]</title>
   </head>
@@ -101,7 +101,8 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
     <div class="pages" id="homePage">
     <div style="height:82px;border-bottom:1px solid black;margin:0px;padding-bottom:6px;">
       <a href="crms">
-        <img src="/c/crms/crms.png" width="455" height="80" alt="CRMS Logo" style="float:left;border:0px solid;margin-right:4em;"/>
+        <img src="[% crms.GetSystemVar('logo') %]" width="455" height="80" alt="CRMS Logo"
+             style="float:left;border:0px solid;margin-right:4em;"/>
       </a>
       <div style="float:right;">
         <table class="exportStats">
@@ -112,11 +113,14 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
           </tr>
           <tr>
             <th nowrap="nowrap" style="text-align:right;">
-              Contact:&nbsp;<a href="mailto:crms-experts@umich.edu?subject=CRMS+Feedback" class="header">crms-experts@umich.edu</a>
+              [% experts = crms.GetSystemVar("expertsEmail") %]
+              [% IF experts %]
+                Contact:&nbsp;<a href="mailto:[% experts %]?subject=CRMS+Feedback" class="header">[% experts %]</a>
+              [% END %]
             </th>
           </tr>
           <tr>
-           <th style="text-align:right;">CRMS&nbsp;Version&nbsp;[% crms.Version() %]</th>
+           <th style="text-align:right;">[% crms.System() %]&nbsp;version&nbsp;[% crms.Version() %]</th>
           </tr>
           [% IF where %]
             <tr>
