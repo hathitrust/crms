@@ -63,7 +63,15 @@ sub Version
 {
   my $self = shift;
   
-  return '3.3.6';
+  return $self->GetSystemVar('version');
+}
+
+# Is this CRMS or CRMS World (or something else entirely)?
+sub System
+{
+  my $self = shift;
+
+  return $self->GetSystemVar('system', undef, 'CRMS');
 }
 
 ## ----------------------------------------------------------------------------
@@ -77,10 +85,10 @@ sub ConnectToDb
   my $db_user   = $CRMSGlobals::mysqlUser;
   my $db_passwd = $CRMSGlobals::mysqlPasswd;
   my $db_server = $CRMSGlobals::mysqlServerDev;
-  my $db        = 'crms';
+  my $db        = $CRMSGlobals::mysqlDbName;
   my $dev       = $self->get('dev');
 
-  if ( !$dev )
+  if (!$dev)
   {
     $db_server = $CRMSGlobals::mysqlServer;
   }
@@ -88,7 +96,7 @@ sub ConnectToDb
   {
     $db = 'crmstest';
   }
-  if ($self->get('verbose')) { $self->Logit( "DBI:mysql:crms:$db_server, $db_user, [passwd]" ); }
+  #if ($self->get('verbose')) { $self->Logit( "DBI:mysql:crms:$db_server, $db_user, [passwd]" ); }
 
   my $dbh = DBI->connect( "DBI:mysql:$db:$db_server", $db_user, $db_passwd,
             { RaiseError => 1, AutoCommit => 1 } ) || die "Cannot connect: $DBI::errstr";
@@ -114,7 +122,7 @@ sub ConnectToSdrDb
 
   if ( ! $self->get( 'dev' ) ) { $db_server = $CRMSGlobals::mysqlMdpServer; }
 
-  if ($self->get('verbose')) { $self->Logit( "DBI:mysql:mdp:$db_server, $db_user, [passwd]" ); }
+  #if ($self->get('verbose')) { $self->Logit( "DBI:mysql:mdp:$db_server, $db_user, [passwd]" ); }
 
   my $sdr_dbh = DBI->connect( "DBI:mysql:mdp:$db_server", $db_user, $db_passwd,
             { RaiseError => 1, AutoCommit => 1 } );
@@ -1107,30 +1115,6 @@ sub GiveItemsInQueuePriority
   return 1;
 }
 
-# Translates pre-CRMS, for legacyLoad.pl.
-sub TranslateCategory
-{
-    my $self     = shift;
-    my $category = uc shift;
-
-    if    ( $category eq 'COLLECTION' ) { return 'Insert(s)'; }
-    elsif ( $category =~ m/LANG.*/ ) { return 'Language'; }
-    elsif ( $category =~ m/MISC.*/ ) { return 'Misc'; }
-    elsif ( $category eq 'MISSING' ) { return 'Missing'; }
-    elsif ( $category eq 'DATE' ) { return 'Date'; }
-    elsif ( $category =~ m/REPRINT.*/ ) { return 'Reprint'; }
-    elsif ( $category eq 'SERIES' ) { return 'Periodical'; }
-    elsif ( $category eq 'TRANS' ) { return 'Translation'; }
-    elsif ( $category =~ m/^WRONG.+/ ) { return 'Wrong Record'; }
-    elsif ( $category =~ m,FOREIGN PUB.*, ) { return 'Foreign Pub'; }
-    elsif ( $category eq 'DISS' ) { return 'Dissertation/Thesis'; }
-    elsif ( $category eq 'EDITION' ) { return 'Edition'; }
-    elsif ( $category eq 'NOT CLASS A' ) { return 'Not Class A'; }
-    elsif ( $category eq 'PERIODICAL' ) { return 'Periodical'; }
-    elsif ( $category =~ /INSERT.*/ ) { return 'Insert(s)'; }
-    else  { return $category };
-}
-
 # Valid for DB reviews/historicalreviews
 sub IsValidCategory
 {
@@ -1140,7 +1124,7 @@ sub IsValidCategory
   my %cats = ('Insert(s)' => 1, 'Language' => 1, 'Misc' => 1, 'Missing' => 1, 'Date' => 1, 'Reprint' => 1,
               'Periodical' => 1, 'Translation' => 1, 'Wrong Record' => 1, 'Foreign Pub' => 1, 'Dissertation/Thesis' => 1,
               'Expert Note' => 1, 'Not Class A' => 1, 'Edition' => 1,
-              'Expert Accepted' => 1, 'Attr Match' => 1, 'Attr Default' => 1, 'Duplicate' => 1);
+              'Expert Accepted' => 1, 'Attr Match' => 1, 'Attr Default' => 1, 'Rights Inherited' => 1);
   return exists $cats{$cat};
 }
 
@@ -1322,65 +1306,6 @@ sub GetPriority
   return $self->StripDecimal($self->SimpleSqlGet($sql));
 }
 
-
-## ----------------------------------------------------------------------------
-##  Function:   submit historical review  (from excel SS)
-##  Parameters: Lots of them -- last one does the sanity checks but no db updates
-##  Return:     1 || 0
-## ----------------------------------------------------------------------------
-sub SubmitHistReview
-{
-  my $self = shift;
-  my ($id, $user, $time, $attr, $reason, $renNum, $renDate, $note, $category, $status, $expert, $legacy, $source, $gid, $noop) = @_;
-
-  $id = lc $id;
-  $legacy = ($legacy)? 1:0;
-  $gid = 'NULL' unless $gid;
-  ## change attr and reason back to numbers
-  $attr = $self->GetRightsNum( $attr ) unless $attr =~ m/^\d+$/;
-  $reason = $self->GetReasonNum( $reason ) unless $reason =~ m/^\d+$/;
-  # ValidateAttrReasonCombo sets error internally on fail.
-  if ( ! $self->ValidateAttrReasonCombo( $attr, $reason ) ) { return 0; }
-  if ($status != 9)
-  {
-    my $err = $self->ValidateSubmissionHistorical($attr, $reason, $note, $category, $renNum, $renDate);
-    if ($err) { $self->SetError($err); return 0; }
-  }
-  ## do some sort of check for expert submissions
-  if (!$noop)
-  {
-    my $dbh = $self->GetDb();
-    $note = $dbh->quote($note);
-    ## all good, INSERT
-    my $sql = 'REPLACE INTO historicalreviews (id, user, time, attr, reason, renNum, renDate, note, legacy, category, status, expert, source, gid) ' .
-           "VALUES('$id', '$user', '$time', '$attr', '$reason', '$renNum', '$renDate', $note, $legacy, '$category', $status, $expert, '$source', $gid)";
-    $self->PrepareSubmitSql( $sql );
-    #Now load this info into the bibdata and system table.
-    $self->UpdateMetadata($id, 'bibdata', 1 );
-    # Update status on status 1 item
-    if ($status == 5)
-    {
-      $sql = "UPDATE historicalreviews SET status=$status WHERE id='$id' AND legacy=1 AND gid IS NULL";
-      $self->PrepareSubmitSql( $sql );
-    }
-    # Update validation on all items with this id
-    $sql = "SELECT user,time,validated FROM historicalreviews WHERE id='$id'";
-    my $ref = $dbh->selectall_arrayref($sql);
-    foreach my $row (@{$ref})
-    {
-      $user = $row->[0];
-      $time = $row->[1];
-      my $val  = $row->[2];
-      my $val2 = $self->IsReviewCorrect($id, $user, $time);
-      if ($val != $val2)
-      {
-        $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$time'";
-        $self->PrepareSubmitSql( $sql );
-      }
-    }
-  }
-  return 1;
-}
 
 ## ----------------------------------------------------------------------------
 ##  Function:   submit a new active review  (single pd review from rights DB)
@@ -4777,98 +4702,6 @@ sub ValidateSubmission2
   return $errorMsg;
 }
 
-# Returns an error message, or an empty string if no error.
-# Relaxes constraints on ic/ren needing renewal id and date
-sub ValidateSubmissionHistorical
-{
-  my $self = shift;
-  my ($attr, $reason, $note, $category, $renNum, $renDate) = @_;
-  my $errorMsg = '';
-
-  my $noteError = 0;
-
-  if ( ( ! $attr ) || ( ! $reason ) )
-  {
-    $errorMsg .= 'rights/reason required.';
-  }
-
-  ## und/nfi
-  if ( $attr == 5 && $reason == 8 && ( ( ! $note ) || ( ! $category ) )  )
-  {
-      $errorMsg .= 'und/nfi must include note category and note text.';
-      $noteError = 1;
-  }
-
-  ## pd/ren should not have a ren number or date
-  #if ( $attr == 1 && $reason == 7 &&  ( ( $renNum ) || ( $renDate ) )  )
-  #{
-  #    $errorMsg .= 'pd/ren should not include renewal info.';
-  #}
-
-  ## pd/ncn requires a ren number
-  if (  $attr == 1 && $reason == 2 && ( ( $renNum ) || ( $renDate ) ) )
-  {
-      $errorMsg .= 'pd/ncn should not include renewal info.';
-  }
-
-  ## pd/cdpp requires a ren number
-  if (  $attr == 1 && $reason == 9 && ( ( $renNum ) || ( $renDate )  ) )
-  {
-      $errorMsg .= 'pd/cdpp should not include renewal info.';
-  }
-
-  #if ( $attr == 1 && $reason == 9 && ( ( ! $note ) || ( ! $category )  )  )
-  #{
-  #    $errorMsg .= 'pd/cdpp must include note category and note text.';
-  #    $noteError = 1;
-  #}
-
-  ## ic/cdpp requires a ren number
-  if (  $attr == 2 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
-  {
-      $errorMsg .= 'ic/cdpp should not include renewal info.';
-  }
-
-  if ( $attr == 2 && $reason == 9 && ( ( ! $note )  || ( ! $category ) )  )
-  {
-      $errorMsg .= 'ic/cdpp must include note category and note text.';
-      $noteError = 1;
-  }
-
-  if ( $noteError == 0 )
-  {
-    if ( ( $category )  && ( ! $note ) )
-    {
-      if ($category ne 'Expert Accepted')
-      {
-        $errorMsg .= 'must include a note if there is a category.';
-      }
-    }
-    elsif ( ( $note ) && ( ! $category ) )
-    {
-      $errorMsg .= 'must include a category if there is a note.';
-    }
-  }
-
-  ## pdus/cdpp requires a note and a 'Foreign' or 'Translation' category, and must not have a ren number
-  if ($attr == 9 && $reason == 9)
-  {
-    if (( $renNum ) || ( $renDate ))
-    {
-      $errorMsg .= 'rights/reason conflicts with renewal info.';
-    }
-    if (( !$note ) || ( !$category ))
-    {
-      $errorMsg .= 'note category/note text required.';
-    }
-    if ($category ne 'Foreign Pub' && $category ne 'Translation')
-    {
-      $errorMsg .= 'pdus/cdpp requires note category "Foreign Pub" or "Translation".';
-    }
-  }
-  return $errorMsg;
-}
-
 
 # 008:28 is 'f' byte.
 sub IsGovDoc
@@ -6628,7 +6461,7 @@ sub IsReviewCorrect
   my $expert  = $row->[4];
   my $status  = $row->[5];
   my $time    = $row->[6];
-  #print "$attr, $reason, $renNum, $renDate, $expert, $swiss\n";
+  #print "$attr, $reason, $renNum, $renDate, $expert, $swiss, $status\n";
   # A non-expert with status 7/8 is protected rather like Swiss.
   return 1 if ($status == 7 && !$expert);
   return 1 if ($status == 8 && !$expert);
@@ -6643,14 +6476,19 @@ sub IsReviewCorrect
   my $erenDate = $row->[3];
   my $euser    = $row->[4];
   my $eswiss   = $row->[5];
-  #print "$eattr, $ereason, $erenNum, $erenDate, $euser\n";
+  #print "$eattr, $ereason, $erenNum, $erenDate, $euser, $eswiss\n";
   if ($attr != $eattr)
   {
+    # A later status 8 might mismatch against a previous status 4.
+    # It's OK if the reason is crms and the mismatch is und vs ic.
+    return 1 if ($ereason == 13 && $attr == 2 && $eattr == 5);
     return (($swiss && !$expert) || ($eswiss && $euser eq 'autocrms'))? 2:0;
   }
   if ($reason != $ereason ||
       ($attr == 2 && $reason == 7 && ($renNum ne $erenNum || $renDate ne $erenDate)))
   {
+    # It's OK if the reason is crms; it can't match anyway.
+    return 1 if $ereason == 13;
     return (($swiss && !$expert) || ($eswiss && $euser eq 'autocrms'))? 2:0;
   }
   return 1;
@@ -8180,6 +8018,71 @@ sub SetSystemVar
   $value = $self->GetDb()->quote($value);
   my $sql = "REPLACE INTO systemvars (name,value) VALUES ('$name',$value)";
   $self->PrepareSubmitSql($sql);
+}
+
+sub Menus
+{
+  my $self = shift;
+
+  my $e = $self->IsUserExpert();
+  my $r = ($e || $self->IsUserReviewer() || $self->IsUserAdvanced());
+  my $x = $self->IsUserExtAdmin();
+  my $a = $self->IsUserAdmin();
+  my $s = $self->IsUserSuperAdmin();
+  my $i = $self->IsUserIncarnationExpertOrHigher();
+  my $sql = "SELECT id,name,class,restricted FROM menus ORDER BY n";
+  #print "$sql\n<br/>";
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my @all = ();
+  foreach my $row (@{$ref})
+  {
+    if (!$row->[3] ||
+        ($row->[3] &&
+         (($e && $row->[3] =~ m/e/) ||
+          ($r && $row->[3] =~ m/r/) ||
+          ($x && $row->[3] =~ m/x/) ||
+          ($a && $row->[3] =~ m/a/) ||
+          ($s && $row->[3] =~ m/s/) ||
+          ($i && $row->[3] =~ m/i/))))
+    {
+      push @all, $row;
+    }
+  }
+  return \@all;
+}
+
+sub MenuItems
+{
+  my $self = shift;
+  my $menu = shift;
+
+  $menu = $self->SimpleSqlGet('SELECT id FROM menus WHERE docs=1 LIMIT 1') if $menu eq 'docs';
+  my $e = $self->IsUserExpert();
+  my $r = ($e || $self->IsUserReviewer() || $self->IsUserAdvanced());
+  my $x = $self->IsUserExtAdmin();
+  my $a = $self->IsUserAdmin();
+  my $s = $self->IsUserSuperAdmin();
+  my $i = $self->IsUserIncarnationExpertOrHigher();
+  my $sql = "SELECT name,href,institution,restricted,target FROM menuitems WHERE menu=$menu ORDER BY n";
+  #print "$sql\n<br/>";
+  my $ref2 = $self->GetDb()->selectall_arrayref($sql);
+  my @all = ();
+  foreach my $row2 (@{$ref2})
+  {
+    next if ($row2->[2] && !$self->CanUserSeeInstitutionalStats($row2->[2]));
+    if (!$row2->[3] ||
+        ($row2->[3] &&
+         (($e && $row2->[3] =~ m/e/) ||
+          ($r && $row2->[3] =~ m/r/) ||
+          ($x && $row2->[3] =~ m/x/) ||
+          ($a && $row2->[3] =~ m/a/) ||
+          ($s && $row2->[3] =~ m/s/) ||
+          ($i && $row2->[3] =~ m/i/))))
+    {
+      push @all, $row2;
+    }
+  }
+  return @all;
 }
 
 1;
