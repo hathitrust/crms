@@ -103,7 +103,10 @@ if (scalar @ARGV)
 }
 my $dates = $start;
 $dates .= " to $end" if $end ne $start;
-my $title = sprintf "CRMS %s %sInheritance, $dates", ($candidates)? 'Candidates':'Export', ($cleanup)? 'Cleanup ':'';
+my $title = sprintf "CRMS %s: %s %sInheritance, $dates",
+                    ($DLPS_DEV)? 'Dev':'Prod',
+                    ($candidates)? 'Candidates':'Export', 
+                    ($cleanup)? 'Cleanup ':'';
 $start .= ' 00:00:00' unless $start =~ m/\d\d:\d\d:\d\d$/;
 $end .= ' 23:59:59' unless $end =~ m/\d\d:\d\d:\d\d$/;
 my %data = %{($candidates)? CandidatesReport($start,$end,\@singles):InheritanceReport($start,$end,\@singles)};
@@ -164,8 +167,8 @@ if (scalar keys %{$data{'chron'}} && !$no{'chron'})
   foreach my $id (KeysSortedOnTitle($data{'chron'}), $th)
   {
     #my $record = $crms->GetMetadata($id);
-    my $title = $th->{$id};
-    $title =~ s/&/&amp;/g;
+    my $title2 = $th->{$id};
+    $title2 =~ s/&/&amp;/g;
     my @lines = split "\n", $data{'chron'}->{$id};
     foreach my $line (@lines)
     {
@@ -176,7 +179,7 @@ if (scalar keys %{$data{'chron'}} && !$no{'chron'})
       my $histLink = $crms->LinkToHistorical($sysid,1);
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td>" .
               "<td><a href='$retrLink' target='_blank'>$id2</a></td>\n";
-      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$title</td></tr>\n";
+      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$title2</td></tr>\n";
     }
   }
   $txt .= "</table>$delim";
@@ -193,8 +196,8 @@ if (scalar keys %{$data{'unneeded'}} && !$no{'unneeded'})
   foreach my $id (KeysSortedOnTitle($data{'unneeded'}, $th))
   {
     #my $record = $crms->GetMetadata($id);
-    my $title = $th->{$id};
-    $title =~ s/&/&amp;/g;
+    my $title2 = $th->{$id};
+    $title2 =~ s/&/&amp;/g;
     my @lines = split "\n", $data{'unneeded'}->{$id};
     foreach my $line (@lines)
     {
@@ -204,7 +207,7 @@ if (scalar keys %{$data{'unneeded'}} && !$no{'unneeded'})
       my $retrLink = $crms->LinkToRetrieve($sysid,1);
       my $histLink = $crms->LinkToHistorical($sysid,1);
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$e</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
-      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$title</td></tr>\n";
+      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$title2</td></tr>\n";
     }
   }
   $data{'unneededcnt'} = $n;
@@ -261,8 +264,8 @@ if (scalar keys %{$data{'disallowed'}})
   foreach my $id (KeysSortedOnTitle($data{'disallowed'}, $th))
   {
     #my $record = $crms->GetMetadata($id);
-    my $title = $th->{$id};
-    $title =~ s/&/&amp;/g;
+    my $title2 = $th->{$id};
+    $title2 =~ s/&/&amp;/g;
     my @lines = split "\n", $data{'disallowed'}->{$id};
     foreach my $line (@lines)
     {
@@ -272,7 +275,7 @@ if (scalar keys %{$data{'disallowed'}})
       my $retrLink = $crms->LinkToRetrieve($sysid,1);
       my $histLink = $crms->LinkToHistorical($sysid,1);
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
-      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$note</td><td>$title</td></tr>\n";
+      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$note</td><td>$title2</td></tr>\n";
     }
   }
   $data{'disallowedcnt'} = $n;
@@ -297,8 +300,8 @@ if (scalar keys %{$data{'inherit'}})
   foreach my $id (KeysSortedOnTitle($data{'inherit'}, $th))
   {
     #my $record = $crms->GetMetadata($id);
-    my $title = $th->{$id};
-    $title =~ s/&/&amp;/g;
+    my $title2 = $th->{$id};
+    $title2 =~ s/&/&amp;/g;
     my @lines = split "\n", $data{'inherit'}->{$id};
     foreach my $line (@lines)
     {
@@ -338,7 +341,7 @@ if (scalar keys %{$data{'inherit'}})
       $$whichtxt .= "<tr><td>$whichn</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
       $$whichtxt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$attr2/$reason2</td><td>$ar</td><td>$change</td>";
       $$whichtxt .= "<td>$incrms</td><td>$h5</td>" if ($incrms && !$candidates);
-      $$whichtxt .= "<td>$title</td><td>$tracking</td></tr>\n";
+      $$whichtxt .= "<td>$title2</td><td>$tracking</td></tr>\n";
     }
   }
   $data{'inheritcnt'} = $n;
@@ -452,11 +455,10 @@ $txt .= "</body></html>\n\n";
 if (@mails)
 {
   use Mail::Sender;
-  $title = 'Dev: ' . $title if $DLPS_DEV;
   my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
                                   from => $crms->GetSystemVar('adminEmail', undef, ''),
                                   on_errors => 'undef' }
-    or die "Error in mailing : $Mail::Sender::Error\n";
+    or die "Error in mailing: $Mail::Sender::Error\n";
   my $to = join ',', @mails;
   my $ctype = 'text/html';
   $sender->OpenMultipart({
