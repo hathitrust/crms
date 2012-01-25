@@ -80,7 +80,7 @@ my $sql = "SELECT id FROM $table";
 my @restrict = ();
 push @restrict, 'src!="gov"' if $und;
 push @restrict, "(time>'$start 00:00:00' AND time<='$end 23:59:59')" unless $all;
-$sql .= ' WHERE ' . join ' ', @restrict if scalar @restrict;
+$sql .= ' WHERE ' . join ' AND ', @restrict if scalar @restrict;
 if (@singles && scalar @singles)
 {
   $sql = sprintf("SELECT id FROM $table WHERE id in ('%s') ORDER BY id", join "','", @singles);
