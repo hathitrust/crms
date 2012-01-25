@@ -155,16 +155,16 @@ sub ProcessFile
       {
         $category = $note;
         $category =~ s/(.*?)[:.].*/$1/s;
-        die "Can't translate $category!" if (uc $category) eq $crms->TranslateCategory( $category );
-        $category = $crms->TranslateCategory( $category );
+        die "Can't translate $category!" if (uc $category) eq TranslateCategory($category);
+        $category = TranslateCategory($category);
         $note =~ s/.*?[:.]\s*(.*)/$1/s;
       }
       elsif ($note)
       {
         $category = $note;
         $note = undef;
-        die "Can't translate $category!" if (uc $category) eq $crms->TranslateCategory( $category );
-        $category = $crms->TranslateCategory( $category );
+        die "Can't translate $category!" if (uc $category) eq TranslateCategory($category);
+        $category = TranslateCategory($category);
       }
     }
     else
@@ -229,4 +229,176 @@ sub ChangeDateFormat
   $day   = "0$day" if $day < 10;
   $date = join '-', ($year, $month, $day);
   return $date;
+}
+
+
+## ----------------------------------------------------------------------------
+##  Function:   submit historical review  (from excel SS)
+##  Parameters: Lots of them -- last one does the sanity checks but no db updates
+##  Return:     1 || 0
+## ----------------------------------------------------------------------------
+sub SubmitHistReview
+{
+  my ($id, $user, $time, $attr, $reason, $renNum, $renDate, $note, $category, $status, $expert, $legacy, $source, $gid, $noop) = @_;
+
+  $id = lc $id;
+  $legacy = ($legacy)? 1:0;
+  $gid = 'NULL' unless $gid;
+  ## change attr and reason back to numbers
+  $attr = $crms->GetRightsNum( $attr ) unless $attr =~ m/^\d+$/;
+  $reason = $crms->GetReasonNum( $reason ) unless $reason =~ m/^\d+$/;
+  # ValidateAttrReasonCombo sets error internally on fail.
+  if ( ! $crms->ValidateAttrReasonCombo( $attr, $reason ) ) { return 0; }
+  if ($status != 9)
+  {
+    my $err = ValidateSubmissionHistorical($attr, $reason, $note, $category, $renNum, $renDate);
+    if ($err) { $crms->SetError($err); return 0; }
+  }
+  ## do some sort of check for expert submissions
+  if (!$noop)
+  {
+    my $dbh = $crms->GetDb();
+    $note = $dbh->quote($note);
+    ## all good, INSERT
+    my $sql = 'REPLACE INTO historicalreviews (id, user, time, attr, reason, renNum, renDate, note, legacy, category, status, expert, source, gid) ' .
+           "VALUES('$id', '$user', '$time', '$attr', '$reason', '$renNum', '$renDate', $note, $legacy, '$category', $status, $expert, '$source', $gid)";
+    $crms->PrepareSubmitSql( $sql );
+    #Now load this info into the bibdata and system table.
+    $crms->UpdateMetadata($id, 'bibdata', 1 );
+    # Update status on status 1 item
+    if ($status == 5)
+    {
+      $sql = "UPDATE historicalreviews SET status=$status WHERE id='$id' AND legacy=1 AND gid IS NULL";
+      $crms->PrepareSubmitSql( $sql );
+    }
+    # Update validation on all items with this id
+    $sql = "SELECT user,time,validated FROM historicalreviews WHERE id='$id'";
+    my $ref = $dbh->selectall_arrayref($sql);
+    foreach my $row (@{$ref})
+    {
+      $user = $row->[0];
+      $time = $row->[1];
+      my $val  = $row->[2];
+      my $val2 = $crms->IsReviewCorrect($id, $user, $time);
+      if ($val != $val2)
+      {
+        $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$time'";
+        $crms->PrepareSubmitSql( $sql );
+      }
+    }
+  }
+  return 1;
+}
+
+sub TranslateCategory
+{
+  my $category = uc shift;
+
+  if    ( $category eq 'COLLECTION' ) { return 'Insert(s)'; }
+  elsif ( $category =~ m/LANG.*/ ) { return 'Language'; }
+  elsif ( $category =~ m/MISC.*/ ) { return 'Misc'; }
+  elsif ( $category eq 'MISSING' ) { return 'Missing'; }
+  elsif ( $category eq 'DATE' ) { return 'Date'; }
+  elsif ( $category =~ m/REPRINT.*/ ) { return 'Reprint'; }
+  elsif ( $category eq 'SERIES' ) { return 'Periodical'; }
+  elsif ( $category eq 'TRANS' ) { return 'Translation'; }
+  elsif ( $category =~ m/^WRONG.+/ ) { return 'Wrong Record'; }
+  elsif ( $category =~ m,FOREIGN PUB.*, ) { return 'Foreign Pub'; }
+  elsif ( $category eq 'DISS' ) { return 'Dissertation/Thesis'; }
+  elsif ( $category eq 'EDITION' ) { return 'Edition'; }
+  elsif ( $category eq 'NOT CLASS A' ) { return 'Not Class A'; }
+  elsif ( $category eq 'PERIODICAL' ) { return 'Periodical'; }
+  elsif ( $category =~ /INSERT.*/ ) { return 'Insert(s)'; }
+  else  { return $category };
+}
+
+# Returns an error message, or an empty string if no error.
+# Relaxes constraints on ic/ren needing renewal id and date
+sub ValidateSubmissionHistorical
+{
+  my ($attr, $reason, $note, $category, $renNum, $renDate) = @_;
+  my $errorMsg = '';
+
+  my $noteError = 0;
+
+  if ( ( ! $attr ) || ( ! $reason ) )
+  {
+    $errorMsg .= 'rights/reason required.';
+  }
+
+  ## und/nfi
+  if ( $attr == 5 && $reason == 8 && ( ( ! $note ) || ( ! $category ) )  )
+  {
+      $errorMsg .= 'und/nfi must include note category and note text.';
+      $noteError = 1;
+  }
+
+  ## pd/ren should not have a ren number or date
+  #if ( $attr == 1 && $reason == 7 &&  ( ( $renNum ) || ( $renDate ) )  )
+  #{
+  #    $errorMsg .= 'pd/ren should not include renewal info.';
+  #}
+
+  ## pd/ncn requires a ren number
+  if (  $attr == 1 && $reason == 2 && ( ( $renNum ) || ( $renDate ) ) )
+  {
+      $errorMsg .= 'pd/ncn should not include renewal info.';
+  }
+
+  ## pd/cdpp requires a ren number
+  if (  $attr == 1 && $reason == 9 && ( ( $renNum ) || ( $renDate )  ) )
+  {
+      $errorMsg .= 'pd/cdpp should not include renewal info.';
+  }
+
+  #if ( $attr == 1 && $reason == 9 && ( ( ! $note ) || ( ! $category )  )  )
+  #{
+  #    $errorMsg .= 'pd/cdpp must include note category and note text.';
+  #    $noteError = 1;
+  #}
+
+  ## ic/cdpp requires a ren number
+  if (  $attr == 2 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
+  {
+      $errorMsg .= 'ic/cdpp should not include renewal info.';
+  }
+
+  if ( $attr == 2 && $reason == 9 && ( ( ! $note )  || ( ! $category ) )  )
+  {
+      $errorMsg .= 'ic/cdpp must include note category and note text.';
+      $noteError = 1;
+  }
+
+  if ( $noteError == 0 )
+  {
+    if ( ( $category )  && ( ! $note ) )
+    {
+      if ($category ne 'Expert Accepted')
+      {
+        $errorMsg .= 'must include a note if there is a category.';
+      }
+    }
+    elsif ( ( $note ) && ( ! $category ) )
+    {
+      $errorMsg .= 'must include a category if there is a note.';
+    }
+  }
+
+  ## pdus/cdpp requires a note and a 'Foreign' or 'Translation' category, and must not have a ren number
+  if ($attr == 9 && $reason == 9)
+  {
+    if (( $renNum ) || ( $renDate ))
+    {
+      $errorMsg .= 'rights/reason conflicts with renewal info.';
+    }
+    if (( !$note ) || ( !$category ))
+    {
+      $errorMsg .= 'note category/note text required.';
+    }
+    if ($category ne 'Foreign Pub' && $category ne 'Translation')
+    {
+      $errorMsg .= 'pdus/cdpp requires note category "Foreign Pub" or "Translation".';
+    }
+  }
+  return $errorMsg;
 }
