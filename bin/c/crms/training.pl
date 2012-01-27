@@ -109,8 +109,8 @@ foreach my $row (@{$ref})
     {
       my $user2 = $row->[0];
       my $time = $row->[1];
-      my $attr = $crms->GetRightsName($row->[2]);
-      my $reason = $crms->GetReasonName($row->[3]);
+      my $attr = $crms->TranslateAttr($row->[2]);
+      my $reason = $crms->TranslateReason($row->[3]);
       my $renDate = $row->[4];
       my $renNum = $row->[5];
       my $category = $row->[6];

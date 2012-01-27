@@ -245,8 +245,8 @@ sub SubmitHistReview
   $legacy = ($legacy)? 1:0;
   $gid = 'NULL' unless $gid;
   ## change attr and reason back to numbers
-  $attr = $crms->GetRightsNum( $attr ) unless $attr =~ m/^\d+$/;
-  $reason = $crms->GetReasonNum( $reason ) unless $reason =~ m/^\d+$/;
+  $attr = $crms->TranslateAttr( $attr ) unless $attr =~ m/^\d+$/;
+  $reason = $crms->TranslateReason( $reason ) unless $reason =~ m/^\d+$/;
   # ValidateAttrReasonCombo sets error internally on fail.
   if ( ! $crms->ValidateAttrReasonCombo( $attr, $reason ) ) { return 0; }
   if ($status != 9)

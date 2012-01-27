@@ -403,8 +403,8 @@ if ($insert && scalar keys %{$data{'inherit'}})
     foreach my $line (@lines)
     {
       my ($id2,$sysid,$attr2,$reason2,$attr,$reason,$gid) = split "\t", $line;
-      $attr2 = $crms->GetRightsNum($attr2);
-      $reason2 = $crms->GetReasonNum($reason2);
+      $attr2 = $crms->TranslateAttr($attr2);
+      $reason2 = $crms->TranslateReason($reason2);
       my $sql = "REPLACE INTO inherit (id,attr,reason,gid,src) VALUES ('$id2',$attr2,$reason2,$gid,'$src')";
       #print "$sql\n";
       $crms->PrepareSubmitSql($sql);

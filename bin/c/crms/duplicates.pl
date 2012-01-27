@@ -171,8 +171,8 @@ foreach my $row ( @{$ref} )
   my $reason = $row->[2];
   if ($legacy)
   {
-    $attr = $crms->GetRightsName($attr);
-    $reason = $crms->GetReasonName($reason);
+    $attr = $crms->TranslateAttr($attr);
+    $reason = $crms->TranslateReason($reason);
   }
   my $date = $row->[3];
   my $time = $row->[4];

@@ -188,17 +188,18 @@ sub SimpleSqlGet
 {
   my $self = shift;
   my $sql  = shift;
+  my $sdr  = shift;
 
   my $val = undef;
-  my $dbh = $self->GetDb();
+  my $dbh = ($sdr)? $self->GetSdrDb():$self->GetDb();
   eval {
     my $ref = $dbh->selectall_arrayref( $sql );
     $val = $ref->[0]->[0];
   };
   if ($@)
   {
-    $self->SetError("sql failed ($sql): " . $@);
-    $self->Logit("sql failed ($sql): " . $@);
+    $self->SetError("SQL failed ($sql): " . $@);
+    $self->Logit("SQL failed ($sql): " . $@);
   }
   return $val;
 }
@@ -1318,10 +1319,10 @@ sub SubmitActiveReview
   my ($id, $user, $date, $attr, $reason, $noop) = @_;
 
   ## change attr and reason back to numbers
-  $attr = $self->GetRightsNum( $attr );
+  $attr = $self->TranslateAttr( $attr );
 
   if (!$attr) { $self->SetError( "bad attr: $attr" ); return 0; }
-  $reason = $self->GetReasonNum( $reason );
+  $reason = $self->TranslateReason( $reason );
   if (!$reason) { $self->SetError( "bad reason: $reason" ); return 0; }
   if (!$self->ValidateAttrReasonCombo( $attr, $reason ) ) { $self->SetError("bad attr/reason $attr/$reason"); return 0; }
   if (!$self->CheckReviewer( $user, 0 ) )                 { $self->SetError("reviewer ($user) check failed"); return 0; }
@@ -1367,8 +1368,8 @@ sub GetFinalAttrReason
   {
     $self->SetError( "$id not found in review table" );
   }
-  my $attr   = $self->GetRightsName( $ref->[0]->[0] );
-  my $reason = $self->GetReasonName( $ref->[0]->[1] );
+  my $attr   = $self->TranslateAttr( $ref->[0]->[0] );
+  my $reason = $self->TranslateReason( $ref->[0]->[1] );
   return ($attr, $reason);
 }
 
@@ -1866,12 +1867,12 @@ sub SearchTermsToSQL
   $search1 = "YEAR($search1)" if $search1 eq 'b.pub_date';
   $search2 = "YEAR($search2)" if $search2 eq 'b.pub_date';
   $search3 = "YEAR($search3)" if $search3 eq 'b.pub_date';
-  $search1value = $self->GetRightsNum($search1value) if $search1 eq 'r.attr';
-  $search2value = $self->GetRightsNum($search2value) if $search2 eq 'r.attr';
-  $search3value = $self->GetRightsNum($search3value) if $search3 eq 'r.attr';
-  $search1value = $self->GetReasonNum($search1value) if $search1 eq 'r.reason';
-  $search2value = $self->GetReasonNum($search2value) if $search2 eq 'r.reason';
-  $search3value = $self->GetReasonNum($search3value) if $search3 eq 'r.reason';
+  $search1value = $self->TranslateAttr($search1value) if $search1 eq 'r.attr';
+  $search2value = $self->TranslateAttr($search2value) if $search2 eq 'r.attr';
+  $search3value = $self->TranslateAttr($search3value) if $search3 eq 'r.attr';
+  $search1value = $self->TranslateReason($search1value) if $search1 eq 'r.reason';
+  $search2value = $self->TranslateReason($search2value) if $search2 eq 'r.reason';
+  $search3value = $self->TranslateReason($search3value) if $search3 eq 'r.reason';
   $search1value = $dbh->quote($search1value) if length $search1value;
   $search2value = $dbh->quote($search2value) if length $search2value;
   $search3value = $dbh->quote($search3value) if length $search3value;
@@ -1947,12 +1948,12 @@ sub SearchTermsToSQLWide
   my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table) = @_;
   $op1 = 'AND' unless $op1;
   $op2 = 'AND' unless $op2;
-  $search1value = $self->GetRightsNum($search1value) if $search1 eq 'r.attr';
-  $search2value = $self->GetRightsNum($search2value) if $search2 eq 'r.attr';
-  $search3value = $self->GetRightsNum($search3value) if $search3 eq 'r.attr';
-  $search1value = $self->GetReasonNum($search1value) if $search1 eq 'r.reason';
-  $search2value = $self->GetReasonNum($search2value) if $search2 eq 'r.reason';
-  $search3value = $self->GetReasonNum($search3value) if $search3 eq 'r.reason';
+  $search1value = $self->TranslateAttr($search1value) if $search1 eq 'r.attr';
+  $search2value = $self->TranslateAttr($search2value) if $search2 eq 'r.attr';
+  $search3value = $self->TranslateAttr($search3value) if $search3 eq 'r.attr';
+  $search1value = $self->TranslateReason($search1value) if $search1 eq 'r.reason';
+  $search2value = $self->TranslateReason($search2value) if $search2 eq 'r.reason';
+  $search3value = $self->TranslateReason($search3value) if $search3 eq 'r.reason';
   # Pull down search 2 if no search 1
   if (!length $search1value)
   {
@@ -2202,8 +2203,8 @@ sub UnpackResults
     my $time       = $row->[1];
     my $duration   = $row->[2];
     my $user       = $row->[3];
-    my $attr       = $self->GetRightsName($row->[4]);
-    my $reason     = $self->GetReasonName($row->[5]);
+    my $attr       = $self->TranslateAttr($row->[4]);
+    my $reason     = $self->TranslateReason($row->[5]);
     my $note       = $row->[6];
     my $renNum     = $row->[7];
     my $expert     = $row->[8];
@@ -2352,8 +2353,8 @@ sub GetReviewsRef
                   date       => $date,
                   duration   => $row->[2],
                   user       => $row->[3],
-                  attr       => $self->GetRightsName($row->[4]),
-                  reason     => $self->GetReasonName($row->[5]),
+                  attr       => $self->TranslateAttr($row->[4]),
+                  reason     => $self->TranslateReason($row->[5]),
                   note       => $row->[6],
                   renNum     => $row->[7],
                   expert     => $row->[8],
@@ -2441,8 +2442,8 @@ sub GetVolumesRef
                   date       => $date,
                   duration   => $row->[2],
                   user       => $row->[3],
-                  attr       => $self->GetRightsName($row->[4]),
-                  reason     => $self->GetReasonName($row->[5]),
+                  attr       => $self->TranslateAttr($row->[4]),
+                  reason     => $self->TranslateReason($row->[5]),
                   note       => $row->[6],
                   renNum     => $row->[7],
                   expert     => $row->[8],
@@ -2526,8 +2527,8 @@ sub GetVolumesRefWide
                   date       => $date,
                   duration   => $row->[2],
                   user       => $row->[3],
-                  attr       => $self->GetRightsName($row->[4]),
-                  reason     => $self->GetReasonName($row->[5]),
+                  attr       => $self->TranslateAttr($row->[4]),
+                  reason     => $self->TranslateReason($row->[5]),
                   note       => $row->[6],
                   renNum     => $row->[7],
                   expert     => $row->[8],
@@ -2876,8 +2877,8 @@ sub GetAttrReasonCode
 
   my $sql = "SELECT attr, reason FROM reviews WHERE id='$id' AND user='$user'";
   my $ref = $self->GetDb()->selectall_arrayref( $sql );
-  my $rights = $self->GetRightsName( $ref->[0]->[0] );
-  my $reason = $self->GetReasonName( $ref->[0]->[1] );
+  my $rights = $self->TranslateAttr( $ref->[0]->[0] );
+  my $reason = $self->TranslateReason( $ref->[0]->[1] );
   return $self->GetAttrReasonCom( "$rights/$reason" );
 }
 
@@ -5710,47 +5711,29 @@ sub GetPriority1Frequency
   return $self->GetSystemVar('priority1Frequency', '$_>=0.0 and $_<1.0', 0.3);
 }
 
-sub GetRightsName
+sub TranslateAttr
 {
   my $self = shift;
-  my $id   = shift;
+  my $a    = shift;
   
-  my %rights = (1 => 'pd', 2 => 'ic', 3 => 'opb', 4 => 'orph', 5 => 'und', 6 => 'umall', 7 => 'world', 8 => 'nobody', 9 => 'pdus');
-  return $rights{$id};
+  my $sql = "SELECT id FROM attributes WHERE name='$a'";
+  $sql = "SELECT name FROM attributes WHERE id='$a'" if $a =~ m/[0-9]+/;
+  my $val = $self->SimpleSqlGet($sql,1);
+  $a = $val if $val;
+  return $a;
 }
 
-sub GetReasonName
+sub TranslateReason
 {
   my $self = shift;
-  my $id   = shift;
+  my $r    = shift;
   
-  my %reasons = ( 1 => 'bib', 2 => 'ncn', 3 => 'con',   4 => 'ddd',  5 => 'man',  6 => 'pvt',
-                  7 => 'ren', 8 => 'nfi', 9 => 'cdpp', 10 => 'cip', 11 => 'unp', 12 => 'gfv',
-                 13 => 'crms', 14 => 'add', 15 => 'exp');
-  return $reasons{$id};
+  my $sql = "SELECT id FROM reasons WHERE name='$r'";
+  $sql = "SELECT name FROM reasons WHERE id='$r'" if $r =~ m/[0-9]+/;
+  my $val = $self->SimpleSqlGet($sql,1);
+  $r = $val if $val;
+  return $r;
 }
-
-sub GetRightsNum
-{
-  my $self = shift;
-  my $id   = shift;
-  
-  my %rights = ('pd'    => 1, 'ic'    => 2, 'opb'    => 3, 'orph' => 4, 'und' => 5,
-                'umall' => 6, 'world' => 7, 'nobody' => 8, 'pdus' => 9);
-  return $rights{$id};
-}
-
-sub GetReasonNum
-{
-  my $self = shift;
-  my $id   = shift;
-  
-  my %reasons = ('bib'  => 1, 'ncn' => 2, 'con'  => 3, 'ddd' => 4,  'man' => 5,  'pvt' => 6,
-                 'ren'  => 7, 'nfi' => 8, 'cdpp' => 9, 'cip' => 10, 'unp' => 11, 'gfv' => 12,
-                 'crms' => 13, 'add' => 14, 'exp' => 15);
-  return $reasons{$id};
-}
-
 
 ## ----------------------------------------------------------------------------
 ##  Function:   get renNum (stanford ren num)
@@ -7383,8 +7366,8 @@ sub GetInheritanceRef
     $i++;
     my $id = $row->[0];
     my $sysid = $self->BarcodeToId($id);
-    my $attr = $self->GetRightsName($row->[1]);
-    my $reason = $self->GetReasonName($row->[2]);
+    my $attr = $self->TranslateAttr($row->[1]);
+    my $reason = $self->TranslateReason($row->[2]);
     my $gid = $row->[3];
     my $id2 = $row->[4] || '';
     my $attr2 = $row->[5];
@@ -7513,10 +7496,10 @@ sub UpdateInheritanceRights
       return;
     }
     my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
-    if ($self->GetRightsName($a) ne $attr || $self->GetReasonName($r) ne $reason)
+    if ($self->TranslateAttr($a) ne $attr || $self->TranslateReason($r) ne $reason)
     {
-      $a = $self->GetRightsNum($attr);
-      $r = $self->GetReasonNum($reason);
+      $a = $self->TranslateAttr($attr);
+      $r = $self->TranslateReason($reason);
       my $sql = "UPDATE inherit SET attr=$a,reason=$r WHERE id='$id'";
       #print "$sql<br/>\n";
       $self->PrepareSubmitSql($sql);
@@ -7554,8 +7537,8 @@ sub SubmitInheritance
   $sql = "SELECT e.attr,e.reason,i.gid FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid WHERE i.id='$id'";
   my $row = $self->GetDb()->selectall_arrayref($sql)->[0];
   return "$id is no longer available for inheritance (has it been processed?)" unless $row;
-  my $attr = $self->GetRightsNum($row->[0]);
-  my $reason = $self->GetReasonNum($row->[1]);
+  my $attr = $self->TranslateAttr($row->[0]);
+  my $reason = $self->TranslateReason($row->[1]);
   my $gid = $row->[2];
   my $category = 'Rights Inherited';
   # Returns a status code (0=Add, 1=Error) followed by optional text.
@@ -8083,6 +8066,40 @@ sub MenuItems
     }
   }
   return @all;
+}
+
+# interface=1 means just the categories used in the review page
+sub Categories
+{
+  my $self      = shift;
+  my $interface = shift;
+
+  my $e = $self->IsUserExpert();
+  my $r = ($e || $self->IsUserReviewer() || $self->IsUserAdvanced());
+  my $x = $self->IsUserExtAdmin();
+  my $a = $self->IsUserAdmin();
+  my $s = $self->IsUserSuperAdmin();
+  my $i = $self->IsUserIncarnationExpertOrHigher();
+  my $sql = 'SELECT id,name,restricted,interface,need_note FROM categories ORDER BY n';
+  #print "$sql\n<br/>";
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my @all = ();
+  foreach my $row (@{$ref})
+  {
+    next if $interface and $row->[4] == 0;
+    if (!$row->[3] ||
+        ($row->[3] &&
+         (($e && $row->[3] =~ m/e/) ||
+          ($r && $row->[3] =~ m/r/) ||
+          ($x && $row->[3] =~ m/x/) ||
+          ($a && $row->[3] =~ m/a/) ||
+          ($s && $row->[3] =~ m/s/) ||
+          ($i && $row->[3] =~ m/i/))))
+    {
+      push @all, $row;
+    }
+  }
+  return \@all;
 }
 
 1;
