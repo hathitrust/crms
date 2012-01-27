@@ -63,7 +63,7 @@ sub Version
 {
   my $self = shift;
   
-  return $self->GetSystemVar('version');
+  return '3.3.8';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
