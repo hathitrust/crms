@@ -5927,15 +5927,23 @@ sub CreateSystemReport
   my $report = "<table class='exportStats'>\n";
   # Gets the (time,count) of last queue addition.
   my ($time,$cnt) = $self->GetLastQueueInfo();
-  $time = 'Never' unless $time;
   $time =~ s/\s/&nbsp;/g;
   $report .= "<tr><th>Last&nbsp;Queue&nbsp;Update</th><td>$time</td></tr>\n";
   $report .= "<tr><th>Volumes&nbsp;Last&nbsp;Added</th><td>$cnt</td></tr>\n";
-  $report .= sprintf("<tr><th>Cumulative&nbsp;Volumes&nbsp;in&nbsp;Queue&nbsp;(ever*)</th><td>%s</td></tr>\n", ($self->GetTotalEverInQueue() or 0));
+  $report .= sprintf("<tr><th>Cumulative&nbsp;Volumes&nbsp;in&nbsp;Queue&nbsp;(ever*)</th><td>%s</td></tr>\n", $self->GetTotalEverInQueue());
   $report .= sprintf("<tr><th>Volumes&nbsp;in&nbsp;Candidates</th><td>%s</td></tr>\n", $self->GetCandidatesSize());
-  my $val = $self->GetLastLoadTimeToCandidates();
-  $val =~ s/\s/&nbsp;/g;
-  $report .= sprintf("<tr><th>Last&nbsp;Candidates&nbsp;Addition</th><td>%s&nbsp;on&nbsp;$val</td></tr>", $self->GetLastLoadSizeToCandidates());
+  my $ct = $self->GetLastLoadTimeToCandidates();
+  my $cn = $self->GetLastLoadSizeToCandidates();
+  if ($ct)
+  {
+    $ct =~ s/\s/&nbsp;/g;
+    $cn = "$cn&nbsp;on&nbsp;$ct";
+  }
+  else
+  {
+    $cn = 'n/a';
+  }
+  $report .= "<tr><th>Last&nbsp;Candidates&nbsp;Addition</th><td>$cn</td></tr>";
   my $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE src!="no meta" AND src!="duplicate"');
   $report .= "<tr><th>Volumes&nbsp;Filtered**</th><td>$count</td></tr>\n";
   if ($count)
@@ -5969,10 +5977,10 @@ sub CreateSystemReport
   }
   else
   {
-    $delay .= $self->Pluralize(' second', $delay);
+    $delay .= '&nbsp;' . $self->Pluralize('second', $delay);
   }
-  $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay since $since</span>" if $alert;
-  $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay on $host</td></tr>\n";
+  $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay&nbsp;since&nbsp;$since</span>" if $alert;
+  $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay&nbsp;on&nbsp;$host</td></tr>\n";
   $report .= sprintf "<tr><th>Automatic&nbsp;Inheritance</th><td>%s</td></tr>\n",
     ($self->GetSystemVar('autoinherit') eq 'disabled')?'Disabled':'Enabled';
   $report .= '<tr><td colspan="2">';
@@ -6268,10 +6276,7 @@ sub GetLastLoadSizeToCandidates
   my $self = shift;
 
   my $sql = 'SELECT addedamount FROM candidatesrecord ORDER BY time DESC LIMIT 1';
-  my $count = $self->SimpleSqlGet( $sql );
-
-  if ($count) { return $count; }
-  return 0;
+  return $self->SimpleSqlGet( $sql );
 }
 
 sub GetLastLoadTimeToCandidates
@@ -6279,9 +6284,7 @@ sub GetLastLoadTimeToCandidates
   my $self = shift;
 
   my $sql = 'SELECT DATE_FORMAT(MAX(time), "%a, %M %e, %Y at %l:%i %p") FROM candidatesrecord';
-  my $time = $self->SimpleSqlGet( $sql );
-  if ($time) { return $time; }
-  return 'no data available';
+  return $self->SimpleSqlGet( $sql );
 }
 
 
@@ -6358,6 +6361,8 @@ sub GetLastQueueInfo
   my $row = $self->GetDb()->selectall_arrayref($sql)->[0];
   my $time = $self->FormatTime($row->[0]);
   my $cnt = $row->[1];
+  $time = 'Never' unless $time;
+  $cnt = 0 unless $cnt;
   return ($time,$cnt);
 }
 
@@ -8080,21 +8085,21 @@ sub Categories
   my $a = $self->IsUserAdmin();
   my $s = $self->IsUserSuperAdmin();
   my $i = $self->IsUserIncarnationExpertOrHigher();
-  my $sql = 'SELECT id,name,restricted,interface,need_note FROM categories ORDER BY n';
+  my $sql = 'SELECT id,name,restricted,interface,need_note FROM categories ORDER BY name';
   #print "$sql\n<br/>";
   my $ref = $self->GetDb()->selectall_arrayref($sql);
   my @all = ();
   foreach my $row (@{$ref})
   {
-    next if $interface and $row->[4] == 0;
-    if (!$row->[3] ||
-        ($row->[3] &&
-         (($e && $row->[3] =~ m/e/) ||
-          ($r && $row->[3] =~ m/r/) ||
-          ($x && $row->[3] =~ m/x/) ||
-          ($a && $row->[3] =~ m/a/) ||
-          ($s && $row->[3] =~ m/s/) ||
-          ($i && $row->[3] =~ m/i/))))
+    next if $interface and $row->[3] == 0;
+    if (!$row->[2] ||
+        ($row->[2] &&
+         (($e && $row->[2] =~ m/e/) ||
+          ($r && $row->[2] =~ m/r/) ||
+          ($x && $row->[2] =~ m/x/) ||
+          ($a && $row->[2] =~ m/a/) ||
+          ($s && $row->[2] =~ m/s/) ||
+          ($i && $row->[2] =~ m/i/))))
     {
       push @all, $row;
     }
