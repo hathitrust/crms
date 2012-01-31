@@ -82,7 +82,7 @@ if ($user ne $ru)
 {
   $crms = CRMS->new(
             logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
-            configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
+            configFile   =>   $configFile,
             verbose      =>   0,
             root         =>   $DLXSROOT,
             dev          =>   $DLPS_DEV,
@@ -194,7 +194,7 @@ if ( $cgi->param('p') eq 'confirmReview' )
   }
 }
 
-
+$cgi->param('sys', $sys) if $sys and $sys ne 'crms';
 if ( $cgi->param('download') )  
 {
   my $order            = $cgi->param('order');
