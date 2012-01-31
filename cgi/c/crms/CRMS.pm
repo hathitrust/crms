@@ -8051,7 +8051,7 @@ sub MenuItems
   my $a = $self->IsUserAdmin();
   my $s = $self->IsUserSuperAdmin();
   my $i = $self->IsUserIncarnationExpertOrHigher();
-  my $sql = "SELECT name,href,institution,restricted,target FROM menuitems WHERE menu=$menu ORDER BY n";
+  my $sql = "SELECT name,href,institution,restricted,target FROM menuitems WHERE menu=$menu ORDER BY n ASC";
   #print "$sql\n<br/>";
   my $ref2 = $self->GetDb()->selectall_arrayref($sql);
   my @all = ();
@@ -8085,7 +8085,7 @@ sub Categories
   my $a = $self->IsUserAdmin();
   my $s = $self->IsUserSuperAdmin();
   my $i = $self->IsUserIncarnationExpertOrHigher();
-  my $sql = 'SELECT id,name,restricted,interface,need_note FROM categories ORDER BY name';
+  my $sql = 'SELECT id,name,restricted,interface,need_note FROM categories ORDER BY name ASC';
   #print "$sql\n<br/>";
   my $ref = $self->GetDb()->selectall_arrayref($sql);
   my @all = ();
@@ -8100,6 +8100,41 @@ sub Categories
           ($a && $row->[2] =~ m/a/) ||
           ($s && $row->[2] =~ m/s/) ||
           ($i && $row->[2] =~ m/i/))))
+    {
+      push @all, $row;
+    }
+  }
+  return \@all;
+}
+
+sub Rights
+{
+  my $self = shift;
+  my $exp  = shift;
+
+  my $e = $self->IsUserExpert();
+  my $r = ($e || $self->IsUserReviewer() || $self->IsUserAdvanced());
+  my $x = $self->IsUserExtAdmin();
+  my $a = $self->IsUserAdmin();
+  my $s = $self->IsUserSuperAdmin();
+  my $i = $self->IsUserIncarnationExpertOrHigher();
+  my $sql = 'SELECT id,attr,reason,restricted,description FROM rights ORDER BY id ASC';
+  #print "$sql\n<br/>";
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my @all = ();
+  foreach my $row (@{$ref})
+  {
+    my $restricted = $row->[3];
+    next if ($restricted && !$exp);
+    next if ($exp && !$restricted);
+    if (!$restricted ||
+        ($restricted &&
+         (($e && $restricted =~ m/e/) ||
+          ($r && $restricted =~ m/r/) ||
+          ($x && $restricted =~ m/x/) ||
+          ($a && $restricted =~ m/a/) ||
+          ($s && $restricted =~ m/s/) ||
+          ($i && $restricted =~ m/i/))))
     {
       push @all, $row;
     }
