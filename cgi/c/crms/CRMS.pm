@@ -909,7 +909,7 @@ sub LoadNewItems
       my $time = $row->[1];
       my $title = $row->[3];
       my $author = $row->[4];
-      if ($self->AddItemToQueue($id, $pub_date, $title, $author))
+      if ($self->AddItemToQueue($id, $record))
       {
         printf "Added to queue: $id published %s\n", substr($pub_date, 0, 4);
         $count++;
@@ -972,15 +972,13 @@ sub AddItemToQueue
 {
   my $self     = shift;
   my $id       = shift;
-  my $pub_date = shift;
-  my $title    = shift;
-  my $author   = shift;
+  my $record   = shift;
 
   return 0 if $self->IsVolumeInQueue($id);
   # queue table has priority and status default to 0, time to current timestamp.
   my $sql = "INSERT INTO queue (id) VALUES ('$id')";
   $self->PrepareSubmitSql($sql);
-  $self->UpdateMetadata($id, 'bibdata', 1);
+  $self->UpdateMetadata($id, 'bibdata', 1, $record);
   return 1;
 }
 
@@ -8138,6 +8136,53 @@ sub Rights
     {
       push @all, $row;
     }
+  }
+  return \@all;
+}
+
+sub Sources
+{
+  my $self = shift;
+  my $id   = shift;
+  my $mag  = shift;
+  
+  my $sql = 'SELECT id,name,url,accesskey,menu,initial FROM sources ORDER BY id ASC';
+  #print "$sql\n<br/>";
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my @all = ();
+  foreach my $row (@{$ref})
+  {
+    my $url = $row->[2];
+    $url =~ s/__HTID__/$id/g;
+    $url =~ s/__MAG__/$mag/g;
+    if ($url =~ m/__SYSID__/)
+    {
+      my $sysid = $self->BarcodeToId($id);
+      $url =~ s/__SYSID__/$sysid/g;
+    }
+    if ($url =~ m/__AUTHOR__/)
+    {
+      my $a = $self->GetEncAuthorForReview($id);
+      $url =~ s/__AUTHOR__/$a/g;
+    }
+    if ($url =~ m/__AUTHOR_(\d+)__/)
+    {
+      my $a = $self->GetEncAuthorForReview($id);
+      $a = lc substr($a, 0, $1);
+      $url =~ s/__AUTHOR_\d+__/$a/g;
+    }
+    if ($url =~ m/__AUTHOR_F__/)
+    {
+      my $a = $self->GetEncAuthorForReview($id);
+      $a = $1 if $a =~ m/^.*?([A-Za-z]+)/;
+      $url =~ s/__AUTHOR_F__/$a/g;
+    }
+    if ($url =~ m/__TITLE__/)
+    {
+      my $t = $self->GetEncTitle($id);
+      $url =~ s/__TITLE__/$t/g;
+    }
+    push @all, [$row->[0], $row->[1], $url, $row->[3], $row->[4], $row->[5]];
   }
   return \@all;
 }
