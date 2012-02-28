@@ -198,7 +198,7 @@ table.ReviewError {
   margin-top: 8px;
 }
 
-table.test {
+table.reviewGrey {
   border-collapse: separate;
   border-bottom: 1px solid #72859a;
   background-color:#e2e2e2;
@@ -206,11 +206,11 @@ table.test {
   width: 100%;
 }
 
-table.test th { 
+table.reviewGrey th { 
   padding: 1px;
 }
 
-table.test td {
+table.reviewGrey td {
   text-align:left;
 }
 

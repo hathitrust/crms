@@ -32,16 +32,16 @@
       </td>
     </tr>
   </table>
-  <table class="test">
+  <table class="reviewGrey">
     <tr>
-      <td class="test"><strong><label for="renewalField">Renewal&nbsp;ID: </label></strong></td>
+      <td class="reviewGrey"><strong><label for="renewalField">Renewal&nbsp;ID: </label></strong></td>
       <td>
         <input id="renewalField" title="Renewal ID" type="text" name="renNum"
                value="[% renNum %]" size="8" onblur="javascript:popRenewalDate()"/>
       </td>
     </tr>
     <tr>
-      <td class="test" align="left" style="margin:0px;padding:0px;">
+      <td class="reviewGrey" align="left" style="margin:0px;padding:0px;">
         <input type="button" value="Get Renewal Date" onclick="popRenewalDate();" accesskey="d" class="reviewblue"
                style="margin:0px;padding:1px;background-color:#d0dee6;"/>
       </td>
@@ -207,7 +207,7 @@
 [% IF error %]
   <table class="ReviewError">
     <tr>
-      <td class="test" align="left">
+      <td class="reviewGrey" align="left">
         <strong style="color:red;">Error Message:</strong>
       </td>
     </tr>
