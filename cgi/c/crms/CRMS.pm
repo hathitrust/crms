@@ -63,7 +63,7 @@ sub Version
 {
   my $self = shift;
   
-  return '3.3.8';
+  return '3.3.9';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -3108,7 +3108,7 @@ sub GetUsers
   my $order = shift;
   
   my $dbh  = $self->GetDb();
-  $order = ($order)? 'ORDER BY expert ASC, name ASC':'ORDER BY name ASC';
+  $order = ($order)? 'ORDER BY expert ASC, name ASC':'ORDER BY (reviewer OR advanced OR extadmin OR admin OR superadmin) DESC, name ASC';
   my $sql = "SELECT id FROM users $order";
   my $ref = $dbh->selectall_arrayref( $sql );
   my @users = map { $_->[0]; } @{ $ref };

@@ -49,18 +49,26 @@
     <th>Ext.&nbsp;Admin</th><th>Admin</th><th>Super&nbsp;Admin</th><th>Note</th><th>Change&nbsp;To</th>
   </tr>
   [% FOREACH userid IN users %]
-    <tr [% id == userid ? 'class="total"':''%]>
+    [% r = crms.IsUserReviewer(userid) %]
+    [% v = crms.IsUserAdvanced(userid) %]
+    [% e = crms.IsUserExpert(userid) %]
+    [% x = crms.IsUserExtAdmin(userid) %]
+    [% a = crms.IsUserAdmin(userid) %]
+    [% s = crms.IsUserSuperAdmin(userid) %]
+    [% style = (r||v||e||x||a||s)? '':'style="background-color:#e2e2e2;"' %]
+    <tr [% id == userid ? 'class="total"':''%][% style %]>
       <td><a href="crms?p=userRate;user=[% userid %]" target="_blank">[% crms.GetUserName(userid).replace('\s','&nbsp;') %]</a></td>
       <td>[% userid %]</td>
       <td>[% crms.GetUserKerberosID(userid) %]</td>
-      <td style="text-align:center">[% IF crms.IsUserReviewer(userid) %][% icon %][% END %]</td>
-      <td style="text-align:center">[% IF crms.IsUserAdvanced(userid) %][% icon %][% END %]</td>
-      <td style="text-align:center">[% IF crms.IsUserExpert(userid) %][% icon %][% END %]</td>
-      <td style="text-align:center">[% IF crms.IsUserExtAdmin(userid) %][% icon %][% END %]</td>
-      <td style="text-align:center">[% IF crms.IsUserAdmin(userid) %][% icon %][% END %]</td>
-      <td style="text-align:center">[% IF crms.IsUserSuperAdmin(userid) %][% icon %][% END %]</td>
+      <td style="text-align:center">[% IF r %][% icon %][% END %]</td>
+      <td style="text-align:center">[% IF v %][% icon %][% END %]</td>
+      <td style="text-align:center">[% IF e %][% icon %][% END %]</td>
+      <td style="text-align:center">[% IF x %][% icon %][% END %]</td>
+      <td style="text-align:center">[% IF a %][% icon %][% END %]</td>
+      <td style="text-align:center">[% IF s %][% icon %][% END %]</td>
       [% note = crms.GetUserNote(userid) %]
-      <td style="text-align:center">[% note.replace('\s','&nbsp;') %]</td>
+      
+      <td style="text-align:center;">[% note.replace('\s','&nbsp;') %]</td>
       <td>
         [% IF crms.CanChangeToUser(user,userid) %]
         <form action="crms">
