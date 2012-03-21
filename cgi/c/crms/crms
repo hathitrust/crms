@@ -93,22 +93,22 @@ if ($user ne $ru)
 ## make sure user known
 if (!$crms->GetUserName($user))
 {
-  print $cgi->header( -status => "403 Forbidden" ) .
+  print $cgi->header(-status => "403 Forbidden") .
         "<h2>Forbidden</h2> (unknown user '$user')";
   exit;
 }
 
-if ( $cgi->param('p') eq 'confirmReview' )  
+if ($cgi->param('p') eq 'confirmReview')  
 {
   my $editing = $cgi->param('editing');
-  if ($cgi->param( 'submit' ) eq 'Cancel')
+  if ($cgi->param('submit') eq 'Cancel')
   {
     my $id = $cgi->param('barcode');
     $crms->UnlockItem( $id, $user);
     $cgi->delete_all();
-    if ( $editing )
+    if ($editing)
     {
-      my $output = qq(<script type="text/javascript" language="JavaScript">window.close();</script>);
+      my $output = '<script type="text/javascript" language="JavaScript">window.close();</script>';
       print "Content-type: text/html\n\n";
       print $output;
     }
@@ -180,7 +180,7 @@ if ( $cgi->param('p') eq 'confirmReview' )
       else
       {
         $cgi->delete_all();
-        if ( $editing )
+        if ($editing)
         {
           print "Content-type: text/html\n\n";
           print '<script type="text/javascript" language="JavaScript">window.close();</script>';
