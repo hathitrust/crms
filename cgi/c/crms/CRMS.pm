@@ -1,4 +1,4 @@
-supackage CRMS;
+package CRMS;
 
 ## ----------------------------------------------------------------------------
 ## Object of shared code for the CRMS DB CGI and BIN scripts
