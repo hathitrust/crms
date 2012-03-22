@@ -1,4 +1,4 @@
-package CRMS;
+supackage CRMS;
 
 ## ----------------------------------------------------------------------------
 ## Object of shared code for the CRMS DB CGI and BIN scripts
@@ -63,7 +63,7 @@ sub Version
 {
   my $self = shift;
   
-  return '3.4.0';
+  return '3.4';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
