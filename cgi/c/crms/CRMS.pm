@@ -63,7 +63,7 @@ sub Version
 {
   my $self = shift;
   
-  return '3.4';
+  return '3.4.1';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -319,6 +319,10 @@ sub CalcStatus
   $sql = "SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id='$id' AND user!='$user'";
   $ref = $dbh->selectall_arrayref( $sql );
   my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{ $ref->[0] };
+  if ($hold && ($today lt $hold || $stat ne 'normal'))
+  {
+    $return{'hold'} = $user;
+  }
   if ($other_hold && ($today lt $other_hold || $stat ne 'normal'))
   {
     $return{'hold'} = $other_user;
