@@ -63,7 +63,7 @@ sub Version
 {
   my $self = shift;
   
-  return '3.4.1';
+  return '3.4.2';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -8189,6 +8189,14 @@ sub Sources
     push @all, [$row->[0], $row->[1], $url, $row->[3], $row->[4], $row->[5]];
   }
   return \@all;
+}
+
+sub Unescape
+{
+  my $self = shift;
+
+  use URI::Escape;
+  return uri_unescape(shift);
 }
 
 1;

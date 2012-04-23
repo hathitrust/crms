@@ -60,6 +60,7 @@ government documents, foreign works, non-books, and items from before 1923 or af
 [% IF ids %]
   <table class="exportStats" style="width:33%;">
   [% FOREACH id IN ids.split %]
+    [% id = crms.Unescape(id) %]
     [% IF id.match('^\d+$') %][% id = 'mdp.' _ id %][% END %]
     [% id = id.remove('(^\s+)|(\s+$)') %]
     [% status = crms.AddItemToQueueOrSetItemActive(id, pri, override) %]
