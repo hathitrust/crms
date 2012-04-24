@@ -19,6 +19,7 @@
 <td>
   <form action="crms">
     <input type="hidden" name="p" value="debug"/>
+    [% crms.HiddenSys() %]
     <input type="hidden" name="processReviews" value="1"/>
     <input type="submit" value="Do it!"/>
   </form>
@@ -30,6 +31,7 @@
 </th>
 <td>
   <form action="crms">
+    [% crms.HiddenSys() %]
     <input type="hidden" name="p" value="debug"/>
     <input type="hidden" name="processReviews" value="2"/>
     <input type="submit" value="Do it!"/>
@@ -54,6 +56,7 @@
     <th class="total">Clear Active Volumes with Priority &gt; 0</th>
     <td>
       <form action="crms">
+      [% crms.HiddenSys() %]
       <input type="hidden" name="p" value="debug"/>
       <input type="hidden" name="resetButton" value="1"/>
       <input type="submit" value="Do it!"/>
@@ -73,6 +76,7 @@
     <th class="total">Clear Active Reviews with Status 0-3</th>
     <td>
       <form action="crms">
+      [% crms.HiddenSys() %]
       <input type="hidden" name="p" value="debug"/>
       <input type="hidden" name="resetButton" value="2"/>
       <input type="submit" value="Do it!"/>
@@ -97,6 +101,7 @@
   <th>Sanity&nbsp;check&nbsp;the&nbsp;database</th>
   <td>
     <form action="crms">
+      [% crms.HiddenSys() %]
       <input type="hidden" name="p" value="debug"/>
       <input type="hidden" name="sanityCheck" value="1"/>
       <input type="submit" value="Do it!"/>
@@ -107,6 +112,7 @@
   <th>List&nbsp;Unicode&nbsp;bibdata&nbsp;entries</th>
   <td>
     <form action="crms">
+      [% crms.HiddenSys() %]
       <input type="hidden" name="p" value="debug"/>
       <input type="hidden" name="multibyte" value="1"/>
       <input type="submit" value="Do it!"/>
@@ -117,6 +123,7 @@
   <th>List&nbsp;System&nbsp;variables</th>
   <td>
     <form action="crms">
+      [% crms.HiddenSys() %]
       <input type="hidden" name="p" value="debug"/>
       <input type="hidden" name="systemvars" value="1"/>
       <input type="submit" value="Do it!"/>
@@ -128,10 +135,11 @@
 [% ids = cgi.param('ids') %]
 <h4>Update Bibliographic Data</h4>
 <form action="crms">
-  <p class="smallishText">Enter one volume id per line.
-  Entries that don't have a namespace will be given an <code>mdp.</code> prefix.</p>
+  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="debug"/>
   <input type="hidden" name="fix" value="1"/>
+  <p class="smallishText">Enter one volume id per line.
+  Entries that don't have a namespace will be given an <code>mdp.</code> prefix.</p>
   <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;">[% ids %]</textarea><br/>
   <input type="submit" value="Submit"/>
 </form>
@@ -185,13 +193,14 @@
       [% id = e.1.match('.+?(\w+\.[A-Za-z]?\d+)').0 %]
       [% IF (e.0 == 'bibdata' || e.0 == 'candidates') && id %]
         <form action="crms">
-        <input type="hidden" name="p" value="debug"/>
-        [% IF e.0 == 'candidates' %]
-          <input type="hidden" name="candidates" value="1"/>
-        [% END %]
-        <input type="hidden" name="fix" value="1"/>
-        <input type="hidden" name="ids" value="[% id %]"/>
-        <input type="submit" value=""/>
+          [% crms.HiddenSys() %]
+          <input type="hidden" name="p" value="debug"/>
+          [% IF e.0 == 'candidates' %]
+            <input type="hidden" name="candidates" value="1"/>
+          [% END %]
+          <input type="hidden" name="fix" value="1"/>
+          <input type="hidden" name="ids" value="[% id %]"/>
+          <input type="submit" value=""/>
         </form>
       [% END %]
     </td>

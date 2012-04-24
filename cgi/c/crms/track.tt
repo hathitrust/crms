@@ -9,8 +9,9 @@
 
 <h2>Track Volumes:</h2>
 <form action="crms">
-  <label for="queryTA" class="smallishText">Enter one system id or volume id per line.</label><br/>
+  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="[% p %]"/>
+  <label for="queryTA" class="smallishText">Enter one system id or volume id per line.</label><br/>
   <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;">[% q %]</textarea>
   <input type="submit" value="Do it!"/>
 </form>

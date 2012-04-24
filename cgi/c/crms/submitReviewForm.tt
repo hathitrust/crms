@@ -8,6 +8,8 @@
   <input type="hidden" name="user"     value="[% user %]"/>
   <input type="hidden" name="confirm"  value="1"/>
   <input type="hidden" name="editing"  value="[% editing %]"/>
+  <input type="hidden" name="sys"      value="[% sys %]"/>
+  <div class="reviewBlue">
   <table class="display">
     <tr>
 	    <td class="display" align="left" colspan="4">
@@ -32,131 +34,144 @@
       </td>
     </tr>
   </table>
+  </div>
+  <div>
   <table class="reviewGrey">
+  [% ren = crms.GetSystemVar("showRenewal") %]
     <tr>
-      <td class="reviewGrey"><strong><label for="renewalField">Renewal&nbsp;ID: </label></strong></td>
+      [% IF ren %]
+        [% label = "Renewal&nbsp;ID" %]
+      [% ELSE %]
+        [% label = (renNum)? "Publication&nbsp;Date":"Author Death Date" %]
+      [% END %]
+      <td class="reviewGrey"><strong><label id="renewalFieldLabel" for="renewalField">
+      [% label %]: </label></strong></td>
       <td>
-        <input id="renewalField" title="Renewal ID" type="text" name="renNum"
-               value="[% renNum %]" size="8" onblur="javascript:popRenewalDate()"/>
+       [% IF ren %]
+        <input id="renewalField" title="[% label %]" type="text" name="renNum"
+               value="[% renNum %]" size="8"
+               onblur="javascript:popRenewalDate()"/>
+       [% ELSE %]
+         <input id="renewalField" title="[% label %]" type="text" name="renDate"
+               value="[% renDate %]" size="4"
+               onblur="javascript:PredictRights('[% barcode %]');"/>
+       [% END %]
       </td>
     </tr>
     <tr>
       <td class="reviewGrey" align="left" style="margin:0px;padding:0px;">
+      [% IF ren %]
         <input type="button" value="Get Renewal Date" onclick="popRenewalDate();" accesskey="d" class="reviewblue"
                style="margin:0px;padding:1px;background-color:#d0dee6;"/>
+      [% ELSE %]
+        <input type="checkbox" id="renewalFieldCheckbox" name="renNum"[% (renNum)? ' checked="checked"':'' %]
+               onchange="javascript:ToggleADD();javascript:PredictRights('[% barcode %]');">&nbsp;Publication Date</input>
+      [% END %]
       </td>
       <td>
+        [% IF ren %]
         <input type="text" title="Stanford Renewal Date" id="getDate" name="renDate"
                value="[% renDate %]" size="8" readonly="readonly"/>
+        [% END %]
       </td>
     </tr>
   </table>
+  </div>
+[% rights = crms.Rights() %]
 <div id="RightsCont" class="rightscont">
 <div id="RightsReason" style="position:relative;">
   <div style="position:absolute;top:0px;right:1em;">
     <a class="tip" href="#">
       <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
       <span>
-      <strong>pd/ncn</strong> - public domain/no printed copyright notice<br/>
-      <strong>pd/ren</strong> - public domain/copyright was not renewed<br/>
-      <strong>pd/cdpp</strong> - public domain/publication date* on piece is pre-1923 (US work)<br/>
-      <strong>ic/ren</strong> - in copyright/copyright was renewed<br/>
-      <strong>ic/cdpp</strong> - in copyright/publication date* on piece is post-1963 (US work)<br/>
-      <strong>und/nfi</strong> - undetermined/needs further investigation<br/>
-      <br/>
-      * if no publication date listed on piece, use copyright date
+      [% asterisk = 0 %]
+      [% FOR right IN rights %]
+        [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
+        <strong>[% ar %]</strong> - [% right.4 %]<br/>
+        [% IF right.4.search('\*') %][% asterisk = 1 %][% END %]
+      [% END %]
+      [% IF asterisk %]
+        <br/>* if no publication date listed on piece, use copyright date
+      [% END %]
       </span>
     </a>
   </div>
   <strong style="margin-left:10px">Rights/Reason:</strong>
   <br/>
-    [% keys = {"1" => "pd/ncn",    "2" => "pd/ren",  "3" => "pd/cdpp",
-               "4" => "ic/ren",    "5" => "ic/cdpp", "6" => "und/nfi",
-               "7" => "pdus/cdpp", "8" => "pd/add",  "9" => "pd/exp"} %]
-  <table>
-    <tr>
-      <td>
-        <input type="radio" id="r1" name="rights" value="1" accesskey="1"
-          [% IF select == "1" %] checked="checked"[% END %] />
-          <label for="r1">[% keys.${"1"} %] (1)</label>
+  [% USE Math %]
+  [% of = rights.size() %]
+  [% IF of > 0 %]
+    [% delta = Math.int(of / 2) %]
+    [% IF of % 2 == 1 %][% delta = delta + 1 %][% END %]
+    [% last = delta - 1 %]
+    <table>
+    [% FOREACH i IN [0 .. last] %]
+      <tr>
+      [% right = rights.$i %]
+      [% id = right.0 %]
+      [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
+      <td style="width:50%;">
+        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
+              [% IF select == id %] checked="checked"[% END %]/>
+        <label for="[% 'r' _ id %]">[% ar %] ([% id %])</label>
       </td>
-      <td>
-        <input type="radio" id="r4" name="rights" value="4" accesskey="4"
-          [% IF select == "4" %] checked="checked"[% END %] />
-          <label for="r4">[% keys.${"4"} %] (4)</label>
-      </td>
-    </tr>
-    <tr>
-      <td>
-        <input type="radio" id="r2" name="rights" value="2" accesskey="2"
-          [% IF select == "2" %] checked="checked"[% END %] />
-          <label for="r2">[% keys.${"2"} %] (2)</label>
-      </td>
-      <td>
-        <input type="radio" id="r5" name="rights" value="5" accesskey="5"
-          [% IF select == "5" %] checked="checked"[% END %] />
-          <label for="r5">[% keys.${"5"} %] (5)</label>
-      </td>
-    </tr>
-    <tr>
-      <td>
-        <input type="radio" id="r3" name="rights" value="3" accesskey="3"
-          [% IF select == "3" %] checked="checked"[% END %] />
-          <label for="r3">[% keys.${"3"} %] (3)</label>
-      </td>
-      <td>
-        <input type="radio" id="r6" name="rights" value="6" accesskey="6"
-          [% IF select == "6" %] checked="checked"[% END %] />
-          <label for="r6">[% keys.${"6"} %] (6)</label>
-      </td>
-    </tr>
-    [% IF expert || crms.IsUserAdmin(user) %]
-    <tr>
-      <td>
-        <input type="radio" id="r7" name="rights" value="7" accesskey="7"
-          [% IF select == "7" %] checked="checked"[% END %] />
-          <label for="r7">[% keys.${"7"} %] (7)</label>
-      </td>
-      [% IF crms.IsUserAdmin(user) %]
-        <td>
-          <input type="radio" id="r8" name="rights" value="8" accesskey="8"
-            [% IF select == "8" %] checked="checked"[% END %] />
-            <label for="r8">[% keys.${"8"} %] (8)</label>
-        </td>
-        </tr><tr>
-        <td>
-          <input type="radio" id="r9" name="rights" value="9" accesskey="9"
-            [% IF select == "9" %] checked="checked"[% END %] />
-            <label for="r9">[% keys.${"9"} %] (9)</label>
-        </td>
-        </tr>
+      [% j = i + delta %]
+      <td style="width:50%;">
+      [% IF j < of %]
+        [% right = rights.$j %]
+        [% id = right.0 %]
+        [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
+        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
+              [% IF select == id %] checked="checked"[% END %]/>
+        <label for="[% 'r' _ id %]">[% ar %] ([% id %])</label>
       [% END %]
-    </tr>
+      </td>
+      </tr>
     [% END %]
-  </table>
+    </table>
+  [% END %]
+  [% rights = crms.Rights(1) %]
+  [% of = rights.size() %]
+  [% IF of > 0 %]
+    <hr style="width:80%;margin-left:auto;margin-right:auto;"/>
+    [% delta = Math.int(of / 2) %]
+    [% IF delta % 2 == 1 %][% delta = delta + 1 %][% END %]
+    [% last = delta - 1 %]
+    <table>
+    [% FOREACH i IN [0 .. last] %]
+      <tr>
+      [% right = rights.$i %]
+      [% id = right.0 %]
+      [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
+      <td style="width:50%;">
+        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
+              [% IF select == id %] checked="checked"[% END %]/>
+        <label for="[% 'r' _ id %]">[% ar %] ([% id %])</label>
+      </td>
+      [% j = i + delta %]
+      <td style="width:50%;">
+      [% IF j < of %]
+        [% right = rights.$j %]
+        [% id = right.0 %]
+        [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
+        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
+              [% IF select == id %] checked="checked"[% END %]/>
+        <label for="[% 'r' _ id %]">[% ar %] ([% id %])</label>
+      [% END %]
+      </td>
+      </tr>
+    [% END %]
+    </table>
+  [% END %]
 </div>
 <div id="Notes">
   <strong><label for="catMenu">Notes: </label></strong>
-  <select id="catMenu" class="review" name="category">
-    [% ncs = {"Foreign Pub"    => "Foreign Pub",   "Language"        => "Language",
-              "Misc"           => "Misc",          "Missing"         => "Missing",
-              "Reprint"        => "Reprint",       "Periodical"      => "Periodical",
-              "Insert(s)"      => "Insert(s)",     "Translation"     => "Translation",
-              "Wrong Record"   => "Wrong Record",  "Date"            => "Date",
-              "Dissertation/Thesis" => "Dissertation/Thesis",
-              "Not Class A"    => "Not Class A",   "Expert Note"     => "Expert Note",
-              "Edition"        => "Edition",       ""                => "none",
-              "Expert Accepted" => "Expert Accepted"} 
-    %]
-    [% FOREACH nc IN ncs.sort %]
-      [%# IF nc == "Author Death Date" && !crms.IsUserAdmin(user) %][%# NEXT %][%# END %]
-      [% IF nc == "Expert Accepted" && category != "Expert Accepted" %][% NEXT %][% END %]
-      [% IF nc == "Expert Note" && (NOT expert) && (NOT crms.IsUserAdmin(user)) %][% NEXT %][% END %]
-      [% IF nc == category %]
-        <option value="[% nc %]" selected="selected">[% ncs.${nc} %]</option>
-      [% ELSE %]
-        <option value="[% nc %]">[% ncs.${nc} %]</option>
-      [% END %]
+  <select id="catMenu" class="review" name="category" onchange="javascript:PredictRights('[% barcode %]');">
+    <option value="" [% ("" == category)? 'selected="selected"':'' %]>none</option>
+    [% cats = crms.Categories(1) %]
+    [% FOREACH cat IN cats %]
+      [% catname = cat.1 %]
+      <option value="[% catname %]" [% (catname == category)? 'selected="selected"':'' %]>[% catname %]</option>
     [% END %]
   </select>
   <textarea title="Note Text" name="comment" cols="20" rows="1">[% comm %]</textarea>
@@ -172,7 +187,7 @@
   <table>
   [% IF expert %]
     <tr>
-      [% checked = ((swiss) || ((status == 2 || status == 3) && crms.GetSystemVar('swissByDefault'))) %]
+      [% checked = (swiss || ((status == 2 || status == 3) && crms.GetSystemVar('swissByDefault'))) %]
       <td style="text-align:left;" width="28">
         <input type="checkbox" id="swiss" name="swiss" [% (checked)? 'checked="checked"':'' %]/>
       </td>

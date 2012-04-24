@@ -36,7 +36,11 @@
   <table class="exportStats">
   <tr><th>User</th><td>               [% review.user %]</td></tr>
   <tr><th>Attr/Reason</th><td>        [% review.attr %]/[% review.reason %]</td></tr>
-  <tr><th>Renewal&nbsp;Info</th><td>  [% review.renDate %],[% review.renNum %]</td></tr>
+  <tr><th>Renewal&nbsp;Info</th><td>
+    [% IF review.renDate || review.renNum %]
+      [% review.renDate %],[% review.renNum %]
+    [% END %]
+    </td></tr>
   <tr><th>Note&nbsp;Category</th><td> [% review.category %]</td></tr>
   <tr><th>User&nbsp;Note</th><td>     [% review.note %]</td></tr>
   </table>

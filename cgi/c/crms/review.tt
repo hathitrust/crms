@@ -1,17 +1,18 @@
 [% INCLUDE header.tt %]
 
 [% error      = cgi.param('errorMsg')   %]
-[% barcode    = cgi.param('barcode') %]
-[% inAdd      = cgi.param('add') %]
-[% editing    = cgi.param('editing') %]
-[% renNum     = cgi.param('renNum') %]
-[% renDate    = cgi.param('renDate') %]
-[% comm       = cgi.param('comm') %]
-[% category   = cgi.param('category') %]
-[% select     = cgi.param('rights') %]
-[% question   = cgi.param('question') %]
-[% swiss      = cgi.param('swiss') %]
-[% mag        = cgi.cookie('mag') %]
+[% barcode    = cgi.param('barcode')    %]
+[% inAdd      = cgi.param('add')        %]
+[% editing    = cgi.param('editing')    %]
+[% renNum     = cgi.param('renNum')     %]
+[% renDate    = cgi.param('renDate')    %]
+[% comm       = cgi.param('comm')       %]
+[% category   = cgi.param('category')   %]
+[% select     = cgi.param('rights')     %]
+[% question   = cgi.param('question')   %]
+[% swiss      = cgi.param('swiss')      %]
+[% sys      = cgi.param('sys')          %]
+[% mag        = cgi.cookie('mag')       %]
 [% expert     = crms.IsUserExpert(user) %]
 
 [% SET mag = 100 IF !mag %]
@@ -65,14 +66,12 @@
   [% STOP %]
 [% END %]
 
-[% status    = crms.GetStatus(barcode)             %]
-[% userName  = crms.GetUserName(user)              %]
-[% pub_date  = crms.GetPublDate(barcode)           %]
-[% author    = crms.GetAuthor(barcode)             %]
-[% encAuthor = crms.GetEncAuthorForReview(barcode) %]
-[% title     = crms.GetTitle(barcode)              %]
-[% encTitle  = crms.GetEncTitle(barcode)           %]
-[% priority  = crms.GetPriority(barcode)           %]
+[% status    = crms.GetStatus(barcode)   %]
+[% userName  = crms.GetUserName(user)    %]
+[% pub_date  = crms.GetPublDate(barcode) %]
+[% author    = crms.GetAuthor(barcode)   %]
+[% title     = crms.GetTitle(barcode)    %]
+[% priority  = crms.GetPriority(barcode) %]
 
 [% IF NOT renNum %]
 [% renNum = crms.GetRenNum( barcode, user ) %]
@@ -83,7 +82,7 @@
 [% END %]
 
 [% IF NOT comm %]
-[% comm = crms.GetReviewField( barcode, user, "note" ) %]
+[% comm = crms.GetReviewField(barcode, user, "note") %]
 [% END %]
 
 [% IF NOT category %]
@@ -95,27 +94,27 @@
 [% END %]
 
 [%# links to PT, stanford DB search, or Mirlyn catalog %]
-[% authorLink = "http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$encAuthor" %]
-[% titleLink  = "http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$encTitle" %]
-[% searchForm = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/modify?clauseMapped(title)=$encTitle&amp;clauseMapped(author)=$encAuthor" %]
-[% ptLink     = crms.PTAddress(barcode) _ ";skin=crms;page=root;view=image;size=$mag" %]
-[% sysID      = crms.BarcodeToId(barcode) %]
-[% catLink    = "http://mirlyn.lib.umich.edu/Record/$sysID" %]
-[% catcLink   = "http://mirlyn-classic.lib.umich.edu/F?func=find-b&amp;find_code=MDN&amp;local_base=MIU01_PUB&amp;request=$barcode" %]
+[%# authorLink = "http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$encAuthor" %]
+[%# titleLink  = "http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$encTitle" %]
+[%# searchForm = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/modify?clauseMapped(title)=$encTitle&amp;clauseMapped(author)=$encAuthor" %]
+[%# ptLink     = crms.PTAddress(barcode) _ ";skin=crms;page=root;view=image;size=$mag" %]
+[%# sysID      = crms.BarcodeToId(barcode) %]
+[%# catLink    = "http://mirlyn.lib.umich.edu/Record/$sysID" %]
+[%# catcLink   = "http://mirlyn-classic.lib.umich.edu/F?func=find-b&amp;find_code=MDN&amp;local_base=MIU01_PUB&amp;request=$barcode" %]
 [% #wCatLink  = "http://www.worldcat.org/search?qt=worldcat_org_bks;fq=dt%3Abks;q=$encTitle" %]
 [% #uscorLink = "http://cocatalog.loc.gov/cgi-bin/Pwebrecon.cgi?DB=local;PAGE=First;Search_Arg=$encTitle" %]
-[% homeLink   = "crms?p=confirmReview;submit=Cancel;barcode=$barcode" %]
+[% homeLink   = "crms?p=confirmReview;submit=Cancel;barcode=$barcode;sys=$sys" %]
 
 <div class="divbody">
   <div class="divNav">
     <div class="navtop">
       <table class="nav">
         <tr>
-          <td rowspan="2"><img src="/c/crms/crmsblue.png" alt="CRMS Logo" width="52" height="40"/></td>
+          <td rowspan="2"><img src="[% crms.GetSystemVar('smallLogo') %]" alt="CRMS Logo" width="52" height="40"/></td>
           <td style="text-align:left;"><strong>Hello [% userName %]</strong></td>
         </tr>
         <tr>
-          <td style="text-align:left;"><a href="[% homeLink %]">Home</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="crms?p=Logout">Logout</a></td>
+          <td style="text-align:left;"><a href="[% homeLink %]">Home</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="crms?p=Logout;sys=$sys">Logout</a></td>
         </tr>
         <tr><td/></tr><tr><td/></tr><tr><td/></tr>
         <tr>
@@ -123,13 +122,10 @@
             <select title="Select Help Documentation" class="review"
                     onchange="if (this.selectedIndex > 0) window.open(this.options[this.selectedIndex].value, '_blank');this.selectedIndex=0;">
               <option>Select Help Documentation</option>
-              <option value="/c/crms/pdf/DecisionTree.pdf">Decision Tree</option>
-              <option value="/c/crms/pdf/DecisionTreeHelp.pdf">Decision Tree Help</option>
-              <option value="/c/crms/pdf/NotClassA.pdf">Not&nbsp;Class&nbsp;A&nbsp;Help</option>
-              <option value="/c/crms/pdf/StanfordHelp.pdf">Stanford&nbsp;Renewal&nbsp;Database&nbsp;Help</option>
-              <option value="/c/crms/pdf/CRMS-Guidelines.pdf">Determination Guidelines</option>
-              <option value="/c/crms/pdf/InterfaceHelp.pdf">Review Interface Help</option>
-              <option value="https://webservices.itcs.umich.edu/mediawiki/CRMS%20Wiki/index.php/Main_Page">CRMS Wiki/FAQ</option>
+              [% items = crms.MenuItems('docs') %]
+              [% FOREACH item IN items %]
+                [% IF ! item.3 %]<option value="[% item.1 %]">[% item.0 %]</option>[% END %]
+              [% END %]
             </select>
           </td>
         </tr>
@@ -140,6 +136,11 @@
         <tr><td><strong>Title:</strong> [% title %]           </td></tr>
         <tr><td><strong>Author:</strong> [% author %]    <br/></td></tr>
         <tr><td><strong>Pub Date:</strong> [% pub_date %]<br/></td></tr>
+        [% country = "" %]
+        [% IF crms.GetSystemVar("showCountry") %]
+          [% country = crms.GetPubCountry(barcode, undef, 1) %]
+          <tr><td><strong>Country:</strong> [% country %]<br/></td></tr>
+        [% END %]
         <tr>
           <td>
             <a class="tip" href="#">
@@ -155,31 +156,46 @@
           </td>
         </tr>
       </table>
-
+      [% sources = crms.Sources(barcode,mag) %]
       <table class="search">
         <tr>
-          <th>Search 1:</th>
+          <th>View 1:</th>
           <td>
-            <select title="Search 1" class="review" id="search1Select" onchange="changeFrame1();" style="float:right;">
-              <option id="ht1" value="[% ptLink %]" selected="selected">HathiTrust</option>
-              <option id="m1" value="[% catLink %]">Mirlyn</option>
-              <option id="mc1" value="[% catcLink %]">Mirlyn Classic</option>
-              <option value="[% titleLink %]">Stanford Title</option>
-              <option value="[% authorLink %]">Stanford Author</option>
-              <option value="[% searchForm %]">Stanford Advanced</option>
+            <select title="Search 1" class="review" id="search1Select" onchange="changeFrame1(1);" style="float:right;">
+            [% selectit = 0 %]
+            [% FOREACH src IN sources %]
+              [% IF src.2 %]
+                [% selectstr = "" %]
+                [% IF selectit == 1 || src.5 == 1 %]
+                  [% selectit = 2 %]
+                  [% selectstr = "selected='selected'" %]
+                [% END %]
+                <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
+              [% ELSE %]
+                <optgroup label="[% src.1 %]">
+              [% END %]
+            [% END %]
             </select>
           </td>
         </tr>
         <tr>
-          <th>Search 2:</th>
+          <th>View 2:</th>
           <td>
-            <select title="Search 2" class="review" id="search2Select" onchange="changeFrame2();" style="float:right;">
-              <option value="[% ptLink %]">HathiTrust</option>
-              <option value="[% catLink %]">Mirlyn</option>
-              <option value="[% catcLink %]">Mirlyn Classic</option>
-              <option value="[% titleLink %]" selected="selected">Stanford Title</option>
-              <option value="[% authorLink %]">Stanford Author</option>
-              <option value="[% searchForm %]">Stanford Advanced</option>
+            <select title="Search 2" class="review" id="search2Select" onchange="changeFrame2(1);" style="float:right;">
+            [% selectit = 0 %]
+            [% FOREACH src IN sources %]
+              [% IF src.2 %]
+                [% selectstr = "" %]
+                [% IF selectit == 1 || src.5 == 2 %]
+                  [% selectit = 2 %]
+                  [% selectstr = "selected='selected'" %]
+                [% END %]
+                <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
+              [% ELSE %]
+                <optgroup label="[% src.1 %]">
+                [% IF country && country == src.1 %][% selectit = 1 %][% END %]
+              [% END %]
+            [% END %]
             </select>
           </td>
         </tr>
@@ -193,32 +209,24 @@
         </tr>
       </table>
     </div>
-    
-    <a style="position:absolute;left:-999px;" href="#" accesskey="h"
-       onfocus="document.getElementById('search1Select').selectedIndex=0;changeFrame1();">.</a>
-    <a style="position:absolute;left:-999px;" href="#" accesskey="v"
-       onfocus="document.getElementById('search1Select').selectedIndex=1;changeFrame1();">.</a>
-    <a style="position:absolute;left:-999px;" href="#" accesskey="m"
-       onfocus="document.getElementById('search1Select').selectedIndex=2;changeFrame1();">.</a>
-    <a style="position:absolute;left:-999px;" href="#" accesskey="t"
-       onfocus="document.getElementById('search2Select').selectedIndex=3;changeFrame2();">.</a>
-    <a style="position:absolute;left:-999px;" href="#" accesskey="a"
-       onfocus="document.getElementById('search2Select').selectedIndex=4;changeFrame2();">.</a>
-    <a style="position:absolute;left:-999px;" href="#" accesskey="q"
-       onfocus="document.getElementById('search2Select').selectedIndex=5;changeFrame2();">.</a>
+    [% FOREACH src IN sources %]
+      [% IF src.3 && src.4 %]
+        <a style="position:absolute;left:-999px;" href="#" accesskey="[% src.3 %]"
+           onfocus="document.getElementById('search[% src.4 %]Select').selectedIndex=[% src.0 %];changeFrame[% src.4 %]();">.</a>
+      [% END %]
+    [% END %]
     
     <div class="navbottom" style="border-collapse:collapse;">
-      [% comment = "" %]
       [% IF expert && editing %]
         [% IF crms.HasItemBeenReviewedByAnotherExpert(barcode,user) %]
           [% error = "An expert has already reviewed this volume. Please cancel." %]
         [% END %]
       [% END %]
       [% INCLUDE submitReviewForm.tt barcode  = barcode,  renNum   = renNum,   renDate  = renDate,
-                                     comm     = comm,    category  = category, editing  = editing,
-                                     error    = error,   select    = select,   mag      = mag,
+                                     comm     = comm,     category = category, editing  = editing,
+                                     error    = error,    select   = select,   mag      = mag,
                                      question = question, swiss    = swiss,    expert   = expert,
-                                     status   = status %]
+                                     status   = status,   sys      = sys %]
       [% IF expert %]
         <table class="nav">
         [% IF status == 3 %]
@@ -251,9 +259,18 @@
   </div>
   [%# the frame (Stanford, HT, Cat...) %]
   <div class="divFrame" id="divFrame">
-    <iframe frameborder="0" width="100%" height="100%" id="topFrame" name="topFrame" src="[% ptLink %]"></iframe>
-    <iframe frameborder="0" width="100%" height="0%"   id="bFrame"   name="bFrame"   src="[% titleLink %]"></iframe>
+    <iframe frameborder="0" width="100%" height="100%" id="topFrame" name="topFrame" src=""></iframe>
+    <iframe frameborder="0" width="100%" height="0%"   id="bFrame"   name="bFrame"   src=""></iframe>
   </div>
 </div>
+
+<script language="javascript">
+window.onload = function(e)
+{
+  changeFrame1();
+  changeFrame2();
+}
+</script>
+
 
 [% INCLUDE footer.tt %]

@@ -38,78 +38,42 @@ function CheckAll(box,formid)
   [% END %]
 [% END %]
 
-[% r = crms.IsUserReviewer || crms.IsUserAdvancedReviewer || crms.IsUserExpert %]
-[% e = crms.IsUserExpert %]
-[% ea = crms.IsUserExtAdmin %]
-[% a = crms.IsUserAdmin %]
-[% s = crms.IsUserSuperAdmin %]
-[% i = crms.IsUserIncarnationExpertOrHigher %]
-
+[% sys = cgi.param('sys') %]
 <table class="mainnav">
-<tr><th><span class="minor">Review</span></th><th><span class="major">Search/Browse</span></th></tr>
-<tr>
-<td>
-[% IF r %]     <a href="crms?p=review">Review</a><br/>                                                    [% END %]
-[% IF e %]     <a href="crms?p=undReviews">Provisional&nbsp;Matches</a><br/>                              [% END %]
-[% IF e %]     <a href="crms?p=expert">Conflicts</a><br/>                                                 [% END %]
-[% IF r || e %]<a href="crms?p=editReviews">My&nbsp;Unprocessed&nbsp;Reviews</a><br/>                     [% END %]
-[% IF r || e %]<a href="crms?p=holds">My Held Reviews</a><br/>                                            [% END %]
-[% IF a || s %]<a href="crms?p=inherit;auto=1">Automatic&nbsp;Rights&nbsp;Inheritance</a><br/>            [% END %]
-[% IF a || s %]<a href="crms?p=inherit;auto=0">Rights&nbsp;Inheritance&nbsp;Pending&nbsp;Approval</a><br/>[% END %]
-</td>
-<td>
-                          <a href="crms?p=adminHistoricalReviews">Historical&nbsp;Reviews</a><br/>
-[% IF e || a || s || ea %]<a href="crms?p=adminReviews">Active&nbsp;Reviews</a><br/>              [% END %]
-[% IF e || a || s || ea %]<a href="crms?p=adminHolds">All&nbsp;Held&nbsp;Reviews</a><br/>         [% END %]
-[% IF e || a || s %]      <a href="crms?p=queue">Volumes&nbsp;in&nbsp;Queue</a><br/>              [% END %]
-</td>
-</tr>
-<tr><th><span class="total">Documentation</span></th><th><span class="orange">Stats/Reports</span></th></tr>
-<tr>
-<td>
-               <a href="/c/crms/pdf/DecisionTree.pdf" target="_blank">Decision&nbsp;Tree</a><br/>
-               <a href="/c/crms/pdf/DecisionTreeHelp.pdf" target="_blank">Decision&nbsp;Tree&nbsp;Help</a><br/>
-               <a href="/c/crms/pdf/NotClassA.pdf" target="_blank">Not&nbsp;Class&nbsp;A&nbsp;Help</a><br/>
-               <a href="/c/crms/pdf/StanfordHelp.pdf" target="_blank">Stanford&nbsp;Renewal&nbsp;Database&nbsp;Help</a><br/>
-               <a href="/c/crms/pdf/CRMS-Guidelines.pdf" target="_blank">Determination&nbsp;Guidelines</a><br/>
-               <a href="/c/crms/pdf/InterfaceHelp.pdf#zoom=100" target="_blank">Review&nbsp;Interface&nbsp;Help</a><br/>
-               <a href="https://webservices.itcs.umich.edu/mediawiki/CRMS%20Wiki/index.php/Main_Page" target="_blank">CRMS&nbsp;Wiki/FAQ</a><br/>
-[% IF a || s %]<a href="/c/crms/pdf/ReviewSearchHelp.pdf" target="_blank">Review&nbsp;Search&nbsp;Help</a><br/>             [% END %]
-[% IF a || s %]<a href="/c/crms/pdf/ReviewSearchTerms.pdf" target="_blank">Review&nbsp;Search&nbsp;Terms</a><br/>           [% END %]
-[% IF a || s %]<a href="/c/crms/pdf/MyReviewStatsHelp.pdf" target="_blank">My&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>     [% END %]
-[% IF a || s %]<a href="/c/crms/pdf/AllReviewStatsHelp.pdf" target="_blank">All&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>   [% END %]
-[% IF a || s %]<a href="/c/crms/pdf/UserLevelsPrivileges.pdf" target="_blank">User&nbsp;Levels/Privileges</a><br/>          [% END %]
-[% IF a || s %]<a href="/c/crms/pdf/AdministrativeContacts.pdf" target="_blank">Administrative&nbsp;Contacts</a><br/>       [% END %]
-[% IF a || s %]<a href="/c/crms/pdf/SystemGeneratedReviews.pdf" target="_blank">System&nbsp;Generated&nbsp;Reviews</a><br/> [% END %]
-[% IF a || s %]<a href="/c/crms/pdf/CRMSStatusCodes.pdf" target="_blank">CRMS&nbsp;Status&nbsp;Codes</a><br/>               [% END %]
-</td>
-<td>
-[% IF r || e %]     <a href="crms?p=userRate">My&nbsp;Review&nbsp;Stats</a><br/>                               [% END %]
-[% IF e || a || s %]<a href="crms?p=adminUserRate">All&nbsp;Review&nbsp;Stats</a><br/>                         [% END %]
-[% affs = crms.GetAffiliations() %]
-[% FOREACH aff IN affs %]
-  [% IF crms.CanUserSeeInstitutionalStats(aff) %]
-                    <a href="crms?p=adminUserRateInst;inst=[% aff %]">[% aff %]&nbsp;Review&nbsp;Stats</a><br/>[% END %]
-[% END %]
-[% IF e || a || s %]<a href="crms?p=queueStatus">System&nbsp;Summary</a><br/>                                  [% END %]
-[% IF e || a || s %]<a href="crms?p=determinationStats">Determinations&nbsp;Breakdown</a><br/>                 [% END %]
-[% IF e || a || s %]<a href="crms?p=exportStats">Export&nbsp;Stats</a><br/>                                    [% END %]
-</td></tr>
-[% IF e || a || s || i %]
-<tr><th colspan="2"><span class="red">Administrative</span></th></tr>
-<tr>
-<td colspan="2">
-                    <a href="crms?p=adminUser">User&nbsp;Accounts</a><br/>
-[% IF e || a || s %]<a href="crms?p=rights">Query&nbsp;Rights&nbsp;Database</a><br/>  [% END %]
-[% IF e || a || s %]<a href="crms?p=retrieve">Retrieve&nbsp;Volume&nbsp;IDs</a><br/>  [% END %]
-[% IF e || a || s %]<a href="crms?p=track">Track&nbsp;Volumes</a><br/>                [% END %]
-[% IF a || s %]     <a href="crms?p=adminQueue">All&nbsp;Locked&nbsp;Volumes</a><br/> [% END %]
-[% IF e || a || s %]<a href="crms?p=queueAdd">Add&nbsp;to&nbsp;Queue</a><br/>         [% END %]
-[% IF a || s %]     <a href="crms?p=systemStatus">Set&nbsp;System&nbsp;Status</a><br/>[% END %]
-[% IF s %]          <a href="crms?p=debug">System&nbsp;Administration</a><br/>        [% END %]
-</td></tr>
+[% menus = crms.Menus() %]
+[% i = 0 %]
+[% of = menus.size() %]
+[% FOREACH menu IN menus %]
+  [% id = menu.0 %]
+  [% IF i % 2 == 0 %]
+    [% class1 = (menus.$i.2)? 'class="' _ menus.$i.2 _ '"':'' %]
+    [% class2 = 0 %]
+    [% j = i+1 %]
+    [% IF j < of %]
+      [% class2 = (menus.$j.2)? 'class="' _ menus.$j.2 _ '"':'' %]
+      <tr><th><span $class1>[% menus.$i.1 %]</span></th><th><span $class2>[% menus.$j.1 %]</span></th></tr>
+    [% ELSE %]
+      <tr><th colspan='2'><span $class1>[% menus.$i.1 %]</span></th></tr>
+    [% END %]
+  [% END %]
+  [% colspan = '' %]
+  [% IF i % 2 == 0 %]
+    [% IF j >= of %][% colspan = 'colspan="2"' %]<tr>[% END %]
+  [% END %]
+    <td $colspan>
+    [% items = crms.MenuItems(id) %]
+    [% FOREACH item IN items %]
+      [% target = (item.4)? ' target="' _ item.4 _ '"':'' %]
+      [% url = item.1 %]
+      [% IF sys %][% url = url _ ';sys=' _  sys %][% END %]
+      <a href="[% url %]"[% target %]>[% item.0.replace('\s', '&nbsp;') %]</a><br/>
+    [% END %]
+    </td>
+    [% IF i % 2 != 0 %]</tr>[% END %]
+  [% i = i + 1 %]
 [% END %]
 </table>
+
 
 [% sysStatus = crms.GetSystemStatus().1 %]
 [% locked = crms.GetLockedItems(user) %]
@@ -132,7 +96,7 @@ function CheckAll(box,formid)
       <td style="text-align:center">[% when.replace('\s', '&nbsp;') %]</td>
       <td style="text-align:center"><input type="checkbox" name="vol_[% item %]"/></td>
       <td style="text-align:center">
-        [% IF sysStatus == 'normal' %]<a href="crms?unlock=[% item %]">do it</a>[% END %]
+        [% IF sysStatus == 'normal' %]<a href="crms?unlock=[% item %];sys=[% sys %]">do it</a>[% END %]
       </td>
     </tr>
   [% END %]

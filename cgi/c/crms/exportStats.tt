@@ -3,7 +3,8 @@
 <h2 style="margin-left:390px">Statistics for Exported Determinations</h2>
 <br/>
 
-<h3>CRMS&nbsp;Project&nbsp;Cumulative*&nbsp;&nbsp;&nbsp;&nbsp;<a target="_blank" href="/cgi/c/crms/getExportStats?type=text;c=1">Download</a></h3>
+[% url = crms.Sysify('/cgi/c/crms/getExportStats?type=text;c=1') %]
+<h3>CRMS&nbsp;Project&nbsp;Cumulative*&nbsp;&nbsp;&nbsp;&nbsp;<a target="_blank" href="[% url %]">Download</a></h3>
 <table style="width:100px;">
   <tr>
     <td>[% report = crms.CreateExportReport(1) %]

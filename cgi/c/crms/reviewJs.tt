@@ -4,26 +4,30 @@ function redirHome()   { window.location = "crms" }
 function redirReview() { window.location = "crms?p=review" }
 function redirExpert() { window.location = "crms?p=expert" }
 
-function changeFrame1() {
+function changeFrame1(doSize) {
   var sel = document.getElementById("search1Select");
   var url = sel.options[sel.selectedIndex].value;
-  if (document.getElementById("topFrame").src != url)
+  var tf = document.getElementById("topFrame");
+  if (tf.src != url) tf.src = url;
+  if (doSize)
   {
-    document.getElementById("topFrame").src = url;
-    size = (document.getElementById("topFrame").height);
-    if (size != "100%") flipFrame();
+    if (tf.height != "100%") tf.height = "100%";
+    document.getElementById("bFrame").height   = "0%";
   }
+  //alert("Iframe 1 is loaded");
 }
 
-function changeFrame2() {
+function changeFrame2(doSize) {
   var sel = document.getElementById("search2Select");
   var url = sel.options[sel.selectedIndex].value;
-  if (document.getElementById("bFrame").src != url)
+  var bf = document.getElementById("bFrame");
+  if (bf.src != url) bf.src = url;
+  if (doSize)
   {
-    document.getElementById("bFrame").src = url;
-    size = (document.getElementById("bFrame").height);
-    if (size != "100%") flipFrame();
+    if (bf.height != "100%") bf.height = "100%";
+    document.getElementById("topFrame").height = "0%";
   }
+  //alert("Iframe 2 is loaded");
 }
 
 
@@ -45,45 +49,91 @@ function flipFrame() {
     }
 }
 
-function popRenewalDate() {
-    var req = null; 
-    var id  = document.submitReview.renNum.value
-    //var old = document.submitReview.renDate.value;
-    
-    if (window.XMLHttpRequest)
-    {
-         req = new XMLHttpRequest();
-    } 
-    else if (window.ActiveXObject) 
+function popRenewalDate()
+{
+  var req = null; 
+  var id  = document.submitReview.renNum.value
+  //var old = document.submitReview.renDate.value;
+
+  if (window.XMLHttpRequest)
+  {
+    req = new XMLHttpRequest();
+  } 
+  else if (window.ActiveXObject) 
+  {
+    try {
+        req = new ActiveXObject("Msxml2.XMLHTTP");
+    } catch (e)
     {
         try {
-            req = new ActiveXObject("Msxml2.XMLHTTP");
-        } catch (e)
-        {
-            try {
-                req = new ActiveXObject("Microsoft.XMLHTTP");
-            } catch (e) {}
-        }
+            req = new ActiveXObject("Microsoft.XMLHTTP");
+        } catch (e) {}
     }
+  }
+  req.onreadystatechange = function()
+  { 
+    document.submitReview.renDate.value = "Searching...";
+    if(req.readyState == 4)
+    {
+      if(req.status == 200)
+      {
+        document.submitReview.renDate.value= req.responseText;    
+      }    
+      else    
+      {
+        // document.submitReview.renDate.value = old;
+        document.submitReview.renDate.value = "";
+      }
+    } 
+  }; 
+  req.open("GET", "/cgi/c/crms/getRenewalDate?id=" + id, true); 
+  req.send(null);
+}
 
-    req.onreadystatechange = function()
-    { 
-        document.submitReview.renDate.value = "Searching...";
-        if(req.readyState == 4)
+function PredictRights(id)
+{
+  var renewalField = document.getElementById("renewalField");
+  var year = renewalField.value;
+  var isPub = (document.getElementById('renewalFieldCheckbox').checked)? 1:0;
+  var isCrown = (SelectedCategory() == 'Crown Copyright')? 1:0;
+  var req = null;
+
+  if (window.XMLHttpRequest)
+  {
+    req = new XMLHttpRequest();
+  } 
+  else if (window.ActiveXObject)
+  {
+    try {
+        req = new ActiveXObject("Msxml2.XMLHTTP");
+    } catch (e)
+    {
+        try {
+            req = new ActiveXObject("Microsoft.XMLHTTP");
+        } catch (e) {}
+    }
+  }
+  req.onreadystatechange = function()
+  { 
+    if (req.readyState == 4)
+    {
+      if (req.status == 200)
+      {
+        rights = document.getElementsByName("rights");
+        sel = GetCheckedValue(rights);
+        if (sel != "")
         {
-            if(req.status == 200)
-            {
-                document.submitReview.renDate.value= req.responseText;    
-            }    
-            else    
-            {
-                // document.submitReview.renDate.value = old;
-                document.submitReview.renDate.value = "";
-            }
-        } 
-    }; 
-    req.open("GET", "/cgi/c/crms/getRenewalDate?id=" + id, true); 
-    req.send(null);
+          button = document.getElementById("r" + sel);
+          button.checked = "";
+        }
+        //alert(req.responseText);
+        button = document.getElementById("r" + req.responseText);
+        if (button) button.checked = "checked"
+      }    
+    } 
+  }; 
+  req.open("GET", "/cgi/c/crms/predictRights?sys=crmsworld;id=" + id + ";year=" + year + ";pub=" + isPub + ";crown=" + isCrown, true); 
+  req.send(null);
 }
 
 function ShowPopup(hoveritem)
@@ -115,7 +165,16 @@ function toggle()
   hp = document.getElementById(1);
   var color = hp.checked? "red" : "red"; 
   hp.style.color = color;
-} 
+}
+
+function ToggleADD()
+{
+  var lab = document.getElementById("renewalFieldLabel");
+  var cb = document.getElementById("renewalFieldCheckbox");
+  var field = document.getElementById("renewalField");
+  lab.innerHTML = (cb.checked)? "Publication&nbsp;Date:":"Author&nbsp;Death&nbsp;Date:";
+  field.title = (cb.checked)? "Publication Date":"Author Death Date";
+}
 
 function VerifyCategory()
 {
@@ -125,13 +184,17 @@ function VerifyCategory()
   {
     return (confirm('Please confirm that this work is, or is derived from, a non-US publication from 1871-1922.'));
   }
-  var cat = document.getElementById("catMenu");
-  var sel = cat.options[cat.selectedIndex].value;
-  if (sel == "Missing")
+  if (SelectedCategory() == "Missing")
   {
     return (confirm('Please confirm that you have submitted a Feedback report within the PageTurner.'));
   }
   return true;
+}
+
+function SelectedCategory()
+{
+  var cat = document.getElementById("catMenu");
+  return cat.options[cat.selectedIndex].value;
 }
 
 // return the value of the radio button that is checked

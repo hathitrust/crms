@@ -3,7 +3,7 @@
   [% STOP %]
 [% END %]
 
-[% INCLUDE header.tt    %]
+[% INCLUDE header.tt %]
 
 [% ids = cgi.param('ids') %]
 [% pri = cgi.param('priority') %]
@@ -12,13 +12,18 @@
 [% IF NOT pri %][% pri = 0 %][% END %]
 [% IF NOT admin %][% override = 0 %][% END %]
 
+[% min = crms.GetCutoffYear('minYear') %]
+[% max = crms.GetCutoffYear('maxYear') %]
+[% max2 = crms.GetCutoffYear('maxYearOverride') %]
+[% canOverride = (max != max2) %]
+
 <h2>Add Volumes to the Queue:</h2>
 These items will take priority in the review process.
 <table style="width:75%;"><tr><td>
 <form action="crms">
   <p class="smallishText">Enter one volume id per line.
   Entries that don't have a namespace will be given an <code>mdp.</code> prefix.</p>
-  <input type="hidden" name="p" value="queueAdd"/>
+  [% crms.Hiddenify(cgi, 'ids', 'priority') %]
   <textarea name="ids" cols="30" rows="30" style="height:9em;">[% ids %]</textarea><br/>
   [% IF admin %]
   <select name="priority" onchange="document.getElementById('ORCheck').disabled=(this.selectedIndex!=2);">
@@ -31,7 +36,7 @@ These items will take priority in the review process.
     [% IF admin %]<option value="4" [% (pri==4)? 'selected="selected"':'' %]>Priority 4</option>[% END %]
   </select>
   &nbsp;&nbsp;&nbsp;
-  [% IF admin %]
+  [% IF admin && canOverride %]
   Override Restrictions
   <input type="checkbox" id="ORCheck" name="override" [% (pri!=3)? 'disabled="disabled"':'' %][% override? 'checked="checked"':'' %]/>
   [% END %]
@@ -43,21 +48,22 @@ These items will take priority in the review process.
 <ul>
 <li><span class="smallishText">Priority 2 can be added by an expert, admin, or superadmin and can be reviewed by anyone.</span></li>
 <li><span class="smallishText">Priority 3 can only be added or reviewed by an expert, admin, or superadmin.
-[% IF admin %]
-<br/>
-<i>Override Restrictions</i> allows admins and superadmins to add US books published 1964-1977.</span></li>
+[% IF admin && canOverride %]
+  <br/><i>Override Restrictions</i> allows admins and superadmins to add US books published [% max + 1 %]-[% max2 %].
 [% END %]
+</li>
 [% IF admin %]
-<li><span class="smallishText">Priority 4 only allows admins and superadmins to add any work in HathiTrust, including<br/>
-government documents, foreign works, non-books, and items from before 1923 or after 1977.</span></li>
+  <li><span class="smallishText">Priority 4 only allows admins and superadmins to add any work in HathiTrust, including<br/>
+  government documents, foreign works, non-books, and items from before [% min %] or after [% max2 %].</span></li>
 [% END %]
 </ul>
 </td></tr></table>
-<br/>
+
 [% adds = 0 %]
 [% skips = 0 %]
 [% already = 0 %]
 [% IF ids %]
+  <br/>
   <table class="exportStats" style="width:33%;">
   [% FOREACH id IN ids.split %]
     [% id = crms.Unescape(id) %]
@@ -115,13 +121,7 @@ government documents, foreign works, non-books, and items from before 1923 or af
     [% ELSE %]
       <a href="/cgi/c/crms/crms?p=queue;search1=Identifier;search1value=[% r.0 %]" target="_blank">
     [% END %]
-    [% r.0 %]</a>
-    [% IF crms.IsLockedForOtherUser(r.0) %]
-      <img width="16" height="16" alt="Locked" src="/c/crms/OtherLock.png"/>
-    [% ELSIF crms.IsLockedForUser(r.0, user) %]
-      <img width="16" height="16" alt="Locked by me" src="/c/crms/Lock.png"/>
-    [% END %]
-    </td>
+    [% r.0 %]</a></td>
     <td>[% cgi.escapeHTML(r.1) %]</td>
     <td>[% cgi.escapeHTML(r.2) %]</td>
     <td>[% r.3 %]</td>

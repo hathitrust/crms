@@ -92,7 +92,7 @@ Restrict selection:
 </td>
 <td>
 <input type="radio" name="dateType" value="date" [% dateType == 'date' ? 'checked="checked"':'' %]/> Export Date<br/>
-<input type="radio" name="dateType" value="idate" [% dateType == 'idate' ? 'checked="checked"':'' %]/> Inerit Date<br/>
+<input type="radio" name="dateType" value="idate" [% dateType == 'idate' ? 'checked="checked"':'' %]/> Inherit Date<br/>
 </td>
 </tr></table>
 
@@ -229,18 +229,7 @@ function VerifyDelete(formid)
   [% items = ref.rows %]
   
   <form action="crms" id="checks">
-    <input type="hidden" name="p" value="$p"/>
-    <input type="hidden" name="search1" value="$search1"/>
-    <input type="hidden" name="search1value" value="$search1value"/>
-    <input type="hidden" name="startDate" value="$startDate"/>
-    <input type="hidden" name="endDate" value="$endDate"/>
-    <input type="hidden" name="dateType" value="$dateType"/>
-    <input type="hidden" name="order" value="$order"/>
-    <input type="hidden" name="order2" value="$order2"/>
-    <input type="hidden" name="dir" value="$dir"/>
-    <input type="hidden" name="dir2" value="$dir2"/>
-    <input type="hidden" name="records" value="$pagesize"/>
-    <input type="hidden" name="auto" value="$auto"/>
+    [% crms.Hiddenify(cgi) %]
     <input type="checkbox" id='all' onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
     [% IF !auto %]
       <input type="submit" name="inherit" value="Inherit from Selected Volumes"/>
@@ -257,38 +246,28 @@ function VerifyDelete(formid)
     [% doPrev = (n > 1) %]
     [% doNext = (n < of) %]
     [% IF doPrev %]
-      [% prev = n - 1 %]
-      <a href="?p=$p;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=$prev;records=$recs;auto=$auto">
+    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">previous [% pagesize %]</a>
     [% ELSE %]
-      <span class="disabledLink">
+    <span class="disabledLink">previous [% pagesize %]</span>
     [% END %]
-    previous [% recs %]
-    [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
     [% IF doNext %]
-      [% next = n + 1 %]
-      <a href="?p=$p;id=$id;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=$next;records=$recs;auto=$auto">
+    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$next#results" %]">next [% pagesize %]</a>
     [% ELSE %]
-      <span class="disabledLink">
+    <span class="disabledLink">next [% pagesize %]</span>
     [% END %]
-    next [% recs %]
-    [% IF doNext %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
-    [% IF doPrev %]
-      <a href="?p=$p;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=1;records=$recs;auto=$auto">
+    [% IF doFirst %]
+    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0#results" %]">first page<a>
     [% ELSE %]
-      <span class="disabledLink">
+    <span class="disabledLink">first page</span>
     [% END %]
-    first page
-    [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
-    [% IF doNext %]
-      <a href="?p=$p;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=$of;records=$recs;auto=$auto">
+    [% IF doLast %]
+    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$last#results" %]">last page</a>
     [% ELSE %]
-      <span class="disabledLink">
+    <span class="disabledLink">last page</span>
     [% END %]
-    last page
-    [% IF doNext %]</a>[% ELSE %]</span>[% END %]
     
     [% color_white  = '#FFFFFF' %]
     [% color_gray   = '#FFCBCC' %]
@@ -355,38 +334,28 @@ function VerifyDelete(formid)
     </table>
     <p><b>Found $inheriting volume[% (inheriting==1)? "":"s"%] from $source source[% (source==1)? "":"s"%], page $n of $of</b></p>
     [% IF doPrev %]
-      [% prev = n - 1 %]
-      <a href="?p=$p;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=$prev;records=$recs;auto=$auto">
+    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">previous [% pagesize %]</a>
     [% ELSE %]
-      <span class="disabledLink">
+    <span class="disabledLink">previous [% pagesize %]</span>
     [% END %]
-    previous [% recs %]
-    [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
     [% IF doNext %]
-      [% next = n + 1 %]
-      <a href="?p=$p;id=$id;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=$next;records=$recs;auto=$auto">
+    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$next#results" %]">next [% pagesize %]</a>
     [% ELSE %]
-      <span class="disabledLink">
+    <span class="disabledLink">next [% pagesize %]</span>
     [% END %]
-    next [% recs %]
-    [% IF doNext %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
-    [% IF doPrev %]
-      <a href="?p=$p;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=1;records=$recs;auto=$auto">
+    [% IF doFirst %]
+    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0#results" %]">first page<a>
     [% ELSE %]
-      <span class="disabledLink">
+    <span class="disabledLink">first page</span>
     [% END %]
-    first page
-    [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
-    [% IF doNext %]
-      <a href="?p=$p;search1=$search1;search1value=$search1value;startDate=$startDate;endDate=$endDate;order=$order;order2=$order2;dir=$dir;n=$of;records=$recs;auto=$auto">
+    [% IF doLast %]
+    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$last#results" %]">last page</a>
     [% ELSE %]
-      <span class="disabledLink">
+    <span class="disabledLink">last page</span>
     [% END %]
-    last page
-    [% IF doNext %]</a>[% ELSE %]</span>[% END %]
   </form>
 [% ELSE %]
   <h4>No results found.</h4>

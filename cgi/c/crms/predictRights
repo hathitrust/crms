@@ -10,7 +10,10 @@ use CRMS;
 my $cgi  = new CGI;
 my $user = $ENV{'REMOTE_USER'};
 my $id   = $cgi->param('id');
+my $year = $cgi->param('year');
 my $sys =  $cgi->param('sys');
+my $pub =  $cgi->param('pub');
+my $crown = $cgi->param('crown');
 $sys = 'crms' unless $sys;
 my $crms = CRMS->new(logFile  =>   "$DLXSROOT/prep/c/crms/log_review.txt",
                      sys      =>   $sys,
@@ -19,11 +22,11 @@ my $crms = CRMS->new(logFile  =>   "$DLXSROOT/prep/c/crms/log_review.txt",
                      dev      =>   $DLPS_DEV,
                      user     =>   $user);
 
-my $date = $crms->GetRenDate( $id );
+my $n = $crms->PredictRights($id, $year, $pub);
 
-if ( $date eq "" ) { print $cgi->header( -status => "400" ); }
+if ($n !~ /\d+/) { print $cgi->header( -status => "400" ); }
 else
 {
-    print $cgi->header();
-    print $date;
+  print $cgi->header();
+  print $n;
 }

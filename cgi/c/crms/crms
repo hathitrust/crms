@@ -1,4 +1,4 @@
-#!../../../bin/symlinks/perl
+#!/usr/bin/perl
 
 my ($DLXSROOT, $DLPS_DEV);
 BEGIN { $DLXSROOT = $ENV{'DLXSROOT'}; $DLPS_DEV = $ENV{'DLPS_DEV'}; }
@@ -15,11 +15,9 @@ my $ru = $ENV{'REMOTE_USER'};
 my $cgi  = new CGI;
 my $sys =  $cgi->param('sys');
 $sys = 'crms' unless $sys;
-my $configFile = "$DLXSROOT/bin/c/crms/$sys.cfg";
-$configFile = "$DLXSROOT/bin/c/crms/crms.cfg" unless -f $configFile;
 my $crms = CRMS->new(
         logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
-        configFile   =>   $configFile,
+        sys          =>   $sys,
         verbose      =>   0,
         root         =>   $DLXSROOT,
         dev          =>   $DLPS_DEV,
@@ -82,7 +80,7 @@ if ($user ne $ru)
 {
   $crms = CRMS->new(
             logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
-            configFile   =>   $configFile,
+            sys          =>   $sys,
             verbose      =>   0,
             root         =>   $DLXSROOT,
             dev          =>   $DLPS_DEV,
@@ -93,22 +91,22 @@ if ($user ne $ru)
 ## make sure user known
 if (!$crms->GetUserName($user))
 {
-  print $cgi->header(-status => "403 Forbidden") .
+  print $cgi->header( -status => "403 Forbidden" ) .
         "<h2>Forbidden</h2> (unknown user '$user')";
   exit;
 }
 
-if ($cgi->param('p') eq 'confirmReview')  
+if ( $cgi->param('p') eq 'confirmReview' )  
 {
   my $editing = $cgi->param('editing');
-  if ($cgi->param('submit') eq 'Cancel')
+  if ($cgi->param( 'submit' ) eq 'Cancel')
   {
     my $id = $cgi->param('barcode');
     $crms->UnlockItem( $id, $user);
     $cgi->delete_all();
-    if ($editing)
+    if ( $editing )
     {
-      my $output = '<script type="text/javascript" language="JavaScript">window.close();</script>';
+      my $output = qq(<script type="text/javascript" language="JavaScript">window.close();</script>);
       print "Content-type: text/html\n\n";
       print $output;
     }
@@ -125,13 +123,18 @@ if ($cgi->param('p') eq 'confirmReview')
     my $question   = $cgi->param('question');
     my $swiss      = $cgi->param('swiss');
 
-    my ( $rights, $reason ) = $crms->GetAttrReasonFromCode($EncRights);
-    my $errorMsg = $crms->HasItemBeenReviewedByTwoReviewers($id, $user);
-    $errorMsg = $crms->ValidateSubmission2($id, $user, $rights, $reason, $comment, $category, $renNum, $renDate) unless $errorMsg;
-    my $stat = $crms->GetSystemStatus();
-    # Actually, this never gets displayed, but that's OK
-    my $status = $stat->[1];
-    $errorMsg = "The CRMS is not currently accepting reviews (status '$status'). Please Cancel." if $stat->[1] ne 'normal';
+    my ($rights, $reason);
+    my $errorMsg = 'You must select a rights/reason combination.' unless $EncRights;
+    if (!$errorMsg)
+    {
+      ($rights, $reason) = $crms->GetAttrReasonFromCode($EncRights);
+      $errorMsg = $crms->HasItemBeenReviewedByTwoReviewers($id, $user);
+      $errorMsg = $crms->ValidateSubmission($id, $user, $rights, $reason, $comment, $category, $renNum, $renDate) unless $errorMsg;
+      my $stat = $crms->GetSystemStatus();
+      # Actually, this never gets displayed, but that's OK
+      my $status = $stat->[1];
+      $errorMsg = "The CRMS is not currently accepting reviews (status '$status'). Please Cancel." if $stat->[1] ne 'normal';
+    }
     if ($errorMsg)
     {
       #clear the cgi
@@ -180,7 +183,7 @@ if ($cgi->param('p') eq 'confirmReview')
       else
       {
         $cgi->delete_all();
-        if ($editing)
+        if ( $editing )
         {
           print "Content-type: text/html\n\n";
           print '<script type="text/javascript" language="JavaScript">window.close();</script>';

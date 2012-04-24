@@ -28,17 +28,21 @@ sub new
   my ($class, %args) = @_;
   my $self = bless {}, $class;
 
-  if ( ! $args{'logFile'} )    { return "missing log file"; }
-  if ( ! $args{'configFile'} ) { return "missing configFile"; }
-  $self->set( 'logFile', $args{'logFile'} );
+  my $sys = $args{'sys'};
+  $sys = 'crms' unless $sys;
+  my $configfile;
+  my $root = $args{'root'};
+  my $configfile = $root . "/bin/c/crms/$sys.cfg";
+  require $configfile;
+  $self->set('logFile', $args{'logFile'});
   my $errors = [];
-  $self->set( 'errors', $errors );
-  require $args{'configFile'};
-  $self->set( 'verbose',    $args{'verbose'});
-  $self->set( 'root',       $args{'root'} );
-  $self->set( 'dev',        $args{'dev'} );
-  $self->set( 'user',       $args{'user'} );
-  #$self->set( 'dbh',        $self->ConnectToDb() );
+  $self->set('errors',  $errors);
+  $self->set('verbose', $args{'verbose'});
+  $self->set('root',    $root );
+  $self->set('dev',     $args{'dev'});
+  $self->set('user',    $args{'user'});
+  $self->set('sys',     $sys );
+  $self->SetError('Warning: configFile parameter is obsolete.') if $args{'configFile'};
   return $self;
 }
 
@@ -63,7 +67,7 @@ sub Version
 {
   my $self = shift;
   
-  return '3.4.2';
+  return '4.0';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -71,7 +75,14 @@ sub System
 {
   my $self = shift;
 
-  return $self->GetSystemVar('system', undef, 'CRMS');
+  return $self->GetSystemVar('system', 'CRMS');
+}
+
+sub Sys
+{
+  my $self = shift;
+
+  return $self->get('sys');
 }
 
 ## ----------------------------------------------------------------------------
@@ -307,78 +318,11 @@ sub ProcessReviews
 sub CalcStatus
 {
   my $self = shift;
-  my $id   = shift;
-  my $stat = shift;
-
-  my %return;
-  my $dbh = $self->GetDb();
-  my $status = 0;
-  my $sql = "SELECT user,attr,reason,renNum,renDate,hold,NOW() FROM reviews WHERE id='$id'";
-  my $ref = $dbh->selectall_arrayref( $sql );
-  my ($user, $attr, $reason, $renNum, $renDate, $hold, $today) = @{ $ref->[0] };
-  $sql = "SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id='$id' AND user!='$user'";
-  $ref = $dbh->selectall_arrayref( $sql );
-  my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{ $ref->[0] };
-  if ($hold && ($today lt $hold || $stat ne 'normal'))
-  {
-    $return{'hold'} = $user;
-  }
-  if ($other_hold && ($today lt $other_hold || $stat ne 'normal'))
-  {
-    $return{'hold'} = $other_user;
-  }
-  elsif ($attr == $other_attr)
-  {
-    # If both reviewers are non-advanced mark as provisional match
-    if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
-    {
-       $status = 3;
-    }
-    else #Mark as 4 or 8 - two that agree
-    {
-      if ($reason != $other_reason)
-      {
-        $status = 8;
-        $return{'attr'} = $attr;
-        $return{'reason'} = 13;
-        $return{'category'} = 'Attr Match';
-      }
-      elsif ($attr == 2 && $reason == 7 && $other_reason == 7 && ($renNum ne $other_renNum || $renDate ne $other_renDate))
-      {
-        $status = 8;
-        $return{'attr'} = $attr;
-        $return{'reason'} = $reason;
-        $return{'category'} = 'Attr Match';
-        $return{'note'} = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)', $renNum, $renDate, $other_renNum, $other_renDate;
-      }
-      else
-      {
-        $status = 4;
-      }
-    }
-  }
-  # Do auto for ic vs und
-  elsif (($attr == 2 && $other_attr == 5) || ($attr == 5 && $other_attr == 2))
-  {
-    # If both reviewers are non-advanced mark as provisional match
-    if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
-    {
-       $status = 3;
-    }
-    else #Mark as 8 - two that agree as und/crms
-    {
-      $status = 8;
-      $return{'attr'} = 5;
-      $return{'reason'} = 13;
-      $return{'category'} = 'Attr Default';
-    }
-  }
-  else #Mark as 2 - two that disagree
-  {
-    $status = 2;
-  }
-  $return{'status'} = $status;
-  return \%return;
+  
+  my $module = 'Validator_' . $self->get('sys') . '.pm';
+  require "$module";
+  unshift @_, $self;
+  return Validator::CalcStatus(@_);
 }
 
 sub CheckPendingStatus
@@ -391,64 +335,10 @@ sub CheckPendingStatus
   my $pstatus = $status;
   if (!$status)
   {
-    $sql = "SELECT user,attr,reason,renNum,renDate FROM reviews WHERE id='$id' AND expert IS NULL";
-    my $ref = $self->GetDb()->selectall_arrayref( $sql );
-    if (scalar @{$ref} > 1)
-    {
-      my $row = @{$ref}[0];
-      my $user    = $row->[0];
-      my $attr    = $row->[1];
-      my $reason  = $row->[2];
-      my $renNum  = $row->[3];
-      my $renDate = $row->[4];
-      $row = @{$ref}[1];
-      my $other_user    = $row->[0];
-      my $other_attr    = $row->[1];
-      my $other_reason  = $row->[2];
-      my $other_renNum  = $row->[3];
-      my $other_renDate = $row->[4];
-      if ($attr == $other_attr)
-      {
-        # If both reviewers are non-advanced mark as provisional match
-        if ( (!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
-        {
-          $pstatus = 3;
-        }
-        else #Mark as 4 or 8 - two that agree
-        {
-          $pstatus = 4;
-          if ($reason != $other_reason)
-          {
-            $pstatus = 8;
-          }
-          elsif ($attr == 2 && $reason == 7 && $other_reason == 7 && ($renNum ne $other_renNum || $renDate ne $other_renDate))
-          {
-            $pstatus = 8;
-          }
-        }
-      }
-      # Do auto for ic vs und
-      elsif (($attr == 2 && $other_attr == 5) || ($attr == 5 && $other_attr == 2))
-      {
-        # If both reviewers are non-advanced mark as provisional match
-        if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
-        {
-          $pstatus = 3;
-        }
-        else #Mark as 8 - two that sort of agree
-        {
-          $pstatus = 8;
-        }
-      }
-      else #Mark as 2 - two that disagree
-      {
-        $pstatus = 2;
-      }
-    }
-    elsif (scalar @{$ref} == 1) #Mark as 1: just single review unless it's a status 5/7 already.
-    {
-      $pstatus = 1 unless $status;
-    }
+    my $module = 'Validator_' . $self->get('sys') . '.pm';
+    require "$module";
+    unshift @_, $self;
+    $pstatus = Validator::CalcPendingStatus(@_);
   }
   $self->RegisterPendingStatus( $id, $pstatus );
 }
@@ -543,10 +433,15 @@ sub ExportReviews
   my $list    = shift;
   my $fromcgi = shift;
 
+  if ($self->GetSystemVar('noExport'))
+  {
+    print ">>> noExport system variable is set; will not create export file or email.\n" unless $fromcgi;
+    $fromcgi = 1;
+  }
   my $count = 0;
   my $user = 'crms';
   my $time = $self->GetTodaysDate();
-  my ( $fh, $file ) = $self->GetExportFh() unless $fromcgi;
+  my ($fh, $file) = $self->GetExportFh() unless $fromcgi;
   my $start_size = $self->GetCandidatesSize();
   foreach my $id ( @{$list} )
   {
@@ -649,29 +544,40 @@ sub RemoveFromCandidates
 
 sub LoadNewItemsInCandidates
 {
-  my $self = shift;
+  my $self   = shift;
+  my $skipnm = shift;
+  my $start  = shift;
+  my $end    = shift;
 
   $self->set('nosystem','nosystem');
-  my $start = $self->SimpleSqlGet('SELECT max(time) FROM candidates');
+  $start = $self->SimpleSqlGet('SELECT max(time) FROM candidates') unless $start;
   my $start_size = $self->GetCandidatesSize();
   print "Before load, the max timestamp in the candidates table is $start, and the size is $start_size\n";
-  my $sql = "SELECT id,time FROM und WHERE src='no meta'";
-  my $dbh = $self->GetDb();
-  my $ref = $dbh->selectall_arrayref( $sql );
-  if (scalar @{ $ref })
+  if (!$skipnm)
   {
-    printf "Checking %d possible no-meta additions to candidates\n", scalar @{ $ref };
-    foreach my $row ( @{$ref} )
+    my $sql = "SELECT id,time FROM und WHERE src='no meta'";
+    my $dbh = $self->GetDb();
+    my $ref = $dbh->selectall_arrayref( $sql );
+    if (scalar @{ $ref })
     {
-      my $id   = $row->[0];
-      my $time = $row->[1];
+      printf "Checking %d possible no-meta additions to candidates\n", scalar @{ $ref };
+      foreach my $row ( @{$ref} )
+      {
+        my $id   = $row->[0];
+        my $time = $row->[1];
 
-      $self->CheckAndLoadItemIntoCandidates($id, $time);
+        $self->CheckAndLoadItemIntoCandidates($id, $time);
+      }
     }
   }
-  $sql = "SELECT namespace,id,time FROM rights_current WHERE attr=2 AND reason=1 AND time>'$start' GROUP BY namespace, id";
-  $dbh = $self->GetSdrDb();
-  $ref = $dbh->selectall_arrayref( $sql );
+  my $module = 'Candidates_' . $self->get('sys') . '.pm';
+  require "$module";
+  my $endclause = ($end)? "AND time<='$end'":'';
+  # Query for a clause like "attr=2 AND reason=1" for the rights DB
+  my $clause = Candidates::RightsClause();
+  my $sql = "SELECT namespace,id,time FROM rights_current WHERE ($clause) AND time>'$start' $endclause GROUP BY namespace, id";
+  my $dbh = $self->GetSdrDb();
+  my $ref = $dbh->selectall_arrayref( $sql );
   printf "Checking %d possible additions to candidates from rights DB\n", scalar @{ $ref };
   foreach my $row ( @{$ref} )
   {
@@ -794,14 +700,26 @@ sub GetViolations
   }
   elsif ($priority < 4 || !$override)
   {
-    my $pub = $self->GetPublDate( $id, $record );
-    my $year = (($override && $priority == 3) || $priority == 4)? 1977:1963;
-    push @errs, "$pub not in range 1923-$year" if ($pub < 1923 || $pub > $year);
-    push @errs, 'gov doc' if $self->IsGovDoc( $id, $record );
-    push @errs, 'foreign pub' if $self->IsForeignPub( $id, $record );
-    push @errs, 'non-BK format' unless $self->IsFormatBK( $id, $record );
+    my $module = 'Candidates_' . $self->get('sys') . '.pm';
+    require "$module";
+    unshift @_, $self;
+    @errs = Candidates::GetViolations($self, $id, $record, $priority, $override);
   }
   return \@errs;
+}
+
+sub GetCutoffYear
+{
+  my $self = shift;
+  my $name = shift;
+
+  my $year = $self->GetSystemVar($name);
+  if ($year =~ m/^p(\d+)/)
+  {
+    $year = $self->GetTheYear();
+    $year -= $1;
+  }
+  return $year;
 }
 
 # Returns a und table src code if the volume belongs in the und table instead of candidates.
@@ -814,13 +732,9 @@ sub ShouldVolumeGoInUndTable
   my $src = undef;
   $record = $self->GetMetadata($id) unless $record;
   return $src unless $record;
-  my $lang = $self->GetPubLanguage($id, $record);
-  if ($self->IsProbableGovDoc($id, $record)) { $src = 'gov'; }
-  elsif ('eng' ne $lang) { $src = 'language'; }
-  elsif ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
-  elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
-  elsif ($self->IsReallyForeignPub($id, $record)) { $src = 'foreign'; }
-  return $src;
+  my $module = 'Candidates_' . $self->get('sys') . '.pm';
+  require "$module";
+  return Candidates::ShouldVolumeGoInUndTable($self, $id, $record);
 }
 
 sub AddItemToCandidates
@@ -868,15 +782,19 @@ sub LoadNewItems
   printf "Need $needed volumes (max of %d and %d).\n", $targetQueueSize - $queuesize, 500 - $priZeroSize;
   return if $needed <= 0;
   my $count = 0;
-  my $y = 1923 + int(rand(40));
+  my $min = $self->GetCutoffYear('minYear');
+  my $max = $self->GetCutoffYear('maxYear');
+  my $y = $min + int(rand($max - $min));
   my %dels = ();
+  #print "Starting with year $y\n";
   while (1)
   {
-    my $sql = 'SELECT id,time,pub_date,title, author FROM candidates ' .
+    my $sql = 'SELECT id,pub_date FROM candidates ' .
               'WHERE id NOT IN (SELECT DISTINCT id FROM inherit) ' .
               'AND id NOT IN (SELECT DISTINCT id FROM queue) ' .
               'AND id NOT IN (SELECT DISTINCT id FROM reviews) ' .
               'ORDER BY pub_date ASC, time DESC';
+    #print "$sql\n";
     my $ref = $self->GetDb()->selectall_arrayref( $sql );
     # This can happen in the testsuite.
     last unless scalar @{$ref};
@@ -885,22 +803,24 @@ sub LoadNewItems
     {
       my $id = $row->[0];
       next if $dels{$id};
-      my $pub_date = $row->[2];
+      next if 0 < $self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'");
+      my $pub_date = $row->[1];
       #print "Trying $id ($pub_date) against $y\n";
       next if $pub_date ne "$y-01-01";
-      next if 0 < $self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'");
-      my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
-      if ('ic/bib' ne "$attr/$reason")
-      {
-        $dels{$id} = "$attr/$reason";
-        next;
-      }
       my $sysid;
       my $record = $self->GetMetadata($id, \$sysid);
       if (!$record)
       {
         print "Filtering $id: can't get metadata for queue\n";
         $self->Filter($id, 'no meta');
+        next;
+      }
+      $pub_date = $self->GetPublDate($id, $record);
+      my @errs = @{ $self->GetViolations($id, $record) };
+      if (scalar @errs)
+      {
+        printf "Will delete $id: %s\n", join '; ', @errs;
+        $dels{$id} = 1;
         next;
       }
       my $dup = $self->IsRecordInQueue($sysid, $record);
@@ -910,30 +830,23 @@ sub LoadNewItems
         $self->Filter($id, 'duplicate');
         next;
       }
-      my $time = $row->[1];
-      my $title = $row->[3];
-      my $author = $row->[4];
       if ($self->AddItemToQueue($id, $record))
       {
         printf "Added to queue: $id published %s\n", substr($pub_date, 0, 4);
         $count++;
         last if $count >= $needed;
         $y++;
-        $y = 1923 if $y > 1963;
+        $y = $min if $y > $max;
       }
     }
     if ($oldcount == $count)
     {
       $y++;
-      $y = 1923 if $y > 1963;
+      $y = $min if $y > $max;
     }
     last if $count >= $needed;
   }
-  foreach my $id (keys %dels)
-  {
-    printf "$id rights is %s; deleting from candidates.\n", $dels{$id};
-    $self->PrepareSubmitSql("DELETE FROM candidates WHERE id='$id'");
-  }
+  $self->RemoveFromCandidates($_) for keys %dels;
   #Record the update to the queue
   my $sql = "INSERT INTO queuerecord (itemcount, source) VALUES ($count, 'RIGHTSDB')";
   $self->PrepareSubmitSql( $sql );
@@ -1123,12 +1036,14 @@ sub IsValidCategory
 {
   my $self = shift;
   my $cat = shift;
-  
-  my %cats = ('Insert(s)' => 1, 'Language' => 1, 'Misc' => 1, 'Missing' => 1, 'Date' => 1, 'Reprint' => 1,
-              'Periodical' => 1, 'Translation' => 1, 'Wrong Record' => 1, 'Foreign Pub' => 1, 'Dissertation/Thesis' => 1,
-              'Expert Note' => 1, 'Not Class A' => 1, 'Edition' => 1,
-              'Expert Accepted' => 1, 'Attr Match' => 1, 'Attr Default' => 1, 'Rights Inherited' => 1);
-  return exists $cats{$cat};
+
+  my $sql = 'SELECT name FROM categories';
+  my $rows = $self->GetDb()->selectall_arrayref($sql);
+  foreach my $row (@{$rows})
+  {
+    return 1 if $row->[0] eq $cat;
+  }
+  return 0;
 }
 
 # Used by experts to approve a review made by a reviewer.
@@ -2740,30 +2655,15 @@ sub LinkToPT
   return '<a href="' . $url . '" target="_blank">' . $title . '</a>';
 }
 
-#sub LinkToGoogleCCE
-#{
-#  my $self   = shift;
-#  my $author = shift;
-#  my $title  = shift;
-#  my $year   = shift;
-#
-#  $author =~ s/\W+/+/g;
-#  $title =~ s/\W+/+/g;
-#  $title =~ s/\++$//g;
-#  my $url = 'http://books.google.com/books?hl=en&uid=4556442065221187955&sourceid=catalog-of-copyright-entries&' .
-#            "q=$author+$title&btnG=Search";
-#  return '<a href="' . $url . '" target="_blank">' . 'Google&nbsp;CCE&#x2026;' . '</a>';
-#}
-
 sub LinkToReview
 {
   my $self  = shift;
   my $id    = shift;
   my $title = shift;
 
-  $title = $self->GetTitle( $id ) unless $title;
+  $title = $self->GetTitle($id) unless $title;
   $title = CGI::escapeHTML($title);
-  my $url = "/cgi/c/crms/crms?p=review;barcode=$id;editing=1";
+  my $url = $self->Sysify("/cgi/c/crms/crms?p=review;barcode=$id;editing=1");
   $self->ClearErrors();
   return "<a href='$url' target='_blank'>$title</a>";
 }
@@ -2776,7 +2676,7 @@ sub DetailInfo
   my $page   = shift;
   my $review = shift;
 
-  my $url = "/cgi/c/crms/crms?p=detailInfo;id=$id;user=$user;page=$page";
+  my $url = $self->Sysify("/cgi/c/crms/crms?p=detailInfo;id=$id;user=$user;page=$page");
   $url .= ';review=1' if $review;
   return "<a href='$url' target='_blank'>$id</a>";
 }
@@ -2810,31 +2710,13 @@ sub IsVolumeInQueue
 
 sub ValidateAttrReasonCombo
 {
-  my $self    = shift;
-  my $attr    = shift;
-  my $reason  = shift;
-
-  return 13 if $reason == 13;
-  my $code = $self->GetCodeFromAttrReason($attr,$reason);
-  $self->SetError( "bad attr/reason: $attr/$reason" ) unless $code;
-  return $code;
-}
-
-sub GetAttrReasonCom
-{
   my $self = shift;
-  my $in   = shift;
+  my $a    = shift;
+  my $r    = shift;
 
-  my %codes = (1 => 'pd/ncn',  2 => 'pd/ren',  3 => 'pd/cdpp', 4 => 'ic/ren',
-               5 => 'ic/cdpp', 6 => 'und/nfi', 7 => 'pdus/cdpp', 8 => 'pd/add',
-               9 => 'pd/exp');
-
-  my %str   = ('pd/ncn' => 1,  'pd/ren'  => 2, 'pd/cdpp' => 3, 'ic/ren' => 4,
-               'ic/cdpp' => 5, 'und/nfi' => 6, 'pdus/cdpp' => 7 , 'pd/add' => 8,
-               'pd/exp' => 9);
-
-  if ( $in =~ m/\d/ ) { return $codes{$in}; }
-  else                { return $str{$in};   }
+  my $code = $self->GetCodeFromAttrReason($a,$r);
+  $self->SetError("bad attr/reason: $a/$r") unless $code;
+  return $code;
 }
 
 sub GetAttrReasonFromCode
@@ -2842,32 +2724,20 @@ sub GetAttrReasonFromCode
   my $self = shift;
   my $code = shift;
 
-  if    ( $code eq '1' ) { return (1,2); }
-  elsif ( $code eq '2' ) { return (1,7); }
-  elsif ( $code eq '3' ) { return (1,9); }
-  elsif ( $code eq '4' ) { return (2,7); }
-  elsif ( $code eq '5' ) { return (2,9); }
-  elsif ( $code eq '6' ) { return (5,8); }
-  elsif ( $code eq '7' ) { return (9,9); }
-  elsif ( $code eq '8' ) { return (1,14); }
-  elsif ( $code eq '9' ) { return (1,15); }
+  my $sql = "SELECT attr,reason FROM rights WHERE id=$code";
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $a = $ref->[0]->[0];
+  my $r = $ref->[0]->[1];
+  return ($a,$r);
 }
 
 sub GetCodeFromAttrReason
 {
-  my $self   = shift;
-  my $attr   = shift;
-  my $reason = shift;
+  my $self = shift;
+  my $a    = shift;
+  my $r    = shift;
 
-  if ($attr == 1 and $reason == 2) { return 1; }
-  if ($attr == 1 and $reason == 7) { return 2; }
-  if ($attr == 1 and $reason == 9) { return 3; }
-  if ($attr == 2 and $reason == 7) { return 4; }
-  if ($attr == 2 and $reason == 9) { return 5; }
-  if ($attr == 5 and $reason == 8) { return 6; }
-  if ($attr == 9 and $reason == 9) { return 7; }
-  if ($attr == 1 and $reason == 14) { return 8; }
-  if ($attr == 1 and $reason == 15) { return 9; }
+  return $self->SimpleSqlGet("SELECT id FROM rights WHERE attr=$a AND reason=$r");
 }
 
 
@@ -2877,11 +2747,15 @@ sub GetAttrReasonCode
   my $id   = shift;
   my $user = shift;
 
-  my $sql = "SELECT attr, reason FROM reviews WHERE id='$id' AND user='$user'";
-  my $ref = $self->GetDb()->selectall_arrayref( $sql );
-  my $rights = $self->TranslateAttr( $ref->[0]->[0] );
-  my $reason = $self->TranslateReason( $ref->[0]->[1] );
-  return $self->GetAttrReasonCom( "$rights/$reason" );
+  my $sql = "SELECT attr,reason FROM reviews WHERE id='$id' AND user='$user'";
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $a = $ref->[0]->[0];
+  my $r = $ref->[0]->[1];
+  if ($a && $r)
+  {
+    return $self->SimpleSqlGet("SELECT id FROM rights WHERE attr=$a AND reason=$r");
+  }
+  return undef;
 }
 
 sub CheckForId
@@ -3769,8 +3643,9 @@ sub CreateDeterminationsBreakdownReport
   my @lines = split "\n", $data;
   $title = shift @lines;
   $title =~ s/\s/&nbsp;/g;
-  my $url = sprintf("<a href='?p=determinationStats;startDate=$start;endDate=$end;%sdownload=1;pre=$pre' target='_blank'>Download</a>",($monthly)?'monthly=on;':'');
-  my $report = "<h3>$title&nbsp;&nbsp;&nbsp;&nbsp;$url</h3>\n";
+  my $url = $self->Sysify(sprintf("?p=determinationStats;startDate=$start;endDate=$end;%sdownload=1;pre=$pre",($monthly)?'monthly=on;':''));
+  my $link = sprintf("<a href='$url' target='_blank'>Download</a>",);
+  my $report = "<h3>$title&nbsp;&nbsp;&nbsp;&nbsp;$link</h3>\n";
   $report .= "<table class='exportStats'>\n";
   $report .= "<tr><th/><th colspan='$span1'><span class='major'>Counts</span></th><th colspan='$span2'><span class='total'>Percentages</span></th></tr>\n";
   my $titles = shift @lines;
@@ -3854,7 +3729,7 @@ sub CreateDeterminationsBreakdownGraph
       my $val = sprintf('{"value":%d,"tip":"%d"}', $count, $count);
       if ($percent)
       {
-        my $pct = 100.0*$count/$line[5];
+        my $pct = eval { 100.0*$count/$line[5]; } or 0.0;
         $val = sprintf('{"value":%.1f,"tip":"%.1f%% (%d)"}', $pct, $pct, $count);
       }
       push @vals, $val;
@@ -3869,59 +3744,8 @@ sub CreateDeterminationsBreakdownGraph
     $valfmt = '"text":"#val#%",';
   }
   my $report = sprintf('{"bg_colour":"#000000","title":{"text":"%s","style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"},"elements":[',$title);
-  $report .= sprintf('%s]',join ',', @elements);
+  $report .= sprintf('%s]', join ',', @elements);
   $report .= sprintf(',"y_axis":{"max":%d,"steps":%d,"colour":"#888888","grid-colour":"#888888","labels":{%s"colour":"#FFFFFF"}}', $ceil, $ceil/10, $valfmt);
-  $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}', join('","',@usedates));
-  $report .= '}';
-  return $report;
-}
-
-sub CreateDeterminationsBreakdownGraphOld
-{
-  my $self     = shift;
-  my $start    = shift;
-  my $end      = shift;
-  my $monthly  = shift;
-  my $title    = shift;
-  my $priority = shift;
-
-  $priority = undef if $priority eq 'All';
-  my $data = $self->CreateDeterminationsBreakdownData("\t", $start, $end, $monthly, $title, $priority);
-  my @lines = split "\n", $data;
-  $title = shift @lines;
-  shift @lines;
-  my @usedates = ();
-  my @elements = ();
-  my %colors = (4 => '#22BB00', 5 => '#FF2200', 6 => '#0088FF', 7 => '#C9A8FF', 8 => 'FFCC00', 9=>'FFFFFF');
-  foreach my $status (sort keys %colors)
-  {
-    my @vals = ();
-    my $color = $colors{$status};
-    my $attrs = sprintf('"dot-style":{"type":"solid-dot","dot-size":3,"colour":"%s"},"text":"Status %s","colour":"%s","on-show":{"type":"pop-up","cascade":1,"delay":0.2}',
-                        $color, $status, $color);
-    if (scalar @lines <= 1)
-    {
-      my $date = substr $self->GetTodaysDate(), 0, 10;
-      @lines = ("$date\t0\t0\t0\t0\t0\t0\t0\t0.0%\t0.0%\t0.0%\t0.0%\t0.0%\t0.0%");
-    }
-    foreach my $line (@lines)
-    {
-      my @line = split "\t", $line;
-      my $date = shift @line;
-      next if $date eq 'Total';
-      next if $date =~ m/Total/ and !$monthly;
-      $date =~ s/Total\s//;
-      push @usedates, $date if $status == 4;
-      my $count = $line[$status-4];
-      my $pct = $line[$status+3];
-      $pct =~ s/%//;
-      push @vals, sprintf('{"value":%d,"tip":"%.1f%% (%d)"}', $pct, $pct, $count);
-    }
-    push @elements, sprintf('{"type":"line","values":[%s],%s}', join(',',@vals), $attrs);
-  }
-  my $report = sprintf('{"bg_colour":"#000000","title":{"text":"%s","style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"},"elements":[',$title);
-  $report .= sprintf('%s]',join ',', @elements);
-  $report .= ',"y_axis":{"max":100,"steps":10,"colour":"#888888","grid-colour":"#888888","labels":{"text":"#val#%","colour":"#FFFFFF"}}';
   $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}', join('","',@usedates));
   $report .= '}';
   return $report;
@@ -4198,8 +4022,9 @@ sub CreateStatsReport
   $suppressBreakdown = 1;
   my $data = $self->CreateStatsData(',', $page, $user, $cumulative, $year, $inval, $nononexpert, 1);
   my @lines = split m/\n/, $data;
+  my $url = $self->Sysify("crms?p=$page;download=1;user=$user;cumulative=$cumulative;year=$year;inval=$inval;nne=$nononexpert");
   my $dllink = <<END;
-  <a href='crms?p=$page;download=1;user=$user;cumulative=$cumulative;year=$year;inval=$inval;nne=$nononexpert' target='_blank'>Download</a>
+  <a href='$url' target='_blank'>Download</a>
   <a class='tip' href='#'>
     <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
     <span>
@@ -4326,19 +4151,20 @@ sub UpdateStats
   my $self = shift;
 
   my $sql = 'DELETE from userstats';
-  $self->PrepareSubmitSql( $sql );
+  $self->PrepareSubmitSql($sql);
+  return if 0 == $self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE legacy!=1');
   my $users = $self->GetUsers();
-  my ( $max_year, $max_month, $min_year, $min_month ) = $self->GetRange();
+  my ($max_year, $max_month, $min_year, $min_month) = $self->GetRange();
   my $max_date = "$max_year-$max_month";
-  while ( 1 )
+  while (1)
   {
     my $statDate = "$min_year-$min_month";
-    foreach my $user ( @{ $users } )
+    foreach my $user (@{$users})
     {
-      $self->GetMonthStats( $user, $statDate );
+      $self->GetMonthStats($user, $statDate);
     }
     $min_month = $min_month + 1;
-    if ( $min_month == 13 )
+    if ($min_month == 13)
     {
       $min_month = 1;
       $min_year = $min_year + 1;
@@ -4446,53 +4272,6 @@ sub UpdateExportStats
   $self->PrepareSubmitSql($sql);
 }
 
-sub CheckRenDate
-{
-  my $self = shift;
-  my $renNum = shift;
-  my $renDate = shift;
-
-  my $errorMsg = '';
-
-  if ( $renDate )
-  {
-    if ( $renDate =~ /^\d{1,2}[A-Za-z]{3}\d{2}$/ )
-    {
-      $renDate =~ s,\w{5}(.*),$1,;
-      $renDate = qq{19$renDate};
-
-      if ( $renDate < 1950 )
-      {
-        $errorMsg .= "The Ren Date you have entered ($renDate) is before 1950; we should not be recording them.";
-      }
-      if ( ( $renDate >= 1950 )  && ( $renDate <= 1953 ) )
-      {
-        if ( ( $renNum =~ m,^R\w{5}$, ) || ( $renNum =~ m,^R\w{6}$, ))
-        {}
-        else
-        {
-          $errorMsg .= 'Ren number format is not correct for item in 1950 - 1953 range.';
-        }
-      }
-      if ( $renDate >= 1978 )
-      {
-        if ( $renNum =~ m,^RE\w{6}$, )
-        {}
-        else
-        {
-          $errorMsg .= 'Ren Number format is not correct for item with Ren Date >= 1978.';
-        }
-      }
-    }
-    else
-    {
-      $errorMsg .= 'Ren Date is not of the right format, for example 17Dec73.';
-    }
-  }
-  return $errorMsg;
-}
-
-
 sub HasItemBeenReviewedByTwoReviewers
 {
   my $self = shift;
@@ -4500,7 +4279,7 @@ sub HasItemBeenReviewedByTwoReviewers
   my $user = shift;
 
   my $msg = '';
-  if ( $self->IsUserExpert( $user ) )
+  if ($self->IsUserExpert($user))
   {
     if ($self->HasItemBeenReviewedByAnotherExpert($id,$user))
     {
@@ -4516,191 +4295,34 @@ sub HasItemBeenReviewedByTwoReviewers
       $msg = 'This volume does not need to be reviewed. Two reviewers or an expert have already reviewed it. Please Cancel.';
     }
     $sql = "SELECT count(*) FROM queue WHERE id ='$id' AND status!=0";
-    $count = $self->SimpleSqlGet( $sql );
+    $count = $self->SimpleSqlGet($sql);
     if ($count >= 1 ) { $msg = 'This item has been processed already. Please Cancel.'; }
   }
   return $msg;
 }
 
-# Returns an error message, or an empty string if no error.
-sub ValidateSubmission2
+sub ValidateSubmission
 {
   my $self = shift;
   my ($id, $user, $attr, $reason, $note, $category, $renNum, $renDate) = @_;
   my $errorMsg = '';
-
-  my $noteError = 0;
-  my $hasren = ($renNum && $renDate);
   ## Someone else has the item locked?
   $errorMsg = 'This item has been locked by another reviewer. Please Cancel.' if $self->IsLockedForOtherUser($id);
   ## check user
-  if ( ! $self->IsUserReviewer( $user ) && ! $self->IsUserAdvanced( $user ))
+  if (!$self->IsUserReviewer($user) && !$self->IsUserAdvanced($user))
   {
     $errorMsg .= 'Not a reviewer.';
   }
-  if ( ( ! $attr ) || ( ! $reason ) )
+  if (!$attr || !$reason)
   {
     $errorMsg .= 'rights/reason designation required.';
   }
-  my $date = $self->GetPubDate($id);
-  ## und/nfi
-  if ( $attr == 5 && $reason == 8 && ( ( ! $note ) || ( ! $category ) )  )
+  if (!$errorMsg)
   {
-    $errorMsg .= 'und/nfi must include note category and note text.';
-    $noteError = 1;
-  }
-  ## ic/ren requires a nonexpired renewal if 1963 or earlier
-  if ( $attr == 2 && $reason == 7 )
-  {
-    if ($hasren)
-    {
-      if ($date > 1963)
-      {
-        $errorMsg .= 'Renewal no longer required for works published after 1963. ';
-      }
-      else
-      {
-        $renDate =~ s,.*[A-Za-z](.*),$1,;
-        $renDate = '19' . $renDate;
-        if ( $renDate < 1950 )
-        {
-          $errorMsg .= "Renewal has expired; volume is pd. Date entered is $renDate. ";
-        }
-      }
-    }
-    else
-    {
-      $errorMsg .= 'ic/ren must include renewal id and renewal date. ';
-    }
-  }
-  ## pd/ren should not have a ren number or date, and is not allowed for post-1963 works.
-  if ( $attr == 1 && $reason == 7 )
-  {
-    if ($date > 1963)
-    {
-      $errorMsg .= 'Renewal no longer required for works published after 1963. ';
-    }
-    elsif ($hasren)
-    {
-      $errorMsg .= 'pd/ren should not include renewal info. ';
-    }
-  }
-  ## pd/ncn requires a ren number in most cases
-  ## For superadmins, ren info is optional for 23-63 and disallowed for 64-77
-  ## For admins, ren info is optional only if Note and category 'Expert Note' for 23-63 and disallowed for 64-77
-  ## For non-admins, ren info is required.
-  if ($attr == 1 && $reason == 2)
-  {
-    if ($self->IsUserSuperAdmin($user))
-    {
-      $errorMsg .= 'Renewal no longer required for works published after 1963. ' if $date > 1963 && $hasren;
-      #$errorMsg .= 'pd/ncn must include renewal id and renewal date. ' if $date <= 1963 && !$hasren;
-    }
-    elsif ($self->IsUserAdmin($user))
-    {
-      $errorMsg .= 'Renewal no longer required for works published after 1963. ' if $date > 1963 && $hasren;
-      if ($date <= 1963 && ($category ne 'Expert Note' || !$note) && !$hasren)
-      {
-        $errorMsg .= 'pd/ncn must include either renewal id and renewal date, or note category "Expert Note". ';
-      }
-    }
-    else
-    {
-      $errorMsg .= 'pd/ncn must include renewal id and renewal date. ' unless $hasren;
-    }
-  }
-  ## pd/cdpp requires a ren number
-  if (  $attr == 1 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
-  {
-    $errorMsg .= 'pd/cdpp should not include renewal info. ';
-  }
-  if ( $attr == 1 && $reason == 9 && ( ( !$note ) || ( !$category ) ) )
-  {
-    $errorMsg .= 'pd/cdpp must include note category and note text. ';
-    $noteError = 1;
-  }
-  ## ic/cdpp requires a ren number
-  if (  $attr == 2 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
-  {
-    $errorMsg .= 'ic/cdpp should not include renewal info. ';
-  }
-  if ( $attr == 2 && $reason == 9 && ( ( !$note )  || ( !$category ) ) )
-  {
-    $errorMsg .= 'ic/cdpp must include note category and note text. ';
-    $noteError = 1;
-  }
-  ## pd/add can only be submitted by an admin and requires note and category
-  if ($attr == 1 && $reason == 14)
-  {
-    if (!$self->IsUserAdmin($user))
-    {
-      $errorMsg .= 'pd/add requires admin privileges.';
-    }
-    elsif (( $renNum ) || ( $renDate ))
-    {
-      $errorMsg .= 'pd/add should not include renewal info. ';
-    }
-    if (( !$note ) || ( !$category ))
-    {
-      $errorMsg .= 'pd/add must include note category and note text. ';
-      $noteError = 1;
-    }
-    elsif ($category ne 'Expert Note' && $category ne 'Foreign Pub' && $category ne 'Misc')
-    {
-      $errorMsg .= 'pd/add requires note category "Expert Note", "Foreign Pub" or "Misc". ';
-    }
-  }
-  ## pd/exp can only be submitted by an admin and requires note and category
-  if ($attr == 1 && $reason == 15)
-  {
-    if (!$self->IsUserAdmin($user))
-    {
-      $errorMsg .= 'pd/exp requires admin privileges.';
-    }
-    elsif (( $renNum ) || ( $renDate ))
-    {
-      $errorMsg .= 'pd/exp should not include renewal info. ';
-    }
-    if (( !$note ) || ( !$category ))
-    {
-      $errorMsg .= 'pd/exp must include note category and note text. ';
-      $noteError = 1;
-    }
-    elsif ($category ne 'Expert Note' && $category ne 'Foreign Pub' && $category ne 'Misc')
-    {
-      $errorMsg .= 'pd/exp requires note category "Expert Note", "Foreign Pub" or "Misc". ';
-    }
-  }
-  ## pdus/cdpp requires a note and a 'Foreign' or 'Translation' category, and must not have a ren number
-  if ($attr == 9 && $reason == 9)
-  {
-    if (( $renNum ) || ( $renDate ))
-    {
-      $errorMsg .= 'pdus/cdpp should not include renewal info. ';
-    }
-    if (( !$note ) || ( !$category ))
-    {
-      $errorMsg .= 'pdus/cdpp must include note category/note text. ';
-      $noteError = 1;
-    }
-    elsif ($category ne 'Foreign Pub' && $category ne 'Translation')
-    {
-      $errorMsg .= 'pdus/cdpp requires note category "Foreign Pub" or "Translation". ';
-    }
-  }
-  if ( $noteError == 0 )
-  {
-    if ( ( $category )  && ( !$note ) )
-    {
-      if ($category ne 'Expert Accepted')
-      {
-        $errorMsg .= 'must include a note if there is a category. ';
-      }
-    }
-    elsif ( ( $note ) && ( !$category ) )
-    {
-      $errorMsg .= 'must include a category if there is a note. ';
-    }
+    my $module = 'Validator_' . $self->get('sys') . '.pm';
+    require "$module";
+    unshift @_, $self;
+    $errorMsg = Validator::ValidateSubmission(@_);
   }
   return $errorMsg;
 }
@@ -4979,6 +4601,29 @@ sub GetPubLanguage
   return substr($leader, 35, 3);
 }
 
+sub GetPubCountry
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
+  my $short  = shift;
+
+  $record = $self->GetMetadata($id) unless $record;
+  return unless $record;
+  my $code;
+  eval {
+    my $xpath = "//*[local-name()='controlfield' and \@tag='008']";
+    $code  = substr($record->findvalue( $xpath ), 15, 3);
+    $code =~ s/[^a-z]//gi;
+  };
+  $self->SetError("failed in GetCountry($id): $@") if $@;
+  use Countries;
+  my $country = Countries::TranslateCountry($code);
+  $country = 'Unknown' unless $country;
+  $country =~ s/\s*\(.*?\)$//g if $short;
+  return $country;
+}
+
 sub GetMarcFixfield
 {
   my $self  = shift;
@@ -5141,7 +4786,6 @@ sub GetEncAuthor
 
   my $au = $self->GetEncAuthorForReview($id);
   $au =~ s,\",\\\",g; ## escape "
-  $au =~ s/[()[\]{}]//g;
   return $au;
 }
 
@@ -5167,6 +4811,7 @@ sub GetAuthor
     $au = $self->SimpleSqlGet("SELECT author FROM bibdata WHERE id='$id'");
   }
   $au =~ s,(.*[A-Za-z]).*,$1,;
+  $au =~ s/(^[([{])|([)\]}])$//g;
   return $au;
 }
 
@@ -5710,7 +5355,7 @@ sub GetPriority1Frequency
 {
   my $self = shift;
   
-  return $self->GetSystemVar('priority1Frequency', '$_>=0.0 and $_<1.0', 0.3);
+  return $self->GetSystemVar('priority1Frequency', 0.3, '$_>=0.0 and $_<1.0');
 }
 
 sub TranslateAttr
@@ -5719,7 +5364,7 @@ sub TranslateAttr
   my $a    = shift;
   
   my $sql = "SELECT id FROM attributes WHERE name='$a'";
-  $sql = "SELECT name FROM attributes WHERE id='$a'" if $a =~ m/[0-9]+/;
+  $sql = "SELECT name FROM attributes WHERE id=$a" if $a =~ m/[0-9]+/;
   my $val = $self->SimpleSqlGet($sql,1);
   $a = $val if $val;
   return $a;
@@ -5731,7 +5376,7 @@ sub TranslateReason
   my $r    = shift;
   
   my $sql = "SELECT id FROM reasons WHERE name='$r'";
-  $sql = "SELECT name FROM reasons WHERE id='$r'" if $r =~ m/[0-9]+/;
+  $sql = "SELECT name FROM reasons WHERE id=$r" if $r =~ m/[0-9]+/;
   my $val = $self->SimpleSqlGet($sql,1);
   $r = $val if $val;
   return $r;
@@ -5796,35 +5441,40 @@ sub GetTodaysDate
 
 sub OpenErrorLog
 {
-    my $self = shift;
-    my $logFile = $self->get( 'logFile' );
+  my $self = shift;
+  my $logFile = $self->get('logFile');
 
+  if ($logFile)
+  {
     open( my $fh, ">>", $logFile );
     if (! defined $fh) { die "failed to open log: $logFile \n"; }
-
     my $oldfh = select($fh); $| = 1; select($oldfh); ## flush out
-
-    $self->set('logFh', $fh );
+    $self->set('logFh', $fh);
+  }
 }
 
 sub CloseErrorLog
 {
-    my $self = shift;
-    close $self->get( 'logFh' );
+  my $self = shift;
+  
+  my $fh = $self->get('logFh');
+  close $fh if $fh;
 }
 
 sub Logit
 {
-    my $self = shift;
-    my $str  = shift;
+  my $self = shift;
+  my $str  = shift;
 
-    $self->OpenErrorLog();
+  $self->OpenErrorLog();
 
-    my $date = $self->GetTodaysDate();
-    my $fh = $self->get( 'logFh' );
-
+  my $date = $self->GetTodaysDate();
+  my $fh = $self->get('logFh');
+  if ($fh)
+  {
     print $fh "$date: $str\n";
     $self->CloseErrorLog();
+  }
 }
 
 ## ----------------------------------------------------------------------------
@@ -7236,7 +6886,7 @@ sub LinkNoteText
 
   if ($note =~ m/See\sall\sreviews\sfor\sSys\s#(\d+)/)
   {
-    my $url = "/cgi/c/crms/crms?p=adminHistoricalReviews;stype=reviews;search1=SysID;search1value=$1";
+    my $url = $self->Sysify("/cgi/c/crms/crms?p=adminHistoricalReviews;stype=reviews;search1=SysID;search1value=$1");
     $note =~ s/(See\sall\sreviews\sfor\sSys\s#)(\d+)/$1<a href="$url" target="_blank">$2<\/a>/;
   }
   return $note;
@@ -7586,8 +7236,9 @@ sub AddInheritanceToQueue
       my $n = $self->SimpleSqlGet($sql);
       if ($n)
       {
-        my $rlink = sprintf "already has $n <a href='?p=adminReviews;search1=Identifier;search1value=$id' target='_blank'>%s</a>", $self->Pluralize('review',$n);
-        push @msgs, $rlink;
+        my $url = $self->Sysify("?p=adminReviews;search1=Identifier;search1value=$id");
+        my $msg = sprintf "already has $n <a href='$url' target='_blank'>%s</a>", $self->Pluralize('review',$n);
+        push @msgs, $msg;
         $stat = 1;
       }
     }
@@ -7630,7 +7281,7 @@ sub LinkToHistorical
   my $sysid = shift;
   my $full  = shift;
 
-  my $url = "/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid";
+  my $url = $self->Sysify("/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid");
   $url = $self->SelfURL() . $url if $full;
   return $url;
 }
@@ -7641,7 +7292,7 @@ sub LinkToRetrieve
   my $sysid = shift;
   my $full  = shift;
 
-  my $url = "/cgi/c/crms/crms?p=track;query=$sysid";
+  my $url = $self->Sysify("/cgi/c/crms/crms?p=track;query=$sysid");
   $url = $self->SelfURL() . $url if $full;
   return $url;
 }
@@ -7762,18 +7413,15 @@ sub AllCRMSRights
 {
   my $self = shift;
   
-  my %okattr = ('pd/ncn' => 1,
-                'pd/ren' => 1,
-                'pd/cdpp' => 1,
-                'pdus/cdpp' => 1,
-                'pd/crms' => 1,
-                'pd/add' => 1,
-                'pd/exp' => 1,
-                'ic/ren' => 1,
-                'ic/cdpp' => 1,
-                'ic/crms' => 1,
-                'und/nfi' => 1,
-                'und/crms' => 1);
+  my $sql = 'SELECT attr,reason FROM rights';
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my %okattr;
+  foreach my $row ( @{$ref} )
+  {
+    my $a = $self->TranslateAttr($row->[0]);
+    my $r = $self->TranslateReason($row->[1]);
+    $okattr{"$a/$r"} = 1;
+  }
   return %okattr;
 }
 
@@ -7980,8 +7628,8 @@ sub GetSystemVar
 {
   my $self    = shift;
   my $name    = shift;
-  my $ck      = shift;
   my $default = shift;
+  my $ck      = shift;
 
   my $sql = "SELECT value FROM systemvars WHERE name='$name'";
   my $var = $self->SimpleSqlGet($sql);
@@ -8019,7 +7667,6 @@ sub Menus
   my $x = $self->IsUserExtAdmin();
   my $a = $self->IsUserAdmin();
   my $s = $self->IsUserSuperAdmin();
-  my $i = $self->IsUserIncarnationExpertOrHigher();
   my $sql = "SELECT id,name,class,restricted FROM menus ORDER BY n";
   #print "$sql\n<br/>";
   my $ref = $self->GetDb()->selectall_arrayref($sql);
@@ -8032,8 +7679,7 @@ sub Menus
           ($r && $row->[3] =~ m/r/) ||
           ($x && $row->[3] =~ m/x/) ||
           ($a && $row->[3] =~ m/a/) ||
-          ($s && $row->[3] =~ m/s/) ||
-          ($i && $row->[3] =~ m/i/))))
+          ($s && $row->[3] =~ m/s/))))
     {
       push @all, $row;
     }
@@ -8052,7 +7698,6 @@ sub MenuItems
   my $x = $self->IsUserExtAdmin();
   my $a = $self->IsUserAdmin();
   my $s = $self->IsUserSuperAdmin();
-  my $i = $self->IsUserIncarnationExpertOrHigher();
   my $sql = "SELECT name,href,institution,restricted,target FROM menuitems WHERE menu=$menu ORDER BY n ASC";
   #print "$sql\n<br/>";
   my $ref2 = $self->GetDb()->selectall_arrayref($sql);
@@ -8066,8 +7711,7 @@ sub MenuItems
           ($r && $row2->[3] =~ m/r/) ||
           ($x && $row2->[3] =~ m/x/) ||
           ($a && $row2->[3] =~ m/a/) ||
-          ($s && $row2->[3] =~ m/s/) ||
-          ($i && $row2->[3] =~ m/i/))))
+          ($s && $row2->[3] =~ m/s/))))
     {
       push @all, $row2;
     }
@@ -8086,7 +7730,7 @@ sub Categories
   my $x = $self->IsUserExtAdmin();
   my $a = $self->IsUserAdmin();
   my $s = $self->IsUserSuperAdmin();
-  my $i = $self->IsUserIncarnationExpertOrHigher();
+  #my $i = $self->IsUserIncarnationExpertOrHigher();
   my $sql = 'SELECT id,name,restricted,interface,need_note FROM categories ORDER BY name ASC';
   #print "$sql\n<br/>";
   my $ref = $self->GetDb()->selectall_arrayref($sql);
@@ -8100,8 +7744,7 @@ sub Categories
           ($r && $row->[2] =~ m/r/) ||
           ($x && $row->[2] =~ m/x/) ||
           ($a && $row->[2] =~ m/a/) ||
-          ($s && $row->[2] =~ m/s/) ||
-          ($i && $row->[2] =~ m/i/))))
+          ($s && $row->[2] =~ m/s/))))
     {
       push @all, $row;
     }
@@ -8119,7 +7762,6 @@ sub Rights
   my $x = $self->IsUserExtAdmin();
   my $a = $self->IsUserAdmin();
   my $s = $self->IsUserSuperAdmin();
-  my $i = $self->IsUserIncarnationExpertOrHigher();
   my $sql = 'SELECT id,attr,reason,restricted,description FROM rights ORDER BY id ASC';
   #print "$sql\n<br/>";
   my $ref = $self->GetDb()->selectall_arrayref($sql);
@@ -8129,14 +7771,14 @@ sub Rights
     my $restricted = $row->[3];
     next if ($restricted && !$exp);
     next if ($exp && !$restricted);
+    next if ($restricted eq 'i');
     if (!$restricted ||
         ($restricted &&
          (($e && $restricted =~ m/e/) ||
           ($r && $restricted =~ m/r/) ||
           ($x && $restricted =~ m/x/) ||
           ($a && $restricted =~ m/a/) ||
-          ($s && $restricted =~ m/s/) ||
-          ($i && $restricted =~ m/i/))))
+          ($s && $restricted =~ m/s/))))
     {
       push @all, $row;
     }
@@ -8189,6 +7831,125 @@ sub Sources
     push @all, [$row->[0], $row->[1], $url, $row->[3], $row->[4], $row->[5]];
   }
   return \@all;
+}
+
+# Makes sure a URL has the correct sys param if needed.
+sub Sysify
+{
+  my $self = shift;
+  my $url  = shift;
+
+  my $sys = $self->get('sys');
+  if ($sys ne 'crms')
+  {
+    if ($url !~ m/sys=$sys/i)
+    {
+      $url .= '?' unless $url =~ m/\?/;
+      $url .= ';' unless $url =~ m/[;?]$/;
+      $url .= "sys=$sys";
+    }
+  }
+  return $url;
+}
+
+# Used to simplify the search results page links.
+# Makes URL params for all values defined in the CGI,
+# ignoring those that are valueless.
+# All subsequent parameters to this routine are left out of the
+# resulting string; it is assumed they will appended by the caller.
+sub URLify
+{
+  my $self = shift;
+  my $cgi  = shift;
+
+  my %exceptions = ();
+  $exceptions{$_} = 1 for @_;
+  my @comps = ();
+  foreach my $key ($cgi->param)
+  {
+    my $val = $cgi->param($key);
+    push @comps, "$key=$val" if $val and not $exceptions{$key};
+  }
+  return join ';',@comps;
+}
+
+# Creates a chunk of HTML with hidden inputs based on the CGI params,
+# ignoring those that are valueless.
+# All subsequent parameters to this routine are left out of the
+# resulting string; it is assumed they will be appended by the caller.
+sub Hiddenify
+{
+  my $self = shift;
+  my $cgi  = shift;
+  
+  my %exceptions = ();
+  $exceptions{$_} = 1 for @_;
+  my @comps = ();
+  foreach my $key ($cgi->param)
+  {
+    my $val = $cgi->param($key);
+    push @comps, "<input type='hidden' name='$key' value='$val'/>" if $val and not $exceptions{$key};
+  }
+  return join "\n", @comps;
+}
+
+# If necessary, emits a hidden input with the sys name
+sub HiddenSys
+{
+  my $self = shift;
+
+  my $sys = $self->get('sys');
+  return "<input type='hidden' name='sys' value='$sys'/>" if $sys && $sys ne 'crms';
+  return '';
+}
+
+# Compares 2 strings or undefs
+sub TolerantCompare
+{
+  my $self = shift;
+  my $s1   = shift;
+  my $s2   = shift;
+  
+  return 1 if (!defined $s1) && (!defined $s2);
+  return 0 if (!defined $s1) && (defined $s2);
+  return 0 if (defined $s1) && (!defined $s2);
+  return $s1 eq $s2; 
+}
+
+# This CRMS World specific. Predict best radio button to choose based on death/pub date.
+sub PredictRights
+{
+  my $self  = shift;
+  my $id    = shift;
+  my $year  = shift;
+  my $pub   = shift;
+  my $crown = shift;
+
+  return 0 if $year !~ m/^\d\d\d\d$/;
+  my $where = $self->GetPubCountry($id);
+  my ($attr, $reason);
+  my $now = $self->GetTheYear();
+  my $when;
+  if ($where eq 'United Kingdom')
+  {
+    $when = $year + ($crown)? 50:70;
+  }
+  else
+  {
+    $when = $year + 50;
+  }
+  if ($when < $now)
+  {
+    $attr = $self->TranslateAttr('pd');
+    $reason = $self->TranslateReason(($pub)? 'exp':'add');
+  }
+  else
+  {
+    $attr = $self->TranslateAttr('ic');
+    $reason = $self->TranslateReason('add');
+  }
+  my $sql = "SELECT id FROM rights WHERE attr=$attr AND reason=$reason";
+  return $self->SimpleSqlGet($sql);
 }
 
 sub Unescape

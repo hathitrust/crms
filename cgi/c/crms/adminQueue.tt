@@ -47,10 +47,12 @@ function CheckAll(box,formid)
 <br/><br/>
 [% locked = crms.GetLockedItems() %]
 [% IF locked.size %]
-  <blockquote><a href="?p=adminQueue;clear=1">Clear old locks</a></blockquote><br/>
+  [% url = crms.Sysify('crms?p=adminQueue;clear=1') %]
+  <blockquote><a href="$url">Clear old locks</a></blockquote><br/>
   <form action="crms" id="checks">
-  <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
+  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="adminQueue"/>
+  <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
   <input type="submit" name="unlockSel" value="Unlock Selected Volumes"/><br/><br/>
   <table class="exportStats" style="width:55%">
   <tr><th colspan="6" style="text-align:center;"><span class="major">Locked Items</span></th></tr>
@@ -65,7 +67,8 @@ function CheckAll(box,formid)
       <td style="text-align:center">[% when.replace('\s', '&nbsp;') %]</td>
       <td style="text-align:center"><input type="checkbox" name="vol_[% item %]"/></td>
       <td style="text-align:center">
-        <a href="crms?p=adminQueue;unlock=[% item %]">do it</a>  
+        [% url = crms.Sysify("crms?p=adminQueue;unlock=$item") %]
+        <a href="$url">do it</a>  
       </td>
     </tr>
   [% END %]

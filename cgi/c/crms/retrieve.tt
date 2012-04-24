@@ -4,14 +4,15 @@
 [% END %]
 
 [% p = cgi.param('p') %]
-[% q = cgi.param('query') %]
+[% q = cgi.param('q') %]
 [% INCLUDE header.tt %]
 
 <h2>Retrieve Volume IDs:</h2>
 <form action="crms">
-  <label for="queryTA" class="smallishText">Enter one system id or volume id per line.</label><br/>
+  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="retrieve"/>
-  <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;">[% q %]</textarea>
+  <label for="queryTA" class="smallishText">Enter one system id or volume id per line.</label><br/>
+  <textarea id="queryTA" name="q" cols="20" rows="10" style="width:33%; height:9em;">[% q %]</textarea>
   <input type="submit" value="Do it!"/>
 </form>
 
@@ -25,7 +26,8 @@
     [% END %]
     [% IF id.search('\.') %][% id = crms.BarcodeToId(id) %][% END %]
     <br/>
-    <a href="?p=$p;download=1;q=[% id %]" target="_blank">download</a>
+    [% url = crms.Sysify("?p=$p;download=1;q=$id") %]
+    <a href="[% url %]" target="_blank">download</a>
     <br/>
     <table class="exportStats">
       <tr><th colspan="9" class="major" style="text-align:center;">

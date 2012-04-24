@@ -18,8 +18,10 @@
 [% offset = (jump - 1) * pagesize %]
 [% END %]
 
+[% blah = cgi.param('records',pagesize) %]
+[% blah = cgi.param('offset',offset)    %]
 
-[% ref = crms.GetQueueRef( order, dir, search1, search1value, op1, search2, search2value, startDate, endDate, offset, pagesize, 0) %]
+[% ref = crms.GetQueueRef(order, dir, search1, search1value, op1, search2, search2value, startDate, endDate, offset, pagesize, 0) %]
 
 [% total = ref.volumes %]
 
@@ -44,40 +46,32 @@
   [% doFirst = (offset != 0) %]
   [% doLast = (offset != last) %]
   [% IF doPrev %]
-  <a href="?p=$p;search1=$search1;search1value=$search1value;search2=$search2;search2value=$search2value;op1=$op1;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=$prev;records=$pagesize#results">
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">previous [% pagesize %]</a>
   [% ELSE %]
-  <span class="disabledLink">
+  <span class="disabledLink">previous [% pagesize %]</span>
   [% END %]
-  previous [% pagesize %]
-  [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
   &nbsp;||&nbsp;
   [% IF doNext %]
-  <a href="?p=$p;id=$id;search1=$search1;search1value=$search1value;search2=$search2;search2value=$search2value;op1=$op1;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=$next;records=$pagesize#results">
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$next#results" %]">next [% pagesize %]</a>
   [% ELSE %]
-  <span class="disabledLink">
+  <span class="disabledLink">next [% pagesize %]</span>
   [% END %]
-  next [% pagesize %]
-  [% IF doNext %]</a>[% ELSE %]</span>[% END %]
   &nbsp;||&nbsp;
   [% IF doFirst %]
-  <a href="?p=$p;search1=$search1;search1value=$search1value;search2=$search2;search2value=$search2value;op1=$op1;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=0;records=$pagesize#results">
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0#results" %]">first page<a>
   [% ELSE %]
-  <span class="disabledLink">
+  <span class="disabledLink">first page</span>
   [% END %]
-  first page
-  [% IF doFirst %]</a>[% ELSE %]</span>[% END %]
   &nbsp;||&nbsp;
   [% IF doLast %]
-  <a href="?p=$p;search1=$search1;search1value=$search1value;search2=$search2;search2value=$search2value;op1=$op1;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=$last;records=$pagesize#results">
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$last#results" %]">last page</a>
   [% ELSE %]
-  <span class="disabledLink">
+  <span class="disabledLink">last page</span>
   [% END %]
-  last page
-  [% IF doLast %]</a>[% ELSE %]</span>[% END %]
 
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="?p=$p;search1=$search1;search1value=$search1value;search2=$search2;search2value=$search2value;op1=$op1;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=$prev;type=$p;download=1" target="_blank">download</a>
-
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0;download=1" %]" target="_blank">download</a>
+  
   [% color_white    = '#FFFFFF' %]
   [% color_gray     = '#C6C4F1' %]
   [% prev_id        = '' %]
@@ -128,7 +122,7 @@
   </table>
 
   [% IF doPrev %]
-  <a href="?p=$p;search1=$search1;search1value=$search1value;search2=$search2;search2value=$search2value;op1=$op1;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=$prev;records=$pagesize#results">
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
@@ -136,7 +130,7 @@
   [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
   &nbsp;||&nbsp;
   [% IF doNext %]
-  <a href="?p=$p;id=$id;search1=$search1;search1value=$search1value;search2=$search2;search2value=$search2value;op1=$op1;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=$next;records=$pagesize#results">
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$next#results" %]">
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
@@ -149,17 +143,7 @@
 
     <form action="crms">
     Jump to Page:
-    <input type="hidden" name="p" value="$p"/>
-    <input type="hidden" name="search1" value="$search1"/>
-    <input type="hidden" name="search1value" value="$search1value"/>
-    <input type="hidden" name="search2" value="$search2"/>
-    <input type="hidden" name="search2value" value="$search2value"/>
-    <input type="hidden" name="op1" value="$op1"/>
-    <input type="hidden" name="startDate" value="$startDate"/>
-    <input type="hidden" name="endDate" value="$endDate"/>
-    <input type="hidden" name="order" value="$order"/>
-    <input type="hidden" name="dir" value="$dir"/>
-    <input type="hidden" name="records" value="$pagesize"/>
+    [% crms.Hiddenify(cgi) %]
     <input title="Jump to Page" size="3" type="text" id="jump" name="jump" value="[% pagenum %]"/>
     &nbsp;&nbsp;&nbsp;&nbsp;||
     [% min = pagenum - 10 %]
@@ -167,9 +151,12 @@
     [% max = pagenum + 10 %]
     [% IF max > of %][% max = of %][% END %]
     [% FOREACH pg IN [min .. max] %]
-      <a href="?p=$p;search1=$search1;search1value=$search1value;search2=$search2;search2value=$search2value;op1=$op1;startDate=$startDate;endDate=$endDate;order=$order;dir=$dir;offset=[% (pg - 1) * pagesize %];records=$pagesize#results">
-      [% IF pg == pagenum %]<b>[% pg %]</b>[% ELSE %][% pg %][% END %]
-  </a> || 
+      [% IF pg == pagenum %]
+        <b>[% pg %]</b> ||
+      [% ELSE %]
+        [% off = (pg - 1) * pagesize %]
+        <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$off#results" %]">[% pg %]</a> ||
+      [% END %]
     [% END %]
     </form>
   [% END %]

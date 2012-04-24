@@ -16,7 +16,7 @@
 [% reviewer   = cgi.param('reviewer')   %]
 [% advanced   = cgi.param('advanced')   %]
 [% expert     = cgi.param('expert')     %]
-[% extadmin   = cgi.param('extadmin')      %]
+[% extadmin   = cgi.param('extadmin')   %]
 [% admin      = cgi.param('admin')      %]
 [% superadmin = cgi.param('superadmin') %]
 [% note       = cgi.param('note') %]
@@ -57,7 +57,8 @@
     [% s = crms.IsUserSuperAdmin(userid) %]
     [% style = (r||v||e||x||a||s)? '':'style="background-color:#e2e2e2;"' %]
     <tr [% id == userid ? 'class="total"':''%][% style %]>
-      <td><a href="crms?p=userRate;user=[% userid %]" target="_blank">[% crms.GetUserName(userid).replace('\s','&nbsp;') %]</a></td>
+      <td>
+        <a href="crms?p=userRate;user=[% userid %]" target="_blank">[% crms.GetUserName(userid).replace('\s','&nbsp;') %]</a></td>
       <td>[% userid %]</td>
       <td>[% crms.GetUserKerberosID(userid) %]</td>
       <td style="text-align:center">[% IF r %][% icon %][% END %]</td>
@@ -72,6 +73,7 @@
       <td>
         [% IF crms.CanChangeToUser(user,userid) %]
         <form action="crms">
+          [% crms.HiddenSys() %]
           <input type="hidden" name="changeuser" value="1"/>
           <input type="hidden" name="newuser" value="[% userid %]"/>
           <input type="submit" value="Go"/>
@@ -89,6 +91,7 @@
   <form action="crms">
     <input type="hidden" name="p" value="adminUser"/>
     <input type="hidden" name="add" value="1"/>
+    [% crms.HiddenSys() %]
     <table>
     <tr>
       <td>
