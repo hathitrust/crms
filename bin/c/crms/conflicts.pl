@@ -1,4 +1,4 @@
-#!/l/local/bin/perl
+#!/usr/bin/perl
 
 # This script can be run from crontab
 
@@ -6,9 +6,9 @@ my $DLXSROOT;
 my $DLPS_DEV;
 BEGIN 
 { 
-    $DLXSROOT = $ENV{'DLXSROOT'}; 
-    $DLPS_DEV = $ENV{'DLPS_DEV'}; 
-    unshift ( @INC, $ENV{'DLXSROOT'} . "/cgi/c/crms/" );
+  $DLXSROOT = $ENV{'DLXSROOT'}; 
+  $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
 use strict;
@@ -16,24 +16,24 @@ use CRMS;
 use Getopt::Std;
 
 my %opts;
-getopts('hpv', \%opts);
+my $ok = getopts('hpvx:', \%opts);
 
 my $help       = $opts{'h'};
 my $production = $opts{'p'};
 my $verbose    = $opts{'v'};
+my $sys        = $opts{'x'};
 
-
-if ($help)
+if ($help || !$ok)
 {
-  die "USAGE: $0 [-h] [-p] [-v] [date]\n\n";
+  die "USAGE: $0 [-hpv] [-X SYS] [date]\n\n";
 }
-
+$DLPS_DEV = undef if $production;
 my $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/gov_hist.txt",
-    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   !$production
+    logFile => "$DLXSROOT/prep/c/crms/gov_hist.txt",
+    sys     => $sys,
+    verbose => $verbose,
+    root    => $DLXSROOT,
+    dev     => $DLPS_DEV
 );
 
 my %confs = (
@@ -55,7 +55,8 @@ my %confs = (
 );
 
 
-my $sql = 'SELECT DISTINCT e.id,e.gid FROM exportdata e INNER JOIN historicalreviews r ON e.gid=r.gid WHERE r.status=5 AND r.time>="2010-05-01 00:00:00"';
+my $sql = 'SELECT DISTINCT e.id,e.gid FROM exportdata e INNER JOIN historicalreviews r ' .
+          'ON e.gid=r.gid WHERE r.status=5 AND r.time>="2010-05-01 00:00:00"';
 my $r = $crms->GetDb()->selectall_arrayref($sql);
 my $n = 0;
 foreach my $blah (@{$r})

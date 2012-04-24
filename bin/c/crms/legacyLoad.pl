@@ -1,12 +1,12 @@
-#!/l/local/bin/perl
+#!/usr/bin/perl
 
 my $DLXSROOT;
 my $DLPS_DEV;
 BEGIN 
 { 
-    $DLXSROOT = $ENV{'DLXSROOT'};
-    $DLPS_DEV = $ENV{'DLPS_DEV'};
-    unshift ( @INC, $ENV{'DLXSROOT'} . "/cgi/c/crms/" );
+  $DLXSROOT = $ENV{'DLXSROOT'};
+  $DLPS_DEV = $ENV{'DLPS_DEV'};
+  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
 use strict;
@@ -15,7 +15,7 @@ use Getopt::Std;
 use Encode qw(from_to);
 
 my $usage = <<END;
-USAGE: $0 [-hnpv] tsv_file1 [tsv_file2...]
+USAGE: $0 [-hnpv] [-X SYS] tsv_file1 [tsv_file2...]
 
 Imports the reviews in the argument tab-separated UTF-16 file(s)
 as legacy historical reviews.
@@ -24,15 +24,17 @@ as legacy historical reviews.
 -n       Do not update the database.
 -p       Run in production.
 -v       Be verbose.
+-x SYS   Set SYS as the system to execute.
 END
 
 my %opts;
-my $ok = getopts('hnpv', \%opts);
+my $ok = getopts('hnpvx:', \%opts);
 
 my $help       = $opts{'h'};
 my $noop       = $opts{'n'};
 my $production = $opts{'p'};
 my $verbose    = $opts{'v'};
+my $sys        = $opts{'x'};
 
 if ($help || scalar @ARGV < 1 || !$ok)
 {
@@ -42,11 +44,11 @@ if ($help || scalar @ARGV < 1 || !$ok)
 my $file = $ARGV[0];
 
 my $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/log_load_hist.txt",
-    configFile   =>   'crms.cfg',
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   !$production,
+    logFile =>   "$DLXSROOT/prep/c/crms/log_load_hist.txt",
+    sys     =>   $sys,
+    verbose =>   $verbose,
+    root    =>   $DLXSROOT,
+    dev     =>   !$production,
 );
 
 

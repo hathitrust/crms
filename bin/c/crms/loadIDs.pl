@@ -1,12 +1,12 @@
-#!/l/local/bin/perl
+#!/usr/bin/perl
 
 my $DLXSROOT;
 my $DLPS_DEV;
 BEGIN 
 { 
-    $DLXSROOT = $ENV{'DLXSROOT'}; 
-    $DLPS_DEV = $ENV{'DLPS_DEV'}; 
-    unshift ( @INC, $ENV{'DLXSROOT'} . "/cgi/c/crms/" );
+  $DLXSROOT = $ENV{'DLXSROOT'}; 
+  $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
 use strict;
@@ -14,47 +14,47 @@ use CRMS;
 use Getopt::Std;
 
 my $usage = <<END;
-USAGE: $0 [-hnpv] -u user tsv_file
+USAGE: $0 [-hnpvx:] -u USER TSV_FILE
 
-Imports reviews for a rereview project from tsv_file.
+Imports reviews for a rereview project from TSV_FILE.
 
 -h       Print this help message.
 -n       Do not update the database.
 -p       Run in production.
--u user  Add reviews by this user ID.
+-u USER  Add reviews by this user ID.
 -v       Be verbose.
+-x SYS   Set SYS as the system to execute.
 
-The tsv_file has one record per line (spacing added for clarity):
+The TSV_FILE has one record per line (spacing added for clarity):
 
 volume id sans mdp <tab> attr <tab> reason <tab> original review date
 39015028120130     <tab>  ic  <tab> ren    <tab> 2007-10-03 12:20:49
 END
 
 my %opts;
-my $ok = getopts('hnpu:v', \%opts);
+my $ok = getopts('hnpu:vx:', \%opts);
 
 my $help       = $opts{'h'};
 my $noop       = $opts{'n'};
 my $production = $opts{'p'};
 my $user       = $opts{'u'};
 my $verbose    = $opts{'v'};
+my $sys        = $opts{'x'};
 
 if ($help || scalar @ARGV != 1 || !$user || !$ok)
 {
   die $usage;
 }
+$DLPS_DEV = undef if $production;
 my $file = $ARGV[0];
 
-#print("DLXSROOT: $DLXSROOT DLPS_DEV: $DLPS_DEV\n");
-
 my $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/log_IDs.txt",
-    configFile   =>   'crms.cfg',
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   !$production,
+    logFile => "$DLXSROOT/prep/c/crms/log_IDs.txt",
+    sys     => $sys,
+    verbose => $verbose,
+    root    => $DLXSROOT,
+    dev     => $DLPS_DEV
 );
-
 
 open my $fh, $file or die "failed to open $file: $@ \n";
 
@@ -145,11 +145,11 @@ foreach my $line ( <$fh> )
 }
 close $fh;
 $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/log_IDs.txt",
-    configFile   =>   'crms.cfg',
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   !$production,
+    logFile  =>   "$DLXSROOT/prep/c/crms/log_IDs.txt",
+    sys      =>   $sys,
+    verbose  =>   $verbose,
+    root     =>   $DLXSROOT,
+    dev      =>   $DLPS_DEV
 );
 $sql = "SELECT COUNT(*) FROM queue WHERE priority=1";
 my $already = $crms->SimpleSqlGet($sql);

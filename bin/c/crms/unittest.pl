@@ -1,4 +1,4 @@
-#!../../../bin/symlinks/perl
+#!/usr/bin/perl
 
 use warnings;
 my ($DLXSROOT, $DLPS_DEV);
@@ -6,9 +6,7 @@ BEGIN
 { 
   $DLXSROOT = $ENV{'DLXSROOT'}; 
   $DLPS_DEV = $ENV{'DLPS_DEV'}; 
-
-  my $toinclude = qq{$DLXSROOT/cgi/c/crms};
-  unshift( @INC, $toinclude );
+  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
 use strict;
@@ -18,18 +16,20 @@ use Test::More;
 
 
 my %opts;
-getopts('rpt', \%opts);
+getopts('rptx:', \%opts);
 
-my $renDate = $opts{'d'};
 my $production = $opts{'p'};
 my $training = $opts{'t'};
+my $sys = $opts{'x'};
 my $dev = 'moseshll';
 $dev = 0 if $production;
 $dev = 'crmstest' if $training;
 
+$sys = 'crms' unless $sys;
+
 my $crms = CRMS->new(
         logFile      =>   "$DLXSROOT/prep/c/crms/log_unittest.txt",
-        configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
+        sys          =>   $sys,
         verbose      =>   1,
         root         =>   $DLXSROOT,
         dev          =>   $dev
@@ -99,7 +99,7 @@ is($crms->IsWorkingDay('2011-06-27'), 1,                                 'WD: a 
 is($crms->GetUserAffiliation('hansone@indiana.edu'), 'IU',               'IU affiliation');
 is($crms->GetUserAffiliation('aseeger@library.wisc.edu'), 'UW',          'UW affiliation');
 is($crms->GetUserAffiliation('zl2114@columbia.edu'), 'COL',              'COL affiliation');
-is(scalar @{ $crms->GetUsersWithAffiliation('IU') }, 6,                  'IU affiliates count');
+is(scalar @{ $crms->GetUsersWithAffiliation('IU') }, 7,                  'IU affiliates count');
 is(scalar @{ $crms->GetUsersWithAffiliation('UW') }, 5,                  'UW affiliates count');
 is(scalar @{ $crms->GetUsersWithAffiliation('COL') }, 1,                 'COL affiliates count');
 
@@ -128,31 +128,31 @@ is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,0)}, 3,    'Viol
 is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,1)}, 0,    'Violations: mdp.39015082195432 P4 1');
 
 ok('Renewal no longer required for works published after 1963. ' eq
-   $crms->ValidateSubmission2('mdp.39015011285692','moseshll',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin >63 +ren');
+   $crms->ValidateSubmission('mdp.39015011285692','moseshll',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin >63 +ren');
 ok('' eq
-   $crms->ValidateSubmission2('mdp.39015011285692','moseshll',1,2,undef,undef,undef,undef),     'pd/ncn superadmin >63 -ren');
+   $crms->ValidateSubmission('mdp.39015011285692','moseshll',1,2,undef,undef,undef,undef),     'pd/ncn superadmin >63 -ren');
 ok('' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','moseshll',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin <63 +ren');
+   $crms->ValidateSubmission('uc1.31822009761677','moseshll',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin <63 +ren');
 ok('' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','moseshll',1,2,undef,undef,undef,undef),     'pd/ncn superadmin <63 -ren');
+   $crms->ValidateSubmission('uc1.31822009761677','moseshll',1,2,undef,undef,undef,undef),     'pd/ncn superadmin <63 -ren');
 
 ok('Renewal no longer required for works published after 1963. ' eq
-   $crms->ValidateSubmission2('mdp.39015011285692','jaheim123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin >63 +ren');
+   $crms->ValidateSubmission('mdp.39015011285692','jaheim123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin >63 +ren');
 ok('' eq
-   $crms->ValidateSubmission2('mdp.39015011285692','jaheim123',1,2,undef,undef,undef,undef),     'pd/ncn admin >63 -ren');
+   $crms->ValidateSubmission('mdp.39015011285692','jaheim123',1,2,undef,undef,undef,undef),     'pd/ncn admin >63 -ren');
 ok('' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','jaheim123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin <63 +ren -note');
+   $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin <63 +ren -note');
 ok('pd/ncn must include either renewal id and renewal date, or note category "Expert Note". ' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','jaheim123',1,2,undef,undef,undef,undef),     'pd/ncn admin <63 -ren -note');
+   $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,undef,undef,undef,undef),     'pd/ncn admin <63 -ren -note');
 ok('' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','jaheim123',1,2,'blah','Expert Note','R000','1Jan60'), 'pd/ncn admin <63 +ren +note');
+   $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,'blah','Expert Note','R000','1Jan60'), 'pd/ncn admin <63 +ren +note');
 ok('' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','jaheim123',1,2,'blah','Expert Note',undef,undef),     'pd/ncn admin <63 -ren +note');
+   $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,'blah','Expert Note',undef,undef),     'pd/ncn admin <63 -ren +note');
 
 ok('' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','gnichols',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn expert <63 +ren');
+   $crms->ValidateSubmission('uc1.31822009761677','gnichols',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn expert <63 +ren');
 ok('pd/ncn must include renewal id and renewal date. ' eq
-   $crms->ValidateSubmission2('uc1.31822009761677','gnichols',1,2,undef,undef,undef,undef),     'pd/ncn expert <63 -ren');
+   $crms->ValidateSubmission('uc1.31822009761677','gnichols',1,2,undef,undef,undef,undef),     'pd/ncn expert <63 -ren');
 my $id = $crms->SimpleSqlGet('SELECT id FROM und WHERE src!="duplicate"');
 $crms->Filter($id, 'duplicate');
 my $src = $crms->SimpleSqlGet("SELECT src FROM und WHERE id='$id'");
@@ -171,27 +171,111 @@ $crms->PrepareSubmitSql('INSERT INTO systemvars (name,value) VALUES ("blah", "1"
 $crms->PrepareSubmitSql('INSERT INTO systemvars (name,value) VALUES ("bleh", "2")');
 is($crms->GetSystemVar('blah'), 1,                                                                 'GetSystemVar 1');
 is($crms->GetSystemVar('bleh'), 2,                                                                 'GetSystemVar 2');
-is($crms->GetSystemVar('bleh','$_<2'), undef,                                                      'GetSystemVar 3');
+is($crms->GetSystemVar('bleh', undef, '$_<2'), undef,                                              'GetSystemVar 3');
 ok(defined $crms->GetSystemVar('priority1Frequency'),                                              'GetSystemVar 4');
 is($crms->GetSystemVar('spam'), undef,                                                             'GetSystemVar 5');
 $crms->PrepareSubmitSql('INSERT INTO systemvars (name,value) VALUES ("spam", "1.0")');
-is($crms->GetSystemVar('spam', '$_>=0.0 and $_<1.0'), undef,                                       'GetSystemVar 6');
-is($crms->GetSystemVar('spam', '$_>=0.0 and $_<1.0', .25), .25,                                    'GetSystemVar 7');
-is($crms->GetSystemVar('span', '$_>=0.0 and $_<1.0'), undef,                                       'GetSystemVar 8');
-is($crms->GetSystemVar('span', '$_>=0.0 and $_<1.0', .25), .25,                                    'GetSystemVar 9');
+is($crms->GetSystemVar('spam', undef, '$_>=0.0 and $_<1.0'), undef,                                'GetSystemVar 6');
+is($crms->GetSystemVar('spam', .25, '$_>=0.0 and $_<1.0'), .25,                                    'GetSystemVar 7');
+is($crms->GetSystemVar('span', undef, '$_>=0.0 and $_<1.0'), undef,                                'GetSystemVar 8');
+is($crms->GetSystemVar('span', .25, '$_>=0.0 and $_<1.0'), .25,                                    'GetSystemVar 9');
 $crms->PrepareSubmitSql('DELETE FROM systemvars WHERE name="blah" OR name="bleh" OR name="spam"');
+is($crms->TranslateAttr(1),'pd',                                                                   'TranslateAttr 1');
+is($crms->TranslateAttr(2),'ic',                                                                   'TranslateAttr 2');
+is($crms->TranslateAttr(3),'opb',                                                                  'TranslateAttr 3');
+is($crms->TranslateAttr(4),'orph',                                                                 'TranslateAttr 4');
+is($crms->TranslateAttr(5),'und',                                                                  'TranslateAttr 5');
+is($crms->TranslateAttr(6),'umall',                                                                'TranslateAttr 6');
+is($crms->TranslateAttr(7),'world',                                                                'TranslateAttr 7');
+is($crms->TranslateAttr(8),'nobody',                                                               'TranslateAttr 8');
+is($crms->TranslateAttr(9),'pdus',                                                                 'TranslateAttr 9');
+is($crms->TranslateAttr(10),'cc-by',                                                               'TranslateAttr 10');
+is($crms->TranslateAttr(11),'cc-by-nd',                                                            'TranslateAttr 11');
+is($crms->TranslateAttr(12),'cc-by-nc-nd',                                                         'TranslateAttr 12');
+is($crms->TranslateAttr(13),'cc-by-nc',                                                            'TranslateAttr 13');
+is($crms->TranslateAttr(14),'cc-by-nc-sa',                                                         'TranslateAttr 14');
+is($crms->TranslateAttr(15),'cc-by-sa',                                                            'TranslateAttr 15');
+is($crms->TranslateAttr(16),'orphcand',                                                            'TranslateAttr 16');
+is($crms->TranslateAttr(17),'cc-zero',                                                             'TranslateAttr 17');
+is($crms->TranslateAttr(18),'und-world',                                                           'TranslateAttr 18');
 
-if ($renDate)
+is($crms->TranslateAttr('pd'),1,                                                                   'TranslateAttr 1a');
+is($crms->TranslateAttr('ic'),2,                                                                   'TranslateAttr 2a');
+is($crms->TranslateAttr('opb'),3,                                                                  'TranslateAttr 3a');
+is($crms->TranslateAttr('orph'),4,                                                                 'TranslateAttr 4a');
+is($crms->TranslateAttr('und'),5,                                                                  'TranslateAttr 5a');
+is($crms->TranslateAttr('umall'),6,                                                                'TranslateAttr 6a');
+is($crms->TranslateAttr('world'),7,                                                                'TranslateAttr 7a');
+is($crms->TranslateAttr('nobody'),8,                                                               'TranslateAttr 8a');
+is($crms->TranslateAttr('pdus'),9,                                                                 'TranslateAttr 9a');
+is($crms->TranslateAttr('cc-by'),10,                                                               'TranslateAttr 10a');
+is($crms->TranslateAttr('cc-by-nd'),11,                                                            'TranslateAttr 11a');
+is($crms->TranslateAttr('cc-by-nc-nd'),12,                                                         'TranslateAttr 12a');
+is($crms->TranslateAttr('cc-by-nc'),13,                                                            'TranslateAttr 13a');
+is($crms->TranslateAttr('cc-by-nc-sa'),14,                                                         'TranslateAttr 14a');
+is($crms->TranslateAttr('cc-by-sa'),15,                                                            'TranslateAttr 15a');
+is($crms->TranslateAttr('orphcand'),16,                                                            'TranslateAttr 16a');
+is($crms->TranslateAttr('cc-zero'),17,                                                             'TranslateAttr 17a');
+is($crms->TranslateAttr('und-world'),18,                                                           'TranslateAttr 18a');
+
+is($crms->TranslateReason(1),'bib',                                                                'TranslateReason 1');
+is($crms->TranslateReason(2),'ncn',                                                                'TranslateReason 2');
+is($crms->TranslateReason(3),'con',                                                                'TranslateReason 3');
+is($crms->TranslateReason(4),'ddd',                                                                'TranslateReason 4');
+is($crms->TranslateReason(5),'man',                                                                'TranslateReason 5');
+is($crms->TranslateReason(6),'pvt',                                                                'TranslateReason 6');
+is($crms->TranslateReason(7),'ren',                                                                'TranslateReason 7');
+is($crms->TranslateReason(8),'nfi',                                                                'TranslateReason 8');
+is($crms->TranslateReason(9),'cdpp',                                                               'TranslateReason 9');
+is($crms->TranslateReason(10),'cip',                                                               'TranslateReason 10');
+is($crms->TranslateReason(11),'unp',                                                               'TranslateReason 11');
+is($crms->TranslateReason(12),'gfv',                                                               'TranslateReason 12');
+is($crms->TranslateReason(13),'crms',                                                              'TranslateReason 13');
+is($crms->TranslateReason(14),'add',                                                               'TranslateReason 14');
+is($crms->TranslateReason(15),'exp',                                                               'TranslateReason 15');
+
+is($crms->TranslateReason('bib'),1,                                                                'TranslateReason 1a');
+is($crms->TranslateReason('ncn'),2,                                                                'TranslateReason 2a');
+is($crms->TranslateReason('con'),3,                                                                'TranslateReason 3a');
+is($crms->TranslateReason('ddd'),4,                                                                'TranslateReason 4a');
+is($crms->TranslateReason('man'),5,                                                                'TranslateReason 5a');
+is($crms->TranslateReason('pvt'),6,                                                                'TranslateReason 6a');
+is($crms->TranslateReason('ren'),7,                                                                'TranslateReason 7a');
+is($crms->TranslateReason('nfi'),8,                                                                'TranslateReason 8a');
+is($crms->TranslateReason('cdpp'),9,                                                               'TranslateReason 9a');
+is($crms->TranslateReason('cip'),10,                                                               'TranslateReason 10a');
+is($crms->TranslateReason('unp'),11,                                                               'TranslateReason 11a');
+is($crms->TranslateReason('gfv'),12,                                                               'TranslateReason 12a');
+is($crms->TranslateReason('crms'),13,                                                              'TranslateReason 13a');
+is($crms->TranslateReason('add'),14,                                                               'TranslateReason 14a');
+is($crms->TranslateReason('exp'),15,                                                               'TranslateReason 15a');
+
+if ($sys eq 'crmsworld')
 {
-  my $sql = "SELECT ID,DREG FROM stanford";
-  my $ref = $crms->GetDb()->selectall_arrayref($sql);
-  foreach my $row (@{$ref})
-  {
-    $id = $row->[0];
-    my $dreg = $row->[1];
-    ok(('' eq $crms->CheckRenDate($dreg)),                                 "CheckRenDate($id)");
-  }
+  is($crms->GetCodeFromAttrReason(1,14),1,                                                         'GetCodeFromAttrReason 1');
+  is($crms->GetCodeFromAttrReason(2,14),2,                                                         'GetCodeFromAttrReason 2');
+  is($crms->GetCodeFromAttrReason(5,8),3,                                                          'GetCodeFromAttrReason 3');
+  ok($crms->Sysify('crms') eq 'crms?sys=crmsworld',                                                'Sysify 1');
+  ok($crms->Sysify('crms?p=review') eq 'crms?p=review;sys=crmsworld',                              'Sysify 2');
 }
+else
+{
+  is($crms->GetCodeFromAttrReason(1,2),1,                                                           'GetCodeFromAttrReason 1');
+  is($crms->GetCodeFromAttrReason(1,7),2,                                                           'GetCodeFromAttrReason 2');
+  is($crms->GetCodeFromAttrReason(1,9),3,                                                           'GetCodeFromAttrReason 3');
+  is($crms->GetCodeFromAttrReason(2,7),4,                                                           'GetCodeFromAttrReason 4');
+  is($crms->GetCodeFromAttrReason(2,9),5,                                                           'GetCodeFromAttrReason 5');
+  is($crms->GetCodeFromAttrReason(5,8),6,                                                           'GetCodeFromAttrReason 6');
+  is($crms->GetCodeFromAttrReason(9,9),7,                                                           'GetCodeFromAttrReason 7');
+  is($crms->GetCodeFromAttrReason(1,14),8,                                                          'GetCodeFromAttrReason 8');
+  is($crms->GetCodeFromAttrReason(1,15),9,                                                          'GetCodeFromAttrReason 9');
+}
+
+ok($crms->TolerantCompare(undef,undef),                                                             'TolerantCompare 1');
+ok(!$crms->TolerantCompare('blah',undef),                                                           'TolerantCompare 2');
+ok(!$crms->TolerantCompare(undef,'blah'),                                                           'TolerantCompare 3');
+ok(!$crms->TolerantCompare('blah','bleh'),                                                          'TolerantCompare 4');
+ok($crms->TolerantCompare('blah','blah'),                                                           'TolerantCompare 5');
 
 
 done_testing();

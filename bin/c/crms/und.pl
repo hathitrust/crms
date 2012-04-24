@@ -1,14 +1,12 @@
-#!/l/local/bin/perl
-
-# This script can be run from crontab; it 
+#!/usr/bin/perl
 
 my $DLXSROOT;
 my $DLPS_DEV;
 BEGIN 
 { 
-    $DLXSROOT = $ENV{'DLXSROOT'}; 
-    $DLPS_DEV = $ENV{'DLPS_DEV'}; 
-    unshift ( @INC, $ENV{'DLXSROOT'} . "/cgi/c/crms/" );
+  $DLXSROOT = $ENV{'DLXSROOT'}; 
+  $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
 use strict;
@@ -16,29 +14,27 @@ use CRMS;
 use Getopt::Std;
 
 my %opts;
-getopts('hnpt:v', \%opts);
+getopts('hnpt:vx:', \%opts);
 
 my $help       = $opts{'h'};
 my $noop       = $opts{'n'};
 my $production = $opts{'p'};
 my $time       = $opts{'t'};
+my $sys        = $opts{'x'};
 my $verbose    = $opts{'v'};
-
+$DLPS_DEV = undef if $production;
 $time = 10800 unless $time;
 
-if ($help)
-{
-  die "USAGE: $0 [-h] [-n] [-p] [-t secs_to_run] [-v]\n\n";
-}
+die "USAGE: $0 [-h] [-n] [-p] [-t secs_to_run] [-v] [-x SYS]\n\n" if $help;
 
 my $file = $ARGV[0];
 
 my $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/und_hist.txt",
-    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   !$production
+    logFile =>   "$DLXSROOT/prep/c/crms/und_hist.txt",
+    sys     =>   $sys,
+    verbose =>   $verbose,
+    root    =>   $DLXSROOT,
+    dev     =>   $DLPS_DEV
 );
 my $done = 0;
 my $of = 0;

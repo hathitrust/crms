@@ -1,4 +1,4 @@
-#!/l/local/bin/perl
+#!/usr/bin/perl
 
 # This script can be run from crontab; it 
 
@@ -8,7 +8,7 @@ BEGIN
 { 
   $DLXSROOT = $ENV{'DLXSROOT'}; 
   $DLPS_DEV = $ENV{'DLPS_DEV'}; 
-  unshift ( @INC, $ENV{'DLXSROOT'} . "/cgi/c/crms/" );
+  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
 use strict;
@@ -17,8 +17,8 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-hlptvw] [-i ID] [-m MAIL_ADDR [-m MAIL_ADDR2...]] [-r TYPE]
-          [-s SUMMARY_PATH] [-t REPORT_TYPE] [start_date [end_date]]
+USAGE: $0 [-hlptvwz] [-i ID] [-m MAIL_ADDR [-m MAIL_ADDR2...]] [-r TYPE]
+          [-s SUMMARY_PATH] [-t REPORT_TYPE] [-x SYS] [start_date [end_date]]
 
 Reports on CRMS determinations for volumes that have duplicates,
 multiple volumes, or conflicting determinations.
@@ -37,8 +37,9 @@ multiple volumes, or conflicting determinations.
            resolvable:    partially conflicting CRMS determinations that can be resolved
                           with a pd/crms, ic/crms, or und/crms determination, >0 ic/bib
          May be repeated.
--x       Generate hyperlinks in the TSV file for Excel.
 -v       Be verbose. May be repeated.
+-x SYS   Set SYS as the system to execute.
+-z       Generate hyperlinks in the TSV file for Excel.
 END
 
 my $help;
@@ -50,18 +51,20 @@ my $report = 'none';
 my $summary;
 my @types;
 my $verbose;
+my $sys;
 my $link;
 
 die 'Terminating' unless GetOptions('h|?' => \$help,
            'i:s@' => \@ids,
-           'l' => \$legacy,
+           'l'    => \$legacy,
            'm:s@' => \@mails,
-           'p' => \$production,
-           'r:s' => \$report,
-           's:s' => \$summary,
+           'p'    => \$production,
+           'r:s'  => \$report,
+           's:s'  => \$summary,
            't=s@' => \@types,
-           'x' => \$link,
-           'v+' => \$verbose);
+           'x:s'  => \$sys,
+           'v+'   => \$verbose,
+           'z'    => \$link);
 $DLPS_DEV = undef if $production;
 print "Verbosity $verbose\n" if $verbose;
 my %reports = ('html'=>1,'none'=>1,'tsv'=>1);
@@ -91,11 +94,11 @@ $end   .= ' 23:59:59' if $end;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/duplicates_hist.txt",
-    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   $DLPS_DEV
+    logFile => "$DLXSROOT/prep/c/crms/duplicates_hist.txt",
+    sys     => $sys,
+    verbose => $verbose,
+    root    => $DLXSROOT,
+    dev     => $DLPS_DEV
 );
 
 
@@ -352,7 +355,7 @@ if (@mails)
   use Mail::Sender;
   $title = 'Dev: ' . $title if $DLPS_DEV;
   my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                  from => $crms->GetSystemVar('adminEmail', undef, ''),
+                                  from => $crms->GetSystemVar('adminEmail', ''),
                                   on_errors => 'undef' }
     or die "Error in mailing : $Mail::Sender::Error\n";
   my $to = join ',', @mails;

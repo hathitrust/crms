@@ -1,6 +1,4 @@
-#!/l/local/bin/perl
-
-# This script can be run from crontab
+#!/usr/bin/perl
 
 my $DLXSROOT;
 my $DLPS_DEV;
@@ -8,7 +6,7 @@ BEGIN
 { 
   $DLXSROOT = $ENV{'DLXSROOT'}; 
   $DLPS_DEV = $ENV{'DLPS_DEV'}; 
-  unshift ( @INC, $ENV{'DLXSROOT'} . "/cgi/c/crms/" );
+  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
 use strict;
@@ -18,7 +16,8 @@ use Spreadsheet::WriteExcel;
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-ahptv] [-m MAIL_ADDR [-m MAIL_ADDR2...]] [start_date [end_date]]
+USAGE: $0 [-ahptv] [-m MAIL_ADDR [-m MAIL_ADDR2...]]
+          [-x SYS] [start_date [end_date]]
 
 Reports on suspected gov docs in the und table.
 
@@ -30,6 +29,7 @@ Reports on suspected gov docs in the und table.
          In the case of Excel it will be created in place and
          attached to any outgoing mail. Default is html.
 -v       Emit debugging information. May be repeated.
+-x SYS     Set SYS as the system to execute.
 END
 
 my $all;
@@ -37,6 +37,7 @@ my $help;
 my @mails;
 my $production;
 my $report = 'html';
+my $sys;
 my $verbose;
 
 Getopt::Long::Configure ('bundling');
@@ -45,17 +46,18 @@ die 'Terminating' unless GetOptions('a' => \$all,
            'm:s@' => \@mails,
            'p' => \$production,
            'r:s' => \$report,
-           'v+' => \$verbose);
+           'v+' => \$verbose,
+           'x:s' => \$sys);
 $DLPS_DEV = undef if $production;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/gov_hist.txt",
-    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   $DLPS_DEV
+    logFile => "$DLXSROOT/prep/c/crms/gov_hist.txt",
+    sys     => $sys,
+    verbose => $verbose,
+    root    => $DLXSROOT,
+    dev     => $DLPS_DEV
 );
 
 my %reports = ('html'=>1,'none'=>1,'tsv'=>1,'excel'=>1);
@@ -187,7 +189,7 @@ if (@mails)
     use Mail::Sender;
     $title = 'Dev: ' . $title if $DLPS_DEV;
     my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                    from => $crms->GetSystemVar('adminEmail', undef, ''),
+                                    from => $crms->GetSystemVar('adminEmail', ''),
                                     on_errors => 'undef' }
       or die "Error in mailing : $Mail::Sender::Error\n";
     my $to = join ',', @mails;

@@ -1,6 +1,4 @@
-#!/l/local/bin/perl
-
-# This script can be run from crontab
+#!/usr/bin/perl
 
 my $DLXSROOT;
 my $DLPS_DEV;
@@ -8,7 +6,7 @@ BEGIN
 { 
   $DLXSROOT = $ENV{'DLXSROOT'};
   $DLPS_DEV = $ENV{'DLPS_DEV'};
-  unshift ( @INC, $ENV{'DLXSROOT'} . "/cgi/c/crms/" );
+  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
 use strict;
@@ -17,44 +15,50 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-adhpvu] [-s VOL_ID [-s VOL_ID2...]]
+USAGE: $0 [-acdhpvux] [-s VOL_ID [-s VOL_ID2...]]
           [start_date [end_date]]
 
 Reports on volumes that are no longer ic/bib in the rights database
 and, optionally, delete them from the system.
 
 -a         Report on all volumes, ignoring date range.
--d         Delete qualifying volumes from candidates.
+-c         Run against candidates.
+-d         Delete qualifying volumes unless they're in the queue.
 -h         Print this help message.
 -p         Run in production.
 -s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
--u         Run against the und table instead of candidates.
+-u         Run against the und table.
 -v         Emit debugging information.
+-x SYS     Set SYS as the system to execute.
 END
 
 my $all;
+my $candidates;
 my $delete;
 my $help;
 my $production;
 my @singles;
 my $und;
 my $verbose;
+my $sys;
 
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
            'a'    => \$all,
+           'c'    => \$candidates,
            'd'    => \$delete,
            'h|?'  => \$help,
            'p'    => \$production,
            's:s@' => \@singles,
            'u'    => \$und,
-           'v+'   => \$verbose);
+           'v+'   => \$verbose,
+           'x'    => \$sys);
 $DLPS_DEV = undef if $production;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/inherit_hist.txt",
-    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
+    logFile      =>   "$DLXSROOT/prep/c/crms/candidatespurge_hist.txt",
+    sys          =>   $sys,
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
     dev          =>   $DLPS_DEV
@@ -75,44 +79,61 @@ if (scalar @ARGV)
   }
 }
 
-my $table = ($und)? 'und':'candidates';
-my $sql = "SELECT id FROM $table";
-my @restrict = ();
-push @restrict, 'src!="gov"' if $und;
-push @restrict, "(time>'$start 00:00:00' AND time<='$end 23:59:59')" unless $all;
-$sql .= ' WHERE ' . join ' AND ', @restrict if scalar @restrict;
-if (@singles && scalar @singles)
+CheckTable('candidates', $all, $start, $end, \@singles) if $candidates;
+CheckTable('und', $all, $start, $end, \@singles) if $und;
+
+
+
+sub CheckTable
 {
-  $sql = sprintf("SELECT id FROM $table WHERE id in ('%s') ORDER BY id", join "','", @singles);
-}
-print "$sql\n" if $verbose > 1;
-my $ref = $dbh->selectall_arrayref($sql);
-my $n = 0;
-foreach my $row (@{$ref})
-{
-  my $id = $row->[0];
-  print "$id\n" if $verbose >= 2;
-  my ($attr,$reason,$src,$usr,$time,$note) = @{$crms->RightsQuery($id,1)->[0]};
-  my $rights = "$attr/$reason";
-  if ($rights ne 'ic/bib' && $rights ne 'pdus/gfv')
+  my $table   = shift;
+  my $all     = shift;
+  my $start   = shift;
+  my $end     = shift;
+  my $singles = shift;
+  
+  my $sql = "SELECT id FROM $table";
+  my @restrict = ();
+  push @restrict, 'src!="gov"' if $table eq 'und';
+  push @restrict, "(time>'$start 00:00:00' AND time<='$end 23:59:59')" unless $all;
+  $sql .= ' WHERE ' . join ' AND ', @restrict if scalar @restrict;
+  my @singles = @{$singles};
+  if (@singles && scalar @singles)
   {
-    my @errs = ();
-    push @errs, 'in queue' if $crms->SimpleSqlGet("SELECT COUNT(*) FROM queue WHERE id='$id'");
-    push @errs, 'in reviews' if $crms->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id'");
-    my $info = $crms->SimpleSqlGet(($und)?"SELECT src FROM und WHERE id='$id'":"SELECT time FROM candidates WHERE id='$id'");
-    printf "$id ($info): $attr/$reason ($usr) -- %s\n", (scalar @errs)? (join '; ', @errs):'can delete' if $verbose;
-    next if scalar @errs;
-    if ($delete)
-    {
-      my $sql = "DELETE FROM $table WHERE id='$id'";
-      print "$sql\n" if $verbose > 1;
-      $crms->PrepareSubmitSql($sql);
-    }
-    $n++;
+    $sql = sprintf("SELECT id FROM $table WHERE id in ('%s') ORDER BY id", join "','", @singles);
   }
+  print "$sql\n" if $verbose > 1;
+  my $ref = $dbh->selectall_arrayref($sql);
+  my $n = 0;
+  foreach my $row (@{$ref})
+  {
+    my $id = $row->[0];
+    print "$id\n" if $verbose >= 2;
+    my ($attr,$reason,$src,$usr,$time,$note) = @{$crms->RightsQuery($id,1)->[0]};
+    my $rights = "$attr/$reason";
+    if ($rights ne 'ic/bib' && $rights ne 'pdus/gfv')
+    {
+      my @errs = ();
+      push @errs, 'in queue' if $crms->SimpleSqlGet("SELECT COUNT(*) FROM queue WHERE id='$id'");
+      push @errs, 'in reviews' if $crms->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id'");
+      my $info = $crms->SimpleSqlGet(($table eq 'und')?"SELECT src FROM und WHERE id='$id'":"SELECT time FROM candidates WHERE id='$id'");
+      if ($delete && 0 == scalar @errs)
+      {
+        my $sql = "DELETE FROM $table WHERE id='$id'";
+        print "$id ($info): $attr/$reason ($usr) -- deleting\n";
+        $crms->PrepareSubmitSql($sql);
+      }
+      else
+      {
+        printf "$id ($info): $attr/$reason ($usr) -- %s\n", (scalar @errs)? (join '; ', @errs):'can delete';
+      }
+      $n++ unless scalar @errs;
+    }
+  }
+  printf "%s delete $n %s of %d from $table\n", ($delete)?'Did':'Can',
+                             $crms->Pluralize('volume', $n),
+                             scalar @{$ref};
 }
-printf "%s delete $n %s of %d from $table\n", ($delete)?'Did':'Can',
-                           $crms->Pluralize('volume', $n),
-                           scalar @{$ref};
+
 print "Warning: $_\n" for @{$crms->GetErrors()};
 

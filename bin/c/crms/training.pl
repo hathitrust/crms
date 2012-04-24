@@ -1,4 +1,4 @@
-#!/l/local/bin/perl
+#!/usr/bin/perl
 
 my $DLXSROOT;
 my $DLPS_DEV;
@@ -6,7 +6,7 @@ BEGIN
 { 
   $DLXSROOT = $ENV{'DLXSROOT'}; 
   $DLPS_DEV = $ENV{'DLPS_DEV'}; 
-  unshift ( @INC, $ENV{'DLXSROOT'} . "/cgi/c/crms/" );
+  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
 use strict;
@@ -14,7 +14,7 @@ use CRMS;
 use Getopt::Std;
 
 my $usage = <<END;
-USAGE: $0 [-hntv5] start_date [end_date]
+USAGE: $0 [-hntv5] count
 
 Populates the training database with examples (correct, single reviews) from production.
 
@@ -22,48 +22,39 @@ Populates the training database with examples (correct, single reviews) from pro
 -n       Do not submit SQL.
 -t       Run in training (dev otherwise).
 -v       Be verbose.
+-x SYS   Set SYS as the system to execute.
 -5       Do only status 5 reviews.
 END
 
 my %opts;
 getopts('hntv5', \%opts);
 
-my $help       = $opts{'h'};
-my $noop       = $opts{'n'};
-my $training   = $opts{'t'};
-my $verbose    = $opts{'v'};
-my $five       = $opts{'5'};
+my $help     = $opts{'h'};
+my $noop     = $opts{'n'};
+my $training = $opts{'t'};
+my $verbose  = $opts{'v'};
+my $sys      = $opts{'x'};
+my $five     = $opts{'5'};
 
 die "$usage\n\n" if $help;
-die "You need a start date and optional end date.\n" unless 0 < scalar @ARGV;
-my $start = $ARGV[0];
-my $end   = $ARGV[1] or '';
-die "Start date format should be YYYY-MM-DD\n" if $start !~ m/\d\d\d\d-\d\d-\d\d/;
-die "End date format should be YYYY-MM-DD\n" if $end and $end !~ m/\d\d\d\d-\d\d-\d\d/;
-if ($end && $start > $end)
-{
-  my $tmp = $start;
-  $start = $end;
-  $end = $tmp;
-}
-$start .= ' 00:00:00' if $start;
-$end   .= ' 23:59:59' if $end;
+die "You need a volume count.\n" unless 1 == scalar @ARGV;
+my $count = $ARGV[0];
+die "Count format should be numeric\n" if $count !~ m/\d+/;
 
 my $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/training_hist.txt",
-    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
+    sys          =>   $sys,
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
     dev          =>   undef
 );
 
-my $endsql = ($end)? "AND time<='$end'":'';
 my $fivesql = ($five)? ' AND status=5':'';
 
 my $n = 0;
 my $sql = 'SELECT id,user,time,gid,status FROM historicalreviews WHERE ' .
           'user IN (SELECT id FROM users WHERE advanced=1 AND extadmin+expert+admin+superadmin=0) AND ' . 
-          "validated=1 AND time>='$start' $endsql $fivesql ORDER BY id ASC, time ASC";
+          "validated=1 $fivesql ORDER BY id ASC, time ASC";
 if ($verbose)
 {
   print "$sql\n";
@@ -85,6 +76,7 @@ my @sqls = ();
 foreach my $row (@{$ref})
 {
   my $id     = $row->[0];
+  last if $n >= $count;
   next if $seen{$id};
   $seen{$id} = 1;
   my $user   = $row->[1];
@@ -147,7 +139,7 @@ foreach my $row (@{$ref})
   $renNum = (defined $renNum)? "'$renNum'":'NULL';
   $category = (defined $category)? "'$category'":'NULL';
   $note = (defined $note)? $crms->GetDb()->quote($note):'NULL';
-  push @sqls, "INSERT INTO queue (id,time,pending_status) VALUES ('$id','$start',1)";
+  push @sqls, "INSERT INTO queue (id,time,pending_status) VALUES ('$id','$time',1)";
   push @sqls, 'INSERT INTO reviews (id,user,time,attr,reason,renDate,renNum,category,note,duration) ' .
               "VALUES ('$id','$user','$time',$attr,$reason,$renDate,$renNum,$category,$note,'$duration')";
   $n++;
@@ -158,7 +150,7 @@ print "Warning: $_\n" for @{$crms->GetErrors()};
 # Connect to training database.
 $crms = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/duplicates_hist.txt",
-    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
+    sys          =>   $sys,
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
     dev          =>   ($training)? 'crmstest':$DLPS_DEV

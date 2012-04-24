@@ -1,4 +1,4 @@
-#!/l/local/bin/perl
+#!/usr/bin/perl
 
 my $DLXSROOT;
 my $DLPS_DEV;
@@ -7,8 +7,7 @@ BEGIN
 { 
   $DLXSROOT = $ENV{'DLXSROOT'}; 
   $DLPS_DEV = $ENV{'DLPS_DEV'}; 
-  my $toinclude = qq{$DLXSROOT/cgi/c/crms};
-  unshift( @INC, $toinclude );
+  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
 use strict;
@@ -16,7 +15,7 @@ use CRMS;
 use Getopt::Std;
 
 my $usage = <<END;
-USAGE: $0 [-hprv]
+USAGE: $0 [-hprv] [-x SYS]
 
 Updates the CRMS database 'lag' table with
 information about when and on what machine
@@ -30,14 +29,16 @@ and mails the report (-r flag) once a day.
 -p       Run in production.
 -r       Print a report on delays in the last 24 hours.
 -v       Be verbose.
+-x SYS   Set SYS as the system to execute.
 END
 
 my %opts;
-my $ok = getopts('hprv', \%opts);
+my $ok = getopts('hprvx:', \%opts);
 my $help       = $opts{'h'};
 my $production = $opts{'p'};
 my $report     = $opts{'r'};
 my $verbose    = $opts{'v'};
+my $sys        = $opts{'x'};
 $DLPS_DEV = undef if $production;
 
 if ($help || !$ok)
@@ -46,11 +47,11 @@ if ($help || !$ok)
 }
 
 my $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/lagcron_hist.txt",
-    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   $DLPS_DEV,
+    logFile => "$DLXSROOT/prep/c/crms/lagcron_hist.txt",
+    sys     => $sys,
+    verbose => $verbose,
+    root    => $DLXSROOT,
+    dev     => $DLPS_DEV,
 );
 
 my $dbh = $crms->GetDb();
@@ -91,3 +92,5 @@ else
     }
   }
 }
+
+print "Warning: $_\n" for @{$crms->GetErrors()};

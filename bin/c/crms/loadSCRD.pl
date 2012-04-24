@@ -1,4 +1,4 @@
-#!/l/local/bin/perl
+#!/usr/bin/perl
 
 my $DLXSROOT;
 my $DLPS_DEV;
@@ -6,9 +6,7 @@ BEGIN
 { 
   $DLXSROOT = $ENV{'DLXSROOT'}; 
   $DLPS_DEV = $ENV{'DLPS_DEV'}; 
-
-  my $toinclude = qq{$DLXSROOT/cgi/c/crms};
-  unshift( @INC, $toinclude );
+  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
 use strict;
@@ -17,7 +15,7 @@ use Getopt::Std;
 
 
 my $usage = <<END;
-USAGE: ./loadSCRD.pl [-hnpt] FILE [FILE...]
+USAGE: ./loadSCRD.pl [-hnpt] [-x SYS] FILE [FILE...]
 
 Loads a downloaded copy of the Stanford Cpoyright Renewal Database
 into the CRMS database "stanford" table..
@@ -26,26 +24,26 @@ into the CRMS database "stanford" table..
 -n       Don't actually do anything, just simulate.
 -p       Run in production.
 -t       Run in training (overrides -p).
+-x SYS   Set SYS as the system to execute.
 END
-
 
 my %opts;
 getopts('hnpt', \%opts);
-my $help = $opts{'h'};
-my $noop = $opts{'n'};
+my $help       = $opts{'h'};
+my $noop       = $opts{'n'};
 my $production = $opts{'p'};
-my $training = $opts{'t'};
-my $dev = 'moseshll';
-$dev = 0 if $production;
-$dev = 'crmstest' if $training;
+my $training   = $opts{'t'};
+my $sys        = $opts{'x'};
+$DLPS_DEV = undef if $production;
+$DLPS_DEV = 'crmstest' if $training;
 die $usage if $help;
 
 my $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/stanford_log.txt",
-    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
-    verbose      =>   0,
-    root         =>   $DLXSROOT,
-    dev          =>   $dev
+    logFile => "$DLXSROOT/prep/c/crms/stanford_log.txt",
+    sys     => $sys,
+    verbose => 0,
+    root    => $DLXSROOT,
+    dev     => $DLPS_DEV
 );
 
 my $filename;

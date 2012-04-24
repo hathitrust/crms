@@ -1,4 +1,4 @@
-#!/l/local/bin/perl
+#!/usr/bin/perl
 
 # This script can be run from crontab
 
@@ -8,7 +8,7 @@ BEGIN
 { 
   $DLXSROOT = $ENV{'DLXSROOT'}; 
   $DLPS_DEV = $ENV{'DLPS_DEV'}; 
-  unshift ( @INC, $ENV{'DLXSROOT'} . "/cgi/c/crms/" );
+  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
 use strict;
@@ -17,7 +17,8 @@ use Getopt::Long;
 use Mail::Sender;
 
 my $usage = <<END;
-USAGE: $0 [-hpv] [-m MAIL_ADDR [-m MAIL_ADDR2...]] 
+USAGE: $0 [-hpv] [-m MAIL_ADDR [-m MAIL_ADDR2...]]
+          [-x SYS]
 
 Sends automatic monthly report of institutional stats for INST which can be in
 {UM-ERAU,IU,UMN,UW,ALL}. Default is UM-ERAU.
@@ -27,6 +28,7 @@ Sends automatic monthly report of institutional stats for INST which can be in
          May be repeated for multiple addresses.
 -p       Run in production.
 -v       Be verbose.
+-x SYS   Set SYS as the system to execute.
 END
 
 my $help;
@@ -38,18 +40,19 @@ my $verbose;
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions('h|?' => \$help,
            'm:s@' => \@mails,
-           'p' => \$production,
-           'v+' => \$verbose);
+           'p'    => \$production,
+           'v+'   => \$verbose,
+           'x:s'  => \$sys);
 $DLPS_DEV = undef if $production;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/inst_hist.txt",
-    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   $DLPS_DEV
+    logFile => "$DLXSROOT/prep/c/crms/inst_hist.txt",
+    sys     => $sys,
+    verbose => $verbose,
+    root    => $DLXSROOT,
+    dev     => $DLPS_DEV
 );
 
 my $inst = uc $ARGV[0];
@@ -93,7 +96,7 @@ foreach $inst (@insts)
             "Resulting # of volumes made available as full text in HathiTrust: $det\n\n" .
             'Note: This is an automatically generated message from the Copyright Review Management System.';
   my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                  from => $crms->GetSystemVar('adminEmail', undef, ''),
+                                  from => $crms->GetSystemVar('adminEmail', ''),
                                   on_errors => 'undef' }
     or die "Error in mailing : $Mail::Sender::Error\n";
   $sender->OpenMultipart({

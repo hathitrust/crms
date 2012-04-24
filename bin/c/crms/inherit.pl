@@ -1,6 +1,4 @@
-#!/l/local/bin/perl
-
-# This script can be run from crontab
+#!/usr/bin/perl
 
 my $DLXSROOT;
 my $DLPS_DEV;
@@ -8,7 +6,7 @@ BEGIN
 { 
   $DLXSROOT = $ENV{'DLXSROOT'};
   $DLPS_DEV = $ENV{'DLPS_DEV'};
-  unshift ( @INC, $ENV{'DLXSROOT'} . "/cgi/c/crms/" );
+  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
 use strict;
@@ -19,7 +17,7 @@ use Encode;
 my $usage = <<END;
 USAGE: $0 [-acChipquv] [-s VOL_ID [-s VOL_ID2...]]
           [-m MAIL_ADDR [-m MAIL_ADDR2...]] [-n TBL [-n TBL...]]
-          [start_date[ time] [end_date[ time]]]
+          [-x SYS] [start_date[ time] [end_date[ time]]]
 
 Reports on the volumes that can inherit from this morning's export,
 or, if start_date is specified, exported after then and before end_date
@@ -39,6 +37,7 @@ if it is specified.
 -s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
 -u         Also report on recent additions to the und table (ignored if -c is not used).
 -v         Emit debugging information.
+-x SYS     Set SYS as the system to execute.
 END
 
 my $all;
@@ -51,6 +50,7 @@ my @no;
 my $production;
 my $quiet;
 my @singles;
+my $sys;
 my $und;
 my $verbose;
 
@@ -67,7 +67,8 @@ die 'Terminating' unless GetOptions(
            'q'    => \$quiet,
            's:s@' => \@singles,
            'u'    => \$und,
-           'v+'   => \$verbose);
+           'v+'   => \$verbose,
+           'x:s'  => \$sys);
 $DLPS_DEV = undef if $production;
 die "$usage\n\n" if $help;
 
@@ -75,11 +76,11 @@ my %no = ();
 $no{$_}=1 for @no;
 
 my $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/inherit_hist.txt",
-    configFile   =>   "$DLXSROOT/bin/c/crms/crms.cfg",
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   $DLPS_DEV
+    logFile => "$DLXSROOT/prep/c/crms/inherit_hist.txt",
+    sys     => $sys,
+    verbose => $verbose,
+    root    => $DLXSROOT,
+    dev     => $DLPS_DEV
 );
 $crms->set('ping','yes');
 my $delim = "\n";
@@ -456,7 +457,7 @@ if (@mails)
 {
   use Mail::Sender;
   my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                  from => $crms->GetSystemVar('adminEmail', undef, ''),
+                                  from => $crms->GetSystemVar('adminEmail', ''),
                                   on_errors => 'undef' }
     or die "Error in mailing: $Mail::Sender::Error\n";
   my $to = join ',', @mails;

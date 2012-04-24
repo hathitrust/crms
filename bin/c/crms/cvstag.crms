@@ -1,5 +1,4 @@
-#!/l/local/bin/perl
-
+#!/usr/bin/perl
 
 my $rootdir = '/l1';
 
