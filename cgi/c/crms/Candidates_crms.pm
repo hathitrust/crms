@@ -35,7 +35,8 @@ sub GetViolations
   push @errs, 'foreign pub' if $self->IsForeignPub($id, $record);
   push @errs, 'non-BK format' unless $self->IsFormatBK($id, $record);
   my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
-  push @errs, "current rights are $attr/$reason" unless ($attr eq 'ic' && $reason eq 'bib');
+  push @errs, "current rights are $attr/$reason" unless ($attr eq 'ic' && $reason eq 'bib') or
+                                                        ($override and $priority == 3) or $priority == 4;
   return @errs;
 }
 
