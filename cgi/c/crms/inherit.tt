@@ -246,15 +246,15 @@ function VerifyDelete(formid)
     [% doPrev = (n > 1) %]
     [% doNext = (n < of) %]
     [% IF doPrev %]
-    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">previous [% pagesize %]</a>
+    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">previous [% recs %]</a>
     [% ELSE %]
-    <span class="disabledLink">previous [% pagesize %]</span>
+    <span class="disabledLink">previous [% recs %]</span>
     [% END %]
     &nbsp;||&nbsp;
     [% IF doNext %]
-    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$next#results" %]">next [% pagesize %]</a>
+    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$next#results" %]">next [% recs %]</a>
     [% ELSE %]
-    <span class="disabledLink">next [% pagesize %]</span>
+    <span class="disabledLink">next [% recs %]</span>
     [% END %]
     &nbsp;||&nbsp;
     [% IF doFirst %]
@@ -334,15 +334,15 @@ function VerifyDelete(formid)
     </table>
     <p><b>Found $inheriting volume[% (inheriting==1)? "":"s"%] from $source source[% (source==1)? "":"s"%], page $n of $of</b></p>
     [% IF doPrev %]
-    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">previous [% pagesize %]</a>
+    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">previous [% recs %]</a>
     [% ELSE %]
-    <span class="disabledLink">previous [% pagesize %]</span>
+    <span class="disabledLink">previous [% recs %]</span>
     [% END %]
     &nbsp;||&nbsp;
     [% IF doNext %]
-    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$next#results" %]">next [% pagesize %]</a>
+    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$next#results" %]">next [% recs %]</a>
     [% ELSE %]
-    <span class="disabledLink">next [% pagesize %]</span>
+    <span class="disabledLink">next [% recs %]</span>
     [% END %]
     &nbsp;||&nbsp;
     [% IF doFirst %]
