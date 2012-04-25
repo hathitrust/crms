@@ -96,7 +96,7 @@ sub CalcStatus
 }
 
 # FIXME: merge this into the above code
-sub CheckPendingStatus
+sub CalcPendingStatus
 {
   my $self = shift;
   my $id   = shift;
