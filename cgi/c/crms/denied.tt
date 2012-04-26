@@ -3,14 +3,14 @@
   <head>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css" />
     <title>No access</title>
-    <meta http-equiv="REFRESH" content="5;url=/cgi/c/crms/crms?p=home">
+    <meta http-equiv="REFRESH" content="5;url="[% crms.Sysify('/cgi/c/crms/crms?p=home') %]">
   </head>
   <body>
   <div class="pages" id="homePage">
-    <img src="/c/crms/crms.png"/>
+    <img src="[% crms.GetSystemVar('logo') %]"/>
     <br/><br/>
     <font size="5"><strong>Hello [% crms.GetUserName %] </strong></font>
-    <a href="crms?p=Logout"> Logout</a>
+    <a href="[% crms.Sysify('crms?p=Logout') %]"> Logout</a>
     [% FOREACH error IN crms.GetErrors %]
       <strong>ERROR: [% error %]</strong>
       <br/>
@@ -18,6 +18,7 @@
 <br/>
 <br/>
 <h3>You do not have access to this page</h3>
-<strong>You will be redirected to your <a href="/cgi/c/crms/crms?p=home">home page</a> in 5 seconds.</strong>
+<strong>You will be redirected to your
+  <a href="[% crms.Sysify('/cgi/c/crms/crms?p=home') %]">home page</a> in 5 seconds.</strong>
 </body>
 </html>
