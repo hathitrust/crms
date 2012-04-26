@@ -99,12 +99,12 @@ if (!$crms->GetUserName($user))
 if ( $cgi->param('p') eq 'confirmReview' )  
 {
   my $editing = $cgi->param('editing');
-  if ($cgi->param( 'submit' ) eq 'Cancel')
+  if ($cgi->param('submit') eq 'Cancel')
   {
     my $id = $cgi->param('barcode');
-    $crms->UnlockItem( $id, $user);
+    $crms->UnlockItem($id, $user);
     $cgi->delete_all();
-    if ( $editing )
+    if ($editing)
     {
       my $output = qq(<script type="text/javascript" language="JavaScript">window.close();</script>);
       print "Content-type: text/html\n\n";
