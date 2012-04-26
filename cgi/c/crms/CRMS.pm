@@ -515,7 +515,7 @@ sub GetExportFh
   $date    =~ s/:/_/g;
   $date    =~ s/ /_/g;
 
-  my $out = $self->get('root') . "/prep/c/crms/crms_" . $date . ".rights";
+  my $out = $self->get('root') . '/prep/c/crms/' . $self->get('sys') . '_' . $date . ".rights";
   if ( -f $out ) { die "file already exists: $out \n"; }
   open ( my $fh, ">", $out ) || die "failed to open exported file ($out): $! \n";
   return ( $fh, $out );
@@ -922,7 +922,7 @@ sub AddItemToQueueOrSetItemActive
     $stat = 1;
   }
   ## give the existing item higher or lower priority
-  elsif ( $self->IsVolumeInQueue( $id ) )
+  elsif ($self->IsVolumeInQueue($id))
   {
     my $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id'";
     my $n = $self->SimpleSqlGet($sql);
@@ -5378,6 +5378,12 @@ sub TranslateReason
   my $sql = "SELECT id FROM reasons WHERE name='$r'";
   $sql = "SELECT name FROM reasons WHERE id=$r" if $r =~ m/[0-9]+/;
   my $val = $self->SimpleSqlGet($sql,1);
+  # FIXME: temp hack for gatt code
+  if (!$val)
+  {
+    if ($r eq '17') {$r = 'gatt';}
+    elsif ($r eq 'gatt') {$r = 17;}
+  }
   $r = $val if $val;
   return $r;
 }
