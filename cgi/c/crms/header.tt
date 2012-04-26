@@ -111,7 +111,8 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
         <table class="exportStats">
           <tr>
             <th nowrap="nowrap" style="text-align:right;">
-              Hello&nbsp;[% crms.GetUserName().replace(" ","&nbsp;") %]&nbsp;&nbsp;<a href="crms?p=Logout" class="header">logout</a>
+              Hello&nbsp;[% crms.GetUserName().replace(" ","&nbsp;") %]&nbsp;&nbsp;
+              <a href="[% crms.Sysify('crms?p=Logout') %]" class="header">logout</a>
             </th>
           </tr>
           <tr>
