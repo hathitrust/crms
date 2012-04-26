@@ -7722,7 +7722,7 @@ sub MenuItems
       push @all, $row2;
     }
   }
-  return @all;
+  return \@all;
 }
 
 # interface=1 means just the categories used in the review page
