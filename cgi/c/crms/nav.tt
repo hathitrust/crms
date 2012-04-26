@@ -9,8 +9,6 @@
 [% END %]
 
 [% menus = crms.Menus() %]
-[% i = 0 %]
-[% of = menus.size() %]
 [% FOREACH menu IN menus %]
   [% id = menu.0 %]
   <li><span>[% menu.1 %]&nbsp;&nbsp;&nbsp;</span>
@@ -24,7 +22,6 @@
       [% IF sys %][% url = url _ ';sys=' _  sys %][% END %]
       <dd><a href="[% url %]">[% item.0.replace('\s', '&nbsp;') %]</a></dd>
     [% END %]
-  [% i = i + 1 %]
   </dl></li>
 [% END %]
 </ul>
