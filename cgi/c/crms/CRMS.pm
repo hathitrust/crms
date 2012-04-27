@@ -5366,6 +5366,12 @@ sub TranslateAttr
   my $sql = "SELECT id FROM attributes WHERE name='$a'";
   $sql = "SELECT name FROM attributes WHERE id=$a" if $a =~ m/[0-9]+/;
   my $val = $self->SimpleSqlGet($sql,1);
+  # FIXME: temp hack for icus/gatt code
+  if (!$val)
+  {
+    if ($a eq '19') {$a = 'icus';}
+    elsif ($a eq 'icus') {$a = 19;}
+  }
   $a = $val if $val;
   return $a;
 }
@@ -5378,7 +5384,7 @@ sub TranslateReason
   my $sql = "SELECT id FROM reasons WHERE name='$r'";
   $sql = "SELECT name FROM reasons WHERE id=$r" if $r =~ m/[0-9]+/;
   my $val = $self->SimpleSqlGet($sql,1);
-  # FIXME: temp hack for gatt code
+  # FIXME: temp hack for icus/gatt code
   if (!$val)
   {
     if ($r eq '17') {$r = 'gatt';}
@@ -7922,7 +7928,8 @@ sub TolerantCompare
   return $s1 eq $s2; 
 }
 
-# This CRMS World specific. Predict best radio button to choose based on death/pub date.
+# CRMS World specific. Predict best radio button (rights combo)
+# to choose based on user selections.
 sub PredictRights
 {
   my $self  = shift;
@@ -7932,13 +7939,13 @@ sub PredictRights
   my $crown = shift;
 
   return 0 if $year !~ m/^\d\d\d\d$/;
-  my $where = $self->GetPubCountry($id);
-  my ($attr, $reason);
+  my $where = $self->GetPubCountry($id, undef, 1);
+  my ($attr, $reason) = (0,0);
   my $now = $self->GetTheYear();
   my $when;
   if ($where eq 'United Kingdom')
   {
-    $when = $year + ($crown)? 50:70;
+    $when = $year + ($crown? 50:70);
   }
   else
   {
@@ -7946,8 +7953,16 @@ sub PredictRights
   }
   if ($when < $now)
   {
-    $attr = $self->TranslateAttr('pd');
-    $reason = $self->TranslateReason(($pub)? 'exp':'add');
+    if ($when >= 1996)
+    {
+      $attr = $self->TranslateAttr('icus');
+      $reason = $self->TranslateReason('gatt');
+    }
+    else
+    {
+      $attr = $self->TranslateAttr('pd');
+      $reason = $self->TranslateReason(($pub)? 'exp':'add');
+    }
   }
   else
   {
