@@ -387,6 +387,7 @@ sub GetCountries
   return \%countries;
 }
 
+# FIXME: move "short" option from CRMS.pm to here.
 sub TranslateCountry
 {
   my $code = shift;
