@@ -105,7 +105,8 @@ sub ConnectToDb
   }
   elsif ($dev eq 'crmstest')
   {
-    $db .= 'test';
+    # FIXME: this is hideous
+    $db .= 'test' unless $self->get('sys') eq 'crmsworld';
   }
   #if ($self->get('verbose')) { $self->Logit( "DBI:mysql:crms:$db_server, $db_user, [passwd]" ); }
 
