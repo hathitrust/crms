@@ -51,6 +51,7 @@ sub ShouldVolumeGoInUndTable
   return $src unless $record;
   my $lang = $self->GetPubLanguage($id, $record);
   if ('eng' ne $lang) { $src = 'language'; }
+  elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
   return $src;
 }
 
