@@ -425,8 +425,9 @@ sub GetInheritedItems
 ##  Function:   create a tab file of reviews to be loaded into the rights table
 ##              vol id | attr | reason | user | null
 ##              mdp.123 | ic   | ren    | crms | null
-##  Parameters: A reference to a list of volume ids
-##  Return:     1 || 0
+##  Parameters: $list: A reference to a list of volume ids
+##              $fromcgi: Suppress printing out progress info if called from CGI
+##  Return:     nothing
 ## ----------------------------------------------------------------------------
 sub ExportReviews
 {
@@ -447,6 +448,20 @@ sub ExportReviews
   foreach my $id ( @{$list} )
   {
     my ($attr,$reason) = $self->GetFinalAttrReason($id);
+    # FIXME: find a more elegant way to do this
+    if ($self->get('sys') eq 'crmsworld' && $attr eq 'und' && $reason eq 'nfi')
+    {
+      my $rq = $self->RightsQuery($id,1);
+      if ($rq)
+      {
+        my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
+        if ($attr2 eq 'pdus')
+        {
+          print "Not exporting $id as und; it is $attr2/$reason\n" unless $fromcgi;
+          next;
+        }
+      }
+    }
     print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $fromcgi;
     my $src = $self->SimpleSqlGet("SELECT source FROM queue WHERE id='$id' ORDER BY time DESC LIMIT 1");
     my $sql = "INSERT INTO  exportdata (time, id, attr, reason, user, src) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src')";
