@@ -121,14 +121,18 @@ function PredictRights(id)
       {
         rights = document.getElementsByName("rights");
         sel = GetCheckedValue(rights);
-        if (sel != "")
+        // Yucky hack to not uncheck und/nfi
+        if (sel != 5)
         {
-          button = document.getElementById("r" + sel);
-          button.checked = "";
+          if (sel != "")
+          {
+            button = document.getElementById("r" + sel);
+            button.checked = "";
+          }
+          //alert(req.responseText);
+          button = document.getElementById("r" + req.responseText);
+          if (button) button.checked = "checked"
         }
-        //alert(req.responseText);
-        button = document.getElementById("r" + req.responseText);
-        if (button) button.checked = "checked"
       }    
     } 
   }; 
