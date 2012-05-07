@@ -93,16 +93,6 @@
 [% swiss = crms.GetReviewField( barcode, user, "swiss" ) %]
 [% END %]
 
-[%# links to PT, stanford DB search, or Mirlyn catalog %]
-[%# authorLink = "http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$encAuthor" %]
-[%# titleLink  = "http://collections.stanford.edu/copyrightrenewals/bin/search/simple/process?query=$encTitle" %]
-[%# searchForm = "http://collections.stanford.edu/copyrightrenewals/bin/search/advanced/modify?clauseMapped(title)=$encTitle&amp;clauseMapped(author)=$encAuthor" %]
-[%# ptLink     = crms.PTAddress(barcode) _ ";skin=crms;page=root;view=image;size=$mag" %]
-[%# sysID      = crms.BarcodeToId(barcode) %]
-[%# catLink    = "http://mirlyn.lib.umich.edu/Record/$sysID" %]
-[%# catcLink   = "http://mirlyn-classic.lib.umich.edu/F?func=find-b&amp;find_code=MDN&amp;local_base=MIU01_PUB&amp;request=$barcode" %]
-[% #wCatLink  = "http://www.worldcat.org/search?qt=worldcat_org_bks;fq=dt%3Abks;q=$encTitle" %]
-[% #uscorLink = "http://cocatalog.loc.gov/cgi-bin/Pwebrecon.cgi?DB=local;PAGE=First;Search_Arg=$encTitle" %]
 [% homeLink   = "crms?p=confirmReview;submit=Cancel;barcode=$barcode;sys=$sys" %]
 
 <div class="divbody">
@@ -166,8 +156,8 @@
             [% FOREACH src IN sources %]
               [% IF src.2 %]
                 [% selectstr = "" %]
-                [% IF selectit == 1 || src.5 == 1 %]
-                  [% selectit = 2 %]
+                [% IF selectit == 0 && src.5 == 1 %]
+                  [% selectit = 1 %]
                   [% selectstr = "selected='selected'" %]
                 [% END %]
                 <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
@@ -186,14 +176,13 @@
             [% FOREACH src IN sources %]
               [% IF src.2 %]
                 [% selectstr = "" %]
-                [% IF selectit == 1 || src.5 == 2 %]
-                  [% selectit = 2 %]
+                [% IF selectit == 0 && src.5 == 2 %]
+                  [% selectit = 1 %]
                   [% selectstr = "selected='selected'" %]
                 [% END %]
                 <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
               [% ELSE %]
                 <optgroup label="[% src.1 %]">
-                [% IF country && country == src.1 %][% selectit = 1 %][% END %]
               [% END %]
             [% END %]
             </select>
@@ -259,8 +248,8 @@
   </div>
   [%# the frame (Stanford, HT, Cat...) %]
   <div class="divFrame" id="divFrame">
-    <iframe frameborder="0" width="100%" height="100%" id="topFrame" name="topFrame" src=""></iframe>
-    <iframe frameborder="0" width="100%" height="0%"   id="bFrame"   name="bFrame"   src=""></iframe>
+    <iframe frameborder="0" width="100%" height="100%" id="tFrame" name="tFrame" src=""></iframe>
+    <iframe frameborder="0" width="100%" height="100%" id="bFrame" name="bFrame" src="" style="display:none;"></iframe>
   </div>
 </div>
 
@@ -271,6 +260,5 @@ window.onload = function(e)
   changeFrame2();
 }
 </script>
-
 
 [% INCLUDE footer.tt %]
