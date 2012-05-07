@@ -4826,8 +4826,8 @@ sub GetAuthor
     $self->UpdateMetadata($id, 'bibdata', 1);
     $au = $self->SimpleSqlGet("SELECT author FROM bibdata WHERE id='$id'");
   }
-  $au =~ s,(.*[A-Za-z]).*,$1,;
-  $au =~ s/(^[([{])|([)\]}])$//g;
+  #$au =~ s,(.*[A-Za-z]).*,$1,;
+  $au =~ s/^[([{]*(.*?)[)\]}]*\s*$/$1/;
   return $au;
 }
 
