@@ -163,7 +163,13 @@ function CheckAll(box,formid)
     <th>User</th>
     <th>Attr</th>
     <th>Reason</th>
-    [% IF p == 'undReviews' %]<th>Renewal</th>[% END %]
+    [% IF p == 'undReviews' || p == 'expert' %]
+      [% IF 'crms' == crms.get('sys') %]
+        <th>Renewal</th>
+      [% ELSE %]
+        <th>Death/<span class="red">Pub</span></th>
+      [% END %]
+    [% END %]
     <th>Note&nbsp;Category</th>
     <th>Note</th>
     [% IF crms.IsUserAdmin() %]<th>Priority</th>[% END %]
@@ -223,7 +229,17 @@ function CheckAll(box,formid)
         <td>$review.user</td>
         <td>$review.attr</td>
         <td>$review.reason</td>
-        [% IF p == 'undReviews' %]<td>$review.renNum</td>[% END %]
+        [% IF p == 'undReviews' || p == 'expert' %]
+          [% IF 'crms' == crms.get('sys') %]
+            <td>$review.renNum</td>
+          [% ELSE %]
+            <td>
+              [% IF review.renNum %]<span class="red">[% END %]
+              $review.renDate
+              [% IF review.renNum %]</span>[% END %]
+            </td>
+          [% END %]
+        [% END %]
         <td>$review.category</td>
         <td>[% crms.LinkNoteText(cgi.escapeHTML(review.note)) %]</td>
         [% IF crms.IsUserAdmin() %]<td>$review.priority</td>[% END %]
