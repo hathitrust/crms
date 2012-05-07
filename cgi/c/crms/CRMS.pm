@@ -4827,7 +4827,7 @@ sub GetAuthor
     $au = $self->SimpleSqlGet("SELECT author FROM bibdata WHERE id='$id'");
   }
   #$au =~ s,(.*[A-Za-z]).*,$1,;
-  $au =~ s/^[([{]*(.*?)[)\]}]*\s*$/$1/;
+  $au =~ s/^[([{]+(.*?)[)\]}]+\s*$/$1/;
   return $au;
 }
 
