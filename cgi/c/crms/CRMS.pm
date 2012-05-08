@@ -7856,6 +7856,7 @@ sub Sources
       my $t = $self->GetEncTitle($id);
       $url =~ s/__TITLE__/$t/g;
     }
+    $url =~ s/\s+/+/g;
     push @all, [$row->[0], $row->[1], $url, $row->[3], $row->[4], $row->[5]];
   }
   return \@all;
