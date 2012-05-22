@@ -52,7 +52,7 @@ die 'Terminating' unless GetOptions(
            's:s@' => \@singles,
            'u'    => \$und,
            'v+'   => \$verbose,
-           'x'    => \$sys);
+           'x:s'  => \$sys);
 $DLPS_DEV = undef if $production;
 die "$usage\n\n" if $help;
 
@@ -111,7 +111,9 @@ sub CheckTable
     print "$id\n" if $verbose >= 2;
     my ($attr,$reason,$src,$usr,$time,$note) = @{$crms->RightsQuery($id,1)->[0]};
     my $rights = "$attr/$reason";
-    if ($rights ne 'ic/bib' && $rights ne 'pdus/gfv')
+    my $sys = $crms->get('sys');
+    if (($sys eq 'crms' && $rights ne 'ic/bib' && $rights ne 'pdus/gfv') ||
+        ($sys eq 'crmsworld' && $rights ne 'ic/bib' && $rights !~ m/^pdus/))
     {
       my @errs = ();
       push @errs, 'in queue' if $crms->SimpleSqlGet("SELECT COUNT(*) FROM queue WHERE id='$id'");
@@ -128,6 +130,15 @@ sub CheckTable
         printf "$id ($info): $attr/$reason ($usr) -- %s\n", (scalar @errs)? (join '; ', @errs):'can delete';
       }
       $n++ unless scalar @errs;
+    }
+    elsif ($table ne 'und')
+    {
+      my $cat = $crms->ShouldVolumeGoInUndTable($id);
+      if ($cat)
+      {
+        print "$id: ($cat) -- filtering\n";
+        $crms->Filter($id, $cat) if $delete;
+      }
     }
   }
   printf "%s delete $n %s of %d from $table\n", ($delete)?'Did':'Can',
