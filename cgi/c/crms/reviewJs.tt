@@ -184,7 +184,8 @@ function VerifyCategory()
   {
     return (confirm('Please confirm that this work is, or is derived from, a non-US publication from 1871-1922.'));
   }
-  if (SelectedCategory() == "Missing")
+  sel = SelectedCategory();
+  if (sel == "Missing" || sel == "Wrong Record")
   {
     return (confirm('Please confirm that you have submitted a Feedback report within the PageTurner.'));
   }
