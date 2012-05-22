@@ -92,7 +92,14 @@ my $sql = 'SELECT DATE(NOW())';
 $sql = 'SELECT DATE(DATE_SUB(NOW(),INTERVAL 1 DAY))' if $candidates;
 my $start = $crms->SimpleSqlGet($sql);
 my $end = $start;
-if (scalar @ARGV)
+if ($all)
+{
+  $sql = sprintf 'SELECT MIN(time) FROM %s', ($candidates)? 'candidates':'exportdata';
+  $start = $crms->SimpleSqlGet($sql);
+  $sql = sprintf 'SELECT MAX(time) FROM %s', ($candidates)? 'candidates':'exportdata';
+  $end = $crms->SimpleSqlGet($sql);
+}
+elsif (scalar @ARGV)
 {
   $start = $ARGV[0];
   die "Bad date format ($start); should be in the form e.g. 2010-08-29" unless $start =~ m/^\d\d\d\d-\d\d-\d\d(\s+\d\d:\d\d:\d\d)?$/;
