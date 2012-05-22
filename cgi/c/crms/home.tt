@@ -75,10 +75,11 @@ function CheckAll(box,formid)
 </table>
 
 
-[% sysStatus = crms.GetSystemStatus().1 %]
 [% locked = crms.GetLockedItems(user) %]
 [% IF locked.size %]
+  [% sysStatus = crms.GetSystemStatus().1 %]
   <br/><br/><form action="crms" id="checks">
+  [% crms.HiddenSys() %]
   <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
   [% IF sysStatus == 'normal' %]
     <input type="submit" name="unlockSel" value="Unlock Selected Volumes"/>
