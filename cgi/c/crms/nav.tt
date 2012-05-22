@@ -2,8 +2,7 @@
 [% IF cgi.param('p') %]
 <li><span>Home</span>
 <dl class="home">
-  [% url = crms.Sysify("crms") %]
-  <dt><a href="[% url %]">Home</a></dt>
+  <dt><a href="[% crms.Sysify("crms") %]">Home</a></dt>
 </dl>
 </li>
 [% END %]
@@ -18,8 +17,6 @@
     [% FOREACH item IN items %]
       [% target = (item.4)? ' target="' _ item.4 _ '"':'' %]
       [% url = item.1 %]
-      [% sys = cgi.param('sys') %]
-      [% IF sys %][% url = url _ ';sys=' _  sys %][% END %]
       <dd><a href="[% url %]">[% item.0.replace('\s', '&nbsp;') %]</a></dd>
     [% END %]
   </dl></li>

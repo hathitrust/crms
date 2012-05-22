@@ -38,7 +38,6 @@ function CheckAll(box,formid)
   [% END %]
 [% END %]
 
-[% sys = cgi.param('sys') %]
 <table class="mainnav">
 [% menus = crms.Menus() %]
 [% i = 0 %]
@@ -65,7 +64,6 @@ function CheckAll(box,formid)
     [% FOREACH item IN items %]
       [% target = (item.4)? ' target="' _ item.4 _ '"':'' %]
       [% url = item.1 %]
-      [% IF sys %][% url = url _ ';sys=' _  sys %][% END %]
       <a href="[% url %]"[% target %]>[% item.0.replace('\s', '&nbsp;') %]</a><br/>
     [% END %]
     </td>
@@ -88,6 +86,7 @@ function CheckAll(box,formid)
   <table class="exportStats" style="width:55%">
   <tr><th colspan="6" style="text-align:center;"><span class="major">Your&nbsp;Locked&nbsp;Items</span></th></tr>
   <tr><th>ID</th><th>Title</th><th>Since</th><th>Select</th><th>Unlock</th></tr>
+  [% sys = cgi.param('sys') %]
   [% FOREACH item IN locked.keys %]
     <tr>
       <td>[% item %]</td>
