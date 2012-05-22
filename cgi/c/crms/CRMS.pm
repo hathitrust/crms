@@ -573,7 +573,7 @@ sub LoadNewItemsInCandidates
   {
     my $sql = "SELECT id,time FROM und WHERE src='no meta'";
     my $dbh = $self->GetDb();
-    my $ref = $dbh->selectall_arrayref( $sql );
+    my $ref = $dbh->selectall_arrayref($sql);
     if (scalar @{ $ref })
     {
       printf "Checking %d possible no-meta additions to candidates\n", scalar @{ $ref };
@@ -591,9 +591,9 @@ sub LoadNewItemsInCandidates
   my $endclause = ($end)? "AND time<='$end'":'';
   # Query for a clause like "attr=2 AND reason=1" for the rights DB
   my $clause = Candidates::RightsClause();
-  my $sql = "SELECT namespace,id,time FROM rights_current WHERE ($clause) AND time>'$start' $endclause GROUP BY namespace, id";
+  my $sql = "SELECT namespace,id,time FROM rights_current WHERE ($clause) AND time>'$start' $endclause ORDER BY time ASC";
   my $dbh = $self->GetSdrDb();
-  my $ref = $dbh->selectall_arrayref( $sql );
+  my $ref = $dbh->selectall_arrayref($sql);
   printf "Checking %d possible additions to candidates from rights DB\n", scalar @{ $ref };
   foreach my $row ( @{$ref} )
   {
@@ -631,7 +631,13 @@ sub CheckAndLoadItemIntoCandidates
     print "Skip $id -- already in historical reviews\n";
     return;
   }
-  my $record = $self->GetMetadata($id);
+  if ($self->SimpleSqlGet("SELECT COUNT(*) FROM candidates WHERE id='$id'") > 0)
+  {
+    print "Skip $id -- already in candidates\n";
+    return;
+  }
+  my $sysid;
+  my $record = $self->GetMetadata($id, \$sysid);
   if (!$record)
   {
     $self->ClearErrors();
@@ -655,7 +661,7 @@ sub CheckAndLoadItemIntoCandidates
     }
     else
     {
-      $self->AddItemToCandidates($id, $time, $record);
+      $self->AddItemToCandidates($id, $time, $record, $sysid);
       $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
     }
   }
@@ -759,18 +765,32 @@ sub AddItemToCandidates
   my $id     = shift;
   my $time   = shift;
   my $record = shift;
+  my $sysid  = shift;
 
-  $record = $self->GetMetadata($id) unless $record;
+  $record = $self->GetMetadata($id, \$sysid) unless $record;
+  return unless $record and $sysid;
   my $pub = $self->GetPublDate($id, $record);
   my $au = $self->GetRecordAuthor($id, $record);
   my $dbh = $self->GetDb();
   $au = $dbh->quote($au);
-  $self->SetError("$id: UTF-8 check failed for quoted author: '$au'") unless $au eq "''" or utf8::is_utf8($au);
-  my $title = $self->GetRecordTitle( $id, $record );
+  #$self->SetError("$id: UTF-8 check failed for quoted author: '$au'") unless $au eq "''" or utf8::is_utf8($au);
+  my $title = $self->GetRecordTitle($id, $record);
   $title = $dbh->quote($title);
-  $self->SetError("$id: UTF-8 check failed for quoted title: '$title'") unless $title eq "''" or utf8::is_utf8($title);
+  #$self->SetError("$id: UTF-8 check failed for quoted title: '$title'") unless $title eq "''" or utf8::is_utf8($title);
   my $sql = "REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub-01-01', $title, $au)";
-  $self->PrepareSubmitSql( $sql );
+  $self->PrepareSubmitSql($sql);
+  # Are there duplicates? Filter them.
+  if (!$self->DoesRecordHaveChron($sysid, $record))
+  {
+    my $rows = $self->VolumeIDsQuery($sysid, $record);
+    next if scalar @{$rows} <= 1;
+    foreach my $line (@{$rows})
+    {
+      my ($id2,$chron2,$rights2) = split '__', $line;
+      next if $id eq $id2;
+      $self->Filter($id2, 'duplicate') if $self->IsVolumeInCandidates($id2);
+    }
+  }
 }
 
 # Load candidates into queue.
@@ -7399,7 +7419,10 @@ sub DuplicateVolumesFromExport
     {
       $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
     }
-    elsif ($okattr{$oldrights} || ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/) || $oldrights eq 'ic/bib')
+    elsif ($okattr{$oldrights} ||
+           ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/) ||
+           $oldrights eq 'ic/bib' ||
+           ($self->get('sys') eq 'crmsworld' && $oldrights =~ m/^pdus/))
     {
       # Always inherit onto a single-review priority 1
       my $rereps = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user LIKE 'rereport%'");
@@ -7410,6 +7433,13 @@ sub DuplicateVolumesFromExport
       elsif ($wrong)
       {
         $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tMissing/Wrong Record on $wrong\n";
+        delete $data->{'unneeded'}->{$id};
+        delete $data->{'inherit'}->{$id};
+      }
+      # CRMS World can't inherit und onto pdus
+      elsif ($self->get('sys') eq 'crmsworld' && $newrights =~ m/^und/ && $oldrights =~ m/^pdus/)
+      {
+        $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit und onto pdus\n";
         delete $data->{'unneeded'}->{$id};
         delete $data->{'inherit'}->{$id};
       }
@@ -7535,11 +7565,18 @@ sub DuplicateVolumesFromCandidates
     {
       $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
     }
+    # CRMS World can't inherit und onto pdus
+    elsif ($self->get('sys') eq 'crmsworld' && $newrights =~ m/^und/ && $oldrights =~ m/^pdus/)
+    {
+      $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit und onto pdus\n";
+    }
     elsif ($wrong)
     {
       $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tMissing/Wrong Record on $wrong\n";
     }
-    elsif ($oldrights eq 'ic/bib' || ($oldrights eq 'pdus/gfv' && $cattr =~ m/^pd/))
+    elsif ($oldrights eq 'ic/bib' ||
+           ($oldrights eq 'pdus/gfv' && $cattr =~ m/^pd/) ||
+           ($self->get('sys') eq 'crmsworld' && $oldrights =~ m/^pdus/))
     {
       $data->{'inherit'}->{$cid} .= "$id\t$sysid\t$attr2\t$reason2\t$cattr\t$creason\t$cgid\n";
     }
@@ -7607,7 +7644,7 @@ sub GetDuplicates
   my @dupes = ();
   my $sysid;
   my $record = $self->GetMetadata($id, \$sysid);
-  my $rows = $self->VolumeIDsQuery($sysid);
+  my $rows = $self->VolumeIDsQuery($sysid, $record);
   foreach my $line (@{$rows})
   {
     my ($id2,$chron2,$rights2) = split '__', $line;
