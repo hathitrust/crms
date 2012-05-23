@@ -111,7 +111,8 @@ elsif (scalar @ARGV)
 }
 my $dates = $start;
 $dates .= " to $end" if $end ne $start;
-my $title = sprintf "CRMS %s: %s %sInheritance, $dates",
+my $title = sprintf "%s %s: %s %sInheritance, $dates",
+                    $crms->System(),
                     ($DLPS_DEV)? 'Dev':'Prod',
                     ($candidates)? 'Candidates':'Export', 
                     ($cleanup)? 'Cleanup ':'';
