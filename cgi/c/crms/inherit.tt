@@ -208,9 +208,6 @@ function VerifyDelete(formid)
 [% END %]
 
 
-[% icnt = crms.GetTodaysInheritanceCount %]
-<h5>[% icnt %] volume[% (icnt==1)? '':'s' %] set to inherit rights</h5>
-<br/>
 [% ref = crms.GetDeletedInheritance %]
 [% IF ref.size() %]
   <h5>Inheritance candidates deleted today:</h5>
