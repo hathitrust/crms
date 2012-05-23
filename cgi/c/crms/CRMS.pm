@@ -441,15 +441,16 @@ sub ExportReviews
     $fromcgi = 1;
   }
   my $count = 0;
-  my $user = 'crms';
+  my $user = $self->get('sys');
   my $time = $self->GetTodaysDate();
   my ($fh, $file) = $self->GetExportFh() unless $fromcgi;
   my $start_size = $self->GetCandidatesSize();
   foreach my $id ( @{$list} )
   {
+    my $suppress = 0;
     my ($attr,$reason) = $self->GetFinalAttrReason($id);
     # FIXME: find a more elegant way to do this
-    if ($self->get('sys') eq 'crmsworld' && $attr eq 'und' && $reason eq 'nfi')
+    if ($user eq 'crmsworld' && $attr eq 'und' && $reason eq 'nfi')
     {
       my $rq = $self->RightsQuery($id,1);
       if ($rq)
@@ -458,13 +459,16 @@ sub ExportReviews
         if ($attr2 eq 'pdus')
         {
           print "Not exporting $id as und; it is $attr2/$reason\n" unless $fromcgi;
-          next;
+          $suppress = 1;
         }
       }
     }
-    print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $fromcgi;
+    if (!$suppress)
+    {
+      print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $fromcgi;
+    }
     my $src = $self->SimpleSqlGet("SELECT source FROM queue WHERE id='$id' ORDER BY time DESC LIMIT 1");
-    my $sql = "INSERT INTO  exportdata (time, id, attr, reason, user, src) VALUES ('$time', '$id', '$attr', '$reason', '$user', '$src')";
+    my $sql = "INSERT INTO  exportdata (time,id,attr,reason,user,src) VALUES ('$time','$id','$attr','$reason','$user','$src')";
     $self->PrepareSubmitSql( $sql );
     my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata');
     $self->MoveFromReviewsToHistoricalReviews($id,$gid);
@@ -7301,18 +7305,6 @@ sub AddInheritanceToQueue
     $self->PrepareSubmitSql($sql);
   }
   return $stat . join '; ', @msgs;
-}
-
-sub GetTodaysInheritanceCount
-{
-  my $self = shift;
-
-  #my $sql = 'SELECT COUNT(*) FROM queue WHERE status=9 AND DATE(time)=DATE(NOW())';
-  my $sql = 'SELECT COUNT(*) FROM queue WHERE status=9';
-  my $n = $self->SimpleSqlGet($sql);
-  $sql = 'SELECT COUNT(*) FROM inherit WHERE del=0 AND ((attr=2 AND reason=1) OR reason=12) ';
-  $n += $self->SimpleSqlGet($sql);
-  return $n;
 }
 
 sub LinkToCatalog
