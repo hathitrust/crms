@@ -338,6 +338,7 @@ sub CheckPendingStatus
   {
     my $module = 'Validator_' . $self->get('sys') . '.pm';
     require "$module";
+    unshift @_, $id;
     unshift @_, $self;
     $pstatus = Validator::CalcPendingStatus(@_);
   }
