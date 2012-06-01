@@ -5,10 +5,10 @@
 # Destination Production Servers
 #   (Note: -m option _must_ be used to specify server to use
 #
-NASDCMR       = ( nas-dcmr.umdl.umich.edu )
-NASHATCHER    = ( nas-hatcher.umdl.umich.edu )
+MACC       = ( quod-update-macc.umdl.umich.edu )
+HATCHER    = ( quod-update-hatcher.umdl.umich.edu )
 
-ALLHOSTS = ( ${NASDCMR} ${NASHATCHER} )
+ALLHOSTS = ( ${MACC} ${HATCHER} )
 
 # File Directories to be released (source)
 
