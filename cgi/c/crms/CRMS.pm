@@ -11,12 +11,12 @@ use LWP::UserAgent;
 use XML::LibXML;
 use Encode;
 use Date::Calc qw(:all);
-use POSIX qw(strftime);
+#use POSIX qw(strftime);
 use DBI qw(:sql_types);
 use List::Util qw(min max);
 use JSON::XS;
 
-binmode(STDOUT, ":utf8"); #prints characters in utf8
+binmode(STDOUT, ':utf8'); #prints characters in utf8
 
 ## ----------------------------------------------------------------------------
 ##  Function:   new() for object
@@ -30,18 +30,23 @@ sub new
 
   my $sys = $args{'sys'};
   $sys = 'crms' unless $sys;
-  my $configfile;
   my $root = $args{'root'};
   my $configfile = $root . "/bin/c/crms/$sys.cfg";
-  require $configfile;
+  eval { require $configfile; };
+  if ($@)
+  {
+    $sys = 'crms';
+    $configfile = $root . "/bin/c/crms/$sys.cfg";
+    require $configfile;
+  }
   $self->set('logFile', $args{'logFile'});
   my $errors = [];
   $self->set('errors',  $errors);
   $self->set('verbose', $args{'verbose'});
-  $self->set('root',    $root );
+  $self->set('root',    $root);
   $self->set('dev',     $args{'dev'});
   $self->set('user',    $args{'user'});
-  $self->set('sys',     $sys );
+  $self->set('sys',     $sys);
   $self->SetError('Warning: configFile parameter is obsolete.') if $args{'configFile'};
   return $self;
 }
