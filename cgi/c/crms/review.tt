@@ -162,7 +162,7 @@
                 [% END %]
                 <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
               [% ELSE %]
-                <optgroup label="[% src.1 %]">
+                <optgroup label="[% src.1 %]"/>
               [% END %]
             [% END %]
             </select>
@@ -182,7 +182,7 @@
                 [% END %]
                 <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
               [% ELSE %]
-                <optgroup label="[% src.1 %]">
+                <optgroup label="[% src.1 %]"/>
               [% END %]
             [% END %]
             </select>
@@ -198,11 +198,13 @@
         </tr>
       </table>
     </div>
+    [% realindex = 0 %]
     [% FOREACH src IN sources %]
       [% IF src.3 && src.4 %]
         <a style="position:absolute;left:-999px;" href="#" accesskey="[% src.3 %]"
-           onfocus="document.getElementById('search[% src.4 %]Select').selectedIndex=[% src.0 %];changeFrame[% src.4 %]();">.</a>
+           onfocus="document.getElementById('search[% src.4 %]Select').selectedIndex=[% realindex %];changeFrame[% src.4 %]();">.</a>
       [% END %]
+      [% IF src.2 %][% realindex = realindex + 1 %][% END %]
     [% END %]
     
     <div class="navbottom" style="border-collapse:collapse;">
