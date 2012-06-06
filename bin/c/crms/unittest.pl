@@ -186,7 +186,7 @@ is($crms->TranslateAttr(3),'opb',                                               
 is($crms->TranslateAttr(4),'orph',                                                                 'TranslateAttr 4');
 is($crms->TranslateAttr(5),'und',                                                                  'TranslateAttr 5');
 is($crms->TranslateAttr(6),'umall',                                                                'TranslateAttr 6');
-is($crms->TranslateAttr(7),'world',                                                                'TranslateAttr 7');
+is($crms->TranslateAttr(7),'ic-world',                                                             'TranslateAttr 7');
 is($crms->TranslateAttr(8),'nobody',                                                               'TranslateAttr 8');
 is($crms->TranslateAttr(9),'pdus',                                                                 'TranslateAttr 9');
 is($crms->TranslateAttr(10),'cc-by',                                                               'TranslateAttr 10');
@@ -205,7 +205,7 @@ is($crms->TranslateAttr('opb'),3,                                               
 is($crms->TranslateAttr('orph'),4,                                                                 'TranslateAttr 4a');
 is($crms->TranslateAttr('und'),5,                                                                  'TranslateAttr 5a');
 is($crms->TranslateAttr('umall'),6,                                                                'TranslateAttr 6a');
-is($crms->TranslateAttr('world'),7,                                                                'TranslateAttr 7a');
+is($crms->TranslateAttr('ic-world'),7,                                                             'TranslateAttr 7a');
 is($crms->TranslateAttr('nobody'),8,                                                               'TranslateAttr 8a');
 is($crms->TranslateAttr('pdus'),9,                                                                 'TranslateAttr 9a');
 is($crms->TranslateAttr('cc-by'),10,                                                               'TranslateAttr 10a');
@@ -260,22 +260,25 @@ if ($sys eq 'crmsworld')
 }
 else
 {
-  is($crms->GetCodeFromAttrReason(1,2),1,                                                           'GetCodeFromAttrReason 1');
-  is($crms->GetCodeFromAttrReason(1,7),2,                                                           'GetCodeFromAttrReason 2');
-  is($crms->GetCodeFromAttrReason(1,9),3,                                                           'GetCodeFromAttrReason 3');
-  is($crms->GetCodeFromAttrReason(2,7),4,                                                           'GetCodeFromAttrReason 4');
-  is($crms->GetCodeFromAttrReason(2,9),5,                                                           'GetCodeFromAttrReason 5');
-  is($crms->GetCodeFromAttrReason(5,8),6,                                                           'GetCodeFromAttrReason 6');
-  is($crms->GetCodeFromAttrReason(9,9),7,                                                           'GetCodeFromAttrReason 7');
-  is($crms->GetCodeFromAttrReason(1,14),8,                                                          'GetCodeFromAttrReason 8');
-  is($crms->GetCodeFromAttrReason(1,15),9,                                                          'GetCodeFromAttrReason 9');
+  is($crms->GetCodeFromAttrReason(1,2),1,                                                          'GetCodeFromAttrReason 1');
+  is($crms->GetCodeFromAttrReason(1,7),2,                                                          'GetCodeFromAttrReason 2');
+  is($crms->GetCodeFromAttrReason(1,9),3,                                                          'GetCodeFromAttrReason 3');
+  is($crms->GetCodeFromAttrReason(2,7),4,                                                          'GetCodeFromAttrReason 4');
+  is($crms->GetCodeFromAttrReason(2,9),5,                                                          'GetCodeFromAttrReason 5');
+  is($crms->GetCodeFromAttrReason(5,8),6,                                                          'GetCodeFromAttrReason 6');
+  is($crms->GetCodeFromAttrReason(9,9),7,                                                          'GetCodeFromAttrReason 7');
+  is($crms->GetCodeFromAttrReason(1,14),8,                                                         'GetCodeFromAttrReason 8');
+  is($crms->GetCodeFromAttrReason(1,15),9,                                                         'GetCodeFromAttrReason 9');
+  is($crms->SameUser('gnichols','gnichols123'),1,                                                  'SameUser 1');
+  is($crms->SameUser('gnichols','moseshll'),0,                                                     'SameUser 2');
+  is($crms->SameUser('rose','doc'),0,                                                              'SameUser 3');
 }
 
-ok($crms->TolerantCompare(undef,undef),                                                             'TolerantCompare 1');
-ok(!$crms->TolerantCompare('blah',undef),                                                           'TolerantCompare 2');
-ok(!$crms->TolerantCompare(undef,'blah'),                                                           'TolerantCompare 3');
-ok(!$crms->TolerantCompare('blah','bleh'),                                                          'TolerantCompare 4');
-ok($crms->TolerantCompare('blah','blah'),                                                           'TolerantCompare 5');
+is($crms->TolerantCompare(undef,undef),1,                                                          'TolerantCompare 1');
+is($crms->TolerantCompare('blah',undef),0,                                                         'TolerantCompare 2');
+is($crms->TolerantCompare(undef,'blah'),0,                                                         'TolerantCompare 3');
+is($crms->TolerantCompare('blah','bleh'),0,                                                        'TolerantCompare 4');
+is($crms->TolerantCompare('blah','blah'),1,                                                        'TolerantCompare 5');
 
 
 done_testing();
