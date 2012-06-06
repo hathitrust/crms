@@ -9,8 +9,6 @@ use CRMS;
 use Template;
 use POSIX;
 
-# !/l/local/bin/perl
-
 my $ru = $ENV{'REMOTE_USER'};
 my $cgi  = new CGI;
 my $sys =  $cgi->param('sys');
@@ -23,7 +21,7 @@ my $crms = CRMS->new(
         dev          =>   $DLPS_DEV,
         user         =>   $ru,
         );
-my $alias = $crms->GetAliasUserName( $ru );
+my $alias = $crms->GetAliasUserName($ru);
 
 if ($cgi->param('p') eq 'Logout')
 {
@@ -37,29 +35,24 @@ if ($cgi->param('p') eq 'Logout')
   }
   else
   {
-    $crms->UnlockAllItemsForUser( $ru );
-    
+    $crms->UnlockAllItemsForUser($ru);
     # change 'central' to the url of your weblogin server.
     my $central = "https://weblogin.umich.edu/cgi-bin/logout";
     my $query_string = "";
-
     # expire and nullify service cookie
     print( "Set-Cookie: $ENV{ COSIGN_SERVICE }=null; path=/; expires=Wednesday, 27-Jan-77 00:00:00 GMT; secure\n" );
-
-    if ( $ENV{ QUERY_STRING } =~ m|^(https?://.*)$| ) {
+    if ( $ENV{ QUERY_STRING } =~ m|^(https?://.*)$| )
+    {
       $query_string = "?$1";
     }
-
     # perform any local cleanup here
-
     # redirect to central weblogin server
-    print( "Location: $central$query_string\n\n" );
-
-    exit( 0 );
+    print("Location: $central$query_string\n\n");
+    exit(0);
   }
 }
 
-if ( $cgi->param('changeuser') == 1 )  
+if ($cgi->param('changeuser') == 1)  
 {
   $alias = $cgi->param('newuser');
   if ($crms->GetUserName($alias))
@@ -96,7 +89,7 @@ if (!$crms->GetUserName($user))
   exit;
 }
 
-if ( $cgi->param('p') eq 'confirmReview' )  
+if ($cgi->param('p') eq 'confirmReview')  
 {
   my $editing = $cgi->param('editing');
   if ($cgi->param('submit') eq 'Cancel')
@@ -106,9 +99,8 @@ if ( $cgi->param('p') eq 'confirmReview' )
     $cgi->delete_all();
     if ($editing)
     {
-      my $output = qq(<script type="text/javascript" language="JavaScript">window.close();</script>);
       print "Content-type: text/html\n\n";
-      print $output;
+      print '<script type="text/javascript" language="JavaScript">window.close();</script>';
     }
   }
   else
@@ -223,14 +215,15 @@ if ( $cgi->param('download') )
   }
   elsif ($page eq 'queue')
   {
-    $success = $crms->SearchAndDownloadQueue( $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $startDate, $endDate );
+    $success = $crms->SearchAndDownloadQueue($order, $dir, $search1, $search1value, $op1,
+                                             $search2, $search2value, $startDate, $endDate);
   }
   elsif ($page eq 'determinationStats')
   {
     my $monthly = $cgi->param('monthly');
     my $priority = $cgi->param('priority');
     my $pre = $cgi->param('pre');
-    $success = $crms->SearchAndDownloadDeterminationStats( $startDate, $endDate, $monthly, $priority, $pre );
+    $success = $crms->SearchAndDownloadDeterminationStats($startDate, $endDate, $monthly, $priority, $pre);
   }
   elsif ($page =~ m/userrate/i)
   {
@@ -241,13 +234,15 @@ if ( $cgi->param('download') )
     my $inval       = $cgi->param('inval');
     my $nononexpert = $cgi->param('nne');
     
-    $success = $crms->DownloadUserStats( $page, $user, $cumulative, $year, $inval, $nononexpert );
+    $success = $crms->DownloadUserStats($page, $user, $cumulative, $year, $inval, $nononexpert);
   }
   else
   {
-    $success = $crms->SearchAndDownload( $page, $order, $dir, $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $stype );
+    $success = $crms->SearchAndDownload($page, $order, $dir, $search1, $search1value, $op1,
+                                        $search2, $search2value, $op2, $search3, $search3value,
+                                        $startDate, $endDate, $stype);
   }
-  if ( $success )
+  if ($success)
   {
     exit;
   }
@@ -260,11 +255,10 @@ my $config =
     INTERPOLATE  => 1,     ## expand "$var" in plain text
     POST_CHOMP   => 1,     ## cleanup whitespace
     EVAL_PERL    => 1,     ## evaluate Perl code blocks
-    ENCODING     => 'UTF-8',
-
+    ENCODING     => 'UTF-8'
 };
 
-my $tt   = Template->new( $config );
+my $tt   = Template->new($config);
 my $vars = {
     title     => $crms->System(),
     crms      => $crms,
@@ -279,12 +273,12 @@ my $page  = $cgi->param('p');
 my $input = $page . ".tt";
 $input = 'home.tt' unless -f $input;
 
-print $cgi->header( -charset => 'utf-8', 'cache-control' => 'private' );
+print $cgi->header(-charset => 'utf-8', 'cache-control' => 'private');
 $tt->process($input, $vars) || die $tt->error();
 if ($cgi->param('debug'))
 {
   print '<br/><br/>';
-  printf '<b>%s</b><br/>', `hostname`;
+  printf 'Host: <b>%s</b><br/>', `hostname`;
   eval {
     foreach my $k (keys %ENV)
     {
