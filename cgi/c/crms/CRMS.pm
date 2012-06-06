@@ -31,13 +31,20 @@ sub new
   my $sys = $args{'sys'};
   $sys = 'crms' unless $sys;
   my $root = $args{'root'};
-  my $configfile = $root . "/bin/c/crms/$sys.cfg";
+  my $configfile = $root . '/bin/c/crms/' . $sys . '.cfg';
   eval { require $configfile; };
   if ($@)
   {
     $sys = 'crms';
-    $configfile = $root . "/bin/c/crms/$sys.cfg";
+    $configfile = $root . '/bin/c/crms/' . $sys . '.cfg';
     require $configfile;
+  }
+  # FIXME: separate out the passwords into a secondary config file not under version control.
+  # FIXME FIXME: ... and change the CRMS US and World passwords.
+  if (0)
+  {
+    my $pwconfigfile = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
+    require $pwconfigfile;
   }
   $self->set('logFile', $args{'logFile'});
   my $errors = [];
@@ -2859,7 +2866,6 @@ sub DeleteUser
   $self->PrepareSubmitSql($sql);
 }
 
-
 sub CheckReviewer
 {
   my $self = shift;
@@ -2881,7 +2887,7 @@ sub GetUserName
 
   $user = $self->get('user') unless $user;
   my $sql = "SELECT name FROM users WHERE id='$user'";
-  return $self->SimpleSqlGet( $sql );
+  return $self->SimpleSqlGet($sql);
 }
 
 sub GetUserNote
@@ -2891,7 +2897,7 @@ sub GetUserNote
 
   $user = $self->get('user') unless $user;
   my $sql = "SELECT note FROM users WHERE id='$user'";
-  return $self->SimpleSqlGet( $sql );
+  return $self->SimpleSqlGet($sql);
 }
 
 sub GetUserKerberosID
@@ -2901,9 +2907,8 @@ sub GetUserKerberosID
 
   $user = $self->get('user') unless $user;
   my $sql = "SELECT kerberos FROM users WHERE id='$user'";
-  return $self->SimpleSqlGet( $sql );
+  return $self->SimpleSqlGet($sql);
 }
-
 
 sub GetAliasUserName
 {
@@ -2934,7 +2939,7 @@ sub SameUser
   
   $u1 = $self->SimpleSqlGet("SELECT kerberos FROM users WHERE id='$u1'");
   $u2 = $self->SimpleSqlGet("SELECT kerberos FROM users WHERE id='$u2'");
-  return $u1 eq $u2 and $u1 ne '';
+  return ($u1 ne '' && $self->TolerantCompare($u1, $u2))? 1:0;
 }
 
 sub CanChangeToUser
@@ -7977,7 +7982,7 @@ sub TolerantCompare
   return 1 if (!defined $s1) && (!defined $s2);
   return 0 if (!defined $s1) && (defined $s2);
   return 0 if (defined $s1) && (!defined $s2);
-  return $s1 eq $s2; 
+  return ($s1 eq $s2)?1:0; 
 }
 
 # CRMS World specific. Predict best radio button (rights combo)
