@@ -640,8 +640,7 @@ sub CheckAndLoadItemIntoCandidates
   if ($self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id' AND src='gfv'") > 0)
   {
     print "Unfilter $id -- reverted from pdus/gfv\n";
-    my $sql = "DELETE FROM und WHERE id='$id'";
-    $self->PrepareSubmitSql($sql);
+    $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
   }
   if ($self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'") > 0)
   {
@@ -651,6 +650,7 @@ sub CheckAndLoadItemIntoCandidates
   if ($self->SimpleSqlGet("SELECT COUNT(*) FROM candidates WHERE id='$id'") > 0)
   {
     print "Skip $id -- already in candidates\n";
+    $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
     return;
   }
   my $sysid;
