@@ -5868,14 +5868,14 @@ sub CreateReviewReport
   $report .= '</tr>';
   
   # Inheriting Automatically
-  $sql = 'SELECT COUNT(*) FROM inherit WHERE del!=1 AND ((attr=2 AND reason=1) OR reason=12)';
+  $sql = 'SELECT COUNT(*) FROM inherit WHERE del!=1 AND (reason=1 OR reason=12)';
   $count = $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Automatically</td><td colspan='%d'>$count</td>", 1+scalar @pris);
   #$report .= "<td/>" for @pris;
   $report .= '</tr>';
   
   # Inheriting Pending Approval
-  $sql = 'SELECT COUNT(*) FROM inherit WHERE del!=1 AND ((attr!=2 OR reason!=1) AND reason!=12)';
+  $sql = 'SELECT COUNT(*) FROM inherit WHERE del!=1 AND (reason!=1 AND reason!=12)';
   $count = $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Pending&nbsp;Approval</td><td colspan='%d'>$count</td>", 1+scalar @pris);
   #$report .= "<td/>" for @pris;
@@ -7238,9 +7238,9 @@ sub AutoSubmitInheritances
   {
     my $id = $row->[0];
     my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
-    my $rights = "$attr/$reason";
-    if ($rights eq 'ic/bib' || $reason eq 'gfv')
+    if ($reason eq 'bib' || $reason eq 'gfv')
     {
+      my $rights = "$attr/$reason";
       print "Submitting inheritance for $id ($rights)\n" unless $fromcgi;
       $self->SubmitInheritance($id);
     }
