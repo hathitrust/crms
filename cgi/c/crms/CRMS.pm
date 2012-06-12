@@ -6479,7 +6479,7 @@ sub ReviewSearchMenu
     splice @keys, 13, 1; # Priority
     splice @labs, 13, 1;
   }
-  if ($page ne 'adminHistoricalReviews')
+  if ($page ne 'adminHistoricalReviews' || $self->TolerantCompare(1,$self->GetSystemVar('noLegacy')))
   {
     splice @keys, 7, 1; # Legacy
     splice @labs, 7, 1;
