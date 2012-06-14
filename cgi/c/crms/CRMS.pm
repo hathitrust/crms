@@ -5417,12 +5417,6 @@ sub TranslateAttr
   my $sql = "SELECT id FROM attributes WHERE name='$a'";
   $sql = "SELECT name FROM attributes WHERE id=$a" if $a =~ m/[0-9]+/;
   my $val = $self->SimpleSqlGet($sql,1);
-  # FIXME: temp hack for icus/gatt code
-  if (!$val)
-  {
-    if ($a eq '19') {$a = 'icus';}
-    elsif ($a eq 'icus') {$a = 19;}
-  }
   $a = $val if $val;
   return $a;
 }
@@ -5435,12 +5429,6 @@ sub TranslateReason
   my $sql = "SELECT id FROM reasons WHERE name='$r'";
   $sql = "SELECT name FROM reasons WHERE id=$r" if $r =~ m/[0-9]+/;
   my $val = $self->SimpleSqlGet($sql,1);
-  # FIXME: temp hack for icus/gatt code
-  if (!$val)
-  {
-    if ($r eq '17') {$r = 'gatt';}
-    elsif ($r eq 'gatt') {$r = 17;}
-  }
   $r = $val if $val;
   return $r;
 }
@@ -8023,7 +8011,8 @@ sub PredictRights
   }
   else
   {
-    $attr = $self->TranslateAttr('ic');
+    my $pub = $self->GetPubDate($id);
+    $attr = $self->TranslateAttr(($pub < 1923)? 'pdus':'ic');
     $reason = $self->TranslateReason('add');
   }
   my $sql = "SELECT id FROM rights WHERE attr=$attr AND reason=$reason";
