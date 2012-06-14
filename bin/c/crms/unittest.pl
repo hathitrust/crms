@@ -40,31 +40,33 @@ ok($crms->GetViolations('mdp.39015063050051'),                           'violat
 ok($crms->GetViolations('mdp.39015068249401'),                           'violation in foreign pub');
 ok($crms->GetViolations('mdp.39015035994030'),                           'violation in FMT');
 
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009761909'), 'gov',       'probable Gov Doc 1'); # uncaught
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009761842'), 'gov',       'probable Gov Doc 2'); # uncaught
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822020641114'), 'gov',       'probable Gov Doc 3'); # uncaught
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822023236219'), 'gov',       'probable Gov Doc 4'); # uncaught
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009762170'), 'gov',       'probable Gov Doc 5'); # uncaught
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822032663288'), 'gov',       'probable Gov Doc 6'); # uncaught
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009761610'), 'gov',       'probable Gov Doc 7'); # uncaught
-is($crms->ShouldVolumeGoInUndTable('uc1.31822032646135'),   'gov',       'probable Gov Doc 8');
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009761628'), 'gov',       'probable Gov Doc 9'); # uncaught
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822032663288'), 'gov',       'probable Gov Doc 10'); # uncaught
-is($crms->ShouldVolumeGoInUndTable('uc1.b4239360'),         'gov',       'probable Gov Doc 11');
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009761800'), 'gov',       'probable Gov Doc 12'); # uncaught
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822016490567'), 'gov',       'probable Gov Doc 13'); # uncaught
-is($crms->ShouldVolumeGoInUndTable('uc1.b4239650'),         'gov',       'probable Gov Doc 14');
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009761677'), 'gov',       'probable Gov Doc 15'); # uncaught
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822016490195'), 'gov',       'probable Gov Doc 16'); # uncaught
-isnt($crms->ShouldVolumeGoInUndTable('uc1.b4250907'),       'gov',       'probable Gov Doc 17'); # uncaught
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009265760'), 'gov',       'probable Gov Doc 18'); # uncaught
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822016490500'), 'gov',       'probable Gov Doc 19'); # uncaught
-isnt($crms->ShouldVolumeGoInUndTable('uc1.31822020642872'), 'gov',       'probable Gov Doc 20'); # uncaught
-
+if ($sys ne 'crmsworld')
+{
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009761909'), 'gov',       'probable Gov Doc 1'); # uncaught
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009761842'), 'gov',       'probable Gov Doc 2'); # uncaught
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822020641114'), 'gov',       'probable Gov Doc 3'); # uncaught
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822023236219'), 'gov',       'probable Gov Doc 4'); # uncaught
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009762170'), 'gov',       'probable Gov Doc 5'); # uncaught
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822032663288'), 'gov',       'probable Gov Doc 6'); # uncaught
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009761610'), 'gov',       'probable Gov Doc 7'); # uncaught
+  is($crms->ShouldVolumeGoInUndTable('uc1.31822032646135'),   'gov',       'probable Gov Doc 8');
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009761628'), 'gov',       'probable Gov Doc 9'); # uncaught
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822032663288'), 'gov',       'probable Gov Doc 10'); # uncaught
+  is($crms->ShouldVolumeGoInUndTable('uc1.b4239360'),         'gov',       'probable Gov Doc 11');
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009761800'), 'gov',       'probable Gov Doc 12'); # uncaught
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822016490567'), 'gov',       'probable Gov Doc 13'); # uncaught
+  is($crms->ShouldVolumeGoInUndTable('uc1.b4239650'),         'gov',       'probable Gov Doc 14');
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009761677'), 'gov',       'probable Gov Doc 15'); # uncaught
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822016490195'), 'gov',       'probable Gov Doc 16'); # uncaught
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.b4250907'),       'gov',       'probable Gov Doc 17'); # uncaught
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009265760'), 'gov',       'probable Gov Doc 18'); # uncaught
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822016490500'), 'gov',       'probable Gov Doc 19'); # uncaught
+  isnt($crms->ShouldVolumeGoInUndTable('uc1.31822020642872'), 'gov',       'probable Gov Doc 20'); # uncaught
+  is($crms->ShouldVolumeGoInUndTable('uc1.b22139'), 'dissertation',        'dissertation to und');
+  is($crms->ShouldVolumeGoInUndTable('uc1.b79381'), 'foreign',             'foreign to und');
+}
 is($crms->ShouldVolumeGoInUndTable('mdp.39015071261104'), 'language',    'language to und');
-is($crms->ShouldVolumeGoInUndTable('uc1.b22139'), 'dissertation',        'dissertation to und');
 is($crms->ShouldVolumeGoInUndTable('mdp.39015004119445'), 'translation', 'translation to und');
-is($crms->ShouldVolumeGoInUndTable('uc1.b79381'), 'foreign',             'foreign to und');
 
 is($crms->TwoWorkingDays('2010-07-28'), '2010-07-30 23:59:59',           '2 WDs from Wed');
 is($crms->TwoWorkingDays('2010-07-30'), '2010-08-03 23:59:59',           '2 WDs from Fri');
@@ -96,37 +98,43 @@ is($crms->IsWorkingDay('2011-06-25'), 0,                                 'WD: a 
 is($crms->IsWorkingDay('2011-06-26'), 0,                                 'WD: a Sunday');
 is($crms->IsWorkingDay('2011-06-27'), 1,                                 'WD: a Monday');
 
-is($crms->GetUserAffiliation('hansone@indiana.edu'), 'IU',               'IU affiliation');
-is($crms->GetUserAffiliation('aseeger@library.wisc.edu'), 'UW',          'UW affiliation');
-is($crms->GetUserAffiliation('zl2114@columbia.edu'), 'COL',              'COL affiliation');
-is(scalar @{ $crms->GetUsersWithAffiliation('IU') }, 7,                  'IU affiliates count');
-is(scalar @{ $crms->GetUsersWithAffiliation('UW') }, 5,                  'UW affiliates count');
-is(scalar @{ $crms->GetUsersWithAffiliation('COL') }, 1,                 'COL affiliates count');
+if ($sys ne 'crmsworld')
+{
+  is($crms->GetUserAffiliation('hansone@indiana.edu'), 'IU',               'IU affiliation');
+  is($crms->GetUserAffiliation('aseeger@library.wisc.edu'), 'UW',          'UW affiliation');
+  is($crms->GetUserAffiliation('zl2114@columbia.edu'), 'COL',              'COL affiliation');
+  is(scalar @{ $crms->GetUsersWithAffiliation('IU') }, 7,                  'IU affiliates count');
+  is(scalar @{ $crms->GetUsersWithAffiliation('UW') }, 5,                  'UW affiliates count');
+  is(scalar @{ $crms->GetUsersWithAffiliation('COL') }, 1,                 'COL affiliates count');
+  is($crms->IsReviewCorrect('uc1.b3763822','dfulmer','2009-11-02') ,0,     'Correctness: uc1.b3763822 1');
+  is($crms->IsReviewCorrect('uc1.b3763822','cwilcox','2009-11-03') ,1,     'Correctness: uc1.b3763822 2');
+  is($crms->IsReviewCorrect('uc1.b3763822','gnichols123','2009-11-04') ,1, 'Correctness: uc1.b3763822 3');
+  is($crms->IsReviewCorrect('uc1.b3763822','jaheim123','2009-11-04') ,0,   'Correctness: uc1.b3763822 4');
+  is($crms->IsReviewCorrect('uc1.b3763822','annekz','2009-11-09') ,1,      'Correctness: uc1.b3763822 5');
+}
 
-is($crms->IsReviewCorrect('uc1.b3763822','dfulmer','2009-11-02') ,0,     'Correctness: uc1.b3763822 1');
-is($crms->IsReviewCorrect('uc1.b3763822','cwilcox','2009-11-03') ,1,     'Correctness: uc1.b3763822 2');
-is($crms->IsReviewCorrect('uc1.b3763822','gnichols123','2009-11-04') ,1, 'Correctness: uc1.b3763822 3');
-is($crms->IsReviewCorrect('uc1.b3763822','jaheim123','2009-11-04') ,0,   'Correctness: uc1.b3763822 4');
-is($crms->IsReviewCorrect('uc1.b3763822','annekz','2009-11-09') ,1,      'Correctness: uc1.b3763822 5');
+if ($sys ne 'crmsworld')
+{
+  my $record = $crms->GetMetadata('mdp.39015011285692');
+  is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,0,0)}, 1,    'Violations: mdp.39015011285692 P0');
+  is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,1,0)}, 1,    'Violations: mdp.39015011285692 P1');
+  is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,2,0)}, 1,    'Violations: mdp.39015011285692 P2');
+  is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,3,0)}, 1,    'Violations: mdp.39015011285692 P3');
+  is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,3,1)}, 0,    'Violations: mdp.39015011285692 P3 1');
+  is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,4,0)}, 0,    'Violations: mdp.39015011285692 P4');
+  is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,4,1)}, 0,    'Violations: mdp.39015011285692 P4 1');
+  $record = $crms->GetMetadata('mdp.39015082195432');
+  is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,0,0)}, 3,    'Violations: mdp.39015082195432 P0');
+  is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,1,0)}, 3,    'Violations: mdp.39015082195432 P1');
+  is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,2,0)}, 3,    'Violations: mdp.39015082195432 P2');
+  is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,3,0)}, 3,    'Violations: mdp.39015082195432 P3');
+  is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,3,1)}, 3,    'Violations: mdp.39015082195432 P3 1');
+  is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,0)}, 3,    'Violations: mdp.39015082195432 P4');
+  is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,1)}, 0,    'Violations: mdp.39015082195432 P4 1');
+}
 
-my $record = $crms->GetMetadata('mdp.39015011285692');
-is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,0,0)}, 1,    'Violations: mdp.39015011285692 P0');
-is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,1,0)}, 1,    'Violations: mdp.39015011285692 P1');
-is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,2,0)}, 1,    'Violations: mdp.39015011285692 P2');
-is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,3,0)}, 1,    'Violations: mdp.39015011285692 P3');
-is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,3,1)}, 0,    'Violations: mdp.39015011285692 P3 1');
-is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,4,0)}, 0,    'Violations: mdp.39015011285692 P4');
-is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,4,1)}, 0,    'Violations: mdp.39015011285692 P4 1');
-
-$record = $crms->GetMetadata('mdp.39015082195432');
-is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,0,0)}, 3,    'Violations: mdp.39015082195432 P0');
-is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,1,0)}, 3,    'Violations: mdp.39015082195432 P1');
-is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,2,0)}, 3,    'Violations: mdp.39015082195432 P2');
-is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,3,0)}, 3,    'Violations: mdp.39015082195432 P3');
-is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,3,1)}, 3,    'Violations: mdp.39015082195432 P3 1');
-is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,0)}, 3,    'Violations: mdp.39015082195432 P4');
-is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,1)}, 0,    'Violations: mdp.39015082195432 P4 1');
-
+if ($sys ne 'crmsworld')
+{
 ok('Renewal no longer required for works published after 1963. ' eq
    $crms->ValidateSubmission('mdp.39015011285692','moseshll',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin >63 +ren');
 ok('' eq
@@ -153,6 +161,7 @@ ok('' eq
    $crms->ValidateSubmission('uc1.31822009761677','gnichols',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn expert <63 +ren');
 ok('pd/ncn must include renewal id and renewal date. ' eq
    $crms->ValidateSubmission('uc1.31822009761677','gnichols',1,2,undef,undef,undef,undef),     'pd/ncn expert <63 -ren');
+}
 my $id = $crms->SimpleSqlGet('SELECT id FROM und WHERE src!="duplicate"');
 $crms->Filter($id, 'duplicate');
 my $src = $crms->SimpleSqlGet("SELECT src FROM und WHERE id='$id'");
@@ -164,9 +173,12 @@ is($crms->IsReviewCorrect('chi.22682760','lnachreiner@library.wisc.edu','2010-11
 is($crms->IsReviewCorrect('chi.22682760','s-zuri@umn.edu','2010-11-02 14:02:51'), 1,               'status 8 validation 2');
 is($crms->IsReviewCorrect('coo.31924002832313','dfulmer','2011-01-13 12:00:37'), 1,                'status 8 validation 3');
 is($crms->IsReviewCorrect('coo.31924002832313','s-zuri@umn.edu','2011-01-13 11:13:57'), 1,         'status 8 validation 4');
-is($crms->IsFiltered('mdp.39015027953937','foreign'), 1,                                           'IsFiltered 1');
-is($crms->IsFiltered('mdp.39015027953937','duplicate'), 0,                                         'IsFiltered 2');
-is($crms->IsFiltered('mdp.39015027953937'), 1,                                                     'IsFiltered 3');
+if ($sys ne 'crmsworld')
+{
+  is($crms->IsFiltered('mdp.39015027953937','foreign'), 1,                                           'IsFiltered 1');
+  is($crms->IsFiltered('mdp.39015027953937','duplicate'), 0,                                         'IsFiltered 2');
+  is($crms->IsFiltered('mdp.39015027953937'), 1,                                                     'IsFiltered 3');
+}
 $crms->PrepareSubmitSql('INSERT INTO systemvars (name,value) VALUES ("blah", "1")');
 $crms->PrepareSubmitSql('INSERT INTO systemvars (name,value) VALUES ("bleh", "2")');
 is($crms->GetSystemVar('blah'), 1,                                                                 'GetSystemVar 1');
@@ -198,6 +210,7 @@ is($crms->TranslateAttr(15),'cc-by-sa',                                         
 is($crms->TranslateAttr(16),'orphcand',                                                            'TranslateAttr 16');
 is($crms->TranslateAttr(17),'cc-zero',                                                             'TranslateAttr 17');
 is($crms->TranslateAttr(18),'und-world',                                                           'TranslateAttr 18');
+is($crms->TranslateAttr(19),'icus',                                                                'TranslateAttr 19');
 
 is($crms->TranslateAttr('pd'),1,                                                                   'TranslateAttr 1a');
 is($crms->TranslateAttr('ic'),2,                                                                   'TranslateAttr 2a');
@@ -217,6 +230,7 @@ is($crms->TranslateAttr('cc-by-sa'),15,                                         
 is($crms->TranslateAttr('orphcand'),16,                                                            'TranslateAttr 16a');
 is($crms->TranslateAttr('cc-zero'),17,                                                             'TranslateAttr 17a');
 is($crms->TranslateAttr('und-world'),18,                                                           'TranslateAttr 18a');
+is($crms->TranslateAttr('icus'),19,                                                                'TranslateAttr 19a');
 
 is($crms->TranslateReason(1),'bib',                                                                'TranslateReason 1');
 is($crms->TranslateReason(2),'ncn',                                                                'TranslateReason 2');
@@ -233,6 +247,8 @@ is($crms->TranslateReason(12),'gfv',                                            
 is($crms->TranslateReason(13),'crms',                                                              'TranslateReason 13');
 is($crms->TranslateReason(14),'add',                                                               'TranslateReason 14');
 is($crms->TranslateReason(15),'exp',                                                               'TranslateReason 15');
+is($crms->TranslateReason(16),'del',                                                               'TranslateReason 16');
+is($crms->TranslateReason(17),'gatt',                                                              'TranslateReason 17');
 
 is($crms->TranslateReason('bib'),1,                                                                'TranslateReason 1a');
 is($crms->TranslateReason('ncn'),2,                                                                'TranslateReason 2a');
@@ -249,12 +265,16 @@ is($crms->TranslateReason('gfv'),12,                                            
 is($crms->TranslateReason('crms'),13,                                                              'TranslateReason 13a');
 is($crms->TranslateReason('add'),14,                                                               'TranslateReason 14a');
 is($crms->TranslateReason('exp'),15,                                                               'TranslateReason 15a');
+is($crms->TranslateReason('del'),16,                                                               'TranslateReason 16a');
+is($crms->TranslateReason('gatt'),17,                                                              'TranslateReason 17a');
 
 if ($sys eq 'crmsworld')
 {
   is($crms->GetCodeFromAttrReason(1,14),1,                                                         'GetCodeFromAttrReason 1');
-  is($crms->GetCodeFromAttrReason(2,14),2,                                                         'GetCodeFromAttrReason 2');
-  is($crms->GetCodeFromAttrReason(5,8),3,                                                          'GetCodeFromAttrReason 3');
+  is($crms->GetCodeFromAttrReason(1,15),2,                                                         'GetCodeFromAttrReason 2');
+  is($crms->GetCodeFromAttrReason(2,14),3,                                                         'GetCodeFromAttrReason 3');
+  is($crms->GetCodeFromAttrReason(19,17),4,                                                        'GetCodeFromAttrReason 3');
+  is($crms->GetCodeFromAttrReason(5,8),5,                                                          'GetCodeFromAttrReason 3');
   ok($crms->Sysify('crms') eq 'crms?sys=crmsworld',                                                'Sysify 1');
   ok($crms->Sysify('crms?p=review') eq 'crms?p=review;sys=crmsworld',                              'Sysify 2');
 }
