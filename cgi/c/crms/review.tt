@@ -110,7 +110,7 @@
         <tr>
           <td colspan="2">
             <select title="Select Help Documentation" class="review"
-                    onchange="if (this.selectedIndex > 0) window.open(this.options[this.selectedIndex].value, '_blank');this.selectedIndex=0;">
+                    onchange="if (this.selectedIndex > 0) window.open(this.options[this.selectedIndex].value);this.selectedIndex=0;">
               <option>Select Help Documentation</option>
               [% items = crms.MenuItems('docs') %]
               [% FOREACH item IN items %]
