@@ -17,6 +17,8 @@
 [% jump           = cgi.param('jump')         %]
 [% pagesize = pagesize.replace('\D','')       %]
 
+[% sys = crms.get('sys') %]
+
 [% showSysID = cgi.cookie('showSysID') %]
 [% vols = (stype == 'volumes' || stype == 'groups') %]
 [% IF NOT pagesize %][% pagesize = (vols)? 10:20 %][% END %]
@@ -164,8 +166,8 @@ function CheckAll(box,formid)
     <th>User</th>
     <th>Attr</th>
     <th>Reason</th>
-    [% IF p == 'undReviews' || p == 'expert' %]
-      [% IF 'crms' == crms.get('sys') %]
+    [% IF p == 'undReviews' || p == 'expert' || ('crmsworld' == sys && p == 'adminHistoricalReviews') %]
+      [% IF 'crms' == sys %]
         <th>Renewal</th>
       [% ELSE %]
         <th>Death/<span class="red">Pub</span></th>
@@ -230,8 +232,8 @@ function CheckAll(box,formid)
         <td>$review.user</td>
         <td>$review.attr</td>
         <td>$review.reason</td>
-        [% IF p == 'undReviews' || p == 'expert' %]
-          [% IF 'crms' == crms.get('sys') %]
+        [% IF p == 'undReviews' || p == 'expert' || ('crmsworld' == sys && p == 'adminHistoricalReviews') %]
+          [% IF 'crms' == sys %]
             <td>$review.renNum</td>
           [% ELSE %]
             <td>
