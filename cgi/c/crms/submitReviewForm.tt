@@ -65,16 +65,24 @@
                style="margin:0px;padding:1px;background-color:#d0dee6;"/>
       [% ELSE %]
         <input type="checkbox" id="renewalFieldCheckbox" name="renNum"[% (renNum)? ' checked="checked"':'' %]
-               onchange="javascript:ToggleADD();javascript:PredictRights('[% barcode %]');">&nbsp;Publication Date</input>
+               onchange="ToggleADD();PredictRights('[% barcode %]');">&nbsp;Publication Date</input>
       [% END %]
       </td>
       <td>
         [% IF ren %]
         <input type="text" title="Stanford Renewal Date" id="getDate" name="renDate"
                value="[% renDate %]" size="8" readonly="readonly"/>
+        [% ELSE %]
+          <input type="button" class="reviewblue" value="Pull Pub Date"
+          [% IF NOT pub_date.match('^\d+$') %]disabled="disabled"[% END %]
+          onclick="document.getElementById('renewalField').value=document.getElementById('pubDateSpan').innerHTML;
+                   document.getElementById('renewalFieldCheckbox').checked=true;PredictRights('[% barcode %]');"
+          accesskey="d"
+          style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
         [% END %]
       </td>
     </tr>
+    
   </table>
   </div>
 [% rights = crms.Rights() %]

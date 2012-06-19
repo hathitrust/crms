@@ -11,7 +11,7 @@
 [% select     = cgi.param('rights')     %]
 [% question   = cgi.param('question')   %]
 [% swiss      = cgi.param('swiss')      %]
-[% sys      = cgi.param('sys')          %]
+[% sys        = cgi.param('sys')        %]
 [% mag        = cgi.cookie('mag')       %]
 [% expert     = crms.IsUserExpert(user) %]
 
@@ -125,7 +125,7 @@
         <tr><td><strong>ID:</strong> <tt>[% barcode %]</tt>   </td></tr>
         <tr><td><strong>Title:</strong> [% title %]           </td></tr>
         <tr><td><strong>Author:</strong> [% author %]    <br/></td></tr>
-        <tr><td><strong>Pub Date:</strong> [% pub_date %]<br/></td></tr>
+        <tr><td><strong>Pub Date:</strong> <span id="pubDateSpan">[% pub_date %]</span><br/></td></tr>
         [% country = "" %]
         [% IF crms.GetSystemVar("showCountry") %]
           [% country = crms.GetPubCountry(barcode, undef, 1) %]
