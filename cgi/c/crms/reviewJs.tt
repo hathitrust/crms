@@ -93,7 +93,11 @@ function PredictRights(id)
   var isPub = (document.getElementById('renewalFieldCheckbox').checked)? 1:0;
   var isCrown = (SelectedCategory() == 'Crown Copyright')? 1:0;
   var req = null;
-
+  var rights = document.getElementsByName("rights");
+  var sel = GetCheckedValue(rights);
+  // Yucky hack to not uncheck und/nfi
+  // FIXME: find a better way to do this!
+  if (sel == 6) return;
   if (window.XMLHttpRequest)
   {
     req = new XMLHttpRequest();
@@ -115,10 +119,9 @@ function PredictRights(id)
     {
       if (req.status == 200)
       {
-        rights = document.getElementsByName("rights");
         sel = GetCheckedValue(rights);
         // Yucky hack to not uncheck und/nfi
-        if (sel != 5)
+        if (sel != 6)
         {
           if (sel != "")
           {
