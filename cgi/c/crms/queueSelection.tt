@@ -31,6 +31,7 @@
 
 <form id="select" action="crms">
 <input type="hidden" name="p" value="$page"/>
+[% crms.HiddenSys() %]
 
 Restrict selection:<br/>
 
