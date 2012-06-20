@@ -95,9 +95,9 @@ function PredictRights(id)
   var req = null;
   var rights = document.getElementsByName("rights");
   var sel = GetCheckedValue(rights);
-  // Yucky hack to not uncheck und/nfi
-  // FIXME: find a better way to do this!
-  if (sel == 6) return;
+  // There is a hidden div that tells us which button id is und/nfi
+  var und = document.getElementById('UNDNFI').title;
+  if (und && sel == und) return;
   if (window.XMLHttpRequest)
   {
     req = new XMLHttpRequest();
@@ -120,8 +120,7 @@ function PredictRights(id)
       if (req.status == 200)
       {
         sel = GetCheckedValue(rights);
-        // Yucky hack to not uncheck und/nfi
-        if (sel != 6)
+        if (!und || sel != und)
         {
           if (sel != "")
           {

@@ -112,6 +112,7 @@
     [% delta = Math.int(of / 2) %]
     [% IF of % 2 == 1 %][% delta = delta + 1 %][% END %]
     [% last = delta - 1 %]
+    <div style="display:none" id="UNDNFI" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=5') %]"></div>
     <table>
     [% FOREACH i IN [0 .. last] %]
       <tr>
