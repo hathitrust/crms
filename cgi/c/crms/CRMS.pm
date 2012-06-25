@@ -11,7 +11,7 @@ use LWP::UserAgent;
 use XML::LibXML;
 use Encode;
 use Date::Calc qw(:all);
-#use POSIX qw(strftime);
+use POSIX;
 use DBI qw(:sql_types);
 use List::Util qw(min max);
 use JSON::XS;
@@ -3193,7 +3193,16 @@ sub GetAllMonthsInYear
   
   my ($currYear, $currMonth) = $self->GetTheYearMonth();
   $year = $currYear unless $year;
-  my $start = ($year eq '2009')? 7:1;
+  my $start = 1;
+  # FIXME: this could be put in the config file.
+  if ($self->get('sys') eq 'crmsworld')
+  {
+    $start = 5 if $year == 2012;
+  }
+  else
+  {
+    $start = 7 if $year == 2009;
+  }
   my @months = ();
   foreach my $m ($start..12)
   {
@@ -3261,49 +3270,50 @@ sub CreateExportData
   my $report = sprintf("$label\nCategories%s%s", $delimiter, ($cumulative)? 'Grand Total':'Total');
   my %stats = ();
   my @usedates = ();
+  
+  my $sql = 'SELECT attr,reason FROM rights ORDER BY id ASC';
+  my $ref = $dbh->selectall_arrayref($sql);
+  my @allRights = map { sprintf('%s_%s', $self->TranslateAttr($_->[0]), $self->TranslateReason($_->[1])); } @{$ref};
+  my $nRights = scalar @allRights;
   foreach my $date (@dates)
   {
-    #print "$date\n";
     last if $date eq $now and !$doCurrentMonth;
     push @usedates, $date;
     $report .= "$delimiter$date";
-    my %cats = ('pd/ren' => 0, 'pd/ncn' => 0, 'pd/cdpp' => 0, 'pd/crms' => 0, 'pd/add' => 0, 'pd/exp' => 0, 'pdus/cdpp' => 0,
-                'ic/ren' => 0, 'ic/cdpp' => 0, 'ic/crms' => 0,
-                'und/nfi' => 0, 'und/crms' => 0,
-                'All PD' => 0, 'All IC' => 0, 'All UND' => 0,
+    my %cats = ('All PD' => 0, 'All IC' => 0, 'All UND' => 0,
                 'Status 4' => 0, 'Status 5' => 0, 'Status 6' => 0, 'Status 7' => 0);
+    my @sums = ();
+    foreach my $right (@allRights)
+    {
+      my ($a,$r) = split '_', $right;
+      $cats{"$a/$r"} = 0;
+      push @sums, "SUM(e.$right)";
+    }
     my $lastDay;
     if (!$cumulative)
     {
       my ($year,$month) = split '-', $date;
       $lastDay = Days_in_Month($year,$month);
     }
-    my $sql = 'SELECT SUM(e.pd_ren),SUM(e.pd_ncn),SUM(e.pd_cdpp),SUM(e.pd_crms),SUM(e.pd_add),SUM(e.pd_exp),SUM(e.pdus_cdpp),' .
-               'SUM(e.ic_ren),SUM(e.ic_cdpp),SUM(e.ic_crms),SUM(e.und_nfi),SUM(e.und_crms),' .
-               'SUM(d.s4),SUM(d.s5),SUM(d.s6),SUM(d.s7),SUM(d.s8),SUM(d.s9) ' .
-               'FROM exportstats e INNER JOIN determinationsbreakdown d ON e.date=d.date WHERE ' .
-              "e.date LIKE '$date%'";
+    $sql = sprintf('SELECT %s, SUM(d.s4),SUM(d.s5),SUM(d.s6),SUM(d.s7),SUM(d.s8),SUM(d.s9) ' .
+                   'FROM exportstats e INNER JOIN determinationsbreakdown d ON e.date=d.date WHERE ' .
+                   "e.date LIKE '$date%'", join ',', @sums);
     #print "$date: $sql<br/>\n";
     my $ref = $dbh->selectall_arrayref( $sql );
     #printf "$date: $sql : %d items<br/>\n", scalar @{$ref};
-    $stats{'pd/ren'}{$date}    += $ref->[0]->[0];
-    $stats{'pd/ncn'}{$date}    += $ref->[0]->[1];
-    $stats{'pd/cdpp'}{$date}   += $ref->[0]->[2];
-    $stats{'pd/crms'}{$date}   += $ref->[0]->[3];
-    $stats{'pd/add'}{$date}    += $ref->[0]->[4];
-    $stats{'pd/exp'}{$date}    += $ref->[0]->[5];
-    $stats{'pdus/cdpp'}{$date} += $ref->[0]->[6];
-    $stats{'ic/ren'}{$date}    += $ref->[0]->[7];
-    $stats{'ic/cdpp'}{$date}   += $ref->[0]->[8];
-    $stats{'ic/crms'}{$date}   += $ref->[0]->[9];
-    $stats{'und/nfi'}{$date}   += $ref->[0]->[10];
-    $stats{'und/crms'}{$date}  += $ref->[0]->[11];
-    $stats{'Status 4'}{$date}  += $ref->[0]->[12];
-    $stats{'Status 5'}{$date}  += $ref->[0]->[13];
-    $stats{'Status 6'}{$date}  += $ref->[0]->[14];
-    $stats{'Status 7'}{$date}  += $ref->[0]->[15];
-    $stats{'Status 8'}{$date}  += $ref->[0]->[16];
-    $stats{'Status 9'}{$date}  += $ref->[0]->[17];
+    my $n = 0;
+    foreach my $right (@allRights)
+    {
+      my ($a,$r) = split '_', $right;
+      $stats{"$a/$r"}{$date} += $ref->[0]->[$n];
+      $n++;
+    }
+    $stats{'Status 4'}{$date} += $ref->[0]->[$n];
+    $stats{'Status 5'}{$date} += $ref->[0]->[$n+1];
+    $stats{'Status 6'}{$date} += $ref->[0]->[$n+2];
+    $stats{'Status 7'}{$date} += $ref->[0]->[$n+3];
+    $stats{'Status 8'}{$date} += $ref->[0]->[$n+4];
+    $stats{'Status 9'}{$date} += $ref->[0]->[$n+5];
     for my $cat (keys %cats)
     {
       next if $cat =~ m/(All)|(Status)/;
@@ -3315,10 +3325,23 @@ sub CreateExportData
     }
   }
   $report .= "\n";
-  my @titles = ('All PD', 'pd/ren', 'pd/ncn', 'pd/cdpp', 'pd/crms', 'pd/add', 'pd/exp', 'pdus/cdpp',
-                'All IC', 'ic/ren', 'ic/cdpp', 'ic/crms',
-                'All UND', 'und/nfi', 'und/crms', 'Total',
-                'Status 4', 'Status 5', 'Status 6', 'Status 7', 'Status 8', 'Status 9');
+  my @titles = ('Total','Status 4', 'Status 5', 'Status 6', 'Status 7', 'Status 8', 'Status 9');
+  my @pdTitles = ('All PD');
+  my @icTitles = ('All IC');
+  my @undTitles = ('All UND');
+  foreach my $right (@allRights)
+  {
+    my ($a,$r) = split '_', $right;
+    my $right = "$a/$r";
+    push @pdTitles, $right if $a =~ m/^pd/;
+    push @icTitles, $right if $a =~ m/^ic/;
+    push @undTitles, $right if $a =~ m/^und/;
+  }
+  
+  unshift @titles, @undTitles;
+  unshift @titles, @icTitles;
+  unshift @titles, @pdTitles;
+  
   my %monthTotals = ();
   my %catTotals = ('All PD' => 0, 'All IC' => 0, 'All UND' => 0);
   my $gt = 0;
@@ -3434,7 +3457,7 @@ sub CreateExportReport
 sub CreateExportGraph
 {
   my $self  = shift;
-  my $type  = int shift;
+  my $type  = shift;
   my $start = shift;
   my $end   = shift;
   
@@ -3452,7 +3475,14 @@ sub CreateExportGraph
   shift @dates; shift @dates;
   # Now the data is just the categories and numbers...
   my @titles = ($type == 1)? ('Total'):('All PD','All IC','All UND');
-  my %titleh = ('All PD' => $lines[0],'All IC' => $lines[8],'All UND' => $lines[12],'Total' => $lines[15]);
+  my %titleh = ();
+  foreach my $line (@lines)
+  {
+    $titleh{'All PD'} = $line if $line =~ m/^All\sPD/i;
+    $titleh{'All IC'} = $line if $line =~ m/^All\sIC/i;
+    $titleh{'All UND'} = $line if $line =~ m/^All\sUND/i;
+    $titleh{'Total'} = $line if $line =~ m/^Total/i;
+  }
   my @elements = ();
   my %colors = ('All PD' => '#22BB00', 'All IC' => '#FF2200', 'All UND' => '#0088FF', 'Total' => '#FFFF00');
   my %totals = ('All PD' => 0, 'All IC' => 0, 'All UND' => 0);
@@ -3462,10 +3492,10 @@ sub CreateExportGraph
   my $gt = shift @totalline;
   foreach my $title (@titles)
   {
-    #print "$title\n";
     # Extract the total,n1,n2... data
     my @line = split(',',$titleh{$title});
     shift @line;
+    #printf "$title: '%s' from %s\n", join(',', @line), $titleh{$title};
     my $total = int(shift @line);
     $totals{$title} = $total;
     foreach my $n (@line) { $ceiling = int($n) if int($n) > $ceiling && $type == 1; }
@@ -4309,6 +4339,7 @@ sub UpdateExportStats
   my %counts;
   $date = $self->SimpleSqlGet('SELECT CURDATE()') unless $date;
   my $sql = "SELECT attr,reason FROM exportdata WHERE DATE(time)='$date'";
+  #print "$sql\n";
   my $ref = $self->GetDb()->selectall_arrayref( $sql );
   foreach my $row (@{$ref})
   {
