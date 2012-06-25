@@ -133,8 +133,9 @@ function PredictRights(id)
         }
       }    
     } 
-  }; 
-  req.open("GET", "/cgi/c/crms/predictRights?sys=crmsworld;id=" + id + ";year=" + year + ";pub=" + isPub + ";crown=" + isCrown, true); 
+  };
+  var url = "/cgi/c/crms/predictRights?sys=crmsworld;id=" + id + ";year=" + year + ";pub=" + isPub + ";crown=" + isCrown;
+  req.open("GET", url, true); 
   req.send(null);
 }
 
