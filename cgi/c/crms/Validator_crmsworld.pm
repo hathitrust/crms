@@ -11,7 +11,7 @@ sub ValidateSubmission
   my $self = shift;
   my ($id, $user, $attr, $reason, $note, $category, $renNum, $renDate) = @_;
   my $errorMsg = '';
-  $renDate =~ s/\D//g;
+  #$renDate =~ s/\D//g;
   my $noteError = 0;
   $attr = $self->TranslateAttr($attr);
   $reason = $self->TranslateReason($reason);
@@ -20,18 +20,14 @@ sub ValidateSubmission
     $errorMsg .= 'und/nfi must include note category and note text.';
     $noteError = 1;
   }
-  if ($renDate && $renDate !~ m/^\d\d\d\d$/)
+  if ($renDate && $renDate !~ m/^\d+$/)
   {
-    $errorMsg .= sprintf("The year of %s must be exactly 4 decimal digits. ",
+    $errorMsg .= sprintf("The year of %s must be only decimal digits. ",
                          ($renNum)? 'publication':'death');
   }
-  elsif ($reason eq 'add' && $renDate !~ m/^\d\d\d\d$/)
+  elsif (($reason eq 'add' || $reason eq 'exp') && $renDate !~ m/^\d+$/)
   {
-    $errorMsg .= "*/add must include a 4-digit year. ";
-  }
-  elsif ($reason eq 'exp' && $renDate !~ m/^\d\d\d\d$/)
-  {
-    $errorMsg .= "*/exp must include a 4-digit year. ";
+    $errorMsg .= "*/$reason must include a year. ";
   }
   if ($noteError == 0)
   {
