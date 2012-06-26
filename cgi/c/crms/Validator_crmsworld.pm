@@ -62,9 +62,11 @@ sub CalcStatus
   my $sql = "SELECT user,attr,reason,renNum,renDate,hold,NOW() FROM reviews WHERE id='$id'";
   my $ref = $dbh->selectall_arrayref( $sql );
   my ($user, $attr, $reason, $renNum, $renDate, $hold, $today) = @{ $ref->[0] };
+  $renNum = undef unless $renDate;
   $sql = "SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id='$id' AND user!='$user'";
   $ref = $dbh->selectall_arrayref( $sql );
   my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{ $ref->[0] };
+  $other_renNum = undef unless $other_renDate;
   if ($hold && ($today lt $hold || $stat ne 'normal'))
   {
     $return{'hold'} = $user;
@@ -118,6 +120,8 @@ sub CalcPendingStatus
     my $other_reason  = $row->[2];
     my $other_renNum  = $row->[3];
     my $other_renDate = $row->[4];
+    $renNum = undef unless $renDate;
+    $other_renNum = undef unless $other_renDate;
     if ($attr == $other_attr && $reason == $other_reason)
     {
       # If both reviewers are non-advanced mark as provisional match
