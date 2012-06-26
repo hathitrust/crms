@@ -7878,7 +7878,10 @@ sub Sources
   my $self = shift;
   my $id   = shift;
   my $mag  = shift;
+  my $view = shift;
   
+  $mag = '100' unless $mag;
+  $view = 'image' unless $view;
   my $sql = 'SELECT id,name,url,accesskey,menu,initial FROM sources ORDER BY id ASC';
   #print "$sql\n<br/>";
   my $ref = $self->GetDb()->selectall_arrayref($sql);
@@ -7888,6 +7891,7 @@ sub Sources
     my $url = $row->[2];
     $url =~ s/__HTID__/$id/g;
     $url =~ s/__MAG__/$mag/g;
+    $url =~ s/__VIEW__/$view/g;
     if ($url =~ m/__SYSID__/)
     {
       my $sysid = $self->BarcodeToId($id);
@@ -8029,7 +8033,7 @@ sub PredictRights
   }
   if ($when < $now)
   {
-    if ($when >= 1996)
+    if ($when >= 1996 && $pub >= 1923)
     {
       $attr = $self->TranslateAttr('icus');
       $reason = $self->TranslateReason('gatt');
