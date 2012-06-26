@@ -20,14 +20,15 @@ sub ValidateSubmission
     $errorMsg .= 'und/nfi must include note category and note text.';
     $noteError = 1;
   }
-  if ($renDate && $renDate !~ m/^\d+$/)
+  if ($renDate && $renDate !~ m/^\-?\d{1,4}$/)
   {
     $errorMsg .= sprintf("The year of %s must be only decimal digits. ",
                          ($renNum)? 'publication':'death');
   }
-  elsif (($reason eq 'add' || $reason eq 'exp') && $renDate !~ m/^\d+$/)
+  # FIXME: check that renDate is defined, format was checked above.
+  elsif (($reason eq 'add' || $reason eq 'exp') && $renDate !~ m/^\-?\d{1,4}$/)
   {
-    $errorMsg .= "*/$reason must include a year. ";
+    $errorMsg .= "*/$reason must include a numeric year. ";
   }
   if ($noteError == 0)
   {
