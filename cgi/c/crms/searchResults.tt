@@ -166,7 +166,7 @@ function CheckAll(box,formid)
     <th>User</th>
     <th>Attr</th>
     <th>Reason</th>
-    [% IF p == 'undReviews' || p == 'expert' || ('crmsworld' == sys && p == 'adminHistoricalReviews') %]
+    [% IF p == 'undReviews' || p == 'expert' || 'crmsworld' == sys %]
       [% IF 'crms' == sys %]
         <th>Renewal</th>
       [% ELSE %]
@@ -232,7 +232,7 @@ function CheckAll(box,formid)
         <td>$review.user</td>
         <td>$review.attr</td>
         <td>$review.reason</td>
-        [% IF p == 'undReviews' || p == 'expert' || ('crmsworld' == sys && p == 'adminHistoricalReviews') %]
+        [% IF p == 'undReviews' || p == 'expert' || 'crmsworld' == sys %]
           [% IF 'crms' == sys %]
             <td>$review.renNum</td>
           [% ELSE %]
