@@ -29,7 +29,7 @@ sub GetViolations
   }
   else
   {
-    push @errs, "pub date not in range not completely specified ($pub)";
+    push @errs, "pub date not in range or not completely specified ($pub)";
   }
   push @errs, 'gov doc' if $self->IsGovDoc($id, $record );
   push @errs, 'foreign pub' if $self->IsForeignPub($id, $record);
