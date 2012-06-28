@@ -218,13 +218,15 @@ function GetCheckedValue(radioObj)
   return "";
 }
 
-function zoom(selector)
+function zoom(selector,name)
 {
-  mag = selector.options[selector.selectedIndex].value;
-  setCookie('mag',mag,7);
+  var val = selector.options[selector.selectedIndex].value;
+  setCookie(name,val,365);
   document.location.search = document.location.search;
   document.getElementById('tFrame').contentWindow.location.reload(true);
 }
+
+
 //-->
 </script>
 

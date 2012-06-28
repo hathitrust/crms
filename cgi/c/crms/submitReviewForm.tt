@@ -13,7 +13,7 @@
   <table class="display">
     <tr>
 	    <td class="display" align="left" colspan="4">
-	      <strong>Display Options:</strong>
+	      <strong>HathiTrust Options:</strong>
       </td>
     </tr>
     <tr><td colspan="4"/></tr>
@@ -21,13 +21,31 @@
     <tr>
       <td class="display" align="left">Size:</td>
       <td>
-        <select title="PageTurner Size" class="review" onchange="zoom(this);">
+        <select title="PageTurner Size" class="review" onchange="zoom(this,'mag');">
         [% percents = [50,75,100,125,150,200] %]
         [% FOREACH p IN percents %]
           [% IF p == mag %]
             <option value="[% p %]" selected="selected">[% "$p%" %]</option>
-          [% ELSE %]  
+          [% ELSE %]
             <option value="[% p %]">[% "$p%" %]</option>
+          [% END %]
+        [% END %]
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <td class="display" align="left">View:</td>
+      <td>
+        <select title="PageTurner View" class="review" onchange="zoom(this,'ptview');">
+        [% views = ['image','1up','2up','thumb'] %]
+        [% names = ['Classic','Scroll','Flip','Thumbnails'] %]
+        [% FOR i IN [0 .. 3] %]
+          [% v = views.$i %]
+          [% n = names.$i %]
+          [% IF v == ptview %]
+            <option value="[% v %]" selected="selected">[% n %]</option>
+          [% ELSE %]
+            <option value="[% v %]">[% n %]</option>
           [% END %]
         [% END %]
         </select>

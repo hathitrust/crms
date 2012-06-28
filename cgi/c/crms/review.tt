@@ -1,21 +1,20 @@
 [% INCLUDE header.tt %]
 
-[% error      = cgi.param('errorMsg')   %]
-[% barcode    = cgi.param('barcode')    %]
-[% inAdd      = cgi.param('add')        %]
-[% editing    = cgi.param('editing')    %]
-[% renNum     = cgi.param('renNum')     %]
-[% renDate    = cgi.param('renDate')    %]
-[% comm       = cgi.param('comm')       %]
-[% category   = cgi.param('category')   %]
-[% select     = cgi.param('rights')     %]
-[% question   = cgi.param('question')   %]
-[% swiss      = cgi.param('swiss')      %]
-[% sys        = cgi.param('sys')        %]
-[% mag        = cgi.cookie('mag')       %]
-[% expert     = crms.IsUserExpert(user) %]
-
-[% SET mag = 100 IF !mag %]
+[% error     = cgi.param('errorMsg')   %]
+[% barcode   = cgi.param('barcode')    %]
+[% inAdd     = cgi.param('add')        %]
+[% editing   = cgi.param('editing')    %]
+[% renNum    = cgi.param('renNum')     %]
+[% renDate   = cgi.param('renDate')    %]
+[% comm      = cgi.param('comm')       %]
+[% category  = cgi.param('category')   %]
+[% select    = cgi.param('rights')     %]
+[% question  = cgi.param('question')   %]
+[% swiss     = cgi.param('swiss')      %]
+[% sys       = cgi.param('sys')        %]
+[% mag       = cgi.cookie('mag')       %]
+[% ptview    = cgi.cookie('ptview')    %]
+[% expert    = crms.IsUserExpert(user) %]
 
 [% IF barcode && editing %]
   [% IF crms.PreviouslyReviewed(barcode, user) %]
@@ -136,8 +135,8 @@
             <a class="tip" href="#">
               <img width="16" height="16" alt="Send mail to MDPCorrections for this volume" src="/c/crms/SendIcon.png"/>
               <span>
-                This e-mail link is used for Wrong Record problems (i.e. when the URL for the digitized
-                work gets associated with the wrong bibliographic record and should be corrected).
+                This e-mail link is used to report bibliographic errors that warrant correction
+                (i.e., errors that affect the searching access points such as title, author, etc.).
               </span>
             </a>
             <a href="mailto:mdpcorrections@umich.edu?subject=$barcode" style="text-decoration: none;">
@@ -146,7 +145,7 @@
           </td>
         </tr>
       </table>
-      [% sources = crms.Sources(barcode,mag) %]
+      [% sources = crms.Sources(barcode,mag,ptview) %]
       <table class="search">
         <tr>
           <th>View 1:</th>
@@ -217,7 +216,7 @@
                                      comm     = comm,     category = category, editing  = editing,
                                      error    = error,    select   = select,   mag      = mag,
                                      question = question, swiss    = swiss,    expert   = expert,
-                                     status   = status,   sys      = sys %]
+                                     status   = status,   sys      = sys,      ptview   = ptview %]
       [% IF expert %]
         <table class="nav">
         [% IF status == 3 %]
