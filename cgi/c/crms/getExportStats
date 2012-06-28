@@ -30,6 +30,7 @@ if ($type eq 'graph')
   my $monthly = $cgi->param('monthly');
   my $title = $cgi->param('title');
   if ($c == 3) { $data = $crms->CreateDeterminationsBreakdownGraph($start, $end, $monthly, $title, $percent); }
+  elsif ($c == 4) { $data = $crms->CreateCandidatesGraph(); }
   else { $data = $crms->CreateExportGraph($c, $start, $end, undef, $priority); }
 }
 else

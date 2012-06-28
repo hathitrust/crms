@@ -3466,7 +3466,7 @@ sub CreateExportGraph
   #print "$data\n";
   my @lines = split m/\n/, $data;
   my $title = shift @lines;
-  $title .= '*' if $type == 2;
+  #$title .= '*' if $type == 2;
   $title =~ s/Cumulative/Monthly Breakdown/ if $type == 0;
   $title =~ s/Cumulative/Monthly Totals/ if $type == 1;
   my @dates = split(',', shift @lines);
@@ -3501,8 +3501,9 @@ sub CreateExportGraph
     foreach my $n (@line) { $ceiling = int($n) if int($n) > $ceiling && $type == 1; }
     my $color = $colors{$title};
     $title = 'Monthly Totals' if $type == 1;
-    my $attrs = sprintf('"dot-style":{"type":"solid-dot","dot-size":3,"colour":"%s"},"text":"%s","colour":"%s","on-show":{"type":"pop-up","cascade":1,"delay":0.2}',
-                        $color, $title, $color);
+    my $attrs = sprintf('"dot-style":{"type":"solid-dot","dot-size":3,"colour":"%s"},"colour":"%s","on-show":{"type":"pop-up","cascade":1,"delay":0.2}',
+                        $color, $color);
+    $attrs .= sprintf(',"text":"%s"', $title) unless $type == 1;
     my @vals = @line;
     if ($type == 0)
     {
@@ -4210,6 +4211,65 @@ sub DownloadUserStats
   return ($report)? 1:0;
 }
 
+sub CreateCandidatesData
+{
+  my $self = shift;
+  
+  my $cnt = $self->GetCandidatesSize();
+  my $sql = 'SELECT cd.ym,cd.cnt,ed.cnt FROM' .
+            ' (SELECT EXTRACT(YEAR_MONTH FROM c.time) AS ym,SUM(c.addedamount) AS cnt FROM candidatesrecord c GROUP BY ym) cd' .
+            ' LEFT JOIN' .
+            ' (SELECT EXTRACT(YEAR_MONTH FROM e.time) AS ym,COUNT(e.id) AS cnt FROM exportdata e' .
+            '  WHERE e.src="candidates" GROUP BY EXTRACT(YEAR_MONTH FROM e.time)) ed' .
+            ' ON (ed.ym=cd.ym) ORDER BY cd.ym DESC';
+  my $dbh = $self->GetDb();
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $report = '';
+  foreach my $row (@{$ref})
+  {
+    my $ym = $row->[0];
+    my $added = $row->[1];
+    my $exported = $row->[2];
+    $exported = 0 unless $exported;
+    #print "$ym $added $exported\n";
+    $ym = $self->YearMonthToEnglish(substr($ym, 0, 4) . '-' . substr($ym, 4, 2));
+    $report = "$ym\t$cnt\n" . $report;
+    $cnt -= $added;
+    $cnt += $exported;
+  }
+  return "Volumes In Candidates\n" . $report;
+}
+
+# Type arg is 0 for Monthly Breakdown, 1 for Total Determinations, 2 for cumulative (pie)
+sub CreateCandidatesGraph
+{
+  my $self  = shift;
+  
+  my $data = $self->CreateCandidatesData();
+  my @lines = split m/\n/, $data;
+  my $title = shift @lines;
+  my @titles;
+  my @vals;
+  my $ceil = 0;
+  my $attrs = '"dot-style":{"type":"solid-dot","dot-size":3},"on-show":{"type":"pop-up","cascade":1,"delay":0.2}';
+  foreach my $line (@lines)
+  {
+    my ($ym,$val) = split "\t", $line;
+    push @titles, $ym;
+    push @vals, $val;
+    $ceil = $val if $val > $ceil;
+  }
+  my $report = '{"bg_colour":"#000000"';
+  $report .= sprintf(',"title":{"text":"%s","style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"}', $title);
+  $report .= sprintf(',"elements":[{"type":"line","colour":"#22BB00","values":[%s],%s}]', join(',', @vals), $attrs);
+  $report .= sprintf(',"y_axis":{"max":%d,"steps":%d,"colour":"#888888","grid-colour":"#888888","labels":{"colour":"#FFFFFF"}}',
+                     $ceil, $ceil/10,);
+  $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}',
+                     join('","',@titles));
+  $report .= '}';
+  return $report;
+}
+
 sub GetRange
 {
   my $self = shift;
@@ -4266,28 +4326,28 @@ sub GetMonthStats
   return unless $start_date;
 
   my $sql = "SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND time LIKE '$start_date%'";
-  my $total_reviews = $self->SimpleSqlGet( $sql );
+  my $total_reviews = $self->SimpleSqlGet($sql);
 
   #pd/pdus
   $sql = "SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND (attr=1 OR attr=9) AND time LIKE '$start_date%'";
-  my $total_pd = $self->SimpleSqlGet( $sql );
+  my $total_pd = $self->SimpleSqlGet($sql);
 
   #ic
   $sql = "SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=2 AND time LIKE '$start_date%'";
-  my $total_ic = $self->SimpleSqlGet( $sql );
+  my $total_ic = $self->SimpleSqlGet($sql);
 
   #und
   $sql = "SELECT count(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND attr=5 AND time LIKE '$start_date%'";
-  my $total_und = $self->SimpleSqlGet( $sql );
+  my $total_und = $self->SimpleSqlGet($sql);
 
   #time reviewing ( in minutes ) - not including outliers
   $sql = "SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/60.0 FROM historicalreviews WHERE
           user='$user' AND legacy!=1 AND time LIKE '$start_date%' AND duration <= '00:05:00'";
-  my $total_time = $self->SimpleSqlGet( $sql );
+  my $total_time = $self->SimpleSqlGet($sql);
   
   #total outliers
   $sql = "SELECT COUNT(*) FROM historicalreviews WHERE user='$user' AND legacy!=1 AND time LIKE '$start_date%' AND duration>'00:05:00'";
-  my $total_outliers = $self->SimpleSqlGet( $sql );
+  my $total_outliers = $self->SimpleSqlGet($sql);
 
   my $time_per_review = 0;
   if ( $total_reviews - $total_outliers > 0)
@@ -8015,10 +8075,11 @@ sub PredictRights
   my $self  = shift;
   my $id    = shift;
   my $year  = shift;
-  my $pub   = shift;
+  my $ispub = shift;
   my $crown = shift;
 
   return 0 if $year !~ m/^\d\d\d\d$/;
+  my $pub = $self->GetPubDate($id);
   my $where = $self->GetPubCountry($id, undef, 1);
   my ($attr, $reason) = (0,0);
   my $now = $self->GetTheYear();
@@ -8041,7 +8102,7 @@ sub PredictRights
     else
     {
       $attr = $self->TranslateAttr('pd');
-      $reason = $self->TranslateReason(($pub)? 'exp':'add');
+      $reason = $self->TranslateReason(($ispub)? 'exp':'add');
     }
   }
   else
