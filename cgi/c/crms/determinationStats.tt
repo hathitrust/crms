@@ -1,5 +1,32 @@
 [% INCLUDE header.tt %]
 
+<script type="text/javascript" src="/c/crms/swfobject.js"></script>
+<script type="text/javascript">
+  <!--
+  function gup(name)
+  {
+    name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+    var regexS = "[\\?&]"+name+"=([^&#]*)";
+    var regex = new RegExp( regexS );
+    var results = regex.exec( window.location.href );
+    if( results == null )
+      return "";
+    else
+      return results[1];
+  }
+  start = gup('startDate');
+  end = gup('endDate');
+  monthly = gup('monthly');
+  priority = gup('priority');
+  str = "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=3&startDate=2009-01-01&endDate=0&monthly=1&title=Project Determinations Breakdown (by count)') %]";
+  swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "800", "300", "9.0.0",
+                     "expressInstall.swf", {"data-file":escape(str)});
+  str = "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=3&startDate=2009-01-01&endDate=0&monthly=1&title=Project Determinations Breakdown (by percentage)&percent=1') %]";
+  swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.0",
+                     "expressInstall.swf", {"data-file":escape(str)});
+  // -->
+</script>
+
 <h2>Determinations Breakdown:</h2>
 
 [% page = cgi.param('p') %]

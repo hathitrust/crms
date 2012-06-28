@@ -49,47 +49,7 @@ function selMenuItem(id, value)
     [% IF page.search('(?i)reviews') || page == 'expert' || page == 'queue'  || page == 'determinationStats' || page == 'holds' || page == 'adminHolds' || page == 'inherit' %]
       <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
     [% END %]
-    [% IF page == 'exportStats' %]
-      <script type="text/javascript" src="/c/crms/swfobject.js"></script>
-      <script type="text/javascript">
-<!--
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=2') %]")});
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=0&startDate=2009-07') %]")});
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "800", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=1&startDate=2009-07') %]")});
-// -->
-      </script>
-    [% END %]
-    [% IF page == 'determinationStats' %]
-      <script type="text/javascript" src="/c/crms/swfobject.js"></script>
-      <script type="text/javascript">
-<!--
-function gup( name )
-{
-  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
-  var regexS = "[\\?&]"+name+"=([^&#]*)";
-  var regex = new RegExp( regexS );
-  var results = regex.exec( window.location.href );
-  if( results == null )
-    return "";
-  else
-    return results[1];
-}
-start = gup('startDate');
-end = gup('endDate');
-monthly = gup('monthly');
-priority = gup('priority');
-str = "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=3&startDate=2009-01-01&endDate=0&monthly=1&title=Project Determinations Breakdown (by count)') %]";
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "800", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape(str)});
-str = "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=3&startDate=2009-01-01&endDate=0&monthly=1&title=Project Determinations Breakdown (by percentage)&percent=1') %]";
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape(str)});
-// -->
-      </script>
-    [% END %]
+    
     [% where = crms.WhereAmI() %]
     [% IF where %][% title = title _ ' - ' _ where %][% END %]
     <title>[% title %] - [% crms.PageToEnglish(page) %]</title>
