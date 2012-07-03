@@ -50,7 +50,7 @@
 [% END %]
 
 [% IF cgi.param('approve') || cgi.param('lock') || cgi.param('unlock') %]
-<h4>Modified [% n %] [% crms.Pluralize("item", n) %] %]</h4>
+<h4>Modified [% n %] [% crms.Pluralize("item", n) %]</h4>
 [% END %]
 
 [% INCLUDE selection.tt  %]
