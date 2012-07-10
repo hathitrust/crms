@@ -93,7 +93,8 @@ These items will take priority in the review process.
   <tr><td colspan="2"><b>$action $adds [% crms.Pluralize("volume", adds) %], skipped $skips, modified $already</b></td></tr></table>
 [% END %]
 
-[% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.added_by,q.status,q.priority FROM queue q, bibdata b WHERE q.id=b.id AND q.priority>=2 ORDER BY q.added_by,q.status ASC,q.priority DESC" %]
+[% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.added_by,q.status,q.priority FROM queue q, bibdata b" _
+         " WHERE q.id=b.id AND q.priority>=2 ORDER BY q.added_by,q.status ASC,q.priority DESC" %]
 [% ref  = crms.GetDb().selectall_arrayref(sql) %]
 [% IF ref.size > 0 %]
   <br/>
@@ -133,7 +134,7 @@ These items will take priority in the review process.
     [% sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='" _ r.0 _ "'" %]
     <td>[% crms.SimpleSqlGet(sql) %]</td>
     <td>
-      [% IF r.5 == user %]
+      [% IF r.5 == user && r.6 == 0 %]
       <a href="crms?p=review;editing=1;barcode=[% r.0 %]" target="_blank">Do It</a>
       [% END %]
     </td>
