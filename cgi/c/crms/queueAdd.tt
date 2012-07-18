@@ -117,10 +117,10 @@ These items will take priority in the review process.
     [% vs = crms.GetViolations(r.0, undef, r.6) %]
     [% style = (r.5==user && r.6==0)? '':'style="background-color:#e2e2e2;"' %]
     <tr [% style %]><td>
-    [% IF r.5 > 0 %]
-      <a href="/cgi/c/crms/crms?p=adminReviews;search1=Identifier;search1value=[% r.0 %]" target="_blank">
+    [% IF r.6 > 0 %]
+      <a href="[% crms.Sysify('/cgi/c/crms/crms?p=adminReviews;search1=Identifier;search1value=' _ r.0) %]" target="_blank">
     [% ELSE %]
-      <a href="/cgi/c/crms/crms?p=queue;search1=Identifier;search1value=[% r.0 %]" target="_blank">
+      <a href="[% crms.Sysify('/cgi/c/crms/crms?p=queue;search1=Identifier;search1value=' _ r.0) %]" target="_blank">
     [% END %]
     [% r.0 %]</a></td>
     <td>[% cgi.escapeHTML(r.1) %]</td>
