@@ -79,7 +79,7 @@ sub Version
 {
   my $self = shift;
   
-  return '4.0.1';
+  return '4.0.2';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
