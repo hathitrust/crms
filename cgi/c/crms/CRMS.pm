@@ -1709,8 +1709,8 @@ sub CreateSQLForVolumes
   my $totalVolumes = $self->SimpleSqlGet($sql);
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
-  $sql = "SELECT r.id as id, $order2($order) AS ord FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS $restrict GROUP BY r.id " .
-         "ORDER BY ord $dir $limit";
+  $sql = "SELECT foo.id FROM (SELECT r.id as id, $order2($order) AS ord FROM $table r LEFT JOIN bibdata b ON r.id=b.id" .
+         " $doQ $doS $restrict GROUP BY r.id) AS foo ORDER BY ord $dir $limit";
   #print "$sql<br/>\n";
   my $n = POSIX::ceil($offset/$pagesize+1);
   my $of = POSIX::ceil($totalVolumes/$pagesize);
