@@ -67,7 +67,7 @@
 
 [% status    = crms.GetStatus(barcode)   %]
 [% userName  = crms.GetUserName(user)    %]
-[% pub_date  = crms.GetPublDate(barcode) %]
+[% pub_date  = crms.GetPubDate(barcode)  %]
 [% author    = crms.GetAuthor(barcode)   %]
 [% title     = crms.GetTitle(barcode)    %]
 [% priority  = crms.GetPriority(barcode) %]
@@ -254,7 +254,7 @@
   </div>
 </div>
 
-<script language="javascript">
+<script type="text/javascript">
 window.onload = function(e)
 {
   changeFrame1();
