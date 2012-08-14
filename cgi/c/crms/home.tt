@@ -57,7 +57,8 @@ function CheckAll(box,formid)
   [% END %]
   [% colspan = '' %]
   [% IF i % 2 == 0 %]
-    [% IF j >= of %][% colspan = 'colspan="2"' %]<tr>[% END %]
+    [% IF j >= of %][% colspan = 'colspan="2"' %][% END %]
+    <tr>
   [% END %]
     <td $colspan>
     [% items = crms.MenuItems(id) %]
@@ -67,7 +68,7 @@ function CheckAll(box,formid)
       <a href="[% url %]"[% target %]>[% item.0.replace('\s', '&nbsp;') %]</a><br/>
     [% END %]
     </td>
-    [% IF i % 2 != 0 %]</tr>[% END %]
+  [% IF i % 2 != 0 || j >= of %]</tr>[% END %]
   [% i = i + 1 %]
 [% END %]
 </table>
