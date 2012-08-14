@@ -148,29 +148,34 @@
 [% IF cgi.param('fix') && ids %]
   <h4>Tried to Fix:</h4>
   <table class="exportStats" style="width:33%">
-  <tr><th>ID</th><th>Sys&nbsp;ID</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th><th>Where</th></tr>
+  <tr><th>ID</th><th>Sys&nbsp;ID</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th><th>Country</th><th>Table</th></tr>
   [% FOREACH id IN ids.split %]
     [% cand = crms.SimpleSqlGet("SELECT COUNT(*) FROM candidates WHERE id='$id'") %]
     [% bib = crms.SimpleSqlGet("SELECT COUNT(*) FROM bibdata WHERE id='$id'") %]
     [% IF id.match('^\d+$') %][% id = 'mdp.' _ id %][% END %]
     [% id = id.remove('(^\s+)|(\s+$)') %]
-    [% which = "bibdata" %]
+    [% which = "candidates" %]
     [% where = "" %]
     [% IF cand %]
       [% blah = crms.UpdateMetadata(id, 'candidates') %]
       [% where = "<code>candidates</code>" %]
-      [% which = "candidates" %]
     [% END %]
     [% IF bib %]
       [% blah = crms.UpdateMetadata(id) %]
       [% IF where.length %][% where = where _ ' and ' %][% END %]
       [% where = where _ '<code>bibdata</code>' %]
+      [% which = "bibdata" %]
     [% END %]
     [% sysid = crms.BarcodeToId(id) %]
-    [% sql = "SELECT author,title,YEAR(pub_date) FROM $which WHERE id='$id'" %]
+    [% IF which == 'bibdata' %]
+      [% sql = "SELECT author,title,YEAR(pub_date),country FROM $which WHERE id='$id'" %]
+    [% ELSE %]
+      [% sql = "SELECT author,title,YEAR(pub_date) FROM $which WHERE id='$id'" %]
+    [% END %]
     [% ref  = crms.GetDb().selectall_arrayref(sql) %]
     [% FOREACH r IN ref %]
-      <tr><td>[% id %]</td><td>[% sysid %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td><td>[% where %]</td></tr>
+      <tr><td>[% id %]</td><td>[% sysid %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td>
+          <td>[% IF which == 'bibdata' %][% r.3 %][% ELSE %]-[% END %]</td><td>[% where %]</td></tr>
       [% LAST %]
     [% END %]
   [% END %]
