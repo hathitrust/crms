@@ -14,7 +14,7 @@ function CheckAll(box,formid)
 </script>
 
 [% n = crms.CountUserHolds(user) %]
-[% IF n %]<h4>You have $n [% crms.Pluralize('volumes', n) %] on hold.</h4><br/>[% END %]
+[% IF n %]<h4>You have $n [% crms.Pluralize('volume', n) %] on hold.</h4><br/>[% END %]
 
 [% IF cgi.param('unlockSel') %]
 <br/>
