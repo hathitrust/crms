@@ -36,7 +36,7 @@
         [% catlink = crms.LinkToCatalog(id) %]
         <a style="color:white;" href="[% catlink %]" target="_blank">$id</a>&nbsp;&nbsp;&nbsp;&nbsp;([% parts = ids.0.split('__') %][% parts.1 %])
       </th></tr>
-      <tr><th>Volume id</th><th>CRMS status</th></tr>
+      <tr><th>Volume id</th><th>[% crms.System() %] status</th></tr>
       <tr>
         <td nowrap="nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% parts.0 %]<br/>[% END %]</td>
         <td nowrap="nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% parts.2 %]<br/>[% END %]</td>
