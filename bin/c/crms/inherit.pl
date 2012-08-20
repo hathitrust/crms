@@ -618,8 +618,11 @@ sub CountSystemIds
   my %sysids;
   foreach my $id (@ids)
   {
-    $sysids{$crms->BarcodeToId($id)} = 1;
+    my $sysid = $crms->BarcodeToId($id);
+    print "$id: $sysid\n" if $verbose > 1;
+    $sysids{$sysid} = 1;
   }
+  printf "Counted %d sys ids\n", scalar keys %sysids if $verbose > 1;
   return scalar keys %sysids;
 }
 
