@@ -4267,49 +4267,21 @@ sub CreateCandidatesGraph
   return $report;
 }
 
-sub GetRange
-{
-  my $self = shift;
-
-  my $max = $self->SimpleSqlGet('SELECT MAX(time) FROM historicalreviews WHERE legacy!=1');
-  my $min = $self->SimpleSqlGet('SELECT MIN(time) FROM historicalreviews WHERE legacy!=1');
-  my $max_year = $max;
-  $max_year =~ s,(.*?)\-.*,$1,;
-  my $max_month = $max;
-  $max_month =~ s,.*?\-(.*?)\-.*,$1,;
-  my $min_year = $min;
-  $min_year =~ s,(.*?)\-.*,$1,;
-  my $min_month = $min;
-  $min_month =~ s,.*?\-(.*?)\-.*,$1,;
-  return ($max_year, $max_month, $min_year, $min_month);
-}
-
 sub UpdateStats
 {
   my $self = shift;
 
-  my $sql = 'DELETE from userstats';
-  $self->PrepareSubmitSql($sql);
-  return if 0 == $self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE legacy!=1');
-  my $users = $self->GetUsers();
-  my ($max_year, $max_month, $min_year, $min_month) = $self->GetRange();
-  my $max_date = "$max_year-$max_month";
-  while (1)
+  # Get the underlying system status, ignoring replication delays.
+  $self->PrepareSubmitSql('DELETE from userstats');
+  if (0 < $self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE legacy!=1'))
   {
-    my $statDate = "$min_year-$min_month";
+    my $users = $self->GetUsers();
     foreach my $user (@{$users})
     {
-      $self->GetMonthStats($user, $statDate);
+      my $sql = "SELECT DISTINCT DATE_FORMAT(time,'%Y-%m') AS ym FROM historicalreviews WHERE legacy!=1 AND user='$user' ORDER BY ym ASC";
+      my $ref = $self->GetDb()->selectall_arrayref($sql);
+      $self->GetMonthStats($user, $_->[0]) for @{$ref};
     }
-    $min_month = $min_month + 1;
-    if ($min_month == 13)
-    {
-      $min_month = 1;
-      $min_year = $min_year + 1;
-    }
-    $min_month = '0' . $min_month if $min_month < 10;
-    my $new_test_date = "$min_year-$min_month";
-    last if $new_test_date gt $max_date;
   }
 }
 
