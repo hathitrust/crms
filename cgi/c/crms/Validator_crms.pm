@@ -181,7 +181,7 @@ sub CalcStatus
 {
   my $self = shift;
   my $id   = shift;
-  my $stat = shift;
+  my $stat = shift; # FIXME: should this be pushed up into caller?
 
   my %return;
   my $dbh = $self->GetDb();
