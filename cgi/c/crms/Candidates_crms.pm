@@ -16,7 +16,7 @@ sub GetViolations
   my ($id, $record, $priority, $override) = @_;
   my @errs = ();
 
-  my $pub = $self->GetPublDate($id, $record);
+  my $pub = $self->GetRecordPubDate($id, $record);
   my $min = $self->GetCutoffYear('minYear');
   my $max = $self->GetCutoffYear('maxYear');
   $max = $self->GetCutoffYear('maxYearOverride') if ($override and $priority == 3) or $priority == 4;
@@ -49,7 +49,7 @@ sub ShouldVolumeGoInUndTable
   my $src = undef;
   $record = $self->GetMetadata($id) unless $record;
   return $src unless $record;
-  my $lang = $self->GetPubLanguage($id, $record);
+  my $lang = $self->GetRecordPubLanguage($id, $record);
   if ($self->IsProbableGovDoc($id, $record)) { $src = 'gov'; }
   elsif ('eng' ne $lang) { $src = 'language'; }
   elsif ($self->IsThesis($id, $record)) { $src = 'dissertation'; }

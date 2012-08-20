@@ -16,8 +16,8 @@ sub GetViolations
   my ($id, $record, $priority, $override) = @_;
   my @errs = ();
 
-  my $pub = $self->GetPublDate($id, $record);
-  my $where = $self->GetPubCountry($id, $record);
+  my $pub = $self->GetRecordPubDate($id, $record);
+  my $where = $self->GetRecordPubCountry($id, $record);
   $where =~ s/\s*\(.*//;
   if ($pub =~ m/\d\d\d\d/)
   {
@@ -49,7 +49,7 @@ sub ShouldVolumeGoInUndTable
   my $src = undef;
   $record = $self->GetMetadata($id) unless $record;
   return $src unless $record;
-  my $lang = $self->GetPubLanguage($id, $record);
+  my $lang = $self->GetRecordPubLanguage($id, $record);
   if ('eng' ne $lang) { $src = 'language'; }
   elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
   return $src;
