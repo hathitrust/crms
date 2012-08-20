@@ -25,7 +25,21 @@ my $verbose    = $opts{'v'};
 $DLPS_DEV = undef if $production;
 $time = 10800 unless $time;
 
-die "USAGE: $0 [-h] [-n] [-p] [-t secs_to_run] [-v] [-x SYS]\n\n" if $help;
+
+my $usage = <<END;
+USAGE: $0 [-hnpv] [-t SECS] [-x SYS] FILE
+
+Filter volumes.
+
+-h         Print this help message.
+-n         Do not submit changes.
+-p         Run in production.
+-t SECS    Run only for SECS seconds.
+-v         Emit debugging information.
+-x SYS     Set SYS as the system to execute.
+END
+
+die "$usage\n\n" if $help;
 
 my $file = $ARGV[0];
 
@@ -54,7 +68,7 @@ foreach my $row ( @{$ref} )
   my $record = $crms->GetMetadata($id);
   if ($record)
   {
-    my $lang = $crms->GetPubLanguage($id, $record);
+    my $lang = $crms->GetRecordPubLanguage($id, $record);
     if ($lang && 'eng' ne $lang && '###' ne $lang && '|||' ne $lang && 'zxx' ne $lang && 'mul' ne $lang && 'sgn' ne $lang && 'und' ne $lang)
     {
       $und{$id} = 'language';

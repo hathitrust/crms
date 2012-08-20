@@ -216,7 +216,7 @@ foreach my $row (@{$ref})
   }
   push @fields, @{$pubs[$_]} for (0 .. 3);
   printf "Have %d pubs, %d fields\n", scalar @pubs, scalar @fields if $verbose > 1;
-  push @fields, $crms->GetPubCountry($id, $record);
+  push @fields, $crms->GetRecordPubCountry($id, $record);
   push @rows, join '____', @fields;
   $crms->PrepareSubmitSql("INSERT INTO orphan (id) VALUES ('$id')") if $insert and !$rereport;
   if ($found >= $n and !$all and !$rereport)
@@ -320,7 +320,7 @@ sub GetDataFromFile
     my $rows = $crms->VolumeIDsQuery($sysid, $record);
     my ($id2,$chron,$rights) = split '__', $rows->[0];
     # FIXME: make it possible to specify this on the command line.
-    my $orig = $crms->GetPubCountry($id2, $record);
+    my $orig = $crms->GetRecordPubCountry($id2, $record);
     next if $orig !~ m/^Canada/ && $orig !~ m/^England/ && $orig !~ m/Australia/;
     next if $crms->SimpleSqlGet("SELECT COUNT(*) FROM orphan WHERE id='$id2'");
     push @data, [$id2,0];

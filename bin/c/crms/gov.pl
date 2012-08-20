@@ -143,7 +143,7 @@ foreach my $row (@{$ref})
   $author =~ s/&/&amp;/g;
   my $title = $crms->GetRecordTitle($id, $record);
   $title =~ s/&/&amp;/g;
-  my $pub = $crms->GetPublDate($id, $record);
+  my $pub = $crms->GetRecordPubDate($id, $record);
   my $field260a = '';
   my $field260b = '';
   eval {

@@ -111,7 +111,7 @@ foreach my $line ( <$fh> )
       print "Can't get metadata for $id; skipping.\n";
       next;
     }
-    my $pub = $crms->GetPublDate( $id, $record );
+    my $pub = $crms->GetRecordPubDate($id, $record);
   
     if ( ( $pub lt '1923' ) || ( $pub gt '1963' ) )
     {
@@ -119,19 +119,19 @@ foreach my $line ( <$fh> )
       print "Skipping item from $pub $id\n";
       next;
     }
-    if ($crms->IsGovDoc( $id, $record ))
+    if ($crms->IsGovDoc($id, $record))
     {
       $counts{'gov'}++;
       print "Skipping gov't doc $id\n";
       next;
     }
-    if ( $crms->IsForeignPub( $id, $record ) )
+    if ( $crms->IsForeignPub($id, $record) )
     {
       $counts{'not us'}++;
       print "Skipping non-us doc $id\n";
       next;
     }
-    if ( ! $crms->IsFormatBK( $id, $record ) )
+    if ( ! $crms->IsFormatBK($id, $record) )
     {
       $counts{'not bk'}++;
       print "Skipping non-us doc $id\n";
