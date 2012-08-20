@@ -5045,7 +5045,7 @@ sub UpdateMetadata
       my $title = $self->GetRecordTitle($id, $record);
       my $author = $self->GetRecordAuthor($id, $record);
       my $date = $self->GetRecordPubDate($id, $record);
-      my $country = $self->GetRecordPubCountry($id, $record, 1);
+      my $country = $self->GetRecordPubCountry($id, $record);
       my $dbh = $self->GetDb();
       my $tiq = $dbh->quote($title);
       my $aiq = $dbh->quote($author);
