@@ -320,7 +320,7 @@ my %countries = ('aa' => 'Albania',
 'unr' => 'Ukraine',
 'up' => 'United States Misc. Pacific Islands',
 'ur' => 'Soviet Union',
-'us' => 'United States',
+'us' => 'USA',
 'utu' => 'USA (Utah)',
 'uv' => 'Burkina Faso',
 'uy' => 'Uruguay',
@@ -370,7 +370,7 @@ my %countries = ('aa' => 'Albania',
 'xra' => 'Australia (South Australia)',
 'xs' => 'South Georgia and the South Sandwich Islands',
 'xv' => 'Slovenia',
-'xx' => 'No place, unknown, or undetermined',
+'xx' => 'Undetermined',
 'xxc' => 'Canada',
 'xxk' => 'United Kingdom',
 'xxr' => 'Soviet Union',
@@ -387,12 +387,15 @@ sub GetCountries
   return \%countries;
 }
 
-# FIXME: move "short" option from CRMS.pm to here.
 sub TranslateCountry
 {
   my $code = shift;
+  my $long = shift;
 
-  return $countries{$code};
+  my $country = $countries{$code};
+  $country = 'Undetermined' unless $country;
+  $country =~ s/\s*\(.*?\)$//g unless $long;
+  return $country;
 }
 
 1;

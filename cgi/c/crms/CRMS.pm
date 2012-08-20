@@ -4744,7 +4744,7 @@ sub GetRecordPubCountry
   my $self   = shift;
   my $id     = shift;
   my $record = shift;
-  my $short  = shift;
+  my $long   = shift;
 
   $record = $self->GetMetadata($id) unless $record;
   return unless $record;
@@ -4756,10 +4756,7 @@ sub GetRecordPubCountry
   };
   $self->SetError("failed in GetCountry($id): $@") if $@;
   use Countries;
-  my $country = Countries::TranslateCountry($code);
-  $country = 'Unknown' unless $country;
-  $country =~ s/\s*\(.*?\)$//g if $short;
-  return $country;
+  return Countries::TranslateCountry($code, $long);
 }
 
 sub GetMarcFixfield
