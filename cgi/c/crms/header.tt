@@ -1,3 +1,4 @@
+[% page = cgi.param('p') %]
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
   <head>
@@ -6,7 +7,7 @@
     <meta http-equiv="Content-Style-Type" content="text/css"/>
     <script type="text/javascript" src="/c/crms/common.js"></script>
     <script type="text/javascript" src="/c/crms/menu.js"></script>
-    <script type="text/Javascript">
+    <script type="text/javascript">
 <!--
 function toggleVisibility(id)
 {
@@ -44,12 +45,8 @@ function selMenuItem(id, value)
 -->
     </script>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
-    [% page = cgi.param('p') %]
     [% IF page == 'review' %][% INCLUDE reviewJs.tt %][% END %]
-    [% IF page.search('(?i)reviews') || page == 'expert' || page == 'queue'  || page == 'determinationStats' || page == 'holds' || page == 'adminHolds' || page == 'inherit' %]
-      <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
-    [% END %]
-    
+    <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
     [% where = crms.WhereAmI() %]
     [% IF where %][% title = title _ ' - ' _ where %][% END %]
     <title>[% title %] - [% crms.PageToEnglish(page) %]</title>
@@ -94,15 +91,13 @@ function selMenuItem(id, value)
         </table>
       </div>
     </div>
-    <div>
-      [% INCLUDE nav.tt %]
-    </div>
+    <div>[% INCLUDE nav.tt %]</div>
     <br/><br/>
     [% noauto = ('disabled' == crms.GetSystemVar('autoinherit')) %]
     [% IF noauto && crms.IsUserAdmin() %]
       <span style="color:red;">Automatic Inheritance Processing is disabled.</span><br/><br/>
     [% ELSE %]
-    <br/>
+      <br/>
     [% END %]
 [% ELSE %]
     <div id="homePage">
@@ -116,12 +111,11 @@ function selMenuItem(id, value)
    [% status = (r.1 == 'down')? 'unavailable':((r.1 == 'partial')? 'partially available':r.1) %]
    <span style="font-size:1.3em;text-align:center;color:#DD4444">System status is <b>[% status %]</b>; last modified [% r.0 %]</span><br/>
    <span style="font-size:1.1em;">[% r.2 %]</span>
-   [% IF page == 'review' %]&nbsp;&nbsp;&nbsp;<a href="crms">Home</a>[% END %]
+   [% IF page == 'review' %]&nbsp;&nbsp;&nbsp;<a href="[% crms.Sysify('crms') %]">Home</a>[% END %]
   </td></tr>
   </table>
 [% END %]
 [% IF r.1 != 'normal' %]
-  [% page = cgi.param('p') %]
   [% IF page != 'systemStatus' %]
     [% IF r.1 == 'down' %]
       [% INCLUDE footer.tt %]
