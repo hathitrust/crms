@@ -49,6 +49,15 @@ my $crms = CRMS->new(
     dev          =>   undef
 );
 
+# Connect to training database.
+my $crms2 = CRMS->new(
+    logFile      =>   "$DLXSROOT/prep/c/crms/duplicates_hist.txt",
+    sys          =>   $sys,
+    verbose      =>   $verbose,
+    root         =>   $DLXSROOT,
+    dev          =>   ($training)? 'crmstest':$DLPS_DEV
+);
+
 my $fivesql = ($five)? ' AND status=5':'';
 
 my $n = 0;
@@ -91,6 +100,7 @@ foreach my $row (@{$ref})
   $sql = "SELECT reason FROM exportdata WHERE gid=$gid";
   my $expreason = $crms->SimpleSqlGet($sql);
   next if $expreason eq 'crms';
+  next if $crms2->SimpleSqlGet("SELECT COUNT(*) FROM queue WHERE id='$id'");
   if ($verbose)
   {
     my %vals = (0=>'x',1=>'+',2=>'-');
@@ -147,15 +157,7 @@ foreach my $row (@{$ref})
 print "</table></body></html>\n" if $verbose;
 print "Warning: $_\n" for @{$crms->GetErrors()};
 
-# Connect to training database.
-$crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/duplicates_hist.txt",
-    sys          =>   $sys,
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   ($training)? 'crmstest':$DLPS_DEV
-);
-
+$crms = $crms2;
 foreach $sql (@sqls)
 {
   print "$sql\n" if $verbose;
