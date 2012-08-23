@@ -8,6 +8,7 @@
 [% ids = cgi.param('ids') %]
 [% pri = cgi.param('priority') %]
 [% override = cgi.param('override') %]
+[% expert = crms.IsUserExpert() %]
 [% admin = crms.IsUserAdmin() %]
 [% IF NOT pri %][% pri = 0 %][% END %]
 [% IF NOT admin %][% override = 0 %][% END %]
@@ -32,8 +33,10 @@ These items will take priority in the review process.
   [% END %]
     <option value="0" [% (pri==0)? 'selected="selected"':'' %]>Priority 0</option>
     <option value="2" [% (pri==2)? 'selected="selected"':'' %]>Priority 2</option>
-    <option value="3" [% (pri==3)? 'selected="selected"':'' %]>Priority 3</option>
-    [% IF admin %]<option value="4" [% (pri==4)? 'selected="selected"':'' %]>Priority 4</option>[% END %]
+    <option value="3" [% (pri==3)? 'selected="selected"':'' %] [% (admin && !expert)? 'disabled="disabled"':'' %]>Priority 3</option>
+    [% IF admin %]
+      <option value="4" [% (pri==4)? 'selected="selected"':'' %] [% (admin && !expert)? 'disabled="disabled"':'' %]>Priority 4</option>
+    [% END %]
   </select>
   &nbsp;&nbsp;&nbsp;
   [% IF admin && canOverride %]
@@ -58,7 +61,12 @@ These items will take priority in the review process.
 [% END %]
 </ul>
 </td></tr></table>
-
+[% IF admin && !expert %]
+  <h3><span class="red">
+    You are using an admin account without expert privileges. Priorities 3 and 4 have been disabled.
+    You should probably use an expert-enabled account if you have one.
+  </span></h3>
+[% END %]
 [% adds = 0 %]
 [% skips = 0 %]
 [% already = 0 %]
