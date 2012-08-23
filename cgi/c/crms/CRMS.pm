@@ -1246,6 +1246,9 @@ sub SubmitReview
       my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $category, $renNum, $renDate);
       #We have decided to register the expert decision right away.
       $self->RegisterStatus($id, $status);
+      # Clear all non-expert holds
+      $sql = "UPDATE reviews SET hold=NULL,sticky_hold=NULL,time=time WHERE id='$id' AND expert!=1";
+      $self->PrepareSubmitSql($sql);
     }
     $self->CheckPendingStatus($id);
     $self->EndTimer($id, $user);
