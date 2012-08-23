@@ -147,16 +147,42 @@ sub ConnectToSdrDb
   if (!$self->get('dev')) { $db_server = $CRMSGlobals::mysqlMdpServer; }
 
   #if ($self->get('verbose')) { $self->Logit("DBI:mysql:mdp:$db_server, $db_user, [passwd]"); }
-
   my $sdr_dbh = DBI->connect("DBI:mysql:mdp:$db_server", $db_user, $db_passwd,
-            { RaiseError => 1, AutoCommit => 1 });
+            { PrintError => 0, AutoCommit => 1 });
   if ($sdr_dbh)
   {
     $sdr_dbh->{mysql_auto_reconnect} = 1;
   }
   else
   {
-    $self->SetError($DBI::errstr);
+    my $err = $DBI::errstr;
+    $self->SetError($err);
+    # Number of errors reported in the last 12 hours.
+    my $sql = 'SELECT COUNT(*) FROM sdrerror WHERE time > DATE_SUB(NOW(), INTERVAL 12 HOUR)';
+    if (0 == $self->SimpleSqlGet($sql))
+    {
+      my $eiq = $self->GetDb()->quote($err);
+      $sql = "INSERT INTO sdrerror (error) VALUES ($eiq)";
+      $self->PrepareSubmitSql($sql);
+      use Mail::Sender;
+      my $me = $self->GetSystemVar('adminEmail', '');
+      my $sender = new Mail::Sender({ smtp => 'mail.umdl.umich.edu',
+                                      from => $me,
+                                      on_errors => 'undef' });
+      my $ctype = 'text/plain';
+      $sender->OpenMultipart({
+        to => $me,
+        subject => 'CRMS rights database issue',
+        ctype => 'text/plain',
+        encoding => 'utf-8'
+        });
+      $sender->Body();
+      my $txt = $err;
+      $txt = '' unless $txt;
+      my $bytes = encode('utf8', $txt);
+      $sender->SendEnc($bytes);
+      $sender->Close();
+    }
   }
   return $sdr_dbh;
 }
@@ -1170,7 +1196,6 @@ sub SubmitReview
   my $qrenDate = ($renDate)? $dbh->quote($renDate):'NULL';
   my $qcategory = ($category)? $dbh->quote($category):'NULL';
   my $priority = $self->GetPriority($id);
-
   my $hold = 'NULL';
 
   if ($question)
@@ -5488,7 +5513,16 @@ sub TranslateAttr
   my $sql = "SELECT id FROM attributes WHERE name='$a'";
   $sql = "SELECT name FROM attributes WHERE id=$a" if $a =~ m/[0-9]+/;
   my $val = $self->SimpleSqlGet($sql,1);
-  $a = $val if $val;
+  if (!$val)
+  {
+    my %rights1 = (1 => 'pd', 2 => 'ic', 3 => 'opb', 4 => 'orph', 5 => 'und',
+                   6 => 'umall', 7 => 'world', 8 => 'nobody', 9 => 'pdus', 19 => 'icus');
+    my %rights2 = ('pd'    => 1, 'ic'    => 2, 'opb'    => 3, 'orph' => 4, 'und' => 5,
+                   'umall' => 6, 'world' => 7, 'nobody' => 8, 'pdus' => 9, 'icus' => 19);
+    $val = $rights1{$a} if $a =~ m/[0-9]+/;
+    $val = $rights2{$a} unless $a =~ m/[0-9]+/;
+  }
+  $a = $val;
   return $a;
 }
 
@@ -5500,7 +5534,18 @@ sub TranslateReason
   my $sql = "SELECT id FROM reasons WHERE name='$r'";
   $sql = "SELECT name FROM reasons WHERE id=$r" if $r =~ m/[0-9]+/;
   my $val = $self->SimpleSqlGet($sql,1);
-  $r = $val if $val;
+  if (!$val)
+  {
+    my %reasons1 = ( 1 => 'bib', 2 => 'ncn', 3 => 'con',   4 => 'ddd',  5 => 'man',  6 => 'pvt',
+                     7 => 'ren', 8 => 'nfi', 9 => 'cdpp', 10 => 'cip', 11 => 'unp', 12 => 'gfv',
+                    13 => 'crms', 14 => 'add', 15 => 'exp', 17 => 'gatt');
+    my %reasons2 = ('bib'  => 1, 'ncn' => 2, 'con'  => 3, 'ddd' => 4,  'man' => 5,  'pvt' => 6,
+                    'ren'  => 7, 'nfi' => 8, 'cdpp' => 9, 'cip' => 10, 'unp' => 11, 'gfv' => 12,
+                    'crms' => 13, 'add' => 14, 'exp' => 15, 'gatt' => 17);
+    $val = $reasons1{$a} if $r =~ m/[0-9]+/;
+    $val = $reasons2{$a} unless $r =~ m/[0-9]+/;
+  }
+  $r = $val;
   return $r;
 }
 
