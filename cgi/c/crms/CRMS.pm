@@ -254,14 +254,15 @@ sub SimpleSqlGet
   return $val;
 }
 
-
 sub GetCandidatesSize
 {
   my $self = shift;
+  my $ns   = shift;
 
-  return $self->SimpleSqlGet('SELECT count(*) FROM candidates');
+  my $sql = 'SELECT count(*) FROM candidates';
+  $sql .= " WHERE id LIKE '$ns%'" if $ns;
+  return $self->SimpleSqlGet($sql);
 }
-
 
 sub ProcessReviews
 {
