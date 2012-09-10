@@ -58,12 +58,21 @@ my $crms2 = CRMS->new(
     dev          =>   ($training)? 'crmstest':$DLPS_DEV
 );
 
-my $fivesql = ($five)? ' AND status=5':'';
+
+
+### Get a list of ids from the training DB already seen,
+### and populate the 'seen' hash with them.
+my %seen;
+my $sql = '(select distinct id from reviews) union distinct (select distinct id from historicalreviews)';
+my $ref = $crms2->GetDb()->selectall_arrayref($sql);
+$seen{$_->[0]} = 1 for @{$ref};
 
 my $n = 0;
-my $sql = 'SELECT id,user,time,gid,status FROM historicalreviews WHERE ' .
-          'user IN (SELECT id FROM users WHERE advanced=1 AND extadmin+expert+admin+superadmin=0) AND ' . 
-          "validated=1 $fivesql ORDER BY id ASC, time ASC";
+
+my $fivesql = ($five)? ' AND status=5':'';
+$sql = 'SELECT id,user,time,gid,status FROM historicalreviews WHERE ' .
+       'user IN (SELECT id FROM users WHERE advanced=1 AND extadmin+expert+admin+superadmin=0) AND ' . 
+       "validated=1 $fivesql ORDER BY id ASC, time ASC";
 if ($verbose)
 {
   print "$sql\n";
@@ -77,8 +86,8 @@ if ($verbose)
         '<th>Note</th><th>Validated</th><th>Importing</th></tr>' .
         "\n";
 }
-my $ref = $crms->GetDb()->selectall_arrayref($sql);
-my %seen;
+$ref = $crms->GetDb()->selectall_arrayref($sql);
+
 my $s4 = 0;
 my $s5 = 0;
 my @sqls = ();
@@ -86,7 +95,11 @@ foreach my $row (@{$ref})
 {
   my $id     = $row->[0];
   last if $n >= $count;
-  next if $seen{$id};
+  if ($seen{$id})
+  {
+    print "Skipping $id, it has been seen\n" if $verbose;
+    next;
+  }
   $seen{$id} = 1;
   my $user   = $row->[1];
   my $time   = $row->[2];
@@ -171,6 +184,10 @@ foreach my $row (@{$ref})
   my $id = $row->[0];
   $crms->UpdateMetadata($id, 'bibdata', 1);
 }
+
+$sql = "INSERT INTO queuerecord (itemcount,source) VALUES ($n,'training.pl')";
+print "$sql\n" if $verbose;
+$crms->PrepareSubmitSql($sql) unless $noop;
 print "Added $n: $s4 status 4 and $s5 status 5\n";
 print "Warning: $_\n" for @{$crms->GetErrors()};
 
