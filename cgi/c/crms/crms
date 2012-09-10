@@ -236,6 +236,11 @@ if ( $cgi->param('download') )
     
     $success = $crms->DownloadUserStats($page, $user, $cumulative, $year, $inval, $nononexpert);
   }
+  elsif ($page eq 'exportData')
+  {
+    $success = $crms->SearchAndDownloadExportData($order, $dir, $search1, $search1value, $op1,
+                                                  $search2, $search2value, $startDate, $endDate);
+  }
   else
   {
     $success = $crms->SearchAndDownload($page, $order, $dir, $search1, $search1value, $op1,

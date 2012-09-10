@@ -1555,6 +1555,7 @@ sub ConvertToSearchTerm
   {
     $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold IS NOT NULL)';
   }
+  elsif ($search eq 'Source') { $new_search = 'r.src'; }
   return $new_search;
 }
 
@@ -2315,6 +2316,24 @@ sub SearchAndDownloadQueue
   return ($buffer)? 1:0;
 }
 
+sub SearchAndDownloadExportData
+{
+  my $self = shift;
+  my $order = shift;
+  my $dir = shift;
+  my $search1 = shift;
+  my $search1Value = shift;
+  my $op1 = shift;
+  my $search2 = shift;
+  my $search2Value = shift;
+  my $startDate = shift;
+  my $endDate = shift;
+  
+  my $buffer = $self->GetExportDataRef($order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, 0, 0, 1);
+  $self->DownloadSpreadSheet($buffer);
+  return ($buffer)? 1:0;
+}
+
 sub GetReviewsRef
 {
   my $self               = shift;
@@ -2707,6 +2726,125 @@ sub GetQueueRef
     {
       $data .= sprintf("\n$id\t%s\t%s\t%s\t$date\t%s\t%s\t%s\t$reviews\t%s\t$holds",
                        $row->[7], $row->[8], $row->[4], $row->[2], $row->[3], $self->StripDecimal($row->[5]), $row->[6]);
+    }
+  }
+  if (!$download)
+  {
+    my $n = POSIX::ceil($offset/$pagesize+1);
+    my $of = POSIX::ceil($totalVolumes/$pagesize);
+    $n = 0 if $of == 0;
+    $data = {'rows' => \@return,
+             'volumes' => $totalVolumes,
+             'page' => $n,
+             'of' => $of
+            };
+  }
+  return $data;
+}
+
+sub GetExportDataRef
+{
+  my $self         = shift;
+  my $order        = shift;
+  my $dir          = shift;
+  my $search1      = shift;
+  my $search1Value = shift;
+  my $op1          = shift;
+  my $search2      = shift;
+  my $search2Value = shift;
+  my $startDate    = shift;
+  my $endDate      = shift;
+  my $offset       = shift;
+  my $pagesize     = shift;
+  my $download     = shift;
+  #print("GetQueueRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$download');<br/>\n");
+  
+  $pagesize = 20 unless $pagesize > 0;
+  $offset = 0 unless $offset > 0;
+  $order = 'id' unless $order;
+  $offset = 0 unless $offset;
+  $search1 = $self->ConvertToSearchTerm($search1, 'exportData');
+  $search2 = $self->ConvertToSearchTerm($search2, 'exportData');
+  if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
+  else { $order = 'r.' . $order; }
+  my @rest = ('r.id=b.id');
+  my $tester1 = '=';
+  my $tester2 = '=';
+  if ($search1Value =~ m/.*\*.*/)
+  {
+    $search1Value =~ s/\*/%/gs;
+    $tester1 = ' LIKE ';
+  }
+  if ($search2Value =~ m/.*\*.*/)
+  {
+    $search2Value =~ s/\*/%/gs;
+    $tester2 = ' LIKE ';
+  }
+  if ($search1Value =~ m/([<>!]=?)\s*(\d+)\s*/)
+  {
+    $search1Value = $2;
+    $tester1 = $1;
+  }
+  if ($search2Value =~ m/([<>!]=?)\s*(\d+)\s*/)
+  {
+    $search2Value = $2;
+    $tester2 = $1;
+  }
+  push @rest, "r.time >= '$startDate'" if $startDate;
+  push @rest, "r.time <= '$endDate'" if $endDate;
+  if ($search1Value ne '' && $search2Value ne '')
+  {
+    push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
+  }
+  else
+  {
+    push @rest, "$search1 $tester1 '$search1Value'" if $search1Value ne '';
+    push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
+  }
+  my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
+  my $sql = "SELECT COUNT(r.id) FROM exportdata r, bibdata b $restrict\n";
+  #print "$sql<br/>\n";
+  my $totalVolumes = $self->SimpleSqlGet($sql);
+  $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
+  my $limit = ($download)? '':"LIMIT $offset, $pagesize";
+  my @return = ();
+  $sql = 'SELECT r.id,r.time,r.attr,r.reason,r.src,b.title,b.author,YEAR(b.pub_date) ' .
+         "FROM exportdata r, bibdata b $restrict ORDER BY $order $dir $limit";
+  #print "$sql<br/>\n";
+  my $ref = undef;
+  eval {
+    $ref = $self->GetDb()->selectall_arrayref($sql);
+  };
+  if ($@)
+  {
+    $self->SetError($@);
+  }
+  my $data = join "\t", ('ID','Title','Author','Pub Date','Date Exported','Source');
+  foreach my $row (@{$ref})
+  {
+    my $id = $row->[0];
+    my $date = $row->[1];
+    $date =~ s/(.*?) .*/$1/;
+    my $pubdate = $row->[7];
+    $pubdate = '?' unless $pubdate;
+    $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id'";
+    #print "$sql<br/>\n";
+    my $reviews = $self->SimpleSqlGet($sql);
+    my $item = {id         => $id,
+                time       => $row->[1],
+                date       => $date,
+                attr       => $row->[2],
+                reason     => $row->[3],
+                src        => $row->[4],
+                title      => $row->[5],
+                author     => $row->[6],
+                pubdate    => $pubdate
+               };
+    push @return, $item;
+    if ($download)
+    {
+      $data .= sprintf("\n$id\t%s\t%s\t$pubdate\t$date\t%s",
+                       $row->[5], $row->[6], $row->[4]);
     }
   }
   if (!$download)
@@ -6663,6 +6801,24 @@ sub QueueSearchMenu
   
   my @keys = qw(Identifier Title Author PubDate Status Locked Priority Reviews ExpertCount Holds);
   my @labs = ('Identifier','Title','Author','Pub Date','Status','Locked','Priority','Reviews','Expert Reviews','Holds');
+  my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
+  foreach my $i (0 .. scalar @keys - 1)
+  {
+    $html .= sprintf("  <option value='%s'%s>%s</option>\n", $keys[$i], ($searchVal eq $keys[$i])? ' selected="selected"':'', $labs[$i]);
+  }
+  $html .= "</select>\n";
+  return $html;
+}
+
+# Generates HTML to get the field type menu on the Export Data page.
+sub ExportDataSearchMenu
+{
+  my $self = shift;
+  my $searchName = shift;
+  my $searchVal = shift;
+  
+  my @keys = qw(Identifier Title Author PubDate Attribute Reason Source);
+  my @labs = ('Identifier','Title','Author','Pub Date','Attribute','Reason','Source');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
