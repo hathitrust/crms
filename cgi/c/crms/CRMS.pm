@@ -281,7 +281,7 @@ sub ProcessReviews
     print "No deleted inheriting volumes to remove.\n" unless $fromcgi;
   }
   # Get the underlying system status, ignoring replication delays.
-  my $stat = $self->GetSystemStatus(1)->[1];
+  my ($blah,$stat,$msg) = @{$self->GetSystemStatus(1)};
   my $reason = '';
   # Don't do this if the system is down or if it is Sunday.
   if ($stat ne 'normal')
@@ -304,6 +304,7 @@ sub ProcessReviews
   {
     print "Not auto-submitting inheritances because $reason.\n" unless $fromcgi;
   }
+  $self->SetSystemStatus('partial', 'CRMS is processing reviews. The Review page is temporarily unavailable. Try back in about a minute.');
   my %stati = (2=>0,3=>0,4=>0,8=>0);
   my $dbh = $self->GetDb();
   my $sql = 'SELECT id FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) GROUP BY id HAVING count(*) = 2';
@@ -311,6 +312,13 @@ sub ProcessReviews
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
+    # Don't process anything that las a review less than 8 hours old.
+    my $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id' AND time>DATE_SUB(NOW(), INTERVAL 8 HOUR)";
+    if (0 < $self->SimpleSqlGet($sql))
+    {
+      print "Not processing $id: it has one or more reviews less than 8 hours old\n" unless $fromcgi;
+      next;
+    }
     my $data = $self->CalcStatus($id, $stat);
     my $status = $data->{'status'};
     next unless $status > 0;
@@ -333,15 +341,20 @@ sub ProcessReviews
     $self->PrepareSubmitSql($sql);
     $stati{$status}++;
   }
+  $self->SetSystemStatus($stat, $msg);
   if (!$fromcgi)
   {
     my $p1 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority=1.0 AND status>0 AND status<9');
-    my $pall = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status>0 AND status<9');
-    printf "P1 mix is %.1f%% ($p1/$pall)\n", 100.0 * $p1 / $pall if $p1;
+    if ($p1)
+    {
+      my $pall = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status>0 AND status<9');
+      printf "P1 mix is %.1f%% ($p1/$pall)\n", 100.0 * $p1 / $pall;
+    }
   }
   # Clear out all the locks
-  $sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
-  $self->PrepareSubmitSql($sql);
+  # FIXME: need to do a report on old locks that need to ba manually cleared.
+  #$sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
+  #$self->PrepareSubmitSql($sql);
   $sql = 'INSERT INTO processstatus VALUES ()';
   $self->PrepareSubmitSql($sql);
   my ($s2,$s3,$s4,$s8) = ($stati{2},$stati{3},$stati{4},$stati{8});
@@ -4284,6 +4297,7 @@ sub CreateCandidatesGraph
     push @vals, $val;
     $ceil = $val if $val > $ceil;
   }
+  $ceil = 1000 * POSIX::ceil($ceil/1000.0);
   my $report = '{"bg_colour":"#000000"';
   $report .= sprintf(',"title":{"text":"%s","style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"}', $title);
   $report .= sprintf(',"elements":[{"type":"line","colour":"#22BB00","values":[%s],%s}]', join(',', @vals), $attrs);
@@ -4295,11 +4309,34 @@ sub CreateCandidatesGraph
   return $report;
 }
 
+sub CreateCountryReviewTimeData
+{
+  my $self  = shift;
+  my $limit = shift;
+
+  my $data = '';
+  my $sql = 'SELECT COALESCE(b.country,"Undetermined"),SUM(COALESCE(TIME_TO_SEC(h.duration),0))/COUNT(b.country) s' .
+          ' FROM bibdata b INNER JOIN historicalreviews h ON b.id=h.id WHERE legacy!=1 AND user!="crmstest"' .
+          ' GROUP BY COALESCE(b.country,"Undetermined") ORDER BY s DESC';
+  $sql .= " LIMIT $limit" if $limit;
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  foreach my $row (@{$ref})
+  {
+    my $cat = $row->[0];
+    my $dur = $row->[1];
+    next if $dur <= 0;
+    $data .= "$cat\t$dur\n";
+  }
+  return $data;
+}
+
 sub UpdateStats
 {
   my $self = shift;
 
   # Get the underlying system status, ignoring replication delays.
+  my ($blah,$stat,$msg) = @{$self->GetSystemStatus(1)};
+  $self->SetSystemStatus($stat, 'CRMS is updating user stats, so they may not display correctly. This usually takes five minutes or so to complete.');
   $self->PrepareSubmitSql('DELETE from userstats');
   if (0 < $self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE legacy!=1'))
   {
@@ -4311,6 +4348,7 @@ sub UpdateStats
       $self->GetMonthStats($user, $_->[0]) for @{$ref};
     }
   }
+  $self->SetSystemStatus($stat, $msg);
 }
 
 
@@ -4834,7 +4872,6 @@ sub GetRecordAuthor
   #After talking to Tim, the author info is in the 1XX field
   #Margrte told me that the only 1xx fields are: 100, 110, 111, 130. 700, 710
   $record = $self->GetMetadata($id) unless $record;
-  if (!$record) { $self->Logit("failed in GetRecordAuthor: $id"); }
   my $data = $self->GetMarcDatafield($id,'100','a',$record);
   if (!$data)
   {
@@ -5019,6 +5056,8 @@ sub GetMetadata
   return $records[0];
 }
 
+# Update sysid and author,title,pubdate fields in bibdata/candidates (default bibdata).
+# Only updates existing rows (does not INSERT) unless the force param is set.
 sub UpdateMetadata
 {
   my $self   = shift;
@@ -6685,7 +6724,7 @@ sub RightsQuery
   my $sql = "SELECT a.name,rs.name,s.name,r.user,r.time,r.note FROM $table r, attributes a, reasons rs, sources s " .
             "WHERE r.namespace='$namespace' AND r.id='$n' AND s.id=r.source AND a.id=r.attr AND rs.id=r.reason " .
             'ORDER BY r.time ASC';
-  my $ref;
+  my $ref = undef;
   eval { $ref = $self->GetSdrDb()->selectall_arrayref($sql); };
   $self->SetError("Rights query for $id failed: $@") if $@;
   return $ref;
@@ -7970,7 +8009,7 @@ sub Sources
   
   $mag = '100' unless $mag;
   $view = 'image' unless $view;
-  my $sql = 'SELECT id,name,url,accesskey,menu,initial FROM sources ORDER BY id ASC';
+  my $sql = 'SELECT id,name,url,accesskey,menu,initial FROM sources ORDER BY n ASC, name ASC';
   #print "$sql\n<br/>";
   my $ref = $self->GetDb()->selectall_arrayref($sql);
   my @all = ();
