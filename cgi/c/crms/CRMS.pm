@@ -4893,13 +4893,14 @@ sub GetRecordPubDate
   my $self   = shift;
   my $id     = shift;
   my $record = shift;
+  my $date2  = shift;
 
   $record = $self->GetMetadata($id) unless $record;
   return 'unknown' unless $record;
   ## my $xpath = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
   my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
   my $leader  = $record->findvalue($xpath);
-  return substr($leader, 7, 4);
+  return substr($leader, ($date2)? 11:7, 4);
 }
 
 sub GetRecordPubLanguage
@@ -5074,6 +5075,7 @@ sub GetPubDate
 {
   my $self = shift;
   my $id   = shift;
+  my $do2  = shift;
 
   my $sql = "SELECT YEAR(pub_date) FROM bibdata WHERE id='$id'";
   my $date = $self->SimpleSqlGet($sql);
@@ -5081,6 +5083,11 @@ sub GetPubDate
   {
     $self->UpdateMetadata($id, 'bibdata', 1);
     $date = $self->SimpleSqlGet($sql);
+  }
+  if ($date && $do2)
+  {
+    my $date2 = $self->GetRecordPubDate($id, undef, 1);
+    $date = "$date-$date2" if $date2 && $date2 =~ m/^\d\d\d\d$/ && $date2 > $date && $date2 <= $self->GetTheYear();
   }
   return $date;
 }
