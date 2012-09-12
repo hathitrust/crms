@@ -233,7 +233,6 @@ sub PrepareSubmitSql
   return 1;
 }
 
-
 sub SimpleSqlGet
 {
   my $self = shift;
@@ -4417,7 +4416,6 @@ sub CreateCandidatesData
   return "Volumes in Candidates\n" . $report;
 }
 
-# Type arg is 0 for Monthly Breakdown, 1 for Total Determinations, 2 for cumulative (pie)
 sub CreateCandidatesGraph
 {
   my $self  = shift;
@@ -4448,6 +4446,93 @@ sub CreateCandidatesGraph
   return $report;
 }
 
+sub CreateCountriesGraph
+{
+  my $self  = shift;
+  # FIXME: should do only for exports?
+  my $sql = 'SELECT COUNT(*) FROM exportdata';
+  my $of = $self->SimpleSqlGet($sql);
+  $sql = 'SELECT b.country,COUNT(DISTINCT e.id) FROM bibdata b INNER JOIN exportdata e ON b.id=e.id' .
+         ' GROUP BY b.country ORDER BY b.country ASC';
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $report = '';
+  my @colorlist = ('#22BB00','#BB2200','#2200BB','#444444');
+  my @vals = ();
+  foreach my $row (@{$ref})
+  {
+    my $country = $row->[0];
+    my $n = $row->[1];
+    push @vals, sprintf('{"value":%d,"label":"%s\n%.1f%%"}', $n, $country, $n / $of * 100.0);
+  }
+  my $report = '{"bg_colour":"#000000"' .
+               ',"title":{"text":"Countries",' .
+                         '"style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"}' .
+               ',"elements":[' .
+                 '{"type":"pie","start-angle":35,"animate":[{"type":"fade"}],"gradient-fill":true' .
+                 ',"colours":["#22BB00","#FF2200","#0088FF","#22BBBB"]' .
+                 sprintf(',"values":[%s]}]}', join(',', @vals));
+  return $report;
+}
+
+sub CreateUndGraph
+{
+  my $self  = shift;
+  # FIXME: should do only for exports?
+  my $sql = 'SELECT COUNT(*) FROM und';
+  my $of = $self->SimpleSqlGet($sql);
+  $sql = 'SELECT src,COUNT(id) FROM und GROUP BY src ORDER BY src ASC';
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my @colorlist = ('#22BB00','#BB2200','#2200BB','#444444');
+  my @vals = ();
+  foreach my $row (@{$ref})
+  {
+    my $country = $row->[0];
+    my $n = $row->[1];
+    push @vals, sprintf('{"value":%d,"label":"%s\n%.1f%%"}', $n, $country, $n / $of * 100.0);
+  }
+  my $report = '{"bg_colour":"#000000"' .
+               ',"title":{"text":"Filtered Volumes",' .
+                         '"style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"}' .
+               ',"elements":[' .
+                 '{"type":"pie","start-angle":35,"animate":[{"type":"fade"}],"gradient-fill":true' .
+                 ',"colours":["#22BB00","#FF2200","#0088FF","#22BBBB","#BB22BB","#BBBB22","#BBBBBB","#888888"]' .
+                 sprintf(',"values":[%s]}]}', join(',', @vals));
+  return $report;
+}
+
+sub CreateNamespaceGraph
+{
+  my $self = shift;
+
+  my @data = ();
+  my $ceil = 0;
+  foreach my $ns (sort $self->Namespaces())
+  {
+    my $sql = "SELECT COUNT(DISTINCT id) FROM exportdata WHERE id LIKE '$ns.%'";
+    #print "$sql\n";
+    my $n = $self->SimpleSqlGet($sql);
+    next unless $n;
+    push @data, [$ns,$n];
+    $ceil = $n if $n > $ceil;
+  }
+  @data = sort {$b->[1] <=> $a->[1]} @data;
+  @data = @data[0 .. 9] if scalar @data > 10;
+  my @labels = map {$_->[0]} @data;
+  my @vals = map {$_->[1]} @data;
+  $ceil = 100 * POSIX::ceil($ceil/100.0);
+  my $report = '{"bg_colour":"#000000","elements":[{"type":"bar","colour":"#BBBB22","on-show":{"type":"grow-up","cascade":1,"delay":0.5}' .
+            sprintf(',"values":[%s]}]', join(',',@vals)) . 
+            ',"title":{"text":"Exports by Namespace",' .
+                      '"style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"}' .
+            sprintf(',"y_axis":{"max":%d,"steps":%d,"colour":"#888888","grid-colour":"#888888",%s}',
+                     $ceil, $ceil/10,
+                     '"labels":{"colour":"#FFFFFF"}') .
+            sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}',
+                       join('","',@labels)) .
+            '}';
+  return $report;
+}
+
 sub CreateCountryReviewTimeData
 {
   my $self  = shift;
@@ -4467,6 +4552,70 @@ sub CreateCountryReviewTimeData
     $data .= "$cat\t$dur\n";
   }
   return $data;
+}
+
+sub CreateCountryReviewTimeGraph
+{
+  my $self = shift;
+
+  my $txt = $self->CreateCountryReviewTimeData();
+  my $ceil = 0;
+  my @data;
+  foreach my $row (split "\n", $txt)
+  {
+    my ($cat,$dur) = split "\t", $row;
+    push @data, [$cat,$dur];
+    $ceil = $dur if $dur > $ceil;
+  }
+  @data = sort {$b->[1] <=> $a->[1]} @data;
+  @data = @data[0 .. 9] if scalar @data > 10;
+  my @labels = map {$_->[0]} @data;
+  my @vals = map {$_->[1]} @data;
+  $ceil = 100 * POSIX::ceil($ceil/100.0);
+  my $report = '{"bg_colour":"#000000","elements":[{"type":"bar","colour":"#BBBB22","on-show":{"type":"grow-up","cascade":1,"delay":0.5}' .
+            sprintf(',"values":[%s]}]', join(',',@vals)) . 
+            ',"title":{"text":"Review Time by Country",' .
+                      '"style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"}' .
+            sprintf(',"y_axis":{"max":%d,"steps":%d,"colour":"#888888","grid-colour":"#888888",%s}',
+                     $ceil, $ceil/10,
+                     '"labels":{"colour":"#FFFFFF"}') .
+            sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}',
+                       join('","',@labels)) .
+            '}';
+  return $report;
+}
+
+sub CreateReviewInstitutionGraph
+{
+  my $self  = shift;
+
+  my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE legacy=0 AND user!="autocrms"';
+  my $of = $self->SimpleSqlGet($sql);
+  $sql = 'SELECT user,COUNT(id) FROM historicalreviews WHERE legacy=0 AND user!="autocrms" GROUP BY user';
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my %totals = ();
+  foreach my $row (@{$ref})
+  {
+    my $user = $row->[0];
+    my $n = $row->[1];
+    my $inst = 'umich.edu';
+    $inst = $1 if $user =~ m/@(.+)/;
+    $totals{$inst} += $n;
+  }
+  my @vals;
+  foreach my $inst (sort keys %totals)
+  {
+    my $n = $totals{$inst};
+    push @vals, sprintf('{"value":%d,"label":"%s\n%.1f%%"}', $n, $inst, $n / $of * 100.0);
+  }
+  my $report = '{"bg_colour":"#000000"' .
+               ',"title":{"text":"Reviews by Institution",' .
+                         '"style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"}' .
+               ',"elements":[' .
+                 '{"type":"pie","start-angle":35,"animate":[{"type":"fade"}],"gradient-fill":true' .
+                 ',"colours":["#22BB00","#FF2200","#0088FF","#22BBBB","#BB22BB","#BBBB22","#BBBBBB","#888888"]' .
+                 sprintf(',"values":[%s]}]}', join(',', @vals));
+  return $report;
 }
 
 sub UpdateStats
@@ -6873,6 +7022,17 @@ sub PageToEnglish
                'userReviews' => 'my processed reviews',
               );
   return $pages{$page};
+}
+
+sub Namespaces
+{
+  my $self = shift;
+
+  my $sql = 'SELECT distinct namespace FROM rights_current';
+  my $ref = undef;
+  eval { $ref = $self->GetSdrDb()->selectall_arrayref($sql); };
+  $self->SetError("Rights query for namespaces failed: $@") if $@;
+  return map {$_->[0];} @{$ref};
 }
 
 # Query the production rights database. This returns an array ref of entries for the volume, oldest first.
