@@ -53,23 +53,12 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart4", "400", "300", "9.0.
     </td>
     <td style="width:566px;"><h1 style="text-align:center;">Performance Dashboard</h1></td>
     <td style="width:566px;">
-      <img src="/c/crms/IMLS_Logo_2c.png" width="330" height="150" alt="IMLS Logo"/>
+      <img src="/c/crms/IMLSLogo.png" width="330" height="150" alt="IMLS Logo"/>
     </td>
   </tr>
 </table>
 
 <table style="width:1600px;align:center;text-align:center;padding:0px; border-collapse:collapse">
-  <!--<tr>
-    <td colspan="2">
-      <img src="[% crms.GetSystemVar('logo') %]" width="455" height="80" alt="CRMS Logo"/>
-    </td>
-    <td colspan="2">
-      <img src="/c/crms/IMLS_Logo_2c.png" width="330" height="150" alt="IMLS Logo"/>
-    </td>
-  </tr>
-  <tr>
-    <td colspan="4"><h2 style="text-align:center;">Performance Dashboard</h2></td>
-  </tr>-->
 [% IF crms.get('sys') == 'crmsworld' %]
   <tr style="background-color:#000000;">
     <td><div id="chart0"></div></td><td><div id="chart1"/></td>
