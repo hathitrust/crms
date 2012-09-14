@@ -15,6 +15,7 @@ sub ValidateSubmission
   my $noteError = 0;
   $attr = $self->TranslateAttr($attr);
   $reason = $self->TranslateReason($reason);
+  $renDate =~ s/\s+//g if $renDate;
   if ($attr eq 'und' && $reason eq 'nfi' && ((!$note) || (!$category)))
   {
     $errorMsg .= 'und/nfi must include note category and note text.';
