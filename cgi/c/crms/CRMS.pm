@@ -5886,22 +5886,6 @@ sub TranslateReason
   return $r;
 }
 
-## ----------------------------------------------------------------------------
-##  Function:   get renNum (stanford ren num)
-##  Parameters: id
-##  Return:     renNum
-## ----------------------------------------------------------------------------
-sub GetRenNum
-{
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift;
-  
-  my $sql = "SELECT renNum FROM reviews WHERE id='$id' AND user='$user'";
-  return $self->SimpleSqlGet($sql);
-}
-
-
 sub GetRenDate
 {
   my $self = shift;

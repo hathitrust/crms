@@ -72,11 +72,11 @@
 [% title    = crms.GetTitle(barcode)      %]
 
 [% IF NOT renNum %]
-[% renNum = crms.GetRenNum(barcode, user) %]
+[% renNum = crms.GetReviewField(barcode, user, "renNum") %]
 [% END %]
 
 [% IF NOT renDate %]
-[% renDate = crms.GetRenDate(renNum) %]
+[% renDate = crms.GetReviewField(barcode, user, "renDate") %]
 [% END %]
 
 [% IF NOT comm %]
