@@ -16,6 +16,8 @@ sub ValidateSubmission
   $attr = $self->TranslateAttr($attr);
   $reason = $self->TranslateReason($reason);
   $renDate =~ s/\s+//g if $renDate;
+  $pubDate = $self->GetPubDate($id);
+  $pubDate = $renDate if $renNum;
   if ($attr eq 'und' && $reason eq 'nfi' && ((!$note) || (!$category)))
   {
     $errorMsg .= 'und/nfi must include note category and note text.';
@@ -26,10 +28,13 @@ sub ValidateSubmission
     $errorMsg .= sprintf("The year of %s must be only decimal digits. ",
                          ($renNum)? 'publication':'death');
   }
-  # FIXME: check that renDate is defined, format was checked above.
-  elsif (($reason eq 'add' || $reason eq 'exp') && $renDate !~ m/^\-?\d{1,4}$/)
+  elsif (($reason eq 'add' || $reason eq 'exp') && !defined $renDate)
   {
     $errorMsg .= "*/$reason must include a numeric year. ";
+  }
+  elsif ($pubDate <= 1923 && $attr eq 'icus' && $reason eq 'gatt')
+  {
+    $errorMsg .= 'Volumes published prior to 1923 are not eligible for icus/gatt. ';
   }
   if ($noteError == 0)
   {
