@@ -19,7 +19,7 @@
 [% END %]
 
 [% FOREACH review IN reviews %]
-  [% titleLink = (review)? crms.LinkToPT( review.id ) : crms.LinkToReview( review.id ) %]
+  [% titleLink = (review)? crms.LinkToPT(review.id) : crms.LinkToReview(review.id) %]
   <table class="exportStats">
   <tr><th>ID</th><td>                 [% review.id %]</td></tr>
   <tr><th>Title</th><td>              [% titleLink %]</td></tr>
@@ -36,9 +36,16 @@
   <table class="exportStats">
   <tr><th>User</th><td>               [% review.user %]</td></tr>
   <tr><th>Attr/Reason</th><td>        [% review.attr %]/[% review.reason %]</td></tr>
-  <tr><th>Renewal&nbsp;Info</th><td>
+  <tr><th>
+    [% IF crms.get('sys') == 'crmsworld' %]
+      Death/<span class="red">Pub</span>
+    [% ELSE %]Renewal
+    [% END %]</th><td>
     [% IF review.renDate || review.renNum %]
-      [% review.renDate %],[% review.renNum %]
+      [% IF crms.get('sys') == 'crmsworld' %]
+        <span [% IF review.renNum %]class="red"[% END %]>[% review.renDate %]</span>
+      [% ELSE %][% review.renDate %],[% review.renNum %]
+      [% END %]
     [% END %]
     </td></tr>
   <tr><th>Note&nbsp;Category</th><td> [% review.category %]</td></tr>
