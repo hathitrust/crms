@@ -22,7 +22,8 @@ BIN_dest         = ( /l1/bin/c/crms )
 CGI_dest         = ( /l1/cgi/c/crms )
 WEB_dest         = ( /l1/web/c/crms )
 
-# do an rdist -oremove on CGI
+# do NOT do an rdist -oremove on BIN
+# want to preserve the password file on dest
 ( ${BIN_src} ) -> ( ${ALLHOSTS} )
         install ${BIN_dest};
         except_pat ( CVS );
@@ -34,9 +35,9 @@ WEB_dest         = ( /l1/web/c/crms )
         except_pat ( CVS );
         # notify dlps-release@umich.edu ;
 
-# do NOT do an rdist -oremove on WEB
+# do an rdist -oremove on WEB
 ( ${WEB_src} ) -> ( ${ALLHOSTS} )
-        install ${WEB_dest};
+        install -oremove ${WEB_dest};
         except_pat ( CVS );
         # notify dlps-release@umich.edu ;
 
