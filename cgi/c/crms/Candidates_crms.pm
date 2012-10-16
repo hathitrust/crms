@@ -34,7 +34,8 @@ sub GetViolations
   push @errs, 'gov doc' if $self->IsGovDoc($id, $record );
   push @errs, 'foreign pub' if $self->IsForeignPub($id, $record);
   push @errs, 'non-BK format' unless $self->IsFormatBK($id, $record);
-  my $ref = $self->RightsQuery($id,1)->[0];
+  my $ref = $self->RightsQuery($id,1);
+  $ref = $ref->[0] if $ref;
   if ($ref)
   {
     my ($attr,$reason,$src,$usr,$time,$note) = @{$ref};
