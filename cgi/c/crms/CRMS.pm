@@ -8452,15 +8452,18 @@ sub TolerantCompare
 # to choose based on user selections.
 sub PredictRights
 {
-  my $self  = shift;
-  my $id    = shift;
-  my $year  = shift;
-  my $ispub = shift;
-  my $crown = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $year   = shift;
+  my $ispub  = shift;
+  my $crown  = shift;
+  my $record = shift;
 
   return 0 if $year !~ m/^\d\d\d\d$/;
-  my $pub = $self->GetPubDate($id);
-  my $where = $self->GetPubCountry($id);
+  my $pub = $self->GetRecordPubDate($id, $record) if $record;
+  $pub = $self->GetPubDate($id) unless $pub;
+  my $where = $self->GetRecordPubCountry($id, $record) if $record;
+  $where = $self->GetPubCountry($id) unless $where;
   my ($attr, $reason) = (0,0);
   my $now = $self->GetTheYear();
   my $when;
@@ -8487,7 +8490,6 @@ sub PredictRights
   }
   else
   {
-    my $pub = $self->GetPubDate($id);
     $attr = $self->TranslateAttr(($pub < 1923)? 'pdus':'ic');
     $reason = $self->TranslateReason('add');
   }
