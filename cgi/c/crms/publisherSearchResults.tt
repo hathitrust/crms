@@ -68,10 +68,10 @@
   [% ELSE %]
   <span class="disabledLink">last page</span>
   [% END %]
-
+<!--
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0;download=1" %]" target="_blank">download</a>
-  
+-->
   [% color_white    = '#FFFFFF' %]
   [% color_gray     = '#FFF1C4' %]
   [% prev_id        = '' %]
