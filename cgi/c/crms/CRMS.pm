@@ -2832,9 +2832,6 @@ sub GetExportDataRef
     $date =~ s/(.*?) .*/$1/;
     my $pubdate = $row->[7];
     $pubdate = '?' unless $pubdate;
-    $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id'";
-    #print "$sql<br/>\n";
-    my $reviews = $self->SimpleSqlGet($sql);
     my $item = {id         => $id,
                 time       => $row->[1],
                 date       => $date,
@@ -5157,17 +5154,29 @@ sub GetMarcDatafield
   return $data;
 }
 
+# The long param includes the author dates in the 100d field if present.
 sub GetRecordAuthor
 {
   my $self   = shift;
   my $id     = shift;
   my $record = shift;
+  my $long   = shift;
 
   #After talking to Tim, the author info is in the 1XX field
   #Margrte told me that the only 1xx fields are: 100, 110, 111, 130. 700, 710
   $record = $self->GetMetadata($id) unless $record;
   my $data = $self->GetMarcDatafield($id,'100','a',$record);
-  if (!$data)
+  if ($data)
+  {
+    my $data2 = $self->GetMarcDatafield($id,'100','c',$record);
+    $data .= ' ' . $data2 if $data2;
+    if ($long)
+    {
+      $data2 = $self->GetMarcDatafield($id,'100','d',$record);
+      $data .= ' ' . $data2 if $data2;
+    }
+  }
+  else
   {
     $data = $self->GetMarcDatafield($id,'110','a',$record);
     $data .= $self->GetMarcDatafield($id,'110','b',$record) if $data;
@@ -5178,7 +5187,7 @@ sub GetRecordAuthor
     $data = $self->GetMarcDatafield($id,'710','a',$record) unless $data;
   }
   $data =~ s/\n+//gs;
-  $data =~ s/\s*[,:;]\s*$//;
+  $data =~ s/\s*[,:;]*\s*$//;
   $data =~ s/^\s+//;
   return $data;
 }
