@@ -2863,6 +2863,34 @@ sub GetExportDataRef
   return $data;
 }
 
+sub GetPublisherDataRef
+{
+  my $self = shift;
+
+  require 'Publisher.pm';
+  unshift @_, $self;
+  return Publisher::GetPublisherDataRef(@_);
+}
+
+sub PublisherDataSearchMenu
+{
+  my $self = shift;
+
+  require 'Publisher.pm';
+  unshift @_, $self;
+  return Publisher::PublisherDataSearchMenu(@_);
+}
+
+sub Linkify
+{
+  my $self = shift;
+  my $txt  = shift;
+
+  $txt =~ s!(((https?|ftp)://|(www|ftp)\.)[a-z0-9-]+(\.[a-z0-9-]+)+([/?][^\(\)\s]*)?)!<a target='_blank' href='$1'>$1</a>!ig;
+  $txt =~ s!(\b.+?\@.+?\..+?\b)!<a href="mailto:$1">$1<\/a>!ig; 
+  return $txt;
+}
+
 sub PTAddress
 {
   my $self = shift;
@@ -5353,7 +5381,6 @@ sub GetMetadata
   }
   my $source;
   eval {
-    $content = Encode::decode('utf8', $content);
     $source = $parser->parse_string($xml);
   };
   if ($@) { $self->SetError("failed to parse ($xml) for $id: $@"); return; }
@@ -5873,7 +5900,7 @@ sub TranslateAttr
     $val = $rights1{$a} if $a =~ m/[0-9]+/;
     $val = $rights2{$a} unless $a =~ m/[0-9]+/;
   }
-  $a = $val;
+  $a = $val if $val;
   return $a;
 }
 
@@ -5896,7 +5923,7 @@ sub TranslateReason
     $val = $reasons1{$a} if $r =~ m/[0-9]+/;
     $val = $reasons2{$a} unless $r =~ m/[0-9]+/;
   }
-  $r = $val;
+  $r = $val if $val;
   return $r;
 }
 
