@@ -136,13 +136,21 @@ sub ConnectToDb
 ## ----------------------------------------------------------------------------
 sub ConnectToSdrDb
 {
-  my $self      = shift;
-  my $db_user   = $CRMSGlobals::mysqlMdpUser;
-  my $db_passwd = $CRMSGlobals::mysqlMdpPasswd;
+  my $self = shift;
+
   my $db_server = $CRMSGlobals::mysqlMdpServerDev;
-
-  if (!$self->get('dev')) { $db_server = $CRMSGlobals::mysqlMdpServer; }
-
+  my $dev       = $self->get('dev');
+  my $root      = $self->get('root');
+  my $sys       = $self->get('sys');
+  # FIXME FIXME: change the CRMS US and World passwords before deploying this.
+  my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
+  require $cfg;
+  my $db_user   = $CRMSPasswords::mysqlMdpUser;
+  my $db_passwd = $CRMSPasswords::mysqlMdpPasswd;
+  if (!$dev)
+  {
+    $db_server = $CRMSGlobals::mysqlMdpServer;
+  }
   #if ($self->get('verbose')) { $self->Logit("DBI:mysql:mdp:$db_server, $db_user, [passwd]"); }
   my $sdr_dbh = DBI->connect("DBI:mysql:mdp:$db_server", $db_user, $db_passwd,
             { PrintError => 0, AutoCommit => 1 });
