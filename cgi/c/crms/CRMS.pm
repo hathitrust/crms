@@ -31,20 +31,13 @@ sub new
   my $sys = $args{'sys'};
   $sys = 'crms' unless $sys;
   my $root = $args{'root'};
-  my $configfile = $root . '/bin/c/crms/' . $sys . '.cfg';
-  eval { require $configfile; };
+  my $cfg = $root . '/bin/c/crms/' . $sys . '.cfg';
+  eval { require $cfg; };
   if ($@)
   {
     $sys = 'crms';
-    $configfile = $root . '/bin/c/crms/' . $sys . '.cfg';
-    require $configfile;
-  }
-  # FIXME: separate out the passwords into a secondary config file not under version control.
-  # FIXME FIXME: ... and change the CRMS US and World passwords.
-  if (0)
-  {
-    my $pwconfigfile = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
-    require $pwconfigfile;
+    $cfg = $root . '/bin/c/crms/' . $sys . '.cfg';
+    require $cfg;
   }
   $self->set('logFile', $args{'logFile'});
   my $errors = [];
@@ -77,12 +70,11 @@ sub set
 
 sub Version
 {
-  my $self = shift;
-
-  return '4.1';
+  return '4.2';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
+# This is the human-readable version.
 sub System
 {
   my $self = shift;
@@ -90,6 +82,8 @@ sub System
   return $self->GetSystemVar('system', 'CRMS');
 }
 
+# This is the NOT SO human-readable version used in sys=blah URL param
+# and the -x blah script param.
 sub Sys
 {
   my $self = shift;
@@ -104,13 +98,18 @@ sub Sys
 ## ----------------------------------------------------------------------------
 sub ConnectToDb
 {
-  my $self      = shift;
-  my $db_user   = $CRMSGlobals::mysqlUser;
-  my $db_passwd = $CRMSGlobals::mysqlPasswd;
+  my $self = shift;
+
   my $db_server = $CRMSGlobals::mysqlServerDev;
   my $db        = $CRMSGlobals::mysqlDbName;
   my $dev       = $self->get('dev');
-
+  my $root      = $self->get('root');
+  my $sys       = $self->get('sys');
+  # FIXME FIXME: change the CRMS US and World passwords before deploying this.
+  my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
+  require $cfg;
+  my $db_user   = $CRMSPasswords::mysqlUser;
+  my $db_passwd = $CRMSPasswords::mysqlPasswd;
   if (!$dev)
   {
     $db_server = $CRMSGlobals::mysqlServer;
@@ -121,13 +120,11 @@ sub ConnectToDb
     $db .= 'test' unless $self->get('sys') eq 'crmsworld';
   }
   #if ($self->get('verbose')) { $self->Logit("DBI:mysql:crms:$db_server, $db_user, [passwd]"); }
-
   my $dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
             { RaiseError => 1, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
   $dbh->{mysql_enable_utf8} = 1;
   $dbh->{mysql_auto_reconnect} = 1;
-  my $sql = "SET NAMES 'utf8';";
-  $dbh->do($sql);
+  $dbh->do('SET NAMES "utf8";');
   return $dbh;
 }
 
