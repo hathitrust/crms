@@ -229,7 +229,7 @@ sub PrepareSubmitSql
 
   my $dbh = $self->GetDb();
   my $sth = $dbh->prepare($sql);
-  eval { $sth->execute(); };
+  eval { $sth->execute(@_); };
   if ($@)
   {
     $self->SetError("sql failed ($sql): " . $sth->errstr);
