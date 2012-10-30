@@ -16,7 +16,7 @@ sub ValidateSubmission
   $attr = $self->TranslateAttr($attr);
   $reason = $self->TranslateReason($reason);
   $renDate =~ s/\s+//g if $renDate;
-  $pubDate = $self->GetPubDate($id);
+  my $pubDate = $self->GetPubDate($id);
   $pubDate = $renDate if $renNum;
   if ($attr eq 'und' && $reason eq 'nfi' && ((!$note) || (!$category)))
   {
@@ -34,7 +34,7 @@ sub ValidateSubmission
   }
   elsif ($pubDate <= 1923 && $attr eq 'icus' && $reason eq 'gatt')
   {
-    $errorMsg .= 'Volumes published prior to 1923 are not eligible for icus/gatt. ';
+    $errorMsg .= 'Volumes published 1923 and earlier are not eligible for icus/gatt. ';
   }
   if ($noteError == 0)
   {
