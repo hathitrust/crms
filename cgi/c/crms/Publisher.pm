@@ -26,8 +26,8 @@ sub GetPublisherDataRef
   my $download     = shift;
   #print("GetQueueRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$download');<br/>\n");
   
-  $pagesize = 20 unless $pagesize > 0;
-  $offset = 0 unless $offset > 0;
+  $pagesize = 20 unless $pagesize and $pagesize > 0;
+  $offset = 0 unless $offset and $offset > 0;
   $order = 'name' unless $order;
   $offset = 0 unless $offset;
   #$search1 = ConvertToSearchTerm($search1);
