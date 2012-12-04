@@ -1,0 +1,35 @@
+#!/usr/bin/perl
+
+my ($DLXSROOT, $DLPS_DEV);
+BEGIN { $DLXSROOT = $ENV{'DLXSROOT'}; $DLPS_DEV = $ENV{'DLPS_DEV'}; }
+
+use strict;
+use CGI;
+use CRMS;
+use JSON::XS;
+
+my $cgi  = new CGI;
+my $user = $ENV{'REMOTE_USER'};
+my $sys  = $cgi->param('sys');
+$sys = 'crms' unless $sys;
+my $crms = CRMS->new(logFile  =>   "$DLXSROOT/prep/c/crms/log_getReviewInfo.txt",
+                     sys      =>   $sys,
+                     verbose  =>   0,
+                     root     =>   $DLXSROOT,
+                     dev      =>   $DLPS_DEV,
+                     user     =>   $user);
+
+my $id = $cgi->param('id');
+my $user = $cgi->param('user');
+my $sql = "SELECT attr,reason,note,category,renNum,renDate FROM reviews WHERE id='$id' AND user='$user'";
+my $row = $crms->GetDb()->selectall_arrayref($sql)->[0];
+my %data;
+$data{'rights'} = $crms->GetCodeFromAttrReason($row->[0], $row->[1]);
+$data{'note'} = $row->[2];
+$data{'category'} = $row->[3];
+$data{'renNum'} = $row->[4];
+$data{'renDate'} = $row->[5];
+print $cgi->header();
+my $json = JSON::XS->new->utf8->encode(\%data);
+print $json;
+
