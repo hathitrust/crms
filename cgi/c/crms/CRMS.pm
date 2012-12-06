@@ -5913,9 +5913,9 @@ sub TranslateAttr
   my $val = $self->SimpleSqlGetSDR($sql);
   if (!$val)
   {
-    my %rights1 = (1 => 'pd', 2 => 'ic', 3 => 'opb', 4 => 'orph', 5 => 'und',
+    my %rights1 = (1 => 'pd', 2 => 'ic', 3 => 'op', 4 => 'orph', 5 => 'und',
                    6 => 'umall', 7 => 'world', 8 => 'nobody', 9 => 'pdus', 19 => 'icus');
-    my %rights2 = ('pd'    => 1, 'ic'    => 2, 'opb'    => 3, 'orph' => 4, 'und' => 5,
+    my %rights2 = ('pd'    => 1, 'ic'    => 2, 'op'    => 3, 'orph' => 4, 'und' => 5,
                    'umall' => 6, 'world' => 7, 'nobody' => 8, 'pdus' => 9, 'icus' => 19);
     $val = $rights1{$a} if $a =~ m/[0-9]+/;
     $val = $rights2{$a} unless $a =~ m/[0-9]+/;
@@ -5935,11 +5935,11 @@ sub TranslateReason
   if (!$val)
   {
     my %reasons1 = ( 1 => 'bib', 2 => 'ncn', 3 => 'con',   4 => 'ddd',  5 => 'man',  6 => 'pvt',
-                     7 => 'ren', 8 => 'nfi', 9 => 'cdpp', 10 => 'cip', 11 => 'unp', 12 => 'gfv',
-                    13 => 'crms', 14 => 'add', 15 => 'exp', 17 => 'gatt');
+                     7 => 'ren', 8 => 'nfi', 9 => 'cdpp', 10 => 'ipma', 11 => 'unp', 12 => 'gfv',
+                    13 => 'crms', 14 => 'add', 15 => 'exp', 16 => 'del', 17 => 'gatt');
     my %reasons2 = ('bib'  => 1, 'ncn' => 2, 'con'  => 3, 'ddd' => 4,  'man' => 5,  'pvt' => 6,
-                    'ren'  => 7, 'nfi' => 8, 'cdpp' => 9, 'cip' => 10, 'unp' => 11, 'gfv' => 12,
-                    'crms' => 13, 'add' => 14, 'exp' => 15, 'gatt' => 17);
+                    'ren'  => 7, 'nfi' => 8, 'cdpp' => 9, 'ipma' => 10, 'unp' => 11, 'gfv' => 12,
+                    'crms' => 13, 'add' => 14, 'exp' => 15, 'del' => 16, 'gatt' => 17);
     $val = $reasons1{$a} if $r =~ m/[0-9]+/;
     $val = $reasons2{$a} unless $r =~ m/[0-9]+/;
   }
