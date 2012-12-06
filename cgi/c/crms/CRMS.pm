@@ -7820,6 +7820,10 @@ sub AddInheritanceToQueue
         push @msgs, $msg;
         $stat = 1;
       }
+      else
+      {
+        $self->PrepareSubmitSql("UPDATE queue SET source='inherited' WHERE id='$id'");
+      }
     }
     $self->UnlockItem($id, 'autocrms');
   }
