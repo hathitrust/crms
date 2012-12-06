@@ -1340,10 +1340,10 @@ sub GetPriority
   my $self = shift;
   my $id   = shift;
   
-  my $sql = "SELECT priority FROM queue WHERE id='$id'";
-  return $self->StripDecimal($self->SimpleSqlGet($sql));
+  my $pri = $self->SimpleSqlGet("SELECT priority FROM queue WHERE id='$id'");
+  $pri = $self->StripDecimal($pri) if defined $pri;
+  return $pri;
 }
-
 
 ## ----------------------------------------------------------------------------
 ##  Function:   submit a new active review  (single pd review from rights DB)
