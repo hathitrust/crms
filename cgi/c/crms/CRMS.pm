@@ -232,7 +232,7 @@ sub PrepareSubmitSql
   eval { $sth->execute(@_); };
   if ($@)
   {
-    $self->SetError("sql failed ($sql): " . $sth->errstr);
+    $self->SetError("SQL failed ($sql): " . $sth->errstr);
     return 0;
   }
   return 1;
@@ -242,18 +242,38 @@ sub SimpleSqlGet
 {
   my $self = shift;
   my $sql  = shift;
-  my $sdr  = shift;
 
   my $val = undef;
-  my $dbh = ($sdr)? $self->GetSdrDb():$self->GetDb();
+  my $dbh = $self->GetDb();
   eval {
-    my $ref = $dbh->selectall_arrayref($sql);
+    my $ref = $dbh->selectall_arrayref($sql, undef, @_);
     $val = $ref->[0]->[0];
   };
   if ($@)
   {
-    $self->SetError("SQL failed ($sql): " . $@);
-    $self->Logit("SQL failed ($sql): " . $@);
+    my $msg = "SQL failed ($sql): " . $@;
+    $self->SetError($msg);
+    $self->Logit($msg);
+  }
+  return $val;
+}
+
+sub SimpleSqlGetSDR
+{
+  my $self = shift;
+  my $sql  = shift;
+
+  my $val = undef;
+  my $dbh = $self->GetSdrDb();
+  eval {
+    my $ref = $dbh->selectall_arrayref($sql, undef, @_);
+    $val = $ref->[0]->[0];
+  };
+  if ($@)
+  {
+    my $msg = "SQL failed ($sql): " . $@;
+    $self->SetError($msg);
+    $self->Logit($msg);
   }
   return $val;
 }
@@ -5890,7 +5910,7 @@ sub TranslateAttr
   
   my $sql = "SELECT id FROM attributes WHERE name='$a'";
   $sql = "SELECT name FROM attributes WHERE id=$a" if $a =~ m/[0-9]+/;
-  my $val = $self->SimpleSqlGet($sql,1);
+  my $val = $self->SimpleSqlGetSDR($sql);
   if (!$val)
   {
     my %rights1 = (1 => 'pd', 2 => 'ic', 3 => 'opb', 4 => 'orph', 5 => 'und',
@@ -5911,7 +5931,7 @@ sub TranslateReason
   
   my $sql = "SELECT id FROM reasons WHERE name='$r'";
   $sql = "SELECT name FROM reasons WHERE id=$r" if $r =~ m/[0-9]+/;
-  my $val = $self->SimpleSqlGet($sql,1);
+  my $val = $self->SimpleSqlGetSDR($sql);
   if (!$val)
   {
     my %reasons1 = ( 1 => 'bib', 2 => 'ncn', 3 => 'con',   4 => 'ddd',  5 => 'man',  6 => 'pvt',
