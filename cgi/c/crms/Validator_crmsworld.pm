@@ -32,9 +32,9 @@ sub ValidateSubmission
   {
     $errorMsg .= "*/$reason must include a numeric year. ";
   }
-  elsif ($pubDate <= 1923 && $attr eq 'icus' && $reason eq 'gatt')
+  elsif ($pubDate < 1923 && $attr eq 'icus' && $reason eq 'gatt')
   {
-    $errorMsg .= 'Volumes published 1923 and earlier are not eligible for icus/gatt. ';
+    $errorMsg .= 'Volumes published prior to 1923 are not eligible for icus/gatt. ';
   }
   if ($noteError == 0)
   {
