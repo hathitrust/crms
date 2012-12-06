@@ -5,9 +5,10 @@ use warnings;
 use vars qw( @ISA @EXPORT @EXPORT_OK );
 our @EXPORT = qw(RightsClause GetViolations ShouldVolumeGoInUndTable);
 
+# pd/bib or pdus/bib or op
 sub RightsClause
 {
-  return '(attr=2 AND reason=1) OR attr=9';
+  return '(attr=2 AND reason=1) OR (attr=3 AND reason=1) OR attr=9';
 }
 
 sub GetViolations
