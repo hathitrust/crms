@@ -73,7 +73,7 @@ function popRenewalDate()
     {
       if(req.status == 200)
       {
-        document.submitReview.renDate.value= req.responseText;    
+        document.submitReview.renDate.value= req.responseText;
       }    
       else    
       {
@@ -83,6 +83,56 @@ function popRenewalDate()
     } 
   }; 
   req.open("GET", "/cgi/c/crms/getRenewalDate?id=" + id, true); 
+  req.send(null);
+}
+
+function popReviewInfo(id,user)
+{
+  var req = null;
+  var loader = document.getElementById('loader' + user);
+  
+  if (window.XMLHttpRequest)
+  {
+    req = new XMLHttpRequest();
+  } 
+  else if (window.ActiveXObject) 
+  {
+    try {
+        req = new ActiveXObject("Msxml2.XMLHTTP");
+    } catch (e)
+    {
+        try {
+            req = new ActiveXObject("Microsoft.XMLHTTP");
+        } catch (e) {}
+    }
+  }
+  req.onreadystatechange = function()
+  { 
+    if (req.readyState == 4)
+    {
+      if (req.status == 200)
+      {
+        //document.submitReview.renDate.value = req.responseText;
+        var data = JSON.parse(req.responseText, null);
+        if (data)
+        {
+          var button = document.getElementById("r" + data.rights);
+          if (button) button.checked = "checked"
+          document.submitReview.renNum.value = data.renNum;
+          document.submitReview.renDate.value = data.renDate;
+          document.submitReview.comment.value = data.note;
+          selMenuItem('catMenu',(data.category)? data.category:'');
+        }
+      }    
+      else    
+      {
+        
+      }
+      if (loader) loader.style.display='none';
+    } 
+  };
+  loader.style.display='';
+  req.open("GET", "/cgi/c/crms/getReviewInfo?id=" + id + ";user=" + user, true); 
   req.send(null);
 }
 

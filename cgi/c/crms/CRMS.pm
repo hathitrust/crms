@@ -2941,10 +2941,12 @@ sub LinkToReview
   my $self  = shift;
   my $id    = shift;
   my $title = shift;
+  my $user  = shift;
 
   $title = $self->GetTitle($id) unless $title;
   $title = CGI::escapeHTML($title);
   my $url = $self->Sysify("/cgi/c/crms/crms?p=review;barcode=$id;editing=1");
+  $url .= ";importUser=$user" if $user;
   $self->ClearErrors();
   return "<a href='$url' target='_blank'>$title</a>";
 }

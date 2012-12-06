@@ -256,6 +256,25 @@
       </td>
     </tr>
   </table>
+  [% data = crms.GetReviewsRef('adminReviews', 'Identifier', 'DESC', 'Identifier', barcode) %]
+  [% reviews = data.rows %]
+  [% IF expert && import && reviews.size %]
+  <table>
+    <tr><td colspan="3"><strong>Import user review:</strong></td></tr>
+    [% FOREACH review IN reviews %]
+      <tr style="height=24;">
+        <td>[% review.user %] ([% review.attr %]/[% review.reason %])</td>
+        <td style="width=20;height=20;">
+          <div><img id="loader[% review.user %]" src="/c/crms/ajax-loader.gif" alt="loading..." style="display:none;"/></div>
+        </td>
+        <td><input type="radio" name="pullrights" id="pull[% review.user %]"
+                   [% IF import == review.user %]checked="checked"[% END %]
+                   onclick="popReviewInfo('[% barcode %]','[% review.user %]');"/>
+        </td>
+      </tr>
+    [% END %]
+  </table>
+  [% END %]
 </div>
 
 [% IF error %]

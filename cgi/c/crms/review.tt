@@ -14,6 +14,8 @@
 [% sys      = cgi.param('sys')        %]
 [% mag      = cgi.cookie('mag')       %]
 [% ptview   = cgi.cookie('ptview')    %]
+[% import   = cgi.param('importUser') %]
+[% IF NOT crms.GetSystemVar('importUser') %][% import = 0 %][% END %]
 [% expert   = crms.IsUserExpert(user) %]
 
 [% IF barcode && editing %]
@@ -218,7 +220,8 @@
                                      comm    = comm,    category = category, editing  = editing,
                                      error   = error,   select   = select,   mag      = mag,
                                      hold    = hold,    swiss    = swiss,    expert   = expert,
-                                     status  = status,  sys      = sys,      ptview   = ptview %]
+                                     status  = status,  sys      = sys,      ptview   = ptview 
+                                     import  = import %]
       [% IF expert %]
         <table class="nav">
         [% IF status == 3 %]
@@ -267,6 +270,9 @@ window.onload = function(e)
 {
   changeFrame1();
   changeFrame2();
+  [% IF import %]
+    popReviewInfo('[% barcode %]','[% import %]');
+  [% END %]
 }
 </script>
 
