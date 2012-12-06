@@ -6076,7 +6076,7 @@ sub StripDecimal
 {
   my $self = shift;
   my $dec  = shift;
-  
+
   $dec =~ s/(\.[1-9]+)0+/$1/g;
   $dec =~ s/\.0*$//;
   return $dec;
@@ -6705,7 +6705,6 @@ sub UpdateCorrectness
   }
 }
 
-
 sub CountCorrectReviews
 {
   my $self  = shift;
@@ -6737,11 +6736,12 @@ sub CountCorrectReviews
   return ($correct,$incorrect,$neutral);
 }
 
-
 # Utility (I used it for debugging UTF-8 problems)
 sub HexDump
 {
-  $_ = shift;
+  my $self = shift;
+  $_       = shift;
+
   my $offset = 0;
   my(@array,$format);
   my $dump = '';
