@@ -223,9 +223,13 @@
         [% ELSIF status == 2 %]
           <tr><td><span style="font-size:1.1em;color:red;">Conflict</span></td></tr>
         [% END %]
-        [% priority = crms.GetPriority(barcode) %]
-        [% IF !priority %][% priority = 'n/a (not in queue)' %][% END %]
-        <tr><td><span style="font-size:1.1em">Priority [% priority %]</span></td></tr>
+        <tr><td><span style="font-size:1.1em">
+          [% IF crms.IsVolumeInQueue(barcode) %]
+            Priority [% crms.GetPriority(barcode) %]
+          [% ELSE %]
+            Not in queue
+          [% END %]
+        </span></td></tr>
         [% totalReviews = crms.GetReviewsCount('adminHistoricalReviews', 'Identifier', barcode) %]
         [% IF totalReviews > 0 %]
           <tr><td><a class="smallishText" href="?p=adminHistoricalReviews;search1=Identifier;search1value=$barcode" target="_blank">
