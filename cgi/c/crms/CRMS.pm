@@ -8516,7 +8516,7 @@ sub PredictRights
   my $crown  = shift; # Crown copyright note category
   my $record = shift; # Metadata (optional) so we don't spam bibdata table for volumes not in queue.
 
-  return 0 if $year !~ m/^\d\d\d\d$/;
+  return 0 if $year !~ m/^\d+$/; # Punt if the year is not exclusively 1 or more decimal digits.
   my $pub = $self->GetRecordPubDate($id, $record) if $record;
   $pub = $self->GetPubDate($id) unless $pub;
   my $where = $self->GetRecordPubCountry($id, $record) if $record;
