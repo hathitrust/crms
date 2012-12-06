@@ -521,6 +521,7 @@ sub ExportReviews
   my $user = $self->get('sys');
   my $time = $self->GetTodaysDate();
   my ($fh, $file) = $self->GetExportFh() unless $fromcgi;
+  print ">>> Exporting to $file.\n" unless $fromcgi;
   my $start_size = $self->GetCandidatesSize();
   foreach my $id (@{$list})
   {
