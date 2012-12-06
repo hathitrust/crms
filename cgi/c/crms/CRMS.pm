@@ -8510,11 +8510,11 @@ sub TolerantCompare
 sub PredictRights
 {
   my $self   = shift;
-  my $id     = shift;
-  my $year   = shift;
-  my $ispub  = shift;
-  my $crown  = shift;
-  my $record = shift;
+  my $id     = shift; # Volume id
+  my $year   = shift; # ADD or Pub entered by user
+  my $ispub  = shift; # Pub date checkbox
+  my $crown  = shift; # Crown copyright note category
+  my $record = shift; # Metadata (optional) so we don't spam bibdata table for volumes not in queue.
 
   return 0 if $year !~ m/^\d\d\d\d$/;
   my $pub = $self->GetRecordPubDate($id, $record) if $record;
@@ -8550,8 +8550,8 @@ sub PredictRights
     $attr = $self->TranslateAttr(($pub < 1923)? 'pdus':'ic');
     $reason = $self->TranslateReason('add');
   }
-  my $sql = "SELECT id FROM rights WHERE attr=$attr AND reason=$reason";
-  return $self->SimpleSqlGet($sql);
+  my $sql = "SELECT id FROM rights WHERE attr=? AND reason=?";
+  return $self->SimpleSqlGet($sql, $attr, $reason);
 }
 
 sub Unescape
