@@ -138,7 +138,7 @@
                 (i.e., errors that affect the searching access points such as title, author, etc.).
               </span>
             </a>
-            <a href="mailto:mdpcorrections@umich.edu?subject=$barcode" style="text-decoration: none;">
+            <a href="mailto:[% crms.MDPCorrections() %]?subject=$barcode" style="text-decoration: none;">
               <strong>Report to MDPCorrections</strong>
             </a>
           </td>

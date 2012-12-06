@@ -8541,4 +8541,13 @@ sub Unescape
   return uri_unescape(shift);
 }
 
+# Return the email address to send catalogue problems
+# which can be overridden in the DB.
+sub MDPCorrections
+{
+  my $self = shift;
+
+  return $self->GetSystemVar('MDPCorrections','mdpcorrections@umich.edu');
+}
+
 1;
