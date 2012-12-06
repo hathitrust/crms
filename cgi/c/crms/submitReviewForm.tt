@@ -36,19 +36,24 @@
     <tr>
       <td class="display" align="left">View:</td>
       <td>
-        <select title="PageTurner View" class="review" onchange="zoom(this,'ptview');">
+        <select id="PTViewSelect" title="PageTurner View" class="review" onchange="zoom(this,'ptview');">
         [% views = ['image','1up','2up','thumb'] %]
         [% names = ['Classic','Scroll','Flip','Thumbnails'] %]
+        [% accesskeys = ['-','=','[',']'] %]
         [% FOR i IN [0 .. 3] %]
           [% v = views.$i %]
           [% n = names.$i %]
           [% IF v == ptview %]
-            <option value="[% v %]" selected="selected">[% n %]</option>
+            <option value="[% v %]" id="view[% names.$i %]Select" selected="selected">[% n %]</option>
           [% ELSE %]
-            <option value="[% v %]">[% n %]</option>
+            <option value="[% v %]" id="view[% names.$i %]Select">[% n %]</option>
           [% END %]
         [% END %]
         </select>
+        [% FOR i IN [0 .. 3] %]
+          <a style="position:absolute;left:-999px;" href="#" accesskey="[% accesskeys.$i %]"
+             onfocus="var ptvs = document.getElementById('PTViewSelect');ptvs.selectedIndex=[% i %];zoom(ptvs,'ptview');">.</a>
+        [% END %]
       </td>
     </tr>
   </table>
@@ -71,9 +76,11 @@
                onblur="javascript:popRenewalDate()"/>
        [% ELSE %]
          <input id="renewalField" title="[% label %]" type="text" name="renDate"
-               value="[% renDate %]" size="4"
-               onblur="javascript:PredictRights('[% barcode %]');"/>
+                value="[% renDate %]" size="4"
+                onblur="javascript:PredictRights('[% barcode %]');"/>
        [% END %]
+       <a style="position:absolute;left:-999px;" href="#" accesskey="d"
+          onfocus="document.getElementById('renewalField').focus()">.</a>
       </td>
     </tr>
     <tr>
@@ -193,7 +200,9 @@
 </div>
 <div id="Notes">
   <strong><label for="catMenu">Notes: </label></strong>
-  <select id="catMenu" class="review" name="category" onchange="javascript:PredictRights('[% barcode %]');">
+  <select id="catMenu" class="review" name="category"
+    [% IF !ren %]onchange="javascript:PredictRights('[% barcode %]');"[% END %]
+    >
     <option value="" [% ("" == category)? 'selected="selected"':'' %]>none</option>
     [% cats = crms.Categories(1) %]
     [% FOREACH cat IN cats %]
@@ -201,7 +210,9 @@
       <option value="[% catname %]" [% (catname == category)? 'selected="selected"':'' %]>[% catname %]</option>
     [% END %]
   </select>
-  <textarea title="Note Text" name="comment" cols="20" rows="1">[% comm %]</textarea>
+  <textarea title="Note Text" id="NoteTextField" name="comment" cols="20" rows="1">[% comm %]</textarea>
+  <a style="position:absolute;left:-999px;" href="#" accesskey="n"
+     onfocus="document.getElementById('NoteTextField').focus()">.</a>
   </div>
   <div id="SubmitForm">
   <table>
@@ -220,7 +231,6 @@
       </td>
       <td><label for="swiss">Do not invalidate other reviews<br/>for this volume</label></td>
     </tr>
-    <tr><td/><td/></tr><tr><td/><td/></tr>
   [% END %]
     <tr>
       <td style="text-align:left;">
