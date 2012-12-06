@@ -1194,7 +1194,7 @@ sub CloneReview
 sub SubmitReview
 {
   my $self = shift;
-  my ($id, $user, $attr, $reason, $note, $renNum, $exp, $renDate, $category, $swiss, $question) = @_;
+  my ($id, $user, $attr, $reason, $note, $renNum, $exp, $renDate, $category, $swiss, $hold) = @_;
 
   if (!$self->CheckForId($id))                         { $self->SetError("id ($id) check failed");         return 0; }
   if (!$self->CheckReviewer($user, $exp))              { $self->SetError("reviewer ($user) check failed"); return 0; }
@@ -1216,7 +1216,7 @@ sub SubmitReview
   my $priority = $self->GetPriority($id);
   my $hold = 'NULL';
 
-  if ($question)
+  if ($hold)
   {
     $hold = $dbh->quote($self->HoldExpiry($id, $user, 0));
     my $sql = "INSERT INTO note (note) VALUES ('hold from $user on $id')";
@@ -1232,7 +1232,7 @@ sub SubmitReview
     push(@fieldList, 'duration');
     push(@valueList, "'$dur'");
   }
-  if (!$question)
+  if (!$hold)
   {
     # Stash their hold if they are cancelling it
     my $oldhold = $self->SimpleSqlGet("SELECT hold FROM reviews WHERE id='$id' AND user='$user'");
@@ -7299,7 +7299,7 @@ sub SetSystemStatus
   $self->PrepareSubmitSql($sql);
 }
 
-# How many items for this user have outstanding questions.
+# How many items for this user have outstanding holds.
 sub CountUserHolds
 {
   my $self = shift;

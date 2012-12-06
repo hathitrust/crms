@@ -9,7 +9,7 @@
 [% comm     = cgi.param('comm')       %]
 [% category = cgi.param('category')   %]
 [% select   = cgi.param('rights')     %]
-[% question = cgi.param('question')   %]
+[% hold     = cgi.param('hold')       %]
 [% swiss    = cgi.param('swiss')      %]
 [% sys      = cgi.param('sys')        %]
 [% mag      = cgi.cookie('mag')       %]
@@ -211,11 +211,11 @@
           [% error = "An expert has already reviewed this volume. Please cancel." %]
         [% END %]
       [% END %]
-      [% INCLUDE submitReviewForm.tt barcode  = barcode,  renNum   = renNum,   renDate  = renDate,
-                                     comm     = comm,     category = category, editing  = editing,
-                                     error    = error,    select   = select,   mag      = mag,
-                                     question = question, swiss    = swiss,    expert   = expert,
-                                     status   = status,   sys      = sys,      ptview   = ptview %]
+      [% INCLUDE submitReviewForm.tt barcode = barcode, renNum   = renNum,   renDate  = renDate,
+                                     comm    = comm,    category = category, editing  = editing,
+                                     error   = error,   select   = select,   mag      = mag,
+                                     hold    = hold,    swiss    = swiss,    expert   = expert,
+                                     status  = status,  sys      = sys,      ptview   = ptview %]
       [% IF expert %]
         <table class="nav">
         [% IF status == 3 %]

@@ -224,21 +224,23 @@
   [% END %]
     <tr>
       <td style="text-align:left;">
-        [% question = crms.HoldForItem(barcode,user) %]
-        <input type="checkbox" id="question" name="question" [% (question)? 'checked="checked"':'' %] onclick="toggleVisibility('expiry');"/>
+        [% IF !hold %]
+          [% hold = crms.HoldForItem(barcode,user) %]
+        [% END %]
+        <input type="checkbox" id="hold" name="hold" [% (hold)? 'checked="checked"':'' %] onclick="toggleVisibility('expiry');"/>
       </td>
-      <td><label for="question">Hold for Question</label></td>
+      <td><label for="hold">Hold for Question</label></td>
     </tr>
     <tr>
       <td colspan="2">
-        <span class="smallishText" id="expiry" [% (question)? '':'style="display:none;"' %]>
+        <span class="smallishText" id="expiry" [% (hold)? '':'style="display:none;"' %]>
           Hold will expire at the end of the day<br/>on [% crms.HoldExpiry(barcode,user,1) %].
         </span>
       </td>
     </tr>
     <tr>
       <td colspan="2">
-        <span class="smallishText">Questioned reviews will be held unprocessed for 2 working days.
+        <span class="smallishText">Held reviews will remain unprocessed for 2 working days.
             It is up to you to get in touch with an expert.
         </span>
       </td>

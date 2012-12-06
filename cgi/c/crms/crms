@@ -106,14 +106,14 @@ if ($cgi->param('p') eq 'confirmReview')
   else
   {
     #Remove all locks for this user.
-    my $EncRights  = $cgi->param('rights');
-    my $comment    = $cgi->param('comment');
-    my $category   = $cgi->param('category');
-    my $renNum     = $cgi->param('renNum');
-    my $renDate    = $cgi->param('renDate');
-    my $id         = $cgi->param('barcode');
-    my $question   = $cgi->param('question');
-    my $swiss      = $cgi->param('swiss');
+    my $EncRights = $cgi->param('rights');
+    my $comment   = $cgi->param('comment');
+    my $category  = $cgi->param('category');
+    my $renNum    = $cgi->param('renNum');
+    my $renDate   = $cgi->param('renDate');
+    my $id        = $cgi->param('barcode');
+    my $hold      = $cgi->param('hold');
+    my $swiss     = $cgi->param('swiss');
 
     my ($rights, $reason);
     my $errorMsg = 'You must select a rights/reason combination.' unless $EncRights;
@@ -141,7 +141,7 @@ if ($cgi->param('p') eq 'confirmReview')
       $cgi->param('renNum',   $renNum );
       $cgi->param('renDate',  $renDate);
       $cgi->param('editing',  $editing);
-      $cgi->param('question', $question);
+      $cgi->param('hold',     $hold);
       $cgi->param('swiss',    $swiss);
     }
     else
@@ -151,7 +151,7 @@ if ($cgi->param('p') eq 'confirmReview')
       my $expert;
       if ( $crms->IsUserExpert( $user ) ) { $expert = 2; }
 
-      $crms->SubmitReview($id, $user, $rights, $reason, $comment, $renNum, $expert, $renDate, $category, $swiss, $question);
+      $crms->SubmitReview($id, $user, $rights, $reason, $comment, $renNum, $expert, $renDate, $category, $swiss, $hold);
       my $ref = $crms->GetErrors();
       if ($ref && $ref->[0])
       {
@@ -168,7 +168,7 @@ if ($cgi->param('p') eq 'confirmReview')
         $cgi->param('renNum',   $renNum );
         $cgi->param('renDate',  $renDate);
         $cgi->param('editing',  $editing);
-        $cgi->param('question', $question);
+        $cgi->param('hold',     $hold);
         $cgi->param('swiss',    $swiss);
         $crms->ClearErrors();
       }
