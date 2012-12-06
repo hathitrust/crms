@@ -62,6 +62,9 @@
 [%# ## failed to get a barcode ## %]
 [% IF NOT barcode %]
   <h3>Unable to find a volume ID to review</h3>
+  [% FOREACH error IN crms.GetErrors %]
+    <strong>ERROR: [% error.replace('\n','<br/>') %]</strong><br/>
+  [% END %]
   [% STOP %]
 [% END %]
 

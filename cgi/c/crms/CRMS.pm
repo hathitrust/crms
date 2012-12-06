@@ -5850,8 +5850,10 @@ sub GetNextItemForReview
   my $user = shift;
   
   my $id = undef;
+  my $err = undef;
+  my $sql = undef;
   eval{
-    my $sql = 'LOCK TABLES queue WRITE, queue AS q WRITE, reviews READ, reviews AS r READ, users READ, timer WRITE, systemvars READ';
+    $sql = 'LOCK TABLES queue WRITE, queue AS q WRITE, reviews READ, reviews AS r READ, users READ, timer WRITE, systemvars READ';
     $self->PrepareSubmitSql($sql);
     my $exclude = 'q.priority<3 AND';
     if ($self->IsUserAdmin($user))
@@ -5880,7 +5882,7 @@ sub GetNextItemForReview
       next if 1 < $self->SimpleSqlGet($sql);
       $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id2' AND user='$user'";
       next if 0 < $self->SimpleSqlGet($sql);
-      my $err = $self->LockItem($id2, $user);
+      $err = $self->LockItem($id2, $user);
       if (!$err)
       {
         $id = $id2;
@@ -5892,7 +5894,9 @@ sub GetNextItemForReview
   $self->PrepareSubmitSql('UNLOCK TABLES');
   if (!$id)
   {
-    $self->SetError("Could not get a volume for $user to review.");
+    $err = sprintf "Could not get a volume for $user to review%s.", ($err)? " ($err)":'';
+    $err .= "\n$sql" if $sql;
+    $self->SetError($err);
   }
   return $id;
 }
