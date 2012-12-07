@@ -113,6 +113,7 @@ function popReviewInfo(id,user)
       if (req.status == 200)
       {
         //document.submitReview.renDate.value = req.responseText;
+        //alert(req.responseText);
         var data = JSON.parse(req.responseText, null);
         if (data)
         {
@@ -131,7 +132,7 @@ function popReviewInfo(id,user)
       if (loader) loader.style.display='none';
     } 
   };
-  loader.style.display='';
+  if (loader) loader.style.display='';
   req.open("GET", "/cgi/c/crms/getReviewInfo?id=" + id + ";user=" + user, true); 
   req.send(null);
 }
