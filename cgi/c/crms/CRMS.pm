@@ -1235,25 +1235,18 @@ sub SubmitReview
   my $qrenDate = ($renDate)? $dbh->quote($renDate):'NULL';
   my $qcategory = ($category)? $dbh->quote($category):'NULL';
   my $priority = $self->GetPriority($id);
-  my $hold = 'NULL';
 
+  my @fieldList = ('id', 'user', 'attr', 'reason', 'note', 'renNum', 'renDate', 'category', 'priority');
+  my @valueList = ("'$id'", "'$user'", $attr, $reason, $qnote, $qrenNum, $qrenDate, $qcategory, $priority);
   if ($hold)
   {
     $hold = $dbh->quote($self->HoldExpiry($id, $user, 0));
     my $sql = "INSERT INTO note (note) VALUES ('hold from $user on $id')";
     $self->PrepareSubmitSql($sql);
+    push(@fieldList, 'hold');
+    push(@valueList, $hold);
   }
-
-  my @fieldList = ('id', 'user', 'attr', 'reason', 'note', 'renNum', 'renDate', 'category', 'priority', 'hold');
-  my @valueList = ("'$id'", "'$user'", $attr, $reason, $qnote, $qrenNum, $qrenDate, $qcategory, $priority, $hold);
-  my $sql = "SELECT duration FROM reviews WHERE user='$user' AND id='$id'";
-  my $dur = $self->SimpleSqlGet($sql);
-  if ($dur)
-  {
-    push(@fieldList, 'duration');
-    push(@valueList, "'$dur'");
-  }
-  if (!$hold)
+  else
   {
     # Stash their hold if they are cancelling it
     my $oldhold = $self->SimpleSqlGet("SELECT hold FROM reviews WHERE id='$id' AND user='$user'");
@@ -1262,6 +1255,13 @@ sub SubmitReview
       push(@fieldList, 'sticky_hold');
       push(@valueList, "'$oldhold'");
     }
+  }
+  my $sql = "SELECT duration FROM reviews WHERE user='$user' AND id='$id'";
+  my $dur = $self->SimpleSqlGet($sql);
+  if ($dur)
+  {
+    push(@fieldList, 'duration');
+    push(@valueList, "'$dur'");
   }
   if ($exp)
   {
@@ -1272,7 +1272,7 @@ sub SubmitReview
     push(@valueList, $swiss);
   }
 
-  $sql = sprintf("REPLACE INTO reviews (%s) VALUES (%s)", join(',', @fieldList), join(",", @valueList));
+  $sql = sprintf("REPLACE INTO reviews (%s) VALUES (%s)", join(',', @fieldList), join(',', @valueList));
   if ($self->get('verbose')) { $self->Logit($sql); }
   my $result = $self->PrepareSubmitSql($sql);
   if ($result)
