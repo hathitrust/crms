@@ -72,19 +72,19 @@ my $user = ($alias)? $alias:$ru;
 if ($user ne $ru)
 {
   $crms = CRMS->new(
-            logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
-            sys          =>   $sys,
-            verbose      =>   0,
-            root         =>   $DLXSROOT,
-            dev          =>   $DLPS_DEV,
-            user         =>   $user,
+            logFile => $DLXSROOT . '/prep/c/crms/log_review.txt',
+            sys     => $sys,
+            verbose => 0,
+            root    => $DLXSROOT,
+            dev     => $DLPS_DEV,
+            user    => $user,
             );
 }
 
 ## make sure user known
 if (!$crms->GetUserName($user))
 {
-  print $cgi->header( -status => "403 Forbidden" ) .
+  print $cgi->header(-status => '403 Forbidden') .
         "<h2>Forbidden</h2> (unknown user '$user')";
   exit;
 }
@@ -131,14 +131,14 @@ if ($cgi->param('p') eq 'confirmReview')
     {
       #clear the cgi
       $cgi->delete_all();
-      $cgi->param('p', 'review' );
-      $cgi->param('errorMsg', $errorMsg );
-      $cgi->param('barcode',  $id );
+      $cgi->param('p', 'review');
+      $cgi->param('errorMsg', $errorMsg);
+      $cgi->param('barcode',  $id);
       $cgi->param('rights',   $EncRights);
       $cgi->param('reason',   $reason);
-      $cgi->param('comm',     $comment );
+      $cgi->param('comm',     $comment);
       $cgi->param('category', $category);
-      $cgi->param('renNum',   $renNum );
+      $cgi->param('renNum',   $renNum);
       $cgi->param('renDate',  $renDate);
       $cgi->param('editing',  $editing);
       $cgi->param('hold',     $hold);
@@ -158,14 +158,14 @@ if ($cgi->param('p') eq 'confirmReview')
         $errorMsg = $ref->[0];
         #clear the cgi
         $cgi->delete_all();
-        $cgi->param('p', 'review' );
-        $cgi->param('errorMsg', $errorMsg );
-        $cgi->param('barcode',  $id );
+        $cgi->param('p', 'review');
+        $cgi->param('errorMsg', $errorMsg);
+        $cgi->param('barcode',  $id);
         $cgi->param('rights',   $EncRights);
         $cgi->param('reason',   $reason);
-        $cgi->param('comm',     $comment );
+        $cgi->param('comm',     $comment);
         $cgi->param('category', $category);
-        $cgi->param('renNum',   $renNum );
+        $cgi->param('renNum',   $renNum);
         $cgi->param('renDate',  $renDate);
         $cgi->param('editing',  $editing);
         $cgi->param('hold',     $hold);
@@ -175,7 +175,7 @@ if ($cgi->param('p') eq 'confirmReview')
       else
       {
         $cgi->delete_all();
-        if ( $editing )
+        if ($editing)
         {
           print "Content-type: text/html\n\n";
           print '<script type="text/javascript" language="JavaScript">window.close();</script>';
