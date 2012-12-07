@@ -216,11 +216,19 @@
           [% error = "An expert has already reviewed this volume. Please cancel." %]
         [% END %]
       [% END %]
-      [% INCLUDE submitReviewForm.tt barcode = barcode, renNum   = renNum,   renDate  = renDate,
-                                     comm    = comm,    category = category, editing  = editing,
-                                     error   = error,   select   = select,   mag      = mag,
-                                     hold    = hold,    swiss    = swiss,    expert   = expert,
-                                     status  = status,  sys      = sys,      ptview   = ptview 
+      [% es = crms.GetErrors() %]
+      [% IF es.size %]
+        [% IF NOT error %][% error = '' %][% END %]
+        [% FOREACH e IN es %]
+          [% error = error _ e _ '<br/>' %]
+        [% END %]
+      [% END %]
+      [% blah = crms.ClearErrors() %]
+      [% INCLUDE submitReviewForm.tt barcode = barcode, renNum   = renNum,   renDate = renDate,
+                                     comm    = comm,    category = category, editing = editing,
+                                     error   = error,   select   = select,   mag     = mag,
+                                     hold    = hold,    swiss    = swiss,    expert  = expert,
+                                     status  = status,  sys      = sys,      ptview  = ptview,
                                      import  = import %]
       [% IF expert %]
         <table class="nav">
