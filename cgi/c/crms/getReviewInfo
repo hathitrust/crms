@@ -29,6 +29,7 @@ $data{'note'} = $row->[2];
 $data{'category'} = $row->[3];
 $data{'renNum'} = $row->[4];
 $data{'renDate'} = $row->[5];
+$data{'sql'} = $sql;
 print $cgi->header();
 my $json = JSON::XS->new->utf8->encode(\%data);
 print $json;
