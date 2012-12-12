@@ -58,7 +58,7 @@ sub ShouldVolumeGoInUndTable
 
   my $src = undef;
   $record = $self->GetMetadata($id) unless $record;
-  return $src unless $record;
+  return 'no meta' unless $record;
   my $lang = $self->GetRecordPubLanguage($id, $record);
   if ('eng' ne $lang) { $src = 'language'; }
   elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }

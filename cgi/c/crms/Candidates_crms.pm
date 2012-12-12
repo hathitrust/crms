@@ -58,7 +58,7 @@ sub ShouldVolumeGoInUndTable
 
   my $src = undef;
   $record = $self->GetMetadata($id) unless $record;
-  return $src unless $record;
+  return 'no meta' unless $record;
   my $lang = $self->GetRecordPubLanguage($id, $record);
   if ($self->IsProbableGovDoc($id, $record)) { $src = 'gov'; }
   elsif ('eng' ne $lang) { $src = 'language'; }
