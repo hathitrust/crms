@@ -70,7 +70,7 @@ sub set
 
 sub Version
 {
-  return '4.2';
+  return '4.2.1';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -116,7 +116,7 @@ sub ConnectToDb
   }
   elsif ($dev eq 'crmstest')
   {
-    # FIXME: this is hideous
+    # FIXME: once the World training site has DB crmsworldtest, get rid of the unless.
     $db .= 'test' unless $self->get('sys') eq 'crmsworld';
   }
   #if ($self->get('verbose')) { $self->Logit("DBI:mysql:crms:$db_server, $db_user, [passwd]"); }
