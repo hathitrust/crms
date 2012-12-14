@@ -269,7 +269,7 @@
         </td>
         <td><input type="radio" name="pullrights" id="pull[% review.user %]"
                    [% IF import == review.user %]checked="checked"[% END %]
-                   onclick="popReviewInfo('[% barcode %]','[% review.user %]');"/>
+                   onclick="popReviewInfo('[% barcode %]','[% review.user %]', '[% sys %]');"/>
         </td>
       </tr>
     [% END %]

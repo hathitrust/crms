@@ -86,7 +86,7 @@ function popRenewalDate()
   req.send(null);
 }
 
-function popReviewInfo(id,user)
+function popReviewInfo(id,user,sys)
 {
   var req = null;
   var loader = document.getElementById('loader' + user);
@@ -133,7 +133,7 @@ function popReviewInfo(id,user)
     } 
   };
   if (loader) loader.style.display='';
-  req.open("GET", "/cgi/c/crms/getReviewInfo?id=" + id + ";user=" + user, true); 
+  req.open("GET", "/cgi/c/crms/getReviewInfo?id=" + id + ";user=" + user + ";sys=" + sys, true); 
   req.send(null);
 }
 

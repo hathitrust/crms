@@ -279,7 +279,7 @@ window.onload = function(e)
   changeFrame1();
   changeFrame2();
   [% IF import %]
-    popReviewInfo('[% barcode %]','[% import %]');
+    popReviewInfo('[% barcode %]','[% import %]', '[% sys %]');
   [% END %]
 }
 </script>
