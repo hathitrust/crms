@@ -118,8 +118,9 @@ function popReviewInfo(id,user,sys)
         if (data)
         {
           var button = document.getElementById("r" + data.rights);
-          if (button) button.checked = "checked"
-          document.submitReview.renNum.value = data.renNum;
+          if (button) button.checked = "checked";
+          button = document.getElementById("renewalFieldCheckbox");
+          if (button) button.checked = (data.renNum != null);
           document.submitReview.renDate.value = data.renDate;
           document.submitReview.comment.value = data.note;
           selMenuItem('catMenu',(data.category)? data.category:'');
