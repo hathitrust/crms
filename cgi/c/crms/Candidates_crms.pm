@@ -15,8 +15,8 @@ sub GetViolations
 {
   my $self = shift;
   my ($id, $record, $priority, $override) = @_;
-  my @errs = ();
 
+  my @errs = ();
   my $pub = $self->GetRecordPubDate($id, $record);
   my $min = $self->GetCutoffYear('minYear');
   my $max = $self->GetCutoffYear('maxYear');
@@ -32,7 +32,7 @@ sub GetViolations
   {
     push @errs, "pub date not in range or not completely specified ($pub)";
   }
-  push @errs, 'gov doc' if $self->IsGovDoc($id, $record );
+  push @errs, 'gov doc' if IsGovDoc($id, $record );
   push @errs, 'foreign pub' if $self->IsForeignPub($id, $record);
   push @errs, 'non-BK format' unless $self->IsFormatBK($id, $record);
   my $ref = $self->RightsQuery($id,1);
@@ -69,6 +69,17 @@ sub ShouldVolumeGoInUndTable
   return $src;
 }
 
+# 008:28 is 'f' byte.
+sub IsGovDoc
+{
+  my $id     = shift;
+  my $record = shift;
+
+  my $xpath  = q{//*[local-name()='controlfield' and @tag='008']};
+  my $leader = $record->findvalue($xpath);
+  return (substr($leader, 28, 1) eq 'f');
+}
+
 # An item is a probable gov doc if one of the following is true. All are case insensitive.
 # Author begins with "United States" and 260 is blank
 # Author begins with "United States" and 260a begins with "([)Washington"
@@ -86,8 +97,6 @@ sub IsProbableGovDoc
   my $id     = shift;
   my $record = shift;
 
-  $record = $self->GetMetadata($id) unless $record;
-  if (!$record) { $self->SetError("no record in IsProbableGovDoc: $id"); return 0; }
   my $author = $self->GetRecordAuthor($id, $record);
   my $title = $self->GetRecordTitle($id, $record);
   my $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='a']};

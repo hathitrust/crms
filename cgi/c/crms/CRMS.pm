@@ -4846,19 +4846,6 @@ sub ValidateSubmission
   return $errorMsg;
 }
 
-# 008:28 is 'f' byte.
-sub IsGovDoc
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-
-  if (!$record) { $self->SetError("no record in IsGovDoc: $id"); return 1; }
-  my $xpath  = q{//*[local-name()='controlfield' and @tag='008']};
-  my $leader = $record->findvalue($xpath);
-  return (substr($leader, 28, 1) eq 'f');
-}
-
 sub IsFormatBK
 {
   my $self   = shift;
