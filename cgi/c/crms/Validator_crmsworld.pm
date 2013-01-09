@@ -63,13 +63,17 @@ sub CalcStatus
   my $dbh = $self->GetDb();
   my $status = 0;
   my $sql = "SELECT user,attr,reason,renNum,renDate,hold,NOW() FROM reviews WHERE id='$id'";
-  my $ref = $dbh->selectall_arrayref( $sql );
+  my $ref = $dbh->selectall_arrayref($sql);
   my ($user, $attr, $reason, $renNum, $renDate, $hold, $today) = @{ $ref->[0] };
   $renNum = undef unless $renDate;
   $sql = "SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id='$id' AND user!='$user'";
-  $ref = $dbh->selectall_arrayref( $sql );
+  $ref = $dbh->selectall_arrayref($sql);
   my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{ $ref->[0] };
   $other_renNum = undef unless $other_renDate;
+  $attr = $self->TranslateAttr($attr);
+  $reason = $self->TranslateReason($reason);
+  $other_attr = $self->TranslateAttr($other_attr);
+  $other_reason = $self->TranslateReason($other_reason);
   if ($hold && ($today lt $hold || $stat ne 'normal'))
   {
     $return{'hold'} = $user;
@@ -78,9 +82,12 @@ sub CalcStatus
   {
     $return{'hold'} = $other_user;
   }
-  elsif ($attr == $other_attr && $reason == $other_reason &&
-         $self->TolerantCompare($renNum, $other_renNum) &&
-         $self->TolerantCompare($renDate, $other_renDate))
+  # Match if attr/reasons match; dates must match unless und/nfi.
+  elsif ($attr eq $other_attr && $reason eq $other_reason &&
+         (($self->TolerantCompare($renNum, $other_renNum) &&
+           $self->TolerantCompare($renDate, $other_renDate))
+          ||
+          $attr eq 'und'))
   {
     # If both reviewers are non-advanced mark as provisional match
     if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
@@ -108,24 +115,23 @@ sub CalcPendingStatus
   
   my $pstatus = 0;
   my $sql = "SELECT user,attr,reason,renNum,renDate FROM reviews WHERE id='$id' AND expert IS NULL";
-  my $ref = $self->GetDb()->selectall_arrayref( $sql );
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
   if (scalar @{$ref} > 1)
   {
-    my $row = @{$ref}[0];
-    my $user    = $row->[0];
-    my $attr    = $row->[1];
-    my $reason  = $row->[2];
-    my $renNum  = $row->[3];
-    my $renDate = $row->[4];
-    $row = @{$ref}[1];
-    my $other_user    = $row->[0];
-    my $other_attr    = $row->[1];
-    my $other_reason  = $row->[2];
-    my $other_renNum  = $row->[3];
-    my $other_renDate = $row->[4];
+    my ($user, $attr, $reason, $renNum, $renDate) = @{ $ref->[0] };
+    my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate) = @{ $ref->[1] };
+    $attr = $self->TranslateAttr($attr);
+    $reason = $self->TranslateReason($reason);
+    $other_attr = $self->TranslateAttr($other_attr);
+    $other_reason = $self->TranslateReason($other_reason);
     $renNum = undef unless $renDate;
     $other_renNum = undef unless $other_renDate;
-    if ($attr == $other_attr && $reason == $other_reason)
+    # Match if attr/reasons match; dates must match unless und/nfi.
+    if ($attr eq $other_attr && $reason eq $other_reason &&
+         (($self->TolerantCompare($renNum, $other_renNum) &&
+           $self->TolerantCompare($renDate, $other_renDate))
+          ||
+          $attr eq 'und'))
     {
       # If both reviewers are non-advanced mark as provisional match
       if (!$self->IsUserAdvanced($user) && !$self->IsUserAdvanced($other_user))
