@@ -70,7 +70,7 @@ sub set
 
 sub Version
 {
-  return '4.2.2';
+  return '4.2.3';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -139,6 +139,7 @@ sub ConnectToSdrDb
   my $self = shift;
 
   my $db_server = $CRMSGlobals::mysqlMdpServerDev;
+  my $db        = $CRMSGlobals::mysqlMdpDbName;
   my $dev       = $self->get('dev');
   my $root      = $self->get('root');
   my $sys       = $self->get('sys');
@@ -152,7 +153,7 @@ sub ConnectToSdrDb
     $db_server = $CRMSGlobals::mysqlMdpServer;
   }
   #if ($self->get('verbose')) { $self->Logit("DBI:mysql:mdp:$db_server, $db_user, [passwd]"); }
-  my $sdr_dbh = DBI->connect("DBI:mysql:mdp:$db_server", $db_user, $db_passwd,
+  my $sdr_dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
             { PrintError => 0, AutoCommit => 1 });
   if ($sdr_dbh)
   {
@@ -4845,7 +4846,6 @@ sub ValidateSubmission
   return $errorMsg;
 }
 
-
 # 008:28 is 'f' byte.
 sub IsGovDoc
 {
@@ -8527,8 +8527,10 @@ sub PredictRights
   my $record = shift; # Metadata (optional) so we don't spam bibdata table for volumes not in queue.
 
   return 0 if $year !~ m/^\d+$/; # Punt if the year is not exclusively 1 or more decimal digits.
-  my $pub = $self->GetRecordPubDate($id, $record) if $record;
+  my $pub = undef;
+  $pub = $self->GetRecordPubDate($id, $record) if $record;
   $pub = $self->GetPubDate($id) unless $pub;
+  return 0 unless defined $pub;
   my $where = $self->GetRecordPubCountry($id, $record) if $record;
   $where = $self->GetPubCountry($id) unless $where;
   my ($attr, $reason) = (0,0);
