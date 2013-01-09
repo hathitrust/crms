@@ -103,7 +103,7 @@ if ($sys ne 'crmsworld')
   is($crms->GetUserAffiliation('hansone@indiana.edu'), 'IU',               'IU affiliation');
   is($crms->GetUserAffiliation('aseeger@library.wisc.edu'), 'UW',          'UW affiliation');
   is($crms->GetUserAffiliation('zl2114@columbia.edu'), 'COL',              'COL affiliation');
-  is(scalar @{ $crms->GetUsersWithAffiliation('IU') }, 7,                  'IU affiliates count');
+  is(scalar @{ $crms->GetUsersWithAffiliation('IU') }, 8,                  'IU affiliates count');
   is(scalar @{ $crms->GetUsersWithAffiliation('UW') }, 5,                  'UW affiliates count');
   is(scalar @{ $crms->GetUsersWithAffiliation('COL') }, 1,                 'COL affiliates count');
   is($crms->IsReviewCorrect('uc1.b3763822','dfulmer','2009-11-02') ,0,     'Correctness: uc1.b3763822 1');
@@ -133,7 +133,13 @@ if ($sys ne 'crmsworld')
   is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,1)}, 0,    'Violations: mdp.39015082195432 P4 1');
 }
 
-if ($sys ne 'crmsworld')
+
+if ($sys eq 'crmsworld')
+{
+ok('Volumes published prior to 1923 are not eligible for icus/gatt. ' eq
+   $crms->ValidateSubmission('inu.39000005773028','moseshll',19,17,undef,undef,undef,undef), 'icus/gatt superadmin >=23');
+}
+else
 {
 ok('Renewal no longer required for works published after 1963. ' eq
    $crms->ValidateSubmission('mdp.39015011285692','moseshll',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin >63 +ren');
@@ -186,6 +192,8 @@ is($crms->GetSystemVar('bleh'), 2,                                              
 is($crms->GetSystemVar('bleh', undef, '$_<2'), undef,                                              'GetSystemVar 3');
 ok(defined $crms->GetSystemVar('priority1Frequency'),                                              'GetSystemVar 4');
 is($crms->GetSystemVar('spam'), undef,                                                             'GetSystemVar 5');
+$crms->PrepareSubmitSql('DELETE FROM systemvars WHERE name="blah" OR name="bleh"');
+
 $crms->PrepareSubmitSql('INSERT INTO systemvars (name,value) VALUES ("spam", "1.0")');
 is($crms->GetSystemVar('spam', undef, '$_>=0.0 and $_<1.0'), undef,                                'GetSystemVar 6');
 is($crms->GetSystemVar('spam', .25, '$_>=0.0 and $_<1.0'), .25,                                    'GetSystemVar 7');
@@ -194,7 +202,7 @@ is($crms->GetSystemVar('span', .25, '$_>=0.0 and $_<1.0'), .25,                 
 $crms->PrepareSubmitSql('DELETE FROM systemvars WHERE name="blah" OR name="bleh" OR name="spam"');
 is($crms->TranslateAttr(1),'pd',                                                                   'TranslateAttr 1');
 is($crms->TranslateAttr(2),'ic',                                                                   'TranslateAttr 2');
-is($crms->TranslateAttr(3),'opb',                                                                  'TranslateAttr 3');
+is($crms->TranslateAttr(3),'op',                                                                   'TranslateAttr 3');
 is($crms->TranslateAttr(4),'orph',                                                                 'TranslateAttr 4');
 is($crms->TranslateAttr(5),'und',                                                                  'TranslateAttr 5');
 is($crms->TranslateAttr(6),'umall',                                                                'TranslateAttr 6');
@@ -214,7 +222,7 @@ is($crms->TranslateAttr(19),'icus',                                             
 
 is($crms->TranslateAttr('pd'),1,                                                                   'TranslateAttr 1a');
 is($crms->TranslateAttr('ic'),2,                                                                   'TranslateAttr 2a');
-is($crms->TranslateAttr('opb'),3,                                                                  'TranslateAttr 3a');
+is($crms->TranslateAttr('op'),3,                                                                   'TranslateAttr 3a');
 is($crms->TranslateAttr('orph'),4,                                                                 'TranslateAttr 4a');
 is($crms->TranslateAttr('und'),5,                                                                  'TranslateAttr 5a');
 is($crms->TranslateAttr('umall'),6,                                                                'TranslateAttr 6a');
@@ -241,7 +249,7 @@ is($crms->TranslateReason(6),'pvt',                                             
 is($crms->TranslateReason(7),'ren',                                                                'TranslateReason 7');
 is($crms->TranslateReason(8),'nfi',                                                                'TranslateReason 8');
 is($crms->TranslateReason(9),'cdpp',                                                               'TranslateReason 9');
-is($crms->TranslateReason(10),'cip',                                                               'TranslateReason 10');
+is($crms->TranslateReason(10),'ipma',                                                              'TranslateReason 10');
 is($crms->TranslateReason(11),'unp',                                                               'TranslateReason 11');
 is($crms->TranslateReason(12),'gfv',                                                               'TranslateReason 12');
 is($crms->TranslateReason(13),'crms',                                                              'TranslateReason 13');
@@ -259,7 +267,7 @@ is($crms->TranslateReason('pvt'),6,                                             
 is($crms->TranslateReason('ren'),7,                                                                'TranslateReason 7a');
 is($crms->TranslateReason('nfi'),8,                                                                'TranslateReason 8a');
 is($crms->TranslateReason('cdpp'),9,                                                               'TranslateReason 9a');
-is($crms->TranslateReason('cip'),10,                                                               'TranslateReason 10a');
+is($crms->TranslateReason('ipma'),10,                                                              'TranslateReason 10a');
 is($crms->TranslateReason('unp'),11,                                                               'TranslateReason 11a');
 is($crms->TranslateReason('gfv'),12,                                                               'TranslateReason 12a');
 is($crms->TranslateReason('crms'),13,                                                              'TranslateReason 13a');
@@ -272,9 +280,10 @@ if ($sys eq 'crmsworld')
 {
   is($crms->GetCodeFromAttrReason(1,14),1,                                                         'GetCodeFromAttrReason 1');
   is($crms->GetCodeFromAttrReason(1,15),2,                                                         'GetCodeFromAttrReason 2');
-  is($crms->GetCodeFromAttrReason(2,14),3,                                                         'GetCodeFromAttrReason 3');
-  is($crms->GetCodeFromAttrReason(19,17),4,                                                        'GetCodeFromAttrReason 3');
-  is($crms->GetCodeFromAttrReason(5,8),5,                                                          'GetCodeFromAttrReason 3');
+  is($crms->GetCodeFromAttrReason(2,14),4,                                                         'GetCodeFromAttrReason 3');
+  is($crms->GetCodeFromAttrReason(9,14),3,                                                         'GetCodeFromAttrReason 4');
+  is($crms->GetCodeFromAttrReason(19,17),5,                                                        'GetCodeFromAttrReason 5');
+  is($crms->GetCodeFromAttrReason(5,8),6,                                                          'GetCodeFromAttrReason 6');
   ok($crms->Sysify('crms') eq 'crms?sys=crmsworld',                                                'Sysify 1');
   ok($crms->Sysify('crms?p=review') eq 'crms?p=review;sys=crmsworld',                              'Sysify 2');
 }
