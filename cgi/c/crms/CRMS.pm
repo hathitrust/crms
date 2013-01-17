@@ -8241,6 +8241,7 @@ sub Sources
   my @all = ();
   foreach my $row (@{$ref})
   {
+    my $name = $row->[1];
     my $url = $row->[2];
     $url =~ s/__HTID__/$id/g;
     $url =~ s/__MAG__/$mag/g;
@@ -8258,7 +8259,19 @@ sub Sources
     if ($url =~ m/__AUTHOR_(\d+)__/)
     {
       my $a = $self->GetEncAuthorForReview($id);
-      $a = lc substr($a, 0, $1);
+      if ($name eq 'NGCOBA' && $a =~ m/^ma?c(.)/i)
+      {
+        $a = 'm1';
+        my $x = lc $1;
+        $a = 'm14' if $x le 'z';
+        $a = 'm13' if $x le 'r';
+        $a = 'm12' if $x le 'n';
+        $a = 'm11' if $x le 'e';
+      }
+      else
+      {
+        $a = lc substr($a, 0, $1);
+      }
       $url =~ s/__AUTHOR_\d+__/$a/g;
     }
     if ($url =~ m/__AUTHOR_F__/)
@@ -8273,7 +8286,7 @@ sub Sources
       $url =~ s/__TITLE__/$t/g;
     }
     $url =~ s/\s+/+/g;
-    push @all, [$row->[0], $row->[1], $url, $row->[3], $row->[4], $row->[5]];
+    push @all, [$row->[0], $name, $url, $row->[3], $row->[4], $row->[5]];
   }
   return \@all;
 }
