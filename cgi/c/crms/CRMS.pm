@@ -6990,6 +6990,7 @@ sub PageToEnglish
                'determinationStats' => 'determinations breakdown',
                'editReviews' => 'my unprocessed reviews',
                'expert' => 'conflicts',
+               'exportData' => 'exported determinations',
                'exportStats' => 'export stats',
                'holds' => 'my held reviews',
                'inherit' => 'rights inheritance',
