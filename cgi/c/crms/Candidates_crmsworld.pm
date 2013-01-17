@@ -8,7 +8,7 @@ our @EXPORT = qw(RightsClause GetViolations ShouldVolumeGoInUndTable);
 # pd/bib or pdus/bib or op
 sub RightsClause
 {
-  return '(attr=2 AND reason=1) OR (attr=3 AND reason=1) OR attr=9';
+  return '(attr=2 AND reason=1) OR (attr=9 AND reason=1) OR attr=3';
 }
 
 sub GetViolations
@@ -16,7 +16,6 @@ sub GetViolations
   my $self = shift;
   my ($id, $record, $priority, $override) = @_;
   my @errs = ();
-
   my $pub = $self->GetRecordPubDate($id, $record);
   my $where = $self->GetRecordPubCountry($id, $record);
   $where =~ s/\s*\(.*//;
@@ -40,7 +39,10 @@ sub GetViolations
   if ($ref)
   {
     my ($attr,$reason,$src,$usr,$time,$note) = @{$ref};
-    push @errs, "current rights are $attr/$reason" unless ($attr eq 'pdus' || ($attr eq 'ic' && $reason eq 'bib'));
+    my $rights = "$attr/$reason";
+    push @errs, "current rights are $rights" unless $attr eq 'pdus' or
+                                                    $rights eq 'ic/bib' or
+                                                    $attr eq 'op';
   }
   else
   {
