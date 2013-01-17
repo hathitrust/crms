@@ -18,8 +18,8 @@ my $usage = <<END;
 USAGE: $0 [-acdhpvux] [-s VOL_ID [-s VOL_ID2...]]
           [start_date [end_date]]
 
-Reports on volumes that are no longer ic/bib in the rights database
-and, optionally, delete them from the system.
+Reports on volumes that are no longer eligible for candidacy in the rights database
+and, optionally, deletes them from the system.
 
 -a         Report on all volumes, ignoring date range.
 -c         Run against candidates.
@@ -57,7 +57,7 @@ $DLPS_DEV = undef if $production;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/candidatespurge_hist.txt",
+    logFile      =>   $DLXSROOT . '/prep/c/crms/candidatespurge_hist.txt',
     sys          =>   $sys,
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
@@ -79,10 +79,12 @@ if (scalar @ARGV)
   }
 }
 
+my $module = 'Candidates_' . $crms->get('sys') . '.pm';
+require "$module";
+my $clause = Candidates::RightsClause();
+
 CheckTable('candidates', $all, $start, $end, \@singles) if $candidates;
 CheckTable('und', $all, $start, $end, \@singles) if $und;
-
-
 
 sub CheckTable
 {
@@ -108,17 +110,18 @@ sub CheckTable
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
+    my ($namespace,$n) = split m/\./, $id, 2;
     print "$id\n" if $verbose >= 2;
     my ($attr,$reason,$src,$usr,$time,$note) = @{$crms->RightsQuery($id,1)->[0]};
     my $rights = "$attr/$reason";
-    my $sys = $crms->get('sys');
-    if (($sys eq 'crms' && $rights ne 'ic/bib' && $rights ne 'pdus/gfv') ||
-        ($sys eq 'crmsworld' && $rights ne 'ic/bib' && $rights !~ m/^pdus/))
+    $sql = "SELECT COUNT(*) FROM rights_current WHERE namespace='$namespace' AND id='$n' AND ($clause)";
+    if ($crms->SimpleSqlGetSDR($sql) > 0)
     {
       my @errs = ();
       push @errs, 'in queue' if $crms->SimpleSqlGet("SELECT COUNT(*) FROM queue WHERE id='$id'");
       push @errs, 'in reviews' if $crms->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id'");
-      my $info = $crms->SimpleSqlGet(($table eq 'und')?"SELECT src FROM und WHERE id='$id'":"SELECT time FROM candidates WHERE id='$id'");
+      $sql = ($table eq 'und')?"SELECT src FROM und WHERE id='$id'":"SELECT time FROM candidates WHERE id='$id'";
+      my $info = $crms->SimpleSqlGet($sql);
       if ($delete && 0 == scalar @errs)
       {
         my $sql = "DELETE FROM $table WHERE id='$id'";
@@ -127,7 +130,7 @@ sub CheckTable
       }
       else
       {
-        printf "$id ($info): $attr/$reason ($usr) -- %s\n", (scalar @errs)? (join '; ', @errs):'can delete';
+        printf "$id ($info): $rights ($usr) -- %s\n", (scalar @errs)? (join '; ', @errs):'can delete';
       }
       $n++ unless scalar @errs;
     }
