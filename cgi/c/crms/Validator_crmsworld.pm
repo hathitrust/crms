@@ -99,6 +99,22 @@ sub CalcStatus
       $status = 4;
     }
   }
+  # Do auto for ic vs und
+  elsif (($attr eq 'ic' && $other_attr eq 'und') || ($attr eq 'und' && $other_attr eq 'ic'))
+  {
+    # If both reviewers are non-advanced mark as provisional match
+    if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+    {
+       $status = 3;
+    }
+    else #Mark as 8 - two that agree as und/crms
+    {
+      $status = 8;
+      $return{'attr'} = 5;
+      $return{'reason'} = 13;
+      $return{'category'} = 'Attr Default';
+    }
+  }
   else #Mark as 2 - two that disagree
   {
     $status = 2;
@@ -128,10 +144,10 @@ sub CalcPendingStatus
     $other_renNum = undef unless $other_renDate;
     # Match if attr/reasons match; dates must match unless und/nfi.
     if ($attr eq $other_attr && $reason eq $other_reason &&
-         (($self->TolerantCompare($renNum, $other_renNum) &&
-           $self->TolerantCompare($renDate, $other_renDate))
-          ||
-          $attr eq 'und'))
+        (($self->TolerantCompare($renNum, $other_renNum) &&
+          $self->TolerantCompare($renDate, $other_renDate))
+         ||
+         $attr eq 'und'))
     {
       # If both reviewers are non-advanced mark as provisional match
       if (!$self->IsUserAdvanced($user) && !$self->IsUserAdvanced($other_user))
@@ -141,6 +157,19 @@ sub CalcPendingStatus
       else #Mark as 4 - two that agree
       {
         $pstatus = 4;
+      }
+    }
+    # Do auto for ic vs und
+    elsif (($attr eq 'ic' && $other_attr eq 'und') || ($attr eq 'und' && $other_attr eq 'ic'))
+    {
+      # If both reviewers are non-advanced mark as provisional match
+      if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+      {
+        $pstatus = 3;
+      }
+      else #Mark as 8 - two that agree as und/crms
+      {
+        $pstatus = 8;
       }
     }
     else #Mark as 2 - two that disagree
