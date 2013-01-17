@@ -280,7 +280,7 @@ sub CalcPendingStatus
     if ($attr == $other_attr)
     {
       # If both reviewers are non-advanced mark as provisional match
-      if ( (!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+      if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
       {
         $pstatus = 3;
       }
