@@ -2793,7 +2793,7 @@ sub GetExportDataRef
   $search2 = $self->ConvertToSearchTerm($search2, 'exportData');
   if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
   else { $order = 'r.' . $order; }
-  my @rest = ('r.id=b.id');
+  my @rest = ();
   my $tester1 = '=';
   my $tester2 = '=';
   if ($search1Value =~ m/.*\*.*/)
@@ -2828,14 +2828,14 @@ sub GetExportDataRef
     push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
   }
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
-  my $sql = "SELECT COUNT(r.id) FROM exportdata r, bibdata b $restrict\n";
+  my $sql = "SELECT COUNT(r.id) FROM exportdata r LEFT JOIN bibdata b ON r.id=b.id $restrict";
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   my @return = ();
   $sql = 'SELECT r.id,r.time,r.attr,r.reason,r.src,b.title,b.author,YEAR(b.pub_date) ' .
-         "FROM exportdata r, bibdata b $restrict ORDER BY $order $dir $limit";
+         "FROM exportdata r LEFT JOIN bibdata b ON r.id=b.id $restrict ORDER BY $order $dir $limit";
   #print "$sql<br/>\n";
   my $ref = undef;
   eval {
@@ -3510,8 +3510,7 @@ sub CreateExportData
     last if $date eq $now and !$doCurrentMonth;
     push @usedates, $date;
     $report .= "$delimiter$date";
-    my %cats = ('All PD' => 0, 'All IC' => 0, 'All UND' => 0,
-                'Status 4' => 0, 'Status 5' => 0, 'Status 6' => 0, 'Status 7' => 0);
+    my %cats = ();
     my @sums = ();
     foreach my $right (@allRights)
     {
@@ -3526,7 +3525,7 @@ sub CreateExportData
       $lastDay = Days_in_Month($year,$month);
     }
     $sql = sprintf('SELECT %s, SUM(d.s4),SUM(d.s5),SUM(d.s6),SUM(d.s7),SUM(d.s8),SUM(d.s9) ' .
-                   'FROM exportstats e INNER JOIN determinationsbreakdown d ON e.date=d.date WHERE ' .
+                   'FROM exportstats e LEFT JOIN determinationsbreakdown d ON DATE(e.date)=d.date WHERE ' .
                    "e.date LIKE '$date%'", join ',', @sums);
     #print "$date: $sql<br/>\n";
     my $ref = $dbh->selectall_arrayref($sql);
