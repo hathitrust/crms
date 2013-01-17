@@ -378,7 +378,7 @@ sub ProcessReviews
     }
   }
   # Clear out all the locks
-  # FIXME: need to do a report on old locks that need to ba manually cleared.
+  # FIXME: need to do a report on old locks that need to be manually cleared.
   #$sql = 'UPDATE queue SET locked=NULL WHERE locked IS NOT NULL';
   #$self->PrepareSubmitSql($sql);
   $sql = 'INSERT INTO processstatus VALUES ()';
@@ -834,9 +834,8 @@ sub ShouldVolumeGoInUndTable
   my $id     = shift;
   my $record = shift;
 
-  my $src = undef;
   $record = $self->GetMetadata($id) unless $record;
-  return $src unless $record;
+  return 'no meta' unless $record;
   my $module = 'Candidates_' . $self->get('sys') . '.pm';
   require "$module";
   return Candidates::ShouldVolumeGoInUndTable($self, $id, $record);
