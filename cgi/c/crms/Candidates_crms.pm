@@ -170,7 +170,7 @@ sub IsReallyForeignPub
   my $id     = shift;
   my $record = shift;
 
-  my $is = $self->IsForeignPub($id, $record);
+  my $is = IsForeignPub($self, $id, $record);
   return $is if $is;
   eval {
     my $path = '//*[local-name()="datafield" and @tag="260"]/*[local-name()="subfield" and @code="a"]';
