@@ -70,7 +70,7 @@ sub set
 
 sub Version
 {
-  return '4.3.1';
+  return '4.3.2';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -8387,8 +8387,12 @@ sub PredictRights
 
   return 0 if $year !~ m/^-?\d+$/; # Punt if the year is not exclusively 1 or more decimal digits with optional minus.
   my $pub = undef;
-  $pub = $self->GetRecordPubDate($id, $record) if $record;
-  $pub = $self->GetPubDate($id) unless $pub;
+  $pub = $year if $ispub;
+  if (! defined $pub)
+  {
+    $pub = $self->GetRecordPubDate($id, $record) if $record;
+    $pub = $self->GetPubDate($id) unless defined $pub;
+  }
   return 0 unless defined $pub;
   my $where = $self->GetRecordPubCountry($id, $record) if $record;
   $where = $self->GetPubCountry($id) unless $where;
@@ -8418,7 +8422,7 @@ sub PredictRights
   }
   else
   {
-    $attr = $self->TranslateAttr(($pub < 1923)? 'pdus':'ic');
+    $attr = $self->TranslateAttr((int $pub < 1923)? 'pdus':'ic');
     $reason = $self->TranslateReason('add');
   }
   my $sql = "SELECT id FROM rights WHERE attr=? AND reason=?";
