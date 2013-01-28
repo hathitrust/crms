@@ -70,7 +70,7 @@ sub set
 
 sub Version
 {
-  return '4.3.2';
+  return '4.3.3';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -5765,12 +5765,15 @@ sub TranslateAttr
   my $val = $self->SimpleSqlGetSDR($sql);
   if (!$val)
   {
-    my %rights1 = (1 => 'pd', 2 => 'ic', 3 => 'op', 4 => 'orph', 5 => 'und',
-                   6 => 'umall', 7 => 'world', 8 => 'nobody', 9 => 'pdus', 19 => 'icus');
-    my %rights2 = ('pd'    => 1, 'ic'    => 2, 'op'    => 3, 'orph' => 4, 'und' => 5,
-                   'umall' => 6, 'world' => 7, 'nobody' => 8, 'pdus' => 9, 'icus' => 19);
-    $val = $rights1{$a} if $a =~ m/[0-9]+/;
-    $val = $rights2{$a} unless $a =~ m/[0-9]+/;
+    my %t1 = (1  => 'pd',       2  => 'ic',          3  => 'op',        4  => 'orph',        5  => 'und',
+              6  => 'umall',    7  => 'ic-world',    8  => 'nobody',    9  => 'pdus',        10 => 'cc-by',
+              11 => 'cc-by-nd', 12 => 'cc-by-nc-nd', 13 => 'cc-by-nc',  14 => 'cc-by-nc-sa', 15 => 'cc-by-sa',
+              16 => 'orphcand', 17 => 'cc-zero',     18 => 'und-world', 19 => 'icus');
+    my %t2 = ('pd'       => 1,  'ic'          => 2,  'op'        => 3,  'orph'        => 4,  'und'      => 5,
+              'umall'    => 6,  'ic-world'    => 7,  'nobody'    => 8,  'pdus'        => 9,  'cc-by'    => 10,
+              'cc-by-nd' => 11, 'cc-by-nc-nd' => 12, 'cc-by-nc'  => 13, 'cc-by-nc-sa' => 14, 'cc-by-sa' => 15,
+              'orphcand' => 16, 'cc-zero'     => 17, 'und-world' => 18, 'icus'        => 19);
+    $val = ($a =~ m/[0-9]+/)? $t1{$a}:$t2{$a};
   }
   $a = $val if $val;
   return $a;
@@ -5786,14 +5789,13 @@ sub TranslateReason
   my $val = $self->SimpleSqlGetSDR($sql);
   if (!$val)
   {
-    my %reasons1 = ( 1 => 'bib', 2 => 'ncn', 3 => 'con',   4 => 'ddd',  5 => 'man',  6 => 'pvt',
-                     7 => 'ren', 8 => 'nfi', 9 => 'cdpp', 10 => 'ipma', 11 => 'unp', 12 => 'gfv',
-                    13 => 'crms', 14 => 'add', 15 => 'exp', 16 => 'del', 17 => 'gatt');
-    my %reasons2 = ('bib'  => 1, 'ncn' => 2, 'con'  => 3, 'ddd' => 4,  'man' => 5,  'pvt' => 6,
-                    'ren'  => 7, 'nfi' => 8, 'cdpp' => 9, 'ipma' => 10, 'unp' => 11, 'gfv' => 12,
-                    'crms' => 13, 'add' => 14, 'exp' => 15, 'del' => 16, 'gatt' => 17);
-    $val = $reasons1{$a} if $r =~ m/[0-9]+/;
-    $val = $reasons2{$a} unless $r =~ m/[0-9]+/;
+    my %t1 = ( 1  => 'bib', 2   => 'ncn', 3  => 'con',  4  => 'ddd',  5  => 'man', 6  => 'pvt',
+               7  => 'ren', 8   => 'nfi', 9  => 'cdpp', 10 => 'ipma', 11 => 'unp', 12 => 'gfv',
+               13 => 'crms', 14 => 'add', 15 => 'exp',  16 => 'del',  17 => 'gatt');
+    my %t2 = ('bib'  => 1,  'ncn' => 2,  'con'  => 3,  'ddd'  => 4,  'man'  => 5,  'pvt' => 6,
+              'ren'  => 7,  'nfi' => 8,  'cdpp' => 9,  'ipma' => 10, 'unp'  => 11, 'gfv' => 12,
+              'crms' => 13, 'add' => 14, 'exp'  => 15, 'del'  => 16, 'gatt' => 17);
+    $val = ($r =~ m/[0-9]+/)? $t1{$r}:$t2{$r};
   }
   $r = $val if $val;
   return $r;
