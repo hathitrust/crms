@@ -116,8 +116,7 @@ sub ConnectToDb
   }
   elsif ($dev eq 'crmstest')
   {
-    # FIXME: once the World training site has DB crmsworldtest, get rid of the unless.
-    $db .= 'test' unless $self->get('sys') eq 'crmsworld';
+    $db .= 'test';
   }
   #if ($self->get('verbose')) { $self->Logit("DBI:mysql:crms:$db_server, $db_user, [passwd]"); }
   my $dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
