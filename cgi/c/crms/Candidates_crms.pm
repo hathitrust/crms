@@ -180,7 +180,7 @@ sub IsReallyForeignPub
     {
       my $where = Normalize($node->textContent);
       my $cities = $self->get('cities');
-      $cities = ReadCities() unless $cities;
+      $cities = ReadCities($self) unless $cities;
       if ($cities !~ m/==$where==/i)
       {
         $is = $where;
