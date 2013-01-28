@@ -60,7 +60,6 @@
   </div>
   <div>
   <table class="reviewGrey">
-  [% ren = crms.GetSystemVar("showRenewal") %]
     <tr>
       [% IF ren %]
         [% label = "Renewal&nbsp;ID" %]
@@ -77,14 +76,13 @@
        [% ELSE %]
          [% doTip = 0 %]
          [% IF NOT renDate && NOT import %]
-           [% renDate = crms.GetADDFromAuthor(barcode) %]
+           [% renDate = authorDD %]
            [% IF renDate %][% doTip = 1 %][% END %]
          [% END %]
          <input id="renewalField" title="[% label %]" type="text" name="renDate"
                 value="[% renDate %]" size="4"
                 onblur="javascript:PredictRights('[% barcode %]');"/>
           [% IF doTip %]
-          
             <a class="tip" style="vertical-align:bottom;" href="#">
               <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
               <span><strong>Derived from author information in Mirlyn</strong>
