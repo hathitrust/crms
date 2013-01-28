@@ -8394,7 +8394,8 @@ sub PredictRights
     $pub = $self->GetPubDate($id) unless defined $pub;
   }
   return 0 unless defined $pub;
-  my $where = $self->GetRecordPubCountry($id, $record) if $record;
+  my $where = undef;
+  $where = $self->GetRecordPubCountry($id, $record) if $record;
   $where = $self->GetPubCountry($id) unless $where;
   my ($attr, $reason) = (0,0);
   my $now = $self->GetTheYear();
@@ -8444,6 +8445,20 @@ sub MDPCorrections
   my $self = shift;
 
   return $self->GetSystemVar('MDPCorrections','mdpcorrections@umich.edu');
+}
+
+sub GetADDFromAuthor
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $add = undef;
+  my $a = $self->GetRecordAuthor($id, undef, 1);
+  if ($a =~ m/\d\d\d\d-(\d\d\d\d)/)
+  {
+    $add = $1;
+  }
+  return $add;
 }
 
 1;

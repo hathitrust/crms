@@ -69,15 +69,28 @@
       [% END %]
       <td class="reviewGrey"><strong><label id="renewalFieldLabel" for="renewalField">
       [% label %]: </label></strong></td>
-      <td>
+      <td nowrap="nowrap">
        [% IF ren %]
         <input id="renewalField" title="[% label %]" type="text" name="renNum"
                value="[% renNum %]" size="8"
                onblur="javascript:popRenewalDate()"/>
        [% ELSE %]
+         [% doTip = 0 %]
+         [% IF NOT renDate && NOT import %]
+           [% renDate = crms.GetADDFromAuthor(barcode) %]
+           [% IF renDate %][% doTip = 1 %][% END %]
+         [% END %]
          <input id="renewalField" title="[% label %]" type="text" name="renDate"
                 value="[% renDate %]" size="4"
                 onblur="javascript:PredictRights('[% barcode %]');"/>
+          [% IF doTip %]
+          
+            <a class="tip" style="vertical-align:bottom;" href="#">
+              <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
+              <span><strong>Derived from author information in Mirlyn</strong>
+              </span>
+            </a>
+          [% END %]
        [% END %]
        <a style="position:absolute;left:-999px;" href="#" accesskey="d"
           onfocus="document.getElementById('renewalField').focus()">.</a>
@@ -95,11 +108,11 @@
       </td>
       <td>
         [% IF ren %]
-        <input type="text" title="Stanford Renewal Date" id="getDate" name="renDate"
-               value="[% renDate %]" size="8" readonly="readonly"/>
+          <input type="text" title="Stanford Renewal Date" id="getDate" name="renDate"
+                 value="[% renDate %]" size="8" readonly="readonly"/>
         [% ELSE %]
           <input type="button" class="reviewblue" value="Pull Pub Date"
-          [% IF NOT pub_date.match('^\d+$') %]disabled="disabled"[% END %]
+          [% IF NOT pub_date.match('^-?\d+$') %]disabled="disabled"[% END %]
           onclick="document.getElementById('renewalField').value=document.getElementById('pubDateSpan').innerHTML;
                    document.getElementById('renewalFieldCheckbox').checked=true;PredictRights('[% barcode %]');"
           accesskey="d"
@@ -107,7 +120,6 @@
         [% END %]
       </td>
     </tr>
-    
   </table>
   </div>
 [% rights = crms.Rights() %]
