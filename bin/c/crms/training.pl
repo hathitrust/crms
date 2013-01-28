@@ -11,10 +11,10 @@ BEGIN
 
 use strict;
 use CRMS;
-use Getopt::Std;
+use Getopt::Long qw(:config no_ignore_case bundling);
 
 my $usage = <<END;
-USAGE: $0 [-hntv5] count
+USAGE: $0 [-hntv5] [-x SYS] count
 
 Populates the training database with examples (correct, single reviews) from production.
 
@@ -26,15 +26,23 @@ Populates the training database with examples (correct, single reviews) from pro
 -5       Do only status 5 reviews.
 END
 
-my %opts;
-getopts('hntv5', \%opts);
+my $help;
+my $noop;
+my $training;
+my $verbose;
+my $sys;
+my $five;
 
-my $help     = $opts{'h'};
-my $noop     = $opts{'n'};
-my $training = $opts{'t'};
-my $verbose  = $opts{'v'};
-my $sys      = $opts{'x'};
-my $five     = $opts{'5'};
+Getopt::Long::Configure ('bundling');
+Getopt::Long::Configure ('bundling');
+die 'Terminating' unless GetOptions(
+           'h'    => \$help,
+           'n'    => \$noop,
+           't'    => \$training,
+           'v'    => \$verbose,
+           'x:s'  => \$sys,
+           '5'    => \$five);
+           
 
 die "$usage\n\n" if $help;
 die "You need a volume count.\n" unless 1 == scalar @ARGV;
@@ -66,13 +74,12 @@ my %seen;
 my $sql = '(select distinct id from reviews) union distinct (select distinct id from historicalreviews)';
 my $ref = $crms2->GetDb()->selectall_arrayref($sql);
 $seen{$_->[0]} = 1 for @{$ref};
-
 my $n = 0;
 
 my $fivesql = ($five)? ' AND status=5':'';
 $sql = 'SELECT id,user,time,gid,status FROM historicalreviews WHERE ' .
        'user IN (SELECT id FROM users WHERE advanced=1 AND extadmin+expert+admin+superadmin=0) AND ' . 
-       "validated=1 $fivesql ORDER BY id ASC, time ASC";
+       "validated=1 $fivesql ORDER BY time DESC";
 if ($verbose)
 {
   print "$sql\n";
@@ -165,6 +172,7 @@ foreach my $row (@{$ref})
   push @sqls, "INSERT INTO queue (id,time,pending_status) VALUES ('$id','$time',1)";
   push @sqls, 'INSERT INTO reviews (id,user,time,attr,reason,renDate,renNum,category,note,duration) ' .
               "VALUES ('$id','$user','$time',$attr,$reason,$renDate,$renNum,$category,$note,'$duration')";
+  $crms->UpdateMetadata($id, 'bibdata', 1);
   $n++;
 }
 print "</table></body></html>\n" if $verbose;
@@ -175,14 +183,6 @@ foreach $sql (@sqls)
 {
   print "$sql\n" if $verbose;
   $crms->PrepareSubmitSql($sql) unless $noop;
-}
-
-$sql = "SELECT id FROM queue WHERE id NOT IN (SELECT id FROM bibdata)";
-my $ref = $crms->GetDb()->selectall_arrayref($sql);
-foreach my $row (@{$ref})
-{
-  my $id = $row->[0];
-  $crms->UpdateMetadata($id, 'bibdata', 1);
 }
 
 $sql = "INSERT INTO queuerecord (itemcount,source) VALUES ($n,'training.pl')";
