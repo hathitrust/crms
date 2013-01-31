@@ -104,7 +104,7 @@ records per page.
                 selMenuItem('search1','Identifier');
                 selMenuItem('search2','Identifier');
                 selMenuItem('order','id');
-                selMenuItem('dir','DESC');
+                selMenuItem('dir','ASC');
                 document.getElementById('startDate').value='';
                 document.getElementById('endDate').value='';
                 document.getElementById('search1value').value='';
