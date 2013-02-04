@@ -70,7 +70,7 @@ sub set
 
 sub Version
 {
-  return '4.3.3';
+  return '4.3.4';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -8104,6 +8104,7 @@ sub Menus
   my $self = shift;
 
   my $e = $self->IsUserExpert();
+  my $i = $self->IsUserIncarnationExpertOrHigher();
   my $r = ($e || $self->IsUserReviewer() || $self->IsUserAdvanced());
   my $x = $self->IsUserExtAdmin();
   my $a = $self->IsUserAdmin();
@@ -8117,6 +8118,7 @@ sub Menus
     if (!$row->[3] ||
         ($row->[3] &&
          (($e && $row->[3] =~ m/e/) ||
+          ($i && $row->[3] =~ m/i/) ||
           ($r && $row->[3] =~ m/r/) ||
           ($x && $row->[3] =~ m/x/) ||
           ($a && $row->[3] =~ m/a/) ||
@@ -8135,26 +8137,28 @@ sub MenuItems
 
   $menu = $self->SimpleSqlGet('SELECT id FROM menus WHERE docs=1 LIMIT 1') if $menu eq 'docs';
   my $e = $self->IsUserExpert();
+  my $i = $self->IsUserIncarnationExpertOrHigher();
   my $r = ($e || $self->IsUserReviewer() || $self->IsUserAdvanced());
   my $x = $self->IsUserExtAdmin();
   my $a = $self->IsUserAdmin();
   my $s = $self->IsUserSuperAdmin();
   my $sql = "SELECT name,href,institution,restricted,target FROM menuitems WHERE menu=$menu ORDER BY n ASC";
   #print "$sql\n<br/>";
-  my $ref2 = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
   my @all = ();
-  foreach my $row2 (@{$ref2})
+  foreach my $row (@{$ref})
   {
-    next if ($row2->[2] && !$self->CanUserSeeInstitutionalStats($row2->[2]));
-    if (!$row2->[3] ||
-        ($row2->[3] &&
-         (($e && $row2->[3] =~ m/e/) ||
-          ($r && $row2->[3] =~ m/r/) ||
-          ($x && $row2->[3] =~ m/x/) ||
-          ($a && $row2->[3] =~ m/a/) ||
-          ($s && $row2->[3] =~ m/s/))))
+    next if ($row->[2] && !$self->CanUserSeeInstitutionalStats($row->[2]));
+    if (!$row->[3] ||
+        ($row->[3] &&
+         (($e && $row->[3] =~ m/e/) ||
+          ($i && $row->[3] =~ m/i/) ||
+          ($r && $row->[3] =~ m/r/) ||
+          ($x && $row->[3] =~ m/x/) ||
+          ($a && $row->[3] =~ m/a/) ||
+          ($s && $row->[3] =~ m/s/))))
     {
-      push @all, $row2;
+      push @all, $row;
     }
   }
   return \@all;
@@ -8171,7 +8175,6 @@ sub Categories
   my $x = $self->IsUserExtAdmin();
   my $a = $self->IsUserAdmin();
   my $s = $self->IsUserSuperAdmin();
-  #my $i = $self->IsUserIncarnationExpertOrHigher();
   my $sql = 'SELECT id,name,restricted,interface,need_note FROM categories ORDER BY name ASC';
   #print "$sql\n<br/>";
   my $ref = $self->GetDb()->selectall_arrayref($sql);
