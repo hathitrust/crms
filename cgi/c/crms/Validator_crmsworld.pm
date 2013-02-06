@@ -82,17 +82,24 @@ sub CalcStatus
   {
     $return{'hold'} = $other_user;
   }
-  # Match if attr/reasons match; dates must match unless und/nfi.
+  # Match if attr/reasons match.
   elsif ($attr eq $other_attr && $reason eq $other_reason &&
          (($self->TolerantCompare($renNum, $other_renNum) &&
            $self->TolerantCompare($renDate, $other_renDate))
           ||
           $attr eq 'und'))
   {
-    # If both reviewers are non-advanced mark as provisional match
-    if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+    # If both reviewers are non-advanced mark as provisional match.
+    # Also, mark provisional if date info disagrees, unless und
+    if (((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+        ||
+        ((!$self->TolerantCompare($renNum, $other_renNum)
+          ||
+          !$self->TolerantCompare($renDate, $other_renDate))
+         &&
+         $attr ne 'und'))
     {
-       $status = 3;
+      $status = 3;
     }
     else #Mark as 4 - two that agree
     {
