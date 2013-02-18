@@ -18,6 +18,7 @@ sub ValidateSubmission
   $renDate =~ s/\s+//g if $renDate;
   my $pubDate = $self->GetPubDate($id);
   $pubDate = $renDate if $renNum;
+  # FIXME: validate the note category and need for a note against the DB categories table.
   if ($attr eq 'und' && $reason eq 'nfi' && ((!$note) || (!$category)))
   {
     $errorMsg .= 'und/nfi must include note category and note text.';
