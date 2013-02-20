@@ -8458,7 +8458,7 @@ sub GetADDFromAuthor
 
   my $add = undef;
   my $a = $self->GetRecordAuthor($id, undef, 1);
-  if ($a =~ m/\d\d\d\d-(\d\d\d\d)/)
+  if ($a =~ m/\d?\d\d\d\??\s*-\s*(\d?\d\d\d)[.,;) ]*$/)
   {
     $add = $1;
   }
