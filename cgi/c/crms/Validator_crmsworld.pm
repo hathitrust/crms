@@ -41,6 +41,7 @@ sub ValidateSubmission
   {
     if ($category && !$note)
     {
+      # FIXME: this is in the categories DB table, should not hard code here.
       if ($category ne 'Expert Accepted' && $category ne 'Crown Copyright')
       {
         $errorMsg .= 'Must include a note if there is a category. ';
@@ -84,14 +85,10 @@ sub CalcStatus
     $return{'hold'} = $other_user;
   }
   # Match if attr/reasons match.
-  elsif ($attr eq $other_attr && $reason eq $other_reason &&
-         (($self->TolerantCompare($renNum, $other_renNum) &&
-           $self->TolerantCompare($renDate, $other_renDate))
-          ||
-          $attr eq 'und'))
+  elsif ($attr eq $other_attr && $reason eq $other_reason)
   {
     # If both reviewers are non-advanced mark as provisional match.
-    # Also, mark provisional if date info disagrees, unless und
+    # Also, mark provisional if date info disagrees, unless und.
     if (((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
         ||
         ((!$self->TolerantCompare($renNum, $other_renNum)
