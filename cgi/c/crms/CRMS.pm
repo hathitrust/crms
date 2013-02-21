@@ -70,7 +70,7 @@ sub set
 
 sub Version
 {
-  return '4.3.5';
+  return '4.3.6';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -707,6 +707,11 @@ sub CheckAndLoadItemIntoCandidates
     print "Unfilter $id -- reverted from pdus/gfv\n";
     $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
   }
+  # FIXME: we should use this to exclude Wrong Record
+  #        but this hasn't been exhaustively tested yet.
+  #my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=? AND' .
+  #          ' category!="Wrong Record" AND category!="Expert Accepted" AND' .
+  #          ' user!="autocrms" AND validated!=0';
   if ($self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'") > 0)
   {
     print "Skip $id -- already in historical reviews\n";
@@ -8455,12 +8460,15 @@ sub GetADDFromAuthor
 {
   my $self = shift;
   my $id   = shift;
+  my $a    = shift; # For testing
 
   my $add = undef;
-  my $a = $self->GetRecordAuthor($id, undef, 1);
-  if ($a =~ m/\d?\d\d\d\??\s*-\s*(\d?\d\d\d)[.,;) ]*$/)
+  $a = $self->GetRecordAuthor($id, undef, 1) unless $a;
+  my $regex = '\d?\d\d\d\??\s*-\s*(\d?\d\d\d)[.,;) ]*$';
+  if ($a =~ m/$regex/)
   {
     $add = $1;
+    $add = undef if $a =~ m/(fl\.*|active)\s*$regex/i;
   }
   return $add;
 }
