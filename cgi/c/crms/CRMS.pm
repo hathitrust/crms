@@ -520,8 +520,8 @@ sub ExportReviews
   my $count = 0;
   my $user = $self->get('sys');
   my $time = $self->GetTodaysDate();
-  my ($fh, $file) = $self->GetExportFh() unless $fromcgi;
-  print ">>> Exporting to $file.\n" unless $fromcgi;
+  my ($fh, $temp, $perm) = $self->GetExportFh() unless $fromcgi;
+  print ">>> Exporting to $temp.\n" unless $fromcgi;
   my $start_size = $self->GetCandidatesSize();
   foreach my $id (@{$list})
   {
@@ -554,7 +554,12 @@ sub ExportReviews
     $self->RemoveFromCandidates($id);
     $count++;
   }
-  close $fh unless $fromcgi;
+  if (!$fromcgi)
+  {
+    close $fh;
+    print ">>> Moving to $perm.\n";
+    rename $temp, $perm;
+  }
   # Update correctness/validation now that everything is in historical
   foreach my $id (@{$list})
   {
@@ -578,7 +583,7 @@ sub ExportReviews
   if (!$fromcgi)
   {
     printf "After export, removed %d volumes from candidates.\n", $start_size-$self->GetCandidatesSize();
-    eval { $self->EmailReport($count, $file); };
+    eval { $self->EmailReport($count, $perm); };
     $self->SetError("EmailReport() failed: $@") if $@;
   }
 }
@@ -606,6 +611,9 @@ sub EmailReport
   }
 }
 
+# Returns a triplet of (filehandle, temp name, permanent name)
+# Filehande is to the temp file; after it is closed it needs
+# to be renamed to the permanent name.
 sub GetExportFh
 {
   my $self = shift;
@@ -613,10 +621,11 @@ sub GetExportFh
   $date    =~ s/:/_/g;
   $date    =~ s/ /_/g;
 
-  my $out = $self->get('root') . '/prep/c/crms/' . $self->get('sys') . '_' . $date . ".rights";
-  if (-f $out) { die "file already exists: $out \n"; }
-  open (my $fh, ">", $out) || die "failed to open exported file ($out): $! \n";
-  return ($fh, $out);
+  my $perm = $self->get('root') . '/prep/c/crms/' . $self->get('sys') . '_' . $date . ".rights";
+  my $temp = $perm . '.tmp';
+  if (-f $temp) { die "file already exists: $temp\n"; }
+  open (my $fh, ">", $temp) || die "failed to open exported file ($temp): $! \n";
+  return ($fh, $temp, $perm);
 }
 
 sub RemoveFromQueue
