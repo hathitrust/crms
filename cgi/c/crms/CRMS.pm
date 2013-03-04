@@ -70,7 +70,7 @@ sub set
 
 sub Version
 {
-  return '4.3.6';
+  return '4.3.7';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -1091,7 +1091,7 @@ sub AddItemToQueueOrSetItemActive
   {
     my $record = $self->GetMetadata($id);
     @msgs = @{ $self->GetViolations($id, $record, $priority, $override) };
-    if (scalar @msgs)
+    if (scalar @msgs && !$override)
     {
       $stat = 1;
     }
