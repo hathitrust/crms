@@ -4460,7 +4460,7 @@ sub CreateCandidatesData
   my $cnt = $self->GetCandidatesSize();
   my $sql = 'SELECT cd.ym,cd.cnt,ed.cnt FROM' .
             ' (SELECT EXTRACT(YEAR_MONTH FROM c.time) AS ym,SUM(c.addedamount) AS cnt FROM candidatesrecord c GROUP BY ym) cd' .
-            ' LEFT JOIN' .
+            ' RIGHT JOIN' .
             ' (SELECT EXTRACT(YEAR_MONTH FROM e.time) AS ym,COUNT(e.id) AS cnt FROM exportdata e' .
             '  WHERE e.src="candidates" OR src="inherited" GROUP BY EXTRACT(YEAR_MONTH FROM e.time)) ed' .
             ' ON (ed.ym=cd.ym) ORDER BY cd.ym DESC';
