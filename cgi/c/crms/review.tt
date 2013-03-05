@@ -251,7 +251,7 @@
         </span></td></tr>
         [% totalReviews = crms.GetReviewsCount('adminHistoricalReviews', 'Identifier', barcode) %]
         [% IF totalReviews > 0 %]
-          <tr><td><a class="smallishText" href="?p=adminHistoricalReviews;search1=Identifier;search1value=$barcode" target="_blank">
+          <tr><td><a class="smallishText" href="[% crms.Sysify('?p=adminHistoricalReviews;search1=Identifier;search1value=' _ barcode) %]" target="_blank">
           [% totalReviews %] historical [% crms.Pluralize("review", totalReviews) %]
           </a></td></tr>
         [% END %]
