@@ -111,7 +111,7 @@ These items will take priority in the review process.
       <td><h4>[% ref.size %]&nbsp;High-priority&nbsp;[% crms.Pluralize("Volume", ref.size) %]</h4></td>
       <td>
         <form action="crms">
-          <input type="hidden" name="p" value="queueAdd"/>
+          [% crms.Hiddenify(cgi, 'ids', 'priority') %]
           <input type="submit" value="Refresh Page"/>
         </form>
       </td>
