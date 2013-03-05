@@ -143,7 +143,7 @@ These items will take priority in the review process.
     <td>[% crms.SimpleSqlGet(sql) %]</td>
     <td>
       [% IF r.5 == user && r.6 == 0 %]
-      <a href="crms?p=review;editing=1;barcode=[% r.0 %]" target="_blank">Do It</a>
+      <a href="[% crms.Sysify('crms?p=review;editing=1;barcode=' _  r.0) %]" target="_blank">Do It</a>
       [% END %]
     </td>
   </tr>
