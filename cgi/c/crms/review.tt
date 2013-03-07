@@ -246,7 +246,7 @@
           [% IF crms.IsVolumeInQueue(barcode) %]
             Priority [% crms.GetPriority(barcode) %]
           [% ELSE %]
-            Not in queue
+            Not in queue. Please cancel; you will get an error if you submit.
           [% END %]
         </span></td></tr>
         [% totalReviews = crms.GetReviewsCount('adminHistoricalReviews', 'Identifier', barcode) %]
@@ -260,6 +260,10 @@
           <tr><td><a class="smallishText" href="?p=adminReviews;search1=Identifier;search1value=$barcode" target="_blank">
           [% totalReviews %] active [% crms.Pluralize("review", totalReviews) %]
           </a></td></tr>
+        [% END %]
+        [% addedby = crms.SimpleSqlGet("SELECT added_by FROM queue WHERE id=?", barcode) %]
+        [% IF addedby %]
+          <tr><td><span class="smallishText">Added by [% addedby %]</span></td></tr>
         [% END %]
         </table>
       [% END %]
