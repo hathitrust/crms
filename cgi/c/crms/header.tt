@@ -10,6 +10,8 @@
     <script type="text/javascript" src="/c/crms/menu.js"></script>
     <script type="text/javascript">
 <!--
+var gSys = '[% crms.Sys() %]';
+
 function toggleVisibility(id)
 {
   var me = document.getElementById(id);
