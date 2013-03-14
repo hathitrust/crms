@@ -70,7 +70,7 @@ sub set
 
 sub Version
 {
-  return '4.3.8';
+  return '4.3.9';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -772,16 +772,12 @@ sub Filter
   my $self = shift;
   my $id   = shift;
   my $src  = shift;
-  my $time = shift;
 
-  $time = $self->SimpleSqlGet("SELECT time FROM candidates WHERE id='$id'") unless $time;
-  $time = $self->SimpleSqlGet("SELECT time FROM und WHERE id='$id'") unless $time;
-  $time = ($time)? qq{'$time'}:'NULL';
   return if $src eq 'duplicate' && $self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id'");
-  my $sql = "REPLACE INTO und (id,src,time) VALUES ('$id','$src',$time)";
-  $self->PrepareSubmitSql($sql);
-  $sql = "DELETE FROM candidates WHERE id='$id'";
-  $self->PrepareSubmitSql($sql);
+  my $sql = 'REPLACE INTO und (id,src) VALUES (?,?)';
+  $self->PrepareSubmitSql($sql, $id, $src);
+  $sql = 'DELETE FROM candidates WHERE id=?';
+  $self->PrepareSubmitSql($sql, $id);
 }
 
 sub Unfilter
@@ -791,7 +787,7 @@ sub Unfilter
 
   if ($self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id'"))
   {
-    my $time = $self->SimpleSqlGet("SELECT time FROM und WHERE id='$id'");
+    my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
     $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
     $self->CheckAndLoadItemIntoCandidates($id, $time);
   }
@@ -7277,37 +7273,6 @@ sub ReplicationDelay
   my $ref = $self->GetDb()->selectall_arrayref($sql);
   my @return = ($ref->[0]->[0],$self->FormatTime($ref->[0]->[1]));
   return @return;
-}
-
-# Places an und volume back in candidates unless it qualifies for the und table in some other way.
-sub RestoreUnd
-{
-  my $self    = shift;
-  my $id      = shift;
-  my $verbose = shift;
-
-  my $time = $self->SimpleSqlGet("SELECT time FROM und WHERE id='$id'");
-  my $src = $self->SimpleSqlGet("SELECT src FROM und WHERE id='$id'");
-  if ($time || $src)
-  {
-    my $src2 = $self->ShouldVolumeGoInUndTable($id);
-    if ($src2 && $src2 ne $src)
-    {
-      my $sql = "UPDATE und SET src='$src',time='$time' WHERE id='$id'";
-      print "$sql\n" if $verbose;
-      $self->PrepareSubmitSql($sql);
-    }
-    else
-    {
-      my $sql = "REPLACE INTO candidates (id,time) VALUES ('$id','$time')";
-      print "$sql\n" if $verbose;
-      $self->PrepareSubmitSql($sql);
-      $self->UpdateMetadata($id, 'candidates');
-      $sql = "DELETE FROM und WHERE id='$id'";
-      print "$sql\n" if $verbose;
-      $self->PrepareSubmitSql($sql);
-    }
-  }
 }
 
 sub StackTrace
