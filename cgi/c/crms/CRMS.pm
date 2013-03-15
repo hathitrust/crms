@@ -105,7 +105,7 @@ sub ConnectToDb
   my $dev       = $self->get('dev');
   my $root      = $self->get('root');
   my $sys       = $self->get('sys');
-  # FIXME FIXME: change the CRMS US and World passwords before deploying this.
+
   my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
   require $cfg;
   my $db_user   = $CRMSPasswords::mysqlUser;
@@ -142,7 +142,7 @@ sub ConnectToSdrDb
   my $dev       = $self->get('dev');
   my $root      = $self->get('root');
   my $sys       = $self->get('sys');
-  # FIXME FIXME: change the CRMS US and World passwords before deploying this.
+
   my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
   require $cfg;
   my $db_user   = $CRMSPasswords::mysqlMdpUser;
@@ -662,7 +662,7 @@ sub LoadNewItemsInCandidates
   print "Before load, the max timestamp in the candidates table is $start, and the size is $start_size\n";
   if (!$skipnm)
   {
-    my $sql = "SELECT id,time FROM und WHERE src='no meta'";
+    my $sql = "SELECT id FROM und WHERE src='no meta'";
     my $dbh = $self->GetDb();
     my $ref = $dbh->selectall_arrayref($sql);
     if (scalar @{ $ref })
@@ -670,10 +670,9 @@ sub LoadNewItemsInCandidates
       printf "Checking %d possible no-meta additions to candidates\n", scalar @{ $ref };
       foreach my $row (@{$ref})
       {
-        my $id   = $row->[0];
-        my $time = $row->[1];
-
-        $self->CheckAndLoadItemIntoCandidates($id, $time);
+        my $id = $row->[0];
+        
+        $self->CheckAndLoadItemIntoCandidates($id);
       }
     }
   }
@@ -688,10 +687,9 @@ sub LoadNewItemsInCandidates
   printf "Checking %d possible additions to candidates from rights DB\n", scalar @{ $ref };
   foreach my $row (@{$ref})
   {
-    my $id   = $row->[0] . '.' . $row->[1];
-    my $time = $row->[2];
+    my $id = $row->[0] . '.' . $row->[1];
     
-    $self->CheckAndLoadItemIntoCandidates($id, $time);
+    $self->CheckAndLoadItemIntoCandidates($id);
   }
   my $end_size = $self->GetCandidatesSize();
   my $diff = $end_size - $start_size;
@@ -703,13 +701,13 @@ sub LoadNewItemsInCandidates
   return 1; # FIXME: this only ever returns 1
 }
 
-# Adds a single ic/bib volume to candidates if possible, putting it in the und table if not.
+# Adds a single qualifying volume to candidates if possible, putting it in the und table if not.
 sub CheckAndLoadItemIntoCandidates
 {
   my $self = shift;
   my $id   = lc shift;
-  my $time = shift;
 
+  my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
   # If it was a gfv and it reverted to ic/bib, remove it from und, alert, and continue.
   if ($self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id' AND src='gfv'") > 0)
   {
@@ -740,7 +738,7 @@ sub CheckAndLoadItemIntoCandidates
     print "No metadata yet for $id: will try again tomorrow.\n";
     if (0 == $self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id'"))
     {
-      $self->Filter($id, 'no meta', $time);
+      $self->Filter($id, 'no meta');
     }
     return;
   }
@@ -753,7 +751,7 @@ sub CheckAndLoadItemIntoCandidates
       my $sql = "SELECT COUNT(*) FROM und WHERE id='$id'";
       my $already = (1 == $self->SimpleSqlGet($sql));
       printf "Skip $id ($src) -- %s in filtered volumes\n", ($already)? 'updating':'inserting';
-      $self->Filter($id, $src, $time);
+      $self->Filter($id, $src);
     }
     else
     {
@@ -787,9 +785,8 @@ sub Unfilter
 
   if ($self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id'"))
   {
-    my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
     $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
-    $self->CheckAndLoadItemIntoCandidates($id, $time);
+    $self->CheckAndLoadItemIntoCandidates($id);
   }
 }
 
