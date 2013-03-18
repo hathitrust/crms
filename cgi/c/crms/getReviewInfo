@@ -25,6 +25,13 @@ my $sql = "SELECT attr,reason,note,category,renNum,renDate FROM reviews WHERE id
 my $row = $crms->GetDb()->selectall_arrayref($sql)->[0];
 my %data;
 $data{'rights'} = $crms->GetCodeFromAttrReason($row->[0], $row->[1]);
+# If the rights attr is not und (5) then run a rights prediction
+if ($row->[0] != $crms->TranslateAttr('und'))
+{
+  $data{'rights'} = $crms->PredictRights($id, $row->[5], $row->[4],
+                                         $crms->TolerantCompare($row->[3],
+                                                                'Crown Copyright'));
+}
 $data{'note'} = $row->[2];
 $data{'category'} = $row->[3];
 $data{'renNum'} = $row->[4];
