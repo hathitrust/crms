@@ -5754,6 +5754,62 @@ sub GetNextItemForReview
   return $id;
 }
 
+# Alternate single-query version that needs extensive testing
+# before replacing the above version.
+sub GetNextItemForReviewSQ
+{
+  my $self = shift;
+  my $user = shift;
+  
+  my $id = undef;
+  my $err = undef;
+  my $sql = undef;
+  eval{
+    $sql = 'LOCK TABLES queue WRITE, queue AS q WRITE, reviews READ, reviews AS r READ,' .
+           ' reviews AS r2 READ, users READ, timer WRITE, systemvars READ';
+    $self->PrepareSubmitSql($sql);
+    my $exclude = 'q.priority<3 AND';
+    if ($self->IsUserAdmin($user))
+    {
+      # Only admin+ reviews P4+
+      $exclude = '';
+    }
+    # If user is expert, get priority 3 items.
+    elsif ($self->IsUserExpert($user))
+    {
+      $exclude = 'q.priority<4 AND';
+    }
+    my $p1f = $self->GetPriority1Frequency();
+    # Exclude priority 1 if our d100 roll is over the P1 threshold or user is not advanced
+    my $exclude1 = (rand() >= $p1f || !$self->IsUserAdvanced($user))? 'q.priority!=1 AND':'';
+    $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt' .
+           " FROM queue q WHERE $exclude $exclude1 q.expcnt=0 AND q.locked IS NULL" .
+           " AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user='$user')" .
+           ' HAVING cnt<2 ORDER BY q.priority DESC, cnt DESC, q.time ASC';
+    #print "$sql<br/>\n";
+    my $ref = $self->GetDb()->selectall_arrayref($sql);
+    foreach my $row (@{$ref})
+    {
+      my $id2 = $row->[0];
+      $err = $self->LockItem($id2, $user);
+      if (!$err)
+      {
+        $id = $id2;
+        last;
+      }
+    }
+  };
+  $self->SetError($@) if $@;
+  $self->PrepareSubmitSql('UNLOCK TABLES');
+  if (!$id)
+  {
+    $err = sprintf "Could not get a volume for $user to review%s.", ($err)? " ($err)":'';
+    $err .= "\n$sql" if $sql;
+    $self->SetError($err);
+  }
+  return $id;
+}
+
 sub GetPriority1Frequency
 {
   my $self = shift;
