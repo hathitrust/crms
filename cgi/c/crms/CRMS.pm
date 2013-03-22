@@ -657,6 +657,7 @@ sub LoadNewItemsInCandidates
   my $end    = shift;
 
   $self->set('nosystem','nosystem');
+  my $now = $self->GetTheDateTime();
   $start = $self->SimpleSqlGet('SELECT max(time) FROM candidatesrecord') unless $start;
   my $start_size = $self->GetCandidatesSize();
   print "Last load to the candidates table was $start, and the size is $start_size\n";
@@ -695,7 +696,7 @@ sub LoadNewItemsInCandidates
   my $diff = $end_size - $start_size;
   print "After load, candidates has $end_size items. Added $diff.\n\n";
   #Record the update to the queue
-  $sql = "INSERT INTO candidatesrecord (time,addedamount) VALUES ($start,$diff)";
+  $sql = "INSERT INTO candidatesrecord (time,addedamount) VALUES ($now,$diff)";
   $self->PrepareSubmitSql($sql);
   $self->set('nosystem',undef);
 }
