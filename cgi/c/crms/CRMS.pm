@@ -70,7 +70,7 @@ sub set
 
 sub Version
 {
-  return '4.3.9';
+  return '4.3.10';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -657,9 +657,9 @@ sub LoadNewItemsInCandidates
   my $end    = shift;
 
   $self->set('nosystem','nosystem');
-  $start = $self->SimpleSqlGet('SELECT max(time) FROM candidates') unless $start;
+  $start = $self->SimpleSqlGet('SELECT max(time) FROM candidatesrecord') unless $start;
   my $start_size = $self->GetCandidatesSize();
-  print "Before load, the max timestamp in the candidates table is $start, and the size is $start_size\n";
+  print "Last load to the candidates table was $start, and the size is $start_size\n";
   if (!$skipnm)
   {
     my $sql = "SELECT id FROM und WHERE src='no meta'";
@@ -695,10 +695,9 @@ sub LoadNewItemsInCandidates
   my $diff = $end_size - $start_size;
   print "After load, candidates has $end_size items. Added $diff.\n\n";
   #Record the update to the queue
-  $sql = "INSERT INTO candidatesrecord (addedamount) VALUES ($diff)";
+  $sql = "INSERT INTO candidatesrecord (time,addedamount) VALUES ($start,$diff)";
   $self->PrepareSubmitSql($sql);
   $self->set('nosystem',undef);
-  return 1; # FIXME: this only ever returns 1
 }
 
 # Adds a single qualifying volume to candidates if possible, putting it in the und table if not.
@@ -714,11 +713,6 @@ sub CheckAndLoadItemIntoCandidates
     print "Unfilter $id -- reverted from pdus/gfv\n";
     $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
   }
-  # FIXME: we should use this to exclude Wrong Record
-  #        but this hasn't been exhaustively tested yet.
-  #my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=? AND' .
-  #          ' category!="Wrong Record" AND category!="Expert Accepted" AND' .
-  #          ' user!="autocrms" AND validated!=0';
   if ($self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'") > 0)
   {
     print "Skip $id -- already in historical reviews\n";
