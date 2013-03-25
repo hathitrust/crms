@@ -657,7 +657,7 @@ sub LoadNewItemsInCandidates
   my $end    = shift;
 
   $self->set('nosystem','nosystem');
-  my $now = $self->GetTheDateTime();
+  my $now = $self->GetTodaysDate();
   $start = $self->SimpleSqlGet('SELECT max(time) FROM candidatesrecord') unless $start;
   my $start_size = $self->GetCandidatesSize();
   print "Last load to the candidates table was $start, and the size is $start_size\n";
