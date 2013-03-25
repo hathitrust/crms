@@ -696,8 +696,8 @@ sub LoadNewItemsInCandidates
   my $diff = $end_size - $start_size;
   print "After load, candidates has $end_size items. Added $diff.\n\n";
   #Record the update to the queue
-  $sql = "INSERT INTO candidatesrecord (time,addedamount) VALUES ($now,$diff)";
-  $self->PrepareSubmitSql($sql);
+  $sql = 'INSERT INTO candidatesrecord (time,addedamount) VALUES (?,?)';
+  $self->PrepareSubmitSql($sql, $now, $diff);
   $self->set('nosystem',undef);
 }
 
