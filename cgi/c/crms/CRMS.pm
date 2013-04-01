@@ -695,7 +695,7 @@ sub LoadNewItemsInCandidates
   my $end_size = $self->GetCandidatesSize();
   my $diff = $end_size - $start_size;
   print "After load, candidates has $end_size items. Added $diff.\n\n";
-  #Record the update to the queue
+  # Record the update
   $sql = 'INSERT INTO candidatesrecord (time,addedamount) VALUES (?,?)';
   $self->PrepareSubmitSql($sql, $now, $diff);
   $self->set('nosystem',undef);
@@ -5534,6 +5534,7 @@ sub UnlockItem
   my $id   = shift;
   my $user = shift;
 
+  $user = $self->get('user') unless defined $user;
   my $sql = "UPDATE queue SET locked=NULL WHERE id='$id' AND locked='$user'";
   $self->PrepareSubmitSql($sql);
   $self->RemoveFromTimer($id, $user);
