@@ -70,7 +70,7 @@ sub set
 
 sub Version
 {
-  return '4.3.10';
+  return '4.3.11';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -2921,7 +2921,7 @@ sub PTAddress
   my $pt = 'babel.hathitrust.org';
   my $syspt = $self->SimpleSqlGet('SELECT value FROM systemvars WHERE name="pt"');
   $pt = $syspt if $syspt;
-  return 'https://' . $pt . '/cgi/pt?attr=1;id=' . $id;
+  return 'https://' . $pt . '/cgi/pt?debug=super;id=' . $id;
 }
 
 sub LinkToPT
