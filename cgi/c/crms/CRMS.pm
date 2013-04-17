@@ -70,7 +70,7 @@ sub set
 
 sub Version
 {
-  return '4.3.11';
+  return '4.3.12';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -528,7 +528,7 @@ sub ExportReviews
     my $suppress = 0;
     my ($attr,$reason) = $self->GetFinalAttrReason($id);
     # FIXME: find a more elegant way to do this
-    if ($user eq 'crmsworld' && $attr eq 'und' && $reason eq 'nfi')
+    if ($user eq 'crmsworld' && $attr eq 'und')
     {
       my $rq = $self->RightsQuery($id,1);
       if ($rq)
