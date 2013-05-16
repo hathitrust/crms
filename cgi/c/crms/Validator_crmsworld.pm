@@ -17,7 +17,8 @@ sub ValidateSubmission
   $renDate =~ s/\s+//g if $renDate;
   my $pubDate = $self->GetPubDate($id);
   $pubDate = $renDate if $renNum;
-  if ($attr eq 'und' && $reason eq 'nfi' && ((!$note) || (!$category)))
+  if ($attr eq 'und' && $reason eq 'nfi' &&
+      (!$category || (!$note && $self->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category))))
   {
     $errorMsg .= 'und/nfi must include note category and note text.';
     $noteError = 1;
