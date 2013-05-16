@@ -70,7 +70,7 @@ sub set
 
 sub Version
 {
-  return '4.3.9';
+  return '4.3.13';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -528,7 +528,7 @@ sub ExportReviews
     my $suppress = 0;
     my ($attr,$reason) = $self->GetFinalAttrReason($id);
     # FIXME: find a more elegant way to do this
-    if ($user eq 'crmsworld' && $attr eq 'und' && $reason eq 'nfi')
+    if ($user eq 'crmsworld' && $attr eq 'und')
     {
       my $rq = $self->RightsQuery($id,1);
       if ($rq)
@@ -657,9 +657,10 @@ sub LoadNewItemsInCandidates
   my $end    = shift;
 
   $self->set('nosystem','nosystem');
-  $start = $self->SimpleSqlGet('SELECT max(time) FROM candidates') unless $start;
+  my $now = $self->GetTodaysDate();
+  $start = $self->SimpleSqlGet('SELECT max(time) FROM candidatesrecord') unless $start;
   my $start_size = $self->GetCandidatesSize();
-  print "Before load, the max timestamp in the candidates table is $start, and the size is $start_size\n";
+  print "Last load to the candidates table was $start, and the size is $start_size\n";
   if (!$skipnm)
   {
     my $sql = "SELECT id FROM und WHERE src='no meta'";
@@ -694,11 +695,10 @@ sub LoadNewItemsInCandidates
   my $end_size = $self->GetCandidatesSize();
   my $diff = $end_size - $start_size;
   print "After load, candidates has $end_size items. Added $diff.\n\n";
-  #Record the update to the queue
-  $sql = "INSERT INTO candidatesrecord (addedamount) VALUES ($diff)";
-  $self->PrepareSubmitSql($sql);
+  # Record the update
+  $sql = 'INSERT INTO candidatesrecord (time,addedamount) VALUES (?,?)';
+  $self->PrepareSubmitSql($sql, $now, $diff);
   $self->set('nosystem',undef);
-  return 1; # FIXME: this only ever returns 1
 }
 
 # Adds a single qualifying volume to candidates if possible, putting it in the und table if not.
@@ -714,11 +714,6 @@ sub CheckAndLoadItemIntoCandidates
     print "Unfilter $id -- reverted from pdus/gfv\n";
     $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
   }
-  # FIXME: we should use this to exclude Wrong Record
-  #        but this hasn't been exhaustively tested yet.
-  #my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=? AND' .
-  #          ' category!="Wrong Record" AND category!="Expert Accepted" AND' .
-  #          ' user!="autocrms" AND validated!=0';
   if ($self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'") > 0)
   {
     print "Skip $id -- already in historical reviews\n";
@@ -2926,7 +2921,7 @@ sub PTAddress
   my $pt = 'babel.hathitrust.org';
   my $syspt = $self->SimpleSqlGet('SELECT value FROM systemvars WHERE name="pt"');
   $pt = $syspt if $syspt;
-  return 'https://' . $pt . '/cgi/pt?attr=1;id=' . $id;
+  return 'https://' . $pt . '/cgi/pt?debug=super;id=' . $id;
 }
 
 sub LinkToPT
@@ -5539,6 +5534,7 @@ sub UnlockItem
   my $id   = shift;
   my $user = shift;
 
+  $user = $self->get('user') unless defined $user;
   my $sql = "UPDATE queue SET locked=NULL WHERE id='$id' AND locked='$user'";
   $self->PrepareSubmitSql($sql);
   $self->RemoveFromTimer($id, $user);

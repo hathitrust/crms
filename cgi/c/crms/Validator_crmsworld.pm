@@ -11,15 +11,14 @@ sub ValidateSubmission
   my $self = shift;
   my ($id, $user, $attr, $reason, $note, $category, $renNum, $renDate) = @_;
   my $errorMsg = '';
-  #$renDate =~ s/\D//g;
   my $noteError = 0;
   $attr = $self->TranslateAttr($attr);
   $reason = $self->TranslateReason($reason);
   $renDate =~ s/\s+//g if $renDate;
   my $pubDate = $self->GetPubDate($id);
   $pubDate = $renDate if $renNum;
-  # FIXME: validate the note category and need for a note against the DB categories table.
-  if ($attr eq 'und' && $reason eq 'nfi' && ((!$note) || (!$category)))
+  if ($attr eq 'und' && $reason eq 'nfi' &&
+      (!$category || (!$note && $self->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category))))
   {
     $errorMsg .= 'und/nfi must include note category and note text.';
     $noteError = 1;
@@ -41,8 +40,7 @@ sub ValidateSubmission
   {
     if ($category && !$note)
     {
-      # FIXME: this is in the categories DB table, should not hard code here.
-      if ($category ne 'Expert Accepted' && $category ne 'Crown Copyright')
+      if ($self->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category))
       {
         $errorMsg .= 'Must include a note if there is a category. ';
       }
