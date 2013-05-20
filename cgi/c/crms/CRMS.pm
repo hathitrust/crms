@@ -31,13 +31,12 @@ sub new
   my $sys = $args{'sys'};
   $sys = 'crms' unless $sys;
   my $root = $args{'root'};
-  my $cfg = $root . '/bin/c/crms/' . $sys . '.cfg';
-  eval { require $cfg; };
-  if ($@)
+  my %d = $self->ReadConfigFile($cfg);
+  if (!%d)
   {
     $sys = 'crms';
     $cfg = $root . '/bin/c/crms/' . $sys . '.cfg';
-    require $cfg;
+    %d = $self->ReadConfigFile($cfg);
   }
   $self->set('logFile', $args{'logFile'});
   my $errors = [];
@@ -70,7 +69,7 @@ sub set
 
 sub Version
 {
-  return '4.3.13';
+  return '4.3.14';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -91,6 +90,32 @@ sub Sys
   return $self->get('sys');
 }
 
+sub ReadConfigFile
+{
+  my $self = shift;
+  my $path = shift;
+  
+  my %dict = ();
+  my $fh;
+  unless (open $fh, '<:encoding(UTF-8)', $path)
+  {
+    $self->SetError("failed to get localization for $path: $!");
+    return undef;
+  }
+  read $fh, my $buff, -s $path; # one of many ways to slurp file.
+  close $fh;
+  my @lines = split "\n", $buff;
+  foreach my $line (@lines)
+  {
+    $line =~ s/#.*//;
+    if ($line =~ m/(\S+)\s*=\s*(\S+(\s+\S+)*)/i)
+    {
+      $dict{$1} = $2;
+    }
+  }
+  return %dict;
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   connect to the mysql DB
 ##  Parameters: nothing
@@ -100,19 +125,19 @@ sub ConnectToDb
 {
   my $self = shift;
 
-  my $db_server = $CRMSGlobals::mysqlServerDev;
-  my $db        = $CRMSGlobals::mysqlDbName;
+  my $db_server = $self->get('mysqlServerDev');
+  my $db        = $self->get('mysqlDbName');
   my $dev       = $self->get('dev');
   my $root      = $self->get('root');
   my $sys       = $self->get('sys');
 
   my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
-  require $cfg;
-  my $db_user   = $CRMSPasswords::mysqlUser;
-  my $db_passwd = $CRMSPasswords::mysqlPasswd;
+  my %d = $self->ReadConfigFile($cfg);
+  my $db_user   = $d{'mysqlUser'};
+  my $db_passwd = $d{'mysqlPasswd'};
   if (!$dev)
   {
-    $db_server = $CRMSGlobals::mysqlServer;
+    $db_server = $self->get('mysqlServer');
   }
   elsif ($dev eq 'crmstest')
   {
@@ -137,19 +162,19 @@ sub ConnectToSdrDb
 {
   my $self = shift;
 
-  my $db_server = $CRMSGlobals::mysqlMdpServerDev;
-  my $db        = $CRMSGlobals::mysqlMdpDbName;
+  my $db_server = $self->get('mysqlMdpServerDev');
+  my $db        = $self->get('mysqlMdpDbName');
   my $dev       = $self->get('dev');
   my $root      = $self->get('root');
   my $sys       = $self->get('sys');
 
   my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
   require $cfg;
-  my $db_user   = $CRMSPasswords::mysqlMdpUser;
-  my $db_passwd = $CRMSPasswords::mysqlMdpPasswd;
+  my $db_user   = $d{'mysqlMdpUser'};
+  my $db_passwd = $d{'mysqlMdpPasswd'};
   if (!$dev)
   {
-    $db_server = $CRMSGlobals::mysqlMdpServer;
+    $db_server = $self->get('mysqlMdpServer');
   }
   #if ($self->get('verbose')) { $self->Logit("DBI:mysql:mdp:$db_server, $db_user, [passwd]"); }
   my $sdr_dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
@@ -8092,7 +8117,6 @@ sub FilterCandidates
 # If ck is specified, it should be of the form "$_ >= 0 && $_ <= 100" which checks the DB value
 # and uses the config file value if the check is failed.
 # If default is specified, returns it if otherwise the return value would be undefined.
-# NOTE: do not use this mechanism for DB connection globals, infinite recursion will result.
 sub GetSystemVar
 {
   my $self    = shift;
@@ -8100,18 +8124,14 @@ sub GetSystemVar
   my $default = shift;
   my $ck      = shift;
 
-  my $sql = "SELECT value FROM systemvars WHERE name='$name'";
-  my $var = $self->SimpleSqlGet($sql);
+  my $sql = 'SELECT value FROM systemvars WHERE name=?';
+  my $var = $self->SimpleSqlGet($sql, $name);
   if ($var && $ck)
   {
     $_ = $var;
     $var = undef unless (eval $ck);
   }
-  if (!defined $var)
-  {
-    $var = eval '$CRMSGlobals::' . $name;
-    #$var = undef if $@;
-  }
+  $var = $self->get($name) unless defined $var;
   $var = $default unless defined $var;
   return $var;
 }
