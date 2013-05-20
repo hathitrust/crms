@@ -31,6 +31,7 @@ sub new
   my $sys = $args{'sys'};
   $sys = 'crms' unless $sys;
   my $root = $args{'root'};
+  my $cfg = $root . '/bin/c/crms/' . $sys . '.cfg';
   my %d = $self->ReadConfigFile($cfg);
   if (!%d)
   {
@@ -38,6 +39,7 @@ sub new
     $cfg = $root . '/bin/c/crms/' . $sys . '.cfg';
     %d = $self->ReadConfigFile($cfg);
   }
+  $self->set($_,        $d{$_}) for keys %d;
   $self->set('logFile', $args{'logFile'});
   my $errors = [];
   $self->set('errors',  $errors);
@@ -145,7 +147,7 @@ sub ConnectToDb
   }
   #if ($self->get('verbose')) { $self->Logit("DBI:mysql:crms:$db_server, $db_user, [passwd]"); }
   my $dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
-            { RaiseError => 1, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
+            { PrintError => 0, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
   $dbh->{mysql_enable_utf8} = 1;
   $dbh->{mysql_auto_reconnect} = 1;
   $dbh->do('SET NAMES "utf8";');
@@ -169,7 +171,7 @@ sub ConnectToSdrDb
   my $sys       = $self->get('sys');
 
   my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
-  require $cfg;
+  my %d = $self->ReadConfigFile($cfg);
   my $db_user   = $d{'mysqlMdpUser'};
   my $db_passwd = $d{'mysqlMdpPasswd'};
   if (!$dev)
@@ -4176,7 +4178,7 @@ sub CreateStatsData
     elsif ($user ne 'all') { $sql .= " AND user='$user'"; }
     #print "$sql<br/>\n";
     my $rows = $dbh->selectall_arrayref($sql);
-    my $row = @{$rows}->[0];
+    my $row = $rows->[0];
     my $i = 0;
     foreach my $title (@titles)
     {
@@ -4243,7 +4245,7 @@ sub CreateStatsData
     elsif ($user ne 'all') { $sql .= " AND user='$user'"; }
     #print "$sql<br/>\n";
     my $rows = $dbh->selectall_arrayref($sql);
-    my $row = @{$rows}->[0];
+    my $row = $rows->[0];
     my $i = 0;
     foreach my $title (@titles)
     {
