@@ -8518,4 +8518,115 @@ sub GetADDFromAuthor
   return $add;
 }
 
+# If successful, returns a hash ref that contains values for some subset of
+# the following keys: 'add', 'author' (the VIAF author name), and 'country'.
+# Returns undef if none of that data could be found.
+sub GetVIAFData
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $author = shift;
+
+  my %ret;
+  my $add;
+  my $a;
+  $a = $author if defined $author;
+  $a = $self->GetAuthor($id) unless defined $a;
+  #print "Looking for $a\n";
+  if (defined $a && length $a)
+  {
+    my $sql = 'SELECT viaf_author,year,country FROM viaf WHERE author=?';
+    my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $a);
+    if (scalar @{$ref} > 0)
+    {
+      $ret{'country'} = $ref->[0]->[2];
+      $ret{'author'}  = $ref->[0]->[0];
+      $ret{'add'} = $ref->[0]->[1];
+      return \%ret;
+    }
+    my $a2 = $a;
+    $a2 =~ s/[^A-Za-z]//g;
+    my %adds;
+    my %names;
+    my $name;
+    my $where;
+    my $url = 'http://viaf.org/viaf/search?query=local.personalNames+all+%22' . $a .
+              '%22+&maximumRecords=10&startRecord=1&sortKeys=holdingscount&httpAccept=text/xml';
+    my $ua = LWP::UserAgent->new;
+    $ua->timeout(1000);
+    my $req = HTTP::Request->new(GET => $url);
+    my $res = $ua->request($req);
+    return unless $res->is_success;
+    my $xml = $res->content;
+    my $parser = XML::LibXML->new();
+    my $doc;
+    eval {
+      $doc = $parser->parse_string($xml);
+    };
+    if ($@) { $self->SetError("failed to parse ($xml): $@"); return; }
+    my $xpc = XML::LibXML::XPathContext->new($doc);
+    #open my $pipe, '|xmllint --format -' or die '...';
+    #print $pipe $xml;
+    #close $pipe;
+    my $n = 0;
+    my $i = 1;
+    my $pref = "/*[local-name()='searchRetrieveResponse']/*[local-name()='records']/*[local-name()='record']";
+    my $xpath = "*[local-name()='recordData']/*[local-name()='VIAFCluster']/*[local-name()='mainHeadings']/*[local-name()='data']/*[local-name()='text']";
+    my $regex = '\d?\d\d\d\??\s*-\s*(\d?\d\d\d)[.,;)\s]*$';
+    foreach my $node ($xpc->findnodes($pref))
+    {
+      my @vals = $node->findnodes($xpath);
+      my $name2;
+      foreach my $node2 (@vals)
+      {
+        my $val = $node2->string_value();
+        my $val2 = $val;
+        $val2 =~ s/[^A-Za-z]//g;
+        #print "  Val $val\n";
+        if ($val =~ m/$regex/)
+        {
+          my $add = $1;
+          $add = undef if $val =~ m/(fl\.*|active)\s*$regex/i;
+          if (defined $add)
+          {
+            ${$adds{$i}}{$add} = 1;
+            $name2 = $val;
+          }
+        }
+        if (length $a2 && $val2 =~ m/^$a2/)
+        {
+          $name = $name2 if $name2 =~ m/[A-Za-z]/;
+          $name = $val unless defined $name;
+          #print "    Name set to $name\n";
+          $n = $i;
+        }
+      }
+      $i++;
+      last if $n > 0;
+    }
+    if ($n > 0)
+    {
+      $pref = "/*[local-name()='searchRetrieveResponse']/*[local-name()='records']/*[local-name()='record'][$n]/*[local-name()='recordData']";
+      $xpath = "$pref/*[local-name()='VIAFCluster']/*[local-name()='nationalityOfEntity']/*[local-name()='data']/*[local-name()='text']";
+      my @vals = $xpc->findnodes($xpath);
+      if (@vals && scalar @vals == 1)
+      {
+        $where = $vals[0]->string_value();
+        $ret{'country'} = substr($where, 0, 2);
+      }
+    }
+    if ($n > 0 && 1 == scalar keys %{$adds{$n}})
+    {
+      $ret{'add'} = (keys %{$adds{$n}})[0];
+      $ret{'author'} = $name if defined $name;
+    }
+    if (defined $name)
+    {
+      $sql = 'INSERT INTO viaf (author,viaf_author,year,country) VALUES (?,?,?,?)';
+      $self->PrepareSubmitSql($sql, $a, $name, $add, $where);
+    }
+  }
+  return (scalar keys %ret > 0)? \%ret:undef;
+}
+
 1;
