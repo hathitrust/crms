@@ -48,8 +48,11 @@ function selMenuItem(id, value)
 -->
     </script>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
-    [% IF page == 'review' %][% INCLUDE reviewJs.tt %][% END %]
-    <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
+    [% IF page == 'review' %]
+      [% INCLUDE reviewJs.tt %]
+    [% ELSE %]
+      <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
+    [% END %]
     [% where = crms.WhereAmI() %]
     [% IF where %][% title = title _ ' - ' _ where %][% END %]
     <title>[% title %] - [% crms.PageToEnglish(page) %]</title>
