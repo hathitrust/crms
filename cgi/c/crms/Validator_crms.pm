@@ -164,7 +164,7 @@ sub ValidateSubmission
   {
     if ( ( $category )  && ( !$note ) )
     {
-      if ($category ne 'Expert Accepted')
+      if ($self->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category))
       {
         $errorMsg .= 'must include a note if there is a category. ';
       }
