@@ -17,7 +17,7 @@ function CheckAll(box,formid)
 [% IF n %]<h4>You have $n [% crms.Pluralize('volume', n) %] on hold.</h4><br/>[% END %]
 
 [% IF cgi.param('unlockSel') %]
-<br/>
+  <br/>
   [% FOREACH param IN cgi.param %]
     [% matches = param.match('(vol_)(.+)') %]
     [% IF matches.0 == 'vol_' %]
@@ -54,7 +54,7 @@ function CheckAll(box,formid)
     [% items = crms.MenuItems(id) %]
     [% FOREACH item IN items %]
       [% target = (item.4)? ' target="' _ item.4 _ '"':'' %]
-      [% url = item.1 %]
+      [% url = crms.Sysify(item.1) %]
       <a href="[% url %]"[% target %]>[% item.0.replace('\s', '&nbsp;') %]</a><br/>
     [% END %]
     </td>
@@ -87,7 +87,7 @@ function CheckAll(box,formid)
       <td style="text-align:center">[% when.replace('\s', '&nbsp;') %]</td>
       <td style="text-align:center"><input type="checkbox" name="vol_[% item %]"/></td>
       <td style="text-align:center">
-        [% IF sysStatus == 'normal' %]<a href="crms?unlock=[% item %];sys=[% sys %]">do it</a>[% END %]
+        [% IF sysStatus == 'normal' %]<a href="[% crms.Sysify("crms?unlock=" _ item) %]">do it</a>[% END %]
       </td>
     </tr>
   [% END %]
