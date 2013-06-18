@@ -97,25 +97,26 @@ Restrict selection:
 </tr></table>
 
 
-
-
-<label for="order" style="width:8em;float:left;">Order by:</label>
-[% crms.InheritanceSelectionMenu('order', order, auto) %]
-
-<select id="dir" name="dir">
-  <option value="ASC"  [% dir == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
-  <option value="DESC" [% dir == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
-</select>
-<br/>
-
-<label for="order2" style="width:8em;float:left;">Then order by:</label>
-[% crms.InheritanceSelectionMenu('order2', order2, auto) %]
-
-<select id="dir2" name="dir2">
-  <option value="ASC"  [% dir2 == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
-  <option value="DESC" [% dir2 == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
-</select>
-<br/>
+<table>
+  <tr>
+    <td><label for="order">Order by:</label></td>
+    <td>[% crms.InheritanceSelectionMenu('order', order, auto) %]
+        <select id="dir" name="dir">
+        <option value="ASC"  [% dir == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
+        <option value="DESC" [% dir == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
+      </select>
+    </td>
+  <tr/>
+  <tr>
+    <td><label for="order2">Then order by:</label></td>
+    <td>[% crms.InheritanceSelectionMenu('order2', order2, auto) %]
+        <select id="dir2" name="dir2">
+        <option value="ASC"  [% dir2 == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
+        <option value="DESC" [% dir2 == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
+      </select>
+    </td>
+  <tr/>
+</table>
 
 <label for="records">Display:</label>
 <input size="3" type="text" id="records" name="records" value="[% recs %]"
