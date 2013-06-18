@@ -21,21 +21,11 @@ function CheckAll(box,formid)
   [% FOREACH param IN cgi.param %]
     [% matches = param.match('(vol_)(.+)') %]
     [% IF matches.0 == 'vol_' %]
-      [% ok = crms.UnlockItemEvenIfNotLocked(matches.1) %]
-      [% IF ok %]
-        <span>Unlocked [% matches.1 %]</span><br/>
-      [% ELSE %]
-        <span style='color:red;'>Could not unlock [% matches.1 %]</span><br/>
-      [% END %]
+      [% blah = crms.UnlockItem(matches.1) %]
     [% END %]
   [% END %]
 [% ELSIF cgi.param('unlock') %]
-  [% ok = crms.UnlockItemEvenIfNotLocked(cgi.param('unlock')) %]
-  [% IF ok %]
-    <span>Unlocked [% cgi.param('unlock') %]</span><br/>
-  [% ELSE %]
-    <span style='color:red;'>Could not unlock [% cgi.param('unlock') %]</span><br/>
-  [% END %]
+  [% blah = crms.UnlockItem(cgi.param('unlock')) %]
 [% END %]
 
 <table class="mainnav">
