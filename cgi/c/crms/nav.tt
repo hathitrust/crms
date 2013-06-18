@@ -1,10 +1,11 @@
+[% p = cgi.param('p') %]
 <ul id="menu" style="width:100%;">
-[% IF cgi.param('p') %]
-<li><span>Home</span>
-<dl class="home">
-  <dt><a href="[% crms.Sysify("crms") %]">Home</a></dt>
-</dl>
-</li>
+[% IF p %]
+  <li><span>Home</span>
+  <dl class="home">
+    <dt><a href="[% crms.Sysify("crms?home=true") %]">Home</a></dt>
+  </dl>
+  </li>
 [% END %]
 
 [% menus = crms.Menus() %]
@@ -16,8 +17,7 @@
     [% items = crms.MenuItems(id) %]
     [% FOREACH item IN items %]
       [% target = (item.4)? ' target="' _ item.4 _ '"':'' %]
-      [% url = item.1 %]
-      <dd><a href="[% url %]">[% item.0.replace('\s', '&nbsp;') %]</a></dd>
+      <dd><a href="[% crms.Sysify(item.1) %]" [% target %]>[% item.0 %]</a></dd>
     [% END %]
   </dl></li>
 [% END %]
