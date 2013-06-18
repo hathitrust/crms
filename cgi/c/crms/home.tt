@@ -85,14 +85,7 @@ function CheckAll(box,formid)
   [% END %]
   <br/><br/>
   <table class="exportStats" style="width:55%">
-  [% ### EASTER EGG ### %]
-  [% IF crms.SimpleSqlGet('SELECT MONTH(NOW())=4 && DAY(NOW())=1') && crms.IsUserAdmin(user) %]
-  <tr><th colspan="6" style="text-align:center;"><span class="major">How many locked items does it have in
-    its nasssty reviewses, my preciousss. <i>Gollum! Gollum!</i>
-  </span></th></tr>
-  [% ELSE %]
   <tr><th colspan="6" style="text-align:center;"><span class="major">Your&nbsp;Locked&nbsp;Items</span></th></tr>
-  [% END %]
   <tr><th>ID</th><th>Title</th><th>Since</th><th>Select</th><th>Unlock</th></tr>
   [% sys = cgi.param('sys') %]
   [% FOREACH item IN locked.keys %]
