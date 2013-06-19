@@ -241,30 +241,37 @@ function VerifyDelete(formid)
     </i></span><br/><br/>-->
     <p><b>Found $inheriting volume[% (inheriting==1)? "":"s"%] from $source source[% (source==1)? "":"s"%], page $n of $of</b></p>
 
+    [% prev = n - 1 %]
+    [% next = n + 1 %]
     [% doPrev = (n > 1) %]
     [% doNext = (n < of) %]
+    [% doFirst = (n > 1) %]
+    [% doLast = (n < of) %]
+    
     [% IF doPrev %]
-    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">previous [% recs %]</a>
+      <a href="?[% crms.URLify(cgi,'n') _ ";n=$prev" %]">
     [% ELSE %]
-    <span class="disabledLink">previous [% recs %]</span>
+      <span class="disabledLink">
     [% END %]
+    previous [% recs %][% IF doPrev %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
     [% IF doNext %]
-    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$next#results" %]">next [% recs %]</a>
+      <a href="?[% crms.URLify(cgi,'n') _ ";n=$next#results" %]">
     [% ELSE %]
-    <span class="disabledLink">next [% recs %]</span>
+      <span class="disabledLink">
     [% END %]
+    next [% recs %][% IF doNext %]</a>[% ELSE %]</span>[% END %]
     &nbsp;||&nbsp;
     [% IF doFirst %]
-    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0#results" %]">first page<a>
+      <a href="?[% crms.URLify(cgi,'n') _ ";n=1#results" %]">first page</a>
     [% ELSE %]
-    <span class="disabledLink">first page</span>
+      <span class="disabledLink">first page</span>
     [% END %]
     &nbsp;||&nbsp;
     [% IF doLast %]
-    <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$last#results" %]">last page</a>
+      <a href="?[% crms.URLify(cgi,'n') _ ";n=$of#results" %]">last page</a>
     [% ELSE %]
-    <span class="disabledLink">last page</span>
+      <span class="disabledLink">last page</span>
     [% END %]
     
     [% color_white  = '#FFFFFF' %]
