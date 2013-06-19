@@ -98,17 +98,6 @@
 <br/><br/>
 <table class='exportStats'>
 <tr>
-  <th>Sanity&nbsp;check&nbsp;the&nbsp;database</th>
-  <td>
-    <form action="crms">
-      [% crms.HiddenSys() %]
-      <input type="hidden" name="p" value="debug"/>
-      <input type="hidden" name="sanityCheck" value="1"/>
-      <input type="submit" value="Do it!"/>
-    </form>
-  </td>
-</tr>
-<tr>
   <th>List&nbsp;Unicode&nbsp;bibdata&nbsp;entries</th>
   <td>
     <form action="crms">
@@ -180,39 +169,6 @@
     [% END %]
   [% END %]
   </table>
-[% END %]
-
-[% IF cgi.param('sanityCheck') %]
-  [% errs = crms.SanityCheckDB() %]
-  <h4>[% errs.size %] Items Need Fixed</h4>
-  <table class="exportStats" style='width:100%;'>
-  <tr><th>Table</th><th>Explanation</th><th>Value</th><th>Fix</th></tr>
-  [% class = 1 %]
-  [% FOREACH error IN errs %]
-    <tr class='[% (class)? 'purple':'major' %]'>
-    [% e = error.split('\s*__\s*') %]
-    <td>[% e.0 %]</td>
-    <td>[% e.1 %]</td>
-    <td>[% e.2.replace('\s','&nbsp;') %]</td>
-    <td>
-      [% id = e.1.match('.+?(\w+\.[A-Za-z]?\d+)').0 %]
-      [% IF (e.0 == 'bibdata' || e.0 == 'candidates') && id %]
-        <form action="crms">
-          [% crms.HiddenSys() %]
-          <input type="hidden" name="p" value="debug"/>
-          [% IF e.0 == 'candidates' %]
-            <input type="hidden" name="candidates" value="1"/>
-          [% END %]
-          <input type="hidden" name="fix" value="1"/>
-          <input type="hidden" name="ids" value="[% id %]"/>
-          <input type="submit" value=""/>
-        </form>
-      [% END %]
-    </td>
-    </tr>
-    [% class = (class)? 0:1 %]
-  [% END %]
-  </table><br/>
 [% END %]
 
 [% # Disable this in production -- too dangerous %]
