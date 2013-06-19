@@ -127,8 +127,7 @@
   [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="debug"/>
   <input type="hidden" name="fix" value="1"/>
-  <p class="smallishText">Enter one volume id per line.
-  Entries that don't have a namespace will be given an <code>mdp.</code> prefix.</p>
+  <p class="smallishText">Enter one volume id per line.</p>
   <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;">[% ids %]</textarea><br/>
   <input type="submit" value="Submit"/>
 </form>
@@ -137,34 +136,16 @@
 [% IF cgi.param('fix') && ids %]
   <h4>Tried to Fix:</h4>
   <table class="exportStats" style="width:33%">
-  <tr><th>ID</th><th>Sys&nbsp;ID</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th><th>Country</th><th>Table</th></tr>
+  <tr><th>ID</th><th>Sys&nbsp;ID</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th><th>Country</th></tr>
   [% FOREACH id IN ids.split %]
-    [% cand = crms.SimpleSqlGet("SELECT COUNT(*) FROM candidates WHERE id='$id'") %]
-    [% bib = crms.SimpleSqlGet("SELECT COUNT(*) FROM bibdata WHERE id='$id'") %]
-    [% IF id.match('^\d+$') %][% id = 'mdp.' _ id %][% END %]
-    [% id = id.remove('(^\s+)|(\s+$)') %]
-    [% which = "candidates" %]
-    [% where = "" %]
-    [% IF cand %]
-      [% blah = crms.UpdateMetadata(id, 'candidates') %]
-      [% where = "<code>candidates</code>" %]
-    [% END %]
-    [% IF bib %]
-      [% blah = crms.UpdateMetadata(id) %]
-      [% IF where.length %][% where = where _ ' and ' %][% END %]
-      [% where = where _ '<code>bibdata</code>' %]
-      [% which = "bibdata" %]
-    [% END %]
+    [% id = id.remove('(^\s+)|(\s+$)') %]   
+    [% blah = crms.UpdateMetadata(id) %]
     [% sysid = crms.BarcodeToId(id) %]
-    [% IF which == 'bibdata' %]
-      [% sql = "SELECT author,title,YEAR(pub_date),country FROM $which WHERE id='$id'" %]
-    [% ELSE %]
-      [% sql = "SELECT author,title,YEAR(pub_date) FROM $which WHERE id='$id'" %]
-    [% END %]
+    [% sql = "SELECT author,title,YEAR(pub_date),country FROM bibdata WHERE id='$id'" %]
     [% ref  = crms.GetDb().selectall_arrayref(sql) %]
     [% FOREACH r IN ref %]
       <tr><td>[% id %]</td><td>[% sysid %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td>
-          <td>[% IF which == 'bibdata' %][% r.3 %][% ELSE %]-[% END %]</td><td>[% where %]</td></tr>
+          <td>[% r.3 %]</td></tr>
       [% LAST %]
     [% END %]
   [% END %]
