@@ -1234,12 +1234,6 @@ sub CloneReview
   return $result;
 }
 
-
-## ----------------------------------------------------------------------------
-##  Function:   submit review
-##  Parameters: id, user, attr, reason, note, stanford ren. number
-##  Return:     1 || 0
-## ----------------------------------------------------------------------------
 sub SubmitReview
 {
   my $self = shift;
@@ -1249,79 +1243,80 @@ sub SubmitReview
   if (!$self->CheckReviewer($user, $exp))              { $self->SetError("reviewer ($user) check failed"); return 0; }
   # ValidateAttrReasonCombo sets error internally on fail.
   if (!$self->ValidateAttrReasonCombo($attr, $reason)) { return 0; }
-
-  my $dbh = $self->GetDb();
   #remove any blanks from renNum
   $renNum =~ s/\s+//gs;
-
   # Javascript code inserts the string 'searching...' into the review text box.
   # This in once case got submitted as the renDate in production
   $renDate = '' if $renDate =~ m/searching.*/i;
-
-  my $qnote = ($note)? $dbh->quote($note):'NULL';
-  my $qrenNum = ($renNum)? $dbh->quote($renNum):'NULL';
-  my $qrenDate = ($renDate)? $dbh->quote($renDate):'NULL';
-  my $qcategory = ($category)? $dbh->quote($category):'NULL';
   my $priority = $self->GetPriority($id);
-
-  my @fieldList = ('id', 'user', 'attr', 'reason', 'note', 'renNum', 'renDate', 'category', 'priority');
-  my @valueList = ("'$id'", "'$user'", $attr, $reason, $qnote, $qrenNum, $qrenDate, $qcategory, $priority);
+  my @fields = qw(id user attr reason note renNum renDate category priority);
+  my @values = ($id, $user, $attr, $reason, $note, $renNum, $renDate, $category, $priority);
   if ($hold)
   {
-    $hold = $dbh->quote($self->HoldExpiry($id, $user, 0));
-    my $sql = "INSERT INTO note (note) VALUES ('hold from $user on $id')";
-    $self->PrepareSubmitSql($sql);
-    push(@fieldList, 'hold');
-    push(@valueList, $hold);
+    $hold = $self->HoldExpiry($id, $user, 0);
+    my $note = "hold from $user on $id";
+    $self->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $note);
+    push(@fields, 'hold');
+    push(@values, $hold);
   }
   else
   {
     # Stash their hold if they are cancelling it
-    my $oldhold = $self->SimpleSqlGet("SELECT hold FROM reviews WHERE id='$id' AND user='$user'");
+    my $sql = 'SELECT hold FROM reviews WHERE id=? AND user=?';
+    my $oldhold = $self->SimpleSqlGet($sql, $id, $user);
     if ($oldhold)
     {
-      push(@fieldList, 'sticky_hold');
-      push(@valueList, "'$oldhold'");
+      push(@fields, 'sticky_hold');
+      push(@values, $oldhold);
     }
   }
-  my $sql = "SELECT duration FROM reviews WHERE user='$user' AND id='$id'";
-  my $dur = $self->SimpleSqlGet($sql);
+  my $sql = 'SELECT duration FROM reviews WHERE user=? AND id=?';
+  my $dur = $self->SimpleSqlGet($sql, $user, $id);
   if ($dur)
   {
-    push(@fieldList, 'duration');
-    push(@valueList, "'$dur'");
+    push(@fields, 'duration');
+    push(@values, $dur);
   }
   if ($exp)
   {
     $swiss = ($swiss)? 1:0;
-    push(@fieldList, 'expert');
-    push(@valueList, 1);
-    push(@fieldList, 'swiss');
-    push(@valueList, $swiss);
+    push(@fields, 'expert');
+    push(@values, 1);
+    push(@fields, 'swiss');
+    push(@values, $swiss);
   }
-
-  $sql = sprintf("REPLACE INTO reviews (%s) VALUES (%s)", join(',', @fieldList), join(',', @valueList));
-  if ($self->get('verbose')) { $self->Logit($sql); }
-  my $result = $self->PrepareSubmitSql($sql);
+  my $wcs = $self->WildcardList(scalar @values);
+  $sql = 'REPLACE INTO reviews (' . join(',', @fields) . ') VALUES ' . $wcs;
+  my $result = $self->PrepareSubmitSql($sql, @values);
   if ($result)
   {
     if ($exp)
     {
-      my $expcnt = $self->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id' AND expert=1");
-      $sql = "UPDATE queue SET expcnt=$expcnt WHERE id='$id'";
-      $result = $self->PrepareSubmitSql($sql);
+      $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND expert=1';
+      my $expcnt = $self->SimpleSqlGet($sql, $id);
+      $sql = 'UPDATE queue SET expcnt=? WHERE id=?';
+      $result = $self->PrepareSubmitSql($sql, $expcnt, $id);
       my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $category, $renNum, $renDate);
       #We have decided to register the expert decision right away.
       $self->RegisterStatus($id, $status);
       # Clear all non-expert holds
-      $sql = "UPDATE reviews SET hold=NULL,sticky_hold=NULL,time=time WHERE id='$id' AND expert!=1";
-      $self->PrepareSubmitSql($sql);
+      $sql = 'UPDATE reviews SET hold=NULL,sticky_hold=NULL,time=time WHERE id=? AND expert!=1';
+      $self->PrepareSubmitSql($sql, $id);
     }
     $self->CheckPendingStatus($id);
     $self->EndTimer($id, $user);
     $self->UnlockItem($id, $user);
   }
   return $result;
+}
+
+# Returns a parenthesized comma separated list of n question marks.
+sub WildcardList
+{
+  my $self = shift;
+  my $n    = shift;
+
+  my $qs = '(' . ('?,' x ($n-1)) . '?)';
 }
 
 sub GetStatusForExpertReview
