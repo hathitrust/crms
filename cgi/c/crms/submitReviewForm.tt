@@ -69,29 +69,34 @@
       <td class="reviewGrey"><strong><label id="renewalFieldLabel" for="renewalField">
       [% label %]: </label></strong></td>
       <td nowrap="nowrap">
-       [% IF ren %]
+      [% IF ren %]
         <input id="renewalField" title="[% label %]" type="text" name="renNum"
                value="[% renNum %]" size="8"
                onblur="javascript:popRenewalDate()"/>
-       [% ELSE %]
-         [% doTip = 0 %]
-         [% IF NOT renDate && NOT import %]
-           [% renDate = authorDD %]
-           [% IF renDate %][% doTip = 1 %][% END %]
-         [% END %]
-         <input id="renewalField" title="[% label %]" type="text" name="renDate"
-                value="[% renDate %]" size="4"
-                onblur="javascript:PredictRights('[% barcode %]');"/>
-          [% IF doTip %]
-            <a class="tip" style="vertical-align:bottom;" href="#">
-              <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
-              <span><strong>Derived from author information in Mirlyn</strong>
-              </span>
-            </a>
+      [% ELSE %]
+        [% viafdata = crms.GetVIAFData(barcode) %]
+        [% IF NOT renDate && NOT import %]
+          [% authorDD = crms.GetADDFromAuthor(barcode) %]
+          [% IF NOT authorDD %]    
+            [% IF viafdata && viafdata.add %]
+              [% authorDD = viafdata.add %]
+              [% viaf = 1 %]
+            [% END %]
           [% END %]
-       [% END %]
-       <a style="position:absolute;left:-999px;" href="#" accesskey="d"
-          onfocus="document.getElementById('renewalField').focus()">.</a>
+          [% IF authorDD %]
+            [% renDate = authorDD %]
+            [% tip = (viaf)? "VIAF":"Mirlyn" %]
+          [% END %]
+        [% END %]
+        <input id="renewalField" title="[% label %]" type="text" name="renDate"
+               value="[% renDate %]" size="6"
+               onblur="javascript:PredictRights('[% barcode %]');"/>
+        [% IF tip %]
+          <span class="red">$tip</span>
+        [% END %]
+      [% END %]
+      <a style="position:absolute;left:-999px;" href="#" accesskey="d"
+         onfocus="document.getElementById('renewalField').focus()">.</a>
       </td>
     </tr>
     <tr>
