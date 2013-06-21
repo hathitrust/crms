@@ -7864,51 +7864,6 @@ sub DuplicateVolumesFromCandidates
   }
 }
 
-# Finds the most recent CRMS exported determination for a non-chron duplicate
-# (if the given volume is non-chron) and adds it to inherit table.
-sub CheckCandidateRightsInheritance
-{
-  my $self  = shift;
-  my $id    = shift;
-  my $sysid = shift;
-
-  my $rows = $self->VolumeIDsQuery($sysid);
-  return if 1 == scalar @{$rows};
-  my $cand;
-  my $ctime;
-  foreach my $line (@{$rows})
-  {
-    my ($id2,$chron2,$rights2) = split '__', $line;
-    return if $chron2;
-    # Don't allow inheritance at all if this volume has chron info.
-    #return if $id2 eq $id and $chron2;
-    next if $id2 eq $id;
-    #next if $chron2;
-    my $sql = "SELECT attr,reason,gid,time FROM exportdata WHERE id='$id2' AND time>='2010-06-02 00:00:00' ORDER BY time DESC LIMIT 1";
-    my $ref = $self->GetDb()->selectall_arrayref($sql);
-    foreach my $row (@{$ref})
-    {
-      my $sttr2   = $row->[0];
-      my $reason2 = $row->[1];
-      my $gid2    = $row->[2];
-      my $time2   = $row->[3];
-      $cand = $gid2 unless $cand;
-      $ctime = $time2 unless $ctime;
-      if ($time2 gt $ctime)
-      {
-        $cand = $gid2;
-        $ctime = $time2;
-      }
-    }
-  }
-  if ($cand)
-  {
-    my $sql = "INSERT INTO inherit (id,attr,reason,gid,src) VALUES ('$id',2,1,$cand,'candidates')";
-    $self->PrepareSubmitSql($sql);
-    $self->UpdateMetadata($id, 'bibdata', 1);
-  }
-}
-
 sub GetDuplicates
 {
   my $self = shift;
