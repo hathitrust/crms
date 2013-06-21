@@ -6627,20 +6627,13 @@ sub CountCorrectReviews
   my $user  = shift;
   my $start = shift;
   my $end   = shift;
-  
-  my $startClause = ($start)? " AND time>='$start'":'';
-  my $endClause = ($end)? " AND time<='$end' ":'';
-  my $userClause = " AND user='$user'";
-  if ($user eq 'all')
-  {
-    $userClause = sprintf(' AND user IN (%s)', join(',', map {"'$_'"} $self->GetType1Reviewers()));
-  }
-  #print "$sql => $total<br/>\n";
+
   my $correct = 0;
   my $incorrect = 0;
   my $neutral = 0;
-  my $sql = "SELECT validated,COUNT(id) FROM historicalreviews WHERE legacy!=1 $startClause $endClause $userClause GROUP BY validated";
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $sql = 'SELECT validated,COUNT(id) FROM historicalreviews' .
+            ' WHERE legacy!=1 AND user=? AND time>=? AND time<=? GROUP BY validated';
+  my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $user, $start, $end);
   foreach my $row (@{$ref})
   {
     my $val = $row->[0];
