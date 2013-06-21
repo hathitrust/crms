@@ -1041,7 +1041,7 @@ sub AddItemToQueue
   # queue table has priority and status default to 0, time to current timestamp.
   my $sql = "INSERT INTO queue (id) VALUES ('$id')";
   $self->PrepareSubmitSql($sql);
-  $self->UpdateMetadata($id, 'bibdata', 1, $record);
+  $self->UpdateMetadata($id, 1, $record);
   return 1;
 }
 
@@ -1114,7 +1114,7 @@ sub AddItemToQueueOrSetItemActive
     {
       my $sql = "INSERT INTO queue (id, priority, source) VALUES ('$id', $priority, '$src')";
       $self->PrepareSubmitSql($sql);
-      $self->UpdateMetadata($id, 'bibdata', 1, $record);
+      $self->UpdateMetadata($id, 1, $record);
       $sql = "INSERT INTO queuerecord (itemcount, source) VALUES (1, '$src')";
       $self->PrepareSubmitSql($sql);
     }
@@ -1155,7 +1155,7 @@ sub GiveItemsInQueuePriority
   {
     $sql = "INSERT INTO queue (id, time, status, priority, source) VALUES ('$id', '$time', $status, $priority, '$source')";
     $self->PrepareSubmitSql($sql);
-    $self->UpdateMetadata($id, 'bibdata', 1, $record);
+    $self->UpdateMetadata($id, 1, $record);
     # Accumulate counts for items added at the 'same time'.
     # Otherwise queuerecord will have a zillion kabillion single-item entries when importing
     # e.g. 2007 reviews for reprocessing.
@@ -1395,7 +1395,7 @@ sub SubmitActiveReview
     $sql = "UPDATE queue SET pending_status=1 WHERE id='$id'";
     $self->PrepareSubmitSql($sql);
     #Now load this info into the bibdata table.
-    $self->UpdateMetadata($id, 'bibdata', 1);
+    $self->UpdateMetadata($id, 1);
   }
   return 1;
 }
@@ -5113,7 +5113,7 @@ sub GetTitle
   my $ti = $self->SimpleSqlGet("SELECT title FROM bibdata WHERE id='$id'");
   if (!$ti)
   {
-    $self->UpdateMetadata($id, 'bibdata', 1);
+    $self->UpdateMetadata($id, 1);
     $ti = $self->SimpleSqlGet("SELECT title FROM bibdata WHERE id='$id'");
   }
   return $ti;
@@ -5145,7 +5145,7 @@ sub GetPubDate
   my $date = $self->SimpleSqlGet($sql);
   if (!$date)
   {
-    $self->UpdateMetadata($id, 'bibdata', 1);
+    $self->UpdateMetadata($id, 1);
     $date = $self->SimpleSqlGet($sql);
   }
   if ($date && $do2)
@@ -5165,7 +5165,7 @@ sub GetPubCountry
   my $date = $self->SimpleSqlGet($sql);
   if (!$date)
   {
-    $self->UpdateMetadata($id, 'bibdata', 1);
+    $self->UpdateMetadata($id, 1);
     $date = $self->SimpleSqlGet($sql);
   }
   return $date;
@@ -5199,7 +5199,7 @@ sub GetAuthor
   my $au = $self->SimpleSqlGet("SELECT author FROM bibdata WHERE id='$id'");
   if (!$au)
   {
-    $self->UpdateMetadata($id, 'bibdata', 1);
+    $self->UpdateMetadata($id, 1);
     $au = $self->SimpleSqlGet("SELECT author FROM bibdata WHERE id='$id'");
   }
   #$au =~ s,(.*[A-Za-z]).*,$1,;
@@ -5265,49 +5265,34 @@ sub GetMetadata
   return $records[0];
 }
 
-# Update sysid and author,title,pubdate fields in bibdata/candidates (default bibdata).
+# Update sysid and author,title,pubdate fields in bibdata.
 # Only updates existing rows (does not INSERT) unless the force param is set.
 sub UpdateMetadata
 {
   my $self   = shift;
   my $id     = shift;
-  my $table  = shift;
   my $force  = shift;
   my $record = shift;
 
-  $table = 'bibdata' unless $table;
-  $table = 'bibdata' if $table ne 'candidates';
-  if (!$id)
+  if (!defined $id)
   {
-    $self->SetError("Trying to update $table metadata for empty volume id!\n");
+    $self->SetError("Trying to update metadata for empty volume id!\n");
     return;
   }
-  my $cnt = $self->SimpleSqlGet("SELECT COUNT(*) FROM $table WHERE id='$id'");
+  my $cnt = $self->SimpleSqlGet('SELECT COUNT(*) FROM bibdata WHERE id=?', $id);
   if ($cnt || $force)
   {
-    $self->PrepareSubmitSql("INSERT INTO $table (id) VALUES ('$id')") unless $cnt;
+    $self->PrepareSubmitSql('INSERT INTO bibdata (id) VALUES (?)', $id) unless $cnt > 0;
     my $sysid = $self->BarcodeToId($id, 1);
     if ($sysid)
     {
-      $record = $self->GetMetadata($id) unless $record;
+      $record = $self->GetMetadata($id) unless defined $record;
       my $title = $self->GetRecordTitle($id, $record);
       my $author = $self->GetRecordAuthor($id, $record);
-      my $date = $self->GetRecordPubDate($id, $record);
+      my $date = $self->GetRecordPubDate($id, $record) . '-01-01';
       my $country = $self->GetRecordPubCountry($id, $record);
-      my $dbh = $self->GetDb();
-      my $tiq = $dbh->quote($title);
-      my $aiq = $dbh->quote($author);
-      my $sql = "UPDATE $table SET author=$aiq,title=$tiq,pub_date='$date-01-01'__TIME____COUNTRY__ WHERE id='$id'";
-      if ($table eq 'bibdata')
-      {
-        my $ciq = $dbh->quote($country);
-        $sql =~ s/__COUNTRY__/,country=$ciq/;
-      }
-      $sql =~ s/__TIME__/,time=time/g if $table eq 'candidates';
-      $sql =~ s/__TIME__//g;
-      $sql =~ s/__COUNTRY__//g;
-      #print "$sql\n";
-      $self->PrepareSubmitSql($sql);
+      my $sql = 'UPDATE bibdata SET author=?,title=?,pub_date=?,country=? WHERE id=?';
+      $self->PrepareSubmitSql($sql, $author, $title, $date, $country, $id);
     }
   }
   return $record;
@@ -7581,7 +7566,7 @@ sub AddInheritanceToQueue
   {
     my $sql = "INSERT INTO queue (id, priority, source) VALUES ('$id', 0, 'inherited')";
     $self->PrepareSubmitSql($sql);
-    $self->UpdateMetadata($id, 'bibdata', 1);
+    $self->UpdateMetadata($id, 1);
     $sql = "INSERT INTO queuerecord (itemcount, source) VALUES (1, 'inheritance')";
     $self->PrepareSubmitSql($sql);
   }

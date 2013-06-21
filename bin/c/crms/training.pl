@@ -172,7 +172,7 @@ foreach my $row (@{$ref})
   push @sqls, "INSERT INTO queue (id,time,pending_status) VALUES ('$id','$time',1)";
   push @sqls, 'INSERT INTO reviews (id,user,time,attr,reason,renDate,renNum,category,note,duration) ' .
               "VALUES ('$id','$user','$time',$attr,$reason,$renDate,$renNum,$category,$note,'$duration')";
-  $crms2->UpdateMetadata($id, 'bibdata', 1) unless $noop;
+  $crms2->UpdateMetadata($id, 1) unless $noop;
   $n++;
 }
 print "</table></body></html>\n" if $verbose;

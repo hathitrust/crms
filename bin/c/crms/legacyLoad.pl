@@ -266,7 +266,7 @@ sub SubmitHistReview
            "VALUES('$id', '$user', '$time', '$attr', '$reason', '$renNum', '$renDate', $note, $legacy, '$category', $status, $expert, '$source', $gid)";
     $crms->PrepareSubmitSql( $sql );
     #Now load this info into the bibdata and system table.
-    $crms->UpdateMetadata($id, 'bibdata', 1 );
+    $crms->UpdateMetadata($id, 1);
     # Update status on status 1 item
     if ($status == 5)
     {
