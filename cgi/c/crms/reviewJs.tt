@@ -143,12 +143,19 @@ function PredictRights(id)
   var renewalField = document.getElementById("renewalField");
   var year = renewalField.value;
   var isPub = (document.getElementById('renewalFieldCheckbox').checked)? 1:0;
-  var isCrown = (SelectedCategory() == 'Crown Copyright')? 1:0;
+  var cat = SelectedCategory();
+  var isCrown = (cat == 'Crown Copyright')? 1:0;
   var req = null;
   var rights = document.getElementsByName("rights");
   var sel = GetCheckedValue(rights);
   // There is a hidden div that tells us which button id is und/nfi
   var und = document.getElementById('UNDNFI').title;
+  if (und && cat == 'Translation')
+  {
+    var button = document.getElementById('r' + und);
+    if (button) button.checked = "checked";
+    return;
+  }
   if (und && sel == und) return;
   if (window.XMLHttpRequest)
   {
