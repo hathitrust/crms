@@ -3291,15 +3291,9 @@ sub IsUserIncarnationExpertOrHigher
   my $user = shift;
   
   $user = $self->get('user') unless $user;
-  my $sql = "SELECT id FROM users WHERE kerberos!='' AND kerberos IN (SELECT DISTINCT kerberos FROM users WHERE id='$user')";
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
-  foreach my $row (@{$ref})
-  {
-    my $id = $row->[0];
-    return 1 if $self->IsUserExpert($id);
-    return 1 if $self->IsUserAdmin($id);
-  }
-  return 0;
+  my $sql = 'SELECT MAX(expert+admin+superadmin) FROM users WHERE kerberos!=""' .
+            ' AND kerberos IN (SELECT DISTINCT kerberos FROM users WHERE id=?)';
+  return 0 < $self->SimpleSqlGet($sql, $user);
 }
 
 # FIXME: this should go in the database, but need mechanism for exclusing UM from
