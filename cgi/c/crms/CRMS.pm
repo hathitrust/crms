@@ -8320,35 +8320,28 @@ sub PredictRights
   $where = $self->GetPubCountry($id) unless $where;
   my ($attr, $reason) = (0,0);
   my $now = $self->GetTheYear();
-  my $when;
-  if ($where eq 'United Kingdom')
-  {
-    $when = $year + ($crown? 50:70);
-  }
-  else
-  {
-    $when = $year + 50;
-  }
+  my $when = $year + ($where eq 'United Kingdom')? ($crown? 50:70):50;
   if ($when < $now)
   {
     if ($when >= 1996 && $pub >= 1923)
     {
-      $attr = $self->TranslateAttr('icus');
-      $reason = $self->TranslateReason('gatt');
+      $attr = 'icus';
+      $reason = 'gatt';
     }
     else
     {
-      $attr = $self->TranslateAttr('pd');
-      $reason = $self->TranslateReason(($ispub)? 'exp':'add');
+      $attr = 'pd';
+      $reason = ($ispub)? 'exp':'add';
     }
   }
   else
   {
-    $attr = $self->TranslateAttr((int $pub < 1923)? 'pdus':'ic');
-    $reason = $self->TranslateReason('add');
+    $attr = (int $pub < 1923)? 'pdus':'ic';
+    $reason = 'add';
   }
   my $sql = "SELECT id FROM rights WHERE attr=? AND reason=?";
-  return $self->SimpleSqlGet($sql, $attr, $reason);
+  return $self->SimpleSqlGet($sql, $self->TranslateAttr($attr),
+                             $self->TranslateReason($reason));
 }
 
 sub Unescape
