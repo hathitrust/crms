@@ -71,10 +71,6 @@
   [% STOP %]
 [% END %]
 
-[% IF !ren %]
-  [% authorDD = crms.GetADDFromAuthor(barcode) %]
-[% END %]
-
 [% status   = crms.GetStatus(barcode)     %]
 [% userName = crms.GetUserName(user)      %]
 [% pub_date = crms.GetPubDate(barcode, 1) %]
@@ -101,7 +97,7 @@
 [% swiss = crms.GetReviewField(barcode, user, "swiss") %]
 [% END %]
 
-[% homeLink   = "crms?p=confirmReview;submit=Cancel;barcode=$barcode;sys=$sys" %]
+[% homeLink = "crms?p=confirmReview;submit=Cancel;barcode=$barcode;sys=$sys" %]
 
 <div class="divbody">
   <div class="divNav">
@@ -197,13 +193,24 @@
           </td>
         </tr>
         <tr>
-          <td>[% IF expert %][%# crms.LinkToGoogleCCE(author, title, pub_date) %][% END %]</td>
+          <td/>
           <td style="margin:0px;padding:0px;">
              <input type="button" class="reviewblue" value="Toggle View" onclick="flipFrame();" accesskey="o"
              style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
           </td>
-          <td/>
         </tr>
+        [% IF ren %]
+          [% viafdata = crms.GetVIAFData(barcode) %]
+          [% IF viafdata && viafdata.country &&
+             viafdata.country != 'US' && viafdata.country != 'XX' %]
+            [% IF !viafdata.add || (viafdata.add && viafdata.add < 1800) %]
+              [% tip = "Warning: possible foreign author" %]
+            [% END %]
+          [% END %]
+          [% IF tip %]
+            <tr><td colspan="2"><span class="red"><b>$tip</b></span></td></tr>
+          [% END %]
+        [% END %]
       </table>
     </div>
     [% realindex = 0 %]
@@ -234,7 +241,7 @@
                                      error   = error,   select   = select,   mag      = mag,
                                      hold    = hold,    swiss    = swiss,    expert   = expert,
                                      status  = status,  sys      = sys,      ptview   = ptview,
-                                     import  = import,  ren      = ren,      authorDD = authorDD %]
+                                     import  = import,  ren      = ren %]
       [% IF expert %]
         <table class="nav">
         [% IF status == 3 %]
