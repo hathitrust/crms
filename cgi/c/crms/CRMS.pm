@@ -1239,7 +1239,7 @@ sub SubmitReview
   my $self = shift;
   my ($id, $user, $attr, $reason, $note, $renNum, $exp, $renDate, $category, $swiss, $hold) = @_;
 
-  if (!$self->CheckForId($id))                         { $self->SetError("id ($id) check failed");         return 0; }
+  if (!$self->IsVolumeInQueue($id))                    { $self->SetError("$id is not in the queue");       return 0; }
   if (!$self->CheckReviewer($user, $exp))              { $self->SetError("reviewer ($user) check failed"); return 0; }
   # ValidateAttrReasonCombo sets error internally on fail.
   if (!$self->ValidateAttrReasonCombo($attr, $reason)) { return 0; }
@@ -3062,18 +3062,6 @@ sub GetAttrReasonCode
     return $self->SimpleSqlGet("SELECT id FROM rights WHERE attr=$a AND reason=$r");
   }
   return undef;
-}
-
-sub CheckForId
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $dbh  = $self->GetDb();
-  ## just make sure the ID is in the queue
-  my $sql = "SELECT id FROM queue WHERE id='$id'";
-  my @rows = $dbh->selectrow_array($sql);
-  return scalar @rows;
 }
 
 sub AddUser
@@ -8339,7 +8327,7 @@ sub PredictRights
     $attr = (int $pub < 1923)? 'pdus':'ic';
     $reason = 'add';
   }
-  my $sql = "SELECT id FROM rights WHERE attr=? AND reason=?";
+  my $sql = 'SELECT id FROM rights WHERE attr=? AND reason=?';
   return $self->SimpleSqlGet($sql, $self->TranslateAttr($attr),
                              $self->TranslateReason($reason));
 }
