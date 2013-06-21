@@ -3,12 +3,16 @@ package Candidates;
 use strict;
 use warnings;
 use vars qw( @ISA @EXPORT @EXPORT_OK );
-our @EXPORT = qw(RightsClause GetViolations ShouldVolumeGoInUndTable);
+our @EXPORT = qw(HasCorrectRights GetViolations ShouldVolumeGoInUndTable);
 
-# ic/bib or op
-sub RightsClause
+sub HasCorrectRights
 {
-  return '(attr=2 AND reason=1) OR attr=3';
+  my $self   = shift;
+  my $attr   = shift;
+  my $reason = shift;
+  
+  return (($attr eq 'ic' && $reason eq 'bib') ||
+           $attr eq 'op');
 }
 
 sub GetViolations

@@ -683,40 +683,36 @@ sub LoadNewItemsInCandidates
   my $start  = shift;
   my $end    = shift;
 
-  $self->set('nosystem','nosystem');
-  my $now = $self->GetTodaysDate();
+  $self->set('nosystem', 'nosystem');
+  my $now = (defined $end)? $end : $self->GetTodaysDate();
   $start = $self->SimpleSqlGet('SELECT max(time) FROM candidatesrecord') unless $start;
   my $start_size = $self->GetCandidatesSize();
-  print "Last load to the candidates table was $start, and the size is $start_size\n";
+  print "Candidates size is $start_size, last load time was $start\n";
   if (!$skipnm)
   {
-    my $sql = "SELECT id FROM und WHERE src='no meta'";
+    my $sql = 'SELECT id FROM und WHERE src="no meta"';
     my $dbh = $self->GetDb();
     my $ref = $dbh->selectall_arrayref($sql);
-    if (scalar @{ $ref })
+    my $n = scalar @{$ref};
+    if ($n)
     {
-      printf "Checking %d possible no-meta additions to candidates\n", scalar @{ $ref };
-      foreach my $row (@{$ref})
-      {
-        my $id = $row->[0];
-        
-        $self->CheckAndLoadItemIntoCandidates($id);
-      }
+      print "Checking $n possible no-meta additions to candidates\n";
+      $self->CheckAndLoadItemIntoCandidates($_->[0]) for @{$ref};
+      $n = $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE src="no meta"');
+      print "Number of no-meta volumes now $n.\n";
     }
   }
   my $module = 'Candidates_' . $self->get('sys') . '.pm';
-  require "$module";
-  my $endclause = ($end)? "AND time<='$end'":'';
-  # Query for a clause like "attr=2 AND reason=1" for the rights DB
-  my $clause = Candidates::RightsClause();
-  my $sql = "SELECT namespace,id,time FROM rights_current WHERE ($clause) AND time>'$start' $endclause ORDER BY time ASC";
+  require $module;
+  my $endclause = ($end)? " AND time<='$end' ":'';
+  my $sql = 'SELECT namespace,id FROM rights_current WHERE time>?' . $endclause . 'ORDER BY time ASC';
   my $dbh = $self->GetSdrDb();
-  my $ref = $dbh->selectall_arrayref($sql);
-  printf "Checking %d possible additions to candidates from rights DB\n", scalar @{ $ref };
+  my $ref = $dbh->selectall_arrayref($sql, undef, $start);
+  my $n = scalar @{$ref};
+  print "Checking $n possible additions to candidates from rights DB\n";
   foreach my $row (@{$ref})
   {
     my $id = $row->[0] . '.' . $row->[1];
-    
     $self->CheckAndLoadItemIntoCandidates($id);
   }
   my $end_size = $self->GetCandidatesSize();
@@ -725,65 +721,150 @@ sub LoadNewItemsInCandidates
   # Record the update
   $sql = 'INSERT INTO candidatesrecord (time,addedamount) VALUES (?,?)';
   $self->PrepareSubmitSql($sql, $now, $diff);
-  $self->set('nosystem',undef);
+  $self->set('nosystem', undef);
 }
 
-# Adds a single qualifying volume to candidates if possible, putting it in the und table if not.
+# Does all checks to see if a volume should be in the candidates or und tables, removing
+# it from either table if it is already in one and no longer qualifies.
+# If necessary, updates the system table with a new sysid.
+# If noop is defined, does nothing that would actually alter the table.
+# If purge is defined, does not abort if volume is already in candidates.
 sub CheckAndLoadItemIntoCandidates
 {
-  my $self = shift;
-  my $id   = lc shift;
+  my $self  = shift;
+  my $id    = shift;
+  my $noop  = shift;
+  my $purge = shift;
 
+  my $incand = (0 < $self->SimpleSqlGet('SELECT COUNT(*) FROM candidates WHERE id=?', $id));
+  my $inund  = $self->SimpleSqlGet('SELECT src FROM und WHERE id=?', $id);
+  my $inq    = $self->IsVolumeInQueue($id);
   my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
+  my $module = 'Candidates_' . $self->get('sys') . '.pm';
+  require $module;
+  my $sysid;
+  my $record;
+  my $oldSysid = $self->SimpleSqlGet('SELECT sysid FROM system WHERE id=?', $id);
+  if (defined $oldSysid)
+  {
+    $record = $self->GetMetadata($id, \$sysid);
+    if (defined $sysid && $sysid ne $oldSysid)
+    {
+      print "Update system ID on $id -- old $oldSysid, new $sysid\n";
+      $self->UpdateMetadata($id, 1, $record) unless defined $noop;
+    }
+  }
+  if (!Candidates::HasCorrectRights($self, $attr, $reason))
+  {
+    if ($incand && $reason eq 'gfv')
+    {
+      print "Filter $id as gfv\n";
+      $self->Filter($id, 'gfv') unless defined $noop;
+    }
+    elsif ($incand && !$inq)
+    {
+      print "Remove $id -- rights are now $attr/$reason\n";
+      $self->RemoveFromCandidates($id) unless defined $noop;
+    }
+    return;
+  }
   # If it was a gfv and it reverted to ic/bib, remove it from und, alert, and continue.
-  if ($self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id' AND src='gfv'") > 0)
+  if ($reason ne 'gfv' &&
+      $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE id=? AND src="gfv"', $id) > 0)
   {
     print "Unfilter $id -- reverted from pdus/gfv\n";
-    $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
+    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) unless defined $noop;
   }
-  if ($self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'") > 0)
+  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id) > 0)
   {
     print "Skip $id -- already in historical reviews\n";
     return;
   }
-  if ($self->SimpleSqlGet("SELECT COUNT(*) FROM candidates WHERE id='$id'") > 0)
+  if (defined $incand && !$purge)
   {
     print "Skip $id -- already in candidates\n";
-    $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
+    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) if defined $inund and !defined $noop;
     return;
   }
-  my $sysid;
-  my $record = $self->GetMetadata($id, \$sysid);
-  if (!$record)
+  $record = $self->GetMetadata($id, \$sysid) unless defined $record;
+  if (!defined $record)
   {
     $self->ClearErrors();
-    print "No metadata yet for $id: will try again tomorrow.\n";
-    if (0 == $self->SimpleSqlGet("SELECT COUNT(*) FROM und WHERE id='$id'"))
-    {
-      $self->Filter($id, 'no meta');
-    }
+    #print "No metadata yet for $id: will try again tomorrow.\n";
+    $self->Filter($id, 'no meta') unless defined $noop;
     return;
   }
   my $errs = $self->GetViolations($id, $record);
   if (scalar @{$errs} == 0)
   {
-    my $src = $self->ShouldVolumeGoInUndTable($id, $record);
-    if ($src)
+    my $src = Candidates::ShouldVolumeGoInUndTable($self, $id, $record);
+    if (defined $src)
     {
-      my $sql = "SELECT COUNT(*) FROM und WHERE id='$id'";
-      my $already = (1 == $self->SimpleSqlGet($sql));
-      printf "Skip $id ($src) -- %s in filtered volumes\n", ($already)? 'updating':'inserting';
-      $self->Filter($id, $src);
+      if (!defined $inund || $src ne $inund)
+      {
+        printf "Skip $id ($src) -- %s in filtered volumes\n", (defined $inund)? 'updating':'inserting';
+        $self->Filter($id, $src) unless defined $noop;
+      }
     }
     else
     {
-      $self->AddItemToCandidates($id, $time, $record, $sysid);
-      $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
+      print "Add $id to candidates\n" unless $incand;
+      $self->AddItemToCandidates($id, $time, $record, $sysid, $noop);
     }
   }
   else
   {
-    $self->PrepareSubmitSql("DELETE FROM und WHERE id='$id'");
+    if ((defined $inund || defined $incand) && !$inq)
+    {
+      printf "Remove $id from %s (%s)\n", (defined $incand)? 'candidates':'und', $errs->[0];
+      $self->RemoveFromCandidates($id);
+    }
+  }
+}
+
+sub AddItemToCandidates
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $time   = shift;
+  my $record = shift;
+  my $sysid  = shift;
+  my $noop   = shift;
+
+  $record = $self->GetMetadata($id, \$sysid) unless $record;
+  return unless defined $record and defined $sysid;
+  my $sql = 'REPLACE INTO candidates (id, time, pub_date) VALUES (?,?,?)';
+  my $date = $self->GetRecordPubDate($id, $record);
+  # Are there duplicates? Filter the oldest duplicates and add the newest to candidates.
+  if (!$self->DoesRecordHaveChron($sysid, $record))
+  {
+    my $rows = $self->VolumeIDsQuery($sysid, $record);
+    last if scalar @{$rows} <= 1;
+    my %map;
+    foreach my $line (@{$rows})
+    {
+      my ($id2,$chron2,$rights2) = split '__', $line;
+      my ($ns,$n) = split m/\./, $id2, 2;
+      my $sql2 = 'SELECT time FROM rights_current WHERE namespace=? AND id=?';
+      my $time2 = $self->SimpleSqlGetSDR($sql2, $ns, $n);
+      $map{$id2} = $time2;
+    }
+    my @sorted = sort {$map{$b} cmp $map{$a}} keys %map;
+    $id = shift @sorted;
+    $time = $map{$id};
+    foreach my $id2 (@sorted)
+    {
+      if ($self->IsVolumeInCandidates($id2))
+      {
+        print "  filter $id2 as duplicate of $id\n";
+        $self->Filter($id2, 'duplicate') unless defined $noop;
+      }
+    }
+  }
+  if (!defined $noop)
+  {
+    $self->PrepareSubmitSql($sql, $id, $time, $date);
+    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
   }
 }
 
@@ -867,40 +948,6 @@ sub ShouldVolumeGoInUndTable
   my $module = 'Candidates_' . $self->get('sys') . '.pm';
   require "$module";
   return Candidates::ShouldVolumeGoInUndTable($self, $id, $record);
-}
-
-sub AddItemToCandidates
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $time   = shift;
-  my $record = shift;
-  my $sysid  = shift;
-
-  $record = $self->GetMetadata($id, \$sysid) unless $record;
-  return unless $record and $sysid;
-  my $pub = $self->GetRecordPubDate($id, $record);
-  my $au = $self->GetRecordAuthor($id, $record);
-  my $dbh = $self->GetDb();
-  $au = $dbh->quote($au);
-  #$self->SetError("$id: UTF-8 check failed for quoted author: '$au'") unless $au eq "''" or utf8::is_utf8($au);
-  my $title = $self->GetRecordTitle($id, $record);
-  $title = $dbh->quote($title);
-  #$self->SetError("$id: UTF-8 check failed for quoted title: '$title'") unless $title eq "''" or utf8::is_utf8($title);
-  my $sql = "REPLACE INTO candidates (id, time, pub_date, title, author) VALUES ('$id', '$time', '$pub-01-01', $title, $au)";
-  $self->PrepareSubmitSql($sql);
-  # Are there duplicates? Filter them.
-  if (!$self->DoesRecordHaveChron($sysid, $record))
-  {
-    my $rows = $self->VolumeIDsQuery($sysid, $record);
-    next if scalar @{$rows} <= 1;
-    foreach my $line (@{$rows})
-    {
-      my ($id2,$chron2,$rights2) = split '__', $line;
-      next if $id eq $id2;
-      $self->Filter($id2, 'duplicate') if $self->IsVolumeInCandidates($id2);
-    }
-  }
 }
 
 # Load candidates into queue.
