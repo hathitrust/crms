@@ -575,7 +575,7 @@ sub ExportReviews
     my $src = $self->SimpleSqlGet("SELECT source FROM queue WHERE id='$id' ORDER BY time DESC LIMIT 1");
     my $sql = "INSERT INTO  exportdata (time,id,attr,reason,user,src) VALUES ('$time','$id','$attr','$reason','$user','$src')";
     $self->PrepareSubmitSql($sql);
-    my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata');
+    my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata WHERE id=?', $id);
     $self->MoveFromReviewsToHistoricalReviews($id,$gid);
     $self->RemoveFromQueue($id);
     $self->RemoveFromCandidates($id);
@@ -1411,14 +1411,14 @@ sub MoveFromReviewsToHistoricalReviews
   my $id   = shift;
   my $gid  = shift;
 
-  my $sql = "SELECT source FROM queue WHERE id='$id'";
-  my $source = $self->SimpleSqlGet($sql);
   my $status = $self->GetStatus($id);
-  $sql = 'INSERT into historicalreviews (id, time, user, attr, reason, note, renNum, expert, duration, legacy, renDate, category, priority, source, status, gid, swiss) ' .
-         "select id, time, user, attr, reason, note, renNum, expert, duration, legacy, renDate, category, priority, '$source', $status, $gid, swiss from reviews where id='$id'";
-  $self->PrepareSubmitSql($sql);
-  $sql = "DELETE FROM reviews WHERE id='$id'";
-  $self->PrepareSubmitSql($sql);
+  my $sql = 'INSERT INTO historicalreviews (id,time,user,attr,reason,note,' .
+            'renNum,expert,duration,legacy,renDate,category,priority,swiss,status,gid)' .
+            ' SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,' .
+            'renDate,category,priority,swiss,?,? FROM reviews WHERE id=?';
+  $self->PrepareSubmitSql($sql, $status, $gid, $id);
+  $sql = 'DELETE FROM reviews WHERE id=?';
+  $self->PrepareSubmitSql($sql, $id);
 }
 
 sub GetFinalAttrReason
