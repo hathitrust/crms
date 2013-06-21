@@ -7886,8 +7886,9 @@ sub ExportSrcToEnglish
   my $self = shift;
   my $src  = shift;
 
-  my %srces = ('adminui' => 'Added to Queue',
-               'rereport' => 'Rereports');
+  my %srces = ('adminui'  => 'Added to Queue',
+               'rereport' => 'Rereports',
+               'newyear'  => 'Expired ADD');
   my $eng = $srces{$src};
   $eng = ucfirst $src unless $eng;
   return $eng;
