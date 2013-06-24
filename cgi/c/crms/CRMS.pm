@@ -2207,7 +2207,7 @@ sub SearchAndDownload
   my $stype          = shift;
 
   $stype = 'reviews' unless $stype;
-  my $table ='reviews';
+  my $table = 'reviews';
   my $top = 'bibdata b';
   my $status = 'r.status';
   if ($page eq 'adminHistoricalReviews')
@@ -2273,8 +2273,7 @@ sub SearchAndDownload
                (($page eq 'adminHistoricalReviews')?
                  'r.validated ':'b.title,b.author,r.hold ') .
                "FROM $top INNER JOIN $table r ON b.id=r.id " .
-               "WHERE r.id='$id' AND r.id=b.id $qrest ORDER BY $order $dir";
-        # FIXME: why is the AND r.id=b.id there? It's an inner join already.
+               "WHERE r.id='$id' $qrest ORDER BY $order $dir";
         #print "$sql<br/>\n";
         my $ref2;
         eval{$ref2 = $self->GetDb()->selectall_arrayref($sql);};
@@ -8335,7 +8334,7 @@ sub GetADDFromAuthor
   my $a    = shift; # For testing
 
   my $add = undef;
-  $a = $self->GetRecordAuthor($id, undef, 1) unless $a;
+  $a = $self->GetRecordAuthor($id, undef, 1) unless defined $a;
   my $regex = '\d?\d\d\d\??\s*-\s*(\d?\d\d\d)[.,;) ]*$';
   if ($a =~ m/$regex/)
   {
