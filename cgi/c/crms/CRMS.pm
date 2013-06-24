@@ -6074,24 +6074,31 @@ sub CreateSystemReport
 
   my $report = "<table class='exportStats'>\n";
   # Gets the (time,count) of last queue addition.
-  my ($time,$cnt) = $self->GetLastQueueInfo();
-  $time =~ s/\s/&nbsp;/g;
-  $report .= "<tr><th>Last&nbsp;Queue&nbsp;Update</th><td>$time</td></tr>\n";
-  $report .= "<tr><th>Volumes&nbsp;Last&nbsp;Added</th><td>$cnt</td></tr>\n";
-  $report .= sprintf("<tr><th>Cumulative&nbsp;Volumes&nbsp;in&nbsp;Queue&nbsp;(ever*)</th><td>%s</td></tr>\n", $self->GetTotalEverInQueue());
-  $report .= sprintf("<tr><th>Volumes&nbsp;in&nbsp;Candidates</th><td>%s</td></tr>\n", $self->GetCandidatesSize());
-  my $ct = $self->GetLastLoadTimeToCandidates();
-  my $cn = $self->GetLastLoadSizeToCandidates();
-  if ($ct)
+  my ($time,$n) = $self->GetLastQueueInfo();
+  if ($time)
   {
-    $ct =~ s/\s/&nbsp;/g;
-    $cn = "$cn&nbsp;on&nbsp;$ct";
+    $time =~ s/\s/&nbsp;/g;
+    $n = $n . '&nbsp;(' . $time . ')';
   }
   else
   {
-    $cn = 'n/a';
+    $n = 'n/a';
   }
-  $report .= "<tr><th>Last&nbsp;Candidates&nbsp;Addition</th><td>$cn</td></tr>";
+  $report .= '<tr><th>Last&nbsp;Queue&nbsp;Update</th><td>' . $n . "</td></tr>\n";
+  $report .= sprintf("<tr><th>Cumulative&nbsp;Volumes&nbsp;in&nbsp;Queue&nbsp;(ever*)</th><td>%s</td></tr>\n", $self->GetTotalEverInQueue());
+  $report .= sprintf("<tr><th>Volumes&nbsp;in&nbsp;Candidates</th><td>%s</td></tr>\n", $self->GetCandidatesSize());
+  $time = $self->GetLastLoadTimeToCandidates();
+  $n = $self->GetLastLoadSizeToCandidates();
+  if ($time)
+  {
+    $time =~ s/\s/&nbsp;/g;
+    $n = $n . '&nbsp;(' . $time . ')';
+  }
+  else
+  {
+    $n = 'n/a';
+  }
+  $report .= '<tr><th>Last&nbsp;Candidates&nbsp;Update</th><td>' . $n . "</td></tr>";
   my $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE src!="no meta" AND src!="duplicate"');
   $report .= "<tr><th>Volumes&nbsp;Filtered**</th><td>$count</td></tr>\n";
   if ($count)
@@ -6100,7 +6107,7 @@ sub CreateSystemReport
     foreach my $row (@{ $ref})
     {
       my $src = $row->[0];
-      my $n = $row->[1];
+      $n = $row->[1];
       $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$n&nbsp;(%0.1f%%)</td></tr>\n", 100.0*$n/$count);
     }
   }
@@ -6112,7 +6119,7 @@ sub CreateSystemReport
     foreach my $row (@{ $ref})
     {
       my $src = $row->[0];
-      my $n = $row->[1];
+      $n = $row->[1];
       $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$n</td></tr>\n";
     }
   }
@@ -6129,8 +6136,6 @@ sub CreateSystemReport
   }
   $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay&nbsp;since&nbsp;$since</span>" if $alert;
   $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay&nbsp;on&nbsp;$host</td></tr>\n";
-  $report .= sprintf "<tr><th>Automatic&nbsp;Inheritance</th><td>%s</td></tr>\n",
-    ($self->GetSystemVar('autoinherit') eq 'disabled')?'Disabled':'Enabled';
   $report .= '<tr><td colspan="2">';
   $report .= '<span class="smallishText">* Not including legacy data (reviews/determinations made prior to July 2009).</span><br/>';
   $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count above.</span>';
@@ -6156,9 +6161,9 @@ sub CreateDeterminationReport
   foreach my $pri (@pris)
   {
     $pri = $self->StripDecimal($pri);
-    $priheaders .= "<th>Priority&nbsp;$pri</th>"
+    $priheaders .= "<th>Priority&nbsp;$pri</th>";
   }
-  my $report = "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
+  my $report = "<table class='exportStats'>\n<tr><th/><th>Total</th>$priheaders</tr>\n";
   foreach my $status (4 .. 9)
   {
     $sql = "SELECT COUNT(DISTINCT h.id) FROM exportdata e, historicalreviews h WHERE e.gid=h.gid AND h.status=$status AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
