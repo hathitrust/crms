@@ -780,7 +780,7 @@ sub CheckAndLoadItemIntoCandidates
     print "Skip $id -- already in historical reviews\n";
     return;
   }
-  if (defined $incand && !$purge)
+  if ($incand && !$purge)
   {
     print "Skip $id -- already in candidates\n";
     $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) if defined $inund and !defined $noop;
@@ -814,7 +814,7 @@ sub CheckAndLoadItemIntoCandidates
   }
   else
   {
-    if ((defined $inund || defined $incand) && !$inq)
+    if ((defined $inund || $incand) && !$inq)
     {
       printf "Remove $id from %s (%s)\n", (defined $incand)? 'candidates':'und', $errs->[0];
       $self->RemoveFromCandidates($id);
