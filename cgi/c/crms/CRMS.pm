@@ -2224,41 +2224,41 @@ sub SearchAndDownload
   
   my $ref = $self->GetDb()->selectall_arrayref($sql);
 
-  my $buffer = '';
+  my $buff = '';
   if (scalar @{$ref} == 0)
   {
-    $buffer = 'No Results Found.';
+    $buff = 'No Results Found.';
   }
   else
   {
     if ($page eq 'userReviews')
     {
-      $buffer .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
+      $buff .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
     }
     elsif ($page eq 'editReviews')
     {
-      $buffer .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
+      $buff .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
     }
     elsif ($page eq 'undReviews')
     {
-      $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote}
+      $buff .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote}
     }
     elsif ($page eq 'expert')
     {
-      $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote};
+      $buff .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote};
     }
     elsif ($page eq 'adminReviews' || $page eq 'adminHolds')
     {
-      $buffer .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote\tswiss\thold thru};
+      $buff .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote\tswiss\thold thru};
     }
     elsif ($page eq 'adminHistoricalReviews')
     {
-      $buffer .= qq{id\tsystem id\ttitle\tauthor\tpub date\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated\tswiss};
+      $buff .= qq{id\tsystem id\ttitle\tauthor\tpub date\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated\tswiss};
     }
-    $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\tpriority":'');
+    $buff .= sprintf("%s\n", ($self->IsUserAdmin())? "\tpriority":'');
     if ($stype eq 'reviews')
     {
-      $buffer .= $self->UnpackResults($page, $ref);
+      $buff .= $self->UnpackResults($page, $ref);
     }
     else
     {
@@ -2284,12 +2284,12 @@ sub SearchAndDownload
           $self->DownloadSpreadSheet("SQL failed: '$sql' ($@)");
           return 0;
         }
-        $buffer .= $self->UnpackResults($page, $ref2);
+        $buff .= $self->UnpackResults($page, $ref2);
       }
     }
   }
-  $self->DownloadSpreadSheet($buffer);
-  return ($buffer)? 1:0;
+  $self->DownloadSpreadSheet($buff);
+  return ($buff)? 1:0;
 }
 
 sub UnpackResults
@@ -2298,7 +2298,7 @@ sub UnpackResults
   my $page = shift;
   my $ref  = shift;
   
-  my $buffer = '';
+  my $buff = '';
   foreach my $row (@{$ref})
   {
     $row->[1] =~ s,(.*) .*,$1,;
@@ -2329,31 +2329,31 @@ sub UnpackResults
     {
       #for reviews
       #id, title, author, review date, attr, reason, category, note.
-      $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note};
+      $buff .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note};
     }
     elsif ($page eq 'editReviews' || $page eq 'holds')
     {
       #for editReviews
       #id, title, author, review date, attr, reason, category, note.
-      $buffer .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note\t$hold};
+      $buff .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note\t$hold};
     }
     elsif ($page eq 'undReviews')
     {
       #for und/nfi
       #id, title, author, review date, status, user, attr, reason, category, note.
-      $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note}
+      $buff .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note}
     }
     elsif ($page eq 'expert')
     {
       #for expert
       #id, title, author, review date, status, user, attr, reason, category, note.
-      $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note};
+      $buff .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note};
     }
     elsif ($page eq 'adminReviews' || $page eq 'adminHolds')
     {
       #for adminReviews
       #id, title, author, review date, status, user, attr, reason, category, note.
-      $buffer .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$swiss\t$hold};
+      $buff .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$swiss\t$hold};
     }
     elsif ($page eq 'adminHistoricalReviews')
     {
@@ -2364,11 +2364,11 @@ sub UnpackResults
       my $validated = $row->[15];
       #id, title, author, review date, status, user, attr, reason, category, note, validated
       my $sysid = $self->SimpleSqlGet("SELECT sysid FROM system WHERE id='$id'");
-      $buffer .= qq{$id\t$sysid\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated\t$swiss};
+      $buff .= qq{$id\t$sysid\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated\t$swiss};
     }
-    $buffer .= sprintf("%s\n", ($self->IsUserAdmin())? "\t$priority":'');
+    $buff .= sprintf("%s\n", ($self->IsUserAdmin())? "\t$priority":'');
   }
-  return $buffer;
+  return $buff;
 }
 
 sub SearchAndDownloadDeterminationStats
@@ -2380,17 +2380,17 @@ sub SearchAndDownloadDeterminationStats
   my $priority  = shift;
   my $pre       = shift;
   
-  my $buffer;
+  my $buff;
   if ($pre)
   {
-    $buffer = $self->CreatePreDeterminationsBreakdownData("\t", $startDate, $endDate, $monthly, undef, $priority);
+    $buff = $self->CreatePreDeterminationsBreakdownData("\t", $startDate, $endDate, $monthly, undef, $priority);
   }
   else
   {
-    $buffer = $self->CreateDeterminationsBreakdownData("\t", $startDate, $endDate, $monthly, undef, $priority);
+    $buff = $self->CreateDeterminationsBreakdownData("\t", $startDate, $endDate, $monthly, undef, $priority);
   }
-  $self->DownloadSpreadSheet($buffer);
-  return ($buffer)? 1:0;
+  $self->DownloadSpreadSheet($buff);
+  return ($buff)? 1:0;
 } 
 
 sub SearchAndDownloadQueue
@@ -2406,9 +2406,9 @@ sub SearchAndDownloadQueue
   my $startDate = shift;
   my $endDate = shift;
   
-  my $buffer = $self->GetQueueRef($order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, 0, 0, 1);
-  $self->DownloadSpreadSheet($buffer);
-  return ($buffer)? 1:0;
+  my $buff = $self->GetQueueRef($order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, 0, 0, 1);
+  $self->DownloadSpreadSheet($buff);
+  return ($buff)? 1:0;
 }
 
 sub SearchAndDownloadExportData
@@ -2424,9 +2424,9 @@ sub SearchAndDownloadExportData
   my $startDate = shift;
   my $endDate = shift;
   
-  my $buffer = $self->GetExportDataRef($order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, 0, 0, 1);
-  $self->DownloadSpreadSheet($buffer);
-  return ($buffer)? 1:0;
+  my $buff = $self->GetExportDataRef($order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, 0, 0, 1);
+  $self->DownloadSpreadSheet($buff);
+  return ($buff)? 1:0;
 }
 
 sub GetReviewsRef
@@ -6530,12 +6530,12 @@ sub GetLastStatusProcessedTime
 sub DownloadSpreadSheet
 {
   my $self   = shift;
-  my $buffer = shift;
+  my $buff = shift;
 
-  if ($buffer)
+  if ($buff)
   {
     print &CGI::header(-type => 'text/plain', -charset => 'utf-8');
-    print $buffer;
+    print $buff;
   }
 }
 
@@ -6967,14 +6967,14 @@ sub DownloadVolumeIDs
   my $self  = shift;
   my $sysid = shift;
   
-  my $buffer = (join "\t", qw (ID Chron Rights Attr Reason Source User Time Note)) . "\n";
+  my $buff = (join "\t", qw (ID Chron Rights Attr Reason Source User Time Note)) . "\n";
   my $rows = $self->VolumeIDsQuery($sysid);
   foreach my $line (@{$rows})
   {
     my ($id,$chron,$rights) = split '__', $line;
-    $buffer .= (join "\t", (($id,$chron,$rights), @{$self->RightsQuery($id,1)->[0]})) . "\n";
+    $buff .= (join "\t", (($id,$chron,$rights), @{$self->RightsQuery($id,1)->[0]})) . "\n";
   }
-  $self->DownloadSpreadSheet($buffer);
+  $self->DownloadSpreadSheet($buff);
   return (1 == scalar @{$self->GetErrors()});
 }
 
