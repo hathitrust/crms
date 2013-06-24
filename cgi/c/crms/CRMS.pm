@@ -101,7 +101,7 @@ sub ReadConfigFile
   my $fh;
   unless (open $fh, '<:encoding(UTF-8)', $path)
   {
-    $self->SetError("failed to get localization for $path: $!");
+    $self->SetError('failed to read config file at $path: ' . $!);
     return undef;
   }
   read $fh, my $buff, -s $path; # one of many ways to slurp file.
@@ -424,7 +424,7 @@ sub CalcStatus
   my $self = shift;
   
   my $module = 'Validator_' . $self->get('sys') . '.pm';
-  require "$module";
+  require $module;
   unshift @_, $self;
   return Validator::CalcStatus(@_);
 }
@@ -440,7 +440,7 @@ sub CheckPendingStatus
   if (!$status)
   {
     my $module = 'Validator_' . $self->get('sys') . '.pm';
-    require "$module";
+    require $module;
     unshift @_, $id;
     unshift @_, $self;
     $pstatus = Validator::CalcPendingStatus(@_);
@@ -915,7 +915,7 @@ sub GetViolations
   elsif ($priority < 4 || !$override)
   {
     my $module = 'Candidates_' . $self->get('sys') . '.pm';
-    require "$module";
+    require $module;
     unshift @_, $self;
     @errs = Candidates::GetViolations($self, $id, $record, $priority, $override);
   }
@@ -946,7 +946,7 @@ sub ShouldVolumeGoInUndTable
   $record = $self->GetMetadata($id) unless $record;
   return 'no meta' unless $record;
   my $module = 'Candidates_' . $self->get('sys') . '.pm';
-  require "$module";
+  require $module;
   return Candidates::ShouldVolumeGoInUndTable($self, $id, $record);
 }
 
@@ -4889,7 +4889,7 @@ sub ValidateSubmission
   if (!$errorMsg)
   {
     my $module = 'Validator_' . $self->get('sys') . '.pm';
-    require "$module";
+    require $module;
     unshift @_, $self;
     $errorMsg = Validator::ValidateSubmission(@_);
   }
