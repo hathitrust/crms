@@ -568,15 +568,17 @@ sub ExportReviews
         }
       }
     }
+    my $exported = 0;
     if (!$suppress)
     {
       print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $fromcgi;
+      $exported = 1;
     }
-    my $src = $self->SimpleSqlGet("SELECT source FROM queue WHERE id='$id' ORDER BY time DESC LIMIT 1");
-    my $sql = "INSERT INTO  exportdata (time,id,attr,reason,user,src) VALUES ('$time','$id','$attr','$reason','$user','$src')";
-    $self->PrepareSubmitSql($sql);
+    my $src = $self->SimpleSqlGet('SELECT source FROM queue WHERE id=?', $id);
+    my $sql = 'INSERT INTO  exportdata (time,id,attr,reason,user,src,exported) VALUES (?,?,?,?,?,?,?)';
+    $self->PrepareSubmitSql($sql, $time, $id, $attr, $reason, $user, $src, $exported);
     my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata WHERE id=?', $id);
-    $self->MoveFromReviewsToHistoricalReviews($id,$gid);
+    $self->MoveFromReviewsToHistoricalReviews($id, $gid);
     $self->RemoveFromQueue($id);
     $self->RemoveFromCandidates($id);
     $count++;
