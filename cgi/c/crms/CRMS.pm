@@ -634,7 +634,7 @@ sub EmailReport
        from => $self->GetSystemVar('exportEmailFrom')};
     $sender->MailFile({to => $self->GetSystemVar('exportEmailTo'),
              subject => $subject,
-             msg => "See attachment.",
+             msg => 'See attachment.',
              file => $file});
     $sender->Close;
   }
@@ -650,10 +650,10 @@ sub GetExportFh
   $date    =~ s/:/_/g;
   $date    =~ s/ /_/g;
 
-  my $perm = $self->get('root') . '/prep/c/crms/' . $self->get('sys') . '_' . $date . ".rights";
+  my $perm = $self->get('root') . '/prep/c/crms/' . $self->get('sys') . '_' . $date . '.rights';
   my $temp = $perm . '.tmp';
   if (-f $temp) { die "file already exists: $temp\n"; }
-  open (my $fh, ">", $temp) || die "failed to open exported file ($temp): $! \n";
+  open (my $fh, '>', $temp) || die "failed to open exported file ($temp): $!\n";
   return ($fh, $temp, $perm);
 }
 
@@ -918,7 +918,6 @@ sub GetViolations
   {
     my $module = 'Candidates_' . $self->get('sys') . '.pm';
     require $module;
-    unshift @_, $self;
     @errs = Candidates::GetViolations($self, $id, $record, $priority, $override);
   }
   return \@errs;
@@ -981,7 +980,6 @@ sub LoadNewItems
   my $max = $self->GetCutoffYear('maxYear');
   my $y = $min + int(rand($max - $min));
   my %dels = ();
-  #print "Starting with year $y\n";
   while (1)
   {
     my $sql = 'SELECT id,pub_date FROM candidates ' .
@@ -1000,7 +998,6 @@ sub LoadNewItems
       next if $dels{$id};
       next if 0 < $self->SimpleSqlGet("SELECT COUNT(*) FROM historicalreviews WHERE id='$id'");
       my $pub_date = $row->[1];
-      #print "Trying $id ($pub_date) against $y\n";
       next if $pub_date ne "$y-01-01";
       my $sysid;
       my $record = $self->GetMetadata($id, \$sysid);
