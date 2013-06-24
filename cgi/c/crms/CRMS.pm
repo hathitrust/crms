@@ -738,7 +738,7 @@ sub CheckAndLoadItemIntoCandidates
   my $noop  = shift;
   my $purge = shift;
 
-  my $incand = (0 < $self->SimpleSqlGet('SELECT COUNT(*) FROM candidates WHERE id=?', $id));
+  my $incand = $self->SimpleSqlGet('SELECT id FROM candidates WHERE id=?', $id);
   my $inund  = $self->SimpleSqlGet('SELECT src FROM und WHERE id=?', $id);
   my $inq    = $self->IsVolumeInQueue($id);
   my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
@@ -758,12 +758,12 @@ sub CheckAndLoadItemIntoCandidates
   }
   if (!Candidates::HasCorrectRights($self, $attr, $reason))
   {
-    if ($incand && $reason eq 'gfv')
+    if (defined $incand && $reason eq 'gfv')
     {
       print "Filter $id as gfv\n";
       $self->Filter($id, 'gfv') unless defined $noop;
     }
-    elsif ($incand && !$inq)
+    elsif (defined $incand && !$inq)
     {
       print "Remove $id -- rights are now $attr/$reason\n";
       $self->RemoveFromCandidates($id) unless defined $noop;
@@ -782,7 +782,7 @@ sub CheckAndLoadItemIntoCandidates
     print "Skip $id -- already in historical reviews\n";
     return;
   }
-  if ($incand && !$purge)
+  if (defined $incand && !$purge)
   {
     print "Skip $id -- already in candidates\n";
     $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) if defined $inund and !defined $noop;
@@ -808,15 +808,15 @@ sub CheckAndLoadItemIntoCandidates
         $self->Filter($id, $src) unless defined $noop;
       }
     }
-    else
+    elsif (!defined $incand)
     {
-      print "Add $id to candidates\n" unless $incand;
+      print "Add $id to candidates\n";
       $self->AddItemToCandidates($id, $time, $record, $sysid, $noop);
     }
   }
   else
   {
-    if ((defined $inund || $incand) && !$inq)
+    if ((defined $inund || defined $incand) && !$inq)
     {
       printf "Remove $id from %s (%s)\n", (defined $incand)? 'candidates':'und', $errs->[0];
       $self->RemoveFromCandidates($id);
