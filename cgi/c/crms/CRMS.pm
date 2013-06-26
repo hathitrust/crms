@@ -758,7 +758,7 @@ sub CheckAndLoadItemIntoCandidates
     }
     elsif (defined $incand && !$inq)
     {
-      print "Remove $id -- rights are now $attr/$reason\n";
+      print "Remove $id -- (rights now $attr/$reason)\n";
       $self->RemoveFromCandidates($id) unless defined $noop;
     }
     return;
@@ -797,13 +797,13 @@ sub CheckAndLoadItemIntoCandidates
     {
       if (!defined $inund || $src ne $inund)
       {
-        printf "Skip $id ($src) -- %s in filtered volumes\n", (defined $inund)? 'updating':'inserting';
+        printf "Skip $id ($src) -- %s in filtered volumes\n",
+          (defined $inund)? "updating $inund->$src":'inserting';
         $self->Filter($id, $src) unless defined $noop;
       }
     }
     elsif (!defined $incand)
     {
-      print "Add $id to candidates\n";
       $self->AddItemToCandidates($id, $time, $record, $sysid, $noop);
     }
   }
@@ -811,8 +811,8 @@ sub CheckAndLoadItemIntoCandidates
   {
     if ((defined $inund || defined $incand) && !$inq)
     {
-      printf "Remove $id from %s (%s)\n", (defined $incand)? 'candidates':'und', $errs->[0];
-      $self->RemoveFromCandidates($id);
+      printf "Remove $id %s (%s)\n", (defined $incand)? '--':'from und', $errs->[0];
+      $self->RemoveFromCandidates($id) unless defined $noop;
     }
   }
 }
@@ -828,8 +828,6 @@ sub AddItemToCandidates
 
   $record = $self->GetMetadata($id, \$sysid) unless $record;
   return unless defined $record and defined $sysid;
-  my $sql = 'REPLACE INTO candidates (id, time, pub_date) VALUES (?,?,?)';
-  my $date = $self->GetRecordPubDate($id, $record);
   # Are there duplicates? Filter the oldest duplicates and add the newest to candidates.
   if (!$self->DoesRecordHaveChron($sysid, $record))
   {
@@ -839,10 +837,13 @@ sub AddItemToCandidates
     foreach my $line (@{$rows})
     {
       my ($id2,$chron2,$rights2) = split '__', $line;
-      my ($ns,$n) = split m/\./, $id2, 2;
-      my $sql2 = 'SELECT time FROM rights_current WHERE namespace=? AND id=?';
-      my $time2 = $self->SimpleSqlGetSDR($sql2, $ns, $n);
-      $map{$id2} = $time2;
+      if ($self->IsVolumeInCandidates($id2) || $self->IsFiltered($id2))
+      {
+        my ($ns,$n) = split m/\./, $id2, 2;
+        my $sql2 = 'SELECT time FROM rights_current WHERE namespace=? AND id=?';
+        my $time2 = $self->SimpleSqlGetSDR($sql2, $ns, $n);
+        $map{$id2} = $time2;
+      }
     }
     my @sorted = sort {$map{$b} cmp $map{$a}} keys %map;
     $id = shift @sorted;
@@ -851,15 +852,21 @@ sub AddItemToCandidates
     {
       if ($self->IsVolumeInCandidates($id2))
       {
-        print "  filter $id2 as duplicate of $id\n";
+        print "Filter $id2 as duplicate of $id\n";
         $self->Filter($id2, 'duplicate') unless defined $noop;
       }
     }
   }
-  if (!defined $noop)
+  if (!$self->IsVolumeInCandidates($id))
   {
-    $self->PrepareSubmitSql($sql, $id, $time, $date);
-    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
+    print "Add $id to candidates\n";
+    if (!defined $noop)
+    {
+      my $date = $self->GetRecordPubDate($id, $record);
+      my $sql = 'REPLACE INTO candidates (id, time, pub_date) VALUES (?,?,?)';
+      $self->PrepareSubmitSql($sql, $id, $time, $date);
+      $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
+    }
   }
 }
 
