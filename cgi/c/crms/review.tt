@@ -200,15 +200,10 @@
           </td>
         </tr>
         [% IF ren %]
-          [% viafdata = crms.GetVIAFData(barcode) %]
-          [% IF viafdata && viafdata.country &&
-             viafdata.country != 'US' && viafdata.country != 'XX' %]
-            [% IF !viafdata.add || (viafdata.add && viafdata.add < 1800) %]
-              [% tip = "Warning: possible foreign author" %]
-            [% END %]
-          [% END %]
-          [% IF tip %]
-            <tr><td colspan="2"><span class="red"><b>$tip</b></span></td></tr>
+          [% viafwarn = crms.VIAFWarning(barcode) %]
+          [% IF viafwarn %]
+            [% viafwarn = "Warning: possible foreign author: " _ viafwarn %]
+            <tr><td colspan="2"><span class="red"><b>$viafwarn</b></span></td></tr>
           [% END %]
         [% END %]
       </table>

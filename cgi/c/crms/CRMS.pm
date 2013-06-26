@@ -5083,11 +5083,13 @@ sub GetMarcDatafield
   my $field  = shift;
   my $code   = shift;
   my $record = shift;
+  my $index  = shift;
 
+  $index = 1 unless defined $index;
   $record = $self->GetMetadata($id) unless $record;
   if (!$record) { $self->Logit("failed in GetMarcDatafield: $id"); }
-  my $xpath = qq{//*[local-name()='datafield' and \@tag='$field'][1]} .
-              qq{/*[local-name()='subfield'  and \@code='$code'][1]};
+  my $xpath = qq{//*[local-name()='datafield' and \@tag='$field'][$index]} .
+              qq{/*[local-name()='subfield'  and \@code='$code'][$index]};
   my $data;
   eval{ $data = $record->findvalue($xpath); };
   if ($@) { $self->Logit("failed to parse metadata for $id: $@"); }
@@ -5104,6 +5106,23 @@ sub GetMarcDatafield
   return $data;
 }
 
+sub CountMarcDatafields
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $field  = shift;
+  my $record = shift;
+
+  my $n = 0;
+  eval {
+    $record = $self->GetMetadata($id) unless $record;
+    my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='$field']");
+    $n = scalar $nodes->get_nodelist();
+  };
+  $self->SetError('CountMarcDatafields: ' . $@) if $@;
+  return $n;
+}
+
 # The long param includes the author dates in the 100d field if present.
 sub GetRecordAuthor
 {
@@ -5112,33 +5131,66 @@ sub GetRecordAuthor
   my $record = shift;
   my $long   = shift;
 
-  #After talking to Tim, the author info is in the 1XX field
-  #Margrte told me that the only 1xx fields are: 100, 110, 111, 130. 700, 710
   $record = $self->GetMetadata($id) unless $record;
-  my $data = $self->GetMarcDatafield($id,'100','a',$record);
-  if ($data)
+  my $data = $self->GetRecordSubfields($id, '100', $record, 1, 'a', 'b', 'c', ($long)? 'd':undef);
+  $data = $self->GetRecordSubfields($id, '110', $record, 1, 'a', 'b') unless defined $data;
+  $data = $self->GetRecordSubfields($id, '111', $record, 1, 'a', 'c') unless defined $data;
+  $data = $self->GetRecordSubfields($id, '700', $record, 1, 'a', 'b', 'c', ($long)? 'd':undef) unless defined $data;
+  $data = $self->GetRecordSubfields($id, '710', $record, 1, 'a') unless defined $data;
+  if (defined $data)
   {
-    my $data2 = $self->GetMarcDatafield($id,'100','c',$record);
+    $data =~ s/\n+//gs;
+    $data =~ s/\s*[,:;]*\s*$//;
+    $data =~ s/^\s+//;
+  }
+  return $data;
+}
+
+sub GetRecordAdditionalAuthors
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
+
+  $record = $self->GetMetadata($id) unless $record;
+  my @aus = ();
+  my $n = $self->CountMarcDatafields($id, '700', $record);
+  foreach my $i (1 .. $n)
+  {
+    my $data = $self->GetRecordSubfields($id, '700', $record, $i, 'a', 'b', 'c', 'd');
+    push @aus, $data if defined $data;
+  }
+  $n = $self->CountMarcDatafields($id, '710', $record);
+  foreach my $i (1 .. $n)
+  {
+    my $data = $self->GetRecordSubfields($id, '710', $record, $i, 'a', 'b');
+    push @aus, $data if defined $data;
+  }
+  return @aus;
+}
+
+sub GetRecordSubfields
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $field  = shift;
+  my $record = shift;
+  my $index  = shift;
+  my @subfields = @_;
+
+  my $data = undef;
+  foreach my $subfield (@subfields)
+  {
+    my $data2 = $self->GetMarcDatafield($id, $field, $subfield, $record, $index);
+    $data2 =~ s/(^\s+)|(\s+$)//g if $data2;
     $data .= ' ' . $data2 if $data2;
-    if ($long)
-    {
-      $data2 = $self->GetMarcDatafield($id,'100','d',$record);
-      $data .= ' ' . $data2 if $data2;
-    }
   }
-  else
+  if (defined $data)
   {
-    $data = $self->GetMarcDatafield($id,'110','a',$record);
-    $data .= $self->GetMarcDatafield($id,'110','b',$record) if $data;
-    $data = $self->GetMarcDatafield($id,'111','a',$record) unless $data;
-    # 130 is for title
-    #$data = $self->GetMarcDatafield($id,'130','a',$record) unless $data;
-    $data = $self->GetMarcDatafield($id,'700','a',$record) unless $data;
-    $data = $self->GetMarcDatafield($id,'710','a',$record) unless $data;
+    $data =~ s/\n+//gs;
+    $data =~ s/\s*[,:;]*\s*$//;
+    $data =~ s/^\s+//;
   }
-  $data =~ s/\n+//gs;
-  $data =~ s/\s*[,:;]*\s*$//;
-  $data =~ s/^\s+//;
   return $data;
 }
 
@@ -8422,7 +8474,7 @@ sub GetVIAFData
       if (@vals && scalar @vals == 1)
       {
         $where = $vals[0]->string_value();
-        $ret{'country'} = substr($where, 0, 2);
+        $ret{'country'} = $where;
       }
     }
     if ($n > 0 && 1 == scalar keys %{$adds{$n}})
@@ -8433,10 +8485,42 @@ sub GetVIAFData
     if (defined $name)
     {
       $sql = 'INSERT INTO viaf (author,viaf_author,year,country) VALUES (?,?,?,?)';
-      $self->PrepareSubmitSql($sql, $a, $name, $add, $where);
+      $self->PrepareSubmitSql($sql, $a, $ret{'author'}, $ret{'add'}, $ret{'country'});
     }
   }
   return (scalar keys %ret > 0)? \%ret:undef;
+}
+
+sub VIAFWarning
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my @warnings;
+  my @aus;
+  my $record = $self->GetMetadata($id);
+  my $au = $self->GetRecordAuthor($id, $record, 1);
+  push @aus, $au if defined $au;
+  my @add = $self->GetRecordAdditionalAuthors($id, $record);
+  push @aus, $_ for @add;
+  foreach $au (@aus)
+  {
+    my $data = $self->GetVIAFData($id, $au);
+    if (defined $data and scalar keys %{$data} > 0)
+    {
+      my $country = $data->{'country'};
+      if (defined $country && substr($country, 0, 2) ne 'US' &&
+          substr($country, 0, 2) ne 'XX')
+      {
+        my $add = $data->{'add'};
+        next if defined $add and $add >= 1800;
+        my $last = $au;
+        $last = $1 if $last =~ m/^(.+?),.*/;
+        push @warnings, "$last ($country)";
+      }
+    }
+  }
+  return (scalar @warnings)? join '; ', @warnings:undef;
 }
 
 1;
