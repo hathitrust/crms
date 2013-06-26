@@ -150,12 +150,13 @@ function PredictRights(id)
   var sel = GetCheckedValue(rights);
   // There is a hidden div that tells us which button id is und/nfi
   var und = document.getElementById('UNDNFI').title;
-  if (und && cat == 'Translation')
+  // Backed out in favor of submission rules TBD.
+  /*if (und && cat == 'Translation')
   {
     var button = document.getElementById('r' + und);
     if (button) button.checked = "checked";
     return;
-  }
+  }*/
   if (und && sel == und) return;
   if (window.XMLHttpRequest)
   {
