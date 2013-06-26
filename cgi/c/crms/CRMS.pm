@@ -8311,9 +8311,16 @@ sub GetADDFromAuthor
   my $a    = shift; # For testing
 
   my $add = undef;
-  $a = $self->GetRecordAuthor($id, undef, 1) unless defined $a;
+  eval {
+    $a = $self->GetRecordAuthor($id, undef, 1) unless defined $a;
+  };
+  if (!$@)
+  {
+    $self->ClearErrors();
+    return;
+  }
   my $regex = '\d?\d\d\d\??\s*-\s*(\d?\d\d\d)[.,;) ]*$';
-  if ($a =~ m/$regex/)
+  if (defined $a && $a =~ m/$regex/)
   {
     $add = $1;
     $add = undef if $a =~ m/(fl\.*|active)\s*$regex/i;
