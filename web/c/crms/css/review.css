@@ -25,14 +25,14 @@ body {
   margin-top: 3px;
 }
 
-a:link {color:#185EAC;}    /* unvisited link */
-a:visited {color:#185EAC;} /* visited link */
-a:hover {color:#1B75DA;}   /* mouse over link */
-a:active {color:#1B75DA;}  /* selected link */
+a:link {color:#185EAC; text-decoration:none;}    /* unvisited link */
+a:visited {color:#185EAC; text-decoration:none;} /* visited link */
+a:hover {color:#1B75DA; text-decoration:underline;}   /* mouse over link */
+a:active {color:#1B75DA; text-decoration:underline;}  /* selected link */
 a.header:link    {color:#82CAFA;}
 a.header:visited {color:#82CAFA;}
 a.header:hover   {color:#A0DAFF;}
-a.header:active  {color:#82CAFA;}tip
+a.header:active  {color:#82CAFA;}
 
 .divbody {
   float:left;
@@ -441,8 +441,8 @@ border-collapse:collapse;}
 #menu dt {background: white; border-left:1px solid black;border-right:1px solid black;margin:0; font-size:1.1em; float:left;}
 #menu dd {display:none;border-left:1px solid black;border-right:1px solid black; clear:left; margin:0; padding:0; color:#fff; font-size: 1em; text-align:left;}
 
-#menu dt a, #menu dt a:visited {background:white; color:black; text-decoration:none; border:1px solid black; margin:-1px; display:block; padding: 5px 10px; font-weight:bold;}
-#menu dd a, #menu dd a:visited {background:white; color:black; text-decoration:none; border:1px solid black; margin:-1px; display:block; padding: 5px 10px;}
+#menu dt a, #menu dt a:visited {background:white; color:black; text-decoration:none; white-space:nowrap; border:1px solid black; margin:-1px; display:block; padding: 5px 10px; font-weight:bold;}
+#menu dd a, #menu dd a:visited {background:white; color:black; text-decoration:none; white-space:nowrap; border:1px solid black; margin:-1px; display:block; padding: 5px 10px;}
 
 /*#menu li a:hover {border:0;}*/
  
