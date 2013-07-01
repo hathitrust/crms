@@ -8366,7 +8366,7 @@ sub GetADDFromAuthor
   eval {
     $a = $self->GetRecordAuthor($id, undef, 1) unless defined $a;
   };
-  if (!$@)
+  if ($@)
   {
     $self->ClearErrors();
     return;
