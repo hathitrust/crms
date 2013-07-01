@@ -8513,7 +8513,7 @@ sub VIAFWarning
           substr($country, 0, 2) ne 'XX')
       {
         my $add = $data->{'add'};
-        next if defined $add and $add >= 1800;
+        next if defined $add and $add <= 1800;
         my $last = $au;
         $last = $1 if $last =~ m/^(.+?),.*/;
         push @warnings, "$last ($country)";
