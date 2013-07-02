@@ -18,7 +18,8 @@ sub ValidateSubmission
   my $pubDate = $self->GetPubDate($id);
   $pubDate = $renDate if $renNum;
   if ($attr eq 'und' && $reason eq 'nfi' &&
-      (!$category || (!$note && $self->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category))))
+      (!$category ||
+       (!$note && 1 == $self->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category))))
   {
     $errorMsg .= 'und/nfi must include note category and note text.';
     $noteError = 1;
@@ -49,6 +50,11 @@ sub ValidateSubmission
     {
       $errorMsg .= 'Must include a category if there is a note. ';
     }
+  }
+  if ($attr ne 'und' && defined $category &&
+      1 == $self->SimpleSqlGet('SELECT need_und FROM categories WHERE name=?', $category))
+  {
+    $errorMsg .= "Note category '$category' must be marked und/nfi. ";
   }
   return $errorMsg;
 }
