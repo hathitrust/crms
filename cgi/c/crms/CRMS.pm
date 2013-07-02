@@ -5478,7 +5478,6 @@ sub BarcodeToId
     {
       my @keys = keys %$records;
       $sysid = $keys[0];
-      print "$sysid\n";
       if ($sysid && $self->get('nosystem') ne 'nosystem')
       {
         $sql = 'REPLACE INTO system (id,sysid) VALUES (?,?)';
