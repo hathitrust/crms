@@ -121,15 +121,15 @@ sub IsProbableGovDoc
   my $leader = lc $record->findvalue($xpath);
   my $code = substr($leader, 28, 1);
   return 0 if ($code ne 'f' && $code =~ m/[a-z]/);
-  if ($author =~ m/^united\s+states/i)
+  if (defined $author && $author =~ m/^united\s+states/i)
   {
     return 1 unless $field260a or $field260b;
     return 1 if $field260a =~ m/^\[?washington/i;
     return 1 if $field260b and $field260b =~ m/^u\.s\.\s+g\.p\.o\./i;
     return 1 if $field260b and $field260b =~ m/^u\.s\.\s+govt\.\s+print\.\s+off\./i;
   }
-  return 1 if $author =~ m/^library\s+of\s+congress/i and $field260a =~ m/^washington/i;
-  return 1 if $title =~ m/^code\s+of\s+federal\s+regulations/i and $field260a =~ m/^washington/i;
+  return 1 if defined $author and $author =~ m/^library\s+of\s+congress/i and $field260a =~ m/^washington/i;
+  return 1 if defined $title and $title =~ m/^code\s+of\s+federal\s+regulations/i and $field260a =~ m/^washington/i;
   if (!$author)
   {
     return 1 if $field260a =~ m/^\[?washington/i and $field260b =~ m/^(u\.s\.|g\.p\.o\.)/i;
