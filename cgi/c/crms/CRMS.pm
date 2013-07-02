@@ -5453,8 +5453,8 @@ sub BarcodeToId
   my $force = shift;
 
   my $sysid = undef;
-  my $sql = "SELECT sysid FROM system WHERE id='$id'";
-  $sysid = $self->SimpleSqlGet($sql) unless $force;
+  my $sql = 'SELECT sysid FROM system WHERE id=?';
+  $sysid = $self->SimpleSqlGet($sql, $id) unless $force;
   if (!$sysid)
   {
     my $url = "http://catalog.hathitrust.org/api/volumes/brief/htid/$id.json";
@@ -5478,10 +5478,11 @@ sub BarcodeToId
     {
       my @keys = keys %$records;
       $sysid = $keys[0];
+      print "$sysid\n";
       if ($sysid && $self->get('nosystem') ne 'nosystem')
       {
-        $sql = "REPLACE INTO system (id,sysid) VALUES ('$id','$sysid')";
-        $self->PrepareSubmitSql($sql);
+        $sql = 'REPLACE INTO system (id,sysid) VALUES (?,?)';
+        $self->PrepareSubmitSql($sql, $id, $sysid);
       }
     }
     else { $self->SetError("HT Bib API found no system id for '$id'\nReturned: '$content'\nURL: '$url'"); }
