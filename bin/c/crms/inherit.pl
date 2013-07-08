@@ -495,8 +495,9 @@ sub InheritanceReport
 
   my %data = ();
   my %seen = ();
-  my $sql = "SELECT id,gid,attr,reason,time,src FROM exportdata WHERE (src!='inherited' AND time>'$start' AND time<='$end') " .
-            "OR id IN (SELECT id FROM unavailable WHERE src='$src') ORDER BY time DESC";
+  my $sql = 'SELECT id,gid,attr,reason,time,src FROM exportdata WHERE' .
+            " (src!='inherited' AND time>'$start' AND time<='$end' AND exported=1)" .
+            " OR id IN (SELECT id FROM unavailable WHERE src='$src') ORDER BY time DESC";
   if ($singles && scalar @{$singles})
   {
     $sql = sprintf("SELECT id,gid,attr,reason,time,src FROM exportdata WHERE id in ('%s') ORDER BY time DESC", join "','", @{$singles});
@@ -527,7 +528,7 @@ sub InheritanceReport
       next;
     }
     # When using date ranges, earlier export should not supersede later.
-    my $latest = $crms->SimpleSqlGet("SELECT time FROM exportdata WHERE id='$id' ORDER BY time DESC LIMIT 1");
+    my $latest = $crms->SimpleSqlGet('SELECT time FROM exportdata WHERE id=? ORDER BY time DESC LIMIT 1', $id);
     if ($time lt $latest)
     {
       print "Later export ($latest) for $id ($time); skipping\n" if $verbose;
