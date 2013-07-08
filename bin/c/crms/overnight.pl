@@ -12,13 +12,13 @@ BEGIN
 
 use strict;
 use CRMS;
-use Getopt::Std;
+use Getopt::Long qw(:config no_ignore_case bundling);
 
 my $usage = <<END;
-USAGE: $0 [-cehmpqt] [-x SYS] [start_date [end_date]]
+USAGE: $0 [-cehlmnpqt] [-x SYS] [start_date [end_date]]
 
 Processes reviews, exports determinations, updates candidates,
-updates the queue, and recalculates user stats.
+updates the queue, recalculates user stats, and clears stale locks.
 
 If the start or end dates are specified, only loads candidates
 with latest rights DB timestamp between them.
@@ -26,6 +26,7 @@ with latest rights DB timestamp between them.
 -c       Do not update candidates.
 -e       Do not process statuses or export determinations.
 -h       Print this help message.
+-l       Do not clear old locks.
 -m       Do not recalculate monthly stats.
 -n       Do not check no-meta filtered volumes
 -p       Run in production.
@@ -34,18 +35,22 @@ with latest rights DB timestamp between them.
 -x SYS   Set SYS as the system to execute.
 END
 
+my ($skipCandidates, $skipExport, $help, $skipLocks, $skipMonthly,
+    $skipNoMeta, $production, $skipQueue, $training, $sys);
 
-my %opts;
-getopts('cehmnpqtx:', \%opts);
-my $skipCandidates = $opts{'c'};
-my $skipExport = $opts{'e'};
-my $help = $opts{'h'};
-my $skipMonthly = $opts{'m'};
-my $skipNoMeta = $opts{'n'};
-my $production = $opts{'p'};
-my $skipQueue = $opts{'q'};
-my $training = $opts{'t'};
-my $sys = $opts{'x'};
+Getopt::Long::Configure ('bundling');
+die 'Terminating' unless GetOptions(
+           'c'    => \$skipCandidates,
+           'e'    => \$skipExport,
+           'h|?'  => \$help,
+           'l'    => \$skipLocks,
+           'm'    => \$skipMonthly,
+           'n'    => \$skipNoMeta,
+           'p'    => \$production,
+           'q'    => \$skipQueue,
+           't'    => \$training,
+           'x:s'  => \$sys);
+
 die $usage if $help;
 $DLPS_DEV = undef if $production;
 
@@ -65,7 +70,7 @@ if (scalar @ARGV)
 }
 
 my $crms = CRMS->new(
-    logFile    =>   "$DLXSROOT/prep/c/crms/update_log.txt",
+    logFile    =>   "$DLXSROOT/prep/c/crms/overnight_log.txt",
     sys        =>   $sys,
     verbose    =>   0,
     root       =>   $DLXSROOT,
@@ -87,7 +92,7 @@ if ($skipCandidates) { ReportMsg("-c flag set; skipping candidates load."); }
 else
 {
   ReportMsg("Starting to load new volumes into candidates.");
-  my $status = $crms->LoadNewItemsInCandidates($skipNoMeta, $start, $end);
+  $crms->LoadNewItemsInCandidates($skipNoMeta, $start, $end);
   ReportMsg("DONE loading new volumes into candidates.");
 }
 
@@ -105,6 +110,14 @@ else
   ReportMsg("Starting to update monthly stats.");
   $crms->UpdateStats();
   ReportMsg("DONE updating monthly stats.");
+}
+
+if ($skipLocks) { ReportMsg("-l flag set; skipping unlock."); }
+else
+{
+  ReportMsg("Starting to clear stale locks.");
+  $crms->RemoveOldLocks();
+  ReportMsg("DONE clearing stale locks.");
 }
 
 my $r = $crms->GetErrors();
