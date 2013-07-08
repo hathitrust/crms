@@ -15,27 +15,27 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-acdhpvux] [-s VOL_ID [-s VOL_ID2...]]
-          [start_date [end_date]]
+USAGE: $0 [-acdhnpvu] [-s VOL_ID [-s VOL_ID2...]]
+          [-x SYS] s[start_date [end_date]]
 
 Reports on volumes that are no longer eligible for candidacy in the rights database
-and, optionally, deletes them from the system.
+and removes them from the system.
 
 -a         Report on all volumes, ignoring date range.
 -c         Run against candidates.
--d         Delete qualifying volumes unless they're in the queue.
 -h         Print this help message.
+-n         No-op; reports what would be done but do not modify the database.
 -p         Run in production.
 -s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
--u         Run against the und table.
+-u         Run against the und table, unfiltering where necessary.
 -v         Emit debugging information.
 -x SYS     Set SYS as the system to execute.
 END
 
 my $all;
 my $candidates;
-my $delete;
 my $help;
+my $noop;
 my $production;
 my @singles;
 my $und;
@@ -46,8 +46,8 @@ Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
            'a'    => \$all,
            'c'    => \$candidates,
-           'd'    => \$delete,
            'h|?'  => \$help,
+           'n'    => \$noop,
            'p'    => \$production,
            's:s@' => \@singles,
            'u'    => \$und,
@@ -79,12 +79,25 @@ if (scalar @ARGV)
   }
 }
 
-my $module = 'Candidates_' . $crms->get('sys') . '.pm';
-require "$module";
-my $clause = Candidates::RightsClause();
-
-CheckTable('candidates', $all, $start, $end, \@singles) if $candidates;
-CheckTable('und', $all, $start, $end, \@singles) if $und;
+my $before = $crms->GetCandidatesSize();
+if ($candidates)
+{
+  print "Checking candidates...\n" if $verbose;
+  CheckTable('candidates', $all, $start, $end, \@singles);
+}
+if ($und)
+{
+  print "Checking und...\n" if $verbose;
+  CheckTable('und', $all, $start, $end, \@singles);
+}
+my $after = $crms->GetCandidatesSize();
+if (!$noop)
+{
+  my $time = $crms->SimpleSqlGet('SELECT MAX(time) FROM candidatesrecord');
+  printf "Change to candidates: %d\n", $after-$before;
+  my $sql = 'INSERT INTO candidatesrecord (time,addedamount) VALUES (?,?)';
+  $crms->PrepareSubmitSql($sql, $time, $after-$before);
+}
 
 sub CheckTable
 {
@@ -94,11 +107,12 @@ sub CheckTable
   my $end     = shift;
   my $singles = shift;
   
-  my $sql = "SELECT id FROM $table";
+  my $sql = 'SELECT id FROM ' . $table;
   my @restrict = ();
   push @restrict, 'src!="gov"' if $table eq 'und';
   push @restrict, "(time>'$start 00:00:00' AND time<='$end 23:59:59')" unless $all;
   $sql .= ' WHERE ' . join ' AND ', @restrict if scalar @restrict;
+  $sql .= ' ORDER BY time ASC';
   my @singles = @{$singles};
   if (@singles && scalar @singles)
   {
@@ -106,47 +120,12 @@ sub CheckTable
   }
   print "$sql\n" if $verbose > 1;
   my $ref = $dbh->selectall_arrayref($sql);
-  my $n = 0;
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    my ($namespace,$n) = split m/\./, $id, 2;
-    print "$id\n" if $verbose >= 2;
-    my ($attr,$reason,$src,$usr,$time,$note) = @{$crms->RightsQuery($id,1)->[0]};
-    my $rights = "$attr/$reason";
-    $sql = "SELECT COUNT(*) FROM rights_current WHERE namespace='$namespace' AND id='$n' AND ($clause)";
-    if ($crms->SimpleSqlGetSDR($sql) > 0)
-    {
-      my @errs = ();
-      push @errs, 'in queue' if $crms->SimpleSqlGet("SELECT COUNT(*) FROM queue WHERE id='$id'");
-      push @errs, 'in reviews' if $crms->SimpleSqlGet("SELECT COUNT(*) FROM reviews WHERE id='$id'");
-      $sql = ($table eq 'und')?"SELECT src FROM und WHERE id='$id'":"SELECT time FROM candidates WHERE id='$id'";
-      my $info = $crms->SimpleSqlGet($sql);
-      if ($delete && 0 == scalar @errs)
-      {
-        my $sql = "DELETE FROM $table WHERE id='$id'";
-        print "$id ($info): $attr/$reason ($usr) -- deleting\n";
-        $crms->PrepareSubmitSql($sql);
-      }
-      else
-      {
-        printf "$id ($info): $rights ($usr) -- %s\n", (scalar @errs)? (join '; ', @errs):'can delete';
-      }
-      $n++ unless scalar @errs;
-    }
-    elsif ($table ne 'und')
-    {
-      my $cat = $crms->ShouldVolumeGoInUndTable($id);
-      if ($cat)
-      {
-        print "$id: ($cat) -- filtering\n";
-        $crms->Filter($id, $cat) if $delete;
-      }
-    }
+    print "$id\n" if $verbose > 1;
+    $crms->CheckAndLoadItemIntoCandidates($id, $noop, 1);
   }
-  printf "%s delete $n %s of %d from $table\n", ($delete)?'Did':'Can',
-                             $crms->Pluralize('volume', $n),
-                             scalar @{$ref};
 }
 
 print "Warning: $_\n" for @{$crms->GetErrors()};
