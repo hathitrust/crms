@@ -5,15 +5,26 @@ use warnings;
 use vars qw( @ISA @EXPORT @EXPORT_OK );
 our @EXPORT = qw(HasCorrectRights GetViolations ShouldVolumeGoInUndTable);
 
+# If new_attr and new_reason are supplied, they are the final determination
+# and this checks whether that determination should be exported (is the
+# volume in scope?).
+# In CRMS World, we can't export anything if the volume is out of scope, or
+# if current rights are pdus and new rights are und.
 sub HasCorrectRights
 {
-  my $self   = shift;
-  my $attr   = shift;
-  my $reason = shift;
-  
-  return (($attr eq 'ic' && $reason eq 'bib') ||
-          ($attr eq 'pdus' && $reason eq 'bib') ||
-           $attr eq 'op');
+  my $self       = shift;
+  my $attr       = shift;
+  my $reason     = shift;
+  my $new_attr   = shift;
+  my $new_reason = shift;
+
+  my $correct = 0;
+  $correct = 1 if ($attr eq 'ic' && $reason eq 'bib') ||
+                  ($attr eq 'pdus' && $reason eq 'bib') ||
+                  $attr eq 'op';
+  $correct = 0 if defined $new_attr && $new_attr eq 'und' &&
+                  ($attr eq 'pd' || $attr eq 'pdus');
+  return $correct;
 }
 
 sub GetViolations

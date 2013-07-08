@@ -540,6 +540,8 @@ sub ExportReviews
     print ">>> noExport system variable is set; will not create export file or email.\n" unless $fromcgi;
     $fromcgi = 1;
   }
+  my $module = 'Candidates_' . $self->get('sys') . '.pm';
+  require $module;
   my $count = 0;
   my $user = $self->get('sys');
   my $time = $self->GetTodaysDate();
@@ -548,27 +550,20 @@ sub ExportReviews
   my $start_size = $self->GetCandidatesSize();
   foreach my $id (@{$list})
   {
-    my $suppress = 0;
+    my $exported = 1;
     my ($attr,$reason) = $self->GetFinalAttrReason($id);
-    # FIXME: find a more elegant way to do this
-    if ($user eq 'crmsworld' && $attr eq 'und')
+    my $rq = $self->RightsQuery($id,1);
+    my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
+    # Do not export determination if the volume has gone out of scope,
+    # or if exporting und would clobber pdus in World.
+    if (!Candidates::HasCorrectRights($self, $attr2, $reason2, $attr, $reason))
     {
-      my $rq = $self->RightsQuery($id,1);
-      if ($rq)
-      {
-        my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
-        if ($attr2 eq 'pdus')
-        {
-          print "Not exporting $id as und; it is $attr2/$reason\n" unless $fromcgi;
-          $suppress = 1;
-        }
-      }
+      print "Not exporting $id as $attr/$reason; it is out of scope ($attr2/$reason)\n" unless $fromcgi;
+      $exported = 0;
     }
-    my $exported = 0;
-    if (!$suppress)
+    if ($exported)
     {
       print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $fromcgi;
-      $exported = 1;
     }
     my $src = $self->SimpleSqlGet('SELECT source FROM queue WHERE id=?', $id);
     my $sql = 'INSERT INTO  exportdata (time,id,attr,reason,user,src,exported) VALUES (?,?,?,?,?,?,?)';
@@ -7774,8 +7769,8 @@ sub DuplicateVolumesFromExport
         delete $data->{'unneeded'}->{$id};
         delete $data->{'inherit'}->{$id};
       }
-      # CRMS World can't inherit und onto pdus
-      elsif ($self->get('sys') eq 'crmsworld' && $newrights =~ m/^und/ && $oldrights =~ m/^pdus/)
+      # CRMS World can't inherit und onto pdus or pd
+      elsif ($self->get('sys') eq 'crmsworld' && $newrights =~ m/^und/ && $oldrights =~ m/^pd/)
       {
         $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit und onto pdus\n";
         delete $data->{'unneeded'}->{$id};
