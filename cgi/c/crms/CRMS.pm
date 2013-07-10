@@ -2901,7 +2901,7 @@ sub GetExportDataRef
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   my @return = ();
-  $sql = 'SELECT r.id,r.time,r.attr,r.reason,r.src,b.title,b.author,YEAR(b.pub_date) ' .
+  $sql = 'SELECT r.id,r.time,r.attr,r.reason,r.src,b.title,b.author,YEAR(b.pub_date),r.exported ' .
          "FROM exportdata r LEFT JOIN bibdata b ON r.id=b.id $restrict ORDER BY $order $dir $limit";
   #print "$sql<br/>\n";
   my $ref = undef;
@@ -2928,6 +2928,7 @@ sub GetExportDataRef
                 src        => $row->[4],
                 title      => $row->[5],
                 author     => $row->[6],
+                exported   => $row->[8],
                 pubdate    => $pubdate
                };
     push @return, $item;
