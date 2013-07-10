@@ -8321,7 +8321,7 @@ sub PredictRights
   $where = $self->GetPubCountry($id) unless $where;
   my ($attr, $reason) = (0,0);
   my $now = $self->GetTheYear();
-  my $when = $year + ($where eq 'United Kingdom')? ($crown? 50:70):50;
+  my $when = $year + (($where eq 'United Kingdom')? ($crown? 50:70):50);
   if ($when < $now)
   {
     if ($when >= 1996 && $pub >= 1923)
