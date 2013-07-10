@@ -558,8 +558,18 @@ sub ExportReviews
     # or if exporting und would clobber pdus in World.
     if (!Candidates::HasCorrectRights($self, $attr2, $reason2, $attr, $reason))
     {
-      print "Not exporting $id as $attr/$reason; it is out of scope ($attr2/$reason)\n" unless $fromcgi;
-      $exported = 0;
+      # But, high-priority volumes should always be exported, even if they
+      # clobber something like pd/bib.
+      my $pri = $self->SimpleSqlGet('SELECT priority FROM queue WHERE id=?', $id);
+      if ($pri >= 4.0)
+      {
+        print "Exporting priority $pri $id as $attr/$reason even though it is out of scope ($attr2/$reason2)\n" unless $fromcgi;
+      }
+      else
+      {
+        print "Not exporting $id as $attr/$reason; it is out of scope ($attr2/$reason2)\n" unless $fromcgi;
+        $exported = 0;
+      }
     }
     if ($exported)
     {
