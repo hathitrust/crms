@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.4';
+  return '4.4.1';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -6905,7 +6905,7 @@ sub PageToEnglish
                'determinationStats' => 'determinations breakdown',
                'editReviews' => 'my unprocessed reviews',
                'expert' => 'conflicts',
-               'exportData' => 'exported determinations',
+               'exportData' => 'final determinations',
                'exportStats' => 'export stats',
                'holds' => 'my held reviews',
                'inherit' => 'rights inheritance',
