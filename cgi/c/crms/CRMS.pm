@@ -4845,7 +4845,7 @@ sub UpdateExportStats
   unshift @keys, 'date';
   unshift @vals, $date;
   my $wcs = $self->WildcardList(scalar @vals);
-  my $sql = 'REPLACE INTO exportstats (' . join(',', @keys) . ' VALUES ' . $wcs;
+  $sql = 'REPLACE INTO exportstats (' . join(',', @keys) . ') VALUES ' . $wcs;
   $self->PrepareSubmitSql($sql, @vals);
 }
 
