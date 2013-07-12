@@ -8499,12 +8499,13 @@ sub GetVIAFData
 
 sub VIAFWarning
 {
-  my $self = shift;
-  my $id   = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
 
-  my @warnings;
+  my %warnings;
   my @aus;
-  my $record = $self->GetMetadata($id);
+  $record = $self->GetMetadata($id) unless defined $record;
   my $au = $self->GetRecordAuthor($id, $record, 1);
   push @aus, $au if defined $au;
   my @add = $self->GetRecordAdditionalAuthors($id, $record);
@@ -8522,11 +8523,11 @@ sub VIAFWarning
         next if defined $add and $add <= 1800;
         my $last = $au;
         $last = $1 if $last =~ m/^(.+?),.*/;
-        push @warnings, "$last ($country)";
+        $warnings{"$last ($country)"} = 1;
       }
     }
   }
-  return (scalar @warnings)? join '; ', @warnings:undef;
+  return (scalar keys %warnings)? join '; ', keys %warnings:undef;
 }
 
 1;
