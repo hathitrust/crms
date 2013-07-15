@@ -27,7 +27,7 @@ sub HasCorrectRights
   # Clobber pdus/gfv if exporting any rights; per rrotter Core Services
   # never put pdus/gfv over pdus/bib.
   $correct = 1 if defined $new_attr && defined $new_reason &&
-                  $attr eq = 'pdus' && $reason eq 'gfv';
+                  $attr eq 'pdus' && $reason eq 'gfv';
   return $correct;
 }
 
