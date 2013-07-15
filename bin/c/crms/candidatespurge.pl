@@ -15,8 +15,8 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-acdhnpvu] [-s VOL_ID [-s VOL_ID2...]]
-          [-x SYS] s[start_date [end_date]]
+USAGE: $0 [-achnpuv] [-s VOL_ID [-s VOL_ID2...]]
+          [-x SYS] [start_date [end_date]]
 
 Reports on volumes that are no longer eligible for candidacy in the rights database
 and removes them from the system.
