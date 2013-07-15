@@ -53,15 +53,15 @@ sub GetCutoffYear
   if (! defined $country)
   {
     return $year-140 if $name eq 'minYear';
-    return $year-50;
+    return $year-51;
   }
   if ($country eq 'United Kingdom')
   {
     return $year-140 if $name eq 'minYear';
-    return $year-70;
+    return $year-71;
   }
   return $year-120 if $name eq 'minYear';
-  return $year-50;
+  return $year-51;
 }
 
 sub GetViolations
