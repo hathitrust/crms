@@ -3552,9 +3552,9 @@ sub CreateExportData
   my %stats = ();
   my @usedates = ();
   
-  my $sql = 'SELECT attr,reason FROM rights ORDER BY id ASC';
+  my $sql = 'SELECT DISTINCT attr,reason FROM exportdata ORDER BY (attr="pd" OR attr="pdus") DESC, attr, reason DESC';
   my $ref = $dbh->selectall_arrayref($sql);
-  my @allRights = map { sprintf('%s_%s', $self->TranslateAttr($_->[0]), $self->TranslateReason($_->[1])); } @{$ref};
+  my @allRights = map { $_->[0] . '_' . $_->[1]; } @{$ref};
   my $nRights = scalar @allRights;
   foreach my $date (@dates)
   {
@@ -8417,7 +8417,6 @@ sub GetVIAFData
     my %adds;
     my %names;
     my $name;
-    my $where;
     my $url = 'http://viaf.org/viaf/search?query=local.personalNames+all+%22' . $a .
               '%22+&maximumRecords=10&startRecord=1&sortKeys=holdingscount&httpAccept=text/xml';
     my $ua = LWP::UserAgent->new;
