@@ -57,7 +57,7 @@ These items will take priority in the review process.
 </li>
 [% IF admin %]
   <li><span class="smallishText">Priority 4 only allows admins and superadmins to add any work in HathiTrust, including<br/>
-  government documents, foreign works, non-books, and items from before [% min %] or after [% max2 %].</span></li>
+  those that are out of CRMS scope.</span></li>
 [% END %]
 </ul>
 </td></tr></table>
