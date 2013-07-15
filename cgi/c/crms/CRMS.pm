@@ -931,13 +931,9 @@ sub GetCutoffYear
   my $self = shift;
   my $name = shift;
 
-  my $year = $self->GetSystemVar($name);
-  if ($year =~ m/^p(\d+)/)
-  {
-    $year = $self->GetTheYear();
-    $year -= $1;
-  }
-  return $year;
+  my $module = 'Candidates_' . $self->get('sys') . '.pm';
+  require $module;
+  return Candidates::GetCutoffYear($self, undef, $name);
 }
 
 # Returns a und table src code if the volume belongs in the und table instead of candidates.

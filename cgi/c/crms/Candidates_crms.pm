@@ -3,7 +3,7 @@ package Candidates;
 use strict;
 use warnings;
 use vars qw( @ISA @EXPORT @EXPORT_OK );
-our @EXPORT = qw(HasCorrectRights GetViolations ShouldVolumeGoInUndTable);
+our @EXPORT = qw(HasCorrectRights HasCorrectYear GetCutoffYear GetViolations ShouldVolumeGoInUndTable);
 
 # If new_attr and new_reason are supplied, they are the final determination
 # and this checks whether that determination should be exported (is the
@@ -22,6 +22,28 @@ sub HasCorrectRights
   return $correct;
 }
 
+sub HasCorrectYear
+{
+  my $self    = shift;
+  my $country = shift;
+  my $year    = shift;
+
+  my $min = GetCutoffYear($self, $country, 'minYear');
+  my $max = GetCutoffYear($self, $country, 'maxYear');
+  return ($min <= $year && $year <= $max);
+}
+
+sub GetCutoffYear
+{
+  my $self    = shift;
+  my $country = shift;
+  my $name    = shift;
+
+  return 1923 if $name eq 'minYear';
+  return 1963 if $name eq 'maxYear';
+  return 1963 if $name eq 'maxYearOverride';
+}
+
 sub GetViolations
 {
   my $self = shift;
@@ -29,8 +51,8 @@ sub GetViolations
 
   my @errs = ();
   my $pub = $self->GetRecordPubDate($id, $record);
-  my $min = $self->GetCutoffYear('minYear');
-  my $max = $self->GetCutoffYear('maxYear');
+  my $min = GetCutoffYear($self, undef, 'minYear');
+  my $max = GetCutoffYear($self, undef, 'maxYear');
   $max = $self->GetCutoffYear('maxYearOverride') if ($override and $priority == 3) or $priority == 4;
   if ($pub =~ m/\d\d\d\d/)
   {

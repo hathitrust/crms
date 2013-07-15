@@ -3,7 +3,7 @@ package Candidates;
 use strict;
 use warnings;
 use vars qw( @ISA @EXPORT @EXPORT_OK );
-our @EXPORT = qw(HasCorrectRights GetViolations ShouldVolumeGoInUndTable);
+our @EXPORT = qw(HasCorrectRights HasCorrectYear GetCutoffYear GetViolations ShouldVolumeGoInUndTable);
 
 # If new_attr and new_reason are supplied, they are the final determination
 # and this checks whether that determination should be exported (is the
@@ -31,6 +31,39 @@ sub HasCorrectRights
   return $correct;
 }
 
+sub HasCorrectYear
+{
+  my $self    = shift;
+  my $country = shift;
+  my $year    = shift;
+
+  my $min = GetCutoffYear($self, $country, 'minYear');
+  my $max = GetCutoffYear($self, $country, 'maxYear');
+  return ($min <= $year && $year <= $max);
+}
+
+sub GetCutoffYear
+{
+  my $self    = shift;
+  my $country = shift;
+  my $name    = shift;
+
+  my $year = $self->GetTheYear();
+  # Generic cutoff for add to queue page.
+  if (! defined $country)
+  {
+    return $year-140 if $name eq 'minYear';
+    return $year-50;
+  }
+  if ($country eq 'United Kingdom')
+  {
+    return $year-140 if $name eq 'minYear';
+    return $year-70;
+  }
+  return $year-120 if $name eq 'minYear';
+  return $year-50;
+}
+
 sub GetViolations
 {
   my $self = shift;
@@ -41,9 +74,9 @@ sub GetViolations
   $where =~ s/\s*\(.*//;
   if ($pub =~ m/\d\d\d\d/)
   {
-    my $min = $self->GetCutoffYear('minYear');
-    my $max = $self->GetCutoffYear('maxYear');
-    $max = $self->GetCutoffYear('maxYearOverride') if ($override and $priority == 3) or $priority == 4;
+    my $min = GetCutoffYear($self, $where, 'minYear');
+    my $max = GetCutoffYear($self, $where, 'maxYear');
+    #$max = GetCutoffYear('maxYearOverride') if ($override and $priority == 3) or $priority == 4;
     push @errs, "$pub not in range $min-$max" if ($pub < $min || $pub > $max);
   }
   else
