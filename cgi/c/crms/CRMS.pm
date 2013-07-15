@@ -8477,10 +8477,17 @@ sub GetVIAFData
       $pref = "/*[local-name()='searchRetrieveResponse']/*[local-name()='records']/*[local-name()='record'][$n]/*[local-name()='recordData']";
       $xpath = "$pref/*[local-name()='VIAFCluster']/*[local-name()='nationalityOfEntity']/*[local-name()='data']/*[local-name()='text']";
       my @vals = $xpc->findnodes($xpath);
-      if (@vals && scalar @vals == 1)
+      if (@vals)
       {
-        $where = $vals[0]->string_value();
-        $ret{'country'} = $where;
+        foreach my $val (@vals)
+        {
+          my $where = $val->string_value();
+          if (defined $where && $where ne 'US' && $where ne 'XX')
+          {
+            $ret{'country'} = $where;
+            last;
+          }
+        }
       }
     }
     if ($n > 0 && 1 == scalar keys %{$adds{$n}})
