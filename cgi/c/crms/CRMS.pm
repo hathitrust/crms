@@ -842,24 +842,18 @@ sub AddItemToCandidates
     foreach my $line (@{$rows})
     {
       my ($id2,$chron2,$rights2) = split '__', $line;
-      if ($self->IsVolumeInCandidates($id2) || $self->IsFiltered($id2))
-      {
-        my ($ns,$n) = split m/\./, $id2, 2;
-        my $sql2 = 'SELECT time FROM rights_current WHERE namespace=? AND id=?';
-        my $time2 = $self->SimpleSqlGetSDR($sql2, $ns, $n);
-        $map{$id2} = $time2;
-      }
+      my ($ns,$n) = split m/\./, $id2, 2;
+      my $sql2 = 'SELECT time FROM rights_current WHERE namespace=? AND id=?';
+      my $time2 = $self->SimpleSqlGetSDR($sql2, $ns, $n);
+      $map{$id2} = $time2;
     }
     my @sorted = sort {$map{$b} cmp $map{$a}} keys %map;
     $id = shift @sorted;
     $time = $map{$id};
     foreach my $id2 (@sorted)
     {
-      if ($self->IsVolumeInCandidates($id2))
-      {
-        print "Filter $id2 as duplicate of $id\n";
-        $self->Filter($id2, 'duplicate') unless defined $noop;
-      }
+      print "Filter $id2 as duplicate of $id\n";
+      $self->Filter($id2, 'duplicate') unless defined $noop;
     }
   }
   if (!$self->IsVolumeInCandidates($id))
