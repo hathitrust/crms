@@ -15,7 +15,7 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-achnpuv] [-s VOL_ID [-s VOL_ID2...]]
+USAGE: $0 [-achinpuv] [-s VOL_ID [-s VOL_ID2...]]
           [-x SYS] [start_date [end_date]]
 
 Reports on volumes that are no longer eligible for candidacy in the rights database
@@ -24,6 +24,8 @@ and removes them from the system.
 -a         Report on all volumes, ignoring date range.
 -c         Run against candidates.
 -h         Print this help message.
+-i         Run the candidates population logic over volumes in the rights database
+           for the date range given (if any).
 -n         No-op; reports what would be done but do not modify the database.
 -p         Run in production.
 -s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
@@ -35,6 +37,7 @@ END
 my $all;
 my $candidates;
 my $help;
+my $init;
 my $noop;
 my $production;
 my @singles;
@@ -47,6 +50,7 @@ die 'Terminating' unless GetOptions(
            'a'    => \$all,
            'c'    => \$candidates,
            'h|?'  => \$help,
+           'i'    => \$init,
            'n'    => \$noop,
            'p'    => \$production,
            's:s@' => \@singles,
@@ -90,6 +94,11 @@ if ($und)
   print "Checking und...\n" if $verbose;
   CheckTable('und', $all, $start, $end, \@singles);
 }
+if ($init)
+{
+  print "Checking rights DB...\n" if $verbose;
+  Init($all, $start, $end, \@singles);
+}
 my $after = $crms->GetCandidatesSize();
 if (!$noop)
 {
@@ -123,6 +132,37 @@ sub CheckTable
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
+    print "$id\n" if $verbose > 1;
+    $crms->CheckAndLoadItemIntoCandidates($id, $noop, 1);
+  }
+}
+
+sub Init
+{
+  my $all     = shift;
+  my $start   = shift;
+  my $end     = shift;
+  my $singles = shift;
+
+  my @singles = @{$singles};
+  if (@singles && scalar @singles)
+  {
+    @singles = @{$singles};
+    print "Singles\n";
+  }
+  else
+  {
+    my $sql = 'SELECT CONCAT(namespace,".",id) FROM rights_current';
+    my @restrict = ();
+    push @restrict, "(time>'$start 00:00:00' AND time<='$end 23:59:59')" unless $all;
+    $sql .= ' WHERE ' . join ' AND ', @restrict if scalar @restrict;
+    $sql .= ' ORDER BY time ASC';
+    print "$sql\n" if $verbose > 1;
+    my $ref = $crms->GetSdrDb()->selectall_arrayref($sql);
+    push @singles, $_->[0] for @{$ref};
+  }
+  foreach my $id (@singles)
+  {
     print "$id\n" if $verbose > 1;
     $crms->CheckAndLoadItemIntoCandidates($id, $noop, 1);
   }
