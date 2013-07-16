@@ -3,12 +3,12 @@
 [% END %]
 
 <form name="submitReview" action="crms" onsubmit="return VerifyCategory();">
-  <input type="hidden" name="p"        value="confirmReview"/>
-  <input type="hidden" name="barcode"  value="[% barcode %]"/>
-  <input type="hidden" name="user"     value="[% user %]"/>
-  <input type="hidden" name="confirm"  value="1"/>
-  <input type="hidden" name="editing"  value="[% editing %]"/>
-  <input type="hidden" name="sys"      value="[% sys %]"/>
+  <input type="hidden" name="p"       value="confirmReview"/>
+  <input type="hidden" name="barcode" value="[% barcode %]"/>
+  <input type="hidden" name="user"    value="[% user %]"/>
+  <input type="hidden" name="confirm" value="1"/>
+  <input type="hidden" name="editing" value="[% editing %]"/>
+  <input type="hidden" name="sys"     value="[% sys %]"/>
   <div class="reviewBlue">
   <table class="display">
     <tr>
@@ -74,16 +74,17 @@
                value="[% renNum %]" size="8"
                onblur="javascript:popRenewalDate()"/>
       [% ELSE %]
-        [% viafdata = crms.GetVIAFData(barcode) %]
         [% IF NOT renDate && NOT import %]
           [% authorDD = crms.GetADDFromAuthor(barcode) %]
-          [% IF NOT authorDD %]    
+          [% IF NOT authorDD %]
+            [% viafdata = crms.GetVIAFData(barcode) %]   
             [% IF viafdata && viafdata.add %]
               [% authorDD = viafdata.add %]
               [% viaf = 1 %]
             [% END %]
           [% END %]
           [% IF authorDD %]
+            <input type="hidden" id="prepopulated" name="prepopulated" value="[% (viaf)? 2:1 %]"/>
             [% renDate = authorDD %]
             [% tip = (viaf)? "VIAF":"Mirlyn" %]
           [% END %]

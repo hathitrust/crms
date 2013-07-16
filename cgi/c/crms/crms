@@ -114,6 +114,7 @@ if ($cgi->param('p') eq 'confirmReview')
     my $id        = $cgi->param('barcode');
     my $hold      = $cgi->param('hold');
     my $swiss     = $cgi->param('swiss');
+    my $pre       = $cgi->param('prepopulated');
 
     my ($rights, $reason);
     my $errorMsg = 'You must select a rights/reason combination.' unless $EncRights;
@@ -151,7 +152,7 @@ if ($cgi->param('p') eq 'confirmReview')
       my $expert;
       if ( $crms->IsUserExpert( $user ) ) { $expert = 2; }
 
-      $crms->SubmitReview($id, $user, $rights, $reason, $comment, $renNum, $expert, $renDate, $category, $swiss, $hold);
+      $crms->SubmitReview($id, $user, $rights, $reason, $comment, $renNum, $expert, $renDate, $category, $swiss, $hold, $pre);
       my $ref = $crms->GetErrors();
       if ($ref && $ref->[0])
       {

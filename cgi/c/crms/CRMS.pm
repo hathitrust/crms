@@ -1275,7 +1275,7 @@ sub CloneReview
 sub SubmitReview
 {
   my $self = shift;
-  my ($id, $user, $attr, $reason, $note, $renNum, $exp, $renDate, $category, $swiss, $hold) = @_;
+  my ($id, $user, $attr, $reason, $note, $renNum, $exp, $renDate, $category, $swiss, $hold, $pre) = @_;
 
   if (!$self->IsVolumeInQueue($id))                    { $self->SetError("$id is not in the queue");       return 0; }
   if (!$self->CheckReviewer($user, $exp))              { $self->SetError("reviewer ($user) check failed"); return 0; }
@@ -1322,6 +1322,11 @@ sub SubmitReview
     push(@values, 1);
     push(@fields, 'swiss');
     push(@values, $swiss);
+  }
+  if (defined $pre)
+  {
+    push(@fields, 'prepopulated');
+    push(@values, $pre);
   }
   my $wcs = $self->WildcardList(scalar @values);
   $sql = 'REPLACE INTO reviews (' . join(',', @fields) . ') VALUES ' . $wcs;
@@ -1446,9 +1451,9 @@ sub MoveFromReviewsToHistoricalReviews
 
   my $status = $self->GetStatus($id);
   my $sql = 'INSERT INTO historicalreviews (id,time,user,attr,reason,note,' .
-            'renNum,expert,duration,legacy,renDate,category,priority,swiss,status,gid)' .
+            'renNum,expert,duration,legacy,renDate,category,priority,swiss,prepopulated,status,gid)' .
             ' SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,' .
-            'renDate,category,priority,swiss,?,? FROM reviews WHERE id=?';
+            'renDate,category,priority,swiss,prepopulated,?,? FROM reviews WHERE id=?';
   $self->PrepareSubmitSql($sql, $status, $gid, $id);
   $sql = 'DELETE FROM reviews WHERE id=?';
   $self->PrepareSubmitSql($sql, $id);
