@@ -559,9 +559,10 @@ sub ExportReviews
     if (!Candidates::HasCorrectRights($self, $attr2, $reason2, $attr, $reason))
     {
       # But, high-priority volumes should always be exported, even if they
-      # clobber something like pd/bib.
+      # clobber something like pd/bib. And in CRMS US we want to always export pd
+      # to overwrite old pre-CRMS work.
       my $pri = $self->SimpleSqlGet('SELECT priority FROM queue WHERE id=?', $id);
-      if ($pri >= 4.0)
+      if ($pri >= 4.0 || $attr eq 'pd' || $attr eq 'pdus')
       {
         print "Exporting priority $pri $id as $attr/$reason even though it is out of scope ($attr2/$reason2)\n" unless $fromcgi;
       }
