@@ -34,7 +34,6 @@ if ($type eq 'graph')
   elsif ($c == 5) { $data = $crms->CreateCountriesGraph(); }
   elsif ($c == 6) { $data = $crms->CreateUndGraph(); }
   elsif ($c == 7) { $data = $crms->CreateNamespaceGraph(); }
-  elsif ($c == 8) { $data = $crms->CreateCountryReviewTimeGraph(); }
   elsif ($c == 9) { $data = $crms->CreateReviewInstitutionGraph(); }
   else { $data = $crms->CreateExportGraph($c, $start, $end, undef, $priority); }
 }

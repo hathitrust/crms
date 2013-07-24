@@ -3765,7 +3765,7 @@ sub CreateExportGraph
     $titleh{'Total'} = $line if $line =~ m/^Total/i;
   }
   my @elements = ();
-  my %colors = ('All PD' => '#22BB00', 'All IC' => '#FF2200', 'All UND' => '#0088FF', 'Total' => '#FFFF00');
+  my %colors = ('All PD' => '#22BB00', 'All IC' => '#FF2200', 'All UND' => '#0088FF', 'Total' => '#006600');
   my %totals = ('All PD' => 0, 'All IC' => 0, 'All UND' => 0);
   my $ceiling = 100;
   my @totalline = split ',',$titleh{'Total'};
@@ -3799,8 +3799,8 @@ sub CreateExportGraph
     push @elements, sprintf('{"type":"line","values":[%s],%s}', join(',',@vals), $attrs);
   }
   # Round ceil up to nearest hundred
-  $ceiling = 100 * POSIX::ceil($ceiling/100.0) if $type == 1;
-  my $report = sprintf('{"bg_colour":"#000000","title":{"text":"%s","style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"},"elements":[',$title);
+  $ceiling = 1000 * POSIX::ceil($ceiling/1000.0) if $type == 1;
+  my $report = '{"bg_colour":"#FFFFFF","elements":[';
   if ($type == 2)
   {
     my @colorlist = ($colors{'All PD'}, $colors{'All IC'}, $colors{'All UND'});
@@ -3811,7 +3811,7 @@ sub CreateExportGraph
       eval { $pct = 100.0 * $totals{$title} / $gt; };
       push(@vals,sprintf('{"value":%s,"label":"%s\n%.1f%%"}', $totals{$title}, $title, $pct));
     }
-    $report .= sprintf('{"type":"pie","start-angle":35,"animate":[{"type":"fade"}],"gradient-fill":true,"colours":["%s"],"values":[%s]}]',
+    $report .= sprintf('{"type":"pie","start-angle":35,"animate":[{"type":"fade"}],"colours":["%s"],"values":[%s]}]',
                        join('","',@colorlist),join(',',@vals));
   }
   else
@@ -3820,8 +3820,8 @@ sub CreateExportGraph
     $report .= sprintf('%s]',join ',', @elements);
     $report .= sprintf(',"y_axis":{"max":%d,"steps":%d,"colour":"#888888","grid-colour":"#888888"%s}',
                        $ceiling, $ceiling/10,
-                       ($type == 0)? ',"labels":{"text":"#val#%","colour":"#FFFFFF"}':',"labels":{"colour":"#FFFFFF"}');
-    $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}',
+                       ($type == 0)? ',"labels":{"text":"#val#%","colour":"#000000"}':',"labels":{"colour":"#000000"}');
+    $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#000000"}}',
                        join('","',@dates));
   }
   $report .= '}';
@@ -4106,10 +4106,9 @@ sub CreateDeterminationsBreakdownGraph
     $ceil = 100;
     $valfmt = '"text":"#val#%",';
   }
-  my $report = sprintf('{"bg_colour":"#000000","title":{"text":"%s","style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"},"elements":[',$title);
-  $report .= sprintf('%s]', join ',', @elements);
-  $report .= sprintf(',"y_axis":{"max":%d,"steps":%d,"colour":"#888888","grid-colour":"#888888","labels":{%s"colour":"#FFFFFF"}}', $ceil, $ceil/10, $valfmt);
-  $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}', join('","',@usedates));
+  my $report = sprintf('{"bg_colour":"#FFFFFF","elements":[%s]', join ',', @elements);
+  $report .= sprintf(',"y_axis":{"max":%d,"steps":%d,"colour":"#888888","grid-colour":"#888888","labels":{%s"colour":"#000000"}}', $ceil, $ceil/10, $valfmt);
+  $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#000000"}}', join('","',@usedates));
   $report .= '}';
   return $report;
 }
@@ -4532,7 +4531,7 @@ sub CreateCandidatesGraph
   
   my $data = $self->CreateCandidatesData();
   my @lines = split m/\n/, $data;
-  my $title = shift @lines;
+  shift @lines;
   my @titles;
   my @vals;
   my $ceil = 0;
@@ -4544,13 +4543,12 @@ sub CreateCandidatesGraph
     push @vals, $val;
     $ceil = $val if $val > $ceil;
   }
-  $ceil = 1000 * POSIX::ceil($ceil/1000.0);
-  my $report = '{"bg_colour":"#000000"';
-  $report .= sprintf(',"title":{"text":"%s","style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"}', $title);
-  $report .= sprintf(',"elements":[{"type":"line","colour":"#22BB00","values":[%s],%s}]', join(',', @vals), $attrs);
-  $report .= sprintf(',"y_axis":{"max":%d,"steps":%d,"colour":"#888888","grid-colour":"#888888","labels":{"colour":"#FFFFFF"}}',
+  $ceil = 10000 * POSIX::ceil($ceil/10000.0);
+  my $report = '{"bg_colour":"#FFFFFF"';
+  $report .= sprintf(',"elements":[{"type":"line","colour":"#0000AA","values":[%s],%s}]', join(',', @vals), $attrs);
+  $report .= sprintf(',"y_axis":{"max":%d,"steps":%d,"colour":"#888888","grid-colour":"#888888","labels":{"colour":"#000000"}}',
                      $ceil, $ceil/10,);
-  $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}',
+  $report .= sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#000000"}}',
                      join('","',@titles));
   $report .= '}';
   return $report;
@@ -4559,26 +4557,24 @@ sub CreateCandidatesGraph
 sub CreateCountriesGraph
 {
   my $self  = shift;
-  # FIXME: should do only for exports?
-  my $sql = 'SELECT COUNT(*) FROM exportdata';
-  my $of = $self->SimpleSqlGet($sql);
-  $sql = 'SELECT b.country,COUNT(DISTINCT e.id) FROM bibdata b INNER JOIN exportdata e ON b.id=e.id' .
-         ' GROUP BY b.country ORDER BY b.country ASC';
+  my $sql = 'SELECT b.country,COUNT(e.id) AS cnt FROM bibdata b INNER JOIN exportdata e ON b.id=e.id' .
+            ' WHERE (b.country="United Kingdom" OR b.country="Canada" OR b.country="Australia")' .
+            ' AND e.exported=1 GROUP BY b.country WITH ROLLUP';
   my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $of = $ref->[-1]->[1];
   my $report = '';
   my @colorlist = ('#22BB00','#BB2200','#2200BB','#444444');
   my @vals = ();
   foreach my $row (@{$ref})
   {
     my $country = $row->[0];
+    last unless defined $country;
     my $n = $row->[1];
     push @vals, sprintf('{"value":%d,"label":"%s\n%.1f%%"}', $n, $country, $n / $of * 100.0);
   }
-  my $report = '{"bg_colour":"#000000"' .
-               ',"title":{"text":"Countries",' .
-                         '"style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"}' .
+  my $report = '{"bg_colour":"#FFFFFF"' .
                ',"elements":[' .
-                 '{"type":"pie","start-angle":35,"animate":[{"type":"fade"}],"gradient-fill":true' .
+                 '{"type":"pie","start-angle":35,"animate":[{"type":"fade"}]' .
                  ',"colours":["#22BB00","#FF2200","#0088FF","#22BBBB"]' .
                  sprintf(',"values":[%s]}]}', join(',', @vals));
   return $report;
@@ -4587,7 +4583,6 @@ sub CreateCountriesGraph
 sub CreateUndGraph
 {
   my $self  = shift;
-  # FIXME: should do only for exports?
   my $sql = 'SELECT COUNT(*) FROM und';
   my $of = $self->SimpleSqlGet($sql);
   $sql = 'SELECT src,COUNT(id) FROM und GROUP BY src ORDER BY src ASC';
@@ -4600,11 +4595,8 @@ sub CreateUndGraph
     my $n = $row->[1];
     push @vals, sprintf('{"value":%d,"label":"%s\n%.1f%%"}', $n, $country, $n / $of * 100.0);
   }
-  my $report = '{"bg_colour":"#000000"' .
-               ',"title":{"text":"Filtered Volumes",' .
-                         '"style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"}' .
-               ',"elements":[' .
-                 '{"type":"pie","start-angle":35,"animate":[{"type":"fade"}],"gradient-fill":true' .
+  my $report = '{"bg_colour":"#FFFFFF","elements":[' .
+                 '{"type":"pie","start-angle":35,"animate":[{"type":"fade"}]' .
                  ',"colours":["#22BB00","#FF2200","#0088FF","#22BBBB","#BB22BB","#BBBB22","#BBBBBB","#888888"]' .
                  sprintf(',"values":[%s]}]}', join(',', @vals));
   return $report;
@@ -4629,67 +4621,13 @@ sub CreateNamespaceGraph
   @data = @data[0 .. 9] if scalar @data > 10;
   my @labels = map {$_->[0]} @data;
   my @vals = map {$_->[1]} @data;
-  $ceil = 100 * POSIX::ceil($ceil/100.0);
-  my $report = '{"bg_colour":"#000000","elements":[{"type":"bar","colour":"#BBBB22","on-show":{"type":"grow-up","cascade":1,"delay":0.5}' .
+  $ceil = 1000 * POSIX::ceil($ceil/1000.0);
+  my $report = '{"bg_colour":"#FFFFFF","elements":[{"type":"bar","colour":"#000099","on-show":{"type":"grow-up","cascade":1,"delay":0.5}' .
             sprintf(',"values":[%s]}]', join(',',@vals)) . 
-            ',"title":{"text":"Exports by Namespace",' .
-                      '"style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"}' .
             sprintf(',"y_axis":{"max":%d,"steps":%d,"colour":"#888888","grid-colour":"#888888",%s}',
                      $ceil, $ceil/10,
-                     '"labels":{"colour":"#FFFFFF"}') .
-            sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}',
-                       join('","',@labels)) .
-            '}';
-  return $report;
-}
-
-sub CreateCountryReviewTimeData
-{
-  my $self  = shift;
-  my $limit = shift;
-
-  my $data = '';
-  my $sql = 'SELECT COALESCE(b.country,"Undetermined"),SUM(COALESCE(TIME_TO_SEC(h.duration),0))/COUNT(b.country) s' .
-          ' FROM bibdata b INNER JOIN historicalreviews h ON b.id=h.id WHERE legacy!=1 AND user!="crmstest"' .
-          ' GROUP BY COALESCE(b.country,"Undetermined") ORDER BY s DESC';
-  $sql .= ' LIMIT ' . $limit if $limit;
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
-  foreach my $row (@{$ref})
-  {
-    my $cat = $row->[0];
-    my $dur = $row->[1];
-    next if $dur <= 0;
-    $data .= "$cat\t$dur\n";
-  }
-  return $data;
-}
-
-sub CreateCountryReviewTimeGraph
-{
-  my $self = shift;
-
-  my $txt = $self->CreateCountryReviewTimeData();
-  my $ceil = 0;
-  my @data;
-  foreach my $row (split "\n", $txt)
-  {
-    my ($cat,$dur) = split "\t", $row;
-    push @data, [$cat,$dur];
-    $ceil = $dur if $dur > $ceil;
-  }
-  @data = sort {$b->[1] <=> $a->[1]} @data;
-  @data = @data[0 .. 9] if scalar @data > 10;
-  my @labels = map {$_->[0]} @data;
-  my @vals = map {$_->[1]} @data;
-  $ceil = 100 * POSIX::ceil($ceil/100.0);
-  my $report = '{"bg_colour":"#000000","elements":[{"type":"bar","colour":"#BBBB22","on-show":{"type":"grow-up","cascade":1,"delay":0.5}' .
-            sprintf(',"values":[%s]}]', join(',',@vals)) . 
-            ',"title":{"text":"Review Time by Country",' .
-                      '"style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"}' .
-            sprintf(',"y_axis":{"max":%d,"steps":%d,"colour":"#888888","grid-colour":"#888888",%s}',
-                     $ceil, $ceil/10,
-                     '"labels":{"colour":"#FFFFFF"}') .
-            sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#FFFFFF"}}',
+                     '"labels":{"colour":"#000000"}') .
+            sprintf(',"x_axis":{"colour":"#888888","grid-colour":"#888888","labels":{"labels":["%s"],"rotate":40,"colour":"#000000"}}',
                        join('","',@labels)) .
             '}';
   return $report;
@@ -4710,6 +4648,7 @@ sub CreateReviewInstitutionGraph
     my $n = $row->[1];
     my $inst = 'umich.edu';
     $inst = $1 if $user =~ m/@(.+)/;
+    $inst =~ s/-expert//;
     $totals{$inst} += $n;
   }
   my @vals;
@@ -4718,11 +4657,9 @@ sub CreateReviewInstitutionGraph
     my $n = $totals{$inst};
     push @vals, sprintf('{"value":%d,"label":"%s\n%.1f%%"}', $n, $inst, $n / $of * 100.0);
   }
-  my $report = '{"bg_colour":"#000000"' .
-               ',"title":{"text":"Reviews by Institution",' .
-                         '"style":"{color:#FFFFFF;font-family:Helvetica;font-size:15px;font-weight:bold;text-align:center;}"}' .
+  my $report = '{"bg_colour":"#FFFFFF"' .
                ',"elements":[' .
-                 '{"type":"pie","start-angle":35,"animate":[{"type":"fade"}],"gradient-fill":true' .
+                 '{"type":"pie","start-angle":35,"animate":[{"type":"fade"}]' .
                  ',"colours":["#22BB00","#FF2200","#0088FF","#22BBBB","#BB22BB","#BBBB22","#BBBBBB","#888888"]' .
                  sprintf(',"values":[%s]}]}', join(',', @vals));
   return $report;

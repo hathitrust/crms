@@ -14,26 +14,14 @@
 <script type="text/javascript" src="/c/crms/swfobject.js"></script>
 <script type="text/javascript">
 <!--
-[% IF crms.get('sys') == 'crmsworld' %]
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=4') %]")});
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=1&startDate=2009-07') %]")});
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart5", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=8') %]")});
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart6", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=9') %]")});
-[% ELSE %]
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "800", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=4') %]")});
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=1&startDate=2009-07') %]")});
-[% END %]
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "800", "300", "9.0.0",
+swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "400", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=7') %]")});
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart3", "400", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=2') %]")});
-
 [% IF crms.get('sys') == 'crmsworld' %]
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart4", "400", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=5') %]")});
@@ -41,7 +29,8 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart4", "400", "300", "9.0.
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart4", "400", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=6') %]")});
 [% END %]
-
+swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart5", "400", "300", "9.0.0",
+                   "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=9') %]")});
 // -->
 </script>
 
@@ -58,18 +47,8 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart4", "400", "300", "9.0.
   </tr>
 </table>
 
-<table style="width:1600px;align:center;text-align:center;padding:0px; border-collapse:collapse">
-[% IF crms.get('sys') == 'crmsworld' %]
-  <tr style="background-color:#000000;">
-    <td><div id="chart0"></div></td><td><div id="chart1"/></td>
-    <td><div id="chart5"/></td><td><div id="chart6"/></td>
-  </tr>
+<table style="width:1600px;align:center;text-align:center;padding:0px;border-collapse:collapse">
   <tr>
-    <td><h4>Volumes in Candidates (estimated)</h4></td><td><h4>Number of Exported Determinations</h4></td>
-    <td><h4>Average Seconds per Review by Country of Publication</h4></td><td><h4>Reviews by User Partner Affiliation</h4></td>
-  </tr>
-[% ELSE %]
-  <tr style="background-color:#000000;">
     <td colspan="2"><div id="chart0"/></td>
     <td colspan="2"><div id="chart1"/></td>
   </tr>
@@ -77,19 +56,21 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart4", "400", "300", "9.0.
     <td colspan="2"><h4>Volumes in Candidates (estimated)</h4></td>
     <td colspan="2"><h4>Number of Exported Determinations</h4></td>
   </tr>
-[% END %]
-  <tr style="background-color:#000000;">
-    <td colspan="2"><div id="chart2"/></td>
-    <td><div id="chart3"/></td><td><div id="chart4"/></td>
+  <tr>
+    <td><div id="chart2"/></td>
+    <td><div id="chart3"/></td>
+    <td><div id="chart4"/></td>
+    <td><div id="chart5"/></td>
   </tr>
   <tr>
-    <td colspan="2"><h4>Exported Determinations by Namespace</h4></td>
+    <td><h4>Exported Determinations by Namespace</h4></td>
     <td><h4>Breakdown of All Determinations</h4></td>
     <td><h4>[% IF crms.get('sys') == 'crmsworld' %]
       Breakdown of Determinations by Country of Publication
       [% ELSE %]
       Breakdown of Volumes Filtered from Candidates
       [% END %]</h4></td>
+    <td><h4>Breakdown of Determinations by Institution</h4></td>
   </tr>
 </table>
 
