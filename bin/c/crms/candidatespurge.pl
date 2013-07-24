@@ -86,22 +86,22 @@ if (scalar @ARGV)
 my $before = $crms->GetCandidatesSize();
 if ($candidates)
 {
-  print "Checking candidates...\n" if $verbose;
+  print "Checking candidates...\n";
   CheckTable('candidates', $all, $start, $end, \@singles);
 }
 if ($und)
 {
-  print "Checking und...\n" if $verbose;
+  print "Checking und...\n";
   CheckTable('und', $all, $start, $end, \@singles);
 }
 if ($init)
 {
-  print "Checking rights DB...\n" if $verbose;
+  print "Checking rights DB...\n";
   Init($all, $start, $end, \@singles);
 }
-my $after = $crms->GetCandidatesSize();
 if (!$noop)
 {
+  my $after = $crms->GetCandidatesSize();
   my $time = $crms->SimpleSqlGet('SELECT MAX(time) FROM candidatesrecord');
   printf "Change to candidates: %d\n", $after-$before;
   my $sql = 'INSERT INTO candidatesrecord (time,addedamount) VALUES (?,?)';
@@ -127,7 +127,7 @@ sub CheckTable
   {
     $sql = sprintf("SELECT id FROM $table WHERE id in ('%s') ORDER BY id", join "','", @singles);
   }
-  print "$sql\n" if $verbose > 1;
+  print "$sql\n" if $verbose > 0;
   my $ref = $dbh->selectall_arrayref($sql);
   foreach my $row (@{$ref})
   {
@@ -144,29 +144,29 @@ sub Init
   my $end     = shift;
   my $singles = shift;
 
-  my @singles = @{$singles};
-  if (@singles && scalar @singles)
+  my $sql = 'SELECT namespace,id,DATE(time) FROM rights_current';
+  my @restrict = ();
+  push @restrict, "(time>'$start 00:00:00' AND time<='$end 23:59:59')" unless $all;
+  $sql .= ' WHERE ' . join ' AND ', @restrict if scalar @restrict;
+  $sql .= ' ORDER BY time ASC';
+  if (defined $singles && scalar @{$singles})
   {
-    @singles = @{$singles};
-    print "Singles\n";
+    $sql = sprintf("SELECT namespace,id,DATE(time)) FROM rights_current WHERE id in ('%s') ORDER BY id", join "','", @{$singles});
   }
-  else
+  my $ref = $crms->GetSdrDb()->selectall_arrayref($sql);
+  my $of = scalar @{$ref};
+  print "$sql: $of results\n" if $verbose > 0;
+  my $lastWhen = '';
+  for (my $i = 0; $i < $of; $i++)
   {
-    my $sql = 'SELECT CONCAT(namespace,".",id) FROM rights_current';
-    my @restrict = ();
-    push @restrict, "(time>'$start 00:00:00' AND time<='$end 23:59:59')" unless $all;
-    $sql .= ' WHERE ' . join ' AND ', @restrict if scalar @restrict;
-    $sql .= ' ORDER BY time ASC';
-    print "$sql\n" if $verbose > 1;
-    my $ref = $crms->GetSdrDb()->selectall_arrayref($sql);
-    push @singles, $_->[0] for @{$ref};
-  }
-  foreach my $id (@singles)
-  {
-    print "$id\n" if $verbose > 1;
-    $crms->CheckAndLoadItemIntoCandidates($id, $noop, 1);
+    my $row = $ref->[$i];
+    my $id = $row->[0] . '.' . $row->[1];
+    my $when = $row->[2];
+    print "$when\n" if $verbose && $lastWhen ne $when;
+    $lastWhen = $when;
+    print "$id ($i/$of)\n" if $verbose > 1;
+    $crms->CheckAndLoadItemIntoCandidates($id, $noop);
   }
 }
 
 print "Warning: $_\n" for @{$crms->GetErrors()};
-
