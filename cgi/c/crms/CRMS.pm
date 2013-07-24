@@ -4764,7 +4764,7 @@ sub GetMonthStats
          ' AND EXTRACT(YEAR FROM time)=? AND EXTRACT(MONTH FROM time)=?';
   my $total_ic = $self->SimpleSqlGet($sql, $user, $y, $m);
   #und
-  $sql = 'SELECT count(*) FROM historicalreviews WHERE user=? AND legacy!=1 AND attr=5' .
+  $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND legacy!=1 AND attr=5' .
          ' AND EXTRACT(YEAR FROM time)=? AND EXTRACT(MONTH FROM time)=?';
   my $total_und = $self->SimpleSqlGet($sql, $user, $y, $m);
   #time reviewing ( in minutes ) - not including outliers
@@ -4776,7 +4776,7 @@ sub GetMonthStats
   $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND legacy!=1' .
          ' AND EXTRACT(YEAR FROM time)=? AND EXTRACT(MONTH FROM time)=?' .
          ' AND duration>"00:05:00"';
-  my $total_outliers = $self->SimpleSqlGet($sql, $user);
+  my $total_outliers = $self->SimpleSqlGet($sql, $user, $y, $m);
   my $time_per_review = 0;
   if ($total_reviews - $total_outliers > 0)
   {
