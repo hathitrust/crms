@@ -838,34 +838,39 @@ sub AddItemToCandidates
   if (!$self->DoesRecordHaveChron($sysid, $record))
   {
     my $rows = $self->VolumeIDsQuery($sysid, $record);
-    last if scalar @{$rows} <= 1;
-    my %map;
-    foreach my $line (@{$rows})
+    if (scalar @{$rows} > 1)
     {
-      my ($id2,$chron2,$rights2) = split '__', $line;
-      my ($ns,$n) = split m/\./, $id2, 2;
-      my $sql2 = 'SELECT time FROM rights_current WHERE namespace=? AND id=?';
-      my $time2 = $self->SimpleSqlGetSDR($sql2, $ns, $n);
-      $map{$id2} = $time2;
+      my %map;
+      foreach my $line (@{$rows})
+      {
+        my ($id2,$chron2,$rights2) = split '__', $line;
+        # Ignore anything that has been thru the system.
+        next if 0 < $self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id2);
+        my ($ns,$n) = split m/\./, $id2, 2;
+        my $sql2 = 'SELECT time FROM rights_current WHERE namespace=? AND id=?';
+        my $time2 = $self->SimpleSqlGetSDR($sql2, $ns, $n);
+        $map{$id2} = $time2;
+      }
+      my @sorted = sort {$map{$b} cmp $map{$a}} keys %map;
+      $id = shift @sorted;
+      $time = $map{$id};
+      foreach my $id2 (@sorted)
+      {
+        next if $self->IsFiltered($id, 'duplicate');
+        print "Filter $id2 as duplicate of $id\n";
+        $self->Filter($id2, 'duplicate') unless defined $noop;
+      }
     }
-    my @sorted = sort {$map{$b} cmp $map{$a}} keys %map;
-    $id = shift @sorted;
-    $time = $map{$id};
-    foreach my $id2 (@sorted)
+    if (!$self->IsVolumeInCandidates($id))
     {
-      print "Filter $id2 as duplicate of $id\n";
-      $self->Filter($id2, 'duplicate') unless defined $noop;
-    }
-  }
-  if (!$self->IsVolumeInCandidates($id))
-  {
-    print "Add $id to candidates\n";
-    if (!defined $noop)
-    {
-      my $date = $self->GetRecordPubDate($id, $record);
-      my $sql = 'REPLACE INTO candidates (id, time, pub_date) VALUES (?,?,?)';
-      $self->PrepareSubmitSql($sql, $id, $time, $date);
-      $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
+      print "Add $id to candidates\n";
+      if (!defined $noop)
+      {
+        my $date = $self->GetRecordPubDate($id, $record);
+        my $sql = 'REPLACE INTO candidates (id, time, pub_date) VALUES (?,?,?)';
+        $self->PrepareSubmitSql($sql, $id, $time, $date);
+        $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
+      }
     }
   }
 }
