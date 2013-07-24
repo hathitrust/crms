@@ -77,7 +77,7 @@ sub GetViolations
     my $min = GetCutoffYear($self, $where, 'minYear');
     my $max = GetCutoffYear($self, $where, 'maxYear');
     #$max = GetCutoffYear('maxYearOverride') if ($override and $priority == 3) or $priority == 4;
-    push @errs, "$pub not in range $min-$max" if ($pub < $min || $pub > $max);
+    push @errs, "$pub not in range $min-$max for $where" if ($pub < $min || $pub > $max);
   }
   else
   {
