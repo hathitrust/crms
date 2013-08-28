@@ -901,7 +901,7 @@ sub Unfilter
 # Returns an array of error messages (reasons for unsuitability for CRMS) for a volume.
 # Used by candidates loading to ignore inappropriate items.
 # Used by Add to Queue page for filtering non-overrides.
-# When used by an expert/admin to add to the queue, the date range becomes 1923-1977 if override
+# When used by an expert/admin to add to the queue, the date range becomes 1923-1977 if override.
 sub GetViolations
 {
   my $self     = shift;
@@ -1149,7 +1149,7 @@ sub AddItemToQueueOrSetItemActive
   {
     my $record = $self->GetMetadata($id);
     @msgs = @{ $self->GetViolations($id, $record, $priority, $override) };
-    if (scalar @msgs && !$override)
+    if (scalar @msgs && (!$override || (join '; ', @msgs) =~ m/not\sfound/i))
     {
       $stat = 1;
     }
