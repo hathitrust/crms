@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.4.2';
+  return '4.4.3';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -8289,15 +8289,6 @@ sub Unescape
 
   use URI::Escape;
   return uri_unescape(shift);
-}
-
-# Return the email address to send catalogue problems
-# which can be overridden in the DB.
-sub MDPCorrections
-{
-  my $self = shift;
-
-  return $self->GetSystemVar('MDPCorrections','mdpcorrections@umich.edu');
 }
 
 sub GetADDFromAuthor

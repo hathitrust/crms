@@ -2,7 +2,6 @@
 
 [% error    = cgi.param('errorMsg')   %]
 [% barcode  = cgi.param('barcode')    %]
-[% inAdd    = cgi.param('add')        %]
 [% editing  = cgi.param('editing')    %]
 [% renNum   = cgi.param('renNum')     %]
 [% renDate  = cgi.param('renDate')    %]
@@ -124,31 +123,15 @@
           </td>
         </tr>
       </table>
-
       <table class="id">
         <tr><td><strong>ID:</strong> <tt>[% barcode %]</tt>   </td></tr>
         <tr><td><strong>Title:</strong> [% title %]           </td></tr>
         <tr><td><strong>Author:</strong> [% author %]    <br/></td></tr>
         <tr><td><strong>Pub Date:</strong> <span id="pubDateSpan">[% pub_date %]</span><br/></td></tr>
-        [% country = "" %]
         [% IF crms.GetSystemVar("showCountry") %]
           [% country = crms.GetPubCountry(barcode, undef, 1) %]
           <tr><td><strong>Country:</strong> [% country %]<br/></td></tr>
         [% END %]
-        <tr>
-          <td>
-            <a class="tip" href="#">
-              <img width="16" height="16" alt="Send mail to MDPCorrections for this volume" src="/c/crms/SendIcon.png"/>
-              <span>
-                This e-mail link is used to report bibliographic errors that warrant correction
-                (i.e., errors that affect the searching access points such as title, author, etc.).
-              </span>
-            </a>
-            <a href="mailto:[% crms.MDPCorrections() %]?subject=$barcode" style="text-decoration: none;">
-              <strong>Report to MDPCorrections</strong>
-            </a>
-          </td>
-        </tr>
       </table>
       [% sources = crms.Sources(barcode,mag,ptview) %]
       <table class="search">
