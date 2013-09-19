@@ -8359,14 +8359,25 @@ sub GetVIAFData
   #print "Looking for $a\n";
   if (defined $a && length $a)
   {
-    my $sql = 'SELECT viaf_author,year,country FROM viaf WHERE author=?';
+    my $sql = 'SELECT viaf_author,year,country,viafID,DATE_SUB(NOW(),INTERVAL 1 MONTH)>time' .
+              ' FROM viaf WHERE author=?';
     my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $a);
-    if (scalar @{$ref} > 0)
+    if (defined $ref && scalar @{$ref} > 0)
     {
-      $ret{'country'} = $ref->[0]->[2];
-      $ret{'author'}  = $ref->[0]->[0];
-      $ret{'add'} = $ref->[0]->[1];
-      return \%ret;
+      # If the data is over a month old, re-fetch.
+      my $old = $ref->[0]->[4];
+      if ($old)
+      {
+        $self->PrepareSubmitSql('DELETE FROM VIAF WHERE author=?', $a);
+      }
+      else
+      {
+        $ret{'author'}  = $ref->[0]->[0];
+        $ret{'add'} = $ref->[0]->[1];
+        $ret{'country'} = $ref->[0]->[2];
+        $ret{'viafID'} = $ref->[0]->[3];
+        return \%ret;
+      }
     }
     my $a2 = $a;
     $a2 =~ s/[^A-Za-z]//g;
@@ -8444,6 +8455,9 @@ sub GetVIAFData
           }
         }
       }
+      $xpath = $pref . '/*[local-name()="VIAFCluster"]/*[local-name()="viafID"]';
+      my @vals = $xpc->findnodes($xpath);
+      $ret{'viafID'} = $vals[0]->string_value() if scalar @vals;
     }
     if ($n > 0 && 1 == scalar keys %{$adds{$n}})
     {
@@ -8452,8 +8466,10 @@ sub GetVIAFData
     }
     if (defined $name)
     {
-      $sql = 'INSERT INTO viaf (author,viaf_author,year,country) VALUES (?,?,?,?)';
-      $self->PrepareSubmitSql($sql, $a, $ret{'author'}, $ret{'add'}, $ret{'country'});
+      $sql = 'DELETE FROM viaf WHERE author=?';
+      $self->PrepareSubmitSql($sql, $a);
+      $sql = 'INSERT INTO viaf (author,viaf_author,year,country,viafID) VALUES (?,?,?,?,?)';
+      $self->PrepareSubmitSql($sql, $a, $name, $ret{'add'},$ret{'country'}, $ret{'viafID'});
     }
   }
   return (scalar keys %ret > 0)? \%ret:undef;
