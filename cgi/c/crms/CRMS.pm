@@ -887,7 +887,7 @@ sub AddItemToCandidates
       print "Add $id to candidates\n";
       if (!defined $noop)
       {
-        my $date = $self->GetRecordPubDate($id, $record);
+        my $date = $self->GetRecordPubDate($id, $record) . '-01-01';
         my $sql = 'REPLACE INTO candidates (id, time, pub_date) VALUES (?,?,?)';
         $self->PrepareSubmitSql($sql, $id, $time, $date);
         $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
