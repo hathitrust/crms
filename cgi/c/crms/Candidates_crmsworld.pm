@@ -60,6 +60,12 @@ sub GetCutoffYear
     return $year-140 if $name eq 'minYear';
     return $year-71;
   }
+  elsif ($country eq 'Australia')
+  {
+    return $year-120 if $name eq 'minYear';
+    # FIXME: will this ever change?
+    return 1954;
+  }
   return $year-120 if $name eq 'minYear';
   return $year-51;
 }
