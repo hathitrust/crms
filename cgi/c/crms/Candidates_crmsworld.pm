@@ -24,10 +24,6 @@ sub HasCorrectRights
                   $attr eq 'op';
   $correct = 0 if defined $new_attr && $new_attr eq 'und' &&
                   ($attr eq 'pd' || $attr eq 'pdus');
-  # Clobber pdus/gfv if exporting any rights; per rrotter Core Services
-  # never put pdus/gfv over pdus/bib.
-  $correct = 1 if defined $new_attr && defined $new_reason &&
-                  $attr eq 'pdus' && $reason eq 'gfv';
   return $correct;
 }
 

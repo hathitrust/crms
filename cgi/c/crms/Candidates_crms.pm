@@ -2,20 +2,21 @@ package Candidates;
 
 use strict;
 use warnings;
-use vars qw( @ISA @EXPORT @EXPORT_OK );
+use vars qw(@ISA @EXPORT @EXPORT_OK);
 our @EXPORT = qw(HasCorrectRights HasCorrectYear GetCutoffYear GetViolations ShouldVolumeGoInUndTable);
 
 # If new_attr and new_reason are supplied, they are the final determination
 # and this checks whether that determination should be exported (is the
 # volume in scope?).
-# Ignored in CRMS US.
+# There are no additional rules governing this in CRMS US, so we let the
+# core logic handle it.
 sub HasCorrectRights
 {
   my $self       = shift;
   my $attr       = shift;
   my $reason     = shift;
-  my $new_attr   = shift;
-  my $new_reason = shift;
+  #my $new_attr   = shift;
+  #my $new_reason = shift;
 
   my $correct = 0;
   $correct = 1 if ($attr eq 'ic' && $reason eq 'bib') || $attr eq 'op';
@@ -41,7 +42,7 @@ sub GetCutoffYear
 
   return 1923 if $name eq 'minYear';
   return 1963 if $name eq 'maxYear';
-  return 1963 if $name eq 'maxYearOverride';
+  return 1977 if $name eq 'maxYearOverride';
 }
 
 sub GetViolations
@@ -66,7 +67,8 @@ sub GetViolations
     push @errs, "pub date not in range or not completely specified ($pub)";
   }
   push @errs, 'gov doc' if IsGovDoc($self, $id, $record );
-  push @errs, 'foreign pub' if IsForeignPub($self, $id, $record);
+  my $where = $self->GetRecordPubCountry($id, $record);
+  push @errs, "foreign pub ($where)" if $where ne 'USA';
   push @errs, 'non-BK format' unless $self->IsFormatBK($id, $record);
   my $ref = $self->RightsQuery($id,1);
   $ref = $ref->[0] if $ref;

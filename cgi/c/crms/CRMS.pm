@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.4.3';
+  return '4.4.4';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -544,41 +544,20 @@ sub ExportReviews
   require $module;
   my $count = 0;
   my $user = $self->get('sys');
-  my $time = $self->GetTodaysDate();
   my ($fh, $temp, $perm) = $self->GetExportFh() unless $fromcgi;
   print ">>> Exporting to $temp.\n" unless $fromcgi;
   my $start_size = $self->GetCandidatesSize();
   foreach my $id (@{$list})
   {
-    my $exported = 1;
     my ($attr,$reason) = $self->GetFinalAttrReason($id);
-    my $rq = $self->RightsQuery($id,1);
-    my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
-    # Do not export determination if the volume has gone out of scope,
-    # or if exporting und would clobber pdus in World.
-    if (!Candidates::HasCorrectRights($self, $attr2, $reason2, $attr, $reason))
-    {
-      # But, high-priority volumes should always be exported, even if they
-      # clobber something like pd/bib. And in CRMS US we want to always export pd
-      # to overwrite old pre-CRMS work.
-      my $pri = $self->SimpleSqlGet('SELECT priority FROM queue WHERE id=?', $id);
-      if ($pri >= 4.0 || $attr eq 'pd' || $attr eq 'pdus')
-      {
-        print "Exporting priority $pri $id as $attr/$reason even though it is out of scope ($attr2/$reason2)\n" unless $fromcgi;
-      }
-      else
-      {
-        print "Not exporting $id as $attr/$reason; it is out of scope ($attr2/$reason2)\n" unless $fromcgi;
-        $exported = 0;
-      }
-    }
-    if ($exported)
+    my $export = $self->CanExportVolume($id, $attr, $reason, $fromcgi);
+    if ($export)
     {
       print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $fromcgi;
     }
     my $src = $self->SimpleSqlGet('SELECT source FROM queue WHERE id=?', $id);
-    my $sql = 'INSERT INTO  exportdata (time,id,attr,reason,user,src,exported) VALUES (?,?,?,?,?,?,?)';
-    $self->PrepareSubmitSql($sql, $time, $id, $attr, $reason, $user, $src, $exported);
+    my $sql = 'INSERT INTO exportdata (id,attr,reason,user,src,exported) VALUES (?,?,?,?,?,?)';
+    $self->PrepareSubmitSql($sql, $id, $attr, $reason, $user, $src, $export);
     my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata WHERE id=?', $id);
     $self->MoveFromReviewsToHistoricalReviews($id, $gid);
     $self->RemoveFromQueue($id);
@@ -617,6 +596,48 @@ sub ExportReviews
     eval { $self->EmailReport($count, $perm); };
     $self->SetError("EmailReport() failed: $@") if $@;
   }
+}
+
+sub CanExportVolume
+{
+  my $self    = shift;
+  my $id      = shift;
+  my $attr    = shift;
+  my $reason  = shift;
+  my $fromcgi = shift;
+  my $gid     = shift;
+  
+  my $module = 'Candidates_' . $self->get('sys') . '.pm';
+  require $module;
+  my $export = 1;
+  my $rq = $self->RightsQuery($id,1);
+  my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
+  # Do not export determination if the volume has gone out of scope,
+  # or if exporting und would clobber pdus in World.
+  if (!Candidates::HasCorrectRights($self, $attr2, $reason2, $attr, $reason))
+  {
+    # But, we clobber OOS if any of the following conditions hold:
+    # 1. If the volume is pdus/gfv (which per rrotter in Core Services never overrides pdus/bib).
+    # 2. Priority 3 or higher.
+    # 3. Previous rights were by user crms*.
+    # 4. The determination is pd*.
+    my $pri = $self->SimpleSqlGet('SELECT priority FROM queue WHERE id=?', $id);
+    if (defined $gid && !defined $pri)
+    {
+      my $sql = 'SELECT MAX(priority) FROM historicalreviews WHERE gid=?';
+      $pri = $self->SimpleSqlGet($sql, $gid);
+    }
+    if ($reason2 eq 'gfv' || $pri >= 3.0 || $usr2 =~ m/^crms/i || $attr =~ m/^pd/)
+    {
+      print "Exporting priority $pri $id as $attr/$reason even though it is out of scope ($attr2/$reason2)\n" unless $fromcgi;
+    }
+    else
+    {
+      print "Not exporting $id as $attr/$reason; it is out of scope ($attr2/$reason2)\n" unless $fromcgi;
+      $export = 0;
+    }
+  }
+  return $export;
 }
 
 # Send email (to Greg) with rights export data.
