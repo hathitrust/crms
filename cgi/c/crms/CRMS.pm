@@ -8280,7 +8280,13 @@ sub PredictRights
   $where = $self->GetPubCountry($id) unless $where;
   my ($attr, $reason) = (0,0);
   my $now = $self->GetTheYear();
+  # $when is the last year the work was in copyright
   my $when = $year + (($where eq 'United Kingdom')? ($crown? 50:70):50);
+  # New logic for Australia: if the pub/death date is >= 1955 then use 70
+  if ($where eq 'Australia')
+  {
+    $when = $year + 70 if $year >= 1955 or $pub >= 1955;
+  }
   if ($when < $now)
   {
     if ($when >= 1996 && $pub >= 1923)
