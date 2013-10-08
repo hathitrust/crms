@@ -769,7 +769,7 @@ sub CheckAndLoadItemIntoCandidates
   my $oldSysid = $self->SimpleSqlGet('SELECT sysid FROM system WHERE id=?', $id);
   if (defined $oldSysid)
   {
-    $record = $self->GetMetadata($id, \$sysid);
+    $record = $self->GetMetadata($id, \$sysid, 1);
     if (defined $sysid && $sysid ne $oldSysid)
     {
       print "Update system ID on $id -- old $oldSysid, new $sysid\n";
@@ -808,10 +808,9 @@ sub CheckAndLoadItemIntoCandidates
     $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) if defined $inund and !defined $noop;
     return;
   }
-  $record = $self->GetMetadata($id, \$sysid) unless defined $record;
+  $record = $self->GetMetadata($id, \$sysid, 1) unless defined $record;
   if (!defined $record)
   {
-    $self->ClearErrors();
     #print "No metadata yet for $id: will try again tomorrow.\n";
     $self->Filter($id, 'no meta') unless defined $noop;
     return;
@@ -1094,7 +1093,6 @@ sub DoesRecordHaveChron
 }
 
 # Plain vanilla code for adding an item with status 0, priority 0
-# Expects the pub_date to be already in 19XX-01-01 format.
 # Returns 1 if item was added, 0 if not added because it was already in the queue.
 sub AddItemToQueue
 {
@@ -1103,6 +1101,7 @@ sub AddItemToQueue
   my $record   = shift;
 
   return 0 if $self->IsVolumeInQueue($id);
+  $record = $self->GetMetadata($id) unless defined $record;
   # queue table has priority and status default to 0, time to current timestamp.
   $self->PrepareSubmitSql('INSERT INTO queue (id) VALUES (?)', $id);
   $self->UpdateMetadata($id, 1, $record);
@@ -5283,6 +5282,7 @@ sub GetMetadata
   my $self   = shift;
   my $id     = shift;
   my $osysid = shift;
+  my $quiet  = shift;
 
   if (!$id) { $self->SetError("GetMetadata: no id given: '$id'"); return; }
   #return $self->get($id) if $self->get($id);
@@ -5309,9 +5309,17 @@ sub GetMetadata
       $$osysid = $keys[0] if $osysid;
       $xml = $records->{$keys[0]}->{'marc-xml'};
     }
-    else { $self->SetError("HT Bib API found no data for '$id' (got '$content')"); return; }
+    else
+    {
+      $self->SetError("HT Bib API found no data for '$id' (got '$content')") unless $quiet;
+      return;
+    }
   };
-  if ($@) { $self->SetError("failed to parse ($content) for $id:$@"); return; }
+  if ($@)
+  {
+    $self->SetError("failed to parse ($content) for $id:$@") unless $quiet;
+    return;
+  }
   my $parser = $self->get('parser');
   if (!$parser)
   {
@@ -5322,7 +5330,11 @@ sub GetMetadata
   eval {
     $source = $parser->parse_string($xml);
   };
-  if ($@) { $self->SetError("failed to parse ($xml) for $id: $@"); return; }
+  if ($@)
+  {
+    $self->SetError("failed to parse ($xml) for $id: $@") unless $quiet;
+    return;
+  }
   my $xpc = XML::LibXML::XPathContext->new($source);
   my $ns = 'http://www.loc.gov/MARC21/slim';
   $xpc->registerNs(ns => $ns);
