@@ -640,7 +640,7 @@ sub CanExportVolume
   return $export;
 }
 
-# Send email (to Greg) with rights export data.
+# Send email with rights export data.
 sub EmailReport
 {
   my $self    = shift;
@@ -654,7 +654,7 @@ sub EmailReport
     use Mail::Sender;
     my $sender = new Mail::Sender
       {smtp => 'mail.umdl.umich.edu',
-       from => $self->GetSystemVar('exportEmailFrom')};
+       from => $self->GetSystemVar('adminEmail')};
     $sender->MailFile({to => $self->GetSystemVar('exportEmailTo'),
              subject => $subject,
              msg => 'See attachment.',
