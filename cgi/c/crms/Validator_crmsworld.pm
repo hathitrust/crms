@@ -15,8 +15,20 @@ sub ValidateSubmission
   $attr = $self->TranslateAttr($attr);
   $reason = $self->TranslateReason($reason);
   $renDate =~ s/\s+//g if $renDate;
-  my $pubDate = $self->GetPubDate($id);
-  $pubDate = $renDate if $renNum;
+  my $pubDate = undef;
+  my $pub2 = 9999;
+  if ($renNum)
+  {
+    $pubDate = $renDate;
+  }
+  else
+  {
+    $pubDate = $self->GetPubDate($id, 1);
+    if ($pubDate =~ m/\-/)
+    {
+      ($pubDate, $pub2) = split '-', $pubDate, 2;
+    }
+  }
   if ($attr eq 'und' && $reason eq 'nfi' &&
       (!$category ||
        (!$note && 1 == $self->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category))))
@@ -26,14 +38,14 @@ sub ValidateSubmission
   }
   if ($renDate && $renDate !~ m/^\-?\d{1,4}$/)
   {
-    $errorMsg .= sprintf("The year of %s must be only decimal digits. ",
-                         ($renNum)? 'publication':'death');
+    $errorMsg .= 'The year must be only decimal digits. ';
   }
   elsif (($reason eq 'add' || $reason eq 'exp') && !defined $renDate)
   {
     $errorMsg .= "*/$reason must include a numeric year. ";
   }
-  elsif ($pubDate < 1923 && $attr eq 'icus' && $reason eq 'gatt')
+  elsif ($pubDate < 1923 && $attr eq 'icus' && $reason eq 'gatt' &&
+         $pub2 < 1923)
   {
     $errorMsg .= 'Volumes published prior to 1923 are not eligible for icus/gatt. ';
   }
