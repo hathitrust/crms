@@ -7055,7 +7055,7 @@ sub GetTrackingInfo
   {
     # See if it has a pre-CRMS determination.
     my $rq = $self->RightsQuery($id,1);
-    if (!$rq)
+    if (!$rq->[0])
     {
       $self->ClearErrors();
       return 'Rights info unavailable';
