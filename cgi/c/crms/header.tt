@@ -48,7 +48,7 @@ function selMenuItem(id, value)
 -->
     </script>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
-    [% IF page == 'review' %]
+    [% IF page == 'review' OR page == 'corrections' %]
       [% INCLUDE reviewJs.tt %]
     [% ELSE %]
       <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
@@ -60,7 +60,7 @@ function selMenuItem(id, value)
   <body>
 [% r = crms.GetSystemStatus() %]
 
-[% IF page != 'review' %]
+[% IF page != 'review' && page != 'corrections' %]
     <div class="pages" id="homePage">
     <div style="height:82px;border-bottom:1px solid black;margin:0px;padding-bottom:6px;">
       <a href="[% crms.Sysify('crms') %]">
@@ -82,7 +82,10 @@ function selMenuItem(id, value)
             <th nowrap="nowrap" style="text-align:right;">
               [% experts = crms.GetSystemVar("expertsEmail") %]
               [% IF experts %]
-                Contact:&nbsp;<a href="mailto:[% experts %]?subject=CRMS+Feedback" class="header">[% experts %]</a>
+                <a href="mailto:[% experts %]?subject=CRMS%20Feedback" class="header">
+                  <img width="16" height="16" alt="Report error" src="/c/crms/SendIcon.png"/>
+                  Click here to report errors
+                </a>
               [% END %]
             </th>
           </tr>
