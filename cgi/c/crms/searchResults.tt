@@ -150,7 +150,8 @@ function CheckAll(box,formid)
     <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
     <input type="submit" name="approve" value="Approve Selected Volumes"/>
     <input type="submit" name="lock" value="Lock Selected Volumes"/>
-    <input type="submit" name="unlock" value="Unlock Selected Volumes"/><br/><br/>
+    <input type="submit" name="unlock" value="Unlock Selected Volumes"/>
+    <input type="submit" value="Refresh Page"/><br/><br/>
   [% END %]
   <table class="exportStats" style="width:100%;" id="resultsTable"><tr>
     <th>ID</th>
