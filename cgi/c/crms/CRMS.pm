@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.4.6';
+  return '4.4.7';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -1263,18 +1263,20 @@ sub CloneReview
   my $self   = shift;
   my $id     = shift;
   my $user   = shift;
-  
+
   my $result = $self->LockItem($id, $user, 1);
   return $result if $result;
   # SubmitReview unlocks it if it succeeds.
   if ($self->HasItemBeenReviewedByUser($id, $user))
   {
     $result = "Could not approve review for $id because you already reviewed it.";
+    $self->UnlockItem($id, $user);
   }
-  elsif ($self->IsLockedForOtherUser($id, $user))
-  {
-    $result = "Could not approve review for $id because it is locked by another user.";
-  }
+  # LockItem above makes this redundant.
+  #elsif ($self->IsLockedForOtherUser($id, $user))
+  #{
+  #  $result = "Could not approve review for $id because it is locked by another user.";
+  #}
   elsif ($self->HasItemBeenReviewedByAnotherExpert($id,$user))
   {
     $result = "Could not approve review for $id because it has already been reviewed by an expert.";
