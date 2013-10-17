@@ -221,7 +221,7 @@ function CheckAll(box,formid)
         <td>
         [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' || p == 'holds' %]
           [% IF crms.IsLockedForOtherUser(review.id) %]
-            review.title
+            [% review.title %]
           [% ELSE %]
              [% IF p == 'expert' || p == 'undReviews' %]
                [% crms.LinkToReview(review.id, review.title, review.user) %]
