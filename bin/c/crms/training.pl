@@ -12,36 +12,43 @@ BEGIN
 use strict;
 use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
+use Spreadsheet::WriteExcel;
 
 my $usage = <<END;
-USAGE: $0 [-hntv5] [-x SYS] count
+USAGE: $0 [-hnrtv] [-e FILE] [-o FILE] [-x SYS] count
 
 Populates the training database with examples (correct, single reviews) from production.
 
+-e FILE  Write an Excel spreadsheet with information on the volumes to be added.
 -h       Print this help message.
 -n       Do not submit SQL.
+-o       Write a tab-delimited file with information on the volumes to be added.
+-r       Randomize sample from production.
 -t       Run in training (dev otherwise).
 -v       Be verbose.
 -x SYS   Set SYS as the system to execute.
--5       Do only status 5 reviews.
 END
 
+my $excel;
 my $help;
 my $noop;
+my $random;
+my $out;
 my $training;
 my $verbose;
 my $sys;
-my $five;
 
 Getopt::Long::Configure ('bundling');
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
+           'e:s'  => \$excel,
            'h'    => \$help,
            'n'    => \$noop,
+           'o:s'  => \$out,
+           'r'    => \$random,
            't'    => \$training,
            'v'    => \$verbose,
-           'x:s'  => \$sys,
-           '5'    => \$five);
+           'x:s'  => \$sys);
            
 
 die "$usage\n\n" if $help;
@@ -59,7 +66,7 @@ my $crms = CRMS->new(
 
 # Connect to training database.
 my $crms2 = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/duplicates_hist.txt",
+    logFile      =>   "$DLXSROOT/prep/c/crms/training_hist2.txt",
     sys          =>   $sys,
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
@@ -67,44 +74,50 @@ my $crms2 = CRMS->new(
 );
 
 
-
+my $workbook;
+my $worksheet;
+my @cols = ('ID', 'Author', 'Title', 'Pub Date', 'Country', 'User', 'Date', 'Category', 'Rights');
+if (defined $excel)
+{
+  $workbook = Spreadsheet::WriteExcel->new($excel);
+  $worksheet = $workbook->add_worksheet();
+  $worksheet->write_string(0, $_, $cols[$_]) for (0 .. scalar @cols);
+}
+my $fh;
+if (defined $out)
+{
+  open $fh, '>', $out or die "Can't open output file\n";
+  binmode($fh, ':utf8');
+  print $fh join "\t", @cols;
+}
 ### Get a list of ids from the training DB already seen,
 ### and populate the 'seen' hash with them.
 my %seen;
-my $sql = '(select distinct id from reviews) union distinct (select distinct id from historicalreviews)';
+my %seenAuthors;
+my %seenTitles;
+my $sql = '(SELECT DISTINCT id FROM reviews) UNION DISTINCT (SELECT DISTINCT id FROM historicalreviews)' .
+          ' UNION DISTINCT (SELECT id FROM queue)';
 my $ref = $crms2->GetDb()->selectall_arrayref($sql);
-$seen{$_->[0]} = 1 for @{$ref};
+#$seen{$_->[0]} = 1 for @{$ref};
 my $n = 0;
 
-my $fivesql = ($five)? ' AND status=5':'';
-$sql = 'SELECT id,user,time,gid,status FROM historicalreviews WHERE ' .
-       'user IN (SELECT id FROM users WHERE advanced=1 AND extadmin+expert+admin+superadmin=0) AND ' . 
-       "validated=1 $fivesql ORDER BY time DESC";
-if ($verbose)
-{
-  print "$sql\n";
-  print "<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>\n" .
-        '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
-        "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'/>\n" .
-        "<title>Duplicate volumes with differing rights</title></head><body>\n" .
-        "<table border='1'>\n" .
-        '<tr><th>ID</th><th>Title</th><th>Author</th><th>PubDate</th><th>Review&nbsp;Date</th><th>Status</th>' .
-        '<th>User</th><th>Attr</th><th>Reason</th><th>Ren&nbsp;Date</th><th>Ren&nbsp;Num</th><th>Category</th>' .
-        '<th>Note</th><th>Validated</th><th>Importing</th></tr>' .
-        "\n";
-}
+my $orderby = ($random)? 'RAND()':'time DESC';
+$sql = 'SELECT id,user,time,gid,status FROM historicalreviews WHERE' .
+       ' user IN (SELECT id FROM users WHERE advanced=1 AND extadmin+expert+admin+superadmin=0) AND' . 
+       ' validated=1 AND (status=4 OR status=5) ORDER BY ' . $orderby;
 $ref = $crms->GetDb()->selectall_arrayref($sql);
-
+print "$sql\n" if $verbose;
 my $s4 = 0;
 my $s5 = 0;
 my @sqls = ();
 foreach my $row (@{$ref})
 {
-  my $id     = $row->[0];
+  my $id = $row->[0];
+  print "$id\n" if $verbose;
   last if $n >= $count;
   if ($seen{$id})
   {
-    print "Skipping $id, it has been seen\n" if $verbose;
+    print "Skipping $id, it has been seen (n is $n)\n" if $verbose;
     next;
   }
   $seen{$id} = 1;
@@ -113,48 +126,14 @@ foreach my $row (@{$ref})
   my $gid    = $row->[3];
   my $status = $row->[4];
   # Do not do nonmatching 'crms' status 4s.
-  my $expr   = $crms->SimpleSqlGet("SELECT reason FROM exportdata WHERE gid='$gid'");
+  my $expr = $crms->SimpleSqlGet('SELECT reason FROM exportdata WHERE gid=?', $gid);
   next if $expr eq 'crms';
-  $sql = "SELECT MAX(swiss) FROM historicalreviews WHERE id='$id'";
-  next if 0 < $crms->SimpleSqlGet($sql);
-  $sql = "SELECT reason FROM exportdata WHERE gid=$gid";
-  my $expreason = $crms->SimpleSqlGet($sql);
+  $sql = 'SELECT MAX(swiss) FROM historicalreviews WHERE id=?';
+  next if 0 < $crms->SimpleSqlGet($sql, $id);
+  $sql = 'SELECT reason FROM exportdata WHERE gid=?';
+  my $expreason = $crms->SimpleSqlGet($sql, $gid);
   next if $expreason eq 'crms';
-  next if $crms2->SimpleSqlGet("SELECT COUNT(*) FROM queue WHERE id='$id'");
-  if ($verbose)
-  {
-    my %vals = (0=>'x',1=>'+',2=>'-');
-    $sql = 'SELECT h.user,DATE(h.time),h.attr,h.reason,h.renDate,h.renNum,h.category,h.note,h.validated,h.status,b.author,b.title,YEAR(b.pub_date) ' .
-           "FROM historicalreviews h INNER JOIN bibdata b ON h.id=b.id WHERE h.gid=$gid";
-    my $ref = $crms->GetDb()->selectall_arrayref($sql);
-    foreach my $row (@{$ref})
-    {
-      my $user2 = $row->[0];
-      my $time = $row->[1];
-      my $attr = $crms->TranslateAttr($row->[2]);
-      my $reason = $crms->TranslateReason($row->[3]);
-      my $renDate = $row->[4];
-      my $renNum = $row->[5];
-      my $category = $row->[6];
-      my $note = $row->[7];
-      my $validated = $vals{$row->[8]};
-      my $status = $row->[9];
-      my $author = $row->[10];
-      my $title = $row->[11];
-      my $pubDate = $row->[12];
-      $renDate = ' ' unless $renDate;
-      $renNum = ' ' unless $renNum;
-      $category = ' ' unless $category;
-      $note = ' ' unless $note;
-      $note =~ s/\s|\n/ /gs;
-      my $importing = ($user eq $user2)? '&#x2713;':'';
-      print "<tr><td>$id</td><td>$title</td><td>$author</td><td>$pubDate</td><td>$time</td><td>$status</td>" .
-            "<td>$user2</td><td>$attr</td><td>$reason</td><td>$renDate</td><td>$renNum</td><td>$category</td>" .
-            "<td>$note</td><td>$validated</td><td>$importing</td></tr>\n";
-    }
-  }
-  $s4++ if $status == 4;
-  $s5++ if $status == 5;
+  my $record = $crms->GetMetadata($id);
   $sql = "SELECT attr,reason,renDate,renNum,category,note,duration FROM historicalreviews WHERE id='$id' AND user='$user' AND time='$time'";
   my $ref2 = $crms->GetDb()->selectall_arrayref($sql);
   $row = $ref2->[0];
@@ -173,11 +152,42 @@ foreach my $row (@{$ref})
   push @sqls, 'INSERT INTO reviews (id,user,time,attr,reason,renDate,renNum,category,note,duration) ' .
               "VALUES ('$id','$user','$time',$attr,$reason,$renDate,$renNum,$category,$note,'$duration')";
   $crms2->UpdateMetadata($id, 1) unless $noop;
+  if (defined $excel || defined $out)
+  {
+    my $author = $crms->GetRecordAuthor($id, $record);
+    my $title = $crms->GetRecordTitle($id, $record);
+    next if $seenAuthors{$author};
+    next if $seenTitles{$title};
+    $seenAuthors{$author} = 1;
+    $seenTitles{$title} = 1;
+    my $date = $crms->GetRecordPubDate($id, $record);
+    my $country = $crms->GetRecordPubCountry($id, $record);
+    my $rights = $crms->TranslateAttr($attr) . '/' . $crms->TranslateReason($reason);
+    $category = $row->[4];
+    if (defined $out)
+    {
+      print $fh join "\t", ($id, $author, $title, $date, $country, $user, $time, $category, $rights);
+    }
+    if (defined $excel)
+    {
+      $worksheet->write_string($n+1, 0, $id);
+      $worksheet->write_string($n+1, 1, $author);
+      $worksheet->write_string($n+1, 2, $title);
+      $worksheet->write_string($n+1, 3, $date);
+      $worksheet->write_string($n+1, 4, $country);
+      $worksheet->write_string($n+1, 5, $user);
+      $worksheet->write_string($n+1, 6, $time);
+      $worksheet->write_string($n+1, 7, $category);
+      $worksheet->write_string($n+1, 8, $rights);
+    }
+  }
   $n++;
+  $s4++ if $status == 4;
+  $s5++ if $status == 5;
 }
-print "</table></body></html>\n" if $verbose;
 print "Warning: $_\n" for @{$crms->GetErrors()};
-
+$workbook->close() if $workbook;
+close $fh if defined $out;
 $crms = $crms2;
 foreach $sql (@sqls)
 {

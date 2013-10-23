@@ -104,7 +104,7 @@ if ($sys ne 'crmsworld')
   is($crms->GetUserAffiliation('aseeger@library.wisc.edu'), 'UW',          'UW affiliation');
   is($crms->GetUserAffiliation('zl2114@columbia.edu'), 'COL',              'COL affiliation');
   is(scalar @{ $crms->GetUsersWithAffiliation('IU') }, 8,                  'IU affiliates count');
-  is(scalar @{ $crms->GetUsersWithAffiliation('UW') }, 5,                  'UW affiliates count');
+  is(scalar @{ $crms->GetUsersWithAffiliation('UW') }, 6,                  'UW affiliates count');
   is(scalar @{ $crms->GetUsersWithAffiliation('COL') }, 1,                 'COL affiliates count');
   is($crms->IsReviewCorrect('uc1.b3763822','dfulmer','2009-11-02') ,0,     'Correctness: uc1.b3763822 1');
   is($crms->IsReviewCorrect('uc1.b3763822','cwilcox','2009-11-03') ,1,     'Correctness: uc1.b3763822 2');
@@ -136,37 +136,36 @@ if ($sys ne 'crmsworld')
 
 if ($sys eq 'crmsworld')
 {
-ok('Volumes published prior to 1923 are not eligible for icus/gatt. ' eq
-   $crms->ValidateSubmission('inu.39000005773028','moseshll',19,17,undef,undef,undef,undef), 'icus/gatt superadmin >=23');
+  ok('Volumes published prior to 1923 are not eligible for icus/gatt. ' eq
+     $crms->ValidateSubmission('inu.39000005773028','moseshll',19,17,undef,undef,undef,undef), 'icus/gatt superadmin >=23');
+  is($crms->PredictRights('uc1.b173100','1945'), 4,    'Predict rights: uc1.b173100 1945 ic/add');
 }
 else
 {
-ok('Renewal no longer required for works published after 1963. ' eq
-   $crms->ValidateSubmission('mdp.39015011285692','moseshll',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin >63 +ren');
-ok('' eq
-   $crms->ValidateSubmission('mdp.39015011285692','moseshll',1,2,undef,undef,undef,undef),     'pd/ncn superadmin >63 -ren');
-ok('' eq
-   $crms->ValidateSubmission('uc1.31822009761677','moseshll',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin <63 +ren');
-ok('' eq
-   $crms->ValidateSubmission('uc1.31822009761677','moseshll',1,2,undef,undef,undef,undef),     'pd/ncn superadmin <63 -ren');
-
-ok('Renewal no longer required for works published after 1963. ' eq
-   $crms->ValidateSubmission('mdp.39015011285692','jaheim123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin >63 +ren');
-ok('' eq
-   $crms->ValidateSubmission('mdp.39015011285692','jaheim123',1,2,undef,undef,undef,undef),     'pd/ncn admin >63 -ren');
-ok('' eq
-   $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin <63 +ren -note');
-ok('pd/ncn must include either renewal id and renewal date, or note category "Expert Note". ' eq
-   $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,undef,undef,undef,undef),     'pd/ncn admin <63 -ren -note');
-ok('' eq
-   $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,'blah','Expert Note','R000','1Jan60'), 'pd/ncn admin <63 +ren +note');
-ok('' eq
-   $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,'blah','Expert Note',undef,undef),     'pd/ncn admin <63 -ren +note');
-
-ok('' eq
-   $crms->ValidateSubmission('uc1.31822009761677','gnichols',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn expert <63 +ren');
-ok('pd/ncn must include renewal id and renewal date. ' eq
-   $crms->ValidateSubmission('uc1.31822009761677','gnichols',1,2,undef,undef,undef,undef),     'pd/ncn expert <63 -ren');
+  ok('Renewal no longer required for works published after 1963. ' eq
+     $crms->ValidateSubmission('mdp.39015011285692','moseshll',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin >63 +ren');
+  ok('' eq
+     $crms->ValidateSubmission('mdp.39015011285692','moseshll',1,2,undef,undef,undef,undef),     'pd/ncn superadmin >63 -ren');
+  ok('' eq
+     $crms->ValidateSubmission('uc1.31822009761677','moseshll',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn superadmin <63 +ren');
+  ok('' eq
+     $crms->ValidateSubmission('uc1.31822009761677','moseshll',1,2,undef,undef,undef,undef),     'pd/ncn superadmin <63 -ren');
+  ok('Renewal no longer required for works published after 1963. ' eq
+     $crms->ValidateSubmission('mdp.39015011285692','jaheim123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin >63 +ren');
+  ok('' eq
+     $crms->ValidateSubmission('mdp.39015011285692','jaheim123',1,2,undef,undef,undef,undef),     'pd/ncn admin >63 -ren');
+  ok('' eq
+     $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin <63 +ren -note');
+  ok('pd/ncn must include either renewal id and renewal date, or note category "Expert Note". ' eq
+     $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,undef,undef,undef,undef),     'pd/ncn admin <63 -ren -note');
+  ok('' eq
+     $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,'blah','Expert Note','R000','1Jan60'), 'pd/ncn admin <63 +ren +note');
+  ok('' eq
+     $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,'blah','Expert Note',undef,undef),     'pd/ncn admin <63 -ren +note');
+  ok('' eq
+     $crms->ValidateSubmission('uc1.31822009761677','gnichols',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn expert <63 +ren');
+  ok('pd/ncn must include renewal id and renewal date. ' eq
+     $crms->ValidateSubmission('uc1.31822009761677','gnichols',1,2,undef,undef,undef,undef),     'pd/ncn expert <63 -ren');
 }
 my $id = $crms->SimpleSqlGet('SELECT id FROM und WHERE src!="duplicate"');
 $crms->Filter($id, 'duplicate');
@@ -289,15 +288,17 @@ if ($sys eq 'crmsworld')
 }
 else
 {
-  is($crms->GetCodeFromAttrReason(1,2),1,                                                          'GetCodeFromAttrReason 1');
-  is($crms->GetCodeFromAttrReason(1,7),2,                                                          'GetCodeFromAttrReason 2');
-  is($crms->GetCodeFromAttrReason(1,9),3,                                                          'GetCodeFromAttrReason 3');
-  is($crms->GetCodeFromAttrReason(2,7),4,                                                          'GetCodeFromAttrReason 4');
-  is($crms->GetCodeFromAttrReason(2,9),5,                                                          'GetCodeFromAttrReason 5');
-  is($crms->GetCodeFromAttrReason(5,8),6,                                                          'GetCodeFromAttrReason 6');
-  is($crms->GetCodeFromAttrReason(9,9),7,                                                          'GetCodeFromAttrReason 7');
-  is($crms->GetCodeFromAttrReason(1,14),8,                                                         'GetCodeFromAttrReason 8');
-  is($crms->GetCodeFromAttrReason(1,15),9,                                                         'GetCodeFromAttrReason 9');
+  is($crms->GetCodeFromAttrReason(1,7),1,                                                          'GetCodeFromAttrReason 1');
+  is($crms->GetCodeFromAttrReason(1,9),2,                                                          'GetCodeFromAttrReason 2');
+  is($crms->GetCodeFromAttrReason(2,7),3,                                                          'GetCodeFromAttrReason 3');
+  is($crms->GetCodeFromAttrReason(2,9),4,                                                          'GetCodeFromAttrReason 4');
+  is($crms->GetCodeFromAttrReason(5,8),5,                                                          'GetCodeFromAttrReason 5');
+  is($crms->GetCodeFromAttrReason(9,9),6,                                                          'GetCodeFromAttrReason 6');
+  is($crms->GetCodeFromAttrReason(1,14),7,                                                         'GetCodeFromAttrReason 7');
+  is($crms->GetCodeFromAttrReason(1,15),8,                                                         'GetCodeFromAttrReason 8');
+  is($crms->GetCodeFromAttrReason(1,13),9,                                                         'GetCodeFromAttrReason 9');
+  is($crms->GetCodeFromAttrReason(2,13),10,                                                        'GetCodeFromAttrReason 10');
+  is($crms->GetCodeFromAttrReason(5,13),11,                                                        'GetCodeFromAttrReason 11');
   is($crms->SameUser('gnichols','gnichols123'),1,                                                  'SameUser 1');
   is($crms->SameUser('gnichols','moseshll'),0,                                                     'SameUser 2');
   is($crms->SameUser('rose','doc'),0,                                                              'SameUser 3');

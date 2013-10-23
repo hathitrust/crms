@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.4.7';
+  return '4.5';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -924,6 +924,34 @@ sub Unfilter
     $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
     $self->CheckAndLoadItemIntoCandidates($id);
   }
+}
+
+# Returns concatenated error messages (reasons for unsuitability for CRMS) for a volume.
+# Checks everything but the current rights;
+# also checks for a latest status 5 non-und determination.
+# This is for evaluating MDPCorrections volumes.
+sub IsVolumeInScope
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $reason = shift;
+
+  my $record = $self->GetMetadata($id);
+  return 'No metadata' unless defined $record;
+  my $errs = $self->GetViolations($id, $record);
+  if (scalar @{$errs})
+  {
+    $errs = join '; ', @{$errs};
+    return $errs if $errs !~ m/^current\srights\sare\s[a-z]+\/[a-z]+$/i;
+  }
+  my $und = $self->ShouldVolumeGoInUndTable($id, $record);
+  return 'Volume should be filtered (' . $und . ')' if defined $und;
+  return 'Volume is already in the queue' if $self->IsVolumeInQueue($id);
+  my $sql = 'SELECT COUNT(*) FROM exportdata e INNER JOIN historicalreviews r ON' .
+            ' e.gid=r.gid WHERE e.id=? AND e.attr!="und" AND r.status=5';
+  my $cnt = $self->SimpleSqlGet($sql, $id);
+  return 'Volume has a non-und expert review' if $cnt > 0;
+  return undef;
 }
 
 # Returns an array of error messages (reasons for unsuitability for CRMS) for a volume.
@@ -2999,6 +3027,44 @@ sub PublisherDataSearchMenu
   require 'Publisher.pm';
   unshift @_, $self;
   return Publisher::PublisherDataSearchMenu(@_);
+}
+
+sub CorrectionsTitles
+{
+  require 'Corrections.pm';
+  return Corrections::CorrectionsTitles();
+}
+
+sub CorrectionsFields
+{
+  require 'Corrections.pm';
+  return Corrections::CorrectionsFields();
+}
+
+sub GetCorrectionsDataRef
+{
+  my $self = shift;
+
+  require 'Corrections.pm';
+  unshift @_, $self;
+  return Corrections::GetCorrectionsDataRef(@_);
+}
+
+sub CorrectionsDataSearchMenu
+{
+  my $self = shift;
+
+  require 'Corrections.pm';
+  unshift @_, $self;
+  return Corrections::CorrectionsDataSearchMenu(@_);
+}
+
+sub IsCorrection
+{
+  my $self = shift;
+  my $id   = shift;
+
+  return $self->SimpleSqlGet('SELECT COUNT(*) FROM corrections WHERE id=?', $id);
 }
 
 sub Linkify
@@ -5490,8 +5556,10 @@ sub HasLockedItem
 {
   my $self = shift;
   my $user = shift;
+  my $correction = shift;
 
-  my $sql = 'SELECT COUNT(*) FROM queue WHERE locked=? LIMIT 1';
+  my $table = (defined $correction)? 'corrections':'queue';
+  my $sql = 'SELECT COUNT(*) FROM ' . $table . ' WHERE locked=? LIMIT 1';
   return ($self->SimpleSqlGet($sql, $user))? 1:0;
 }
 
@@ -5499,8 +5567,10 @@ sub GetLockedItem
 {
   my $self = shift;
   my $user = shift;
+  my $correction = shift;
 
-  my $sql = 'SELECT id FROM queue WHERE locked=? LIMIT 1';
+  my $table = (defined $correction)? 'corrections':'queue';
+  my $sql = 'SELECT id FROM ' . $table . ' WHERE locked=? LIMIT 1';
   return $self->SimpleSqlGet($sql, $user);
 }
 
@@ -5508,8 +5578,10 @@ sub IsLocked
 {
   my $self = shift;
   my $id   = shift;
+  my $correction = shift;
 
-  my $sql = 'SELECT id FROM queue WHERE locked IS NOT NULL AND id=?';
+  my $table = (defined $correction)? 'corrections':'queue';
+  my $sql = 'SELECT id FROM ' . $table . ' WHERE locked IS NOT NULL AND id=?';
   return ($self->SimpleSqlGet($sql, $id))? 1:0;
 }
 
@@ -5518,8 +5590,10 @@ sub IsLockedForUser
   my $self = shift;
   my $id   = shift;
   my $user = shift;
+  my $correction = shift;
 
-  my $sql = 'SELECT COUNT(*) FROM queue WHERE id=? AND locked=?';
+  my $table = (defined $correction)? 'corrections':'queue';
+  my $sql = 'SELECT COUNT(*) FROM ' . $table . ' WHERE id=? AND locked=?';
   return 1 == $self->SimpleSqlGet($sql, $id, $user);
 }
 
@@ -5528,9 +5602,11 @@ sub IsLockedForOtherUser
   my $self = shift;
   my $id   = shift;
   my $user = shift;
+  my $correction = shift;
 
+  my $table = (defined $correction)? 'corrections':'queue';
   $user = $self->get('user') unless $user;
-  my $lock = $self->SimpleSqlGet('SELECT locked FROM queue WHERE id=?', $id);
+  my $lock = $self->SimpleSqlGet('SELECT locked FROM ' . $table . ' WHERE id=?', $id);
   return ($lock && $lock ne $user);
 }
 
@@ -5538,7 +5614,9 @@ sub RemoveOldLocks
 {
   my $self = shift;
   my $time = shift;
+  my $correction = shift;
 
+  my $table = (defined $correction)? 'corrections':'queue';
   # By default, GetPrevDate() returns the date/time 24 hours ago.
   $time = $self->GetPrevDate($time);
   my $lockedRef = $self->GetLockedItems();
@@ -5547,12 +5625,12 @@ sub RemoveOldLocks
     my $id = $lockedRef->{$item}->{id};
     my $user = $lockedRef->{$item}->{locked};
     my $since = $self->ItemLockedSince($id, $user);
-    my $sql = 'SELECT id FROM queue WHERE id=? AND time<?';
+    my $sql = 'SELECT id FROM ' . $table . ' WHERE id=? AND time<?';
     my $old = $self->SimpleSqlGet($sql, $id, $time);
     if ($old)
     {
       #$self->Logit("REMOVING OLD LOCK:\t$id, $user: $since | $time");
-      $self->UnlockItem($id, $user);
+      $self->UnlockItem($id, $user, $correction);
     }
   }
 }
@@ -5574,11 +5652,13 @@ sub PreviouslyReviewed
 # Returns 0 on success, error message on error.
 sub LockItem
 {
-  my $self     = shift;
-  my $id       = shift;
-  my $user     = shift;
-  my $override = shift;
+  my $self       = shift;
+  my $id         = shift;
+  my $user       = shift;
+  my $override   = shift;
+  my $correction = shift;
 
+  my $table = (defined $correction)? 'corrections':'queue';
   ## if already locked for this user, that's OK
   return 0 if $self->IsLockedForUser($id, $user);
   # Not locked for user, maybe someone else
@@ -5586,56 +5666,67 @@ sub LockItem
   ## can only have 1 item locked at a time (unless override)
   if (!$override)
   {
-    my $locked = $self->HasLockedItem($user);
-    return 0 if $locked eq $id; ## already locked
-    return "You already have a locked item ($locked)." if $locked;
+    my $locked = $self->GetLockedItem($user, $correction);
+    if (defined $locked)
+    {
+      return 0 if $locked eq $id;
+      return "You already have a locked item ($locked).";
+    }
   }
-  my $sql = 'UPDATE queue SET locked=? WHERE id=?';
+  my $sql = 'UPDATE ' . $table . ' SET locked=? WHERE id=?';
   $self->PrepareSubmitSql($sql, $user, $id);
-  $self->StartTimer($id, $user);
+  $self->StartTimer($id, $user) unless defined $correction;
   return 0;
 }
 
 sub UnlockItem
 {
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift;
+  my $self       = shift;
+  my $id         = shift;
+  my $user       = shift;
+  my $correction = shift;
 
+  my $table = (defined $correction)? 'corrections':'queue';
   $user = $self->get('user') unless defined $user;
-  my $sql = 'UPDATE queue SET locked=NULL WHERE id=? AND locked=?';
+  my $sql = 'UPDATE ' . $table . ' SET locked=NULL WHERE id=? AND locked=?';
   $self->PrepareSubmitSql($sql, $id, $user);
-  $self->RemoveFromTimer($id, $user);
+  $self->RemoveFromTimer($id, $user) unless defined $correction;
 }
 
 sub UnlockItemEvenIfNotLocked
 {
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift;
+  my $self       = shift;
+  my $id         = shift;
+  my $user       = shift;
+  my $correction = shift;
 
-  my $sql = 'UPDATE queue SET locked=NULL WHERE id=?';
+  my $table = (defined $correction)? 'corrections':'queue';
+  my $sql = 'UPDATE ' . $table . ' SET locked=NULL WHERE id=?';
   if (!$self->PrepareSubmitSql($sql, $id)) { return 0; }
-  $self->RemoveFromTimer($id, $user);
+  $self->RemoveFromTimer($id, $user) unless defined $correction;
   return 1;
 }
 
 sub UnlockAllItemsForUser
 {
-  my $self = shift;
-  my $user = shift;
+  my $self       = shift;
+  my $user       = shift;
+  my $correction = shift;
 
-  $self->PrepareSubmitSql('UPDATE queue SET locked=NULL WHERE locked=?', $user);
-  $self->PrepareSubmitSql('DELETE FROM timer WHERE user=?', $user);
+  my $table = (defined $correction)? 'corrections':'queue';
+  $self->PrepareSubmitSql('UPDATE ' . $table . ' SET locked=NULL WHERE locked=?', $user);
+  $self->PrepareSubmitSql('DELETE FROM timer WHERE user=?', $user) unless $correction;
 }
 
 sub GetLockedItems
 {
-  my $self = shift;
-  my $user = shift;
+  my $self       = shift;
+  my $user       = shift;
+  my $correction = shift;
 
+  my $table = (defined $correction)? 'corrections':'queue';
   my $restrict = ($user)? "='$user'":'IS NOT NULL';
-  my $sql = "SELECT id, locked FROM queue WHERE locked $restrict";
+  my $sql = 'SELECT id, locked FROM ' . $table . ' WHERE locked ' . $restrict;
   my $ref = $self->GetDb()->selectall_arrayref($sql);
   my $return = {};
   foreach my $row (@{$ref})
@@ -5857,6 +5948,37 @@ sub GetNextItemForReviewSQ
   if (!$id)
   {
     $err = sprintf "Could not get a volume for $user to review%s.", ($err)? " ($err)":'';
+    $err .= "\n$sql" if $sql;
+    $self->SetError($err);
+  }
+  return $id;
+}
+
+sub GetNextCorrectionForReview
+{
+  my $self = shift;
+  my $user = shift;
+  
+  my $id = undef;
+  my $err = undef;
+  my $sql = 'SELECT c.id FROM corrections c WHERE c.locked IS NULL AND status IS NULL ORDER BY time DESC';
+  eval{
+    my $ref = $self->GetDb()->selectall_arrayref($sql);
+    foreach my $row (@{$ref})
+    {
+      my $id2 = $row->[0];
+      $err = $self->LockItem($id2, $user, 0, 1);
+      if (!$err)
+      {
+        $id = $id2;
+        last;
+      }
+    }
+  };
+  $self->SetError($@) if $@;
+  if (!$id)
+  {
+    $err = sprintf "Could not get a correction for $user to review%s.", ($err)? " ($err)":'';
     $err .= "\n$sql" if $sql;
     $self->SetError($err);
   }
@@ -6882,6 +7004,8 @@ sub PageToEnglish
                'adminUserRate' => 'all review stats',
                'adminUserRateInst' => 'institutional review stats',
                'contact' => 'contact us',
+               'corrections' => 'corrections',
+               'correctionsData' => 'corrections data',
                'debug' => 'system administration',
                'detailInfo' => 'review detail',
                'determinationStats' => 'determinations breakdown',
@@ -6928,8 +7052,10 @@ sub RightsQuery
   
   my ($ns,$n) = split m/\./, $id, 2;
   my $table = ($latest)? 'rights_current':'rights_log';
-  my $sql = "SELECT a.name,rs.name,s.name,r.user,r.time,r.note FROM $table r, attributes a, reasons rs, sources s" .
-            ' WHERE r.namespace=? AND r.id=? AND s.id=r.source AND a.id=r.attr AND rs.id=r.reason' .
+  my $sql = 'SELECT a.name,rs.name,s.name,r.user,r.time,r.note,p.name FROM ' .
+            $table . ' r, attributes a, reasons rs, sources s, access_profiles p' .
+            ' WHERE r.namespace=? AND r.id=? AND s.id=r.source AND a.id=r.attr' .
+            ' AND rs.id=r.reason AND p.id=r.access_profile' .
             ' ORDER BY r.time ASC';
   my $ref;
   eval { $ref = $self->GetSdrDb()->selectall_arrayref($sql, undef, $ns, $n); };
@@ -8188,6 +8314,31 @@ sub Sources
     }
     $url =~ s/\s+/+/g;
     push @all, [$row->[0], $name, $url, $row->[3], $row->[4], $row->[5]];
+  }
+  return \@all;
+}
+
+sub CorrectionSources
+{
+  my $self = shift;
+  my $id   = shift;
+  my $mag  = shift;
+  my $view = shift;
+  
+  $mag = '100' unless $mag;
+  $view = 'image' unless $view;
+  my @all = ();
+  my $url = $self->SimpleSqlGet('SELECT url FROM sources WHERE name="HathiTrust"');
+  $url =~ s/__HTID__/$id/g;
+  $url =~ s/__MAG__/$mag/g;
+  $url =~ s/__VIEW__/$view/g;
+  #id,name,url,accesskey,menu,initial
+  push @all, [0, 'HathiTrust', $url, 'h', 1, 1];
+  my $ticket = $self->SimpleSqlGet('SELECT ticket FROM corrections WHERE id=?', $id);
+  if (defined $ticket)
+  {
+    $url = 'https://wush.net/jira/hathitrust/browse/' . $ticket;
+    push @all, [1, 'Jira', $url, 'j', 2, 2];
   }
   return \@all;
 }

@@ -231,6 +231,20 @@
                                      hold    = hold,    swiss    = swiss,    expert   = expert,
                                      status  = status,  sys      = sys,      ptview   = ptview,
                                      import  = import,  ren      = ren %]
+      [% IF crms.IsCorrection(barcode) %]
+        <table class="ReviewError" id="CorrectionWarning">
+          <tr>
+            <td class="reviewGrey" align="left">
+              <strong style="color:red;">Warning:</strong>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <span style="font-size:1.1em;color:red;">Volume has been corrected - <b>do not</b> submit feedback.</span>
+            </td>
+          </tr>
+        </table>
+      [% END %]
       [% IF expert %]
         <table class="nav">
         [% IF status == 3 %]

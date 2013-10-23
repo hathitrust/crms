@@ -1,0 +1,116 @@
+[% IF NOT select %] 
+[% select = crms.GetAttrReasonCode(barcode, user) %]
+[% END %]
+
+<form name="submitCorrection" action="crms">
+  <input type="hidden" name="p" value="confirmCorrection"/>
+  [% IF barcode %]<input type="hidden" name="barcode" value="[% barcode %]"/>[% END %]
+  [% IF user %]<input type="hidden" name="user" value="[% user %]"/>[% END %]
+  [% IF editing %]<input type="hidden" name="editing" value="[% editing %]"/>[% END %]
+  [% IF sys %]<input type="hidden" name="sys" value="[% sys %]"/>[% END %]
+  <input type="hidden" name="inScopeInput" id="inScopeInput" value="[% inScope %]"/>
+  <div class="reviewBlue">
+  <table class="display">
+    <tr>
+	    <td class="display" align="left" colspan="4">
+	      <strong>HathiTrust Options:</strong>
+      </td>
+    </tr>
+    <tr><td colspan="4"/></tr>
+    <tr><td colspan="4"/></tr>
+    <tr>
+      <td class="display" align="left">Size:</td>
+      <td>
+        <select title="PageTurner Size" class="review" onchange="zoom(this,'mag');">
+        [% percents = [50,75,100,125,150,200] %]
+        [% FOREACH p IN percents %]
+          [% IF p == mag %]
+            <option value="[% p %]" selected="selected">[% "$p%" %]</option>
+          [% ELSE %]
+            <option value="[% p %]">[% "$p%" %]</option>
+          [% END %]
+        [% END %]
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <td class="display" align="left">View:</td>
+      <td>
+        <select id="PTViewSelect" title="PageTurner View" class="review" onchange="zoom(this,'ptview');">
+        [% views = ['image','1up','2up','thumb'] %]
+        [% names = ['Classic','Scroll','Flip','Thumbnails'] %]
+        [% accesskeys = ['-','=','[',']'] %]
+        [% FOR i IN [0 .. 3] %]
+          [% v = views.$i %]
+          [% n = names.$i %]
+          [% IF v == ptview %]
+            <option value="[% v %]" id="view[% names.$i %]Select" selected="selected">[% n %]</option>
+          [% ELSE %]
+            <option value="[% v %]" id="view[% names.$i %]Select">[% n %]</option>
+          [% END %]
+        [% END %]
+        </select>
+        [% FOR i IN [0 .. 3] %]
+          <a style="position:absolute;left:-999px;" href="#" accesskey="[% accesskeys.$i %]"
+             onfocus="var ptvs = document.getElementById('PTViewSelect');ptvs.selectedIndex=[% i %];zoom(ptvs,'ptview');">.</a>
+        [% END %]
+      </td>
+    </tr>
+  </table>
+  </div>
+
+<table class="reviewGrey">
+  <tr>
+    <td colspan="2"><strong>Status:</strong></td>
+  <tr>
+    <td colspan="2">
+      <input type="checkbox" id="fixedCheckbox"
+             name="fixed"[% (fixed)? ' checked="checked"':'' %]
+             onchange="var isI=document.getElementById('inScopeInput');
+                       var isCB = document.getElementById('inScopeCheckbox');
+                       isCB.disabled=!this.checked;
+                       isCB.checked=(this.checked && isI.value==1);">
+        &nbsp;Fixed
+      </input>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <input type="checkbox" id="inScopeCheckbox" name="inScope"
+             [% (inScope && fixed)? ' checked="checked"':'' %]
+             [% (inScope && fixed)? '':' disabled="disabled"' %]>
+        &nbsp;Add to Queue
+      </input>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2"><strong><label for="catMenu">Notes: </label></strong></td>
+  </tr>
+  <tr>
+    <td colspan="2"><textarea title="Note Text" id="NoteTextField" name="note" cols="20" rows="1">[% note %]</textarea></td>
+  </tr>
+  <a style="position:absolute;left:-999px;" href="#" accesskey="n"
+     onfocus="document.getElementById('NoteTextField').focus()">.</a>
+  <tr>
+    <td><input class="review" type="submit" name="submit" value="Submit" accesskey="s"/></td>
+    <td style="padding-left:2em;"><input class="review" type="submit" name="submit" value="Cancel" accesskey="c" onclick="this.form.onsubmit=null;"/></td>
+  </tr>
+</table>
+
+
+[% IF error %]
+  <table class="ReviewError">
+    <tr>
+      <td class="reviewGrey" align="left">
+        <strong style="color:red;">Warning:</strong>
+      </td>
+    </tr>
+    <tr>
+      <td>
+	      <textarea cols="20" rows="5">[% error %]</textarea>
+      </td>
+    </tr>
+  </table>
+[% END %]
+
+</form>

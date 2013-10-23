@@ -92,9 +92,9 @@ if (!$crms->GetUserName($user))
 if ($cgi->param('p') eq 'confirmReview')  
 {
   my $editing = $cgi->param('editing');
+  my $id = $cgi->param('barcode');
   if ($cgi->param('submit') eq 'Cancel')
   {
-    my $id = $cgi->param('barcode');
     $crms->UnlockItem($id, $user);
     $cgi->delete_all();
     if ($editing)
@@ -111,29 +111,36 @@ if ($cgi->param('p') eq 'confirmReview')
     my $category  = $cgi->param('category');
     my $renNum    = $cgi->param('renNum');
     my $renDate   = $cgi->param('renDate');
-    my $id        = $cgi->param('barcode');
     my $hold      = $cgi->param('hold');
     my $swiss     = $cgi->param('swiss');
     my $pre       = $cgi->param('prepopulated');
-
     my ($rights, $reason);
-    my $errorMsg = 'You must select a rights/reason combination.' unless $EncRights;
-    if (!$errorMsg)
+    my $err = 'You must select a rights/reason combination.' unless $EncRights;
+    if (!$err)
     {
       ($rights, $reason) = $crms->GetAttrReasonFromCode($EncRights);
-      $errorMsg = $crms->HasItemBeenReviewedByTwoReviewers($id, $user);
-      $errorMsg = $crms->ValidateSubmission($id, $user, $rights, $reason, $note, $category, $renNum, $renDate) unless $errorMsg;
+      $err = $crms->HasItemBeenReviewedByTwoReviewers($id, $user);
+      $err = $crms->ValidateSubmission($id, $user, $rights, $reason, $note, $category, $renNum, $renDate) unless $err;
       my $stat = $crms->GetSystemStatus();
       # Actually, this never gets displayed, but that's OK
       my $status = $stat->[1];
-      $errorMsg = "The CRMS is not currently accepting reviews (status '$status'). Please Cancel." if $stat->[1] ne 'normal';
+      $err = "The CRMS is not currently accepting reviews (status '$status'). Please Cancel." if $stat->[1] ne 'normal';
     }
-    if ($errorMsg)
+    if (!$err)
+    {
+      #Process the submission, and go on to the next item
+      my $expert;
+      if ( $crms->IsUserExpert( $user ) ) { $expert = 2; }
+      $crms->SubmitReview($id, $user, $rights, $reason, $note, $renNum, $expert, $renDate, $category, $swiss, $hold, $pre);
+      my $ref = $crms->GetErrors();
+      $err = $ref->[0] if $ref && $ref->[0];
+    }
+    if ($err)
     {
       #clear the cgi
       $cgi->delete_all();
       $cgi->param('p', 'review');
-      $cgi->param('errorMsg', $errorMsg);
+      $cgi->param('errorMsg', $err);
       $cgi->param('barcode',  $id);
       $cgi->param('rights',   $EncRights);
       $cgi->param('reason',   $reason);
@@ -144,47 +151,77 @@ if ($cgi->param('p') eq 'confirmReview')
       $cgi->param('editing',  $editing);
       $cgi->param('hold',     $hold);
       $cgi->param('swiss',    $swiss);
+      $crms->ClearErrors();
     }
     else
     {
-      #Process the submission, and go on to the next item
-      my $id = $cgi->param('barcode');
-      my $expert;
-      if ( $crms->IsUserExpert( $user ) ) { $expert = 2; }
-
-      $crms->SubmitReview($id, $user, $rights, $reason, $note, $renNum, $expert, $renDate, $category, $swiss, $hold, $pre);
-      my $ref = $crms->GetErrors();
-      if ($ref && $ref->[0])
+      $cgi->delete_all();
+      if ($editing)
       {
-        $errorMsg = $ref->[0];
-        #clear the cgi
-        $cgi->delete_all();
-        $cgi->param('p', 'review');
-        $cgi->param('errorMsg', $errorMsg);
-        $cgi->param('barcode',  $id);
-        $cgi->param('rights',   $EncRights);
-        $cgi->param('reason',   $reason);
-        $cgi->param('note',     $note);
-        $cgi->param('category', $category);
-        $cgi->param('renNum',   $renNum);
-        $cgi->param('renDate',  $renDate);
-        $cgi->param('editing',  $editing);
-        $cgi->param('hold',     $hold);
-        $cgi->param('swiss',    $swiss);
-        $crms->ClearErrors();
+        print "Content-type: text/html\n\n";
+        print '<script type="text/javascript" language="JavaScript">window.close();</script>';
       }
       else
       {
-        $cgi->delete_all();
-        if ($editing)
-        {
-          print "Content-type: text/html\n\n";
-          print '<script type="text/javascript" language="JavaScript">window.close();</script>';
-        }
-        else
-        {
-          $cgi->param('p', 'review' );
-        }
+        $cgi->param('p', 'review' );
+      }
+    }
+  }
+}
+elsif ($cgi->param('p') eq 'confirmCorrection')  
+{
+  my $editing = $cgi->param('editing');
+  my $id = $cgi->param('barcode');
+  if ($cgi->param('submit') eq 'Cancel')
+  {
+    $crms->UnlockItem($id, $user, 1);
+    $cgi->delete_all();
+    if ($editing)
+    {
+      print "Content-type: text/html\n\n";
+      print '<script type="text/javascript" language="JavaScript">window.close();</script>';
+    }
+  }
+  else
+  {
+    my $note    = $cgi->param('note');
+    my $fixed   = $cgi->param('fixed');
+    my $inScope = $cgi->param('inScope');
+    my $stat = $crms->GetSystemStatus();
+    my $status = $stat->[1];
+    my $err;
+    $err = "The CRMS is not currently accepting reviews (status '$status'). Please Cancel." if $stat->[1] ne 'normal';
+    if (!defined $err)
+    {
+      #Process the submission, and go on to the next item
+      my $status = ($fixed)? (($inScope)? 'added':'fixed'):'unfixed';
+      $crms->PrepareSubmitSql('UPDATE corrections SET status=?, user=?, note=? WHERE id=?', $status, $user, $note, $id);
+      $crms->AddItemToQueueOrSetItemActive($id, 0, 0, 'correction') if $status eq 'added';
+      my $ref = $crms->GetErrors();
+      $err = $ref->[0] if $ref && $ref->[0];
+    }
+    $cgi->delete_all();
+    if ($err)
+    {
+      $cgi->param('p',        'corrections');
+      $cgi->param('errorMsg', $err);
+      $cgi->param('barcode',  $id);
+      $cgi->param('note',     $note);
+      $cgi->param('fixed',    $fixed);
+      $cgi->param('editing',  $editing);
+      $crms->ClearErrors();
+    }
+    else
+    {
+      $crms->UnlockItem($id, $user, 1);
+      if ($editing)
+      {
+        print "Content-type: text/html\n\n";
+        print '<script type="text/javascript" language="JavaScript">window.close();</script>';
+      }
+      else
+      {
+        $cgi->param('p', 'corrections' );
       }
     }
   }
