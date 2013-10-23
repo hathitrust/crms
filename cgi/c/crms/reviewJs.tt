@@ -11,7 +11,7 @@ function changeFrame1(doSize) {
   if (tf.src != url) tf.src = url;
   if (doSize)
   {
-    tf.style.display = "";
+    tf.style.display = "block";
     document.getElementById("bFrame").style.display = "none";
   }
 }
@@ -23,7 +23,7 @@ function changeFrame2(doSize) {
   if (bf.src != url) bf.src = url;
   if (doSize)
   {
-    bf.style.display = "";
+    bf.style.display = "block";
     document.getElementById("tFrame").style.display = "none";
   }
 }
@@ -35,13 +35,13 @@ function flipFrame()
   var bf = document.getElementById("bFrame");
   if (tf.style.display == "none")
   {
-    tf.style.display = "";
+    tf.style.display = "block";
     bf.style.display = "none";
   }
   else
   {
     tf.style.display = "none";
-    bf.style.display = "";
+    bf.style.display = "block";
   }
 }
 
@@ -107,7 +107,7 @@ function popReviewInfo(id,user,sys)
     }
   }
   req.onreadystatechange = function()
-  { 
+  {
     if (req.readyState == 4)
     {
       if (req.status == 200)
@@ -122,7 +122,7 @@ function popReviewInfo(id,user,sys)
           button = document.getElementById("renewalFieldCheckbox");
           if (button) button.checked = (data.renNum != null);
           document.submitReview.renDate.value = data.renDate;
-          document.submitReview.comment.value = data.note;
+          document.submitReview.note.value = data.note;
           selMenuItem('catMenu',(data.category)? data.category:'');
         }
       }    
@@ -253,7 +253,8 @@ function VerifyCategory()
   var sel = SelectedCategory();
   if (sel == "Missing" || sel == "Wrong Record")
   {
-    return (confirm('Please confirm that you have submitted a Feedback report within the PageTurner.'));
+    if (!document.getElementById("CorrectionWarning"))
+      return (confirm('Please confirm that you have submitted a Feedback report within the PageTurner.'));
   }
   return true;
 }
