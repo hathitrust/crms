@@ -226,7 +226,7 @@
       <option value="[% catname %]" [% (catname == category)? 'selected="selected"':'' %]>[% catname %]</option>
     [% END %]
   </select>
-  <textarea title="Note Text" id="NoteTextField" name="comment" cols="20" rows="1">[% comm %]</textarea>
+  <textarea title="Note Text" id="NoteTextField" name="note" cols="20" rows="1">[% comm %]</textarea>
   <a style="position:absolute;left:-999px;" href="#" accesskey="n"
      onfocus="document.getElementById('NoteTextField').focus()">.</a>
   </div>

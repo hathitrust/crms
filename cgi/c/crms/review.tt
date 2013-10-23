@@ -5,7 +5,7 @@
 [% editing  = cgi.param('editing')    %]
 [% renNum   = cgi.param('renNum')     %]
 [% renDate  = cgi.param('renDate')    %]
-[% comm     = cgi.param('comm')       %]
+[% note     = cgi.param('note')       %]
 [% category = cgi.param('category')   %]
 [% select   = cgi.param('rights')     %]
 [% hold     = cgi.param('hold')       %]
@@ -84,8 +84,8 @@
 [% renDate = crms.GetReviewField(barcode, user, "renDate") %]
 [% END %]
 
-[% IF NOT comm %]
-[% comm = crms.GetReviewField(barcode, user, "note") %]
+[% IF NOT note %]
+[% note = crms.GetReviewField(barcode, user, "note") %]
 [% END %]
 
 [% IF NOT category %]
@@ -226,7 +226,7 @@
       [% END %]
       [% blah = crms.ClearErrors() %]
       [% INCLUDE submitReviewForm.tt barcode = barcode, renNum   = renNum,   renDate  = renDate,
-                                     comm    = comm,    category = category, editing  = editing,
+                                     note    = note,    category = category, editing  = editing,
                                      error   = error,   select   = select,   mag      = mag,
                                      hold    = hold,    swiss    = swiss,    expert   = expert,
                                      status  = status,  sys      = sys,      ptview   = ptview,
