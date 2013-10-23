@@ -610,7 +610,8 @@ sub CanExportVolume
   my $module = 'Candidates_' . $self->get('sys') . '.pm';
   require $module;
   my $export = 1;
-  my $rq = $self->RightsQuery($id,1);
+  my $rq = $self->RightsQuery($id, 1);
+  return 1 unless defined $rq;
   my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
   # Do not export determination if the volume has gone out of scope,
   # or if exporting und would clobber pdus in World.
@@ -650,7 +651,7 @@ sub EmailReport
   my $where = ($self->WhereAmI() or 'Prod');
   if ($where eq 'Prod')
   {
-    my $subject = sprintf('CRMS %s: %d volumes exported to rights db', $where, $count);
+    my $subject = sprintf('%s %s: %d volumes exported to rights db', $self->System(), $where, $count);
     use Mail::Sender;
     my $sender = new Mail::Sender
       {smtp => 'mail.umdl.umich.edu',
@@ -761,7 +762,14 @@ sub CheckAndLoadItemIntoCandidates
   my $incand = $self->SimpleSqlGet('SELECT id FROM candidates WHERE id=?', $id);
   my $inund  = $self->SimpleSqlGet('SELECT src FROM und WHERE id=?', $id);
   my $inq    = $self->IsVolumeInQueue($id);
-  my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
+  my $rq = $self->RightsQuery($id, 1);
+  if (!defined $rq)
+  {
+    print "Can't get rights for $id, removing from system\n";
+    $self->Unfilter($id) unless $noop;
+    $self->RemoveFromCandidates($id) unless $noop;
+  }
+  my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
   my $module = 'Candidates_' . $self->get('sys') . '.pm';
   require $module;
   my $sysid;
@@ -5297,7 +5305,7 @@ sub GetMetadata
   my $res = $ua->request($req);
   if (!$res->is_success)
   {
-    $self->SetError($url . ' failed: ' . $res->message());
+    $self->SetError($url . ' failed: ' . $res->message()) unless $quiet;
     return;
   }
   my $xml = undef;
@@ -6910,8 +6918,8 @@ sub Namespaces
 }
 
 # Query the production rights database. This returns an array ref of entries for the volume, oldest first.
-# Returns: aref to aref of ($attr,$reason,$src,$usr,$time,$note)
-# FIXME: should use rights_log but different ORDER BY.
+# Returns: aref of aref of ($attr,$reason,$src,$usr,$time,$note,$access_profile)
+# of undef if not found.
 sub RightsQuery
 {
   my $self   = shift;
@@ -6923,9 +6931,14 @@ sub RightsQuery
   my $sql = "SELECT a.name,rs.name,s.name,r.user,r.time,r.note FROM $table r, attributes a, reasons rs, sources s" .
             ' WHERE r.namespace=? AND r.id=? AND s.id=r.source AND a.id=r.attr AND rs.id=r.reason' .
             ' ORDER BY r.time ASC';
-  my $ref = undef;
+  my $ref;
   eval { $ref = $self->GetSdrDb()->selectall_arrayref($sql, undef, $ns, $n); };
-  $self->SetError("Rights query for $id failed: $@") if $@;
+  if ($@)
+  {
+    $self->SetError("Rights query for $id failed: $@");
+    return undef;
+  }
+  $ref = undef if scalar @{$ref} == 0;
   return $ref;
 }
 
@@ -7069,11 +7082,7 @@ sub GetTrackingInfo
   {
     # See if it has a pre-CRMS determination.
     my $rq = $self->RightsQuery($id,1);
-    if (!$rq->[0])
-    {
-      $self->ClearErrors();
-      return 'Rights info unavailable';
-    }
+    return 'Rights info unavailable' unless defined $rq;
     my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
     my %okattr = $self->AllCRMSRights();
     my $rights = $attr.'/'.$reason;
@@ -7520,12 +7529,8 @@ sub UpdateInheritanceRights
     my $id = $row->[0];
     my $a = $row->[1];
     my $r = $row->[2];
-    my $rq = $self->RightsQuery($id,1);
-    if (!$rq)
-    {
-      $self->ClearErrors();
-      return;
-    }
+    my $rq = $self->RightsQuery($id, 1);
+    next unless defined $rq;
     my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
     if ($self->TranslateAttr($a) ne $attr || $self->TranslateReason($r) ne $reason)
     {
@@ -7547,7 +7552,9 @@ sub AutoSubmitInheritances
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    my ($attr,$reason,$src,$usr,$time,$note) = @{$self->RightsQuery($id,1)->[0]};
+    my $rq = $self->RightsQuery($id, 1);
+    next unless defined $rq;
+    my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
     if ($reason eq 'bib' || $reason eq 'gfv')
     {
       my $rights = "$attr/$reason";
@@ -7723,7 +7730,9 @@ sub DuplicateVolumesFromExport
   {
     my ($id2,$chron2,$rights2) = split '__', $line;
     next if $id eq $id2;
-    my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id2,1)->[0]};
+    my $rq = $self->RightsQuery($id2, 1);
+    next unless defined $rq;
+    my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
     # In case we have a more recent export that has not made it into the rights DB...
     if ($self->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE id=? AND time>=?', $id2, $time2))
     {
@@ -7865,16 +7874,13 @@ sub DuplicateVolumesFromCandidates
   }
   if ($cid)
   {
-    my ($attr2,$reason2,$src2,$usr2,$time2,$note2);
-    eval {
-      ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$self->RightsQuery($id,1)->[0]};
-    };
-    if ($@)
+    my $rq = $self->RightsQuery($id, 1);
+    if (!defined $rq)
     {
       $data->{'unavailable'}->{$id} = 1;
-      $self->ClearErrors();
       return;
     }
+    my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
     my $oldrights = "$attr2/$reason2";
     my $newrights = "$cattr/$creason";
     my $wrong = $self->HasMissingOrWrongRecord($id, $sysid, $rows);

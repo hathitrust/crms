@@ -30,11 +30,11 @@
       [% END %]
       <table class="exportStats" style="width:33%;">
       <tr>
-        <th colspan="6" class="major" style="text-align:center;">
+        <th colspan="7" class="major" style="text-align:center;">
           [% id %] ([% syslink %])
         </th>
       </tr>
-      <tr><th>Attr</th><th>Reason</th><th>Source</th><th>User</th><th>Time</th><th>Note</th></tr>
+      <tr><th>Attr</th><th>Reason</th><th>Source</th><th>User</th><th>Time</th><th>Note</th><th>Access</th></tr>
       [% FOREACH r IN rows %]
         <tr>
         <td>[% r.0 %]</td>
@@ -43,6 +43,7 @@
         <td>[% r.3 %]</td>
         <td>[% r.4.replace('\s','&nbsp;') %]</td>
         <td>[% r.5 %]</td>
+        <td>[% r.6 %]</td>
         </tr>
       [% END %]
 
