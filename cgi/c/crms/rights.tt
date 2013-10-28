@@ -14,7 +14,7 @@
   <form action="crms">
     <label for="queryTA" class="smallishText">Enter one volume id per line.</label><br/>
     [% crms.Hiddenify(cgi,'query') %]
-    <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;"></textarea>
+    <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;">$q</textarea>
     <input type="submit" value="Do it!"/>
   </form>
 
