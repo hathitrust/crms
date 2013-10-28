@@ -2,7 +2,7 @@
   [% INCLUDE denied.tt  %]
   [% STOP %]
 [% END %]
-
+[% force = cgi.param('force') %]
 [% INCLUDE header.tt %]
 
 <h2>System Administration:</h2>
@@ -129,6 +129,8 @@
   <input type="hidden" name="fix" value="1"/>
   <p class="smallishText">Enter one volume id per line.</p>
   <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;">[% ids %]</textarea><br/>
+  <input type="checkbox" id="forceCB" name="force" value="1" [% (force)? 'checked="checked"':'' %]/>
+  <label for="forceCB">&nbsp;Force</label>
   <input type="submit" value="Submit"/>
 </form>
 <br/>
@@ -139,7 +141,7 @@
   <tr><th>ID</th><th>Sys&nbsp;ID</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th><th>Country</th></tr>
   [% FOREACH id IN ids.split %]
     [% id = id.remove('(^\s+)|(\s+$)') %]   
-    [% blah = crms.UpdateMetadata(id) %]
+    [% blah = crms.UpdateMetadata(id, force) %]
     [% sysid = crms.BarcodeToId(id) %]
     [% sql = "SELECT author,title,YEAR(pub_date),country FROM bibdata WHERE id='$id'" %]
     [% ref  = crms.GetDb().selectall_arrayref(sql) %]
