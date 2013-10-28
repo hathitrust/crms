@@ -11,7 +11,7 @@
 <form action="crms">
   [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="[% p %]"/>
-  <label for="queryTA" class="smallishText">Enter one system id or volume id per line.</label><br/>
+  <label for="queryTA" class="smallishText">Enter one volume or system id per line.</label><br/>
   <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;">[% q %]</textarea>
   <input type="submit" value="Do it!"/>
 </form>
@@ -19,27 +19,31 @@
 [% IF q %]
   [% FOREACH id IN q.split %]
     [% ids = crms.CRMSQuery(id) %]
-    [% IF (NOT ids) || ids.size() == 0 %]
-      <br/><h4>No results for $id</h4>
-      [% blah = crms.ClearErrors() %]
-      [% NEXT %]
-    [% END %]
+    [% blah = crms.ClearErrors() %]
     [% IF id.search('\.') %]
-      [% sysid = crms.BarcodeToId(id) %]
+      [% sysid = crms.BarcodeToId(id, 1) %]
       [% blah = crms.ClearErrors() %]
-      [% IF NOT sysid %]<br/><h4>No results for $id</h4>[%NEXT %][% END %]
-      [% id = sysid %]
+    [% ELSE %]
+      [% sysid = id %]
     [% END %]
+    [% parts = ids.0.split('__') %]
     <br/><br/>
     <table class="exportStats">
       <tr><th colspan="2" class="major" nowrap="nowrap">
-        [% catlink = crms.LinkToCatalog(id) %]
-        <a style="color:white;" href="[% catlink %]" target="_blank">$id</a>&nbsp;&nbsp;&nbsp;&nbsp;([% parts = ids.0.split('__') %][% parts.1 %])
+        [% IF sysid %]
+          [% catlink = crms.LinkToCatalog(sysid) %]
+          <a style="color:white;" href="[% catlink %]" target="_blank">$sysid</a>
+        [% ELSE %]
+          $id&nbsp;&nbsp;&nbsp;&nbsp;(not in catalog)
+        [% END %]
+        &nbsp;&nbsp;&nbsp;&nbsp;([% parts.1 %])
       </th></tr>
-      <tr><th>Volume id</th><th>[% crms.System() %] status</th></tr>
       <tr>
-        <td nowrap="nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% parts.0 %]<br/>[% END %]</td>
-        <td nowrap="nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% parts.2 %]<br/>[% END %]</td>
+        <th style="white-space: nowrap">Volume id</th>
+        <th style="white-space: nowrap">Status</th></tr>
+      <tr>
+        <td style="white-space: nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% parts.0 %]<br/>[% END %]</td>
+        <td style="white-space: nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% parts.2 %]<br/>[% END %]</td>
       </tr>
     </table>
   [% END %]

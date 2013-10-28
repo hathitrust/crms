@@ -7136,9 +7136,19 @@ sub CRMSQuery
 
   my @ids;
   my $sysid;
+  my $title;
+  my $rows;
   my $record = $self->GetMetadata($id, \$sysid);
-  my $title = $self->GetRecordTitle($id, $record);
-  my $rows = $self->VolumeIDsQuery($id, $record);
+  if (!defined $record)
+  {
+    $title = $self->GetTitle($id);
+    $rows = [$id . '____'];
+  }
+  else
+  {
+    $title = $self->GetRecordTitle($id, $record);
+    $rows = $self->VolumeIDsQuery($id, $record);
+  }
   foreach my $line (@{$rows})
   {
     my ($id2,$chron2,$rights2) = split '__', $line;
