@@ -75,10 +75,24 @@ foreach my $file (@files)
     next unless length $line;
     my ($id,$ticket) = split "\t", $line;
     my $record = $crmsUS->GetMetadata($id);
+    if (!defined $record && $id =~ m/uc1\.b\d{1,6}$/)
+    {
+      $crmsUS->ClearErrors();
+      my $id2 = $id;
+      $id2 =~ s/b/\$b/;
+      $record = $crmsUS->GetMetadata($id2);
+      if (!defined $record)
+      {
+        print "$id ($id2) record undefined\n";
+        next;
+      }
+      print "Adding $id as $id2\n" if $verbose;
+      $id = $id2;
+    }
     print "Warning: could not get metadata for $id\n" unless defined $record;
-    # FIXME: what if the metadata is not available?
+    # FIXME: what if the metadata is not available at all?
     my $where = $crmsUS->GetRecordPubCountry($id, $record);
-    # FIXME: make this an API exposed by the Candidates_sys modules.
+    # FIXME: maybe make this an API exposed by the Candidates_sys modules.
     my $obj = ($where eq 'USA')? $crmsUS:$crmsWorld;
     my $sql = 'REPLACE INTO corrections (id,ticket) VALUES (?,?)';
     printf "Replacing $id (%s) in %s ($where)\n", (defined $ticket)? $ticket:'undef', $obj->System() if $verbose;
