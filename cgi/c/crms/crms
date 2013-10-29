@@ -195,7 +195,8 @@ elsif ($cgi->param('p') eq 'confirmCorrection')
     {
       #Process the submission, and go on to the next item
       my $status = ($fixed)? (($inScope)? 'added':'fixed'):'unfixed';
-      $crms->PrepareSubmitSql('UPDATE corrections SET status=?, user=?, note=? WHERE id=?', $status, $user, $note, $id);
+      my $sql = 'UPDATE corrections SET status=?,user=?,note=?,time=CURRENT_TIMESTAMP WHERE id=?';
+      $crms->PrepareSubmitSql($sql, $status, $user, $note, $id);
       $crms->AddItemToQueueOrSetItemActive($id, 0, 0, 'correction') if $status eq 'added';
       my $ref = $crms->GetErrors();
       $err = $ref->[0] if $ref && $ref->[0];
