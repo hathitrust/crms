@@ -70,7 +70,7 @@
                        var isCB = document.getElementById('inScopeCheckbox');
                        isCB.disabled=!this.checked;
                        isCB.checked=(this.checked && isI.value==1);">
-        &nbsp;Fixed
+        &nbsp;<label for="fixedCheckbox">Fixed</label>
       </input>
     </td>
   </tr>
@@ -79,7 +79,7 @@
       <input type="checkbox" id="inScopeCheckbox" name="inScope"
              [% (inScope && fixed)? ' checked="checked"':'' %]
              [% (inScope && fixed)? '':' disabled="disabled"' %]>
-        &nbsp;Add to Queue
+        &nbsp;<label for="inScopeCheckbox">Add to Queue</label>
       </input>
     </td>
   </tr>
