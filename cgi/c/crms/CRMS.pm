@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.5.1';
+  return '4.5.2';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -7153,16 +7153,17 @@ sub CRMSQuery
   {
     my ($id2,$chron2,$rights2) = split '__', $line;
     
-    push @ids, $id2 . '__' . $title . '__' . $self->GetTrackingInfo($id2, 1);
+    push @ids, $id2 . '__' . $title . '__' . $self->GetTrackingInfo($id2, 1, 1);
   }
   return \@ids;
 }
 
 sub GetTrackingInfo
 {
-  my $self    = shift;
-  my $id      = shift;
-  my $inherit = shift;
+  my $self       = shift;
+  my $id         = shift;
+  my $inherit    = shift;
+  my $correction = shift;
 
   my @stati = ();
   my $inQ = $self->IsVolumeInQueue($id);
@@ -7205,6 +7206,18 @@ sub GetTrackingInfo
     my $reviews = $self->Pluralize('review', $n);
     push @stati, "$n legacy $reviews" if $n;
   }
+  if ($correction && $self->SimpleSqlGet('SELECT COUNT(*) FROM corrections WHERE id=?', $id))
+  {
+    my $sql = 'SELECT user,status,ticket,DATE(time) FROM corrections WHERE id=?';
+    my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $id);
+    my $user = $ref->[0]->[0];
+    my $status = $ref->[0]->[1];
+    my $tx = $ref->[0]->[2];
+    my $date = $ref->[0]->[3];
+    my $s = (defined $user)? "correction by $user, status $status":'awaiting correction';
+    $s .= " (Jira $tx)" if defined $tx;
+    push @stati, $s
+  }
   if ($inherit && $self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE id=? AND del=0', $id))
   {
     my $sql = 'SELECT e.id,e.attr,e.reason FROM exportdata e INNER JOIN inherit i ON e.gid=i.gid WHERE i.id=?';
@@ -7214,19 +7227,18 @@ sub GetTrackingInfo
     my $r = $ref->[0]->[2];
     push @stati, "inheriting $a/$r from $src";
   }
+  if ($inherit && $self->SimpleSqlGet('SELECT COUNT(*) FROM unavailable WHERE id=?', $id))
+  {
+    push @stati, 'possible inheritance source awaiting metadata';
+  }
   if (0 == scalar @stati)
   {
     # See if it has a pre-CRMS determination.
     my $rq = $self->RightsQuery($id,1);
     return 'Rights info unavailable' unless defined $rq;
     my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
-    my %okattr = $self->AllCRMSRights();
-    my $rights = $attr.'/'.$reason;
-    if ($okattr{$rights} == 1)
-    {
-      $time =~ s/(\d\d\d\d-\d\d-\d\d).*/$1/;
-      push @stati, "Pre-legacy review ($rights $time by $usr)";
-    }
+    $time =~ s/(\d\d\d\d-\d\d-\d\d).*/$1/;
+    push @stati, "Latest rights $attr/$reason ($usr $time)";
   }
   return ucfirst join '; ', @stati;
 }
