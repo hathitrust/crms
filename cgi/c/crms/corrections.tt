@@ -156,7 +156,7 @@
         [% errors.unshift(es) %]
         [% inScope = 0 %]
       [% END %]
-      [% error = errors.join('; ') %]
+      [% IF !error %][% error = errors.join('; ') %][% END %]
       [% INCLUDE submitCorrectionForm.tt barcode = barcode, editing = editing, inScope = inScope,
                                          error   = error,    select = select,  mag     = mag,
                                          expert  = expert,   sys    = sys,     ptview  = ptview,
