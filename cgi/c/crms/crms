@@ -187,6 +187,7 @@ elsif ($cgi->param('p') eq 'confirmCorrection')
     my $note    = $cgi->param('note');
     my $fixed   = $cgi->param('fixed');
     my $inScope = $cgi->param('inScope');
+    
     my $stat = $crms->GetSystemStatus();
     my $status = $stat->[1];
     my $err;
@@ -194,12 +195,19 @@ elsif ($cgi->param('p') eq 'confirmCorrection')
     if (!defined $err)
     {
       #Process the submission, and go on to the next item
-      my $status = ($fixed)? (($inScope)? 'added':'fixed'):'unfixed';
-      my $sql = 'UPDATE corrections SET status=?,user=?,note=?,time=CURRENT_TIMESTAMP WHERE id=?';
-      $crms->PrepareSubmitSql($sql, $status, $user, $note, $id);
-      $crms->AddItemToQueueOrSetItemActive($id, 0, 0, 'correction') if $status eq 'added';
+      $status = ($fixed)? (($inScope)? 'added':'fixed'):'unfixed';
+      my $status = $crms->AddItemToQueueOrSetItemActive($id, 0, 1, 'correction') if $status eq 'added';
       my $ref = $crms->GetErrors();
       $err = $ref->[0] if $ref && $ref->[0];
+      if (!$err)
+      {
+        $err = substr($status, 1) if (substr($status, 0, 1) == 1);
+      }
+      if (!$err)
+      {
+        my $sql = 'UPDATE corrections SET status=?,user=?,note=?,time=CURRENT_TIMESTAMP WHERE id=?';
+        $crms->PrepareSubmitSql($sql, $status, $user, $note, $id);
+      }
     }
     $cgi->delete_all();
     if ($err)
