@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.5.4';
+  return '4.5.5';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -5412,12 +5412,8 @@ sub GetMetadata
     $self->SetError("failed to parse ($xml) for $id: $@") unless $quiet;
     return;
   }
-  my $xpc = XML::LibXML::XPathContext->new($source);
-  # This now gives a 404, and it looks like we never needed it at all.
-  #my $ns = 'http://www.loc.gov/MARC21/slim';
-  #$xpc->registerNs(ns => $ns);
-  my @records = $xpc->findnodes('record');
-  #$self->set($id,$records[0]);
+  my $root = $source->getDocumentElement();
+  my @records = $root->findnodes('//*[local-name()="record"]');
   return $records[0];
 }
 
