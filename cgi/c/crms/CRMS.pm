@@ -4940,17 +4940,22 @@ sub ValidateSubmission
   return $errorMsg;
 }
 
+# This is the correct way to do it.
+# Look at leader[6] and leader[7]
+# If leader[6] is in {a t} and leader[7] is in {a c d m} then BK
 sub IsFormatBK
 {
   my $self   = shift;
   my $id     = shift;
   my $record = shift;
 
-  my $nodes = $record->findnodes(q{//*[local-name()='datafield' and @tag='970']});
-  foreach my $node ($nodes->get_nodelist())
-  {
-    return 1 if 'BK' eq $node->findvalue("./*[local-name()='subfield' and \@code='a']");
-  }
+  my $ldr  = $record->findvalue('//*[local-name()="leader"]');
+  my $type = substr $ldr, 6, 1;
+  my $lev  = substr $ldr, 7, 1;
+  my %types = ('a'=>1, 't'=>1);
+  my %levs = ('a'=>1, 'c'=>1, 'd'=>1, 'm'=>1);
+  return 1 if $types{$type}==1 && $levs{$lev}==1;
+  return 0;
 }
 
 sub IsThesis
