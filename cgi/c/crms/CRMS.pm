@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.5.3';
+  return '4.5.4';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -768,6 +768,7 @@ sub CheckAndLoadItemIntoCandidates
     print "Can't get rights for $id, removing from system\n";
     $self->Unfilter($id) unless $noop;
     $self->RemoveFromCandidates($id) unless $noop;
+    return;
   }
   my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
   my $module = 'Candidates_' . $self->get('sys') . '.pm';
