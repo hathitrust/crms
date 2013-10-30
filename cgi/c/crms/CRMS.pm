@@ -5413,9 +5413,10 @@ sub GetMetadata
     return;
   }
   my $xpc = XML::LibXML::XPathContext->new($source);
-  my $ns = 'http://www.loc.gov/MARC21/slim';
-  $xpc->registerNs(ns => $ns);
-  my @records = $xpc->findnodes('//ns:record');
+  # This now gives a 404, and it looks like we never needed it at all.
+  #my $ns = 'http://www.loc.gov/MARC21/slim';
+  #$xpc->registerNs(ns => $ns);
+  my @records = $xpc->findnodes('record');
   #$self->set($id,$records[0]);
   return $records[0];
 }
@@ -8678,6 +8679,7 @@ sub VIAFWarning
   my %warnings;
   my @aus;
   $record = $self->GetMetadata($id) unless defined $record;
+  return 'unable to fetch MARC metadata for volume' unless defined $record;
   my $au = $self->GetRecordAuthor($id, $record, 1);
   push @aus, $au if defined $au;
   my @add = $self->GetRecordAdditionalAuthors($id, $record);
