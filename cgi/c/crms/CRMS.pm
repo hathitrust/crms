@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.5.6';
+  return '4.5.7';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -890,16 +890,16 @@ sub AddItemToCandidates
         $self->Filter($id2, 'duplicate') unless defined $noop;
       }
     }
-    if (!$self->IsVolumeInCandidates($id))
+  }
+  if (!$self->IsVolumeInCandidates($id))
+  {
+    print "Add $id to candidates \n";
+    if (!defined $noop)
     {
-      print "Add $id to candidates\n";
-      if (!defined $noop)
-      {
-        my $date = $self->GetRecordPubDate($id, $record) . '-01-01';
-        my $sql = 'REPLACE INTO candidates (id, time, pub_date) VALUES (?,?,?)';
-        $self->PrepareSubmitSql($sql, $id, $time, $date);
-        $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
-      }
+      my $date = $self->GetRecordPubDate($id, $record) . '-01-01';
+      my $sql = 'REPLACE INTO candidates (id, time, pub_date) VALUES (?,?,?)';
+      $self->PrepareSubmitSql($sql, $id, $time, $date);
+      $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
     }
   }
 }
