@@ -173,14 +173,19 @@ sub ExportCorrections
     my $tx = $exports{$id}->{'jira'};
     my $ex = $exports{$id}->{'exported'};
     printf "Processing $id, ticket %s, exported=%d\n", (defined $tx)? $tx:'(none)', (defined $ex)? $ex:0;
-    
     if (1 == $exports{$id}->{'exported'})
     {
       my $line = $id . ((defined $tx)? "\t$tx":'') . "\n";
       print $fh $line;
+      my $id2 = $self->Undollarize($id);
+      if (defined $id2)
+      {
+        $line = $id2 . ((defined $tx)? "\t$tx":'') . "\n";
+        print $fh $line;
+      }
       $n++;
     }
-  } 
+  }
   close $fh;
   print "Moving to $perm.\n";
   rename $temp, $perm;
@@ -219,7 +224,7 @@ sub GetCorrectionsExportFh
   my $date = $self->GetTodaysDate();
   $date    =~ s/:/_/g;
   $date    =~ s/ /_/g;
-  my $perm = $self->get('root') . '/prep/c/crms/' . $self->get('sys') . '_' . $date . '.status';
+  my $perm = $self->get('root') . '/prep/c/crms/' . $self->get('sys') . '_' . $date . '.status.txt';
   my $temp = $perm . '.tmp';
   if (-f $temp) { die "file already exists: $temp\n"; }
   open (my $fh, '>', $temp) || die "failed to open exported file ($temp): $!\n";

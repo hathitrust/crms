@@ -8711,4 +8711,48 @@ sub VIAFWarning
   return (scalar keys %warnings)? join '; ', keys %warnings:undef;
 }
 
+# Return dollarized barcode if suffix is the right length,
+# and metadata is available, or undef.
+# Returns the metadata by reference.
+sub Dollarize
+{
+  my $self = shift;
+  my $id   = shift;
+  my $meta = shift;
+  
+  if ($id =~ m/uc1\.b\d{1,6}$/)
+  {
+    my $id2 = $id;
+    $id2 =~ s/b/\$b/;
+    my $record = $self->GetMetadata($id2);
+    if (!defined $record)
+    {
+      $self->ClearErrors();
+      print "$id2: no meta\n";
+    }
+    else
+    {
+      $$meta = $record;
+      return $id2;
+    }
+  }
+  return undef;
+}
+
+# Return undollarized barcode if suffix is the right length,
+# a, or undef.
+sub Undollarize
+{
+  my $self = shift;
+  my $id   = shift;
+
+  if ($id =~ m/uc1\.\$b\d{1,6}$/)
+  {
+    my $id2 = $id;
+    $id2 =~ s/\$b/b/;
+    return $id2;
+  }
+  return undef;
+}
+
 1;
