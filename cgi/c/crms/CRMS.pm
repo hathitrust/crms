@@ -7584,19 +7584,19 @@ sub GetInheritanceRef
     my $h5 = undef;
     if ($incrms)
     {
-      my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id' AND status=5";
-      $h5 = 1 if $self->SimpleSqlGet($sql) > 0;
+      my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=? AND status=5';
+      $h5 = 1 if $self->SimpleSqlGet($sql, $id) > 0;
     }
     my $change = (($pd == 1 && $icund == 1) || ($pd == 1 && $pdus == 1) || ($icund == 1 && $pdus == 1));
     my $summary = '';
     if ($self->IsVolumeInQueue($id))
     {
       $summary = sprintf "in queue (P%s)", $self->GetPriority($id);
-      $sql = "SELECT user FROM reviews WHERE id='$id'";
-      my $ref2 = $self->GetDb()->selectall_arrayref($sql);
+      $sql = 'SELECT user FROM reviews WHERE id=?';
+      my $ref2 = $self->GetDb()->selectall_arrayref($sql, undef, $id);
       my $users = join ', ', (map {$_->[0]} @{$ref2});
       $summary .= "; reviewed by $users" if $users;
-      my $locked = $self->SimpleSqlGet("SELECT locked FROM queue WHERE id='$id'");
+      my $locked = $self->SimpleSqlGet('SELECT locked FROM queue WHERE id=?', $id);
       $summary .= "; locked for $locked" if $locked;
     }
     my %dic = ('i'=>$i, 'inheriting'=>$id, 'sysid'=>$sysid, 'rights'=>"$attr/$reason",
