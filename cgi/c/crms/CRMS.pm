@@ -811,6 +811,12 @@ sub CheckAndLoadItemIntoCandidates
     print "Skip $id -- already in historical reviews\n";
     return;
   }
+  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE id=?', $id) > 0 ||
+      $self->SimpleSqlGet('SELECT COUNT(*) FROM unavailable WHERE id=?', $id) > 0)
+  {
+    print "Skip $id -- already inheriting\n";
+    return;
+  }
   if (defined $incand && !$purge)
   {
     print "Skip $id -- already in candidates\n";
