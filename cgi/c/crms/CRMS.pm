@@ -7073,7 +7073,7 @@ sub RightsQuery
     $self->SetError("Rights query for $id failed: $@");
     return undef;
   }
-  $ref = undef if scalar @{$ref} == 0;
+  $ref = undef if defined $ref && scalar @{$ref} == 0;
   return $ref;
 }
 
