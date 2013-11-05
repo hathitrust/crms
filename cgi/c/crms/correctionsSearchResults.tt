@@ -58,7 +58,7 @@
   [% END %]
   &nbsp;||&nbsp;
   [% IF doFirst %]
-  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0#results" %]">first page<a>
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0#results" %]">first page</a>
   [% ELSE %]
   <span class="disabledLink">first page</span>
   [% END %]

@@ -196,12 +196,14 @@ elsif ($cgi->param('p') eq 'confirmCorrection')
     {
       #Process the submission, and go on to the next item
       $status = ($fixed)? (($inScope)? 'added':'fixed'):'unfixed';
-      my $status = $crms->AddItemToQueueOrSetItemActive($id, 0, 1, 'correction') if $status eq 'added';
+      my $qstatus = $crms->AddItemToQueueOrSetItemActive($id, 0, 1, 'correction') if $status eq 'added';
+      my $nt = sprintf("$id: err %s status $status", (defined $err)? $err:'undef');
+      $crms->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $nt);
       my $ref = $crms->GetErrors();
       $err = $ref->[0] if $ref && $ref->[0];
       if (!$err)
       {
-        $err = substr($status, 1) if (substr($status, 0, 1) == 1);
+        $err = substr($qstatus, 1) if (substr($qstatus, 0, 1) == 1);
       }
       if (!$err)
       {
