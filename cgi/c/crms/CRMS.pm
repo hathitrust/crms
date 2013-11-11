@@ -934,9 +934,9 @@ sub Unfilter
 }
 
 # Returns concatenated error messages (reasons for unsuitability for CRMS) for a volume.
-# Checks everything but the current rights;
-# also checks for a latest status 5 non-und determination.
-# This is for evaluating MDPCorrections volumes.
+# Checks everything including current rights, but ignores rights if currently und;
+# also checks for a latest expert non-und determination.
+# This is for evaluating corrections.
 sub IsVolumeInScope
 {
   my $self   = shift;
@@ -949,13 +949,14 @@ sub IsVolumeInScope
   if (scalar @{$errs})
   {
     $errs = join '; ', @{$errs};
-    return $errs if $errs !~ m/^current\srights\sare\s[a-z]+\/[a-z]+$/i;
+    return $errs if $errs !~ m/^current\srights\sare\sund\/[a-z]+$/i;
   }
   my $und = $self->ShouldVolumeGoInUndTable($id, $record);
   return 'Volume should be filtered (' . $und . ')' if defined $und;
   return 'Volume is already in the queue' if $self->IsVolumeInQueue($id);
-  my $sql = 'SELECT COUNT(*) FROM exportdata e INNER JOIN historicalreviews r ON' .
-            ' e.gid=r.gid WHERE e.id=? AND e.attr!="und" AND r.status=5';
+  my $sql = 'SELECT COUNT(*) FROM exportdata e INNER JOIN historicalreviews r' .
+            ' ON e.gid=r.gid WHERE e.id=? AND e.attr!="und" AND r.expert IS NOT NULL' .
+            ' AND r.expert>0';
   my $cnt = $self->SimpleSqlGet($sql, $id);
   return 'Volume has a non-und expert review' if $cnt > 0;
   return undef;
