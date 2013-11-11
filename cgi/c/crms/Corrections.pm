@@ -241,7 +241,7 @@ sub EmailCorrections
   my $where = ($self->WhereAmI() or 'Prod');
   if ($where eq 'Prod' || 1)
   {
-    my $subject = sprintf('CRMS %s: %d volume(s) fixed', $where, $count);
+    my $subject = sprintf('%s %s: %d volume(s) fixed', $self->System(), $where, $count);
     use Mail::Sender;
     my $sender = new Mail::Sender
       {smtp => 'mail.umdl.umich.edu',
