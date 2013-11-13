@@ -26,6 +26,7 @@ and removes them from the system.
 -h         Print this help message.
 -i         Run the candidates population logic over volumes in the rights database
            for the date range given (if any).
+-j         Only consider ic and op volumes in rights_current when the -i flag is set.
 -n         No-op; reports what would be done but do not modify the database.
 -p         Run in production.
 -s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
@@ -38,6 +39,7 @@ my $all;
 my $candidates;
 my $help;
 my $init;
+my $iconly;
 my $noop;
 my $production;
 my @singles;
@@ -51,6 +53,7 @@ die 'Terminating' unless GetOptions(
            'c'    => \$candidates,
            'h|?'  => \$help,
            'i'    => \$init,
+           'j'    => \$iconly,
            'n'    => \$noop,
            'p'    => \$production,
            's:s@' => \@singles,
@@ -102,10 +105,9 @@ if ($init)
 if (!$noop)
 {
   my $after = $crms->GetCandidatesSize();
-  my $time = $crms->SimpleSqlGet('SELECT MAX(time) FROM candidatesrecord');
   printf "Change to candidates: %d\n", $after-$before;
-  my $sql = 'INSERT INTO candidatesrecord (time,addedamount) VALUES (?,?)';
-  $crms->PrepareSubmitSql($sql, $time, $after-$before);
+  my $sql = 'INSERT INTO candidatesrecord (addedamount) VALUES (?)';
+  $crms->PrepareSubmitSql($sql, $after-$before);
 }
 
 sub CheckTable
@@ -147,6 +149,7 @@ sub Init
   my $sql = 'SELECT namespace,id,DATE(time) FROM rights_current';
   my @restrict = ();
   push @restrict, "(time>'$start 00:00:00' AND time<='$end 23:59:59')" unless $all;
+  push @restrict, '((attr=2 AND reason=1) OR (attr=3 AND reason=10))' if $iconly;
   $sql .= ' WHERE ' . join ' AND ', @restrict if scalar @restrict;
   $sql .= ' ORDER BY time ASC';
   if (defined $singles && scalar @{$singles})
