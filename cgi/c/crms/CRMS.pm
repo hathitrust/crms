@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.5.10';
+  return '4.5.11';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -948,17 +948,18 @@ sub IsVolumeInScope
   my $errs = $self->GetViolations($id, $record);
   if (scalar @{$errs})
   {
-    $errs = join '; ', @{$errs};
-    return $errs if $errs !~ m/^current\srights\sare\sund\/[a-z]+$/i;
+    my $joined = join '; ', @{$errs};
+    $errs = [] if $joined =~ m/^current\srights\sare\sund\/[a-z]+$/i;
   }
   my $und = $self->ShouldVolumeGoInUndTable($id, $record);
-  return 'Volume should be filtered (' . $und . ')' if defined $und;
-  return 'Volume is already in the queue' if $self->IsVolumeInQueue($id);
+  push @{$errs}, 'should be filtered (' . $und . ')' if defined $und;
+  push @{$errs}, 'already in the queue' if $self->IsVolumeInQueue($id);
   my $sql = 'SELECT COUNT(*) FROM exportdata e INNER JOIN historicalreviews r' .
             ' ON e.gid=r.gid WHERE e.id=? AND e.attr!="und" AND r.expert IS NOT NULL' .
             ' AND r.expert>0';
   my $cnt = $self->SimpleSqlGet($sql, $id);
-  return 'Volume has a non-und expert review' if $cnt > 0;
+  push @{$errs}, 'non-und expert review' if $cnt > 0;
+  return ucfirst join '; ', @{$errs} if scalar @{$errs} > 0;
   return undef;
 }
 
@@ -8754,6 +8755,14 @@ sub Undollarize
     return $id2;
   }
   return undef;
+}
+
+sub GetUserProgress
+{
+  my $self = shift;
+  my $user = shift;
+
+  return sprintf '%d%%', 50;
 }
 
 1;
