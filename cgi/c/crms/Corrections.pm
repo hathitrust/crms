@@ -2,9 +2,9 @@ package Corrections;
 
 use strict;
 use warnings;
-use vars qw( @ISA @EXPORT @EXPORT_OK );
+use vars qw(@ISA @EXPORT @EXPORT_OK);
 our @EXPORT = qw(CorrectionsTitles CorrectionsFields GetCorrectionsDataRef CorrectionsDataSearchMenu
-                 ExportCorrections);
+                 ExportCorrections RetrieveTicket);
 
 my @FieldNames = ('Volume ID','Ticket','Time','Status','User','Locked','Note','Exported');
 my @Fields     = qw(id ticket time status user locked note exported);
@@ -260,7 +260,7 @@ sub CorrectionsToJira
   my $exports = shift;
   my $noop    = shift;
 
-  my $msg = '(TEST) CRMS re-reviewed this volume and was able to make a copyright determination. That closes this ticket.';
+  my $msg = 'CRMS re-reviewed this volume and was able to make a copyright determination. That closes this ticket.';
   my $json = <<END;
 {
   "update":
@@ -329,6 +329,72 @@ END
     else
     {
       warn("Got " . $res->code() . " posting $url\n");
+      #printf "%s\n", $res->content();
+    }
+  }
+}
+
+sub RetrieveTickets
+{
+  my $self    = shift;
+  my $ids     = shift;
+  my $verbose = shift;
+  
+  my $root = $self->get('root');
+  my $sys = $self->get('sys');
+  my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
+  my %d = $self->ReadConfigFile($cfg);
+  my $username   = $d{'jiraUser'};
+  my $password = $d{'jiraPasswd'};
+  my $ua = new LWP::UserAgent;
+  $ua->cookie_jar( {} );
+  my $url = 'http://wush.net/jira/hathitrust/rest/auth/1/session';
+  my $req = HTTP::Request->new(POST => $url);
+  $req->content_type('application/json');
+  $req->content(<<END);
+    {
+        "username": "$username",
+        "password": "$password"
+    }
+END
+  my $res = $ua->request($req);
+  if (!$res->is_success())
+  {
+    warn("Got " . $res->code() . " logging in at $url\n" . $res->content() . "\n");
+    return;
+  }
+  foreach my $id (sort keys %{$ids})
+  {
+    $url = 'https://wush.net/jira/hathitrust/rest/api/2/search?jql=summary~"' . $id . '" AND (status=1 OR status=4 OR status=3)';
+    print "$url\n" if $verbose;
+    $req = HTTP::Request->new(GET => $url);
+    $res = $ua->request($req);
+    if ($res->is_success())
+    {
+      my $json = JSON::XS->new;
+      my $content = $res->content;
+      eval {
+        my $data = $json->decode($content);
+        my $of = $data->{'total'};
+        if ($of == 0)
+        {
+          print "Warning: found no results for $id\n";
+        }
+        elsif ($of > 1)
+        {
+          my @alltx = map {$data->{'issues'}->[$_]->{'key'}} (0 .. $of-1);
+          printf "Warning: found %d results for $id: %s\n", $of, join ', ', @alltx;
+        }
+        else
+        {
+          my $tx = $data->{'issues'}->[0]->{'key'};
+          $ids->{$id} = $tx;
+        }
+      }
+    }
+    else
+    {
+      warn("Got " . $res->code() . " getting $url\n");
       #printf "%s\n", $res->content();
     }
   }

@@ -23,20 +23,26 @@ Loads volumes from all files in the prep directory with the extension
 'corrections'. The file format is a tab-delimited file with volume id
 and (optional) Jira ticket number.
 
+-e         Skip corrections export.
 -h         Print this help message.
+-i         Skip corrections import.
 -n         No-op; reports what would be done but do not modify the database.
 -p         Run in production.
 -v         Emit debugging information.
 END
 
+my $noexport;
 my $help;
+my $noimport;
 my $noop;
 my $production;
 my $verbose;
 
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
+           'e'    => \$noexport,
            'h|?'  => \$help,
+           'i'    => \$noimport,
            'n'    => \$noop,
            'p'    => \$production,
            'v+'   => \$verbose);
@@ -61,51 +67,67 @@ my $crmsWorld = CRMS->new(
 
 print "Verbosity $verbose\n" if $verbose;
 
-my $prep = $crmsUS->get('root') . '/prep/c/crms/';
-my $ar = $crmsUS->get('root') . '/prep/c/crms/archive/';
-print "Looking in $prep\n" if $verbose;
-my @files = grep {/\.corrections$/} <$prep/*>;
-foreach my $file (@files)
+use Corrections;
+if (!$noimport)
 {
-  print "$file\n" if $verbose;
-  open my $fh, $file or die "failed to open: $@ \n";
-  foreach my $line (<$fh>)
+  my $prep = $crmsUS->get('root') . '/prep/c/crms/';
+  my $ar = $crmsUS->get('root') . '/prep/c/crms/archive/';
+  print "Looking in $prep\n" if $verbose;
+  my @files = grep {/\.corrections$/} <$prep/*>;
+  my %ids;
+  foreach my $file (@files)
   {
-    chomp $line;
-    next unless length $line;
-    my ($id,$ticket) = split "\t", $line;
+    print "$file\n" if $verbose;
+    open my $fh, $file or die "failed to open: $@ \n";
+    foreach my $line (<$fh>)
+    {
+      chomp $line;
+      next unless length $line;
+      $ids{$line} = '?';
+    }
+    close $fh;
+  }
+  Corrections::RetrieveTickets($crmsUS, \%ids);
+  foreach my $id (sort keys %ids)
+  {
+    my $tx = $ids{$id};
+    $tx = undef if $tx eq '?';
     my $record = $crmsUS->GetMetadata($id);
-    if (!defined $record && $id =~ m/uc1\.b\d{1,6}$/)
+    if (! defined $record)
+    {
+      my $id2 = $crmsUS->Dollarize($id, \$record);
+      $id = $id2 if defined $id2;
+    }
+    if (!defined $record)
+    {
+      print "Warning: could not get metadata for $id\n";
+      next;
+    }
+    else
     {
       $crmsUS->ClearErrors();
-      my $id2 = $id;
-      $id2 =~ s/b/\$b/;
-      $record = $crmsUS->GetMetadata($id2);
-      if (!defined $record)
-      {
-        print "$id ($id2) record undefined\n";
-        next;
-      }
-      print "Adding $id as $id2\n" if $verbose;
-      $id = $id2;
     }
-    print "Warning: could not get metadata for $id\n" unless defined $record;
     # FIXME: what if the metadata is not available at all?
     my $where = $crmsUS->GetRecordPubCountry($id, $record);
     # FIXME: maybe make this an API exposed by the Candidates_sys modules.
     my $obj = ($where eq 'USA')? $crmsUS:$crmsWorld;
     my $sql = 'REPLACE INTO corrections (id,ticket) VALUES (?,?)';
-    printf "Replacing $id (%s) in %s ($where)\n", (defined $ticket)? $ticket:'undef', $obj->System() if $verbose;
-    $obj->PrepareSubmitSql($sql, $id, $ticket) unless $noop;
+    printf "Replacing $id (%s) in %s ($where)\n", (defined $tx)? $tx:'undef', $obj->System() if $verbose;
+    $obj->PrepareSubmitSql($sql, $id, $tx) unless $noop;
     $obj->UpdateMetadata($id, 1, $record) unless $noop;
   }
-  close $fh;
-  print "Moving $file to archive $ar\n" if $verbose;
-  File::Copy::move($file, $ar);
+  foreach my $file (@files)
+  {
+    print "Moving $file to $ar\n";
+    File::Copy::move($file, $ar) unless $noop;
+  }
 }
 
-Corrections::ExportCorrections($crmsUS, $noop);
-Corrections::ExportCorrections($crmsWorld, $noop);
+if (!$noexport)
+{
+  Corrections::ExportCorrections($crmsUS, $noop);
+  Corrections::ExportCorrections($crmsWorld, $noop);
+}
 
 print "Warning (US): $_\n" for @{$crmsUS->GetErrors()};
 print "Warning (World): $_\n" for @{$crmsWorld->GetErrors()};
