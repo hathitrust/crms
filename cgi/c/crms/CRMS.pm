@@ -891,7 +891,7 @@ sub AddItemToCandidates
       $time = $map{$id};
       foreach my $id2 (@sorted)
       {
-        next if $self->IsFiltered($id, 'duplicate');
+        next if $self->IsFiltered($id2, 'duplicate');
         print "Filter $id2 as duplicate of $id\n";
         $self->Filter($id2, 'duplicate') unless defined $noop;
       }
