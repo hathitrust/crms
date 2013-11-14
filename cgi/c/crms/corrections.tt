@@ -84,7 +84,7 @@
           <tr><td><strong>Country:</strong> [% country %]<br/></td></tr>
         [% END %]
       </table>
-      [% sources = crms.CorrectionSources(barcode,mag,ptview) %]
+      [% sources = crms.Sources(barcode,mag,ptview,1) %]
       <table class="search">
         <tr>
           <th>View 1:</th>

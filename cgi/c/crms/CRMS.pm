@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.5.11';
+  return '4.5.12';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -8292,10 +8292,13 @@ sub Sources
   my $id   = shift;
   my $mag  = shift;
   my $view = shift;
+  my $corr = shift;
   
   $mag = '100' unless $mag;
   $view = 'image' unless $view;
-  my $sql = 'SELECT id,name,url,accesskey,menu,initial FROM sources ORDER BY n ASC, name ASC';
+  my $table = (defined $corr)? 'correctionsources':'sources';
+  my $sql = 'SELECT id,name,url,accesskey,menu,initial FROM ' .
+             $table . ' ORDER BY n ASC, name ASC';
   #print "$sql\n<br/>";
   my $ref = $self->GetDb()->selectall_arrayref($sql);
   my @all = ();
@@ -8306,6 +8309,10 @@ sub Sources
     $url =~ s/__HTID__/$id/g;
     $url =~ s/__MAG__/$mag/g;
     $url =~ s/__VIEW__/$view/g;
+    if ($url =~ m/crms\?/)
+    {
+      $url = $self->Sysify($url);
+    }
     if ($url =~ m/__SYSID__/)
     {
       my $sysid = $self->BarcodeToId($id);
@@ -8345,33 +8352,13 @@ sub Sources
       my $t = $self->GetEncTitle($id);
       $url =~ s/__TITLE__/$t/g;
     }
+    if ($url =~ m/__TICKET__/)
+    {
+      my $t = $self->SimpleSqlGet('SELECT ticket FROM corrections WHERE id=?', $id);
+      $url =~ s/__TICKET__/$t/g;
+    }
     $url =~ s/\s+/+/g;
     push @all, [$row->[0], $name, $url, $row->[3], $row->[4], $row->[5]];
-  }
-  return \@all;
-}
-
-sub CorrectionSources
-{
-  my $self = shift;
-  my $id   = shift;
-  my $mag  = shift;
-  my $view = shift;
-  
-  $mag = '100' unless $mag;
-  $view = 'image' unless $view;
-  my @all = ();
-  my $url = $self->SimpleSqlGet('SELECT url FROM sources WHERE name="HathiTrust"');
-  $url =~ s/__HTID__/$id/g;
-  $url =~ s/__MAG__/$mag/g;
-  $url =~ s/__VIEW__/$view/g;
-  #id,name,url,accesskey,menu,initial
-  push @all, [0, 'HathiTrust', $url, 'h', 1, 1];
-  my $ticket = $self->SimpleSqlGet('SELECT ticket FROM corrections WHERE id=?', $id);
-  if (defined $ticket)
-  {
-    $url = 'https://wush.net/jira/hathitrust/browse/' . $ticket;
-    push @all, [1, 'Jira', $url, 'j', 2, 2];
   }
   return \@all;
 }
