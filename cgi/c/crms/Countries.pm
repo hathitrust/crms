@@ -375,6 +375,7 @@ my %countries = ('aa' => 'Albania',
 'xxk' => 'United Kingdom',
 'xxr' => 'Soviet Union',
 'xxu' => 'USA',
+'u' => 'USA',
 'ye' => 'Yemen',
 'ykc' => 'Canada (Yukon Territory)',
 'ys' => 'Yemen (People\'s Democratic Republic)',
@@ -392,6 +393,7 @@ sub TranslateCountry
   my $code = shift;
   my $long = shift;
 
+  $code =~ s/\s//g;
   my $country = $countries{$code};
   $country = 'Undetermined' unless $country;
   $country =~ s/\s*\(.*?\)$//g unless $long;
