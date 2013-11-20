@@ -115,7 +115,7 @@ sub IsGovDoc
   eval {
     my $path  = '//*[local-name()="controlfield" and @tag="008"]';
     my $leader = $record->findvalue($path);
-    $is = (substr($leader, 28, 1) eq 'f');
+    $is = (length $leader > 28 && substr($leader, 28, 1) eq 'f');
   };
   $self->SetError("failed in IsGovDoc($id): $@") if $@;
   return $is;
@@ -150,8 +150,11 @@ sub IsProbableGovDoc
   # we accept it and say it is NOT probable
   $xpath  = q{//*[local-name()='controlfield' and @tag='008']};
   my $leader = lc $record->findvalue($xpath);
-  my $code = substr($leader, 28, 1);
-  return 0 if ($code ne 'f' && $code =~ m/[a-z]/);
+  if (length $leader >28)
+  {
+    my $code = substr($leader, 28, 1);
+    return 0 if ($code ne 'f' && $code =~ m/[a-z]/);
+  }
   if (defined $author && $author =~ m/^united\s+states/i)
   {
     return 1 unless $field260a or $field260b;
@@ -185,7 +188,7 @@ sub IsForeignPub
   my $is = undef;
   eval {
     my $path = '//*[local-name()="controlfield" and @tag="008"]';
-    my $code  = substr($record->findvalue($path), 15, 3);
+    my $code = substr($record->findvalue($path), 15, 3);
     $is = $code if substr($code,2,1) ne 'u';
   };
   $self->SetError("failed in IsForeignPub($id): $@") if $@;
