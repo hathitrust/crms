@@ -5085,9 +5085,8 @@ sub GetRecordPubCountry
   eval {
     my $xpath = "//*[local-name()='controlfield' and \@tag='008']";
     $code  = substr($record->findvalue($xpath), 15, 3);
-    $code =~ s/[^a-z]//gi;
   };
-  $self->SetError("failed in GetCountry($id): $@") if $@;
+  $self->SetError("failed in GetRecordPubCountry($id): $@") if $@;
   use Countries;
   return Countries::TranslateCountry($code, $long);
 }
