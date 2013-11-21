@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.5.12';
+  return '4.5.13';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -2423,13 +2423,13 @@ sub UnpackResults
     }
     elsif ($page eq 'adminHistoricalReviews')
     {
-      $author = $self->SimpleSqlGet("SELECT author FROM bibdata WHERE id='$id'");
-      $title = $self->SimpleSqlGet("SELECT title FROM bibdata WHERE id='$id'");
-      my $pubdate = $self->SimpleSqlGet("SELECT YEAR(pub_date) FROM bibdata WHERE id='$id'");
+      $author = $self->SimpleSqlGet('SELECT author FROM bibdata WHERE id=?', $id);
+      $title = $self->SimpleSqlGet('SELECT title FROM bibdata WHERE id=?', $id);
+      my $pubdate = $self->SimpleSqlGet('SELECT YEAR(pub_date) FROM bibdata WHERE id=?', $id);
       $pubdate = '?' unless $pubdate;
       my $validated = $row->[15];
       #id, title, author, review date, status, user, attr, reason, category, note, validated
-      my $sysid = $self->SimpleSqlGet("SELECT sysid FROM system WHERE id='$id'");
+      my $sysid = $self->SimpleSqlGet('SELECT sysid FROM system WHERE id=?', $id);
       $buff .= qq{$id\t$sysid\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated\t$swiss};
     }
     $buff .= sprintf("%s\n", ($self->IsUserAdmin())? "\t$priority":'');
@@ -2863,12 +2863,12 @@ sub GetQueueRef
     $date =~ s/(.*) .*/$1/;
     my $pubdate = $row->[4];
     $pubdate = '?' unless $pubdate;
-    $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id'";
+    $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
     #print "$sql<br/>\n";
-    my $reviews = $self->SimpleSqlGet($sql);
-    $sql = "SELECT COUNT(*) FROM reviews WHERE id='$id' AND hold IS NOT NULL";
+    my $reviews = $self->SimpleSqlGet($sql, $id);
+    $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND hold IS NOT NULL';
     #print "$sql<br/>\n";
-    my $holds = $self->SimpleSqlGet($sql);
+    my $holds = $self->SimpleSqlGet($sql, $id);
     my $item = {id         => $id,
                 time       => $row->[1],
                 date       => $date,
@@ -3430,7 +3430,7 @@ sub GetUsers
   my $dbh  = $self->GetDb();
   $order = ($order)? 'ORDER BY expert ASC, name ASC':
                      'ORDER BY (reviewer OR advanced OR extadmin OR admin OR superadmin) DESC, name ASC';
-  my $sql = "SELECT id FROM users $order";
+  my $sql = 'SELECT id FROM users ' . $order;
   my $ref = $dbh->selectall_arrayref($sql);
   my @users = map { $_->[0]; } @{ $ref };
   return \@users;
@@ -3950,7 +3950,7 @@ sub CreatePreDeterminationsBreakdownData
   $end = "$year-$month-$lastDay" unless $end;
   my $what = 'date';
   $what = 'DATE_FORMAT(date, "%Y-%m")' if $monthly;
-  my $sql = "SELECT DISTINCT($what) FROM predeterminationsbreakdown WHERE date>=? AND date<=?";
+  my $sql = 'SELECT DISTINCT(' . $what . ') FROM predeterminationsbreakdown WHERE date>=? AND date<=?';
   #print "$sql<br/>\n";
   my @dates = map {$_->[0];} @{$self->GetDb()->selectall_arrayref($sql, undef, $start, $end)};
   if (scalar @dates && !$justThisMonth)
@@ -3975,7 +3975,7 @@ sub CreatePreDeterminationsBreakdownData
       $date2 = "$date-$lastDay";
       $date = $self->YearMonthToEnglish($date);
     }
-    my $sql = "SELECT s2,s3,s4,s8,s2+s3+s4+s8 FROM predeterminationsbreakdown WHERE date LIKE '$date1%'";
+    my $sql = 'SELECT s2,s3,s4,s8,s2+s3+s4+s8 FROM predeterminationsbreakdown WHERE date LIKE "' . $date1 . '%"';
     #print "$sql<br/>\n";
     my ($s2,$s3,$s4,$s8,$sum) = @{$self->GetDb()->selectall_arrayref($sql)->[0]};
     my @line = ($s2,$s3,$s4,$s8,$sum,0,0,0,0);
@@ -4023,7 +4023,7 @@ sub CreateDeterminationsBreakdownData
   $end = "$year-$month-$lastDay" unless $end;
   my $what = 'date';
   $what = 'DATE_FORMAT(date, "%Y-%m")' if $monthly;
-  my $sql = "SELECT DISTINCT($what) FROM determinationsbreakdown WHERE date>=? AND date<=?";
+  my $sql = 'SELECT DISTINCT(' . $what . ') FROM determinationsbreakdown WHERE date>=? AND date<=?';
   #print "$sql<br/>\n";
   my @dates = map {$_->[0];} @{$self->GetDb()->selectall_arrayref($sql, undef, $start, $end)};
   if (scalar @dates && !$justThisMonth)
@@ -4238,7 +4238,7 @@ sub GetStatsYears
       $usersql = "AND user='$user'";
     }
   }
-  my $sql = "SELECT DISTINCT year FROM userstats WHERE total_reviews>0 $usersql ORDER BY year DESC";
+  my $sql = 'SELECT DISTINCT year FROM userstats WHERE total_reviews>0 ' . $usersql . ' ORDER BY year DESC';
   #print "$sql<br/>\n";
   my $ref = $self->GetDb()->selectall_arrayref($sql);
   return unless scalar @{$ref};
@@ -4715,7 +4715,7 @@ sub CreateNamespaceGraph
   my $ceil = 0;
   foreach my $ns (sort $self->Namespaces())
   {
-    my $sql = "SELECT COUNT(DISTINCT id) FROM exportdata WHERE id LIKE '$ns.%'";
+    my $sql = 'SELECT COUNT(DISTINCT id) FROM exportdata WHERE id LIKE "' . $ns . '.%"';
     #print "$sql\n";
     my $n = $self->SimpleSqlGet($sql);
     next unless $n;
@@ -5264,11 +5264,11 @@ sub GetTitle
   my $self = shift;
   my $id   = shift;
 
-  my $ti = $self->SimpleSqlGet("SELECT title FROM bibdata WHERE id='$id'");
+  my $ti = $self->SimpleSqlGet('SELECT title FROM bibdata WHERE id=?', $id);
   if (!$ti)
   {
     $self->UpdateMetadata($id, 1);
-    $ti = $self->SimpleSqlGet("SELECT title FROM bibdata WHERE id='$id'");
+    $ti = $self->SimpleSqlGet('SELECT title FROM bibdata WHERE id=?', $id);
   }
   return $ti;
 }
@@ -5295,12 +5295,12 @@ sub GetPubDate
   my $id   = shift;
   my $do2  = shift;
 
-  my $sql = "SELECT YEAR(pub_date) FROM bibdata WHERE id='$id'";
-  my $date = $self->SimpleSqlGet($sql);
+  my $sql = 'SELECT YEAR(pub_date) FROM bibdata WHERE id=?';
+  my $date = $self->SimpleSqlGet($sql, $id);
   if (!$date)
   {
     $self->UpdateMetadata($id, 1);
-    $date = $self->SimpleSqlGet($sql);
+    $date = $self->SimpleSqlGet($sql, $id);
   }
   if ($date && $do2)
   {
@@ -5315,12 +5315,12 @@ sub GetPubCountry
   my $self = shift;
   my $id   = shift;
 
-  my $sql = "SELECT country FROM bibdata WHERE id='$id'";
-  my $date = $self->SimpleSqlGet($sql);
+  my $sql = 'SELECT country FROM bibdata WHERE id=?';
+  my $date = $self->SimpleSqlGet($sql, $id);
   if (!$date)
   {
     $self->UpdateMetadata($id, 1);
-    $date = $self->SimpleSqlGet($sql);
+    $date = $self->SimpleSqlGet($sql, $id);
   }
   return $date;
 }
@@ -5559,7 +5559,7 @@ sub GetReviewField
   my $user  = shift;
   my $field = shift;
 
-  return $self->SimpleSqlGet("SELECT $field FROM reviews WHERE id=? AND user=? LIMIT 1", $id, $user);
+  return $self->SimpleSqlGet('SELECT ' . $field . ' FROM reviews WHERE id=? AND user=? LIMIT 1', $id, $user);
 }
 
 sub HasLockedItem
@@ -6007,9 +6007,9 @@ sub TranslateAttr
   my $self = shift;
   my $a    = shift;
   
-  my $sql = "SELECT id FROM attributes WHERE name='$a'";
-  $sql = "SELECT name FROM attributes WHERE id=$a" if $a =~ m/[0-9]+/;
-  my $val = $self->SimpleSqlGetSDR($sql);
+  my $sql = 'SELECT id FROM attributes WHERE name=?';
+  $sql = 'SELECT name FROM attributes WHERE id=?' if $a =~ m/[0-9]+/;
+  my $val = $self->SimpleSqlGetSDR($sql, $a);
   if (!$val)
   {
     my %t1 = (1  => 'pd',       2  => 'ic',          3  => 'op',        4  => 'orph',        5  => 'und',
@@ -6031,9 +6031,9 @@ sub TranslateReason
   my $self = shift;
   my $r    = shift;
   
-  my $sql = "SELECT id FROM reasons WHERE name='$r'";
-  $sql = "SELECT name FROM reasons WHERE id=$r" if $r =~ m/[0-9]+/;
-  my $val = $self->SimpleSqlGetSDR($sql);
+  my $sql = 'SELECT id FROM reasons WHERE name=?';
+  $sql = 'SELECT name FROM reasons WHERE id=?' if $r =~ m/[0-9]+/;
+  my $val = $self->SimpleSqlGetSDR($sql, $a);
   if (!$val)
   {
     my %t1 = ( 1  => 'bib', 2   => 'ncn', 3  => 'con',  4  => 'ddd',  5  => 'man', 6  => 'pvt',
@@ -6166,11 +6166,10 @@ sub GetQueueSize
   my $self     = shift;
   my $priority = shift;
 
-  my $restrict = (defined $priority)? "WHERE priority=$priority":'';
-  my $sql = "SELECT COUNT(*) FROM queue $restrict";
-  return $self->SimpleSqlGet($sql);
+  my $sql = 'SELECT COUNT(*) FROM queue';
+  $sql .= ' WHERE priority=?' if defined $priority;
+  return $self->SimpleSqlGet($sql, $priority);
 }
-
 
 # Remove trailing zeroes and point-zeroes from a floating point format.
 sub StripDecimal
@@ -6197,19 +6196,19 @@ sub CreateQueueReport
   my $report = "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
   foreach my $status (-1 .. 9)
   {
-    my $statusClause = ($status == -1)? '':" WHERE STATUS=$status";
-    my $sql = "SELECT COUNT(*) FROM queue $statusClause";
+    my $statusClause = ($status == -1)? '':"WHERE STATUS=$status";
+    my $sql = 'SELECT COUNT(*) FROM queue ' . $statusClause;
     my $count = $self->SimpleSqlGet($sql);
     $status = 'All' if $status == -1;
     my $class = ($status eq 'All')?' class="total"':'';
     $class = ' style="background-color:#999999;"' if $status == 6;
     $report .= sprintf("<tr><td%s>$status%s</td><td%s>$count</td>", $class, ($status == 6)? '*':'', $class);
-    $sql = "SELECT priority FROM queue $statusClause";
+    $sql = 'SELECT priority FROM queue ' . $statusClause;
     my $ref = $dbh->selectall_arrayref($sql);
     $report .= $self->DoPriorityBreakdown($ref,$class,\@pris);
     $report .= "</tr>\n";
   }
-  my $sql = "SELECT priority FROM queue WHERE status=0 AND id NOT IN (SELECT id FROM reviews)";
+  my $sql = 'SELECT priority FROM queue WHERE status=0 AND id NOT IN (SELECT id FROM reviews)';
   my $ref = $dbh->selectall_arrayref($sql);
   my $count = $self->GetTotalAwaitingReview();
   my $class = ' class="major"';
@@ -6597,7 +6596,7 @@ sub GetTotalExported
 {
   my $self = shift;
 
-  my $sql = "SELECT SUM(itemcount) FROM exportrecord";
+  my $sql = 'SELECT SUM(itemcount) FROM exportrecord';
   return $self->SimpleSqlGet($sql);
 }
 
@@ -6616,7 +6615,7 @@ sub GetLastExport
   my $self     = shift;
   my $readable = shift;
 
-  my $sql = "SELECT itemcount,time FROM exportrecord WHERE itemcount>0 ORDER BY time DESC LIMIT 1";
+  my $sql = 'SELECT itemcount,time FROM exportrecord WHERE itemcount>0 ORDER BY time DESC LIMIT 1';
   my $ref = $self->GetDb()->selectall_arrayref($sql);
   my $count = $ref->[0]->[0];
   my $time = $ref->[0]->[1];
@@ -6628,7 +6627,7 @@ sub GetTotalLegacyCount
 {
   my $self = shift;
 
-  my $sql = "SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE legacy=1 AND priority!=1";
+  my $sql = 'SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE legacy=1 AND priority!=1';
   return $self->SimpleSqlGet($sql);
 }
 
@@ -8164,7 +8163,7 @@ sub Menus
   my $x = $self->IsUserExtAdmin();
   my $a = $self->IsUserAdmin();
   my $s = $self->IsUserSuperAdmin();
-  my $sql = "SELECT id,name,class,restricted FROM menus ORDER BY n";
+  my $sql = 'SELECT id,name,class,restricted FROM menus ORDER BY n';
   #print "$sql\n<br/>";
   my $ref = $self->GetDb()->selectall_arrayref($sql);
   my @all = ();
