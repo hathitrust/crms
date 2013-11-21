@@ -5791,16 +5791,6 @@ sub RemoveFromTimer
   $self->PrepareSubmitSql($sql, $id, $user);
 }
 
-sub GetDuration
-{
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift;
-
-  my $sql = 'SELECT duration FROM reviews WHERE user=? AND id=?';
-  return $self->SimpleSqlGet($sql, $user, $id);
-}
-
 sub SetDuration
 {
   my $self = shift;
