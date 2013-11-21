@@ -5799,11 +5799,15 @@ sub SetDuration
 
   my $sql = 'SELECT TIMEDIFF(end_time,start_time) FROM timer where id=? AND user=?';
   my $dur = $self->SimpleSqlGet($sql, $id, $user);
-  if ($dur)
+  if (defined $dur)
   {
+    my $d1 = $self->SimpleSqlGet('SELECT duration FROM reviews where user=? AND id=?', $user, $id);
     ## insert time
     $sql = 'UPDATE reviews SET duration=ADDTIME(duration,?),time=time WHERE user=? AND id=?';
     $self->PrepareSubmitSql($sql, $dur, $user, $id);
+    my $d2 = $self->SimpleSqlGet('SELECT duration FROM reviews where user=? AND id=?', $user, $id);
+    my $msg = "$id ($user) dur $dur set from $d1 to $d2";
+    $self->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $msg);
   }
   $self->RemoveFromTimer($id, $user);
 }
