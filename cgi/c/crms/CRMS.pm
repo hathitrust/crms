@@ -1037,67 +1037,51 @@ sub LoadNewItems
   {
     $needed = max($targetQueueSize - $queuesize, 500 - $priZeroSize);
   }
-  printf "Need $needed volumes (max of %d and %d).\n", $targetQueueSize - $queuesize, 500 - $priZeroSize;
+  printf "Need $needed volumes (max of %d [%d-%d] and %d [%d-%d]).\n",
+          $targetQueueSize - $queuesize, $targetQueueSize, $queuesize,
+          500 - $priZeroSize, 500, $priZeroSize;
   return if $needed <= 0;
   my $count = 0;
-  my $min = $self->GetCutoffYear('minYear');
-  my $max = $self->GetCutoffYear('maxYear');
-  my $y = $min + int(rand($max - $min));
   my %dels = ();
-  while (1)
+  my $sql = 'SELECT id,pub_date FROM candidates' .
+            ' WHERE id NOT IN (SELECT DISTINCT id FROM inherit)' .
+            ' AND id NOT IN (SELECT DISTINCT id FROM queue)' .
+            ' AND id NOT IN (SELECT DISTINCT id FROM reviews)' .
+            ' AND id NOT IN (SELECT DISTINCT id FROM historicalreviews)' .
+            ' ORDER BY time DESC';
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  foreach my $row (@{$ref})
   {
-    my $sql = 'SELECT id,pub_date FROM candidates' .
-              ' WHERE id NOT IN (SELECT DISTINCT id FROM inherit)' .
-              ' AND id NOT IN (SELECT DISTINCT id FROM queue)' .
-              ' AND id NOT IN (SELECT DISTINCT id FROM reviews)' .
-              ' ORDER BY pub_date ASC, time DESC';
-    my $ref = $self->GetDb()->selectall_arrayref($sql);
-    # This can happen in the testsuite.
-    last unless scalar @{$ref};
-    my $oldcount = $count;
-    foreach my $row (@{$ref})
+    my $id = $row->[0];
+    next if $dels{$id};
+    my $sysid;
+    my $record = $self->GetMetadata($id, \$sysid);
+    if (!$record)
     {
-      my $id = $row->[0];
-      next if $dels{$id};
-      next if 0 < $self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id);
-      my $pub_date = $row->[1];
-      next if $pub_date ne "$y-01-01";
-      my $sysid;
-      my $record = $self->GetMetadata($id, \$sysid);
-      if (!$record)
-      {
-        print "Filtering $id: can't get metadata for queue\n";
-        $self->Filter($id, 'no meta');
-        next;
-      }
-      $pub_date = $self->GetRecordPubDate($id, $record);
-      my @errs = @{ $self->GetViolations($id, $record) };
-      if (scalar @errs)
-      {
-        printf "Will delete $id: %s\n", join '; ', @errs;
-        $dels{$id} = 1;
-        next;
-      }
-      my $dup = $self->IsRecordInQueue($sysid, $record);
-      if ($dup && !$self->DoesRecordHaveChron($sysid, $record))
-      {
-        print "Filtering $id: queue has $dup on $sysid (no chron/enum)\n";
-        $self->Filter($id, 'duplicate');
-        next;
-      }
-      if ($self->AddItemToQueue($id, $record))
-      {
-        printf "Added to queue: $id published %s\n", substr($pub_date, 0, 4);
-        $count++;
-        last if $count >= $needed;
-        $y++;
-        $y = $min if $y > $max;
-      }
+      print "Filtering $id: can't get metadata for queue\n";
+      $self->Filter($id, 'no meta');
+      next;
     }
-    if ($oldcount == $count)
+    my $pub_date = $self->GetRecordPubDate($id, $record);
+    my @errs = @{ $self->GetViolations($id, $record) };
+    if (scalar @errs)
     {
-      $y++;
-      $y = $min if $y > $max;
+      printf "Will delete $id: %s\n", join '; ', @errs;
+      $dels{$id} = 1;
+      next;
+    }
+    my $dup = $self->IsRecordInQueue($sysid, $record);
+    if ($dup && !$self->DoesRecordHaveChron($sysid, $record))
+    {
+      print "Filtering $id: queue has $dup on $sysid (no chron/enum)\n";
+      $self->Filter($id, 'duplicate');
+      next;
+    }
+    print "Add $id ($pub_date) to queue?\n";
+    if ($self->AddItemToQueue($id, $record))
+    {
+      printf "Added to queue: $id published %s\n", substr($pub_date, 0, 4);
+      $count++;
     }
     last if $count >= $needed;
   }
@@ -6161,8 +6145,8 @@ sub GetQueueSize
   my $priority = shift;
 
   my $sql = 'SELECT COUNT(*) FROM queue';
-  $sql .= ' WHERE priority=?' if defined $priority;
-  return $self->SimpleSqlGet($sql, $priority);
+  $sql .= (' WHERE priority=' . $priority) if defined $priority;
+  return $self->SimpleSqlGet($sql);
 }
 
 # Remove trailing zeroes and point-zeroes from a floating point format.
