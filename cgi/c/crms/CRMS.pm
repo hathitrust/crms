@@ -8422,6 +8422,42 @@ sub TolerantCompare
   return ($s1 eq $s2)?1:0; 
 }
 
+# CRMS World specific. Returns the last year the work was/will be in copyright,
+# or undef on error.
+sub PredictLastCopyrightYear
+{
+  my $self   = shift;
+  my $id     = shift; # Volume id
+  my $year   = shift; # ADD or Pub entered by user
+  my $ispub  = shift; # Pub date checkbox
+  my $crown  = shift; # Crown copyright note category
+  my $record = shift; # Metadata (optional) so we don't spam bibdata table for volumes not in queue.
+  my $pubref = shift; # Pub date, by reference
+
+  return undef if $year !~ m/^-?\d+$/; # Punt if the year is not exclusively 1 or more decimal digits with optional minus.my $pub = undef;
+  my $pub;
+  $pub = $year if $ispub;
+  if (! defined $pub)
+  {
+    $pub = $self->GetRecordPubDate($id, $record) if $record;
+    $pub = $self->GetPubDate($id) unless defined $pub;
+  }
+  return undef unless defined $pub;
+  $$pubref = $pub if defined $pubref;
+  my $where = undef;
+  $where = $self->GetRecordPubCountry($id, $record) if $record;
+  $where = $self->GetPubCountry($id) unless $where;
+  my $now = $self->GetTheYear();
+  # $when is the last year the work was in copyright
+  my $when = $year + (($where eq 'United Kingdom')? ($crown? 50:70):50);
+  # New logic for Australia: if the pub/death date is >= 1955 then use 70
+  if ($where eq 'Australia')
+  {
+    $when = $year + 70 if $year >= 1955 or $pub >= 1955;
+  }
+  return $when;
+}
+
 # CRMS World specific. Predict best radio button (rights combo)
 # to choose based on user selections.
 sub PredictRights
@@ -8433,27 +8469,11 @@ sub PredictRights
   my $crown  = shift; # Crown copyright note category
   my $record = shift; # Metadata (optional) so we don't spam bibdata table for volumes not in queue.
 
-  return 0 if $year !~ m/^-?\d+$/; # Punt if the year is not exclusively 1 or more decimal digits with optional minus.
-  my $pub = undef;
-  $pub = $year if $ispub;
-  if (! defined $pub)
-  {
-    $pub = $self->GetRecordPubDate($id, $record) if $record;
-    $pub = $self->GetPubDate($id) unless defined $pub;
-  }
-  return 0 unless defined $pub;
-  my $where = undef;
-  $where = $self->GetRecordPubCountry($id, $record) if $record;
-  $where = $self->GetPubCountry($id) unless $where;
   my ($attr, $reason) = (0,0);
   my $now = $self->GetTheYear();
-  # $when is the last year the work was in copyright
-  my $when = $year + (($where eq 'United Kingdom')? ($crown? 50:70):50);
-  # New logic for Australia: if the pub/death date is >= 1955 then use 70
-  if ($where eq 'Australia')
-  {
-    $when = $year + 70 if $year >= 1955 or $pub >= 1955;
-  }
+  my $pub;
+  my $when = $self->PredictLastCopyrightYear($id, $year, $ispub, $crown, $record, \$pub);
+  return 0 unless defined $when;
   if ($when < $now)
   {
     if ($when >= 1996 && $pub >= 1923)
