@@ -50,7 +50,8 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "800", "300", "9.0.
 [% years = crms.GetAllExportYears() %]
 [% FOR year IN years.reverse() %]
   <h3>Exported&nbsp;Determinations&nbsp;$year&nbsp;&nbsp;&nbsp;&nbsp;
-    <a target="_blank" href="/cgi/c/crms/getExportStats?type=text;c=0;startDate=$year-01;endDate=$year-12">Download</a></h3>
+    [% url = crms.Sysify('/cgi/c/crms/getExportStats?type=text;c=0;startDate=$year-01;endDate=$year-12') %]
+    <a target="_blank" href="[% url %]">Download</a></h3>
   [% report = crms.CreateExportReport(0, year) %]
   [% IF year == '2010' %]
     [% report = report.replace('Status&nbsp;6','Status&nbsp;6**') %]
