@@ -1072,6 +1072,10 @@ sub LoadNewItems
     $priZeroSize = $self->SimpleSqlGet($sql, $country);
     $excludeCountries = ' AND country="' . $country . '"';
   }
+  else
+  {
+    $excludeCountries = ' AND country NOT IN (SELECT DISTINCT country FROM usercountries)';
+  }
   my $targetQueueSize = $self->GetSystemVar('queueSize');
   print "Before load, the queue has $queuesize volumes, $priZeroSize priority 0.\n";
   if ($needed)
@@ -5922,6 +5926,10 @@ sub GetNextItemForReview
       $exclude .= ' q.added_by="oneoff" AND ';
       $order = 'q.source ASC, q.id ASC';
     }
+    else
+    {
+      $exclude .= ' q.added_by!="oneoff" AND ';
+    }
     my $p1f = $self->GetPriority1Frequency();
     # Exclude priority 1 if our d100 roll is over the P1 threshold or user is not advanced
     my $exclude1 = (rand() >= $p1f || !$self->IsUserAdvanced($user))? 'q.priority!=1 AND ':'';
@@ -5934,7 +5942,7 @@ sub GetNextItemForReview
     else
     {
       $sql = 'SELECT DISTINCT country FROM usercountries';
-      $ref = $self->GetDb()->selectall_arrayref($sql);
+      my $ref = $self->GetDb()->selectall_arrayref($sql);
       @countries = map {'"' . $_->[0] . '"';} @{$ref};
       if (scalar @countries)
       {
