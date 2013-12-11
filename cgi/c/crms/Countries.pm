@@ -102,7 +102,7 @@ my %countries = ('aa' => 'Albania',
 'fm' => 'Micronesia (Federated States)',
 'fp' => 'French Polynesia',
 'fr' => 'France',
-'fs' => 'Terres australes et antarctiques françaises',
+'fs' => 'Terres australes et antarctiques franaises',
 'ft' => 'Djibouti',
 'gau' => 'USA (Georgia)',
 'gb' => 'Kiribati',
@@ -143,7 +143,7 @@ my %countries = ('aa' => 'Albania',
 'is' => 'Israel',
 'it' => 'Italy',
 'iu' => 'Israel-Syria Demilitarized Zones',
-'iv' => 'Côte d\'Ivoire',
+'iv' => 'C™te d\'Ivoire',
 'iw' => 'Israel-Jordan Demilitarized Zones',
 'iy' => 'Iraq-Saudi Arabia Neutral Zone',
 'ja' => 'Japan',
@@ -393,9 +393,11 @@ sub TranslateCountry
   my $code = shift;
   my $long = shift;
 
+  my $orig = $code;
   $code =~ s/[^a-z]//gi;
   my $country = $countries{$code};
   $country = 'Undetermined' unless $country;
+  $country .= " [$orig]" if $country eq 'Undetermined';
   $country =~ s/\s*\(.*?\)$//g unless $long;
   return $country;
 }
