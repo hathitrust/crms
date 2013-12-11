@@ -48,7 +48,7 @@ function selMenuItem(id, value)
 -->
     </script>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
-    [% IF page == 'review' OR page == 'corrections' %]
+    [% IF page == 'review' OR page == 'corrections' OR page == 'oneoff' %]
       [% INCLUDE reviewJs.tt %]
     [% ELSE %]
       <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
@@ -60,7 +60,7 @@ function selMenuItem(id, value)
   <body>
 [% r = crms.GetSystemStatus() %]
 
-[% IF page != 'review' && page != 'corrections' %]
+[% IF page != 'review' && page != 'corrections' && page != 'oneoff' %]
     <div class="pages" id="homePage">
     <div style="height:82px;border-bottom:1px solid black;margin:0px;padding-bottom:6px;">
       <a href="[% crms.Sysify('crms') %]">

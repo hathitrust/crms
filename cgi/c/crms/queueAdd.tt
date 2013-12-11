@@ -1,8 +1,6 @@
 [% IF NOT (crms.IsUserExpert() || crms.IsUserAdmin()) %]
   [% INCLUDE denied.tt  %]
-  [% STOP %]
 [% END %]
-
 [% INCLUDE header.tt %]
 
 [% ids = cgi.param('ids') %]
@@ -101,8 +99,9 @@ These items will take priority in the review process.
   <tr><td colspan="2"><b>$action $adds [% crms.Pluralize("volume", adds) %], skipped $skips, modified $already</b></td></tr></table>
 [% END %]
 
-[% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.added_by,q.status,q.priority FROM queue q, bibdata b" _
-         " WHERE q.id=b.id AND q.priority>=2 ORDER BY q.added_by,q.status ASC,q.priority DESC" %]
+[% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.added_by,q.status,q.priority,q.source" _
+         " FROM queue q, bibdata b" _
+         " WHERE q.id=b.id AND q.priority>=2 ORDER BY q.added_by,q.source,q.status ASC,q.priority DESC,q.id ASC" %]
 [% ref  = crms.GetDb().selectall_arrayref(sql) %]
 [% IF ref.size > 0 %]
   <br/>
@@ -123,7 +122,7 @@ These items will take priority in the review process.
   [% user = crms.get('user') %]
   [% FOREACH r IN ref %]
     [% vs = crms.GetViolations(r.0, undef, r.6) %]
-    [% style = (r.5==user && r.6==0)? '':'style="background-color:#e2e2e2;"' %]
+    [% style = ((r.5 == user || r.5 == 'oneoff') && r.6 == 0)? '':'style="background-color:#e2e2e2;"' %]
     <tr [% style %]><td>
     [% IF r.6 > 0 %]
       <a href="[% crms.Sysify('/cgi/c/crms/crms?p=adminReviews;search1=Identifier;search1value=' _ r.0) %]" target="_blank">
@@ -135,15 +134,17 @@ These items will take priority in the review process.
     <td>[% cgi.escapeHTML(r.2) %]</td>
     <td>[% r.3 %]</td>
     <td>[% r.4 %]</td>
-    <td>[% r.5 %]</td>
+    <td>[% (r.5 == 'oneoff')? r.8:r.5 %]</td>
     <td>[% r.6 %]</td>
     <td>[% crms.StripDecimal(r.7) %]</td>
     <td>[% vs.join('; ') %]</td>
     [% sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='" _ r.0 _ "'" %]
     <td>[% crms.SimpleSqlGet(sql) %]</td>
     <td>
-      [% IF r.5 == user && r.6 == 0 %]
-      <a href="[% crms.Sysify('crms?p=review;editing=1;barcode=' _  r.0) %]" target="_blank">Do It</a>
+      [% IF (r.5 == user || r.5 == 'oneoff') && r.6 == 0 %]
+        [% page = 'review' %]
+        [% IF r.5 == 'oneoff' %][% page = 'oneoff' %][% END %]
+        <a href="[% crms.Sysify('crms?p=' _ page _ ';editing=1;barcode=' _  r.0) %]" target="_blank">Do It</a>
       [% END %]
     </td>
   </tr>

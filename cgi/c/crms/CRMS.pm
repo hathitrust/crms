@@ -1157,7 +1157,7 @@ sub AddItemToQueueOrSetItemActive
   $src = 'adminui' unless $src;
   my $stat = 0;
   my @msgs = ();
-  my $admin = $self->IsUserAdmin($user);
+  my $admin = $user eq 'oneoff' || $self->IsUserAdmin($user);
   $override = 1 if $priority == 4;
   if ($priority == 4 && !$admin)
   {
@@ -5838,14 +5838,14 @@ sub GetNextItemForReview
 {
   my $self = shift;
   my $user = shift;
+  my $page = shift;
   
   my $id = undef;
   my $err = undef;
   my $sql = undef;
   eval{
-    $sql = 'LOCK TABLES queue WRITE, queue AS q WRITE, reviews READ, reviews AS r READ, users READ, timer WRITE, systemvars READ';
-    $self->PrepareSubmitSql($sql);
     my $exclude = 'q.priority<3 AND ';
+    my $order = 'q.priority DESC, cnt DESC, q.time ASC';
     if ($self->IsUserAdmin($user))
     {
       # Only admin+ reviews P4+
@@ -5855,6 +5855,11 @@ sub GetNextItemForReview
     elsif ($self->IsUserExpert($user))
     {
       $exclude = 'q.priority<4 AND ';
+    }
+    if (defined $page && $page eq 'oneoff')
+    {
+      $exclude .= ' q.added_by="oneoff" AND ';
+      $order = 'q.source ASC, q.id ASC';
     }
     my $p1f = $self->GetPriority1Frequency();
     # Exclude priority 1 if our d100 roll is over the P1 threshold or user is not advanced
@@ -5881,7 +5886,6 @@ sub GetNextItemForReview
     }
   };
   $self->SetError($@) if $@;
-  $self->PrepareSubmitSql('UNLOCK TABLES');
   if (!$id)
   {
     $err = sprintf "Could not get a volume for $user to review%s.", ($err)? " ($err)":'';
@@ -5902,10 +5906,8 @@ sub GetNextItemForReviewSQ
   my $err = undef;
   my $sql = undef;
   eval{
-    $sql = 'LOCK TABLES queue WRITE, queue AS q WRITE, reviews READ, reviews AS r READ,' .
-           ' reviews AS r2 READ, users READ, timer WRITE, systemvars READ';
-    $self->PrepareSubmitSql($sql);
     my $exclude = 'q.priority<3 AND ';
+    my $order = 'q.priority DESC, cnt DESC, q.time ASC';
     if ($self->IsUserAdmin($user))
     {
       # Only admin+ reviews P4+
@@ -5916,13 +5918,18 @@ sub GetNextItemForReviewSQ
     {
       $exclude = 'q.priority<4 AND ';
     }
+    if (defined $page && $page eq 'oneoff')
+    {
+      $exclude .= ' q.added_by="oneoff" AND ';
+      $order = 'q.source ASC, q.id ASC';
+    }
     my $p1f = $self->GetPriority1Frequency();
     # Exclude priority 1 if our d100 roll is over the P1 threshold or user is not advanced
     my $exclude1 = (rand() >= $p1f || !$self->IsUserAdvanced($user))? 'q.priority!=1 AND ':'';
-    $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt' .
-           ' FROM queue q WHERE ' . $exclude . $exclude1 . 'q.expcnt=0 AND q.locked IS NULL' .
-           ' AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user=?)' .
-           ' HAVING cnt<2 ORDER BY q.priority DESC, cnt DESC, q.time ASC';
+    my $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt' .
+              ' FROM queue q WHERE ' . $exclude . $exclude1 . 'q.expcnt=0 AND q.locked IS NULL' .
+              ' AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user=?)' .
+              ' HAVING cnt<2 ORDER BY ' . $order;
     #print "$sql<br/>\n";
     my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $user);
     foreach my $row (@{$ref})
@@ -5937,7 +5944,6 @@ sub GetNextItemForReviewSQ
     }
   };
   $self->SetError($@) if $@;
-  $self->PrepareSubmitSql('UNLOCK TABLES');
   if (!$id)
   {
     $err = sprintf "Could not get a volume for $user to review%s.", ($err)? " ($err)":'';
@@ -6319,6 +6325,9 @@ sub CreateDeterminationReport
   {
     $sources{ $row->[0] } = $row->[1];
   }
+  $sql = 'SELECT COUNT(gid) FROM exportdata WHERE src LIKE "HTS-%"';
+  my $cnt = $self->SimpleSqlGet($sql);
+  $sources{ 'One-off from Jira' } = $cnt if $cnt;
   my ($count2,$time2) = $self->GetLastExport(1);
   $time2 =~ s/\s/&nbsp;/g;
   $count = 'None' unless $count;
@@ -7165,7 +7174,9 @@ sub GetTrackingInfo
     my $n = $self->CountReviews($id);
     my $reviews = $self->Pluralize('review', $n);
     my $pri = $self->GetPriority($id);
-    push @stati, "in Queue (P$pri, status $status, $n $reviews)";
+    my $q = (1 <= $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE id=? AND added_by="oneoff"', $id))?
+            'One-off Queue':'Queue';
+    push @stati, "in $q (P$pri, status $status, $n $reviews)";
   }
   elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM candidates WHERE id=?', $id))
   {
@@ -8237,6 +8248,7 @@ sub Rights
 {
   my $self = shift;
   my $exp  = shift;
+  my $oo   = shift;
 
   my $e = $self->IsUserExpert();
   my $r = ($e || $self->IsUserReviewer() || $self->IsUserAdvanced());
@@ -8259,7 +8271,8 @@ sub Rights
           ($r && $restricted =~ m/r/) ||
           ($x && $restricted =~ m/x/) ||
           ($a && $restricted =~ m/a/) ||
-          ($s && $restricted =~ m/s/))))
+          ($s && $restricted =~ m/s/) ||
+          ($oo && $restricted =~ m/o/))))
     {
       push @all, $row;
     }
@@ -8273,13 +8286,13 @@ sub Sources
   my $id   = shift;
   my $mag  = shift;
   my $view = shift;
-  my $corr = shift;
+  my $page = shift;
   
   $mag = '100' unless $mag;
   $view = 'image' unless $view;
-  my $table = (defined $corr)? 'correctionsources':'sources';
-  my $sql = 'SELECT id,name,url,accesskey,menu,initial FROM ' .
-             $table . ' ORDER BY n ASC, name ASC';
+  $page = 'review' unless defined $page;
+  my $sql = 'SELECT id,name,url,accesskey,menu,initial FROM sources' .
+            ' WHERE page=? ORDER BY n ASC, name ASC';
   #print "$sql\n<br/>";
   my $ref = $self->GetDb()->selectall_arrayref($sql);
   my @all = ();
@@ -8335,7 +8348,8 @@ sub Sources
     }
     if ($url =~ m/__TICKET__/)
     {
-      my $t = $self->SimpleSqlGet('SELECT ticket FROM corrections WHERE id=?', $id);
+      my $t = $self->SimpleSqlGet('SELECT ticket FROM ' . $page . ' WHERE id=?', $id);
+      $t = $self->SimpleSqlGet('SELECT source FROM queue WHERE id=?', $id) unless defined $t;
       $url =~ s/__TICKET__/$t/g;
     }
     $url =~ s/\s+/+/g;
@@ -8751,6 +8765,25 @@ sub GetUserProgress
   my $user = shift;
 
   return sprintf '%d%%', 50;
+}
+
+sub OneoffProgress
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $tx = $self->OneoffTicket($id);
+  my $of = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE source=?', $tx);
+  my $n = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE source=? AND status!=0', $tx);
+  return [$n, $of];
+}
+
+sub OneoffTicket
+{
+  my $self = shift;
+  my $id   = shift;
+
+  return $self->SimpleSqlGet('SELECT source FROM queue WHERE id=?', $id);
 }
 
 1;

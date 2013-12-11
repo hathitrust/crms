@@ -1,0 +1,290 @@
+[% INCLUDE header.tt %]
+
+[% p        = cgi.param('p')          %]
+[% error    = cgi.param('errorMsg')   %]
+[% barcode  = cgi.param('barcode')    %]
+[% editing  = cgi.param('editing')    %]
+[% note     = cgi.param('note')       %]
+[% category = cgi.param('category')   %]
+[% select   = cgi.param('rights')     %]
+[% hold     = cgi.param('hold')       %]
+[% swiss    = cgi.param('swiss')      %]
+[% sys      = cgi.param('sys')        %]
+[% mag      = cgi.cookie('mag')       %]
+[% ptview   = cgi.cookie('ptview')    %]
+[% expert   = crms.IsUserExpert(user) %]
+
+[% IF barcode && editing %]
+  [% IF crms.PreviouslyReviewed(barcode, user) %]
+    <h3>Too late, can't edit your review for this item.</h3>
+    [% STOP %]
+  [% END %]
+  [% IF expert && crms.HasItemBeenReviewedByAnotherExpert(barcode,user) %]
+    <h3>Item has already been reviewed by another expert.</h3>
+    <br/><a href="JavaScript:window.close()">Close</a>
+    [% STOP %]
+  [% END %]
+  [% err = crms.LockItem(barcode, user, expert) %]
+  [% IF err != 0 %]
+    <h3>[% err %].</h3>
+    [% locked = crms.GetLockedItems(user) %]
+    [% IF locked %]
+      [% FOREACH item IN locked.keys %]
+         <strong>locked:</strong>
+         [% crms.GetTitle( item ) %]
+         (since [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
+         [% IF user == locked.${item}.locked %]
+           [ <a href="crms?p=crms;checkin=[% item %]">unlock item</a> ]
+        [% END %]
+      [% END %]
+    [% END %]
+    <br/><a href="JavaScript:window.close()">Close</a>
+    [% STOP %]
+  [% END %]
+[% END %]
+
+[% IF !expert %]
+  <h3>You are not authorized to review these volumes.</h3>
+  [% STOP %]
+[% END %]
+
+[% IF !editing %]
+  [%# ## Get locked item or new one from queue ## %]
+  [% IF crms.HasLockedItem(user) %]
+    [% barcode = crms.GetLockedItem(user) %]
+  [% ELSE %]
+    [% barcode = crms.GetNextItemForReview(user, p) %]
+  [% END %]
+[% END %]
+
+[%# ## failed to get a barcode ## %]
+[% IF NOT barcode %]
+  <h3>Unable to find a volume ID to review</h3>
+  [% FOREACH error IN crms.GetErrors %]
+    <strong>ERROR: [% error.replace('\n','<br/>') %]</strong><br/>
+  [% END %]
+  [% STOP %]
+[% END %]
+
+[% status   = crms.GetStatus(barcode)     %]
+[% userName = crms.GetUserName(user)      %]
+[% pub_date = crms.GetPubDate(barcode, 1) %]
+[% author   = crms.GetAuthor(barcode)     %]
+[% title    = crms.GetTitle(barcode)      %]
+
+[% IF NOT note %]
+[% note = crms.GetReviewField(barcode, user, "note") %]
+[% END %]
+
+[% IF NOT category %]
+[% category = crms.GetReviewField(barcode, user, "category") %]
+[% END %]
+
+[% IF NOT swiss %]
+[% swiss = crms.GetReviewField(barcode, user, "swiss") %]
+[% END %]
+
+[% homeLink = "crms?p=confirmReview;submit=Cancel;barcode=$barcode;sys=$sys" %]
+
+<div class="divbody">
+  <div class="divNav">
+    <div class="navtop">
+      <table class="nav">
+        <tr>
+          <td rowspan="3"><img src="[% crms.GetSystemVar('smallLogo') %]" alt="CRMS Logo" width="52" height="40"/></td>
+          <td style="text-align:left;"><strong>Hello [% userName %]</strong></td>
+        </tr>
+        <tr>
+          <td style="text-align:left;"><a href="[% homeLink %]">Home</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="crms?p=Logout;sys=$sys">Logout</a></td>
+        </tr>
+        <tr><td/></tr>
+        <tr><td/></tr>
+        <tr>
+          <td colspan="2">
+            <select title="Select Help Documentation" class="review"
+                    onchange="if (this.selectedIndex > 0) window.open(this.options[this.selectedIndex].value);this.selectedIndex=0;">
+              <option>Select Help Documentation</option>
+              [% items = crms.MenuItems('docs') %]
+              [% FOREACH item IN items %]
+                [% IF ! item.3 %]<option value="[% item.1 %]">[% item.0 %]</option>[% END %]
+              [% END %]
+            </select>
+          </td>
+        </tr>
+        <tr><td colspan="2">
+          [% experts = crms.GetSystemVar("expertsEmail") %]
+          [% IF experts %]
+          <a href="mailto:[% experts %]?subject=CRMS%20Feedback">
+            <img width="16" height="16" alt="Report error" src="/c/crms/SendIcon.png"/>
+            <b>Can't see scan? Error message?</b>
+          </a>
+          [% END %]
+        </td></tr>
+        
+      </table>
+      <table class="reviewGrey">
+        <tr><td><strong>ID:</strong> <tt>[% barcode %]</tt>   </td></tr>
+        <tr><td><strong>Title:</strong> [% title %]           </td></tr>
+        <tr><td><strong>Author:</strong> [% author %]    <br/></td></tr>
+        <tr><td><strong>Pub Date:</strong> <span id="pubDateSpan">[% pub_date %]</span><br/></td></tr>
+        [% IF crms.GetSystemVar("showCountry") %]
+          [% country = crms.GetPubCountry(barcode, undef, 1) %]
+          <tr><td><strong>Country:</strong> [% country %]<br/></td></tr>
+        [% END %]
+      </table>
+      [% sources = crms.Sources(barcode,mag,ptview,'oneoff') %]
+      <table class="oneoff">
+        <tr>
+          <th>View 1:</th>
+          <td>
+            <select title="Search 1" class="review" id="search1Select" onchange="changeFrame1(1);" style="float:right;">
+            [% selectit = 0 %]
+            [% FOREACH src IN sources %]
+              [% IF src.2 %]
+                [% selectstr = "" %]
+                [% IF selectit == 0 && src.5 == 1 %]
+                  [% selectit = 1 %]
+                  [% selectstr = "selected='selected'" %]
+                [% END %]
+                <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
+              [% ELSE %]
+                <optgroup label="[% src.1 %]"/>
+              [% END %]
+            [% END %]
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th>View 2:</th>
+          <td>
+            <select title="Search 2" class="review" id="search2Select" onchange="changeFrame2(1);" style="float:right;">
+            [% selectit = 0 %]
+            [% FOREACH src IN sources %]
+              [% IF src.2 %]
+                [% selectstr = "" %]
+                [% IF selectit == 0 && src.5 == 2 %]
+                  [% selectit = 1 %]
+                  [% selectstr = "selected='selected'" %]
+                [% END %]
+                <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
+              [% ELSE %]
+                <optgroup label="[% src.1 %]"/>
+              [% END %]
+            [% END %]
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td/>
+          <td style="margin:0px;padding:0px;">
+             <input type="button" class="reviewblue" value="Toggle View" onclick="flipFrame();" accesskey="o"
+             style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
+          </td>
+        </tr>
+      </table>
+    </div>
+    [% realindex = 0 %]
+    [% FOREACH src IN sources %]
+      [% IF src.3 && src.4 %]
+        <a style="position:absolute;left:-999px;" href="#" accesskey="[% src.3 %]"
+           onfocus="document.getElementById('search[% src.4 %]Select').selectedIndex=[% realindex %];changeFrame[% src.4 %]();">.</a>
+      [% END %]
+      [% IF src.2 %][% realindex = realindex + 1 %][% END %]
+    [% END %]
+    
+    <div class="navbottom" style="border-collapse:collapse;">
+      [% IF expert && editing %]
+        [% IF crms.HasItemBeenReviewedByAnotherExpert(barcode,user) %]
+          [% error = "An expert has already reviewed this volume. Please cancel." %]
+        [% END %]
+      [% END %]
+      [% es = crms.GetErrors() %]
+      [% IF es.size %]
+        [% IF NOT error %][% error = '' %][% END %]
+        [% FOREACH e IN es %]
+          [% error = error _ e _ '<br/>' %]
+        [% END %]
+      [% END %]
+      [% blah = crms.ClearErrors() %]
+      [% INCLUDE submitOneoffForm.tt barcode = barcode,
+                                     note    = note,    category = category, editing  = editing,
+                                     error   = error,   select   = select,   mag      = mag,
+                                     hold    = hold,    swiss    = swiss,    expert   = expert,
+                                     status  = status,  sys      = sys,      ptview   = ptview %]
+      [% IF crms.IsCorrection(barcode) %]
+        <table class="ReviewError" id="CorrectionWarning">
+          <tr>
+            <td class="reviewGrey" align="left">
+              <strong style="color:red;">Warning:</strong>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <span style="font-size:1.1em;color:red;">Volume has been corrected - <b>do not</b> submit feedback.</span>
+            </td>
+          </tr>
+        </table>
+      [% END %]
+      [% IF expert %]
+        <table class="nav">
+        [% IF status == 3 %]
+          <tr><td><span style="font-size:1.1em;color:red;">Provisional Match</span></td></tr>
+        [% ELSIF status == 2 %]
+          <tr><td><span style="font-size:1.1em;color:red;">Conflict</span></td></tr>
+        [% END %]
+        [% IF !crms.IsVolumeInQueue(barcode) %]
+          <tr><td><span style="font-size:1.1em;color:red;">
+          Not in queue. Please cancel; you will get an error if you submit.
+          </span></td></tr>
+        [% END %]
+        [% totalReviews = crms.GetReviewsCount('adminHistoricalReviews', 'Identifier', barcode) %]
+        [% IF totalReviews > 0 %]
+          <tr><td><a class="smallishText"
+                     href="[% crms.Sysify('?p=adminHistoricalReviews;search1=Identifier;search1value=' _ barcode) %]"
+                     target="_blank">
+          [% totalReviews %] historical [% crms.Pluralize("review", totalReviews) %]
+          </a></td></tr>
+        [% END %]
+        [% totalReviews = crms.GetReviewsCount('adminReviews', 'Identifier', barcode) %]
+        [% IF totalReviews > 0 %]
+          <tr><td><a class="smallishText"
+                     href="[% crms.Sysify('?p=adminReviews;search1=Identifier;search1value=' _ barcode) %]"
+                     target="_blank">
+          [% totalReviews %] active [% crms.Pluralize("review", totalReviews) %]
+          </a></td></tr>
+        [% END %]
+        [% progress = crms.OneoffProgress(barcode) %]
+        <tr><td>
+          <span style="font-size:1.1em;color:red;">
+            This is [% progress.0 + 1 %] of [% progress.1 %] volumes on [% crms.OneoffTicket(barcode) %].
+            [% IF progress.0 + 1 == progress.1 %]
+            <br/>The ticket can be closed when this review is submitted.
+            [% END %]
+          </span>
+        </td></tr>
+        </table>
+      [% END %]
+      [% status = crms.GetSystemStatus() %]
+      [% IF status.2 %]
+        <table class="nav">
+        <tr><td style="text-align:left;"><span style="font-size:1.3em;font-weight:bold;color:#990000;">[% status.2 %]</span></td></tr>
+        </table>
+      [% END %]
+    </div>
+  </div>
+  [%# the frame (Stanford, HT, Cat...) %]
+  <div class="divFrame" id="divFrame">
+    <iframe frameborder="0" width="100%" height="100%" id="tFrame" name="tFrame" src=""></iframe>
+    <iframe frameborder="0" width="100%" height="100%" id="bFrame" name="bFrame" src="" style="display:none;"></iframe>
+  </div>
+</div>
+
+<script type="text/javascript">
+window.onload = function(e)
+{
+  changeFrame1();
+  changeFrame2();
+}
+</script>
+
+[% INCLUDE footer.tt %]

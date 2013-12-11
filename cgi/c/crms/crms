@@ -115,6 +115,7 @@ if ($cgi->param('p') eq 'confirmReview')
     my $hold      = $cgi->param('hold');
     my $swiss     = $cgi->param('swiss');
     my $pre       = $cgi->param('prepopulated');
+    my $oneoff    = $cgi->param('oneoff');
     my ($rights, $reason);
     my $err = 'You must select a rights/reason combination.' unless $EncRights;
     if (!$err)
@@ -140,7 +141,7 @@ if ($cgi->param('p') eq 'confirmReview')
     {
       #clear the cgi
       $cgi->delete_all();
-      $cgi->param('p', 'review');
+      $cgi->param('p', ($oneoff)?'oneoff':'review');
       $cgi->param('errorMsg', $err);
       $cgi->param('barcode',  $id);
       $cgi->param('rights',   $EncRights);
@@ -164,7 +165,7 @@ if ($cgi->param('p') eq 'confirmReview')
       }
       else
       {
-        $cgi->param('p', 'review' );
+        $cgi->param('p', ($oneoff)?'oneoff':'review');
       }
     }
   }
