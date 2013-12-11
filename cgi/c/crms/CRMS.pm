@@ -8295,7 +8295,7 @@ sub Sources
   my $sql = 'SELECT id,name,url,accesskey,menu,initial FROM sources' .
             ' WHERE page=? ORDER BY n ASC, name ASC';
   #print "$sql\n<br/>";
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $page);
   my @all = ();
   foreach my $row (@{$ref})
   {
