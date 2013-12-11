@@ -34,7 +34,9 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "800", "300", "9.0.
   the subsequent determination is counted as an additional determination (these occurrences should be rare).
       </span><br/><br/>
       <span class="smallishText">
-      ** Note: Status 6 no longer in use as of 4/19/2010.
+      ** Note: Status 6 (expert-reviewed matching <code>und</code> reviews) was
+      discontinued 4/19/2010. As of 2014 it indicates that a Missing
+      or Wrong Record was submitted by a reviewer, and no determination is made.
       </span>
     </td>
   </tr>
@@ -60,7 +62,9 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "800", "300", "9.0.
   [% IF year == '2010' %]
     <br/>
     <span class="smallishText">
-      ** Note: Status 6 no longer in use as of 4/19/2010.
+      ** Note: Status 6 (expert-reviewed matching <code>und</code> reviews) was
+      discontinued 4/19/2010. As of 2014 it is used to indicates that a Missing
+      or Wrong Record was submitted by a reviewer, and no determination is made.
     </span><br/>
   [% END %]
 [% END %]

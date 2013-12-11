@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.5.13';
+  return '4.6';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -128,7 +128,6 @@ sub ConnectToDb
   my $self = shift;
 
   my $db_server = $self->get('mysqlServerDev');
-  my $db        = $self->get('mysqlDbName');
   my $dev       = $self->get('dev');
   my $root      = $self->get('root');
   my $sys       = $self->get('sys');
@@ -141,10 +140,7 @@ sub ConnectToDb
   {
     $db_server = $self->get('mysqlServer');
   }
-  elsif ($dev eq 'crmstest')
-  {
-    $db .= 'test';
-  }
+  my $db = $self->DbName();
   #if ($self->get('verbose')) { $self->Logit("DBI:mysql:crms:$db_server, $db_user, [passwd]"); }
   my $dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
             { PrintError => 0, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
@@ -231,6 +227,16 @@ sub GetSdrDb
     $self->set('sdr_dbh', $sdr_dbh);
   }
   return $sdr_dbh;
+}
+
+sub DbName
+{
+  my $self = shift;
+
+  my $dev = $self->get('dev');
+  my $db = $self->get('mysqlDbName');
+  $db .= 'test' if $dev && $dev eq 'crmstest';
+  return $db;
 }
 
 # Gets cached dbh, or connects if no connection is made yet.
@@ -608,6 +614,14 @@ sub CanExportVolume
   my $export = 1;
   my $rq = $self->RightsQuery($id, 1);
   return 1 unless defined $rq;
+  # Do not export Status 6, since they are not really final determinations.
+  my $sql = 'SELECT MAX(status) FROM historicalreviews WHERE gid=?';
+  my $stat = $self->SimpleSqlGet($sql, $gid);
+  if ($stat == 6)
+  {
+    print "Not exporting $id; it is status 6\n" unless $fromcgi;
+    return 0;
+  }
   my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
   my $cm = $self->CandidatesModule();
   # Do not export determination if the volume has gone out of scope,
@@ -897,9 +911,10 @@ sub AddItemToCandidates
     if (!defined $noop)
     {
       my $date = $self->GetRecordPubDate($id, $record) . '-01-01';
-      my $sql = 'REPLACE INTO candidates (id, time, pub_date) VALUES (?,?,?)';
+      my $sql = 'INSERT INTO candidates (id,time,pub_date) VALUES (?,?,?)';
       $self->PrepareSubmitSql($sql, $id, $time, $date);
       $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
+      $self->UpdateMetadata($id, 1, $record);
     }
   }
 }
@@ -1395,7 +1410,9 @@ sub SubmitReview
   my $result = $self->PrepareSubmitSql($sql, @values);
   if ($result)
   {
-    if ($exp)
+    if ($exp ||
+        (defined $category &&
+         ($category eq 'Missing' || $category eq 'Wrong Record')))
     {
       $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND expert=1';
       my $expcnt = $self->SimpleSqlGet($sql, $id);
@@ -1434,7 +1451,8 @@ sub GetStatusForExpertReview
   my $category = shift;
   my $renNum   = shift;
   my $renDate  = shift;
-  
+
+  return 6 if $category eq 'Missing' or $category eq 'Wrong Record';
   return 7 if $category eq 'Expert Accepted';
   return 9 if $category eq 'Rights Inherited';
   my $status = 5;
@@ -1799,7 +1817,7 @@ sub CreateSQLForReviews
     # Experts need to see stuff with any status; non-expert should only see stuff that hasn't been processed yet.
     my $restrict = ($self->IsUserExpert($user))? '':'AND q.status=0';
     $sql .= 'q.status, b.title, b.author, DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id ' .
-            "AND r.user='$user' AND (r.time>='$today' OR r.hold IS NOT NULL) $restrict";
+            "AND r.user='$user' AND (r.time>='$today' OR r.hold IS NOT NULL) AND q.status!=6 $restrict";
   }
   my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
   $sql .= " AND $terms" if $terms;
@@ -5927,10 +5945,10 @@ sub GetNextItemForReviewSQ
     my $p1f = $self->GetPriority1Frequency();
     # Exclude priority 1 if our d100 roll is over the P1 threshold or user is not advanced
     my $exclude1 = (rand() >= $p1f || !$self->IsUserAdvanced($user))? 'q.priority!=1 AND ':'';
-    my $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt' .
-              ' FROM queue q WHERE ' . $exclude . $exclude1 . 'q.expcnt=0 AND q.locked IS NULL' .
-              ' AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user=?)' .
-              ' HAVING cnt<2 ORDER BY ' . $order;
+    $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt' .
+           ' FROM queue q WHERE ' . $exclude . $exclude1 . 'q.expcnt=0 AND q.locked IS NULL' .
+           ' AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user=?)' .
+           ' HAVING cnt<2 ORDER BY ' . $order;
     #print "$sql<br/>\n";
     my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $user);
     foreach my $row (@{$ref})
@@ -6191,8 +6209,7 @@ sub CreateQueueReport
     my $count = $self->SimpleSqlGet($sql);
     $status = 'All' if $status == -1;
     my $class = ($status eq 'All')?' class="total"':'';
-    $class = ' style="background-color:#999999;"' if $status == 6;
-    $report .= sprintf("<tr><td%s>$status%s</td><td%s>$count</td>", $class, ($status == 6)? '*':'', $class);
+    $report .= sprintf("<tr><td%s>$status</td><td%s>$count</td>", $class, $class);
     $sql = 'SELECT priority FROM queue ' . $statusClause;
     my $ref = $dbh->selectall_arrayref($sql);
     $report .= $self->DoPriorityBreakdown($ref,$class,\@pris);
@@ -6206,7 +6223,6 @@ sub CreateQueueReport
   $report .= $self->DoPriorityBreakdown($ref,$class,\@pris);
   $report .= "</tr>\n";
   $report .= sprintf("<tr><td nowrap='nowrap' colspan='%d'><span class='smallishText'>Note: includes both active and inactive volumes.</span><br/>\n", 2+scalar @pris);
-  $report .= "<span class='smallishText'>* Status 6 no longer in use as of 4/19/2010.</span></td></tr>\n";
   $report .= "</table>\n";
   return $report;
 }
@@ -6320,7 +6336,7 @@ sub CreateDeterminationReport
   my $colspan = 1 + scalar @pris;
   my $legacy = $self->GetTotalLegacyCount();
   my %sources;
-  $sql = 'SELECT src,COUNT(gid) FROM exportdata WHERE src IS NOT NULL GROUP BY src';
+  $sql = 'SELECT src,COUNT(gid) FROM exportdata WHERE src IS NOT NULL AND src NOT LIKE "HTS-%" GROUP BY src';
   my $rows = $dbh->selectall_arrayref($sql);
   foreach my $row (@{$rows})
   {
@@ -6337,15 +6353,13 @@ sub CreateDeterminationReport
   $report .= "<tr><th>Last&nbsp;CRMS&nbsp;Export</th><td colspan='$colspan'>$time2</td></tr>";
   foreach my $status (sort keys %cts)
   {
-    my $thstyle = ($status == 6)? " style='color:#999999;'":'';
-    my $tdstyle = ($status == 6)? " style='background-color:#999999;'":'';
-    $report .= sprintf("<tr><th$thstyle>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;%d</th><td $tdstyle>%d&nbsp;(%.1f%%)</td>",
+    $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;%d</th><td>%d&nbsp;(%.1f%%)</td>",
                        $status, $cts{$status}, $pcts{$status});
     $sql = 'SELECT h.priority,h.gid FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid ' .
            "WHERE h.status=$status AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
     my $ref = $dbh->selectall_arrayref($sql);
     #print "$sql<br/>\n";
-    $report .= $self->DoPriorityBreakdown($ref, $tdstyle, \@pris, $cts{$status});
+    $report .= $self->DoPriorityBreakdown($ref, undef, \@pris, $cts{$status});
     $report .= '</tr>';
   }
   $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Total</th><td>$count</td>";
@@ -6353,7 +6367,7 @@ sub CreateDeterminationReport
          ' WHERE e.time>=date_sub(?, INTERVAL 1 MINUTE)';
   my $ref = $dbh->selectall_arrayref($sql, undef, $time);
   #print "$sql<br/>\n";
-  $report .= $self->DoPriorityBreakdown($ref, '', \@pris, $count);
+  $report .= $self->DoPriorityBreakdown($ref, undef, \@pris, $count);
   $report .= '</tr>';
   $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</th><td colspan='$colspan'>%s</td></tr>", $exported);
   foreach my $source (sort keys %sources)
@@ -6363,7 +6377,6 @@ sub CreateDeterminationReport
   }
   $report .= sprintf("<tr><th>Total&nbsp;Legacy&nbsp;Determinations</th><td colspan='$colspan'>%s</td></tr>", $legacy);
   $report .= sprintf("<tr><th>Total&nbsp;Determinations</th><td colspan='$colspan'>%s</td></tr>", $exported + $legacy);
-  $report .= sprintf("<tr><td colspan='%d'><span class='smallishText'>* Status 6 no longer in use as of 4/19/2010.</span></td></tr>\n", $colspan+1);
   $report .= "</table>\n";
   return $report;
 }
