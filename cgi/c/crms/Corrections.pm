@@ -81,6 +81,7 @@ sub GetCorrectionsDataRef
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   my @return = ();
   my $concat = join ',', @Fields;
+  $concat =~ s/,time,/,DATE(time),/;
   $sql = " SELECT $concat FROM corrections $restrict ORDER BY $order $dir $limit";
   #print "$sql<br/>\n";
   my $ref = undef;
@@ -122,7 +123,7 @@ sub CorrectionsDataSearchMenu
   my $self       = shift;
   my $searchName = shift;
   my $searchVal  = shift;
-  
+
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @Fields - 1)
   {
@@ -154,6 +155,7 @@ sub ExportCorrections
     {
       $exports{$id}->{'exported'} = (defined $tx)? 0:1;
       $exports{$id}->{'jira'} = $tx if defined $tx;
+      $exports{$id}->{'status'} = $st;
     }
   }
   if (scalar keys %exports == 0)
@@ -172,7 +174,8 @@ sub ExportCorrections
   {
     my $tx = $exports{$id}->{'jira'};
     my $ex = $exports{$id}->{'exported'};
-    printf "Processing $id, ticket %s, exported=%d\n", (defined $tx)? $tx:'(none)', (defined $ex)? $ex:0;
+    my $st = $exports{$id}->{'status'};
+    printf "Processing $id ($st), ticket %s, exported=%d\n", (defined $tx)? $tx:'(none)', (defined $ex)? $ex:0;
     if (1 == $exports{$id}->{'exported'})
     {
       my $line = $id . ((defined $tx)? "\t$tx":'') . "\n";
@@ -196,7 +199,8 @@ sub ExportCorrections
     if ($@)
     {
       $err = 1;
-      $self->SetError("EmailCorrections() failed: $@");
+      $err = "EmailCorrections() failed: $@";
+      $self->SetError($err);
     }
   }
   foreach my $id (sort keys %exports)
@@ -288,47 +292,33 @@ sub CorrectionsToJira
   }
 }
 END
-  my $root = $self->get('root');
-  my $sys = $self->get('sys');
-  my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
-  my %d = $self->ReadConfigFile($cfg);
-  my $username   = $d{'jiraUser'};
-  my $password = $d{'jiraPasswd'};
-  my $ua = new LWP::UserAgent;
-  $ua->cookie_jar( {} );
-  my $url = 'http://wush.net/jira/hathitrust/rest/auth/1/session';
-  my $req = HTTP::Request->new(POST => $url);
-  $req->content_type('application/json');
-  $req->content(<<END);
-    {
-        "username": "$username",
-        "password": "$password"
-    }
-END
-  my $res = $ua->request($req);
-  if (!$res->is_success())
-  {
-    warn("Got " . $res->code() . " logging in at $url\n" . $res->content() . "\n");
-    return;
-  }
+  use Jira;
+  my $ua = Jira::Login($self);
+  return unless defined $ua;
   foreach my $id (sort keys %{$exports})
   {
     my $tx = $exports->{$id}{'jira'};
     next unless defined $tx;
-    $url = 'https://wush.net/jira/hathitrust/rest/api/2/issue/' . $tx . '/transitions';
+    my $url = 'https://wush.net/jira/hathitrust/rest/api/2/issue/' . $tx . '/transitions';
     print "$url\n";
-    next if $noop;
-    $req = HTTP::Request->new(POST => $url);
-    $req->content_type('application/json');
-    $req->content($json);
-    $res = $ua->request($req);
-    if ($res->is_success())
+    my $ok = 1;
+    my $code;
+    if (!$noop)
+    {
+      my $req = HTTP::Request->new(POST => $url);
+      $req->content_type('application/json');
+      $req->content($json);
+      my $res = $ua->request($req);
+      $ok = $res->is_success();
+      $code = $res->code();
+    }
+    if ($ok)
     {
       $exports->{$id}->{'exported'} = 1;
     }
     else
     {
-      warn("Got " . $res->code() . " posting $url\n");
+      warn('Got ' . $code . " posting $url\n");
       #printf "%s\n", $res->content();
     }
   }
@@ -340,35 +330,16 @@ sub RetrieveTickets
   my $ids     = shift;
   my $verbose = shift;
   
-  my $root = $self->get('root');
-  my $sys = $self->get('sys');
-  my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
-  my %d = $self->ReadConfigFile($cfg);
-  my $username   = $d{'jiraUser'};
-  my $password = $d{'jiraPasswd'};
-  my $ua = new LWP::UserAgent;
-  $ua->cookie_jar( {} );
-  my $url = 'http://wush.net/jira/hathitrust/rest/auth/1/session';
-  my $req = HTTP::Request->new(POST => $url);
-  $req->content_type('application/json');
-  $req->content(<<END);
-    {
-        "username": "$username",
-        "password": "$password"
-    }
-END
-  my $res = $ua->request($req);
-  if (!$res->is_success())
-  {
-    warn("Got " . $res->code() . " logging in at $url\n" . $res->content() . "\n");
-    return;
-  }
+  use Jira;
+  my $ua = Jira::Login($self);
+  return unless defined $ua;
   foreach my $id (sort keys %{$ids})
   {
-    $url = 'https://wush.net/jira/hathitrust/rest/api/2/search?jql=summary~"' . $id . '" AND (status=1 OR status=4 OR status=3)';
+    my $url = 'https://wush.net/jira/hathitrust/rest/api/2/search?jql=summary~"' .
+               $id . '" AND (status=1 OR status=4 OR status=3)';
     print "$url\n" if $verbose;
-    $req = HTTP::Request->new(GET => $url);
-    $res = $ua->request($req);
+    my $req = HTTP::Request->new(GET => $url);
+    my $res = $ua->request($req);
     if ($res->is_success())
     {
       my $json = JSON::XS->new;
