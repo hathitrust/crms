@@ -84,7 +84,7 @@
           <tr><td><strong>Country:</strong> [% country %]<br/></td></tr>
         [% END %]
       </table>
-      [% sources = crms.Sources(barcode,mag,ptview,1) %]
+      [% sources = crms.Sources(barcode,mag,ptview,'corrections') %]
       <table class="search">
         <tr>
           <th>View 1:</th>
@@ -158,9 +158,8 @@
       [% END %]
       [% IF NOT error %][% error = errors.join('; ') %][% END %]
       [% INCLUDE submitCorrectionForm.tt barcode = barcode, editing = editing, inScope = inScope,
-                                         error   = error,    select = select,  mag     = mag,
-                                         expert  = expert,   sys    = sys,     ptview  = ptview,
-                                         fixed   = fixed %]
+                                         error   = error,   select = select,   mag     = mag,
+                                         sys     = sys,     ptview  = ptview,  fixed   = fixed %]
       [% status = crms.GetSystemStatus() %]
       [% IF status.2 %]
         <table class="nav">
