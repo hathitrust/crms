@@ -8786,4 +8786,13 @@ sub OneoffTicket
   return $self->SimpleSqlGet('SELECT source FROM queue WHERE id=?', $id);
 }
 
+sub CanVolumeBeCrownCopyright
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $c = $self->GetPubCountry($id);
+  return 1 if $c eq 'United Kingdom' || $c eq 'Canada' || $c eq 'Australia';
+}
+
 1;

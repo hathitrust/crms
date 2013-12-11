@@ -10,7 +10,7 @@
   <input type="hidden" name="editing" value="[% editing %]"/>
   <input type="hidden" name="sys"     value="[% sys %]"/>
   <div class="reviewBlue">
-  <table class="display">
+  <table class="id">
     <tr>
 	    <td class="display" align="left" colspan="4">
 	      <strong>HathiTrust Options:</strong>
@@ -222,6 +222,7 @@
     <option value="" [% ("" == category)? 'selected="selected"':'' %]>none</option>
     [% cats = crms.Categories(1) %]
     [% FOREACH cat IN cats %]
+      [% NEXT IF cat.1 == 'Crown Copyright' && ! crms.CanVolumeBeCrownCopyright(barcode) %]
       [% catname = cat.1 %]
       <option value="[% catname %]" [% (catname == category)? 'selected="selected"':'' %]>[% catname %]</option>
     [% END %]
