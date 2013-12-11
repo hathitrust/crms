@@ -3664,10 +3664,12 @@ sub CreateExportData
   my $report = sprintf("$label\nCategories%s%s", $delimiter, ($cumulative)? 'Grand Total':'Total');
   my %stats = ();
   my @usedates = ();
-  
-  my $sql = 'SELECT DISTINCT attr,reason FROM exportdata ORDER BY (attr="pd" OR attr="pdus") DESC, attr, reason DESC';
-  my $ref = $dbh->selectall_arrayref($sql);
-  my @allRights = map { $_->[0] . '_' . $_->[1]; } @{$ref};
+  my $sql = 'SELECT COLUMN_NAME AS c FROM INFORMATION_SCHEMA.COLUMNS' .
+            ' WHERE TABLE_SCHEMA=? AND TABLE_NAME="exportstats" AND COLUMN_NAME LIKE "%_%"' .
+            ' ORDER BY (c LIKE "pd%") DESC, c';
+  #print "$sql<br/>\n";
+  my $ref = $dbh->selectall_arrayref($sql, undef, $self->DbName());
+  my @allRights = map { $_->[0]; } @{$ref};
   my $nRights = scalar @allRights;
   foreach my $date (@dates)
   {
