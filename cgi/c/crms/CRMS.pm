@@ -1025,6 +1025,17 @@ sub GetCutoffYear
   return $self->CandidatesModule()->GetCutoffYear(undef, $name);
 }
 
+# Returns a hash ref of Country name => 1 covered by the system.
+# If oneoff is set, return undef to indicate this is the
+# catch-all system.
+sub GetCountries
+{
+  my $self   = shift;
+  my $oneoff = shift;
+
+  return $self->CandidatesModule()->Countries($oneoff);
+}
+
 # Returns a und table src code if the volume belongs in the und table instead of candidates.
 sub ShouldVolumeGoInUndTable
 {
@@ -1043,11 +1054,24 @@ sub ShouldVolumeGoInUndTable
 # Otherwise loads to the standard limit of 800, 500 Priority 0.
 sub LoadNewItems
 {
-  my $self   = shift;
-  my $needed = shift;
+  my $self    = shift;
+  my $needed  = shift;
+  my $country = shift;
 
   my $queuesize = $self->GetQueueSize();
   my $priZeroSize = $self->GetQueueSize(0);
+  my $excludeCountries = '';
+  if (defined $country)
+  {
+    print "Loading queue items for $country\n";
+    my $sql = 'SELECT COUNT(*) FROM queue q INNER JOIN bibdata b ON q.id=b.id' .
+              ' WHERE b.country=?';
+    $queuesize = $self->SimpleSqlGet($sql, $country);
+    $sql = 'SELECT COUNT(*) FROM queue q INNER JOIN bibdata b ON q.id=b.id' .
+           ' WHERE b.country=? AND q.priority=0';
+    $priZeroSize = $self->SimpleSqlGet($sql, $country);
+    $excludeCountries = ' AND country="' . $country . '"';
+  }
   my $targetQueueSize = $self->GetSystemVar('queueSize');
   print "Before load, the queue has $queuesize volumes, $priZeroSize priority 0.\n";
   if ($needed)
@@ -1069,6 +1093,7 @@ sub LoadNewItems
             ' AND id NOT IN (SELECT DISTINCT id FROM queue)' .
             ' AND id NOT IN (SELECT DISTINCT id FROM reviews)' .
             ' AND id NOT IN (SELECT DISTINCT id FROM historicalreviews)' .
+            $excludeCountries .
             ' ORDER BY time DESC';
   my $ref = $self->GetDb()->selectall_arrayref($sql);
   foreach my $row (@{$ref})
@@ -3234,6 +3259,7 @@ sub AddUser
   my $admin      = shift;
   my $superadmin = shift;
   my $note       = shift;
+  my $countries  = shift;
 
   $reviewer = ($reviewer)? 1:0;
   $advanced = ($advanced)? 1:0;
@@ -3253,6 +3279,13 @@ sub AddUser
             ' VALUES ' . $wcs;
   $self->PrepareSubmitSql($sql, $id, $kerberos, $name, $reviewer, $advanced,
                           $expert, $extadmin, $admin, $superadmin, $note);
+  if (defined $countries)
+  {
+    my @cs = split m/\s*,\s*/, $countries;
+    $self->PrepareSubmitSql('DELETE FROM usercountries WHERE user=?', $id);
+    $sql = 'INSERT INTO usercountries (user,country) VALUES (?,?)';
+    $self->PrepareSubmitSql($sql, $id, $_) for @cs;
+  }
 }
 
 sub DeleteUser
@@ -5681,7 +5714,10 @@ sub LockItem
   ## if already locked for this user, that's OK
   return 0 if $self->IsLockedForUser($id, $user);
   # Not locked for user, maybe someone else
-  if ($self->IsLocked($id)) { return 'Volume has been locked by another user'; }
+  if ($self->IsLocked($id, $correction))
+  {
+    return 'Volume has been locked by another user';
+  }
   ## can only have 1 item locked at a time (unless override)
   if (!$override)
   {
@@ -5784,7 +5820,7 @@ sub EndTimer
   my $user = shift;
 
   my $sql = 'UPDATE timer SET end_time=NOW() WHERE id=? AND user=?';
-  if (!$self->PrepareSubmitSql($sql, $id, $user)) { return 0; }
+  $self->PrepareSubmitSql($sql, $id, $user);
   ## add duration to reviews table
   $self->SetDuration($id, $user);
 }
@@ -5806,6 +5842,7 @@ sub SetDuration
   my $id   = shift;
   my $user = shift;
 
+  my $msg;
   my $sql = 'SELECT TIMEDIFF(end_time,start_time) FROM timer where id=? AND user=?';
   my $dur = $self->SimpleSqlGet($sql, $id, $user);
   if (defined $dur)
@@ -5815,9 +5852,13 @@ sub SetDuration
     $sql = 'UPDATE reviews SET duration=ADDTIME(duration,?),time=time WHERE user=? AND id=?';
     $self->PrepareSubmitSql($sql, $dur, $user, $id);
     my $d2 = $self->SimpleSqlGet('SELECT duration FROM reviews where user=? AND id=?', $user, $id);
-    my $msg = "$id ($user) dur $dur set from $d1 to $d2";
-    $self->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $msg);
+    $msg = "$id ($user) dur $dur set from $d1 to $d2";
   }
+  else
+  {
+    $msg = "$id ($user) no duration!";
+  }
+  $self->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $msg) if defined $msg;
   $self->RemoveFromTimer($id, $user);
 }
 
@@ -5859,7 +5900,7 @@ sub GetNextItemForReview
   my $self = shift;
   my $user = shift;
   my $page = shift;
-  
+
   my $id = undef;
   my $err = undef;
   my $sql = undef;
@@ -5884,9 +5925,27 @@ sub GetNextItemForReview
     my $p1f = $self->GetPriority1Frequency();
     # Exclude priority 1 if our d100 roll is over the P1 threshold or user is not advanced
     my $exclude1 = (rand() >= $p1f || !$self->IsUserAdvanced($user))? 'q.priority!=1 AND ':'';
+    my $excludeCountries = '';
+    my @countries = @{$self->GetUserCountries($user)};
+    if (scalar @countries)
+    {
+      $order = 'b.country IN (SELECT country FROM usercountries WHERE user="' . $user . '") DESC,' . $order;
+    }
+    else
+    {
+      $sql = 'SELECT DISTINCT country FROM usercountries';
+      $ref = $self->GetDb()->selectall_arrayref($sql);
+      @countries = map {'"' . $_->[0] . '"';} @{$ref};
+      if (scalar @countries)
+      {
+        $excludeCountries = sprintf ' b.country NOT IN (%s) AND ', join ',', @countries;
+      }
+    }
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt FROM queue q' .
-           ' WHERE ' . $exclude . $exclude1 . 'q.expcnt=0 AND q.locked IS NULL' .
-           ' ORDER BY q.priority DESC, cnt DESC, q.time ASC';
+           ' INNER JOIN bibdata b ON q.id=b.id'.
+           ' WHERE ' . $exclude . $exclude1 . $excludeCountries .
+           ' q.expcnt=0 AND q.locked IS NULL' .
+           ' ORDER BY ' . $order;
     #print "$sql<br/>\n";
     my $ref = $self->GetDb()->selectall_arrayref($sql);
     foreach my $row (@{$ref})
@@ -8490,6 +8549,10 @@ sub PredictLastCopyrightYear
   {
     $when = $year + 70 if $year >= 1955 or $pub >= 1955;
   }
+  elsif ($where eq 'Spain')
+  {
+    $when = $year + 80;
+  }
   return $when;
 }
 
@@ -8800,6 +8863,25 @@ sub OneoffTicket
   my $id   = shift;
 
   return $self->SimpleSqlGet('SELECT source FROM queue WHERE id=?', $id);
+}
+
+sub GetUserCountries
+{
+  my $self = shift;
+  my $user = shift;
+
+  my $ref = $self->GetDb()->selectall_arrayref('SELECT country FROM usercountries WHERE user=?', undef, $user);
+  my @cs = map {$_->[0];} @{$ref};
+  return \@cs;
+}
+
+sub UserCountries
+{
+  my $self = shift;
+
+  my $ref = $self->GetDb()->selectall_arrayref('SELECT DISTINCT country FROM usercountries');
+  my @cs = map {$_->[0];} @{$ref};
+  return \@cs;
 }
 
 sub CanVolumeBeCrownCopyright

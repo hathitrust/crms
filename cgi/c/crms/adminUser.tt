@@ -19,8 +19,9 @@
 [% extadmin   = cgi.param('extadmin')   %]
 [% admin      = cgi.param('admin')      %]
 [% superadmin = cgi.param('superadmin') %]
-[% note       = cgi.param('note') %]
+[% note       = cgi.param('note')       %]
 [% delete     = cgi.param('delete')     %]
+[% countries  = cgi.param('countries')   %]
 
 [% icon = '<img width="16" height="16" alt="Check" src="/c/crms/CheckIcon.png"/>' %]
 
@@ -34,7 +35,8 @@
       [% END %]
     [% ELSE %]
       [% IF id %]
-        [% blah = crms.AddUser(id,kerberos,name,reviewer,advanced,expert,extadmin,admin,superadmin,note) %]
+        [% blah = crms.AddUser(id,kerberos,name,reviewer,advanced,expert,
+                               extadmin,admin,superadmin,note,countries) %]
       [% ELSE %]
         <h3 style="color:red;">No user ID provided</h3>
       [% END %]
@@ -46,7 +48,8 @@
 <table class="exportStats">
   <tr>
     <th>Name</th><th>ID</th><th>Kerberos&nbsp;ID</th><th>Reviewer</th><th>Advanced</th><th>Expert</th>
-    <th>Ext.&nbsp;Admin</th><th>Admin</th><th>Super&nbsp;Admin</th><th>Note</th><th>Change&nbsp;To</th>
+    <th>Ext.&nbsp;Admin</th><th>Admin</th><th>Super&nbsp;Admin</th><th>Note</th><th>Countries</th>
+    <th>Change&nbsp;To</th>
   </tr>
   [% FOREACH userid IN users %]
     [% r = crms.IsUserReviewer(userid) %]
@@ -68,8 +71,8 @@
       <td style="text-align:center">[% IF a %][% icon %][% END %]</td>
       <td style="text-align:center">[% IF s %][% icon %][% END %]</td>
       [% note = crms.GetUserNote(userid) %]
-      
       <td style="text-align:center;">[% note.replace('\s','&nbsp;') %]</td>
+      <td style="text-align:center;">[% crms.GetUserCountries(userid).join(',&nbsp;') %]</td>
       <td>
         [% IF crms.CanChangeToUser(user,userid) %]
         <form action="crms">
@@ -96,23 +99,30 @@
     <tr>
       <td>
         <label for="idfield" style="float:left;width:5.5em">ID: <span class="smallishText" style="color:red;">(required)</span></label>
-        <input id="idfield" type="text" name="id"/>
+        <input id="idfield" type="text" name="id" tabindex="1"/>
       </td>
       <td rowspan="3">
         <label for="notefield" style="float:left;width:4em">Note:</label>
-        <textarea name="note" id="notefield" rows="3" cols="20"></textarea>
+        <textarea name="note" id="notefield" rows="3" cols="20" tabindex="5"></textarea>
       </td>
     </tr>
     <tr>
       <td>
         <label for="kerbfield" style="float:left;width:5.5em">Kerberos&nbsp;ID:</label>
-        <input id="kerbfield" type="text" name="kerberos"/>
+        <input id="kerbfield" type="text" name="kerberos" tabindex="2"/>
       </td>
     </tr>
     <tr>
       <td>
         <label for="namefield" style="float:left;width:5.5em">Name:</label>
-        <input id="namefield" type="text" name="name"/>
+        <input id="namefield" type="text" name="name" tabindex="3"/>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <label for="countriesfield" style="float:left;width:5.5em">Countries:</label>
+        <input id="countriesfield" type="text" name="countries" tabindex="4"/>
+        <span style="color:#777777;">Comma-delimited, e.g. "Spain, Germany"</span>
       </td>
     </tr>
     </table>
@@ -134,8 +144,8 @@
     <br/><br/><input type="submit" value="Submit"/>
   </form>
 </div>
-<span class="smallishText">Note: you can leave the name, kerberos, and note fields blank and the corresponding fields will be unchanged
-in the user's record.</span>
+<span class="smallishText">Note: you can leave the name, kerberos, and note fields
+blank and the corresponding fields will be unchanged in the user's record.</span>
 [% END %]
 
 [% INCLUDE footer.tt %]
