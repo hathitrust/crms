@@ -5901,7 +5901,8 @@ sub GetNextItemForReviewSQ
 {
   my $self = shift;
   my $user = shift;
-  
+  my $page = shift;
+
   my $id = undef;
   my $err = undef;
   my $sql = undef;
