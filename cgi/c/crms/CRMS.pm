@@ -540,8 +540,6 @@ sub ExportReviews
     print ">>> noExport system variable is set; will not create export file or email.\n" unless $fromcgi;
     $fromcgi = 1;
   }
-  my $module = 'Candidates_' . $self->get('sys') . '.pm';
-  require $module;
   my $count = 0;
   my $user = $self->get('sys');
   my ($fh, $temp, $perm) = $self->GetExportFh() unless $fromcgi;
@@ -606,16 +604,15 @@ sub CanExportVolume
   my $reason  = shift;
   my $fromcgi = shift;
   my $gid     = shift;
-  
-  my $module = 'Candidates_' . $self->get('sys') . '.pm';
-  require $module;
+
   my $export = 1;
   my $rq = $self->RightsQuery($id, 1);
   return 1 unless defined $rq;
   my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
+  my $cm = $self->CandidatesModule();
   # Do not export determination if the volume has gone out of scope,
   # or if exporting und would clobber pdus in World.
-  if (!Candidates::HasCorrectRights($self, $attr2, $reason2, $attr, $reason))
+  if (!$cm->HasCorrectRights($self, $attr2, $reason2, $attr, $reason))
   {
     # But, we clobber OOS if any of the following conditions hold:
     # 1. If the volume is pdus/gfv (which per rrotter in Core Services never overrides pdus/bib).
@@ -725,8 +722,6 @@ sub LoadNewItemsInCandidates
       print "Number of no-meta volumes now $n.\n";
     }
   }
-  my $module = 'Candidates_' . $self->get('sys') . '.pm';
-  require $module;
   my $endclause = ($end)? " AND time<='$end' ":'';
   my $sql = 'SELECT namespace,id FROM rights_current WHERE time>?' . $endclause . 'ORDER BY time ASC';
   my $dbh = $self->GetSdrDb();
@@ -771,8 +766,7 @@ sub CheckAndLoadItemIntoCandidates
     return;
   }
   my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
-  my $module = 'Candidates_' . $self->get('sys') . '.pm';
-  require $module;
+  my $cm = $self->CandidatesModule();
   my $sysid;
   my $record;
   my $oldSysid = $self->SimpleSqlGet('SELECT sysid FROM system WHERE id=?', $id);
@@ -785,7 +779,7 @@ sub CheckAndLoadItemIntoCandidates
       $self->UpdateMetadata($id, 1, $record) unless defined $noop;
     }
   }
-  if (!Candidates::HasCorrectRights($self, $attr, $reason))
+  if (!$cm->HasCorrectRights($attr, $reason))
   {
     if (defined $incand && $reason eq 'gfv')
     {
@@ -833,7 +827,7 @@ sub CheckAndLoadItemIntoCandidates
   my $errs = $self->GetViolations($id, $record);
   if (scalar @{$errs} == 0)
   {
-    my $src = Candidates::ShouldVolumeGoInUndTable($self, $id, $record);
+    my $src = $self->ShouldVolumeGoInUndTable($id, $record);
     if (defined $src)
     {
       if (!defined $inund || $src ne $inund)
@@ -941,7 +935,6 @@ sub IsVolumeInScope
 {
   my $self   = shift;
   my $id     = shift;
-  my $reason = shift;
 
   my $record = $self->GetMetadata($id);
   return 'No metadata' unless defined $record;
@@ -949,7 +942,7 @@ sub IsVolumeInScope
   if (scalar @{$errs})
   {
     my $joined = join '; ', @{$errs};
-    $errs = [] if $joined =~ m/^current\srights\sare\sund\/[a-z]+$/i;
+    $errs = [] if $joined =~ m/^current\srights\sund\/[a-z]+$/i;
   }
   my $und = $self->ShouldVolumeGoInUndTable($id, $record);
   push @{$errs}, 'should be filtered (' . $und . ')' if defined $und;
@@ -961,6 +954,26 @@ sub IsVolumeInScope
   push @{$errs}, 'non-und expert review' if $cnt > 0;
   return ucfirst join '; ', @{$errs} if scalar @{$errs} > 0;
   return undef;
+}
+
+sub CandidatesModule
+{
+  my $self = shift;
+
+  my $mod = $self->get('Candidates');
+  if (!defined $mod)
+  {
+    my $class = 'Candidates_' . $self->get('sys');
+    require $class . '.pm';
+    $mod =  $class->new($self);
+    if (!defined $mod || $@)
+    {
+      $self->SetError("Could not load module $class\n");
+      return;
+    }
+    $self->set('Candidates', $mod);
+  }
+  return $mod;
 }
 
 # Returns an array of error messages (reasons for unsuitability for CRMS) for a volume.
@@ -984,9 +997,7 @@ sub GetViolations
   }
   elsif ($priority < 4 || !$override)
   {
-    my $module = 'Candidates_' . $self->get('sys') . '.pm';
-    require $module;
-    @errs = Candidates::GetViolations($self, $id, $record, $priority, $override);
+    @errs = $self->CandidatesModule()->GetViolations($id, $record, $priority, $override);
   }
   return \@errs;
 }
@@ -996,9 +1007,7 @@ sub GetCutoffYear
   my $self = shift;
   my $name = shift;
 
-  my $module = 'Candidates_' . $self->get('sys') . '.pm';
-  require $module;
-  return Candidates::GetCutoffYear($self, undef, $name);
+  return $self->CandidatesModule()->GetCutoffYear(undef, $name);
 }
 
 # Returns a und table src code if the volume belongs in the und table instead of candidates.
@@ -1010,9 +1019,7 @@ sub ShouldVolumeGoInUndTable
 
   $record = $self->GetMetadata($id) unless $record;
   return 'no meta' unless $record;
-  my $module = 'Candidates_' . $self->get('sys') . '.pm';
-  require $module;
-  return Candidates::ShouldVolumeGoInUndTable($self, $id, $record);
+  return $self->CandidatesModule()->ShouldVolumeGoInUndTable($id, $record);
 }
 
 # Load candidates into queue.
@@ -1031,7 +1038,6 @@ sub LoadNewItems
   if ($needed)
   {
     $needed = $needed - $queuesize;
-    return if $needed < 0;
   }
   else
   {
@@ -1077,7 +1083,6 @@ sub LoadNewItems
       $self->Filter($id, 'duplicate');
       next;
     }
-    print "Add $id ($pub_date) to queue?\n";
     if ($self->AddItemToQueue($id, $record))
     {
       printf "Added to queue: $id published %s\n", substr($pub_date, 0, 4);

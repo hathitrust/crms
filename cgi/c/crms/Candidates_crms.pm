@@ -1,9 +1,21 @@
-package Candidates;
+package Candidates_crms;
 
 use strict;
 use warnings;
-use vars qw(@ISA @EXPORT @EXPORT_OK);
-our @EXPORT = qw(HasCorrectRights HasCorrectYear GetCutoffYear GetViolations ShouldVolumeGoInUndTable);
+
+sub new
+{
+  my $class = shift;
+  my $self = { crms => shift };
+  return bless $self, $class;
+}
+
+sub Countries
+{
+  my $self = shift;
+
+  return {'USA'=>1};
+}
 
 # If new_attr and new_reason are supplied, they are the final determination
 # and this checks whether that determination should be exported (is the
@@ -29,8 +41,8 @@ sub HasCorrectYear
   my $country = shift;
   my $year    = shift;
 
-  my $min = GetCutoffYear($self, $country, 'minYear');
-  my $max = GetCutoffYear($self, $country, 'maxYear');
+  my $min = $self->GetCutoffYear($country, 'minYear');
+  my $max = $self->GetCutoffYear($country, 'maxYear');
   return ($min <= $year && $year <= $max);
 }
 
@@ -51,35 +63,35 @@ sub GetViolations
   my ($id, $record, $priority, $override) = @_;
 
   my @errs = ();
-  my $pub = $self->GetRecordPubDate($id, $record);
-  my $min = GetCutoffYear($self, undef, 'minYear');
-  my $max = GetCutoffYear($self, undef, 'maxYear');
-  $max = $self->GetCutoffYear('maxYearOverride') if ($override and $priority == 3) or $priority == 4;
+  my $pub = $self->{crms}->GetRecordPubDate($id, $record);
   if ($pub =~ m/\d\d\d\d/)
   {
-    my $min = $self->GetCutoffYear('minYear');
-    my $max = $self->GetCutoffYear('maxYear');
-    $max = $self->GetCutoffYear('maxYearOverride') if ($override and $priority == 3) or $priority == 4;
+    my $min = $self->GetCutoffYear(undef, 'minYear');
+    my $max = $self->GetCutoffYear(undef, 'maxYear');
+    if (($override && $priority == 3) or $priority == 4)
+    {
+      $max = $self->GetCutoffYear(undef, 'maxYearOverride');
+    }
     push @errs, "$pub not in range $min-$max" if ($pub < $min || $pub > $max);
   }
   else
   {
     push @errs, "pub date not in range or not completely specified ($pub)";
   }
-  push @errs, 'gov doc' if IsGovDoc($self, $id, $record );
-  my $where = $self->GetRecordPubCountry($id, $record);
+  push @errs, 'gov doc' if $self->IsGovDoc($id, $record );
+  my $where = $self->{crms}->GetRecordPubCountry($id, $record);
   push @errs, "foreign pub ($where)" if $where ne 'USA';
-  push @errs, 'non-BK format' unless $self->IsFormatBK($id, $record);
-  my $ref = $self->RightsQuery($id,1);
+  push @errs, 'non-BK format' unless $self->{crms}->IsFormatBK($id, $record);
+  my $ref = $self->{crms}->RightsQuery($id,1);
   $ref = $ref->[0] if $ref;
   if ($ref)
   {
     my ($attr,$reason,$src,$usr,$time,$note) = @{$ref};
     my $rights = "$attr/$reason";
-    push @errs, "current rights are $rights" unless $rights eq 'ic/bib' or
-                                                    $attr eq 'op' or
-                                                    ($override and $priority == 3) or
-                                                    $priority == 4;
+    push @errs, "current rights $rights" unless $rights eq 'ic/bib' or
+                                                $attr eq 'op' or
+                                                ($override and $priority == 3) or
+                                                $priority == 4;
   }
   else
   {
@@ -94,14 +106,12 @@ sub ShouldVolumeGoInUndTable
   my $id     = shift;
   my $record = shift;
 
-  my $src = undef;
-  my $lang = $self->GetRecordPubLanguage($id, $record);
-  if (IsProbableGovDoc($self, $id, $record)) { $src = 'gov'; }
-  elsif ('eng' ne $lang) { $src = 'language'; }
-  elsif ($self->IsThesis($id, $record)) { $src = 'dissertation'; }
-  elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
-  elsif (IsReallyForeignPub($self, $id, $record)) { $src = 'foreign'; }
-  return $src;
+  return 'gov' if $self->IsProbableGovDoc($id, $record);
+  return 'language' if 'eng' ne $self->{crms}->GetRecordPubLanguage($id, $record);
+  return 'dissertation' if $self->{crms}->IsThesis($id, $record);
+  return 'translation' if $self->{crms}->IsTranslation($id, $record);
+  return 'foreign' if $self->IsReallyForeignPub($id, $record);
+  return undef;
 }
 
 # 008:28 is 'f' byte.
@@ -117,7 +127,7 @@ sub IsGovDoc
     my $leader = $record->findvalue($path);
     $is = (length $leader > 28 && substr($leader, 28, 1) eq 'f');
   };
-  $self->SetError("failed in IsGovDoc($id): $@") if $@;
+  $self->{crms}->SetError("failed in IsGovDoc($id): $@") if $@;
   return $is;
 }
 
@@ -138,8 +148,8 @@ sub IsProbableGovDoc
   my $id     = shift;
   my $record = shift;
 
-  my $author = $self->GetRecordAuthor($id, $record);
-  my $title = $self->GetRecordTitle($id, $record);
+  my $author = $self->{crms}->GetRecordAuthor($id, $record);
+  my $title = $self->{crms}->GetRecordTitle($id, $record);
   my $xpath  = '//*[local-name()="datafield" and @tag="260"]/*[local-name()="subfield" and @code="a"]';
   my $field260a = $record->findvalue($xpath);
   $xpath  = '//*[local-name()="datafield" and @tag="260"]/*[local-name()="subfield" and @code="b"]';
@@ -191,7 +201,7 @@ sub IsForeignPub
     my $code = substr($record->findvalue($path), 15, 3);
     $is = $code if substr($code,2,1) ne 'u';
   };
-  $self->SetError("failed in IsForeignPub($id): $@") if $@;
+  $self->{crms}->SetError("failed in IsForeignPub($id): $@") if $@;
   return $is;
 }
 
@@ -208,7 +218,7 @@ sub IsReallyForeignPub
   my $id     = shift;
   my $record = shift;
 
-  my $is = IsForeignPub($self, $id, $record);
+  my $is = $self->IsForeignPub($id, $record);
   return $is if $is;
   eval {
     my $path = '//*[local-name()="datafield" and @tag="260"]/*[local-name()="subfield" and @code="a"]';
@@ -217,8 +227,8 @@ sub IsReallyForeignPub
     foreach my $node (@nodes)
     {
       my $where = Normalize($node->textContent);
-      my $cities = $self->get('cities');
-      $cities = ReadCities($self) unless $cities;
+      my $cities = $self->{crms}->get('cities');
+      $cities = $self->ReadCities() unless $cities;
       if ($cities !~ m/==$where==/i)
       {
         $is = $where;
@@ -226,7 +236,7 @@ sub IsReallyForeignPub
       }
     }
   };
-  $self->SetError("failed in IsReallyForeignPub($id): $@") if $@;
+  $self->{crms}->SetError("failed in IsReallyForeignPub($id): $@") if $@;
   return $is;
 }
 
@@ -234,8 +244,8 @@ sub ReadCities
 {
   my $self = shift;
   
-  my $in = $self->get('root') . '/bin/c/crms/us_cities.txt';
-  open (FH, '<', $in) || $self->SetError("Could not open $in");
+  my $in = $self->{crms}->get('root') . '/bin/c/crms/us_cities.txt';
+  open (FH, '<', $in) || $self->{crms}->SetError("Could not open $in");
   my $cities = '';
   while (<FH>) { chomp; $cities .= "==$_=="; }
   close FH;

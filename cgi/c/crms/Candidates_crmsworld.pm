@@ -1,9 +1,25 @@
-package Candidates;
+package Candidates_crmsworld;
 
 use strict;
 use warnings;
-use vars qw( @ISA @EXPORT @EXPORT_OK );
-our @EXPORT = qw(HasCorrectRights HasCorrectYear GetCutoffYear GetViolations ShouldVolumeGoInUndTable);
+
+sub new
+{
+  my $class = shift;
+  my $self = { crms => shift };
+  return bless $self, $class;
+}
+
+# If oneoff is set, return undef to indicate this is the
+# catch-all system.
+sub Countries
+{
+  my $self   = shift;
+  my $oneoff = shift;
+
+  return undef if $oneoff;
+  return {'United Kingdom'=>1, 'Canada'=>1, 'Australia'=>1, 'Spain'=>1};
+}
 
 # If new_attr and new_reason are supplied, they are the final determination
 # and this checks whether that determination should be exported (is the
@@ -33,8 +49,8 @@ sub HasCorrectYear
   my $country = shift;
   my $year    = shift;
 
-  my $min = GetCutoffYear($self, $country, 'minYear');
-  my $max = GetCutoffYear($self, $country, 'maxYear');
+  my $min = $self->GetCutoffYear($country, 'minYear');
+  my $max = $self->GetCutoffYear($country, 'maxYear');
   return ($min <= $year && $year <= $max);
 }
 
@@ -44,7 +60,7 @@ sub GetCutoffYear
   my $country = shift;
   my $name    = shift;
 
-  my $year = $self->GetTheYear();
+  my $year = $self->{crms}->GetTheYear();
   # Generic cutoff for add to queue page.
   if (! defined $country)
   {
@@ -62,6 +78,11 @@ sub GetCutoffYear
     # FIXME: will this ever change?
     return 1954;
   }
+  elsif ($country eq 'Spain')
+  {
+    return $year-140 if $name eq 'minYear';
+    return 1935;
+  }
   return $year-120 if $name eq 'minYear';
   return $year-51;
 }
@@ -70,14 +91,15 @@ sub GetViolations
 {
   my $self = shift;
   my ($id, $record, $priority, $override) = @_;
+
   my @errs = ();
-  my $pub = $self->GetRecordPubDate($id, $record);
-  my $where = $self->GetRecordPubCountry($id, $record);
+  my $pub = $self->{crms}->GetRecordPubDate($id, $record);
+  my $where = $self->{crms}->GetRecordPubCountry($id, $record);
   $where =~ s/\s*\(.*//;
   if ($pub =~ m/\d\d\d\d/)
   {
-    my $min = GetCutoffYear($self, $where, 'minYear');
-    my $max = GetCutoffYear($self, $where, 'maxYear');
+    my $min = $self->GetCutoffYear($where, 'minYear');
+    my $max = $self->GetCutoffYear($where, 'maxYear');
     #$max = GetCutoffYear('maxYearOverride') if ($override and $priority == 3) or $priority == 4;
     push @errs, "$pub not in range $min-$max for $where" if ($pub < $min || $pub > $max);
   }
@@ -87,9 +109,10 @@ sub GetViolations
   }
   push @errs, "foreign pub ($where)" if $where ne 'United Kingdom' and
                                         $where ne 'Australia' and
-                                        $where ne 'Canada';
-  push @errs, 'non-BK format' unless $self->IsFormatBK($id, $record);
-  my $ref = $self->RightsQuery($id,1);
+                                        $where ne 'Canada' and
+                                        $where ne 'Spain';
+  push @errs, 'non-BK format' unless $self->{crms}->IsFormatBK($id, $record);
+  my $ref = $self->{crms}->RightsQuery($id,1);
   $ref = $ref->[0] if $ref;
   if ($ref)
   {
@@ -113,13 +136,13 @@ sub ShouldVolumeGoInUndTable
   my $id     = shift;
   my $record = shift;
 
-  my $src = undef;
-  $record = $self->GetMetadata($id) unless $record;
+  $record = $self->{crms}->GetMetadata($id) unless $record;
   return 'no meta' unless $record;
-  my $lang = $self->GetRecordPubLanguage($id, $record);
-  if ('eng' ne $lang) { $src = 'language'; }
-  elsif ($self->IsTranslation($id, $record)) { $src = 'translation'; }
-  return $src;
+  my $lang = $self->{crms}->GetRecordPubLanguage($id, $record);
+  my $where = $self->{crms}->GetRecordPubCountry($id, $record);
+  return 'language' if 'eng' ne $lang and $where ne 'Spain';
+  return 'translation' if $self->{crms}->IsTranslation($id, $record);
+  return undef;
 }
 
 1;
