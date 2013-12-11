@@ -71,16 +71,9 @@
 
 
 [% crms.CreateDeterminationsBreakdownReport(startDate, endDate, 0, undef, 1) %]
-[% report = crms.CreateDeterminationsBreakdownReport(startDate, endDate, 0, undef) %]
-[% report.replace('Status&nbsp;6','Status&nbsp;6*') %]
-<br/>
-<span class="smallishText">* Note: Status 6 no longer in use as of 4/19/2010.</span>
+[% crms.CreateDeterminationsBreakdownReport(startDate, endDate, 0, undef) %]
 <br/><br/>
-<br/>
-[% report = crms.CreateDeterminationsBreakdownReport('2009-07-01' 0, 1, 'Project Determinations Breakdown') %]
-[% report.replace('Status&nbsp;6','Status&nbsp;6*') %]
-<br/>
-<span class="smallishText">* Note: Status 6 no longer in use as of 4/19/2010.</span>
+[% crms.CreateDeterminationsBreakdownReport('2009-07-01' 0, 1, 'Project Determinations Breakdown') %]
 <br/><br/>
 <table style="padding:0px; width:800px; height:300px; border-collapse:collapse">
 <tr style="background-color:#000000;"><td><div id="chart0"/></td></tr>
