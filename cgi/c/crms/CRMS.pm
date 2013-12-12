@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.6';
+  return '4.6.1';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -5928,7 +5928,7 @@ sub GetNextItemForReview
     }
     else
     {
-      $exclude .= ' q.added_by!="oneoff" AND ';
+      $exclude .= ' (q.added_by IS NULL OR q.added_by!="oneoff") AND ';
     }
     my $p1f = $self->GetPriority1Frequency();
     # Exclude priority 1 if our d100 roll is over the P1 threshold or user is not advanced
