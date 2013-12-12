@@ -23,6 +23,7 @@ and removes them from the system.
 
 -a         Report on all volumes, ignoring date range.
 -c         Run against candidates.
+-f         Run against single volume ids in a text file.
 -h         Print this help message.
 -i         Run the candidates population logic over volumes in the rights database
            for the date range given (if any).
@@ -37,6 +38,7 @@ END
 
 my $all;
 my $candidates;
+my $file;
 my $help;
 my $init;
 my $iconly;
@@ -51,6 +53,7 @@ Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
            'a'    => \$all,
            'c'    => \$candidates,
+           'f:s'  => \$file,
            'h|?'  => \$help,
            'i'    => \$init,
            'j'    => \$iconly,
@@ -71,6 +74,18 @@ my $crms = CRMS->new(
     dev          =>   $DLPS_DEV
 );
 
+if ($file)
+{
+  if (open(my $fh, '<:encoding(UTF-8)', $file))
+  {
+    while (my $row = <$fh>)
+    {
+      chomp $row;
+      push @singles, $row;
+    }
+    close($fh);
+  }
+}
 print "Verbosity $verbose\n" if $verbose;
 my $dbh = $crms->GetDb();
 my $start = $crms->SimpleSqlGet('SELECT DATE(NOW())');
@@ -146,29 +161,36 @@ sub Init
   my $end     = shift;
   my $singles = shift;
 
-  my $sql = 'SELECT namespace,id,DATE(time) FROM rights_current';
-  my @restrict = ();
-  push @restrict, "(time>'$start 00:00:00' AND time<='$end 23:59:59')" unless $all;
-  push @restrict, '((attr=2 AND reason=1) OR (attr=3 AND reason=10))' if $iconly;
-  $sql .= ' WHERE ' . join ' AND ', @restrict if scalar @restrict;
-  $sql .= ' ORDER BY time ASC';
   if (defined $singles && scalar @{$singles})
   {
-    $sql = sprintf("SELECT namespace,id,DATE(time)) FROM rights_current WHERE id in ('%s') ORDER BY id", join "','", @{$singles});
+    foreach my $id (@{$singles})
+    {
+      my ($n,$i) = split m/\./, $id;
+      $crms->CheckAndLoadItemIntoCandidates($id, $noop);
+    }
   }
-  my $ref = $crms->GetSdrDb()->selectall_arrayref($sql);
-  my $of = scalar @{$ref};
-  print "$sql: $of results\n" if $verbose > 0;
-  my $lastWhen = '';
-  for (my $i = 0; $i < $of; $i++)
+  else
   {
-    my $row = $ref->[$i];
-    my $id = $row->[0] . '.' . $row->[1];
-    my $when = $row->[2];
-    print "$when\n" if $verbose && $lastWhen ne $when;
-    $lastWhen = $when;
-    print "$id ($i/$of)\n" if $verbose > 1;
-    $crms->CheckAndLoadItemIntoCandidates($id, $noop);
+    my $sql = 'SELECT namespace,id,DATE(time) FROM rights_current';
+    my @restrict = ();
+    push @restrict, "(time>'$start 00:00:00' AND time<='$end 23:59:59')" unless $all;
+    push @restrict, '((attr=2 AND reason=1) OR (attr=3 AND reason=10))' if $iconly;
+    $sql .= ' WHERE ' . join ' AND ', @restrict if scalar @restrict;
+    $sql .= ' ORDER BY time ASC';
+    my $ref = $crms->GetSdrDb()->selectall_arrayref($sql);
+    my $of = scalar @{$ref};
+    print "$sql: $of results\n" if $verbose > 0;
+    my $lastWhen = '';
+    for (my $i = 0; $i < $of; $i++)
+    {
+      my $row = $ref->[$i];
+      my $id = $row->[0] . '.' . $row->[1];
+      my $when = $row->[2];
+      print "$when\n" if $verbose && $lastWhen ne $when;
+      $lastWhen = $when;
+      print "$id ($i/$of)\n" if $verbose > 1;
+      $crms->CheckAndLoadItemIntoCandidates($id, $noop);
+    }
   }
 }
 
