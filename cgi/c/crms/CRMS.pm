@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.6.1';
+  return '4.6.2';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -5952,7 +5952,7 @@ sub GetNextItemForReview
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt FROM queue q' .
            ' INNER JOIN bibdata b ON q.id=b.id'.
            ' WHERE ' . $exclude . $exclude1 . $excludeCountries .
-           ' q.expcnt=0 AND q.locked IS NULL' .
+           ' q.expcnt=0 AND q.locked IS NULL AND q.status<2' .
            ' ORDER BY ' . $order;
     #print "$sql<br/>\n";
     my $ref = $self->GetDb()->selectall_arrayref($sql);
@@ -6011,12 +6011,16 @@ sub GetNextItemForReviewSQ
       $exclude .= ' q.added_by="oneoff" AND ';
       $order = 'q.source ASC, q.id ASC';
     }
+    else
+    {
+      $exclude .= ' (q.added_by IS NULL OR q.added_by!="oneoff") AND ';
+    }
     my $p1f = $self->GetPriority1Frequency();
     # Exclude priority 1 if our d100 roll is over the P1 threshold or user is not advanced
     my $exclude1 = (rand() >= $p1f || !$self->IsUserAdvanced($user))? 'q.priority!=1 AND ':'';
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt' .
            ' FROM queue q WHERE ' . $exclude . $exclude1 . 'q.expcnt=0 AND q.locked IS NULL' .
-           ' AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user=?)' .
+           ' AND q.status<2 AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user=?)' .
            ' HAVING cnt<2 ORDER BY ' . $order;
     #print "$sql<br/>\n";
     my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $user);
