@@ -115,16 +115,12 @@ sub FindICtoPD
     my $renNum = $ref2->[0]->[1];
     my $cat = $ref2->[0]->[2];
     next if $renDate != $t1 && $renDate != $t2;
-    my $rid = $crms->PredictRights($id, $renDate, $renNum, $crms->TolerantCompare($cat, 'Crown Copyright'));
-    #printf "PredictRights($id, $renDate, %s, %s)\n", ($renNum)? '1':'undef', ($cat && $cat eq 'Crown Copyright')? '1':'undef';
-    my $a2 = $crms->TranslateAttr($crms->SimpleSqlGet("SELECT attr FROM rights WHERE id=$rid"));
-    my $r2 = $crms->TranslateReason($crms->SimpleSqlGet("SELECT reason FROM rights WHERE id=$rid"));
+    my $last = $crms->PredictLastCopyrightYear($id, $renDate, $renNum, $crms->TolerantCompare($cat, 'Crown Copyright'));
+    #printf "PredictLastCopyrightYear($id, $renDate, %s, %s)\n", ($renNum)? '1':'undef', ($cat && $cat eq 'Crown Copyright')? '1':'undef';
     #print "$id: predicted $rid: $a2/$r2\n";
-    if (($a2 eq 'pd' && ($a eq 'pdus' || $a eq 'ic')) ||
-        ($a2 eq 'pdus' && $a eq 'ic') ||
-        $a2 eq 'icus')
+    if ($last < $year)
     {
-      print "$id: $a2/$r2 from $a/$r ($renDate)\n" if $verbose;
+      print "$id: $last ($renDate)\n" if $verbose;
       if ($insert)
       {
         # Returns a status code (0=Add, 1=Error, 2=Skip, 3=Modify) followed by optional text.
