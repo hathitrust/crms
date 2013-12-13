@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.6.2';
+  return '4.6.3';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -626,7 +626,7 @@ sub CanExportVolume
   my $cm = $self->CandidatesModule();
   # Do not export determination if the volume has gone out of scope,
   # or if exporting und would clobber pdus in World.
-  if (!$cm->HasCorrectRights($self, $attr2, $reason2, $attr, $reason))
+  if (!$cm->HasCorrectRights($attr2, $reason2, $attr, $reason))
   {
     # But, we clobber OOS if any of the following conditions hold:
     # 1. If the volume is pdus/gfv (which per rrotter in Core Services never overrides pdus/bib).
