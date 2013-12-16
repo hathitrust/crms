@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.6.3';
+  return '4.6.4';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -1080,11 +1080,11 @@ sub LoadNewItems
     $sql = 'SELECT COUNT(*) FROM queue q INNER JOIN bibdata b ON q.id=b.id' .
            ' WHERE b.country=? AND q.priority=0';
     $priZeroSize = $self->SimpleSqlGet($sql, $country);
-    $excludeCountries = ' AND country="' . $country . '"';
+    $excludeCountries = ' AND b.country="' . $country . '"';
   }
   else
   {
-    $excludeCountries = ' AND country NOT IN (SELECT DISTINCT country FROM usercountries)';
+    $excludeCountries = ' AND b.country NOT IN (SELECT DISTINCT country FROM usercountries)';
   }
   my $targetQueueSize = $self->GetSystemVar('queueSize');
   print "Before load, the queue has $queuesize volumes, $priZeroSize priority 0.\n";
@@ -1102,13 +1102,14 @@ sub LoadNewItems
   return if $needed <= 0;
   my $count = 0;
   my %dels = ();
-  my $sql = 'SELECT id,pub_date FROM candidates' .
-            ' WHERE id NOT IN (SELECT DISTINCT id FROM inherit)' .
-            ' AND id NOT IN (SELECT DISTINCT id FROM queue)' .
-            ' AND id NOT IN (SELECT DISTINCT id FROM reviews)' .
-            ' AND id NOT IN (SELECT DISTINCT id FROM historicalreviews)' .
+  my $sql = 'SELECT c.id FROM candidates c INNER JOIN bibdata b ON c.id=b.id' .
+            ' WHERE c.id NOT IN (SELECT DISTINCT id FROM inherit)' .
+            ' AND c.id NOT IN (SELECT DISTINCT id FROM queue)' .
+            ' AND c.id NOT IN (SELECT DISTINCT id FROM reviews)' .
+            ' AND c.id NOT IN (SELECT DISTINCT id FROM historicalreviews)' .
             $excludeCountries .
             ' ORDER BY time DESC';
+  #print "$sql\n";
   my $ref = $self->GetDb()->selectall_arrayref($sql);
   foreach my $row (@{$ref})
   {
@@ -1122,7 +1123,6 @@ sub LoadNewItems
       $self->Filter($id, 'no meta');
       next;
     }
-    my $pub_date = $self->GetRecordPubDate($id, $record);
     my @errs = @{ $self->GetViolations($id, $record) };
     if (scalar @errs)
     {
@@ -1139,6 +1139,7 @@ sub LoadNewItems
     }
     if ($self->AddItemToQueue($id, $record))
     {
+      my $pub_date = $self->GetRecordPubDate($id, $record);
       printf "Added to queue: $id published %s\n", substr($pub_date, 0, 4);
       $count++;
     }
