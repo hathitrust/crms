@@ -610,6 +610,7 @@ sub CanExportVolume
   my $reason  = shift;
   my $fromcgi = shift;
   my $gid     = shift;
+  my $time    = shift;
 
   my $export = 1;
   my $rq = $self->RightsQuery($id, 1);
@@ -641,7 +642,16 @@ sub CanExportVolume
     }
     if ($reason2 eq 'gfv' || $pri >= 3.0 || $usr2 =~ m/^crms/i || $attr =~ m/^pd/)
     {
-      print "Exporting priority $pri $id as $attr/$reason even though it is out of scope ($attr2/$reason2)\n" unless $fromcgi;
+      # This is used for cleanup purposes
+      if (defined $time)
+      {
+        if ($usr2 =~ m/^crms/ && $time lt $time2)
+        {
+          print "Not exporting $id as $attr/$reason; there is a newer CRMS export ($attr2/$reason2 by $usr2 [$time2])\n" unless $fromcgi
+          $export = 0;
+        }
+      }
+      print "Exporting priority $pri $id as $attr/$reason even though it is out of scope ($attr2/$reason2 by $usr2 [$time2])\n" unless $fromcgi or $reason2 eq 'gfv' or $export == 0;
     }
     else
     {
