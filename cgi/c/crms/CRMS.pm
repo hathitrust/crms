@@ -647,7 +647,7 @@ sub CanExportVolume
       {
         if ($usr2 =~ m/^crms/ && $time lt $time2)
         {
-          print "Not exporting $id as $attr/$reason; there is a newer CRMS export ($attr2/$reason2 by $usr2 [$time2])\n" unless $fromcgi
+          print "Not exporting $id as $attr/$reason; there is a newer CRMS export ($attr2/$reason2 by $usr2 [$time2])\n" unless $fromcgi;
           $export = 0;
         }
       }
