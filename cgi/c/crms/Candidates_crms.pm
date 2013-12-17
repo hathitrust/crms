@@ -249,7 +249,7 @@ sub ReadCities
   my $cities = '';
   while (<FH>) { chomp; $cities .= "==$_=="; }
   close FH;
-  $self->set('cities',$cities);
+  $self->{crms}->set('cities',$cities);
   return $cities;
 }
 
