@@ -140,7 +140,14 @@ sub ShouldVolumeGoInUndTable
   return 'no meta' unless $record;
   my $lang = $self->{crms}->GetRecordPubLanguage($id, $record);
   my $where = $self->{crms}->GetRecordPubCountry($id, $record);
-  return 'language' if 'eng' ne $lang and $where ne 'Spain';
+  if ($where eq 'Spain')
+  {
+    return 'language' if 'spa' ne $lang and 'eng' ne $lang;
+  }
+  else
+  {
+    return 'language' if 'eng' ne $lang;
+  }
   return 'translation' if $self->{crms}->IsTranslation($id, $record);
   return undef;
 }
