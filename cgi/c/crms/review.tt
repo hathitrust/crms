@@ -63,10 +63,14 @@
 
 [%# ## failed to get a barcode ## %]
 [% IF NOT barcode %]
-  <h3>Unable to find a volume ID to review</h3>
-  [% FOREACH error IN crms.GetErrors %]
-    <strong>ERROR: [% error.replace('\n','<br/>') %]</strong><br/>
-  [% END %]
+  <div style="background-color:black;">
+  <h3 style="color:white;">Unable to find a volume to review</h3>
+  <h4 style="color:white;">Queue has [% crms.GetQueueSize() %] volumes; candidates has [% crms.GetCandidatesSize() %].
+  <br/>Could it be we're all done with this project? If so, congratulations!
+  <br/><img src="http://www.picgifs.com/graphics/f/fireworks/graphics-fireworks-432653.gif"/>
+  </h4>
+  </div>
+  [% INCLUDE footer.tt %]
   [% STOP %]
 [% END %]
 
@@ -109,6 +113,17 @@
         <tr>
           <td style="text-align:left;"><a href="[% homeLink %]">Home</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="crms?p=Logout;sys=$sys">Logout</a></td>
         </tr>
+        <!--
+        <tr>
+          <td>
+            [% IF crms.WhereAmI() != 'Training' %]
+            <div id="ProgressBar[% (crms.sys() == 'crmsworld')? 'Red':'' %]">
+              <div id="ProgressBarInner"></div>
+            </div>
+            [% END %]
+          </td>
+        </tr>
+        -->
         <tr><td/></tr>
         <tr><td/></tr>
         <tr>
@@ -302,7 +317,7 @@ window.onload = function(e)
   changeFrame1();
   changeFrame2();
   [% IF import %]
-    popReviewInfo('[% barcode %]','[% import %]', '[% sys %]');
+    popReviewInfo('[% barcode %]', '[% import %]', '[% sys %]');
   [% END %]
   [% IF !ren %]
     var renewalField = document.getElementById("renewalField");
@@ -318,6 +333,11 @@ window.onload = function(e)
       document.getElementById('renewalField').focus();
     }
   [% END %]
+  //var progress = document.getElementById('ProgressBarInner');
+  //if (progress)
+  //{
+  //  progress.style.width = '[% crms.GetUserProgress(user) %]';
+  //}
 }
 </script>
 
