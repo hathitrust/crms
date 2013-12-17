@@ -5983,10 +5983,9 @@ sub GetNextItemForReview
       }
     }
   };
-  $self->SetError($@) if $@;
-  if (!$id)
+  if ($@ && ! defined $id)
   {
-    $err = sprintf "Could not get a volume for $user to review%s.", ($err)? " ($err)":'';
+    my $err = "Could not get a volume for $user to review: $@.";
     $err .= "\n$sql" if $sql;
     $self->SetError($err);
   }
