@@ -903,6 +903,9 @@ sub AddItemToCandidates
         my $sql2 = 'SELECT time FROM rights_current WHERE namespace=? AND id=?';
         my $time2 = $self->SimpleSqlGetSDR($sql2, $ns, $n);
         $map{$id2} = $time2;
+        # FIXME: check current rights on $id2 and make sure it's in scope:
+        # a single volume on the record might have */con type rights, and
+        # we'd prefer ic/bib.
       }
       my @sorted = sort {$map{$b} cmp $map{$a}} keys %map;
       $id = shift @sorted;
@@ -5975,6 +5978,8 @@ sub GetNextItemForReview
       next if 1 < $self->SimpleSqlGet($sql, $id2);
       $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND user=?';
       next if 0 < $self->SimpleSqlGet($sql, $id2, $user);
+      $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=? AND user=?';
+      next if 0 < $self->SimpleSqlGet($sql, $id2, $user) and !$self->IsUserAdmin($user);
       $err = $self->LockItem($id2, $user);
       if (!$err)
       {
@@ -6037,6 +6042,8 @@ sub GetNextItemForReviewSQ
     foreach my $row (@{$ref})
     {
       my $id2 = $row->[0];
+      $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=? AND user=?';
+      next if 0 < $self->SimpleSqlGet($sql, $id2, $user) and !$self->IsUserAdmin($user);
       $err = $self->LockItem($id2, $user);
       if (!$err)
       {
