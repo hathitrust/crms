@@ -8,6 +8,7 @@ use CGI;
 use CRMS;
 use Template;
 use POSIX;
+use Encode;
 
 my $ru = $ENV{'REMOTE_USER'};
 my $cgi  = new CGI;
@@ -108,7 +109,7 @@ if ($cgi->param('p') eq 'confirmReview')
   {
     #Remove all locks for this user.
     my $EncRights = $cgi->param('rights');
-    my $note      = $cgi->param('note');
+    my $note      = Encode::decode("UTF-8", $cgi->param('note'));
     my $category  = $cgi->param('category');
     my $renNum    = $cgi->param('renNum');
     my $renDate   = $cgi->param('renDate');
@@ -186,7 +187,7 @@ elsif ($cgi->param('p') eq 'confirmCorrection')
   }
   else
   {
-    my $note    = $cgi->param('note');
+    my $note    = Encode::decode("UTF-8", $cgi->param('note'));
     my $fixed   = $cgi->param('fixed');
     my $inScope = $cgi->param('inScope');
     
