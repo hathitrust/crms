@@ -8078,7 +8078,6 @@ sub DuplicateVolumesFromCandidates
     $data->{'nodups'}->{$id} .= "$sysid\n";
     return;
   }
-  $data->{'titles'}->{$id} = $self->GetRecordTitle($id, $record);
   my $cid = undef;
   my $cgid = undef;
   my $cattr = undef;
@@ -8141,16 +8140,16 @@ sub DuplicateVolumesFromCandidates
     my $wrong = $self->HasMissingOrWrongRecord($id, $sysid, $rows);
     if ($newrights eq 'pd/ncn')
     {
-      $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
+      $data->{'disallowed'}->{$cid} .= "$id\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
     }
     # CRMS World can't inherit und onto pdus
     elsif ($self->get('sys') eq 'crmsworld' && $newrights =~ m/^und/ && $oldrights =~ m/^pdus/)
     {
-      $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit und onto pdus\n";
+      $data->{'disallowed'}->{$cid} .= "$id\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit und onto pdus\n";
     }
     elsif ($wrong)
     {
-      $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tMissing/Wrong Record on $wrong\n";
+      $data->{'disallowed'}->{$cid} .= "$id\t$sysid\t$oldrights\t$newrights\t$id\tMissing/Wrong Record on $wrong\n";
     }
     elsif ($oldrights eq 'ic/bib' ||
            ($oldrights eq 'pdus/gfv' && $cattr =~ m/^pd/) ||
@@ -8160,11 +8159,13 @@ sub DuplicateVolumesFromCandidates
     }
     else
     {
-      $data->{'disallowed'}->{$id} .= "$cid\t$sysid\t$oldrights\t$newrights\t$id\tRights\n";
+      $data->{'disallowed'}->{$cid} .= "$id\t$sysid\t$oldrights\t$newrights\t$id\tRights\n";
     }
+    $data->{'titles'}->{$cid} = $self->GetRecordTitle($cid, $record);
   }
   else
   {
+    $data->{'titles'}->{$id} = $self->GetRecordTitle($id, $record);
     $data->{'noexport'}->{$id} .= "$sysid\n";
   }
 }
