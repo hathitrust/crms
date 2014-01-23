@@ -54,15 +54,17 @@ function CheckAll(box,formid)
     [% items = crms.MenuItems(id) %]
     [% FOREACH item IN items %]
       [% target = (item.4)? ' target="' _ item.4 _ '"':'' %]
-      [% url = crms.Sysify(item.1) %]
-      <a href="[% url %]"[% target %]>[% item.0.replace('\s', '&nbsp;') %]</a><br/>
+      [% href = item.1 %]
+      [% IF NOT href.match('(?i)javascript') %]
+        [% href = crms.Sysify(href) %]
+      [% END %]
+      <a href="[% href %]"[% target %]>[% item.0.replace('\s', '&nbsp;') %]</a><br/>
     [% END %]
     </td>
   [% IF i % 2 != 0 || j >= of %]</tr>[% END %]
   [% i = i + 1 %]
 [% END %]
 </table>
-
 
 [% locked = crms.GetLockedItems(user) %]
 [% IF locked.size %]

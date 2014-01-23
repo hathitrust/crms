@@ -45,6 +45,13 @@ function selMenuItem(id, value)
     }
   }
 }
+
+function ChatWindow()
+{
+  w = window.open(
+  '/c/crms/chat.html','CRMS Chat',
+  'height=500,width=300,left=10,top=10,resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=no,directories=no,status=yes')
+}
 -->
     </script>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
