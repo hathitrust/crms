@@ -18,7 +18,8 @@ sub Countries
   my $oneoff = shift;
 
   return undef if $oneoff;
-  return {'United Kingdom'=>1, 'Canada'=>1, 'Australia'=>1, 'Spain'=>1};
+  #return {'United Kingdom'=>1, 'Canada'=>1, 'Australia'=>1, 'Spain'=>1};
+  return {'United Kingdom'=>1, 'Canada'=>1, 'Australia'=>1};
 }
 
 # If new_attr and new_reason are supplied, they are the final determination
@@ -107,10 +108,10 @@ sub GetViolations
   {
     push @errs, "pub date not completely specified ($pub)";
   }
+  # FIXME: use Countries() method
   push @errs, "foreign pub ($where)" if $where ne 'United Kingdom' and
                                         $where ne 'Australia' and
-                                        $where ne 'Canada' and
-                                        $where ne 'Spain';
+                                        $where ne 'Canada';
   push @errs, 'non-BK format' unless $self->{crms}->IsFormatBK($id, $record);
   my $ref = $self->{crms}->RightsQuery($id,1);
   $ref = $ref->[0] if $ref;
