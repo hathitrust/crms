@@ -506,10 +506,8 @@ sub GetExpertRevItems
 {
   my $self = shift;
 
-  my $stat = $self->GetSystemStatus(1)->[1];
-  my $holdSQL = ($stat eq 'normal')? 'CURTIME()<hold':'hold IS NOT NULL';
   my $sql  = 'SELECT id FROM queue WHERE (status>=5 AND status<8) AND id NOT IN ' .
-             "(SELECT id FROM reviews WHERE $holdSQL)";
+             '(SELECT id FROM reviews WHERE CURTIME()<hold)';
   return $self->GetDb()->selectall_arrayref($sql);
 }
 
