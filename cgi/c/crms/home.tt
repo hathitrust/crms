@@ -14,8 +14,12 @@ function CheckAll(box,formid)
 </script>
 
 [% n = crms.CountUserHolds(user) %]
-[% IF n %]<h4>You have $n [% crms.Pluralize('volume', n) %] on hold.</h4><br/>[% END %]
+[% IF n %]<h4>You have $n [% crms.Pluralize('volume', n) %] on hold.</h4>[% END %]
 
+[% ref = crms.GetAddToQueueRef() %]
+[% n = ref.size %]
+[% IF n>0 %]<h4>You have $n <a href="[% crms.Sysify('/cgi/c/crms/crms?p=queueAdd') %]">high-priority</a> [% crms.Pluralize('volume', n) %].</h4>[% END %]
+<br/>
 [% IF cgi.param('unlockSel') %]
   <br/>
   [% FOREACH param IN cgi.param %]
