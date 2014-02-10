@@ -98,11 +98,7 @@ These items will take priority in the review process.
   [% action = (cgi.param("delete"))? "Deleted":"Added" %]
   <tr><td colspan="2"><b>$action $adds [% crms.Pluralize("volume", adds) %], skipped $skips, modified $already</b></td></tr></table>
 [% END %]
-
-[% sql = "SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.added_by,q.status,q.priority,q.source" _
-         " FROM queue q, bibdata b" _
-         " WHERE q.id=b.id AND q.priority>=2 ORDER BY q.added_by,q.source,q.status ASC,q.priority DESC,q.id ASC" %]
-[% ref  = crms.GetDb().selectall_arrayref(sql) %]
+[% ref  = crms.GetAddToQueueRef() %]
 [% IF ref.size > 0 %]
   <br/>
   <table style="width:auto;">
@@ -119,9 +115,8 @@ These items will take priority in the review process.
   <table class="exportStats" style="width:auto;">
   <tr><th>ID</th><th>Title</th><th>Author</th><th>Pub&nbsp;Date</th><th>Added</th><th>Added&nbsp;By</th>
   <th>Status</th><th>Priority</th><th>Issues</th><th>Historical<br/>Reviews</th><th>Review<br/>Now</th></tr>
-  [% user = crms.get('user') %]
   [% FOREACH r IN ref %]
-    [% vs = crms.GetViolations(r.0, undef, r.6) %]
+    <!-- Comment -->
     [% style = ((r.5 == user || r.5 == 'oneoff') && r.6 == 0)? '':'style="background-color:#e2e2e2;"' %]
     <tr [% style %]><td>
     [% IF r.6 > 0 %]
@@ -137,7 +132,7 @@ These items will take priority in the review process.
     <td>[% (r.5 == 'oneoff')? r.8:r.5 %]</td>
     <td>[% r.6 %]</td>
     <td>[% crms.StripDecimal(r.7) %]</td>
-    <td>[% vs.join('; ') %]</td>
+    <td>[% r.9 %]</td>
     [% sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='" _ r.0 _ "'" %]
     <td>[% crms.SimpleSqlGet(sql) %]</td>
     <td>

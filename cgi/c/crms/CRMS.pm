@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.6.6';
+  return '4.6.7';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -1258,15 +1258,17 @@ sub AddItemToQueueOrSetItemActive
   else
   {
     my $record = $self->GetMetadata($id);
+    my $issues;
     @msgs = @{ $self->GetViolations($id, $record, $priority, $override) };
-    if (scalar @msgs && (!$override || (join '; ', @msgs) =~ m/not\sfound/i))
+    $issues = join '; ', @msgs if scalar @msgs;
+    if (scalar @msgs && (!$override || $issues =~ m/not\sfound/i))
     {
       $stat = 1;
     }
     else
     {
-      my $sql = 'INSERT INTO queue (id,priority,source) VALUES (?,?,?)';
-      $self->PrepareSubmitSql($sql, $id, $priority, $src);
+      my $sql = 'INSERT INTO queue (id,priority,source,issues) VALUES (?,?,?,?)';
+      $self->PrepareSubmitSql($sql, $id, $priority, $src, $issues);
       $self->UpdateMetadata($id, 1, $record);
       $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (1,?)';
       $self->PrepareSubmitSql($sql, $src);
@@ -8918,7 +8920,21 @@ sub CanVolumeBeCrownCopyright
   my $id   = shift;
 
   my $c = $self->GetPubCountry($id);
-  return 1 if $c eq 'United Kingdom' || $c eq 'Canada' || $c eq 'Australia';
+  return 1 if defined $c && ($c eq 'United Kingdom' || $c eq 'Canada' || $c eq 'Australia');
+}
+
+sub GetAddToQueueRef
+{
+  my $self = shift;
+  my $user = shift;
+
+  $user = $self->get('user') unless defined $user;
+  my $addedSql = ($self->IsUserAdmin($user))? '(added_by=? OR added_by="oneoff")':'added_by=?';
+  my $sql = 'SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.added_by,' .
+            ' q.status,q.priority,q.source,q.issues FROM queue q INNER JOIN bibdata b ON q.id=b.id' .
+            ' WHERE q.priority>=3 AND ' . $addedSql .
+            ' ORDER BY q.added_by,q.source,q.status ASC,q.priority DESC,q.id ASC';
+  return $self->GetDb()->selectall_arrayref($sql, undef, $user);
 }
 
 1;
