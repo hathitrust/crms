@@ -39,7 +39,7 @@ if ($cgi->param('p') eq 'Logout')
     $crms->UnlockAllItemsForUser($ru);
     # change 'central' to the url of your weblogin server.
     my $central = "https://weblogin.umich.edu/cgi-bin/logout";
-    my $query_string = "";
+    my $query_string = '';
     # expire and nullify service cookie
     print( "Set-Cookie: $ENV{ COSIGN_SERVICE }=null; path=/; expires=Wednesday, 27-Jan-77 00:00:00 GMT; secure\n" );
     if ( $ENV{ QUERY_STRING } =~ m|^(https?://.*)$| )
@@ -327,7 +327,7 @@ my $vars = {
 ## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
 ## the default is home.tt in case a tt is not found
 my $page  = $cgi->param('p');
-my $input = $page . ".tt";
+my $input = $page . '.tt';
 $input = 'home.tt' unless -f $input;
 
 print $cgi->header(-charset => 'utf-8', 'cache-control' => 'private');
