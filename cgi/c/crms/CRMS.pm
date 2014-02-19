@@ -8392,7 +8392,7 @@ sub Sources
   my $mag  = shift;
   my $view = shift;
   my $page = shift;
-  
+
   $mag = '100' unless $mag;
   $view = 'image' unless $view;
   $page = 'review' unless defined $page;
@@ -8401,6 +8401,8 @@ sub Sources
   #print "$sql\n<br/>";
   my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $page);
   my @all = ();
+  my $a = $self->GetEncAuthorForReview($id);
+  $a =~ s/&/%26/g;
   foreach my $row (@{$ref})
   {
     my $name = $row->[1];
@@ -8419,12 +8421,10 @@ sub Sources
     }
     if ($url =~ m/__AUTHOR__/)
     {
-      my $a = $self->GetEncAuthorForReview($id);
       $url =~ s/__AUTHOR__/$a/g;
     }
     if ($url =~ m/__AUTHOR_(\d+)__/)
     {
-      my $a = $self->GetEncAuthorForReview($id);
       if ($name eq 'NGCOBA' && $a =~ m/^ma?c(.)/i)
       {
         $a = 'm1';
@@ -8442,13 +8442,13 @@ sub Sources
     }
     if ($url =~ m/__AUTHOR_F__/)
     {
-      my $a = $self->GetEncAuthorForReview($id);
       $a = $1 if $a =~ m/^.*?([A-Za-z]+)/;
       $url =~ s/__AUTHOR_F__/$a/g;
     }
     if ($url =~ m/__TITLE__/)
     {
       my $t = $self->GetEncTitle($id);
+      $t =~ s/&/%26/g;
       $url =~ s/__TITLE__/$t/g;
     }
     if ($url =~ m/__TICKET__/)
