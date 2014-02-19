@@ -226,8 +226,8 @@ sub GetCorrectionsExportFh
   my $self = shift;
 
   my $date = $self->GetTodaysDate();
-  $date    =~ s/:/_/g;
-  $date    =~ s/ /_/g;
+  $date =~ s/:/_/g;
+  $date =~ s/ /_/g;
   my $perm = $self->get('root') . '/prep/c/crms/' . $self->get('sys') . '_' . $date . '.status.txt';
   my $temp = $perm . '.tmp';
   if (-f $temp) { die "file already exists: $temp\n"; }
