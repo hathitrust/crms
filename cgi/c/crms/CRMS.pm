@@ -1395,7 +1395,8 @@ sub CloneReview
 sub SubmitReview
 {
   my $self = shift;
-  my ($id, $user, $attr, $reason, $note, $renNum, $exp, $renDate, $category, $swiss, $hold, $pre) = @_;
+  my ($id, $user, $attr, $reason, $note, $renNum, $exp,
+      $renDate, $category, $swiss, $hold, $pre, $start) = @_;
 
   if (!$self->IsVolumeInQueue($id))                    { $self->SetError("$id is not in the queue");       return 0; }
   if (!$self->CheckReviewer($user, $exp))              { $self->SetError("reviewer ($user) check failed"); return 0; }
@@ -1428,9 +1429,14 @@ sub SubmitReview
       push(@values, $oldhold);
     }
   }
+  my $dur = $self->SimpleSqlGet('SELECT TIMEDIFF(NOW(),?)', $start);
   my $sql = 'SELECT duration FROM reviews WHERE user=? AND id=?';
-  my $dur = $self->SimpleSqlGet($sql, $user, $id);
-  if ($dur)
+  my $dur2 = $self->SimpleSqlGet($sql, $user, $id);
+  if (defined $dur2)
+  {
+    $dur = $self->SimpleSqlGet('SELECT ADDTIME(?,?)', $dur, $dur2);
+  }
+  if (defined $dur)
   {
     push(@fields, 'duration');
     push(@values, $dur);
@@ -1469,7 +1475,6 @@ sub SubmitReview
       $self->PrepareSubmitSql($sql, $id);
     }
     $self->CheckPendingStatus($id);
-    $self->EndTimer($id, $user);
     $self->UnlockItem($id, $user);
   }
   return $result;
@@ -3649,6 +3654,13 @@ sub GetTheYearMonth
   return ($year, $month);
 }
 
+sub GetNow
+{
+  my $self = shift;
+
+  return $self->SimpleSqlGet('SELECT NOW()');
+}
+
 # Convert a yearmonth-type string, e.g. '2009-08' to English: 'August 2009'
 # Pass 1 as a second parameter to leave it long, otherwise truncates to 3-char abbreviation
 sub YearMonthToEnglish
@@ -5796,7 +5808,6 @@ sub LockItem
   }
   my $sql = 'UPDATE ' . $table . ' SET locked=? WHERE id=?';
   $self->PrepareSubmitSql($sql, $user, $id);
-  $self->StartTimer($id, $user) unless defined $correction;
   return 0;
 }
 
@@ -5811,20 +5822,17 @@ sub UnlockItem
   $user = $self->get('user') unless defined $user;
   my $sql = 'UPDATE ' . $table . ' SET locked=NULL WHERE id=? AND locked=?';
   $self->PrepareSubmitSql($sql, $id, $user);
-  $self->RemoveFromTimer($id, $user) unless defined $correction;
 }
 
 sub UnlockItemEvenIfNotLocked
 {
-  my $self       = shift;
-  my $id         = shift;
-  my $user       = shift;
-  my $correction = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
 
-  my $table = (defined $correction)? 'corrections':'queue';
-  my $sql = 'UPDATE ' . $table . ' SET locked=NULL WHERE id=?';
+  my $sql = 'UPDATE queue SET locked=NULL WHERE id=?';
   if (!$self->PrepareSubmitSql($sql, $id)) { return 0; }
-  $self->RemoveFromTimer($id, $user) unless defined $correction;
+  #$self->RemoveFromTimer($id, $user);
   return 1;
 }
 
@@ -5836,7 +5844,7 @@ sub UnlockAllItemsForUser
 
   my $table = (defined $correction)? 'corrections':'queue';
   $self->PrepareSubmitSql('UPDATE ' . $table . ' SET locked=NULL WHERE locked=?', $user);
-  $self->PrepareSubmitSql('DELETE FROM timer WHERE user=?', $user) unless $correction;
+  #$self->PrepareSubmitSql('DELETE FROM timer WHERE user=?', $user) unless $correction;
 }
 
 sub GetLockedItems
@@ -5867,65 +5875,6 @@ sub ItemLockedSince
 
   my $sql = 'SELECT start_time FROM timer WHERE id=? AND user=?';
   return $self->SimpleSqlGet($sql, $id, $user);
-}
-
-sub StartTimer
-{
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift;
-
-  my $sql = 'REPLACE INTO timer SET start_time=NOW(), id=?, user=?';
-  $self->PrepareSubmitSql($sql, $id, $user);
-}
-
-sub EndTimer
-{
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift;
-
-  my $sql = 'UPDATE timer SET end_time=NOW() WHERE id=? AND user=?';
-  $self->PrepareSubmitSql($sql, $id, $user);
-  ## add duration to reviews table
-  $self->SetDuration($id, $user);
-}
-
-sub RemoveFromTimer
-{
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift;
-
-  ## clear entry in table
-  my $sql = 'DELETE FROM timer WHERE id=? AND user=?';
-  $self->PrepareSubmitSql($sql, $id, $user);
-}
-
-sub SetDuration
-{
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift;
-
-  my $msg;
-  my $sql = 'SELECT TIMEDIFF(end_time,start_time) FROM timer where id=? AND user=?';
-  my $dur = $self->SimpleSqlGet($sql, $id, $user);
-  if (defined $dur)
-  {
-    my $d1 = $self->SimpleSqlGet('SELECT duration FROM reviews where user=? AND id=?', $user, $id);
-    ## insert time
-    $sql = 'UPDATE reviews SET duration=ADDTIME(duration,?),time=time WHERE user=? AND id=?';
-    $self->PrepareSubmitSql($sql, $dur, $user, $id);
-    my $d2 = $self->SimpleSqlGet('SELECT duration FROM reviews where user=? AND id=?', $user, $id);
-    $msg = "$id ($user) dur $dur set from $d1 to $d2";
-  }
-  else
-  {
-    $msg = "$id ($user) no duration!";
-  }
-  $self->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $msg) if defined $msg;
-  $self->RemoveFromTimer($id, $user);
 }
 
 sub HasItemBeenReviewedByAnotherExpert

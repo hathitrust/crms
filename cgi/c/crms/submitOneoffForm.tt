@@ -5,6 +5,7 @@
 <form name="submitReview" action="crms" onsubmit="return VerifyCategory();">
   <input type="hidden" name="p"       value="confirmReview"/>
   <input type="hidden" name="barcode" value="[% barcode %]"/>
+  <input type="hidden" name="start"   value="[% crms.GetNow() %]"/>
   <input type="hidden" name="user"    value="[% user %]"/>
   <input type="hidden" name="confirm" value="1"/>
   <input type="hidden" name="editing" value="[% editing %]"/>
@@ -156,12 +157,14 @@
   <strong><label for="catMenu">Notes: </label></strong>
   <select id="catMenu" class="review" name="category">
     <option value="" [% ("" == category)? 'selected="selected"':'' %]>none</option>
+    [% IF NOT category %][% category = "Expert Note" %][% END %]
     [% cats = crms.Categories(1) %]
     [% FOREACH cat IN cats %]
       [% catname = cat.1 %]
       <option value="[% catname %]" [% (catname == category)? 'selected="selected"':'' %]>[% catname %]</option>
     [% END %]
   </select>
+  [% IF NOT note %][% note = tx %][% END %]
   <textarea title="Note Text" id="NoteTextField" name="note" cols="20" rows="1">[% note %]</textarea>
   <a style="position:absolute;left:-999px;" href="#" accesskey="n"
      onfocus="document.getElementById('NoteTextField').focus()">.</a>

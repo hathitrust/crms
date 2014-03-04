@@ -96,7 +96,6 @@ if ($cgi->param('p') eq 'confirmReview')
   my $id = $cgi->param('barcode');
   if ($cgi->param('submit') eq 'Cancel')
   {
-    $crms->EndTimer($id, $user);
     $crms->UnlockItem($id, $user);
     $cgi->delete_all();
     if ($editing)
@@ -117,6 +116,7 @@ if ($cgi->param('p') eq 'confirmReview')
     my $swiss     = $cgi->param('swiss');
     my $pre       = $cgi->param('prepopulated');
     my $oneoff    = $cgi->param('oneoff');
+    my $start     = $cgi->param('start');
     my ($rights, $reason);
     my $err = 'You must select a rights/reason combination.' unless $EncRights;
     if (!$err)
@@ -134,7 +134,8 @@ if ($cgi->param('p') eq 'confirmReview')
       #Process the submission, and go on to the next item
       my $expert;
       if ( $crms->IsUserExpert( $user ) ) { $expert = 2; }
-      $crms->SubmitReview($id, $user, $rights, $reason, $note, $renNum, $expert, $renDate, $category, $swiss, $hold, $pre);
+      $crms->SubmitReview($id, $user, $rights, $reason, $note, $renNum, $expert,
+                          $renDate, $category, $swiss, $hold, $pre, $start);
       my $ref = $crms->GetErrors();
       $err = $ref->[0] if $ref && $ref->[0];
     }
@@ -146,7 +147,6 @@ if ($cgi->param('p') eq 'confirmReview')
       $cgi->param('errorMsg', $err);
       $cgi->param('barcode',  $id);
       $cgi->param('rights',   $EncRights);
-      $cgi->param('reason',   $reason);
       $cgi->param('note',     $note);
       $cgi->param('category', $category);
       $cgi->param('renNum',   $renNum);
@@ -154,6 +154,7 @@ if ($cgi->param('p') eq 'confirmReview')
       $cgi->param('editing',  $editing);
       $cgi->param('hold',     $hold);
       $cgi->param('swiss',    $swiss);
+      $cgi->param('start',    $start);
       $crms->ClearErrors();
     }
     else
