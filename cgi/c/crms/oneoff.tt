@@ -84,6 +84,8 @@
 [% swiss = crms.GetReviewField(barcode, user, "swiss") %]
 [% END %]
 
+[% tx = crms.OneoffTicket(barcode) %]
+
 [% homeLink = "crms?p=confirmReview;submit=Cancel;barcode=$barcode;sys=$sys" %]
 
 <div class="divbody">
@@ -210,7 +212,8 @@
                                      note    = note,    category = category, editing  = editing,
                                      error   = error,   select   = select,   mag      = mag,
                                      hold    = hold,    swiss    = swiss,    expert   = expert,
-                                     status  = status,  sys      = sys,      ptview   = ptview %]
+                                     status  = status,  sys      = sys,      ptview   = ptview,
+                                     tx      = tx %]
       [% IF crms.IsCorrection(barcode) %]
         <table class="ReviewError" id="CorrectionWarning">
           <tr>
@@ -254,14 +257,16 @@
           </a></td></tr>
         [% END %]
         [% progress = crms.OneoffProgress(barcode) %]
+        [% IF progress.1 > 0 AND tx %]
         <tr><td>
           <span style="font-size:1.1em;color:red;">
-            This is [% progress.0 + 1 %] of [% progress.1 %] volumes on [% crms.OneoffTicket(barcode) %].
+            Volume [% progress.0 + 1 %] of [% progress.1 %] on [% tx %].
             [% IF progress.0 + 1 == progress.1 %]
-            <br/>The ticket can be closed when this review is submitted.
+            <br/>The ticket can be closed when this review is processed.
             [% END %]
           </span>
         </td></tr>
+        [% END %]
         </table>
       [% END %]
       [% status = crms.GetSystemStatus() %]
