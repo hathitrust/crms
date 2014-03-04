@@ -8842,11 +8842,10 @@ sub Dollarize
     if (!defined $record)
     {
       $self->ClearErrors();
-      print "$id2: no meta\n";
     }
     else
     {
-      $$meta = $record;
+      $$meta = $record if defined $meta;
       return $id2;
     }
   }
@@ -8883,8 +8882,8 @@ sub OneoffProgress
   my $id   = shift;
 
   my $tx = $self->OneoffTicket($id);
-  my $of = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE source=?', $tx);
   my $n = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE source=? AND status!=0', $tx);
+  my $of = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE source=?', $tx);
   return [$n, $of];
 }
 
