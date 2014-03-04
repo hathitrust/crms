@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.6.9';
+  return '4.7';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -2695,7 +2695,7 @@ sub GetVolumesRef
                   title      => $row->[15],
                   author     => $row->[16]
                  };
-      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds' or $page eq 'adminHolds';;
+      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds' or $page eq 'adminHolds';
       if ($page eq 'adminHistoricalReviews')
       {
         my $pubdate = $row->[17];
@@ -3292,11 +3292,13 @@ sub AddUser
   $kerberos = $self->SimpleSqlGet('SELECT kerberos FROM users WHERE id=?', $id) unless $kerberos;
   $name = $self->SimpleSqlGet('SELECT name FROM users WHERE id=?', $id) unless $name;
   $note = $self->SimpleSqlGet('SELECT note FROM users WHERE id=?', $id) unless $note;
-  my $wcs = $self->WildcardList(10);
-  my $sql = "REPLACE INTO users (id,kerberos,name,reviewer,advanced,expert,extadmin,admin,superadmin,note)" .
+  my $inst = $self->PredictUserInstitution($id);
+  my $wcs = $self->WildcardList(11);
+  my $sql = 'REPLACE INTO users (id,kerberos,name,reviewer,advanced,expert,extadmin,' .
+            'admin,superadmin,note,institution)' .
             ' VALUES ' . $wcs;
   $self->PrepareSubmitSql($sql, $id, $kerberos, $name, $reviewer, $advanced,
-                          $expert, $extadmin, $admin, $superadmin, $note);
+                          $expert, $extadmin, $admin, $superadmin, $note, $inst);
   if (defined $countries)
   {
     my @cs = split m/\s*,\s*/, $countries;
@@ -3479,16 +3481,21 @@ sub IsUserSuperAdmin
   return $self->SimpleSqlGet($sql, $user);
 }
 
-# If order, orders by privilege level from low to high
+# Order 0: by name with inactives last
+# Order 1: by privilege level from low to high (used in stats pages)
+# Order 2: by institution, name
+# Order 3: by privilege level from high to low, name
 sub GetUsers
 {
   my $self  = shift;
-  my $order = shift;
+  my $order = shift or 0;
 
   my $dbh  = $self->GetDb();
-  $order = ($order)? 'ORDER BY expert ASC, name ASC':
-                     'ORDER BY (reviewer OR advanced OR extadmin OR admin OR superadmin) DESC, name ASC';
-  my $sql = 'SELECT id FROM users ' . $order;
+  my $ordercl = '(u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC, u.name ASC';
+  $ordercl = 'u.expert ASC, u.name' if $order == 1;
+  $ordercl = '(u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC, i.name ASC, u.name ASC' if $order == 2;
+  $ordercl = '(u.reviewer+(2*u.advanced)+(4*u.extadmin)+(8*u.admin)+(16*u.superadmin)) DESC, u.name ASC' if $order == 3;
+  my $sql = 'SELECT u.id FROM users u INNER JOIN institutions i ON u.institution=i.id ORDER BY ' . $ordercl;
   my $ref = $dbh->selectall_arrayref($sql);
   my @users = map { $_->[0]; } @{ $ref };
   return \@users;
@@ -3505,49 +3512,89 @@ sub IsUserIncarnationExpertOrHigher
   return 0 < $self->SimpleSqlGet($sql, $user);
 }
 
-# FIXME: this should go in the database, but need mechanism for exclusing UM from
-# the institutional stats menu/nav.
-# Suggest CREATE TABLE institutions id, name, code, report BOOL
-# ex. 1, "Indiana University", "IU", TRUE
-#     2, "University of Michigan", "UM", FALSE
-# and link entries in the users table to the inst id.
-# FIXME: use the term institution or affiliation, not both.
-sub GetAffiliations
+sub GetInstitutions
 {
   my $self = shift;
-  
-  return ['UM-ERAU','COL','IU','UMN','UW'];
+
+  my @insts = ();
+  push @insts, $_->[0] for $self->GetDb()->selectall_arrayref('SELECT id FROM institutions');
+  return \@insts;
 }
 
-# Default 'UM', can also be 'IU', 'UW', or 'UMN'
-sub GetUserAffiliation
+sub PredictUserInstitution
 {
   my $self = shift;
   my $id   = shift;
-  
+
+  my $inst;
   my @parts = split '@', $id;
-  if (scalar @parts > 1)
+  if (scalar @parts == 2)
   {
     my $suff = $parts[1];
-    return 'IU' if $suff eq 'indiana.edu';
-    return 'UW' if $suff eq 'library.wisc.edu';
-    return 'UMN' if $suff eq 'umn.edu';
-    return 'COL' if $suff eq 'columbia.edu';
+    $suff =~ s/\-expert//;
+    my $sql = "SELECT id FROM institutions WHERE LOCATE(suffix,'$suff')>0";
+    $inst = $self->SimpleSqlGet($sql);
   }
-  return ($id =~ m/annekz/)? 'UM':'UM-ERAU';
+  $inst = 0 unless defined $inst;
+  return $inst;
 }
 
-sub GetUsersWithAffiliation
+# Ext admin can see their institution's; admins can see all of them.
+sub InstitutionMenus
+{
+  my $self = shift;
+  my $user = shift;
+
+  $user = $self->get('user') unless $user;
+  my @menus;
+  my $param = undef;
+  my $inst = $self->GetUserInstitution($user);
+  my $sql = 'SELECT DISTINCT i.id,i.shortname FROM institutions i INNER JOIN users u ON i.id=u.institution';
+  my $admin = $self->GetSystemVar('adminEmail', '');
+  if (!$self->IsUserAdmin($user))
+  {
+    $sql .= ' AND u.institution=' . $inst . ' AND u.extadmin=1 AND u.id="' . $user . '"';
+  }
+  elsif ($inst == 0 && $admin !~ /$user/i)
+  {
+    $sql .= ' AND u.institution=0';
+  }
+  $sql .= ' ORDER BY i.shortname ASC';
+  #print "$user: $sql\n";
+  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  @menus = map {['crms?p=adminUserRateInst;inst='.$_->[0],'All ' . $_->[1] . ' Stats'];} @{$ref};
+  return \@menus;
+}
+
+sub GetUserInstitution
+{
+  my $self = shift;
+  my $id   = shift;
+
+  return $self->SimpleSqlGet('SELECT institution FROM users WHERE id=?', $id);
+}
+
+sub GetInstitutionName
+{
+  my $self = shift;
+  my $id   = shift;
+  my $long = shift;
+
+  my $col = ($long)? 'name':'shortname';
+  return $self->SimpleSqlGet('SELECT ' . $col . ' FROM institutions WHERE id=?', $id);
+}
+
+sub GetInstitutionUsers
 {
   my $self  = shift;
-  my $aff   = shift;
+  my $inst  = shift;
   my $order = shift;
   
   my $users = $self->GetUsers($order);
   my @ausers = ();
   foreach my $user (@{$users})
   {
-    push @ausers, $user if $aff eq $self->GetUserAffiliation($user);
+    push @ausers, $user if $inst == $self->GetUserInstitution($user);
   }
   return \@ausers;
 }
@@ -3558,11 +3605,11 @@ sub CanUserSeeInstitutionalStats
   my $inst = shift;
   my $user = shift;
 
-  return 0 unless $inst;
+  return 0 unless defined $inst;
   $user = $self->get('user') unless $user;
   return 1 if $self->IsUserExpert($user) or $self->IsUserAdmin($user);
-  my $aff = $self->GetUserAffiliation($user);
-  return ($aff eq $inst && $self->IsUserExtAdmin($user));
+  my $aff = $self->GetUserInstitution($user);
+  return ($aff == $inst && $self->IsUserExtAdmin($user));
 }
 
 sub GetTheYear
@@ -4290,15 +4337,15 @@ sub GetStatsYears
     if ('all__' eq substr $user, 0, 5)
     {
       my $inst = substr $user, 5;
-      my $affs = $self->GetUsersWithAffiliation($inst);
-      $usersql = sprintf "AND user IN ('%s')", join "','", @{$affs};
+      $usersql = 'AND u.institution=' . $inst;
     }
     else
     {
       $usersql = "AND user='$user'";
     }
   }
-  my $sql = 'SELECT DISTINCT year FROM userstats WHERE total_reviews>0 ' . $usersql . ' ORDER BY year DESC';
+  my $sql = 'SELECT DISTINCT year FROM userstats s INNER JOIN users u ON s.user=u.id' .
+            ' WHERE s.total_reviews>0 ' . $usersql . ' ORDER BY year DESC';
   #print "$sql<br/>\n";
   my $ref = $self->GetDb()->selectall_arrayref($sql);
   return unless scalar @{$ref};
@@ -4332,8 +4379,9 @@ sub CreateStatsData
   {
     my $inst = substr $user, 5;
     #print "inst '$inst'<br/>\n";
-    $username = "All $inst Reviewers";
-    my $affs = $self->GetUsersWithAffiliation($inst);
+    my $name = $self->GetInstitutionName($inst);
+    $username = "All $name Reviewers";
+    my $affs = $self->GetInstitutionUsers($inst);
     $instusers = sprintf "'%s'", join "','", @{$affs};
     $instusersne = sprintf "'%s'", join "','", map {($self->IsUserExpert($_))? ():$_} @{$affs};
   }
@@ -8301,7 +8349,14 @@ sub MenuItems
   my @all = ();
   foreach my $row (@{$ref})
   {
-    next if ($row->[2] && !$self->CanUserSeeInstitutionalStats($row->[2]));
+    if (defined $row->[2])
+    {
+      foreach my $inst (@{$self->InstitutionMenus()})
+      {
+        push @all, [$inst->[1],$inst->[0],undef,undef,undef];
+      }
+      next;
+    }
     if (!$row->[3] ||
         ($row->[3] &&
          (($e && $row->[3] =~ m/e/) ||

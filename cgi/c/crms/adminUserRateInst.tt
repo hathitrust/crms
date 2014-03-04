@@ -8,14 +8,16 @@
 
 [% INCLUDE header.tt %]
 
-<h2>[% inst %] Review Stats:</h2>
+[% name = crms.GetInstitutionName(inst, 1) %]
+<h2>[% name %] Review Stats:</h2>
+
 <a href="/c/crms/pdf/AllReviewStatsHelp.pdf" target="_blank">All&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
 <br/>
-[% nononexpert = (inst != 'UM-ERAU') %]
+[% nononexpert = 1 %]
 [% IF crms.GetTotalHistoricalReviewCount() %]
   [% crms.CreateStatsReport(p, 'all', 1, 1, 0, 1, nononexpert) %]
   <br/><br/>
-  [% users = crms.GetUsersWithAffiliation(inst, 1) %]
+  [% users = crms.GetInstitutionUsers(inst, 1) %]
   [% users.unshift('all' _ '__' _ inst) %]
   [% users.unshift('all') %]
   [% onclicks = '' %]
@@ -51,7 +53,9 @@
       <br/><br/>
     [% END %]
   [% END %]
-  <span class="smallishText">*Does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews.</span>
+  <span class="smallishText">*Does not include Reviews Awaiting Verdict
+    [% IF crms.sys() == 'crms'%] or pre-CRMS/Legacy reviews[% END %]
+  </span>
 [% ELSE %]
   There are no historical reviews at this time.
 [% END %]
