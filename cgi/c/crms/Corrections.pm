@@ -2,6 +2,7 @@ package Corrections;
 
 use strict;
 use warnings;
+use Jira;
 use vars qw(@ISA @EXPORT @EXPORT_OK);
 our @EXPORT = qw(CorrectionsTitles CorrectionsFields GetCorrectionsDataRef CorrectionsDataSearchMenu
                  ExportCorrections RetrieveTicket);
@@ -292,7 +293,6 @@ sub CorrectionsToJira
   }
 }
 END
-  use Jira;
   my $ua = Jira::Login($self);
   return unless defined $ua;
   foreach my $id (sort keys %{$exports})
@@ -329,8 +329,7 @@ sub RetrieveTickets
   my $self    = shift;
   my $ids     = shift;
   my $verbose = shift;
-  
-  use Jira;
+
   my $ua = Jira::Login($self);
   return unless defined $ua;
   foreach my $id (sort keys %{$ids})
