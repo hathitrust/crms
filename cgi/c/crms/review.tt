@@ -205,7 +205,7 @@
           <td/>
           <td style="margin:0px;padding:0px;">
              <input type="button" class="reviewblue" value="Toggle View" onclick="flipFrame();" accesskey="o"
-             style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
+             style="margin:0px;padding:1px;background-color:#e0d6de;float:right;"/>
           </td>
         </tr>
         [% IF ren %]
