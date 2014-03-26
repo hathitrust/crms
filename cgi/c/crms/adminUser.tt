@@ -108,6 +108,7 @@
   <form action="crms">
     <input type="hidden" name="p" value="adminUser"/>
     <input type="hidden" name="add" value="1"/>
+    <input type="hidden" name="order" value="[% order %]"/>
     [% crms.HiddenSys() %]
     <table>
     <tr>
