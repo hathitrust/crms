@@ -1168,8 +1168,7 @@ sub LoadNewItems
     }
     if ($self->AddItemToQueue($id, $record))
     {
-      my $pub_date = $self->GetRecordPubDate($id, $record);
-      printf "Added to queue: $id published %s\n", substr($pub_date, 0, 4);
+      print "Added to queue: $id\n";
       $count++;
     }
     last if $count >= $needed;
