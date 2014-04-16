@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.7';
+  return '4.8';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -807,7 +807,7 @@ sub CheckAndLoadItemIntoCandidates
   my $cm = $self->CandidatesModule();
   my $sysid;
   my $record;
-  my $oldSysid = $self->SimpleSqlGet('SELECT sysid FROM system WHERE id=?', $id);
+  my $oldSysid = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
   if (defined $oldSysid)
   {
     $record = $self->GetMetadata($id, \$sysid, 1);
@@ -860,6 +860,7 @@ sub CheckAndLoadItemIntoCandidates
   {
     #print "No metadata yet for $id: will try again tomorrow.\n";
     $self->Filter($id, 'no meta') unless defined $noop;
+    $self->ClearErrors();
     return;
   }
   my $errs = $self->GetViolations($id, $record);
@@ -1683,7 +1684,7 @@ sub HoldExpiry
   my $id       = shift;
   my $user     = shift;
   my $readable = shift;
-  
+
   my $exp = $self->HoldForItem($id,$user);
   $exp = $self->StickyHoldForItem($id,$user) unless $exp;
   $exp = $self->TwoWorkingDays() unless $exp;
@@ -1794,7 +1795,7 @@ sub ConvertToSearchTerm
   }
   elsif ($search eq 'Swiss') { $new_search = 'r.swiss'; }
   elsif ($search eq 'Hold Thru') { $new_search = 'r.hold'; }
-  elsif ($search eq 'SysID') { $new_search = 's.sysid'; }
+  elsif ($search eq 'SysID') { $new_search = 'b.sysid'; }
   elsif ($search eq 'Holds')
   {
     $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold IS NOT NULL)';
@@ -1867,11 +1868,9 @@ sub CreateSQLForReviews
   }
   elsif ($page eq 'adminHistoricalReviews')
   {
-    my $doS = 'LEFT JOIN system s ON r.id=s.id';
-    $doS = '' unless ($search1 . $search2 . $search3 . $order) =~ m/sysid/;
     my $doB = 'LEFT JOIN bibdata b ON r.id=b.id';
     $doB = '' unless ($search1 . $search2 . $search3 . $order) =~ m/b\./;
-    $sql .= "r.status,r.validated FROM historicalreviews r $doB $doS WHERE r.id IS NOT NULL";
+    $sql .= "r.status,r.validated FROM historicalreviews r $doB WHERE r.id IS NOT NULL";
   }
   elsif ($page eq 'undReviews')
   {
@@ -1953,12 +1952,10 @@ sub CreateSQLForVolumes
   my @rest = ();
   my $table = 'reviews';
   my $doQ = '';
-  my $doS = '';
   my $status = 'r.status';
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
-    $doS = 'LEFT JOIN system s ON r.id=s.id' if ($search1 . $search2 . $search3 . $order) =~ m/sysid/;
   }
   else
   {
@@ -1987,16 +1984,16 @@ sub CreateSQLForVolumes
   push @rest, "date(r.time) <= '$endDate'" if $endDate;
   my $restrict = join(' AND ', @rest);
   $restrict = 'WHERE '.$restrict if $restrict;
-  my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT r.id FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS $restrict)";
+  my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT r.id FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $restrict)";
   #print "$sql<br/>\n";
   my $totalReviews = $self->SimpleSqlGet($sql);
-  $sql = "SELECT COUNT(DISTINCT r.id) FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS $restrict";
+  $sql = "SELECT COUNT(DISTINCT r.id) FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $restrict";
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   $sql = "SELECT foo.id FROM (SELECT r.id as id, $order2($order) AS ord FROM $table r LEFT JOIN bibdata b ON r.id=b.id" .
-         " $doQ $doS $restrict GROUP BY r.id) AS foo ORDER BY ord $dir $limit";
+         " $doQ $restrict GROUP BY r.id) AS foo ORDER BY ord $dir $limit";
   #print "$sql<br/>\n";
   my $n = POSIX::ceil($offset/$pagesize+1);
   my $of = POSIX::ceil($totalVolumes/$pagesize);
@@ -2048,7 +2045,6 @@ sub CreateSQLForVolumesWide
   {
     $table = 'historicalreviews';
     $top = 'bibdata b ';
-    $top .= 'LEFT JOIN system s ON b.id=s.id' if ($search1 . $search2 . $search3 . $order) =~ m/sysid/;
   }
   else
   {
@@ -2226,7 +2222,7 @@ sub SearchTermsToSQLWide
     $search2value = $search3value;
     $search3value = $search3 = undef;
   }
-  my %pref2table = ('b'=>'bibdata','r'=>$table,'q'=>'queue','s'=>'system');
+  my %pref2table = ('b'=>'bibdata','r'=>$table,'q'=>'queue');
   my $table1 = $pref2table{substr $search1,0,1};
   my $table2 = $pref2table{substr $search2,0,1};
   my $table3 = $pref2table{substr $search3,0,1};
@@ -2510,8 +2506,8 @@ sub UnpackResults
       my $pubdate = $self->SimpleSqlGet('SELECT YEAR(pub_date) FROM bibdata WHERE id=?', $id);
       $pubdate = '?' unless $pubdate;
       my $validated = $row->[15];
+      my $sysid = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
       #id, title, author, review date, status, user, attr, reason, category, note, validated
-      my $sysid = $self->SimpleSqlGet('SELECT sysid FROM system WHERE id=?', $id);
       $buff .= qq{$id\t$sysid\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated\t$swiss};
     }
     $buff .= sprintf("%s\n", ($self->IsUserAdmin())? "\t$priority":'');
@@ -2646,7 +2642,7 @@ sub GetReviewsRef
         ${$item}{'pubdate'} = $pubdate;
         ${$item}{'author'} = $self->SimpleSqlGet('SELECT author FROM bibdata WHERE id=?', $id);
         ${$item}{'title'} = $self->SimpleSqlGet('SELECT title FROM bibdata WHERE id=?', $id);
-        ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM system WHERE id=?', $id);
+        ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
         ${$item}{'validated'} = $row->[15];
       }
       push(@{$return}, $item);
@@ -2680,11 +2676,9 @@ sub GetVolumesRef
   }
   my $table = 'reviews';
   my $doQ = '';
-  my $doS = '';
   my $status = 'r.status';
   if ($page eq 'adminHistoricalReviews')
   {
-    $doS = 'LEFT JOIN system s ON r.id=s.id';
     $table = 'historicalreviews';
   }
   else
@@ -2698,9 +2692,9 @@ sub GetVolumesRef
     my $id = $row->[0];
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
-           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ') .
+           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, b.sysid ':' ') .
            (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ', DATE(r.hold) ':' ') .
-           "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS " .
+           "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ " .
            "WHERE r.id='$id' ORDER BY $order $dir";
     #print "$sql<br/>\n";
     my $ref2 = $self->GetDb()->selectall_arrayref($sql);
@@ -2734,7 +2728,7 @@ sub GetVolumesRef
         $pubdate = '?' unless $pubdate;
         ${$item}{'pubdate'} = $pubdate;
         ${$item}{'validated'} = $row->[18];
-        ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM system WHERE id=?', $id);
+        ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
       }
       push(@{$return}, $item);
     }
@@ -2757,12 +2751,10 @@ sub GetVolumesRefWide
   
   my $table ='reviews';
   my $doQ = '';
-  my $doS = '';
   my $status = 'r.status';
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
-    $doS = 'INNER JOIN system s ON r.id=s.id';
   }
   else
   {
@@ -2783,9 +2775,9 @@ sub GetVolumesRefWide
     my $id = $row->[0];
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
-           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, s.sysid ':' ') .
+           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, b.sysid ':' ') .
            (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ', DATE(r.hold) ':' ') .
-           "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $doS " .
+           "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ " .
            "WHERE r.id='$id' ORDER BY $order $dir";
     #print "$sql<br/>\n";
     my $ref2 = $self->GetDb()->selectall_arrayref($sql);
@@ -2819,7 +2811,7 @@ sub GetVolumesRefWide
         $pubdate = '?' unless $pubdate;
         ${$item}{'pubdate'} = $pubdate;
         ${$item}{'validated'} = $row->[18];
-        ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM system WHERE id=?', $id);
+        ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
       }
       push(@{$return}, $item);
     }
@@ -3549,7 +3541,7 @@ sub GetInstitutions
   my $self = shift;
 
   my @insts = ();
-  push @insts, $_->[0] for $self->GetDb()->selectall_arrayref('SELECT id FROM institutions');
+  push @insts, $_->[0] for @{$self->GetDb()->selectall_arrayref('SELECT id FROM institutions')};
   return \@insts;
 }
 
@@ -5071,8 +5063,8 @@ sub HasItemBeenReviewedByTwoReviewers
 
 sub ValidateSubmission
 {
-  my $self = shift;
-  my ($id, $user, $attr, $reason, $note, $category, $renNum, $renDate) = @_;
+  my ($self, $id, $user, $attr, $reason, $note,
+      $category, $renNum, $renDate, $oneoff) = @_;
   my $errorMsg = '';
   ## Someone else has the item locked?
   $errorMsg = 'This item has been locked by another reviewer. Please Cancel.' if $self->IsLockedForOtherUser($id);
@@ -5089,7 +5081,6 @@ sub ValidateSubmission
   {
     my $module = 'Validator_' . $self->get('sys') . '.pm';
     require $module;
-    unshift @_, $self;
     $errorMsg = Validator::ValidateSubmission(@_);
   }
   return $errorMsg;
@@ -5464,7 +5455,7 @@ sub GetPubCountry
 
   my $sql = 'SELECT country FROM bibdata WHERE id=?';
   my $date = $self->SimpleSqlGet($sql, $id);
-  if (!$date)
+  if (!defined $date)
   {
     $self->UpdateMetadata($id, 1);
     $date = $self->SimpleSqlGet($sql, $id);
@@ -5663,7 +5654,7 @@ sub BarcodeToId
   my $force = shift;
 
   my $sysid = undef;
-  my $sql = 'SELECT sysid FROM system WHERE id=?';
+  my $sql = 'SELECT sysid FROM bibdata WHERE id=?';
   $sysid = $self->SimpleSqlGet($sql, $id) unless $force;
   if (!$sysid)
   {
@@ -5690,8 +5681,8 @@ sub BarcodeToId
       $sysid = $keys[0];
       if (defined $sysid)
       {
-        $sql = 'REPLACE INTO system (id,sysid) VALUES (?,?)';
-        $self->PrepareSubmitSql($sql, $id, $sysid);
+        $sql = 'UPDATE bibdata SET sysid=? WHERE id=?';
+        $self->PrepareSubmitSql($sql, $sysid, $id);
       }
     }
     else { $self->SetError("HT Bib API found no system id for '$id'\nReturned: '$content'\nURL: '$url'"); }
@@ -6187,35 +6178,32 @@ sub GetPrevDate
 
   ## default 1 day (86,400 sec.)
   if (!$prev) { $prev = 86400; }
-
   my @p = localtime(time() - $prev);
   $p[3] = ($p[3]);
   $p[4] = ($p[4]+1);
   $p[5] = ($p[5]+1900);
   foreach (0,1,2,3,4) { $p[$_] = sprintf("%0*d", "2", $p[$_]); }
-
   ## DB format (YYYY-MM-DD HH:MM:SS)
   return "$p[5]-$p[4]-$p[3] $p[2]:$p[1]:$p[0]";
 }
 
-
 sub GetTodaysDate
 {
-    my $self = shift;
-    my @p = localtime(time());
-    $p[4] = ($p[4]+1);
-    $p[5] = ($p[5]+1900);
-    foreach (0,1,2,3,4) { $p[$_] = sprintf("%0*d", "2", $p[$_]); }
+  my $self = shift;
 
-    ## DB format (YYYY-MM-DD HH:MM:SS)
-    return "$p[5]-$p[4]-$p[3] $p[2]:$p[1]:$p[0]";
+  my @p = localtime(time());
+  $p[4] = ($p[4]+1);
+  $p[5] = ($p[5]+1900);
+  foreach (0,1,2,3,4) { $p[$_] = sprintf("%0*d", "2", $p[$_]); }
+  ## DB format (YYYY-MM-DD HH:MM:SS)
+  return "$p[5]-$p[4]-$p[3] $p[2]:$p[1]:$p[0]";
 }
 
 sub OpenErrorLog
 {
   my $self = shift;
-  my $logFile = $self->get('logFile');
 
+  my $logFile = $self->get('logFile');
   if ($logFile)
   {
     open(my $fh, ">>", $logFile);
@@ -6254,8 +6242,6 @@ sub Logit
 ##              $self->SetError("foo");
 ##              my $r = $self->GetErrors();
 ##              if (defined $r) { $self->Logit(join(", ", @{$r})); }
-##  Parameters: 
-##  Return:     
 ## ----------------------------------------------------------------------------
 sub SetError
 {
@@ -7590,7 +7576,7 @@ sub ConvertToInheritanceSearchTerm
   $new_search = 'DATE(e.time)' if $search eq 'date';
   $new_search = 'DATE(i.time)' if $search eq 'idate';
   $new_search = 'e.id' if (!$search || $search eq 'src');
-  $new_search = 's.sysid' if $search eq 'sysid';
+  $new_search = 'b.sysid' if $search eq 'sysid';
   $new_search = 'i.id' if $search eq 'id';
   $new_search = '(i.attr=1 && (e.attr="ic" || e.attr="und") || (e.attr="pd" && (i.attr=2 || i.attr=5)))' if $search eq 'change';
   $new_search = 'IF(i.reason=1 || i.reason=12,0,1)' if $search eq 'prior';
@@ -7640,7 +7626,6 @@ sub GetInheritanceRef
     $search1Value = $2;
     $tester1 = $1;
   }
-  my $doS = ' LEFT JOIN system s ON s.id=e.id ';
   my $datesrc = ($dateType eq 'date')? 'DATE(e.time)':'DATE(i.time)';
   push @rest, "$datesrc >= '$startDate'" if $startDate;
   push @rest, "$datesrc <= '$endDate'" if $endDate;
@@ -7650,7 +7635,7 @@ sub GetInheritanceRef
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
   my $sql = 'SELECT COUNT(DISTINCT e.id),COUNT(DISTINCT i.id) FROM inherit i ' .
             'LEFT JOIN exportdata e ON i.gid=e.gid ' .
-            "LEFT JOIN bibdata b ON e.id=b.id $doS $restrict";
+            "LEFT JOIN bibdata b ON e.id=b.id $restrict";
   my $ref;
   #print "$sql<br/>\n";
   eval {
@@ -7665,9 +7650,9 @@ sub GetInheritanceRef
   my $of = POSIX::ceil($inheritingVolumes/$pagesize);
   $n = $of if $n > $of;
   my $return = ();
-  $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time),i.src,DATE(i.time) ' .
+  $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time),i.src,DATE(i.time),b.sysid ' .
          'FROM inherit i LEFT JOIN exportdata e ON i.gid=e.gid ' .
-         "LEFT JOIN bibdata b ON e.id=b.id $doS $restrict ORDER BY $order $dir, $order2 $dir2 LIMIT $offset, $pagesize";
+         "LEFT JOIN bibdata b ON e.id=b.id $restrict ORDER BY $order $dir, $order2 $dir2 LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
   $ref = undef;
   eval {
@@ -7684,7 +7669,6 @@ sub GetInheritanceRef
   {
     $i++;
     my $id = $row->[0];
-    my $sysid = $self->BarcodeToId($id);
     my $attr = $self->TranslateAttr($row->[1]);
     my $reason = $self->TranslateReason($row->[2]);
     my $gid = $row->[3];
@@ -7695,6 +7679,7 @@ sub GetInheritanceRef
     my $date = $row->[8];
     my $src = $row->[9];
     my $idate = $row->[10]; # Date added to inherit table
+    my $sysid = $row->[11];
     $title =~ s/&/&amp;/g;
     #my ($attr,$reason,$src3,$usr3,$time3,$note3) = @{$self->RightsQuery($id,1)->[0]};
     my ($pd,$pdus,$icund) = (0,0,0);
@@ -8790,16 +8775,13 @@ sub GetVIAFData
       $pref = "/*[local-name()='searchRetrieveResponse']/*[local-name()='records']/*[local-name()='record'][$n]/*[local-name()='recordData']";
       $xpath = "$pref/*[local-name()='VIAFCluster']/*[local-name()='nationalityOfEntity']/*[local-name()='data']/*[local-name()='text']";
       my @vals = $xpc->findnodes($xpath);
-      if (@vals)
+      foreach my $val (@vals)
       {
-        foreach my $val (@vals)
+        my $where = $val->string_value();
+        if (defined $where && $where ne 'US' && $where ne 'XX')
         {
-          my $where = $val->string_value();
-          if (defined $where && $where ne 'US' && $where ne 'XX')
-          {
-            $ret{'country'} = $where;
-            last;
-          }
+          $ret{'country'} = $where;
+          last;
         }
       }
       $xpath = $pref . '/*[local-name()="VIAFCluster"]/*[local-name()="viafID"]';
@@ -8864,7 +8846,7 @@ sub Dollarize
   my $self = shift;
   my $id   = shift;
   my $meta = shift;
-  
+
   if ($id =~ m/uc1\.b\d{1,6}$/)
   {
     my $id2 = $id;
@@ -8884,7 +8866,7 @@ sub Dollarize
 }
 
 # Return undollarized barcode if suffix is the right length,
-# a, or undef.
+# or undef.
 sub Undollarize
 {
   my $self = shift;
