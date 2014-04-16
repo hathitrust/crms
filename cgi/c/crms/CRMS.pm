@@ -1021,7 +1021,6 @@ sub CandidatesModule
 # Returns an array of error messages (reasons for unsuitability for CRMS) for a volume.
 # Used by candidates loading to ignore inappropriate items.
 # Used by Add to Queue page for filtering non-overrides.
-# When used by an expert/admin to add to the queue, the date range becomes 1923-1977 if override.
 sub GetViolations
 {
   my $self     = shift;
@@ -1040,6 +1039,19 @@ sub GetViolations
   elsif ($priority < 4 || !$override)
   {
     @errs = $self->CandidatesModule()->GetViolations($id, $record, $priority, $override);
+  }
+  my $ref = $self->RightsQuery($id, 1);
+  $ref = $ref->[0] if $ref;
+  if ($ref)
+  {
+    my ($attr,$reason,$src,$usr,$time,$note) = @{$ref};
+    push @errs, "current rights $attr/$reason" unless $self->CandidatesModule()->HasCorrectRights($attr, $reason) or
+                                                ($override and $priority >= 3) or
+                                                $priority == 4;
+  }
+  else
+  {
+    push @errs, "rights query for $id failed";
   }
   return \@errs;
 }

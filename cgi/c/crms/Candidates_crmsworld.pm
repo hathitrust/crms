@@ -113,20 +113,6 @@ sub GetViolations
                                         $where ne 'Australia' and
                                         $where ne 'Canada';
   push @errs, 'non-BK format' unless $self->{crms}->IsFormatBK($id, $record);
-  my $ref = $self->{crms}->RightsQuery($id,1);
-  $ref = $ref->[0] if $ref;
-  if ($ref)
-  {
-    my ($attr,$reason,$src,$usr,$time,$note) = @{$ref};
-    my $rights = "$attr/$reason";
-    push @errs, "current rights are $rights" unless $attr eq 'pdus' or
-                                                    $rights eq 'ic/bib' or
-                                                    $attr eq 'op';
-  }
-  else
-  {
-    push @errs, "rights query for $id failed";
-  }
   #printf "$id: %s\n", join '; ', @errs if scalar @errs;
   return @errs;
 }

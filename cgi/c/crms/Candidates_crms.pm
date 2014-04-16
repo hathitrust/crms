@@ -82,21 +82,6 @@ sub GetViolations
   my $where = $self->{crms}->GetRecordPubCountry($id, $record);
   push @errs, "foreign pub ($where)" if $where ne 'USA';
   push @errs, 'non-BK format' unless $self->{crms}->IsFormatBK($id, $record);
-  my $ref = $self->{crms}->RightsQuery($id,1);
-  $ref = $ref->[0] if $ref;
-  if ($ref)
-  {
-    my ($attr,$reason,$src,$usr,$time,$note) = @{$ref};
-    my $rights = "$attr/$reason";
-    push @errs, "current rights $rights" unless $rights eq 'ic/bib' or
-                                                $attr eq 'op' or
-                                                ($override and $priority == 3) or
-                                                $priority == 4;
-  }
-  else
-  {
-    push @errs, "rights query for $id failed";
-  }
   return @errs;
 }
 
