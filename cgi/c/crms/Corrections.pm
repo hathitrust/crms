@@ -181,12 +181,6 @@ sub ExportCorrections
     {
       my $line = $id . ((defined $tx)? "\t$tx":'') . "\n";
       print $fh $line;
-      my $id2 = $self->Undollarize($id);
-      if (defined $id2)
-      {
-        $line = $id2 . ((defined $tx)? "\t$tx":'') . "\n";
-        print $fh $line;
-      }
       $n++;
     }
   }
@@ -207,11 +201,10 @@ sub ExportCorrections
   foreach my $id (sort keys %exports)
   {
     # Set as exported anything marked exported by Jira,
-    # and anything non-Jira as long as there was no email error.
+    # and anything non-Jira.
     my $tx = $exports{$id}->{'jira'};
     my $ex = $exports{$id}->{'exported'};
-    if ((defined $tx && 1 == $ex) ||
-        (!defined $tx && !$err))
+    if ((defined $tx && 1 == $ex) || !defined $tx)
     {
       $sql = 'UPDATE corrections SET exported=1 WHERE id=?';
       $self->PrepareSubmitSql($sql, $id) unless $noop;
@@ -300,17 +293,21 @@ END
     my $tx = $exports->{$id}{'jira'};
     next unless defined $tx;
     my $url = 'https://wush.net/jira/hathitrust/rest/api/2/issue/' . $tx . '/transitions';
-    print "$url\n";
     my $ok = 1;
     my $code;
     if (!$noop)
     {
+      print "$url\n";
       my $req = HTTP::Request->new(POST => $url);
       $req->content_type('application/json');
       $req->content($json);
       my $res = $ua->request($req);
       $ok = $res->is_success();
       $code = $res->code();
+    }
+    else
+    {
+      print "No-op, not submitting on $tx\n";
     }
     if ($ok)
     {
