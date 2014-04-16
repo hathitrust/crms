@@ -5,7 +5,7 @@
 <form name="submitReview" action="crms" onsubmit="return VerifyCategory();">
   <input type="hidden" name="p"       value="confirmReview"/>
   <input type="hidden" name="barcode" value="[% barcode %]"/>
-  <input type="hidden" name="start" value="[% crms.GetNow() %]"/>
+  <input type="hidden" name="start"   value="[% crms.GetNow() %]"/>
   <input type="hidden" name="user"    value="[% user %]"/>
   <input type="hidden" name="confirm" value="1"/>
   <input type="hidden" name="editing" value="[% editing %]"/>
@@ -118,7 +118,7 @@
         [% ELSE %]
           <input type="button" class="reviewblue" value="Pull Pub Date"
           [% IF NOT pub_date.match('^-?\d+$') %]disabled="disabled"[% END %]
-          onclick="document.getElementById('renewalField').value=document.getElementById('pubDateSpan').innerHTML;
+          onclick="PullPubDate();
                    document.getElementById('renewalFieldCheckbox').checked=true;PredictRights('[% barcode %]');"
           accesskey="d"
           style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>

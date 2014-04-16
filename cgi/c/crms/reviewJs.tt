@@ -290,6 +290,15 @@ function zoom(selector,name)
   document.getElementById('tFrame').contentWindow.location.reload(true);
 }
 
+function PullPubDate()
+{
+  var date = document.getElementById('pubDateSpan').innerHTML;
+  var re = /^\s*(-?\d+)(--?\d+)?\s*$/;
+  var a = re.exec(date)
+  if (a.length > 1) date = a[1];
+  else date = '';
+  document.getElementById('renewalField').value=date;
+}
 
 //-->
 </script>
