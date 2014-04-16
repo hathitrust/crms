@@ -36,7 +36,7 @@ sub ValidateSubmission
     $errorMsg .= 'und/nfi must include note category and note text.';
     $noteError = 1;
   }
-  if ($renDate && $renDate !~ m/^\-?\d{1,4}$/)
+  if ($renDate && $renDate !~ m/^-?\d{1,4}$/)
   {
     $errorMsg .= 'The year must be only decimal digits. ';
   }
