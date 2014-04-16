@@ -393,6 +393,7 @@ sub TranslateCountry
   my $code = shift;
   my $long = shift;
 
+  $code = 'xx' unless defined $code;
   my $orig = $code;
   $code =~ s/[^a-z]//gi;
   my $country = $countries{$code};
