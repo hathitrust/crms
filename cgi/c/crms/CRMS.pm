@@ -761,7 +761,7 @@ sub LoadNewItemsInCandidates
       print "Number of no-meta volumes now $n.\n";
     }
   }
-  my $endclause = ($end)? " AND time<='$end' ":'';
+  my $endclause = ($end)? " AND time<='$end' ":' ';
   my $sql = 'SELECT namespace,id FROM rights_current WHERE time>?' . $endclause . 'ORDER BY time ASC';
   my $dbh = $self->GetSdrDb();
   my $ref = $dbh->selectall_arrayref($sql, undef, $start);
