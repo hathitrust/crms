@@ -310,6 +310,25 @@ sub SimpleSqlGetSDR
   return $val;
 }
 
+sub SelectAll
+{
+  my $self = shift;
+  my $sql  = shift;
+
+  my $ref = undef;
+  my $dbh = $self->GetDb();
+  eval {
+    $ref = $dbh->selectall_arrayref($sql, undef, @_);
+  };
+  if ($@)
+  {
+    my $msg = "SQL failed ($sql): " . $@;
+    $self->SetError($msg);
+    $self->Logit($msg);
+  }
+  return $ref;
+}
+
 sub GetCandidatesSize
 {
   my $self = shift;
