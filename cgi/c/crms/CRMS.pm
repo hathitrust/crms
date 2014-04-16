@@ -150,7 +150,6 @@ sub ConnectToDb
   return $dbh;
 }
 
-
 ## ----------------------------------------------------------------------------
 ##  Function:   connect to the development mysql DB
 ##  Parameters: nothing
@@ -744,7 +743,6 @@ sub LoadNewItemsInCandidates
   my $start  = shift;
   my $end    = shift;
 
-  $self->set('nosystem', 'nosystem');
   my $now = (defined $end)? $end : $self->GetTodaysDate();
   $start = $self->SimpleSqlGet('SELECT max(time) FROM candidatesrecord') unless $start;
   my $start_size = $self->GetCandidatesSize();
@@ -780,7 +778,6 @@ sub LoadNewItemsInCandidates
   # Record the update
   $sql = 'INSERT INTO candidatesrecord (time,addedamount) VALUES (?,?)';
   $self->PrepareSubmitSql($sql, $now, $diff);
-  $self->set('nosystem', undef);
 }
 
 # Does all checks to see if a volume should be in the candidates or und tables, removing
@@ -5680,7 +5677,7 @@ sub BarcodeToId
     {
       my @keys = keys %$records;
       $sysid = $keys[0];
-      if ($sysid && $self->get('nosystem') ne 'nosystem')
+      if (defined $sysid)
       {
         $sql = 'REPLACE INTO system (id,sysid) VALUES (?,?)';
         $self->PrepareSubmitSql($sql, $id, $sysid);
