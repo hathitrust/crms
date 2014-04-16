@@ -93,6 +93,7 @@ if (!$crms->GetUserName($user))
 if ($cgi->param('p') eq 'confirmReview')  
 {
   my $editing = $cgi->param('editing');
+  my $oneoff  = $cgi->param('oneoff');
   my $id = $cgi->param('barcode');
   if ($cgi->param('submit') eq 'Cancel')
   {
@@ -102,6 +103,25 @@ if ($cgi->param('p') eq 'confirmReview')
     {
       print "Content-type: text/html\n\n";
       print '<script type="text/javascript" language="JavaScript">window.close();</script>';
+    }
+  }
+  elsif ($cgi->param('submit') eq 'Sequester')
+  {
+    if ($crms->IsUserSuperAdmin($user))
+    {
+      $crms->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', "Id $id is an SU sequester");
+      $crms->UnlockItem($id, $user);
+      $crms->Sequester($id);
+      $cgi->delete_all();
+      if ($editing)
+      {
+        print "Content-type: text/html\n\n";
+        print '<script type="text/javascript" language="JavaScript">window.close();</script>';
+      }
+      else
+      {
+        $cgi->param('p', ($oneoff)?'oneoff':'review');
+      }
     }
   }
   else
@@ -115,7 +135,6 @@ if ($cgi->param('p') eq 'confirmReview')
     my $hold      = $cgi->param('hold');
     my $swiss     = $cgi->param('swiss');
     my $pre       = $cgi->param('prepopulated');
-    my $oneoff    = $cgi->param('oneoff');
     my $start     = $cgi->param('start');
     my ($rights, $reason);
     my $err = 'You must select a rights/reason combination.' unless $EncRights;
@@ -123,7 +142,8 @@ if ($cgi->param('p') eq 'confirmReview')
     {
       ($rights, $reason) = $crms->GetAttrReasonFromCode($EncRights);
       $err = $crms->HasItemBeenReviewedByTwoReviewers($id, $user);
-      $err = $crms->ValidateSubmission($id, $user, $rights, $reason, $note, $category, $renNum, $renDate) unless $err;
+      $err = $crms->ValidateSubmission($id, $user, $rights, $reason, $note, $category,
+                                       $renNum, $renDate, $oneoff) unless $err;
       my $stat = $crms->GetSystemStatus();
       # Actually, this never gets displayed, but that's OK
       my $status = $stat->[1];
@@ -138,6 +158,10 @@ if ($cgi->param('p') eq 'confirmReview')
                           $renDate, $category, $swiss, $hold, $pre, $start);
       my $ref = $crms->GetErrors();
       $err = $ref->[0] if $ref && $ref->[0];
+      if (!$err)
+      {
+        $crms->PropagateTheFormula($id, $user) if $cgi->param('submit') eq 'Propagate';
+      }
     }
     if ($err)
     {
@@ -332,7 +356,11 @@ my $input = $page . '.tt';
 $input = 'home.tt' unless -f $input;
 
 print $cgi->header(-charset => 'utf-8', 'cache-control' => 'private');
-$tt->process($input, $vars) || die $tt->error();
+if (!$tt->process($input, $vars))
+{
+  printf "%s\n", $tt->error() if defined $crms->WhereAmI();
+  die $tt->error();
+}
 if ($cgi->param('debug'))
 {
   print '<br/><br/>';

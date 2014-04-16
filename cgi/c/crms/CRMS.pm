@@ -1266,8 +1266,8 @@ sub AddItemToQueueOrSetItemActive
     }
     else
     {
-      $sql = 'UPDATE queue SET priority=?, time=NOW() WHERE id=?';
-      $self->PrepareSubmitSql($sql, $priority, $id);
+      $sql = 'UPDATE queue SET priority=?, time=NOW(), source=? WHERE id=?';
+      $self->PrepareSubmitSql($sql, $priority, $src, $id);
       push @msgs, "changed priority from $oldpri to $priority";
       if ($n)
       {
@@ -1295,6 +1295,8 @@ sub AddItemToQueueOrSetItemActive
     }
     else
     {
+      my $existing = $self->SimpleSqlGet('SELECT issues FROM queue WHERE id=?', $id);
+      $issues = $existing if defined $existing;
       my $sql = 'INSERT INTO queue (id,priority,source,issues) VALUES (?,?,?,?)';
       $self->PrepareSubmitSql($sql, $id, $priority, $src, $issues);
       $self->UpdateMetadata($id, 1, $record);
@@ -1688,6 +1690,7 @@ sub HoldExpiry
   my $exp = $self->HoldForItem($id,$user);
   $exp = $self->StickyHoldForItem($id,$user) unless $exp;
   $exp = $self->TwoWorkingDays() unless $exp;
+  $exp = '2030-12-31' if $self->IsUserSuperAdmin();
   return ($readable)? $self->FormatDate($exp):$exp;
 }
 
@@ -5067,15 +5070,19 @@ sub ValidateSubmission
       $category, $renNum, $renDate, $oneoff) = @_;
   my $errorMsg = '';
   ## Someone else has the item locked?
-  $errorMsg = 'This item has been locked by another reviewer. Please Cancel.' if $self->IsLockedForOtherUser($id);
+  $errorMsg = 'This item has been locked by another reviewer. Please Cancel. ' if $self->IsLockedForOtherUser($id);
   ## check user
-  if (!$self->IsUserReviewer($user) && !$self->IsUserAdvanced($user))
+  if (!$oneoff && !$self->IsUserReviewer($user) && !$self->IsUserAdvanced($user))
   {
-    $errorMsg .= 'Not a reviewer.';
+    $errorMsg .= 'Not a reviewer. ';
+  }
+  elsif ($oneoff && !$self->IsUserSuperAdmin($user))
+  {
+    $errorMsg .= 'Not a one-off reviewer. ';
   }
   if (!$attr || !$reason)
   {
-    $errorMsg .= 'rights/reason designation required.';
+    $errorMsg .= 'rights/reason designation required. ';
   }
   if (!$errorMsg)
   {
@@ -5922,6 +5929,15 @@ sub HasItemBeenReviewedByUser
   return ($count)? 1:0;
 }
 
+sub CountExpertHistoricalReviews
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=? AND expert>0';
+  return $self->SimpleSqlGet($sql, $id);
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   get the next item to be reviewed (not something this user has
 ##              already reviewed)
@@ -5952,7 +5968,7 @@ sub GetNextItemForReview
     }
     if (defined $page && $page eq 'oneoff')
     {
-      $exclude .= ' q.added_by="oneoff" AND ';
+      $exclude .= ' q.added_by="oneoff" AND q.priority>0 AND ';
       $order = 'q.source ASC, q.id ASC';
     }
     else
@@ -5963,19 +5979,22 @@ sub GetNextItemForReview
     # Exclude priority 1 if our d100 roll is over the P1 threshold or user is not advanced
     my $exclude1 = (rand() >= $p1f || !$self->IsUserAdvanced($user))? 'q.priority!=1 AND ':'';
     my $excludeCountries = '';
-    my @countries = @{$self->GetUserCountries($user)};
-    if (scalar @countries)
+    if (!defined $page || $page ne 'oneoff')
     {
-      $order = 'b.country IN (SELECT country FROM usercountries WHERE user="' . $user . '") DESC,' . $order;
-    }
-    else
-    {
-      $sql = 'SELECT DISTINCT country FROM usercountries';
-      my $ref = $self->GetDb()->selectall_arrayref($sql);
-      @countries = map {'"' . $_->[0] . '"';} @{$ref};
+      my @countries = @{$self->GetUserCountries($user)};
       if (scalar @countries)
       {
-        $excludeCountries = sprintf ' b.country NOT IN (%s) AND ', join ',', @countries;
+        $order = 'b.country IN (SELECT country FROM usercountries WHERE user="' . $user . '") DESC,' . $order;
+      }
+      else
+      {
+        $sql = 'SELECT DISTINCT country FROM usercountries';
+        my $ref = $self->GetDb()->selectall_arrayref($sql);
+        @countries = map {'"' . $_->[0] . '"';} @{$ref};
+        if (scalar @countries)
+        {
+          $excludeCountries = sprintf ' b.country NOT IN (%s) AND ', join ',', @countries;
+        }
       }
     }
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt FROM queue q' .
@@ -7183,6 +7202,23 @@ sub RightsQuery
   return $ref;
 }
 
+sub CurrentRightsQuery
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $rights = 'unknown';
+  my $ref = $self->RightsQuery($id, 1);
+  return $rights unless defined $ref;
+  $rights = $ref->[0]->[0] . '/' . $ref->[0]->[1];
+  my ($a, $r) = $self->GetFinalAttrReason($id);
+  if (defined $a && defined $r && ($a ne $ref->[0]->[0] || $r ne $ref->[0]->[1]))
+  {
+    $rights .= ' ' . "\N{U+2192}" . " $a/$r";
+  }
+  return $rights;
+}
+
 sub RightsDBAvailable
 {
   my $self = shift;
@@ -8026,6 +8062,12 @@ sub DuplicateVolumesFromExport
         delete $data->{'unneeded'}->{$id};
         delete $data->{'inherit'}->{$id};
       }
+      elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE id=? AND src LIKE "HTS%"', $id)>0)
+      {
+        $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tWas One-Off Review\n";
+        delete $data->{'unneeded'}->{$id};
+        delete $data->{'inherit'}->{$id};
+      }
       # CRMS World can't inherit und onto pdus or pd
       elsif ($self->get('sys') eq 'crmsworld' && $newrights =~ m/^und/ && $oldrights =~ m/^pd/)
       {
@@ -8590,10 +8632,19 @@ sub PredictLastCopyrightYear
   $where = $self->GetPubCountry($id) unless $where;
   my $now = $self->GetTheYear();
   # $when is the last year the work was in copyright
-  my $when = $year + (($where eq 'United Kingdom')? ($crown? 50:70):50);
-  # New logic for Australia: if the pub/death date is >= 1955 then use 70
-  if ($where eq 'Australia')
+  my $when;
+  if ($where eq 'United Kingdom')
   {
+    $when = $year + ($crown)? 50:70;
+  }
+  elsif ($where eq 'Canada')
+  {
+    $when = $year + 50;
+  }
+  elsif ($where eq 'Australia')
+  {
+    $when = $year + 50;
+    # New logic: if the pub/death date is >= 1955 then use 70
     $when = $year + 70 if $year >= 1955 or $pub >= 1955;
   }
   elsif ($where eq 'Spain')
@@ -8688,7 +8739,6 @@ sub GetVIAFData
   my $a;
   $a = $author if defined $author;
   $a = $self->GetAuthor($id) unless defined $a;
-  #print "Looking for $a\n";
   if (defined $a && length $a)
   {
     my $sql = 'SELECT viaf_author,year,country,viafID,DATE_SUB(NOW(),INTERVAL 1 MONTH)>time' .
@@ -8748,7 +8798,6 @@ sub GetVIAFData
         my $val = $node2->string_value();
         my $val2 = $val;
         $val2 =~ s/[^A-Za-z]//g;
-        #print "  Val $val\n";
         if ($val =~ m/$regex/)
         {
           my $add = $1;
@@ -8759,11 +8808,10 @@ sub GetVIAFData
             $name2 = $val;
           }
         }
-        if (length $a2 && $val2 =~ m/^$a2/)
+        if (length $a2 && $val2 =~ m/^$a2/i)
         {
           $name = $name2 if $name2 =~ m/[A-Za-z]/;
           $name = $val unless defined $name;
-          #print "    Name set to $name\n";
           $n = $i;
         }
       }
@@ -8939,15 +8987,89 @@ sub CanVolumeBeCrownCopyright
 sub GetAddToQueueRef
 {
   my $self = shift;
+  my $seq  = shift;
   my $user = shift;
 
   $user = $self->get('user') unless defined $user;
-  my $addedSql = ($self->IsUserAdmin($user))? '(added_by=? OR added_by="oneoff")':'added_by=?';
+  my $addedSql = ($self->IsUserSuperAdmin($user))? '(added_by=? OR added_by="oneoff")':'added_by=?';
   my $sql = 'SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.added_by,' .
             ' q.status,q.priority,q.source,q.issues FROM queue q INNER JOIN bibdata b ON q.id=b.id' .
-            ' WHERE q.priority>=3 AND ' . $addedSql .
-            ' ORDER BY q.added_by,q.source,q.status ASC,q.priority DESC,q.id ASC';
+            ' WHERE ' . $addedSql;
+  $sql .= ($seq)? ' AND q.priority<=-3':' AND q.priority>=3';
+  $sql .= ' ORDER BY q.added_by,q.source,q.status ASC,q.priority DESC,q.id ASC';
+  #printf "$sql, %s<br/>\n", (defined $user)? $user:'<undef>';
   return $self->GetDb()->selectall_arrayref($sql, undef, $user);
+}
+
+sub Sequester
+{
+  my $self  = shift;
+  my $id    = shift;
+  my $unseq = shift;
+
+  my $tx = $self->OneoffTicket($id);
+  my @ids = ($id);
+  if ($tx =~ m/^HTS/)
+  {
+    my $ref = $self->SelectAll('SELECT id FROM queue WHERE source=?', $tx);
+    push @ids, $_->[0] for @{$ref};
+  }
+  foreach $id (@ids)
+  {
+    my $sql = 'UPDATE queue SET priority=-priority WHERE id=?';
+    $sql .= ($unseq)? ' AND priority<=3':' AND priority>=3';
+    $self->PrepareSubmitSql($sql, $id);
+  }
+}
+
+# Duplicate a one-off review for all other volumes on the ticket
+sub PropagateTheFormula
+{
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
+  
+  my $tx = $self->OneoffTicket($id);
+  return unless defined $tx and $tx =~ m/^HTS-\d+$/;
+  my $ref = $self->SelectAll('SELECT id FROM queue WHERE source=? AND id!=?', $tx, $id);
+  my $status = $self->GetStatus($id);
+  foreach my $row (@{$ref})
+  {
+    my $id2 = $row->[0];
+    my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND user=?';
+    next if 0 < $self->SimpleSqlGet($sql, $id2, $user);
+    $sql = 'REPLACE INTO reviews (id,time,user,attr,reason,note,' .
+              'renNum,expert,duration,legacy,renDate,category,priority,swiss,prepopulated)' .
+              ' SELECT ?,time,user,attr,reason,note,renNum,expert,duration,legacy,' .
+              'renDate,category,priority,swiss,prepopulated FROM reviews WHERE id=? AND user=?';
+    $self->PrepareSubmitSql($sql, $id2, $id, $user);
+    $self->RegisterStatus($id2, $status);
+    $self->RegisterPendingStatus($id2, $status);
+    $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND expert=1';
+    my $expcnt = $self->SimpleSqlGet($sql, $id2);
+    $sql = 'UPDATE queue SET expcnt=? WHERE id=?';
+    $self->PrepareSubmitSql($sql, $expcnt, $id2);
+  }
+}
+
+sub GetBothSystems
+{
+  my $self = shift;
+
+  my $crmsUS = CRMS->new(
+    logFile      => $self->get('logfile'),
+    sys          => 'crms',
+    verbose      => 0,
+    root         => $self->get('root'),
+    dev          => $self->get('dev'));
+
+  my $crmsWorld = CRMS->new(
+    logFile      => $self->get('logfile'),
+    sys          => 'crmsworld',
+    verbose      => 0,
+    root         => $self->get('root'),
+    dev          => $self->get('dev'));
+  return [$crmsUS,$crmsWorld];
 }
 
 1;

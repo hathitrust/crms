@@ -11,7 +11,7 @@
   <input type="hidden" name="editing" value="[% editing %]"/>
   <input type="hidden" name="sys"     value="[% sys %]"/>
   <input type="hidden" name="oneoff"  value="1"/>
-  <table class="reviewGrey">
+  <table class="oneoff">
     <tr>
 	    <td class="display" align="left" colspan="4">
 	      <strong>HathiTrust Options:</strong>
@@ -54,6 +54,71 @@
         [% FOR i IN [0 .. 3] %]
           <a style="position:absolute;left:-999px;" href="#" accesskey="[% accesskeys.$i %]"
              onfocus="var ptvs = document.getElementById('PTViewSelect');ptvs.selectedIndex=[% i %];zoom(ptvs,'ptview');">.</a>
+        [% END %]
+      </td>
+    </tr>
+  </table>
+  <table class="reviewGrey">
+    <tr>
+      [% IF ren %]
+        [% label = "Renewal&nbsp;ID" %]
+      [% ELSE %]
+        [% label = (renNum)? "Publication&nbsp;Date":"Author Death Date" %]
+      [% END %]
+      <td class="reviewGrey"><strong><label id="renewalFieldLabel" for="renewalField">
+      [% label %]: </label></strong></td>
+      <td nowrap="nowrap">
+      [% IF ren %]
+        <input id="renewalField" title="[% label %]" type="text" name="renNum"
+               value="[% renNum %]" size="8"
+               onblur="javascript:popRenewalDate()"/>
+      [% ELSE %]
+        [% IF NOT renDate && NOT import %]
+          [% authorDD = crms.GetADDFromAuthor(barcode) %]
+          [% IF NOT authorDD %]
+            [% viafdata = crms.GetVIAFData(barcode) %]   
+            [% IF viafdata && viafdata.add %]
+              [% authorDD = viafdata.add %]
+              [% viaf = 1 %]
+            [% END %]
+          [% END %]
+          [% IF authorDD %]
+            <input type="hidden" id="prepopulated" name="prepopulated" value="[% (viaf)? 2:1 %]"/>
+            [% renDate = authorDD %]
+            [% tip = (viaf)? "VIAF":"Mirlyn" %]
+          [% END %]
+        [% END %]
+        <input id="renewalField" title="[% label %]" type="text" name="renDate"
+               value="[% renDate %]" size="6"
+               onblur="javascript:PredictRights('[% barcode %]');"/>
+        [% IF tip %]
+          <span class="red">$tip</span>
+        [% END %]
+      [% END %]
+      <a style="position:absolute;left:-999px;" href="#" accesskey="d"
+         onfocus="document.getElementById('renewalField').focus()">.</a>
+      </td>
+    </tr>
+    <tr>
+      <td class="reviewGrey" align="left" style="margin:0px;padding:0px;">
+      [% IF ren %]
+        <input type="button" value="Get Renewal Date" onclick="popRenewalDate();" accesskey="d" class="reviewblue"
+               style="margin:0px;padding:1px;background-color:#d0dee6;"/>
+      [% ELSE %]
+        <input type="checkbox" id="renewalFieldCheckbox" name="renNum"[% (renNum)? ' checked="checked"':'' %]
+               onchange="ToggleADD();PredictRights('[% barcode %]');">&nbsp;Publication Date</input>
+      [% END %]
+      </td>
+      <td>
+        [% IF ren %]
+          <input type="text" title="Stanford Renewal Date" id="getDate" name="renDate"
+                 value="[% renDate %]" size="8" readonly="readonly"/>
+        [% ELSE %]
+          <input type="button" class="reviewblue" value="Pull Pub Date"
+          onclick="PullPubDate();
+                   document.getElementById('renewalFieldCheckbox').checked=true;PredictRights('[% barcode %]');"
+          accesskey="d"
+          style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
         [% END %]
       </td>
     </tr>
@@ -169,48 +234,61 @@
   <a style="position:absolute;left:-999px;" href="#" accesskey="n"
      onfocus="document.getElementById('NoteTextField').focus()">.</a>
   </div>
-  <div id="SubmitForm">
-  <table>
-    <tr>
-      <td><input class="review" type="submit" name="submit" value="Submit" accesskey="s"/></td>
-      <td style="padding-left:2em;"><input class="review" type="submit" name="submit" value="Cancel" accesskey="c" onclick="this.form.onsubmit=null;"/></td>
-    </tr>
-  </table>
+  <div>
+    <table>
+      <tr>
+        <td style="text-align:center;"><input style="margin-left:0px" class="ooreview" type="submit" name="submit" value="Submit" accesskey="s"/></td>
+        <td style="text-align:center;"><input style="margin-left:0px" class="ooreview" type="submit" name="submit" value="Cancel" accesskey="c" onclick="this.form.onsubmit=null;"/></td>
+      </tr>
+      <tr>
+        <td style="text-align:center;">
+        [% progress = crms.OneoffProgress(barcode) %]
+          <input style="margin-left:0px;" class="review" type="submit" name="submit"
+          [% IF progress.1 == 1 %]
+                 disabled="disabled"
+          [% END %]
+                 value="Propagate"/>
+        </td>
+        <td style="text-align:center;">
+          <input style="margin-left:0px;color:#DD1111;" class="review" type="submit" name="submit" value="Sequester" onclick="this.form.onsubmit=null;"/>
+        </td>
+      </tr>
+    </table>
   </div>
-  <table>
-  [% IF expert %]
-    <tr>
-      [% checked = (swiss || ((status == 2 || status == 3) && crms.GetSystemVar('swissByDefault'))) %]
-      <td style="text-align:left;" width="28">
-        <input type="checkbox" id="swiss" name="swiss" [% (checked)? 'checked="checked"':'' %]/>
-      </td>
-      <td><label for="swiss">Do not invalidate other reviews<br/>for this volume</label></td>
-    </tr>
-  [% END %]
-    <tr>
-      <td style="text-align:left;">
-        [% IF !hold %]
-          [% hold = crms.HoldForItem(barcode,user) %]
-        [% END %]
-        <input type="checkbox" id="hold" name="hold" [% (hold)? 'checked="checked"':'' %] onclick="toggleVisibility('expiry');"/>
-      </td>
-      <td><label for="hold">Hold for Question</label></td>
-    </tr>
-    <tr>
-      <td colspan="2">
-        <span class="smallishText" id="expiry" [% (hold)? '':'style="display:none;"' %]>
-          Hold will expire at the end of the day<br/>on [% crms.HoldExpiry(barcode,user,1) %].
-        </span>
-      </td>
-    </tr>
-    <tr>
-      <td colspan="2">
-        <span class="smallishText">Held reviews will remain unprocessed for 2 working days.
-            It is up to you to get in touch with an expert.
-        </span>
-      </td>
-    </tr>
-  </table>
+  <div>
+    <table>
+      <tr>
+        [% checked = (swiss || ((status == 2 || status == 3) && crms.GetSystemVar('swissByDefault'))) %]
+        <td style="text-align:left;" width="28">
+          <input type="checkbox" id="swiss" name="swiss" [% (checked)? 'checked="checked"':'' %]/>
+        </td>
+        <td><label for="swiss">Do not invalidate other reviews<br/>for this volume</label></td>
+      </tr>
+      <tr>
+        <td style="text-align:left;">
+          [% IF !hold %]
+            [% hold = crms.HoldForItem(barcode,user) %]
+          [% END %]
+          <input type="checkbox" id="hold" name="hold" [% (hold)? 'checked="checked"':'' %] onclick="toggleVisibility('expiry');"/>
+        </td>
+        <td><label for="hold">Hold for Question</label></td>
+      </tr>
+      <tr>
+        <td colspan="2">
+          <span class="smallishText" id="expiry" [% (hold)? '':'style="display:none;"' %]>
+            Hold will expire at the end of the day<br/>on [% crms.HoldExpiry(barcode,user,1) %].
+          </span>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2">
+          <span class="smallishText">Held reviews will remain unprocessed for 2 working days.
+              It is up to you to get in touch with an expert.
+          </span>
+        </td>
+      </tr>
+    </table>
+  </div>
 </div>
 
 [% IF error %]
