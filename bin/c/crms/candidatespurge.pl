@@ -163,6 +163,7 @@ sub Init
 
   if (defined $singles && scalar @{$singles})
   {
+    printf "Checking %d single volumes\n", scalar @{$singles} if $verbose;
     foreach my $id (@{$singles})
     {
       my ($n,$i) = split m/\./, $id;
