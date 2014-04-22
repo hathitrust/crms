@@ -67,8 +67,9 @@ sub FindICtoPD
   $year = $crms->GetTheYear() unless $year;
   my $t1 = $year - 51;
   my $t2 = $year - 71;
-  my $sql = 'SELECT id,gid,attr,reason FROM exportdata WHERE (attr="pdus" OR (attr="ic" AND reason="add"))' .
-            ' AND src!="inherited"';
+  my $sql = 'SELECT id,gid FROM exportdata ' .
+            ' WHERE (attr="pdus" OR (attr="ic" AND reason="add"))' .
+            ' AND exported=1 AND src="candidates"';
   if (scalar @singles)
   {
     $sql .= sprintf(" AND id in ('%s')", join "','", @singles);
@@ -82,45 +83,63 @@ sub FindICtoPD
   {
     my $id = $row->[0];
     next if $seen{$id};
-    #-next unless $id eq 'mdp.39015011941781';
+    my $rq = $crms->RightsQuery($id, 1);
+    my ($acurr,$rcurr,$src,$usr,$time,$note) = @{$rq->[0]};
     $i++;
     my $gid = $row->[1];
-    my $a = $row->[2];
-    my $r = $row->[3];
     #print "$i: $id\n";
     $seen{$id} = 1;
-    $sql = "SELECT renDate,renNum,category FROM historicalreviews WHERE gid=$gid" .
+    my $pub = $crms->GetPubDate($id);
+    if ($pub + 140 < $year && $pub > 0)
+    {
+      print "$id: pub date $pub\n" if $verbose > 1;
+      $change++;
+      next;
+    }
+    $sql = "SELECT renDate,renNum,category,note FROM historicalreviews WHERE gid=$gid" .
            ' AND validated=1 AND renDate IS NOT NULL';
     #print "$sql\n";
     my $ref2 = $crms->GetDb()->selectall_arrayref($sql);
     my $same = 1;
     my $n = scalar @{$ref2};
-    #print "Results: $n\n";
-    foreach (0 ... $n-2)
+    next unless $n > 0;
+    my %predictions;
+    my $pa;
+    my $pr;
+    my $renDate;
+    foreach my $row2 (@{$ref2})
     {
-      $same = 0 unless $crms->TolerantCompare($ref2->[$_]->[0], $ref2->[$_+1]->[0]);
-      #printf "$id: [$_] %s vs %s\n", $ref2->[$_]->[0], $ref2->[$_+1]->[0];
+      my %dates;
+      $renDate = $row2->[0];
+      $dates{$renDate} = 1;
+      my $renNum = $row2->[1];
+      my $cat = $row2->[2];
+      my $note = $row2->[3];
+      my @matches = $note =~ /(?<!\d)1\d\d\d(?![\d\-])/g;
+      foreach my $match (@matches)
+      {
+        $dates{$match} = 1 if $match < $year;
+      }
+      foreach $renDate (sort keys %dates)
+      {
+        my $last = $crms->PredictLastCopyrightYear($id, $renDate, $renNum,
+                                                   $crms->TolerantCompare($cat, 'Crown Copyright'));
+        print "$id: last copyright year $last\n" if $verbose > 1;
+        my $rid = $crms->PredictRights($id, $renDate, $renNum, $crms->TolerantCompare($cat, 'Crown Copyright'));
+        $pa = $crms->TranslateAttr($crms->SimpleSqlGet("SELECT attr FROM rights WHERE id=$rid"));
+        $pr = $crms->TranslateReason($crms->SimpleSqlGet("SELECT reason FROM rights WHERE id=$rid"));
+        print "$id: ($renDate) predicted $pa/$pr (curr $acurr/$rcurr)\n" if $verbose > 1;
+        $predictions{$pa} = 1;
+        last if $pa =~ 'ic';
+      }
     }
-    foreach (0 ... $n-2)
+    if (scalar keys %predictions && !defined $predictions{'ic'} &&
+        !defined $predictions{'icus'} && (defined $predictions{'pd'} ||
+        defined $predictions{'pdus'}))
     {
-      $same = 0 unless $crms->TolerantCompare($ref2->[$_]->[1], $ref2->[$_+1]->[1]);
-      #printf "$id: [$_ a] %s vs %s\n", $ref2->[$_]->[1], $ref2->[$_+1]->[1];
-    }
-    if (!$same)
-    {
-      #print "Conflicting dates for $id ($gid)\n";
-      next;
-    }
-    my $renDate = $ref2->[0]->[0];
-    my $renNum = $ref2->[0]->[1];
-    my $cat = $ref2->[0]->[2];
-    next if $renDate != $t1 && $renDate != $t2;
-    my $last = $crms->PredictLastCopyrightYear($id, $renDate, $renNum, $crms->TolerantCompare($cat, 'Crown Copyright'));
-    #printf "PredictLastCopyrightYear($id, $renDate, %s, %s)\n", ($renNum)? '1':'undef', ($cat && $cat eq 'Crown Copyright')? '1':'undef';
-    #print "$id: predicted $rid: $a2/$r2\n";
-    if ($last < $year)
-    {
-      print "$id: $last ($renDate)\n" if $verbose;
+      next if defined $predictions{'pdus'} and $acurr eq 'pdus';
+      next if defined $predictions{'pd'} and $acurr eq 'pd';
+      printf "%-20s ($renDate) predicted %s (currently $acurr/$rcurr)\n", $id, join ', ', sort keys %predictions if $verbose;
       if ($insert)
       {
         # Returns a status code (0=Add, 1=Error, 2=Skip, 3=Modify) followed by optional text.
