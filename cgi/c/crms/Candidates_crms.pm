@@ -63,7 +63,7 @@ sub GetViolations
   my ($id, $record, $priority, $override) = @_;
 
   my @errs = ();
-  my $pub = $self->{crms}->GetRecordPubDate($id, $record);
+  my $pub = $record->pubdate;
   if ($pub =~ m/\d\d\d\d/)
   {
     my $min = $self->GetCutoffYear(undef, 'minYear');
@@ -78,10 +78,10 @@ sub GetViolations
   {
     push @errs, "pub date not in range or not completely specified ($pub)";
   }
-  push @errs, 'gov doc' if $self->IsGovDoc($id, $record );
-  my $where = $self->{crms}->GetRecordPubCountry($id, $record);
+  push @errs, 'gov doc' if $self->IsGovDoc($record);
+  my $where = $record->country;
   push @errs, "foreign pub ($where)" if $where ne 'USA';
-  push @errs, 'non-BK format' unless $self->{crms}->IsFormatBK($id, $record);
+  push @errs, 'non-BK format' unless $record->isFormatBK($id, $record);
   return @errs;
 }
 
@@ -91,11 +91,11 @@ sub ShouldVolumeGoInUndTable
   my $id     = shift;
   my $record = shift;
 
-  return 'gov' if $self->IsProbableGovDoc($id, $record);
-  return 'language' if 'eng' ne $self->{crms}->GetRecordPubLanguage($id, $record);
-  return 'dissertation' if $self->{crms}->IsThesis($id, $record);
-  return 'translation' if $self->{crms}->IsTranslation($id, $record);
-  return 'foreign' if $self->IsReallyForeignPub($id, $record);
+  return 'gov' if $self->IsProbableGovDoc($record);
+  return 'language' if 'eng' ne $record->language;
+  return 'dissertation' if $record->isThesis;
+  return 'translation' if $record->isTranslation;
+  return 'foreign' if $self->IsReallyForeignPub($record);
   return undef;
 }
 
@@ -103,16 +103,14 @@ sub ShouldVolumeGoInUndTable
 sub IsGovDoc
 {
   my $self   = shift;
-  my $id     = shift;
   my $record = shift;
 
   my $is = undef;
   eval {
-    my $path  = '//*[local-name()="controlfield" and @tag="008"]';
-    my $leader = $record->findvalue($path);
+    my $leader = $record->GetControlfield('008');
     $is = (length $leader > 28 && substr($leader, 28, 1) eq 'f');
   };
-  $self->{crms}->SetError("failed in IsGovDoc($id): $@") if $@;
+  $self->{crms}->SetError($record->id . " failed in IsGovDoc(): $@") if $@;
   return $is;
 }
 
@@ -130,21 +128,20 @@ sub IsGovDoc
 sub IsProbableGovDoc
 {
   my $self   = shift;
-  my $id     = shift;
   my $record = shift;
 
-  my $author = $self->{crms}->GetRecordAuthor($id, $record);
-  my $title = $self->{crms}->GetRecordTitle($id, $record);
+  my $author = $record->author;
+  my $title = $record->title;
   my $xpath  = '//*[local-name()="datafield" and @tag="260"]/*[local-name()="subfield" and @code="a"]';
-  my $field260a = $record->findvalue($xpath);
+  my $field260a = $record->xml->findvalue($xpath);
   $xpath  = '//*[local-name()="datafield" and @tag="260"]/*[local-name()="subfield" and @code="b"]';
-  my $field260b = $record->findvalue($xpath);
+  my $field260b = $record->xml->findvalue($xpath);
   $field260a =~ s/^\s*(.*?)\s*$/$1/;
   $field260b =~ s/^\s*(.*?)\s*$/$1/;
   # If there is an alphabetic character in 008:28 other than 'f',
   # we accept it and say it is NOT probable
   $xpath  = q{//*[local-name()='controlfield' and @tag='008']};
-  my $leader = lc $record->findvalue($xpath);
+  my $leader = lc $record->xml->findvalue($xpath);
   if (length $leader >28)
   {
     my $code = substr($leader, 28, 1);
@@ -177,37 +174,34 @@ sub IsProbableGovDoc
 sub IsForeignPub
 {
   my $self   = shift;
-  my $id     = shift;
   my $record = shift;
 
   my $is = undef;
   eval {
-    my $path = '//*[local-name()="controlfield" and @tag="008"]';
-    my $code = substr($record->findvalue($path), 15, 3);
+    my $code = substr($record->GetControlfield('008'), 15, 3);
     $is = $code if substr($code,2,1) ne 'u';
   };
-  $self->{crms}->SetError("failed in IsForeignPub($id): $@") if $@;
+  $self->{crms}->SetError("failed in IsForeignPub: $@") if $@;
   return $is;
 }
 
 # second/foreign place of pub. From Tim's documentation:
 # Check of 260 field for multiple subfield a:
 # If PubPlace 17 eq 'u', and the 260 field contains multiple subfield
-# a?s, then the data in each subfield a is normalized and matched
+# a's, then the data in each subfield a is normalized and matched
 # against a list of known US cities.  If any of the subfield a?s are not
 # in the list, then the mult_260a_non_us flag is set.
 # As a convenience (and for testing) returns undef for US titles and a string with the city that failed.
 sub IsReallyForeignPub
 {
   my $self   = shift;
-  my $id     = shift;
   my $record = shift;
 
-  my $is = $self->IsForeignPub($id, $record);
+  my $is = $self->IsForeignPub($record);
   return $is if $is;
   eval {
     my $path = '//*[local-name()="datafield" and @tag="260"]/*[local-name()="subfield" and @code="a"]';
-    my @nodes = $record->findnodes($path)->get_nodelist();
+    my @nodes = $record->xml->findnodes($path)->get_nodelist();
     return if scalar @nodes == 1;
     foreach my $node (@nodes)
     {
@@ -221,7 +215,7 @@ sub IsReallyForeignPub
       }
     }
   };
-  $self->{crms}->SetError("failed in IsReallyForeignPub($id): $@") if $@;
+  $self->{crms}->SetError("failed in IsReallyForeignPub: $@") if $@;
   return $is;
 }
 

@@ -15,7 +15,7 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-acChipquv] [-s VOL_ID [-s VOL_ID2...]]
+USAGE: $0 [-acCdhipquv] [-s VOL_ID [-s VOL_ID2...]]
           [-m MAIL_ADDR [-m MAIL_ADDR2...]] [-n TBL [-n TBL...]]
           [-x SYS] [start_date[ time] [end_date[ time]]]
 
@@ -26,6 +26,7 @@ if it is specified.
 -a         Report on all exports, regardless of date range.
 -c         Report on recent addition to candidates.
 -C         Use 'cleanup' as the source.
+-d         Use volumes filtered as duplicates, similar to the -c flag.
 -h         Print this help message.
 -i         Insert entries in the inherit table.
 -m ADDR    Mail the report to ADDR. May be repeated for multiple addresses.
@@ -43,6 +44,7 @@ END
 my $all;
 my $candidates;
 my $cleanup;
+my $duplicate;
 my $help;
 my $insert;
 my @mails;
@@ -59,6 +61,7 @@ die 'Terminating' unless GetOptions(
            'a'    => \$all,
            'c'    => \$candidates,
            'C'    => \$cleanup,
+           'd'    => \$duplicate,
            'h|?'  => \$help,
            'i'    => \$insert,
            'm:s@' => \@mails,
@@ -118,7 +121,9 @@ my $title = sprintf "%s %s: %s %sInheritance, $dates",
                     ($cleanup)? 'Cleanup ':'';
 $start .= ' 00:00:00' unless $start =~ m/\d\d:\d\d:\d\d$/;
 $end .= ' 23:59:59' unless $end =~ m/\d\d:\d\d:\d\d$/;
-my %data = %{($candidates)? CandidatesReport($start,$end,\@singles):InheritanceReport($start,$end,\@singles)};
+my %data = %{($candidates || $duplicate)?
+             CandidatesReport($start,$end,\@singles):
+             InheritanceReport($start,$end,\@singles)};
 my $head = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' . "\n";
 $head .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
         "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'/>\n" .
@@ -434,22 +439,10 @@ if ($insert && scalar keys %{$data{'inherit'}})
     }
   }
 }
-if ($insert && scalar keys %{$data{'disallowed'}})
-{
-  foreach my $id (keys %{$data{'disallowed'}})
-  {
-    my @lines = split "\n", $data{'disallowed'}->{$id};
-    foreach my $line (@lines)
-    {
-      my ($id2,$sysid,$oldrights,$newrights,$ignore,$note) = split "\t", $line;
-      if ($note =~ m/^Missing/ && $crms->IsFiltered($id2, 'duplicate'))
-      {
-        $txt .= "<h5>Unfiltering $id2</h5>\n";
-        $crms->Unfilter($id2) 
-      }
-    }
-  }
-}
+UnfilterVolumes($data{'nodups'}) if $insert && scalar keys %{$data{'nodups'}};
+UnfilterVolumes($data{'chron'}) if $insert && scalar keys %{$data{'chron'}};
+UnfilterVolumes($data{'unneeded'}) if $insert && scalar keys %{$data{'unneeded'}};
+UnfilterVolumes($data{'disallowed'}) if $insert && scalar keys %{$data{'disallowed'}};
 
 for (@{$crms->GetErrors()})
 {
@@ -487,6 +480,23 @@ else
 }
 
 
+sub UnfilterVolumes
+{
+  my $data = shift;
+
+  foreach my $id (keys %{$data})
+  {
+    my @lines = split "\n", $data->{$id};
+    foreach my $line (@lines)
+    {
+      my @fields = split "\t", $line;
+      my $id2 = shift @fields;
+      $txt .= "<h5>Unfiltering $id2</h5>\n";
+      $crms->Unfilter($id2);
+    }
+  }
+}
+
 sub InheritanceReport
 {
   my $start   = shift;
@@ -518,8 +528,7 @@ sub InheritanceReport
       print "Already saw $id; skipping\n" if $verbose;
       next;
     }
-    my $sysid;
-    my $record = $crms->GetMetadata($id, \$sysid);
+    my $record = $crms->GetMetadata($id);
     if (!$record)
     {
       print "Metadata unavailable for $id; skipping\n" if $verbose;
@@ -537,7 +546,7 @@ sub InheritanceReport
     # THIS is the export we're going to inherit from.
     $seen{$id} = $id;
     $data{'total'}->{$id} = 1;
-    $crms->DuplicateVolumesFromExport($id, $gid, $sysid, $attr, $reason,\%data, $record);
+    $crms->DuplicateVolumesFromExport($id, $gid, $record->sysid, $attr, $reason,\%data, $record);
   }
   $crms->PrepareSubmitSql("DELETE FROM unavailable WHERE src='$src'") if $insert;
   return \%data;
@@ -553,6 +562,7 @@ sub CandidatesReport
   my $sql = "SELECT id,time FROM candidates WHERE (time>'$start' AND time<='$end') " .
             "OR id IN (SELECT id FROM unavailable WHERE src='$src')";
   $sql .= " UNION DISTINCT SELECT id,time FROM und WHERE (time>'$start' AND time<='$end') AND src!='no meta'" if $und;
+  $sql = 'SELECT id,time FROM und WHERE src="duplicate"' if $duplicate;
   $sql .= ' ORDER BY time DESC';
   if ($singles && scalar @{$singles})
   {
@@ -568,8 +578,7 @@ sub CandidatesReport
   {
     my $id = $row->[0];
     print "CandidatesReport: checking $id ($n/$of)\n" if $verbose;
-    my $sysid;
-    my $record = $crms->GetMetadata($id, \$sysid);
+    my $record = $crms->GetMetadata($id);
     if (!$record)
     {
       print "Metadata unavailable for $id; skipping\n" if $verbose;
@@ -578,7 +587,7 @@ sub CandidatesReport
       next;
     }
     $data{'total'}->{$id} = 1;
-    $crms->DuplicateVolumesFromCandidates($id, $sysid, \%data, $record);
+    $crms->DuplicateVolumesFromCandidates($id, $record->sysid, \%data, $record);
     $n++;
   }
   $crms->PrepareSubmitSql("DELETE FROM unavailable WHERE src='$src'") if $insert;
@@ -619,7 +628,8 @@ sub CountSystemIds
   my %sysids;
   foreach my $id (@ids)
   {
-    my $sysid = $crms->BarcodeToId($id);
+    my $record = $crms->GetMetadata($id);
+    my $sysid = $record->sysid;
     print "$id: $sysid\n" if $verbose > 1;
     $sysids{$sysid} = 1;
   }

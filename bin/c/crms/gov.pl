@@ -135,22 +135,27 @@ foreach my $row (@{$ref})
   my $time = $row->[1];
   
   $n++;
-  my $sysid = $crms->BarcodeToId($id);
+  my $record = $crms->GetMetadata($id);
+  if (!defined $record)
+  {
+    print "Error: no metadata for $id\n";
+    next;
+  }
   my $catLink = "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
-  my $ptLink = 'https://babel.hathitrust.org/cgi/pt?attr=1;id=' . $id;
-  my $record = $crms->GetMetadata($sysid);
-  my $author = $crms->GetRecordAuthor($id, $record);
+  my $ptLink = 'https://babel.hathitrust.org/cgi/pt?debug=super;id=' . $id;
+  my $author = $record->author;
   $author =~ s/&/&amp;/g;
-  my $title = $crms->GetRecordTitle($id, $record);
+  my $title = $record->title;
   $title =~ s/&/&amp;/g;
-  my $pub = $crms->GetRecordPubDate($id, $record);
+  my $pub = $record->pubdate;
+  my $sysid = $record->sysid;
   my $field260a = '';
   my $field260b = '';
   eval {
     my $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='a']};
-    $field260a = $record->findvalue( $xpath );
+    $field260a = $record->xml->findvalue( $xpath );
     $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='b']};
-    $field260b = $record->findvalue( $xpath );
+    $field260b = $record->xml->findvalue( $xpath );
   };
   $field260a .= ' ' . $field260b;
   if ($report eq 'html')

@@ -140,14 +140,16 @@
   <table class="exportStats" style="width:33%">
   <tr><th>ID</th><th>Sys&nbsp;ID</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th><th>Country</th></tr>
   [% FOREACH id IN ids.split %]
-    [% id = id.remove('(^\s+)|(\s+$)') %]   
-    [% blah = crms.UpdateMetadata(id, force) %]
-    [% sysid = crms.BarcodeToId(id) %]
-    [% sql = "SELECT author,title,YEAR(pub_date),country FROM bibdata WHERE id='$id'" %]
-    [% ref  = crms.GetDb().selectall_arrayref(sql) %]
+    [% id = id.remove('(^\s+)|(\s+$)') %]
+    [% record = crms.GetMetadata(id) %]
+    [% blah = crms.UpdateMetadata(id, force, record) %]
+    [% sysid = record.sysid %]
+    [% sql = "SELECT id,author,title,YEAR(pub_date),country FROM bibdata WHERE id=?" %]
+    [% sql %]
+    [% ref = crms.SelectAll(sql, id) %]
     [% FOREACH r IN ref %]
-      <tr><td>[% id %]</td><td>[% sysid %]</td><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td>
-          <td>[% r.3 %]</td></tr>
+      <tr><td>[% r.0 %]</td><td>[% sysid %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td><td>[% r.3 %]</td>
+          <td>[% r.4 %]</td></tr>
       [% LAST %]
     [% END %]
   [% END %]

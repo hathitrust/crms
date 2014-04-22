@@ -805,16 +805,26 @@ sub CheckAndLoadItemIntoCandidates
   }
   my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
   my $cm = $self->CandidatesModule();
-  my $sysid;
   my $record;
   my $oldSysid = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
-  if (defined $oldSysid)
+  my $oldMirlyn = $self->SimpleSqlGet('SELECT mirlyn FROM bibdata WHERE id=?', $id);
+  if (defined $oldSysid || defined $oldMirlyn)
   {
-    $record = $self->GetMetadata($id, \$sysid, 1);
-    if (defined $sysid && $sysid ne $oldSysid)
+    $record = $self->GetMetadata($id);
+    if (defined $record)
     {
-      print "Update system ID on $id -- old $oldSysid, new $sysid\n";
-      $self->UpdateMetadata($id, 1, $record) unless defined $noop;
+      my $sysid = $record->sysid;
+      my $mirlyn = $record->mirlyn;
+      if (defined $sysid && defined $oldSysid && $sysid ne $oldSysid)
+      {
+        print "Update system ID on $id -- old $oldSysid, new $sysid\n";
+        $self->UpdateMetadata($id, 1, $record) unless defined $noop;
+      }
+      if (defined $mirlyn && defined $oldMirlyn && $mirlyn ne $oldMirlyn)
+      {
+        print "Update Mirlyn ID on $id -- old $oldMirlyn, new $mirlyn\n";
+        $self->UpdateMetadata($id, 1, $record) unless defined $noop;
+      }
     }
   }
   if (!$cm->HasCorrectRights($attr, $reason))
@@ -855,7 +865,7 @@ sub CheckAndLoadItemIntoCandidates
     $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) if defined $inund and !defined $noop;
     return;
   }
-  $record = $self->GetMetadata($id, \$sysid, 1) unless defined $record;
+  $record = $self->GetMetadata($id) unless defined $record;
   if (!defined $record)
   {
     #print "No metadata yet for $id: will try again tomorrow.\n";
@@ -878,7 +888,7 @@ sub CheckAndLoadItemIntoCandidates
     }
     elsif (!defined $incand)
     {
-      $self->AddItemToCandidates($id, $time, $record, $sysid, $noop);
+      $self->AddItemToCandidates($id, $time, $record, $noop);
     }
   }
   else
@@ -897,11 +907,11 @@ sub AddItemToCandidates
   my $id     = shift;
   my $time   = shift;
   my $record = shift;
-  my $sysid  = shift;
   my $noop   = shift;
 
-  $record = $self->GetMetadata($id, \$sysid) unless $record;
-  return unless defined $record and defined $sysid;
+  $record = $self->GetMetadata($id) unless defined $record;
+  return unless defined $record;
+  my $sysid = $record->sysid;
   # Are there duplicates? Filter the oldest duplicates and add the newest to candidates.
   if (!$self->DoesRecordHaveChron($sysid, $record))
   {
@@ -938,7 +948,7 @@ sub AddItemToCandidates
     print "Add $id to candidates \n";
     if (!defined $noop)
     {
-      my $date = $self->GetRecordPubDate($id, $record) . '-01-01';
+      my $date = $record->pubdate . '-01-01';
       my $sql = 'INSERT INTO candidates (id,time,pub_date) VALUES (?,?,?)';
       $self->PrepareSubmitSql($sql, $id, $time, $date);
       $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
@@ -1145,9 +1155,8 @@ sub LoadNewItems
   {
     my $id = $row->[0];
     next if $dels{$id};
-    my $sysid;
-    my $record = $self->GetMetadata($id, \$sysid);
-    if (!$record)
+    my $record = $self->GetMetadata($id);
+    if (!defined $record)
     {
       print "Filtering $id: can't get metadata for queue\n";
       $self->Filter($id, 'no meta');
@@ -1160,6 +1169,7 @@ sub LoadNewItems
       $dels{$id} = 1;
       next;
     }
+    my $sysid = $record->sysid;
     my $dup = $self->IsRecordInQueue($sysid, $record);
     if ($dup && !$self->DoesRecordHaveChron($sysid, $record))
     {
@@ -5093,305 +5103,6 @@ sub ValidateSubmission
   return $errorMsg;
 }
 
-# This is the correct way to do it.
-# Look at leader[6] and leader[7]
-# If leader[6] is in {a t} and leader[7] is in {a c d m} then BK
-sub IsFormatBK
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-
-  my $ldr  = $record->findvalue('//*[local-name()="leader"]');
-  my $type = substr $ldr, 6, 1;
-  my $lev  = substr $ldr, 7, 1;
-  my %types = ('a'=>1, 't'=>1);
-  my %levs = ('a'=>1, 'c'=>1, 'd'=>1, 'm'=>1);
-  return 1 if $types{$type}==1 && $levs{$lev}==1;
-  return 0;
-}
-
-sub IsThesis
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-
-  my $is = 0;
-  if (!$record) { $self->SetError("no record in IsThesis($id)"); return 0; }
-  eval {
-    my $xpath = "//*[local-name()='datafield' and \@tag='502']/*[local-name()='subfield' and \@code='a']";
-    my $doc  = $record->findvalue($xpath);
-    $is = 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
-    my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='500']");
-    foreach my $node ($nodes->get_nodelist())
-    {
-      $doc = $node->findvalue("./*[local-name()='subfield' and \@code='a']");
-      $is = 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
-    }
-  };
-  $self->SetError("failed in IsThesis($id): $@") if $@;
-  return $is;
-}
-
-# Translations: 041, first indicator=1, $a=eng, $h= (original
-# language code); Translation (or variations thereof) in 500(a) note field.
-sub IsTranslation
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-
-  my $is = 0;
-  if (!$record) { $self->SetError("no record in IsTranslation($id)"); return 0; }
-  eval {
-    my $xpath = "//*[local-name()='datafield' and \@tag='041' and \@ind1='1']/*[local-name()='subfield' and \@code='a']";
-    my $lang  = $record->findvalue($xpath);
-    $xpath = "//*[local-name()='datafield' and \@tag='041' and \@ind1='1']/*[local-name()='subfield' and \@code='h']";
-    my $orig  = $record->findvalue($xpath);
-    if ($lang && $orig)
-    {
-      $is = 1 if $lang eq 'eng' and $orig ne 'eng';
-    }
-    if (!$is && $lang)
-    {
-      # some uc volumes have no 'h' but instead concatenate everything in 'a'
-      $is = 1 if length($lang) > 3 and substr($lang,0,3) eq 'eng';
-    }
-    if (!$is)
-    {
-      my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='500']");
-      foreach my $node ($nodes->get_nodelist())
-      {
-        my $doc = $node->findvalue("./*[local-name()='subfield' and \@code='a']");
-        $is = 1 if $doc =~ m/translat(ion|ed)/i;
-      }
-    }
-    if (!$is)
-    {
-      $xpath = "//*[local-name()='datafield' and \@tag='245']/*[local-name()='subfield' and \@code='c']";
-      my $doc  = $record->findvalue($xpath);
-      if ($doc =~ m/translat(ion|ed)/i)
-      {
-        $is = 1;
-        #$in245++;
-        #print "245c: $id has '$doc'\n";
-      }
-    }
-  };
-  $self->SetError("failed in IsTranslation($id): $@") if $@;
-  return $is;
-}
-
-## ----------------------------------------------------------------------------
-##  Function:   get the publ date (260|c)for a specific vol.
-##  Parameters: volume id
-##  Return:     date string
-## ----------------------------------------------------------------------------
-sub GetRecordPubDate
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-  my $date2  = shift;
-
-  $record = $self->GetMetadata($id) unless $record;
-  return 'unknown' unless $record;
-  ## my $xpath = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
-  my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
-  my $leader  = $record->findvalue($xpath);
-  return substr($leader, ($date2)? 11:7, 4);
-}
-
-sub GetRecordPubLanguage
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-
-  $record = $self->GetMetadata($id) unless $record;
-  if (!$record) { return 0; }
-  ## my $xpath = q{//*[local-name()='oai_marc']/*[local-name()='fixfield' and @id='008']};
-  my $xpath   = q{//*[local-name()='controlfield' and @tag='008']};
-  my $leader  = $record->findvalue($xpath);
-  return substr($leader, 35, 3);
-}
-
-sub GetRecordPubCountry
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-  my $long   = shift;
-
-  $record = $self->GetMetadata($id) unless $record;
-  return unless $record;
-  my $code;
-  eval {
-    my $xpath = "//*[local-name()='controlfield' and \@tag='008']";
-    $code  = substr($record->findvalue($xpath), 15, 3);
-  };
-  $self->SetError("failed in GetRecordPubCountry($id): $@") if $@;
-  use Countries;
-  return Countries::TranslateCountry($code, $long);
-}
-
-sub GetMarcFixfield
-{
-  my $self  = shift;
-  my $id    = shift;
-  my $field = shift;
-
-  my $record = $self->GetMetadata($id);
-  if (!$record) { $self->Logit("failed in GetMarcFixfield: $id"); }
-  my $xpath = qq{//*[local-name()='oai_marc']/*[local-name()='fixfield' and \@id='$field']};
-  return $record->findvalue($xpath);
-}
-
-sub GetMarcVarfield
-{
-  my $self  = shift;
-  my $id    = shift;
-  my $field = shift;
-  my $label = shift;
-
-  my $record = $self->GetMetadata($id);
-  if (!$record) { $self->Logit("failed in GetMarcVarfield: $id"); }
-  my $xpath = qq{//*[local-name()='oai_marc']/*[local-name()='varfield' and \@id='$field']} .
-              qq{/*[local-name()='subfield' and \@label='$label']};
-  return $record->findvalue($xpath);
-}
-
-sub GetMarcControlfield
-{
-  my $self  = shift;
-  my $id    = shift;
-  my $field = shift;
-
-  my $record = $self->GetMetadata($id);
-  if (!$record) { $self->Logit("failed in GetMarcControlfield: $id"); }
-  my $xpath = qq{//*[local-name()='controlfield' and \@tag='$field']};
-  return $record->findvalue($xpath);
-}
-
-sub GetMarcDatafield
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $field  = shift;
-  my $code   = shift;
-  my $record = shift;
-  my $index  = shift;
-
-  $index = 1 unless defined $index;
-  $record = $self->GetMetadata($id) unless $record;
-  if (!$record) { $self->Logit("failed in GetMarcDatafield: $id"); }
-  my $xpath = qq{//*[local-name()='datafield' and \@tag='$field'][$index]} .
-              qq{/*[local-name()='subfield'  and \@code='$code'][$index]};
-  my $data;
-  eval{ $data = $record->findvalue($xpath); };
-  if ($@) { $self->Logit("failed to parse metadata for $id: $@"); }
-  my $len = length $data;
-  if ($len && $len % 3 == 0)
-  {
-    my $s = $len / 3;
-    my $f1 = substr $data, 0, $s;
-    my $f2 = substr $data, $s, $s;
-    my $f3 = substr $data, 2*$s, $s;
-    #print "Warning: possible triplet from '$data' ($id)\n" if $f1 eq $f2 and $f2 eq $f3;
-    $data = $f1 if $f1 eq $f2 and $f2 eq $f3;
-  }
-  return $data;
-}
-
-sub CountMarcDatafields
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $field  = shift;
-  my $record = shift;
-
-  my $n = 0;
-  eval {
-    $record = $self->GetMetadata($id) unless $record;
-    my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='$field']");
-    $n = scalar $nodes->get_nodelist();
-  };
-  $self->SetError('CountMarcDatafields: ' . $@) if $@;
-  return $n;
-}
-
-# The long param includes the author dates in the 100d field if present.
-sub GetRecordAuthor
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-  my $long   = shift;
-
-  $record = $self->GetMetadata($id) unless $record;
-  my $data = $self->GetRecordSubfields($id, '100', $record, 1, 'a', 'b', 'c', ($long)? 'd':undef);
-  $data = $self->GetRecordSubfields($id, '110', $record, 1, 'a', 'b') unless defined $data;
-  $data = $self->GetRecordSubfields($id, '111', $record, 1, 'a', 'c') unless defined $data;
-  $data = $self->GetRecordSubfields($id, '700', $record, 1, 'a', 'b', 'c', ($long)? 'd':undef) unless defined $data;
-  $data = $self->GetRecordSubfields($id, '710', $record, 1, 'a') unless defined $data;
-  if (defined $data)
-  {
-    $data =~ s/\n+//gs;
-    $data =~ s/\s*[,:;]*\s*$//;
-    $data =~ s/^\s+//;
-  }
-  return $data;
-}
-
-sub GetRecordAdditionalAuthors
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-
-  $record = $self->GetMetadata($id) unless $record;
-  my @aus = ();
-  my $n = $self->CountMarcDatafields($id, '700', $record);
-  foreach my $i (1 .. $n)
-  {
-    my $data = $self->GetRecordSubfields($id, '700', $record, $i, 'a', 'b', 'c', 'd');
-    push @aus, $data if defined $data;
-  }
-  $n = $self->CountMarcDatafields($id, '710', $record);
-  foreach my $i (1 .. $n)
-  {
-    my $data = $self->GetRecordSubfields($id, '710', $record, $i, 'a', 'b');
-    push @aus, $data if defined $data;
-  }
-  return @aus;
-}
-
-sub GetRecordSubfields
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $field  = shift;
-  my $record = shift;
-  my $index  = shift;
-  my @subfields = @_;
-
-  my $data = undef;
-  foreach my $subfield (@subfields)
-  {
-    my $data2 = $self->GetMarcDatafield($id, $field, $subfield, $record, $index);
-    $data2 =~ s/(^\s+)|(\s+$)//g if $data2;
-    $data .= ' ' . $data2 if $data2;
-  }
-  if (defined $data)
-  {
-    $data =~ s/\n+//gs;
-    $data =~ s/\s*[,:;]*\s*$//;
-    $data =~ s/^\s+//;
-  }
-  return $data;
-}
-
 # Removes paren/brace/brack and backslash-escape single quote
 sub GetEncTitle
 {
@@ -5418,22 +5129,6 @@ sub GetTitle
   return $ti;
 }
 
-sub GetRecordTitle
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-
-  $record = $self->GetMetadata($id) unless $record;
-  my $xpath = "//*[local-name()='datafield' and \@tag='245']/*[local-name()='subfield' and \@code='a']";
-  my $title = '';
-  eval{ $title = $record->findvalue($xpath); };
-  if ($@) { $self->Logit("failed to parse metadata for $id: $@"); }
-  # Get rid of trailing punctuation
-  $title =~ s/\s*([:\/,;]*\s*)+$// if $title;
-  return $title;
-}
-
 sub GetPubDate
 {
   my $self = shift;
@@ -5449,7 +5144,8 @@ sub GetPubDate
   }
   if ($date && $do2)
   {
-    my $date2 = $self->GetRecordPubDate($id, undef, 1);
+    my $record = $self->GetMetadata($id);
+    my $date2 = $record->pubdate(1);
     $date = "$date-$date2" if $date2 && $date2 =~ m/^\d\d\d\d$/ && $date2 > $date && $date2 <= $self->GetTheYear();
   }
   return $date;
@@ -5506,75 +5202,37 @@ sub GetAuthor
   return $au;
 }
 
-## ----------------------------------------------------------------------------
-##  Function:   get the metadata record (MARC21)
-##  Parameters: volume id or system id
-##  Return:     XML::LibXML record doc
-## ----------------------------------------------------------------------------
-sub GetMetadata
+sub GetMirlyn
 {
-  my $self   = shift;
-  my $id     = shift;
-  my $osysid = shift;
-  my $quiet  = shift;
+  my $self = shift;
+  my $id   = shift;
 
-  if (!$id) { $self->SetError("GetMetadata: no id given: '$id'"); return; }
-  #return $self->get($id) if $self->get($id);
-  # If it has a period, it's a volume ID
-  my $url = ($id =~ m/\./)? "http://catalog.hathitrust.org/api/volumes/full/htid/$id.json" :
-                            "http://catalog.hathitrust.org/api/volumes/full/recordnumber/$id.json";
-  my $ua = LWP::UserAgent->new;
-  $ua->timeout(1000);
-  my $req = HTTP::Request->new(GET => $url);
-  my $res = $ua->request($req);
-  if (!$res->is_success)
+  my $m = $self->SimpleSqlGet('SELECT mirlyn FROM bibdata WHERE id=?', $id);
+  if (!$m)
   {
-    $self->SetError($url . ' failed: ' . $res->message()) unless $quiet;
-    return;
+    $self->UpdateMetadata($id, 1);
+    $m = $self->SimpleSqlGet('SELECT mirlyn FROM bibdata WHERE id=?', $id);
   }
-  my $xml = undef;
-  my $json = JSON::XS->new;
-  my $content = $res->content;
-  eval {
-    my $records = $json->decode($content)->{'records'};
-    if ('HASH' eq ref $records)
-    {
-      my @keys = keys %$records;
-      $$osysid = $keys[0] if $osysid;
-      $xml = $records->{$keys[0]}->{'marc-xml'};
-    }
-    else
-    {
-      $self->SetError("HT Bib API found no data for '$id' (got '$content')") unless $quiet;
-      return;
-    }
-  };
-  if ($@)
-  {
-    $self->SetError("failed to parse ($content) for $id:$@") unless $quiet;
-    return;
-  }
-  my $parser = $self->get('parser');
-  if (!$parser)
-  {
-    $parser = XML::LibXML->new();
-    $self->set('parser',$parser);
-  }
-  my $source;
-  eval {
-    $source = $parser->parse_string($xml);
-  };
-  if ($@)
-  {
-    $self->SetError("failed to parse ($xml) for $id: $@") unless $quiet;
-    return;
-  }
-  my $root = $source->getDocumentElement();
-  my @records = $root->findnodes('//*[local-name()="record"]');
-  return $records[0];
+  return $m;
 }
 
-# Update sysid and author,title,pubdate fields in bibdata.
+sub GetMetadata
+{
+  my $self = shift;
+  my $id   = shift;
+
+  use Metadata;
+  my $record = Metadata->new('id' => $id, 'crms' => $self);
+  my @errs = @{$record->GetErrors()};
+  if (scalar @errs)
+  {
+    $record = undef;
+    $self->SetError($_) for @errs;
+  }
+  return $record;
+}
+
+# Update author, title, pubdate, country, sysid, mirlyn fields in bibdata.
 # Only updates existing rows (does not INSERT) unless the force param is set.
 sub UpdateMetadata
 {
@@ -5583,118 +5241,37 @@ sub UpdateMetadata
   my $force  = shift;
   my $record = shift;
 
-  if (!defined $id)
-  {
-    $self->SetError("Trying to update metadata for empty volume id!\n");
-    return;
-  }
   my $cnt = $self->SimpleSqlGet('SELECT COUNT(*) FROM bibdata WHERE id=?', $id);
-  if ($cnt || $force)
+  if ($cnt == 0 || $force)
   {
-    $self->PrepareSubmitSql('INSERT INTO bibdata (id) VALUES (?)', $id) unless $cnt > 0;
-    my $sysid = $self->BarcodeToId($id, 1);
-    if ($sysid)
+    $record = $self->GetMetadata($id) unless defined $record;
+    if (defined $record)
     {
-      $record = $self->GetMetadata($id) unless defined $record;
-      my $title = $self->GetRecordTitle($id, $record);
-      my $author = $self->GetRecordAuthor($id, $record);
-      my $date = $self->GetRecordPubDate($id, $record) . '-01-01';
-      my $country = $self->GetRecordPubCountry($id, $record);
-      my $sql = 'UPDATE bibdata SET author=?,title=?,pub_date=?,country=? WHERE id=?';
-      $self->PrepareSubmitSql($sql, $author, $title, $date, $country, $id);
+      my $date = $record->pubdate($id) . '-01-01';
+      
+      if ($record->id eq $record->sysid)
+      {
+        my $sql = 'UPDATE bibdata SET author=?,title=?,pub_date=?,country=?,mirlyn=?' .
+                  ' WHERE sysid=?';
+        $self->PrepareSubmitSql($sql, $record->author, $record->title,
+                              $date, $record->country, $record->mirlyn,
+                              $record->sysid);
+      }
+      else
+      {
+        my $sql = 'REPLACE INTO bibdata (id,author,title,pub_date,country,mirlyn,sysid)' .
+                  ' VALUES (?,?,?,?,?,?,?)';
+        $self->PrepareSubmitSql($sql, $id, $record->author, $record->title,
+                              $date, $record->country, $record->mirlyn,
+                              $record->sysid);
+      }
+    }
+    else
+    {
+      $self->SetError('Could not get metadata for ' . $id);
     }
   }
   return $record;
-}
-
-# Get the usRightsString field of the item record for the
-# given volume id from the HT Bib API.
-sub GetRightsString
-{
-  my $self = shift;
-  my $id   = shift;
-
-  if (!$id) { $self->SetError("GetRightsString: no id given: '$id'"); return; }
-  # If it has a period, it's a volume ID
-  my $url = "http://catalog.hathitrust.org/api/volumes/brief/htid/$id.json";
-  my $ua = LWP::UserAgent->new;
-  $ua->timeout(1000);
-  my $req = HTTP::Request->new(GET => $url);
-  my $res = $ua->request($req);
-  if (!$res->is_success)
-  {
-    $self->SetError($url . ' failed: ' . $res->message());
-    return;
-  }
-  my $rightsString = '';
-  my $json = JSON::XS->new;
-  my $content = $res->content;
-  eval {
-    my $items = $json->decode($content)->{'items'};
-    if ('ARRAY' eq ref $items)
-    {
-      foreach my $item (@{$items})
-      {
-        if ($item->{'htid'} eq $id)
-        {
-          $rightsString = $item->{'usRightsString'};
-          last;
-        }
-      }
-    }
-    else { $self->SetError("HT Bib API found no data for '$id' (got '$content')"); return; }
-  };
-  if ($@) { $self->SetError("failed to parse ($content) for $id:$@"); return; }
-  return $rightsString;
-}
-
-## ----------------------------------------------------------------------------
-##  Function:   get the mirlyn ID for a given volume id using the HT Bib API
-##              update local system table if necessary.
-##  Parameters: volume id, force to get from metadata bypassing system table
-##  Return:     system id
-## ----------------------------------------------------------------------------
-sub BarcodeToId
-{
-  my $self  = shift;
-  my $id    = shift;
-  my $force = shift;
-
-  my $sysid = undef;
-  my $sql = 'SELECT sysid FROM bibdata WHERE id=?';
-  $sysid = $self->SimpleSqlGet($sql, $id) unless $force;
-  if (!$sysid)
-  {
-    my $url = "http://catalog.hathitrust.org/api/volumes/brief/htid/$id.json";
-    my $ua = LWP::UserAgent->new;
-    $ua->timeout(1000);
-    my $req = HTTP::Request->new(GET => $url);
-    my $res = $ua->request($req);
-    if (!$res->is_success)
-    {
-      $self->SetError($url . ' failed: ' . $res->message());
-      return;
-    }
-    my $content = $res->content;
-    my $records = undef;
-    eval {
-      my $json = JSON::XS->new;
-      $records = $json->decode($content)->{'records'};
-    };
-    if ($@ || !$records) { $self->SetError("failed to parse JSON for $id: $@"); return; }
-    elsif ('HASH' eq ref $records)
-    {
-      my @keys = keys %$records;
-      $sysid = $keys[0];
-      if (defined $sysid)
-      {
-        $sql = 'UPDATE bibdata SET sysid=? WHERE id=?';
-        $self->PrepareSubmitSql($sql, $sysid, $id);
-      }
-    }
-    else { $self->SetError("HT Bib API found no system id for '$id'\nReturned: '$content'\nURL: '$url'"); }
-  }
-  return $sysid;
 }
 
 sub GetReviewField
@@ -6246,7 +5823,6 @@ sub Logit
   my $str  = shift;
 
   $self->OpenErrorLog();
-
   my $date = $self->GetTodaysDate();
   my $fh = $self->get('logFh');
   if ($fh)
@@ -7231,37 +6807,15 @@ sub RightsDBAvailable
   return ($dbh)? 1:0;
 }
 
-# Query Mirlyn holdings for this system id and return volume identifiers.
 sub VolumeIDsQuery
 {
   my $self   = shift;
   my $sysid  = shift;
   my $record = shift;
 
-  my @ids;
-  eval {
-    $record = $self->GetMetadata($sysid) unless $record;
-    my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='974']");
-    foreach my $node ($nodes->get_nodelist())
-    {
-      my $id = $node->findvalue("./*[local-name()='subfield' and \@code='u']");
-      my $chron = $node->findvalue("./*[local-name()='subfield' and \@code='z']");
-      my $rights = $self->GetRightsString($id);
-      #print "$rights,$id,$chron<br/>\n";
-      push @ids, $id . '__' . $chron . '__' . $rights;
-    }
-    $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='MDP']");
-    foreach my $node ($nodes->get_nodelist())
-    {
-      my $id2 = $node->findvalue("./*[local-name()='subfield' and \@code='u']");
-      my $chron = $node->findvalue("./*[local-name()='subfield' and \@code='z']");
-      my $rights = $self->GetRightsString($id2);
-      #print "$rights,$id,$chron<br/>\n";
-      push @ids, $id2 . '__' . $chron . '__' . $rights;
-    }
-  };
-  $self->SetError("Holdings query for $sysid failed: $@") if $@;
-  return \@ids;
+  $record = $self->GetMetadata($sysid) unless defined $record;
+  return undef unless defined $record;
+  return $record->volumeIDs
 }
 
 sub DownloadVolumeIDs
@@ -7286,10 +6840,9 @@ sub CRMSQuery
   my $id   = shift;
 
   my @ids;
-  my $sysid;
   my $title;
   my $rows;
-  my $record = $self->GetMetadata($id, \$sysid);
+  my $record = $self->GetMetadata($id);
   if (!defined $record)
   {
     $title = $self->GetTitle($id);
@@ -7297,7 +6850,7 @@ sub CRMSQuery
   }
   else
   {
-    $title = $self->GetRecordTitle($id, $record);
+    $title = $record->title;
     $rows = $self->VolumeIDsQuery($id, $record);
   }
   foreach my $line (@{$rows})
@@ -7886,8 +7439,8 @@ sub SubmitInheritance
     return $id . ': ' . substr $res, 1, length $res;
   }
   $self->PrepareSubmitSql('DELETE FROM reviews WHERE id=?', $id);
-  my $sysid = $self->BarcodeToId($id);
-  my $note = "See all reviews for Sys #$sysid";
+  my $record = $self->GetMetadata($id);
+  my $note = 'See all reviews for Sys #' . $record->sysid;
   my $swiss = ($self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id)>0)? 1:0;
   $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,$category,$swiss);
   $self->PrepareSubmitSql('DELETE FROM inherit WHERE id=?', $id);
@@ -8002,7 +7555,7 @@ sub DuplicateVolumesFromExport
     $data->{'nodups'}->{$id} .= "$sysid\n";
     return;
   }
-  $data->{'titles'}->{$id} = $self->GetRecordTitle($id, $record);
+  $data->{'titles'}->{$id} = $record->title;
   # Get most recent CRMS determination for any volume on this record
   # and see if it's more recent that what we're exporting.
   my $candidate = $id;
@@ -8212,11 +7765,11 @@ sub DuplicateVolumesFromCandidates
     {
       $data->{'disallowed'}->{$cid} .= "$id\t$sysid\t$oldrights\t$newrights\t$id\tRights\n";
     }
-    $data->{'titles'}->{$cid} = $self->GetRecordTitle($cid, $record);
+    $data->{'titles'}->{$cid} = $record->title;
   }
   else
   {
-    $data->{'titles'}->{$id} = $self->GetRecordTitle($id, $record);
+    $data->{'titles'}->{$id} = $record->title;
     $data->{'noexport'}->{$id} .= "$sysid\n";
   }
 }
@@ -8228,8 +7781,8 @@ sub GetDuplicates
 
   my @dupes = ();
   my $sysid;
-  my $record = $self->GetMetadata($id, \$sysid);
-  my $rows = $self->VolumeIDsQuery($sysid, $record);
+  my $record = $self->GetMetadata($id);
+  my $rows = $self->VolumeIDsQuery($record->sysid, $record);
   foreach my $line (@{$rows})
   {
     my ($id2,$chron2,$rights2) = split '__', $line;
@@ -8474,7 +8027,7 @@ sub Sources
     }
     if ($url =~ m/__SYSID__/)
     {
-      my $sysid = $self->BarcodeToId($id);
+      my $sysid = $self->GetMirlyn($id);
       $url =~ s/__SYSID__/$sysid/g;
     }
     if ($url =~ m/__AUTHOR__/)
@@ -8622,13 +8175,13 @@ sub PredictLastCopyrightYear
   $pub = $year if $ispub;
   if (! defined $pub)
   {
-    $pub = $self->GetRecordPubDate($id, $record) if $record;
+    $pub = $record->pubdate if defined $record;
     $pub = $self->GetPubDate($id) unless defined $pub;
   }
   return undef unless defined $pub;
   $$pubref = $pub if defined $pubref;
   my $where = undef;
-  $where = $self->GetRecordPubCountry($id, $record) if $record;
+  $where = $record->country if defined $record;
   $where = $self->GetPubCountry($id) unless $where;
   my $now = $self->GetTheYear();
   # $when is the last year the work was in copyright
@@ -8709,7 +8262,8 @@ sub GetADDFromAuthor
 
   my $add = undef;
   eval {
-    $a = $self->GetRecordAuthor($id, undef, 1) unless defined $a;
+    my $record = $self->GetMetadata($id);
+    $a = $record->author(1) unless defined $a;
   };
   if ($@)
   {
@@ -8862,9 +8416,9 @@ sub VIAFWarning
   my @aus;
   $record = $self->GetMetadata($id) unless defined $record;
   return 'unable to fetch MARC metadata for volume' unless defined $record;
-  my $au = $self->GetRecordAuthor($id, $record, 1);
+  my $au = $record->author(1);
   push @aus, $au if defined $au;
-  my @add = $self->GetRecordAdditionalAuthors($id, $record);
+  my @add = $record->GetAdditionalAuthors();
   push @aus, $_ for @add;
   foreach $au (@aus)
   {
@@ -8924,7 +8478,15 @@ sub Undollarize
   {
     my $id2 = $id;
     $id2 =~ s/\$b/b/;
-    return $id2;
+    my $record = $self->GetMetadata($id2);
+    if (!defined $record)
+    {
+      $self->ClearErrors();
+    }
+    else
+    {
+      return $id2;
+    }
   }
   return undef;
 }

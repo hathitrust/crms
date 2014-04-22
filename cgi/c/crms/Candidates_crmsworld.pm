@@ -94,8 +94,8 @@ sub GetViolations
   my ($id, $record, $priority, $override) = @_;
 
   my @errs = ();
-  my $pub = $self->{crms}->GetRecordPubDate($id, $record);
-  my $where = $self->{crms}->GetRecordPubCountry($id, $record);
+  my $pub = $record->pubdate;
+  my $where = $record->country;
   $where =~ s/\s*\(.*//;
   if ($pub =~ m/\d\d\d\d/)
   {
@@ -112,7 +112,7 @@ sub GetViolations
   push @errs, "foreign pub ($where)" if $where ne 'United Kingdom' and
                                         $where ne 'Australia' and
                                         $where ne 'Canada';
-  push @errs, 'non-BK format' unless $self->{crms}->IsFormatBK($id, $record);
+  push @errs, 'non-BK format' unless $record->isFormatBK($id);
   #printf "$id: %s\n", join '; ', @errs if scalar @errs;
   return @errs;
 }
@@ -125,8 +125,8 @@ sub ShouldVolumeGoInUndTable
 
   $record = $self->{crms}->GetMetadata($id) unless $record;
   return 'no meta' unless $record;
-  my $lang = $self->{crms}->GetRecordPubLanguage($id, $record);
-  my $where = $self->{crms}->GetRecordPubCountry($id, $record);
+  my $lang = $record->language;
+  my $where = $record->country;
   if ($where eq 'Spain')
   {
     return 'language' if 'spa' ne $lang and 'eng' ne $lang;
@@ -135,7 +135,7 @@ sub ShouldVolumeGoInUndTable
   {
     return 'language' if 'eng' ne $lang;
   }
-  return 'translation' if $self->{crms}->IsTranslation($id, $record);
+  return 'translation' if $record->isTranslation;
   return undef;
 }
 
