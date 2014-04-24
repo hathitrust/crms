@@ -5247,8 +5247,7 @@ sub UpdateMetadata
     $record = $self->GetMetadata($id) unless defined $record;
     if (defined $record)
     {
-      my $date = $record->pubdate($id) . '-01-01';
-      
+      my $date = $record->pubdate . '-01-01';
       if ($record->id eq $record->sysid)
       {
         my $sql = 'UPDATE bibdata SET author=?,title=?,pub_date=?,country=?,mirlyn=?' .
