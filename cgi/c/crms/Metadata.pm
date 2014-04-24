@@ -2,6 +2,8 @@ package Metadata;
 use vars qw(@ISA @EXPORT @EXPORT_OK);
 our @EXPORT = qw(GetErrors id sysid mirlyn);
 
+use strict;
+use warnings;
 use LWP::UserAgent;
 use XML::LibXML;
 use JSON::XS;
@@ -56,8 +58,7 @@ sub SetError
   my $self   = shift;
   my $error  = shift;
 
-  my $crms = $self->get('crms');
-  $error .= "\n" . $self->StackTrace() if defined $crms;
+  $error .= "\n" . $self->StackTrace();
   my $errors = $self->get('errors');
   push @{$errors}, $error;
 }
@@ -146,15 +147,23 @@ sub xml
     my $json = $self->json;
     my $records = $json->{'records'};
     my @keys = keys %$records;
-    $xml = $records->{$keys[0]}->{'marc-xml'};
-    my $parser = XML::LibXML->new();
     my $source;
-    eval {
-      $source = $parser->parse_string($xml);
-    };
-    if ($@)
+    if (scalar @keys)
     {
-      $self->SetError("failed to parse ($xml) for $id: $@");
+      $xml = $records->{$keys[0]}->{'marc-xml'};
+      my $parser = XML::LibXML->new();
+      eval {
+        $source = $parser->parse_string($xml);
+      };
+      if (!scalar @keys || $@)
+      {
+        $self->SetError($self->id . " failed to parse ($xml): $@");
+        return;
+      }
+    }
+    else
+    {
+      $self->SetError($self->id . " no records found");
       return;
     }
     my $root = $source->getDocumentElement();
@@ -189,7 +198,7 @@ sub isFormatBK
   my $lev  = substr $ldr, 7, 1;
   my %types = ('a'=>1, 't'=>1);
   my %levs = ('a'=>1, 'c'=>1, 'd'=>1, 'm'=>1);
-  return 1 if $types{$type}==1 && $levs{$lev}==1;
+  return 1 if defined $types{$type} && defined $levs{$lev};
   return 0;
 }
 
@@ -198,10 +207,10 @@ sub isThesis
   my $self   = shift;
 
   my $is = 0;
-  if (!$record) { $self->SetError("no record in IsThesis($id)"); return 0; }
   eval {
+    my $record = $self->xml;
     my $xpath = "//*[local-name()='datafield' and \@tag='502']/*[local-name()='subfield' and \@code='a']";
-    my $doc  = $self->xml->findvalue($xpath);
+    my $doc  = $record->findvalue($xpath);
     $is = 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
     my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='500']");
     foreach my $node ($nodes->get_nodelist())
@@ -210,7 +219,7 @@ sub isThesis
       $is = 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
     }
   };
-  $self->SetError("failed in IsThesis($id): $@") if $@;
+  $self->SetError($self->id . ": failed in isThesis: $@") if $@;
   return $is;
 }
 
@@ -257,7 +266,7 @@ sub isTranslation
       }
     }
   };
-  $self->SetError("failed in IsTranslation($id): $@") if $@;
+  $self->SetError($self->id . ":failed in isTranslation: $@") if $@;
   return $is;
 }
 
@@ -288,7 +297,8 @@ sub HTIDToMirlyn
     return;
   }
   my $root = $source->getDocumentElement();
-  return $self->GetControlfield('001', $root);
+  my $mirlyn = $self->GetControlfield('001', $root);
+  return $mirlyn;
 }
 
 sub MirlynToSystem
@@ -347,12 +357,11 @@ sub author
   my $self = shift;
   my $long = shift;
 
-  my $record = $self->xml;
-  my $data = $self->GetSubfields('100', $record, 1, 'a', 'b', 'c', ($long)? 'd':undef);
-  $data = $self->GetSubfields('110', $record, 1, 'a', 'b') unless defined $data;
-  $data = $self->GetSubfields('111', $record, 1, 'a', 'c') unless defined $data;
-  $data = $self->GetSubfields('700', $record, 1, 'a', 'b', 'c', ($long)? 'd':undef) unless defined $data;
-  $data = $self->GetSubfields('710', $record, 1, 'a') unless defined $data;
+  my $data = $self->GetSubfields('100', 1, 'a', 'b', 'c', ($long)? 'd':undef);
+  $data = $self->GetSubfields('110', 1, 'a', 'b') unless defined $data;
+  $data = $self->GetSubfields('111', 1, 'a', 'c') unless defined $data;
+  $data = $self->GetSubfields('700', 1, 'a', 'b', 'c', ($long)? 'd':undef) unless defined $data;
+  $data = $self->GetSubfields('710', 1, 'a') unless defined $data;
   if (defined $data)
   {
     $data =~ s/\n+//gs;
@@ -447,9 +456,12 @@ sub GetControlfield
 {
   my $self   = shift;
   my $field  = shift;
+  my $xml    = shift;
 
+  $xml = $self->xml unless defined $xml;
   my $xpath = "//*[local-name()='controlfield' and \@tag='$field']";
-  eval { $data = $self->xml->findvalue($xpath); };
+  my $data;
+  eval { $data = $xml->findvalue($xpath); };
   if ($@) { $self->SetError($self->id . " GetControlfield failed: $@"); }
   return $data;
 }
@@ -460,12 +472,15 @@ sub GetDatafield
   my $field  = shift;
   my $code   = shift;
   my $index  = shift;
+  my $xml    = shift;
 
+  $self->SetError("no code: $field, $index") unless defined $code;
+  $xml = $self->xml unless defined $xml;
   $index = 1 unless defined $index;
   my $xpath = "//*[local-name()='datafield' and \@tag='$field'][$index]" .
-              "/*[local-name()='subfield'  and \@code='$code']";
+              "/*[local-name()='subfield' and \@code='$code']";
   my $data;
-  eval { $data = $self->xml->findvalue($xpath); };
+  eval { $data = $xml->findvalue($xpath); };
   if ($@) { $self->SetError($self->id . " GetDatafield failed: $@"); }
   my $len = length $data;
   if ($len && $len % 3 == 0)
@@ -484,11 +499,12 @@ sub CountDatafields
 {
   my $self   = shift;
   my $field  = shift;
+  my $xml    = shift;
 
-  $record = $self->xml;
+  $xml = $self->xml unless defined $xml;
   my $n = 0;
   eval {
-    my $nodes = $record->findnodes("//*[local-name()='datafield' and \@tag='$field']");
+    my $nodes = $xml->findnodes("//*[local-name()='datafield' and \@tag='$field']");
     $n = scalar $nodes->get_nodelist();
   };
   $self->SetError('CountDatafields: ' . $@) if $@;
@@ -525,6 +541,7 @@ sub GetSubfields
   my $data = undef;
   foreach my $subfield (@subfields)
   {
+    next unless defined $subfield;
     my $data2 = $self->GetDatafield($field, $subfield, $index);
     $data2 =~ s/(^\s+)|(\s+$)//g if $data2;
     $data .= ' ' . $data2 if $data2;
@@ -538,3 +555,17 @@ sub GetSubfields
   return $data;
 }
 
+sub StackTrace
+{
+  my $self = shift;
+  
+  my ($path, $line, $subr);
+  my $max_depth = 30;
+  my $i = 1;
+  my $trace = "--- Begin stack trace ---\n";
+  while ((my @call_details = (caller($i++))) && ($i<$max_depth))
+  {
+    $trace .= "$call_details[1] line $call_details[2] in function $call_details[3]\n";
+  }
+  return $trace . "--- End stack trace ---\n";
+}
