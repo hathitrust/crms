@@ -5232,6 +5232,16 @@ sub GetMetadata
   return $record;
 }
 
+sub BarcodeToId
+{
+  my $self   = shift;
+  my $id     = shift;
+
+  my $record = $self->GetMetadata($id);
+  $self->ClearErrors();
+  return $record->mirlyn if defined $record;
+}
+
 # Update author, title, pubdate, country, sysid, mirlyn fields in bibdata.
 # Only updates existing rows (does not INSERT) unless the force param is set.
 sub UpdateMetadata
@@ -5554,28 +5564,30 @@ sub GetNextItemForReview
     my $p1f = $self->GetPriority1Frequency();
     # Exclude priority 1 if our d100 roll is over the P1 threshold or user is not advanced
     my $exclude1 = (rand() >= $p1f || !$self->IsUserAdvanced($user))? 'q.priority!=1 AND ':'';
-    my $excludeCountries = '';
+    my $countries = '';
     if (!defined $page || $page ne 'oneoff')
     {
-      my @countries = @{$self->GetUserCountries($user)};
-      if (scalar @countries)
+      my @allcountries = @{$self->UserCountries($user)};
+      if (scalar @allcountries)
       {
-        $order = 'b.country IN (SELECT country FROM usercountries WHERE user="' . $user . '") DESC,' . $order;
-      }
-      else
-      {
-        $sql = 'SELECT DISTINCT country FROM usercountries';
-        my $ref = $self->GetDb()->selectall_arrayref($sql);
-        @countries = map {'"' . $_->[0] . '"';} @{$ref};
+        my @countries = @{$self->GetUserCountries($user)};
         if (scalar @countries)
         {
-          $excludeCountries = sprintf ' b.country NOT IN (%s) AND ', join ',', @countries;
+          @countries = map {'"' . $_ . '"';} @countries;
+          $countries .= ' b.country IN (' . join(',', @countries) . ') AND ';
+        }
+        
+        my @noncountries = @{$self->GetNonUserCountries($user)};
+        if (scalar @noncountries)
+        {
+          @noncountries = map {'"' . $_ . '"';} @noncountries;
+          $countries .= ' b.country NOT IN (' . join(',', @noncountries) . ') AND ';
         }
       }
     }
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt FROM queue q' .
            ' INNER JOIN bibdata b ON q.id=b.id'.
-           ' WHERE ' . $exclude . $exclude1 . $excludeCountries .
+           ' WHERE ' . $exclude . $exclude1 . $countries .
            ' q.expcnt=0 AND q.locked IS NULL AND q.status<2' .
            ' ORDER BY ' . $order;
     #print "$sql<br/>\n";
@@ -5584,6 +5596,7 @@ sub GetNextItemForReview
     {
       my $id2 = $row->[0];
       my $cnt = $row->[1];
+      print "Trying $id2 ($cnt)\n";
       $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
       next if 1 < $self->SimpleSqlGet($sql, $id2);
       $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND user=?';
@@ -5596,6 +5609,7 @@ sub GetNextItemForReview
         $id = $id2;
         last;
       }
+      else {print "$err\n"};
     }
   };
   if ($@ && ! defined $id)
@@ -8523,6 +8537,18 @@ sub GetUserCountries
   my $user = shift;
 
   my $ref = $self->GetDb()->selectall_arrayref('SELECT country FROM usercountries WHERE user=?', undef, $user);
+  my @cs = map {$_->[0];} @{$ref};
+  return \@cs;
+}
+
+sub GetNonUserCountries
+{
+  my $self = shift;
+  my $user = shift;
+
+  my $sql = 'SELECT country FROM usercountries WHERE country NOT IN'.
+            ' (SELECT DISTINCT country FROM usercountries WHERE user=?';
+  my $ref = $self->SelectAll($sql, $user);
   my @cs = map {$_->[0];} @{$ref};
   return \@cs;
 }
