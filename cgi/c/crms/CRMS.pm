@@ -510,7 +510,7 @@ sub ClearQueueAndExport
   $self->ExportReviews($export, $fromcgi);
   $self->UpdateExportStats();
   $self->UpdateDeterminationsBreakdown();
-  return "Exported: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved, $iCount inherited rights\n";
+  return "Removed from queue: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved, $iCount inherited rights\n";
 }
 
 sub GetDoubleRevItemsInAgreement
@@ -557,10 +557,9 @@ sub ExportReviews
   my $list    = shift;
   my $fromcgi = shift;
 
-  if ($self->GetSystemVar('noExport'))
+  if ($self->GetSystemVar('noExport') && !$fromcgi)
   {
-    print ">>> noExport system variable is set; will not create export file or email.\n" unless $fromcgi;
-    $fromcgi = 1;
+    print ">>> noExport system variable is set; will only export high-priority volumes.\n";
   }
   my $count = 0;
   my $user = $self->get('sys');
@@ -632,12 +631,30 @@ sub CanExportVolume
   my $rq = $self->RightsQuery($id, 1);
   return 1 unless defined $rq;
   # Do not export Status 6, since they are not really final determinations.
-  my $sql = 'SELECT MAX(status) FROM historicalreviews WHERE gid=?';
-  my $stat = $self->SimpleSqlGet($sql, $gid);
-  if ($stat == 6)
+  my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE gid=? AND status=6';
+  if ($self->SimpleSqlGet($sql, $gid))
   {
     print "Not exporting $id; it is status 6\n" unless $fromcgi;
     return 0;
+  }
+  my $pri = $self->SimpleSqlGet('SELECT priority FROM queue WHERE id=?', $id);
+  if (defined $gid && !defined $pri)
+  {
+    my $sql = 'SELECT MAX(priority) FROM historicalreviews WHERE gid=?';
+    $pri = $self->SimpleSqlGet($sql, $gid);
+  }
+  if ($self->GetSystemVar('noExport'))
+  {
+    if ($pri>=3)
+    {
+      print "Exporting $id; noExport is on but it is priority $pri\n" unless $fromcgi;
+      return 1;
+    }
+    else
+    {
+      print "Not exporting $id; noExport is on and it is priority $pri\n" unless $fromcgi;
+      return 0;
+    }
   }
   my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
   my $cm = $self->CandidatesModule();
@@ -650,12 +667,6 @@ sub CanExportVolume
     # 2. Priority 3 or higher.
     # 3. Previous rights were by user crms*.
     # 4. The determination is pd*.
-    my $pri = $self->SimpleSqlGet('SELECT priority FROM queue WHERE id=?', $id);
-    if (defined $gid && !defined $pri)
-    {
-      my $sql = 'SELECT MAX(priority) FROM historicalreviews WHERE gid=?';
-      $pri = $self->SimpleSqlGet($sql, $gid);
-    }
     if ($reason2 eq 'gfv' || $pri >= 3.0 || $usr2 =~ m/^crms/i || $attr =~ m/^pd/)
     {
       # This is used for cleanup purposes
