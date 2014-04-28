@@ -129,6 +129,23 @@ table.id td {
   text-align:left;
 }
 
+table.oneoff { 
+  border-spacing: 2px;
+  border-collapse: separate;
+  border-bottom: 1px solid #72859a;
+  background-color: #d0e6de;
+  font-size:12px;
+}
+
+table.oneoff th {
+  padding: 1px;
+}
+
+table.oneoff td {
+  padding: 0px 0px 0px 0px;
+  text-align:left;
+}
+
 table.search { 
   border-collapse: separate;
   border-bottom: 1px solid #72859a;
@@ -175,6 +192,12 @@ div#RightsCont {
   font-size:12px;
 }
 
+div#OneoffCont {
+  padding-top: 15px;
+  background-color: #d0e6de;
+  font-size:12px;
+}
+
 #RightsReason table {
   font-size:12px;
 }
@@ -196,6 +219,10 @@ table.ReviewError {
 #SubmitForm {
   height: 3em;
   margin-top: 8px;
+}
+
+#SubmitOneoffForm {
+  
 }
 
 table.reviewGrey {
@@ -388,6 +415,11 @@ input.reviewblue {
 input.review {
   padding-left:3px;
   padding-right:3px;
+  font-size:1em;
+  font-weight:bold;
+}
+
+input.ooreview {
   font-size:1em;
   font-weight:bold;
 }
