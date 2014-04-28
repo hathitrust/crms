@@ -5541,6 +5541,8 @@ sub CountExpertHistoricalReviews
 ##  Parameters: user name
 ##  Return:     volume id
 ## ----------------------------------------------------------------------------
+# Code commented out with #### are race condition mitigations
+# to be considered for next release.
 sub GetNextItemForReview
 {
   my $self = shift;
@@ -5553,15 +5555,20 @@ sub GetNextItemForReview
   eval{
     my $exclude = 'q.priority<3 AND ';
     my $order = 'q.priority DESC, cnt DESC, q.time ASC';
+    ####my $order = 'hash';
+    ####$order = 'q.priority DESC,'.$order if rand()<.25;
+    ####$order = 'cnt DESC,'.$order if rand()<.25;
     if ($self->IsUserAdmin($user))
     {
       # Only admin+ reviews P4+
       $exclude = '';
+      ####$order = 'q.priority DESC';
     }
     # If user is expert, get priority 3 items.
     elsif ($self->IsUserExpert($user))
     {
       $exclude = 'q.priority<4 AND ';
+      ####$order = 'q.priority DESC';
     }
     if (defined $page && $page eq 'oneoff')
     {
@@ -5587,12 +5594,10 @@ sub GetNextItemForReview
           @countries = map {'"' . $_ . '"';} @countries;
           $countries .= ' b.country IN (' . join(',', @countries) . ') AND ';
         }
-        
-        my @noncountries = @{$self->GetNonUserCountries($user)};
-        if (scalar @noncountries)
+        else
         {
-          @noncountries = map {'"' . $_ . '"';} @noncountries;
-          $countries .= ' b.country NOT IN (' . join(',', @noncountries) . ') AND ';
+          @allcountries = map {'"' . $_ . '"';} @allcountries;
+          $countries .= ' b.country NOT IN (' . join(',', @allcountries) . ') AND ';
         }
       }
     }
@@ -5601,96 +5606,38 @@ sub GetNextItemForReview
            ' WHERE ' . $exclude . $exclude1 . $countries .
            ' q.expcnt=0 AND q.locked IS NULL AND q.status<2' .
            ' ORDER BY ' . $order;
+    ####$sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,' .
+    ####       ' SHA2(CONCAT(?,q.id),0) as hash'.
+    ####       ' FROM queue q INNER JOIN bibdata b ON q.id=b.id'.
+    ####       ' WHERE ' . $exclude . $exclude1 . $countries .
+    ####       ' q.expcnt=0 AND q.locked IS NULL AND q.status<2'.
+    ####       ' AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user=?)' .
+    ####       ' HAVING cnt<2 ORDER BY ' . $order;
     #print "$sql<br/>\n";
-    my $ref = $self->GetDb()->selectall_arrayref($sql);
+    my $ref = $self->SelectAll($sql); ####($sql, $user, $user);
     foreach my $row (@{$ref})
     {
       my $id2 = $row->[0];
       my $cnt = $row->[1];
-      print "Trying $id2 ($cnt)\n";
+      ####my $hash = $row->[2];
       $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
       next if 1 < $self->SimpleSqlGet($sql, $id2);
       $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND user=?';
       next if 0 < $self->SimpleSqlGet($sql, $id2, $user);
+      #### #FIXME: create a second AND NOT EXISTS for the query below if not admin
       $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=? AND user=?';
       next if 0 < $self->SimpleSqlGet($sql, $id2, $user) and !$self->IsUserAdmin($user);
       $err = $self->LockItem($id2, $user);
       if (!$err)
       {
-        $id = $id2;
+        $id = $id2;#### unless defined $id; # for testing presentation order
         last;
       }
-      else {print "$err\n"};
     }
   };
   if ($@ && ! defined $id)
   {
     my $err = "Could not get a volume for $user to review: $@.";
-    $err .= "\n$sql" if $sql;
-    $self->SetError($err);
-  }
-  return $id;
-}
-
-# Alternate single-query version that needs extensive testing
-# before replacing the above version.
-sub GetNextItemForReviewSQ
-{
-  my $self = shift;
-  my $user = shift;
-  my $page = shift;
-
-  my $id = undef;
-  my $err = undef;
-  my $sql = undef;
-  eval{
-    my $exclude = 'q.priority<3 AND ';
-    my $order = 'q.priority DESC, cnt DESC, q.time ASC';
-    if ($self->IsUserAdmin($user))
-    {
-      # Only admin+ reviews P4+
-      $exclude = '';
-    }
-    # If user is expert, get priority 3 items.
-    elsif ($self->IsUserExpert($user))
-    {
-      $exclude = 'q.priority<4 AND ';
-    }
-    if (defined $page && $page eq 'oneoff')
-    {
-      $exclude .= ' q.added_by="oneoff" AND ';
-      $order = 'q.source ASC, q.id ASC';
-    }
-    else
-    {
-      $exclude .= ' (q.added_by IS NULL OR q.added_by!="oneoff") AND ';
-    }
-    my $p1f = $self->GetPriority1Frequency();
-    # Exclude priority 1 if our d100 roll is over the P1 threshold or user is not advanced
-    my $exclude1 = (rand() >= $p1f || !$self->IsUserAdvanced($user))? 'q.priority!=1 AND ':'';
-    $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt' .
-           ' FROM queue q WHERE ' . $exclude . $exclude1 . 'q.expcnt=0 AND q.locked IS NULL' .
-           ' AND q.status<2 AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user=?)' .
-           ' HAVING cnt<2 ORDER BY ' . $order;
-    #print "$sql<br/>\n";
-    my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $user);
-    foreach my $row (@{$ref})
-    {
-      my $id2 = $row->[0];
-      $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=? AND user=?';
-      next if 0 < $self->SimpleSqlGet($sql, $id2, $user) and !$self->IsUserAdmin($user);
-      $err = $self->LockItem($id2, $user);
-      if (!$err)
-      {
-        $id = $id2;
-        last;
-      }
-    }
-  };
-  $self->SetError($@) if $@;
-  if (!$id)
-  {
-    $err = sprintf "Could not get a volume for $user to review%s.", ($err)? " ($err)":'';
     $err .= "\n$sql" if $sql;
     $self->SetError($err);
   }
@@ -8548,18 +8495,6 @@ sub GetUserCountries
   my $user = shift;
 
   my $ref = $self->GetDb()->selectall_arrayref('SELECT country FROM usercountries WHERE user=?', undef, $user);
-  my @cs = map {$_->[0];} @{$ref};
-  return \@cs;
-}
-
-sub GetNonUserCountries
-{
-  my $self = shift;
-  my $user = shift;
-
-  my $sql = 'SELECT country FROM usercountries WHERE country NOT IN'.
-            ' (SELECT DISTINCT country FROM usercountries WHERE user=?';
-  my $ref = $self->SelectAll($sql, $user);
   my @cs = map {$_->[0];} @{$ref};
   return \@cs;
 }
