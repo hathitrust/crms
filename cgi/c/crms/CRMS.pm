@@ -1870,6 +1870,23 @@ sub CreateSQLForReviews
   $dir = 'DESC' unless $dir;
   $offset = 0 unless $offset;
   $pagesize = 20 unless $pagesize > 0;
+  my $user = $self->get('user');
+  my $project = '';
+  my @allsubs = @{$self->UserCountries($user)};
+  if (scalar @allsubs)
+  {
+    my @subs = @{$self->GetUserCountries($user)};
+    if (scalar @subs)
+    {
+      @subs = map {'"' . $_ . '"';} @subs;
+      $project .= ' AND b.country IN (' . join(',', @subs) . ')';
+    }
+    else
+    {
+      @allsubs = map {'"' . $_ . '"';} @allsubs;
+      $project = ' AND b.country NOT IN (' . join(',', @allsubs) . ')';
+    }
+  }
   my $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,r.category,r.legacy,r.renDate,r.priority,r.swiss,';
   if ($page eq 'adminReviews')
   {
@@ -1877,7 +1894,6 @@ sub CreateSQLForReviews
   }
   elsif ($page eq 'holds')
   {
-    my $user = $self->get('user');
     $sql .= 'q.status,b.title,b.author,DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
     $sql .= " AND r.user='$user' AND r.hold IS NOT NULL";
   }
@@ -1889,7 +1905,7 @@ sub CreateSQLForReviews
   elsif ($page eq 'expert')
   {
     $sql .= 'q.status,b.title,b.author,DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
-    $sql .= ' AND q.status=2';
+    $sql .= ' AND q.status=2' . $project;
   }
   elsif ($page eq 'adminHistoricalReviews')
   {
@@ -1900,18 +1916,16 @@ sub CreateSQLForReviews
   elsif ($page eq 'undReviews')
   {
     $sql .= 'q.status,b.title,b.author,DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
-    $sql .= ' AND q.status=3';
+    $sql .= ' AND q.status=3' . $project;
   }
   elsif ($page eq 'userReviews')
   {
-    my $user = $self->get('user');
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
            'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author ' .
            "FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id AND r.user='$user' AND q.status>0";
   }
   elsif ($page eq 'editReviews')
   {
-    my $user = $self->get('user');
     my $today = $self->SimpleSqlGet('SELECT DATE(NOW())') . ' 00:00:00';
     # Experts need to see stuff with any status; non-expert should only see stuff that hasn't been processed yet.
     my $restrict = ($self->IsUserExpert($user))? '':'AND q.status=0';
