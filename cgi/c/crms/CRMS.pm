@@ -8175,7 +8175,6 @@ sub PredictLastCopyrightYear
   {
     $when = $year + 80;
   }
-  print "$when, $year\n";
   return $when;
 }
 
