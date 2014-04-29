@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.8';
+  return '4.8.1';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -8159,7 +8159,7 @@ sub PredictLastCopyrightYear
   my $when;
   if ($where eq 'United Kingdom')
   {
-    $when = $year + ($crown)? 50:70;
+    $when = $year + (($crown)? 50:70);
   }
   elsif ($where eq 'Canada')
   {
@@ -8175,6 +8175,7 @@ sub PredictLastCopyrightYear
   {
     $when = $year + 80;
   }
+  print "$when, $year\n";
   return $when;
 }
 
