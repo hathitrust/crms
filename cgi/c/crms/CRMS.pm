@@ -1458,6 +1458,7 @@ sub SubmitReview
   # Javascript code inserts the string 'searching...' into the review text box.
   # This in once case got submitted as the renDate in production
   $renDate = '' if $renDate =~ m/searching.*/i;
+  $renDate =~ s/^\s+|\s+$//gs;
   my $priority = $self->GetPriority($id);
   my @fields = qw(id user attr reason note renNum renDate category priority);
   my @values = ($id, $user, $attr, $reason, $note, $renNum, $renDate, $category, $priority);
@@ -8193,7 +8194,7 @@ sub PredictRights
   my $now = $self->GetTheYear();
   my $pub;
   my $when = $self->PredictLastCopyrightYear($id, $year, $ispub, $crown, $record, \$pub);
-  return 0 unless defined $when;
+  return unless defined $when;
   if ($when < $now)
   {
     if ($when >= 1996 && $pub >= 1923)
