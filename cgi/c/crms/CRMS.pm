@@ -8256,10 +8256,10 @@ sub GetADDFromAuthor
     $self->ClearErrors();
     return;
   }
-  my $regex = '\d?\d\d\d\??\s*-\s*(\d?\d\d\d)[.,;) ]*$';
+  my $regex = '(\d?\d\d\d\??)?\s*-\s*(\d?\d\d\d)[.,;) ]*$';
   if (defined $a && $a =~ m/$regex/)
   {
-    $add = $1;
+    $add = $2;
     $add = undef if $a =~ m/(fl\.*|active)\s*$regex/i;
   }
   return $add;
