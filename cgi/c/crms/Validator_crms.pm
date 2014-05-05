@@ -61,6 +61,9 @@ sub ValidateSubmission
   ## For superadmins, ren info is optional for 23-63 and disallowed for 64-77
   ## For admins, ren info is optional only if Note and category 'Expert Note' for 23-63 and disallowed for 64-77
   ## For non-admins, ren info is required.
+  ## For the State gov doc project this is no longer enforced, plus
+  ## ncn implies failure to follow formalities, so the legal justification
+  ## for these checks is not clear.
   if ($attr == 1 && $reason == 2)
   {
     if ($self->IsUserSuperAdmin($user))
@@ -76,10 +79,10 @@ sub ValidateSubmission
         $errorMsg .= 'pd/ncn must include either renewal id and renewal date, or note category "Expert Note". ';
       }
     }
-    else
-    {
-      $errorMsg .= 'pd/ncn must include renewal id and renewal date. ' unless $hasren;
-    }
+    #else
+    #{
+    #  $errorMsg .= 'pd/ncn must include renewal id and renewal date. ' unless $hasren;
+    #}
   }
   ## pd/cdpp requires a ren number
   if (  $attr == 1 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
