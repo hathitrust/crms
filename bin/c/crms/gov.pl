@@ -141,6 +141,7 @@ foreach my $row (@{$ref})
     print "Error: no metadata for $id\n";
     next;
   }
+  my $sysid = $record->sysid;
   my $catLink = "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
   my $ptLink = 'https://babel.hathitrust.org/cgi/pt?debug=super;id=' . $id;
   my $author = $record->author;
@@ -148,7 +149,6 @@ foreach my $row (@{$ref})
   my $title = $record->title;
   $title =~ s/&/&amp;/g;
   my $pub = $record->pubdate;
-  my $sysid = $record->sysid;
   my $field260a = '';
   my $field260b = '';
   eval {
