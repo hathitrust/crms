@@ -21,7 +21,7 @@
 [% superadmin = cgi.param('superadmin') %]
 [% note       = cgi.param('note')       %]
 [% delete     = cgi.param('delete')     %]
-[% countries  = cgi.param('countries')  %]
+[% countries  = cgi.param('projects')   %]
 [% order      = cgi.param('order')      %]
 
 
@@ -49,7 +49,7 @@
     [% ELSE %]
       [% IF id %]
         [% blah = crms.AddUser(id,kerberos,name,reviewer,advanced,expert,
-                               extadmin,admin,superadmin,note,countries) %]
+                               extadmin,admin,superadmin,note,projects) %]
       [% ELSE %]
         <h3 style="color:red;">No user ID provided</h3>
       [% END %]
@@ -62,7 +62,7 @@
   <tr>
     <th>Name</th><th>ID</th><th>Kerberos&nbsp;ID</th><th>Institution</th>
     <th>Reviewer</th><th>Advanced</th><th>Expert</th><th>Ext.&nbsp;Admin</th><th>Admin</th><th>Super&nbsp;Admin</th>
-    <th>Note</th><th>Countries</th><th>Change&nbsp;To</th>
+    <th>Note</th><th>Projects</th><th>Change&nbsp;To</th>
   </tr>
   [% FOREACH userid IN users %]
     [% r = crms.IsUserReviewer(userid) %]
@@ -86,7 +86,7 @@
       <td style="text-align:center">[% IF s %][% icon %][% END %]</td>
       [% note = crms.GetUserNote(userid) %]
       <td style="text-align:center;">[% note.replace('\s','&nbsp;') %]</td>
-      <td style="text-align:center;">[% crms.GetUserCountries(userid).join(',&nbsp;') %]</td>
+      <td style="text-align:center;">[% crms.GetUserProjects(userid).join(',&nbsp;') %]</td>
       <td>
         [% IF crms.CanChangeToUser(user,userid) %]
         <form action="crms">
@@ -135,9 +135,9 @@
     </tr>
     <tr>
       <td colspan="2">
-        <label for="countriesfield" style="float:left;width:5.5em">Countries:</label>
-        <input id="countriesfield" type="text" name="countries" tabindex="4"/>
-        <span style="color:#777777;">Comma-delimited, e.g. "Spain, Germany"</span>
+        <label for="projectsfield" style="float:left;width:5.5em">Projects:</label>
+        <input id="projectsfield" type="text" name="projects" tabindex="4"/>
+        <span style="color:#777777;">Comma-delimited, e.g. "CRMS Spain, Germany"</span>
       </td>
     </tr>
     </table>
@@ -159,8 +159,14 @@
     <br/><br/><input type="submit" value="Submit"/>
   </form>
 </div>
+
+[% projs = crms.UserProjects() %]
+[% IF projs.size %]
+  Available projects: <b>[% projs.join('</b>, <b>') %]</b><br/>
+[% END %]
 <span class="smallishText">Note: you can leave the name, kerberos, and note fields
 blank and the corresponding fields will be unchanged in the user's record.</span>
 [% END %]
+
 
 [% INCLUDE footer.tt %]

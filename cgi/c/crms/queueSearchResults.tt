@@ -89,6 +89,7 @@
     <th>Reviews</th>
     <th>Expert&nbsp;Reviews</th>
     <th>Holds</th>
+    <th>Project</th>
     </tr>
     [% FOREACH item IN ref.rows %]
 
@@ -114,6 +115,7 @@
         <td>$item.reviews</td>
         <td>$item.expcnt</td>
         <td>$item.holds</td>
+        <td>$item.project</td>
       </tr>
 
       [% prev_id = item.id %]

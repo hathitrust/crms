@@ -574,9 +574,12 @@ sub ExportReviews
     {
       print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $fromcgi;
     }
-    my $src = $self->SimpleSqlGet('SELECT source FROM queue WHERE id=?', $id);
-    my $sql = 'INSERT INTO exportdata (id,attr,reason,user,src,exported) VALUES (?,?,?,?,?,?)';
-    $self->PrepareSubmitSql($sql, $id, $attr, $reason, $user, $src, $export);
+    my $ref = $self->SelectAll('SELECT source,project FROM queue WHERE id=?', $id);
+    my $src = $ref->[0]->[0];
+    my $proj = $ref->[0]->[1];
+    my $sql = 'INSERT INTO exportdata (id,attr,reason,user,src,project,exported)'.
+              ' VALUES (?,?,?,?,?,?,?)';
+    $self->PrepareSubmitSql($sql, $id, $attr, $reason, $user, $src, $proj, $export);
     my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata WHERE id=?', $id);
     $self->MoveFromReviewsToHistoricalReviews($id, $gid);
     $self->RemoveFromQueue($id);
@@ -1826,6 +1829,7 @@ sub ConvertToSearchTerm
     $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold IS NOT NULL)';
   }
   elsif ($search eq 'Source') { $new_search = 'r.src'; }
+  elsif ($search eq 'Project') { $new_search = 'q.project'; }
   return $new_search;
 }
 
@@ -1872,19 +1876,19 @@ sub CreateSQLForReviews
   $pagesize = 20 unless $pagesize > 0;
   my $user = $self->get('user');
   my $project = '';
-  my @allsubs = @{$self->UserCountries($user)};
+  my @allsubs = @{$self->UserProjects($user)};
   if (scalar @allsubs)
   {
-    my @subs = @{$self->GetUserCountries($user)};
+    my @subs = @{$self->GetUserProjects($user)};
     if (scalar @subs)
     {
       @subs = map {'"' . $_ . '"';} @subs;
-      $project .= ' AND b.country IN (' . join(',', @subs) . ')';
+      $project .= ' AND q.project IN (' . join(',', @subs) . ')';
     }
     else
     {
       @allsubs = map {'"' . $_ . '"';} @allsubs;
-      $project = ' AND b.country NOT IN (' . join(',', @allsubs) . ')';
+      $project = ' AND q.project NOT IN (' . join(',', @allsubs) . ')';
     }
   }
   my $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,r.category,r.legacy,r.renDate,r.priority,r.swiss,';
@@ -2957,8 +2961,9 @@ sub GetQueueRef
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   my @return = ();
-  $sql = 'SELECT q.id, q.time, q.status, q.locked, YEAR(b.pub_date), q.priority, q.expcnt, b.title, b.author ' .
-         "FROM queue q, bibdata b $restrict ORDER BY $order $dir $limit";
+  $sql = 'SELECT q.id,q.time,q.status,q.locked,YEAR(b.pub_date),q.priority,'.
+         ' q.expcnt,b.title,b.author,q.project'.
+         ' FROM queue q, bibdata b '. $restrict. ' ORDER BY '. "$order $dir $limit";
   #print "$sql<br/>\n";
   my $ref = undef;
   eval {
@@ -2968,7 +2973,7 @@ sub GetQueueRef
   {
     $self->SetError($@);
   }
-  my $data = join "\t", ('ID','Title','Author','Pub Date','Date Added','Status','Locked','Priority','Reviews','Expert Reviews','Holds');
+  my $data = join "\t", ('ID','Title','Author','Pub Date','Date Added','Status','Locked','Priority','Reviews','Expert Reviews','Holds','Project');
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
@@ -2993,7 +2998,8 @@ sub GetQueueRef
                 title      => $row->[7],
                 author     => $row->[8],
                 reviews    => $reviews,
-                holds      => $holds
+                holds      => $holds,
+                project    => $row->[9]
                };
     push @return, $item;
     if ($download)
@@ -3340,7 +3346,7 @@ sub AddUser
   my $admin      = shift;
   my $superadmin = shift;
   my $note       = shift;
-  my $countries  = shift;
+  my $projects   = shift;
 
   $reviewer = ($reviewer)? 1:0;
   $advanced = ($advanced)? 1:0;
@@ -3362,12 +3368,12 @@ sub AddUser
             ' VALUES ' . $wcs;
   $self->PrepareSubmitSql($sql, $id, $kerberos, $name, $reviewer, $advanced,
                           $expert, $extadmin, $admin, $superadmin, $note, $inst);
-  if (defined $countries)
+  if (defined $projects)
   {
-    my @cs = split m/\s*,\s*/, $countries;
-    $self->PrepareSubmitSql('DELETE FROM usercountries WHERE user=?', $id);
-    $sql = 'INSERT INTO usercountries (user,country) VALUES (?,?)';
-    $self->PrepareSubmitSql($sql, $id, $_) for @cs;
+    my @ps = split m/\s*,\s*/, $projects;
+    $self->PrepareSubmitSql('DELETE FROM userprojects WHERE user=?', $id);
+    $sql = 'INSERT INTO userprojects (user,project) VALUES (?,?)';
+    $self->PrepareSubmitSql($sql, $id, $_) for @ps;
   }
 }
 
@@ -5560,7 +5566,7 @@ sub GetNextItemForReview
     {
       # Only admin+ reviews P4+
       $exclude = '';
-      ####$order = 'q.priority DESC';
+      ####$order = 'priority DESC';
     }
     # If user is expert, get priority 3 items.
     elsif ($self->IsUserExpert($user))
@@ -5580,28 +5586,27 @@ sub GetNextItemForReview
     my $p1f = $self->GetPriority1Frequency();
     # Exclude priority 1 if our d100 roll is over the P1 threshold or user is not advanced
     my $exclude1 = (rand() >= $p1f || !$self->IsUserAdvanced($user))? 'q.priority!=1 AND ':'';
-    my $countries = '';
+    my $projs = '';
     if (!defined $page || $page ne 'oneoff')
     {
-      my @allcountries = @{$self->UserCountries($user)};
-      if (scalar @allcountries)
+      my @allprojs = @{$self->UserProjects($user)};
+      if (scalar @allprojs)
       {
-        my @countries = @{$self->GetUserCountries($user)};
-        if (scalar @countries)
+        my @projs = @{$self->GetUserProjects($user)};
+        if (scalar @projs)
         {
-          @countries = map {'"' . $_ . '"';} @countries;
-          $countries .= ' b.country IN (' . join(',', @countries) . ') AND ';
+          @projs = map {'"' . $_ . '"';} @projs;
+          $projs .= ' q.project IN (' . join(',', @projs) . ') AND ';
         }
         else
         {
-          @allcountries = map {'"' . $_ . '"';} @allcountries;
-          $countries .= ' b.country NOT IN (' . join(',', @allcountries) . ') AND ';
+          @allprojs = map {'"' . $_ . '"';} @allprojs;
+          $projs .= ' (q.project IS NULL OR q.project NOT IN (' . join(',', @allprojs) . ')) AND ';
         }
       }
     }
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt FROM queue q' .
-           ' INNER JOIN bibdata b ON q.id=b.id'.
-           ' WHERE ' . $exclude . $exclude1 . $countries .
+           ' WHERE ' . $exclude . $exclude1 . $projs .
            ' q.expcnt=0 AND q.locked IS NULL AND q.status<2' .
            ' ORDER BY ' . $order;
     ####$sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,' .
@@ -6638,8 +6643,8 @@ sub QueueSearchMenu
   my $searchName = shift;
   my $searchVal = shift;
   
-  my @keys = qw(Identifier Title Author PubDate Status Locked Priority Reviews ExpertCount Holds);
-  my @labs = ('Identifier','Title','Author','Pub Date','Status','Locked','Priority','Reviews','Expert Reviews','Holds');
+  my @keys = qw(Identifier Title Author PubDate Status Locked Priority Reviews ExpertCount Holds Project);
+  my @labs = ('Identifier','Title','Author','Pub Date','Status','Locked','Priority','Reviews','Expert Reviews','Holds','Project');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
@@ -8487,23 +8492,27 @@ sub OneoffTicket
   return $self->SimpleSqlGet('SELECT source FROM queue WHERE id=?', $id);
 }
 
-sub GetUserCountries
+sub GetUserProjects
 {
   my $self = shift;
   my $user = shift;
 
-  my $ref = $self->GetDb()->selectall_arrayref('SELECT country FROM usercountries WHERE user=?', undef, $user);
-  my @cs = map {$_->[0];} @{$ref};
-  return \@cs;
+  my $ref = $self->SelectAll('SELECT project FROM userprojects WHERE user=?', $user);
+  my @ps = map {$_->[0];} @{$ref};
+  return \@ps;
 }
 
-sub UserCountries
+sub UserProjects
 {
   my $self = shift;
 
-  my $ref = $self->GetDb()->selectall_arrayref('SELECT DISTINCT country FROM usercountries');
-  my @cs = map {$_->[0];} @{$ref};
-  return \@cs;
+  my $sql = 'SELECT DISTINCT project FROM userprojects'.
+            ' WHERE project IS NOT NULL UNION DISTINCT'.
+            ' SELECT project FROM queue WHERE project IS NOT NULL'.
+            ' ORDER BY project';
+  my $ref = $self->SelectAll($sql);
+  my @ps = map {$_->[0];} @{$ref};
+  return \@ps;
 }
 
 sub CanVolumeBeCrownCopyright
