@@ -101,7 +101,6 @@ else
 {
   ReportMsg("Starting to load new volumes into queue.");
   $crms->LoadNewItems();
-  $crms->LoadNewItems(undef, $_) for @{$crms->UserCountries()};
   ReportMsg("DONE loading new volumes into queue.");
 }
 
