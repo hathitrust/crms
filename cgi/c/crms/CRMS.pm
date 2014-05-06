@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.8.1';
+  return '4.8.2';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -1251,6 +1251,7 @@ sub AddItemToQueue
 }
 
 # Returns a status code (0=Add, 1=Error, 2=Skip, 3=Modify) followed by optional text.
+# FIXME: make it possible to specify a project
 sub AddItemToQueueOrSetItemActive
 {
   my $self     = shift;
