@@ -28,20 +28,12 @@
     <br/><a href="JavaScript:window.close()">Close</a>
     [% STOP %]
   [% END %]
+  [% IF NOT expert %]
+    [% blah = crms.UnlockAllItemsForUser(user) %]
+  [% END %]
   [% err = crms.LockItem(barcode, user, expert) %]
   [% IF err != 0 %]
     <h3>[% err %].</h3>
-    [% locked = crms.GetLockedItems(user) %]
-    [% IF locked %]
-      [% FOREACH item IN locked.keys %]
-         <strong>locked:</strong>
-         [% crms.GetTitle( item ) %]
-         (since [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
-         [% IF user == locked.${item}.locked %]
-           [ <a href="crms?p=crms;checkin=[% item %]">unlock item</a> ]
-        [% END %]
-      [% END %]
-    [% END %]
     <br/><a href="JavaScript:window.close()">Close</a>
     [% STOP %]
   [% END %]

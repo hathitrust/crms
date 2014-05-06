@@ -32,9 +32,8 @@
       [% FOREACH item IN locked.keys %]
          <strong>locked:</strong>
          [% crms.GetTitle( item ) %]
-         (since [% crms.ItemLockedSince(locked.${item}.id, locked.${item}.locked) %])
          [% IF user == locked.${item}.locked %]
-           [ <a href="crms?p=crms;checkin=[% item %]">unlock item</a> ]
+           [ <a href=[% crms.Sysify("crms?p=crms;unlock=$item") %]>unlock item</a> ]
         [% END %]
       [% END %]
     [% END %]

@@ -5391,14 +5391,9 @@ sub RemoveOldLocks
   {
     my $id = $lockedRef->{$item}->{id};
     my $user = $lockedRef->{$item}->{locked};
-    my $since = $self->ItemLockedSince($id, $user);
     my $sql = 'SELECT id FROM ' . $table . ' WHERE id=? AND time<?';
     my $old = $self->SimpleSqlGet($sql, $id, $time);
-    if ($old)
-    {
-      #$self->Logit("REMOVING OLD LOCK:\t$id, $user: $since | $time");
-      $self->UnlockItem($id, $user, $correction);
-    }
+    $self->UnlockItem($id, $user, $correction) if $old;
   }
 }
 
@@ -5469,7 +5464,6 @@ sub UnlockItemEvenIfNotLocked
 
   my $sql = 'UPDATE queue SET locked=NULL WHERE id=?';
   if (!$self->PrepareSubmitSql($sql, $id)) { return 0; }
-  #$self->RemoveFromTimer($id, $user);
   return 1;
 }
 
@@ -5481,7 +5475,6 @@ sub UnlockAllItemsForUser
 
   my $table = (defined $correction)? 'corrections':'queue';
   $self->PrepareSubmitSql('UPDATE ' . $table . ' SET locked=NULL WHERE locked=?', $user);
-  #$self->PrepareSubmitSql('DELETE FROM timer WHERE user=?', $user) unless $correction;
 }
 
 sub GetLockedItems
@@ -5502,16 +5495,6 @@ sub GetLockedItems
     $return->{$id} = {'id' => $id, 'locked' => $lo};
   }
   return $return;
-}
-
-sub ItemLockedSince
-{
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift;
-
-  my $sql = 'SELECT start_time FROM timer WHERE id=? AND user=?';
-  return $self->SimpleSqlGet($sql, $id, $user);
 }
 
 sub HasItemBeenReviewedByAnotherExpert
