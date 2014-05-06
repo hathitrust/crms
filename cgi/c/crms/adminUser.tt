@@ -21,7 +21,7 @@
 [% superadmin = cgi.param('superadmin') %]
 [% note       = cgi.param('note')       %]
 [% delete     = cgi.param('delete')     %]
-[% countries  = cgi.param('projects')   %]
+[% projects   = cgi.param('projects')   %]
 [% order      = cgi.param('order')      %]
 
 
