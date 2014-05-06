@@ -58,7 +58,7 @@
 [% END %]
 
 [% users = crms.GetUsers(order) %]
-<table class="exportStats">
+<table class="exportStats" style="white-space:nowrap">
   <tr>
     <th>Name</th><th>ID</th><th>Kerberos&nbsp;ID</th><th>Institution</th>
     <th>Reviewer</th><th>Advanced</th><th>Expert</th><th>Ext.&nbsp;Admin</th><th>Admin</th><th>Super&nbsp;Admin</th>
@@ -77,7 +77,7 @@
         <a href="[% crms.Sysify('crms?p=userRate;user=' _ userid) %]" target="_blank">[% crms.GetUserName(userid).replace('\s','&nbsp;') %]</a></td>
       <td>[% userid %]</td>
       <td>[% crms.GetUserKerberosID(userid) %]</td>
-      <td>[% crms.GetInstitutionName(crms.GetUserInstitution(userid)).replace('\s','&nbsp;') %]</td>
+      <td>[% crms.GetInstitutionName(crms.GetUserInstitution(userid)) %]</td>
       <td style="text-align:center">[% IF r %][% icon %][% END %]</td>
       <td style="text-align:center">[% IF v %][% icon %][% END %]</td>
       <td style="text-align:center">[% IF e %][% icon %][% END %]</td>
@@ -85,8 +85,8 @@
       <td style="text-align:center">[% IF a %][% icon %][% END %]</td>
       <td style="text-align:center">[% IF s %][% icon %][% END %]</td>
       [% note = crms.GetUserNote(userid) %]
-      <td style="text-align:center;">[% note.replace('\s','&nbsp;') %]</td>
-      <td style="text-align:center;">[% crms.GetUserProjects(userid).join(',&nbsp;') %]</td>
+      <td style="text-align:center;">[% note %]</td>
+      <td style="text-align:center;">[% crms.GetUserProjects(userid).join(', ') %]</td>
       <td>
         [% IF crms.CanChangeToUser(user,userid) %]
         <form action="crms">
