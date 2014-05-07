@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.8.2';
+  return '4.8.3';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -1889,7 +1889,7 @@ sub CreateSQLForReviews
     else
     {
       @allsubs = map {'"' . $_ . '"';} @allsubs;
-      $project = ' AND q.project NOT IN (' . join(',', @allsubs) . ')';
+      $project = ' AND (ISNULL(q.project) OR q.project NOT IN (' . join(',', @allsubs) . '))';
     }
   }
   my $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,r.category,r.legacy,r.renDate,r.priority,r.swiss,';
@@ -1944,7 +1944,7 @@ sub CreateSQLForReviews
   if ($endDate) { $sql .= " AND $which <='$endDate 23:59:59' "; }
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   $sql .= " ORDER BY $order $dir $limit ";
-  #print "$sql<br/>\n";
+  #print "$sql<br/>\n"; 
   my $countSql = $sql;
   $countSql =~ s/(SELECT\s+).+?(FROM.+)/$1 COUNT(r.id),COUNT(DISTINCT r.id) $2/i;
   $countSql =~ s/(LIMIT\s\d+(,\s*\d+)?)//;
@@ -5730,6 +5730,17 @@ sub TranslateReason
   }
   $r = $val if $val;
   return $r;
+}
+
+sub TranslateRights
+{
+  my $self   = shift;
+  my $rights = shift;
+
+  my $ref = $self->SelectAll('SELECT attr,reason FROM rights WHERE id=?', $rights);
+  my $a = $self->TranslateAttr($ref->[0]->[0]);
+  my $r = $self->TranslateReason($ref->[0]->[1]);
+  return $a.'/'.$r;
 }
 
 sub GetRenDate
