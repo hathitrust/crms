@@ -332,7 +332,7 @@ sub MirlynToSystem
         {
           my $fieldcontent = $field->{$fieldname};
           my $sub = $fieldcontent->{subfields}->[0]->{a};
-          if ($sub =~ m/^sdr-zephir(\d+)$/)
+          if (defined $sub && $sub =~ m/^sdr-zephir(\d+)$/)
           {
             $sysid = $1;
             last;
