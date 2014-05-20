@@ -16,7 +16,7 @@ sub ValidateSubmission
   $reason = $self->TranslateReason($reason);
   $renDate =~ s/\s+//g if $renDate;
   my $pubDate = undef;
-  my $pub2 = 9999;
+  my $pub2;
   if ($renNum)
   {
     $pubDate = $renDate;
@@ -45,7 +45,7 @@ sub ValidateSubmission
     $errorMsg .= "*/$reason must include a numeric year. ";
   }
   elsif ($pubDate < 1923 && $attr eq 'icus' && $reason eq 'gatt' &&
-         $pub2 < 1923)
+         (!defined $pub2 || $pub2 < 1923))
   {
     $errorMsg .= 'Volumes published prior to 1923 are not eligible for icus/gatt. ';
   }
