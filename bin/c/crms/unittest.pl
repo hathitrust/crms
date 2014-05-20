@@ -23,7 +23,7 @@ my $training = $opts{'t'};
 my $sys = $opts{'x'};
 my $dev = 'moseshll';
 $dev = 0 if $production;
-$dev = 'crmstest' if $training;
+$dev = 'crms-training' if $training;
 
 $sys = 'crms' unless $sys;
 
@@ -62,8 +62,8 @@ if ($sys ne 'crmsworld')
   isnt($crms->ShouldVolumeGoInUndTable('uc1.31822009265760'), 'gov',       'probable Gov Doc 18'); # uncaught
   isnt($crms->ShouldVolumeGoInUndTable('uc1.31822016490500'), 'gov',       'probable Gov Doc 19'); # uncaught
   isnt($crms->ShouldVolumeGoInUndTable('uc1.31822020642872'), 'gov',       'probable Gov Doc 20'); # uncaught
-  is($crms->ShouldVolumeGoInUndTable('uc1.b22139'), 'dissertation',        'dissertation to und');
-  is($crms->ShouldVolumeGoInUndTable('uc1.b79381'), 'foreign',             'foreign to und');
+  is($crms->ShouldVolumeGoInUndTable('uc1.$b22139'), 'dissertation',       'dissertation to und');
+  is($crms->ShouldVolumeGoInUndTable('uc1.$b79381'), 'foreign',            'foreign to und');
 }
 is($crms->ShouldVolumeGoInUndTable('mdp.39015071261104'), 'language',    'language to und');
 is($crms->ShouldVolumeGoInUndTable('mdp.39015004119445'), 'translation', 'translation to und');
@@ -100,12 +100,12 @@ is($crms->IsWorkingDay('2011-06-27'), 1,                                 'WD: a 
 
 if ($sys ne 'crmsworld')
 {
-  is($crms->GetUserAffiliation('hansone@indiana.edu'), 'IU',               'IU affiliation');
-  is($crms->GetUserAffiliation('aseeger@library.wisc.edu'), 'UW',          'UW affiliation');
-  is($crms->GetUserAffiliation('zl2114@columbia.edu'), 'COL',              'COL affiliation');
-  is(scalar @{ $crms->GetUsersWithAffiliation('IU') }, 8,                  'IU affiliates count');
-  is(scalar @{ $crms->GetUsersWithAffiliation('UW') }, 6,                  'UW affiliates count');
-  is(scalar @{ $crms->GetUsersWithAffiliation('COL') }, 1,                 'COL affiliates count');
+  is($crms->GetInstitutionName($crms->GetUserInstitution('hansone@indiana.edu')),      'Indiana',               'IU affiliation');
+  is($crms->GetInstitutionName($crms->GetUserInstitution('aseeger@library.wisc.edu')), 'Wisconsin',          'UW affiliation');
+  is($crms->GetInstitutionName($crms->GetUserInstitution('zl2114@columbia.edu')),      'Columbia',              'COL affiliation');
+  is(scalar @{ $crms->GetInstitutionUsers(1) }, 8,                         'IU affiliates count');
+  is(scalar @{ $crms->GetInstitutionUsers(2) }, 7,                         'UW affiliates count');
+  is(scalar @{ $crms->GetInstitutionUsers(4) }, 1,                         'COL affiliates count');
   is($crms->IsReviewCorrect('uc1.b3763822','dfulmer','2009-11-02') ,0,     'Correctness: uc1.b3763822 1');
   is($crms->IsReviewCorrect('uc1.b3763822','cwilcox','2009-11-03') ,1,     'Correctness: uc1.b3763822 2');
   is($crms->IsReviewCorrect('uc1.b3763822','gnichols123','2009-11-04') ,1, 'Correctness: uc1.b3763822 3');
@@ -136,9 +136,9 @@ if ($sys ne 'crmsworld')
 
 if ($sys eq 'crmsworld')
 {
-  ok('Volumes published prior to 1923 are not eligible for icus/gatt. ' eq
-     $crms->ValidateSubmission('inu.39000005773028','moseshll',19,17,undef,undef,undef,undef), 'icus/gatt superadmin >=23');
-  is($crms->PredictRights('uc1.b173100','1945'), 4,    'Predict rights: uc1.b173100 1945 ic/add');
+  is($crms->ValidateSubmission('inu.39000005773028','moseshll',19,17,undef,undef,undef,undef),
+     'Volumes published prior to 1923 are not eligible for icus/gatt. ', 'icus/gatt superadmin <23');
+  is($crms->PredictRights('uc1.$b173100','1945'), 4,    'Predict rights: uc1.$b173100 1945 ic/add');
 }
 else
 {
@@ -208,12 +208,12 @@ is($crms->TranslateAttr(6),'umall',                                             
 is($crms->TranslateAttr(7),'ic-world',                                                             'TranslateAttr 7');
 is($crms->TranslateAttr(8),'nobody',                                                               'TranslateAttr 8');
 is($crms->TranslateAttr(9),'pdus',                                                                 'TranslateAttr 9');
-is($crms->TranslateAttr(10),'cc-by',                                                               'TranslateAttr 10');
-is($crms->TranslateAttr(11),'cc-by-nd',                                                            'TranslateAttr 11');
-is($crms->TranslateAttr(12),'cc-by-nc-nd',                                                         'TranslateAttr 12');
-is($crms->TranslateAttr(13),'cc-by-nc',                                                            'TranslateAttr 13');
-is($crms->TranslateAttr(14),'cc-by-nc-sa',                                                         'TranslateAttr 14');
-is($crms->TranslateAttr(15),'cc-by-sa',                                                            'TranslateAttr 15');
+is($crms->TranslateAttr(10),'cc-by-3.0',                                                           'TranslateAttr 10');
+is($crms->TranslateAttr(11),'cc-by-nd-3.0',                                                        'TranslateAttr 11');
+is($crms->TranslateAttr(12),'cc-by-nc-nd-3.0',                                                     'TranslateAttr 12');
+is($crms->TranslateAttr(13),'cc-by-nc-3.0',                                                        'TranslateAttr 13');
+is($crms->TranslateAttr(14),'cc-by-nc-sa-3.0',                                                     'TranslateAttr 14');
+is($crms->TranslateAttr(15),'cc-by-sa-3.0',                                                        'TranslateAttr 15');
 is($crms->TranslateAttr(16),'orphcand',                                                            'TranslateAttr 16');
 is($crms->TranslateAttr(17),'cc-zero',                                                             'TranslateAttr 17');
 is($crms->TranslateAttr(18),'und-world',                                                           'TranslateAttr 18');
@@ -228,12 +228,12 @@ is($crms->TranslateAttr('umall'),6,                                             
 is($crms->TranslateAttr('ic-world'),7,                                                             'TranslateAttr 7a');
 is($crms->TranslateAttr('nobody'),8,                                                               'TranslateAttr 8a');
 is($crms->TranslateAttr('pdus'),9,                                                                 'TranslateAttr 9a');
-is($crms->TranslateAttr('cc-by'),10,                                                               'TranslateAttr 10a');
-is($crms->TranslateAttr('cc-by-nd'),11,                                                            'TranslateAttr 11a');
-is($crms->TranslateAttr('cc-by-nc-nd'),12,                                                         'TranslateAttr 12a');
-is($crms->TranslateAttr('cc-by-nc'),13,                                                            'TranslateAttr 13a');
-is($crms->TranslateAttr('cc-by-nc-sa'),14,                                                         'TranslateAttr 14a');
-is($crms->TranslateAttr('cc-by-sa'),15,                                                            'TranslateAttr 15a');
+is($crms->TranslateAttr('cc-by-3.0'),10,                                                           'TranslateAttr 10a');
+is($crms->TranslateAttr('cc-by-nd-3.0'),11,                                                        'TranslateAttr 11a');
+is($crms->TranslateAttr('cc-by-nc-nd-3.0'),12,                                                     'TranslateAttr 12a');
+is($crms->TranslateAttr('cc-by-nc-3.0'),13,                                                        'TranslateAttr 13a');
+is($crms->TranslateAttr('cc-by-nc-sa-3.0'),14,                                                     'TranslateAttr 14a');
+is($crms->TranslateAttr('cc-by-sa-3.0'),15,                                                        'TranslateAttr 15a');
 is($crms->TranslateAttr('orphcand'),16,                                                            'TranslateAttr 16a');
 is($crms->TranslateAttr('cc-zero'),17,                                                             'TranslateAttr 17a');
 is($crms->TranslateAttr('und-world'),18,                                                           'TranslateAttr 18a');
