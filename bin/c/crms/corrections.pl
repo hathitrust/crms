@@ -19,7 +19,7 @@ use Term::ANSIColor qw(:constants);
 $Term::ANSIColor::AUTORESET = 1;
 
 my $usage = <<END;
-USAGE: $0 [-ehinopv] [-l LIMIT]
+USAGE: $0 [-ehinopv] [-l LIMIT] [-m MAIL_ADDR [-m MAIL_ADDR2...]]
 
 Loads volumes from all files in the prep directory with the extension
 'corrections'. The file format is a tab-delimited file with volume id
@@ -29,6 +29,7 @@ and (optional) Jira ticket number.
 -h         Print this help message.
 -i         Skip corrections import.
 -l LIMIT   Limit the number of one-off tickets to LIMIT
+-m ADDR    Mail the report to ADDR. May be repeated for multiple addresses.
 -n         No-op; reports what would be done but do not modify the database.
 -o         Skip one-off import.
 -p         Run in production.
@@ -38,6 +39,7 @@ END
 my $noexport;
 my $help;
 my $lim;
+my @mails;
 my $noimport;
 my $noop;
 my $nooneoff;
@@ -50,6 +52,7 @@ die 'Terminating' unless GetOptions(
            'h|?'  => \$help,
            'i'    => \$noimport,
            'l:s'  => \$lim,
+           'm:s@' => \@mails,
            'n'    => \$noop,
            'o'    => \$nooneoff,
            'p'    => \$production,
@@ -158,7 +161,9 @@ if (!$noexport)
 
 if (!$nooneoff)
 {
-  my $hash = OneoffQuery();
+  my @noids;
+  my @systemserials;
+  my $hash = OneoffQuery(\@noids, \@systemserials);
   foreach my $tx (keys %{$hash})
   {
     print "$tx (add phase)\n";
@@ -171,6 +176,7 @@ if (!$nooneoff)
     }
     foreach my $id (keys %{$ids})
     {
+      print "  $id\n";
       next unless $id =~ m/\./;
       my $record = $crmsUS->GetMetadata($id);
       if (! defined $record)
@@ -192,7 +198,7 @@ if (!$nooneoff)
       my $err = $crmsWorld->AddItemToQueueOrSetItemActive($id, 4, 1, $tx, 'oneoff');
       if ('1' eq substr $err, 0, 1)
       {
-        print "  $id: $err\n";
+        print BOLD RED "  $id: $err\n";
       }
       elsif ($verbose > 1)
       {
@@ -200,12 +206,14 @@ if (!$nooneoff)
       }
     }
   }
+  MailWarnings(\@noids, \@systemserials) if (scalar @noids or scalar @systemserials) and scalar @mails;
 }
 
 sub OneoffQuery
 {
+  my $noids = shift;
+  my $systemserials = shift;
   my $mail = 'copyrightinquiry@umich.edu';
-
   use Jira;
   my $ua = Jira::Login($crmsUS);
   my %txs;
@@ -233,7 +241,7 @@ sub OneoffQuery
       my $tx = $item->{'key'};
       printf "$tx (%d of $of)\n", $i+1;
       my @fields = ('customfield_10040','customfield_10041');
-      foreach my $field (@fields) # FOREACH FIELD
+      foreach my $field (@fields)
       {
         my $desc = $item->{'fields'}->{$field};
         print "  Desc '$desc'\n" if $verbose > 2;
@@ -250,7 +258,7 @@ sub OneoffQuery
             }
             elsif ($line =~ m/Record\/(\d+)/ || $desc =~ m/ItemID=([a-z]+\.[^;,\s]+)/)
             {
-              print "  SYSID $1 from $line\n" if $verbose;
+              print "  SYSID $1 from $line\n" if $verbose and !defined $txs{$tx}->{$1};
               $txs{$tx}->{$1} = $1;
             }
             elsif ($line =~ m/([a-z0-9]+\.[^;,\s]+)/)
@@ -259,10 +267,43 @@ sub OneoffQuery
               $txs{$tx}->{$1} = 1;
             }
           }
-          print BOLD RED "Warning: could not find ids for $tx\n" unless defined $txs{$tx};
         }
       }
-      AddDuplicates($tx, \%txs);
+      if (defined $txs{$tx})
+      {
+        my $comments = Jira::GetComments($crmsWorld, $ua, $tx);
+        my $bail = 0;
+        foreach my $comment (@$comments)
+        {
+          print "$tx comment: '$comment'\n\n" if $verbose > 3;
+          if ($comment =~ m/\[CRMS\s+do\s+not\s+ingest\]/i)
+          {
+            print RED "$tx: ingest disabled by '$comment'\n" if $verbose;
+            $bail = 1;
+            last;
+          }
+        }
+        if ($bail)
+        {
+          delete $txs{$tx};
+        }
+        else
+        {
+          AddDuplicates($tx, \%txs);
+          my @k = keys %{$txs{$tx}};
+          if (scalar @k == 1 && $k[0] !~ m/\./)
+          {
+            print BOLD RED "$tx: no Hathi ID found for probable serial\n" if $verbose;
+            push @$systemserials, $tx;
+            delete $txs{$tx};
+          }
+        }
+      }
+      else
+      {
+        print BOLD RED "Warning: could not find ids for $tx\n";
+        push @$noids, $tx;
+      }
     }
   };
   $crmsUS->SetError("Error: $@") if $@;
@@ -369,6 +410,41 @@ sub HasPreviousOneOff
     }
   }
   return undef;
+}
+
+sub MailWarnings
+{
+  my $noids = shift;
+  my $systemserials = shift;
+
+  use Mail::Sender;
+  my $title = 'CRMS Copyright Inquiries: skipped tickets';
+  my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
+                                  from => $crmsWorld->GetSystemVar('adminEmail', ''),
+                                  on_errors => 'undef' }
+    or die "Error in mailing : $Mail::Sender::Error\n";
+  my $to = join ',', @mails;
+  $sender->OpenMultipart({
+    to => $to,
+    subject => $title,
+    ctype => 'text/plain',
+    encoding => 'utf-8'
+    }) or die $Mail::Sender::Error,"\n";
+  $sender->Body();
+  my $txt = "CRMS JIRA copyright inquiry ingest noted the following exceptions.\n";
+  if (scalar @$noids)
+  {
+    $txt .= "\nNo Zephir or Hathi IDs could be extracted from the following:\n";
+    $txt .= ' '.join("\n ", @$noids)."\n";
+  }
+  if (scalar @$systemserials)
+  {
+    $txt .= "\nNCRMS could not determine the appropriate Hathi id(s) to review because the item appears to be a serial:\n";
+    $txt .= ' '.join("\n ", @$systemserials)."\n";
+  }
+  my $bytes = encode('utf8', $txt);
+  $sender->SendEnc($bytes);
+  $sender->Close();
 }
 
 print "Warning (US): $_\n" for @{$crmsUS->GetErrors()};
