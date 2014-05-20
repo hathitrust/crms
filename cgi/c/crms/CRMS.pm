@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.8.4';
+  return '4.8.5';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -234,7 +234,7 @@ sub DbName
 
   my $dev = $self->get('dev');
   my $db = $self->get('mysqlDbName');
-  $db .= '-training' if $dev && $dev eq 'crms-training';
+  $db .= '_training' if $dev && $dev eq 'crms-training';
   return $db;
 }
 
@@ -7033,14 +7033,12 @@ sub SelfURL
 {
   my $self = shift;
 
-  my $url = '';
+  my $url = 'quod.lib.umich.edu';
   my $dev = $self->get('dev');
   if ($dev)
   {
-    $url = 'dev.umdl.umich.edu';
     $url = $dev . '.' . $url if $dev eq 'crms-training' or $dev eq 'moseshll';
   }
-  else {$url = 'quod.lib.umich.edu';}
   return 'https://' . $url;
 }
 
