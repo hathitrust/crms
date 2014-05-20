@@ -5696,14 +5696,24 @@ sub TranslateAttr
   my $val = $self->SimpleSqlGetSDR($sql, $a);
   if (!$val)
   {
-    my %t1 = (1  => 'pd',       2  => 'ic',          3  => 'op',        4  => 'orph',        5  => 'und',
-              6  => 'umall',    7  => 'ic-world',    8  => 'nobody',    9  => 'pdus',        10 => 'cc-by',
-              11 => 'cc-by-nd', 12 => 'cc-by-nc-nd', 13 => 'cc-by-nc',  14 => 'cc-by-nc-sa', 15 => 'cc-by-sa',
-              16 => 'orphcand', 17 => 'cc-zero',     18 => 'und-world', 19 => 'icus');
-    my %t2 = ('pd'       => 1,  'ic'          => 2,  'op'        => 3,  'orph'        => 4,  'und'      => 5,
-              'umall'    => 6,  'ic-world'    => 7,  'nobody'    => 8,  'pdus'        => 9,  'cc-by'    => 10,
-              'cc-by-nd' => 11, 'cc-by-nc-nd' => 12, 'cc-by-nc'  => 13, 'cc-by-nc-sa' => 14, 'cc-by-sa' => 15,
-              'orphcand' => 16, 'cc-zero'     => 17, 'und-world' => 18, 'icus'        => 19);
+    my %t1 = (1  => 'pd',              2  => 'ic',              3  => 'op',
+              4  => 'orph',            5  => 'und',             6  => 'umall',
+              7  => 'ic-world',        8  => 'nobody',          9  => 'pdus',
+              10 => 'cc-by-3.0',       11 => 'cc-by-nd-3.0',    12 => 'cc-by-nc-nd-3.0',
+              13 => 'cc-by-nc-3.0',    14 => 'cc-by-nc-sa-3.0', 15 => 'cc-by-sa-3.0',
+              16 => 'orphcand',        17 => 'cc-zero',         18 => 'und-world',
+              19 => 'icus',            20 => 'cc-by-4.0',       21 => 'cc-by-nd-4.0',
+              22 => 'cc-by-nc-nd-4.0', 23 => 'cc-by-nc-4.0',    24 => 'cc-by-nc-sa-4.0',
+              25 => 'cc-by-sa-4.0');
+    my %t2 = ('pd'              => 1,  'ic'              => 2,  'op'              => 3,
+              'orph'            => 4,  'und'             => 5,  'umall'           => 6,
+              'ic-world'        => 7,  'nobody'          => 8,  'pdus'            => 9,
+              'cc-by-3.0'       => 10, 'cc-by-nd-3.0'    => 11, 'cc-by-nc-nd-3.0' => 12,
+              'cc-by-nc-3.0'    => 13, 'cc-by-nc-sa-3.0' => 14, 'cc-by-sa-3.0'    => 15,
+              'orphcand'        => 16, 'cc-zero'         => 17, 'und-world'       => 18,
+              'icus'            => 19, 'cc-by-4.0'       => 20, 'cc-by-nd-4.0'    => 21,
+              'cc-by-nc-nd-4.0' => 22, 'cc-by-nc-4.0'    => 23, 'cc-by-nc-sa-4.0' => 24,
+              'cc-by-sa-4.0'    => 25);
     $val = ($a =~ m/[0-9]+/)? $t1{$a}:$t2{$a};
   }
   $a = $val if $val;
