@@ -39,7 +39,7 @@ die 'Terminating' unless GetOptions(
            'x:s'  => \$sys);
 
 $DLPS_DEV = undef if $production;
-$DLPS_DEV = 'crmstest' if $training;
+$DLPS_DEV = 'crms-training' if $training;
 die $usage if $help or !scalar @ARGV;
 
 my $crms = CRMS->new(

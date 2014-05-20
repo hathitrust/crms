@@ -70,7 +70,7 @@ my $crms2 = CRMS->new(
     sys          =>   $sys,
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
-    dev          =>   ($training)? 'crmstest':$DLPS_DEV
+    dev          =>   ($training)? 'crms-training':$DLPS_DEV
 );
 
 
