@@ -5714,7 +5714,7 @@ sub TranslateAttr
               'icus'            => 19, 'cc-by-4.0'       => 20, 'cc-by-nd-4.0'    => 21,
               'cc-by-nc-nd-4.0' => 22, 'cc-by-nc-4.0'    => 23, 'cc-by-nc-sa-4.0' => 24,
               'cc-by-sa-4.0'    => 25);
-    $val = ($a =~ m/[0-9]+/)? $t1{$a}:$t2{$a};
+    $val = ($a =~ m/^[0-9]+$/)? $t1{$a}:$t2{$a};
   }
   $a = $val if $val;
   return $a;
