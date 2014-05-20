@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.8.3';
+  return '4.8.4';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -234,7 +234,7 @@ sub DbName
 
   my $dev = $self->get('dev');
   my $db = $self->get('mysqlDbName');
-  $db .= 'test' if $dev && $dev eq 'crmstest';
+  $db .= '-training' if $dev && $dev eq 'crms-training';
   return $db;
 }
 
@@ -7013,7 +7013,7 @@ sub WhereAmI
   my $dev = $self->get('dev');
   if ($dev)
   {
-    return 'Training' if $dev eq 'crmstest';
+    return 'Training' if $dev eq 'crms-training';
     return 'Moses Dev' if $dev eq 'moseshll';
     return 'Dev';
   }
@@ -7023,16 +7023,15 @@ sub SelfURL
 {
   my $self = shift;
 
-  my $url = 'https://';
+  my $url = '';
   my $dev = $self->get('dev');
   if ($dev)
   {
-    if ($dev eq 'crmstest') {$url .= 'crmstest.dev.umdl.umich.edu';}
-    elsif ($dev eq 'moseshll') {$url .= 'moseshll.dev.umdl.umich.edu';}
-    else {$url .= 'dev.umdl.umich.edu';}
+    $url = 'dev.umdl.umich.edu';
+    $url = $dev . '.' . $url if $dev eq 'crms-training' or $dev eq 'moseshll';
   }
-  else {$url .= 'quod.lib.umich.edu';}
-  return $url;
+  else {$url = 'quod.lib.umich.edu';}
+  return 'https://' . $url;
 }
 
 sub IsTrainingArea
