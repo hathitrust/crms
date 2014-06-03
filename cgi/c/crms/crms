@@ -351,14 +351,24 @@ my $vars = {
 
 ## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
 ## the default is home.tt in case a tt is not found
-my $page  = $cgi->param('p');
+my $page  = $cgi->param('p') | '';
+my $ip = $ENV{'REMOTE_ADDR'};
+my %ips = %{$crms->GetUserIPs($ru)};
+if (scalar keys %ips)
+{
+  if (!defined $ips{$ip})
+  {
+    $page = 'ip';
+    $cgi->param('REMOTE_ADDR', $ip);
+  }
+}
 my $input = $page . '.tt';
 $input = 'home.tt' unless -f $input;
 
 print $cgi->header(-charset => 'utf-8', 'cache-control' => 'private');
 if (!$tt->process($input, $vars))
 {
-  printf "%s\n", $tt->error() if defined $crms->WhereAmI();
+  printf "<h3>%s</h3>\n", $tt->error();
   die $tt->error();
 }
 if ($cgi->param('debug'))
