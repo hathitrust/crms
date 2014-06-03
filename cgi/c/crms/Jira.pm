@@ -126,4 +126,32 @@ sub GetIssueStatus
   return $stat;
 }
 
+sub GetComments
+{
+  my $self = shift;
+  my $ua   = shift;
+  my $tx   = shift;
+  
+  my $url = 'https://wush.net/jira/hathitrust/rest/api/2/issue/' . $tx;
+  my @comments;
+  my $req = HTTP::Request->new(GET => $url);
+  my $res = $ua->request($req);
+  if ($res->is_success())
+  {
+    my $json = JSON::XS->new;
+    my $content = $res->content;
+    eval {
+      my $data = $json->decode($content);
+      push @comments, $_->{'body'} for @{$data->{'fields'}->{'comment'}->{'comments'}};
+    }
+  }
+  else
+  {
+    warn("Got " . $res->code() . " getting $url\n");
+    #printf "%s\n", $res->content();
+  }
+  return \@comments;
+}
+
+
 1;
