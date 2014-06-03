@@ -45,7 +45,8 @@ sub ValidateSubmission
     $errorMsg .= "*/$reason must include a numeric year. ";
   }
   elsif ($pubDate < 1923 && $attr eq 'icus' && $reason eq 'gatt' &&
-         (!defined $pub2 || $pub2 < 1923))
+         (!defined $pub2 || $pub2 < 1923) &&
+         !$self->IsUserExpert() && !$self->IsUserAdmin())
   {
     $errorMsg .= 'Volumes published prior to 1923 are not eligible for icus/gatt. ';
   }
