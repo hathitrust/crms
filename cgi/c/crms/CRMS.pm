@@ -5560,15 +5560,15 @@ sub GetNextItemForReview
   my $sql = undef;
   eval{
     my $exclude = 'q.priority<3 AND ';
-    my $order = 'q.priority DESC, cnt DESC, q.time ASC';
-    ####my $order = 'hash';
+    my $order = 'q.priority DESC, cnt DESC, hash, q.time ASC';
+    ####$order = 'hash';
     ####$order = 'q.priority DESC,'.$order if rand()<.25;
     ####$order = 'cnt DESC,'.$order if rand()<.25;
     if ($self->IsUserAdmin($user))
     {
       # Only admin+ reviews P4+
       $exclude = '';
-      ####$order = 'priority DESC';
+      ####$order = 'q.priority DESC';
     }
     # If user is expert, get priority 3 items.
     elsif ($self->IsUserExpert($user))
@@ -5607,31 +5607,29 @@ sub GetNextItemForReview
         }
       }
     }
-    $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt FROM queue q' .
+    my @args = ($user, $user);
+    my $excludeh = '';
+    if (!$self->IsUserAdmin($user))
+    {
+      $excludeh = ' AND NOT EXISTS (SELECT * FROM historicalreviews h WHERE h.id=q.id AND h.user=?)';
+      push @args, $user;
+    }
+    $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,'.
+           ' SHA2(CONCAT(?,q.id),0) as hash'.
+           ' FROM queue q INNER JOIN bibdata b ON q.id=b.id'.
            ' WHERE ' . $exclude . $exclude1 . $projs .
-           ' q.expcnt=0 AND q.locked IS NULL AND q.status<2' .
+           ' q.expcnt=0 AND q.locked IS NULL AND q.status<2'.
+           ' AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user=?)'.
+           $excludeh.
+           ' HAVING cnt<2 '.
            ' ORDER BY ' . $order;
-    ####$sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,' .
-    ####       ' SHA2(CONCAT(?,q.id),0) as hash'.
-    ####       ' FROM queue q INNER JOIN bibdata b ON q.id=b.id'.
-    ####       ' WHERE ' . $exclude . $exclude1 . $countries .
-    ####       ' q.expcnt=0 AND q.locked IS NULL AND q.status<2'.
-    ####       ' AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user=?)' .
-    ####       ' HAVING cnt<2 ORDER BY ' . $order;
     #print "$sql<br/>\n";
-    my $ref = $self->SelectAll($sql); ####($sql, $user, $user);
+    my $ref = $self->SelectAll($sql, @args);
     foreach my $row (@{$ref})
     {
       my $id2 = $row->[0];
-      my $cnt = $row->[1];
-      ####my $hash = $row->[2];
-      $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
-      next if 1 < $self->SimpleSqlGet($sql, $id2);
-      $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND user=?';
-      next if 0 < $self->SimpleSqlGet($sql, $id2, $user);
-      #### #FIXME: create a second AND NOT EXISTS for the query below if not admin
-      $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=? AND user=?';
-      next if 0 < $self->SimpleSqlGet($sql, $id2, $user) and !$self->IsUserAdmin($user);
+      #my $cnt = $row->[1];
+      #my $hash = $row->[2];
       $err = $self->LockItem($id2, $user);
       if (!$err)
       {
