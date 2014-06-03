@@ -195,7 +195,50 @@ function PredictRights(id)
     } 
   };
   var url = "/cgi/c/crms/predictRights?sys=crmsworld;id=" + id + ";year=" + year + ";pub=" + isPub + ";crown=" + isCrown;
-  req.open("GET", url, true); 
+  req.open("GET", url, true);
+  req.send(null);
+}
+
+function PredictDate(id)
+{
+  var rf = document.getElementById("renewalField2");
+  var year = rf.value;
+  if (year.length == 0) return;
+  //var isPub = (document.getElementById('renewalFieldCheckbox2').checked)? 1:0;
+  //var cat = SelectedCategory();
+  //var isCrown = (cat == 'Crown Copyright')? 1:0;
+  var req = null;
+  var span = document.getElementById("renewalSpan2");
+  span.innerHTML = "Calculating...";
+  if (window.XMLHttpRequest)
+  {
+    req = new XMLHttpRequest();
+  } 
+  else if (window.ActiveXObject)
+  {
+    try {
+        req = new ActiveXObject("Msxml2.XMLHTTP");
+    } catch (e)
+    {
+        try {
+            req = new ActiveXObject("Microsoft.XMLHTTP");
+        } catch (e) {}
+    }
+  }
+  req.onreadystatechange = function()
+  { 
+    if (req.readyState == 4)
+    {
+      if (req.status == 200)
+      {
+        var txt = req.responseText;
+        span.innerHTML = txt;
+      }    
+    } 
+  };
+  //var url = "/cgi/c/crms/predictRights?sys=crmsworld;doyear=1;id=" + id + ";year=" + year + ";pub=" + isPub + ";crown=" + isCrown;
+  var url = "/cgi/c/crms/predictRights?sys=crmsworld;doyear=1;id=" + id + ";year=" + year;
+  req.open("GET", url, true);
   req.send(null);
 }
 

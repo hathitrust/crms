@@ -7,13 +7,14 @@ use strict;
 use CGI;
 use CRMS;
 
-my $cgi  = new CGI;
-my $user = $ENV{'REMOTE_USER'};
-my $id   = $cgi->param('id');
-my $year = $cgi->param('year');
-my $sys =  $cgi->param('sys');
-my $pub =  $cgi->param('pub');
-my $crown = $cgi->param('crown');
+my $cgi    = new CGI;
+my $user   = $ENV{'REMOTE_USER'};
+my $id     = $cgi->param('id');
+my $year   = $cgi->param('year');
+my $sys    =  $cgi->param('sys');
+my $pub    =  $cgi->param('pub');
+my $crown  = $cgi->param('crown');
+my $doyear = $cgi->param('doyear');
 $sys = 'crms' unless $sys;
 my $crms = CRMS->new(logFile  =>   "$DLXSROOT/prep/c/crms/log_review.txt",
                      sys      =>   $sys,
@@ -22,11 +23,35 @@ my $crms = CRMS->new(logFile  =>   "$DLXSROOT/prep/c/crms/log_review.txt",
                      dev      =>   $DLPS_DEV,
                      user     =>   $user);
 
-my $n = $crms->PredictRights($id, $year, $pub, $crown);
-
-if ($n !~ /\d+/) { print $cgi->header( -status => "400" ); }
+my $n;
+if (defined $doyear)
+{
+  $n = $crms->PredictLastCopyrightYear($id, $year, $pub, $crown);
+  my $r = $crms->TranslateRights($crms->PredictRights($id, $year, $pub, $crown));
+  if (defined $n)
+  {
+    $n++;
+    if (defined $r && $r =~ /gatt$/)
+    {
+      $n = $crms->GetPubDate($id) + 95;
+      $n .= ' (GATT)';
+    }
+  }
+  else
+  {
+    $n = 'unknown';
+  }
+  print $cgi->header();
+  print $n
+}
 else
 {
-  print $cgi->header();
-  print $n;
+  $n = $crms->PredictRights($id, $year, $pub, $crown);
+  if (defined $n && $n !~ /\d+/) { print $cgi->header( -status => "400" ); }
+  else
+  {
+    print $cgi->header();
+    print $n if defined $n;
+  }
 }
+

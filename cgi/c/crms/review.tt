@@ -291,8 +291,21 @@
       [% status = crms.GetSystemStatus() %]
       [% IF status.2 %]
         <table class="nav">
-        <tr><td style="text-align:left;"><span style="font-size:1.3em;font-weight:bold;color:#990000;">[% status.2 %]</span></td></tr>
+        <tr><td style="align:left;"><span style="font-size:1.3em;font-weight:bold;color:#990000;">[% status.2 %]</span></td></tr>
         </table>
+      [% END %]
+      [% IF !ren %]
+      <table class="reviewGrey">
+        <tr><th style="width:55%">Date calculator</th>
+        <td>
+        <input id="renewalField2" title="[% label %]" type="text" name="renDate"
+               value="[% renDate %]" size="6" style="margin-left:0;"
+               onblur="javascript:PredictDate('[% barcode %]');"/>
+        </td></tr>
+        <tr><th style="width:55%">Public Domain in:</th>
+          <td><b><span class="red" id=renewalSpan2></span></b></rd>
+        </tr>
+      </table>
       [% END %]
     </div>
   </div>
