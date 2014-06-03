@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.8.5';
+  return '4.8.6';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -158,13 +158,14 @@ sub ConnectToDb
 sub ConnectToSdrDb
 {
   my $self = shift;
+  my $db   = shift;
 
   my $db_server = $self->get('mysqlMdpServerDev');
-  my $db        = $self->get('mysqlMdpDbName');
   my $dev       = $self->get('dev');
   my $root      = $self->get('root');
   my $sys       = $self->get('sys');
 
+  $db = $self->get('mysqlMdpDbName') unless defined $db;
   my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
   my %d = $self->ReadConfigFile($cfg);
   my $db_user   = $d{'mysqlMdpUser'};
@@ -6801,6 +6802,43 @@ sub RightsDBAvailable
   };
   $self->ClearErrors();
   return ($dbh)? 1:0;
+}
+
+sub GetUserIPs
+{
+  my $self = shift;
+  my $user = shift;
+
+  $user = $self->get('user') unless defined $user;
+  my $sql = "SELECT iprestrict FROM ht_users WHERE userid='$user'";
+  my $sdr_dbh = $self->get('ht_repository');
+  if (!defined $sdr_dbh)
+  {
+    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
+    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
+  }
+  my $ipr;
+  eval {
+    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, @_);
+    $ipr = $ref->[0]->[0];
+  };
+  if ($@)
+  {
+    my $msg = "SQL failed ($sql): " . $@;
+    $self->SetError($msg);
+  }
+  my %ips;
+  if (defined $ipr)
+  {
+    my @ips2 = split m/\|/, $ipr;
+    foreach my $ip (@ips2)
+    {
+      $ip =~ s/^\^|\$$//g;
+      $ip =~ s/\\\././g;
+      $ips{$ip} = 1 if $ip =~ m/(\d+\.){3}\d+/;
+    }
+  }
+  return \%ips;
 }
 
 sub VolumeIDsQuery
