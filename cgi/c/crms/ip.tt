@@ -1,0 +1,44 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Strict//EN">
+<html>
+  <head>
+    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css" />
+    <title>IP Address Issue</title>
+  </head>
+  <body>
+  <div class="pages" id="homePage">
+    <img src="[% crms.GetSystemVar('logo') %]"
+         style="display:block;margin-left:auto;margin-right:auto;"/>
+    <br/><br/>
+    <!--<font size="5"><strong>Hello [% crms.GetUserName %] </strong></font>-->
+<br/>
+<br/>
+[% mail = crms.GetSystemVar('adminEmail') %]
+<div class="warningBox">
+<h2>Your IP address appears to have changed, so you will be unable to
+    view HathiTrust page images. Please disconnect from your wireless
+    network if possible and try again. Otherwise, copy-paste the following
+    into an e-mail to your IT support staff:</h2><br/><br/>
+<div class="warningSubbox">
+[% user = crms.get('user') %]
+[% ips = crms.GetUserIPs.keys %]
+[% plural = (ips.size > 1) %]
+<h4>Security considerations require Copyright Review Management System reviewer
+    <span style="color:black;">[% user %]</span>
+    to log in from a workstation assigned
+    [% IF plural %]one of [% END %]the following approved static
+    IP address[% IF plural %]es[% END %]:
+    <span style="color:black;">[% ips.join(', ') %]</span>.
+    Currently, the connection appears to be originating from
+    <span style="color:black;">[% cgi.param('REMOTE_ADDR') %]</span>.
+    Please take whatever steps are needed to ensure that the workstation
+    is assigned [% IF plural %]one of [% END %]the approved
+    address[% IF plural %]es[% END %] listed above.
+    If this cannot be done, please have the reviewer notify
+    the UM CRMS team of a permanent IP address change.
+    If you have any questions or concerns, contact
+    <a href="mailto:[% mail %]"><span style="color:black;">[% mail %]</span></a>.
+</h4>
+</div>
+</div>
+</body>
+</html>
