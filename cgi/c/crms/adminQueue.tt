@@ -52,7 +52,8 @@ function CheckAll(box,formid)
   <form action="crms" id="checks">
   [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="adminQueue"/>
-  <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
+  <input type="checkbox" id="SelectAllCB" onclick="CheckAll(this,'checks');"/>
+  <label for="SelectAllCB">Select All</label>&nbsp;&nbsp;&nbsp;&nbsp;
   <input type="submit" name="unlockSel" value="Unlock Selected Volumes"/><br/><br/>
   <table class="exportStats" style="width:55%">
   <tr><th colspan="6" style="text-align:center;"><span class="major">Locked Items</span></th></tr>
