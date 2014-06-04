@@ -62,7 +62,7 @@
   <tr>
     <th>Name</th><th>ID</th><th>Kerberos&nbsp;ID</th><th>Institution</th>
     <th>Reviewer</th><th>Advanced</th><th>Expert</th><th>Ext.&nbsp;Admin</th><th>Admin</th><th>Super&nbsp;Admin</th>
-    <th>Note</th><th>Projects</th><th>Change&nbsp;To</th>
+    <th>Note</th><th>Projects</th><th>IP Address</th><th>Change&nbsp;To</th>
   </tr>
   [% FOREACH userid IN users %]
     [% r = crms.IsUserReviewer(userid) %]
@@ -87,6 +87,7 @@
       [% note = crms.GetUserNote(userid) %]
       <td style="text-align:center;">[% note %]</td>
       <td style="text-align:center;">[% crms.GetUserProjects(userid).join(', ') %]</td>
+      <td>[% crms.GetUserIPs(userid).keys.join(', ') %]</td>
       <td>
         [% IF crms.CanChangeToUser(user,userid) %]
         <form action="crms">
