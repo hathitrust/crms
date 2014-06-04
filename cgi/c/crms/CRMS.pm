@@ -5549,11 +5549,13 @@ sub CountExpertHistoricalReviews
 ## ----------------------------------------------------------------------------
 # Code commented out with #### are race condition mitigations
 # to be considered for next release.
+# Test param prints debug info and iterates 5 times to test mitigation.
 sub GetNextItemForReview
 {
   my $self = shift;
   my $user = shift;
   my $page = shift;
+  my $test = shift;
 
   my $id = undef;
   my $err = undef;
@@ -5562,7 +5564,9 @@ sub GetNextItemForReview
     my $exclude = 'q.priority<3 AND ';
     my $order = 'q.priority DESC, cnt DESC, hash, q.time ASC';
     ####$order = 'hash';
-    ####$order = 'q.priority DESC,'.$order if rand()<.25;
+    #### #Random de-prioritization will interfere withe the CRMS US
+    #### #State gov docs project, so this needs a system var to override.
+    ####$order = 'q.priority DESC,'.$order if rand()<.25 and !$self->GetSystemVar('alwaysPrioritize');
     ####$order = 'cnt DESC,'.$order if rand()<.25;
     if ($self->IsUserAdmin($user))
     {
@@ -5623,18 +5627,32 @@ sub GetNextItemForReview
            $excludeh.
            ' HAVING cnt<2 '.
            ' ORDER BY ' . $order;
-    #print "$sql<br/>\n";
+    if (defined $test)
+    {
+      $sql .= ' LIMIT 5';
+      print "$user\n";
+    }
     my $ref = $self->SelectAll($sql, @args);
     foreach my $row (@{$ref})
     {
       my $id2 = $row->[0];
-      #my $cnt = $row->[1];
-      #my $hash = $row->[2];
-      $err = $self->LockItem($id2, $user);
-      if (!$err)
+      my $cnt = $row->[1];
+      my $hash = $row->[2];
+      if (defined $test)
       {
-        $id = $id2;#### unless defined $id; # for testing presentation order
-        last;
+        printf "  $id2 %s %s ($cnt, %s...)\n",
+               $self->GetAuthor($id2), $self->GetTitle($id2),
+               uc substr $hash, 0, 8;
+        $id = $id2 unless defined $id;
+      }
+      else
+      {
+        $err = $self->LockItem($id2, $user);
+        if (!$err)
+        {
+          $id = $id2;
+          last;
+        }
       }
     }
   };
