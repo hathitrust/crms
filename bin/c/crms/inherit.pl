@@ -493,7 +493,7 @@ sub UnfilterVolumes
       my $id2 = shift @fields;
       $txt .= "<h5>Unfiltering and enqueueing $id2</h5>\n";
       $crms->Unfilter($id2);
-      $crms->AddItemToQueue($id2) if $self->IsVolumeInCandidates($id2);
+      $crms->AddItemToQueue($id2) if $crms->IsVolumeInCandidates($id2);
     }
   }
 }
