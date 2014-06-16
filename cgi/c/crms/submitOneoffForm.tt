@@ -85,7 +85,7 @@
           [% IF authorDD %]
             <input type="hidden" id="prepopulated" name="prepopulated" value="[% (viaf)? 2:1 %]"/>
             [% renDate = authorDD %]
-            [% tip = (viaf)? "VIAF":"Mirlyn" %]
+            [% tip = (viaf)? "VIAF":"Zephir" %]
           [% END %]
         [% END %]
         <input id="renewalField" title="[% label %]" type="text" name="renDate"
