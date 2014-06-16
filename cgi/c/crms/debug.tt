@@ -145,7 +145,6 @@
     [% blah = crms.UpdateMetadata(id, force, record) %]
     [% sysid = record.sysid %]
     [% sql = "SELECT id,author,title,YEAR(pub_date),country FROM bibdata WHERE id=?" %]
-    [% sql %]
     [% ref = crms.SelectAll(sql, id) %]
     [% FOREACH r IN ref %]
       <tr><td>[% r.0 %]</td><td>[% sysid %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td><td>[% r.3 %]</td>
