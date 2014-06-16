@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.8.7';
+  return '4.8.8';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -5171,16 +5171,22 @@ sub GetPubDate
 
   my $sql = 'SELECT YEAR(pub_date) FROM bibdata WHERE id=?';
   my $date = $self->SimpleSqlGet($sql, $id);
+  my $record;
   if (!$date)
   {
-    $self->UpdateMetadata($id, 1);
+    $record = $self->UpdateMetadata($id, 1);
     $date = $self->SimpleSqlGet($sql, $id);
   }
   if ($date && $do2)
   {
-    my $record = $self->GetMetadata($id);
-    my $date2 = $record->pubdate(1);
-    $date = "$date-$date2" if $date2 && $date2 =~ m/^\d\d\d\d$/ && $date2 > $date && $date2 <= $self->GetTheYear();
+    $record = $self->GetMetadata($id) unless defined $record;
+    if (defined $record)
+    {
+      my $date2 = $record->pubdate(1);
+      $date = "$date-$date2" if $date2 && $date2 =~ m/^\d\d\d\d$/ &&
+                                $date2 > $date &&
+                                $date2 <= $self->GetTheYear();
+    }
   }
   return $date;
 }
@@ -5631,6 +5637,7 @@ sub GetNextItemForReview
     {
       $sql .= ' LIMIT 5';
       print "$user\n";
+      #print "$sql\n";
     }
     my $ref = $self->SelectAll($sql, @args);
     foreach my $row (@{$ref})
