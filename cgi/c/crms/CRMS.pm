@@ -6931,6 +6931,7 @@ sub GetTrackingInfo
   my $id         = shift;
   my $inherit    = shift;
   my $correction = shift;
+  my $quiet      = shift;
 
   my @stati = ();
   my $inQ = $self->IsVolumeInQueue($id);
@@ -7000,7 +7001,7 @@ sub GetTrackingInfo
   {
     push @stati, 'possible inheritance source awaiting metadata';
   }
-  if (0 == scalar @stati)
+  if (0 == scalar @stati && !$quiet)
   {
     # See if it has a pre-CRMS determination.
     my $rq = $self->RightsQuery($id,1);
