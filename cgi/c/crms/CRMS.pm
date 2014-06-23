@@ -7584,6 +7584,15 @@ sub LinkToMirlynDetails
   return "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
 }
 
+sub LinkToJira
+{
+  my $self = shift;
+  my $tx   = shift;
+
+  use Jira;
+  return Jira::LinkToJira($tx);
+}
+
 # Populates $data (a hash ref) with information about the duplication status of an exported determination.
 sub DuplicateVolumesFromExport
 {

@@ -103,7 +103,7 @@
               <img width="16" height="16" alt="Exported" src="/c/crms/CheckIcon.png"/>
             [%END %]
           [% ELSIF field=='ticket' %]
-            <a href="https://wush.net/jira/hathitrust/browse/[% item.$field %]" target="_blank">[% item.$field %]</a>
+            [% crms.LinkToJira(item.$field) %]
           [% ELSE %]
             [% item.$field %]
           [%END %]
