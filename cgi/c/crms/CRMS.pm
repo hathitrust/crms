@@ -5337,10 +5337,13 @@ sub HasLockedItem
 {
   my $self = shift;
   my $user = shift;
-  my $correction = shift;
+  my $page = shift;
 
-  my $table = (defined $correction)? 'corrections':'queue';
+  $page = 'review' unless defined $page;
+  my $table = ($page eq 'corrections')? 'corrections':'queue';
   my $sql = 'SELECT COUNT(*) FROM ' . $table . ' WHERE locked=? LIMIT 1';
+  $sql .= ' AND source LIKE "HTS%"' if $page eq 'oneoff';
+  $sql .= ' LIMIT 1';
   return ($self->SimpleSqlGet($sql, $user))? 1:0;
 }
 
@@ -5348,10 +5351,13 @@ sub GetLockedItem
 {
   my $self = shift;
   my $user = shift;
-  my $correction = shift;
+  my $page = shift;
 
-  my $table = (defined $correction)? 'corrections':'queue';
-  my $sql = 'SELECT id FROM ' . $table . ' WHERE locked=? LIMIT 1';
+  $page = 'review' unless defined $page;
+  my $table = ($page eq 'corrections')? 'corrections':'queue';
+  my $sql = 'SELECT id FROM ' . $table . ' WHERE locked=?';
+  $sql .= ' AND source LIKE "HTS%"' if $page eq 'oneoff';
+  $sql .= ' LIMIT 1';
   return $self->SimpleSqlGet($sql, $user);
 }
 

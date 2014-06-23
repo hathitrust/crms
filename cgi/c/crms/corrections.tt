@@ -1,5 +1,6 @@
 [% INCLUDE header.tt %]
 
+[% p        = cgi.param('p')          %]
 [% error    = cgi.param('errorMsg')   %]
 [% barcode  = cgi.param('barcode')    %]
 [% editing  = cgi.param('editing')    %]
@@ -25,8 +26,8 @@
 
 [% IF !editing %]
   [%# ## Get locked item or new one from queue ## %]
-  [% IF crms.HasLockedItem(user, 1) %]
-    [% barcode = crms.GetLockedItem(user, 1) %]
+  [% IF crms.HasLockedItem(user, p) %]
+    [% barcode = crms.GetLockedItem(user, p) %]
   [% ELSE %]
     [% barcode = crms.GetNextCorrectionForReview(user) %]
   [% END %]
