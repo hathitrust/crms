@@ -160,6 +160,7 @@ These items will take priority in the review process.
 [% color_white  = '#FFFFFF' %]
 [% color_gray   = '#FEAEAE' %]
 
+[% tix = crms.GetClosedTickets() %]
 [% ref  = crms.GetAddToQueueRef() %]
 [% IF ref.size > 0 %]
   [% prev_id      = '' %]
@@ -215,8 +216,17 @@ These items will take priority in the review process.
     <td>[% cgi.escapeHTML(r.2) %]</td>
     <td>[% crms.GetPubDate(r.0, 1) %]</td>
     <td>[% r.4 %]</td>
-    <td>[% (r.5 == 'oneoff')?
-           '<a href="https://wush.net/jira/hathitrust/browse/' _ r.8 _ '" target="_blank">' _ r.8 _ '</a>':r.5 %]</td>
+    <td>[% IF r.5 == 'oneoff' %]
+          [% tx = r.8 %]
+          [% crms.LinkToJira(tx) %]
+          [% stat = tix.$tx %]
+          [% IF stat %]
+            <span style="color:red;">[% stat %]</span>
+          [% END %]
+        [% ELSE %]
+          [% r.5 %]
+        [% END %]
+    </td>
     <td>[% r.6 %]</td>
     <td>[% crms.StripDecimal(r.7) %]</td>
     <td>[% r.9 %]</td>
@@ -295,8 +305,17 @@ These items will take priority in the review process.
       <td>[% cgi.escapeHTML(r.2) %]</td>
       <td>[% r.3 %]</td>
       <td>[% r.4 %]</td>
-      <td>[% (r.5 == 'oneoff')?
-           '<a href="https://wush.net/jira/hathitrust/browse/' _ r.8 _ '" target="_blank">' _ r.8 _ '</a>':r.5 %]</td>
+      <td>[% IF r.5 == 'oneoff' %]
+          [% tx = r.8 %]
+          [% crms.LinkToJira(tx) %]
+          [% stat = tix.$tx %]
+          [% IF stat %]
+            <span style="color:red;">[% stat %]</span>
+          [% END %]
+        [% ELSE %]
+          [% r.5 %]
+        [% END %]
+      </td>
       <td>[% r.6 %]</td>
       <td>[% crms.StripDecimal(r.7) %]</td>
       <td>[% r.9 %]</td>

@@ -8711,4 +8711,23 @@ END
   return $html;
 }
 
+sub GetClosedTickets
+{
+  my $self = shift;
+
+  my $sql = 'SELECT DISTINCT source FROM queue WHERE source LIKE "HTS%"';
+  my @txs;
+  push @txs, $_->[0] for @{$self->SelectAll($sql)};
+  use Jira;
+  my $ua = Jira::Login($self);
+  my $stats = Jira::GetIssuesStatus($self, $ua, \@txs);
+  my %stats2;
+  foreach my $tx (keys %{$stats})
+  {
+    my $stat = $stats->{$tx};
+    $stats2{$tx} = $stat if $stat eq 'Closed' or $stat eq 'Resolved' or $stat eq 'Status unknown';
+  }
+  return \%stats2;
+}
+
 1;
