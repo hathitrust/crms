@@ -124,10 +124,7 @@ $end .= ' 23:59:59' unless $end =~ m/\d\d:\d\d:\d\d$/;
 my %data = %{($candidates || $duplicate)?
              CandidatesReport($start,$end,\@singles):
              InheritanceReport($start,$end,\@singles)};
-my $head = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' . "\n";
-$head .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
-        "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'/>\n" .
-        "<title>$title</title></head><body>\n";
+my $head = $crms->StartHTML();
 my $txt = '';
 $delim = "<br/>\n";
 
@@ -439,7 +436,7 @@ if ($insert && scalar keys %{$data{'inherit'}})
     }
   }
 }
-UnfilterVolumes($data{'nodups'}) if $insert && scalar keys %{$data{'nodups'}};
+
 UnfilterVolumes($data{'chron'}) if $insert && scalar keys %{$data{'chron'}};
 UnfilterVolumes($data{'unneeded'}) if $insert && scalar keys %{$data{'unneeded'}};
 UnfilterVolumes($data{'disallowed'}) if $insert && scalar keys %{$data{'disallowed'}};
@@ -450,11 +447,12 @@ for (@{$crms->GetErrors()})
   $txt .= "<i>Warning: $_</i><br/>\n";
 }
 my $hashref = $crms->GetSdrDb()->{mysql_dbd_stats};
-$txt .= sprintf "SDR Database OK reconnects: %d, bad reconnects: %d<br/>\n", $hashref->{'auto_reconnects_ok'}, $hashref->{'auto_reconnects_failed'};
-
+$txt .= sprintf "SDR Database OK reconnects: %d, bad reconnects: %d<br/>\n",
+                $hashref->{'auto_reconnects_ok'},
+                $hashref->{'auto_reconnects_failed'};
 $txt .= "</body></html>\n\n";
 
-if (@mails)
+if (scalar @mails)
 {
   use Mail::Sender;
   my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
@@ -462,11 +460,10 @@ if (@mails)
                                   on_errors => 'undef' }
     or die "Error in mailing: $Mail::Sender::Error\n";
   my $to = join ',', @mails;
-  my $ctype = 'text/html';
   $sender->OpenMultipart({
     to => $to,
     subject => $title,
-    ctype => $ctype,
+    ctype => 'text/html',
     encoding => 'utf-8'
     }) or die $Mail::Sender::Error,"\n";
   $sender->Body();

@@ -112,10 +112,7 @@ $start .= ' 00:00:00' unless $start =~ m/\d\d:\d\d:\d\d$/;
 $end .= ' 23:59:59' unless $end =~ m/\d\d:\d\d:\d\d$/;
 my $xpc;
 my %data = %{ADDReport($start,$end,\@singles)};
-my $txt = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' . "\n";
-$txt .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' .
-        "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'/>\n" .
-        "<title>$title</title></head><body>\n";
+my $txt = $crms->StartHTML($title);
 $delim = "<br/>\n";
 
 for (@{$crms->GetErrors()})

@@ -57,7 +57,7 @@ print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    logFile => "$DLXSROOT/prep/c/crms/inst_hist.txt",
+    logFile => $DLXSROOT . '/prep/c/crms/inst_hist.txt',
     sys     => $sys,
     verbose => $verbose,
     root    => $DLXSROOT,
