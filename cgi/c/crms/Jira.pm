@@ -1,6 +1,7 @@
 package Jira;
 
 use LWP::UserAgent;
+use HTTP::Cookies;
 use strict;
 use warnings;
 use vars qw(@ISA @EXPORT @EXPORT_OK);
@@ -14,13 +15,12 @@ sub Login
   my $root = $self->get('root');
   my $sys = $self->get('sys');
   my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
-  print "$cfg\n";
   my %d = $self->ReadConfigFile($cfg);
   my $username   = $d{'jiraUser'};
   my $password = $d{'jiraPasswd'};
   my $ua = new LWP::UserAgent;
-  $ua->cookie_jar( {} );
-  my $url = 'http://wush.net/jira/hathitrust/rest/auth/1/session';
+  $ua->cookie_jar({});
+  my $url = 'https://wush.net/jira/hathitrust/rest/auth/1/session';
   my $req = HTTP::Request->new(POST => $url);
   $req->content_type('application/json');
   $req->content(<<END);
@@ -104,7 +104,7 @@ sub GetIssueStatus
   my $self = shift;
   my $ua   = shift;
   my $tx   = shift;
-  
+
   my $url = 'https://wush.net/jira/hathitrust/rest/api/2/issue/' . $tx;
   my $stat = 'Unknown';
   my $req = HTTP::Request->new(GET => $url);
@@ -124,6 +124,41 @@ sub GetIssueStatus
     #printf "%s\n", $res->content();
   }
   return $stat;
+}
+
+sub GetIssuesStatus
+{
+  my $self = shift;
+  my $ua   = shift;
+  my $txs  = shift;
+
+  my %stats;
+  my $url = sprintf 'https://wush.net/jira/hathitrust/rest/api/2/search?'.
+                    'fields=status&jql=issueKey in (%s)', join ',', @{$txs};
+  $stats{$_} = 'Status unknown' for @{$txs};
+  my $req = HTTP::Request->new(GET => $url);
+  my $res = $ua->request($req);
+  if ($res->is_success())
+  {
+    my $json = JSON::XS->new;
+    my $content = $res->content;
+    eval {
+      my $data = $json->decode($content);
+      foreach my $iss (@{$data->{'issues'}})
+      {
+        my $tx = $iss->{'key'};
+        my $stat = $iss->{'fields'}->{'status'}->{'name'};
+        $stats{$tx} = $stat;
+      }
+    };
+    $self->SetError("GetIssuesStatus error: " . $@) if $@;
+  }
+  else
+  {
+    $self->SetError("GetIssuesStatus got " . $res->code() . " getting $url\n");
+    #printf "%s\n", $res->content();
+  }
+  return \%stats;
 }
 
 sub GetComments
@@ -153,5 +188,12 @@ sub GetComments
   return \@comments;
 }
 
+sub LinkToJira
+{
+  my $tx = shift;
+
+  return '<a href="https://wush.net/jira/hathitrust/browse/'.
+         $tx. '" target="_blank">'. $tx. '</a>';
+}
 
 1;
