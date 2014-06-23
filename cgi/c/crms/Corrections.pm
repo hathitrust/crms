@@ -138,78 +138,95 @@ sub CorrectionsDataSearchMenu
 
 # Send the fixed non-Jira corrections to a text file in prep/c/crms and mail it.
 # Comment and close the Jira corrections.
+# $data is a hashref with the following fields
+# ->{'html'}     In-progress HTML to be sent to recipients
+# ->{'fh'}       The open handle to tempfile
+# ->{'tempfile'} The name of the temp file
+# ->{'permfile'} The name of the permanent file that will be attached
+# ->{'verbose'}  Verbosity level
 sub ExportCorrections
 {
   my $self = shift;
   my $noop = shift;
+  my $data = shift;
 
+  my $verbose = $data->{'verbose'};
   my %exports;
-  my $sql = 'SELECT id,ticket,status FROM corrections WHERE exported=0 AND user IS NOT NULL';
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
-  return unless scalar @{$ref} > 0;
-  foreach my $row (@{$ref})
+  my $sql = 'SELECT id,ticket,DATE(time),note FROM corrections'.
+            ' WHERE (status="fixed" OR status="added") AND exported=0'.
+            ' ORDER BY time DESC';
+  my $ref = $self->SelectAll($sql);
+  my $html = $data->{'html'};
+  $html .= sprintf "<h3>Exporting %d corrections from %s</h3>\n", scalar @{$ref}, $self->System();
+  if (scalar @{$ref} > 0)
   {
-    my $id = $row->[0];
-    my $tx = $row->[1];
-    my $st = $row->[2];
-    if ($st eq 'fixed' || $st eq 'added')
+    foreach my $row (@{$ref})
     {
-      $exports{$id}->{'exported'} = (defined $tx)? 0:1;
+      my $id = $row->[0];
+      my $tx = $row->[1];
+      my $date = $row->[2];
+      my $note = $row->[3];
       $exports{$id}->{'jira'} = $tx if defined $tx;
-      $exports{$id}->{'status'} = $st;
+      $exports{$id}->{'date'} = $date;
+      $exports{$id}->{'note'} = $note;
     }
-  }
-  if (scalar keys %exports == 0)
-  {
-    $sql = 'UPDATE corrections SET exported=1 WHERE exported=0 AND user IS NOT NULL';
-    $self->PrepareSubmitSql($sql) unless $noop;
-    print "No corrections to export\n";
-    return;
-  }
-  print "Exporting volumes to Jira.\n";
-  CorrectionsToJira($self, \%exports, $noop);
-  my ($fh, $temp, $perm) = GetCorrectionsExportFh($self);
-  printf "Exporting %d volumes to $temp.\n", scalar keys %exports;
-  my $n = 0;
-  foreach my $id (sort keys %exports)
-  {
-    my $tx = $exports{$id}->{'jira'};
-    my $ex = $exports{$id}->{'exported'};
-    my $st = $exports{$id}->{'status'};
-    printf "Processing $id ($st), ticket %s, exported=%d\n", (defined $tx)? $tx:'(none)', (defined $ex)? $ex:0;
-    if (1 == $exports{$id}->{'exported'})
+    my $ua = CorrectionsToJira($self, \%exports, $noop);
+    my $fh = $data->{'fh'};
+    my $temp = $data->{'tempfile'};
+    my $perm = $data->{'permfile'};
+    if (!defined $fh)
     {
-      my $line = $id . ((defined $tx)? "\t$tx":'') . "\n";
-      print $fh $line;
-      $n++;
+      ($fh, $temp, $perm) = GetCorrectionsExportFh($self);
+      $data->{'fh'} = $fh;
+      $data->{'tempfile'} = $temp;
+      $data->{'permfile'} = $perm;
     }
-  }
-  close $fh;
-  print "Moving to $perm.\n";
-  rename $temp, $perm;
-  my $err;
-  if ($n > 0 && !$noop)
-  {
-    eval { EmailCorrections($self, $n, $perm); };
-    if ($@)
+    printf "Exporting %d volumes to $temp.\n", scalar keys %exports if $verbose;
+    my $n = 0;
+    foreach my $id (sort keys %exports)
     {
-      $err = 1;
-      $err = "EmailCorrections() failed: $@";
-      $self->SetError($err);
+      my $tx = $exports{$id}->{'jira'};
+      my $ex = $exports{$id}->{'exported'};
+      printf "Processing $id, ticket %s, exported=%d\n",
+              (defined $tx)? $tx:'(none)',
+              (defined $ex)? $ex:0 if $verbose>1;
+      if (1 == $ex)
+      {
+        my $line = $id . ((defined $tx)? "\t$tx":'');
+        print $fh $line . "\n";
+        $n++;
+      }
     }
-  }
-  foreach my $id (sort keys %exports)
-  {
-    # Set as exported anything marked exported by Jira,
-    # and anything non-Jira.
-    my $tx = $exports{$id}->{'jira'};
-    my $ex = $exports{$id}->{'exported'};
-    if ((defined $tx && 1 == $ex) || !defined $tx)
+    $html .= '<table border=1><tr><th>ID</th><th>Ticket</th><th>Date</th>'.
+             '<th>Reviewer Note</th><th>Jira Status</th><th>Exported</th>'.
+             '<th>Message</th><tr>'. "\n";
+    foreach my $id (sort keys %exports)
     {
-      $sql = 'UPDATE corrections SET exported=1 WHERE id=?';
-      $self->PrepareSubmitSql($sql, $id) unless $noop;
+      # Set as exported anything marked exported by Jira,
+      # and anything non-Jira.
+      my $tx = $exports{$id}->{'jira'};
+      my $ex = $exports{$id}->{'exported'};
+      my $msg = $exports{$id}->{'message'};
+      $msg = '' unless defined $msg;
+      $msg = '<span style="color:red;">' . $msg . '</span>' if length $msg;
+      if (1 == $ex)
+      {
+        $sql = 'UPDATE corrections SET exported=1 WHERE id=?';
+        $self->PrepareSubmitSql($sql, $id) unless $noop;
+      }
+      $html .= sprintf "<tr><td>$id</td><td>%s</td><td>%s</td>".
+                       "<td>%s</td><td>%s</td><td>%s</td><td>$msg</td><tr>\n",
+              Jira::LinkToJira($tx), $exports{$id}->{'date'},
+              $exports{$id}->{'note'},
+              Jira::GetIssueStatus($self, $ua, $tx), ($ex)? '&#x2713;':'';
     }
+    $html .= "</table>\n";
   }
+  $sql = 'SELECT COUNT(*) FROM corrections WHERE status IS NULL';
+  my $ct = $self->SimpleSqlGet($sql);
+  $ct = 'no' if $ct == 0;
+  $html .= "<h4>After export, there are $ct unchecked corrections</h4>\n";
+  $data->{'html'} = $html;
 }
 
 # Returns a triplet of (filehandle, temp name, permanent name)
@@ -227,29 +244,6 @@ sub GetCorrectionsExportFh
   if (-f $temp) { die "file already exists: $temp\n"; }
   open (my $fh, '>', $temp) || die "failed to open exported file ($temp): $!\n";
   return ($fh, $temp, $perm);
-}
-
-# Send email with corrections data.
-sub EmailCorrections
-{
-  my $self  = shift;
-  my $count = shift;
-  my $file  = shift;
-
-  my $where = ($self->WhereAmI() or 'Prod');
-  if ($where eq 'Prod' || 1)
-  {
-    my $subject = sprintf('%s %s: %d volume(s) fixed', $self->System(), $where, $count);
-    use Mail::Sender;
-    my $sender = new Mail::Sender
-      {smtp => 'mail.umdl.umich.edu',
-       from => $self->GetSystemVar('adminEmail')};
-    $sender->MailFile({to => $self->GetSystemVar('correctionsEmailTo'),
-             subject => $subject,
-             msg => 'See attachment.',
-             file => $file});
-    $sender->Close;
-  }
 }
 
 sub CorrectionsToJira
@@ -291,7 +285,11 @@ END
   foreach my $id (sort keys %{$exports})
   {
     my $tx = $exports->{$id}{'jira'};
-    next unless defined $tx;
+    if (!defined $tx)
+    {
+      $exports->{$id}->{'exported'} = 1;
+      next;
+    }
     my $url = 'https://wush.net/jira/hathitrust/rest/api/2/issue/' . $tx . '/transitions';
     my $ok = 1;
     my $code;
@@ -315,10 +313,12 @@ END
     }
     else
     {
-      warn('Got ' . $code . " posting $url\n");
+      $exports->{$id}->{'exported'} = 0;
+      $exports->{$id}->{'message'} = 'Got ' . $code . " posting $url\n";
       #printf "%s\n", $res->content();
     }
   }
+  return $ua;
 }
 
 sub RetrieveTickets
