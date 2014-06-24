@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.8.10';
+  return '4.8.11';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -5341,7 +5341,7 @@ sub HasLockedItem
 
   $page = 'review' unless defined $page;
   my $table = ($page eq 'corrections')? 'corrections':'queue';
-  my $sql = 'SELECT COUNT(*) FROM ' . $table . ' WHERE locked=? LIMIT 1';
+  my $sql = 'SELECT COUNT(*) FROM ' . $table . ' WHERE locked=?';
   $sql .= ' AND source LIKE "HTS%"' if $page eq 'oneoff';
   $sql .= ' LIMIT 1';
   return ($self->SimpleSqlGet($sql, $user))? 1:0;
