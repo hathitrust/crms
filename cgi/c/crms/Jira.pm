@@ -99,6 +99,34 @@ END
   return $err;
 }
 
+# 1-6 currently, 1-3 are considered major
+sub GetIssuePriority
+{
+  my $self = shift;
+  my $ua   = shift;
+  my $tx   = shift;
+
+  my $url = 'https://wush.net/jira/hathitrust/rest/api/2/issue/' . $tx;
+  my $stat = 'Unknown';
+  my $req = HTTP::Request->new(GET => $url);
+  my $res = $ua->request($req);
+  if ($res->is_success())
+  {
+    my $json = JSON::XS->new;
+    my $content = $res->content;
+    eval {
+      my $data = $json->decode($content);
+      $stat = $data->{'fields'}->{'priority'}->{'id'};
+    }
+  }
+  else
+  {
+    warn("Got " . $res->code() . " getting $url\n");
+    #printf "%s\n", $res->content();
+  }
+  return $stat;
+}
+
 sub GetIssueStatus
 {
   my $self = shift;
