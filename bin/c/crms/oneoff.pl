@@ -17,18 +17,21 @@ use Encode;
 use File::Copy;
 use Term::ANSIColor qw(:constants);
 $Term::ANSIColor::AUTORESET = 1;
+use Jira;
 
 my $usage = <<END;
 USAGE: $0 [-hnopqv] [-l LIMIT] [-m MAIL_ADDR [-m MAIL_ADDR2...]]
+       [-t TICKET [-t TICKET2...]]
 
 Loads one-off reviews from Jira.
 
 -h         Print this help message.
--l LIMIT   Limit the number of tickets to LIMIT
+-l LIMIT   Limit the number of tickets to LIMIT.
 -m ADDR    Mail the report to ADDR. May be repeated for multiple addresses.
 -n         No-op; reports what would be done but do not modify the database.
 -p         Run in production.
 -q         Do not emit report (ignored if -m is used).
+-t TICKET  Limit to the Jira ticket(s) specified.
 -v         Emit debugging information.
 END
 
@@ -38,6 +41,7 @@ my @mails;
 my $noop;
 my $production;
 my $quiet;
+my @tix;
 my $verbose;
 
 Getopt::Long::Configure ('bundling');
@@ -48,12 +52,13 @@ die 'Terminating' unless GetOptions(
            'n'    => \$noop,
            'p'    => \$production,
            'q'    => \$quiet,
+           't:s@' => \@tix,
            'v+'   => \$verbose);
 $DLPS_DEV = undef if $production;
 die "$usage\n\n" if $help;
 
 my $crmsUS = CRMS->new(
-    logFile      =>   $DLXSROOT . '/prep/c/crms/corrections_hist.txt',
+    logFile      =>   $DLXSROOT . '/prep/c/crms/oneoff_hist.txt',
     sys          =>   'crms',
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
@@ -61,7 +66,7 @@ my $crmsUS = CRMS->new(
 );
 
 my $crmsWorld = CRMS->new(
-    logFile      =>   $DLXSROOT . '/prep/c/crms/oneoff_hist.txt',
+    logFile      =>   $DLXSROOT . '/prep/c/crms/W_oneoff_hist.txt',
     sys          =>   'crmsworld',
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
@@ -74,6 +79,7 @@ print "Verbosity $verbose\n" if $verbose;
 my $title = 'CRMS One-off Review Report';
 my $html = $crmsUS->StartHTML($title);
 my %data = ('html' => $html, 'verbose' => $verbose );
+my $ua = Jira::Login($crmsUS);
 
 my @noids;
 my @systemserials;
@@ -81,7 +87,25 @@ my $hash = OneoffQuery(\@noids, \@systemserials);
 $html .= "<h3>One-off reviews imported from Jira</h3>\n";
 $html .= '<table border="1"><tr><th>Ticket</th><th>ID</th>'.
          '<th>Author</th><th>Title</th><th>Tracking</th>'.
-         "<th>Comments</th><th>Added</th></tr>\n";
+         "<th>Comments</th><th>Disposition</th></tr>\n";
+my $closed = $crmsWorld->GetClosedTickets();
+foreach my $tx (keys %{$closed})
+{
+  my $url = Jira::LinkToJira($tx);
+  my $stat = $closed->{$tx};
+  if ($stat eq 'Status unknown')
+  {
+    $html .= "  <tr><td>$url</td><td/><td/><td/><td/>".
+      '<td><span style="color:red;">In queue; unable to get current Jira status</span></td><td/></tr>' . "\n";
+  }
+  else
+  {
+    $html .= "  <tr><td>$url</td><td/><td/><td/><td/>".
+      '<td><span style="color:blue;">Ticket marked as '.$stat.'; deleted</span></td><td>&#x2715;</td></tr>' . "\n";
+    my $sql = 'DELETE FROM queue WHERE source=?';
+    $crmsWorld->PrepareSubmitSql($sql, $tx) unless $noop;
+  }
+}
 foreach my $tx (@noids)
 {
   my $url = Jira::LinkToJira($tx);
@@ -113,7 +137,7 @@ foreach my $tx (sort keys %{$hash})
   my $i = 0;
   foreach my $id (keys %{$ids})
   {
-    my $added = 0;
+    my $added = '';
     print "  $id\n" if $verbose;
     next unless $id =~ m/\./;
     my $record = $crmsUS->GetMetadata($id);
@@ -138,7 +162,16 @@ foreach my $tx (sort keys %{$hash})
       }
       print "  Adding $id\n" if $verbose;
       my $err = '0';
-      $err = $crmsWorld->AddItemToQueueOrSetItemActive($id, 4, 1, $tx, 'oneoff') unless $noop;
+      my $pri = 4;
+      my $jpri = Jira::GetIssuePriority($crmsUS, $ua, $tx);
+      if (defined $jpri && $jpri < 3)
+      {
+        $pri = 4.1 if $jpri == 3;
+        $pri = 4.2 if $jpri == 2;
+        $pri = 4.3 if $jpri == 1;
+        $status = sprintf '<span style="color:green">CRMS priority %s from Jira priority %s</span>', $pri, $jpri;
+      }
+      $err = $crmsWorld->AddItemToQueueOrSetItemActive($id, $pri, 1, $tx, 'oneoff') unless $noop;
       if ('1' eq substr $err, 0, 1)
       {
         $status = sprintf '<span style="color:red">%s</span>', substr $err, 1, -1;
@@ -146,14 +179,14 @@ foreach my $tx (sort keys %{$hash})
       }
       elsif ('0' eq substr $err, 0, 1)
       {
-        $added = 1;
+        $added = '&#x2713;';
       }
     }
     my $url = '';
     $url = my $url = Jira::LinkToJira($tx) if $i == 0;
     $html .= sprintf "  <tr><td>$url</td><td style='white-space:nowrap;'>$id</td><td>%s</td><td>%s</td><td>$track</td><td>$status</td>",
                         $record->author, $record->title;
-    $html .= sprintf "<td>%s</td></tr>\n", ($added)? '&#x2713;':'';
+    $html .= "<td>$added</td></tr>\n";
     $i++;
   }
 }
@@ -176,22 +209,30 @@ $html .= "</body></html>\n";
 
 if (scalar @mails)
 {
-  use Mail::Sender;
-  my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                  from => $crmsWorld->GetSystemVar('adminEmail', ''),
-                                  on_errors => 'undef' }
-    or die "Error in mailing: $Mail::Sender::Error\n";
-  my $to = join ',', @mails;
-  $sender->OpenMultipart({
-    to => $to,
-    subject => $title,
-    ctype => 'text/html',
-    encoding => 'utf-8'
-    }) or die $Mail::Sender::Error,"\n";
-  $sender->Body();
-  my $bytes = encode('utf8', $html);
-  $sender->SendEnc($bytes);
-  $sender->Close();
+  if ($verbose)
+  {
+    print "Sending mail to:\n";
+    print "  $_\n" for @mails;
+  }
+  #if (!$noop)
+  {
+    use Mail::Sender;
+    my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
+                                    from => $crmsWorld->GetSystemVar('adminEmail', ''),
+                                    on_errors => 'undef' }
+      or die "Error in mailing: $Mail::Sender::Error\n";
+    my $to = join ',', @mails;
+    $sender->OpenMultipart({
+      to => $to,
+      subject => $title,
+      ctype => 'text/html',
+      encoding => 'utf-8'
+      }) or die $Mail::Sender::Error,"\n";
+    $sender->Body();
+    my $bytes = encode('utf8', $html);
+    $sender->SendEnc($bytes);
+    $sender->Close();
+  }
 }
 else
 {
@@ -204,13 +245,19 @@ sub OneoffQuery
   my $noids = shift;
   my $systemserials = shift;
   my $mail = 'copyrightinquiry@umich.edu';
-  use Jira;
-  my $ua = Jira::Login($crmsUS);
   my %txs;
   return unless defined $ua;
   my $url = 'https://wush.net/jira/hathitrust/rest/api/2/search?jql="HathiTrust%20Contact"~"' .
              $mail . '" AND (status=1 OR status=4 OR status=3)';
-  $url .= '&maxResults=' . $lim if defined $lim;
+  if (scalar @tix)
+  {
+     $url = sprintf 'https://wush.net/jira/hathitrust/rest/api/2/search?jql=issueKey in (%s)',
+           join ',', @tix;
+  }
+  else
+  {
+    $url .= '&maxResults=' . $lim if defined $lim;
+  }
   print "$url\n" if $verbose;
   my $req = HTTP::Request->new(GET => $url);
   my $res = $ua->request($req);
@@ -227,6 +274,7 @@ sub OneoffQuery
     my $of = ($data->{'total'}<$data->{'maxResults'})? $data->{'total'}:$data->{'maxResults'};
     foreach my $i (0 .. $of-1)
     {
+      my $htidsonly = 1;
       my $item = $data->{'issues'}->[$i];
       my $tx = $item->{'key'};
       printf "$tx (%d of $of)\n", $i+1 if $verbose;
@@ -251,6 +299,7 @@ sub OneoffQuery
             {
               print "  SYSID $1 from $line\n" if $verbose and !defined $txs{$tx}->{$1};
               $txs{$tx}->{$1} = $1;
+              $htidsonly = 0;
             }
             elsif ($line =~ m/([a-z0-9]+\.[^;,\s]+)/)
             {
@@ -280,7 +329,7 @@ sub OneoffQuery
         }
         else
         {
-          AddDuplicates($tx, \%txs);
+          AddDuplicates($tx, \%txs) unless $htidsonly == 1;
           my @k = keys %{$txs{$tx}};
           if (scalar @k == 1 && $k[0] !~ m/\./)
           {
