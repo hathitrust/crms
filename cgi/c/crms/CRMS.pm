@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.8.11';
+  return '4.8.12';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -143,7 +143,7 @@ sub ConnectToDb
   my $db = $self->DbName();
   #if ($self->get('verbose')) { $self->Logit("DBI:mysql:crms:$db_server, $db_user, [passwd]"); }
   my $dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
-            { PrintError => 0, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
+            { PrintError => 0, RaiseError => 1, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
   $dbh->{mysql_enable_utf8} = 1;
   $dbh->{mysql_auto_reconnect} = 1;
   $dbh->do('SET NAMES "utf8";');
@@ -1945,11 +1945,11 @@ sub CreateSQLForReviews
   if ($endDate) { $sql .= " AND $which <='$endDate 23:59:59' "; }
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   $sql .= " ORDER BY $order $dir $limit ";
-  #print "$sql<br/>\n"; 
+  #print "$sql<br/>\n";
   my $countSql = $sql;
   $countSql =~ s/(SELECT\s+).+?(FROM.+)/$1 COUNT(r.id),COUNT(DISTINCT r.id) $2/i;
   $countSql =~ s/(LIMIT\s\d+(,\s*\d+)?)//;
-  my $ref = $self->GetDb()->selectall_arrayref($countSql);
+  my $ref = $self->SelectAll($countSql);
   my $totalReviews = $ref->[0]->[0];
   my $totalVolumes = $ref->[0]->[1];
   my $n = POSIX::ceil($offset/$pagesize+1);
@@ -5493,6 +5493,7 @@ sub UnlockAllItemsForUser
   my $user       = shift;
   my $correction = shift;
 
+  $user = $self->get('user') unless defined $user;
   my $table = (defined $correction)? 'corrections':'queue';
   $self->PrepareSubmitSql('UPDATE ' . $table . ' SET locked=NULL WHERE locked=?', $user);
 }
@@ -5747,6 +5748,7 @@ sub TranslateAttr
     $val = ($a =~ m/^[0-9]+$/)? $t1{$a}:$t2{$a};
   }
   $a = $val if $val;
+  $self->ClearErrors();
   return $a;
 }
 
@@ -5769,6 +5771,7 @@ sub TranslateReason
     $val = ($r =~ m/[0-9]+/)? $t1{$r}:$t2{$r};
   }
   $r = $val if $val;
+  $self->ClearErrors();
   return $r;
 }
 
@@ -6867,6 +6870,7 @@ sub GetUserIPs
       $ips{$ip} = 1 if $ip =~ m/(\d+\.){3}\d+/;
     }
   }
+  $self->ClearErrors();
   return \%ips;
 }
 
@@ -8374,7 +8378,7 @@ sub GetVIAFData
       my $old = $ref->[0]->[4];
       if ($old)
       {
-        $self->PrepareSubmitSql('DELETE FROM VIAF WHERE author=?', $a);
+        $self->PrepareSubmitSql('DELETE FROM viaf WHERE author=?', $a);
       }
       else
       {
