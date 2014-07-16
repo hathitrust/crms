@@ -22,14 +22,6 @@
 
 <script type="text/Javascript">
 <!--
-function CheckAll(box,formid)
-{
-	var aa=document.getElementById(formid);
-	for (var i=0; i < aa.elements.length; i++) 
-	{
-	  aa.elements[i].checked = box.checked;
-	}
-}
 function CheckAllTx(box,id)
 {
   var q = 'input[id*="'+id+'"]';
@@ -190,8 +182,6 @@ These items will take priority in the review process.
   <form action="crms" id="checks1">
   [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="queueAdd"/>
-  <input type="checkbox" id="SelectAllCB1" onclick="CheckAll(this,'checks1');"/>
-  <label for="SelectAllCB1">Select All</label>&nbsp;&nbsp;&nbsp;&nbsp;
   <input type="submit" name="seqSel" value="Sequester Selection"/>
   <input type="submit" name="delSel" value="Delete Selection"/><br/><br/>
   [% END %]
@@ -295,8 +285,6 @@ These items will take priority in the review process.
     <form action="crms" id="checks2">
     [% crms.HiddenSys() %]
     <input type="hidden" name="p" value="queueAdd"/>
-    <input type="checkbox" id="SelectAllCB2" onclick="CheckAll(this,'checks2');"/>
-    <label for="SelectAllCB2">Select All</label>&nbsp;&nbsp;&nbsp;&nbsp;
     <input type="submit" name="unseqSel" value="Unsequester Selection"/>
     <input type="submit" name="delSel" value="Delete Selection"/><br/><br/>
   
