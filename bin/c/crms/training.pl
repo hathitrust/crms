@@ -15,10 +15,12 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Spreadsheet::WriteExcel;
 
 my $usage = <<END;
-USAGE: $0 [-hnrtv] [-e FILE] [-o FILE] [-x SYS] count
+USAGE: $0 [-hnrtv] [-e FILE] [-o FILE] [-x SYS]
+          [-p PRIORITY [-p PRIORITY2...]] count
 
 Populates the training database with examples (correct, single reviews) from production.
 
+-a       Allow status 7 reviews from non-advanced reviewers.
 -e FILE  Write an Excel spreadsheet with information on the volumes to be added.
 -h       Print this help message.
 -n       Do not submit SQL.
@@ -29,9 +31,11 @@ Populates the training database with examples (correct, single reviews) from pro
 -x SYS   Set SYS as the system to execute.
 END
 
+my $noadvanced;
 my $excel;
 my $help;
 my $noop;
+my @pris;
 my $random;
 my $out;
 my $training;
@@ -41,10 +45,12 @@ my $sys;
 Getopt::Long::Configure ('bundling');
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
+           'a'    => \$noadvanced,
            'e:s'  => \$excel,
            'h'    => \$help,
            'n'    => \$noop,
            'o:s'  => \$out,
+           'p:s@' => \@pris,
            'r'    => \$random,
            't'    => \$training,
            'v'    => \$verbose,
@@ -56,7 +62,7 @@ die "You need a volume count.\n" unless 1 == scalar @ARGV;
 my $count = $ARGV[0];
 die "Count format should be numeric\n" if $count !~ m/\d+/;
 
-my $crms = CRMS->new(
+my $crmsp = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/training_hist.txt",
     sys          =>   $sys,
     verbose      =>   $verbose,
@@ -65,7 +71,7 @@ my $crms = CRMS->new(
 );
 
 # Connect to training database.
-my $crms2 = CRMS->new(
+my $crmst = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/training_hist2.txt",
     sys          =>   $sys,
     verbose      =>   $verbose,
@@ -95,21 +101,28 @@ if (defined $out)
 my %seen;
 my %seenAuthors;
 my %seenTitles;
-my $sql = '(SELECT DISTINCT id FROM reviews) UNION DISTINCT (SELECT DISTINCT id FROM historicalreviews)' .
-          ' UNION DISTINCT (SELECT id FROM queue)';
-my $ref = $crms2->GetDb()->selectall_arrayref($sql);
+#my $sql = '(SELECT DISTINCT id FROM reviews) UNION DISTINCT (SELECT DISTINCT id FROM historicalreviews)' .
+#          ' UNION DISTINCT (SELECT id FROM queue)';
+#my $ref = $crmst->SelectAll($sql);
 #$seen{$_->[0]} = 1 for @{$ref};
 my $n = 0;
-
+my $usql = sprintf '(SELECT id FROM users WHERE %s=1'.
+                   ' AND extadmin+expert+admin+superadmin=0)',
+                   ($noadvanced)?'reviewer':'advanced';
+my $ssql = 'status=4 OR status=5';
+$ssql .= ' OR status=7' if $noadvanced;
+my $prisql = '';
+$prisql = sprintf ' AND priority IN (%s)', join ',', @pris if scalar @pris;
 my $orderby = ($random)? 'RAND()':'time DESC';
-$sql = 'SELECT id,user,time,gid,status FROM historicalreviews WHERE' .
-       ' user IN (SELECT id FROM users WHERE advanced=1 AND extadmin+expert+admin+superadmin=0) AND' . 
-       ' validated=1 AND (status=4 OR status=5) ORDER BY ' . $orderby;
-$ref = $crms->GetDb()->selectall_arrayref($sql);
-print "$sql\n" if $verbose;
+my $sql = 'SELECT id,user,time,gid,status FROM historicalreviews WHERE' .
+          ' user IN '. $usql.
+          ' AND validated=1 AND ('. $ssql. ')'.
+          $prisql .  ' ORDER BY ' . $orderby;
+my $ref = $crmsp->SelectAll($sql);
+printf "$sql: %d results\n", scalar @$ref if $verbose;
 my $s4 = 0;
 my $s5 = 0;
-my @sqls = ();
+my $s7 = 0;
 foreach my $row (@{$ref})
 {
   my $id = $row->[0];
@@ -126,16 +139,17 @@ foreach my $row (@{$ref})
   my $gid    = $row->[3];
   my $status = $row->[4];
   # Do not do nonmatching 'crms' status 4s.
-  my $expr = $crms->SimpleSqlGet('SELECT reason FROM exportdata WHERE gid=?', $gid);
+  my $expr = $crmsp->SimpleSqlGet('SELECT reason FROM exportdata WHERE gid=?', $gid);
   next if $expr eq 'crms';
   $sql = 'SELECT MAX(swiss) FROM historicalreviews WHERE id=?';
-  next if 0 < $crms->SimpleSqlGet($sql, $id);
+  next if 0 < $crmsp->SimpleSqlGet($sql, $id);
   $sql = 'SELECT reason FROM exportdata WHERE gid=?';
-  my $expreason = $crms->SimpleSqlGet($sql, $gid);
+  my $expreason = $crmsp->SimpleSqlGet($sql, $gid);
   next if $expreason eq 'crms';
-  my $record = $crms->GetMetadata($id);
-  $sql = "SELECT attr,reason,renDate,renNum,category,note,duration FROM historicalreviews WHERE id='$id' AND user='$user' AND time='$time'";
-  my $ref2 = $crms->GetDb()->selectall_arrayref($sql);
+  my $record = $crmsp->GetMetadata($id);
+  $sql = 'SELECT attr,reason,renDate,renNum,category,note'.
+         ' FROM historicalreviews WHERE id=? AND user=? AND time=?';
+  my $ref2 = $crmsp->SelectAll($sql, $id, $user, $time);
   $row = $ref2->[0];
   my $attr = $row->[0];
   my $reason = $row->[1];
@@ -143,26 +157,24 @@ foreach my $row (@{$ref})
   my $renNum = $row->[3];
   my $category = $row->[4];
   my $note = $row->[5];
-  my $duration = $row->[6];
-  $renDate = (defined $renDate)? "'$renDate'":'NULL';
-  $renNum = (defined $renNum)? "'$renNum'":'NULL';
-  $category = (defined $category)? "'$category'":'NULL';
-  $note = (defined $note)? $crms->GetDb()->quote($note):'NULL';
-  push @sqls, "INSERT INTO queue (id,time,pending_status) VALUES ('$id','$time',1)";
-  push @sqls, 'INSERT INTO reviews (id,user,time,attr,reason,renDate,renNum,category,note,duration) ' .
-              "VALUES ('$id','$user','$time',$attr,$reason,$renDate,$renNum,$category,$note,'$duration')";
-  $crms2->UpdateMetadata($id, 1) unless $noop;
+  $sql = 'INSERT INTO queue (id,time,pending_status) VALUES (?,?,1)';
+  $crmst->PrepareSubmitSql($sql, $id, $time) unless $noop;
+  $sql = 'INSERT INTO reviews (id,user,time,attr,reason,renDate,renNum,category,note)'.
+         'VALUES (?,?,?,?,?,?,?,?,?)';
+  $crmst->PrepareSubmitSql($sql, $id, $user, $time, $attr, $reason,
+                          $renDate, $renNum, $category, $note) unless $noop;
+  $crmst->UpdateMetadata($id, 1) unless $noop;
   if (defined $excel || defined $out)
   {
-    my $author = $crms->GetRecordAuthor($id, $record);
-    my $title = $crms->GetRecordTitle($id, $record);
+    my $author = $crmst->GetRecordAuthor($id, $record);
+    my $title = $crmst->GetRecordTitle($id, $record);
     next if $seenAuthors{$author};
     next if $seenTitles{$title};
     $seenAuthors{$author} = 1;
     $seenTitles{$title} = 1;
-    my $date = $crms->GetRecordPubDate($id, $record);
-    my $country = $crms->GetRecordPubCountry($id, $record);
-    my $rights = $crms->TranslateAttr($attr) . '/' . $crms->TranslateReason($reason);
+    my $date = $crmst->GetRecordPubDate($id, $record);
+    my $country = $crmst->GetRecordPubCountry($id, $record);
+    my $rights = $crmst->TranslateAttr($attr) . '/' . $crmst->TranslateReason($reason);
     $category = $row->[4];
     if (defined $out)
     {
@@ -184,20 +196,14 @@ foreach my $row (@{$ref})
   $n++;
   $s4++ if $status == 4;
   $s5++ if $status == 5;
+  $s7++ if $status == 7;
 }
-print "Warning: $_\n" for @{$crms->GetErrors()};
 $workbook->close() if $workbook;
 close $fh if defined $out;
-$crms = $crms2;
-foreach $sql (@sqls)
-{
-  print "$sql\n" if $verbose;
-  $crms->PrepareSubmitSql($sql) unless $noop;
-}
-
-$sql = "INSERT INTO queuerecord (itemcount,source) VALUES ($n,'training.pl')";
+$sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,"training.pl")';
 print "$sql\n" if $verbose;
-$crms->PrepareSubmitSql($sql) unless $noop;
-print "Added $n: $s4 status 4 and $s5 status 5\n";
-print "Warning: $_\n" for @{$crms->GetErrors()};
+$crmst->PrepareSubmitSql($sql, $n) unless $noop;
+print "Added $n: $s4 status 4, $s5 status 5, $s7 status 7\n";
+print "Warning: $_\n" for @{$crmsp->GetErrors()};
+print "Warning: $_\n" for @{$crmst->GetErrors()};
 
