@@ -24,20 +24,10 @@
     <br/><a href="JavaScript:window.close()">Close</a>
     [% STOP %]
   [% END %]
+  [% blah = crms.UnlockAllItemsForUser(user) %]
   [% err = crms.LockItem(barcode, user, expert) %]
   [% IF err != 0 %]
     <h3>[% err %].</h3>
-    [% locked = crms.GetLockedItems(user) %]
-    [% IF locked %]
-      [% FOREACH item IN locked.keys %]
-         <strong>locked:</strong>
-         [% crms.GetTitle( item ) %]
-         [% IF user == locked.${item}.locked %]
-           [ <a href=[% crms.Sysify("crms?p=crms;unlock=$item") %]>unlock item</a> ]
-        [% END %]
-      [% END %]
-    [% END %]
-    <br/><a href="JavaScript:window.close()">Close</a>
     [% STOP %]
   [% END %]
 [% END %]
