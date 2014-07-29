@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.8.12';
+  return '4.8.13';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -1470,7 +1470,7 @@ sub SubmitReview
   if ($hold)
   {
     $hold = $self->HoldExpiry($id, $user, 0);
-    my $note = "hold from $user on $id";
+    my $note = "hold from $user on $id: $hold";
     $self->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $note);
     push(@fields, 'hold');
     push(@values, $hold);
@@ -1527,8 +1527,9 @@ sub SubmitReview
       my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $category, $renNum, $renDate);
       #We have decided to register the expert decision right away.
       $self->RegisterStatus($id, $status);
-      # Clear all holds
-      $sql = 'UPDATE reviews SET hold=NULL,sticky_hold=NULL,time=time WHERE id=?';
+      # Clear all non-expert holds
+      $sql = 'UPDATE reviews SET hold=NULL,sticky_hold=NULL,time=time WHERE id=?'.
+             ' AND user NOT IN (SELECT id FROM users WHERE expert=1)';
       $self->PrepareSubmitSql($sql, $id);
     }
     $self->CheckPendingStatus($id);
