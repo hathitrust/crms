@@ -16,7 +16,7 @@ use Spreadsheet::WriteExcel;
 
 my $usage = <<END;
 USAGE: $0 [-hnrtv] [-e FILE] [-o FILE] [-x SYS]
-          [-p PRIORITY [-p PRIORITY2...]] count
+          [-p PRI [-p PRI2...]] count
 
 Populates the training database with examples (correct, single reviews) from production.
 
@@ -25,6 +25,7 @@ Populates the training database with examples (correct, single reviews) from pro
 -h       Print this help message.
 -n       Do not submit SQL.
 -o       Write a tab-delimited file with information on the volumes to be added.
+-p PRI   Only include reviews of the specified priority PRI
 -r       Randomize sample from production.
 -t       Run in training (dev otherwise).
 -v       Be verbose.
@@ -35,9 +36,9 @@ my $noadvanced;
 my $excel;
 my $help;
 my $noop;
+my $out;
 my @pris;
 my $random;
-my $out;
 my $training;
 my $verbose;
 my $sys;
