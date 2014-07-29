@@ -9,7 +9,7 @@ our @EXPORT = qw(ValidateSubmission);
 sub ValidateSubmission
 {
   my $self = shift;
-  my ($id, $user, $attr, $reason, $note, $category, $renNum, $renDate) = @_;
+  my ($id, $user, $attr, $reason, $note, $category, $renNum, $renDate, $oneoff) = @_;
   my $errorMsg = '';
   my $noteError = 0;
   $attr = $self->TranslateAttr($attr);
