@@ -504,7 +504,7 @@ sub InheritanceReport
   my %data = ();
   my %seen = ();
   my $sql = 'SELECT id,gid,attr,reason,time,src FROM exportdata WHERE' .
-            " (src!='inherited' AND time>'$start' AND time<='$end' AND exported=1)" .
+            " (src!='inherited' AND time>'$start' AND time<='$end')" .
             " OR id IN (SELECT id FROM unavailable WHERE src='$src') ORDER BY time DESC";
   if ($singles && scalar @{$singles})
   {
