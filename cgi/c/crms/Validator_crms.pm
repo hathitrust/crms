@@ -9,14 +9,16 @@ our @EXPORT = qw(ValidateSubmission);
 sub ValidateSubmission
 {
   my $self = shift;
-  my ($id, $user, $attr, $reason, $note, $category, $renNum, $renDate) = @_;
+  my ($id, $user, $attr, $reason, $note, $category, $renNum, $renDate, $oneoff) = @_;
   my $errorMsg = '';
 
   my $noteError = 0;
   my $hasren = ($renNum && $renDate);
   my $date = $self->GetPubDate($id);
   ## und/nfi
-  if ( $attr == 5 && $reason == 8 && ( ( ! $note ) || ( ! $category ) )  )
+  if ($attr == 5 && $reason == 8 &&
+      (!$category ||
+       (!$note && 1 == $self->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category))))
   {
     $errorMsg .= 'und/nfi must include note category and note text.';
     $noteError = 1;
@@ -66,18 +68,19 @@ sub ValidateSubmission
   ## for these checks is not clear.
   if ($attr == 1 && $reason == 2)
   {
-    if ($self->IsUserSuperAdmin($user))
+    #if ($self->IsUserSuperAdmin($user))
+    #{
+    #  $errorMsg .= 'Renewal no longer required for works published after 1963. ' if $date > 1963 && $hasren;
+    #  #$errorMsg .= 'pd/ncn must include renewal id and renewal date. ' if $date <= 1963 && !$hasren;
+    #}
+    #elsif ($self->IsUserAdmin($user))
+    if ($self->IsUserAdmin($user))
     {
       $errorMsg .= 'Renewal no longer required for works published after 1963. ' if $date > 1963 && $hasren;
-      #$errorMsg .= 'pd/ncn must include renewal id and renewal date. ' if $date <= 1963 && !$hasren;
-    }
-    elsif ($self->IsUserAdmin($user))
-    {
-      $errorMsg .= 'Renewal no longer required for works published after 1963. ' if $date > 1963 && $hasren;
-      if ($date <= 1963 && (!$self->TolerantCompare($category, 'Expert Note')) && !$hasren)
-      {
-        $errorMsg .= 'pd/ncn must include either renewal id and renewal date, or note category "Expert Note". ';
-      }
+      #if ($date <= 1963 && (!$self->TolerantCompare($category, 'Expert Note')) && !$hasren)
+      #{
+      #  $errorMsg .= 'pd/ncn must include either renewal id and renewal date, or note category "Expert Note". ';
+      #}
     }
     #else
     #{
