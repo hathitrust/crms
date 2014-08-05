@@ -180,6 +180,8 @@ function PredictRights(id)
       if (req.status == 200)
       {
         sel = GetCheckedValue(rights);
+        und = document.getElementById('UNDNFI').title;
+        if (und && sel == und) return;
         if (!und || sel != und)
         {
           if (sel != "")
