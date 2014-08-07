@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.8.14';
+  return '4.8.15';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -5002,16 +5002,18 @@ sub GetMonthStats
   $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND legacy!=1 AND attr=5' .
          ' AND EXTRACT(YEAR FROM time)=? AND EXTRACT(MONTH FROM time)=?';
   my $total_und = $self->SimpleSqlGet($sql, $user, $y, $m);
-  #time reviewing ( in minutes ) - not including outliers
+  # time reviewing (in minutes) - not including outliers
+  # default outlier seconds is 300 (5 min)
+  my $outSec = $self->GetSystemVar('outlierSeconds', 300);
   $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/60.0 FROM historicalreviews' .
          ' WHERE user=? AND legacy!=1 AND EXTRACT(YEAR FROM time)=?' .
-         ' AND EXTRACT(MONTH FROM time)=? AND duration<="00:05:00"';
-  my $total_time = $self->SimpleSqlGet($sql, $user, $y, $m);
-  #total outliers
+         ' AND EXTRACT(MONTH FROM time)=? AND TIME(duration)<=SEC_TO_TIME(?)';
+  my $total_time = $self->SimpleSqlGet($sql, $user, $y, $m, $outSec);
+  # Total outliers
   $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND legacy!=1' .
          ' AND EXTRACT(YEAR FROM time)=? AND EXTRACT(MONTH FROM time)=?' .
-         ' AND duration>"00:05:00"';
-  my $total_outliers = $self->SimpleSqlGet($sql, $user, $y, $m);
+         ' AND TIME(duration)>SEC_TO_TIME(?)';
+  my $total_outliers = $self->SimpleSqlGet($sql, $user, $y, $m, $outSec);
   my $time_per_review = 0;
   if ($total_reviews - $total_outliers > 0)
   {
