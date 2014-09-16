@@ -1261,6 +1261,8 @@ sub AddItemToQueueOrSetItemActive
   my $override = shift;
   my $src      = shift;
   my $user     = shift;
+  my $noop     = shift;
+  my $record   = shift;
 
   $user = $self->get('user') unless $user;
   $id = lc $id;
@@ -1293,12 +1295,12 @@ sub AddItemToQueueOrSetItemActive
     else
     {
       $sql = 'UPDATE queue SET priority=?, time=NOW(), source=? WHERE id=?';
-      $self->PrepareSubmitSql($sql, $priority, $src, $id);
+      $self->PrepareSubmitSql($sql, $priority, $src, $id) unless $noop;
       push @msgs, "changed priority from $oldpri to $priority";
       if ($n)
       {
         $sql = 'UPDATE reviews SET priority=?, time=time WHERE id=?';
-        $self->PrepareSubmitSql($sql, $priority, $id);
+        $self->PrepareSubmitSql($sql, $priority, $id) unless $noop;
       }
       $stat = 3;
     }
@@ -1311,7 +1313,7 @@ sub AddItemToQueueOrSetItemActive
   }
   else
   {
-    my $record = $self->GetMetadata($id);
+    $record = $self->GetMetadata($id) unless defined $record;
     my $issues;
     @msgs = @{ $self->GetViolations($id, $record, $priority, $override) };
     $issues = join '; ', @msgs if scalar @msgs;
@@ -1324,16 +1326,16 @@ sub AddItemToQueueOrSetItemActive
       my $existing = $self->SimpleSqlGet('SELECT issues FROM queue WHERE id=?', $id);
       $issues = $existing if defined $existing;
       my $sql = 'INSERT INTO queue (id,priority,source,issues) VALUES (?,?,?,?)';
-      $self->PrepareSubmitSql($sql, $id, $priority, $src, $issues);
-      $self->UpdateMetadata($id, 1, $record);
+      $self->PrepareSubmitSql($sql, $id, $priority, $src, $issues) unless $noop;
+      $self->UpdateMetadata($id, 1, $record) unless $noop;
       $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (1,?)';
-      $self->PrepareSubmitSql($sql, $src);
+      $self->PrepareSubmitSql($sql, $src) unless $noop;
     }
   }
   if ($user && ($stat == 0 || $stat == 3))
   {
     my $sql = 'UPDATE queue SET added_by=? WHERE id=?';
-    $self->PrepareSubmitSql($sql, $user, $id);
+    $self->PrepareSubmitSql($sql, $user, $id) unless $noop;
   }
   return $stat . join '; ', @msgs;
 }
@@ -8720,7 +8722,7 @@ sub StartHTML
 {
   my $self  = shift;
   my $title = shift;
-  
+
   my $html = <<END;
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                       "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -8746,7 +8748,7 @@ sub GetClosedTickets
   if (scalar @txs > 0)
   {
     use Jira;
-    my $ua = Jira::Login($self) unless defined $ua;
+    $ua = Jira::Login($self) unless defined $ua;
     my $stats = Jira::GetIssuesStatus($self, $ua, \@txs);
     foreach my $tx (keys %{$stats})
     {
