@@ -8737,6 +8737,7 @@ END
 sub GetClosedTickets
 {
   my $self = shift;
+  my $ua   = shift;
 
   my $sql = 'SELECT DISTINCT source FROM queue WHERE source LIKE "HTS%"';
   my @txs;
@@ -8745,7 +8746,7 @@ sub GetClosedTickets
   if (scalar @txs > 0)
   {
     use Jira;
-    my $ua = Jira::Login($self);
+    my $ua = Jira::Login($self) unless defined $ua;
     my $stats = Jira::GetIssuesStatus($self, $ua, \@txs);
     foreach my $tx (keys %{$stats})
     {
