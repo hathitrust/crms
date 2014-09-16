@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.8.15';
+  return '4.8.16';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -4929,19 +4929,19 @@ sub CreateReviewInstitutionGraph
 {
   my $self  = shift;
 
-  my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE legacy=0 AND user!="autocrms"';
-  my $of = $self->SimpleSqlGet($sql);
-  $sql = 'SELECT user,COUNT(id) FROM historicalreviews WHERE legacy=0 AND user!="autocrms" GROUP BY user';
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
-  my %totals = ();
+  my $sql = 'SELECT i.shortname,COUNT(h.id) AS n FROM historicalreviews h'.
+            ' INNER JOIN users u ON h.user=u.id'.
+            ' INNER JOIN institutions i ON u.institution=i.id WHERE h.legacy=0'.
+            ' AND h.user!="autocrms" GROUP BY i.shortname ORDER BY n DESC';
+  my $ref = $self->SelectAll($sql);
+  my $of = 0;
+  my %totals;
   foreach my $row (@{$ref})
   {
-    my $user = $row->[0];
+    my $inst = $row->[0];
     my $n = $row->[1];
-    my $inst = 'umich.edu';
-    $inst = $1 if $user =~ m/@(.+)/;
-    $inst =~ s/-expert//;
-    $totals{$inst} += $n;
+    $of += $n;
+    $totals{$inst} = $n;
   }
   my @vals;
   foreach my $inst (sort keys %totals)

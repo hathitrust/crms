@@ -70,7 +70,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart5", "400", "300", "9.0.
       [% ELSE %]
       Breakdown of Volumes Filtered from Candidates
       [% END %]</h4></td>
-    <td><h4>Breakdown of Determinations by Institution</h4></td>
+    <td><h4>Breakdown of Reviews by Institution</h4></td>
   </tr>
 </table>
 
