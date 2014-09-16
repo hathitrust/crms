@@ -5170,16 +5170,16 @@ sub GetTitle
 
 sub GetPubDate
 {
-  my $self = shift;
-  my $id   = shift;
-  my $do2  = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $do2    = shift;
+  my $record = shift;
 
   my $sql = 'SELECT YEAR(pub_date) FROM bibdata WHERE id=?';
   my $date = $self->SimpleSqlGet($sql, $id);
-  my $record;
   if (!$date)
   {
-    $record = $self->UpdateMetadata($id, 1);
+    $record = $self->UpdateMetadata($id, 1, $record);
     $date = $self->SimpleSqlGet($sql, $id);
   }
   if ($date && $do2)
