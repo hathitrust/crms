@@ -5,10 +5,9 @@
 # Destination Production Servers
 #   (Note: -m option _must_ be used to specify server to use
 #
-MACC       = ( quod-update-macc.umdl.umich.edu )
-HATCHER    = ( quod-update-hatcher.umdl.umich.edu )
+VALUESTORE    = ( quod-update.umdl.umich.edu )
 
-ALLHOSTS = ( ${MACC} ${HATCHER} )
+ALLHOSTS = ( ${VALUESTORE} )
 
 # File Directories to be released (source)
 
