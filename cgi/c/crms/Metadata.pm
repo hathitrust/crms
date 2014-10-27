@@ -404,6 +404,26 @@ sub country
   return Countries::TranslateCountry($code, $long);
 }
 
+sub enumchron
+{
+  my $self = shift;
+
+  my $data;
+  eval {
+    my $json = $self->json;
+    foreach my $item (@{$json->{'items'}})
+    {
+      if ($self->id eq $item->{'htid'})
+      {
+        $data = $item->{'enumcron'};
+        last;
+      }
+    }
+  };
+  $self->SetError('enumchron query for ' . $self->id . " failed: $@") if $@;
+  return $data;
+}
+
 sub volumeIDs
 {
   my $self = shift;
