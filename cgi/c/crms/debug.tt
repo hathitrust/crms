@@ -168,7 +168,7 @@
 
 [% IF cgi.param('multibyte') %]
   [% sql = "SELECT id,author,title FROM bibdata WHERE LENGTH(title)!=CHAR_LENGTH(title) OR LENGTH(author)!=CHAR_LENGTH(author) ORDER BY author,title,id" %]
-  [% ref  = crms.GetDb().selectall_arrayref(sql) %]
+  [% ref  = crms.SelectAll(sql) %]
   <h4>[% ref.size %] Items</h4>
   <table class='exportStats'><tr><th>ID</th><th>Author</th><th>Title</th></tr>
   [% FOREACH r IN ref %]
@@ -179,7 +179,7 @@
 
 [% IF cgi.param('systemvars') %]
   [% sql = "SELECT name,value FROM systemvars ORDER BY name" %]
-  [% ref  = crms.GetDb().selectall_arrayref(sql) %]
+  [% ref  = crms.SelectAll(sql) %]
   <h4>System Variables</h4>
   <table class='exportStats'><tr><th>Name</th><th>Value</th></tr>
   [% FOREACH r IN ref %]
