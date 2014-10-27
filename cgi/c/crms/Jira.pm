@@ -43,6 +43,38 @@ END
 # msg:    Text of Jira comment
 # [ua]:   LWP user agent to (re-)use from Jira::Login
 # [noop]: Do not submit
+sub AddComment
+{
+  my $self = shift;
+  my $tx   = shift;
+  my $msg  = shift;
+  my $ua   = shift;
+  my $noop = shift;
+
+  my $json = <<END;
+{
+  "update":
+  {
+    "comment":
+    [
+      {
+        "add":
+        {
+          "body":"$msg"
+        }
+      }
+    ]
+  }
+}
+END
+  return PostToJira($self, $tx, $json, $ua, $noop);
+}
+
+# Returns undef on success, error otherwise.
+# tx:     Jira ticket
+# msg:    Text of Jira comment
+# [ua]:   LWP user agent to (re-)use from Jira::Login
+# [noop]: Do not submit
 sub CloseIssue
 {
   my $self = shift;
@@ -78,9 +110,25 @@ sub CloseIssue
   }
 }
 END
+  return PostToJira($self, $tx, $json, $ua, $noop);
+}
+
+# Returns undef on success, error otherwise.
+# tx:     Jira ticket
+# json:   JSON to post
+# [ua]:   LWP user agent to (re-)use from Jira::Login
+# [noop]: Do not submit
+sub PostToJira
+{
+  my $self = shift;
+  my $tx   = shift;
+  my $json = shift;
+  my $ua   = shift;
+  my $noop = shift;
+
   $ua = Jira::Login($self) unless defined $ua;
-  return unless defined $ua;
-  return unless defined $tx;
+  return 'No connection to Jira' unless defined $ua;
+  return 'No ticket specified' unless defined $tx;
   my $err;
   my $url = 'https://wush.net/jira/hathitrust/rest/api/2/issue/' . $tx . '/transitions';
   my $code;
