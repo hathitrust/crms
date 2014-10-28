@@ -140,11 +140,24 @@ function popReviewInfo(id,user,sys)
 
 function PredictRights(id)
 {
-  var renewalField = document.getElementById("renewalField");
-  var year = renewalField.value;
+  var year = document.getElementById("renewalField").value;
   var isPub = (document.getElementById('renewalFieldCheckbox').checked)? 1:0;
   var cat = SelectedCategory();
   var isCrown = (cat == 'Crown Copyright')? 1:0;
+  /*var actualPubField = document.getElementById('actualPubDateField');
+  var actualPub;
+  if (actualPubField)
+  {
+    actualPub = actualPubField.value;
+  }
+  if (actualPub == null)
+  {
+    actualPubField = document.getElementById('pubDateSpan');
+    if (actualPubField)
+    {
+      actualPub = actualPubField.value;
+    }
+  }*/
   var req = null;
   var rights = document.getElementsByName("rights");
   var sel = GetCheckedValue(rights);
@@ -189,14 +202,16 @@ function PredictRights(id)
             button = document.getElementById("r" + sel);
             button.checked = "";
           }
-          //alert(req.responseText);
           button = document.getElementById("r" + req.responseText);
           if (button) button.checked = "checked"
         }
       }    
     } 
   };
-  var url = "/cgi/c/crms/predictRights?sys=crmsworld;id=" + id + ";year=" + year + ";pub=" + isPub + ";crown=" + isCrown;
+  var url = "/cgi/c/crms/predictRights?sys=crmsworld;id=" +
+            id + ";year=" + year + ";ispub=" + isPub +
+            ";crown=" + isCrown;
+  //if (actualPub) url += ";pub=" + actualPub;
   req.open("GET", url, true);
   req.send(null);
 }
@@ -205,12 +220,22 @@ function PredictDate(id)
 {
   var rf = document.getElementById("renewalField2");
   var year = rf.value;
-  if (year.length == 0) return;
+  var span = document.getElementById("renewalSpan2");
+  if (year.length == 0)
+  {
+    span.innerHTML = '';
+    return;
+  }
   //var isPub = (document.getElementById('renewalFieldCheckbox2').checked)? 1:0;
   //var cat = SelectedCategory();
   //var isCrown = (cat == 'Crown Copyright')? 1:0;
+  /*var actualPubField = document.getElementById('actualPubDateField');
+  var actualPub;
+  if (actualPubField)
+  {
+    actualPub = actualPubField.value;
+  }*/
   var req = null;
-  var span = document.getElementById("renewalSpan2");
   span.innerHTML = "Calculating...";
   if (window.XMLHttpRequest)
   {
@@ -235,11 +260,16 @@ function PredictDate(id)
       {
         var txt = req.responseText;
         span.innerHTML = txt;
-      }    
+      }
+      else
+      {
+        span.innerHTML = '';
+      }   
     } 
   };
-  //var url = "/cgi/c/crms/predictRights?sys=crmsworld;doyear=1;id=" + id + ";year=" + year + ";pub=" + isPub + ";crown=" + isCrown;
-  var url = "/cgi/c/crms/predictRights?sys=crmsworld;doyear=1;id=" + id + ";year=" + year;
+  var url = "/cgi/c/crms/predictRights?sys=crmsworld;doyear=1;id=" +
+            id + ";year=" + year;
+  //if (actualPub) url += ";pub=" + actualPub;
   req.open("GET", url, true);
   req.send(null);
 }
@@ -282,6 +312,17 @@ function ToggleADD()
   var field = document.getElementById("renewalField");
   lab.innerHTML = (cb.checked)? "Publication&nbsp;Date:":"Author&nbsp;Death&nbsp;Date:";
   field.title = (cb.checked)? "Publication Date":"Author Death Date";
+  /*var actualPubRow = document.getElementById('actualPubRow');
+  if (actualPubRow)
+  {
+    actualPubRow.style.display = (cb.checked)? "none":"table-row";
+    var actualPubField = document.getElementById('actualPubDateField');
+    if (actualPubField && cb.checked)
+    {
+      // not sure about this; it is destructive
+      //field.value = actualPubField.value;
+    }
+  }*/
 }
 
 function VerifyCategory()

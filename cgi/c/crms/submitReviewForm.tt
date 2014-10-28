@@ -67,7 +67,7 @@
       [% ELSE %]
         [% label = (renNum)? "Publication&nbsp;Date":"Author Death Date" %]
       [% END %]
-      <td class="reviewGrey"><strong><label id="renewalFieldLabel" for="renewalField">
+      <td nowrap="nowrap"><strong><label id="renewalFieldLabel" for="renewalField">
       [% label %]: </label></strong></td>
       <td nowrap="nowrap">
       [% IF ren %]
@@ -101,6 +101,21 @@
          onfocus="document.getElementById('renewalField').focus()">.</a>
       </td>
     </tr>
+    [% #IF NOT ren %]
+    [% IF 0 %]
+      [% IF pub_date.match('^\d+-\d+$') %]
+        <tr id="actualPubRow">
+          <td nowrap="nowrap"><strong><label id="renewalFieldLabel" for="renewalField">
+            Actual Pub Date: </label></strong>
+          </td>
+          <td nowrap="nowrap">
+            <input id="actualPubDateField" title="Actual Pub Date" type="text"
+                   name="actualPubDateField" size="6"
+                   onblur="javascript:PredictRights('[% barcode %]');"/>
+          </td
+        </tr>
+      [% END %]
+    [% END %]
     <tr>
       <td class="reviewGrey" align="left" style="margin:0px;padding:0px;">
       [% IF ren %]
