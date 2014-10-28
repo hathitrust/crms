@@ -11,9 +11,10 @@ my $cgi    = new CGI;
 my $user   = $ENV{'REMOTE_USER'};
 my $id     = $cgi->param('id');
 my $year   = $cgi->param('year');
-my $sys    =  $cgi->param('sys');
-my $pub    =  $cgi->param('pub');
+my $sys    = $cgi->param('sys');
+my $ispub  = $cgi->param('ispub');
 my $crown  = $cgi->param('crown');
+#my $pub    = $cgi->param('pub');
 my $doyear = $cgi->param('doyear');
 $sys = 'crms' unless $sys;
 my $crms = CRMS->new(logFile  =>   "$DLXSROOT/prep/c/crms/log_review.txt",
@@ -22,18 +23,17 @@ my $crms = CRMS->new(logFile  =>   "$DLXSROOT/prep/c/crms/log_review.txt",
                      root     =>   $DLXSROOT,
                      dev      =>   $DLPS_DEV,
                      user     =>   $user);
-
 my $n;
 if (defined $doyear)
 {
-  $n = $crms->PredictLastCopyrightYear($id, $year, $pub, $crown);
-  my $r = $crms->TranslateRights($crms->PredictRights($id, $year, $pub, $crown));
+  $n = $crms->PredictLastCopyrightYear($id, $year, $ispub, $crown);
+  my $r = $crms->TranslateRights($crms->PredictRights($id, $year, $ispub, $crown));
   if (defined $n)
   {
     $n++;
     if (defined $r && $r =~ /gatt$/)
     {
-      $n = $crms->GetPubDate($id) + 95;
+      $n = 95 + ((defined $pub)? $pub:$crms->GetPubDate($id));
       $n .= ' (GATT)';
     }
   }
@@ -41,17 +41,17 @@ if (defined $doyear)
   {
     $n = 'unknown';
   }
-  print $cgi->header();
-  print $n
 }
 else
 {
-  $n = $crms->PredictRights($id, $year, $pub, $crown);
-  if (defined $n && $n !~ /\d+/) { print $cgi->header( -status => "400" ); }
-  else
-  {
-    print $cgi->header();
-    print $n if defined $n;
-  }
+  #if (defined $pub && $pub =~ m/^(\d+)-(\d+)$/)
+  #{
+  #  my ($pub1, $pub2) = ($1, $2);
+  #  my $r1 = $crms->PredictRights($id, $year, $ispub, $crown, $pub1);
+  #  my $r2 = $crms->PredictRights($id, $year, $ispub, $crown, $pub2);
+  #  $n = $r1 if $crms->TolerantCompare($r1, $r2);
+  #}
+  $n = $crms->PredictRights($id, $year, $ispub, $crown) unless defined $n;
 }
-
+print $cgi->header();
+print $n if defined $n;
