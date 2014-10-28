@@ -103,7 +103,7 @@
     </tr>
     [% #IF NOT ren %]
     [% IF 0 %]
-      [% IF pub_date.match('^\d+-\d+$') %]
+      [% IF pubDate.match('^\d+-\d+$') %]
         <tr id="actualPubRow">
           <td nowrap="nowrap"><strong><label id="renewalFieldLabel" for="renewalField">
             Actual Pub Date: </label></strong>
@@ -132,7 +132,7 @@
                  value="[% renDate %]" size="8" readonly="readonly"/>
         [% ELSE %]
           <input type="button" class="reviewblue" value="Pull Pub Date"
-          [% IF NOT pub_date.match('^-?\d+$') %]disabled="disabled"[% END %]
+          [% IF NOT pubDate.match('^-?\d+$') %]disabled="disabled"[% END %]
           onclick="PullPubDate();
                    document.getElementById('renewalFieldCheckbox').checked=true;PredictRights('[% barcode %]');"
           accesskey="d"

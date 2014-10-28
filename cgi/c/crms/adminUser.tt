@@ -20,8 +20,9 @@
 [% admin      = cgi.param('admin')      %]
 [% superadmin = cgi.param('superadmin') %]
 [% note       = cgi.param('note')       %]
-[% delete     = cgi.param('delete')     %]
+[% disable    = cgi.param('disable')    %]
 [% projects   = cgi.param('projects')   %]
+[% commitment = cgi.param('commitment') %]
 [% order      = cgi.param('order')      %]
 
 
@@ -33,6 +34,7 @@
     <option value="0" [% (order==0)? 'selected="selected"':'' %]>Name</option>
     <option value="2" [% (order==2)? 'selected="selected"':'' %]>Institution</option>
     <option value="3" [% (order==3)? 'selected="selected"':'' %]>Privileges</option>
+    <option value="4" [% (order==4)? 'selected="selected"':'' %]>Commitment</option>
   </select>
 </form>
 
@@ -40,19 +42,15 @@
 
 [% IF crms.IsUserAdmin() %]
   [% IF add %]
-    [% IF delete %]
-      [% IF id %]
-        [% blah = crms.DeleteUser(id) %]
-        <h3>[% id %] was deleted</h3>
-        [% id = '' %]
-      [% END %]
+    [% IF id %]
+      [% res = crms.AddUser(id,kerberos,name,reviewer,advanced,expert,
+                            extadmin,admin,superadmin,note,projects,
+                            commitment,disable) %]
     [% ELSE %]
-      [% IF id %]
-        [% blah = crms.AddUser(id,kerberos,name,reviewer,advanced,expert,
-                               extadmin,admin,superadmin,note,projects) %]
-      [% ELSE %]
-        <h3 style="color:red;">No user ID provided</h3>
-      [% END %]
+      [% res = "No user ID provided" %]
+    [% END %]
+    [% IF res %]
+      <h3 style="color:red;">[% res %]</h3>
     [% END %]
   [% END %]
 [% END %]
@@ -62,7 +60,7 @@
   <tr>
     <th>Name</th><th>ID</th><th>Kerberos&nbsp;ID</th><th>Institution</th>
     <th>Reviewer</th><th>Advanced</th><th>Expert</th><th>Ext.&nbsp;Admin</th><th>Admin</th><th>Super&nbsp;Admin</th>
-    <th>Note</th><th>Projects</th><th>IP Address</th><th>Change&nbsp;To</th>
+    <th>Note</th><th>Projects</th><th>IP Address</th><th>Commitment</th><th>Change&nbsp;To</th>
   </tr>
   [% FOREACH userid IN users %]
     [% r = crms.IsUserReviewer(userid) %]
@@ -88,6 +86,7 @@
       <td style="text-align:center;">[% note %]</td>
       <td style="text-align:center;">[% crms.GetUserProjects(userid).join(', ') %]</td>
       <td>[% crms.GetUserIPs(userid).keys.join(', ') %]</td>
+      <td>[% crms.GetUserCommitment(userid, 1) %]</td>
       <td>
         [% IF crms.CanChangeToUser(user,userid) %]
         <form action="crms">
@@ -141,6 +140,13 @@
         <span style="color:#777777;">Comma-delimited, e.g. "CRMS Spain, Germany"</span>
       </td>
     </tr>
+    <tr>
+      <td colspan="2">
+        <label for="commitmentfield" style="float:left;width:5.5em">Commitment:</label>
+        <input id="commitmentfield" type="text" name="commitment" tabindex="5"/>
+        <span style="color:#777777;">As percent or decimal, e.g. 25% or .25</span>
+      </td>
+    </tr>
     </table>
     <br/>
     <table>
@@ -156,7 +162,7 @@
             <label for="superAdminCB">Super Admin</label></td>
       </tr>
     </table>
-    <br/><input type="checkbox" name="delete" id="deleteCB"/> <label for="deleteCB">Delete user</label>
+    <br/><input type="checkbox" name="disable" id="disableCB"/> <label for="disableCB">Disable user</label>
     <br/><br/><input type="submit" value="Submit"/>
   </form>
 </div>
@@ -165,7 +171,7 @@
 [% IF projs.size %]
   Available projects: <b>[% projs.join('</b>, <b>') %]</b><br/>
 [% END %]
-<span class="smallishText">Note: you can leave the name, kerberos, and note fields
+<span class="smallishText">Note: you can leave all fields
 blank and the corresponding fields will be unchanged in the user's record.</span>
 [% END %]
 

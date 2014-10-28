@@ -68,7 +68,7 @@
 
 [% status   = crms.GetStatus(barcode)     %]
 [% userName = crms.GetUserName(user)      %]
-[% pub_date = crms.GetPubDate(barcode, 1) %]
+[% pubDate  = crms.GetPubDate(barcode, 1) %]
 [% author   = crms.GetAuthor(barcode)     %]
 [% title    = crms.GetTitle(barcode)      %]
 
@@ -105,17 +105,24 @@
         <tr>
           <td style="text-align:left;"><a href="[% homeLink %]">Home</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="crms?p=Logout;sys=$sys">Logout</a></td>
         </tr>
-        <!--
+        
         <tr>
-          <td>
-            [% IF crms.WhereAmI() != 'Training' %]
-            <div id="ProgressBar[% (crms.sys() == 'crmsworld')? 'Red':'' %]">
-              <div id="ProgressBarInner"></div>
-            </div>
+          [% IF crms.WhereAmI() != 'Training' %]
+            [% prog = crms.GetUserProgress(user) %]
+            [% IF prog %]
+              <td><b>[% FILTER format('%.1f') %][% (prog * 100.0) %][% END %]%</b></td>
+              <td>
+                [% IF prog > 1.0 %][% prog = 1.0 %][% END %]
+                <div id="ProgressBar[% (crms.sys() == 'crmsworld')? 'Red':'' %]">
+                  <div id="ProgressBarInner"
+                       style="width:[% (prog * 100.0) _ '%' %];">
+                  </div>
+                </div>
+              </td>
             [% END %]
-          </td>
+          [% END %]
         </tr>
-        -->
+        
         <tr><td/></tr>
         <tr><td/></tr>
         <tr>
@@ -142,13 +149,16 @@
         
       </table>
       <table class="id">
-        <tr><td><strong>ID:</strong> <tt>[% barcode %]</tt>   </td></tr>
-        <tr><td><strong>Title:</strong> [% title %]           </td></tr>
-        <tr><td><strong>Author:</strong> [% author %]    <br/></td></tr>
-        <tr><td><strong>Pub Date:</strong> <span id="pubDateSpan">[% pub_date %]</span><br/></td></tr>
+        <tr><td><strong>ID:</strong> [% barcode %]</td></tr>
+        <tr><td><strong>Title:</strong> [% title %]</td></tr>
+        <tr><td><strong>Author:</strong> [% author %]</td></tr>
+        <tr><td><strong>Pub Date:</strong> <span id="pubDateSpan"
+          [% IF NOT ren && pubDate.match('^\d+-\d+$') %]class="red"[% END %]>
+          [% pubDate %]</span></td>
+        </tr>
         [% IF crms.GetSystemVar("showCountry") %]
           [% country = crms.GetPubCountry(barcode, undef, 1) %]
-          <tr><td><strong>Country:</strong> [% country %]<br/></td></tr>
+          <tr><td><strong>Country:</strong> [% country %]</td></tr>
         [% END %]
       </table>
       [% sources = crms.Sources(barcode,mag,ptview) %]
@@ -237,7 +247,7 @@
                                      error   = error,   select   = select,   mag      = mag,
                                      hold    = hold,    swiss    = swiss,    expert   = expert,
                                      status  = status,  sys      = sys,      ptview   = ptview,
-                                     import  = import,  ren      = ren %]
+                                     import  = import,  ren      = ren       pubDate  = pubDate %]
       [% IF crms.IsCorrection(barcode) %]
         <table class="ReviewError" id="CorrectionWarning">
           <tr>
@@ -298,8 +308,8 @@
       <table class="reviewGrey">
         <tr><th style="width:55%">Date calculator</th>
         <td>
-        <input id="renewalField2" title="[% label %]" type="text" name="renDate"
-               value="[% renDate %]" size="6" style="margin-left:0;"
+        <input id="renewalField2" title="[% label %]" type="text" name="renDate2"
+               size="6" style="margin-left:0;"
                onblur="javascript:PredictDate('[% barcode %]');"/>
         </td></tr>
         <tr><th style="width:55%">Public Domain in:</th>
@@ -338,11 +348,6 @@ window.onload = function(e)
       document.getElementById('renewalField').focus();
     }
   [% END %]
-  //var progress = document.getElementById('ProgressBarInner');
-  //if (progress)
-  //{
-  //  progress.style.width = '[% crms.GetUserProgress(user) %]';
-  //}
 }
 </script>
 

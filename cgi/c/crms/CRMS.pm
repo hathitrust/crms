@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.8.16';
+  return '4.9';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -3352,27 +3352,46 @@ sub AddUser
   my $superadmin = shift;
   my $note       = shift;
   my $projects   = shift;
+  my $commitment = shift;
+  my $disable    = shift;
 
-  $reviewer = ($reviewer)? 1:0;
-  $advanced = ($advanced)? 1:0;
-  $expert = ($expert)? 1:0;
-  $extadmin = ($extadmin)? 1:0;
-  $admin = ($admin)? 1:0;
-  $superadmin = ($superadmin)? 1:0;
+  my @fields = (\$reviewer,\$advanced,\$expert,\$extadmin,\$admin,\$superadmin);
+  my @fnames = qw (reviewer advanced expert extadmin admin superadmin);
+  ${$fields[$_]} = (${$fields[$_]})? 1:0 for (0 .. scalar @fields - 1);
+  $reviewer = $self->SimpleSqlGet('SELECT reviewer FROM users WHERE id=?', $id) unless $reviewer;
+  $advanced = $self->SimpleSqlGet('SELECT advanced FROM users WHERE id=?', $id) unless $advanced;
+  $expert = $self->SimpleSqlGet('SELECT expert FROM users WHERE id=?', $id) unless $expert;
+  $extadmin = $self->SimpleSqlGet('SELECT extadmin FROM users WHERE id=?', $id) unless $extadmin;
+  $admin = $self->SimpleSqlGet('SELECT admin FROM users WHERE id=?', $id) unless $admin;
+  $superadmin = $self->SimpleSqlGet('SELECT superadmin FROM users WHERE id=?', $id) unless $superadmin;
+  ($reviewer,$advanced,$expert,$extadmin,$admin,$superadmin) = (0,0,0,0,0,0) if $disable;
   # Remove surrounding whitespace on user id, kerberos, and name.
   $id =~ s/^\s*(.+?)\s*$/$1/;
   $kerberos =~ s/^\s*(.+?)\s*$/$1/;
   $name =~ s/^\s*(.+?)\s*$/$1/;
+  $commitment =~ s/^\s*(.+?)\s*$/$1/;
   $kerberos = $self->SimpleSqlGet('SELECT kerberos FROM users WHERE id=?', $id) unless $kerberos;
   $name = $self->SimpleSqlGet('SELECT name FROM users WHERE id=?', $id) unless $name;
   $note = $self->SimpleSqlGet('SELECT note FROM users WHERE id=?', $id) unless $note;
-  my $inst = $self->PredictUserInstitution($id);
-  my $wcs = $self->WildcardList(11);
+  $commitment = $self->SimpleSqlGet('SELECT commitment FROM users WHERE id=?', $id) unless $commitment;
+  # Remove percent sign if it exists and make sure commitment is a valid number.
+  # If it's > 1 count it as a percent, otherwise as a decimal.
+  # Convert it to decimal as needed for storage.
+  $commitment =~ s/%+//g;
+  if ($commitment !~ m/^\d*\.?\d*$/ || $commitment !~ m/\d+/)
+  {
+    return "Error: commitment '$commitment' not numeric.";
+  }
+  $commitment /= 100.0 if $commitment > 1;
+  my $inst = $self->SimpleSqlGet('SELECT institution FROM users WHERE id=?', $id);
+  $inst = $self->PredictUserInstitution($id) unless defined $inst;
+  my $wcs = $self->WildcardList(12);
   my $sql = 'REPLACE INTO users (id,kerberos,name,reviewer,advanced,expert,extadmin,' .
-            'admin,superadmin,note,institution)' .
+            'admin,superadmin,note,institution,commitment)' .
             ' VALUES ' . $wcs;
   $self->PrepareSubmitSql($sql, $id, $kerberos, $name, $reviewer, $advanced,
-                          $expert, $extadmin, $admin, $superadmin, $note, $inst);
+                          $expert, $extadmin, $admin, $superadmin, $note, $inst,
+                          $commitment);
   if (defined $projects)
   {
     my @ps = split m/\s*,\s*/, $projects;
@@ -3423,6 +3442,18 @@ sub GetUserNote
   $user = $self->get('user') unless $user;
   my $sql = 'SELECT note FROM users WHERE id=?';
   return $self->SimpleSqlGet($sql, $user);
+}
+
+sub GetUserCommitment
+{
+  my $self = shift;
+  my $user = shift;
+
+  $user = $self->get('user') unless $user;
+  my $sql = 'SELECT commitment FROM users WHERE id=?';
+  my $comm = $self->SimpleSqlGet($sql, $user);
+  $comm = 100*$comm . '%' if defined $comm;
+  return $comm or '';
 }
 
 sub GetUserKerberosID
@@ -3564,14 +3595,18 @@ sub GetUsers
   my $self  = shift;
   my $order = shift or 0;
 
-  my $dbh  = $self->GetDb();
-  my $ordercl = '(u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC, u.name ASC';
-  $ordercl = 'u.expert ASC, u.name' if $order == 1;
-  $ordercl = '(u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC, i.name ASC, u.name ASC' if $order == 2;
-  $ordercl = '(u.reviewer+(2*u.advanced)+(4*u.extadmin)+(8*u.admin)+(16*u.superadmin)) DESC, u.name ASC' if $order == 3;
-  my $sql = 'SELECT u.id FROM users u INNER JOIN institutions i ON u.institution=i.id ORDER BY ' . $ordercl;
-  my $ref = $dbh->selectall_arrayref($sql);
-  my @users = map { $_->[0]; } @{ $ref };
+  my $ordercl = '(u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC,u.name ASC';
+  $ordercl = 'u.expert ASC,u.name' if $order == 1;
+  $ordercl = '(u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC'.
+             ',i.name ASC,u.name ASC' if $order == 2;
+  $ordercl = '(u.reviewer+(2*u.advanced)+(4*u.extadmin)+(8*u.admin)+(16*u.superadmin)) DESC'.
+             ',u.name ASC' if $order == 3;
+  $ordercl = '(u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC'.
+             ',u.commitment DESC,u.name ASC' if $order == 4;
+  my $sql = 'SELECT u.id FROM users u INNER JOIN institutions i'.
+            ' ON u.institution=i.id ORDER BY ' . $ordercl;
+  my $ref = $self->SelectAll($sql);
+  my @users = map { $_->[0]; } @{$ref};
   return \@users;
 }
 
@@ -8578,7 +8613,20 @@ sub GetUserProgress
   my $self = shift;
   my $user = shift;
 
-  return sprintf '%d%%', 50;
+  my $p;
+  my $comm = $self->SimpleSqlGet('SELECT commitment FROM users WHERE id=?', $user);
+  if (defined $comm)
+  {
+    my $kerb = $self->SimpleSqlGet('SELECT kerberos FROM users WHERE id=?', $user) or 'xxxx';
+    my $sql = 'SELECT s.total_time/60.0 FROM userstats s INNER JOIN users u ON s.user=u.id'.
+              ' WHERE s.monthyear=CONCAT(YEAR(NOW()),"-",MONTH(NOW()))'.
+              ' AND (s.user=? OR u.kerberos=?)';
+    my $hours = $self->SimpleSqlGet($sql, $user, $kerb);
+    $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/3600.0 from reviews WHERE user=?';
+    $hours += $self->SimpleSqlGet($sql, $user);
+    $p = $hours/(160.0*$comm);
+  }
+  return $p;
 }
 
 sub OneoffProgress
