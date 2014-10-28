@@ -1,0 +1,183 @@
+[% IF NOT crms.IsUserAdmin() %]
+  [% INCLUDE denied.tt  %]
+  [% STOP %]
+[% END %]
+
+[% INCLUDE header.tt %]
+
+<script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
+<script type="text/javascript" src="/c/crms/swfobject.js"></script>
+<script type="text/javascript">
+<!--
+
+var graphURLBase = '/cgi/c/crms/getExportStats?type=graph;c=10;sys=' + gSys;
+var graphURL = graphURLBase;
+swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "1000", "600", "9.0.0",
+                   "expressInstall.swf", {"data-file":graphURL});
+
+function reloadSWF()
+{
+  ConstructURL();
+  findSWF('chart0').reload(graphURL);
+}
+
+function findSWF(movieName) {
+  if (navigator.appName.indexOf("Microsoft")!= -1) {
+    return window["ie_" + movieName];
+  } else {
+    return document[movieName];
+  }
+}
+
+window.onload = function(e)
+{
+  reloadSWF();
+}
+
+function ConstructURL()
+{
+  graphURL = graphURLBase;
+  var table = document.getElementById('userTable');
+	var aa=table.querySelectorAll('input.userCB');
+	for (var i=0; i < aa.length; i++) 
+	{
+	  if (aa[i].checked) graphURL += ';user=' + aa[i].id;
+	}
+	table = document.getElementById('userTable1');
+	aa=table.querySelectorAll('input.userCB');
+	for (var i=0; i < aa.length; i++) 
+	{
+	  if (aa[i].checked) graphURL += ';user=' + aa[i].id;
+	}
+	var menu = document.getElementById('activityTypeMenu');
+	graphURL += ';type2=' + menu.value;
+	var start = document.getElementById('startDate');
+	graphURL += ';startDate=' + start.value;
+	var end = document.getElementById('endDate');
+	graphURL += ';endDate=' + end.value;
+}
+
+function CheckAllTx(box,id)
+{
+  var q = 'input[name="'+id+'"]';
+	var aa=document.querySelectorAll(q);
+	for (var i=0; i < aa.length; i++) 
+	{
+	  aa[i].checked = box.checked;
+	}
+}
+
+function checkInst(id)
+{
+  var cb = document.getElementById(id);
+  var q = 'input[name="'+id+'"]';
+  //alert(q);
+	var aa=document.querySelectorAll(q);
+	var checked = 0;
+	for (var i=0; i < aa.length; i++) 
+	{
+	  if (aa[i].checked) checked++;
+	}
+	if (checked == aa.length) cb.checked = true;
+	else cb.checked = false;
+	//alert(id + ' ' + aa.length + ' ' + checked);
+}
+ 
+function save_image(debug)
+{
+  var ofc = findSWF("chart0");
+  var img_win = window.open('', 'Reviewer Activity Chart');
+  img_win.document.write('<html><head><title>imagesave<\/title><\/head><body>');
+  img_win.document.write('<img src="data:image/png;base64,' + ofc.get_img_binary() + '" \/>');
+  img_win.document.write('<\/body><\/html>');
+  img_win.document.close();
+}
+// -->
+</script>
+
+
+<table style="padding:0px;border-collapse:collapse;">
+<tr style="background-color:#FFFFFF;">
+  <td style="vertical-align:top;width:1000px;">
+    <label for="activityTypeMenu">Reviewer Activity: </label>
+<select title="Select Activity Type"
+        class="review" id="activityTypeMenu"
+        onchange="reloadSWF('chart0')">
+  <option value="0">Review Count</option>
+  <option value="1">Time Reviewing (hours)</option>
+  <option value="2">Invalidation Rate</option>
+</select>
+<input type="submit" value="Open Image in new Tab" onclick="save_image(0);"></input>
+<br/>
+<label for="startDate" style="width:5em;float:left;">Start Date:</label>
+<input type="text" id="startDate" name="startDate" value="[% startDate %]"
+       onclick="datePickerController.show('startDate');"
+       onblur="datePickerController.hide('startDate');reloadSWF('chart0');"/>
+<script type="text/javascript">
+// <![CDATA[
+  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };
+  datePickerController.createDatePicker(opts);
+// ]]>
+</script>
+<span class="smallText">(YYYY-MM-DD)</span>
+<br/>
+<label for="endDate" style="width:5em;float:left;">End Date:</label>
+<input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
+       onblur="datePickerController.hide('endDate');reloadSWF('chart0');"/>
+<script type="text/javascript">
+// <![CDATA[
+  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };
+  datePickerController.createDatePicker(opts);
+// ]]>
+</script>
+<span class="smallText">(YYYY-MM-DD)</span>
+<br/>
+<br/>
+    <div id="chart0"/>
+  </td>
+  <td style="align:left;text-align:left;vertical-align:top">
+    [% sql = "SELECT id,shortname FROM institutions WHERE id!=0 ORDER BY shortname ASC" %]
+    [% ref  = crms.SelectAll(sql) %]
+    <table class='exportStats' id='userTable'>
+    [% i = 1 %]
+    [% col = 0 %]
+    [% FOREACH r IN ref %]
+      [% revs  = crms.GetInstitutionReviewers(r.0) %]
+      [% IF revs.size() > 0 %]
+        [% IF (i > ref.size() / 2 && col == 0) %]
+          [% col = col + 1 %]
+          </td></table>
+          <td style="align:left;text-align:left;vertical-align:top">
+          <table class='exportStats' id='userTable[% col %]'>
+        [% END %]
+        [% i = i + 1 %]
+        <tr><th colspan="2">
+          <label for="instCB_[% r.0 %]">[% r.1 %]</label>
+          <input type="checkbox"
+                 id="inst_[% r.0 %]"
+                 onclick="CheckAllTx(this,'inst_[% r.0 %]');"
+                 onchange="reloadSWF('chart0');"/>
+        </th></tr>
+      [% END %]
+      [% FOREACH h IN revs %]
+        <tr>
+          <td style="white-space:nowrap;">
+            <input type="checkbox" class="userCB" name="inst_[% r.0 %]" id="[% h.id %]"
+                   onchange="checkInst('inst_[% r.0 %]');reloadSWF('chart0');"/>
+            <label for="[% h.id %]">
+              [% IF h.active == 0 %]<i>[% END %]
+              [% h.name %]
+              [% IF h.active == 0 %]</i>[% END %]
+            </label>
+          </td>
+          <td>[% IF h.commitment %][% 100 * h.commitment %]%[% END %]</td>
+        </tr>
+      [% END %]
+    [% END %]
+  </table>
+  </td>
+</tr>
+</table><br/>
+
+[% INCLUDE footer.tt %]
+

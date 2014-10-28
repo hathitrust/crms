@@ -4994,6 +4994,149 @@ sub CreateReviewInstitutionGraph
   return $report;
 }
 
+sub CreateReviewerGraph
+{
+  my $self  = shift;
+  my $type  = shift;
+  my $start = shift;
+  my $end   = shift;
+  my @users = @_;
+
+  $start =~ s/(\d\d\d\d-\d\d)-\d\d/$1/ if defined $start;
+  $end =~ s/(\d\d\d\d-\d\d)-\d\d/$1/ if defined $end;
+  $start = $self->SimpleSqlGet('SELECT MIN(monthyear) FROM userstats') unless $start;
+  $end = $self->SimpleSqlGet('SELECT MAX(monthyear) FROM userstats') unless $end;
+  my %users;
+  my %titles = (0=>'Review Count',1=>'Time Reviewing',2=>'Invalidation Rate');
+  my %sel = (0=>'SUM(s.total_reviews)',1=>'SUM(s.total_time/60)',2=>'100*SUM(s.total_incorrect)/SUM(s.total_reviews)');
+  $type = 0 unless defined $titles{$type};
+  my $title = $titles{$type};
+  my $sql = 'SELECT DISTINCT monthyear FROM userstats WHERE monthyear>=? AND monthyear<=? ORDER BY monthyear ASC';
+  #print "$sql, $start,  $end\n";
+  my @dates = map {$_->[0];} @{$self->SelectAll($sql, $start, $end)};
+  my @elements = (); # Lines of data points on the graph
+  my @colors = $self->PickColors(scalar @users, 0.8);
+  my $ceiling = 1;#100;
+  my $i = 0;
+  my @anims = qw(pop-up explode mid-slide drop fade-in shrink-in);
+  my $anim = $anims[rand @anims];
+  foreach my $user (@users)
+  {
+    my $kerb = $self->SimpleSqlGet('SELECT kerberos FROM users WHERE id=?', $user);
+    $kerb = 'xxxx' unless $kerb;
+    my $name = $self->GetUserName($user);
+    my $color = $colors[$i];
+    my $attrs = sprintf('"dot-style":{"type":"solid-dot","dot-size":3,"colour":"%s"},"colour":"%s"'.
+                        ',"on-show":{"type":"' . $anim . '","cascade":1,"delay":0.2},"text":"%s"',
+                        $color, $color, $name);
+    my @vals;
+    my @counts; # For the inval rate tip
+    foreach my $date (@dates)
+    {
+      my $sql = 'SELECT ' . $sel{$type} . ' FROM userstats s INNER JOIN users u ON s.user=u.id'.
+                ' WHERE s.monthyear=? AND (s.user=? OR u.kerberos=?)';
+      #print 'SELECT ' . $sel{$type} . ' FROM userstats s INNER JOIN users u ON s.user=u.id'.
+      #          " WHERE s.monthyear='$date' AND (s.user='$user' OR u.kerberos='$kerb')\n";
+      my $val = $self->SimpleSqlGet($sql, $date, $user, $kerb);
+      $val = 0 unless $val;
+      if ($type == 2)
+      {
+        $sql = 'SELECT SUM(s.total_reviews) FROM userstats s INNER JOIN users u ON s.user=u.id'.
+               ' WHERE s.monthyear=? AND (s.user=? OR u.kerberos=?)';
+        my $count = $self->SimpleSqlGet($sql, $date, $user, $kerb);
+        $count = 0 unless defined $count;
+        push @counts, $count;
+      }
+      if ($type == 1)
+      {
+        $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(r.duration)),0)/3600.0 from reviews r'.
+               ' INNER JOIN users u ON r.id=u.id'.
+               ' WHERE CONCAT(YEAR(DATE(r.time)),"-",MONTH(DATE(r.time)))=?'.
+               ' AND (r.user=? OR u.kerberos=?)';
+        $val += $self->SimpleSqlGet($sql, $date, $user, $kerb);
+      }
+      push @vals, $val;
+      $ceiling = $val if $val > $ceiling;# and $type != 2;
+    }
+    if ($type == 2)
+    {
+      my @vals2;
+      push @vals2, sprintf('{"value":%.2f,"tip":"%s<br>%.2f%%, %d reviews"%s}',
+                           $vals[$_], $name, $vals[$_], $counts[$_],
+                           (($vals[$_] > 0 || $counts[$_] > 0) && $vals[$_] <= 6)?
+                           ',"type":"star","dot-size":"7"':'')
+                           for (0 .. scalar @vals-1);
+      @vals = @vals2;
+    }
+    elsif ($type == 1)
+    {
+      my $comm = $self->SimpleSqlGet('SELECT commitment FROM users WHERE id=?', $user);
+      @vals = map {sprintf(qq/{"value":$_,"tip":"$name<br>$_"%s}/,
+                           (defined $comm && 160.0*$comm <= $_)?',"type":"star","dot-size":"7"':'')} @vals;
+    }
+    else
+    {
+      @vals = map {qq/{"value":$_,"tip":"$name<br>$_"}/} @vals;
+    }
+    push @elements, sprintf(qq/{"type":"line","values":[%s],%s}\n/, join(',',@vals), $attrs);
+    $i++;
+    $i = 0 if $i >= scalar @colors;
+    #print ">>$_\n<<" for @elements;
+  }
+  # Round ceil up to nearest hundred
+  #print "1 ceiling now $ceiling\n";
+  $ceiling = $self->NearestPowerOfTen($ceiling);# if $type < 2;
+  #print "1 ceiling now $ceiling\n";
+  my $report = qq/{"bg_colour":"#FFFFFF",\n"elements":[/;
+  @dates = map $self->YearMonthToEnglish($_), @dates;
+  $report .= sprintf("%s]\n",join ',', @elements);
+  $report .= sprintf(qq/,"title":{"text":"%s","style":"{font-size:20px}"}/, $titles{$type});
+  $report .= sprintf(qq/,\n"y_axis":{"max":$ceiling,"steps":%s,"colour":"#888888","grid-colour":"#888888"%s}/,
+                       $ceiling/10,
+                       ($type == 2)? ',"labels":{"text":"#val#%","colour":"#000000"}':',"labels":{"colour":"#000000"}');
+  $report .= sprintf(qq/,\n"x_axis":{"colour":"#888888","grid-colour":"#888888",\n"labels":{"labels":["%s"],"rotate":40,"colour":"#000000"}}/,
+                       join('","',@dates));
+  $report .= '}';
+  return $report;
+}
+
+sub NearestPowerOfTen
+{
+  my $self = shift;
+  my $num  = shift;
+
+  my $roundto = 10 ** max(int(log(abs($num))/log(10))-1,1);
+  return int(ceil($num/$roundto))*$roundto;
+}
+
+# Returns an array ref of hash refs
+# Each hash has keys 'id', 'name', 'active'
+# Array is sorted alphabetically with inactive reviewers last.
+sub GetInstitutionReviewers
+{
+  my $self = shift;
+  my $inst = shift;
+
+  my @revs;
+  my $sql = 'SELECT id,name,reviewer+advanced+expert+extadmin+admin+superadmin as active,commitment'.
+            ' FROM users WHERE institution=?'.
+            ' AND (reviewer+advanced+expert>0 OR reviewer+advanced+expert+extadmin+admin+superadmin=0)'.
+            ' ORDER BY active DESC,name';
+  my $ref = $self->SelectAll($sql, $inst);
+  foreach my $row (@{$ref})
+  {
+    my $id = $row->[0];
+    my $name = $row->[1];
+    my $active = ($row->[2] > 0)? 1:0;
+    next if $name =~ m/\(|\)/;
+    push @revs, {'id'=>$id, 'name'=>$name, 'active'=>$active, 'commitment'=>$row->[3]};
+  }
+  @revs = sort {$b->{'active'} <=> $a->{'active'}
+                || $b->{'commitment'} <=> $a->{'commitment'}
+                || $a->{'name'} <=> $b->{'name'};} @revs;
+  return \@revs;
+}
+
 sub UpdateStats
 {
   my $self = shift;
@@ -6321,7 +6464,7 @@ sub DoPriorityBreakdown
     $breakdown{$pri}++;
   }
   my $bd = '';
-  foreach my $key (sort keys %breakdown)
+  foreach my $key (sort {$a <=> $b} keys %breakdown)
   {
     my $ct = $breakdown{$key};
     my $pct = '';
@@ -6799,6 +6942,7 @@ sub PageToEnglish
                'queueStatus' => 'system summary',
                'retrieve' => 'retrieve volume ids',
                'review' => 'review',
+               'reviewerActivity' => 'Reviewer Activity',
                'rights' => 'query rights database',
                'systemStatus' => 'system status',
                'track' => 'track volumes',
@@ -6806,7 +6950,7 @@ sub PageToEnglish
                'userRate' => 'my review stats',
                'userReviews' => 'my processed reviews',
               );
-  return $pages{$page};
+  return $pages{$page} or '';
 }
 
 sub Namespaces
@@ -8808,6 +8952,43 @@ sub GetClosedTickets
     }
   }
   return \%stats2;
+}
+
+sub PickColors
+{
+  my $self   = shift;
+  my $count  = shift;
+  my $bright = shift;
+
+  my @cols;
+  my $delta = ($count>0)? 360/$count:360;
+  for (my $hue = 0; $hue < 360; $hue += $delta)
+  {
+    my @col = $self->HSV2RGB($hue, .8, $bright);
+    @col = map {int($_ * 255);} @col;
+    push @cols, sprintf '#%02X%02X%02X', $col[0], $col[1], $col[2];
+  }
+  return @cols;
+}
+
+sub HSV2RGB
+{
+  use POSIX;
+  my $self = shift;
+  my ($h, $s, $v) = @_;
+  if ($s == 0) { return $v, $v, $v; }
+  $h /= 60;
+  my $i = floor( $h );
+  my $f = $h - $i;
+  my $p = $v * ( 1 - $s );
+  my $q = $v * ( 1 - $s * $f );
+  my $t = $v * ( 1 - $s * ( 1 - $f ) );
+  if ($i == 0 ) { return $v, $t, $p; }
+  elsif ($i == 1) { return $q, $v, $p; }
+  elsif ($i == 2) { return $p, $v, $t; }
+  elsif ($i == 3) { return $p, $q, $v; }
+  elsif ($i == 4) { return $t, $p, $v; }
+  else { return $v, $p, $q; }
 }
 
 1;

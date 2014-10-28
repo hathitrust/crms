@@ -35,6 +35,12 @@ if ($type eq 'graph')
   elsif ($c == 6) { $data = $crms->CreateUndGraph(); }
   elsif ($c == 7) { $data = $crms->CreateNamespaceGraph(); }
   elsif ($c == 9) { $data = $crms->CreateReviewInstitutionGraph(); }
+  elsif ($c == 10)
+  {
+    my $type2 = $cgi->param('type2');
+    my @users = $cgi->param('user');
+    $data = $crms->CreateReviewerGraph($type2, $start, $end, @users);
+  }
   else { $data = $crms->CreateExportGraph($c, $start, $end, undef, $priority); }
 }
 else
@@ -48,3 +54,4 @@ else
   print $cgi->header(-type => 'text/plain', -charset => 'utf-8');
   print $data;
 }
+my @users = $cgi->param('user');
