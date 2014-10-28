@@ -32,7 +32,7 @@ Loads one-off reviews from Jira.
 -p         Run in production.
 -q         Do not emit report (ignored if -m is used).
 -t TICKET  Limit to the Jira ticket(s) specified.
--v         Emit debugging information.
+-v         Emit debugging information. May be repeated for increased verbosity.
 END
 
 my $help;
@@ -84,11 +84,11 @@ my $ua = Jira::Login($crmsUS);
 my @noids;
 my @systemserials;
 my $hash = OneoffQuery(\@noids, \@systemserials);
-$html .= "<h3>One-off reviews imported from Jira</h3>\n";
+$html .= "<h3>One-off requests imported from Jira</h3>\n";
 $html .= '<table border="1"><tr><th>Ticket</th><th>ID</th>'.
          '<th>Author</th><th>Title</th><th>Tracking</th>'.
          "<th>Comments</th><th>Disposition</th></tr>\n";
-my $closed = $crmsWorld->GetClosedTickets();
+my $closed = $crmsWorld->GetClosedTickets($ua);
 foreach my $tx (keys %{$closed})
 {
   my $url = Jira::LinkToJira($tx);
@@ -102,8 +102,6 @@ foreach my $tx (keys %{$closed})
   {
     $html .= "  <tr><td>$url</td><td/><td/><td/><td/>".
       '<td><span style="color:blue;">Ticket marked as '.$stat.'; deleted</span></td><td>&#x2715;</td></tr>' . "\n";
-    my $sql = 'DELETE FROM queue WHERE source=?';
-    $crmsWorld->PrepareSubmitSql($sql, $tx) unless $noop;
   }
 }
 foreach my $tx (@noids)
@@ -111,6 +109,8 @@ foreach my $tx (@noids)
   my $url = Jira::LinkToJira($tx);
   $html .= "  <tr><td>$url</td><td/><td/><td/><td/>".
     '<td><span style="color:red;">No Zephir or Hathi IDs could be extracted from the ticket</span></td><td/></tr>' . "\n";
+  my $sql = 'DELETE FROM queue WHERE source=?';
+  $crmsWorld->PrepareSubmitSql($sql, $tx) unless $noop;
 }
 foreach my $tx (@systemserials)
 {
@@ -123,6 +123,7 @@ foreach my $tx (sort keys %{$hash})
   my $ids = $hash->{$tx};
   my $status = '';
   my $prev = HasPreviousOneOff($tx);
+  my $i = 0;
   if (defined $prev)
   {
     print "  Previous one-off detected from $prev; skipping\n" if $verbose;
@@ -132,66 +133,115 @@ foreach my $tx (sort keys %{$hash})
     $html .= '  <tr><td>'. Jira::LinkToJira($tx).
              '</td><td/><td/><td/><td/><td><span style="color:red;">'.
              "$msg</span></td><td/></tr>\n";
-    next;
   }
-  my $i = 0;
-  foreach my $id (keys %{$ids})
+  else
   {
-    my $added = '';
-    print "  $id\n" if $verbose;
-    next unless $id =~ m/\./;
-    my $record = $crmsUS->GetMetadata($id);
-    if (! defined $record)
+    my $addcount = 0;
+    foreach my $id (keys %{$ids})
     {
-      my $id2 = $crmsUS->Dollarize($id, \$record);
-      $id = $id2 if defined $id2;
-    }
-    my $track = '';
-    $crmsUS->ClearErrors();
-    if (!defined $record)
+      my $added = '';
+      print "  $id\n" if $verbose;
+      next unless $id =~ m/\./;
+      my $record = $crmsUS->GetMetadata($id);
+      if (! defined $record)
+      {
+        my $id2 = $crmsUS->Dollarize($id, \$record);
+        $id = $id2 if defined $id2;
+      }
+      my $track = '';
+      $crmsUS->ClearErrors();
+      if (!defined $record)
+      {
+        $status = 'Metadata unavailable';
+      }
+      else
+      {
+        $track = $crmsWorld->GetTrackingInfo($id, 1, 0, 1);
+        if ($track eq '')
+        {
+          $track = $crmsUS->GetTrackingInfo($id, 1, 0, 1);
+          $track = '(US) '. $track if $track ne '';
+        }
+        print "  Adding $id\n" if $verbose;
+        my $err = '0';
+        my $pri = 2;
+        my $jpri = Jira::GetIssuePriority($crmsUS, $ua, $tx);
+        if (defined $jpri && $jpri < 3)
+        {
+          $pri = 2.1 if $jpri == 3;
+          $pri = 2.2 if $jpri == 2;
+          $pri = 2.3 if $jpri == 1;
+          $status = sprintf '<span style="color:green">CRMS priority %s from Jira priority %s</span>', $pri, $jpri;
+        }
+        $err = $crmsWorld->AddItemToQueueOrSetItemActive($id, $pri, 0, $tx, 'in-scope oneoff', $noop, $record);
+        if ('1' eq substr $err, 0, 1)
+        {
+          $status = sprintf '<span style="color:red">%s</span>', substr $err, 1;
+          print BOLD RED "  $id: $status\n";
+        }
+        elsif ('0' eq substr $err, 0, 1)
+        {
+          $added = '&#x2713;';
+          $addcount++;
+        }
+        else
+        {
+          $status = sprintf '<span style="color:blue">%s</span>', substr $err, 1;
+          $addcount++;
+        }
+        $crmsWorld->PrepareSubmitSql('INSERT INTO tickets (ticket,id) VALUES (?,?)', $tx, $id) unless $noop;
+      }
+      my $url = '';
+      $url = my $url = Jira::LinkToJira($tx) if $i == 0;
+      $html .= sprintf "  <tr><td>$url</td><td style='white-space:nowrap;'>$id</td><td>%s</td><td>%s</td><td>$track</td><td>$status</td>",
+                          $record->author, $record->title;
+      $html .= "<td>$added</td></tr>\n";
+      $i++;
+    } # foreach id
+    if ($addcount == 0)
     {
-      $status = 'Metadata unavailable';
+      my $msg = 'CRMS could not find any HathiTrust volumes that are in-scope for review.';
+      Jira::AddMessage($crmsWorld, $tx, $msg, $ua, $noop);
+      print "AddMesssage to $tx\n" if $verbose;
     }
-    else
-    {
-      $track = $crmsWorld->GetTrackingInfo($id, 1, 0, 1);
-      if ($track eq '')
-      {
-        $track = $crmsUS->GetTrackingInfo($id, 1, 0, 1);
-        $track = '(US) '. $track if $track ne '';
-      }
-      print "  Adding $id\n" if $verbose;
-      my $err = '0';
-      my $pri = 4;
-      my $jpri = Jira::GetIssuePriority($crmsUS, $ua, $tx);
-      if (defined $jpri && $jpri < 3)
-      {
-        $pri = 4.1 if $jpri == 3;
-        $pri = 4.2 if $jpri == 2;
-        $pri = 4.3 if $jpri == 1;
-        $status = sprintf '<span style="color:green">CRMS priority %s from Jira priority %s</span>', $pri, $jpri;
-      }
-      $err = $crmsWorld->AddItemToQueueOrSetItemActive($id, $pri, 1, $tx, 'oneoff') unless $noop;
-      if ('1' eq substr $err, 0, 1)
-      {
-        $status = sprintf '<span style="color:red">%s</span>', substr $err, 1, -1;
-        print BOLD RED "  $id: $status\n";
-      }
-      elsif ('0' eq substr $err, 0, 1)
-      {
-        $added = '&#x2713;';
-      }
-    }
-    my $url = '';
-    $url = my $url = Jira::LinkToJira($tx) if $i == 0;
-    $html .= sprintf "  <tr><td>$url</td><td style='white-space:nowrap;'>$id</td><td>%s</td><td>%s</td><td>$track</td><td>$status</td>",
-                        $record->author, $record->title;
-    $html .= "<td>$added</td></tr>\n";
-    $i++;
-  }
-}
+  } # no previous one-off
+  $crmsWorld->PrepareSubmitSql('INSERT INTO tickets (ticket) VALUES (?)', $tx) if $i == 0 and !$noop;
+} # foreach tx
 $html .= "</table>\n";
 
+# Close and report tickets that have been fully resolved
+my $ref = $crmsWorld->SelectAll('SELECT DISTINCT(ticket) FROM tickets WHERE id IS NOT NULL AND closed=0');
+if (scalar @{$ref})
+{
+  my $didheader = 0;
+  foreach my $row (@{$ref})
+  {
+    my $tx = $row->[0];
+    if (IsTicketResolved($tx))
+    {
+      my @ids;
+      my $dispo = "Reviewed by CRMS with the following results:\n\n";
+      push @ids, $_->[0] for @{$crmsWorld->SelectAll('SELECT id FROM tickets WHERE id IS NOT NULL AND ticket=?', $tx)};
+      foreach my $id (@ids)
+      {
+        print "$tx: $id\n";
+        my $sql = 'SELECT CONCAT(attr,"/",reason) FROM exportdata WHERE id=? AND src=? ORDER BY time DESC LIMIT 1';
+        my $rights = $crmsWorld->SimpleSqlGet($sql, $id, $tx);
+        $dispo .= "  $id: $rights\n";
+      }
+      my $dispo2 = $dispo;
+      $dispo2 =~ s/\n/<br\/>/g;
+      my $stat = Jira::GetIssueStatus($crmsWorld, $ua, $tx);
+      $html .= "<h3>One-off requests closed in Jira</h3>\n" unless $didheader;
+      $html .= "<table border='1'><tr><th>Ticket</th><th>Disposition</th><th>Jira Status</th></tr>\n" unless $didheader;
+      $didheader = 1;
+      $html .= "  <tr><td>$tx</td><td>$dispo2</td><td>$stat</td></tr>\n";
+      $crmsWorld->PrepareSubmitSql('UPDATE tickets SET closed=1 WHERE ticket=?', $tx) unless $noop;
+      Jira::CloseIssue($crmsWorld, $tx, $dispo, $noop);
+    }
+  }
+  $html .= "</table>\n";
+}
 
 for (@{$crmsUS->GetErrors()})
 {
@@ -278,11 +328,16 @@ sub OneoffQuery
       my $item = $data->{'issues'}->[$i];
       my $tx = $item->{'key'};
       printf "$tx (%d of $of)\n", $i+1 if $verbose;
+      if (0 < $crmsWorld->SimpleSqlGet('SELECT COUNT(*) FROM tickets WHERE ticket=?', $tx))
+      {
+        print BLUE "$tx: already checked\n" if $verbose;
+        next;
+      }
       my @fields = ('customfield_10040','customfield_10041');
       foreach my $field (@fields)
       {
         my $desc = $item->{'fields'}->{$field};
-        print "  Desc '$desc'\n" if $verbose > 2;
+        print "  $field desc '$desc'\n" if $verbose > 2;
         if (defined $desc)
         {
           my @lines = split /([\r|\n]+)|([;,\s*])/, $desc;
@@ -452,6 +507,15 @@ sub HasPreviousOneOff
     }
   }
   return undef;
+}
+
+sub IsTicketResolved
+{
+  my $tx = shift;
+
+  my $n = $crmsWorld->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE src=?', $tx);
+  my $of = $crmsWorld->SimpleSqlGet('SELECT COUNT(*) FROM tickets WHERE ticket=?', $tx);
+  return ($n == $of);
 }
 
 print "Warning (US): $_\n" for @{$crmsUS->GetErrors()};
