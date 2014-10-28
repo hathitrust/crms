@@ -68,7 +68,7 @@ my $excelpath = sprintf('/l1/prep/c/crms/GovDocs_%s.xls', $month);
 my @cols= ('ID','Sys ID','Author','Title','Pub Date','Pub');
 my $workbook  = Spreadsheet::WriteExcel->new($excelpath);
 my $worksheet = $workbook->add_worksheet();
-$worksheet->write_string(0, $_, $cols[$_]) for (0 .. scalar @cols);
+$worksheet->write_string(0, $_, $cols[$_]) for (0 .. scalar @cols - 1);
 my $n = 0;
 foreach my $row (@{$ref})
 {
@@ -77,12 +77,22 @@ foreach my $row (@{$ref})
   if (!defined $record)
   {
     $crms->Filter($id, 'no meta');
-    print "Error: no metadata for $id\n";
     next;
   }
-  ## FIXME: check to make sure the record has not been updated in the meantime
+  # Check to make sure the record has not been updated in the meantime
   my $cat = $crms->ShouldVolumeGoInUndTable($id, $record);
-  next if !defined $cat || $cat ne 'gov';
+  if (defined $cat)
+  {
+    if ($cat ne 'gov')
+    {
+      $crms->Filter($id, $cat);
+      next;
+    }
+  }
+  else
+  {
+    next;
+  }
   my $sysid = $record->sysid;
   my $catLink = "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
   my $ptLink = 'https://babel.hathitrust.org/cgi/pt?debug=super;id=' . $id;
@@ -95,22 +105,18 @@ foreach my $row (@{$ref})
   my $field260b = '';
   eval {
     my $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='a']};
-    $field260a = $record->xml->findvalue( $xpath );
+    $field260a = $record->xml->findvalue($xpath);
     $xpath  = q{//*[local-name()='datafield' and @tag='260']/*[local-name()='subfield' and @code='b']};
-    $field260b = $record->xml->findvalue( $xpath );
+    $field260b = $record->xml->findvalue($xpath);
   };
   $n++;
   $field260a .= ' ' . $field260b;
-  $worksheet->write_string($n, 0, $id);
-  $worksheet->write_string($n, 1, $sysid);
-  $worksheet->write_string($n, 2, $au);
-  $worksheet->write_string($n, 3, $ti);
-  $worksheet->write_string($n, 4, $pub);
-  $worksheet->write_string($n, 5, $field260a);
+  @cols = ($id, $sysid, $au, $ti, $pub, $field260a);
+  $worksheet->write_string($n, $_, $cols[$_]) for (0 .. scalar @cols - 1);
 }
 $workbook->close();
 $subj .= " ($n)";
-if (scalar @mails && $n > 0)
+if (scalar @mails)
 {
   use Mail::Sender;
   my $where = $crms->WhereAmI() or 'Prod';
@@ -119,9 +125,8 @@ if (scalar @mails && $n > 0)
                                   from => $crms->GetSystemVar('adminEmail', ''),
                                   on_errors => 'undef' }
     or die "Error in mailing : $Mail::Sender::Error\n";
-  my $to = join ',', @mails;
   $sender->OpenMultipart({
-    to => $to,
+    to => join ',', @mails;,
     subject => $subj,
     ctype => 'text/plain',
     encoding => 'utf-8'
