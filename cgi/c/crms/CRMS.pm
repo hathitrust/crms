@@ -8249,19 +8249,22 @@ sub PredictLastCopyrightYear
   my $record = shift; # Metadata (optional) so we don't spam bibdata table for volumes not in queue.
   my $pubref = shift; # Pub date, by reference
 
-  return undef if $year !~ m/^-?\d+$/; # Punt if the year is not exclusively 1 or more decimal digits with optional minus.my $pub = undef;
+  # Punt if the year is not exclusively 1 or more decimal digits with optional minus.
+  return undef if $year !~ m/^-?\d+$/;
   my $pub;
   $pub = $year if $ispub;
   if (! defined $pub)
   {
-    $pub = $record->pubdate if defined $record;
-    $pub = $self->GetPubDate($id) unless defined $pub;
+    $pub = $record->pubdate(1) if defined $record;
+    $pub = $self->GetPubDate($id, 1) unless defined $pub;
   }
   return undef unless defined $pub;
+  return undef if $pub =~ m/^\d+-\d+$/;
   $$pubref = $pub if defined $pubref;
   my $where = undef;
   $where = $record->country if defined $record;
   $where = $self->GetPubCountry($id) unless $where;
+  return undef unless defined $where;
   my $now = $self->GetTheYear();
   # $when is the last year the work was in copyright
   my $when;
@@ -8275,9 +8278,7 @@ sub PredictLastCopyrightYear
   }
   elsif ($where eq 'Australia')
   {
-    $when = $year + 50;
-    # New logic: if the pub/death date is >= 1955 then use 70
-    $when = $year + 70 if $year >= 1955 or $pub >= 1955;
+    $when = $year + (($year >= 1955)? 70:50);
   }
   elsif ($where eq 'Spain')
   {
@@ -8302,9 +8303,11 @@ sub PredictRights
   my $pub;
   my $when = $self->PredictLastCopyrightYear($id, $year, $ispub, $crown, $record, \$pub);
   return unless defined $when;
+  return undef if $pub =~ m/^\d+-\d+$/;
   if ($when < $now)
   {
-    if ($when >= 1996 && $pub >= 1923)
+    if ($when >= 1996 && $pub >= 1923 &&
+        $pub + 95 >= $now)
     {
       $attr = 'icus';
       $reason = 'gatt';
@@ -8317,7 +8320,7 @@ sub PredictRights
   }
   else
   {
-    $attr = (int $pub < 1923)? 'pdus':'ic';
+    $attr = ($pub < 1923)? 'pdus':'ic';
     $reason = 'add';
   }
   my $sql = 'SELECT id FROM rights WHERE attr=? AND reason=?';
