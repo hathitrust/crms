@@ -72,10 +72,17 @@
     [% style = (r||v||e||x||a||s)? '':'style="background-color:#e2e2e2;"' %]
     <tr [% id == userid ? 'class="total"':''%][% style %]>
       <td>
-        <a href="[% crms.Sysify('crms?p=userRate;user=' _ userid) %]" target="_blank">[% crms.GetUserName(userid).replace('\s','&nbsp;') %]</a></td>
+        <a href="[% crms.Sysify('crms?p=userRate;user=' _ userid) %]" target="_blank">
+          [% crms.GetUserName(userid).replace('\s','&nbsp;') %]
+        </a>
+      </td>
       <td>[% userid %]</td>
       <td>[% crms.GetUserKerberosID(userid) %]</td>
-      <td>[% crms.GetInstitutionName(crms.GetUserInstitution(userid)) %]</td>
+      <td>
+        [% inst = crms.GetUserInstitution(userid) %]
+        <a href="[% crms.Sysify('crms?p=adminUserRateInst;inst=' _ inst) %]" target="_blank">
+          [% crms.GetInstitutionName(inst) %]
+        </a></td>
       <td style="text-align:center">[% IF r %][% icon %][% END %]</td>
       <td style="text-align:center">[% IF v %][% icon %][% END %]</td>
       <td style="text-align:center">[% IF e %][% icon %][% END %]</td>

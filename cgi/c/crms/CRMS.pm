@@ -3648,31 +3648,22 @@ sub PredictUserInstitution
   return $inst;
 }
 
-# Ext admin can see their institution's; admins can see all of them.
-sub InstitutionMenus
+# Ext admin can see their institution's.
+# Returns aref of [url,label] or undef if they're not an extadmin.
+sub InstitutionMenu
 {
   my $self = shift;
   my $user = shift;
 
+  my $ret;
   $user = $self->get('user') unless $user;
-  my @menus;
-  my $param = undef;
-  my $inst = $self->GetUserInstitution($user);
-  my $sql = 'SELECT DISTINCT i.id,i.shortname FROM institutions i INNER JOIN users u ON i.id=u.institution';
-  my $admin = $self->GetSystemVar('adminEmail', '');
-  if (!$self->IsUserAdmin($user))
+  if ($self->IsUserExtAdmin($user))
   {
-    $sql .= ' AND u.institution=' . $inst . ' AND u.extadmin=1 AND u.id="' . $user . '"';
+    my $inst = $self->GetUserInstitution($user);
+    my $name = $self->GetInstitutionName($inst);
+    $ret = ['crms?p=adminUserRateInst;inst='.$inst, 'All ' . $name . ' Stats'];
   }
-  elsif ($inst == 0 && $admin !~ /$user/i)
-  {
-    $sql .= ' AND u.institution=0';
-  }
-  $sql .= ' ORDER BY i.shortname ASC';
-  #print "$user: $sql\n";
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
-  @menus = map {['crms?p=adminUserRateInst;inst='.$_->[0],'All ' . $_->[1] . ' Stats'];} @{$ref};
-  return \@menus;
+  return $ret;
 }
 
 sub GetUserInstitution
@@ -8165,10 +8156,8 @@ sub MenuItems
   {
     if (defined $row->[2])
     {
-      foreach my $inst (@{$self->InstitutionMenus()})
-      {
-        push @all, [$inst->[1],$inst->[0],undef,undef,undef];
-      }
+      my $inst = $self->InstitutionMenu();
+      push @all, [$inst->[1],$inst->[0],undef,undef,undef] if defined $inst;
       next;
     }
     if (!$row->[3] ||
