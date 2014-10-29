@@ -136,6 +136,7 @@ sub ShouldVolumeGoInUndTable
     return 'language' if 'eng' ne $lang;
   }
   return 'translation' if $record->isTranslation;
+  return 'date range' if $record->pubdate(1) =~ m/^\d+$/;
   return undef;
 }
 
