@@ -55,6 +55,8 @@ function ConstructURL()
 	graphURL += ';startDate=' + start.value;
 	var end = document.getElementById('endDate');
 	graphURL += ';endDate=' + end.value;
+	var fudge = document.getElementById('fudgefountain');
+	if (fudge.checked) graphURL += ';fudge=1';
 }
 
 function CheckAllTx(box,id)
@@ -107,7 +109,10 @@ function save_image(debug)
   <option value="1">Time Reviewing (hours)</option>
   <option value="2">Invalidation Rate</option>
 </select>
-<input type="submit" value="Open Image in new Tab" onclick="save_image(0);"></input>
+<label for="fudgefountain">Use Fudge Factor</label>
+<input type="checkbox" name="fudgefountain" id="fudgefountain"
+       onchange="var menu = document.getElementById('activityTypeMenu');if (1 == menu.value) reloadSWF('chart0');"/>
+<input type="submit" value="Open Image in new Tab" onclick="save_image(0);"/>
 <br/>
 <label for="startDate" style="width:5em;float:left;">Start Date:</label>
 <input type="text" id="startDate" name="startDate" value="[% startDate %]"

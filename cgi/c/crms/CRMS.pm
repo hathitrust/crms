@@ -4991,6 +4991,7 @@ sub CreateReviewerGraph
   my $type  = shift;
   my $start = shift;
   my $end   = shift;
+  my $fudge = shift;
   my @users = @_;
 
   $start =~ s/(\d\d\d\d-\d\d)-\d\d/$1/ if defined $start;
@@ -5062,8 +5063,8 @@ sub CreateReviewerGraph
     elsif ($type == 1)
     {
       my $comm = $self->SimpleSqlGet('SELECT commitment FROM users WHERE id=?', $user);
-      @vals = map {sprintf(qq/{"value":$_,"tip":"$name<br>$_"%s}/,
-                           (defined $comm && 160.0*$comm <= $_)?',"type":"star","dot-size":"7"':'')} @vals;
+      @vals = map {sprintf(qq/{"value":"$_","tip":"$name<br>$_"%s}/,
+                           (defined $comm && 160.0*((defined $fudge)?.7*$comm:$comm) <= $_)?',"type":"star","dot-size":"7"':'')} @vals;
     }
     else
     {
@@ -8757,7 +8758,7 @@ sub GetUserProgress
     my $hours = $self->SimpleSqlGet($sql, $user, $kerb);
     $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/3600.0 from reviews WHERE user=?';
     $hours += $self->SimpleSqlGet($sql, $user);
-    $p = $hours/(160.0*$comm);
+    $p = ($hours/(160.0*$comm)) + .3; # Add fudge factor
   }
   return $p;
 }

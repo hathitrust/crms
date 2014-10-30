@@ -39,7 +39,8 @@ if ($type eq 'graph')
   {
     my $type2 = $cgi->param('type2');
     my @users = $cgi->param('user');
-    $data = $crms->CreateReviewerGraph($type2, $start, $end, @users);
+    my $fudge = $cgi->param('fudge');
+    $data = $crms->CreateReviewerGraph($type2, $start, $end, $fudge, @users);
   }
   else { $data = $crms->CreateExportGraph($c, $start, $end, undef, $priority); }
 }
