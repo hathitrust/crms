@@ -3907,25 +3907,24 @@ sub CreateExportData
       my ($year,$month) = split '-', $date;
       $lastDay = Days_in_Month($year,$month);
     }
-    $sql = sprintf('SELECT %s, SUM(d.s4),SUM(d.s5),SUM(d.s6),SUM(d.s7),SUM(d.s8),SUM(d.s9) ' .
-                   'FROM exportstats e LEFT JOIN determinationsbreakdown d ON DATE(e.date)=d.date WHERE ' .
-                   "e.date LIKE '$date%'", join ',', @sums);
+    $sql = 'SELECT '. join(',', @sums). ' FROM exportstats e LEFT JOIN determinationsbreakdown d'.
+           ' ON DATE(e.date)=d.date WHERE e.date LIKE "'. $date. '%"';
     #print "$date: $sql<br/>\n";
     my $ref = $dbh->selectall_arrayref($sql);
     #printf "$date: $sql : %d items<br/>\n", scalar @{$ref};
-    my $n = 0;
-    foreach my $right (@allRights)
+    foreach my $n (0 .. scalar @allRights-1)
     {
-      my ($a,$r) = split '_', $right;
+      my ($a,$r) = split '_', $allRights[$n];
       $stats{"$a/$r"}{$date} += $ref->[0]->[$n];
-      $n++;
     }
-    $stats{'Status 4'}{$date} += $ref->[0]->[$n];
-    $stats{'Status 5'}{$date} += $ref->[0]->[$n+1];
-    $stats{'Status 6'}{$date} += $ref->[0]->[$n+2];
-    $stats{'Status 7'}{$date} += $ref->[0]->[$n+3];
-    $stats{'Status 8'}{$date} += $ref->[0]->[$n+4];
-    $stats{'Status 9'}{$date} += $ref->[0]->[$n+5];
+    foreach my $status (4..9)
+    {
+      $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r' .
+             ' ON e.gid=r.gid WHERE r.legacy!=1 AND r.status=? AND e.exported=1'.
+             ' AND DATE(e.time) LIKE "'. $date. '%"';
+      #print "$date: $sql<br/>\n";
+      $stats{'Status '. $status}{$date} += $self->SimpleSqlGet($sql, $status);
+    }
     for my $cat (keys %cats)
     {
       next if $cat =~ m/(All)|(Status)/;
