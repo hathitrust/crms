@@ -180,7 +180,8 @@ sub mirlyn
   my $mirlyn = $self->get('mirlyn');
   if (!defined $mirlyn)
   {
-    $mirlyn = $self->HTIDToMirlyn($self->id);
+    $mirlyn = $self->sysid; # Avoid bc2meta if we can
+    $mirlyn = $self->HTIDToMirlyn($self->id) if substr $mirlyn, 0, 1 ne '0';
     $self->set('mirlyn', $mirlyn) if defined $mirlyn;
   }
   return $mirlyn;
@@ -392,7 +393,7 @@ sub language
 {
   my $self   = shift;
   my $leader  = $self->GetControlfield('008');
-  return substr($leader, 35, 3);
+  return (length $leader >=38)? substr($leader, 35, 3):'???';
 }
 
 sub country
