@@ -881,7 +881,7 @@ sub CheckAndLoadItemIntoCandidates
     return;
   }
   $record = $self->GetMetadata($id) unless defined $record;
-  if (!defined $record)
+  if (!defined $record || !defined $record->mirlyn || '' == $record->mirlyn)
   {
     #print "No metadata yet for $id: will try again tomorrow.\n";
     $self->Filter($id, 'no meta') unless defined $noop;
@@ -1109,7 +1109,7 @@ sub ShouldVolumeGoInUndTable
   my $record = shift;
 
   $record = $self->GetMetadata($id) unless $record;
-  return 'no meta' unless $record;
+  return 'no meta' if !defined $record || !defined $record->mirlyn || '' == $record->mirlyn;
   return $self->CandidatesModule()->ShouldVolumeGoInUndTable($id, $record);
 }
 
@@ -1171,7 +1171,7 @@ sub LoadNewItems
     my $id = $row->[0];
     next if $dels{$id};
     my $record = $self->GetMetadata($id);
-    if (!defined $record)
+    if (!defined $record || !defined $record->mirlyn || '' == $record->mirlyn)
     {
       print "Filtering $id: can't get metadata for queue\n";
       $self->Filter($id, 'no meta');
