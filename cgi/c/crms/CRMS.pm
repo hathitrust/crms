@@ -4889,7 +4889,7 @@ sub CreateCountriesGraph
   my $ref = $self->GetDb()->selectall_arrayref($sql);
   my $of = $ref->[-1]->[1];
   my $report = '';
-  my @colorlist = ('#22BB00','#BB2200','#2200BB','#444444');
+  my @colors = $self->PickColors(3);
   my @vals = ();
   foreach my $row (@{$ref})
   {
@@ -4901,8 +4901,8 @@ sub CreateCountriesGraph
   my $report = '{"bg_colour":"#FFFFFF"' .
                ',"elements":[' .
                  '{"type":"pie","start-angle":35,"animate":[{"type":"fade"}]' .
-                 ',"colours":["#22BB00","#FF2200","#0088FF","#22BBBB"]' .
-                 sprintf(',"values":[%s]}]}', join(',', @vals));
+                 ',"colours":["' . join('","', reverse @colors). '"],' .
+                 sprintf('"values":[%s]}]}', join(',', @vals));
   return $report;
 }
 
@@ -4913,7 +4913,6 @@ sub CreateUndGraph
   my $of = $self->SimpleSqlGet($sql);
   $sql = 'SELECT src,COUNT(id) FROM und GROUP BY src ORDER BY src ASC';
   my $ref = $self->GetDb()->selectall_arrayref($sql);
-  my @colorlist = ('#22BB00','#BB2200','#2200BB','#444444');
   my @vals = ();
   foreach my $row (@{$ref})
   {
@@ -4921,10 +4920,11 @@ sub CreateUndGraph
     my $n = $row->[1];
     push @vals, sprintf('{"value":%d,"label":"%s\n%.1f%%"}', $n, $country, $n / $of * 100.0);
   }
+  my @colors = $self->PickColors(scalar @vals, 1);
   my $report = '{"bg_colour":"#FFFFFF","elements":[' .
                  '{"type":"pie","start-angle":35,"animate":[{"type":"fade"}]' .
-                 ',"colours":["#22BB00","#FF2200","#0088FF","#22BBBB","#BB22BB","#BBBB22","#BBBBBB","#888888"]' .
-                 sprintf(',"values":[%s]}]}', join(',', @vals));
+                 ',"colours":["'. join('","', @colors) . '"],' .
+                 sprintf('"values":[%s]}]}', join(',', @vals));
   return $report;
 }
 
@@ -4978,16 +4978,17 @@ sub CreateReviewInstitutionGraph
     $totals{$inst} = $n;
   }
   my @vals;
+  my @colors = $self->PickColors(scalar keys %totals, 1);
   foreach my $inst (sort keys %totals)
   {
     my $n = $totals{$inst};
     push @vals, sprintf('{"value":%d,"label":"%s\n%.1f%%"}', $n, $inst, $n / $of * 100.0);
   }
   my $report = '{"bg_colour":"#FFFFFF"' .
-               ',"elements":[' .
-                 '{"type":"pie","start-angle":35,"animate":[{"type":"fade"}]' .
-                 ',"colours":["#22BB00","#FF2200","#0088FF","#22BBBB","#BB22BB","#BBBB22","#BBBBBB","#888888"]' .
-                 sprintf(',"values":[%s]}]}', join(',', @vals));
+               ',"elements":['.
+                 '{"type":"pie","start-angle":35,"animate":[{"type":"fade"}]'.
+                 ',"colours":'. '["'. join( '","', @colors). '"],'.
+                 sprintf('"values":[%s]}]}', join(',', @vals));
   return $report;
 }
 
@@ -5012,7 +5013,7 @@ sub CreateReviewerGraph
   #print "$sql, $start,  $end\n";
   my @dates = map {$_->[0];} @{$self->SelectAll($sql, $start, $end)};
   my @elements = (); # Lines of data points on the graph
-  my @colors = $self->PickColors(scalar @users, 0.8);
+  my @colors = $self->PickColors(scalar @users);
   my $ceiling = 1;#100;
   my $i = 0;
   my @anims = qw(pop-up explode mid-slide drop fade-in shrink-in);
@@ -8951,17 +8952,29 @@ sub GetClosedTickets
 
 sub PickColors
 {
-  my $self   = shift;
-  my $count  = shift;
-  my $bright = shift;
+  my $self    = shift;
+  my $count   = shift;
+  my $shuffle = shift;
 
   my @cols;
   my $delta = ($count>0)? 360/$count:360;
-  for (my $hue = 0; $hue < 360; $hue += $delta)
+  for (my $hue = 109; $hue < 469; $hue += $delta)
   {
-    my @col = $self->HSV2RGB($hue, .8, $bright);
+    my $h2 = $hue;
+    $h2 -= 360 if $h2 >= 360;
+    my @col = $self->HSV2RGB($h2, 1, .75);
     @col = map {int($_ * 255);} @col;
     push @cols, sprintf '#%02X%02X%02X', $col[0], $col[1], $col[2];
+  }
+  if ($shuffle)
+  {
+    my ($i,$j) = (1,2);
+    while ($i <= scalar @cols-2)
+    {
+      @cols[$i,$j] = @cols[$j,$i];
+      $i += 2;
+      $j += 2;
+    }
   }
   return @cols;
 }
