@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.9.1';
+  return '4.9.2';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -3357,14 +3357,17 @@ sub AddUser
 
   my @fields = (\$reviewer,\$advanced,\$expert,\$extadmin,\$admin,\$superadmin);
   my @fnames = qw (reviewer advanced expert extadmin admin superadmin);
-  ${$fields[$_]} = (${$fields[$_]})? 1:0 for (0 .. scalar @fields - 1);
-  $reviewer = $self->SimpleSqlGet('SELECT reviewer FROM users WHERE id=?', $id) unless $reviewer;
-  $advanced = $self->SimpleSqlGet('SELECT advanced FROM users WHERE id=?', $id) unless $advanced;
-  $expert = $self->SimpleSqlGet('SELECT expert FROM users WHERE id=?', $id) unless $expert;
-  $extadmin = $self->SimpleSqlGet('SELECT extadmin FROM users WHERE id=?', $id) unless $extadmin;
-  $admin = $self->SimpleSqlGet('SELECT admin FROM users WHERE id=?', $id) unless $admin;
-  $superadmin = $self->SimpleSqlGet('SELECT superadmin FROM users WHERE id=?', $id) unless $superadmin;
-  ($reviewer,$advanced,$expert,$extadmin,$admin,$superadmin) = (0,0,0,0,0,0) if $disable;
+  ${$fields[$_]} = (length ${$fields[$_]} && !$disable)? 1:0 for (0 .. scalar @fields - 1);
+  # Preserve existing privileges unless there are some checkboxes checked
+  my $checked = 0;
+  $checked += ${$fields[$_]} for (0 .. scalar @fields - 1);
+  if ($checked == 0)
+  {
+    my $sql = 'SELECT reviewer,advanced,expert,extadmin,admin,superadmin FROM users WHERE id=?';
+    my $ref = $self->SelectAll($sql, $id);
+    return "Unknown reviewer '$id'" unless 1 == scalar @{$ref};
+    ${$fields[$_]} = $ref->[0]->[$_] for (0 .. 5);
+  }
   # Remove surrounding whitespace on user id, kerberos, and name.
   $id =~ s/^\s*(.+?)\s*$/$1/;
   $kerberos =~ s/^\s*(.+?)\s*$/$1/;
@@ -3377,12 +3380,15 @@ sub AddUser
   # Remove percent sign if it exists and make sure commitment is a valid number.
   # If it's > 1 count it as a percent, otherwise as a decimal.
   # Convert it to decimal as needed for storage.
-  $commitment =~ s/%+//g;
-  if ($commitment !~ m/^\d*\.?\d*$/ || $commitment !~ m/\d+/)
+  if ($commitment)
   {
-    return "Error: commitment '$commitment' not numeric.";
+    $commitment =~ s/%+//g;
+    if (length $commitment && ($commitment !~ m/^\d*\.?\d*$/ || $commitment !~ m/\d+/))
+    {
+      return "Error: commitment '$commitment' not numeric.";
+    }
+    $commitment /= 100.0 if $commitment > 1;
   }
-  $commitment /= 100.0 if $commitment > 1;
   my $inst = $self->SimpleSqlGet('SELECT institution FROM users WHERE id=?', $id);
   $inst = $self->PredictUserInstitution($id) unless defined $inst;
   my $wcs = $self->WildcardList(12);
