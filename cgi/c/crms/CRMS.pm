@@ -621,6 +621,7 @@ sub ExportReviews
   }
 }
 
+# In overnight processing this is called BEFORE queue deletion and move to historical
 sub CanExportVolume
 {
   my $self    = shift;
@@ -628,15 +629,20 @@ sub CanExportVolume
   my $attr    = shift;
   my $reason  = shift;
   my $fromcgi = shift;
-  my $gid     = shift;
-  my $time    = shift;
+  my $gid     = shift; # Optional
+  my $time    = shift; # Optional
 
   my $export = 1;
   my $rq = $self->RightsQuery($id, 1);
   return 1 unless defined $rq;
   # Do not export Status 6, since they are not really final determinations.
-  my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE gid=? AND status=6';
-  if ($self->SimpleSqlGet($sql, $gid))
+  my $status = $self->SimpleSqlGet('SELECT status FROM queue WHERE id=?', $id);
+  if (!defined $status && defined $gid)
+  {
+    my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE gid=? AND status=6';
+    $status = ($self->SimpleSqlGet($sql, $gid))? 6:4;
+  }
+  if ($status == 6)
   {
     print "Not exporting $id; it is status 6\n" unless $fromcgi;
     return 0;
