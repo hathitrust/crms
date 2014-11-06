@@ -201,8 +201,8 @@ foreach my $tx (sort keys %{$hash})
     if ($addcount == 0)
     {
       my $msg = 'CRMS could not find any HathiTrust volumes that are in-scope for review.';
-      Jira::AddMessage($crmsWorld, $tx, $msg, $ua, $noop);
-      print "AddMesssage to $tx\n" if $verbose;
+      Jira::AddComment($crmsWorld, $tx, $msg, $ua, $noop);
+      print "Jira::AddComment to $tx\n" if $verbose;
     }
   } # no previous one-off
   $crmsWorld->PrepareSubmitSql('INSERT INTO tickets (ticket) VALUES (?)', $tx) if $i == 0 and !$noop;
