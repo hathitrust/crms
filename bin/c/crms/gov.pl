@@ -126,11 +126,11 @@ if (scalar @mails)
                                   on_errors => 'undef' }
     or die "Error in mailing : $Mail::Sender::Error\n";
   $sender->OpenMultipart({
-    to => join ',', @mails;,
+    to => (join ',', @mails),
     subject => $subj,
     ctype => 'text/plain',
     encoding => 'utf-8'
-    }) or die $Mail::Sender::Error,"\n";
+    }) or die "Error in opening : $Mail::Sender::Error\n";
   $sender->Body();
   $txt = 'This is an automatically generated report on possible federal government docs from the previous ' .
           "month. We believe these should have an 'f' inserted into the 008 MARC field. " .
