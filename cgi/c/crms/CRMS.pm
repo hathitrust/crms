@@ -829,13 +829,14 @@ sub CheckAndLoadItemIntoCandidates
   my $record;
   my $oldSysid = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
   my $oldMirlyn = $self->SimpleSqlGet('SELECT mirlyn FROM bibdata WHERE id=?', $id);
+  my $mirlyn;
   if (defined $oldSysid || defined $oldMirlyn)
   {
     $record = $self->GetMetadata($id);
     if (defined $record)
     {
       my $sysid = $record->sysid;
-      my $mirlyn = $record->mirlyn;
+      $mirlyn = $record->mirlyn;
       if (defined $sysid && defined $oldSysid && $sysid ne $oldSysid)
       {
         print "Update system ID on $id -- old $oldSysid, new $sysid\n";
@@ -887,9 +888,13 @@ sub CheckAndLoadItemIntoCandidates
     return;
   }
   $record = $self->GetMetadata($id) unless defined $record;
-  if (!defined $record || !defined $record->mirlyn || '' == $record->mirlyn)
+  $mirlyn = $record->mirlyn if defined $record;
+  if (!defined $record || !defined $mirlyn || '' == $mirlyn)
   {
-    #print "No metadata yet for $id: will try again tomorrow.\n";
+    #if (defined $record && (!defined $mirlyn || '' == $mirlyn))
+    #{
+    #  print "No Mirlyn id for $id: will try again tomorrow.\n";
+    #}
     $self->Filter($id, 'no meta') unless defined $noop;
     $self->ClearErrors();
     return;
