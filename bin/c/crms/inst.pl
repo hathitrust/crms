@@ -68,13 +68,11 @@ my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
                                 from => $crms->GetSystemVar('adminEmail', ''),
                                 on_errors => 'undef' }
 or die "Error in mailing : $Mail::Sender::Error\n";
-printf "%d insts\n", scalar @insts;
 @insts = @{$crms->GetInstitutions()} unless scalar @insts > 0;
 my $system = $crms->System();
 foreach my $inst (@insts)
 {
   my $iname = $crms->SimpleSqlGet('SELECT name FROM institutions WHERE id=?', $inst);
-  print "$iname\n";
   my $mail = $crms->SimpleSqlGet('SELECT GROUP_CONCAT(id SEPARATOR ",") FROM users WHERE institution=? AND extadmin=1', $inst);
   next unless defined $mail;
   my $date = $crms->SimpleSqlGet('SELECT DATE_FORMAT(NOW() - INTERVAL 1 MONTH, "%Y-%m")');
