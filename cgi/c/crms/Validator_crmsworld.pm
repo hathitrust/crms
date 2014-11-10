@@ -64,17 +64,10 @@ sub ValidateSubmission
       $errorMsg .= 'Must include a category if there is a note. ';
     }
   }
-  if (defined $category && $attr ne 'und')
+  if (defined $category && length $category && $attr ne 'und')
   {
-    #my $need = $self->SimpleSqlGet('SELECT COALESCE(need_und,0) FROM categories WHERE name=?', $category);
     my $need = $self->SimpleSqlGet('SELECT need_und FROM categories WHERE name=?', $category);
-    if (!defined $need)
-    {
-      my $sql = 'INSERT INTO note (note) VALUES (?)';
-      my $note = 'No need_und found for "' . $category . '"';
-      $self->PrepareSubmitSql($sql, $note);
-    }
-    elsif (1 == $need)
+    if (defined $need && 1 == $need)
     {
       $errorMsg .= "Note category '$category' must be marked und/nfi. ";
     }
