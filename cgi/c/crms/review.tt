@@ -44,7 +44,7 @@
   [% STOP %]
 [% END %]
 
-[% IF !editing %]
+[% IF !editing && !error %]
   [%# ## Get locked item or new one from queue ## %]
   [% IF crms.HasLockedItem(user) %]
     [% barcode = crms.GetLockedItem(user) %]
