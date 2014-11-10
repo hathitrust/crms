@@ -137,7 +137,8 @@ if ($cgi->param('p') eq 'confirmReview')
     my $pre       = $cgi->param('prepopulated');
     my $start     = $cgi->param('start');
     my ($rights, $reason);
-    my $err = 'You must select a rights/reason combination.' unless $EncRights;
+    my $err;
+    $err = 'You must select a rights/reason combination.' unless $EncRights;
     if (!$err)
     {
       ($rights, $reason) = $crms->GetAttrReasonFromCode($EncRights);
@@ -153,7 +154,7 @@ if ($cgi->param('p') eq 'confirmReview')
     {
       #Process the submission, and go on to the next item
       my $expert;
-      if ( $crms->IsUserExpert( $user ) ) { $expert = 2; }
+      if ($crms->IsUserExpert($user)) { $expert = 2; }
       $crms->SubmitReview($id, $user, $rights, $reason, $note, $renNum, $expert,
                           $renDate, $category, $swiss, $hold, $pre, $start);
       my $ref = $crms->GetErrors();
