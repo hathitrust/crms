@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.9.2';
+  return '4.9.3';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -5286,13 +5286,13 @@ sub HasItemBeenReviewedByTwoReviewers
   }
   else
   {
-    my $sql = 'SELECT count(*) FROM reviews WHERE id=? AND user!=?';
+    my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND user!=?';
     my $count = $self->SimpleSqlGet($sql, $id, $user);
     if ($count >= 2)
     {
       $msg = 'This volume does not need to be reviewed. Two reviewers or an expert have already reviewed it. Please Cancel.';
     }
-    $sql = 'SELECT count(*) FROM queue WHERE id =? AND status!=0';
+    $sql = 'SELECT COUNT(*) FROM queue WHERE id=? AND status!=0';
     $count = $self->SimpleSqlGet($sql, $id);
     if ($count >= 1) { $msg = 'This item has been processed already. Please Cancel.'; }
   }
@@ -5305,7 +5305,13 @@ sub ValidateSubmission
       $category, $renNum, $renDate, $oneoff) = @_;
   my $errorMsg = '';
   ## Someone else has the item locked?
-  $errorMsg = 'This item has been locked by another reviewer. Please Cancel. ' if $self->IsLockedForOtherUser($id);
+  my $lock = $self->IsLockedForOtherUser($id);
+  if ($lock)
+  {
+    $errorMsg = 'This item has been locked by another reviewer. Please Cancel. ';
+    my $note = sprintf "Collision on %s: $id locked for $lock", $self->Hostname();
+    $self->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $note);
+  }
   ## check user
   if (!$oneoff && !$self->IsUserReviewer($user) && !$self->IsUserAdvanced($user))
   {
@@ -5585,7 +5591,7 @@ sub IsLockedForOtherUser
   my $table = (defined $correction)? 'corrections':'queue';
   $user = $self->get('user') unless $user;
   my $lock = $self->SimpleSqlGet('SELECT locked FROM ' . $table . ' WHERE id=?', $id);
-  return ($lock && $lock ne $user);
+  return ($lock && $lock ne $user)? $lock:undef;
 }
 
 sub RemoveOldLocks
@@ -5651,6 +5657,8 @@ sub LockItem
   }
   my $sql = 'UPDATE ' . $table . ' SET locked=? WHERE id=?';
   $self->PrepareSubmitSql($sql, $user, $id);
+  my $note = sprintf "$id locked for $user on %s", $self->Hostname();
+  $self->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $note);
   return 0;
 }
 
