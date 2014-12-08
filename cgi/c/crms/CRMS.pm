@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.9.3';
+  return '4.9.4';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -276,9 +276,8 @@ sub SimpleSqlGet
   my $sql  = shift;
 
   my $val = undef;
-  my $dbh = $self->GetDb();
   eval {
-    my $ref = $dbh->selectall_arrayref($sql, undef, @_);
+    my $ref = $self->SelectAll($sql, @_);
     $val = $ref->[0]->[0];
   };
   if ($@)
@@ -317,6 +316,25 @@ sub SelectAll
 
   my $ref = undef;
   my $dbh = $self->GetDb();
+  eval {
+    $ref = $dbh->selectall_arrayref($sql, undef, @_);
+  };
+  if ($@)
+  {
+    my $msg = "SQL failed ($sql): " . $@;
+    $self->SetError($msg);
+    $self->Logit($msg);
+  }
+  return $ref;
+}
+
+sub SelectAllSDR
+{
+  my $self = shift;
+  my $sql  = shift;
+
+  my $ref = undef;
+  my $dbh = $self->GetSdrDb();
   eval {
     $ref = $dbh->selectall_arrayref($sql, undef, @_);
   };
@@ -382,9 +400,8 @@ sub ProcessReviews
   }
   $self->SetSystemStatus('partial', 'CRMS is processing reviews. The Review page is temporarily unavailable. Try back in about a minute.');
   my %stati = (2=>0,3=>0,4=>0,8=>0);
-  my $dbh = $self->GetDb();
   my $sql = 'SELECT id FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) GROUP BY id HAVING count(*) = 2';
-  my $ref = $dbh->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
@@ -518,30 +535,29 @@ sub GetDoubleRevItemsInAgreement
 {
   my $self = shift;
   my $sql  = 'SELECT id FROM queue WHERE status=4';
-  return $self->GetDb()->selectall_arrayref($sql);
+  return $self->SelectAll($sql);
 }
 
 sub GetExpertRevItems
 {
   my $self = shift;
-
   my $sql  = 'SELECT id FROM queue WHERE (status>=5 AND status<8) AND id NOT IN ' .
              '(SELECT id FROM reviews WHERE CURTIME()<hold)';
-  return $self->GetDb()->selectall_arrayref($sql);
+  return $self->SelectAll($sql);
 }
 
 sub GetAutoResolvedItems
 {
   my $self = shift;
   my $sql  = 'SELECT id FROM queue WHERE status=8';
-  return $self->GetDb()->selectall_arrayref($sql);
+  return $self->SelectAll($sql);
 }
 
 sub GetInheritedItems
 {
   my $self = shift;
   my $sql  = 'SELECT id FROM queue WHERE status=9';
-  return $self->GetDb()->selectall_arrayref($sql);
+  return $self->SelectAll($sql);
 }
 
 ## ----------------------------------------------------------------------------
@@ -597,7 +613,7 @@ sub ExportReviews
   foreach my $id (@{$list})
   {
     my $sql = 'SELECT user,time,validated FROM historicalreviews WHERE id=?';
-    my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $id);
+    my $ref = $self->SelectAll($sql, $id);
     foreach my $row (@{$ref})
     {
       my $user = $row->[0];
@@ -771,8 +787,7 @@ sub LoadNewItemsInCandidates
   if (!$skipnm)
   {
     my $sql = 'SELECT id FROM und WHERE src="no meta"';
-    my $dbh = $self->GetDb();
-    my $ref = $dbh->selectall_arrayref($sql);
+    my $ref = $self->SelectAll($sql);
     my $n = scalar @{$ref};
     if ($n)
     {
@@ -784,8 +799,7 @@ sub LoadNewItemsInCandidates
   }
   my $endclause = ($end)? " AND time<='$end' ":' ';
   my $sql = 'SELECT namespace,id FROM rights_current WHERE time>?' . $endclause . 'ORDER BY time ASC';
-  my $dbh = $self->GetSdrDb();
-  my $ref = $dbh->selectall_arrayref($sql, undef, $start);
+  my $ref = $self->SelectAllSDR($sql, $start);
   my $n = scalar @{$ref};
   print "Checking $n possible additions to candidates from rights DB\n";
   foreach my $row (@{$ref})
@@ -1176,7 +1190,7 @@ sub LoadNewItems
             $excludeCountries .
             ' ORDER BY time DESC';
   #print "$sql\n";
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
@@ -1408,8 +1422,7 @@ sub IsValidCategory
   my $self = shift;
   my $cat = shift;
 
-  my $sql = 'SELECT name FROM categories';
-  my $rows = $self->GetDb()->selectall_arrayref($sql);
+  my $rows = $self->SelectAll('SELECT name FROM categories');
   foreach my $row (@{$rows})
   {
     return 1 if $row->[0] eq $cat;
@@ -1446,7 +1459,7 @@ sub CloneReview
   {
     my $note = undef;
     my $sql = 'SELECT attr,reason,renNum,renDate FROM reviews WHERE id=?';
-    my $rows = $self->GetDb()->selectall_arrayref($sql, undef, $id);
+    my $rows = $self->SelectAll($sql, $id);
     my $attr = $rows->[0]->[0];
     my $reason = $rows->[0]->[1];
     if ($attr == 2 && $reason == 7 && ($rows->[0]->[2] ne $rows->[1]->[2] || $rows->[0]->[3] ne $rows->[1]->[3]))
@@ -1578,7 +1591,7 @@ sub GetStatusForExpertReview
   # See if it's a provisional match and expert agreed with both of existing non-advanced reviews. If so, status 7.
   my $sql = 'SELECT attr,reason,renNum,renDate FROM reviews WHERE id=?' .
             ' AND user IN (SELECT id FROM users WHERE expert=0 AND advanced=0)';
-  my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $id);
+  my $ref = $self->SelectAll($sql, $id);
   if (scalar @{ $ref } >= 2)
   {
     my $attr1    = $ref->[0]->[0];
@@ -1665,7 +1678,7 @@ sub GetFinalAttrReason
 
   ## order by expert so that if there is an expert review, return that one
   my $sql = 'SELECT attr,reason FROM reviews WHERE id=? ORDER BY expert DESC, time DESC LIMIT 1';
-  my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $id);
+  my $ref = $self->SelectAll($sql, $id);
   if (!$ref->[0]->[0])
   {
     $self->SetError("$id not found in review table");
@@ -2042,8 +2055,10 @@ sub CreateSQLForVolumes
   push @rest, "date(r.time) >= '$startDate'" if $startDate;
   push @rest, "date(r.time) <= '$endDate'" if $endDate;
   my $restrict = join(' AND ', @rest);
-  $restrict = 'WHERE '.$restrict if $restrict;
-  my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT r.id FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $restrict)";
+  $restrict = 'WHERE '. $restrict if $restrict;
+  my $sql = 'SELECT COUNT(r2.id) FROM '. $table. ' r2'.
+            ' WHERE r2.id IN (SELECT r.id FROM '. $table. ' r'.
+            ' LEFT JOIN bibdata b ON r.id=b.id '. $doQ. ' '. $restrict. ')';
   #print "$sql<br/>\n";
   my $totalReviews = $self->SimpleSqlGet($sql);
   $sql = "SELECT COUNT(DISTINCT r.id) FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ $restrict";
@@ -2051,7 +2066,7 @@ sub CreateSQLForVolumes
   my $totalVolumes = $self->SimpleSqlGet($sql);
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
-  $sql = "SELECT foo.id FROM (SELECT r.id as id, $order2($order) AS ord FROM $table r LEFT JOIN bibdata b ON r.id=b.id" .
+  $sql = "SELECT foo.id FROM (SELECT r.id as id, $order2($order) AS ord FROM $table r LEFT JOIN bibdata b ON r.id=b.id".
          " $doQ $restrict GROUP BY r.id) AS foo ORDER BY ord $dir $limit";
   #print "$sql<br/>\n";
   my $n = POSIX::ceil($offset/$pagesize+1);
@@ -2427,7 +2442,7 @@ sub SearchAndDownload
                                                                   $search1value, $op1, $search2, $search2value,
                                                                   $op2, $search3, $search3value, $startDate,
                                                                   $endDate, 0, 0, 1);
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   my $buff = '';
   if (scalar @{$ref} == 0)
   {
@@ -2480,7 +2495,7 @@ sub SearchAndDownload
                "WHERE r.id='$id' $qrest ORDER BY $order $dir";
         #print "$sql<br/>\n";
         my $ref2;
-        eval{$ref2 = $self->GetDb()->selectall_arrayref($sql);};
+        eval { $ref2 = $self->SelectAll($sql); };
         if ($@)
         {
           $self->SetError("SQL failed: '$sql' ($@)");
@@ -2662,7 +2677,7 @@ sub GetReviewsRef
   my ($sql,$totalReviews,$totalVolumes) = $self->CreateSQLForReviews($page, $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $offset, $pagesize);
   #print "$sql<br/>\n";
   my $ref = undef;
-  eval { $ref = $self->GetDb()->selectall_arrayref($sql); };
+  eval { $ref = $self->SelectAll($sql); };
   if ($@)
   {
     $self->SetError("SQL failed: '$sql' ($@)");
@@ -2727,7 +2742,7 @@ sub GetVolumesRef
   my $dir = $_[2];
   my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQLForVolumes(@_);
   my $ref = undef;
-  eval { $ref = $self->GetDb()->selectall_arrayref($sql); };
+  eval { $ref = $self->SelectAll($sql); };
   if ($@)
   {
     $self->SetError("SQL failed: '$sql' ($@)");
@@ -2756,7 +2771,7 @@ sub GetVolumesRef
            "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ " .
            "WHERE r.id='$id' ORDER BY $order $dir";
     #print "$sql<br/>\n";
-    my $ref2 = $self->GetDb()->selectall_arrayref($sql);
+    my $ref2 = $self->SelectAll($sql);
     foreach my $row (@{$ref2})
     {
       my $date = $row->[1];
@@ -2822,7 +2837,7 @@ sub GetVolumesRefWide
   }
   my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQLForVolumesWide(@_);
   my $ref = undef;
-  eval { $ref = $self->GetDb()->selectall_arrayref($sql); };
+  eval { $ref = $self->SelectAll($sql); };
   if ($@)
   {
     $self->SetError("SQL failed: '$sql' ($@)");
@@ -2839,7 +2854,7 @@ sub GetVolumesRefWide
            "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ " .
            "WHERE r.id='$id' ORDER BY $order $dir";
     #print "$sql<br/>\n";
-    my $ref2 = $self->GetDb()->selectall_arrayref($sql);
+    my $ref2 = $self->SelectAll($sql);
     foreach my $row (@{$ref2})
     {
       my $date = $row->[1];
@@ -2983,7 +2998,7 @@ sub GetQueueRef
   #print "$sql<br/>\n";
   my $ref = undef;
   eval {
-    $ref = $self->GetDb()->selectall_arrayref($sql);
+    $ref = $self->SelectAll($sql);
   };
   if ($@)
   {
@@ -3098,7 +3113,7 @@ sub GetExportDataRef
     push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
   }
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
-  my $sql = "SELECT COUNT(r.id) FROM exportdata r LEFT JOIN bibdata b ON r.id=b.id $restrict";
+  my $sql = 'SELECT COUNT(r.id) FROM exportdata r LEFT JOIN bibdata b ON r.id=b.id '. $restrict;
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
@@ -3108,9 +3123,7 @@ sub GetExportDataRef
          "FROM exportdata r LEFT JOIN bibdata b ON r.id=b.id $restrict ORDER BY $order $dir $limit";
   #print "$sql<br/>\n";
   my $ref = undef;
-  eval {
-    $ref = $self->GetDb()->selectall_arrayref($sql);
-  };
+  eval { $ref = $self->SelectAll($sql); };
   if ($@)
   {
     $self->SetError($@);
@@ -3317,7 +3330,7 @@ sub GetAttrReasonFromCode
   my $code = shift;
 
   my $sql = 'SELECT attr,reason FROM rights WHERE id=?';
-  my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $code);
+  my $ref = $self->SelectAll($sql, $code);
   my $a = $ref->[0]->[0];
   my $r = $ref->[0]->[1];
   return ($a,$r);
@@ -3339,7 +3352,7 @@ sub GetAttrReasonCode
   my $user = shift;
 
   my $sql = 'SELECT attr,reason FROM reviews WHERE id=? AND user=?';
-  my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $id, $user);
+  my $ref = $self->SelectAll($sql, $id, $user);
   my $a = $ref->[0]->[0];
   my $r = $ref->[0]->[1];
   if ($a && $r)
@@ -3376,8 +3389,8 @@ sub AddUser
   {
     my $sql = 'SELECT reviewer,advanced,expert,extadmin,admin,superadmin FROM users WHERE id=?';
     my $ref = $self->SelectAll($sql, $id);
-    return "Unknown reviewer '$id'" unless 1 == scalar @{$ref};
-    ${$fields[$_]} = $ref->[0]->[$_] for (0 .. 5);
+    return "Unknown reviewer '$id'" if 0 == scalar @{$ref};
+    ${$fields[$_]} = $ref->[0]->[$_] for (0 .. scalar @fields - 1);
   }
   # Remove surrounding whitespace on user id, kerberos, and name.
   $id =~ s/^\s*(.+?)\s*$/$1/;
@@ -3403,12 +3416,10 @@ sub AddUser
   my $inst = $self->SimpleSqlGet('SELECT institution FROM users WHERE id=?', $id);
   $inst = $self->PredictUserInstitution($id) unless defined $inst;
   my $wcs = $self->WildcardList(12);
-  my $sql = 'REPLACE INTO users (id,kerberos,name,reviewer,advanced,expert,extadmin,' .
-            'admin,superadmin,note,institution,commitment)' .
-            ' VALUES ' . $wcs;
-  $self->PrepareSubmitSql($sql, $id, $kerberos, $name, $reviewer, $advanced,
-                          $expert, $extadmin, $admin, $superadmin, $note, $inst,
-                          $commitment);
+  my $sql = 'REPLACE INTO users (id,kerberos,name,reviewer,advanced,expert,extadmin,'.
+            'admin,superadmin,note,institution,commitment) VALUES '. $wcs;
+  $self->PrepareSubmitSql($sql, $id, $kerberos, $name, $reviewer, $advanced, $expert,
+                          $extadmin, $admin, $superadmin, $note, $inst, $commitment);
   if (defined $projects)
   {
     my @ps = split m/\s*,\s*/, $projects;
@@ -3525,10 +3536,10 @@ sub CanChangeToUser
   return 1 if $self->SameUser($me, $him);
   return 0 if not ($self->IsUserAdmin($me) && $self->WhereAmI());
   my $sql = 'SELECT reviewer,advanced,expert,admin,superadmin FROM users WHERE id=?';
-  my $ref1 = $self->GetDb()->selectall_arrayref($sql, undef, $me);
+  my $ref1 = $self->SelectAll($sql, $me);
   $ref1 = $ref1->[0];
   $sql = 'SELECT reviewer,advanced,expert,admin,superadmin FROM users WHERE id=?';
-  my $ref2 = $self->GetDb()->selectall_arrayref($sql, undef, $him);
+  my $ref2 = $self->SelectAll($sql, $him);
   $ref2 = $ref2->[0];
   return 0 if $ref2->[4] and not $ref1->[4];
   return 1 if $ref1->[4];
@@ -3643,7 +3654,7 @@ sub GetInstitutions
   my $self = shift;
 
   my @insts = ();
-  push @insts, $_->[0] for @{$self->GetDb()->selectall_arrayref('SELECT id FROM institutions')};
+  push @insts, $_->[0] for @{$self->SelectAll('SELECT id FROM institutions')};
   return \@insts;
 }
 
@@ -3658,8 +3669,8 @@ sub PredictUserInstitution
   {
     my $suff = $parts[1];
     $suff =~ s/\-expert//;
-    my $sql = "SELECT id FROM institutions WHERE LOCATE(suffix,'$suff')>0";
-    $inst = $self->SimpleSqlGet($sql);
+    my $sql = 'SELECT id FROM institutions WHERE LOCATE(suffix,?)>0';
+    $inst = $self->SimpleSqlGet($sql, $suff);
   }
   $inst = 0 unless defined $inst;
   return $inst;
@@ -3856,7 +3867,6 @@ sub CreateExportData
   my $doPercent      = shift;
   
   #print "CreateExportData('$delimiter', $cumulative, $doCurrentMonth, '$start', '$end', '$doPercent')<br/>\n";
-  my $dbh = $self->GetDb();
   my ($year,$month) = $self->GetTheYearMonth();
   my $now = "$year-$month";
   $start = "$year-01" unless $start;
@@ -3873,7 +3883,7 @@ sub CreateExportData
     my $sql = 'SELECT DISTINCT(DATE_FORMAT(date,"%Y-%m")) FROM exportstats' .
               ' WHERE DATE_FORMAT(date,"%Y-%m")>=?' .
               ' AND DATE_FORMAT(date,"%Y-%m")<=? ORDER BY date ASC';
-    @dates = map {$_->[0];} @{$dbh->selectall_arrayref($sql, undef, $start, $end)};
+    @dates = map {$_->[0];} @{$self->SelectAll($sql, $start, $end)};
   }
   my $titleDate = '';
   if (!$cumulative)
@@ -3890,7 +3900,7 @@ sub CreateExportData
             ' WHERE TABLE_SCHEMA=? AND TABLE_NAME="exportstats" AND COLUMN_NAME LIKE "%_%"' .
             ' ORDER BY (c LIKE "pd%") DESC, c';
   #print "$sql<br/>\n";
-  my $ref = $dbh->selectall_arrayref($sql, undef, $self->DbName());
+  my $ref = $self->SelectAll($sql, $self->DbName());
   my @allRights = map { $_->[0]; } @{$ref};
   my $nRights = scalar @allRights;
   foreach my $date (@dates)
@@ -3915,7 +3925,7 @@ sub CreateExportData
     $sql = 'SELECT '. join(',', @sums). ' FROM exportstats e LEFT JOIN determinationsbreakdown d'.
            ' ON DATE(e.date)=d.date WHERE e.date LIKE "'. $date. '%"';
     #print "$date: $sql<br/>\n";
-    my $ref = $dbh->selectall_arrayref($sql);
+    my $ref = $self->SelectAll($sql);
     #printf "$date: $sql : %d items<br/>\n", scalar @{$ref};
     foreach my $n (0 .. scalar @allRights-1)
     {
@@ -3941,7 +3951,7 @@ sub CreateExportData
     }
   }
   $report .= "\n";
-  my @titles = ('Total','Status 4', 'Status 5', 'Status 6', 'Status 7', 'Status 8', 'Status 9');
+  my @titles = ('Total', 'Status 4', 'Status 5', 'Status 6', 'Status 7', 'Status 8', 'Status 9');
   my @pdTitles = ('All PD');
   my @icTitles = ('All IC');
   my @undTitles = ('All UND');
@@ -4182,7 +4192,7 @@ sub CreatePreDeterminationsBreakdownData
   $what = 'DATE_FORMAT(date, "%Y-%m")' if $monthly;
   my $sql = 'SELECT DISTINCT(' . $what . ') FROM predeterminationsbreakdown WHERE date>=? AND date<=?';
   #print "$sql<br/>\n";
-  my @dates = map {$_->[0];} @{$self->GetDb()->selectall_arrayref($sql, undef, $start, $end)};
+  my @dates = map {$_->[0];} @{$self->SelectAll($sql, $start, $end)};
   if (scalar @dates && !$justThisMonth)
   {
     my $startEng = $self->YearMonthToEnglish(substr($dates[0],0,7));
@@ -4207,7 +4217,7 @@ sub CreatePreDeterminationsBreakdownData
     }
     my $sql = 'SELECT s2,s3,s4,s8,s2+s3+s4+s8 FROM predeterminationsbreakdown WHERE date LIKE "' . $date1 . '%"';
     #print "$sql<br/>\n";
-    my ($s2,$s3,$s4,$s8,$sum) = @{$self->GetDb()->selectall_arrayref($sql)->[0]};
+    my ($s2,$s3,$s4,$s8,$sum) = @{$self->SelectAll($sql)->[0]};
     my @line = ($s2,$s3,$s4,$s8,$sum,0,0,0,0);
     next unless $sum > 0;
     for (my $i=0; $i < 4; $i++)
@@ -4255,7 +4265,7 @@ sub CreateDeterminationsBreakdownData
   $what = 'DATE_FORMAT(date, "%Y-%m")' if $monthly;
   my $sql = 'SELECT DISTINCT(' . $what . ') FROM determinationsbreakdown WHERE date>=? AND date<=?';
   #print "$sql<br/>\n";
-  my @dates = map {$_->[0];} @{$self->GetDb()->selectall_arrayref($sql, undef, $start, $end)};
+  my @dates = map {$_->[0];} @{$self->SelectAll($sql, $start, $end)};
   if (scalar @dates && !$justThisMonth)
   {
     my $startEng = $self->YearMonthToEnglish(substr($dates[0],0,7));
@@ -4281,7 +4291,7 @@ sub CreateDeterminationsBreakdownData
     $sql = 'SELECT SUM(s4),SUM(s5),SUM(s6),SUM(s7),SUM(s8),SUM(s4+s5+s6+s7+s8),SUM(s9),SUM(s4+s5+s6+s7+s8+s9)' .
            ' FROM determinationsbreakdown WHERE date>=? AND date<=?';
     #print "$sql<br/>\n";
-    my ($s4,$s5,$s6,$s7,$s8,$sum1,$s9,$sum2) = @{$self->GetDb()->selectall_arrayref($sql, undef, $date1, $date2)->[0]};
+    my ($s4,$s5,$s6,$s7,$s8,$sum1,$s9,$sum2) = @{$self->SelectAll($sql, $date1, $date2)->[0]};
     my @line = ($s4,$s5,$s6,$s7,$s8,$sum1,$s9,$sum2,0,0,0,0,0);
     next unless $sum1 > 0;
     for (my $i=0; $i < 5; $i++)
@@ -4455,22 +4465,25 @@ sub GetStatsYears
 
   my $usersql = '';
   $user = '' if $user eq 'all';
+  my @params;
   if ($user)
   {
     if ('all__' eq substr $user, 0, 5)
     {
       my $inst = substr $user, 5;
-      $usersql = 'AND u.institution=' . $inst;
+      $usersql = 'AND u.institution=? '
+      push @params, $inst;
     }
     else
     {
-      $usersql = "AND user='$user'";
+      $usersql = 'AND user=? ';
+      push @params, $user;
     }
   }
   my $sql = 'SELECT DISTINCT year FROM userstats s INNER JOIN users u ON s.user=u.id' .
-            ' WHERE s.total_reviews>0 ' . $usersql . ' ORDER BY year DESC';
+            ' WHERE s.total_reviews>0 ' . $usersql . 'ORDER BY year DESC';
   #print "$sql<br/>\n";
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql, @params);
   return unless scalar @{$ref};
   my @years = map {$_->[0];} @{$ref};
   my $thisyear = $self->GetTheYear();
@@ -4493,7 +4506,6 @@ sub CreateStatsData
   #print "CreateStatsData($delimiter,$page,$user,$cumulative,$year,$inval,$nononexpert,$dopercent)<br/>\n";
   my $instusers = undef;
   my $instusersne = undef;
-  my $dbh = $self->GetDb();
   $year = ($self->GetTheYearMonth())[0] unless $year;
   my @statdates = ($cumulative)? reverse @{$self->GetStatsYears()} : $self->GetAllMonthsInYear($year);
   my $username;
@@ -4536,7 +4548,7 @@ sub CreateStatsData
     if ($instusers) { $sql .= " AND user IN ($instusers)"; }
     elsif ($user ne 'all') { $sql .= " AND user='$user'"; }
     #print "$sql<br/>\n";
-    my $rows = $dbh->selectall_arrayref($sql, undef, $mintime, $maxtime);
+    my $rows = $self->SelectAll($sql, $mintime, $maxtime);
     my $row = $rows->[0];
     my $i = 0;
     foreach my $title (@titles)
@@ -4549,11 +4561,11 @@ sub CreateStatsData
     $correct += $neutral if $page eq 'userRate';
     #print "total $total correct $correct incorrect $incorrect neutral $neutral for $mintime to $maxtime ($instusersne)<br/>\n";
     my $whichone = ($inval)? $incorrect:$correct;
-    my $pct = eval{100.0*$whichone/$total;};
+    my $pct = eval {100.0*$whichone/$total;};
     if ('all__' eq substr $user, 0, 5)
     {
       my ($total2,$correct2,$incorrect2,$neutral2) = $self->GetValidation($mintime, $maxtime);
-      $pct = eval{100.0*$incorrect2/$total2;};
+      $pct = eval {100.0*$incorrect2/$total2;};
     }
     if ($user eq 'all' || $instusers)
     {
@@ -4578,11 +4590,11 @@ sub CreateStatsData
   $correct += $neutral if $page eq 'userRate';
   #print "total $total correct $correct incorrect $incorrect neutral $neutral for $earliest to $latest ($instusersne)<br/>\n";
   my $whichone = ($inval)? $incorrect:$correct;
-  my $pct = eval{100.0*$whichone/$total;};
+  my $pct = eval {100.0*$whichone/$total;};
   if ('all__' eq substr $user, 0, 5)
   {
     my ($total2,$correct2,$incorrect2,$neutral2) = $self->GetValidation($earliest, $latest);
-    $pct = eval{100.0*$incorrect2/$total2;};
+    $pct = eval {100.0*$incorrect2/$total2;};
   }
   if ($user eq 'all' || $instusers)
   {
@@ -4609,7 +4621,7 @@ sub CreateStatsData
       push @params, $user;
     }
     #print "$sql<br/>\n";
-    my $rows = $dbh->selectall_arrayref($sql, undef, @params);
+    my $rows = $self->SelectAll($sql, @params);
     my $row = $rows->[0];
     my $i = 0;
     foreach my $title (@titles)
@@ -4621,11 +4633,11 @@ sub CreateStatsData
     $correct += $neutral if $page eq 'userRate';
     #print "project total $total correct $correct incorrect $incorrect neutral $neutral for $user<br/>\n";
     my $whichone = ($inval)? $incorrect:$correct;
-    my $pct = eval{100.0*$whichone/$total;};
+    my $pct = eval {100.0*$whichone/$total;};
     if ('all__' eq substr $user, 0, 5)
     {
       my ($total2,$correct2,$incorrect2,$neutral2) = $self->GetValidation($earliest, $latest);
-      $pct = eval{100.0*$incorrect2/$total2;};
+      $pct = eval {100.0*$incorrect2/$total2;};
     }
     if ($user eq 'all' || $instusers)
     {
@@ -4844,7 +4856,7 @@ sub CreateCandidatesData
             ' (SELECT EXTRACT(YEAR_MONTH FROM e.time) AS ym,COUNT(e.id) AS cnt FROM exportdata e' .
             '  WHERE e.src="candidates" OR src="inherited" GROUP BY EXTRACT(YEAR_MONTH FROM e.time)) ed' .
             ' ON (ed.ym=cd.ym) ORDER BY cd.ym DESC';
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   my $report = '';
   foreach my $row (@{$ref})
   {
@@ -4896,7 +4908,7 @@ sub CreateCountriesGraph
   my $sql = 'SELECT b.country,COUNT(e.id) AS cnt FROM bibdata b INNER JOIN exportdata e ON b.id=e.id' .
             ' WHERE (b.country="United Kingdom" OR b.country="Canada" OR b.country="Australia")' .
             ' AND e.exported=1 GROUP BY b.country WITH ROLLUP';
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   my $of = $ref->[-1]->[1];
   my $report = '';
   my @colors = $self->PickColors(3);
@@ -4922,7 +4934,7 @@ sub CreateUndGraph
   my $sql = 'SELECT COUNT(*) FROM und';
   my $of = $self->SimpleSqlGet($sql);
   $sql = 'SELECT src,COUNT(id) FROM und GROUP BY src ORDER BY src ASC';
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   my @vals = ();
   foreach my $row (@{$ref})
   {
@@ -5158,7 +5170,7 @@ sub UpdateStats
   {
     my $sql = 'SELECT DISTINCT DATE_FORMAT(time,"%Y-%m") AS ym FROM historicalreviews' .
               ' WHERE legacy!=1 AND user=? ORDER BY ym ASC';
-    my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $user);
+    my $ref = $self->SelectAll($sql, $user);
     foreach my $row (@{$ref})
     {
       my ($y,$m) = split '-', $row->[0];
@@ -5234,13 +5246,13 @@ sub UpdateDeterminationsBreakdown
   my @vals;
   foreach my $status (4..9)
   {
-    my $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r' .
+    my $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r'.
               ' ON e.gid=r.gid WHERE r.legacy!=1 AND DATE(e.time)=? AND r.status=?';
     push @vals, $self->SimpleSqlGet($sql, $date, $status);
   }
   unshift @vals, $date;
   my $wcs = $self->WildcardList(scalar @vals);
-  my $sql = 'REPLACE INTO determinationsbreakdown (date,s4,s5,s6,s7,s8,s9) VALUES ' . $wcs;
+  my $sql = 'REPLACE INTO determinationsbreakdown (date,s4,s5,s6,s7,s8,s9) VALUES '. $wcs;
   $self->PrepareSubmitSql($sql, @vals);
 }
 
@@ -5253,7 +5265,7 @@ sub UpdateExportStats
   $date = $self->SimpleSqlGet('SELECT CURDATE()') unless $date;
   my $sql = 'SELECT attr,reason FROM exportdata WHERE DATE(time)=? AND exported=1';
   #print "$sql\n";
-  my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $date);
+  my $ref = $self->SelectAll($sql, $date);
   foreach my $row (@{$ref})
   {
     my $attr = $row->[0];
@@ -5471,8 +5483,8 @@ sub GetMetadata
 
 sub BarcodeToId
 {
-  my $self   = shift;
-  my $id     = shift;
+  my $self = shift;
+  my $id   = shift;
 
   my $record = $self->GetMetadata($id);
   $self->ClearErrors();
@@ -5706,7 +5718,7 @@ sub GetLockedItems
   my $table = (defined $correction)? 'corrections':'queue';
   my $restrict = ($user)? "='$user'":'IS NOT NULL';
   my $sql = 'SELECT id, locked FROM ' . $table . ' WHERE locked ' . $restrict;
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   my $return = {};
   foreach my $row (@{$ref})
   {
@@ -5772,7 +5784,7 @@ sub GetNextItemForReview
   my $id = undef;
   my $err = undef;
   my $sql = undef;
-  eval{
+  eval {
     my $exclude = 'q.priority<3 AND ';
     my $order = 'q.priority DESC, cnt DESC, hash, q.time ASC';
     ####$order = 'hash';
@@ -5886,8 +5898,8 @@ sub GetNextCorrectionForReview
   my $id = undef;
   my $err = undef;
   my $sql = 'SELECT c.id FROM corrections c WHERE c.locked IS NULL AND status IS NULL ORDER BY time DESC';
-  eval{
-    my $ref = $self->GetDb()->selectall_arrayref($sql);
+  eval {
+    my $ref = $self->SelectAll($sql);
     foreach my $row (@{$ref})
     {
       my $id2 = $row->[0];
@@ -6116,9 +6128,10 @@ sub StripDecimal
 sub CreateQueueReport
 {
   my $self = shift;
-  my $dbh = $self->GetDb();
+
   my $priheaders = '';
-  my @pris = map {$_->[0]} @{ $dbh->selectall_arrayref('SELECT DISTINCT priority FROM queue ORDER BY priority ASC') };
+  my $sql = 'SELECT DISTINCT priority FROM queue ORDER BY priority ASC';
+  my @pris = map {$_->[0]} @{ $self->SelectAll($sql) };
   foreach my $pri (@pris)
   {
     $pri = $self->StripDecimal($pri);
@@ -6128,18 +6141,18 @@ sub CreateQueueReport
   foreach my $status (-1 .. 9)
   {
     my $statusClause = ($status == -1)? '':"WHERE STATUS=$status";
-    my $sql = 'SELECT COUNT(*) FROM queue ' . $statusClause;
+    $sql = 'SELECT COUNT(*) FROM queue ' . $statusClause;
     my $count = $self->SimpleSqlGet($sql);
     $status = 'All' if $status == -1;
     my $class = ($status eq 'All')?' class="total"':'';
     $report .= sprintf("<tr><td%s>$status</td><td%s>$count</td>", $class, $class);
     $sql = 'SELECT priority FROM queue ' . $statusClause;
-    my $ref = $dbh->selectall_arrayref($sql);
+    my $ref = $self->SelectAll($sql);
     $report .= $self->DoPriorityBreakdown($ref,$class,\@pris);
     $report .= "</tr>\n";
   }
-  my $sql = 'SELECT priority FROM queue WHERE status=0 AND id NOT IN (SELECT id FROM reviews)';
-  my $ref = $dbh->selectall_arrayref($sql);
+  $sql = 'SELECT priority FROM queue WHERE status=0 AND id NOT IN (SELECT id FROM reviews)';
+  my $ref = $self->SelectAll($sql);
   my $count = $self->GetTotalAwaitingReview();
   my $class = ' class="major"';
   $report .= sprintf("<tr><td%s>Not&nbsp;Yet&nbsp;Active</td><td%s>$count</td>", $class, $class);
@@ -6185,7 +6198,9 @@ sub CreateSystemReport
   $report .= "<tr><th>Volumes&nbsp;Filtered**</th><td>$count</td></tr>\n";
   if ($count)
   {
-    my $ref = $self->GetDb()->selectall_arrayref('SELECT src,COUNT(src) FROM und WHERE src!="no meta" AND src!="duplicate" GROUP BY src ORDER BY src');
+    my $sql = 'SELECT src,COUNT(src) FROM und WHERE src!="no meta"'.
+              ' AND src!="duplicate" GROUP BY src ORDER BY src';
+    my $ref = $self->SelectAll($sql);
     foreach my $row (@{ $ref})
     {
       my $src = $row->[0];
@@ -6197,7 +6212,9 @@ sub CreateSystemReport
   $report .= "<tr><th>Volumes&nbsp;Temporarily&nbsp;Filtered**</th><td>$count</td></tr>\n";
   if ($count)
   {
-    my $ref = $self->GetDb()->selectall_arrayref('SELECT src,COUNT(src) FROM und WHERE src="no meta" OR src="duplicate" GROUP BY src ORDER BY src');
+    my $sql = 'SELECT src,COUNT(src) FROM und WHERE src="no meta"'.
+              ' OR src="duplicate" GROUP BY src ORDER BY src';
+    my $ref = $self->SelectAll($sql);
     foreach my $row (@{ $ref})
     {
       my $src = $row->[0];
@@ -6229,14 +6246,13 @@ sub CreateDeterminationReport
 {
   my $self = shift;
 
-  my $dbh = $self->GetDb();
   my ($count,$time) = $self->GetLastExport();
   my %cts = ();
   my %pcts = ();
   my $priheaders = '';
   my $sql = 'SELECT DISTINCT h.priority FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid' .
             ' WHERE e.time>=date_sub(?, INTERVAL 1 MINUTE) ORDER BY h.priority ASC';
-  my @pris = map {$_->[0]} @{ $dbh->selectall_arrayref($sql, undef, $time) };
+  my @pris = map {$_->[0]} @{ $self->SelectAll($sql, $time) };
   $sql = 'SELECT COUNT(DISTINCT h.id) FROM exportdata e, historicalreviews h' .
          ' WHERE e.gid=h.gid AND e.time>=date_sub(?, INTERVAL 1 MINUTE)';
   my $total = $self->SimpleSqlGet($sql, $time);
@@ -6260,7 +6276,7 @@ sub CreateDeterminationReport
   my $legacy = $self->GetTotalLegacyCount();
   my %sources;
   $sql = 'SELECT src,COUNT(gid) FROM exportdata WHERE src IS NOT NULL AND src NOT LIKE "HTS-%" GROUP BY src';
-  my $rows = $dbh->selectall_arrayref($sql);
+  my $rows = $self->SelectAll($sql);
   foreach my $row (@{$rows})
   {
     $sources{ $row->[0] } = $row->[1];
@@ -6280,7 +6296,7 @@ sub CreateDeterminationReport
                        $status, $cts{$status}, $pcts{$status});
     $sql = 'SELECT h.priority,h.gid FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid ' .
            "WHERE h.status=$status AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
-    my $ref = $dbh->selectall_arrayref($sql);
+    my $ref = $self->SelectAll($sql);
     #print "$sql<br/>\n";
     $report .= $self->DoPriorityBreakdown($ref, undef, \@pris, $cts{$status});
     $report .= '</tr>';
@@ -6288,7 +6304,7 @@ sub CreateDeterminationReport
   $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Total</th><td>$count</td>";
   $sql = 'SELECT h.priority,h.gid FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid' .
          ' WHERE e.time>=date_sub(?, INTERVAL 1 MINUTE)';
-  my $ref = $dbh->selectall_arrayref($sql, undef, $time);
+  my $ref = $self->SelectAll($sql, $time);
   #print "$sql<br/>\n";
   $report .= $self->DoPriorityBreakdown($ref, undef, \@pris, $count);
   $report .= '</tr>';
@@ -6319,11 +6335,10 @@ sub CreateHistoricalReviewsReport
 sub CreateReviewReport
 {
   my $self = shift;
-  my $dbh = $self->GetDb();
-  
+
   my $report = '';
   my $priheaders = '';
-  my @pris = map {$_->[0]} @{ $dbh->selectall_arrayref('SELECT DISTINCT priority FROM queue ORDER BY priority ASC') };
+  my @pris = map {$_->[0]} @{$self->SelectAll('SELECT DISTINCT priority FROM queue ORDER BY priority ASC')};
   foreach my $pri (@pris)
   {
     $pri = $self->StripDecimal($pri);
@@ -6332,49 +6347,49 @@ sub CreateReviewReport
   $report .= "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
   
   my $sql = 'SELECT priority FROM queue WHERE id IN (SELECT DISTINCT id FROM reviews)';
-  my $ref = $dbh->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   my $count = scalar @{$ref};
   $report .= "<tr><td class='total'>Active</td><td class='total'>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,' class="total"',\@pris) . "</tr>\n";
   
   # Unprocessed
   $sql = 'SELECT priority FROM queue WHERE status=0 AND pending_status>0';
-  $ref = $dbh->selectall_arrayref($sql);
+  $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td class='minor'>Unprocessed</td><td class='minor'>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,' class="minor"',\@pris) . "</tr>\n";
   
   # Unprocessed - single review
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=1';
-  $ref = $dbh->selectall_arrayref($sql);
+  $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Single&nbsp;Review</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
   
   # Unprocessed - match
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=4';
-  $ref = $dbh->selectall_arrayref($sql);
+  $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Match</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
   
   # Unprocessed - conflict
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=2';
-  $ref = $dbh->selectall_arrayref($sql);
+  $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflict</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
   
   # Unprocessed - provisional match
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=3';
-  $ref = $dbh->selectall_arrayref($sql);
+  $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Match</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
   
   # Unprocessed - auto-resolved
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=8';
-  $ref = $dbh->selectall_arrayref($sql);
+  $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Auto-Resolved</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
@@ -6416,25 +6431,25 @@ sub CreateReviewReport
   
   # Processed
   $sql = 'SELECT priority FROM queue WHERE status!=0';
-  $ref = $dbh->selectall_arrayref($sql);
+  $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td class='minor'>Processed</td><td class='minor'>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,' class="minor"',\@pris) . "</tr>\n";
   
   $sql = 'SELECT priority from queue WHERE status=2';
-  $ref = $dbh->selectall_arrayref($sql);
+  $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflict</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,'',\@pris) . "</tr>\n";
 
   $sql = 'SELECT priority from queue WHERE status=3';
-  $ref = $dbh->selectall_arrayref($sql);
+  $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Match</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,'',\@pris) . "</tr>\n";
   
   $sql = 'SELECT priority from queue WHERE status>=4';
-  $ref = $dbh->selectall_arrayref($sql);
+  $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Awaiting&nbsp;Export</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,'',\@pris) . "</tr>\n";
@@ -6444,7 +6459,7 @@ sub CreateReviewReport
     for my $status (4..9)
     {
       $sql = 'SELECT priority from queue WHERE status=?';
-      $ref = $dbh->selectall_arrayref($sql, undef, $status);
+      $ref = $self->SelectAll($sql, $status);
       $count = scalar @{$ref};
       $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;$status</td><td>$count</td>";
       $report .= $self->DoPriorityBreakdown($ref,'',\@pris) . "</tr>\n";
@@ -6455,7 +6470,7 @@ sub CreateReviewReport
   return $report;
 }
 
-# Takes a selectall_arrayref ref in which each row has a priority as its first column
+# Takes a SelectAll ref in which each row has a priority as its first column
 sub DoPriorityBreakdown
 {
   my $self  = shift;
@@ -6545,7 +6560,7 @@ sub GetLastExport
   my $readable = shift;
 
   my $sql = 'SELECT itemcount,time FROM exportrecord WHERE itemcount>0 ORDER BY time DESC LIMIT 1';
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   my $count = $ref->[0]->[0];
   my $time = $ref->[0]->[1];
   $time = $self->FormatTime($time) if $readable;
@@ -6590,7 +6605,7 @@ sub GetLastQueueInfo
   my $self = shift;
   
   my $sql = 'SELECT time,itemcount FROM queuerecord WHERE source="RIGHTSDB" ORDER BY time DESC LIMIT 1';
-  my $row = $self->GetDb()->selectall_arrayref($sql)->[0];
+  my $row = $self->SelectAll($sql)->[0];
   my $time = $self->FormatTime($row->[0]);
   my $cnt = $row->[1];
   $time = 'Never' unless $time;
@@ -6672,7 +6687,7 @@ sub IsReviewCorrect
   # Get the review
   $sql = 'SELECT attr,reason,renNum,renDate,expert,status,time FROM historicalreviews' .
          " WHERE id=? AND user=? AND time LIKE '$time%'";
-  my $r = $self->GetDb()->selectall_arrayref($sql, undef, $id, $user);
+  my $r = $self->SelectAll($sql, $id, $user);
   my $row = $r->[0];
   my $attr    = $row->[0];
   my $reason  = $row->[1];
@@ -6688,7 +6703,7 @@ sub IsReviewCorrect
   # Get the most recent non-autocrms expert review.
   $sql = 'SELECT attr,reason,renNum,renDate,user,swiss FROM historicalreviews' .
          ' WHERE id=? AND expert>0 AND time>? ORDER BY time DESC';
-  $r = $self->GetDb()->selectall_arrayref($sql, undef, $id, $time);
+  $r = $self->SelectAll($sql, $id, $time);
   return 1 unless scalar @{$r};
   $row = $r->[0];
   my $eattr    = $row->[0];
@@ -6721,7 +6736,7 @@ sub UpdateCorrectness
   my $id   = shift;
 
   my $sql = 'SELECT user,time,validated FROM historicalreviews WHERE id=?';
-  my $r = $self->GetDb()->selectall_arrayref($sql, undef, $id);
+  my $r = $self->SelectAll($sql, $id);
   foreach my $row (@{$r})
   {
     my $user = $row->[0];
@@ -6748,7 +6763,7 @@ sub CountCorrectReviews
   my $neutral = 0;
   my $sql = 'SELECT validated,COUNT(id) FROM historicalreviews' .
             ' WHERE legacy!=1 AND user=? AND time>=? AND time<=? GROUP BY validated';
-  my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $user, $start, $end);
+  my $ref = $self->SelectAll($sql, $user, $start, $end);
   foreach my $row (@{$ref})
   {
     my $val = $row->[0];
@@ -6796,9 +6811,9 @@ sub HexDump
 sub GetType1Reviewers
 {
   my $self = shift;
-  my $dbh = $self->GetDb();
+
   my $sql = 'SELECT id FROM users WHERE id NOT LIKE "rereport%" AND expert=0';
-  return map {$_->[0]} @{$dbh->selectall_arrayref($sql)};
+  return map {$_->[0]} @{ $self->SelectAll($sql) };
 }
 
 sub GetValidation
@@ -6814,7 +6829,7 @@ sub GetValidation
   my $sql = 'SELECT SUM(total_reviews),SUM(total_correct),SUM(total_incorrect),SUM(total_neutral) FROM userstats' .
             " WHERE monthyear>=? AND monthyear<=? AND user IN ($users)";
   #print "$sql<br/>\n";
-  my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $start, $end);
+  my $ref = $self->SelectAll($sql, $start, $end);
   my $row = $ref->[0];
   return @{ $row };
 }
@@ -6975,7 +6990,7 @@ sub Namespaces
 
   my $sql = 'SELECT distinct namespace FROM rights_current';
   my $ref = undef;
-  eval { $ref = $self->GetSdrDb()->selectall_arrayref($sql); };
+  eval { $ref = $self->SelectAllSDR($sql); };
   $self->SetError("Rights query for namespaces failed: $@") if $@;
   return map {$_->[0];} @{$ref};
 }
@@ -6997,7 +7012,7 @@ sub RightsQuery
             ' AND rs.id=r.reason AND p.id=r.access_profile' .
             ' ORDER BY r.time ASC';
   my $ref;
-  eval { $ref = $self->GetSdrDb()->selectall_arrayref($sql, undef, $ns, $n); };
+  eval { $ref = $self->SelectAllSDR($sql, $ns, $n); };
   if ($@)
   {
     $self->SetError("Rights query for $id failed: $@");
@@ -7042,7 +7057,7 @@ sub GetUserIPs
   my $user = shift;
 
   $user = $self->get('user') unless defined $user;
-  my $sql = "SELECT iprestrict FROM ht_users WHERE userid='$user'";
+  my $sql = 'SELECT iprestrict FROM ht_users WHERE userid=?';
   my $sdr_dbh = $self->get('ht_repository');
   if (!defined $sdr_dbh)
   {
@@ -7051,7 +7066,7 @@ sub GetUserIPs
   }
   my $ipr;
   eval {
-    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, @_);
+    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user);
     $ipr = $ref->[0]->[0];
   };
   if ($@)
@@ -7165,7 +7180,7 @@ sub GetTrackingInfo
   if ($self->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE id=?', $id))
   {
     my $sql = 'SELECT attr,reason,DATE(time),src FROM exportdata WHERE id=? ORDER BY time DESC LIMIT 1';
-    my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $id);
+    my $ref = $self->SelectAll($sql, $id);
     my $a = $ref->[0]->[0];
     my $r = $ref->[0]->[1];
     my $t = $ref->[0]->[2];
@@ -7183,7 +7198,7 @@ sub GetTrackingInfo
   if ($correction && $self->SimpleSqlGet('SELECT COUNT(*) FROM corrections WHERE id=?', $id))
   {
     my $sql = 'SELECT user,status,ticket,DATE(time) FROM corrections WHERE id=?';
-    my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $id);
+    my $ref = $self->SelectAll($sql, $id);
     my $user = $ref->[0]->[0];
     my $status = $ref->[0]->[1];
     my $tx = $ref->[0]->[2];
@@ -7195,7 +7210,7 @@ sub GetTrackingInfo
   if ($inherit && $self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE id=? AND del=0', $id))
   {
     my $sql = 'SELECT e.id,e.attr,e.reason FROM exportdata e INNER JOIN inherit i ON e.gid=i.gid WHERE i.id=?';
-    my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $id);
+    my $ref = $self->SelectAll($sql, $id);
     my $src = $ref->[0]->[0];
     my $a = $ref->[0]->[1];
     my $r = $ref->[0]->[2];
@@ -7244,7 +7259,7 @@ sub GetSystemStatus
     return \@vals;
   }
   my $sql = 'SELECT time,status,message FROM systemstatus LIMIT 1';
-  my $r = $self->GetDb()->selectall_arrayref($sql);
+  my $r = $self->SelectAll($sql);
   my $row = $r->[0];
   if ($row)
   {
@@ -7274,7 +7289,7 @@ sub SetSystemStatus
   my $msg    = shift;
 
   $self->PrepareSubmitSql('DELETE FROM systemstatus');
-  my $sql = "INSERT INTO systemstatus (status,message) VALUES (?,?)";
+  my $sql = 'INSERT INTO systemstatus (status,message) VALUES (?,?)';
   $self->PrepareSubmitSql($sql, $status, $msg);
 }
 
@@ -7330,7 +7345,9 @@ sub ResetButton
   return unless $self->IsTrainingArea();
   if ($nuke)
   {
-    my $ref = $self->GetDb()->selectall_arrayref('SELECT id FROM queue WHERE status<4 AND id IN (SELECT DISTINCT id FROM reviews)');
+    my $sql = 'SELECT id FROM queue WHERE status<4'.
+              ' AND id IN (SELECT DISTINCT id FROM reviews)';
+    my $ref = $self->SelectAll($sql);
     foreach my $row (@{$ref})
     {
       my $id = $row->[0];
@@ -7361,7 +7378,7 @@ sub ReplicationDelay
 
   my $host = $self->Hostname();
   my $sql = 'SELECT seconds,DATE_SUB(time, INTERVAL seconds SECOND) FROM mysqlrep.delay WHERE client=?';
-  my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $host);
+  my $ref = $self->SelectAll($sql, $host);
   my @return = ($ref->[0]->[0],$self->FormatTime($ref->[0]->[1]));
   return @return;
 }
@@ -7493,7 +7510,7 @@ sub GetInheritanceRef
   my $ref;
   #print "$sql<br/>\n";
   eval {
-    $ref = $self->GetDb()->selectall_arrayref($sql);
+    $ref = $self->SelectAll($sql);
   };
   if ($@)
   {
@@ -7510,7 +7527,7 @@ sub GetInheritanceRef
   #print "$sql<br/>\n";
   $ref = undef;
   eval {
-    $ref = $self->GetDb()->selectall_arrayref($sql);
+    $ref = $self->SelectAll($sql);
   };
   if ($@)
   {
@@ -7554,7 +7571,7 @@ sub GetInheritanceRef
     {
       $summary = sprintf "in queue (P%s)", $self->GetPriority($id);
       $sql = 'SELECT user FROM reviews WHERE id=?';
-      my $ref2 = $self->GetDb()->selectall_arrayref($sql, undef, $id);
+      my $ref2 = $self->SelectAll($sql, $id);
       my $users = join ', ', (map {$_->[0]} @{$ref2});
       $summary .= "; reviewed by $users" if $users;
       my $locked = $self->SimpleSqlGet('SELECT locked FROM queue WHERE id=?', $id);
@@ -7633,7 +7650,7 @@ sub GetDeletedInheritance
   my $self = shift;
 
   my $sql = 'SELECT id FROM inherit WHERE del=1';
-  return $self->GetDb()->selectall_arrayref($sql);
+  return $self->SelectAll($sql);
 }
 
 sub UpdateInheritanceRights
@@ -7641,7 +7658,7 @@ sub UpdateInheritanceRights
   my $self = shift;
 
   my $sql = 'SELECT id,attr,reason FROM inherit';
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
@@ -7666,7 +7683,7 @@ sub AutoSubmitInheritances
   my $fromcgi = shift;
 
   my $sql = 'SELECT id FROM inherit WHERE del=0';
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
@@ -7690,7 +7707,7 @@ sub SubmitInheritance
   my $sql = 'SELECT COUNT(*) FROM reviews r INNER JOIN queue q ON r.id=q.id WHERE r.id=? AND r.user="autocrms" AND q.status=9';
   return 'skip' if $self->SimpleSqlGet($sql, $id);
   $sql = 'SELECT e.attr,e.reason,i.gid FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid WHERE i.id=?';
-  my $row = $self->GetDb()->selectall_arrayref($sql, undef, $id)->[0];
+  my $row = $self->SelectAll($sql, $id)->[0];
   return "$id is no longer available for inheritance (has it been processed?)" unless $row;
   my $attr = $self->TranslateAttr($row->[0]);
   my $reason = $self->TranslateReason($row->[1]);
@@ -7762,7 +7779,7 @@ sub LinkToCatalog
   my $self  = shift;
   my $sysid = shift;
   
-  return "http://catalog.hathitrust.org/Record/$sysid";
+  return 'http://catalog.hathitrust.org/Record/'. $sysid;
 }
 
 sub LinkToHistorical
@@ -7771,7 +7788,7 @@ sub LinkToHistorical
   my $sysid = shift;
   my $full  = shift;
 
-  my $url = $self->Sysify("/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value=$sysid");
+  my $url = $self->Sysify('/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value='. $sysid);
   $url = $self->SelfURL() . $url if $full;
   return $url;
 }
@@ -7782,7 +7799,7 @@ sub LinkToRetrieve
   my $sysid = shift;
   my $full  = shift;
 
-  my $url = $self->Sysify("/cgi/c/crms/crms?p=track;query=$sysid");
+  my $url = $self->Sysify('/cgi/c/crms/crms?p=track;query='. $sysid);
   $url = $self->SelfURL() . $url if $full;
   return $url;
 }
@@ -7864,7 +7881,7 @@ sub DuplicateVolumesFromExport
     if ($self->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE id=? AND time>=?', $id2, $time2))
     {
       my $sql = 'SELECT attr,reason FROM exportdata WHERE id=? ORDER BY time DESC LIMIT 1';
-      ($attr2,$reason2) = @{$self->GetDb()->selectall_arrayref($sql, undef, $id2)->[0]};
+      ($attr2,$reason2) = @{$self->SelectAll($sql, $id2)->[0]};
     }
     my $newrights = "$attr/$reason";
     my $oldrights = "$attr2/$reason2";
@@ -7931,7 +7948,7 @@ sub AllCRMSRights
   my $self = shift;
   
   my $sql = 'SELECT attr,reason FROM rights';
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   my %okattr;
   foreach my $row (@{$ref})
   {
@@ -7986,7 +8003,7 @@ sub DuplicateVolumesFromCandidates
     {
       $sql = 'SELECT attr,reason,gid,time FROM exportdata WHERE id=?' .
              ' AND time>="2010-06-02 00:00:00" ORDER BY time DESC LIMIT 1';
-      my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $id2);
+      my $ref = $self->SelectAll($sql, $id2);
       foreach my $row (@{$ref})
       {
         my $attr2   = $row->[0];
@@ -8142,7 +8159,7 @@ sub Menus
   my $s = $self->IsUserSuperAdmin();
   my $sql = 'SELECT id,name,class,restricted FROM menus ORDER BY n';
   #print "$sql\n<br/>";
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   my @all = ();
   foreach my $row (@{$ref})
   {
@@ -8175,7 +8192,7 @@ sub MenuItems
   my $s = $self->IsUserSuperAdmin();
   my $sql = 'SELECT name,href,institution,restricted,target FROM menuitems WHERE menu=? ORDER BY n ASC';
   #print "$sql\n<br/>";
-  my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $menu);
+  my $ref = $self->SelectAll($sql, $menu);
   my @all = ();
   foreach my $row (@{$ref})
   {
@@ -8213,7 +8230,7 @@ sub Categories
   my $s = $self->IsUserSuperAdmin();
   my $sql = 'SELECT id,name,restricted,interface,need_note FROM categories ORDER BY name ASC';
   #print "$sql\n<br/>";
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   my @all = ();
   foreach my $row (@{$ref})
   {
@@ -8245,7 +8262,7 @@ sub Rights
   my $s = $self->IsUserSuperAdmin();
   my $sql = 'SELECT id,attr,reason,restricted,description FROM rights ORDER BY id ASC';
   #print "$sql\n<br/>";
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   my @all = ();
   foreach my $row (@{$ref})
   {
@@ -8282,7 +8299,7 @@ sub Sources
   my $sql = 'SELECT id,name,url,accesskey,menu,initial FROM sources' .
             ' WHERE page=? ORDER BY n ASC, name ASC';
   #print "$sql\n<br/>";
-  my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $page);
+  my $ref = $self->SelectAll($sql, $page);
   my @all = ();
   my $a = $self->GetEncAuthorForReview($id);
   $a =~ s/&/%26/g;
@@ -8572,7 +8589,7 @@ sub GetVIAFData
   {
     my $sql = 'SELECT viaf_author,year,country,viafID,DATE_SUB(NOW(),INTERVAL 1 MONTH)>time' .
               ' FROM viaf WHERE author=?';
-    my $ref = $self->GetDb()->selectall_arrayref($sql, undef, $a);
+    my $ref = $self->SelectAll($sql, $a);
     if (defined $ref && scalar @{$ref} > 0)
     {
       # If the data is over a month old, re-fetch.
@@ -8852,7 +8869,7 @@ sub GetAddToQueueRef
   $sql .= ($seq)? ' AND q.priority<=-3':' AND q.priority>=3';
   $sql .= ' ORDER BY q.added_by,q.source,q.status ASC,q.priority DESC,q.id ASC';
   #printf "$sql, %s<br/>\n", (defined $user)? $user:'<undef>';
-  return $self->GetDb()->selectall_arrayref($sql, undef, $user);
+  return $self->SelectAll($sql, $user);
 }
 
 sub Sequester
