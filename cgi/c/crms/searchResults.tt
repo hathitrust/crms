@@ -216,7 +216,7 @@ function CheckAll(box,formid)
         </td>
         [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
           <td style="display:[% (showSysID)? 'table-cell':'none' %];">
-            <a href="http://mirlyn.lib.umich.edu/Record/[% review.sysid %]/Details#tabs" target="_blank">$review.sysid</a>
+            <a href="[% crms.LinkToMirlynDetails(review.id) %]" target="_blank">$review.sysid</a>
           </td>
         [% END %]
         <td>

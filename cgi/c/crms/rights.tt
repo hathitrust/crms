@@ -26,7 +26,7 @@
       [% sysid = crms.BarcodeToId(id) %]
       [% syslink = "No System ID" %]
       [% IF sysid %]
-         [% syslink = '<a style="color:white;" href="http://mirlyn.lib.umich.edu/Record/' _ sysid _ '/Details#tabs" target="_blank">' _ sysid _ "</a>" %]
+         [% syslink = '<a style="color:white;" href="' _ crms.LinkToMirlynDetails(id) _ '" target="_blank">' _ sysid _ "</a>" %]
       [% END %]
       <table class="exportStats" style="width:33%;">
       <tr>

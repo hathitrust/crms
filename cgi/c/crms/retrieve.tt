@@ -21,7 +21,6 @@
     [% all.$id = 1 %]
   [% END %]
   [% FOREACH id IN q.split %]
-    [% mirlyn = 0 %]
     [% ids = crms.VolumeIDsQuery(id) %]
     [% IF (NOT ids) || ids.size() == 0 %]
       <br/><h4>No results for $id</h4>
@@ -38,16 +37,13 @@
     [% url = crms.Sysify("?p=$p;download=1;q=$id") %]
     <a href="[% url %]" target="_blank">download</a>
     <br/>
-    [% IF NOT mirlyn %][% mirlyn = crms.HTIDToMirlyn(id) %][% END %]
     <table class="exportStats">
       <tr>
         <th colspan="9" class="major" style="text-align:center;">
           <span style="color:white;">
-          [% IF NOT mirlyn %][% mirlyn = sys %][% END %]
-          [% IF sys != mirlyn %]($sys) [% END %]
           <a style="color:white;"
-             href="http://mirlyn.lib.umich.edu/Record/$mirlyn/Details#tabs"
-             target="_blank">$mirlyn</a>
+             href=[% crms.LinkToMirlynDetails(id) %]
+             target="_blank">$sys</a>
           </span>
         </th>
       </tr>
