@@ -3913,11 +3913,10 @@ sub CreateExportData
     }
     foreach my $status (4..9)
     {
-      $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r' .
-             ' ON e.gid=r.gid WHERE r.legacy!=1 AND r.status=? AND e.exported=1'.
-             ' AND DATE(e.time) LIKE "'. $date. '%"';
-      #print "$date: $sql<br/>\n";
-      $stats{'Status '. $status}{$date} += $self->SimpleSqlGet($sql, $status);
+      $sql = 'SELECT SUM(s'. $status. ')'.
+             ' FROM determinationsbreakdown WHERE'.
+             ' date LIKE "'. $date. '%"';
+      $stats{'Status '. $status}{$date} += $self->SimpleSqlGet($sql);
     }
     for my $cat (keys %cats)
     {
@@ -5226,7 +5225,7 @@ sub UpdateDeterminationsBreakdown
   foreach my $status (4..9)
   {
     my $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r'.
-              ' ON e.gid=r.gid WHERE r.legacy!=1 AND DATE(e.time)=? AND r.status=?';
+              ' ON e.gid=r.gid WHERE r.legacy!=1 AND DATE(e.time)=? AND r.status=? AND e.exported=1';
     push @vals, $self->SimpleSqlGet($sql, $date, $status);
   }
   unshift @vals, $date;
