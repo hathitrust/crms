@@ -190,14 +190,13 @@ sub CalcStatus
   my $stat = shift; # FIXME: should this be pushed up into caller?
 
   my %return;
-  my $dbh = $self->GetDb();
   my $status = 0;
-  my $sql = "SELECT user,attr,reason,renNum,renDate,hold,NOW() FROM reviews WHERE id='$id'";
-  my $ref = $dbh->selectall_arrayref( $sql );
-  my ($user, $attr, $reason, $renNum, $renDate, $hold, $today) = @{ $ref->[0] };
-  $sql = "SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id='$id' AND user!='$user'";
-  $ref = $dbh->selectall_arrayref( $sql );
-  my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{ $ref->[0] };
+  my $sql = 'SELECT user,attr,reason,renNum,renDate,hold,NOW() FROM reviews WHERE id=?';
+  my $ref = $self->SelectAll($sql, $id);
+  my ($user, $attr, $reason, $renNum, $renDate, $hold, $today) = @{$ref->[0]};
+  $sql = 'SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id=? AND user!=?';
+  $ref = $self->SelectAll($sql, $id, $user);
+  my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{$ref->[0]};
   if ($hold && ($today lt $hold || $stat ne 'normal'))
   {
     $return{'hold'} = $user;
@@ -267,8 +266,8 @@ sub CalcPendingStatus
   my $id   = shift;
   
   my $pstatus = 0;
-  my $sql = "SELECT user,attr,reason,renNum,renDate FROM reviews WHERE id='$id' AND expert IS NULL";
-  my $ref = $self->GetDb()->selectall_arrayref( $sql );
+  my $sql = 'SELECT user,attr,reason,renNum,renDate FROM reviews WHERE id=? AND expert IS NULL';
+  my $ref = $self->SelectAll($sql, $id);
   if (scalar @{$ref} > 1)
   {
     my $row = @{$ref}[0];

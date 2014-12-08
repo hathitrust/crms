@@ -82,14 +82,13 @@ sub CalcStatus
   my $stat = shift;
 
   my %return;
-  my $dbh = $self->GetDb();
   my $status = 0;
-  my $sql = "SELECT user,attr,reason,renNum,renDate,hold,NOW() FROM reviews WHERE id='$id'";
-  my $ref = $dbh->selectall_arrayref($sql);
+  my $sql = 'SELECT user,attr,reason,renNum,renDate,hold,NOW() FROM reviews WHERE id=?';
+  my $ref = $self->SelectAll($sql, $id);
   my ($user, $attr, $reason, $renNum, $renDate, $hold, $today) = @{ $ref->[0] };
   $renNum = undef unless $renDate;
-  $sql = "SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id='$id' AND user!='$user'";
-  $ref = $dbh->selectall_arrayref($sql);
+  $sql = 'SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id=? AND user!=?';
+  $ref = $self->SelectAll($sql, $id, $user);
   my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{ $ref->[0] };
   $other_renNum = undef unless $other_renDate;
   $attr = $self->TranslateAttr($attr);
@@ -155,12 +154,12 @@ sub CalcPendingStatus
   my $id   = shift;
   
   my $pstatus = 0;
-  my $sql = "SELECT user,attr,reason,renNum,renDate FROM reviews WHERE id='$id' AND expert IS NULL";
-  my $ref = $self->GetDb()->selectall_arrayref($sql);
+  my $sql = 'SELECT user,attr,reason,renNum,renDate FROM reviews WHERE id=? AND expert IS NULL';
+  my $ref = $self->SelectAll($sql, $id);
   if (scalar @{$ref} > 1)
   {
-    my ($user, $attr, $reason, $renNum, $renDate) = @{ $ref->[0] };
-    my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate) = @{ $ref->[1] };
+    my ($user, $attr, $reason, $renNum, $renDate) = @{$ref->[0]};
+    my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate) = @{$ref->[1]};
     $attr = $self->TranslateAttr($attr);
     $reason = $self->TranslateReason($reason);
     $other_attr = $self->TranslateAttr($other_attr);

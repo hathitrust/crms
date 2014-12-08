@@ -21,8 +21,8 @@ my $crms = CRMS->new(logFile  =>   "$DLXSROOT/prep/c/crms/log_getReviewInfo.txt"
 
 my $id = $cgi->param('id');
 my $user = $cgi->param('user');
-my $sql = "SELECT attr,reason,note,category,renNum,renDate FROM reviews WHERE id='$id' AND user='$user'";
-my $row = $crms->GetDb()->selectall_arrayref($sql)->[0];
+my $sql = 'SELECT attr,reason,note,category,renNum,renDate FROM reviews WHERE id=? AND user=?';
+my $row = $crms->SelectAll($sql, $id, $user)->[0];
 my %data;
 $data{'rights'} = $crms->GetCodeFromAttrReason($row->[0], $row->[1]);
 # If the rights attr is not und (5) then run a rights prediction
