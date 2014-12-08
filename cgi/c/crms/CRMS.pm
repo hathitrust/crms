@@ -7806,10 +7806,10 @@ sub LinkToRetrieve
 
 sub LinkToMirlynDetails
 {
-  my $self  = shift;
-  my $sysid = shift;
+  my $self = shift;
+  my $id   = shift;
 
-  return "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
+  return 'http://mirlyn.lib.umich.edu/Record/HTID/'. $id;
 }
 
 sub LinkToJira
