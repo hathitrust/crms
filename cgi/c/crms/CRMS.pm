@@ -3373,7 +3373,7 @@ sub AddUser
   # Preserve existing privileges unless there are some checkboxes checked
   my $checked = 0;
   $checked += ${$fields[$_]} for (0 .. scalar @fields - 1);
-  if ($checked == 0)
+  if ($checked == 0 && !$disable)
   {
     my $sql = 'SELECT reviewer,advanced,expert,extadmin,admin,superadmin FROM users WHERE id=?';
     my $ref = $self->SelectAll($sql, $id);
