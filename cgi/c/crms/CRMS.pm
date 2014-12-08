@@ -842,23 +842,15 @@ sub CheckAndLoadItemIntoCandidates
   my $cm = $self->CandidatesModule();
   my $record;
   my $oldSysid = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
-  my $oldMirlyn = $self->SimpleSqlGet('SELECT mirlyn FROM bibdata WHERE id=?', $id);
-  my $mirlyn;
-  if (defined $oldSysid || defined $oldMirlyn)
+  if (defined $oldSysid)
   {
     $record = $self->GetMetadata($id);
     if (defined $record)
     {
       my $sysid = $record->sysid;
-      $mirlyn = $record->mirlyn;
       if (defined $sysid && defined $oldSysid && $sysid ne $oldSysid)
       {
         print "Update system ID on $id -- old $oldSysid, new $sysid\n";
-        $self->UpdateMetadata($id, 1, $record) unless defined $noop;
-      }
-      if (defined $mirlyn && defined $oldMirlyn && $mirlyn ne $oldMirlyn)
-      {
-        print "Update Mirlyn ID on $id -- old $oldMirlyn, new $mirlyn\n";
         $self->UpdateMetadata($id, 1, $record) unless defined $noop;
       }
     }
@@ -902,13 +894,8 @@ sub CheckAndLoadItemIntoCandidates
     return;
   }
   $record = $self->GetMetadata($id) unless defined $record;
-  $mirlyn = $record->mirlyn if defined $record;
-  if (!defined $record || !defined $mirlyn || '' == $mirlyn)
+  if (!defined $record)
   {
-    #if (defined $record && (!defined $mirlyn || '' == $mirlyn))
-    #{
-    #  print "No Mirlyn id for $id: will try again tomorrow.\n";
-    #}
     $self->Filter($id, 'no meta') unless defined $noop;
     $self->ClearErrors();
     return;
@@ -1134,7 +1121,7 @@ sub ShouldVolumeGoInUndTable
   my $record = shift;
 
   $record = $self->GetMetadata($id) unless $record;
-  return 'no meta' if !defined $record || !defined $record->mirlyn || '' == $record->mirlyn;
+  return 'no meta' unless defined $record;
   return $self->CandidatesModule()->ShouldVolumeGoInUndTable($id, $record);
 }
 
@@ -1196,7 +1183,7 @@ sub LoadNewItems
     my $id = $row->[0];
     next if $dels{$id};
     my $record = $self->GetMetadata($id);
-    if (!defined $record || !defined $record->mirlyn || '' == $record->mirlyn)
+    if (!defined $record)
     {
       print "Filtering $id: can't get metadata for queue\n";
       $self->Filter($id, 'no meta');
@@ -5451,20 +5438,6 @@ sub GetAuthor
   return $au;
 }
 
-sub GetMirlyn
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $m = $self->SimpleSqlGet('SELECT mirlyn FROM bibdata WHERE id=?', $id);
-  if (!$m)
-  {
-    $self->UpdateMetadata($id, 1);
-    $m = $self->SimpleSqlGet('SELECT mirlyn FROM bibdata WHERE id=?', $id);
-  }
-  return $m;
-}
-
 sub GetMetadata
 {
   my $self = shift;
@@ -5486,12 +5459,17 @@ sub BarcodeToId
   my $self = shift;
   my $id   = shift;
 
-  my $record = $self->GetMetadata($id);
-  $self->ClearErrors();
-  return $record->mirlyn if defined $record;
+  my $sys = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
+  if (!$sys)
+  {
+    my $record = $self->GetMetadata($id);
+    $self->ClearErrors();
+    $sys = $record->sysid if defined $record;
+  }
+  return $sys;
 }
 
-# Update author, title, pubdate, country, sysid, mirlyn fields in bibdata.
+# Update author, title, pubdate, country, sysid fields in bibdata.
 # Only updates existing rows (does not INSERT) unless the force param is set.
 sub UpdateMetadata
 {
@@ -5509,19 +5487,16 @@ sub UpdateMetadata
       my $date = $record->pubdate . '-01-01';
       if ($record->id eq $record->sysid)
       {
-        my $sql = 'UPDATE bibdata SET author=?,title=?,pub_date=?,country=?,mirlyn=?' .
-                  ' WHERE sysid=?';
+        my $sql = 'UPDATE bibdata SET author=?,title=?,pub_date=?,country=? WHERE sysid=?';
         $self->PrepareSubmitSql($sql, $record->author, $record->title,
-                              $date, $record->country, $record->mirlyn,
-                              $record->sysid);
+                                $date, $record->country, $record->sysid);
       }
       else
       {
-        my $sql = 'REPLACE INTO bibdata (id,author,title,pub_date,country,mirlyn,sysid)' .
+        my $sql = 'REPLACE INTO bibdata (id,author,title,pub_date,country,sysid)' .
                   ' VALUES (?,?,?,?,?,?,?)';
         $self->PrepareSubmitSql($sql, $id, $record->author, $record->title,
-                              $date, $record->country, $record->mirlyn,
-                              $record->sysid);
+                                $date, $record->country, $record->sysid);
       }
     }
     else
@@ -8323,11 +8298,6 @@ sub Sources
     {
       $url = $self->Sysify($url);
     }
-    if ($url =~ m/__SYSID__/)
-    {
-      my $sysid = $self->GetMirlyn($id);
-      $url =~ s/__SYSID__/$sysid/g;
-    }
     if ($url =~ m/__AUTHOR__/)
     {
       $url =~ s/__AUTHOR__/$a/g;
@@ -8557,20 +8527,15 @@ sub Unescape
 
 sub GetADDFromAuthor
 {
-  my $self = shift;
-  my $id   = shift;
-  my $a    = shift; # For testing
+  my $self   = shift;
+  my $id     = shift;
+  my $a      = shift; # For testing
+  my $record = shift;
 
   my $add = undef;
-  eval {
-    my $record = $self->GetMetadata($id);
-    $a = $record->author(1) unless defined $a;
-  };
-  if ($@)
-  {
-    $self->ClearErrors();
-    return;
-  }
+  $record = $self->GetMetadata($id) unless defined $record;
+  return unless defined $record;
+  $a = $record->author(1) unless defined $a;
   my $regex = '(\d?\d\d\d\??)?\s*-\s*(\d?\d\d\d)[.,;) ]*$';
   if (defined $a && $a =~ m/$regex/)
   {

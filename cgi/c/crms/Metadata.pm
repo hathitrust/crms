@@ -1,6 +1,6 @@
 package Metadata;
 use vars qw(@ISA @EXPORT @EXPORT_OK);
-our @EXPORT = qw(GetErrors id sysid mirlyn);
+our @EXPORT = qw(GetErrors id sysid);
 
 use strict;
 use warnings;
@@ -16,19 +16,7 @@ sub new
   my $errors = [];
   $self->set('errors', $errors);
   my $id = $args{'id'};
-  if ($id !~ m/\./)
-  {
-    if ($id =~ m/^0/)
-    {
-      $self->set($id,'mirlyn');
-      $id = $self->MirlynToSystem($id);
-      $self->set('id', $id);
-    }
-    else
-    {
-      $self->set('sysid', $id);
-    }
-  }
+  $self->set('sysid', $id) if $id !~ m/\./;
   $self->set('id', $id);
   $self->json;
   $self->xml;
@@ -174,18 +162,18 @@ sub xml
   return $xml;
 }
 
-sub mirlyn
-{
-  my $self = shift;
-  my $mirlyn = $self->get('mirlyn');
-  if (!defined $mirlyn)
-  {
-    $mirlyn = $self->sysid; # Avoid bc2meta if we can
-    $mirlyn = $self->HTIDToMirlyn($self->id) if substr $mirlyn, 0, 1 ne '0';
-    $self->set('mirlyn', $mirlyn) if defined $mirlyn;
-  }
-  return $mirlyn;
-}
+#sub mirlyn
+#{
+#  my $self = shift;
+#  my $mirlyn = $self->get('mirlyn');
+#  if (!defined $mirlyn)
+#  {
+#    $mirlyn = $self->sysid; # Avoid bc2meta if we can
+#    $mirlyn = $self->HTIDToMirlyn($self->id) if substr $mirlyn, 0, 1 ne '0';
+#    $self->set('mirlyn', $mirlyn) if defined $mirlyn;
+#  }
+#  return $mirlyn;
+#}
 
 # This is the correct way to do it.
 # Look at leader[6] and leader[7]
@@ -271,86 +259,86 @@ sub isTranslation
   return $is;
 }
 
-sub HTIDToMirlyn
-{
-  my $self   = shift;
-  my $id     = shift;
+#sub HTIDToMirlyn
+#{
+#  my $self   = shift;
+#   my $id     = shift;
+# 
+#   my $url = 'http://mirlyn.lib.umich.edu/cgi-bin/bc2meta?id=' .$id. '&schema=marcxml';
+#   my $ua  = LWP::UserAgent->new;
+#   $ua->timeout(1000);
+#   my $req = HTTP::Request->new(GET => $url);
+#   my $res = $ua->request($req);
+#   if (! $res->is_success)
+#   {
+#     $self->SetError("Failed $url: " . $res->message());
+#     return;
+#   }
+#   my $source;
+#   eval
+#   {
+#     my $parser = XML::LibXML->new();
+#     $source = $parser->parse_string($res->content());
+#   };
+#   if ($@)
+#   {
+#     $self->SetError("failed to parse response: $@");
+#     return;
+#   }
+#   my $root = $source->getDocumentElement();
+#   my $mirlyn = $self->GetControlfield('001', $root);
+#   return $mirlyn;
+# }
 
-  my $url = 'http://mirlyn.lib.umich.edu/cgi-bin/bc2meta?id=' .$id. '&schema=marcxml';
-  my $ua  = LWP::UserAgent->new;
-  $ua->timeout(1000);
-  my $req = HTTP::Request->new(GET => $url);
-  my $res = $ua->request($req);
-  if (! $res->is_success)
-  {
-    $self->SetError("Failed $url: " . $res->message());
-    return;
-  }
-  my $source;
-  eval
-  {
-    my $parser = XML::LibXML->new();
-    $source = $parser->parse_string($res->content());
-  };
-  if ($@)
-  {
-    $self->SetError("failed to parse response: $@");
-    return;
-  }
-  my $root = $source->getDocumentElement();
-  my $mirlyn = $self->GetControlfield('001', $root);
-  return $mirlyn;
-}
-
-sub MirlynToSystem
-{
-  my $self   = shift;
-  my $id     = shift;
-
-  return $id if $id=~ m/^1\d*/;
-  my $sysid;
-  my $url = 'http://mirlyn.lib.umich.edu/Record/' .$id. '.json';
-  my $ua  = LWP::UserAgent->new;
-  $ua->timeout(1000);
-  my $req = HTTP::Request->new(GET => $url);
-  my $res = $ua->request($req);
-  if (! $res->is_success)
-  {
-    $self->SetError("Failed $url: " . $res->message());
-    return;
-  }
-  my $source;
-  eval
-  {
-    my $json = JSON::XS->new;
-    my $fields = $json->decode($res->content())->{fields};
-    # Array ref of hash ref
-    foreach my $field (@$fields)
-    {
-      foreach my $fieldname (keys %$field)
-      {
-        if ($fieldname eq '035')
-        {
-          my $fieldcontent = $field->{$fieldname};
-          my $sub = $fieldcontent->{subfields}->[0]->{a};
-          if (defined $sub && $sub =~ m/^sdr-zephir(\d+)$/)
-          {
-            $sysid = $1;
-            last;
-          }
-        }
-      }
-      last if defined $sysid;
-    }
-  };
-  if ($@)
-  {
-    $self->SetError("failed to parse response: $@");
-    return;
-  }
-  $sysid = $id unless defined $sysid;
-  return $sysid;
-}
+# sub MirlynToSystem
+# {
+#   my $self   = shift;
+#   my $id     = shift;
+# 
+#   return $id if $id=~ m/^1\d*/;
+#   my $sysid;
+#   my $url = 'http://mirlyn.lib.umich.edu/Record/' .$id. '.json';
+#   my $ua  = LWP::UserAgent->new;
+#   $ua->timeout(1000);
+#   my $req = HTTP::Request->new(GET => $url);
+#   my $res = $ua->request($req);
+#   if (! $res->is_success)
+#   {
+#     $self->SetError("Failed $url: " . $res->message());
+#     return;
+#   }
+#   my $source;
+#   eval
+#   {
+#     my $json = JSON::XS->new;
+#     my $fields = $json->decode($res->content())->{fields};
+#     # Array ref of hash ref
+#     foreach my $field (@$fields)
+#     {
+#       foreach my $fieldname (keys %$field)
+#       {
+#         if ($fieldname eq '035')
+#         {
+#           my $fieldcontent = $field->{$fieldname};
+#           my $sub = $fieldcontent->{subfields}->[0]->{a};
+#           if (defined $sub && $sub =~ m/^sdr-zephir(\d+)$/)
+#           {
+#             $sysid = $1;
+#             last;
+#           }
+#         }
+#       }
+#       last if defined $sysid;
+#     }
+#   };
+#   if ($@)
+#   {
+#     $self->SetError("failed to parse response: $@");
+#     return;
+#   }
+#   $sysid = $id unless defined $sysid;
+#   return $sysid;
+# }
 
 # The long param includes the author dates in the 100d field if present.
 sub author
