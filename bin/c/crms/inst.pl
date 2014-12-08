@@ -80,12 +80,12 @@ foreach my $inst (@insts)
   my $sql = 'SELECT COUNT(r.id),COUNT(DISTINCT e.id) FROM users u INNER JOIN historicalreviews r' .
             ' ON u.id=r.user INNER JOIN exportdata e ON r.gid=e.gid WHERE ' .
             "r.attr=1 AND e.attr='pd' AND r.validated!=0 AND r.time LIKE '$date%' AND u.institution=?";
-  my $ref = $crms->GetDb()->selectall_arrayref($sql, undef, $inst);
+  my $ref = $crms->SelectAll($sql, $inst);
   my $rev = $ref->[0]->[0];
   my $det = $ref->[0]->[1];
   $sql = 'SELECT COUNT(r.id) FROM historicalreviews r INNER JOIN users u ON r.user=u.id WHERE ' .
          'r.time LIKE "' . $date . '%" AND u.institution=?';
-  $ref = $crms->GetDb()->selectall_arrayref($sql, undef, $inst);
+  $ref = $crms->SelectAll($sql, $inst);
   my $tot = $ref->[0]->[0];
   my $msg = "Monthly statistics for $iname $system Reviewers\n\n" .
             "Total Reviews: $tot\n" .

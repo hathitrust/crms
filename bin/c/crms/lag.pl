@@ -54,12 +54,11 @@ my $crms = CRMS->new(
     dev     => $DLPS_DEV,
 );
 
-my $dbh = $crms->GetDb();
 if ($report)
 {
   my $start = $crms->SimpleSqlGet('SELECT DATE_SUB(NOW(), INTERVAL 24 HOUR)');
   my $sql = "SELECT time,client,seconds FROM lag WHERE time>='$start'";
-  my $ref = $dbh->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   if (!scalar @{$ref})
   {
     print "There have been no delays since $start\n";
@@ -77,7 +76,7 @@ if ($report)
 else
 {
   my $sql = "SELECT client,seconds FROM mysqlrep.delay";
-  my $ref = $dbh->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     my $client = $row->[0];

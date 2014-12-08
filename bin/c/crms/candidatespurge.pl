@@ -87,7 +87,6 @@ if ($file)
   }
 }
 print "Verbosity $verbose\n" if $verbose;
-my $dbh = $crms->GetDb();
 my $start = $crms->SimpleSqlGet('SELECT DATE(NOW())');
 my $end = $start;
 if (scalar @ARGV)
@@ -145,7 +144,7 @@ sub CheckTable
     $sql = sprintf("SELECT id FROM $table WHERE id in ('%s') ORDER BY id", join "','", @singles);
   }
   print "$sql\n" if $verbose > 0;
-  my $ref = $dbh->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
@@ -178,7 +177,7 @@ sub Init
     push @restrict, '((attr=2 AND reason=1) OR (attr=3 AND reason=10))' if $iconly;
     $sql .= ' WHERE ' . join ' AND ', @restrict if scalar @restrict;
     $sql .= ' ORDER BY time ASC';
-    my $ref = $crms->GetSdrDb()->selectall_arrayref($sql);
+    my $ref = $crms->SelectAllSDR($sql);
     my $of = scalar @{$ref};
     print "$sql: $of results\n" if $verbose > 0;
     my $lastWhen = '';

@@ -82,7 +82,6 @@ $crms->set('ping','yes');
 my $delim = "\n";
 my $src = 'export';
 print "Verbosity $verbose$delim" if $verbose;
-my $dbh = $crms->GetDb();
 my $sql = 'SELECT DATE(NOW())';
 my $start = $crms->SimpleSqlGet($sql);
 my $end = $start;
@@ -167,7 +166,7 @@ sub ADDReport
                    " ON e.id=b.id WHERE e.id IN ('%s') ORDER BY b.author ASC", join "','", @{$singles});
   }
   print "$sql\n" if $verbose > 1;
-  my $ref = $dbh->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   my %auths = (); # Long name -> arrayref of gids
   foreach my $row (@{$ref})
   {

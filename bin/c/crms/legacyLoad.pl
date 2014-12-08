@@ -259,7 +259,6 @@ sub SubmitHistReview
   ## do some sort of check for expert submissions
   if (!$noop)
   {
-    my $dbh = $crms->GetDb();
     $note = $dbh->quote($note);
     ## all good, INSERT
     my $sql = 'REPLACE INTO historicalreviews (id, user, time, attr, reason, renNum, renDate, note, legacy, category, status, expert, source, gid) ' .
@@ -275,7 +274,7 @@ sub SubmitHistReview
     }
     # Update validation on all items with this id
     $sql = "SELECT user,time,validated FROM historicalreviews WHERE id='$id'";
-    my $ref = $dbh->selectall_arrayref($sql);
+    my $ref = $self->SelectAll($sql);
     foreach my $row (@{$ref})
     {
       $user = $row->[0];
@@ -285,7 +284,7 @@ sub SubmitHistReview
       if ($val != $val2)
       {
         $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$time'";
-        $crms->PrepareSubmitSql( $sql );
+        $crms->PrepareSubmitSql($sql);
       }
     }
   }

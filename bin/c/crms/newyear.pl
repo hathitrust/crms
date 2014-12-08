@@ -75,7 +75,7 @@ sub FindICtoPD
     $sql .= sprintf(" AND id in ('%s')", join "','", @singles);
   }
   $sql .= ' ORDER BY time DESC';
-  my $ref = $crms->GetDb()->selectall_arrayref($sql);
+  my $ref = $crms->SelectAll($sql);
   my %seen;
   my $i = 0;
   my $change = 0;
@@ -99,7 +99,7 @@ sub FindICtoPD
     $sql = "SELECT renDate,renNum,category,note FROM historicalreviews WHERE gid=$gid" .
            ' AND validated=1 AND renDate IS NOT NULL';
     #print "$sql\n";
-    my $ref2 = $crms->GetDb()->selectall_arrayref($sql);
+    my $ref2 = $crms->SelectAll($sql);
     my $same = 1;
     my $n = scalar @{$ref2};
     next unless $n > 0;

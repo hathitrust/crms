@@ -57,7 +57,7 @@ my %und = ();
 my %times = ();
 alarm($time);
 my $sql = 'SELECT id,time FROM candidates WHERE checked=0';
-my $ref = $crms->GetDb()->selectall_arrayref($sql);
+my $ref = $crms->SelectAll($sql);
 foreach my $row ( @{$ref} )
 {
   last if $done;
