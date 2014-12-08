@@ -15,45 +15,44 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Spreadsheet::WriteExcel;
 
 my $usage = <<END;
-USAGE: $0 [-hnrtv] [-e FILE] [-o FILE] [-x SYS]
+USAGE: $0 [-dhnrv] [-e FILE] [-o FILE] [-x SYS]
           [-p PRI [-p PRI2...]] count
 
 Populates the training database with examples (correct, single reviews) from production.
 
 -a       Allow status 7 reviews from non-advanced reviewers.
+-d       Run in dev (training otherwise).
 -e FILE  Write an Excel spreadsheet with information on the volumes to be added.
 -h       Print this help message.
 -n       Do not submit SQL.
 -o       Write a tab-delimited file with information on the volumes to be added.
 -p PRI   Only include reviews of the specified priority PRI
 -r       Randomize sample from production.
--t       Run in training (dev otherwise).
 -v       Be verbose.
 -x SYS   Set SYS as the system to execute.
 END
 
 my $noadvanced;
+my $dev;
 my $excel;
 my $help;
 my $noop;
 my $out;
 my @pris;
 my $random;
-my $training;
 my $verbose;
 my $sys;
 
 Getopt::Long::Configure ('bundling');
-Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
            'a'    => \$noadvanced,
+           'd'    => \$dev,
            'e:s'  => \$excel,
            'h'    => \$help,
            'n'    => \$noop,
            'o:s'  => \$out,
            'p:s@' => \@pris,
            'r'    => \$random,
-           't'    => \$training,
            'v'    => \$verbose,
            'x:s'  => \$sys);
            
@@ -77,7 +76,7 @@ my $crmst = CRMS->new(
     sys          =>   $sys,
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
-    dev          =>   ($training)? 'crms-training':$DLPS_DEV
+    dev          =>   ($dev)? $DLPS_DEV:'crms-training'
 );
 
 
