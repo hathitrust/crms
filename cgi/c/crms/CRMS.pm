@@ -1169,12 +1169,13 @@ sub LoadNewItems
   return if $needed <= 0;
   my $count = 0;
   my %dels = ();
-  my $sql = 'SELECT c.id FROM candidates c INNER JOIN bibdata b ON c.id=b.id' .
-            ' WHERE c.id NOT IN (SELECT DISTINCT id FROM inherit)' .
-            ' AND c.id NOT IN (SELECT DISTINCT id FROM queue)' .
-            ' AND c.id NOT IN (SELECT DISTINCT id FROM reviews)' .
-            ' AND c.id NOT IN (SELECT DISTINCT id FROM historicalreviews)' .
-            $excludeCountries .
+  my $sql = 'SELECT c.id FROM candidates c INNER JOIN bibdata b ON c.id=b.id'.
+            ' WHERE c.id NOT IN (SELECT DISTINCT id FROM inherit)'.
+            ' AND c.id NOT IN (SELECT DISTINCT id FROM queue)'.
+            ' AND c.id NOT IN (SELECT DISTINCT id FROM reviews)'.
+            ' AND c.id NOT IN (SELECT DISTINCT id FROM historicalreviews)'.
+            $excludeCountries.
+            ' AND c.time<=DATE_SUB(NOW(), INTERVAL 1 WEEK)'.
             ' ORDER BY time DESC';
   #print "$sql\n";
   my $ref = $self->SelectAll($sql);
@@ -6217,10 +6218,10 @@ sub CreateDeterminationReport
   my %pcts = ();
   my $priheaders = '';
   my $sql = 'SELECT DISTINCT h.priority FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid' .
-            ' WHERE e.time>=date_sub(?, INTERVAL 1 MINUTE) ORDER BY h.priority ASC';
+            ' WHERE e.time>=DATE_SUB(?, INTERVAL 1 MINUTE) ORDER BY h.priority ASC';
   my @pris = map {$_->[0]} @{ $self->SelectAll($sql, $time) };
   $sql = 'SELECT COUNT(DISTINCT h.id) FROM exportdata e, historicalreviews h' .
-         ' WHERE e.gid=h.gid AND e.time>=date_sub(?, INTERVAL 1 MINUTE)';
+         ' WHERE e.gid=h.gid AND e.time>=DATE_SUB(?, INTERVAL 1 MINUTE)';
   my $total = $self->SimpleSqlGet($sql, $time);
   foreach my $pri (@pris)
   {
@@ -6231,7 +6232,7 @@ sub CreateDeterminationReport
   foreach my $status (4 .. 9)
   {
     $sql = 'SELECT COUNT(DISTINCT h.id) FROM exportdata e, historicalreviews h' .
-          ' WHERE e.gid=h.gid AND h.status=? AND e.time>=date_sub(?, INTERVAL 1 MINUTE)';
+          ' WHERE e.gid=h.gid AND h.status=? AND e.time>=DATE_SUB(?, INTERVAL 1 MINUTE)';
     my $ct = $self->SimpleSqlGet($sql, $status, $time);
     my $pct = 0.0;
     eval {$pct = 100.0*$ct/$total;};
@@ -6261,7 +6262,7 @@ sub CreateDeterminationReport
     $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;%d</th><td>%d&nbsp;(%.1f%%)</td>",
                        $status, $cts{$status}, $pcts{$status});
     $sql = 'SELECT h.priority,h.gid FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid ' .
-           "WHERE h.status=$status AND e.time>=date_sub('$time', INTERVAL 1 MINUTE)";
+           "WHERE h.status=$status AND e.time>=DATE_SUB('$time', INTERVAL 1 MINUTE)";
     my $ref = $self->SelectAll($sql);
     #print "$sql<br/>\n";
     $report .= $self->DoPriorityBreakdown($ref, undef, \@pris, $cts{$status});
@@ -6269,7 +6270,7 @@ sub CreateDeterminationReport
   }
   $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Total</th><td>$count</td>";
   $sql = 'SELECT h.priority,h.gid FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid' .
-         ' WHERE e.time>=date_sub(?, INTERVAL 1 MINUTE)';
+         ' WHERE e.time>=DATE_SUB(?, INTERVAL 1 MINUTE)';
   my $ref = $self->SelectAll($sql, $time);
   #print "$sql<br/>\n";
   $report .= $self->DoPriorityBreakdown($ref, undef, \@pris, $count);
