@@ -4449,7 +4449,7 @@ sub GetStatsYears
     if ('all__' eq substr $user, 0, 5)
     {
       my $inst = substr $user, 5;
-      $usersql = 'AND u.institution=? '
+      $usersql = 'AND u.institution=? ';
       push @params, $inst;
     }
     else
