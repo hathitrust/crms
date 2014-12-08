@@ -235,8 +235,7 @@ These items will take priority in the review process.
     <td>[% r.6 %]</td>
     <td>[% crms.StripDecimal(r.7) %]</td>
     <td>[% r.9 %]</td>
-    [% sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='" _ r.0 _ "'" %]
-    <td>[% crms.SimpleSqlGet(sql) %]</td>
+    <td>[% crms.CountHistoricalReviews(r.0) %]</td>
     <td>[% crms.CurrentRightsQuery(r.0).replace('\s','&nbsp;') %]</td>
     <td>
       [% IF (r.5 == user || r.5 == 'oneoff') && r.6 == 0 %]
@@ -336,8 +335,7 @@ These items will take priority in the review process.
       <td>[% r.6 %]</td>
       <td>[% crms.StripDecimal(r.7) %]</td>
       <td>[% r.9 %]</td>
-      [% sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='" _ r.0 _ "'" %]
-      <td>[% crms.SimpleSqlGet(sql) %]</td>
+      <td>[% crms.CountHistoricalReviews(r.0) %]</td>
       <td>[% crms.CurrentRightsQuery(r.0) %]</td>
       <td style="text-align:center"><input type="checkbox" name="vol_[% r.0 %]"
       [% IF tx %]

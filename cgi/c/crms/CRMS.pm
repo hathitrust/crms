@@ -6674,6 +6674,15 @@ sub CountAllReviewsForUser
   return $n;
 }
 
+sub CountHistoricalReviews
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=?';
+  return $self->SimpleSqlGet($sql, $id);
+}
+
 sub IsReviewCorrect
 {
   my $self = shift;
