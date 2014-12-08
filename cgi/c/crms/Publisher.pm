@@ -78,7 +78,7 @@ sub GetPublisherDataRef
   #print "$sql<br/>\n";
   my $ref = undef;
   eval {
-    $ref = $self->GetDb()->selectall_arrayref($sql);
+    $ref = $self->SelectAll($sql);
   };
   if ($@)
   {

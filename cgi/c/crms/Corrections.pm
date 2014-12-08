@@ -75,7 +75,7 @@ sub GetCorrectionsDataRef
     push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
   }
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
-  my $sql = "SELECT COUNT(*) FROM corrections $restrict\n";
+  my $sql = 'SELECT COUNT(*) FROM corrections '. $restrict;
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
@@ -83,11 +83,11 @@ sub GetCorrectionsDataRef
   my @return = ();
   my $concat = join ',', @Fields;
   $concat =~ s/,time,/,DATE(time),/;
-  $sql = " SELECT $concat FROM corrections $restrict ORDER BY $order $dir $limit";
+  $sql = "SELECT $concat FROM corrections $restrict ORDER BY $order $dir $limit";
   #print "$sql<br/>\n";
   my $ref = undef;
   eval {
-    $ref = $self->GetDb()->selectall_arrayref($sql);
+    $ref = $self->SelectAll($sql);
   };
   if ($@)
   {
