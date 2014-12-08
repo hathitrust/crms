@@ -90,7 +90,6 @@ my $delim = "\n";
 my $src = ($candidates)? 'candidates':'export';
 $src = 'cleanup' if $cleanup;
 print "Verbosity $verbose$delim" if $verbose;
-my $dbh = $crms->GetDb();
 my $sql = 'SELECT DATE(NOW())';
 $sql = 'SELECT DATE(DATE_SUB(NOW(),INTERVAL 1 DAY))' if $candidates;
 my $start = $crms->SimpleSqlGet($sql);
@@ -318,7 +317,7 @@ if (scalar keys %{$data{'inherit'}})
     {
       my ($id2,$sysid,$attr2,$reason2,$attr,$reason,$gid) = split "\t", $line;
       print "$line\n" if $verbose > 1;
-      my $catLink = "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
+      my $catLink = $crms->LinkToMirlynDetails($id);
       my $htCatLink = $crms->LinkToCatalog($sysid);
       my $histLink = $crms->LinkToHistorical($sysid,1);
       my $retrLink = $crms->LinkToRetrieve($sysid,1);
@@ -511,7 +510,7 @@ sub InheritanceReport
     $sql = sprintf("SELECT id,gid,attr,reason,time,src FROM exportdata WHERE id in ('%s') ORDER BY time DESC", join "','", @{$singles});
   }
   print "$sql\n" if $verbose > 1;
-  my $ref = $dbh->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
@@ -569,7 +568,7 @@ sub CandidatesReport
     $sql .= ' ORDER BY id';
   }
   print "$sql\n" if $verbose > 1;
-  my $ref = $dbh->selectall_arrayref($sql);
+  my $ref = $self->SelectAll($sql);
   my $of = scalar @{$ref};
   my $n = 1;
   foreach my $row (@{$ref})

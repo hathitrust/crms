@@ -93,8 +93,7 @@ foreach my $row (@{$ref})
   {
     next;
   }
-  my $sysid = $record->sysid;
-  my $catLink = "http://mirlyn.lib.umich.edu/Record/$sysid/Details#tabs";
+  my $catLink = $crms->LinkToMirlynDetails($id);
   my $ptLink = 'https://babel.hathitrust.org/cgi/pt?debug=super;id=' . $id;
   my $au = $record->author;
   $au =~ s/&/&amp;/g;
@@ -110,8 +109,7 @@ foreach my $row (@{$ref})
     $field260b = $record->xml->findvalue($xpath);
   };
   $n++;
-  $field260a .= ' ' . $field260b;
-  @cols = ($id, $sysid, $au, $ti, $pub, $field260a);
+  @cols = ($id, $record->sysid, $au, $ti, $pub, $field260a . ' ' . $field260b);
   $worksheet->write_string($n, $_, $cols[$_]) for (0 .. scalar @cols - 1);
 }
 $workbook->close();
