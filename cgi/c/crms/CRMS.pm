@@ -3416,15 +3416,6 @@ sub AddUser
   }
 }
 
-sub DeleteUser
-{
-  my $self = shift;
-  my $id   = shift;
-  
-  my $sql = 'DELETE FROM users WHERE id=?';
-  $self->PrepareSubmitSql($sql, $id);
-}
-
 sub CheckReviewer
 {
   my $self = shift;
