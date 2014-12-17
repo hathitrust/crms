@@ -7784,7 +7784,11 @@ sub LinkToMirlynDetails
   my $self = shift;
   my $id   = shift;
 
-  return 'http://mirlyn.lib.umich.edu/Record/HTID/'. $id;
+  my $url = 'http://mirlyn.lib.umich.edu/Record/';
+  $url .= 'HTID/' if $id =~ m/\./;
+  $url .= $id;
+  $url .= '/Details#tabs' unless $id =~ m/\./;
+  return $url;
 }
 
 sub LinkToJira
