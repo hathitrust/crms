@@ -6289,7 +6289,7 @@ sub CreateDeterminationReport
 sub CreateHistoricalReviewsReport
 {
   my $self = shift;
-  
+
   my $report = "<table class='exportStats'>\n";
   $report .= sprintf("<tr><th>CRMS&nbsp;Reviews</th><td>%s</td></tr>\n", $self->GetTotalNonLegacyReviewCount());
   $report .= sprintf("<tr><th>Legacy&nbsp;Reviews</th><td>%s</td></tr>\n", $self->GetTotalLegacyReviewCount());
@@ -8520,6 +8520,15 @@ sub Unescape
   return uri_unescape(shift);
 }
 
+#046	##$f1899$g1961
+#100	1#$aHemingway, Ernest,$d1899-1961
+#Dates are in ISO 8601 format unless specified in a $2, thus
+#Died January 10 1963=$g 19630110
+#Died January 1963= $g 1963-01
+#Died January 10 or 11, 1963=$g [19630110,19630111] $2 edtf <-- we don't handle this
+#Died Between 1930 and 1933=$g 1930...1933 $2 edtf
+#Died 65 AD=$g 0065
+#Died 361 BC= $g -0360
 sub GetADDFromAuthor
 {
   my $self   = shift;
@@ -8536,6 +8545,14 @@ sub GetADDFromAuthor
   {
     $add = $2;
     $add = undef if $a =~ m/(fl\.*|active)\s*$regex/i;
+  }
+  if (!defined $add)
+  {
+    my $data = $record->GetDatafield('046', 'g', 1);
+    if ($data && $data =~ m/^\s*(-?\d\d\d\d)/)
+    {
+      $add = $1;
+    }
   }
   return $add;
 }
