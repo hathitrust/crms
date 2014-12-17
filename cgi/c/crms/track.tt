@@ -31,19 +31,37 @@
     <table class="exportStats">
       <tr><th colspan="2" class="major" nowrap="nowrap">
         [% IF sysid %]
-          [% catlink = crms.LinkToCatalog(sysid) %]
-          <a style="color:white;" href="[% catlink %]" target="_blank">$sysid</a>
+          [% link = crms.LinkToCatalog(sysid) %]
+          <a style="color:white;" href="[% link %]" target="_blank">$sysid</a>
         [% ELSE %]
           $id&nbsp;&nbsp;&nbsp;&nbsp;(not in catalog)
         [% END %]
-        &nbsp;&nbsp;&nbsp;&nbsp;([% parts.1 %])
+        &nbsp;&nbsp;&nbsp;&nbsp;
+        [% IF sysid && sysid.substr(0, 1) == '0' %]
+          [% link = crms.LinkToMirlynDetails(sysid) %]
+          <a style="color:white;" href="[% link %]" target="_blank">([% parts.1 %])</a>
+        [% ELSE %]
+          ([% parts.1 %])
+        [% END %]
       </th></tr>
       <tr>
         <th style="white-space: nowrap">Volume id</th>
         <th style="white-space: nowrap">Status</th></tr>
       <tr>
-        <td style="white-space: nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% parts.0 %]<br/>[% END %]</td>
-        <td style="white-space: nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% parts.2 %]<br/>[% END %]</td>
+        <td style="white-space: nowrap">
+          [% FOREACH id IN ids %]
+            [% parts = id.split('__') %]
+            [% url = crms.PTAddress(parts.0) %]
+            <a href="[% url %]" target="_blank">
+              [% parts.0 %]
+            </a><br/>
+          [% END %]
+        </td>
+        <td style="white-space: nowrap">
+          [% FOREACH id IN ids %]
+            [% parts = id.split('__') %][% parts.2 %]<br/>
+          [% END %]
+        </td>
       </tr>
     </table>
   [% END %]
