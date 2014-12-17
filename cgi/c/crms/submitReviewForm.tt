@@ -123,7 +123,7 @@
                style="margin:0px;padding:1px;background-color:#d0dee6;"/>
       [% ELSE %]
         <input type="checkbox" id="renewalFieldCheckbox" name="renNum"[% (renNum)? ' checked="checked"':'' %]
-               onchange="ToggleADD();PredictRights('[% barcode %]');">&nbsp;Publication Date</input>
+               onchange="ToggleADD();PredictRights('[% barcode %]');">&nbsp;Pub Date</input>
       [% END %]
       </td>
       <td>
