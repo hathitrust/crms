@@ -349,7 +349,7 @@ sub author
   my $data = $self->GetSubfields('100', 1, 'a', 'b', 'c', ($long)? 'd':undef);
   $data = $self->GetSubfields('110', 1, 'a', 'b') unless defined $data;
   $data = $self->GetSubfields('111', 1, 'a', 'c') unless defined $data;
-  $data = $self->GetSubfields('700', 1, 'a', 'b', 'c', ($long)? 'd':undef) unless defined $data;
+  $data = $self->GetSubfields('700', 1, 'a', 'b', 'c', ($long)? 'd':undef, 'e') unless defined $data;
   $data = $self->GetSubfields('710', 1, 'a') unless defined $data;
   if (defined $data)
   {
@@ -411,6 +411,30 @@ sub enumchron
   };
   $self->SetError('enumchron query for ' . $self->id . " failed: $@") if $@;
   return $data;
+}
+
+sub editor
+{
+  my $self = shift;
+  my $mult = shift;
+  
+  my @eds;
+  my $n = $self->CountDatafields('700');
+  my %seen;
+  foreach my $i (1 .. $n)
+  {
+    my $f700e = $self->GetDatafield('700', 'e', $i);
+    if ($f700e and $f700e =~ m/(^|\s+)ed(itor)?\.?(\s+|$)/i)
+    {
+      my $data = $self->GetSubfields('700', $i, 'a');
+      next if $data and $seen{$data};
+      $seen{$data} = 1 if $data;
+      $data = $self->GetSubfields('700', $i, 'e', 'a', 'd');
+      push @eds, $data if defined $data;
+    }
+    last if scalar @eds == 1 and not $mult;
+  }
+  return join '; ', @eds;
 }
 
 sub volumeIDs
