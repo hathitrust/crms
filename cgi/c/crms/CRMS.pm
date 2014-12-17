@@ -5384,13 +5384,13 @@ sub GetPubCountry
   my $id   = shift;
 
   my $sql = 'SELECT country FROM bibdata WHERE id=?';
-  my $date = $self->SimpleSqlGet($sql, $id);
-  if (!defined $date)
+  my $where = $self->SimpleSqlGet($sql, $id);
+  if (!defined $where)
   {
     $self->UpdateMetadata($id, 1);
-    $date = $self->SimpleSqlGet($sql, $id);
+    $where = $self->SimpleSqlGet($sql, $id);
   }
-  return $date;
+  return $where;
 }
 
 sub GetEncAuthor
@@ -5485,7 +5485,7 @@ sub UpdateMetadata
       else
       {
         my $sql = 'REPLACE INTO bibdata (id,author,title,pub_date,country,sysid)' .
-                  ' VALUES (?,?,?,?,?,?,?)';
+                  ' VALUES (?,?,?,?,?,?)';
         $self->PrepareSubmitSql($sql, $id, $record->author, $record->title,
                                 $date, $record->country, $record->sysid);
       }
