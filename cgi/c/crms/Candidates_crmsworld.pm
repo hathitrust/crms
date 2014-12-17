@@ -136,7 +136,8 @@ sub ShouldVolumeGoInUndTable
     return 'language' if 'eng' ne $lang;
   }
   return 'translation' if $record->isTranslation;
-  return 'date range' if $self->{crms}->GetPubDate($id, 1, $record) =~ m/^\d+-\d+$/;
+  my $date = $self->{crms}->GetPubDate($id, 1, $record);
+  return 'date range' if defined $date and $date =~ m/^\d+-\d+$/;
   return undef;
 }
 
