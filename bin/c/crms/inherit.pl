@@ -510,7 +510,7 @@ sub InheritanceReport
     $sql = sprintf("SELECT id,gid,attr,reason,time,src FROM exportdata WHERE id in ('%s') ORDER BY time DESC", join "','", @{$singles});
   }
   print "$sql\n" if $verbose > 1;
-  my $ref = $self->SelectAll($sql);
+  my $ref = $crms->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
@@ -568,7 +568,7 @@ sub CandidatesReport
     $sql .= ' ORDER BY id';
   }
   print "$sql\n" if $verbose > 1;
-  my $ref = $self->SelectAll($sql);
+  my $ref = $crms->SelectAll($sql);
   my $of = scalar @{$ref};
   my $n = 1;
   foreach my $row (@{$ref})
