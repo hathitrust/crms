@@ -417,7 +417,7 @@ sub editor
 {
   my $self = shift;
   my $mult = shift;
-  
+
   my @eds;
   my $n = $self->CountDatafields('700');
   my %seen;
@@ -434,7 +434,8 @@ sub editor
     }
     last if scalar @eds == 1 and not $mult;
   }
-  return join '; ', @eds;
+  return join '; ', @eds if wantarray;
+  return @eds;
 }
 
 sub volumeIDs
@@ -542,6 +543,29 @@ sub CountDatafields
   };
   $self->SetError('CountDatafields: ' . $@) if $@;
   return $n;
+}
+
+sub GetAllAuthors
+{
+  my $self   = shift;
+
+  my %aus;
+  my $au = $self->author(1);
+  $aus{$au} = 1 if defined $au;
+  my $n = $self->CountDatafields('700');
+  foreach my $i (1 .. $n)
+  {
+    $au = $self->GetSubfields('700', $i, 'a', 'b', 'c', 'd');
+    $aus{$au} = 1 if defined $au;
+  }
+  $n = $self->CountDatafields('710');
+  foreach my $i (1 .. $n)
+  {
+    $au = $self->GetSubfields('710', $i, 'a', 'b');
+    $aus{$au} = 1 if defined $au;
+  }
+  $aus{$_} = 1 for $self->editor(1);
+  return sort keys %aus;
 }
 
 sub GetAdditionalAuthors

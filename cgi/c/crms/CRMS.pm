@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.9.4';
+  return '4.9.5';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -8716,6 +8716,21 @@ sub VIAFWarning
     }
   }
   return (scalar keys %warnings)? join '; ', keys %warnings:undef;
+}
+
+sub GetAllAuthors
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
+
+  my @aus;
+  $record = $self->GetMetadata($id) unless defined $record;
+  if (defined $record)
+  {
+    push @aus, $_ for $record->GetAllAuthors();
+  }
+  return @aus;
 }
 
 # Return dollarized barcode if suffix is the right length,
