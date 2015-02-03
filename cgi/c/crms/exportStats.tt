@@ -13,7 +13,7 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.
 swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "800", "300", "9.0.0",
                    "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=1&startDate=2009-07') %]")});
 // -->
-      </script>
+</script>
 
 [% url = crms.Sysify('/cgi/c/crms/getExportStats?type=text;c=1') %]
 <h3>CRMS&nbsp;Project&nbsp;Cumulative*&nbsp;&nbsp;&nbsp;&nbsp;<a target="_blank" href="[% url %]">Download</a></h3>
