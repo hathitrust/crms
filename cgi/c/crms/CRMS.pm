@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.9.5';
+  return '4.9.6';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -7062,6 +7062,32 @@ sub GetUserIPs
   }
   $self->ClearErrors();
   return \%ips;
+}
+
+sub GetUserRole
+{
+  my $self = shift;
+  my $user = shift;
+
+  $user = $self->get('user') unless defined $user;
+  my $sql = 'SELECT role FROM ht_users WHERE userid=?';
+  my $sdr_dbh = $self->get('ht_repository');
+  if (!defined $sdr_dbh)
+  {
+    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
+    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
+  }
+  my $role;
+  eval {
+    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user);
+    $role = $ref->[0]->[0];
+  };
+  if ($@)
+  {
+    my $msg = "SQL failed ($sql): " . $@;
+    $self->SetError($msg);
+  }
+  return $role;
 }
 
 sub VolumeIDsQuery
