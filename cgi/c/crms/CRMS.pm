@@ -8552,7 +8552,7 @@ sub Unescape
 #Died January 10 1963=$g 19630110
 #Died January 1963= $g 1963-01
 #Died January 10 or 11, 1963=$g [19630110,19630111] $2 edtf <-- we don't handle this
-#Died Between 1930 and 1933=$g 1930...1933 $2 edtf
+#Died Between 1930 and 1933=$g 1930...1933 $2 edtf <-- we can't handle this
 #Died 65 AD=$g 0065
 #Died 361 BC= $g -0360
 sub GetADDFromAuthor
@@ -8975,7 +8975,10 @@ sub StartHTML
 {
   my $self  = shift;
   my $title = shift;
+  my $head  = shift;
 
+  $title = '' unless defined $title;
+  $head  = '' unless defined $head;
   my $html = <<END;
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
                       "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -8983,6 +8986,7 @@ sub StartHTML
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>$title</title>
+    $head
   </head>
   <body>
 END
