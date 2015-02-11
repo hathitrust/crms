@@ -69,7 +69,7 @@ These items will take priority in the review process.
 [% IF admin && canOverride %]
   <br/><i>Override Restrictions</i> allows admins and superadmins to add US books published [% max + 1 %]-[% max2 %].
 [% END %]
-</li>
+</span></li>
 [% IF admin %]
   <li><span class="smallishText">Priority 4 only allows admins and superadmins to add any work in HathiTrust, including<br/>
   those that are out of CRMS scope.</span></li>
