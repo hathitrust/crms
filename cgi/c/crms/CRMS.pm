@@ -5035,8 +5035,7 @@ sub CreateReviewerGraph
   my $anim = $anims[rand @anims];
   foreach my $user (@users)
   {
-    my $kerb = $self->SimpleSqlGet('SELECT kerberos FROM users WHERE id=?', $user);
-    $kerb = 'xxxx' unless $kerb;
+    my $ids = $self->GetUserIncarnations($user);
     my $name = $self->GetUserName($user);
     my $color = $colors[$i];
     my $attrs = sprintf('"dot-style":{"type":"solid-dot","dot-size":3,"colour":"%s"},"colour":"%s"'.
@@ -5044,19 +5043,18 @@ sub CreateReviewerGraph
                         $color, $color, $name);
     my @vals;
     my @counts; # For the inval rate tip
+    my $wc = $self->WildcardList(scalar @{$ids});
     foreach my $date (@dates)
     {
-      my $sql = 'SELECT ' . $sel{$type} . ' FROM userstats s INNER JOIN users u ON s.user=u.id'.
-                ' WHERE s.monthyear=? AND (s.user=? OR u.kerberos=?)';
-      #print 'SELECT ' . $sel{$type} . ' FROM userstats s INNER JOIN users u ON s.user=u.id'.
-      #          " WHERE s.monthyear='$date' AND (s.user='$user' OR u.kerberos='$kerb')\n";
-      my $val = $self->SimpleSqlGet($sql, $date, $user, $kerb);
+      my $sql = 'SELECT ' . $sel{$type} . ' FROM userstats s'.
+                ' WHERE s.monthyear=? AND s.user IN '. $wc;
+      my $val = $self->SimpleSqlGet($sql, $date, @{$ids});
       $val = 0 unless $val;
       if ($type == 2)
       {
-        $sql = 'SELECT SUM(s.total_reviews) FROM userstats s INNER JOIN users u ON s.user=u.id'.
-               ' WHERE s.monthyear=? AND (s.user=? OR u.kerberos=?)';
-        my $count = $self->SimpleSqlGet($sql, $date, $user, $kerb);
+        $sql = 'SELECT SUM(s.total_reviews) FROM userstats s'.
+               ' WHERE s.monthyear=? AND s.user IN '. $wc;
+        my $count = $self->SimpleSqlGet($sql, $date, @{$ids});
         $count = 0 unless defined $count;
         push @counts, $count;
       }
@@ -5065,8 +5063,8 @@ sub CreateReviewerGraph
         $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(r.duration)),0)/3600.0 from reviews r'.
                ' INNER JOIN users u ON r.id=u.id'.
                ' WHERE CONCAT(YEAR(DATE(r.time)),"-",MONTH(DATE(r.time)))=?'.
-               ' AND (r.user=? OR u.kerberos=?)';
-        $val += $self->SimpleSqlGet($sql, $date, $user, $kerb);
+               ' AND r.user IN '. $wc;
+        $val += $self->SimpleSqlGet($sql, $date, @{$ids});
       }
       push @vals, $val;
       $ceiling = $val if $val > $ceiling;# and $type != 2;
@@ -7067,6 +7065,7 @@ sub GetUserIPs
   my %ips;
   if (defined $ipr)
   {
+    $ipr =~ s/\s//g;
     my @ips2 = split m/\|/, $ipr;
     foreach my $ip (@ips2)
     {
@@ -8828,22 +8827,26 @@ sub Undollarize
 
 sub GetUserProgress
 {
-  my $self = shift;
-  my $user = shift;
+  my $self   = shift;
+  my $user   = shift;
+  my $format = shift;
 
-  my $p;
-  my $comm = $self->SimpleSqlGet('SELECT commitment FROM users WHERE id=?', $user);
-  if (defined $comm)
+  my $p = 0;
+  my $comm = $self->GetUserCommitment($user);
+  if ($comm > 0.0)
   {
-    my $kerb = $self->SimpleSqlGet('SELECT kerberos FROM users WHERE id=?', $user) or 'xxxx';
-    my $sql = 'SELECT s.total_time/60.0 FROM userstats s INNER JOIN users u ON s.user=u.id'.
-              ' WHERE s.monthyear=CONCAT(YEAR(NOW()),"-",MONTH(NOW()))'.
-              ' AND (s.user=? OR u.kerberos=?)';
-    my $hours = $self->SimpleSqlGet($sql, $user, $kerb);
-    $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/3600.0 from reviews WHERE user=?';
-    $hours += $self->SimpleSqlGet($sql, $user);
+    my $ids = $self->GetUserIncarnations($user);
+    my $wc = $self->WildcardList(scalar @{$ids});
+    my $sql = 'SELECT s.total_time/60.0 FROM userstats s'.
+              ' WHERE s.monthyear=DATE_FORMAT(NOW(),"%Y-%m")'.
+              ' AND s.user IN '. $wc;
+    my $hours = $self->SimpleSqlGet($sql, @{$ids});
+    $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/3600.0 from reviews'.
+           ' WHERE user IN '. $wc;
+    $hours += $self->SimpleSqlGet($sql, @{$ids});
     $p = $hours/(160.0*$comm);
   }
+  $p = sprintf "%.1f%%", 100.0*$p if $format;
   return $p;
 }
 
