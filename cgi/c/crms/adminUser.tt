@@ -106,7 +106,11 @@
         [% END %]
       [% END %]
       </td>
-      <td>[% crms.GetUserCommitment(userid, 1) %]</td>
+      <td>
+        [% IF crms.GetUserCommitment(userid) > 0.0 %]
+          [% crms.GetUserCommitment(userid, 1) %]
+        [% END %]
+      </td>
       <td>
         [% IF crms.CanChangeToUser(user,userid) %]
         <form action="crms">

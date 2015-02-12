@@ -3451,16 +3451,20 @@ sub GetUserNote
   return $self->SimpleSqlGet($sql, $user);
 }
 
+# Return the maximum commitment for all user incarnations.
 sub GetUserCommitment
 {
-  my $self = shift;
-  my $user = shift;
+  my $self   = shift;
+  my $user   = shift;
+  my $format = shift;
 
   $user = $self->get('user') unless $user;
-  my $sql = 'SELECT commitment FROM users WHERE id=?';
-  my $comm = $self->SimpleSqlGet($sql, $user);
-  $comm = 100*$comm . '%' if defined $comm;
-  return $comm or '';
+  my $ids = $self->GetUserIncarnations($user);
+  my $wc = $self->WildcardList(scalar @{$ids});
+  my $sql = 'SELECT MAX(COALESCE(commitment,0.0)) FROM users WHERE id IN '. $wc;
+  my $comm = $self->SimpleSqlGet($sql, @{$ids});
+  $comm = 100*$comm . '%' if defined $comm and $format;
+  return $comm;
 }
 
 sub GetUserKerberosID
@@ -3532,11 +3536,11 @@ sub CanChangeToUser
   my $me   = shift;
   my $him  = shift;
 
-  return 0 if $me eq $him;
   my $where = $self->WhereAmI();
   return 1 if $self->SameUser($me, $him);
   if (defined $where && $where ne 'Training')
   {
+    return 0 if $me eq $him;
     return 1 if $self->IsUserAdmin($me);
   }
   return 0;
