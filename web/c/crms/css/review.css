@@ -274,6 +274,9 @@ table.exportStats th {
   text-align:left;
 }
 
+tr.hoverWide:hover { background: #E0E0E0; }
+tr.hoverWide td:hover { background: transparent; }
+
 span.major {
   color:#82CAFA;
 }
@@ -480,34 +483,27 @@ a.tip:hover span {
   background-color: #FFCACA;
 }
 
-#ProgressBarRed {
-  background-color:#c2c2c2;
- 	
-/* IE10 Consumer Preview */ 
-/*background-image: -ms-linear-gradient(left, #FF9889 0%, #D1382E 100%);*/
-
-/* Mozilla Firefox */ 
-/*background-image: -moz-linear-gradient(left, #FF9889 0%, #D1382E 100%);*/
-
-/* Opera */ 
-/*background-image: -o-linear-gradient(left, #FF9889 0%, #D1382E 100%);*/
-
-/* Webkit (Safari/Chrome 10) */ 
-/*background-image: -webkit-gradient(linear, left top, right top, color-stop(0, #FF9889), color-stop(1, #D1382E));*/
-
-/* Webkit (Chrome 11+) */ 
-/*background-image: -webkit-linear-gradient(left, #FF9889 0%, #D1382E 100%);*/
-
-/* W3C Markup, IE10 Release Preview */ 
-/*background-image: linear-gradient(to right, #FF9889 0%, #D1382E 100%);*/
-  border-radius: 6px; /* (height of inner div) / 2 + padding */
+.ProgressBarRed {
+  background-color:#a2a2a2;
+  /* IE10 Consumer Preview */ 
+  /*background-image: -ms-linear-gradient(left, #FF9889 0%, #D1382E 100%);*/
+  /* Mozilla Firefox */ 
+  /*background-image: -moz-linear-gradient(left, #FF9889 0%, #D1382E 100%);*/
+  /* Opera */ 
+  /*background-image: -o-linear-gradient(left, #FF9889 0%, #D1382E 100%);*/
+  /* Webkit (Safari/Chrome 10) */ 
+  /*background-image: -webkit-gradient(linear, left top, right top, color-stop(0, #FF9889), color-stop(1, #D1382E));*/
+  /* Webkit (Chrome 11+) */ 
+  /*background-image: -webkit-linear-gradient(left, #FF9889 0%, #D1382E 100%);*/
+  /* W3C Markup, IE10 Release Preview */ 
+  /*background-image: linear-gradient(to right, #FF9889 0%, #D1382E 100%);*/
+  border-radius: 5px; /* (height of inner div) / 2 + padding */
   padding: 3px;
-  margin-right: 6px;
+  margin-right: 2px;
 }
 
-#ProgressBar {
-  background-color:#c2c2c2;
- 	
+.ProgressBar {
+  background-color:#a2a2a2;
   /* IE10 Consumer Preview */ 
   /*background-image: -ms-linear-gradient(left, #78D2F5 0%, #0F75BC 100%);*/
   /* Mozilla Firefox */ 
@@ -520,16 +516,15 @@ a.tip:hover span {
   /*background-image: -webkit-linear-gradient(left, #78D2F5 0%, #0F75BC 100%);*/
   /* W3C Markup, IE10 Release Preview */ 
   /*background-image: linear-gradient(to right, #78D2F5 0%, #0F75BC 100%);*/
-  
-  border-radius: 6px; /* (height of inner div) / 2 + padding */
+  border-radius: 5px; /* (height of inner div) / 2 + padding */
   padding: 3px;
-  margin-right: 6px;
+  margin-right: 2px;
 }
 
-#ProgressBar > div, #ProgressBarRed > div {
-  background-color: #ffffff;
-  height: 4px;
-  border-radius: 8px;
+.ProgressBar > div, .ProgressBarRed > div {
+  background-color: #00ff00;
+  height: 3px;
+  border-radius: 4px;
 }
 
 /* ================================================================ 
@@ -572,4 +567,66 @@ border-collapse:collapse;}
 #menu dl[class=minor] a:hover, #menu dl[class=minor] a.sfhover         {background: #FEFCAE;}
 #menu dl[class=orange] a:hover, #menu dl[class=orange] a.sfhover       {background: #EB9747;}
 #menu dl[class=red] a:hover, #menu dl[class=red] a.sfhover             {background: #FB5252;}
+
+
+/* ================================================================ 
+By Keenan Payne
+=================================================================== */
+
+.modalDialog {
+	position: fixed;
+	font-family: Arial, Helvetica, sans-serif;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	background: rgba(0,0,0,0.65);
+	z-index: 99999;
+	opacity:0;
+	-webkit-transition: opacity 400ms ease-in;
+	-moz-transition: opacity 400ms ease-in;
+	transition: opacity 400ms ease-in;
+	pointer-events: none;
+}
+
+.modalDialog:target {
+	opacity:1;
+	pointer-events: auto;
+}
+
+.modalDialog > div {
+	width: 400px;
+	position: relative;
+	margin: 10% auto;
+	padding: 5px 20px 13px 20px;
+	border-radius: 10px;
+	background: #fff;
+	background: -moz-linear-gradient(#fff, #999);
+	background: -webkit-linear-gradient(#fff, #999);
+	background: -o-linear-gradient(#fff, #999);
+}
+
+
+
+.close {
+	background: #606061;
+	color: #FFFFFF;
+	line-height: 25px;
+	position: absolute;
+	right: -12px;
+	text-align: center;
+	top: -10px;
+	width: 24px;
+	text-decoration: none;
+	font-weight: bold;
+	-webkit-border-radius: 12px;
+	-moz-border-radius: 12px;
+	border-radius: 12px;
+	-moz-box-shadow: 1px 1px 3px #000;
+	-webkit-box-shadow: 1px 1px 3px #000;
+	box-shadow: 1px 1px 3px #000;
+}
+
+a.close:hover { background: #00d9ff; text-decoration:none;}
+a.close {color:white; text-decoration:none;}
 
