@@ -58,9 +58,11 @@
 [% users = crms.GetUsers(order) %]
 <table class="exportStats" style="white-space:nowrap">
   <tr>
-    <th>Name</th><th>ID</th><th>Kerberos&nbsp;ID</th><th>Institution</th>
-    <th>Reviewer</th><th>Advanced</th><th>Expert</th><th>Ext.&nbsp;Admin</th><th>Admin</th><th>Super&nbsp;Admin</th>
-    <th>Note</th><th>Projects</th><th>IP Address</th><th>Commitment</th><th>Change&nbsp;To</th>
+    <th>Name</th><th>ID</th><th>Kerberos</th><th>Institution</th>
+    <th>Reviewer</th><th>Advanced</th><th>Expert</th><th>Ext.&nbsp;Admin</th>
+    <th>Admin</th><th>Super&nbsp;Admin</th><th>Note</th><th>Projects</th>
+    <th>IP Address</th><th>Commitment[% IF crms.IsUserAdmin() %]<br/>(Progress)[% END %]</th>
+    <th>Change&nbsp;To</th>
   </tr>
   [% FOREACH userid IN users %]
     [% r = crms.IsUserReviewer(userid) %]
@@ -69,8 +71,9 @@
     [% x = crms.IsUserExtAdmin(userid) %]
     [% a = crms.IsUserAdmin(userid) %]
     [% s = crms.IsUserSuperAdmin(userid) %]
-    [% style = (r||v||e||x||a||s)? '':'style="background-color:#e2e2e2;"' %]
-    <tr [% id == userid ? 'class="total"':''%][% style %]>
+    [% active = (r||v||e||x||a||s) %]
+    [% style = (active)? '':'style="background-color:#e2e2e2;"' %]
+    <tr [% id == userid ? 'class="total"':'class="hoverWide"'%][% style %]>
       <td>
         <a href="[% crms.Sysify('crms?p=userRate;user=' _ userid) %]" target="_blank">
           [% crms.GetUserName(userid).replace('\s','&nbsp;') %]
@@ -102,13 +105,25 @@
         [% role = crms.GetUserRole(userid) %]
         [% IF !userid.match("-expert") && !userid.match("-nonexpert") &&
            !userid.match("-reviewer") && r && "crms" != role  && inst != 0 %]
-          <span class="red">Warning: role set to "[% role %]"</span>
+          <span class="red">Role <b>[% role %]</b></span>
         [% END %]
       [% END %]
       </td>
       <td>
         [% IF crms.GetUserCommitment(userid) > 0.0 %]
           [% crms.GetUserCommitment(userid, 1) %]
+          [% prog = crms.GetUserProgress(userid) %]
+          [% IF active && crms.IsUserAdmin() %]
+            [% IF prog > 1.0 %][% prog = 1.0 %][% END %]
+            <div class="ProgressBar[% (crms.sys() == 'crmsworld')? 'Red':'' %]">
+              <div class="ProgressBarInner"
+                   style="width:[% (prog * 100.0) _ '%' %];">
+              </div>
+            </div>
+          [% END %]
+          [% IF 0#prog && active %]
+            ([% prog %])
+          [% END %]
         [% END %]
       </td>
       <td>
