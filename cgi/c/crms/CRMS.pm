@@ -3494,6 +3494,23 @@ sub ChangeAliasUserName
   $self->PrepareSubmitSql($sql, $new_user, $user);
 }
 
+# Return an arrayref of all user ids that share the same kerberos id.
+sub GetUserIncarnations
+{
+  my $self = shift;
+  my $user = shift;
+
+  my $kerb = $self->GetUserKerberosID($user);
+  my %ids = ($user => 1);
+  if ($kerb)
+  {
+    my $sql = 'SELECT id FROM users WHERE kerberos=?';
+    $ids{$_->[0]} = 1 for @{$self->SelectAll($sql, $kerb)};
+  }
+  my @ids2 = sort keys %ids;
+  return \@ids2;
+}
+
 # Same kerberos, different user id for "change-to" purposes.
 sub SameUser
 {
