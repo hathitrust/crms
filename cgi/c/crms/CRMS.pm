@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.9.6';
+  return '4.9.7';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -3494,43 +3494,35 @@ sub ChangeAliasUserName
   $self->PrepareSubmitSql($sql, $new_user, $user);
 }
 
+# Same kerberos, different user id for "change-to" purposes.
 sub SameUser
 {
   my $self = shift;
   my $u1   = shift;
   my $u2   = shift;
 
-  $u1 = $self->SimpleSqlGet('SELECT kerberos FROM users WHERE id=?', $u1);
-  $u2 = $self->SimpleSqlGet('SELECT kerberos FROM users WHERE id=?', $u2);
-  return ($u1 ne '' && $self->TolerantCompare($u1, $u2))? 1:0;
+  my $sql = 'SELECT COUNT(*) FROM users u1 INNER JOIN users u2'.
+            ' ON u1.id=u2.id WHERE u1.id=? AND u2.id=?'.
+            ' AND u1.kerberos=u2.kerberos AND u1.id!=u2.id';
+  return $self->SimpleSqlGet($sql, $u1, $u2);
 }
 
+# In production and training, users can only change to a different user with the
+# same kerberos. In dev, an admin can change to anyone.
 sub CanChangeToUser
 {
   my $self = shift;
   my $me   = shift;
   my $him  = shift;
-  
+
   return 0 if $me eq $him;
+  my $where = $self->WhereAmI();
   return 1 if $self->SameUser($me, $him);
-  return 0 if not ($self->IsUserAdmin($me) && $self->WhereAmI());
-  my $sql = 'SELECT reviewer,advanced,expert,admin,superadmin FROM users WHERE id=?';
-  my $ref1 = $self->SelectAll($sql, $me);
-  $ref1 = $ref1->[0];
-  $sql = 'SELECT reviewer,advanced,expert,admin,superadmin FROM users WHERE id=?';
-  my $ref2 = $self->SelectAll($sql, $him);
-  $ref2 = $ref2->[0];
-  return 0 if $ref2->[4] and not $ref1->[4];
-  return 1 if $ref1->[4];
-  return 0 if $ref2->[3] and not $ref1->[3];
-  return 1 if $ref1->[3];
-  return 0 if $ref2->[2] and not $ref1->[2];
-  return 1 if $ref1->[2];
-  return 0 if $ref2->[1] and not $ref1->[1];
-  return 1 if $ref1->[1];
-  return 0 if $ref2->[0] and not $ref1->[0];
-  return 1 if $ref1->[0];
-  return 1;
+  if (defined $where && $where ne 'Training')
+  {
+    return 1 if $self->IsUserAdmin($me);
+  }
+  return 0;
 }
 
 sub IsUserReviewer
@@ -7304,6 +7296,7 @@ sub CountUserHolds
   return $self->SimpleSqlGet($sql, $user);
 }
 
+# Returns name of system, or undef for production
 sub WhereAmI
 {
   my $self = shift;
