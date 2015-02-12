@@ -3610,6 +3610,7 @@ sub IsUserSuperAdmin
 # Order 1: by privilege level from low to high (used in stats pages)
 # Order 2: by institution, name
 # Order 3: by privilege level from high to low, name
+# Order 4: by percentage commitment
 sub GetUsers
 {
   my $self  = shift;
@@ -3619,7 +3620,8 @@ sub GetUsers
   $ordercl = 'u.expert ASC,u.name' if $order == 1;
   $ordercl = '(u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC'.
              ',i.name ASC,u.name ASC' if $order == 2;
-  $ordercl = '(u.reviewer+(2*u.advanced)+(4*u.extadmin)+(8*u.admin)+(16*u.superadmin)) DESC'.
+  $ordercl = '(u.reviewer+(2*u.advanced)+(4*u.expert)'.
+             '+(8*u.extadmin)+(16*u.admin)+(32*u.superadmin)) DESC'.
              ',u.name ASC' if $order == 3;
   $ordercl = '(u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC'.
              ',u.commitment DESC,u.name ASC' if $order == 4;
