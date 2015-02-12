@@ -5178,15 +5178,15 @@ sub GetMonthStats
   my $y    = shift;
   my $m    = shift;
 
-  my $sql = 'SELECT count(*) FROM historicalreviews WHERE user=? AND legacy!=1' . 
+  my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND legacy!=1' . 
             ' AND EXTRACT(YEAR FROM time)=? AND EXTRACT(MONTH FROM time)=?';
   my $total_reviews = $self->SimpleSqlGet($sql, $user, $y, $m);
   #pd/pdus
-  $sql = 'SELECT count(*) FROM historicalreviews WHERE user=? AND legacy!=1 AND (attr=1 OR attr=9)' .
+  $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND legacy!=1 AND (attr=1 OR attr=9)' .
          ' AND EXTRACT(YEAR FROM time)=? AND EXTRACT(MONTH FROM time)=?';
   my $total_pd = $self->SimpleSqlGet($sql, $user, $y, $m);
   #ic
-  $sql = 'SELECT count(*) FROM historicalreviews WHERE user=? AND legacy!=1 AND attr=2' .
+  $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND legacy!=1 AND attr=2' .
          ' AND EXTRACT(YEAR FROM time)=? AND EXTRACT(MONTH FROM time)=?';
   my $total_ic = $self->SimpleSqlGet($sql, $user, $y, $m);
   #und
