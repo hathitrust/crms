@@ -7,6 +7,10 @@
 <h2>My Review Stats:</h2>
 <a href="/c/crms/pdf/MyReviewStatsHelp.pdf" target="_blank">My&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
 <br/>
+[% crms.CreateStatsReport(p, 'all', 1, 1) %]
+<br/><br/>
+[% crms.CreateStatsReport(p, 'all', 0, 1) %]
+<br/><br/>
 [% years = crms.GetStatsYears() %]
 [% IF years %]
   [% thisyear = years.shift() %]
