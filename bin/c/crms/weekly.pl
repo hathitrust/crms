@@ -77,9 +77,9 @@ my @recips;
 
 my $msg = $crms->StartHTML();
 $msg .= <<'END';
-<h3>Total reviews this week __TOTEL_THIS_WEEK__</h3>
-<h3>Total reviews last week __TOTEL_LAST_WEEK__</h3>
-<h3>We did __PERCENT__ compared to our weekly target</h3>
+<h3>Total reviews this week: __TOTEL_THIS_WEEK__</h3>
+<h3>Total reviews last week: __TOTEL_LAST_WEEK__</h3>
+<h3>We did __PERCENT__ (__COUNT__) out of our weekly target of __TARGET__ determinations.</h3>
 <table style="border:1px solid #000000;border-collapse:collapse;">
 <tr><th style="background-color:#000000;color:#FFFFFF;padding:4px 20px 2px 6px;">Total by Institution</th>
     <th style="background-color:#000000;color:#FFFFFF;padding:4px 20px 2px 6px;">this week</th>
@@ -98,7 +98,7 @@ my $startThis = $crms->SimpleSqlGet($sql, $now);
 $sql = 'SELECT DATE_SUB(?, INTERVAL 2 WEEK)';
 my $startLast = $crms->SimpleSqlGet($sql, $now);
 
-$sql = 'SELECT COUNT(*) FROM historicalreviews WHERE time>=? AND time<?';
+$sql = 'SELECT COUNT(*) FROM historicalreviews WHERE time>=? AND time<? AND user!="autocrms"';
 my $thisn = $crms->SimpleSqlGet($sql, $startThis, $now);
 my $lastn = $crms->SimpleSqlGet($sql, $startLast, $startThis);
 $sql = 'SELECT COUNT(*) FROM reviews WHERE time>=? AND time<?';
@@ -140,13 +140,15 @@ $sql = 'SELECT COUNT(*) FROM reviews WHERE time>=? AND time<? AND user="keden-re
 $kn += $crms->SimpleSqlGet($sql, $startThis, $now);
 $msg =~ s/__KEDEN_COUNT__/$kn/i;
 
-$sql = 'SELECT'.
-       ' (SELECT COUNT(*) FROM exportdata WHERE src="candidates" AND time<=?'.
-       '  AND time>=?)'.
-       ' /(COUNT(*)/(DATEDIFF("2015-11-30 23:59:59", ?)/7)) FROM candidates';
-my $pct = $crms->SimpleSqlGet($sql, $now, $startThis, $now);
-$pct = sprintf('%.1f%%', 100.0 * $pct);
+$sql = 'SELECT COUNT(*) FROM exportdata WHERE src="candidates" AND time>=? AND time<?';
+my $count = $crms->SimpleSqlGet($sql, $startThis, $now);
+$sql = 'SELECT COUNT(*)/(DATEDIFF("2015-11-30 23:59:59", ?)/7) FROM candidates';
+my $target = int $crms->SimpleSqlGet($sql, $now);
+my $pct = sprintf('%.1f%%', 100.0 * $count / $target);
 $msg =~ s/__PERCENT__/$pct/;
+$msg =~ s/__COUNT__/$count/;
+$msg =~ s/__TARGET__/$target/;
+
 $msg .= sprintf('<span style="font-size:.9em;">Report for week %s to %s, compared to week %s to %s</span>',
                 $crms->FormatDate($startThis), $crms->FormatDate($now),
                 $crms->FormatDate($startLast), $crms->FormatDate($startThis));
