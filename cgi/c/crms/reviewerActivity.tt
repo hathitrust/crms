@@ -41,13 +41,17 @@ function ConstructURL()
 	var aa=table.querySelectorAll('input.userCB');
 	for (var i=0; i < aa.length; i++) 
 	{
-	  if (aa[i].checked) graphURL += ';user=' + aa[i].id;
+	  var user = aa[i].id;
+    var res = user.replace(/__AT__/i, "@"); 
+	  if (aa[i].checked) graphURL += ';user=' + res;
 	}
 	table = document.getElementById('userTable1');
 	aa=table.querySelectorAll('input.userCB');
 	for (var i=0; i < aa.length; i++) 
 	{
-	  if (aa[i].checked) graphURL += ';user=' + aa[i].id;
+	  var user = aa[i].id;
+    var res = user.replace(/__AT__/i, "@"); 
+	  if (aa[i].checked) graphURL += ';user=' + res;
 	}
 	var menu = document.getElementById('activityTypeMenu');
 	graphURL += ';type2=' + menu.value;
@@ -142,11 +146,11 @@ function save_image(debug)
     [% i = 1 %]
     [% col = 0 %]
     [% FOREACH r IN ref %]
-      [% revs  = crms.GetInstitutionReviewers(r.0) %]
+      [% revs = crms.GetInstitutionReviewers(r.0) %]
       [% IF revs.size() > 0 %]
-        [% IF (i > ref.size() / 2 && col == 0) %]
+        [% IF (i >= ref.size() / 2 && col == 0) %]
           [% col = col + 1 %]
-          </td></table>
+          </table>
           <td style="align:left;text-align:left;vertical-align:top">
           <table class='exportStats' id='userTable[% col %]'>
         [% END %]
@@ -161,13 +165,14 @@ function save_image(debug)
       [% END %]
       [% FOREACH h IN revs %]
         <tr>
+          [% id = h.id.replace('@', '__AT__') %]
+          [% name = h.name %]
           <td style="white-space:nowrap;">
-            <input type="checkbox" class="userCB" name="inst_[% r.0 %]" id="[% h.id %]"
+            <input type="checkbox" class="userCB" name="inst_[% r.0 %]" id="[% id %]"
                    onchange="checkInst('inst_[% r.0 %]');reloadSWF('chart0');"/>
-            <label for="[% h.id %]">
-              [% IF h.active == 0 %]<i>[% END %]
-              [% h.name %]
-              [% IF h.active == 0 %]</i>[% END %]
+            <label for="[% id %]">
+              [% IF h.active == 0 %][% name = "<i>" _ name _ "</i>" %][% END %]
+              [% name %]
             </label>
           </td>
           <td>[% IF h.commitment %][% 100 * h.commitment %]%[% END %]</td>
@@ -175,7 +180,6 @@ function save_image(debug)
       [% END %]
     [% END %]
   </table>
-  </td>
 </tr>
 </table><br/>
 
