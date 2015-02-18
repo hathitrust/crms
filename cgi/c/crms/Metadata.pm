@@ -369,26 +369,72 @@ sub title
   return $title;
 }
 
-sub pubdate
+sub copyrightDate
 {
-  my $self   = shift;
-  my $date2  = shift;
-  my $leader  = $self->GetControlfield('008');
-  return substr($leader, ($date2)? 11:7, 4);
+  my $self = shift;
+
+  my $leader = $self->GetControlfield('008');
+  my $type = substr($leader, 6, 1);
+  my $date1 = substr($leader, 7, 4);
+  my $date2 = substr($leader, 11, 4);
+  $date1 =~ s/\s//g;
+  $date2 =~ s/\s//g;
+  $date1 = undef if $date1 =~ m/\D/ or $date1 eq '';
+  $date2 = undef if $date2 =~ m/\D/ or $date2 eq '';
+  my $field;
+  if ($type eq 't')
+  {
+    $field = $date1 if defined $date1;
+    $field = $date2 if defined $date2;
+  }
+  elsif ($type eq 'r' || $type eq 'e')
+  {
+    $field = $date1 if defined $date1;
+  }
+  else
+  {
+    $field = $date1 if defined $date1;
+    $field = $date2 if defined $date2 and (defined $date1 and $date2 > $date1) and $date2 ne '9999';
+  }
+  $field = undef if defined $field and $field eq '';
+  return $field;
+}
+
+sub dateType
+{
+  my $self  = shift;
+
+  my $leader = $self->GetControlfield('008');
+  return substr($leader, 6, 1);
+}
+
+sub pubDate
+{
+  my $self  = shift;
+  my $date2 = shift;
+
+  my $leader = $self->GetControlfield('008');
+  my $type = substr($leader, 6, 1);
+  my $field = substr($leader, ($date2)? 11:7, 4);
+  $field =~ s/\s//g;
+  $field = undef if $field =~ m/\D/ or $field eq '';
+  return $field;
 }
 
 sub language
 {
-  my $self   = shift;
+  my $self = shift;
+
   my $leader  = $self->GetControlfield('008');
   return (length $leader >=38)? substr($leader, 35, 3):'???';
 }
 
 sub country
 {
-  my $self   = shift;
-  my $long   = shift;
-  my $code  = substr($self->GetControlfield('008'), 15, 3);
+  my $self = shift;
+  my $long = shift;
+
+  my $code = substr($self->GetControlfield('008'), 15, 3);
   use Countries;
   return Countries::TranslateCountry($code, $long);
 }
@@ -429,12 +475,12 @@ sub editor
       my $data = $self->GetSubfields('700', $i, 'a');
       next if $data and $seen{$data};
       $seen{$data} = 1 if $data;
-      $data = $self->GetSubfields('700', $i, 'e', 'a', 'd');
-      push @eds, $data if defined $data;
+      $data = $self->GetSubfields('700', $i, 'a', 'd', 'e');
+      push @eds, $data if $data;
     }
     last if scalar @eds == 1 and not $mult;
   }
-  return join '; ', @eds if wantarray;
+  return join '; ', @eds unless wantarray;
   return @eds;
 }
 
@@ -551,20 +597,21 @@ sub GetAllAuthors
 
   my %aus;
   my $au = $self->author(1);
-  $aus{$au} = 1 if defined $au;
+  $aus{$au} = 1 if $au;
   my $n = $self->CountDatafields('700');
   foreach my $i (1 .. $n)
   {
     $au = $self->GetSubfields('700', $i, 'a', 'b', 'c', 'd');
-    $aus{$au} = 1 if defined $au;
+    $aus{$au} = 1 if $au;
   }
   $n = $self->CountDatafields('710');
   foreach my $i (1 .. $n)
   {
     $au = $self->GetSubfields('710', $i, 'a', 'b');
-    $aus{$au} = 1 if defined $au;
+    $aus{$au} = 1 if $au;
   }
-  $aus{$_} = 1 for $self->editor(1);
+  my @eds = $self->editor(1);
+  $aus{$_} = 1 for @eds;
   return sort keys %aus;
 }
 
