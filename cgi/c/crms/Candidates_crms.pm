@@ -63,8 +63,8 @@ sub GetViolations
   my ($id, $record, $priority, $override) = @_;
 
   my @errs = ();
-  my $pub = $record->pubdate;
-  if ($pub =~ m/\d\d\d\d/)
+  my $pub = $record->copyrightDate;
+  if (defined $pub && $pub =~ m/\d\d\d\d/)
   {
     my $min = $self->GetCutoffYear(undef, 'minYear');
     my $max = $self->GetCutoffYear(undef, 'maxYear');
@@ -76,7 +76,11 @@ sub GetViolations
   }
   else
   {
-    push @errs, "pub date not in range or not completely specified ($pub)";
+    my $leader = $record->GetControlfield('008');
+    my $type = substr($leader, 6, 1);
+    my $date1 = substr($leader, 7, 4);
+    my $date2 = substr($leader, 11, 4);
+    push @errs, "pub date not in range or not completely specified ($date1,$date2,'$type')";
   }
   push @errs, 'gov doc' if $self->IsGovDoc($record);
   my $where = $record->country;

@@ -219,7 +219,7 @@ These items will take priority in the review process.
     [% r.0 %]</a></td>
     <td>[% cgi.escapeHTML(r.1) %]</td>
     <td>[% cgi.escapeHTML(r.2) %]</td>
-    <td>[% crms.GetPubDate(r.0, 1) %]</td>
+    <td>[% crms.FormatPubDate(r.0) %]</td>
     <td>[% r.4 %]</td>
     <td>[% IF r.5 == 'oneoff' %]
           [% tx = r.8 %]

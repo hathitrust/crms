@@ -23,8 +23,8 @@ sub ValidateSubmission
   }
   else
   {
-    $pubDate = $self->GetPubDate($id, 1);
-    if ($pubDate =~ m/\-/)
+    $pubDate = $self->FormatPubDate($id);
+    if ($pubDate =~ m/-/)
     {
       ($pubDate, $pub2) = split '-', $pubDate, 2;
     }
@@ -45,7 +45,7 @@ sub ValidateSubmission
     $errorMsg .= "*/$reason must include a numeric year. ";
   }
   elsif ($pubDate < 1923 && $attr eq 'icus' && $reason eq 'gatt' &&
-         (!defined $pub2 || $pub2 < 1923) &&
+         (!$pub2 || $pub2 < 1923) &&
          !$self->IsUserExpert() && !$self->IsUserAdmin())
   {
     $errorMsg .= 'Volumes published prior to 1923 are not eligible for icus/gatt. ';

@@ -94,10 +94,10 @@ sub GetViolations
   my ($id, $record, $priority, $override) = @_;
 
   my @errs = ();
-  my $pub = $record->pubdate;
+  my $pub = $record->copyrightDate;
   my $where = $record->country;
   $where =~ s/\s*\(.*//;
-  if ($pub =~ m/\d\d\d\d/)
+  if (defined $pub && $pub =~ m/\d\d\d\d/)
   {
     my $min = $self->GetCutoffYear($where, 'minYear');
     my $max = $self->GetCutoffYear($where, 'maxYear');
@@ -106,7 +106,11 @@ sub GetViolations
   }
   else
   {
-    push @errs, "pub date not completely specified ($pub)";
+    my $leader = $record->GetControlfield('008');
+    my $type = substr($leader, 6, 1);
+    my $date1 = substr($leader, 7, 4);
+    my $date2 = substr($leader, 11, 4);
+    push @errs, "pub date not in range or not completely specified ($date1,$date2,'$type')";
   }
   # FIXME: use Countries() method
   push @errs, "foreign pub ($where)" if $where ne 'United Kingdom' and
@@ -136,8 +140,8 @@ sub ShouldVolumeGoInUndTable
     return 'language' if 'eng' ne $lang;
   }
   return 'translation' if $record->isTranslation;
-  my $date = $self->{crms}->GetPubDate($id, 1, $record);
-  return 'date range' if defined $date and $date =~ m/^\d+-\d+$/;
+  my $date = $self->{crms}->FormatPubDate($id, $record);
+  return 'date range' if $date =~ m/^\d+-(\d+)?$/;
   return undef;
 }
 
