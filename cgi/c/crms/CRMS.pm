@@ -3541,7 +3541,7 @@ sub CanChangeToUser
   if (defined $where && $where ne 'Training')
   {
     return 0 if $me eq $him;
-    #return 1 if $self->IsUserAdmin($me);
+    return 1 if $self->IsUserAdmin($me);
   }
   return 0;
 }
