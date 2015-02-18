@@ -99,7 +99,7 @@ foreach my $row (@{$ref})
   $au =~ s/&/&amp;/g;
   my $ti = $record->title;
   $ti =~ s/&/&amp;/g;
-  my $pub = $record->pubdate;
+  my $pub = $record->copyrightDate;
   my $field260a = '';
   my $field260b = '';
   eval {
