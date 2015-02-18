@@ -139,6 +139,8 @@ if ($sys eq 'crmsworld')
   is($crms->ValidateSubmission('inu.39000005773028','moseshll',19,17,undef,undef,undef,undef),
      'Volumes published prior to 1923 are not eligible for icus/gatt. ', 'icus/gatt superadmin <23');
   is($crms->PredictRights('uc1.$b173100','1945'), 4,    'Predict rights: uc1.$b173100 1945 ic/add');
+  ok($crms->CanChangeToUser('jblock@princeton.edu','jblock@princeton.edu-expert'), 'user switching');
+  ok(!$crms->CanChangeToUser('jblock@princeton.edu','moseshll'), 'user switching');
 }
 else
 {
