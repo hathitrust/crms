@@ -153,7 +153,7 @@
         <tr><td><strong>Title:</strong> [% title %]</td></tr>
         <tr><td><strong>Author:</strong> [% author %]</td></tr>
         <tr><td><strong>Pub Date:</strong> <span id="pubDateSpan"
-          [% IF NOT ren && pubDate.match('^\d+-\d+$') %]class="red"[% END %]>
+          [% IF NOT ren && pubDate.match('^\d+-\d*$') %]class="red"[% END %]>
           [% pubDate %]</span></td>
         </tr>
         [% IF crms.GetSystemVar("showCountry") %]
