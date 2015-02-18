@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.9.7';
+  return '4.9.8';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -975,7 +975,7 @@ sub AddItemToCandidates
     print "Add $id to candidates \n";
     if (!defined $noop)
     {
-      my $date = $record->pubdate . '-01-01';
+      my $date = $record->copyrightDate . '-01-01';
       my $sql = 'INSERT INTO candidates (id,time,pub_date) VALUES (?,?,?)';
       $self->PrepareSubmitSql($sql, $id, $time, $date);
       $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
@@ -3523,8 +3523,8 @@ sub SameUser
   my $u2   = shift;
 
   my $sql = 'SELECT COUNT(*) FROM users u1 INNER JOIN users u2'.
-            ' ON u1.id=u2.id WHERE u1.id=? AND u2.id=?'.
-            ' AND u1.kerberos=u2.kerberos AND u1.id!=u2.id';
+            ' ON u1.kerberos=u2.kerberos WHERE u1.id=? AND u2.id=?'.
+            ' AND u1.id!=u2.id';
   return $self->SimpleSqlGet($sql, $u1, $u2);
 }
 
@@ -3541,7 +3541,7 @@ sub CanChangeToUser
   if (defined $where && $where ne 'Training')
   {
     return 0 if $me eq $him;
-    return 1 if $self->IsUserAdmin($me);
+    #return 1 if $self->IsUserAdmin($me);
   }
   return 0;
 }
@@ -5370,6 +5370,7 @@ sub GetPubDate
   my $do2    = shift;
   my $record = shift;
 
+  print "Warning: GetPubDate no longer takes a do2 parameter!\n" if $do2;
   my $sql = 'SELECT YEAR(pub_date) FROM bibdata WHERE id=?';
   my $date = $self->SimpleSqlGet($sql, $id);
   if (!$date)
@@ -5377,17 +5378,36 @@ sub GetPubDate
     $record = $self->UpdateMetadata($id, 1, $record);
     $date = $self->SimpleSqlGet($sql, $id);
   }
-  if ($date && $do2)
+  return $date;
+}
+
+sub FormatPubDate
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
+
+  my $date;
+  $record = $self->GetMetadata($id) unless defined $record;
+  if (defined $record)
   {
-    $record = $self->GetMetadata($id) unless defined $record;
-    if (defined $record)
+    my $date1 = $record->pubDate(0);
+    my $date2 = $record->pubDate(1);
+    my $type = $record->dateType();
+    my $cDate = $record->copyrightDate();
+    $date = $cDate;
+    $date2 = undef if $type eq 'e';
+    if (defined $date1)
     {
-      my $date2 = $record->pubdate(1);
-      $date = "$date-$date2" if $date2 && $date2 =~ m/^\d\d\d\d$/ &&
-                                $date2 > $date &&
-                                $date2 <= $self->GetTheYear();
+      if ($type eq 'i' || $type eq 'k' || $type eq 'm' ||
+          $type eq 'c' || $type eq 'd' || $type eq 'u')
+      {
+        $date = "$date1-$date2" if defined $date2 and $date2 > $date1;
+        $date = $date1. '-' if !defined $date2 or $date2 eq '9999';
+      }
     }
   }
+  $date = 'unknown' unless defined $date;
   return $date;
 }
 
@@ -5488,7 +5508,7 @@ sub UpdateMetadata
     $record = $self->GetMetadata($id) unless defined $record;
     if (defined $record)
     {
-      my $date = $record->pubdate . '-01-01';
+      my $date = $record->copyrightDate . '-01-01';
       if ($record->id eq $record->sysid)
       {
         my $sql = 'UPDATE bibdata SET author=?,title=?,pub_date=?,country=? WHERE sysid=?';
@@ -8480,11 +8500,11 @@ sub PredictLastCopyrightYear
   $pub = $year if $ispub;
   if (! defined $pub)
   {
-    $pub = $record->pubdate(1) if defined $record;
-    $pub = $self->GetPubDate($id, 1) unless defined $pub;
+    $pub = $record->copyrightDate(1) if defined $record;
+    $pub = $self->FormatPubDate($id, $record) unless defined $pub;
   }
   return undef unless defined $pub;
-  return undef if $pub =~ m/^\d+-\d+$/;
+  return undef if $pub =~ m/-/;
   $$pubref = $pub if defined $pubref;
   my $where = undef;
   $where = $record->country if defined $record;
