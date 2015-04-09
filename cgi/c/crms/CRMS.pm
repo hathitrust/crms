@@ -1024,7 +1024,7 @@ sub IsVolumeInScope
     my $joined = join '; ', @{$errs};
     $errs = [] if $joined =~ m/^current\srights\sund\/[a-z]+$/i;
   }
-  my $und = $self->ShouldVolumeGoInUndTable($id, $record);
+  my $und = $self->ShouldVolumeBeFiltered($id, $record);
   push @{$errs}, 'should be filtered (' . $und . ')' if defined $und;
   push @{$errs}, 'already in the queue' if $self->IsVolumeInQueue($id);
   my $sql = 'SELECT COUNT(*) FROM exportdata e INNER JOIN historicalreviews r' .
@@ -1114,7 +1114,7 @@ sub GetCountries
 }
 
 # Returns a und table src code if the volume belongs in the und table instead of candidates.
-sub ShouldVolumeGoInUndTable
+sub ShouldVolumeBeFiltered
 {
   my $self   = shift;
   my $id     = shift;
@@ -1122,7 +1122,7 @@ sub ShouldVolumeGoInUndTable
 
   $record = $self->GetMetadata($id) unless $record;
   return 'no meta' unless defined $record;
-  return $self->CandidatesModule()->ShouldVolumeGoInUndTable($id, $record);
+  return $self->CandidatesModule()->ShouldVolumeBeFiltered($id, $record);
 }
 
 # Load candidates into queue.
