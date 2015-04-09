@@ -185,10 +185,10 @@ function PredictRights(id)
     }
   }
   req.onreadystatechange = function()
-  { 
-    if (req.readyState == 4)
+  {
+    if (req.readyState == 4 && req.status == 200)
     {
-      if (req.status == 200)
+      if (req.responseText)
       {
         sel = GetCheckedValue(rights);
         und = document.getElementById('UNDNFI').title;
@@ -203,8 +203,8 @@ function PredictRights(id)
           button = document.getElementById("r" + req.responseText);
           if (button) button.checked = "checked"
         }
-      }    
-    } 
+      }
+    }
   };
   var url = "/cgi/c/crms/predictRights?sys=crmsworld;id=" +
             id + ";year=" + year + ";ispub=" + isPub +
