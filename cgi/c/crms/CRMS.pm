@@ -3577,27 +3577,26 @@ sub IsUserSuperAdmin
   return $self->SimpleSqlGet($sql, $user);
 }
 
-# Order 0: by name with inactives last
-# Order 1: by privilege level from low to high (used in stats pages)
-# Order 2: by institution, name
-# Order 3: by privilege level from high to low, name
+# All orders place inactives last and order by name
+# Order 0: by name
+# Order 1: by privilege level from low to high (user stats pages)
+# Order 2: by institution
+# Order 3: by privilege level from high to low
 # Order 4: by percentage commitment
 sub GetUsers
 {
-  my $self  = shift;
-  my $order = shift or 0;
+  my $self = shift;
+  my $ord  = shift;
 
-  my $ordercl = '(u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC,u.name ASC';
-  $ordercl = 'u.expert ASC,u.name' if $order == 1;
-  $ordercl = '(u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC'.
-             ',i.name ASC,u.name ASC' if $order == 2;
-  $ordercl = '(u.reviewer+(2*u.advanced)+(4*u.expert)'.
-             '+(8*u.extadmin)+(16*u.admin)+(32*u.superadmin)) DESC'.
-             ',u.name ASC' if $order == 3;
-  $ordercl = '(u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC'.
-             ',u.commitment DESC,u.name ASC' if $order == 4;
+  my $order = '(u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC';
+  $order .= ',u.expert ASC' if $ord == 1;
+  $order .= ',i.shortname ASC' if $ord == 2;
+  $order .= ',(u.reviewer+(2*u.advanced)+(4*u.expert)'.
+            '+(8*u.extadmin)+(16*u.admin)+(32*u.superadmin)) DESC' if $ord == 3;
+  $order .= ',u.commitment DESC' if $ord == 4;
+  $order .= ',u.name ASC';
   my $sql = 'SELECT u.id FROM users u INNER JOIN institutions i'.
-            ' ON u.institution=i.id ORDER BY ' . $ordercl;
+            ' ON u.institution=i.id ORDER BY ' . $order;
   my $ref = $self->SelectAll($sql);
   my @users = map { $_->[0]; } @{$ref};
   return \@users;
