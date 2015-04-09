@@ -2,7 +2,7 @@ package Validator;
 
 use strict;
 use warnings;
-use vars qw( @ISA @EXPORT @EXPORT_OK );
+use vars qw(@ISA @EXPORT @EXPORT_OK);
 our @EXPORT = qw(ValidateSubmission);
 
 # Returns an error message, or an empty string if no error.

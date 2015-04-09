@@ -2,7 +2,7 @@ package Validator;
 
 use strict;
 use warnings;
-use vars qw( @ISA @EXPORT @EXPORT_OK );
+use vars qw(@ISA @EXPORT @EXPORT_OK);
 our @EXPORT = qw(ValidateSubmission);
 
 # Returns an error message, or an empty string if no error.
@@ -24,7 +24,7 @@ sub ValidateSubmission
     $noteError = 1;
   }
   ## ic/ren requires a nonexpired renewal if 1963 or earlier
-  if ( $attr == 2 && $reason == 7 )
+  if ($attr == 2 && $reason == 7)
   {
     if ($hasren)
     {
@@ -36,7 +36,7 @@ sub ValidateSubmission
       {
         $renDate =~ s,.*[A-Za-z](.*),$1,;
         $renDate = '19' . $renDate;
-        if ( $renDate < 1950 )
+        if ($renDate < 1950)
         {
           $errorMsg .= "Renewal has expired; volume is pd. Date entered is $renDate. ";
         }
@@ -48,7 +48,7 @@ sub ValidateSubmission
     }
   }
   ## pd/ren should not have a ren number or date, and is not allowed for post-1963 works.
-  if ( $attr == 1 && $reason == 7 )
+  if ($attr == 1 && $reason == 7)
   {
     if ($date > 1963)
     {
@@ -88,21 +88,21 @@ sub ValidateSubmission
     #}
   }
   ## pd/cdpp requires a ren number
-  if (  $attr == 1 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
+  if ($attr == 1 && $reason == 9 && ($renNum || $renDate))
   {
     $errorMsg .= 'pd/cdpp should not include renewal info. ';
   }
-  if ( $attr == 1 && $reason == 9 && ( ( !$note ) || ( !$category ) ) )
+  if ($attr == 1 && $reason == 9 && (!$note || !$category))
   {
     $errorMsg .= 'pd/cdpp must include note category and note text. ';
     $noteError = 1;
   }
   ## ic/cdpp requires a ren number
-  if (  $attr == 2 && $reason == 9 && ( ( $renNum ) || ( $renDate ) ) )
+  if ($attr == 2 && $reason == 9 && ($renNum || $renDate))
   {
     $errorMsg .= 'ic/cdpp should not include renewal info. ';
   }
-  if ( $attr == 2 && $reason == 9 && ( ( !$note )  || ( !$category ) ) )
+  if ($attr == 2 && $reason == 9 && (!$note || !$category))
   {
     $errorMsg .= 'ic/cdpp must include note category and note text. ';
     $noteError = 1;
@@ -114,11 +114,11 @@ sub ValidateSubmission
     {
       $errorMsg .= 'pd/add requires admin privileges.';
     }
-    elsif (( $renNum ) || ( $renDate ))
+    elsif ($renNum || $renDate)
     {
       $errorMsg .= 'pd/add should not include renewal info. ';
     }
-    if (( !$note ) || ( !$category ))
+    if (!$note || !$category)
     {
       $errorMsg .= 'pd/add must include note category and note text. ';
       $noteError = 1;
@@ -135,11 +135,11 @@ sub ValidateSubmission
     {
       $errorMsg .= 'pd/exp requires admin privileges.';
     }
-    elsif (( $renNum ) || ( $renDate ))
+    elsif ($renNum || $renDate)
     {
       $errorMsg .= 'pd/exp should not include renewal info. ';
     }
-    if (( !$note ) || ( !$category ))
+    if (!$note || !$category)
     {
       $errorMsg .= 'pd/exp must include note category and note text. ';
       $noteError = 1;
@@ -152,11 +152,11 @@ sub ValidateSubmission
   ## pdus/cdpp requires a note and a 'Foreign' or 'Translation' category, and must not have a ren number
   if ($attr == 9 && $reason == 9)
   {
-    if (( $renNum ) || ( $renDate ))
+    if ($renNum || $renDate)
     {
       $errorMsg .= 'pdus/cdpp should not include renewal info. ';
     }
-    if (( !$note ) || ( !$category ))
+    if (!$note || !$category)
     {
       $errorMsg .= 'pdus/cdpp must include note category/note text. ';
       $noteError = 1;
@@ -166,16 +166,16 @@ sub ValidateSubmission
       $errorMsg .= 'pdus/cdpp requires note category "Foreign Pub" or "Translation". ';
     }
   }
-  if ( $noteError == 0 )
+  if ($noteError == 0)
   {
-    if ( ( $category )  && ( !$note ) )
+    if ($category && !$note)
     {
       if ($self->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category))
       {
         $errorMsg .= 'must include a note if there is a category. ';
       }
     }
-    elsif ( ( $note ) && ( !$category ) )
+    elsif ($note && !$category)
     {
       $errorMsg .= 'must include a category if there is a note. ';
     }
