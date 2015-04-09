@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.9.9';
+  return '4.9.10';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -1126,56 +1126,27 @@ sub ShouldVolumeGoInUndTable
 }
 
 # Load candidates into queue.
-# If the needed parameter is given, tries to make the total in the queue equal to needed.
-# (In other words if there are 500 and you tell it needed = 1000, it loads 500 more.)
-# Otherwise loads to the standard limit of 800, 500 Priority 0.
 sub LoadNewItems
 {
-  my $self    = shift;
-  my $needed  = shift;
-  my $country = shift;
+  my $self = shift;
 
   my $queuesize = $self->GetQueueSize();
   my $priZeroSize = $self->GetQueueSize(0);
-  my $excludeCountries = '';
-  if (defined $country)
-  {
-    print "Loading queue items for $country\n";
-    my $sql = 'SELECT COUNT(*) FROM queue q INNER JOIN bibdata b ON q.id=b.id' .
-              ' WHERE b.country=?';
-    $queuesize = $self->SimpleSqlGet($sql, $country);
-    $sql = 'SELECT COUNT(*) FROM queue q INNER JOIN bibdata b ON q.id=b.id' .
-           ' WHERE b.country=? AND q.priority=0';
-    $priZeroSize = $self->SimpleSqlGet($sql, $country);
-    $excludeCountries = ' AND b.country="' . $country . '"';
-  }
-  else
-  {
-    $excludeCountries = ' AND b.country NOT IN (SELECT DISTINCT country FROM usercountries)';
-  }
   my $targetQueueSize = $self->GetSystemVar('queueSize');
   print "Before load, the queue has $queuesize volumes, $priZeroSize priority 0.\n";
-  if ($needed)
-  {
-    $needed = $needed - $queuesize;
-  }
-  else
-  {
-    $needed = max($targetQueueSize - $queuesize, 500 - $priZeroSize);
-  }
+  my $needed = max($targetQueueSize - $queuesize, 500 - $priZeroSize);
   printf "Need $needed volumes (max of %d [%d-%d] and %d [%d-%d]).\n",
           $targetQueueSize - $queuesize, $targetQueueSize, $queuesize,
           500 - $priZeroSize, 500, $priZeroSize;
   return if $needed <= 0;
   my $count = 0;
   my %dels = ();
-  my $sql = 'SELECT c.id FROM candidates c INNER JOIN bibdata b ON c.id=b.id'.
-            ' WHERE c.id NOT IN (SELECT DISTINCT id FROM inherit)'.
-            ' AND c.id NOT IN (SELECT DISTINCT id FROM queue)'.
-            ' AND c.id NOT IN (SELECT DISTINCT id FROM reviews)'.
-            ' AND c.id NOT IN (SELECT DISTINCT id FROM historicalreviews)'.
-            $excludeCountries.
-            ' AND c.time<=DATE_SUB(NOW(), INTERVAL 1 WEEK)'.
+  my $sql = 'SELECT id FROM candidates'.
+            ' WHERE id NOT IN (SELECT DISTINCT id FROM inherit)'.
+            ' AND id NOT IN (SELECT DISTINCT id FROM queue)'.
+            ' AND id NOT IN (SELECT DISTINCT id FROM reviews)'.
+            ' AND id NOT IN (SELECT DISTINCT id FROM historicalreviews)'.
+            ' AND time<=DATE_SUB(NOW(), INTERVAL 1 WEEK)'.
             ' ORDER BY time DESC';
   #print "$sql\n";
   my $ref = $self->SelectAll($sql);
