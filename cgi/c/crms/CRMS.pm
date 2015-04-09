@@ -4483,10 +4483,19 @@ sub CreateStatsData
     $instusers = sprintf "'%s'", join "','", @{$affs};
     $instusersne = sprintf "'%s'", join "','", map {($self->IsUserExpert($_))? ():$_} @{$affs};
   }
-  else { $username = $self->GetUserName($user) };
+  else
+  {
+    $username = $self->GetUserName($user);
+    if ($page =~ m/^Admin/i && $page !~ m/Inst$/i)
+    {
+      my $inst = $self->GetUserInstitution($user);
+      my $iname = $self->GetInstitutionName($inst);
+      $username .= ' ('. $iname . ')';
+    }
+  }
   #print "username '$username', instusers $instusers<br/>\n";
   my $label = "$username: " . (($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative":$year);
-  my $report = sprintf("$label\nCategories%sProject Total%s", $delimiter, (!$cumulative)? ($delimiter . "Total $year"):'');
+  my $report = sprintf("$label\n%sProject Total%s", $delimiter, (!$cumulative)? ($delimiter . "Total $year"):'');
   my %stats = ();
   my %totals = ();
   my @usedates = ();
@@ -4692,16 +4701,16 @@ sub CreateStatsReport
   my $page              = shift;
   my $user              = shift;
   my $cumulative        = shift;
-  my $suppressBreakdown = shift;
+  my $suppressBreakdown = shift; #unused
   my $year              = shift;
   my $inval             = shift;
   my $nononexpert       = shift;
-  
-  # FIXME: remove this param completely?
-  $suppressBreakdown = 1;
+
   my $data = $self->CreateStatsData(',', $page, $user, $cumulative, $year, $inval, $nononexpert, 1);
   my @lines = split m/\n/, $data;
   my $url = $self->Sysify("crms?p=$page;download=1;user=$user;cumulative=$cumulative;year=$year;inval=$inval;nne=$nononexpert");
+  my $name = shift @lines;
+  my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
   my $dllink = <<END;
   <a href='$url' target='_blank'>Download</a>
   <a class='tip' href='#'>
@@ -4716,8 +4725,8 @@ sub CreateStatsReport
     </span>
   </a>
 END
-  my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
-  my $report = sprintf("<span style='font-size:1.3em;'><b>%s</b></span>$nbsps $dllink\n<br/><table class='exportStats'>\n<tr>\n", shift @lines);
+  my $report = "<span style='font-size:1.3em;'><b>$name</b></span>$nbsps $dllink\n<br/>";
+  $report .= "<table class='exportStats'>\n<tr>\n";
   foreach my $th (split ',', shift @lines)
   {
     $th = $self->YearMonthToEnglish($th) if $th =~ m/^\d.*/;
@@ -4738,7 +4747,7 @@ END
     next if $title eq '__AVAL__' and ($exp);
     next if $title eq '__NEUT__' && ($exp || $page eq 'userRate');
     next if $title eq '__TOTNE__' and ($user ne 'all' and $user !~ m/all__/ and !$cumulative);
-    next if ($cumulative or $user eq 'all' or $user !~ m/all__/ or $suppressBreakdown) and !exists $majors{$title} and !exists $minors{$title} and $title !~ m/__.+?__/;
+    next if ($cumulative or $user eq 'all' or $user !~ m/all__/) and !exists $majors{$title} and !exists $minors{$title} and $title !~ m/__.+?__/;
     my $class = (exists $majors{$title})? 'major':(exists $minors{$title})? 'minor':'';
     $class = 'total' if $title =~ m/__.+?__/ and $title ne '__TOT__';
     $report .= '<tr>';
