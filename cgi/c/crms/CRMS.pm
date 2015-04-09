@@ -903,7 +903,7 @@ sub CheckAndLoadItemIntoCandidates
   my $errs = $self->GetViolations($id, $record);
   if (scalar @{$errs} == 0)
   {
-    my $src = $self->ShouldVolumeGoInUndTable($id, $record);
+    my $src = $self->ShouldVolumeBeFiltered($id, $record);
     if (defined $src)
     {
       if (!defined $inund || $src ne $inund)

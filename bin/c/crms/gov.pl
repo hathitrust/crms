@@ -80,7 +80,7 @@ foreach my $row (@{$ref})
     next;
   }
   # Check to make sure the record has not been updated in the meantime
-  my $cat = $crms->ShouldVolumeGoInUndTable($id, $record);
+  my $cat = $crms->ShouldVolumeBeFiltered($id, $record);
   if (defined $cat)
   {
     if ($cat ne 'gov')

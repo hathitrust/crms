@@ -159,14 +159,14 @@ sub ADDReport
   my %seen = ();
   my $sql = 'SELECT e.id,e.gid,e.attr,e.reason,e.time,e.src FROM exportdata e INNER JOIN bibdata b' .
             " ON e.id=b.id WHERE e.src!='inherited' AND e.time>'$start' AND e.time<='$end'" .
-            " AND (e.attr='pd' OR e.attr='pdus') AND e.reason='add' ORDER BY b.author ASC";
+            " AND (e.attr='pd' OR e.attr='pdus') AND e.reason='add' ORDER BY b.author ASC LIMIT 100";
   if ($singles && scalar @{$singles})
   {
     $sql = sprintf('SELECT e.id,e.gid,e.attr,e.reason,e.time,e.src FROM exportdata e INNER JOIN bibdata b' . 
                    " ON e.id=b.id WHERE e.id IN ('%s') ORDER BY b.author ASC", join "','", @{$singles});
   }
   print "$sql\n" if $verbose > 1;
-  my $ref = $self->SelectAll($sql);
+  my $ref = $crms->SelectAll($sql);
   my %auths = (); # Long name -> arrayref of gids
   foreach my $row (@{$ref})
   {
@@ -208,7 +208,7 @@ sub ADDReport
     # THIS is the export we're going to inherit from.
     $seen{$id} = $id;
     $data{'total'}->{$id} = 1;
-    my $author = $crms->GetRecordAuthor($id, $record, 1);
+    my $author = $record->author(1);
     if (!$author)
     {
       print "Empty author for $id; skipping\n" if $verbose;
@@ -238,14 +238,14 @@ sub ADDReport
     my $attr = $crms->SimpleSqlGet(sprintf "SELECT attr FROM exportdata WHERE gid='%s'", $gids[-1]);
     my $reason = $crms->SimpleSqlGet(sprintf "SELECT reason FROM exportdata WHERE gid='%s'", $gids[-1]);
     my $record = $crms->GetMetadata($id);
-    my $shortauthor = lc $crms->GetRecordAuthor($id, $record);
+    my $shortauthor = lc $record->author;
     my $solrauthor = $shortauthor;
     $shortauthor =~ s/[.,;]+$//;
     $shortauthor = NFD($shortauthor);
     $shortauthor =~ s/\pM//og;
     $shortauthor =~ s/[^a-z]//g;
-    my $title = $crms->GetRecordTitle($id, $record);
-    my $pubdate = $crms->GetRecordPubDate($id, $record);
+    my $title = $record->title;
+    my $pubdate = $crms->FormatPubDate($id, $record);
     if ($verbose)
     {
       print "$author (";
@@ -291,7 +291,7 @@ sub ADDReport
       my $title2 = $crms->GetRecordTitle($ids[0], $record);
       my $pubdate2 = $crms->GetRecordPubDate($ids[0], $record);
       my $errs = $crms->GetViolations($ids[0], $record);
-      my $src = $crms->ShouldVolumeGoInUndTable($ids[0], $record);
+      my $src = $crms->ShouldVolumeBeFiltered($ids[0], $record);
       #print "'$shortauthor' vs '$shortauthor2'\n";
       if ($shortauthor ne $shortauthor2)
       {
@@ -380,7 +380,7 @@ sub GetSOLRData
 
   my $query = qq{author:"$author"};
   $query = URI::Escape::uri_escape_utf8($query);
-  my $url = 'http://solr-sdr-catalog.umdl.umich.edu:9033/catalog/select/?rows=50&q=' . $query;
+  my $url = 'http://solr-sdr-catalog.umdl.umich.edu:9033/catalog/select?rows=50&q=' . $query;
   print "SOLR query: $url\n" if $verbose;
   my $ua = LWP::UserAgent->new;
   $ua->timeout(1000);

@@ -80,7 +80,7 @@ sub GetViolations
     my $type = substr($leader, 6, 1);
     my $date1 = substr($leader, 7, 4);
     my $date2 = substr($leader, 11, 4);
-    push @errs, "pub date not in range or not completely specified ($date1,$date2,'$type')";
+    push @errs, "pub date not completely specified ($date1,$date2,'$type')";
   }
   push @errs, 'gov doc' if $self->IsGovDoc($record);
   my $where = $record->country;
@@ -89,7 +89,7 @@ sub GetViolations
   return @errs;
 }
 
-sub ShouldVolumeGoInUndTable
+sub ShouldVolumeBeFiltered
 {
   my $self   = shift;
   my $id     = shift;
