@@ -221,7 +221,8 @@ function CheckAll(box,formid)
         [% END %]
         <td>
         [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' || p == 'holds' %]
-          [% IF crms.IsLockedForOtherUser(review.id) %]
+          [% IF crms.IsLockedForOtherUser(review.id) ||
+                0#crms.HasItemBeenReviewedByAnotherIncarnation(review.id) %]
             [% review.title %]
           [% ELSE %]
              [% IF p == 'expert' || p == 'undReviews' %]

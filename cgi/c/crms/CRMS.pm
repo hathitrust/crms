@@ -5313,6 +5313,11 @@ sub ValidateSubmission
     require $module;
     $errorMsg = Validator::ValidateSubmission(@_);
   }
+  if (!$oneoff)
+  {
+    my $incarn = $self->HasItemBeenReviewedByAnotherIncarnation($id, $user);
+    $errorMsg .= "Another expert must do this review because of a review by $incarn. Please cancel. " if $incarn;
+  }
   return $errorMsg;
 }
 
@@ -5732,6 +5737,22 @@ sub HasItemBeenReviewedByUser
   my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND user=?';
   my $count = $self->SimpleSqlGet($sql, $id, $user);
   return ($count)? 1:0;
+}
+
+sub HasItemBeenReviewedByAnotherIncarnation
+{
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
+
+  $user = $self->get('user') unless $user;
+  my $incarns = $self->GetUserIncarnations($user);
+  foreach my $incarn (@{$incarns})
+  {
+    next if $incarn eq $user;
+    my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND user=?';
+    return $incarn if $self->SimpleSqlGet($sql, $id, $incarn);
+  }
 }
 
 sub CountExpertHistoricalReviews
