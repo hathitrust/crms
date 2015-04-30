@@ -7952,13 +7952,6 @@ sub DuplicateVolumesFromExport
         delete $data->{'unneeded'}->{$id};
         delete $data->{'inherit'}->{$id};
       }
-      # CRMS World can't inherit und onto pdus or pd
-      elsif ($self->get('sys') eq 'crmsworld' && $newrights =~ m/^und/ && $oldrights =~ m/^pd/)
-      {
-        $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit und onto pdus\n";
-        delete $data->{'unneeded'}->{$id};
-        delete $data->{'inherit'}->{$id};
-      }
       elsif ($candidate ne $id)
       {
         $data->{'disallowed'}->{$id} = "$id2\t$sysid\t$oldrights\t$newrights\t$id\t$candidate has newer review ($candidateTime)\n";
@@ -8076,11 +8069,6 @@ sub DuplicateVolumesFromCandidates
     if ($newrights eq 'pd/ncn')
     {
       $data->{'disallowed'}->{$cid} .= "$id\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
-    }
-    # CRMS World can't inherit und onto pdus
-    elsif ($self->get('sys') eq 'crmsworld' && $newrights =~ m/^und/ && $oldrights =~ m/^pdus/)
-    {
-      $data->{'disallowed'}->{$cid} .= "$id\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit und onto pdus\n";
     }
     elsif ($wrong)
     {
