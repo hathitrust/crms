@@ -1015,8 +1015,9 @@ sub IsVolumeInScope
 {
   my $self   = shift;
   my $id     = shift;
+  my $record = shift;
 
-  my $record = $self->GetMetadata($id);
+  $record = $self->GetMetadata($id) unless defined $record;
   return 'No metadata' unless defined $record;
   my $errs = $self->GetViolations($id, $record);
   if (scalar @{$errs})
@@ -7214,15 +7215,16 @@ sub GetTrackingInfo
   }
   if ($self->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE id=?', $id))
   {
-    my $sql = 'SELECT attr,reason,DATE(time),src FROM exportdata WHERE id=? ORDER BY time DESC LIMIT 1';
+    my $sql = 'SELECT attr,reason,DATE(time),src,exported FROM exportdata WHERE id=? ORDER BY time DESC LIMIT 1';
     my $ref = $self->SelectAll($sql, $id);
     my $a = $ref->[0]->[0];
     my $r = $ref->[0]->[1];
     my $t = $ref->[0]->[2];
     my $src = $ref->[0]->[3];
-    #$t = $self->FormatDate($t);
+    my $exp = $ref->[0]->[4];
     my $action = ($src eq 'inherited')? ' (inherited)':'';
-    push @stati, "exported$action $a/$r $t";
+    $exp = ($exp)? '':' (unexported)';
+    push @stati, "determined$exp$action $a/$r $t";
   }
   #else
   {
