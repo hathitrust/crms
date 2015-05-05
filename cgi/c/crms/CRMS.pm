@@ -71,7 +71,7 @@ sub set
 
 sub Version
 {
-  return '4.9.12';
+  return '4.9.13';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -8075,6 +8075,10 @@ sub DuplicateVolumesFromCandidates
     elsif ($wrong)
     {
       $data->{'disallowed'}->{$cid} .= "$id\t$sysid\t$oldrights\t$newrights\t$id\tMissing/Wrong Record on $wrong\n";
+    }
+    elsif (0 < $self->SimpleSqlGet('SELECT COUNT(*) FROM reviews WHERE id=?', $cid))
+    {
+      $data->{'disallowed'}->{$cid} .= "$id\t$sysid\t$oldrights\t$newrights\t$id\tVolume already has reviews\n";
     }
     elsif ($oldrights eq 'ic/bib' ||
            ($oldrights eq 'pdus/gfv' && $cattr =~ m/^pd/) ||
