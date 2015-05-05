@@ -17,6 +17,7 @@
 </form>
 
 [% IF q %]
+  [% seen = {} %]
   [% FOREACH id IN q.split %]
     [% ids = crms.CRMSQuery(id) %]
     [% blah = crms.ClearErrors() %]
@@ -26,6 +27,8 @@
     [% ELSE %]
       [% sysid = id %]
     [% END %]
+    [% IF seen.$sysid %][% NEXT %][% END %]
+    [% seen.$sysid = 1 %]
     [% parts = ids.0.split('__') %]
     <br/><br/>
     <table class="exportStats">
