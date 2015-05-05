@@ -8123,25 +8123,6 @@ sub ExportSrcToEnglish
   return $eng;
 }
 
-# Prevent multiple volumes from getting in the queue.
-# If possible (if not already in queue) filter oldVol as src=duplicate
-# Otherwise filter (if possible) newVol.
-sub FilterCandidates
-{
-  my $self   = shift;
-  my $oldVol = shift;
-  my $newVol = shift;
-
-  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE id=?', $oldVol) == 0)
-  {
-    $self->Filter($oldVol, 'duplicate');
-  }
-  elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE id=?', $newVol) == 0)
-  {
-    $self->Filter($newVol, 'duplicate');
-  }
-}
-
 # Retrieves a system var from the DB if possible, otherwise use the value from the config file.
 # If ck is specified, it should be of the form "$_ >= 0 && $_ <= 100" which checks the DB value
 # and uses the config file value if the check is failed.

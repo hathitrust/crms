@@ -430,7 +430,7 @@ if ($insert && scalar keys %{$data{'inherit'}})
       foreach my $line (@lines)
       {
         my ($id2,$sysid) = split "\t", $line;
-        $crms->FilterCandidates($id2, $id);
+        FilterCandidates($id2, $id);
       }
     }
   }
@@ -589,6 +589,24 @@ sub CandidatesReport
   }
   $crms->PrepareSubmitSql("DELETE FROM unavailable WHERE src='$src'") if $insert;
   return \%data;
+}
+
+# Prevent multiple volumes from getting in the queue.
+# If possible (if not already in queue) filter oldVol as src=duplicate
+# Otherwise filter (if possible) newVol.
+sub FilterCandidates
+{
+  my $oldVol = shift;
+  my $newVol = shift;
+
+  if ($crms->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE id=?', $oldVol) == 0)
+  {
+    $crms->Filter($oldVol, 'duplicate');
+  }
+  elsif ($crms->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE id=?', $newVol) == 0)
+  {
+    $crms->Filter($newVol, 'duplicate');
+  }
 }
 
 sub GetTitleHash
