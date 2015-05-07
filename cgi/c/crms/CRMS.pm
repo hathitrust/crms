@@ -72,7 +72,7 @@ sub set
 
 sub Version
 {
-  return '4.9.13';
+  return '4.9.14';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -8293,7 +8293,7 @@ sub Rights
   my $a = $self->IsUserAdmin();
   my $s = $self->IsUserSuperAdmin();
   return \@all if $exp && !$e && !$s;
-  my $sql = 'SELECT id,attr,reason,restricted,description FROM rights ORDER BY attr ASC, id ASC';
+  my $sql = 'SELECT id,attr,reason,restricted,description FROM rights ORDER BY id ASC';
   my $ref = $self->SelectAll($sql);
   my %seen = ();
   foreach my $row (@{$ref})

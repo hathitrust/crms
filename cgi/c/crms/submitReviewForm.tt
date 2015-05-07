@@ -176,22 +176,24 @@
     [% FOREACH i IN [0 .. last] %]
       <tr>
       [% right = rights.$i %]
-      [% id = i+1 %]
+      [% n = i+1 %]
+      [% id = right.0 %]
       [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
       <td style="width:50%;">
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
+        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% n %]"
               [% IF select == id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ id %]">[% ar %] ([% id %])</label>
+        <label for="[% 'r' _ id %]">[% ar %] ([% n %])</label>
       </td>
       [% j = i + delta %]
       <td style="width:50%;">
       [% IF j < of %]
         [% right = rights.$j %]
-        [% id = j+1 %]
+        [% n = j+1 %]
+        [% id = right.0 %]
         [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
+        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% n %]"
               [% IF select == id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ id %]">[% ar %] ([% id %])</label>
+        <label for="[% 'r' _ id %]">[% ar %] ([% n %])</label>
       [% END %]
       </td>
       </tr>
@@ -209,22 +211,24 @@
     [% FOREACH i IN [0 .. last] %]
       <tr>
       [% right = rights.$i %]
-      [% id = i+1 %]
+      [% n = i+1 %]
+      [% id = right.0 %]
       [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
       <td style="width:50%;">
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
+        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% n %]"
               [% IF select == id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ id %]">[% ar %] ([% id %])</label>
+        <label for="[% 'r' _ id %]">[% ar %] ([% n %])</label>
       </td>
       [% j = i + delta %]
       <td style="width:50%;">
       [% IF j < of %]
         [% right = rights.$j %]
-        [% id = j+1 %]
+        [% n = j+1 %]
+        [% id = right.0 %]
         [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
+        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% n %]"
               [% IF select == id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ id %]">[% ar %] ([% id %])</label>
+        <label for="[% 'r' _ id %]">[% ar %] ([% n %])</label>
       [% END %]
       </td>
       </tr>
