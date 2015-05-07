@@ -5792,7 +5792,7 @@ sub GetNextItemForReview
   my $user = shift;
   my $page = shift;
   my $test = shift;
-return undef;
+
   my $id = undef;
   my $err = undef;
   my $sql = undef;
