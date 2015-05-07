@@ -55,13 +55,7 @@
 
 [%# ## failed to get a barcode ## %]
 [% IF NOT barcode %]
-  <div style="background-color:black;">
-  <h3 style="color:white;">Unable to find a volume to review</h3>
-  <h4 style="color:white;">Queue has [% crms.GetQueueSize() %] volumes; candidates has [% crms.GetCandidatesSize() %].
-  <br/>Could it be we're all done with this project? If so, congratulations!
-  <br/><img src="http://www.picgifs.com/graphics/f/fireworks/graphics-fireworks-432653.gif"/>
-  </h4>
-  </div>
+  [% INCLUDE novols.tt %]
   [% INCLUDE footer.tt %]
   [% STOP %]
 [% END %]
