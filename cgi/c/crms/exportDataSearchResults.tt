@@ -85,6 +85,7 @@
     <th>Export&nbsp;Date</th>
     <th>Rights</th>
     <th>Source</th>
+    <th>Project</th>
     <th>Exported</th>
     </tr>
     [% FOREACH item IN ref.rows %]
@@ -107,6 +108,7 @@
         <td>$item.date</td>
         <td>[% item.attr _ '/' _ item.reason %]</td>
         <td>$item.src</td>
+        <td>$item.project</td>
         <td>
           [% IF item.exported %]
             <img width="16" height="16" alt="Exported" src="/c/crms/CheckIcon.png"/>
