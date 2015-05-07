@@ -25,7 +25,6 @@ Sends weekly activity reports to all active reviewers.
 -d DATE  Use YYYY-MM-DD[ HH:MM:SS] as the current date.
 -h       Print this help message.
 -m MAIL  Also send report to MAIL. May be repeated for multiple recipients.
-         Appends '@umich.edu' in e-mail if necessary.
 -n       No-op; do not send e-mail at all.
 -p       Run in production.
 -q       Send only to addresses specified via the -m flag.
@@ -73,7 +72,7 @@ my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
                                 on_errors => 'undef' }
 or die "Error in mailing : $Mail::Sender::Error\n";
 my $system = $crms->System();
-my @recips;
+
 
 my $msg = $crms->StartHTML();
 $msg .= <<'END';
@@ -142,9 +141,12 @@ $msg =~ s/__KEDEN_COUNT__/$kn/i;
 
 $sql = 'SELECT COUNT(*) FROM exportdata WHERE src="candidates" AND time>=? AND time<?';
 my $count = $crms->SimpleSqlGet($sql, $startThis, $now);
-$sql = 'SELECT COUNT(*)/(DATEDIFF("2015-11-30 23:59:59", ?)/7) FROM candidates';
-my $target = int $crms->SimpleSqlGet($sql, $now);
+# FIXME: add AND filter IS NULL
+$sql = 'SELECT COUNT(*)/(DATEDIFF("2015-11-30 23:59:59", ?)/7) FROM candidates WHERE time<"2014-12-01"';
+my $target = $crms->SimpleSqlGet($sql, $now);
 my $pct = sprintf('%.1f%%', 100.0 * $count / $target);
+# Round to nearest integer for display
+$target = int($target + $target/abs($target*2));
 $msg =~ s/__PERCENT__/$pct/;
 $msg =~ s/__COUNT__/$count/;
 $msg =~ s/__TARGET__/$target/;
@@ -154,23 +156,10 @@ $msg .= sprintf('<span style="font-size:.9em;">Report for week %s to %s, compare
                 $crms->FormatDate($startLast), $crms->FormatDate($startThis));
 $msg .= '</body></html>';
 my $title = sprintf '%s %sWednesday Data Report',
-                    $crms->System(),
-                    ($DLPS_DEV)? 'Dev ':'';
-my %recipients;
-$recipients{$_}=1 for @mails;
-if (!$quiet)
-{
-  $sql = 'SELECT id FROM users WHERE reviewer+advanced+expert>0'.
-         ' AND NOT id LIKE "%-reviewer" AND NOT id LIKE "%-expert"';
-  my $ref = $crms->SelectAll($sql);
-  $recipients{$_->[0]}=1 for @{$ref};
-}
-@mails = ();
-foreach my $user (sort keys %recipients)
-{
-  $user .= '@umich.edu' unless $user =~ m/@/;
-  push @mails, $user;
-}
+                    $system, ($DLPS_DEV)? 'Dev ':'';
+my $list = 'crms-world-reviewers@umich.edu';
+$list = 'ccheckers@umich.edu' unless $crms->Sys() eq 'crmsworld';
+push @mails, $list unless $quiet;
 my $to = join ',', @mails;
 
 if ($noop)
@@ -179,7 +168,7 @@ if ($noop)
 }
 else
 {
-  if (scalar @mails && !$noop)
+  if (scalar @mails)
   {
     $sender->OpenMultipart({
       to => $to,
