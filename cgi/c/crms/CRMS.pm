@@ -15,6 +15,7 @@ use POSIX;
 use DBI qw(:sql_types);
 use List::Util qw(min max);
 use JSON::XS;
+use CGI;
 
 binmode(STDOUT, ':utf8'); #prints characters in utf8
 
@@ -692,8 +693,9 @@ sub CanExportVolume
     # 1. If the volume is pdus/gfv (which per rrotter in Core Services never overrides pdus/bib).
     # 2. Priority 3 or higher.
     # 3. Previous rights were by user crms*.
-    # 4. The determination is pd*.
-    if ($reason2 eq 'gfv' || $pri >= 3.0 || $usr2 =~ m/^crms/i || $attr =~ m/^pd/)
+    # 4. The determination is pd* (unless a pdus would clobber pd/bib.
+    if ($reason2 eq 'gfv' || $pri >= 3.0 || $usr2 =~ m/^crms/i ||
+        ($attr =~ m/^pd/ && !($attr eq 'pdus' && $attr2 eq 'pd')))
     {
       # This is used for cleanup purposes
       if (defined $time)
@@ -1584,6 +1586,14 @@ sub GetPriority
   return $pri;
 }
 
+sub GetProject
+{
+  my $self = shift;
+  my $id   = shift;
+
+  return $self->SimpleSqlGet('SELECT project FROM queue WHERE id=?', $id);
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   submit a new active review  (single pd review from rights DB)
 ##  Parameters: Lots of them -- last one does the sanity checks but no db updates
@@ -1819,6 +1829,7 @@ sub ConvertToSearchTerm
   }
   elsif ($search eq 'Source') { $new_search = 'r.src'; }
   elsif ($search eq 'Project') { $new_search = 'q.project'; }
+  if ($search eq 'Project' && $page eq 'exportData') { $new_search = 'r.project'; }
   return $new_search;
 }
 
@@ -3079,7 +3090,7 @@ sub GetExportDataRef
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   my @return = ();
-  $sql = 'SELECT r.id,r.time,r.attr,r.reason,r.src,b.title,b.author,YEAR(b.pub_date),r.exported ' .
+  $sql = 'SELECT r.id,r.time,r.attr,r.reason,r.src,b.title,b.author,YEAR(b.pub_date),r.exported,r.project ' .
          "FROM exportdata r LEFT JOIN bibdata b ON r.id=b.id $restrict ORDER BY $order $dir $limit";
   #print "$sql<br/>\n";
   my $ref = undef;
@@ -3104,6 +3115,7 @@ sub GetExportDataRef
                 src        => $row->[4],
                 title      => $row->[5],
                 author     => $row->[6],
+                project    => $row->[9],
                 exported   => $row->[8],
                 pubdate    => $pubdate
                };
@@ -5780,7 +5792,7 @@ sub GetNextItemForReview
   my $user = shift;
   my $page = shift;
   my $test = shift;
-
+return undef;
   my $id = undef;
   my $err = undef;
   my $sql = undef;
@@ -6939,8 +6951,8 @@ sub ExportDataSearchMenu
   my $searchName = shift;
   my $searchVal = shift;
   
-  my @keys = qw(Identifier Title Author PubDate Attribute Reason Source);
-  my @labs = ('Identifier','Title','Author','Pub Date','Attribute','Reason','Source');
+  my @keys = qw(Identifier Title Author PubDate Attribute Reason Source Project);
+  my @labs = ('Identifier','Title','Author','Pub Date','Attribute','Reason','Source','Project');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
@@ -7752,7 +7764,7 @@ sub SubmitInheritance
   my $gid = $row->[2];
   my $category = 'Rights Inherited';
   # Returns a status code (0=Add, 1=Error) followed by optional text.
-  my $res = $self->AddInheritanceToQueue($id);
+  my $res = $self->AddInheritanceToQueue($id, $gid);
   my $code = substr $res, 0, 1;
   if ($code ne '0')
   {
@@ -7772,9 +7784,12 @@ sub AddInheritanceToQueue
 {
   my $self = shift;
   my $id   = shift;
+  my $gid  = shift;
 
   my $stat = 0;
   my @msgs = ();
+  my $sql = 'SELECT project FROM exportdata WHERE gid=?';
+  my $proj = $self->SimpleSqlGet($sql, $gid);
   if ($self->IsVolumeInQueue($id))
   {
     my $err = $self->LockItem($id, 'autocrms');
@@ -7796,15 +7811,15 @@ sub AddInheritanceToQueue
       }
       else
       {
-        $self->PrepareSubmitSql('UPDATE queue SET source="inherited" WHERE id=?', $id);
+        $self->PrepareSubmitSql('UPDATE queue SET source="inherited",project=? WHERE id=?', $id, $proj);
       }
     }
     $self->UnlockItem($id, 'autocrms');
   }
   else
   {
-    my $sql = 'INSERT INTO queue (id,priority,source) VALUES (?,0,"inherited")';
-    $self->PrepareSubmitSql($sql, $id);
+    my $sql = 'INSERT INTO queue (id,priority,source,project) VALUES (?,0,"inherited",?)';
+    $self->PrepareSubmitSql($sql, $id, $proj);
     $self->UpdateMetadata($id, 1);
     $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (1,"inheritance")';
     $self->PrepareSubmitSql($sql);
@@ -8269,32 +8284,52 @@ sub Rights
   my $self = shift;
   my $exp  = shift;
   my $oo   = shift;
+  my $proj = shift;
 
+  my @all = ();
   my $e = $self->IsUserExpert();
-  my $r = ($e || $self->IsUserReviewer() || $self->IsUserAdvanced());
-  my $x = $self->IsUserExtAdmin();
+  #my $r = ($e || $self->IsUserReviewer() || $self->IsUserAdvanced());
+  #my $x = $self->IsUserExtAdmin();
   my $a = $self->IsUserAdmin();
   my $s = $self->IsUserSuperAdmin();
-  my $sql = 'SELECT id,attr,reason,restricted,description FROM rights ORDER BY id ASC';
-  #print "$sql\n<br/>";
+  return \@all if $exp && !$e && !$s;
+  my $sql = 'SELECT id,attr,reason,restricted,description FROM rights ORDER BY attr ASC, id ASC';
   my $ref = $self->SelectAll($sql);
-  my @all = ();
+  my %seen = ();
   foreach my $row (@{$ref})
   {
+    my $id = $row->[0];
+    my $rights = $row->[1] . '-' . $row->[2];
     my $restricted = $row->[3];
-    next if ($restricted && !$exp);
-    next if ($exp && !$restricted);
+    next if ($restricted =~ m/e|a/ && !$exp);
+    next if ($exp && $restricted !~ m/e|a/);
     next if ($restricted eq 'i');
-    if (!$restricted ||
-        ($restricted &&
-         (($e && $restricted =~ m/e/) ||
-          ($r && $restricted =~ m/r/) ||
-          ($x && $restricted =~ m/x/) ||
-          ($a && $restricted =~ m/a/) ||
-          ($s && $restricted =~ m/s/) ||
-          ($oo && $restricted =~ m/o/))))
+    next if (!defined $proj && $restricted =~ m/p/);
+    my $projOK = 1;
+    if ($restricted =~ m/p/)
     {
+      $sql = 'SELECT COUNT(*) FROM projectrights WHERE project=? AND rights=?';
+      $projOK = 0 if 0 == $self->SimpleSqlGet($sql, $proj, $id);
+    }
+    elsif ($proj)
+    {
+      $sql = 'SELECT COUNT(*) FROM projectrights WHERE project=? AND rights=?';
+      $projOK = 0 if 0 == $self->SimpleSqlGet($sql, $proj, $id);
+    }
+    if ($projOK && 
+        (!$restricted ||
+         ($restricted &&
+          (($proj && $restricted =~ m/p/) ||
+           ($e && $restricted =~ m/e/) ||
+           #($r && $restricted =~ m/r/) ||
+           #($x && $restricted =~ m/x/) ||
+           ($a && $restricted =~ m/a/) ||
+           ($s && $restricted =~ m/s/) ||
+           ($oo && $restricted =~ m/o/)))))
+    {
+      next if $seen{$rights};
       push @all, $row;
+      $seen{$rights} = 1;
     }
   }
   return \@all;

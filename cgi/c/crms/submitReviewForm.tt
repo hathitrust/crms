@@ -140,9 +140,11 @@
         [% END %]
       </td>
     </tr>
+    <tr>
   </table>
   </div>
-[% rights = crms.Rights() %]
+[% project = crms.GetProject(barcode) %]
+[% rights = crms.Rights(0, 0, project) %]
 <div id="RightsCont" class="rightscont">
 <div id="RightsReason" style="position:relative;">
   <div style="position:absolute;top:0px;right:1em;">
@@ -174,7 +176,7 @@
     [% FOREACH i IN [0 .. last] %]
       <tr>
       [% right = rights.$i %]
-      [% id = right.0 %]
+      [% id = i+1 %]
       [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
       <td style="width:50%;">
         <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
@@ -185,7 +187,7 @@
       <td style="width:50%;">
       [% IF j < of %]
         [% right = rights.$j %]
-        [% id = right.0 %]
+        [% id = j+1 %]
         [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
         <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
               [% IF select == id %] checked="checked"[% END %]/>
@@ -196,7 +198,7 @@
     [% END %]
     </table>
   [% END %]
-  [% rights = crms.Rights(1) %]
+  [% rights = crms.Rights(1, 0, project) %]
   [% of = rights.size() %]
   [% IF of > 0 %]
     <hr style="width:80%;margin-left:auto;margin-right:auto;"/>
@@ -207,7 +209,7 @@
     [% FOREACH i IN [0 .. last] %]
       <tr>
       [% right = rights.$i %]
-      [% id = right.0 %]
+      [% id = i+1 %]
       [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
       <td style="width:50%;">
         <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
@@ -218,7 +220,7 @@
       <td style="width:50%;">
       [% IF j < of %]
         [% right = rights.$j %]
-        [% id = right.0 %]
+        [% id = j+1 %]
         [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
         <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
               [% IF select == id %] checked="checked"[% END %]/>
