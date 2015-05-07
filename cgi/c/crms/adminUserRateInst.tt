@@ -13,36 +13,29 @@
 
 <a href="/c/crms/pdf/AllReviewStatsHelp.pdf" target="_blank">All&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
 <br/>
-[% nononexpert = 1 %]
+
 [% IF crms.GetTotalHistoricalReviewCount() %]
-  [% crms.CreateStatsReport(p, 'all', 1, 1, 0, 1, nononexpert) %]
+  [% crms.CreateStatsReport(p, 'all', 1, 1, 0, 1, 1) %]
   <br/><br/>
   [% users = crms.GetInstitutionUsers(inst, 1) %]
   [% users.unshift('all' _ '__' _ inst) %]
   [% users.unshift('all') %]
-  [% onclicks = '' %]
   [% FOREACH id IN users %]
     [% IF id.match('rereport') %][% NEXT %][% END %]
-    [% IF id != 'all' && id.substr(0,5) != 'all__' && 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
+    [% IF !id.match('^all')  && 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
     [% years = crms.GetStatsYears(id) %]
     [% year = years.shift() %]
-    [% FOREACH year IN years %]
-      [% divid = id.replace('@','_') _ '_' _ year %]
-      [% onclicks = onclicks _ "toggleVisibility(\"$divid\");" %]
+    [% rep = crms.CreateStatsReport(p, id, 0, 1, year, 1, 1) %]
+    [% IF !id.match('^all') && 0 == crms.CountHistoricalReviewsForUser(id, year) && year == crms.GetTheYear() %]
+      [% matches = rep.match('(<span.*?>.*?):.*') %]
+      [% matches.0 %]</span>
+      [% years.unshift(year) %]
+    [% ELSE %]
+      [% rep %]
     [% END %]
-  [% END %]
-  [% IF NOT crms.IsTrainingArea() %]
-    <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
-       onclick='[% onclicks %]'>Toggle All</a><br/><br/>
-  [% END %]
-  [% FOREACH id IN users %]
-    [% IF id.match('rereport') %][% NEXT %][% END %]
-    [% IF id != 'all' && id.substr(0,5) != 'all__' && 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
-    [% years = crms.GetStatsYears(id) %]
-    [% year = years.shift() %]
-    [% crms.CreateStatsReport(p, id, 0, 1, year, 1, nononexpert) %]
     <br/><br/>
     [% FOREACH year IN years %]
+      [% IF !id.match('^all') && 0 == crms.CountHistoricalReviewsForUser(id, year) %][% NEXT %][% END %]
       [% divid = id.replace('@','_') _ '_' _ year %]
       <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
          onclick='toggleVisibility("[% divid %]");'>Show [% year %]</a><br/>

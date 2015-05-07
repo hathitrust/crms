@@ -15,30 +15,22 @@
   <br/><br/>
   [% users = crms.GetUsers(1) %]
   [% users.unshift('all') %] 
-  [% onclicks = '' %]
   [% FOREACH id IN users %]
     [% IF id.match('rereport') %][% NEXT %][% END %]
-    [% IF 'all' != id && 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
     [% years = crms.GetStatsYears(id) %]
     [% year = years.shift() %]
-    [% FOREACH year IN years %]
-      [% divid = id.replace('@','_') _ '_' _ year %]
-      [% onclicks = onclicks _ "toggleVisibility(\"$divid\");" %]
+    [% IF !id.match('^all') && 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
+    [% rep = crms.CreateStatsReport(p, id, 0, 1, year, 1) %]
+    [% IF !id.match('^all') && 0 == crms.CountHistoricalReviewsForUser(id, year) && year == crms.GetTheYear() %]
+      [% matches = rep.match('(<span.*?>.*?):.*') %]
+      [% matches.0 %]</span>
+      [% years.unshift(year) %]
+    [% ELSE %]
+      [% rep %]
     [% END %]
-  [% END %]
-  [% IF NOT crms.IsTrainingArea() %]
-    <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
-       onclick='[% onclicks %]'>Toggle&nbsp;All</a><br/><br/>
-  [% END %]
-  [% FOREACH id IN users %]
-    [% IF id.match('rereport') %][% NEXT %][% END %]
-    [% years = crms.GetStatsYears(id) %]
-    [% year = years.shift() %]
-    [% IF 'all' != id && 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
-    [% crms.CreateStatsReport(p, id, 0, 1, year, 1) %]
     <br/><br/>
     [% FOREACH year IN years %]
-      [% IF 'all' != id && 0 == crms.CountHistoricalReviewsForUser(id,year) %][% NEXT %][% END %]
+      [% IF !id.match('^all') && 0 == crms.CountHistoricalReviewsForUser(id, year) %][% NEXT %][% END %]
       [% divid = id.replace('@','_') _ '_' _ year %]
       <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
          onclick='toggleVisibility("[% divid %]");'>Show [% year %]</a><br/>
