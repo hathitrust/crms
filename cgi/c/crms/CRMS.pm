@@ -8405,6 +8405,11 @@ sub Sources
       $t = $self->SimpleSqlGet('SELECT source FROM queue WHERE id=?', $id) unless defined $t;
       $url =~ s/__TICKET__/$t/g;
     }
+    if ($url =~ m/__SYSID__/)
+    {
+      my $sysid = $self->BarcodeToId($id);
+      $url =~ s/__SYSID__/$sysid/g;
+    }
     $url =~ s/\s+/+/g;
     push @all, [$row->[0], $name, $url, $row->[3], $row->[4], $row->[5]];
   }
