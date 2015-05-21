@@ -72,7 +72,7 @@ sub set
 
 sub Version
 {
-  return '4.9.15';
+  return '4.9.16';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -5477,13 +5477,14 @@ sub GetMetadata
 
 sub BarcodeToId
 {
-  my $self = shift;
-  my $id   = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
 
   my $sys = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
   if (!$sys)
   {
-    my $record = $self->GetMetadata($id);
+    $record = $self->GetMetadata($id) unless defined $record;
     $self->ClearErrors();
     $sys = $record->sysid if defined $record;
   }
@@ -5855,7 +5856,7 @@ sub GetNextItemForReview
       push @args, $user;
     }
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,'.
-           ' SHA2(CONCAT(?,q.id),0) as hash'.
+           ' SHA2(CONCAT(?,q.id),0) as hash, q.priority'.
            ' FROM queue q INNER JOIN bibdata b ON q.id=b.id'.
            ' WHERE ' . $exclude . $exclude1 . $projs .
            ' q.expcnt=0 AND q.locked IS NULL AND q.status<2'.
@@ -5867,7 +5868,7 @@ sub GetNextItemForReview
     {
       $sql .= ' LIMIT 5';
       print "$user\n";
-      #print "$sql\n";
+      print "$sql\n";
     }
     my $ref = $self->SelectAll($sql, @args);
     foreach my $row (@{$ref})
@@ -5875,11 +5876,12 @@ sub GetNextItemForReview
       my $id2 = $row->[0];
       my $cnt = $row->[1];
       my $hash = $row->[2];
+      my $pri = $row->[3];
       if (defined $test)
       {
-        printf "  $id2 %s %s ($cnt, %s...)\n",
+        printf "  $id2 %s %s ($cnt, %s...) (P %s)\n",
                $self->GetAuthor($id2), $self->GetTitle($id2),
-               uc substr $hash, 0, 8;
+               uc substr($hash, 0, 8), $pri;
         $id = $id2 unless defined $id;
       }
       else
@@ -8028,9 +8030,11 @@ sub DuplicateVolumesFromCandidates
   my $cattr = undef;
   my $creason = undef;
   my $ctime = undef;
+  $data->{'titles'}->{$id} = $record->title;
   foreach my $line (@{$rows})
   {
     my ($id2,$chron2,$rights2) = split '__', $line;
+    next if $id eq $id2;
     if ($chron2)
     {
       $data->{'chron'}->{$id} = "$id2\t$sysid\n";
@@ -8041,7 +8045,6 @@ sub DuplicateVolumesFromCandidates
       delete $data->{'disallowed'}->{$id};
       return;
     }
-    next if $id eq $id2;
     # id may be in und, so only apply this check if id is in candidates.
     my $sql = 'SELECT COUNT(*) FROM candidates WHERE id=?';
     if ($self->SimpleSqlGet($sql, $id) && !$data->{'already'}->{$id2} &&
@@ -8109,7 +8112,6 @@ sub DuplicateVolumesFromCandidates
   }
   else
   {
-    $data->{'titles'}->{$id} = $record->title;
     $data->{'noexport'}->{$id} .= "$sysid\n";
   }
 }
