@@ -436,9 +436,9 @@ if ($insert && scalar keys %{$data{'inherit'}})
   }
 }
 
-UnfilterVolumes($data{'chron'}) if $insert && scalar keys %{$data{'chron'}};
-UnfilterVolumes($data{'unneeded'}) if $insert && scalar keys %{$data{'unneeded'}};
-UnfilterVolumes($data{'disallowed'}) if $insert && scalar keys %{$data{'disallowed'}};
+UnfilterVolumes('chron') if $insert;
+UnfilterVolumes('unneeded') if $insert;
+UnfilterVolumes('disallowed') if $insert;
 
 for (@{$crms->GetErrors()})
 {
@@ -475,21 +475,32 @@ else
   print "$txt\n" unless $quiet;
 }
 
-
+# For 'disallowed' and 'unneeded', unfilter exactly one volume to act as the new candidate.
+# For 'chron', unfilter and enqueue all of them.
 sub UnfilterVolumes
 {
-  my $data = shift;
+  my $reason = shift;
 
-  foreach my $id (keys %{$data})
+  foreach my $id (keys %{$data{$reason}})
   {
-    my @lines = split "\n", $data->{$id};
+    $txt .= "<h5>Unfiltering and enqueueing for $id</h5>\n";
+    my @lines = split "\n", $data{$reason}->{$id};
     foreach my $line (@lines)
     {
       my @fields = split "\t", $line;
       my $id2 = shift @fields;
-      $txt .= "<h5>Unfiltering and enqueueing $id2</h5>\n";
+      $txt .= "&nbsp;&nbsp;$id2";
       $crms->Unfilter($id2);
       $crms->AddItemToQueue($id2) if $crms->IsVolumeInCandidates($id2);
+      if ($reason eq 'disallowed' or $reason eq 'unneeded')
+      {
+        $txt .= " (only one)<br/>\n";
+        last;
+      }
+      else
+      {
+        $txt .= "<br/>\n";
+      }
     }
   }
 }
