@@ -6925,42 +6925,9 @@ sub PageToEnglish
 {
   my $self = shift;
   my $page = shift;
-  
-  return 'home' unless $page;
-  my %pages = ('adminEditUser' => 'user accounts',
-               'adminHistoricalReviews' => 'historical reviews',
-               'adminHolds' => 'all held reviews',
-               'adminQueue' => 'all locked volumes',
-               'adminReviews' => 'active reviews',
-               'adminUser' => 'user accounts',
-               'adminUserRate' => 'all review stats',
-               'adminUserRateInst' => 'institutional review stats',
-               'contact' => 'contact us',
-               'corrections' => 'corrections',
-               'correctionsData' => 'corrections data',
-               'debug' => 'system administration',
-               'detailInfo' => 'review detail',
-               'determinationStats' => 'determinations breakdown',
-               'editReviews' => 'my unprocessed reviews',
-               'expert' => 'conflicts',
-               'exportData' => 'final determinations',
-               'exportStats' => 'export stats',
-               'holds' => 'my held reviews',
-               'inherit' => 'rights inheritance',
-               'queue' => 'volumes in queue',
-               'queueAdd' => 'add to queue',
-               'queueStatus' => 'system summary',
-               'retrieve' => 'retrieve volume ids',
-               'review' => 'review',
-               'reviewerActivity' => 'Reviewer Activity',
-               'rights' => 'query rights database',
-               'systemStatus' => 'system status',
-               'track' => 'track volumes',
-               'undReviews' => 'provisional matches',
-               'userRate' => 'my review stats',
-               'userReviews' => 'my processed reviews',
-              );
-  return $pages{$page} or '';
+
+  return 'Home' unless $page;
+  return $self->SimpleSqlGet('SELECT name FROM menuitems WHERE href=CONCAT("crms?p=",?)', $page);
 }
 
 sub Namespaces
