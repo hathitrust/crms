@@ -34,3 +34,23 @@ sub HexDump
   return $dump;
 }
 
+sub HSV2RGB
+{
+  use POSIX;
+  my ($h, $s, $v) = @_;
+  if ($s == 0) { return $v, $v, $v; }
+  $h /= 60;
+  my $i = floor( $h );
+  my $f = $h - $i;
+  my $p = $v * ( 1 - $s );
+  my $q = $v * ( 1 - $s * $f );
+  my $t = $v * ( 1 - $s * ( 1 - $f ) );
+  if ($i == 0 ) { return $v, $t, $p; }
+  elsif ($i == 1) { return $q, $v, $p; }
+  elsif ($i == 2) { return $p, $v, $t; }
+  elsif ($i == 3) { return $p, $q, $v; }
+  elsif ($i == 4) { return $t, $p, $v; }
+  else { return $v, $p, $q; }
+}
+
+return 1;

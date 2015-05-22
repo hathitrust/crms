@@ -9001,13 +9001,14 @@ sub PickColors
   my $count   = shift;
   my $shuffle = shift;
 
+  use Utilities;
   my @cols;
   my $delta = ($count>0)? 360/$count:360;
   for (my $hue = 109; $hue < 469; $hue += $delta)
   {
     my $h2 = $hue;
     $h2 -= 360 if $h2 >= 360;
-    my @col = $self->HSV2RGB($h2, 1, .75);
+    my @col = Utilities::HSV2RGB($h2, 1, .75);
     @col = map {int($_ * 255);} @col;
     push @cols, sprintf '#%02X%02X%02X', $col[0], $col[1], $col[2];
   }
@@ -9022,26 +9023,6 @@ sub PickColors
     }
   }
   return @cols;
-}
-
-sub HSV2RGB
-{
-  use POSIX;
-  my $self = shift;
-  my ($h, $s, $v) = @_;
-  if ($s == 0) { return $v, $v, $v; }
-  $h /= 60;
-  my $i = floor( $h );
-  my $f = $h - $i;
-  my $p = $v * ( 1 - $s );
-  my $q = $v * ( 1 - $s * $f );
-  my $t = $v * ( 1 - $s * ( 1 - $f ) );
-  if ($i == 0 ) { return $v, $t, $p; }
-  elsif ($i == 1) { return $q, $v, $p; }
-  elsif ($i == 2) { return $p, $v, $t; }
-  elsif ($i == 3) { return $p, $q, $v; }
-  elsif ($i == 4) { return $t, $p, $v; }
-  else { return $v, $p, $q; }
 }
 
 1;
