@@ -940,10 +940,10 @@ sub AddItemToCandidates
 
   $record = $self->GetMetadata($id) unless defined $record;
   return unless defined $record;
-  my $sysid = $record->sysid;
   # Are there duplicates? Filter the oldest duplicates and add the newest to candidates.
-  if (!$self->DoesRecordHaveChron($sysid, $record))
+  if (!$record->countEnumchron)
   {
+    my $sysid = $record->sysid;
     my $rows = $self->VolumeIDsQuery($sysid, $record);
     if (scalar @{$rows} > 1)
     {
@@ -1171,13 +1171,16 @@ sub LoadNewItems
       $dels{$id} = 1;
       next;
     }
-    my $sysid = $record->sysid;
-    my $dup = $self->IsRecordInQueue($sysid, $record);
-    if ($dup && !$self->DoesRecordHaveChron($sysid, $record))
+    if (!$record->countEnumchron)
     {
-      print "Filtering $id: queue has $dup on $sysid (no chron/enum)\n";
-      $self->Filter($id, 'duplicate');
-      next;
+      my $dup = $self->IsRecordInQueue($record->sysid, $record);
+      if ($dup)
+      {
+        my $sysid = $record->sysid;
+        print "Filtering $id: queue has $dup on $sysid (no chron/enum)\n";
+        $self->Filter($id, 'duplicate');
+        next;
+      }
     }
     if ($self->AddItemToQueue($id, $record))
     {
@@ -1205,21 +1208,6 @@ sub IsRecordInQueue
     return $id if $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE id=?', $id);
   }
   return undef;
-}
-
-sub DoesRecordHaveChron
-{
-  my $self   = shift;
-  my $sysid  = shift;
-  my $record = shift;
-  
-  my $rows = $self->VolumeIDsQuery($sysid, $record);
-  foreach my $line (@{$rows})
-  {
-    my ($id,$chron,$rights) = split '__', $line;
-    return 1 if $chron;
-  }
-  return 0;
 }
 
 # Plain vanilla code for adding an item with status 0, priority 0
@@ -5785,7 +5773,7 @@ sub CountExpertHistoricalReviews
 ##  Return:     volume id
 ## ----------------------------------------------------------------------------
 # Code commented out with #### are race condition mitigations
-# to be considered for next release.
+# to be considered for a later release.
 # Test param prints debug info and iterates 5 times to test mitigation.
 sub GetNextItemForReview
 {
