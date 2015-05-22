@@ -103,8 +103,11 @@ sub json
     my $xml = undef;
     my $jsonxs = JSON::XS->new;
     my $content = $res->content;
+    # Sometimes the API can return diagnostic information up top,
+    # so we cut that out.
+    $content =~ s/^(.*?)({"records":)/$2/s;
     eval {
-      $json = $jsonxs->decode($res->content);
+      $json = $jsonxs->decode($content);
       if (!defined $self->get('id'))
       {
         my $id2 = $json->{items}->[0]->{htid};
@@ -457,6 +460,25 @@ sub enumchron
   };
   $self->SetError('enumchron query for ' . $self->id . " failed: $@") if $@;
   return $data;
+}
+
+sub countEnumchron
+{
+  my $self = shift;
+
+  my $n = $self->get('enumchronCount');
+  return $n if defined $n;
+  eval {
+    my $json = $self->json;
+    foreach my $item (@{$json->{'items'}})
+    {
+      my $data = $item->{'enumcron'};
+      $n++ if defined $data and length $data;
+    }
+  };
+  $self->SetError('enumchron query for ' . $self->id . " failed: $@") if $@;
+  $self->set('enumchronCount', $n);
+  return $n;
 }
 
 sub editor
