@@ -124,8 +124,7 @@ sub IsGovDoc
 # Author begins with "United States" and 260b begins with "U.S. G.P.O." or "U.S. Govt. Print. Off."
 # Author begins with "Library of Congress" and 260a begins with "Washington"
 # Title begins with "Code of Federal Regulations" and 260a begins with "Washington"
-# Author is blank and 260(a) begins with "([)Washington" and 260(b) begins with "U.S."
-# Author is blank and 260(a) begins with "([)Washington" and 260(b) begins with "G.P.O."
+# Author is blank and 260(a) begins with "([)Washington" and 260(b) begins with "U.S." or "G.P.O."
 # Author is blank and 260(b) includes "National Aeronautics and Space"
 # Author begins with "Federal Reserve Bank"
 # Author includes "Bureau of Mines"
@@ -173,7 +172,7 @@ sub IsProbableGovDoc
   return 0;
 }
 
-# Rejects anything with 008 15-17 that is not '**u' or 'us*'.
+# Rejects anything with 008 15-17 that is not '**u'.
 # As a convenience (and for testing) returns undef for US titles and a string with the country code that failed.
 sub IsForeignPub
 {
@@ -183,7 +182,7 @@ sub IsForeignPub
   my $is = undef;
   eval {
     my $code = substr($record->GetControlfield('008'), 15, 3);
-    $is = $code if substr($code,2,1) ne 'u';
+    $is = $code if substr($code, 2, 1) ne 'u';
   };
   $self->{crms}->SetError("failed in IsForeignPub: $@") if $@;
   return $is;
