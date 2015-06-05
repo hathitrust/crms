@@ -25,11 +25,11 @@ function CheckAll(box,formid)
   [% FOREACH param IN cgi.param %]
     [% matches = param.match('(vol_)(.+)') %]
     [% IF matches.0 == 'vol_' %]
-      [% blah = crms.UnlockItem(matches.1) %]
+      [% CALL crms.UnlockItem(matches.1) %]
     [% END %]
   [% END %]
 [% ELSIF cgi.param('unlock') %]
-  [% blah = crms.UnlockItem(cgi.param('unlock')) %]
+  [% CALL crms.UnlockItem(cgi.param('unlock')) %]
 [% END %]
 
 <table class="mainnav">

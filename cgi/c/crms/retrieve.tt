@@ -24,7 +24,7 @@
     [% ids = crms.VolumeIDsQuery(id) %]
     [% IF (NOT ids) || ids.size() == 0 %]
       <br/><h4>No results for $id</h4>
-      [% blah = crms.ClearErrors() %]
+      [% CALL crms.ClearErrors() %]
       [% NEXT %]
     [% END %]
     [% sys = id %]

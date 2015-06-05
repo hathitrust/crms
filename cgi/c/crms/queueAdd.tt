@@ -125,13 +125,13 @@ These items will take priority in the review process.
     [% id = crms.Unescape(id) %]
     [% id = id.remove('(^\s+)|(\s+$)') %]
     [% IF seq %]
-      [% blah = crms.Sequester(id) %]
+      [% CALL crms.Sequester(id) %]
       [% status = '3Sequester submitted' %]
     [% ELSIF unseq %]
-      [% blah = crms.Sequester(id, 1) %]
+      [% CALL crms.Sequester(id, 1) %]
       [% status = '3Unsequester submitted' %]
     [% ELSIF delete %]
-      [% blah = crms.RemoveFromQueue(id) %]
+      [% CALL crms.RemoveFromQueue(id) %]
       [% status = '0Deleted' %]
     [% ELSE %]
       [% status = crms.AddItemToQueueOrSetItemActive(id, pri, override) %]
@@ -355,5 +355,5 @@ These items will take priority in the review process.
 [% END %]
 
 
-[% blah = crms.ClearErrors() %]
+[% CALL crms.ClearErrors() %]
 [% INCLUDE footer.tt %]

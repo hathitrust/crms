@@ -29,7 +29,7 @@
     [% STOP %]
   [% END %]
   [% IF NOT expert %]
-    [% blah = crms.UnlockAllItemsForUser(user) %]
+    [% CALL crms.UnlockAllItemsForUser(user) %]
   [% END %]
   [% err = crms.LockItem(barcode, user, expert) %]
   [% IF err != 0 %]
@@ -235,7 +235,7 @@
           [% error = error _ e _ '<br/>' %]
         [% END %]
       [% END %]
-      [% blah = crms.ClearErrors() %]
+      [% CALL crms.ClearErrors() %]
       [% INCLUDE submitReviewForm.tt barcode = barcode, renNum   = renNum,   renDate  = renDate,
                                      note    = note,    category = category, editing  = editing,
                                      error   = error,   select   = select,   mag      = mag,

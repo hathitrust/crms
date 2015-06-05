@@ -18,8 +18,8 @@
 [% offset = (jump - 1) * pagesize %]
 [% END %]
 
-[% blah = cgi.param('records',pagesize) %]
-[% blah = cgi.param('offset',offset)    %]
+[% CALL cgi.param('records',pagesize) %]
+[% CALL cgi.param('offset',offset)    %]
 
 [% ref = crms.GetPublisherDataRef(order, dir, search1, search1value, op1, search2, search2value, startDate, endDate, offset, pagesize, 0) %]
 

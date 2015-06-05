@@ -14,12 +14,12 @@
 [% recs = recs.replace('\D','') %]
 [% IF NOT recs %]
   [% recs = cgi.cookie('recs') or 20 %]
-  [% blah = cgi.param('records', recs) %]
+  [% CALL cgi.param('records', recs) %]
 [% END %]
 
 [% IF NOT dir %]
   [% dir = 'ASC' %]
-  [% blah = cgi.param('dir', 'ASC') %]
+  [% CALL cgi.param('dir', 'ASC') %]
 [% END %]
 <br/>
 <div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">

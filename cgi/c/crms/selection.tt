@@ -24,12 +24,12 @@
 [% nvrecs = cgi.cookie('recs') or 20 %]
 [% IF NOT recs %]
   [% recs = (vols)? vrecs : nvrecs %]
-  [% blah = cgi.param('records', recs) %]
+  [% CALL cgi.param('records', recs) %]
 [% END %]
 
 [% IF NOT dir %]
   [% dir = 'ASC' %]
-  [% blah = cgi.param('dir', 'ASC') %]
+  [% CALL cgi.param('dir', 'ASC') %]
 [% END %]
 <script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
 <br/>

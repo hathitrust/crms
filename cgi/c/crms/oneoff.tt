@@ -24,7 +24,7 @@
     <br/><a href="JavaScript:window.close()">Close</a>
     [% STOP %]
   [% END %]
-  [% blah = crms.UnlockAllItemsForUser(user) %]
+  [% CALL crms.UnlockAllItemsForUser(user) %]
   [% err = crms.LockItem(barcode, user, expert) %]
   [% IF err != 0 %]
     <h3>[% err %].</h3>
@@ -174,7 +174,7 @@
           [% error = error _ e _ '<br/>' %]
         [% END %]
       [% END %]
-      [% blah = crms.ClearErrors() %]
+      [% CALL crms.ClearErrors() %]
       [% INCLUDE submitOneoffForm.tt barcode = barcode,
                                      note    = note,    category = category, editing  = editing,
                                      error   = error,   select   = select,   mag      = mag,

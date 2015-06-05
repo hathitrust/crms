@@ -31,12 +31,12 @@ may not be up-to-date.</h3>
 [% recs = recs.replace('\D','') %]
 [% IF NOT recs %]
   [% recs = cgi.cookie('recs') or 20 %]
-  [% blah = cgi.param('records', recs) %]
+  [% CALL cgi.param('records', recs) %]
 [% END %]
 
 [% IF NOT dir %]
   [% dir = 'DESC' %]
-  [% blah = cgi.param('dir', 'DESC') %]
+  [% CALL cgi.param('dir', 'DESC') %]
 [% END %]
 <br/>
 <div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">

@@ -48,7 +48,7 @@
 <table class='exportStats'>
   [% level = cgi.param('resetButton') %]
   [% IF level %]
-    [% blah = crms.ResetButton(level - 1) %]
+    [% CALL crms.ResetButton(level - 1) %]
     [% note = (level == 1)? 'Volumes added to queue have been cleared':'Active reviews have been cleared' %]
     <tr><th colspan="2"><span class="red"><strong>[% note %].</strong></span></th></tr>
   [% END %]
@@ -142,7 +142,7 @@
   [% FOREACH id IN ids.split %]
     [% id = id.remove('(^\s+)|(\s+$)') %]
     [% record = crms.GetMetadata(id) %]
-    [% blah = crms.UpdateMetadata(id, force, record) %]
+    [% CALL crms.UpdateMetadata(id, force, record) %]
     [% sysid = record.sysid %]
     [% sql = "SELECT id,author,title,YEAR(pub_date),country FROM bibdata WHERE id=?" %]
     [% ref = crms.SelectAll(sql, id) %]
@@ -159,7 +159,7 @@
 [% IF crms.get('dev') %]
   [% level = cgi.param('processReviews') %]
   [% IF level %]
-    [% blah = crms.ProcessReviews(1) %]
+    [% CALL crms.ProcessReviews(1) %]
     [% IF level == 2 %]
       <p>[% crms.ClearQueueAndExport(1) %]</p>
     [% END %]
