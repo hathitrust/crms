@@ -78,7 +78,7 @@
         [% IF NOT renDate && NOT import %]
           [% authorDD = crms.GetADDFromAuthor(barcode) %]
           [% IF NOT authorDD %]
-            [% viafdata = crms.GetVIAFData(barcode) %]   
+            [% viafdata = crms.GetVIAFData(barcode) %]
             [% IF viafdata && viafdata.add %]
               [% authorDD = viafdata.add %]
               [% viaf = 1 %]
