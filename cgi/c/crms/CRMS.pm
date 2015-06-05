@@ -6086,7 +6086,8 @@ sub SetError
   my $error  = shift;
 
   $error .= "\n";
-  $error .= $self->StackTrace();
+  use Utilities;
+  $error .= Utilities::StackTrace();
   my $errors = $self->get('errors');
   push @{$errors}, $error;
 }
@@ -7356,21 +7357,6 @@ sub ReplicationDelay
   my $ref = $self->SelectAll($sql, $host);
   my @return = ($ref->[0]->[0],$self->FormatTime($ref->[0]->[1]));
   return @return;
-}
-
-sub StackTrace
-{
-  my $self = shift;
-  
-  my ($path, $line, $subr);
-  my $max_depth = 30;
-  my $i = 1;
-  my $trace = "--- Begin stack trace ---\n";
-  while ((my @call_details = (caller($i++))) && ($i<$max_depth))
-  {
-    $trace .= "$call_details[1] line $call_details[2] in function $call_details[3]\n";
-  }
-  return $trace . "--- End stack trace ---\n";
 }
 
 sub LinkNoteText

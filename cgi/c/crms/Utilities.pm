@@ -53,4 +53,17 @@ sub HSV2RGB
   else { return $v, $p, $q; }
 }
 
+sub StackTrace
+{
+  my ($path, $line, $subr);
+  my $max_depth = 30;
+  my $i = 1;
+  my $trace = "--- Begin stack trace ---\n";
+  while ((my @call_details = (caller($i++))) && ($i<$max_depth))
+  {
+    $trace .= "$call_details[1] line $call_details[2] in function $call_details[3]\n";
+  }
+  return $trace . "--- End stack trace ---\n";
+}
+
 return 1;

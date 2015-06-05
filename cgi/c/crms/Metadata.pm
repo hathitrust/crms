@@ -46,7 +46,9 @@ sub SetError
   my $self   = shift;
   my $error  = shift;
 
-  $error .= "\n" . $self->StackTrace();
+  $error .= "\n";
+  use Utilities;
+  $error .= Utilities::StackTrace();
   my $errors = $self->get('errors');
   push @{$errors}, $error;
 }
@@ -681,17 +683,4 @@ sub GetSubfields
   return $data;
 }
 
-sub StackTrace
-{
-  my $self = shift;
-  
-  my ($path, $line, $subr);
-  my $max_depth = 30;
-  my $i = 1;
-  my $trace = "--- Begin stack trace ---\n";
-  while ((my @call_details = (caller($i++))) && ($i<$max_depth))
-  {
-    $trace .= "$call_details[1] line $call_details[2] in function $call_details[3]\n";
-  }
-  return $trace . "--- End stack trace ---\n";
-}
+return 1;
