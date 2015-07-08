@@ -90,6 +90,8 @@ sub GetPublisherDataRef
     my %item = ();
     $item{$Fields[$_]} = $row->[$_] for (0 ... 9);
     $item{'added'} = '' if $item{'added'} eq '0000-00-00';
+    $item{'notes1'} =~ s/&(?!\w+;)/&amp;/g;
+    $item{'notes2'} =~ s/&(?!\w+;)/&amp;/g;
     push @return, \%item;
     if ($download)
     {
