@@ -72,7 +72,7 @@ sub set
 
 sub Version
 {
-  return '4.9.16';
+  return '4.9.17';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -835,9 +835,8 @@ sub CheckAndLoadItemIntoCandidates
   my $rq = $self->RightsQuery($id, 1);
   if (!defined $rq)
   {
-    print "Can't get rights for $id, removing from system\n";
-    $self->Unfilter($id) unless $noop;
-    $self->RemoveFromCandidates($id) unless $noop;
+    print "Can't get rights for $id, filtering\n";
+    $self->Filter($id, 'no meta') unless $noop;
     return;
   }
   my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
