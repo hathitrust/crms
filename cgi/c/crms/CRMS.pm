@@ -72,7 +72,7 @@ sub set
 
 sub Version
 {
-  return '4.9.17';
+  return '4.9.18';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -7060,6 +7060,33 @@ sub GetUserRole
     $self->SetError($msg);
   }
   return $role;
+}
+
+# Returns IC access expiration date, or undef if not expired.
+sub IsUserExpired
+{
+  my $self = shift;
+  my $user = shift;
+
+  $user = $self->get('user') unless defined $user;
+  my $sql = 'SELECT IF(expires<NOW(),DATE(expires),NULL) FROM ht_users WHERE userid=?';
+  my $sdr_dbh = $self->get('ht_repository');
+  if (!defined $sdr_dbh)
+  {
+    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
+    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
+  }
+  my $exp;
+  eval {
+    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user);
+    $exp = $ref->[0]->[0];
+  };
+  if ($@)
+  {
+    my $msg = "SQL failed ($sql): " . $@;
+    $self->SetError($msg);
+  }
+  return $exp;
 }
 
 sub VolumeIDsQuery

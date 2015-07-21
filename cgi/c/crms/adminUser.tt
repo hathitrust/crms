@@ -30,7 +30,7 @@
   <input type="hidden" name="p" value="adminUser"/>
   [% crms.HiddenSys() %]
   <label for="order">Order by:</label>
-  <select name="order" onchange="this.form.submit()">
+  <select name="order" id="order" onchange="this.form.submit()">
     <option value="0" [% (order==0)? 'selected="selected"':'' %]>Name</option>
     <option value="2" [% (order==2)? 'selected="selected"':'' %]>Institution</option>
     <option value="3" [% (order==3)? 'selected="selected"':'' %]>Privileges</option>
@@ -60,7 +60,7 @@
   <tr>
     <th>Name</th><th>ID</th><th>Kerberos</th><th>Institution</th>
     <th>Reviewer</th><th>Advanced</th><th>Expert</th><th>Ext.&nbsp;Admin</th>
-    <th>Admin</th><th>Super&nbsp;Admin</th><th>Note</th><th>Projects</th>
+    <th>Admin</th><th>Super<br/>Admin</th><th>Note</th><th>Projects</th>
     <th>IP Address</th><th>Commitment[% IF crms.IsUserAdmin() %]<br/>(Progress)[% END %]</th>
     <th>Change&nbsp;To</th>
   </tr>
@@ -73,7 +73,7 @@
     [% s = crms.IsUserSuperAdmin(userid) %]
     [% active = (r||v||e||x||a||s) %]
     [% style = (active)? '':'style="background-color:#e2e2e2;"' %]
-    <tr [% id == userid ? 'class="total"':'class="hoverWide"'%][% style %]>
+    <tr [% id == userid ? 'class="total"':'class="hoverWide"'%] [% style %]>
       <td>
         <a href="[% crms.Sysify('crms?p=userRate;user=' _ userid) %]" target="_blank">
           [% crms.GetUserName(userid).replace('\s','&nbsp;') %]
@@ -102,10 +102,17 @@
       <span class="red">Warning: no IP address</span>
       [% ELSE %]
         [% ips.keys.join(', ') %]
-        [% role = crms.GetUserRole(userid) %]
+        
         [% IF !userid.match("-expert") && !userid.match("-nonexpert") &&
-           !userid.match("-reviewer") && r && "crms" != role  && inst != 0 %]
-          <span class="red">Role <b>[% role %]</b></span>
+           !userid.match("-reviewer") && r %]
+          [% role = crms.GetUserRole(userid) %]
+          [% IF "crms" != role && inst != 0 %]
+            <span class="red"><br/>Role <b>[% role %]</b></span>
+          [% END %]
+          [% exp = crms.IsUserExpired(userid) %]
+          [% IF exp %]
+            <span class="red"><br/>Expired <b>[% exp %]</b></span>
+          [% END %]
         [% END %]
       [% END %]
       </td>
