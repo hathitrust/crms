@@ -1,6 +1,6 @@
 [% INCLUDE header.tt %]
 
-<script type="text/Javascript">
+<script type="text/javascript">
 <!--
 function CheckAll(box,formid)
 {
