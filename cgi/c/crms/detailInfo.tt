@@ -15,7 +15,7 @@
 [% IF NOT reviews.size %]
   <b>Review has been processed and is no longer accessible from this view.</b><br/>
 [% ELSE %]
-  <a href="JavaScript:window.close()">Close</a>
+  <a href="javascript:window.close()">Close</a>
 [% END %]
 
 [% FOREACH review IN reviews %]
@@ -59,7 +59,7 @@
   <br/>
 [% END %]
 [% END %]
-<a href="JavaScript:window.close()">Close</a>
+<a href="javascript:window.close()">Close</a>
 
 
 [% INCLUDE footer.tt %]

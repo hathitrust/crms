@@ -7,7 +7,7 @@
 
 <h2>All Locked Items</h2>
 
-<script type="text/Javascript">
+<script type="text/javascript">
 <!--
 function CheckAll(box,formid)
 {

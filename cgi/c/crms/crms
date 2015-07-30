@@ -90,7 +90,7 @@ if (!$crms->GetUserName($user))
   exit;
 }
 
-if ($cgi->param('p') eq 'confirmReview')  
+if ($cgi->param('p') eq 'confirmReview')
 {
   my $editing = $cgi->param('editing');
   my $oneoff  = $cgi->param('oneoff');
@@ -102,7 +102,7 @@ if ($cgi->param('p') eq 'confirmReview')
     if ($editing)
     {
       print "Content-type: text/html\n\n";
-      print '<script type="text/javascript" language="JavaScript">window.close();</script>';
+      print '<script type="text/javascript">window.close();</script>';
     }
   }
   elsif ($cgi->param('submit') eq 'Sequester')
@@ -116,7 +116,7 @@ if ($cgi->param('p') eq 'confirmReview')
       if ($editing)
       {
         print "Content-type: text/html\n\n";
-        print '<script type="text/javascript" language="JavaScript">window.close();</script>';
+        print '<script type="text/javascript">window.close();</script>';
       }
       else
       {
@@ -188,7 +188,7 @@ if ($cgi->param('p') eq 'confirmReview')
       if ($editing)
       {
         print "Content-type: text/html\n\n";
-        print '<script type="text/javascript" language="JavaScript">window.close();</script>';
+        print '<script type="text/javascript">window.close();</script>';
       }
       else
       {
@@ -208,7 +208,7 @@ elsif ($cgi->param('p') eq 'confirmCorrection')
     if ($editing)
     {
       print "Content-type: text/html\n\n";
-      print '<script type="text/javascript" language="JavaScript">window.close();</script>';
+      print '<script type="text/javascript">window.close();</script>';
     }
   }
   else
@@ -257,7 +257,7 @@ elsif ($cgi->param('p') eq 'confirmCorrection')
       if ($editing)
       {
         print "Content-type: text/html\n\n";
-        print '<script type="text/javascript" language="JavaScript">window.close();</script>';
+        print '<script type="text/javascript">window.close();</script>';
       }
       else
       {
