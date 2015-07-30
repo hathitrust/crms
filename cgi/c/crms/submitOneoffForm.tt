@@ -67,7 +67,7 @@
       [% END %]
       <td class="reviewGrey"><strong><label id="renewalFieldLabel" for="renewalField">
       [% label %]: </label></strong></td>
-      <td nowrap="nowrap">
+      <td class="nowrap">
       [% IF ren %]
         <input id="renewalField" title="[% label %]" type="text" name="renNum"
                value="[% renNum %]" size="8"
