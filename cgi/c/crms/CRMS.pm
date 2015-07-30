@@ -97,7 +97,7 @@ sub ReadConfigFile
 {
   my $self = shift;
   my $path = shift;
-  
+
   my %dict = ();
   my $fh;
   unless (open $fh, '<:encoding(UTF-8)', $path)
@@ -219,7 +219,7 @@ sub ConnectToSdrDb
 sub GetSdrDb
 {
   my $self = shift;
-  
+
   my $sdr_dbh = $self->get('sdr_dbh');
   my $ping = $self->get('ping');
   if (!$sdr_dbh || !(($ping)? $sdr_dbh->ping():1))
@@ -244,7 +244,7 @@ sub DbName
 sub GetDb
 {
   my $self = shift;
-  
+
   my $dbh = $self->get('dbh');
   my $ping = $self->get('ping');
   if (!$dbh || !(($ping)? $dbh->ping():1))
@@ -461,7 +461,7 @@ sub ProcessReviews
 sub CalcStatus
 {
   my $self = shift;
-  
+
   my $module = 'Validator_' . $self->get('sys') . '.pm';
   require $module;
   unshift @_, $self;
@@ -472,7 +472,7 @@ sub CheckPendingStatus
 {
   my $self = shift;
   my $id   = shift;
-  
+
   my $sql = 'SELECT status FROM queue WHERE id=?';
   my $status = $self->SimpleSqlGet($sql, $id);
   my $pstatus = $status;
@@ -1712,7 +1712,7 @@ sub TwoWorkingDays
   use UMCalendar;
   my $self = shift;
   my $time = shift;
-  
+
   $time = $self->GetTodaysDate() unless $time;
   my $cal = Date::Calendar->new($UMCalendar::UMCal);
   my @parts = split '-', substr($time, 0, 10);
@@ -1752,7 +1752,7 @@ sub FormatDate
 {
   my $self = shift;
   my $date = shift;
-  
+
   my $sql = 'SELECT DATE_FORMAT(?, "%a, %M %e, %Y")';
   return $self->SimpleSqlGet($sql, $date);
 }
@@ -1761,7 +1761,7 @@ sub FormatTime
 {
   my $self = shift;
   my $time = shift;
-  
+
   my $sql = 'SELECT DATE_FORMAT(?, "%a, %M %e, %Y at %l:%i %p")';
   return $self->SimpleSqlGet($sql, $time);
 }
@@ -1825,7 +1825,7 @@ sub CreateSQL
 {
   my $self  = shift;
   my $stype = shift;
-  
+
   return $self->CreateSQLForVolumesWide(@_) if $stype eq 'volumes';
   return $self->CreateSQLForVolumes(@_) if $stype eq 'groups';
   return $self->CreateSQLForReviews(@_);
@@ -2053,7 +2053,7 @@ sub CreateSQLForVolumesWide
   my $offset       = shift;
   my $pagesize     = shift;
   my $download     = shift;
-  
+
   #print("GetVolumesRefWide('$order','$dir','$search1','$search1value','$op1','$search2','$search2value','$op2','$search3','$search3value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
   $dir = 'DESC' unless $dir;
   $pagesize = 20 unless $pagesize > 0;
@@ -2474,7 +2474,7 @@ sub UnpackResults
   my $self = shift;
   my $page = shift;
   my $ref  = shift;
-  
+
   my $buff = '';
   foreach my $row (@{$ref})
   {
@@ -2501,7 +2501,6 @@ sub UnpackResults
     my $title      = $row->[15]; # Validated in historical
     my $author     = $row->[16];
     my $hold       = $row->[17];
-    
     if ($page eq 'userReviews')
     {
       #for reviews
@@ -2556,7 +2555,7 @@ sub SearchAndDownloadDeterminationStats
   my $monthly   = shift;
   my $priority  = shift;
   my $pre       = shift;
-  
+
   my $buff;
   if ($pre)
   {
@@ -2568,7 +2567,7 @@ sub SearchAndDownloadDeterminationStats
   }
   $self->DownloadSpreadSheet($buff);
   return ($buff)? 1:0;
-} 
+}
 
 sub SearchAndDownloadQueue
 {
@@ -2582,7 +2581,7 @@ sub SearchAndDownloadQueue
   my $search2Value = shift;
   my $startDate = shift;
   my $endDate = shift;
-  
+
   my $buff = $self->GetQueueRef($order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, 0, 0, 1);
   $self->DownloadSpreadSheet($buff);
   return ($buff)? 1:0;
@@ -2600,7 +2599,7 @@ sub SearchAndDownloadExportData
   my $search2Value = shift;
   my $startDate = shift;
   my $endDate = shift;
-  
+
   my $buff = $self->GetExportDataRef($order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, 0, 0, 1);
   $self->DownloadSpreadSheet($buff);
   return ($buff)? 1:0;
@@ -2781,7 +2780,7 @@ sub GetVolumesRefWide
   my $page = $_[0];
   my $order = $self->ConvertToSearchTerm($_[1], $page);
   my $dir = $_[2];
-  
+
   my $table ='reviews';
   my $doQ = '';
   my $status = 'r.status';
@@ -2894,7 +2893,7 @@ sub GetQueueRef
   my $pagesize     = shift;
   my $download     = shift;
   #print("GetQueueRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$download');<br/>\n");
-  
+
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
   $order = 'id' unless $order;
@@ -3028,7 +3027,7 @@ sub GetExportDataRef
   my $pagesize     = shift;
   my $download     = shift;
   #print("GetQueueRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$download');<br/>\n");
-  
+
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
   $order = 'id' unless $order;
@@ -3190,7 +3189,7 @@ sub Linkify
   my $txt  = shift;
 
   $txt =~ s!(((https?|ftp)://|(www|ftp)\.)[a-z0-9-]+(\.[a-z0-9-]+)+([/?][^\(\)\s]*)?)!<a target='_blank' href='$1'>$1</a>!ig;
-  $txt =~ s!(\b.+?\@.+?\..+?\b)!<a href="mailto:$1">$1<\/a>!ig; 
+  $txt =~ s!(\b.+?\@.+?\..+?\b)!<a href="mailto:$1">$1<\/a>!ig;
   return $txt;
 }
 
@@ -3198,7 +3197,7 @@ sub PTAddress
 {
   my $self = shift;
   my $id   = shift;
-  
+
   my $pt = 'babel.hathitrust.org';
   my $syspt = $self->SimpleSqlGet('SELECT value FROM systemvars WHERE name="pt"');
   $pt = $syspt if $syspt;
@@ -3682,7 +3681,7 @@ sub GetInstitutionUsers
   my $self  = shift;
   my $inst  = shift;
   my $order = shift;
-  
+
   my $users = $self->GetUsers($order);
   my @ausers = ();
   foreach my $user (@{$users})
@@ -3708,14 +3707,14 @@ sub CanUserSeeInstitutionalStats
 sub GetTheYear
 {
   my $self = shift;
-  
+
   return ($self->GetTheYearMonth())[0];
 }
 
 sub GetTheMonth
 {
   my $self = shift;
-  
+
   return ($self->GetTheYearMonth())[1];
 }
 
@@ -3781,7 +3780,7 @@ sub GetAllMonthsInYear
 {
   my $self = shift;
   my $year = shift;
-  
+
   my ($currYear, $currMonth) = $self->GetTheYearMonth();
   $year = $currYear unless $year;
   my $start = 1;
@@ -3808,7 +3807,7 @@ sub GetAllMonthsInYear
 sub GetAllExportYears
 {
   my $self = shift;
-  
+
   my @list = ();
   my $min = $self->SimpleSqlGet('SELECT MIN(time) FROM exportdata');
   my $max = $self->SimpleSqlGet('SELECT MAX(time) FROM exportdata');
@@ -3830,7 +3829,7 @@ sub CreateExportData
   my $start          = shift;
   my $end            = shift;
   my $doPercent      = shift;
-  
+
   #print "CreateExportData('$delimiter', $cumulative, $doCurrentMonth, '$start', '$end', '$doPercent')<br/>\n";
   my ($year,$month) = $self->GetTheYearMonth();
   my $now = "$year-$month";
@@ -3927,11 +3926,11 @@ sub CreateExportData
     push @icTitles, $right if $a =~ m/^ic/;
     push @undTitles, $right if $a =~ m/^und/;
   }
-  
+
   unshift @titles, @undTitles;
   unshift @titles, @icTitles;
   unshift @titles, @pdTitles;
-  
+
   my %monthTotals = ();
   my %catTotals = ('All PD' => 0, 'All IC' => 0, 'All UND' => 0);
   my $gt = 0;
@@ -4461,7 +4460,7 @@ sub CreateStatsData
     }
     $ptotals{'__AVAL__'} = $pct;
   }
-  
+
   my %majors = ('PD Reviews' => 1, 'IC Reviews' => 1, 'UND/NFI Reviews' => 1);
   my %minors = ('Time Reviewing (mins)' => 1, 'Time per Review (mins)' => 1,
                 'Reviews per Hour' => 1, 'Outlier Reviews' => 1);
@@ -4639,7 +4638,7 @@ sub DownloadUserStats
   my $year        = shift;
   my $inval       = shift;
   my $nononexpert = shift;
-  
+
   my $report = $self->CreateStatsData("\t", $page, $user, $cumulative, $year, $inval, $nononexpert);
   $report =~ s/(\d\d\d\d-\d\d)/$self->YearMonthToEnglish($&)/ge;
   $report =~ s/&nbsp;/ /g;
@@ -4726,7 +4725,7 @@ sub GetMonthStats
   my $y    = shift;
   my $m    = shift;
 
-  my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND legacy!=1' . 
+  my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND legacy!=1' .
             ' AND EXTRACT(YEAR FROM time)=? AND EXTRACT(MONTH FROM time)=?';
   my $total_reviews = $self->SimpleSqlGet($sql, $user, $y, $m);
   #pd/pdus
@@ -5482,7 +5481,7 @@ sub GetNextCorrectionForReview
 {
   my $self = shift;
   my $user = shift;
-  
+
   my $id = undef;
   my $err = undef;
   my $sql = 'SELECT c.id FROM corrections c WHERE c.locked IS NULL AND status IS NULL ORDER BY time DESC';
@@ -5512,7 +5511,7 @@ sub GetNextCorrectionForReview
 sub GetPriority1Frequency
 {
   my $self = shift;
-  
+
   return $self->GetSystemVar('priority1Frequency', 0.3, '$_>=0.0 and $_<1.0');
 }
 
@@ -5520,7 +5519,7 @@ sub TranslateAttr
 {
   my $self = shift;
   my $a    = shift;
-  
+
   my $sql = 'SELECT id FROM attributes WHERE name=?';
   $sql = 'SELECT name FROM attributes WHERE id=?' if $a =~ m/[0-9]+/;
   my $val = $self->SimpleSqlGetSDR($sql, $a);
@@ -5555,7 +5554,7 @@ sub TranslateReason
 {
   my $self = shift;
   my $r    = shift;
-  
+
   my $sql = 'SELECT id FROM reasons WHERE name=?';
   $sql = 'SELECT name FROM reasons WHERE id=?' if $r =~ m/[0-9]+/;
   my $val = $self->SimpleSqlGetSDR($sql, $a);
@@ -5640,7 +5639,7 @@ sub OpenErrorLog
 sub CloseErrorLog
 {
   my $self = shift;
-  
+
   my $fh = $self->get('logFh');
   close $fh if $fh;
 }
@@ -5942,55 +5941,55 @@ sub CreateReviewReport
     $priheaders .= "<th>Priority&nbsp;$pri</th>"
   }
   $report .= "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
-  
+
   my $sql = 'SELECT priority FROM queue WHERE id IN (SELECT DISTINCT id FROM reviews)';
   my $ref = $self->SelectAll($sql);
   my $count = scalar @{$ref};
   $report .= "<tr><td class='total'>Active</td><td class='total'>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,' class="total"',\@pris) . "</tr>\n";
-  
+
   # Unprocessed
   $sql = 'SELECT priority FROM queue WHERE status=0 AND pending_status>0';
   $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td class='minor'>Unprocessed</td><td class='minor'>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,' class="minor"',\@pris) . "</tr>\n";
-  
+
   # Unprocessed - single review
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=1';
   $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Single&nbsp;Review</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
-  
+
   # Unprocessed - match
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=4';
   $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Match</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
-  
+
   # Unprocessed - conflict
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=2';
   $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflict</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
-  
+
   # Unprocessed - provisional match
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=3';
   $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Match</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
-  
+
   # Unprocessed - auto-resolved
   $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=8';
   $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Auto-Resolved</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
-  
+
   # Inheriting
   $sql = 'SELECT COUNT(*) FROM queue WHERE status=9';
   my $s9count = $self->SimpleSqlGet($sql);
@@ -5999,40 +5998,40 @@ sub CreateReviewReport
   $report .= sprintf("<tr class='inherit'><td>Can&nbsp;Inherit</td><td colspan='%d'>$count</td>", 1+scalar @pris);
   #$report .= "<td/>" for @pris;
   $report .= '</tr>';
-  
+
   # Inheriting Automatically
   $sql = 'SELECT COUNT(*) FROM inherit WHERE del!=1 AND (reason=1 OR reason=12)';
   $count = $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Automatically</td><td colspan='%d'>$count</td>", 1+scalar @pris);
   #$report .= "<td/>" for @pris;
   $report .= '</tr>';
-  
+
   # Inheriting Pending Approval
   $sql = 'SELECT COUNT(*) FROM inherit WHERE del!=1 AND (reason!=1 AND reason!=12)';
   $count = $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Pending&nbsp;Approval</td><td colspan='%d'>$count</td>", 1+scalar @pris);
   #$report .= "<td/>" for @pris;
   $report .= '</tr>';
-  
+
   # Approved
   $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Approved</td><td colspan='%d'>$s9count</td>", 1+scalar @pris);
   #$report .= "<td/>" for @pris;
   $report .= '</tr>';
-  
+
   # Deleted
   $sql = 'SELECT COUNT(*) FROM inherit WHERE del=1';
   $count = $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Deleted</td><td colspan='%d'>$count</td>", 1+scalar @pris);
   #$report .= "<td/>" for @pris;
   $report .= '</tr>';
-  
+
   # Processed
   $sql = 'SELECT priority FROM queue WHERE status!=0';
   $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td class='minor'>Processed</td><td class='minor'>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,' class="minor"',\@pris) . "</tr>\n";
-  
+
   $sql = 'SELECT priority from queue WHERE status=2';
   $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
@@ -6044,13 +6043,13 @@ sub CreateReviewReport
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Match</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,'',\@pris) . "</tr>\n";
-  
+
   $sql = 'SELECT priority from queue WHERE status>=4';
   $ref = $self->SelectAll($sql);
   $count = scalar @{$ref};
   $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Awaiting&nbsp;Export</td><td>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,'',\@pris) . "</tr>\n";
-  
+
   if ($count > 0)
   {
     for my $status (4..9)
@@ -6200,7 +6199,7 @@ sub GetTotalHistoricalReviewCount
 sub GetLastQueueInfo
 {
   my $self = shift;
-  
+
   my $sql = 'SELECT time,itemcount FROM queuerecord WHERE source="RIGHTSDB" ORDER BY time DESC LIMIT 1';
   my $row = $self->SelectAll($sql)->[0];
   my $time = $self->FormatTime($row->[0]);
@@ -6286,7 +6285,7 @@ sub IsReviewCorrect
   my $id   = shift;
   my $user = shift;
   my $time = shift;
-  
+
   # Has there ever been a swiss review for this volume?
   my $sql = 'SELECT COUNT(id) FROM historicalreviews WHERE id=? AND swiss=1';
   my $swiss = $self->SimpleSqlGet($sql, $id);
@@ -6396,7 +6395,7 @@ sub GetValidation
   my $start = shift;
   my $end   = shift;
   my $users = shift;
-  
+
   $users = sprintf '"%s"', join '","', $self->GetType1Reviewers() unless $users;
   $start = substr($start,0,7);
   $end = substr($end,0,7);
@@ -6424,12 +6423,12 @@ sub ReviewSearchMenu
   my $searchName = shift;
   my $searchVal  = shift;
   my $order      = shift;
-  
+
   my @keys = ('Identifier','SysID',    'Title','Author','PubDate', 'ReviewDate', 'Status','Legacy','UserId','Attribute',
               'Reason', 'NoteCategory', 'Note', 'Priority', 'Validated', 'Swiss', 'Hold Thru');
   my @labs = ('Identifier','System ID','Title','Author','Pub Date','Review Date', 'Status','Legacy','User',  'Attribute',
               'Reason','Note Category', 'Note', 'Priority', 'Verdict',   'Swiss', 'Hold Thru');
-  
+
   if ($page ne 'adminReviews' && $page ne 'editReviews' && $page ne 'holds')
   {
     splice @keys, 16, 1; # Hold
@@ -6485,7 +6484,7 @@ sub QueueSearchMenu
   my $self = shift;
   my $searchName = shift;
   my $searchVal = shift;
-  
+
   my @keys = qw(Identifier Title Author PubDate Status Locked Priority Reviews ExpertCount Holds Project);
   my @labs = ('Identifier','Title','Author','Pub Date','Status','Locked','Priority','Reviews','Expert Reviews','Holds','Project');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
@@ -6503,7 +6502,7 @@ sub ExportDataSearchMenu
   my $self = shift;
   my $searchName = shift;
   my $searchVal = shift;
-  
+
   my @keys = qw(Identifier Title Author PubDate Attribute Reason Source Project);
   my @labs = ('Identifier','Title','Author','Pub Date','Attribute','Reason','Source','Project');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
@@ -6544,7 +6543,7 @@ sub RightsQuery
   my $self   = shift;
   my $id     = shift;
   my $latest = shift;
-  
+
   my ($ns,$n) = split m/\./, $id, 2;
   my $table = ($latest)? 'rights_current':'rights_log';
   my $sql = 'SELECT a.name,rs.name,s.name,r.user,r.time,r.note,p.name FROM ' .
@@ -6583,7 +6582,7 @@ sub CurrentRightsQuery
 sub RightsDBAvailable
 {
   my $self = shift;
-  
+
   my $dbh = undef;
   eval {
     $dbh = $self->GetSdrDb();
@@ -6699,7 +6698,7 @@ sub DownloadVolumeIDs
 {
   my $self  = shift;
   my $sysid = shift;
-  
+
   my $buff = (join "\t", qw (ID Chron Rights Attr Reason Source User Time Note)) . "\n";
   my $rows = $self->VolumeIDsQuery($sysid);
   foreach my $line (@{$rows})
@@ -6733,7 +6732,6 @@ sub CRMSQuery
   foreach my $line (@{$rows})
   {
     my ($id2,$chron2,$rights2) = split '__', $line;
-    
     push @ids, $id2 . '__' . $title . '__' . $self->GetTrackingInfo($id2, 1, 1);
   }
   return \@ids;
@@ -6833,7 +6831,7 @@ sub Pluralize
   my $self = shift;
   my $word = shift;
   my $n    = shift;
-  
+
   return $word . (($n == 1)? '':'s');
 }
 
@@ -6999,7 +6997,7 @@ sub InheritanceSelectionMenu
   my $searchName = shift;
   my $searchVal = shift;
   my $auto = shift;
-  
+
   my @keys = ('date','idate','src','id','sysid','change','prior','prior5','title');
   my @labs = ('Export Date','Inherit Date','Source Volume','Volume Inheriting','System ID','Access Change',
               'Prior CRMS Determination','Prior Status 5 Determination','Title');
@@ -7363,7 +7361,7 @@ sub LinkToCatalog
 {
   my $self  = shift;
   my $sysid = shift;
-  
+
   return 'http://catalog.hathitrust.org/Record/'. $sysid;
 }
 
@@ -7528,7 +7526,7 @@ sub DuplicateVolumesFromExport
 sub AllCRMSRights
 {
   my $self = shift;
-  
+
   my $sql = 'SELECT attr,reason FROM rights';
   my $ref = $self->SelectAll($sql);
   my %okattr;
@@ -7848,7 +7846,7 @@ sub Rights
       $sql = 'SELECT COUNT(*) FROM projectrights WHERE project=? AND rights=?';
       $projOK = 0 if 0 == $self->SimpleSqlGet($sql, $proj, $id);
     }
-    if ($projOK && 
+    if ($projOK &&
         (!$restricted ||
          ($restricted &&
           (($proj && $restricted =~ m/p/) ||
@@ -7994,7 +7992,7 @@ sub Hiddenify
 {
   my $self = shift;
   my $cgi  = shift;
-  
+
   my %exceptions = ();
   $exceptions{$_} = 1 for @_;
   my @comps = ();
@@ -8022,11 +8020,11 @@ sub TolerantCompare
   my $self = shift;
   my $s1   = shift;
   my $s2   = shift;
-  
+
   return 1 if (!defined $s1) && (!defined $s2);
   return 0 if (!defined $s1) && (defined $s2);
   return 0 if (defined $s1) && (!defined $s2);
-  return ($s1 eq $s2)?1:0; 
+  return ($s1 eq $s2)?1:0;
 }
 
 # CRMS World specific. Returns the last year the work was/will be in copyright,
@@ -8512,7 +8510,7 @@ sub PropagateTheFormula
   my $self = shift;
   my $id   = shift;
   my $user = shift;
-  
+
   my $tx = $self->OneoffTicket($id);
   return unless defined $tx and $tx =~ m/^HTS-\d+$/;
   my $ref = $self->SelectAll('SELECT id FROM queue WHERE source=? AND id!=?', $tx, $id);
