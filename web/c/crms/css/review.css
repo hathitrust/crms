@@ -76,6 +76,12 @@ a.header:active  {color:#82CAFA;}
 
 .smallishText { font-size:.9em }
 
+.nowrap { white-space:nowrap; }
+
+.textcenter { text-align:center; }
+.textright { text-align:right; }
+.textleft { text-align:left; }
+
 .greeting {
   font-size: 1.5em;
   font-weight: bold;
