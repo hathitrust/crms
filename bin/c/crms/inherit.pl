@@ -2,8 +2,8 @@
 
 my $DLXSROOT;
 my $DLPS_DEV;
-BEGIN 
-{ 
+BEGIN
+{
   $DLXSROOT = $ENV{'DLXSROOT'};
   $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
@@ -116,7 +116,7 @@ $dates .= " to $end" if $end ne $start;
 my $title = sprintf "%s %s: %s %sInheritance, $dates",
                     $crms->System(),
                     ($DLPS_DEV)? 'Dev':'Prod',
-                    ($candidates)? 'Candidates':'Export', 
+                    ($candidates)? 'Candidates':'Export',
                     ($cleanup)? 'Cleanup ':'';
 $start .= ' 00:00:00' unless $start =~ m/\d\d:\d\d:\d\d$/;
 $end .= ' 23:59:59' unless $end =~ m/\d\d:\d\d:\d\d$/;
@@ -513,15 +513,22 @@ sub InheritanceReport
 
   my %data = ();
   my %seen = ();
-  my $sql = 'SELECT id,gid,attr,reason,time,src FROM exportdata WHERE' .
-            " (src!='inherited' AND time>'$start' AND time<='$end')" .
-            " OR id IN (SELECT id FROM unavailable WHERE src='$src') ORDER BY time DESC";
+  my $ref;
+  my $sql = 'SELECT id,gid,attr,reason,time,src FROM exportdata WHERE ';
   if ($singles && scalar @{$singles})
   {
-    $sql = sprintf("SELECT id,gid,attr,reason,time,src FROM exportdata WHERE id in ('%s') ORDER BY time DESC", join "','", @{$singles});
+    $sql .= sprintf 'id IN %s ORDER BY time DESC', $crms->WildcardList(scalar @{$singles});
+    $ref = $crms->SelectAll($sql, @{$singles});
+  }
+  else
+  {
+    $sql .= ' ((src!="inherited" AND time>? AND time<=?)'.
+            '  OR id IN (SELECT id FROM unavailable WHERE src=?))'.
+            ' AND NOT EXISTS (SELECT * FROM exportdata e2 WHERE e2.id=id AND e2.time>time)'.
+            ' ORDER BY time DESC';
+    $ref = $crms->SelectAll($sql, $start, $end, $src);
   }
   print "$sql\n" if $verbose > 1;
-  my $ref = $crms->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
@@ -542,13 +549,6 @@ sub InheritanceReport
       print "Metadata unavailable for $id; skipping\n" if $verbose;
       $data{'unavailable'}->{$id} = 1;
       $crms->ClearErrors();
-      next;
-    }
-    # When using date ranges, earlier export should not supersede later.
-    my $latest = $crms->SimpleSqlGet('SELECT time FROM exportdata WHERE id=? ORDER BY time DESC LIMIT 1', $id);
-    if ($time lt $latest)
-    {
-      print "Later export ($latest) for $id ($time); skipping\n" if $verbose;
       next;
     }
     # THIS is the export we're going to inherit from.
@@ -624,7 +624,7 @@ sub GetTitleHash
 {
   my $ref  = shift;
   my $data = shift;
-  
+
   my %h = ();
   $h{$_} = $data->{'titles'}->{$_} for keys %{$ref};
   return \%h;

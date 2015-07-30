@@ -2,10 +2,10 @@
 
 my $DLXSROOT;
 my $DLPS_DEV;
-BEGIN 
-{ 
-  $DLXSROOT = $ENV{'DLXSROOT'}; 
-  $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+BEGIN
+{
+  $DLXSROOT = $ENV{'DLXSROOT'};
+  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -132,7 +132,7 @@ if (scalar @mails)
   $sender->Body();
   $txt = 'This is an automatically generated report on possible federal government docs from the previous ' .
           "month. We believe these should have an 'f' inserted into the 008 MARC field. " .
-          "Please notify the other addressees of any volumes that do not seem to meet these criteria.\n"; 
+          "Please notify the other addressees of any volumes that do not seem to meet these criteria.\n";
   my $bytes = encode('utf8', $txt);
   $sender->SendEnc($bytes);
   $sender->Attach({

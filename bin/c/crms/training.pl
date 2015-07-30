@@ -2,10 +2,10 @@
 
 my $DLXSROOT;
 my $DLPS_DEV;
-BEGIN 
-{ 
-  $DLXSROOT = $ENV{'DLXSROOT'}; 
-  $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+BEGIN
+{
+  $DLXSROOT = $ENV{'DLXSROOT'};
+  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -55,7 +55,6 @@ die 'Terminating' unless GetOptions(
            'r'    => \$random,
            'v'    => \$verbose,
            'x:s'  => \$sys);
-           
 
 die "$usage\n\n" if $help;
 die "You need a volume count.\n" unless 1 == scalar @ARGV;
@@ -101,10 +100,17 @@ if (defined $out)
 my %seen;
 my %seenAuthors;
 my %seenTitles;
-#my $sql = '(SELECT DISTINCT id FROM reviews) UNION DISTINCT (SELECT DISTINCT id FROM historicalreviews)' .
-#          ' UNION DISTINCT (SELECT id FROM queue)';
-#my $ref = $crmst->SelectAll($sql);
-#$seen{$_->[0]} = 1 for @{$ref};
+my $sql = 'SELECT q.id,b.author,b.title FROM queue q INNER JOIN bibdata b ON q.id=b.id';
+my $ref = $crmst->SelectAll($sql);
+foreach my $row (@{$ref})
+{
+  my $id = $row->[0];
+  my $a = $row->[1];
+  my $t = $row->[2];
+  $seen{$id} = 1;
+  $seenAuthors{$a} = 1 if length $a;
+  $seenTitles{$t} = 1 if length $t;
+}
 my $n = 0;
 my $usql = sprintf '(SELECT id FROM users WHERE %s=1'.
                    ' AND extadmin+expert+admin+superadmin=0)',
@@ -114,10 +120,10 @@ $ssql .= ' OR status=7' if $noadvanced;
 my $prisql = '';
 $prisql = sprintf ' AND priority IN (%s)', join ',', @pris if scalar @pris;
 my $orderby = ($random)? 'RAND()':'time DESC';
-my $sql = 'SELECT id,user,time,gid,status FROM historicalreviews WHERE' .
-          ' user IN '. $usql.
-          ' AND validated=1 AND ('. $ssql. ')'.
-          $prisql .  ' ORDER BY ' . $orderby;
+$sql = 'SELECT id,user,time,gid,status FROM historicalreviews WHERE' .
+       ' user IN '. $usql.
+       ' AND validated=1 AND ('. $ssql. ')'.
+       $prisql .  ' ORDER BY ' . $orderby;
 my $ref = $crmsp->SelectAll($sql);
 printf "$sql: %d results\n", scalar @$ref if $verbose;
 my $s4 = 0;
@@ -128,12 +134,18 @@ foreach my $row (@{$ref})
   my $id = $row->[0];
   print "$id\n" if $verbose;
   last if $n >= $count;
-  if ($seen{$id})
+  my $record = $crmsp->GetMetadata($id);
+  next unless defined $record;
+  my $a = $record->author;
+  my $t = $record->title;
+  if ($seen{$id} || $seenAuthors{$a} || $seenTitles{$t})
   {
     print "Skipping $id, it has been seen (n is $n)\n" if $verbose;
     next;
   }
   $seen{$id} = 1;
+  $seenAuthors{$a} = 1 if length $a;
+  $seenTitles{$t} = 1 if length $t;
   my $user   = $row->[1];
   my $time   = $row->[2];
   my $gid    = $row->[3];
@@ -146,7 +158,6 @@ foreach my $row (@{$ref})
   $sql = 'SELECT reason FROM exportdata WHERE gid=?';
   my $expreason = $crmsp->SimpleSqlGet($sql, $gid);
   next if $expreason eq 'crms';
-  my $record = $crmsp->GetMetadata($id);
   $sql = 'SELECT attr,reason,renDate,renNum,category,note'.
          ' FROM historicalreviews WHERE id=? AND user=? AND time=?';
   my $ref2 = $crmsp->SelectAll($sql, $id, $user, $time);
@@ -166,25 +177,19 @@ foreach my $row (@{$ref})
   $crmst->UpdateMetadata($id, 1) unless $noop;
   if (defined $excel || defined $out)
   {
-    my $author = $crmst->GetRecordAuthor($id, $record);
-    my $title = $crmst->GetRecordTitle($id, $record);
-    next if $seenAuthors{$author};
-    next if $seenTitles{$title};
-    $seenAuthors{$author} = 1;
-    $seenTitles{$title} = 1;
     my $date = $crmst->GetRecordPubDate($id, $record);
     my $country = $crmst->GetRecordPubCountry($id, $record);
     my $rights = $crmst->TranslateAttr($attr) . '/' . $crmst->TranslateReason($reason);
     $category = $row->[4];
     if (defined $out)
     {
-      print $fh join "\t", ($id, $author, $title, $date, $country, $user, $time, $category, $rights);
+      print $fh join "\t", ($id, $a, $t, $date, $country, $user, $time, $category, $rights);
     }
     if (defined $excel)
     {
       $worksheet->write_string($n+1, 0, $id);
-      $worksheet->write_string($n+1, 1, $author);
-      $worksheet->write_string($n+1, 2, $title);
+      $worksheet->write_string($n+1, 1, $a);
+      $worksheet->write_string($n+1, 2, $t);
       $worksheet->write_string($n+1, 3, $date);
       $worksheet->write_string($n+1, 4, $country);
       $worksheet->write_string($n+1, 5, $user);

@@ -1,13 +1,13 @@
 #!/usr/bin/perl
 
-# This script can be run from crontab; it 
+# This script can be run from crontab
 
 my $DLXSROOT;
 my $DLPS_DEV;
-BEGIN 
-{ 
-  $DLXSROOT = $ENV{'DLXSROOT'}; 
-  $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+BEGIN
+{
+  $DLXSROOT = $ENV{'DLXSROOT'};
+  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 

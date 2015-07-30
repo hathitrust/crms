@@ -3,10 +3,10 @@
 my $DLXSROOT;
 my $DLPS_DEV;
 
-BEGIN 
-{ 
-  $DLXSROOT = $ENV{'DLXSROOT'}; 
-  $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+BEGIN
+{
+  $DLXSROOT = $ENV{'DLXSROOT'};
+  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -70,7 +70,7 @@ if ($report)
     my ($time,$client,$secs) = @{$row};
     my $status = $secs . ' ' . $crms->Pluralize('second', $secs);
     $status = 'replication disabled' if $secs == 999999;
-    printf "$time: $client $status\n", 
+    printf "$time: $client $status\n",
   }
 }
 else

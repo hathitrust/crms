@@ -2,8 +2,8 @@
 
 my $DLXSROOT;
 my $DLPS_DEV;
-BEGIN 
-{ 
+BEGIN
+{
   $DLXSROOT = $ENV{'DLXSROOT'};
   $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
@@ -162,7 +162,7 @@ sub ADDReport
             " AND (e.attr='pd' OR e.attr='pdus') AND e.reason='add' ORDER BY b.author ASC LIMIT 100";
   if ($singles && scalar @{$singles})
   {
-    $sql = sprintf('SELECT e.id,e.gid,e.attr,e.reason,e.time,e.src FROM exportdata e INNER JOIN bibdata b' . 
+    $sql = sprintf('SELECT e.id,e.gid,e.attr,e.reason,e.time,e.src FROM exportdata e INNER JOIN bibdata b' .
                    " ON e.id=b.id WHERE e.id IN ('%s') ORDER BY b.author ASC", join "','", @{$singles});
   }
   print "$sql\n" if $verbose > 1;
@@ -304,7 +304,7 @@ sub ADDReport
       {
         $err = join '; ', @{$errs} if scalar @{$errs} > 0;
         if ($src)
-        {      
+        {
           $err .= '; ' if $err;
           $err .= "UND: $src";
         }

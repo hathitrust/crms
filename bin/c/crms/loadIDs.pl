@@ -2,10 +2,10 @@
 
 my $DLXSROOT;
 my $DLPS_DEV;
-BEGIN 
-{ 
-  $DLXSROOT = $ENV{'DLXSROOT'}; 
-  $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+BEGIN
+{
+  $DLXSROOT = $ENV{'DLXSROOT'};
+  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -112,7 +112,7 @@ foreach my $line ( <$fh> )
       next;
     }
     my $pub = $crms->GetRecordPubDate($id, $record);
-  
+
     if ( ( $pub lt '1923' ) || ( $pub gt '1963' ) )
     {
       $counts{'date'}++;
@@ -161,7 +161,7 @@ foreach my $id (keys %ids)
   printf "%d) updating $id ($attr/$reason) $time\n", $cnt+1 if $verbose;
   if (!$noop)
   {
-    $crms->GiveItemsInQueuePriority($id, $now, 0, 1, 'rereport');
+    GiveItemsInQueuePriority($crms, $id, $now, 0, 1, 'rereport');
     my $r = $crms->GetErrors();
     if (scalar @{$r})
     {
@@ -189,3 +189,77 @@ foreach my $reason (sort keys %counts)
   printf "$reason: %s volumes\n", $counts{$reason};
 }
 
+sub GiveItemsInQueuePriority
+{
+  my $crms     = shift;
+  my $id       = lc shift;
+  my $time     = shift;
+  my $status   = shift;
+  my $priority = shift;
+  my $source   = shift;
+
+  my $record = $crms->GetMetadata($id);
+  my $errs = $crms->GetViolations($id, $record);
+  if (scalar @{$errs})
+  {
+    $crms->SetError(sprintf "$id: %s", join ';', @{$errs});
+    return 0;
+  }
+  my $sql = 'SELECT COUNT(*) FROM queue WHERE id=?';
+  my $count = $crms->SimpleSqlGet($sql, $id);
+  if ($count == 1)
+  {
+    $sql = 'UPDATE queue SET priority=1 WHERE id=?';
+    $crms->PrepareSubmitSql($sql, $id);
+  }
+  else
+  {
+    $sql = 'INSERT INTO queue (id,time,status,priority,src) VALUES (?,?,?,?,?)';
+    $crms->PrepareSubmitSql($sql, $id, $time, $status, $priority, $source);
+    $crms->UpdateMetadata($id, 1, $record);
+    # Accumulate counts for items added at the 'same time'.
+    # Otherwise queuerecord will have a zillion kabillion single-item entries when importing
+    # e.g. 2007 reviews for reprocessing.
+    # We see if there is another ADMINSCRIPT entry for the current time; if so increment.
+    # If not, add a new one.
+    $sql = 'SELECT itemcount FROM queuerecord WHERE time=? AND src="ADMINSCRIPT" LIMIT 1';
+    my $itemcount = $crms->SimpleSqlGet($sql, $time);
+    if ($itemcount)
+    {
+      $itemcount++;
+      $sql = 'UPDATE queuerecord SET itemcount=? WHERE time=? AND src="ADMINSCRIPT"';
+    }
+    else
+    {
+      $itemcount = 1;
+      $sql = 'INSERT INTO queuerecord (itemcount,time,src) values (?,?,"ADMINSCRIPT")';
+    }
+    $crms->PrepareSubmitSql($sql, $itemcount, $time);
+  }
+  return 1;
+}
+
+sub SubmitActiveReview
+{
+  my $crms = shift;
+  my ($id, $user, $date, $attr, $reason, $noop) = @_;
+
+  ## change attr and reason back to numbers
+  $attr = $crms->TranslateAttr($attr);
+  if (!$attr) { $crms->SetError("bad attr: $attr"); return 0; }
+  $reason = $crms->TranslateReason($reason);
+  if (!$reason) { $crms->SetError("bad reason: $reason"); return 0; }
+  if (!$crms->ValidateAttrReasonCombo($attr, $reason)) { $crms->SetError("bad attr/reason $attr/$reason"); return 0; }
+  if (!$crms->CheckReviewer($user, 0))                 { $crms->SetError("reviewer ($user) check failed"); return 0; }
+  if (!$noop)
+  {
+    ## all good, INSERT
+    my $sql = 'REPLACE INTO reviews (id,user,time,attr,reason,legacy,priority)' .
+              ' VALUES(?,?,?,?,?,1,1)';
+    $crms->PrepareSubmitSql($sql, $id, $user, $date, $attr, $reason);
+    $sql = 'UPDATE queue SET pending_status=1 WHERE id=?';
+    $crms->PrepareSubmitSql($sql, $id);
+    $crms->UpdateMetadata($id, 1);
+  }
+  return 1;
+}

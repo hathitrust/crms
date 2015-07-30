@@ -2,8 +2,8 @@
 
 my $DLXSROOT;
 my $DLPS_DEV;
-BEGIN 
-{ 
+BEGIN
+{
   $DLXSROOT = $ENV{'DLXSROOT'};
   $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
@@ -15,7 +15,7 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-achinpuv] [-s VOL_ID [-s VOL_ID2...]]
+USAGE: $0 [-achinpv] [-s VOL_ID [-s VOL_ID2...]]
           [-x SYS] [start_date [end_date]]
 
 Reports on volumes that are no longer eligible for candidacy in the rights database
@@ -31,7 +31,6 @@ and removes them from the system.
 -n         No-op; reports what would be done but do not modify the database.
 -p         Run in production.
 -s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
--u         Run against the und table, unfiltering where necessary.
 -v         Emit debugging information.
 -x SYS     Set SYS as the system to execute.
 END
@@ -45,7 +44,6 @@ my $iconly;
 my $noop;
 my $production;
 my @singles;
-my $und;
 my $verbose;
 my $sys;
 
@@ -60,7 +58,6 @@ die 'Terminating' unless GetOptions(
            'n'    => \$noop,
            'p'    => \$production,
            's:s@' => \@singles,
-           'u'    => \$und,
            'v+'   => \$verbose,
            'x:s'  => \$sys);
 $DLPS_DEV = undef if $production;
@@ -100,16 +97,11 @@ if (scalar @ARGV)
   }
 }
 
-my $before = $crms->GetCandidatesSize();
+my $before = $crms->GetCandidatesSize(undef, 1);
 if ($candidates)
 {
   print "Checking candidates...\n";
-  CheckTable('candidates', $all, $start, $end, \@singles);
-}
-if ($und)
-{
-  print "Checking und...\n";
-  CheckTable('und', $all, $start, $end, \@singles);
+  CheckCandidates($all, $start, $end, \@singles);
 }
 if ($init)
 {
@@ -118,33 +110,31 @@ if ($init)
 }
 if (!$noop)
 {
-  my $after = $crms->GetCandidatesSize();
+  my $after = $crms->GetCandidatesSize(undef, 1);
   printf "Change to candidates: %d\n", $after-$before;
   my $sql = 'INSERT INTO candidatesrecord (addedamount) VALUES (?)';
   $crms->PrepareSubmitSql($sql, $after-$before);
 }
 
-sub CheckTable
+sub CheckCandidates
 {
-  my $table   = shift;
   my $all     = shift;
   my $start   = shift;
   my $end     = shift;
   my $singles = shift;
-  
-  my $sql = 'SELECT id FROM ' . $table;
+
+  my $sql = 'SELECT id FROM candidates';
   my @restrict = ();
-  push @restrict, 'src!="gov"' if $table eq 'und';
   push @restrict, "(time>'$start 00:00:00' AND time<='$end 23:59:59')" unless $all;
   $sql .= ' WHERE ' . join ' AND ', @restrict if scalar @restrict;
   $sql .= ' ORDER BY time ASC';
   my @singles = @{$singles};
   if (@singles && scalar @singles)
   {
-    $sql = sprintf("SELECT id FROM $table WHERE id in ('%s') ORDER BY id", join "','", @singles);
+    $sql = sprintf("SELECT id FROM candidates WHERE id in ('%s') ORDER BY id", join "','", @singles);
   }
   print "$sql\n" if $verbose > 0;
-  my $ref = $self->SelectAll($sql);
+  my $ref = $crms->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];

@@ -2,8 +2,8 @@
 
 my $DLXSROOT;
 my $DLPS_DEV;
-BEGIN 
-{ 
+BEGIN
+{
   $DLXSROOT = $ENV{'DLXSROOT'};
   $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');

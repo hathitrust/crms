@@ -2,8 +2,8 @@
 
 my $DLXSROOT;
 my $DLPS_DEV;
-BEGIN 
-{ 
+BEGIN
+{
   $DLXSROOT = $ENV{'DLXSROOT'};
   $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
@@ -126,9 +126,9 @@ sub ProcessFile
       printf("Doing a rereport? %s\n", ($alt)? 'yes':'no') if $verbose;
     }
     my $j = 0;
-    my ( $id, $title, $year, $cDate, $attr, $reason, $renDate, 
+    my ( $id, $title, $year, $cDate, $attr, $reason, $renDate,
          $renNum, $date, $user, $note, $category, $status );
-    # $alt indicates file 2 
+    # $alt indicates file 2
     $id      = "mdp." . $parts[0];
     $title   = $parts[2];
     $year    = $parts[3];
@@ -210,7 +210,7 @@ sub ProcessFile
       printf("SubmitHistReview(%s)\n", join ', ', ($id, $user, $date, $attr, $reason, $renNum, $renDate, $note, $category, $status));
     }
     my $rc = $crms->SubmitHistReview($id, $user, $date, $attr, $reason, $renNum, $renDate, $note, $category, $status, ($alt)? 2:0, 1, 'legacy', undef, $noop);
-    if ( ! $rc ) 
+    if (! $rc)
     {
       my $errors = $crms->GetErrors();
       map { print "Error: $_\n"; } ( @{$errors} );

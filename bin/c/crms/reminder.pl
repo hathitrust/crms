@@ -4,10 +4,10 @@
 
 my $DLXSROOT;
 my $DLPS_DEV;
-BEGIN 
-{ 
-  $DLXSROOT = $ENV{'DLXSROOT'}; 
-  $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+BEGIN
+{
+  $DLXSROOT = $ENV{'DLXSROOT'};
+  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -69,7 +69,7 @@ Automated Reminder: CRMS Review Time - 7 Days out of the system
 
 The CRMS system indicates you have not reviewed in over a week.  Please notify us if there has been a change in your time commitment or availability on the CRMS copyright review project.
 Time missed due to vacation and illness does not need to be made up, but please inform us of extended absences.  If you have already done so, thank you! This automated email reminder will run anyway.
- 
+
 -- If you have any questions about your CRMS time commitment, please check with your supervisor.
 For additional questions or assistance, contact the CRMS Team:
 

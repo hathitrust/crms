@@ -4,10 +4,10 @@
 
 my $DLXSROOT;
 my $DLPS_DEV;
-BEGIN 
-{ 
-  $DLXSROOT = $ENV{'DLXSROOT'}; 
-  $DLPS_DEV = $ENV{'DLPS_DEV'}; 
+BEGIN
+{
+  $DLXSROOT = $ENV{'DLXSROOT'};
+  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -18,7 +18,7 @@ use Getopt::Long;
 use Mail::Sender;
 
 my $usage = <<'END';
-USAGE: $0 [-hnpqv] [-d DATE][-m USER [-m USER...]] [-x SYS]
+USAGE: $0 [-hnpqv] [-d DATE][-m USER [-m USER...]]
 
 Sends weekly activity reports to all active reviewers.
 
@@ -29,7 +29,6 @@ Sends weekly activity reports to all active reviewers.
 -p       Run in production.
 -q       Send only to addresses specified via the -m flag.
 -v       Be verbose.
--x SYS   Set SYS as the system to execute.
 END
 
 my $date;
@@ -49,8 +48,7 @@ die 'Terminating' unless GetOptions('d:s' => \$date,
            'n'    => \$noop,
            'p'    => \$production,
            'q'    => \$quiet,
-           'v+'   => \$verbose,
-           'x:s'  => \$sys);
+           'v+'   => \$verbose);
 $DLPS_DEV = undef if $production;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
@@ -61,7 +59,14 @@ $date .= ' 00:00:00' if defined $date and $date !~ m/\d\d:\d\d:\d\d$/;
 
 my $crms = CRMS->new(
     logFile => $DLXSROOT . '/prep/c/crms/weekly_hist.txt',
-    sys     => $sys,
+    sys     => 'crmsworld',
+    verbose => $verbose,
+    root    => $DLXSROOT,
+    dev     => $DLPS_DEV
+);
+my $crmsUS = CRMS->new(
+    logFile => $DLXSROOT . '/prep/c/crms/weekly_hist.txt',
+    sys     => 'crms',
     verbose => $verbose,
     root    => $DLXSROOT,
     dev     => $DLPS_DEV
@@ -76,8 +81,9 @@ my $system = $crms->System();
 
 my $msg = $crms->StartHTML();
 $msg .= <<'END';
-<h3>Total reviews this week: __TOTEL_THIS_WEEK__</h3>
-<h3>Total reviews last week: __TOTEL_LAST_WEEK__</h3>
+<h2>CRMS-World</h2>
+<h3>Total reviews this week: __TOTAL_THIS_WEEK__</h3>
+<h3>Total reviews last week: __TOTAL_LAST_WEEK__</h3>
 <h3>We did __PERCENT__ (__COUNT__) out of our weekly target of __TARGET__ determinations.</h3>
 <table style="border:1px solid #000000;border-collapse:collapse;">
 <tr><th style="background-color:#000000;color:#FFFFFF;padding:4px 20px 2px 6px;">Total by Institution</th>
@@ -87,8 +93,19 @@ $msg .= <<'END';
 __TABLE__
 </table>
 <h4>keden-reviewer: __KEDEN_COUNT__</h4>
+<h2>CRMS-US</h2>
+<h3>Total reviews this week: __TOTAL_THIS_WEEK2__</h3>
+<h3>Total reviews last week: __TOTAL_LAST_WEEK2__</h3>
+<table style="border:1px solid #000000;border-collapse:collapse;">
+<tr><th style="background-color:#000000;color:#FFFFFF;padding:4px 20px 2px 6px;">Total by Institution</th>
+    <th style="background-color:#000000;color:#FFFFFF;padding:4px 20px 2px 6px;">this week</th>
+    <th style="background-color:#000000;color:#FFFFFF;padding:4px 20px 2px 6px;">last week</th>
+</tr>
+__TABLE2__
+</table>
 END
 my $table = '';
+my $table2 = '';
 my $sql = 'SELECT NOW()';
 my $now = $crms->SimpleSqlGet($sql);
 $now = $date if defined $date;
@@ -103,12 +120,12 @@ my $lastn = $crms->SimpleSqlGet($sql, $startLast, $startThis);
 $sql = 'SELECT COUNT(*) FROM reviews WHERE time>=? AND time<?';
 $thisn += $crms->SimpleSqlGet($sql, $startThis, $now);
 $lastn += $crms->SimpleSqlGet($sql, $startLast, $startThis);
-$msg =~ s/__TOTEL_THIS_WEEK__/$thisn/;
-$msg =~ s/__TOTEL_LAST_WEEK__/$lastn/;
+$msg =~ s/__TOTAL_THIS_WEEK__/$thisn/;
+$msg =~ s/__TOTAL_LAST_WEEK__/$lastn/;
 
 $sql = 'SELECT id,shortname FROM institutions'.
        ' WHERE id IN (SELECT DISTINCT institution FROM users'.
-       '  WHERE reviewer+advanced+expert>0)'. 
+       '  WHERE reviewer+advanced+expert>0)'.
        ' ORDER BY shortname ASC';
 my $ref = $crms->SelectAll($sql);
 foreach my $row (@{$ref})
@@ -132,6 +149,41 @@ foreach my $row (@{$ref})
             "<td style='border:1px solid #000000;'>$lastn</td></tr>\n";
 }
 $msg =~ s/__TABLE__/$table/;
+$sql = 'SELECT COUNT(*) FROM historicalreviews WHERE time>=? AND time<? AND user!="autocrms"';
+$thisn = $crmsUS->SimpleSqlGet($sql, $startThis, $now);
+$lastn = $crmsUS->SimpleSqlGet($sql, $startLast, $startThis);
+$sql = 'SELECT COUNT(*) FROM reviews WHERE time>=? AND time<?';
+$thisn += $crmsUS->SimpleSqlGet($sql, $startThis, $now);
+$lastn += $crmsUS->SimpleSqlGet($sql, $startLast, $startThis);
+$msg =~ s/__TOTAL_THIS_WEEK2__/$thisn/;
+$msg =~ s/__TOTAL_LAST_WEEK2__/$lastn/;
+$table = '';
+$sql = 'SELECT id,shortname FROM institutions'.
+       ' WHERE id IN (SELECT DISTINCT institution FROM users'.
+       '  WHERE reviewer+advanced+expert>0)'.
+       ' ORDER BY shortname ASC';
+$ref = $crmsUS->SelectAll($sql);
+foreach my $row (@{$ref})
+{
+  my $id = $row->[0];
+  my $name = $row->[1];
+  $sql = 'SELECT COUNT(*) FROM historicalreviews r INNER JOIN users u ON r.user=u.id'.
+         ' INNER JOIN institutions i ON u.institution=i.id'.
+         ' WHERE i.id=? AND r.time>=? AND r.time<?'.
+         ' AND u.reviewer+u.advanced+u.expert>0';
+  $thisn = $crmsUS->SimpleSqlGet($sql, $id, $startThis, $now);
+  $lastn = $crmsUS->SimpleSqlGet($sql, $id, $startLast, $startThis);
+  $sql = 'SELECT COUNT(*) FROM reviews r INNER JOIN users u ON r.user=u.id'.
+         ' INNER JOIN institutions i ON u.institution=i.id'.
+         ' WHERE i.id=? AND r.time>=? AND r.time<?'.
+         ' AND u.reviewer+u.advanced+u.expert>0';
+  $thisn += $crmsUS->SimpleSqlGet($sql, $id, $startThis, $now);
+  $lastn += $crmsUS->SimpleSqlGet($sql, $id, $startLast, $startThis);
+  $table .= "<tr><td style='border:1px solid #000000;'>$name</td>".
+            "<td style='border:1px solid #000000;'>$thisn</td>".
+            "<td style='border:1px solid #000000;'>$lastn</td></tr>\n";
+}
+$msg =~ s/__TABLE2__/$table/;
 
 $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE time>=? AND time<? AND user="keden-reviewer"';
 my $kn = $crms->SimpleSqlGet($sql, $startThis, $now);
@@ -139,7 +191,7 @@ $sql = 'SELECT COUNT(*) FROM reviews WHERE time>=? AND time<? AND user="keden-re
 $kn += $crms->SimpleSqlGet($sql, $startThis, $now);
 $msg =~ s/__KEDEN_COUNT__/$kn/i;
 
-$sql = 'SELECT COUNT(*) FROM exportdata WHERE src="candidates" AND time>=? AND time<?';
+$sql = 'SELECT COUNT(*) FROM exportdata WHERE src!="inherited" AND time>=? AND time<?';
 my $count = $crms->SimpleSqlGet($sql, $startThis, $now);
 # FIXME: add AND filter IS NULL
 $sql = 'SELECT COUNT(*)/(DATEDIFF("2015-11-30 23:59:59", ?)/7) FROM candidates WHERE time<"2014-12-01"';
@@ -157,11 +209,9 @@ $msg .= sprintf('<span style="font-size:.9em;">Report for week %s to %s, compare
 $msg .= '</body></html>';
 my $title = sprintf '%s %sWednesday Data Report',
                     $system, ($DLPS_DEV)? 'Dev ':'';
-my $list = 'crms-world-reviewers@umich.edu';
-$list = 'ccheckers@umich.edu' unless $crms->Sys() eq 'crmsworld';
-push @mails, $list unless $quiet;
+push @mails, $crms->GetSystemVar('mailingList') unless $quiet;
+push @mails, $crmsUS->GetSystemVar('mailingList') unless $quiet;
 my $to = join ',', @mails;
-
 if ($noop)
 {
   print "No-op set; not sending e-mail to $to\n" if $verbose;
