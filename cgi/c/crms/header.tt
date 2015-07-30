@@ -80,13 +80,13 @@ function ChatWindow()
       <div style="float:right;">
         <table class="exportStats">
           <tr>
-            <th nowrap="nowrap" style="text-align:right;">
+            <th class="nowrap" style="text-align:right;">
               Hello&nbsp;[% crms.GetUserName().replace(" ","&nbsp;") %]&nbsp;&nbsp;
               <a href="[% crms.Sysify('crms?p=Logout') %]" class="header">logout</a>
             </th>
           </tr>
           <tr>
-            <th nowrap="nowrap" style="text-align:right;">
+            <th class="nowrap" style="text-align:right;">
               [% experts = crms.GetSystemVar("expertsEmail") %]
               [% IF experts %]
                 <a href="mailto:[% experts %]?subject=CRMS%20Feedback" class="header">
