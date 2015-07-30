@@ -13,12 +13,10 @@
   <div class="reviewBlue">
   <table class="id">
     <tr>
-	    <td class="display" style="text-align:left;" colspan="4">
+	    <td class="display" style="text-align:left;" colspan="2">
 	      <strong>HathiTrust Options:</strong>
       </td>
     </tr>
-    <tr><td colspan="4"></td></tr>
-    <tr><td colspan="4"></td></tr>
     <tr>
       <td class="display" style="text-align:left;">Size:</td>
       <td>
@@ -123,7 +121,8 @@
                style="margin:0px;padding:1px;background-color:#d0dee6;"/>
       [% ELSE %]
         <input type="checkbox" id="renewalFieldCheckbox" name="renNum"[% (renNum)? ' checked="checked"':'' %]
-               onchange="ToggleADD();PredictRights('[% barcode %]');">&nbsp;Pub Date</input>
+               onchange="ToggleADD();PredictRights('[% barcode %]');"/>
+        <label for="renewalFieldCheckbox">&nbsp;Pub Date</label>
       [% END %]
       </td>
       <td>
@@ -140,7 +139,6 @@
         [% END %]
       </td>
     </tr>
-    <tr>
   </table>
   </div>
 [% project = crms.GetProject(barcode) %]
@@ -180,7 +178,8 @@
       [% id = right.0 %]
       [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
       <td style="width:50%;">
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% n %]"
+        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" 
+              [% IF n < 10 %]accesskey="[% n %]"[% END %]
               [% IF select == id %] checked="checked"[% END %]/>
         <label for="[% 'r' _ id %]">[% ar %] ([% n %])</label>
       </td>
@@ -191,7 +190,8 @@
         [% n = j+1 %]
         [% id = right.0 %]
         [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% n %]"
+        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]"
+              [% IF n < 10 %]accesskey="[% n %]"[% END %]
               [% IF select == id %] checked="checked"[% END %]/>
         <label for="[% 'r' _ id %]">[% ar %] ([% n %])</label>
       [% END %]
@@ -215,7 +215,8 @@
       [% id = right.0 %]
       [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
       <td style="width:50%;">
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% m %]"
+        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]"
+              [% IF m < 10 %]accesskey="[% m %]"[% END %]
               [% IF select == id %] checked="checked"[% END %]/>
         <label for="[% 'r' _ id %]">[% ar %] ([% m %])</label>
       </td>
@@ -226,7 +227,8 @@
         [% m = n+j+1 %]
         [% id = right.0 %]
         [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% m %]"
+        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]"
+              [% IF m < 10 %]accesskey="[% m %]"[% END %]
               [% IF select == id %] checked="checked"[% END %]/>
         <label for="[% 'r' _ id %]">[% ar %] ([% m %])</label>
       [% END %]
@@ -265,7 +267,7 @@
   [% IF expert %]
     <tr>
       [% checked = (swiss || ((status == 2 || status == 3) && crms.GetSystemVar('swissByDefault'))) %]
-      <td style="text-align:left;" width="28">
+      <td style="text-align:left;">
         <input type="checkbox" id="swiss" name="swiss" [% (checked)? 'checked="checked"':'' %]/>
       </td>
       <td><label for="swiss">Do not invalidate other reviews<br/>for this volume</label></td>

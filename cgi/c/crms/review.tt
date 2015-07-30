@@ -25,7 +25,7 @@
   [% END %]
   [% IF expert && crms.HasItemBeenReviewedByAnotherExpert(barcode,user) %]
     <h3>Item has already been reviewed by another expert.</h3>
-    <br/><a href="JavaScript:window.close()">Close</a>
+    <br/><a href="javascript:window.close()">Close</a>
     [% STOP %]
   [% END %]
   [% IF NOT expert %]
@@ -34,7 +34,7 @@
   [% err = crms.LockItem(barcode, user, expert) %]
   [% IF err != 0 %]
     <h3>[% err %].</h3>
-    <br/><a href="JavaScript:window.close()">Close</a>
+    <br/><a href="javascript:window.close()">Close</a>
     [% STOP %]
   [% END %]
 [% END %]
@@ -97,11 +97,13 @@
           <td style="text-align:left;padding-left:8px;"><strong>Hello [% userName %]</strong></td>
         </tr>
         <tr>
-          <td style="text-align:left;padding-left:8px;"><a href="[% homeLink %]">Home</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="crms?p=Logout;sys=$sys">Logout</a></td>
+          <td style="text-align:left;padding-left:8px;">
+            <a href="[% homeLink %]">Home</a>
+            &nbsp;&nbsp;&nbsp;&nbsp;<a href="crms?p=Logout;sys=$sys">Logout</a>
+          </td>
         </tr>
-        
+        [% IF 0 #crms.WhereAmI() != 'Training' %]
         <tr>
-          [% IF 0 #crms.WhereAmI() != 'Training' %]
             [% prog = crms.GetUserProgress(user) %]
             [% IF prog %]
               <td><b>[% FILTER format('%.1f') %][% (prog * 100.0) %][% END %]%</b></td>
@@ -114,11 +116,8 @@
                 </div>
               </td>
             [% END %]
-          [% END %]
         </tr>
-        
-        <tr><td/></tr>
-        <tr><td/></tr>
+        [% END %]
         <tr>
           <td colspan="2">
             <select title="Select Help Documentation" class="review"
@@ -161,6 +160,7 @@
           <th>View 1:</th>
           <td>
             <select title="Search 1" class="review" id="search1Select" onchange="changeFrame1(1);" style="float:right;">
+            [% optopen = 0 %]
             [% selectit = 0 %]
             [% FOREACH src IN sources %]
               [% IF src.2 %]
@@ -171,9 +171,12 @@
                 [% END %]
                 <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
               [% ELSE %]
-                <optgroup label="[% src.1 %]"/>
+                [% IF optopen == 1 %]</optgroup>[% END %]
+                <optgroup label="[% src.1 %]">
+                [% optopen = 1 %]
               [% END %]
             [% END %]
+            [% IF optopen == 1 %]</optgroup>[% END %]
             </select>
           </td>
         </tr>
@@ -181,6 +184,7 @@
           <th>View 2:</th>
           <td>
             <select title="Search 2" class="review" id="search2Select" onchange="changeFrame2(1);" style="float:right;">
+            [% optopen = 0 %]
             [% selectit = 0 %]
             [% FOREACH src IN sources %]
               [% IF src.2 %]
@@ -191,14 +195,17 @@
                 [% END %]
                 <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
               [% ELSE %]
-                <optgroup label="[% src.1 %]"/>
+                [% IF optopen == 1 %]</optgroup>[% END %]
+                <optgroup label="[% src.1 %]">
+                [% optopen = 1 %]
               [% END %]
             [% END %]
+            [% IF optopen == 1 %]</optgroup>[% END %]
             </select>
           </td>
         </tr>
         <tr>
-          <td/>
+          <td></td>
           <td style="margin:0px;padding:0px;">
              <input type="button" class="reviewblue" value="Toggle View" onclick="flipFrame();" accesskey="o"
              style="margin:0px;padding:1px;background-color:#e0d6de;float:right;"/>
@@ -217,7 +224,7 @@
     [% FOREACH src IN sources %]
       [% IF src.3 && src.4 %]
         <a style="position:absolute;left:-999px;" href="#" accesskey="[% src.3 %]"
-           onfocus="document.getElementById('search[% src.4 %]Select').selectedIndex=[% realindex %];changeFrame[% src.4 %]();">.</a>
+           onfocus="document.getElementById('search[% src.4 %]Select').selectedIndex=[% realindex %];changeFrame[% src.4 %](1);">.</a>
       [% END %]
       [% IF src.2 %][% realindex = realindex + 1 %][% END %]
     [% END %]
@@ -307,7 +314,7 @@
                onblur="javascript:PredictDate('[% barcode %]');"/>
         </td></tr>
         <tr><th style="width:55%">Public Domain in:</th>
-          <td><b><span class="red" id=renewalSpan2></span></b></rd>
+          <td><b><span class="red" id=renewalSpan2></span></b></td>
         </tr>
       </table>
       [% END %]
@@ -315,12 +322,13 @@
   </div>
   [%# the frame (Stanford, HT, Cat...) %]
   <div class="divFrame" id="divFrame">
-    <iframe frameborder="0" width="100%" height="100%" id="tFrame" name="tFrame" src=""></iframe>
-    <iframe frameborder="0" width="100%" height="100%" id="bFrame" name="bFrame" src="" style="display:none;"></iframe>
+    <iframe id="tFrame" name="tFrame" src="about:blank" style="border:none;width:100%;height:100%;"></iframe>
+    <iframe id="bFrame" name="bFrame" src="about:blank" style="border:none;width:100%;height:100%;display:none;"></iframe>
   </div>
 </div>
 
 <script type="text/javascript">
+<!--
 window.onload = function(e)
 {
   changeFrame1();
@@ -343,6 +351,7 @@ window.onload = function(e)
     }
   [% END %]
 }
+-->
 </script>
 
 [% INCLUDE footer.tt %]
