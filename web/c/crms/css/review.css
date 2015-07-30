@@ -66,6 +66,9 @@ a.header:active  {color:#82CAFA;}
 }
 
 .rightscont  {
+  padding-top: 15px;
+  background-color: #d0dee6;
+  font-size:12px;
   text-align:left; 
   vertical-align:bottom;
   border-bottom: 1px solid #72859a;
@@ -94,7 +97,7 @@ a.header:active  {color:#82CAFA;}
 .plainLink { text-decoration: none; color: black;}
 
 input {
-  margin-left: 10px;
+  margin-left: 8px;
 }
 
 table {
@@ -190,12 +193,6 @@ table.display td {
   border-style: inset inset inset inset;
   border-color: white white white white;
   text-align:left;
-}
-
-div#RightsCont {
-  padding-top: 15px;
-  background-color: #d0dee6;
-  font-size:12px;
 }
 
 div#OneoffCont {
@@ -446,7 +443,7 @@ a.tip img {
 
 a.tip:hover {z-index:25;}
 
-a.tip span{display:none;}
+a.tip span {display:none;}
 
 a.tip:hover span {
   padding:.5em;
