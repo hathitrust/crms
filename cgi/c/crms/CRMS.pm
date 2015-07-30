@@ -7938,7 +7938,7 @@ sub Sources
       my $sysid = $self->BarcodeToId($id);
       $url =~ s/__SYSID__/$sysid/g;
     }
-    $url =~ s/\s+/+/g;
+    $url = CGI::escapeHTML($url);
     push @all, [$row->[0], $name, $url, $row->[3], $row->[4], $row->[5]];
   }
   return \@all;
