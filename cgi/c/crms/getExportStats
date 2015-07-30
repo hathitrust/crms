@@ -6,7 +6,8 @@ BEGIN { $DLXSROOT = $ENV{'DLXSROOT'}; $DLPS_DEV = $ENV{'DLPS_DEV'}; }
 use strict;
 use CGI;
 use CRMS;
-
+use JSON::XS;
+use Graph;
 my $cgi  = new CGI;
 my $user = $ENV{'REMOTE_USER'};
 my $sys =  $cgi->param('sys');
@@ -23,25 +24,26 @@ my $data = '';
 my $c = $cgi->param('c'); # Class or cumulative
 my $start = $cgi->param('startDate');
 my $end = $cgi->param('endDate');
-my $priority = $cgi->param('priority');
 my $percent = $cgi->param('percent');
 if ($type eq 'graph')
 {
   my $monthly = $cgi->param('monthly');
   my $title = $cgi->param('title');
-  if ($c == 3) { $data = $crms->CreateDeterminationsBreakdownGraph($start, $end, $monthly, $title, $percent); }
-  elsif ($c == 4) { $data = $crms->CreateCandidatesGraph(); }
-  elsif ($c == 5) { $data = $crms->CreateCountriesGraph(); }
-  elsif ($c == 6) { $data = $crms->CreateUndGraph(); }
-  elsif ($c == 7) { $data = $crms->CreateNamespaceGraph(); }
-  elsif ($c == 9) { $data = $crms->CreateReviewInstitutionGraph(); }
+  if ($c == 0) { $data = Graph::CreateExportGraph($crms); }
+  elsif ($c == 1) { $data = Graph::CreateExportBreakdownGraph($crms); }
+  elsif ($c == 2) { $data = Graph::CreateExportsPieChart($crms); }
+  elsif ($c == 3) { $data = Graph::CreateDeterminationsBreakdownGraph($crms); }
+  elsif ($c == 4) { $data = Graph::CreateCandidatesGraph($crms); }
+  elsif ($c == 5) { $data = Graph::CreateCountriesGraph($crms); }
+  elsif ($c == 6) { $data = Graph::CreateUndGraph($crms); }
+  elsif ($c == 7) { $data = Graph::CreateNamespaceGraph($crms); }
+  elsif ($c == 9) { $data = Graph::CreateReviewInstitutionGraph($crms); }
   elsif ($c == 10)
   {
     my $type2 = $cgi->param('type2');
     my @users = $cgi->param('user');
-    $data = $crms->CreateReviewerGraph($type2, $start, $end, @users);
+    $data = Graph::CreateReviewerGraph($crms, $type2, $start, $end, @users);
   }
-  else { $data = $crms->CreateExportGraph($c, $start, $end, undef, $priority); }
 }
 else
 {
@@ -51,7 +53,8 @@ else
 if ( $data eq '' ) { print $cgi->header( -status => "400" ); }
 else
 {
-  print $cgi->header(-type => 'text/plain', -charset => 'utf-8');
-  print $data;
+  my $json = JSON::XS->new->utf8->encode($data);
+  print $cgi->header('application/json');
+  print $json;
 }
 my @users = $cgi->param('user');
