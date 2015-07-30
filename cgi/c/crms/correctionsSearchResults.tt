@@ -29,7 +29,7 @@
   [% pagenum = ref.page %]
   [% of = ref.of %]
   [% items = ref.rows %]
-  <a name="results"></a>
+  <a id="results"></a>
   <p><b>Found $total, page $pagenum of $of</b></p>
 
   [% IF NOT offset %] [% offset = 0 %] [% END %]
