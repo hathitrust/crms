@@ -1,9 +1,9 @@
-[% page = cgi.param('p') %]
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <link rel="icon" type="image/png" href="[% crms.GetSystemVar('favicon') %]"/>
+    <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
     <meta http-equiv="Content-Script-Type" content="text/javascript"/>
     <meta http-equiv="Content-Style-Type" content="text/css"/>
     <script type="text/javascript" src="/c/crms/js/common.js"></script>
@@ -16,14 +16,13 @@ var gSys = '[% crms.Sys() %]';
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
     [% IF page == 'review' OR page == 'corrections' OR page == 'oneoff' %]
       <script type="text/javascript" src="/c/crms/js/review.js"></script>
-    [% ELSE %]
-      <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
     [% END %]
     [% where = crms.WhereAmI() %]
     [% IF where %][% title = title _ ' - ' _ where %][% END %]
     <title>[% title %] - [% crms.PageToEnglish(page) %]</title>
   </head>
   <body>
+[% page = cgi.param('p') %]
 [% r = crms.GetSystemStatus() %]
 
 [% IF page != 'review' && page != 'corrections' && page != 'oneoff' %]
