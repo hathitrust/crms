@@ -5,8 +5,7 @@ use warnings;
 
 sub HexDump
 {
-  my $self = shift;
-  $_       = shift;
+  $_ = shift;
 
   my $offset = 0;
   my(@array,$format);
