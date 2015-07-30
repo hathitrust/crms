@@ -6,8 +6,8 @@
     <link rel="icon" type="image/png" href="[% crms.GetSystemVar('favicon') %]"/>
     <meta http-equiv="Content-Script-Type" content="text/javascript"/>
     <meta http-equiv="Content-Style-Type" content="text/css"/>
-    <script type="text/javascript" src="/c/crms/common.js"></script>
-    <script type="text/javascript" src="/c/crms/menu.js"></script>
+    <script type="text/javascript" src="/c/crms/js/common.js"></script>
+    <script type="text/javascript" src="/c/crms/js/menu.js"></script>
     <script type="text/javascript">
 <!--
 var gSys = '[% crms.Sys() %]';
@@ -15,7 +15,7 @@ var gSys = '[% crms.Sys() %]';
     </script>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
     [% IF page == 'review' OR page == 'corrections' OR page == 'oneoff' %]
-      [% INCLUDE reviewJs.tt %]
+      <script type="text/javascript" src="/c/crms/js/review.js"></script>
     [% ELSE %]
       <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
     [% END %]
