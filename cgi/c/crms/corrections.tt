@@ -134,6 +134,11 @@
              style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
           </td>
         </tr>
+        [% viafwarn = crms.VIAFWarning(barcode) %]
+        [% IF viafwarn %]
+          [% viafwarn = "Warning: possible foreign author: " _ viafwarn %]
+          <tr><td colspan="2"><span class="red"><b>$viafwarn</b></span></td></tr>
+        [% END %]
       </table>
     </div>
     [% realindex = 0 %]
