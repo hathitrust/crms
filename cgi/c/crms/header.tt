@@ -7,7 +7,6 @@
     <meta http-equiv="Content-Script-Type" content="text/javascript"/>
     <meta http-equiv="Content-Style-Type" content="text/css"/>
     <script type="text/javascript" src="/c/crms/js/common.js"></script>
-    <script type="text/javascript" src="/c/crms/js/menu.js"></script>
     <script type="text/javascript">
 <!--
 var gSys = '[% crms.Sys() %]';
