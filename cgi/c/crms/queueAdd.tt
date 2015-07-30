@@ -24,7 +24,7 @@
 <!--
 function CheckAllTx(box,id)
 {
-  var q = 'input[id*="'+id+'"]';
+  var q = '.tx_'+id;
 	var aa=document.querySelectorAll(q);
 	for (var i=0; i < aa.length; i++) 
 	{
@@ -120,7 +120,6 @@ These items will take priority in the review process.
 [% IF ids %]
   <br/>
   <table class="exportStats" style="width:33%;">
-  [% id %]<br/>
   [% FOREACH id IN ids %]
     [% id = crms.Unescape(id) %]
     [% id = id.remove('(^\s+)|(\s+$)') %]
@@ -141,15 +140,15 @@ These items will take priority in the review process.
     [% status = status.substr(1, status.length()) %]
     [% IF err == 0 %]
       [% adds = adds + 1 %]
-      <td nowrap="nowrap">OK[% IF status.length() %]<span style='color:red;'> ($status)</span>[% END %]</td>
+      <td class="nowrap">OK[% IF status.length() %]<span style='color:red;'> ($status)</span>[% END %]</td>
     [% ELSIF err == 1 %]
-      <td nowrap="nowrap" style="color:red">Could not add: $status</td>
+      <td class="nowrap" style="color:red">Could not add: $status</td>
       [% skips = skips + 1 %]
     [% ELSIF err == 2 %]
-      <td nowrap="nowrap">Skipped: $status</td>
+      <td class="nowrap">Skipped: $status</td>
       [% skips = skips + 1 %]
     [% ELSIF err == 3 %]
-      <td nowrap="nowrap">OK: $status</td>
+      <td class="nowrap">OK: $status</td>
       [% already = already + 1 %]
     [% END %]
     </tr>
@@ -245,7 +244,7 @@ These items will take priority in the review process.
     </td>
     <td style="text-align:center"><input type="checkbox" name="vol_[% r.0 %]"
       [% IF tx %]
-        id="tx_[% tx %]"
+        class="tx_[% tx %]"
       [% END %]
       /></td>
     <td>
@@ -339,7 +338,7 @@ These items will take priority in the review process.
       <td>[% crms.CurrentRightsQuery(r.0) %]</td>
       <td style="text-align:center"><input type="checkbox" name="vol_[% r.0 %]"
       [% IF tx %]
-        id="tx_[% tx %]"
+        class="tx_[% tx %]"
       [% END %]
       /></td>
     <td>
