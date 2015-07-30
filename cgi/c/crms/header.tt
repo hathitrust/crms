@@ -11,47 +11,6 @@
     <script type="text/javascript">
 <!--
 var gSys = '[% crms.Sys() %]';
-
-function toggleVisibility(id)
-{
-  var me = document.getElementById(id);
-  if (me == null)
-  {
-    //alert("Can't get " + id);
-  }
-  else
-  {
-    if (me.style.display!="none") {me.style.display="none";}
-    else {me.style.display="";}
-  }
-}
-
-function selMenuItem(id, value)
-{
-  var me = document.getElementById(id);
-  if (me == null)
-  {
-    //alert("Can't get " + id);
-  }
-  else
-  {
-    for (var i = 0; i < me.length; i++)
-    {
-      if (me.options[i].value == value)
-      {
-        me.selectedIndex = i;
-        break;
-      }
-    }
-  }
-}
-
-function ChatWindow()
-{
-  w = window.open(
-  '/c/crms/chat.html','CRMS Chat',
-  'height=500,width=300,left=10,top=10,resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=no,directories=no,status=yes')
-}
 -->
     </script>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
