@@ -27,7 +27,6 @@
 may not be up-to-date.</h3>
 [% END %]
 
-<script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
 [% recs = recs.replace('\D','') %]
 [% IF NOT recs %]
   [% recs = cgi.cookie('recs') or 20 %]
@@ -322,7 +321,7 @@ function VerifyDelete(formid)
           <td><a href='[% crms.LinkToRetrieve(review.inheriting) %]' target='_blank'>[% review.inheriting %]</a></td>
           <td><a href='[% crms.LinkToCatalog(review.sysid) %]'target='_blank'>[% review.sysid %]</a></td>
           <td>[% review.rights %]</td>
-          <td nowrap='nowrap'>[% review.newrights %]</td>
+          <td class='nowrap'>[% review.newrights %]</td>
           <td>[% (review.change==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
         [% IF NOT auto %]
           <td>[% (review.incrms==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
