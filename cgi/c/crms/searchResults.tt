@@ -62,7 +62,7 @@ function CheckAll(box,formid)
   [% pagenum = ref.page %]
   [% of = ref.of %]
   [% reviews = ref.rows %]
-  <a name="results"></a>
+  <a id="results"></a>
 
   <p><b>Found $Total review[% (Total==1)? "":"s"%] for $TotalVolumes volume[% (TotalVolumes==1)? "":"s"%], page $pagenum of $of</b></p>
 
@@ -93,7 +93,7 @@ function CheckAll(box,formid)
   [% END %]
   &nbsp;||&nbsp;
   [% IF doFirst %]
-  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0#results" %]">first page<a>
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0#results" %]">first page</a>
   [% ELSE %]
   <span class="disabledLink">first page</span>
   [% END %]
@@ -156,7 +156,7 @@ function CheckAll(box,formid)
   <table class="exportStats" style="width:100%;" id="resultsTable"><tr>
     <th>ID</th>
     [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
-      <th nowrap="nowrap" id="sysidth" style="display:[% (showSysID)? 'table-cell':'none' %];">System&nbsp;ID</th>
+      <th class="nowrap" id="sysidth" style="display:[% (showSysID)? 'table-cell':'none' %];">System&nbsp;ID</th>
     [% END %]
     <th>Title</th>
     <th>Author</th>
@@ -200,7 +200,7 @@ function CheckAll(box,formid)
         [% END %]
       [% END %]
       <tr style="background-color:[% active_color %];">
-        <td nowrap="nowrap">
+        <td class="nowrap">
         [% IF p == 'editReviews' || p == 'adminHolds' %]
           [% crms.DetailInfo(review.id, review.user, p, 1) %]
         [% ELSE %]
@@ -262,14 +262,14 @@ function CheckAll(box,formid)
         <td>[% crms.LinkNoteText(cgi.escapeHTML(review.note)) %]</td>
         [% IF crms.IsUserAdmin() %]<td>$review.priority</td>[% END %]
         [% IF p == 'adminHistoricalReviews' %]
-          <td align="center">
+          <td class="textcenter">
             [% icon = (review.validated)? ((review.validated == 2)? 'MinusIcon.png':'CheckIcon.png'):'XIcon.png' %]
             <img width="16" height="16" alt="Correctness" src="/c/crms/[% icon %]"/>
           </td>
         [% END %]
         [% IF crms.IsUserExpert() && p != 'undReviews' && p != 'expert' %]<td>$review.swiss</td>[% END %]
         [% IF p == 'undReviews' %]
-        <td align="center">
+        <td class="textcenter">
           [% IF first && !crms.IsLockedForOtherUser(review.id) %]
             <input type="checkbox" name="vol_[% review.id %]"/>
           [% END %]

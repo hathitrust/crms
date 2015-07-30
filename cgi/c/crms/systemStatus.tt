@@ -26,7 +26,7 @@
 </table><br/>
 
 
-<script language="javascript" type="text/javascript">
+<script type="text/javascript">
 function limitText(limitField, limitCount, limitNum)
 {
 	if (limitField.value.length > limitNum)
@@ -72,7 +72,7 @@ To display a custom message, or override the standard ones (<i>down</i>/<i>parti
   <input type="hidden" name="setAutoinherit" value="1"/>
   <table class="exportStats">
   <tr>
-  <td nowrap="nowrap">
+  <td class="nowrap">
   <input type="radio" name="autoinherit" value="enabled" [% autoinherit? 'checked="checked"':'' %]/> Enabled&nbsp;
   [% IF didSet && autoinherit %]<img width="16" height="16" alt="Check" src="/c/crms/CheckIcon.png"/>[% END %]<br/>
   <input type="radio" name="autoinherit" value="disabled" [% autoinherit? '':'checked="checked"' %]/> Disabled&nbsp;

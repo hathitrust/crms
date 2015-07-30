@@ -64,7 +64,7 @@
     </td>
   </tr>
   <tr>
-    <td nowrap="nowrap" colspan="2">
+    <td class="nowrap" colspan="2">
       <p>When these volumes are cleared, CRMS does the following:</p>
       <ul>
       <li>Removes all active reviews with priority &gt; 0.</li>
@@ -84,7 +84,7 @@
     </td>
   </tr>
   <tr>
-    <td nowrap="nowrap" colspan="2">
+    <td class="nowrap" colspan="2">
       <p>When these active reviews are cleared, CRMS does the following:</p>
       <ul>
       <li>Removes all active volumes with status 0-3 from queue.</li>

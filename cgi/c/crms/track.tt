@@ -22,7 +22,7 @@
     [% ids = crms.CRMSQuery(id) %]
     [% CALL crms.ClearErrors() %]
     [% IF id.search('\.') %]
-      [% sysid = crms.BarcodeToId(id, 1) %]
+      [% sysid = crms.BarcodeToId(id) %]
       [% CALL crms.ClearErrors() %]
     [% ELSE %]
       [% sysid = id %]
@@ -32,7 +32,7 @@
     [% parts = ids.0.split('__') %]
     <br/><br/>
     <table class="exportStats">
-      <tr><th colspan="2" class="major" nowrap="nowrap">
+      <tr><th colspan="2" class="major" class="nowrap">
         [% IF sysid %]
           [% link = crms.LinkToCatalog(sysid) %]
           <a style="color:white;" href="[% link %]" target="_blank">$sysid</a>
@@ -48,10 +48,10 @@
         [% END %]
       </th></tr>
       <tr>
-        <th style="white-space: nowrap">Volume id</th>
-        <th style="white-space: nowrap">Status</th></tr>
+        <th class="nowrap">Volume id</th>
+        <th class="nowrap">Status</th></tr>
       <tr>
-        <td style="white-space: nowrap">
+        <td class="nowrap">
           [% FOREACH id IN ids %]
             [% parts = id.split('__') %]
             [% url = crms.PTAddress(parts.0) %]
@@ -60,7 +60,7 @@
             </a><br/>
           [% END %]
         </td>
-        <td style="white-space: nowrap">
+        <td class="nowrap">
           [% FOREACH id IN ids %]
             [% parts = id.split('__') %][% parts.2 %]<br/>
           [% END %]
