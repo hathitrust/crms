@@ -8,18 +8,25 @@
     <meta http-equiv="Content-Style-Type" content="text/css"/>
     <script type="text/javascript" src="/c/crms/js/common.js"></script>
     <script type="text/javascript" src="/c/crms/js/datepicker.packed.js"></script>
+  [% page = cgi.param('p') %]
+  [% IF page == 'determinationStats' OR page == 'exportStats' OR page == 'reviewerActivity' %]
+    <script type="text/javascript" src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
+    <script type="text/javascript" src="https://code.highcharts.com/highcharts.js"></script>
+    [% IF page == 'reviewerActivity' %]
+      <script type="text/javascript" src="https://code.highcharts.com/modules/exporting.js"></script>
+    [% END %]
+  [% END %]
     <script type="text/javascript">
 <!--
 var gSys = '[% crms.Sys() %]';
 -->
     </script>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
-    [% page = cgi.param('p') %]
-    [% IF page == 'review' OR page == 'corrections' OR page == 'oneoff' %]
-      <script type="text/javascript" src="/c/crms/js/review.js"></script>
-    [% END %]
-    [% where = crms.WhereAmI() %]
-    [% IF where %][% title = title _ ' - ' _ where %][% END %]
+  [% IF page == 'review' OR page == 'corrections' OR page == 'oneoff' %]
+    <script type="text/javascript" src="/c/crms/js/review.js"></script>
+  [% END %]
+  [% where = crms.WhereAmI() %]
+  [% IF where %][% title = title _ ' - ' _ where %][% END %]
     <title>[% title %] - [% crms.PageToEnglish(page) %]</title>
   </head>
   <body>

@@ -1,41 +1,43 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" 
+          "http://www.w3.org/TR/html4/strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-<head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-  <title>CRMS Dashboard</title>
-  <!--<meta http-equiv="Content-Script-Type" content="text/javascript"/>-->
-  <!--<meta http-equiv="Content-Style-Type" content="text/css"/>-->
-  <!--script type="text/javascript" src="/c/crms/common.js"></script>-->
-  <!--<script type="text/javascript" src="/c/crms/menu.js"></script>-->
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <link rel="icon" type="image/png" href="[% crms.GetSystemVar('favicon') %]"/>
+    <title>CRMS Dashboard</title>
+    <script type="text/javascript" src="/c/crms/js/common.js"></script>
+    <script type="text/javascript" src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
+    <script type="text/javascript" src="https://code.highcharts.com/highcharts.js"></script>
 </head>
 <body>
 
-<script type="text/javascript" src="/c/crms/swfobject.js"></script>
 <script type="text/javascript">
 <!--
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "800", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=4') %]")});
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart1", "800", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=1&startDate=2009-07') %]")});
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart2", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=7') %]")});
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart3", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=2') %]")});
+	window.onload = function()
+	{
+	  try
+	  {
+      loadChart('chart0', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=4') %]");
+      loadChart('chart1', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=0') %]");
+      loadChart('chart2', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=7') %]");
+      loadChart('chart3', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=2') %]");
 [% IF crms.get('sys') == 'crmsworld' %]
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart4", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=5') %]")});
+      loadChart('chart4', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=5') %]");
 [% ELSE %]
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart4", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=6') %]")});
+      loadChart('chart4', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=6') %]");
 [% END %]
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart5", "400", "300", "9.0.0",
-                   "expressInstall.swf", {"data-file":escape("[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=9') %]")});
+      loadChart('chart5', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=9') %]");
+    }
+    catch (e)
+    {
+      alert('Problem loading chart: '+e);
+    }
+	}
 // -->
 </script>
 
-
-<table style="width:1600px;align:center;text-align:center;padding:0px; border-collapse:collapse">
+<table style="width:1600px;align:center;text-align:center;padding:0px; border-collapse:collapse"
+       summary="CRMS and IMLS logos.">
   <tr>
     <td style="width:566px;">
       <img src="[% crms.GetSystemVar('logo') %]" width="455" height="80" alt="CRMS Logo"/>
@@ -47,20 +49,22 @@ swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart5", "400", "300", "9.0.
   </tr>
 </table>
 
-<table style="width:1600px;align:center;text-align:center;padding:0px;border-collapse:collapse">
+[% #FIXME: break out these styles into dashboard.css %]
+<table style="width:1600px;align:center;text-align:center;padding:0px;border-collapse:collapse"
+       summary="Charts and graphs summarizing various CRMS trends and distributions.">
   <tr>
-    <td colspan="2"><div id="chart0"/></td>
-    <td colspan="2"><div id="chart1"/></td>
+    <td colspan="2"><div id="chart0" style="width:800px;height:300px;"></div></td>
+    <td colspan="2"><div id="chart1" style="width:800px;height:300px;"></div></td>
   </tr>
   <tr>
     <td colspan="2"><h4>Volumes in Candidates (estimated)</h4></td>
     <td colspan="2"><h4>Number of Exported Determinations</h4></td>
   </tr>
   <tr>
-    <td><div id="chart2"/></td>
-    <td><div id="chart3"/></td>
-    <td><div id="chart4"/></td>
-    <td><div id="chart5"/></td>
+    <td><div id="chart2" style="width:400px;height:300px;"></div></td>
+    <td><div id="chart3" style="width:400px;height:300px;"></div></td>
+    <td><div id="chart4" style="width:400px;height:300px;"></div></td>
+    <td><div id="chart5" style="width:400px;height:300px;"></div></td>
   </tr>
   <tr>
     <td><h4>Exported Determinations by Namespace</h4></td>

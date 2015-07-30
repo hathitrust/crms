@@ -5,33 +5,31 @@
 
 [% INCLUDE header.tt %]
 
-<script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
-<script type="text/javascript" src="/c/crms/swfobject.js"></script>
 <script type="text/javascript">
 <!--
 
 var graphURLBase = '/cgi/c/crms/getExportStats?type=graph;c=10;sys=' + gSys;
 var graphURL = graphURLBase;
-swfobject.embedSWF("/c/crms/open-flash-chart.swf", "chart0", "1000", "600", "9.0.0",
-                   "expressInstall.swf", {"data-file":graphURL});
 
-function reloadSWF()
+// Define a custom symbol path
+Highcharts.SVGRenderer.prototype.symbols.cross = function(x, y, w, h)
 {
-  ConstructURL();
-  findSWF('chart0').reload(graphURL);
+  return ['M', x, y, 'L', x + w, y + h, 'M', x + w, y, 'L', x, y + h, 'z'];
+};
+if (Highcharts.VMLRenderer)
+{
+  Highcharts.VMLRenderer.prototype.symbols.cross = Highcharts.SVGRenderer.prototype.symbols.cross;
 }
 
-function findSWF(movieName) {
-  if (navigator.appName.indexOf("Microsoft")!= -1) {
-    return window["ie_" + movieName];
-  } else {
-    return document[movieName];
-  }
+function reloadChart()
+{
+  ConstructURL();
+  loadChart('chart0', graphURL);
 }
 
 window.onload = function(e)
 {
-  reloadSWF();
+  reloadChart();
 }
 
 function ConstructURL()
@@ -61,7 +59,7 @@ function ConstructURL()
 	graphURL += ';endDate=' + end.value;
 }
 
-function CheckAllTx(box,id)
+function CheckAll(box,id)
 {
   var q = 'input[name="'+id+'"]';
 	var aa=document.querySelectorAll(q);
@@ -86,16 +84,6 @@ function checkInst(id)
 	else cb.checked = false;
 	//alert(id + ' ' + aa.length + ' ' + checked);
 }
- 
-function save_image(debug)
-{
-  var ofc = findSWF("chart0");
-  var img_win = window.open('', 'Reviewer Activity Chart');
-  img_win.document.write('<html><head><title>imagesave<\/title><\/head><body>');
-  img_win.document.write('<img src="data:image/png;base64,' + ofc.get_img_binary() + '" \/>');
-  img_win.document.write('<\/body><\/html>');
-  img_win.document.close();
-}
 // -->
 </script>
 
@@ -106,7 +94,7 @@ function save_image(debug)
     <label for="activityTypeMenu">Reviewer Activity: </label>
 <select title="Select Activity Type"
         class="review" id="activityTypeMenu"
-        onchange="reloadSWF('chart0')">
+        onchange="reloadChart('chart0')">
   <option value="0">Review Count</option>
   <option value="1">Time Reviewing (hours)</option>
   <option value="2">Invalidation Rate</option>
@@ -116,7 +104,7 @@ function save_image(debug)
 <label for="startDate" style="width:5em;float:left;">Start Date:</label>
 <input type="text" id="startDate" name="startDate" value="[% startDate %]"
        onclick="datePickerController.show('startDate');"
-       onblur="datePickerController.hide('startDate');reloadSWF('chart0');"/>
+       onblur="datePickerController.hide('startDate');reloadChart('chart0');"/>
 <script type="text/javascript">
 // <![CDATA[
   var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };
@@ -127,7 +115,7 @@ function save_image(debug)
 <br/>
 <label for="endDate" style="width:5em;float:left;">End Date:</label>
 <input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
-       onblur="datePickerController.hide('endDate');reloadSWF('chart0');"/>
+       onblur="datePickerController.hide('endDate');reloadChart('chart0');"/>
 <script type="text/javascript">
 // <![CDATA[
   var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };
@@ -137,7 +125,7 @@ function save_image(debug)
 <span class="smallText">(YYYY-MM-DD)</span>
 <br/>
 <br/>
-    <div id="chart0"/>
+    <div id="chart0" style="width:1000px;height:600px;"></div>
   </td>
   <td style="align:left;text-align:left;vertical-align:top">
     [% sql = "SELECT id,shortname FROM institutions WHERE id!=0 ORDER BY shortname ASC" %]
@@ -159,8 +147,8 @@ function save_image(debug)
           <label for="instCB_[% r.0 %]">[% r.1 %]</label>
           <input type="checkbox"
                  id="inst_[% r.0 %]"
-                 onclick="CheckAllTx(this,'inst_[% r.0 %]');"
-                 onchange="reloadSWF('chart0');"/>
+                 onclick="CheckAll(this,'inst_[% r.0 %]');"
+                 onchange="reloadChart('chart0');"/>
         </th></tr>
       [% END %]
       [% FOREACH h IN revs %]
@@ -169,7 +157,7 @@ function save_image(debug)
           [% name = h.name %]
           <td style="white-space:nowrap;">
             <input type="checkbox" class="userCB" name="inst_[% r.0 %]" id="[% id %]"
-                   onchange="checkInst('inst_[% r.0 %]');reloadSWF('chart0');"/>
+                   onchange="checkInst('inst_[% r.0 %]');reloadChart('chart0');"/>
             <label for="[% id %]">
               [% IF h.active == 0 %][% name = "<i>" _ name _ "</i>" %][% END %]
               [% name %]
