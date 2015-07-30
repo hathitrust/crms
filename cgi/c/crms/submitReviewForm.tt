@@ -13,14 +13,14 @@
   <div class="reviewBlue">
   <table class="id">
     <tr>
-	    <td class="display" align="left" colspan="4">
+	    <td class="display" style="text-align:left;" colspan="4">
 	      <strong>HathiTrust Options:</strong>
       </td>
     </tr>
-    <tr><td colspan="4"/></tr>
-    <tr><td colspan="4"/></tr>
+    <tr><td colspan="4"></td></tr>
+    <tr><td colspan="4"></td></tr>
     <tr>
-      <td class="display" align="left">Size:</td>
+      <td class="display" style="text-align:left;">Size:</td>
       <td>
         <select title="PageTurner Size" class="review" onchange="zoom(this,'mag');">
         [% percents = [50,75,100,125,150,200] %]
@@ -35,7 +35,7 @@
       </td>
     </tr>
     <tr>
-      <td class="display" align="left">View:</td>
+      <td class="display" style="text-align:left;">View:</td>
       <td>
         <select id="PTViewSelect" title="PageTurner View" class="review" onchange="zoom(this,'ptview');">
         [% views = ['image','1up','2up','thumb'] %]
@@ -67,9 +67,9 @@
       [% ELSE %]
         [% label = (renNum)? "Publication&nbsp;Date":"Author Death Date" %]
       [% END %]
-      <td nowrap="nowrap"><strong><label id="renewalFieldLabel" for="renewalField">
+      <td class="nowrap"><strong><label id="renewalFieldLabel" for="renewalField">
       [% label %]: </label></strong></td>
-      <td nowrap="nowrap">
+      <td class="nowrap">
       [% IF ren %]
         <input id="renewalField" title="[% label %]" type="text" name="renNum"
                value="[% renNum %]" size="8"
@@ -105,10 +105,10 @@
     [% IF 0 %]
       [% IF pubDate.match('^\d+-\d+$') %]
         <tr id="actualPubRow">
-          <td nowrap="nowrap"><strong><label id="renewalFieldLabel" for="renewalField">
+          <td class="nowrap"><strong><label id="renewalFieldLabel" for="renewalField">
             Actual Pub Date: </label></strong>
           </td>
-          <td nowrap="nowrap">
+          <td class="nowrap">
             <input id="actualPubDateField" title="Actual Pub Date" type="text"
                    name="actualPubDateField" size="6"
                    onblur="javascript:PredictRights('[% barcode %]');"/>
@@ -117,7 +117,7 @@
       [% END %]
     [% END %]
     <tr>
-      <td class="reviewGrey" align="left" style="margin:0px;padding:0px;">
+      <td class="reviewGrey" style="text-align:left;margin:0px;padding:0px;">
       [% IF ren %]
         <input type="button" value="Get Renewal Date" onclick="popRenewalDate();" accesskey="d" class="reviewblue"
                style="margin:0px;padding:1px;background-color:#d0dee6;"/>
@@ -319,7 +319,7 @@
 [% IF error %]
   <table class="ReviewError">
     <tr>
-      <td class="reviewGrey" align="left">
+      <td class="reviewGrey" style="text-align:left;">
         <strong style="color:red;">Error Message:</strong>
       </td>
     </tr>
