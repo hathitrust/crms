@@ -1,4 +1,4 @@
-[% IF NOT select %] 
+[% IF NOT select %]
 [% select = crms.GetAttrReasonCode(barcode, user) %]
 [% END %]
 

@@ -86,7 +86,7 @@
 
       [% IF prev_id == '' %][% prev_id = item.id %][% END %]
 
-      [% IF prev_id != item.id %] 
+      [% IF prev_id != item.id %]
         [% IF active_color == color_gray  %]
           [% active_color = color_white %]
         [% ELSIF active_color == color_white %]

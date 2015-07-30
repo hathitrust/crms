@@ -26,7 +26,7 @@ function CheckAllTx(box,id)
 {
   var q = '.tx_'+id;
 	var aa=document.querySelectorAll(q);
-	for (var i=0; i < aa.length; i++) 
+	for (var i=0; i < aa.length; i++)
 	{
 	  aa[i].checked = box.checked;
 	}
@@ -197,7 +197,7 @@ These items will take priority in the review process.
       [% prev_id = id %]
       [% changed = 1 %]
     [% END %]
-    [% IF prev_id != id %] 
+    [% IF prev_id != id %]
       [% IF active_color == color_gray  %]
         [% active_color = color_white %]
       [% ELSIF active_color == color_white %]

@@ -73,7 +73,7 @@ Restrict selection:
        onblur="datePickerController.hide('startDate');"/>
 <script type="text/javascript">
 // <![CDATA[
-  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
+  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };
   datePickerController.createDatePicker(opts);
 // ]]>
 </script>
@@ -84,7 +84,7 @@ Restrict selection:
        onblur="datePickerController.hide('endDate');"/>
 <script type="text/javascript">
 // <![CDATA[
-  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };       
+  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };
   datePickerController.createDatePicker(opts);
 // ]]>
 </script>
@@ -145,7 +145,7 @@ inheriting volumes per page.
 function CheckAll(box,formid)
 {
 	var aa=document.getElementById(formid);
-	for (var i=0; i < aa.elements.length; i++) 
+	for (var i=0; i < aa.elements.length; i++)
 	{
 	  aa.elements[i].checked = box.checked;
 	}
@@ -155,7 +155,7 @@ function CountChecked(formid)
 {
 	var aa=document.getElementById(formid);
   var n = 0;
-	for (var i=0; i < aa.elements.length; i++) 
+	for (var i=0; i < aa.elements.length; i++)
 	{
     var box2 = aa.elements[i];
 	  if (box2.checked) n++;

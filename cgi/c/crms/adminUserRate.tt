@@ -14,7 +14,7 @@
   [% crms.CreateStatsReport(p, 'all', 1, 1, 0, 1) %]
   <br/><br/>
   [% users = crms.GetUsers(1) %]
-  [% users.unshift('all') %] 
+  [% users.unshift('all') %]
   [% FOREACH id IN users %]
     [% IF id.match('rereport') %][% NEXT %][% END %]
     [% years = crms.GetStatsYears(id) %]
