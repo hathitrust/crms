@@ -97,7 +97,7 @@ sub CreateDeterminationsBreakdownGraph
 sub CreateCandidatesData
 {
   my $self = shift;
-  
+
   my $cnt = $self->GetCandidatesSize();
   my $sql = 'SELECT cd.ym,cd.cnt,ed.cnt FROM' .
             ' (SELECT EXTRACT(YEAR_MONTH FROM c.time) AS ym,SUM(c.addedamount) AS cnt FROM candidatesrecord c GROUP BY ym) cd' .
@@ -125,7 +125,7 @@ sub CreateCandidatesData
 sub CreateCandidatesGraph
 {
   my $self  = shift;
-  
+
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
               'tooltip'=>{'pointFormat'=>'<b>{point.y}</b>'},
               'xAxis'=>{'categories'=>[], 'labels'=>{'rotation'=>45}},
@@ -300,6 +300,7 @@ sub CreateReviewInstitutionGraph
   return \%data;
 }
 
+# FIXME: show percents in tooltips and Y axis for invalidation rate
 sub CreateReviewerGraph
 {
   my $self  = shift;

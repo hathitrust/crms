@@ -225,7 +225,7 @@ function VerifyDelete(formid)
   [% n = ref.n %]
   [% of = ref.of %]
   [% items = ref.rows %]
-  
+
   <form action="crms" id="checks">
     [% crms.Hiddenify(cgi) %]
     <input type="checkbox" id='all' onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
@@ -247,7 +247,7 @@ function VerifyDelete(formid)
     [% doNext = (n < of) %]
     [% doFirst = (n > 1) %]
     [% doLast = (n < of) %]
-    
+
     [% IF doPrev %]
       <a href="?[% crms.URLify(cgi,'n') _ ";n=$prev" %]">
     [% ELSE %]
@@ -273,12 +273,12 @@ function VerifyDelete(formid)
     [% ELSE %]
       <span class="disabledLink">last page</span>
     [% END %]
-    
+
     [% color_white  = '#FFFFFF' %]
     [% color_gray   = '#FFCBCC' %]
     [% prev_id      = '' %]
     [% active_color = color_white %]
-    
+
     <table class="exportStats" style="width:100%;" id="resultsTable">
       <tr>
         <th>#</th>

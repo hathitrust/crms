@@ -37,18 +37,18 @@ function ConstructURL()
   graphURL = graphURLBase;
   var table = document.getElementById('userTable');
 	var aa=table.querySelectorAll('input.userCB');
-	for (var i=0; i < aa.length; i++) 
+	for (var i=0; i < aa.length; i++)
 	{
 	  var user = aa[i].id;
-    var res = user.replace(/__AT__/i, "@"); 
+    var res = user.replace(/__AT__/i, "@");
 	  if (aa[i].checked) graphURL += ';user=' + res;
 	}
 	table = document.getElementById('userTable1');
 	aa=table.querySelectorAll('input.userCB');
-	for (var i=0; i < aa.length; i++) 
+	for (var i=0; i < aa.length; i++)
 	{
 	  var user = aa[i].id;
-    var res = user.replace(/__AT__/i, "@"); 
+    var res = user.replace(/__AT__/i, "@");
 	  if (aa[i].checked) graphURL += ';user=' + res;
 	}
 	var menu = document.getElementById('activityTypeMenu');
@@ -63,7 +63,7 @@ function CheckAll(box,id)
 {
   var q = 'input[name="'+id+'"]';
 	var aa=document.querySelectorAll(q);
-	for (var i=0; i < aa.length; i++) 
+	for (var i=0; i < aa.length; i++)
 	{
 	  aa[i].checked = box.checked;
 	}
@@ -76,7 +76,7 @@ function checkInst(id)
   //alert(q);
 	var aa=document.querySelectorAll(q);
 	var checked = 0;
-	for (var i=0; i < aa.length; i++) 
+	for (var i=0; i < aa.length; i++)
 	{
 	  if (aa[i].checked) checked++;
 	}

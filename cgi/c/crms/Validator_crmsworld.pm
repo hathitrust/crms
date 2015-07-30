@@ -152,7 +152,7 @@ sub CalcPendingStatus
 {
   my $self = shift;
   my $id   = shift;
-  
+
   my $pstatus = 0;
   my $sql = 'SELECT user,attr,reason,renNum,renDate FROM reviews WHERE id=? AND expert IS NULL';
   my $ref = $self->SelectAll($sql, $id);

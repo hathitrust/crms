@@ -71,7 +71,7 @@
 
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0;download=1" %]" target="_blank">download</a>
-  
+
   [% color_white    = '#FFFFFF' %]
   [% color_gray     = '#C6C4F1' %]
   [% prev_id        = '' %]
@@ -95,7 +95,7 @@
 
       [% IF prev_id == '' %][% prev_id = item.id %][% END %]
 
-      [% IF prev_id != item.id %] 
+      [% IF prev_id != item.id %]
         [% IF active_color == color_gray  %]
           [% active_color = color_white %]
         [% ELSIF active_color == color_white %]

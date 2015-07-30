@@ -139,7 +139,6 @@
           </a>
           [% END %]
         </td></tr>
-        
       </table>
       <table class="id">
         <tr><td><strong>ID:</strong> [% barcode %]</td></tr>
@@ -228,7 +227,7 @@
       [% END %]
       [% IF src.2 %][% realindex = realindex + 1 %][% END %]
     [% END %]
-    
+
     <div class="navbottom" style="border-collapse:collapse;">
       [% IF expert && editing %]
         [% IF crms.HasItemBeenReviewedByAnotherExpert(barcode,user) %]

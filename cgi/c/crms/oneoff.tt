@@ -160,7 +160,7 @@
       [% END %]
       [% IF src.2 %][% realindex = realindex + 1 %][% END %]
     [% END %]
-    
+
     <div class="navbottom" style="border-collapse:collapse;">
       [% IF editing %]
         [% IF crms.HasItemBeenReviewedByAnotherExpert(barcode,user) %]
@@ -178,7 +178,7 @@
       [% INCLUDE submitOneoffForm.tt barcode = barcode,
                                      note    = note,    category = category, editing  = editing,
                                      error   = error,   select   = select,   mag      = mag,
-                                     hold    = hold,    swiss    = swiss,    status   = status, 
+                                     hold    = hold,    swiss    = swiss,    status   = status,
                                      sys     = sys,     ptview   = ptview,   tx       = tx %]
       [% IF crms.IsCorrection(barcode) %]
         <table class="ReviewError" id="CorrectionWarning">

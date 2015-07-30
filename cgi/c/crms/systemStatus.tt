@@ -39,12 +39,12 @@ function limitText(limitField, limitCount, limitNum)
 <form action="crms">
   <p class="smallishText">Enter a message to be displayed on every page of the CRMS.<br/>
   (Max 150 characters; <input readonly="readonly" type="text" name="countdown" size="3" value="150"/> left.)</p>
-  
+
   [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="systemStatus"/>
   <input type="hidden" name="setStatus" value="1"/>
-  <textarea name="msg" cols="20" rows="3" style="width:33%;" 
-            onkeydown="limitText(this.form.msg,this.form.countdown,150);" 
+  <textarea name="msg" cols="20" rows="3" style="width:33%;"
+            onkeydown="limitText(this.form.msg,this.form.countdown,150);"
             onkeyup="limitText(this.form.msg,this.form.countdown,150);">[% msg %]</textarea><br/>
   <label for="statussel">Set system status:</label>
   <select id="statussel" name="status">

@@ -27,7 +27,7 @@ window.onload = function()
        onblur="datePickerController.hide('startDate');"/>
 <script type="text/javascript">
 // <![CDATA[
-  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
+  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };
   datePickerController.createDatePicker(opts);
 // ]]>
 </script>

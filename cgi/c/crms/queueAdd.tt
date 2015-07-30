@@ -267,7 +267,7 @@ These items will take priority in the review process.
     [% prev_id      = '' %]
     [% active_color = color_white %]
     <br/>
-    
+
     <table style="width:auto;">
       <tr style="background-color:[% active_color %];">
         <td><h4>[% ref.size %]&nbsp;Sequestered&nbsp;[% crms.Pluralize("Volume", ref.size) %]</h4></td>
@@ -279,13 +279,12 @@ These items will take priority in the review process.
         </td>
       </tr>
     </table>
-    
+
     <form action="crms" id="checks2">
     [% crms.HiddenSys() %]
     <input type="hidden" name="p" value="queueAdd"/>
     <input type="submit" name="unseqSel" value="Unsequester Selection"/>
     <input type="submit" name="delSel" value="Delete Selection"/><br/><br/>
-  
     <table class="exportStats" style="width:auto;">
     <tr><th>ID</th><th>Title</th><th>Author</th><th>Pub&nbsp;Date</th><th>Added</th><th>Added&nbsp;By</th>
     <th>Status</th><th>Priority</th><th>Issues</th><th>Historical<br/>Reviews</th><th>Rights</th>

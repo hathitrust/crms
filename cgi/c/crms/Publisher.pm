@@ -25,7 +25,7 @@ sub GetPublisherDataRef
   my $pagesize     = shift;
   my $download     = shift;
   #print("GetQueueRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$download');<br/>\n");
-  
+
   $pagesize = 20 unless $pagesize and $pagesize > 0;
   $offset = 0 unless $offset and $offset > 0;
   $order = 'name' unless $order;
@@ -118,7 +118,7 @@ sub PublisherDataSearchMenu
   my $self = shift;
   my $searchName = shift;
   my $searchVal = shift;
-  
+
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @Fields - 1)
   {

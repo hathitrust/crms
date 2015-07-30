@@ -36,7 +36,7 @@
 function CheckAll(box,formid)
 {
 	var aa=document.getElementById(formid);
-	for (var i=0; i < aa.elements.length; i++) 
+	for (var i=0; i < aa.elements.length; i++)
 	{
 	  aa.elements[i].checked = box.checked;
 	}
@@ -106,7 +106,7 @@ function CheckAll(box,formid)
 
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0;download=1" %]" target="_blank">download</a>
-  
+
   [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
       <input type="checkbox" [% IF showSysID %]checked="checked"[% END %] id="sysIDCB"
              onchange="setCookie('showSysID',(this.checked)?1:0,31);
@@ -118,9 +118,8 @@ function CheckAll(box,formid)
                if (cels.length > 1) cels[1].style.display=vis;
              }
              document.getElementById('sysidth').style.display = vis;"/><label id="cblabel" for="sysIDCB">&nbsp;&nbsp;Show&nbsp;System&nbsp;ID</label>
-             
   [% END %]
-  
+
   [% color_white    = '#FFFFFF' %]
   [% IF vols %]
   [% color_gray     = '#B6D8B9' %]

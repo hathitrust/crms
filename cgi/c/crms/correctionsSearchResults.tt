@@ -93,8 +93,7 @@
           [% active_color = color_gray %]
         [% END %]
       [% END %]
-      
-      
+
       <tr style="background-color:[% active_color %];">
         [% FOREACH field IN fields %]
           <td>

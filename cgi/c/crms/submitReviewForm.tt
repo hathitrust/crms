@@ -1,4 +1,4 @@
-[% IF NOT select %] 
+[% IF NOT select %]
 [% select = crms.GetAttrReasonCode(barcode, user) %]
 [% END %]
 
@@ -178,7 +178,7 @@
       [% id = right.0 %]
       [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
       <td style="width:50%;">
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" 
+        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]"
               [% IF n < 10 %]accesskey="[% n %]"[% END %]
               [% IF select == id %] checked="checked"[% END %]/>
         <label for="[% 'r' _ id %]">[% ar %] ([% n %])</label>

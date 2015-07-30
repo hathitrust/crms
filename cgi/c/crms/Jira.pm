@@ -242,7 +242,7 @@ sub GetComments
   my $self = shift;
   my $ua   = shift;
   my $tx   = shift;
-  
+
   my $url = 'https://wush.net/jira/hathitrust/rest/api/2/issue/' . $tx;
   my @comments;
   my $req = HTTP::Request->new(GET => $url);

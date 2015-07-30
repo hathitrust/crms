@@ -225,7 +225,7 @@ sub IsReallyForeignPub
 sub ReadCities
 {
   my $self = shift;
-  
+
   my $in = $self->{crms}->get('root') . '/bin/c/crms/us_cities.txt';
   open (FH, '<', $in) || $self->{crms}->SetError("Could not open $in");
   my $cities = '';

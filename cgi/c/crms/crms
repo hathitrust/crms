@@ -53,7 +53,7 @@ if ($cgi->param('p') eq 'Logout')
   }
 }
 
-if ($cgi->param('changeuser') == 1)  
+if ($cgi->param('changeuser') == 1)
 {
   $alias = $cgi->param('newuser');
   if ($crms->GetUserName($alias))
@@ -197,7 +197,7 @@ if ($cgi->param('p') eq 'confirmReview')
     }
   }
 }
-elsif ($cgi->param('p') eq 'confirmCorrection')  
+elsif ($cgi->param('p') eq 'confirmCorrection')
 {
   my $editing = $cgi->param('editing');
   my $id = $cgi->param('barcode');
@@ -216,7 +216,7 @@ elsif ($cgi->param('p') eq 'confirmCorrection')
     my $note    = Encode::decode("UTF-8", $cgi->param('note'));
     my $fixed   = $cgi->param('fixed');
     my $inScope = $cgi->param('inScope');
-    
+
     my $stat = $crms->GetSystemStatus();
     my $status = $stat->[1];
     my $err;
@@ -268,7 +268,7 @@ elsif ($cgi->param('p') eq 'confirmCorrection')
 }
 
 $cgi->param('sys', $sys) if $sys and $sys ne 'crms';
-if ( $cgi->param('download') )  
+if ($cgi->param('download'))
 {
   my $order            = $cgi->param('order');
   my $dir              = $cgi->param('dir');
@@ -311,7 +311,7 @@ if ( $cgi->param('download') )
     my $year        = $cgi->param('year');
     my $inval       = $cgi->param('inval');
     my $nononexpert = $cgi->param('nne');
-    
+
     $success = $crms->DownloadUserStats($page, $user, $cumulative, $year, $inval, $nononexpert);
   }
   elsif ($page eq 'exportData')
@@ -332,7 +332,7 @@ if ( $cgi->param('download') )
 }
 
 ## config options for TT
-my $config = 
+my $config =
 {
     INCLUDE_PATH => '.',
     INTERPOLATE  => 1,     ## expand "$var" in plain text

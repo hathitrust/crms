@@ -82,7 +82,7 @@ Search for Reviews where<br/>
        onblur="datePickerController.hide('startDate');"/>
 <script type="text/javascript">
 // <![CDATA[
-  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
+  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };
   datePickerController.createDatePicker(opts);
 // ]]>
 </script>
@@ -93,7 +93,7 @@ Search for Reviews where<br/>
        onblur="datePickerController.hide('endDate');"/>
 <script type="text/javascript">
 // <![CDATA[
-  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };       
+  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };
   datePickerController.createDatePicker(opts);
 // ]]>
 </script>

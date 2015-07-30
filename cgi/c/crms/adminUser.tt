@@ -102,7 +102,6 @@
       <span class="red">Warning: no IP address</span>
       [% ELSE %]
         [% ips.keys.join(', ') %]
-        
         [% IF !userid.match("-expert") && !userid.match("-nonexpert") &&
            !userid.match("-reviewer") && r %]
           [% role = crms.GetUserRole(userid) %]

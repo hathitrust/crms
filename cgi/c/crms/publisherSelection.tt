@@ -65,9 +65,9 @@ Restrict selection:<br/>
 <script type="text/javascript">
 // <![CDATA[
   // FIXME: if we start using v6 of the datepicker, need to use "%Y-%m-%d" as the format
-  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };       
+  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };
   datePickerController.createDatePicker(opts);
-// ]]> 
+// ]]>
 </script>
 <span class="smallText">(YYYY-MM-DD)</span>
 <br/>
@@ -76,7 +76,7 @@ Restrict selection:<br/>
        onblur="datePickerController.hide('endDate');"/>
 <script type="text/javascript">
 // <![CDATA[
-  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };       
+  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };
   datePickerController.createDatePicker(opts);
 // ]]>
 </script>
