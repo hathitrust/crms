@@ -31,7 +31,7 @@
   [% dir = 'ASC' %]
   [% CALL cgi.param('dir', 'ASC') %]
 [% END %]
-<script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
+
 <br/>
 <div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
 

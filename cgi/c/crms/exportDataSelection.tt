@@ -10,7 +10,6 @@
 [% dir = cgi.param('dir') %]
 [% recs = cgi.param('records') %]
 
-<script type="text/javascript" src="/c/crms/datepicker.packed.js"></script>
 [% recs = recs.replace('\D','') %]
 [% IF NOT recs %]
   [% recs = cgi.cookie('recs') or 20 %]
