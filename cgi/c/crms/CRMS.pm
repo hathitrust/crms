@@ -651,8 +651,6 @@ sub CanExportVolume
   my $time    = shift; # Optional
 
   my $export = 1;
-  my $rq = $self->RightsQuery($id, 1);
-  return 1 unless defined $rq;
   # Do not export Status 6, since they are not really final determinations.
   my $status = $self->SimpleSqlGet('SELECT status FROM queue WHERE id=?', $id);
   if (!defined $status && defined $gid)
@@ -684,6 +682,8 @@ sub CanExportVolume
       return 0;
     }
   }
+  my $rq = $self->RightsQuery($id, 1);
+  return 1 unless defined $rq;
   my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
   my $cm = $self->CandidatesModule();
   # Do not export determination if the volume has gone out of scope,
