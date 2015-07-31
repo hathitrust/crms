@@ -50,11 +50,15 @@ else
   $data = $crms->CreateExportData("\t", $c, 1, $start, $end);
 }
 
-if ( $data eq '' ) { print $cgi->header( -status => "400" ); }
-else
+if ( $data eq '') { print $cgi->header( -status => "400" ); }
+if (ref($data))
 {
   my $json = JSON::XS->new->utf8->encode($data);
   print $cgi->header('application/json');
   print $json;
 }
-my @users = $cgi->param('user');
+else
+{
+  print $cgi->header(-type => 'text/plain', -charset => 'utf-8');
+  print $data;
+}
