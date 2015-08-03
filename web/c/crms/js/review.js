@@ -1,4 +1,3 @@
-"use strict";
 function redirHome()   { window.location = "crms"; }
 function redirReview() { window.location = "crms?p=review"; }
 function redirExpert() { window.location = "crms?p=expert"; }
@@ -191,10 +190,10 @@ function PredictRights(id)
         {
           if (sel != "")
           {
-            button = document.getElementById("r" + sel);
+            var button = document.getElementById("r" + sel);
             button.checked = "";
           }
-          button = document.getElementById("r" + req.responseText);
+          var button = document.getElementById("r" + req.responseText);
           if (button) { button.checked = "checked" }
         }
       }
