@@ -683,7 +683,7 @@ sub CanExportVolume
     }
   }
   my $rq = $self->RightsQuery($id, 1);
-  return 1 unless defined $rq;
+  return 0 unless defined $rq;
   my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
   my $cm = $self->CandidatesModule();
   # Do not export determination if the volume has gone out of scope,
