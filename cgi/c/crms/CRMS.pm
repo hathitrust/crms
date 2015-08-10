@@ -72,7 +72,7 @@ sub set
 
 sub Version
 {
-  return '4.10.1';
+  return '4.10.2';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
