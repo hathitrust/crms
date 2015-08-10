@@ -72,7 +72,7 @@ sub set
 
 sub Version
 {
-  return '4.10';
+  return '4.10.1';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -7939,6 +7939,7 @@ sub Sources
       $url =~ s/__SYSID__/$sysid/g;
     }
     $url = CGI::escapeHTML($url);
+    $url =~ s/\s+/+/g;
     push @all, [$row->[0], $name, $url, $row->[3], $row->[4], $row->[5]];
   }
   return \@all;
