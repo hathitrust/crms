@@ -132,7 +132,7 @@ sub ConnectToDb
   my $db_server = $self->get('mysqlServerDev');
   my $dev       = $self->get('dev');
   my $root      = $self->get('root');
-  my $sys       = $self->get('sys');
+  my $sys       = $self->Sys();
 
   my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
   my %d = $self->ReadConfigFile($cfg);
@@ -165,7 +165,7 @@ sub ConnectToSdrDb
   my $db_server = $self->get('mysqlMdpServerDev');
   my $dev       = $self->get('dev');
   my $root      = $self->get('root');
-  my $sys       = $self->get('sys');
+  my $sys       = $self->Sys();
 
   $db = $self->get('mysqlMdpDbName') unless defined $db;
   my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
@@ -463,7 +463,7 @@ sub CalcStatus
 {
   my $self = shift;
 
-  my $module = 'Validator_' . $self->get('sys') . '.pm';
+  my $module = 'Validator_' . $self->Sys() . '.pm';
   require $module;
   unshift @_, $self;
   return Validator::CalcStatus(@_);
@@ -479,7 +479,7 @@ sub CheckPendingStatus
   my $pstatus = $status;
   if (!$status)
   {
-    my $module = 'Validator_' . $self->get('sys') . '.pm';
+    my $module = 'Validator_' . $self->Sys() . '.pm';
     require $module;
     unshift @_, $id;
     unshift @_, $self;
@@ -581,7 +581,7 @@ sub ExportReviews
     print ">>> noExport system variable is set; will only export high-priority volumes.\n";
   }
   my $count = 0;
-  my $user = $self->get('sys');
+  my $user = $self->Sys();
   my ($fh, $temp, $perm) = $self->GetExportFh() unless $fromcgi;
   print ">>> Exporting to $temp.\n" unless $fromcgi;
   my $start_size = $self->GetCandidatesSize();
@@ -747,11 +747,11 @@ sub EmailReport
 sub GetExportFh
 {
   my $self = shift;
+
   my $date = $self->GetTodaysDate();
   $date    =~ s/:/_/g;
   $date    =~ s/ /_/g;
-
-  my $perm = $self->get('root') . '/prep/c/crms/' . $self->get('sys') . '_' . $date . '.rights';
+  my $perm = $self->get('root') . '/prep/c/crms/' . $self->Sys() . '_' . $date . '.rights';
   my $temp = $perm . '.tmp';
   if (-f $temp) { die "file already exists: $temp\n"; }
   open (my $fh, '>', $temp) || die "failed to open exported file ($temp): $!\n";
@@ -1046,7 +1046,7 @@ sub CandidatesModule
   my $mod = $self->get('Candidates');
   if (!defined $mod)
   {
-    my $class = 'Candidates_' . $self->get('sys');
+    my $class = 'Candidates_' . $self->Sys();
     require $class . '.pm';
     $mod =  $class->new($self);
     if (!defined $mod || $@)
@@ -3785,7 +3785,7 @@ sub GetAllMonthsInYear
   $year = $currYear unless $year;
   my $start = 1;
   # FIXME: this could be put in the config file.
-  if ($self->get('sys') eq 'crmsworld')
+  if ($self->Sys() eq 'crmsworld')
   {
     $start = 5 if $year == 2012;
   }
@@ -4820,7 +4820,7 @@ sub ValidateSubmission
   }
   if (!$errorMsg)
   {
-    my $module = 'Validator_' . $self->get('sys') . '.pm';
+    my $module = 'Validator_' . $self->Sys() . '.pm';
     require $module;
     $errorMsg = Validator::ValidateSubmission(@_);
   }
@@ -7408,7 +7408,7 @@ sub DuplicateVolumesFromExport
     elsif ($okattr{$oldrights} ||
            ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/) ||
            $oldrights eq 'ic/bib' ||
-           ($self->get('sys') eq 'crmsworld' && $oldrights =~ m/^pdus/))
+           ($self->Sys() eq 'crmsworld' && $oldrights =~ m/^pdus/))
     {
       # Always inherit onto a single-review priority 1
       my $rereps = $self->SimpleSqlGet('SELECT COUNT(*) FROM reviews WHERE id=? AND user LIKE "rereport%"', $id2);
@@ -7557,7 +7557,7 @@ sub DuplicateVolumesFromCandidates
     }
     elsif ($oldrights eq 'ic/bib' ||
            ($oldrights eq 'pdus/gfv' && $cattr =~ m/^pd/) ||
-           ($self->get('sys') eq 'crmsworld' && $oldrights =~ m/^pdus/))
+           ($self->Sys() eq 'crmsworld' && $oldrights =~ m/^pdus/))
     {
       $data->{'inherit'}->{$cid} .= "$id\t$sysid\t$attr2\t$reason2\t$cattr\t$creason\t$cgid\n";
     }
@@ -7881,7 +7881,7 @@ sub Sysify
   my $url  = shift;
 
   use Utilities;
-  my $sys = $self->get('sys');
+  my $sys = $self->Sys();
   $url = Utilities::AppendParam($url, 'sys', $sys) if $sys ne 'crms';
   my $pdb = $self->get('pdb');
   $url = Utilities::AppendParam($url, 'pdb', $pdb) if $pdb;
@@ -7935,7 +7935,7 @@ sub HiddenSys
   my $self = shift;
 
   my $html = '';
-  my $sys = $self->get('sys');
+  my $sys = $self->Sys();
   $html = "<input type='hidden' name='sys' value='$sys'/>" if $sys && $sys ne 'crms';
   my $pdb = $self->get('pdb');
   $html .= "<input type='hidden' name='pdb' value='$pdb'/>" if $pdb;
