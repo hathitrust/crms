@@ -33,6 +33,13 @@ sub HexDump
   return $dump;
 }
 
+sub StringifySql
+{
+  my $sql = shift;
+
+  return $sql . ' (' . (join ',', @_). ')';
+}
+
 sub HSV2RGB
 {
   use POSIX;
