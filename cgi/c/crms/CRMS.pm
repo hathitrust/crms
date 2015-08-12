@@ -751,7 +751,7 @@ sub GetExportFh
   my $date = $self->GetTodaysDate();
   $date    =~ s/:/_/g;
   $date    =~ s/ /_/g;
-  my $perm = $self->get('root') . '/prep/c/crms/' . $self->Sys() . '_' . $date . '.rights';
+  my $perm = $self->get('root'). $self->get('dataDir'). '/'. $self->Sys(). '_'. $date. '.rights';
   my $temp = $perm . '.tmp';
   if (-f $temp) { die "file already exists: $temp\n"; }
   open (my $fh, '>', $temp) || die "failed to open exported file ($temp): $!\n";
