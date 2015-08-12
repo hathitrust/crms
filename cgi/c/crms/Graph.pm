@@ -160,7 +160,7 @@ sub CreateExportsPieChart
   my $self  = shift;
 
   my %data = ('chart'=>{'type'=>'pie'}, 'title'=>{'text'=>undef},
-              'tooltip'=>{'pointFormat'=>'<b>{point.percentage:.1f}%</b>'},
+              'tooltip'=>{'pointFormat'=>'<b>{point.percentage:.2f}%</b> ({point.y})'},
               'plotOptions'=>{'pie'=>{'cursor'=>'pointer', size=>'70%',
                                      'dataLabels'=>{'enabled'=>JSON::XS::true,'format'=>'{point.name}'},
                                      'colors'=>[]}},
