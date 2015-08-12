@@ -324,6 +324,10 @@ td.inherit,tr.inherit {
   font-weight:bold;
 }
 
+span.total {
+  color:#A0FEAE;
+}
+
 td.total,tr.total {
   background-color:#A0FEAE;
   color:#000000;
