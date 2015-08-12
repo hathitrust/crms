@@ -55,6 +55,11 @@ sub AppendParam
   return $url;
 }
 
+sub ClearArrays
+{
+  @{$_} = () for @_;
+}
+
 sub HSV2RGB
 {
   use POSIX;

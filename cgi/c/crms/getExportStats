@@ -12,23 +12,21 @@ my $cgi  = new CGI;
 my $user = $ENV{'REMOTE_USER'};
 my $sys =  $cgi->param('sys');
 $sys = 'crms' unless $sys;
-my $crms = CRMS->new(logFile   =>   "$DLXSROOT/prep/c/crms/log_review.txt",
-                     sys       =>   $sys,
-                     verbose   =>   0,
-                     root      =>   $DLXSROOT,
-                     dev       =>   $DLPS_DEV,
-                     user      =>   $user);
+my $crms = CRMS->new(logFile => "$DLXSROOT/prep/c/crms/log_review.txt",
+                     sys     => $sys,
+                     verbose => 0,
+                     root    => $DLXSROOT,
+                     dev     => $DLPS_DEV,
+                     user    => $user,
+                     pdb     => $cgi->param('pdb'));
 
 my $type = $cgi->param('type');
 my $data = '';
 my $c = $cgi->param('c'); # Class or cumulative
-my $start = $cgi->param('startDate');
-my $end = $cgi->param('endDate');
+my $year = $cgi->param('y');
 my $percent = $cgi->param('percent');
 if ($type eq 'graph')
 {
-  my $monthly = $cgi->param('monthly');
-  my $title = $cgi->param('title');
   if ($c == 0) { $data = Graph::CreateExportGraph($crms); }
   elsif ($c == 1) { $data = Graph::CreateExportBreakdownGraph($crms); }
   elsif ($c == 2) { $data = Graph::CreateExportsPieChart($crms); }
@@ -40,6 +38,8 @@ if ($type eq 'graph')
   elsif ($c == 9) { $data = Graph::CreateReviewInstitutionGraph($crms); }
   elsif ($c == 10)
   {
+    my $start = $cgi->param('startDate');
+    my $end = $cgi->param('endDate');
     my $type2 = $cgi->param('type2');
     my @users = $cgi->param('user');
     $data = Graph::CreateReviewerGraph($crms, $type2, $start, $end, @users);
@@ -47,7 +47,7 @@ if ($type eq 'graph')
 }
 else
 {
-  $data = $crms->CreateExportData("\t", $c, 1, $start, $end);
+  $data = $crms->CreateExportData($year);
 }
 
 if ( $data eq '') { print $cgi->header( -status => "400" ); }

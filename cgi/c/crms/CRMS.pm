@@ -402,7 +402,7 @@ sub ProcessReviews
   }
   $self->SetSystemStatus('partial', 'CRMS is processing reviews. The Review page is temporarily unavailable. Try back in about a minute.');
   my %stati = (2=>0,3=>0,4=>0,8=>0);
-  my $sql = 'SELECT id FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) GROUP BY id HAVING count(*) = 2';
+  $sql = 'SELECT id FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) GROUP BY id HAVING count(*) = 2';
   my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
@@ -528,7 +528,6 @@ sub ClearQueueAndExport
     push(@{$export}, $id);
   }
   $self->ExportReviews($export, $fromcgi);
-  $self->UpdateExportStats();
   $self->UpdateNewExportStats();
   $self->UpdateDeterminationsBreakdown();
   return "Removed from queue: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved, $iCount inherited rights\n";
@@ -1192,7 +1191,7 @@ sub LoadNewItems
   }
   $self->RemoveFromCandidates($_) for keys %dels;
   #Record the update to the queue
-  my $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,"RIGHTSDB")';
+  $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,"RIGHTSDB")';
   $self->PrepareSubmitSql($sql, $count);
 }
 
@@ -3804,184 +3803,142 @@ sub GetAllMonthsInYear
   return @months;
 }
 
-# Returns an array of year strings e.g. ('2009','2010') for all years for which we have data.
+# Returns arrayref of year strings e.g. ('2009','2010') for all years for which we have stats.
 sub GetAllExportYears
 {
   my $self = shift;
 
   my @list = ();
-  my $min = $self->SimpleSqlGet('SELECT MIN(time) FROM exportdata');
-  my $max = $self->SimpleSqlGet('SELECT MAX(time) FROM exportdata');
-  if ($min && $max)
-  {
-    $min = substr($min,0,4);
-    $max = substr($max,0,4);
-    @list = ($min..$max);
-  }
+  my $min = $self->SimpleSqlGet('SELECT MIN(YEAR(date)) FROM newexportstats');
+  my $max = $self->SimpleSqlGet('SELECT MAX(YEAR(date)) FROM newexportstats');
+  @list = ($min..$max) if $min and $max;
   return \@list;
 }
 
+# If year is undef, report is project cumulative with one year per column and first is grand total.
+# Otherwise report is for a single year with one month per column.
+# If pct is set, appends a percentage in parentheses.
 sub CreateExportData
 {
-  my $self           = shift;
-  my $delimiter      = shift;
-  my $cumulative     = shift;
-  my $doCurrentMonth = shift;
-  my $start          = shift;
-  my $end            = shift;
-  my $doPercent      = shift;
+  my $self = shift;
+  my $year = shift;
+  my $pct  = shift;
 
-  #print "CreateExportData('$delimiter', $cumulative, $doCurrentMonth, '$start', '$end', '$doPercent')<br/>\n";
-  my ($year,$month) = $self->GetTheYearMonth();
-  my $now = "$year-$month";
-  $start = "$year-01" unless $start;
-  $end = "$year-12" unless $end;
-  ($start,$end) = ($end,$start) if $end lt $start;
-  $start = '2009-07' if $start lt '2009-07';
+  use Utilities;
   my @dates;
-  if ($cumulative)
+  my $report;
+  my $fmt;
+  if (!defined $year)
   {
     @dates = @{$self->GetAllExportYears()};
+    unshift @dates, 'Grand Total';
+    $report = "CRMS Project Cumulative\n\t";
+    $fmt = 'YEAR(date)=?';
   }
   else
   {
-    my $sql = 'SELECT DISTINCT(DATE_FORMAT(date,"%Y-%m")) FROM exportstats' .
-              ' WHERE DATE_FORMAT(date,"%Y-%m")>=?' .
+    my $sql = 'SELECT DISTINCT(DATE_FORMAT(date,"%Y-%m")) FROM newexportstats'.
+              ' WHERE DATE_FORMAT(date,"%Y-%m")>=?'.
               ' AND DATE_FORMAT(date,"%Y-%m")<=? ORDER BY date ASC';
-    @dates = map {$_->[0];} @{$self->SelectAll($sql, $start, $end)};
+    @dates = map {$_->[0];} @{$self->SelectAll($sql, $year.'-01', $year.'-12')};
+    unshift @dates, 'Total';
+    $report = "$year Exports\n\t";
+    $fmt = 'DATE_FORMAT(date,"%Y-%m")=?';
   }
-  my $titleDate = '';
-  if (!$cumulative)
+  $report .= (join "\t", @dates). "\n";
+  my @titles; # Titles in correct order
+  my %data; # Unordered map of title to arrayref of cell values
+  my @clauses;
+  my @params;
+  my $sql = 'SELECT DISTINCT CONCAT(attr,"/",reason) FROM newexportstats'.
+            ((defined $year)? ' WHERE YEAR(date)='.$year:'').
+            ' ORDER BY attr LIKE "pd%" DESC,attr,(attr="und" AND reason="nfi") DESC,reason';
+  my $ref = $self->SelectAll($sql);
+  @titles = map { $_->[0]; } @{$ref};
+  my $last = '';
+  foreach (my $i = 0; $i < scalar @titles; $i++)
   {
-    my $startEng = substr($dates[0],0,4);
-    my $endEng = substr($dates[-1],0,4);
-    $titleDate = ($startEng eq $endEng)? $startEng:"$startEng-$endEng";
-  }
-  my $label = ($cumulative)? 'CRMS Project Cumulative' : "Cumulative $titleDate";
-  my $report = sprintf("$label\nCategories%s%s", $delimiter, ($cumulative)? 'Grand Total':'Total');
-  my %stats = ();
-  my @usedates = ();
-  my $sql = 'SELECT COLUMN_NAME AS c FROM INFORMATION_SCHEMA.COLUMNS' .
-            ' WHERE TABLE_SCHEMA=? AND TABLE_NAME="exportstats" AND COLUMN_NAME LIKE "%_%"' .
-            ' ORDER BY (c LIKE "pd%") DESC, c';
-  #print "$sql<br/>\n";
-  my $ref = $self->SelectAll($sql, $self->DbName());
-  my @allRights = map { $_->[0]; } @{$ref};
-  my $nRights = scalar @allRights;
-  foreach my $date (@dates)
-  {
-    last if $date eq $now and !$doCurrentMonth;
-    push @usedates, $date;
-    $report .= "$delimiter$date";
-    my %cats = ();
-    my @sums = ();
-    foreach my $right (@allRights)
+    my $prefix = substr($titles[$i], 0, 2);
+    if ($prefix ne $last)
     {
-      my ($a,$r) = split '_', $right;
-      $cats{"$a/$r"} = 0;
-      push @sums, "SUM(e.$right)";
-    }
-    my $lastDay;
-    if (!$cumulative)
-    {
-      my ($year,$month) = split '-', $date;
-      $lastDay = Days_in_Month($year,$month);
-    }
-    $sql = 'SELECT '. join(',', @sums). ' FROM exportstats e LEFT JOIN determinationsbreakdown d'.
-           ' ON DATE(e.date)=d.date WHERE e.date LIKE "'. $date. '%"';
-    #print "$date: $sql<br/>\n";
-    my $ref = $self->SelectAll($sql);
-    #printf "$date: $sql : %d items<br/>\n", scalar @{$ref};
-    foreach my $n (0 .. scalar @allRights-1)
-    {
-      my ($a,$r) = split '_', $allRights[$n];
-      $stats{"$a/$r"}{$date} += $ref->[0]->[$n];
-    }
-    foreach my $status (4..9)
-    {
-      $sql = 'SELECT SUM(s'. $status. ')'.
-             ' FROM determinationsbreakdown WHERE'.
-             ' date LIKE "'. $date. '%"';
-      $stats{'Status '. $status}{$date} += $self->SimpleSqlGet($sql);
-    }
-    for my $cat (keys %cats)
-    {
-      next if $cat =~ m/(All)|(Status)/;
-      my $attr = $cat;
-      $attr =~ s/(.+?)\/.*/$1/;
-      my $allkey = 'All ' . uc substr $attr, 0, ($attr eq 'und')? 3:2;
-      $stats{$allkey}{$date} += $stats{$cat}{$date};
-      #printf "\$stats{'$allkey'}{'$date'} += \$stats{'$cat'}{'$date'} (%d)<br>\n", $stats{$cat}{$date} if $cat =~ m/und/;
+      my $allkey = 'All ' . uc substr $titles[$i], 0, ($prefix =~ m/^un/)? 3:2;
+      splice @titles, $i, 0, $allkey;
+      $i++;
+      $last = $prefix;
     }
   }
-  $report .= "\n";
-  my @titles = ('Total', 'Status 4', 'Status 5', 'Status 6', 'Status 7', 'Status 8', 'Status 9');
-  my @pdTitles = ('All PD');
-  my @icTitles = ('All IC');
-  my @undTitles = ('All UND');
-  foreach my $right (@allRights)
+  push @titles, 'Total';
+  foreach my $title (@titles)
   {
-    my ($a,$r) = split '_', $right;
-    my $right = "$a/$r";
-    push @pdTitles, $right if $a =~ m/^pd/;
-    push @icTitles, $right if $a =~ m/^ic/;
-    push @undTitles, $right if $a =~ m/^und/;
+    $data{$title} = [];
+    my ($attr,$reason) = split '/', $title;
+    $attr = lc $1 if $title =~ m/^all\s(.+)$/i;
+    $attr = undef if $title eq 'Total';
+    foreach my $date (@dates)
+    {
+      Utilities::ClearArrays(\@clauses, \@params);
+      $sql = 'SELECT COALESCE(SUM(count),0) FROM newexportstats';
+      if ($attr)
+      {
+        my $attr2 = $attr;
+        push @clauses, '(attr=? OR attr=?)';
+        $attr2 .= 'us' if $attr ne 'und' and !$reason;
+        push @params, $attr, $attr2;
+      }
+      if ($reason)
+      {
+        push @clauses, 'reason=?';
+        push @params, $reason;
+      }
+      if ($date =~ m/^\d+/)
+      {
+        push @clauses, $fmt;
+        push @params, $date;
+      }
+      $sql .= ' WHERE '. join ' AND ', @clauses if scalar @clauses;
+      push @{$data{$title}}, $self->SimpleSqlGet($sql, @params);
+    }
   }
-
-  unshift @titles, @undTitles;
-  unshift @titles, @icTitles;
-  unshift @titles, @pdTitles;
-
-  my %monthTotals = ();
-  my %catTotals = ('All PD' => 0, 'All IC' => 0, 'All UND' => 0);
-  my $gt = 0;
-  foreach my $date (@usedates)
+  # Append in the Status breakdown
+  foreach my $status (4 .. 9)
   {
-    my $monthTotal = $stats{'All PD'}{$date} + $stats{'All IC'}{$date} + $stats{'All UND'}{$date};
-    $catTotals{'All PD'} += $stats{'All PD'}{$date};
-    $catTotals{'All IC'} += $stats{'All IC'}{$date};
-    $catTotals{'All UND'} += $stats{'All UND'}{$date};
-    $monthTotals{$date} = $monthTotal;
-    $gt += $monthTotal;
+    my $title = 'Status '.$status;
+    push @titles, $title;
+    $data{$title} = [];
+    foreach my $date (@dates)
+    {
+      Utilities::ClearArrays(\@clauses, \@params);
+      $sql = 'SELECT COALESCE(SUM(s'. $status.'),0) FROM determinationsbreakdown';
+      if ($date =~ m/^\d+/)
+      {
+        push @clauses, $fmt;
+        push @params, $date;
+      }
+      $sql .= ' WHERE '. join ' AND ', @clauses if scalar @clauses;
+      push @{$data{$title}}, $self->SimpleSqlGet($sql, @params);
+    }
+  }
+  # Now that total is available, decorate with percentages.
+  if ($pct)
+  {
+    foreach my $title (@titles)
+    {
+      next if $title eq 'Total';
+      foreach my $i (0 .. scalar @dates - 1)
+      {
+        my $n = $data{$title}->[$i];
+        my $of = $data{'Total'}->[$i];
+        if ($of > 0)
+        {
+          $data{$title}->[$i] = sprintf '%d (%.1f%%)', $n, 100.0 * $n / $of;
+        }
+      }
+    }
   }
   foreach my $title (@titles)
   {
-    $report .= $title;
-    my $total = 0;
-    foreach my $date (@usedates)
-    {
-      my $n = 0;
-      if ($title eq 'Total') { $n = $monthTotals{$date}; }
-      else { $n = $stats{$title}{$date}; }
-      $total += $n;
-    }
-    my $of = $gt;
-    if ($title ne 'Total' && $doPercent)
-    {
-      my $pct = eval { 100.0*$total/$of; };
-      $pct = 0.0 unless $pct;
-      $total = sprintf("$total:%.1f", $pct);
-    }
-    $report .= $delimiter . $total;
-    foreach my $date (@usedates)
-    {
-      my $n = 0;
-      $of = $monthTotals{$date};
-      if ($title eq 'Total') { $n = $monthTotals{$date}; }
-      else
-      {
-        $n = $stats{$title}{$date};
-        $n = 0 if !$n;
-        if ($doPercent)
-        {
-          my $pct = eval { 100.0*$n/$of; };
-          $pct = 0.0 unless $pct;
-          $n = sprintf("$n:%.1f", $pct);
-        }
-      }
-      $n = 0 if !$n;
-      $report .= $delimiter . $n;
-    }
+    $report .= "$title\t";
+    $report .= join "\t", @{$data{$title}};
     $report .= "\n";
   }
   return $report;
@@ -3991,50 +3948,43 @@ sub CreateExportData
 # If cumulative, columns are years, not months.
 sub CreateExportReport
 {
-  my $self       = shift;
-  my $cumulative = shift;
-  my $year       = shift;
+  my $self = shift;
+  my $year = shift;
 
-  my $start = $year . '-01';
-  my $end = $year . '-12';
-  my $data = $self->CreateExportData(',', $cumulative, 1, $start, $end, 1);
+  my $data = $self->CreateExportData($year, 1);
   my @lines = split m/\n/, $data;
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
   my $title = shift @lines;
-  $title .= '*' if $cumulative;
+  $title .= '*' unless defined $year;
   my $report = sprintf("<table class='exportStats'>\n<tr>\n", $title);
-  foreach my $th (split ',', shift @lines)
+  foreach my $th (split "\t", shift @lines)
   {
     $th = $self->YearMonthToEnglish($th) if $th =~ m/^\d.*/;
     $th =~ s/\s/&nbsp;/g;
-    $report .= sprintf("<th%s>$th</th>\n", ($th ne 'Categories')? ' style="text-align:center;"':'');
+    $report .= '<th style="text-align:center;">'. $th. '</th>';
   }
   $report .= "</tr>\n";
   my %majors = ('All PD' => 1, 'All IC' => 1, 'All UND' => 1);
-  my $titleline = '';
   foreach my $line (@lines)
   {
-    my @items = split(',', $line);
-    my $i = 0;
+    my @items = split("\t", $line);
     $title = shift @items;
     my $major = exists $majors{$title};
     $title =~ s/\s/&nbsp;/g;
+    my $cstyle = ($title eq 'Total')? 'class="total" style="text-align:right;"':'';
+    my $sstyle = ($major)? 'class="major"':
+                           (($title =~ m/^Status/)? 'class="minor"':
+                                                    ($title eq 'Total')? 'class="total"':''),
     my $padding = ($major)? '':$nbsps;
-    my $newline = sprintf("<tr><th%s><span%s>%s$title</span></th>",
-      ($title eq 'Total')? ' style="text-align:right;"':'',
-      ($major)? ' class="major"':(($title =~ m/Status.+/)? ' class="minor"':''),
-      ($major)? '':$nbsps);
-    foreach my $item (@items)
+    my $newline = "<tr><th $cstyle><span $sstyle>$padding$title</span></th>";
+    foreach my $n (@items)
     {
-      my ($n,$pct) = split ':', $item;
       $n =~ s/\s/&nbsp;/g;
-      $newline .= sprintf("<td%s>%s%s$n%s%s</td>",
-                         ($major)? ' class="major"':($title eq 'Total')? ' style="text-align:center;"':(($title =~ m/Status.+/)? ' class="minor"':''),
-                         ($major)? '':$nbsps,
-                         ($title eq 'Total')? '<b>':'',
-                         ($title eq 'Total')? '</b>':'',
-                         ($pct)? "&nbsp;($pct%)":'');
-      $i++;
+      $cstyle = ($major)? 'class="major"':
+                          ($title eq 'Total')? 'class="total" style="text-align:center;"':
+                                               (($title =~ m/^Status/)? ' class="minor"':'');
+      $n = '<b>'. $n. '</b>' if $title eq 'Total';
+      $newline .= "<td $cstyle>$padding$n</td>", 
     }
     $newline .= "</tr>\n";
     $report .= $newline;
@@ -4398,6 +4348,7 @@ sub CreateStatsData
   };
   $latest = "$year-01" unless $latest;
   $earliest = "$year-01" unless $earliest;
+  # FIXME: masks $year param
   my ($year,$month) = split '-', $latest;
   my $lastDay = Days_in_Month($year,$month);
   my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, $latest, $instusersne);
@@ -4792,32 +4743,6 @@ sub UpdateDeterminationsBreakdown
   unshift @vals, $date;
   my $wcs = $self->WildcardList(scalar @vals);
   my $sql = 'REPLACE INTO determinationsbreakdown (date,s4,s5,s6,s7,s8,s9) VALUES '. $wcs;
-  $self->PrepareSubmitSql($sql, @vals);
-}
-
-sub UpdateExportStats
-{
-  my $self = shift;
-  my $date = shift;
-
-  my %counts;
-  $date = $self->SimpleSqlGet('SELECT CURDATE()') unless $date;
-  my $sql = 'SELECT attr,reason FROM exportdata WHERE DATE(time)=? AND exported=1';
-  #print "$sql\n";
-  my $ref = $self->SelectAll($sql, $date);
-  foreach my $row (@{$ref})
-  {
-    my $attr = $row->[0];
-    my $reason = $row->[1];
-    $counts{$attr . '_' . $reason}++;
-  }
-  my @keys = keys %counts;
-  my @vals = map {$counts{$_}} @keys;
-  return unless scalar @keys;
-  unshift @keys, 'date';
-  unshift @vals, $date;
-  my $wcs = $self->WildcardList(scalar @vals);
-  $sql = 'REPLACE INTO exportstats (' . join(',', @keys) . ') VALUES ' . $wcs;
   $self->PrepareSubmitSql($sql, @vals);
 }
 
@@ -5804,7 +5729,7 @@ sub CreateSystemReport
       $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$n&nbsp;(%0.1f%%)</td></tr>\n", 100.0*$n/$count);
     }
   }
-  my $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE src="no meta" OR src="duplicate"');
+  $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE src="no meta" OR src="duplicate"');
   $report .= "<tr><th>Volumes&nbsp;Temporarily&nbsp;Filtered**</th><td>$count</td></tr>\n";
   if ($count)
   {
@@ -6300,7 +6225,7 @@ sub IsReviewCorrect
   my $renDate = $row->[3];
   my $expert  = $row->[4];
   my $status  = $row->[5];
-  my $time    = $row->[6];
+  my $time2   = $row->[6];
   #print "$attr, $reason, $renNum, $renDate, $expert, $swiss, $status\n";
   # A non-expert with status 7/8 is protected rather like Swiss.
   return 1 if ($status == 7 && !$expert);
@@ -6308,7 +6233,7 @@ sub IsReviewCorrect
   # Get the most recent non-autocrms expert review.
   $sql = 'SELECT attr,reason,renNum,renDate,user,swiss FROM historicalreviews' .
          ' WHERE id=? AND expert>0 AND time>? ORDER BY time DESC';
-  $r = $self->SelectAll($sql, $id, $time);
+  $r = $self->SelectAll($sql, $id, $time2);
   return 1 unless scalar @{$r};
   $row = $r->[0];
   my $eattr    = $row->[0];
@@ -8274,7 +8199,7 @@ sub GetVIAFData
         }
       }
       $xpath = $pref . '/*[local-name()="VIAFCluster"]/*[local-name()="viafID"]';
-      my @vals = $xpc->findnodes($xpath);
+      @vals = $xpc->findnodes($xpath);
       $ret{'viafID'} = $vals[0]->string_value() if scalar @vals;
     }
     if ($n > 0 && 1 == scalar keys %{$adds{$n}})
