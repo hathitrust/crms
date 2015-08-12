@@ -15,12 +15,13 @@ my $cgi  = new CGI;
 my $sys =  $cgi->param('sys');
 $sys = 'crms' unless $sys;
 my $crms = CRMS->new(
-        logFile      =>   "$DLXSROOT/prep/c/crms/log_review.txt",
-        sys          =>   $sys,
-        verbose      =>   0,
-        root         =>   $DLXSROOT,
-        dev          =>   $DLPS_DEV,
-        user         =>   $ru,
+        logFile => "$DLXSROOT/prep/c/crms/log_review.txt",
+        sys     => $sys,
+        verbose => 0,
+        root    => $DLXSROOT,
+        dev     => $DLPS_DEV,
+        user    => $ru,
+        pdb     => $cgi->param('pdb'),
         );
 my $alias = $crms->GetAliasUserName($ru);
 
@@ -79,6 +80,7 @@ if ($user ne $ru)
             root    => $DLXSROOT,
             dev     => $DLPS_DEV,
             user    => $user,
+            pdb     => $cgi->param('pdb')
             );
 }
 

@@ -40,6 +40,21 @@ sub StringifySql
   return $sql . ' (' . (join ',', @_). ')';
 }
 
+sub AppendParam
+{
+  my $url  = shift;
+  my $name = shift;
+  my $val  = shift;
+
+  if ($url !~ m/$name=$val/i)
+  {
+    $url .= '?' unless $url =~ m/\?/;
+    $url .= ';' unless $url =~ m/[;?]$/;
+    $url .= $name. '='. $val;
+  }
+  return $url;
+}
+
 sub HSV2RGB
 {
   use POSIX;

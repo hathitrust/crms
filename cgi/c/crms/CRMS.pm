@@ -48,6 +48,7 @@ sub new
   $self->set('root',    $root);
   $self->set('dev',     $args{'dev'});
   $self->set('user',    $args{'user'});
+  $self->set('pdb',     $args{'pdb'});
   $self->set('sys',     $sys);
   $self->SetError('Warning: configFile parameter is obsolete.') if $args{'configFile'};
   return $self;
@@ -72,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '4.10.2';
+  return '4.10.3';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -137,7 +138,7 @@ sub ConnectToDb
   my %d = $self->ReadConfigFile($cfg);
   my $db_user   = $d{'mysqlUser'};
   my $db_passwd = $d{'mysqlPasswd'};
-  if (!$dev)
+  if (!$dev || $self->get('pdb'))
   {
     $db_server = $self->get('mysqlServer');
   }
@@ -3509,7 +3510,7 @@ sub CanChangeToUser
 
   my $where = $self->WhereAmI();
   return 1 if $self->SameUser($me, $him);
-  if (defined $where && $where ne 'Training')
+  if (defined $where && $where !~ /^training/i)
   {
     return 0 if $me eq $him;
     return 1 if $self->IsUserAdmin($me);
@@ -4833,7 +4834,6 @@ sub UpdateNewExportStats
   foreach my $row (@{$ref})
   {
     $sql = 'REPLACE INTO newexportstats (date,attr,reason,count) VALUES (?,?,?,?)';
-    #printf "$sql %s,%s,%s,%s\n", $date, $row->[0], $row->[1], $row->[2];
     $self->PrepareSubmitSql($sql, $date, $row->[0], $row->[1], $row->[2]);
   }
 }
@@ -6224,7 +6224,7 @@ sub DownloadSpreadSheet
 
   if ($buff)
   {
-    print &CGI::header(-type => 'text/plain', -charset => 'utf-8');
+    print CGI::header(-type => 'text/plain', -charset => 'utf-8');
     print $buff;
   }
 }
@@ -6902,13 +6902,17 @@ sub WhereAmI
 {
   my $self = shift;
 
+  my $where = '';
   my $dev = $self->get('dev');
+  my $pdb = $self->get('pdb');
   if ($dev)
   {
-    return 'Training' if $dev eq 'crms-training';
-    return 'Moses Dev' if $dev eq 'moseshll';
-    return 'Dev';
+    $where = 'Dev';
+    $where = 'Training' if $dev eq 'crms-training';
+    $where = 'Moses Dev' if $dev eq 'moseshll';
   }
+  $where .= ' [Production DB]' if length $where and $pdb;
+  return $where;
 }
 
 sub SelfURL
@@ -6929,7 +6933,7 @@ sub IsTrainingArea
   my $self = shift;
 
   my $where = $self->WhereAmI();
-  return ($where eq 'Training');
+  return ($where =~ m/^training/i);
 }
 
 sub ResetButton
@@ -7945,22 +7949,17 @@ sub Sources
   return \@all;
 }
 
-# Makes sure a URL has the correct sys param if needed.
+# Makes sure a URL has the correct sys and pdb params if needed.
 sub Sysify
 {
   my $self = shift;
   my $url  = shift;
 
+  use Utilities;
   my $sys = $self->get('sys');
-  if ($sys ne 'crms')
-  {
-    if ($url !~ m/sys=$sys/i)
-    {
-      $url .= '?' unless $url =~ m/\?/;
-      $url .= ';' unless $url =~ m/[;?]$/;
-      $url .= "sys=$sys";
-    }
-  }
+  $url = Utilities::AppendParam($url, 'sys', $sys) if $sys ne 'crms';
+  my $pdb = $self->get('pdb');
+  $url = Utilities::AppendParam($url, 'pdb', $pdb) if $pdb;
   return $url;
 }
 
@@ -8005,14 +8004,17 @@ sub Hiddenify
   return join "\n", @comps;
 }
 
-# If necessary, emits a hidden input with the sys name
+# If necessary, emits a hidden input with the sys name and pdb
 sub HiddenSys
 {
   my $self = shift;
 
+  my $html = '';
   my $sys = $self->get('sys');
-  return "<input type='hidden' name='sys' value='$sys'/>" if $sys && $sys ne 'crms';
-  return '';
+  $html = "<input type='hidden' name='sys' value='$sys'/>" if $sys && $sys ne 'crms';
+  my $pdb = $self->get('pdb');
+  $html .= "<input type='hidden' name='pdb' value='$pdb'/>" if $pdb;
+  return $html;
 }
 
 # Compares 2 strings or undefs
