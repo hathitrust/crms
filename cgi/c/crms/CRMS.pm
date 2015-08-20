@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '4.10.3';
+  return '4.10.4';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -3026,7 +3026,6 @@ sub GetExportDataRef
   my $offset       = shift;
   my $pagesize     = shift;
   my $download     = shift;
-  #print("GetQueueRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$download');<br/>\n");
 
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
@@ -3059,8 +3058,8 @@ sub GetExportDataRef
     $search2Value = $2;
     $tester2 = $1;
   }
-  push @rest, "r.time >= '$startDate'" if $startDate;
-  push @rest, "r.time <= '$endDate'" if $endDate;
+  push @rest, "DATE(r.time)>='$startDate'" if $startDate;
+  push @rest, "DATE(r.time)<='$endDate'" if $endDate;
   if ($search1Value ne '' && $search2Value ne '')
   {
     push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
