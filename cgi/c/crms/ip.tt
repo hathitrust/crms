@@ -1,10 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Strict//EN">
-<html>
-  <head>
-    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css" />
-    <title>IP Address Issue</title>
-  </head>
-  <body>
+[% crms.StartHTML('No Access', '<link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>') %]
   <div class="pages" id="homePage">
     <img src="[% crms.GetSystemVar('logo') %]"
          style="display:block;margin-left:auto;margin-right:auto;"/>
