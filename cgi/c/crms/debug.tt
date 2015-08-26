@@ -1,99 +1,8 @@
-[% IF NOT crms.IsUserAdmin() %]
-  [% INCLUDE denied.tt  %]
-  [% STOP %]
-[% END %]
 [% force = cgi.param('force') %]
 [% INCLUDE header.tt %]
 
 <h2>System Administration:</h2>
 <br/>
-
-
-[% # Disable this in production -- too dangerous %]
-[% IF crms.get('dev') %]
-<table class='exportStats'>
-<tr>
-<th>Process&nbsp;today's&nbsp;reviews<span class="total">
-  Only update volume status.</span>
-</th>
-<td>
-  <form action="crms">
-    <input type="hidden" name="p" value="debug"/>
-    [% crms.HiddenSys() %]
-    <input type="hidden" name="processReviews" value="1"/>
-    <input type="submit" value="Do it!"/>
-  </form>
-</td>
-</tr>
-<tr>
-<th>Process&nbsp;today's&nbsp;reviews
-  <span class="total">Update volume status, move to historical, and simulate determinations export.</span>
-</th>
-<td>
-  <form action="crms">
-    [% crms.HiddenSys() %]
-    <input type="hidden" name="p" value="debug"/>
-    <input type="hidden" name="processReviews" value="2"/>
-    <input type="submit" value="Do it!"/>
-  </form>
-</td>
-</tr>
-</table>
-<br/>
-[% END %]
-
-[% # Disable this everywhere but training %]
-[% IF crms.IsTrainingArea() %]
-
-<table class='exportStats'>
-  [% level = cgi.param('resetButton') %]
-  [% IF level %]
-    [% CALL crms.ResetButton(level - 1) %]
-    [% note = (level == 1)? 'Volumes added to queue have been cleared':'Active reviews have been cleared' %]
-    <tr><th colspan="2"><span class="red"><strong>[% note %].</strong></span></th></tr>
-  [% END %]
-  <tr>
-    <th class="total">Clear Active Volumes with Priority &gt; 0</th>
-    <td>
-      <form action="crms">
-      [% crms.HiddenSys() %]
-      <input type="hidden" name="p" value="debug"/>
-      <input type="hidden" name="resetButton" value="1"/>
-      <input type="submit" value="Do it!"/>
-      </form>
-    </td>
-  </tr>
-  <tr>
-    <td class="nowrap" colspan="2">
-      <p>When these volumes are cleared, CRMS does the following:</p>
-      <ul>
-      <li>Removes all active reviews with priority &gt; 0.</li>
-      <li>Removes all volumes with priority &gt; 0 from the queue.</li>
-      </ul>
-    </td>
-  </tr>
-  <tr>
-    <th class="total">Clear Active Reviews with Status 0-3</th>
-    <td>
-      <form action="crms">
-      [% crms.HiddenSys() %]
-      <input type="hidden" name="p" value="debug"/>
-      <input type="hidden" name="resetButton" value="2"/>
-      <input type="submit" value="Do it!"/>
-      </form>
-    </td>
-  </tr>
-  <tr>
-    <td class="nowrap" colspan="2">
-      <p>When these active reviews are cleared, CRMS does the following:</p>
-      <ul>
-      <li>Removes all active volumes with status 0-3 from queue.</li>
-      <li>Deletes all active reviews with status 0-3.</li>
-      </ul>
-    </td>
-  </tr>
-</table>
-[% END %]
 
 <br/><br/>
 <table class='exportStats'>
@@ -155,17 +64,6 @@
   </table>
 [% END %]
 
-[% # Disable this in production -- too dangerous %]
-[% IF crms.get('dev') %]
-  [% level = cgi.param('processReviews') %]
-  [% IF level %]
-    [% CALL crms.ProcessReviews(1) %]
-    [% IF level == 2 %]
-      <p>[% crms.ClearQueueAndExport(1) %]</p>
-    [% END %]
-  [% END %]
-[% END %]
-
 [% IF cgi.param('multibyte') %]
   [% sql = "SELECT id,author,title FROM bibdata WHERE LENGTH(title)!=CHAR_LENGTH(title) OR LENGTH(author)!=CHAR_LENGTH(author) ORDER BY author,title,id" %]
   [% ref  = crms.SelectAll(sql) %]
@@ -191,7 +89,7 @@
 [% IF cgi.param('debug') %]
   <h3>CRMS&nbsp;Object</h3>
   <table class="exportStats" style="width:30%;">
-  [% FOREACH key IN crms.keys() %]
+  [% FOREACH key IN crms.keys().sort() %]
   <tr><td>[% key %]</td><td>[% crms.get(key) %]</td></tr>
   [% END %]
   </table>

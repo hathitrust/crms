@@ -1,18 +1,17 @@
 [% INCLUDE header.tt %]
 
-[% p        = cgi.param('p')              %]
-[% error    = cgi.param('errorMsg')       %]
-[% barcode  = cgi.param('barcode')        %]
-[% editing  = cgi.param('editing')        %]
-[% note     = cgi.param('note')           %]
-[% category = cgi.param('category')       %]
-[% select   = cgi.param('rights')         %]
-[% hold     = cgi.param('hold')           %]
-[% swiss    = cgi.param('swiss')          %]
-[% sys      = cgi.param('sys')            %]
-[% mag      = cgi.cookie('mag')           %]
-[% ptview   = cgi.cookie('ptview')        %]
-[% super    = crms.IsUserSuperAdmin(user) %]
+[% p        = cgi.param('p')        %]
+[% error    = cgi.param('errorMsg') %]
+[% barcode  = cgi.param('barcode')  %]
+[% editing  = cgi.param('editing')  %]
+[% note     = cgi.param('note')     %]
+[% category = cgi.param('category') %]
+[% select   = cgi.param('rights')   %]
+[% hold     = cgi.param('hold')     %]
+[% swiss    = cgi.param('swiss')    %]
+[% sys      = cgi.param('sys')      %]
+[% mag      = cgi.cookie('mag')     %]
+[% ptview   = cgi.cookie('ptview')  %]
 
 [% IF barcode && editing %]
   [% IF crms.PreviouslyReviewed(barcode, user) %]
@@ -30,11 +29,6 @@
     <h3>[% err %].</h3>
     [% STOP %]
   [% END %]
-[% END %]
-
-[% IF !super %]
-  <h3>You are not authorized to review these volumes.</h3>
-  [% STOP %]
 [% END %]
 
 [% IF !editing %]

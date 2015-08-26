@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '4.10.4';
+  return '4.10.5';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -3639,24 +3639,6 @@ sub PredictUserInstitution
   return $inst;
 }
 
-# Ext admin can see their institution's.
-# Returns aref of [url,label] or undef if they're not an extadmin.
-sub InstitutionMenu
-{
-  my $self = shift;
-  my $user = shift;
-
-  my $ret;
-  $user = $self->get('user') unless $user;
-  if ($self->IsUserExtAdmin($user))
-  {
-    my $inst = $self->GetUserInstitution($user);
-    my $name = $self->GetInstitutionName($inst);
-    $ret = ['crms?p=adminUserRateInst;inst='.$inst, 'All ' . $name . ' Stats'];
-  }
-  return $ret;
-}
-
 sub GetUserInstitution
 {
   my $self = shift;
@@ -3688,19 +3670,6 @@ sub GetInstitutionUsers
     push @ausers, $user if $inst == $self->GetUserInstitution($user);
   }
   return \@ausers;
-}
-
-sub CanUserSeeInstitutionalStats
-{
-  my $self = shift;
-  my $inst = shift;
-  my $user = shift;
-
-  return 0 unless defined $inst;
-  $user = $self->get('user') unless $user;
-  return 1 if $self->IsUserExpert($user) or $self->IsUserAdmin($user);
-  my $aff = $self->GetUserInstitution($user);
-  return ($aff == $inst && $self->IsUserExtAdmin($user));
 }
 
 sub GetTheYear
@@ -7638,27 +7607,17 @@ sub SetSystemVar
 sub Menus
 {
   my $self = shift;
+  my $user = shift;
 
-  my $e = $self->IsUserExpert();
-  my $i = $self->IsUserIncarnationExpertOrHigher();
-  my $r = ($e || $self->IsUserReviewer() || $self->IsUserAdvanced());
-  my $x = $self->IsUserExtAdmin();
-  my $a = $self->IsUserAdmin();
-  my $s = $self->IsUserSuperAdmin();
+  $user = $self->get('user') unless defined $user;
+  my $q = $self->GetUserQualifications($user);
   my $sql = 'SELECT id,name,class,restricted FROM menus ORDER BY n';
-  #print "$sql\n<br/>";
   my $ref = $self->SelectAll($sql);
   my @all = ();
   foreach my $row (@{$ref})
   {
-    if (!$row->[3] ||
-        ($row->[3] &&
-         (($e && $row->[3] =~ m/e/) ||
-          ($i && $row->[3] =~ m/i/) ||
-          ($r && $row->[3] =~ m/r/) ||
-          ($x && $row->[3] =~ m/x/) ||
-          ($a && $row->[3] =~ m/a/) ||
-          ($s && $row->[3] =~ m/s/))))
+    my $r = $row->[3];
+    if ($self->DoQualificationsAndRestrictionsOverlap($q, $r))
     {
       push @all, $row;
     }
@@ -7666,43 +7625,82 @@ sub Menus
   return \@all;
 }
 
+# Returns aref of arefs to name, url, and target
 sub MenuItems
 {
   my $self = shift;
   my $menu = shift;
+  my $user = shift || $self->get('user');
 
   $menu = $self->SimpleSqlGet('SELECT id FROM menus WHERE docs=1 LIMIT 1') if $menu eq 'docs';
-  my $e = $self->IsUserExpert();
-  my $i = $self->IsUserIncarnationExpertOrHigher();
-  my $r = ($e || $self->IsUserReviewer() || $self->IsUserAdvanced());
-  my $x = $self->IsUserExtAdmin();
-  my $a = $self->IsUserAdmin();
-  my $s = $self->IsUserSuperAdmin();
-  my $sql = 'SELECT name,href,institution,restricted,target FROM menuitems WHERE menu=? ORDER BY n ASC';
-  #print "$sql\n<br/>";
+  my $q = $self->GetUserQualifications($user);
+  my $inst = $self->GetUserInstitution($user);
+  my $iname = $self->GetInstitutionName($inst, 1);
+  my $sql = 'SELECT name,href,restricted,target FROM menuitems WHERE menu=? ORDER BY n ASC';
   my $ref = $self->SelectAll($sql, $menu);
   my @all = ();
   foreach my $row (@{$ref})
   {
-    if (defined $row->[2])
+    my $r = $row->[2];
+    if ($self->DoQualificationsAndRestrictionsOverlap($q, $r))
     {
-      my $inst = $self->InstitutionMenu();
-      push @all, [$inst->[1],$inst->[0],undef,undef,undef] if defined $inst;
-      next;
-    }
-    if (!$row->[3] ||
-        ($row->[3] &&
-         (($e && $row->[3] =~ m/e/) ||
-          ($i && $row->[3] =~ m/i/) ||
-          ($r && $row->[3] =~ m/r/) ||
-          ($x && $row->[3] =~ m/x/) ||
-          ($a && $row->[3] =~ m/a/) ||
-          ($s && $row->[3] =~ m/s/))))
-    {
-      push @all, $row;
+      my $name = $row->[0];
+      $name =~ s/__INST__/$iname/;
+      push @all, [$name, $row->[1], $row->[3]];
     }
   }
   return \@all;
+}
+
+sub GetUserQualifications
+{
+  my $self = shift;
+  my $user = shift || $self->get('user');
+
+  my $sql = 'SELECT CONCAT('.
+            ' IF(reviewer=1 OR advanced=1,"r",""),'.
+            ' IF(expert=1,"e",""),'.
+            ' IF(extadmin=1,"x",""),'.
+            ' IF(admin=1,"a",""),'.
+            ' IF(superadmin=1,"xas",""))'.
+            ' FROM users where id=?';
+  my $q = $self->SimpleSqlGet($sql, $user);
+  $q .= 'i' if $self->IsUserIncarnationExpertOrHigher($user);
+  return $q;
+}
+
+# Called by the top-level script to make sure the user is allowed.
+# Returns undef if user qualifies, error otherwise.
+sub AccessCheck
+{
+  my $self = shift;
+  my $page = shift;
+  my $user = shift || $self->get('user');
+
+  my $sql = 'SELECT restricted FROM menuitems WHERE page=?';
+  my $r = $self->SimpleSqlGet($sql, $page) || '';
+  my $q = $self->GetUserQualifications($user) || '';
+  if (!$self->DoQualificationsAndRestrictionsOverlap($q, $r))
+  {
+    return "DBC failed for $page.tt: r='$r', q='$q'";
+  }
+  return undef;
+}
+
+# Returns Boolean: do qualifications and restriction overlap?
+sub DoQualificationsAndRestrictionsOverlap
+{
+  my $self = shift;
+  my $q    = shift;
+  my $r    = shift;
+
+  return 1 unless defined $r and length $r;
+  return (($q =~ m/e/ && $r =~ m/e/) ||
+          ($q =~ m/i/ && $r =~ m/i/) ||
+          ($q =~ m/r/ && $r =~ m/r/) ||
+          ($q =~ m/x/ && $r =~ m/x/) ||
+          ($q =~ m/a/ && $r =~ m/a/) ||
+          ($q =~ m/s/ && $r =~ m/s/));
 }
 
 # interface=1 means just the categories used in the review page
@@ -7711,11 +7709,7 @@ sub Categories
   my $self      = shift;
   my $interface = shift;
 
-  my $e = $self->IsUserExpert();
-  my $r = ($e || $self->IsUserReviewer() || $self->IsUserAdvanced());
-  my $x = $self->IsUserExtAdmin();
-  my $a = $self->IsUserAdmin();
-  my $s = $self->IsUserSuperAdmin();
+  my $q = $self->GetUserQualifications();
   my $sql = 'SELECT id,name,restricted,interface,need_note FROM categories ORDER BY name ASC';
   #print "$sql\n<br/>";
   my $ref = $self->SelectAll($sql);
@@ -7723,13 +7717,8 @@ sub Categories
   foreach my $row (@{$ref})
   {
     next if $interface and $row->[3] == 0;
-    if (!$row->[2] ||
-        ($row->[2] &&
-         (($e && $row->[2] =~ m/e/) ||
-          ($r && $row->[2] =~ m/r/) ||
-          ($x && $row->[2] =~ m/x/) ||
-          ($a && $row->[2] =~ m/a/) ||
-          ($s && $row->[2] =~ m/s/))))
+    my $r = $row->[2];
+    if ($self->DoQualificationsAndRestrictionsOverlap($q, $r))
     {
       push @all, $row;
     }

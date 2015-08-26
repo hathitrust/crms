@@ -1,18 +1,30 @@
-[% crms.StartHTML('No Access') %]
+[% crms.StartHTML('No Access', '<link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>') %]
+
 <div class="pages" id="homePage">
-  <img src="[% crms.GetSystemVar('logo') %]" alt="CRMS Logo"/>
-  <br/><br/>
-  <font size="5"><strong>Hello [% crms.GetUserName %] </strong></font>
-  <a href="[% crms.Sysify('crms?p=Logout') %]"> Logout</a>
-  [% FOREACH error IN crms.GetErrors %]
-    <strong>ERROR: [% error %]</strong>
-    <br/>
-  [% END %]
-  <br/><br/>
-  <h3>You do not have access to this page</h3>
-  <strong>
-    <a href="[% crms.Sysify('/cgi/c/crms/crms?p=home') %]">Go to home page</a>
-  </strong>
-</div>
-</body>
-</html>
+  <img src="[% crms.GetSystemVar('logo') %]"
+       style="display:block;margin-left:auto;margin-right:auto;"
+       alt="[% crms.System() %] Logo"/>
+    <br/><br/>
+    <!--<font size="5"><strong>Hello [% crms.GetUserName %] </strong></font>-->
+  <br/>
+  <br/>
+  [% mail = crms.GetSystemVar('expertsEmail') %]
+  [% mail2 = mail.replace('-', '&#8209;') %]
+  [% user = crms.get('user') %]
+  <div class="warningBox">
+    <h2>Hello [% crms.GetUserName %]. You do not have access to this page.</h2>
+    <strong><a href="[% crms.Sysify('/cgi/c/crms/crms?p=home') %]">Go to home page</a></strong><br/>
+    <strong><a href="[% crms.Sysify('crms?p=Logout') %]"> Logout</a></strong>
+  
+    <div class="warningSubbox">
+      <h4>Security considerations do not allow Copyright Review Management System reviewer
+          <span style="color:black;">[% user %]</span>
+          to access the page <span style="color:black;">[% cgi.param('p') %]</span>.
+          If you feel that this message is being displayed in error, contact:
+          <a href="mailto:[% mail %]"><span style="color:black;whitespace:nowrap;">[% mail2 %]</span></a>.
+          <br/>
+          Error message: <span style="color:black;"><code>[% cgi.param('dbc') %]</code></span>
+      </h4>
+    </div>
+  </div>
+[% INCLUDE footer.tt %]

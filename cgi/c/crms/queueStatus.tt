@@ -1,4 +1,4 @@
-[% INCLUDE header.tt   %]
+[% INCLUDE header.tt %]
 
 <h2>System Summary:</h2><br/>
 

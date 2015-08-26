@@ -1,11 +1,6 @@
-[% IF NOT crms.IsUserAdmin() %]
-  [% INCLUDE denied.tt  %]
-  [% STOP %]
-[% END %]
-
 [% INCLUDE header.tt %]
 
-<h2>All Locked Items</h2>
+<h2>All Locked Items:</h2>
 
 <script type="text/javascript">
 <!--

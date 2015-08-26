@@ -1,11 +1,8 @@
-[% inst = cgi.param('inst') %]
-[% p    = cgi.param('p')    %]
-
-[% IF NOT crms.CanUserSeeInstitutionalStats(inst) %]
-  [% INCLUDE denied.tt  %]
-  [% STOP %]
+[% inst = crms.GetUserInstitution() %]
+[% IF crms.IsUserAdmin() %]
+  [% inst2 = cgi.param('inst') %]
+  [% IF inst2 %][% inst = inst2 %][% END %]
 [% END %]
-
 [% INCLUDE header.tt %]
 
 [% name = crms.GetInstitutionName(inst, 1) %]

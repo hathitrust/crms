@@ -8,7 +8,6 @@
 [% mag      = cgi.cookie('mag')       %]
 [% ptview   = cgi.cookie('ptview')    %]
 [% fixed    = cgi.cookie('fixed')     %]
-[% expert   = crms.IsUserExpert(user) %]
 
 [% IF barcode && editing %]
   [% err = crms.LockItem(barcode, user, 0, 1) %]
@@ -17,11 +16,6 @@
     <br/><a href="JavaScript:window.close()">Close</a>
     [% STOP %]
   [% END %]
-[% END %]
-
-[% IF !expert %]
-  <h3>You are not authorized to review corrections.</h3>
-  [% STOP %]
 [% END %]
 
 [% IF !editing %]

@@ -1,8 +1,3 @@
-[% IF NOT (crms.IsUserExpert() || crms.IsUserAdmin()) %]
-  [% INCLUDE denied.tt  %]
-  [% STOP %]
-[% END %]
-
 [% p = cgi.param('p') %]
 [% q = cgi.param('query') %]
 [% INCLUDE header.tt %]

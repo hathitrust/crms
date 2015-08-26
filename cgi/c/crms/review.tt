@@ -39,11 +39,6 @@
   [% END %]
 [% END %]
 
-[% IF (!crms.IsUserReviewer()) && (!crms.IsUserAdvanced()) && (!expert) %]
-  <h3>You are not authorized to review volumes.</h3>
-  [% STOP %]
-[% END %]
-
 [% IF !editing && !error %]
   [%# ## Get locked item or new one from queue ## %]
   [% IF crms.HasLockedItem(user) %]

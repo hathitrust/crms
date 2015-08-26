@@ -17,7 +17,7 @@
     <dt><a>[% menu.1 %]&nbsp;&nbsp;&nbsp;</a></dt>
     [% items = crms.MenuItems(id) %]
     [% FOREACH item IN items %]
-      [% target = (item.4)? ' target="' _ item.4 _ '"':'' %]
+      [% target = (item.2)? ' target="' _ item.2 _ '"':'' %]
       [% href = item.1 %]
       [% IF NOT href.match('(?i)javascript') %]
         [% href = crms.Sysify(href) %]
