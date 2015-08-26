@@ -117,7 +117,8 @@ function CheckAll(box,formid)
                var cels = rows[row].getElementsByTagName('td');
                if (cels.length > 1) cels[1].style.display=vis;
              }
-             document.getElementById('sysidth').style.display = vis;"/><label id="cblabel" for="sysIDCB">&nbsp;&nbsp;Show&nbsp;System&nbsp;ID</label>
+             document.getElementById('sysidth').style.display = vis;"/>
+             <label id="cblabel" for="sysIDCB">&nbsp;&nbsp;Show&nbsp;System&nbsp;ID</label>
   [% END %]
 
   [% color_white    = '#FFFFFF' %]
