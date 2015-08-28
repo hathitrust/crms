@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '4.10.5';
+  return '4.10.6';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -3642,9 +3642,9 @@ sub PredictUserInstitution
 sub GetUserInstitution
 {
   my $self = shift;
-  my $id   = shift;
+  my $user = shift || $self->get('user');
 
-  return $self->SimpleSqlGet('SELECT institution FROM users WHERE id=?', $id);
+  return $self->SimpleSqlGet('SELECT institution FROM users WHERE id=?', $user);
 }
 
 sub GetInstitutionName
