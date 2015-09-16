@@ -528,7 +528,7 @@ sub ClearQueueAndExport
     push(@{$export}, $id);
   }
   $self->ExportReviews($export, $fromcgi);
-  $self->UpdateNewExportStats();
+  $self->UpdateExportStats();
   $self->UpdateDeterminationsBreakdown();
   return "Removed from queue: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved, $iCount inherited rights\n";
 }
@@ -3777,8 +3777,8 @@ sub GetAllExportYears
   my $self = shift;
 
   my @list = ();
-  my $min = $self->SimpleSqlGet('SELECT MIN(YEAR(date)) FROM newexportstats');
-  my $max = $self->SimpleSqlGet('SELECT MAX(YEAR(date)) FROM newexportstats');
+  my $min = $self->SimpleSqlGet('SELECT MIN(YEAR(date)) FROM exportstats');
+  my $max = $self->SimpleSqlGet('SELECT MAX(YEAR(date)) FROM exportstats');
   @list = ($min..$max) if $min and $max;
   return \@list;
 }
@@ -3805,7 +3805,7 @@ sub CreateExportData
   }
   else
   {
-    my $sql = 'SELECT DISTINCT(DATE_FORMAT(date,"%Y-%m")) FROM newexportstats'.
+    my $sql = 'SELECT DISTINCT(DATE_FORMAT(date,"%Y-%m")) FROM exportstats'.
               ' WHERE DATE_FORMAT(date,"%Y-%m")>=?'.
               ' AND DATE_FORMAT(date,"%Y-%m")<=? ORDER BY date ASC';
     @dates = map {$_->[0];} @{$self->SelectAll($sql, $year.'-01', $year.'-12')};
@@ -3818,7 +3818,7 @@ sub CreateExportData
   my %data; # Unordered map of title to arrayref of cell values
   my @clauses;
   my @params;
-  my $sql = 'SELECT DISTINCT CONCAT(attr,"/",reason) FROM newexportstats'.
+  my $sql = 'SELECT DISTINCT CONCAT(attr,"/",reason) FROM exportstats'.
             ((defined $year)? ' WHERE YEAR(date)='.$year:'').
             ' ORDER BY attr LIKE "pd%" DESC,attr,(attr="und" AND reason="nfi") DESC,reason';
   my $ref = $self->SelectAll($sql);
@@ -3845,7 +3845,7 @@ sub CreateExportData
     foreach my $date (@dates)
     {
       Utilities::ClearArrays(\@clauses, \@params);
-      $sql = 'SELECT COALESCE(SUM(count),0) FROM newexportstats';
+      $sql = 'SELECT COALESCE(SUM(count),0) FROM exportstats';
       if ($attr)
       {
         my $attr2 = $attr;
@@ -4714,7 +4714,7 @@ sub UpdateDeterminationsBreakdown
   $self->PrepareSubmitSql($sql, @vals);
 }
 
-sub UpdateNewExportStats
+sub UpdateExportStats
 {
   my $self = shift;
   my $date = shift;
@@ -4726,7 +4726,7 @@ sub UpdateNewExportStats
   my $ref = $self->SelectAll($sql, $date);
   foreach my $row (@{$ref})
   {
-    $sql = 'REPLACE INTO newexportstats (date,attr,reason,count) VALUES (?,?,?,?)';
+    $sql = 'REPLACE INTO exportstats (date,attr,reason,count) VALUES (?,?,?,?)';
     $self->PrepareSubmitSql($sql, $date, $row->[0], $row->[1], $row->[2]);
   }
 }
@@ -8056,10 +8056,9 @@ sub GetADDFromAuthor
   my $self   = shift;
   my $id     = shift;
   my $a      = shift; # For testing
-  my $record = shift;
+  my $record = shift || $self->GetMetadata($id);
 
   my $add = undef;
-  $record = $self->GetMetadata($id) unless defined $record;
   return unless defined $record;
   $a = $record->author(1) unless defined $a;
   my $regex = '(\d?\d\d\d\??)?\s*-\s*(\d?\d\d\d)[.,;) ]*$';
