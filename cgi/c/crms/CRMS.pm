@@ -47,10 +47,12 @@ sub new
   $self->set('verbose', $args{'verbose'});
   $self->set('root',    $root);
   $self->set('dev',     $args{'dev'});
-  $self->set('user',    $args{'user'});
   $self->set('pdb',     $args{'pdb'});
   $self->set('sys',     $sys);
-  $self->SetError('Warning: configFile parameter is obsolete.') if $args{'configFile'};
+  my $user = $ENV{'REMOTE_USER'};
+  my $alias = $self->GetAlias($user);
+  $user = $alias if defined $alias and length $alias and $alias ne $user;
+  $self->set('user', $user);
   return $self;
 }
 
@@ -73,7 +75,7 @@ sub set
 
 sub Version
 {
-  return '4.10.6';
+  return '4.11';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -3447,7 +3449,7 @@ sub GetUserKerberosID
   return $self->SimpleSqlGet($sql, $user);
 }
 
-sub GetAliasUserName
+sub GetAlias
 {
   my $self = shift;
   my $user = shift;
@@ -3457,15 +3459,17 @@ sub GetAliasUserName
   return $self->SimpleSqlGet($sql, $user);
 }
 
-sub ChangeAliasUserName
+sub SetAlias
 {
-  my $self     = shift;
-  my $user     = shift;
-  my $new_user = shift;
+  my $self  = shift;
+  my $user  = shift || $self->get('user');
+  my $alias = shift;
 
-  $user = $self->get('user') unless $user;
-  my $sql = 'UPDATE users SET alias=? WHERE id=?';
-  $self->PrepareSubmitSql($sql, $new_user, $user);
+  if ($self->CanChangeToUser($user, $alias))
+  {
+    my $sql = 'UPDATE users SET alias=? WHERE id=?';
+    $self->PrepareSubmitSql($sql, $alias, $user);
+  }
 }
 
 # Return an arrayref of all user ids that share the same kerberos id.
@@ -3506,9 +3510,9 @@ sub CanChangeToUser
   my $me   = shift;
   my $him  = shift;
 
-  my $where = $self->WhereAmI();
   return 1 if $self->SameUser($me, $him);
-  if (defined $where && $where !~ /^training/i)
+  my $where = $self->WhereAmI();
+  if (length $where && $where !~ /^training/i)
   {
     return 0 if $me eq $him;
     return 1 if $self->IsUserAdmin($me);

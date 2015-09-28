@@ -11,6 +11,7 @@ use POSIX;
 use Encode;
 
 my $ru = $ENV{'REMOTE_USER'};
+my $user = $ru;
 my $cgi  = new CGI;
 my $sys =  $cgi->param('sys');
 $sys = 'crms' unless $sys;
@@ -20,24 +21,23 @@ my $crms = CRMS->new(
         verbose => 0,
         root    => $DLXSROOT,
         dev     => $DLPS_DEV,
-        user    => $ru,
         pdb     => $cgi->param('pdb'),
         );
-my $alias = $crms->GetAliasUserName($ru);
+my $alias = $crms->GetAlias($user) || '';
 
 if ($cgi->param('p') eq 'Logout')
 {
   # Remove all locks for this user.
   # If we're aliased, we don't log out, we just drop the alias.
-  if ($alias && $alias ne $ru)
+  if ($alias)
   {
     $crms->UnlockAllItemsForUser($alias);
-    $cgi->param('changeuser', 1);
-    $cgi->param('newuser', $ru);
+    $crms->SetAlias($user, undef);
+    $cgi->delete_all();
   }
   else
   {
-    $crms->UnlockAllItemsForUser($ru);
+    $crms->UnlockAllItemsForUser($user);
     # change 'central' to the url of your weblogin server.
     my $central = "https://weblogin.umich.edu/cgi-bin/logout";
     my $query_string = '';
@@ -53,30 +53,27 @@ if ($cgi->param('p') eq 'Logout')
     exit(0);
   }
 }
-
-if ($cgi->param('changeuser') == 1)
+elsif ($cgi->param('changeuser') == 1)
 {
   $alias = $cgi->param('newuser');
   if ($crms->GetUserName($alias))
   {
-    $crms->ChangeAliasUserName($ru, ($alias eq $ru)? '':$alias);
+    $crms->SetAlias($user, ($user eq $alias)? undef:$alias);
   }
   $cgi->delete_all();
+  $user = $alias;
 }
-my $user = ($alias)? $alias:$ru;
-if ($user ne $ru)
+if ($user ne $crms->get('user'))
 {
   $crms = CRMS->new(
-            logFile => $DLXSROOT. '/prep/c/crms/log_review.txt',
-            sys     => $sys,
-            verbose => 0,
-            root    => $DLXSROOT,
-            dev     => $DLPS_DEV,
-            user    => $user,
-            pdb     => $cgi->param('pdb')
-            );
+                logFile => $DLXSROOT. '/prep/c/crms/log_review.txt',
+                sys     => $sys,
+                verbose => 0,
+                root    => $DLXSROOT,
+                dev     => $DLPS_DEV,
+                pdb     => $cgi->param('pdb')
+                );
 }
-
 ## make sure user known
 if (!$crms->GetUserName($user))
 {
