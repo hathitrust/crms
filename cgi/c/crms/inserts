@@ -1,0 +1,93 @@
+#!/usr/bin/perl
+
+my ($DLXSROOT, $DLPS_DEV);
+BEGIN { $DLXSROOT = $ENV{'DLXSROOT'}; $DLPS_DEV = $ENV{'DLPS_DEV'}; }
+
+use strict;
+use CGI;
+use CRMS;
+use Inserts;
+use Template;
+use POSIX;
+use Encode;
+
+my $cgi  = new CGI;
+my $sys =  $cgi->param('sys');
+$sys = 'crms' unless $sys;
+$cgi->param('sys', $sys) if $sys and $sys ne 'crms';
+my $crms = CRMS->new(
+        logFile      =>   "$DLXSROOT/prep/c/crms/log_inserts.txt",
+        sys          =>   $sys,
+        verbose      =>   0,
+        root         =>   $DLXSROOT,
+        dev          =>   $DLPS_DEV
+        );
+
+my $ins = Inserts->new('crms'=>$crms);
+my $editing = $cgi->param('editing');
+my $id = $cgi->param('barcode');
+if ($cgi->param('submit') eq 'Cancel')
+{
+  $ins->Unlock($id);
+  $cgi->delete_all();
+  if ($editing)
+  {
+    print "Content-type: text/html\n\n";
+    print '<script type="text/javascript">window.close();</script>';
+  }
+}
+
+## config options for TT
+my $config =
+{
+    INCLUDE_PATH => '.',
+    INTERPOLATE  => 1,     ## expand "$var" in plain text
+    POST_CHOMP   => 1,     ## cleanup whitespace
+    EVAL_PERL    => 1,     ## evaluate Perl code blocks
+    ENCODING     => 'UTF-8'
+};
+
+my $tt   = Template->new($config);
+my $vars = {
+    title     => $crms->System(),
+    inserts   => $ins,
+    crms      => $crms,
+    cgi       => $cgi,
+    user      => $crms->get('user'),
+    yesterday => POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time-86400))
+};
+
+## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
+## the default is home.tt in case a tt is not found
+my $page  = $cgi->param('p') || '';
+my $ip = $ENV{'REMOTE_ADDR'};
+my %ips = %{$crms->GetUserIPs()};
+if (scalar keys %ips)
+{
+  if (!defined $ips{$ip} && !$crms->IsUserAdmin())
+  {
+    $page = 'ip';
+    $cgi->param('REMOTE_ADDR', $ip);
+  }
+}
+my $input = $page . '.tt';
+$input = 'home.tt' unless -f $input;
+
+print $cgi->header(-charset => 'utf-8', 'cache-control' => 'private');
+if (!$tt->process($input, $vars))
+{
+  printf "<h3>%s</h3>\n", $tt->error();
+  die $tt->error();
+}
+if ($cgi->param('debug'))
+{
+  print '<br/><br/>';
+  printf 'Host: <b>%s</b><br/>', `hostname`;
+  eval {
+    foreach my $k (keys %ENV)
+    {
+      printf "$k: %s<br/>\n", $ENV{$k};
+    }
+  }
+}
+

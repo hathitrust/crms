@@ -1,0 +1,164 @@
+[% INCLUDE header.tt %]
+
+[% p        = cgi.param('p')          %]
+[% error    = cgi.param('errorMsg')   %]
+[% barcode  = cgi.param('barcode')    %]
+[% editing  = cgi.param('editing')    %]
+[% sys      = cgi.param('sys')        %]
+[% mag      = cgi.cookie('mag')       %]
+[% ptview   = cgi.cookie('ptview')    %]
+[% expert   = crms.IsUserIncarnationExpertOrHigher(user) %]
+
+[% IF barcode && editing %]
+  [% err = inserts.Lock(barcode, user) %]
+  [% IF err != 0 %]
+    <h3>[% err %].</h3>
+    <br/><a href="JavaScript:window.close()">Close</a>
+    [% STOP %]
+  [% END %]
+[% END %]
+
+[% IF !editing %]
+  [%# ## Get locked item or new one from queue ## %]
+  [% barcode = inserts.GetLockedInserts(user) %]
+  [% IF !barcode %]
+    [% barcode = inserts.GetNextInsertsForReview(user) %]
+  [% END %]
+[% END %]
+
+[%# ## failed to get a barcode ## %]
+[% IF NOT barcode %]
+  <h3>Unable to find a volume ID to review</h3>
+  [% FOREACH error IN crms.GetErrors %]
+    <strong>ERROR: [% error.replace('\n','<br/>') %]</strong><br/>
+  [% END %]
+  [% STOP %]
+[% END %]
+
+[% pub_date = crms.FormatPubDate(barcode) %]
+[% author   = crms.GetAuthor(barcode)     %]
+[% title    = crms.GetTitle(barcode)      %]
+
+[% homeLink = crms.Sysify("inserts?p=inserts;submit=Cancel;barcode=$barcode") %]
+
+<div class="divbody" style="overflow-y:hidden;max-height:100vh;">
+  <div class="divNav" id="divNav" style="overflow:auto;overflow-x:hidden;max-height:100vh;">
+    <div class="navtop">
+      <table class="nav">
+        <tr>
+          <td rowspan="2"><img src="[% crms.GetSystemVar('smallLogo') %]" alt="CRMS Logo" width="52" height="40"/></td>
+          <td style="text-align:left;"><strong>Hello [% crms.GetUserName(user) %]</strong></td>
+        </tr>
+        <tr>
+          <td style="text-align:left;"><a href="[% homeLink %]">Home</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="crms?p=Logout;sys=$sys">Logout</a></td>
+        </tr>
+        <tr><td></td><td></td></tr>
+        <tr><td></td><td></td></tr>
+        <tr><td></td><td></td></tr>
+        <!--<tr>
+          <td colspan="2">
+            <select title="Select Help Documentation" class="review"
+                    onchange="if (this.selectedIndex > 0) window.open(this.options[this.selectedIndex].value);this.selectedIndex=0;">
+              <option>Select Help Documentation</option>
+              [% items = crms.MenuItems('docs') %]
+              [% FOREACH item IN items %]
+                [% IF ! item.3 %]<option value="[% item.1 %]">[% item.0 %]</option>[% END %]
+              [% END %]
+            </select>
+          </td>
+        </tr>
+        -->
+      </table>
+
+      <table class="id">
+        <tr><td><strong>ID:</strong> [% barcode %]</td></tr>
+        <tr><td><strong>Title:</strong> [% title %]</td></tr>
+        <tr><td><strong>Author:</strong> [% author %]</td></tr>
+        <tr><td><strong>Pub Date:</strong> <span id="pubDateSpan">[% pub_date %]</span><br/></td></tr>
+      </table>
+      [% sources = crms.Sources(barcode,mag,ptview,p) %]
+      <table class="search">
+        <tr>
+          <th>View&nbsp;1:</th>
+          <td>
+            <select title="Search 1" class="review" id="search1Select" onchange="changeFrame1(1);" style="float:right;">
+            [% selectit = 0 %]
+            [% FOREACH src IN sources %]
+              [% IF src.2 %]
+                [% selectstr = "" %]
+                [% IF selectit == 0 && src.5 == 1 %]
+                  [% selectit = 1 %]
+                  [% selectstr = "selected='selected'" %]
+                [% END %]
+                <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
+              [% ELSE %]
+                <optgroup label="[% src.1 %]"/>
+              [% END %]
+            [% END %]
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th>View&nbsp;2:</th>
+          <td>
+            <select title="Search 2" class="review" id="search2Select" onchange="changeFrame2(1);" style="float:right;">
+            [% selectit = 0 %]
+            [% FOREACH src IN sources %]
+              [% IF src.2 %]
+                [% selectstr = "" %]
+                [% IF selectit == 0 && src.5 == 2 %]
+                  [% selectit = 1 %]
+                  [% selectstr = "selected='selected'" %]
+                [% END %]
+                <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
+              [% ELSE %]
+                <optgroup label="[% src.1 %]"/>
+              [% END %]
+            [% END %]
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td></td>
+          <td style="margin:0px;padding:0px;">
+             <input type="button" class="reviewblue" value="Toggle View" onclick="flipFrame();" accesskey="o"
+             style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
+          </td>
+        </tr>
+      </table>
+    </div>
+    [% realindex = 0 %]
+    [% FOREACH src IN sources %]
+      [% IF src.3 && src.4 %]
+        <a style="position:absolute;left:-999px;" href="#" accesskey="[% src.3 %]"
+           onfocus="document.getElementById('search[% src.4 %]Select').selectedIndex=[% realindex %];changeFrame[% src.4 %]();">.</a>
+      [% END %]
+      [% IF src.2 %][% realindex = realindex + 1 %][% END %]
+    [% END %]
+    <div class="navbottom" style="border-collapse:collapse;">
+      [% errors = [] %]
+      [% es = crms.GetErrors() %]
+      [% IF es.size %]
+        [% CALL errors.import(es) %]
+      [% END %]
+      [% CALL crms.ClearErrors() %]
+      [% IF NOT error %][% error = errors.join('; ') %][% END %]
+      [% INCLUDE submitInsertsForm.tt barcode = barcode, editing = editing,
+                                      error   = error,   select = select,   mag     = mag,
+                                      sys     = sys,     ptview  = ptview %]
+      [% status = crms.GetSystemStatus() %]
+      [% IF status.2 %]
+        <table class="nav">
+          <tr><td style="text-align:left;"><span style="font-size:1.3em;font-weight:bold;color:#990000;">[% status.2 %]</span></td></tr>
+        </table>
+      [% END %]
+    </div>
+  </div>
+  [%# the frame (Stanford, HT, Cat...) %]
+  <div class="divFrame" id="divFrame">
+    <iframe width="100%" height="100%" id="tFrame" name="tFrame" src="" style="border:none;"></iframe>
+    <iframe width="100%" height="100%" id="bFrame" name="bFrame" src="" style="border:none;display:none;"></iframe>
+  </div>
+</div>
+
+[% INCLUDE footer.tt %]
