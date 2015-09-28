@@ -22,7 +22,8 @@ var gSys = '[% crms.Sys() %]';
 -->
     </script>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
-  [% IF page == 'review' OR page == 'corrections' OR page == 'oneoff' %]
+  [% reviewType = (page == 'review' OR page == 'corrections' OR page == 'oneoff' OR page == 'inserts') %]
+  [% IF reviewType %]
     <script type="text/javascript" src="/c/crms/js/review.js"></script>
   [% END %]
   [% where = crms.WhereAmI() %]
@@ -33,7 +34,7 @@ var gSys = '[% crms.Sys() %]';
 [% page = cgi.param('p') %]
 [% r = crms.GetSystemStatus() %]
 
-[% IF page != 'review' && page != 'corrections' && page != 'oneoff' %]
+[% IF !reviewType %]
     <div class="pages" id="homePage">
     <div style="height:82px;border-bottom:1px solid black;margin:0px;padding-bottom:6px;">
       <a href="[% crms.Sysify('crms') %]">
