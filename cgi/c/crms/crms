@@ -34,6 +34,7 @@ if ($cgi->param('p') eq 'Logout')
     $crms->UnlockAllItemsForUser($alias);
     $crms->SetAlias($user, undef);
     $cgi->delete_all();
+    $alias = '';
   }
   else
   {
@@ -63,6 +64,7 @@ elsif ($cgi->param('changeuser') == 1)
   $cgi->delete_all();
   $user = $alias;
 }
+$user = $alias if length $alias;
 if ($user ne $crms->get('user'))
 {
   $crms = CRMS->new(
@@ -344,7 +346,7 @@ my $vars = {
 
 ## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
 ## the default is home.tt in case a tt is not found
-my $page  = $cgi->param('p') | '';
+my $page = $cgi->param('p') || '';
 my $ip = $ENV{'REMOTE_ADDR'};
 $cgi->param('REMOTE_ADDR', $ip);
 my %ips = %{$crms->GetUserIPs($ru)};
