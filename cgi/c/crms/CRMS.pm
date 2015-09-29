@@ -75,7 +75,7 @@ sub set
 
 sub Version
 {
-  return '4.11.1';
+  return '4.11.2';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -3465,7 +3465,7 @@ sub SetAlias
   my $user  = shift || $self->get('user');
   my $alias = shift;
 
-  if ($self->CanChangeToUser($user, $alias))
+  if (!defined $alias || $self->CanChangeToUser($user, $alias))
   {
     my $sql = 'UPDATE users SET alias=? WHERE id=?';
     $self->PrepareSubmitSql($sql, $alias, $user);
