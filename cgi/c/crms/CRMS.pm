@@ -75,7 +75,7 @@ sub set
 
 sub Version
 {
-  return '4.11';
+  return '4.11.1';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -5136,8 +5136,6 @@ sub LockItem
   }
   my $sql = 'UPDATE ' . $table . ' SET locked=? WHERE id=?';
   $self->PrepareSubmitSql($sql, $user, $id);
-  my $note = sprintf "$id locked for $user on %s", $self->Hostname();
-  $self->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $note);
   return 0;
 }
 
