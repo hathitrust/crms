@@ -7,6 +7,7 @@
 [% kerberos   = cgi.param('kerberos')   %]
 [% add        = cgi.param('add')        %]
 [% name       = cgi.param('name')       %]
+[% rcpc       = cgi.param('rcpc')       %]
 [% reviewer   = cgi.param('reviewer')   %]
 [% advanced   = cgi.param('advanced')   %]
 [% expert     = cgi.param('expert')     %]
@@ -31,13 +32,13 @@
     <option value="4" [% (order==4)? 'selected="selected"':'' %]>Commitment</option>
   </select>
 </form>
-
+[% sys = crms.Sys() %]
 [% icon = '<img width="16" height="16" alt="Check" src="/c/crms/CheckIcon.png"/>' %]
 
 [% IF crms.IsUserAdmin() %]
   [% IF add %]
     [% IF id %]
-      [% res = crms.AddUser(id,kerberos,name,reviewer,advanced,expert,
+      [% res = crms.AddUser(id,kerberos,name,rcpc,reviewer,advanced,expert,
                             extadmin,admin,superadmin,note,projects,
                             commitment,disable) %]
     [% ELSE %]
@@ -53,19 +54,23 @@
 <table class="exportStats" style="white-space:nowrap">
   <tr>
     <th>Name</th><th>ID</th><th>Kerberos</th><th>Institution</th>
+    [% IF sys != 'crmsworld' %]
+      <th>RCPC<br/>Reviewer</th>
+    [% END %]
     <th>Reviewer</th><th>Advanced</th><th>Expert</th><th>Ext.&nbsp;Admin</th>
     <th>Admin</th><th>Super<br/>Admin</th><th>Note</th><th>Projects</th>
     <th>IP Address</th><th>Commitment[% IF crms.IsUserAdmin() %]<br/>(Progress)[% END %]</th>
     <th>Change&nbsp;To</th>
   </tr>
   [% FOREACH userid IN users %]
+    [% rcpc = crms.IsUserRCPCReviewer(userid) %]
     [% r = crms.IsUserReviewer(userid) %]
     [% v = crms.IsUserAdvanced(userid) %]
     [% e = crms.IsUserExpert(userid) %]
     [% x = crms.IsUserExtAdmin(userid) %]
     [% a = crms.IsUserAdmin(userid) %]
     [% s = crms.IsUserSuperAdmin(userid) %]
-    [% active = (r||v||e||x||a||s) %]
+    [% active = (rcpc||r||v||e||x||a||s) %]
     [% style = (active)? '':'style="background-color:#e2e2e2;"' %]
     <tr [% id == userid ? 'class="total"':'class="hoverWide"'%] [% style %]>
       <td>
@@ -73,13 +78,16 @@
           [% crms.GetUserName(userid).replace('\s','&nbsp;') %]
         </a>
       </td>
-      <td>[% userid %]</td>
+      <td>[% userid #crms.GetUserId(userid) %]</td>
       <td>[% crms.GetUserKerberosID(userid) %]</td>
       <td>
         [% inst = crms.GetUserInstitution(userid) %]
         <a href="[% crms.Sysify('crms?p=adminUserRateInst;inst=' _ inst) %]" target="_blank">
           [% crms.GetInstitutionName(inst) %]
         </a></td>
+      [% IF sys != 'crmsworld' %]
+      <td style="text-align:center">[% IF rcpc %][% icon %][% END %]</td>
+      [% END %]
       <td style="text-align:center">[% IF r %][% icon %][% END %]</td>
       <td style="text-align:center">[% IF v %][% icon %][% END %]</td>
       <td style="text-align:center">[% IF e %][% icon %][% END %]</td>
@@ -189,6 +197,13 @@
     </table>
     <br/>
     <table>
+      [% IF sys != 'crmsworld' %]
+      <tr>
+        <td><input type="checkbox" name="rcpc" id="rcpcReviewerCB"/> <label for="rcpcReviewerCB">RCPC Reviewer</label></td>
+        <td></td>
+        <td></td>
+      </tr>  
+      [% END %]
       <tr>
         <td><input type="checkbox" name="reviewer" id="reviewerCB"/> <label for="reviewerCB">Reviewer</label></td>
         <td><input type="checkbox" name="advanced" id="advancedCB"/> <label for="advancedCB">Advanced Reviewer</label></td>

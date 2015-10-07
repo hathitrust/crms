@@ -65,7 +65,7 @@ sub GetInsertsData
   my $sql = 'SELECT * FROM inserts WHERE id=? AND user=? AND ';
   $sql .= ($pri)? 'iid=0':'iid>0';
   $sql .= ' ORDER BY iid ASC';
-  $crms->Note('GetInsertsData: '. Utilities::StringifySql($sql, $id, $user));
+  #$crms->Note('GetInsertsData: '. Utilities::StringifySql($sql, $id, $user));
   my $ref = $crms->GetDb()->selectall_hashref($sql, 'iid', undef, $id, $user);
   return ($pri)? $ref->{0}:$ref;
 }
@@ -78,14 +78,14 @@ sub ConfirmInserts
   my $final = $cgi->param('final');
   my $crms = $self->get('crms');
   my $user = $crms->get('user');
-  $crms->Note("ConfirmInserts($user, $final)");
+  #$crms->Note("ConfirmInserts($user, $final)");
   my $id = $cgi->param('barcode');
   $self->SubmitInserts($cgi, $id, $user, $final);
   if (!$crms->CountErrors())
   {
     if ($final)
     {
-      $crms->Note("Unlocking $id");
+      #$crms->Note("Unlocking $id");
       $self->Unlock($id, $user);
     }
   }
@@ -96,7 +96,7 @@ sub ConfirmInserts
 }
 
 my %nogo = ('p'=>1,'editing'=>1,'barcode'=>1,'count'=>1,'confirm'=>1,
-            'sys'=>1,'submit'=>1,'final'=>1);
+            'sys'=>1,'submit'=>1,'final'=>1,'notApplicable'=>1);
 sub SubmitInserts
 {
   my $self  = shift;
@@ -160,10 +160,14 @@ sub SubmitInserts
   }
   push @fields, 'id';
   push @vals, $id;
+  my $sql = 'SELECT author,title,pub_date FROM bibdata WHERE id=?';
+  my $ref = $crms->SelectAll($sql, $id);
+  push @fields, ('author', 'title', 'pub_date');
+  push @vals, ($ref->[0]->[0], $ref->[0]->[1], $ref->[0]->[2]);
   my $wc = $crms->WildcardList(scalar @fields);
-  my $sql = 'REPLACE INTO inserts ('.
-             (join ',', @fields) .
-             ') VALUES '. $wc;
+  $sql = 'REPLACE INTO inserts ('.
+          (join ',', @fields) .
+          ') VALUES '. $wc;
   $crms->Note((join ',', @fields) . ' => ' . (join ',', (map {(defined $_)? $_:'<undef>'} @vals)));
   $crms->PrepareSubmitSql($sql, @vals);
   for my $i (1 .. $count)
@@ -370,6 +374,151 @@ sub URLForYear
   {
     $url = 'http://cocatalog.loc.gov/cgi-bin/Pwebrecon.cgi?DB=local&PAGE=First';
   }
+  return $url;
+}
+
+# FIXME: create derived list for menus excluding renDate
+my @FieldNames = ('Volume ID', 'User', 'Title', 'Author', 'Pub Date', 'Type', 'Page',
+                  'Pub History', 'Renewed', 'RenNum', 'RenDate', 'Source', 'Reason');
+my @Fields     = qw(id user title author pubDate type page
+                    pub_history renewed renNum renDate source reason);
+my @Fields2    = ('i.id', 'i.user', 'i.title', 'i.author', 'i.pub_date', 'i.type', 'i.page',
+                  'i.pub_history', 'i.renewed', 'i.renNum', 'CONCAT(i.renDateY,"-",i.renDateM,"-",i.renDateD)',
+                  'i.source', 'i.reason', 'i.iid');
+
+sub InsertsTitles
+{
+  return \@FieldNames;
+}
+
+sub InsertsFields
+{
+  return \@Fields;
+}
+
+sub GetInsertsDataRef
+{
+  my $self         = shift;
+  my $order        = shift;
+  my $dir          = shift;
+  my $search1      = shift;
+  my $search1Value = shift;
+  my $op1          = shift;
+  my $search2      = shift;
+  my $search2Value = shift;
+  my $startDate    = shift;
+  my $endDate      = shift;
+  my $offset       = shift;
+  my $pagesize     = shift;
+  my $download     = shift;
+
+  $pagesize = 20 unless $pagesize and $pagesize > 0;
+  $offset = 0 unless $offset and $offset > 0;
+  $order = 'id' unless $order;
+  $offset = 0 unless $offset;
+  my @rest = ();
+  my $tester1 = '=';
+  my $tester2 = '=';
+  if ($search1Value =~ m/.*\*.*/)
+  {
+    $search1Value =~ s/\*/%/gs;
+    $tester1 = ' LIKE ';
+  }
+  if ($search2Value =~ m/.*\*.*/)
+  {
+    $search2Value =~ s/\*/%/gs;
+    $tester2 = ' LIKE ';
+  }
+  if ($search1Value =~ m/([<>!]=?)\s*(\d+)\s*/)
+  {
+    $search1Value = $2;
+    $tester1 = $1;
+  }
+  if ($search2Value =~ m/([<>!]=?)\s*(\d+)\s*/)
+  {
+    $search2Value = $2;
+    $tester2 = $1;
+  }
+  push @rest, "added >= '$startDate'" if $startDate;
+  push @rest, "added <= '$endDate'" if $endDate;
+  if ($search1Value ne '' && $search2Value ne '')
+  {
+    push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
+  }
+  else
+  {
+    push @rest, "$search1 $tester1 '$search1Value'" if $search1Value ne '';
+    push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
+  }
+  my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
+  my $sql = 'SELECT COUNT(*) FROM inserts i '. $restrict;
+  #print "$sql<br/>\n";
+  my $totalVolumes = $self->SimpleSqlGet($sql);
+  $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
+  my $limit = ($download)? '':"LIMIT $offset, $pagesize";
+  my @return = ();
+  my $concat = join ',', @Fields2;
+  $sql = "SELECT $concat FROM inserts i INNER JOIN bibdata b".
+         " ON i.id=b.id $restrict ORDER BY $order $dir $limit";
+  #$self->Note($sql);
+  my $ref = undef;
+  eval {
+    $ref = $self->SelectAll($sql);
+  };
+  if ($@)
+  {
+    $self->SetError($@);
+  }
+  my $data = join "\t", @FieldNames;
+  foreach my $row (@{$ref})
+  {
+    my %item = ();
+    $item{$Fields[$_]} = $row->[$_] for (0 .. scalar @Fields);
+    push @return, \%item;
+    if ($download)
+    {
+      $data .= "\n" . join "\t", @{$row};
+    }
+  }
+  if (!$download)
+  {
+    my $n = POSIX::ceil($offset/$pagesize+1);
+    my $of = POSIX::ceil($totalVolumes/$pagesize);
+    $n = 0 if $of == 0;
+    $data = {'rows' => \@return,
+             'volumes' => $totalVolumes,
+             'page' => $n,
+             'of' => $of
+            };
+  }
+  return $data;
+}
+
+# Generates HTML to get the field type menu on the Corrections Data page.
+sub InsertsDataSearchMenu
+{
+  my $self       = shift;
+  my $searchName = shift;
+  my $searchVal  = shift;
+
+  my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
+  foreach my $i (0 .. scalar @Fields2 - 1)
+  {
+    $html .= sprintf("  <option value='%s'%s>%s</option>\n",
+                     $Fields2[$i], ($searchVal eq $Fields2[$i])? ' selected="selected"':'',
+                     $FieldNames[$i]);
+  }
+  $html .= "</select>\n";
+  return $html;
+}
+
+sub LinkToInserts
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $crms = $self->get('crms');
+  my $url = $crms->Sysify('/cgi/c/crms/inserts?p=inserts;editing=1;barcode='. $id);
   return $url;
 }
 return 1;

@@ -3184,6 +3184,30 @@ sub IsCorrection
   return $self->SimpleSqlGet('SELECT COUNT(*) FROM corrections WHERE id=?', $id);
 }
 
+sub InsertsTitles
+{
+  require 'Inserts.pm';
+  return Inserts::InsertsTitles();
+}
+
+sub InsertsFields
+{
+  require 'Inserts.pm';
+  return Inserts::InsertsFields();
+}
+
+sub GetInsertsDataRef
+{
+  require 'Inserts.pm';
+  return Inserts::GetInsertsDataRef(@_);
+}
+
+sub InsertsDataSearchMenu
+{
+  require 'Inserts.pm';
+  return Inserts::InsertsDataSearchMenu(@_);
+}
+
 sub Linkify
 {
   my $self = shift;
@@ -3328,6 +3352,7 @@ sub AddUser
   my $id         = shift;
   my $kerberos   = shift;
   my $name       = shift;
+  my $rcpc       = shift;
   my $reviewer   = shift;
   my $advanced   = shift;
   my $expert     = shift;
@@ -3339,17 +3364,16 @@ sub AddUser
   my $commitment = shift;
   my $disable    = shift;
 
-  my @fields = (\$reviewer,\$advanced,\$expert,\$extadmin,\$admin,\$superadmin);
-  my @fnames = qw (reviewer advanced expert extadmin admin superadmin);
+  my @fields = (\$rcpc,\$reviewer,\$advanced,\$expert,\$extadmin,\$admin,\$superadmin);
   ${$fields[$_]} = (length ${$fields[$_]} && !$disable)? 1:0 for (0 .. scalar @fields - 1);
   # Preserve existing privileges unless there are some checkboxes checked
   my $checked = 0;
   $checked += ${$fields[$_]} for (0 .. scalar @fields - 1);
   if ($checked == 0 && !$disable)
   {
-    my $sql = 'SELECT reviewer,advanced,expert,extadmin,admin,superadmin FROM users WHERE id=?';
+    my $sql = 'SELECT rcpc,reviewer,advanced,expert,extadmin,admin,superadmin FROM users WHERE id=?';
     my $ref = $self->SelectAll($sql, $id);
-    return "Unknown reviewer '$id'" if 0 == scalar @{$ref};
+    #return "Unknown reviewer '$id'" if 0 == scalar @{$ref};
     ${$fields[$_]} = $ref->[0]->[$_] for (0 .. scalar @fields - 1);
   }
   # Remove surrounding whitespace on user id, kerberos, and name.
@@ -3375,11 +3399,12 @@ sub AddUser
   }
   my $inst = $self->SimpleSqlGet('SELECT institution FROM users WHERE id=?', $id);
   $inst = $self->PredictUserInstitution($id) unless defined $inst;
-  my $wcs = $self->WildcardList(12);
-  my $sql = 'REPLACE INTO users (id,kerberos,name,reviewer,advanced,expert,extadmin,'.
+  my $wcs = $self->WildcardList(13);
+  my $sql = 'REPLACE INTO users (id,kerberos,name,rcpc,reviewer,advanced,expert,extadmin,'.
             'admin,superadmin,note,institution,commitment) VALUES '. $wcs;
-  $self->PrepareSubmitSql($sql, $id, $kerberos, $name, $reviewer, $advanced, $expert,
+  $self->PrepareSubmitSql($sql, $id, $kerberos, $name, $rcpc, $reviewer, $advanced, $expert,
                           $extadmin, $admin, $superadmin, $note, $inst, $commitment);
+  $self->Note($_) for @{$self->GetErrors()};
   if (defined $projects)
   {
     my @ps = split m/\s*,\s*/, $projects;
@@ -3512,12 +3537,21 @@ sub CanChangeToUser
 
   return 1 if $self->SameUser($me, $him);
   my $where = $self->WhereAmI();
-  if (length $where && $where !~ /^training/i)
+  if (defined $where && $where !~ /^training/i)
   {
     return 0 if $me eq $him;
     return 1 if $self->IsUserAdmin($me);
   }
   return 0;
+}
+
+sub IsUserRCPCReviewer
+{
+  my $self = shift;
+  my $user = shift || $self->get('user');
+
+  my $sql = 'SELECT rcpc FROM users WHERE id=?';
+  return $self->SimpleSqlGet($sql, $user);
 }
 
 sub IsUserReviewer
@@ -3591,11 +3625,11 @@ sub GetUsers
   my $self = shift;
   my $ord  = shift;
 
-  my $order = '(u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC';
+  my $order = '(u.rcpc+u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC';
   $order .= ',u.expert ASC' if $ord == 1;
   $order .= ',i.shortname ASC' if $ord == 2;
-  $order .= ',(u.reviewer+(2*u.advanced)+(4*u.expert)'.
-            '+(8*u.extadmin)+(16*u.admin)+(32*u.superadmin)) DESC' if $ord == 3;
+  $order .= ',(u.rcpc+(2*u.reviewer)+(4*u.advanced)+(8*u.expert)'.
+            '+(16*u.extadmin)+(32*u.admin)+(64*u.superadmin)) DESC' if $ord == 3;
   $order .= ',u.commitment DESC' if $ord == 4;
   $order .= ',u.name ASC';
   my $sql = 'SELECT u.id FROM users u INNER JOIN institutions i'.
@@ -7660,6 +7694,7 @@ sub GetUserQualifications
   my $user = shift || $self->get('user');
 
   my $sql = 'SELECT CONCAT('.
+            ' IF(rcpc=1,"c",""),'.
             ' IF(reviewer=1 OR advanced=1,"r",""),'.
             ' IF(expert=1,"e",""),'.
             ' IF(extadmin=1,"x",""),'.
@@ -7697,7 +7732,8 @@ sub DoQualificationsAndRestrictionsOverlap
   my $r    = shift;
 
   return 1 unless defined $r and length $r;
-  return (($q =~ m/e/ && $r =~ m/e/) ||
+  return (($q =~ m/c/ && $r =~ m/c/) ||
+          ($q =~ m/e/ && $r =~ m/e/) ||
           ($q =~ m/i/ && $r =~ m/i/) ||
           ($q =~ m/r/ && $r =~ m/r/) ||
           ($q =~ m/x/ && $r =~ m/x/) ||
