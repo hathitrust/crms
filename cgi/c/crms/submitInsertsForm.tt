@@ -542,12 +542,6 @@ function validateInsert(i)
   var el;
   if (i > 0)
   {
-    el = document.getElementById(i+'page');
-    if (!el.value.match(numeric))
-    {
-      el.select();
-      return 'Insert #'+i+' page number not numeric.';
-    }
     el = document.getElementById(i+'pub_date');
     if (el.value.length > 0 && !el.value.match(numeric))
     {
