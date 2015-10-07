@@ -166,15 +166,18 @@ sub CalcPendingStatus
     $other_reason = $self->TranslateReason($other_reason);
     $renNum = undef unless $renDate;
     $other_renNum = undef unless $other_renDate;
-    # Match if attr/reasons match; dates must match unless und/nfi.
-    if ($attr eq $other_attr && $reason eq $other_reason &&
-        (($self->TolerantCompare($renNum, $other_renNum) &&
-          $self->TolerantCompare($renDate, $other_renDate))
-         ||
-         $attr eq 'und'))
+    # Match if attr/reasons match.
+    elsif ($attr eq $other_attr && $reason eq $other_reason)
     {
-      # If both reviewers are non-advanced mark as provisional match
-      if (!$self->IsUserAdvanced($user) && !$self->IsUserAdvanced($other_user))
+      # If both reviewers are non-advanced mark as provisional match.
+      # Also, mark provisional if date info disagrees, unless und.
+      if (((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+          ||
+          ((!$self->TolerantCompare($renNum, $other_renNum)
+            ||
+            !$self->TolerantCompare($renDate, $other_renDate))
+           &&
+           $attr ne 'und'))
       {
         $pstatus = 3;
       }
