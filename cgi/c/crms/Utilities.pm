@@ -37,7 +37,7 @@ sub StringifySql
 {
   my $sql = shift;
 
-  return $sql . ' (' . (join ',', @_). ')';
+  return $sql . ' (' . (join ',', map {(defined $_)? $_:'<undef>'} @_). ')';
 }
 
 sub AppendParam
