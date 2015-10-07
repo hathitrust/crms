@@ -375,7 +375,7 @@ function DeleteLastInsert()
         }
       }
     }
-    gNInserts--;
+    if (gNInserts > 0) { gNInserts--; }
     document.getElementById('insertCount').value = gNInserts;
   }
   SubmitInserts(false);
@@ -592,6 +592,22 @@ function validateInsert(i)
       return 'Insert #'+i+' renewal year not numeric.';
     }
   }
+  el = document.getElementById('0notApplicable');
+  if (!el.checked)
+  {
+    el = document.getElementById('0estimate');
+    if (el.value.length == 0 || !el.value.match(numeric))
+    {
+      el.select();
+      return 'No separate renewal estimate is blank or not numeric.';
+    }
+    el = document.getElementById('0insufficient');
+    if (el.value.length == 0 || !el.value.match(numeric))
+    {
+      el.select();
+      return 'Insufficient information count is blank or not numeric.';
+    }
+  }
 }
 
 function SubmitInserts(fini)
@@ -673,7 +689,7 @@ window.onload = function(e)
   <input type="hidden" name="user"    value="[% user %]"/>
   <input type="hidden" id="insertCount" name="count"   value="0"/>
   <input type="hidden" id="finalInput" name="final" value="0"/>
-  <!--input type="hidden" name="editing" value="[% editing %]"/-->
+  <input type="hidden" name="editing" value="[% editing %]"/>
   <input type="hidden" name="sys"     value="[% sys %]"/>
   <div class="reviewBlue">
   <table id="HTOptionsTable" class="id">
@@ -803,6 +819,12 @@ window.onload = function(e)
                  name="0insufficient" size="8" value="[% data.insufficient %]"/>
         </td>
       </tr>
+      <tr id="CountDataRow4">
+        <td>
+          <input type="checkbox" id="0notApplicable" name="0notApplicable" value="0">
+          <label for="0notApplicable">Not applicable</label>
+        </td>
+      </tr>
     </table>
   </div>
 </div>
@@ -827,6 +849,11 @@ window.onload = function(e)
       </td>
     </tr>
     <tr>
+      <td colspan="2"><input type="radio" name="0pd" id="0pd2" value=2 $ch1/>
+          <label for="0pd0">Not enough information</label>
+      </td>
+    </tr>
+    <tr>
       <td><input class="review" type="button" name="submit" value="Add Insert"
                  accesskey="a" onclick="javascript:AddInsert(1);"/></td>
       <td><input class="review" type="button" name="submit" value="Delete Last Insert"
@@ -839,6 +866,11 @@ window.onload = function(e)
       </td>
       <td><input class="review" type="button" name="submit" value="Save and Next"
                  onclick="javascript:SubmitInserts(1)"/></td>
+    </tr>
+    [% homeLink = crms.Sysify("inserts?p=inserts;submit=Cancel;barcode=$barcode") %]
+    <tr>
+      <td></td>
+      <td><input class="review" type="submit" name="submit" value="Cancel"/></td>
     </tr>
     <tr>
       <td colspan="2" style="width=20;height=20;">
