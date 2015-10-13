@@ -75,7 +75,7 @@ sub set
 
 sub Version
 {
-  return '4.11.5';
+  return '4.11.6';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -727,7 +727,7 @@ sub EmailReport
   my $count   = shift;
   my $file    = shift;
 
-  my $where = ($self->WhereAmI() or 'Prod');
+  my $where = ($self->WhereAmI() || 'Prod');
   if ($where eq 'Prod')
   {
     my $subject = sprintf('%s %s: %d volumes exported to rights db', $self->System(), $where, $count);
@@ -6831,7 +6831,7 @@ sub WhereAmI
 {
   my $self = shift;
 
-  my $where = '';
+  my $where = undef;
   my $dev = $self->get('dev');
   my $pdb = $self->get('pdb');
   if ($dev)
@@ -6862,7 +6862,7 @@ sub IsTrainingArea
   my $self = shift;
 
   my $where = $self->WhereAmI();
-  return ($where =~ m/^training/i);
+  return (defined $where && $where =~ m/^training/i);
 }
 
 sub ResetButton
