@@ -20,7 +20,8 @@ my $crms = CRMS->new(
         sys          =>   $sys,
         verbose      =>   0,
         root         =>   $DLXSROOT,
-        dev          =>   $DLPS_DEV
+        dev          =>   $DLPS_DEV,
+        pdb          => $cgi->param('pdb')
         );
 
 my $ins = Inserts->new('crms'=>$crms);
