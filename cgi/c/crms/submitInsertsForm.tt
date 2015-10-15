@@ -101,7 +101,7 @@ function AddInsert(activate)
   table = document.getElementById('InsertsTable');
   table.style.display='block';
   div = document.getElementById('HoldDiv');
-  div.style.display='block';
+  if (div) { div.style.display='block'; }
   var prefix = gNInserts + 1;
   var row = table.insertRow(gNRows);
   gNRows++;
