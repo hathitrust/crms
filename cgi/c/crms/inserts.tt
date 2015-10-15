@@ -11,7 +11,7 @@
 
 [% IF barcode && editing %]
   [% user2 = cgi.param('user') %]
-  [% IF user2 && expert %]
+  [% IF user2 && user2 != user && expert %]
     [% user = user2 %]
     [% inspecting = 1 %]
   [% ELSE %]
