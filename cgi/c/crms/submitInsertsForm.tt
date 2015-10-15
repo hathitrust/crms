@@ -254,6 +254,7 @@ function AddInsert(activate)
 
 function startTime(i)
 {
+[% IF !inspecting %]
   gTimers[i+'timer'] = new Date();
   updateTime(i);
   if (gInterval) { clearInterval(gInterval); }
@@ -261,6 +262,7 @@ function startTime(i)
   gIntervalFor = i;
   var span = document.getElementById(i + 'timerSpan');
   if (span) { span.style.color = 'rgb(255,0,0)'; }
+[% END %]
 }
 
 function stopTime(i)
@@ -276,6 +278,7 @@ function stopTime(i)
 
 function restartTime(i)
 {
+[% IF !inspecting %]
   var now = new Date();
   var input = document.getElementById(i+'timer').value;
   var parts = input.split(':');
@@ -294,6 +297,7 @@ function restartTime(i)
   gIntervalFor = i;
   var span = document.getElementById(i + 'timerSpan');
   if (span) { span.style.color = 'rgb(255,0,0)'; }
+[% END %]
 }
 
 function updateTime(i)
