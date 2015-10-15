@@ -25,6 +25,8 @@ var gNInserts = 0;
 var gNRows = 0;
 var gTypeSelect = '<select id="__PRE__type" name="__PRE__type" title="Insert Type" class="review" onchange="restartTime(__PRE__);">'+
                   '<option value="Book">Book</option>'+
+                  '<option value="Chapter">Chapter</option>'+
+                  '<option value="Article">Article</option>'+
                   '<option value="Periodical contrib.">Periodical contrib.</option>'+
                   '<option value="Drama">Drama</option>'+
                   '<option value="Music">Music</option>'+
