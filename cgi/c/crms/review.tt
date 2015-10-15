@@ -55,9 +55,9 @@
   [% STOP %]
 [% END %]
 
-[% status   = crms.GetStatus(barcode)     %]
-[% userName = crms.GetUserName(user)      %]
-[% pubDate  = crms.FormatPubDate(barcode) %]
+[% status   = crms.GetStatus(barcode)  %]
+[% userName = crms.GetUserName(user)   %]
+[% pubDate  = crms.GetPubDate(barcode) %]
 [% author   = crms.GetAuthor(barcode)     %]
 [% title    = crms.GetTitle(barcode)      %]
 
