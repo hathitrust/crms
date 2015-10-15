@@ -30,7 +30,8 @@ window.onerror = function(msg, url, line, col, error) {
 <body>
 <div class="pages" id="homePage">
 [% id = cgi.param("id") %]
-[% data = inserts.GetInsertsData(id) %]
+[% user = cgi.param("user") %]
+[% data = inserts.GetInsertsData(id, user) %]
 [% count = data.keys.size() %]
 <h2 style="margin-left:390px">[% count %] [% crms.Pluralize("insert", count) %] for [% id %]</h2>
 <br/>

@@ -96,7 +96,8 @@
                   [% selectit = 1 %]
                   [% selectstr = "selected='selected'" %]
                 [% END %]
-                <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
+                [% url = src.2.replace('__USER__', user) %]
+                <option value="[% url %]" [% selectstr %]>[% src.1 %]</option>
               [% ELSE %]
                 <optgroup label="[% src.1 %]"/>
               [% END %]
@@ -116,7 +117,8 @@
                   [% selectit = 1 %]
                   [% selectstr = "selected='selected'" %]
                 [% END %]
-                <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
+                [% url = src.2.replace('__USER__', user) %]
+                <option value="[% url %]" [% selectstr %]>[% src.1 %]</option>
               [% ELSE %]
                 <optgroup label="[% src.1 %]"/>
               [% END %]
