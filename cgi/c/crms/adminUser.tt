@@ -212,7 +212,7 @@
       <tr>
         <td><input type="checkbox" name="extadmin" id="extAdminCB"/> <label for="extAdminCB">Ext.&nbsp;Admin</label></td>
         <td><input type="checkbox" name="admin" id="adminCB"/> <label for="adminCB">Admin</label></td>
-        <td><input type="checkbox" name="superadmin"[% crms.IsUserSuperAdmin()? '' : 'disabled="disabled"' %] id="superAdminCB"/>
+        <td><input type="checkbox" name="superadmin"[% crms.IsUserSuperAdmin()? '':' disabled="disabled"' %] id="superAdminCB"/>
             <label for="superAdminCB">Super Admin</label></td>
       </tr>
     </table>
