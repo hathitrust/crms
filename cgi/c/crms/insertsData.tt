@@ -218,10 +218,9 @@ records per page.
                 [% txt %]
             [% ELSIF field == 'id' %]
               [% IF item.$iid == 0 %]
+                  <a href="[% inserts.LinkToInserts(item.id, item.user) %]" target="_blank">[% item.id %]</a>
                 [% IF inserts.IsLocked(item.id) %]
-                  [% item.id %]<img width="16" height="16" alt="Locked" src="/c/crms/OtherLock.png"/>
-                [% ELSE %]
-                  <a href="[% inserts.LinkToInserts(item.id) %]" target="_blank">[% item.id %]</a>
+                  <img width="16" height="16" alt="Locked" src="/c/crms/OtherLock.png"/>
                 [% END %]
               [% ELSE %]
                 Insert [% item.$iid %]

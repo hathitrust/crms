@@ -57,11 +57,10 @@ sub GetInsertsData
 {
   my $self = shift;
   my $id   = shift;
-  my $user = shift;
+  my $user = shift || $self->crms->get('user');
   my $pri  = shift;
 
   my $crms = $self->crms;
-  $user = $crms->get('user') unless defined $user;
   my $sql = 'SELECT * FROM inserts WHERE id=? AND user=? AND ';
   $sql .= ($pri)? 'iid=0':'iid>0';
   $sql .= ' ORDER BY iid ASC';
@@ -516,9 +515,11 @@ sub LinkToInserts
 {
   my $self = shift;
   my $id   = shift;
+  my $user = shift;
 
   my $crms = $self->get('crms');
   my $url = $crms->Sysify('/cgi/c/crms/inserts?p=inserts;editing=1;barcode='. $id);
+  $url .= ";user=$user" if defined $user;
   return $url;
 }
 return 1;

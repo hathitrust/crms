@@ -10,11 +10,17 @@
 [% expert   = crms.IsUserIncarnationExpertOrHigher(user) %]
 
 [% IF barcode && editing %]
-  [% err = inserts.Lock(barcode, user) %]
-  [% IF err != 0 %]
-    <h3>[% err %].</h3>
-    <br/><a href="JavaScript:window.close()">Close</a>
-    [% STOP %]
+  [% user2 = cgi.param('user') %]
+  [% IF user2 && expert %]
+    [% user = user2 %]
+    [% inspecting = 1 %]
+  [% ELSE %]
+    [% err = inserts.Lock(barcode, user) %]
+    [% IF err != 0 %]
+      <h3>[% err %].</h3>
+      <br/><a href="JavaScript:window.close()">Close</a>
+      [% STOP %]
+    [% END %]
   [% END %]
 [% END %]
 
@@ -47,7 +53,7 @@
       <table class="nav">
         <tr>
           <td rowspan="2"><img src="[% crms.GetSystemVar('smallLogo') %]" alt="CRMS Logo" width="52" height="40"/></td>
-          <td style="text-align:left;"><strong>Hello [% crms.GetUserName(user) %]</strong></td>
+          <td style="text-align:left;"><strong>Hello [% crms.GetUserName() %]</strong></td>
         </tr>
         <tr>
           <td style="text-align:left;"><a href="[% homeLink %]">Home</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="crms?p=Logout;sys=$sys">Logout</a></td>
@@ -143,9 +149,9 @@
       [% END %]
       [% CALL crms.ClearErrors() %]
       [% IF NOT error %][% error = errors.join('; ') %][% END %]
-      [% INCLUDE submitInsertsForm.tt barcode = barcode, editing = editing,
-                                      error   = error,   select = select,   mag     = mag,
-                                      sys     = sys,     ptview  = ptview %]
+      [% INCLUDE submitInsertsForm.tt barcode = barcode, editing = editing, inspecting = inspecting,
+                                      error   = error,   select  = select,  mag        = mag,
+                                      sys     = sys,     ptview  = ptview,  user       = user %]
       [% status = crms.GetSystemStatus() %]
       [% IF status.2 %]
         <table class="nav">

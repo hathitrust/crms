@@ -460,7 +460,7 @@ function LoadInserts(id, user)
       }
       else
       {
-        alert("Error: "+url+" failed:"+req.status);
+        alert("Error: "+url+" failed:"+req.status+"\n"+req.statusText);
       }
     }
   };
@@ -833,6 +833,7 @@ window.onload = function(e)
 <table id="InsertsTable" class="reviewGrey" style="display:none;"></table>
 <div id="ButtonDiv" class="reviewBlue">
   <table class="id">
+    [% IF !inspecting %]
     <tr>
       <td colspan="2"><strong>Is this entire volume likely in the public domain?</strong></td>
     </tr>
@@ -863,6 +864,7 @@ window.onload = function(e)
       <td><input class="review" type="button" name="submit" value="Save and Next"
                  onclick="javascript:SubmitInserts(1)"/></td>
     </tr>
+    [% END %]
     [% homeLink = crms.Sysify("inserts?p=inserts;submit=Cancel;barcode=$barcode") %]
     <tr>
       <td></td>
@@ -875,6 +877,7 @@ window.onload = function(e)
     </tr>
   </table>
 </div>
+[% IF !inspecting %]
 <div id="HoldDiv" class="reviewBlue" style="display:none;">
   <table class="id">
     <tr>
@@ -902,6 +905,7 @@ window.onload = function(e)
     </tr>
   </table>
 </div>
+[% END %]
 
 [% IF error %]
   <table class="ReviewError">
