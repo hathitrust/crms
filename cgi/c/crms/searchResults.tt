@@ -165,7 +165,7 @@ function CheckAll(box,formid)
     <th>Status</th>
     [% leg = !crms.TolerantCompare(1,crms.GetSystemVar('noLegacy')) %]
     [% IF p == 'adminHistoricalReviews'  && leg %]<th>Legacy</th>[% END %]
-    <th>User</th>
+    <th>Reviewer</th>
     <th>Attr</th>
     <th>Reason</th>
     [% IF p == 'undReviews' || p == 'expert' || 'crmsworld' == sys %]
