@@ -161,8 +161,6 @@
       </span>
     </a>
   </div>
-  <strong style="margin-left:10px">Rights/Reason:</strong>
-  <br/>
   [% USE Math %]
   [% of = rights.size() %]
   [% IF of > 0 %]
@@ -171,6 +169,14 @@
     [% last = delta - 1 %]
     <div style="display:none" id="UNDNFI" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=5') %]"></div>
     <table>
+    <tr style="height:20px;">
+      <td><strong>Rights/Reason:</strong></td>
+      <td>
+      [% IF !ren %]
+        <img id="predictionLoader" width="16px" height="16px"
+             src="/c/crms/ajax-loader.gif" alt="loading..." style="display:none;"/>
+      [% END %]
+      </tr>
     [% FOREACH i IN [0 .. last] %]
       <tr>
       [% right = rights.$i %]
