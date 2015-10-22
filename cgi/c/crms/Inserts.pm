@@ -118,12 +118,6 @@ sub SubmitInserts
   my $count = $cgi->param('count');
   my @fields;
   my @vals;
-  # Wipe out irrelevant renewal information from the form
-  my $ren = $cgi->param('0renewed');
-  if (!$ren)
-  {
-    $cgi->delete('0renNum', '0renDateY', '0renDateM', '0renDateD');
-  }
   foreach my $name ($cgi->param)
   {
     my $val = $cgi->param($name);
@@ -169,20 +163,6 @@ sub SubmitInserts
   $crms->PrepareSubmitSql($sql, @vals);
   for my $i (1 .. $count)
   {
-    # Wipe out irrelevant renewal information from the form
-    my $ren = $cgi->param($i.'renewed') || 0;
-    if ($ren == 0)
-    {
-      $cgi->delete($i.'source', $i.'reason', $i.'renNum', $i.'renDateY', $i.'renDateM', $i.'renDateD');
-    }
-    elsif ($ren == 1)
-    {
-      $cgi->delete($i.'reason');
-    }
-    elsif ($ren == 2)
-    {
-      $cgi->delete($i.'source', $i.'renNum', $i.'renDateY', $i.'renDateM', $i.'renDateD');
-    }
     @fields = ();
     @vals = ();
     foreach my $name ($cgi->param)
@@ -214,6 +194,10 @@ sub SubmitInserts
   }
   $sql = 'DELETE FROM inserts WHERE user=? AND iid>?';
   $crms->PrepareSubmitSql($sql, $user, $count);
+  if (!$self->get('noInsertsNote'))
+  {
+    $crms->Note(Utilities::StringifySql($sql, $user, $count));
+  }
   my $status = ($final)? 5:1;
   if (!$self->get('noInsertsNote'))
   {
