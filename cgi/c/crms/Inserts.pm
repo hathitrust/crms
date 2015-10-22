@@ -110,24 +110,19 @@ sub SubmitInserts
   {
     $msg .= sprintf "$name: {%s}\n", join ',', ($cgi->param($name));
   }
-  $crms->Note($msg);
+  if (!$self->get('noInsertsNote'))
+  {
+    $crms->Note($msg);
+  }
   my %inserts;
   my $count = $cgi->param('count');
   my @fields;
   my @vals;
   # Wipe out irrelevant renewal information from the form
-  my $ren = $cgi->param('renewed');
-  if ($ren == 0)
+  my $ren = $cgi->param('0renewed');
+  if (!$ren)
   {
-    $cgi->delete('source', 'reason', 'renNum', 'renDateY', 'renDateM', 'renDateD');
-  }
-  elsif ($ren == 1)
-  {
-    $cgi->delete('reason');
-  }
-  elsif ($ren == 2)
-  {
-    $cgi->delete('source', 'renNum', 'renDateY', 'renDateM', 'renDateD');
+    $cgi->delete('0renNum', '0renDateY', '0renDateM', '0renDateD');
   }
   foreach my $name ($cgi->param)
   {
@@ -167,12 +162,15 @@ sub SubmitInserts
   $sql = 'REPLACE INTO inserts ('.
           (join ',', @fields) .
           ') VALUES '. $wc;
-  $crms->Note((join ',', @fields) . ' => ' . (join ',', (map {(defined $_)? $_:'<undef>'} @vals)));
+  if (!$self->get('noInsertsNote'))
+  {
+    $crms->Note((join ',', @fields) . ' => ' . (join '_', (map {(defined $_)? $_:'<undef>'} @vals)));
+  }
   $crms->PrepareSubmitSql($sql, @vals);
   for my $i (1 .. $count)
   {
     # Wipe out irrelevant renewal information from the form
-    my $ren = $cgi->param($i.'renewed');
+    my $ren = $cgi->param($i.'renewed') || 0;
     if ($ren == 0)
     {
       $cgi->delete($i.'source', $i.'reason', $i.'renNum', $i.'renDateY', $i.'renDateM', $i.'renDateD');
@@ -209,12 +207,18 @@ sub SubmitInserts
               (join ',', @fields) .
               ') VALUES '. $wc;
     $crms->PrepareSubmitSql($sql, @vals);
-    $crms->Note("$i: ". (join ',', @fields) . ' => ' . (join ',', (map {(defined $_)? $_:'<undef>'} @vals)));
+    if (!$self->get('noInsertsNote'))
+    {
+      $crms->Note("$i: ". (join ',', @fields) . ' => ' . (join ',', (map {(defined $_)? $_:'<undef>'} @vals)));
+    }
   }
   $sql = 'DELETE FROM inserts WHERE user=? AND iid>?';
   $crms->PrepareSubmitSql($sql, $user, $count);
   my $status = ($final)? 5:1;
-  $crms->Note("$id: setting status to $status");
+  if (!$self->get('noInsertsNote'))
+  {
+    $crms->Note("$id: setting status to $status");
+  }
   $sql = 'UPDATE insertsqueue SET status=? WHERE id=?';
   $crms->PrepareSubmitSql($sql, $status, $id);
 }
@@ -225,21 +229,30 @@ sub GetNextInsertsForReview
   my $user = shift;
 
   my $crms = $self->crms;
-  $crms->Note("GetNextInsertsForReview($user)");
   $user = $self->get('user') unless defined $user;
+  if (!$self->get('noInsertsNote'))
+  {
+    $crms->Note("GetNextInsertsForReview($user)");
+  }
   my $id = undef;
   my $err = undef;
   my $sql = 'SELECT id FROM insertsqueue WHERE (locked IS NULL AND status=0)'.
             ' OR (id IN (SELECT id FROM inserts WHERE user=?) AND status=1)'.
             ' ORDER BY status DESC';
-  $crms->Note(Utilities::StringifySql($sql, $user));
+  if (!$self->get('noInsertsNote'))
+  {
+    $crms->Note(Utilities::StringifySql($sql, $user));
+  }
   eval {
     my $ref = $crms->SelectAll($sql, $user);
     foreach my $row (@{$ref})
     {
       my $id2 = $row->[0];
       $err = $self->Lock($id2, $user);
-      $crms->Note($id2. ': '. $err);
+      if (!$self->get('noInsertsNote'))
+      {
+        $crms->Note($id2. ': '. $err);
+      }
       if (!$err)
       {
         $id = $id2;
@@ -290,8 +303,6 @@ sub Lock
   }
   my $sql = 'UPDATE insertsqueue SET locked=? WHERE id=?';
   $crms->PrepareSubmitSql($sql, $user, $id);
-  my $note = sprintf "$id locked for $user on %s", $crms->Hostname();
-  $crms->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $note);
   return 0;
 }
 
@@ -377,13 +388,13 @@ sub URLForYear
 }
 
 # FIXME: create derived list for menus excluding renDate
-my @FieldNames = ('Volume ID', 'User', 'Title', 'Author', 'Pub Date', 'Type', 'Page',
-                  'Pub History', 'Renewed', 'RenNum', 'RenDate', 'Source', 'Reason');
-my @Fields     = qw(id user title author pubDate type page
-                    pub_history renewed renNum renDate source reason);
-my @Fields2    = ('i.id', 'i.user', 'i.title', 'i.author', 'i.pub_date', 'i.type', 'i.page',
+my @FieldNames = ('Volume ID', 'User', 'Review Date', 'Title', 'Author', 'Pub Date', 'Type', 'Page',
+                  'Pub History', 'Renewed', 'RenNum', 'RenDate', 'Source', 'Reason', 'Timer', 'Complete');
+my @Fields     = qw(id user reviewDate title author pubDate type page
+                    pub_history renewed renNum renDate source reason timer status);
+my @Fields2    = ('i.id', 'i.user', 'DATE(i.time)', 'i.title', 'i.author', 'i.pub_date', 'i.type', 'i.page',
                   'i.pub_history', 'i.renewed', 'i.renNum', 'CONCAT(i.renDateY,"-",i.renDateM,"-",i.renDateD)',
-                  'i.source', 'i.reason', 'i.iid');
+                  'i.source', 'i.reason', 'i.timer', 'iq.status', 'i.iid');
 
 sub InsertsTitles
 {
@@ -438,8 +449,8 @@ sub GetInsertsDataRef
     $search2Value = $2;
     $tester2 = $1;
   }
-  push @rest, "added >= '$startDate'" if $startDate;
-  push @rest, "added <= '$endDate'" if $endDate;
+  push @rest, "DATE(i.time)>='$startDate'" if $startDate;
+  push @rest, "DATE(i.time)<='$endDate'" if $endDate;
   if ($search1Value ne '' && $search2Value ne '')
   {
     push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
@@ -458,7 +469,8 @@ sub GetInsertsDataRef
   my @return = ();
   my $concat = join ',', @Fields2;
   $sql = "SELECT $concat FROM inserts i INNER JOIN bibdata b".
-         " ON i.id=b.id $restrict ORDER BY $order $dir $limit";
+         ' ON i.id=b.id INNER JOIN insertsqueue iq ON b.id=iq.id'.
+         " $restrict ORDER BY $order $dir $limit";
   #$self->Note($sql);
   my $ref = undef;
   eval {
@@ -501,7 +513,7 @@ sub InsertsDataSearchMenu
   my $searchVal  = shift;
 
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
-  foreach my $i (0 .. scalar @Fields2 - 1)
+  foreach my $i (0 .. scalar @Fields - 1)
   {
     $html .= sprintf("  <option value='%s'%s>%s</option>\n",
                      $Fields2[$i], ($searchVal eq $Fields2[$i])? ' selected="selected"':'',
@@ -522,4 +534,5 @@ sub LinkToInserts
   $url .= ";user=$user" if defined $user;
   return $url;
 }
+
 return 1;

@@ -210,11 +210,12 @@ records per page.
           <td>
           [% IF !newid && (field == 'time') %]
           [% ELSE %]
-            [% IF field == 'page' && item.page == 0 %]
+            [% IF (field == 'page' && item.page == 0) ||
+                  (field == 'reviewDate' && item.$iid != 0) %]
             
             [% ELSIF field=='renewed' %]
               [% ren = item.renewed %]
-              [% txt = (ren)? ((ren == 2)? 'not enough info':'yes'):'no' %]
+              [% txt = (ren)? ((ren == 2)? 'Not enough info':'Yes'):'No' %]
                 [% txt %]
             [% ELSIF field == 'id' %]
               [% IF item.$iid == 0 %]
@@ -231,6 +232,10 @@ records per page.
               [% crms.GetTitle(item.id) %]
             [% ELSIF field == 'pubDate' && item.$iid==0 %]
               [% crms.GetPubDate(item.id) %]
+            [% ELSIF field == 'status' %]
+              [% IF item.status == 5 && item.$iid==0 %]
+                <img width="16" height="16" alt="Correctness" src="/c/crms/CheckIcon.png"/>
+              [% END %]
             [% ELSE %]
               [% item.$field %]
             [% END %]
