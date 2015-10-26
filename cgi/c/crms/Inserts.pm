@@ -115,6 +115,7 @@ sub SubmitInserts
     $crms->Note($msg);
   }
   my %inserts;
+  my %seen;
   my $count = $cgi->param('count');
   my @fields;
   my @vals;
@@ -145,9 +146,15 @@ sub SubmitInserts
       push @fields, $name;
       push @vals, $val;
     }
+    $seen{$name} = 1;
   }
   push @fields, 'id';
   push @vals, $id;
+  if (!$seen{'iid'})
+  {
+    push @fields, 'iid';
+    push @vals, 0;
+  }
   my $sql = 'SELECT author,title,pub_date FROM bibdata WHERE id=?';
   my $ref = $crms->SelectAll($sql, $id);
   push @fields, ('author', 'title', 'pub_date');
@@ -161,6 +168,12 @@ sub SubmitInserts
     $crms->Note((join ',', @fields) . ' => ' . (join '_', (map {(defined $_)? $_:'<undef>'} @vals)));
   }
   $crms->PrepareSubmitSql($sql, @vals);
+  $sql = 'DELETE FROM inserts WHERE id=? AND user=? AND iid>0';
+  $crms->PrepareSubmitSql($sql, $id, $user);
+  if (!$self->get('noInsertsNote'))
+  {
+    $crms->Note(Utilities::StringifySql($sql, $user, $count));
+  }
   for my $i (1 .. $count)
   {
     @fields = ();
@@ -183,7 +196,7 @@ sub SubmitInserts
     push @fields, 'user';
     push @vals, $user;
     my $wc = $crms->WildcardList(scalar @fields);
-    my $sql = 'REPLACE INTO inserts ('.
+    my $sql = 'INSERT INTO inserts ('.
               (join ',', @fields) .
               ') VALUES '. $wc;
     $crms->PrepareSubmitSql($sql, @vals);
@@ -191,12 +204,6 @@ sub SubmitInserts
     {
       $crms->Note("$i: ". (join ',', @fields) . ' => ' . (join ',', (map {(defined $_)? $_:'<undef>'} @vals)));
     }
-  }
-  $sql = 'DELETE FROM inserts WHERE user=? AND iid>?';
-  $crms->PrepareSubmitSql($sql, $user, $count);
-  if (!$self->get('noInsertsNote'))
-  {
-    $crms->Note(Utilities::StringifySql($sql, $user, $count));
   }
   my $status = ($final)? 5:1;
   if (!$self->get('noInsertsNote'))
