@@ -821,7 +821,7 @@ window.onload = function(e)
       </tr>
       <tr id="CountDataRow4">
         <td>
-          <input type="checkbox" id="0notApplicable" name="0notApplicable" value="0">
+          <input type="checkbox" id="0notApplicable" name="0notApplicable" value="[% data.notApplicable %]">
           <label for="0notApplicable">Not applicable</label>
         </td>
       </tr>
@@ -830,14 +830,17 @@ window.onload = function(e)
 </div>
 [% ch1 = "" %]
 [% ch2 = 'checked="checked"' %]
-[% IF data.pd %]
+[% ch3 = "" %]
+[% IF data.pd == 1 %]
   [% ch1 = ch2 %]
+  [% ch2 = "" %]
+[% ELSIF data.pd == 2 %]
+  [% ch3 = ch2 %]
   [% ch2 = "" %]
 [% END %]
 <table id="InsertsTable" class="reviewGrey" style="display:none;"></table>
 <div id="ButtonDiv" class="reviewBlue">
   <table class="id">
-    [% IF !inspecting %]
     <tr>
       <td colspan="2"><strong>Is this entire volume likely in the public domain?</strong></td>
     </tr>
@@ -850,10 +853,11 @@ window.onload = function(e)
       </td>
     </tr>
     <tr>
-      <td colspan="2"><input type="radio" name="0pd" id="0pd2" value=2 $ch1/>
+      <td colspan="2"><input type="radio" name="0pd" id="0pd2" value=2 $ch3/>
           <label for="0pd0">Not enough information</label>
       </td>
     </tr>
+    [% IF !inspecting %]
     <tr>
       <td><input class="review" type="button" name="submit" value="Add Insert"
                  accesskey="a" onclick="javascript:AddInsert(1);"/></td>
@@ -869,10 +873,13 @@ window.onload = function(e)
                  onclick="javascript:SubmitInserts(1)"/></td>
     </tr>
     [% END %]
-    [% homeLink = crms.Sysify("inserts?p=inserts;submit=Cancel;barcode=$barcode") %]
+    [% homeLink = crms.Sysify("inserts?p=inserts;submit=Cancel;barcode=$barcode;editing=$editing") %]
     <tr>
       <td></td>
-      <td><input class="review" type="submit" name="submit" value="Cancel"/></td>
+      <td>
+        <input class="review" type="button" name="submit" value="Cancel"
+               onclick="window.location.href='[% homeLink %]';"/>
+      </td>
     </tr>
     <tr>
       <td colspan="2" style="width=20;height=20;">
