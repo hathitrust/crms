@@ -379,13 +379,14 @@ sub URLForYear
 }
 
 # FIXME: create derived list for menus excluding renDate
-my @FieldNames = ('Volume ID', 'User', 'Review Date', 'Title', 'Author', 'Pub Date', 'Type', 'Page',
-                  'Pub History', 'Renewed', 'RenNum', 'RenDate', 'Source', 'Reason', 'Timer', 'Complete');
+my @FieldNames = ('Volume ID', 'User', 'Review<br/>Date', 'Title', 'Author', 'Pub Date', 'Type', 'Page',
+                  'Pub History', 'Renewed', 'RenNum', 'RenDate', 'Source', 'Reason', 'Timer',
+                  'All pd', 'Restored', 'Done');
 my @Fields     = qw(id user reviewDate title author pubDate type page
-                    pub_history renewed renNum renDate source reason timer status);
+                    pub_history renewed renNum renDate source reason timer pd restored status);
 my @Fields2    = ('i.id', 'i.user', 'DATE(i.time)', 'i.title', 'i.author', 'i.pub_date', 'i.type', 'i.page',
                   'i.pub_history', 'i.renewed', 'i.renNum', 'CONCAT(i.renDateY,"-",i.renDateM,"-",i.renDateD)',
-                  'i.source', 'i.reason', 'i.timer', 'iq.status', 'i.iid');
+                  'i.source', 'i.reason', 'i.timer', 'i.pd', 'i.restored', 'iq.status', 'i.iid');
 
 sub InsertsTitles
 {
