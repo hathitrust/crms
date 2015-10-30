@@ -40,6 +40,17 @@ sub crms
   return $self->get('crms');
 }
 
+sub GetDuration
+{
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
+
+  my $crms = $self->crms;
+  my $sql = 'SELECT timer FROM inserts WHERE id=? AND iid=0 AND user=?';
+  return $crms->SimpleSqlGet($sql, $id, $user);
+}
+
 sub GetInsertPage
 {
   my $self = shift;
@@ -109,7 +120,7 @@ sub ConfirmInserts
 }
 
 my %nogo = ('p'=>1,'editing'=>1,'barcode'=>1,'count'=>1,'confirm'=>1,
-            'sys'=>1,'submit'=>1,'final'=>1,'notApplicable'=>1);
+            'sys'=>1,'submit'=>1,'final'=>1,'notApplicable'=>1,'duration'=>1);
 sub SubmitInserts
 {
   my $self  = shift;
@@ -146,8 +157,7 @@ sub SubmitInserts
     if ($name eq 'start')
     {
       my $dur = $crms->SimpleSqlGet('SELECT TIMEDIFF(NOW(),?)', $val);
-      my $sql = 'SELECT timer FROM inserts WHERE user=? AND id=? AND iid=0';
-      my $dur2 = $crms->SimpleSqlGet($sql, $user, $id);
+      my $dur2 = $cgi->param('duration');
       if (defined $dur2)
       {
         $dur = $crms->SimpleSqlGet('SELECT ADDTIME(?,?)', $dur, $dur2);
@@ -169,7 +179,7 @@ sub SubmitInserts
     push @fields, 'iid';
     push @vals, 0;
   }
-  my $sql = 'SELECT author,title,pub_date FROM bibdata WHERE id=?';
+  my $sql = 'SELECT author,title,DATE(pub_date) FROM bibdata WHERE id=?';
   my $ref = $crms->SelectAll($sql, $id);
   push @fields, ('author', 'title', 'pub_date');
   push @vals, ($ref->[0]->[0], $ref->[0]->[1], $ref->[0]->[2]);

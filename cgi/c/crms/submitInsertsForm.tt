@@ -683,11 +683,11 @@ window.onload = function(e)
   [% data = inserts.GetInsertsData(barcode, user, 1) %]
 [% END %]
 <form id="submitInsertsForm">
-  <!--input type="hidden" name="p"       value="confirmInserts"/-->
-  <input type="hidden" name="barcode" value="[% barcode %]"/>
-  <input type="hidden" name="start"   value="[% crms.GetNow() %]"/>
-  <input type="hidden" name="user"    value="[% user %]"/>
-  <input type="hidden" id="insertCount" name="count"   value="0"/>
+  <input type="hidden" name="barcode"  value="[% barcode %]"/>
+  <input type="hidden" name="start"    value="[% crms.GetNow() %]"/>
+  <input type="hidden" name="duration" value="[% inserts.GetDuration(barcode, user) %]"/>
+  <input type="hidden" name="user"     value="[% user %]"/>
+  <input type="hidden" id="insertCount" name="count" value="0"/>
   <input type="hidden" id="finalInput" name="final" value="0"/>
   <input type="hidden" name="editing" value="[% editing %]"/>
   <input type="hidden" name="sys"     value="[% sys %]"/>
