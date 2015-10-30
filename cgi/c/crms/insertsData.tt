@@ -277,7 +277,7 @@ records per page.
     <br/>
     <p><b>Found $total, page $pagenum of $of</b></p>
 
-    <form action="crms">
+    <form action="inserts">
     Jump to Page:
     [% crms.Hiddenify(cgi) %]
     <input title="Jump to Page" size="3" type="text" id="jump" name="jump" value="[% pagenum %]"/>
