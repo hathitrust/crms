@@ -1,3 +1,41 @@
+<script type="text/javascript">
+<!--
+function SubmitRequeue(id, user)
+{
+  if (confirm("Please confirm you want to requeue "+id+" for "+user+"."))
+  {
+    var submit = document.getElementById('submit'+id+user);
+    if (submit) { submit.style.display='none'; }
+    var loader = document.getElementById('loader'+id+user);
+    if (loader) { loader.style.display='block'; }
+    var xhr = new XMLHttpRequest();
+    var url = "/cgi/c/crms/submitInserts?requeue=1;id="+id+";user="+user;
+    xhr.onreadystatechange = function()
+    {
+      if (xhr.readyState == 4)
+      {
+        if (xhr.status == 200)
+        {
+          var img = document.getElementById('check'+id+user);
+          if (img) { img.style.display='none'; }
+          var span = document.getElementById('span'+id+user);
+          if (span) { span.style.display='block'; }
+        }
+        else
+        {
+          alert("Error: "+url+" failed:"+xhr.status+"\n"+xhr.responseText);
+          if (submit) { submit.style.display='block'; }
+        }
+        if (loader) { loader.style.display='none'; }
+      }
+    };
+    xhr.open('GET', url, true);
+    xhr.send(null);
+  }
+}
+-->
+</script>
+
 [% page = cgi.param("p") %]
 [% op1 = cgi.param("op1") %]
 [% search1 = cgi.param("search1") %]
@@ -39,6 +77,10 @@
   [% CALL cgi.param('order', 'id') %]
 [% END %]
 [% INCLUDE header.tt %]
+
+[% IF requeue %]
+  [% inserts.Requeue(id, user) %]
+[% END %]
 
 <h2>Inserts:</h2>
 <div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
@@ -207,12 +249,15 @@ records per page.
 
       <tr style="background-color:[% active_color %];">
         [% FOREACH field IN fields %]
-          <td>
+          [% attrs = '' %]
+          [% IF field == 'status' && item.status == 5 && item.$iid==0 %]
+            [% attrs = 'style="text-align:center"' %]
+          [% END %]
+          <td [% attrs %]>
           [% IF !newid && (field == 'time') %]
           [% ELSE %]
             [% IF (field == 'page' && item.page == 0) ||
                   (field == 'reviewDate' && item.$iid != 0) %]
-            
             [% ELSIF field=='renewed' %]
               [% ren = item.renewed %]
               [% txt = (ren)? ((ren == 2)? 'Not enough info':'Yes'):'No' %]
@@ -234,15 +279,19 @@ records per page.
               [% crms.GetPubDate(item.id) %]
             [% ELSIF field == 'status' %]
               [% IF item.status == 5 && item.$iid==0 %]
-                <img width="16" height="16" alt="Correctness" src="/c/crms/CheckIcon.png"/>
+                <img id="check[% item.id _ item.user %]" width="16" height="16" alt="Done" src="/c/crms/CheckIcon.png"/>
+                <input type="button" name="requeue" value="Requeue" id="submit[% item.id _ item.user %]"
+                       onclick="SubmitRequeue('[% item.id %]', '[% item.user %]');"/>
+                <img id="loader[% item.id _ item.user %]" style="display:none;" src="/c/crms/ajax-loader.gif" alt="Submitting..."/>
+                <span id="span[% item.id _ item.user %]" style="display:none;">Requeued</span>
               [% END %]
-            [% ELSIF field == 'pd' %]
+            [% ELSIF field == 'pd' && item.$iid == 0 %]
               [% pd = item.pd %]
               [% txt = (pd)? ((pd == 2)? 'Not enough info':'Yes'):'No' %]
               [% txt %]
             [% ELSIF field == 'restored' %]
               [% IF item.restored == 1 %]
-                <img width="16" height="16" alt="Correctness" src="/c/crms/CheckIcon.png"/>
+                <img width="16" height="16" alt="Restored" src="/c/crms/CheckIcon.png"/>
               [% END %]
             [% ELSE %]
               [% item.$field %]

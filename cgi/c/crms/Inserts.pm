@@ -69,6 +69,20 @@ sub GetInsertsData
   return ($pri)? $ref->{0}:$ref;
 }
 
+sub Requeue
+{
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
+
+  my $crms = $self->crms;
+  if (!$self->get('noInsertsNote'))
+  {
+    $crms->Note("Requeue requested: $id for $user");
+  }
+  $crms->PrepareSubmitSql('UPDATE insertsqueue SET status=1 WHERE id=?', $id);
+}
+
 sub ConfirmInserts
 {
   my $self  = shift;
@@ -214,6 +228,9 @@ sub SubmitInserts
   $crms->PrepareSubmitSql($sql, $status, $id);
 }
 
+# Order of priority in selecting volume:
+# Status 1 volumes the user has worked on previously
+# Status 0 volumes that are not locked
 sub GetNextInsertsForReview
 {
   my $self = shift;
