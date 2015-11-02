@@ -158,7 +158,7 @@ sub SubmitInserts
     {
       my $dur = $crms->SimpleSqlGet('SELECT TIMEDIFF(NOW(),?)', $val);
       my $dur2 = $cgi->param('duration');
-      if (defined $dur2)
+      if (defined $dur2 && length $dur2)
       {
         $dur = $crms->SimpleSqlGet('SELECT ADDTIME(?,?)', $dur, $dur2);
       }
@@ -204,7 +204,6 @@ sub SubmitInserts
     @vals = ();
     foreach my $name ($cgi->param)
     {
-      next if $name eq 'start';
       next unless $name =~ m/^$i(\D+)$/;
       my $suffix = $1;
       next if $nogo{$suffix};
@@ -443,7 +442,8 @@ sub GetInsertsDataRef
 
   $pagesize = 20 unless $pagesize and $pagesize > 0;
   $offset = 0 unless $offset and $offset > 0;
-  $order = 'id' unless $order;
+  $order = 'i.id' unless $order;
+  $order .= ',i.iid';
   $offset = 0 unless $offset;
   my @rest = ();
   my $tester1 = '=';
