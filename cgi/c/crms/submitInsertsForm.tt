@@ -21,6 +21,7 @@ String.prototype.replaceAll = function(search, replace)
   return this.split(search).join(replace);
 }
 
+var gInspecting = false;
 var gNInserts = 0;
 var gNRows = 0;
 var gTypeSelect = '<select id="__PRE__type" name="__PRE__type" title="Insert Type" class="review" onchange="restartTime(__PRE__);">'+
@@ -155,14 +156,6 @@ function AddInsert(activate)
   cell.innerHTML = gTypeHelp+'<strong>Insert Type: </strong>';
   cell = row.insertCell(1);
   cell.innerHTML = gTypeSelect.replaceAll("__PRE__", prefix);
-  //row = table.insertRow(gNRows);
-  //gNRows++;
-  //cell = row.insertCell(0);
-  //cell.innerHTML = '<strong>Other Type: </strong>';
-  //cell = row.insertCell(1);
-  //cell.innerHTML = '<input type="text" id="'+prefix+'other_type" name="'+prefix+'other_type"/>';
-  //row.id = prefix+'otherRow';
-  //row.style.display = 'none';
   row = table.insertRow(gNRows);
   gNRows++;
   row.id = prefix+'Row'+gNRows;
@@ -239,13 +232,11 @@ function AddInsert(activate)
   cell = row.insertCell(0);
   cell.colSpan = 2;
   cell.innerHTML = gRestoredHelp+'<label for="'+prefix+'restored"><strong>Copyright was likely restored</strong></label>';
-  //cell = row.insertCell(1);
   cell.innerHTML+='<input type="checkbox" id="'+prefix+'restored" name="'+prefix+'restored" value="1" onclick="javascript:restartTime('+prefix+');"/>';
   gNInserts++;
   document.getElementById('insertCount').value = gNInserts;
   if (gNInserts > 1)
   {
-    //alert("going to toggle "+(gNInserts-1));
     ToggleInsert(gNInserts - 1, 1);
   }
   var objDiv = document.getElementById('divNav');
@@ -254,15 +245,16 @@ function AddInsert(activate)
 
 function startTime(i)
 {
-[% IF !inspecting %]
-  gTimers[i+'timer'] = new Date();
-  updateTime(i);
-  if (gInterval) { clearInterval(gInterval); }
-  gInterval = setInterval(function(){updateTime(i)},500);
-  gIntervalFor = i;
-  var span = document.getElementById(i + 'timerSpan');
-  if (span) { span.style.color = 'rgb(255,0,0)'; }
-[% END %]
+  if (!gInspecting)
+  {
+    gTimers[i+'timer'] = new Date();
+    updateTime(i);
+    if (gInterval) { clearInterval(gInterval); }
+    gInterval = setInterval(function(){updateTime(i)},500);
+    gIntervalFor = i;
+    var span = document.getElementById(i + 'timerSpan');
+    if (span) { span.style.color = 'rgb(255,0,0)'; }
+  }
 }
 
 function stopTime(i)
@@ -278,26 +270,27 @@ function stopTime(i)
 
 function restartTime(i)
 {
-[% IF !inspecting %]
-  var now = new Date();
-  var input = document.getElementById(i+'timer').value;
-  var parts = input.split(':');
-  var delta = new Date(now.getFullYear(), now.getMonth(), now.getDay(),
-                       parts[0], parts[1], parts[2]).valueOf() - (now.getTimezoneOffset() * 60000);
-  var d = new Date(new Date() - delta);
-  gTimers[i+'timer'] = d;
-  updateTime(i);
-  if (gInterval) { clearInterval(gInterval); }
-  if (gIntervalFor > 0)
+  if (!gInspecting)
   {
-    var span = document.getElementById(gIntervalFor + 'timerSpan');
-    if (span) { span.style.color = 'rgb(0,0,0)'; }
+    var now = new Date();
+    var input = document.getElementById(i+'timer').value;
+    var parts = input.split(':');
+    var delta = new Date(now.getFullYear(), now.getMonth(), now.getDay(),
+                         parts[0], parts[1], parts[2]).valueOf() - (now.getTimezoneOffset() * 60000);
+    var d = new Date(new Date() - delta);
+    gTimers[i+'timer'] = d;
+    updateTime(i);
+    if (gInterval) { clearInterval(gInterval); }
+    if (gIntervalFor > 0)
+    {
+      var span = document.getElementById(gIntervalFor + 'timerSpan');
+      if (span) { span.style.color = 'rgb(0,0,0)'; }
+    }
+    gInterval = setInterval(function(){updateTime(i)},500);
+    gIntervalFor = i;
+    var span = document.getElementById(i + 'timerSpan');
+    if (span) { span.style.color = 'rgb(255,0,0)'; }
   }
-  gInterval = setInterval(function(){updateTime(i)},500);
-  gIntervalFor = i;
-  var span = document.getElementById(i + 'timerSpan');
-  if (span) { span.style.color = 'rgb(255,0,0)'; }
-[% END %]
 }
 
 function updateTime(i)
@@ -395,7 +388,8 @@ function ToggleRenewal(forceClose)
   var show = (forceClose)? false:(butt.innerHTML == right);
   var disp = (show)? 'table-row':'none';
   var ids = ['RenewalRow0','RenewalDataRow0','RenewalDataRow1','RenewalDataRow2',
-             'CountDataRow0','CountDataRow1','CountDataRow2','CountDataRow3'];
+             'CountDataRow0','CountDataRow1','CountDataRow2','CountDataRow3',
+             'CountDataRow4'];
   for (var i = 0; i < ids.length; i++)
   {
     var div = document.getElementById(ids[i]);
@@ -437,17 +431,7 @@ function CalcRenewal(prefix)
   row = document.getElementById(prefix+'reasonRow');
   disp = (el.checked)? 'table-row':'none';
   row.style.display = disp;
-  //row = document.getElementById(prefix+'reasonSelectRow');
-  //row.style.display = disp;
 }
-
-//function EnableOther(prefix)
-//{
-//  var el = document.getElementById(prefix+'otherType');
-//  var row = document.getElementById(prefix+'otherRow');
-//  //alert(el+', '+el.selected);
-//  row.style.display = (el.selected)? 'table-row':'none';
-//}
 
 function LoadInserts(id, user)
 {
@@ -459,7 +443,6 @@ function LoadInserts(id, user)
     {
       if (req.status == 200)
       {
-        //alert("LoadInserts("+id+","+user+") succeeded:"+req.status);
         PopulateInserts(req.responseText);
       }
       else
@@ -490,7 +473,6 @@ function PopulateInserts(data)
 function PopulateInsert(iid, data)
 {
   var keys = Object.keys(data);
-  //alert(keys);
   for (var key in keys)
   {
     val = data[keys[key]];
@@ -499,13 +481,11 @@ function PopulateInsert(iid, data)
     {
       if (keys[key] == 'restored')
       {
-        //alert(el+":"+keys[key]+","+val);
         if (val == 1) { el.checked='checked'; }
         val = 1;
       }
       el.value = val;
     }
-    //else alert(iid+""+keys[key]);
   }
   val = document.getElementById(iid+'timer').value;
   var parts = val.split(':');
@@ -514,7 +494,6 @@ function PopulateInsert(iid, data)
   document.getElementById(iid+'timerSpan').textContent = val;
   val = data['renewed'];
   document.getElementById(iid+'renewed'+val).checked='checked';
-  //EnableOther(iid);
   CalcRenewal(iid);
 }
 
@@ -626,10 +605,7 @@ function SubmitInserts(fini)
     var xhr = new XMLHttpRequest();
     var url = "/cgi/c/crms/submitInserts";
     xhr.open('POST', url, true);
-    //xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
-    //var str = JSON.stringify(data);
     xhr.send(data);
-    //alert(data);
     xhr.onreadystatechange = function()
     {
       if (xhr.readyState == 4)
@@ -656,7 +632,6 @@ function SubmitInserts(fini)
               }
             }
           }
-          //alert("SubmitInserts("+fini+") to " + url + " succeeded:"+xhr.status+"\n"+xhr.responseText);
         }
         else
         {
@@ -672,16 +647,13 @@ window.onload = function(e)
 {
   changeFrame1();
   changeFrame2();
-  [% IF 1 #editing OR error %]
-    LoadInserts("[% barcode %]", "[% user %]");
-  [% END %]
+  gInspecting = [% (inspecting)? 'true':'false' %];
+  LoadInserts("[% barcode %]", "[% user %]");
 }
 -->
 </script>
 
-[% IF 1#editing %]
-  [% data = inserts.GetInsertsData(barcode, user, 1) %]
-[% END %]
+[% data = inserts.GetInsertsData(barcode, user, 1) %]
 <form id="submitInsertsForm">
   <input type="hidden" name="barcode"  value="[% barcode %]"/>
   <input type="hidden" name="start"    value="[% crms.GetNow() %]"/>
