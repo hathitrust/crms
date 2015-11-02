@@ -275,10 +275,9 @@ function restartTime(i)
     var now = new Date();
     var input = document.getElementById(i+'timer').value;
     var parts = input.split(':');
-    var delta = new Date(now.getFullYear(), now.getMonth(), now.getDay(),
-                         parts[0], parts[1], parts[2]).valueOf() - (now.getTimezoneOffset() * 60000);
-    var d = new Date(new Date() - delta);
-    gTimers[i+'timer'] = d;
+    var delta = 1000 * ((parseInt(parts[0])*3600) + (parseInt(parts[1])*60) + parseInt(parts[2]));
+    now.setTime(now.getTime() - delta);
+    gTimers[i+'timer'] = now;
     updateTime(i);
     if (gInterval) { clearInterval(gInterval); }
     if (gIntervalFor > 0)
