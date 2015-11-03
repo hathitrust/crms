@@ -9,20 +9,33 @@ use CRMS;
 use Inserts;
 use JSON::XS;
 
-my $cgi  = new CGI;
-my $user = $ENV{'REMOTE_USER'};
-my $sys  = $cgi->param('sys');
+my $cgi = new CGI;
+my $sys = $cgi->param('sys');
 $sys = 'crms' unless $sys;
-my $crms = CRMS->new(logFile  =>   "$DLXSROOT/prep/c/crms/log_getReviewInfo.txt",
+my $crms = CRMS->new(logFile  =>   "$DLXSROOT/prep/c/crms/log_submitInserts.txt",
                      sys      =>   $sys,
                      verbose  =>   0,
                      root     =>   $DLXSROOT,
-                     dev      =>   $DLPS_DEV,
-                     user     =>   $user);
+                     dev      =>   $DLPS_DEV);
 
 my $ins = Inserts->new(crms => $crms);
-
-$ins->ConfirmInserts($cgi);
+if ($cgi->param('requeue'))
+{
+  if ($crms->IsUserAdmin())
+  {
+    my $id = $cgi->param('id');
+    my $user = $cgi->param('user');
+    $ins->Requeue($id, $user);
+  }
+  else
+  {
+    $crms->SetError('Action not allowed.');
+  }
+}
+else
+{
+  $ins->ConfirmInserts($cgi);
+}
 my $err = $crms->GetErrors();
 if (scalar @{$err})
 {
