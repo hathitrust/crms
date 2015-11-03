@@ -72,6 +72,15 @@ if (scalar keys %ips)
     $cgi->param('REMOTE_ADDR', $ip);
   }
 }
+if (length $page)
+{
+  my $dbc = $crms->AccessCheck($page);
+  if (defined $dbc)
+  {
+    $page = 'denied';
+    $cgi->param('dbc', $dbc);
+  }
+}
 my $input = $page . '.tt';
 $input = 'home.tt' unless -f $input;
 
