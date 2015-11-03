@@ -50,6 +50,7 @@ sub new
   $self->set('pdb',     $args{'pdb'});
   $self->set('sys',     $sys);
   my $user = $ENV{'REMOTE_USER'};
+  $self->set('remote_user', $user);
   my $alias = $self->GetAlias($user);
   $user = $alias if defined $alias and length $alias and $alias ne $user;
   $self->set('user', $user);
@@ -3477,9 +3478,8 @@ sub GetUserKerberosID
 sub GetAlias
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless $user;
   my $sql = 'SELECT alias FROM users WHERE id=?';
   return $self->SimpleSqlGet($sql, $user);
 }
@@ -6450,7 +6450,7 @@ sub PageToEnglish
   my $page = shift;
 
   return 'Home' unless $page;
-  return $self->SimpleSqlGet('SELECT name FROM menuitems WHERE href=CONCAT("crms?p=",?)', $page);
+  return $self->SimpleSqlGet('SELECT name FROM menuitems WHERE page=?', $page);
 }
 
 sub Namespaces
