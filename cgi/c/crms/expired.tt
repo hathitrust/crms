@@ -1,0 +1,28 @@
+[% crms.StartHTML('No Access', '<link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>') %]
+[% exp = crms.IsUserExpired(userid) %]
+<div class="pages" id="homePage">
+  <img src="[% crms.GetSystemVar('logo') %]"
+       style="display:block;margin-left:auto;margin-right:auto;"
+       alt="[% crms.System() %] Logo"/>
+    <br/><br/>
+    <!--<font size="5"><strong>Hello [% crms.GetUserName %] </strong></font>-->
+  <br/>
+  <br/>
+  [% mail = crms.GetSystemVar('expertsEmail') %]
+  [% mail2 = mail.replace('-', '&#8209;') %]
+  [% user = crms.get('user') %]
+  <div class="warningBox">
+    <h2>Hello [% crms.GetUserName %]. You do not have access to this site.</h2>
+    <strong><a href="[% crms.Sysify('crms?p=Logout') %]"> Logout</a></strong>
+  
+    <div class="warningSubbox">
+      <h4>Your access to in-copyright HathiTrust scans expired [% exp %].
+          Security considerations do not allow Copyright Review Management System reviewer
+          <span style="color:black;">[% user %]</span>
+          to perform further reviews until scans are fully viewable.
+          For instructions on renewing your in-copyright access, contact:
+          <a href="mailto:[% mail %]"><span style="color:black;whitespace:nowrap;">[% mail2 %]</span></a>.
+      </h4>
+    </div>
+  </div>
+[% INCLUDE footer.tt %]

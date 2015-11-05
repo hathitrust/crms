@@ -357,6 +357,10 @@ if (scalar keys %ips)
     $page = 'ip';
   }
 }
+if ($crms->IsUserExpired($user))
+{
+  $page = 'expired';
+}
 if (length $page)
 {
   my $dbc = $crms->AccessCheck($page);
