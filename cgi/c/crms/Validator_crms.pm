@@ -149,21 +149,12 @@ sub ValidateSubmission
       $errorMsg .= 'pd/exp requires note category "Expert Note", "Foreign Pub" or "Misc". ';
     }
   }
-  ## pdus/cdpp requires a note and a 'Foreign' or 'Translation' category, and must not have a ren number
+  ## pdus/cdpp  must not have a ren number
   if ($attr == 9 && $reason == 9)
   {
     if ($renNum || $renDate)
     {
       $errorMsg .= 'pdus/cdpp should not include renewal info. ';
-    }
-    if (!$note || !$category)
-    {
-      $errorMsg .= 'pdus/cdpp must include note category/note text. ';
-      $noteError = 1;
-    }
-    elsif ($category ne 'Foreign Pub' && $category ne 'Translation')
-    {
-      $errorMsg .= 'pdus/cdpp requires note category "Foreign Pub" or "Translation". ';
     }
   }
   if ($noteError == 0)
