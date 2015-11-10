@@ -93,7 +93,7 @@ function AddInsert(activate)
   {
     ok = ValidateForm();
     if (!ok) { return; }
-    SubmitInserts(0);
+    SubmitInserts(false, false);
   }
   if (gNInserts == 0)
   {
@@ -224,7 +224,7 @@ function AddInsert(activate)
   cell.innerHTML = '<strong>Timer: </strong><span id="'+prefix+'timerSpan"></span>'+
                    '<input type="hidden" id="'+prefix+'timer" name="'+prefix+'timer"/>';
   cell = row.insertCell(1);
-  cell.innerHTML = '<input type="button" value="Resume" onclick="javascript:restartTime(\''+prefix+'\');"/>';
+  cell.innerHTML = '<input type="button" id="'+prefix+'ResumeButton" value="Resume" onclick="javascript:restartTime(\''+prefix+'\');"/>';
   if (activate) { startTime(prefix); }
   row = table.insertRow(gNRows);
   gNRows++;
@@ -233,6 +233,16 @@ function AddInsert(activate)
   cell.colSpan = 2;
   cell.innerHTML = gRestoredHelp+'<label for="'+prefix+'restored"><strong>Copyright was likely restored</strong></label>';
   cell.innerHTML+='<input type="checkbox" id="'+prefix+'restored" name="'+prefix+'restored" value="1" onclick="javascript:restartTime('+prefix+');"/>';
+  if (gInspecting)
+  {
+    row = table.insertRow(gNRows);
+    gNRows++;
+    row.id = prefix+'Row'+gNRows;
+    cell = row.insertCell(0);
+    cell.colspan = 2;
+    cell.innerHTML = '<input type="button" value="Submit Override" onclick="SubmitOverride('+prefix+');"/>';
+    row.id = prefix + 'overrideRow';
+  }  
   gNInserts++;
   document.getElementById('insertCount').value = gNInserts;
   if (gNInserts > 1)
@@ -245,16 +255,15 @@ function AddInsert(activate)
 
 function startTime(i)
 {
-  if (!gInspecting)
-  {
-    gTimers[i+'timer'] = new Date();
-    updateTime(i);
-    if (gInterval) { clearInterval(gInterval); }
-    gInterval = setInterval(function(){updateTime(i)},500);
-    gIntervalFor = i;
-    var span = document.getElementById(i + 'timerSpan');
-    if (span) { span.style.color = 'rgb(255,0,0)'; }
-  }
+  gTimers[i+'timer'] = new Date();
+  updateTime(i);
+  if (gInterval) { clearInterval(gInterval); }
+  gInterval = setInterval(function(){updateTime(i)},500);
+  gIntervalFor = i;
+  var span = document.getElementById(i + 'timerSpan');
+  if (span) { span.style.color = 'rgb(255,0,0)'; }
+  var butt = document.getElementById(i + 'ResumeButton');
+  if (butt) { butt.style.display = 'none'; }
 }
 
 function stopTime(i)
@@ -265,31 +274,34 @@ function stopTime(i)
     gIntervalFor = 0;
     var span = document.getElementById(i + 'timerSpan');
     if (span) { span.style.color = 'rgb(0,0,0)'; }
+    var butt = document.getElementById(i + 'ResumeButton');
+    if (butt) { butt.style.display = 'block'; }
   }
 }
 
 function restartTime(i)
 {
-  if (!gInspecting)
+  var now = new Date();
+  var input = document.getElementById(i+'timer').value;
+  var parts = input.split(':');
+  var delta = 1000 * ((parseInt(parts[0])*3600) + (parseInt(parts[1])*60) + parseInt(parts[2]));
+  now.setTime(now.getTime() - delta);
+  gTimers[i+'timer'] = now;
+  updateTime(i);
+  if (gInterval) { clearInterval(gInterval); }
+  if (gIntervalFor > 0)
   {
-    var now = new Date();
-    var input = document.getElementById(i+'timer').value;
-    var parts = input.split(':');
-    var delta = 1000 * ((parseInt(parts[0])*3600) + (parseInt(parts[1])*60) + parseInt(parts[2]));
-    now.setTime(now.getTime() - delta);
-    gTimers[i+'timer'] = now;
-    updateTime(i);
-    if (gInterval) { clearInterval(gInterval); }
-    if (gIntervalFor > 0)
-    {
-      var span = document.getElementById(gIntervalFor + 'timerSpan');
-      if (span) { span.style.color = 'rgb(0,0,0)'; }
-    }
-    gInterval = setInterval(function(){updateTime(i)},500);
-    gIntervalFor = i;
-    var span = document.getElementById(i + 'timerSpan');
-    if (span) { span.style.color = 'rgb(255,0,0)'; }
+    var span = document.getElementById(gIntervalFor + 'timerSpan');
+    if (span) { span.style.color = 'rgb(0,0,0)'; }
+    var butt = document.getElementById(gIntervalFor + 'ResumeButton');
+    if (butt) { butt.style.display = 'block'; }
   }
+  gInterval = setInterval(function(){updateTime(i)},500);
+  gIntervalFor = i;
+  var span = document.getElementById(i + 'timerSpan');
+  if (span) { span.style.color = 'rgb(255,0,0)'; }
+  var butt = document.getElementById(i + 'ResumeButton');
+  if (butt) { butt.style.display = 'none'; }
 }
 
 function updateTime(i)
@@ -376,7 +388,7 @@ function DeleteLastInsert()
     if (gNInserts > 0) { gNInserts--; }
     document.getElementById('insertCount').value = gNInserts;
   }
-  SubmitInserts(false);
+  SubmitInserts(false, false);
 }
 
 function ToggleRenewal(forceClose)
@@ -388,11 +400,11 @@ function ToggleRenewal(forceClose)
   var disp = (show)? 'table-row':'none';
   var ids = ['RenewalRow0','RenewalDataRow0','RenewalDataRow1','RenewalDataRow2',
              'CountDataRow0','CountDataRow1','CountDataRow2','CountDataRow3',
-             'CountDataRow4'];
+             'CountDataRow4', 'CountDataRow5'];
   for (var i = 0; i < ids.length; i++)
   {
     var div = document.getElementById(ids[i]);
-    div.style.display = disp;
+    if (div) { div.style.display = disp; }
   }
   butt.innerHTML = (show)? down:right;
 }
@@ -463,7 +475,7 @@ function PopulateInserts(data)
     AddInsert(0);
     PopulateInsert(i, obj[i]);
   }
-  if (gNInserts > 0)
+  if (gNInserts > 0 && !gInspecting)
   {
     restartTime(gNInserts);
   }
@@ -489,7 +501,14 @@ function PopulateInsert(iid, data)
   val = document.getElementById(iid+'timer').value;
   var parts = val.split(':');
   if (parts[0].length == 2 && parts[0].charAt(0) == '0')
+  {
     val = parts[0].charAt(1)+':'+parts[1]+':'+parts[2];
+  }
+  if (gInspecting)
+  {
+    val = '0:00:00';
+    document.getElementById(iid+'timer').value = val;
+  }
   document.getElementById(iid+'timerSpan').textContent = val;
   val = data['renewed'];
   document.getElementById(iid+'renewed'+val).checked='checked';
@@ -588,9 +607,9 @@ function validateInsert(i)
   }
 }
 
-function SubmitInserts(fini)
+function SubmitInserts(fini, override)
 {
-  if (ValidateForm())
+  if (override || ValidateForm())
   {
     var loader = document.getElementById('loader');
     if (loader) { loader.style.display=''; }
@@ -613,7 +632,7 @@ function SubmitInserts(fini)
         {
           if (fini)
           {
-            window.location.href = "[% crms.Sysify('inserts?p=inserts') %]";
+            window.location.href = 'inserts?p=inserts';
           }
           else
           {
@@ -642,6 +661,17 @@ function SubmitInserts(fini)
   }
 }
 
+function SubmitOverride(i)
+{
+  var iname = (i == 0)? "the top-level volume":"Insert "+i;
+  if (confirm('Are you sure you want to submit an override for '+iname+'?'))
+  {
+    var ov = document.getElementById('override');
+    if (ov) { ov.value = i; }
+    SubmitInserts(false, true);
+  }
+}
+
 window.onload = function(e)
 {
   changeFrame1();
@@ -656,10 +686,13 @@ window.onload = function(e)
 <form id="submitInsertsForm">
   <input type="hidden" name="barcode"  value="[% barcode %]"/>
   <input type="hidden" name="start"    value="[% crms.GetNow() %]"/>
-  <input type="hidden" name="duration" value="[% inserts.GetDuration(barcode, user) %]"/>
+  <input type="hidden" name="duration" value="[% (inspecting)? 0:inserts.GetDuration(barcode, user) %]"/>
   <input type="hidden" name="user"     value="[% user %]"/>
-  <input type="hidden" id="insertCount" name="count" value="0"/>
+  <input type="hidden" id="insertCount" name="count"   value="0"/>
   <input type="hidden" id="finalInput" name="final" value="0"/>
+[% IF inspecting %]
+  <input type="hidden" id="override" name="override" value="0"/>
+[% END %]
   <input type="hidden" name="editing" value="[% editing %]"/>
   <input type="hidden" name="sys"     value="[% sys %]"/>
   <div class="reviewBlue">
@@ -796,6 +829,13 @@ window.onload = function(e)
           <label for="0notApplicable">Not applicable</label>
         </td>
       </tr>
+      [% IF inspecting %]
+      <tr id="CountDataRow5">
+        <td>
+          <input type="button" value="Submit Override" onclick="SubmitOverride(0);"/>
+        </td>
+      </tr>
+      [% END %]
     </table>
   </div>
 </div>
@@ -838,10 +878,10 @@ window.onload = function(e)
     <tr>
       <td>
         <input class="review" type="button" name="submit" value="Save"
-               accesskey="s" onclick="javascript:SubmitInserts(0);"/>
+               accesskey="s" onclick="javascript:SubmitInserts(false, false);"/>
       </td>
       <td><input class="review" type="button" name="submit" value="Save and Next"
-                 onclick="javascript:SubmitInserts(1)"/></td>
+                 onclick="javascript:SubmitInserts(true, false)"/></td>
     </tr>
     [% END %]
     [% homeLink = crms.Sysify("inserts?p=inserts;submit=Cancel;barcode=$barcode;editing=$editing") %]

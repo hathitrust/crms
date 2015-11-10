@@ -246,8 +246,12 @@ records per page.
           [% active_color = color_gray %]
         [% END %]
       [% END %]
-
-      <tr style="background-color:[% active_color %];">
+      [% col = active_color %]
+      [% IF inserts.IsOverride(item.id, item.$iid, item.user) %]
+        [% col = '#A0FEAE' %]
+      [% END %]
+      
+      <tr style="background-color:[% col %];">
         [% FOREACH field IN fields %]
           [% attrs = '' %]
           [% IF field == 'status' && item.status == 5 && item.$iid==0 %]
@@ -278,7 +282,7 @@ records per page.
             [% ELSIF field == 'pubDate' && item.$iid==0 %]
               [% crms.GetPubDate(item.id) %]
             [% ELSIF field == 'status' %]
-              [% IF item.status == 5 && item.$iid==0 %]
+              [% IF item.status == 5 && item.$iid==0 && !inserts.IsOverride(item.id, item.$iid, item.user) %]
                 <img id="check[% item.id _ item.user %]" width="16" height="16" alt="Done" src="/c/crms/CheckIcon.png"/>
                 <input type="button" name="requeue" value="Requeue" id="submit[% item.id _ item.user %]"
                        onclick="SubmitRequeue('[% item.id %]', '[% item.user %]');"/>

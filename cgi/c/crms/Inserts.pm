@@ -51,6 +51,18 @@ sub GetDuration
   return $crms->SimpleSqlGet($sql, $id, $user);
 }
 
+sub IsOverride
+{
+  my $self = shift;
+  my $id   = shift;
+  my $iid  = shift;
+  my $user = shift;
+
+  my $crms = $self->crms;
+  my $sql = 'SELECT COUNT(*) FROM inserts WHERE id=? AND iid=? AND user=? AND override=1';
+  return $crms->SimpleSqlGet($sql, $id, $iid, $user);
+}
+
 sub GetInsertPage
 {
   my $self = shift;
@@ -120,7 +132,8 @@ sub ConfirmInserts
 }
 
 my %nogo = ('p'=>1,'editing'=>1,'barcode'=>1,'count'=>1,'confirm'=>1,
-            'sys'=>1,'submit'=>1,'final'=>1,'notApplicable'=>1,'duration'=>1);
+            'sys'=>1,'submit'=>1,'final'=>1,'notApplicable'=>1,'duration'=>1,
+            'override'=>1, 'user'=>1,'iid'=>1);
 sub SubmitInserts
 {
   my $self  = shift;
@@ -140,66 +153,74 @@ sub SubmitInserts
     $crms->Note($msg);
   }
   my %inserts;
-  my %seen;
-  my $count = $cgi->param('count');
   my @fields;
   my @vals;
-  foreach my $name ($cgi->param)
+  my $count = $cgi->param('count');
+  my $override = $cgi->param('override');
+  $crms->Note("Override $override detected") if defined $override;
+  if (!defined $override || $override == 0)
   {
-    my $val = $cgi->param($name);
-    if ($name =~ m/^0(\D+)$/)
+    foreach my $name ($cgi->param)
     {
-      $name = $1;
-    }
-    next if $name =~ m/^\d/;
-    next if $nogo{$name};
-    $val = undef unless defined $val and length $val;
-    if ($name eq 'start')
-    {
-      my $dur = $crms->SimpleSqlGet('SELECT TIMEDIFF(NOW(),?)', $val);
-      my $dur2 = $cgi->param('duration');
-      if (defined $dur2 && length $dur2)
+      my $val = $cgi->param($name);
+      if ($name =~ m/^0(\D+)$/)
       {
-        $dur = $crms->SimpleSqlGet('SELECT ADDTIME(?,?)', $dur, $dur2);
+        $name = $1;
       }
-      push(@fields, 'timer');
-      push(@vals, $dur);
+      next if $name =~ m/^\d/;
+      next if $nogo{$name};
+      $val = undef unless defined $val and length $val;
+      if ($name eq 'start')
+      {
+        my $dur = $crms->SimpleSqlGet('SELECT TIMEDIFF(NOW(),?)', $val);
+        my $dur2 = $cgi->param('duration');
+        if (defined $dur2 && length $dur2)
+        {
+          $dur = $crms->SimpleSqlGet('SELECT ADDTIME(?,?)', $dur, $dur2);
+        }
+        push(@fields, 'timer');
+        push(@vals, $dur);
+      }
+      else
+      {
+        push @fields, $name;
+        push @vals, $val;
+      }
     }
-    else
-    {
-      push @fields, $name;
-      push @vals, $val;
-    }
-    $seen{$name} = 1;
-  }
-  push @fields, 'id';
-  push @vals, $id;
-  if (!$seen{'iid'})
-  {
+    push @fields, 'id';
+    push @vals, $id;
     push @fields, 'iid';
     push @vals, 0;
+    if (defined $override && $override == 0)
+    {
+      push @fields, 'override';
+      push @vals, 1;
+    }
+    push @fields, 'user';
+    push @vals, $user;
+    my $sql = 'SELECT author,title,DATE(pub_date) FROM bibdata WHERE id=?';
+    my $ref = $crms->SelectAll($sql, $id);
+    push @fields, ('author', 'title', 'pub_date');
+    push @vals, ($ref->[0]->[0], $ref->[0]->[1], $ref->[0]->[2]);
+    my $wc = $crms->WildcardList(scalar @fields);
+    $sql = 'REPLACE INTO inserts ('.
+            (join ',', @fields) .
+            ') VALUES '. $wc;
+    if (!$self->get('noInsertsNote'))
+    {
+      $crms->Note((join ',', @fields) . ' => ' . (join '_', (map {(defined $_)? $_:'<undef>'} @vals)));
+    }
+    $crms->PrepareSubmitSql($sql, @vals);
   }
-  my $sql = 'SELECT author,title,DATE(pub_date) FROM bibdata WHERE id=?';
-  my $ref = $crms->SelectAll($sql, $id);
-  push @fields, ('author', 'title', 'pub_date');
-  push @vals, ($ref->[0]->[0], $ref->[0]->[1], $ref->[0]->[2]);
-  my $wc = $crms->WildcardList(scalar @fields);
-  $sql = 'REPLACE INTO inserts ('.
-          (join ',', @fields) .
-          ') VALUES '. $wc;
+  my $sql = 'DELETE FROM inserts WHERE id=? AND user=? AND iid>?';
+  $crms->PrepareSubmitSql($sql, $id, $user, $count);
   if (!$self->get('noInsertsNote'))
   {
-    $crms->Note((join ',', @fields) . ' => ' . (join '_', (map {(defined $_)? $_:'<undef>'} @vals)));
-  }
-  $crms->PrepareSubmitSql($sql, @vals);
-  $sql = 'DELETE FROM inserts WHERE id=? AND user=? AND iid>0';
-  $crms->PrepareSubmitSql($sql, $id, $user);
-  if (!$self->get('noInsertsNote'))
-  {
-    $crms->Note(Utilities::StringifySql($sql, $user, $count));
+    $crms->Note(Utilities::StringifySql($sql, $id, $user, $count));
   }
   for my $i (1 .. $count)
   {
+    next if defined $override and $i ne $override;
     @fields = ();
     @vals = ();
     foreach my $name ($cgi->param)
@@ -218,8 +239,13 @@ sub SubmitInserts
     push @vals, $i;
     push @fields, 'user';
     push @vals, $user;
+    if (defined $override)
+    {
+      push @fields, 'override';
+      push @vals, 1;
+    }
     my $wc = $crms->WildcardList(scalar @fields);
-    my $sql = 'INSERT INTO inserts ('.
+    my $sql = 'REPLACE INTO inserts ('.
               (join ',', @fields) .
               ') VALUES '. $wc;
     $crms->PrepareSubmitSql($sql, @vals);
@@ -228,13 +254,16 @@ sub SubmitInserts
       $crms->Note("$i: ". (join ',', @fields) . ' => ' . (join ',', (map {(defined $_)? $_:'<undef>'} @vals)));
     }
   }
-  my $status = ($final)? 5:1;
-  if (!$self->get('noInsertsNote'))
+  if (!defined $override)
   {
-    $crms->Note("$id: setting status to $status");
+    my $status = ($final)? 5:1;
+    if (!$self->get('noInsertsNote'))
+    {
+      $crms->Note("$id: setting status to $status");
+    }
+    $sql = 'UPDATE insertsqueue SET status=? WHERE id=?';
+    $crms->PrepareSubmitSql($sql, $status, $id);
   }
-  $sql = 'UPDATE insertsqueue SET status=? WHERE id=?';
-  $crms->PrepareSubmitSql($sql, $status, $id);
 }
 
 # Order of priority in selecting volume:
@@ -290,9 +319,10 @@ sub GetNextInsertsForReview
 sub GetLockedInserts
 {
   my $self = shift;
+  my $user = shift;
 
   my $crms = $self->crms;
-  my $user = $crms->get('user');
+  $user = $crms->get('user') unless defined $user;
   my $sql = 'SELECT id FROM insertsqueue WHERE locked=? LIMIT 1';
   return $crms->SimpleSqlGet($sql, $user);
 }
@@ -412,7 +442,7 @@ my @Fields     = qw(id user reviewDate title author pubDate type page
                     pub_history renewed renNum renDate source reason timer pd restored status);
 my @Fields2    = ('i.id', 'i.user', 'DATE(i.time)', 'i.title', 'i.author', 'i.pub_date', 'i.type', 'i.page',
                   'i.pub_history', 'i.renewed', 'i.renNum', 'CONCAT(i.renDateY,"-",i.renDateM,"-",i.renDateD)',
-                  'i.source', 'i.reason', 'i.timer', 'i.pd', 'i.restored', 'iq.status', 'i.iid');
+                  'i.source', 'i.reason', 'i.timer', 'i.pd', 'i.restored', 'iq.status', 'i.iid', 'i.override');
 
 sub InsertsTitles
 {
@@ -443,7 +473,7 @@ sub GetInsertsDataRef
   $pagesize = 20 unless $pagesize and $pagesize > 0;
   $offset = 0 unless $offset and $offset > 0;
   $order = 'i.id' unless $order;
-  $order .= ',i.iid';
+  $order .= ',i.iid,i.override';
   $offset = 0 unless $offset;
   my @rest = ();
   my $tester1 = '=';
