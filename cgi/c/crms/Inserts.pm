@@ -133,7 +133,7 @@ sub ConfirmInserts
 
 my %nogo = ('p'=>1,'editing'=>1,'barcode'=>1,'count'=>1,'confirm'=>1,
             'sys'=>1,'submit'=>1,'final'=>1,'notApplicable'=>1,'duration'=>1,
-            'override'=>1, 'user'=>1,'iid'=>1);
+            'override'=>1, 'user'=>1,'iid'=>1,'totalCount'=>1);
 sub SubmitInserts
 {
   my $self  = shift;
@@ -169,6 +169,7 @@ sub SubmitInserts
       }
       next if $name =~ m/^\d/;
       next if $nogo{$name};
+      next if $name eq 'total' or $name eq 'totaltype';
       $val = undef unless defined $val and length $val;
       if ($name eq 'start')
       {
@@ -228,6 +229,7 @@ sub SubmitInserts
       next unless $name =~ m/^$i(\D+)$/;
       my $suffix = $1;
       next if $nogo{$suffix};
+      next if $name eq 'total' or $name eq 'totaltype';
       push @fields, $suffix;
       my $val = $cgi->param($name);
       $val = undef unless defined $val and length $val > 0;
@@ -264,6 +266,66 @@ sub SubmitInserts
     $sql = 'UPDATE insertsqueue SET status=? WHERE id=?';
     $crms->PrepareSubmitSql($sql, $status, $id);
   }
+  $self->SubmitTotals($cgi, $id, $user);
+}
+
+# CREATE TABLE insertstotals (id VARCHAR(32) NOT NULL, user VARCHAR(64) NOT NULL, type VARCHAR(32) NOT NULL, total INT(11) NOT NULL DEFAULT 0);
+sub GetTotalsData
+{
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift || $self->crms->get('user');
+
+  my $crms = $self->crms;
+  my $sql = 'SELECT type,total FROM insertstotals WHERE id=? AND user=?';
+  return $crms->SelectAll($sql, $id, $user);
+}
+
+sub SubmitTotals
+{
+  my $self = shift;
+  my $cgi  = shift;
+  my $id   = shift;
+  my $user = shift;
+  
+  my $crms = $self->crms;
+  $crms->Note("SubmitTotals($id, $user)");
+  my $count = $cgi->param('totalCount');
+  return unless $count;
+  my $sql = 'DELETE FROM insertstotals WHERE id=? AND user=?';
+  $crms->PrepareSubmitSql($sql, $id, $user);
+  
+  my %param = 
+    map {$_ => $cgi->param($_)} $cgi->param;
+  for my $i (0 .. $count-1)
+  {
+    my $type = $param{$i. 'totaltype'};
+    my $total = $param{$i. 'total'};
+    $sql = 'INSERT INTO insertstotals (id,user,type,total) VALUES (?,?,?,?)';
+    $crms->PrepareSubmitSql($sql, $id, $user, $type, $total);
+  }
+}
+
+sub TotalsString
+{
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
+  
+  my $crms = $self->crms;
+  my $str = '';
+  my $sql = 'SELECT type,total FROM insertstotals WHERE id=? AND user=?';
+  my $ref = $crms->SelectAll($sql, $id, $user);
+  if (scalar @{$ref})
+  {
+    $str = '<table class="exportStats"><tr><th>Type</th><th>Total</th></tr>';
+    foreach my $row (@{$ref})
+    {
+      $str .= '<tr><td>'. $row->[0]. '</td><td>'. $row->[1]. '</td></tr>';
+    }
+    $str .= '</table>';
+  }
+  return $str;
 }
 
 # Order of priority in selecting volume:

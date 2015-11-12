@@ -1,41 +1,3 @@
-<script type="text/javascript">
-<!--
-function SubmitRequeue(id, user)
-{
-  if (confirm("Please confirm you want to requeue "+id+" for "+user+"."))
-  {
-    var submit = document.getElementById('submit'+id+user);
-    if (submit) { submit.style.display='none'; }
-    var loader = document.getElementById('loader'+id+user);
-    if (loader) { loader.style.display='block'; }
-    var xhr = new XMLHttpRequest();
-    var url = "/cgi/c/crms/submitInserts?requeue=1;id="+id+";user="+user;
-    xhr.onreadystatechange = function()
-    {
-      if (xhr.readyState == 4)
-      {
-        if (xhr.status == 200)
-        {
-          var img = document.getElementById('check'+id+user);
-          if (img) { img.style.display='none'; }
-          var span = document.getElementById('span'+id+user);
-          if (span) { span.style.display='block'; }
-        }
-        else
-        {
-          alert("Error: "+url+" failed:"+xhr.status+"\n"+xhr.responseText);
-          if (submit) { submit.style.display='block'; }
-        }
-        if (loader) { loader.style.display='none'; }
-      }
-    };
-    xhr.open('GET', url, true);
-    xhr.send(null);
-  }
-}
--->
-</script>
-
 [% page = cgi.param("p") %]
 [% op1 = cgi.param("op1") %]
 [% search1 = cgi.param("search1") %]
@@ -77,6 +39,44 @@ function SubmitRequeue(id, user)
   [% CALL cgi.param('order', 'id') %]
 [% END %]
 [% INCLUDE header.tt %]
+
+<script type="text/javascript">
+<!--
+function SubmitRequeue(id, user)
+{
+  if (confirm("Please confirm you want to requeue "+id+" for "+user+"."))
+  {
+    var submit = document.getElementById('submit'+id+user);
+    if (submit) { submit.style.display='none'; }
+    var loader = document.getElementById('loader'+id+user);
+    if (loader) { loader.style.display='block'; }
+    var xhr = new XMLHttpRequest();
+    var url = "/cgi/c/crms/submitInserts?requeue=1;id="+id+";user="+user;
+    xhr.onreadystatechange = function()
+    {
+      if (xhr.readyState == 4)
+      {
+        if (xhr.status == 200)
+        {
+          var img = document.getElementById('check'+id+user);
+          if (img) { img.style.display='none'; }
+          var span = document.getElementById('span'+id+user);
+          if (span) { span.style.display='block'; }
+        }
+        else
+        {
+          alert("Error: "+url+" failed:"+xhr.status+"\n"+xhr.responseText);
+          if (submit) { submit.style.display='block'; }
+        }
+        if (loader) { loader.style.display='none'; }
+      }
+    };
+    xhr.open('GET', url, true);
+    xhr.send(null);
+  }
+}
+-->
+</script>
 
 [% IF requeue %]
   [% inserts.Requeue(id, user) %]
@@ -271,6 +271,17 @@ records per page.
                   <a href="[% inserts.LinkToInserts(item.id, item.user) %]" target="_blank">[% item.id %]</a>
                 [% IF inserts.IsLocked(item.id) %]
                   <img width="16" height="16" alt="Locked" src="/c/crms/OtherLock.png"/>
+                [% END %]
+                [% totals = inserts.TotalsString(item.id, item.user) %]
+                [% IF totals %]
+                
+                  <a class="tip" href="#">
+                    <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
+                    <span style="width:auto;">
+                    $totals
+                    </span>
+                  </a>
+                
                 [% END %]
               [% ELSE %]
                 Insert [% item.$iid %]

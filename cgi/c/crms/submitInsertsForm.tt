@@ -1,5 +1,6 @@
 <script type="text/javascript">
 <!--
+
 window.onerror = function(msg, url, line, col, error) {
    // Note that col & error are new to the HTML 5 spec and may not be
    // supported in every browser.  It worked for me in Chrome.
@@ -24,6 +25,7 @@ String.prototype.replaceAll = function(search, replace)
 var gInspecting = false;
 var gNInserts = 0;
 var gNRows = 0;
+var gNTotals = 0;
 var gTypeSelect = '<select id="__PRE__type" name="__PRE__type" title="Insert Type" class="review" onchange="restartTime(__PRE__);">'+
                   '<option value="Book">Book</option>'+
                   '<option value="Chapter">Chapter</option>'+
@@ -400,10 +402,15 @@ function ToggleRenewal(forceClose)
   var disp = (show)? 'table-row':'none';
   var ids = ['RenewalRow0','RenewalDataRow0','RenewalDataRow1','RenewalDataRow2',
              'CountDataRow0','CountDataRow1','CountDataRow2','CountDataRow3',
-             'CountDataRow4', 'CountDataRow5'];
+             'CountDataRow4', 'CountDataRow5', 'TotalTopRow0', 'TotalTopRow1'];
   for (var i = 0; i < ids.length; i++)
   {
     var div = document.getElementById(ids[i]);
+    if (div) { div.style.display = disp; }
+  }
+  for (var i = 0; i < gNTotals; i++)
+  {
+    var div = document.getElementById('TotalRow'+i);
     if (div) { div.style.display = disp; }
   }
   butt.innerHTML = (show)? down:right;
@@ -672,26 +679,93 @@ function SubmitOverride(i)
   }
 }
 
+function AddTotal()
+{
+  var table = document.getElementById('CountDataTable');
+  var offset = 6 + gNTotals;
+  var row = table.insertRow(offset);
+  row.id = 'TotalRow'+gNTotals;
+  cell = row.insertCell(0);
+  var id = gNTotals+'totaltype';
+  cell.innerHTML = gTypeSelect.replaceAll("__PRE__", gNTotals+'total');
+  var input = document.getElementById(id);
+  input.onchange = undefined;
+  cell = row.insertCell(1);
+  id = gNTotals+'total';
+  cell.innerHTML = '<input id="'+id+'" title="Estimated insert count" type="text" name="'+id+'" size="8"/>';
+  gNTotals++;
+  document.getElementById('totalCount').value = gNTotals;
+}
+
+function LoadTotals(id, user)
+{
+  var req = new XMLHttpRequest();
+  var url = "/cgi/c/crms/getInsertsInfo?id=" + id + ";user=" + user + ";totals=1";
+  req.onreadystatechange = function()
+  {
+    if (req.readyState == 4)
+    {
+      if (req.status == 200)
+      {
+        PopulateTotals(req.responseText);
+      }
+      else
+      {
+        alert("Error: "+url+" failed:"+req.status+"\n"+req.statusText);
+      }
+    }
+  };
+  req.open("GET", url, true);
+  req.send(null);
+}
+
+function PopulateTotals(data)
+{
+  var obj = JSON.parse(data);
+  for (var i = 0; i < obj.length; i++)
+  {
+    AddTotal();
+    PopulateTotal(i, obj[i]);
+  }
+}
+
+function PopulateTotal(i, data)
+{
+  var sel = document.getElementById(i+"totaltype");
+  if (sel) { sel.value = data[0]; }
+  var inp = document.getElementById(i+"total");
+  if (inp) { inp.value = data[1]; }
+}
+-->
+</script>
+
+[% data = inserts.GetInsertsData(barcode, user, 1) %]
+[% totals = inserts.GetTotalsData(barcode, user) %]
+<script type="text/javascript">
+<!--
 window.onload = function(e)
 {
   changeFrame1();
   changeFrame2();
   gInspecting = [% (inspecting)? 'true':'false' %];
   LoadInserts("[% barcode %]", "[% user %]");
+  [% IF totals.size() %]
+    LoadTotals("[% barcode %]", "[% user %]");
+  [% END %]
 }
 -->
 </script>
 
-[% data = inserts.GetInsertsData(barcode, user, 1) %]
 <form id="submitInsertsForm">
   <input type="hidden" name="barcode"  value="[% barcode %]"/>
   <input type="hidden" name="start"    value="[% crms.GetNow() %]"/>
   <input type="hidden" name="duration" value="[% (inspecting)? 0:inserts.GetDuration(barcode, user) %]"/>
   <input type="hidden" name="user"     value="[% user %]"/>
-  <input type="hidden" id="insertCount" name="count"   value="0"/>
-  <input type="hidden" id="finalInput" name="final" value="0"/>
+  <input type="hidden" id="insertCount" name="count"      value="0"/>
+  <input type="hidden" id="totalCount"  name="totalCount" value="[% totals.size() %]"/>
+  <input type="hidden" id="finalInput"  name="final"      value="0"/>
 [% IF inspecting %]
-  <input type="hidden" id="override" name="override" value="0"/>
+  <input type="hidden" id="override"    name="override"   value="0"/>
 [% END %]
   <input type="hidden" name="editing" value="[% editing %]"/>
   <input type="hidden" name="sys"     value="[% sys %]"/>
@@ -800,7 +874,7 @@ window.onload = function(e)
     </table>
   </div>
   <div id="CountDataDiv">
-    <table>
+    <table id="CountDataTable">
       <tr id="CountDataRow0">
         <td>
           Estimate the number of inserts first published with this volume and not separately renewed
@@ -829,6 +903,15 @@ window.onload = function(e)
           <label for="0notApplicable">Not applicable</label>
         </td>
       </tr>
+      <tr id="TotalTopRow0">
+        <td colspan="2"><strong>Total insert count (by type)</strong></td>
+      </tr>
+      <tr id="TotalTopRow1">
+        <td colspan="2">
+          <input class="review" type="button" name="submit" value="Add Total"
+                 onclick="javascript:AddTotal();"/>
+        </td>
+      </tr>
       [% IF inspecting %]
       <tr id="CountDataRow5">
         <td>
@@ -836,6 +919,7 @@ window.onload = function(e)
         </td>
       </tr>
       [% END %]
+      
     </table>
   </div>
 </div>

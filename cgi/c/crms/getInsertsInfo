@@ -22,7 +22,16 @@ my $crms = CRMS->new(logFile => "$DLXSROOT/prep/c/crms/log_getReviewInfo.txt",
 my $ins = Inserts->new(crms => $crms);
 my $id = $cgi->param('id');
 my $user = $cgi->param('user');
-my $data = $ins->GetInsertsData($id, $user);
+my $totals = $cgi->param('totals');
+my $data = '';
+if (defined $totals && $totals == 1)
+{
+  $data = $ins->GetTotalsData($id, $user);
+}
+else
+{
+  $data = $ins->GetInsertsData($id, $user);
+}
 my $json = JSON::XS->new->utf8->encode($data);
 print $cgi->header('application/json');
 print $json;
