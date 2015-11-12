@@ -62,14 +62,18 @@ my $vars = {
 ## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
 ## the default is home.tt in case a tt is not found
 my $page  = $cgi->param('p') || '';
-my $ip = $ENV{'REMOTE_ADDR'};
-my %ips = %{$crms->GetUserIPs()};
-if (scalar keys %ips)
+
+if (!$crms->GetAlias())
 {
-  if (!defined $ips{$ip} && !$crms->IsUserAdmin())
+  my %ips = %{$crms->GetUserIPs()};
+  if (scalar keys %ips)
   {
-    $page = 'ip';
-    $cgi->param('REMOTE_ADDR', $ip);
+    my $ip = $ENV{'REMOTE_ADDR'};
+    if (!defined $ips{$ip} && !$crms->IsUserAdmin())
+    {
+      $page = 'ip';
+      $cgi->param('REMOTE_ADDR', $ip);
+    }
   }
 }
 if (length $page)
