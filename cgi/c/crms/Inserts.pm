@@ -294,15 +294,16 @@ sub SubmitTotals
   return unless $count;
   my $sql = 'DELETE FROM insertstotals WHERE id=? AND user=?';
   $crms->PrepareSubmitSql($sql, $id, $user);
-  
-  my %param = 
-    map {$_ => $cgi->param($_)} $cgi->param;
+  my %param = map {$_ => $cgi->param($_)} $cgi->param;
   for my $i (0 .. $count-1)
   {
     my $type = $param{$i. 'totaltype'};
     my $total = $param{$i. 'total'};
-    $sql = 'INSERT INTO insertstotals (id,user,type,total) VALUES (?,?,?,?)';
-    $crms->PrepareSubmitSql($sql, $id, $user, $type, $total);
+    if (defined $type && defined $total)
+    {
+      $sql = 'INSERT INTO insertstotals (id,user,type,total) VALUES (?,?,?,?)';
+      $crms->PrepareSubmitSql($sql, $id, $user, $type, $total);
+    }
   }
 }
 

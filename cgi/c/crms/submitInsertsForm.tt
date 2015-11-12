@@ -692,9 +692,27 @@ function AddTotal()
   input.onchange = undefined;
   cell = row.insertCell(1);
   id = gNTotals+'total';
-  cell.innerHTML = '<input id="'+id+'" title="Estimated insert count" type="text" name="'+id+'" size="8"/>';
+  cell.innerHTML = '<input id="'+id+'" title="Estimated insert count" type="text" name="'+id+'" size="6"/>';
   gNTotals++;
   document.getElementById('totalCount').value = gNTotals;
+  document.getElementById('DeleteLastButton').disabled = false;
+}
+
+function DeleteLastTotal()
+{
+  if (gNTotals > 0)
+  {
+    if (confirm("Are you sure you want to delete the last total? This cannot be undone."))
+    {
+      var offset = 5 + gNTotals;
+      var table = document.getElementById("CountDataTable");
+      table.deleteRow(offset);
+      gNTotals--;
+      document.getElementById('totalCount').value = gNTotals;
+      SubmitInserts(false, false);
+    }
+    document.getElementById('DeleteLastButton').disabled = (gNTotals == 0);
+  }
 }
 
 function LoadTotals(id, user)
@@ -907,9 +925,13 @@ window.onload = function(e)
         <td colspan="2"><strong>Total insert count (by type)</strong></td>
       </tr>
       <tr id="TotalTopRow1">
-        <td colspan="2">
+        <td colspan>
           <input class="review" type="button" name="submit" value="Add Total"
                  onclick="javascript:AddTotal();"/>
+        </td>
+        <td colspan>
+          <input class="review" type="button" name="submit" id="DeleteLastButton" value="Delete Last"
+                 onclick="javascript:DeleteLastTotal();" disabled="disabled"/>
         </td>
       </tr>
       [% IF inspecting %]
