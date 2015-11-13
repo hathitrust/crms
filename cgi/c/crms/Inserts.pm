@@ -226,12 +226,12 @@ sub SubmitInserts
     @vals = ();
     foreach my $name ($cgi->param)
     {
-      next unless $name =~ m/^$i(\D+)$/;
-      my $suffix = $1;
-      next if $nogo{$suffix};
-      next if $name eq 'total' or $name eq 'totaltype';
-      push @fields, $suffix;
       my $val = $cgi->param($name);
+      next unless $name =~ m/^$i(\D+)$/;
+      $name = $1;
+      next if $nogo{$name};
+      next if $name eq 'total' or $name eq 'totaltype';
+      push @fields, $name;
       $val = undef unless defined $val and length $val > 0;
       push @vals, $val;
     }
