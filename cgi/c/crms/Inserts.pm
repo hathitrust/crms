@@ -317,7 +317,7 @@ sub TotalsString
   my $str = '';
   my $sql = 'SELECT type,total FROM insertstotals WHERE id=? AND user=?';
   my $ref = $crms->SelectAll($sql, $id, $user);
-  if (scalar @{$ref})
+  if (defined $ref && scalar @{$ref})
   {
     $str = '<table class="exportStats"><tr><th>Type</th><th>Total</th></tr>';
     foreach my $row (@{$ref})
