@@ -76,7 +76,7 @@ sub set
 
 sub Version
 {
-  return '4.11.15';
+  return '4.11.16';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -5350,27 +5350,29 @@ sub GetNextItemForReview
         }
       }
     }
-    my @args = ($user, $user);
-    my $excludeh = '';
+    my @args = ($user);
+    my ($excludeh, $excludei) = ('', '');
     if (!$self->IsUserAdmin($user))
     {
       $excludeh = ' AND NOT EXISTS (SELECT * FROM historicalreviews h WHERE h.id=q.id AND h.user=?)';
       push @args, $user;
     }
+    my $inc = $self->GetUserIncarnations($user);
+    my $wc = $self->WildcardList(scalar @{$inc});
+    $excludei = ' AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user IN '. $wc. ')';
+    push @args, @{$inc};
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,'.
            ' SHA2(CONCAT(?,q.id),0) as hash, q.priority'.
            ' FROM queue q INNER JOIN bibdata b ON q.id=b.id'.
            ' WHERE ' . $exclude . $exclude1 . $projs .
            ' q.expcnt=0 AND q.locked IS NULL AND q.status<2'.
-           ' AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user=?)'.
-           $excludeh.
+           $excludei. $excludeh.
            ' HAVING cnt<2 '.
            ' ORDER BY ' . $order;
     if (defined $test)
     {
       $sql .= ' LIMIT 5';
-      print "$user\n";
-      print "$sql\n";
+      printf "$user: %s\n", Utilities::StringifySql($sql, @args);
     }
     my $ref = $self->SelectAll($sql, @args);
     foreach my $row (@{$ref})
