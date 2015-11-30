@@ -14,7 +14,7 @@
 [% IF q %]
   [% seen = {} %]
   [% FOREACH id IN q.split %]
-    [% ids = crms.CRMSQuery(id) %]
+    [% ids = crms.TrackingQuery(id) %]
     [% CALL crms.ClearErrors() %]
     [% IF id.search('\.') %]
       [% sysid = crms.BarcodeToId(id) %]
@@ -24,7 +24,6 @@
     [% END %]
     [% IF seen.$sysid %][% NEXT %][% END %]
     [% seen.$sysid = 1 %]
-    [% parts = ids.0.split('__') %]
     <br/><br/>
     <table class="exportStats">
       <tr><th colspan="2" class="major" class="nowrap">
@@ -37,9 +36,9 @@
         &nbsp;&nbsp;&nbsp;&nbsp;
         [% IF sysid && sysid.substr(0, 1) == '0' %]
           [% link = crms.LinkToMirlynDetails(sysid) %]
-          <a style="color:white;" href="[% link %]" target="_blank">([% parts.1 %])</a>
+          <a style="color:white;" href="[% link %]" target="_blank">([% ids.0.1 %])</a>
         [% ELSE %]
-          ([% parts.1 %])
+          ([% ids.0.1 %])
         [% END %]
       </th></tr>
       <tr>
@@ -47,17 +46,18 @@
         <th class="nowrap">Status</th></tr>
       <tr>
         <td class="nowrap">
-          [% FOREACH id IN ids %]
-            [% parts = id.split('__') %]
-            [% url = crms.PTAddress(parts.0) %]
-            <a href="[% url %]" target="_blank">
-              [% parts.0 %]
+          [% FOREACH line IN ids %]
+            [% url = crms.PTAddress(line.0) %]
+            [% style = (line.0 == id)? 'style="color:green;"':'' %]
+            <a href="[% url %]" target="_blank" [% style %]>
+              [% line.0 %]
             </a><br/>
           [% END %]
         </td>
         <td class="nowrap">
-          [% FOREACH id IN ids %]
-            [% parts = id.split('__') %][% parts.2 %]<br/>
+          [% FOREACH line IN ids %]
+            [% style = (line.0 == id)? 'style="color:green;"':'' %]
+            <span [% style %]>[% line.2 %]</span><br/>
           [% END %]
         </td>
       </tr>

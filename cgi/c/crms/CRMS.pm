@@ -6649,7 +6649,7 @@ sub DownloadVolumeIDs
   return (1 == scalar @{$self->GetErrors()});
 }
 
-sub CRMSQuery
+sub TrackingQuery
 {
   my $self = shift;
   my $id   = shift;
@@ -6671,7 +6671,15 @@ sub CRMSQuery
   foreach my $line (@{$rows})
   {
     my ($id2,$chron2,$rights2) = split '__', $line;
-    push @ids, $id2 . '__' . $title . '__' . $self->GetTrackingInfo($id2, 1, 1);
+    my $data = [$id2, $title, $self->GetTrackingInfo($id2, 1, 1)];
+    if ($id eq $id2)
+    {
+      unshift @ids, $data;
+    }
+    else
+    {
+      push @ids, $data;
+    }
   }
   return \@ids;
 }
