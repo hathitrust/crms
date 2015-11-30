@@ -1,9 +1,8 @@
 package CRMS;
 
-## ----------------------------------------------------------------------------
-## Object of shared code for the CRMS DB CGI and BIN scripts
-##
-## ----------------------------------------------------------------------------
+## ----------------------------------------------------------
+## Object of shared code for the CRMS DB CGI and BIN scripts.
+## ----------------------------------------------------------
 
 #use warnings;
 use strict;
@@ -19,11 +18,9 @@ use CGI;
 
 binmode(STDOUT, ':utf8'); #prints characters in utf8
 
-## ----------------------------------------------------------------------------
-##  Function:   new() for object
-##  Parameters: %hash with a bunch of args
-##  Return:     ref to object
-## ----------------------------------------------------------------------------
+## -------------------------------------------------
+##  Top level CRMS object. This guy does everything.
+## -------------------------------------------------
 sub new
 {
   my ($class, %args) = @_;
@@ -3833,7 +3830,7 @@ sub CreateExportData
   use Utilities;
   my @dates;
   my $report;
-  my $fmt;
+  my ($fmt, $fmt2);
   if (!defined $year)
   {
     @dates = @{$self->GetAllExportYears()};
@@ -3850,6 +3847,7 @@ sub CreateExportData
     unshift @dates, 'Total';
     $report = "$year Exports\n\t";
     $fmt = 'DATE_FORMAT(date,"%Y-%m")=?';
+    $fmt2 = 'DATE_FORMAT(date,"%Y")=?';
   }
   $report .= (join "\t", @dates). "\n";
   my @titles; # Titles in correct order
@@ -3901,6 +3899,11 @@ sub CreateExportData
         push @clauses, $fmt;
         push @params, $date;
       }
+      elsif ($date eq 'Total' && defined $year)
+      {
+        push @clauses, $fmt2;
+        push @params, $year;
+      }
       $sql .= ' WHERE '. join ' AND ', @clauses if scalar @clauses;
       push @{$data{$title}}, $self->SimpleSqlGet($sql, @params);
     }
@@ -3919,6 +3922,11 @@ sub CreateExportData
       {
         push @clauses, $fmt;
         push @params, $date;
+      }
+      elsif ($date eq 'Total' && defined $year)
+      {
+        push @clauses, $fmt2;
+        push @params, $year;
       }
       $sql .= ' WHERE '. join ' AND ', @clauses if scalar @clauses;
       push @{$data{$title}}, $self->SimpleSqlGet($sql, @params);
@@ -6842,7 +6850,7 @@ sub WhereAmI
     $where = 'Training' if $dev eq 'crms-training';
     $where = 'Moses Dev' if $dev eq 'moseshll';
   }
-  $where .= ' [Production DB]' if length $where and $pdb;
+  $where .= ' [Production DB]' if defined $where and length $where and $pdb;
   return $where;
 }
 
