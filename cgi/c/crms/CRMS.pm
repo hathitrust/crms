@@ -3499,11 +3499,12 @@ sub SetAlias
   my $user  = shift || $self->get('remote_user');
   my $alias = shift;
 
+  $alias = undef if $alias eq $user;
   if (!defined $alias || $self->CanChangeToUser($user, $alias))
   {
     my $sql = 'UPDATE users SET alias=? WHERE id=?';
     $self->PrepareSubmitSql($sql, $alias, $user);
-    $self->set('user', $alias);
+    $self->set('user', $alias) if defined $alias;
   }
 }
 
