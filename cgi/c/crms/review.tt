@@ -23,7 +23,7 @@
     <h3>Too late, can't edit your review for this item.</h3>
     [% STOP %]
   [% END %]
-  [% IF expert && crms.HasItemBeenReviewedByAnotherExpert(barcode,user) %]
+  [% IF expert && crms.HasItemBeenReviewedByAnotherExpert(barcode, user) %]
     <h3>Item has already been reviewed by another expert.</h3>
     <br/><a href="javascript:window.close()">Close</a>
     [% STOP %]
@@ -58,8 +58,8 @@
 [% status   = crms.GetStatus(barcode)  %]
 [% userName = crms.GetUserName(user)   %]
 [% pubDate  = crms.GetPubDate(barcode) %]
-[% author   = crms.GetAuthor(barcode)     %]
-[% title    = crms.GetTitle(barcode)      %]
+[% author   = crms.GetAuthor(barcode)  %]
+[% title    = crms.GetTitle(barcode)   %]
 
 [% IF NOT renNum %]
 [% renNum = crms.GetReviewField(barcode, user, "renNum") %]
@@ -278,6 +278,11 @@
                      target="_blank">
           [% totalReviews %] historical [% crms.Pluralize("review", totalReviews) %]
           </a></td></tr>
+          <tr><td>
+            <span class="smallishText" style="color:green;">
+              Current rights [% crms.GetCurrentRights(barcode) %]
+            </span>
+          </td></tr>
         [% END %]
         [% totalReviews = crms.GetReviewsCount('adminReviews', 'Identifier', barcode) %]
         [% IF totalReviews > 0 %]
