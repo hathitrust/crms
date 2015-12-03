@@ -103,7 +103,6 @@ if ($cgi->param('p') eq 'confirmReview')
   {
     if ($crms->IsUserSuperAdmin($user))
     {
-      $crms->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', "Id $id is an SU sequester");
       $crms->UnlockItem($id, $user);
       $crms->Sequester($id);
       $cgi->delete_all();
@@ -262,6 +261,7 @@ elsif ($cgi->param('p') eq 'confirmCorrection')
 }
 
 $cgi->param('sys', $sys) if $sys and $sys ne 'crms';
+# FIXME: stick these in a Downloads.pm module.
 if ($cgi->param('download'))
 {
   my $order            = $cgi->param('order');
