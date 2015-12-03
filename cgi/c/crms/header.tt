@@ -1,11 +1,9 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta charset="utf-8"/>
     <link rel="icon" type="image/png" href="[% crms.GetSystemVar('favicon') %]"/>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
-    <meta http-equiv="Content-Script-Type" content="text/javascript"/>
-    <meta http-equiv="Content-Style-Type" content="text/css"/>
     <script type="text/javascript" src="/c/crms/js/common.js"></script>
     <script type="text/javascript" src="/c/crms/js/datepicker.packed.js"></script>
   [% page = cgi.param('p') %]
@@ -31,9 +29,8 @@ var gSys = '[% crms.Sys() %]';
     <title>[% title %] - [% crms.PageToEnglish(page) %]</title>
   </head>
   <body>
-[% page = cgi.param('p') %]
-[% r = crms.GetSystemStatus() %]
 
+[% r = crms.GetSystemStatus() %]
 [% IF !reviewType %]
     <div class="pages" id="homePage">
     <div style="height:82px;border-bottom:1px solid black;margin:0px;padding-bottom:6px;">
@@ -64,7 +61,9 @@ var gSys = '[% crms.Sys() %]';
             </th>
           </tr>
           <tr>
-           <th style="text-align:right;">[% crms.System() %]&nbsp;version&nbsp;[% crms.Version() %]</th>
+           <th style="text-align:right;">
+             [% crms.System() %]&nbsp;version&nbsp;[% crms.Version() %]
+            </th>
           </tr>
           [% IF where %]
             <tr>
@@ -75,13 +74,7 @@ var gSys = '[% crms.Sys() %]';
       </div>
     </div>
     <div>[% INCLUDE nav.tt %]</div>
-    <br/><br/>
-    [% noauto = ('disabled' == crms.GetSystemVar('autoinherit')) %]
-    [% IF noauto && crms.IsUserAdmin() %]
-      <span style="color:red;">Automatic Inheritance Processing is disabled.</span><br/><br/>
-    [% ELSE %]
-      <br/>
-    [% END %]
+    <br/><br/><br/>
 [% ELSE %]
     <div id="homePage">
 [% END %]
