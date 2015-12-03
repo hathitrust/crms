@@ -694,7 +694,7 @@ sub CanExportVolume
     # 1. If the volume is pdus/gfv (which per rrotter in Core Services never overrides pdus/bib).
     # 2. Priority 3 or higher.
     # 3. Previous rights were by user crms*.
-    # 4. The determination is pd* (unless a pdus would clobber pd/bib.
+    # 4. The determination is pd* (unless a pdus would clobber pd/bib).
     if ($reason2 eq 'gfv' || $pri >= 3.0 || $usr2 =~ m/^crms/i ||
         ($attr =~ m/^pd/ && !($attr eq 'pdus' && $attr2 eq 'pd')))
     {
@@ -3315,8 +3315,20 @@ sub GetAttrReasonFromCode
   my $ref = $self->SelectAll($sql, $code);
   my $a = $ref->[0]->[0];
   my $r = $ref->[0]->[1];
-  return ($a,$r);
+  return ($a, $r);
 }
+
+sub TranslateAttrReasonFromCode
+{
+  my $self = shift;
+  my $code = shift;
+
+  my ($a, $r) = $self->GetAttrReasonFromCode($code);
+  $a = $self->TranslateAttr($a);
+  $r = $self->TranslateReason($r);
+  return ($a, $r);
+}
+
 
 sub GetCodeFromAttrReason
 {
@@ -6501,6 +6513,8 @@ sub RightsQuery
   return $ref;
 }
 
+# For completed one-offs in Add to Queue page.
+# Shows current rights and, if available, the rights being transitioned to.
 sub CurrentRightsQuery
 {
   my $self = shift;
@@ -6515,6 +6529,19 @@ sub CurrentRightsQuery
   {
     $rights .= ' ' . "\N{U+2192}" . " $a/$r";
   }
+  return $rights;
+}
+
+# Returns human readable a/r string.
+sub GetCurrentRights
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $rights = 'unknown';
+  my $ref = $self->RightsQuery($id, 1);
+  return $rights unless defined $ref;
+  $rights = $ref->[0]->[0] . '/' . $ref->[0]->[1];
   return $rights;
 }
 
