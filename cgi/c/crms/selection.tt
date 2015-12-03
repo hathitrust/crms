@@ -135,7 +135,11 @@ records per page.
                 document.getElementById('endDate').value='';
                 document.getElementById('search1value').value='';
                 document.getElementById('search2value').value='';
-                document.getElementById('search3value').value='';"
+                document.getElementById('search3value').value='';
+[% IF page != 'editReviews' && page != 'userReviews' && page != 'holds' %]
+                document.getElementById('stype').value='reviews';
+[% END %]
+                "
 />
 </form>
 </div>
