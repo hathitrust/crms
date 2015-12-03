@@ -3487,7 +3487,7 @@ sub GetUserKerberosID
 sub GetAlias
 {
   my $self = shift;
-  my $user = shift || $self->get('user');
+  my $user = shift || $self->get('remote_user');
 
   my $sql = 'SELECT alias FROM users WHERE id=?';
   return $self->SimpleSqlGet($sql, $user);
@@ -3496,13 +3496,14 @@ sub GetAlias
 sub SetAlias
 {
   my $self  = shift;
-  my $user  = shift || $self->get('user');
+  my $user  = shift || $self->get('remote_user');
   my $alias = shift;
 
   if (!defined $alias || $self->CanChangeToUser($user, $alias))
   {
     my $sql = 'UPDATE users SET alias=? WHERE id=?';
     $self->PrepareSubmitSql($sql, $alias, $user);
+    $self->set('user', $alias);
   }
 }
 
@@ -6553,9 +6554,8 @@ sub RightsDBAvailable
 sub GetUserIPs
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('remote_user');
 
-  $user = $self->get('user') unless defined $user;
   my $sql = 'SELECT iprestrict FROM ht_users WHERE userid=?';
   my $sdr_dbh = $self->get('ht_repository');
   if (!defined $sdr_dbh)
