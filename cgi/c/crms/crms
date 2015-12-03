@@ -142,8 +142,12 @@ if ($cgi->param('p') eq 'confirmReview')
     else
     {
       $crms->PropagateTheFormula($id, $user) if $action eq 'Propagate';
+      my $home = $cgi->param('subHome');
       $cgi->delete_all();
-      $cgi->param('p', ($oneoff)?'oneoff':'review');
+      if (!$home)
+      {
+        $cgi->param('p', ($oneoff)?'oneoff':'review');
+      }
     }
   }
   if ($editing && !$err)
