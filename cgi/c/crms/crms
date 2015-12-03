@@ -89,37 +89,20 @@ if ($cgi->param('p') eq 'confirmReview')
   my $editing = $cgi->param('editing');
   my $oneoff  = $cgi->param('oneoff');
   my $id = $cgi->param('barcode');
-  if ($cgi->param('submit') eq 'Cancel')
+  my $err;
+  my $action = $cgi->param('submit');
+  if ($action eq 'Cancel' || $action eq 'Sequester')
   {
     $crms->UnlockItem($id, $user);
     $cgi->delete_all();
-    if ($editing)
+    if ($action eq 'Sequester' && $crms->IsUserSuperAdmin($user))
     {
-      print "Content-type: text/html\n\n";
-      print '<script type="text/javascript">window.close();</script>';
-    }
-  }
-  elsif ($cgi->param('submit') eq 'Sequester')
-  {
-    if ($crms->IsUserSuperAdmin($user))
-    {
-      $crms->UnlockItem($id, $user);
       $crms->Sequester($id);
-      $cgi->delete_all();
-      if ($editing)
-      {
-        print "Content-type: text/html\n\n";
-        print '<script type="text/javascript">window.close();</script>';
-      }
-      else
-      {
-        $cgi->param('p', ($oneoff)?'oneoff':'review');
-      }
+      $cgi->param('p', ($oneoff)?'oneoff':'review');
     }
   }
   else
   {
-    #Remove all locks for this user.
     my $EncRights = $cgi->param('rights');
     my $note      = Encode::decode("UTF-8", $cgi->param('note'));
     my $category  = $cgi->param('category');
@@ -130,7 +113,6 @@ if ($cgi->param('p') eq 'confirmReview')
     my $pre       = $cgi->param('prepopulated');
     my $start     = $cgi->param('start');
     my ($rights, $reason);
-    my $err;
     $err = 'You must select a rights/reason combination.' unless $EncRights;
     if (!$err)
     {
@@ -146,48 +128,28 @@ if ($cgi->param('p') eq 'confirmReview')
     if (!$err)
     {
       #Process the submission, and go on to the next item
-      my $expert;
-      if ($crms->IsUserExpert($user)) { $expert = 2; }
-      $crms->SubmitReview($id, $user, $rights, $reason, $note, $renNum, $expert,
+      $crms->SubmitReview($id, $user, $rights, $reason, $note, $renNum, $crms->IsUserExpert($user),
                           $renDate, $category, $swiss, $hold, $pre, $start);
       my $ref = $crms->GetErrors();
       $err = $ref->[0] if $ref && $ref->[0];
-      if (!$err)
-      {
-        $crms->PropagateTheFormula($id, $user) if $cgi->param('submit') eq 'Propagate';
-      }
     }
     if ($err)
     {
-      #clear the cgi
-      $cgi->delete_all();
-      $cgi->param('p', ($oneoff)?'oneoff':'review');
-      $cgi->param('errorMsg', $err);
-      $cgi->param('barcode',  $id);
-      $cgi->param('rights',   $EncRights);
-      $cgi->param('note',     $note);
-      $cgi->param('category', $category);
-      $cgi->param('renNum',   $renNum);
-      $cgi->param('renDate',  $renDate);
-      $cgi->param('editing',  $editing);
-      $cgi->param('hold',     $hold);
-      $cgi->param('swiss',    $swiss);
-      $cgi->param('start',    $start);
       $crms->ClearErrors();
+      $cgi->param('errorMsg', $err);
+      $cgi->param('p', ($oneoff)?'oneoff':'review');
     }
     else
     {
+      $crms->PropagateTheFormula($id, $user) if $action eq 'Propagate';
       $cgi->delete_all();
-      if ($editing)
-      {
-        print "Content-type: text/html\n\n";
-        print '<script type="text/javascript">window.close();</script>';
-      }
-      else
-      {
-        $cgi->param('p', ($oneoff)?'oneoff':'review');
-      }
+      $cgi->param('p', ($oneoff)?'oneoff':'review');
     }
+  }
+  if ($editing && !$err)
+  {
+    print "Content-type: text/html\n\n";
+    print '<script type="text/javascript">window.close();</script>';
   }
 }
 elsif ($cgi->param('p') eq 'confirmCorrection')
@@ -218,6 +180,7 @@ elsif ($cgi->param('p') eq 'confirmCorrection')
     else
     {
       $cgi->delete_all();
+      # FIXME: move this to Corrections::ConfirmCorrection like w/ SubmitReview
       $crms->UnlockItem($id, $user, 1);
       $cgi->param('p', 'corrections' );
     }
