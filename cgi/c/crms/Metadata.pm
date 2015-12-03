@@ -410,7 +410,7 @@ sub editor
   return @eds;
 }
 
-sub volumeIDsQuery
+sub volumeIDs
 {
   my $self = shift;
 
