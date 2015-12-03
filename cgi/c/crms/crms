@@ -194,69 +194,38 @@ elsif ($cgi->param('p') eq 'confirmCorrection')
 {
   my $editing = $cgi->param('editing');
   my $id = $cgi->param('barcode');
+  my $err;
   if ($cgi->param('submit') eq 'Cancel')
   {
     $crms->UnlockItem($id, $user, 1);
     $cgi->delete_all();
-    if ($editing)
-    {
-      print "Content-type: text/html\n\n";
-      print '<script type="text/javascript">window.close();</script>';
-    }
   }
   else
   {
-    my $note    = Encode::decode("UTF-8", $cgi->param('note'));
-    my $fixed   = $cgi->param('fixed');
-    my $inScope = $cgi->param('inScope');
-
     my $stat = $crms->GetSystemStatus();
     my $status = $stat->[1];
-    my $err;
-    $err = "The CRMS is not currently accepting reviews (status '$status'). Please Cancel." if $stat->[1] ne 'normal';
+    $err = "The CRMS is not currently accepting corrections (status '$status'). Please Cancel." if $stat->[1] ne 'normal';
     if (!defined $err)
     {
-      #Process the submission, and go on to the next item
-      $status = ($fixed)? (($inScope)? 'added':'fixed'):'unfixed';
-      my $qstatus = $crms->AddItemToQueueOrSetItemActive($id, 0, 1, 'correction') if $status eq 'added';
-      #my $nt = sprintf("$id: err %s status $qstatus", (defined $err)? $err:'undef');
-      #$crms->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $nt);
-      my $ref = $crms->GetErrors();
-      $err = $ref->[0] if $ref && $ref->[0];
-      if (!$err)
-      {
-        $err = substr($qstatus, 1) if (substr($qstatus, 0, 1) == 1);
-      }
-      if (!$err)
-      {
-        my $sql = 'UPDATE corrections SET status=?,user=?,note=?,time=CURRENT_TIMESTAMP WHERE id=?';
-        $crms->PrepareSubmitSql($sql, $status, $user, $note, $id);
-      }
+      use Corrections;
+      $err = Corrections::ConfirmCorrection($crms, $id, $user, $cgi);
     }
-    $cgi->delete_all();
     if ($err)
     {
-      $cgi->param('p',        'corrections');
       $cgi->param('errorMsg', $err);
-      $cgi->param('barcode',  $id);
-      $cgi->param('note',     $note);
-      $cgi->param('fixed',    $fixed);
-      $cgi->param('editing',  $editing);
       $crms->ClearErrors();
     }
     else
     {
+      $cgi->delete_all();
       $crms->UnlockItem($id, $user, 1);
-      if ($editing)
-      {
-        print "Content-type: text/html\n\n";
-        print '<script type="text/javascript">window.close();</script>';
-      }
-      else
-      {
-        $cgi->param('p', 'corrections' );
-      }
+      $cgi->param('p', 'corrections' );
     }
+  }
+  if ($editing && !$err)
+  {
+    print "Content-type: text/html\n\n";
+    print '<script type="text/javascript">window.close();</script>';
   }
 }
 

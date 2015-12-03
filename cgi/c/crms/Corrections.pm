@@ -4,11 +4,40 @@ use strict;
 use warnings;
 use Jira;
 use vars qw(@ISA @EXPORT @EXPORT_OK);
-our @EXPORT = qw(CorrectionsTitles CorrectionsFields GetCorrectionsDataRef CorrectionsDataSearchMenu
-                 ExportCorrections RetrieveTicket);
+our @EXPORT = qw(ConfirmCorrection CorrectionsTitles CorrectionsFields GetCorrectionsDataRef
+                 CorrectionsDataSearchMenu ExportCorrections RetrieveTicket);
 
 my @FieldNames = ('Volume ID','Ticket','Time','Status','User','Locked','Note','Exported');
 my @Fields     = qw(id ticket time status user locked note exported);
+
+
+sub ConfirmCorrection
+{
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift || $self->get('user');
+  my $cgi  = shift;
+
+  my $err;
+  my $note    = Encode::decode("UTF-8", $cgi->param('note'));
+  my $fixed   = $cgi->param('fixed');
+  my $inScope = $cgi->param('inScope');
+  
+  my $status = ($fixed)? (($inScope)? 'added':'fixed'):'unfixed';
+  my $qstatus = $self->AddItemToQueueOrSetItemActive($id, 0, 1, 'correction') if $status eq 'added';
+  my $ref = $self->GetErrors();
+  $err = $ref->[0] if $ref && $ref->[0];
+  if (!$err)
+  {
+    $err = substr($qstatus, 1) if (substr($qstatus, 0, 1) == 1);
+  }
+  if (!$err)
+  {
+    my $sql = 'UPDATE corrections SET status=?,user=?,note=?,time=CURRENT_TIMESTAMP WHERE id=?';
+    $self->PrepareSubmitSql($sql, $status, $user, $note, $id);
+  }
+  return $err;
+}
 
 sub CorrectionsTitles
 {
