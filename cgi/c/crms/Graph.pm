@@ -2,7 +2,7 @@ package Graph;
 
 use strict;
 use warnings;
-
+use Utilities;
 
 sub CreateExportGraph
 {
@@ -39,7 +39,7 @@ sub CreateExportBreakdownGraph
               'series'=>[{'name'=>'All PD', 'data'=>[]},{'name'=>'All IC', 'data'=>[]},{'name'=>'All UND', 'data'=>[]}]);
   my $sql = 'SELECT DISTINCT DATE_FORMAT(DATE(time),"%b %Y") FROM exportdata ORDER BY DATE(time) ASC';
   my $ref = $self->SelectAll($sql);
-  my @colors = $self->PickColors(3, 1);
+  my @colors = PickColors(3, 1);
   $data{'series'}->[$_]->{'color'} = $colors[$_] for (0..2);
   foreach my $row (@{$ref})
   {
@@ -73,7 +73,7 @@ sub CreateDeterminationsBreakdownGraph
               'credits'=>{'enabled'=>JSON::XS::false},
               'series'=>[]);
   my @titles = ('Status 4', 'Status 5', 'Status 6', 'Status 7', 'Status 8', 'Status 9');
-  my @colors = $self->PickColors(scalar @titles, 1);
+  my @colors = PickColors(scalar @titles, 1);
   my $i = 0;
   foreach my $title (@titles)
   {
@@ -169,7 +169,7 @@ sub CreateExportsPieChart
             ' GROUP BY rights ORDER BY rights="pd" DESC';
   my $ref = $self->SelectAll($sql);
   my $i = 0;
-  my @colors = $self->PickColors(scalar @{$ref}, 1);
+  my @colors = PickColors(scalar @{$ref}, 1);
   foreach my $row (@{$ref})
   {
     my $attr = $row->[0];
@@ -196,7 +196,7 @@ sub CreateCountriesGraph
             ' WHERE (b.country="United Kingdom" OR b.country="Canada" OR b.country="Australia")' .
             ' AND e.exported=1 GROUP BY b.country';
   my $ref = $self->SelectAll($sql);
-  my @colors = $self->PickColors(3);
+  my @colors = PickColors(3);
   my $i = 0;
   foreach my $row (@{$ref})
   {
@@ -223,7 +223,7 @@ sub CreateUndGraph
               'series'=>[{'name'=>'Institutions', 'data'=>[]}]);
   my $sql = 'SELECT src,COUNT(id) FROM und GROUP BY src ORDER BY src ASC';
   my $ref = $self->SelectAll($sql);
-  my @colors = $self->PickColors(scalar @{$ref}, 1);
+  my @colors = PickColors(scalar @{$ref}, 1);
   my $i = 0;
   foreach my $row (@{$ref})
   {
@@ -287,7 +287,7 @@ sub CreateReviewInstitutionGraph
             ' AND h.user!="autocrms" GROUP BY i.shortname ORDER BY n DESC';
   my $ref = $self->SelectAll($sql);
   my $i = 0;
-  my @colors = $self->PickColors(scalar @{$ref}, 1);
+  my @colors = PickColors(scalar @{$ref}, 1);
   foreach my $row (@{$ref})
   {
     my $inst = $row->[0];
@@ -337,7 +337,7 @@ sub CreateReviewerGraph
   }
   my $i = 0;
   $data{'yAxis'}->{'title'}->{'text'} = $title;
-  my @colors = $self->PickColors(scalar @users);
+  my @colors = PickColors(scalar @users);
   foreach my $user (@users)
   {
     my $ids = $self->GetUserIncarnations($user);
@@ -383,6 +383,34 @@ sub CreateReviewerGraph
     $i++;
   }
   return \%data;
+}
+
+sub PickColors
+{
+  my $count   = shift;
+  my $shuffle = shift;
+
+  my @cols;
+  my $delta = ($count>0)? 360/$count:360;
+  for (my $hue = 109; $hue < 469; $hue += $delta)
+  {
+    my $h2 = $hue;
+    $h2 -= 360 if $h2 >= 360;
+    my @col = Utilities::HSV2RGB($h2, 1, .75);
+    @col = map {int($_ * 255);} @col;
+    push @cols, sprintf '#%02X%02X%02X', $col[0], $col[1], $col[2];
+  }
+  if ($shuffle)
+  {
+    my ($i,$j) = (1,2);
+    while ($i <= scalar @cols-2)
+    {
+      @cols[$i,$j] = @cols[$j,$i];
+      $i += 2;
+      $j += 2;
+    }
+  }
+  return @cols;
 }
 
 return 1;

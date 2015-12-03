@@ -8591,36 +8591,6 @@ sub GetClosedTickets
   return \%stats2;
 }
 
-sub PickColors
-{
-  my $self    = shift;
-  my $count   = shift;
-  my $shuffle = shift;
-
-  use Utilities;
-  my @cols;
-  my $delta = ($count>0)? 360/$count:360;
-  for (my $hue = 109; $hue < 469; $hue += $delta)
-  {
-    my $h2 = $hue;
-    $h2 -= 360 if $h2 >= 360;
-    my @col = Utilities::HSV2RGB($h2, 1, .75);
-    @col = map {int($_ * 255);} @col;
-    push @cols, sprintf '#%02X%02X%02X', $col[0], $col[1], $col[2];
-  }
-  if ($shuffle)
-  {
-    my ($i,$j) = (1,2);
-    while ($i <= scalar @cols-2)
-    {
-      @cols[$i,$j] = @cols[$j,$i];
-      $i += 2;
-      $j += 2;
-    }
-  }
-  return @cols;
-}
-
 sub Note
 {
   my $self = shift;
