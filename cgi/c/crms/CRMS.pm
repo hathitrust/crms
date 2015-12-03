@@ -4989,14 +4989,7 @@ sub GetMetadata
   my $id   = shift;
 
   use Metadata;
-  my $record = Metadata->new('id' => $id, 'crms' => $self);
-  my @errs = @{$record->GetErrors()};
-  if (scalar @errs)
-  {
-    $record = undef;
-    $self->SetError($_) for @errs;
-  }
-  return $record;
+  return Metadata->new('id' => $id, 'crms' => $self);
 }
 
 sub BarcodeToId

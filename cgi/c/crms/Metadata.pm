@@ -1,6 +1,5 @@
 package Metadata;
 use vars qw(@ISA @EXPORT @EXPORT_OK);
-our @EXPORT = qw(GetErrors id sysid);
 
 use strict;
 use warnings;
@@ -18,6 +17,9 @@ sub new
   my $id = $args{'id'};
   $self->set('sysid', $id) if $id !~ m/\./;
   $self->set('id', $id);
+  my $crms = $args{'crms'};
+  die "Metadata module needs CRMS instance." unless defined $crms;
+  $self->set('crms', $crms);
   $self->json;
   $self->xml;
   return $self;
@@ -46,17 +48,7 @@ sub SetError
   my $self   = shift;
   my $error  = shift;
 
-  $error .= "\n";
-  use Utilities;
-  $error .= Utilities::StackTrace();
-  my $errors = $self->get('errors');
-  push @{$errors}, $error;
-}
-
-sub GetErrors
-{
-  my $self = shift;
-  return $self->get('errors');
+  $self->get('crms')->SetError($error);
 }
 
 sub id
