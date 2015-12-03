@@ -10,8 +10,6 @@ use Template;
 use POSIX;
 use Encode;
 
-my $ru = $ENV{'REMOTE_USER'};
-my $user = $ru;
 my $cgi  = new CGI;
 my $sys =  $cgi->param('sys');
 $sys = 'crms' unless $sys;
@@ -23,22 +21,21 @@ my $crms = CRMS->new(
         dev     => $DLPS_DEV,
         pdb     => $cgi->param('pdb'),
         );
-my $alias = $crms->GetAlias($user) || '';
 
 if ($cgi->param('p') eq 'Logout')
 {
   # Remove all locks for this user.
   # If we're aliased, we don't log out, we just drop the alias.
+  my $alias = $crms->GetAlias();
   if ($alias)
   {
     $crms->UnlockAllItemsForUser($alias);
-    $crms->SetAlias($user, undef);
+    $crms->SetAlias();
     $cgi->delete_all();
-    $alias = '';
   }
   else
   {
-    $crms->UnlockAllItemsForUser($user);
+    $crms->UnlockAllItemsForUser();
     # change 'central' to the url of your weblogin server.
     my $central = "https://weblogin.umich.edu/cgi-bin/logout";
     my $query_string = '';
@@ -56,33 +53,10 @@ if ($cgi->param('p') eq 'Logout')
 }
 elsif ($cgi->param('changeuser') == 1)
 {
-  $alias = $cgi->param('newuser');
-  if ($crms->GetUserName($alias))
-  {
-    $crms->SetAlias($user, ($user eq $alias)? undef:$alias);
-  }
+  $crms->SetAlias(undef, $cgi->param('newuser'));
   $cgi->delete_all();
-  $user = $alias;
 }
-$user = $alias if length $alias;
-if ($user ne $crms->get('user'))
-{
-  $crms = CRMS->new(
-                logFile => $DLXSROOT. '/prep/c/crms/log_review.txt',
-                sys     => $sys,
-                verbose => 0,
-                root    => $DLXSROOT,
-                dev     => $DLPS_DEV,
-                pdb     => $cgi->param('pdb')
-                );
-}
-## make sure user known
-if (!$crms->GetUserName($user))
-{
-  print $cgi->header(-status => '403 Forbidden') .
-        "<h2>Forbidden</h2> (unknown user '$user')";
-  exit;
-}
+my $user = $crms->get('user');
 
 if ($cgi->param('p') eq 'confirmReview')
 {
@@ -283,14 +257,17 @@ my $vars = {
 ## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
 ## the default is home.tt in case a tt is not found
 my $page = $cgi->param('p') || '';
-my $ip = $ENV{'REMOTE_ADDR'};
-$cgi->param('REMOTE_ADDR', $ip);
-my %ips = %{$crms->GetUserIPs($ru)};
-if (scalar keys %ips)
+if (!$crms->GetAlias())
 {
-  if (!defined $ips{$ip} && !$crms->IsUserAdmin())
+  my $ip = $ENV{'REMOTE_ADDR'};
+  $cgi->param('REMOTE_ADDR', $ip);
+  my %ips = %{$crms->GetUserIPs()};
+  if (scalar keys %ips)
   {
-    $page = 'ip';
+    if (!defined $ips{$ip} && !$crms->IsUserAdmin())
+    {
+      $page = 'ip';
+    }
   }
 }
 if ($crms->IsUserExpired($user))
