@@ -139,7 +139,7 @@ function checkInst(id)
         [% END %]
         [% i = i + 1 %]
         <tr><th colspan="2">
-          <label for="instCB_[% r.0 %]">[% r.1 %]</label>
+          <label for="inst_[% r.0 %]">[% r.1 %]</label>
           <input type="checkbox"
                  id="inst_[% r.0 %]"
                  onclick="CheckAll(this,'inst_[% r.0 %]');"
