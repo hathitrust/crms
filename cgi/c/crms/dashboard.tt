@@ -1,8 +1,7 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"
-          "http://www.w3.org/TR/html4/strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta charset="utf-8"/>
     <link rel="icon" type="image/png" href="[% crms.GetSystemVar('favicon') %]"/>
     <title>CRMS Dashboard</title>
     <script type="text/javascript" src="/c/crms/js/common.js"></script>
@@ -36,8 +35,7 @@
 // -->
 </script>
 
-<table style="width:1600px;align:center;text-align:center;padding:0px; border-collapse:collapse"
-       summary="CRMS and IMLS logos.">
+<table style="width:1600px;align:center;text-align:center;padding:0px; border-collapse:collapse">
   <tr>
     <td style="width:566px;">
       <img src="[% crms.GetSystemVar('logo') %]" width="455" height="80" alt="CRMS Logo"/>
@@ -50,8 +48,7 @@
 </table>
 
 [% #FIXME: break out these styles into dashboard.css %]
-<table style="width:1600px;align:center;text-align:center;padding:0px;border-collapse:collapse"
-       summary="Charts and graphs summarizing various CRMS trends and distributions.">
+<table style="width:1600px;align:center;text-align:center;padding:0px;border-collapse:collapse">
   <tr>
     <td colspan="2"><div id="chart0" style="width:800px;height:300px;"></div></td>
     <td colspan="2"><div id="chart1" style="width:800px;height:300px;"></div></td>
