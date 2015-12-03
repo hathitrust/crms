@@ -6,6 +6,7 @@ use warnings;
 use LWP::UserAgent;
 use XML::LibXML;
 use JSON::XS;
+use Unicode::Normalize;
 
 sub new
 {
@@ -95,7 +96,7 @@ sub json
     }
     my $xml = undef;
     my $jsonxs = JSON::XS->new;
-    my $content = $res->content;
+    my $content = Unicode::Normalize::NFC($res->content);
     # Sometimes the API can return diagnostic information up top,
     # so we cut that out.
     $content =~ s/^(.*?)({"records":)/$2/s;
