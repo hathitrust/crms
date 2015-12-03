@@ -267,8 +267,11 @@ sub title
 {
   my $self = shift;
   my $title = $self->GetDatafield('245', 'a', 1);
-  # Get rid of trailing punctuation
-  $title =~ s/\s*([:\/,;]*\s*)+$// if $title;
+  if (defined $title)
+  {
+    # Get rid of trailing punctuation
+    $title =~ s/\s*([:\/,;]*\s*)+$//;
+  }
   return $title;
 }
 
@@ -368,12 +371,13 @@ sub countEnumchron
 
   my $n = $self->get('enumchronCount');
   return $n if defined $n;
+  $n = 0;
   eval {
     my $json = $self->json;
     foreach my $item (@{$json->{'items'}})
     {
       my $data = $item->{'enumcron'};
-      $n++ if defined $data and length $data;
+      $n++ if $data;
     }
   };
   $self->SetError('enumchron query for ' . $self->id . " failed: $@") if $@;
@@ -406,7 +410,7 @@ sub editor
   return @eds;
 }
 
-sub volumeIDs
+sub volumeIDsQuery
 {
   my $self = shift;
 
@@ -422,7 +426,7 @@ sub volumeIDs
       push @ids, $id . '__' . $chron . '__' . $rights;
     }
   };
-  $self->SetError('Holdings query for ' . $self->id . " failed: $@") if $@;
+  $self->SetError('volumeIDsQuery for ' . $self->id . " failed: $@") if $@;
   return \@ids;
 }
 
