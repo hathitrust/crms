@@ -3329,7 +3329,6 @@ sub TranslateAttrReasonFromCode
   return ($a, $r);
 }
 
-
 sub GetCodeFromAttrReason
 {
   my $self = shift;
@@ -6588,9 +6587,8 @@ sub GetUserIPs
 sub GetUserRole
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless defined $user;
   my $sql = 'SELECT role FROM ht_users WHERE userid=?';
   my $sdr_dbh = $self->get('ht_repository');
   if (!defined $sdr_dbh)
@@ -6615,9 +6613,8 @@ sub GetUserRole
 sub IsUserExpired
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless defined $user;
   my $sql = 'SELECT IF(expires<NOW(),DATE(expires),NULL) FROM ht_users WHERE userid=?';
   my $sdr_dbh = $self->get('ht_repository');
   if (!defined $sdr_dbh)
@@ -7677,9 +7674,8 @@ sub SetSystemVar
 sub Menus
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless defined $user;
   my $q = $self->GetUserQualifications($user);
   my $sql = 'SELECT id,name,class,restricted FROM menus ORDER BY n';
   my $ref = $self->SelectAll($sql);
@@ -8457,9 +8453,8 @@ sub GetAddToQueueRef
 {
   my $self = shift;
   my $seq  = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless defined $user;
   my $addedSql = ($self->IsUserSuperAdmin($user))? '(added_by=? OR added_by="oneoff")':'added_by=?';
   my $sql = 'SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.added_by,' .
             ' q.status,q.priority,q.source,q.issues FROM queue q INNER JOIN bibdata b ON q.id=b.id' .
