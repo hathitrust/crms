@@ -1,0 +1,21 @@
+.dashboardTable {
+  width:1600px;
+  align:center;
+  text-align:center;
+  padding:0px;
+  border-collapse:collapse
+}
+
+.dashboardLogo {
+  width:566px;
+}
+
+.dashboardNarrow {
+  width:400px;
+  height:300px
+}
+
+.dashboardWide {
+  width:800px;
+  height:300px;
+}
