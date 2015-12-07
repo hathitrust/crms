@@ -4593,7 +4593,7 @@ sub DownloadUserStats
   my $inval       = shift;
   my $nononexpert = shift;
 
-  my $report = $self->CreateStatsData("\t", $page, $user, $cumulative, $year, $inval, $nononexpert);
+  my $report = $self->CreateStatsData($page, $user, $cumulative, $year, $inval, $nononexpert);
   $report =~ s/(\d\d\d\d-\d\d)/$self->YearMonthToEnglish($&)/ge;
   $report =~ s/&nbsp;/ /g;
   $report =~ s/__TOT__/Total Reviews/;
