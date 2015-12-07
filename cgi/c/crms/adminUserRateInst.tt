@@ -1,3 +1,4 @@
+[% p = cgi.param('p') %]
 [% inst = crms.GetUserInstitution() %]
 [% IF crms.IsUserAdmin() %]
   [% inst2 = cgi.param('inst') %]
