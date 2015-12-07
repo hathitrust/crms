@@ -1235,11 +1235,10 @@ sub AddItemToQueueOrSetItemActive
   my $priority = shift;
   my $override = shift;
   my $src      = shift;
-  my $user     = shift;
+  my $user     = shift || $self->get('user');
   my $noop     = shift;
   my $record   = shift;
 
-  $user = $self->get('user') unless $user;
   $id = lc $id;
   $src = 'adminui' unless $src;
   my $stat = 0;
@@ -3440,9 +3439,8 @@ sub CheckReviewer
 sub GetUserName
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless $user;
   my $sql = 'SELECT name FROM users WHERE id=?';
   return $self->SimpleSqlGet($sql, $user);
 }
@@ -3450,9 +3448,8 @@ sub GetUserName
 sub GetUserNote
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless $user;
   my $sql = 'SELECT note FROM users WHERE id=?';
   return $self->SimpleSqlGet($sql, $user);
 }
@@ -3461,10 +3458,9 @@ sub GetUserNote
 sub GetUserCommitment
 {
   my $self   = shift;
-  my $user   = shift;
+  my $user = shift || $self->get('user');
   my $format = shift;
 
-  $user = $self->get('user') unless $user;
   my $ids = $self->GetUserIncarnations($user);
   my $wc = $self->WildcardList(scalar @{$ids});
   my $sql = 'SELECT MAX(COALESCE(commitment,0.0)) FROM users WHERE id IN '. $wc;
@@ -3476,9 +3472,8 @@ sub GetUserCommitment
 sub GetUserKerberosID
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless $user;
   my $sql = 'SELECT kerberos FROM users WHERE id=?';
   return $self->SimpleSqlGet($sql, $user);
 }
@@ -3567,9 +3562,8 @@ sub IsUserRCPCReviewer
 sub IsUserReviewer
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless $user;
   my $sql = 'SELECT reviewer FROM users WHERE id=?';
   return $self->SimpleSqlGet($sql, $user);
 }
@@ -3577,9 +3571,8 @@ sub IsUserReviewer
 sub IsUserAdvanced
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless $user;
   my $sql = 'SELECT advanced FROM users WHERE id=?';
   return $self->SimpleSqlGet($sql, $user);
 }
@@ -3587,9 +3580,8 @@ sub IsUserAdvanced
 sub IsUserExpert
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless $user;
   my $sql = 'SELECT expert FROM users WHERE id=?';
   return $self->SimpleSqlGet($sql, $user);
 }
@@ -3597,9 +3589,8 @@ sub IsUserExpert
 sub IsUserExtAdmin
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless $user;
   my $sql = 'SELECT extadmin FROM users WHERE id=?';
   return $self->SimpleSqlGet($sql, $user);
 }
@@ -3607,9 +3598,8 @@ sub IsUserExtAdmin
 sub IsUserAdmin
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless $user;
   my $sql = 'SELECT (admin OR superadmin) FROM users WHERE id=?';
   return $self->SimpleSqlGet($sql, $user);
 }
@@ -3617,9 +3607,8 @@ sub IsUserAdmin
 sub IsUserSuperAdmin
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless $user;
   my $sql = 'SELECT superadmin FROM users WHERE id=?';
   return $self->SimpleSqlGet($sql, $user);
 }
@@ -3652,9 +3641,8 @@ sub GetUsers
 sub IsUserIncarnationExpertOrHigher
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless $user;
   my $sql = 'SELECT MAX(expert+admin+superadmin) FROM users WHERE kerberos!=""' .
             ' AND kerberos IN (SELECT DISTINCT kerberos FROM users WHERE id=?)';
   return 0 < $self->SimpleSqlGet($sql, $user);
@@ -5268,9 +5256,8 @@ sub HasItemBeenReviewedByAnotherIncarnation
 {
   my $self = shift;
   my $id   = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
-  $user = $self->get('user') unless $user;
   my $incarns = $self->GetUserIncarnations($user);
   foreach my $incarn (@{$incarns})
   {
