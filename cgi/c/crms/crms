@@ -116,6 +116,7 @@ if ($cgi->param('p') eq 'confirmReview')
     else
     {
       $crms->PropagateTheFormula($id, $user) if $action eq 'Propagate';
+      # Unused parameter to support submitting last review before leaving the system.
       my $home = $cgi->param('subHome');
       $cgi->delete_all();
       if (!$home)
