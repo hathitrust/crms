@@ -10,7 +10,7 @@
 [% fixed    = cgi.cookie('fixed')     %]
 
 [% IF barcode && editing %]
-  [% err = crms.LockItem(barcode, user, 0, 1) %]
+  [% err = crms.LockItem(barcode, user, 0, p) %]
   [% IF err != 0 %]
     <h3>[% err %].</h3>
     <br/><a href="JavaScript:window.close()">Close</a>
