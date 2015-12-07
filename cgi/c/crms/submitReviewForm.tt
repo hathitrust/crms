@@ -117,8 +117,8 @@
     <tr>
       <td class="reviewGrey" style="text-align:left;margin:0px;padding:0px;">
       [% IF ren %]
-        <input type="button" value="Get Renewal Date" onclick="popRenewalDate();" accesskey="d" class="reviewblue"
-               style="margin:0px;padding:1px;background-color:#d0dee6;"/>
+        <input type="button" value="Get Renewal Date" onclick="popRenewalDate();" accesskey="d"
+               class="reviewblue" style="margin:0px;padding:1px;background-color:#d0dee6;"/>
       [% ELSE %]
         <input type="checkbox" id="renewalFieldCheckbox" name="renNum"[% (renNum)? ' checked="checked"':'' %]
                onchange="ToggleADD();PredictRights('[% barcode %]');"/>
@@ -265,7 +265,8 @@
   <table>
     <tr>
       <td><input class="review" type="submit" name="submit" value="Submit" accesskey="s"/></td>
-      <td style="padding-left:2em;"><input class="review" type="submit" name="submit" value="Cancel" accesskey="c" onclick="this.form.onsubmit=null;"/></td>
+      <td style="padding-left:2em;"><input class="review" type="submit" name="submit"
+          value="Cancel" accesskey="c" onclick="this.form.onsubmit=null;"/></td>
     </tr>
   </table>
   </div>
@@ -284,7 +285,8 @@
         [% IF !hold %]
           [% hold = crms.HoldForItem(barcode,user) %]
         [% END %]
-        <input type="checkbox" id="hold" name="hold" [% (hold)? 'checked="checked"':'' %] onclick="toggleVisibility('expiry');"/>
+        <input type="checkbox" id="hold" name="hold" [% (hold)? 'checked="checked"':'' %]
+               onclick="toggleVisibility('expiry');"/>
       </td>
       <td><label for="hold">Hold for Question</label></td>
     </tr>
@@ -312,7 +314,10 @@
       <tr style="height=24;">
         <td>[% review.user %] ([% review.attr %]/[% review.reason %])</td>
         <td style="width=20;height=20;">
-          <div><img id="loader[% review.user %]" src="/c/crms/ajax-loader.gif" alt="loading..." style="display:none;"/></div>
+          <div>
+            <img id="loader[% review.user %]" src="/c/crms/ajax-loader.gif"
+                 alt="loading..." style="display:none;"/>
+          </div>
         </td>
         <td><input type="radio" name="pullrights" id="pull[% review.user %]"
                    [% IF import == review.user %]checked="checked"[% END %]
