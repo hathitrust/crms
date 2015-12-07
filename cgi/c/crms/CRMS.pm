@@ -6435,7 +6435,9 @@ sub PageToEnglish
   my $page = shift;
 
   return 'Home' unless $page;
-  return $self->SimpleSqlGet('SELECT name FROM menuitems WHERE page=?', $page);
+  my $eng = $self->SimpleSqlGet('SELECT name FROM menuitems WHERE page=?', $page);
+  $eng =~ s/__INST__/Institutional/;
+  return $eng;
 }
 
 sub Namespaces
