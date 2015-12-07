@@ -16,13 +16,13 @@ use warnings;
 use CRMS;
 use Getopt::Long;
 use Mail::Sender;
+use Utilities;
 
 my $usage = <<'END';
-USAGE: $0 [-hnpqv] [-d DATE][-m USER [-m USER...]]
+USAGE: $0 [-hnpqv] [-m USER [-m USER...]]
 
 Sends weekly activity reports to all active reviewers.
 
--d DATE  Use YYYY-MM-DD[ HH:MM:SS] as the current date.
 -h       Print this help message.
 -m MAIL  Also send report to MAIL. May be repeated for multiple recipients.
 -n       No-op; do not send e-mail at all.
@@ -31,7 +31,6 @@ Sends weekly activity reports to all active reviewers.
 -v       Be verbose.
 END
 
-my $date;
 my $help;
 my $nomail;
 my @mails;
@@ -42,8 +41,7 @@ my $sys;
 my $verbose = 0;
 
 Getopt::Long::Configure ('bundling');
-die 'Terminating' unless GetOptions('d:s' => \$date,
-           'h|?'  => \$help,
+die 'Terminating' unless GetOptions('h|?'  => \$help,
            'm:s@' => \@mails,
            'n'    => \$noop,
            'p'    => \$production,
@@ -52,10 +50,6 @@ die 'Terminating' unless GetOptions('d:s' => \$date,
 $DLPS_DEV = undef if $production;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
-
-die "Bad date format ($date); should be in the form e.g. 2010-08-29"
-  if defined $date and $date !~ m/^\d\d\d\d-\d\d-\d\d(\s+\d\d:\d\d:\d\d)?$/;
-$date .= ' 00:00:00' if defined $date and $date !~ m/\d\d:\d\d:\d\d$/;
 
 my $crms = CRMS->new(
     logFile => $DLXSROOT . '/prep/c/crms/weekly_hist.txt',
@@ -84,7 +78,6 @@ $msg .= <<'END';
 <h2>CRMS-World</h2>
 <h3>Total reviews this week: __TOTAL_THIS_WEEK__</h3>
 <h3>Total reviews last week: __TOTAL_LAST_WEEK__</h3>
-<h3>We did __PERCENT__ (__COUNT__) out of our weekly target of __TARGET__ determinations.</h3>
 <table style="border:1px solid #000000;border-collapse:collapse;">
 <tr><th style="background-color:#000000;color:#FFFFFF;padding:4px 20px 2px 6px;">Total by Institution</th>
     <th style="background-color:#000000;color:#FFFFFF;padding:4px 20px 2px 6px;">this week</th>
@@ -108,13 +101,13 @@ my $table = '';
 my $table2 = '';
 my $sql = 'SELECT NOW()';
 my $now = $crms->SimpleSqlGet($sql);
-$now = $date if defined $date;
 $sql = 'SELECT DATE_SUB(?, INTERVAL 1 WEEK)';
 my $startThis = $crms->SimpleSqlGet($sql, $now);
 $sql = 'SELECT DATE_SUB(?, INTERVAL 2 WEEK)';
 my $startLast = $crms->SimpleSqlGet($sql, $now);
 
 $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE time>=? AND time<? AND user!="autocrms"';
+printf "%s\n", Utilities::StringifySql($sql, $startThis, $now) if $verbose>1;
 my $thisn = $crms->SimpleSqlGet($sql, $startThis, $now);
 my $lastn = $crms->SimpleSqlGet($sql, $startLast, $startThis);
 $sql = 'SELECT COUNT(*) FROM reviews WHERE time>=? AND time<?';
@@ -193,7 +186,6 @@ $msg =~ s/__KEDEN_COUNT__/$kn/i;
 
 $sql = 'SELECT COUNT(*) FROM exportdata WHERE src!="inherited" AND time>=? AND time<?';
 my $count = $crms->SimpleSqlGet($sql, $startThis, $now);
-# FIXME: add AND filter IS NULL
 $sql = 'SELECT COUNT(*)/(DATEDIFF("2015-11-30 23:59:59", ?)/7) FROM candidates WHERE time<"2014-12-01"';
 my $target = $crms->SimpleSqlGet($sql, $now);
 my $pct = sprintf('%.1f%%', 100.0 * $count / $target);
