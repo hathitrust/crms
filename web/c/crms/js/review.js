@@ -131,6 +131,8 @@ function popReviewInfo(id,user,sys)
 
 function PredictRights(id)
 {
+  var img = document.getElementById("predictionLoader");
+  if (img) { img.style.display = 'block'; }
   var year = document.getElementById("renewalField").value;
   var isPub = (document.getElementById('renewalFieldCheckbox').checked)? 1:0;
   var cat = SelectedCategory();
@@ -181,6 +183,7 @@ function PredictRights(id)
   {
     if (req.readyState == 4 && req.status == 200)
     {
+      if (img) { img.style.display = 'none'; }
       if (req.responseText)
       {
         sel = GetCheckedValue(rights);
