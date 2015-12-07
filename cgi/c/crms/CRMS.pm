@@ -1227,7 +1227,6 @@ sub AddItemToQueue
 }
 
 # Returns a status code (0=Add, 1=Error, 2=Skip, 3=Modify) followed by optional text.
-# FIXME: make it possible to specify a project
 sub AddItemToQueueOrSetItemActive
 {
   my $self     = shift;
@@ -3783,7 +3782,6 @@ sub GetAllMonthsInYear
   my ($currYear, $currMonth) = $self->GetTheYearMonth();
   $year = $currYear unless $year;
   my $start = 1;
-  # FIXME: this could be put in the config file.
   if ($self->Sys() eq 'crmsworld')
   {
     $start = 5 if $year == 2012;
@@ -4278,7 +4276,6 @@ sub CreateStatsData
   elsif ('all__' eq substr $user, 0, 5)
   {
     my $inst = substr $user, 5;
-    #print "inst '$inst'<br/>\n";
     my $name = $self->GetInstitutionName($inst);
     $username = "All $name Reviewers";
     my $affs = $self->GetInstitutionUsers($inst);
@@ -4358,9 +4355,8 @@ sub CreateStatsData
   };
   $latest = "$year-01" unless $latest;
   $earliest = "$year-01" unless $earliest;
-  # FIXME: masks $year param
-  my ($year,$month) = split '-', $latest;
-  my $lastDay = Days_in_Month($year,$month);
+  my ($y, $m) = split '-', $latest;
+  my $lastDay = Days_in_Month($y, $m);
   my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, $latest, $instusersne);
   $correct += $neutral if $page eq 'userRate';
   #print "total $total correct $correct incorrect $incorrect neutral $neutral for $earliest to $latest ($instusersne)<br/>\n";
