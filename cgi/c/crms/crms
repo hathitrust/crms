@@ -13,6 +13,7 @@ use Encode;
 my $cgi  = new CGI;
 my $sys =  $cgi->param('sys');
 $sys = 'crms' unless $sys;
+my $page = $cgi->param('p');
 my $crms = CRMS->new(
         logFile => $DLXSROOT. '/prep/c/crms/log_review.txt',
         sys     => $sys,
@@ -22,7 +23,7 @@ my $crms = CRMS->new(
         pdb     => $cgi->param('pdb'),
         );
 
-if ($cgi->param('p') eq 'Logout')
+if ($page eq 'Logout')
 {
   # Remove all locks for this user.
   # If we're aliased, we don't log out, we just drop the alias.
@@ -58,7 +59,7 @@ elsif ($cgi->param('changeuser') == 1)
 }
 my $user = $crms->get('user');
 
-if ($cgi->param('p') eq 'confirmReview')
+if ($page eq 'confirmReview')
 {
   my $editing = $cgi->param('editing');
   my $oneoff  = $cgi->param('oneoff');
@@ -131,14 +132,14 @@ if ($cgi->param('p') eq 'confirmReview')
     print '<script type="text/javascript">window.close();</script>';
   }
 }
-elsif ($cgi->param('p') eq 'confirmCorrection')
+elsif ($page eq 'confirmCorrection')
 {
   my $editing = $cgi->param('editing');
   my $id = $cgi->param('barcode');
   my $err;
   if ($cgi->param('submit') eq 'Cancel')
   {
-    $crms->UnlockItem($id, $user, 1);
+    $crms->UnlockItem($id, $user, $page);
     $cgi->delete_all();
   }
   else
@@ -159,8 +160,6 @@ elsif ($cgi->param('p') eq 'confirmCorrection')
     else
     {
       $cgi->delete_all();
-      # FIXME: move this to Corrections::ConfirmCorrection like w/ SubmitReview
-      $crms->UnlockItem($id, $user, 1);
       $cgi->param('p', 'corrections' );
     }
   }
@@ -188,7 +187,6 @@ if ($cgi->param('download'))
   my $startDate        = $cgi->param('startDate');
   my $endDate          = $cgi->param('endDate');
   my $stype            = $cgi->param('stype');
-  my $page             = $cgi->param('p');
   my $q                = $cgi->param('q');
   my $success = 1;
 
@@ -210,7 +208,6 @@ if ($cgi->param('download'))
   }
   elsif ($page =~ m/userrate/i)
   {
-    my $page        = $cgi->param('p');
     my $user        = $cgi->param('user');
     my $cumulative  = $cgi->param('cumulative');
     my $year        = $cgi->param('year');
@@ -257,7 +254,7 @@ my $vars = {
 
 ## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
 ## the default is home.tt in case a tt is not found
-my $page = $cgi->param('p') || '';
+$page = $cgi->param('p') || '';
 if (!$crms->GetAlias())
 {
   my $ip = $ENV{'REMOTE_ADDR'};

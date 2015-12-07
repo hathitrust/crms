@@ -18,15 +18,14 @@ sub ConfirmCorrection
   my $user = shift || $self->get('user');
   my $cgi  = shift;
 
-  my $err;
+  my $page = $cgi->param('p');
   my $note    = Encode::decode("UTF-8", $cgi->param('note'));
   my $fixed   = $cgi->param('fixed');
   my $inScope = $cgi->param('inScope');
-  
   my $status = ($fixed)? (($inScope)? 'added':'fixed'):'unfixed';
   my $qstatus = $self->AddItemToQueueOrSetItemActive($id, 0, 1, 'correction') if $status eq 'added';
   my $ref = $self->GetErrors();
-  $err = $ref->[0] if $ref && $ref->[0];
+  my $err = $ref->[0] if $ref && $ref->[0];
   if (!$err)
   {
     $err = substr($qstatus, 1) if (substr($qstatus, 0, 1) == 1);
@@ -35,6 +34,7 @@ sub ConfirmCorrection
   {
     my $sql = 'UPDATE corrections SET status=?,user=?,note=?,time=CURRENT_TIMESTAMP WHERE id=?';
     $self->PrepareSubmitSql($sql, $status, $user, $note, $id);
+    $self->UnlockItem($id, $user, $page);
   }
   return $err;
 }
