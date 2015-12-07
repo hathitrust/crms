@@ -5061,10 +5061,9 @@ sub GetReviewField
 sub HasLockedItem
 {
   my $self = shift;
-  my $user = shift;
-  my $page = shift;
+  my $user = shift || $self->get('user');
+  my $page = shift || 'review';
 
-  $page = 'review' unless defined $page;
   my $table = ($page eq 'corrections')? 'corrections':'queue';
   my $sql = 'SELECT COUNT(*) FROM ' . $table . ' WHERE locked=?';
   $sql .= ' AND source LIKE "HTS%"' if $page eq 'oneoff';
@@ -5075,10 +5074,9 @@ sub HasLockedItem
 sub GetLockedItem
 {
   my $self = shift;
-  my $user = shift;
-  my $page = shift;
+  my $user = shift || $self->get('user');
+  my $page = shift || 'review';
 
-  $page = 'review' unless defined $page;
   my $table = ($page eq 'corrections')? 'corrections':'queue';
   my $sql = 'SELECT id FROM ' . $table . ' WHERE locked=?';
   $sql .= ' AND source LIKE "HTS%"' if $page eq 'oneoff';
@@ -5090,9 +5088,9 @@ sub IsLocked
 {
   my $self = shift;
   my $id   = shift;
-  my $correction = shift;
+  my $page = shift || 'review';
 
-  my $table = (defined $correction)? 'corrections':'queue';
+  my $table = ($page eq 'corrections')? 'corrections':'queue';
   my $sql = 'SELECT id FROM ' . $table . ' WHERE locked IS NOT NULL AND id=?';
   return ($self->SimpleSqlGet($sql, $id))? 1:0;
 }
@@ -5101,10 +5099,10 @@ sub IsLockedForUser
 {
   my $self = shift;
   my $id   = shift;
-  my $user = shift;
-  my $correction = shift;
+  my $user = shift || $self->get('user');
+  my $page = shift || 'review';
 
-  my $table = (defined $correction)? 'corrections':'queue';
+  my $table = ($page eq 'corrections')? 'corrections':'queue';
   my $sql = 'SELECT COUNT(*) FROM ' . $table . ' WHERE id=? AND locked=?';
   return 1 == $self->SimpleSqlGet($sql, $id, $user);
 }
@@ -5113,11 +5111,10 @@ sub IsLockedForOtherUser
 {
   my $self = shift;
   my $id   = shift;
-  my $user = shift;
-  my $correction = shift;
+  my $user = shift || $self->get('user');
+  my $page = shift || 'review';
 
-  my $table = (defined $correction)? 'corrections':'queue';
-  $user = $self->get('user') unless $user;
+  my $table = ($page eq 'corrections')? 'corrections':'queue';
   my $lock = $self->SimpleSqlGet('SELECT locked FROM ' . $table . ' WHERE id=?', $id);
   return ($lock && $lock ne $user)? $lock:undef;
 }
@@ -5126,9 +5123,9 @@ sub RemoveOldLocks
 {
   my $self = shift;
   my $time = shift;
-  my $correction = shift;
+  my $page = shift || 'review';
 
-  my $table = (defined $correction)? 'corrections':'queue';
+  my $table = ($page eq 'corrections')? 'corrections':'queue';
   # By default, GetPrevDate() returns the date/time 24 hours ago.
   $time = $self->GetPrevDate($time);
   my $lockedRef = $self->GetLockedItems();
@@ -5138,7 +5135,7 @@ sub RemoveOldLocks
     my $user = $lockedRef->{$item}->{locked};
     my $sql = 'SELECT id FROM ' . $table . ' WHERE id=? AND time<?';
     my $old = $self->SimpleSqlGet($sql, $id, $time);
-    $self->UnlockItem($id, $user, $correction) if $old;
+    $self->UnlockItem($id, $user, $page) if $old;
   }
 }
 
@@ -5146,7 +5143,7 @@ sub PreviouslyReviewed
 {
   my $self = shift;
   my $id   = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
   ## expert reviewers can edit any time
   return 0 if $self->IsUserExpert($user);
@@ -5159,24 +5156,24 @@ sub PreviouslyReviewed
 # Returns 0 on success, error message on error.
 sub LockItem
 {
-  my $self       = shift;
-  my $id         = shift;
-  my $user       = shift;
-  my $override   = shift;
-  my $correction = shift;
+  my $self     = shift;
+  my $id       = shift;
+  my $user     = shift || $self->get('user');
+  my $override = shift;
+  my $page     = shift || 'review';
 
-  my $table = (defined $correction)? 'corrections':'queue';
+  my $table = ($page eq 'corrections')? 'corrections':'queue';
   ## if already locked for this user, that's OK
   return 0 if $self->IsLockedForUser($id, $user);
   # Not locked for user, maybe someone else
-  if ($self->IsLocked($id, $correction))
+  if ($self->IsLocked($id, $page))
   {
     return 'Volume has been locked by another user';
   }
   ## can only have 1 item locked at a time (unless override)
   if (!$override)
   {
-    my $locked = $self->GetLockedItem($user, $correction);
+    my $locked = $self->GetLockedItem($user, $page);
     if (defined $locked)
     {
       return 0 if $locked eq $id;
@@ -5190,13 +5187,12 @@ sub LockItem
 
 sub UnlockItem
 {
-  my $self       = shift;
-  my $id         = shift;
-  my $user       = shift;
-  my $correction = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift || $self->get('user');
+  my $page = shift || 'review';
 
-  my $table = (defined $correction)? 'corrections':'queue';
-  $user = $self->get('user') unless defined $user;
+  my $table = ($page eq 'corrections')? 'corrections':'queue';
   my $sql = 'UPDATE ' . $table . ' SET locked=NULL WHERE id=? AND locked=?';
   $self->PrepareSubmitSql($sql, $id, $user);
 }
@@ -5205,7 +5201,7 @@ sub UnlockItemEvenIfNotLocked
 {
   my $self = shift;
   my $id   = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
   my $sql = 'UPDATE queue SET locked=NULL WHERE id=?';
   if (!$self->PrepareSubmitSql($sql, $id)) { return 0; }
@@ -5214,22 +5210,21 @@ sub UnlockItemEvenIfNotLocked
 
 sub UnlockAllItemsForUser
 {
-  my $self       = shift;
-  my $user       = shift;
-  my $correction = shift;
+  my $self = shift;
+  my $user = shift || $self->get('user');
+  my $page = shift || 'review';
 
-  $user = $self->get('user') unless defined $user;
-  my $table = (defined $correction)? 'corrections':'queue';
+  my $table = ($page eq 'corrections')? 'corrections':'queue';
   $self->PrepareSubmitSql('UPDATE ' . $table . ' SET locked=NULL WHERE locked=?', $user);
 }
 
 sub GetLockedItems
 {
-  my $self       = shift;
-  my $user       = shift;
-  my $correction = shift;
+  my $self = shift;
+  my $user = shift || $self->get('user');
+  my $page = shift || 'review';
 
-  my $table = (defined $correction)? 'corrections':'queue';
+  my $table = ($page eq 'corrections')? 'corrections':'queue';
   my $restrict = ($user)? "='$user'":'IS NOT NULL';
   my $sql = 'SELECT id, locked FROM ' . $table . ' WHERE locked ' . $restrict;
   my $ref = $self->SelectAll($sql);
