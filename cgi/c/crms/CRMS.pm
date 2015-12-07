@@ -1383,9 +1383,9 @@ sub IsValidCategory
 # Returns an error message.
 sub CloneReview
 {
-  my $self   = shift;
-  my $id     = shift;
-  my $user   = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
 
   my $result = $self->LockItem($id, $user, 1);
   return $result if $result;
@@ -1395,12 +1395,7 @@ sub CloneReview
     $result = "Could not approve review for $id because you already reviewed it.";
     $self->UnlockItem($id, $user);
   }
-  # LockItem above makes this redundant.
-  #elsif ($self->IsLockedForOtherUser($id, $user))
-  #{
-  #  $result = "Could not approve review for $id because it is locked by another user.";
-  #}
-  elsif ($self->HasItemBeenReviewedByAnotherExpert($id,$user))
+  elsif ($self->HasItemBeenReviewedByAnotherExpert($id, $user))
   {
     $result = "Could not approve review for $id because it has already been reviewed by an expert.";
   }
@@ -1411,9 +1406,12 @@ sub CloneReview
     my $rows = $self->SelectAll($sql, $id);
     my $attr = $rows->[0]->[0];
     my $reason = $rows->[0]->[1];
-    if ($attr == 2 && $reason == 7 && ($rows->[0]->[2] ne $rows->[1]->[2] || $rows->[0]->[3] ne $rows->[1]->[3]))
+    if ($attr == 2 && $reason == 7 &&
+        ($rows->[0]->[2] ne $rows->[1]->[2] ||
+         $rows->[0]->[3] ne $rows->[1]->[3]))
     {
-      $note = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)', $rows->[0]->[2], $rows->[0]->[3], $rows->[1]->[2], $rows->[1]->[3];
+      $note = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)',
+                      $rows->[0]->[2], $rows->[0]->[3], $rows->[1]->[2], $rows->[1]->[3];
     }
     # If reasons mismatch, reason is 'crms'.
     $reason = 13 if $rows->[0]->[1] ne $rows->[1]->[1];
@@ -1698,8 +1696,8 @@ sub HoldExpiry
   my $user     = shift;
   my $readable = shift;
 
-  my $exp = $self->HoldForItem($id,$user);
-  $exp = $self->StickyHoldForItem($id,$user) unless $exp;
+  my $exp = $self->HoldForItem($id, $user);
+  $exp = $self->StickyHoldForItem($id, $user) unless $exp;
   $exp = $self->TwoWorkingDays() unless $exp;
   $exp = '2030-12-31' if $self->IsUserSuperAdmin();
   return ($readable)? $self->FormatDate($exp):$exp;
@@ -1715,7 +1713,7 @@ sub TwoWorkingDays
   $time = $self->GetTodaysDate() unless $time;
   my $cal = Date::Calendar->new($UMCalendar::UMCal);
   my @parts = split '-', substr($time, 0, 10);
-  my $date = $cal->add_delta_workdays($parts[0],$parts[1],$parts[2],2);
+  my $date = $cal->add_delta_workdays($parts[0], $parts[1], $parts[2], 2);
   $date = sprintf '%s-%s-%s 23:59:59', substr($date,0,4), substr($date,4,2), substr($date,6,2);
   return $date;
 }
@@ -1727,8 +1725,7 @@ sub WasYesterdayWorkingDay
 
   $time = $self->GetTodaysDate() unless $time;
   my @parts = split '-', substr($time, 0, 10);
-  #printf "Add_Delta_Days(%s,%s,%s,-2)\n", $parts[0],$parts[1],$parts[2];
-  my ($y,$m,$d) = Date::Calc::Add_Delta_Days($parts[0],$parts[1],$parts[2],-1);
+  my ($y,$m,$d) = Date::Calc::Add_Delta_Days($parts[0], $parts[1], $parts[2], -1);
   return $self->IsWorkingDay("$y-$m-$d");
 }
 
@@ -1742,9 +1739,7 @@ sub IsWorkingDay
   $time = $self->GetTodaysDate() unless $time;
   my $cal = Date::Calendar->new($UMCalendar::UMCal);
   my @parts = split '-', substr($time, 0, 10);
-  my $is = ($cal->is_full($parts[0],$parts[1],$parts[2]))? 0:1;
-  #printf "is_work(%s,%s,%s) -> %d\n", $parts[0],$parts[1],$parts[2], $is;
-  return $is;
+  return ($cal->is_full($parts[0], $parts[1], $parts[2]))? 0:1;
 }
 
 sub FormatDate
@@ -3458,7 +3453,7 @@ sub GetUserNote
 sub GetUserCommitment
 {
   my $self   = shift;
-  my $user = shift || $self->get('user');
+  my $user   = shift || $self->get('user');
   my $format = shift;
 
   my $ids = $self->GetUserIncarnations($user);
