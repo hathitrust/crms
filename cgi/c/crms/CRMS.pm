@@ -2552,11 +2552,11 @@ sub SearchAndDownloadDeterminationStats
   my $buff;
   if ($pre)
   {
-    $buff = $self->CreatePreDeterminationsBreakdownData("\t", $startDate, $endDate, $monthly, undef, $priority);
+    $buff = $self->CreatePreDeterminationsBreakdownData($startDate, $endDate, $monthly, undef, $priority);
   }
   else
   {
-    $buff = $self->CreateDeterminationsBreakdownData("\t", $startDate, $endDate, $monthly, undef, $priority);
+    $buff = $self->CreateDeterminationsBreakdownData($startDate, $endDate, $monthly, undef, $priority);
   }
   $self->DownloadSpreadSheet($buff);
   return ($buff)? 1:0;
@@ -4003,12 +4003,11 @@ sub CreateExportReport
 
 sub CreatePreDeterminationsBreakdownData
 {
-  my $self      = shift;
-  my $delimiter = shift;
-  my $start     = shift;
-  my $end       = shift;
-  my $monthly   = shift;
-  my $title     = shift;
+  my $self    = shift;
+  my $start   = shift;
+  my $end     = shift;
+  my $monthly = shift;
+  my $title   = shift;
 
   my ($year,$month) = $self->GetTheYearMonth();
   my $titleDate = $self->YearMonthToEnglish("$year-$month");
@@ -4029,7 +4028,7 @@ sub CreatePreDeterminationsBreakdownData
   }
   my $report = ($title)? "$title\n":"Preliminary Determinations Breakdown $titleDate\n";
   my @titles = ('Date','Status 2','Status 3','Status 4','Status 8','Total','Status 2','Status 3','Status 4','Status 8');
-  $report .= join($delimiter, @titles) . "\n";
+  $report .= join("\t", @titles) . "\n";
   my @totals = (0,0,0,0);
   foreach my $date (@dates)
   {
@@ -4059,7 +4058,7 @@ sub CreatePreDeterminationsBreakdownData
       $line[$i+5] = sprintf('%.1f%%', $pct);
     }
     $report .= $date;
-    $report .= $delimiter . join($delimiter, @line) . "\n";
+    $report .= "\t" . join("\t", @line) . "\n";
   }
   my $gt = $totals[0] + $totals[1] + $totals[2] + $totals[3];
   push @totals, $gt;
@@ -4069,18 +4068,17 @@ sub CreatePreDeterminationsBreakdownData
     eval {$pct = 100.0*$totals[$i]/$gt;};
     push @totals, sprintf('%.1f%%', $pct);
   }
-  $report .= 'Total' . $delimiter . join($delimiter, @totals) . "\n";
+  $report .= "Total\t" . join("\t", @totals) . "\n";
   return $report;
 }
 
 sub CreateDeterminationsBreakdownData
 {
-  my $self      = shift;
-  my $delimiter = shift;
-  my $start     = shift;
-  my $end       = shift;
-  my $monthly   = shift;
-  my $title     = shift;
+  my $self    = shift;
+  my $start   = shift;
+  my $end     = shift;
+  my $monthly = shift;
+  my $title   = shift;
 
   #print "CreateDeterminationsBreakdownData('$delimiter','$start','$end','$monthly','$title')<br/>\n";
   my ($year,$month) = $self->GetTheYearMonth();
@@ -4102,7 +4100,7 @@ sub CreateDeterminationsBreakdownData
   }
   my $report = ($title)? "$title\n":"Determinations Breakdown $titleDate\n";
   my @titles = ('Date','Status 4','Status 5','Status 6','Status 7','Status 8','Subtotal','Status 9','Total','Status 4','Status 5','Status 6','Status 7','Status 8');
-  $report .= join($delimiter, @titles) . "\n";
+  $report .= join("\t", @titles) . "\n";
   my @totals = (0,0,0,0,0,0);
   foreach my $date (@dates)
   {
@@ -4134,7 +4132,7 @@ sub CreateDeterminationsBreakdownData
       $line[$i+8] = sprintf('%.1f%%', $pct);
     }
     $report .= $date;
-    $report .= $delimiter . join($delimiter, @line) . "\n";
+    $report .= "\t" . join("\t", @line) . "\n";
   }
   my $gt1 = $totals[0] + $totals[1] + $totals[2] + $totals[3] + $totals[4];
   my $gt2 = $gt1 + $totals[5];
@@ -4146,7 +4144,7 @@ sub CreateDeterminationsBreakdownData
     eval {$pct = 100.0*$totals[$i]/$gt1;};
     push @totals, sprintf('%.1f%%', $pct);
   }
-  $report .= 'Total' . $delimiter . join($delimiter, @totals) . "\n";
+  $report .= "Total\t" . join("\t", @totals) . "\n";
   return $report;
 }
 
@@ -4165,14 +4163,14 @@ sub CreateDeterminationsBreakdownReport
   my $span2 = 5;
   if ($pre)
   {
-    $data = $self->CreatePreDeterminationsBreakdownData("\t", $start, $end, $monthly, $title);
+    $data = $self->CreatePreDeterminationsBreakdownData($start, $end, $monthly, $title);
     %whichlines = (4=>1);
     $span1 = 5;
     $span2 = 4;
   }
   else
   {
-    $data = $self->CreateDeterminationsBreakdownData("\t", $start, $end, $monthly, $title);
+    $data = $self->CreateDeterminationsBreakdownData($start, $end, $monthly, $title);
     $pre = 0;
   }
   my $cols = $span1 + $span2;
@@ -4257,7 +4255,6 @@ sub GetStatsYears
 sub CreateStatsData
 {
   my $self        = shift;
-  my $delimiter   = shift;
   my $page        = shift;
   my $user        = shift;
   my $cumulative  = shift;
@@ -4266,7 +4263,6 @@ sub CreateStatsData
   my $nononexpert = shift;
   my $dopercent   = shift;
 
-  #print "CreateStatsData($delimiter,$page,$user,$cumulative,$year,$inval,$nononexpert,$dopercent)<br/>\n";
   my $instusers = undef;
   my $instusersne = undef;
   $year = ($self->GetTheYearMonth())[0] unless $year;
@@ -4294,7 +4290,7 @@ sub CreateStatsData
   }
   #print "username '$username', instusers $instusers<br/>\n";
   my $label = "$username: " . (($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative":$year);
-  my $report = sprintf("$label\n%sProject Total%s", $delimiter, (!$cumulative)? ($delimiter . "Total $year"):'');
+  my $report = sprintf("$label\n\tProject Total%s", (!$cumulative)? "\tTotal $year":'');
   my %stats = ();
   my %totals = ();
   my @usedates = ();
@@ -4306,7 +4302,7 @@ sub CreateStatsData
   foreach my $date (@statdates)
   {
     push @usedates, $date;
-    $report .= $delimiter . $date;
+    $report .= "\t" . $date;
     my $mintime = $date . (($cumulative)? '-01':'');
     my $maxtime = $date . (($cumulative)? '-12':'');
     $earliest = $mintime if $earliest eq '' or $mintime lt $earliest;
@@ -4446,7 +4442,7 @@ sub CreateStatsData
       {
         $n = sprintf('%.1f', $n) if $n > 0.0;
       }
-      $report .= $delimiter . $n;
+      $report .= "\t" . $n;
     }
     my $n = $totals{$title};
     $n = 0 unless $n;
@@ -4465,7 +4461,7 @@ sub CreateStatsData
     {
       $n = sprintf('%.1f', $n) if $n > 0.0;
     }
-    $report .= $delimiter . $n;
+    $report .= "\t" . $n;
     foreach my $date (@usedates)
     {
       $n = $stats{$title}{$date};
@@ -4486,7 +4482,7 @@ sub CreateStatsData
         $n = sprintf('%.1f', $n) if $n > 0.0;
       }
       $n = 0 unless $n;
-      $report .= $delimiter . $n;
+      $report .= "\t" . $n;
       #print "$user $title $n $of\n";
     }
     $report .= "\n";
@@ -4505,7 +4501,7 @@ sub CreateStatsReport
   my $inval             = shift;
   my $nononexpert       = shift;
 
-  my $data = $self->CreateStatsData(',', $page, $user, $cumulative, $year, $inval, $nononexpert, 1);
+  my $data = $self->CreateStatsData($page, $user, $cumulative, $year, $inval, $nononexpert, 1);
   my @lines = split m/\n/, $data;
   my $url = $self->Sysify("crms?p=$page;download=1;user=$user;cumulative=$cumulative;year=$year;inval=$inval;nne=$nononexpert");
   my $name = shift @lines;
@@ -4526,7 +4522,7 @@ sub CreateStatsReport
 END
   my $report = "<span style='font-size:1.3em;'><b>$name</b></span>$nbsps $dllink\n<br/>";
   $report .= "<table class='exportStats'>\n<tr>\n";
-  foreach my $th (split ',', shift @lines)
+  foreach my $th (split "\t", shift @lines)
   {
     $th = $self->YearMonthToEnglish($th) if $th =~ m/^\d.*/;
     $th =~ s/\s/&nbsp;/g;
@@ -4539,7 +4535,7 @@ END
   my $exp = $self->IsUserExpert($user);
   foreach my $line (@lines)
   {
-    my @items = split(',', $line);
+    my @items = split("\t", $line);
     my $title = shift @items;
     next if $title eq '__VAL__' and ($exp);
     next if $title eq '__MVAL__' and ($exp);
