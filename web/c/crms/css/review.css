@@ -66,7 +66,7 @@ a.header:active  {color:#82CAFA;}
 }
 
 .rightscont  {
-  padding-top: 15px;
+  padding-top: 6px;
   background-color: #d0dee6;
   font-size:12px;
   text-align:left; 
@@ -220,7 +220,6 @@ table.ReviewError {
 }
 
 #SubmitForm {
-  height: 3em;
   margin-top: 8px;
 }
 
