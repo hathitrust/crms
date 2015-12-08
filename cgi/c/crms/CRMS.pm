@@ -3492,7 +3492,8 @@ sub SetAlias
   {
     my $sql = 'UPDATE users SET alias=? WHERE id=?';
     $self->PrepareSubmitSql($sql, $alias, $user);
-    $self->set('user', $alias) if defined $alias;
+    $user = $alias if defined $alias;
+    $self->set('user', $user);
   }
 }
 
