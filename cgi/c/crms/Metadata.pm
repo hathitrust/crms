@@ -21,7 +21,7 @@ sub new
   die "Metadata module needs CRMS instance." unless defined $crms;
   $self->set('crms', $crms);
   $self->json;
-  $self->xml;
+  return undef unless defined $self->xml;
   return $self;
 }
 
