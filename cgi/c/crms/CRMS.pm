@@ -543,8 +543,8 @@ sub GetDoubleRevItemsInAgreement
 sub GetExpertRevItems
 {
   my $self = shift;
-  my $sql  = 'SELECT id FROM queue WHERE (status>=5 AND status<8) AND id NOT IN ' .
-             '(SELECT id FROM reviews WHERE CURTIME()<hold)';
+  my $sql  = 'SELECT id FROM queue WHERE status>=5 AND status<8 AND id NOT IN ' .
+             '(SELECT id FROM reviews WHERE NOW()<hold)';
   return $self->SelectAll($sql);
 }
 
@@ -5336,15 +5336,15 @@ sub GetNextItemForReview
     }
     my @args = ($user);
     my ($excludeh, $excludei) = ('', '');
-    if (!$self->IsUserAdmin($user))
-    {
-      $excludeh = ' AND NOT EXISTS (SELECT * FROM historicalreviews h WHERE h.id=q.id AND h.user=?)';
-      push @args, $user;
-    }
     my $inc = $self->GetUserIncarnations($user);
     my $wc = $self->WildcardList(scalar @{$inc});
     $excludei = ' AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user IN '. $wc. ')';
     push @args, @{$inc};
+    if (!$self->IsUserAdmin($user))
+    {
+      $excludeh = ' AND NOT EXISTS (SELECT * FROM historicalreviews r3 WHERE r3.id=q.id AND r3.user IN '. $wc. ')';
+      push @args, @{$inc};
+    }
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,'.
            ' SHA2(CONCAT(?,q.id),0) as hash, q.priority'.
            ' FROM queue q INNER JOIN bibdata b ON q.id=b.id'.
