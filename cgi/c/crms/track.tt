@@ -13,6 +13,10 @@
 
 [% IF q %]
   [% seen = {} %]
+  [% all = {} %]
+  [% FOREACH id IN q.split %]
+    [% all.$id = 1 %]
+  [% END %]
   [% FOREACH id IN q.split %]
     [% ids = crms.TrackingQuery(id) %]
     [% CALL crms.ClearErrors() %]
@@ -42,21 +46,24 @@
         [% END %]
       </th></tr>
       <tr>
-        <th class="nowrap">Volume id</th>
-        <th class="nowrap">Status</th></tr>
+        <th class="nowrap">Volume</th>
+        <th class="nowrap">Status</th>
+      </tr>
       <tr>
         <td class="nowrap">
           [% FOREACH line IN ids %]
-            [% url = crms.PTAddress(line.0) %]
-            [% style = (line.0 == id)? 'style="color:green;"':'' %]
+            [% id2 = line.0 %]
+            [% url = crms.PTAddress(id2) %]
+            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
             <a href="[% url %]" target="_blank" [% style %]>
-              [% line.0 %]
+              [% id2 %]
             </a><br/>
           [% END %]
         </td>
         <td class="nowrap">
           [% FOREACH line IN ids %]
-            [% style = (line.0 == id)? 'style="color:green;"':'' %]
+            [% id2 = line.0 %]
+            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
             <span [% style %]>[% line.2 %]</span><br/>
           [% END %]
         </td>
