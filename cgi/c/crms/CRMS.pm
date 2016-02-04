@@ -869,6 +869,10 @@ sub CheckAndLoadItemIntoCandidates
       print "Remove $id -- (rights now $attr/$reason)\n";
       $self->RemoveFromCandidates($id) unless defined $noop;
     }
+    if ($inund)
+    {
+      $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
+    }
     return;
   }
   # If it was a gfv and it reverted to ic/bib, remove it from und, alert, and continue.
