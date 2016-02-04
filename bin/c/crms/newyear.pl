@@ -18,7 +18,7 @@ $Term::ANSIColor::AUTORESET = 1;
 
 my $usage = <<END;
 USAGE: $0 [-hinpv] [-e VOL_ID [-e VOL_ID2...]]
-       [-s VOL_ID [-s VOL_ID2...]] [-x SYS] [-y YEAR]
+       [-s VOL_ID [-s VOL_ID2...]] [-y YEAR]
 
 Reports on determinations that may now, as of the new year, have had the copyright
 expire.
@@ -30,7 +30,6 @@ expire.
 -p         Run in production.
 -s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
 -v         Emit debugging information.
--x SYS     Set SYS as the system to execute.
 -y YEAR    Use this year instead of the current one (implies -n).
 END
 
@@ -41,7 +40,6 @@ my $noop;
 my $production;
 my @singles;
 my $verbose;
-my $sys;
 my $year;
 
 Getopt::Long::Configure('bundling');
@@ -53,14 +51,13 @@ die 'Terminating' unless GetOptions(
            'p'    => \$production,
            's:s@' => \@singles,
            'v+'   => \$verbose,
-           'x:s'  => \$sys,
            'y:s'  => \$year);
 $DLPS_DEV = undef if $production;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
     logFile      =>   $DLXSROOT . '/prep/c/crms/newyear_hist.txt',
-    sys          =>   $sys,
+    sys          =>   'crmsworld',
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
     dev          =>   $DLPS_DEV
@@ -77,7 +74,8 @@ $attrsClause = '(attr="ic")' if $icus;
 my $sql = 'SELECT id,gid,time,attr,reason FROM exportdata'.
           ' WHERE '. $attrsClause.
           ' AND exported=1 AND src="candidates" AND YEAR(DATE(time))<?'.
-          ' AND id NOT IN (SELECT id FROM queue)';
+          ' AND id NOT IN (SELECT id FROM queue)'.
+          ' AND id NOT IN (SELECT DISTINCT id FROM exportdata WHERE src="newyear")';
 if (scalar @singles)
 {
   $sql .= sprintf(" AND id IN ('%s')", join "','", @singles);
@@ -87,6 +85,7 @@ if (scalar @excludes)
   $sql .= sprintf(" AND NOT id IN ('%s')", join "','", @excludes);
 }
 $sql .= ' ORDER BY time DESC';
+print "$sql, $year\n" if $verbose > 1;
 my $ref = $crms->SelectAll($sql, $year);
 my %seen;
 my $i = 0;
@@ -172,8 +171,8 @@ foreach my $row (@{$ref})
     my $msg3 = sprintf "%-20s (gid $gid, ADD $renDate, pub $pub) predicted %s (curr $acurr/$rcurr) - $time",
                        '', join ', ', sort keys %predictions;
     my $t3 = ($record->country eq 'United Kingdom')? (($crown)? $t1:$t2):$t1;
-    print colored($msg2, ($renDate > $t3)? 'red':'black'), "\n";
-    print colored($msg3, ($renDate > $t3)? 'red':'black'), "\n";
+    print colored($msg2, ($renDate > $t3)? 'red':'black'), "\n" if $renDate > $t3 || $verbose;
+    print colored($msg3, ($renDate > $t3)? 'red':'black'), "\n" if $renDate > $t3 || $verbose;
     if ($renDate > $t3 || $verbose > 1)
     {
       print "$msg";
@@ -191,6 +190,7 @@ foreach my $row (@{$ref})
       }
     }
     $change++;
+    print "$id: $change\n";
   }
 }
 print "Suggested rereviews: $change of $i\n";
