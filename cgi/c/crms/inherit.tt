@@ -295,7 +295,7 @@ function VerifyDelete(formid)
         <th>Prior<br/>Status 5<br/>Determ?</th>
       [% END %]
         <th style="text-align:center;">Title</th>
-        <th>Tracking Info</th>
+        <th>Tracking<br/>(inheriting volume)</th>
         <th>Source</th>
         <th>Select</th>
       </tr>
@@ -317,7 +317,7 @@ function VerifyDelete(formid)
           <td>[% review.i %]</td>
           <td>[% review.date %]</td>
           <td>[% review.idate %]</td>
-          <td><a href='[% crms.LinkToHistorical(review.sysid) %]'target='_blank'>[% review.from %]</a></td>
+          <td><a href='[% crms.LinkToHistorical(review.sysid) _ ";order=ReviewDate;dir=ASC" %]'target='_blank'>[% review.from %]</a></td>
           <td><a href='[% crms.LinkToRetrieve(review.inheriting) %]' target='_blank'>[% review.inheriting %]</a></td>
           <td><a href='[% crms.LinkToCatalog(review.sysid) %]'target='_blank'>[% review.sysid %]</a></td>
           <td>[% review.rights %]</td>
