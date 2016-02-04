@@ -327,12 +327,14 @@ if (scalar keys %{$data{'inherit'}})
       $icund = 1 if ($attr eq 'ic' || $attr2 eq 'ic');
       $icund = 1 if ($attr eq 'und' || $attr2 eq 'und');
       my $incrms = ($reason2 eq 'bib' || $reason2 eq 'gfv')? '':'&nbsp;&nbsp;&nbsp;&#x2713;';
+      my $status = $crms->SimpleSqlGet('SELECT status FROM exportdata WHERE gid=?', $gid);
+      $incrms = '' if $status == 5;
       my $h5 = '';
       my $whichtxt = \$autotxt;
       my $whichn;
       if ($incrms)
       {
-        my $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id2' AND status=5";
+        $sql = "SELECT COUNT(*) FROM historicalreviews WHERE id='$id2' AND status=5";
         $h5 = '&nbsp;&nbsp;&nbsp;&#x2713;' if $crms->SimpleSqlGet($sql);
         $whichtxt = \$pendtxt;
         $npend++;

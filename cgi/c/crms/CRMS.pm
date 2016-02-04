@@ -593,12 +593,14 @@ sub ExportReviews
     {
       print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $fromcgi;
     }
-    my $ref = $self->SelectAll('SELECT source,project FROM queue WHERE id=?', $id);
-    my $src = $ref->[0]->[0];
-    my $proj = $ref->[0]->[1];
-    my $sql = 'INSERT INTO exportdata (id,attr,reason,user,src,project,exported)'.
-              ' VALUES (?,?,?,?,?,?,?)';
-    $self->PrepareSubmitSql($sql, $id, $attr, $reason, $user, $src, $proj, $export);
+    my $ref = $self->SelectAll('SELECT status,priority,source,project FROM queue WHERE id=?', $id);
+    my $status = $ref->[0]->[0];
+    my $pri = $ref->[0]->[1];
+    my $src = $ref->[0]->[2];
+    my $proj = $ref->[0]->[3];
+    my $sql = 'INSERT INTO exportdata (id,attr,reason,status,priority,user,src,project,exported)'.
+              ' VALUES (?,?,?,?,?,?,?,?,?)';
+    $self->PrepareSubmitSql($sql, $id, $attr, $reason, $status, $pri, $user, $src, $proj, $export);
     my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata WHERE id=?', $id);
     $self->MoveFromReviewsToHistoricalReviews($id, $gid);
     $self->RemoveFromQueue($id);
@@ -6198,6 +6200,7 @@ sub CountHistoricalReviews
   return $self->SimpleSqlGet($sql, $id);
 }
 
+# FIXME: this should be sensitive to new year reviews, but how?
 sub IsReviewCorrect
 {
   my $self = shift;
@@ -6713,16 +6716,16 @@ sub GetTrackingInfo
   }
   if ($self->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE id=?', $id))
   {
-    my $sql = 'SELECT attr,reason,DATE(time),src,exported FROM exportdata WHERE id=? ORDER BY time DESC LIMIT 1';
+    my $sql = 'SELECT attr,reason,DATE(time),src,exported,status FROM exportdata WHERE id=? ORDER BY time DESC LIMIT 1';
     my $ref = $self->SelectAll($sql, $id);
     my $a = $ref->[0]->[0];
     my $r = $ref->[0]->[1];
     my $t = $ref->[0]->[2];
     my $src = $ref->[0]->[3];
     my $exp = $ref->[0]->[4];
-    my $action = ($src eq 'inherited')? ' (inherited)':'';
+    my $status = $ref->[0]->[5];
     $exp = ($exp)? '':' (unexported)';
-    push @stati, "determined$exp$action $a/$r $t";
+    push @stati, "S$status determination$exp $a/$r $t";
   }
   #else
   {
@@ -7028,6 +7031,7 @@ sub GetInheritanceRef
   push @rest, "$search1 $tester1 '$search1Value'" if $search1Value or $search1Value eq '0';
   my $prior = $self->ConvertToInheritanceSearchTerm('prior');
   push @rest, sprintf "$prior=%d", ($auto)? 0:1;
+  push @rest, sprintf "e.status%s5", ($auto)? '=':'!=';
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
   my $sql = 'SELECT COUNT(DISTINCT e.id),COUNT(DISTINCT i.id) FROM inherit i ' .
             'LEFT JOIN exportdata e ON i.gid=e.gid ' .
@@ -7207,15 +7211,17 @@ sub AutoSubmitInheritances
   my $self    = shift;
   my $fromcgi = shift;
 
-  my $sql = 'SELECT id FROM inherit WHERE del=0';
+  my $sql = 'SELECT id,gid FROM inherit WHERE del=0';
   my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
+    my $gid = $row->[1];
     my $rq = $self->RightsQuery($id, 1);
     next unless defined $rq;
     my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
-    if ($reason eq 'bib' || $reason eq 'gfv')
+    my $status = $self->SimpleSqlGet('SELECT status FROM exportdata WHERE gid=?', $gid);
+    if ($reason eq 'bib' || $reason eq 'gfv' || $status == 5)
     {
       my $rights = "$attr/$reason";
       print "Submitting inheritance for $id ($rights)\n" unless $fromcgi;
