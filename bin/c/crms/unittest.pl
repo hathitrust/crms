@@ -62,8 +62,6 @@ if ($sys ne 'crmsworld')
   isnt($crms->ShouldVolumeBeFiltered('uc1.31822009265760'), 'gov',       'probable Gov Doc 18'); # uncaught
   isnt($crms->ShouldVolumeBeFiltered('uc1.31822016490500'), 'gov',       'probable Gov Doc 19'); # uncaught
   isnt($crms->ShouldVolumeBeFiltered('uc1.31822020642872'), 'gov',       'probable Gov Doc 20'); # uncaught
-  is($crms->ShouldVolumeBeFiltered('uc1.$b22139'), 'dissertation',       'dissertation to und');
-  is($crms->ShouldVolumeBeFiltered('uc1.$b79381'), 'foreign',            'foreign to und');
 }
 is($crms->ShouldVolumeBeFiltered('mdp.39015071261104'), 'language',    'language to und');
 is($crms->ShouldVolumeBeFiltered('mdp.39015004119445'), 'translation', 'translation to und');
@@ -100,9 +98,9 @@ is($crms->IsWorkingDay('2011-06-27'), 1,                                 'WD: a 
 
 if ($sys ne 'crmsworld')
 {
-  is($crms->GetInstitutionName($crms->GetUserInstitution('hansone@indiana.edu')),      'Indiana',               'IU affiliation');
+  is($crms->GetInstitutionName($crms->GetUserInstitution('hansone@indiana.edu')),      'Indiana',            'IU affiliation');
   is($crms->GetInstitutionName($crms->GetUserInstitution('aseeger@library.wisc.edu')), 'Wisconsin',          'UW affiliation');
-  is($crms->GetInstitutionName($crms->GetUserInstitution('zl2114@columbia.edu')),      'Columbia',              'COL affiliation');
+  is($crms->GetInstitutionName($crms->GetUserInstitution('zl2114@columbia.edu')),      'Columbia',           'COL affiliation');
   is(scalar @{ $crms->GetInstitutionUsers(1) }, 8,                         'IU affiliates count');
   is(scalar @{ $crms->GetInstitutionUsers(2) }, 7,                         'UW affiliates count');
   is(scalar @{ $crms->GetInstitutionUsers(4) }, 1,                         'COL affiliates count');
@@ -158,16 +156,13 @@ else
      $crms->ValidateSubmission('mdp.39015011285692','jaheim123',1,2,undef,undef,undef,undef),     'pd/ncn admin >63 -ren');
   ok('' eq
      $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin <63 +ren -note');
-  ok('pd/ncn must include either renewal id and renewal date, or note category "Expert Note". ' eq
-     $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,undef,undef,undef,undef),     'pd/ncn admin <63 -ren -note');
+  
   ok('' eq
      $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,'blah','Expert Note','R000','1Jan60'), 'pd/ncn admin <63 +ren +note');
   ok('' eq
      $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,'blah','Expert Note',undef,undef),     'pd/ncn admin <63 -ren +note');
   ok('' eq
      $crms->ValidateSubmission('uc1.31822009761677','gnichols',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn expert <63 +ren');
-  ok('pd/ncn must include renewal id and renewal date. ' eq
-     $crms->ValidateSubmission('uc1.31822009761677','gnichols',1,2,undef,undef,undef,undef),     'pd/ncn expert <63 -ren');
 }
 my $id = $crms->SimpleSqlGet('SELECT id FROM und WHERE src!="duplicate"');
 $crms->Filter($id, 'duplicate');
@@ -292,15 +287,15 @@ else
 {
   is($crms->GetCodeFromAttrReason(1,7),1,                                                          'GetCodeFromAttrReason 1');
   is($crms->GetCodeFromAttrReason(1,9),2,                                                          'GetCodeFromAttrReason 2');
-  is($crms->GetCodeFromAttrReason(2,7),3,                                                          'GetCodeFromAttrReason 3');
-  is($crms->GetCodeFromAttrReason(2,9),4,                                                          'GetCodeFromAttrReason 4');
-  is($crms->GetCodeFromAttrReason(5,8),5,                                                          'GetCodeFromAttrReason 5');
-  is($crms->GetCodeFromAttrReason(9,9),6,                                                          'GetCodeFromAttrReason 6');
-  is($crms->GetCodeFromAttrReason(1,14),7,                                                         'GetCodeFromAttrReason 7');
-  is($crms->GetCodeFromAttrReason(1,15),8,                                                         'GetCodeFromAttrReason 8');
-  is($crms->GetCodeFromAttrReason(1,13),9,                                                         'GetCodeFromAttrReason 9');
-  is($crms->GetCodeFromAttrReason(2,13),10,                                                        'GetCodeFromAttrReason 10');
-  is($crms->GetCodeFromAttrReason(5,13),11,                                                        'GetCodeFromAttrReason 11');
+  is($crms->GetCodeFromAttrReason(1,2),3,                                                          'GetCodeFromAttrReason 3');
+  is($crms->GetCodeFromAttrReason(2,7),4,                                                          'GetCodeFromAttrReason 4');
+  is($crms->GetCodeFromAttrReason(2,9),5,                                                          'GetCodeFromAttrReason 5');
+  is($crms->GetCodeFromAttrReason(5,8),6,                                                          'GetCodeFromAttrReason 6');
+  is($crms->GetCodeFromAttrReason(9,9),7,                                                          'GetCodeFromAttrReason 7');
+  is($crms->GetCodeFromAttrReason(1,14),8,                                                         'GetCodeFromAttrReason 8');
+  is($crms->GetCodeFromAttrReason(1,15),9,                                                         'GetCodeFromAttrReason 9');
+  is($crms->GetCodeFromAttrReason(9,14),11,                                                        'GetCodeFromAttrReason 11');
+  is($crms->GetCodeFromAttrReason(2,14),12,                                                        'GetCodeFromAttrReason 12');
   is($crms->SameUser('gnichols','gnichols123'),1,                                                  'SameUser 1');
   is($crms->SameUser('gnichols','moseshll'),0,                                                     'SameUser 2');
   is($crms->SameUser('rose','doc'),0,                                                              'SameUser 3');
