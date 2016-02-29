@@ -15,7 +15,7 @@ sub CreateExportGraph
               'legend'=>{'enabled'=>JSON::XS::false},
               'credits'=>{'enabled'=>JSON::XS::false},
               'series'=>[{'name'=>'Exports', 'data'=>[]}]);
-  my $sql = 'SELECT DATE_FORMAT(date,"%b %Y") AS fmt,SUM(count) FROM newexportstats'.
+  my $sql = 'SELECT DATE_FORMAT(date,"%b %Y") AS fmt,SUM(count) FROM exportstats'.
             ' GROUP BY DATE_FORMAT(date,"%Y-%m")';
   my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
@@ -45,15 +45,15 @@ sub CreateExportBreakdownGraph
   {
     my $t = $row->[0];
     push $data{'xAxis'}->{'categories'}, $t;
-    $sql = 'SELECT COALESCE(SUM(count),0) FROM newexportstats'.
+    $sql = 'SELECT COALESCE(SUM(count),0) FROM exportstats'.
            ' WHERE (attr="pd" OR attr="pdus") AND DATE_FORMAT(date, "%b %Y")=?';
     my $n = $self->SimpleSqlGet($sql, $t);
     push $data{'series'}->[0]->{'data'}, int($n);
-    $sql = 'SELECT COALESCE(SUM(count),0) FROM newexportstats'.
+    $sql = 'SELECT COALESCE(SUM(count),0) FROM exportstats'.
            ' WHERE (attr="ic" OR attr="icus") AND DATE_FORMAT(date, "%b %Y")=?';
     $n = $self->SimpleSqlGet($sql, $t);
     push $data{'series'}->[1]->{'data'}, int($n);
-    $sql = 'SELECT COALESCE(SUM(count),0) FROM newexportstats'.
+    $sql = 'SELECT COALESCE(SUM(count),0) FROM exportstats'.
            ' WHERE attr="und" AND DATE_FORMAT(date, "%b %Y")=?';
     $n = $self->SimpleSqlGet($sql, $t);
     push $data{'series'}->[2]->{'data'}, int($n);
@@ -165,7 +165,7 @@ sub CreateExportsPieChart
                                      'dataLabels'=>{'enabled'=>JSON::XS::true,'format'=>'{point.name}'},
                                      'colors'=>[]}},
               'series'=>[{'name'=>'Exports', 'data'=>[]}]);
-  my $sql = 'SELECT SUBSTRING(attr,1,2) AS rights,SUM(count) FROM newexportstats'.
+  my $sql = 'SELECT SUBSTRING(attr,1,2) AS rights,SUM(count) FROM exportstats'.
             ' GROUP BY rights ORDER BY rights="pd" DESC';
   my $ref = $self->SelectAll($sql);
   my $i = 0;
