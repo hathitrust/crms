@@ -79,7 +79,7 @@
           <tr><td><strong>Country:</strong> [% country %]<br/></td></tr>
         [% END %]
       </table>
-      [% sources = crms.Sources(barcode,mag,ptview,'corrections') %]
+      [% sources = crms.Authorities(barcode,mag,ptview,'corrections') %]
       <table class="search">
         <tr>
           <th>View 1:</th>
@@ -87,15 +87,15 @@
             <select title="Search 1" class="review" id="search1Select" onchange="changeFrame1(1);" style="float:right;">
             [% selectit = 0 %]
             [% FOREACH src IN sources %]
-              [% IF src.2 %]
+              [% IF src.url %]
                 [% selectstr = "" %]
-                [% IF selectit == 0 && src.5 == 1 %]
+                [% IF selectit == 0 && src.initial == 1 %]
                   [% selectit = 1 %]
                   [% selectstr = "selected='selected'" %]
                 [% END %]
-                <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
+                <option value="[% src.url %]" [% selectstr %]>[% src.name %]</option>
               [% ELSE %]
-                <optgroup label="[% src.1 %]"/>
+                <optgroup label="[% src.name %]"/>
               [% END %]
             [% END %]
             </select>
@@ -107,15 +107,15 @@
             <select title="Search 2" class="review" id="search2Select" onchange="changeFrame2(1);" style="float:right;">
             [% selectit = 0 %]
             [% FOREACH src IN sources %]
-              [% IF src.2 %]
+              [% IF src.url %]
                 [% selectstr = "" %]
-                [% IF selectit == 0 && src.5 == 2 %]
+                [% IF selectit == 0 && src.initial == 2 %]
                   [% selectit = 1 %]
                   [% selectstr = "selected='selected'" %]
                 [% END %]
-                <option value="[% src.2 %]" [% selectstr %]>[% src.1 %]</option>
+                <option value="[% src.url %]" [% selectstr %]>[% src.name %]</option>
               [% ELSE %]
-                <optgroup label="[% src.1 %]"/>
+                <optgroup label="[% src.name %]"/>
               [% END %]
             [% END %]
             </select>

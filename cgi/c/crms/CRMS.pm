@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.0.5';
+  return '5.1';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -7837,19 +7837,23 @@ sub Rights
   return \@all;
 }
 
-sub Sources
+# Information sources for the various review pages.
+# Returns a ref to in-display-order list of dictionaries with the following keys:
+# name, url, accesskey, initial
+sub Authorities
 {
   my $self = shift;
   my $id   = shift;
   my $mag  = shift;
   my $view = shift;
   my $page = shift;
+  my $gid  = shift;
 
   $mag = '100' unless $mag;
   $view = 'image' unless $view;
   $page = 'review' unless defined $page;
-  my $sql = 'SELECT id,name,url,accesskey,menu,initial FROM sources' .
-            ' WHERE page=? ORDER BY n ASC, name ASC';
+  my $sql = 'SELECT a.name,a.url,p.accesskey,p.initial FROM pageauthorities p'.
+            ' INNER JOIN authorities a ON p.id=a.id WHERE page=? ORDER BY p.n ASC';
   #print "$sql\n<br/>";
   my $ref = $self->SelectAll($sql, $page);
   my @all = ();
@@ -7857,9 +7861,10 @@ sub Sources
   $a =~ s/&/%26/g;
   foreach my $row (@{$ref})
   {
-    my $name = $row->[1];
-    my $url = $row->[2];
+    my $name = $row->[0];
+    my $url = $row->[1];
     $url =~ s/__HTID__/$id/g;
+    $url =~ s/__GID__/$gid/g;
     $url =~ s/__MAG__/$mag/g;
     $url =~ s/__VIEW__/$view/g;
     if ($url =~ m/crms\?/)
@@ -7912,7 +7917,8 @@ sub Sources
     }
     $url = CGI::escapeHTML($url);
     $url =~ s/\s+/+/g;
-    push @all, [$row->[0], $name, $url, $row->[3], $row->[4], $row->[5]];
+    push @all, {'name' => $name, 'url' => $url,
+                'accesskey' => $row->[2], 'initial' => $row->[3]};
   }
   return \@all;
 }
