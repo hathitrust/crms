@@ -990,7 +990,7 @@ window.onload = function(e)
                  onclick="javascript:SubmitInserts(true, false)"/></td>
     </tr>
     [% END %]
-    [% homeLink = crms.Sysify("inserts?p=inserts;submit=Cancel;barcode=$barcode;editing=$editing") %]
+    [% homeLink = crms.Sysify("inserts?p=inserts;submit=Cancel;barcode=$barcode;editing=$editing;user=$user") %]
     <tr>
       <td></td>
       <td>

@@ -29,7 +29,8 @@ my $editing = $cgi->param('editing');
 my $id = $cgi->param('barcode');
 if ($cgi->param('submit') eq 'Cancel')
 {
-  $ins->Unlock($id);
+  my $user = $cgi->param('user');
+  $ins->Unlock($id, $user);
   $cgi->delete_all();
   if ($editing)
   {
