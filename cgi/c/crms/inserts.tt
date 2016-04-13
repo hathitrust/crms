@@ -82,7 +82,7 @@
         <tr><td><strong>Author:</strong> [% author %]</td></tr>
         <tr><td><strong>Pub Date:</strong> <span id="pubDateSpan">[% pub_date %]</span><br/></td></tr>
       </table>
-      [% sources = crms.Sources(barcode,mag,ptview,p) %]
+      [% sources = crms.Authorities(barcode,mag,ptview,p) %]
       <table class="search">
         <tr>
           <th>View&nbsp;1:</th>
@@ -90,16 +90,16 @@
             <select title="Search 1" class="review" id="search1Select" onchange="changeFrame1(1);" style="float:right;">
             [% selectit = 0 %]
             [% FOREACH src IN sources %]
-              [% IF src.2 %]
+              [% IF src.url %]
                 [% selectstr = "" %]
-                [% IF selectit == 0 && src.5 == 1 %]
+                [% IF selectit == 0 && src.initial == 1 %]
                   [% selectit = 1 %]
                   [% selectstr = "selected='selected'" %]
                 [% END %]
-                [% url = src.2.replace('__USER__', user) %]
-                <option value="[% url %]" [% selectstr %]>[% src.1 %]</option>
+                [% url = src.url.replace('__USER__', user) %]
+                <option value="[% url %]" [% selectstr %]>[% src.name %]</option>
               [% ELSE %]
-                <optgroup label="[% src.1 %]"/>
+                <optgroup label="[% src.name %]"/>
               [% END %]
             [% END %]
             </select>
@@ -111,16 +111,16 @@
             <select title="Search 2" class="review" id="search2Select" onchange="changeFrame2(1);" style="float:right;">
             [% selectit = 0 %]
             [% FOREACH src IN sources %]
-              [% IF src.2 %]
+              [% IF src.url %]
                 [% selectstr = "" %]
-                [% IF selectit == 0 && src.5 == 2 %]
+                [% IF selectit == 0 && src.initial == 2 %]
                   [% selectit = 1 %]
                   [% selectstr = "selected='selected'" %]
                 [% END %]
-                [% url = src.2.replace('__USER__', user) %]
-                <option value="[% url %]" [% selectstr %]>[% src.1 %]</option>
+                [% url = src.url.replace('__USER__', user) %]
+                <option value="[% url %]" [% selectstr %]>[% src.name %]</option>
               [% ELSE %]
-                <optgroup label="[% src.1 %]"/>
+                <optgroup label="[% src.name %]"/>
               [% END %]
             [% END %]
             </select>
