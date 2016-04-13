@@ -7,11 +7,10 @@
 [% sys      = cgi.param('sys')        %]
 [% mag      = cgi.cookie('mag')       %]
 [% ptview   = cgi.cookie('ptview')    %]
-[% expert   = crms.IsUserIncarnationExpertOrHigher(user) %]
 
 [% IF barcode && editing %]
   [% user2 = cgi.param('user') %]
-  [% IF user2 && user2 != user && expert %]
+  [% IF user2 && user2 != user %]
     [% user = user2 %]
     [% inspecting = 1 %]
   [% ELSE %]
