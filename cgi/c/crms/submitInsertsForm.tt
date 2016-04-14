@@ -21,8 +21,10 @@ String.prototype.replaceAll = function(search, replace)
   if (replace === undefined) return this.toString();
   return this.split(search).join(replace);
 }
-
+var gUser = null;
+var gEditing = false;
 var gInspecting = false;
+var gInspectingAdded = 0;
 var gNInserts = 0;
 var gNRows = 0;
 var gNTotals = 0;
@@ -88,15 +90,9 @@ var gRestoredHelp = '<a class="tip" href="#">'+
 var gTimers = {};
 var gInterval;
 var gIntervalFor;
-function AddInsert(activate)
+function AddInsert(userAdded)
 {
   var ok = true;
-  if (activate)
-  {
-    ok = ValidateForm();
-    if (!ok) { return; }
-    SubmitInserts(false, false);
-  }
   if (gNInserts == 0)
   {
     ToggleRenewal(1);
@@ -227,7 +223,11 @@ function AddInsert(activate)
                    '<input type="hidden" id="'+prefix+'timer" name="'+prefix+'timer"/>';
   cell = row.insertCell(1);
   cell.innerHTML = '<input type="button" id="'+prefix+'ResumeButton" value="Resume" onclick="javascript:restartTime(\''+prefix+'\');"/>';
-  if (activate) { startTime(prefix); }
+  if (userAdded ||
+      (gInspecting && prefix > gNTotals - gInspectingAdded))
+  {
+    startTime(prefix);
+  }
   row = table.insertRow(gNRows);
   gNRows++;
   row.id = prefix+'Row'+gNRows;
@@ -235,7 +235,7 @@ function AddInsert(activate)
   cell.colSpan = 2;
   cell.innerHTML = gRestoredHelp+'<label for="'+prefix+'restored"><strong>Copyright was likely restored</strong></label>';
   cell.innerHTML+='<input type="checkbox" id="'+prefix+'restored" name="'+prefix+'restored" value="1" onclick="javascript:restartTime('+prefix+');"/>';
-  if (gInspecting)
+  if (gInspecting && !userAdded && gInspectingAdded == 0)
   {
     row = table.insertRow(gNRows);
     gNRows++;
@@ -244,7 +244,13 @@ function AddInsert(activate)
     cell.colspan = 2;
     cell.innerHTML = '<input type="button" value="Submit Override" onclick="SubmitOverride('+prefix+');"/>';
     row.id = prefix + 'overrideRow';
-  }  
+  }
+  if (gInspecting && userAdded)
+  {
+    gInspectingAdded++;
+    document.getElementById('DeleteLastInsertButton').disabled = false;
+    document.getElementById('override').value = 'Add';
+  }
   gNInserts++;
   document.getElementById('insertCount').value = gNInserts;
   if (gNInserts > 1)
@@ -253,6 +259,7 @@ function AddInsert(activate)
   }
   var objDiv = document.getElementById('divNav');
   objDiv.scrollTop = objDiv.scrollHeight;
+  //alert('gInspectingAdded '+gInspectingAdded);
 }
 
 function startTime(i)
@@ -368,6 +375,12 @@ function ToggleInsert(prefix, forceClose)
 
 function DeleteLastInsert()
 {
+  //alert('gInspecting:'+gInspecting+', gInspectingAdded:'+gInspectingAdded);
+  if (gInspecting && gInspectingAdded < 1)
+  {
+    alert('Programmer made poor career choice (delete button should be disabled).');
+    return;
+  }
   if (confirm("Are you sure you want to delete the last insert? This cannot be undone."))
   {
     stopTime(gNInserts);
@@ -388,8 +401,20 @@ function DeleteLastInsert()
       }
     }
     if (gNInserts > 0) { gNInserts--; }
+    if (gInspecting && gInspectingAdded > 0)
+    {
+      gInspectingAdded--;
+    }
+    var disable = false;
+    if (gNInserts < 1 ||
+        (gInspecting && gInspectingAdded < 1))
+    {
+      disable = true;
+    }
+    document.getElementById('DeleteLastInsertButton').disabled = disable;
     document.getElementById('insertCount').value = gNInserts;
   }
+  ToggleInsert(gNInserts);
   SubmitInserts(false, false);
 }
 
@@ -455,12 +480,17 @@ function LoadInserts(id, user)
 {
   var req = new XMLHttpRequest();
   var url = "/cgi/c/crms/getInsertsInfo?id=" + id + ";user=" + user;
+  if (gInspecting)
+  {
+    url += ';inspecting=1';
+  }
   req.onreadystatechange = function()
   {
     if (req.readyState == 4)
     {
       if (req.status == 200)
       {
+        //alert(req.responseText);
         PopulateInserts(req.responseText);
       }
       else
@@ -494,6 +524,11 @@ function PopulateInsert(iid, data)
   for (var key in keys)
   {
     val = data[keys[key]];
+    //alert('gInspecting '+gInspecting+' key '+keys[key]+' gUser '+gUser+' val '+val);
+    if (gInspecting && keys[key] == 'user' && gUser != null && val != gUser)
+    {
+      gInspectingAdded++;
+    }
     var el = document.getElementById(iid+keys[key]);
     if (el)
     {
@@ -639,7 +674,7 @@ function SubmitInserts(fini, override)
         {
           if (fini)
           {
-            window.location.href = 'inserts?p=inserts';
+            NavigateAway();
           }
           else
           {
@@ -665,6 +700,18 @@ function SubmitInserts(fini, override)
       }
       if (loader) { loader.style.display='none'; }
     };
+  }
+}
+
+function NavigateAway()
+{
+  if (gEditing)
+  {
+    window.close();
+  }
+  else
+  {
+    window.location.href = 'inserts?p=inserts';
   }
 }
 
@@ -695,7 +742,7 @@ function AddTotal()
   cell.innerHTML = '<input id="'+id+'" title="Estimated insert count" type="text" name="'+id+'" size="6"/>';
   gNTotals++;
   document.getElementById('totalCount').value = gNTotals;
-  document.getElementById('DeleteLastButton').disabled = false;
+  document.getElementById('DeleteLastTotalButton').disabled = false;
 }
 
 function DeleteLastTotal()
@@ -706,12 +753,16 @@ function DeleteLastTotal()
     {
       var offset = 5 + gNTotals;
       var table = document.getElementById("CountDataTable");
-      table.deleteRow(offset);
       gNTotals--;
+      if (gInspecting)
+      {
+        gInspectingAdded--;
+      }
+      table.deleteRow(offset);
       document.getElementById('totalCount').value = gNTotals;
       SubmitInserts(false, false);
     }
-    document.getElementById('DeleteLastButton').disabled = (gNTotals == 0);
+    document.getElementById('DeleteLastTotalButton').disabled = (gNTotals == 0);
   }
 }
 
@@ -766,6 +817,8 @@ window.onload = function(e)
   changeFrame1();
   changeFrame2();
   gInspecting = [% (inspecting)? 'true':'false' %];
+  gEditing = [% (editing)? 'true':'false' %];
+  gUser = [% (user)? "'$user'":"null"  %];
   LoadInserts("[% barcode %]", "[% user %]");
   [% IF totals.size() %]
     LoadTotals("[% barcode %]", "[% user %]");
@@ -900,8 +953,10 @@ window.onload = function(e)
       </tr>
       <tr id="CountDataRow1">
         <td>
+          [% val = data.estimate %]
+          [% IF inspecting && !val %][% val = 0 %][% END %]
           <input id="0estimate" title="Estimated insert count" type="text"
-                 name="0estimate" size="8" value="[% data.estimate %]"/>
+                 name="0estimate" size="8" value="[% val %]"/>
         </td>
       </tr>
       <tr id="CountDataRow2">
@@ -911,8 +966,10 @@ window.onload = function(e)
       </tr>
       <tr id="CountDataRow3">
         <td>
+          [% val = data.insufficient %]
+          [% IF inspecting && !val %][% val = 0 %][% END %]
           <input id="0insufficient" title="Insufficient information count" type="text"
-                 name="0insufficient" size="8" value="[% data.insufficient %]"/>
+                 name="0insufficient" size="8" value="[% val %]"/>
         </td>
       </tr>
       <tr id="CountDataRow4">
@@ -930,7 +987,7 @@ window.onload = function(e)
                  onclick="javascript:AddTotal();"/>
         </td>
         <td colspan>
-          <input class="review" type="button" name="submit" id="DeleteLastButton" value="Delete Last"
+          <input class="review" type="button" name="submit" id="DeleteLastTotalButton" value="Delete Last"
                  onclick="javascript:DeleteLastTotal();" disabled="disabled"/>
         </td>
       </tr>
@@ -974,28 +1031,36 @@ window.onload = function(e)
           <label for="0pd0">Not enough information</label>
       </td>
     </tr>
-    [% IF !inspecting %]
     <tr>
       <td><input class="review" type="button" name="submit" value="Add Insert"
                  accesskey="a" onclick="javascript:AddInsert(1);"/></td>
-      <td><input class="review" type="button" name="submit" value="Delete Last Insert"
-                 accesskey="a" onclick="javascript:DeleteLastInsert();"/></td>
+      <td>
+        
+        <input class="review" type="button" name="submit" value="Delete Last Insert" id="DeleteLastInsertButton"
+               [% IF inspecting %]
+               disabled="disabled"
+               [% END %]
+               onclick="javascript:DeleteLastInsert();"/>
+      </td>
     </tr>
     <tr>
       <td>
         <input class="review" type="button" name="submit" value="Save"
                accesskey="s" onclick="javascript:SubmitInserts(false, false);"/>
       </td>
-      <td><input class="review" type="button" name="submit" value="Save and Next"
-                 onclick="javascript:SubmitInserts(true, false)"/></td>
+      <td>
+        [% val = "Save and Next" %]
+        [% IF editing %][% val = "Save and Done" %][% END %]
+        <input class="review" type="button" name="submit" value="$val"
+               onclick="javascript:SubmitInserts(true, false)"/>
+      </td>
     </tr>
-    [% END %]
     [% homeLink = crms.Sysify("inserts?p=inserts;submit=Cancel;barcode=$barcode;editing=$editing;user=$user") %]
     <tr>
       <td></td>
       <td>
         <input class="review" type="button" name="submit" value="Cancel"
-               onclick="window.location.href='[% homeLink %]';"/>
+               onclick="javascript:NavigateAway();"/>
       </td>
     </tr>
     <tr>

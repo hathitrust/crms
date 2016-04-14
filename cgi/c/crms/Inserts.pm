@@ -84,11 +84,12 @@ sub GetInsertsData
   my $pri  = shift;
 
   my $crms = $self->crms;
-  my $sql = 'SELECT * FROM inserts WHERE id=? AND user=? AND ';
-  $sql .= ($pri)? 'iid=0':'iid>0';
+  my $user2 = $crms->get('user');
+  my $sql = 'SELECT * FROM inserts WHERE id=? AND (user=? OR user=?) AND';
+  $sql .= ($pri)? ' iid=0':' iid>0';
   $sql .= ' ORDER BY iid ASC';
-  #$crms->Note('GetInsertsData: '. Utilities::StringifySql($sql, $id, $user));
-  my $ref = $crms->GetDb()->selectall_hashref($sql, 'iid', undef, $id, $user);
+  #$crms->Note('GetInsertsData: '. Utilities::StringifySql($sql, $id, $user, $user2));
+  my $ref = $crms->GetDb()->selectall_hashref($sql, 'iid', undef, $id, $user, $user2);
   return ($pri)? $ref->{0}:$ref;
 }
 
@@ -158,7 +159,7 @@ sub SubmitInserts
   my $count = $cgi->param('count');
   my $override = $cgi->param('override');
   $crms->Note("Override $override detected") if defined $override;
-  if (!defined $override || $override == 0)
+  if (!defined $override || $override eq '0')
   {
     foreach my $name ($cgi->param)
     {
@@ -192,7 +193,7 @@ sub SubmitInserts
     push @vals, $id;
     push @fields, 'iid';
     push @vals, 0;
-    if (defined $override && $override == 0)
+    if (defined $override && $override ne '0')
     {
       push @fields, 'override';
       push @vals, 1;
@@ -219,9 +220,17 @@ sub SubmitInserts
   {
     $crms->Note(Utilities::StringifySql($sql, $id, $user, $count));
   }
-  for my $i (1 .. $count)
+  my $start = 1;
+  if (defined $override && $override eq 'Add')
   {
-    next if defined $override and $i ne $override;
+    my $user2 = $cgi->param('user');
+    $sql = 'SELECT 1+MAX(iid) FROM inserts WHERE id=? AND user=?';
+    $start = $crms->SimpleSqlGet($sql, $id, $user2);
+    $crms->Note("$start from ". Utilities::StringifySql($sql, $id, $user2));
+  }
+  for my $i ($start .. $count)
+  {
+    next if defined $override and $override =~ m/^\d+$/ and $i ne $override;
     @fields = ();
     @vals = ();
     foreach my $name ($cgi->param)
@@ -241,7 +250,7 @@ sub SubmitInserts
     push @vals, $i;
     push @fields, 'user';
     push @vals, $user;
-    if (defined $override)
+    if (defined $override && $override ne 'Add')
     {
       push @fields, 'override';
       push @vals, 1;
