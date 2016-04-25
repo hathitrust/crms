@@ -491,7 +491,7 @@ sub CheckPendingStatus
 # If quiet is set, don't try to create the export file, print stuff, or send mail.
 sub ClearQueueAndExport
 {
-  my $self    = shift;
+  my $self  = shift;
   my $quiet = shift;
 
   my $export = [];
@@ -8009,15 +8009,24 @@ sub PredictLastCopyrightYear
 
   # Punt if the year is not exclusively 1 or more decimal digits with optional minus.
   return undef if $year !~ m/^-?\d+$/;
-  my $pub;
+  my $pub = (defined $pubref)? $$pubref:undef;
   $pub = $year if $ispub;
-  if (! defined $pub)
-  {
-    $pub = $record->copyrightDate(1) if defined $record;
-    $pub = $self->FormatPubDate($id, $record) unless defined $pub;
-  }
+  $pub = $self->FormatPubDate($id, $record) unless defined $pub;
   return undef unless defined $pub;
-  return undef if $pub =~ m/-/;
+  if ($pub =~ m/-/)
+  {
+    my ($d1, $d2) = split '-', $pub;
+    # Use the maximum iff the date range does not span 1923 boundary.
+    if ($d1 =~ m/^\d+$/ && $d2 =~ m/^\d+$/ && $d1 < $d2 &&
+        (($d1 < 1923 && $d2 < 1923) || ($d1 >= 1923 && $d2 >= 1923)))
+    {
+      $pub = $d2;
+    }
+    else
+    {
+      return undef;
+    }
+  }
   $$pubref = $pub if defined $pubref;
   my $where = undef;
   $where = $record->country if defined $record;
