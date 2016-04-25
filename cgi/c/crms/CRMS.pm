@@ -7996,7 +7996,7 @@ sub TolerantCompare
 }
 
 # CRMS World specific. Returns the last year the work was/will be in copyright,
-# or undef on error.
+# or undef on error or not enough info.
 sub PredictLastCopyrightYear
 {
   my $self   = shift;
@@ -8064,10 +8064,10 @@ sub PredictRights
   my $ispub  = shift; # Pub date checkbox
   my $crown  = shift; # Crown copyright note category
   my $record = shift; # Metadata (optional) so we don't spam bibdata table for volumes not in queue.
+  my $pub    = shift; # Actual pub date when date range.
 
   my ($attr, $reason) = (0,0);
   my $now = $self->GetTheYear();
-  my $pub;
   my $when = $self->PredictLastCopyrightYear($id, $year, $ispub, $crown, $record, \$pub);
   return unless defined $when;
   return undef if $pub =~ m/^\d+-\d+$/;

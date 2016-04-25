@@ -44,26 +44,11 @@ function flipFrame()
 
 function popRenewalDate()
 {
-  var req = null;
   var renNum = document.getElementById('renNum');
   var renDate = document.getElementById('renDate');
   var id  = renNum.value;
   renDate.value = "Searching...";
-  if (window.XMLHttpRequest)
-  {
-    req = new XMLHttpRequest();
-  }
-  else if (window.ActiveXObject)
-  {
-    try {
-        req = new ActiveXObject("Msxml2.XMLHTTP");
-    } catch (e)
-    {
-        try {
-            req = new ActiveXObject("Microsoft.XMLHTTP");
-        } catch (e) {}
-    }
-  }
+  var req = new XMLHttpRequest();
   req.onreadystatechange = function()
   {
     if (req.readyState == 4)
@@ -84,24 +69,8 @@ function popRenewalDate()
 
 function popReviewInfo(id,user,sys)
 {
-  var req = null;
   var loader = document.getElementById('loader' + user);
-
-  if (window.XMLHttpRequest)
-  {
-    req = new XMLHttpRequest();
-  }
-  else if (window.ActiveXObject)
-  {
-    try {
-        req = new ActiveXObject("Msxml2.XMLHTTP");
-    } catch (e)
-    {
-        try {
-            req = new ActiveXObject("Microsoft.XMLHTTP");
-        } catch (e) {}
-    }
-  }
+  var req = new XMLHttpRequest();
   req.onreadystatechange = function()
   {
     if (req.readyState == 4)
@@ -137,7 +106,7 @@ function PredictRights(id)
   var isPub = (document.getElementById('renewalFieldCheckbox').checked)? 1:0;
   var cat = SelectedCategory();
   var isCrown = (cat == 'Crown Copyright')? 1:0;
-  /*var actualPubField = document.getElementById('actualPubDateField');
+  var actualPubField = document.getElementById('actualPubDateField');
   var actualPub;
   if (actualPubField)
   {
@@ -150,7 +119,7 @@ function PredictRights(id)
     {
       actualPub = actualPubField.value;
     }
-  }*/
+  }
   var req = null;
   var rights = document.getElementsByName("rights");
   var sel = GetCheckedValue(rights);
@@ -164,40 +133,26 @@ function PredictRights(id)
     return;
   }*/
   if (und && sel == und) { return; }
-  if (window.XMLHttpRequest)
-  {
-    req = new XMLHttpRequest();
-  }
-  else if (window.ActiveXObject)
-  {
-    try {
-        req = new ActiveXObject("Msxml2.XMLHTTP");
-    } catch (e)
-    {
-        try {
-            req = new ActiveXObject("Microsoft.XMLHTTP");
-        } catch (e) {}
-    }
-  }
+  var req = new XMLHttpRequest();
   req.onreadystatechange = function()
   {
     if (req.readyState == 4 && req.status == 200)
     {
       if (img) { img.style.display = 'none'; }
-      if (req.responseText)
+      sel = GetCheckedValue(rights);
+      und = document.getElementById('UNDNFI').title;
+      if (und && sel == und) { return; }
+      if (!und || sel != und)
       {
-        sel = GetCheckedValue(rights);
-        und = document.getElementById('UNDNFI').title;
-        if (und && sel == und) { return; }
-        if (!und || sel != und)
+        if (sel != "")
         {
-          if (sel != "")
-          {
-            var button = document.getElementById("r" + sel);
-            button.checked = "";
-          }
+          var button = document.getElementById("r" + sel);
+          button.checked = "";
+        }
+        if (req.responseText)
+        {
           var button = document.getElementById("r" + req.responseText);
-          if (button) { button.checked = "checked" }
+          if (button) { button.checked = "checked"; }
         }
       }
     }
@@ -205,7 +160,7 @@ function PredictRights(id)
   var url = "/cgi/c/crms/predictRights?sys=crmsworld;id=" +
             id + ";year=" + year + ";ispub=" + isPub +
             ";crown=" + isCrown;
-  //if (actualPub) url += ";pub=" + actualPub;
+  if (actualPub) { url += ";pub=" + actualPub; }
   req.open("GET", url, true);
   req.send(null);
 }
@@ -223,29 +178,14 @@ function PredictDate(id)
   //var isPub = (document.getElementById('renewalFieldCheckbox2').checked)? 1:0;
   //var cat = SelectedCategory();
   //var isCrown = (cat == 'Crown Copyright')? 1:0;
-  /*var actualPubField = document.getElementById('actualPubDateField');
+  var actualPubField = document.getElementById('actualPubDateField');
   var actualPub;
   if (actualPubField)
   {
     actualPub = actualPubField.value;
-  }*/
-  var req = null;
+  }
   span.innerHTML = "Calculating...";
-  if (window.XMLHttpRequest)
-  {
-    req = new XMLHttpRequest();
-  }
-  else if (window.ActiveXObject)
-  {
-    try {
-        req = new ActiveXObject("Msxml2.XMLHTTP");
-    } catch (e)
-    {
-        try {
-            req = new ActiveXObject("Microsoft.XMLHTTP");
-        } catch (e) {}
-    }
-  }
+  var req = new XMLHttpRequest();
   req.onreadystatechange = function()
   {
     if (req.readyState == 4)
@@ -263,11 +203,12 @@ function PredictDate(id)
   };
   var url = "/cgi/c/crms/predictRights?sys=crmsworld;doyear=1;id=" +
             id + ";year=" + year;
-  //if (actualPub) url += ";pub=" + actualPub;
+  if (actualPub) url += ";pub=" + actualPub;
   req.open("GET", url, true);
   req.send(null);
 }
 
+// FIXME: the following four functions appear to be unused
 function ShowPopup(hoveritem)
 {
   hp = document.getElementById("hoverpopup");
@@ -304,19 +245,20 @@ function ToggleADD()
   var lab = document.getElementById("renewalFieldLabel");
   var cb = document.getElementById("renewalFieldCheckbox");
   var field = document.getElementById("renewalField");
-  lab.innerHTML = (cb.checked)? "Publication&nbsp;Date:":"Author&nbsp;Death&nbsp;Date:";
+  var actualPubRow = document.getElementById('actualPubRow');
+  lab.innerHTML = (cb.checked)? ((actualPubRow)? "Actual&nbsp;Pub&nbsp;Date":"Publication&nbsp;Date:"):"Author&nbsp;Death&nbsp;Date:";
   field.title = (cb.checked)? "Publication Date":"Author Death Date";
-  /*var actualPubRow = document.getElementById('actualPubRow');
   if (actualPubRow)
   {
     actualPubRow.style.display = (cb.checked)? "none":"table-row";
     var actualPubField = document.getElementById('actualPubDateField');
-    if (actualPubField && cb.checked)
+    if (actualPubField && cb.checked && actualPubField.value)
     {
       // not sure about this; it is destructive
-      //field.value = actualPubField.value;
+      field.value = actualPubField.value;
+      actualPubField.value = "";
     }
-  }*/
+  }
 }
 
 function VerifyCategory()

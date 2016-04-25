@@ -14,8 +14,9 @@ my $year   = $cgi->param('year');
 my $sys    = $cgi->param('sys');
 my $ispub  = $cgi->param('ispub');
 my $crown  = $cgi->param('crown');
-#my $pub    = $cgi->param('pub');
+my $pub    = $cgi->param('pub');
 my $doyear = $cgi->param('doyear');
+my $readable = $cgi->param('readable');
 $sys = 'crms' unless $sys;
 my $crms = CRMS->new(logFile  =>   "$DLXSROOT/prep/c/crms/log_review.txt",
                      sys      =>   $sys,
@@ -26,8 +27,7 @@ my $crms = CRMS->new(logFile  =>   "$DLXSROOT/prep/c/crms/log_review.txt",
 my $n;
 if (defined $doyear)
 {
-  my $pub;
-  $n = $crms->PredictLastCopyrightYear($id, $year, $ispub, $crown);
+  $n = $crms->PredictLastCopyrightYear($id, $year, $ispub, $crown, undef, \$pub);
   my $r = $crms->TranslateRights($crms->PredictRights($id, $year, $ispub, $crown, undef, \$pub));
   if (defined $n)
   {
@@ -52,7 +52,14 @@ else
   #  my $r2 = $crms->PredictRights($id, $year, $ispub, $crown, $pub2);
   #  $n = $r1 if $crms->TolerantCompare($r1, $r2);
   #}
-  $n = $crms->PredictRights($id, $year, $ispub, $crown) unless defined $n;
+  $n = $crms->PredictRights($id, $year, $ispub, $crown, undef, $pub) unless defined $n;
 }
 print $cgi->header();
+if ($readable && $n)
+{
+  my $ref = $crms->SelectAll("SELECT attr,reason FROM rights WHERE id=?", $n);
+  my $pa = $crms->TranslateAttr($ref->[0]->[0]);
+  my $pr = $crms->TranslateReason($ref->[0]->[1]);
+  $n = $pa . '/' . $pr;
+}
 print $n if defined $n;
