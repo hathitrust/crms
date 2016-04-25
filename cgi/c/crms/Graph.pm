@@ -160,7 +160,7 @@ sub CreateExportsPieChart
   my $self  = shift;
 
   my %data = ('chart'=>{'type'=>'pie'}, 'title'=>{'text'=>undef},
-              'tooltip'=>{'pointFormat'=>'<b>{point.percentage:.2f}%</b> ({point.y})'},
+              'tooltip'=>{'pointFormat'=>'<strong>{point.percentage:.1f}%</strong><br/>({point.y})'},
               'plotOptions'=>{'pie'=>{'cursor'=>'pointer', size=>'70%',
                                      'dataLabels'=>{'enabled'=>JSON::XS::true,'format'=>'{point.name}'},
                                      'colors'=>[]}},
@@ -187,7 +187,7 @@ sub CreateCountriesGraph
 {
   my $self  = shift;
   my %data = ('chart'=>{'type'=>'pie'}, 'title'=>{'text'=>undef},
-              'tooltip'=>{'pointFormat'=>'<b>{point.percentage:.1f}%</b>'},
+              'tooltip'=>{'pointFormat'=>'<strong>{point.percentage:.1f}%</strong><br/>({point.y})'},
               'plotOptions'=>{'pie'=>{'cursor'=>'pointer', size=>'70%',
                                      'dataLabels'=>{'enabled'=>'false','format'=>'{point.name}'},
                                      'colors'=>[]}},
@@ -216,7 +216,7 @@ sub CreateUndGraph
   my $self  = shift;
 
   my %data = ('chart'=>{'type'=>'pie'}, 'title'=>{'text'=>''},
-              'tooltip'=>{'pointFormat'=>'<b>{point.percentage:.1f}%</b>'},
+              'tooltip'=>{'pointFormat'=>'<strong>{point.percentage:.1f}%</strong><br/>({point.y})'},
               'plotOptions'=>{'pie'=>{'cursor'=>'pointer', size=>'70%',
                                       'dataLabels'=>{'enabled'=>JSON::XS::true,'format'=>'{point.name}'},
                                       'colors'=>[]}},
@@ -242,9 +242,9 @@ sub CreateNamespaceGraph
   my $self = shift;
 
   my %data = ('chart'=>{'type'=>'column'}, 'title'=>{'text'=>undef},
-              'tooltip'=>{'pointFormat'=>'<b>{point.y}</b>'},
+              'tooltip'=>{'pointFormat'=>'<strong>{point.y}</strong>'},
               'xAxis'=>{'type'=>'category', 'labels'=>{'rotation'=>45}},
-              'yAxis'=>{'min'=>0, 'title'=>{'text'=>'Volumes'}},
+              'yAxis'=>{'min'=>0, 'title'=>{'text'=>'Determinations'}},
               'legend'=>{'enabled'=>JSON::XS::false},
               'credits'=>{'enabled'=>JSON::XS::false},
               'series'=>[{'name'=>'Namespace', 'data'=>[]}]);
@@ -253,7 +253,6 @@ sub CreateNamespaceGraph
   foreach my $ns (sort $self->Namespaces())
   {
     my $sql = 'SELECT COUNT(DISTINCT id) FROM exportdata WHERE id LIKE "' . $ns . '.%"';
-    #print "$sql\n";
     my $n = $self->SimpleSqlGet($sql);
     next unless $n;
     push @data, [$ns,$n];
@@ -276,7 +275,7 @@ sub CreateReviewInstitutionGraph
   my $self  = shift;
 
   my %data = ('chart'=>{'type'=>'pie'}, 'title'=>{'text'=>undef},
-              'tooltip'=>{'pointFormat'=>'<b>{point.percentage:.1f}%</b>'},
+              'tooltip'=>{'pointFormat'=>'<strong>{point.percentage:.1f}%</strong><br/>({point.y})'},
               'plotOptions'=>{'pie'=>{'cursor'=>'pointer', size=>'70%',
                                      'dataLabels'=>{'enabled'=>JSON::XS::true,'format'=>'{point.name}'},
                                      'colors'=>[]}},
@@ -300,7 +299,6 @@ sub CreateReviewInstitutionGraph
   return \%data;
 }
 
-# FIXME: show percents in tooltips and Y axis for invalidation rate
 sub CreateReviewerGraph
 {
   my $self  = shift;
@@ -321,8 +319,10 @@ sub CreateReviewerGraph
   $start = $self->SimpleSqlGet('SELECT MIN(monthyear) FROM userstats') unless $start;
   $end = $self->SimpleSqlGet('SELECT MAX(monthyear) FROM userstats') unless $end;
   my %users;
-  my %titles = (0=>'Review Count',1=>'Time Reviewing',2=>'Invalidation Rate');
-  my %sel = (0=>'SUM(s.total_reviews)',1=>'SUM(s.total_time/60)',2=>'100*SUM(s.total_incorrect)/SUM(s.total_reviews)');
+  my %titles = (0=>'Review Count', 1=>'Time Reviewing', 2=>'Invalidation Rate');
+  my %sel = (0=>'SUM(s.total_reviews)',
+             1=>'SUM(s.total_time/60)',
+             2=>'ROUND(100*SUM(s.total_incorrect)/SUM(s.total_reviews),2)');
   $type = 0 unless defined $titles{$type};
   my $title = $titles{$type};
   my $sql = 'SELECT DISTINCT monthyear FROM userstats WHERE monthyear>=? AND monthyear<=? ORDER BY monthyear ASC';
@@ -337,6 +337,8 @@ sub CreateReviewerGraph
   }
   my $i = 0;
   $data{'yAxis'}->{'title'}->{'text'} = $title;
+  $data{'yAxis'}->{'labels'}->{'format'} = '{value}%' if $type == 2;
+  $data{'tooltip'}->{'pointFormat'} = '{series.name}: <strong>{point.y}%</strong>' if $type == 2;
   my @colors = PickColors(scalar @users);
   foreach my $user (@users)
   {
