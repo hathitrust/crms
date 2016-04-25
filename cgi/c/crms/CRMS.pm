@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.1.1';
+  return '5.2';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -361,20 +361,20 @@ sub GetCandidatesSize
 
 sub ProcessReviews
 {
-  my $self    = shift;
-  my $fromcgi = shift;
+  my $self  = shift;
+  my $quiet = shift;
 
   # Clear the deleted inheritances, regardless of system status
   my $sql = 'SELECT COUNT(*) FROM inherit WHERE del=1';
   my $dels = $self->SimpleSqlGet($sql);
   if ($dels)
   {
-    print "Deleted inheriting volumes to be removed: $dels\n" unless $fromcgi;
+    print "Deleted inheriting volumes to be removed: $dels\n" unless $quiet;
     $self->PrepareSubmitSql('DELETE FROM inherit WHERE del=1');
   }
   else
   {
-    print "No deleted inheriting volumes to remove.\n" unless $fromcgi;
+    print "No deleted inheriting volumes to remove.\n" unless $quiet;
   }
   # Get the underlying system status, ignoring replication delays.
   my ($blah,$stat,$msg) = @{$self->GetSystemStatus(1)};
@@ -394,11 +394,11 @@ sub ProcessReviews
   }
   if ($reason eq '')
   {
-    $self->AutoSubmitInheritances($fromcgi);
+    $self->AutoSubmitInheritances($quiet);
   }
   else
   {
-    print "Not auto-submitting inheritances because $reason.\n" unless $fromcgi;
+    print "Not auto-submitting inheritances because $reason.\n" unless $quiet;
   }
   $self->SetSystemStatus('partial', 'CRMS is processing reviews. The Review page is temporarily unavailable. Try back in about a minute.');
   my %stati = (2=>0,3=>0,4=>0,8=>0);
@@ -411,7 +411,7 @@ sub ProcessReviews
     my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND time>DATE_SUB(NOW(), INTERVAL 8 HOUR)';
     if (0 < $self->SimpleSqlGet($sql, $id))
     {
-      print "Not processing $id: it has one or more reviews less than 8 hours old\n" unless $fromcgi;
+      print "Not processing $id: it has one or more reviews less than 8 hours old\n" unless $quiet;
       next;
     }
     my $data = $self->CalcStatus($id, $stat);
@@ -420,7 +420,7 @@ sub ProcessReviews
     my $hold = $data->{'hold'};
     if ($hold)
     {
-      print "Not processing $id for $hold: it is held; system status is '$stat'\n" if $stat ne 'normal' and !$fromcgi;
+      print "Not processing $id for $hold: it is held; system status is '$stat'\n" if $stat ne 'normal' and !$quiet;
       next;
     }
     if ($status == 8)
@@ -437,7 +437,7 @@ sub ProcessReviews
     $stati{$status}++;
   }
   $self->SetSystemStatus($stat, $msg);
-  if (!$fromcgi)
+  if (!$quiet)
   {
     my $p1 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority=1.0 AND status>0 AND status<9');
     if ($p1)
@@ -488,11 +488,11 @@ sub CheckPendingStatus
   $self->RegisterPendingStatus($id, $pstatus);
 }
 
-# If fromcgi is set, don't try to create the export file, print stuff, or send mail.
+# If quiet is set, don't try to create the export file, print stuff, or send mail.
 sub ClearQueueAndExport
 {
   my $self    = shift;
-  my $fromcgi = shift;
+  my $quiet = shift;
 
   my $export = [];
   ## get items > 2, clear these
@@ -527,7 +527,7 @@ sub ClearQueueAndExport
     my $id = $row->[0];
     push(@{$export}, $id);
   }
-  $self->ExportReviews($export, $fromcgi);
+  $self->ExportReviews($export, $quiet);
   $self->UpdateExportStats();
   $self->UpdateDeterminationsBreakdown();
   return "Removed from queue: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved, $iCount inherited rights\n";
@@ -567,31 +567,31 @@ sub GetInheritedItems
 ##              vol id | attr | reason | user | null
 ##              mdp.123 | ic   | ren    | crms | null
 ##  Parameters: $list: A reference to a list of volume ids
-##              $fromcgi: Suppress printing out progress info if called from CGI
+##              $quiet: Suppress printing out progress info if called from CGI
 ##  Return:     nothing
 ## ----------------------------------------------------------------------------
 sub ExportReviews
 {
-  my $self    = shift;
-  my $list    = shift;
-  my $fromcgi = shift;
+  my $self  = shift;
+  my $list  = shift;
+  my $quiet = shift;
 
-  if ($self->GetSystemVar('noExport') && !$fromcgi)
+  if ($self->GetSystemVar('noExport') && !$quiet)
   {
     print ">>> noExport system variable is set; will only export high-priority volumes.\n";
   }
   my $count = 0;
   my $user = $self->Sys();
-  my ($fh, $temp, $perm) = $self->GetExportFh() unless $fromcgi;
-  print ">>> Exporting to $temp.\n" unless $fromcgi;
+  my ($fh, $temp, $perm) = $self->GetExportFh() unless $quiet;
+  print ">>> Exporting to $temp.\n" unless $quiet;
   my $start_size = $self->GetCandidatesSize();
   foreach my $id (@{$list})
   {
     my ($attr,$reason) = $self->GetFinalAttrReason($id);
-    my $export = $self->CanExportVolume($id, $attr, $reason, $fromcgi);
+    my $export = $self->CanExportVolume($id, $attr, $reason, $quiet);
     if ($export)
     {
-      print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $fromcgi;
+      print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $quiet;
     }
     my $ref = $self->SelectAll('SELECT status,priority,source,project FROM queue WHERE id=?', $id);
     my $status = $ref->[0]->[0];
@@ -607,7 +607,7 @@ sub ExportReviews
     $self->RemoveFromCandidates($id);
     $count++;
   }
-  if (!$fromcgi)
+  if (!$quiet)
   {
     close $fh;
     print ">>> Moving to $perm.\n";
@@ -633,7 +633,7 @@ sub ExportReviews
   }
   my $sql = 'INSERT INTO exportrecord (itemcount) VALUES (?)';
   $self->PrepareSubmitSql($sql, $count);
-  if (!$fromcgi)
+  if (!$quiet)
   {
     printf "After export, removed %d volumes from candidates.\n", $start_size-$self->GetCandidatesSize();
     eval { $self->EmailReport($count, $perm); };
@@ -644,13 +644,13 @@ sub ExportReviews
 # In overnight processing this is called BEFORE queue deletion and move to historical
 sub CanExportVolume
 {
-  my $self    = shift;
-  my $id      = shift;
-  my $attr    = shift;
-  my $reason  = shift;
-  my $fromcgi = shift;
-  my $gid     = shift; # Optional
-  my $time    = shift; # Optional
+  my $self   = shift;
+  my $id     = shift;
+  my $attr   = shift;
+  my $reason = shift;
+  my $quiet  = shift;
+  my $gid    = shift; # Optional
+  my $time   = shift; # Optional
 
   my $export = 1;
   # Do not export Status 6, since they are not really final determinations.
@@ -662,7 +662,7 @@ sub CanExportVolume
   }
   if ($status == 6)
   {
-    print "Not exporting $id; it is status 6\n" unless $fromcgi;
+    print "Not exporting $id; it is status 6\n" unless $quiet;
     return 0;
   }
   my $pri = $self->SimpleSqlGet('SELECT priority FROM queue WHERE id=?', $id);
@@ -675,12 +675,12 @@ sub CanExportVolume
   {
     if ($pri>=3)
     {
-      print "Exporting $id; noExport is on but it is priority $pri\n" unless $fromcgi;
+      print "Exporting $id; noExport is on but it is priority $pri\n" unless $quiet;
       return 1;
     }
     else
     {
-      print "Not exporting $id; noExport is on and it is priority $pri\n" unless $fromcgi;
+      print "Not exporting $id; noExport is on and it is priority $pri\n" unless $quiet;
       return 0;
     }
   }
@@ -705,15 +705,15 @@ sub CanExportVolume
       {
         if ($usr2 =~ m/^crms/ && $time lt $time2)
         {
-          print "Not exporting $id as $attr/$reason; there is a newer CRMS export ($attr2/$reason2 by $usr2 [$time2])\n" unless $fromcgi;
+          print "Not exporting $id as $attr/$reason; there is a newer CRMS export ($attr2/$reason2 by $usr2 [$time2])\n" unless $quiet;
           $export = 0;
         }
       }
-      print "Exporting priority $pri $id as $attr/$reason even though it is out of scope ($attr2/$reason2 by $usr2 [$time2])\n" unless $fromcgi or $reason2 eq 'gfv' or $export == 0;
+      print "Exporting priority $pri $id as $attr/$reason even though it is out of scope ($attr2/$reason2 by $usr2 [$time2])\n" unless $quiet or $reason2 eq 'gfv' or $export == 0;
     }
     else
     {
-      print "Not exporting $id as $attr/$reason; it is out of scope ($attr2/$reason2)\n" unless $fromcgi;
+      print "Not exporting $id as $attr/$reason; it is out of scope ($attr2/$reason2)\n" unless $quiet;
       $export = 0;
     }
   }
@@ -7199,8 +7199,8 @@ sub UpdateInheritanceRights
 
 sub AutoSubmitInheritances
 {
-  my $self    = shift;
-  my $fromcgi = shift;
+  my $self  = shift;
+  my $quiet = shift;
 
   my $sql = 'SELECT id,gid FROM inherit WHERE del=0';
   my $ref = $self->SelectAll($sql);
@@ -7215,7 +7215,7 @@ sub AutoSubmitInheritances
     if ($reason eq 'bib' || $reason eq 'gfv' || $status == 5)
     {
       my $rights = "$attr/$reason";
-      print "Submitting inheritance for $id ($rights)\n" unless $fromcgi;
+      print "Submitting inheritance for $id ($rights)\n" unless $quiet;
       $self->SubmitInheritance($id);
     }
   }
