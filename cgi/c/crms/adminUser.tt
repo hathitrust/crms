@@ -57,7 +57,7 @@
     [% IF sys != 'crmsworld' %]
       <th>RCPC<br/>Reviewer</th>
     [% END %]
-    <th>Reviewer</th><th>Advanced</th><th>Expert</th><th>Ext.&nbsp;Admin</th>
+    <th>Reviewer</th><th>Advanced</th><th>Expert</th><th>External<br/>Admin</th>
     <th>Admin</th><th>Super<br/>Admin</th><th>Note</th><th>Projects</th>
     <th>IP Address</th><th>Commitment[% IF crms.IsUserAdmin() %]<br/>(Progress)[% END %]</th>
     <th>Change&nbsp;To</th>
