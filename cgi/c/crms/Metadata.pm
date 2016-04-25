@@ -327,6 +327,28 @@ sub pubDate
   return $field;
 }
 
+sub formatPubDate
+{
+  my $self  = shift;
+
+  my $date1 = $self->pubDate(0);
+  my $date2 = $self->pubDate(1);
+  my $type = $self->dateType();
+  my $cDate = $self->copyrightDate();
+  my $date = $cDate;
+  $date2 = undef if $type eq 'e';
+  if (defined $date1)
+  {
+    if ($type eq 'i' || $type eq 'k' || $type eq 'm' ||
+        $type eq 'c' || $type eq 'd' || $type eq 'u')
+    {
+      $date = "$date1-$date2" if defined $date2 and $date2 > $date1;
+      $date = $date1. '-' if !defined $date2 or $date2 eq '9999';
+    }
+  }
+  return $date;
+}
+
 sub language
 {
   my $self = shift;
@@ -361,6 +383,7 @@ sub enumchron
       }
     }
   };
+  $data = undef unless $data;
   $self->SetError('enumchron query for ' . $self->id . " failed: $@") if $@;
   return $data;
 }
