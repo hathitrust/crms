@@ -33,7 +33,7 @@
       alert('Problem loading chart: '+e);
     }
 	}
-// -->
+-->
 </script>
 
 <table class="dashboardTable">
@@ -42,7 +42,7 @@
       <img src="[% crms.GetSystemVar('logo') %]" width="455" height="80" alt="CRMS Logo"/>
     </td>
     <td class="dashboardLogo"><h1>Performance Dashboard</h1></td>
-    <td class="dashboardLogo">>
+    <td class="dashboardLogo">
       <img src="/c/crms/IMLSLogo.png" width="330" height="150" alt="IMLS Logo"/>
     </td>
   </tr>
@@ -54,7 +54,7 @@
     <td colspan="2"><div id="chart1" class="dashboardWide"></div></td>
   </tr>
   <tr>
-    <td colspan="2"><h4>Volumes in Candidates (estimated)</h4></td>
+    <td colspan="2"><h4>Volumes in Candidates</h4></td>
     <td colspan="2"><h4>Number of Exported Determinations</h4></td>
   </tr>
   <tr>
@@ -64,14 +64,14 @@
     <td><div id="chart5" class="dashboardNarrow"></div></td>
   </tr>
   <tr>
-    <td><h4>Exported Determinations by Namespace</h4></td>
-    <td><h4>Breakdown of All Determinations</h4></td>
+    <td><h4>Determinations by Namespace</h4></td>
+    <td><h4>All Rights Determinations</h4></td>
     <td><h4>[% IF crms.get('sys') == 'crmsworld' %]
-      Breakdown of Determinations by Country of Publication
+      Determinations by Country of Publication
       [% ELSE %]
-      Breakdown of Volumes Filtered from Candidates
+      Volumes Filtered from Candidates
       [% END %]</h4></td>
-    <td><h4>Breakdown of Reviews by Institution</h4></td>
+    <td><h4>Reviews by Institution</h4></td>
   </tr>
 </table>
 
