@@ -44,6 +44,7 @@ if ($type eq 'graph')
     my @users = $cgi->param('user');
     $data = Graph::CreateReviewerGraph($crms, $type2, $start, $end, @users);
   }
+  elsif ($c == 11) { $data = Graph::CreateProgressGraph($crms); }
 }
 else
 {

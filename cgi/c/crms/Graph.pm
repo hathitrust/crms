@@ -385,6 +385,41 @@ sub CreateReviewerGraph
   return \%data;
 }
 
+sub CreateProgressGraph
+{
+  my $self  = shift;
+
+  my $sql = 'SELECT COUNT(*) FROM exportdata WHERE src="candidates" AND DATE(time)>="2016-04-01"';
+  my $val = $self->SimpleSqlGet($sql);
+  my $fmt = '<div style="text-align:center"><span style="font-size:25px;color:black">{y}</span><br/><span style="font-size:12px;color:silver">determinations</span></div>';
+  my %data = ('chart'=>{'type'=>'solidgauge'},
+              'title'=>{'text'=>'Progress Toward Finishing Candidates'},
+              'pane'=>{'center'=>['50%','85%'],
+                       'size'=>'120%',
+                       'startAngle'=>'-90',
+                       'endAngle'=>'90',
+                       'background'=>{'backgroundColor'=>'#EEE',
+                                      'innerRadius'=>'60%',
+                                      'outerRadius'=>'100%',
+                                      'shape'=>'arc'}},
+              'yAxis'=>{'stops'=>[[0.1, '#DF5353'],[0.5, '#DDDF0D'],[0.9, '#55BF3B']],
+                        'min'=>0,
+                        'max'=>18000,
+                        'lineWidth'=>1,
+                        'minorTickInterval'=>undef,
+                        'tickInterval'=>1500,
+                        'tickWidth'=>1,
+                        'title'=>{'y'=>-70},
+                        'labels'=>{'y'=>16}},
+              'plotOptions'=>{'solidgauge'=>{'dataLabels'=>{'y'=>5,'borderWidth'=>0,'useHTML'=>JSON::XS::true}}},
+              'credits'=>{'enabled'=>JSON::XS::false},
+              'series'=>[{'name'=>'Determinations',
+                          'data'=>[int $val],
+                          'dataLabels'=>{'format'=>$fmt},
+                          }]);
+  return \%data;
+}
+
 sub PickColors
 {
   my $count   = shift;

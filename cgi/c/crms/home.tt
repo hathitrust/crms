@@ -1,5 +1,9 @@
 [% INCLUDE header.tt %]
 
+<script type="text/javascript" src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
+<script type="text/javascript" src="https://code.highcharts.com/highcharts.js"></script>
+<script type="text/javascript" src="https://code.highcharts.com/highcharts-more.js"></script>
+<script type="text/javascript" src="https://code.highcharts.com/modules/solid-gauge.js"></script>
 <script type="text/javascript">
 <!--
 function CheckAll(box,formid)
@@ -9,6 +13,22 @@ function CheckAll(box,formid)
 	{
 	  aa.elements[i].checked = box.checked;
 	}
+}
+
+window.onload = function(e)
+{
+  var progress = document.getElementById('progress');
+  if (progress)
+  {
+    try
+    {
+      loadChart(progress, "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=11') %]");
+    }
+    catch (e)
+    {
+      alert('Problem loading chart: '+e);
+    }
+  }
 }
 -->
 </script>
@@ -32,6 +52,9 @@ function CheckAll(box,formid)
   [% CALL crms.UnlockItem(cgi.param('unlock')) %]
 [% END %]
 
+[% IF crms.Sys() == 'crmsworld' %]
+<div id="progress" style="width:450px;float:right;margin-right:240px;"></div>
+[% END %]
 <table class="mainnav">
 [% menus = crms.Menus() %]
 [% i = 0 %]
@@ -44,9 +67,18 @@ function CheckAll(box,formid)
     [% j = i+1 %]
     [% IF j < of %]
       [% class2 = (menus.$j.2)? 'class="' _ menus.$j.2 _ '"':'' %]
-      <tr><th><span $class1>[% menus.$i.1 %]</span></th><th><span $class2>[% menus.$j.1 %]</span></th></tr>
+      <tr>
+        <th id="[% menus.$i.1 %]" scope="col">
+          <span $class1>[% menus.$i.1 %]</span>
+        </th>
+        <th id="[% menus.$j.1 %]" scope="col">
+          <span $class2>[% menus.$j.1 %]</span>
+        </th>
+      </tr>
     [% ELSE %]
-      <tr><th colspan='2'><span $class1>[% menus.$i.1 %]</span></th></tr>
+      <tr><th colspan='2' id="[% menus.$i.1 %]" scope="col">
+        <span $class1>[% menus.$i.1 %]</span>
+      </th></tr>
     [% END %]
   [% END %]
   [% colspan = '' %]
@@ -54,7 +86,7 @@ function CheckAll(box,formid)
     [% IF j >= of %][% colspan = 'colspan="2"' %][% END %]
     <tr>
   [% END %]
-    <td $colspan>
+    <td $colspan headers="[% menus.$i.1 %]">
     [% items = crms.MenuItems(id) %]
     [% FOREACH item IN items %]
       [% target = (item.2)? ' target="' _ item.2 _ '"':'' %]
@@ -69,6 +101,7 @@ function CheckAll(box,formid)
   [% i = i + 1 %]
 [% END %]
 </table>
+
 
 [% locked = crms.GetLockedItems(user) %]
 [% IF locked.size %]
