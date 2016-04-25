@@ -2856,24 +2856,15 @@ sub GetVolumesRefWide
   return $data;
 }
 
-sub GetReviewsCount
+sub GetReviewCount
 {
-  my $self           = shift;
-  my $page           = shift;
-  my $search1        = shift;
-  my $search1value   = shift;
-  my $op1            = shift;
-  my $search2        = shift;
-  my $search2value   = shift;
-  my $op2            = shift;
-  my $search3        = shift;
-  my $search3value   = shift;
-  my $startDate      = shift;
-  my $endDate        = shift;
-  my $stype          = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $hist = shift;
 
-  my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQL($stype, $page, undef, 'ASC', $search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $startDate, $endDate, $stype);
-  return $totalReviews;
+  my $table = ($hist)? 'historicalreviews':'reviews';
+  my $sql = 'SELECT COUNT(*) FROM '. $table. ' WHERE id=?';
+  return $self->SimpleSqlGet($sql, $id);
 }
 
 sub GetQueueRef

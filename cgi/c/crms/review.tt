@@ -271,7 +271,7 @@
             Not in queue. Please cancel; you will get an error if you submit.
           [% END %]
         </span></td></tr>
-        [% totalReviews = crms.GetReviewsCount('adminHistoricalReviews', 'Identifier', barcode) %]
+        [% totalReviews = crms.GetReviewCount(barcode, 1) %]
         [% IF totalReviews > 0 %]
           <tr><td><a class="smallishText"
                      href="[% crms.Sysify('?p=adminHistoricalReviews;search1=Identifier;search1value=' _ barcode) %]"
@@ -284,7 +284,7 @@
             </span>
           </td></tr>
         [% END %]
-        [% totalReviews = crms.GetReviewsCount('adminReviews', 'Identifier', barcode) %]
+        [% totalReviews = crms.GetReviewCount(barcode) %]
         [% IF totalReviews > 0 %]
           <tr><td><a class="smallishText"
                      href="[% crms.Sysify('?p=adminReviews;search1=Identifier;search1value=' _ barcode) %]"
