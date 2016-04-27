@@ -437,16 +437,6 @@ sub ProcessReviews
     $stati{$status}++;
   }
   $self->SetSystemStatus($stat, $msg);
-  if (!$quiet)
-  {
-    my $p1 = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE priority=1.0 AND status>0 AND status<9');
-    if ($p1)
-    {
-      my $pall = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE status>0 AND status<9');
-      printf "P1 mix is %.1f%% ($p1/$pall)\n", 100.0 * $p1 / $pall;
-    }
-  }
-  # FIXME: need to do a report on old locks that need to be manually cleared.
   $sql = 'INSERT INTO processstatus VALUES ()';
   $self->PrepareSubmitSql($sql);
   my ($s2,$s3,$s4,$s8) = ($stati{2},$stati{3},$stati{4},$stati{8});
@@ -693,7 +683,7 @@ sub CanExportVolume
   if (!$cm->HasCorrectRights($attr2, $reason2, $attr, $reason))
   {
     # But, we clobber OOS if any of the following conditions hold:
-    # 1. If the volume is pdus/gfv (which per rrotter in Core Services never overrides pdus/bib).
+    # 1. If the volume is pdus/gfv (which per rrotter in Core Services never overrides pd/bib).
     # 2. Priority 3 or higher.
     # 3. Previous rights were by user crms*.
     # 4. The determination is pd* (unless a pdus would clobber pd/bib).
