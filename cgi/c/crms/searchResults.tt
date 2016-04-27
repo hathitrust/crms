@@ -64,7 +64,7 @@ function CheckAll(box,formid)
   [% reviews = ref.rows %]
   <a id="results"></a>
 
-  <p><b>Found $Total review[% (Total==1)? "":"s"%] for $TotalVolumes volume[% (TotalVolumes==1)? "":"s"%], page $pagenum of $of</b></p>
+  <strong>Found $Total review[% (Total==1)? "":"s"%] for $TotalVolumes volume[% (TotalVolumes==1)? "":"s"%], page $pagenum of $of</strong><br/>
 
   [% IF NOT offset %] [% offset = 0 %] [% END %]
   [% IF offset > 0 %] [% next = offset + pagesize %]
@@ -115,10 +115,11 @@ function CheckAll(box,formid)
              var vis = (this.checked)? 'table-cell':'none';
              for (var row=0; row<rows.length;row++) {
                var cels = rows[row].getElementsByTagName('td');
-               if (cels.length > 1) cels[1].style.display=vis;
+               if (cels.length > 1) { cels[1].style.display=vis; cels[2].style.display=vis; }
              }
-             document.getElementById('sysidth').style.display = vis;"/>
-             <label id="cblabel" for="sysIDCB">&nbsp;&nbsp;Show&nbsp;System&nbsp;ID</label>
+             document.getElementById('sysidth').style.display = vis;
+             document.getElementById('srcth').style.display = vis;"/>
+             <label id="cblabel" for="sysIDCB">&nbsp;&nbsp;Show&nbsp;Additional&nbsp;Fields</label>
   [% END %]
 
   [% color_white    = '#FFFFFF' %]
@@ -157,6 +158,7 @@ function CheckAll(box,formid)
     <th>ID</th>
     [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
       <th class="nowrap" id="sysidth" style="display:[% (showSysID)? 'table-cell':'none' %];">System&nbsp;ID</th>
+      <th class="nowrap" id="srcth" style="display:[% (showSysID)? 'table-cell':'none' %];">Source</th>
     [% END %]
     <th>Title</th>
     <th>Author</th>
@@ -217,6 +219,9 @@ function CheckAll(box,formid)
         [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
           <td style="display:[% (showSysID)? 'table-cell':'none' %];">
             <a href="[% crms.LinkToMirlynDetails(review.id) %]" target="_blank">$review.sysid</a>
+          </td>
+          <td style="display:[% (showSysID)? 'table-cell':'none' %];">
+            <a href="[% crms.LinkToMirlynDetails(review.id) %]" target="_blank">$review.src</a>
           </td>
         [% END %]
         <td>
@@ -286,7 +291,7 @@ function CheckAll(box,formid)
     </form>
   [% END %]
 
-  <p><b>Found $Total review[% (Total==1)? "":"s"%] for $TotalVolumes volume[% (TotalVolumes==1)? "":"s"%], page $pagenum of $of</b></p>
+  <strong>Found $Total review[% (Total==1)? "":"s"%] for $TotalVolumes volume[% (TotalVolumes==1)? "":"s"%], page $pagenum of $of</strong><br/>
   [% IF doPrev %]
   <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">
   [% ELSE %]
@@ -315,7 +320,7 @@ function CheckAll(box,formid)
     [% IF max > of %][% max = of %][% END %]
     [% FOREACH pg IN [min .. max] %]
       [% IF pg == pagenum %]
-        <b>[% pg %]</b> ||
+        <strong>[% pg %]</strong> ||
       [% ELSE %]
         [% off = (pg - 1) * pagesize %]
         <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$off#results" %]">[% pg %]</a> ||

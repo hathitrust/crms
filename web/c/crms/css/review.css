@@ -636,3 +636,6 @@ By Keenan Payne
 a.close:hover { background: #00d9ff; text-decoration:none;}
 a.close {color:white; text-decoration:none;}
 
+@keyframes fadetogrey {
+    100% {background-color:#e2e2e2;}
+}

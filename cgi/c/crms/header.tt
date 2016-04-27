@@ -20,7 +20,8 @@ var gSys = '[% crms.Sys() %]';
 -->
     </script>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
-  [% reviewType = (page == 'review' OR page == 'corrections' OR page == 'oneoff' OR page == 'inserts') %]
+  [% reviewType = (page == 'review' OR page == 'corrections' OR page == 'oneoff'
+                   OR page == 'inserts' OR page == 'cri') %]
   [% IF reviewType %]
     <script type="text/javascript" src="/c/crms/js/review.js"></script>
   [% END %]

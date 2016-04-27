@@ -22,7 +22,12 @@ my $crms = CRMS->new(
         dev     => $DLPS_DEV,
         pdb     => $cgi->param('pdb'),
         );
-
+my $cri;
+if ($page eq 'cri' || $page eq 'criData' || $page eq 'confirmCRI')
+{
+  use CRI;
+  $cri = CRI->new('crms' => $crms);
+}
 if ($page eq 'Logout')
 {
   # Remove all locks for this user.
@@ -160,7 +165,7 @@ elsif ($page eq 'confirmCorrection')
     else
     {
       $cgi->delete_all();
-      $cgi->param('p', 'corrections' );
+      $cgi->param('p', 'corrections');
     }
   }
   if ($editing && !$err)
@@ -169,33 +174,60 @@ elsif ($page eq 'confirmCorrection')
     print '<script type="text/javascript">window.close();</script>';
   }
 }
+elsif ($page eq 'confirmCRI')
+{
+  my $editing = $cgi->param('editing');
+  my $id = $cgi->param('htid');
+  my $err;
+  if ($cgi->param('submit') eq 'Cancel')
+  {
+    $cri->UnlockItem($id, $user);
+    $cgi->delete_all();
+  }
+  else
+  {
+    my $stat = $crms->GetSystemStatus();
+    my $status = $stat->[1];
+    $err = "The CRMS is not currently accepting CRI (status '$status'). Please Cancel." if $stat->[1] ne 'normal';
+    if (!defined $err)
+    {
+      if ($cgi->param('submit') eq 'Submit')
+      {
+        $err = $cri->ConfirmCRI($id, $user, $cgi);
+      }
+      elsif ($cgi->param('submit') eq 'Reject')
+      {
+        $err = $cri->RejectCRI($id, $user, $cgi);
+      }
+    }
+    if ($err)
+    {
+      $cgi->param('errorMsg', $err);
+      $crms->ClearErrors();
+      $cgi->param('p', 'cri');
+    }
+    else
+    {
+      $cri->UnlockItem($id, $user);
+      $cgi->delete_all();
+      $cgi->param('p', 'cri');
+    }
+  }
+  if ($editing && !$err)
+  {
+    print "Content-type: text/html\n\n";
+    print '<script type="text/javascript">window.close();</script>';
+    exit(0);
+  }
+}
 
 $cgi->param('sys', $sys) if $sys and $sys ne 'crms';
-# FIXME: stick these in a Downloads.pm module.
+
 if ($cgi->param('download'))
 {
   use Downloads;
   exit if 1 == Downloads::Download($crms, $cgi);
 }
-
-## config options for TT
-my $config =
-{
-    INCLUDE_PATH => '.',
-    INTERPOLATE  => 1,     ## expand "$var" in plain text
-    POST_CHOMP   => 1,     ## cleanup whitespace
-    EVAL_PERL    => 1,     ## evaluate Perl code blocks
-    ENCODING     => 'UTF-8'
-};
-
-my $tt   = Template->new($config);
-my $vars = {
-    title     => $crms->System(),
-    crms      => $crms,
-    cgi       => $cgi,
-    user      => $user,
-    yesterday => POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time-86400))
-};
 
 ## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
 ## the default is home.tt in case a tt is not found
@@ -228,6 +260,26 @@ if (length $page)
 }
 my $input = $page . '.tt';
 $input = 'home.tt' unless -f $input;
+
+## config options for TT
+my $config =
+{
+    INCLUDE_PATH => '.',
+    INTERPOLATE  => 1,     ## expand "$var" in plain text
+    POST_CHOMP   => 1,     ## cleanup whitespace
+    EVAL_PERL    => 1,     ## evaluate Perl code blocks
+    ENCODING     => 'UTF-8'
+};
+
+my $tt   = Template->new($config);
+my $vars = {
+    title     => $crms->System(),
+    crms      => $crms,
+    cgi       => $cgi,
+    user      => $user,
+    yesterday => POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time-86400))
+};
+$vars->{'cri'} = $cri if defined $cri;
 
 print $cgi->header(-charset => 'utf-8', 'cache-control' => 'private');
 if (!$tt->process($input, $vars))

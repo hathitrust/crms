@@ -941,55 +941,63 @@ sub AddItemToCandidates
   my $self   = shift;
   my $id     = shift;
   my $time   = shift;
-  my $record = shift;
+  my $record = shift || $self->GetMetadata($id);
   my $noop   = shift;
+  my $quiet  = shift;
 
-  $record = $self->GetMetadata($id) unless defined $record;
   return unless defined $record;
-  # Are there duplicates? Filter the oldest duplicates and add the newest to candidates.
+  # Are there duplicates w/o enumchron? Filter everything but this volume
   if (!$record->countEnumchron)
   {
     my $sysid = $record->sysid;
     my $rows = $self->VolumeIDsQuery($sysid, $record);
-    if (scalar @{$rows} > 1)
+    foreach my $line (@{$rows})
     {
-      my %map;
-      foreach my $line (@{$rows})
-      {
-        my ($id2,$chron2,$rights2) = split '__', $line;
-        # Ignore anything that has been thru the system.
-        next if 0 < $self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id2);
-        my ($ns,$n) = split m/\./, $id2, 2;
-        my $sql2 = 'SELECT time FROM rights_current WHERE namespace=? AND id=?';
-        my $time2 = $self->SimpleSqlGetSDR($sql2, $ns, $n);
-        $map{$id2} = $time2;
-        # FIXME: check current rights on $id2 and make sure it's in scope:
-        # a single volume on the record might have */con type rights, and
-        # we'd prefer ic/bib.
-      }
-      my @sorted = sort {$map{$b} cmp $map{$a}} keys %map;
-      $id = shift @sorted;
-      $time = $map{$id};
-      foreach my $id2 (@sorted)
-      {
-        next if $self->IsFiltered($id2, 'duplicate');
-        print "Filter $id2 as duplicate of $id\n";
-        $self->Filter($id2, 'duplicate') unless defined $noop;
-      }
+      my ($id2,$chron2,$rights2) = split '__', $line;
+      next if $id2 eq $id;
+      print "Filter $id2 as duplicate if $id\n" unless $quiet;
+      $self->Filter($id2, 'duplicate') unless $noop;
     }
   }
   if (!$self->IsVolumeInCandidates($id))
   {
-    print "Add $id to candidates \n";
-    if (!defined $noop)
-    {
-      my $date = $record->copyrightDate . '-01-01';
-      my $sql = 'INSERT INTO candidates (id,time,pub_date) VALUES (?,?,?)';
-      $self->PrepareSubmitSql($sql, $id, $time, $date);
-      $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
-      $self->UpdateMetadata($id, 1, $record);
-    }
+    print "Add $id to candidates \n" unless $quiet;
+    my $sql = 'INSERT INTO candidates (id,time) VALUES (?,?)';
+    $self->PrepareSubmitSql($sql, $id, $time) unless $noop;
   }
+  if (defined $self->CheckForCRI($id, $noop, $quiet))
+  {
+    print "Filter $id as CRI\n" unless $quiet;
+    $self->Filter($id, 'cross-record inheritance') unless $noop;
+  }
+  $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) unless $noop;
+  $self->UpdateMetadata($id, 1, $record) unless $noop;
+}
+
+# Returns the gid of the determination inheriting from, or undef if no inheritance.
+sub CheckForCRI
+{
+  my $self  = shift;
+  my $id    = shift;
+  my $noop  = shift;
+  my $quiet = shift;
+
+  my $cri = $self->get('cri');
+  if (!defined $cri)
+  {
+    use CRI;
+    $cri = CRI->new('crms' => $self);
+    $self->set('cri', $cri);
+  }
+  my $gid = $cri->CheckVolume($id);
+  if (defined $gid)
+  {
+    print "Adding CRI for $id ($gid)\n" unless $quiet;
+    my $sql = 'INSERT INTO cri (id,gid) VALUES (?,?)';
+    $self->PrepareSubmitSql($sql, $id, $gid) unless $noop;
+    return $gid;
+  }
+  return undef;
 }
 
 sub Filter
@@ -1814,8 +1822,9 @@ sub ConvertToSearchTerm
   {
     $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold IS NOT NULL)';
   }
-  elsif ($search eq 'Source') { $new_search = 'r.src'; }
+  elsif ($search eq 'Source') { $new_search = 'q.src'; }
   elsif ($search eq 'Project') { $new_search = 'q.project'; }
+  elsif ($search eq 'GID') { $new_search = 'r.gid'; }
   if ($search eq 'Project' && $page eq 'exportData') { $new_search = 'r.project'; }
   return $new_search;
 }
@@ -1878,7 +1887,8 @@ sub CreateSQLForReviews
       $project = ' AND (ISNULL(q.project) OR q.project NOT IN (' . join(',', @allsubs) . '))';
     }
   }
-  my $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,r.category,r.legacy,r.renDate,r.priority,r.swiss,';
+  my $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,'.
+            'r.renNum,r.expert,r.category,r.legacy,r.renDate,r.priority,r.swiss,';
   if ($page eq 'adminReviews')
   {
     $sql .= 'q.status,b.title,b.author,DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
@@ -1902,7 +1912,7 @@ sub CreateSQLForReviews
   {
     my $doB = 'LEFT JOIN bibdata b ON r.id=b.id';
     $doB = '' unless ($search1 . $search2 . $search3 . $order) =~ m/b\./;
-    $sql .= "r.status,r.validated FROM historicalreviews r $doB WHERE r.id IS NOT NULL";
+    $sql .= "r.status,r.validated,q.src FROM historicalreviews r $doB INNER JOIN exportdata q ON r.gid=q.gid WHERE r.id IS NOT NULL";
   }
   elsif ($page eq 'undReviews')
   {
@@ -2675,6 +2685,7 @@ sub GetReviewsRef
         ${$item}{'title'} = $self->SimpleSqlGet('SELECT title FROM bibdata WHERE id=?', $id);
         ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
         ${$item}{'validated'} = $row->[15];
+        ${$item}{'src'} = $row->[16];
       }
       push(@{$return}, $item);
   }
@@ -2706,24 +2717,23 @@ sub GetVolumesRef
     return;
   }
   my $table = 'reviews';
-  my $doQ = '';
-  my $status = 'r.status';
+  my $doQ;
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
+    $doQ = 'INNER JOIN exportdata q ON r.gid=q.gid';
   }
   else
   {
     $doQ = 'INNER JOIN queue q ON r.id=q.id';
-    $status = 'q.status';
   }
   my $return = ();
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-           "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
-           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, b.sysid ':' ') .
+           "r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author" .
+           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, b.sysid, q.src ':' ') .
            (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ', DATE(r.hold) ':' ') .
            "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ " .
            "WHERE r.id='$id' ORDER BY $order $dir";
@@ -2759,7 +2769,8 @@ sub GetVolumesRef
         $pubdate = '?' unless $pubdate;
         ${$item}{'pubdate'} = $pubdate;
         ${$item}{'validated'} = $row->[18];
-        ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
+        ${$item}{'sysid'} = $row->[19];
+        ${$item}{'src'} = $row->[20];
       }
       push(@{$return}, $item);
     }
@@ -2781,16 +2792,15 @@ sub GetVolumesRefWide
   my $dir = $_[2];
 
   my $table ='reviews';
-  my $doQ = '';
-  my $status = 'r.status';
+  my $doQ;
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
+    $doQ = 'INNER JOIN exportdata q ON r.id=q.id';
   }
   else
   {
-    $doQ = 'INNER JOIN queue q ON r.id=q.id';
-    $status = 'q.status';
+    $doQ = 'INNER JOIN queue q ON r.gid=q.gid';
   }
   my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQLForVolumesWide(@_);
   my $ref = undef;
@@ -2805,10 +2815,10 @@ sub GetVolumesRefWide
   {
     my $id = $row->[0];
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-           "r.category, r.legacy, r.renDate, r.priority, r.swiss, $status, b.title, b.author" .
-           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, b.sysid ':' ') .
+           "r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author" .
+           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, b.sysid, q.src ':' ') .
            (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ', DATE(r.hold) ':' ') .
-           "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ " .
+           "FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id " .
            "WHERE r.id='$id' ORDER BY $order $dir";
     #print "$sql<br/>\n";
     my $ref2 = $self->SelectAll($sql);
@@ -2842,7 +2852,8 @@ sub GetVolumesRefWide
         $pubdate = '?' unless $pubdate;
         ${$item}{'pubdate'} = $pubdate;
         ${$item}{'validated'} = $row->[18];
-        ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
+        ${$item}{'sysid'} = $row->[19];
+        ${$item}{'src'} = $row->[20];
       }
       push(@{$return}, $item);
     }
@@ -4882,28 +4893,18 @@ sub FormatPubDate
   my $id     = shift;
   my $record = shift;
 
-  my $date;
   $record = $self->GetMetadata($id) unless defined $record;
-  if (defined $record)
-  {
-    my $date1 = $record->pubDate(0);
-    my $date2 = $record->pubDate(1);
-    my $type = $record->dateType();
-    my $cDate = $record->copyrightDate();
-    $date = $cDate;
-    $date2 = undef if $type eq 'e';
-    if (defined $date1)
-    {
-      if ($type eq 'i' || $type eq 'k' || $type eq 'm' ||
-          $type eq 'c' || $type eq 'd' || $type eq 'u')
-      {
-        $date = "$date1-$date2" if defined $date2 and $date2 > $date1;
-        $date = $date1. '-' if !defined $date2 or $date2 eq '9999';
-      }
-    }
-  }
-  $date = 'unknown' unless defined $date;
-  return $date;
+  return $record->formatPubDate() if defined 'record';
+  return 'unknown';
+}
+
+sub IsDateRange
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $fmt = $self->FormatPubDate($id);
+  return ($fmt =~ m/-/)? 1:0;
 }
 
 sub GetPubCountry
@@ -5702,12 +5703,13 @@ sub CreateSystemReport
     $n = 'n/a';
   }
   $report .= '<tr><th>Last&nbsp;Candidates&nbsp;Update</th><td>' . $n . "</td></tr>";
-  my $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE src!="no meta" AND src!="duplicate"');
+  my $sql = 'SELECT COUNT(*) FROM und WHERE src!="no meta" AND src!="duplicate" AND src!="cross-record inheritance"';
+  my $count = $self->SimpleSqlGet($sql);
   $report .= "<tr><th>Volumes&nbsp;Filtered**</th><td>$count</td></tr>\n";
   if ($count)
   {
-    my $sql = 'SELECT src,COUNT(src) FROM und WHERE src!="no meta"'.
-              ' AND src!="duplicate" GROUP BY src ORDER BY src';
+    $sql = 'SELECT src,COUNT(src) FROM und WHERE src!="no meta"'.
+           ' AND src!="duplicate" AND src!="cross-record inheritance" GROUP BY src ORDER BY src';
     my $ref = $self->SelectAll($sql);
     foreach my $row (@{ $ref})
     {
@@ -5716,18 +5718,19 @@ sub CreateSystemReport
       $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$n&nbsp;(%0.1f%%)</td></tr>\n", 100.0*$n/$count);
     }
   }
-  $count = $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE src="no meta" OR src="duplicate"');
+  $sql = 'SELECT COUNT(*) FROM und WHERE src="no meta" OR src="duplicate" OR src="cross-record inheritance"';
+  $count = $self->SimpleSqlGet($sql);
   $report .= "<tr><th>Volumes&nbsp;Temporarily&nbsp;Filtered**</th><td>$count</td></tr>\n";
   if ($count)
   {
-    my $sql = 'SELECT src,COUNT(src) FROM und WHERE src="no meta"'.
-              ' OR src="duplicate" GROUP BY src ORDER BY src';
+    $sql = 'SELECT src,COUNT(src) FROM und WHERE src="no meta" OR src="duplicate"'.
+           ' OR src="cross-record inheritance" GROUP BY src ORDER BY src';
     my $ref = $self->SelectAll($sql);
     foreach my $row (@{ $ref})
     {
       my $src = $row->[0];
       $n = $row->[1];
-      $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$n</td></tr>\n";
+      $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$n&nbsp;(%0.1f%%)</td></tr>\n", 100.0*$n/$count);
     }
   }
   my $host = $self->Hostname();
@@ -6692,18 +6695,19 @@ sub GetTrackingInfo
             'One-off Queue':'Queue';
     push @stati, "in $q (P$pri, status $status, $n $reviews)";
   }
+  elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM cri WHERE id=? AND status IS NOT NULL', $id))
+  {
+    push @stati, 'CRI-eligible';
+  }
   elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM candidates WHERE id=?', $id))
   {
     push @stati, 'in Candidates';
   }
   my $src = $self->SimpleSqlGet('SELECT src FROM und WHERE id=?', $id);
-  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE id=? AND (src="no meta" OR src="duplicate")', $id))
+  if (defined $src)
   {
-    push @stati, "temporarily filtered ($src)";
-  }
-  elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE id=? AND src!="no meta" AND src!="duplicate"', $id))
-  {
-    push @stati, "filtered ($src)";
+    my %temps = ('no meta' => 1, 'duplicate' => 1, 'cross-record inheritance' => 1);
+    push @stati, sprintf "%sfiltered ($src)", (defined $temps{$src})? 'temporarily ':'';
   }
   if ($self->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE id=?', $id))
   {
@@ -6716,7 +6720,7 @@ sub GetTrackingInfo
     my $exp = $ref->[0]->[4];
     my $status = $ref->[0]->[5];
     $exp = ($exp)? '':' (unexported)';
-    push @stati, "S$status determination$exp $a/$r $t";
+    push @stati, "S$status determination$exp $a/$r $t from $src";
   }
   #else
   {
