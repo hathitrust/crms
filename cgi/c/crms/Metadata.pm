@@ -340,7 +340,8 @@ sub formatPubDate
   if (defined $date1)
   {
     if ($type eq 'i' || $type eq 'k' || $type eq 'm' ||
-        $type eq 'c' || $type eq 'd' || $type eq 'u')
+        $type eq 'c' || $type eq 'd' || $type eq 'u' ||
+        $type eq ' ')
     {
       $date = "$date1-$date2" if defined $date2 and $date2 > $date1;
       $date = $date1. '-' if !defined $date2 or $date2 eq '9999';
