@@ -127,8 +127,6 @@ sub ShouldVolumeBeFiltered
   my $id     = shift;
   my $record = shift;
 
-  $record = $self->{crms}->GetMetadata($id) unless $record;
-  return 'no meta' unless $record;
   my $lang = $record->language;
   my $where = $record->country;
   if ($where eq 'Spain')
