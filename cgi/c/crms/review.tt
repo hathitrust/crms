@@ -114,7 +114,7 @@
           [% IF experts %]
           <a href="mailto:[% experts %]?subject=CRMS%20Feedback">
             <img width="16" height="16" alt="Report error" src="/c/crms/SendIcon.png"/>
-            <b>Can't see scan? Error message?</b>
+            <strong>Can't see scan? Error message?</strong>
           </a>
           [% END %]
         </td></tr>
@@ -193,7 +193,7 @@
           [% viafwarn = crms.VIAFWarning(barcode) %]
           [% IF viafwarn %]
             [% viafwarn = "Warning: possible foreign author: " _ viafwarn %]
-            <tr><td colspan="2"><span class="red"><b>$viafwarn</b></span></td></tr>
+            <tr><td colspan="2"><span class="red"><strong>$viafwarn</strong></span></td></tr>
           [% END %]
         [% END %]
       </table>
@@ -236,7 +236,7 @@
           </tr>
           <tr>
             <td>
-              <span style="font-size:1.1em;color:red;">Volume has been corrected - <b>do not</b> submit feedback.</span>
+              <span style="font-size:1.1em;color:red;">Volume has been corrected - <strong>do not</strong> submit feedback.</span>
             </td>
           </tr>
         </table>
@@ -290,14 +290,14 @@
       [% END %]
       [% IF !ren %]
       <table class="reviewGrey">
-        <tr><th style="width:55%">Date calculator</th>
+        <tr><th style="width:55%"><label for="renewalField2">Date calculator</label></th>
         <td>
         <input id="renewalField2" title="[% label %]" type="text" name="renDate2"
                size="6" style="margin-left:0;"
                onblur="javascript:PredictDate('[% barcode %]');"/>
         </td></tr>
         <tr><th style="width:55%">Public Domain in:</th>
-          <td><b><span class="red" id=renewalSpan2></span></b></td>
+          <td><strong><span class="red" id=renewalSpan2></span></strong></td>
         </tr>
       </table>
       [% END %]
