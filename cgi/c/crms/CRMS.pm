@@ -6190,7 +6190,6 @@ sub CountHistoricalReviews
   return $self->SimpleSqlGet($sql, $id);
 }
 
-# FIXME: this should be sensitive to new year reviews, but how?
 sub IsReviewCorrect
 {
   my $self = shift;
@@ -6202,8 +6201,10 @@ sub IsReviewCorrect
   my $sql = 'SELECT COUNT(id) FROM historicalreviews WHERE id=? AND swiss=1';
   my $swiss = $self->SimpleSqlGet($sql, $id);
   # Get the review
-  $sql = 'SELECT attr,reason,renNum,renDate,expert,status,time FROM historicalreviews' .
-         " WHERE id=? AND user=? AND time LIKE '$time%'";
+  $sql = 'SELECT r.attr,r.reason,r.renNum,r.renDate,u.expert,e.status,r.time,r.category,r.gid FROM historicalreviews r'.
+         ' INNER JOIN exportdata e ON r.gid=e.gid'.
+         ' INNER JOIN users u ON r.user=u.id'.
+         " WHERE r.id=? AND r.user=? AND r.time LIKE '$time%'";
   my $r = $self->SelectAll($sql, $id, $user);
   my $row = $r->[0];
   my $attr    = $row->[0];
@@ -6213,12 +6214,17 @@ sub IsReviewCorrect
   my $expert  = $row->[4];
   my $status  = $row->[5];
   my $time2   = $row->[6];
+  my $cat     = $row->[7];
+  my $gid     = $row->[8];
   #print "$attr, $reason, $renNum, $renDate, $expert, $swiss, $status\n";
-  # A non-expert with status 7/8 is protected rather like Swiss.
-  return 1 if ($status == 7 && !$expert);
-  return 1 if ($status == 8 && !$expert);
+  # A non-expert with status 6/7/8 is protected rather like Swiss.
+  return 1 if ($status >=6 && $status <= 8 && !$expert);
+  # If there is a newer newyear determination, that also offers blanket protection.
+  my $sql = 'SELECT COUNT(id) FROM exportdata WHERE id=? AND src="newyear" AND time>?';
+  my $newyear = $self->SimpleSqlGet($sql, $id, $time);
+  return 1 if $newyear;
   # Get the most recent non-autocrms expert review.
-  $sql = 'SELECT attr,reason,renNum,renDate,user,swiss FROM historicalreviews' .
+  $sql = 'SELECT attr,reason,renNum,renDate,user,swiss,gid FROM historicalreviews' .
          ' WHERE id=? AND expert>0 AND time>? ORDER BY time DESC';
   $r = $self->SelectAll($sql, $id, $time2);
   return 1 unless scalar @{$r};
@@ -6229,6 +6235,9 @@ sub IsReviewCorrect
   my $erenDate = $row->[3];
   my $euser    = $row->[4];
   my $eswiss   = $row->[5];
+  my $egid     = $row->[6];
+  # Missing/Wrong record category, if present, offers protection from re-reviews (different gid)
+  return 1 if $gid ne $egid and ($cat eq 'Missing' or $cat eq 'Wrong Record');
   #print "$eattr, $ereason, $erenNum, $erenDate, $euser, $eswiss\n";
   if ($attr != $eattr)
   {
