@@ -97,22 +97,6 @@
             &nbsp;&nbsp;&nbsp;&nbsp;<a href="crms?p=Logout;sys=$sys">Logout</a>
           </td>
         </tr>
-        [% IF 0 #crms.WhereAmI() != 'Training' %]
-        <tr>
-            [% prog = crms.GetUserProgress(user) %]
-            [% IF prog %]
-              <td><b>[% FILTER format('%.1f') %][% (prog * 100.0) %][% END %]%</b></td>
-              <td>
-                [% IF prog > 1.0 %][% prog = 1.0 %][% END %]
-                <div id="ProgressBar[% (crms.sys() == 'crmsworld')? 'Red':'' %]">
-                  <div id="ProgressBarInner"
-                       style="width:[% (prog * 100.0) _ '%' %];">
-                  </div>
-                </div>
-              </td>
-            [% END %]
-        </tr>
-        [% END %]
         <tr>
           <td colspan="2">
             <select title="Select Help Documentation" class="review"
