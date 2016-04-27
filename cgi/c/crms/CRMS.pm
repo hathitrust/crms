@@ -781,7 +781,6 @@ sub RemoveFromCandidates
 sub LoadNewItemsInCandidates
 {
   my $self   = shift;
-  my $skipnm = shift;
   my $start  = shift;
   my $end    = shift;
 
@@ -789,19 +788,6 @@ sub LoadNewItemsInCandidates
   $start = $self->SimpleSqlGet('SELECT max(time) FROM candidatesrecord') unless $start;
   my $start_size = $self->GetCandidatesSize();
   print "Candidates size is $start_size, last load time was $start\n";
-  if (!$skipnm)
-  {
-    my $sql = 'SELECT id FROM und WHERE src="no meta"';
-    my $ref = $self->SelectAll($sql);
-    my $n = scalar @{$ref};
-    if ($n)
-    {
-      print "Checking $n possible no-meta additions to candidates\n";
-      $self->CheckAndLoadItemIntoCandidates($_->[0]) for @{$ref};
-      $n = $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE src="no meta"');
-      print "Number of no-meta volumes now $n.\n";
-    }
-  }
   my $endclause = ($end)? " AND time<='$end' ":' ';
   my $sql = 'SELECT namespace,id FROM rights_current WHERE time>?' . $endclause . 'ORDER BY time ASC';
   my $ref = $self->SelectAllSDR($sql, $start);
