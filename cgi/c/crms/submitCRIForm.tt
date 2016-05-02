@@ -50,13 +50,28 @@ function RowSelect(me, id)
   document.getElementById('seluser').value = id;
   document.getElementById('undCheckbox').checked = false;
   document.getElementById('predictedRightsInput').value = '';
-  document.getElementById('rightsSpan').innerHTML = '';
+  //document.getElementById('rightsSpan').innerHTML = '';
   document.getElementById('rightsSpanExtra').innerHTML = '';
-  UpdateRights(id);
+  UpdateRights();
 }
 
 function UpdateRights()
 {
+  if (!gSelID) { return; }
+  var span = document.getElementById('rightsSpan');
+  var spanex = document.getElementById('rightsSpanExtra');
+  var und = document.getElementById('undCheckbox');
+  var undrow = document.getElementById('undRow');
+  var re = /^und/;
+  if (re.test(span.innerHTML))
+  {
+    spanex.innerHTML = '(no prediction)';
+    und.disabled = true;
+    undrow.style.display = 'none';
+    return;
+  }
+  und.disabled = false;
+  undrow.style.display = 'table-row';
   var el = document.getElementById('rightsSpanExtra');
   el.innerHTML = '';
   var img = document.getElementById("predictionLoader");
@@ -71,12 +86,12 @@ function UpdateRights()
   {
     actualPub = actualPubField.value;
   }
-  if (actualPub == null)
+  if (actualPub != null && actualPub != '')
   {
-    actualPubField = document.getElementById('pubDateSpan');
-    if (actualPubField)
+    if (document.getElementById(gSelID+'PubDate').textContent.length)
     {
-      actualPub = actualPubField.value;
+      year = actualPub;
+      actualPub = null;
     }
   }
   var req = new XMLHttpRequest();
@@ -85,13 +100,11 @@ function UpdateRights()
     if (req.readyState == 4 && req.status == 200)
     {
       if (img) { img.style.display = 'none'; }
-      el = document.getElementById('rightsSpan');
-      if (el)
+      if (span)
       {
-        el.innerHTML = req.responseText;
+        span.innerHTML = req.responseText;
         var rightsInput = document.getElementById('predictedRightsInput');
         rightsInput.value = req.responseText;
-        el = document.getElementById('rightsSpanExtra');
         var warning = '';
         if (req.responseText)
         {
@@ -101,15 +114,14 @@ function UpdateRights()
         {
           warning = "Can't Predict";
         }
-        el.innerHTML = warning;
+        spanex.innerHTML = warning;
       }
     }
   };
   var url = "/cgi/c/crms/predictRights?sys=crmsworld;id=[% htid %]" +
             ";year=" + year + ";ispub=" + isPub +
             ";crown=" + isCrown + ";readable=1";
-  if (actualPub) { url += ";pub=" + actualPub; }
-  //alert(url);
+  if (actualPub != null) { url += ";pub=" + actualPub; }
   req.open("GET", url, true);
   req.send(null);
 }
@@ -186,7 +198,7 @@ function UpdateRights()
            src="/c/crms/ajax-loader.gif" alt="loading..." style="display:none;"/>
     </td>
   </tr>
-  <tr>
+  <tr id="undRow">
     <td colspan="2">
       <label for="undCheckbox"><strong>UND/NFI: </strong>
       <input type="checkbox" name="und" id="undCheckbox"/>
