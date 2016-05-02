@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.2.1';
+  return '5.2.2';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -6690,9 +6690,13 @@ sub GetTrackingInfo
             'One-off Queue':'Queue';
     push @stati, "in $q (P$pri, status $status, $n $reviews)";
   }
-  elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM cri WHERE id=? AND status IS NOT NULL', $id))
+  elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM cri WHERE id=? AND exported=0', $id))
   {
-    push @stati, 'CRI-eligible';
+    my $stat = $self->SimpleSqlGet('SELECT status FROM cri WHERE id=?', $id);
+    my %stats = (0 => 'rejected', 1 => 'submitted', 2 => 'UND');
+    my $msg = 'unreviewed';
+    $msg = $stats{$stat} if defined $stat;
+    push @stati, "CRI-eligible ($msg)";
   }
   elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM candidates WHERE id=?', $id))
   {
