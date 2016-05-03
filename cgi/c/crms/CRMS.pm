@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.2.2';
+  return '5.2.3';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -810,13 +810,11 @@ sub LoadNewItemsInCandidates
 # it from either table if it is already in one and no longer qualifies.
 # If necessary, updates the system table with a new sysid.
 # If noop is defined, does nothing that would actually alter the table.
-# If purge is defined, does not abort if volume is already in candidates.
 sub CheckAndLoadItemIntoCandidates
 {
-  my $self  = shift;
-  my $id    = shift;
-  my $noop  = shift;
-  my $purge = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $noop = shift;
 
   my $incand = $self->SimpleSqlGet('SELECT id FROM candidates WHERE id=?', $id);
   my $inund  = $self->SimpleSqlGet('SELECT src FROM und WHERE id=?', $id);
@@ -881,7 +879,7 @@ sub CheckAndLoadItemIntoCandidates
     print "Skip $id -- already inheriting\n";
     return;
   }
-  if (defined $incand && !$purge)
+  if (defined $incand)
   {
     print "Skip $id -- already in candidates\n";
     $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) if defined $inund and !defined $noop;
