@@ -7611,9 +7611,10 @@ sub ExportSrcToEnglish
 
   my %srces = ('adminui'  => 'Added to Queue',
                'rereport' => 'Rereports',
-               'newyear'  => 'Expired ADD');
+               'newyear'  => 'Expired ADD',
+               'cri'      => 'Cross-record Inheritance');
   my $eng = $srces{$src};
-  $eng = ucfirst $src unless $eng;
+  $eng = ucfirst $src unless defined $eng;
   return $eng;
 }
 
