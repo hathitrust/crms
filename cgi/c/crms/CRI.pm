@@ -486,20 +486,21 @@ sub ProcessCRI
     my $id = $row->[0];
     my $status = $row->[1];
     my $newgid;
-    if ($status == 1)
+    if ($status == 1 || $status == 2)
     {
       $sql = 'SELECT gid FROM exportdata WHERE id=? AND src="cri" ORDER BY time DESC LIMIT 1';
       $newgid = $crms->SimpleSqlGet($sql, $id);
+      print "Processing status $status CRI with gid $newgid\n";
     }
-    elsif ($status == 0 || $status == 2)
+    elsif ($status == 0)
     {
-      $crms->CheckAndLoadItemIntoCandidates($id, undef, 0, 0, 1);
+      print "Checking status $status CRI for candidacy\n";
+      $crms->CheckAndLoadItemIntoCandidates($id);
     }
     $sql = 'UPDATE cri SET exported=1,newgid=? WHERE id=?';
     $crms->PrepareSubmitSql($sql, $newgid, $id);
   }
 }
-
 
 sub LikeQuery
 {
