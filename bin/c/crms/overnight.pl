@@ -15,7 +15,7 @@ use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 
 my $usage = <<END;
-USAGE: $0 [-cehlmnpqt] [-x SYS] [start_date [end_date]]
+USAGE: $0 [-cCehlmpqt] [-x SYS] [start_date [end_date]]
 
 Processes reviews, exports determinations, updates candidates,
 updates the queue, recalculates user stats, and clears stale locks.
@@ -24,28 +24,28 @@ If the start or end dates are specified, only loads candidates
 with latest rights DB timestamp between them.
 
 -c       Do not update candidates.
+-C       Do not process CRI.
 -e       Do not process statuses or export determinations.
 -h       Print this help message.
 -l       Do not clear old locks.
 -m       Do not recalculate monthly stats.
--n       Do not check no-meta filtered volumes
 -p       Run in production.
 -q       Do not update queue.
 -t       Run in training.
 -x SYS   Set SYS as the system to execute.
 END
 
-my ($skipCandidates, $skipExport, $help, $skipLocks, $skipMonthly,
-    $skipNoMeta, $production, $skipQueue, $training, $sys);
+my ($skipCandidates, $skipExport, $help, $skipCRI, $skipLocks, $skipMonthly,
+    $production, $skipQueue, $training, $sys);
 
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
            'c'    => \$skipCandidates,
+           'C'    => \$skipCRI,
            'e'    => \$skipExport,
            'h|?'  => \$help,
            'l'    => \$skipLocks,
            'm'    => \$skipMonthly,
-           'n'    => \$skipNoMeta,
            'p'    => \$production,
            'q'    => \$skipQueue,
            't'    => \$training,
@@ -76,6 +76,7 @@ my $crms = CRMS->new(
     root       =>   $DLXSROOT,
     dev        =>   ($training)? 'crms-training':$DLPS_DEV
 );
+
 $crms->set('ping','yes');
 if ($skipExport) { ReportMsg("-e flag set; skipping queue processing and export."); }
 else
@@ -87,12 +88,21 @@ else
   my $rc = $crms->ClearQueueAndExport();
   ReportMsg("$rc\nDONE exporting.");
 }
+if ($skipCRI) { ReportMsg("-i flag set; skipping CRI processing."); }
+else
+{
+  ReportMsg("Starting to process CRI.");
+  use CRI;
+  my $cri = CRI->new('crms' => $crms);
+  $cri->ProcessCRI();
+  ReportMsg("DONE processing CRI.");
+}
 
 if ($skipCandidates) { ReportMsg("-c flag set; skipping candidates load."); }
 else
 {
   ReportMsg("Starting to load new volumes into candidates.");
-  $crms->LoadNewItemsInCandidates($skipNoMeta, $start, $end);
+  $crms->LoadNewItemsInCandidates($start, $end);
   ReportMsg("DONE loading new volumes into candidates.");
 }
 
