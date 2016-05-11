@@ -137,12 +137,6 @@ if (scalar keys %{$data{'unavailable'}})
     $n++;
     my $retrLink = $crms->LinkToRetrieve($id,1);
     $txt .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$id</a></td></tr>\n";
-    if ($insert)
-    {
-      $sql = "REPLACE INTO unavailable (id,src) VALUES ('$id','$src')";
-      print "$sql\n" if $verbose > 1;
-      $crms->PrepareSubmitSql($sql);
-    }
   }
   $txt .= "</table>$delim";
 }
@@ -417,9 +411,9 @@ if ($insert && scalar keys %{$data{'inherit'}})
       my ($id2,$sysid,$attr2,$reason2,$attr,$reason,$gid) = split "\t", $line;
       $attr2 = $crms->TranslateAttr($attr2);
       $reason2 = $crms->TranslateReason($reason2);
-      my $sql = "REPLACE INTO inherit (id,attr,reason,gid,src) VALUES ('$id2',$attr2,$reason2,$gid,'$src')";
+      my $sql = "REPLACE INTO inherit (id,attr,reason,gid,src) VALUES (?,?,?,?,?)";
       #print "$sql\n";
-      $crms->PrepareSubmitSql($sql);
+      $crms->PrepareSubmitSql($sql, $id2, $attr2, $reason2, $gid, $src);
       $crms->Filter($id2, 'duplicate') if $crms->IsVolumeInCandidates($id2);
     }
   }
@@ -485,7 +479,7 @@ sub UnfilterVolumes
 
   foreach my $id (keys %{$data{$reason}})
   {
-    $txt .= "<h5>Unfiltering and enqueueing for $id</h5>\n";
+    $txt .= "<h5>Unfiltering $id</h5>\n";
     my @lines = split "\n", $data{$reason}->{$id};
     foreach my $line (@lines)
     {
