@@ -408,6 +408,19 @@ sub countEnumchron
   return $n;
 }
 
+sub allHTIDs
+{
+  my $self = shift;
+
+  my @ids;
+  eval {
+    my $json = $self->json;
+    push @ids, $_->{'htid'} for @{$json->{'items'}};
+  };
+  $self->SetError('enumchron query for ' . $self->id . " failed: $@") if $@;
+  return \@ids;
+}
+
 sub editor
 {
   my $self = shift;
