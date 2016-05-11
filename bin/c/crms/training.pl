@@ -15,7 +15,7 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Spreadsheet::WriteExcel;
 
 my $usage = <<END;
-USAGE: $0 [-dhnrv] [-e FILE] [-o FILE] [-x SYS]
+USAGE: $0 [-adhnrv] [-e FILE] [-o FILE] [-x SYS]
           [-p PRI [-p PRI2...]] count
 
 Populates the training database with examples (correct, single reviews) from production.
@@ -25,9 +25,8 @@ Populates the training database with examples (correct, single reviews) from pro
 -e FILE  Write an Excel spreadsheet with information on the volumes to be added.
 -h       Print this help message.
 -n       Do not submit SQL.
--o       Write a tab-delimited file with information on the volumes to be added.
+-o FILE  Write a tab-delimited file with information on the volumes to be added.
 -p PRI   Only include reviews of the specified priority PRI
--r       Randomize sample from production.
 -v       Be verbose.
 -x SYS   Set SYS as the system to execute.
 END
@@ -115,15 +114,14 @@ my $n = 0;
 my $usql = sprintf '(SELECT id FROM users WHERE %s=1'.
                    ' AND extadmin+expert+admin+superadmin=0)',
                    ($noadvanced)?'reviewer':'advanced';
-my $ssql = 'status=4 OR status=5';
-$ssql .= ' OR status=7' if $noadvanced;
+my $ssql = 'e.status=4 OR e.status=5';
+$ssql .= ' OR e.status=7' if $noadvanced;
 my $prisql = '';
 $prisql = sprintf ' AND priority IN (%s)', join ',', @pris if scalar @pris;
-my $orderby = ($random)? 'RAND()':'time DESC';
-$sql = 'SELECT id,user,time,gid,status FROM historicalreviews WHERE' .
-       ' user IN '. $usql.
-       ' AND validated=1 AND ('. $ssql. ')'.
-       $prisql .  ' ORDER BY ' . $orderby;
+$sql = 'SELECT r.id,r.user,r.time,r.gid,e.status FROM historicalreviews r'.
+       ' INNER JOIN exportdata e ON r.gid=e.gid WHERE r.user IN '. $usql.
+       ' AND r.validated=1 AND ('. $ssql. ')'.
+       $prisql .  ' ORDER BY e.status DESC,r.time DESC';
 my $ref = $crmsp->SelectAll($sql);
 printf "$sql: %d results\n", scalar @$ref if $verbose;
 my $s4 = 0;
@@ -132,15 +130,24 @@ my $s7 = 0;
 foreach my $row (@{$ref})
 {
   my $id = $row->[0];
-  print "$id\n" if $verbose;
   last if $n >= $count;
   my $record = $crmsp->GetMetadata($id);
   next unless defined $record;
   my $a = $record->author;
   my $t = $record->title;
-  if ($seen{$id} || $seenAuthors{$a} || $seenTitles{$t})
+  if ($seen{$id})
   {
-    print "Skipping $id, it has been seen (n is $n)\n" if $verbose;
+    print "Skipping $id, it has been seen\n" if $verbose;
+    next;
+  }
+  if ($seenAuthors{$a})
+  {
+    print "Skipping $id, author has been seen ($a)\n" if $verbose;
+    next;
+  }
+  if ($seenTitles{$t})
+  {
+    print "Skipping $id, title has been seen ($t)\n" if $verbose;
     next;
   }
   $seen{$id} = 1;
@@ -150,6 +157,7 @@ foreach my $row (@{$ref})
   my $time   = $row->[2];
   my $gid    = $row->[3];
   my $status = $row->[4];
+  print "$id ($gid, S$status)\n" if $verbose;
   # Do not do nonmatching 'crms' status 4s.
   my $expr = $crmsp->SimpleSqlGet('SELECT reason FROM exportdata WHERE gid=?', $gid);
   next if $expr eq 'crms';

@@ -485,9 +485,9 @@ sub AddDuplicates
       my $hasid = 0;
       if ($id !~ m/\./)
       {
-        foreach my $line (@{$rows2})
+        foreach my $ref (@{$rows2})
         {
-          my ($id2,$chron,$rights) = split '__', $line;
+          my $id2 = $ref->{'id'};
           if (defined $ids->{$id2})
           {
             $hasid = 1;

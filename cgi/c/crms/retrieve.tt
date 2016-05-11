@@ -48,21 +48,20 @@
       <tr>
         <td class="nowrap">
           [% FOREACH id IN ids %]
-            [% parts = id.split('__') %]
-            [% id = parts.0 %]
+            [% id = id.id %]
             [% style = (all.$id == 1)? 'style="color:green;"':'' %]
             <span [% style %]>[% id %]</span><br/>
             [% seen.$id = 1 %]
           [% END %]
         </td>
-        <td class="nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% parts.1.replace('\s','&nbsp;') %]<br/>[% END %]</td>
-        <td class="nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% parts.2.replace('\s','&nbsp;') %]<br/>[% END %]</td>
-        <td class="nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% crms.RightsQuery(parts.0,1).0.0.replace('\s','&nbsp;') %]<br/>[% END %]</td>
-        <td class="nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% crms.RightsQuery(parts.0,1).0.1.replace('\s','&nbsp;') %]<br/>[% END %]</td>
-        <td class="nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% crms.RightsQuery(parts.0,1).0.2.replace('\s','&nbsp;') %]<br/>[% END %]</td>
-        <td class="nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% crms.RightsQuery(parts.0,1).0.3.replace('\s','&nbsp;') %]<br/>[% END %]</td>
-        <td class="nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% crms.RightsQuery(parts.0,1).0.4.replace('\s','&nbsp;') %]<br/>[% END %]</td>
-        <td class="nowrap">[% FOREACH id IN ids %][% parts = id.split('__') %][% crms.RightsQuery(parts.0,1).0.5.replace('\s','&nbsp;') %]<br/>[% END %]</td>
+        <td class="nowrap">[% FOREACH id IN ids %][% id.chron.replace('\s','&nbsp;') %]<br/>[% END %]</td>
+        <td class="nowrap">[% FOREACH id IN ids %][% id.rights.replace('\s','&nbsp;') %]<br/>[% END %]</td>
+        <td class="nowrap">[% FOREACH id IN ids %][% crms.RightsQuery(id.id,1).0.0.replace('\s','&nbsp;') %]<br/>[% END %]</td>
+        <td class="nowrap">[% FOREACH id IN ids %][% crms.RightsQuery(id.id,1).0.1.replace('\s','&nbsp;') %]<br/>[% END %]</td>
+        <td class="nowrap">[% FOREACH id IN ids %][% crms.RightsQuery(id.id,1).0.2.replace('\s','&nbsp;') %]<br/>[% END %]</td>
+        <td class="nowrap">[% FOREACH id IN ids %][% crms.RightsQuery(id.id,1).0.3.replace('\s','&nbsp;') %]<br/>[% END %]</td>
+        <td class="nowrap">[% FOREACH id IN ids %][% crms.RightsQuery(id.id,1).0.4.replace('\s','&nbsp;') %]<br/>[% END %]</td>
+        <td class="nowrap">[% FOREACH id IN ids %][% crms.RightsQuery(id.id,1).0.5.replace('\s','&nbsp;') %]<br/>[% END %]</td>
       </tr>
     </table>
   [% END %]

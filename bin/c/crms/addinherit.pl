@@ -316,9 +316,9 @@ sub ADDReport
       }
       my $rows = $crms->VolumeIDsQuery(undef, $record);
       my $haschron = 0;
-      foreach my $line (@{$rows})
+      foreach my $ref (@{$rows})
       {
-        my ($id2,$chron2,$rights2) = split '__', $line;
+        my $chron2 = $ref->{'chron'};
         if ($chron2 && $chron2 !~ /co?py/)
         {
           $haschron = 1;

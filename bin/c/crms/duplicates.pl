@@ -215,13 +215,12 @@ foreach my $row ( @{$ref} )
   $rights{"$attr/$reason"} = 1;
   my $chron = '';
   print "Original: $id ($sysid) $attr/$reason\n" if $verbose;
-  foreach my $holding (@{$holdings})
+  foreach my $ref (@{$holdings})
   {
-    #print "$holding\n";
-    my ($hi,$hc,$hblah) = split '__', $holding;
+    my $hi = $ref->{'id'};
     if ($hi eq $id)
     {
-      $chron = $hc;
+      $chron = $ref->{'chron'};
       last;
     }
   }

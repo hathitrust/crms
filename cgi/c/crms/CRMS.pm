@@ -939,9 +939,9 @@ sub AddItemToCandidates
   {
     my $sysid = $record->sysid;
     my $rows = $self->VolumeIDsQuery($sysid, $record);
-    foreach my $line (@{$rows})
+    foreach my $ref (@{$rows})
     {
-      my ($id2,$chron2,$rights2) = split '__', $line;
+      my $id2 = $ref->{'id'};
       next if $id2 eq $id;
       print "Filter $id2 as duplicate if $id\n" unless $quiet;
       $self->Filter($id2, 'duplicate') unless $noop;
@@ -1204,9 +1204,9 @@ sub IsRecordInQueue
   my $record = shift;
 
   my $rows = $self->VolumeIDsQuery($sysid, $record);
-  foreach my $line (@{$rows})
+  foreach my $ref (@{$rows})
   {
-    my ($id,$chron,$rights) = split '__', $line;
+    my $id = $ref->{'id'};
     return $id if $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE id=?', $id);
   }
   return undef;
@@ -6628,10 +6628,10 @@ sub DownloadVolumeIDs
 
   my $buff = (join "\t", qw (ID Chron Rights Attr Reason Source User Time Note)) . "\n";
   my $rows = $self->VolumeIDsQuery($sysid);
-  foreach my $line (@{$rows})
+  foreach my $ref (@{$rows})
   {
-    my ($id,$chron,$rights) = split '__', $line;
-    $buff .= (join "\t", (($id,$chron,$rights), @{$self->RightsQuery($id,1)->[0]})) . "\n";
+    $buff .= (join "\t", (($ref->{'id'},$ref->{'chron'},$ref->{'rights'}),
+                           @{$self->RightsQuery($ref->{'id'},1)->[0]})) . "\n";
   }
   $self->DownloadSpreadSheet($buff);
   return (1 == scalar @{$self->GetErrors()});
@@ -6649,16 +6649,16 @@ sub TrackingQuery
   if (!defined $record)
   {
     $title = $self->GetTitle($id);
-    $rows = [$id . '____'];
+    $rows = [{'id' => $id, 'chron' => '', 'rights' => ''}];
   }
   else
   {
     $title = $record->title;
     $rows = $self->VolumeIDsQuery($id, $record);
   }
-  foreach my $line (@{$rows})
+  foreach my $ref (@{$rows})
   {
-    my ($id2,$chron2,$rights2) = split '__', $line;
+    my $id2 = $ref->{'id'};
     my $data = [$id2, $title, $self->GetTrackingInfo($id2, 1, 1)];
     if ($id eq $id2)
     {
@@ -7133,9 +7133,9 @@ sub HasMissingOrWrongRecord
   my $rows  = shift;
 
   $rows = $self->VolumeIDsQuery($sysid) unless $rows;
-  foreach my $line (@{$rows})
+  foreach my $ref (@{$rows})
   {
-    my ($id2,$chron2,$rights2) = split '__', $line;
+    my $id2 = $ref->{'id'};
     my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=? AND (category="Wrong Record" OR category="Missing")';
     return $id2 if ($self->SimpleSqlGet($sql, $id2) > 0);
   }
@@ -7385,9 +7385,10 @@ sub DuplicateVolumesFromExport
   # and see if it's more recent that what we're exporting.
   my $candidate = $id;
   my $candidateTime = $self->SimpleSqlGet('SELECT MAX(time) FROM historicalreviews WHERE id=?', $id);
-  foreach my $line (@{$rows})
+  foreach my $ref (@{$rows})
   {
-    my ($id2,$chron2,$rights2) = split '__', $line;
+    my $id2 = $ref->{'id'};
+    my $chron2 = $ref->{'chron'};
     if ($chron2)
     {
       $data->{'chron'}->{$id} = "$id2\t$sysid\n";
@@ -7404,9 +7405,9 @@ sub DuplicateVolumesFromExport
     }
   }
   my $wrong = $self->HasMissingOrWrongRecord($id, $sysid, $rows);
-  foreach my $line (@{$rows})
+  foreach my $ref (@{$rows})
   {
-    my ($id2,$chron2,$rights2) = split '__', $line;
+    my $id2 = $ref->{'id'};
     next if $id eq $id2;
     my $rq = $self->RightsQuery($id2, 1);
     next unless defined $rq;
@@ -7506,9 +7507,10 @@ sub DuplicateVolumesFromCandidates
   my $creason = undef;
   my $ctime = undef;
   $data->{'titles'}->{$id} = $record->title;
-  foreach my $line (@{$rows})
+  foreach my $ref (@{$rows})
   {
-    my ($id2,$chron2,$rights2) = split '__', $line;
+    my $id2 = $ref->{'id'};
+    my $chron2 = $ref->{'chron'};
     next if $id eq $id2;
     if ($chron2)
     {
@@ -7600,9 +7602,9 @@ sub GetDuplicates
   my $sysid;
   my $record = $self->GetMetadata($id);
   my $rows = $self->VolumeIDsQuery($record->sysid, $record);
-  foreach my $line (@{$rows})
+  foreach my $ref (@{$rows})
   {
-    my ($id2,$chron2,$rights2) = split '__', $line;
+    my $id2 = $ref->{'id'};
     push @dupes, $id2 if $id2 ne $id;
   }
   return @dupes;
