@@ -7733,7 +7733,13 @@ sub AccessCheck
   my $page = shift;
   my $user = shift || $self->get('user');
 
-  my $sql = 'SELECT restricted FROM menuitems WHERE page=?';
+  my $sql = 'SELECT COUNT(*) FROM users WHERE id=?';
+  my $cnt = $self->SimpleSqlGet($sql, $user);
+  if ($cnt == 0)
+  {
+    return "DBC failed for $page.tt: user '$user' not in system";
+  }
+  $sql = 'SELECT restricted FROM menuitems WHERE page=?';
   my $r = $self->SimpleSqlGet($sql, $page) || '';
   my $q = $self->GetUserQualifications($user) || '';
   if (!$self->DoQualificationsAndRestrictionsOverlap($q, $r))
