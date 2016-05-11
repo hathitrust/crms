@@ -378,7 +378,7 @@ sub enumchron
     my $json = $self->json;
     foreach my $item (@{$json->{'items'}})
     {
-      if ($self->id eq $item->{'htid'})
+      if ($id eq $item->{'htid'})
       {
         $data = $item->{'enumcron'};
         last;
