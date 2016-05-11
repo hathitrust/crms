@@ -3432,7 +3432,8 @@ sub GetUserName
   my $user = shift || $self->get('user');
 
   my $sql = 'SELECT name FROM users WHERE id=?';
-  return $self->SimpleSqlGet($sql, $user);
+  my $name = $self->SimpleSqlGet($sql, $user);
+  return (defined $name)? $name:'(no name available)';
 }
 
 sub GetUserNote
