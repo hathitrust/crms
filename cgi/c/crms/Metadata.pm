@@ -288,7 +288,7 @@ sub copyrightDate
   $date1 = undef if $date1 =~ m/\D/ or $date1 eq '';
   $date2 = undef if $date2 =~ m/\D/ or $date2 eq '';
   my $field;
-  if ($type eq 't')
+  if ($type eq 't' || $type eq 'c')
   {
     $field = $date1 if defined $date1;
     $field = $date2 if defined $date2;
@@ -334,16 +334,16 @@ sub formatPubDate
   my $date1 = $self->pubDate(0);
   my $date2 = $self->pubDate(1);
   my $type = $self->dateType();
-  my $cDate = $self->copyrightDate();
-  my $date = $cDate;
+  my $date = $self->copyrightDate();
   $date2 = undef if $type eq 'e';
   if (defined $date1)
   {
-    if ($type eq 'i' || $type eq 'k' || $type eq 'm' ||
-        $type eq 'c' || $type eq 'd' || $type eq 'u')
+    if ($type eq 'd' || $type eq 'i' || $type eq 'k' ||
+        $type eq 'm' || $type eq 'u' || $type eq ' ')
     {
       $date = "$date1-$date2" if defined $date2 and $date2 > $date1;
-      $date = $date1. '-' if !defined $date2 or $date2 eq '9999';
+      $date = $date1. '-' if defined $date2 and $date2 == 9999;
+      $date = $date1. '-' if !defined $date2 and $type eq 'u';
     }
   }
   return $date;
