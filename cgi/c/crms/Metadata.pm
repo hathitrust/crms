@@ -370,7 +370,9 @@ sub country
 sub enumchron
 {
   my $self = shift;
+  my $id   = shift;
 
+  $id = $self->id unless defined $id;
   my $data;
   eval {
     my $json = $self->json;
