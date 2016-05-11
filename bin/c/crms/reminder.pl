@@ -73,8 +73,6 @@ Time missed due to vacation and illness does not need to be made up, but please 
 -- If you have any questions about your CRMS time commitment, please check with your supervisor.
 For additional questions or assistance, contact the CRMS Team:
 
-Richard Adler: 734-615-1351, rcadler@umich.edu
-
 Kristina Eden: 734-764-9602, keden@umich.edu
 END
 my %seen;
