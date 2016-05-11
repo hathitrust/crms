@@ -231,7 +231,7 @@ if ($cgi->param('download'))
 
 ## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
 ## the default is home.tt in case a tt is not found
-$page = $cgi->param('p') || '';
+$page = $cgi->param('p') || 'home';
 if (!$crms->GetAlias())
 {
   my $ip = $ENV{'REMOTE_ADDR'};
