@@ -838,8 +838,12 @@ sub CheckAndLoadItemIntoCandidates
       my $sysid = $record->sysid;
       if (defined $sysid && defined $oldSysid && $sysid ne $oldSysid)
       {
-        print "Update system ID on $id -- old $oldSysid, new $sysid\n";
-        $self->UpdateMetadata($id, 1, $record) unless defined $noop;
+        my $ids = $record->allHTIDs;
+        foreach my $id2 (@{$ids})
+        {
+          print "Update system ID on $id2 -- old $oldSysid, new $sysid\n";
+          $self->UpdateMetadata($id2, 1, $record) unless defined $noop;
+        }
       }
     }
   }
