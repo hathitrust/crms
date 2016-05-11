@@ -6485,7 +6485,7 @@ sub CurrentRightsQuery
   my $self = shift;
   my $id   = shift;
 
-  my $rights = 'unknown';
+  my $rights = '(unavailable)';
   my $ref = $self->RightsQuery($id, 1);
   return $rights unless defined $ref;
   $rights = $ref->[0]->[0] . '/' . $ref->[0]->[1];
@@ -6503,7 +6503,7 @@ sub GetCurrentRights
   my $self = shift;
   my $id   = shift;
 
-  my $rights = 'unknown';
+  my $rights = '(unavailable)';
   my $ref = $self->RightsQuery($id, 1);
   return $rights unless defined $ref;
   $rights = $ref->[0]->[0] . '/' . $ref->[0]->[1];
@@ -6673,13 +6673,15 @@ sub TrackingQuery
   return \@ids;
 }
 
+# inherit, correction, and rights allow inclusion of information that is not
+# redundant to the page.
 sub GetTrackingInfo
 {
   my $self       = shift;
   my $id         = shift;
   my $inherit    = shift;
   my $correction = shift;
-  my $quiet      = shift;
+  my $rights     = shift;
 
   my @stati = ();
   my $inQ = $self->IsVolumeInQueue($id);
@@ -6755,10 +6757,10 @@ sub GetTrackingInfo
   {
     push @stati, 'possible inheritance source awaiting metadata';
   }
-  if (0 == scalar @stati && !$quiet)
+  if ($rights)
   {
     # See if it has a pre-CRMS determination.
-    my $rq = $self->RightsQuery($id,1);
+    my $rq = $self->RightsQuery($id, 1);
     return 'Rights info unavailable' unless defined $rq;
     my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
     $time =~ s/(\d\d\d\d-\d\d-\d\d).*/$1/;
