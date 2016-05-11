@@ -461,7 +461,8 @@ sub volumeIDs
       my $chron = $item->{'enumcron'};
       $chron = '' unless $chron;
       my $rights = $item->{'usRightsString'};
-      push @ids, $id . '__' . $chron . '__' . $rights;
+      my %data = ('id' => $id, 'chron' => $chron, 'rights' => $rights);
+      push @ids, \%data;
     }
   };
   $self->SetError('volumeIDsQuery for ' . $self->id . " failed: $@") if $@;
