@@ -235,7 +235,7 @@ function AddInsert(userAdded)
   cell.colSpan = 2;
   cell.innerHTML = gRestoredHelp+'<label for="'+prefix+'restored"><strong>Copyright was likely restored</strong></label>';
   cell.innerHTML+='<input type="checkbox" id="'+prefix+'restored" name="'+prefix+'restored" value="1" onclick="javascript:restartTime('+prefix+');"/>';
-  if (gInspecting && !userAdded && gInspectingAdded == 0)
+  if (gInspecting && !userAdded)
   {
     row = table.insertRow(gNRows);
     gNRows++;
