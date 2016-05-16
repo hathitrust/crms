@@ -5675,9 +5675,9 @@ sub CreateSystemReport
   {
     $n = 'n/a';
   }
-  $report .= '<tr><th>Last&nbsp;Queue&nbsp;Update</th><td>' . $n . "</td></tr>\n";
-  $report .= sprintf("<tr><th>Cumulative&nbsp;Volumes&nbsp;in&nbsp;Queue&nbsp;(ever*)</th><td>%s</td></tr>\n", $self->GetTotalEverInQueue());
-  $report .= sprintf("<tr><th>Volumes&nbsp;in&nbsp;Candidates</th><td>%s</td></tr>\n", $self->GetCandidatesSize());
+  $report .= '<tr><th class="nowrap">Last Queue Update</th><td>' . $n . "</td></tr>\n";
+  $report .= sprintf("<tr><th class='nowrap'>Cumulative Volumes in Queue (ever*)</th><td>%s</td></tr>\n", $self->GetTotalEverInQueue());
+  $report .= sprintf("<tr><th class='nowrap'>Volumes in Candidates</th><td>%s</td></tr>\n", $self->GetCandidatesSize());
   $time = $self->GetLastLoadTimeToCandidates();
   $n = $self->GetLastLoadSizeToCandidates();
   if ($time)
@@ -5689,10 +5689,10 @@ sub CreateSystemReport
   {
     $n = 'n/a';
   }
-  $report .= '<tr><th>Last&nbsp;Candidates&nbsp;Update</th><td>' . $n . "</td></tr>";
+  $report .= '<tr><th class="nowrap">Last Candidates Update</th><td>' . $n . "</td></tr>\n";
   my $sql = 'SELECT COUNT(*) FROM und WHERE src!="no meta" AND src!="duplicate" AND src!="cross-record inheritance"';
   my $count = $self->SimpleSqlGet($sql);
-  $report .= "<tr><th>Volumes&nbsp;Filtered**</th><td>$count</td></tr>\n";
+  $report .= "<tr><th class='nowrap'>Volumes Filtered**</th><td>$count</td></tr>\n";
   if ($count)
   {
     $sql = 'SELECT src,COUNT(src) FROM und WHERE src!="no meta"'.
@@ -5707,7 +5707,7 @@ sub CreateSystemReport
   }
   $sql = 'SELECT COUNT(*) FROM und WHERE src="no meta" OR src="duplicate" OR src="cross-record inheritance"';
   $count = $self->SimpleSqlGet($sql);
-  $report .= "<tr><th>Volumes&nbsp;Temporarily&nbsp;Filtered**</th><td>$count</td></tr>\n";
+  $report .= "<tr><th class='nowrap'>Volumes Temporarily Filtered**</th><td>$count</td></tr>\n";
   if ($count)
   {
     $sql = 'SELECT src,COUNT(src) FROM und WHERE src="no meta" OR src="duplicate"'.
@@ -5732,10 +5732,10 @@ sub CreateSystemReport
     $delay .= '&nbsp;' . $self->Pluralize('second', $delay);
   }
   $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay&nbsp;since&nbsp;$since</span>" if $alert;
-  $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay&nbsp;on&nbsp;$host</td></tr>\n";
+  $report .= "<tr><th class='nowrap'>Database Replication Delay</th><td>$delay&nbsp;on&nbsp;$host</td></tr>\n";
   $report .= '<tr><td colspan="2">';
   $report .= '<span class="smallishText">* Not including legacy data (reviews/determinations made prior to July 2009).</span><br/>';
-  $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count above.</span>';
+  $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count.</span>';
   $report .= "</td></tr></table>\n";
   return $report;
 }
@@ -5759,7 +5759,7 @@ sub CreateDeterminationReport
     $pri = $self->StripDecimal($pri);
     $priheaders .= "<th>Priority&nbsp;$pri</th>";
   }
-  my $report = "<table class='exportStats'>\n<tr><th/><th>Total</th>$priheaders</tr>\n";
+  my $report = "<table class='exportStats'>\n<tr><th></th><th>Total</th>$priheaders</tr>\n";
   foreach my $status (4 .. 9)
   {
     $sql = 'SELECT COUNT(DISTINCT h.id) FROM exportdata e, historicalreviews h' .
