@@ -5774,7 +5774,6 @@ sub CreateDeterminationReport
     $pcts{$status} = $pct;
   }
   my $colspan = 1 + scalar @pris;
-  my $legacy = $self->GetTotalLegacyCount();
   my %sources;
   $sql = 'SELECT src,COUNT(gid) FROM exportdata WHERE src IS NOT NULL AND src NOT LIKE "HTS-%" GROUP BY src';
   my $rows = $self->SelectAll($sql);
@@ -5815,8 +5814,12 @@ sub CreateDeterminationReport
     my $n = $sources{$source};
     $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;%s</th><td colspan='$colspan'>$n</td></tr>", $self->ExportSrcToEnglish($source));
   }
-  $report .= sprintf("<tr><th>Total&nbsp;Legacy&nbsp;Determinations</th><td colspan='$colspan'>%s</td></tr>", $legacy);
-  $report .= sprintf("<tr><th>Total&nbsp;Determinations</th><td colspan='$colspan'>%s</td></tr>", $exported + $legacy);
+  if ($self->Sys() ne 'crmsworld')
+  {
+    my $legacy = $self->GetTotalLegacyCount();
+    $report .= "<tr><th>Total&nbsp;Legacy&nbsp;Determinations</th><td colspan='$colspan'>$legacy</td></tr>";
+    $report .= sprintf("<tr><th>Total&nbsp;Determinations</th><td colspan='$colspan'>%s</td></tr>", $exported + $legacy);
+  }
   $report .= "</table>\n";
   return $report;
 }
