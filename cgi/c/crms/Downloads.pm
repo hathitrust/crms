@@ -25,9 +25,9 @@ sub Download
   my $q                = $cgi->param('q');
   my $success = 1;
 
-  if ($page eq 'retrieve')
+  if ($page eq 'track')
   {
-    $crms->DownloadVolumeIDs($q)
+    $crms->DownloadTracking($q)
   }
   elsif ($page eq 'queue')
   {

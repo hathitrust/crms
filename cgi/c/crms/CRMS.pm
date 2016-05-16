@@ -6454,7 +6454,7 @@ sub RightsQuery
 
   my ($ns,$n) = split m/\./, $id, 2;
   my $table = ($latest)? 'rights_current':'rights_log';
-  my $sql = 'SELECT a.name,rs.name,s.name,r.user,r.time,r.note,p.name FROM ' .
+  my $sql = 'SELECT a.name,rs.name,s.name,r.user,r.time,COALESCE(r.note,""),p.name FROM ' .
             $table . ' r, attributes a, reasons rs, sources s, access_profiles p' .
             ' WHERE r.namespace=? AND r.id=? AND s.id=r.source AND a.id=r.attr' .
             ' AND rs.id=r.reason AND p.id=r.access_profile' .
@@ -6614,55 +6614,67 @@ sub VolumeIDsQuery
   return $record->volumeIDs
 }
 
-sub DownloadVolumeIDs
+sub DownloadTracking
 {
-  my $self  = shift;
-  my $sysid = shift;
+  my $self = shift;
+  my $id   = shift;
 
-  my $buff = (join "\t", qw (ID Chron Rights Attr Reason Source User Time Note)) . "\n";
-  my $rows = $self->VolumeIDsQuery($sysid);
+  my $syss = $self->GetBothSystems();
+  my $buff = (join "\t", ('ID', 'Enum/Chron', 'CRMS-US Status', 'CRMS-World Status',
+                          'U.S. Rights', 'Attribute', 'Reason', 'Source', 'User',
+                          'Time', 'Note', 'Access Profile')) . "\n";
+  my $rows = $self->VolumeIDsQuery($id);
   foreach my $ref (@{$rows})
   {
-    $buff .= (join "\t", (($ref->{'id'},$ref->{'chron'},$ref->{'rights'}),
-                           @{$self->RightsQuery($ref->{'id'},1)->[0]})) . "\n";
+    $buff .= (join "\t", (($ref->{'id'}, $ref->{'chron'},
+                           $syss->[0]->GetTrackingInfo($id, 1, 1),
+                           $syss->[1]->GetTrackingInfo($id, 1, 1),
+                           $ref->{'rights'}),
+                           @{$self->RightsQuery($ref->{'id'}, 1)->[0]})) . "\n";
   }
   $self->DownloadSpreadSheet($buff);
   return (1 == scalar @{$self->GetErrors()});
 }
 
+# All volumes in the query (q) are moved to the top of the results.
 sub TrackingQuery
 {
   my $self = shift;
   my $id   = shift;
+  my $q    = shift;
 
+  my %rest;
+  $rest{$_} = 1 for @{$q};
+  my $syss = $self->GetBothSystems();
+  my %data = ('crms' => $syss->[0], 'crmsworld' => $syss->[1]);
   my @ids;
-  my $title;
   my $rows;
   my $record = $self->GetMetadata($id);
-  if (!defined $record)
+  if (defined $record)
   {
-    $title = $self->GetTitle($id);
-    $rows = [{'id' => $id, 'chron' => '', 'rights' => ''}];
-  }
-  else
-  {
-    $title = $record->title;
+    $data{'title'} = $record->title;
+    $data{'sysid'} = $record->sysid;
     $rows = $self->VolumeIDsQuery($id, $record);
   }
   foreach my $ref (@{$rows})
   {
     my $id2 = $ref->{'id'};
-    my $data = [$id2, $title, $self->GetTrackingInfo($id2, 1, 1)];
-    if ($id eq $id2)
+    my $data2 = [$id2, $ref->{'chron'},
+                 $syss->[0]->GetTrackingInfo($id2, 1, 1),
+                 $syss->[1]->GetTrackingInfo($id2, 1, 1),
+                 $ref->{'rights'},
+                 @{$self->RightsQuery($id2, 1)->[0]}];
+    if ($rest{$id2})
     {
-      unshift @ids, $data;
+      unshift @ids, $data2;
     }
     else
     {
-      push @ids, $data;
+      push @ids, $data2;
     }
   }
-  return \@ids;
+  $data{'data'} = \@ids;
+  return \%data;
 }
 
 # inherit, correction, and rights allow inclusion of information that is not
