@@ -5628,14 +5628,9 @@ sub CreateQueueReport
 {
   my $self = shift;
 
-  my $priheaders = '';
   my $sql = 'SELECT DISTINCT priority FROM queue ORDER BY priority ASC';
-  my @pris = map {$_->[0]} @{ $self->SelectAll($sql) };
-  foreach my $pri (@pris)
-  {
-    $pri = $self->StripDecimal($pri);
-    $priheaders .= "<th>Priority&nbsp;$pri</th>";
-  }
+  my @pris = map {$self->StripDecimal($_->[0])} @{$self->SelectAll($sql)};
+  my $priheaders = join '', map {"<th>Priority&nbsp;$_</th>";} @pris;
   my $report = "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
   foreach my $status (-1 .. 9)
   {
@@ -5657,7 +5652,9 @@ sub CreateQueueReport
   $report .= sprintf("<tr><td%s>Not&nbsp;Yet&nbsp;Active</td><td%s>$count</td>", $class, $class);
   $report .= $self->DoPriorityBreakdown($ref, $class, \@pris);
   $report .= "</tr>\n";
-  $report .= sprintf("<tr><td nowrap='nowrap' colspan='%d'><span class='smallishText'>Note: includes both active and inactive volumes.</span><br/>\n", 2+scalar @pris);
+  #$report .= sprintf("<tr><td class='nowrap' colspan='%d'>
+  #                        <span class='smallishText'>Note: includes both active and inactive volumes.</span></td></tr>\n",
+  #                        2+scalar @pris);
   $report .= "</table>\n";
   return $report;
 }
