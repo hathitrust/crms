@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.2.4';
+  return '5.3';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -8530,19 +8530,27 @@ sub GetBothSystems
 {
   my $self = shift;
 
-  my $crmsUS = CRMS->new(
-    logFile      => $self->get('logfile'),
-    sys          => 'crms',
-    verbose      => 0,
-    root         => $self->get('root'),
-    dev          => $self->get('dev'));
-
-  my $crmsWorld = CRMS->new(
-    logFile      => $self->get('logfile'),
-    sys          => 'crmsworld',
-    verbose      => 0,
-    root         => $self->get('root'),
-    dev          => $self->get('dev'));
+  my ($crmsUS, $crmsWorld);
+  if ($self->Sys() eq 'crmsworld')
+  {
+    $crmsUS = CRMS->new(
+      logFile      => $self->get('logfile'),
+      sys          => 'crms',
+      verbose      => 0,
+      root         => $self->get('root'),
+      dev          => $self->get('dev'));
+    $crmsWorld = $self;
+  }
+  else
+  {
+    $crmsUS = $self;
+    $crmsWorld = CRMS->new(
+      logFile      => $self->get('logfile'),
+      sys          => 'crmsworld',
+      verbose      => 0,
+      root         => $self->get('root'),
+      dev          => $self->get('dev'));
+  }
   return [$crmsUS,$crmsWorld];
 }
 
