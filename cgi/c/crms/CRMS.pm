@@ -5747,23 +5747,17 @@ sub CreateDeterminationReport
   my ($count,$time) = $self->GetLastExport();
   my %cts = ();
   my %pcts = ();
-  my $priheaders = '';
-  my $sql = 'SELECT DISTINCT h.priority FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid' .
-            ' WHERE e.time>=DATE_SUB(?, INTERVAL 1 MINUTE) ORDER BY h.priority ASC';
-  my @pris = map {$_->[0]} @{ $self->SelectAll($sql, $time) };
-  $sql = 'SELECT COUNT(DISTINCT h.id) FROM exportdata e, historicalreviews h' .
-         ' WHERE e.gid=h.gid AND e.time>=DATE_SUB(?, INTERVAL 1 MINUTE)';
+  my $sql = 'SELECT DISTINCT priority FROM exportdata'.
+            ' WHERE DATE(time)=DATE(?) ORDER BY priority ASC';
+  my @pris = map {$self->StripDecimal($_->[0])} @{$self->SelectAll($sql, $time)};
+  $sql = 'SELECT COUNT(gid) FROM exportdata'.
+         ' WHERE DATE(time)=DATE(?) ORDER BY priority ASC';
   my $total = $self->SimpleSqlGet($sql, $time);
-  foreach my $pri (@pris)
-  {
-    $pri = $self->StripDecimal($pri);
-    $priheaders .= "<th>Priority&nbsp;$pri</th>";
-  }
+  my $priheaders = join '', map {"<th>Priority&nbsp;$_</th>";} @pris;
   my $report = "<table class='exportStats'>\n<tr><th></th><th>Total</th>$priheaders</tr>\n";
   foreach my $status (4 .. 9)
   {
-    $sql = 'SELECT COUNT(DISTINCT h.id) FROM exportdata e, historicalreviews h' .
-          ' WHERE e.gid=h.gid AND h.status=? AND e.time>=DATE_SUB(?, INTERVAL 1 MINUTE)';
+    $sql = 'SELECT COUNT(id) FROM exportdata WHERE status=? AND DATE(time)=DATE(?)';
     my $ct = $self->SimpleSqlGet($sql, $status, $time);
     my $pct = 0.0;
     eval {$pct = 100.0*$ct/$total;};
@@ -5784,26 +5778,22 @@ sub CreateDeterminationReport
   my ($count2,$time2) = $self->GetLastExport(1);
   $time2 =~ s/\s/&nbsp;/g;
   $count = 'None' unless $count;
-  $time = 'record' unless $time2;
-  my $exported = $self->SimpleSqlGet('SELECT COUNT(DISTINCT gid) FROM exportdata');
+  my $exported = $self->SimpleSqlGet('SELECT COUNT(gid) FROM exportdata');
   $report .= "<tr><th>Last&nbsp;CRMS&nbsp;Export</th><td colspan='$colspan'>$time2</td></tr>";
   foreach my $status (sort keys %cts)
   {
     $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;%d</th><td>%d&nbsp;(%.1f%%)</td>",
                        $status, $cts{$status}, $pcts{$status});
-    $sql = 'SELECT h.priority,h.gid FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid ' .
-           "WHERE h.status=$status AND e.time>=DATE_SUB('$time', INTERVAL 1 MINUTE)";
-    my $ref = $self->SelectAll($sql);
-    #print "$sql<br/>\n";
+    $sql = 'SELECT priority,gid FROM exportdata WHERE status=? AND DATE(time)=DATE(?)';
+    my $ref = $self->SelectAll($sql, $status, $time);
     $report .= $self->DoPriorityBreakdown($ref, undef, \@pris, $cts{$status});
     $report .= '</tr>';
   }
   $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Total</th><td>$count</td>";
-  $sql = 'SELECT h.priority,h.gid FROM exportdata e INNER JOIN historicalreviews h ON e.gid=h.gid' .
-         ' WHERE e.time>=DATE_SUB(?, INTERVAL 1 MINUTE)';
-  my $ref = $self->SelectAll($sql, $time);
-  #print "$sql<br/>\n";
-  $report .= $self->DoPriorityBreakdown($ref, undef, \@pris, $count);
+  $sql = 'SELECT priority,COUNT(gid),CONCAT(FORMAT(IF(?=0,0,(COUNT(gid)*100.0)/?),1),"%")'.
+         ' FROM exportdata where date(time)=DATE(?) GROUP BY priority ORDER BY priority';
+  my $ref = $self->SelectAll($sql, $total, $total, $time);
+  $report .= sprintf('<td class="nowrap">%s (%s)</td>', $_->[1], $_->[2]) for @{$ref};
   $report .= '</tr>';
   $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</th><td colspan='$colspan'>%s</td></tr>", $exported);
   foreach my $source (sort keys %sources)
