@@ -5732,10 +5732,10 @@ sub CreateSystemReport
     $delay .= '&nbsp;' . $self->Pluralize('second', $delay);
   }
   $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay&nbsp;since&nbsp;$since</span>" if $alert;
-  $report .= "<tr><th class='nowrap'>Database Replication Delay</th><td>$delay&nbsp;on&nbsp;$host</td></tr>\n";
+  $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay&nbsp;on&nbsp;$host</td></tr>\n";
   $report .= '<tr><td colspan="2">';
   $report .= '<span class="smallishText">* Not including legacy data (reviews/determinations made prior to July 2009).</span><br/>';
-  $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count.</span>';
+  $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count above.</span>';
   $report .= "</td></tr></table>\n";
   return $report;
 }
@@ -5795,7 +5795,7 @@ sub CreateDeterminationReport
   my $ref = $self->SelectAll($sql, $total, $total, $time);
   $report .= sprintf('<td class="nowrap">%s (%s)</td>', $_->[1], $_->[2]) for @{$ref};
   $report .= '</tr>';
-  $report .= sprintf("<tr><th>Total&nbsp;CRMS&nbsp;Determinations</th><td colspan='$colspan'>%s</td></tr>", $exported);
+  $report .= "<tr><th class='nowrap'>Total CRMS Determinations</th><td colspan='$colspan'>$exported</td></tr>";
   foreach my $source (sort keys %sources)
   {
     my $n = $sources{$source};
