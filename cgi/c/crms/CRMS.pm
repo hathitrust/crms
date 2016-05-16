@@ -7061,7 +7061,6 @@ sub GetInheritanceRef
   {
     $self->SetError($@);
   }
-  my $data = join "\t", ('ID','Title','Author','Pub Date','Date Added','Status','Locked','Priority','Reviews','Expert Reviews','Holds');
   my $i = $offset;
   my @return = ();
   foreach my $row (@{$ref})
@@ -7110,22 +7109,13 @@ sub GetInheritanceRef
                'title'=>$title, 'gid'=>$gid, 'date'=>$date, 'summary'=>ucfirst $summary,
                'src'=>ucfirst $src, 'h5'=>$h5, 'idate'=>$idate);
     push @return, \%dic;
-    #if ($download)
-    #{
-      #$data .= sprintf("\n$id\t%s\t%s\t%s\t$date\t%s\t%s\t%s\t$reviews\t%s\t$holds",
-      #                 $row->[7], $row->[8], $row->[4], $row->[2], $row->[3], $self->StripDecimal($row->[5]), $row->[6]);
-    #}
   }
-  #if (!$download)
-  {
-    $data = {'rows' => \@return,
-             'source' => $totalVolumes,
-             'inheriting' => $inheritingVolumes,
-             'n' => $n,
-             'of' => $of
-            };
-  }
-  return $data;
+  return {'rows' => \@return,
+          'source' => $totalVolumes,
+          'inheriting' => $inheritingVolumes,
+          'n' => $n,
+          'of' => $of
+         };
 }
 
 sub HasMissingOrWrongRecord
