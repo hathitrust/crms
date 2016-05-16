@@ -5251,6 +5251,7 @@ sub CountExpertHistoricalReviews
   return $self->SimpleSqlGet($sql, $id);
 }
 
+# FIXME: why is bibdata included in the main query?
 ## ----------------------------------------------------------------------------
 ##  Function:   get the next item to be reviewed (not something this user has
 ##              already reviewed)
@@ -5646,7 +5647,7 @@ sub CreateQueueReport
     $report .= sprintf("<tr><td%s>$status</td><td%s>$count</td>", $class, $class);
     $sql = 'SELECT priority FROM queue ' . $statusClause;
     my $ref = $self->SelectAll($sql);
-    $report .= $self->DoPriorityBreakdown($ref,$class,\@pris);
+    $report .= $self->DoPriorityBreakdown($ref, $class, \@pris);
     $report .= "</tr>\n";
   }
   $sql = 'SELECT priority FROM queue WHERE status=0 AND id NOT IN (SELECT id FROM reviews)';
@@ -5654,7 +5655,7 @@ sub CreateQueueReport
   my $count = $self->GetTotalAwaitingReview();
   my $class = ' class="major"';
   $report .= sprintf("<tr><td%s>Not&nbsp;Yet&nbsp;Active</td><td%s>$count</td>", $class, $class);
-  $report .= $self->DoPriorityBreakdown($ref,$class,\@pris);
+  $report .= $self->DoPriorityBreakdown($ref, $class, \@pris);
   $report .= "</tr>\n";
   $report .= sprintf("<tr><td nowrap='nowrap' colspan='%d'><span class='smallishText'>Note: includes both active and inactive volumes.</span><br/>\n", 2+scalar @pris);
   $report .= "</table>\n";
@@ -5779,11 +5780,11 @@ sub CreateDeterminationReport
   my $rows = $self->SelectAll($sql);
   foreach my $row (@{$rows})
   {
-    $sources{ $row->[0] } = $row->[1];
+    $sources{$row->[0]} = $row->[1];
   }
   $sql = 'SELECT COUNT(gid) FROM exportdata WHERE src LIKE "HTS-%"';
   my $cnt = $self->SimpleSqlGet($sql);
-  $sources{ 'One-off from Jira' } = $cnt if $cnt;
+  $sources{'One-off from Jira'} = $cnt if $cnt;
   my ($count2,$time2) = $self->GetLastExport(1);
   $time2 =~ s/\s/&nbsp;/g;
   $count = 'None' unless $count;
@@ -5816,18 +5817,6 @@ sub CreateDeterminationReport
   }
   $report .= sprintf("<tr><th>Total&nbsp;Legacy&nbsp;Determinations</th><td colspan='$colspan'>%s</td></tr>", $legacy);
   $report .= sprintf("<tr><th>Total&nbsp;Determinations</th><td colspan='$colspan'>%s</td></tr>", $exported + $legacy);
-  $report .= "</table>\n";
-  return $report;
-}
-
-sub CreateHistoricalReviewsReport
-{
-  my $self = shift;
-
-  my $report = "<table class='exportStats'>\n";
-  $report .= sprintf("<tr><th>CRMS&nbsp;Reviews</th><td>%s</td></tr>\n", $self->GetTotalNonLegacyReviewCount());
-  $report .= sprintf("<tr><th>Legacy&nbsp;Reviews</th><td>%s</td></tr>\n", $self->GetTotalLegacyReviewCount());
-  $report .= sprintf("<tr><th>Total&nbsp;Historical&nbsp;Reviews</th><td>%s</td></tr>\n", $self->GetTotalHistoricalReviewCount());
   $report .= "</table>\n";
   return $report;
 }
