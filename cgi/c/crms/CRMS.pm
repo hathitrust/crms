@@ -943,6 +943,7 @@ sub AddItemToCandidates
     {
       my $id2 = $ref->{'id'};
       next if $id2 eq $id;
+      next unless $self->IsVolumeInCandidates($id2);
       print "Filter $id2 as duplicate if $id\n" unless $quiet;
       $self->Filter($id2, 'duplicate') unless $noop;
     }
