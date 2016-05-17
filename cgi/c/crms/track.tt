@@ -111,7 +111,13 @@
         <td class="nowrap" headers="sourceTH">[% FOREACH line IN data.data %][% line.7 %]<br/>[% END %]</td>
         <td class="nowrap" headers="userTH">[% FOREACH line IN data.data %][% line.8 %]<br/>[% END %]</td>
         <td class="nowrap" headers="timeTH">[% FOREACH line IN data.data %][% line.9 %]<br/>[% END %]</td>
-        <td headers="noteTH">[% FOREACH line IN data.data %][% line.10 %]<br/>[% END %]</td>
+        <td headers="noteTH">[% FOREACH line IN data.data %]
+              [% IF line.10 %]
+              <a class="tip2" href="#"><strong>&#x1F4DD;</strong><span>[% line.10 %]</span></a>
+              [% ELSE %]&nbsp;
+              [% END %]
+            [% END %]
+        </td>
         <td class="nowrap" headers="accessProfileTH">[% FOREACH line IN data.data %][% line.11 %]<br/>[% END %]</td>
       </tr>
       [% END %]
