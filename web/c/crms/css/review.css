@@ -459,6 +459,35 @@ a.tip:hover span {
   background-color:#FFFFFF;
 }
 
+a.tip2 {
+  position:relative;
+  text-decoration:none;
+  border: 0 none;
+}
+
+a.tip2 img {
+  border: 0px solid;
+}
+
+a.tip2:hover {
+  z-index:25;
+  text-shadow: 4px 1px 6px black;
+}
+
+a.tip2 span {display:none;}
+
+a.tip2:hover span {
+  text-shadow:none;
+  padding:.5em;
+  display:block;
+  position:absolute;
+  top:1.5em; left:-12em; width:24em;
+  border:1px solid #000000;
+  text-align:center;
+  color:#FFFFFF;
+  background-color:#000000;
+}
+
 .warningBox
 {
   border: 1px solid;
