@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.3';
+  return '5.3.1';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -5631,23 +5631,25 @@ sub CreateQueueReport
   my $sql = 'SELECT DISTINCT priority FROM queue ORDER BY priority ASC';
   my @pris = map {$self->StripDecimal($_->[0])} @{$self->SelectAll($sql)};
   my $priheaders = join '', map {"<th>Priority&nbsp;$_</th>";} @pris;
-  my $report = "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
+  my $report = "<table class='exportStats'>
+                <tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
   foreach my $status (-1 .. 9)
   {
     my $statusClause = ($status == -1)? '':"WHERE STATUS=$status";
-    $sql = 'SELECT COUNT(*) FROM queue ' . $statusClause;
-    my $count = $self->SimpleSqlGet($sql);
     $status = 'All' if $status == -1;
     my $class = ($status eq 'All')?' class="total"':'';
-    $report .= sprintf("<tr><td%s>$status</td><td%s>$count</td>", $class, $class);
-    $sql = 'SELECT priority FROM queue ' . $statusClause;
+    $sql = 'SELECT priority,COUNT(id) FROM queue '. $statusClause. 
+           ' GROUP BY priority ASC WITH ROLLUP';
     my $ref = $self->SelectAll($sql);
+    my $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
+    $report .= sprintf("<tr><td%s>$status</td><td%s>$count</td>", $class, $class);
     $report .= $self->DoPriorityBreakdown($ref, $class, \@pris);
     $report .= "</tr>\n";
   }
-  $sql = 'SELECT priority FROM queue WHERE status=0 AND id NOT IN (SELECT id FROM reviews)';
+  $sql = 'SELECT priority,COUNT(id) FROM queue WHERE status=0'.
+         ' AND pending_status=0 GROUP BY priority ASC WITH ROLLUP';
   my $ref = $self->SelectAll($sql);
-  my $count = $self->GetTotalAwaitingReview();
+  my $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
   my $class = ' class="major"';
   $report .= sprintf("<tr><td%s>Not&nbsp;Yet&nbsp;Active</td><td%s>$count</td>", $class, $class);
   $report .= $self->DoPriorityBreakdown($ref, $class, \@pris);
@@ -5784,14 +5786,15 @@ sub CreateDeterminationReport
   {
     $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;%d</th><td>%d&nbsp;(%.1f%%)</td>",
                        $status, $cts{$status}, $pcts{$status});
-    $sql = 'SELECT priority,gid FROM exportdata WHERE status=? AND DATE(time)=DATE(?)';
+    $sql = 'SELECT priority,COUNT(*) FROM exportdata WHERE status=?'.
+           ' AND DATE(time)=DATE(?) GROUP BY priority ASC';
     my $ref = $self->SelectAll($sql, $status, $time);
     $report .= $self->DoPriorityBreakdown($ref, undef, \@pris, $cts{$status});
     $report .= '</tr>';
   }
   $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Total</th><td>$count</td>";
   $sql = 'SELECT priority,COUNT(gid),CONCAT(FORMAT(IF(?=0,0,(COUNT(gid)*100.0)/?),1),"%")'.
-         ' FROM exportdata where date(time)=DATE(?) GROUP BY priority ORDER BY priority';
+         ' FROM exportdata where date(time)=DATE(?) GROUP BY priority ASC';
   my $ref = $self->SelectAll($sql, $total, $total, $time);
   $report .= sprintf('<td class="nowrap">%s (%s)</td>', $_->[1], $_->[2]) for @{$ref};
   $report .= '</tr>';
@@ -5815,63 +5818,39 @@ sub CreateReviewReport
 {
   my $self = shift;
 
-  my $report = '';
-  my $priheaders = '';
-  my @pris = map {$_->[0]} @{$self->SelectAll('SELECT DISTINCT priority FROM queue ORDER BY priority ASC')};
-  foreach my $pri (@pris)
-  {
-    $pri = $self->StripDecimal($pri);
-    $priheaders .= "<th>Priority&nbsp;$pri</th>"
-  }
-  $report .= "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
+  my $sql = 'SELECT DISTINCT priority FROM queue ORDER BY priority ASC';
+  my @pris = map {$self->StripDecimal($_->[0])} @{$self->SelectAll($sql)};
+  my $priheaders = join '', map {"<th>Priority&nbsp;$_</th>";} @pris;
+  my $report = "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
 
-  my $sql = 'SELECT priority FROM queue WHERE id IN (SELECT DISTINCT id FROM reviews)';
+  $sql = 'SELECT priority,COUNT(id) FROM queue WHERE status>0'.
+         ' OR pending_status>0 GROUP BY priority ASC';
   my $ref = $self->SelectAll($sql);
-  my $count = scalar @{$ref};
+  my $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
   $report .= "<tr><td class='total'>Active</td><td class='total'>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,' class="total"',\@pris) . "</tr>\n";
 
   # Unprocessed
-  $sql = 'SELECT priority FROM queue WHERE status=0 AND pending_status>0';
+  $sql = 'SELECT priority,COUNT(*) FROM queue WHERE status=0 AND pending_status>0 GROUP BY priority WITH ROLLUP';
   $ref = $self->SelectAll($sql);
-  $count = scalar @{$ref};
+  $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
   $report .= "<tr><td class='minor'>Unprocessed</td><td class='minor'>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref,' class="minor"',\@pris) . "</tr>\n";
 
-  # Unprocessed - single review
-  $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=1';
-  $ref = $self->SelectAll($sql);
-  $count = scalar @{$ref};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Single&nbsp;Review</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
-
-  # Unprocessed - match
-  $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=4';
-  $ref = $self->SelectAll($sql);
-  $count = scalar @{$ref};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Match</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
-
-  # Unprocessed - conflict
-  $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=2';
-  $ref = $self->SelectAll($sql);
-  $count = scalar @{$ref};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflict</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
-
-  # Unprocessed - provisional match
-  $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=3';
-  $ref = $self->SelectAll($sql);
-  $count = scalar @{$ref};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Match</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
-
-  # Unprocessed - auto-resolved
-  $sql = 'SELECT priority from queue WHERE status=0 AND pending_status=8';
-  $ref = $self->SelectAll($sql);
-  $count = scalar @{$ref};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Auto-Resolved</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,undef,\@pris) . "</tr>\n";
+  # Unprocessed categories
+  my @unprocessed = ({'status'=>1,'name'=>'Single Review'},
+                     {'status'=>2,'name'=>'Conflict'},
+                     {'status'=>3,'name'=>'Provisional Match'},
+                     {'status'=>4,'name'=>'Match'},
+                     {'status'=>8,'name'=>'Auto-Resolved'});
+  foreach my $row (@unprocessed)
+  {
+    $sql = 'SELECT priority,COUNT(*) from queue WHERE status=0 AND pending_status=? GROUP BY priority WITH ROLLUP';
+    $ref = $self->SelectAll($sql, $row->{'status'});
+    $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
+    $report .= sprintf "<tr><td>&nbsp;&nbsp;&nbsp;%s</td><td>$count</td>", $row->{'name'};
+    $report .= $self->DoPriorityBreakdown($ref, '', \@pris) . "</tr>\n";
+  }
 
   # Inheriting
   $sql = 'SELECT COUNT(*) FROM queue WHERE status=9';
@@ -5909,69 +5888,49 @@ sub CreateReviewReport
   $report .= '</tr>';
 
   # Processed
-  $sql = 'SELECT priority FROM queue WHERE status!=0';
+  my @processed = ({'status'=>2,'name'=>'Conflict'},
+                   {'status'=>3,'name'=>'Provisional Match'},
+                   #{'status'=>4,'name'=>'Match'}
+                   );
+  $sql = 'SELECT priority,COUNT(*) FROM queue WHERE status!=0 GROUP BY priority WITH ROLLUP';
   $ref = $self->SelectAll($sql);
-  $count = scalar @{$ref};
+  $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
   $report .= "<tr><td class='minor'>Processed</td><td class='minor'>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,' class="minor"',\@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref, ' class="minor"', \@pris) . "</tr>\n";
 
-  $sql = 'SELECT priority from queue WHERE status=2';
-  $ref = $self->SelectAll($sql);
-  $count = scalar @{$ref};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Conflict</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,'',\@pris) . "</tr>\n";
-
-  $sql = 'SELECT priority from queue WHERE status=3';
-  $ref = $self->SelectAll($sql);
-  $count = scalar @{$ref};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Provisional&nbsp;Match</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,'',\@pris) . "</tr>\n";
-
-  $sql = 'SELECT priority from queue WHERE status>=4';
-  $ref = $self->SelectAll($sql);
-  $count = scalar @{$ref};
-  $report .= "<tr><td>&nbsp;&nbsp;&nbsp;Awaiting&nbsp;Export</td><td>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,'',\@pris) . "</tr>\n";
-
-  if ($count > 0)
+  foreach my $row (@processed)
   {
-    for my $status (4..9)
-    {
-      $sql = 'SELECT priority from queue WHERE status=?';
-      $ref = $self->SelectAll($sql, $status);
-      $count = scalar @{$ref};
-      $report .= "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;$status</td><td>$count</td>";
-      $report .= $self->DoPriorityBreakdown($ref,'',\@pris) . "</tr>\n";
-    }
+    $sql = 'SELECT priority,COUNT(*) from queue WHERE status=? GROUP BY priority WITH ROLLUP';
+    $ref = $self->SelectAll($sql, $row->{'status'});
+    $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
+    $report .= sprintf "<tr><td>&nbsp;&nbsp;&nbsp;%s</td><td>$count</td>", $row->{'name'};
+    $report .= $self->DoPriorityBreakdown($ref, '', \@pris) . "</tr>\n";
   }
-  $report .= sprintf("<tr><td nowrap='nowrap' colspan='%d'><span class='smallishText'>Last processed %s</span></td></tr>\n", 2+scalar @pris, $self->GetLastStatusProcessedTime());
+  
+  $report .= sprintf("<tr><td class='nowrap' colspan='%d'>
+                      <span class='smallishText'>Last processed %s</span>
+                      </td></tr>\n", 2+scalar @pris, $self->GetLastStatusProcessedTime());
   $report .= "</table>\n";
   return $report;
 }
 
-# Takes a SelectAll ref in which each row has a priority as its first column
+# Takes a SelectAll ref in which each row is priority, count
 sub DoPriorityBreakdown
 {
   my $self  = shift;
   my $ref   = shift;
-  my $class = shift;
+  my $class = shift || '';
   my $pris  = shift;
   my $total = shift;
 
   my %breakdown;
   $breakdown{$_} = 0 for @{$pris};
-  my %h = ();
   foreach my $row (@{$ref})
   {
-    my $pri = $self->StripDecimal($row->[0]);
-    if (scalar @{$row} > 1)
-    {
-      my $uvalue = $row->[1];
-      next if $h{$uvalue};
-      $h{$uvalue} = 1;
-    }
-    #print "Pri $pri<br/>\n";
-    $breakdown{$pri}++;
+    my $pri = $row->[0];
+    next unless defined $pri;
+    $pri = $self->StripDecimal($pri);
+    $breakdown{$pri} = $row->[1];
   }
   my $bd = '';
   foreach my $key (sort {$a <=> $b} keys %breakdown)
@@ -5986,17 +5945,7 @@ sub DoPriorityBreakdown
     }
     $bd .= "<td$class>$ct$pct</td>";
   }
-  #printf "%d priorities: %s <!-- $bd --><br/>\n"; scalar keys %breakdown, join ',', keys %breakdown;
   return $bd;
-}
-
-sub GetTotalAwaitingReview
-{
-  my $self = shift;
-
-  my $sql = 'SELECT COUNT(id) FROM queue WHERE status=0 AND id NOT IN (SELECT DISTINCT id FROM reviews)';
-  my $count = $self->SimpleSqlGet($sql);
-  return ($count)? $count:0;
 }
 
 sub GetLastLoadSizeToCandidates
