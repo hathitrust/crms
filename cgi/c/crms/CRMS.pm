@@ -1778,11 +1778,7 @@ sub ConvertToSearchTerm
     $new_search = ($page eq 'queue')? 'q.time':'r.time';
   }
   elsif ($search eq 'UserId') { $new_search = 'r.user'; }
-  elsif ($search eq 'Status')
-  {
-    if ($page eq 'adminHistoricalReviews') { $new_search = 'r.status'; }
-    else { $new_search = 'q.status'; }
-  }
+  elsif ($search eq 'Status') { $new_search = 'q.status'; }
   elsif ($search eq 'Attribute') { $new_search = 'r.attr'; }
   elsif ($search eq 'Reason') { $new_search = 'r.reason'; }
   elsif ($search eq 'NoteCategory') { $new_search = 'r.category'; }
@@ -1790,11 +1786,7 @@ sub ConvertToSearchTerm
   elsif ($search eq 'Legacy') { $new_search = 'r.legacy'; }
   elsif ($search eq 'Title') { $new_search = 'b.title'; }
   elsif ($search eq 'Author') { $new_search = 'b.author'; }
-  elsif ($search eq 'Priority')
-  {
-    if ($page eq 'queue') { $new_search = 'q.priority'; }
-    else { $new_search = 'r.priority'; }
-  }
+  elsif ($search eq 'Priority') { $new_search = 'q.priority'; }
   elsif ($search eq 'Validated') { $new_search = 'r.validated'; }
   elsif ($search eq 'PubDate') { $new_search = 'b.pub_date'; }
   elsif ($search eq 'ReviewDate') { $new_search = 'r.time'; }
@@ -1927,8 +1919,9 @@ sub CreateSQLForReviews
   my $which = ($page eq 'holds')? 'r.hold':'r.time';
   if ($startDate) { $sql .= " AND $which >='$startDate 00:00:00' "; }
   if ($endDate) { $sql .= " AND $which <='$endDate 23:59:59' "; }
-  my $limit = ($download)? '':"LIMIT $offset, $pagesize";
-  $sql .= " ORDER BY $order $dir $limit ";
+  $sql .= " ORDER BY $order $dir";
+  $sql .= ', r.time ASC' unless $order eq 'r.time';
+  $sql .= " LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
   my $countSql = $sql;
   $countSql =~ s/(SELECT\s+).+?(FROM.+)/$1 COUNT(r.id),COUNT(DISTINCT r.id) $2/i;
@@ -1981,15 +1974,15 @@ sub CreateSQLForVolumes
   my @rest = ();
   my $table = 'reviews';
   my $doQ = '';
-  my $status = 'r.status';
+  my $status = 'q.status';
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
+    $doQ = 'INNER JOIN exportdata q ON r.id=q.id';
   }
   else
   {
     $doQ = 'INNER JOIN queue q ON r.id=q.id';
-    $status = 'q.status';
   }
   if ($page eq 'undReviews')
   {
@@ -2070,18 +2063,15 @@ sub CreateSQLForVolumesWide
   my $order2 = ($dir eq 'ASC')? 'min':'max';
   my @rest = ();
   my $table = 'reviews';
-  my $top = 'bibdata b';
-  my $status = 'r.status';
+  my $joins;
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
-    $top = 'bibdata b ';
+    $joins = 'exportdata q ON r.gid=q.gid INNER JOIN bibdata b ON q.id=b.id';
   }
   else
   {
-    push @rest, 'r.id=q.id';
-    $top = 'queue q INNER JOIN bibdata b ON q.id=b.id';
-    $status = 'q.status';
+    $joins = 'queue q ON r.id=q.id INNER JOIN bibdata b ON q.id=b.id';
   }
   if ($page eq 'undReviews')
   {
@@ -2099,22 +2089,22 @@ sub CreateSQLForVolumesWide
     push @rest, "r.time >= '$yesterday'";
     push @rest, 'q.status=0' unless $self->IsUserAdmin($user);
   }
-  my ($joins,@rest2) = $self->SearchTermsToSQLWide($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table);
+  my ($joins2,@rest2) = $self->SearchTermsToSQLWide($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table);
   push @rest, @rest2;
   push @rest, "date(r.time) >= '$startDate'" if $startDate;
   push @rest, "date(r.time) <= '$endDate'" if $endDate;
   my $restrict = join(' AND ', @rest);
   $restrict = 'WHERE '.$restrict if $restrict;
   #my $sql = "SELECT COUNT(r.id) FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict";
-  my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT DISTINCT r.id FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict)";
+  my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT DISTINCT r.id FROM $table r INNER JOIN $joins $joins2 $restrict)";
   #print "$sql<br/>\n";
   my $totalReviews = $self->SimpleSqlGet($sql);
-  $sql = "SELECT COUNT(DISTINCT r.id) FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict";
+  $sql = "SELECT COUNT(DISTINCT r.id) FROM $table r INNER JOIN $joins $joins2 $restrict";
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
-  $sql = "SELECT r.id as id, $order2($order) AS ord FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict GROUP BY r.id " .
+  $sql = "SELECT r.id as id, $order2($order) AS ord FROM $table r INNER JOIN $joins $joins2 $restrict GROUP BY r.id " .
          "ORDER BY ord $dir $limit";
   #print "$sql<br/>\n";
   my $n = POSIX::ceil($offset/$pagesize+1);
@@ -2231,6 +2221,7 @@ sub SearchTermsToSQLWide
   my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table) = @_;
   $op1 = 'AND' unless $op1;
   $op2 = 'AND' unless $op2;
+  my $id = ($table eq 'historicalreviews')? 'gid':'id';
   $search1value = $self->TranslateAttr($search1value) if $search1 eq 'r.attr';
   $search2value = $self->TranslateAttr($search2value) if $search2 eq 'r.attr';
   $search3value = $self->TranslateAttr($search3value) if $search3 eq 'r.attr';
@@ -2254,6 +2245,7 @@ sub SearchTermsToSQLWide
     $search3value = $search3 = undef;
   }
   my %pref2table = ('b'=>'bibdata','r'=>$table,'q'=>'queue');
+  $pref2table{'q'} = 'exportdata' if $table eq 'historicalreviews';
   my $table1 = $pref2table{substr $search1,0,1};
   my $table2 = $pref2table{substr $search2,0,1};
   my $table3 = $pref2table{substr $search3,0,1};
@@ -2321,20 +2313,20 @@ sub SearchTermsToSQLWide
     $search1term =~ s/[a-z]\./t1./;
     if ($op1 eq 'AND' || !length $search2term)
     {
-      $joins = "INNER JOIN $table1 t1 ON t1.id=r.id";
+      $joins = "INNER JOIN $table1 t1 ON t1.$id=r.$id";
       push @rest, $search1term;
     }
     elsif ($op2 ne 'OR' || !length $search3term)
     {
       $search2term =~ s/[a-z]\./t2./;
-      $joins = "INNER JOIN (SELECT t1.id FROM $table1 t1 WHERE $search1term UNION SELECT t2.id FROM $table2 t2 WHERE $search2term) AS or1 ON or1.id=r.id";
+      $joins = "INNER JOIN (SELECT t1.id FROM $table1 t1 WHERE $search1term UNION SELECT t2.id FROM $table2 t2 WHERE $search2term) AS or1 ON or1.$id=r.$id";
       $did2 = 1;
     }
     else
     {
       $search2term =~ s/[a-z]\./t2./;
       $search3term =~ s/[a-z]\./t3./;
-      $joins = "INNER JOIN (SELECT t1.id FROM $table1 t1 WHERE $search1term UNION SELECT t2.id FROM $table2 t2 WHERE $search2term UNION SELECT t3.id FROM $table3 t3 WHERE $search3term) AS or1 ON or1.id=r.id";
+      $joins = "INNER JOIN (SELECT t1.id FROM $table1 t1 WHERE $search1term UNION SELECT t2.id FROM $table2 t2 WHERE $search2term UNION SELECT t3.id FROM $table3 t3 WHERE $search3term) AS or1 ON or1.$id=r.$id";
       $did2 = 1;
       $did3 = 1;
     }
@@ -2344,20 +2336,20 @@ sub SearchTermsToSQLWide
     $search2term =~ s/[a-z]\./t2./;
     if ($op2 eq 'AND' || !length $search3term)
     {
-      $joins .= " INNER JOIN $table2 t2 ON t2.id=r.id";
+      $joins .= " INNER JOIN $table2 t2 ON t2.$id=r.$id";
       push @rest, $search2term;
     }
     else
     {
       $search3term =~ s/[a-z]\./t3./;
-      $joins .= " INNER JOIN (SELECT t2.id FROM $table2 t2 WHERE $search2term UNION SELECT t3.id FROM $table3 t3 WHERE $search3term) AS or2 ON or2.id=r.id";
+      $joins .= " INNER JOIN (SELECT t2.id FROM $table2 t2 WHERE $search2term UNION SELECT t3.id FROM $table3 t3 WHERE $search3term) AS or2 ON or2.$id=r.$id";
       $did3 = 1;
     }
   }
   if (length $search3term && !$did3)
   {
     $search3term =~ s/[a-z]\./t3./;
-    $joins .= " INNER JOIN $table3 t3 ON t3.id=r.id";
+    $joins .= " INNER JOIN $table3 t3 ON t3.$id=r.$id";
     push @rest, $search3term;
   }
   #foreach $_ (@rest) { print "R: $_<br/>\n"; }
@@ -2726,6 +2718,7 @@ sub GetVolumesRef
            (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ', DATE(r.hold) ':' ') .
            "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ " .
            "WHERE r.id='$id' ORDER BY $order $dir";
+    $sql .= ', r.time ASC' unless $order eq 'r.time';
     #print "$sql<br/>\n";
     my $ref2 = $self->SelectAll($sql);
     foreach my $row (@{$ref2})
@@ -2785,11 +2778,11 @@ sub GetVolumesRefWide
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
-    $doQ = 'INNER JOIN exportdata q ON r.id=q.id';
+    $doQ = 'INNER JOIN exportdata q ON r.gid=q.gid';
   }
   else
   {
-    $doQ = 'INNER JOIN queue q ON r.gid=q.gid';
+    $doQ = 'INNER JOIN queue q ON r.id=q.id';
   }
   my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQLForVolumesWide(@_);
   my $ref = undef;
@@ -2809,6 +2802,7 @@ sub GetVolumesRefWide
            (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ', DATE(r.hold) ':' ') .
            "FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id " .
            "WHERE r.id='$id' ORDER BY $order $dir";
+    $sql .= ', r.time ASC' unless $order eq 'r.time';
     #print "$sql<br/>\n";
     my $ref2 = $self->SelectAll($sql);
     foreach my $row (@{$ref2})
@@ -5738,7 +5732,7 @@ sub CreateSystemReport
   $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay&nbsp;on&nbsp;$host</td></tr>\n";
   $report .= '<tr><td colspan="2">';
   $report .= '<span class="smallishText">* Not including legacy data (reviews/determinations made prior to July 2009).</span><br/>';
-  $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count above.</span>';
+  $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count.</span>';
   $report .= "</td></tr></table>\n";
   return $report;
 }
