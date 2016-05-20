@@ -135,6 +135,7 @@ if ($page eq 'confirmReview')
   {
     print "Content-type: text/html\n\n";
     print '<script type="text/javascript">window.close();</script>';
+    exit(0);
   }
 }
 elsif ($page eq 'confirmCorrection')
@@ -172,6 +173,7 @@ elsif ($page eq 'confirmCorrection')
   {
     print "Content-type: text/html\n\n";
     print '<script type="text/javascript">window.close();</script>';
+    exit(0);
   }
 }
 elsif ($page eq 'confirmCRI')
