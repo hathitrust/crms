@@ -101,7 +101,6 @@ function popReviewInfo(id,user,sys)
 function PredictRights(id)
 {
   var img = document.getElementById("predictionLoader");
-  if (img) { img.style.display = 'block'; }
   var year = document.getElementById("renewalField").value;
   var isPub = (document.getElementById('renewalFieldCheckbox').checked)? 1:0;
   var cat = SelectedCategory();
@@ -133,6 +132,7 @@ function PredictRights(id)
     return;
   }*/
   if (und && sel == und) { return; }
+  if (img) { img.style.display = 'block'; }
   var req = new XMLHttpRequest();
   req.onreadystatechange = function()
   {
