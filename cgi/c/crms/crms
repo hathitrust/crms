@@ -245,10 +245,8 @@ if (!$crms->GetAlias())
     }
   }
 }
-if ($crms->IsUserExpired($user))
-{
-  $page = 'expired';
-}
+my $exp = $crms->IsUserExpired($user);
+$page = 'expired' if $exp->{'staus'} == 1;
 if (length $page)
 {
   my $dbc = $crms->AccessCheck($page);
