@@ -53,14 +53,24 @@
 [% users = crms.GetUsers(order) %]
 <table class="exportStats" style="white-space:nowrap">
   <tr>
-    <th>Name</th><th>ID</th><th>Kerberos</th><th>Institution</th>
+    <th scope="col">Name</th>
+    <th scope="col">ID</th>
+    <th scope="col">Kerberos</th>
+    <th scope="col">Institution</th>
     [% IF sys != 'crmsworld' %]
-      <th>RCPC<br/>Reviewer</th>
+      <th scope="col">RCPC<br/>Reviewer</th>
     [% END %]
-    <th>Reviewer</th><th>Advanced</th><th>Expert</th><th>External<br/>Admin</th>
-    <th>Admin</th><th>Super<br/>Admin</th><th>Note</th><th>Projects</th>
-    <th>IP Address</th><th>Commitment[% IF crms.IsUserAdmin() %]<br/>(Progress)[% END %]</th>
-    <th>Change&nbsp;To</th>
+    <th scope="col">Reviewer</th>
+    <th scope="col">Advanced</th>
+    <th scope="col">Expert</th>
+    <th scope="col">External<br/>Admin</th>
+    <th scope="col">Admin</th>
+    <th scope="col">Super<br/>Admin</th>
+    <th scope="col">Note</th>
+    <th scope="col">Projects</th>
+    <th scope="col">IP Address</th>
+    <th scope="col">Commitment[% IF crms.IsUserAdmin() %]<br/>(Progress)[% END %]</th>
+    <th scope="col">Change&nbsp;To</th>
   </tr>
   [% FOREACH userid IN users %]
     [% rcpc = crms.IsUserRCPCReviewer(userid) %]
@@ -108,11 +118,13 @@
            !userid.match("-reviewer") && r %]
           [% role = crms.GetUserRole(userid) %]
           [% IF "crms" != role && inst != 0 %]
-            <span class="red"><br/>Role <b>[% role %]</b></span>
+            <span class="red"><br/>Role <strong>[% role %]</strong></span>
           [% END %]
           [% exp = crms.IsUserExpired(userid) %]
-          [% IF exp %]
-            <span class="red"><br/>Expired <b>[% exp %]</b></span>
+          [% IF exp.status == 1 %]
+            <span class="red"><br/>Expired <strong>[% exp.expires %]</strong></span>
+          [% ELSIF exp.status == 2 %]
+            <span style="color:#FF7777;"><br/>Will expire <strong>[% exp.expires %]</strong></span>
           [% END %]
         [% END %]
       [% END %]
