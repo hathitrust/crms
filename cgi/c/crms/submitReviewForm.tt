@@ -173,10 +173,11 @@
       <td><strong>Rights/Reason:</strong></td>
       <td>
       [% IF !ren %]
-        <img id="predictionLoader" width="16px" height="16px"
+        <img id="predictionLoader" width="16" height="16"
              src="/c/crms/ajax-loader.gif" alt="loading..." style="display:none;"/>
       [% END %]
-      </tr>
+      </td>
+    </tr>
     [% FOREACH i IN [0 .. last] %]
       <tr>
       [% right = rights.$i %]
