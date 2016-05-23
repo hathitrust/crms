@@ -6517,7 +6517,7 @@ sub IsUserExpired
 
   my %data;
   my $sql = 'SELECT DATE(expires),IF(expires<NOW(),1,'.
-            'IF(DATE_SUB(expires,INTERVAL 100 DAY)<NOW(),2,0))'.
+            'IF(DATE_SUB(expires,INTERVAL 10 DAY)<NOW(),2,0))'.
             ' FROM ht_users WHERE userid=?';
   #print "$sql<br/>\n";
   my $sdr_dbh = $self->get('ht_repository');
