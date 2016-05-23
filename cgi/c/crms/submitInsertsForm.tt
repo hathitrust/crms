@@ -1059,8 +1059,7 @@ window.onload = function(e)
     <tr>
       <td></td>
       <td>
-        <input class="review" type="button" name="submit" value="Cancel"
-               onclick="javascript:NavigateAway();"/>
+        <input class="review" type="submit" name="submit" value="Cancel"/>
       </td>
     </tr>
     <tr>
