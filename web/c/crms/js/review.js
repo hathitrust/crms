@@ -44,8 +44,8 @@ function flipFrame()
 
 function popRenewalDate()
 {
-  var renNum = document.getElementById('renNum');
-  var renDate = document.getElementById('renDate');
+  var renNum = document.getElementById('renewalField');
+  var renDate = document.getElementById('getDate');
   var id  = renNum.value;
   renDate.value = "Searching...";
   var req = new XMLHttpRequest();
