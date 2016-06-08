@@ -2818,15 +2818,7 @@ sub GetQueueRef
   $offset = 0 unless $offset;
   $search1 = $self->ConvertToSearchTerm($search1, 'queue');
   $search2 = $self->ConvertToSearchTerm($search2, 'queue');
-  if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
-  elsif ($order eq 'reviews') { $order = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)'; }
-  elsif ($order eq 'holds') { $order = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold IS NOT NULL)'; }
-  elsif ($order eq 'presented')
-  {
-    $order = sprintf "q.priority $dir, (SELECT COUNT(*) FROM reviews WHERE id=q.id) DESC, q.status DESC, q.time %s", ($dir eq 'DESC')? 'ASC':'DESC';
-    $dir = '';
-  }
-  else { $order = 'q.' . $order; }
+  $order = $self->ConvertToSearchTerm($order, 'queue');
   my @rest = ('q.id=b.id');
   my $tester1 = '=';
   my $tester2 = '=';
@@ -2869,8 +2861,9 @@ sub GetQueueRef
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   my @return = ();
   $sql = 'SELECT q.id,q.time,q.status,q.locked,YEAR(b.pub_date),q.priority,'.
-         ' q.expcnt,b.title,b.author,q.project'.
-         ' FROM queue q, bibdata b '. $restrict. ' ORDER BY '. "$order $dir $limit";
+         ' q.expcnt,b.title,b.author,q.project,q.source,q.ticket,q.added_by'.
+         ' FROM queue q LEFT JOIN bibdata b ON q.id=b.id '. $restrict.
+         ' ORDER BY '. "$order $dir $limit";
   #print "$sql<br/>\n";
   my $ref = undef;
   eval {
@@ -2894,19 +2887,22 @@ sub GetQueueRef
     $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND hold IS NOT NULL';
     #print "$sql<br/>\n";
     my $holds = $self->SimpleSqlGet($sql, $id);
-    my $item = {id         => $id,
-                time       => $row->[1],
-                date       => $date,
-                status     => $row->[2],
-                locked     => $row->[3],
-                pubdate    => $pubdate,
-                priority   => $self->StripDecimal($row->[5]),
-                expcnt     => $row->[6],
-                title      => $row->[7],
-                author     => $row->[8],
-                reviews    => $reviews,
-                holds      => $holds,
-                project    => $row->[9]
+    my $item = {id       => $id,
+                time     => $row->[1],
+                date     => $date,
+                status   => $row->[2],
+                locked   => $row->[3],
+                pubdate  => $pubdate,
+                priority => $self->StripDecimal($row->[5]),
+                expcnt   => $row->[6],
+                title    => $row->[7],
+                author   => $row->[8],
+                reviews  => $reviews,
+                holds    => $holds,
+                project  => $row->[9],
+                source   => $row->[10],
+                ticket   => $row->[11],
+                added_by => $row->[12]
                };
     push @return, $item;
     if ($download)
@@ -6245,8 +6241,11 @@ sub QueueSearchMenu
   my $searchName = shift;
   my $searchVal  = shift;
 
-  my @keys = qw(Identifier Title Author PubDate Status Locked Priority Reviews ExpertCount Holds Project);
-  my @labs = ('Identifier','Title','Author','Pub Date','Status','Locked','Priority','Reviews','Expert Reviews','Holds','Project');
+  my @keys = qw(Identifier Title Author PubDate Status Locked Priority Reviews
+                ExpertCount Holds Source AddedBy Project Ticket);
+  my @labs = ('Identifier', 'Title', 'Author', 'Pub Date','Status', 'Locked',
+              'Priority', 'Reviews', 'Expert Reviews', 'Holds', 'Source',
+              'Added By', 'Project', 'Ticket');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
