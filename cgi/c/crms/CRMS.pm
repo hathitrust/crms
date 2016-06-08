@@ -1600,10 +1600,10 @@ sub SubmitActiveReview
   if (!$noop)
   {
     ## all good, INSERT
-    my $sql = 'REPLACE INTO reviews (id,user,time,attr,reason,legacy,priority)' .
-              ' VALUES(?,?,?,?,?,1,1)';
+    my $sql = 'REPLACE INTO reviews (id,user,time,attr,reason,legacy)' .
+              ' VALUES(?,?,?,?,?,1)';
     $self->PrepareSubmitSql($sql, $id, $user, $date, $attr, $reason);
-    $sql = 'UPDATE queue SET pending_status=1 WHERE id=?';
+    $sql = 'UPDATE queue SET pending_status=1,priority=1 WHERE id=?';
     $self->PrepareSubmitSql($sql, $id);
     #Now load this info into the bibdata table.
     $self->UpdateMetadata($id, 1);
@@ -5818,14 +5818,14 @@ sub CreateReviewReport
   my $ref = $self->SelectAll($sql);
   my $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
   $report .= "<tr><td class='total'>Active</td><td class='total'>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,' class="total"',\@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref, ' class="total"', \@pris) . "</tr>\n";
 
   # Unprocessed
   $sql = 'SELECT priority,COUNT(*) FROM queue WHERE status=0 AND pending_status>0 GROUP BY priority WITH ROLLUP';
   $ref = $self->SelectAll($sql);
   $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
   $report .= "<tr><td class='minor'>Unprocessed</td><td class='minor'>$count</td>";
-  $report .= $self->DoPriorityBreakdown($ref,' class="minor"',\@pris) . "</tr>\n";
+  $report .= $self->DoPriorityBreakdown($ref, ' class="minor"', \@pris) . "</tr>\n";
 
   # Unprocessed categories
   my @unprocessed = ({'status'=>1,'name'=>'Single Review'},
@@ -7256,9 +7256,9 @@ sub LinkToHistorical
 
 sub LinkToDeterminations
 {
-  my $self  = shift;
-  my $gid = shift;
-  my $full  = shift;
+  my $self = shift;
+  my $gid  = shift;
+  my $full = shift;
 
   my $url = $self->Sysify('/cgi/c/crms/crms?p=exportData;search1=GID;search1value='. $gid);
   $url = $self->SelfURL() . $url if $full;
