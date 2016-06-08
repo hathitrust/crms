@@ -36,22 +36,22 @@ var gSys = '[% crms.Sys() %]';
     <div class="pages" id="homePage">
     <div style="height:82px;border-bottom:1px solid black;margin:0px;padding-bottom:6px;">
       <a href="[% crms.Sysify('crms') %]">
-        <img src="[% crms.GetSystemVar('logo') %]" width="455" height="80" alt="CRMS Logo"
+        <img src="[% crms.GetSystemVar('logo') %]" width="455" height="80" alt="Jump to home page"
              style="float:left;border:0px solid;margin-right:4em;"/>
       </a>
       [% IF where %]
-        <span style="color:red;font-size:3.2em;">Location:&nbsp;[% where.replace(" ","&nbsp;") %]</span>
+        <span class="darkred" style="font-size:3.2em;">Location:&nbsp;[% where.replace(" ","&nbsp;") %]</span>
       [% END %]
       <div style="float:right;">
         <table class="exportStats">
           <tr>
-            <th class="nowrap" style="text-align:right;">
+            <td class="hello" style="text-align:right;">
               Hello&nbsp;[% crms.GetUserName().replace(" ","&nbsp;") %]&nbsp;&nbsp;
               <a href="[% crms.Sysify('crms?p=Logout') %]" class="header">logout</a>
-            </th>
+            </td>
           </tr>
           <tr>
-            <th class="nowrap" style="text-align:right;">
+            <td class="hello" style="text-align:right;">
               [% experts = crms.GetSystemVar("expertsEmail") %]
               [% IF experts %]
                 <a href="mailto:[% experts %]?subject=CRMS%20Feedback" class="header">
@@ -59,18 +59,13 @@ var gSys = '[% crms.Sys() %]';
                   Click here to report errors
                 </a>
               [% END %]
-            </th>
+            </td>
           </tr>
           <tr>
-           <th style="text-align:right;">
-             [% crms.System() %]&nbsp;version&nbsp;[% crms.Version() %]
-            </th>
+            <td class="hello" style="text-align:right;">
+              [% crms.System() %]&nbsp;version&nbsp;[% crms.Version() %]
+            </td>
           </tr>
-          [% IF where %]
-            <tr>
-              <th style="text-align:right;">Location:&nbsp;[% where.replace(" ","&nbsp;") %]</th>
-            </tr>
-          [% END %]
         </table>
       </div>
     </div>
