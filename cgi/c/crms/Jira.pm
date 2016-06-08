@@ -140,8 +140,8 @@ sub PostToJira
     my $res = $ua->request($req);
     if (!$res->is_success())
     {
-      my $code = $res->code();
-      $err = 'Got ' . $code . ' posting ' . $url;
+      $err = sprintf "Got %s (%s) posting $url: %s",
+                     $res->code(), $res->message(), $res->content();
     }
   }
   return $err;
