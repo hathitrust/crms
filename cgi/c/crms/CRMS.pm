@@ -1580,37 +1580,6 @@ sub GetProject
   return $self->SimpleSqlGet('SELECT project FROM queue WHERE id=?', $id);
 }
 
-## ----------------------------------------------------------------------------
-##  Function:   submit a new active review  (single pd review from rights DB)
-##  Parameters: Lots of them -- last one does the sanity checks but no db updates
-##  Return:     1 || 0
-## ----------------------------------------------------------------------------
-sub SubmitActiveReview
-{
-  my $self = shift;
-  my ($id, $user, $date, $attr, $reason, $noop) = @_;
-
-  ## change attr and reason back to numbers
-  $attr = $self->TranslateAttr($attr);
-  if (!$attr) { $self->SetError("bad attr: $attr"); return 0; }
-  $reason = $self->TranslateReason($reason);
-  if (!$reason) { $self->SetError("bad reason: $reason"); return 0; }
-  if (!$self->ValidateAttrReasonCombo($attr, $reason)) { $self->SetError("bad attr/reason $attr/$reason"); return 0; }
-  if (!$self->CheckReviewer($user, 0))                 { $self->SetError("reviewer ($user) check failed"); return 0; }
-  if (!$noop)
-  {
-    ## all good, INSERT
-    my $sql = 'REPLACE INTO reviews (id,user,time,attr,reason,legacy)' .
-              ' VALUES(?,?,?,?,?,1)';
-    $self->PrepareSubmitSql($sql, $id, $user, $date, $attr, $reason);
-    $sql = 'UPDATE queue SET pending_status=1,priority=1 WHERE id=?';
-    $self->PrepareSubmitSql($sql, $id);
-    #Now load this info into the bibdata table.
-    $self->UpdateMetadata($id, 1);
-  }
-  return 1;
-}
-
 sub MoveFromReviewsToHistoricalReviews
 {
   my $self = shift;

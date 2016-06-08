@@ -172,7 +172,7 @@ foreach my $id (keys %ids)
     next if scalar @{$r};
     $counts{"$attr/$reason"}++;
   }
-  $crms->SubmitActiveReview($id, $user, $time, $attr, $reason, $noop);
+  SubmitActiveReview($crms, $id, $user, $time, $attr, $reason, $noop);
   my $r = $crms->GetErrors();
   printf "Error: %s\n", join("; ", @{$r}) if scalar @{$r};
   $crms->ClearErrors();
@@ -239,6 +239,11 @@ sub GiveItemsInQueuePriority
   return 1;
 }
 
+## ----------------------------------------------------------------------------
+##  Function:   submit a new active review  (single pd review from rights DB)
+##  Parameters: Lots of them -- last one does the sanity checks but no db updates
+##  Return:     1 || 0
+## ----------------------------------------------------------------------------
 sub SubmitActiveReview
 {
   my $crms = shift;
@@ -254,11 +259,12 @@ sub SubmitActiveReview
   if (!$noop)
   {
     ## all good, INSERT
-    my $sql = 'REPLACE INTO reviews (id,user,time,attr,reason,legacy,priority)' .
-              ' VALUES(?,?,?,?,?,1,1)';
+    my $sql = 'REPLACE INTO reviews (id,user,time,attr,reason,legacy)' .
+              ' VALUES(?,?,?,?,?,1)';
     $crms->PrepareSubmitSql($sql, $id, $user, $date, $attr, $reason);
-    $sql = 'UPDATE queue SET pending_status=1 WHERE id=?';
+    $sql = 'UPDATE queue SET pending_status=1,priority=1 WHERE id=?';
     $crms->PrepareSubmitSql($sql, $id);
+    #Now load this info into the bibdata table.
     $crms->UpdateMetadata($id, 1);
   }
   return 1;
