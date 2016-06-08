@@ -236,13 +236,13 @@ if ($cgi->param('download'))
 $page = $cgi->param('p') || 'home';
 if (!$crms->GetAlias())
 {
-  my $ip = $ENV{'REMOTE_ADDR'};
-  $cgi->param('REMOTE_ADDR', $ip);
   my %ips = %{$crms->GetUserIPs()};
   if (scalar keys %ips)
   {
+    my $ip = $ENV{'REMOTE_ADDR'};
     if (!defined $ips{$ip} && !$crms->IsUserAdmin())
     {
+      $cgi->param('REMOTE_ADDR', $ip);
       $page = 'ip';
     }
   }
