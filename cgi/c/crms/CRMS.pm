@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.3.3';
+  return '5.3.4';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -583,14 +583,17 @@ sub ExportReviews
     {
       print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $quiet;
     }
-    my $ref = $self->SelectAll('SELECT status,priority,source,project FROM queue WHERE id=?', $id);
+    my $sql = 'SELECT status,priority,source,added_by,project,ticket FROM queue WHERE id=?';
+    my $ref = $self->SelectAll($sql, $id);
     my $status = $ref->[0]->[0];
     my $pri = $ref->[0]->[1];
     my $src = $ref->[0]->[2];
-    my $proj = $ref->[0]->[3];
-    my $sql = 'INSERT INTO exportdata (id,attr,reason,status,priority,user,src,project,exported)'.
-              ' VALUES (?,?,?,?,?,?,?,?,?)';
-    $self->PrepareSubmitSql($sql, $id, $attr, $reason, $status, $pri, $user, $src, $proj, $export);
+    my $added_by = $ref->[0]->[3];
+    my $proj = $ref->[0]->[4];
+    my $tx = $ref->[0]->[5];
+    $sql = 'INSERT INTO exportdata (id,attr,reason,status,priority,src,added_by,project,ticket,exported)'.
+           ' VALUES (?,?,?,?,?,?,?,?,?,?)';
+    $self->PrepareSubmitSql($sql, $id, $attr, $reason, $status, $pri, $src, $added_by, $proj, $tx, $export);
     my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata WHERE id=?', $id);
     $self->MoveFromReviewsToHistoricalReviews($id, $gid);
     $self->RemoveFromQueue($id);
