@@ -1442,14 +1442,11 @@ sub SubmitReview
   # This in once case got submitted as the renDate in production
   $renDate = '' if $renDate =~ m/searching.*/i;
   $renDate =~ s/^\s+|\s+$//gs;
-  my $priority = $self->GetPriority($id);
-  my @fields = qw(id user attr reason note renNum renDate category priority);
-  my @values = ($id, $user, $attr, $reason, $note, $renNum, $renDate, $category, $priority);
+  my @fields = qw(id user attr reason note renNum renDate category);
+  my @values = ($id, $user, $attr, $reason, $note, $renNum, $renDate, $category);
   if ($hold)
   {
     $hold = $self->HoldExpiry($id, $user, 0);
-    my $note = "hold from $user on $id: $hold";
-    $self->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $note);
     push(@fields, 'hold');
     push(@values, $hold);
   }
