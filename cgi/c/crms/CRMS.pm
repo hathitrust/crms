@@ -3247,19 +3247,6 @@ sub LinkToReview
   return "<a href='$url' target='_blank'>$title</a>";
 }
 
-sub DetailInfo
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $user   = shift;
-  my $page   = shift;
-  my $review = shift;
-
-  my $url = $self->Sysify("/cgi/c/crms/crms?p=detailInfo;id=$id;user=$user;page=$page");
-  $url .= ';review=1' if $review;
-  return "<a href='$url' target='_blank'>$id</a>";
-}
-
 sub GetStatus
 {
   my $self = shift;
@@ -7263,6 +7250,17 @@ sub LinkToHistorical
   my $full  = shift;
 
   my $url = $self->Sysify('/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value='. $sysid);
+  $url = $self->SelfURL() . $url if $full;
+  return $url;
+}
+
+sub LinkToDeterminations
+{
+  my $self  = shift;
+  my $gid = shift;
+  my $full  = shift;
+
+  my $url = $self->Sysify('/cgi/c/crms/crms?p=exportData;search1=GID;search1value='. $gid);
   $url = $self->SelfURL() . $url if $full;
   return $url;
 }

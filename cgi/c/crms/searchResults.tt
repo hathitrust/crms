@@ -158,8 +158,10 @@ function CheckAll(box,formid)
   <table class="exportStats" style="width:100%;" id="resultsTable"><tr>
     <th>ID</th>
     [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
-      <th class="nowrap" id="gidth" style="display:[% (showSysID)? 'table-cell':'none' %];">GID</th>
-      <th class="nowrap" id="sysidth" style="display:[% (showSysID)? 'table-cell':'none' %];">System&nbsp;ID</th>
+      <th class="nowrap" id="gidth" style="display:[% (showSysID)? 'table-cell':'none' %];">GID
+        <br/>(<span style="color:[% color_gray %];">determinations</span>)</th>
+      <th class="nowrap" id="sysidth" style="display:[% (showSysID)? 'table-cell':'none' %];">System&nbsp;ID
+        <br/>(<span style="color:[% color_gray %];">Mirlyn</span>)</th>
       <th class="nowrap" id="srcth" style="display:[% (showSysID)? 'table-cell':'none' %];">Source</th>
     [% END %]
     <th>Title</th>
@@ -205,11 +207,7 @@ function CheckAll(box,formid)
       [% END %]
       <tr style="background-color:[% active_color %];">
         <td class="nowrap">
-        [% IF p == 'editReviews' || p == 'adminHolds' %]
-          [% crms.DetailInfo(review.id, review.user, p, 1) %]
-        [% ELSE %]
-          [% crms.DetailInfo(review.id, review.user, p) %]
-        [% END %]
+        [% review.id %]
         [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' %]
           [% IF crms.IsLockedForOtherUser(review.id) %]
             <img width="16" height="16" alt="Locked" src="/c/crms/OtherLock.png"/>
@@ -217,9 +215,14 @@ function CheckAll(box,formid)
             <img width="16" height="16" alt="Locked by me" src="/c/crms/Lock.png"/>
           [% END %]
         [% END %]
+        [% IF 'crms' == sys && (review.renDate || review.renNum) %]
+          <a class="tip2" href="#"><strong>&#x1F4DD;</strong><span style="width:10em;">[% review.renNum _ ', ' _ review.renDate %]</span></a>
+        [% END %]
         </td>
         [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
-          <td style="display:[% (showSysID)? 'table-cell':'none' %];">$review.gid</td>
+          <td style="display:[% (showSysID)? 'table-cell':'none' %];">
+            <a href='[% crms.LinkToDeterminations(review.gid) %]' target='_blank'>[% review.gid %]</a>
+          </td>
           <td style="display:[% (showSysID)? 'table-cell':'none' %];">
             <a href="[% crms.LinkToMirlynDetails(review.id) %]" target="_blank">$review.sysid</a>
           </td>
@@ -253,7 +256,7 @@ function CheckAll(box,formid)
         <td>$review.user</td>
         <td>$review.attr</td>
         <td>$review.reason</td>
-        [% IF p == 'undReviews' || p == 'expert' || 'crmsworld' == sys %]
+        [% IF p == 'undReviews' || p == 'expert' || (p == 'adminHistoricalReviews' && 'crmsworld' == sys) %]
           [% IF 'crms' == sys %]
             <td>$review.renNum</td>
           [% ELSE %]
@@ -264,7 +267,7 @@ function CheckAll(box,formid)
             </td>
           [% END %]
         [% END %]
-        <td>$review.category</td>
+        <td class="nowrap">$review.category</td>
         <td>[% crms.LinkNoteText(cgi.escapeHTML(review.note)) %]</td>
         [% IF crms.IsUserAdmin() %]<td>$review.priority</td>[% END %]
         [% IF p == 'adminHistoricalReviews' %]
