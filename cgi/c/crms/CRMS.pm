@@ -1768,14 +1768,15 @@ sub ConvertToSearchTerm
   my $search         = shift;
   my $page           = shift;
 
+  my $prefix = ($page eq 'queue' || $page eq 'exportData')? 'q.':'r.';
   my $new_search = $search;
   if (!$search || $search eq 'Identifier')
   {
-    $new_search = ($page eq 'queue')? 'q.id':'r.id';
+    $new_search = $prefix. 'id';
   }
   if ($search eq 'Time')
   {
-    $new_search = ($page eq 'queue')? 'q.time':'r.time';
+    $new_search = $prefix. 'time';
   }
   elsif ($search eq 'UserId') { $new_search = 'r.user'; }
   elsif ($search eq 'Status') { $new_search = 'q.status'; }
@@ -1803,10 +1804,14 @@ sub ConvertToSearchTerm
   {
     $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold IS NOT NULL)';
   }
-  elsif ($search eq 'Source') { $new_search = 'q.src'; }
+  elsif ($search eq 'Source')
+  {
+    $new_search = ($page eq 'queue')? 'q.source':'q.src';
+  }
   elsif ($search eq 'Project') { $new_search = 'q.project'; }
-  elsif ($search eq 'GID') { $new_search = 'r.gid'; }
-  if ($search eq 'Project' && $page eq 'exportData') { $new_search = 'r.project'; }
+  elsif ($search eq 'GID') { $new_search = $prefix. 'gid'; }
+  elsif ($search eq 'AddedBy') { $new_search = 'q.added_by'; }
+  elsif ($search eq 'Ticket') { $new_search = 'q.ticket'; }
   return $new_search;
 }
 
@@ -2491,7 +2496,7 @@ sub UnpackResults
     my $title      = $row->[15]; # Validated in historical
     my $author     = $row->[16];
     my $hold       = $row->[17];
-    if ($page eq 'userReviews')
+    if ($page eq 'userReviews') # FIXME: is this ever used??
     {
       #for reviews
       #id, title, author, review date, attr, reason, category, note.
@@ -2916,8 +2921,8 @@ sub GetQueueRef
     $search2Value = $2;
     $tester2 = $1;
   }
-  push @rest, "q.time >= '$startDate'" if $startDate;
-  push @rest, "q.time <= '$endDate'" if $endDate;
+  push @rest, "q.time>='$startDate'" if $startDate;
+  push @rest, "q.time<='$endDate'" if $endDate;
   if ($search1Value ne '' && $search2Value ne '')
   {
     push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
@@ -3017,8 +3022,7 @@ sub GetExportDataRef
   $offset = 0 unless $offset;
   $search1 = $self->ConvertToSearchTerm($search1, 'exportData');
   $search2 = $self->ConvertToSearchTerm($search2, 'exportData');
-  if ($order eq 'author' || $order eq 'title' || $order eq 'pub_date') { $order = 'b.' . $order; }
-  else { $order = 'r.' . $order; }
+  $order = $self->ConvertToSearchTerm($order, 'exportData');
   my @rest = ();
   my $tester1 = '=';
   my $tester2 = '=';
@@ -3054,14 +3058,15 @@ sub GetExportDataRef
     push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
   }
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
-  my $sql = 'SELECT COUNT(r.id) FROM exportdata r LEFT JOIN bibdata b ON r.id=b.id '. $restrict;
+  my $sql = 'SELECT COUNT(q.id) FROM exportdata q LEFT JOIN bibdata b ON q.id=b.id '. $restrict;
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   my @return = ();
-  $sql = 'SELECT r.id,r.time,r.attr,r.reason,r.src,b.title,b.author,YEAR(b.pub_date),r.exported,r.project ' .
-         "FROM exportdata r LEFT JOIN bibdata b ON r.id=b.id $restrict ORDER BY $order $dir $limit";
+  $sql = 'SELECT q.id,DATE(q.time),q.attr,q.reason,q.status,q.priority,q.src,b.title,b.author,'.
+         'YEAR(b.pub_date),q.exported,q.project,q.gid,q.added_by,q.ticket'.
+         " FROM exportdata q LEFT JOIN bibdata b ON q.id=b.id $restrict ORDER BY $order $dir $limit";
   #print "$sql<br/>\n";
   my $ref = undef;
   eval { $ref = $self->SelectAll($sql); };
@@ -3073,27 +3078,29 @@ sub GetExportDataRef
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    my $date = $row->[1];
-    $date =~ s/(.*?) .*/$1/;
-    my $pubdate = $row->[7];
+    my $pubdate = $row->[9];
     $pubdate = '?' unless $pubdate;
     my $item = {id         => $id,
-                time       => $row->[1],
-                date       => $date,
+                date       => $row->[1],
                 attr       => $row->[2],
                 reason     => $row->[3],
-                src        => $row->[4],
-                title      => $row->[5],
-                author     => $row->[6],
-                project    => $row->[9],
-                exported   => $row->[8],
-                pubdate    => $pubdate
+                status     => $row->[4],
+                priority   => $self->StripDecimal($row->[5]),
+                src        => $row->[6],
+                title      => $row->[7],
+                author     => $row->[8],
+                pubdate    => $pubdate,
+                exported   => $row->[10],
+                project    => $row->[11],
+                gid        => $row->[12],
+                added_by   => $row->[13],
+                ticket     => $row->[14],
                };
     push @return, $item;
     if ($download)
     {
-      $data .= sprintf("\n$id\t%s\t%s\t$pubdate\t$date\t%s",
-                       $row->[5], $row->[6], $row->[4]);
+      $data .= sprintf("\n$id\t%s\t%s\t$pubdate\t%s\t%s",
+                       $row->[5], $row->[6], $row->[4], $row->[1]);
     }
   }
   if (!$download)
@@ -6136,7 +6143,7 @@ sub IsReviewCorrect
   # A non-expert with status 6/7/8 is protected rather like Swiss.
   return 1 if ($status >=6 && $status <= 8 && !$expert);
   # If there is a newer newyear determination, that also offers blanket protection.
-  my $sql = 'SELECT COUNT(id) FROM exportdata WHERE id=? AND src="newyear" AND time>?';
+  $sql = 'SELECT COUNT(id) FROM exportdata WHERE id=? AND src="newyear" AND time>?';
   my $newyear = $self->SimpleSqlGet($sql, $id, $time);
   return 1 if $newyear;
   # Get the most recent non-autocrms expert review.
@@ -6318,9 +6325,9 @@ sub ReviewSearchMenu
 # Generates HTML to get the field type menu on the Volumes in Queue page.
 sub QueueSearchMenu
 {
-  my $self = shift;
+  my $self       = shift;
   my $searchName = shift;
-  my $searchVal = shift;
+  my $searchVal  = shift;
 
   my @keys = qw(Identifier Title Author PubDate Status Locked Priority Reviews ExpertCount Holds Project);
   my @labs = ('Identifier','Title','Author','Pub Date','Status','Locked','Priority','Reviews','Expert Reviews','Holds','Project');
@@ -6336,16 +6343,19 @@ sub QueueSearchMenu
 # Generates HTML to get the field type menu on the Export Data page.
 sub ExportDataSearchMenu
 {
-  my $self = shift;
+  my $self       = shift;
   my $searchName = shift;
-  my $searchVal = shift;
+  my $searchVal  = shift;
 
-  my @keys = qw(Identifier Title Author PubDate Attribute Reason Source Project);
-  my @labs = ('Identifier','Title','Author','Pub Date','Attribute','Reason','Source','Project');
+  my @keys = qw(Identifier Title Author PubDate Attribute Reason
+                Status Priority Source AddedBy Project Ticket GID Exported);
+  my @labs = ('Identifier', 'Title', 'Author', 'Pub Date', 'Attribute', 'Reason',
+              'Status', 'Priority', 'Source', 'Added By', 'Project', 'Ticket', 'GID', 'Exported');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
-    $html .= sprintf("  <option value='%s'%s>%s</option>\n", $keys[$i], ($searchVal eq $keys[$i])? ' selected="selected"':'', $labs[$i]);
+    $html .= sprintf("  <option value='%s'%s>%s</option>\n", $keys[$i],
+                     ($searchVal eq $keys[$i])? ' selected="selected"':'', $labs[$i]);
   }
   $html .= "</select>\n";
   return $html;

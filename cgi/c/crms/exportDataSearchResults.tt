@@ -82,10 +82,15 @@
     <th>Title</th>
     <th>Author</th>
     <th>Pub&nbsp;Date</th>
-    <th>Export&nbsp;Date</th>
+    <th>Date</th>
     <th>Rights</th>
+    <th>Status</th>
+    <th>Priority</th>
     <th>Source</th>
+    <th>Added&nbsp;By</th>
     <th>Project</th>
+    <th>Ticket</th>
+    <th>GID</th>
     <th>Exported</th>
     </tr>
     [% FOREACH item IN ref.rows %]
@@ -101,14 +106,19 @@
       [% END %]
 
       <tr style="background-color:[% active_color %];">
-        <td>$item.id</td>
+        <td class="nowrap">$item.id</td>
         <td>[% crms.LinkToPT(item.id, item.title) %]</td>
         <td>[% cgi.escapeHTML(item.author) %]</td>
         <td>$item.pubdate</td>
         <td>$item.date</td>
         <td>[% item.attr _ '/' _ item.reason %]</td>
-        <td>$item.src</td>
-        <td>$item.project</td>
+        <td>$item.status</td>
+        <td>$item.priority</td>
+        <td class="nowrap">$item.src</td>
+        <td>$item.added_by</td>
+        <td class="nowrap">$item.project</td>
+        <td>$item.ticket</td>
+        <td>$item.gid</td>
         <td>
           [% IF item.exported %]
             <img width="16" height="16" alt="Exported" src="/c/crms/CheckIcon.png"/>

@@ -71,16 +71,7 @@ Restrict selection:<br/>
 <br/>
 
 <label for="order">Order by:</label>
-<select id="order" name="order">
-  <option value="id"       [% order == 'id' ?  'selected="selected"':'' %]>Identifier</option>
-  <option value="title"    [% order == 'title' ? 'selected="selected"':'' %]>Title</option>
-  <option value="author"   [% order == 'author' ? 'selected="selected"':'' %]>Author</option>
-  <option value="pub_date" [% order == 'pub_date' ? 'selected="selected"':'' %]>Pub&nbsp;Date</option>
-  <option value="time"     [% order == 'time' ?  'selected="selected"':'' %]>Date&nbsp;Exported</option>
-  <option value="attr"     [% order == 'attr' ?  'selected="selected"':'' %]>Attribute</option>
-  <option value="reason"   [% order == 'reason' ?  'selected="selected"':'' %]>Reason</option>
-  <option value="src"      [% order == 'src' ? 'selected="selected"':'' %]>Source</option>
-</select>
+[% crms.ExportDataSearchMenu('order', order) %]
 <br/>
 
 <label for="dir">Direction:</label>
