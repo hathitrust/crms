@@ -154,7 +154,7 @@ function checkInst(id)
             <input type="checkbox" class="userCB" name="inst_[% r.0 %]" id="[% id %]"
                    onchange="checkInst('inst_[% r.0 %]');reloadChart('chart0');"/>
             <label for="[% id %]">
-              [% IF h.active == 0 %][% name = "<i>" _ name _ "</i>" %][% END %]
+              [% IF h.active == 0 %][% name = "<em>" _ name _ "</em>" %][% END %]
               [% name %]
             </label>
           </td>
