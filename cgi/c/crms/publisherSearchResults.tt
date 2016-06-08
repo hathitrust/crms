@@ -30,7 +30,7 @@
   [% of = ref.of %]
   [% items = ref.rows %]
   <a id="results"></a>
-  <p><b>Found $total publisher[% (total==1)? "":"s"%], page $pagenum of $of</b></p>
+  <strong>Found $total publisher[% (total==1)? "":"s"%], page $pagenum of $of</strong><br/>
 
   [% IF NOT offset %] [% offset = 0 %] [% END %]
   [% IF offset > 0 %] [% next = offset + pagesize %]
@@ -137,7 +137,7 @@
 
   [% IF of > 1 %]
     <br/>
-    <p><b>Found $total publishers, page $pagenum of $of</b></p>
+    <strong>Found $total publishers, page $pagenum of $of</strong><br/>
 
     <form action="crms">
     Jump to Page:
@@ -150,7 +150,7 @@
     [% IF max > of %][% max = of %][% END %]
     [% FOREACH pg IN [min .. max] %]
       [% IF pg == pagenum %]
-        <b>[% pg %]</b> ||
+        <strong>[% pg %]</strong> ||
       [% ELSE %]
         [% off = (pg - 1) * pagesize %]
         <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$off#results" %]">[% pg %]</a> ||
