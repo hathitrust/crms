@@ -276,6 +276,15 @@ table.exportStats th {
   text-align:left;
 }
 
+table.exportStats td.hello {
+  padding:4px 6px 2px 6px;
+  background-color:#000000;
+  color:#FFFFFF;
+  text-align:left;
+  white-space:nowrap;
+  font-weight:bold;
+}
+
 tr.hoverWide:hover { background: #E0E0E0; }
 tr.hoverWide td:hover { background: transparent; }
 
@@ -289,13 +298,10 @@ td.major,tr.major {
   font-weight:bold;
 }
 
-span.red {
-  color:#FB5252;
-}
+span.red { color:#FB5252; }
+span.orange { color:#EB9747; }
 
-span.orange {
-  color:#EB9747;
-}
+.darkred { color:#EE0000; }
 
 td.purple,tr.purple {
   background-color:#D2B4DA;
