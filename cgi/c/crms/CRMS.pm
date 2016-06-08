@@ -1586,12 +1586,11 @@ sub MoveFromReviewsToHistoricalReviews
   my $id   = shift;
   my $gid  = shift;
 
-  my $status = $self->GetStatus($id);
   my $sql = 'INSERT INTO historicalreviews (id,time,user,attr,reason,note,' .
-            'renNum,expert,duration,legacy,renDate,category,priority,swiss,prepopulated,status,gid)' .
+            'renNum,expert,duration,legacy,renDate,category,swiss,prepopulated,gid)' .
             ' SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,' .
-            'renDate,category,priority,swiss,prepopulated,?,? FROM reviews WHERE id=?';
-  $self->PrepareSubmitSql($sql, $status, $gid, $id);
+            'renDate,category,swiss,prepopulated,? FROM reviews WHERE id=?';
+  $self->PrepareSubmitSql($sql, $gid, $id);
   $sql = 'DELETE FROM reviews WHERE id=?';
   $self->PrepareSubmitSql($sql, $id);
 }
