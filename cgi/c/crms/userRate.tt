@@ -24,7 +24,7 @@
     </span>
   [% END %]
   <br/><br/>
-  <b>Reviews Awaiting Verdict: [% crms.CountReviewsForUser(user) %]</b>
+  <strong>Reviews Awaiting Verdict: [% crms.CountReviewsForUser(user) %]</strong>
   <br/><br/>
   [% IF NOT crms.IsTrainingArea() %]
     [% divid = user.replace('@','_') %]
