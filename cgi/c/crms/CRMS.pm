@@ -1794,27 +1794,23 @@ sub CreateSQL
 
 sub CreateSQLForReviews
 {
-  my $self               = shift;
-  my $page               = shift;
-  my $order              = shift;
-  my $dir                = shift;
-
-  my $search1            = shift;
-  my $search1value       = shift;
-  my $op1                = shift;
-
-  my $search2            = shift;
-  my $search2value       = shift;
-  my $op2                = shift;
-
-  my $search3            = shift;
-  my $search3value       = shift;
-
-  my $startDate          = shift;
-  my $endDate            = shift;
-  my $offset             = shift;
-  my $pagesize           = shift;
-  my $download           = shift;
+  my $self         = shift;
+  my $page         = shift;
+  my $order        = shift;
+  my $dir          = shift;
+  my $search1      = shift;
+  my $search1value = shift;
+  my $op1          = shift;
+  my $search2      = shift;
+  my $search2value = shift;
+  my $op2          = shift;
+  my $search3      = shift;
+  my $search3value = shift;
+  my $startDate    = shift;
+  my $endDate      = shift;
+  my $offset       = shift;
+  my $pagesize     = shift;
+  my $download     = shift;
 
   $order = $self->ConvertToSearchTerm($order, $page);
   $search1 = $self->ConvertToSearchTerm($search1, $page);
@@ -1841,49 +1837,49 @@ sub CreateSQLForReviews
     }
   }
   my $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,'.
-            'r.renNum,r.expert,r.category,r.legacy,r.renDate,r.priority,r.swiss,';
+            'r.renNum,r.expert,r.category,r.legacy,r.renDate,q.priority,r.swiss,'.
+            'q.status,b.title,b.author,';
   if ($page eq 'adminReviews')
   {
-    $sql .= 'q.status,b.title,b.author,DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= 'DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
   }
   elsif ($page eq 'holds')
   {
-    $sql .= 'q.status,b.title,b.author,DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= 'DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
     $sql .= " AND r.user='$user' AND r.hold IS NOT NULL";
   }
   elsif ($page eq 'adminHolds')
   {
-    $sql .= 'q.status,b.title,b.author,DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= 'DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
     $sql .= " AND r.hold IS NOT NULL";
   }
   elsif ($page eq 'expert')
   {
-    $sql .= 'q.status,b.title,b.author,DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= 'DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
     $sql .= ' AND q.status=2' . $project;
   }
   elsif ($page eq 'adminHistoricalReviews')
   {
     my $doB = 'LEFT JOIN bibdata b ON r.id=b.id';
     $doB = '' unless ($search1 . $search2 . $search3 . $order) =~ m/b\./;
-    $sql .= "r.status,r.validated,q.src,q.gid FROM historicalreviews r $doB INNER JOIN exportdata q ON r.gid=q.gid WHERE r.id IS NOT NULL";
+    $sql .= 'r.validated,q.src,q.gid FROM historicalreviews r LEFT JOIN bibdata b ON b.id=r.id'.
+            ' INNER JOIN exportdata q ON r.gid=q.gid WHERE r.id IS NOT NULL';
   }
   elsif ($page eq 'undReviews')
   {
-    $sql .= 'q.status,b.title,b.author,DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= 'DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
     $sql .= ' AND q.status=3' . $project;
   }
   elsif ($page eq 'userReviews')
   {
-    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-           'r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author ' .
-           "FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id AND r.user='$user' AND q.status>0";
+    $sql .= "DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id AND r.user='$user' AND q.status>0";
   }
   elsif ($page eq 'editReviews')
   {
     my $today = $self->SimpleSqlGet('SELECT DATE(NOW())') . ' 00:00:00';
     # Experts need to see stuff with any status; non-expert should only see stuff that hasn't been processed yet.
     my $restrict = ($self->IsUserExpert($user))? '':'AND q.status=0';
-    $sql .= 'q.status, b.title, b.author, DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id ' .
+    $sql .= 'DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id ' .
             "AND r.user='$user' AND (r.time>='$today' OR r.hold IS NOT NULL) AND q.status!=6 $restrict";
   }
   my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
@@ -1946,7 +1942,6 @@ sub CreateSQLForVolumes
   my @rest = ();
   my $table = 'reviews';
   my $doQ = '';
-  my $status = 'q.status';
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
@@ -2193,7 +2188,6 @@ sub SearchTermsToSQLWide
   my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table) = @_;
   $op1 = 'AND' unless $op1;
   $op2 = 'AND' unless $op2;
-  my $id = ($table eq 'historicalreviews')? 'gid':'id';
   $search1value = $self->TranslateAttr($search1value) if $search1 eq 'r.attr';
   $search2value = $self->TranslateAttr($search2value) if $search2 eq 'r.attr';
   $search3value = $self->TranslateAttr($search3value) if $search3 eq 'r.attr';
@@ -2282,6 +2276,7 @@ sub SearchTermsToSQLWide
   my $did3 = 0;
   if (length $search1term)
   {
+    my $id = ($table eq 'historicalreviews' && $table1 != 'bibdata')? 'gid':'id';
     $search1term =~ s/[a-z]\./t1./;
     if ($op1 eq 'AND' || !length $search2term)
     {
@@ -2291,20 +2286,24 @@ sub SearchTermsToSQLWide
     elsif ($op2 ne 'OR' || !length $search3term)
     {
       $search2term =~ s/[a-z]\./t2./;
-      $joins = "INNER JOIN (SELECT t1.id FROM $table1 t1 WHERE $search1term UNION SELECT t2.id FROM $table2 t2 WHERE $search2term) AS or1 ON or1.$id=r.$id";
+      $joins = "INNER JOIN (SELECT t1.id FROM $table1 t1 WHERE $search1term".
+               " UNION SELECT t2.id FROM $table2 t2 WHERE $search2term) AS or1 ON or1.$id=r.$id";
       $did2 = 1;
     }
     else
     {
       $search2term =~ s/[a-z]\./t2./;
       $search3term =~ s/[a-z]\./t3./;
-      $joins = "INNER JOIN (SELECT t1.id FROM $table1 t1 WHERE $search1term UNION SELECT t2.id FROM $table2 t2 WHERE $search2term UNION SELECT t3.id FROM $table3 t3 WHERE $search3term) AS or1 ON or1.$id=r.$id";
+      $joins = "INNER JOIN (SELECT t1.id FROM $table1 t1 WHERE $search1term".
+               " UNION SELECT t2.id FROM $table2 t2 WHERE $search2term".
+               " UNION SELECT t3.id FROM $table3 t3 WHERE $search3term) AS or1 ON or1.$id=r.$id";
       $did2 = 1;
       $did3 = 1;
     }
   }
   if (length $search2term && !$did2)
   {
+    my $id = ($table eq 'historicalreviews' && $table2 != 'bibdata')? 'gid':'id';
     $search2term =~ s/[a-z]\./t2./;
     if ($op2 eq 'AND' || !length $search3term)
     {
@@ -2314,12 +2313,14 @@ sub SearchTermsToSQLWide
     else
     {
       $search3term =~ s/[a-z]\./t3./;
-      $joins .= " INNER JOIN (SELECT t2.id FROM $table2 t2 WHERE $search2term UNION SELECT t3.id FROM $table3 t3 WHERE $search3term) AS or2 ON or2.$id=r.$id";
+      $joins .= " INNER JOIN (SELECT t2.id FROM $table2 t2 WHERE $search2term".
+                " UNION SELECT t3.id FROM $table3 t3 WHERE $search3term) AS or2 ON or2.$id=r.$id";
       $did3 = 1;
     }
   }
   if (length $search3term && !$did3)
   {
+    my $id = ($table eq 'historicalreviews' && $table3 != 'bibdata')? 'gid':'id';
     $search3term =~ s/[a-z]\./t3./;
     $joins .= " INNER JOIN $table3 t3 ON t3.$id=r.$id";
     push @rest, $search3term;
@@ -2349,15 +2350,14 @@ sub SearchAndDownload
   $stype = 'reviews' unless $stype;
   my $table = 'reviews';
   my $top = 'bibdata b';
-  my $status = 'r.status';
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
+    $top = 'exportdata q INNER JOIN bibdata b ON q.id=b.id';
   }
   else
   {
     $top = 'queue q INNER JOIN bibdata b ON q.id=b.id';
-    $status = 'q.status';
   }
   my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQL($stype, $page, $order, $dir, $search1,
                                                                   $search1value, $op1, $search2, $search2value,
@@ -2373,27 +2373,23 @@ sub SearchAndDownload
   {
     if ($page eq 'userReviews')
     {
-      $buff .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
+      $buff .= qq{id\ttitle\tauthor\tdate\tattr\treason\tcategory\tnote};
     }
     elsif ($page eq 'editReviews')
     {
-      $buff .= qq{id\ttitle\tauthor\ttime\tattr\treason\tcategory\tnote};
+      $buff .= qq{id\ttitle\tauthor\tdate\tattr\treason\tcategory\tnote};
     }
-    elsif ($page eq 'undReviews')
+    elsif ($page eq 'expert' || $page eq 'undReviews')
     {
-      $buff .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote}
-    }
-    elsif ($page eq 'expert')
-    {
-      $buff .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote};
+      $buff .= qq{id\ttitle\tauthor\tdate\tstatus\tuser\tattr\treason\tcategory\tnote}
     }
     elsif ($page eq 'adminReviews' || $page eq 'adminHolds')
     {
-      $buff .= qq{id\ttitle\tauthor\ttime\tstatus\tuser\tattr\treason\tcategory\tnote\tswiss\thold thru};
+      $buff .= qq{id\ttitle\tauthor\tdate\tstatus\tuser\tattr\treason\tcategory\tnote\tswiss\thold thru};
     }
     elsif ($page eq 'adminHistoricalReviews')
     {
-      $buff .= qq{id\tsystem id\ttitle\tauthor\tpub date\ttime\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated\tswiss};
+      $buff .= qq{id\tsystem id\ttitle\tauthor\tpub date\tdate\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated\tswiss};
     }
     $buff .= sprintf("%s\n", ($self->IsUserAdmin())? "\tpriority":'');
     if ($stype eq 'reviews')
@@ -2408,12 +2404,11 @@ sub SearchAndDownload
       {
         my $id = $row->[0];
         my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
-        $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,' .
-               "r.category,r.legacy,r.renDate,r.priority,r.swiss,$status," .
-               (($page eq 'adminHistoricalReviews')?
-                 'r.validated ':'b.title,b.author,r.hold ') .
-               "FROM $top INNER JOIN $table r ON b.id=r.id " .
-               "WHERE r.id='$id' $qrest ORDER BY $order $dir";
+        $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
+               'r.category,r.legacy,r.renDate,r.priority,r.swiss,q.status,b.title,b.author,'.
+               (($page eq 'adminHistoricalReviews')?'r.validated':'r.hold ').
+               " FROM $top INNER JOIN $table r ON b.id=r.id".
+               " WHERE r.id='$id' $qrest ORDER BY $order $dir";
         #print "$sql<br/>\n";
         my $ref2;
         eval { $ref2 = $self->SelectAll($sql); };
@@ -2460,49 +2455,32 @@ sub UnpackResults
     my $priority   = $self->StripDecimal($row->[12]);
     my $swiss      = $row->[13];
     my $status     = $row->[14];
-    my $title      = $row->[15]; # Validated in historical
+    my $title      = $row->[15];
     my $author     = $row->[16];
-    my $hold       = $row->[17];
+    my $holdval    = $row->[17];
     if ($page eq 'userReviews') # FIXME: is this ever used??
     {
-      #for reviews
-      #id, title, author, review date, attr, reason, category, note.
       $buff .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note};
     }
     elsif ($page eq 'editReviews' || $page eq 'holds')
     {
-      #for editReviews
-      #id, title, author, review date, attr, reason, category, note.
-      $buff .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note\t$hold};
+      $buff .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note\t$holdval};
     }
-    elsif ($page eq 'undReviews')
+    elsif ($page eq 'expert' || $page eq 'undReviews')
     {
-      #for und/nfi
-      #id, title, author, review date, status, user, attr, reason, category, note.
       $buff .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note}
-    }
-    elsif ($page eq 'expert')
-    {
-      #for expert
-      #id, title, author, review date, status, user, attr, reason, category, note.
-      $buff .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note};
     }
     elsif ($page eq 'adminReviews' || $page eq 'adminHolds')
     {
-      #for adminReviews
-      #id, title, author, review date, status, user, attr, reason, category, note.
-      $buff .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$swiss\t$hold};
+      $buff .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$swiss\t$holdval};
     }
     elsif ($page eq 'adminHistoricalReviews')
     {
-      $author = $self->SimpleSqlGet('SELECT author FROM bibdata WHERE id=?', $id);
-      $title = $self->SimpleSqlGet('SELECT title FROM bibdata WHERE id=?', $id);
       my $pubdate = $self->SimpleSqlGet('SELECT YEAR(pub_date) FROM bibdata WHERE id=?', $id);
       $pubdate = '?' unless $pubdate;
-      my $validated = $row->[15];
       my $sysid = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
       #id, title, author, review date, status, user, attr, reason, category, note, validated
-      $buff .= qq{$id\t$sysid\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$validated\t$swiss};
+      $buff .= qq{$id\t$sysid\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$holdval\t$swiss};
     }
     $buff .= sprintf("%s\n", ($self->IsUserAdmin())? "\t$priority":'');
   }
@@ -2569,31 +2547,25 @@ sub SearchAndDownloadExportData
 
 sub GetReviewsRef
 {
-  my $self               = shift;
-  my $page               = shift;
-  my $order              = shift;
-  my $dir                = shift;
-
-  my $search1            = shift;
-  my $search1Value       = shift;
-  my $op1                = shift;
-
-  my $search2            = shift;
-  my $search2Value       = shift;
-  my $op2                = shift;
-
-  my $search3            = shift;
-  my $search3Value       = shift;
-
-  my $startDate          = shift;
-  my $endDate            = shift;
-  my $offset             = shift;
-  my $pagesize           = shift;
+  my $self         = shift;
+  my $page         = shift;
+  my $order        = shift;
+  my $dir          = shift;
+  my $search1      = shift;
+  my $search1Value = shift;
+  my $op1          = shift;
+  my $search2      = shift;
+  my $search2Value = shift;
+  my $op2          = shift;
+  my $search3      = shift;
+  my $search3Value = shift;
+  my $startDate    = shift;
+  my $endDate      = shift;
+  my $offset       = shift;
+  my $pagesize     = shift;
 
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
-
-  #print("GetReviewsRef('$page','$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$op2','$search3','$search3Value','$startDate','$endDate','$offset','$pagesize');<br/>\n");
   my ($sql,$totalReviews,$totalVolumes) = $self->CreateSQLForReviews($page, $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $offset, $pagesize);
   #print "$sql<br/>\n";
   my $ref = undef;
@@ -2626,20 +2598,18 @@ sub GetReviewsRef
                   swiss      => $row->[13],
                   status     => $row->[14],
                   title      => $row->[15],
-                  author     => $row->[16]
+                  author     => $row->[16],
+                  hold       => $row->[17]
                  };
-      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds' or $page eq 'adminHolds';
       if ($page eq 'adminHistoricalReviews')
       {
         my $pubdate = $self->SimpleSqlGet('SELECT YEAR(pub_date) FROM bibdata WHERE id=?', $id);
         $pubdate = '?' unless $pubdate;
         ${$item}{'pubdate'} = $pubdate;
-        ${$item}{'author'} = $self->SimpleSqlGet('SELECT author FROM bibdata WHERE id=?', $id);
-        ${$item}{'title'} = $self->SimpleSqlGet('SELECT title FROM bibdata WHERE id=?', $id);
         ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
-        ${$item}{'validated'} = $row->[15];
-        ${$item}{'src'} = $row->[16];
-        ${$item}{'gid'} = $row->[17];
+        ${$item}{'validated'} = $row->[17];
+        ${$item}{'src'} = $row->[18];
+        ${$item}{'gid'} = $row->[19];
       }
       push(@{$return}, $item);
   }
@@ -2685,22 +2655,19 @@ sub GetVolumesRef
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-           "r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author" .
-           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, b.sysid, q.src ':' ') .
+    $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
+           'r.category,r.legacy,r.renDate,r.priority,r.swiss,q.status,b.title,b.author'.
+           (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':'') .
            (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ', DATE(r.hold) ':' ') .
-           "FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ " .
-           "WHERE r.id='$id' ORDER BY $order $dir";
+           " FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ " .
+           " WHERE r.id='$id' ORDER BY $order $dir";
     $sql .= ', r.time ASC' unless $order eq 'r.time';
     #print "$sql<br/>\n";
     my $ref2 = $self->SelectAll($sql);
     foreach my $row (@{$ref2})
     {
-      my $date = $row->[1];
-      $date =~ s/(.*) .*/$1/;
       my $item = {id         => $row->[0],
-                  time       => $row->[1],
-                  date       => $date,
+                  date       => $row->[1],
                   duration   => $row->[2],
                   user       => $row->[3],
                   attr       => $self->TranslateAttr($row->[4]),
@@ -2715,9 +2682,9 @@ sub GetVolumesRef
                   swiss      => $row->[13],
                   status     => $row->[14],
                   title      => $row->[15],
-                  author     => $row->[16]
+                  author     => $row->[16],
+                  hold       => $row->[17]
                  };
-      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds' or $page eq 'adminHolds';
       if ($page eq 'adminHistoricalReviews')
       {
         my $pubdate = $row->[17];
@@ -2726,6 +2693,7 @@ sub GetVolumesRef
         ${$item}{'validated'} = $row->[18];
         ${$item}{'sysid'} = $row->[19];
         ${$item}{'src'} = $row->[20];
+        ${$item}{'gid'} = $row->[21];
       }
       push(@{$return}, $item);
     }
@@ -2747,15 +2715,11 @@ sub GetVolumesRefWide
   my $dir = $_[2];
 
   my $table ='reviews';
-  my $doQ;
+  my $doQ = 'INNER JOIN queue q ON r.id=q.id';
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
     $doQ = 'INNER JOIN exportdata q ON r.gid=q.gid';
-  }
-  else
-  {
-    $doQ = 'INNER JOIN queue q ON r.id=q.id';
   }
   my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQLForVolumesWide(@_);
   my $ref = undef;
@@ -2769,22 +2733,18 @@ sub GetVolumesRefWide
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
-           "r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author" .
-           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, b.sysid, q.src, q.gid ':' ') .
-           (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ', DATE(r.hold) ':' ') .
-           "FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id " .
-           "WHERE r.id='$id' ORDER BY $order $dir";
-    $sql .= ', r.time ASC' unless $order eq 'r.time';
+    $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
+           'r.category,r.legacy,r.renDate,r.priority,r.swiss,q.status,b.title,b.author'.
+           (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':'DATE(r.hold)').
+           " FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id".
+           " WHERE r.id='$id' ORDER BY $order $dir";
+    $sql .= ',r.time ASC' unless $order eq 'r.time';
     #print "$sql<br/>\n";
     my $ref2 = $self->SelectAll($sql);
     foreach my $row (@{$ref2})
     {
-      my $date = $row->[1];
-      $date =~ s/(.*) .*/$1/;
       my $item = {id         => $row->[0],
-                  time       => $row->[1],
-                  date       => $date,
+                  date       => $row->[1],
                   duration   => $row->[2],
                   user       => $row->[3],
                   attr       => $self->TranslateAttr($row->[4]),
@@ -2799,9 +2759,9 @@ sub GetVolumesRefWide
                   swiss      => $row->[13],
                   status     => $row->[14],
                   title      => $row->[15],
-                  author     => $row->[16]
+                  author     => $row->[16],
+                  hold       => $row->[17]
                  };
-      ${$item}{'hold'} = $row->[17] if $page eq 'adminReviews' or $page eq 'editReviews' or $page eq 'holds';
       if ($page eq 'adminHistoricalReviews')
       {
         my $pubdate = $row->[17];
