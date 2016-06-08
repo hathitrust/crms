@@ -115,8 +115,9 @@ function CheckAll(box,formid)
              var vis = (this.checked)? 'table-cell':'none';
              for (var row=0; row<rows.length;row++) {
                var cels = rows[row].getElementsByTagName('td');
-               if (cels.length > 1) { cels[1].style.display=vis; cels[2].style.display=vis; }
+               if (cels.length > 1) { cels[1].style.display=vis; cels[2].style.display=vis; cels[3].style.display=vis; }
              }
+             document.getElementById('gidth').style.display = vis;
              document.getElementById('sysidth').style.display = vis;
              document.getElementById('srcth').style.display = vis;"/>
              <label id="cblabel" for="sysIDCB">&nbsp;&nbsp;Show&nbsp;Additional&nbsp;Fields</label>
@@ -157,6 +158,7 @@ function CheckAll(box,formid)
   <table class="exportStats" style="width:100%;" id="resultsTable"><tr>
     <th>ID</th>
     [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
+      <th class="nowrap" id="gidth" style="display:[% (showSysID)? 'table-cell':'none' %];">GID</th>
       <th class="nowrap" id="sysidth" style="display:[% (showSysID)? 'table-cell':'none' %];">System&nbsp;ID</th>
       <th class="nowrap" id="srcth" style="display:[% (showSysID)? 'table-cell':'none' %];">Source</th>
     [% END %]
@@ -217,12 +219,11 @@ function CheckAll(box,formid)
         [% END %]
         </td>
         [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
+          <td style="display:[% (showSysID)? 'table-cell':'none' %];">$review.gid</td>
           <td style="display:[% (showSysID)? 'table-cell':'none' %];">
             <a href="[% crms.LinkToMirlynDetails(review.id) %]" target="_blank">$review.sysid</a>
           </td>
-          <td style="display:[% (showSysID)? 'table-cell':'none' %];">
-            <a href="[% crms.LinkToMirlynDetails(review.id) %]" target="_blank">$review.src</a>
-          </td>
+          <td style="display:[% (showSysID)? 'table-cell':'none' %];">$review.src</td>
         [% END %]
         <td>
         [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' || p == 'holds' %]

@@ -1072,13 +1072,12 @@ sub GetViolations
 {
   my $self     = shift;
   my $id       = shift;
-  my $record   = shift;
+  my $record   = shift || $self->GetMetadata($id);
   my $priority = shift;
   my $override = shift;
 
   $priority = 0 unless $priority;
   my @errs = ();
-  $record =  $self->GetMetadata($id) unless $record;
   if (!$record)
   {
     push @errs, 'not found in HathiTrust';
@@ -1898,7 +1897,7 @@ sub CreateSQLForReviews
   {
     my $doB = 'LEFT JOIN bibdata b ON r.id=b.id';
     $doB = '' unless ($search1 . $search2 . $search3 . $order) =~ m/b\./;
-    $sql .= "r.status,r.validated,q.src FROM historicalreviews r $doB INNER JOIN exportdata q ON r.gid=q.gid WHERE r.id IS NOT NULL";
+    $sql .= "r.status,r.validated,q.src,q.gid FROM historicalreviews r $doB INNER JOIN exportdata q ON r.gid=q.gid WHERE r.id IS NOT NULL";
   }
   elsif ($page eq 'undReviews')
   {
@@ -2672,6 +2671,7 @@ sub GetReviewsRef
         ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
         ${$item}{'validated'} = $row->[15];
         ${$item}{'src'} = $row->[16];
+        ${$item}{'gid'} = $row->[17];
       }
       push(@{$return}, $item);
   }
@@ -2803,7 +2803,7 @@ sub GetVolumesRefWide
     my $id = $row->[0];
     $sql = 'SELECT r.id, r.time, r.duration, r.user, r.attr, r.reason, r.note, r.renNum, r.expert, ' .
            "r.category, r.legacy, r.renDate, r.priority, r.swiss, q.status, b.title, b.author" .
-           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, b.sysid, q.src ':' ') .
+           (($page eq 'adminHistoricalReviews')? ', YEAR(b.pub_date), r.validated, b.sysid, q.src, q.gid ':' ') .
            (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ', DATE(r.hold) ':' ') .
            "FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id " .
            "WHERE r.id='$id' ORDER BY $order $dir";
@@ -2842,6 +2842,7 @@ sub GetVolumesRefWide
         ${$item}{'validated'} = $row->[18];
         ${$item}{'sysid'} = $row->[19];
         ${$item}{'src'} = $row->[20];
+        ${$item}{'gid'} = $row->[21];
       }
       push(@{$return}, $item);
     }
