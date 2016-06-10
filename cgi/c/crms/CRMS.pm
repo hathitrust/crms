@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.3.4';
+  return '5.3.5';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -1747,8 +1747,8 @@ sub ConvertToSearchTerm
   }
   elsif ($search eq 'UserId') { $new_search = 'r.user'; }
   elsif ($search eq 'Status') { $new_search = 'q.status'; }
-  elsif ($search eq 'Attribute') { $new_search = 'r.attr'; }
-  elsif ($search eq 'Reason') { $new_search = 'r.reason'; }
+  elsif ($search eq 'Attribute') { $new_search = $prefix. 'attr'; }
+  elsif ($search eq 'Reason') { $new_search = $prefix. 'reason'; }
   elsif ($search eq 'NoteCategory') { $new_search = 'r.category'; }
   elsif ($search eq 'Note') { $new_search = 'r.note'; }
   elsif ($search eq 'Legacy') { $new_search = 'r.legacy'; }
