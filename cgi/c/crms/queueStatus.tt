@@ -16,7 +16,7 @@
             <tr><th>CRMS&nbsp;Reviews</th><td>[% crms.GetTotalNonLegacyReviewCount() %]</td></tr>
             <tr><th>Legacy&nbsp;Reviews</th><td>[% crms.GetTotalLegacyReviewCount() %]</td></tr>
           [% END %]
-          <tr><th>Total&nbsp;Historical&nbsp;Reviews</th><td>[% crms.GetTotalHistoricalReviewCount() %]</td></tr>
+          <tr><th scope="row">Total&nbsp;Historical&nbsp;Reviews</th><td>[% crms.GetTotalHistoricalReviewCount() %]</td></tr>
         </table>
     </td>
   </tr>
