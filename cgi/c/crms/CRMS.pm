@@ -5636,7 +5636,6 @@ sub CreateSystemReport
     }
   }
   my ($delay,$since) = $self->ReplicationDelay();
-  $delay = 7;
   if ($delay > 0)
   {
     my $host = $self->Hostname();
