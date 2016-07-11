@@ -32,7 +32,7 @@
       <tr><th>Attr</th><th>Reason</th><th>Source</th><th>User</th><th>Time</th><th>Note</th><th>Access</th></tr>
       [% FOREACH r IN rows %]
         <tr>
-        <td>[% r.0 %]</td>
+        <td class="nowrap">[% r.0 %]</td>
         <td>[% r.1 %]</td>
         <td>[% r.2 %]</td>
         <td>[% r.3 %]</td>
