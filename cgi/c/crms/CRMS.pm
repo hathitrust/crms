@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.3.5';
+  return '5.3.6';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -5592,7 +5592,6 @@ sub CreateSystemReport
     $n = 'n/a';
   }
   $report .= '<tr><th class="nowrap">Last Queue Update</th><td>' . $n . "</td></tr>\n";
-  $report .= sprintf("<tr><th class='nowrap'>Cumulative Volumes in Queue (ever*)</th><td>%s</td></tr>\n", $self->GetTotalEverInQueue());
   $report .= sprintf("<tr><th class='nowrap'>Volumes in Candidates</th><td>%s</td></tr>\n", $self->GetCandidatesSize());
   $time = $self->GetLastLoadTimeToCandidates();
   $n = $self->GetLastLoadSizeToCandidates();
@@ -5608,7 +5607,7 @@ sub CreateSystemReport
   $report .= '<tr><th class="nowrap">Last Candidates Update</th><td>' . $n . "</td></tr>\n";
   my $sql = 'SELECT COUNT(*) FROM und WHERE src!="no meta" AND src!="duplicate" AND src!="cross-record inheritance"';
   my $count = $self->SimpleSqlGet($sql);
-  $report .= "<tr><th class='nowrap'>Volumes Filtered**</th><td>$count</td></tr>\n";
+  $report .= "<tr><th class='nowrap'>Volumes Filtered*</th><td>$count</td></tr>\n";
   if ($count)
   {
     $sql = 'SELECT src,COUNT(src) FROM und WHERE src!="no meta"'.
@@ -5623,7 +5622,7 @@ sub CreateSystemReport
   }
   $sql = 'SELECT COUNT(*) FROM und WHERE src="no meta" OR src="duplicate" OR src="cross-record inheritance"';
   $count = $self->SimpleSqlGet($sql);
-  $report .= "<tr><th class='nowrap'>Volumes Temporarily Filtered**</th><td>$count</td></tr>\n";
+  $report .= "<tr><th class='nowrap'>Volumes Temporarily Filtered*</th><td>$count</td></tr>\n";
   if ($count)
   {
     $sql = 'SELECT src,COUNT(src) FROM und WHERE src="no meta" OR src="duplicate"'.
@@ -5636,22 +5635,25 @@ sub CreateSystemReport
       $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$n&nbsp;(%0.1f%%)</td></tr>\n", 100.0*$n/$count);
     }
   }
-  my $host = $self->Hostname();
   my ($delay,$since) = $self->ReplicationDelay();
-  my $alert = $delay >= 5;
-  if ($delay == 999999)
+  $delay = 7;
+  if ($delay > 0)
   {
-    $delay = 'Disabled';
+    my $host = $self->Hostname();
+    my $alert = $delay >= 5;
+    if ($delay == 999999)
+    {
+      $delay = 'Disabled';
+    }
+    else
+    {
+      $delay .= '&nbsp;' . $self->Pluralize('second', $delay);
+    }
+    $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay&nbsp;since&nbsp;$since</span><br/>" if $alert;
+    $report .= "<tr><th class='nowrap'>Database Replication Delay</th><td class='nowrap'>$delay on $host</td></tr>\n";
   }
-  else
-  {
-    $delay .= '&nbsp;' . $self->Pluralize('second', $delay);
-  }
-  $delay = "<span style='color:#CC0000;font-weight:bold;'>$delay&nbsp;since&nbsp;$since</span>" if $alert;
-  $report .= "<tr><th>Database&nbsp;Replication&nbsp;Delay</th><td>$delay&nbsp;on&nbsp;$host</td></tr>\n";
   $report .= '<tr><td colspan="2">';
-  $report .= '<span class="smallishText">* Not including legacy data (reviews/determinations made prior to July 2009).</span><br/>';
-  $report .= '<span class="smallishText">** This number is not included in the "Volumes in Candidates" count.</span>';
+  $report .= '<span class="smallishText">* This number is not included in the "Volumes in Candidates" count.</span>';
   $report .= "</td></tr></table>\n";
   return $report;
 }
@@ -5884,16 +5886,6 @@ sub GetTotalExported
 
   my $sql = 'SELECT SUM(itemcount) FROM exportrecord';
   return $self->SimpleSqlGet($sql);
-}
-
-sub GetTotalEverInQueue
-{
-  my $self = shift;
-
-  my $count_exported = $self->GetTotalExported();
-  my $count_queue = $self->GetQueueSize();
-  my $total = $count_exported + $count_queue;
-  return $total;
 }
 
 sub GetLastExport
