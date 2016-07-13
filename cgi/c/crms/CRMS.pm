@@ -5533,7 +5533,6 @@ sub CreateSystemReport
   my $self = shift;
 
   my $report = "<table class='exportStats'>\n";
-  # Gets the (time,count) of last queue addition.
   my ($time,$n) = $self->GetLastQueueInfo();
   if ($time)
   {
@@ -5545,7 +5544,20 @@ sub CreateSystemReport
     $n = 'n/a';
   }
   $report .= '<tr><th class="nowrap">Last Queue Update</th><td>' . $n . "</td></tr>\n";
-  $report .= sprintf("<tr><th class='nowrap'>Volumes in Candidates</th><td>%s</td></tr>\n", $self->GetCandidatesSize());
+  my $count = $self->GetCandidatesSize();
+  $report .= "<tr><th class='nowrap'>Volumes in Candidates</th><td>$count</td></tr>\n";
+  my $sql = 'SELECT project,COUNT(*) FROM candidates GROUP BY project'.
+            ' ORDER BY ISNULL(project) DESC,project DESC';
+  my $ref = $self->SelectAll($sql);
+  if (scalar @{$ref} > 1)
+  {
+    foreach my $row (@{$ref})
+    {
+      my $proj = $row->[0] || 'Core';
+      $n = $row->[1];
+      $report .= sprintf("<tr><th class='nowrap'>&nbsp;&nbsp;&nbsp;&nbsp;$proj project</th><td class='nowrap'>$n (%0.1f%%)</td></tr>\n", 100.0*$n/$count);
+    }
+  }
   $time = $self->GetLastLoadTimeToCandidates();
   $n = $self->GetLastLoadSizeToCandidates();
   if ($time)
@@ -5890,12 +5902,11 @@ sub GetLastQueueInfo
 {
   my $self = shift;
 
-  my $sql = 'SELECT time,itemcount FROM queuerecord WHERE source="RIGHTSDB" ORDER BY time DESC LIMIT 1';
+  my $sql = 'SELECT time,itemcount FROM queuerecord WHERE source="RIGHTSDB"'.
+            ' AND itemcount>0 ORDER BY time DESC LIMIT 1';
   my $row = $self->SelectAll($sql)->[0];
-  my $time = $self->FormatTime($row->[0]);
-  my $cnt = $row->[1];
-  $time = 'Never' unless $time;
-  $cnt = 0 unless $cnt;
+  my $time = $self->FormatTime($row->[0]) || 'Never';
+  my $cnt = $row->[1] || 0;
   return ($time,$cnt);
 }
 
@@ -6442,6 +6453,7 @@ sub DownloadTracking
 }
 
 # All volumes in the query (q) are moved to the top of the results.
+# The two groups are sorted by enumchron.
 sub TrackingQuery
 {
   my $self = shift;
@@ -6461,7 +6473,7 @@ sub TrackingQuery
     $data{'sysid'} = $record->sysid;
     $rows = $self->VolumeIDsQuery($id, $record);
   }
-  foreach my $ref (@{$rows})
+  foreach my $ref (sort {$a->{'chron'} cmp $b->{'chron'}} @{$rows})
   {
     my $id2 = $ref->{'id'};
     my $data2 = [$id2, $ref->{'chron'},
