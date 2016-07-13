@@ -2839,7 +2839,6 @@ sub GetQueueRef
   my $offset       = shift;
   my $pagesize     = shift;
   my $download     = shift;
-  #print("GetQueueRef('$order','$dir','$search1','$search1Value','$op1','$search2','$search2Value','$startDate','$endDate','$offset','$pagesize','$download');<br/>\n");
 
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
@@ -3000,8 +2999,8 @@ sub GetExportDataRef
     $search2Value = $2;
     $tester2 = $1;
   }
-  push @rest, "DATE(r.time)>='$startDate'" if $startDate;
-  push @rest, "DATE(r.time)<='$endDate'" if $endDate;
+  push @rest, "DATE(q.time)>='$startDate'" if $startDate;
+  push @rest, "DATE(q.time)<='$endDate'" if $endDate;
   if ($search1Value ne '' && $search2Value ne '')
   {
     push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
