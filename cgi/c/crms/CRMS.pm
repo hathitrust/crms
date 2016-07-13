@@ -3866,7 +3866,7 @@ sub CreateExportReport
       $cstyle = ($major)? 'class="major"':
                           ($title eq 'Total')? 'class="total" style="text-align:center;"':
                                                (($title =~ m/^Status/)? ' class="minor"':'');
-      $n = '<b>'. $n. '</b>' if $title eq 'Total';
+      $n = '<strong>'. $n. '</strong>' if $title eq 'Total';
       $newline .= "<td $cstyle>$padding$n</td>", 
     }
     $newline .= "</tr>\n";
@@ -4386,22 +4386,22 @@ sub CreateStatsReport
   <a class='tip' href='#'>
     <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
     <span>
-    <b>To get the downloaded stats into a spreadsheet:</b><br/>
+    <strong>To get the downloaded stats into a spreadsheet:</strong><br/>
       &#x2022; Click on the "Download" link (this will open a new page in your browser)<br/>
       &#x2022; Select all of the text on the new page and copy it<br/>
       &#x2022; Switch to Excel<br/>
-      &#x2022; Choose the menu item <b>Edit &#x2192; Paste Special...</b><br/>
+      &#x2022; Choose the menu item <strong>Edit &#x2192; Paste Special...</strong><br/>
       &#x2022; Choose Unicode in the dialog box<br/>
     </span>
   </a>
 END
-  my $report = "<span style='font-size:1.3em;'><b>$name</b></span>$nbsps $dllink\n<br/>";
+  my $report = "<span style='font-size:1.3em;'><strong>$name</strong></span>$nbsps $dllink\n<br/>";
   $report .= "<table class='exportStats'>\n<tr>\n";
   foreach my $th (split "\t", shift @lines)
   {
     $th = $self->YearMonthToEnglish($th) if $th =~ m/^\d.*/;
     $th =~ s/\s/&nbsp;/g;
-    $report .= sprintf("<th%s>$th</th>\n", ($th ne 'Categories')? ' style="text-align:center;"':'');
+    $report .= "<th style='text-align:center;'>$th</th>\n";
   }
   $report .= "</tr>\n";
   my %majors = ('PD Reviews' => 1, 'IC Reviews' => 1, 'UND/NFI Reviews' => 1, '__TOT__' => 1);
@@ -4437,7 +4437,7 @@ END
                          ($class)? " class='$class'":'',
                          ($title =~ m/__.+?__/ || $class eq 'minor')? ' style="text-align:center;"':'',
                          $padding,
-                         ($title eq '__TOT__')? "<b>$n</b>":$n,
+                         ($title eq '__TOT__')? "<strong>$n</strong>":$n,
                          ($pct)? "&nbsp;($pct%)":'');
     }
     $report .= "</tr>\n";
