@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.3.6';
+  return '5.3.7';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -953,16 +953,21 @@ sub AddItemToCandidates
   }
   if (!$self->IsVolumeInCandidates($id))
   {
-    print "Add $id to candidates \n" unless $quiet;
-    my $sql = 'INSERT INTO candidates (id,time) VALUES (?,?)';
-    $self->PrepareSubmitSql($sql, $id, $time) unless $noop;
+    
+    my $project = $self->GetCandidateProject($id, $record);
+    printf "Add $id to candidates%s\n", (defined $project)? " for project'$project'":'' unless $quiet;
+    my $sql = 'INSERT INTO candidates (id,time,project) VALUES (?,?,?)';
+    $self->PrepareSubmitSql($sql, $id, $time, $project) unless $noop;
   }
   if (defined $self->CheckForCRI($id, $noop, $quiet))
   {
     print "Filter $id as CRI\n" unless $quiet;
     $self->Filter($id, 'cross-record inheritance') unless $noop;
   }
-  $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) unless $noop;
+  else
+  {
+    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) unless $noop;
+  }
   $self->UpdateMetadata($id, 1, $record) unless $noop;
 }
 
@@ -1133,31 +1138,52 @@ sub ShouldVolumeBeFiltered
   return $self->CandidatesModule()->ShouldVolumeBeFiltered($id, $record);
 }
 
-# Load candidates into queue.
-sub LoadNewItems
+# Returns a project name string or undef.
+sub GetCandidateProject
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift || $self->GetMetadata($id);
+
+  return $self->CandidatesModule()->GetProject($id, $record);
+}
+
+sub LoadQueue
 {
   my $self = shift;
 
-  my $queuesize = $self->GetQueueSize();
-  my $priZeroSize = $self->GetQueueSize(0);
+  my $sql = 'SELECT DISTINCT project FROM candidates';
+  $self->LoadQueueForProject($_->[0]) for @{$self->SelectAll($sql)};
+}
+
+# Load candidates into queue for a given project (which may be NULL/undef).
+sub LoadQueueForProject
+{
+  my $self    = shift;
+  my $project = shift;
+
+  my @args = ();
+  push @args, $project if defined $project;
+  # WHERE NULL handling derived from CPAN DBI documentation.
+  my $sql = 'SELECT COUNT(*) FROM queue WHERE project=? OR (project IS NULL AND ?=0)';
+  my $queueSize = $self->SimpleSqlGet($sql, $project, (defined $project)? 1:0);
   my $targetQueueSize = $self->GetSystemVar('queueSize');
-  print "Before load, the queue has $queuesize volumes, $priZeroSize priority 0.\n";
-  my $needed = max($targetQueueSize - $queuesize, 500 - $priZeroSize);
-  printf "Need $needed volumes (max of %d [%d-%d] and %d [%d-%d]).\n",
-          $targetQueueSize - $queuesize, $targetQueueSize, $queuesize,
-          500 - $priZeroSize, 500, $priZeroSize;
+  my $needed = $targetQueueSize - $queueSize;
+  printf "Before load, the queue has $queueSize volumes%s -- need $needed.\n",
+         (defined $project)?" for project '$project'":'';
   return if $needed <= 0;
   my $count = 0;
   my %dels = ();
-  my $sql = 'SELECT id FROM candidates'.
-            ' WHERE id NOT IN (SELECT DISTINCT id FROM inherit)'.
-            ' AND id NOT IN (SELECT DISTINCT id FROM queue)'.
-            ' AND id NOT IN (SELECT DISTINCT id FROM reviews)'.
-            ' AND id NOT IN (SELECT DISTINCT id FROM historicalreviews)'.
-            ' AND time<=DATE_SUB(NOW(), INTERVAL 1 WEEK)'.
-            ' ORDER BY time DESC';
+  $sql = 'SELECT id FROM candidates'.
+         ' WHERE id NOT IN (SELECT DISTINCT id FROM inherit)'.
+         ' AND id NOT IN (SELECT DISTINCT id FROM queue)'.
+         ' AND id NOT IN (SELECT DISTINCT id FROM reviews)'.
+         ' AND id NOT IN (SELECT DISTINCT id FROM historicalreviews)'.
+         ' AND time<=DATE_SUB(NOW(), INTERVAL 1 WEEK)';
+         ' AND (project=? OR (project IS NULL AND ?=0))'.
+         ' ORDER BY time DESC';
   #print "$sql\n";
-  my $ref = $self->SelectAll($sql);
+  my $ref = $self->SelectAll($sql, $project, (defined $project)? 1:0);
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
@@ -1187,7 +1213,7 @@ sub LoadNewItems
         next;
       }
     }
-    if ($self->AddItemToQueue($id, $record))
+    if ($self->AddItemToQueue($id, $record, $project))
     {
       print "Added to queue: $id\n";
       $count++;
@@ -1195,7 +1221,7 @@ sub LoadNewItems
     last if $count >= $needed;
   }
   $self->RemoveFromCandidates($_) for keys %dels;
-  #Record the update to the queue
+  # FIXME: change RIGHTSDB to candidates.
   $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,"RIGHTSDB")';
   $self->PrepareSubmitSql($sql, $count);
 }
@@ -1222,16 +1248,19 @@ sub AddItemToQueue
   my $self     = shift;
   my $id       = shift;
   my $record   = shift;
+  my $project  = shift;
 
   return 0 if $self->IsVolumeInQueue($id);
   $record = $self->GetMetadata($id) unless defined $record;
   # queue table has priority and status default to 0, time to current timestamp.
-  $self->PrepareSubmitSql('INSERT INTO queue (id) VALUES (?)', $id);
+  $self->PrepareSubmitSql('INSERT INTO queue (id,project) VALUES (?,?)', $id, $project);
   $self->UpdateMetadata($id, 1, $record);
   return 1;
 }
 
 # Returns a status code (0=Add, 1=Error, 2=Skip, 3=Modify) followed by optional text.
+# FIXME: change the return value to a data structure.
+# FiXME: merge this with AddItemToQueue() to include a project.
 sub AddItemToQueueOrSetItemActive
 {
   my $self     = shift;
@@ -5515,16 +5544,6 @@ sub ClearErrors
 
   my $errors = [];
   $self->set('errors', $errors);
-}
-
-sub GetQueueSize
-{
-  my $self     = shift;
-  my $priority = shift;
-
-  my $sql = 'SELECT COUNT(*) FROM queue';
-  $sql .= (' WHERE priority=' . $priority) if defined $priority;
-  return $self->SimpleSqlGet($sql);
 }
 
 # Remove trailing zeroes and point-zeroes from a floating point format.

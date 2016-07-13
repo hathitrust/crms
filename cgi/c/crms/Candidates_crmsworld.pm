@@ -37,22 +37,10 @@ sub HasCorrectRights
 
   my $correct = 0;
   $correct = 1 if ($attr eq 'ic' && $reason eq 'bib') ||
-                  ($attr eq 'pdus' && $reason eq 'bib') ||
-                  $attr eq 'op';
+                  ($attr eq 'pdus' && $reason eq 'bib');
   $correct = 0 if defined $new_attr && $new_attr eq 'und' &&
                   ($attr eq 'pd' || $attr eq 'pdus');
   return $correct;
-}
-
-sub HasCorrectYear
-{
-  my $self    = shift;
-  my $country = shift;
-  my $year    = shift;
-
-  my $min = $self->GetCutoffYear($country, 'minYear');
-  my $max = $self->GetCutoffYear($country, 'maxYear');
-  return ($min <= $year && $year <= $max);
 }
 
 sub GetCutoffYear
@@ -140,6 +128,15 @@ sub ShouldVolumeBeFiltered
   return 'translation' if $record->isTranslation;
   my $date = $self->{crms}->FormatPubDate($id, $record);
   return 'date range' if $date =~ m/^\d+-(\d+)?$/;
+  return undef;
+}
+
+sub GetProject
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
+
   return undef;
 }
 

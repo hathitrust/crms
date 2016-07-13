@@ -31,19 +31,8 @@ sub HasCorrectRights
   #my $new_reason = shift;
 
   my $correct = 0;
-  $correct = 1 if ($attr eq 'ic' && $reason eq 'bib') || $attr eq 'op';
+  $correct = 1 if $attr eq 'ic' && $reason eq 'bib';
   return $correct;
-}
-
-sub HasCorrectYear
-{
-  my $self    = shift;
-  my $country = shift;
-  my $year    = shift;
-
-  my $min = $self->GetCutoffYear($country, 'minYear');
-  my $max = $self->GetCutoffYear($country, 'maxYear');
-  return ($min <= $year && $year <= $max);
 }
 
 sub GetCutoffYear
@@ -59,8 +48,11 @@ sub GetCutoffYear
 
 sub GetViolations
 {
-  my $self = shift;
-  my ($id, $record, $priority, $override) = @_;
+  my $self     = shift;
+  my $id       = shift;
+  my $record   = shift;
+  my $priority = shift || 0;
+  my $override = shift;
 
   my @errs = ();
   my $pub = $record->copyrightDate;
@@ -68,7 +60,9 @@ sub GetViolations
   {
     my $min = $self->GetCutoffYear(undef, 'minYear');
     my $max = $self->GetCutoffYear(undef, 'maxYear');
-    if (($override && $priority == 3) or $priority == 4)
+    if (($override && $priority == 3) ||
+        $priority == 4 ||
+        $self->IsStateGovDoc($record))
     {
       $max = $self->GetCutoffYear(undef, 'maxYearOverride');
     }
@@ -115,6 +109,21 @@ sub IsGovDoc
     $is = (length $leader > 28 && substr($leader, 28, 1) eq 'f');
   };
   $self->{crms}->SetError($record->id . " failed in IsGovDoc(): $@") if $@;
+  return $is;
+}
+
+# 008:28 is 's' byte.
+sub IsStateGovDoc
+{
+  my $self   = shift;
+  my $record = shift;
+
+  my $is = undef;
+  eval {
+    my $leader = $record->GetControlfield('008');
+    $is = (length $leader > 28 && substr($leader, 28, 1) eq 's');
+  };
+  $self->{crms}->SetError($record->id . " failed in IsStateGovDoc(): $@") if $@;
   return $is;
 }
 
@@ -248,6 +257,25 @@ sub Normalize
   $suba =~ s/\s+/ /g;
   $suba =~ s/^\s*(.*?)\s*$/$1/;
   return $suba;
+}
+
+sub GetProject
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
+
+  my $proj;
+  my $author = $record->author;
+  my $title = $record->title;
+  if ($self->IsStateGovDoc($record) &&
+      $author !~ m/university/i && $author !~ m/college/i &&
+      $title !~ m/university/i && $title !~ m/college/i)
+  {
+    $proj = 'State gov docs';
+  }
+  printf "Project is %s\n", (defined $proj)? $proj:'NULL';
+  return $proj;
 }
 
 1;
