@@ -1152,8 +1152,14 @@ sub LoadQueue
 {
   my $self = shift;
 
+  my $before = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue');
   my $sql = 'SELECT DISTINCT project FROM candidates';
   $self->LoadQueueForProject($_->[0]) for @{$self->SelectAll($sql)};
+  my $after = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue');
+  my $count = $after - $before;
+  # FIXME: change RIGHTSDB to candidates.
+  $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,"RIGHTSDB")';
+  $self->PrepareSubmitSql($sql, $count);
 }
 
 # Load candidates into queue for a given project (which may be NULL/undef).
@@ -1221,9 +1227,6 @@ sub LoadQueueForProject
     last if $count >= $needed;
   }
   $self->RemoveFromCandidates($_) for keys %dels;
-  # FIXME: change RIGHTSDB to candidates.
-  $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,"RIGHTSDB")';
-  $self->PrepareSubmitSql($sql, $count);
 }
 
 sub IsRecordInQueue
