@@ -110,7 +110,7 @@ if ($skipQueue) { ReportMsg("-q flag set; skipping queue load."); }
 else
 {
   ReportMsg("Starting to load new volumes into queue.");
-  $crms->LoadNewItems();
+  $crms->LoadQueue();
   ReportMsg("DONE loading new volumes into queue.");
 }
 
