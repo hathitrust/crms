@@ -1157,8 +1157,7 @@ sub LoadQueue
   $self->LoadQueueForProject($_->[0]) for @{$self->SelectAll($sql)};
   my $after = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue');
   my $count = $after - $before;
-  # FIXME: change RIGHTSDB to candidates.
-  $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,"RIGHTSDB")';
+  $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,"candidates")';
   $self->PrepareSubmitSql($sql, $count);
 }
 
@@ -5546,7 +5545,7 @@ sub CreateSystemReport
   {
     $n = 'n/a';
   }
-  $report .= '<tr><th class="nowrap">Last Queue Update</th><td>' . $n . "</td></tr>\n";
+  $report .= '<tr><th class="nowrap">Last Queue Addition</th><td>' . $n . "</td></tr>\n";
   my $count = $self->GetCandidatesSize();
   $report .= "<tr><th class='nowrap'>Volumes in Candidates</th><td>$count</td></tr>\n";
   my $sql = 'SELECT project,COUNT(*) FROM candidates GROUP BY project'.
@@ -5905,7 +5904,7 @@ sub GetLastQueueInfo
 {
   my $self = shift;
 
-  my $sql = 'SELECT time,itemcount FROM queuerecord WHERE source="RIGHTSDB"'.
+  my $sql = 'SELECT time,itemcount FROM queuerecord WHERE source="candidates"'.
             ' AND itemcount>0 ORDER BY time DESC LIMIT 1';
   my $row = $self->SelectAll($sql)->[0];
   my $time = $self->FormatTime($row->[0]) || 'Never';
