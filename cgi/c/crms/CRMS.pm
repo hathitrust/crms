@@ -5315,7 +5315,7 @@ sub TranslateAttr
               16 => 'orphcand',        17 => 'cc-zero',         18 => 'und-world',
               19 => 'icus',            20 => 'cc-by-4.0',       21 => 'cc-by-nd-4.0',
               22 => 'cc-by-nc-nd-4.0', 23 => 'cc-by-nc-4.0',    24 => 'cc-by-nc-sa-4.0',
-              25 => 'cc-by-sa-4.0',    26 => 'pd-pvt');
+              25 => 'cc-by-sa-4.0',    26 => 'pd-pvt',          27 => 'supp');
     my %t2 = ('pd'              => 1,  'ic'              => 2,  'op'              => 3,
               'orph'            => 4,  'und'             => 5,  'umall'           => 6,
               'ic-world'        => 7,  'nobody'          => 8,  'pdus'            => 9,
@@ -5324,7 +5324,7 @@ sub TranslateAttr
               'orphcand'        => 16, 'cc-zero'         => 17, 'und-world'       => 18,
               'icus'            => 19, 'cc-by-4.0'       => 20, 'cc-by-nd-4.0'    => 21,
               'cc-by-nc-nd-4.0' => 22, 'cc-by-nc-4.0'    => 23, 'cc-by-nc-sa-4.0' => 24,
-              'cc-by-sa-4.0'    => 25, 'pd-pvt' => 26);
+              'cc-by-sa-4.0'    => 25, 'pd-pvt'          => 26, 'supp'            => 27);
     $val = ($a =~ m/^[0-9]+$/)? $t1{$a}:$t2{$a};
   }
   $a = $val if $val;
