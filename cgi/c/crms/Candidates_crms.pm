@@ -274,7 +274,6 @@ sub GetProject
   {
     $proj = 'State gov docs';
   }
-  printf "Project is %s\n", (defined $proj)? $proj:'NULL';
   return $proj;
 }
 
