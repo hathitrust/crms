@@ -266,8 +266,8 @@ sub GetProject
   my $record = shift;
 
   my $proj;
-  my $author = $record->author;
-  my $title = $record->title;
+  my $author = $record->author || '';
+  my $title = $record->title || '';
   if ($self->IsStateGovDoc($record) &&
       $author !~ m/university/i && $author !~ m/college/i &&
       $title !~ m/university/i && $title !~ m/college/i)
