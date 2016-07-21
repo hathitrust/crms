@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.3.7';
+  return '5.3.8';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -815,9 +815,10 @@ sub LoadNewItemsInCandidates
 # If noop is defined, does nothing that would actually alter the table.
 sub CheckAndLoadItemIntoCandidates
 {
-  my $self = shift;
-  my $id   = shift;
-  my $noop = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $noop   = shift;
+  my $record = shift;
 
   my $incand = $self->SimpleSqlGet('SELECT id FROM candidates WHERE id=?', $id);
   my $inund  = $self->SimpleSqlGet('SELECT src FROM und WHERE id=?', $id);
@@ -831,7 +832,6 @@ sub CheckAndLoadItemIntoCandidates
   }
   my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
   my $cm = $self->CandidatesModule();
-  my $record;
   my $oldSysid = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
   if (defined $oldSysid)
   {
@@ -955,7 +955,7 @@ sub AddItemToCandidates
   {
     
     my $project = $self->GetCandidateProject($id, $record);
-    printf "Add $id to candidates%s\n", (defined $project)? " for project'$project'":'' unless $quiet;
+    printf "Add $id to candidates%s\n", (defined $project)? " for project '$project'":'' unless $quiet;
     my $sql = 'INSERT INTO candidates (id,time,project) VALUES (?,?,?)';
     $self->PrepareSubmitSql($sql, $id, $time, $project) unless $noop;
   }
@@ -6528,7 +6528,8 @@ sub GetTrackingInfo
   }
   elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM candidates WHERE id=?', $id))
   {
-    push @stati, 'in Candidates';
+    my $proj = $self->SimpleSqlGet('SELECT project FROM candidates WHERE id=?', $id);
+    push @stati, sprintf 'in Candidates%s', (defined $proj)? " ($proj project)":'';
   }
   my $src = $self->SimpleSqlGet('SELECT src FROM und WHERE id=?', $id);
   if (defined $src)
