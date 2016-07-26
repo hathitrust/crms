@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.3.8';
+  return '5.3.9';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -4860,6 +4860,11 @@ sub UpdateMetadata
   my $force  = shift;
   my $record = shift;
 
+  # Bail out if the volume is in historicalreviews and not in the queue,
+  # to preserve bid data potentially instrumental to an existing review
+  # and possibly clobbered by a bib correction.
+  return if $self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id) and
+            !$self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE id=?', $id);
   my $cnt = $self->SimpleSqlGet('SELECT COUNT(*) FROM bibdata WHERE id=?', $id);
   if ($cnt == 0 || $force)
   {
@@ -4867,6 +4872,8 @@ sub UpdateMetadata
     if (defined $record)
     {
       my $date = $record->copyrightDate . '-01-01';
+      # FIXME: can this ever happen? Why would we update bibdata for a catalog record
+      # and not a specific HTID?
       if ($record->id eq $record->sysid)
       {
         my $sql = 'UPDATE bibdata SET author=?,title=?,pub_date=?,country=? WHERE sysid=?';
