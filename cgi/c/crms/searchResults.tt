@@ -174,7 +174,7 @@ function CheckAll(box,formid)
     <th>Reviewer</th>
     <th>Attr</th>
     <th>Reason</th>
-    [% IF p == 'undReviews' || p == 'expert' || 'crmsworld' == sys %]
+    [% IF p == 'undReviews' || p == 'expert' || (p == 'adminHistoricalReviews' && 'crmsworld' == sys) %]
       [% IF 'crms' == sys %]
         <th>Renewal</th>
       [% ELSE %]
