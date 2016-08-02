@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.3.9';
+  return '5.3.10';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -1697,9 +1697,10 @@ sub FormatTime
 
 sub ConvertToSearchTerm
 {
-  my $self           = shift;
-  my $search         = shift;
-  my $page           = shift;
+  my $self   = shift;
+  my $search = shift;
+  my $page   = shift;
+  my $order  = shift;
 
   my $prefix = ($page eq 'queue' || $page eq 'exportData')? 'q.':'r.';
   my $new_search = $search;
@@ -1707,9 +1708,10 @@ sub ConvertToSearchTerm
   {
     $new_search = $prefix. 'id';
   }
-  if ($search eq 'Time')
+  if ($search eq 'Date')
   {
     $new_search = $prefix. 'time';
+    $new_search = "DATE($new_search)" unless $order;
   }
   elsif ($search eq 'UserId') { $new_search = 'r.user'; }
   elsif ($search eq 'Status') { $new_search = 'q.status'; }
@@ -1723,7 +1725,6 @@ sub ConvertToSearchTerm
   elsif ($search eq 'Priority') { $new_search = 'q.priority'; }
   elsif ($search eq 'Validated') { $new_search = 'r.validated'; }
   elsif ($search eq 'PubDate') { $new_search = 'b.pub_date'; }
-  elsif ($search eq 'ReviewDate') { $new_search = 'r.time'; }
   elsif ($search eq 'Locked') { $new_search = 'q.locked'; }
   elsif ($search eq 'ExpertCount') { $new_search = 'q.expcnt'; }
   elsif ($search eq 'Reviews')
@@ -1778,10 +1779,10 @@ sub CreateSQLForReviews
   my $pagesize     = shift;
   my $download     = shift;
 
-  $order = $self->ConvertToSearchTerm($order, $page);
   $search1 = $self->ConvertToSearchTerm($search1, $page);
   $search2 = $self->ConvertToSearchTerm($search2, $page);
   $search3 = $self->ConvertToSearchTerm($search3, $page);
+  $order = $self->ConvertToSearchTerm($order, $page, 1);
   $dir = 'DESC' unless $dir;
   $offset = 0 unless $offset;
   $pagesize = 20 unless $pagesize > 0;
@@ -1902,7 +1903,7 @@ sub CreateSQLForVolumes
   $search1 = $self->ConvertToSearchTerm($search1, $page);
   $search2 = $self->ConvertToSearchTerm($search2, $page);
   $search3 = $self->ConvertToSearchTerm($search3, $page);
-  $order = $self->ConvertToSearchTerm($order, $page);
+  $order = $self->ConvertToSearchTerm($order, $page, 1);
   $search1 = 'r.id' unless $search1;
   my $order2 = ($dir eq 'ASC')? 'min':'max';
   my @rest = ();
@@ -2364,8 +2365,8 @@ sub SearchAndDownload
     }
     else
     {
-      $order = 'Identifier' if $order eq 'SysID';
-      $order = $self->ConvertToSearchTerm($order);
+      #$order = 'Identifier' if $order eq 'SysID';
+      $order = $self->ConvertToSearchTerm($order, 1);
       foreach my $row (@{$ref})
       {
         my $id = $row->[0];
@@ -6142,9 +6143,8 @@ sub ReviewSearchMenu
   my $page       = shift;
   my $searchName = shift;
   my $searchVal  = shift;
-  my $order      = shift;
 
-  my @keys = ('Identifier','SysID',    'Title','Author','PubDate', 'ReviewDate', 'Status','Legacy','UserId','Attribute',
+  my @keys = ('Identifier','SysID',    'Title','Author','PubDate', 'Date', 'Status','Legacy','UserId','Attribute',
               'Reason', 'NoteCategory', 'Note', 'Priority', 'Validated', 'Swiss', 'Hold Thru');
   my @labs = ('Identifier','System ID','Title','Author','Pub Date','Review Date', 'Status','Legacy','User',  'Attribute',
               'Reason','Note Category', 'Note', 'Priority', 'Verdict',   'Swiss', 'Hold Thru');
@@ -6173,11 +6173,6 @@ sub ReviewSearchMenu
   {
     splice @keys, 7, 1; # Legacy
     splice @labs, 7, 1;
-  }
-  if (!$order)
-  {
-    splice @keys, 5, 1; # Review Date
-    splice @labs, 5, 1;
   }
   if ($page ne 'adminHistoricalReviews')
   {
