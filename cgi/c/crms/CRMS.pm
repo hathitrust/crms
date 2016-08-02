@@ -1803,7 +1803,7 @@ sub CreateSQLForReviews
       $project = ' AND (ISNULL(q.project) OR q.project NOT IN (' . join(',', @allsubs) . '))';
     }
   }
-  my $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,'.
+  my $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,'.
             'r.renNum,r.expert,r.category,r.legacy,r.renDate,q.priority,r.swiss,'.
             'q.status,b.title,b.author,';
   if ($page eq 'adminReviews')
@@ -2537,7 +2537,7 @@ sub GetReviewsRef
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
   my ($sql,$totalReviews,$totalVolumes) = $self->CreateSQLForReviews($page, $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $offset, $pagesize);
-  #print "$sql<br/>\n";
+  print "$sql<br/>\n";
   my $ref = undef;
   eval { $ref = $self->SelectAll($sql); };
   if ($@)
@@ -2548,12 +2548,9 @@ sub GetReviewsRef
   my $return = [];
   foreach my $row (@{$ref})
   {
-      my $date = $row->[1];
-      $date =~ s/(.*) .*/$1/;
       my $id = $row->[0];
       my $item = {id         => $id,
-                  time       => $row->[1],
-                  date       => $date,
+                  date       => $row->[1],
                   duration   => $row->[2],
                   user       => $row->[3],
                   attr       => $self->TranslateAttr($row->[4]),
