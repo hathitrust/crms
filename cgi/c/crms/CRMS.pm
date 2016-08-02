@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.3.10';
+  return '5.3.11';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -841,12 +841,8 @@ sub CheckAndLoadItemIntoCandidates
       my $sysid = $record->sysid;
       if (defined $sysid && defined $oldSysid && $sysid ne $oldSysid)
       {
-        my $ids = $record->allHTIDs;
-        foreach my $id2 (@{$ids})
-        {
-          print "Update system ID on $id2 -- old $oldSysid, new $sysid\n";
-          $self->UpdateMetadata($id2, 1, $record) unless defined $noop;
-        }
+        print "Update system IDs from $oldSysid to $sysid\n";
+        $self->UpdateSysids($record) unless defined $noop;
       }
     }
   }
@@ -4848,6 +4844,15 @@ sub BarcodeToId
     $sys = $record->sysid if defined $record;
   }
   return $sys;
+}
+
+sub UpdateSysids
+{
+  my $self   = shift;
+  my $record = shift;
+  
+  my $sql = 'UPDATE bibdata SET sysid=? WHERE id=?';
+  $self->PrepareSubmitSql($sql, $record->sysid, $_) for @{$record->allHTIDs};
 }
 
 # Update author, title, pubdate, country, sysid fields in bibdata.
