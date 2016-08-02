@@ -7421,23 +7421,6 @@ sub DuplicateVolumesFromCandidates
   }
 }
 
-sub GetDuplicates
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my @dupes = ();
-  my $sysid;
-  my $record = $self->GetMetadata($id);
-  my $rows = $self->VolumeIDsQuery($record->sysid, $record);
-  foreach my $ref (@{$rows})
-  {
-    my $id2 = $ref->{'id'};
-    push @dupes, $id2 if $id2 ne $id;
-  }
-  return @dupes;
-}
-
 sub ExportSrcToEnglish
 {
   my $self = shift;
