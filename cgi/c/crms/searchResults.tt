@@ -174,7 +174,8 @@ function CheckAll(box,formid)
     <th>Reviewer</th>
     <th>Attr</th>
     <th>Reason</th>
-    [% IF p == 'undReviews' || p == 'expert' || (p == 'adminHistoricalReviews' && 'crmsworld' == sys) %]
+    [% showRen = (p == 'undReviews' || p == 'expert' || (p == 'adminHistoricalReviews' && 'crmsworld' == sys)) %]
+    [% IF showRen %]
       [% IF 'crms' == sys %]
         <th>Renewal</th>
       [% ELSE %]
@@ -215,9 +216,6 @@ function CheckAll(box,formid)
             <img width="16" height="16" alt="Locked by me" src="/c/crms/Lock.png"/>
           [% END %]
         [% END %]
-        [% IF 'crms' == sys && (review.renDate || review.renNum) %]
-          <a class="tip2" href="#"><strong>&#x1F4DD;</strong><span style="width:10em;">[% review.renNum _ ', ' _ review.renDate %]</span></a>
-        [% END %]
         </td>
         [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
           <td style="display:[% (showSysID)? 'table-cell':'none' %];">
@@ -255,8 +253,17 @@ function CheckAll(box,formid)
         [% IF p == 'adminHistoricalReviews' && leg %]<td>$review.legacy</td>[% END %]
         <td>$review.user</td>
         <td>$review.attr</td>
-        <td>$review.reason</td>
-        [% IF p == 'undReviews' || p == 'expert' || (p == 'adminHistoricalReviews' && 'crmsworld' == sys) %]
+        <td class="nowrap">$review.reason
+        [% IF !showRen && (review.renDate || review.renNum) %]
+          [% IF 'crms' == sys %]
+            [% msg = review.renNum _ ', ' _ review.renDate %]
+          [% ELSE %]
+            [% msg = ((review.renNum)? 'Pub Date ':'ADD ')  _ review.renDate %]
+          [% END %]
+          <a class="tip2" href="#"><strong>&#x1F4DD;</strong><span style="width:10em;">[% msg %]</span></a>
+        [% END %]
+        </td>
+        [% IF showRen %]
           [% IF 'crms' == sys %]
             <td>$review.renNum</td>
           [% ELSE %]
