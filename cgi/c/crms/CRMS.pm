@@ -2826,7 +2826,7 @@ sub GetQueueRef
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   my @return = ();
-  $sql = 'SELECT q.id,q.time,q.status,q.locked,YEAR(b.pub_date),q.priority,'.
+  $sql = 'SELECT q.id,DATE(q.time),q.status,q.locked,YEAR(b.pub_date),q.priority,'.
          ' q.expcnt,b.title,b.author,q.project,q.source,q.ticket,q.added_by'.
          ' FROM queue q LEFT JOIN bibdata b ON q.id=b.id '. $restrict.
          ' ORDER BY '. "$order $dir $limit";
@@ -2843,8 +2843,7 @@ sub GetQueueRef
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    my $date = $row->[1];
-    $date =~ s/(.*) .*/$1/;
+    
     my $pubdate = $row->[4];
     $pubdate = '?' unless $pubdate;
     $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
@@ -2854,8 +2853,7 @@ sub GetQueueRef
     #print "$sql<br/>\n";
     my $holds = $self->SimpleSqlGet($sql, $id);
     my $item = {id       => $id,
-                time     => $row->[1],
-                date     => $date,
+                date     => $row->[1],
                 status   => $row->[2],
                 locked   => $row->[3],
                 pubdate  => $pubdate,
@@ -2873,8 +2871,8 @@ sub GetQueueRef
     push @return, $item;
     if ($download)
     {
-      $data .= sprintf("\n$id\t%s\t%s\t%s\t$date\t%s\t%s\t%s\t$reviews\t%s\t$holds",
-                       $row->[7], $row->[8], $row->[4], $row->[2], $row->[3], $self->StripDecimal($row->[5]), $row->[6]);
+      $data .= sprintf("\n$id\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t$reviews\t%s\t$holds",
+                       $row->[7], $row->[8], $row->[4], $row->[1], $row->[2], $row->[3], $self->StripDecimal($row->[5]), $row->[6]);
     }
   }
   if (!$download)
@@ -6200,9 +6198,9 @@ sub QueueSearchMenu
   my $searchName = shift;
   my $searchVal  = shift;
 
-  my @keys = qw(Identifier Title Author PubDate Status Locked Priority Reviews
+  my @keys = qw(Identifier Title Author PubDate Date Status Locked Priority Reviews
                 ExpertCount Holds Source AddedBy Project Ticket);
-  my @labs = ('Identifier', 'Title', 'Author', 'Pub Date','Status', 'Locked',
+  my @labs = ('Identifier', 'Title', 'Author', 'Pub Date', 'Date Added', 'Status', 'Locked',
               'Priority', 'Reviews', 'Expert Reviews', 'Holds', 'Source',
               'Added By', 'Project', 'Ticket');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
@@ -6221,9 +6219,9 @@ sub ExportDataSearchMenu
   my $searchName = shift;
   my $searchVal  = shift;
 
-  my @keys = qw(Identifier Title Author PubDate Attribute Reason
+  my @keys = qw(Identifier Title Author PubDate Date Attribute Reason
                 Status Priority Source AddedBy Project Ticket GID Exported);
-  my @labs = ('Identifier', 'Title', 'Author', 'Pub Date', 'Attribute', 'Reason',
+  my @labs = ('Identifier', 'Title', 'Author', 'Pub Date', 'Date', 'Attribute', 'Reason',
               'Status', 'Priority', 'Source', 'Added By', 'Project', 'Ticket', 'GID', 'Exported');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
