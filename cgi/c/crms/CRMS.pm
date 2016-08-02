@@ -2182,10 +2182,13 @@ sub SearchTermsToSQLWide
   my $table1 = $pref2table{substr $search1,0,1};
   my $table2 = $pref2table{substr $search2,0,1};
   my $table3 = $pref2table{substr $search3,0,1};
+  $table1 = 'historicalreviews' if $search1 =~ m/^DATE/;
+  $table2 = 'historicalreviews' if $search2 =~ m/^DATE/;
+  $table3 = 'historicalreviews' if $search3 =~ m/^DATE/;
   my ($search1term,$search2term,$search3term);
   $search1 = "YEAR($search1)" if $search1 eq 'b.pub_date';
-  $search1 = "YEAR($search2)" if $search2 eq 'b.pub_date';
-  $search1 = "YEAR($search3)" if $search3 eq 'b.pub_date';
+  $search2 = "YEAR($search2)" if $search2 eq 'b.pub_date';
+  $search3 = "YEAR($search3)" if $search3 eq 'b.pub_date';
   $search1value = $dbh->quote($search1value) if length $search1value;
   $search2value = $dbh->quote($search2value) if length $search2value;
   $search3value = $dbh->quote($search3value) if length $search3value;
