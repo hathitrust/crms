@@ -2537,7 +2537,7 @@ sub GetReviewsRef
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
   my ($sql,$totalReviews,$totalVolumes) = $self->CreateSQLForReviews($page, $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $offset, $pagesize);
-  print "$sql<br/>\n";
+  #print "$sql<br/>\n";
   my $ref = undef;
   eval { $ref = $self->SelectAll($sql); };
   if ($@)
