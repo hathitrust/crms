@@ -87,7 +87,7 @@ sub ValidateSubmission
     #  $errorMsg .= 'pd/ncn must include renewal id and renewal date. ' unless $hasren;
     #}
   }
-  ## pd/cdpp requires a ren number
+  ## pd/cdpp must not have a ren number
   if ($attr == 1 && $reason == 9 && ($renNum || $renDate))
   {
     $errorMsg .= 'pd/cdpp should not include renewal info. ';
@@ -149,7 +149,7 @@ sub ValidateSubmission
       $errorMsg .= 'pd/exp requires note category "Expert Note", "Foreign Pub" or "Misc". ';
     }
   }
-  ## pdus/cdpp  must not have a ren number
+  ## pdus/cdpp must not have a ren number
   if ($attr == 9 && $reason == 9)
   {
     if ($renNum || $renDate)
@@ -182,17 +182,17 @@ sub CalcStatus
 
   my %return;
   my $status = 0;
-  my $sql = 'SELECT user,attr,reason,renNum,renDate,hold,NOW() FROM reviews WHERE id=?';
+  my $sql = 'SELECT user,attr,reason,renNum,renDate,newhold FROM reviews WHERE id=?';
   my $ref = $self->SelectAll($sql, $id);
-  my ($user, $attr, $reason, $renNum, $renDate, $hold, $today) = @{$ref->[0]};
-  $sql = 'SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id=? AND user!=?';
+  my ($user, $attr, $reason, $renNum, $renDate, $hold) = @{$ref->[0]};
+  $sql = 'SELECT user,attr,reason,renNum,renDate,newhold FROM reviews WHERE id=? AND user!=?';
   $ref = $self->SelectAll($sql, $id, $user);
   my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{$ref->[0]};
-  if ($hold && ($today lt $hold || $stat ne 'normal'))
+  if ($hold)
   {
     $return{'hold'} = $user;
   }
-  if ($other_hold && ($today lt $other_hold || $stat ne 'normal'))
+  if ($other_hold)
   {
     $return{'hold'} = $other_user;
   }

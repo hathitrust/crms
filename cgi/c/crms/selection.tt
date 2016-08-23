@@ -100,10 +100,6 @@ Search for Reviews where<br/>
 <span class="smallText">(YYYY-MM-DD)</span>
 <br/>
 
-[% IF page == 'holds' %]
-<span class="smallishText"><b>Note: date range applies to hold thru date, not review date.</b></span><br/><br/>
-[% END %]
-
 <label for="order">Order by:</label>
 [% crms.ReviewSearchMenu(page, 'order', order) %]
 <br/>

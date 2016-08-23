@@ -33,7 +33,7 @@ window.onload = function(e)
 -->
 </script>
 
-[% n = crms.CountUserHolds(user) %]
+[% n = crms.CountHolds() %]
 [% IF n %]<h4>You have $n [% crms.Pluralize('volume', n) %] on hold.</h4>[% END %]
 
 [% ref = crms.GetAddToQueueRef() %]
@@ -52,7 +52,7 @@ window.onload = function(e)
   [% CALL crms.UnlockItem(cgi.param('unlock')) %]
 [% END %]
 
-[% IF crms.Sys() == 'crmsworld' %]
+[% IF crms.Sys() == 'crmsworld' && crms.WhereAmI() != 'Training' %]
 <div id="progress" style="width:450px;float:right;margin-right:240px;"></div>
 [% END %]
 <table class="mainnav">

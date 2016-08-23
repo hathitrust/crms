@@ -23,11 +23,6 @@
 [% vols = (stype == 'volumes' || stype == 'groups') %]
 [% IF NOT pagesize %][% pagesize = (vols)? 10:20 %][% END %]
 
-[% IF p == 'holds' || p == 'adminHolds' %]
-  [% IF !order %][% order = 'Hold Thru' %][% END %]
-  [% IF !dir %][% dir = 'ASC' %][% END %]
-[% END %]
-
 [% IF !order %][% order = 'Identifier' %][% END %]
 [% IF !dir %][% dir = 'ASC' %][% END %]
 
@@ -188,8 +183,8 @@ function CheckAll(box,formid)
     [% IF p == 'adminHistoricalReviews' %]<th>Verdict</th>[% END %]
     [% IF crms.IsUserExpert() && p != 'undReviews' && p != 'expert' %]<th>Swiss</th>[% END %]
     [% IF p == 'undReviews' %]<th>Select</th>[% END %]
-    [% IF p == 'adminReviews' || p == 'editReviews' || p == 'holds' || p == 'adminHolds' %]
-      <th>Hold&nbsp;Thru</th>
+    [% IF p == 'adminReviews' || p == 'editReviews' %]
+      <th>Hold</th>
     [% END %]
     </tr>
     [% FOREACH review IN ref.rows %]
@@ -291,8 +286,12 @@ function CheckAll(box,formid)
           [% END %]
         </td>
         [% END %]
-        [% IF p == 'adminReviews' || p == 'editReviews' || p == 'holds' || p == 'adminHolds' %]
-          <td>$review.hold</td>
+        [% IF p == 'adminReviews' || p == 'editReviews' %]
+          <td>
+          [% IF review.hold %]
+            <img width="16" height="16" alt="Correctness" src="/c/crms/CheckIcon.png"/>
+          [% END %]
+          </td>
         [% END %]
       </tr>
       [% prev_id = review.id %]

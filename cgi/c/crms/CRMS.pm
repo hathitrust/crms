@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.3.13';
+  return '5.4';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -420,7 +420,7 @@ sub ProcessReviews
     my $hold = $data->{'hold'};
     if ($hold)
     {
-      print "Not processing $id for $hold: it is held; system status is '$stat'\n" if $stat ne 'normal' and !$quiet;
+      print "Not processing $id for $hold: it is held; system status is '$stat'\n" unless $quiet;
       next;
     }
     if ($status == 8)
@@ -432,7 +432,7 @@ sub ProcessReviews
       $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,$category,0,0);
     }
     $self->RegisterStatus($id, $status);
-    $sql = 'UPDATE reviews SET hold=NULL,sticky_hold=NULL,time=time WHERE id=?';
+    $sql = 'UPDATE reviews SET newhold=NULL,time=time WHERE id=?';
     $self->PrepareSubmitSql($sql, $id);
     $stati{$status}++;
   }
@@ -533,8 +533,8 @@ sub GetDoubleRevItemsInAgreement
 sub GetExpertRevItems
 {
   my $self = shift;
-  my $sql  = 'SELECT id FROM queue WHERE status>=5 AND status<8 AND id NOT IN ' .
-             '(SELECT id FROM reviews WHERE NOW()<hold)';
+  my $sql  = 'SELECT id FROM queue WHERE status>=5 AND status<8 AND id IN'.
+             ' (SELECT id FROM reviews WHERE newhold=0)';
   return $self->SelectAll($sql);
 }
 
@@ -943,7 +943,7 @@ sub AddItemToCandidates
       my $id2 = $ref->{'id'};
       next if $id2 eq $id;
       next unless $self->IsVolumeInCandidates($id2);
-      print "Filter $id2 as duplicate if $id\n" unless $quiet;
+      print "Filter $id2 as duplicate of $id\n" unless $quiet;
       $self->Filter($id2, 'duplicate') unless $noop;
     }
   }
@@ -1405,23 +1405,8 @@ sub SubmitReview
   $renDate =~ s/^\s+|\s+$//gs;
   my @fields = qw(id user attr reason note renNum renDate category);
   my @values = ($id, $user, $attr, $reason, $note, $renNum, $renDate, $category);
-  if ($hold)
-  {
-    $hold = $self->HoldExpiry($id, $user, 0);
-    push(@fields, 'hold');
-    push(@values, $hold);
-  }
-  else
-  {
-    # Stash their hold if they are cancelling it
-    my $sql = 'SELECT hold FROM reviews WHERE id=? AND user=?';
-    my $oldhold = $self->SimpleSqlGet($sql, $id, $user);
-    if ($oldhold)
-    {
-      push(@fields, 'sticky_hold');
-      push(@values, $oldhold);
-    }
-  }
+  push(@fields, 'newhold');
+  push(@values, ($hold)? 1:0);
   my $dur = $self->SimpleSqlGet('SELECT TIMEDIFF(NOW(),?)', $start);
   my $sql = 'SELECT duration FROM reviews WHERE user=? AND id=?';
   my $dur2 = $self->SimpleSqlGet($sql, $user, $id);
@@ -1461,10 +1446,9 @@ sub SubmitReview
       $sql = 'UPDATE queue SET expcnt=? WHERE id=?';
       $result = $self->PrepareSubmitSql($sql, $expcnt, $id);
       my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $category, $renNum, $renDate);
-      #We have decided to register the expert decision right away.
       $self->RegisterStatus($id, $status);
       # Clear all non-expert holds
-      $sql = 'UPDATE reviews SET hold=NULL,sticky_hold=NULL,time=time WHERE id=?'.
+      $sql = 'UPDATE reviews SET newhold=0,time=time WHERE id=?'.
              ' AND user NOT IN (SELECT id FROM users WHERE expert=1)';
       $self->PrepareSubmitSql($sql, $id);
     }
@@ -1602,51 +1586,21 @@ sub GetYesterday
   return substr($yd, 0, 10);
 }
 
+sub CountHolds
+{
+  my $self = shift;
+  my $user = shift || $self->get('user');
+
+  return $self->SimpleSqlGet('SELECT COUNT(*) FROM reviews WHERE user=? AND newhold=1', $user);
+}
+
 sub HoldForItem
 {
   my $self = shift;
   my $id   = shift;
   my $user = shift;
 
-  return $self->SimpleSqlGet('SELECT hold FROM reviews WHERE id=? AND user=?', $id, $user);
-}
-
-sub StickyHoldForItem
-{
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift;
-
-  return $self->SimpleSqlGet('SELECT sticky_hold FROM reviews WHERE id=? AND user=?', $id, $user);
-}
-
-sub HoldExpiry
-{
-  my $self     = shift;
-  my $id       = shift;
-  my $user     = shift;
-  my $readable = shift;
-
-  my $exp = $self->HoldForItem($id, $user);
-  $exp = $self->StickyHoldForItem($id, $user) unless $exp;
-  $exp = $self->TwoWorkingDays() unless $exp;
-  $exp = '2030-12-31' if $self->IsUserSuperAdmin();
-  return ($readable)? $self->FormatDate($exp):$exp;
-}
-
-# Returned format is YYYY-MM-DD 23:59:59
-sub TwoWorkingDays
-{
-  use UMCalendar;
-  my $self = shift;
-  my $time = shift;
-
-  $time = $self->GetTodaysDate() unless $time;
-  my $cal = Date::Calendar->new($UMCalendar::UMCal);
-  my @parts = split '-', substr($time, 0, 10);
-  my $date = $cal->add_delta_workdays($parts[0], $parts[1], $parts[2], 2);
-  $date = sprintf '%s-%s-%s 23:59:59', substr($date,0,4), substr($date,4,2), substr($date,6,2);
-  return $date;
+  return $self->SimpleSqlGet('SELECT newhold FROM reviews WHERE id=? AND user=?', $id, $user);
 }
 
 sub WasYesterdayWorkingDay
@@ -1728,11 +1682,10 @@ sub ConvertToSearchTerm
     $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)';
   }
   elsif ($search eq 'Swiss') { $new_search = 'r.swiss'; }
-  elsif ($search eq 'Hold Thru') { $new_search = 'r.hold'; }
   elsif ($search eq 'SysID') { $new_search = 'b.sysid'; }
   elsif ($search eq 'Holds')
   {
-    $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold IS NOT NULL)';
+    $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.newhold=1)';
   }
   elsif ($search eq 'Source')
   {
@@ -1804,21 +1757,21 @@ sub CreateSQLForReviews
             'q.status,b.title,b.author,';
   if ($page eq 'adminReviews')
   {
-    $sql .= 'DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= 'r.newhold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
   }
   elsif ($page eq 'holds')
   {
-    $sql .= 'DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
-    $sql .= " AND r.user='$user' AND r.hold IS NOT NULL";
+    $sql .= 'r.newhold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= " AND r.user='$user' AND r.newhold=1";
   }
   elsif ($page eq 'adminHolds')
   {
-    $sql .= 'DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
-    $sql .= " AND r.hold IS NOT NULL";
+    $sql .= 'r.newhold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= " AND r.newhold=1";
   }
   elsif ($page eq 'expert')
   {
-    $sql .= 'DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= 'r.newhold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
     $sql .= ' AND q.status=2' . $project;
   }
   elsif ($page eq 'adminHistoricalReviews')
@@ -1830,26 +1783,25 @@ sub CreateSQLForReviews
   }
   elsif ($page eq 'undReviews')
   {
-    $sql .= 'DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= 'r.newhold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
     $sql .= ' AND q.status=3' . $project;
   }
   elsif ($page eq 'userReviews')
   {
-    $sql .= "DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id AND r.user='$user' AND q.status>0";
+    $sql .= "r.newhold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id AND r.user='$user' AND q.status>0";
   }
   elsif ($page eq 'editReviews')
   {
     my $today = $self->SimpleSqlGet('SELECT DATE(NOW())') . ' 00:00:00';
     # Experts need to see stuff with any status; non-expert should only see stuff that hasn't been processed yet.
     my $restrict = ($self->IsUserExpert($user))? '':'AND q.status=0';
-    $sql .= 'DATE(r.hold) FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id ' .
-            "AND r.user='$user' AND (r.time>='$today' OR r.hold IS NOT NULL) AND q.status!=6 $restrict";
+    $sql .= 'r.newhold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id ' .
+            "AND r.user='$user' AND (r.time>='$today' OR r.newhold=1) AND q.status!=6 $restrict";
   }
   my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
   $sql .= " AND $terms" if $terms;
-  my $which = ($page eq 'holds')? 'r.hold':'r.time';
-  if ($startDate) { $sql .= " AND $which >='$startDate 00:00:00' "; }
-  if ($endDate) { $sql .= " AND $which <='$endDate 23:59:59' "; }
+  if ($startDate) { $sql .= " AND DATE(r.time) >='$startDate' "; }
+  if ($endDate) { $sql .= " AND DATE(r.time) <='$endDate' "; }
   $sql .= " ORDER BY $order $dir";
   $sql .= ', r.time ASC' unless $order eq 'r.time';
   $sql .= " LIMIT $offset, $pagesize";
@@ -2341,9 +2293,9 @@ sub SearchAndDownload
     {
       $buff .= qq{id\ttitle\tauthor\tdate\tattr\treason\tcategory\tnote};
     }
-    elsif ($page eq 'editReviews')
+    elsif ($page eq 'editReviews' || $page eq 'holds')
     {
-      $buff .= qq{id\ttitle\tauthor\tdate\tattr\treason\tcategory\tnote};
+      $buff .= qq{id\ttitle\tauthor\tdate\tattr\treason\tcategory\tnote\thold};
     }
     elsif ($page eq 'expert' || $page eq 'undReviews')
     {
@@ -2351,7 +2303,7 @@ sub SearchAndDownload
     }
     elsif ($page eq 'adminReviews' || $page eq 'adminHolds')
     {
-      $buff .= qq{id\ttitle\tauthor\tdate\tstatus\tuser\tattr\treason\tcategory\tnote\tswiss\thold thru};
+      $buff .= qq{id\ttitle\tauthor\tdate\tstatus\tuser\tattr\treason\tcategory\tnote\tswiss\thold};
     }
     elsif ($page eq 'adminHistoricalReviews')
     {
@@ -2372,7 +2324,7 @@ sub SearchAndDownload
         my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
         $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
                'r.category,r.legacy,r.renDate,r.priority,r.swiss,q.status,b.title,b.author,'.
-               (($page eq 'adminHistoricalReviews')?'r.validated':'r.hold ').
+               (($page eq 'adminHistoricalReviews')?'r.validated':'r.newhold ').
                " FROM $top INNER JOIN $table r ON b.id=r.id".
                " WHERE r.id='$id' $qrest ORDER BY $order $dir";
         #print "$sql<br/>\n";
@@ -2621,7 +2573,7 @@ sub GetVolumesRef
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
            'r.category,r.legacy,r.renDate,r.priority,r.swiss,q.status,b.title,b.author'.
            (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':'') .
-           (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ', DATE(r.hold) ':' ') .
+           (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ',r.newhold':'') .
            " FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ " .
            " WHERE r.id='$id' ORDER BY $order $dir";
     $sql .= ', r.time ASC' unless $order eq 'r.time';
@@ -2698,7 +2650,7 @@ sub GetVolumesRefWide
     my $id = $row->[0];
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
            'r.category,r.legacy,r.renDate,r.priority,r.swiss,q.status,b.title,b.author'.
-           (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':'DATE(r.hold)').
+           (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':'r.newhold').
            " FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id".
            " WHERE r.id='$id' ORDER BY $order $dir";
     $sql .= ',r.time ASC' unless $order eq 'r.time';
@@ -2845,7 +2797,7 @@ sub GetQueueRef
     $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
     #print "$sql<br/>\n";
     my $reviews = $self->SimpleSqlGet($sql, $id);
-    $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND hold IS NOT NULL';
+    $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND newhold=1';
     #print "$sql<br/>\n";
     my $holds = $self->SimpleSqlGet($sql, $id);
     my $item = {id       => $id,
@@ -5000,7 +4952,7 @@ sub PreviouslyReviewed
   ## expert reviewers can edit any time
   return 0 if $self->IsUserExpert($user);
   my $limit = $self->GetYesterday();
-  my $sql = 'SELECT id FROM reviews WHERE id=? AND user=? AND time<? AND hold IS NULL';
+  my $sql = 'SELECT id FROM reviews WHERE id=? AND user=? AND time<? AND newhold=0';
   my $found = $self->SimpleSqlGet($sql, $id, $user, $limit);
   return ($found)? 1:0;
 }
@@ -6148,15 +6100,9 @@ sub ReviewSearchMenu
   my $searchVal  = shift;
 
   my @keys = ('Identifier','SysID',    'Title','Author','PubDate', 'Date', 'Status','Legacy','UserId','Attribute',
-              'Reason', 'NoteCategory', 'Note', 'Priority', 'Validated', 'Swiss', 'Hold Thru');
+              'Reason', 'NoteCategory', 'Note', 'Priority', 'Validated', 'Swiss');
   my @labs = ('Identifier','System ID','Title','Author','Pub Date','Review Date', 'Status','Legacy','User',  'Attribute',
-              'Reason','Note Category', 'Note', 'Priority', 'Verdict',   'Swiss', 'Hold Thru');
-
-  if ($page ne 'adminReviews' && $page ne 'editReviews' && $page ne 'holds')
-  {
-    splice @keys, 16, 1; # Hold
-    splice @labs, 16, 1;
-  }
+              'Reason','Note Category', 'Note', 'Priority', 'Verdict',   'Swiss');
   if (!$self->IsUserExpert())
   {
     splice @keys, 15, 1; # Swiss

@@ -83,11 +83,11 @@ sub CalcStatus
 
   my %return;
   my $status = 0;
-  my $sql = 'SELECT user,attr,reason,renNum,renDate,hold,NOW() FROM reviews WHERE id=?';
+  my $sql = 'SELECT user,attr,reason,renNum,renDate,newhold FROM reviews WHERE id=?';
   my $ref = $self->SelectAll($sql, $id);
-  my ($user, $attr, $reason, $renNum, $renDate, $hold, $today) = @{ $ref->[0] };
+  my ($user, $attr, $reason, $renNum, $renDate, $hold) = @{ $ref->[0] };
   $renNum = undef unless $renDate;
-  $sql = 'SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id=? AND user!=?';
+  $sql = 'SELECT user,attr,reason,renNum,renDate,newhold FROM reviews WHERE id=? AND user!=?';
   $ref = $self->SelectAll($sql, $id, $user);
   my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{ $ref->[0] };
   $other_renNum = undef unless $other_renDate;
@@ -95,11 +95,11 @@ sub CalcStatus
   $reason = $self->TranslateReason($reason);
   $other_attr = $self->TranslateAttr($other_attr);
   $other_reason = $self->TranslateReason($other_reason);
-  if ($hold && ($today lt $hold || $stat ne 'normal'))
+  if ($hold)
   {
     $return{'hold'} = $user;
   }
-  elsif ($other_hold && ($today lt $other_hold || $stat ne 'normal'))
+  elsif ($other_hold)
   {
     $return{'hold'} = $other_user;
   }
