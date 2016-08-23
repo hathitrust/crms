@@ -1269,6 +1269,7 @@ sub AddItemToQueueOrSetItemActive
   my $user     = shift || $self->get('user');
   my $noop     = shift;
   my $record   = shift;
+  my $project  = shift;
 
   $id = lc $id;
   $src = 'adminui' unless $src;
@@ -1341,6 +1342,11 @@ sub AddItemToQueueOrSetItemActive
   {
     my $sql = 'UPDATE queue SET added_by=? WHERE id=?';
     $self->PrepareSubmitSql($sql, $user, $id) unless $noop;
+  }
+  if (defined $project)
+  {
+    my $sql = 'UPDATE queue SET project=? WHERE id=?';
+    $self->PrepareSubmitSql($sql, $project, $id) unless $noop;
   }
   return $stat . join '; ', @msgs;
 }
