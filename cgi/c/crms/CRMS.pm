@@ -686,11 +686,13 @@ sub CanExportVolume
   if (!$cm->HasCorrectRights($attr2, $reason2, $attr, $reason))
   {
     # But, we clobber OOS if any of the following conditions hold:
-    # 1. If the volume is pdus/gfv (which per rrotter in Core Services never overrides pd/bib).
-    # 2. Priority 3 or higher.
-    # 3. Previous rights were by user crms*.
-    # 4. The determination is pd* (unless a pdus would clobber pd/bib).
-    if ($reason2 eq 'gfv' || $pri >= 3.0 || $usr2 =~ m/^crms/i ||
+    # 1. Current rights are pdus/gfv (which per rrotter in Core Services never overrides pd/bib).
+    # 2. Current rights are */bib
+    # 3. Priority 3 or higher.
+    # 4. Previous rights were by user crms*.
+    # 5. The determination is pd* (unless a pdus would clobber pd/bib).
+    if ($reason2 eq 'gfv' || $reason2 eq 'bib' ||
+        $pri >= 3.0 || $usr2 =~ m/^crms/i ||
         ($attr =~ m/^pd/ && !($attr eq 'pdus' && $attr2 eq 'pd')))
     {
       # This is used for cleanup purposes
