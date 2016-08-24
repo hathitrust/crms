@@ -112,16 +112,18 @@ sub IsGovDoc
   return $is;
 }
 
-# 008:28 is 's' byte.
+# Returns a code {clmos} if state or local document, undef otherwise.
 sub IsStateGovDoc
 {
   my $self   = shift;
   my $record = shift;
 
+  my %codes = ('c' => 1, 'l' => 1, 'm' => 1, 'o' => 1, 's' => 1);
   my $is = undef;
   eval {
     my $leader = $record->GetControlfield('008');
-    $is = (length $leader > 28 && substr($leader, 28, 1) eq 's');
+    my $code = (length $leader > 28)? substr($leader, 28, 1):'';
+    $is = $code if defined $codes{$code};
   };
   $self->{crms}->SetError($record->id . " failed in IsStateGovDoc(): $@") if $@;
   return $is;
