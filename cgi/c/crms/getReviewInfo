@@ -21,9 +21,11 @@ my $crms = CRMS->new(logFile  =>   "$DLXSROOT/prep/c/crms/log_getReviewInfo.txt"
 
 my $id = $cgi->param('id');
 my $user = $cgi->param('user');
+#my $proj = $crms->SimpleSqlGet('SELECT project FROM queue WHERE id=?', $id);
 my $sql = 'SELECT attr,reason,note,category,renNum,renDate FROM reviews WHERE id=? AND user=?';
 my $row = $crms->SelectAll($sql, $id, $user)->[0];
 my %data;
+# FIXME: this may need to be made project-sensitive.
 $data{'rights'} = $crms->GetCodeFromAttrReason($row->[0], $row->[1]);
 # If the rights attr is not und (5) then run a rights prediction
 if ($row->[0] != $crms->TranslateAttr('und'))
