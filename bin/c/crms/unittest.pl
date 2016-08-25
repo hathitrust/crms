@@ -66,9 +66,9 @@ if ($sys ne 'crmsworld')
 is($crms->ShouldVolumeBeFiltered('mdp.39015071261104'), 'language',    'language to und');
 is($crms->ShouldVolumeBeFiltered('mdp.39015004119445'), 'translation', 'translation to und');
 
-is($crms->TwoWorkingDays('2010-07-28'), '2010-07-30 23:59:59',           '2 WDs from Wed');
-is($crms->TwoWorkingDays('2010-07-30'), '2010-08-03 23:59:59',           '2 WDs from Fri');
-is($crms->TwoWorkingDays('2011-05-26'), '2011-05-31 23:59:59',           '2 WDs over Memorial 2011');
+#is($crms->TwoWorkingDays('2010-07-28'), '2010-07-30 23:59:59',           '2 WDs from Wed');
+#is($crms->TwoWorkingDays('2010-07-30'), '2010-08-03 23:59:59',           '2 WDs from Fri');
+#is($crms->TwoWorkingDays('2011-05-26'), '2011-05-31 23:59:59',           '2 WDs over Memorial 2011');
 is($crms->WasYesterdayWorkingDay('2011-05-30'), 0,                       'WD: Memorial 2011');
 is($crms->WasYesterdayWorkingDay('2011-05-29'), 0,                       'WD: Memorial 2011 - 1');
 is($crms->WasYesterdayWorkingDay('2011-05-31'), 0,                       'WD: Memorial 2011 + 1');
@@ -136,7 +136,7 @@ if ($sys eq 'crmsworld')
 {
   is($crms->ValidateSubmission('inu.39000005773028','moseshll',19,17,undef,undef,undef,undef),
      'Volumes published prior to 1923 are not eligible for icus/gatt. ', 'icus/gatt superadmin <23');
-  is($crms->PredictRights('uc1.$b173100','1945'), 4,    'Predict rights: uc1.$b173100 1945 ic/add');
+  is($crms->PredictRights('uc1.b3122005 ','1958'), 4,    'Predict rights: uc1.b3122005 1958 ic/add');
   ok($crms->CanChangeToUser('jblock@princeton.edu','jblock@princeton.edu-expert'), 'user switching');
   ok(!$crms->CanChangeToUser('jblock@princeton.edu','moseshll'), 'user switching');
 }
@@ -298,7 +298,7 @@ else
   is($crms->GetCodeFromAttrReason(2,14),12,                                                        'GetCodeFromAttrReason 12');
   is($crms->SameUser('gnichols','gnichols123'),1,                                                  'SameUser 1');
   is($crms->SameUser('gnichols','moseshll'),0,                                                     'SameUser 2');
-  is($crms->SameUser('rose','doc'),0,                                                              'SameUser 3');
+  #is($crms->SameUser('rose','doc'),0,                                                              'SameUser 3');
 }
 
 is($crms->TolerantCompare(undef,undef),1,                                                          'TolerantCompare 1');
@@ -307,6 +307,19 @@ is($crms->TolerantCompare(undef,'blah'),0,                                      
 is($crms->TolerantCompare('blah','bleh'),0,                                                        'TolerantCompare 4');
 is($crms->TolerantCompare('blah','blah'),1,                                                        'TolerantCompare 5');
 
+is($crms->AccessChange('pd','pd'),0,                                                               'AccessChange 1');
+is($crms->AccessChange('pd','pdus'),1,                                                             'AccessChange 2');
+is($crms->AccessChange('pd','ic'),1,                                                               'AccessChange 3');
+is($crms->AccessChange('pd','und'),1,                                                              'AccessChange 4');
+is($crms->AccessChange('pd','icus'),1,                                                             'AccessChange 5');
+is($crms->AccessChange('pdus','pdus'),0,                                                           'AccessChange 6');
+is($crms->AccessChange('pdus','ic'),1,                                                             'AccessChange 7');
+is($crms->AccessChange('pdus','und'),1,                                                            'AccessChange 8');
+is($crms->AccessChange('pdus','icus'),1,                                                           'AccessChange 9');
+is($crms->AccessChange('ic','ic'),0,                                                               'AccessChange 10');
+is($crms->AccessChange('ic','und'),0,                                                              'AccessChange 11');
+is($crms->AccessChange('ic','icus'),1,                                                             'AccessChange 12');
+is($crms->AccessChange('und','icus'),1,                                                            'AccessChange 13');
 
 done_testing();
 
