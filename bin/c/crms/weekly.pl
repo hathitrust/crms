@@ -70,8 +70,6 @@ my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
                                 from => 'crms-mailbot@umich.edu',
                                 on_errors => 'undef' }
 or die "Error in mailing : $Mail::Sender::Error\n";
-my $system = $crms->System();
-
 
 my $msg = $crms->StartHTML();
 $msg .= <<'END';
@@ -199,8 +197,7 @@ $msg .= sprintf('<span style="font-size:.9em;">Report for week %s to %s, compare
                 $crms->FormatDate($startThis), $crms->FormatDate($now),
                 $crms->FormatDate($startLast), $crms->FormatDate($startThis));
 $msg .= '</body></html>';
-my $title = sprintf '%s %sWednesday Data Report',
-                    $system, ($DLPS_DEV)? 'Dev ':'';
+my $title = sprintf '%sWednesday Data Report', ($DLPS_DEV)? 'Dev ':'';
 push @mails, $crms->GetSystemVar('mailingList') unless $quiet;
 push @mails, $crmsUS->GetSystemVar('mailingList') unless $quiet;
 my $to = join ',', @mails;
