@@ -707,7 +707,8 @@ sub CanExportVolume
           $export = 0;
         }
       }
-      print "Exporting priority $pri $id as $attr/$reason even though it is out of scope ($attr2/$reason2 by $usr2 [$time2])\n" unless $quiet or $reason2 eq 'gfv' or $export == 0;
+      print "Exporting priority $pri $id as $attr/$reason even though it is out of scope ($attr2/$reason2 by $usr2 [$time2])\n"
+            unless $quiet or $export == 0;
     }
     else
     {
@@ -4447,15 +4448,6 @@ sub DownloadUserStats
   return ($report)? 1:0;
 }
 
-sub NearestPowerOfTen
-{
-  my $self = shift;
-  my $num  = shift;
-
-  my $roundto = 10 ** max(int(log(abs($num))/log(10))-1,1);
-  return int(ceil($num/$roundto))*$roundto;
-}
-
 # Returns an array ref of hash refs
 # Each hash has keys 'id', 'name', 'active'
 # Array is sorted alphabetically with inactive reviewers last.
@@ -6614,16 +6606,6 @@ sub SetSystemStatus
   $self->PrepareSubmitSql('DELETE FROM systemstatus');
   my $sql = 'INSERT INTO systemstatus (status,message) VALUES (?,?)';
   $self->PrepareSubmitSql($sql, $status, $msg);
-}
-
-# How many items for this user have outstanding holds.
-sub CountUserHolds
-{
-  my $self = shift;
-  my $user = shift;
-
-  my $sql = 'SELECT COUNT(*) FROM reviews WHERE user=? AND hold IS NOT NULL';
-  return $self->SimpleSqlGet($sql, $user);
 }
 
 # Returns name of system, or undef for production
