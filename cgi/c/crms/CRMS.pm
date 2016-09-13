@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.4.1';
+  return '5.4.2';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -686,14 +686,17 @@ sub CanExportVolume
   if (!$cm->HasCorrectRights($attr2, $reason2, $attr, $reason))
   {
     # But, we clobber OOS if any of the following conditions hold:
-    # 1. Current rights are pdus/gfv (which per rrotter in Core Services never overrides pd/bib).
-    # 2. Current rights are */bib
+    # 1. Current rights are pdus/gfv (which per rrotter in Core Services never overrides pd/bib)
+    #    and determination is not und.
+    # 2. Current rights are */bib (unless a und would clobber pdus/bib).
     # 3. Priority 3 or higher.
     # 4. Previous rights were by user crms*.
     # 5. The determination is pd* (unless a pdus would clobber pd/bib).
-    if ($reason2 eq 'gfv' || $reason2 eq 'bib' ||
-        $pri >= 3.0 || $usr2 =~ m/^crms/i ||
-        ($attr =~ m/^pd/ && !($attr eq 'pdus' && $attr2 eq 'pd')))
+    if (($reason2 eq 'gfv' && $attr ne 'und')
+        || ($reason2 eq 'bib' && !($attr eq 'und' && $attr2 =~ m/^pd/))
+        || $pri >= 3.0
+        || $usr2 =~ m/^crms/i
+        || ($attr =~ m/^pd/ && !($attr eq 'pdus' && $attr2 eq 'pd')))
     {
       # This is used for cleanup purposes
       if (defined $time)
