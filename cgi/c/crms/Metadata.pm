@@ -410,6 +410,19 @@ sub countEnumchron
   return $n;
 }
 
+sub doEnumchronMatch
+{
+  my $self = shift;
+  my $id   = shift;
+  my $id2  = shift;
+
+  my $chron = lc ($self->enumchron($id) || '');
+  my $chron2 = lc ($self->enumchron($id2) || '');
+  $chron =~ s/\s+//g;
+  $chron2 =~ s/\s+//g;
+  return ($chron eq $chron2);
+}
+
 sub allHTIDs
 {
   my $self = shift;
