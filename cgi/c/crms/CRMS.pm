@@ -4665,9 +4665,9 @@ sub ValidateSubmission
 sub GetEncTitle
 {
   my $self = shift;
-  my $bar  = shift;
+  my $id   = shift;
 
-  my $ti = $self->GetTitle($bar);
+  my $ti = $self->GetTitle($id);
   $ti =~ s,\',\\\',g; ## escape '
   $ti =~ s/[()[\]{}]//g;
   return $ti;
@@ -7609,6 +7609,7 @@ sub Authorities
   my $page = shift;
   my $gid  = shift;
 
+  use URI::Escape;
   $mag = '100' unless $mag;
   $view = 'image' unless $view;
   $page = 'review' unless defined $page;
@@ -7617,8 +7618,7 @@ sub Authorities
   #print "$sql\n<br/>";
   my $ref = $self->SelectAll($sql, $page);
   my @all = ();
-  my $a = $self->GetEncAuthorForReview($id);
-  $a =~ s/&/%26/g;
+  my $a = $self->GetAuthor($id);
   foreach my $row (@{$ref})
   {
     my $name = $row->[0];
@@ -7633,7 +7633,8 @@ sub Authorities
     }
     if ($url =~ m/__AUTHOR__/)
     {
-      $url =~ s/__AUTHOR__/$a/g;
+      my $a2 = uri_escape_utf8($a);
+      $url =~ s/__AUTHOR__/$a2/g;
     }
     if ($url =~ m/__AUTHOR_(\d+)__/)
     {
@@ -7651,6 +7652,7 @@ sub Authorities
       {
         $a2 = lc substr($a, 0, $1);
       }
+      $a2 = uri_escape_utf8($a2);
       $url =~ s/__AUTHOR_\d+__/$a2/g;
     }
     if ($url =~ m/__AUTHOR_F__/)
@@ -7660,14 +7662,13 @@ sub Authorities
     }
     if ($url =~ m/__TITLE__/)
     {
-      my $t = $self->GetEncTitle($id);
-      $t =~ s/&/%26/g;
+      my $t = $self->GetTitle($id);
+      $t = uri_escape_utf8($t);
       $url =~ s/__TITLE__/$t/g;
     }
     if ($url =~ m/__TICKET__/)
     {
-      my $t = $self->SimpleSqlGet('SELECT ticket FROM ' . $page . ' WHERE id=?', $id);
-      $t = $self->SimpleSqlGet('SELECT source FROM queue WHERE id=?', $id) unless defined $t;
+      my $t = $self->SimpleSqlGet('SELECT ticket FROM queue WHERE id=?', $id);
       $url =~ s/__TICKET__/$t/g;
     }
     if ($url =~ m/__SYSID__/)
@@ -7675,8 +7676,6 @@ sub Authorities
       my $sysid = $self->BarcodeToId($id);
       $url =~ s/__SYSID__/$sysid/g;
     }
-    $url = CGI::escapeHTML($url);
-    $url =~ s/\s+/+/g;
     push @all, {'name' => $name, 'url' => $url,
                 'accesskey' => $row->[2], 'initial' => $row->[3]};
   }
