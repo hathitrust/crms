@@ -66,11 +66,11 @@
     <th scope="col">External<br/>Admin</th>
     <th scope="col">Admin</th>
     <th scope="col">Super<br/>Admin</th>
-    <th scope="col">Note</th>
     <th scope="col">Projects</th>
     <th scope="col">IP Address</th>
-    <th scope="col">Commitment[% IF crms.IsUserAdmin() %]<br/>(Progress)[% END %]</th>
     <th scope="col">Change&nbsp;To</th>
+    <th scope="col">Commitment[% IF crms.IsUserAdmin() %]<br/>(Progress)[% END %]</th>
+    <th scope="col">Note</th>
   </tr>
   [% FOREACH userid IN users %]
     [% rcpc = crms.IsUserRCPCReviewer(userid) %]
@@ -105,7 +105,6 @@
       <td style="text-align:center">[% IF a %][% icon %][% END %]</td>
       <td style="text-align:center">[% IF s %][% icon %][% END %]</td>
       [% note = crms.GetUserNote(userid) %]
-      <td style="text-align:center;">[% note %]</td>
       <td style="text-align:center;">[% crms.GetUserProjects(userid).join(', ') %]</td>
       [% ips = crms.GetUserIPs(userid) %]
       <td>
@@ -130,6 +129,16 @@
       [% END %]
       </td>
       <td>
+        [% IF crms.CanChangeToUser(user,userid) %]
+        <form action="crms">
+          [% crms.HiddenSys() %]
+          <input type="hidden" name="changeuser" value="1"/>
+          <input type="hidden" name="newuser" value="[% userid %]"/>
+          <input type="submit" value="Go"/>
+        </form>
+        [% END %]
+      </td>
+      <td>
         [% IF crms.GetUserCommitment(userid) > 0.0 %]
           [% crms.GetUserCommitment(userid, 1) %]
           [% prog = crms.GetUserProgress(userid) %]
@@ -146,16 +155,7 @@
           [% END %]
         [% END %]
       </td>
-      <td>
-        [% IF crms.CanChangeToUser(user,userid) %]
-        <form action="crms">
-          [% crms.HiddenSys() %]
-          <input type="hidden" name="changeuser" value="1"/>
-          <input type="hidden" name="newuser" value="[% userid %]"/>
-          <input type="submit" value="Go"/>
-        </form>
-        [% END %]
-      </td>
+      <td style="text-align:center;">[% note %]</td>
     </tr>
   [% END %]
 </table>
@@ -196,9 +196,18 @@
       <td colspan="2">
         <label for="projectsfield" style="float:left;width:5.5em">Projects:</label>
         <input id="projectsfield" type="text" name="projects" tabindex="4"/>
-        <span style="color:#777777;">Comma-delimited, e.g. "CRMS Spain, Germany"</span>
+        <span style="color:#777777;">Comma-delimited
+        </span>
       </td>
     </tr>
+    [% projs = crms.UserProjects() %]
+    [% IF projs.size %]
+    <tr>
+      <td colspan="2">
+        Available projects: <strong>[% projs.join('</strong>, <strong>') %]</strong><br/>
+      </td>
+    </tr>
+    [% END %]
     <tr>
       <td colspan="2">
         <label for="commitmentfield" style="float:left;width:5.5em">Commitment:</label>
@@ -233,10 +242,6 @@
   </form>
 </div>
 
-[% projs = crms.UserProjects() %]
-[% IF projs.size %]
-  Available projects: <b>[% projs.join('</b>, <b>') %]</b><br/>
-[% END %]
 <span class="smallishText">Note: you can leave all fields
 blank and the corresponding fields will be unchanged in the user's record.</span>
 [% END %]
