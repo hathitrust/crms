@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.4.2';
+  return '5.4.3';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -432,7 +432,7 @@ sub ProcessReviews
       $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,$category,0,0);
     }
     $self->RegisterStatus($id, $status);
-    $sql = 'UPDATE reviews SET newhold=NULL,time=time WHERE id=?';
+    $sql = 'UPDATE reviews SET hold=0,time=time WHERE id=?';
     $self->PrepareSubmitSql($sql, $id);
     $stati{$status}++;
   }
@@ -534,7 +534,7 @@ sub GetExpertRevItems
 {
   my $self = shift;
   my $sql  = 'SELECT id FROM queue WHERE status>=5 AND status<8 AND id IN'.
-             ' (SELECT id FROM reviews WHERE newhold=0)';
+             ' (SELECT id FROM reviews WHERE hold=0)';
   return $self->SelectAll($sql);
 }
 
@@ -1417,7 +1417,7 @@ sub SubmitReview
   $renDate =~ s/^\s+|\s+$//gs;
   my @fields = qw(id user attr reason note renNum renDate category);
   my @values = ($id, $user, $attr, $reason, $note, $renNum, $renDate, $category);
-  push(@fields, 'newhold');
+  push(@fields, 'hold');
   push(@values, ($hold)? 1:0);
   my $dur = $self->SimpleSqlGet('SELECT TIMEDIFF(NOW(),?)', $start);
   my $sql = 'SELECT duration FROM reviews WHERE user=? AND id=?';
@@ -1460,7 +1460,7 @@ sub SubmitReview
       my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $category, $renNum, $renDate);
       $self->RegisterStatus($id, $status);
       # Clear all non-expert holds
-      $sql = 'UPDATE reviews SET newhold=0,time=time WHERE id=?'.
+      $sql = 'UPDATE reviews SET hold=0,time=time WHERE id=?'.
              ' AND user NOT IN (SELECT id FROM users WHERE expert=1)';
       $self->PrepareSubmitSql($sql, $id);
     }
@@ -1603,7 +1603,7 @@ sub CountHolds
   my $self = shift;
   my $user = shift || $self->get('user');
 
-  return $self->SimpleSqlGet('SELECT COUNT(*) FROM reviews WHERE user=? AND newhold=1', $user);
+  return $self->SimpleSqlGet('SELECT COUNT(*) FROM reviews WHERE user=? AND hold=1', $user);
 }
 
 sub HoldForItem
@@ -1612,7 +1612,7 @@ sub HoldForItem
   my $id   = shift;
   my $user = shift;
 
-  return $self->SimpleSqlGet('SELECT newhold FROM reviews WHERE id=? AND user=?', $id, $user);
+  return $self->SimpleSqlGet('SELECT hold FROM reviews WHERE id=? AND user=?', $id, $user);
 }
 
 sub WasYesterdayWorkingDay
@@ -1697,7 +1697,7 @@ sub ConvertToSearchTerm
   elsif ($search eq 'SysID') { $new_search = 'b.sysid'; }
   elsif ($search eq 'Holds')
   {
-    $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.newhold=1)';
+    $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id AND r.hold=1)';
   }
   elsif ($search eq 'Source')
   {
@@ -1769,21 +1769,21 @@ sub CreateSQLForReviews
             'q.status,b.title,b.author,';
   if ($page eq 'adminReviews')
   {
-    $sql .= 'r.newhold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= 'r.hold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
   }
   elsif ($page eq 'holds')
   {
-    $sql .= 'r.newhold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
-    $sql .= " AND r.user='$user' AND r.newhold=1";
+    $sql .= 'r.hold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= " AND r.user='$user' AND r.hold=1";
   }
   elsif ($page eq 'adminHolds')
   {
-    $sql .= 'r.newhold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
-    $sql .= " AND r.newhold=1";
+    $sql .= 'r.hold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= " AND r.hold=1";
   }
   elsif ($page eq 'expert')
   {
-    $sql .= 'r.newhold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= 'r.hold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
     $sql .= ' AND q.status=2' . $project;
   }
   elsif ($page eq 'adminHistoricalReviews')
@@ -1795,20 +1795,20 @@ sub CreateSQLForReviews
   }
   elsif ($page eq 'undReviews')
   {
-    $sql .= 'r.newhold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
+    $sql .= 'r.hold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id';
     $sql .= ' AND q.status=3' . $project;
   }
   elsif ($page eq 'userReviews')
   {
-    $sql .= "r.newhold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id AND r.user='$user' AND q.status>0";
+    $sql .= "r.hold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id AND r.user='$user' AND q.status>0";
   }
   elsif ($page eq 'editReviews')
   {
     my $today = $self->SimpleSqlGet('SELECT DATE(NOW())') . ' 00:00:00';
     # Experts need to see stuff with any status; non-expert should only see stuff that hasn't been processed yet.
     my $restrict = ($self->IsUserExpert($user))? '':'AND q.status=0';
-    $sql .= 'r.newhold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id ' .
-            "AND r.user='$user' AND (r.time>='$today' OR r.newhold=1) AND q.status!=6 $restrict";
+    $sql .= 'r.hold FROM reviews r, queue q, bibdata b WHERE q.id=r.id AND q.id=b.id ' .
+            "AND r.user='$user' AND (r.time>='$today' OR r.hold=1) AND q.status!=6 $restrict";
   }
   my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
   $sql .= " AND $terms" if $terms;
@@ -2336,7 +2336,7 @@ sub SearchAndDownload
         my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
         $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
                'r.category,r.legacy,r.renDate,r.priority,r.swiss,q.status,b.title,b.author,'.
-               (($page eq 'adminHistoricalReviews')?'r.validated':'r.newhold ').
+               (($page eq 'adminHistoricalReviews')?'r.validated':'r.hold ').
                " FROM $top INNER JOIN $table r ON b.id=r.id".
                " WHERE r.id='$id' $qrest ORDER BY $order $dir";
         #print "$sql<br/>\n";
@@ -2585,7 +2585,7 @@ sub GetVolumesRef
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
            'r.category,r.legacy,r.renDate,r.priority,r.swiss,q.status,b.title,b.author'.
            (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':'') .
-           (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ',r.newhold':'') .
+           (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ',r.hold':'') .
            " FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ " .
            " WHERE r.id='$id' ORDER BY $order $dir";
     $sql .= ', r.time ASC' unless $order eq 'r.time';
@@ -2662,7 +2662,7 @@ sub GetVolumesRefWide
     my $id = $row->[0];
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
            'r.category,r.legacy,r.renDate,r.priority,r.swiss,q.status,b.title,b.author'.
-           (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':'r.newhold').
+           (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':'r.hold').
            " FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id".
            " WHERE r.id='$id' ORDER BY $order $dir";
     $sql .= ',r.time ASC' unless $order eq 'r.time';
@@ -2809,7 +2809,7 @@ sub GetQueueRef
     $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
     #print "$sql<br/>\n";
     my $reviews = $self->SimpleSqlGet($sql, $id);
-    $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND newhold=1';
+    $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND hold=1';
     #print "$sql<br/>\n";
     my $holds = $self->SimpleSqlGet($sql, $id);
     my $item = {id       => $id,
@@ -4955,7 +4955,7 @@ sub PreviouslyReviewed
   ## expert reviewers can edit any time
   return 0 if $self->IsUserExpert($user);
   my $limit = $self->GetYesterday();
-  my $sql = 'SELECT id FROM reviews WHERE id=? AND user=? AND time<? AND newhold=0';
+  my $sql = 'SELECT id FROM reviews WHERE id=? AND user=? AND time<? AND hold=0';
   my $found = $self->SimpleSqlGet($sql, $id, $user, $limit);
   return ($found)? 1:0;
 }
