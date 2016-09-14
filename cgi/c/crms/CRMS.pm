@@ -4661,18 +4661,6 @@ sub ValidateSubmission
   return $errorMsg;
 }
 
-# Removes paren/brace/brack and backslash-escape single quote
-sub GetEncTitle
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $ti = $self->GetTitle($id);
-  $ti =~ s,\',\\\',g; ## escape '
-  $ti =~ s/[()[\]{}]//g;
-  return $ti;
-}
-
 sub GetTitle
 {
   my $self = shift;
@@ -4738,26 +4726,6 @@ sub GetPubCountry
     $where = $self->SimpleSqlGet($sql, $id);
   }
   return $where;
-}
-
-sub GetEncAuthor
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $au = $self->GetEncAuthorForReview($id);
-  $au =~ s,\",\\\",g; ## escape "
-  return $au;
-}
-
-sub GetEncAuthorForReview
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $au = $self->GetAuthor($id);
-  $au =~ s/\'/\\\'/g; ## escape '
-  return $au;
 }
 
 sub GetAuthor
