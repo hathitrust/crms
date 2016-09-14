@@ -59,7 +59,9 @@
 [% userName = crms.GetUserName(user)      %]
 [% pubDate  = crms.FormatPubDate(barcode) %]
 [% author   = crms.GetAuthor(barcode)     %]
+[% author   = cgi.escapeHTML(author)      %]
 [% title    = crms.GetTitle(barcode)      %]
+[% title    = cgi.escapeHTML(title)       %]
 
 [% IF NOT renNum %]
 [% renNum = crms.GetReviewField(barcode, user, "renNum") %]
