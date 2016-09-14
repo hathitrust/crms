@@ -4631,7 +4631,7 @@ sub ValidateSubmission
   if ($lock)
   {
     $errorMsg = 'This item has been locked by another reviewer. Please Cancel. ';
-    my $note = sprintf "Collision on %s: $id locked for $lock", $self->Hostname();
+    my $note = sprintf "Collision for $user on %s: $id locked for $lock", $self->Hostname();
     $self->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $note);
   }
   ## check user
