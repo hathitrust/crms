@@ -182,10 +182,10 @@ sub CalcStatus
 
   my %return;
   my $status = 0;
-  my $sql = 'SELECT user,attr,reason,renNum,renDate,newhold FROM reviews WHERE id=?';
+  my $sql = 'SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id=?';
   my $ref = $self->SelectAll($sql, $id);
   my ($user, $attr, $reason, $renNum, $renDate, $hold) = @{$ref->[0]};
-  $sql = 'SELECT user,attr,reason,renNum,renDate,newhold FROM reviews WHERE id=? AND user!=?';
+  $sql = 'SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id=? AND user!=?';
   $ref = $self->SelectAll($sql, $id, $user);
   my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{$ref->[0]};
   if ($hold)
