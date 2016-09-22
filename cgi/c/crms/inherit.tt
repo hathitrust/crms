@@ -163,13 +163,12 @@ function CountChecked(formid)
   return n;
 }
 
-function VerifyDelete(formid)
+function EnableButtons(formid)
 {
-  var n = CountChecked(formid)
-  if (n == 0) return 1;
-  var morph = (n == 1)? '':'s';
-  var demonstr = (n == 1)? 'this':'these ' + n;
-  return (confirm('Please confirm that you wish to delete ' + demonstr + ' volume' + morph + '. This action can not be undone.'));
+  var n = CountChecked(formid);
+  document.getElementById('inheritButton').disabled = (n == 0);
+  document.getElementById('deleteButton').disabled = (n == 0);
+  document.getElementById('resetButton').disabled = (n == 0);
 }
 -->
 </script>
@@ -179,28 +178,24 @@ function VerifyDelete(formid)
   [% FOREACH param IN cgi.param %]
     [% matches = param.match('(vol_)(.+)') %]
     [% IF matches.0 == 'vol_' %]
-      [% res = crms.SubmitInheritance(matches.1) %]
-      [% IF res == 'skip' %]
-      [% ELSIF res %]
-        <b><span style='color:red;'>[% res %]</span></b><br/>
-      [% ELSE %]
-        <b>Approved [% matches.1 %]</b><br/>
-        [% i = i + 1 %]
-      [% END %]
+      [% CALL crms.SetInheritanceStatus(matches.1, 1) %]
+      [% i = i + 1 %]
     [% END %]
   [% END %]
 [% ELSIF cgi.param('delete') %]
   [% FOREACH param IN cgi.param %]
     [% matches = param.match('(vol_)(.+)') %]
     [% IF matches.0 == 'vol_' %]
-      [% res = crms.DeleteInheritance(matches.1) %]
-      [% IF res == 'skip' %]
-      [% ELSIF res %]
-        <b><span style='color:red;'>[% res %]</span></b><br/>
-      [% ELSE %]
-        <b>Deleted [% matches.1 %]</b><br/>
-        [% i = i + 1 %]
-      [% END %]
+      [% CALL crms.SetInheritanceStatus(matches.1, 0) %]
+      [% i = i + 1 %]
+    [% END %]
+  [% END %]
+[% ELSIF cgi.param('reset') %]
+  [% FOREACH param IN cgi.param %]
+    [% matches = param.match('(vol_)(.+)') %]
+    [% IF matches.0 == 'vol_' %]
+      [% CALL crms.SetInheritanceStatus(matches.1) %]
+      [% i = i + 1 %]
     [% END %]
   [% END %]
 [% END %]
@@ -208,15 +203,6 @@ function VerifyDelete(formid)
   <h4>Modified [% i %] [% crms.Pluralize("item", i) %]</h4><br/>
 [% END %]
 
-
-[% ref = crms.GetDeletedInheritance %]
-[% IF ref.size() %]
-  <h5>Inheritance candidates deleted today:</h5>
-  [% FOREACH row IN ref %]
-    [% row.0 %]<br/>
-  [% END %]
-  <br/>
-[% END %]
 
 [% ref = crms.GetInheritanceRef(order,dir,order2,dir2,search1,search1value,startDate,endDate,dateType,n,recs,auto) %]
 [% inheriting = ref.inheriting %]
@@ -227,12 +213,15 @@ function VerifyDelete(formid)
   [% items = ref.rows %]
 
   <form action="crms" id="checks">
-    [% crms.Hiddenify(cgi) %]
+    <input type="hidden" name="p" value="$p"/>
+    <input type="hidden" name="auto" value="$auto"/>
+    [% crms.HiddenSys() %]
     <input type="checkbox" id='all' onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
     [% IF !auto %]
-      <input type="submit" name="inherit" value="Inherit from Selected Volumes"/>
+      <input type="submit" disabled="disabled" id="inheritButton" name="inherit" value="Inherit from Selected Volumes"/>
     [% END %]
-    <input type="submit" name="delete" value="Delete Selected Volumes" onclick="return VerifyDelete('checks');"/>
+    <input type="submit" disabled="disabled" id="deleteButton" name="delete" value="Delete Selected Volumes"/>
+    <input type="submit" disabled="disabled" id="resetButton" name="reset" value="Reset Status on Selected Volumes"/>
     <br/><br/>
     <!--<span class="smallishText"><i>Note: Tracking Info only reports on events that are represented inside the CRMS.
     Events that resulted in a CRMS-style determination but were done outside the CRMS and are not represented
@@ -297,6 +286,7 @@ function VerifyDelete(formid)
         <th style="text-align:center;">Title</th>
         <th>Tracking<br/>(inheriting volume)</th>
         <th>Source</th>
+        <th>Status</th>
         <th>Select</th>
       </tr>
       [% FOREACH review IN items %]
@@ -317,8 +307,8 @@ function VerifyDelete(formid)
           <td>[% review.i %]</td>
           <td>[% review.date %]</td>
           <td>[% review.idate %]</td>
-          <td><a href='[% crms.LinkToHistorical(review.sysid) _ ";order=Date;dir=ASC" %]'target='_blank'>[% review.from %]</a></td>
-          <td><a href='[% crms.LinkToRetrieve(review.inheriting) %]' target='_blank'>[% review.inheriting %]</a></td>
+          <td class="nowrap"><a href='[% crms.LinkToHistorical(review.sysid) _ ";order=Date;dir=ASC" %]'target='_blank'>[% review.from %]</a></td>
+          <td class="nowrap"><a href='[% crms.LinkToRetrieve(review.inheriting) %]' target='_blank'>[% review.inheriting %]</a></td>
           <td><a href='[% crms.LinkToCatalog(review.sysid) %]'target='_blank'>[% review.sysid %]</a></td>
           <td>[% review.rights %]</td>
           <td class='nowrap'>[% review.newrights %]</td>
@@ -330,8 +320,15 @@ function VerifyDelete(formid)
           <td>[% review.title %]</td>
           <td>[% crms.GetTrackingInfo(review.inheriting) %]</td>
           <td>[% review.src %]</td>
+          <td id="status[% review.inheriting %]">
+          [% IF review.status == 1 %]
+            <img width="16" height="16" alt="Accepted" src="/c/crms/CheckIcon.png"/>
+          [% ELSIF review.status == 0 %]
+            <img width="16" height="16" alt="Accepted" src="/c/crms/XIcon.png"/>
+          [% END %]
+          </td>
           <td align="center">
-            <input type="checkbox" name="vol_[% review.inheriting %]"/>
+            <input type="checkbox" name="vol_[% review.inheriting %]" onclick="EnableButtons('checks');"/>
           </td>
         </tr>
         [% prev_id = review.from %]

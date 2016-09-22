@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.4.4';
+  return '5.4.5';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -365,16 +365,16 @@ sub ProcessReviews
   my $quiet = shift;
 
   # Clear the deleted inheritances, regardless of system status
-  my $sql = 'SELECT COUNT(*) FROM inherit WHERE del=1';
+  my $sql = 'SELECT COUNT(*) FROM inherit WHERE status=0';
   my $dels = $self->SimpleSqlGet($sql);
   if ($dels)
   {
-    print "Deleted inheriting volumes to be removed: $dels\n" unless $quiet;
-    $self->PrepareSubmitSql('DELETE FROM inherit WHERE del=1');
+    print "Deleted inheritances to be removed: $dels\n" unless $quiet;
+    $self->DeleteInheritances($quiet);
   }
   else
   {
-    print "No deleted inheriting volumes to remove.\n" unless $quiet;
+    print "No deleted inheritances to remove.\n" unless $quiet;
   }
   # Get the underlying system status, ignoring replication delays.
   my ($blah, $stat, $msg) = @{$self->GetSystemStatus(1)};
@@ -394,7 +394,7 @@ sub ProcessReviews
   }
   if ($reason eq '')
   {
-    $self->AutoSubmitInheritances($quiet);
+    $self->SubmitInheritances($quiet);
   }
   else
   {
@@ -6748,7 +6748,7 @@ sub GetInheritanceRef
   $search1 = $self->ConvertToInheritanceSearchTerm($search1);
   $order = $self->ConvertToInheritanceSearchTerm($order);
   $order2 = $self->ConvertToInheritanceSearchTerm($order2);
-  my @rest = ('i.del=0');
+  my @rest = ();
   my $tester1 = '=';
   if ($search1Value =~ m/.*\*.*/)
   {
@@ -6785,9 +6785,9 @@ sub GetInheritanceRef
   my $of = POSIX::ceil($inheritingVolumes/$pagesize);
   $n = $of if $n > $of;
   my $return = ();
-  $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time),i.src,DATE(i.time),b.sysid ' .
-         'FROM inherit i LEFT JOIN exportdata e ON i.gid=e.gid ' .
-         "LEFT JOIN bibdata b ON e.id=b.id $restrict ORDER BY $order $dir, $order2 $dir2 LIMIT $offset, $pagesize";
+  $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time),i.src,DATE(i.time),b.sysid,i.status'.
+         ' FROM inherit i LEFT JOIN exportdata e ON i.gid=e.gid'.
+         " LEFT JOIN bibdata b ON e.id=b.id $restrict ORDER BY $order $dir, $order2 $dir2 LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
   $ref = undef;
   eval {
@@ -6814,6 +6814,7 @@ sub GetInheritanceRef
     my $src = $row->[9];
     my $idate = $row->[10]; # Date added to inherit table
     my $sysid = $row->[11];
+    my $status = $row->[12];
     $title =~ s/&/&amp;/g;
     #my ($attr,$reason,$src3,$usr3,$time3,$note3) = @{$self->RightsQuery($id,1)->[0]};
     my ($pd,$pdus,$icund) = (0,0,0);
@@ -6843,7 +6844,7 @@ sub GetInheritanceRef
     my %dic = ('i'=>$i, 'inheriting'=>$id, 'sysid'=>$sysid, 'rights'=>"$attr/$reason",
                'newrights'=>"$attr2/$reason2", 'incrms'=>$incrms, 'change'=>$change, 'from'=>$id2,
                'title'=>$title, 'gid'=>$gid, 'date'=>$date, 'summary'=>ucfirst $summary,
-               'src'=>ucfirst $src, 'h5'=>$h5, 'idate'=>$idate);
+               'src'=>ucfirst $src, 'h5'=>$h5, 'idate'=>$idate, 'status'=>$status);
     push @return, \%dic;
   }
   return {'rows' => \@return,
@@ -6885,28 +6886,6 @@ sub IsFiltered
   return $self->SimpleSqlGet($sql, $id);
 }
 
-sub DeleteInheritance
-{
-  my $self = shift;
-  my $id  = shift;
-
-  return 'skip' if $self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE id=? AND del=1', $id);
-  return 'skip' unless $self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE id=?', $id);
-  $self->PrepareSubmitSql('UPDATE inherit SET del=1 WHERE id=?', $id);
-  # Only unfilter if the und src is 'duplicate' because duplicate filtration
-  # does not override other sources like gfv
-  $self->Unfilter($id) if $self->IsFiltered($id, 'duplicate');
-  return 0;
-}
-
-sub GetDeletedInheritance
-{
-  my $self = shift;
-
-  my $sql = 'SELECT id FROM inherit WHERE del=1';
-  return $self->SelectAll($sql);
-}
-
 sub UpdateInheritanceRights
 {
   my $self = shift;
@@ -6931,7 +6910,47 @@ sub UpdateInheritanceRights
   }
 }
 
-sub AutoSubmitInheritances
+# NULL = no activity, 0 = deleted, 1 = approved
+sub GetInheritanceStatus
+{
+  my $self = shift;
+  my $id   = shift;
+
+  return $self->SimpleSqlGet('SELECT status FROM inherit WHERE id=?', $id);
+}
+
+sub SetInheritanceStatus
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $status = shift;
+
+  $self->PrepareSubmitSql('UPDATE inherit SET status=? WHERE id=?', $status, $id);  
+}
+
+sub DeleteInheritances
+{
+  my $self  = shift;
+  my $quiet = shift;
+
+  my $sql = 'SELECT id FROM inherit WHERE status=0';
+  my $ref = $self->SelectAll($sql);
+  foreach my $row (@{$ref})
+  {
+    my $id = $row->[0];
+    print "Deleting inheritance for $id\n" unless $quiet;
+    $self->PrepareSubmitSql('DELETE FROM inherit WHERE id=?', $id);
+    # Only unfilter if the und src is 'duplicate' because duplicate filtration
+    # does not override other sources like gfv
+    if ($self->IsFiltered($id, 'duplicate'))
+    {
+      print "Unfiltering $id\n" unless $quiet;
+      $self->Unfilter($id);
+    }
+  }
+}
+
+sub SubmitInheritances
 {
   my $self  = shift;
   my $quiet = shift;
