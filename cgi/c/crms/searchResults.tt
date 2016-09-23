@@ -102,7 +102,7 @@ function CheckAll(box,formid)
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0;download=1" %]" target="_blank">download</a>
 
-  [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
+  [% IF crms.IsUserAtLeastExpert() && p == 'adminHistoricalReviews' %]
       <input type="checkbox" [% IF showSysID %]checked="checked"[% END %] id="sysIDCB"
              onchange="setCookie('showSysID',(this.checked)?1:0,31);
              var tbl  = document.getElementById('resultsTable');
@@ -152,7 +152,7 @@ function CheckAll(box,formid)
   [% END %]
   <table class="exportStats" style="width:100%;" id="resultsTable"><tr>
     <th>ID</th>
-    [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
+    [% IF crms.IsUserAtLeastExpert() && p == 'adminHistoricalReviews' %]
       <th class="nowrap" id="gidth" style="display:[% (showSysID)? 'table-cell':'none' %];">GID
         <br/>(<span style="color:[% color_gray %];">determinations</span>)</th>
       <th class="nowrap" id="sysidth" style="display:[% (showSysID)? 'table-cell':'none' %];">System&nbsp;ID
@@ -163,7 +163,7 @@ function CheckAll(box,formid)
     <th>Author</th>
     [% IF p == 'adminHistoricalReviews' %]<th>Pub&nbsp;Date</th>[% END %]
     <th>Review&nbsp;Date</th>
-    <th>Status</th>
+    [% IF p != 'undReviews' AND p != 'expert' %]<th>Status</th>[% END %]
     [% leg = !crms.TolerantCompare(1,crms.GetSystemVar('noLegacy')) %]
     [% IF p == 'adminHistoricalReviews'  && leg %]<th>Legacy</th>[% END %]
     <th>Reviewer</th>
@@ -179,9 +179,9 @@ function CheckAll(box,formid)
     [% END %]
     <th>Note&nbsp;Category</th>
     <th>Note</th>
-    [% IF crms.IsUserAdmin() %]<th>Priority</th>[% END %]
+    [% IF crms.IsUserAtLeastExpert() %]<th>Priority</th>[% END %]
     [% IF p == 'adminHistoricalReviews' %]<th>Verdict</th>[% END %]
-    [% IF crms.IsUserExpert() && p != 'undReviews' && p != 'expert' %]<th>Swiss</th>[% END %]
+    [% IF crms.IsUserAtLeastExpert() && p != 'undReviews' && p != 'expert' %]<th>Swiss</th>[% END %]
     [% IF p == 'undReviews' %]<th>Select</th>[% END %]
     [% IF p == 'adminReviews' || p == 'editReviews' %]
       <th>Hold</th>
@@ -212,7 +212,7 @@ function CheckAll(box,formid)
           [% END %]
         [% END %]
         </td>
-        [% IF crms.IsUserAdmin() && p == 'adminHistoricalReviews' %]
+        [% IF crms.IsUserAtLeastExpert() && p == 'adminHistoricalReviews' %]
           <td style="display:[% (showSysID)? 'table-cell':'none' %];">
             <a href='[% crms.LinkToDeterminations(review.gid) %]' target='_blank'>[% review.gid %]</a>
           </td>
@@ -244,7 +244,7 @@ function CheckAll(box,formid)
         <td>[% cgi.escapeHTML(review.author) %]</td>
         [% IF p == 'adminHistoricalReviews' %]<td>$review.pubdate</td>[% END %]
         <td>$review.date</td>
-        <td>$review.status</td>
+        [% IF p != 'undReviews' AND p != 'expert' %]<td>$review.status</td>[% END %]
         [% IF p == 'adminHistoricalReviews' && leg %]<td>$review.legacy</td>[% END %]
         <td>$review.user</td>
         <td>$review.attr</td>
@@ -271,14 +271,14 @@ function CheckAll(box,formid)
         [% END %]
         <td class="nowrap">$review.category</td>
         <td>[% crms.LinkNoteText(cgi.escapeHTML(review.note)) %]</td>
-        [% IF crms.IsUserAdmin() %]<td>$review.priority</td>[% END %]
+        [% IF crms.IsUserAtLeastExpert() %]<td>$review.priority</td>[% END %]
         [% IF p == 'adminHistoricalReviews' %]
           <td class="textcenter">
             [% icon = (review.validated)? ((review.validated == 2)? 'MinusIcon.png':'CheckIcon.png'):'XIcon.png' %]
             <img width="16" height="16" alt="Correctness" src="/c/crms/[% icon %]"/>
           </td>
         [% END %]
-        [% IF crms.IsUserExpert() && p != 'undReviews' && p != 'expert' %]<td>$review.swiss</td>[% END %]
+        [% IF crms.IsUserAtLeastExpert() && p != 'undReviews' && p != 'expert' %]<td>$review.swiss</td>[% END %]
         [% IF p == 'undReviews' %]
         <td class="textcenter">
           [% IF first && !crms.IsLockedForOtherUser(review.id) %]

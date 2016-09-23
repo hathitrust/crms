@@ -3416,6 +3416,15 @@ sub IsUserExpert
   return $self->SimpleSqlGet($sql, $user);
 }
 
+sub IsUserAtLeastExpert
+{
+  my $self = shift;
+  my $user = shift || $self->get('user');
+
+  my $sql = 'SELECT (expert OR admin OR superadmin) FROM users WHERE id=?';
+  return $self->SimpleSqlGet($sql, $user);
+}
+
 sub IsUserExtAdmin
 {
   my $self = shift;
@@ -6074,7 +6083,7 @@ sub ReviewSearchMenu
               'Reason', 'NoteCategory', 'Note', 'Priority', 'Validated', 'Swiss');
   my @labs = ('Identifier','System ID','Title','Author','Pub Date','Review Date', 'Status','Legacy','User',  'Attribute',
               'Reason','Note Category', 'Note', 'Priority', 'Verdict',   'Swiss');
-  if (!$self->IsUserExpert())
+  if (!$self->IsUserAtLeastExpert())
   {
     splice @keys, 15, 1; # Swiss
     splice @labs, 15, 1;
@@ -6084,7 +6093,7 @@ sub ReviewSearchMenu
     splice @keys, 14, 1;
     splice @labs, 14, 1; # Validated
   }
-  if (!$self->IsUserAdmin())
+  if (!$self->IsUserAtLeastExpert())
   {
     splice @keys, 13, 1; # Priority
     splice @labs, 13, 1;
@@ -6099,7 +6108,7 @@ sub ReviewSearchMenu
     splice @keys, 4, 1; # Pub Date
     splice @labs, 4, 1;
   }
-  if ($page ne 'adminHistoricalReviews' || !($self->IsUserExpert() || $self->IsUserAdmin()))
+  if ($page ne 'adminHistoricalReviews' || !$self->IsUserAtLeastExpert())
   {
     splice @keys, 1, 1; # Sys ID
     splice @labs, 1, 1;
