@@ -809,7 +809,7 @@ sub LoadNewItemsInCandidates
   }
   my $end_size = $self->GetCandidatesSize();
   my $diff = $end_size - $start_size;
-  print "After load, candidates has $end_size items. Added $diff.\n\n";
+  print "After load, candidates has $end_size volumes. Added $diff.\n\n";
   # Record the update
   $sql = 'INSERT INTO candidatesrecord (time,addedamount) VALUES (?,?)';
   $self->PrepareSubmitSql($sql, $now, $diff);
@@ -6490,7 +6490,7 @@ sub GetTrackingInfo
     $s .= " (Jira $tx)" if defined $tx;
     push @stati, $s
   }
-  if ($inherit && $self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE id=? AND del=0', $id))
+  if ($inherit && $self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE id=? AND (status IS NULL OR status=1)', $id))
   {
     my $sql = 'SELECT e.id,e.attr,e.reason FROM exportdata e INNER JOIN inherit i ON e.gid=i.gid WHERE i.id=?';
     my $ref = $self->SelectAll($sql, $id);
@@ -6955,23 +6955,65 @@ sub SubmitInheritances
   my $self  = shift;
   my $quiet = shift;
 
-  my $sql = 'SELECT id,gid FROM inherit WHERE del=0';
+  my $sql = 'SELECT id,gid,status FROM inherit WHERE status!=0';
   my $ref = $self->SelectAll($sql);
+  printf "Submitting %d inheritances\n", scalar @{$ref} unless $quiet;
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
     my $gid = $row->[1];
-    my $rq = $self->RightsQuery($id, 1);
-    next unless defined $rq;
-    my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
-    my $status = $self->SimpleSqlGet('SELECT status FROM exportdata WHERE gid=?', $gid);
-    if ($reason eq 'bib' || $reason eq 'gfv' || $status == 5)
+    my $status = $row->[2];
+    if ($status == 1 || $self->CanAutoSubmitInheritance($id, $gid))
     {
-      my $rights = "$attr/$reason";
-      print "Submitting inheritance for $id ($rights)\n" unless $quiet;
+      print "Submitting inheritance for $id\n" unless $quiet;
       $self->SubmitInheritance($id);
     }
   }
+}
+
+# Given inheriting id and source gid,
+# can the inheritance take place automatically?
+# It can only happen in the following circumstances:
+# 1. The source determination is src = 'newyear'.
+# OR
+# 2. The source determination is priority >= 3.
+# OR
+# 2. The current rights are available and are */bib or */gfv,
+#    where in the case of gfv inherited rights are pd or pdus.
+sub CanAutoSubmitInheritance
+{
+  my $self = shift;
+  my $id   = shift;
+  my $gid  = shift;
+
+  my $ref = $self->SelectAll('SELECT src,attr FROM exportdata WHERE gid=?', $gid);
+  my $src = $ref->[0]->[0];
+  my $a = $ref->[0]->[1];
+  return 1 if $src eq 'newyear';
+  my $priority = $self->SimpleSqlGet('SELECT priority FROM exportdata WHERE gid=?', $gid);
+  return 1 if $priority >= 3;
+  my $rq = $self->RightsQuery($id, 1);
+  return 0 unless defined $rq;
+  my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
+  return 1 if $reason eq 'bib';
+  return 1 if $a =~ m/^pd/ and $reason eq 'gfv';
+  return 0;
+}
+
+# Returns whether attr/* changing to attr2/* will result
+# in a change of access in U.S. or outside U.S.
+sub AccessChange
+{
+  my $self  = shift;
+  my $attr  = shift;
+  my $attr2 = shift;
+
+  my ($pd,$pdus,$icund,$icus) = (0,0,0,0);
+  $pd = 1 if $attr eq 'pd' or $attr2 eq 'pd';
+  $pdus = 1 if $attr eq 'pdus' or $attr2 eq 'pdus';
+  $icund = 1 if $attr eq 'ic' or $attr2 eq 'ic' or $attr eq 'und' or $attr2 eq 'und';
+  $icus = 1 if $attr eq 'icus' or $attr2 eq 'icus';
+  return ($pd + $pdus + $icund + $icus > 1)? 1:0;
 }
 
 sub SubmitInheritance
@@ -7143,19 +7185,10 @@ sub DuplicateVolumesFromExport
   # Get most recent CRMS determination for any volume on this record
   # and see if it's more recent that what we're exporting.
   my $candidate = $id;
-  my $candidateTime = $self->SimpleSqlGet('SELECT MAX(time) FROM historicalreviews WHERE id=?', $id);
+  my $candidateTime = $self->SimpleSqlGet('SELECT MAX(time) FROM exportdata WHERE gid=?', $gid);
   foreach my $ref (@{$rows})
   {
     my $id2 = $ref->{'id'};
-    my $chron2 = $ref->{'chron'};
-    if ($chron2)
-    {
-      $data->{'chron'}->{$id} = "$id2\t$sysid\n";
-      delete $data->{'unneeded'}->{$id};
-      delete $data->{'inherit'}->{$id};
-      delete $data->{'disallowed'}->{$id};
-      return;
-    }
     my $time = $self->SimpleSqlGet('SELECT MAX(time) FROM historicalreviews WHERE id=?', $id2);
     if ($time && $time gt $candidateTime)
     {
@@ -7194,6 +7227,10 @@ sub DuplicateVolumesFromExport
       {
         $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\n";
       }
+      elsif (!$record->doEnumchronMatch($id, $id2))
+      {
+        $data->{'chron'}->{$id} = sprintf "$id2\t$sysid\t%s\t%s\n", $record->enumchron($id), $record->enumchron($id2);
+      }
       elsif ($wrong)
       {
         $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tMissing/Wrong Record on $wrong\n";
@@ -7220,7 +7257,8 @@ sub DuplicateVolumesFromExport
       }
       else
       {
-        $data->{'inherit'}->{$id} .= "$id2\t$sysid\t$attr2\t$reason2\t$attr\t$reason\t$gid\n";
+        $data->{'inherit'}->{$id} .= sprintf "$id2\t$sysid\t$attr2\t$reason2\t$attr\t$reason\t$gid\t%s\t%s\n",
+                                             $record->enumchron($id), $record->enumchron($id2);
       }
     }
     else
@@ -7326,6 +7364,10 @@ sub DuplicateVolumesFromCandidates
     {
       $data->{'disallowed'}->{$cid} .= "$id\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
     }
+    elsif (!$record->doEnumchronMatch($cid, $id))
+    {
+      $data->{'chron'}->{$cid} = sprintf "$id\t$sysid\t%s\t%s\n", $record->enumchron($cid), $record->enumchron($id);
+    }
     elsif ($wrong)
     {
       $data->{'disallowed'}->{$cid} .= "$id\t$sysid\t$oldrights\t$newrights\t$id\tMissing/Wrong Record on $wrong\n";
@@ -7338,7 +7380,8 @@ sub DuplicateVolumesFromCandidates
            ($oldrights eq 'pdus/gfv' && $cattr =~ m/^pd/) ||
            ($self->Sys() eq 'crmsworld' && $oldrights =~ m/^pdus/))
     {
-      $data->{'inherit'}->{$cid} .= "$id\t$sysid\t$attr2\t$reason2\t$cattr\t$creason\t$cgid\n";
+      $data->{'inherit'}->{$cid} .= sprintf "$id\t$sysid\t$attr2\t$reason2\t$cattr\t$creason\t$cgid\t%s\t%s\n",
+                                            $record->enumchron($cid), $record->enumchron($id);
     }
     else
     {
