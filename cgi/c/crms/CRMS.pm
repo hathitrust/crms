@@ -1791,10 +1791,8 @@ sub CreateSQLForReviews
   }
   elsif ($page eq 'adminHistoricalReviews')
   {
-    my $doB = 'LEFT JOIN bibdata b ON r.id=b.id';
-    $doB = '' unless ($search1 . $search2 . $search3 . $order) =~ m/b\./;
     $sql .= 'r.validated,q.src,q.gid FROM historicalreviews r LEFT JOIN bibdata b ON b.id=r.id'.
-            ' INNER JOIN exportdata q ON r.gid=q.gid WHERE r.id IS NOT NULL';
+            ' LEFT JOIN exportdata q ON r.gid=q.gid WHERE r.id IS NOT NULL';
   }
   elsif ($page eq 'undReviews')
   {
@@ -1875,7 +1873,7 @@ sub CreateSQLForVolumes
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
-    $doQ = 'INNER JOIN exportdata q ON r.id=q.id';
+    $doQ = 'LEFT JOIN exportdata q ON r.gid=q.gid';
   }
   else
   {
@@ -1895,7 +1893,7 @@ sub CreateSQLForVolumes
     my $user = $self->get('user');
     my $yesterday = $self->GetYesterday();
     push @rest, "r.time >= '$yesterday'";
-    push @rest, 'q.status=0' unless $self->IsUserExpert($user);
+    push @rest, 'q.status=0' unless $self->IsUserAtLeastExpert($user);
   }
   my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
   push @rest, $terms if $terms;
@@ -1964,11 +1962,11 @@ sub CreateSQLForVolumesWide
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
-    $joins = 'exportdata q ON r.gid=q.gid INNER JOIN bibdata b ON q.id=b.id';
+    $joins = 'exportdata q ON r.gid=q.gid LEFT JOIN bibdata b ON q.id=b.id';
   }
   else
   {
-    $joins = 'queue q ON r.id=q.id INNER JOIN bibdata b ON q.id=b.id';
+    $joins = 'queue q ON r.id=q.id LEFT JOIN bibdata b ON q.id=b.id';
   }
   if ($page eq 'undReviews')
   {
@@ -1993,15 +1991,15 @@ sub CreateSQLForVolumesWide
   my $restrict = join(' AND ', @rest);
   $restrict = 'WHERE '.$restrict if $restrict;
   #my $sql = "SELECT COUNT(r.id) FROM $top INNER JOIN $table r ON b.id=r.id $joins $restrict";
-  my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT DISTINCT r.id FROM $table r INNER JOIN $joins $joins2 $restrict)";
+  my $sql = "SELECT COUNT(r2.id) FROM $table r2 WHERE r2.id IN (SELECT DISTINCT r.id FROM $table r LEFT JOIN $joins $joins2 $restrict)";
   #print "$sql<br/>\n";
   my $totalReviews = $self->SimpleSqlGet($sql);
-  $sql = "SELECT COUNT(DISTINCT r.id) FROM $table r INNER JOIN $joins $joins2 $restrict";
+  $sql = "SELECT COUNT(DISTINCT r.id) FROM $table r LEFT JOIN $joins $joins2 $restrict";
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
-  $sql = "SELECT r.id as id, $order2($order) AS ord FROM $table r INNER JOIN $joins $joins2 $restrict GROUP BY r.id " .
+  $sql = "SELECT r.id as id, $order2($order) AS ord FROM $table r LEFT JOIN $joins $joins2 $restrict GROUP BY r.id " .
          "ORDER BY ord $dir $limit";
   #print "$sql<br/>\n";
   my $n = POSIX::ceil($offset/$pagesize+1);
@@ -2575,11 +2573,11 @@ sub GetVolumesRef
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
-    $doQ = 'INNER JOIN exportdata q ON r.gid=q.gid';
+    $doQ = 'LEFT JOIN exportdata q ON r.gid=q.gid';
   }
   else
   {
-    $doQ = 'INNER JOIN queue q ON r.id=q.id';
+    $doQ = 'LEFT JOIN queue q ON r.id=q.id';
   }
   my $return = ();
   foreach my $row (@{$ref})
@@ -2645,11 +2643,11 @@ sub GetVolumesRefWide
   my $dir = $_[2];
 
   my $table ='reviews';
-  my $doQ = 'INNER JOIN queue q ON r.id=q.id';
+  my $doQ = 'LEFT JOIN queue q ON r.id=q.id';
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
-    $doQ = 'INNER JOIN exportdata q ON r.gid=q.gid';
+    $doQ = 'LEFT JOIN exportdata q ON r.gid=q.gid';
   }
   my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQLForVolumesWide(@_);
   my $ref = undef;
