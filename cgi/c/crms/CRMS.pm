@@ -436,6 +436,7 @@ sub ProcessReviews
     $self->PrepareSubmitSql($sql, $id);
     $stati{$status}++;
   }
+  print "Setting system status back to '$stat'\n" unless $quiet;
   $self->SetSystemStatus($stat, $msg);
   $sql = 'INSERT INTO processstatus VALUES ()';
   $self->PrepareSubmitSql($sql);
@@ -939,23 +940,25 @@ sub AddItemToCandidates
   my $quiet  = shift;
 
   return unless defined $record;
-  # Are there duplicates w/o enumchron? Filter everything but this volume
-  if (!$record->countEnumchron)
+  # Are there duplicates w/ nonmatching enumchron? Filter those.
+  my $chron = $record->enumchron($id) || '';
+  my $sysid = $record->sysid;
+  my $rows = $self->VolumeIDsQuery($sysid, $record);
+  foreach my $ref (@{$rows})
   {
-    my $sysid = $record->sysid;
-    my $rows = $self->VolumeIDsQuery($sysid, $record);
-    foreach my $ref (@{$rows})
+    my $id2 = $ref->{'id'};
+    next if $id2 eq $id;
+    next unless $self->IsVolumeInCandidates($id2);
+    if (!$record->doEnumchronMatch($id, $id2))
     {
-      my $id2 = $ref->{'id'};
-      next if $id2 eq $id;
-      next unless $self->IsVolumeInCandidates($id2);
-      print "Filter $id2 as duplicate of $id\n" unless $quiet;
-      $self->Filter($id2, 'duplicate') unless $noop;
+      my $chron2 = $record->enumchron($id2) || '';
+      printf "Filter $id2%s as duplicate of $id%s\n",
+            (length $chron)? " ($chron)":'', (length $chron2)? " ($chron2)":'' unless $quiet;
     }
+    $self->Filter($id2, 'duplicate') unless $noop;
   }
   if (!$self->IsVolumeInCandidates($id))
   {
-    
     my $project = $self->GetCandidateProject($id, $record);
     printf "Add $id to candidates%s\n", (defined $project)? " for project '$project'":'' unless $quiet;
     my $sql = 'INSERT INTO candidates (id,time,project) VALUES (?,?,?)';
