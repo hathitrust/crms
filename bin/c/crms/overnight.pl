@@ -88,14 +88,15 @@ else
   my $rc = $crms->ClearQueueAndExport();
   ReportMsg("$rc\nDONE exporting.");
 }
-if ($skipCRI) { ReportMsg("-i flag set; skipping CRI processing."); }
+if (!$crms->GetSystemVar('cri')) { ReportMsg('CRI system variable not set; skipping.'); }
+elsif ($skipCRI) { ReportMsg('-i flag set; skipping CRI processing.'); }
 else
 {
-  ReportMsg("Starting to process CRI.");
+  ReportMsg('Starting to process CRI.');
   use CRI;
   my $cri = CRI->new('crms' => $crms);
   $cri->ProcessCRI();
-  ReportMsg("DONE processing CRI.");
+  ReportMsg('DONE processing CRI.');
 }
 
 if ($skipCandidates) { ReportMsg("-c flag set; skipping candidates load."); }
