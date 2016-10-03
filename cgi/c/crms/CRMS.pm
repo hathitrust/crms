@@ -7065,7 +7065,7 @@ sub SubmitInheritance
     return $id . ': ' . substr $res, 1, length $res;
   }
   $self->PrepareSubmitSql('DELETE FROM reviews WHERE id=?', $id);
-  # FIXME: this note should be displayed generated on the fly in Historical Reviews.
+  # FIXME: can this note be generated on the fly in Historical Reviews?
   my $note = 'See all reviews for Sys #'. $self->BarcodeToId($id);
   my $swiss = ($self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id)>0)? 1:0;
   $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,$category,$swiss);
@@ -8162,7 +8162,7 @@ sub OneoffTicket
   my $self = shift;
   my $id   = shift;
 
-  return $self->SimpleSqlGet('SELECT source FROM queue WHERE id=?', $id);
+  return $self->SimpleSqlGet('SELECT ticket FROM queue WHERE id=?', $id);
 }
 
 sub GetUserProjects
