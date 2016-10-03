@@ -7065,8 +7065,8 @@ sub SubmitInheritance
     return $id . ': ' . substr $res, 1, length $res;
   }
   $self->PrepareSubmitSql('DELETE FROM reviews WHERE id=?', $id);
-  my $record = $self->GetMetadata($id);
-  my $note = 'See all reviews for Sys #' . $record->sysid;
+  # FIXME: this note should be displayed generated on the fly in Historical Reviews.
+  my $note = 'See all reviews for Sys #'. $self->BarcodeToId($id);
   my $swiss = ($self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id)>0)? 1:0;
   $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,$category,$swiss);
   $self->PrepareSubmitSql('DELETE FROM inherit WHERE id=?', $id);
