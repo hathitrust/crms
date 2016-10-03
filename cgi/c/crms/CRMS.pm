@@ -1169,7 +1169,7 @@ sub LoadQueue
   $self->LoadQueueForProject($_->[0]) for @{$self->SelectAll($sql)};
   my $after = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue');
   $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,"candidates")';
-  $self->PrepareSubmitSql($sql, $after - $before;);
+  $self->PrepareSubmitSql($sql, $after - $before);
 }
 
 # Load candidates into queue for a given project (which may be NULL/undef).
@@ -7194,14 +7194,15 @@ sub LinkToJira
 # Populates $data (a hash ref) with information about the duplication status of an exported determination.
 sub DuplicateVolumesFromExport
 {
-  my $self   = shift;
-  my $id     = shift;
-  my $gid    = shift;
-  my $sysid  = shift;
-  my $attr   = shift;
-  my $reason = shift;
-  my $data   = shift;
-  my $record = shift;
+  my $self      = shift;
+  my $id        = shift;
+  my $gid       = shift;
+  my $sysid     = shift;
+  my $attr      = shift;
+  my $reason    = shift;
+  my $data      = shift;
+  my $record    = shift;
+  my $candidate = shift; # id of candidate to inherit onto
 
   my %okattr = $self->AllCRMSRights();
   my $rows = $self->VolumeIDsQuery($sysid, $record);
@@ -7219,16 +7220,19 @@ sub DuplicateVolumesFromExport
   $data->{'titles'}->{$id} = $record->title;
   # Get most recent CRMS determination for any volume on this record
   # and see if it's more recent that what we're exporting.
-  my $candidate = $id;
-  my $candidateTime = $self->SimpleSqlGet('SELECT MAX(time) FROM exportdata WHERE gid=?', $gid);
-  foreach my $ref (@{$rows})
+  my $latest = $id;
+  my $latestTime = $self->SimpleSqlGet('SELECT time FROM exportdata WHERE gid=?', $gid);
+  if (!defined $candidate)
   {
-    my $id2 = $ref->{'id'};
-    my $time = $self->SimpleSqlGet('SELECT MAX(time) FROM historicalreviews WHERE id=?', $id2);
-    if ($time && $time gt $candidateTime)
+    foreach my $ref (@{$rows})
     {
-      $candidate = $id2;
-      $candidateTime = $time;
+      my $id2 = $ref->{'id'};
+      my $time = $self->SimpleSqlGet('SELECT MAX(time) FROM exportdata WHERE id=?', $id2);
+      if ($time && $time gt $latestTime)
+      {
+        $latest = $id2;
+        $latestTime = $time;
+      }
     }
   }
   my $wrong = $self->HasMissingOrWrongRecord($id, $sysid, $rows);
@@ -7236,6 +7240,7 @@ sub DuplicateVolumesFromExport
   {
     my $id2 = $ref->{'id'};
     next if $id eq $id2;
+    next if defined $candidate && $candidate ne $id2;
     my $rq = $self->RightsQuery($id2, 1);
     next unless defined $rq;
     my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
@@ -7280,9 +7285,9 @@ sub DuplicateVolumesFromExport
         delete $data->{'unneeded'}->{$id};
         delete $data->{'inherit'}->{$id};
       }
-      elsif ($candidate ne $id)
+      elsif ($latest ne $id)
       {
-        $data->{'disallowed'}->{$id} = "$id2\t$sysid\t$oldrights\t$newrights\t$id\t$candidate has newer review ($candidateTime)\n";
+        $data->{'disallowed'}->{$id} = "$id2\t$sysid\t$oldrights\t$newrights\t$id\t$latest has newer review ($latestTime)\n";
         delete $data->{'unneeded'}->{$id};
         delete $data->{'inherit'}->{$id};
         return;
@@ -7335,101 +7340,24 @@ sub DuplicateVolumesFromCandidates
     $data->{'nodups'}->{$id} .= "$sysid\n";
     return;
   }
-  my $cid = undef;
-  my $cgid = undef;
-  my $cattr = undef;
-  my $creason = undef;
-  my $ctime = undef;
   $data->{'titles'}->{$id} = $record->title;
+  my $n = 0;
   foreach my $ref (@{$rows})
   {
     my $id2 = $ref->{'id'};
-    my $chron2 = $ref->{'chron'};
     next if $id eq $id2;
-    if ($chron2)
-    {
-      $data->{'chron'}->{$id} = "$id2\t$sysid\n";
-      delete $data->{'already'}->{$id};
-      delete $data->{'unneeded'}->{$id};
-      delete $data->{'inherit'}->{$id};
-      delete $data->{'noexport'}->{$id};
-      delete $data->{'disallowed'}->{$id};
-      return;
-    }
-    # id may be in und, so only apply this check if id is in candidates.
-    my $sql = 'SELECT COUNT(*) FROM candidates WHERE id=?';
-    if ($self->SimpleSqlGet($sql, $id) && !$data->{'already'}->{$id2} &&
-        $self->SimpleSqlGet($sql, $id2))
-    {
-      $data->{'already'}->{$id} .= "$id2\t$sysid\n";
-    }
-    else
-    {
-      $sql = 'SELECT attr,reason,gid,time FROM exportdata WHERE id=?' .
-             ' AND time>="2010-06-02 00:00:00" ORDER BY time DESC LIMIT 1';
-      my $ref = $self->SelectAll($sql, $id2);
-      foreach my $row (@{$ref})
-      {
-        my $attr2   = $row->[0];
-        my $reason2 = $row->[1];
-        my $gid2    = $row->[2];
-        my $time2   = $row->[3];
-        if (!$ctime || $time2 gt $ctime)
-        {
-          $cid = $id2;
-          $cgid = $gid2;
-          $cattr = $attr2;
-          $creason = $reason2;
-          $ctime = $time2;
-        }
-      }
-    }
+    my $sql = 'SELECT attr,reason,gid FROM exportdata WHERE id=?'.
+              ' AND time>="2010-06-02 00:00:00"'.
+              ' ORDER BY IF(status=5,1,0) DESC,time DESC LIMIT 1';
+    my $ref = $self->SelectAll($sql, $id2);
+    next unless scalar @{$ref};
+    $n++;
+    my $attr = $ref->[0]->[0];
+    my $reason = $ref->[0]->[1];
+    my $gid2 = $ref->[0]->[2];
+    $self->DuplicateVolumesFromExport($id2, $gid2, $sysid, $attr, $reason, $data, $record, $id);
   }
-  if ($cid)
-  {
-    my $rq = $self->RightsQuery($id, 1);
-    if (!defined $rq)
-    {
-      $data->{'unavailable'}->{$id} = 1;
-      return;
-    }
-    my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
-    my $oldrights = "$attr2/$reason2";
-    my $newrights = "$cattr/$creason";
-    my $wrong = $self->HasMissingOrWrongRecord($id, $sysid, $rows);
-    if ($newrights eq 'pd/ncn')
-    {
-      $data->{'disallowed'}->{$cid} .= "$id\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
-    }
-    elsif (!$record->doEnumchronMatch($cid, $id))
-    {
-      $data->{'chron'}->{$cid} = sprintf "$id\t$sysid\t%s\t%s\n", $record->enumchron($cid), $record->enumchron($id);
-    }
-    elsif ($wrong)
-    {
-      $data->{'disallowed'}->{$cid} .= "$id\t$sysid\t$oldrights\t$newrights\t$id\tMissing/Wrong Record on $wrong\n";
-    }
-    elsif (0 < $self->SimpleSqlGet('SELECT COUNT(*) FROM reviews WHERE id=?', $cid))
-    {
-      $data->{'disallowed'}->{$cid} .= "$id\t$sysid\t$oldrights\t$newrights\t$id\tVolume already has reviews\n";
-    }
-    elsif ($oldrights eq 'ic/bib' ||
-           ($oldrights eq 'pdus/gfv' && $cattr =~ m/^pd/) ||
-           ($self->Sys() eq 'crmsworld' && $oldrights =~ m/^pdus/))
-    {
-      $data->{'inherit'}->{$cid} .= sprintf "$id\t$sysid\t$attr2\t$reason2\t$cattr\t$creason\t$cgid\t%s\t%s\n",
-                                            $record->enumchron($cid), $record->enumchron($id);
-    }
-    else
-    {
-      $data->{'disallowed'}->{$cid} .= "$id\t$sysid\t$oldrights\t$newrights\t$id\tRights\n";
-    }
-    $data->{'titles'}->{$cid} = $record->title;
-  }
-  else
-  {
-    $data->{'noexport'}->{$id} .= "$sysid\n";
-  }
+  $data->{'noexport'}->{$id} .= "$sysid\n" unless $n > 0;
 }
 
 sub ExportSrcToEnglish
