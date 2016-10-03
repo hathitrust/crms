@@ -60,9 +60,9 @@ sub GetViolations
   {
     my $min = $self->GetCutoffYear(undef, 'minYear');
     my $max = $self->GetCutoffYear(undef, 'maxYear');
+    my $proj = $self->GetProject($id, $record) || '';
     if (($override && $priority == 3) ||
-        $priority == 4 ||
-        $self->IsStateGovDoc($record))
+        $priority == 4 || $proj eq 'State gov docs')
     {
       $max = $self->GetCutoffYear(undef, 'maxYearOverride');
     }
@@ -270,9 +270,11 @@ sub GetProject
   my $proj;
   my $author = $record->author || '';
   my $title = $record->title || '';
+  my $field260b = $record->GetDatafield('260', 'b') || '';
   if ($self->IsStateGovDoc($record) &&
       $author !~ m/university/i && $author !~ m/college/i &&
-      $title !~ m/university/i && $title !~ m/college/i)
+      $title !~ m/university/i && $title !~ m/college/i &&
+      $field260b !~ m/university\s+press/i)
   {
     $proj = 'State gov docs';
   }
