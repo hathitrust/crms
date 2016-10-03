@@ -2807,7 +2807,7 @@ sub GetQueueRef
     push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
   }
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
-  my $sql = "SELECT COUNT(q.id) FROM queue q, bibdata b $restrict\n";
+  my $sql = 'SELECT COUNT(q.id) FROM queue q INNER JOIN bibdata b ON q.id=b.id '. $restrict;
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
