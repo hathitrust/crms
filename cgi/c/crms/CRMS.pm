@@ -7212,7 +7212,7 @@ sub DuplicateVolumesFromExport
     next unless defined $rq;
     my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
     # In case we have a more recent export that has not made it into the rights DB...
-    if ($self->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE id=? AND time>=?', $id2, $time2))
+    if ($self->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE id=? AND exported=1 AND time>?', $id2, $time2))
     {
       my $sql = 'SELECT attr,reason FROM exportdata WHERE id=? AND exported=1 ORDER BY time DESC LIMIT 1';
       ($attr2,$reason2) = @{$self->SelectAll($sql, $id2)->[0]};
