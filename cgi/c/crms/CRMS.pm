@@ -6077,9 +6077,9 @@ sub ReviewSearchMenu
   my $searchVal  = shift;
 
   my @keys = ('Identifier','SysID',    'Title','Author','PubDate', 'Date', 'Status','Legacy','UserId','Attribute',
-              'Reason', 'NoteCategory', 'Note', 'Priority', 'Validated', 'Swiss');
+              'Reason', 'NoteCategory', 'Note', 'Priority', 'Validated', 'Swiss', 'Project');
   my @labs = ('Identifier','System ID','Title','Author','Pub Date','Review Date', 'Status','Legacy','User',  'Attribute',
-              'Reason','Note Category', 'Note', 'Priority', 'Verdict',   'Swiss');
+              'Reason','Note Category', 'Note', 'Priority', 'Verdict',   'Swiss', 'Project');
   if (!$self->IsUserAtLeastExpert())
   {
     splice @keys, 15, 1; # Swiss
@@ -6680,7 +6680,7 @@ sub LinkNoteText
   return $note;
 }
 
-sub InheritanceSelectionMenu
+sub InheritanceSearchMenu
 {
   my $self = shift;
   my $searchName = shift;

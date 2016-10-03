@@ -62,7 +62,7 @@ Restrict selection:
 
 <br/>
 
-[% crms.InheritanceSelectionMenu('search1', search1, auto) %]
+[% crms.InheritanceSearchMenu('search1', search1, auto) %]
 <input title="Value 1" type="text"  id="search1value" name="search1value" value="[% search1value %]" size="30"/>
 <br/>
 
@@ -100,7 +100,7 @@ Restrict selection:
 <table>
   <tr>
     <td><label for="order">Order by:</label></td>
-    <td>[% crms.InheritanceSelectionMenu('order', order, auto) %]
+    <td>[% crms.InheritanceSearchMenu('order', order, auto) %]
         <select id="dir" name="dir">
         <option value="ASC"  [% dir == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
         <option value="DESC" [% dir == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
@@ -109,7 +109,7 @@ Restrict selection:
   <tr/>
   <tr>
     <td><label for="order2">Then order by:</label></td>
-    <td>[% crms.InheritanceSelectionMenu('order2', order2, auto) %]
+    <td>[% crms.InheritanceSearchMenu('order2', order2, auto) %]
         <select id="dir2" name="dir2">
         <option value="ASC"  [% dir2 == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
         <option value="DESC" [% dir2 == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
@@ -166,9 +166,12 @@ function CountChecked(formid)
 function EnableButtons(formid)
 {
   var n = CountChecked(formid);
-  document.getElementById('inheritButton').disabled = (n == 0);
-  document.getElementById('deleteButton').disabled = (n == 0);
-  document.getElementById('resetButton').disabled = (n == 0);
+  var el = document.getElementById('inheritButton');
+  if (el) { el.disabled = (n == 0); }
+  el = document.getElementById('deleteButton');
+  if (el) { el.disabled = (n == 0); }
+  el = document.getElementById('resetButton');
+  if (el) { el.disabled = (n == 0); }
 }
 -->
 </script>
@@ -273,9 +276,9 @@ function EnableButtons(formid)
         <th>#</th>
         <th>Export Date</th>
         <th>Inherit Date</th>
-        <th>Source&nbsp;Volume<br/>(<span style="color:[% color_gray %];">historical/SysID</span>)</th>
-        <th>Volume&nbsp;Inheriting<br/>(<span style="color:[% color_gray %];">volume tracking</span>)</th>
-        <th>System&nbsp;ID<br/>(<span style="color:[% color_gray %];">catalog</span>)</th>
+        <th class="nowrap">Source Volume<br/>(<span style="color:[% color_gray %];">historical/SysID</span>)</th>
+        <th class="nowrap">Inheriting Volume<br/>(<span style="color:[% color_gray %];">volume tracking</span>)</th>
+        <th class="nowrap">System ID<br/>(<span style="color:[% color_gray %];">catalog</span>)</th>
         <th>Rights</th>
         <th>New&nbsp;Rights</th>
         <th>Access<br/>Change?</th>
@@ -318,7 +321,13 @@ function EnableButtons(formid)
           <td>[% (review.h5==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
         [% END %]
           <td>[% review.title %]</td>
-          <td>[% crms.GetTrackingInfo(review.inheriting) %]</td>
+          <td>
+            [% summ = '' %]
+            [% IF review.summary %]
+              [% summ = '<a class="tip2" href="#"><strong>&#x1F4DD;</strong><span>' _ review.summary _ '</span></a>' %]
+            [% END %]
+            [% crms.GetTrackingInfo(review.inheriting) _ summ %]
+          </td>
           <td>[% review.src %]</td>
           <td id="status[% review.inheriting %]">
           [% IF review.status == 1 %]
