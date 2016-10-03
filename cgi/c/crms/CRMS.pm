@@ -3155,9 +3155,9 @@ sub ValidateAttrReasonCombo
   my $a    = shift;
   my $r    = shift;
 
-  my $code = $self->GetCodeFromAttrReason($a,$r);
-  $self->SetError("bad attr/reason: $a/$r") unless $code;
-  return $code;
+  my $n = $self->SimpleSqlGet('SELECT COUNT(*) FROM rights WHERE attr=? AND reason=?', $a, $r);
+  $self->SetError("bad attr/reason: $a/$r") unless $n;
+  return $n;
 }
 
 sub GetAttrReasonFromCode
@@ -3189,7 +3189,8 @@ sub GetCodeFromAttrReason
   my $a    = shift;
   my $r    = shift;
 
-  return $self->SimpleSqlGet('SELECT id FROM rights WHERE attr=? AND reason=?', $a, $r);
+  my $sql = 'SELECT id FROM rights WHERE attr=? AND reason=? ORDER BY IF(restricted LIKE "%o%",0,1) DESC LIMIT 1';
+  return $self->SimpleSqlGet($sql, $a, $r);
 }
 
 sub GetAttrReasonCode
