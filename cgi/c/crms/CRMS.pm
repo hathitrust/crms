@@ -1160,6 +1160,26 @@ sub GetQueueSize
   return $self->SimpleSqlGet('SELECT COUNT(*) FROM queue');
 }
 
+sub UpdateQueueRecord
+{
+  my $self  = shift;
+  my $count = shift;
+  my $src   = shift;
+
+  my $sql = 'SELECT MAX(time) FROM queuerecord WHERE source=? AND time>=DATE_SUB(NOW(),INTERVAL 1 MINUTE)';
+  my $then = $self->SimpleSqlGet($sql, $src);
+  if ($then)
+  {
+    $sql = 'UPDATE queuerecord SET itemcount=itemcount+?,time=NOW() WHERE source=? AND time=? LIMIT 1';
+    $self->PrepareSubmitSql($sql, $count, $src, $then);
+  }
+  else
+  {
+    $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,?)';
+    $self->PrepareSubmitSql($sql, $count, $src);
+  }
+}
+
 sub LoadQueue
 {
   my $self = shift;
@@ -1168,8 +1188,7 @@ sub LoadQueue
   my $sql = 'SELECT DISTINCT project FROM candidates';
   $self->LoadQueueForProject($_->[0]) for @{$self->SelectAll($sql)};
   my $after = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue');
-  $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,"candidates")';
-  $self->PrepareSubmitSql($sql, $after - $before);
+  $self->UpdateQueueRecord($after - $before, 'candidates');
 }
 
 # Load candidates into queue for a given project (which may be NULL/undef).
@@ -1348,8 +1367,7 @@ sub AddItemToQueueOrSetItemActive
       my $sql = 'INSERT INTO queue (id,priority,source,issues) VALUES (?,?,?,?)';
       $self->PrepareSubmitSql($sql, $id, $priority, $src, $issues) unless $noop;
       $self->UpdateMetadata($id, 1, $record) unless $noop;
-      $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (1,?)';
-      $self->PrepareSubmitSql($sql, $src) unless $noop;
+      $self->UpdateQueueRecord(1, $src) unless $noop;
     }
   }
   if ($stat != 1)
@@ -7116,8 +7134,7 @@ sub AddInheritanceToQueue
     my $sql = 'INSERT INTO queue (id,priority,source,project) VALUES (?,0,"inherited",?)';
     $self->PrepareSubmitSql($sql, $id, $proj);
     $self->UpdateMetadata($id, 1);
-    $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (1,"inheritance")';
-    $self->PrepareSubmitSql($sql);
+    $self->UpdateQueueRecord(1, 'inheritance');
   }
   return $stat . join '; ', @msgs;
 }
