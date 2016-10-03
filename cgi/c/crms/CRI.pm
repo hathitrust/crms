@@ -490,11 +490,11 @@ sub ProcessCRI
     {
       $sql = 'SELECT gid FROM exportdata WHERE id=? AND src="cri" ORDER BY time DESC LIMIT 1';
       $newgid = $crms->SimpleSqlGet($sql, $id);
-      print "Processing status $status CRI with gid $newgid\n";
+      print "Processing status $status CRI $id with gid $newgid\n";
     }
     elsif ($status == 0)
     {
-      print "Checking status $status CRI for candidacy\n";
+      print "Checking status $status CRI $id for candidacy\n";
       $crms->CheckAndLoadItemIntoCandidates($id);
     }
     $sql = 'UPDATE cri SET exported=1,newgid=? WHERE id=?';
