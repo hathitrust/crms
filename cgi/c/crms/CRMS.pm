@@ -6476,7 +6476,7 @@ sub GetTrackingInfo
     my $exp = $ref->[0]->[4];
     my $status = $ref->[0]->[5];
     $exp = ($exp)? '':' (unexported)';
-    push @stati, "S$status determination$exp $a/$r $t from $src";
+    push @stati, "S$status$exp $a/$r $t from $src";
   }
   #else
   {
@@ -6687,8 +6687,8 @@ sub InheritanceSelectionMenu
   my $searchVal = shift;
   my $auto = shift;
 
-  my @keys = ('date','idate','src','id','sysid','change','prior','prior5','title');
-  my @labs = ('Export Date','Inherit Date','Source Volume','Volume Inheriting','System ID','Access Change',
+  my @keys = ('date','idate','src','id','sysid','prior','prior5','title');
+  my @labs = ('Export Date','Inherit Date','Source Volume','Inheriting Volume','System ID',
               'Prior CRMS Determination','Prior Status 5 Determination','Title');
   if ($auto)
   {
@@ -6718,7 +6718,6 @@ sub ConvertToInheritanceSearchTerm
   $new_search = 'e.id' if (!$search || $search eq 'src');
   $new_search = 'b.sysid' if $search eq 'sysid';
   $new_search = 'i.id' if $search eq 'id';
-  $new_search = '(i.attr=1 && (e.attr="ic" || e.attr="und") || (e.attr="pd" && (i.attr=2 || i.attr=5)))' if $search eq 'change';
   $new_search = 'IF(i.reason=1 || i.reason=12,0,1)' if $search eq 'prior';
   $new_search = 'IF((SELECT COUNT(*) FROM historicalreviews WHERE id=i.id AND status=5)>0,1,0)' if $search eq 'prior5';
   $new_search = 'b.title' if $search eq 'title';
@@ -6770,13 +6769,18 @@ sub GetInheritanceRef
   push @rest, "$datesrc >= '$startDate'" if $startDate;
   push @rest, "$datesrc <= '$endDate'" if $endDate;
   push @rest, "$search1 $tester1 '$search1Value'" if $search1Value or $search1Value eq '0';
-  my $prior = $self->ConvertToInheritanceSearchTerm('prior');
-  push @rest, sprintf "$prior=%d", ($auto)? 0:1;
-  push @rest, sprintf "e.status%s5", ($auto)? '=':'!=';
-  my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
-  my $sql = 'SELECT COUNT(DISTINCT e.id),COUNT(DISTINCT i.id) FROM inherit i ' .
-            'LEFT JOIN exportdata e ON i.gid=e.gid ' .
-            "LEFT JOIN bibdata b ON e.id=b.id $restrict";
+  if ($auto)
+  {
+    push @rest, '(i.reason=1 OR (i.reason=12 AND (e.attr="pd" OR e.attr="pdus")))';
+  }
+  else
+  {
+    push @rest, '(i.reason!=1 AND !(i.reason=12 AND (e.attr="pd" OR e.attr="pdus")))';
+  }
+  my $restrict = 'WHERE '. join(' AND ', @rest);
+  my $sql = 'SELECT COUNT(DISTINCT e.id),COUNT(DISTINCT i.id) FROM inherit i'.
+            ' INNER JOIN exportdata e ON i.gid=e.gid'.
+            ' LEFT JOIN bibdata b ON e.id=b.id '. $restrict;
   my $ref;
   #print "$sql<br/>\n";
   eval {
@@ -6791,9 +6795,11 @@ sub GetInheritanceRef
   my $of = POSIX::ceil($inheritingVolumes/$pagesize);
   $n = $of if $n > $of;
   my $return = ();
-  $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,b.title,DATE(e.time),i.src,DATE(i.time),b.sysid,i.status'.
-         ' FROM inherit i LEFT JOIN exportdata e ON i.gid=e.gid'.
-         " LEFT JOIN bibdata b ON e.id=b.id $restrict ORDER BY $order $dir, $order2 $dir2 LIMIT $offset, $pagesize";
+  $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,'.
+         'b.title,DATE(e.time),i.src,DATE(i.time),b.sysid,i.status'.
+         ' FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid'.
+         ' LEFT JOIN bibdata b ON e.id=b.id '. $restrict.
+         " ORDER BY $order $dir, $order2 $dir2 LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
   $ref = undef;
   eval {
@@ -6980,11 +6986,7 @@ sub SubmitInheritances
 # Given inheriting id and source gid,
 # can the inheritance take place automatically?
 # It can only happen in the following circumstances:
-# 1. The source determination is src = 'newyear'.
-# OR
-# 2. The source determination is priority >= 3.
-# OR
-# 2. The current rights are available and are */bib or */gfv,
+# The current rights are available and are */bib or */gfv,
 #    where in the case of gfv inherited rights are pd or pdus.
 sub CanAutoSubmitInheritance
 {
@@ -6992,17 +6994,12 @@ sub CanAutoSubmitInheritance
   my $id   = shift;
   my $gid  = shift;
 
-  my $ref = $self->SelectAll('SELECT src,attr FROM exportdata WHERE gid=?', $gid);
-  my $src = $ref->[0]->[0];
-  my $a = $ref->[0]->[1];
-  return 1 if $src eq 'newyear';
-  my $priority = $self->SimpleSqlGet('SELECT priority FROM exportdata WHERE gid=?', $gid);
-  return 1 if $priority >= 3;
   my $rq = $self->RightsQuery($id, 1);
   return 0 unless defined $rq;
   my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
   return 1 if $reason eq 'bib';
-  return 1 if $a =~ m/^pd/ and $reason eq 'gfv';
+  my $attr = $self->SimpleSqlGet('SELECT attr FROM exportdata WHERE gid=?', $gid);
+  return 1 if $attr =~ m/^pd/ and $reason eq 'gfv';
   return 0;
 }
 
@@ -7213,7 +7210,7 @@ sub DuplicateVolumesFromExport
     # In case we have a more recent export that has not made it into the rights DB...
     if ($self->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE id=? AND time>=?', $id2, $time2))
     {
-      my $sql = 'SELECT attr,reason FROM exportdata WHERE id=? ORDER BY time DESC LIMIT 1';
+      my $sql = 'SELECT attr,reason FROM exportdata WHERE id=? AND exported=1 ORDER BY time DESC LIMIT 1';
       ($attr2,$reason2) = @{$self->SelectAll($sql, $id2)->[0]};
     }
     my $newrights = "$attr/$reason";
@@ -7222,18 +7219,16 @@ sub DuplicateVolumesFromExport
     {
       $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
     }
+    elsif ($attr2 eq $attr && $reason2 ne 'bib')
+    {
+      $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\n";
+    }
     elsif ($okattr{$oldrights} ||
            ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/) ||
            $oldrights eq 'ic/bib' ||
            ($self->Sys() eq 'crmsworld' && $oldrights =~ m/^pdus/))
     {
-      # Always inherit onto a single-review priority 1
-      my $rereps = $self->SimpleSqlGet('SELECT COUNT(*) FROM reviews WHERE id=? AND user LIKE "rereport%"', $id2);
-      if ($attr2 eq $attr && $reason2 ne 'bib' && $rereps == 0)
-      {
-        $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\n";
-      }
-      elsif (!$record->doEnumchronMatch($id, $id2))
+      if (!$record->doEnumchronMatch($id, $id2))
       {
         $data->{'chron'}->{$id} = sprintf "$id2\t$sysid\t%s\t%s\n", $record->enumchron($id), $record->enumchron($id2);
       }
