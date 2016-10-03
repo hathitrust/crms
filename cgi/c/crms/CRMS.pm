@@ -5678,38 +5678,35 @@ sub CreateReviewReport
     $report .= $self->DoPriorityBreakdown($ref, '', \@pris) . "</tr>\n";
   }
   # Inheriting
-  $sql = 'SELECT COUNT(*) FROM queue WHERE status=9';
-  my $s9count = $self->SimpleSqlGet($sql);
   $sql = 'SELECT COUNT(*) FROM inherit';
-  $count = $s9count + $self->SimpleSqlGet($sql);
+  $count = $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr class='inherit'><td>Can&nbsp;Inherit</td><td colspan='%d'>$count</td>", 1+scalar @pris);
-  #$report .= "<td/>" for @pris;
   $report .= '</tr>';
 
   # Inheriting Automatically
-  $sql = 'SELECT COUNT(*) FROM inherit WHERE del!=1 AND (reason=1 OR reason=12)';
+  $sql = 'SELECT COUNT(*) FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid'.
+         ' WHERE i.status IS NULL AND (i.reason=1 OR (i.reason=12 AND (e.attr="pd" OR e.attr="pdus")))';
   $count = $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Automatically</td><td colspan='%d'>$count</td>", 1+scalar @pris);
-  #$report .= "<td/>" for @pris;
   $report .= '</tr>';
 
   # Inheriting Pending Approval
-  $sql = 'SELECT COUNT(*) FROM inherit WHERE del!=1 AND (reason!=1 AND reason!=12)';
+  $sql = 'SELECT COUNT(*) FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid'.
+         ' WHERE i.status IS NULL AND (i.reason!=1 AND !(i.reason=12 AND (e.attr="pd" OR e.attr="pdus")))';
   $count = $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Pending&nbsp;Approval</td><td colspan='%d'>$count</td>", 1+scalar @pris);
-  #$report .= "<td/>" for @pris;
   $report .= '</tr>';
 
   # Approved
-  $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Approved</td><td colspan='%d'>$s9count</td>", 1+scalar @pris);
-  #$report .= "<td/>" for @pris;
+  $sql = 'SELECT COUNT(*) FROM inherit WHERE status=1';
+  $count = $self->SimpleSqlGet($sql);
+  $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Approved</td><td colspan='%d'>$count</td>", 1+scalar @pris);
   $report .= '</tr>';
 
   # Deleted
-  $sql = 'SELECT COUNT(*) FROM inherit WHERE del=1';
+  $sql = 'SELECT COUNT(*) FROM inherit WHERE status=0';
   $count = $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Deleted</td><td colspan='%d'>$count</td>", 1+scalar @pris);
-  #$report .= "<td/>" for @pris;
   $report .= '</tr>';
 
   # Processed
