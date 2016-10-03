@@ -1435,7 +1435,6 @@ sub SubmitReview
   my ($id, $user, $attr, $reason, $note, $renNum, $exp,
       $renDate, $category, $swiss, $hold, $pre, $start) = @_;
 
-  if (!$self->IsVolumeInQueue($id))                    { $self->SetError("$id is not in the queue");       return 0; }
   if (!$self->CheckReviewer($user, $exp))              { $self->SetError("reviewer ($user) check failed"); return 0; }
   # ValidateAttrReasonCombo sets error internally on fail.
   if (!$self->ValidateAttrReasonCombo($attr, $reason)) { return 0; }
@@ -5708,7 +5707,7 @@ sub CreateReviewReport
     $report .= sprintf "<tr><td>&nbsp;&nbsp;&nbsp;%s</td><td>$count</td>", $row->{'name'};
     $report .= $self->DoPriorityBreakdown($ref, '', \@pris) . "</tr>\n";
   }
-  
+
   # Inheriting
   $sql = 'SELECT COUNT(*) FROM inherit';
   $count = $self->SimpleSqlGet($sql);
@@ -6738,7 +6737,6 @@ sub InheritanceSearchMenu
   return $html;
 }
 
-
 sub ConvertToInheritanceSearchTerm
 {
   my $self   = shift;
@@ -6860,12 +6858,6 @@ sub GetInheritanceRef
     my $sysid = $row->[11];
     my $status = $row->[12];
     $title =~ s/&/&amp;/g;
-    #my ($attr,$reason,$src3,$usr3,$time3,$note3) = @{$self->RightsQuery($id,1)->[0]};
-    my ($pd,$pdus,$icund) = (0,0,0);
-    $pd = 1 if ($attr eq 'pd' || $attr2 eq 'pd');
-    $pdus = 1 if ($attr eq 'pdus' || $attr2 eq 'pdus');
-    $icund = 1 if ($attr eq 'ic' || $attr2 eq 'ic');
-    $icund = 1 if ($attr eq 'und' || $attr2 eq 'und');
     my $incrms = (($attr eq 'ic' && $reason eq 'bib') || $reason eq 'gfv')? undef:1;
     my $h5 = undef;
     if ($incrms)
@@ -6873,7 +6865,7 @@ sub GetInheritanceRef
       my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=? AND status=5';
       $h5 = 1 if $self->SimpleSqlGet($sql, $id) > 0;
     }
-    my $change = (($pd == 1 && $icund == 1) || ($pd == 1 && $pdus == 1) || ($icund == 1 && $pdus == 1));
+    my $change = $self->AccessChange($attr, $attr2);
     my $summary = '';
     if ($self->IsVolumeInQueue($id))
     {
