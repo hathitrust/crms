@@ -1280,14 +1280,13 @@ sub AddItemToQueueOrSetItemActive
   my $id       = shift;
   my $priority = shift;
   my $override = shift;
-  my $src      = shift;
+  my $src      = shift || 'adminui';
   my $user     = shift || $self->get('user');
   my $noop     = shift;
   my $record   = shift;
   my $project  = shift;
+  my $ticket   = shift;
 
-  $id = lc $id;
-  $src = 'adminui' unless $src;
   my $stat = 0;
   my @msgs = ();
   my $admin = $user eq 'oneoff' || $self->IsUserAdmin($user);
@@ -1353,15 +1352,37 @@ sub AddItemToQueueOrSetItemActive
       $self->PrepareSubmitSql($sql, $src) unless $noop;
     }
   }
-  if ($user && ($stat == 0 || $stat == 3))
+  if ($stat != 1)
   {
-    my $sql = 'UPDATE queue SET added_by=? WHERE id=?';
-    $self->PrepareSubmitSql($sql, $user, $id) unless $noop;
-  }
-  if (defined $project)
-  {
-    my $sql = 'UPDATE queue SET project=? WHERE id=?';
-    $self->PrepareSubmitSql($sql, $project, $id) unless $noop;
+    if ($user)
+    {
+      my $sql = 'UPDATE queue SET added_by=? WHERE id=?';
+      $self->PrepareSubmitSql($sql, $user, $id) unless $noop;
+    }
+    if (defined $project && length $project)
+    {
+      my $sql = 'SELECT project FROM queue WHERE id=?';
+      my $existing = $self->SimpleSqlGet($sql, $id);
+      if (!defined $existing || $existing ne $project)
+      {
+        $sql = 'UPDATE queue SET project=? WHERE id=?';
+        $self->PrepareSubmitSql($sql, $project, $id) unless $noop;
+        $stat = 3;
+        push @msgs, 'project updated';
+      }
+    }
+    if (defined $ticket && length $ticket)
+    {
+      my $sql = 'SELECT ticket FROM queue WHERE id=?';
+      my $existing = $self->SimpleSqlGet($sql, $id);
+      if (!defined $existing || $existing ne $ticket)
+      {
+        $sql = 'UPDATE queue SET ticket=? WHERE id=?';
+        $self->PrepareSubmitSql($sql, $ticket, $id) unless $noop;
+        $stat = 3;
+        push @msgs, 'ticket updated';
+      }
+    }
   }
   return $stat . join '; ', @msgs;
 }
@@ -5687,6 +5708,7 @@ sub CreateReviewReport
     $report .= sprintf "<tr><td>&nbsp;&nbsp;&nbsp;%s</td><td>$count</td>", $row->{'name'};
     $report .= $self->DoPriorityBreakdown($ref, '', \@pris) . "</tr>\n";
   }
+  
   # Inheriting
   $sql = 'SELECT COUNT(*) FROM inherit';
   $count = $self->SimpleSqlGet($sql);
