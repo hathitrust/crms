@@ -1153,17 +1153,23 @@ sub GetCandidateProject
   return $self->CandidatesModule()->GetProject($id, $record);
 }
 
+sub GetQueueSize
+{
+  my $self = shift;
+
+  return $self->SimpleSqlGet('SELECT COUNT(*) FROM queue');
+}
+
 sub LoadQueue
 {
   my $self = shift;
 
-  my $before = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue');
+  my $before = $self->GetQueueSize();
   my $sql = 'SELECT DISTINCT project FROM candidates';
   $self->LoadQueueForProject($_->[0]) for @{$self->SelectAll($sql)};
   my $after = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue');
-  my $count = $after - $before;
   $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,"candidates")';
-  $self->PrepareSubmitSql($sql, $count);
+  $self->PrepareSubmitSql($sql, $after - $before;);
 }
 
 # Load candidates into queue for a given project (which may be NULL/undef).
