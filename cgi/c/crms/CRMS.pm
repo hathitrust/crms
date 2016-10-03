@@ -2807,7 +2807,7 @@ sub GetQueueRef
     push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
   }
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
-  my $sql = 'SELECT COUNT(q.id) FROM queue q INNER JOIN bibdata b ON q.id=b.id '. $restrict;
+  my $sql = 'SELECT COUNT(q.id) FROM queue q LEFT JOIN bibdata b ON q.id=b.id '. $restrict;
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
@@ -7280,7 +7280,7 @@ sub DuplicateVolumesFromExport
       }
       elsif ($latest ne $id)
       {
-        $data->{'disallowed'}->{$id} = "$id2\t$sysid\t$oldrights\t$newrights\t$id\t$latest has newer review ($latestTime)\n";
+        $data->{'disallowed'}->{$id} = "$id2\t$sysid\t$oldrights\t$newrights\t$id\t$latest has newer determination ($latestTime)\n";
         delete $data->{'unneeded'}->{$id};
         delete $data->{'inherit'}->{$id};
         return;
@@ -8169,7 +8169,7 @@ sub OneoffTicket
 sub GetUserProjects
 {
   my $self = shift;
-  my $user = shift;
+  my $user = shift || $self->get('user');
 
   my $ref = $self->SelectAll('SELECT project FROM userprojects WHERE user=?', $user);
   my @ps = map {$_->[0];} @{$ref};
