@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.4.5';
+  return '5.5';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -964,7 +964,7 @@ sub AddItemToCandidates
     my $sql = 'INSERT INTO candidates (id,time,project) VALUES (?,?,?)';
     $self->PrepareSubmitSql($sql, $id, $time, $project) unless $noop;
   }
-  if (defined $self->CheckForCRI($id, $noop, $quiet))
+  if ($self->GetSystemVar('cri') && defined $self->CheckForCRI($id, $noop, $quiet))
   {
     print "Filter $id as CRI\n" unless $quiet;
     $self->Filter($id, 'cross-record inheritance') unless $noop;
@@ -984,12 +984,12 @@ sub CheckForCRI
   my $noop  = shift;
   my $quiet = shift;
 
-  my $cri = $self->get('cri');
+  my $cri = $self->get('criModule');
   if (!defined $cri)
   {
     use CRI;
     $cri = CRI->new('crms' => $self);
-    $self->set('cri', $cri);
+    $self->set('criModule', $cri);
   }
   my $gid = $cri->CheckVolume($id);
   if (defined $gid)
@@ -5677,7 +5677,6 @@ sub CreateReviewReport
     $report .= sprintf "<tr><td>&nbsp;&nbsp;&nbsp;%s</td><td>$count</td>", $row->{'name'};
     $report .= $self->DoPriorityBreakdown($ref, '', \@pris) . "</tr>\n";
   }
-
   # Inheriting
   $sql = 'SELECT COUNT(*) FROM queue WHERE status=9';
   my $s9count = $self->SimpleSqlGet($sql);
