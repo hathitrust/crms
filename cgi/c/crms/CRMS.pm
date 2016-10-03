@@ -4644,6 +4644,10 @@ sub ValidateSubmission
     my $note = sprintf "Collision for $user on %s: $id locked for $lock", $self->Hostname();
     $self->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $note);
   }
+  if (!$self->IsVolumeInQueue($id))
+  {
+    $errorMsg .= 'This volume is not in the queue. Please cancel. ';
+  }
   ## check user
   if (!$oneoff && !$self->IsUserReviewer($user) && !$self->IsUserAdvanced($user))
   {
