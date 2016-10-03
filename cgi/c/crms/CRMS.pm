@@ -7227,9 +7227,13 @@ sub DuplicateVolumesFromExport
     {
       $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\n";
     }
+    elsif ($newrights eq 'und/crms' && $usr2 =~ m/^crms/)
+    {
+      $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from und/crms\n";
+    }
     elsif ($okattr{$oldrights} ||
            ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/) ||
-           $oldrights eq 'ic/bib' ||
+           $oldrights eq 'ic/bib' || $oldrights eq 'und/bib' ||
            ($self->Sys() eq 'crmsworld' && $oldrights =~ m/^pdus/))
     {
       if (!$record->doEnumchronMatch($id, $id2))
