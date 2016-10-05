@@ -949,7 +949,7 @@ sub AddItemToCandidates
     my $id2 = $ref->{'id'};
     next if $id2 eq $id;
     next unless $self->IsVolumeInCandidates($id2);
-    if (!$record->doEnumchronMatch($id, $id2))
+    if ($record->doEnumchronMatch($id, $id2))
     {
       my $chron2 = $record->enumchron($id2) || '';
       printf "Filter $id2%s as duplicate of $id%s\n",
@@ -7266,7 +7266,7 @@ sub DuplicateVolumesFromExport
     {
       $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
     }
-    elsif ($attr2 eq $attr && $reason2 ne 'bib')
+    elsif ($attr2 eq $attr && $reason2 ne 'bib' && $reason2 ne 'gfv')
     {
       $data->{'unneeded'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\n";
     }
