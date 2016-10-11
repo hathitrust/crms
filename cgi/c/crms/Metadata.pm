@@ -291,7 +291,7 @@ sub copyrightDate
   if ($type eq 't' || $type eq 'c')
   {
     $field = $date1 if defined $date1;
-    $field = $date2 if defined $date2;
+    $field = $date2 if defined $date2 and $date2 ne '9999';
   }
   elsif ($type eq 'r' || $type eq 'e')
   {
@@ -342,7 +342,7 @@ sub formatPubDate
         $type eq 'm' || $type eq 'u' || $type eq ' ')
     {
       $date = "$date1-$date2" if defined $date2 and $date2 > $date1;
-      $date = $date1. '-' if defined $date2 and $date2 == 9999;
+      $date = $date1. '-' if defined $date2 and $date2 eq '9999';
       $date = $date1. '-' if !defined $date2 and $type eq 'u';
     }
   }
