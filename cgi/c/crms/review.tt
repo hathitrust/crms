@@ -14,7 +14,6 @@
 [% mag      = cgi.cookie('mag')       %]
 [% ptview   = cgi.cookie('ptview')    %]
 [% import   = cgi.param('importUser') %]
-[% IF NOT crms.GetSystemVar('importUser') %][% import = 0 %][% END %]
 [% expert   = crms.IsUserExpert(user) %]
 [% ren      = crms.GetSystemVar("showRenewal") %]
 
