@@ -73,9 +73,7 @@
             [% seen.$id2 = 1 %]
             [% url = crms.PTAddress(id2) %]
             [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
-            <a href="[% url %]" target="_blank" [% style %]>
-              [% id2 %]
-            </a><br/>
+            <a href="[% url %]" target="_blank" [% style %]>[% id2 %]</a><br/>
           [% END %]
         </td>
         <td class="nowrap" headers="enumchronTH">
