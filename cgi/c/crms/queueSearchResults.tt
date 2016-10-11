@@ -118,7 +118,7 @@
         <td>$item.reviews</td>
         <td>$item.expcnt</td>
         <td>$item.holds</td>
-        <td>$item.source</td>
+        <td class="nowrap">$item.source</td>
         <td>$item.added_by</td>
         <td class="nowrap">$item.project</td>
         <td class="nowrap">$item.ticket</td>
