@@ -954,8 +954,8 @@ sub AddItemToCandidates
       my $chron2 = $record->enumchron($id2) || '';
       printf "Filter $id2%s as duplicate of $id%s\n",
             (length $chron)? " ($chron)":'', (length $chron2)? " ($chron2)":'' unless $quiet;
+      $self->Filter($id2, 'duplicate') unless $noop;
     }
-    $self->Filter($id2, 'duplicate') unless $noop;
   }
   if (!$self->IsVolumeInCandidates($id))
   {
@@ -963,6 +963,7 @@ sub AddItemToCandidates
     printf "Add $id to candidates%s\n", (defined $project)? " for project '$project'":'' unless $quiet;
     my $sql = 'INSERT INTO candidates (id,time,project) VALUES (?,?,?)';
     $self->PrepareSubmitSql($sql, $id, $time, $project) unless $noop;
+    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) unless $noop;
   }
   if ($self->GetSystemVar('cri') && defined $self->CheckForCRI($id, $noop, $quiet))
   {
@@ -1237,6 +1238,7 @@ sub LoadQueueForProject
       $dels{$id} = 1;
       next;
     }
+    # FIXME: this is the wrong place to do this.
     if (!$record->countEnumchron)
     {
       my $dup = $self->IsRecordInQueue($record->sysid, $record);
@@ -7237,7 +7239,7 @@ sub DuplicateVolumesFromExport
     foreach my $ref (@{$rows})
     {
       my $id2 = $ref->{'id'};
-      my $time = $self->SimpleSqlGet('SELECT MAX(time) FROM exportdata WHERE id=?', $id2);
+      my $time = $self->SimpleSqlGet('SELECT MAX(time) FROM exportdata WHERE id=? AND src!="inherited"', $id2);
       if ($time && $time gt $latestTime)
       {
         $latest = $id2;
@@ -7356,7 +7358,7 @@ sub DuplicateVolumesFromCandidates
   {
     my $id2 = $ref->{'id'};
     next if $id eq $id2;
-    my $sql = 'SELECT attr,reason,gid FROM exportdata WHERE id=?'.
+    my $sql = 'SELECT attr,reason,gid FROM exportdata WHERE id=? AND src!="inherited"'.
               ' AND time>="2010-06-02 00:00:00"'.
               ' ORDER BY IF(status=5,1,0) DESC,time DESC LIMIT 1';
     my $ref = $self->SelectAll($sql, $id2);
