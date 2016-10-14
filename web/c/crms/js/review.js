@@ -1,7 +1,3 @@
-function redirHome()   { window.location = "crms"; }
-function redirReview() { window.location = "crms?p=review"; }
-function redirExpert() { window.location = "crms?p=expert"; }
-
 function changeFrame1(doSize) {
   var sel = document.getElementById("search1Select");
   var url = sel.options[sel.selectedIndex].value;
@@ -56,6 +52,12 @@ function popRenewalDate()
       if (req.status == 200)
       {
         renDate.value = req.responseText;
+        var icren = document.getElementById('ICREN');
+        if (icren)
+        {
+          var button = document.getElementById("r" + icren.title);
+          if (button) { button.checked = "checked"; }
+        }
       }
       else
       {
@@ -315,6 +317,7 @@ function zoom(selector,name)
   setCookie(name,val,365);
   document.location.search = document.location.search;
   document.getElementById('tFrame').contentWindow.location.reload(true);
+  //document.getElementById('tFrame').src = document.getElementById('tFrame').src;
 }
 
 function PullPubDate()
