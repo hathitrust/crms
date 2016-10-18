@@ -28,7 +28,7 @@ my $n;
 if (defined $doyear)
 {
   $n = $crms->PredictLastCopyrightYear($id, $year, $ispub, $crown, undef, \$pub);
-  my $r = $crms->TranslateRights($crms->PredictRights($id, $year, $ispub, $crown, undef, \$pub));
+  my $r = $crms->TranslateRights($crms->PredictRights($id, $year, $ispub, $crown, undef, $pub));
   if (defined $n)
   {
     $n++;
