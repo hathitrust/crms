@@ -49,19 +49,25 @@ function popRenewalDate()
   {
     if (req.readyState == 4)
     {
+      var icren = document.getElementById('ICREN');
+      var button;
+      if (icren)
+      {
+        button = document.getElementById("r" + icren.title);
+      }
       if (req.status == 200)
       {
+        var rights = document.getElementsByName("rights");
+        var sel = GetCheckedValue(rights);
+        var und = document.getElementById('UNDNFI').title;
         renDate.value = req.responseText;
-        var icren = document.getElementById('ICREN');
-        if (icren)
-        {
-          var button = document.getElementById("r" + icren.title);
-          if (button) { button.checked = "checked"; }
-        }
+        if (und && sel == und) { return; }
+        if (button) { button.checked = "checked"; }
       }
       else
       {
         renDate.value = "";
+        if (button) { button.checked = ""; }
       }
     }
   };
