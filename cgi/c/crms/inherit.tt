@@ -50,12 +50,12 @@ Restrict selection:
   <a class="tip" href="#">
     <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
     <span>
-    <strong>Access Change</strong> - Either <b>0</b> (unchecked) or <b>1</b> (checked)<br/>
+    <strong>Access Change</strong> - Either <strong>0</strong> (unchecked) or <strong>1</strong> (checked)<br/>
   [% IF NOT auto %]
-    <strong>Prior CRMS Determination</strong> - Either <b>0</b> (unchecked) or <b>1</b> (checked)<br/>
-    <strong>Prior Status 5 Determination</strong> - Either <b>0</b> (unchecked) or <b>1</b> (checked)<br/>
+    <strong>Prior CRMS Determination</strong> - Either <strong>0</strong> (unchecked) or <strong>1</strong> (checked)<br/>
+    <strong>Prior Status 5 Determination</strong> - Either <strong>0</strong> (unchecked) or <strong>1</strong> (checked)<br/>
   [% END %]
-    <strong>Source</strong> - <b>Candidates</b>, <b>Export</b>, or <b>Cleanup</b><br/>
+    <strong>Source</strong> - <strong>Candidates</strong>, <strong>Export</strong>, or <strong>Cleanup</strong><br/>
     </span>
   </a>
 </div>
@@ -91,8 +91,14 @@ Restrict selection:
 <span class="smallText">(YYYY-MM-DD)</span>
 </td>
 <td>
-<input type="radio" name="dateType" value="date" [% dateType == 'date' ? 'checked="checked"':'' %]/> Export Date<br/>
-<input type="radio" name="dateType" value="idate" [% dateType == 'idate' ? 'checked="checked"':'' %]/> Inherit Date<br/>
+  <fieldset>
+  <input type="radio" name="dateType" value="date" id="eDateRadio"
+         [% dateType == 'date' ? 'checked="checked"':'' %]/>
+  <label for="eDateRadio">Export Date</label><br/>
+  <input type="radio" name="dateType" value="idate" id="iDateRadio"
+         [% dateType == 'idate' ? 'checked="checked"':'' %]/>
+  <label for="iDateRadio">Inherit Date</label>
+  </fieldset>
 </td>
 </tr></table>
 
@@ -101,21 +107,23 @@ Restrict selection:
   <tr>
     <td><label for="order">Order by:</label></td>
     <td>[% crms.InheritanceSearchMenu('order', order, auto) %]
+        <label for="dir">Dir: </label>
         <select id="dir" name="dir">
-        <option value="ASC"  [% dir == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
-        <option value="DESC" [% dir == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
+          <option value="ASC"  [% dir == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
+          <option value="DESC" [% dir == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
       </select>
     </td>
-  <tr/>
+  </tr>
   <tr>
     <td><label for="order2">Then order by:</label></td>
     <td>[% crms.InheritanceSearchMenu('order2', order2, auto) %]
+        <label for="dir2">Dir: </label>
         <select id="dir2" name="dir2">
-        <option value="ASC"  [% dir2 == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
-        <option value="DESC" [% dir2 == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
+          <option value="ASC"  [% dir2 == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
+          <option value="DESC" [% dir2 == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
       </select>
     </td>
-  <tr/>
+  </tr>
 </table>
 
 <label for="records">Display:</label>
@@ -149,6 +157,7 @@ function CheckAll(box,formid)
 	{
 	  aa.elements[i].checked = box.checked;
 	}
+	EnableButtons(formid);
 }
 
 function CountChecked(formid)
@@ -219,7 +228,9 @@ function EnableButtons(formid)
     <input type="hidden" name="p" value="$p"/>
     <input type="hidden" name="auto" value="$auto"/>
     [% crms.HiddenSys() %]
-    <input type="checkbox" id='all' onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
+    <input type="checkbox" id='SelectAllButton' onclick="CheckAll(this,'checks');"/>
+    <label for="SelectAllButton">Select All</label>
+    &nbsp;&nbsp;&nbsp;&nbsp;
     [% IF !auto %]
       <input type="submit" disabled="disabled" id="inheritButton" name="inherit" value="Inherit from Selected Volumes"/>
     [% END %]
@@ -231,7 +242,7 @@ function EnableButtons(formid)
     as legacy reviews will not be reported here.<br/>
     See the "Rights" and "Prior CRMS Determ" columns for additional information.
     </i></span><br/><br/>-->
-    <p><b>Found $inheriting volume[% (inheriting==1)? "":"s"%] from $source source[% (source==1)? "":"s"%], page $n of $of</b></p>
+    <p><strong>Found $inheriting volume[% (inheriting==1)? "":"s"%] from $source source[% (source==1)? "":"s"%], page $n of $of</strong></p>
 
     [% prev = n - 1 %]
     [% next = n + 1 %]
@@ -310,9 +321,9 @@ function EnableButtons(formid)
           <td>[% review.i %]</td>
           <td>[% review.date %]</td>
           <td>[% review.idate %]</td>
-          <td class="nowrap"><a href='[% crms.LinkToHistorical(review.sysid) _ ";order=Date;dir=ASC" %]'target='_blank'>[% review.from %]</a></td>
+          <td class="nowrap"><a href='[% crms.LinkToHistorical(review.sysid) _ ";order=Date;dir=ASC" %]' target='_blank'>[% review.from %]</a></td>
           <td class="nowrap"><a href='[% crms.LinkToRetrieve(review.inheriting) %]' target='_blank'>[% review.inheriting %]</a></td>
-          <td><a href='[% crms.LinkToCatalog(review.sysid) %]'target='_blank'>[% review.sysid %]</a></td>
+          <td><a href='[% crms.LinkToCatalog(review.sysid) %]' target='_blank'>[% review.sysid %]</a></td>
           <td>[% review.rights %]</td>
           <td class='nowrap'>[% review.newrights %]</td>
           <td>[% (review.change==1)? '&nbsp;&nbsp;&nbsp;&#x2713;':'' %]</td>
@@ -336,14 +347,14 @@ function EnableButtons(formid)
             <img width="16" height="16" alt="Accepted" src="/c/crms/XIcon.png"/>
           [% END %]
           </td>
-          <td align="center">
+          <td style="text-align:center;">
             <input type="checkbox" name="vol_[% review.inheriting %]" onclick="EnableButtons('checks');"/>
           </td>
         </tr>
         [% prev_id = review.from %]
       [% END %]
     </table>
-    <p><b>Found $inheriting volume[% (inheriting==1)? "":"s"%] from $source source[% (source==1)? "":"s"%], page $n of $of</b></p>
+    <p><strong>Found $inheriting volume[% (inheriting==1)? "":"s"%] from $source source[% (source==1)? "":"s"%], page $n of $of</strong></p>
     [% IF doPrev %]
       <a href="?[% crms.URLify(cgi,'n') _ ";n=$prev" %]">
     [% ELSE %]
