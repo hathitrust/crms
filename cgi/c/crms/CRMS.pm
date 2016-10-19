@@ -13,7 +13,6 @@ use Date::Calc qw(:all);
 use POSIX;
 use DBI qw(:sql_types);
 use List::Util qw(min max);
-use JSON::XS;
 use CGI;
 
 binmode(STDOUT, ':utf8'); #prints characters in utf8
@@ -73,7 +72,7 @@ sub set
 
 sub Version
 {
-  return '5.5.2';
+  return '5.5.3';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -266,7 +265,8 @@ sub PrepareSubmitSql
   eval { $sth->execute(@_); };
   if ($@)
   {
-    $self->SetError("SQL failed ($sql): " . $sth->errstr);
+    my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $sth->errstr;
+    $self->SetError($msg);
     return 0;
   }
   return 1;
@@ -284,7 +284,7 @@ sub SimpleSqlGet
   };
   if ($@)
   {
-    my $msg = "SQL failed ($sql): " . $@;
+    my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
     $self->SetError($msg);
     $self->Logit($msg);
   }
@@ -304,7 +304,7 @@ sub SimpleSqlGetSDR
   };
   if ($@)
   {
-    my $msg = "SQL failed ($sql): " . $@;
+    my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
     $self->SetError($msg);
     $self->Logit($msg);
   }
@@ -323,7 +323,7 @@ sub SelectAll
   };
   if ($@)
   {
-    my $msg = "SQL failed ($sql): " . $@;
+    my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
     $self->SetError($msg);
     $self->Logit($msg);
   }
@@ -342,7 +342,7 @@ sub SelectAllSDR
   };
   if ($@)
   {
-    my $msg = "SQL failed ($sql): " . $@;
+    my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
     $self->SetError($msg);
     $self->Logit($msg);
   }
@@ -3714,7 +3714,6 @@ sub CreateExportData
   my $year = shift;
   my $pct  = shift;
 
-  use Utilities;
   my @dates;
   my $report;
   my ($fmt, $fmt2);
@@ -5448,7 +5447,6 @@ sub SetError
   my $error  = shift;
 
   $error .= "\n";
-  use Utilities;
   $error .= Utilities::StackTrace();
   my $errors = $self->get('errors');
   push @{$errors}, $error;
@@ -7695,7 +7693,6 @@ sub Sysify
   my $self = shift;
   my $url  = shift;
 
-  use Utilities;
   my $sys = $self->Sys();
   $url = Utilities::AppendParam($url, 'sys', $sys) if $sys ne 'crms';
   my $pdb = $self->get('pdb');
