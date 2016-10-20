@@ -14,6 +14,7 @@ use POSIX;
 use DBI qw(:sql_types);
 use List::Util qw(min max);
 use CGI;
+use Utilities;
 
 binmode(STDOUT, ':utf8'); #prints characters in utf8
 
