@@ -355,15 +355,15 @@ $header .= sprintf("Volumes w/ chron/enum: %d$delim$delim", scalar keys %{$data{
 if ($candidates)
 {
   $header .= sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table: %d$delim", scalar keys %{$data{'noexport'}});
-  $header .= sprintf("Unique Sys IDs checked, no duplicates with CRMS determination (from June 2010 or later): %d$delim$delim", CountSystemIds(keys %{$data{'noexport'}}));
+  $header .= sprintf("Unique Sys IDs checked, no duplicates with CRMS determination (from June 2010 or later): %d$delim$delim", CountSystemIds('noexport', keys %{$data{'noexport'}}));
   $header .= "<h4>Filtered from candidates temporarily:</h4>$delim";
   $header .= sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later), duplicate volume already in candidates: %d$delim", scalar keys %{$data{'already'}});
-  $header .= sprintf("Unique Sys IDs checked, duplicate volume already in candidates: %d$delim$delim", CountSystemIds(keys %{$data{'already'}}));
+  $header .= sprintf("Unique Sys IDs checked, duplicate volume already in candidates: %d$delim$delim", CountSystemIds('already', keys %{$data{'already'}}));
 }
 else
 {
   $header .= sprintf("Volumes checked, no inheritance needed: %d$delim", scalar keys %{$data{'unneeded'}});
-  $header .= sprintf("Unique Sys IDs checked, no inheritance needed: %d$delim", CountSystemIds(keys %{$data{'unneeded'}}));
+  $header .= sprintf("Unique Sys IDs checked, no inheritance needed: %d$delim", CountSystemIds('unneeded', keys %{$data{'unneeded'}}));
   $header .= sprintf("Volumes not needing inheritance: %d$delim$delim", $data{'unneededcnt'});
 }
 $header .= sprintf("Volumes checked, inheritance not permitted: %d$delim", scalar keys %{$data{'disallowed'}});
@@ -377,7 +377,7 @@ else
 {
   $header .= sprintf("Volumes checked - inheritance permitted: %d$delim", scalar keys %{$data{'inherit'}});
 }
-$header .= sprintf("Unique Sys IDs w/ volumes inheriting rights: %d$delim", CountSystemIds(keys %{$data{'inherit'}}));
+$header .= sprintf("Unique Sys IDs w/ volumes inheriting rights: %d$delim", CountSystemIds('inherit', keys %{$data{'inherit'}}));
 $header .= sprintf("Volumes inheriting rights automatically: %d$delim", $data{'inheritcnt'});
 if (!$candidates)
 {
@@ -639,8 +639,8 @@ sub KeysSortedOnTitle
 
 sub CountSystemIds
 {
-  my $self = shift;
-  my @ids  = @_;
+  my $report = shift;
+  my @ids    = @_;
 
   my %sysids;
   foreach my $id (@ids)
@@ -650,7 +650,7 @@ sub CountSystemIds
     print "$id: $sysid\n" if $verbose > 1;
     $sysids{$sysid} = 1;
   }
-  printf "Counted %d sys ids\n", scalar keys %sysids if $verbose > 1;
+  printf "Counted %d sys ids for $report\n", scalar keys %sysids if $verbose > 1;
   return scalar keys %sysids;
 }
 
