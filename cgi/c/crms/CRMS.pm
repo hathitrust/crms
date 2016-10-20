@@ -7006,7 +7006,7 @@ sub SubmitInheritances
   my $self  = shift;
   my $quiet = shift;
 
-  my $sql = 'SELECT id,gid,status FROM inherit WHERE status!=0';
+  my $sql = 'SELECT id,gid,status FROM inherit WHERE (status IS NULL OR status=1)';
   my $ref = $self->SelectAll($sql);
   printf "Submitting %d inheritances\n", scalar @{$ref} unless $quiet;
   foreach my $row (@{$ref})
@@ -7014,7 +7014,7 @@ sub SubmitInheritances
     my $id = $row->[0];
     my $gid = $row->[1];
     my $status = $row->[2];
-    if ($status == 1 || $self->CanAutoSubmitInheritance($id, $gid))
+    if ((defined $status && $status == 1) || $self->CanAutoSubmitInheritance($id, $gid))
     {
       print "Submitting inheritance for $id\n" unless $quiet;
       $self->SubmitInheritance($id);
