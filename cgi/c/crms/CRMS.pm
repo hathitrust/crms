@@ -883,8 +883,7 @@ sub CheckAndLoadItemIntoCandidates
     print "Skip $id -- already in historical reviews\n";
     return;
   }
-  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE id=?', $id) > 0 ||
-      $self->SimpleSqlGet('SELECT COUNT(*) FROM unavailable WHERE id=?', $id) > 0)
+  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE id=?', $id) > 0)
   {
     print "Skip $id -- already inheriting\n";
     return;
@@ -6554,10 +6553,6 @@ sub GetTrackingInfo
     my $a = $ref->[0]->[1];
     my $r = $ref->[0]->[2];
     push @stati, "inheriting $a/$r from $src";
-  }
-  if ($inherit && $self->SimpleSqlGet('SELECT COUNT(*) FROM unavailable WHERE id=?', $id))
-  {
-    push @stati, 'possible inheritance source awaiting metadata';
   }
   if ($rights)
   {
