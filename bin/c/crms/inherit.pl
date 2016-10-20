@@ -506,11 +506,10 @@ sub InheritanceReport
   }
   else
   {
-    $sql .= ' ((src!="inherited" AND time>? AND time<=?)'.
-            '  OR id IN (SELECT id FROM unavailable WHERE src=?))'.
+    $sql .= ' src!="inherited" AND time>? AND time<=?'.
             ' AND NOT EXISTS (SELECT * FROM exportdata e2 WHERE e2.id=id AND e2.time>time)'.
             ' ORDER BY time DESC';
-    @params = ($start, $end, $src);
+    @params = ($start, $end);
   }
   $ref = $crms->SelectAll($sql, @params);
   use Utilities;
@@ -542,7 +541,6 @@ sub InheritanceReport
     $data{'total'}->{$id} = 1;
     $crms->DuplicateVolumesFromExport($id, $gid, $record->sysid, $attr, $reason,\%data, $record);
   }
-  $crms->PrepareSubmitSql("DELETE FROM unavailable WHERE src='$src'") unless $noop;
   return \%data;
 }
 
@@ -588,8 +586,6 @@ sub CandidatesReport
     $crms->DuplicateVolumesFromCandidates($id, $record->sysid, \%data, $record);
     $n++;
   }
-  print "Deleting from unavailable\n" if $verbose > 1;
-  $crms->PrepareSubmitSql("DELETE FROM unavailable WHERE src='$src'") unless $noop;
   return \%data;
 }
 
