@@ -391,11 +391,19 @@ sub CreateProgressGraph
 {
   my $self  = shift;
 
-  my $sql = 'SELECT COUNT(*) FROM exportdata WHERE src="candidates" AND DATE(time)>="2016-04-01"';
+  my $sql = 'SELECT COUNT(*) FROM exportdata WHERE src="candidates" AND DATE(time)>"2016-10-01"';
   my $val = $self->SimpleSqlGet($sql);
-  my $fmt = '<div style="text-align:center"><span style="font-size:25px;color:black">{y}</span><br/><span style="font-size:12px;color:silver">determinations</span></div>';
+  $sql = 'SELECT COUNT(*) FROM candidates';
+  my $n = $self->SimpleSqlGet($sql);
+  my $total = $val + $n;
+  use Math::Round;
+  my $max = Math::Round::nearest(100, $total);
+  my $fmt = '<div style="text-align:center">'.
+            '<span style="font-size:25px;color:black">{y} of '. $total. '</span><br/>'.
+            '<span style="font-size:12px;color:silver">determinations</span></div>';
   my %data = ('chart'=>{'type'=>'solidgauge'},
-              'title'=>{'text'=>'Progress Toward Finishing Candidates'},
+              'title'=>{'text'=>'<span style="font-size:25px;color:black">October-December 2016</span><br/>'.
+                                '<span style="font-size:25px;color:black">Final Stretch</span>'},
               'pane'=>{'center'=>['50%','85%'],
                        'size'=>'120%',
                        'startAngle'=>'-90',
@@ -404,12 +412,12 @@ sub CreateProgressGraph
                                       'innerRadius'=>'60%',
                                       'outerRadius'=>'100%',
                                       'shape'=>'arc'}},
-              'yAxis'=>{'stops'=>[[0.1, '#DF5353'],[0.5, '#DDDF0D'],[0.9, '#55BF3B']],
+              'yAxis'=>{'stops'=>[[0.0, '#DF5353'],[0.5, '#DDDF0D'],[1.0, '#55BF3B']],
                         'min'=>0,
-                        'max'=>18000,
+                        'max'=>$max,
                         'lineWidth'=>1,
                         'minorTickInterval'=>undef,
-                        'tickInterval'=>1500,
+                        'tickInterval'=>500,
                         'tickWidth'=>1,
                         'title'=>{'y'=>-70},
                         'labels'=>{'y'=>16}},
