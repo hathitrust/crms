@@ -9,7 +9,7 @@ sub CreateExportGraph
   my $self  = shift;
 
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
-              'tooltip'=>{'pointFormat'=>'<b>{point.y}</b>'},
+              'tooltip'=>{'pointFormat'=>'<strong>{point.y}</strong>'},
               'xAxis'=>{'categories'=>[], 'labels'=>{'rotation'=>45}},
               'yAxis'=>{'min'=>0, 'title'=>{'text'=>'Volumes'}},
               'legend'=>{'enabled'=>JSON::XS::false},
@@ -31,7 +31,7 @@ sub CreateExportBreakdownGraph
   my $self  = shift;
 
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
-              'tooltip'=>{'pointFormat'=>'<b>{point.y}</b>'},
+              'tooltip'=>{'pointFormat'=>'<strong>{point.y}</strong>'},
               'xAxis'=>{'categories'=>[], 'labels'=>{'rotation'=>45}},
               'yAxis'=>{'min'=>0, 'title'=>{'text'=>'Volumes'}},
               'legend'=>{'enabled'=>JSON::XS::true},
@@ -66,7 +66,7 @@ sub CreateDeterminationsBreakdownGraph
   my $self  = shift;
 
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
-              'tooltip'=>{'pointFormat'=>'<b>{point.y}</b>'},
+              'tooltip'=>{'pointFormat'=>'<strong>{point.y}</strong>'},
               'xAxis'=>{'categories'=>[], 'labels'=>{'rotation'=>45}},
               'yAxis'=>{'min'=>0, 'title'=>{'text'=>'Volumes'}},
               'legend'=>{'enabled'=>JSON::XS::true},
@@ -127,7 +127,7 @@ sub CreateCandidatesGraph
   my $self  = shift;
 
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
-              'tooltip'=>{'pointFormat'=>'<b>{point.y}</b>'},
+              'tooltip'=>{'pointFormat'=>'<strong>{point.y}</strong>'},
               'xAxis'=>{'categories'=>[], 'labels'=>{'rotation'=>45}},
               'yAxis'=>{'min'=>0, 'title'=>{'text'=>'Volumes'}},
               'legend'=>{'enabled'=>JSON::XS::false},
@@ -308,7 +308,7 @@ sub CreateReviewerGraph
   my @users = @_;
 
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
-              'tooltip'=>{'pointFormat'=>'{series.name}: <b>{point.y}</b>'},
+              'tooltip'=>{'pointFormat'=>'{series.name}: <strong>{point.y}</strong>'},
               'xAxis'=>{'categories'=>[], 'labels'=>{'rotation'=>45}},
               'yAxis'=>{'min'=>0, 'title'=>{'text'=>'Volumes'}},
               'legend'=>{'enabled'=>JSON::XS::true},
