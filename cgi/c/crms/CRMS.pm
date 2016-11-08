@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.5.4';
+  return '5.5.5';
 }
 
 # Is this CRMS or CRMS World (or something else entirely)?
@@ -4618,14 +4618,12 @@ sub UpdateDeterminationsBreakdown
   my $date = shift;
 
   $date = $self->SimpleSqlGet('SELECT CURDATE()') unless $date;
-  my @vals;
+  my @vals = ($date);
   foreach my $status (4..9)
   {
-    my $sql = 'SELECT COUNT(DISTINCT e.gid) FROM exportdata e INNER JOIN historicalreviews r'.
-              ' ON e.gid=r.gid WHERE r.legacy!=1 AND DATE(e.time)=? AND r.status=? AND e.exported=1';
+    my $sql = 'SELECT COUNT(gid) FROM exportdata WHERE DATE(time)=? AND status=?';
     push @vals, $self->SimpleSqlGet($sql, $date, $status);
   }
-  unshift @vals, $date;
   my $wcs = $self->WildcardList(scalar @vals);
   my $sql = 'REPLACE INTO determinationsbreakdown (date,s4,s5,s6,s7,s8,s9) VALUES '. $wcs;
   $self->PrepareSubmitSql($sql, @vals);
