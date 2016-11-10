@@ -1625,14 +1625,18 @@ sub GetFinalAttrReason
   my $id   = shift;
 
   ## order by expert so that if there is an expert review, return that one
-  my $sql = 'SELECT attr,reason FROM reviews WHERE id=? ORDER BY expert DESC, time DESC LIMIT 1';
+  my $sql = 'SELECT a.name,rs.name FROM reviews r'.
+            ' INNER JOIN attributes a ON r.attr=a.id'.
+            ' INNER JOIN reasons rs ON r.reason=rs.id'.
+            ' WHERE r.id=? ORDER BY r.expert DESC, r.time DESC LIMIT 1';
+  print "$sql\n";
   my $ref = $self->SelectAll($sql, $id);
   if (!$ref->[0]->[0])
   {
     $self->SetError("$id not found in review table");
   }
-  my $attr   = $self->TranslateAttr($ref->[0]->[0]);
-  my $reason = $self->TranslateReason($ref->[0]->[1]);
+  my $attr   = $ref->[0]->[0];
+  my $reason = $ref->[0]->[1];
   return ($attr, $reason);
 }
 
@@ -5306,38 +5310,43 @@ sub GetPriority1Frequency
   return $self->GetSystemVar('priority1Frequency', 0.3, '$_>=0.0 and $_<1.0');
 }
 
+# Checks whether the attributes and reasons tables are up to date with the Rights DB.
+# If not, purges and repopulates any that need an update.
+sub AttrReasonSync
+{
+  my $self = shift;
+
+  my @tables = ('attributes','reasons');
+  foreach my $table (@tables)
+  {
+    my $sql = 'SELECT COUNT(*) FROM '. $table;
+    my $count = $self->SimpleSqlGet($sql);
+    my $count2 = $self->SimpleSqlGetSDR($sql);
+    if ($count != $count2)
+    {
+      $sql = 'DELETE FROM '. $table;
+      $self->PrepareSubmitSql($sql);
+      my $sql = 'SELECT * FROM '. $table;
+      my $ref = $self->SelectAllSDR($sql);
+      my $wc = $self->WildcardList(scalar @{$ref->[0]});
+      foreach my $row (@{$ref})
+      {
+        $sql = 'INSERT INTO '. $table. ' VALUES '. $wc;
+        $self->PrepareSubmitSql($sql, @{$row});
+      }
+    }
+  }
+}
+
 sub TranslateAttr
 {
   my $self = shift;
   my $a    = shift;
 
   my $sql = 'SELECT id FROM attributes WHERE name=?';
-  $sql = 'SELECT name FROM attributes WHERE id=?' if $a =~ m/[0-9]+/;
-  my $val = $self->SimpleSqlGetSDR($sql, $a);
-  if (!$val)
-  {
-    my %t1 = (1  => 'pd',              2  => 'ic',              3  => 'op',
-              4  => 'orph',            5  => 'und',             6  => 'umall',
-              7  => 'ic-world',        8  => 'nobody',          9  => 'pdus',
-              10 => 'cc-by-3.0',       11 => 'cc-by-nd-3.0',    12 => 'cc-by-nc-nd-3.0',
-              13 => 'cc-by-nc-3.0',    14 => 'cc-by-nc-sa-3.0', 15 => 'cc-by-sa-3.0',
-              16 => 'orphcand',        17 => 'cc-zero',         18 => 'und-world',
-              19 => 'icus',            20 => 'cc-by-4.0',       21 => 'cc-by-nd-4.0',
-              22 => 'cc-by-nc-nd-4.0', 23 => 'cc-by-nc-4.0',    24 => 'cc-by-nc-sa-4.0',
-              25 => 'cc-by-sa-4.0',    26 => 'pd-pvt',          27 => 'supp');
-    my %t2 = ('pd'              => 1,  'ic'              => 2,  'op'              => 3,
-              'orph'            => 4,  'und'             => 5,  'umall'           => 6,
-              'ic-world'        => 7,  'nobody'          => 8,  'pdus'            => 9,
-              'cc-by-3.0'       => 10, 'cc-by-nd-3.0'    => 11, 'cc-by-nc-nd-3.0' => 12,
-              'cc-by-nc-3.0'    => 13, 'cc-by-nc-sa-3.0' => 14, 'cc-by-sa-3.0'    => 15,
-              'orphcand'        => 16, 'cc-zero'         => 17, 'und-world'       => 18,
-              'icus'            => 19, 'cc-by-4.0'       => 20, 'cc-by-nd-4.0'    => 21,
-              'cc-by-nc-nd-4.0' => 22, 'cc-by-nc-4.0'    => 23, 'cc-by-nc-sa-4.0' => 24,
-              'cc-by-sa-4.0'    => 25, 'pd-pvt'          => 26, 'supp'            => 27);
-    $val = ($a =~ m/^[0-9]+$/)? $t1{$a}:$t2{$a};
-  }
+  $sql = 'SELECT name FROM attributes WHERE id=?' if $a =~ m/^\d+$/;
+  my $val = $self->SimpleSqlGet($sql, $a);
   $a = $val if $val;
-  $self->ClearErrors();
   return $a;
 }
 
@@ -5347,20 +5356,9 @@ sub TranslateReason
   my $r    = shift;
 
   my $sql = 'SELECT id FROM reasons WHERE name=?';
-  $sql = 'SELECT name FROM reasons WHERE id=?' if $r =~ m/[0-9]+/;
-  my $val = $self->SimpleSqlGetSDR($sql, $a);
-  if (!$val)
-  {
-    my %t1 = ( 1  => 'bib', 2   => 'ncn', 3  => 'con',  4  => 'ddd',  5  => 'man',  6  => 'pvt',
-               7  => 'ren', 8   => 'nfi', 9  => 'cdpp', 10 => 'ipma', 11 => 'unp',  12 => 'gfv',
-               13 => 'crms', 14 => 'add', 15 => 'exp',  16 => 'del',  17 => 'gatt', 18 => 'supp');
-    my %t2 = ('bib'  => 1,  'ncn' => 2,  'con'  => 3,  'ddd'  => 4,  'man'  => 5,  'pvt' => 6,
-              'ren'  => 7,  'nfi' => 8,  'cdpp' => 9,  'ipma' => 10, 'unp'  => 11, 'gfv' => 12,
-              'crms' => 13, 'add' => 14, 'exp'  => 15, 'del'  => 16, 'gatt' => 17, 'supp' => 18);
-    $val = ($r =~ m/[0-9]+/)? $t1{$r}:$t2{$r};
-  }
+  $sql = 'SELECT name FROM reasons WHERE id=?' if $r =~ m/^\d+$/;
+  my $val = $self->SimpleSqlGet($sql, $r);
   $r = $val if $val;
-  $self->ClearErrors();
   return $r;
 }
 
@@ -5369,10 +5367,12 @@ sub TranslateRights
   my $self   = shift;
   my $rights = shift;
 
-  my $ref = $self->SelectAll('SELECT attr,reason FROM rights WHERE id=?', $rights);
-  my $a = $self->TranslateAttr($ref->[0]->[0]);
-  my $r = $self->TranslateReason($ref->[0]->[1]);
-  return $a.'/'.$r;
+  my $sql = 'SELECT CONCAT(a.name,"/",rs.name) FROM rights r'.
+            ' INNER JOIN attributes a ON r.attr=a.id'.
+            ' INNER JOIN reasons rs ON r.reason=rs.id'.
+            ' WHERE r.id=?';
+  my $ref = $self->SelectAll($sql, $rights);
+  return $ref->[0]->[0];
 }
 
 sub GetRenDate
@@ -7080,11 +7080,15 @@ sub SubmitInheritance
 
   my $sql = 'SELECT COUNT(*) FROM reviews r INNER JOIN queue q ON r.id=q.id WHERE r.id=? AND r.user="autocrms" AND q.status=9';
   return 'skip' if $self->SimpleSqlGet($sql, $id);
-  $sql = 'SELECT e.attr,e.reason,i.gid FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid WHERE i.id=?';
+  $sql = 'SELECT a.id,rs.id,i.gid FROM inherit i'.
+         ' INNER JOIN exportdata e ON i.gid=e.gid'.
+         ' INNER JOIN attributes a ON e.attr=a.id'.
+         ' INNER JOIN reasons rs ON e.reason=rs.id'.
+         ' WHERE i.id=?';
   my $row = $self->SelectAll($sql, $id)->[0];
   return "$id is no longer available for inheritance (has it been processed?)" unless $row;
-  my $attr = $self->TranslateAttr($row->[0]);
-  my $reason = $self->TranslateReason($row->[1]);
+  my $attr = $row->[0];
+  my $reason = $row->[1];
   my $gid = $row->[2];
   my $category = 'Rights Inherited';
   # Returns a status code (0=Add, 1=Error) followed by optional text.
@@ -7335,15 +7339,12 @@ sub AllCRMSRights
 {
   my $self = shift;
 
-  my $sql = 'SELECT attr,reason FROM rights';
+  my $sql = 'SELECT CONCAT(a.name,"/",rs.name) FROM rights r'.
+            ' INNER JOIN attributes a ON r.attr=a.id'.
+            ' INNER JOIN reasons rs ON r.reason=rs.id';
   my $ref = $self->SelectAll($sql);
   my %okattr;
-  foreach my $row (@{$ref})
-  {
-    my $a = $self->TranslateAttr($row->[0]);
-    my $r = $self->TranslateReason($row->[1]);
-    $okattr{"$a/$r"} = 1;
-  }
+  $okattr{$_->[0]} = 1 for @{$ref};
   return %okattr;
 }
 
@@ -7873,9 +7874,10 @@ sub PredictRights
     $attr = ($pub < 1923)? 'pdus':'ic';
     $reason = 'add';
   }
-  my $sql = 'SELECT id FROM rights WHERE attr=? AND reason=?';
-  return $self->SimpleSqlGet($sql, $self->TranslateAttr($attr),
-                             $self->TranslateReason($reason));
+  my $sql = 'SELECT id FROM rights r INNER JOIN attributes a ON r.attr=a.id'.
+            ' INNER JOIN reasons rs ON r.reason=rs.name'.
+            ' WHERE a.name=? AND rs.name=?';
+  return $self->SimpleSqlGet($sql, $attr, $reason);
 }
 
 sub Unescape
