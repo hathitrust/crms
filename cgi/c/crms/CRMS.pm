@@ -73,10 +73,10 @@ sub set
 
 sub Version
 {
-  return '5.5.5';
+  return '5.5.6';
 }
 
-# Is this CRMS or CRMS World (or something else entirely)?
+# Is this CRMS-US or CRMS-World (or something else entirely)?
 # This is the human-readable version.
 sub System
 {
@@ -759,6 +759,23 @@ sub GetExportFh
   if (-f $temp) { die "file already exists: $temp\n"; }
   open (my $fh, '>', $temp) || die "failed to open exported file ($temp): $!\n";
   return ($fh, $temp, $perm);
+}
+
+# Remove from the queue only if the volume is untouched.
+# Returns 1 if successful, undef otherwise.
+sub SafeRemoveFromQueue
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $sql = 'UPDATE queue SET priority=-2 WHERE id=? AND priority<3'.
+            ' AND locked IS NULL AND status=0 AND pending_status=0';
+  $self->PrepareSubmitSql($sql, $id);
+  $sql = 'DELETE FROM queue WHERE id=? AND priority=-2'.
+         ' AND locked IS NULL AND status=0 AND pending_status=0';
+  $self->PrepareSubmitSql($sql, $id);
+  $sql = 'SELECT COUNT(*) FROM queue WHERE id=?';
+  return ($self->SimpleSqlGet($sql, $id) == 0)? 1:undef;
 }
 
 sub RemoveFromQueue
