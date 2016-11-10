@@ -117,8 +117,7 @@ $subj .= " ($n)";
 if (scalar @mails)
 {
   use Mail::Sender;
-  my $where = $crms->WhereAmI() or 'Prod';
-  $subj = $crms->System() . ' ' . $where . ': ' . $subj;
+  $subj = $crms->SubjectLine($subj);
   my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
                                   from => $crms->GetSystemVar('adminEmail', ''),
                                   on_errors => 'undef' }

@@ -131,7 +131,7 @@ sub Date2Field
 my $txt = '';
 my $dates = $start;
 $dates .= " to $end" if $end ne $start;
-my $title = sprintf "CRMS %s Duplicates, $dates", join ',', map {ucfirst $_;} @types;
+my $title = $crms->SubjectLine(sprintf "%s Duplicates, $dates", join ',', map {ucfirst $_;} @types);
 if ($report eq 'tsv')
 {
   $txt .= "System ID\tVolume ID\tTitle\tAttr\tReason\tChron/Enum\tDate 1\tDate 2\tTime of Determination\tTracking\tType\n";

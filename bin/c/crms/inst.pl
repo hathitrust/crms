@@ -127,7 +127,7 @@ foreach my $inst (@insts)
     $sender->OpenMultipart({
       to => $mail,
       cc => $cc,
-      subject => "$system: $iname Statistics for $english",
+      subject => $crms->SubjectLine($iname. ' Statistics for '. $english),
       ctype => 'text/plain',
       encoding => 'quoted-printable'
       }) or die $Mail::Sender::Error,"\n";

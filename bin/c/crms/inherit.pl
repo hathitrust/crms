@@ -117,12 +117,10 @@ elsif (scalar @ARGV)
 }
 my $dates = $start;
 $dates .= " to $end" if $end ne $start;
-my $title = sprintf "%s %s: %s %sInheritance, $dates%s",
-                    $crms->System(),
-                    ($DLPS_DEV)? 'Dev':'Prod',
-                    ($candidates)? 'Candidates':'Export',
-                    ($cleanup)? 'Cleanup ':'',
-                    (scalar @projs)? (' Project: {'. join(',', @projs). '}'):'';
+my $subj = $crms->SubjectLine(sprintf "%s %sInheritance, $dates%s",
+                              ($candidates)? 'Candidates':'Export',
+                              ($cleanup)? 'Cleanup ':'',
+                              (scalar @projs)? (' Project: {'. join(',', @projs). '}'):'');
 $start .= ' 00:00:00' unless $start =~ m/\d\d:\d\d:\d\d$/;
 $end .= ' 23:59:59' unless $end =~ m/\d\d:\d\d:\d\d$/;
 my %data = %{($candidates || $duplicate)?
@@ -148,8 +146,8 @@ if (scalar keys %{$data{'inherit'}})
   foreach my $id (KeysSortedOnTitle($data{'inherit'}, $th))
   {
     #my $record = $crms->GetMetadata($id);
-    my $title2 = $th->{$id};
-    $title2 =~ s/&/&amp;/g;
+    my $title = $th->{$id};
+    $title =~ s/&/&amp;/g;
     my @lines = split "\n", $data{'inherit'}->{$id};
     foreach my $line (@lines)
     {
@@ -188,7 +186,7 @@ if (scalar keys %{$data{'inherit'}})
       $$whichtxt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td>";
       $$whichtxt .= "<td>$attr2/$reason2</td><td>$attr/$reason</td><td>$change</td>";
       $$whichtxt .= "<td>$h5</td>" unless $auto;
-      $$whichtxt .= "<td>$title2</td><td>$tracking</td></tr>\n";
+      $$whichtxt .= "<td>$title</td><td>$tracking</td></tr>\n";
     }
   }
   $data{'inheritcnt'} = $n;
@@ -211,8 +209,8 @@ if (scalar keys %{$data{'chron'}} && !$no{'chron'})
   foreach my $id (KeysSortedOnTitle($data{'chron'}), $th)
   {
     #my $record = $crms->GetMetadata($id);
-    my $title2 = $th->{$id};
-    $title2 =~ s/&/&amp;/g;
+    my $title = $th->{$id};
+    $title =~ s/&/&amp;/g;
     my @lines = split "\n", $data{'chron'}->{$id};
     foreach my $line (@lines)
     {
@@ -225,7 +223,7 @@ if (scalar keys %{$data{'chron'}} && !$no{'chron'})
       my $histLink = $crms->LinkToHistorical($sysid,1);
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a>$chron</td>" .
               "<td><a href='$retrLink' target='_blank'>$id2</a>$chron2</td>\n";
-      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$title2</td></tr>\n";
+      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$title</td></tr>\n";
     }
   }
   $txt .= "</table>$delim";
@@ -242,8 +240,8 @@ if (scalar keys %{$data{'disallowed'}})
   foreach my $id (KeysSortedOnTitle($data{'disallowed'}, $th))
   {
     #my $record = $crms->GetMetadata($id);
-    my $title2 = $th->{$id};
-    $title2 =~ s/&/&amp;/g;
+    my $title = $th->{$id};
+    $title =~ s/&/&amp;/g;
     my @lines = split "\n", $data{'disallowed'}->{$id};
     foreach my $line (@lines)
     {
@@ -253,7 +251,7 @@ if (scalar keys %{$data{'disallowed'}})
       my $retrLink = $crms->LinkToRetrieve($sysid,1);
       my $histLink = $crms->LinkToHistorical($sysid,1);
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
-      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$note</td><td>$title2</td></tr>\n";
+      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$note</td><td>$title</td></tr>\n";
     }
   }
   $data{'disallowedcnt'} = $n;
@@ -306,8 +304,8 @@ if (scalar keys %{$data{'unneeded'}} && !$no{'unneeded'})
   foreach my $id (KeysSortedOnTitle($data{'unneeded'}, $th))
   {
     #my $record = $crms->GetMetadata($id);
-    my $title2 = $th->{$id};
-    $title2 =~ s/&/&amp;/g;
+    my $title = $th->{$id};
+    $title =~ s/&/&amp;/g;
     my @lines = split "\n", $data{'unneeded'}->{$id};
     foreach my $line (@lines)
     {
@@ -317,7 +315,7 @@ if (scalar keys %{$data{'unneeded'}} && !$no{'unneeded'})
       my $retrLink = $crms->LinkToRetrieve($id2,1);
       my $histLink = $crms->LinkToHistorical($sysid,1);
       $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$e</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
-      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$title2</td></tr>\n";
+      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$title</td></tr>\n";
     }
   }
   $data{'unneededcnt'} = $n;
@@ -443,7 +441,7 @@ if (scalar @mails)
   my $to = join ',', @mails;
   $sender->OpenMultipart({
     to => $to,
-    subject => $title,
+    subject => $subj,
     ctype => 'text/html',
     encoding => 'utf-8'
     }) or die $Mail::Sender::Error,"\n";
