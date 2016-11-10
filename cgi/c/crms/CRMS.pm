@@ -8343,6 +8343,14 @@ END
   return $html;
 }
 
+sub SubjectLine
+{
+  my $self = shift;
+  my $rest = shift || '<No Subject>';
+
+  return sprintf "%s %s: $rest", $self->System(), ($DLPS_DEV)? 'Dev':'Prod',
+}
+
 sub GetClosedTickets
 {
   my $self = shift;
