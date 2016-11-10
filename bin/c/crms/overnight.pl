@@ -15,7 +15,7 @@ use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 
 my $usage = <<END;
-USAGE: $0 [-cCehlmpqt] [-x SYS] [start_date [end_date]]
+USAGE: $0 [-acCehlmpqt] [-x SYS] [start_date [end_date]]
 
 Processes reviews, exports determinations, updates candidates,
 updates the queue, recalculates user stats, and clears stale locks.
@@ -23,23 +23,25 @@ updates the queue, recalculates user stats, and clears stale locks.
 If the start or end dates are specified, only loads candidates
 with latest rights DB timestamp between them.
 
--c       Do not update candidates.
--C       Do not process CRI.
--e       Do not process statuses or export determinations.
--h       Print this help message.
--l       Do not clear old locks.
--m       Do not recalculate monthly stats.
--p       Run in production.
--q       Do not update queue.
--t       Run in training.
--x SYS   Set SYS as the system to execute.
+-a      Do not synchronize local attribute/reason tables with Rights Database.
+-c      Do not update candidates.
+-C      Do not process CRI.
+-e      Do not process statuses or export determinations.
+-h      Print this help message.
+-l      Do not clear old locks.
+-m      Do not recalculate monthly stats.
+-p      Run in production.
+-q      Do not update queue.
+-t      Run in training.
+-x SYS  Set SYS as the system to execute.
 END
 
-my ($skipCandidates, $skipExport, $help, $skipCRI, $skipLocks, $skipMonthly,
-    $production, $skipQueue, $training, $sys);
+my ($skipAttrReason, $skipCandidates, $skipExport, $help, $skipCRI,
+    $skipLocks, $skipMonthly, $production, $skipQueue, $training, $sys);
 
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
+           'a'    => \$skipAttrReason,
            'c'    => \$skipCandidates,
            'C'    => \$skipCRI,
            'e'    => \$skipExport,
@@ -128,6 +130,14 @@ else
 {
   ReportMsg("Starting to clear stale locks.");
   $crms->RemoveOldLocks();
+  ReportMsg("DONE clearing stale locks.");
+}
+
+if ($skipLocks) { ReportMsg("-a flag set; skipping attr/reason sync."); }
+else
+{
+  ReportMsg("Starting to synchronize attr/reason tables with Rights Database.");
+  $crms->AttrReasonSync();
   ReportMsg("DONE clearing stale locks.");
 }
 
