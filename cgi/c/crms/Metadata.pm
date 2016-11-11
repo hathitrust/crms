@@ -249,10 +249,10 @@ sub author
   my $self = shift;
   my $long = shift;
 
-  my $data = $self->GetSubfields('100', 1, 'a', 'b', 'c', ($long)? 'd':undef);
+  my $data = $self->GetSubfields('100', 1, 'a', 'b', 'c', 'q', ($long)? 'd':undef);
   $data = $self->GetSubfields('110', 1, 'a', 'b') unless defined $data;
   $data = $self->GetSubfields('111', 1, 'a', 'c') unless defined $data;
-  $data = $self->GetSubfields('700', 1, 'a', 'b', 'c', ($long)? 'd':undef, 'e') unless defined $data;
+  $data = $self->GetSubfields('700', 1, 'a', 'b', 'c', 'q', ($long)? 'd':undef, 'e') unless defined $data;
   $data = $self->GetSubfields('710', 1, 'a') unless defined $data;
   if (defined $data)
   {
