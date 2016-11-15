@@ -8348,7 +8348,7 @@ sub SubjectLine
   my $self = shift;
   my $rest = shift || '<No Subject>';
 
-  return sprintf "%s %s: $rest", $self->System(), ($DLPS_DEV)? 'Dev':'Prod',
+  return sprintf "%s %s: $rest", $self->System(), $self->WhereAmI() || 'Prod';
 }
 
 sub GetClosedTickets
