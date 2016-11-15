@@ -1629,7 +1629,7 @@ sub GetFinalAttrReason
             ' INNER JOIN attributes a ON r.attr=a.id'.
             ' INNER JOIN reasons rs ON r.reason=rs.id'.
             ' WHERE r.id=? ORDER BY r.expert DESC, r.time DESC LIMIT 1';
-  print "$sql\n";
+  #print "$sql\n";
   my $ref = $self->SelectAll($sql, $id);
   if (!$ref->[0]->[0])
   {
