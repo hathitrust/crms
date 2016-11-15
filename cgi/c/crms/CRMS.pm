@@ -3993,7 +3993,6 @@ sub CreateDeterminationsBreakdownData
   my $monthly = shift;
   my $title   = shift;
 
-  #print "CreateDeterminationsBreakdownData('$delimiter','$start','$end','$monthly','$title')<br/>\n";
   my ($year,$month) = $self->GetTheYearMonth();
   my $titleDate = $self->YearMonthToEnglish("$year-$month");
   my $justThisMonth = (!$start && !$end);
@@ -4002,7 +4001,8 @@ sub CreateDeterminationsBreakdownData
   $end = "$year-$month-$lastDay" unless $end;
   my $what = 'date';
   $what = 'DATE_FORMAT(date, "%Y-%m")' if $monthly;
-  my $sql = 'SELECT DISTINCT(' . $what . ') FROM determinationsbreakdown WHERE date>=? AND date<=?';
+  my $sql = 'SELECT DISTINCT(' . $what . ') FROM determinationsbreakdown WHERE date>=? AND date<=?'.
+            ' ORDER BY date DESC';
   #print "$sql<br/>\n";
   my @dates = map {$_->[0];} @{$self->SelectAll($sql, $start, $end)};
   if (scalar @dates && !$justThisMonth)
@@ -4012,7 +4012,8 @@ sub CreateDeterminationsBreakdownData
     $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
   }
   my $report = ($title)? "$title\n":"Determinations Breakdown $titleDate\n";
-  my @titles = ('Date','Status 4','Status 5','Status 6','Status 7','Status 8','Subtotal','Status 9','Total','Status 4','Status 5','Status 6','Status 7','Status 8');
+  my @titles = ('Date','Status 4','Status 5','Status 6','Status 7','Status 8','Subtotal',
+                'Status 9','Total','Status 4','Status 5','Status 6','Status 7','Status 8');
   $report .= join("\t", @titles) . "\n";
   my @totals = (0,0,0,0,0,0);
   foreach my $date (@dates)
@@ -4045,7 +4046,7 @@ sub CreateDeterminationsBreakdownData
       $line[$i+8] = sprintf('%.1f%%', $pct);
     }
     $report .= $date;
-    $report .= "\t" . join("\t", @line) . "\n";
+    $report .= "\t". join("\t", @line). "\n";
   }
   my $gt1 = $totals[0] + $totals[1] + $totals[2] + $totals[3] + $totals[4];
   my $gt2 = $gt1 + $totals[5];
@@ -4124,7 +4125,9 @@ sub CreateDeterminationsBreakdownReport
         $class = 'class="total"';
         $class = 'class="major"' if $i < max keys %whichlines;
       }
-      $report .= sprintf("<td $class $style>%s</td>\n", $line[$i]);
+      my $val = $line[$i];
+      $val = '' if $val eq '0' or $val eq '0.0%';
+      $report .= "<td $class $style>$val</td>\n";
     }
     $report .= "</tr>\n";
   }
