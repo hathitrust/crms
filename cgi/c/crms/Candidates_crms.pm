@@ -274,7 +274,7 @@ sub GetProject
   if ($self->IsStateGovDoc($record) &&
       $author !~ m/university/i && $author !~ m/college/i &&
       $title !~ m/university/i && $title !~ m/college/i &&
-      $field260b !~ m/university\s+press/i)
+      $field260b !~ m/university.*?press/i)
   {
     $proj = 'State gov docs';
   }
