@@ -1620,6 +1620,18 @@ sub MoveFromReviewsToHistoricalReviews
   $self->PrepareSubmitSql($sql, $gid, $id);
   $sql = 'DELETE FROM reviews WHERE id=?';
   $self->PrepareSubmitSql($sql, $id);
+  $sql = 'SELECT user FROM historicalreviews WHERE gid=?';
+  my $ref = $self->SelectAll($sql, $gid);
+  foreach my $row (@{$ref})
+  {
+    my $user = $row->[0];
+    my $flag = $self->ShouldReviewBeFlagged($gid, $user);
+    if (defined $flag)
+    {
+      $sql = 'UPDATE historicalreviews SET flagged=? WHERE gid=? AND user=?';
+      $self->PrepareSubmitSql($sql, $flag, $gid, $user);
+    }
+  }
 }
 
 sub GetFinalAttrReason
@@ -6129,6 +6141,41 @@ sub GetValidation
   my $ref = $self->SelectAll($sql, $start, $end);
   my $row = $ref->[0];
   return @{ $row };
+}
+
+sub ShouldReviewBeFlagged
+{
+  my $self = shift;
+  my $user = shift;
+  my $gid  = shift;
+
+  my ($pd, $icren, $date, $wr);
+  my $sql = 'SELECT r.user, a.name,rs.name,r.category,r.validated FROM historicalreviews r'.
+            ' INNER JOIN exportdata e ON r.gid=e.gid'.
+            ' INNER JOIN attributes a ON r.attr=a.id'.
+            ' INNER JOIN reasons rs ON r.reason=rs.id'.
+            ' WHERE r.gid=? ORDER BY IF(r.user=?,1,0) DESC';
+  my $ref = $self->SelectAll($sql, $gid, $user);
+  #printf "%d results for $gid\n", scalar @{$ref};
+  foreach my $row (@{$ref})
+  {
+    my ($user2, $attr, $reason, $category, $val) = @{$row};
+    if ($user2 eq $user)
+    {
+      return if $val == 1;
+      $pd = 1 if $attr eq 'pd';
+    }
+    else
+    {
+      $icren = 1 if $attr eq 'ic' and $reason eq 'ren';
+      $date = 1 if $attr eq 'und' and $reason eq 'nfi' and $category eq 'Date';
+      $wr = 1 if $attr eq 'und' and $reason eq 'nfi' and $category eq 'Wrong Record';
+    }
+  }
+  return 0 if !$pd;
+  return 1 if $icren;
+  return 2 if $date;
+  return 3 if $wr;
 }
 
 # Is this a properly formatted RenDate?
