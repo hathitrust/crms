@@ -6178,15 +6178,6 @@ sub ShouldReviewBeFlagged
   return 3 if $wr;
 }
 
-# Is this a properly formatted RenDate?
-sub IsRenDate
-{
-  my $self = shift;
-  my $date = shift;
-  my $rendateRE = '^\d\d?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\d\d$';
-  return ($date eq '' || $date =~ m/$rendateRE/);
-}
-
 sub ReviewSearchMenu
 {
   my $self       = shift;

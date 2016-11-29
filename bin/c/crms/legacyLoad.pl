@@ -195,7 +195,7 @@ sub ProcessFile
     die "Not a valid date: $date" unless $date =~ m/^\d\d\d\d-\d\d-\d\d\s\d\d:\d\d:\d\d$/;
     # Rendate is in the yucky format DD-Mon-YY and we need it in the equally yucky format DDMonYY
     $renDate =~ s/-//g;
-    die "Not a valid renewal date: $renDate" unless $crms->IsRenDate($renDate);
+    die "Not a valid renewal date: $renDate" unless IsRenDate($renDate);
     if ( $verbose )
     {
       print "ID:    $id\n";
@@ -402,4 +402,13 @@ sub ValidateSubmissionHistorical
     }
   }
   return $errorMsg;
+}
+
+# Is this a properly formatted RenDate?
+sub IsRenDate
+{
+  my $date = shift;
+
+  my $rendateRE = '^\d\d?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\d\d$';
+  return ($date eq '' || $date =~ m/$rendateRE/);
 }
