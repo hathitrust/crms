@@ -2406,7 +2406,7 @@ sub SearchAndDownload
         my $id = $row->[0];
         my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
         $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
-               'r.category,r.legacy,r.renDate,r.priority,r.swiss,q.status,b.title,b.author,'.
+               'r.category,r.legacy,r.renDate,q.priority,r.swiss,q.status,b.title,b.author,'.
                (($page eq 'adminHistoricalReviews')?'r.validated':'r.hold ').
                " FROM $top INNER JOIN $table r ON b.id=r.id".
                " WHERE r.id='$id' $qrest ORDER BY $order $dir";
@@ -2654,7 +2654,7 @@ sub GetVolumesRef
   {
     my $id = $row->[0];
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
-           'r.category,r.legacy,r.renDate,r.priority,r.swiss,q.status,b.title,b.author'.
+           'r.category,r.legacy,r.renDate,q.priority,r.swiss,q.status,b.title,b.author'.
            (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':'') .
            (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ',r.hold':'') .
            " FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ " .
@@ -2732,7 +2732,7 @@ sub GetVolumesRefWide
   {
     my $id = $row->[0];
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
-           'r.category,r.legacy,r.renDate,r.priority,r.swiss,q.status,b.title,b.author'.
+           'r.category,r.legacy,r.renDate,q.priority,r.swiss,q.status,b.title,b.author'.
            (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':'r.hold').
            " FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id".
            " WHERE r.id='$id' ORDER BY $order $dir";
