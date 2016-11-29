@@ -4641,14 +4641,14 @@ sub GetMonthStats
   my $lastDay = Days_in_Month($y, $m);
   my $mintime = "$y-$m-01 00:00:00";
   my $maxtime = "$y-$m-$lastDay 23:59:59";
-  my ($total_correct,$total_incorrect,$total_neutral) = $self->CountCorrectReviews($user, $mintime, $maxtime);
-  $sql = 'INSERT INTO userstats (user,month,year,monthyear,total_reviews,total_pd,' .
-         'total_ic,total_und,total_time,time_per_review,reviews_per_hour,' .
-         'total_outliers,total_correct,total_incorrect,total_neutral)' .
-         ' VALUES ' . $self->WildcardList(15);
+  my ($total_correct,$total_incorrect,$total_neutral,$total_flagged) = $self->CountCorrectReviews($user, $mintime, $maxtime);
+  $sql = 'INSERT INTO userstats (user,month,year,monthyear,total_reviews,total_pd,'.
+         'total_ic,total_und,total_time,time_per_review,reviews_per_hour,'.
+         'total_outliers,total_correct,total_incorrect,total_neutral,total_flagged)'.
+         ' VALUES ' . $self->WildcardList(16);
   $self->PrepareSubmitSql($sql, $user, $m, $y, $y . '-' . $m, $total_reviews, $total_pd,
                           $total_ic, $total_und, $total_time, $time_per_review, $reviews_per_hour,
-                          $total_outliers, $total_correct, $total_incorrect, $total_neutral);
+                          $total_outliers, $total_correct, $total_incorrect, $total_neutral, $total_flagged);
 }
 
 sub UpdateDeterminationsBreakdown
@@ -6113,7 +6113,10 @@ sub CountCorrectReviews
     $correct = $cnt if $val == 1;
     $neutral = $cnt if $val == 2;
   }
-  return ($correct,$incorrect,$neutral);
+  $sql = 'SELECT COUNT(*) FROM historicalreviews'.
+         ' WHERE legacy!=1 AND user=? AND time>=? AND time<=? AND flagged IS NOT NULL';
+  my $flagged = $self->SimpleSqlGet($sql, $user, $start, $end);
+  return ($correct, $incorrect, $neutral, $flagged);
 }
 
 # Gets only those reviewers that are not experts
