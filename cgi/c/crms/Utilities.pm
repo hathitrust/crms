@@ -5,30 +5,17 @@ use warnings;
 
 sub HexDump
 {
-  $_ = shift;
-
-  my $offset = 0;
-  my(@array,$format);
   my $dump = '';
-  foreach my $data (unpack("a16"x(length($_[0])/16)."a*",$_[0]))
+  my $offset = 0;
+        
+  foreach my $chunk (unpack "(a16)*", $_[0])
   {
-    my($len)=length($data);
-    if ($len == 16)
-    {
-      @array = unpack('N4', $data);
-      $format="0x%08x (%05d)   %08x %08x %08x %08x   %s\n";
-    }
-    else
-    {
-      @array = unpack('C*', $data);
-      $_ = sprintf "%2.2x", $_ for @array;
-      push(@array, '  ') while $len++ < 16;
-      $format="0x%08x (%05d)" .
-           "   %s%s%s%s %s%s%s%s %s%s%s%s %s%s%s%s   %s\n";
-    }
-    $data =~ tr/\0-\37\177-\377/./;
-    $dump .= sprintf $format,$offset,$offset,@array,$data;
-    $offset += 16;
+      my $hex = unpack "H*", $chunk; # hexadecimal magic
+      $chunk =~ tr/ -~/./c;          # replace unprintables
+      $hex   =~ s/(.{1,8})/$1 /gs;   # insert spaces
+      $dump .= sprintf "0x%08x (%05u)  %-*s %s\n",
+          $offset, $offset, 36, $hex, $chunk;
+      $offset += 16;
   }
   return $dump;
 }
@@ -87,9 +74,24 @@ sub StackTrace
   my $trace = "--- Begin stack trace ---\n";
   while ((my @call_details = (caller($i++))) && ($i<$max_depth))
   {
-    $trace .= "$call_details[1] line $call_details[2] in function $call_details[3]\n";
+    $trace .= "$call_details[1] line $call_details[2] at $call_details[3]\n";
   }
   return $trace . "--- End stack trace ---\n";
+}
+
+sub GenerateID
+{
+  my @chars = ('a' .. 'z', 0 .. 9);
+  return join '', @chars[ map { rand @chars } 1 .. 8 ];
+}
+
+sub NearestPowerOfTen
+{
+  my $self = shift;
+  my $num  = shift;
+
+  my $roundto = 10 ** max(int(log(abs($num))/log(10))-1,1);
+  return int(ceil($num/$roundto))*$roundto;
 }
 
 return 1;
