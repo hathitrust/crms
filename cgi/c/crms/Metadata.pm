@@ -249,10 +249,10 @@ sub author
   my $self = shift;
   my $long = shift;
 
-  my $data = $self->GetSubfields('100', 1, 'a', 'b', 'c', 'q', ($long)? 'd':undef);
+  my $data = $self->GetSubfields('100', 1, 'a', 'b', 'q', 'c', ($long)? 'd':undef);
   $data = $self->GetSubfields('110', 1, 'a', 'b') unless defined $data;
   $data = $self->GetSubfields('111', 1, 'a', 'c') unless defined $data;
-  $data = $self->GetSubfields('700', 1, 'a', 'b', 'c', 'q', ($long)? 'd':undef, 'e') unless defined $data;
+  $data = $self->GetSubfields('700', 1, 'a', 'b', 'q', 'c', ($long)? 'd':undef, 'e') unless defined $data;
   $data = $self->GetSubfields('710', 1, 'a') unless defined $data;
   if (defined $data)
   {
@@ -436,31 +436,6 @@ sub allHTIDs
   return \@ids;
 }
 
-sub editor
-{
-  my $self = shift;
-  my $mult = shift;
-
-  my @eds;
-  my $n = $self->CountDatafields('700');
-  my %seen;
-  foreach my $i (1 .. $n)
-  {
-    my $f700e = $self->GetDatafield('700', 'e', $i);
-    if ($f700e and $f700e =~ m/(^|\s+)ed(itor)?\.?(\s+|$)/i)
-    {
-      my $data = $self->GetSubfields('700', $i, 'a');
-      next if $data and $seen{$data};
-      $seen{$data} = 1 if $data;
-      $data = $self->GetSubfields('700', $i, 'a', 'd', 'e');
-      push @eds, $data if $data;
-    }
-    last if scalar @eds == 1 and not $mult;
-  }
-  return join '; ', @eds unless wantarray;
-  return @eds;
-}
-
 sub volumeIDs
 {
   my $self = shift;
@@ -551,38 +526,10 @@ sub GetAllAuthors
   my $n = $self->CountDatafields('700');
   foreach my $i (1 .. $n)
   {
-    $au = $self->GetSubfields('700', $i, 'a', 'b', 'c', 'd');
+    $au = $self->GetSubfields('700', $i, 'a', 'b', 'q', 'c', 'd');
     $aus{$au} = 1 if $au;
   }
-  $n = $self->CountDatafields('710');
-  foreach my $i (1 .. $n)
-  {
-    $au = $self->GetSubfields('710', $i, 'a', 'b');
-    $aus{$au} = 1 if $au;
-  }
-  my @eds = $self->editor(1);
-  $aus{$_} = 1 for @eds;
   return sort keys %aus;
-}
-
-sub GetAdditionalAuthors
-{
-  my $self   = shift;
-
-  my @aus = ();
-  my $n = $self->CountDatafields('700');
-  foreach my $i (1 .. $n)
-  {
-    my $data = $self->GetSubfields('700', $i, 'a', 'b', 'c', 'd');
-    push @aus, $data if defined $data;
-  }
-  $n = $self->CountDatafields('710');
-  foreach my $i (1 .. $n)
-  {
-    my $data = $self->GetSubfields('710', $i, 'a', 'b');
-    push @aus, $data if defined $data;
-  }
-  return @aus;
 }
 
 sub GetSubfields

@@ -73,7 +73,7 @@ sub set
 
 sub Version
 {
-  return '5.5.6';
+  return '5.6';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -7614,8 +7614,6 @@ sub Rights
 
   my @all = ();
   my $e = $self->IsUserExpert();
-  #my $r = ($e || $self->IsUserReviewer() || $self->IsUserAdvanced());
-  #my $x = $self->IsUserExtAdmin();
   my $a = $self->IsUserAdmin();
   my $s = $self->IsUserSuperAdmin();
   return \@all if $exp && !$e && !$s;
@@ -7647,8 +7645,6 @@ sub Rights
          ($restricted &&
           (($proj && $restricted =~ m/p/) ||
            ($e && $restricted =~ m/e/) ||
-           #($r && $restricted =~ m/r/) ||
-           #($x && $restricted =~ m/x/) ||
            ($a && $restricted =~ m/a/) ||
            ($s && $restricted =~ m/s/) ||
            ($oo && $restricted =~ m/o/)))))
@@ -7971,180 +7967,39 @@ sub GetADDFromAuthor
   return $add;
 }
 
-# If successful, returns a hash ref that contains values for some subset of
-# the following keys: 'add', 'author' (the VIAF author name), and 'country'.
-# Returns undef if none of that data could be found.
-sub GetVIAFData
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $author = shift;
-
-  my %ret;
-  my $add;
-  my $a;
-  $a = $author if defined $author;
-  $a = $self->GetAuthor($id) unless defined $a;
-  if (defined $a && length $a)
-  {
-    my $sql = 'SELECT viaf_author,year,country,viafID,DATE_SUB(NOW(),INTERVAL 1 MONTH)>time' .
-              ' FROM viaf WHERE author=?';
-    my $ref = $self->SelectAll($sql, $a);
-    if (defined $ref && scalar @{$ref} > 0)
-    {
-      # If the data is over a month old, re-fetch.
-      my $old = $ref->[0]->[4];
-      if ($old)
-      {
-        $self->PrepareSubmitSql('DELETE FROM viaf WHERE author=?', $a);
-      }
-      else
-      {
-        $ret{'author'}  = $ref->[0]->[0];
-        $ret{'add'} = $ref->[0]->[1];
-        $ret{'country'} = $ref->[0]->[2];
-        $ret{'viafID'} = $ref->[0]->[3];
-        return \%ret;
-      }
-    }
-    my $a2 = $a;
-    $a2 =~ s/[^A-Za-z]//g;
-    my %adds;
-    my %names;
-    my $name;
-    my $url = 'http://viaf.org/viaf/search?query=local.personalNames+all+%22' . $a .
-              '%22+&maximumRecords=10&startRecord=1&sortKeys=holdingscount&httpAccept=text/xml';
-    my $ua = LWP::UserAgent->new;
-    $ua->timeout(1000);
-    my $req = HTTP::Request->new(GET => $url);
-    my $res = $ua->request($req);
-    return unless $res->is_success;
-    my $xml = $res->content;
-    my $parser = XML::LibXML->new();
-    my $doc;
-    eval {
-      $doc = $parser->parse_string($xml);
-    };
-    if ($@) { $self->SetError("failed to parse ($xml): $@"); return; }
-    my $xpc = XML::LibXML::XPathContext->new($doc);
-    #open my $pipe, '|xmllint --format -' or die '...';
-    #print $pipe $xml;
-    #close $pipe;
-    my $n = 0;
-    my $i = 1;
-    my $pref = "/*[local-name()='searchRetrieveResponse']/*[local-name()='records']/*[local-name()='record']";
-    my $xpath = "*[local-name()='recordData']/*[local-name()='VIAFCluster']/*[local-name()='mainHeadings']/*[local-name()='data']/*[local-name()='text']";
-    my $regex = '\d?\d\d\d\??\s*-\s*(\d?\d\d\d)[.,;)\s]*$';
-    foreach my $node ($xpc->findnodes($pref))
-    {
-      my @vals = $node->findnodes($xpath);
-      my $name2;
-      foreach my $node2 (@vals)
-      {
-        my $val = $node2->string_value();
-        my $val2 = $val;
-        $val2 =~ s/[^A-Za-z]//g;
-        if ($val =~ m/$regex/)
-        {
-          my $add = $1;
-          $add = undef if $val =~ m/(fl\.*|active)\s*$regex/i;
-          if (defined $add)
-          {
-            ${$adds{$i}}{$add} = 1;
-            $name2 = $val;
-          }
-        }
-        if (length $a2 && $val2 =~ m/^$a2/i)
-        {
-          $name = $name2 if $name2 =~ m/[A-Za-z]/;
-          $name = $val unless defined $name;
-          $n = $i;
-        }
-      }
-      $i++;
-      last if $n > 0;
-    }
-    if ($n > 0)
-    {
-      $pref = "/*[local-name()='searchRetrieveResponse']/*[local-name()='records']/*[local-name()='record'][$n]/*[local-name()='recordData']";
-      $xpath = "$pref/*[local-name()='VIAFCluster']/*[local-name()='nationalityOfEntity']/*[local-name()='data']/*[local-name()='text']";
-      my @vals = $xpc->findnodes($xpath);
-      foreach my $val (@vals)
-      {
-        my $where = $val->string_value();
-        if (defined $where && $where ne 'US' && $where ne 'XX')
-        {
-          $ret{'country'} = $where;
-          last;
-        }
-      }
-      $xpath = $pref . '/*[local-name()="VIAFCluster"]/*[local-name()="viafID"]';
-      @vals = $xpc->findnodes($xpath);
-      $ret{'viafID'} = $vals[0]->string_value() if scalar @vals;
-    }
-    if ($n > 0 && 1 == scalar keys %{$adds{$n}})
-    {
-      $ret{'add'} = (keys %{$adds{$n}})[0];
-      $ret{'author'} = $name if defined $name;
-    }
-    if (defined $name)
-    {
-      $sql = 'DELETE FROM viaf WHERE author=?';
-      $self->PrepareSubmitSql($sql, $a);
-      $sql = 'INSERT INTO viaf (author,viaf_author,year,country,viafID) VALUES (?,?,?,?,?)';
-      $self->PrepareSubmitSql($sql, $a, $name, $ret{'add'},$ret{'country'}, $ret{'viafID'});
-    }
-  }
-  return (scalar keys %ret > 0)? \%ret:undef;
-}
-
 sub VIAFWarning
 {
   my $self   = shift;
   my $id     = shift;
   my $record = shift;
 
+  use VIAF;
   my %warnings;
-  my @aus;
   $record = $self->GetMetadata($id) unless defined $record;
   return 'unable to fetch MARC metadata for volume' unless defined $record;
-  my $au = $record->author(1);
-  push @aus, $au if defined $au;
-  my @add = $record->GetAdditionalAuthors();
-  push @aus, $_ for @add;
-  foreach $au (@aus)
+  my @authors = $record->GetAllAuthors();
+  foreach my $author (@authors)
   {
-    my $data = $self->GetVIAFData($id, $au);
+    my $data = VIAF::GetVIAFData($self, $author);
     if (defined $data and scalar keys %{$data} > 0)
     {
       my $country = $data->{'country'};
-      if (defined $country && substr($country, 0, 2) ne 'US' &&
-          substr($country, 0, 2) ne 'XX')
+      if (defined $country && $country ne 'US')
       {
+        my $abd = $data->{'abd'};
         my $add = $data->{'add'};
-        next if defined $add and $add <= 1895;
-        my $last = $au;
+        next if defined $abd and $abd <= 1815;
+        next if defined $add and $add <= 1925;
+        my $dates = '';
+        $dates = sprintf ' %s-%s', (defined $abd)? $abd:'', (defined $add)? $add:'' if $abd or $add;
+        my $last = $author;
         $last = $1 if $last =~ m/^(.+?),.*/;
-        $warnings{"$last ($country)"} = 1;
+        $last =~ s/[.,;) ]*$//;
+        $warnings{"$last ($country$dates)"} = 1;
       }
     }
   }
   return (scalar keys %warnings)? join '; ', keys %warnings:undef;
-}
-
-sub GetAllAuthors
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-
-  my @aus;
-  $record = $self->GetMetadata($id) unless defined $record;
-  if (defined $record)
-  {
-    push @aus, $_ for $record->GetAllAuthors();
-  }
-  return @aus;
 }
 
 # Return dollarized barcode if suffix is the right length,
