@@ -43,26 +43,18 @@ var gSys = '[% crms.Sys() %]';
         <span class="darkred" style="font-size:3.2em;">Location:&nbsp;[% where.replace(" ","&nbsp;") %]</span>
       [% END %]
       <div style="float:right;">
-        <table class="exportStats">
+        <table class="helloBox">
           <tr>
-            <td class="hello" style="text-align:right;">
+            <td rowspan="2" style="padding:0px;height:80px;line-height:1px;">
+              <img src="/c/crms/HathiTrustLogo.png" width="86" height="80" alt="HathiTrust Logo"/>
+            </td>
+            <td style="line-height:1px;">
               Hello&nbsp;[% crms.GetUserName().replace(" ","&nbsp;") %]&nbsp;&nbsp;
               <a href="[% crms.Sysify('crms?p=Logout') %]" class="header">logout</a>
             </td>
           </tr>
           <tr>
-            <td class="hello" style="text-align:right;">
-              [% experts = crms.GetSystemVar("expertsEmail") %]
-              [% IF experts %]
-                <a href="mailto:[% experts %]?subject=CRMS%20Feedback" class="header">
-                  <img width="16" height="16" alt="Report error" src="/c/crms/SendIcon.png"/>
-                  Click here to report errors
-                </a>
-              [% END %]
-            </td>
-          </tr>
-          <tr>
-            <td class="hello" style="text-align:right;">
+            <td>
               [% crms.System() %]&nbsp;version&nbsp;[% crms.Version() %]
             </td>
           </tr>
