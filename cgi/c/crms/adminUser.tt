@@ -92,31 +92,29 @@
       <td>[% crms.GetUserKerberosID(userid) %]</td>
       <td>
         [% inst = crms.GetUserInstitution(userid) %]
+        [% shortname = crms.GetInstitutionName(inst) %]
         <a href="[% crms.Sysify('crms?p=adminUserRateInst;inst=' _ inst) %]" target="_blank">
-          [% crms.GetInstitutionName(inst) %]
+          [% shortname %]
         </a></td>
       [% IF sys != 'crmsworld' %]
       <td style="text-align:center">[% IF rcpc %][% icon %][% END %]</td>
       [% END %]
-      <td style="text-align:center">[% IF r %][% icon %][% END %]</td>
-      <td style="text-align:center">[% IF v %][% icon %][% END %]</td>
-      <td style="text-align:center">[% IF e %][% icon %][% END %]</td>
-      <td style="text-align:center">[% IF x %][% icon %][% END %]</td>
-      <td style="text-align:center">[% IF a %][% icon %][% END %]</td>
-      <td style="text-align:center">[% IF s %][% icon %][% END %]</td>
-      [% note = crms.GetUserNote(userid) %]
+      <td style="text-align:center;">[% IF r %][% icon %][% END %]</td>
+      <td style="text-align:center;">[% IF v %][% icon %][% END %]</td>
+      <td style="text-align:center;">[% IF e %][% icon %][% END %]</td>
+      <td style="text-align:center;">[% IF x %][% icon %][% END %]</td>
+      <td style="text-align:center;">[% IF a %][% icon %][% END %]</td>
+      <td style="text-align:center;">[% IF s %][% icon %][% END %]</td>
       <td style="text-align:center;">[% crms.GetUserProjects(userid).join(', ') %]</td>
       [% ips = crms.GetUserIPs(userid) %]
       <td>
-      [% IF !userid.match("-expert") && !userid.match("-nonexpert") &&
-         !userid.match("-reviewer") && r && !ips.keys.size() && inst != 0 %]
+      [% IF !userid.match("-expert") && !userid.match("-reviewer") && r && !ips.keys.size() && inst != 0 %]
       <span class="red">Warning: no IP address</span>
       [% ELSE %]
         [% ips.keys.join(', ') %]
-        [% IF !userid.match("-expert") && !userid.match("-nonexpert") &&
-           !userid.match("-reviewer") && r %]
+        [% IF !userid.match("-expert") && !userid.match("-reviewer") && r %]
           [% role = crms.GetUserRole(userid) %]
-          [% IF "crms" != role && inst != 0 %]
+          [% IF "crms" != role && 'Michigan' != shortname %]
             <span class="red"><br/>Role <strong>[% role %]</strong></span>
           [% END %]
           [% exp = crms.IsUserExpired(userid) %]
@@ -155,6 +153,7 @@
           [% END %]
         [% END %]
       </td>
+      [% note = crms.GetUserNote(userid) %]
       <td style="text-align:center;">[% note %]</td>
     </tr>
   [% END %]
