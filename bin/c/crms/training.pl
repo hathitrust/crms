@@ -10,55 +10,62 @@ BEGIN
 }
 
 use strict;
+use warnings;
 use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
-use Spreadsheet::WriteExcel;
+use Term::ANSIColor qw(:constants);
+$Term::ANSIColor::AUTORESET = 1;
 
 my $usage = <<END;
-USAGE: $0 [-adhnrv] [-e FILE] [-o FILE] [-x SYS]
-          [-p PRI [-p PRI2...]] count
+USAGE: $0 [-7Ddhnv] [-e N] [-o FILE] [-x SYS]
+          [-p PROJ [-p PROJ2...]] COUNT
 
-Populates the training database with examples (correct, single reviews) from production.
+Populates the training database with examples (correct, single reviews)
+from production so that the queue size is increased to COUNT.
 
--a       Allow status 7 reviews from non-advanced reviewers.
+-7       Disallow status 7 determinations.
+-D       Delete all existing reviews and volumes in queue.
 -d       Run in dev (training otherwise).
--e FILE  Write an Excel spreadsheet with information on the volumes to be added.
+-e N     Specify an ease factor from 1 to 3 inclusive:
+         1. Use only Status 4 determinations, no Inserts.
+         2. Use only Status 4 and 5 determinations, no Inserts.
+         3. (default) Use all Status 4 and 5 determinations.
 -h       Print this help message.
 -n       Do not submit SQL.
--o FILE  Write a tab-delimited file with information on the volumes to be added.
--p PRI   Only include reviews of the specified priority PRI
+-p PROJ  Only include reviews on the specified project PROJ.
 -v       Be verbose.
 -x SYS   Set SYS as the system to execute.
 END
 
-my $noadvanced;
+my $no7;
+my $del;
 my $dev;
-my $excel;
+my $ease;
 my $help;
 my $noop;
-my $out;
-my @pris;
-my $random;
+my @projs;
 my $verbose;
 my $sys;
 
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
-           'a'    => \$noadvanced,
+           '7'    => \$no7,
+           'D'    => \$del,
            'd'    => \$dev,
-           'e:s'  => \$excel,
+           'e:3'  => \$ease,
            'h'    => \$help,
            'n'    => \$noop,
-           'o:s'  => \$out,
-           'p:s@' => \@pris,
-           'r'    => \$random,
+           'p:s@' => \@projs,
            'v'    => \$verbose,
            'x:s'  => \$sys);
 
 die "$usage\n\n" if $help;
 die "You need a volume count.\n" unless 1 == scalar @ARGV;
 my $count = $ARGV[0];
-die "Count format should be numeric\n" if $count !~ m/\d+/;
+die "Count format should be numeric\n" if $count !~ m/^\d+$/;
+die "Ease should be numeric\n" if defined $ease && $ease !~ m/^\d+$/;
+die "Ease should be between 1 and 3 inclusive\n" if defined $ease && ($ease < 1 || $ease > 3);
+$ease = 3 unless defined $ease;
 
 my $crmsp = CRMS->new(
     logFile      =>   "$DLXSROOT/prep/c/crms/training_hist.txt",
@@ -77,95 +84,103 @@ my $crmst = CRMS->new(
     dev          =>   ($dev)? $DLPS_DEV:'crms-training'
 );
 
+if ($del)
+{
+  print "Deleting reviews and emptying queue...\n" if $verbose;
+  $crmst->PrepareSubmitSql('DELETE from queue') unless $noop;
+  $crmst->PrepareSubmitSql('DELETE from reviews') unless $noop;
+}
 
-my $workbook;
-my $worksheet;
-my @cols = ('ID', 'Author', 'Title', 'Pub Date', 'Country', 'User', 'Date', 'Category', 'Rights');
-if (defined $excel)
-{
-  $workbook = Spreadsheet::WriteExcel->new($excel);
-  $worksheet = $workbook->add_worksheet();
-  $worksheet->write_string(0, $_, $cols[$_]) for (0 .. scalar @cols);
-}
-my $fh;
-if (defined $out)
-{
-  open $fh, '>', $out or die "Can't open output file\n";
-  binmode($fh, ':utf8');
-  print $fh join "\t", @cols;
-}
 ### Get a list of ids from the training DB already seen,
 ### and populate the 'seen' hash with them.
 my %seen;
-my %seenAuthors;
-my %seenTitles;
-my $sql = 'SELECT q.id,b.author,b.title FROM queue q INNER JOIN bibdata b ON q.id=b.id';
+my %seenAuthorTitles;
+my %seenSysids;
+my $sql = 'SELECT q.id,b.sysid,b.author,b.title FROM queue q INNER JOIN bibdata b ON q.id=b.id';
 my $ref = $crmst->SelectAll($sql);
 foreach my $row (@{$ref})
 {
   my $id = $row->[0];
-  my $a = $row->[1];
-  my $t = $row->[2];
+  my $sysid = $row->[1];
+  my $a = $row->[2] || '';
+  my $t = $row->[3] || '';
+  my $at = $a . $t;
+  $at =~ s/[^A-Za-z0-9]//g;
+  print "Updating seen filters for existing $id ($sysid) $at\n" if $verbose;
   $seen{$id} = 1;
-  $seenAuthors{$a} = 1 if length $a;
-  $seenTitles{$t} = 1 if length $t;
+  $seenSysids{$sysid} = 1;
+  $seenAuthorTitles{$at} = 1 if length $at;
 }
 my $n = 0;
-my $usql = sprintf '(SELECT id FROM users WHERE %s=1'.
-                   ' AND extadmin+expert+admin+superadmin=0)',
-                   ($noadvanced)?'reviewer':'advanced';
-my $ssql = 'e.status=4 OR e.status=5';
-$ssql .= ' OR e.status=7' if $noadvanced;
-my $prisql = '';
-$prisql = sprintf ' AND priority IN (%s)', join ',', @pris if scalar @pris;
-$sql = 'SELECT r.id,r.user,r.time,r.gid,e.status FROM historicalreviews r'.
+my $usql = '(SELECT id FROM users WHERE reviewer=1 AND extadmin+expert+admin+superadmin=0)';
+my $ssql = 'e.status=4';
+$ssql .= ' OR e.status=5' unless $ease == 1;
+$ssql .= ' OR e.status=7' unless $no7;
+my $projsql = (scalar @projs)? (sprintf 'e.project IN ("%s")', join '","', @projs):'e.project IS NULL';
+$sql = 'SELECT r.id,r.user,r.time,r.gid,e.status,e.project FROM historicalreviews r'.
        ' INNER JOIN exportdata e ON r.gid=e.gid WHERE r.user IN '. $usql.
-       ' AND r.validated=1 AND ('. $ssql. ')'.
-       $prisql .  ' ORDER BY e.status DESC,r.time DESC';
-my $ref = $crmsp->SelectAll($sql);
-printf "$sql: %d results\n", scalar @$ref if $verbose;
+       ' AND r.validated=1 AND e.reason!="crms" AND ('. $ssql. ')'.
+       ' AND '. $projsql. ' ORDER BY r.time DESC';
+
+$ref = $crmsp->SelectAll($sql);
+printf "$sql: %s results\n", (defined $ref)? scalar @$ref:'no' if $verbose;
 my $s4 = 0;
 my $s5 = 0;
 my $s7 = 0;
+$projsql = (scalar @projs)? (sprintf 'project IN ("%s")', join '","', @projs):' project IS NULL';
+$sql = 'SELECT COUNT(*) FROM queue WHERE '. $projsql;
+print "$sql\n" if $verbose;
+my $already = $crmst->SimpleSqlGet($sql);
+$count -= $already;
+print "Need $count volumes ($already already in queue)\n" if $verbose;
 foreach my $row (@{$ref})
 {
   my $id = $row->[0];
   last if $n >= $count;
   my $record = $crmsp->GetMetadata($id);
   next unless defined $record;
+  my $sysid = $record->sysid;
   my $a = $record->author;
   my $t = $record->title;
+  my $at = $a . $t;
+  $at =~ s/[^A-Za-z0-9]//g;
   if ($seen{$id})
   {
-    print "Skipping $id, it has been seen\n" if $verbose;
+    print RED "Skipping $id, it has been seen\n" if $verbose;
     next;
   }
-  if ($seenAuthors{$a})
+  if ($seenSysids{$sysid})
   {
-    print "Skipping $id, author has been seen ($a)\n" if $verbose;
+    print RED "Skipping $id, sysid has been seen ($sysid)\n" if $verbose;
     next;
   }
-  if ($seenTitles{$t})
+  if ($seenAuthorTitles{$t})
   {
-    print "Skipping $id, title has been seen ($t)\n" if $verbose;
+    print RED "Skipping $id, author/title has been seen ($t)\n" if $verbose;
     next;
   }
   $seen{$id} = 1;
-  $seenAuthors{$a} = 1 if length $a;
-  $seenTitles{$t} = 1 if length $t;
+  $seenSysids{$sysid} = 1;
+  $seenAuthorTitles{$at} = 1 if length $at;
   my $user   = $row->[1];
   my $time   = $row->[2];
   my $gid    = $row->[3];
   my $status = $row->[4];
-  print "$id ($gid, S$status)\n" if $verbose;
-  # Do not do nonmatching 'crms' status 4s.
-  my $expr = $crmsp->SimpleSqlGet('SELECT reason FROM exportdata WHERE gid=?', $gid);
-  next if $expr eq 'crms';
+  my $proj   = $row->[5];
+  # Disallow swissed volumes.
   $sql = 'SELECT MAX(swiss) FROM historicalreviews WHERE id=?';
-  next if 0 < $crmsp->SimpleSqlGet($sql, $id);
-  $sql = 'SELECT reason FROM exportdata WHERE gid=?';
-  my $expreason = $crmsp->SimpleSqlGet($sql, $gid);
-  next if $expreason eq 'crms';
+  if (0 < $crmsp->SimpleSqlGet($sql, $id))
+  {
+    print RED "Skipping swissed $id\n" if $verbose;
+    next;
+  }
+  # Disallow inserts unless ease is 3.
+  $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE gid=? AND category="Insert(s)"';
+  if (0 < $crmsp->SimpleSqlGet($sql, $gid) && $ease < 3)
+  {
+    print RED "Skipping Inserts on $id for ease $ease\n" if $verbose;
+    next;
+  }
   $sql = 'SELECT attr,reason,renDate,renNum,category,note'.
          ' FROM historicalreviews WHERE id=? AND user=? AND time=?';
   my $ref2 = $crmsp->SelectAll($sql, $id, $user, $time);
@@ -176,45 +191,25 @@ foreach my $row (@{$ref})
   my $renNum = $row->[3];
   my $category = $row->[4];
   my $note = $row->[5];
-  $sql = 'INSERT INTO queue (id,time,pending_status) VALUES (?,?,1)';
-  $crmst->PrepareSubmitSql($sql, $id, $time) unless $noop;
+  my $projDesc = (defined $proj)? " for project '$proj'":'';
+  print GREEN "Add to queue: $id$proj\n" if $verbose;
+  $sql = 'INSERT INTO queue (id,time,pending_status,project) VALUES (?,?,1,?)';
+  $crmst->PrepareSubmitSql($sql, $id, $time, $proj) unless $noop;
+  my $ta = $crmst->TranslateAttr($attr);
+  my $tr = $crmst->TranslateReason($reason);
+  print "  $user ($ta/$tr) status $status ($time)\n" if $verbose;
   $sql = 'INSERT INTO reviews (id,user,time,attr,reason,renDate,renNum,category,note)'.
          'VALUES (?,?,?,?,?,?,?,?,?)';
   $crmst->PrepareSubmitSql($sql, $id, $user, $time, $attr, $reason,
                           $renDate, $renNum, $category, $note) unless $noop;
-  $crmst->UpdateMetadata($id, 1) unless $noop;
-  if (defined $excel || defined $out)
-  {
-    my $date = $crmst->GetRecordPubDate($id, $record);
-    my $country = $crmst->GetRecordPubCountry($id, $record);
-    my $rights = $crmst->TranslateAttr($attr) . '/' . $crmst->TranslateReason($reason);
-    $category = $row->[4];
-    if (defined $out)
-    {
-      print $fh join "\t", ($id, $a, $t, $date, $country, $user, $time, $category, $rights);
-    }
-    if (defined $excel)
-    {
-      $worksheet->write_string($n+1, 0, $id);
-      $worksheet->write_string($n+1, 1, $a);
-      $worksheet->write_string($n+1, 2, $t);
-      $worksheet->write_string($n+1, 3, $date);
-      $worksheet->write_string($n+1, 4, $country);
-      $worksheet->write_string($n+1, 5, $user);
-      $worksheet->write_string($n+1, 6, $time);
-      $worksheet->write_string($n+1, 7, $category);
-      $worksheet->write_string($n+1, 8, $rights);
-    }
-  }
+  $crmst->UpdateMetadata($id, 1, $record) unless $noop;
   $n++;
   $s4++ if $status == 4;
   $s5++ if $status == 5;
   $s7++ if $status == 7;
 }
-$workbook->close() if $workbook;
-close $fh if defined $out;
+
 $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,"training.pl")';
-print "$sql\n" if $verbose;
 $crmst->PrepareSubmitSql($sql, $n) unless $noop;
 print "Added $n: $s4 status 4, $s5 status 5, $s7 status 7\n";
 print "Warning: $_\n" for @{$crmsp->GetErrors()};
