@@ -138,7 +138,7 @@ else
 {
   ReportMsg("Starting to synchronize attr/reason tables with Rights Database.");
   $crms->AttrReasonSync();
-  ReportMsg("DONE clearing stale locks.");
+  ReportMsg("DONE synchronizing attr/reasons.");
 }
 
 my $r = $crms->GetErrors();
