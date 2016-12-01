@@ -151,16 +151,16 @@ else
   ok('' eq
      $crms->ValidateSubmission('uc1.31822009761677','moseshll',1,2,undef,undef,undef,undef),     'pd/ncn superadmin <63 -ren');
   ok('Renewal no longer required for works published after 1963. ' eq
-     $crms->ValidateSubmission('mdp.39015011285692','jaheim123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin >63 +ren');
+     $crms->ValidateSubmission('mdp.39015011285692','gnichols123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin >63 +ren');
   ok('' eq
-     $crms->ValidateSubmission('mdp.39015011285692','jaheim123',1,2,undef,undef,undef,undef),     'pd/ncn admin >63 -ren');
+     $crms->ValidateSubmission('mdp.39015011285692','gnichols123',1,2,undef,undef,undef,undef),     'pd/ncn admin >63 -ren');
   ok('' eq
-     $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin <63 +ren -note');
+     $crms->ValidateSubmission('uc1.31822009761677','gnichols123',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn admin <63 +ren -note');
   
   ok('' eq
-     $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,'blah','Expert Note','R000','1Jan60'), 'pd/ncn admin <63 +ren +note');
+     $crms->ValidateSubmission('uc1.31822009761677','gnichols123',1,2,'blah','Expert Note','R000','1Jan60'), 'pd/ncn admin <63 +ren +note');
   ok('' eq
-     $crms->ValidateSubmission('uc1.31822009761677','jaheim123',1,2,'blah','Expert Note',undef,undef),     'pd/ncn admin <63 -ren +note');
+     $crms->ValidateSubmission('uc1.31822009761677','gnichols123',1,2,'blah','Expert Note',undef,undef),     'pd/ncn admin <63 -ren +note');
   ok('' eq
      $crms->ValidateSubmission('uc1.31822009761677','gnichols',1,2,undef,undef,'R000','1Jan60'), 'pd/ncn expert <63 +ren');
 }
