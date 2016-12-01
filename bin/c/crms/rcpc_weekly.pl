@@ -97,7 +97,6 @@ $msg .= <<END;
 </html>
 END
 
-my $title = sprintf 'RCPC %sProgress Report', ($DLPS_DEV)? 'Dev ':'';
 push @mails, 'rcpc-copyright@umich.edu' unless $quiet;
 
 my $to = join ',', @mails;
@@ -111,7 +110,7 @@ else
   {
     $sender->OpenMultipart({
       to => $to,
-      subject => $title,
+      subject => $crms->SubjectLine('RCPC Progress Report'),
       ctype => 'text/html',
       encoding => 'utf-8'
     }) or die $Mail::Sender::Error,"\n";
