@@ -100,14 +100,14 @@
   [% id = cgi.param('008') %]
   [% record = crms.GetMetadata(id) %]
   [% field = record.GetControlfield('008') %]
-  <table class="exportStats" style="width:30%;">
+  <table class="exportStats">
   <tr><th>Date Entered</th><td>[% field.substr(0, 6) %]</td></tr>
   <tr><th>Date Type</th><td>[% field.substr(6, 1) %]</td></tr>
   <tr><th>Date 1</th><td>[% field.substr(7, 4) %]</td></tr>
   <tr><th>Date 2</th><td>[% field.substr(11, 4) %]</td></tr>
-  <tr><th>Place</th><td>[% field.substr(15, 3) %] ([% record.country() %])</td></tr>
+  <tr><th>Place</th><td class="nowrap">[% field.substr(15, 3) %] ([% record.country() %])</td></tr>
   <tr><th>Illustrations</th><td>[% field.substr(18, 4) %]</td></tr>
-  <tr><th>Target Audience</th><td>[% field.substr(22, 1) %]</td></tr>
+  <tr><th class="nowrap">Target Audience</th><td>[% field.substr(22, 1) %]</td></tr>
   <tr><th>Form</th><td>[% field.substr(23, 1) %]</td></tr>
   <tr><th>Nature</th><td>[% field.substr(24, 4) %]</td></tr>
   <tr><th>Government</th><td>[% field.substr(28, 1) %]</td></tr>
@@ -115,7 +115,7 @@
   <tr><th>Festschrift </th><td>[% field.substr(30, 1) %]</td></tr>
   <tr><th>Index </th><td>[% field.substr(31, 1) %]</td></tr>
   <tr><th>(undefined)</th><td>[% field.substr(32, 1) %]</td></tr>
-  <tr><th>Literary form</th><td>[% field.substr(33, 1) %]</td></tr>
+  <tr><th class="nowrap">Literary form</th><td>[% field.substr(33, 1) %]</td></tr>
   <tr><th>Biography</th><td>[% field.substr(34, 1) %]</td></tr>
   <tr><th>Language</th><td>[% field.substr(35, 3) %]</td></tr>
   <tr><th>Modified</th><td>[% field.substr(38, 1) %]</td></tr>
