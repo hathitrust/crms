@@ -78,8 +78,9 @@ END
 my %seen;
 if (!scalar @mails)
 {
-  my $sql = 'SELECT id FROM users WHERE reviewer+advanced+expert>0'.
-            ' AND institution!=0 && NOT id LIKE "%-%"';
+  my $sql = 'SELECT u.id FROM users u INNER JOIN institutions i ON u.institution=i.id'.
+            ' WHERE u.reviewer+u.advanced+u.expert>0'.
+            ' AND i.shortname!="Michigan" AND NOT u.id LIKE "%-%"';
   my $ref = $crms->SelectAll($sql);
   push @mails, $_->[0] for @{$ref};
 }
