@@ -7617,7 +7617,11 @@ sub Rights
   my $a = $self->IsUserAdmin();
   my $s = $self->IsUserSuperAdmin();
   return \@all if $exp && !$e && !$s;
-  my $sql = 'SELECT id,attr,reason,restricted,description FROM rights ORDER BY id ASC';
+  my $sql = 'SELECT r.id,r.attr,r.reason,r.restricted,r.description FROM rights r'.
+            ' INNER JOIN attributes a ON r.attr=a.id'.
+            ' INNER JOIN reasons rs ON r.reason=rs.id'.
+            ' ORDER BY IF(a.name="pd"||a.name="pdus",1,0) DESC, a.name ASC, rs.name ASC';
+            
   my $ref = $self->SelectAll($sql);
   my %seen = ();
   foreach my $row (@{$ref})
