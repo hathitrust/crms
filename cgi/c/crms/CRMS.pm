@@ -6167,7 +6167,7 @@ sub ShouldReviewBeFlagged
     if ($user2 eq $user)
     {
       return if $val == 1;
-      $pd = 1 if $attr eq 'pd';
+      $pd = 1 if $attr =~ m/^pd/;
     }
     else
     {
