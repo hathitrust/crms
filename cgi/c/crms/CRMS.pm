@@ -7921,8 +7921,8 @@ sub PredictRights
     $attr = ($pub < 1923)? 'pdus':'ic';
     $reason = 'add';
   }
-  my $sql = 'SELECT id FROM rights r INNER JOIN attributes a ON r.attr=a.id'.
-            ' INNER JOIN reasons rs ON r.reason=rs.name'.
+  my $sql = 'SELECT r.id FROM rights r INNER JOIN attributes a ON r.attr=a.id'.
+            ' INNER JOIN reasons rs ON r.reason=rs.id'.
             ' WHERE a.name=? AND rs.name=?';
   return $self->SimpleSqlGet($sql, $attr, $reason);
 }
