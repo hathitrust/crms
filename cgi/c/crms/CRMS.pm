@@ -3594,7 +3594,7 @@ sub PredictUserInstitution
     my $sql = 'SELECT id FROM institutions WHERE LOCATE(suffix,?)>0';
     $inst = $self->SimpleSqlGet($sql, $suff);
   }
-  $inst = 0 unless defined $inst;
+  $inst = 1 unless defined $inst;
   return $inst;
 }
 
