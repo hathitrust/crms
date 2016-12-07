@@ -45,6 +45,7 @@ sub new
   $self->set('root',    $root);
   $self->set('dev',     $args{'dev'});
   $self->set('pdb',     $args{'pdb'});
+  $self->set('tdb',     $args{'tdb'});
   $self->set('sys',     $sys);
   my $user = $ENV{'REMOTE_USER'};
   $self->set('remote_user', $user);
@@ -236,8 +237,9 @@ sub DbName
   my $self = shift;
 
   my $dev = $self->get('dev');
+  my $tdb = $self->get('tdb');
   my $db = $self->get('mysqlDbName');
-  $db .= '_training' if $dev && $dev eq 'crms-training';
+  $db .= '_training' if $dev && ($dev eq 'crms-training' or $tdb);
   return $db;
 }
 
@@ -6153,13 +6155,12 @@ sub ShouldReviewBeFlagged
   my $gid  = shift;
 
   my ($pd, $icren, $date, $wr);
-  my $sql = 'SELECT r.user, a.name,rs.name,r.category,r.validated FROM historicalreviews r'.
+  my $sql = 'SELECT r.user,a.name,rs.name,r.category,r.validated FROM historicalreviews r'.
             ' INNER JOIN exportdata e ON r.gid=e.gid'.
             ' INNER JOIN attributes a ON r.attr=a.id'.
             ' INNER JOIN reasons rs ON r.reason=rs.id'.
             ' WHERE r.gid=? ORDER BY IF(r.user=?,1,0) DESC';
   my $ref = $self->SelectAll($sql, $gid, $user);
-  #printf "%d results for $gid\n", scalar @{$ref};
   foreach my $row (@{$ref})
   {
     my ($user2, $attr, $reason, $category, $val) = @{$row};
@@ -6698,6 +6699,7 @@ sub WhereAmI
   my $where = undef;
   my $dev = $self->get('dev');
   my $pdb = $self->get('pdb');
+  my $tdb = $self->get('tdb');
   if ($dev)
   {
     $where = 'Dev';
@@ -6705,6 +6707,7 @@ sub WhereAmI
     $where = 'Moses Dev' if $dev eq 'moseshll';
   }
   $where .= ' [Production DB]' if defined $where and length $where and $pdb;
+  $where .= ' [Training DB]' if defined $where and length $where and $tdb;
   return $where;
 }
 
@@ -7756,6 +7759,8 @@ sub Sysify
   $url = Utilities::AppendParam($url, 'sys', $sys) if $sys ne 'crms';
   my $pdb = $self->get('pdb');
   $url = Utilities::AppendParam($url, 'pdb', $pdb) if $pdb;
+  my $tdb = $self->get('tdb');
+  $url = Utilities::AppendParam($url, 'tdb', $tdb) if $tdb;
   return $url;
 }
 
@@ -7810,6 +7815,8 @@ sub HiddenSys
   $html = "<input type='hidden' name='sys' value='$sys'/>" if $sys && $sys ne 'crms';
   my $pdb = $self->get('pdb');
   $html .= "<input type='hidden' name='pdb' value='$pdb'/>" if $pdb;
+  my $tdb = $self->get('tdb');
+  $html .= "<input type='hidden' name='tdb' value='$tdb'/>" if $tdb;
   return $html;
 }
 
