@@ -422,7 +422,8 @@ sub CreateFlaggedGraph
     push @{$data{'series'}}, $h;
     foreach my $date (@dates)
     {
-      my $sql = 'SELECT COUNT(id) FROM historicalreviews WHERE flagged>0 AND DATE(time)=? AND user in '. $wc;
+      my $sql = 'SELECT COUNT(id) FROM historicalreviews WHERE flagged IS NOT NULL'.
+                ' AND flagged>0 AND DATE(time)=? AND user in '. $wc;
       my $val = int($self->SimpleSqlGet($sql, $date, @{$ids}));
       $val = 0 unless $val;
       push @{$data{'series'}->[$i]->{'data'}}, $val;

@@ -6176,7 +6176,7 @@ sub ShouldReviewBeFlagged
       $wr = 1 if $attr eq 'und' and $reason eq 'nfi' and $category eq 'Wrong Record';
     }
   }
-  return 0 if !$pd;
+  return if !$pd;
   return 1 if $icren;
   return 2 if $date;
   return 3 if $wr;
