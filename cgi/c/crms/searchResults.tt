@@ -298,7 +298,14 @@ function CheckAll(box,formid)
     [% END %]
   </table>
   [% IF p == 'undReviews' %]
+    <br/>
+    <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
+    <input type="submit" name="approve" value="Approve Selected Volumes"/>
+    <input type="submit" name="lock" value="Lock Selected Volumes"/>
+    <input type="submit" name="unlock" value="Unlock Selected Volumes"/>
+    <input type="submit" value="Refresh Page"/>
     </form>
+    <br/>
   [% END %]
 
   <strong>Found $Total review[% (Total==1)? "":"s"%] for $TotalVolumes volume[% (TotalVolumes==1)? "":"s"%], page $pagenum of $of</strong><br/>
@@ -341,4 +348,4 @@ function CheckAll(box,formid)
 [% ELSE %]
   <h4>No results found.</h4>
 [% END %]
-<!-- Icons courtesy of 	http://www.visualpharm.com -->
+<!-- Icons courtesy of http://www.visualpharm.com -->
