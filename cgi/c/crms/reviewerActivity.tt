@@ -1,10 +1,12 @@
 [% INCLUDE header.tt %]
 
+
 <script type="text/javascript">
 <!--
 
-var graphURLBase = '/cgi/c/crms/getExportStats?type=graph;c=10;sys=' + gSys;
+var graphURLBase = "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph;c=10') %]";
 var graphURL = graphURLBase;
+var gActives = [];
 
 // Define a custom symbol path
 Highcharts.SVGRenderer.prototype.symbols.cross = function(x, y, w, h)
@@ -20,11 +22,6 @@ function reloadChart()
 {
   ConstructURL();
   loadChart('chart0', graphURL);
-}
-
-window.onload = function(e)
-{
-  reloadChart();
 }
 
 function ConstructURL()
@@ -62,6 +59,7 @@ function CheckAll(box,id)
 	{
 	  aa[i].checked = box.checked;
 	}
+	reloadChart();
 }
 
 function checkInst(id)
@@ -78,48 +76,64 @@ function checkInst(id)
 	if (checked == aa.length) cb.checked = true;
 	else cb.checked = false;
 	//alert(id + ' ' + aa.length + ' ' + checked);
+	reloadChart();
+}
+
+function checkActive(cb)
+{
+	for (var i=0; i < gActives.length; i++)
+	{
+	  var cb2 = document.getElementById(gActives[i]);
+	  if (cb2) { cb2.checked = cb.checked; }
+	}
+	reloadChart();
 }
 // -->
 </script>
-
 
 <table style="padding:0px;border-collapse:collapse;">
 <tr style="background-color:#FFFFFF;">
   <td style="vertical-align:top;width:1000px;">
     <label for="activityTypeMenu">Reviewer Activity: </label>
-<select title="Select Activity Type"
-        class="review" id="activityTypeMenu"
-        onchange="reloadChart('chart0')">
-  <option value="0">Review Count</option>
-  <option value="1">Time Reviewing (hours)</option>
-  <option value="2">Invalidation Rate</option>
-</select>
-<input type="submit" value="Open Image in new Tab" onclick="save_image(0);"/>
-<br/>
-<label for="startDate" style="width:5em;float:left;">Start Date:</label>
-<input type="text" id="startDate" name="startDate" value="[% startDate %]"
-       onclick="datePickerController.show('startDate');"
-       onblur="datePickerController.hide('startDate');reloadChart('chart0');"/>
-<script type="text/javascript">
-// <![CDATA[
-  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };
-  datePickerController.createDatePicker(opts);
-// ]]>
-</script>
-<span class="smallText">(YYYY-MM-DD)</span>
-<br/>
-<label for="endDate" style="width:5em;float:left;">End Date:</label>
-<input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
-       onblur="datePickerController.hide('endDate');reloadChart('chart0');"/>
-<script type="text/javascript">
-// <![CDATA[
-  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };
-  datePickerController.createDatePicker(opts);
-// ]]>
-</script>
-<span class="smallText">(YYYY-MM-DD)</span>
-<br/>
-<br/>
+    <select title="Select Activity Type"
+            class="review" id="activityTypeMenu"
+            onchange="reloadChart();">
+      <option value="0">Review Count</option>
+      <option value="1">Time Reviewing (hours)</option>
+      <option value="2">Invalidation Rate</option>
+      <option value="3">Flagged Reviews</option>
+    </select>
+    <input type="submit" value="Open Image in new Tab" onclick="save_image(0);"/>
+    <input type="checkbox" class="userCB" id="checkActiveCB"
+            onchange="checkActive(this);"/>
+    <label for="checkActiveCB">Check All Active Reviewers</label>
+    <br/>
+    <div id="DateSelectionDiv">
+    <label for="startDate" style="width:5em;float:left;">Start Date:</label>
+    <input type="text" id="startDate" name="startDate" value="[% startDate %]"
+           onclick="datePickerController.show('startDate');"
+           onblur="datePickerController.hide('startDate');reloadChart();"/>
+    <script type="text/javascript">
+    // <![CDATA[
+      var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };
+      datePickerController.createDatePicker(opts);
+    // ]]>
+    </script>
+    <span class="smallText">(YYYY-MM-DD)</span>
+    <br/>
+    <label for="endDate" style="width:5em;float:left;">End Date:</label>
+    <input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
+           onblur="datePickerController.hide('endDate');reloadChart();"/>
+    <script type="text/javascript">
+    // <![CDATA[
+      var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };
+      datePickerController.createDatePicker(opts);
+    // ]]>
+    </script>
+    <span class="smallText">(YYYY-MM-DD)</span>
+    </div>
+    <br/><br/>
+    [% actives = [] %]
     <div id="chart0" style="width:1000px;height:600px;"></div>
   </td>
   <td style="align:left;text-align:left;vertical-align:top">
@@ -142,19 +156,22 @@ function checkInst(id)
           <label for="inst_[% r.0 %]">[% r.1 %]</label>
           <input type="checkbox"
                  id="inst_[% r.0 %]"
-                 onclick="CheckAll(this,'inst_[% r.0 %]');"
-                 onchange="reloadChart('chart0');"/>
+                 onclick="CheckAll(this,'inst_[% r.0 %]');"/>
         </th></tr>
       [% END %]
       [% FOREACH h IN revs %]
         <tr>
           [% id = h.id.replace('@', '__AT__') %]
           [% name = h.name %]
-          <td style="white-space:nowrap;">
+          <td class="nowrap">
             <input type="checkbox" class="userCB" name="inst_[% r.0 %]" id="[% id %]"
-                   onchange="checkInst('inst_[% r.0 %]');reloadChart('chart0');"/>
+                   onchange="checkInst('inst_[% r.0 %]');"/>
             <label for="[% id %]">
-              [% IF h.active == 0 %][% name = "<em>" _ name _ "</em>" %][% END %]
+              [% IF h.active == 0 %]
+                [% name = "<em>" _ name _ "</em>" %]
+              [% ELSE %]
+                [% actives.push(id) %]
+              [% END %]
               [% name %]
             </label>
           </td>
@@ -165,6 +182,16 @@ function checkInst(id)
   </table>
 </tr>
 </table><br/>
+[% json = '["' _ actives.join('","') _ '"]' %]
 
+<script type="text/javascript">
+<!--
+window.onload = function(e)
+{
+  reloadChart();
+  gActives = JSON.parse('[% json %]', null);
+}
+-->
+</script>
 [% INCLUDE footer.tt %]
 
