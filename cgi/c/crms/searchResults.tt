@@ -164,8 +164,6 @@ function CheckAll(box,formid)
     [% IF p == 'adminHistoricalReviews' %]<th>Pub&nbsp;Date</th>[% END %]
     <th>Review&nbsp;Date</th>
     [% IF p != 'undReviews' AND p != 'expert' %]<th>Status</th>[% END %]
-    [% leg = !crms.TolerantCompare(1,crms.GetSystemVar('noLegacy')) %]
-    [% IF p == 'adminHistoricalReviews'  && leg %]<th>Legacy</th>[% END %]
     <th>Reviewer</th>
     <th>Attr</th>
     <th>Reason</th>
@@ -245,7 +243,6 @@ function CheckAll(box,formid)
         [% IF p == 'adminHistoricalReviews' %]<td>$review.pubdate</td>[% END %]
         <td>$review.date</td>
         [% IF p != 'undReviews' AND p != 'expert' %]<td>$review.status</td>[% END %]
-        [% IF p == 'adminHistoricalReviews' && leg %]<td>$review.legacy</td>[% END %]
         <td>$review.user</td>
         <td>$review.attr</td>
         <td class="nowrap">$review.reason
