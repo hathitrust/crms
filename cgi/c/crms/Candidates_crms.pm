@@ -66,7 +66,7 @@ sub GetViolations
     {
       $max = $self->GetCutoffYear(undef, 'maxYearOverride');
     }
-    push @errs, "$pub not in range $min-$max" if ($pub < $min || $pub > $max);
+    push @errs, sprintf "$pub not in range $min-$max%s", ($proj)? " for project $proj":'' if ($pub < $min || $pub > $max);
   }
   else
   {
