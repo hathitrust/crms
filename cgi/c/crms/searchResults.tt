@@ -43,17 +43,27 @@ function CheckAll(box,formid)
 [% offset = (jump - 1) * pagesize %]
 [% END %]
 
-[% IF stype == 'volumes' %]
-  [% ref = crms.GetVolumesRefWide(p, order, dir, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize) %]
-[% ELSIF stype == 'groups' %]
-  [% ref = crms.GetVolumesRef(p, order, dir, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize) %]
+[% IF p == 'adminHistoricalReviews' && !search1.length() AND !search2.length() AND !search3.length() %]
+  [% ref = {volumes => 0, reviews => 0} %]
 [% ELSE %]
-  [% ref = crms.GetReviewsRef(p, order, dir, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize) %]
+  [% IF stype == 'volumes' %]
+    [% ref = crms.GetVolumesRefWide(p, order, dir, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize) %]
+  [% ELSIF stype == 'groups' %]
+    [% ref = crms.GetVolumesRef(p, order, dir, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize) %]
+  [% ELSE %]
+    [% ref = crms.GetReviewsRef(p, order, dir, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize) %]
+  [% END %]
 [% END %]
 [% TotalVolumes = ref.volumes %]
 [% Total = ref.reviews %]
 
-[% IF Total %]
+[% IF !Total %]
+  [% IF p == 'adminHistoricalReviews' && !search1.length() AND !search2.length() AND !search3.length() %]
+  
+  [% ELSE %]
+    <h4>No results found.</h4>
+  [% END %]
+[% ELSE %]
   [% pagenum = ref.page %]
   [% of = ref.of %]
   [% reviews = ref.rows %]
@@ -342,7 +352,5 @@ function CheckAll(box,formid)
     [% END %]
     </form>
   [% END %]
-[% ELSE %]
-  <h4>No results found.</h4>
 [% END %]
 <!-- Icons courtesy of http://www.visualpharm.com -->
