@@ -395,7 +395,8 @@ sub CreateFlaggedGraph
               'yAxis'=>{'min'=>0, 'title'=>{'text'=>'Volumes'}},
               'legend'=>{'enabled'=>JSON::XS::true},
               'credits'=>{'enabled'=>JSON::XS::false},
-              'series'=>[]);
+              'series'=>[],
+              'users'=>[]);
   my $sql = 'SELECT DISTINCT DATE(time) d FROM historicalreviews'.
             ' WHERE time>=DATE_SUB(NOW(), INTERVAL 1 MONTH)'.
             ' AND user IN ('. join(',',map {"\"$_\"";} @users). ')'.
@@ -416,14 +417,13 @@ sub CreateFlaggedGraph
   {
     my $ids = $self->GetUserIncarnations($user);
     my $name = $self->GetUserName($user);
-    my @counts; # For the inval rate tip
     my $wc = $self->WildcardList(scalar @{$ids});
     my $h = {'color'=>$colors[$i], 'name'=>$name, 'data'=>[]};
     push @{$data{'series'}}, $h;
     foreach my $date (@dates)
     {
       my $sql = 'SELECT COUNT(id) FROM historicalreviews WHERE flagged>0 AND DATE(time)=? AND user in '. $wc;
-      my $val = $self->SimpleSqlGet($sql, $date, @{$ids});
+      my $val = int($self->SimpleSqlGet($sql, $date, @{$ids}));
       $val = 0 unless $val;
       push @{$data{'series'}->[$i]->{'data'}}, $val;
     }
