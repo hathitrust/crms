@@ -1,9 +1,9 @@
 [% crms.StartHTML('No Access', '<link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>') %]
 
 <div class="pages" id="homePage">
-  <img src="[% crms.GetSystemVar('logo') %]"
-       style="display:block;margin-left:auto;margin-right:auto;"
-       alt="[% crms.System() %] Logo"/>
+  <img src="[% crms.GetSystemVar('logo') %]" width="455" height="80"
+             alt="[% crms.System() %] Logo"
+             style="display:block;margin-left:auto;margin-right:auto;"/>
     <br/><br/>
     <!--<font size="5"><strong>Hello [% crms.GetUserName %] </strong></font>-->
   <br/>
