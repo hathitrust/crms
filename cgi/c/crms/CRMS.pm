@@ -6698,17 +6698,35 @@ sub WhereAmI
 
   my $where = undef;
   my $dev = $self->get('dev');
-  my $pdb = $self->get('pdb');
-  my $tdb = $self->get('tdb');
   if ($dev)
   {
-    $where = 'Dev';
-    $where = 'Training' if $dev eq 'crms-training';
-    $where = 'Moses Dev' if $dev eq 'moseshll';
+    if ($where eq '1')
+    {
+      $where = 'Dev';
+    }
+    if ($dev eq 'crms-training')
+    {
+      $where = 'Training';
+    }
+    else
+    { 
+      $where = $dev. ' Dev';
+    }
   }
-  $where .= ' [Production DB]' if defined $where and length $where and $pdb;
-  $where .= ' [Training DB]' if defined $where and length $where and $tdb;
   return $where;
+}
+
+sub DevBanner
+{
+  my $self = shift;
+
+  my $where = $self->WhereAmI();
+  if (defined $where)
+  {
+    $where .= ' | Production DB' if $self->get('pdb');
+    $where .= ' | Training DB' if $self->get('tdb');
+  }
+  return '[ '. $where. ' ]' if defined $where;
 }
 
 sub SelfURL

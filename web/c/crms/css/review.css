@@ -21,10 +21,6 @@ h3 {
   margin: 15px 0;
 }
 
-body {
-  margin-top: 3px;
-}
-
 a:link {color:#185EAC; text-decoration:none;}    /* unvisited link */
 a:visited {color:#185EAC; text-decoration:none;} /* visited link */
 a:hover {color:#1B75DA; text-decoration:underline;}   /* mouse over link */
@@ -658,8 +654,6 @@ By Keenan Payne
 	background: -o-linear-gradient(#fff, #999);
 }
 
-
-
 .close {
 	background: #606061;
 	color: #FFFFFF;
@@ -684,4 +678,14 @@ a.close {color:white; text-decoration:none;}
 
 @keyframes fadetogrey {
     100% {background-color:#e2e2e2;}
+}
+
+div.topBanner {
+  line-height:24px;
+  font-size: 1.1em;
+  color:#FFFFFF;
+  width:100%;
+  background-color:#ED7B22;
+  text-align:center;
+  vertical-align:top;
 }

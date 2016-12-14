@@ -31,17 +31,19 @@ var gSys = '[% crms.Sys() %]';
   </head>
   <body>
 
-[% r = crms.GetSystemStatus() %]
-[% IF !reviewType %]
+  [% r = crms.GetSystemStatus() %]
+  [% IF reviewType %]
+    <div id="homePage">
+  [% ELSE %]
+    [% IF where %]
+    <div class="topBanner">[% crms.DevBanner().replace(" ","&nbsp;") %]</div>
+    [% END %]
     <div class="pages" id="homePage">
     <div style="height:82px;border-bottom:1px solid black;margin:0px;padding-bottom:6px;">
       <a href="[% crms.Sysify('crms') %]">
         <img src="[% crms.GetSystemVar('logo') %]" width="455" height="80" alt="Jump to home page"
              style="float:left;border:0px solid;margin-right:4em;"/>
       </a>
-      [% IF where %]
-        <span class="darkred" style="font-size:3.2em;">Location:&nbsp;[% where.replace(" ","&nbsp;") %]</span>
-      [% END %]
       <div style="float:right;">
         <table class="helloBox">
           <tr>
@@ -63,8 +65,6 @@ var gSys = '[% crms.Sys() %]';
     </div>
     <div>[% INCLUDE nav.tt %]</div>
     <br/><br/><br/>
-[% ELSE %]
-    <div id="homePage">
 [% END %]
 [% # Don't display the notice if this is the review page and situation normal %]
 [% IF r.2 && (page != 'review' || r.1 != 'normal') %]
