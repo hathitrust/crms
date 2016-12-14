@@ -182,8 +182,8 @@ foreach my $row (@{$ref})
       $crms->UpdateMetadata($id, 1, $record);
       # Returns a status code (0=Add, 1=Error, 2=Skip, 3=Modify) followed by optional text.
       my $res = $crms->AddItemToQueueOrSetItemActive($id, 3, 1, 'newyear', undef, undef, $record);
-      my $code = substr $res, 0, 1;
-      my $msg = substr $res, 1;
+      my $code = $res->{'status'};
+      my $msg = $res->{'msg'}
       if ($code eq '1' || $code eq '2')
       {
         print ($code == 1)? RED:GREEN "Result for $id: $code $msg\n";

@@ -1314,8 +1314,8 @@ sub AddItemToQueue
   return 1;
 }
 
-# Returns a status code (0=Add, 1=Error, 2=Skip, 3=Modify) followed by optional text.
-# FIXME: change the return value to a data structure.
+# Returns a hashref with 'status' => {0=Add, 1=Error, 2=Skip, 3=Modify}
+# and optional 'msg' with human-readable text.
 # FiXME: merge this with AddItemToQueue() to include a project.
 sub AddItemToQueueOrSetItemActive
 {
@@ -1426,7 +1426,7 @@ sub AddItemToQueueOrSetItemActive
       }
     }
   }
-  return $stat . join '; ', @msgs;
+  return {'status' => $stat, 'msg' => join '; ', @msgs};
 }
 
 # Used by experts to approve a review made by a reviewer.

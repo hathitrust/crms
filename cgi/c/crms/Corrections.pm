@@ -28,7 +28,7 @@ sub ConfirmCorrection
   my $err = $ref->[0] if $ref && $ref->[0];
   if (!$err)
   {
-    $err = substr($qstatus, 1) if (substr($qstatus, 0, 1) == 1);
+    $err = $qstatus->{'msg'} if $qstatus->{'status'} eq '1';
   }
   if (!$err)
   {

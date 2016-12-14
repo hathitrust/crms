@@ -133,19 +133,19 @@ These items will take priority in the review process.
       [% status = crms.AddItemToQueueOrSetItemActive(id, pri, override) %]
     [% END %]
     <tr><th style="width:10em;"><span class="major">[% id %]</span></th>
-    [% err = status.substr(0, 1) %]
-    [% status = status.substr(1, status.length()) %]
+    [% err = status.status %]
+    [% msg = status.msg %]
     [% IF err == 0 %]
       [% adds = adds + 1 %]
-      <td class="nowrap">OK[% IF status.length() %]<span style='color:red;'> ($status)</span>[% END %]</td>
+      <td class="nowrap">OK[% IF msg.length() %]<span style='color:red;'> ($msg)</span>[% END %]</td>
     [% ELSIF err == 1 %]
-      <td class="nowrap" style="color:red">Could not add: $status</td>
+      <td class="nowrap" style="color:red">Could not add: $msg</td>
       [% skips = skips + 1 %]
     [% ELSIF err == 2 %]
-      <td class="nowrap">Skipped: $status</td>
+      <td class="nowrap">Skipped: $msg</td>
       [% skips = skips + 1 %]
     [% ELSIF err == 3 %]
-      <td class="nowrap">OK: $status</td>
+      <td class="nowrap">OK: $msg</td>
       [% already = already + 1 %]
     [% END %]
     </tr>
