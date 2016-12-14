@@ -33,6 +33,7 @@ from production so that the queue size is increased to COUNT.
 -h       Print this help message.
 -n       Do not submit SQL.
 -p PROJ  Only include reviews on the specified project PROJ.
+-q       Only bring in queue entries, do not import single review.
 -v       Be verbose.
 -x SYS   Set SYS as the system to execute.
 END
@@ -44,6 +45,7 @@ my $ease;
 my $help;
 my $noop;
 my @projs;
+my $queueOnly;
 my $verbose;
 my $sys;
 
@@ -56,6 +58,7 @@ die 'Terminating' unless GetOptions(
            'h'    => \$help,
            'n'    => \$noop,
            'p:s@' => \@projs,
+           'q'    => \$queueOnly,
            'v'    => \$verbose,
            'x:s'  => \$sys);
 
@@ -192,16 +195,19 @@ foreach my $row (@{$ref})
   my $category = $row->[4];
   my $note = $row->[5];
   my $projDesc = (defined $proj)? " for project '$proj'":'';
-  print GREEN "Add to queue: $id$proj\n" if $verbose;
+  print GREEN "Add to queue: $id$projDesc\n" if $verbose;
   $sql = 'INSERT INTO queue (id,time,pending_status,project) VALUES (?,?,1,?)';
   $crmst->PrepareSubmitSql($sql, $id, $time, $proj) unless $noop;
-  my $ta = $crmst->TranslateAttr($attr);
-  my $tr = $crmst->TranslateReason($reason);
-  print "  $user ($ta/$tr) status $status ($time)\n" if $verbose;
-  $sql = 'INSERT INTO reviews (id,user,time,attr,reason,renDate,renNum,category,note)'.
-         'VALUES (?,?,?,?,?,?,?,?,?)';
-  $crmst->PrepareSubmitSql($sql, $id, $user, $time, $attr, $reason,
-                          $renDate, $renNum, $category, $note) unless $noop;
+  if (!$queueOnly)
+  {
+    my $ta = $crmst->TranslateAttr($attr);
+    my $tr = $crmst->TranslateReason($reason);
+    print "  $user ($ta/$tr) status $status ($time)\n" if $verbose;
+    $sql = 'INSERT INTO reviews (id,user,time,attr,reason,renDate,renNum,category,note)'.
+           'VALUES (?,?,?,?,?,?,?,?,?)';
+    $crmst->PrepareSubmitSql($sql, $id, $user, $time, $attr, $reason,
+                            $renDate, $renNum, $category, $note) unless $noop;
+  }
   $crmst->UpdateMetadata($id, 1, $record) unless $noop;
   $n++;
   $s4++ if $status == 4;
