@@ -2,8 +2,6 @@
 [% INCLUDE header.tt %]
 
 <h2>System Administration:</h2>
-<br/>
-
 <br/><br/>
 <table class='exportStats'>
 <tr>
