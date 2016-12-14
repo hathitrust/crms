@@ -183,7 +183,7 @@ foreach my $row (@{$ref})
       # Returns a status code (0=Add, 1=Error, 2=Skip, 3=Modify) followed by optional text.
       my $res = $crms->AddItemToQueueOrSetItemActive($id, 3, 1, 'newyear', undef, undef, $record);
       my $code = $res->{'status'};
-      my $msg = $res->{'msg'}
+      my $msg = $res->{'msg'};
       if ($code eq '1' || $code eq '2')
       {
         print ($code == 1)? RED:GREEN "Result for $id: $code $msg\n";
