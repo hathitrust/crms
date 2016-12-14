@@ -176,7 +176,7 @@ foreach my $tx (@sorted)
         $track = GetTrackingString($id);
         $note = $track if length $track;
         print "Note now '$note'\n" if $verbose > 2;
-        my $err = '0';
+        my $status;
         my $pri = 2;
         my $jpri = Jira::GetIssuePriority($crmsUS, $ua, $tx);
         if (defined $jpri && $jpri < 3)
@@ -189,16 +189,16 @@ foreach my $tx (@sorted)
         if ((!$seen{$sysid} || $record->countEnumchron) && !$exp)
         {
           print "$id: trying to add\n" if $verbose > 2;
-          $err = $crms->AddItemToQueueOrSetItemActive($id, $pri, 0, $tx, 'Jira', $noop, $record);
+          $status = $crms->AddItemToQueueOrSetItemActive($id, $pri, 0, $tx, 'Jira', $noop, $record);
         }
         else
         {
-          $err = '2(duplicate)';
+          $status = {'status' => 2, 'msg' => '(duplicate)'};
         }
-        $seen{$sysid} = substr $err, 0, 1;
-        if ('1' eq substr $err, 0, 1)
+        $seen{$sysid} = $status->{'status'};
+        if ('1' eq $status->{'status'})
         {
-          $note = ucfirst substr $err, 1;
+          $note = ucfirst $status->{'msg'};
           if ($note =~ m/current\s+rights\s+pd\//i)
           {
             $note .= '; <b>possible takedown</p>' if $note =~ m/current\s+rights\s+pd\/(?!bib)/i;
@@ -206,7 +206,7 @@ foreach my $tx (@sorted)
           $noteStyle = 'color:red';
           print BOLD RED "  $id: $note\n" if $verbose;
         }
-        elsif ('0' eq substr $err, 0, 1)
+        elsif ('0' eq $status->{'status'})
         {
           $note = 'Added to queue; '. $crms->GetTrackingInfo($id, 1, 0, 1);
           $noteStyle = 'color:blue;';
