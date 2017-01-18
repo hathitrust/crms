@@ -1,0 +1,67 @@
+.debug {
+	border-style: outset;
+	border-color: #000000;
+	border-width: 1px;
+	font-size: 11px;
+	line-height: 20px;
+}
+
+.debugForm {
+	background-color: #99c;
+	font-weight: bold;
+	padding: 0 20px 0 20px; 
+}
+
+.debugFormDetails {
+	background-color: #ccf;
+	border-top: 1px solid #999;
+}
+
+.debugSql {
+	background-color: #696;
+	font-weight: bold;
+	padding: 0 20px 0 20px; 
+}
+
+.debugSqlDetails {
+	background-color: #9c9;
+	padding: 0 20px 0 20px; 
+	border-top: 1px solid #999;
+}
+
+.debugVar {
+	background-color: #c99;
+	font-weight: bold;
+	padding: 0 20px 0 20px; 
+}
+
+.debugVarDetails {
+	background-color: #fcc;
+	padding: 0 20px 0 20px; 
+	border-top: 1px solid #999;
+}
+
+.debugErr {
+	background-color: #900;
+	font-weight: bold;
+	color: #fff;
+	padding: 0 20px 0 20px;
+}
+
+.debugErrDetails {
+	background-color: #fcc;
+	padding: 0 20px 0 20px;
+	border-top: 1px solid #999;
+}
+
+.divHide	{
+	display:none;
+}
+
+.divShow	{
+	display:block;
+	padding: 0 20px 0 20px;
+	border-top: 1px solid #fff;
+	background-color: #333;
+	line-height: 30px;
+}
