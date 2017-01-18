@@ -19,7 +19,6 @@
 [% commitment = cgi.param('commitment') %]
 [% order      = cgi.param('order')      %]
 
-
 <form action="crms">
   <input type="hidden" name="p" value="adminUser"/>
   [% crms.HiddenSys() %]
@@ -47,6 +46,9 @@
       <h3 style="color:red;">[% res %]</h3>
     [% END %]
   [% END %]
+  [% admin = 1 %]
+[% ELSE %]
+  [% admin = 0 %]
 [% END %]
 
 [% users = crms.GetUsers(order) %]
@@ -64,7 +66,7 @@
     <th scope="col">Projects</th>
     <th scope="col">IP Address</th>
     <th scope="col">Change&nbsp;To</th>
-    <th scope="col">Commitment[% IF crms.IsUserAdmin() %]<br/>(Progress)[% END %]</th>
+    <th scope="col">Commitment[% IF admin %]<br/>(Progress)[% END %]</th>
     <th scope="col">Note</th>
   </tr>
   [% FOREACH userid IN users %]
@@ -129,7 +131,7 @@
         [% IF crms.GetUserCommitment(userid) > 0.0 %]
           [% crms.GetUserCommitment(userid, 1) %]
           [% prog = crms.GetUserProgress(userid) %]
-          [% IF active && crms.IsUserAdmin() %]
+          [% IF active && admin %]
             [% IF prog > 1.0 %][% prog = 1.0 %][% END %]
             <div class="ProgressBar[% (crms.sys() == 'crmsworld')? 'Red':'' %]">
               <div class="ProgressBarInner"
@@ -149,7 +151,7 @@
 </table>
 <br/>
 
-[% IF crms.IsUserAdmin() %]
+[% IF admin %]
 <h4>Add or Edit a User:</h4>
 <div style="position:relative;border-style:solid;width:38em;border-width:1px;padding:10px;">
   <form action="crms">
