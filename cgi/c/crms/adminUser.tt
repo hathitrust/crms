@@ -11,7 +11,6 @@
 [% reviewer   = cgi.param('reviewer')   %]
 [% advanced   = cgi.param('advanced')   %]
 [% expert     = cgi.param('expert')     %]
-[% extadmin   = cgi.param('extadmin')   %]
 [% admin      = cgi.param('admin')      %]
 [% superadmin = cgi.param('superadmin') %]
 [% note       = cgi.param('note')       %]
@@ -39,7 +38,7 @@
   [% IF add %]
     [% IF id %]
       [% res = crms.AddUser(id,kerberos,name,rcpc,reviewer,advanced,expert,
-                            extadmin,admin,superadmin,note,projects,
+                            admin,superadmin,note,projects,
                             commitment,disable) %]
     [% ELSE %]
       [% res = "No user ID provided" %]
@@ -57,13 +56,9 @@
     <th scope="col">ID</th>
     <th scope="col">Kerberos</th>
     <th scope="col">Institution</th>
-    [% IF sys != 'crmsworld' %]
-      <th scope="col">RCPC<br/>Reviewer</th>
-    [% END %]
     <th scope="col">Reviewer</th>
     <th scope="col">Advanced</th>
     <th scope="col">Expert</th>
-    <th scope="col">External<br/>Admin</th>
     <th scope="col">Admin</th>
     <th scope="col">Super<br/>Admin</th>
     <th scope="col">Projects</th>
@@ -73,14 +68,12 @@
     <th scope="col">Note</th>
   </tr>
   [% FOREACH userid IN users %]
-    [% rcpc = crms.IsUserRCPCReviewer(userid) %]
     [% r = crms.IsUserReviewer(userid) %]
     [% v = crms.IsUserAdvanced(userid) %]
     [% e = crms.IsUserExpert(userid) %]
-    [% x = crms.IsUserExtAdmin(userid) %]
     [% a = crms.IsUserAdmin(userid) %]
     [% s = crms.IsUserSuperAdmin(userid) %]
-    [% active = (rcpc||r||v||e||x||a||s) %]
+    [% active = (r||v||e||a||s) %]
     [% style = (active)? '':'style="background-color:#e2e2e2;"' %]
     <tr [% id == userid ? 'class="total"':'class="hoverWide"'%] [% style %]>
       <td>
@@ -96,13 +89,9 @@
         <a href="[% crms.Sysify('crms?p=adminUserRateInst;inst=' _ inst) %]" target="_blank">
           [% shortname %]
         </a></td>
-      [% IF sys != 'crmsworld' %]
-      <td style="text-align:center">[% IF rcpc %][% icon %][% END %]</td>
-      [% END %]
       <td style="text-align:center;">[% IF r %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF v %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF e %][% icon %][% END %]</td>
-      <td style="text-align:center;">[% IF x %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF a %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF s %][% icon %][% END %]</td>
       <td style="text-align:center;">[% crms.GetUserProjects(userid).join(', ') %]</td>
@@ -217,23 +206,16 @@
     </table>
     <br/>
     <table>
-      [% IF sys != 'crmsworld' %]
-      <tr>
-        <td><input type="checkbox" name="rcpc" id="rcpcReviewerCB"/> <label for="rcpcReviewerCB">RCPC Reviewer</label></td>
-        <td></td>
-        <td></td>
-      </tr>  
-      [% END %]
       <tr>
         <td><input type="checkbox" name="reviewer" id="reviewerCB"/> <label for="reviewerCB">Reviewer</label></td>
         <td><input type="checkbox" name="advanced" id="advancedCB"/> <label for="advancedCB">Advanced Reviewer</label></td>
         <td><input type="checkbox" name="expert" id="expertCB"/> <label for="expertCB">Expert</label></td>
       </tr>
       <tr>
-        <td><input type="checkbox" name="extadmin" id="extAdminCB"/> <label for="extAdminCB">Ext.&nbsp;Admin</label></td>
         <td><input type="checkbox" name="admin" id="adminCB"/> <label for="adminCB">Admin</label></td>
         <td><input type="checkbox" name="superadmin"[% crms.IsUserSuperAdmin()? '':' disabled="disabled"' %] id="superAdminCB"/>
             <label for="superAdminCB">Super Admin</label></td>
+        <td></td>
       </tr>
     </table>
     <br/><input type="checkbox" name="disable" id="disableCB"/> <label for="disableCB">Disable user</label>

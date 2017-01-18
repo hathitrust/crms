@@ -374,7 +374,7 @@ sub DebugSql
 	  my $html = <<END;
     <div class="debug">
       <div class="debugSql" onClick="ToggleDiv('details$ct');">
-        SQL QUERY
+        SQL QUERY ($ct)
       </div>
       <div id="details$ct" class="divHide"
            style="background-color: #9c9;" onClick="ToggleDiv('details$ct');">
@@ -3343,7 +3343,6 @@ sub AddUser
   my $reviewer   = shift;
   my $advanced   = shift;
   my $expert     = shift;
-  my $extadmin   = shift;
   my $admin      = shift;
   my $superadmin = shift;
   my $note       = shift;
@@ -3351,14 +3350,14 @@ sub AddUser
   my $commitment = shift;
   my $disable    = shift;
 
-  my @fields = (\$rcpc,\$reviewer,\$advanced,\$expert,\$extadmin,\$admin,\$superadmin);
+  my @fields = (\$rcpc,\$reviewer,\$advanced,\$expert,\$admin,\$superadmin);
   ${$fields[$_]} = (length ${$fields[$_]} && !$disable)? 1:0 for (0 .. scalar @fields - 1);
   # Preserve existing privileges unless there are some checkboxes checked
   my $checked = 0;
   $checked += ${$fields[$_]} for (0 .. scalar @fields - 1);
   if ($checked == 0 && !$disable)
   {
-    my $sql = 'SELECT rcpc,reviewer,advanced,expert,extadmin,admin,superadmin FROM users WHERE id=?';
+    my $sql = 'SELECT rcpc,reviewer,advanced,expert,admin,superadmin FROM users WHERE id=?';
     my $ref = $self->SelectAll($sql, $id);
     #return "Unknown reviewer '$id'" if 0 == scalar @{$ref};
     ${$fields[$_]} = $ref->[0]->[$_] for (0 .. scalar @fields - 1);
@@ -3387,10 +3386,10 @@ sub AddUser
   my $inst = $self->SimpleSqlGet('SELECT institution FROM users WHERE id=?', $id);
   $inst = $self->PredictUserInstitution($id) unless defined $inst;
   my $wcs = $self->WildcardList(13);
-  my $sql = 'REPLACE INTO users (id,kerberos,name,rcpc,reviewer,advanced,expert,extadmin,'.
+  my $sql = 'REPLACE INTO users (id,kerberos,name,rcpc,reviewer,advanced,expert,'.
             'admin,superadmin,note,institution,commitment) VALUES '. $wcs;
   $self->PrepareSubmitSql($sql, $id, $kerberos, $name, $rcpc, $reviewer, $advanced, $expert,
-                          $extadmin, $admin, $superadmin, $note, $inst, $commitment);
+                          $admin, $superadmin, $note, $inst, $commitment);
   $self->Note($_) for @{$self->GetErrors()};
   if (defined $projects)
   {
@@ -3576,15 +3575,6 @@ sub IsUserAtLeastExpert
   return $self->SimpleSqlGet($sql, $user);
 }
 
-sub IsUserExtAdmin
-{
-  my $self = shift;
-  my $user = shift || $self->get('user');
-
-  my $sql = 'SELECT extadmin FROM users WHERE id=?';
-  return $self->SimpleSqlGet($sql, $user);
-}
-
 sub IsUserAdmin
 {
   my $self = shift;
@@ -3614,11 +3604,11 @@ sub GetUsers
   my $self = shift;
   my $ord  = shift;
 
-  my $order = '(u.rcpc+u.reviewer+u.advanced+u.extadmin+u.admin+u.superadmin > 0) DESC';
+  my $order = '(u.rcpc+u.reviewer+u.advanced+u.admin+u.superadmin > 0) DESC';
   $order .= ',u.expert ASC' if $ord == 1;
   $order .= ',i.shortname ASC' if $ord == 2;
-  $order .= ',(u.rcpc+(2*u.reviewer)+(4*u.advanced)+(8*u.expert)'.
-            '+(16*u.extadmin)+(32*u.admin)+(64*u.superadmin)) DESC' if $ord == 3;
+  $order .= ',u.reviewer+(2*u.advanced)+(4*u.expert)'.
+            '+(8*u.admin)+(16*u.superadmin)) DESC' if $ord == 3;
   $order .= ',u.commitment DESC' if $ord == 4;
   $order .= ',u.name ASC';
   my $sql = 'SELECT u.id FROM users u INNER JOIN institutions i'.
@@ -4619,9 +4609,9 @@ sub GetInstitutionReviewers
   my $inst = shift;
 
   my @revs;
-  my $sql = 'SELECT id,name,reviewer+advanced+expert+extadmin+admin+superadmin as active,commitment'.
+  my $sql = 'SELECT id,name,reviewer+advanced+expert+admin+superadmin as active,commitment'.
             ' FROM users WHERE institution=?'.
-            ' AND (reviewer+advanced+expert>0 OR reviewer+advanced+expert+extadmin+admin+superadmin=0)'.
+            ' AND (reviewer+advanced+expert>0 OR reviewer+advanced+expert+admin+superadmin=0)'.
             ' ORDER BY active DESC,name';
   my $ref = $self->SelectAll($sql, $inst);
   foreach my $row (@{$ref})
@@ -7615,10 +7605,8 @@ sub GetUserQualifications
   my $user = shift || $self->get('user');
 
   my $sql = 'SELECT CONCAT('.
-            ' IF(rcpc=1,"c",""),'.
             ' IF(reviewer=1 OR advanced=1,"r",""),'.
             ' IF(expert=1,"e",""),'.
-            ' IF(extadmin=1,"x",""),'.
             ' IF(admin=1,"a",""),'.
             ' IF(superadmin=1,"xas",""))'.
             ' FROM users where id=?';
@@ -7652,6 +7640,7 @@ sub AccessCheck
 }
 
 # Returns Boolean: do qualifications and restriction overlap?
+# FIXME: c and x (RCPC and extadmin) are obsolete.
 sub DoQualificationsAndRestrictionsOverlap
 {
   my $self = shift;
