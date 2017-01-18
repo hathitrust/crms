@@ -115,7 +115,7 @@ foreach my $row (@{$ref})
   $seenAuthorTitles{$at} = 1 if length $at;
 }
 my $n = 0;
-my $usql = '(SELECT id FROM users WHERE reviewer=1 AND extadmin+expert+admin+superadmin=0)';
+my $usql = '(SELECT id FROM users WHERE reviewer=1 AND expert+admin+superadmin=0)';
 my $ssql = 'e.status=4';
 $ssql .= ' OR e.status=5' unless $ease == 1;
 $ssql .= ' OR e.status=7' unless $no7;
@@ -143,8 +143,8 @@ foreach my $row (@{$ref})
   my $record = $crmsp->GetMetadata($id);
   next unless defined $record;
   my $sysid = $record->sysid;
-  my $a = $record->author;
-  my $t = $record->title;
+  my $a = $record->author || '';
+  my $t = $record->title || '';
   my $at = $a . $t;
   $at =~ s/[^A-Za-z0-9]//g;
   if ($seen{$id})
