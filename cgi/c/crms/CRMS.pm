@@ -15,6 +15,7 @@ use DBI qw(:sql_types);
 use List::Util qw(min max);
 use CGI;
 use Utilities;
+use Time::HiRes;
 
 binmode(STDOUT, ':utf8'); #prints characters in utf8
 
@@ -40,13 +41,15 @@ sub new
   $self->set($_,        $d{$_}) for keys %d;
   $self->set('logFile', $args{'logFile'});
   my $errors = [];
-  $self->set('errors',  $errors);
-  $self->set('verbose', $args{'verbose'});
-  $self->set('root',    $root);
-  $self->set('dev',     $args{'dev'});
-  $self->set('pdb',     $args{'pdb'});
-  $self->set('tdb',     $args{'tdb'});
-  $self->set('sys',     $sys);
+  $self->set('errors',   $errors);
+  $self->set('verbose',  $args{'verbose'});
+  $self->set('root',     $root);
+  $self->set('dev',      $args{'dev'});
+  $self->set('pdb',      $args{'pdb'});
+  $self->set('tdb',      $args{'tdb'});
+  $self->set('debugSql', $args{'debugSql'});
+  $self->set('debugVar', $args{'debugVar'});
+  $self->set('sys',      $sys);
   my $user = $ENV{'REMOTE_USER'};
   $self->set('remote_user', $user);
   my $alias = $self->GetAlias($user);
@@ -74,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '5.6.4';
+  return '5.6.5';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -300,9 +303,8 @@ sub SimpleSqlGetSDR
   my $sql  = shift;
 
   my $val = undef;
-  my $dbh = $self->GetSdrDb();
   eval {
-    my $ref = $dbh->selectall_arrayref($sql, undef, @_);
+    my $ref = $self->SelectAllSDR($sql, @_);
     $val = $ref->[0]->[0];
   };
   if ($@)
@@ -321,9 +323,12 @@ sub SelectAll
 
   my $ref = undef;
   my $dbh = $self->GetDb();
+  my $t1 = Time::HiRes::time();
   eval {
     $ref = $dbh->selectall_arrayref($sql, undef, @_);
   };
+  my $t2 = Time::HiRes::time();
+  $self->DebugSql($sql, 1000.0*($t2-$t1), @_);
   if ($@)
   {
     my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
@@ -340,9 +345,12 @@ sub SelectAllSDR
 
   my $ref = undef;
   my $dbh = $self->GetSdrDb();
+  my $t1 = Time::HiRes::time();
   eval {
     $ref = $dbh->selectall_arrayref($sql, undef, @_);
   };
+  my $t2 = Time::HiRes::time();
+  $self->DebugSql($sql, 1000.0*($t2-$t1), @_);
   if ($@)
   {
     my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
@@ -350,6 +358,63 @@ sub SelectAllSDR
     $self->Logit($msg);
   }
   return $ref;
+}
+
+sub DebugSql
+{
+  my $self = shift;
+  my $sql  = shift;
+  my $time = shift;
+
+  my $debug = $self->get('debugSql');
+  if ($debug && $self->get('headerLoaded') == 1)
+  {
+    my $ct = $self->get('debugCount');
+    $ct = 0 unless $ct;
+	  my $html = <<END;
+    <div class="debug">
+      <div class="debugSql" onClick="ToggleDiv('details$ct');">
+        SQL QUERY
+      </div>
+      <div id="details$ct" class="divHide"
+           style="background-color: #9c9;" onClick="ToggleDiv('details$ct');">
+        $sql <strong>{%s}</strong> <i>(%.3fms)</i>
+      </div>
+    </div>
+END
+    printf $html, join(',', @_), $time;
+    $ct++;
+    $self->set('debugCount', $ct);
+  }
+}
+
+sub DebugVar
+{
+  my $self = shift;
+  my $var  = shift;
+  my $val  = shift;
+
+  my $debug = $self->get('debugVar');
+  if ($debug && $self->get('headerLoaded') == 1)
+  {
+    my $ct = $self->get('debugCount');
+    $ct = 0 unless $ct;
+	  my $html = <<END;
+    <div class="debug">
+      <div class="debugVar" onClick="ToggleDiv('details$ct');">
+        VAR $var
+      </div>
+      <div id="details$ct" class="divHide"
+           style="background-color: #fcc;" onClick="ToggleDiv('details$ct');">
+        %s
+      </div>
+    </div>
+END
+    use Data::Dumper;
+    printf $html, Dumper($val);
+    $ct++;
+    $self->set('debugCount', $ct);
+  }
 }
 
 sub GetCandidatesSize
@@ -5100,7 +5165,7 @@ sub GetLockedItems
 
   my $table = ($page eq 'corrections')? 'corrections':'queue';
   my $restrict = ($user)? "='$user'":'IS NOT NULL';
-  my $sql = 'SELECT id, locked FROM ' . $table . ' WHERE locked ' . $restrict;
+  my $sql = 'SELECT id,locked FROM ' . $table . ' WHERE locked ' . $restrict;
   my $ref = $self->SelectAll($sql);
   my $return = {};
   foreach my $row (@{$ref})

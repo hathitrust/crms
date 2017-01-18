@@ -99,3 +99,12 @@ if (window.attachEvent)
 {
   window.attachEvent("onload", sfHover);
 }
+
+// action code for debugger bars
+function ToggleDiv(thisone)
+{
+  var ndDiv = document.getElementById(thisone);
+  if (ndDiv.className == 'divHide') { ndDiv.className = 'divShow'; }
+  else { ndDiv.className = 'divHide'; }
+}
+
