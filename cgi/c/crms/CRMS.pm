@@ -3339,7 +3339,6 @@ sub AddUser
   my $id         = shift;
   my $kerberos   = shift;
   my $name       = shift;
-  my $rcpc       = shift;
   my $reviewer   = shift;
   my $advanced   = shift;
   my $expert     = shift;
@@ -3350,14 +3349,14 @@ sub AddUser
   my $commitment = shift;
   my $disable    = shift;
 
-  my @fields = (\$rcpc,\$reviewer,\$advanced,\$expert,\$admin,\$superadmin);
+  my @fields = (\$reviewer,\$advanced,\$expert,\$admin,\$superadmin);
   ${$fields[$_]} = (length ${$fields[$_]} && !$disable)? 1:0 for (0 .. scalar @fields - 1);
   # Preserve existing privileges unless there are some checkboxes checked
   my $checked = 0;
   $checked += ${$fields[$_]} for (0 .. scalar @fields - 1);
   if ($checked == 0 && !$disable)
   {
-    my $sql = 'SELECT rcpc,reviewer,advanced,expert,admin,superadmin FROM users WHERE id=?';
+    my $sql = 'SELECT reviewer,advanced,expert,admin,superadmin FROM users WHERE id=?';
     my $ref = $self->SelectAll($sql, $id);
     #return "Unknown reviewer '$id'" if 0 == scalar @{$ref};
     ${$fields[$_]} = $ref->[0]->[$_] for (0 .. scalar @fields - 1);
@@ -3386,9 +3385,9 @@ sub AddUser
   my $inst = $self->SimpleSqlGet('SELECT institution FROM users WHERE id=?', $id);
   $inst = $self->PredictUserInstitution($id) unless defined $inst;
   my $wcs = $self->WildcardList(13);
-  my $sql = 'REPLACE INTO users (id,kerberos,name,rcpc,reviewer,advanced,expert,'.
+  my $sql = 'REPLACE INTO users (id,kerberos,name,reviewer,advanced,expert,'.
             'admin,superadmin,note,institution,commitment) VALUES '. $wcs;
-  $self->PrepareSubmitSql($sql, $id, $kerberos, $name, $rcpc, $reviewer, $advanced, $expert,
+  $self->PrepareSubmitSql($sql, $id, $kerberos, $name, $reviewer, $advanced, $expert,
                           $admin, $superadmin, $note, $inst, $commitment);
   $self->Note($_) for @{$self->GetErrors()};
   if (defined $projects)
@@ -3530,15 +3529,6 @@ sub CanChangeToUser
   return 0;
 }
 
-sub IsUserRCPCReviewer
-{
-  my $self = shift;
-  my $user = shift || $self->get('user');
-
-  my $sql = 'SELECT rcpc FROM users WHERE id=?';
-  return $self->SimpleSqlGet($sql, $user);
-}
-
 sub IsUserReviewer
 {
   my $self = shift;
@@ -3604,7 +3594,7 @@ sub GetUsers
   my $self = shift;
   my $ord  = shift;
 
-  my $order = '(u.rcpc+u.reviewer+u.advanced+u.admin+u.superadmin > 0) DESC';
+  my $order = '(u.reviewer+u.advanced+u.admin+u.superadmin > 0) DESC';
   $order .= ',u.expert ASC' if $ord == 1;
   $order .= ',i.shortname ASC' if $ord == 2;
   $order .= ',u.reviewer+(2*u.advanced)+(4*u.expert)'.

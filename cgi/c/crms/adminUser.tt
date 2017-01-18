@@ -7,7 +7,6 @@
 [% kerberos   = cgi.param('kerberos')   %]
 [% add        = cgi.param('add')        %]
 [% name       = cgi.param('name')       %]
-[% rcpc       = cgi.param('rcpc')       %]
 [% reviewer   = cgi.param('reviewer')   %]
 [% advanced   = cgi.param('advanced')   %]
 [% expert     = cgi.param('expert')     %]
@@ -36,7 +35,7 @@
 [% IF crms.IsUserAdmin() %]
   [% IF add %]
     [% IF id %]
-      [% res = crms.AddUser(id,kerberos,name,rcpc,reviewer,advanced,expert,
+      [% res = crms.AddUser(id,kerberos,name,reviewer,advanced,expert,
                             admin,superadmin,note,projects,
                             commitment,disable) %]
     [% ELSE %]
