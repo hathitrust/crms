@@ -3611,9 +3611,12 @@ sub GetUsers
   $order .= ',u.commitment DESC' if $ord == 4;
   $order .= ',u.name ASC';
   my $sql = 'SELECT u.id,u.name,u.reviewer,u.advanced,u.expert,u.admin,u.superadmin,u.kerberos,'.
-            'u.note,i.shortname,u.commitment'.
-            ' FROM users u INNER JOIN institutions i'.
-            ' ON u.institution=i.id ORDER BY ' . $order;
+            'u.note,i.shortname,u.commitment,us.total_time/60.0,'.
+            '(SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/3600.0 FROM reviews WHERE user=u.id)'.
+            ' FROM users u INNER JOIN institutions i ON u.institution=i.id'.
+            ' LEFT JOIN userstats us ON u.id=us.user'.
+            ' AND us.monthyear=DATE_FORMAT(NOW(),"%Y-%m")'.
+            ' ORDER BY ' . $order;
   my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
@@ -3622,12 +3625,7 @@ sub GetUsers
     my $progress = 0.0;
     if ($row->[10])
     {
-      $sql = 'SELECT s.total_time/60.0 FROM userstats s'.
-             ' WHERE s.monthyear=DATE_FORMAT(NOW(),"%Y-%m") AND s.user=?';
-      my $hours = $self->SimpleSqlGet($sql, $id);
-      $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/3600.0 from reviews'.
-             ' WHERE user=?';
-      $hours += $self->SimpleSqlGet($sql, $id);
+      my $hours = $row->[11] + $row->[12];
       $progress = $hours/(160.0*$row->[10]) ;
       $progress = 0.0 if $progress < 0.0;
       $progress = 1.0 if $progress > 1.0;
