@@ -159,12 +159,59 @@ sub xml
   return $xml;
 }
 
+sub fmt
+{
+  my $self = shift;
+
+  my $ldr  = $self->xml->findvalue('//*[local-name()="leader"]');
+  my $type = substr $ldr, 6, 1;
+  my $lev  = substr $ldr, 7, 1;
+  my %bktypes = ('a'=>1, 't'=>1);
+  my %bklevs = ('a'=>1, 'c'=>1, 'd'=>1, 'm'=>1);
+  my %types = ('a' => 'Language material',
+               'c' => 'Notated music',
+               'd' => 'Manuscript notated music',
+               'e' => 'Cartographic material',
+               'f' => 'Manuscript cartographic material',
+               'g' => 'Projected medium',
+               'i' => 'Nonmusical sound recording',
+               'j' => 'Musical sound recording',
+               'k' => 'Two-dimensional nonprojectable graphic',
+               'm' => 'Computer file',
+               'o' => 'Kit',
+               'p' => 'Mixed materials',
+               'r' => 'Three-dimensional artifact or naturally occurring object',
+               't' => 'Manuscript language material');
+  
+  my %levs = ('a' => 'Monographic component part',
+              'b' => 'Serial component part',
+              'c' => 'Collection',
+              'd' => 'Subunit',
+              'i' => 'Integrating resource',
+              'm' => 'Monograph/Item',
+              's' => 'Serial');
+  my $fmt;
+  if (defined $bktypes{$type} && defined $bklevs{$lev})
+  {
+    $fmt = 'Book';
+  }
+  elsif (defined $bktypes{$type} && !defined $bklevs{$lev})
+  {
+    $fmt = $levs{$lev};
+  }
+  else
+  {
+    $fmt = $types{$type};
+  }
+  return $fmt;
+}
+
 # This is the correct way to do it.
 # Look at leader[6] and leader[7]
 # If leader[6] is in {a t} and leader[7] is in {a c d m} then BK
 sub isFormatBK
 {
-  my $self   = shift;
+  my $self = shift;
 
   my $ldr  = $self->xml->findvalue('//*[local-name()="leader"]');
   my $type = substr $ldr, 6, 1;
@@ -177,7 +224,7 @@ sub isFormatBK
 
 sub isThesis
 {
-  my $self   = shift;
+  my $self = shift;
 
   my $is = 0;
   eval {
@@ -200,7 +247,7 @@ sub isThesis
 # language code); Translation (or variations thereof) in 500(a) note field.
 sub isTranslation
 {
-  my $self   = shift;
+  my $self = shift;
 
   my $is = 0;
   eval {
