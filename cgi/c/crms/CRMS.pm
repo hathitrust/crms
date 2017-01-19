@@ -3392,7 +3392,7 @@ sub AddUser
   }
   my $inst = $self->SimpleSqlGet('SELECT institution FROM users WHERE id=?', $id);
   $inst = $self->PredictUserInstitution($id) unless defined $inst;
-  my $wcs = $self->WildcardList(13);
+  my $wcs = $self->WildcardList(11);
   my $sql = 'REPLACE INTO users (id,kerberos,name,reviewer,advanced,expert,'.
             'admin,superadmin,note,institution,commitment) VALUES '. $wcs;
   $self->PrepareSubmitSql($sql, $id, $kerberos, $name, $reviewer, $advanced, $expert,
@@ -3602,17 +3602,43 @@ sub GetUsers
   my $self = shift;
   my $ord  = shift;
 
+  my @users;
   my $order = '(u.reviewer+u.advanced+u.admin+u.superadmin > 0) DESC';
   $order .= ',u.expert ASC' if $ord == 1;
   $order .= ',i.shortname ASC' if $ord == 2;
-  $order .= ',u.reviewer+(2*u.advanced)+(4*u.expert)'.
+  $order .= ',(u.reviewer+(2*u.advanced)+(4*u.expert)'.
             '+(8*u.admin)+(16*u.superadmin)) DESC' if $ord == 3;
   $order .= ',u.commitment DESC' if $ord == 4;
   $order .= ',u.name ASC';
-  my $sql = 'SELECT u.id FROM users u INNER JOIN institutions i'.
+  my $sql = 'SELECT u.id,u.name,u.reviewer,u.advanced,u.expert,u.admin,u.superadmin,u.kerberos,'.
+            'u.note,i.shortname,u.commitment'.
+            ' FROM users u INNER JOIN institutions i'.
             ' ON u.institution=i.id ORDER BY ' . $order;
   my $ref = $self->SelectAll($sql);
-  my @users = map { $_->[0]; } @{$ref};
+  foreach my $row (@{$ref})
+  {
+    my $id = $row->[0];
+    my $expiration = $self->IsUserExpired($id);
+    my $progress = 0.0;
+    if ($row->[10])
+    {
+      $sql = 'SELECT s.total_time/60.0 FROM userstats s'.
+             ' WHERE s.monthyear=DATE_FORMAT(NOW(),"%Y-%m") AND s.user=?';
+      my $hours = $self->SimpleSqlGet($sql, $id);
+      $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/3600.0 from reviews'.
+             ' WHERE user=?';
+      $hours += $self->SimpleSqlGet($sql, $id);
+      $progress = $hours/(160.0*$row->[10]) ;
+      $progress = 0.0 if $progress < 0.0;
+      $progress = 1.0 if $progress > 1.0;
+    }
+    push @users, {'id' => $id, 'name' => $row->[1], 'reviewer' => $row->[2],
+                  'advanced' => $row->[3], 'expert' => $row->[4], 'admin' => $row->[5],
+                  'superadmin' => $row->[6], 'kerberos' => $row->[7], 'note' => $row->[8],
+                  'institution' => $row->[9], 'commitment' => $row->[10],
+                  'commitmentFmt' => (100.0 *$row->[10]). '%', 'progress' => $progress,
+                  'expiration' => $expiration};
+  }
   return \@users;
 }
 

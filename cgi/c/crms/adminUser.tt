@@ -18,6 +18,8 @@
 [% commitment = cgi.param('commitment') %]
 [% order      = cgi.param('order')      %]
 
+[% uadmin = crms.IsUserAdmin() %]
+
 <form action="crms">
   <input type="hidden" name="p" value="adminUser"/>
   [% crms.HiddenSys() %]
@@ -32,7 +34,7 @@
 [% sys = crms.Sys() %]
 [% icon = '<img width="16" height="16" alt="Check" src="/c/crms/CheckIcon.png"/>' %]
 
-[% IF crms.IsUserAdmin() %]
+[% IF uadmin %]
   [% IF add %]
     [% IF id %]
       [% res = crms.AddUser(id,kerberos,name,reviewer,advanced,expert,
@@ -45,9 +47,6 @@
       <h3 style="color:red;">[% res %]</h3>
     [% END %]
   [% END %]
-  [% admin = 1 %]
-[% ELSE %]
-  [% admin = 0 %]
 [% END %]
 
 [% users = crms.GetUsers(order) %]
@@ -65,30 +64,29 @@
     <th scope="col">Projects</th>
     <th scope="col">IP Address</th>
     <th scope="col">Change&nbsp;To</th>
-    <th scope="col">Commitment[% IF admin %]<br/>(Progress)[% END %]</th>
+    <th scope="col">Commitment[% IF uadmin %]<br/>(Progress)[% END %]</th>
     <th scope="col">Note</th>
   </tr>
-  [% FOREACH userid IN users %]
-    [% r = crms.IsUserReviewer(userid) %]
-    [% v = crms.IsUserAdvanced(userid) %]
-    [% e = crms.IsUserExpert(userid) %]
-    [% a = crms.IsUserAdmin(userid) %]
-    [% s = crms.IsUserSuperAdmin(userid) %]
+  [% FOREACH u IN users %]
+    [% userid = u.id %]
+    [% r = u.reviewer %]
+    [% v = u.advanced %]
+    [% e = u.expert %]
+    [% a = u.admin %]
+    [% s = u.superadmin %]
     [% active = (r||v||e||a||s) %]
     [% style = (active)? '':'style="background-color:#e2e2e2;"' %]
-    <tr [% id == userid ? 'class="total"':'class="hoverWide"'%] [% style %]>
+    <tr [% id == u.id ? 'class="total"':'class="hoverWide"'%] [% style %]>
       <td>
         <a href="[% crms.Sysify('crms?p=userRate;user=' _ userid) %]" target="_blank">
-          [% crms.GetUserName(userid).replace('\s','&nbsp;') %]
+          [% u.name.replace('\s','&nbsp;') %]
         </a>
       </td>
-      <td>[% userid #crms.GetUserId(userid) %]</td>
-      <td>[% crms.GetUserKerberosID(userid) %]</td>
+      <td>[% u.id %]</td>
+      <td>[% u.kerberos %]</td>
       <td>
-        [% inst = crms.GetUserInstitution(userid) %]
-        [% shortname = crms.GetInstitutionName(inst) %]
         <a href="[% crms.Sysify('crms?p=adminUserRateInst;inst=' _ inst) %]" target="_blank">
-          [% shortname %]
+          [% u.institution %]
         </a></td>
       <td style="text-align:center;">[% IF r %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF v %][% icon %][% END %]</td>
@@ -104,10 +102,10 @@
         [% ips.keys.join(', ') %]
         [% IF !userid.match("-expert") && !userid.match("-reviewer") && r %]
           [% role = crms.GetUserRole(userid) %]
-          [% IF "crms" != role && 'Michigan' != shortname %]
+          [% IF "crms" != role && 'Michigan' != u.institution %]
             <span class="red"><br/>Role <strong>[% role %]</strong></span>
           [% END %]
-          [% exp = crms.IsUserExpired(userid) %]
+          [% exp = u.expiration %]
           [% IF exp.status == 1 %]
             <span class="red"><br/>Expired <strong>[% exp.expires %]</strong></span>
           [% ELSIF exp.status == 2 %]
@@ -127,30 +125,24 @@
         [% END %]
       </td>
       <td>
-        [% IF crms.GetUserCommitment(userid) > 0.0 %]
-          [% crms.GetUserCommitment(userid, 1) %]
-          [% prog = crms.GetUserProgress(userid) %]
-          [% IF active && admin %]
-            [% IF prog > 1.0 %][% prog = 1.0 %][% END %]
+        [% IF u.commitment > 0.0 %]
+          [% u.commitmentFmt %]
+          [% IF active && uadmin %]
             <div class="ProgressBar[% (crms.sys() == 'crmsworld')? 'Red':'' %]">
               <div class="ProgressBarInner"
-                   style="width:[% (prog * 100.0) _ '%' %];">
+                   style="width:[% (u.progress * 100.0) _ '%' %];">
               </div>
             </div>
           [% END %]
-          [% IF 0#prog && active %]
-            ([% prog %])
-          [% END %]
         [% END %]
       </td>
-      [% note = crms.GetUserNote(userid) %]
-      <td style="text-align:center;">[% note %]</td>
+      <td style="text-align:center;">[% u.note %]</td>
     </tr>
   [% END %]
 </table>
 <br/>
 
-[% IF admin %]
+[% IF uadmin %]
 <h4>Add or Edit a User:</h4>
 <div style="position:relative;border-style:solid;width:38em;border-width:1px;padding:10px;">
   <form action="crms">
