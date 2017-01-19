@@ -340,7 +340,7 @@ sub CreateReviewerGraph
   foreach my $user (@users)
   {
     my $ids = $self->GetUserIncarnations($user);
-    my $name = $self->GetUserName($user);
+    my $name = $self->GetUserProperty($user, 'name');
     my $comm = $self->SimpleSqlGet('SELECT commitment FROM users WHERE id=?', $user);
     my @counts; # For the inval rate tip
     my $wc = $self->WildcardList(scalar @{$ids});
@@ -416,7 +416,7 @@ sub CreateFlaggedGraph
   foreach my $user (@users)
   {
     my $ids = $self->GetUserIncarnations($user);
-    my $name = $self->GetUserName($user);
+    my $name = $self->GetUserProperty($user, 'name');
     my $wc = $self->WildcardList(scalar @{$ids});
     my $h = {'color'=>$colors[$i], 'name'=>$name, 'data'=>[]};
     push @{$data{'series'}}, $h;

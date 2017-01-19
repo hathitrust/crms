@@ -2,8 +2,8 @@
   <div class="pages" id="homePage">
     <img src="[% crms.GetSystemVar('logo') %]"
          style="display:block;margin-left:auto;margin-right:auto;"/>
-    <br/><br/>
-    <!--<font size="5"><strong>Hello [% crms.GetUserName %] </strong></font>-->
+<br/>
+<br/>
 <br/>
 <br/>
 [% mail = crms.GetSystemVar('adminEmail') %]

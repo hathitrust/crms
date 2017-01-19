@@ -1,5 +1,5 @@
 [% p = cgi.param('p') %]
-[% inst = crms.GetUserInstitution() %]
+[% inst = crms.GetUserProperty(undef, 'institution') %]
 [% IF crms.IsUserAdmin() %]
   [% inst2 = cgi.param('inst') %]
   [% IF inst2 %][% inst = inst2 %][% END %]

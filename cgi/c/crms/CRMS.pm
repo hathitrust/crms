@@ -3421,6 +3421,16 @@ sub CheckReviewer
   return ($isReviewer || $isAdvanced || $isExpert);
 }
 
+sub GetUserProperty
+{
+  my $self = shift;
+  my $user = shift || $self->get('user');
+  my $prop = shift;
+
+  my $sql = 'SELECT '. $prop. ' FROM users WHERE id=?';
+  return $self->SimpleSqlGet($sql, $user);
+}
+
 sub GetUserName
 {
   my $self = shift;

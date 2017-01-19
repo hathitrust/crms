@@ -54,7 +54,7 @@ var gSys = '[% crms.Sys() %]';
               <img src="/c/crms/HathiTrustLogo.png" width="86" height="80" alt="HathiTrust Logo"/>
             </td>
             <td style="line-height:1px;">
-              Hello&nbsp;[% crms.GetUserName().replace(" ","&nbsp;") %]&nbsp;&nbsp;
+              Hello&nbsp;[% crms.GetUserProperty(undef, 'name').replace(" ","&nbsp;") %]&nbsp;&nbsp;
               <a href="[% crms.Sysify('crms?p=Logout') %]" class="header">logout</a>
             </td>
           </tr>

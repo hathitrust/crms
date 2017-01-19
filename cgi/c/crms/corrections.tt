@@ -36,7 +36,6 @@
   [% STOP %]
 [% END %]
 
-[% userName = crms.GetUserName(user)      %]
 [% pub_date = crms.FormatPubDate(barcode) %]
 [% author   = crms.GetAuthor(barcode)     %]
 [% title    = crms.GetTitle(barcode)      %]
@@ -49,7 +48,7 @@
       <table class="nav">
         <tr>
           <td rowspan="2"><img src="[% crms.GetSystemVar('smallLogo') %]" alt="CRMS Logo" width="52" height="40"/></td>
-          <td style="text-align:left;"><strong>Hello [% userName %]</strong></td>
+          <td style="text-align:left;"><strong>Hello [% crms.GetUserProperty(user, 'name') %]</strong></td>
         </tr>
         <tr>
           <td style="text-align:left;"><a href="[% homeLink %]">Home</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="crms?p=Logout;sys=$sys">Logout</a></td>

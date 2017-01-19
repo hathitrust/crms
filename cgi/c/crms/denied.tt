@@ -4,15 +4,15 @@
   <img src="[% crms.GetSystemVar('logo') %]" width="455" height="80"
              alt="[% crms.System() %] Logo"
              style="display:block;margin-left:auto;margin-right:auto;"/>
-    <br/><br/>
-    <!--<font size="5"><strong>Hello [% crms.GetUserName %] </strong></font>-->
+  <br/>
+  <br/>
   <br/>
   <br/>
   [% mail = crms.GetSystemVar('expertsEmail') %]
   [% mail2 = mail.replace('-', '&#8209;') %]
   [% user = crms.get('user') %]
   <div class="warningBox">
-    <h2>Hello [% crms.GetUserName %]. You do not have access to this page.</h2>
+    <h2>Hello [% crms.GetUserProperty(user, 'name') %]. You do not have access to this page.</h2>
     <strong><a href="[% crms.Sysify('/cgi/c/crms/crms?p=home') %]">Go to home page</a></strong><br/>
     <strong><a href="[% crms.Sysify('crms?p=Logout') %]"> Logout</a></strong>
   
