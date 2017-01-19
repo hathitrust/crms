@@ -8158,31 +8158,6 @@ sub Undollarize
   return undef;
 }
 
-sub GetUserProgress
-{
-  my $self   = shift;
-  my $user   = shift;
-  my $format = shift;
-
-  my $p = 0;
-  my $comm = $self->GetUserCommitment($user);
-  if ($comm > 0.0)
-  {
-    my $ids = $self->GetUserIncarnations($user);
-    my $wc = $self->WildcardList(scalar @{$ids});
-    my $sql = 'SELECT s.total_time/60.0 FROM userstats s'.
-              ' WHERE s.monthyear=DATE_FORMAT(NOW(),"%Y-%m")'.
-              ' AND s.user IN '. $wc;
-    my $hours = $self->SimpleSqlGet($sql, @{$ids});
-    $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/3600.0 from reviews'.
-           ' WHERE user IN '. $wc;
-    $hours += $self->SimpleSqlGet($sql, @{$ids});
-    $p = $hours/(160.0*$comm);
-  }
-  $p = sprintf "%.1f%%", 100.0*$p if $format;
-  return $p;
-}
-
 sub OneoffProgress
 {
   my $self = shift;
