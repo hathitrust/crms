@@ -68,7 +68,6 @@ sub HSV2RGB
 
 sub StackTrace
 {
-  my ($path, $line, $subr);
   my $max_depth = 30;
   my $i = 1;
   my $trace = "--- Begin stack trace ---\n";
@@ -77,6 +76,19 @@ sub StackTrace
     $trace .= "$call_details[1] line $call_details[2] at $call_details[3]\n";
   }
   return $trace . "--- End stack trace ---\n";
+}
+
+sub LocalCallChain
+{
+  my $i = 2;
+  my @chain;
+  while (my @call_details = (caller($i++)))
+  {
+    next if $call_details[3] eq '(eval)';
+    last if $call_details[3] =~ m/^Template/;
+    push @chain, $call_details[3];
+  }
+  return \@chain;
 }
 
 sub GenerateID

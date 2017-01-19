@@ -267,8 +267,11 @@ sub PrepareSubmitSql
   my $sql  = shift;
 
   my $dbh = $self->GetDb();
+  my $t1 = Time::HiRes::time();
   my $sth = $dbh->prepare($sql);
   eval { $sth->execute(@_); };
+  my $t2 = Time::HiRes::time();
+  $self->DebugSql($sql, 1000.0*($t2-$t1), @_);
   if ($@)
   {
     my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $sth->errstr;
@@ -371,14 +374,19 @@ sub DebugSql
   {
     my $ct = $self->get('debugCount');
     $ct = 0 unless $ct;
+    my @parts = split m/\s+/, $sql;
+    my $type = uc $parts[0];
+    my $trace = Utilities::LocalCallChain();
+    $trace = join '<br>', @{$trace};
 	  my $html = <<END;
     <div class="debug">
       <div class="debugSql" onClick="ToggleDiv('details$ct');">
-        SQL QUERY ($ct)
+        SQL QUERY [$type] ($ct)
       </div>
       <div id="details$ct" class="divHide"
            style="background-color: #9c9;" onClick="ToggleDiv('details$ct');">
-        $sql <strong>{%s}</strong> <i>(%.3fms)</i>
+        $sql <strong>{%s}</strong> <i>(%.3fms)</i><br/>
+        <i>$trace</i>
       </div>
     </div>
 END
