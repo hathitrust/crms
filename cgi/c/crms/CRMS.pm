@@ -3431,16 +3431,6 @@ sub GetUserProperty
   return $self->SimpleSqlGet($sql, $user);
 }
 
-sub GetUserName
-{
-  my $self = shift;
-  my $user = shift || $self->get('user');
-
-  my $sql = 'SELECT name FROM users WHERE id=?';
-  my $name = $self->SimpleSqlGet($sql, $user);
-  return (defined $name)? $name:'(no name available)';
-}
-
 sub GetUserNote
 {
   my $self = shift;
@@ -4300,7 +4290,7 @@ sub CreateStatsData
   }
   else
   {
-    $username = $self->GetUserName($user);
+    $username = $self->GetUserProperty($user, 'name');
     if ($page =~ m/^Admin/i && $page !~ m/Inst$/i)
     {
       my $inst = $self->GetUserInstitution($user);
