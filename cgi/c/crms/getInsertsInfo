@@ -32,6 +32,6 @@ else
 {
   $data = $ins->GetInsertsData($id, $user);
 }
-my $json = JSON::XS->new->utf8->encode($data);
-print $cgi->header('application/json');
+my $json = JSON::XS->new->encode($data);
+print $cgi->header(-type => 'application/json', -charset => 'utf-8');
 print $json;

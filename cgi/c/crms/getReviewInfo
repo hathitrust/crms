@@ -28,7 +28,7 @@ my %data;
 # FIXME: this may need to be made project-sensitive.
 $data{'rights'} = $crms->GetCodeFromAttrReason($row->[0], $row->[1]);
 # If the rights attr is not und (5) then run a rights prediction
-if ($row->[0] != $crms->TranslateAttr('und'))
+if ($crms->Sys() eq 'crmsworld' && $row->[0] != $crms->TranslateAttr('und'))
 {
   $data{'rights'} = $crms->PredictRights($id, $row->[5], $row->[4],
                                          $crms->TolerantCompare($row->[3],
@@ -39,7 +39,7 @@ $data{'category'} = $row->[3];
 $data{'renNum'} = $row->[4];
 $data{'renDate'} = $row->[5];
 $data{'sql'} = $sql;
-print $cgi->header();
-my $json = JSON::XS->new->utf8->encode(\%data);
+my $json = JSON::XS->new->encode(\%data);
+print $cgi->header(-type => 'application/json', -charset => 'utf-8');
 print $json;
 

@@ -57,8 +57,8 @@ else
 if ( $data eq '') { print $cgi->header( -status => "400" ); }
 if (ref($data))
 {
-  my $json = JSON::XS->new->utf8->encode($data);
-  print $cgi->header('application/json');
+  my $json = JSON::XS->new->encode($data);
+  print $cgi->header(-type => 'application/json', -charset => 'utf-8');
   print $json;
 }
 else
