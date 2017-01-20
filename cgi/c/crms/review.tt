@@ -135,7 +135,7 @@
       [% sources = crms.Authorities(barcode,mag,ptview) %]
       <table class="search">
         <tr>
-          <th>View 1:</th>
+          <th class="nowrap">View 1:</th>
           <td>
             <select title="Search 1" class="review" id="search1Select" onchange="changeFrame1(1);" style="float:right;">
             [% optopen = 0 %]
@@ -159,7 +159,7 @@
           </td>
         </tr>
         <tr>
-          <th>View 2:</th>
+          <th class="nowrap">View 2:</th>
           <td>
             <select title="Search 2" class="review" id="search2Select" onchange="changeFrame2(1);" style="float:right;">
             [% optopen = 0 %]
