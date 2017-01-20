@@ -16,14 +16,18 @@ $sys = 'crms' unless $sys;
 my $page = $cgi->param('p');
 my $pdb = $cgi->param('pdb');
 my $tdb = $cgi->param('tdb');
+my $debugSql = $cgi->param('debugSql');
+my $debugVar = $cgi->param('debugVar');
 my $crms = CRMS->new(
-        logFile => $DLXSROOT. '/prep/c/crms/log_review.txt',
-        sys     => $sys,
-        verbose => 0,
-        root    => $DLXSROOT,
-        dev     => $DLPS_DEV,
-        pdb     => $pdb,
-        tdb     => $tdb,
+        logFile  => $DLXSROOT. '/prep/c/crms/log_review.txt',
+        sys      => $sys,
+        verbose  => 0,
+        root     => $DLXSROOT,
+        dev      => $DLPS_DEV,
+        pdb      => $pdb,
+        tdb      => $tdb,
+        debugSql => $debugSql,
+        debugVar => $debugVar
         );
 my $cri;
 if ($page eq 'cri' || $page eq 'criData' || $page eq 'confirmCRI')
