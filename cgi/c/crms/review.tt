@@ -112,15 +112,6 @@
             </select>
           </td>
         </tr>
-        <tr><td colspan="2">
-          [% experts = crms.GetSystemVar("expertsEmail") %]
-          [% IF experts %]
-          <a href="mailto:[% experts %]?subject=CRMS%20Feedback">
-            <img width="16" height="16" alt="Report error" src="/c/crms/SendIcon.png"/>
-            <strong>Can't see scan? Error message?</strong>
-          </a>
-          [% END %]
-        </td></tr>
       </table>
       <table class="id">
         <tr><td><strong>ID:</strong> [% barcode %]</td></tr>
