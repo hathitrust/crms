@@ -33,12 +33,41 @@ window.onload = function(e)
 -->
 </script>
 
+[% pf = cgi.param('projectForm') %]
+[% ps = cgi.param('projectSel') %]
+[% IF pf == 1 %]
+  [% CALL crms.SetUserCurrentProject(undef, ps) %]
+[% END %]
+
+[% projs = crms.GetUserProjects() %]
+[% IF projs.size > 1 %]
+  [% cp = crms.GetUserProperty(undef, 'newproject') %]
+  <form action="crms">
+    <input type="hidden" name="projectForm" value="1"/>
+    [% crms.HiddenSys() %]
+    <label for="projectSel">Current project:</label>
+    <select name="projectSel" id="projectSel" onchange="this.form.submit()">
+    [% FOREACH proj IN projs %]
+      <option value="[% proj.id %]" [% (cp==proj.id)? 'selected="selected"':'' %]>[% proj.name %] ([% proj.count %] available)</option>
+    [% END %]
+    </select>
+    
+  </form>
+[% END %]
+
 [% n = crms.CountHolds() %]
 [% IF n %]<h4>You have $n [% crms.Pluralize('volume', n) %] on hold.</h4>[% END %]
 
+[% # FIXME: GetAddToQueueRef() is potentially inefficient. %]
+[% # FIXME: replace this with breakdown of reviewer's items by project. %]
 [% ref = crms.GetAddToQueueRef() %]
 [% n = ref.size %]
-[% IF n>0 %]<h4>You have $n <a href="[% crms.Sysify('/cgi/c/crms/crms?p=queueAdd') %]">high-priority</a> [% crms.Pluralize('volume', n) %].</h4>[% END %]
+[% IF n>0 %]
+  <h4>You have $n
+    <a href="[% crms.Sysify('/cgi/c/crms/crms?p=queueAdd') %]">
+    high-priority</a> [% crms.Pluralize('volume', n) %].
+  </h4>
+[% END %]
 <br/>
 [% IF cgi.param('unlockSel') %]
   <br/>
@@ -52,7 +81,7 @@ window.onload = function(e)
   [% CALL crms.UnlockItem(cgi.param('unlock')) %]
 [% END %]
 
-[% IF crms.Sys() == 'crmsworld' && crms.WhereAmI() != 'Training' %]
+[% IF 0 #crms.Sys() == 'crmsworld' && crms.WhereAmI() != 'Training' %]
 <div id="progress" style="width:450px;float:right;margin-right:240px;"></div>
 [% END %]
 <table class="mainnav">

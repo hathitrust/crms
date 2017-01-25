@@ -1,31 +1,40 @@
 <div class="pages">
-  <img src="[% crms.GetSystemVar('logo') %]"
-       style="display:block;margin-left:auto;margin-right:auto;"/>
+  <a href="[% crms.Sysify('crms') %]">
+    <img src="[% crms.GetSystemVar('logo') %]" width="455" height="80"
+               alt="Jump to home page"
+               style="display:block;margin-left:auto;margin-right:auto;"/>
+  </a>
   <br/><br/><br/><br/>
   [% mail = crms.GetSystemVar('adminEmail') %]
   [% experts = crms.GetSystemVar("expertsEmail") %]
   [% user = crms.get('user') %]
   <div class="warningBox">
-    <h2>Hello [% crms.GetUserName() %], CRMS is unable to find a volume for you to review.
+    <h2>Hello [% crms.GetUserProperty(user, 'name') %], CRMS is unable to find a volume for you to review.
     It appears all available volumes in the queue have been reviewed.
     [% projs = crms.GetUserProjects(user) %]
     [% IF projs.size() %]
       You are on the following [% crms.Pluralize('project', projs.size) %]:
-      <i>[% projs.join(', ') %]</i>.
+      [% names = [] %]
+      [% FOREACH proj IN projs %][% names.push(proj.name) %][% END %]
+      <i>[% names.join(', ') %]</i>.
+      [% cp = crms.GetUserProperty(user, 'newproject') %]
+      [% name = crms.GetProjectName(cp) %]
+      Your current project is <i>[% name %]</i>.
     [% END %]
     </h2><br/><br/>
     <div class="warningSubbox">
     <h4>Queue has [% crms.GetQueueSize() %] volumes; candidates has [% crms.GetCandidatesSize() %].
         If indeed your work on CRMS is finished, congratulations!
-        If you have been assigned a CRMS special project sub-queue and need to return to
-        the regular queue please contact your CRMS liaison, or the e-mail below.
+        If you have been assigned a CRMS project and cannot return to
+        the core project please contact your CRMS liaison, or the e-mail below.
         If you feel that this may be a CRMS error, please try refreshing the page
         a couple of times before contacting
         [% IF experts %]
         <a href="mailto:[% mail %]"><span style="color:black;">[% experts %]</span></a>
-        or
+        or, <i>in extremis</i>,
         [% END %]
         <a href="mailto:[% mail %]"><span style="color:black;">[% mail %]</span></a>.
     </h4>
   </div>
 </div>
+[% INCLUDE footer.tt %]

@@ -77,7 +77,7 @@ function popRenewalDate()
 
 function popReviewInfo(id,user,sys)
 {
-  var loader = document.getElementById('loader' + user);
+  var loader = document.getElementById('importLoader');
   var req = new XMLHttpRequest();
   req.onreadystatechange = function()
   {
@@ -85,6 +85,7 @@ function popReviewInfo(id,user,sys)
     {
       if (req.status == 200)
       {
+        //alert(req.responseText);
         var data = JSON.parse(req.responseText, null);
         if (data)
         {

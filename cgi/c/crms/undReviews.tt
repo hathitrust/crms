@@ -1,6 +1,12 @@
 [% INCLUDE header.tt %]
 
-<h2>Provisional Matches:</h2>
+[% projs = crms.GetUserProjects() %]
+[% IF projs.size %]
+  [% proj = crms.GetProjectName(crms.GetUserProperty(undef, 'newproject')) %]
+  [% flag = " -- " _ proj _ " Project" %]
+[% END %]
+
+<h2>Provisional Matches[% flag %]:</h2>
 
 [% n = 0 %]
 [% IF cgi.param('approve') %]
@@ -49,7 +55,5 @@
 [% END %]
 
 [% INCLUDE selection.tt  %]
-
 [% INCLUDE searchResults.tt  %]
-
 [% INCLUDE footer.tt %]

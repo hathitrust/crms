@@ -14,11 +14,17 @@
 [% superadmin = cgi.param('superadmin') %]
 [% note       = cgi.param('note')       %]
 [% disable    = cgi.param('disable')    %]
-[% projects   = cgi.param('projects')   %]
 [% commitment = cgi.param('commitment') %]
 [% order      = cgi.param('order')      %]
 
 [% uadmin = crms.IsUserAdmin() %]
+[% projects = [] %]
+[% FOREACH param IN cgi.param %]
+  [% matches = param.match('(proj_)(.?)') %]
+  [% IF matches.0 == 'proj_' %]
+    [% projects.push(matches.1) %]
+  [% END %]
+[% END %]
 
 <form action="crms">
   <input type="hidden" name="p" value="adminUser"/>
@@ -93,7 +99,12 @@
       <td style="text-align:center;">[% IF e %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF a %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF s %][% icon %][% END %]</td>
-      <td style="text-align:center;">[% crms.GetUserProjects(userid).join(', ') %]</td>
+      <td style="text-align:center;">
+        [% projs = crms.GetUserProjects(userid) %]
+        [% names = [] %]
+        [% FOREACH proj IN projs %][% names.push(proj.name) %][% END %]
+        [% names.join(', ') %]
+      </td>
       [% ips = crms.GetUserIPs(userid) %]
       <td>
       [% IF !userid.match("-expert") && !userid.match("-reviewer") && r && !ips.keys.size() && inst != 0 %]
@@ -173,19 +184,16 @@
         <input id="namefield" type="text" name="name" tabindex="3"/>
       </td>
     </tr>
-    <tr>
-      <td colspan="2">
-        <label for="projectsfield" style="float:left;width:5.5em">Projects:</label>
-        <input id="projectsfield" type="text" name="projects" tabindex="4"/>
-        <span style="color:#777777;">Comma-delimited
-        </span>
-      </td>
-    </tr>
-    [% projs = crms.UserProjects() %]
+    [% projs = crms.GetProjectsRef() %]
     [% IF projs.size %]
     <tr>
       <td colspan="2">
-        Available projects: <strong>[% projs.join('</strong>, <strong>') %]</strong><br/>
+        <fieldset id="projectsGroup">Projects:</label>
+        [% FOR proj IN projs %]
+          <input type="checkbox" name="proj_[% proj.id %]" id="Project[% proj.id %]CB"
+                 [% IF proj.id == 0 %]checked="checked"[% END %]/>
+          <label for="Project[% proj.id %]CB">[% proj.name %]</label>
+        [% END %]
       </td>
     </tr>
     [% END %]
@@ -208,7 +216,7 @@
         <td><input type="checkbox" name="admin" id="adminCB"/> <label for="adminCB">Admin</label></td>
         <td><input type="checkbox" name="superadmin"[% crms.IsUserSuperAdmin()? '':' disabled="disabled"' %] id="superAdminCB"/>
             <label for="superAdminCB">Super Admin</label></td>
-        <td></td>
+        <td/>
       </tr>
     </table>
     <br/><input type="checkbox" name="disable" id="disableCB"/> <label for="disableCB">Disable user</label>

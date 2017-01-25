@@ -141,8 +141,7 @@
     </tr>
   </table>
   </div>
-[% project = crms.GetProject(barcode) %]
-[% rights = crms.Rights(0, 0, project) %]
+[% rights = crms.Rights(barcode) %]
 <div id="RightsCont" class="rightscont">
 <div id="RightsReason" style="position:relative;">
   <div style="position:absolute;top:0px;right:1em;">
@@ -151,9 +150,8 @@
       <span>
       [% asterisk = 0 %]
       [% FOR right IN rights %]
-        [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
-        <strong>[% ar %]</strong> - [% right.4 %]<br/>
-        [% IF right.4.search('\*') %][% asterisk = 1 %][% END %]
+        <strong>[% right.1 %]</strong> - [% right.2 %]<br/>
+        [% IF right.2.search('\*') %][% asterisk = 1 %][% END %]
       [% END %]
       [% IF asterisk %]
         <br/>* if no publication date listed on piece, use copyright date
@@ -161,12 +159,8 @@
       </span>
     </a>
   </div>
-  [% USE Math %]
   [% of = rights.size() %]
-  [% IF of > 0 %]
-    [% delta = Math.int(of / 2) %]
-    [% IF of % 2 == 1 %][% delta = delta + 1 %][% END %]
-    [% last = delta - 1 %]
+  [% n = 0 %]
     <div style="display:none" id="UNDNFI" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=5 AND reason=8') %]"></div>
     <div style="display:none" id="ICREN" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=2 AND reason=7') %]"></div>
     <table>
@@ -179,72 +173,31 @@
       [% END %]
       </td>
     </tr>
-    [% FOREACH i IN [0 .. last] %]
+    [% WHILE n < of %]
       <tr>
-      [% right = rights.$i %]
-      [% n = i+1 %]
+      [% right = rights.$n %]
       [% id = right.0 %]
-      [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
       <td style="width:50%;">
         <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]"
               [% IF n < 10 %]accesskey="[% n %]"[% END %]
               [% IF select == id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ id %]">[% ar %] ([% n %])</label>
+        <label for="[% 'r' _ id %]">[% right.1 %] ([% right.3 %])</label>
       </td>
-      [% j = i + delta %]
+      [% n = n + 1 %]
       <td style="width:50%;">
-      [% IF j < of %]
-        [% right = rights.$j %]
-        [% n = j+1 %]
+        [% IF n < of %]
+        [% right = rights.$n %]
         [% id = right.0 %]
-        [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
         <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]"
-              [% IF n < 10 %]accesskey="[% n %]"[% END %]
+              [% IF n < 9 %]accesskey="[% n + 1 %]"[% END %]
               [% IF select == id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ id %]">[% ar %] ([% n %])</label>
-      [% END %]
+        <label for="[% 'r' _ id %]">[% right.1 %] ([% right.3 %])</label>
+        [% END %]
       </td>
       </tr>
+      [% n = n + 1 %]
     [% END %]
     </table>
-  [% END %]
-  [% rights = crms.Rights(1, 0, project) %]
-  [% of = rights.size() %]
-  [% IF of > 0 %]
-    <hr style="width:80%;margin-left:auto;margin-right:auto;"/>
-    [% delta = Math.int(of / 2) %]
-    [% IF delta % 2 == 1 %][% delta = delta + 1 %][% END %]
-    [% last = delta - 1 %]
-    <table>
-    [% FOREACH i IN [0 .. last] %]
-      <tr>
-      [% right = rights.$i %]
-      [% m = n+i+1 %]
-      [% id = right.0 %]
-      [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
-      <td style="width:50%;">
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]"
-              [% IF m < 10 %]accesskey="[% m %]"[% END %]
-              [% IF select == id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ id %]">[% ar %] ([% m %])</label>
-      </td>
-      [% j = i + delta %]
-      <td style="width:50%;">
-      [% IF j < of %]
-        [% right = rights.$j %]
-        [% m = n+j+1 %]
-        [% id = right.0 %]
-        [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]"
-              [% IF m < 10 %]accesskey="[% m %]"[% END %]
-              [% IF select == id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ id %]">[% ar %] ([% m %])</label>
-      [% END %]
-      </td>
-      </tr>
-    [% END %]
-    </table>
-  [% END %]
 </div>
 <div id="Notes">
   <strong><label for="catMenu">Notes: </label></strong>
@@ -252,11 +205,11 @@
     [% IF !ren %]onchange="javascript:PredictRights('[% barcode %]');"[% END %]
     >
     <option value="" [% ("" == category)? 'selected="selected"':'' %]>none</option>
-    [% cats = crms.Categories(1) %]
+    [% cats = crms.Categories(barcode) %]
     [% FOREACH cat IN cats %]
-      [% NEXT IF cat.1 == 'Crown Copyright' && ! crms.CanVolumeBeCrownCopyright(barcode) %]
-      [% catname = cat.1 %]
-      <option value="[% catname %]" [% (catname == category)? 'selected="selected"':'' %]>[% catname %]</option>
+      [% # FIXME: projectcategories may make CanVolumeBeCrownCopyright() obsolete %]
+      [% NEXT IF cat == 'Crown Copyright' && ! crms.CanVolumeBeCrownCopyright(barcode) %]
+      <option value="[% cat %]" [% (cat == category)? 'selected="selected"':'' %]>[% cat %]</option>
     [% END %]
   </select>
   <textarea title="Note Text" id="NoteTextField" name="note" cols="20" rows="1">[% note %]</textarea>
@@ -309,16 +262,19 @@
   [% reviews = data.rows %]
   [% IF expert && import && reviews.size %]
   <table>
-    <tr><td colspan="3"><strong>Import user review:</strong></td></tr>
+    <tr>
+      <td>
+        <div style="line-height:20px;">
+          <strong>Import user review:</strong>
+        </div>
+      </td>
+      <td>
+        <img id="importLoader" src="/c/crms/ajax-loader.gif"
+             alt="loading..." style="display:none;"/>
+      </td>
     [% FOREACH review IN reviews %]
-      <tr style="height=24;">
-        <td>[% review.user %] ([% review.attr %]/[% review.reason %])</td>
-        <td style="width=20;height=20;">
-          <div>
-            <img id="loader[% review.user %]" src="/c/crms/ajax-loader.gif"
-                 alt="loading..." style="display:none;"/>
-          </div>
-        </td>
+      <tr>
+        <td><label for="pull[% review.user %]">[% review.user %] ([% review.attr %]/[% review.reason %])</label></td>
         <td><input type="radio" name="pullrights" id="pull[% review.user %]"
                    [% IF import == review.user %]checked="checked"[% END %]
                    onclick="popReviewInfo('[% barcode %]','[% review.user %]', '[% sys %]');"/>

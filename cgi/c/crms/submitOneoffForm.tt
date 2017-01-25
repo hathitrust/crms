@@ -123,8 +123,7 @@
       </td>
     </tr>
   </table>
-[% rights = crms.Rights() %]
-[% rights2 = crms.Rights(1,1) %]
+[% rights = crms.Rights(1) %]
 <div id="OneoffCont" class="rightscont">
 <div id="RightsReason" style="position:relative;">
   <div style="position:absolute;top:0px;right:1em;">
@@ -133,14 +132,8 @@
       <span>
       [% asterisk = 0 %]
       [% FOR right IN rights %]
-        [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
-        <strong>[% ar %]</strong> - [% right.4 %]<br/>
-        [% IF right.4.search('\*') %][% asterisk = 1 %][% END %]
-      [% END %]
-      [% FOR right IN rights2 %]
-        [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
-        <strong>[% ar %]</strong> - [% right.4 %]<br/>
-        [% IF right.4.search('\*') %][% asterisk = 1 %][% END %]
+        <strong>[% right.1 %]</strong> - [% right.3 %]<br/>
+        [% IF right.3.search('\*') %][% asterisk = 1 %][% END %]
       [% END %]
       [% IF asterisk %]
         <br/>* if no publication date listed on piece, use copyright date
@@ -162,55 +155,19 @@
       <tr>
       [% right = rights.$i %]
       [% id = right.0 %]
-      [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
       <td style="width:50%;">
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
+        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]"
               [% IF select == id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ id %]">[% ar %] ([% id %])</label>
+        <label for="[% 'r' _ id %]">[% right.1 %]</label>
       </td>
       [% j = i + delta %]
       <td style="width:50%;">
       [% IF j < of %]
         [% right = rights.$j %]
         [% id = right.0 %]
-        [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
+        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]"
               [% IF select == id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ id %]">[% ar %] ([% id %])</label>
-      [% END %]
-      </td>
-      </tr>
-    [% END %]
-    </table>
-  [% END %]
-  [% rights = rights2 %]
-  [% of = rights.size() %]
-  [% IF of > 0 %]
-    <hr style="width:80%;margin-left:auto;margin-right:auto;"/>
-    [% delta = Math.int(of / 2) %]
-    [% IF of % 2 == 1 %][% delta = delta + 1 %][% END %]
-    [% last = delta - 1 %]
-    <div style="display:none" id="UNDNFI" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=5') %]"></div>
-    <table>
-    [% FOREACH i IN [0 .. last] %]
-      <tr>
-      [% right = rights.$i %]
-      [% id = right.0 %]
-      [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
-      <td style="width:50%;">
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
-              [% IF select == id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ id %]">[% ar %] ([% id %])</label>
-      </td>
-      [% j = i + delta %]
-      <td style="width:50%;">
-      [% IF j < of %]
-        [% right = rights.$j %]
-        [% id = right.0 %]
-        [% ar = crms.TranslateAttr(right.1) _ '/' _ crms.TranslateReason(right.2) %]
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]" accesskey="[% id %]"
-              [% IF select == id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ id %]">[% ar %] ([% id %])</label>
+        <label for="[% 'r' _ id %]">[% right.1 %]</label>
       [% END %]
       </td>
       </tr>
@@ -223,10 +180,9 @@
   <select id="catMenu" class="review" name="category">
     <option value="" [% ("" == category)? 'selected="selected"':'' %]>none</option>
     [% IF NOT category %][% category = "Expert Note" %][% END %]
-    [% cats = crms.Categories(1) %]
+    [% cats = crms.Categories(barcode) %]
     [% FOREACH cat IN cats %]
-      [% catname = cat.1 %]
-      <option value="[% catname %]" [% (catname == category)? 'selected="selected"':'' %]>[% catname %]</option>
+      <option value="[% cat %]" [% (cat == category)? 'selected="selected"':'' %]>[% cat %]</option>
     [% END %]
   </select>
   [% IF NOT note %][% note = tx %][% END %]
