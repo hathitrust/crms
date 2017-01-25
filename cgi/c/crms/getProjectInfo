@@ -1,0 +1,90 @@
+#!/usr/bin/perl
+
+my ($DLXSROOT, $DLPS_DEV);
+BEGIN { $DLXSROOT = $ENV{'DLXSROOT'}; $DLPS_DEV = $ENV{'DLPS_DEV'}; }
+
+use strict;
+use CGI;
+use CRMS;
+use JSON::XS;
+use utf8;
+
+my $cgi  = new CGI;
+my $sys  = $cgi->param('sys');
+$sys = 'crms' unless $sys;
+my $crms = CRMS->new(logFile  =>   "$DLXSROOT/prep/c/crms/log_getReviewInfo.txt",
+                     sys      =>   $sys,
+                     verbose  =>   0,
+                     root     =>   $DLXSROOT,
+                     dev      =>   $DLPS_DEV);
+
+my %data;
+my @errs;
+my $q = $cgi->param('q');
+my %rs = ('setProjectColor' => 'a',
+          'addProject'      => 'a');
+my $qual = $crms->GetUserQualifications();
+my $rest = $rs{$q};
+if (!$crms->DoQualificationsAndRestrictionsOverlap($qual, $rest))
+{
+  push @errs, 'insufficient privileges ($qual vs $rest) for this operation';
+}
+else
+{
+  if ($q eq 'setProjectColor')
+  {
+    my $id = $cgi->param('id');
+    my $color = $cgi->param('color');
+    $color =~ s/^#+// if defined $color;
+    $crms->PrepareSubmitSql('UPDATE projects SET color=? WHERE id=?', $color, $id);
+  }
+  elsif ($q eq 'setProjectProperty')
+  {
+    my $id = $cgi->param('id');
+    $id = undef if $id eq '0' or $id eq '';
+    my $prop = $cgi->param('property');
+    my @values = split ',', $cgi->param('value');
+    if ($prop eq 'users')
+    {
+      $crms->SetProjectUsers($id, @values);
+    }
+    else
+    {
+      my $table = 'project'. $prop;
+      my %map = ('rights' => 'rights', 'categories' => 'category',
+                 'authorities' => 'authority', 'users' => 'user');
+      my ($f1, $f2) = ('project', $map{$prop});
+      $f1 = 'newproject' if $prop eq 'rights';
+      my $sql = 'DELETE FROM '. $table. ' WHERE '. $f1;
+      $sql .= (defined $id)? '=?':' IS NULL';
+      my @args = ($id);
+      @args = () unless defined $id;
+      $crms->PrepareSubmitSql($sql, @args);
+      #$crms->SetError("$sql {$id}");
+      foreach my $value (@values)
+      {
+        $crms->PrepareSubmitSql('INSERT INTO '. $table. ' ('.$f1. ','. $f2. ') VALUES (?,?)', $id, $value);
+      }
+    }
+  }
+  elsif ($q eq 'addProject')
+  {
+    my $name = $cgi->param('name');
+    my $restrict = $cgi->param('restrict') || undef;
+    my $id = $crms->AddProject($name, $restrict);
+    my $ref = $crms->GetProjectsRef($id);
+    %data = %{$ref->[0]};
+  }
+  elsif ($q eq 'getProjects')
+  {
+    my $ref = $crms->GetProjectsRef(1);
+    $data{'projects'} = $ref;
+  }
+}
+push @errs, $_ for @{$crms->GetErrors()};
+$data{'error'} = ucfirst join ';', @errs if scalar @errs;
+print $cgi->header(-type=>'application/json', -charset=>'utf-8');
+my $json = JSON::XS->new->encode(\%data);
+#$crms->Note($json);
+print $json;
+
