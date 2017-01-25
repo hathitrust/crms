@@ -6626,7 +6626,7 @@ sub WhereAmI
   if ($dev)
   {
     if ($where eq '1') { $where = 'Dev'; }
-    if ($dev eq 'crms-training') { $where = 'Training'; }
+    elsif ($dev eq 'crms-training') { $where = 'Training'; }
     else { $where = $dev. ' Dev'; }
   }
   return $where;
