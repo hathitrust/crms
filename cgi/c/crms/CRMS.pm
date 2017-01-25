@@ -6625,7 +6625,7 @@ sub WhereAmI
   my $dev = $self->get('dev');
   if ($dev)
   {
-    if ($where eq '1') { $where = 'Dev'; }
+    if ($dev eq '1') { $where = 'Dev'; }
     elsif ($dev eq 'crms-training') { $where = 'Training'; }
     else { $where = $dev. ' Dev'; }
   }
