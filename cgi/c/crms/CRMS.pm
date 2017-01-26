@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.0.1';
+  return '6.0.3';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -7526,6 +7526,7 @@ sub Categories
   my $id   = shift;
 
   my $proj = $self->SimpleSqlGet('SELECT newproject FROM queue WHERE id=?', $id);
+  $proj = 1 unless defined $proj;
   my $q = $self->GetUserQualifications();
   my $sql = 'SELECT c.name,c.restricted FROM categories c'.
             ' INNER JOIN projectcategories p ON c.id=p.category'.
@@ -7551,6 +7552,7 @@ sub Rights
   my $id   = shift;
 
   my $proj = $self->SimpleSqlGet('SELECT newproject FROM queue WHERE id=?', $id);
+  $proj = 1 unless defined $proj;
   my @all = ();
   my $sql = 'SELECT r.id,CONCAT(a.name,"/",rs.name),r.description FROM rights r'.
             ' INNER JOIN attributes a ON r.attr=a.id'.
@@ -7597,13 +7599,13 @@ sub Authorities
   $view = 'image' unless $view;
   $page = 'review' unless defined $page;
   my $proj = $self->SimpleSqlGet('SELECT newproject FROM queue WHERE id=?', $id);
+  $proj = 1 unless defined $proj;
   my $sql = 'SELECT a.name,a.url,p.accesskey,p.initial FROM pageauthorities p'.
             ' INNER JOIN authorities a ON p.id=a.id'.
             ' INNER JOIN projectauthorities pa ON pa.authority=a.id'.
             ' WHERE p.page=? AND pa.project=?'.
             ' ORDER BY p.n ASC';
-  
-  #print "$sql\n<br/>";
+  #printf "%s\n<br/>", Utilities::StringifySql($sql, ($page, $proj));
   my $ref = $self->SelectAll($sql, $page, $proj);
   my @all = ();
   my $a = $self->GetAuthor($id);
