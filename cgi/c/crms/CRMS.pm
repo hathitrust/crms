@@ -1280,7 +1280,7 @@ sub LoadQueueForProject
   my $queueSize = $self->SimpleSqlGet($sql, $project);
   my $targetQueueSize = $self->GetSystemVar('queueSize');
   my $needed = $targetQueueSize - $queueSize;
-  printf "Before load, the queue has $queueSize volumes%s -- need $needed for project '$project'";
+  printf "Before load, the queue has $queueSize volumes%s -- need $needed for project $project\n";
   return if $needed <= 0;
   my $count = 0;
   my %dels = ();
