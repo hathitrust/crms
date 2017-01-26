@@ -5154,7 +5154,8 @@ sub GetNextItemForReview
   my $err = undef;
   my $sql = undef;
   eval {
-    my @params = ($user);
+    my $proj = $self->SimpleSqlGet('SELECT newproject FROM users WHERE id=?', $user);
+    my @params = ($user, $proj);
     my $order = 'q.priority DESC, cnt DESC, hash, q.time ASC';
     ####$order = 'hash';
     #### #Random de-prioritization will interfere withe the CRMS US
@@ -5171,10 +5172,11 @@ sub GetNextItemForReview
       $excludeh = ' AND NOT EXISTS (SELECT * FROM historicalreviews r3 WHERE r3.id=q.id AND r3.user IN '. $wc. ')';
       push @params, @{$inc};
     }
+    
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,'.
            'SHA2(CONCAT(?,q.id),0) AS hash,q.priority'.
-           ' FROM queue q INNER JOIN users u ON u.newproject=q.newproject'.
-           ' AND q.expcnt=0 AND q.locked IS NULL AND q.status<2'.
+           ' FROM queue q WHERE q.newproject=? AND q.expcnt=0'.
+           ' AND q.locked IS NULL AND q.status<2'.
            $excludei. $excludeh.
            ' HAVING cnt<2 '.
            ' ORDER BY '. $order;
