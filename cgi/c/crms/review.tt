@@ -61,8 +61,6 @@
 [% title    = crms.GetTitle(barcode)       %]
 [% title    = cgi.escapeHTML(title)        %]
 [% proj     = crms.GetProjectName(barcode) %]
-[% projs    = crms.GetUserProjects() %]
-[% IF projs.size < 2 %][% proj = '' %][% END %]
 
 [% IF NOT renNum %]
 [% renNum = crms.GetReviewField(barcode, user, "renNum") %]
@@ -125,9 +123,7 @@
           [% country = crms.GetPubCountry(barcode, undef, 1) %]
           <tr><td><strong>Country:</strong> [% country %]</td></tr>
         [% END %]
-        [% IF proj %]
-          <tr><td><strong>Project:</strong> [% proj %]</td></tr>
-        [% END %]
+        <tr><td><strong>Project:</strong> [% proj %]</td></tr>
       </table>
       [% sources = crms.Authorities(barcode,mag,ptview) %]
       <table class="search">
