@@ -1036,7 +1036,11 @@ sub AddItemToCandidates
   {
     my $project = $self->GetCandidateProject($id, $record);
     my $proj = $self->SimpleSqlGet('SELECT id FROM projects WHERE name=?', $project);
-    $proj = 1 unless defined $proj;
+    if (! defined $proj)
+    {
+      $proj = 1;
+      $project = 'Core';
+    }
     printf "Add $id to candidates for project '$project' ($proj)\n" unless $quiet;
     my $sql = 'INSERT INTO candidates (id,time,newproject) VALUES (?,?,?)';
     $self->PrepareSubmitSql($sql, $id, $time, $proj) unless $noop;
