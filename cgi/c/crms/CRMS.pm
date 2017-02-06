@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.0.2';
+  return '6.0.3';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -5158,7 +5158,7 @@ sub GetNextItemForReview
   my $err = undef;
   my $sql = undef;
   eval {
-    my $proj = $self->SimpleSqlGet('SELECT newproject FROM users WHERE id=?', $user);
+    my $proj = $self->GetUserCurrentProject($user);
     my @params = ($user, $proj);
     my $order = 'q.priority DESC, cnt DESC, hash, q.time ASC';
     ####$order = 'hash';
@@ -5178,7 +5178,7 @@ sub GetNextItemForReview
     }
     
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,'.
-           'SHA2(CONCAT(?,q.id),0) AS hash,q.priority'.
+           'SHA2(CONCAT(?,q.id),0) AS hash,q.priority,q.newproject'.
            ' FROM queue q WHERE q.newproject=? AND q.expcnt=0'.
            ' AND q.locked IS NULL AND q.status<2'.
            $excludei. $excludeh.
@@ -5196,11 +5196,12 @@ sub GetNextItemForReview
       my $cnt = $row->[1];
       my $hash = $row->[2];
       my $pri = $row->[3];
+      $proj = $row->[4];
       if (defined $test)
       {
-        printf "  $id2 %s %s ($cnt, %s...) (P %s)\n",
+        printf "  $id2 %s %s ($cnt, %s...) (P %s Proj %s)\n",
                $self->GetAuthor($id2), $self->GetTitle($id2),
-               uc substr($hash, 0, 8), $pri;
+               uc substr($hash, 0, 8), $pri, $proj;
         $id = $id2 unless defined $id;
       }
       else
@@ -8127,6 +8128,26 @@ sub GetUserProjects
   my @ps = map {{'id' => $_->[0], 'name' => $_->[1], 'count' => $_->[2]};} @{$ref};
   @ps = () if scalar @ps == 1 and !defined $ref->[0]->[0];
   return \@ps;
+}
+
+# Get the user's current project, sanity-checking and updating it if necessary.
+sub GetUserCurrentProject
+{
+  my $self = shift;
+  my $user = shift || $self->get('user');
+
+  my $sql = 'SELECT newproject FROM users WHERE id=?';
+  my $proj = $self->SimpleSqlGet($sql, $user);
+  $sql = 'SELECT COUNT(*) FROM projectusers WHERE project=? AND user=?';
+  my $ct = $self->SimpleSqlGet($sql, $proj, $user);
+  if (!$ct)
+  {
+    $sql = 'SELECT project FROM projectusers WHERE user=? LIMIT 1';
+    $proj = $self->SimpleSqlGet($sql, $user);
+    $sql = 'UPDATE users SET newproject=? WHERE id=?';
+    $proj = $self->PrepareSubmitSql($sql, $proj, $user);
+  }
+  return $proj;
 }
 
 sub SetUserCurrentProject
