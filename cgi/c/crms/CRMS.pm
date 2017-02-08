@@ -3612,6 +3612,7 @@ sub GetInstitutionUsers
   my @ausers = ();
   foreach my $user (@{$users})
   {
+    $user = $user->{'id'};
     push @ausers, $user if $inst == $self->GetUserProperty($user, 'institution');
   }
   return \@ausers;
@@ -4568,6 +4569,7 @@ sub UpdateStats
   my $users = $self->GetUsers();
   foreach my $user (@{$users})
   {
+    $user = $user->{'id'};
     my $sql = 'SELECT DISTINCT DATE_FORMAT(time,"%Y-%m") AS ym FROM historicalreviews' .
               ' WHERE legacy!=1 AND user=? ORDER BY ym ASC';
     my $ref = $self->SelectAll($sql, $user);
@@ -8168,7 +8170,7 @@ sub GetProjectName
 
   my $sql = 'SELECT name FROM projects WHERE id=?';
   $sql = 'SELECT p.name FROM projects p INNER JOIN queue q ON q.newproject=p.id WHERE q.id=?' if $id !~ m/^\d+$/;
-  $self->SimpleSqlGet($sql, $id);
+  return $self->SimpleSqlGet($sql, $id);
 }
 
 # Returns an arrayref of hashrefs with id, name, color, userCount (active assignees),
@@ -8178,7 +8180,7 @@ sub GetProjectsRef
   my $self = shift;
 
   my @projects;
-  my $sql = 'SELECT p.id,p.name,p.restricted,p.color,'.
+  my $sql = 'SELECT p.id,p.name,p.restricted,COALESCE(p.color,"000000"),'.
             '(SELECT COUNT(*) FROM projectusers pu INNER JOIN users u ON pu.user=u.id'.
             ' WHERE pu.project=p.id AND u.reviewer+u.advanced+u.expert+u.admin+u.superadmin>0),'.
             '(SELECT COUNT(*) FROM queue q WHERE q.newproject=p.id),'.
@@ -8203,7 +8205,7 @@ sub GetProjectsRef
   return \@projects;
 }
 
-# Returns the id of the added project, or under on error.
+# Returns the id of the added project, or undef on error.
 sub AddProject
 {
   my $self     = shift;
