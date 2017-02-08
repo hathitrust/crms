@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.0.4';
+  return '6.0.5';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -6261,10 +6261,13 @@ sub CurrentRightsQuery
   my $ref = $self->RightsQuery($id, 1);
   return $rights unless defined $ref;
   $rights = $ref->[0]->[0] . '/' . $ref->[0]->[1];
-  my ($a, $r) = $self->GetFinalAttrReason($id);
-  if (defined $a && defined $r && ($a ne $ref->[0]->[0] || $r ne $ref->[0]->[1]))
+  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM reviews WHERE id=?', $id) > 0)
   {
-    $rights .= ' ' . "\N{U+2192}" . " $a/$r";
+    my ($a, $r) = $self->GetFinalAttrReason($id);
+    if (defined $a && defined $r && ($a ne $ref->[0]->[0] || $r ne $ref->[0]->[1]))
+    {
+      $rights .= ' ' . "\N{U+2192}" . " $a/$r";
+    }
   }
   return $rights;
 }
@@ -6482,7 +6485,7 @@ sub GetTrackingInfo
     my $reviews = $self->Pluralize('review', $n);
     my $pri = $self->GetPriority($id);
     my $sql = 'SELECT p.name FROM queue q LEFT JOIN projects p'.
-              ' ON p.newproject=p.id WHERE q.id=?';
+              ' ON q.newproject=p.id WHERE q.id=?';
     my $proj = $self->SimpleSqlGet($sql, $id);
     my $projinfo = (defined $proj)? ", project '$proj'":'';
     push @stati, "in Queue (P$pri, status $status, $n $reviews$projinfo)";
@@ -8023,7 +8026,8 @@ sub GetAddToQueueRef
     push @result, {'id' => $row->[0], 'title' => $row->[1], 'author' => $row->[2],
                    'pub_date' => $row->[3], 'date' => $row->[4], 'added_by' => $row->[5],
                    'status' => $row->[6], 'priority' => $row->[7], 'source' => $row->[8],
-                   'issues' => $row->[9], 'ticket' => $row->[10], 'project' => $row->[11]};
+                   'issues' => $row->[9], 'ticket' => $row->[10], 'project' => $row->[11],
+                   'tracking' => $self->GetTrackingInfo($row->[0], 1, 1)};
   }
   return \@result;
 }
