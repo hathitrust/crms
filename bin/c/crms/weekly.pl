@@ -186,9 +186,12 @@ $sql = 'SELECT COUNT(*) FROM exportdata WHERE src!="inherited" AND time>=? AND t
 my $count = $crms->SimpleSqlGet($sql, $startThis, $now);
 $sql = 'SELECT COUNT(*)/(DATEDIFF("2015-11-30 23:59:59", ?)/7) FROM candidates WHERE time<"2014-12-01"';
 my $target = $crms->SimpleSqlGet($sql, $now);
-my $pct = sprintf('%.1f%%', 100.0 * $count / $target);
-# Round to nearest integer for display
-$target = int($target + $target/abs($target*2));
+my $pct = '';
+eval {
+  $pct = sprintf('%.1f%%', 100.0 * $count / $target);
+  # Round to nearest integer for display
+  $target = int($target + $target/abs($target*2));
+};
 $msg =~ s/__PERCENT__/$pct/;
 $msg =~ s/__COUNT__/$count/;
 $msg =~ s/__TARGET__/$target/;
