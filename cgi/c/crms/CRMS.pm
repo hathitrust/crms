@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.0.3';
+  return '6.0.4';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -8171,6 +8171,26 @@ sub GetProjectName
   my $sql = 'SELECT name FROM projects WHERE id=?';
   $sql = 'SELECT p.name FROM projects p INNER JOIN queue q ON q.newproject=p.id WHERE q.id=?' if $id !~ m/^\d+$/;
   return $self->SimpleSqlGet($sql, $id);
+}
+
+# Get the color for either a project or volume ID in the queue.
+# If the project colors are not distinctive, returns undef.
+sub GetProjectColor
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $color = undef;
+  my $sql = 'SELECT COUNT(DISTINCT color) FROM projects WHERE color IS NOT NULL';
+  my $n = $self->SimpleSqlGet($sql);
+  if ($n > 1)
+  {
+    $sql = 'SELECT COALESCE(color,"000000") FROM projects WHERE id=?';
+    $sql = 'SELECT COALESCE(p.color,"000000") FROM projects p'.
+           ' INNER JOIN queue q ON q.newproject=p.id WHERE q.id=?' if $id !~ m/^\d+$/;
+    $color = $self->SimpleSqlGet($sql, $id);
+  }
+  return $color;
 }
 
 # Returns an arrayref of hashrefs with id, name, color, userCount (active assignees),
