@@ -48,7 +48,9 @@ window.onload = function(e)
     <label for="projectSel">Current project:</label>
     <select name="projectSel" id="projectSel" onchange="this.form.submit()">
     [% FOREACH proj IN projs %]
-      <option value="[% proj.id %]" [% (cp==proj.id)? 'selected="selected"':'' %]>[% proj.name %] ([% proj.count %] available)</option>
+      <option value="[% proj.id %]" [% (cp==proj.id)? 'selected="selected"':'' %]>
+        [% proj.name %] ([% proj.count %] available)
+      </option>
     [% END %]
     </select>
     
