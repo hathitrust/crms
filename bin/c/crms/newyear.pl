@@ -20,12 +20,11 @@ my $usage = <<END;
 USAGE: $0 [-hinpv] [-e VOL_ID [-e VOL_ID2...]]
        [-s VOL_ID [-s VOL_ID2...]] [-y YEAR]
 
-Reports on determinations that may now, as of the new year, have had the copyright
-expire.
+Reports on determinations that may now, as of the new year, have had copyright
+expire from ic to either pd* or icus.
 
 -e VOL_ID  Exclude VOL_ID from being considered.
 -h         Print this help message.
--i         Report on ic to icus/gatt transitions instead.
 -n         No-op. Makes no changes to the database.
 -p         Run in production.
 -s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
@@ -35,7 +34,6 @@ END
 
 my @excludes;
 my $help;
-my $icus;
 my $noop;
 my $production;
 my @singles;
@@ -46,7 +44,6 @@ Getopt::Long::Configure('bundling');
 die 'Terminating' unless GetOptions(
            'e:s@' => \@excludes,
            'h|?'  => \$help,
-           'i'    => \$icus,
            'n'    => \$noop,
            'p'    => \$production,
            's:s@' => \@singles,
@@ -66,11 +63,12 @@ my $crms = CRMS->new(
 $noop = 1 if $year;
 print "Verbosity $verbose\n" if $verbose;
 
+my $proj = $crms->SimpleSqlGet('SELECT id FROM projects WHERE name="New Year"');
+die "Can't get New Year project" unless $proj;
 $year = $crms->GetTheYear() unless $year;
 my $t1 = $year - 51;
 my $t2 = $year - 71;
 my $attrsClause = '(attr="pdus" OR attr="ic" OR attr="icus")';
-$attrsClause = '(attr="ic")' if $icus;
 my $sql = 'SELECT id,gid,time,attr,reason FROM exportdata'.
           ' WHERE '. $attrsClause.
           ' AND exported=1 AND src="candidates" AND YEAR(DATE(time))<?'.
@@ -156,17 +154,13 @@ foreach my $row (@{$ref})
       last if $pa eq $acurr;
     }
   }
-  if (!$icus && scalar keys %predictions && !defined $predictions{'ic'} &&
-      !defined $predictions{'icus'} && (defined $predictions{'pd'} ||
-      defined $predictions{'pdus'})
-      ||
-      ($icus && scalar keys %predictions && !defined $predictions{'ic'} &&
-      defined $predictions{'icus'} && !(defined $predictions{'pd'} ||
-      defined $predictions{'pdus'})))
+  if (scalar keys %predictions && !defined $predictions{'ic'} &&
+      (defined $predictions{'icus'} || defined $predictions{'pd'} ||
+       defined $predictions{'pdus'}))
   {
-    next if !$icus and $predictions{'pdus'} and $acurr =~ m/^pd/;
-    next if !$icus and $predictions{'pd'} and $acurr eq 'pd';
-    next if $icus and $predictions{'icus'} and $acurr eq 'icus';
+    next if $predictions{'pdus'} and $acurr =~ m/^pd/;
+    next if $predictions{'pd'} and $acurr eq 'pd';
+    next if $predictions{'icus'} and $acurr eq 'icus';
     my $msg2 = sprintf "%-20s %s: %s (%s)", $id, $record->author, $record->title, $record->country;
     my $msg3 = sprintf "%-20s (gid $gid, ADD $renDate, pub $pub) predicted %s (curr $acurr/$rcurr) - $time",
                        '', join ', ', sort keys %predictions;
@@ -181,7 +175,7 @@ foreach my $row (@{$ref})
     {
       $crms->UpdateMetadata($id, 1, $record);
       # Returns a status code (0=Add, 1=Error, 2=Skip, 3=Modify) followed by optional text.
-      my $res = $crms->AddItemToQueueOrSetItemActive($id, 3, 1, 'newyear', undef, undef, $record);
+      my $res = $crms->AddItemToQueueOrSetItemActive($id, 0, 1, 'newyear', undef, undef, $record, $proj);
       my $code = $res->{'status'};
       my $msg = $res->{'msg'};
       if ($code eq '1' || $code eq '2')
