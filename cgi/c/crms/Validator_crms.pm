@@ -157,6 +157,22 @@ sub ValidateSubmission
       $errorMsg .= 'pdus/cdpp should not include renewal info. ';
     }
   }
+  ## und/ren must have Note Category Inserts/No Renewal
+  if ($attr == 5 && $reason == 7)
+  {
+    if ($category ne 'Inserts/No Renewal')
+    {
+      $errorMsg .= 'und/ren must have note category Inserts/No Renewal. ';
+    }
+  }
+  ## and vice versa
+  if ($category eq 'Inserts/No Renewal')
+  {
+    if ($attr != 5 || $reason != 7)
+    {
+      $errorMsg .= 'Inserts/No Renewal must have rights code und/ren. ';
+    }
+  }
   if ($noteError == 0)
   {
     if ($category && !$note)
