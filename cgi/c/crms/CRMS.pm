@@ -8270,7 +8270,9 @@ sub AllAssignableAuthorities
 {
   my $self = shift;
 
-  my $sql = 'SELECT a.id,a.name,a.url FROM authorities a ORDER BY a.name ASC';
+  my $sql = 'SELECT a.id,a.name,a.url FROM authorities a'.
+            ' INNER JOIN pageauthorities pa ON a.id=pa.id'.
+            ' WHERE pa.page="review" ORDER BY a.name ASC';
   my $ref = $self->SelectAll($sql);
   my @authorities;
   push @authorities, {'id' => $_->[0], 'name' => $_->[1], 'url' => $_->[2]} for @{$ref};
