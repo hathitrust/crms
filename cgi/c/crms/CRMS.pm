@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.0.5';
+  return '6.0.6';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -3318,21 +3318,19 @@ sub AddUser
   }
   my $inst = $self->SimpleSqlGet('SELECT institution FROM users WHERE id=?', $id);
   $inst = $self->PredictUserInstitution($id) unless defined $inst;
-  my $wcs = $self->WildcardList(11);
-  my $sql = 'REPLACE INTO users (id,kerberos,name,reviewer,advanced,expert,'.
-            'admin,superadmin,note,institution,commitment) VALUES '. $wcs;
-  $self->PrepareSubmitSql($sql, $id, $kerberos, $name, $reviewer, $advanced, $expert,
-                          $admin, $superadmin, $note, $inst, $commitment);
+  my $sql = 'UPDATE users SET name=?,kerberos=?,reviewer=?,advanced=?,expert=?,'.
+            'admin=?,superadmin=?,note=?,institution=?,commitment=? WHERE id=?';
+  $self->PrepareSubmitSql($sql, $name, $kerberos, $reviewer, $advanced, $expert,
+                          $admin, $superadmin, $note, $inst, $commitment, $id);
   $self->Note($_) for @{$self->GetErrors()};
   if (defined $projects)
   {
     $self->PrepareSubmitSql('DELETE FROM projectusers WHERE user=?', $id);
-    $sql = 'INSERT INTO projectusers (user,newproject) VALUES (?,?)';
+    $sql = 'INSERT INTO projectusers (user,project) VALUES (?,?)';
     foreach my $proj (@{$projects})
     {
-      # No need to store Core unless multiple projects.
       $proj = undef unless int $proj;
-      next unless defined $proj or scalar @{$projects} > 1;
+      next unless defined $proj;
       $self->PrepareSubmitSql($sql, $id, $proj);
     }
   }
