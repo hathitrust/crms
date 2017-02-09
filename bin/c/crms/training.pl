@@ -196,8 +196,9 @@ foreach my $row (@{$ref})
   my $note = $row->[5];
   my $projDesc = (defined $proj)? " for project '$proj'":'';
   print GREEN "Add to queue: $id$projDesc\n" if $verbose;
-  $sql = 'INSERT INTO queue (id,time,pending_status,project) VALUES (?,?,1,?)';
-  $crmst->PrepareSubmitSql($sql, $id, $time, $proj) unless $noop;
+  my $pending = ($queueOnly)? 0:1;
+  $sql = 'INSERT INTO queue (id,time,pending_status,project) VALUES (?,?,?,?)';
+  $crmst->PrepareSubmitSql($sql, $id, $time, $pending, $proj) unless $noop;
   if (!$queueOnly)
   {
     my $ta = $crmst->TranslateAttr($attr);
