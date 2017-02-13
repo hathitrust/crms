@@ -93,6 +93,8 @@ function popReviewInfo(id,user,sys)
           if (button) { button.checked = "checked"; }
           button = document.getElementById("renewalFieldCheckbox");
           if (button) { button.checked = (data.renNum != null); }
+          var field = document.getElementById("renewalField");
+          if (field) { field.value = data.renNum; }
           document.submitReview.renDate.value = data.renDate;
           document.submitReview.note.value = data.note;
           selMenuItem('catMenu',(data.category)? data.category:'');
