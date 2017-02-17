@@ -28,7 +28,7 @@ sub ValidateSubmission
   {
     if ($hasren)
     {
-      if ($date > 1963)
+      if (0)#($date > 1963)
       {
         $errorMsg .= 'Renewal no longer required for works published after 1963. ';
       }
@@ -50,7 +50,7 @@ sub ValidateSubmission
   ## pd/ren should not have a ren number or date, and is not allowed for post-1963 works.
   if ($attr == 1 && $reason == 7)
   {
-    if ($date > 1963)
+    if (0)#($date > 1963)
     {
       $errorMsg .= 'Renewal no longer required for works published after 1963. ';
     }
