@@ -223,10 +223,19 @@ sub CalcStatus
     {
       if ($reason != $other_reason)
       {
-        $status = 8;
-        $return{'attr'} = $attr;
-        $return{'reason'} = 13;
-        $return{'category'} = 'Attr Match';
+        # If one is und/nfi and one is und/ren, it is a conflict.
+        if ($attr == 5 && (($reason == 8 && $other_reason == 7) || ($reason == 7 && $other_reason == 8)))
+        {
+          $status = 2;
+        }
+        else
+        {
+          # Any other nonmatching reasons are resolved as an attr match
+          $status = 8;
+          $return{'attr'} = $attr;
+          $return{'reason'} = 13;
+          $return{'category'} = 'Attr Match';
+        }
       }
       elsif ($attr == 2 && $reason == 7 && $other_reason == 7 && ($renNum ne $other_renNum || $renDate ne $other_renDate))
       {
