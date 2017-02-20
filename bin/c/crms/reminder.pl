@@ -113,7 +113,7 @@ foreach my $user (@recips)
   {
     $sender->OpenMultipart({
       to => $user,
-      subject => 'Automated Reminder: CRMS Review Time - 7 Days out of the system',
+      subject => $crms->SubjectLine('7 Day Out-of-System Automated Reminder'),
       ctype => 'text/plain',
       encoding => 'quoted-printable'
       }) or die $Mail::Sender::Error,"\n";
