@@ -1382,11 +1382,16 @@ sub AddItemToQueueOrSetItemActive
   my $user     = shift || $self->get('user');
   my $noop     = shift || undef;
   my $record   = shift || undef;
-  my $project  = shift || undef;
+  my $project  = shift || 1;
   my $ticket   = shift || undef;
 
   my $stat = 0;
   my @msgs = ();
+  if ($project !~ m/^\d+$/)
+  {
+    my $sql = 'SELECT id FROM projects WHERE name=?';
+    $project = $self->SimpleSqlGet($sql, $project) || 1;
+  }
   ## give the existing item higher or lower priority
   if ($self->IsVolumeInQueue($id))
   {
