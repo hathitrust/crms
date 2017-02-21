@@ -7031,7 +7031,7 @@ sub SubmitInheritances
     if ((defined $status && $status == 1) || $self->CanAutoSubmitInheritance($id, $gid))
     {
       print "Submitting inheritance for $id\n" unless $quiet;
-      $self->SubmitInheritance($id);
+      my $res = $self->SubmitInheritance($id);
       print "$res\n" if $res;
     }
   }
