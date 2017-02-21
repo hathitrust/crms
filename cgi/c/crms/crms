@@ -74,19 +74,13 @@ my $user = $crms->get('user');
 if ($page eq 'confirmReview')
 {
   my $editing = $cgi->param('editing');
-  my $oneoff  = $cgi->param('oneoff');
   my $id = $cgi->param('barcode');
   my $err;
   my $action = $cgi->param('submit');
-  if ($action eq 'Cancel' || $action eq 'Sequester')
+  if ($action eq 'Cancel')
   {
     $crms->UnlockItem($id, $user);
     $cgi->delete_all();
-    if ($action eq 'Sequester' && $crms->IsUserSuperAdmin($user))
-    {
-      $crms->Sequester($id);
-      $cgi->param('p', ($oneoff)?'oneoff':'review');
-    }
   }
   else
   {
@@ -106,7 +100,7 @@ if ($page eq 'confirmReview')
       ($rights, $reason) = $crms->GetAttrReasonFromCode($EncRights);
       $err = $crms->HasItemBeenReviewedByTwoReviewers($id, $user);
       $err = $crms->ValidateSubmission($id, $user, $rights, $reason, $note, $category,
-                                       $renNum, $renDate, $oneoff) unless $err;
+                                       $renNum, $renDate) unless $err;
       my $stat = $crms->GetSystemStatus();
       # Actually, this never gets displayed, but that's OK
       my $status = $stat->[1];
@@ -124,7 +118,7 @@ if ($page eq 'confirmReview')
     {
       $crms->ClearErrors();
       $cgi->param('errorMsg', $err);
-      $cgi->param('p', ($oneoff)?'oneoff':'review');
+      $cgi->param('p', 'review');
     }
     else
     {
@@ -134,7 +128,7 @@ if ($page eq 'confirmReview')
       $cgi->delete_all();
       if (!$home)
       {
-        $cgi->param('p', ($oneoff)?'oneoff':'review');
+        $cgi->param('p', 'review');
       }
     }
   }
