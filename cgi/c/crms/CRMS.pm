@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.0.9';
+  return '6.0.10';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -1279,7 +1279,6 @@ sub LoadQueueForProject
   my $self    = shift;
   my $project = shift;
 
-  # WHERE NULL handling derived from CPAN DBI documentation.
   my $sql = 'SELECT COUNT(*) FROM queue WHERE newproject=?';
   my $queueSize = $self->SimpleSqlGet($sql, $project);
   my $targetQueueSize = $self->GetSystemVar('queueSize');
@@ -7033,6 +7032,7 @@ sub SubmitInheritances
     {
       print "Submitting inheritance for $id\n" unless $quiet;
       $self->SubmitInheritance($id);
+      print "$res\n" if $res;
     }
   }
 }
@@ -7082,8 +7082,8 @@ sub SubmitInheritance
   return 'skip' if $self->SimpleSqlGet($sql, $id);
   $sql = 'SELECT a.id,rs.id,i.gid FROM inherit i'.
          ' INNER JOIN exportdata e ON i.gid=e.gid'.
-         ' INNER JOIN attributes a ON e.attr=a.id'.
-         ' INNER JOIN reasons rs ON e.reason=rs.id'.
+         ' INNER JOIN attributes a ON e.attr=a.name'.
+         ' INNER JOIN reasons rs ON e.reason=rs.name'.
          ' WHERE i.id=?';
   my $row = $self->SelectAll($sql, $id)->[0];
   return "$id is no longer available for inheritance (has it been processed?)" unless $row;
