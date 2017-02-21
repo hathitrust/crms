@@ -1,9 +1,9 @@
 [% INCLUDE header.tt %]
 
-<script type="text/javascript" src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
-<script type="text/javascript" src="https://code.highcharts.com/highcharts.js"></script>
-<script type="text/javascript" src="https://code.highcharts.com/highcharts-more.js"></script>
-<script type="text/javascript" src="https://code.highcharts.com/modules/solid-gauge.js"></script>
+<!--<script type="text/javascript" src="https://code.highcharts.com/adapters/standalone-framework.js"></script>-->
+<!--<script type="text/javascript" src="https://code.highcharts.com/highcharts.js"></script>-->
+<!--<script type="text/javascript" src="https://code.highcharts.com/highcharts-more.js"></script>-->
+<!--<script type="text/javascript" src="https://code.highcharts.com/modules/solid-gauge.js"></script>-->
 <script type="text/javascript">
 <!--
 function CheckAll(box,formid)
@@ -26,7 +26,7 @@ window.onload = function(e)
     }
     catch (e)
     {
-      alert('Problem loading chart: '+e);
+      //alert('Problem loading chart: '+e);
     }
   }
 }
