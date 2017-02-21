@@ -5725,8 +5725,11 @@ sub CreateReviewReport
   # Processed
   my @processed = ({'status'=>2,'name'=>'Conflict'},
                    {'status'=>3,'name'=>'Provisional Match'},
-                   #{'status'=>4,'name'=>'Match'}
-                   );
+                   {'status'=>5,'name'=>'Expert-Reviewed'},
+                   {'status'=>6,'name'=>'Reported to HathiTrust'},
+                   {'status'=>7,'name'=>'Expert-Accepted'},
+                   {'status'=>8,'name'=>'Auto-Resolved'},
+                   {'status'=>9,'name'=>'Inheritance'});
   $sql = 'SELECT priority,COUNT(*) FROM queue WHERE status!=0 GROUP BY priority WITH ROLLUP';
   $ref = $self->SelectAll($sql);
   $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
@@ -5738,8 +5741,11 @@ sub CreateReviewReport
     $sql = 'SELECT priority,COUNT(*) from queue WHERE status=? GROUP BY priority WITH ROLLUP';
     $ref = $self->SelectAll($sql, $row->{'status'});
     $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
-    $report .= sprintf "<tr><td>&nbsp;&nbsp;&nbsp;%s</td><td>$count</td>", $row->{'name'};
-    $report .= $self->DoPriorityBreakdown($ref, '', \@pris) . "</tr>\n";
+    if ($count)
+    {
+      $report .= sprintf "<tr><td class='nowrap'>&nbsp;&nbsp;&nbsp;%s</td><td>$count</td>", $row->{'name'};
+      $report .= $self->DoPriorityBreakdown($ref, '', \@pris) . "</tr>\n";
+    }
   }
   
   $report .= sprintf("<tr><td class='nowrap' colspan='%d'>
