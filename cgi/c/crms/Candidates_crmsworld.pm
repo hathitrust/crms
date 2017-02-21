@@ -10,15 +10,10 @@ sub new
   return bless $self, $class;
 }
 
-# If oneoff is set, return undef to indicate this is the
-# catch-all system.
 sub Countries
 {
-  my $self   = shift;
-  my $oneoff = shift;
+  my $self = shift;
 
-  return undef if $oneoff;
-  #return {'United Kingdom'=>1, 'Canada'=>1, 'Australia'=>1, 'Spain'=>1};
   return {'United Kingdom'=>1, 'Canada'=>1, 'Australia'=>1};
 }
 

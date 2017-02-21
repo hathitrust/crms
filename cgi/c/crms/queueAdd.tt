@@ -174,7 +174,7 @@ function CheckAllTx(box,id)
       [% prev_id = id %]
       [% changed = 1%]
     [% END %]
-    [% IF ((r.source != user || r.source != 'oneoff') && r.status != 0) %]
+    [% IF (r.status != 0) %]
       [% active_color = "#e2e2e2;" %]
     [% END %]
     <!-- <tr style="background-color:[% active_color %];"> -->

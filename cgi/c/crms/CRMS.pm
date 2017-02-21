@@ -1203,14 +1203,11 @@ sub GetCutoffYear
 }
 
 # Returns a hash ref of Country name => 1 covered by the system.
-# If oneoff is set, return undef to indicate this is the
-# catch-all system.
 sub GetCountries
 {
   my $self   = shift;
-  my $oneoff = shift;
 
-  return $self->CandidatesModule()->Countries($oneoff);
+  return $self->CandidatesModule()->Countries();
 }
 
 # Returns a und table src code if the volume belongs in the und table instead of candidates.
@@ -4707,7 +4704,7 @@ sub HasItemBeenReviewedByTwoReviewers
 sub ValidateSubmission
 {
   my ($self, $id, $user, $attr, $reason, $note,
-      $category, $renNum, $renDate, $oneoff) = @_;
+      $category, $renNum, $renDate) = @_;
   my $errorMsg = '';
   ## Someone else has the item locked?
   my $lock = $self->IsLockedForOtherUser($id);
@@ -4722,13 +4719,9 @@ sub ValidateSubmission
     $errorMsg .= 'This volume is not in the queue. Please cancel. ';
   }
   ## check user
-  if (!$oneoff && !$self->IsUserReviewer($user) && !$self->IsUserAdvanced($user))
+  if (!$self->IsUserReviewer($user) && !$self->IsUserAdvanced($user))
   {
     $errorMsg .= 'Not a reviewer. ';
-  }
-  elsif ($oneoff && !$self->IsUserSuperAdmin($user))
-  {
-    $errorMsg .= 'Not a one-off reviewer. ';
   }
   if (!$attr || !$reason)
   {
@@ -4740,11 +4733,8 @@ sub ValidateSubmission
     require $module;
     $errorMsg = Validator::ValidateSubmission(@_);
   }
-  if (!$oneoff)
-  {
-    my $incarn = $self->HasItemBeenReviewedByAnotherIncarnation($id, $user);
-    $errorMsg .= "Another expert must do this review because of a review by $incarn. Please cancel. " if $incarn;
-  }
+  my $incarn = $self->HasItemBeenReviewedByAnotherIncarnation($id, $user);
+  $errorMsg .= "Another expert must do this review because of a review by $incarn. Please cancel. " if $incarn;
   return $errorMsg;
 }
 
