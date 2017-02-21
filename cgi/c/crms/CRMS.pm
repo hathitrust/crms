@@ -5662,7 +5662,7 @@ sub CreateReviewReport
   my $report = "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
 
   $sql = 'SELECT priority,COUNT(id) FROM queue WHERE status>0'.
-         ' OR pending_status>0 GROUP BY priority ASC';
+         ' OR pending_status>0 GROUP BY priority ASC WITH ROLLUP';
   my $ref = $self->SelectAll($sql);
   my $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
   $report .= "<tr><td class='total'>Active</td><td class='total'>$count</td>";
