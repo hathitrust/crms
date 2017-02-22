@@ -777,7 +777,7 @@ sub EmailReport
   my $filename = shift;
 
   my $where = ($self->WhereAmI() || 'Prod');
-  if (1)#$where eq 'Prod')
+  if ($where eq 'Prod')
   {
     my $subject = sprintf('%s %s: %d volumes exported to rights db', $self->System(), $where, $count);
     use Mail::Sendmail;
