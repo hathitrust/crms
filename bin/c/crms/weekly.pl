@@ -78,7 +78,7 @@ $msg .= <<'END';
 </tr>
 __TABLE__
 </table>
-<h4>keden-reviewer: __KEDEN_COUNT__</h4>
+<br/>
 <h2>CRMS-US</h2>
 <h3>Total reviews this week: __TOTAL_THIS_WEEK2__</h3>
 <h3>Total reviews last week: __TOTAL_LAST_WEEK2__</h3>
@@ -170,12 +170,6 @@ foreach my $row (@{$ref})
             "<td style='border:1px solid #000000;'>$lastn</td></tr>\n";
 }
 $msg =~ s/__TABLE2__/$table/;
-
-$sql = 'SELECT COUNT(*) FROM historicalreviews WHERE time>=? AND time<? AND user="keden-reviewer"';
-my $kn = $crms->SimpleSqlGet($sql, $startThis, $now);
-$sql = 'SELECT COUNT(*) FROM reviews WHERE time>=? AND time<? AND user="keden-reviewer"';
-$kn += $crms->SimpleSqlGet($sql, $startThis, $now);
-$msg =~ s/__KEDEN_COUNT__/$kn/i;
 
 $sql = 'SELECT COUNT(*) FROM exportdata WHERE src!="inherited" AND time>=? AND time<?';
 my $count = $crms->SimpleSqlGet($sql, $startThis, $now);
