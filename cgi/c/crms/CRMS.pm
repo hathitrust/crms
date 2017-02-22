@@ -197,24 +197,16 @@ sub ConnectToSdrDb
     {
       $sql = 'INSERT INTO sdrerror (error) VALUES (?)';
       $self->PrepareSubmitSql($sql, $err);
-      use Mail::Sender;
       my $me = $self->GetSystemVar('adminEmail', '');
-      my $sender = new Mail::Sender({ smtp => 'mail.umdl.umich.edu',
-                                      from => $me,
-                                      on_errors => 'undef' });
-      my $ctype = 'text/plain';
-      $sender->OpenMultipart({
-        to => $me,
-        subject => 'CRMS rights database issue',
-        ctype => 'text/plain',
-        encoding => 'utf-8'
-        });
-      $sender->Body();
-      my $txt = $err;
-      $txt = '' unless $txt;
-      my $bytes = encode('utf8', $txt);
-      $sender->SendEnc($bytes);
-      $sender->Close();
+      my $bytes = encode('utf8', $err);
+      use Mail::Sendmail;
+      my %mail = ('from'         => $me,
+                  'to'           => $me,
+                  'subject'      => 'CRMS rights database issue',
+                  'content-type' => 'text/html; charset="UTF-8"',
+                  'body'         => $bytes
+                  );
+      sendmail(%mail) || $self->SetError("Error: $Mail::Sendmail::error\n");
     }
   }
   return $sdr_dbh;
@@ -629,7 +621,7 @@ sub ExportReviews
   }
   my $count = 0;
   my $user = $self->Sys();
-  my ($fh, $temp, $perm) = $self->GetExportFh() unless $quiet;
+  my ($fh, $temp, $perm, $filename) = $self->GetExportFh() unless $quiet;
   print ">>> Exporting to $temp.\n" unless $quiet;
   my $start_size = $self->GetCandidatesSize();
   foreach my $id (@{$list})
@@ -686,7 +678,7 @@ sub ExportReviews
   if (!$quiet)
   {
     printf "After export, removed %d volumes from candidates.\n", $start_size-$self->GetCandidatesSize();
-    eval { $self->EmailReport($count, $perm); };
+    eval { $self->EmailReport($count, $perm, $filename); };
     $self->SetError("EmailReport() failed: $@") if $@;
   }
 }
@@ -779,23 +771,42 @@ sub CanExportVolume
 # Send email with rights export data.
 sub EmailReport
 {
-  my $self    = shift;
-  my $count   = shift;
-  my $file    = shift;
+  my $self     = shift;
+  my $count    = shift;
+  my $file     = shift;
+  my $filename = shift;
 
   my $where = ($self->WhereAmI() || 'Prod');
-  if ($where eq 'Prod')
+  if (1)#$where eq 'Prod')
   {
     my $subject = sprintf('%s %s: %d volumes exported to rights db', $self->System(), $where, $count);
-    use Mail::Sender;
-    my $sender = new Mail::Sender
-      {smtp => 'mail.umdl.umich.edu',
-       from => $self->GetSystemVar('adminEmail')};
-    $sender->MailFile({to => $self->GetSystemVar('exportEmailTo'),
-             subject => $subject,
-             msg => 'See attachment.',
-             file => $file});
-    $sender->Close;
+    use Mail::Sendmail;
+    my $boundary = "====" . time() . "====";
+    my %mail = ('from'         => $self->GetSystemVar('adminEmail'),
+                'to'           => $self->GetSystemVar('exportEmailTo'),
+                'subject'      => $subject,
+                'content-type' => "multipart/mixed; boundary=\"$boundary\""
+                );
+    open (F, $file) or die "Cannot read $file: $!";
+    binmode F; undef $/;
+    my $enc = <F>;
+    close F;
+    $boundary = '--'.$boundary;
+    $mail{body} = <<END_OF_BODY;
+$boundary
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+See attachment.
+$boundary
+Content-Type: text/plain; charset="UTF-8"; name="$filename"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="$filename"
+
+$enc
+$boundary--
+END_OF_BODY
+    sendmail(%mail) || $self->SetError("Error: $Mail::Sendmail::error\n");
   }
 }
 
@@ -809,11 +820,12 @@ sub GetExportFh
   my $date = $self->GetTodaysDate();
   $date    =~ s/:/_/g;
   $date    =~ s/ /_/g;
-  my $perm = $self->get('root'). $self->get('dataDir'). '/'. $self->Sys(). '_'. $date. '.rights';
+  my $filename = $self->Sys(). '_'. $date. '.rights';
+  my $perm = $self->get('root'). $self->get('dataDir'). '/'. $filename;
   my $temp = $perm . '.tmp';
   if (-f $temp) { die "file already exists: $temp\n"; }
   open (my $fh, '>', $temp) || die "failed to open exported file ($temp): $!\n";
-  return ($fh, $temp, $perm);
+  return ($fh, $temp, $perm, $filename);
 }
 
 # Remove from the queue only if the volume is untouched.
