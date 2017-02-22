@@ -15,8 +15,8 @@ use strict;
 use warnings;
 use CRMS;
 use Getopt::Long;
-use Mail::Sender;
 use Utilities;
+use Encode;
 
 my $usage = <<'END';
 USAGE: $0 [-hnpqv] [-m USER [-m USER...]]
@@ -65,11 +65,6 @@ my $crmsUS = CRMS->new(
     root    => $DLXSROOT,
     dev     => $DLPS_DEV
 );
-
-my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                from => 'crms-mailbot@umich.edu',
-                                on_errors => 'undef' }
-or die "Error in mailing : $Mail::Sender::Error\n";
 
 my $msg = $crms->StartHTML();
 $msg .= <<'END';
@@ -212,15 +207,16 @@ else
 {
   if (scalar @mails)
   {
-    $sender->OpenMultipart({
-      to => $to,
-      subject => $title,
-      ctype => 'text/html',
-      encoding => 'utf-8'
-    }) or die $Mail::Sender::Error,"\n";
-    $sender->Body();
-    $sender->SendEnc($msg);
-    $sender->Close();
+    use Encode;
+    use Mail::Sendmail;
+    my $bytes = encode('utf8', $msg);
+    my %mail = ('from'         => 'crms-mailbot@umich.edu',
+                'to'           => $to,
+                'subject'      => $title,
+                'content-type' => 'text/html; charset="UTF-8"',
+                'body'         => $bytes
+                );
+    sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n");
   }
 }
 print "Warning: $_\n" for @{$crms->GetErrors()};

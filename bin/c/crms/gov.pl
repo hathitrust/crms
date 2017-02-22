@@ -116,32 +116,41 @@ $workbook->close();
 $subj .= " ($n)";
 if (scalar @mails)
 {
-  use Mail::Sender;
   $subj = $crms->SubjectLine($subj);
-  my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                  from => $crms->GetSystemVar('adminEmail', ''),
-                                  on_errors => 'undef' }
-    or die "Error in mailing : $Mail::Sender::Error\n";
-  $sender->OpenMultipart({
-    to => (join ',', @mails),
-    subject => $subj,
-    ctype => 'text/plain',
-    encoding => 'utf-8'
-    }) or die "Error in opening : $Mail::Sender::Error\n";
-  $sender->Body();
   $txt = 'This is an automatically generated report on possible federal government docs from the previous ' .
           "month. We believe these should have an 'f' inserted into the 008 MARC field. " .
           "Please notify the other addressees of any volumes that do not seem to meet these criteria.\n";
   my $bytes = encode('utf8', $txt);
-  $sender->SendEnc($bytes);
-  $sender->Attach({
-      description => 'Gov Report',
-      ctype => 'application/vnd.ms-excel',
-      encoding => 'Base64',
-      disposition => 'attachment; filename=*',
-      file => $excelpath
-      });
-  $sender->Close();
+  use MIME::Base64;
+  use Mail::Sendmail;
+  my $boundary = "====" . time() . "====";
+  my %mail = ('from'         => 'crms-mailbot@umich.edu',
+              'to'           => (join ',', @mails),
+              'subject'      => $subj,
+              'content-type' => "multipart/mixed; boundary=\"$boundary\""
+              );
+  open (F, $excelpath) or die "Cannot read $excelpath: $!";
+  binmode F; undef $/;
+  my $enc = encode_base64(<F>);
+  close F;
+  $boundary = '--'.$boundary;
+  # FIXME: should find a way to specify filename.
+  $mail{body} = <<END_OF_BODY;
+$boundary
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+$txt
+$boundary
+Content-Type: application/vnd.ms-excel; name="$excelpath"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename=*
+
+$enc
+$boundary--
+END_OF_BODY
+
+  sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n");
 }
 $crms->PrepareSubmitSql('DELETE FROM und WHERE src="gov"') unless $noop;
 print "Warning: $_\n" for @{$crms->GetErrors()};

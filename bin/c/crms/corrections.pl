@@ -14,7 +14,6 @@ use CRMS;
 use Corrections;
 use Jira;
 use Getopt::Long qw(:config no_ignore_case bundling);
-use Encode;
 use File::Copy;
 use Term::ANSIColor qw(:constants);
 $Term::ANSIColor::AUTORESET = 1;
@@ -127,7 +126,7 @@ if (!$noimport)
       my $obj;
       foreach my $sys (@systems)
       {
-        my $cs = $sys->GetCountries(1);
+        my $cs = $sys->GetCountries();
         if (!defined $cs || $cs->{$where} == 1)
         {
           $obj = $sys;
@@ -196,30 +195,37 @@ if (defined $fh)
 }
 if (scalar @mails)
 {
-  use Mail::Sender;
-  my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                  from => $crmsWorld->GetSystemVar('adminEmail', ''),
-                                  on_errors => 'undef' }
-    or die "Error in mailing: $Mail::Sender::Error\n";
+  use Mail::Sendmail;
+  use Encode;
   my $to = join ',', @mails;
-  $sender->OpenMultipart({
-    to => $to,
-    subject => $title,
-    ctype => 'text/html',
-    encoding => 'utf-8'
-    }) or die $Mail::Sender::Error,"\n";
-  $sender->Body();
   my $bytes = encode('utf8', $html);
-  $sender->SendEnc($bytes);
-  if (defined $perm)
-  {
-    $sender->Attach({description => 'Corrections export summary',
-                     ctype => 'text/plain',
-                     encoding => 'utf-8',
-                     file => $perm
-      }) or die $Mail::Sender::Error,"\n";
-  }
-  $sender->Close();
+  my $boundary = "====" . time() . "====";
+  my %mail = ('from'         => $self->GetSystemVar('adminEmail'),
+              'to'           => $to,
+              'subject'      => $title,
+              'content-type' => "multipart/mixed; boundary=\"$boundary\""
+              );
+  open (F, $perm) or die "Cannot read $file: $!";
+  binmode F; undef $/;
+  my $enc = encode('utf8', <F>);
+  close F;
+  $boundary = '--'.$boundary;
+  # FIXME: extract filename for attachment
+  $mail{body} = <<END_OF_BODY;
+$boundary
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+$bytes
+Content-Type: text/plain; name="$perm"
+Content-Transfer-Encoding: binary
+Content-Disposition: attachment; filename="$perm"
+Content-Description: Corrections export summary
+
+$enc
+$boundary--
+END_OF_BODY
+  sendmail(%mail) || $self->SetError("Error: $Mail::Sendmail::error\n");
 }
 else
 {

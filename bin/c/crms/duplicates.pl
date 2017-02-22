@@ -108,8 +108,7 @@ sub Date1Field
   my $record = shift;
 
   if ( ! $record ) { $crms->SetError("no record in Date1Field: $id"); return; }
-  my $xpath  = q{//*[local-name()='controlfield' and @tag='008']};
-  my $leader = $record->findvalue( $xpath );
+  my $leader = $record->GetControlfield('008');
   my $d = substr $leader, 7, 4;
   #print "Date1: '$d'\n";
   return $d;
@@ -122,7 +121,7 @@ sub Date2Field
 
   if ( ! $record ) { $crms->SetError("no record in Date2Field: $id"); return; }
   my $xpath  = q{//*[local-name()='controlfield' and @tag='008']};
-  my $leader = $record->findvalue( $xpath );
+  my $leader = $record->GetControlfield('008');
   my $d = substr $leader, 11, 4;
   #print "Date2: '$d'\n";
   return $d;
@@ -199,14 +198,13 @@ foreach my $row ( @{$ref} )
     }
   }
   $lastdate = $date;
-  my $sysid = $crms->BarcodeToId($id);
-  next unless $sysid;
-  my $record = $crms->GetMetadata($sysid);
-  my $holdings = $crms->VolumeIDsQuery($sysid, $record);
+  my $record = $crms->GetMetadata($id);
+  next unless defined $record;
+  my $holdings = $crms->VolumeIDsQuery($id, $record);
   next unless scalar @{$holdings} > 1;
   my $date1 = Date1Field($id, $record);
   my $date2 = Date2Field($id, $record);
-  my $ti = $crms->GetRecordTitle($id, $record);
+  my $ti = $record->title;
   $ti =~ s/\t+/ /g;
   my @lines = ();
   my %attrs;
@@ -351,24 +349,17 @@ printf "SDR Database OK reconnects: %d, bad reconnects: %d\n", $hashref->{'auto_
 $txt .= "</body></html>\n\n" if $report eq 'html';
 if (@mails)
 {
-  use Mail::Sender;
-  $title = 'Dev: ' . $title if $DLPS_DEV;
-  my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                  from => $crms->GetSystemVar('adminEmail', ''),
-                                  on_errors => 'undef' }
-    or die "Error in mailing : $Mail::Sender::Error\n";
-  my $to = join ',', @mails;
-  my $ctype = 'text/html';
-  $sender->OpenMultipart({
-    to => $to,
-    subject => $title,
-    ctype => $ctype,
-    encoding => 'utf-8'
-    }) or die $Mail::Sender::Error,"\n";
-  $sender->Body();
+  use Encode;
+  use Mail::Sendmail;
   my $bytes = encode('utf8', $txt);
-  $sender->SendEnc($bytes);
-  $sender->Close();
+  my $to = join ',', @mails;
+  my %mail = ('from'         => from => $crms->GetSystemVar('adminEmail', ''),
+              'to'           => $to,
+              'subject'      => $title,
+              'content-type' => 'text/html; charset="UTF-8"',
+              'body'         => $bytes
+              );
+  sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n");
 }
 else
 {

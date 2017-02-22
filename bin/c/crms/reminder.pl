@@ -15,7 +15,8 @@ use strict;
 use warnings;
 use CRMS;
 use Getopt::Long;
-use Mail::Sender;
+use Encode;
+use Mail::Sendmail;
 
 my $usage = <<'END';
 USAGE: $0 [-hpqv] [-m USER [-m USER...]] [-x SYS]
@@ -58,10 +59,6 @@ my $crms = CRMS->new(
     dev     => $DLPS_DEV
 );
 
-my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                from => 'crms-mailbot@umich.edu',
-                                on_errors => 'undef' }
-or die "Error in mailing : $Mail::Sender::Error\n";
 my $system = $crms->System();
 my @recips;
 my $msg = <<'END';
@@ -105,21 +102,19 @@ foreach my $user (@mails)
   printf "%s: $n\n", join ', ', @identities if $verbose;
   push @recips, $user if $n==0;
 }
+my $bytes = encode('utf8', $msg);
 foreach my $user (@recips)
 {
-  $user .= '@umich.edu' unless $user =~ m/@/;
   print "Sending to $user\n" if $verbose;
   if (!$quiet)
   {
-    $sender->OpenMultipart({
-      to => $user,
-      subject => $crms->SubjectLine('7 Day Out-of-System Automated Reminder'),
-      ctype => 'text/plain',
-      encoding => 'quoted-printable'
-      }) or die $Mail::Sender::Error,"\n";
-    $sender->Body();
-    $sender->SendEnc($msg);
-    $sender->Close();
+    my %mail = ('from'         => 'crms-mailbot@umich.edu',
+                'to'           => $user,
+                'subject'      => $crms->SubjectLine('7 Day Out-of-System Automated Reminder'),
+                'content-type' => 'text/html; charset="UTF-8"',
+                'body'         => $bytes
+                );
+    sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n");
   }
 }
 

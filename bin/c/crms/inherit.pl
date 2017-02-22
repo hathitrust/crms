@@ -12,7 +12,6 @@ BEGIN
 use strict;
 use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
-use Encode;
 
 my $usage = <<END;
 USAGE: $0 [-acCdhnpquv] [-s VOL_ID [-s VOL_ID2...]]
@@ -430,25 +429,20 @@ $txt .= sprintf "SDR Database OK reconnects: %d, bad reconnects: %d<br/>\n",
                 $hashref->{'auto_reconnects_failed'};
 $txt .= "</body></html>\n\n";
 
-printf "Will send to %d mail recipients\n", scalar @mails if $verbose;
+my $to = join(',', @mails);
+printf "Mailing to: $to\n" if $verbose;
 if (scalar @mails)
 {
-  use Mail::Sender;
-  my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                  from => $crms->GetSystemVar('adminEmail', ''),
-                                  on_errors => 'undef' }
-    or die "Error in mailing: $Mail::Sender::Error\n";
-  my $to = join ',', @mails;
-  $sender->OpenMultipart({
-    to => $to,
-    subject => $subj,
-    ctype => 'text/html',
-    encoding => 'utf-8'
-    }) or die $Mail::Sender::Error,"\n";
-  $sender->Body();
+  use Mail::Sendmail;
+  use Encode;
   my $bytes = encode('utf8', $txt);
-  $sender->SendEnc($bytes);
-  $sender->Close();
+  my %mail = ('from'         => $crms->GetSystemVar('adminEmail'),
+              'to'           => $to,
+              'subject'      => $subj,
+              'content-type' => 'text/html; charset="UTF-8"',
+              'body'         => $bytes
+              );
+  sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n");
 }
 else
 {
