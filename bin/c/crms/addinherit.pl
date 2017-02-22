@@ -126,23 +126,17 @@ $txt .= "</body></html>\n\n";
 
 if (@mails)
 {
-  use Mail::Sender;
-  my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                  from => $crms->GetSystemVar('adminEmail', ''),
-                                  on_errors => 'undef' }
-    or die "Error in mailing: $Mail::Sender::Error\n";
+  use Encode;
+  use Mail::Sendmail;
   my $to = join ',', @mails;
-  my $ctype = 'text/html';
-  $sender->OpenMultipart({
-    to => $to,
-    subject => $title,
-    ctype => $ctype,
-    encoding => 'utf-8'
-    }) or die $Mail::Sender::Error,"\n";
-  $sender->Body();
   my $bytes = encode('utf8', $txt);
-  $sender->SendEnc($bytes);
-  $sender->Close();
+  my %mail = ('from'         => from => $crms->GetSystemVar('adminEmail', ''),
+              'to'           => $to,
+              'subject'      => $title,
+              'content-type' => 'text/html; charset="UTF-8"',
+              'body'         => $bytes
+              );
+  sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n");
 }
 else
 {
