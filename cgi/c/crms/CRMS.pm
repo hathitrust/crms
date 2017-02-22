@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.0.10';
+  return '6.1.0';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -746,7 +746,7 @@ sub CanExportVolume
     # 1. Current rights are pdus/gfv (which per rrotter in Core Services never overrides pd/bib)
     #    and determination is not und.
     # 2. Current rights are */bib (unless a und would clobber pdus/bib).
-    # 3. Priority 3 or higher.
+    # 3. Priority 3 or higher. FIXME: this should be changed to special project?
     # 4. Previous rights were by user crms*.
     # 5. The determination is pd* (unless a pdus would clobber pd/bib).
     if (($reason2 eq 'gfv' && $attr ne 'und')
@@ -817,22 +817,22 @@ sub GetExportFh
 }
 
 # Remove from the queue only if the volume is untouched.
-# Optionally filters volume if $filter is specified.
 # Returns 1 if successful, undef otherwise.
 sub SafeRemoveFromQueue
 {
-  my $self   = shift;
-  my $id     = shift;
-  my $filter = shift;
+  my $self = shift;
+  my $id   = shift;
+  my $noop = shift;
 
-  my $sql = 'UPDATE queue SET priority=-2 WHERE id=? AND priority<3'.
+  my $sql = 'UPDATE queue SET priority=-2 WHERE id=?'.
+            ' AND newproject NOT IN (SELECT id FROM projects WHERE name="Special")'.
             ' AND locked IS NULL AND status=0 AND pending_status=0';
-  $self->PrepareSubmitSql($sql, $id);
+  $self->PrepareSubmitSql($sql, $id) unless defined $noop;
   $sql = 'DELETE FROM queue WHERE id=? AND priority=-2'.
          ' AND locked IS NULL AND status=0 AND pending_status=0';
-  $self->PrepareSubmitSql($sql, $id);
-  $self->Filter($id, $filter) if defined $filter;
+  $self->PrepareSubmitSql($sql, $id) unless defined $noop;
   $sql = 'SELECT COUNT(*) FROM queue WHERE id=?';
+  return 1 if defined $noop;
   return ($self->SimpleSqlGet($sql, $id) == 0)? 1:undef;
 }
 
@@ -849,9 +849,13 @@ sub RemoveFromCandidates
 {
   my $self = shift;
   my $id   = shift;
+  my $noop = shift;
 
-  $self->PrepareSubmitSql('DELETE FROM candidates WHERE id=?', $id);
-  $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
+  if ($self->SafeRemoveFromQueue($id, $noop))
+  {
+    $self->PrepareSubmitSql('DELETE FROM candidates WHERE id=?', $id);
+    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
+  }
 }
 
 sub LoadNewItemsInCandidates
@@ -906,6 +910,7 @@ sub CheckAndLoadItemIntoCandidates
   my $incand = $self->SimpleSqlGet('SELECT id FROM candidates WHERE id=?', $id);
   my $inund  = $self->SimpleSqlGet('SELECT src FROM und WHERE id=?', $id);
   my $inq    = $self->IsVolumeInQueue($id);
+  my $remove;
   my $rq = $self->RightsQuery($id, 1);
   if (!defined $rq)
   {
@@ -931,15 +936,15 @@ sub CheckAndLoadItemIntoCandidates
   }
   if (!$cm->HasCorrectRights($attr, $reason))
   {
-    if (defined $incand && $reason eq 'gfv')
+    if ((defined $incand || defined $inq) && $reason eq 'gfv')
     {
       print "Filter $id as gfv\n";
       $self->Filter($id, 'gfv') unless defined $noop;
     }
-    elsif (defined $incand && !$inq)
+    elsif (defined $incand || defined $inq)
     {
       print "Remove $id -- (rights now $attr/$reason)\n";
-      $self->RemoveFromCandidates($id) unless defined $noop;
+      $self->RemoveFromCandidates($id, $noop);
     }
     if ($inund)
     {
@@ -959,20 +964,15 @@ sub CheckAndLoadItemIntoCandidates
     print "Skip $id -- already in historical reviews\n";
     return;
   }
-  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE id=?', $id) > 0)
+  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE (status IS NULL OR status=1) AND id=?', $id) > 0)
   {
     print "Skip $id -- already inheriting\n";
-    return;
-  }
-  if (defined $incand)
-  {
-    print "Skip $id -- already in candidates\n";
-    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) if defined $inund and !defined $noop;
     return;
   }
   $record = $self->GetMetadata($id) unless defined $record;
   if (!defined $record)
   {
+    print "Skip $id -- no metadata to be had\n";
     $self->Filter($id, 'no meta') unless defined $noop;
     $self->ClearErrors();
     return;
@@ -983,24 +983,21 @@ sub CheckAndLoadItemIntoCandidates
     my $src = $self->ShouldVolumeBeFiltered($id, $record);
     if (defined $src)
     {
-      if (!defined $inund || $src ne $inund)
-      {
-        printf "Skip $id ($src) -- %s in filtered volumes\n",
-          (defined $inund)? "updating $inund->$src":'inserting';
-        $self->Filter($id, $src) unless defined $noop;
-      }
+      printf "Skip $id ($src) -- %s in filtered volumes\n",
+             (defined $inund)? "updating $inund->$src":'inserting';
+      $self->Filter($id, $src) unless defined $noop;
     }
-    elsif (!defined $incand)
+    else
     {
       $self->AddItemToCandidates($id, $time, $record, $noop);
     }
   }
   else
   {
-    if ((defined $inund || defined $incand) && !$inq)
+    if (defined $inund || defined $incand || defined $inq)
     {
       printf "Remove $id %s (%s)\n", (defined $incand)? '--':'from und', $errs->[0];
-      $self->RemoveFromCandidates($id) unless defined $noop;
+      $self->RemoveFromCandidates($id, $noop);
     }
   }
 }
@@ -1032,19 +1029,38 @@ sub AddItemToCandidates
       $self->Filter($id2, 'duplicate') unless $noop;
     }
   }
+  my $project = $self->GetCandidateProject($id, $record);
+  my $proj = $self->SimpleSqlGet('SELECT id FROM projects WHERE name=?', $project);
+  if (! defined $proj)
+  {
+    $proj = 1;
+    $project = 'Core';
+  }
   if (!$self->IsVolumeInCandidates($id))
   {
-    my $project = $self->GetCandidateProject($id, $record);
-    my $proj = $self->SimpleSqlGet('SELECT id FROM projects WHERE name=?', $project);
-    if (! defined $proj)
-    {
-      $proj = 1;
-      $project = 'Core';
-    }
     printf "Add $id to candidates for project '$project' ($proj)\n" unless $quiet;
     my $sql = 'INSERT INTO candidates (id,time,newproject) VALUES (?,?,?)';
     $self->PrepareSubmitSql($sql, $id, $time, $proj) unless $noop;
     $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) unless $noop;
+  }
+  else
+  {
+    my $sql = 'SELECT newproject FROM candidates WHERE id=?';
+    my $proj2 = $self->SimpleSqlGet($sql, $id);
+    if ($proj != $proj2)
+    {
+      print "Update $id project from $proj2 to $proj\n";
+      my $sql = 'UPDATE candidates SET newproject=? WHERE id=?';
+      $self->PrepareSubmitSql($sql, $proj, $id) unless $noop;
+    }
+    my $sql = 'SELECT newproject FROM queue WHERE id=? AND source="candidates"';
+    $proj2 = $self->SimpleSqlGet($sql, $id);
+    if (defined $proj2 && $proj != $proj2)
+    {
+      print "Update $id queue project from $proj2 to $proj\n";
+      my $sql = 'UPDATE queue SET newproject=? WHERE id=?';
+      $self->PrepareSubmitSql($sql, $proj, $id) unless $noop;
+    }
   }
   if ($self->GetSystemVar('cri') && defined $self->CheckForCRI($id, $noop, $quiet))
   {
@@ -1093,6 +1109,7 @@ sub Filter
   return if $src eq 'duplicate' && $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE id=?', $id);
   $self->PrepareSubmitSql('REPLACE INTO und (id,src) VALUES (?,?)', $id, $src);
   $self->PrepareSubmitSql('DELETE FROM candidates WHERE id=?', $id);
+  $self->SafeRemoveFromQueue($id);
 }
 
 sub Unfilter
