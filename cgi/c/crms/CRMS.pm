@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.1.0';
+  return '6.1.1';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -707,22 +707,25 @@ sub CanExportVolume
     print "Not exporting $id; it is status 6\n" unless $quiet;
     return 0;
   }
-  my $pri = $self->SimpleSqlGet('SELECT priority FROM queue WHERE id=?', $id);
-  if (defined $gid && !defined $pri)
+  my $sql = 'SELECT p.name FROM queue q INNER JOIN projects p'.
+            ' ON q.newproject=p.id WHERE id=?';
+  my $project = $self->SimpleSqlGet($sql, $id);
+  if (defined $gid && !defined $project)
   {
-    my $sql = 'SELECT MAX(priority) FROM historicalreviews WHERE gid=?';
-    $pri = $self->SimpleSqlGet($sql, $gid);
+    $sql = 'SELECT p.name FROM exportdata e INNER JOIN projects p'.
+           ' ON e.newproject=p.id WHERE id=?';
+    $project = $self->SimpleSqlGet($sql, $gid);
   }
   if ($self->GetSystemVar('noExport'))
   {
-    if ($pri>=3)
+    if ($project eq 'Special')
     {
-      print "Exporting $id; noExport is on but it is priority $pri\n" unless $quiet;
+      print "Exporting $id; noExport is on but it is Special\n" unless $quiet;
       return 1;
     }
     else
     {
-      print "Not exporting $id; noExport is on and it is priority $pri\n" unless $quiet;
+      print "Not exporting $id; noExport is on and it is project $project\n" unless $quiet;
       return 0;
     }
   }
@@ -738,12 +741,12 @@ sub CanExportVolume
     # 1. Current rights are pdus/gfv (which per rrotter in Core Services never overrides pd/bib)
     #    and determination is not und.
     # 2. Current rights are */bib (unless a und would clobber pdus/bib).
-    # 3. Priority 3 or higher. FIXME: this should be changed to special project?
+    # 3. Project 'Special' FIXME: add "always export" flag to projects table.
     # 4. Previous rights were by user crms*.
     # 5. The determination is pd* (unless a pdus would clobber pd/bib).
     if (($reason2 eq 'gfv' && $attr ne 'und')
         || ($reason2 eq 'bib' && !($attr eq 'und' && $attr2 =~ m/^pd/))
-        || $pri >= 3.0
+        || $project eq 'Special'
         || $usr2 =~ m/^crms/i
         || ($attr =~ m/^pd/ && !($attr eq 'pdus' && $attr2 eq 'pd')))
     {
@@ -756,7 +759,7 @@ sub CanExportVolume
           $export = 0;
         }
       }
-      print "Exporting priority $pri $id as $attr/$reason even though it is out of scope ($attr2/$reason2 by $usr2 [$time2])\n"
+      print "Exporting $id ($project) as $attr/$reason even though it is out of scope ($attr2/$reason2 by $usr2 [$time2])\n"
             unless $quiet or $export == 0;
     }
     else
