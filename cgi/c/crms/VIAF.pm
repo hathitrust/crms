@@ -44,7 +44,16 @@ sub GetVIAFData
     return;
   }
   my $jsonxs = JSON::XS->new->utf8;
-  my $json = $jsonxs->decode($res->content);
+  my $json;
+  eval {
+    no warnings 'all';
+    $json = $jsonxs->decode($res->content);
+  };
+  if ($@)
+  {
+    $self->Note('VIAF parse error for '. $url);
+    return;
+  }
   my $records = $json->{'searchRetrieveResponse'}->{'records'};
   next unless defined $records;
   my $n = 1;
