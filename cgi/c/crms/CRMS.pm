@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.1.2';
+  return '6.1.3';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -708,12 +708,12 @@ sub CanExportVolume
     return 0;
   }
   my $sql = 'SELECT p.name FROM queue q INNER JOIN projects p'.
-            ' ON q.newproject=p.id WHERE id=?';
+            ' ON q.newproject=p.id WHERE q.id=?';
   my $project = $self->SimpleSqlGet($sql, $id);
   if (defined $gid && !defined $project)
   {
     $sql = 'SELECT p.name FROM exportdata e INNER JOIN projects p'.
-           ' ON e.newproject=p.id WHERE id=?';
+           ' ON e.newproject=p.id WHERE q.id=?';
     $project = $self->SimpleSqlGet($sql, $gid);
   }
   if ($self->GetSystemVar('noExport'))
