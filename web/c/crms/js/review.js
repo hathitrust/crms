@@ -274,15 +274,6 @@ function ToggleADD()
 
 function VerifyCategory()
 {
-  if (gSys == 'crms')
-  {
-    var rights = document.getElementsByName("rights");
-    var sel = GetCheckedValue(rights);
-    if (sel == "7")
-    {
-      return (confirm('Please confirm that this work is, or is derived from, a non-US publication from 1871-1922.'));
-    }
-  }
   var sel = SelectedCategory();
   if (sel == "Missing" || sel == "Wrong Record")
   {
