@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.1.3';
+  return '6.1.4';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -3351,6 +3351,11 @@ sub AddUser
   }
   my $inst = $self->SimpleSqlGet('SELECT institution FROM users WHERE id=?', $id);
   $inst = $self->PredictUserInstitution($id) unless defined $inst;
+  if (!$self->SimpleSqlGet('SELECT COUNT(*) FROM users WHERE id=?', $id))
+  {
+    my $sql = 'INSERT INTO users (id,institution) VALUES (?,?)';
+    $self->PrepareSubmitSql($sql, $id, $inst);
+  }
   my $sql = 'UPDATE users SET name=?,kerberos=?,reviewer=?,advanced=?,expert=?,'.
             'admin=?,superadmin=?,note=?,institution=?,commitment=? WHERE id=?';
   $self->PrepareSubmitSql($sql, $name, $kerberos, $reviewer, $advanced, $expert,
