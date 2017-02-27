@@ -951,12 +951,12 @@ sub CheckAndLoadItemIntoCandidates
   }
   if (!$cm->HasCorrectRights($attr, $reason))
   {
-    if ((defined $incand || defined $inq) && $reason eq 'gfv')
+    if ((defined $incand || $inq) && $reason eq 'gfv')
     {
       print "Filter $id as gfv\n";
       $self->Filter($id, 'gfv') unless defined $noop;
     }
-    elsif (defined $incand || defined $inq)
+    elsif (defined $incand || $inq)
     {
       print "Remove $id -- (rights now $attr/$reason)\n";
       $self->RemoveFromCandidates($id, $noop);
@@ -1009,7 +1009,7 @@ sub CheckAndLoadItemIntoCandidates
   }
   else
   {
-    if (defined $inund || defined $incand || defined $inq)
+    if (defined $inund || defined $incand || $inq)
     {
       printf "Remove $id %s (%s)\n", (defined $incand)? '--':'from und', $errs->[0];
       $self->RemoveFromCandidates($id, $noop);
