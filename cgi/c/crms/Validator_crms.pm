@@ -251,22 +251,22 @@ sub CalcStatus
     }
   }
   # Do auto for ic vs und
-  elsif (($attr == 2 && $other_attr == 5) || ($attr == 5 && $other_attr == 2))
-  {
-    # If both reviewers are non-advanced mark as provisional match
-    if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
-    {
-       $status = 3;
-    }
-    else #Mark as 8 - two that agree as und/crms
-    {
-      $status = 8;
-      $return{'attr'} = 5;
-      $return{'reason'} = 13;
-      $return{'category'} = 'Attr Default';
-    }
-  }
-  else #Mark as 2 - two that disagree
+  # elsif (($attr == 2 && $other_attr == 5) || ($attr == 5 && $other_attr == 2))
+#   {
+#     # If both reviewers are non-advanced mark as provisional match
+#     if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+#     {
+#        $status = 3;
+#     }
+#     else #Mark as 8 - two that agree as und/crms
+#     {
+#       $status = 8;
+#       $return{'attr'} = 5;
+#       $return{'reason'} = 13;
+#       $return{'category'} = 'Attr Default';
+#     }
+#   }
+  else # Attributes do not match -- mark as conflict
   {
     $status = 2;
   }
@@ -318,18 +318,18 @@ sub CalcPendingStatus
       }
     }
     # Do auto for ic vs und
-    elsif (($attr == 2 && $other_attr == 5) || ($attr == 5 && $other_attr == 2))
-    {
-      # If both reviewers are non-advanced mark as provisional match
-      if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
-      {
-        $pstatus = 3;
-      }
-      else #Mark as 8 - two that sort of agree
-      {
-        $pstatus = 8;
-      }
-    }
+    #elsif (($attr == 2 && $other_attr == 5) || ($attr == 5 && $other_attr == 2))
+    #{
+    #  # If both reviewers are non-advanced mark as provisional match
+    #  if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+    #  {
+    #    $pstatus = 3;
+    #  }
+    #  else #Mark as 8 - two that sort of agree
+    #  {
+    #    $pstatus = 8;
+    #  }
+    #}
     else #Mark as 2 - two that disagree
     {
       $pstatus = 2;
