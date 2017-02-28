@@ -34,9 +34,11 @@ sub ValidateSubmission
       }
       else
       {
+        # Blow away everything but the trailing 2 year digits.
+        # If submitted while data is still being fetched, this will leave a bogus empty year.
         $renDate =~ s,.*[A-Za-z](.*),$1,;
         $renDate = '19' . $renDate;
-        if ($renDate < 1950)
+        if ($renDate < 1950 && $renDate != 19)
         {
           $errorMsg .= "Renewal has expired; volume is pd. Date entered is $renDate. ";
         }
