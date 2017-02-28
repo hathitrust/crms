@@ -272,19 +272,6 @@ function ToggleADD()
   }
 }
 
-function VerifyCategory()
-{
-  var sel = SelectedCategory();
-  if (sel == "Missing" || sel == "Wrong Record")
-  {
-    if (!document.getElementById("CorrectionWarning"))
-    {
-      return (confirm('Please confirm that you have submitted a Feedback report within the PageTurner.'));
-    }
-  }
-  return true;
-}
-
 function SelectedCategory()
 {
   var cat = document.getElementById("catMenu");

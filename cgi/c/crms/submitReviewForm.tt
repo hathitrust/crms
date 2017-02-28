@@ -2,7 +2,7 @@
 [% select = crms.GetAttrReasonCode(barcode, user) %]
 [% END %]
 
-<form name="submitReview" action="crms" onsubmit="return VerifyCategory();">
+<form name="submitReview" action="crms">
   <input type="hidden" name="p"       value="confirmReview"/>
   <input type="hidden" name="barcode" value="[% barcode %]"/>
   <input type="hidden" name="start"   value="[% crms.GetNow() %]"/>
