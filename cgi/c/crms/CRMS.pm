@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.1.5';
+  return '6.1.6';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -582,8 +582,8 @@ sub GetDoubleRevItemsInAgreement
 sub GetExpertRevItems
 {
   my $self = shift;
-  my $sql  = 'SELECT id FROM queue WHERE status>=5 AND status<8 AND id IN'.
-             ' (SELECT id FROM reviews WHERE hold=0)';
+  my $sql  = 'SELECT id FROM queue WHERE status>=5 AND status<8 AND id NOT IN'.
+             ' (SELECT id FROM reviews WHERE hold=1)';
   return $self->SelectAll($sql);
 }
 
