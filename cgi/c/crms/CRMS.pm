@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.1.7';
+  return '6.1.8';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -7964,7 +7964,8 @@ sub VIAFWarning
     if (defined $data and scalar keys %{$data} > 0)
     {
       my $country = $data->{'country'};
-      if (defined $country && $country ne 'US' && lc $country ne 'ame')
+      if (defined $country && $country ne 'US' && lc $country ne 'ame' &&
+          lc $country ne 'zz' && lc $country ne 'xx')
       {
         my $abd = $data->{'abd'};
         my $add = $data->{'add'};
