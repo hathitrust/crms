@@ -31,6 +31,7 @@ sub GetVIAFData
               'country' => $ref->[0]->[3], 'viafID' => $ref->[0]->[4]};
     }
   }
+  $author =~ s/"//g;
   my $url = 'http://viaf.org/viaf/search?query=local.names+all+%22'. $author.
             '%22+&maximumRecords=10&startRecord=1&sortKeys=holdingscount&'.
             'httpAccept=application/json';
