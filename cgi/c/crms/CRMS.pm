@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.1.8';
+  return '6.1.9';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -4470,7 +4470,7 @@ sub CreateStatsReport
       &#x2022; Select all of the text on the new page and copy it<br/>
       &#x2022; Switch to Excel<br/>
       &#x2022; Choose the menu item <strong>Edit &#x2192; Paste Special...</strong><br/>
-      &#x2022; Choose Unicode in the dialog box<br/>
+      &#x2022; Choose "Text" or "Unicode" in the dialog box<br/>
     </span>
   </a>
 END
