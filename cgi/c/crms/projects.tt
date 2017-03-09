@@ -290,19 +290,8 @@ function populateProject(data, table)
   cell.innerHTML = data.determinationsCount;
   cell = row.insertCell(6);
   cell.className = 'nowrap';
-  var restrictions = [];
-  if (data.restricted)
-  {
-    if (data.restricted.search('e') != -1)
-    {
-      restrictions.push('Expert');
-    }
-    if (data.restricted.search('a') != -1)
-    {
-       restrictions.push('Admin');
-    }
-  }
-  cell.innerHTML = restrictions.join(', ');
+  cell.innerHTML = (data.autoinherit == 1)? '<img width="16" height="16" alt="Checked" src="/c/crms/CheckIcon.png"/>':'';
+  cell.style.textAlign = 'center';
   cell = row.insertCell(7);
   var input = document.createElement('input');
   input.setAttribute('type', 'color');
@@ -403,7 +392,7 @@ function addProject(name)
       <th>Candidates</th>
       <th>Queue</th>
       <th>Determinations</th>
-      <th>Restricted</th>
+      <th>Auto-Inherit</th>
       <th>Color</th>
     </thead>
     <tbody id=projectsTableBody>
@@ -462,7 +451,9 @@ function addProject(name)
       <td><input type="checkbox" id="[% a.id %]ACheckbox" name="[% a.id %]" onchange="propertyChanged('authorities');"/></td>
       <td>
         <label for="[% a.id %]ACheckbox">[% a.name %]</label>
+        [%  IF a.url %]
         <a class="tip2" style="float:right;" href="#"><strong>&#x1F4DD;</strong><span>[% a.url %]</span></a>
+        [% END %]
       </td>
       <!--<td class="nowrap">[% r.description %]</td>-->
     </tr>

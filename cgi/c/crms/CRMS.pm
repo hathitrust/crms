@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.1.9';
+  return '6.2';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -4461,7 +4461,7 @@ sub CreateStatsReport
   my $name = shift @lines;
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
   my $dllink = <<END;
-  <a href='$url' target='_blank'>Download</a>
+  <a href='$url' target='_blank'>download</a>
   <a class='tip' href='#'>
     <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
     <span>
@@ -6863,15 +6863,16 @@ sub GetInheritanceRef
   push @rest, "$search1 $tester1 '$search1Value'" if $search1Value or $search1Value eq '0';
   if ($auto)
   {
-    push @rest, '(i.reason=1 OR (i.reason=12 AND (e.attr="pd" OR e.attr="pdus")))';
+    push @rest, '(p.autoinherit=1 OR i.reason=1 OR (i.reason=12 AND (e.attr="pd" OR e.attr="pdus")))';
   }
   else
   {
-    push @rest, '(i.reason!=1 AND !(i.reason=12 AND (e.attr="pd" OR e.attr="pdus")))';
+    push @rest, '(p.autoinherit=0 AND i.reason!=1 AND !(i.reason=12 AND (e.attr="pd" OR e.attr="pdus")))';
   }
   my $restrict = 'WHERE '. join(' AND ', @rest);
   my $sql = 'SELECT COUNT(DISTINCT e.id),COUNT(DISTINCT i.id) FROM inherit i'.
             ' INNER JOIN exportdata e ON i.gid=e.gid'.
+            ' INNER JOIN projects p ON e.newproject=p.id'.
             ' LEFT JOIN bibdata b ON e.id=b.id '. $restrict;
   my $ref;
   #print "$sql<br/>\n";
@@ -6890,6 +6891,7 @@ sub GetInheritanceRef
   $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,'.
          'b.title,DATE(e.time),i.src,DATE(i.time),b.sysid,i.status'.
          ' FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid'.
+         ' INNER JOIN projects p ON e.newproject=p.id'.
          ' LEFT JOIN bibdata b ON e.id=b.id '. $restrict.
          " ORDER BY $order $dir, $order2 $dir2 LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
@@ -7075,6 +7077,8 @@ sub SubmitInheritances
 # It can only happen in the following circumstances:
 # The current rights are available and are */bib or */gfv,
 #    where in the case of gfv inherited rights are pd or pdus.
+# OR
+# the source volume's project has the autoinherit flag set.
 sub CanAutoSubmitInheritance
 {
   my $self = shift;
@@ -7087,7 +7091,9 @@ sub CanAutoSubmitInheritance
   return 1 if $reason eq 'bib';
   my $attr = $self->SimpleSqlGet('SELECT attr FROM exportdata WHERE gid=?', $gid);
   return 1 if $attr =~ m/^pd/ and $reason eq 'gfv';
-  return 0;
+  my $sql = 'SELECT p.autoinherit FROM exportdata e'.
+            ' INNER JOIN projects p ON e.newproject=p.id WHERE e.gid=?';
+  return $self->SimpleSqlGet($sql);
 }
 
 # Returns whether attr/* changing to attr2/* will result
@@ -7965,7 +7971,8 @@ sub VIAFWarning
     {
       my $country = $data->{'country'};
       if (defined $country && $country ne 'US' && lc $country ne 'ame' &&
-          lc $country ne 'zz' && lc $country ne 'xx')
+          lc $country ne 'american' && lc $country ne 'zz' &&
+          lc $country ne 'xx')
       {
         my $abd = $data->{'abd'};
         my $add = $data->{'add'};
@@ -8246,14 +8253,15 @@ sub GetProjectsRef
             ' WHERE pu.project=p.id AND u.reviewer+u.advanced+u.expert+u.admin+u.superadmin>0),'.
             '(SELECT COUNT(*) FROM queue q WHERE q.newproject=p.id),'.
             '(SELECT COUNT(*) FROM candidates c WHERE c.newproject=p.id),'.
-            '(SELECT COUNT(*) FROM exportdata e WHERE e.newproject=p.id)'.
+            '(SELECT COUNT(*) FROM exportdata e WHERE e.newproject=p.id),p.autoinherit'.
             ' FROM projects p ORDER BY p.id ASC';
   my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     push @projects, {'id' => $row->[0], 'name' => $row->[1], 'restricted' => $row->[2],
                      'color' => $row->[3], 'userCount' => $row->[4], 'queueCount' => $row->[5],
-                     'candidatesCount' => $row->[6], 'determinationsCount' => $row->[7]};
+                     'candidatesCount' => $row->[6], 'determinationsCount' => $row->[7],
+                     'autoinherit' => $row->[8]};
     my $ref2 = $self->SelectAll('SELECT rights FROM projectrights WHERE newproject=?', $row->[0]);
     $projects[-1]->{'rights'} = [map {$_->[0]} @{$ref2}];
     $ref2 = $self->SelectAll('SELECT category FROM projectcategories WHERE project=?', $row->[0]);
