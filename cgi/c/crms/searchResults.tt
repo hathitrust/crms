@@ -110,7 +110,19 @@ function CheckAll(box,formid)
   [% END %]
 
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  
   <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0;download=1" %]" target="_blank">download</a>
+  <a class='tip' href='#'>
+    <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
+    <span>
+    <strong>To get the downloaded data into a spreadsheet:</strong><br/>
+      &#x2022; Click on the "Download" link (this will open a new tab in your browser)<br/>
+      &#x2022; Select all of the text on the new tab and copy it<br/>
+      &#x2022; Switch to Excel<br/>
+      &#x2022; Choose the menu item <strong>Edit &#x2192; Paste Special...</strong><br/>
+      &#x2022; Choose "Text" or "Unicode" in the dialog box<br/>
+    </span>
+  </a>
 
   [% IF crms.IsUserAtLeastExpert() && p == 'adminHistoricalReviews' %]
       <input type="checkbox" [% IF showSysID %]checked="checked"[% END %] id="sysIDCB"
