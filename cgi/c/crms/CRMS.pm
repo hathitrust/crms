@@ -6077,7 +6077,7 @@ sub CountCorrectReviews
     $neutral = $cnt if $val == 2;
   }
   $sql = 'SELECT COUNT(*) FROM historicalreviews'.
-         ' WHERE legacy!=1 AND user=? AND time>=? AND time<=? AND flagged IS NOT NULL';
+         ' WHERE legacy!=1 AND user=? AND time>=? AND time<=? AND flagged IS NOT NULL AND flagged>0';
   my $flagged = $self->SimpleSqlGet($sql, $user, $start, $end);
   return ($correct, $incorrect, $neutral, $flagged);
 }
