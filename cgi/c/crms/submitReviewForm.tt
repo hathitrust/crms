@@ -179,7 +179,7 @@
       [% id = right.0 %]
       <td style="width:50%;">
         <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]"
-              [% IF n < 10 %]accesskey="[% n %]"[% END %]
+              [% IF right.3 < 10 %]accesskey="[% right.3 %]"[% END %]
               [% IF select == id %] checked="checked"[% END %]/>
         <label for="[% 'r' _ id %]">[% right.1 %] ([% right.3 %])</label>
       </td>
@@ -189,7 +189,7 @@
         [% right = rights.$n %]
         [% id = right.0 %]
         <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]"
-              [% IF n < 9 %]accesskey="[% n + 1 %]"[% END %]
+              [% IF right.3 < 10 %]accesskey="[% right.3 %]"[% END %]
               [% IF select == id %] checked="checked"[% END %]/>
         <label for="[% 'r' _ id %]">[% right.1 %] ([% right.3 %])</label>
         [% END %]
