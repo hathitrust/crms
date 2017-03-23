@@ -181,9 +181,17 @@
             </select>
           </td>
         </tr>
-        <tr>
-          <td></td>
-          <td style="margin:0px;padding:0px;">
+        <tr><!-- Added to make room for Stanford emergency links -->
+          <td colspan="2">
+            [% stanfords = [] %]
+            [% FOREACH src IN sources %]
+              [% IF src.name.search('^Stanford') %]
+                [% stanfords.push('<a href="' _ src.url _ '" target="_blank">' _ src.name _ '…</a>') %]
+              [% END %]
+            [% END %]
+            [% stanfords.join('<br/>') %]
+          <!--</td>-->
+          <!--<td style="margin:0px;padding:0px;">-->
              <input type="button" class="reviewblue" value="Toggle View" onclick="flipFrame();" accesskey="o"
              style="margin:0px;padding:1px;background-color:#e0d6de;float:right;"/>
           </td>
