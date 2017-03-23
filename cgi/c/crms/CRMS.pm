@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.2.2';
+  return '6.2.3';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -839,9 +839,11 @@ sub SafeRemoveFromQueue
   my $id   = shift;
   my $noop = shift;
 
-  my $sql = 'UPDATE queue SET priority=-2 WHERE id=?'.
-            ' AND newproject NOT IN (SELECT id FROM projects WHERE name="Special")'.
-            ' AND locked IS NULL AND status=0 AND pending_status=0';
+  my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
+  return undef if $self->SimpleSqlGet($sql, $id) > 0;
+  $sql = 'UPDATE queue SET priority=-2 WHERE id=?'.
+         ' AND newproject NOT IN (SELECT id FROM projects WHERE name="Special")'.
+         ' AND locked IS NULL AND status=0 AND pending_status=0';
   $self->PrepareSubmitSql($sql, $id) unless defined $noop;
   $sql = 'DELETE FROM queue WHERE id=? AND priority=-2'.
          ' AND locked IS NULL AND status=0 AND pending_status=0';
@@ -870,6 +872,7 @@ sub RemoveFromCandidates
   {
     $self->PrepareSubmitSql('DELETE FROM candidates WHERE id=?', $id);
     $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
+    return 1;
   }
 }
 
