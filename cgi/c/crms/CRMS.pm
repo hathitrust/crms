@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.2.3';
+  return '6.2.4';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -2777,7 +2777,7 @@ sub GetVolumesRefWide
     my $id = $row->[0];
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
            'r.category,r.legacy,r.renDate,q.priority,r.swiss,q.status,b.title,b.author'.
-           (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':'r.hold').
+           (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':',r.hold').
            " FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id".
            " WHERE r.id='$id' ORDER BY $order $dir";
     $sql .= ',r.time ASC' unless $order eq 'r.time';
