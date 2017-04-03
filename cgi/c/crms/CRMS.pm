@@ -2009,6 +2009,11 @@ sub CreateSQLForVolumes
     push @rest, "r.time >= '$yesterday'";
     push @rest, 'q.status=0' unless $self->IsUserAtLeastExpert($user);
   }
+  if ($page eq 'expert' || $page eq 'undReviews')
+  {
+    my $proj = $self->GetUserProperty(undef, 'newproject');
+    push @rest, 'q.newproject'. ((defined $proj)? "=$proj":' IS NULL');
+  }
   my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
   push @rest, $terms if $terms;
   push @rest, "date(r.time) >= '$startDate'" if $startDate;
@@ -2097,6 +2102,11 @@ sub CreateSQLForVolumesWide
     my $yesterday = $self->GetYesterday();
     push @rest, "r.time >= '$yesterday'";
     push @rest, 'q.status=0' unless $self->IsUserAdmin($user);
+  }
+  if ($page eq 'expert' || $page eq 'undReviews')
+  {
+    my $proj = $self->GetUserProperty(undef, 'newproject');
+    push @rest, 'q.newproject'. ((defined $proj)? "=$proj":' IS NULL');
   }
   my ($joins2,@rest2) = $self->SearchTermsToSQLWide($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table);
   push @rest, @rest2;
