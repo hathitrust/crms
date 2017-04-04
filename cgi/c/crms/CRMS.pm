@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.2.4';
+  return '6.2.5';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -7106,7 +7106,7 @@ sub CanAutoSubmitInheritance
   return 1 if $attr =~ m/^pd/ and $reason eq 'gfv';
   my $sql = 'SELECT p.autoinherit FROM exportdata e'.
             ' INNER JOIN projects p ON e.newproject=p.id WHERE e.gid=?';
-  return $self->SimpleSqlGet($sql);
+  return $self->SimpleSqlGet($sql, $gid);
 }
 
 # Returns whether attr/* changing to attr2/* will result
