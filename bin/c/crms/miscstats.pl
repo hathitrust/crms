@@ -113,49 +113,6 @@ $sql = "SELECT COUNT(DISTINCT b.sysid) FROM exportdata e INNER JOIN bibdata b ON
 $uniq = $crms->SimpleSqlGet($sql);
 $report .= "<h2>Total Unique Titles Exported (slight guesstimate): $uniq</h2>\n";
 
-# Not for World: temp report on the State gov docs P2.2 volumes for patron
-# For the weekly status report, I think we would want the title, author, publisher,
-# catalog record url or system number, and item identifier for items reviewed that week. Would that work?
-if (!$sys || $sys ne 'crmsworld')
-{
-  $report .= "<h2>State Gov Docs Patron Request Progress</h2>\n";
-  $sql = 'SELECT DISTINCT e.id,b.sysid,e.attr,e.reason,b.author,b.title FROM exportdata e'.
-         ' INNER JOIN historicalreviews r ON e.gid=r.gid INNER JOIN bibdata b'.
-         ' ON e.id=b.id WHERE r.priority=2.3 AND e.time>=DATE_SUB(NOW(), INTERVAL 1 WEEK)';
-  my $ref = $crms->SelectAll($sql);
-  $report .= '<table style="border:1px solid black;border-collapse:collapse;"><tr>'.
-             '<th style="border:1px solid black;">ID</th>'.
-             '<th style="border:1px solid black;">Cat ID</th>'.
-             '<th style="border:1px solid black;">Author</th>'.
-             '<th style="border:1px solid black;">Title</th>'.
-             '<th style="border:1px solid black;">Publisher</th>'.
-             '<th style="border:1px solid black;">Rights</th></tr>'."\n";
-  foreach my $row (@{$ref})
-  {
-    my $id = $row->[0];
-    my $sysid = $row->[1];
-    my $a = $row->[2];
-    my $r = $row->[3];
-    my $a = $row->[4];
-    my $t = $row->[5];
-    my $url = $crms->LinkToMirlynDetails($id);
-    my $record = $crms->GetMetadata($id);
-    if (!defined $record)
-    {
-      print "No metadata for $id\n";
-      next;
-    }
-    my $pub = $record->GetDatafield('260', 'a') . ' ' . $record->GetDatafield('260', 'b');
-    $report .= "<tr><td style='border:1px solid black;'>$id</td>".
-               "<td style='border:1px solid black;'><a href='$url'>$sysid</td>".
-               "<td style='border:1px solid black;'>$a</td>".
-               "<td style='border:1px solid black;'>$t</td>".
-               "<td style='border:1px solid black;'>$pub</td>".
-               "<td style='border:1px solid black;'>$a/$r</td></tr>\n";
-  }
-  $report .= "</table>\n";
-}
-
 $report .= "<h2>Candidates by Namespace</h2>\n";
 $report .= "<table><tr><th>Namespace</th><th>Count</th>";
 my @nss = $crms->Namespaces();
