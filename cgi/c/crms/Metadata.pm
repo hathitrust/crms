@@ -350,6 +350,9 @@ sub copyrightDate
     $field = $date2 if defined $date2 and (defined $date1 and $date2 > $date1) and $date2 ne '9999';
   }
   $field = undef if defined $field and $field eq '';
+  my $field2;
+  $field2 = $self->get_volume_date;
+  $field = $field2 if $field2;
   return $field;
 }
 
@@ -376,7 +379,7 @@ sub pubDate
 
 sub formatPubDate
 {
-  my $self  = shift;
+  my $self = shift;
 
   my $date1 = $self->pubDate(0);
   my $date2 = $self->pubDate(1);
@@ -395,6 +398,81 @@ sub formatPubDate
   }
   return $date;
 }
+
+# Source code from Tim Prettyman
+sub get_volume_date
+{
+  my $self = shift;
+
+  my $item_desc = $self->enumchron;
+  $item_desc or return '';
+  $item_desc = lc $item_desc;
+  my @vol_date = ();
+  my $orig_desc = $item_desc;
+  my $low;
+  my $high;
+  my $date;
+  
+  # umdl item descriptions may contain NNNN.NNN--if so, return null
+  $item_desc =~ /^\d{4}\.[a-z0-9]{3}$/i and return '';
+
+  # check for tech report number formats
+  $item_desc =~ /^\d{1,3}-\d{4}$/ and return '';
+
+  # strip confusing page/part data:
+  #39015022710779: Title 7 1965 pt.1090-end
+  #39015022735396: v.23 no.5-8 1984 pp.939-1830
+  #39015022735701: v.77 1983 no.7-12 p.673-1328
+  #39015022735750: v.75 1981 no.7-12 p.673-1324
+  #no. 3086/3115 1964
+  #no.3043,3046
+  #39015040299169      no.5001-5007,5009-5010
+  #$item_desc =~ s/(v\.|no\.|p{1,2}\.|pt\.)[\d,-]+//g;
+  $item_desc =~ s/\b(v\.\s*|no\.\s*|p{1,2}\.\s*|pt\.\s*)[\d,-\/]+//g;
+
+  # strip months
+  $item_desc =~ s/(january|february|march|april|may|june|july|august|september|october|november|december)\.{0,1}-{0,1}//gi;
+  $item_desc =~ s/(jan|feb|mar|apr|may|jun|jul|aug|sept|sep|oct|nov|dec)\.{0,1}-{0,1}//gi;
+  $item_desc =~ s/(winter|spring|summer|fall|autumn)-{0,1}//gi;
+  $item_desc =~ s/(supplement|suppl|quarter|qtr|jahr)\.{0,1}-{0,1}//gi;
+  
+  # report numbers 
+  #no.CR-2291 1973
+  $item_desc =~ s/\b[a-zA-Z.]+-\d+//;
+
+  # check for date ranges: yyyy-yy
+  #($low, $high) = ( $item_desc =~ /\b(\d{4})\-(\d{2})\b/ ) and do {
+  #($low, $high) = ( $item_desc =~ /\s(\d{4})\-(\d{2})\s/ ) and do {
+  #$item_desc =~ /\b(\d{4})\-(\d{2})\b/ and do {
+  $item_desc =~ /\b(\d{4})[-\/](\d{2})\b/ and do {
+    $low = $1;
+    $high = $2;
+    $high = substr($low,0,2) . $high;
+    push(@vol_date, $high);
+  };
+
+  # check for date ranges: yyyy-y
+  #($low, $high) = ( $item_desc =~ /\b(\d{4})\-(\d)\b/ ) and do {
+  ($low, $high) = ( $item_desc =~ /\s(\d{4})\-(\d)\s/ ) and do {
+    $high = substr($low,0,3) . $high;
+    push(@vol_date, $high);
+  };
+
+  # look for 4-digit strings
+#  $item_desc =~ tr/0-9u/ /cs;           # xlate non-digits to blank (keep "u")
+  $item_desc =~ tr/u^|/9/;              # translate "u" to "9"
+  push (@vol_date, $item_desc =~ /\b(\d{4})\b/g);
+
+  # cull values before 1700 and after 5 years in future
+  @vol_date = grep { $_ >= 1700 && $_ <= 1900 + (localtime)[5] + 5 } @vol_date;
+  # return the maximum year
+  @vol_date = sort(@vol_date);
+  return if scalar @vol_date == 0;
+  my $vol_date =  pop(@vol_date);
+  # reality check--
+  #$vol_date < 1700 and $vol_date = '';
+  return $vol_date;
+}  
 
 sub language
 {
