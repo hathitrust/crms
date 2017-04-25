@@ -1421,22 +1421,31 @@ sub AddItemToQueueOrSetItemActive
     my $sql = 'SELECT id FROM projects WHERE name=?';
     $project = $self->SimpleSqlGet($sql, $project) || 1;
   }
+  my $oldproj = $self->SimpleSqlGet('SELECT newproject FROM queue WHERE id=?', $id);
   # Modify data for existing item.
-  if ($self->IsVolumeInQueue($id))
+  if (defined $oldproj)
   {
-    my $sql = 'UPDATE queue SET priority=?,time=NOW(),source=?,'.
-              'newproject=?,added_by=?,ticket=? WHERE id=?';
-    $self->PrepareSubmitSql($sql, $priority, $src,
-                            $project, $user, $ticket, $id) unless $noop;
-    push @msgs, 'queue item updated';
-    $stat = 2;
-    $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
+    my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
     my $n = $self->SimpleSqlGet($sql, $id);
-    if ($n)
+    my $rlink = "already has $n ".
+                "<a href='?p=adminReviews;search1=Identifier;search1value=$id' target='_blank'>".
+                $self->Pluralize('review', $n). '</a>';
+    # Not allowed to change project if there are already reviews.
+    if ($oldproj != $project && $n > 0)
     {
-      my $rlink = sprintf("already has $n <a href='?p=adminReviews;search1=Identifier;search1value=$id' target='_blank'>%s</a>",
-                          $self->Pluralize('review', $n));
-      push @msgs, $rlink;
+      my $pname = $self->SimpleSqlGet('SELECT name FROM projects WHERE id=?', $oldproj);
+      push @msgs, $rlink. " on project $pname";
+      $stat = 1;
+    }
+    else
+    {
+      $sql = 'UPDATE queue SET priority=?,time=NOW(),source=?,'.
+             'newproject=?,added_by=?,ticket=? WHERE id=?';
+      $self->PrepareSubmitSql($sql, $priority, $src,
+                              $project, $user, $ticket, $id) unless $noop;
+      push @msgs, 'queue item updated';
+      $stat = 2;
+      push @msgs, $rlink if $n;
     }
   }
   else
@@ -1455,7 +1464,6 @@ sub AddItemToQueueOrSetItemActive
     }
     else
     {
-      
       my $sql = 'INSERT INTO queue (id,priority,source,'.
                 'newproject,added_by,ticket) VALUES (?,?,?,?,?,?)';
       $self->PrepareSubmitSql($sql, $id, $priority, $src,
