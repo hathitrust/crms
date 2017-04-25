@@ -241,7 +241,10 @@ if (!$crms->GetAlias())
   if (scalar keys %ips)
   {
     my $ip = $ENV{'REMOTE_ADDR'};
-    if (!defined $ips{$ip} && !$crms->IsUserAdmin())
+    if (!defined $ips{$ip} &&
+        ($crms->IsUserReviewer() ||
+         $crms->IsUserAdvanced() ||
+         $crms->IsUserExpert()))
     {
       $cgi->param('REMOTE_ADDR', $ip);
       $page = 'ip';
