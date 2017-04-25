@@ -2022,8 +2022,8 @@ sub CreateSQLForVolumes
   }
   if ($page eq 'expert' || $page eq 'undReviews')
   {
-    my $proj = $self->GetUserProperty(undef, 'newproject');
-    push @rest, 'q.newproject'. ((defined $proj)? "=$proj":' IS NULL');
+    my $proj = $self->GetUserProperty(undef, 'newproject') || 1;
+    push @rest, "q.newproject=$proj";
   }
   my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
   push @rest, $terms if $terms;
@@ -2116,8 +2116,8 @@ sub CreateSQLForVolumesWide
   }
   if ($page eq 'expert' || $page eq 'undReviews')
   {
-    my $proj = $self->GetUserProperty(undef, 'newproject');
-    push @rest, 'q.newproject'. ((defined $proj)? "=$proj":' IS NULL');
+    my $proj = $self->GetUserProperty(undef, 'newproject') || 1;
+    push @rest, "q.newproject=$proj";
   }
   my ($joins2,@rest2) = $self->SearchTermsToSQLWide($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table);
   push @rest, @rest2;
