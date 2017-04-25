@@ -5,6 +5,7 @@
 [% project = cgi.param('project') %]
 [% ticket = cgi.param('ticket') %]
 [% override = cgi.param('override') %]
+[% noop = cgi.param('noop') %]
 [% delete = cgi.param('delete') %]
 [% expert = crms.IsUserExpert() %]
 [% admin = crms.IsUserAdmin() %]
@@ -29,31 +30,62 @@ function CheckAllTx(box,id)
 <br/>
 <form action="crms">
   <p class="smallishText">Enter one volume id per line.</p>
-  [% crms.Hiddenify(cgi, 'ids', 'priority', 'delete', 'ticket', 'project') %]
+  [% crms.Hiddenify(cgi, 'ids', 'priority', 'delete', 'ticket', 'project', 'noop') %]
   <textarea name="ids" cols="28" rows="30" style="width:33%; height:9em;">[% ids %]</textarea>
   <br/><br/>
-  <label for="priorityField"><strong>Priority </strong></label>
-  <input type="text" value="[% pri %]" id="priorityField" name="priority" size="6" pattern="-?\d(\.\d\d?)?"/>
-  &nbsp;&nbsp;&nbsp;
-  [% IF admin %]
-  <label for="ORCheck"><strong>Override Restrictions </strong></label>
-  <input type="checkbox" id="ORCheck" name="override" [% override? 'checked="checked"':'' %]/>
-  [% END %]
-  &nbsp;&nbsp;&nbsp;
-  [% projs = crms.GetProjectsRef() %]
-  [% IF projs.size %]
-    <label id="projectFieldLabel" for="projectField"><strong>Project </strong></label>
-    <select name="project">
-    [% FOREACH proj IN projs %]
-      <option value="[% proj.id %]" [% (project==proj.id)? 'selected="selected"':'' %]>[% proj.name %]</option>
-    [% END %]
-    </select>
-    &nbsp;&nbsp;&nbsp;
-  [% END %]
-  <label id="ticketFieldLabel" for="ticketField"><strong>Ticket </strong></label>
-  <input id="ticketField" type="text" name="ticket" size="10" value="[% ticket %]"></input>
-  &nbsp;&nbsp;&nbsp;
-  <input type="submit" value="Submit"/>
+  <table style="width:30%;">
+    <tr>
+      <td>
+        <label for="priorityField"><strong>Priority</strong></label>
+      </td>
+      <td>
+        <input type="text" value="[% pri %]" id="priorityField" name="priority" size="6" pattern="-?\d(\.\d\d?)?"/>
+      </td>
+      <td style="text-align:right;">
+      [% IF admin %]
+        <label for="ORCheck"><strong>Override&nbsp;Restrictions</strong></label>
+      [% END %]
+      </td>
+      <td>
+      [% IF admin %]
+        <input type="checkbox" id="ORCheck" name="override" [% override? 'checked="checked"':'' %]/>
+      [% END %]
+      </td>
+      <td style="text-align:right;">
+      [% projs = crms.GetProjectsRef() %]
+      [% IF projs.size %]
+        <label id="projectFieldLabel" for="projectField"><strong>Project</strong></label>
+      [% END %]
+      </td>
+      <td style="text-align:right;">
+        [% IF projs.size %]
+        <select name="project">
+        [% FOREACH proj IN projs %]
+          <option value="[% proj.id %]" [% (project==proj.id)? 'selected="selected"':'' %]>[% proj.name %]</option>
+        [% END %]
+        </select>
+      [% END %]
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <label id="ticketFieldLabel" for="ticketField"><strong>Ticket</strong></label>
+      </td>
+      <td>
+        <input id="ticketField" type="text" name="ticket" size="10" value="[% ticket %]"></input>
+      </td>
+      <td style="text-align:right;">
+        <label for="NoopCheck"><strong>Test Only</strong></label>
+      </td>
+      <td>
+        <input type="checkbox" id="NoopCheck" name="noop" [% noop? 'checked="checked"':'' %]/>
+      </td>
+      <td/>
+      <td style="text-align:right;">
+        <input type="submit" value="Submit"/>
+      </td>
+    </tr>
+  </table>
 </form>
 
 [% adds = 0 %]
@@ -83,9 +115,9 @@ function CheckAllTx(box,id)
       [% CALL crms.RemoveFromQueue(id) %]
       [% status = {'status' = 0, 'msg' = 'Deleted'} %]
     [% ELSE %]
-      [% status = crms.AddItemToQueueOrSetItemActive(id, pri, override, 'adminui', undef, undef, undef, project, ticket) %]
+      [% status = crms.AddItemToQueueOrSetItemActive(id, pri, override, 'adminui', undef, noop, undef, project, ticket) %]
     [% END %]
-    <tr><th style="width:10em;"><span class="major">[% id %]</span></th>
+    <tr><th style="width:10em;" class="nowrap"><span class="major">[% id %]</span></th>
     [% err = status.status %]
     [% msg = status.msg %]
     [% IF err == 0 %]
@@ -106,6 +138,9 @@ function CheckAllTx(box,id)
   <tr>
     <td colspan="2">
       <strong>$action $adds [% crms.Pluralize("volume", adds) %], skipped $skips, modified $already</strong>
+      [% IF noop %]
+        <span style='color:red;'> (made no actual changes to database)</span>
+      [% END %]
     </td>
   </tr>
 </table>
@@ -124,7 +159,7 @@ function CheckAllTx(box,id)
       <td><h4>[% ref.size %]&nbsp;Special Project&nbsp;[% crms.Pluralize("Volume", ref.size) %]</h4></td>
       <td>
         <form action="crms">
-          [% crms.Hiddenify(cgi, 'ids', 'priority', 'delete', 'seq', 'unseq', 'delSel', 'seqSel', 'unseqSel') %]
+          [% crms.Hiddenify(cgi, 'ids', 'priority', 'delete', 'delSel') %]
           <input type="submit" value="Refresh Page"/>
         </form>
       </td>
