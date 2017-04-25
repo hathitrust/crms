@@ -73,8 +73,9 @@ sub GetCutoffYear
 
 sub GetViolations
 {
-  my $self = shift;
-  my ($id, $record, $priority, $override) = @_;
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
 
   my @errs = ();
   my $pub = $record->copyrightDate;
@@ -84,7 +85,6 @@ sub GetViolations
   {
     my $min = $self->GetCutoffYear($where, 'minYear');
     my $max = $self->GetCutoffYear($where, 'maxYear');
-    #$max = GetCutoffYear('maxYearOverride') if ($override and $priority == 3) or $priority == 4;
     push @errs, "$pub not in range $min-$max for $where" if ($pub < $min || $pub > $max);
   }
   else

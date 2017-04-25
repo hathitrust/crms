@@ -1200,27 +1200,25 @@ sub GetViolations
   my $self     = shift;
   my $id       = shift;
   my $record   = shift || $self->GetMetadata($id);
-  my $priority = shift;
-  my $override = shift;
 
-  $priority = 0 unless $priority;
   my @errs = ();
   if (!$record)
   {
     push @errs, 'not found in HathiTrust';
   }
-  elsif ($priority < 4 || !$override)
+  else
   {
-    @errs = $self->CandidatesModule()->GetViolations($id, $record, $priority, $override);
+    @errs = $self->CandidatesModule()->GetViolations($id, $record);
   }
   my $ref = $self->RightsQuery($id, 1);
   $ref = $ref->[0] if $ref;
   if ($ref)
   {
     my ($attr,$reason,$src,$usr,$time,$note) = @{$ref};
-    push @errs, "current rights $attr/$reason" unless $self->CandidatesModule()->HasCorrectRights($attr, $reason) or
-                                                ($override and $priority >= 3) or
-                                                $priority == 4;
+    unless ($self->CandidatesModule()->HasCorrectRights($attr, $reason))
+    {
+      push @errs, "current rights $attr/$reason";
+    }
   }
   else
   {
@@ -1423,15 +1421,17 @@ sub AddItemToQueueOrSetItemActive
     my $sql = 'SELECT id FROM projects WHERE name=?';
     $project = $self->SimpleSqlGet($sql, $project) || 1;
   }
-  ## give the existing item higher or lower priority
+  # Modify data for existing item.
   if ($self->IsVolumeInQueue($id))
   {
-    my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
-    my $n = $self->SimpleSqlGet($sql, $id);
-    $sql = 'UPDATE queue SET priority=?, time=NOW(), source=?, newproject=?, added_by=?, ticket=? WHERE id=?';
-    $self->PrepareSubmitSql($sql, $priority, $src, $project, $user, $ticket, $id) unless $noop;
+    my $sql = 'UPDATE queue SET priority=?,time=NOW(),source=?,'.
+              'newproject=?,added_by=?,ticket=? WHERE id=?';
+    $self->PrepareSubmitSql($sql, $priority, $src,
+                            $project, $user, $ticket, $id) unless $noop;
     push @msgs, 'queue item updated';
     $stat = 2;
+    $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
+    my $n = $self->SimpleSqlGet($sql, $id);
     if ($n)
     {
       my $rlink = sprintf("already has $n <a href='?p=adminReviews;search1=Identifier;search1value=$id' target='_blank'>%s</a>",
@@ -1445,26 +1445,29 @@ sub AddItemToQueueOrSetItemActive
     if (!defined $record)
     {
       $self->ClearErrors();
-      return {'status' => 1, 'msg' => 'not a valid HathiTrust identifier'};
+      return {'status' => 1, 'msg' => 'HathiTrust search failed'};
     }
-    my $issues = '';
-    @msgs = @{ $self->GetViolations($id, $record, $priority, $override) };
-    $issues = join '; ', @msgs if scalar @msgs;
-    if (scalar @msgs && !$override && $issues !~ m/not\sfound/i)
+    @msgs = @{ $self->GetViolations($id, $record) };
+    # If there are error messages and user is not overriding it is an error.
+    if (scalar @msgs && !$override)
     {
       $stat = 1;
     }
     else
     {
-      my $existing = $self->SimpleSqlGet('SELECT issues FROM queue WHERE id=?', $id);
-      $issues = $existing if defined $existing;
-      my $sql = 'INSERT INTO queue (id,priority,source,issues,newproject,added_by,ticket) VALUES (?,?,?,?,?,?,?)';
-      $self->PrepareSubmitSql($sql, $id, $priority, $src, $issues, $project, $user, $ticket) unless $noop;
+      
+      my $sql = 'INSERT INTO queue (id,priority,source,'.
+                'newproject,added_by,ticket) VALUES (?,?,?,?,?,?)';
+      $self->PrepareSubmitSql($sql, $id, $priority, $src,
+                              $project, $user, $ticket) unless $noop;
       $self->UpdateMetadata($id, 1, $record) unless $noop;
       $self->UpdateQueueRecord(1, $src) unless $noop;
     }
   }
-  return {'status' => $stat, 'msg' => join '; ', @msgs};
+  my $msg = ucfirst join '; ', @msgs;
+  my $sql = 'UPDATE queue SET issues=? WHERE id=?';
+  $self->PrepareSubmitSql($sql, $msg, $id) unless $noop;
+  return {'status' => $stat, 'msg' => $msg};
 }
 
 # Used by experts to approve a review made by a reviewer.

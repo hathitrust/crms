@@ -51,8 +51,6 @@ sub GetViolations
   my $self     = shift;
   my $id       = shift;
   my $record   = shift;
-  my $priority = shift || 0;
-  my $override = shift;
 
   my @errs = ();
   my $pub = $record->copyrightDate;
@@ -61,8 +59,7 @@ sub GetViolations
     my $min = $self->GetCutoffYear(undef, 'minYear');
     my $max = $self->GetCutoffYear(undef, 'maxYear');
     my $proj = $self->GetProject($id, $record) || '';
-    if (($override && $priority == 3) ||
-        $priority == 4 || $proj eq 'State gov docs')
+    if ($proj eq 'State gov docs')
     {
       $max = $self->GetCutoffYear(undef, 'maxYearOverride');
     }
@@ -74,6 +71,7 @@ sub GetViolations
     my $type = substr($leader, 6, 1);
     my $date1 = substr($leader, 7, 4);
     my $date2 = substr($leader, 11, 4);
+    my $date = $record->copyrightDate;
     push @errs, "pub date not completely specified ($date1,$date2,'$type')";
   }
   push @errs, 'gov doc' if $self->IsGovDoc($record);
@@ -274,7 +272,7 @@ sub GetProject
   if ($self->IsStateGovDoc($record) &&
       $author !~ m/university/i && $author !~ m/college/i &&
       $title !~ m/university/i && $title !~ m/college/i &&
-      $field260b !~ m/university.*?press/i)
+      $field260b !~ m/((university)|(univ\.)).*?press/i)
   {
     $proj = 'State gov docs';
   }
