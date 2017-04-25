@@ -713,7 +713,7 @@ sub CanExportVolume
   if (defined $gid && !defined $project)
   {
     $sql = 'SELECT p.name FROM exportdata e INNER JOIN projects p'.
-           ' ON e.newproject=p.id WHERE p.id=?';
+           ' ON e.newproject=p.id WHERE e.gid=?';
     $project = $self->SimpleSqlGet($sql, $gid);
   }
   if ($self->GetSystemVar('noExport'))
