@@ -5229,7 +5229,7 @@ sub GetNextItemForReview
     my $wc = $self->WildcardList(scalar @{$inc});
     $excludei = ' AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user IN '. $wc. ')';
     push @params, @{$inc};
-    if (!$self->IsUserAdmin($user))
+    if (!$self->IsUserExpert($user))
     {
       $excludeh = ' AND NOT EXISTS (SELECT * FROM historicalreviews r3 WHERE r3.id=q.id AND r3.user IN '. $wc. ')';
       push @params, @{$inc};
