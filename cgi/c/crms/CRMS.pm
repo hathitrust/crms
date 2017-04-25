@@ -7669,6 +7669,7 @@ sub Authorities
   my $view = shift;
   my $page = shift;
   my $gid  = shift;
+  my $aid  = shift;
 
   use URI::Escape;
   $mag = '100' unless $mag;
@@ -7676,13 +7677,21 @@ sub Authorities
   $page = 'review' unless defined $page;
   my $proj = $self->SimpleSqlGet('SELECT newproject FROM queue WHERE id=?', $id);
   $proj = 1 unless defined $proj;
-  my $sql = 'SELECT a.name,a.url,p.accesskey,p.initial FROM pageauthorities p'.
-            ' INNER JOIN authorities a ON p.id=a.id'.
-            ' INNER JOIN projectauthorities pa ON pa.authority=a.id'.
-            ' WHERE p.page=? AND pa.project=?'.
-            ' ORDER BY p.n ASC';
-  #printf "%s\n<br/>", Utilities::StringifySql($sql, ($page, $proj));
-  my $ref = $self->SelectAll($sql, $page, $proj);
+  my $ref;
+  if ($aid)
+  {
+    my $sql = 'SELECT name,url,1,1,id FROM authorities WHERE id=?';
+    $ref = $self->SelectAll($sql, $aid);
+  }
+  else
+  {
+    my $sql = 'SELECT a.name,a.url,p.accesskey,p.initial,a.id FROM pageauthorities p'.
+              ' INNER JOIN authorities a ON p.id=a.id'.
+              ' INNER JOIN projectauthorities pa ON pa.authority=a.id'.
+              ' WHERE p.page=? AND pa.project=?'.
+              ' ORDER BY p.n ASC';
+    $ref = $self->SelectAll($sql, $page, $proj);
+  }
   my @all = ();
   my $a = $self->GetAuthor($id);
   foreach my $row (@{$ref})
@@ -7742,8 +7751,8 @@ sub Authorities
       my $sysid = $self->BarcodeToId($id);
       $url =~ s/__SYSID__/$sysid/g;
     }
-    push @all, {'name' => $name, 'url' => $url,
-                'accesskey' => $row->[2], 'initial' => $row->[3]};
+    push @all, {'name' => $name, 'url' => $url, 'accesskey' => $row->[2],
+                'initial' => $row->[3], 'id' => $row->[4]};
   }
   return \@all;
 }
