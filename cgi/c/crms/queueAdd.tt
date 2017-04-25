@@ -138,7 +138,7 @@ function CheckAllTx(box,id)
   <tr>
     <td colspan="2">
       <strong>$action $adds [% crms.Pluralize("volume", adds) %], skipped $skips, modified $already</strong>
-      [% IF noop %]
+      [% IF noop && (adds > 0 || already > 0) %]
         <span style='color:red;'> (made no actual changes to database)</span>
       [% END %]
     </td>
@@ -146,8 +146,8 @@ function CheckAllTx(box,id)
 </table>
 [% END %]
 
-[% color_white  = '#FFFFFF' %]
-[% color_gray   = '#FECFCF' %]
+[% color_white = '#FFFFFF' %]
+[% color_gray  = '#FECFCF' %]
 
 [% ref  = crms.GetAddToQueueRef() %]
 [% IF ref.size > 0 %]
