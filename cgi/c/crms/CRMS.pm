@@ -4805,9 +4805,9 @@ sub GetTitle
   my $id   = shift;
 
   my $ti = $self->SimpleSqlGet('SELECT title FROM bibdata WHERE id=?', $id);
-  if (!$ti)
+  if (!defined $ti)
   {
-    $self->UpdateMetadata($id, 1);
+    $self->UpdateMetadata($id);
     $ti = $self->SimpleSqlGet('SELECT title FROM bibdata WHERE id=?', $id);
   }
   return $ti;
@@ -4823,9 +4823,9 @@ sub GetPubDate
   print "Warning: GetPubDate no longer takes a do2 parameter!\n" if $do2;
   my $sql = 'SELECT YEAR(pub_date) FROM bibdata WHERE id=?';
   my $date = $self->SimpleSqlGet($sql, $id);
-  if (!$date)
+  if (!defined $date)
   {
-    $record = $self->UpdateMetadata($id, 1, $record);
+    $record = $self->UpdateMetadata($id, undef, $record);
     $date = $self->SimpleSqlGet($sql, $id);
   }
   return $date;
@@ -4860,7 +4860,7 @@ sub GetPubCountry
   my $where = $self->SimpleSqlGet($sql, $id);
   if (!defined $where)
   {
-    $self->UpdateMetadata($id, 1);
+    $self->UpdateMetadata($id);
     $where = $self->SimpleSqlGet($sql, $id);
   }
   return $where;
@@ -4872,9 +4872,9 @@ sub GetAuthor
   my $id   = shift;
 
   my $au = $self->SimpleSqlGet('SELECT author FROM bibdata WHERE id=?', $id);
-  if (!$au)
+  if (!defined $au)
   {
-    $self->UpdateMetadata($id, 1);
+    $self->UpdateMetadata($id);
     $au = $self->SimpleSqlGet('SELECT author FROM bibdata WHERE id=?', $id);
   }
   #$au =~ s,(.*[A-Za-z]).*,$1,;
@@ -4928,8 +4928,11 @@ sub UpdateMetadata
   # Bail out if the volume is in historicalreviews and not in the queue,
   # to preserve bid data potentially instrumental to an existing review
   # and possibly clobbered by a bib correction.
+  # Force parameter should only be used when something is to be further worked on,
+  # like when adding to queue.
   return if $self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id) and
-            !$self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE id=?', $id);
+            !$self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE id=?', $id) and
+            !$force;
   my $cnt = $self->SimpleSqlGet('SELECT COUNT(*) FROM bibdata WHERE id=?', $id);
   if ($cnt == 0 || $force)
   {
@@ -7660,7 +7663,7 @@ sub Rights
 
 # Information sources for the various review pages.
 # Returns a ref to in-display-order list of dictionaries with the following keys:
-# name, url, accesskey, initial
+# name, url, accesskey, initial, id
 sub Authorities
 {
   my $self = shift;
