@@ -1464,6 +1464,8 @@ sub AddItemToQueueOrSetItemActive
     }
     else
     {
+      my $src = $self->ShouldVolumeBeFiltered($id, $record);
+      push @msgs, "should be filtered ($src)" if defined $src;
       my $sql = 'INSERT INTO queue (id,priority,source,'.
                 'newproject,added_by,ticket) VALUES (?,?,?,?,?,?)';
       $self->PrepareSubmitSql($sql, $id, $priority, $src,
