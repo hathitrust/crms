@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.2.6';
+  return '6.2.7';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -1464,8 +1464,8 @@ sub AddItemToQueueOrSetItemActive
     }
     else
     {
-      my $src = $self->ShouldVolumeBeFiltered($id, $record);
-      push @msgs, "should be filtered ($src)" if defined $src;
+      my $src2 = $self->ShouldVolumeBeFiltered($id, $record);
+      push @msgs, "should be filtered ($src2)" if defined $src2;
       my $sql = 'INSERT INTO queue (id,priority,source,'.
                 'newproject,added_by,ticket) VALUES (?,?,?,?,?,?)';
       $self->PrepareSubmitSql($sql, $id, $priority, $src,
