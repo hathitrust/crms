@@ -4265,7 +4265,7 @@ sub CreateStatsData
     {
       my $inst = $self->GetUserProperty($user, 'institution');
       my $iname = $self->GetInstitutionName($inst);
-      $username .= ' ('. $iname . ')';
+      $username .= ' ('. $iname. ' &#x2014; '. $user. ')';
     }
   }
   #print "username '$username', instusers $instusers<br/>\n";
@@ -8388,6 +8388,5 @@ sub SetProjectUsers
     $self->PrepareSubmitSql($sql, $user, $proj);
   }
 }
-
 
 1;
