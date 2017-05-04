@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.2.7';
+  return '6.2.8';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -8388,5 +8388,6 @@ sub SetProjectUsers
     $self->PrepareSubmitSql($sql, $user, $proj);
   }
 }
+
 
 1;
