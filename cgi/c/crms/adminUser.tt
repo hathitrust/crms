@@ -136,7 +136,7 @@
         [% END %]
       </td>
       <td>
-        [% IF u.commitment > 0.0 %]
+        [% IF u.commitment && u.commitment > 0.0 %]
           [% u.commitmentFmt %]
           [% IF active && uadmin %]
             <div class="ProgressBar[% (crms.sys() == 'crmsworld')? 'Red':'' %]">
