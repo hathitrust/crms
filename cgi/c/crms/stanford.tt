@@ -26,15 +26,15 @@
   [% ELSE %]
     <strong>No results</strong>
   [% END %]
-  <br/><br/>
   [% IF data.pages.current_page && data.pages.current_page > 1 %]
     [% prev = page - 1 %]
-    <a href="?[% crms.URLify(cgi,'page') _ "&page=$prev" %]">Prev</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;<a href="?[% crms.URLify(cgi,'page') _ "&page=$prev" %]">Prev</a>
   [% END %]
   [% IF data.pages.current_page && data.pages.total_pages && data.pages.current_page < data.pages.total_pages %]
     [% next = page + 1 %]
-    <a href="?[% crms.URLify(cgi,'page') _ "&page=$next" %]">Next</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;<a href="?[% crms.URLify(cgi,'page') _ "&page=$next" %]">Next</a>
   [% END %]
+  <br/><br/>
   <table style="width:65%;">
     [% FOR doc IN data.docs %]
       <tr>
@@ -81,6 +81,16 @@
   <br/>
   [% IF data.pages.total_pages %]
     <strong>Found [% data.pages.total_count %], page [% data.pages.current_page %] of [% data.pages.total_pages %]</strong>
+  [% ELSE %]
+    <strong>No results</strong>
+  [% END %]
+  [% IF data.pages.current_page && data.pages.current_page > 1 %]
+    [% prev = page - 1 %]
+    &nbsp;&nbsp;&nbsp;&nbsp;<a href="?[% crms.URLify(cgi,'page') _ "&page=$prev" %]">Prev</a>
+  [% END %]
+  [% IF data.pages.current_page && data.pages.total_pages && data.pages.current_page < data.pages.total_pages %]
+    [% next = page + 1 %]
+    &nbsp;&nbsp;&nbsp;&nbsp;<a href="?[% crms.URLify(cgi,'page') _ "&page=$next" %]">Next</a>
   [% END %]
   <br/><br/><br/>
 [% END %]
