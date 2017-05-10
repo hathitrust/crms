@@ -16,8 +16,9 @@
   <label for="titleRB">Title</label>
   <input id="everythingRB" name="field" value="search" type="radio" [% field == "search"? 'checked="checked"':'' %]>
   <label for="everythingRB">Everything</label>
-  <input type="text" name="q" value="[% crms.EchoInput(q) %]" style="width:33em;"></input>
+  <input type="text" id="queryField" name="q" value="[% crms.EchoInput(q) %]" style="width:33em;"></input>
   <input type="submit" value="Submit"/>
+  <input type="button" value="Clear" onclick="document.getElementById('queryField').value='';"/>
 </form>
 <br/>
 [% IF q && field %]
@@ -36,7 +37,7 @@
     [% next = page + 1 %]
     <a href="?[% crms.URLify(cgi,'page') _ "&page=$next" %]">Next</a>
   [% END %]
-  <table style="width:45%;">
+  <table style="width:65%;">
     [% FOR doc IN data.docs %]
       <tr>
         <td class="nowrap" style="text-align:right;color:#999;">Title:</td>
@@ -79,24 +80,13 @@
       </tr>
     [% END %]
   </table>
-  <br/><br/>
+  <br/>
+  [% IF data.pages.total_pages %]
+    <strong>Found [% data.pages.total_count %], page [% data.pages.current_page %] of [% data.pages.total_pages %]</strong>
+  [% END %]
+  <br/><br/><br/>
 [% END %]
 </div>
 [% INCLUDE footer.tt %]
 
-[%
-#my $title = $doc->{'title_display'};
-#print RED "$title\n";
-#printf "Author: %s\n", $doc->{'author_sort'};
-#printf "Date: %s\n", $doc->{'pub_year_no_approx_isi'};
-#printf "Renewal ID: %s\n", $doc->{'id'};
-#printf "Renewal Date: %s\n", join ', ', @{$doc->{'exhibit_copyrightrenewals_date-of-renewal_tesim'}};
-#printf "Publication Date: %s\n", join ', ', @{$doc->{'exhibit_copyrightrenewals_date-of-publication_tesim'}};
-#printf "Original registration number: %s\n", join ', ', @{$doc->{'exhibit_copyrightrenewals_original-registration-number_tesim'}};
-#printf "Claimant: %s\n", join ', ', @{$doc->{'exhibit_copyrightrenewals_claimant_tesim'}};
-#printf "Class Code: %s\n", join ', ', @{$doc->{'exhibit_copyrightrenewals_class-code_ssim'}};
-#print "\n";
-  
-#print BLUE 'Page '. $pages->{'current_page'}. ' of '. $pages->{'total_pages'}. "\n";
-%]
   
