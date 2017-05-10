@@ -7,7 +7,7 @@
   [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="[% p %]"/>
   <label for="queryTA" class="smallishText">Enter one volume or system id per line.</label><br/>
-  <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;">[% q %]</textarea>
+  <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;">[% crms.EchoInput(q) %]</textarea>
   <input type="submit" value="Do it!"/>
 </form>
 
@@ -42,7 +42,7 @@
             ([% data.title %])
           [% END %]
         [% ELSE %]
-          $id&nbsp;&nbsp;&nbsp;&nbsp;(not in catalog)
+          [% crms.EchoInput(id) %]&nbsp;&nbsp;&nbsp;&nbsp;(not in catalog)
         [% END %]
       </th></tr>
       [% IF sysid %]

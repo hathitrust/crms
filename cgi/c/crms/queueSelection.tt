@@ -35,7 +35,7 @@
 Restrict selection:<br/>
 
 [% crms.QueueSearchMenu('search1', search1) %]
-<input title="Value 1" type="text"  id="search1value" name="search1value" value="[% search1value %]" size="30"/>
+<input title="Value 1" type="text"  id="search1value" name="search1value" value="[% crms.EchoInput(search1value) %]" size="30"/>
 <select title="Boolean Option" name="op1">
   <option [% op1 == 'AND' ? 'selected="selected"':'' %]>AND</option>
   <option [% op1 == 'OR' ? 'selected="selected"':'' %]>OR</option>
@@ -43,7 +43,7 @@ Restrict selection:<br/>
 <br/>
 
 [% crms.QueueSearchMenu('search2', search2) %]
-<input title="Value 2" type="text" id="search2value" name="search2value" value="[% search2value %]" size="30"/>
+<input title="Value 2" type="text" id="search2value" name="search2value" value="[% crms.EchoInput(search2value) %]" size="30"/>
 <br/>
 
 <label for="startDate" style="width:5em;float:left;">Start Date:</label>
