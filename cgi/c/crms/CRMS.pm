@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.2.8';
+  return '6.3';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -8387,6 +8387,28 @@ sub SetProjectUsers
   {
     $self->PrepareSubmitSql($sql, $user, $proj);
   }
+}
+
+sub GetStanfordData
+{
+  my $self  = shift;
+  my $q     = shift;
+  my $type  = shift;
+  my $page  = shift;
+
+  use Stanford;
+  return Stanford::GetStanfordData($self, $q, $type, $page);
+}
+
+sub EchoInput
+{
+  my $self = shift;
+  my $text = shift;
+
+  use HTML::Entities;
+  $text = decode_utf8($text);
+  $text = encode_entities($text);
+  return $text;
 }
 
 1;
