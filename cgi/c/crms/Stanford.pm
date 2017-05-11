@@ -10,7 +10,6 @@ sub GetStanfordData
   my $field = shift || 'search';
   my $page  = shift;
 
-  $field = 'search' if $field eq 'search_title';
   my $ret;
   return unless defined $q and length $q;
   my $url = GetStanfordURL($self, $q, $field, $page);
