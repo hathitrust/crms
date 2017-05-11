@@ -107,7 +107,8 @@
       </td>
       [% ips = crms.GetUserIPs(userid) %]
       <td>
-      [% IF !userid.match("-expert") && !userid.match("-reviewer") && r && !ips.keys.size() && (r || v || e) %]
+      [% IF !userid.match("-expert") && !userid.match("-reviewer") &&
+         'Michigan' != u.institution && !ips.keys.size() && (r || v || e) %]
       <span class="red">Warning: no IP address</span>
       [% ELSE %]
         [% ips.keys.join(', ') %]
