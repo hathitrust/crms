@@ -81,8 +81,6 @@
   <br/>
   [% IF data.pages.total_pages %]
     <strong>Found [% data.pages.total_count %], page [% data.pages.current_page %] of [% data.pages.total_pages %]</strong>
-  [% ELSE %]
-    <strong>No results</strong>
   [% END %]
   [% IF data.pages.current_page && data.pages.current_page > 1 %]
     [% prev = page - 1 %]
