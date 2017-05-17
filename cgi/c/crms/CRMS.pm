@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.3';
+  return '6.3.1';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -1322,7 +1322,7 @@ sub LoadQueueForProject
          ' AND id NOT IN (SELECT DISTINCT id FROM queue)'.
          ' AND id NOT IN (SELECT DISTINCT id FROM reviews)'.
          ' AND id NOT IN (SELECT DISTINCT id FROM historicalreviews)'.
-         ' AND time<=DATE_SUB(NOW(), INTERVAL 1 WEEK) AND project=?'.
+         ' AND time<=DATE_SUB(NOW(), INTERVAL 1 WEEK) AND newproject=?'.
          ' ORDER BY time DESC';
   #print "$sql\n";
   my $ref = $self->SelectAll($sql, $project);
