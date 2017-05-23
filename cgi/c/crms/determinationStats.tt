@@ -49,6 +49,7 @@ window.onload = function()
        onclick="document.getElementById('startDate').value='';
                 document.getElementById('endDate').value='';
        "/>
+[% crms.HiddenSys %]
 </form>
 </div>
 <br/>
