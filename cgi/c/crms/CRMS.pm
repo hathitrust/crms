@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.3.1';
+  return '6.3.2';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -4756,6 +4756,8 @@ sub HasItemBeenReviewedByTwoReviewers
     if ($count >= 2)
     {
       $msg = 'This volume does not need to be reviewed. Two reviewers or an expert have already reviewed it. Please Cancel.';
+      my $note = sprintf "Collision for $user on %s: $id has $count reviews", $self->Hostname();
+      $self->Note($note);
     }
     $sql = 'SELECT COUNT(*) FROM queue WHERE id=? AND status!=0';
     $count = $self->SimpleSqlGet($sql, $id);
@@ -4775,7 +4777,7 @@ sub ValidateSubmission
   {
     $errorMsg = 'This item has been locked by another reviewer. Please Cancel. ';
     my $note = sprintf "Collision for $user on %s: $id locked for $lock", $self->Hostname();
-    $self->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $note);
+    $self->Note($note);
   }
   if (!$self->IsVolumeInQueue($id))
   {
