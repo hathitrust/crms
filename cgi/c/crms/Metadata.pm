@@ -571,8 +571,7 @@ sub volumeIDs
     foreach my $item (@{$json->{'items'}})
     {
       my $id = $item->{'htid'};
-      my $chron = $item->{'enumcron'};
-      $chron = '' unless $chron;
+      my $chron = $item->{'enumcron'} || '';
       my $rights = $item->{'usRightsString'};
       my %data = ('id' => $id, 'chron' => $chron, 'rights' => $rights);
       push @ids, \%data;
