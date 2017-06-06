@@ -6510,7 +6510,12 @@ sub TrackingQuery
     $data{'title'} = $record->title;
     $data{'sysid'} = $record->sysid;
     $rows = $self->VolumeIDsQuery($id, $record);
-    foreach my $ref (sort {$a->{'chron'} cmp $b->{'chron'}} @{$rows})
+    foreach my $ref (sort
+      {my $a1 = lc $a->{'chron'};
+       my $b1 = lc $b->{'chron'};
+       $a1 =~ s/[^a-z0-9]//g;
+       $b1 =~ s/[^a-z0-9]//g;
+       $a1 cmp $b1;} @{$rows})
     {
       my $id2 = $ref->{'id'};
       my $data2 = [$id2, $ref->{'chron'},
