@@ -259,6 +259,7 @@ sub Normalize
   return $suba;
 }
 
+# Return project name, or undef for Core project.
 sub GetProject
 {
   my $self   = shift;
@@ -269,10 +270,13 @@ sub GetProject
   my $author = $record->author || '';
   my $title = $record->title || '';
   my $field260b = $record->GetDatafield('260', 'b') || '';
-  if ($self->IsStateGovDoc($record) &&
-      $author !~ m/university/i && $author !~ m/college/i &&
-      $title !~ m/university/i && $title !~ m/college/i &&
-      $field260b !~ m/((university)|(univ\.)|(college)).*?press/i)
+  my $field110ab = $record->GetSubfields('110', 1, 'a', 'b') || '';
+  if (($self->IsStateGovDoc($record) &&
+       $author !~ m/university/i && $author !~ m/college/i &&
+       $title !~ m/university/i && $title !~ m/college/i &&
+       $field260b !~ m/((university)|(univ\.)|(college)).*?press/i) ||
+       $field110ab =~ m/\(state\)/i)
+      
   {
     $proj = 'State gov docs';
   }
