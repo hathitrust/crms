@@ -59,7 +59,7 @@ my $crms = CRMS->new(
     dev     => $DLPS_DEV
 );
 
-my $outfile = $crms->get('root'). $crms->get('dataDir'). '/CRMSRenewals.csv';
+my $outfile = $crms->get('root'). $crms->get('dataDir'). '/CRMSRenewals.tsv';
 my $msg = $crms->StartHTML();
 $msg .= <<'END';
 <h2>CRMS-US</h2>
