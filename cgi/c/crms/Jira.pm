@@ -268,7 +268,7 @@ sub LinkToJira
 {
   my $tx = shift;
 
-  return '<a href="https://wush.net/jira/hathitrust/browse/'.
+  return '<a href="https://tools.lib.umich.edu/jira/browse/'.
          $tx. '" target="_blank">'. $tx. '</a>';
 }
 
