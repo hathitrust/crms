@@ -63,7 +63,9 @@ sub GetViolations
     {
       $max = $self->GetCutoffYear(undef, 'maxYearOverride');
     }
-    push @errs, sprintf "$pub not in range $min-$max%s", ($proj)? " for project $proj":'' if ($pub < $min || $pub > $max);
+    push @errs, sprintf "$pub not in range $min-$max%s",
+                        ($proj)? " for project $proj":''
+                        if ($pub < $min || $pub > $max);
   }
   else
   {
@@ -182,7 +184,8 @@ sub IsProbableGovDoc
 }
 
 # Rejects anything with 008 15-17 that is not '**u'.
-# As a convenience (and for testing) returns undef for US titles and a string with the country code that failed.
+# As a convenience (and for testing) returns undef for US titles
+# and a string with the country code that failed.
 sub IsForeignPub
 {
   my $self   = shift;
@@ -203,7 +206,8 @@ sub IsForeignPub
 # a's, then the data in each subfield a is normalized and matched
 # against a list of known US cities.  If any of the subfield a?s are not
 # in the list, then the mult_260a_non_us flag is set.
-# As a convenience (and for testing) returns undef for US titles and a string with the city that failed.
+# As a convenience (and for testing) returns undef for US titles
+# and a string with the city that failed.
 sub IsReallyForeignPub
 {
   my $self   = shift;
