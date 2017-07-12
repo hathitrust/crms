@@ -103,27 +103,32 @@ if ($cnt)
   $report .= "<tr><td>Jira</td><td>$cnt</td></tr>\n";
 }
 $report .= "</table>\n";
-
-$sql = 'SELECT COUNT(id) FROM candidates';
-$uniq = $crms->SimpleSqlGet($sql);
-$report .= "<h2>Total Volumes Still in Candidates: $uniq</h2>\n";
-
-### Total unique titles exported (guesstimate)
-$sql = "SELECT COUNT(DISTINCT b.sysid) FROM exportdata e INNER JOIN bibdata b ON e.id=b.id";
-$uniq = $crms->SimpleSqlGet($sql);
-$report .= "<h2>Total Unique Titles Exported (slight guesstimate): $uniq</h2>\n";
-
-$report .= "<h2>Candidates by Namespace</h2>\n";
-$report .= "<table><tr><th>Namespace</th><th>Count</th>";
-my @nss = $crms->Namespaces();
-foreach my $ns (@nss)
+if (0)
 {
-  my $cnt = $crms->SimpleSqlGet('SELECT COUNT(*) FROM candidates WHERE id LIKE "'. $ns . '%"');
-  next if $cnt == 0;
-  $report .= "  <tr><td>$ns</td><td>$cnt</td></tr>\n";
+  $sql = 'SELECT COUNT(id) FROM candidates';
+  $uniq = $crms->SimpleSqlGet($sql);
+  $report .= "<h2>Total Volumes Still in Candidates: $uniq</h2>\n";
 }
-$report .= "</table>\n";
-
+if (0)
+{
+  ### Total unique titles exported (guesstimate)
+  $sql = "SELECT COUNT(DISTINCT b.sysid) FROM exportdata e INNER JOIN bibdata b ON e.id=b.id";
+  $uniq = $crms->SimpleSqlGet($sql);
+  $report .= "<h2>Total Unique Titles Exported (slight guesstimate): $uniq</h2>\n";
+}
+if (0)
+{
+  $report .= "<h2>Candidates by Namespace</h2>\n";
+  $report .= "<table><tr><th>Namespace</th><th>Count</th>";
+  my @nss = $crms->Namespaces();
+  foreach my $ns (@nss)
+  {
+    my $cnt = $crms->SimpleSqlGet('SELECT COUNT(*) FROM candidates WHERE id LIKE "'. $ns . '%"');
+    next if $cnt == 0;
+    $report .= "  <tr><td>$ns</td><td>$cnt</td></tr>\n";
+  }
+  $report .= "</table>\n";
+}
 $report .= "<h2>New Reviewer Progress</h2>\n";
 $report .= N00bReport();
 
@@ -145,20 +150,23 @@ foreach my $row (@{$ref})
 $report .= "</table>\n";
 
 ### CRMS World only: breakdown of time for country of origin
-$report .= "<h2>Average Review Time by Country of Origin</h2>\n";
-$report .= "<h4>including outliers of more than 5 minutes</h4>\n";
-$report .= "<table><tr><th>Category</th><th>Seconds</th></tr>\n";
-my $data = CreateCountryReviewTimeData(10);
-foreach my $row (split "\n", $data)
+if (0)
 {
-  my ($cat,$dur) = split "\t", $row;
-  $report .= sprintf "<tr><td>%s</td><td>%0.2f</td></tr>\n", $cat, $dur;# if $dur > 0.0;
+  $report .= "<h2>Average Review Time by Country of Origin</h2>\n";
+  $report .= "<h4>including outliers of more than 5 minutes</h4>\n";
+  $report .= "<table><tr><th>Category</th><th>Seconds</th></tr>\n";
+  my $data = CreateCountryReviewTimeData(10);
+  foreach my $row (split "\n", $data)
+  {
+    my ($cat,$dur) = split "\t", $row;
+    $report .= sprintf "<tr><td>%s</td><td>%0.2f</td></tr>\n", $cat, $dur;# if $dur > 0.0;
+  }
+  $report .= "</table>\n";
 }
-$report .= "</table>\n";
 
 # Breakdown of time reviewing
 my @ys = @{$crms->GetAllExportYears()};
-foreach my $y (@ys)
+foreach my $y (reverse @ys)
 {
   $report .= "<h2>$y Reviews by Duration</h2>\n";
   my @yms = $crms->GetAllMonthsInYear($y);
@@ -205,34 +213,35 @@ foreach my $y (@ys)
   }
   $report .= "</table>\n";
 }
-
-$report .= "<h2>Note Category Prevalence by Reviewer</h2>\n";
-my %cats;
-$sql = 'SELECT name FROM categories WHERE restricted IS NULL AND interface=1';
-$ref = $crms->SelectAll($sql);
-$cats{$_->[0]} = 1 for (@{$ref});
-$sql = 'SELECT id FROM users WHERE reviewer+advanced>0 AND expert+admin+superadmin=0';
-$ref = $crms->SelectAll($sql);
-$report .= '<table><tr><th>User (validation)<th>' . join "</th><th>", keys %cats;
-$report .= "</th></tr>\n";
-foreach my $row (@{$ref})
+if (0)
 {
-  my $user = $row->[0];
-  $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND category IS NOT NULL';
-  my $total = $crms->SimpleSqlGet($sql, $user);
-  next if $total == 0;
-  $sql = 'SELECT SUM(total_correct)/SUM(total_reviews)*100.0 FROM userstats WHERE user=?';
-  $report .= sprintf "<tr><th>$user (%.1f%%)</th>", $crms->SimpleSqlGet($sql, $user);
-  foreach my $cat (sort keys %cats)
+  $report .= "<h2>Note Category Prevalence by Reviewer</h2>\n";
+  my %cats;
+  $sql = 'SELECT name FROM categories WHERE restricted IS NULL AND interface=1';
+  $ref = $crms->SelectAll($sql);
+  $cats{$_->[0]} = 1 for (@{$ref});
+  $sql = 'SELECT id FROM users WHERE reviewer+advanced>0 AND expert+admin+superadmin=0';
+  $ref = $crms->SelectAll($sql);
+  $report .= '<table><tr><th>User (validation)<th>' . join "</th><th>", keys %cats;
+  $report .= "</th></tr>\n";
+  foreach my $row (@{$ref})
   {
-    $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND category=?';
-    my $n = $crms->SimpleSqlGet($sql, $user, $cat);
-    $report .= sprintf "<td>%.1f%%</td>", 100.0 * $n / $total;
+    my $user = $row->[0];
+    $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND category IS NOT NULL';
+    my $total = $crms->SimpleSqlGet($sql, $user);
+    next if $total == 0;
+    $sql = 'SELECT SUM(total_correct)/SUM(total_reviews)*100.0 FROM userstats WHERE user=?';
+    $report .= sprintf "<tr><th>$user (%.1f%%)</th>", $crms->SimpleSqlGet($sql, $user);
+    foreach my $cat (sort keys %cats)
+    {
+      $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND category=?';
+      my $n = $crms->SimpleSqlGet($sql, $user, $cat);
+      $report .= sprintf "<td>%.1f%%</td>", 100.0 * $n / $total;
+    }
+    $report .= "</tr>\n";
   }
-  $report .= "</tr>\n";
+  $report .= "</table>\n";
 }
-$report .= "</table>\n";
-
 $report .= "</body></html>\n";
 
 if (@mails)
