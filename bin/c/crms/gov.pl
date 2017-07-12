@@ -64,7 +64,8 @@ $sql = 'SELECT DATE_FORMAT(MAX(time), "%M %Y") FROM und WHERE src="gov"';
 my $month = $crms->SimpleSqlGet($sql);
 my $subj = "Suspected Gov Documents, $month";
 $month =~ s/\s+/_/g;
-my $excelpath = sprintf('/l1/prep/c/crms/GovDocs_%s.xls', $month);
+my $excelname = 'GovDocs_'. $month. '.xls';
+my $excelpath = '/l1/prep/c/crms/'. $excelname;
 my @cols= ('ID','Sys ID','Author','Title','Pub Date','Pub');
 my $workbook  = Spreadsheet::WriteExcel->new($excelpath);
 my $worksheet = $workbook->add_worksheet();
@@ -144,7 +145,7 @@ $txt
 $boundary
 Content-Type: application/vnd.ms-excel; name="$excelpath"
 Content-Transfer-Encoding: base64
-Content-Disposition: attachment; filename=*
+Content-Disposition: attachment; filename="$excelname"
 
 $enc
 $boundary--
