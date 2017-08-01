@@ -90,7 +90,10 @@ sub ShouldVolumeBeFiltered
   my $record = shift;
 
   return 'gov' if $self->IsProbableGovDoc($record);
-  return 'language' if 'eng' ne $record->language;
+  my %langs = ('   ' => 1, '|||' => 1, 'emg' => 1,
+               'eng' => 1, 'enm' => 1, 'mul' => 1,
+               'new' => 1, 'und' => 1);
+  return 'language' if !$langs{$record->language};
   return 'dissertation' if $record->isThesis;
   return 'translation' if $record->isTranslation;
   return 'foreign' if $self->IsReallyForeignPub($record);
