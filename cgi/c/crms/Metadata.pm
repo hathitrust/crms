@@ -680,4 +680,30 @@ sub GetSubfields
   return $data;
 }
 
+sub GetAllSubfields
+{
+  my $self   = shift;
+  my $field  = shift;
+  my $code   = shift;
+  my $xml    = shift;
+
+  $self->SetError("no code: $field") unless defined $code;
+  $xml = $self->xml unless defined $xml;
+  my $xpath = "//*[local-name()='datafield' and \@tag='$field']" .
+              "/*[local-name()='subfield' and \@code='$code']";
+  my @data;
+  my $n = 0;
+  eval {
+    my $nodes = $xml->findnodes($xpath);
+    foreach my $node ($nodes->get_nodelist())
+    {
+      my $doc = $node->findvalue("./*[local-name()='subfield' and \@code='$code']");
+      push @data, $doc;
+    }
+  };
+  if ($@) { $self->SetError($self->id . " GetAllSubfields failed: $@"); }
+  
+  return \@data;
+}
+
 return 1;
