@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.3.8';
+  return '6.3.9';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -7633,11 +7633,12 @@ sub Categories
 }
 
 # Get the rights combinations appropriate to the project
-# in an order appropriate for a two-column layout.
+# in an order appropriate for a two-column layout unless $order.
 sub Rights
 {
-  my $self = shift;
-  my $id   = shift;
+  my $self  = shift;
+  my $id    = shift;
+  my $order = shift;
 
   my $proj = $self->SimpleSqlGet('SELECT newproject FROM queue WHERE id=?', $id);
   $proj = 1 unless defined $proj;
@@ -7658,6 +7659,7 @@ sub Rights
     push @all, [$row->[0], $row->[1], $row->[2], $n];
     $n++;
   }
+  return \@all if $order;
   my @inorder;
   my $of = scalar @all;
   my $middle = int($of / 2);

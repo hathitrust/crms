@@ -141,7 +141,7 @@
     </tr>
   </table>
   </div>
-[% rights = crms.Rights(barcode) %]
+[% rights = crms.Rights(barcode, 1) %]
 <div id="RightsCont" class="rightscont">
 <div id="RightsReason" style="position:relative;">
   <div style="position:absolute;top:0px;right:1em;">
@@ -159,6 +159,7 @@
       </span>
     </a>
   </div>
+  [% rights = crms.Rights(barcode) %]
   [% of = rights.size() %]
   [% n = 0 %]
     <div style="display:none" id="UNDNFI" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=5 AND reason=8') %]"></div>
