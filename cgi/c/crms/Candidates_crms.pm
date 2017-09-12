@@ -96,7 +96,7 @@ sub ShouldVolumeBeFiltered
   return 'language' if !$langs{$record->language};
   return 'dissertation' if $record->isThesis;
   return 'translation' if $record->isTranslation;
-  return 'foreign' if $self->IsReallyForeignPub($record);
+  #return 'foreign' if $self->IsReallyForeignPub($record);
   return undef;
 }
 
