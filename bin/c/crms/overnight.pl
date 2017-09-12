@@ -15,7 +15,7 @@ use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 
 my $usage = <<END;
-USAGE: $0 [-acCehlmpqt] [-x SYS] [start_date [end_date]]
+USAGE: $0 [-acCehlmpqt] [-x SYS] [-m USER [-m USER...]] [start_date [end_date]]
 
 Processes reviews, exports determinations, updates candidates,
 updates the queue, recalculates user stats, and clears stale locks.
@@ -29,15 +29,18 @@ with latest rights DB timestamp between them.
 -e      Do not process statuses or export determinations.
 -h      Print this help message.
 -l      Do not clear old locks.
--m      Do not recalculate monthly stats.
+-m MAIL Send report to MAIL. May be repeated for multiple recipients.
 -p      Run in production.
 -q      Do not update queue.
+-s      Do not recalculate monthly stats.
 -t      Run in training.
 -x SYS  Set SYS as the system to execute.
+-v      Be verbose.
 END
 
 my ($skipAttrReason, $skipCandidates, $skipExport, $help, $skipCRI,
-    $skipLocks, $skipMonthly, $production, $skipQueue, $training, $sys);
+    $skipLocks, @mails, $production, $skipQueue, $skipStats, $training,
+    $verbose, $sys);
 
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
@@ -47,10 +50,12 @@ die 'Terminating' unless GetOptions(
            'e'    => \$skipExport,
            'h|?'  => \$help,
            'l'    => \$skipLocks,
-           'm'    => \$skipMonthly,
+           'm:s@' => \@mails,
            'p'    => \$production,
            'q'    => \$skipQueue,
+           's'    => \$skipStats,
            't'    => \$training,
+           'v+'   => \$verbose,
            'x:s'  => \$sys);
 
 die $usage if $help;
@@ -79,80 +84,96 @@ my $crms = CRMS->new(
     dev        =>   ($training)? 'crms-training':$DLPS_DEV
 );
 
-$crms->set('ping','yes');
-if ($skipExport) { ReportMsg("-e flag set; skipping queue processing and export."); }
+my $subj = $crms->SubjectLine('Nightly Processing');
+my $body = $crms->StartHTML($subj);
+$crms->set('ping', 'yes');
+$crms->set('messages', $body) if scalar @mails;
+
+if ($skipExport) { $crms->ReportMsg('-e flag set; skipping queue processing and export.', 1); }
 else
 {
-  ReportMsg("Starting to process the statuses.");
+  $crms->ReportMsg('Starting to process the statuses.', 1);
   $crms->ProcessReviews();
-  ReportMsg("DONE processing the statuses.");
-  ReportMsg("Starting to create export for the rights db. You should receive a separate email when this completes.");
+  $crms->ReportMsg('<b>Done</b> processing the statuses.', 1);
+  $crms->ReportMsg('Starting to create export for the rights db. You should receive a separate email when this completes.', 1);
   my $rc = $crms->ClearQueueAndExport();
-  ReportMsg("$rc\nDONE exporting.");
+  $crms->ReportMsg("$rc\n<b>Done</b> exporting.", 1);
 }
-if (!$crms->GetSystemVar('cri')) { ReportMsg('CRI system variable not set; skipping.'); }
-elsif ($skipCRI) { ReportMsg('-i flag set; skipping CRI processing.'); }
+if (!$crms->GetSystemVar('cri')) { $crms->ReportMsg('CRI system variable not set; skipping.', 1); }
+elsif ($skipCRI) { ReportMsg('-i flag set; skipping CRI processing.', 1); }
 else
 {
-  ReportMsg('Starting to process CRI.');
+  $crms->ReportMsg('Starting to process CRI.', 1);
   use CRI;
   my $cri = CRI->new('crms' => $crms);
   $cri->ProcessCRI();
-  ReportMsg('DONE processing CRI.');
+  $crms->ReportMsg('DONE processing CRI.', 1);
 }
 
-if ($skipCandidates) { ReportMsg("-c flag set; skipping candidates load."); }
+if ($skipCandidates) { ReportMsg("-c flag set; skipping candidates load.", 1); }
 else
 {
-  ReportMsg("Starting to load new volumes into candidates.");
-  $crms->LoadNewItemsInCandidates($start, $end);
-  ReportMsg("DONE loading new volumes into candidates.");
+  $crms->ReportMsg('Starting to load new volumes into candidates.', 1);
+  my $added = $crms->LoadNewItemsInCandidates($start, $end);
+  $crms->ReportMsg("<b>Done</b> loading $added new volumes into candidates.", 1);
+  $subj = $crms->SubjectLine("Candidates Load ($added new)");
 }
 
-if ($skipQueue) { ReportMsg("-q flag set; skipping queue load."); }
+if ($skipQueue) { $crms->ReportMsg('-q flag set; skipping queue load.', 1); }
 else
 {
-  ReportMsg("Starting to load new volumes into queue.");
+  $crms->ReportMsg('Starting to load new volumes into queue.', 1);
   $crms->LoadQueue();
-  ReportMsg("DONE loading new volumes into queue.");
+  $crms->ReportMsg('<b>Done</b> loading new volumes into queue.', 1);
 }
 
-if ($skipMonthly) { ReportMsg("-m flag set; skipping monthly stats."); }
+if ($skipStats) { $crms->ReportMsg('-s flag set; skipping monthly stats.', 1); }
 else
 {
-  ReportMsg("Starting to update monthly stats.");
+  $crms->ReportMsg('Starting to update monthly stats.', 1);
   $crms->UpdateStats();
-  ReportMsg("DONE updating monthly stats.");
+  $crms->ReportMsg('<b>Done</b> updating monthly stats.', 1);
 }
 
-if ($skipLocks) { ReportMsg("-l flag set; skipping unlock."); }
+if ($skipLocks) { $crms->ReportMsg('-l flag set; skipping unlock.', 1); }
 else
 {
-  ReportMsg("Starting to clear stale locks.");
+  $crms->ReportMsg('Starting to clear stale locks.', 1);
   $crms->RemoveOldLocks();
-  ReportMsg("DONE clearing stale locks.");
+  $crms->ReportMsg('<b>Done</b> clearing stale locks.', 1);
 }
 
-if ($skipLocks) { ReportMsg("-a flag set; skipping attr/reason sync."); }
+if ($skipLocks) { $crms->ReportMsg('-a flag set; skipping attr/reason sync.', 1); }
 else
 {
-  ReportMsg("Starting to synchronize attr/reason tables with Rights Database.");
+  $crms->ReportMsg('Starting to synchronize attr/reason tables with Rights Database.', 1);
   $crms->AttrReasonSync();
-  ReportMsg("DONE synchronizing attr/reasons.");
+  $crms->ReportMsg('<b>Done</b> synchronizing attr/reasons.', 1);
 }
 
 my $r = $crms->GetErrors();
-printf "There were %d errors%s\n", scalar @{$r}, (scalar @{$r})? ':':'.';
-print "$_\n" for @{$r};
+$crms->ReportMsg(sprintf("There were %d errors%s", scalar @{$r}, (scalar @{$r})? ':':'.'));
+$crms->ReportMsg("$_") for @{$r};
 
-ReportMsg("All DONE with nightly script.");
+$crms->ReportMsg('All <b>done</b> with nightly script.', 1);
+$body = $crms->get('messages');
+$body .= "  </body>\n</html>\n";
 
-
-sub ReportMsg
+if (scalar @mails)
 {
-  my $msg = shift;
-
-  my $newtime = scalar (localtime(time()));
-  print "$newtime: $msg\n";
+  @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
+  my $to = join ',', @mails;
+  $crms->ReportMsg("Sending to $to\n") if $verbose;
+  use Encode;
+  use Mail::Sendmail;
+  my $bytes = encode('utf8', $body);
+  my %mail = ('from'         => 'crms-mailbot@umich.edu',
+              'to'           => $to,
+              'subject'      => $subj,
+              'content-type' => 'text/html; charset="UTF-8"',
+              'body'         => $bytes
+              );
+  sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n");
 }
+
 

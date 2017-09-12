@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.3.9';
+  return '6.3.10';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -417,12 +417,12 @@ sub ProcessReviews
   my $dels = $self->SimpleSqlGet($sql);
   if ($dels)
   {
-    print "Deleted inheritances to be removed: $dels\n" unless $quiet;
+    $self->ReportMsg("Deleted inheritances to be removed: $dels.") unless $quiet;
     $self->DeleteInheritances($quiet);
   }
   else
   {
-    print "No deleted inheritances to remove.\n" unless $quiet;
+    $self->ReportMsg('No deleted inheritances to remove.') unless $quiet;
   }
   # Get the underlying system status, ignoring replication delays.
   my ($blah, $stat, $msg) = @{$self->GetSystemStatus(1)};
@@ -446,7 +446,7 @@ sub ProcessReviews
   }
   else
   {
-    print "Not auto-submitting inheritances because $reason.\n" unless $quiet;
+    $self->ReportMsg('Not auto-submitting inheritances because $reason.') unless $quiet;
   }
   $self->SetSystemStatus('partial', 'CRMS is processing reviews. The Review page is temporarily unavailable. Try back in about a minute.');
   my %stati = (2=>0,3=>0,4=>0,8=>0);
@@ -459,7 +459,7 @@ sub ProcessReviews
     my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND time>DATE_SUB(NOW(), INTERVAL 8 HOUR)';
     if (0 < $self->SimpleSqlGet($sql, $id))
     {
-      print "Not processing $id: it has one or more reviews less than 8 hours old\n" unless $quiet;
+      $self->ReportMsg("Not processing $id: it has one or more reviews less than 8 hours old") unless $quiet;
       next;
     }
     my $data = $self->CalcStatus($id, $stat);
@@ -468,7 +468,7 @@ sub ProcessReviews
     my $hold = $data->{'hold'};
     if ($hold)
     {
-      print "Not processing $id for $hold: it is held; system status is '$stat'\n" unless $quiet;
+      $self->ReportMsg("Not processing $id for $hold: it is held; system status is '$stat'") unless $quiet;
       next;
     }
     if ($status == 8)
@@ -484,7 +484,7 @@ sub ProcessReviews
     $self->PrepareSubmitSql($sql, $id);
     $stati{$status}++;
   }
-  print "Setting system status back to '$stat'\n" unless $quiet;
+  $self->ReportMsg("Setting system status back to '$stat'") unless $quiet;
   $self->SetSystemStatus($stat, $msg);
   $sql = 'INSERT INTO processstatus VALUES ()';
   $self->PrepareSubmitSql($sql);
@@ -617,12 +617,12 @@ sub ExportReviews
 
   if ($self->GetSystemVar('noExport') && !$quiet)
   {
-    print ">>> noExport system variable is set; will only export high-priority volumes.\n";
+    $self->ReportMsg('>>> noExport system variable is set; will only export high-priority volumes.');
   }
   my $count = 0;
   my $user = $self->Sys();
   my ($fh, $temp, $perm, $filename) = $self->GetExportFh() unless $quiet;
-  print ">>> Exporting to $temp.\n" unless $quiet;
+  $self->ReportMsg(">>> Exporting to $temp.") unless $quiet;
   my $start_size = $self->GetCandidatesSize();
   foreach my $id (@{$list})
   {
@@ -630,7 +630,7 @@ sub ExportReviews
     my $export = $self->CanExportVolume($id, $attr, $reason, $quiet);
     if ($export)
     {
-      print $fh "$id\t$attr\t$reason\t$user\tnull\n" unless $quiet;
+      print $fh "$id\t$attr\t$reason\t$user\tnull\n";
     }
     my $sql = 'SELECT status,priority,source,added_by,newproject,ticket FROM queue WHERE id=?';
     my $ref = $self->SelectAll($sql, $id);
@@ -652,7 +652,7 @@ sub ExportReviews
   if (!$quiet)
   {
     close $fh;
-    print ">>> Moving to $perm.\n";
+    $self->ReportMsg(">>> Moving to $perm.");
     rename $temp, $perm;
   }
   # Update correctness/validation now that everything is in historical
@@ -677,7 +677,8 @@ sub ExportReviews
   $self->PrepareSubmitSql($sql, $count);
   if (!$quiet)
   {
-    printf "After export, removed %d volumes from candidates.\n", $start_size-$self->GetCandidatesSize();
+    my $dels = $start_size-$self->GetCandidatesSize();
+    $self->ReportMsg("After export, removed $dels volumes from candidates.");
     eval { $self->EmailReport($count, $perm, $filename); };
     $self->SetError("EmailReport() failed: $@") if $@;
   }
@@ -704,7 +705,7 @@ sub CanExportVolume
   }
   if ($status == 6)
   {
-    print "Not exporting $id; it is status 6\n" unless $quiet;
+    $self->ReportMsg("Not exporting $id; it is status 6") unless $quiet;
     return 0;
   }
   my $sql = 'SELECT p.name FROM queue q INNER JOIN projects p'.
@@ -720,12 +721,12 @@ sub CanExportVolume
   {
     if ($project eq 'Special')
     {
-      print "Exporting $id; noExport is on but it is Special\n" unless $quiet;
+      $self->ReportMsg("Exporting $id; noExport is on but it is Special") unless $quiet;
       return 1;
     }
     else
     {
-      print "Not exporting $id; noExport is on and it is project $project\n" unless $quiet;
+      $self->ReportMsg("Not exporting $id; noExport is on and it is project $project") unless $quiet;
       return 0;
     }
   }
@@ -755,7 +756,7 @@ sub CanExportVolume
       {
         if ($usr2 =~ m/^crms/ && $time lt $time2)
         {
-          print "Not exporting $id as $attr/$reason; there is a newer CRMS export ($attr2/$reason2 by $usr2 [$time2])\n" unless $quiet;
+          $self->ReportMsg("Not exporting $id as $attr/$reason; there is a newer CRMS export ($attr2/$reason2 by $usr2 [$time2])") unless $quiet;
           $export = 0;
         }
       }
@@ -764,7 +765,7 @@ sub CanExportVolume
     }
     else
     {
-      print "Not exporting $id as $attr/$reason; it is out of scope ($attr2/$reason2)\n" unless $quiet;
+      $self->ReportMsg("Not exporting $id as $attr/$reason; it is out of scope ($attr2/$reason2)") unless $quiet;
       $export = 0;
     }
   }
@@ -782,7 +783,7 @@ sub EmailReport
   my $where = ($self->WhereAmI() || 'Prod');
   if ($where eq 'Prod')
   {
-    my $subject = sprintf('%s %s: %d volumes exported to rights db', $self->System(), $where, $count);
+    my $subject = $self->SubjectLine("$count volumes exported to rights db");
     use Mail::Sendmail;
     my $boundary = "====" . time() . "====";
     my %mail = ('from'         => $self->GetSystemVar('adminEmail'),
@@ -876,6 +877,7 @@ sub RemoveFromCandidates
   }
 }
 
+# Returns number of candidates added.
 sub LoadNewItemsInCandidates
 {
   my $self   = shift;
@@ -885,22 +887,22 @@ sub LoadNewItemsInCandidates
   my $now = (defined $end)? $end : $self->GetTodaysDate();
   $start = $self->SimpleSqlGet('SELECT max(time) FROM candidatesrecord') unless $start;
   my $start_size = $self->GetCandidatesSize();
-  print "Candidates size is $start_size, last load time was $start\n";
+  $self->ReportMsg("Candidates size is $start_size, last load time was $start");
   my $sql = 'SELECT id FROM und WHERE src="no meta"';
   my $ref = $self->SelectAll($sql);
   my $n = scalar @{$ref};
   if ($n)
   {
-    print "Checking $n possible no-meta additions to candidates\n";
+    $self->ReportMsg("Checking $n possible no-meta additions to candidates");
     $self->CheckAndLoadItemIntoCandidates($_->[0]) for @{$ref};
     $n = $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE src="no meta"');
-    print "Number of no-meta volumes now $n.\n";
+    $self->ReportMsg("Number of no-meta volumes now $n.");
   }
   my $endclause = ($end)? " AND time<='$end' ":' ';
   $sql = 'SELECT namespace,id FROM rights_current WHERE time>?' . $endclause . 'ORDER BY time ASC';
   my $ref = $self->SelectAllSDR($sql, $start);
   my $n = scalar @{$ref};
-  print "Checking $n possible additions to candidates from rights DB\n";
+  $self->ReportMsg("Checking $n possible additions to candidates from rights DB");
   foreach my $row (@{$ref})
   {
     my $id = $row->[0] . '.' . $row->[1];
@@ -908,10 +910,11 @@ sub LoadNewItemsInCandidates
   }
   my $end_size = $self->GetCandidatesSize();
   my $diff = $end_size - $start_size;
-  print "After load, candidates has $end_size volumes. Added $diff.\n\n";
+  $self->ReportMsg("After load, candidates has $end_size volumes. Added $diff.");
   # Record the update
   $sql = 'INSERT INTO candidatesrecord (time,addedamount) VALUES (?,?)';
   $self->PrepareSubmitSql($sql, $now, $diff);
+  return $diff;
 }
 
 # Does all checks to see if a volume should be in the candidates or und tables, removing
@@ -932,7 +935,7 @@ sub CheckAndLoadItemIntoCandidates
   my $rq = $self->RightsQuery($id, 1);
   if (!defined $rq)
   {
-    print "Can't get rights for $id, filtering\n";
+    $self->ReportMsg("Can't get rights for $id, filtering.");
     $self->Filter($id, 'no meta') unless $noop;
     return;
   }
@@ -947,7 +950,7 @@ sub CheckAndLoadItemIntoCandidates
       my $sysid = $record->sysid;
       if (defined $sysid && defined $oldSysid && $sysid ne $oldSysid)
       {
-        print "Update system IDs from $oldSysid to $sysid\n";
+        $self->ReportMsg("Update system IDs from $oldSysid to $sysid");
         $self->UpdateSysids($record) unless defined $noop;
       }
     }
@@ -956,12 +959,12 @@ sub CheckAndLoadItemIntoCandidates
   {
     if ((defined $incand || $inq) && $reason eq 'gfv')
     {
-      print "Filter $id as gfv\n";
+      $self->ReportMsg("Filter $id as gfv");
       $self->Filter($id, 'gfv') unless defined $noop;
     }
     elsif (defined $incand || $inq)
     {
-      print "Remove $id -- (rights now $attr/$reason)\n";
+      $self->ReportMsg("Remove $id -- (rights now $attr/$reason)");
       $self->RemoveFromCandidates($id, $noop);
     }
     if ($inund)
@@ -974,23 +977,23 @@ sub CheckAndLoadItemIntoCandidates
   if ($reason ne 'gfv' &&
       $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE id=? AND src="gfv"', $id) > 0)
   {
-    print "Unfilter $id -- reverted from pdus/gfv\n";
+    $self->ReportMsg("Unfilter $id -- reverted from pdus/gfv");
     $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) unless defined $noop;
   }
   if ($self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id) > 0)
   {
-    print "Skip $id -- already in historical reviews\n";
+    $self->ReportMsg("Skip $id -- already in historical reviews");
     return;
   }
   if ($self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE (status IS NULL OR status=1) AND id=?', $id) > 0)
   {
-    print "Skip $id -- already inheriting\n";
+    $self->ReportMsg("Skip $id -- already inheriting");
     return;
   }
   $record = $self->GetMetadata($id) unless defined $record;
   if (!defined $record)
   {
-    print "Skip $id -- no metadata to be had\n";
+    $self->ReportMsg("Skip $id -- no metadata to be had");
     $self->Filter($id, 'no meta') unless defined $noop;
     $self->ClearErrors();
     return;
@@ -1001,8 +1004,8 @@ sub CheckAndLoadItemIntoCandidates
     my $src = $self->ShouldVolumeBeFiltered($id, $record);
     if (defined $src)
     {
-      printf "Skip $id ($src) -- %s in filtered volumes\n",
-             (defined $inund)? "updating $inund->$src":'inserting';
+      $self->ReportMsg(sprintf("Skip $id ($src) -- %s in filtered volumes",
+                               (defined $inund)? "updating $inund->$src":'inserting'));
       $self->Filter($id, $src) unless defined $noop;
     }
     else
@@ -1014,7 +1017,7 @@ sub CheckAndLoadItemIntoCandidates
   {
     if (defined $inund || defined $incand || $inq)
     {
-      printf "Remove $id %s (%s)\n", (defined $incand)? '--':'from und', $errs->[0];
+      $self->ReportMsg(sprintf("Remove $id %s (%s)\n", (defined $incand)? '--':'from und', $errs->[0]));
       $self->RemoveFromCandidates($id, $noop);
     }
   }
@@ -1042,8 +1045,8 @@ sub AddItemToCandidates
     if ($record->doEnumchronMatch($id, $id2))
     {
       my $chron2 = $record->enumchron($id2) || '';
-      printf "Filter $id2%s as duplicate of $id%s\n",
-            (length $chron)? " ($chron)":'', (length $chron2)? " ($chron2)":'' unless $quiet;
+      $self->ReportMsg(sprintf("Filter $id2%s as duplicate of $id%s",
+                       (length $chron)? " ($chron)":'', (length $chron2)? " ($chron2)":'')) unless $quiet;
       $self->Filter($id2, 'duplicate') unless $noop;
     }
   }
@@ -1056,7 +1059,7 @@ sub AddItemToCandidates
   }
   if (!$self->IsVolumeInCandidates($id))
   {
-    printf "Add $id to candidates for project '$project' ($proj)\n" unless $quiet;
+    $self->ReportMsg(sprintf("Add $id to candidates for project '$project' ($proj)")) unless $quiet;
     my $sql = 'INSERT INTO candidates (id,time,newproject) VALUES (?,?,?)';
     $self->PrepareSubmitSql($sql, $id, $time, $proj) unless $noop;
     $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) unless $noop;
@@ -1067,7 +1070,7 @@ sub AddItemToCandidates
     my $proj2 = $self->SimpleSqlGet($sql, $id);
     if ($proj != $proj2)
     {
-      print "Update $id project from $proj2 to $proj\n";
+      $self->ReportMsg("Update $id project from $proj2 to $proj");
       my $sql = 'UPDATE candidates SET newproject=? WHERE id=?';
       $self->PrepareSubmitSql($sql, $proj, $id) unless $noop;
     }
@@ -1075,14 +1078,14 @@ sub AddItemToCandidates
     $proj2 = $self->SimpleSqlGet($sql, $id);
     if (defined $proj2 && $proj != $proj2)
     {
-      print "Update $id queue project from $proj2 to $proj\n";
+      $self->ReportMsg("Update $id queue project from $proj2 to $proj");
       my $sql = 'UPDATE queue SET newproject=? WHERE id=?';
       $self->PrepareSubmitSql($sql, $proj, $id) unless $noop;
     }
   }
   if ($self->GetSystemVar('cri') && defined $self->CheckForCRI($id, $noop, $quiet))
   {
-    print "Filter $id as CRI\n" unless $quiet;
+    $self->ReportMsg("Filter $id as CRI") unless $quiet;
     $self->Filter($id, 'cross-record inheritance') unless $noop;
   }
   else
@@ -1110,7 +1113,7 @@ sub CheckForCRI
   my $gid = $cri->CheckVolume($id);
   if (defined $gid)
   {
-    print "Adding CRI for $id ($gid)\n" unless $quiet;
+    $self->ReportMsg("Adding CRI for $id ($gid)") unless $quiet;
     my $sql = 'INSERT INTO cri (id,gid) VALUES (?,?)';
     $self->PrepareSubmitSql($sql, $id, $gid) unless $noop;
     return $gid;
@@ -1313,7 +1316,7 @@ sub LoadQueueForProject
   my $queueSize = $self->SimpleSqlGet($sql, $project);
   my $targetQueueSize = $self->GetSystemVar('queueSize');
   my $needed = $targetQueueSize - $queueSize;
-  printf "Before load, the queue has $queueSize volumes%s -- need $needed for project $project\n";
+  $self->ReportMsg("Before load, the queue has $queueSize volumes -- need $needed for project $project");
   return if $needed <= 0;
   my $count = 0;
   my %dels = ();
@@ -1333,14 +1336,14 @@ sub LoadQueueForProject
     my $record = $self->GetMetadata($id);
     if (!defined $record)
     {
-      print "Filtering $id: can't get metadata for queue\n";
+      $self->ReportMsg("Filtering $id: can't get metadata for queue");
       $self->Filter($id, 'no meta');
       next;
     }
     my @errs = @{ $self->GetViolations($id, $record) };
     if (scalar @errs)
     {
-      printf "Will delete $id: %s\n", join '; ', @errs;
+      $self->ReportMsg(sprintf("Will delete $id: %s", join '; ', @errs));
       $dels{$id} = 1;
       next;
     }
@@ -1351,14 +1354,14 @@ sub LoadQueueForProject
       if ($dup)
       {
         my $sysid = $record->sysid;
-        print "Filtering $id: queue has $dup on $sysid (no chron/enum)\n";
+        $self->ReportMsg("Filtering $id: queue has $dup on $sysid (no chron/enum)");
         $self->Filter($id, 'duplicate');
         next;
       }
     }
     if ($self->AddItemToQueue($id, $record, $project))
     {
-      print "Added to queue: $id\n";
+      $self->ReportMsg("Added to queue: $id");
       $count++;
     }
     last if $count >= $needed;
@@ -1978,7 +1981,6 @@ sub CreateSQLForVolumes
   my $pagesize     = shift;
   my $download     = shift;
 
-  #print("CreateSQLForVolumes('$order','$dir','$search1','$search1value','$op1','$search2','$search2value','$op2','$search3','$search3value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
   $dir = 'DESC' unless $dir;
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
@@ -2072,7 +2074,6 @@ sub CreateSQLForVolumesWide
   my $pagesize     = shift;
   my $download     = shift;
 
-  #print("GetVolumesRefWide('$order','$dir','$search1','$search1value','$op1','$search2','$search2value','$op2','$search3','$search3value','$startDate','$endDate','$offset','$pagesize','$page');<br/>\n");
   $dir = 'DESC' unless $dir;
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
@@ -5457,6 +5458,25 @@ sub Logit
   }
 }
 
+sub ReportMsg
+{
+  my $self = shift;
+  my $msg  = shift;
+  my $ts   = shift;
+
+  my $messages = $self->get('messages');
+  if (defined $messages)
+  {
+    $msg = sprintf('<i>%s:</i> %s', scalar (localtime(time())), $msg) if $ts;
+    $messages .= "$msg<br/>\n";
+    $self->set('messages', $messages);
+  }
+  else
+  {
+    print $msg. "\n";
+  }
+}
+
 ## ----------------------------------------------------------------------------
 ##  Function:   add to and get errors
 ##              $self->SetError("foo");
@@ -7074,13 +7094,13 @@ sub DeleteInheritances
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    print "Deleting inheritance for $id\n" unless $quiet;
+    $self->ReportMsg("Deleting inheritance for $id") unless $quiet;
     $self->PrepareSubmitSql('DELETE FROM inherit WHERE id=?', $id);
     # Only unfilter if the und src is 'duplicate' because duplicate filtration
     # does not override other sources like gfv
     if ($self->IsFiltered($id, 'duplicate'))
     {
-      print "Unfiltering $id\n" unless $quiet;
+      $self->ReportMsg("Unfiltering $id") unless $quiet;
       $self->Unfilter($id);
     }
   }
@@ -7093,7 +7113,7 @@ sub SubmitInheritances
 
   my $sql = 'SELECT id,gid,status FROM inherit WHERE (status IS NULL OR status=1)';
   my $ref = $self->SelectAll($sql);
-  printf "Submitting %d inheritances\n", scalar @{$ref} unless $quiet;
+  $self->ReportMsg(sprintf("Submitting %d inheritances", scalar @{$ref})) unless $quiet;
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
@@ -7101,9 +7121,9 @@ sub SubmitInheritances
     my $status = $row->[2];
     if ((defined $status && $status == 1) || $self->CanAutoSubmitInheritance($id, $gid))
     {
-      print "Submitting inheritance for $id\n" unless $quiet;
+      $self->ReportMsg("Submitting inheritance for $id") unless $quiet;
       my $res = $self->SubmitInheritance($id);
-      print "$res\n" if $res;
+      $self->ReportMsg("-- $res") if $res;
     }
   }
 }
@@ -7643,7 +7663,7 @@ sub Rights
   my $proj = $self->SimpleSqlGet('SELECT newproject FROM queue WHERE id=?', $id);
   $proj = 1 unless defined $proj;
   my @all = ();
-  my $sql = 'SELECT r.id,CONCAT(a.name,"/",rs.name),r.description FROM rights r'.
+  my $sql = 'SELECT r.id,CONCAT(a.name,"/",rs.name),r.description,a.name,rs.name FROM rights r'.
             ' INNER JOIN attributes a ON r.attr=a.id'.
             ' INNER JOIN reasons rs ON r.reason=rs.id'.
             ' INNER JOIN projectrights pr ON r.id=pr.rights'.
@@ -7656,7 +7676,7 @@ sub Rights
   my $n = 1;
   foreach my $row (@{$ref})
   {
-    push @all, [$row->[0], $row->[1], $row->[2], $n];
+    push @all, [$row->[0], $row->[1], $row->[2], $n, $row->[3], $row->[4]];
     $n++;
   }
   return \@all if $order;
