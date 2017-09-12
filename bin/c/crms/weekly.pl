@@ -136,10 +136,11 @@ $msg .= sprintf('<span style="font-size:.9em;">Report for week %s to %s, compare
                 $crms->FormatDate($startThis), $crms->FormatDate($now),
                 $crms->FormatDate($startLast), $crms->FormatDate($startThis));
 $msg .= '</body></html>';
-my $subj = sprintf '%sWednesday Data Report', ($DLPS_DEV)? 'Dev ':'';
+
 @mails = keys %mails;
 if (scalar @mails)
 {
+  my $subj = $crms->SubjectLine('Wednesday Data Report');
   @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
   my $to = join ',', keys %mails;
   print "Sending to $to\n" if $verbose;
