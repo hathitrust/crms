@@ -429,6 +429,7 @@ $txt .= sprintf "SDR Database OK reconnects: %d, bad reconnects: %d<br/>\n",
                 $hashref->{'auto_reconnects_failed'};
 $txt .= "</body></html>\n\n";
 
+@mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
 my $to = join(',', @mails);
 printf "Mailing to: $to\n" if $verbose;
 if (scalar @mails)
