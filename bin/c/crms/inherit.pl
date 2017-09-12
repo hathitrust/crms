@@ -123,11 +123,9 @@ my $subj = $crms->SubjectLine(sprintf "%s %sInheritance, $dates%s",
 $start .= ' 00:00:00' unless $start =~ m/\d\d:\d\d:\d\d$/;
 $end .= ' 23:59:59' unless $end =~ m/\d\d:\d\d:\d\d$/;
 my %data = %{($candidates || $duplicate)?
-             CandidatesReport($start,$end,\@singles):
-             InheritanceReport($start,$end,\@singles)};
-my $head = $crms->StartHTML();
-my $txt = '';
-$delim = "<br/>\n";
+             CandidatesReport($start, $end, \@singles):
+             InheritanceReport($start, $end, \@singles)};
+$crms->set('messages', $crms->StartHTML());
 
 if (scalar keys %{$data{'inherit'}})
 {
@@ -192,17 +190,17 @@ if (scalar keys %{$data{'inherit'}})
   $data{'pendinheritcnt'} = $npend;
   $autotxt .= '</table>';
   $pendtxt .= '</table>';
-  $txt .= $autotxt if $n;
-  $txt .= $pendtxt if $npend;
+  $crms->ReportMsg($autotxt) if $n;
+  $crms->ReportMsg($pendtxt) if $npend;
 }
 
 if (scalar keys %{$data{'chron'}} && !$no{'chron'})
 {
-  $txt .= sprintf("<h4>Volumes skipped because of nonmatching enumchron%s</h4>\n", ($candidates)? ' - No Inheritance':'');
-  $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume (chron)<br/>(<span style='color:blue;'>historical/SysID</span>)</th>" .
-          '<th>Volume Checked (chron)<br/>(<span style="color:blue;">volume tracking</span>)</th>' .
-          '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th>' .
-          "<th>Title</th></tr>\n";
+  my $table = sprintf("<h4>Volumes skipped because of nonmatching enumchron%s</h4>\n", ($candidates)? ' - No Inheritance':'');
+  $table .= '<table border="1"><tr><th>#</th><th>Source&nbsp;Volume (chron)<br/>(<span style="color:blue;">historical/SysID</span>)</th>'.
+            '<th>Volume Checked (chron)<br/>(<span style="color:blue;">volume tracking</span>)</th>'.
+            '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th>'.
+            '<th>Title</th></tr>';
   my $n = 0;
   my $th = GetTitleHash($data{'chron'}, \%data);
   foreach my $id (KeysSortedOnTitle($data{'chron'}), $th)
@@ -220,20 +218,20 @@ if (scalar keys %{$data{'chron'}} && !$no{'chron'})
       my $htCatLink = $crms->LinkToCatalog($sysid);
       my $retrLink = $crms->LinkToRetrieve($sysid,1);
       my $histLink = $crms->LinkToHistorical($sysid,1);
-      $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a>$chron</td>" .
-              "<td><a href='$retrLink' target='_blank'>$id2</a>$chron2</td>\n";
-      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$title</td></tr>\n";
+      $table .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a>$chron</td>".
+                "<td><a href='$retrLink' target='_blank'>$id2</a>$chron2</td>";
+      $table .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$title</td></tr>";
     }
   }
-  $txt .= "</table>$delim";
+  $crms->ReportMsg($table. '</table>');
 }
 
 if (scalar keys %{$data{'disallowed'}})
 {
-  $txt .= "<h4>Volumes not allowed to inherit</h4>\n";
-  $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style='color:blue;'>historical/SysID</span>)</th>" .
-          "<th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th><th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th>" .
-          "<th>Rights</th><th>New Rights</th><th>Why</th><th>Title</th></tr>\n";
+  my $table = "<h4>Volumes not allowed to inherit</h4>\n";
+  $table .= '<table border="1"><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style="color:blue;">historical/SysID</span>)</th>'.
+            '<th>Volume Checked<br/>(<span style="color:blue;">volume tracking</span>)</th><th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th>'.
+            "<th>Rights</th><th>New Rights</th><th>Why</th><th>Title</th></tr>\n";
   my $n = 0;
   my $th = GetTitleHash($data{'disallowed'}, \%data);
   foreach my $id (KeysSortedOnTitle($data{'disallowed'}, $th))
@@ -249,33 +247,33 @@ if (scalar keys %{$data{'disallowed'}})
       my $htCatLink = $crms->LinkToCatalog($sysid);
       my $retrLink = $crms->LinkToRetrieve($sysid,1);
       my $histLink = $crms->LinkToHistorical($sysid,1);
-      $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
-      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$note</td><td>$title</td></tr>\n";
+      $table .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$id</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
+      $table .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$note</td><td>$title</td></tr>\n";
     }
   }
   $data{'disallowedcnt'} = $n;
-  $txt .= "</table>$delim";
+  $crms->ReportMsg($table. '</table>');
 }
 
 if (scalar keys %{$data{'unavailable'}})
 {
-  $txt .= "<h4>Volumes which had no metadata available</h4>\n";
-  $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th></tr>\n";
+  my $table = "<h4>Volumes which had no metadata available</h4>\n";
+  $table .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th></tr>\n";
   my $n = 0;
   foreach my $id (keys %{$data{'unavailable'}})
   {
     $n++;
     my $retrLink = $crms->LinkToRetrieve($id,1);
-    $txt .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$id</a></td></tr>\n";
+    $table .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$id</a></td></tr>\n";
   }
-  $txt .= "</table>$delim";
+  $crms->ReportMsg($table. '</table>');
 }
 
 if (scalar keys %{$data{'nodups'}} && !$no{'nodups'})
 {
-  $txt .= sprintf("<h4>Volumes single copy/no duplicates%s</h4>\n", ($candidates)? ' - No Inheritance/Adding to Candidates':'');
-  $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th>" .
-          "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
+  my $table = sprintf("<h4>Volumes single copy/no duplicates%s</h4>\n", ($candidates)? ' - No Inheritance/Adding to Candidates':'');
+  $table .= '<table border="1"><tr><th>#</th><th>Volume Checked<br/>(<span style="color:blue;">volume tracking</span>)</th>'.
+            "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
   my $n = 0;
   foreach my $id (keys %{$data{'nodups'}})
   {
@@ -285,19 +283,19 @@ if (scalar keys %{$data{'nodups'}} && !$no{'nodups'})
       $n++;
       my $htCatLink = $crms->LinkToCatalog($sysid);
       my $retrLink = $crms->LinkToRetrieve($sysid,1);
-      $txt .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$id</a></td><td><a href='$htCatLink' target='_blank'>$sysid</a></td></tr>\n";
+      $table .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$id</a></td><td><a href='$htCatLink' target='_blank'>$sysid</a></td></tr>\n";
     }
   }
-  $txt .= "</table>$delim";
+  $crms->ReportMsg($table. '</table>');
 }
 
 if (scalar keys %{$data{'unneeded'}} && !$no{'unneeded'})
 {
-  $txt .= sprintf("<h4>Volumes not needing inheritance</h4>\n", ($candidates)? ' - No Inheritance/Adding to Candidates':'');
-  $txt .= "<table border='1'><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style='color:blue;'>historical/SysID</span>)</th>" .
-          '<th>Volume Checked<br/>(<span style="color:blue;">volume tracking</span>)</th>' .
-          '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th><th>Rights</th><th>New Rights</th>' .
-          "<th>Title</th></tr>\n";
+  my $table = sprintf("<h4>Volumes not needing inheritance</h4>\n", ($candidates)? ' - No Inheritance/Adding to Candidates':'');
+  $table .= '<table border="1"><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style="color:blue;">historical/SysID</span>)</th>'.
+            '<th>Volume Checked<br/>(<span style="color:blue;">volume tracking</span>)</th>'.
+            '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th><th>Rights</th><th>New Rights</th>'.
+            "<th>Title</th></tr>\n";
   my $n = 0;
   my $th = GetTitleHash($data{'unneeded'}, \%data);
   foreach my $id (KeysSortedOnTitle($data{'unneeded'}, $th))
@@ -313,18 +311,18 @@ if (scalar keys %{$data{'unneeded'}} && !$no{'unneeded'})
       my $htCatLink = $crms->LinkToCatalog($sysid);
       my $retrLink = $crms->LinkToRetrieve($id2,1);
       my $histLink = $crms->LinkToHistorical($sysid,1);
-      $txt .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$e</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
-      $txt .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$title</td></tr>\n";
+      $table .= "<tr><td>$n</td><td><a href='$histLink' target='_blank'>$e</a></td><td><a href='$retrLink' target='_blank'>$id2</a></td>";
+      $table .= "<td><a href='$htCatLink' target='_blank'>$sysid</a></td><td>$c</td><td>$d</td><td>$title</td></tr>\n";
     }
   }
   $data{'unneededcnt'} = $n;
-  $txt .= "</table>$delim";
+  $crms->ReportMsg($table. '</table>');
 }
 if (scalar keys %{$data{'noexport'}} && !$no{'noexport'})
 {
-  $txt .= "<h4>Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table - No Inheritance/Adding to Candidates</h4>\n";
-  $txt .= "<table border='1'><tr><th>#</th><th>Volume Checked<br/>(<span style='color:blue;'>volume tracking</span>)</th>" .
-          "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
+  my $table = "<h4>Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table - No Inheritance/Adding to Candidates</h4>\n";
+  $table .= '<table border="1"><tr><th>#</th><th>Volume Checked<br/>(<span style="color:blue;">volume tracking</span>)</th>'.
+            "<th>Sys ID<br/>(<span style='color:blue;'>catalog</span>)</th></tr>\n";
   my $n = 0;
   foreach my $id (keys %{$data{'noexport'}})
   {
@@ -334,57 +332,56 @@ if (scalar keys %{$data{'noexport'}} && !$no{'noexport'})
       $n++;
       my $htCatLink = $crms->LinkToCatalog($sysid);
       my $retrLink = $crms->LinkToRetrieve($sysid,1);
-      $txt .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$id</a></td><td><a href='$htCatLink' target='_blank'>$sysid</a></td></tr>\n";
+      $table .= "<tr><td>$n</td><td><a href='$retrLink' target='_blank'>$id</a></td><td><a href='$htCatLink' target='_blank'>$sysid</a></td></tr>\n";
     }
   }
-  $txt .= "</table>$delim";
+  $crms->ReportMsg($table. '</table>');
 }
 
 
-my $header = sprintf("Total # volumes checked for inheritance from $dates: %d$delim", scalar keys %{$data{'total'}});
-$header .= sprintf("Volumes for which metadata was unavailable: %d$delim$delim", scalar keys %{$data{'unavailable'}});
+$crms->ReportMsg("Total # volumes checked for inheritance from $dates: ". scalar keys %{$data{'total'}});
+$crms->ReportMsg(sprintf("Volumes for which metadata was unavailable: %d<br/>\n", scalar keys %{$data{'unavailable'}}));
 if ($candidates)
 {
-  $header .= "<h4>No inheritance - Adding to candidates:</h4>$delim";
+  $crms->ReportMsg('<h4>No inheritance - Adding to candidates:</h4>');
 }
-$header .= sprintf("Volumes single copy/no duplicates: %d$delim$delim", scalar keys %{$data{'nodups'}});
-$header .= sprintf("Volumes w/ chron/enum: %d$delim$delim", scalar keys %{$data{'chron'}});
+$crms->ReportMsg(sprintf("Volumes single copy/no duplicates: %d<br/>\n", scalar keys %{$data{'nodups'}}));
+$crms->ReportMsg(sprintf("Volumes w/ chron/enum: %d<br/>\n", scalar keys %{$data{'chron'}}));
 if ($candidates)
 {
-  $header .= sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table: %d$delim", scalar keys %{$data{'noexport'}});
-  $header .= sprintf("Unique Sys IDs checked, no duplicates with CRMS determination (from June 2010 or later): %d$delim$delim", CountSystemIds('noexport', keys %{$data{'noexport'}}));
-  $header .= "<h4>Filtered from candidates temporarily:</h4>$delim";
-  $header .= sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later), duplicate volume already in candidates: %d$delim", scalar keys %{$data{'already'}});
-  $header .= sprintf("Unique Sys IDs checked, duplicate volume already in candidates: %d$delim$delim", CountSystemIds('already', keys %{$data{'already'}}));
+  $crms->ReportMsg(sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table: %d$delim", scalar keys %{$data{'noexport'}}));
+  $crms->ReportMsg(sprintf("Unique Sys IDs checked, no duplicates with CRMS determination (from June 2010 or later): %d$delim$delim", CountSystemIds('noexport', keys %{$data{'noexport'}})));
+  $crms->ReportMsg('<h4>Filtered from candidates temporarily:</h4>');
+  $crms->ReportMsg(sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later), duplicate volume already in candidates: %d$delim", scalar keys %{$data{'already'}}));
+  $crms->ReportMsg(sprintf("Unique Sys IDs checked, duplicate volume already in candidates: %d<br/>\n", CountSystemIds('already', keys %{$data{'already'}})));
 }
 else
 {
-  $header .= sprintf("Volumes checked, no inheritance needed: %d$delim", scalar keys %{$data{'unneeded'}});
-  $header .= sprintf("Unique Sys IDs checked, no inheritance needed: %d$delim", CountSystemIds('unneeded', keys %{$data{'unneeded'}}));
-  $header .= sprintf("Volumes not needing inheritance: %d$delim$delim", $data{'unneededcnt'});
+  $crms->ReportMsg(sprintf("Volumes checked, no inheritance needed: %d$delim", scalar keys %{$data{'unneeded'}}));
+  $crms->ReportMsg('Unique Sys IDs checked, no inheritance needed: '. CountSystemIds('unneeded', keys %{$data{'unneeded'}}));
+  $crms->ReportMsg(sprintf("Volumes not needing inheritance: %d$delim$delim", $data{'unneededcnt'}));
 }
-$header .= sprintf("Volumes checked, inheritance not permitted: %d$delim", scalar keys %{$data{'disallowed'}});
-$header .= sprintf("Volumes not allowed to inherit: %d$delim$delim", $data{'disallowedcnt'});
+$crms->ReportMsg('Volumes checked, inheritance not permitted: '. scalar keys %{$data{'disallowed'}});
+$crms->ReportMsg(sprintf("Volumes not allowed to inherit: %d<br/>\n", $data{'disallowedcnt'}));
 if ($candidates)
 {
-  $header .= "<h4>Inheritance Permitted - Not Adding to Candidates - Status 9 Review awaiting approval:</h4>$delim";
-  $header .= sprintf("Volumes checked - duplicate w/CRMS determination exists (from June 2010 or later) - inheritance permitted: %d$delim", scalar keys %{$data{'inherit'}});
+  $crms->ReportMsg('<h4>Inheritance Permitted - Not Adding to Candidates - Status 9 Review awaiting approval:</h4>');
+  $crms->ReportMsg('Volumes checked - duplicate w/CRMS determination exists (from June 2010 or later) - inheritance permitted: '. scalar keys %{$data{'inherit'}});
 }
 else
 {
-  $header .= sprintf("Volumes checked - inheritance permitted: %d$delim", scalar keys %{$data{'inherit'}});
+  $crms->ReportMsg('Volumes checked - inheritance permitted: '. scalar keys %{$data{'inherit'}});
 }
-$header .= sprintf("Unique Sys IDs w/ volumes inheriting rights: %d$delim", CountSystemIds('inherit', keys %{$data{'inherit'}}));
-$header .= sprintf("Volumes inheriting rights automatically: %d$delim", $data{'inheritcnt'});
+$crms->ReportMsg(sprintf('Unique Sys IDs w/ volumes inheriting rights: %d', CountSystemIds('inherit', keys %{$data{'inherit'}})));
+$crms->ReportMsg('Volumes inheriting rights automatically: '. $data{'inheritcnt'});
 if (!$candidates)
 {
-  $header .= sprintf("Volumes inheriting rights pending approval: %d$delim", $data{'pendinheritcnt'});
+  $crms->ReportMsg('Volumes inheriting rights pending approval: '. $data{'pendinheritcnt'});
 }
-$txt = $head . $header . $delim . $txt;
 
 if (!$noop && scalar keys %{$data{'inherit'}})
 {
-  $txt .= '<h4>Now inserting inheritance data</h4>';
+  $crms->ReportMsg('<h4>Now inserting inheritance data</h4>');
   foreach my $id (keys %{$data{'inherit'}})
   {
     my @lines = split "\n", $data{'inherit'}->{$id};
@@ -401,7 +398,7 @@ if (!$noop && scalar keys %{$data{'inherit'}})
   }
   if ($candidates)
   {
-    $txt .= '<h4>Now filtering duplicates in candidates</h4>';
+    $crms->ReportMsg('<h4>Now filtering duplicates in candidates</h4>');
     foreach my $id (keys %{$data{'already'}})
     {
       my @lines = split "\n", $data{'already'}->{$id};
@@ -421,17 +418,18 @@ UnfilterVolumes('disallowed') unless $noop;
 for (@{$crms->GetErrors()})
 {
   s/\n/<br\/>/g;
-  $txt .= "<i>Warning: $_</i><br/>\n";
+  $crms->ReportMsg("<i>Warning: $_</i>");
 }
 my $hashref = $crms->GetSdrDb()->{mysql_dbd_stats};
-$txt .= sprintf "SDR Database OK reconnects: %d, bad reconnects: %d<br/>\n",
-                $hashref->{'auto_reconnects_ok'},
-                $hashref->{'auto_reconnects_failed'};
-$txt .= "</body></html>\n\n";
+$crms->ReportMsg(sprintf "SDR Database OK reconnects: %d, bad reconnects: %d<br/>\n",
+                 $hashref->{'auto_reconnects_ok'},
+                 $hashref->{'auto_reconnects_failed'});
+$crms->ReportMsg("</body></html>\n");
 
 @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
 my $to = join(',', @mails);
 printf "Mailing to: $to\n" if $verbose;
+my $txt = $crms->get('messages');
 if (scalar @mails)
 {
   use Mail::Sendmail;
