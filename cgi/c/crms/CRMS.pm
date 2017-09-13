@@ -760,7 +760,7 @@ sub CanExportVolume
           $export = 0;
         }
       }
-      print "Exporting $id ($project) as $attr/$reason even though it is out of scope ($attr2/$reason2 by $usr2 [$time2])\n"
+      $self->ReportMsg("Exporting $id ($project) as $attr/$reason even though it is out of scope ($attr2/$reason2 by $usr2 [$time2])")
             unless $quiet or $export == 0;
     }
     else
