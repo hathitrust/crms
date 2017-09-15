@@ -446,7 +446,7 @@ sub ProcessReviews
   }
   else
   {
-    $self->ReportMsg('Not auto-submitting inheritances because $reason.') unless $quiet;
+    $self->ReportMsg("Not auto-submitting inheritances because $reason.") unless $quiet;
   }
   $self->SetSystemStatus('partial', 'CRMS is processing reviews. The Review page is temporarily unavailable. Try back in about a minute.');
   my %stati = (2=>0,3=>0,4=>0,8=>0);
