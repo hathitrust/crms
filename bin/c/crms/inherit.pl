@@ -89,10 +89,9 @@ my $crms = CRMS->new(
     dev     => $DLPS_DEV
 );
 $crms->set('ping','yes');
-my $delim = "\n";
 my $src = ($candidates)? 'candidates':'export';
 $src = 'cleanup' if $cleanup;
-print "Verbosity $verbose$delim" if $verbose;
+print "Verbosity $verbose\n" if $verbose;
 my $sql = 'SELECT DATE(NOW())';
 $sql = 'SELECT DATE(DATE_SUB(NOW(),INTERVAL 1 DAY))' if $candidates;
 my $start = $crms->SimpleSqlGet($sql);
@@ -349,17 +348,17 @@ $crms->ReportMsg(sprintf("Volumes single copy/no duplicates: %d<br/>\n", scalar 
 $crms->ReportMsg(sprintf("Volumes w/ chron/enum: %d<br/>\n", scalar keys %{$data{'chron'}}));
 if ($candidates)
 {
-  $crms->ReportMsg(sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table: %d$delim", scalar keys %{$data{'noexport'}}));
-  $crms->ReportMsg(sprintf("Unique Sys IDs checked, no duplicates with CRMS determination (from June 2010 or later): %d$delim$delim", CountSystemIds('noexport', keys %{$data{'noexport'}})));
+  $crms->ReportMsg(sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later) in CRMS exports table: %d", scalar keys %{$data{'noexport'}}));
+  $crms->ReportMsg(sprintf("Unique Sys IDs checked, no duplicates with CRMS determination (from June 2010 or later): %d", CountSystemIds('noexport', keys %{$data{'noexport'}})));
   $crms->ReportMsg('<h4>Filtered from candidates temporarily:</h4>');
-  $crms->ReportMsg(sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later), duplicate volume already in candidates: %d$delim", scalar keys %{$data{'already'}}));
+  $crms->ReportMsg(sprintf("Volumes checked, no duplicates with CRMS determination (from June 2010 or later), duplicate volume already in candidates: %d", scalar keys %{$data{'already'}}));
   $crms->ReportMsg(sprintf("Unique Sys IDs checked, duplicate volume already in candidates: %d<br/>\n", CountSystemIds('already', keys %{$data{'already'}})));
 }
 else
 {
-  $crms->ReportMsg(sprintf("Volumes checked, no inheritance needed: %d$delim", scalar keys %{$data{'unneeded'}}));
+  $crms->ReportMsg(sprintf("Volumes checked, no inheritance needed: %d", scalar keys %{$data{'unneeded'}}));
   $crms->ReportMsg('Unique Sys IDs checked, no inheritance needed: '. CountSystemIds('unneeded', keys %{$data{'unneeded'}}));
-  $crms->ReportMsg(sprintf("Volumes not needing inheritance: %d$delim$delim", $data{'unneededcnt'}));
+  $crms->ReportMsg(sprintf("Volumes not needing inheritance: %d", $data{'unneededcnt'}));
 }
 $crms->ReportMsg('Volumes checked, inheritance not permitted: '. scalar keys %{$data{'disallowed'}});
 $crms->ReportMsg(sprintf("Volumes not allowed to inherit: %d<br/>\n", $data{'disallowedcnt'}));
