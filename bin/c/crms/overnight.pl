@@ -110,7 +110,7 @@ else
   $crms->ReportMsg('DONE processing CRI.', 1);
 }
 
-if ($skipCandidates) { ReportMsg("-c flag set; skipping candidates load.", 1); }
+if ($skipCandidates) { $crms->ReportMsg("-c flag set; skipping candidates load.", 1); }
 else
 {
   $crms->ReportMsg('Starting to load new volumes into candidates.', 1);
