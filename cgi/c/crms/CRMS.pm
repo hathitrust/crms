@@ -6201,10 +6201,10 @@ sub ReviewSearchMenu
   my $searchName = shift;
   my $searchVal  = shift;
 
-  my @keys = ('Identifier','SysID',    'Title','Author','PubDate', 'Date', 'Status','Legacy','UserId','Attribute',
+  my @keys = ('Identifier', 'SysID', 'Title', 'Author', 'PubDate', 'Date', 'Status', 'Legacy', 'UserId', 'Attribute',
               'Reason', 'NoteCategory', 'Note', 'Priority', 'Validated', 'Swiss', 'Project');
-  my @labs = ('Identifier','System ID','Title','Author','Pub Date','Review Date', 'Status','Legacy','User',  'Attribute',
-              'Reason','Note Category', 'Note', 'Priority', 'Verdict',   'Swiss', 'Project');
+  my @labs = ('Identifier', 'System ID', 'Title', 'Author', 'Pub Date', 'Review Date', 'Status', 'Legacy', 'Reviewer', 'Attribute',
+              'Reason', 'Note Category', 'Note', 'Priority', 'Verdict', 'Swiss', 'Project');
   if (!$self->IsUserAtLeastExpert())
   {
     splice @keys, 15, 1; # Swiss
