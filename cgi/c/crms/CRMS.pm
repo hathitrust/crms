@@ -622,7 +622,7 @@ sub ExportReviews
   my $count = 0;
   my $user = $self->Sys();
   my ($fh, $temp, $perm, $filename) = $self->GetExportFh() unless $quiet;
-  $self->ReportMsg(">>> Exporting to $temp.") unless $quiet;
+  $self->ReportMsg("<i>Exporting to <code>$temp</code>.</i>") unless $quiet;
   my $start_size = $self->GetCandidatesSize();
   foreach my $id (@{$list})
   {
@@ -652,7 +652,7 @@ sub ExportReviews
   if (!$quiet)
   {
     close $fh;
-    $self->ReportMsg(">>> Moving to $perm.");
+    $self->ReportMsg("<i>Moving to <code>$perm</code>.</i>");
     rename $temp, $perm;
   }
   # Update correctness/validation now that everything is in historical
@@ -1004,9 +1004,16 @@ sub CheckAndLoadItemIntoCandidates
     my $src = $self->ShouldVolumeBeFiltered($id, $record);
     if (defined $src)
     {
-      $self->ReportMsg(sprintf("Skip $id ($src) -- %s in filtered volumes",
-                               (defined $inund)? "updating $inund->$src":'inserting'));
-      $self->Filter($id, $src) unless defined $noop;
+      if (!defined $inund || $inund ne $src)
+      {
+        $self->ReportMsg(sprintf("Skip $id ($src) -- %s in filtered volumes",
+                                 (defined $inund)? "updating $inund->$src":'inserting'));
+        $self->Filter($id, $src) unless defined $noop;
+      }
+      else
+      {
+        $self->ReportMsg("Skip $id already filtered as $src");
+      }
     }
     else
     {
@@ -6030,9 +6037,11 @@ sub IsReviewCorrect
   my $sql = 'SELECT COUNT(id) FROM historicalreviews WHERE id=? AND swiss=1';
   my $swiss = $self->SimpleSqlGet($sql, $id);
   # Get the review
-  $sql = 'SELECT r.attr,r.reason,r.renNum,r.renDate,u.expert,e.status,r.time,r.category,r.gid FROM historicalreviews r'.
+  $sql = 'SELECT a.name,rs.name,r.renNum,r.renDate,r.expert,e.status,r.time,r.category,r.gid FROM historicalreviews r'.
          ' INNER JOIN exportdata e ON r.gid=e.gid'.
          ' INNER JOIN users u ON r.user=u.id'.
+         ' INNER JOIN attributes a ON r.attr=a.id'.
+         ' INNER JOIN reasons rs ON r.reason=rs.id'.
          " WHERE r.id=? AND r.user=? AND r.time LIKE '$time%'";
   my $r = $self->SelectAll($sql, $id, $user);
   my $row = $r->[0];
@@ -6045,7 +6054,7 @@ sub IsReviewCorrect
   my $time2   = $row->[6];
   my $cat     = $row->[7];
   my $gid     = $row->[8];
-  #print "$attr, $reason, $renNum, $renDate, $expert, $swiss, $status\n";
+  #print "($user) $attr, $reason, $renNum, $renDate, $expert, $swiss, $status ($time)\n";
   # A non-expert with status 6/7/8 is protected rather like Swiss.
   return 1 if ($status >=6 && $status <= 8 && !$expert);
   # If there is a newer newyear determination, that also offers blanket protection.
@@ -6053,8 +6062,11 @@ sub IsReviewCorrect
   my $newyear = $self->SimpleSqlGet($sql, $id, $time);
   return 1 if $newyear;
   # Get the most recent non-autocrms expert review.
-  $sql = 'SELECT attr,reason,renNum,renDate,user,swiss,gid FROM historicalreviews' .
-         ' WHERE id=? AND expert>0 AND time>? ORDER BY time DESC';
+  $sql = 'SELECT a.name,rs.name,r.renNum,r.renDate,r.user,r.swiss,r.gid,e.status FROM historicalreviews r'.
+         ' INNER JOIN exportdata e ON r.gid=e.gid'.
+         ' INNER JOIN attributes a ON r.attr=a.id'.
+         ' INNER JOIN reasons rs ON r.reason=rs.id'.
+         ' WHERE r.id=? AND r.expert>0 AND r.time>? ORDER BY r.time DESC';
   $r = $self->SelectAll($sql, $id, $time2);
   return 1 unless scalar @{$r};
   $row = $r->[0];
@@ -6065,21 +6077,24 @@ sub IsReviewCorrect
   my $euser    = $row->[4];
   my $eswiss   = $row->[5];
   my $egid     = $row->[6];
+  my $estatus  = $row->[7];
   # Missing/Wrong record category, if present, offers protection from re-reviews (different gid)
   return 1 if $gid ne $egid and ($cat eq 'Missing' or $cat eq 'Wrong Record');
-  #print "$eattr, $ereason, $erenNum, $erenDate, $euser, $eswiss\n";
-  if ($attr != $eattr)
+  #print "Expert: $eattr, $ereason, $erenNum, $erenDate, $euser, $eswiss\n";
+  if ($attr ne $eattr)
   {
     # A later status 8 might mismatch against a previous status 4.
     # It's OK if the reason is crms and the mismatch is und vs ic.
-    return 1 if ($ereason == 13 && $attr == 2 && $eattr == 5);
+    return 1 if ($ereason eq 'crms' && $attr eq 'ic' && $eattr eq 'und');
     return (($swiss && !$expert) || ($eswiss && $euser eq 'autocrms'))? 2:0;
   }
-  if ($reason != $ereason ||
-      ($attr == 2 && $reason == 7 && ($renNum ne $erenNum || $renDate ne $erenDate)))
+  if ($reason ne $ereason ||
+      ($attr eq 'ic' && $reason eq 'ren' && ($renNum ne $erenNum || $renDate ne $erenDate)))
   {
     # It's OK if the reason is crms; it can't match anyway.
-    return 1 if $ereason == 13;
+    return 1 if $ereason eq 'crms';
+    # It is also OK if the status is 7 (expert accepted) on the same review cycle.
+    return 1 if $estatus == 7 and $gid == $egid;
     return (($swiss && !$expert) || ($eswiss && $euser eq 'autocrms'))? 2:0;
   }
   return 1;
