@@ -3,7 +3,7 @@ package Validator;
 use strict;
 use warnings;
 use vars qw(@ISA @EXPORT @EXPORT_OK);
-our @EXPORT = qw(ValidateSubmission);
+our @EXPORT = qw(ValidateSubmission CalcStatus CalcPendingStatus DoRightsMatch);
 
 # Returns an error message, or an empty string if no error.
 sub ValidateSubmission
@@ -196,15 +196,19 @@ sub CalcStatus
 {
   my $self = shift;
   my $id   = shift;
-  my $stat = shift; # FIXME: should this be pushed up into caller?
 
   my %return;
   my $status = 0;
-  my $sql = 'SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id=?';
+  my $sql = 'SELECT r.user,a.name,rs.name,r.renNum,r.renDate,r.hold'.
+            ' FROM reviews r INNER JOIN attributes a ON r.attr=a.id'.
+            ' INNER JOIN reasons rs ON r.reason=rs.id WHERE r.id=?';
   my $ref = $self->SelectAll($sql, $id);
   my ($user, $attr, $reason, $renNum, $renDate, $hold) = @{$ref->[0]};
-  $sql = 'SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id=? AND user!=?';
+  $sql = 'SELECT user,attr,reason,renNum,renDate,hold'.
+         ' FROM reviews r INNER JOIN attributes a ON r.attr=a.id'.
+         ' INNER JOIN reasons rs ON r.reason=rs.id WHERE r.id=? AND r.user!=?';
   $ref = $self->SelectAll($sql, $id, $user);
+  return undef if 0 == scalar @{$ref};
   my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{$ref->[0]};
   if ($hold)
   {
@@ -214,20 +218,16 @@ sub CalcStatus
   {
     $return{'hold'} = $other_user;
   }
-  elsif ($attr == $other_attr)
+  if (DoRightsMatch($attr, $reason, $other_attr, $other_reason))
   {
-    # If one is und/nfi and one is und/ren, it is a conflict.
-    if ($attr == 5 && (($reason == 8 && $other_reason == 7) || ($reason == 7 && $other_reason == 8)))
-    {
-      $status = 2;
-    }
     # If both reviewers are non-advanced mark as provisional match
-    elsif ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+    if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
     {
-       $status = 3;
+      $status = 3;
     }
-    else #Mark as 4 or 8 - two that agree
+    else # Mark as 4 or 8 - two that agree
     {
+      $status = 4;
       if ($reason != $other_reason)
       {
         # Any other nonmatching reasons are resolved as an attr match
@@ -236,7 +236,7 @@ sub CalcStatus
         $return{'reason'} = 13;
         $return{'category'} = 'Attr Match';
       }
-      elsif ($attr == 2 && $reason == 7 && $other_reason == 7 && ($renNum ne $other_renNum || $renDate ne $other_renDate))
+      elsif ($attr eq 'ic' && $reason eq 'ren' && $other_reason eq 'ren' && ($renNum ne $other_renNum || $renDate ne $other_renDate))
       {
         $status = 8;
         $return{'attr'} = $attr;
@@ -244,29 +244,9 @@ sub CalcStatus
         $return{'category'} = 'Attr Match';
         $return{'note'} = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)', $renNum, $renDate, $other_renNum, $other_renDate;
       }
-      else
-      {
-        $status = 4;
-      }
     }
   }
-  # Do auto for ic vs und
-  # elsif (($attr == 2 && $other_attr == 5) || ($attr == 5 && $other_attr == 2))
-#   {
-#     # If both reviewers are non-advanced mark as provisional match
-#     if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
-#     {
-#        $status = 3;
-#     }
-#     else #Mark as 8 - two that agree as und/crms
-#     {
-#       $status = 8;
-#       $return{'attr'} = 5;
-#       $return{'reason'} = 13;
-#       $return{'category'} = 'Attr Default';
-#     }
-#   }
-  else # Attributes do not match -- mark as conflict
+  else
   {
     $status = 2;
   }
@@ -274,72 +254,35 @@ sub CalcStatus
   return \%return;
 }
 
-# FIXME: merge this into the above code
 sub CalcPendingStatus
 {
   my $self = shift;
   my $id   = shift;
 
-  my $pstatus = 0;
-  my $sql = 'SELECT user,attr,reason,renNum,renDate FROM reviews WHERE id=? AND expert IS NULL';
-  my $ref = $self->SelectAll($sql, $id);
-  if (scalar @{$ref} > 1)
+  my $n = $self->SimpleSqlGet('SELECT COUNT(*) FROM reviews WHERE id=?', $id);
+  if ($n > 1)
   {
-    my $row = @{$ref}[0];
-    my $user    = $row->[0];
-    my $attr    = $row->[1];
-    my $reason  = $row->[2];
-    my $renNum  = $row->[3];
-    my $renDate = $row->[4];
-    $row = @{$ref}[1];
-    my $other_user    = $row->[0];
-    my $other_attr    = $row->[1];
-    my $other_reason  = $row->[2];
-    my $other_renNum  = $row->[3];
-    my $other_renDate = $row->[4];
-    if ($attr == $other_attr)
-    {
-      # If both reviewers are non-advanced mark as provisional match
-      if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
-      {
-        $pstatus = 3;
-      }
-      else #Mark as 4 or 8 - two that agree
-      {
-        $pstatus = 4;
-        if ($reason != $other_reason)
-        {
-          $pstatus = 8;
-        }
-        elsif ($attr == 2 && $reason == 7 && $other_reason == 7 && ($renNum ne $other_renNum || $renDate ne $other_renDate))
-        {
-          $pstatus = 8;
-        }
-      }
-    }
-    # Do auto for ic vs und
-    #elsif (($attr == 2 && $other_attr == 5) || ($attr == 5 && $other_attr == 2))
-    #{
-    #  # If both reviewers are non-advanced mark as provisional match
-    #  if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
-    #  {
-    #    $pstatus = 3;
-    #  }
-    #  else #Mark as 8 - two that sort of agree
-    #  {
-    #    $pstatus = 8;
-    #  }
-    #}
-    else #Mark as 2 - two that disagree
-    {
-      $pstatus = 2;
-    }
+    my $data = CalcStatus($self, $id);
+    return (defined $data)? $data->{'status'}:0;
   }
-  elsif (scalar @{$ref} == 1)
+  return $n;
+}
+
+sub DoRightsMatch
+{
+  my $self    = shift;
+  my $attr1   = shift;
+  my $reason1 = shift;
+  my $attr2   = shift;
+  my $reason2 = shift;
+
+  if ($attr1 eq $attr2)
   {
-    $pstatus = 1;
+    # If one is und/nfi and one is und/ren, it is a conflict.
+    return 0 if $attr1 eq 'und' && (($reason1 eq 'nfi' && $reason2 eq 'ren') || ($reason1 eq 'ren' && $reason2 eq 'nfi'));
+    return 1;
   }
-  return $pstatus;
+  return 0;
 }
 
 1;

@@ -3,7 +3,7 @@ package Validator;
 use strict;
 use warnings;
 use vars qw(@ISA @EXPORT @EXPORT_OK);
-our @EXPORT = qw(ValidateSubmission);
+our @EXPORT = qw(ValidateSubmission CalcStatus CalcPendingStatus DoRightsMatch);
 
 # Returns an error message, or an empty string if no error.
 sub ValidateSubmission
@@ -79,22 +79,20 @@ sub CalcStatus
 {
   my $self = shift;
   my $id   = shift;
-  my $stat = shift;
 
   my %return;
   my $status = 0;
-  my $sql = 'SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id=?';
+  my $sql = 'SELECT r.user,a.name,rs.name,r.renNum,r.renDate,r.hold'.
+            ' FROM reviews r INNER JOIN attributes a ON r.attr=a.id'.
+            ' INNER JOIN reasons rs ON r.reason=rs.id WHERE r.id=?';
   my $ref = $self->SelectAll($sql, $id);
-  my ($user, $attr, $reason, $renNum, $renDate, $hold) = @{ $ref->[0] };
-  $renNum = undef unless $renDate;
-  $sql = 'SELECT user,attr,reason,renNum,renDate,hold FROM reviews WHERE id=? AND user!=?';
+  my ($user, $attr, $reason, $renNum, $renDate, $hold) = @{$ref->[0]};
+  $sql = 'SELECT user,attr,reason,renNum,renDate,hold'.
+         ' FROM reviews r INNER JOIN attributes a ON r.attr=a.id'.
+         ' INNER JOIN reasons rs ON r.reason=rs.id WHERE r.id=? AND r.user!=?';
   $ref = $self->SelectAll($sql, $id, $user);
   my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{ $ref->[0] };
   $other_renNum = undef unless $other_renDate;
-  $attr = $self->TranslateAttr($attr);
-  $reason = $self->TranslateReason($reason);
-  $other_attr = $self->TranslateAttr($other_attr);
-  $other_reason = $self->TranslateReason($other_reason);
   if ($hold)
   {
     $return{'hold'} = $user;
@@ -104,8 +102,9 @@ sub CalcStatus
     $return{'hold'} = $other_user;
   }
   # Match if attr/reasons match.
-  elsif ($attr eq $other_attr && $reason eq $other_reason)
+  if (DoRightsMatch($attr, $other_attr, $reason, $other_reason))
   {
+    $status = 4;
     # If both reviewers are non-advanced mark as provisional match.
     # Also, mark provisional if date info disagrees, unless und.
     if (((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
@@ -118,26 +117,21 @@ sub CalcStatus
     {
       $status = 3;
     }
-    else #Mark as 4 - two that agree
+    # Do auto for ic vs und
+    elsif (($attr eq 'ic' && $other_attr eq 'und') || ($attr eq 'und' && $other_attr eq 'ic'))
     {
-      $status = 4;
-    }
-  }
-  # Do auto for ic vs und
-  elsif (($attr eq 'ic' && $other_attr eq 'und') || ($attr eq 'und' && $other_attr eq 'ic'))
-  {
-    # If both reviewers are non-advanced mark as provisional match
-    if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
-    {
-       $status = 3;
-    }
-    else #Mark as 8 - two that agree as und/crms
-    {
-      $status = 8;
-      $return{'attr'} = 5;
-      $return{'reason'} = 13;
-      $return{'category'} = 'Attr Default';
-    }
+      # If both reviewers are non-advanced mark as provisional match
+      if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+      {
+         $status = 3;
+      }
+      else #Mark as 8 - two that agree as und/crms
+      {
+        $status = 8;
+        $return{'attr'} = 5;
+        $return{'reason'} = 13;
+        $return{'category'} = 'Attr Default';
+      }
   }
   else #Mark as 2 - two that disagree
   {
@@ -147,68 +141,29 @@ sub CalcStatus
   return \%return;
 }
 
-# FIXME: merge this into the above code
 sub CalcPendingStatus
 {
   my $self = shift;
   my $id   = shift;
 
-  my $pstatus = 0;
-  my $sql = 'SELECT user,attr,reason,renNum,renDate FROM reviews WHERE id=? AND expert IS NULL';
-  my $ref = $self->SelectAll($sql, $id);
-  if (scalar @{$ref} > 1)
+  my $n = $self->SimpleSqlGet('SELECT COUNT(*) FROM reviews WHERE id=?', $id);
+  if ($n > 1)
   {
-    my ($user, $attr, $reason, $renNum, $renDate) = @{$ref->[0]};
-    my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate) = @{$ref->[1]};
-    $attr = $self->TranslateAttr($attr);
-    $reason = $self->TranslateReason($reason);
-    $other_attr = $self->TranslateAttr($other_attr);
-    $other_reason = $self->TranslateReason($other_reason);
-    $renNum = undef unless $renDate;
-    $other_renNum = undef unless $other_renDate;
-    # Match if attr/reasons match.
-    if ($attr eq $other_attr && $reason eq $other_reason)
-    {
-      # If both reviewers are non-advanced mark as provisional match.
-      # Also, mark provisional if date info disagrees, unless und.
-      if (((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
-          ||
-          ((!$self->TolerantCompare($renNum, $other_renNum)
-            ||
-            !$self->TolerantCompare($renDate, $other_renDate))
-           &&
-           $attr ne 'und'))
-      {
-        $pstatus = 3;
-      }
-      else #Mark as 4 - two that agree
-      {
-        $pstatus = 4;
-      }
-    }
-    # Do auto for ic vs und
-    elsif (($attr eq 'ic' && $other_attr eq 'und') || ($attr eq 'und' && $other_attr eq 'ic'))
-    {
-      # If both reviewers are non-advanced mark as provisional match
-      if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
-      {
-        $pstatus = 3;
-      }
-      else #Mark as 8 - two that agree as und/crms
-      {
-        $pstatus = 8;
-      }
-    }
-    else #Mark as 2 - two that disagree
-    {
-      $pstatus = 2;
-    }
+    my $data = CalcStatus($self, $id);
+    return (defined $data)? $data->{'status'}:0;
   }
-  elsif (scalar @{$ref} == 1)
-  {
-    $pstatus = 1;
-  }
-  return $pstatus;
+  return $n;
+}
+
+sub DoRightsMatch
+{
+  my $self    = shift;
+  my $attr1   = shift;
+  my $reason1 = shift;
+  my $attr2   = shift;
+  my $reason2 = shift;
+
+  return ($attr1 eq $attr2);
 }
 
 1;
