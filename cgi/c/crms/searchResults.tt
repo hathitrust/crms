@@ -207,6 +207,9 @@ function CheckAll(box,formid)
     [% IF p == 'adminReviews' || p == 'editReviews' %]
       <th>Hold</th>
     [% END %]
+    [% IF p == 'adminReviews' || p == 'adminHistoricalReviews' || p == 'adminHolds' %]
+      <th>Project</th>
+    [% END %]
     </tr>
     [% FOREACH review IN ref.rows %]
       [% first = 0 %]
@@ -312,6 +315,9 @@ function CheckAll(box,formid)
             <img width="16" height="16" alt="Correctness" src="/c/crms/CheckIcon.png"/>
           [% END %]
           </td>
+        [% END %]
+        [% IF p == 'adminReviews' || p == 'adminHistoricalReviews' || p == 'adminHolds' %]
+          <td>$review.project</td>
         [% END %]
       </tr>
       [% prev_id = review.id %]

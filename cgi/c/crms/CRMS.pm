@@ -2684,6 +2684,10 @@ sub GetReviewsRef
         ${$item}{'src'} = $row->[18];
         ${$item}{'gid'} = $row->[19];
       }
+      $sql = 'SELECT p.name FROM projects p INNER JOIN '.
+             (($page eq 'adminHistoricalReviews')? 'exportdata':'queue').
+             ' q ON p.id=q.newproject WHERE q.id=?';
+      ${$item}{'project'} = $self->SimpleSqlGet($sql, $id);
       push(@{$return}, $item);
   }
   my $n = POSIX::ceil($offset/$pagesize+1);
@@ -2768,6 +2772,10 @@ sub GetVolumesRef
         ${$item}{'src'} = $row->[20];
         ${$item}{'gid'} = $row->[21];
       }
+      $sql = 'SELECT p.name FROM projects p INNER JOIN '.
+             (($page eq 'adminHistoricalReviews')? 'exportdata':'queue').
+             ' q ON p.id=q.newproject WHERE q.id=?';
+      ${$item}{'project'} = $self->SimpleSqlGet($sql, $id);
       push(@{$return}, $item);
     }
   }
@@ -2845,6 +2853,10 @@ sub GetVolumesRefWide
         ${$item}{'src'} = $row->[20];
         ${$item}{'gid'} = $row->[21];
       }
+      $sql = 'SELECT p.name FROM projects p INNER JOIN '.
+             (($page eq 'adminHistoricalReviews')? 'exportdata':'queue').
+             ' q ON p.id=q.newproject WHERE q.id=?';
+      ${$item}{'project'} = $self->SimpleSqlGet($sql, $id);
       push(@{$return}, $item);
     }
   }
