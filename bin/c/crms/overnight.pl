@@ -97,10 +97,11 @@ else
   $crms->ReportMsg('<b>Done</b> processing the statuses.', 1);
   $crms->ReportMsg('Starting to create export for the rights db. You should receive a separate email when this completes.', 1);
   my $rc = $crms->ClearQueueAndExport();
-  $crms->ReportMsg("$rc\n<b>Done</b> exporting.", 1);
+  $crms->ReportMsg($rc, 1);
+  $crms->ReportMsg("<b>Done</b> exporting.", 1);
 }
 if (!$crms->GetSystemVar('cri')) { $crms->ReportMsg('CRI system variable not set; skipping.', 1); }
-elsif ($skipCRI) { ReportMsg('-i flag set; skipping CRI processing.', 1); }
+elsif ($skipCRI) { $crms->ReportMsg('-i flag set; skipping CRI processing.', 1); }
 else
 {
   $crms->ReportMsg('Starting to process CRI.', 1);
