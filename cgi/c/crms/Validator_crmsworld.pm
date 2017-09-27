@@ -87,7 +87,7 @@ sub CalcStatus
             ' INNER JOIN reasons rs ON r.reason=rs.id WHERE r.id=?';
   my $ref = $self->SelectAll($sql, $id);
   my ($user, $attr, $reason, $renNum, $renDate, $hold) = @{$ref->[0]};
-  $sql = 'SELECT user,attr,reason,renNum,renDate,hold'.
+  $sql = 'SELECT r.user,a.name,rs.name,r.renNum,r.renDate,r.hold'.
          ' FROM reviews r INNER JOIN attributes a ON r.attr=a.id'.
          ' INNER JOIN reasons rs ON r.reason=rs.id WHERE r.id=? AND r.user!=?';
   $ref = $self->SelectAll($sql, $id, $user);
@@ -132,6 +132,7 @@ sub CalcStatus
         $return{'reason'} = 13;
         $return{'category'} = 'Attr Default';
       }
+    }
   }
   else #Mark as 2 - two that disagree
   {

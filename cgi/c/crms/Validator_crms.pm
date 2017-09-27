@@ -204,7 +204,7 @@ sub CalcStatus
             ' INNER JOIN reasons rs ON r.reason=rs.id WHERE r.id=?';
   my $ref = $self->SelectAll($sql, $id);
   my ($user, $attr, $reason, $renNum, $renDate, $hold) = @{$ref->[0]};
-  $sql = 'SELECT user,attr,reason,renNum,renDate,hold'.
+  $sql = 'SELECT r.user,a.name,rs.name,r.renNum,r.renDate,r.hold'.
          ' FROM reviews r INNER JOIN attributes a ON r.attr=a.id'.
          ' INNER JOIN reasons rs ON r.reason=rs.id WHERE r.id=? AND r.user!=?';
   $ref = $self->SelectAll($sql, $id, $user);
@@ -228,7 +228,7 @@ sub CalcStatus
     else # Mark as 4 or 8 - two that agree
     {
       $status = 4;
-      if ($reason != $other_reason)
+      if ($reason ne $other_reason)
       {
         # Any other nonmatching reasons are resolved as an attr match
         $status = 8;
