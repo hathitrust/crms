@@ -556,7 +556,7 @@ sub CandidatesReport
     $sql .= ' ORDER BY id';
   }
   #$sql .= ' LIMIT 5000';
-  print "$sql\n" if $verbose > 1;
+  $crms->ReportMsg("<code>$sql</code>") if $verbose > 1;
   my $ref = $crms->SelectAll($sql);
   my $of = scalar @{$ref};
   my $n = 1;
