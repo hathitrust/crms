@@ -77,7 +77,7 @@ sub set
 
 sub Version
 {
-  return '6.3.10';
+  return '6.3.11';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -569,7 +569,7 @@ sub ClearQueueAndExport
   $self->ExportReviews($export, $quiet);
   $self->UpdateExportStats();
   $self->UpdateDeterminationsBreakdown();
-  return "Removed from queue: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved, $iCount inherited rights\n";
+  return "Removed from queue: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved, $iCount inherited rights";
 }
 
 sub GetDoubleRevItemsInAgreement
