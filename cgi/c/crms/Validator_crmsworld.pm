@@ -102,7 +102,7 @@ sub CalcStatus
     $return{'hold'} = $other_user;
   }
   # Match if attr/reasons match.
-  if (DoRightsMatch($attr, $other_attr, $reason, $other_reason))
+  if (DoRightsMatch($self, $attr, $other_attr, $reason, $other_reason))
   {
     $status = 4;
     # If both reviewers are non-advanced mark as provisional match.

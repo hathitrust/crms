@@ -218,7 +218,7 @@ sub CalcStatus
   {
     $return{'hold'} = $other_user;
   }
-  if (DoRightsMatch($attr, $reason, $other_attr, $other_reason))
+  if (DoRightsMatch($self, $attr, $reason, $other_attr, $other_reason))
   {
     # If both reviewers are non-advanced mark as provisional match
     if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
@@ -232,15 +232,15 @@ sub CalcStatus
       {
         # Any other nonmatching reasons are resolved as an attr match
         $status = 8;
-        $return{'attr'} = $attr;
+        $return{'attr'} = $self->TranslateAttr($attr);
         $return{'reason'} = 13;
         $return{'category'} = 'Attr Match';
       }
       elsif ($attr eq 'ic' && $reason eq 'ren' && $other_reason eq 'ren' && ($renNum ne $other_renNum || $renDate ne $other_renDate))
       {
         $status = 8;
-        $return{'attr'} = $attr;
-        $return{'reason'} = $reason;
+        $return{'attr'} = $self->TranslateAttr($attr);
+        $return{'reason'} = $self->TranslateReason($reason);
         $return{'category'} = 'Attr Match';
         $return{'note'} = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)', $renNum, $renDate, $other_renNum, $other_renDate;
       }
