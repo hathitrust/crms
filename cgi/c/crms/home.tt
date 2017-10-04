@@ -83,9 +83,6 @@ window.onload = function(e)
   [% CALL crms.UnlockItem(cgi.param('unlock')) %]
 [% END %]
 
-[% IF 0 #crms.Sys() == 'crmsworld' && crms.WhereAmI() != 'Training' %]
-<div id="progress" style="width:450px;float:right;margin-right:240px;"></div>
-[% END %]
 <table class="mainnav">
 [% menus = crms.Menus() %]
 [% i = 0 %]
