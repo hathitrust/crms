@@ -7703,7 +7703,9 @@ sub Rights
   my $n = 1;
   foreach my $row (@{$ref})
   {
-    push @all, [$row->[0], $row->[1], $row->[2], $n, $row->[3], $row->[4]];
+    push @all, {'id' => $row->[0], 'rights' => $row->[1],
+                'description' => $row->[2], 'n' => $n,
+                'attr' => $row->[3], 'reason' => $row->[4]};
     $n++;
   }
   return \@all if $order;

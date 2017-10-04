@@ -150,8 +150,8 @@
       <span>
       [% asterisk = 0 %]
       [% FOR right IN rights %]
-        <strong>[% right.1 %]</strong> - [% right.2 %]<br/>
-        [% IF right.2.search('\*') %][% asterisk = 1 %][% END %]
+        <strong>[% right.rights %]</strong> - [% right.description %]<br/>
+        [% IF right.description.search('\*') %][% asterisk = 1 %][% END %]
       [% END %]
       [% IF asterisk %]
         <br/>* if no publication date listed on piece, use copyright date
@@ -177,22 +177,20 @@
     [% WHILE n < of %]
       <tr>
       [% right = rights.$n %]
-      [% id = right.0 %]
       <td style="width:50%;">
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]"
-              [% IF right.3 < 10 %]accesskey="[% right.3 %]"[% END %]
-              [% IF select == id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ id %]">[% right.1 %] ([% right.3 %])</label>
+        <input type="radio" id="[% 'r' _ right.id %]" name="rights" value="[% right.id %]"
+              [% IF right.n < 10 %]accesskey="[% right.n %]"[% END %]
+              [% IF select == right.id %] checked="checked"[% END %]/>
+        <label for="[% 'r' _ right.id %]">[% right.attr %]/[% right.reason.upper %] ([% right.n %])</label>
       </td>
       [% n = n + 1 %]
       <td style="width:50%;">
         [% IF n < of %]
         [% right = rights.$n %]
-        [% id = right.0 %]
-        <input type="radio" id="[% 'r' _ id %]" name="rights" value="[% id %]"
-              [% IF right.3 < 10 %]accesskey="[% right.3 %]"[% END %]
-              [% IF select == id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ id %]">[% right.1 %] ([% right.3 %])</label>
+        <input type="radio" id="[% 'r' _ right.id %]" name="rights" value="[% right.id %]"
+              [% IF right.n < 10 %]accesskey="[% right.n %]"[% END %]
+              [% IF select == right.id %] checked="checked"[% END %]/>
+        <label for="[% 'r' _ right.id %]">[% right.attr %]/[% right.reason.upper %] ([% right.n %])</label>
         [% END %]
       </td>
       </tr>
