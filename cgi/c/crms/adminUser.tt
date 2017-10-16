@@ -69,7 +69,6 @@
     <th scope="col">Super<br/>Admin</th>
     <th scope="col">Projects</th>
     <th scope="col">IP Address</th>
-    <th scope="col">Change&nbsp;To</th>
     <th scope="col">Commitment[% IF uadmin %]<br/>(Progress)[% END %]</th>
     <th scope="col">Note</th>
   </tr>
@@ -83,10 +82,18 @@
     [% active = (r||v||e||a||s) %]
     [% style = (active)? '':'style="background-color:#e2e2e2;"' %]
     <tr [% id == u.id ? 'class="total"':'class="hoverWide"'%] [% style %]>
-      <td>
+      <td class="nowrap">
         <a href="[% crms.Sysify('crms?p=userRate;user=' _ userid) %]" target="_blank">
           [% u.name.replace('\s','&nbsp;') %]
         </a>
+        [% IF crms.CanChangeToUser(user,userid) %]
+        <form action="crms" style="display:inline;align:right;">
+          [% crms.HiddenSys() %]
+          <input type="hidden" name="changeuser" value="1"/>
+          <input type="hidden" name="newuser" value="[% userid %]"/>
+          <input type="submit" value="Change to…"/>
+        </form>
+        [% END %]
       </td>
       <td>[% u.id %]</td>
       <td>[% u.kerberos %]</td>
@@ -125,16 +132,6 @@
           [% END %]
         [% END %]
       [% END %]
-      </td>
-      <td>
-        [% IF crms.CanChangeToUser(user,userid) %]
-        <form action="crms">
-          [% crms.HiddenSys() %]
-          <input type="hidden" name="changeuser" value="1"/>
-          <input type="hidden" name="newuser" value="[% userid %]"/>
-          <input type="submit" value="Go"/>
-        </form>
-        [% END %]
       </td>
       <td>
         [% IF u.commitment && u.commitment > 0.0 %]
@@ -189,12 +186,13 @@
     [% IF projs.size %]
     <tr>
       <td colspan="2">
-        <fieldset id="projectsGroup">Projects:</label>
+        <fieldset id="projectsGroup">Projects:
         [% FOR proj IN projs %]
           <input type="checkbox" name="proj_[% proj.id %]" id="Project[% proj.id %]CB"
                  [% IF proj.id == 0 %]checked="checked"[% END %]/>
           <label for="Project[% proj.id %]CB">[% proj.name %]</label>
         [% END %]
+        </fieldset>
       </td>
     </tr>
     [% END %]
@@ -217,7 +215,7 @@
         <td><input type="checkbox" name="admin" id="adminCB"/> <label for="adminCB">Admin</label></td>
         <td><input type="checkbox" name="superadmin"[% crms.IsUserSuperAdmin()? '':' disabled="disabled"' %] id="superAdminCB"/>
             <label for="superAdminCB">Super Admin</label></td>
-        <td/>
+        <td></td>
       </tr>
     </table>
     <br/><input type="checkbox" name="disable" id="disableCB"/> <label for="disableCB">Disable user</label>
