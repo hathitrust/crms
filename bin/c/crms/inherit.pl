@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -47,6 +45,7 @@ my $candidates;
 my $cleanup;
 my $duplicate;
 my $help;
+my $instance;
 my @mails;
 my @no;
 my $noop;
@@ -75,20 +74,21 @@ die 'Terminating' unless GetOptions(
            'u'    => \$und,
            'v+'   => \$verbose,
            'x:s'  => \$sys);
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
 die "$usage\n\n" if $help;
 
 my %no = ();
 $no{$_}=1 for @no;
 
 my $crms = CRMS->new(
-    logFile => "$DLXSROOT/prep/c/crms/inherit_hist.txt",
-    sys     => $sys,
-    verbose => $verbose,
-    root    => $DLXSROOT,
-    dev     => $DLPS_DEV
+    logFile  => "$DLXSROOT/prep/c/crms/inherit_hist.txt",
+    sys      => $sys,
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
-$crms->set('ping','yes');
+$crms->set('ping', 'yes');
+$crms->set('noop', 1) if $noop;
 my $src = ($candidates)? 'candidates':'export';
 $src = 'cleanup' if $cleanup;
 print "Verbosity $verbose\n" if $verbose;
@@ -378,7 +378,7 @@ if (!$candidates)
   $crms->ReportMsg('Volumes inheriting rights pending approval: '. $data{'pendinheritcnt'});
 }
 
-if (!$noop && scalar keys %{$data{'inherit'}})
+if (scalar keys %{$data{'inherit'}})
 {
   $crms->ReportMsg('<h4>Now inserting inheritance data</h4>');
   foreach my $id (keys %{$data{'inherit'}})
@@ -410,9 +410,9 @@ if (!$noop && scalar keys %{$data{'inherit'}})
   }
 }
 
-UnfilterVolumes('chron') unless $noop;
-UnfilterVolumes('unneeded') unless $noop;
-UnfilterVolumes('disallowed') unless $noop;
+UnfilterVolumes('chron');
+UnfilterVolumes('unneeded');
+UnfilterVolumes('disallowed');
 
 for (@{$crms->GetErrors()})
 {

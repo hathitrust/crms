@@ -3,11 +3,9 @@
 # This script can be run from crontab
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -38,6 +36,7 @@ END
 my $date;
 my $help;
 my @insts;
+my $instance;
 my $nomail;
 my @mails;
 my $production;
@@ -55,16 +54,16 @@ die 'Terminating' unless GetOptions('d:s' => \$date,
            'q'    => \$quiet,
            'v+'   => \$verbose,
            'x:s'  => \$sys);
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    logFile => $DLXSROOT . '/prep/c/crms/inst_hist.txt',
-    sys     => $sys,
-    verbose => $verbose,
-    root    => $DLXSROOT,
-    dev     => $DLPS_DEV
+    logFile  => $DLXSROOT . '/prep/c/crms/inst_hist.txt',
+    sys      => $sys,
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 
 my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',

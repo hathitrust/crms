@@ -1,12 +1,10 @@
 #!/usr/bin/perl
 
 my $DLXSROOT;
-my $DLPS_DEV;
 
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -38,6 +36,7 @@ with latest rights DB timestamp between them.
 -v      Be verbose.
 END
 
+my $instance;
 my ($skipAttrReason, $skipCandidates, $skipExport, $help, $skipCRI,
     $skipLocks, @mails, $production, $skipQueue, $skipStats, $training,
     $verbose, $sys);
@@ -59,7 +58,8 @@ die 'Terminating' unless GetOptions(
            'x:s'  => \$sys);
 
 die $usage if $help;
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
+$instance = 'crms-training' if $training;
 
 my $start = undef;
 my $end = undef;
@@ -77,17 +77,19 @@ if (scalar @ARGV)
 }
 
 my $crms = CRMS->new(
-    logFile    =>   "$DLXSROOT/prep/c/crms/overnight_log.txt",
-    sys        =>   $sys,
-    verbose    =>   0,
-    root       =>   $DLXSROOT,
-    dev        =>   ($training)? 'crms-training':$DLPS_DEV
+    logFile  => "$DLXSROOT/prep/c/crms/overnight_log.txt",
+    sys      => $sys,
+    verbose  => 0,
+    root     => $DLXSROOT,
+    instance => $instance
 );
+
 
 my $subj = $crms->SubjectLine('Nightly Processing');
 my $body = $crms->StartHTML($subj);
 $crms->set('ping', 'yes');
 $crms->set('messages', $body) if scalar @mails;
+$crms->ReportMsg(sprintf "%s\n", $crms->DbInfo()) if $verbose;
 
 if ($skipExport) { $crms->ReportMsg('-e flag set; skipping queue processing and export.', 1); }
 else

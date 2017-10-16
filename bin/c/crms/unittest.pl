@@ -1,11 +1,10 @@
 #!/usr/bin/perl
 
 use warnings;
-my ($DLXSROOT, $DLPS_DEV);
+my $DLXSROOT;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -16,23 +15,15 @@ use Test::More;
 
 
 my %opts;
-getopts('rptx:', \%opts);
+getopts('x:', \%opts);
 
-my $production = $opts{'p'};
-my $training = $opts{'t'};
-my $sys = $opts{'x'};
-my $dev = 'moseshll';
-$dev = 0 if $production;
-$dev = 'crms-training' if $training;
-
-$sys = 'crms' unless $sys;
+my $sys = $opts{'x'} || 'crms';
 
 my $crms = CRMS->new(
-        logFile      =>   "$DLXSROOT/prep/c/crms/log_unittest.txt",
-        sys          =>   $sys,
-        verbose      =>   1,
-        root         =>   $DLXSROOT,
-        dev          =>   $dev
+        logFile  =>   "$DLXSROOT/prep/c/crms/log_unittest.txt",
+        sys      =>   $sys,
+        verbose  =>   1,
+        root     =>   $DLXSROOT
 		    );
 
 
@@ -98,39 +89,18 @@ is($crms->IsWorkingDay('2011-06-27'), 1,                                 'WD: a 
 
 if ($sys ne 'crmsworld')
 {
-  is($crms->GetInstitutionName($crms->GetUserInstitution('hansone@indiana.edu')),      'Indiana',            'IU affiliation');
-  is($crms->GetInstitutionName($crms->GetUserInstitution('aseeger@library.wisc.edu')), 'Wisconsin',          'UW affiliation');
-  is($crms->GetInstitutionName($crms->GetUserInstitution('zl2114@columbia.edu')),      'Columbia',           'COL affiliation');
-  is(scalar @{ $crms->GetInstitutionUsers(1) }, 8,                         'IU affiliates count');
-  is(scalar @{ $crms->GetInstitutionUsers(2) }, 7,                         'UW affiliates count');
-  is(scalar @{ $crms->GetInstitutionUsers(4) }, 1,                         'COL affiliates count');
+  is($crms->GetInstitutionName($crms->GetUserProperty('hansone@indiana.edu', 'institution')),      'Indiana',            'IU affiliation');
+  is($crms->GetInstitutionName($crms->GetUserProperty('aseeger@library.wisc.edu', 'institution')), 'Wisconsin',          'UW affiliation');
+  is($crms->GetInstitutionName($crms->GetUserProperty('zl2114@columbia.edu', 'institution')),      'Columbia',           'COL affiliation');
+  is(scalar @{ $crms->GetInstitutionUsers(3) }, 8,                         'IU affiliates count');
+  is(scalar @{ $crms->GetInstitutionUsers(5) }, 7,                         'UW affiliates count');
+  is(scalar @{ $crms->GetInstitutionUsers(9) }, 1,                         'COL affiliates count');
   is($crms->IsReviewCorrect('uc1.b3763822','dfulmer','2009-11-02') ,0,     'Correctness: uc1.b3763822 1');
   is($crms->IsReviewCorrect('uc1.b3763822','cwilcox','2009-11-03') ,1,     'Correctness: uc1.b3763822 2');
   is($crms->IsReviewCorrect('uc1.b3763822','gnichols123','2009-11-04') ,1, 'Correctness: uc1.b3763822 3');
   is($crms->IsReviewCorrect('uc1.b3763822','jaheim123','2009-11-04') ,0,   'Correctness: uc1.b3763822 4');
   is($crms->IsReviewCorrect('uc1.b3763822','annekz','2009-11-09') ,1,      'Correctness: uc1.b3763822 5');
 }
-
-if ($sys ne 'crmsworld')
-{
-  my $record = $crms->GetMetadata('mdp.39015011285692');
-  is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,0,0)}, 1,    'Violations: mdp.39015011285692 P0');
-  is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,1,0)}, 1,    'Violations: mdp.39015011285692 P1');
-  is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,2,0)}, 1,    'Violations: mdp.39015011285692 P2');
-  is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,3,0)}, 1,    'Violations: mdp.39015011285692 P3');
-  is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,3,1)}, 0,    'Violations: mdp.39015011285692 P3 1');
-  is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,4,0)}, 0,    'Violations: mdp.39015011285692 P4');
-  is(scalar @{$crms->GetViolations('mdp.39015011285692',$record,4,1)}, 0,    'Violations: mdp.39015011285692 P4 1');
-  $record = $crms->GetMetadata('mdp.39015082195432');
-  is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,0,0)}, 3,    'Violations: mdp.39015082195432 P0');
-  is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,1,0)}, 3,    'Violations: mdp.39015082195432 P1');
-  is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,2,0)}, 3,    'Violations: mdp.39015082195432 P2');
-  is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,3,0)}, 3,    'Violations: mdp.39015082195432 P3');
-  is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,3,1)}, 3,    'Violations: mdp.39015082195432 P3 1');
-  is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,0)}, 3,    'Violations: mdp.39015082195432 P4');
-  is(scalar @{$crms->GetViolations('mdp.39015082195432',$record,4,1)}, 0,    'Violations: mdp.39015082195432 P4 1');
-}
-
 
 if ($sys eq 'crmsworld')
 {

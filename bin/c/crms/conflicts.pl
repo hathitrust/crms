@@ -3,11 +3,9 @@
 # This script can be run from crontab
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -19,6 +17,7 @@ my %opts;
 my $ok = getopts('hpvx:', \%opts);
 
 my $help       = $opts{'h'};
+my $instance;
 my $production = $opts{'p'};
 my $verbose    = $opts{'v'};
 my $sys        = $opts{'x'};
@@ -27,13 +26,13 @@ if ($help || !$ok)
 {
   die "USAGE: $0 [-hpv] [-X SYS] [date]\n\n";
 }
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
 my $crms = CRMS->new(
-    logFile => "$DLXSROOT/prep/c/crms/gov_hist.txt",
-    sys     => $sys,
-    verbose => $verbose,
-    root    => $DLXSROOT,
-    dev     => $DLPS_DEV
+    logFile  => "$DLXSROOT/prep/c/crms/conflicts_hist.txt",
+    sys      => $sys,
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 
 my %confs = (

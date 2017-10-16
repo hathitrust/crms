@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -37,6 +35,7 @@ END
 
 my $noexport;
 my $help;
+my $instance;
 my @mails;
 my $noimport;
 my $noop;
@@ -54,23 +53,23 @@ die 'Terminating' unless GetOptions(
            'p'    => \$production,
            'q'    => \$quiet,
            'v+'   => \$verbose);
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
 die "$usage\n\n" if $help;
 
 my $crmsUS = CRMS->new(
-    logFile      =>   $DLXSROOT . '/prep/c/crms/corrections_hist.txt',
-    sys          =>   'crms',
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   $DLPS_DEV
+    logFile  => $DLXSROOT . '/prep/c/crms/corrections_hist.txt',
+    sys      => 'crms',
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 
 my $crmsWorld = CRMS->new(
-    logFile      =>   $DLXSROOT . '/prep/c/crms/corrections_hist.txt',
-    sys          =>   'crmsworld',
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   $DLPS_DEV
+    logFile  => $DLXSROOT . '/prep/c/crms/corrections_hist.txt',
+    sys      => 'crmsworld',
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 
 my @systems = ($crmsUS, $crmsWorld);
@@ -200,12 +199,12 @@ if (scalar @mails)
   my $to = join ',', @mails;
   my $bytes = encode('utf8', $html);
   my $boundary = "====" . time() . "====";
-  my %mail = ('from'         => $self->GetSystemVar('adminEmail'),
+  my %mail = ('from'         => $crmsUS->GetSystemVar('adminEmail'),
               'to'           => $to,
               'subject'      => $title,
               'content-type' => "multipart/mixed; boundary=\"$boundary\""
               );
-  open (F, $perm) or die "Cannot read $file: $!";
+  open (F, $perm) or die "Cannot read $perm: $!";
   binmode F; undef $/;
   my $enc = encode('utf8', <F>);
   close F;
@@ -225,7 +224,7 @@ Content-Description: Corrections export summary
 $enc
 $boundary--
 END_OF_BODY
-  sendmail(%mail) || $self->SetError("Error: $Mail::Sendmail::error\n");
+  sendmail(%mail) || $crmsUS->SetError("Error: $Mail::Sendmail::error\n");
 }
 else
 {

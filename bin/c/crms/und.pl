@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -17,12 +15,13 @@ my %opts;
 getopts('hnpt:vx:', \%opts);
 
 my $help       = $opts{'h'};
+my $instance;
 my $noop       = $opts{'n'};
 my $production = $opts{'p'};
 my $time       = $opts{'t'};
 my $sys        = $opts{'x'};
 my $verbose    = $opts{'v'};
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
 $time = 10800 unless $time;
 
 
@@ -44,11 +43,11 @@ die "$usage\n\n" if $help;
 my $file = $ARGV[0];
 
 my $crms = CRMS->new(
-    logFile =>   "$DLXSROOT/prep/c/crms/und_hist.txt",
-    sys     =>   $sys,
-    verbose =>   $verbose,
-    root    =>   $DLXSROOT,
-    dev     =>   $DLPS_DEV
+    logFile  =>   "$DLXSROOT/prep/c/crms/und_hist.txt",
+    sys      =>   $sys,
+    verbose  =>   $verbose,
+    root     =>   $DLXSROOT,
+    instance =>   $instance
 );
 my $done = 0;
 my $of = 0;

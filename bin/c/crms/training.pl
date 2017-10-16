@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -32,7 +30,7 @@ from production so that the queue size is increased to COUNT.
          3. (default) Use all Status 4 and 5 determinations.
 -h       Print this help message.
 -n       Do not submit SQL.
--p PROJ  Only include reviews on the specified project PROJ.
+-p PROJ  Only include reviews on the specified project PROJ. Defaults to 'Core'.
 -q       Only bring in queue entries, do not import single review.
 -v       Be verbose.
 -x SYS   Set SYS as the system to execute.
@@ -43,6 +41,7 @@ my $del;
 my $dev;
 my $ease;
 my $help;
+my $instance;
 my $noop;
 my @projs;
 my $queueOnly;
@@ -75,23 +74,33 @@ my $crmsp = CRMS->new(
     sys          =>   $sys,
     verbose      =>   $verbose,
     root         =>   $DLXSROOT,
-    dev          =>   undef
+    instance     =>   'production'
 );
 
 # Connect to training database.
 my $crmst = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/training_hist2.txt",
-    sys          =>   $sys,
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   ($dev)? $DLPS_DEV:'crms-training'
+    logFile  => "$DLXSROOT/prep/c/crms/training_hist2.txt",
+    sys      => $sys,
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => ($dev)? undef:'crms-training'
 );
+
+$crmst->set('noop', 1) if $noop;
+if ($verbose)
+{
+  my $dbinfo = $crmsp->DbInfo();
+  print "Production instance: $dbinfo\n";
+  $dbinfo = $crmst->DbInfo();
+  print "Training instance: $dbinfo\n";
+  
+}
 
 if ($del)
 {
   print "Deleting reviews and emptying queue...\n" if $verbose;
-  $crmst->PrepareSubmitSql('DELETE from queue') unless $noop;
-  $crmst->PrepareSubmitSql('DELETE from reviews') unless $noop;
+  $crmst->PrepareSubmitSql('DELETE from queue');
+  $crmst->PrepareSubmitSql('DELETE from reviews');
 }
 
 ### Get a list of ids from the training DB already seen,
@@ -119,11 +128,15 @@ my $usql = '(SELECT id FROM users WHERE reviewer=1 AND expert+admin+superadmin=0
 my $ssql = 'e.status=4';
 $ssql .= ' OR e.status=5' unless $ease == 1;
 $ssql .= ' OR e.status=7' unless $no7;
-my $projsql = (scalar @projs)? (sprintf 'e.project IN ("%s")', join '","', @projs):'e.project IS NULL';
-$sql = 'SELECT r.id,r.user,r.time,r.gid,e.status,e.project FROM historicalreviews r'.
-       ' INNER JOIN exportdata e ON r.gid=e.gid WHERE r.user IN '. $usql.
+@projs = ('Core') unless scalar @projs;
+my $projsql = sprintf '("%s")', join '","', @projs;
+$sql = 'SELECT r.id,r.user,r.time,r.gid,e.status,e.newproject FROM historicalreviews r'.
+       ' INNER JOIN exportdata e ON r.gid=e.gid'.
+       ' INNER JOIN projects p ON e.newproject=p.id'.
+       ' WHERE r.user IN '. $usql.
+       ' AND p.name IN '. $projsql.
        ' AND r.validated=1 AND e.reason!="crms" AND ('. $ssql. ')'.
-       ' AND '. $projsql. ' ORDER BY r.time DESC';
+       ' ORDER BY r.time DESC';
 
 $ref = $crmsp->SelectAll($sql);
 printf "$sql: %s results\n", (defined $ref)? scalar @$ref:'no' if $verbose;
@@ -194,11 +207,10 @@ foreach my $row (@{$ref})
   my $renNum = $row->[3];
   my $category = $row->[4];
   my $note = $row->[5];
-  my $projDesc = (defined $proj)? " for project '$proj'":'';
-  print GREEN "Add to queue: $id$projDesc\n" if $verbose;
+  print GREEN "Add to queue: $id for project $proj\n" if $verbose;
   my $pending = ($queueOnly)? 0:1;
-  $sql = 'INSERT INTO queue (id,time,pending_status,project) VALUES (?,?,?,?)';
-  $crmst->PrepareSubmitSql($sql, $id, $time, $pending, $proj) unless $noop;
+  $sql = 'INSERT INTO queue (id,time,pending_status,newproject) VALUES (?,?,?,?)';
+  $crmst->PrepareSubmitSql($sql, $id, $time, $pending, $proj);
   if (!$queueOnly)
   {
     my $ta = $crmst->TranslateAttr($attr);
@@ -207,9 +219,9 @@ foreach my $row (@{$ref})
     $sql = 'INSERT INTO reviews (id,user,time,attr,reason,renDate,renNum,category,note)'.
            'VALUES (?,?,?,?,?,?,?,?,?)';
     $crmst->PrepareSubmitSql($sql, $id, $user, $time, $attr, $reason,
-                            $renDate, $renNum, $category, $note) unless $noop;
+                            $renDate, $renNum, $category, $note);
   }
-  $crmst->UpdateMetadata($id, 1, $record) unless $noop;
+  $crmst->UpdateMetadata($id, 1, $record);
   $n++;
   $s4++ if $status == 4;
   $s5++ if $status == 5;
@@ -217,7 +229,7 @@ foreach my $row (@{$ref})
 }
 
 $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,"training.pl")';
-$crmst->PrepareSubmitSql($sql, $n) unless $noop;
+$crmst->PrepareSubmitSql($sql, $n);
 print "Added $n: $s4 status 4, $s5 status 5, $s7 status 7\n";
 print "Warning: $_\n" for @{$crmsp->GetErrors()};
 print "Warning: $_\n" for @{$crmst->GetErrors()};

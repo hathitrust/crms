@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -40,6 +38,7 @@ my $candidates;
 my $file;
 my $help;
 my $init;
+my $instance;
 my $iconly;
 my $noop;
 my $production;
@@ -60,15 +59,15 @@ die 'Terminating' unless GetOptions(
            's:s@' => \@singles,
            'v+'   => \$verbose,
            'x:s'  => \$sys);
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    logFile      =>   $DLXSROOT . '/prep/c/crms/candidatespurge_hist.txt',
-    sys          =>   $sys,
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   $DLPS_DEV
+    logFile  => $DLXSROOT . '/prep/c/crms/candidatespurge_hist.txt',
+    sys      => $sys,
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 
 if ($file)

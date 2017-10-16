@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -34,6 +32,7 @@ END
 
 my @excludes;
 my $help;
+my $instance;
 my $noop;
 my $production;
 my @singles;
@@ -49,15 +48,15 @@ die 'Terminating' unless GetOptions(
            's:s@' => \@singles,
            'v+'   => \$verbose,
            'y:s'  => \$year);
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    logFile      =>   $DLXSROOT . '/prep/c/crms/newyear_hist.txt',
-    sys          =>   'crmsworld',
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   $DLPS_DEV
+    logFile  => $DLXSROOT . '/prep/c/crms/newyear_hist.txt',
+    sys      => 'crmsworld',
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 
 $noop = 1 if $year;

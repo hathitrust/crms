@@ -3,11 +3,9 @@
 # This script can be run from crontab
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -42,6 +40,7 @@ If there is more than one distinct renewal ID then no value is written.
 END
 
 my $help;
+my $instance;
 my $nomail;
 my @mails;
 my $noop;
@@ -57,16 +56,16 @@ die 'Terminating' unless GetOptions('h|?'  => \$help,
            'p'    => \$production,
            'q'    => \$quiet,
            'v+'   => \$verbose);
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    logFile => $DLXSROOT . '/prep/c/crms/renewals_log.txt',
-    sys     => 'crms',
-    verbose => $verbose,
-    root    => $DLXSROOT,
-    dev     => $DLPS_DEV
+    logFile  => $DLXSROOT . '/prep/c/crms/renewals_log.txt',
+    sys      => 'crms',
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 
 my $outfile = $crms->get('root'). $crms->get('dataDir'). '/CRMSRenewals.tsv';

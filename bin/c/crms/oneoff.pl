@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -37,6 +35,7 @@ Reports CRMS status for Jira copyrightinquiry\@umich.edu tickets.
 END
 
 my $help;
+my $instance;
 my $nojira;
 my $lim;
 my @mails;
@@ -57,23 +56,23 @@ die 'Terminating' unless GetOptions(
            'q'    => \$quiet,
            't:s@' => \@tix,
            'v+'   => \$verbose);
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
 die "$usage\n\n" if $help;
 
 my $crmsUS = CRMS->new(
-    logFile      =>   $DLXSROOT . '/prep/c/crms/oneoff_hist.txt',
-    sys          =>   'crms',
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   $DLPS_DEV
+    logFile  => $DLXSROOT . '/prep/c/crms/oneoff_hist.txt',
+    sys      => 'crms',
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 
 my $crms = CRMS->new(
-    logFile      =>   $DLXSROOT . '/prep/c/crms/W_oneoff_hist.txt',
-    sys          =>   'crmsworld',
-    verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
-    dev          =>   $DLPS_DEV
+    logFile  => $DLXSROOT . '/prep/c/crms/W_oneoff_hist.txt',
+    sys      => 'crmsworld',
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 
 $verbose = 0 unless defined $verbose;

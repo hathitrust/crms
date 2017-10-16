@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -28,6 +26,7 @@ into the CRMS database "stanford" table.
 -x SYS   Set SYS as the system to execute.
 END
 
+my $instance;
 my ($help, $noop, $production, $training, $verbose, $sys);
 Getopt::Long::Configure('bundling');
 die 'Terminating' unless GetOptions(
@@ -38,16 +37,16 @@ die 'Terminating' unless GetOptions(
            'v'    => \$verbose,
            'x:s'  => \$sys);
 
-$DLPS_DEV = undef if $production;
-$DLPS_DEV = 'crms-training' if $training;
+$instance = 'production' if $production;
+$instance = 'crms-training' if $training;
 die $usage if $help or !scalar @ARGV;
 
 my $crms = CRMS->new(
-    logFile => "$DLXSROOT/prep/c/crms/stanford_log.txt",
-    sys     => $sys,
-    verbose => 0,
-    root    => $DLXSROOT,
-    dev     => $DLPS_DEV
+    logFile  => "$DLXSROOT/prep/c/crms/stanford_log.txt",
+    sys      => $sys,
+    verbose  => 0,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 
 foreach my $filename (@ARGV)

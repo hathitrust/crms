@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -31,6 +29,7 @@ my %opts;
 my $ok = getopts('hnpvx:', \%opts);
 
 my $help       = $opts{'h'};
+my $instance;
 my $noop       = $opts{'n'};
 my $production = $opts{'p'};
 my $verbose    = $opts{'v'};
@@ -42,13 +41,13 @@ if ($help || scalar @ARGV < 1 || !$ok)
 }
 
 my $file = $ARGV[0];
-
+$instance = 'production' if $production;
 my $crms = CRMS->new(
-    logFile =>   "$DLXSROOT/prep/c/crms/log_load_hist.txt",
-    sys     =>   $sys,
-    verbose =>   $verbose,
-    root    =>   $DLXSROOT,
-    dev     =>   !$production,
+    logFile  =>   "$DLXSROOT/prep/c/crms/log_load_hist.txt",
+    sys      =>   $sys,
+    verbose  =>   $verbose,
+    root     =>   $DLXSROOT,
+    instance =>   $instance,
 );
 
 

@@ -3,11 +3,9 @@
 # This script can be run from crontab
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -31,6 +29,7 @@ Sends weekly activity reports.
 END
 
 my $help;
+my $instance;
 my $lists;
 my @mails;
 my $production;
@@ -43,26 +42,26 @@ die 'Terminating' unless GetOptions('h|?'  => \$help,
            'm:s@' => \@mails,
            'p'    => \$production,
            'v+'   => \$verbose);
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
 my %systems;
 my %mails;
 my $crms = CRMS->new(
-    logFile => $DLXSROOT . '/prep/c/crms/weekly_hist.txt',
-    sys     => 'crmsworld',
-    verbose => $verbose,
-    root    => $DLXSROOT,
-    dev     => $DLPS_DEV
+    logFile  => $DLXSROOT . '/prep/c/crms/weekly_hist.txt',
+    sys      => 'crmsworld',
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 #$systems{$crms->System()} = $crms;
 $crms = CRMS->new(
-    logFile => $DLXSROOT . '/prep/c/crms/weekly_hist.txt',
-    sys     => 'crms',
-    verbose => $verbose,
-    root    => $DLXSROOT,
-    dev     => $DLPS_DEV
+    logFile  => $DLXSROOT . '/prep/c/crms/weekly_hist.txt',
+    sys      => 'crms',
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 $systems{$crms->System()} = $crms;
 $mails{$_} = 1 for @mails;

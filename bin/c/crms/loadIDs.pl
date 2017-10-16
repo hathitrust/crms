@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -35,6 +33,7 @@ my %opts;
 my $ok = getopts('hnpu:vx:', \%opts);
 
 my $help       = $opts{'h'};
+my $instance;
 my $noop       = $opts{'n'};
 my $production = $opts{'p'};
 my $user       = $opts{'u'};
@@ -45,15 +44,15 @@ if ($help || scalar @ARGV != 1 || !$user || !$ok)
 {
   die $usage;
 }
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
 my $file = $ARGV[0];
 
 my $crms = CRMS->new(
-    logFile => "$DLXSROOT/prep/c/crms/log_IDs.txt",
-    sys     => $sys,
-    verbose => $verbose,
-    root    => $DLXSROOT,
-    dev     => $DLPS_DEV
+    logFile  => "$DLXSROOT/prep/c/crms/log_IDs.txt",
+    sys      => $sys,
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 
 open my $fh, $file or die "failed to open $file: $@ \n";
@@ -144,12 +143,13 @@ foreach my $line ( <$fh> )
   $linen++;
 }
 close $fh;
+# FIXME: why is this recreated?
 $crms = CRMS->new(
     logFile  =>   "$DLXSROOT/prep/c/crms/log_IDs.txt",
     sys      =>   $sys,
     verbose  =>   $verbose,
     root     =>   $DLXSROOT,
-    dev      =>   $DLPS_DEV
+    instance =>   $instance
 );
 $sql = "SELECT COUNT(*) FROM queue WHERE priority=1";
 my $already = $crms->SimpleSqlGet($sql);

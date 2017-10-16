@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -45,6 +43,7 @@ END
 my $all;
 my $help;
 my $insert;
+my $instance;
 my @mails;
 my @no;
 my $production;
@@ -65,18 +64,18 @@ die 'Terminating' unless GetOptions(
            's:s@' => \@singles,
            'v+'   => \$verbose,
            'x:s'  => \$sys);
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
 die "$usage\n\n" if $help;
 
 my %no = ();
 $no{$_}=1 for @no;
 
 my $crms = CRMS->new(
-    logFile => "$DLXSROOT/prep/c/crms/inherit_hist.txt",
-    sys     => $sys,
-    verbose => $verbose,
-    root    => $DLXSROOT,
-    dev     => $DLPS_DEV
+    logFile  => "$DLXSROOT/prep/c/crms/addinherit_hist.txt",
+    sys      => $sys,
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 $crms->set('ping','yes');
 my $delim = "\n";
@@ -104,9 +103,7 @@ elsif (scalar @ARGV)
 }
 my $dates = $start;
 $dates .= " to $end" if $end ne $start;
-my $title = sprintf "%s %s: %s %sInheritance, $dates",
-                    $crms->System(),
-                    ($DLPS_DEV)? 'Dev':'Prod';
+my $title = $crms->SubjectLine("ADD Inheritance, $dates");
 $start .= ' 00:00:00' unless $start =~ m/\d\d:\d\d:\d\d$/;
 $end .= ' 23:59:59' unless $end =~ m/\d\d:\d\d:\d\d$/;
 my $xpc;

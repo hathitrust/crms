@@ -3,11 +3,9 @@
 # This script can be run from crontab
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -44,6 +42,7 @@ END
 
 my $help;
 my @ids;
+my $instance;
 my $legacy;
 my @mails;
 my $production;
@@ -65,7 +64,7 @@ die 'Terminating' unless GetOptions('h|?' => \$help,
            'x:s'  => \$sys,
            'v+'   => \$verbose,
            'z'    => \$link);
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
 print "Verbosity $verbose\n" if $verbose;
 my %reports = ('html'=>1,'none'=>1,'tsv'=>1);
 die "Bad value '$report' for -r flag" unless defined $reports{$report};
@@ -94,11 +93,11 @@ $end   .= ' 23:59:59' if $end;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    logFile => "$DLXSROOT/prep/c/crms/duplicates_hist.txt",
-    sys     => $sys,
-    verbose => $verbose,
-    root    => $DLXSROOT,
-    dev     => $DLPS_DEV
+    logFile  => "$DLXSROOT/prep/c/crms/duplicates_hist.txt",
+    sys      => $sys,
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 
 
@@ -199,6 +198,7 @@ foreach my $row ( @{$ref} )
   }
   $lastdate = $date;
   my $record = $crms->GetMetadata($id);
+  my $sysid = $record->sysid;
   next unless defined $record;
   my $holdings = $crms->VolumeIDsQuery($id, $record);
   next unless scalar @{$holdings} > 1;

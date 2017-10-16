@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -32,6 +30,7 @@ END
 
 my $delete;
 my $help;
+my $instance;
 my @mails;
 my $production;
 my $quiet;
@@ -48,15 +47,16 @@ die 'Terminating' unless GetOptions(
            't'    => \$training,
            'v+'   => \$verbose,
            'x:s'  => \$sys);
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
+$instance = 'crms-training' if $training;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    logFile =>   "$DLXSROOT/prep/c/crms/miscstats_hist.txt",
-    sys     =>   $sys,
-    verbose =>   $verbose,
-    root    =>   $DLXSROOT,
-    dev     =>   ($training)? 'crms-training':$DLPS_DEV
+    logFile  =>   "$DLXSROOT/prep/c/crms/miscstats_hist.txt",
+    sys      =>   $sys,
+    verbose  =>   $verbose,
+    root     =>   $DLXSROOT,
+    instance =>   $instance
 );
 
 my $report = $crms->StartHTML('CRMS Miscellaneous Stats');

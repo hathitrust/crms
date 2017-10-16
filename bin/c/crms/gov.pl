@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
 my $DLXSROOT;
-my $DLPS_DEV;
 BEGIN
 {
   $DLXSROOT = $ENV{'DLXSROOT'};
-  $DLPS_DEV = $ENV{'DLPS_DEV'};
   unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
 }
 
@@ -29,6 +27,7 @@ Reports on suspected gov docs in the und table.
 END
 
 my $help;
+my $instance;
 my @mails;
 my $noop;
 my $production;
@@ -43,16 +42,16 @@ die 'Terminating' unless GetOptions(
            'p' => \$production,
            'v+' => \$verbose,
            'x:s' => \$sys);
-$DLPS_DEV = undef if $production;
+$instance = 'production' if $production;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    logFile => "$DLXSROOT/prep/c/crms/gov_hist.txt",
-    sys     => $sys,
-    verbose => $verbose,
-    root    => $DLXSROOT,
-    dev     => $DLPS_DEV
+    logFile  => "$DLXSROOT/prep/c/crms/gov_hist.txt",
+    sys      => $sys,
+    verbose  => $verbose,
+    root     => $DLXSROOT,
+    instance => $instance
 );
 
 my $start = $crms->SimpleSqlGet('SELECT DATE(MIN(time)) FROM und WHERE src="gov"');
