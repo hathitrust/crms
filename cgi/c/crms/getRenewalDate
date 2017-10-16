@@ -1,23 +1,25 @@
 #!/usr/bin/perl
 
-my ($DLXSROOT, $DLPS_DEV);
-BEGIN { $DLXSROOT = $ENV{'DLXSROOT'}; $DLPS_DEV = $ENV{'DLPS_DEV'}; }
+my $DLXSROOT;
+BEGIN
+{
+  $DLXSROOT = $ENV{'DLXSROOT'};
+}
 
 use strict;
 use CGI;
 use CRMS;
 
 my $cgi  = new CGI;
-my $user = $ENV{'REMOTE_USER'};
 my $id   = $cgi->param('id');
 my $sys =  $cgi->param('sys');
 $sys = 'crms' unless $sys;
-my $crms = CRMS->new(logFile  =>   "$DLXSROOT/prep/c/crms/log_review.txt",
-                     sys      =>   $sys,
-                     verbose  =>   0,
-                     root     =>   $DLXSROOT,
-                     dev      =>   $DLPS_DEV,
-                     user     =>   $user);
+my $crms = CRMS->new(logFile => $DLXSROOT. '/prep/c/crms/log_getRenewalDate.txt',
+                     sys     => $sys,
+                     verbose => 0,
+                     root    => $DLXSROOT,
+                     pdb     => $cgi->param('pdb'),
+                     tdb     => $cgi->param('tdb'));
 
 my $date = $crms->GetRenDate( $id );
 

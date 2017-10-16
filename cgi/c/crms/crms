@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
-my ($DLXSROOT, $DLPS_DEV);
-BEGIN { $DLXSROOT = $ENV{'DLXSROOT'}; $DLPS_DEV = $ENV{'DLPS_DEV'}; }
+my $DLXSROOT;
+BEGIN { $DLXSROOT = $ENV{'DLXSROOT'}; }
 
 use strict;
 use CGI;
@@ -23,7 +23,6 @@ my $crms = CRMS->new(
         sys      => $sys,
         verbose  => 0,
         root     => $DLXSROOT,
-        dev      => $DLPS_DEV,
         pdb      => $pdb,
         tdb      => $tdb,
         debugSql => $debugSql,
@@ -295,6 +294,9 @@ if ($cgi->param('debug'))
 {
   print '<br/><br/>';
   printf 'Host: <b>%s</b><br/>', `hostname`;
+  my $dbinfo = $crms->DbInfo();
+  $dbinfo =~ s/\n/<br\/>/g;
+  print "<i>$dbinfo</i><br/>\n";
   eval {
     foreach my $k (keys %ENV)
     {

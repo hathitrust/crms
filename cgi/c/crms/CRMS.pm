@@ -27,6 +27,11 @@ sub new
   my ($class, %args) = @_;
   my $self = bless {}, $class;
 
+  if ($args{'dev'})
+  {
+    $self->SetError("<strong>WARNING: 'dev' arg no longer used with CRMS <code>new()</code>,".
+          " use 'instance' for CRMS_INSTANCE instead!</strong><br/>\n");
+  }
   my $sys = $args{'sys'};
   $sys = 'crms' unless $sys;
   my $root = $args{'root'};
@@ -44,7 +49,10 @@ sub new
   $self->set('errors',   $errors);
   $self->set('verbose',  $args{'verbose'});
   $self->set('root',     $root);
-  $self->set('dev',      $args{'dev'});
+  # If running under Apache.
+  $self->set('instance', $ENV{'CRMS_INSTANCE'});
+  # If running from command line.
+  $self->set('instance', $args{'instance'}) if $args{'instance'};
   $self->set('pdb',      $args{'pdb'});
   $self->set('tdb',      $args{'tdb'});
   $self->set('debugSql', $args{'debugSql'});
@@ -63,6 +71,11 @@ sub get
   my $self = shift;
   my $key  = shift;
 
+  if ($key eq 'dev')
+  {
+    $self->SetError("<strong>WARNING: 'dev' key no longer used with CRMS <code>get()</code>,".
+          " use 'instance' for CRMS_INSTANCE instead!</strong><br/>\n");
+  }
   return $self->{$key};
 }
 
@@ -72,12 +85,17 @@ sub set
   my $key  = shift;
   my $val  = shift;
 
+  if ($key eq 'dev')
+  {
+    $self->SetError("<strong>WARNING: 'dev' key no longer used with CRMS <code>set()</code>,".
+          " use 'instance' for CRMS_INSTANCE instead!</strong><br/>\n");
+  }
   $self->{$key} = $val;
 }
 
 sub Version
 {
-  return '6.4';
+  return '6.5';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -134,7 +152,7 @@ sub ConnectToDb
   my $self = shift;
 
   my $db_server = $self->get('mysqlServerDev');
-  my $dev       = $self->get('dev');
+  my $instance  = $self->get('instance');
   my $root      = $self->get('root');
   my $sys       = $self->Sys();
 
@@ -142,18 +160,51 @@ sub ConnectToDb
   my %d = $self->ReadConfigFile($cfg);
   my $db_user   = $d{'mysqlUser'};
   my $db_passwd = $d{'mysqlPasswd'};
-  if (!$dev || $self->get('pdb'))
+  if ($instance eq 'production'
+      || $self->get('pdb')
+      || $instance eq 'crms-training'
+      || $self->get('tdb')
+      )
   {
     $db_server = $self->get('mysqlServer');
   }
   my $db = $self->DbName();
-  #if ($self->get('verbose')) { $self->Logit("DBI:mysql:crms:$db_server, $db_user, [passwd]"); }
   my $dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
             { PrintError => 0, RaiseError => 1, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
   $dbh->{mysql_enable_utf8} = 1;
   $dbh->{mysql_auto_reconnect} = 1;
   $dbh->do('SET NAMES "utf8";');
   return $dbh;
+}
+
+sub DbInfo
+{
+  my $self = shift;
+
+  my $db_server = $self->get('mysqlServerDev');
+  my $instance  = $self->get('instance');
+  my $root      = $self->get('root');
+  my $sys       = $self->Sys();
+
+  my $msg = '';
+  my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
+  my %d = $self->ReadConfigFile($cfg);
+  my $db_user   = $d{'mysqlUser'};
+  my $db_passwd = $d{'mysqlPasswd'};
+  if ($instance eq 'production'
+      || $self->get('pdb')
+      || $instance eq 'crms-training'
+      || $self->get('tdb')
+      )
+  {
+    $db_server = $self->get('mysqlServer');
+  }
+  my $db = $self->DbName();
+  my $where = $self->DevBanner() || 'PRODUCTION';
+  $msg = "DB Info:\nInstance $instance\n$where\n$db on $db_server as $db_user";
+  $msg .= "\n(PDB set)" if $self->get('pdb');
+  $msg .= "\n(TDB set)" if $self->get('tdb');
+  return $msg;
 }
 
 ## ----------------------------------------------------------------------------
@@ -167,7 +218,7 @@ sub ConnectToSdrDb
   my $db   = shift;
 
   my $db_server = $self->get('mysqlMdpServerDev');
-  my $dev       = $self->get('dev');
+  my $instance  = $self->get('instance');
   my $root      = $self->get('root');
   my $sys       = $self->Sys();
 
@@ -176,11 +227,11 @@ sub ConnectToSdrDb
   my %d = $self->ReadConfigFile($cfg);
   my $db_user   = $d{'mysqlMdpUser'};
   my $db_passwd = $d{'mysqlMdpPasswd'};
-  if (!$dev)
+  if ($instance eq 'production' || $instance eq 'crms-training' ||
+      $self->get('pdb') || $self->get('tdb'))
   {
     $db_server = $self->get('mysqlMdpServer');
   }
-  #if ($self->get('verbose')) { $self->Logit("DBI:mysql:mdp:$db_server, $db_user, [passwd]"); }
   my $sdr_dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
             { PrintError => 0, AutoCommit => 1 });
   if ($sdr_dbh)
@@ -202,7 +253,7 @@ sub ConnectToSdrDb
       use Mail::Sendmail;
       my %mail = ('from'         => $me,
                   'to'           => $me,
-                  'subject'      => 'CRMS rights database issue',
+                  'subject'      => $self->SubjectLine('rights database issue'),
                   'content-type' => 'text/html; charset="UTF-8"',
                   'body'         => $bytes
                   );
@@ -231,10 +282,10 @@ sub DbName
 {
   my $self = shift;
 
-  my $dev = $self->get('dev');
+  my $instance = $self->get('instance');
   my $tdb = $self->get('tdb');
   my $db = $self->get('mysqlDbName');
-  $db .= '_training' if $dev && ($dev eq 'crms-training' or $tdb);
+  $db .= '_training' if $instance eq 'crms-training' or $tdb;
   return $db;
 }
 
@@ -253,11 +304,13 @@ sub GetDb
   return $dbh;
 }
 
+# Returns 1 on success.
 sub PrepareSubmitSql
 {
   my $self = shift;
   my $sql  = shift;
 
+  return 1 if $self->get('noop');
   my $dbh = $self->GetDb();
   my $t1 = Time::HiRes::time();
   my $sth = $dbh->prepare($sql);
@@ -468,7 +521,7 @@ sub ProcessReviews
     my $hold = $data->{'hold'};
     if ($hold)
     {
-      $self->ReportMsg("Not processing $id for $hold: it is held; system status is '$stat'") unless $quiet;
+      $self->ReportMsg("Not processing $id for $hold: it is held") unless $quiet;
       next;
     }
     if ($status == 8)
@@ -619,10 +672,15 @@ sub ExportReviews
   {
     $self->ReportMsg('>>> noExport system variable is set; will only export high-priority volumes.');
   }
+  my $training = $self->IsTrainingArea();
+  if ($training && !$quiet)
+  {
+    $self->ReportMsg('>>> <b>Training site detected. Will not write .rights file.</b>');
+  }
   my $count = 0;
   my $user = $self->Sys();
-  my ($fh, $temp, $perm, $filename) = $self->GetExportFh() unless $quiet;
-  $self->ReportMsg("<i>Exporting to <code>$temp</code>.</i>") unless $quiet;
+  my ($fh, $temp, $perm, $filename) = $self->GetExportFh() unless $training or $quiet;
+  $self->ReportMsg("<i>Exporting to <code>$temp</code>.</i>") unless $training or $quiet;
   my $start_size = $self->GetCandidatesSize();
   foreach my $id (@{$list})
   {
@@ -649,7 +707,7 @@ sub ExportReviews
     $self->RemoveFromCandidates($id);
     $count++;
   }
-  if (!$quiet)
+  if (!$training && !$quiet)
   {
     close $fh;
     $self->ReportMsg("<i>Moving to <code>$perm</code>.</i>");
@@ -675,7 +733,7 @@ sub ExportReviews
   }
   my $sql = 'INSERT INTO exportrecord (itemcount) VALUES (?)';
   $self->PrepareSubmitSql($sql, $count);
-  if (!$quiet)
+  if (!$training && !$quiet)
   {
     my $dels = $start_size-$self->GetCandidatesSize();
     $self->ReportMsg("After export, removed $dels volumes from candidates.");
@@ -780,8 +838,8 @@ sub EmailReport
   my $file     = shift;
   my $filename = shift;
 
-  my $where = ($self->WhereAmI() || 'Prod');
-  if ($where eq 'Prod')
+  my $instance = $self->get('instance');
+  if ($instance eq 'production')
   {
     my $subject = $self->SubjectLine("$count volumes exported to rights db");
     use Mail::Sendmail;
@@ -838,20 +896,17 @@ sub SafeRemoveFromQueue
 {
   my $self = shift;
   my $id   = shift;
-  my $noop = shift;
 
   my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
   return undef if $self->SimpleSqlGet($sql, $id) > 0;
   $sql = 'UPDATE queue SET priority=-2 WHERE id=?'.
          ' AND newproject NOT IN (SELECT id FROM projects WHERE name="Special")'.
          ' AND locked IS NULL AND status=0 AND pending_status=0';
-  $self->PrepareSubmitSql($sql, $id) unless defined $noop;
+  my $return1 = $self->PrepareSubmitSql($sql, $id);
   $sql = 'DELETE FROM queue WHERE id=? AND priority=-2'.
          ' AND locked IS NULL AND status=0 AND pending_status=0';
-  $self->PrepareSubmitSql($sql, $id) unless defined $noop;
-  $sql = 'SELECT COUNT(*) FROM queue WHERE id=?';
-  return 1 if defined $noop;
-  return ($self->SimpleSqlGet($sql, $id) == 0)? 1:undef;
+  my $return2 = $self->PrepareSubmitSql($sql, $id);
+  return ($return1 && $return2)? 1:undef;
 }
 
 sub RemoveFromQueue
@@ -867,9 +922,8 @@ sub RemoveFromCandidates
 {
   my $self = shift;
   my $id   = shift;
-  my $noop = shift;
 
-  if ($self->SafeRemoveFromQueue($id, $noop))
+  if ($self->SafeRemoveFromQueue($id))
   {
     $self->PrepareSubmitSql('DELETE FROM candidates WHERE id=?', $id);
     $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
@@ -920,12 +974,10 @@ sub LoadNewItemsInCandidates
 # Does all checks to see if a volume should be in the candidates or und tables, removing
 # it from either table if it is already in one and no longer qualifies.
 # If necessary, updates the system table with a new sysid.
-# If noop is defined, does nothing that would actually alter the table.
 sub CheckAndLoadItemIntoCandidates
 {
   my $self   = shift;
   my $id     = shift;
-  my $noop   = shift;
   my $record = shift;
 
   my $incand = $self->SimpleSqlGet('SELECT id FROM candidates WHERE id=?', $id);
@@ -936,7 +988,7 @@ sub CheckAndLoadItemIntoCandidates
   if (!defined $rq)
   {
     $self->ReportMsg("Can't get rights for $id, filtering.");
-    $self->Filter($id, 'no meta') unless $noop;
+    $self->Filter($id, 'no meta');
     return;
   }
   my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
@@ -951,7 +1003,7 @@ sub CheckAndLoadItemIntoCandidates
       if (defined $sysid && defined $oldSysid && $sysid ne $oldSysid)
       {
         $self->ReportMsg("Update system IDs from $oldSysid to $sysid");
-        $self->UpdateSysids($record) unless defined $noop;
+        $self->UpdateSysids($record);
       }
     }
   }
@@ -960,12 +1012,12 @@ sub CheckAndLoadItemIntoCandidates
     if ((defined $incand || $inq) && $reason eq 'gfv')
     {
       $self->ReportMsg("Filter $id as gfv");
-      $self->Filter($id, 'gfv') unless defined $noop;
+      $self->Filter($id, 'gfv');
     }
     elsif (defined $incand || $inq)
     {
       $self->ReportMsg("Remove $id -- (rights now $attr/$reason)");
-      $self->RemoveFromCandidates($id, $noop);
+      $self->RemoveFromCandidates($id);
     }
     if ($inund)
     {
@@ -978,7 +1030,7 @@ sub CheckAndLoadItemIntoCandidates
       $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE id=? AND src="gfv"', $id) > 0)
   {
     $self->ReportMsg("Unfilter $id -- reverted from pdus/gfv");
-    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) unless defined $noop;
+    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
   }
   if ($self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id) > 0)
   {
@@ -994,7 +1046,7 @@ sub CheckAndLoadItemIntoCandidates
   if (!defined $record)
   {
     $self->ReportMsg("Skip $id -- no metadata to be had");
-    $self->Filter($id, 'no meta') unless defined $noop;
+    $self->Filter($id, 'no meta');
     $self->ClearErrors();
     return;
   }
@@ -1008,7 +1060,7 @@ sub CheckAndLoadItemIntoCandidates
       {
         $self->ReportMsg(sprintf("Skip $id ($src) -- %s in filtered volumes",
                                  (defined $inund)? "updating $inund->$src":'inserting'));
-        $self->Filter($id, $src) unless defined $noop;
+        $self->Filter($id, $src);
       }
       else
       {
@@ -1017,7 +1069,7 @@ sub CheckAndLoadItemIntoCandidates
     }
     else
     {
-      $self->AddItemToCandidates($id, $time, $record, $noop);
+      $self->AddItemToCandidates($id, $time, $record);
     }
   }
   else
@@ -1025,7 +1077,7 @@ sub CheckAndLoadItemIntoCandidates
     if (defined $inund || defined $incand || $inq)
     {
       $self->ReportMsg(sprintf("Remove $id %s (%s)\n", (defined $incand)? '--':'from und', $errs->[0]));
-      $self->RemoveFromCandidates($id, $noop);
+      $self->RemoveFromCandidates($id);
     }
   }
 }
@@ -1036,7 +1088,6 @@ sub AddItemToCandidates
   my $id     = shift;
   my $time   = shift;
   my $record = shift || $self->GetMetadata($id);
-  my $noop   = shift;
   my $quiet  = shift;
 
   return unless defined $record;
@@ -1054,7 +1105,7 @@ sub AddItemToCandidates
       my $chron2 = $record->enumchron($id2) || '';
       $self->ReportMsg(sprintf("Filter $id2%s as duplicate of $id%s",
                        (length $chron)? " ($chron)":'', (length $chron2)? " ($chron2)":'')) unless $quiet;
-      $self->Filter($id2, 'duplicate') unless $noop;
+      $self->Filter($id2, 'duplicate');
     }
   }
   my $project = $self->GetCandidateProject($id, $record);
@@ -1068,8 +1119,8 @@ sub AddItemToCandidates
   {
     $self->ReportMsg(sprintf("Add $id to candidates for project '$project' ($proj)")) unless $quiet;
     my $sql = 'INSERT INTO candidates (id,time,newproject) VALUES (?,?,?)';
-    $self->PrepareSubmitSql($sql, $id, $time, $proj) unless $noop;
-    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) unless $noop;
+    $self->PrepareSubmitSql($sql, $id, $time, $proj);
+    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
   }
   else
   {
@@ -1079,7 +1130,7 @@ sub AddItemToCandidates
     {
       $self->ReportMsg("Update $id project from $proj2 to $proj");
       my $sql = 'UPDATE candidates SET newproject=? WHERE id=?';
-      $self->PrepareSubmitSql($sql, $proj, $id) unless $noop;
+      $self->PrepareSubmitSql($sql, $proj, $id);
     }
     my $sql = 'SELECT newproject FROM queue WHERE id=? AND source="candidates"';
     $proj2 = $self->SimpleSqlGet($sql, $id);
@@ -1087,19 +1138,19 @@ sub AddItemToCandidates
     {
       $self->ReportMsg("Update $id queue project from $proj2 to $proj");
       my $sql = 'UPDATE queue SET newproject=? WHERE id=?';
-      $self->PrepareSubmitSql($sql, $proj, $id) unless $noop;
+      $self->PrepareSubmitSql($sql, $proj, $id);
     }
   }
-  if ($self->GetSystemVar('cri') && defined $self->CheckForCRI($id, $noop, $quiet))
+  if ($self->GetSystemVar('cri') && defined $self->CheckForCRI($id, $quiet))
   {
     $self->ReportMsg("Filter $id as CRI") unless $quiet;
-    $self->Filter($id, 'cross-record inheritance') unless $noop;
+    $self->Filter($id, 'cross-record inheritance');
   }
   else
   {
-    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id) unless $noop;
+    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
   }
-  $self->UpdateMetadata($id, 1, $record) unless $noop;
+  $self->UpdateMetadata($id, 1, $record);
 }
 
 # Returns the gid of the determination inheriting from, or undef if no inheritance.
@@ -1107,7 +1158,6 @@ sub CheckForCRI
 {
   my $self  = shift;
   my $id    = shift;
-  my $noop  = shift;
   my $quiet = shift;
 
   my $cri = $self->get('criModule');
@@ -1122,7 +1172,7 @@ sub CheckForCRI
   {
     $self->ReportMsg("Adding CRI for $id ($gid)") unless $quiet;
     my $sql = 'INSERT INTO cri (id,gid) VALUES (?,?)';
-    $self->PrepareSubmitSql($sql, $id, $gid) unless $noop;
+    $self->PrepareSubmitSql($sql, $id, $gid);
     return $gid;
   }
   return undef;
@@ -1419,7 +1469,6 @@ sub AddItemToQueueOrSetItemActive
   my $override = shift;
   my $src      = shift || 'adminui';
   my $user     = shift || $self->get('user');
-  my $noop     = shift || undef;
   my $record   = shift || undef;
   my $project  = shift || 1;
   my $ticket   = shift || undef;
@@ -1452,7 +1501,7 @@ sub AddItemToQueueOrSetItemActive
       $sql = 'UPDATE queue SET priority=?,time=NOW(),source=?,'.
              'newproject=?,added_by=?,ticket=? WHERE id=?';
       $self->PrepareSubmitSql($sql, $priority, $src,
-                              $project, $user, $ticket, $id) unless $noop;
+                              $project, $user, $ticket, $id);
       push @msgs, 'queue item updated';
       $stat = 2;
       push @msgs, $rlink if $n;
@@ -1479,14 +1528,14 @@ sub AddItemToQueueOrSetItemActive
       my $sql = 'INSERT INTO queue (id,priority,source,'.
                 'newproject,added_by,ticket) VALUES (?,?,?,?,?,?)';
       $self->PrepareSubmitSql($sql, $id, $priority, $src,
-                              $project, $user, $ticket) unless $noop;
-      $self->UpdateMetadata($id, 1, $record) unless $noop;
-      $self->UpdateQueueRecord(1, $src) unless $noop;
+                              $project, $user, $ticket);
+      $self->UpdateMetadata($id, 1, $record);
+      $self->UpdateQueueRecord(1, $src);
     }
   }
   my $msg = ucfirst join '; ', @msgs;
   my $sql = 'UPDATE queue SET issues=? WHERE id=?';
-  $self->PrepareSubmitSql($sql, $msg, $id) unless $noop;
+  $self->PrepareSubmitSql($sql, $msg, $id);
   return {'status' => $stat, 'msg' => $msg};
 }
 
@@ -3523,8 +3572,8 @@ sub CanChangeToUser
   my $him  = shift;
 
   return 1 if $self->SameUser($me, $him);
-  my $where = $self->WhereAmI();
-  if (defined $where && $where !~ /^training/i)
+  my $instance = $self->get('instance');
+  if ($instance ne 'production' && $instance ne 'crms-training')
   {
     return 0 if $me eq $him;
     return 1 if $self->IsUserAdmin($me);
@@ -6747,20 +6796,15 @@ sub SetSystemStatus
   $self->PrepareSubmitSql($sql, $status, $msg);
 }
 
-# Returns name of system, or undef for production
+# Returns capitalized name of system
 sub WhereAmI
 {
   my $self = shift;
 
-  my $where = undef;
-  my $dev = $self->get('dev');
-  if ($dev)
-  {
-    if ($dev eq '1') { $where = 'Dev'; }
-    elsif ($dev eq 'crms-training') { $where = 'Training'; }
-    else { $where = $dev. ' Dev'; }
-  }
-  return $where;
+  my $instance = $self->get('instance') || 'dev';
+  $instance = "dev ($instance)" unless $instance eq 'production' or $instance eq 'crms-training' or $instance eq 'dev';
+  $instance = 'training' if $instance eq 'crms-training';
+  return ucfirst $instance;
 }
 
 sub DevBanner
@@ -6768,12 +6812,13 @@ sub DevBanner
   my $self = shift;
 
   my $where = $self->WhereAmI();
-  if (defined $where)
+  if ($where ne 'Production')
   {
     $where .= ' | Production DB' if $self->get('pdb');
     $where .= ' | Training DB' if $self->get('tdb');
+    return '[ '. $where. ' ]';
   }
-  return '[ '. $where. ' ]' if defined $where;
+  return undef;
 }
 
 sub SelfURL
@@ -6781,11 +6826,8 @@ sub SelfURL
   my $self = shift;
 
   my $url = 'quod.lib.umich.edu';
-  my $dev = $self->get('dev');
-  if ($dev)
-  {
-    $url = $dev . '.' . $url if $dev eq 'crms-training' or $dev eq 'moseshll';
-  }
+  my $instance = $self->get('instance') || 'test';
+  $url = $instance . '.' . $url if $instance ne 'production';
   return 'https://' . $url;
 }
 
@@ -6793,10 +6835,10 @@ sub IsTrainingArea
 {
   my $self = shift;
 
-  my $where = $self->WhereAmI();
-  return (defined $where && $where =~ m/^training/i);
+  return $self->get('instance') eq 'crms-training';
 }
 
+# FIXME: delete this
 sub ResetButton
 {
   my $self = shift;
@@ -8258,7 +8300,7 @@ sub SubjectLine
   my $self = shift;
   my $rest = shift || '<No Subject>';
 
-  return sprintf "%s %s: $rest", $self->System(), $self->WhereAmI() || 'Prod';
+  return sprintf "%s %s: $rest", $self->System(), $self->WhereAmI();
 }
 
 sub GetClosedTickets

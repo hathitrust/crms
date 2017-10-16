@@ -1,7 +1,10 @@
 #!/usr/bin/perl
 
-my ($DLXSROOT, $DLPS_DEV);
-BEGIN { $DLXSROOT = $ENV{'DLXSROOT'}; $DLPS_DEV = $ENV{'DLPS_DEV'}; }
+my $DLXSROOT;
+BEGIN
+{
+  $DLXSROOT = $ENV{'DLXSROOT'};
+}
 
 use strict;
 use CGI;
@@ -16,13 +19,12 @@ my $sys =  $cgi->param('sys');
 $sys = 'crms' unless $sys;
 $cgi->param('sys', $sys) if $sys and $sys ne 'crms';
 my $crms = CRMS->new(
-        logFile      =>   "$DLXSROOT/prep/c/crms/log_inserts.txt",
-        sys          =>   $sys,
-        verbose      =>   0,
-        root         =>   $DLXSROOT,
-        dev          =>   $DLPS_DEV,
-        pdb          => $cgi->param('pdb')
-        );
+        logFile => $DLXSROOT. '/prep/c/crms/log_inserts.txt',
+        sys     => $sys,
+        verbose => 0,
+        root    => $DLXSROOT,
+        pdb     => $cgi->param('pdb'),
+        tdb     => $cgi->param('tdb'));
 
 my $ins = Inserts->new('crms'=>$crms);
 my $editing = $cgi->param('editing');

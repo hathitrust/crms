@@ -106,6 +106,9 @@ function CheckAllTx(box,id)
 [% END %]
 
 [% IF ids %]
+  [% IF noop %]
+    [% crms.set('noop', 1) %]
+  [% END %]
   <br/>
   <table class="exportStats" style="width:33%;">
   [% FOREACH id IN ids %]
@@ -115,7 +118,7 @@ function CheckAllTx(box,id)
       [% CALL crms.RemoveFromQueue(id) %]
       [% status = {'status' = 0, 'msg' = 'Deleted'} %]
     [% ELSE %]
-      [% status = crms.AddItemToQueueOrSetItemActive(id, pri, override, 'adminui', undef, noop, undef, project, ticket) %]
+      [% status = crms.AddItemToQueueOrSetItemActive(id, pri, override, 'adminui', undef, undef, project, ticket) %]
     [% END %]
     <tr><th style="width:10em;" class="nowrap"><span class="major">[% id %]</span></th>
     [% err = status.status %]

@@ -28,7 +28,7 @@ var gSys = '[% crms.Sys() %]';
     <script type="text/javascript" src="/c/crms/js/review.js"></script>
   [% END %]
   [% where = crms.WhereAmI() %]
-  [% IF where %][% title = title _ ' - ' _ where %][% END %]
+  [% IF where != 'Production' %][% title = title _ ' - ' _ where %][% END %]
     <title>[% title %] - [% crms.PageToEnglish(page) %]</title>
   </head>
   <body>
