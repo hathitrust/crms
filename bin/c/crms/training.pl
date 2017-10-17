@@ -15,8 +15,7 @@ use Term::ANSIColor qw(:constants);
 $Term::ANSIColor::AUTORESET = 1;
 
 my $usage = <<END;
-USAGE: $0 [-7Ddhnv] [-e N] [-o FILE] [-x SYS]
-          [-p PROJ [-p PROJ2...]] COUNT
+USAGE: $0 [-7Ddhnqv] [-e N] [-x SYS] [-p PROJ [-p PROJ2...]] COUNT
 
 Populates the training database with examples (correct, single reviews)
 from production so that the queue size is increased to COUNT.
@@ -129,12 +128,13 @@ my $ssql = 'e.status=4';
 $ssql .= ' OR e.status=5' unless $ease == 1;
 $ssql .= ' OR e.status=7' unless $no7;
 @projs = ('Core') unless scalar @projs;
-my $projsql = sprintf '("%s")', join '","', @projs;
-$sql = 'SELECT r.id,r.user,r.time,r.gid,e.status,e.newproject FROM historicalreviews r'.
+my $projsql = sprintf 'p.name IN ("%s")', join '","', @projs;
+$sql = 'SELECT r.id,r.user,r.time,r.gid,e.status,p.name FROM historicalreviews r'.
        ' INNER JOIN exportdata e ON r.gid=e.gid'.
        ' INNER JOIN projects p ON e.newproject=p.id'.
        ' WHERE r.user IN '. $usql.
-       ' AND p.name IN '. $projsql.
+       ' AND '. $projsql.
+       ' AND e.ticket IS NULL'.
        ' AND r.validated=1 AND e.reason!="crms" AND ('. $ssql. ')'.
        ' ORDER BY r.time DESC';
 
@@ -143,8 +143,9 @@ printf "$sql: %s results\n", (defined $ref)? scalar @$ref:'no' if $verbose;
 my $s4 = 0;
 my $s5 = 0;
 my $s7 = 0;
-$projsql = (scalar @projs)? (sprintf 'project IN ("%s")', join '","', @projs):' project IS NULL';
-$sql = 'SELECT COUNT(*) FROM queue WHERE '. $projsql;
+$sql = 'SELECT COUNT(*) FROM queue q'.
+       ' INNER JOIN projects p ON q.newproject=p.id'.
+       ' AND '. $projsql;
 print "$sql\n" if $verbose;
 my $already = $crmst->SimpleSqlGet($sql);
 $count -= $already;
@@ -197,22 +198,25 @@ foreach my $row (@{$ref})
     print RED "Skipping Inserts on $id for ease $ease\n" if $verbose;
     next;
   }
-  $sql = 'SELECT attr,reason,renDate,renNum,category,note'.
-         ' FROM historicalreviews WHERE id=? AND user=? AND time=?';
-  my $ref2 = $crmsp->SelectAll($sql, $id, $user, $time);
-  $row = $ref2->[0];
-  my $attr = $row->[0];
-  my $reason = $row->[1];
-  my $renDate = $row->[2];
-  my $renNum = $row->[3];
-  my $category = $row->[4];
-  my $note = $row->[5];
+  $sql = 'SELECT COALESCE(id,1) FROM projects WHERE name=?';
+  my $projt = $crmst->SimpleSqlGet($sql, $proj);
+  die "Can't get training instance project id for $proj\n" unless defined $projt;
   print GREEN "Add to queue: $id for project $proj\n" if $verbose;
   my $pending = ($queueOnly)? 0:1;
   $sql = 'INSERT INTO queue (id,time,pending_status,newproject) VALUES (?,?,?,?)';
-  $crmst->PrepareSubmitSql($sql, $id, $time, $pending, $proj);
+  $crmst->PrepareSubmitSql($sql, $id, $time, $pending, $projt);
   if (!$queueOnly)
   {
+    $sql = 'SELECT attr,reason,renDate,renNum,category,note'.
+         ' FROM historicalreviews WHERE id=? AND user=? AND time=?';
+    my $ref2 = $crmsp->SelectAll($sql, $id, $user, $time);
+    $row = $ref2->[0];
+    my $attr = $row->[0];
+    my $reason = $row->[1];
+    my $renDate = $row->[2];
+    my $renNum = $row->[3];
+    my $category = $row->[4];
+    my $note = $row->[5];
     my $ta = $crmst->TranslateAttr($attr);
     my $tr = $crmst->TranslateReason($reason);
     print "  $user ($ta/$tr) status $status ($time)\n" if $verbose;
