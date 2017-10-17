@@ -95,7 +95,7 @@ sub set
 
 sub Version
 {
-  return '6.5';
+  return '6.5.1';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -6327,9 +6327,9 @@ sub QueueSearchMenu
   my $searchName = shift;
   my $searchVal  = shift;
 
-  my @keys = qw(Identifier Title Author PubDate Date Status Locked Priority Reviews
+  my @keys = qw(Identifier SysID Title Author PubDate Date Status Locked Priority Reviews
                 ExpertCount Holds Source AddedBy Project Ticket);
-  my @labs = ('Identifier', 'Title', 'Author', 'Pub Date', 'Date Added', 'Status', 'Locked',
+  my @labs = ('Identifier', 'System Identifier', 'Title', 'Author', 'Pub Date', 'Date Added', 'Status', 'Locked',
               'Priority', 'Reviews', 'Expert Reviews', 'Holds', 'Source',
               'Added By', 'Project', 'Ticket');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
@@ -6348,9 +6348,9 @@ sub ExportDataSearchMenu
   my $searchName = shift;
   my $searchVal  = shift;
 
-  my @keys = qw(Identifier Title Author PubDate Date Attribute Reason
+  my @keys = qw(Identifier SysID Title Author PubDate Date Attribute Reason
                 Status Priority Source AddedBy Project Ticket GID Exported);
-  my @labs = ('Identifier', 'Title', 'Author', 'Pub Date', 'Date', 'Attribute', 'Reason',
+  my @labs = ('Identifier', 'System Identifier', 'Title', 'Author', 'Pub Date', 'Date', 'Attribute', 'Reason',
               'Status', 'Priority', 'Source', 'Added By', 'Project', 'Ticket', 'GID', 'Exported');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
