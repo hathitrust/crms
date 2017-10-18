@@ -290,8 +290,8 @@
   </div>
   [%# the frame (Stanford, HT, Cat...) %]
   <div class="divFrame" id="divFrame">
-    <iframe id="tFrame" name="tFrame" src="about:blank" style="border:none;width:100%;height:100%;"></iframe>
-    <iframe id="bFrame" name="bFrame" src="about:blank" style="border:none;width:100%;height:100%;display:none;"></iframe>
+    <iframe title="Authority 1" id="tFrame" name="tFrame" src="about:blank" style="border:none;width:100%;height:100%;"></iframe>
+    <iframe title="Authority 2" id="bFrame" name="bFrame" src="about:blank" style="border:none;width:100%;height:100%;display:none;"></iframe>
   </div>
 </div>
 
