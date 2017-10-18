@@ -5,8 +5,13 @@
     <link rel="icon" type="image/png" href="[% crms.GetSystemVar('favicon') %]"/>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
     <script type="text/javascript" src="/c/crms/js/common.js"></script>
-    <script type="text/javascript" src="/c/crms/js/datepicker.packed.js"></script>
   [% page = cgi.param('p') %]
+  [% reviewType = (page == 'review' OR page == 'corrections' OR page == 'cri' OR page == 'stanford') %]
+  [% IF reviewType %]
+    <script type="text/javascript" src="/c/crms/js/review.js"></script>
+  [% ELSE %]
+    <script type="text/javascript" src="/c/crms/js/datepicker.packed.js"></script>
+  [% END %]
   [% IF crms.get('debugSql') || crms.get('debugVar') %]
     <link rel="stylesheet" type="text/css" href="/c/crms/css/debug.css"/>
   [% END %]
@@ -23,10 +28,6 @@ var gSys = '[% crms.Sys() %]';
 -->
     </script>
     <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
-  [% reviewType = (page == 'review' OR page == 'corrections' OR page == 'cri' OR page == 'stanford') %]
-  [% IF reviewType %]
-    <script type="text/javascript" src="/c/crms/js/review.js"></script>
-  [% END %]
   [% where = crms.WhereAmI() %]
   [% IF where != 'Production' %][% title = title _ ' - ' _ where %][% END %]
     <title>[% title %] - [% crms.PageToEnglish(page) %]</title>
