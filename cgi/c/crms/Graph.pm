@@ -296,7 +296,7 @@ sub CreateReviewInstitutionGraph
 sub CreateReviewerGraph
 {
   my $self  = shift;
-  my $type  = shift;
+  my $type  = shift || 1;
   my $start = shift;
   my $end   = shift;
   my @users = @_;

@@ -1523,6 +1523,7 @@ sub AddItemToQueueOrSetItemActive
     }
     else
     {
+      # FIXME: should this also error out?
       my $src2 = $self->ShouldVolumeBeFiltered($id, $record);
       push @msgs, "should be filtered ($src2)" if defined $src2;
       my $sql = 'INSERT INTO queue (id,priority,source,'.
@@ -3676,12 +3677,15 @@ sub GetUsers
       $progress = 0.0 if $progress < 0.0;
       $progress = 1.0 if $progress > 1.0;
     }
+    $sql = 'SELECT COUNT(*) FROM users WHERE ? REGEXP CONCAT(id,".+")';
+    my $secondary = $self->SimpleSqlGet($sql, $id);
     push @users, {'id' => $id, 'name' => $row->[1], 'reviewer' => $row->[2],
                   'advanced' => $row->[3], 'expert' => $row->[4], 'admin' => $row->[5],
                   'superadmin' => $row->[6], 'kerberos' => $row->[7], 'note' => $row->[8],
                   'institution' => $row->[9], 'commitment' => $row->[10],
                   'commitmentFmt' => (100.0 *$row->[10]). '%', 'progress' => $progress,
-                  'expiration' => $expiration};
+                  'expiration' => $expiration, 'ips' => $self->GetUserIPs($id),
+                  'role' => $self->GetUserRole($id), 'secondary' => $secondary};
   }
   return \@users;
 }
@@ -6487,25 +6491,30 @@ sub GetUserIPs
   my $self = shift;
   my $user = shift || $self->get('remote_user');
 
-  my $sql = 'SELECT iprestrict FROM ht_users WHERE userid=?';
+  my $sql = 'SELECT iprestrict,mfa FROM ht_users WHERE userid=?';
   my $sdr_dbh = $self->get('ht_repository');
   if (!defined $sdr_dbh)
   {
     $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
     $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
   }
-  my $ipr;
+  my ($ipr, $mfa);
   eval {
     my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user);
     $ipr = $ref->[0]->[0];
+    $mfa = $ref->[0]->[1];
   };
   if ($@)
   {
-    my $msg = "SQL failed ($sql): " . $@;
+    my $msg = "SQL failed ($sql): ". $@;
     $self->SetError($msg);
   }
   my %ips;
-  if (defined $ipr)
+  if ($mfa)
+  {
+    $ips{'mfa'} = 1;
+  }
+  elsif (defined $ipr)
   {
     $ipr =~ s/\s//g;
     my @ips2 = split m/\|/, $ipr;
@@ -6516,7 +6525,7 @@ sub GetUserIPs
       $ips{$ip} = 1 if $ip =~ m/(\d+\.){3}\d+/;
     }
   }
-  $self->ClearErrors();
+  #$self->ClearErrors();
   return \%ips;
 }
 

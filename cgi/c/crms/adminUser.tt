@@ -43,9 +43,9 @@
 [% IF uadmin %]
   [% IF add %]
     [% IF id %]
-      [% res = crms.AddUser(id,kerberos,name,reviewer,advanced,expert,
-                            admin,superadmin,note,projects,
-                            commitment,disable) %]
+      [% res = crms.AddUser(id, kerberos, name, reviewer, advanced, expert,
+                            admin, superadmin, note, projects,
+                            commitment, disable) %]
     [% ELSE %]
       [% res = "No user ID provided" %]
     [% END %]
@@ -86,7 +86,7 @@
         <a href="[% crms.Sysify('crms?p=userRate;user=' _ userid) %]" target="_blank">
           [% u.name.replace('\s','&nbsp;') %]
         </a>
-        [% IF crms.CanChangeToUser(user,userid) %]
+        [% IF active && crms.CanChangeToUser(user,userid) %]
         <form action="crms" style="display:inline;align:right;">
           [% crms.HiddenSys() %]
           <input type="hidden" name="changeuser" value="1"/>
@@ -98,9 +98,9 @@
       <td>[% u.id %]</td>
       <td>[% u.kerberos %]</td>
       <td>
-        <a href="[% crms.Sysify('crms?p=adminUserRateInst;inst=' _ inst) %]" target="_blank">
-          [% u.institution %]
-        </a></td>
+        <a href="[% crms.Sysify('crms?p=adminUserRateInst;inst=' _ inst) %]"
+           target="_blank">[% u.institution %]</a>
+      </td>
       <td style="text-align:center;">[% IF r %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF v %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF e %][% icon %][% END %]</td>
@@ -112,39 +112,51 @@
         [% FOREACH proj IN projs %][% names.push(proj.name) %][% END %]
         [% names.join(', ') %]
       </td>
-      [% ips = crms.GetUserIPs(userid) %]
-      <td>
-      [% IF !userid.match("-expert") && !userid.match("-reviewer") &&
-         'Michigan' != u.institution && !ips.keys.size() && (r || v || e) %]
-      <span class="red">Warning: no IP address</span>
+      [% IF u.secondary %]
+        <td style="background-color:#e2e2e2;"></td>
       [% ELSE %]
-        [% ips.keys.join(', ') %]
-        [% IF !userid.match("-expert") && !userid.match("-reviewer") && r %]
-          [% role = crms.GetUserRole(userid) %]
-          [% IF "crms" != role && 'Michigan' != u.institution %]
-            <span class="red"><br/>Role <strong>[% role %]</strong></span>
-          [% END %]
-          [% exp = u.expiration %]
-          [% IF exp.status == 1 %]
-            <span class="red"><br/>Expired <strong>[% exp.expires %]</strong></span>
-          [% ELSIF exp.status == 2 %]
-            <span style="color:#FF7777;"><br/>Will expire <strong>[% exp.expires %]</strong></span>
+        <td>
+        [% IF active %]
+          [% IF u.ips.mfa %]
+            <img src="/c/crms/img/Duo.png"
+                 alt="Two-factor authentication enabled"
+                 width="20" height="20"/>
+          [% ELSIF !u.ips.keys.size() && (r || v || e) %]
+            <span class="red">Warning: no IP address</span>
+          [% ELSE %]
+            [% u.ips.keys.join(', ') %]
+            [% IF !userid.match("-expert") && !userid.match("-reviewer") && r %]
+              [% role = u.role %]
+              [% IF "crms" != role && 'Michigan' != u.institution %]
+                <span class="red"><br/>Role <strong>[% role %]</strong></span>
+              [% END %]
+              [% exp = u.expiration %]
+              [% IF exp.status == 1 %]
+                <span class="red"><br/>Expired <strong>[% exp.expires %]</strong></span>
+              [% ELSIF exp.status == 2 %]
+                <span style="color:#FF7777;"><br/>Will expire <strong>[% exp.expires %]</strong></span>
+              [% END %]
+            [% END %]
           [% END %]
         [% END %]
+        </td>
       [% END %]
-      </td>
-      <td>
-        [% IF u.commitment && u.commitment > 0.0 %]
-          [% u.commitmentFmt %]
-          [% IF active && uadmin %]
-            <div class="ProgressBar[% (crms.sys() == 'crmsworld')? 'Red':'' %]">
-              <div class="ProgressBarInner"
-                   style="width:[% (u.progress * 100.0) _ '%' %];">
+      [% IF u.secondary %]
+        <td style="background-color:#e2e2e2;"></td>
+      [% ELSE %]
+        <td>
+          [% IF u.commitment && u.commitment > 0.0 %]
+            [% u.commitmentFmt %]
+            [% IF active && uadmin %]
+              <div class="ProgressBar[% (crms.sys() == 'crmsworld')? 'Red':'' %]">
+                <div class="ProgressBarInner"
+                     style="width:[% (u.progress * 100.0) _ '%' %];">
+                </div>
               </div>
-            </div>
+            [% END %]
           [% END %]
-        [% END %]
-      </td>
+        </td>
+      [% END %]
       <td style="text-align:center;">[% u.note %]</td>
     </tr>
   [% END %]
@@ -162,7 +174,7 @@
     <table>
     <tr>
       <td>
-        <label for="idfield" style="float:left;width:5.5em">ID: <span class="smallishText" style="color:red;">(required)</span></label>
+        <label for="idfield" style="float:left;width:5.5em">ID: <span class="darkred smallishText">(required)</span></label>
         <input id="idfield" type="text" name="id" tabindex="1"/>
       </td>
       <td rowspan="3">
@@ -200,7 +212,7 @@
       <td colspan="2">
         <label for="commitmentfield" style="float:left;width:5.5em">Commitment:</label>
         <input id="commitmentfield" type="text" name="commitment" tabindex="5"/>
-        <span style="color:#777777;">As percent or decimal, e.g. 25% or .25</span>
+        (as percent or decimal, e.g. 25% or .25)
       </td>
     </tr>
     </table>

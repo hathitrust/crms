@@ -241,6 +241,7 @@ if (!$crms->GetAlias())
   {
     my $ip = $ENV{'REMOTE_ADDR'};
     if (!defined $ips{$ip} &&
+        !defined $ips{'mfa'} &&
         ($crms->IsUserReviewer() ||
          $crms->IsUserAdvanced() ||
          $crms->IsUserExpert()))
