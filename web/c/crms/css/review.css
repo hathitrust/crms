@@ -134,23 +134,6 @@ table.id td {
   text-align:left;
 }
 
-table.oneoff { 
-  border-spacing: 2px;
-  border-collapse: separate;
-  border-bottom: 1px solid #72859a;
-  background-color: #d0e6de;
-  font-size:12px;
-}
-
-table.oneoff th {
-  padding: 1px;
-}
-
-table.oneoff td {
-  padding: 0px 0px 0px 0px;
-  text-align:left;
-}
-
 table.search { 
   border-collapse: separate;
   border-bottom: 1px solid #72859a;
@@ -191,12 +174,6 @@ table.display td {
   text-align:left;
 }
 
-div#OneoffCont {
-  padding-top: 15px;
-  background-color: #d0e6de;
-  font-size:12px;
-}
-
 #RightsReason table {
   font-size:12px;
 }
@@ -217,10 +194,6 @@ table.ReviewError {
 
 #SubmitForm {
   margin-top: 8px;
-}
-
-#SubmitOneoffForm {
-  
 }
 
 table.reviewGrey {
@@ -305,7 +278,7 @@ td.major,tr.major {
   font-weight:bold;
 }
 
-span.red { color:#FB5252; }
+span.red { color:#EE0000; }
 span.orange { color:#EB9747; }
 
 .darkred { color:#EE0000; }
