@@ -95,7 +95,7 @@ sub set
 
 sub Version
 {
-  return '6.5.1';
+  return '6.5.2';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -6491,7 +6491,8 @@ sub GetUserIPs
   my $self = shift;
   my $user = shift || $self->get('remote_user');
 
-  my $sql = 'SELECT iprestrict,mfa FROM ht_users WHERE userid=?';
+  my $sql = 'SELECT iprestrict,mfa FROM ht_users WHERE userid=? OR email=?'.
+            ' ORDER BY IF(role="crms",1,0) DESC';
   my $sdr_dbh = $self->get('ht_repository');
   if (!defined $sdr_dbh)
   {
@@ -6500,7 +6501,7 @@ sub GetUserIPs
   }
   my ($ipr, $mfa);
   eval {
-    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user);
+    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
     $ipr = $ref->[0]->[0];
     $mfa = $ref->[0]->[1];
   };
@@ -6534,7 +6535,8 @@ sub GetUserRole
   my $self = shift;
   my $user = shift || $self->get('user');
 
-  my $sql = 'SELECT role FROM ht_users WHERE userid=?';
+  my $sql = 'SELECT role FROM ht_users WHERE userid=? OR email=?'.
+            ' ORDER BY IF(role="crms",1,0) DESC';
   my $sdr_dbh = $self->get('ht_repository');
   if (!defined $sdr_dbh)
   {
@@ -6543,7 +6545,7 @@ sub GetUserRole
   }
   my $role;
   eval {
-    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user);
+    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
     $role = $ref->[0]->[0];
   };
   if ($@)
@@ -6564,7 +6566,8 @@ sub IsUserExpired
   my %data;
   my $sql = 'SELECT DATE(expires),IF(expires<NOW(),1,'.
             'IF(DATE_SUB(expires,INTERVAL 10 DAY)<NOW(),2,0))'.
-            ' FROM ht_users WHERE userid=?';
+            ' FROM ht_users WHERE userid=? OR userid=?'.
+            ' ORDER BY IF(role="crms",1,0) DESC';
   #print "$sql<br/>\n";
   my $sdr_dbh = $self->get('ht_repository');
   if (!defined $sdr_dbh)
@@ -6573,7 +6576,7 @@ sub IsUserExpired
     $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
   }
   eval {
-    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user);
+    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
     $data{'expires'} = $ref->[0]->[0];
     $data{'status'} = $ref->[0]->[1];
   };
@@ -7885,7 +7888,8 @@ sub GetIDP
   my $self = shift;
   my $user = shift;
 
-  my $sql = 'SELECT identity_provider FROM ht_users WHERE email=? OR userid=?';
+  my $sql = 'SELECT identity_provider FROM ht_users WHERE email=? OR userid=?'.
+            ' ORDER BY IF(role="crms",1,0) DESC';
   my $sdr_dbh = $self->get('ht_repository');
   if (!defined $sdr_dbh)
   {
