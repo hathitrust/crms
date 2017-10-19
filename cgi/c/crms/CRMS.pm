@@ -5599,36 +5599,43 @@ sub StripDecimal
 sub CreateQueueReport
 {
   my $self = shift;
+  my $proj = shift;
 
-  my $sql = 'SELECT DISTINCT priority FROM queue ORDER BY priority ASC';
+  my $field = ($proj)? 'p.name':'q.priority';
+  my $sql = 'SELECT DISTINCT '. $field. ' FROM queue q'.
+            ' INNER JOIN projects p ON q.newproject=p.id'.
+            ' ORDER BY '. $field. ' ASC';
   my @pris = map {$self->StripDecimal($_->[0])} @{$self->SelectAll($sql)};
-  my $priheaders = join '', map {"<th>Priority&nbsp;$_</th>";} @pris;
-  my $report = "<table class='exportStats'>
-                <tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
+  my @headers = map {"<th>Priority $_</th>";} @pris;
+  @headers = map {"<th>$_</th>";} @pris if $proj;
+  s/\s/&nbsp;/g for @headers;
+  my $report = '<table class="exportStats">'.
+               '<tr><th>Status</th><th>Total</th>'.
+               (join '', @headers). "</tr>\n";
   foreach my $status (-1 .. 9)
   {
     my $statusClause = ($status == -1)? '':"WHERE STATUS=$status";
     $status = 'All' if $status == -1;
     my $class = ($status eq 'All')?' class="total"':'';
-    $sql = 'SELECT priority,COUNT(id) FROM queue '. $statusClause. 
-           ' GROUP BY priority ASC WITH ROLLUP';
+    $sql = 'SELECT '. $field. ',COUNT(*) FROM queue q'.
+           ' INNER JOIN projects p ON q.newproject=p.id '. $statusClause. 
+           ' GROUP BY '. $field. ' ASC WITH ROLLUP';
     my $ref = $self->SelectAll($sql);
     my $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
     $report .= sprintf("<tr><td%s>$status</td><td%s>$count</td>", $class, $class);
     $report .= $self->DoPriorityBreakdown($ref, $class, \@pris);
     $report .= "</tr>\n";
   }
-  $sql = 'SELECT priority,COUNT(id) FROM queue WHERE status=0'.
-         ' AND pending_status=0 GROUP BY priority ASC WITH ROLLUP';
+  $sql = 'SELECT '. $field. ',COUNT(q.id) FROM queue q'.
+         ' INNER JOIN projects p ON q.newproject=p.id'.
+         ' WHERE q.status=0'.
+         ' AND q.pending_status=0 GROUP BY '. $field. ' ASC WITH ROLLUP';
   my $ref = $self->SelectAll($sql);
   my $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
   my $class = ' class="major"';
   $report .= sprintf("<tr><td%s>Not&nbsp;Yet&nbsp;Active</td><td%s>$count</td>", $class, $class);
   $report .= $self->DoPriorityBreakdown($ref, $class, \@pris);
   $report .= "</tr>\n";
-  #$report .= sprintf("<tr><td class='nowrap' colspan='%d'>
-  #                        <span class='smallishText'>Note: includes both active and inactive volumes.</span></td></tr>\n",
-  #                        2+scalar @pris);
   $report .= "</table>\n";
   return $report;
 }
@@ -5729,21 +5736,32 @@ sub CreateSystemReport
 sub CreateDeterminationReport
 {
   my $self = shift;
+  my $proj = shift;
 
   my ($count,$time) = $self->GetLastExport();
   my %cts = ();
   my %pcts = ();
-  my $sql = 'SELECT DISTINCT priority FROM exportdata'.
-            ' WHERE DATE(time)=DATE(?) ORDER BY priority ASC';
+  my $field = ($proj)? 'p.name':'e.priority';
+  my $sql = 'SELECT DISTINCT '. $field. ' FROM exportdata e'.
+            ' INNER JOIN projects p ON e.newproject=p.id'.
+            ' WHERE DATE(time)=DATE(?) ORDER BY '. $field. ' ASC';
   my @pris = map {$self->StripDecimal($_->[0])} @{$self->SelectAll($sql, $time)};
+  my @headers = map {"<th>Priority $_</th>";} @pris;
+  @headers = map {"<th>$_</th>";} @pris if $proj;
+  s/\s/&nbsp;/g for @headers;
   $sql = 'SELECT COUNT(gid) FROM exportdata'.
          ' WHERE DATE(time)=DATE(?) ORDER BY priority ASC';
   my $total = $self->SimpleSqlGet($sql, $time);
   my $priheaders = join '', map {"<th>Priority&nbsp;$_</th>";} @pris;
-  my $report = "<table class='exportStats'>\n<tr><th></th><th>Total</th>$priheaders</tr>\n";
+  my $report = '<table class="exportStats">'.
+               '<tr><th></th><th>Total</th>'.
+               (join '', @headers).
+               "</tr>\n";
   foreach my $status (4 .. 9)
   {
-    $sql = 'SELECT COUNT(id) FROM exportdata WHERE status=? AND DATE(time)=DATE(?)';
+    $sql = 'SELECT COUNT(*) FROM exportdata e'.
+           ' INNER JOIN projects p ON e.newproject=p.id'.
+           ' WHERE e.status=? AND DATE(e.time)=DATE(?)';
     my $ct = $self->SimpleSqlGet($sql, $status, $time);
     my $pct = 0.0;
     eval {$pct = 100.0*$ct/$total;};
@@ -5751,16 +5769,6 @@ sub CreateDeterminationReport
     $pcts{$status} = $pct;
   }
   my $colspan = 1 + scalar @pris;
-  my %sources;
-  $sql = 'SELECT src,COUNT(gid) FROM exportdata WHERE src IS NOT NULL AND src NOT LIKE "HTS-%" GROUP BY src';
-  my $rows = $self->SelectAll($sql);
-  foreach my $row (@{$rows})
-  {
-    $sources{$row->[0]} = $row->[1];
-  }
-  $sql = 'SELECT COUNT(gid) FROM exportdata WHERE src LIKE "HTS-%"';
-  my $cnt = $self->SimpleSqlGet($sql);
-  $sources{'One-off from Jira'} = $cnt if $cnt;
   my ($count2,$time2) = $self->GetLastExport(1);
   $time2 =~ s/\s/&nbsp;/g;
   $count = 'None' unless $count;
@@ -5770,23 +5778,30 @@ sub CreateDeterminationReport
   {
     $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;%d</th><td>%d&nbsp;(%.1f%%)</td>",
                        $status, $cts{$status}, $pcts{$status});
-    $sql = 'SELECT priority,COUNT(*) FROM exportdata WHERE status=?'.
-           ' AND DATE(time)=DATE(?) GROUP BY priority ASC';
+    $sql = 'SELECT '. $field. ',COUNT(*) FROM exportdata e'.
+           ' INNER JOIN projects p ON e.newproject=p.id'.
+           ' WHERE e.status=? AND DATE(time)=DATE(?) GROUP BY '. $field. ' ASC';
     my $ref = $self->SelectAll($sql, $status, $time);
     $report .= $self->DoPriorityBreakdown($ref, undef, \@pris, $cts{$status});
     $report .= '</tr>';
   }
   $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Total</th><td>$count</td>";
-  $sql = 'SELECT priority,COUNT(gid),CONCAT(FORMAT(IF(?=0,0,(COUNT(gid)*100.0)/?),1),"%")'.
-         ' FROM exportdata where date(time)=DATE(?) GROUP BY priority ASC';
+  $sql = 'SELECT '. $field. ',COUNT(gid),CONCAT(FORMAT(IF(?=0,0,(COUNT(gid)*100.0)/?),1),"%")'.
+         ' FROM exportdata e'.
+         ' INNER JOIN projects p ON e.newproject=p.id'.
+         ' WHERE DATE(time)=DATE(?) GROUP BY '. $field. ' ASC';
   my $ref = $self->SelectAll($sql, $total, $total, $time);
   $report .= sprintf('<td class="nowrap">%s (%s)</td>', $_->[1], $_->[2]) for @{$ref};
   $report .= '</tr>';
   $report .= "<tr><th class='nowrap'>Total CRMS Determinations</th><td colspan='$colspan'>$exported</td></tr>";
-  foreach my $source (sort keys %sources)
+  $sql = 'SELECT src,COUNT(gid) FROM exportdata WHERE src IS NOT NULL'.
+         ' GROUP BY src ORDER BY src ASC';
+  $ref = $self->SelectAll($sql);
+  foreach my $row (@{$ref})
   {
-    my $n = $sources{$source};
-    $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;%s</th><td colspan='$colspan'>$n</td></tr>", $self->ExportSrcToEnglish($source));
+    my $n = $row->[1];
+    $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;%s</th><td colspan='$colspan'>$n</td></tr>",
+                       $self->ExportSrcToEnglish($row->[0]));
   }
   if ($self->Sys() ne 'crmsworld')
   {
@@ -5801,26 +5816,36 @@ sub CreateDeterminationReport
 sub CreateReviewReport
 {
   my $self = shift;
+  my $proj = shift;
 
-  my $sql = 'SELECT DISTINCT priority FROM queue ORDER BY priority ASC';
+  my $field = ($proj)? 'p.name':'q.priority';
+  my $sql = 'SELECT DISTINCT '. $field. ' FROM queue q'.
+            ' INNER JOIN projects p ON q.newproject=p.id'.
+            ' ORDER BY '. $field. ' ASC';
   my @pris = map {$self->StripDecimal($_->[0])} @{$self->SelectAll($sql)};
-  my $priheaders = join '', map {"<th>Priority&nbsp;$_</th>";} @pris;
-  my $report = "<table class='exportStats'>\n<tr><th>Status</th><th>Total</th>$priheaders</tr>\n";
-
-  $sql = 'SELECT priority,COUNT(id) FROM queue WHERE status>0'.
-         ' OR pending_status>0 GROUP BY priority ASC WITH ROLLUP';
+  my @headers = map {"<th>Priority $_</th>";} @pris;
+  @headers = map {"<th>$_</th>";} @pris if $proj;
+  s/\s/&nbsp;/g for @headers;
+  my $report = '<table class="exportStats">'.
+               '<tr><th>Status</th><th>Total</th>'.
+               (join '', @headers).
+               "</tr>\n";
+  $sql = 'SELECT '. $field. ',COUNT(*) FROM queue q'.
+         ' INNER JOIN projects p ON q.newproject=p.id'.
+         ' WHERE q.status>0 OR q.pending_status>0'.
+         ' GROUP BY '. $field. ' ASC WITH ROLLUP';
   my $ref = $self->SelectAll($sql);
   my $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
   $report .= "<tr><td class='total'>Active</td><td class='total'>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref, ' class="total"', \@pris) . "</tr>\n";
-
   # Unprocessed
-  $sql = 'SELECT priority,COUNT(*) FROM queue WHERE status=0 AND pending_status>0 GROUP BY priority WITH ROLLUP';
+  $sql = 'SELECT '. $field. ',COUNT(*) FROM queue q'.
+         ' INNER JOIN projects p ON q.newproject=p.id'.
+         ' WHERE q.status=0 AND q.pending_status>0 GROUP BY '. $field. ' WITH ROLLUP';
   $ref = $self->SelectAll($sql);
   $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
   $report .= "<tr><td class='minor'>Unprocessed</td><td class='minor'>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref, ' class="minor"', \@pris) . "</tr>\n";
-
   # Unprocessed categories
   my @unprocessed = ({'status'=>1,'name'=>'Single Review'},
                      {'status'=>2,'name'=>'Conflict'},
@@ -5829,45 +5854,41 @@ sub CreateReviewReport
                      {'status'=>8,'name'=>'Auto-Resolved'});
   foreach my $row (@unprocessed)
   {
-    $sql = 'SELECT priority,COUNT(*) from queue WHERE status=0 AND pending_status=? GROUP BY priority WITH ROLLUP';
+    $sql = 'SELECT '. $field. ',COUNT(*) from queue q'.
+           ' INNER JOIN projects p ON q.newproject=p.id'.
+           ' WHERE status=0 AND pending_status=? GROUP BY '. $field. ' WITH ROLLUP';
     $ref = $self->SelectAll($sql, $row->{'status'});
     $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
     $report .= sprintf "<tr><td>&nbsp;&nbsp;&nbsp;%s</td><td>$count</td>", $row->{'name'};
     $report .= $self->DoPriorityBreakdown($ref, '', \@pris) . "</tr>\n";
   }
-
   # Inheriting
   $sql = 'SELECT COUNT(*) FROM inherit';
   $count = $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr class='inherit'><td>Can&nbsp;Inherit</td><td colspan='%d'>$count</td>", 1+scalar @pris);
   $report .= '</tr>';
-
   # Inheriting Automatically
   $sql = 'SELECT COUNT(*) FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid'.
          ' WHERE i.status IS NULL AND (i.reason=1 OR (i.reason=12 AND (e.attr="pd" OR e.attr="pdus")))';
   $count = $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Automatically</td><td colspan='%d'>$count</td>", 1+scalar @pris);
   $report .= '</tr>';
-
   # Inheriting Pending Approval
   $sql = 'SELECT COUNT(*) FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid'.
          ' WHERE i.status IS NULL AND (i.reason!=1 AND !(i.reason=12 AND (e.attr="pd" OR e.attr="pdus")))';
   $count = $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Pending&nbsp;Approval</td><td colspan='%d'>$count</td>", 1+scalar @pris);
   $report .= '</tr>';
-
   # Approved
   $sql = 'SELECT COUNT(*) FROM inherit WHERE status=1';
   $count = $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Approved</td><td colspan='%d'>$count</td>", 1+scalar @pris);
   $report .= '</tr>';
-
   # Deleted
   $sql = 'SELECT COUNT(*) FROM inherit WHERE status=0';
   $count = $self->SimpleSqlGet($sql);
   $report .= sprintf("<tr><td>&nbsp;&nbsp;&nbsp;Deleted</td><td colspan='%d'>$count</td>", 1+scalar @pris);
   $report .= '</tr>';
-
   # Processed
   my @processed = ({'status'=>2,'name'=>'Conflict'},
                    {'status'=>3,'name'=>'Provisional Match'},
@@ -5876,15 +5897,18 @@ sub CreateReviewReport
                    {'status'=>7,'name'=>'Expert-Accepted'},
                    {'status'=>8,'name'=>'Auto-Resolved'},
                    {'status'=>9,'name'=>'Inheritance'});
-  $sql = 'SELECT priority,COUNT(*) FROM queue WHERE status!=0 GROUP BY priority WITH ROLLUP';
+  $sql = 'SELECT '. $field. ',COUNT(*) FROM queue q'.
+         ' INNER JOIN projects p ON q.newproject=p.id'.
+         ' WHERE status!=0 GROUP BY '. $field. ' WITH ROLLUP';
   $ref = $self->SelectAll($sql);
   $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
   $report .= "<tr><td class='minor'>Processed</td><td class='minor'>$count</td>";
   $report .= $self->DoPriorityBreakdown($ref, ' class="minor"', \@pris) . "</tr>\n";
-
   foreach my $row (@processed)
   {
-    $sql = 'SELECT priority,COUNT(*) from queue WHERE status=? GROUP BY priority WITH ROLLUP';
+    $sql = 'SELECT '. $field. ',COUNT(*) from queue q'.
+           ' INNER JOIN projects p ON q.newproject=p.id'.
+           ' WHERE q.status=? GROUP BY '. $field. ' WITH ROLLUP';
     $ref = $self->SelectAll($sql, $row->{'status'});
     $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
     if ($count)
@@ -5893,7 +5917,6 @@ sub CreateReviewReport
       $report .= $self->DoPriorityBreakdown($ref, '', \@pris) . "</tr>\n";
     }
   }
-  
   $report .= sprintf("<tr><td class='nowrap' colspan='%d'>
                       <span class='smallishText'>Last processed %s</span>
                       </td></tr>\n", 2+scalar @pris, $self->GetLastStatusProcessedTime());
@@ -5920,7 +5943,7 @@ sub DoPriorityBreakdown
     $breakdown{$pri} = $row->[1];
   }
   my $bd = '';
-  foreach my $key (sort {$a <=> $b} keys %breakdown)
+  foreach my $key (@{$pris})
   {
     my $ct = $breakdown{$key};
     my $pct = '';
