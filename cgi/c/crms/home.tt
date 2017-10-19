@@ -83,6 +83,7 @@ window.onload = function(e)
   [% CALL crms.UnlockItem(cgi.param('unlock')) %]
 [% END %]
 
+<main>
 <table class="mainnav">
 [% menus = crms.Menus() %]
 [% i = 0 %]
@@ -118,11 +119,7 @@ window.onload = function(e)
     [% items = crms.MenuItems(id) %]
     [% FOREACH item IN items %]
       [% target = (item.2)? ' target="' _ item.2 _ '"':'' %]
-      [% href = item.1 %]
-      [% IF NOT href.match('(?i)javascript') %]
-        [% href = crms.Sysify(href) %]
-      [% END %]
-      <a href="[% href %]"[% target %]>[% item.0.replace('\s', '&nbsp;') %]</a><br/>
+      <a href="[% item.1 %]"[% target %] [% item.3 %]>[% item.0.replace('\s', '&nbsp;') %]</a><br/>
     [% END %]
     </td>
   [% IF i % 2 != 0 || j >= of %]</tr>[% END %]
@@ -160,5 +157,5 @@ window.onload = function(e)
 </form>
 <br/>
 [% END %]
-
+</main>
 [% INCLUDE footer.tt %]

@@ -7636,7 +7636,7 @@ sub Menus
   return \@all;
 }
 
-# Returns aref of arefs to name, url, and target
+# Returns aref of arefs to name, url, target, and rel
 sub MenuItems
 {
   my $self = shift;
@@ -7645,8 +7645,7 @@ sub MenuItems
 
   $menu = $self->SimpleSqlGet('SELECT id FROM menus WHERE docs=1 LIMIT 1') if $menu eq 'docs';
   my $q = $self->GetUserQualifications($user);
-  my $inst = $self->GetUserProperty($user, 'institution');
-  my $iname = $self->GetInstitutionName($inst, 1);
+  my ($inst, $iname);
   my $sql = 'SELECT name,href,restricted,target FROM menuitems WHERE menu=? ORDER BY n ASC';
   my $ref = $self->SelectAll($sql, $menu);
   my @all = ();
@@ -7655,9 +7654,16 @@ sub MenuItems
     my $r = $row->[2];
     if ($self->DoQualificationsAndRestrictionsOverlap($q, $r))
     {
+      $inst = $self->GetUserProperty($user, 'institution') unless defined $inst;
+      $iname = $self->GetInstitutionName($inst, 1) unless defined $iname;
       my $name = $row->[0];
       $name =~ s/__INST__/$iname/;
-      push @all, [$name, $row->[1], $row->[3]];
+      my $rel = '';
+      if ($row->[3] && $row->[3] eq '_blank' && $row->[1] =~ m/^http/i)
+      {
+        $rel = 'rel="noopener"';
+      }
+      push @all, [$name, $self->Sysify($row->[1]), $row->[3], $rel];
     }
   }
   return \@all;
@@ -7923,6 +7929,7 @@ sub Sysify
   my $self = shift;
   my $url  = shift;
 
+  return $url if $url =~ m/^https/ or $url =~ m/\.pdf(#.*)?$/;
   my $sys = $self->Sys();
   $url = Utilities::AppendParam($url, 'sys', $sys) if $sys ne 'crms';
   my $pdb = $self->get('pdb');
