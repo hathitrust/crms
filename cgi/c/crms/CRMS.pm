@@ -6861,33 +6861,6 @@ sub IsTrainingArea
   return $self->get('instance') eq 'crms-training';
 }
 
-# FIXME: delete this
-sub ResetButton
-{
-  my $self = shift;
-  my $nuke = shift;
-
-  return unless $self->IsTrainingArea();
-  if ($nuke)
-  {
-    my $sql = 'SELECT id FROM queue WHERE status<4'.
-              ' AND id IN (SELECT DISTINCT id FROM reviews)';
-    my $ref = $self->SelectAll($sql);
-    foreach my $row (@{$ref})
-    {
-      my $id = $row->[0];
-      $self->RemoveFromQueue($id);
-      $self->PrepareSubmitSql('DELETE FROM reviews WHERE id=?', $id);
-    }
-  }
-  else
-  {
-    $self->PrepareSubmitSql('DELETE FROM reviews WHERE priority>0');
-    $self->PrepareSubmitSql('DELETE FROM queue WHERE priority>0');
-  }
-  $self->PrepareSubmitSql('UPDATE queue SET status=0,pending_status=0,expcnt=0 WHERE id NOT IN (SELECT DISTINCT id FROM reviews)');
-}
-
 sub Hostname
 {
   my $self = shift;
