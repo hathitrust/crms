@@ -105,7 +105,7 @@
               <option>Select Help Documentation</option>
               [% items = crms.MenuItems('docs') %]
               [% FOREACH item IN items %]
-                [% IF ! item.3 %]<option value="[% item.1 %]">[% item.0 %]</option>[% END %]
+                <option value="[% item.1 %]">[% item.0 %]</option>
               [% END %]
             </select>
           </td>
