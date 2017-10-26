@@ -95,7 +95,7 @@ sub set
 
 sub Version
 {
-  return '6.5.3';
+  return '6.5.4';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -686,7 +686,7 @@ sub ExportReviews
   {
     my ($attr,$reason) = $self->GetFinalAttrReason($id);
     my $export = $self->CanExportVolume($id, $attr, $reason, $quiet);
-    if ($export)
+    if ($export && !$training && !$quiet)
     {
       print $fh "$id\t$attr\t$reason\t$user\tnull\n";
     }
