@@ -11,17 +11,17 @@ use CGI;
 use CRMS;
 
 my $cgi  = new CGI;
-my $id   = $cgi->param('id');
-my $sys =  $cgi->param('sys');
-$sys = 'crms' unless $sys;
+my $sys =  $cgi->param('sys') || 'crms';
+my $pdb = $cgi->param('pdb');
+my $tdb = $cgi->param('tdb');
 my $crms = CRMS->new(logFile => $DLXSROOT. '/prep/c/crms/log_getRenewalDate.txt',
                      sys     => $sys,
                      verbose => 0,
                      root    => $DLXSROOT,
-                     pdb     => $cgi->param('pdb'),
-                     tdb     => $cgi->param('tdb'));
-
-my $date = $crms->GetRenDate( $id );
+                     pdb     => $pdb,
+                     tdb     => $tdb);
+my $id  = $cgi->param('id');
+my $date = $crms->GetRenDate($id);
 
 if ($date eq '') { print $cgi->header( -status => "400" ); }
 else

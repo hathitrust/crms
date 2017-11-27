@@ -13,14 +13,15 @@ use Inserts;
 use JSON::XS;
 
 my $cgi  = new CGI;
-my $sys  = $cgi->param('sys');
-$sys = 'crms' unless $sys;
+my $sys  = $cgi->param('sys') || 'crms';
+my $pdb = $cgi->param('pdb');
+my $tdb = $cgi->param('tdb');
 my $crms = CRMS->new(logFile => "$DLXSROOT/prep/c/crms/log_getInsertsInfo.txt",
                      sys     => $sys,
                      verbose => 0,
                      root    => $DLXSROOT,
-                     pdb     => $cgi->param('pdb'),
-                     tdb     => $cgi->param('tdb'));
+                     pdb     => $pdb,
+                     tdb     => $tdb);
 
 my $ins = Inserts->new(crms => $crms);
 my $id = $cgi->param('id');
