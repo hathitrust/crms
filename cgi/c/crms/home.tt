@@ -40,8 +40,8 @@ window.onload = function(e)
 [% END %]
 
 [% projs = crms.GetUserProjects() %]
+[% cp = crms.GetUserCurrentProject() %]
 [% IF projs.size > 1 %]
-  [% cp = crms.GetUserProperty(undef, 'newproject') %]
   <form action="crms">
     <input type="hidden" name="projectForm" value="1"/>
     [% crms.HiddenSys() %]

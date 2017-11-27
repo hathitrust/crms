@@ -95,7 +95,7 @@ sub set
 
 sub Version
 {
-  return '6.5.5';
+  return '6.5.6';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -8380,8 +8380,7 @@ sub GetUserCurrentProject
   {
     $sql = 'SELECT project FROM projectusers WHERE user=? LIMIT 1';
     $proj = $self->SimpleSqlGet($sql, $user);
-    $sql = 'UPDATE users SET newproject=? WHERE id=?';
-    $proj = $self->PrepareSubmitSql($sql, $proj, $user);
+    $self->SetUserCurrentProject($user, $proj);
   }
   return $proj;
 }
