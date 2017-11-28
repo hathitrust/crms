@@ -28,6 +28,7 @@ with latest rights DB timestamp between them.
 -h      Print this help message.
 -l      Do not clear old locks.
 -m MAIL Send report to MAIL. May be repeated for multiple recipients.
+-N      Do not check no meta volumes in queue for priority restoration.
 -p      Run in production.
 -q      Do not update queue.
 -s      Do not recalculate monthly stats.
@@ -38,7 +39,7 @@ END
 
 my $instance;
 my ($skipAttrReason, $skipCandidates, $skipExport, $help, $skipCRI,
-    $skipLocks, @mails, $production, $skipQueue, $skipStats, $training,
+    $skipLocks, @mails, $skipQueueNoMeta, $production, $skipQueue, $skipStats, $training,
     $verbose, $sys);
 
 Getopt::Long::Configure ('bundling');
@@ -50,6 +51,7 @@ die 'Terminating' unless GetOptions(
            'h|?'  => \$help,
            'l'    => \$skipLocks,
            'm:s@' => \@mails,
+           'N'    => \$skipQueueNoMeta,
            'p'    => \$production,
            'q'    => \$skipQueue,
            's'    => \$skipStats,
@@ -146,12 +148,20 @@ else
   $crms->ReportMsg('<b>Done</b> clearing stale locks.', 1);
 }
 
-if ($skipLocks) { $crms->ReportMsg('-a flag set; skipping attr/reason sync.', 1); }
+if ($skipAttrReason) { $crms->ReportMsg('-a flag set; skipping attr/reason sync.', 1); }
 else
 {
   $crms->ReportMsg('Starting to synchronize attr/reason tables with Rights Database.', 1);
   $crms->AttrReasonSync();
   $crms->ReportMsg('<b>Done</b> synchronizing attr/reasons.', 1);
+}
+
+if ($skipQueueNoMeta) { $crms->ReportMsg('-N flag set; skipping queue no meta restoration.', 1); }
+else
+{
+  $crms->ReportMsg('Starting to restore queue no meta volumes.', 1);
+  $crms->UpdateQueueNoMeta();
+  $crms->ReportMsg('<b>Done</b> restoring queue no meta volumes.', 1);
 }
 
 my $r = $crms->GetErrors();

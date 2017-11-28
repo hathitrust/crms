@@ -95,7 +95,7 @@ sub set
 
 sub Version
 {
-  return '6.5.6';
+  return '6.5.7';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -4965,7 +4965,7 @@ sub GetMetadata
   my $id   = shift;
 
   use Metadata;
-  return Metadata->new('id' => $id, 'crms' => $self);
+  $self->get($id) || Metadata->new('id' => $id, 'crms' => $self);
 }
 
 sub BarcodeToId
@@ -5290,7 +5290,6 @@ sub GetNextItemForReview
   my $test = shift;
 
   my $id = undef;
-  my $err = undef;
   my $sql = undef;
   eval {
     my $proj = $self->GetUserCurrentProject($user);
@@ -5311,7 +5310,6 @@ sub GetNextItemForReview
       $excludeh = ' AND NOT EXISTS (SELECT * FROM historicalreviews r3 WHERE r3.id=q.id AND r3.user IN '. $wc. ')';
       push @params, @{$inc};
     }
-    
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,'.
            'SHA2(CONCAT(?,q.id),0) AS hash,q.priority,q.newproject'.
            ' FROM queue q WHERE q.newproject=? AND q.expcnt=0'.
@@ -5341,7 +5339,22 @@ sub GetNextItemForReview
       }
       else
       {
-        $err = $self->LockItem($id2, $user);
+        my $err;
+        my $record = $self->GetMetadata($id2);
+        $self->ClearErrors();
+        if (!$record)
+        {
+          $err = 'No Record Found';
+          my $pri2 = ($pri == 0)? -3.14:-$pri;
+          $self->Note("No record found for $id2, downgrading priority from $pri to $pri2.");
+          $sql = 'UPDATE queue SET priority=? WHERE id=?';
+          $self->PrepareSubmitSql($sql, $pri2, $id2);
+        }
+        else
+        {
+          $self->set($id2, $record);
+          $err = $self->LockItem($id2, $user);
+        }
         if (!$err)
         {
           $id = $id2;
@@ -5357,6 +5370,35 @@ sub GetNextItemForReview
     $self->SetError($err);
   }
   return $id;
+}
+
+# Called as part of overnight processing,
+# iterates through anything that was downgraded to negative priority by the
+# queueing algorithm, restoring original priority.
+# Anything above priority 0 is set to negative, and priority 0 is set to -3.14.
+sub UpdateQueueNoMeta
+{
+  my $self = shift;
+
+  my $sql = 'SELECT id,priority FROM queue WHERE priority<0';
+  my $ref = $self->SelectAll($sql);
+  foreach my $row (@{$ref})
+  {
+    my $id = $row->[0];
+    my $pri = $row->[1];
+    my $record = $self->GetMetadata($id);
+    if (defined $record)
+    {
+      my $newpri = ($pri == -3.14)? 0:-$pri;
+      $self->ReportMsg("$id: restoring priority from $pri to $newpri");
+      $sql = 'UPDATE queue SET priority=? WHERE id=?';
+      $self->PrepareSubmitSql($sql, $newpri, $id);
+    }
+    else
+    {
+      $self->ReportMsg("<b>$id</b>: still no meta, leaving priority at $pri");
+    }
+  }
 }
 
 sub GetNextCorrectionForReview
@@ -8378,7 +8420,7 @@ sub GetUserCurrentProject
   my $ct = $self->SimpleSqlGet($sql, $proj, $user);
   if (!$ct)
   {
-    $sql = 'SELECT project FROM projectusers WHERE user=? LIMIT 1';
+    $sql = 'SELECT project FROM projectusers WHERE user=? ORDER BY project ASC LIMIT 1';
     $proj = $self->SimpleSqlGet($sql, $user);
     $self->SetUserCurrentProject($user, $proj);
   }
