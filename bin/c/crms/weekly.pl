@@ -17,7 +17,7 @@ use Utilities;
 use Encode;
 
 my $usage = <<'END';
-USAGE: $0 [-hlpv] [-m USER [-m USER...]]
+USAGE: $0 [-hlptv] [-m USER [-m USER...]]
 
 Sends weekly activity reports.
 
@@ -25,6 +25,7 @@ Sends weekly activity reports.
 -l       Send to the MCommunity list for each CRMS system.
 -m MAIL  Also send report to MAIL. May be repeated for multiple recipients.
 -p       Run in production.
+-t       Run in training.
 -v       Be verbose.
 END
 
@@ -33,6 +34,7 @@ my $instance;
 my $lists;
 my @mails;
 my $production;
+my $training;
 my $sys;
 my $verbose = 0;
 
@@ -41,8 +43,10 @@ die 'Terminating' unless GetOptions('h|?'  => \$help,
            'l'    => \$lists,
            'm:s@' => \@mails,
            'p'    => \$production,
+           't'    => \$training,
            'v+'   => \$verbose);
 $instance = 'production' if $production;
+$instance = 'crms-training' if $training;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
@@ -141,7 +145,7 @@ if (scalar @mails)
 {
   my $subj = $crms->SubjectLine('Wednesday Data Report');
   @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
-  my $to = join ',', keys %mails;
+  my $to = join ',', @mails;
   print "Sending to $to\n" if $verbose;
   use Encode;
   use Mail::Sendmail;
