@@ -5403,33 +5403,8 @@ sub UpdateQueueNoMeta
 
 sub GetNextCorrectionForReview
 {
-  my $self = shift;
-  my $user = shift;
-
-  my $id = undef;
-  my $err = undef;
-  my $sql = 'SELECT c.id FROM corrections c WHERE c.locked IS NULL AND status IS NULL ORDER BY time DESC';
-  eval {
-    my $ref = $self->SelectAll($sql);
-    foreach my $row (@{$ref})
-    {
-      my $id2 = $row->[0];
-      $err = $self->LockItem($id2, $user, 0, 1);
-      if (!$err)
-      {
-        $id = $id2;
-        last;
-      }
-    }
-  };
-  $self->SetError($@) if $@;
-  if (!$id)
-  {
-    $err = sprintf "Could not get a correction for $user to review%s.", ($err)? " ($err)":'';
-    $err .= "\n$sql" if $sql;
-    $self->SetError($err);
-  }
-  return $id;
+  require 'Corrections.pm';
+  return Corrections::GetNextCorrectionForReview(@_);
 }
 
 # Checks whether the attributes and reasons tables are up to date with the Rights DB.
