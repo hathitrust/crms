@@ -95,7 +95,7 @@ sub set
 
 sub Version
 {
-  return '6.5.7';
+  return '6.6';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -8118,6 +8118,13 @@ sub Unescape
 
   use URI::Escape;
   return uri_unescape(shift);
+}
+
+sub EscapeHTML
+{
+  my $self = shift;
+
+  return CGI::escapeHTML(shift);
 }
 
 #046	##$f1899$g1961
