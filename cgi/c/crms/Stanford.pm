@@ -33,6 +33,7 @@ sub GetStanfordData
     $self->SetError('Stanford parse error for '. $url);
     return;
   }
+  $json->{'response'}->{'json'} = $res->content;
   return $json->{'response'};
 }
 
