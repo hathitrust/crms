@@ -5294,12 +5294,16 @@ sub GetNextItemForReview
   eval {
     my $proj = $self->GetUserCurrentProject($user);
     my @params = ($user, $proj);
-    my $order = 'q.priority DESC, cnt DESC, hash, q.time ASC';
-    ####$order = 'hash';
-    #### #Random de-prioritization will interfere withe the CRMS US
-    #### #State gov docs project, so this needs a system var to override.
-    ####$order = 'q.priority DESC,'.$order if rand()<.25 and !$self->GetSystemVar('alwaysPrioritize');
-    ####$order = 'cnt DESC,'.$order if rand()<.25;
+    my @orders = ('q.priority DESC', 'cnt DESC', 'hash', 'q.time ASC');
+    $sql = 'SELECT group_volumes FROM projects WHERE id=?';
+    my $gv = $self->SimpleSqlGet($sql, $proj);
+    my $sysid;
+    if ($gv)
+    {
+      $sql = 'SELECT b.sysid FROM reviews r INNER JOIN bibdata b ON r.id=b.id'.
+             ' WHERE r.user=? ORDER BY r.time DESC LIMIT 1';
+      $sysid = $self->SimpleSqlGet($sql, $user);
+    }
     my ($excludeh, $excludei) = ('', '');
     my $inc = $self->GetUserIncarnations($user);
     my $wc = $self->WildcardList(scalar @{$inc});
@@ -5310,13 +5314,20 @@ sub GetNextItemForReview
       $excludeh = ' AND NOT EXISTS (SELECT * FROM historicalreviews r3 WHERE r3.id=q.id AND r3.user IN '. $wc. ')';
       push @params, @{$inc};
     }
+    if (defined $sysid)
+    {
+      # First order, last param (assumes any order param will be last).
+      # Adding any additional parameterized ordering will be trickier.
+      unshift @orders, 'IF(b.sysid=?,1,0) DESC';
+      push @params, $sysid;
+    }
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,'.
-           'SHA2(CONCAT(?,q.id),0) AS hash,q.priority,q.newproject'.
-           ' FROM queue q WHERE q.newproject=? AND q.expcnt=0'.
+           'SHA2(CONCAT(?,q.id),0) AS hash,q.priority,q.project,b.sysid'.
+           ' FROM queue q INNER JOIN bibdata b ON q.id=b.id'.
+           ' WHERE q.project=? AND q.expcnt=0'.
            ' AND q.locked IS NULL AND q.status<2'.
            $excludei. $excludeh.
-           ' HAVING cnt<2 '.
-           ' ORDER BY '. $order;
+           ' HAVING cnt<2 ORDER BY '. join ',', @orders;
     if (defined $test)
     {
       $sql .= ' LIMIT 5';
@@ -5330,9 +5341,10 @@ sub GetNextItemForReview
       my $hash = $row->[2];
       my $pri = $row->[3];
       $proj = $row->[4];
+      my $sysid = $row->[5];
       if (defined $test)
       {
-        printf "  $id2 %s %s ($cnt, %s...) (P %s Proj %s)\n",
+        printf "  $id2 ($sysid) %s %s ($cnt, %s...) (P %s Proj %s)\n",
                $self->GetAuthor($id2), $self->GetTitle($id2),
                uc substr($hash, 0, 8), $pri, $proj;
         $id = $id2 unless defined $id;
@@ -8462,7 +8474,7 @@ sub GetProjectsRef
             ' WHERE pu.project=p.id AND u.reviewer+u.advanced+u.expert+u.admin+u.superadmin>0),'.
             '(SELECT COUNT(*) FROM queue q WHERE q.newproject=p.id),'.
             '(SELECT COUNT(*) FROM candidates c WHERE c.newproject=p.id),'.
-            '(SELECT COUNT(*) FROM exportdata e WHERE e.newproject=p.id),p.autoinherit'.
+            '(SELECT COUNT(*) FROM exportdata e WHERE e.newproject=p.id),p.autoinherit,p.group_volumes'.
             ' FROM projects p ORDER BY p.id ASC';
   my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
@@ -8470,7 +8482,7 @@ sub GetProjectsRef
     push @projects, {'id' => $row->[0], 'name' => $row->[1], 'restricted' => $row->[2],
                      'color' => $row->[3], 'userCount' => $row->[4], 'queueCount' => $row->[5],
                      'candidatesCount' => $row->[6], 'determinationsCount' => $row->[7],
-                     'autoinherit' => $row->[8]};
+                     'autoinherit' => $row->[8], 'group_volumes' => $row->[9]};
     my $ref2 = $self->SelectAll('SELECT rights FROM projectrights WHERE newproject=?', $row->[0]);
     $projects[-1]->{'rights'} = [map {$_->[0]} @{$ref2}];
     $ref2 = $self->SelectAll('SELECT category FROM projectcategories WHERE project=?', $row->[0]);

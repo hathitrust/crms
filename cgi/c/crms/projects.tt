@@ -293,6 +293,10 @@ function populateProject(data, table)
   cell.innerHTML = (data.autoinherit == 1)? '<img width="16" height="16" alt="Checked" src="/c/crms/CheckIcon.png"/>':'';
   cell.style.textAlign = 'center';
   cell = row.insertCell(7);
+  cell.className = 'nowrap';
+  cell.innerHTML = (data.group_volumes == 1)? '<img width="16" height="16" alt="Checked" src="/c/crms/CheckIcon.png"/>':'';
+  cell.style.textAlign = 'center';
+  cell = row.insertCell(8);
   var input = document.createElement('input');
   input.setAttribute('type', 'color');
   input.id = data.id+'color';
@@ -393,6 +397,7 @@ function addProject(name)
       <th>Queue</th>
       <th>Determinations</th>
       <th>Auto-Inherit</th>
+      <th>Group&nbsp;Volumes</th>
       <th>Color</th>
     </thead>
     <tbody id=projectsTableBody>
