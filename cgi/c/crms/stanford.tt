@@ -39,7 +39,7 @@
     [% FOR doc IN data.docs %]
       <tr>
         <td class="nowrap" style="text-align:right;color:#999;">Title:</td>
-        <td style="padding-left:1.5em;">[% doc.title_display %]</td>
+        <td style="padding-left:1.5em;">[% crms.EscapeHTML(doc.title_display) %]</td>
       </tr>
       <tr>
         <td class="nowrap" style="text-align:right;color:#999;">Author:</td>
