@@ -690,7 +690,7 @@ sub ExportReviews
     {
       print $fh "$id\t$attr\t$reason\t$user\tnull\n";
     }
-    my $sql = 'SELECT status,priority,source,added_by,newproject,ticket FROM queue WHERE id=?';
+    my $sql = 'SELECT status,priority,source,added_by,project,ticket FROM queue WHERE id=?';
     my $ref = $self->SelectAll($sql, $id);
     my $status = $ref->[0]->[0];
     my $pri = $ref->[0]->[1];
@@ -698,7 +698,7 @@ sub ExportReviews
     my $added_by = $ref->[0]->[3];
     my $proj = $ref->[0]->[4];
     my $tx = $ref->[0]->[5];
-    $sql = 'INSERT INTO exportdata (id,attr,reason,status,priority,src,added_by,newproject,ticket,exported)'.
+    $sql = 'INSERT INTO exportdata (id,attr,reason,status,priority,src,added_by,project,ticket,exported)'.
            ' VALUES (?,?,?,?,?,?,?,?,?,?)';
     $self->PrepareSubmitSql($sql, $id, $attr, $reason, $status, $pri, $src, $added_by, $proj, $tx, $export);
     my $gid = $self->SimpleSqlGet('SELECT MAX(gid) FROM exportdata WHERE id=?', $id);
@@ -767,12 +767,12 @@ sub CanExportVolume
     return 0;
   }
   my $sql = 'SELECT p.name FROM queue q INNER JOIN projects p'.
-            ' ON q.newproject=p.id WHERE q.id=?';
+            ' ON q.project=p.id WHERE q.id=?';
   my $project = $self->SimpleSqlGet($sql, $id);
   if (defined $gid && !defined $project)
   {
     $sql = 'SELECT p.name FROM exportdata e INNER JOIN projects p'.
-           ' ON e.newproject=p.id WHERE e.gid=?';
+           ' ON e.project=p.id WHERE e.gid=?';
     $project = $self->SimpleSqlGet($sql, $gid);
   }
   if ($self->GetSystemVar('noExport'))
@@ -900,7 +900,7 @@ sub SafeRemoveFromQueue
   my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
   return undef if $self->SimpleSqlGet($sql, $id) > 0;
   $sql = 'UPDATE queue SET priority=-2 WHERE id=?'.
-         ' AND newproject NOT IN (SELECT id FROM projects WHERE name="Special")'.
+         ' AND project NOT IN (SELECT id FROM projects WHERE name="Special")'.
          ' AND locked IS NULL AND status=0 AND pending_status=0';
   my $return1 = $self->PrepareSubmitSql($sql, $id);
   $sql = 'DELETE FROM queue WHERE id=? AND priority=-2'.
@@ -1118,26 +1118,26 @@ sub AddItemToCandidates
   if (!$self->IsVolumeInCandidates($id))
   {
     $self->ReportMsg(sprintf("Add $id to candidates for project '$project' ($proj)")) unless $quiet;
-    my $sql = 'INSERT INTO candidates (id,time,newproject) VALUES (?,?,?)';
+    my $sql = 'INSERT INTO candidates (id,time,project) VALUES (?,?,?)';
     $self->PrepareSubmitSql($sql, $id, $time, $proj);
     $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
   }
   else
   {
-    my $sql = 'SELECT newproject FROM candidates WHERE id=?';
+    my $sql = 'SELECT project FROM candidates WHERE id=?';
     my $proj2 = $self->SimpleSqlGet($sql, $id);
     if ($proj != $proj2)
     {
       $self->ReportMsg("Update $id project from $proj2 to $proj");
-      my $sql = 'UPDATE candidates SET newproject=? WHERE id=?';
+      my $sql = 'UPDATE candidates SET project=? WHERE id=?';
       $self->PrepareSubmitSql($sql, $proj, $id);
     }
-    my $sql = 'SELECT newproject FROM queue WHERE id=? AND source="candidates"';
+    my $sql = 'SELECT project FROM queue WHERE id=? AND source="candidates"';
     $proj2 = $self->SimpleSqlGet($sql, $id);
     if (defined $proj2 && $proj != $proj2)
     {
       $self->ReportMsg("Update $id queue project from $proj2 to $proj");
-      my $sql = 'UPDATE queue SET newproject=? WHERE id=?';
+      my $sql = 'UPDATE queue SET project=? WHERE id=?';
       $self->PrepareSubmitSql($sql, $proj, $id);
     }
   }
@@ -1357,7 +1357,7 @@ sub LoadQueue
   my $self = shift;
 
   my $before = $self->GetQueueSize();
-  my $sql = 'SELECT DISTINCT newproject FROM candidates';
+  my $sql = 'SELECT DISTINCT project FROM candidates';
   $self->LoadQueueForProject($_->[0]) for @{$self->SelectAll($sql)};
   my $after = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue');
   $self->UpdateQueueRecord($after - $before, 'candidates');
@@ -1369,7 +1369,7 @@ sub LoadQueueForProject
   my $self    = shift;
   my $project = shift;
 
-  my $sql = 'SELECT COUNT(*) FROM queue WHERE newproject=?';
+  my $sql = 'SELECT COUNT(*) FROM queue WHERE project=?';
   my $queueSize = $self->SimpleSqlGet($sql, $project);
   my $targetQueueSize = $self->GetSystemVar('queueSize');
   my $needed = $targetQueueSize - $queueSize;
@@ -1382,7 +1382,7 @@ sub LoadQueueForProject
          ' AND id NOT IN (SELECT DISTINCT id FROM queue)'.
          ' AND id NOT IN (SELECT DISTINCT id FROM reviews)'.
          ' AND id NOT IN (SELECT DISTINCT id FROM historicalreviews)'.
-         ' AND time<=DATE_SUB(NOW(), INTERVAL 1 WEEK) AND newproject=?'.
+         ' AND time<=DATE_SUB(NOW(), INTERVAL 1 WEEK) AND project=?'.
          ' ORDER BY time DESC';
   #print "$sql\n";
   my $ref = $self->SelectAll($sql, $project);
@@ -1453,7 +1453,7 @@ sub AddItemToQueue
   return 0 if $self->IsVolumeInQueue($id);
   $record = $self->GetMetadata($id) unless defined $record;
   # queue table has priority and status default to 0, time to current timestamp.
-  $self->PrepareSubmitSql('INSERT INTO queue (id,newproject) VALUES (?,?)', $id, $project);
+  $self->PrepareSubmitSql('INSERT INTO queue (id,project) VALUES (?,?)', $id, $project);
   $self->UpdateMetadata($id, 1, $record);
   return 1;
 }
@@ -1480,7 +1480,7 @@ sub AddItemToQueueOrSetItemActive
     my $sql = 'SELECT id FROM projects WHERE name=?';
     $project = $self->SimpleSqlGet($sql, $project) || 1;
   }
-  my $oldproj = $self->SimpleSqlGet('SELECT newproject FROM queue WHERE id=?', $id);
+  my $oldproj = $self->SimpleSqlGet('SELECT project FROM queue WHERE id=?', $id);
   # Modify data for existing item.
   if (defined $oldproj)
   {
@@ -1499,7 +1499,7 @@ sub AddItemToQueueOrSetItemActive
     else
     {
       $sql = 'UPDATE queue SET priority=?,time=NOW(),source=?,'.
-             'newproject=?,added_by=?,ticket=? WHERE id=?';
+             'project=?,added_by=?,ticket=? WHERE id=?';
       $self->PrepareSubmitSql($sql, $priority, $src,
                               $project, $user, $ticket, $id);
       push @msgs, 'queue item updated';
@@ -1527,7 +1527,7 @@ sub AddItemToQueueOrSetItemActive
       my $src2 = $self->ShouldVolumeBeFiltered($id, $record);
       push @msgs, "should be filtered ($src2)" if defined $src2;
       my $sql = 'INSERT INTO queue (id,priority,source,'.
-                'newproject,added_by,ticket) VALUES (?,?,?,?,?,?)';
+                'project,added_by,ticket) VALUES (?,?,?,?,?,?)';
       $self->PrepareSubmitSql($sql, $id, $priority, $src,
                               $project, $user, $ticket);
       $self->UpdateMetadata($id, 1, $record);
@@ -1719,7 +1719,7 @@ sub GetProject
   my $name = shift;
 
   my $sql = 'SELECT '. (($name)? 'p.name':'p.id').
-            ' FROM queue q INNER JOIN projects p ON q.newproject=p.id WHERE q.id=?';
+            ' FROM queue q INNER JOIN projects p ON q.project=p.id WHERE q.id=?';
   return $self->SimpleSqlGet($sql, $id);
 }
 
@@ -1954,7 +1954,7 @@ sub CreateSQLForReviews
             'q.status,b.title,b.author,r.hold FROM reviews r'.
             ' INNER JOIN queue q ON r.id=q.id'.
             ' INNER JOIN bibdata b ON r.id=b.id'.
-            ' LEFT JOIN projects p ON q.newproject=p.id WHERE ';
+            ' LEFT JOIN projects p ON q.project=p.id WHERE ';
   if ($page eq 'adminReviews')
   {
     $sql .= 'r.id=r.id';
@@ -1969,8 +1969,8 @@ sub CreateSQLForReviews
   }
   elsif ($page eq 'expert')
   {
-    my $proj = $self->GetUserProperty($user, 'newproject');
-    $sql .= 'q.status=2 AND q.newproject'. ((defined $proj)? "=$proj":' IS NULL');
+    my $proj = $self->GetUserProperty($user, 'project');
+    $sql .= 'q.status=2 AND q.project'. ((defined $proj)? "=$proj":' IS NULL');
   }
   elsif ($page eq 'adminHistoricalReviews')
   {
@@ -1980,12 +1980,12 @@ sub CreateSQLForReviews
            ' FROM historicalreviews r'.
            ' LEFT JOIN exportdata q ON r.gid=q.gid'.
            ' LEFT JOIN bibdata b ON r.id=b.id'.
-           ' LEFT JOIN projects p ON q.newproject=p.id WHERE r.id IS NOT NULL';
+           ' LEFT JOIN projects p ON q.project=p.id WHERE r.id IS NOT NULL';
   }
   elsif ($page eq 'undReviews')
   {
-    my $proj = $self->GetUserProperty($user, 'newproject');
-    $sql .= 'q.status=3 AND q.newproject'. ((defined $proj)? "=$proj":' IS NULL');
+    my $proj = $self->GetUserProperty($user, 'project');
+    $sql .= 'q.status=3 AND q.project'. ((defined $proj)? "=$proj":' IS NULL');
   }
   elsif ($page eq 'userReviews')
   {
@@ -2083,8 +2083,8 @@ sub CreateSQLForVolumes
   }
   if ($page eq 'expert' || $page eq 'undReviews')
   {
-    my $proj = $self->GetUserProperty(undef, 'newproject') || 1;
-    push @rest, "q.newproject=$proj";
+    my $proj = $self->GetUserProperty(undef, 'project') || 1;
+    push @rest, "q.project=$proj";
   }
   my $terms = $self->SearchTermsToSQL($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value);
   push @rest, $terms if $terms;
@@ -2176,8 +2176,8 @@ sub CreateSQLForVolumesWide
   }
   if ($page eq 'expert' || $page eq 'undReviews')
   {
-    my $proj = $self->GetUserProperty(undef, 'newproject') || 1;
-    push @rest, "q.newproject=$proj";
+    my $proj = $self->GetUserProperty(undef, 'project') || 1;
+    push @rest, "q.project=$proj";
   }
   my ($joins2,@rest2) = $self->SearchTermsToSQLWide($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table);
   push @rest, @rest2;
@@ -2736,7 +2736,7 @@ sub GetReviewsRef
       }
       $sql = 'SELECT p.name FROM projects p INNER JOIN '.
              (($page eq 'adminHistoricalReviews')? 'exportdata':'queue').
-             ' q ON p.id=q.newproject WHERE q.id=?';
+             ' q ON p.id=q.project WHERE q.id=?';
       ${$item}{'project'} = $self->SimpleSqlGet($sql, $id);
       push(@{$return}, $item);
   }
@@ -2824,7 +2824,7 @@ sub GetVolumesRef
       }
       $sql = 'SELECT p.name FROM projects p INNER JOIN '.
              (($page eq 'adminHistoricalReviews')? 'exportdata':'queue').
-             ' q ON p.id=q.newproject WHERE q.id=?';
+             ' q ON p.id=q.project WHERE q.id=?';
       ${$item}{'project'} = $self->SimpleSqlGet($sql, $id);
       push(@{$return}, $item);
     }
@@ -2905,7 +2905,7 @@ sub GetVolumesRefWide
       }
       $sql = 'SELECT p.name FROM projects p INNER JOIN '.
              (($page eq 'adminHistoricalReviews')? 'exportdata':'queue').
-             ' q ON p.id=q.newproject WHERE q.id=?';
+             ' q ON p.id=q.project WHERE q.id=?';
       ${$item}{'project'} = $self->SimpleSqlGet($sql, $id);
       push(@{$return}, $item);
     }
@@ -2989,7 +2989,7 @@ sub GetQueueRef
   }
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
   my $sql = 'SELECT COUNT(q.id) FROM queue q LEFT JOIN bibdata b ON q.id=b.id'.
-            ' INNER JOIN projects p ON q.newproject=p.id '. $restrict;
+            ' INNER JOIN projects p ON q.project=p.id '. $restrict;
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
@@ -2998,7 +2998,7 @@ sub GetQueueRef
   $sql = 'SELECT q.id,DATE(q.time),q.status,q.locked,YEAR(b.pub_date),q.priority,'.
          ' q.expcnt,b.title,b.author,p.name,q.source,q.ticket,q.added_by'.
          ' FROM queue q LEFT JOIN bibdata b ON q.id=b.id'.
-         ' INNER JOIN projects p ON q.newproject=p.id '. $restrict.
+         ' INNER JOIN projects p ON q.project=p.id '. $restrict.
          ' ORDER BY '. "$order $dir $limit";
   #print "$sql<br/>\n";
   my $ref = undef;
@@ -3118,7 +3118,7 @@ sub GetExportDataRef
   }
   my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
   my $sql = 'SELECT COUNT(q.id) FROM exportdata q LEFT JOIN bibdata b ON q.id=b.id'.
-            ' INNER JOIN projects p ON q.newproject=p.id '. $restrict;
+            ' INNER JOIN projects p ON q.project=p.id '. $restrict;
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
@@ -3127,7 +3127,7 @@ sub GetExportDataRef
   $sql = 'SELECT q.id,DATE(q.time),q.attr,q.reason,q.status,q.priority,q.src,b.title,b.author,'.
          'YEAR(b.pub_date),q.exported,p.name,q.gid,q.added_by,q.ticket'.
          ' FROM exportdata q LEFT JOIN bibdata b ON q.id=b.id'.
-         ' INNER JOIN projects p ON q.newproject=p.id'.
+         ' INNER JOIN projects p ON q.project=p.id'.
          " $restrict ORDER BY $order $dir $limit";
   #print "$sql<br/>\n";
   my $ref = undef;
@@ -5636,7 +5636,7 @@ sub CreateQueueReport
 
   my $field = ($proj)? 'p.name':'q.priority';
   my $sql = 'SELECT DISTINCT '. $field. ' FROM queue q'.
-            ' INNER JOIN projects p ON q.newproject=p.id'.
+            ' INNER JOIN projects p ON q.project=p.id'.
             ' ORDER BY '. $field. ' ASC';
   my @pris = map {$self->StripDecimal($_->[0])} @{$self->SelectAll($sql)};
   my @headers = map {"<th>Priority $_</th>";} @pris;
@@ -5651,7 +5651,7 @@ sub CreateQueueReport
     $status = 'All' if $status == -1;
     my $class = ($status eq 'All')?' class="total"':'';
     $sql = 'SELECT '. $field. ',COUNT(*) FROM queue q'.
-           ' INNER JOIN projects p ON q.newproject=p.id '. $statusClause. 
+           ' INNER JOIN projects p ON q.project=p.id '. $statusClause. 
            ' GROUP BY '. $field. ' ASC WITH ROLLUP';
     my $ref = $self->SelectAll($sql);
     my $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
@@ -5660,7 +5660,7 @@ sub CreateQueueReport
     $report .= "</tr>\n";
   }
   $sql = 'SELECT '. $field. ',COUNT(q.id) FROM queue q'.
-         ' INNER JOIN projects p ON q.newproject=p.id'.
+         ' INNER JOIN projects p ON q.project=p.id'.
          ' WHERE q.status=0'.
          ' AND q.pending_status=0 GROUP BY '. $field. ' ASC WITH ROLLUP';
   my $ref = $self->SelectAll($sql);
@@ -5776,7 +5776,7 @@ sub CreateDeterminationReport
   my %pcts = ();
   my $field = ($proj)? 'p.name':'e.priority';
   my $sql = 'SELECT DISTINCT '. $field. ' FROM exportdata e'.
-            ' INNER JOIN projects p ON e.newproject=p.id'.
+            ' INNER JOIN projects p ON e.project=p.id'.
             ' WHERE DATE(time)=DATE(?) ORDER BY '. $field. ' ASC';
   my @pris = map {$self->StripDecimal($_->[0])} @{$self->SelectAll($sql, $time)};
   my @headers = map {"<th>Priority $_</th>";} @pris;
@@ -5793,7 +5793,7 @@ sub CreateDeterminationReport
   foreach my $status (4 .. 9)
   {
     $sql = 'SELECT COUNT(*) FROM exportdata e'.
-           ' INNER JOIN projects p ON e.newproject=p.id'.
+           ' INNER JOIN projects p ON e.project=p.id'.
            ' WHERE e.status=? AND DATE(e.time)=DATE(?)';
     my $ct = $self->SimpleSqlGet($sql, $status, $time);
     my $pct = 0.0;
@@ -5812,7 +5812,7 @@ sub CreateDeterminationReport
     $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Status&nbsp;%d</th><td>%d&nbsp;(%.1f%%)</td>",
                        $status, $cts{$status}, $pcts{$status});
     $sql = 'SELECT '. $field. ',COUNT(*) FROM exportdata e'.
-           ' INNER JOIN projects p ON e.newproject=p.id'.
+           ' INNER JOIN projects p ON e.project=p.id'.
            ' WHERE e.status=? AND DATE(time)=DATE(?) GROUP BY '. $field. ' ASC';
     my $ref = $self->SelectAll($sql, $status, $time);
     $report .= $self->DoPriorityBreakdown($ref, undef, \@pris, $cts{$status});
@@ -5821,7 +5821,7 @@ sub CreateDeterminationReport
   $report .= "<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;Total</th><td>$count</td>";
   $sql = 'SELECT '. $field. ',COUNT(gid),CONCAT(FORMAT(IF(?=0,0,(COUNT(gid)*100.0)/?),1),"%")'.
          ' FROM exportdata e'.
-         ' INNER JOIN projects p ON e.newproject=p.id'.
+         ' INNER JOIN projects p ON e.project=p.id'.
          ' WHERE DATE(time)=DATE(?) GROUP BY '. $field. ' ASC';
   my $ref = $self->SelectAll($sql, $total, $total, $time);
   $report .= sprintf('<td class="nowrap">%s (%s)</td>', $_->[1], $_->[2]) for @{$ref};
@@ -5853,7 +5853,7 @@ sub CreateReviewReport
 
   my $field = ($proj)? 'p.name':'q.priority';
   my $sql = 'SELECT DISTINCT '. $field. ' FROM queue q'.
-            ' INNER JOIN projects p ON q.newproject=p.id'.
+            ' INNER JOIN projects p ON q.project=p.id'.
             ' ORDER BY '. $field. ' ASC';
   my @pris = map {$self->StripDecimal($_->[0])} @{$self->SelectAll($sql)};
   my @headers = map {"<th>Priority $_</th>";} @pris;
@@ -5864,7 +5864,7 @@ sub CreateReviewReport
                (join '', @headers).
                "</tr>\n";
   $sql = 'SELECT '. $field. ',COUNT(*) FROM queue q'.
-         ' INNER JOIN projects p ON q.newproject=p.id'.
+         ' INNER JOIN projects p ON q.project=p.id'.
          ' WHERE q.status>0 OR q.pending_status>0'.
          ' GROUP BY '. $field. ' ASC WITH ROLLUP';
   my $ref = $self->SelectAll($sql);
@@ -5873,7 +5873,7 @@ sub CreateReviewReport
   $report .= $self->DoPriorityBreakdown($ref, ' class="total"', \@pris) . "</tr>\n";
   # Unprocessed
   $sql = 'SELECT '. $field. ',COUNT(*) FROM queue q'.
-         ' INNER JOIN projects p ON q.newproject=p.id'.
+         ' INNER JOIN projects p ON q.project=p.id'.
          ' WHERE q.status=0 AND q.pending_status>0 GROUP BY '. $field. ' WITH ROLLUP';
   $ref = $self->SelectAll($sql);
   $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
@@ -5888,7 +5888,7 @@ sub CreateReviewReport
   foreach my $row (@unprocessed)
   {
     $sql = 'SELECT '. $field. ',COUNT(*) from queue q'.
-           ' INNER JOIN projects p ON q.newproject=p.id'.
+           ' INNER JOIN projects p ON q.project=p.id'.
            ' WHERE status=0 AND pending_status=? GROUP BY '. $field. ' WITH ROLLUP';
     $ref = $self->SelectAll($sql, $row->{'status'});
     $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
@@ -5931,7 +5931,7 @@ sub CreateReviewReport
                    {'status'=>8,'name'=>'Auto-Resolved'},
                    {'status'=>9,'name'=>'Inheritance'});
   $sql = 'SELECT '. $field. ',COUNT(*) FROM queue q'.
-         ' INNER JOIN projects p ON q.newproject=p.id'.
+         ' INNER JOIN projects p ON q.project=p.id'.
          ' WHERE status!=0 GROUP BY '. $field. ' WITH ROLLUP';
   $ref = $self->SelectAll($sql);
   $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
@@ -5940,7 +5940,7 @@ sub CreateReviewReport
   foreach my $row (@processed)
   {
     $sql = 'SELECT '. $field. ',COUNT(*) from queue q'.
-           ' INNER JOIN projects p ON q.newproject=p.id'.
+           ' INNER JOIN projects p ON q.project=p.id'.
            ' WHERE q.status=? GROUP BY '. $field. ' WITH ROLLUP';
     $ref = $self->SelectAll($sql, $row->{'status'});
     $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
@@ -6716,7 +6716,7 @@ sub GetTrackingInfo
     my $reviews = $self->Pluralize('review', $n);
     my $pri = $self->GetPriority($id);
     my $sql = 'SELECT p.name FROM queue q LEFT JOIN projects p'.
-              ' ON q.newproject=p.id WHERE q.id=?';
+              ' ON q.project=p.id WHERE q.id=?';
     my $proj = $self->SimpleSqlGet($sql, $id);
     my $projinfo = (defined $proj)? ", project '$proj'":'';
     push @stati, "in Queue (P$pri, status $status, $n $reviews$projinfo)";
@@ -6732,7 +6732,7 @@ sub GetTrackingInfo
   elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM candidates WHERE id=?', $id))
   {
     my $sql = 'SELECT p.name FROM candidates c'.
-              ' INNER JOIN projects p ON c.newproject=p.id WHERE c.id=?';
+              ' INNER JOIN projects p ON c.project=p.id WHERE c.id=?';
     my $proj = $self->SimpleSqlGet($sql, $id);
     push @stati, "in Candidates ($proj project)";
   }
@@ -7034,7 +7034,7 @@ sub GetInheritanceRef
   my $restrict = 'WHERE '. join(' AND ', @rest);
   my $sql = 'SELECT COUNT(DISTINCT e.id),COUNT(DISTINCT i.id) FROM inherit i'.
             ' INNER JOIN exportdata e ON i.gid=e.gid'.
-            ' INNER JOIN projects p ON e.newproject=p.id'.
+            ' INNER JOIN projects p ON e.project=p.id'.
             ' LEFT JOIN bibdata b ON e.id=b.id '. $restrict;
   my $ref;
   #print "$sql<br/>\n";
@@ -7053,7 +7053,7 @@ sub GetInheritanceRef
   $sql = 'SELECT i.id,i.attr,i.reason,i.gid,e.id,e.attr,e.reason,'.
          'b.title,DATE(e.time),i.src,DATE(i.time),b.sysid,i.status'.
          ' FROM inherit i INNER JOIN exportdata e ON i.gid=e.gid'.
-         ' INNER JOIN projects p ON e.newproject=p.id'.
+         ' INNER JOIN projects p ON e.project=p.id'.
          ' LEFT JOIN bibdata b ON e.id=b.id '. $restrict.
          " ORDER BY $order $dir, $order2 $dir2 LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
@@ -7254,7 +7254,7 @@ sub CanAutoSubmitInheritance
   my $attr = $self->SimpleSqlGet('SELECT attr FROM exportdata WHERE gid=?', $gid);
   return 1 if $attr =~ m/^pd/ and $reason eq 'gfv';
   my $sql = 'SELECT p.autoinherit FROM exportdata e'.
-            ' INNER JOIN projects p ON e.newproject=p.id WHERE e.gid=?';
+            ' INNER JOIN projects p ON e.project=p.id WHERE e.gid=?';
   return $self->SimpleSqlGet($sql, $gid);
 }
 
@@ -7317,7 +7317,7 @@ sub AddInheritanceToQueue
 
   my $stat = 0;
   my @msgs = ();
-  my $sql = 'SELECT newproject FROM exportdata WHERE gid=?';
+  my $sql = 'SELECT project FROM exportdata WHERE gid=?';
   my $proj = $self->SimpleSqlGet($sql, $gid);
   if ($self->IsVolumeInQueue($id))
   {
@@ -7340,14 +7340,14 @@ sub AddInheritanceToQueue
       }
       else
       {
-        $self->PrepareSubmitSql('UPDATE queue SET source="inherited",newproject=? WHERE id=?', $id, $proj);
+        $self->PrepareSubmitSql('UPDATE queue SET source="inherited",project=? WHERE id=?', $id, $proj);
       }
     }
     $self->UnlockItem($id, 'autocrms');
   }
   else
   {
-    my $sql = 'INSERT INTO queue (id,priority,source,newproject) VALUES (?,0,"inherited",?)';
+    my $sql = 'INSERT INTO queue (id,priority,source,project) VALUES (?,0,"inherited",?)';
     $self->PrepareSubmitSql($sql, $id, $proj);
     $self->UpdateMetadata($id, 1);
     $self->UpdateQueueRecord(1, 'inheritance');
@@ -7745,7 +7745,7 @@ sub Categories
   my $self = shift;
   my $id   = shift;
 
-  my $proj = $self->SimpleSqlGet('SELECT newproject FROM queue WHERE id=?', $id);
+  my $proj = $self->SimpleSqlGet('SELECT project FROM queue WHERE id=?', $id);
   $proj = 1 unless defined $proj;
   my $q = $self->GetUserQualifications();
   my $sql = 'SELECT c.name,c.restricted FROM categories c'.
@@ -7772,7 +7772,7 @@ sub Rights
   my $id    = shift;
   my $order = shift;
 
-  my $proj = $self->SimpleSqlGet('SELECT newproject FROM queue WHERE id=?', $id);
+  my $proj = $self->SimpleSqlGet('SELECT project FROM queue WHERE id=?', $id);
   $proj = 1 unless defined $proj;
   my @all = ();
   my $sql = 'SELECT r.id,CONCAT(a.name,"/",rs.name),r.description,a.name,rs.name FROM rights r'.
@@ -7780,7 +7780,7 @@ sub Rights
             ' INNER JOIN reasons rs ON r.reason=rs.id'.
             ' INNER JOIN projectrights pr ON r.id=pr.rights'.
             ' WHERE (r.restricted IS NULL OR r.restricted NOT LIKE "%i%")'.
-            ' AND pr.newproject=?'.
+            ' AND pr.project=?'.
             ' ORDER BY IF(a.name="pd"||a.name="pdus",1,0) DESC, a.name ASC, rs.name ASC';
   #print "$sql<br/>\n";
   my $ref = $self->SelectAll($sql, $proj);
@@ -7823,7 +7823,7 @@ sub Authorities
   $mag = '100' unless $mag;
   $view = 'image' unless $view;
   $page = 'review' unless defined $page;
-  my $proj = $self->SimpleSqlGet('SELECT newproject FROM queue WHERE id=?', $id);
+  my $proj = $self->SimpleSqlGet('SELECT project FROM queue WHERE id=?', $id);
   $proj = 1 unless defined $proj;
   my $ref;
   if ($aid)
@@ -8281,7 +8281,7 @@ sub GetAddToQueueRef
   my $sql = 'SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.added_by,' .
             ' q.status,q.priority,q.source,q.issues,q.ticket,p.name FROM queue q'.
             ' INNER JOIN bibdata b ON q.id=b.id'.
-            ' INNER JOIN projects p ON q.newproject=p.id'.
+            ' INNER JOIN projects p ON q.project=p.id'.
             ' WHERE q.added_by=? AND p.name="Special"'.
             ' ORDER BY q.added_by,q.source,q.status ASC,q.priority DESC,q.id ASC';
   #print "$sql\n";
@@ -8392,7 +8392,7 @@ sub GetUserProjects
   my $user = shift || $self->get('user');
 
   my $sql = 'SELECT pu.project,p.name,'.
-            '(SELECT COUNT(*) FROM queue q WHERE q.newproject=pu.project)'.
+            '(SELECT COUNT(*) FROM queue q WHERE q.project=pu.project)'.
             ' FROM projectusers pu INNER JOIN projects p ON pu.project=p.id WHERE pu.user=?'.
             ' ORDER BY p.name';
   #print "$sql\n";
@@ -8408,7 +8408,7 @@ sub GetUserCurrentProject
   my $self = shift;
   my $user = shift || $self->get('user');
 
-  my $sql = 'SELECT newproject FROM users WHERE id=?';
+  my $sql = 'SELECT project FROM users WHERE id=?';
   my $proj = $self->SimpleSqlGet($sql, $user);
   $sql = 'SELECT COUNT(*) FROM projectusers WHERE project=? AND user=?';
   my $ct = $self->SimpleSqlGet($sql, $proj, $user);
@@ -8427,7 +8427,7 @@ sub SetUserCurrentProject
   my $user = shift || $self->get('user');
   my $proj = shift || '1';
 
-  my $sql = 'UPDATE users SET newproject=? WHERE id=?';
+  my $sql = 'UPDATE users SET project=? WHERE id=?';
   $self->PrepareSubmitSql($sql, $proj, $user);
 }
 
@@ -8438,7 +8438,7 @@ sub GetProjectName
   my $id   = shift;
 
   my $sql = 'SELECT name FROM projects WHERE id=?';
-  $sql = 'SELECT p.name FROM projects p INNER JOIN queue q ON q.newproject=p.id WHERE q.id=?' if $id !~ m/^\d+$/;
+  $sql = 'SELECT p.name FROM projects p INNER JOIN queue q ON q.project=p.id WHERE q.id=?' if $id !~ m/^\d+$/;
   return $self->SimpleSqlGet($sql, $id);
 }
 
@@ -8456,7 +8456,7 @@ sub GetProjectColor
   {
     $sql = 'SELECT COALESCE(color,"000000") FROM projects WHERE id=?';
     $sql = 'SELECT COALESCE(p.color,"000000") FROM projects p'.
-           ' INNER JOIN queue q ON q.newproject=p.id WHERE q.id=?' if $id !~ m/^\d+$/;
+           ' INNER JOIN queue q ON q.project=p.id WHERE q.id=?' if $id !~ m/^\d+$/;
     $color = $self->SimpleSqlGet($sql, $id);
   }
   return $color;
@@ -8472,9 +8472,9 @@ sub GetProjectsRef
   my $sql = 'SELECT p.id,p.name,p.restricted,COALESCE(p.color,"000000"),'.
             '(SELECT COUNT(*) FROM projectusers pu INNER JOIN users u ON pu.user=u.id'.
             ' WHERE pu.project=p.id AND u.reviewer+u.advanced+u.expert+u.admin+u.superadmin>0),'.
-            '(SELECT COUNT(*) FROM queue q WHERE q.newproject=p.id),'.
-            '(SELECT COUNT(*) FROM candidates c WHERE c.newproject=p.id),'.
-            '(SELECT COUNT(*) FROM exportdata e WHERE e.newproject=p.id),p.autoinherit,p.group_volumes'.
+            '(SELECT COUNT(*) FROM queue q WHERE q.project=p.id),'.
+            '(SELECT COUNT(*) FROM candidates c WHERE c.project=p.id),'.
+            '(SELECT COUNT(*) FROM exportdata e WHERE e.project=p.id),p.autoinherit,p.group_volumes'.
             ' FROM projects p ORDER BY p.id ASC';
   my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
@@ -8483,7 +8483,7 @@ sub GetProjectsRef
                      'color' => $row->[3], 'userCount' => $row->[4], 'queueCount' => $row->[5],
                      'candidatesCount' => $row->[6], 'determinationsCount' => $row->[7],
                      'autoinherit' => $row->[8], 'group_volumes' => $row->[9]};
-    my $ref2 = $self->SelectAll('SELECT rights FROM projectrights WHERE newproject=?', $row->[0]);
+    my $ref2 = $self->SelectAll('SELECT rights FROM projectrights WHERE project=?', $row->[0]);
     $projects[-1]->{'rights'} = [map {$_->[0]} @{$ref2}];
     $ref2 = $self->SelectAll('SELECT category FROM projectcategories WHERE project=?', $row->[0]);
     $projects[-1]->{'categories'} = [map {$_->[0]} @{$ref2}];

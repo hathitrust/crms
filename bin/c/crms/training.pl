@@ -131,7 +131,7 @@ $ssql .= ' OR e.status=7' unless $no7;
 my $projsql = sprintf 'p.name IN ("%s")', join '","', @projs;
 $sql = 'SELECT r.id,r.user,r.time,r.gid,e.status,p.name FROM historicalreviews r'.
        ' INNER JOIN exportdata e ON r.gid=e.gid'.
-       ' INNER JOIN projects p ON e.newproject=p.id'.
+       ' INNER JOIN projects p ON e.project=p.id'.
        ' WHERE r.user IN '. $usql.
        ' AND '. $projsql.
        ' AND e.ticket IS NULL'.
@@ -144,7 +144,7 @@ my $s4 = 0;
 my $s5 = 0;
 my $s7 = 0;
 $sql = 'SELECT COUNT(*) FROM queue q'.
-       ' INNER JOIN projects p ON q.newproject=p.id'.
+       ' INNER JOIN projects p ON q.project=p.id'.
        ' AND '. $projsql;
 print "$sql\n" if $verbose;
 my $already = $crmst->SimpleSqlGet($sql);
@@ -203,7 +203,7 @@ foreach my $row (@{$ref})
   die "Can't get training instance project id for $proj\n" unless defined $projt;
   print GREEN "Add to queue: $id for project $proj\n" if $verbose;
   my $pending = ($queueOnly)? 0:1;
-  $sql = 'INSERT INTO queue (id,time,pending_status,newproject) VALUES (?,?,?,?)';
+  $sql = 'INSERT INTO queue (id,time,pending_status,project) VALUES (?,?,?,?)';
   $crmst->PrepareSubmitSql($sql, $id, $time, $pending, $projt);
   if (!$queueOnly)
   {
