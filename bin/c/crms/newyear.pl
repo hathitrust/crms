@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+# FIXME: assigns Core project to added queue items instead of
+# New Year project.
+
 my $DLXSROOT;
 BEGIN
 {
@@ -27,7 +30,7 @@ expire from ic to either pd* or icus.
 -p         Run in production.
 -s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
 -v         Emit debugging information.
--y YEAR    Use this year instead of the current one (implies -n).
+-y YEAR    Use this year instead of the current one.
 END
 
 my @excludes;
@@ -59,11 +62,10 @@ my $crms = CRMS->new(
     instance => $instance
 );
 
-$noop = 1 if $year;
 print "Verbosity $verbose\n" if $verbose;
 
 my $proj = $crms->SimpleSqlGet('SELECT id FROM projects WHERE name="New Year"');
-die "Can't get New Year project" unless $proj;
+die "Can't get New Year project" unless defined $proj;
 $year = $crms->GetTheYear() unless $year;
 my $t1 = $year - 51;
 my $t2 = $year - 71;
@@ -94,6 +96,11 @@ foreach my $row (@{$ref})
   my $record = $crms->GetMetadata($id);
   next unless defined $record;
   my $rq = $crms->RightsQuery($id, 1);
+  if (!defined $rq)
+  {
+    print RED "No rights available for $id, skipping.\n";
+    next;
+  }
   my ($acurr,$rcurr,$src,$usr,$time,$note) = @{$rq->[0]};
   $i++;
   my $gid = $row->[1];
@@ -108,6 +115,7 @@ foreach my $row (@{$ref})
     $change++;
     next;
   }
+  print "$id\n";
   $sql = 'SELECT renDate,renNum,category,note,user FROM historicalreviews WHERE gid=?' .
          ' AND validated=1 AND renDate IS NOT NULL';
   my $ref2 = $crms->SelectAll($sql, $gid);
@@ -138,13 +146,10 @@ foreach my $row (@{$ref})
     printf "Dates %s\n", join ', ', sort keys %dates if $verbose > 2;
     foreach $renDate (sort keys %dates)
     {
-      my $last = $crms->PredictLastCopyrightYear($id, $renDate, $renNum,
-                                                 $crms->TolerantCompare($cat, 'Crown Copyright'),
-                                                 $record);
+      my $last = $crms->PredictLastCopyrightYear($id, $renDate, $renNum, $crown, $record);
       $msg .= "   last copyright year '$last' from '$renDate', '$renNum' ($user)\n";
       my $rid = $crms->PredictRights($id, $renDate, $renNum,
-                                     $crms->TolerantCompare($cat, 'Crown Copyright'),
-                                     $record, \$pub);
+                                     $crown, $record, \$pub, $year);
       ($pa, $pr) = $crms->TranslateAttrReasonFromCode($rid);
       $msg .= "   ADD $renDate predicted $pa/$pr (curr $acurr/$rcurr)\n";
       $predictions{$pa} = 1;
@@ -174,7 +179,7 @@ foreach my $row (@{$ref})
     {
       $crms->UpdateMetadata($id, 1, $record);
       # Returns a status code (0=Add, 1=Error, 2=Skip, 3=Modify) followed by optional text.
-      my $res = $crms->AddItemToQueueOrSetItemActive($id, 0, 1, 'newyear', undef, undef, $record, $proj);
+      my $res = $crms->AddItemToQueueOrSetItemActive($id, 0, 1, 'newyear', undef, $record, $proj);
       my $code = $res->{'status'};
       my $msg = $res->{'msg'};
       if ($code eq '1' || $code eq '2')
@@ -188,5 +193,5 @@ foreach my $row (@{$ref})
 }
 print "Suggested rereviews: $change of $i\n";
 
-print "Warning: $_\n" for @{$crms->GetErrors()};
+print RED "Warning: $_\n" for @{$crms->GetErrors()};
 
