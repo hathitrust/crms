@@ -95,7 +95,7 @@ sub set
 
 sub Version
 {
-  return '6.6';
+  return '6.6.1';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -5298,10 +5298,10 @@ sub GetNextItemForReview
     $sql = 'SELECT group_volumes FROM projects WHERE id=?';
     my $gv = $self->SimpleSqlGet($sql, $proj);
     my $sysid;
-    if ($gv)
+    if ($gv && $self->IsUserAdvanced($user))
     {
       $sql = 'SELECT b.sysid FROM reviews r INNER JOIN bibdata b ON r.id=b.id'.
-             ' WHERE r.user=? ORDER BY r.time DESC LIMIT 1';
+             ' WHERE r.user=? AND hold=0 ORDER BY r.time DESC LIMIT 1';
       $sysid = $self->SimpleSqlGet($sql, $user);
     }
     my ($excludeh, $excludei) = ('', '');
@@ -5318,7 +5318,7 @@ sub GetNextItemForReview
     {
       # First order, last param (assumes any order param will be last).
       # Adding any additional parameterized ordering will be trickier.
-      unshift @orders, 'IF(b.sysid=?,1,0) DESC';
+      unshift @orders, 'IF(b.sysid=?,1,0) DESC,q.id ASC';
       push @params, $sysid;
     }
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,'.
