@@ -8093,9 +8093,10 @@ sub PredictRights
   my $crown  = shift; # Crown copyright note category
   my $record = shift; # Metadata (optional) so we don't spam bibdata table for volumes not in queue.
   my $pub    = shift; # Actual pub date when date range.
+  my $now    = shift; # The current year, for predicting future public domain transitions.
 
   my ($attr, $reason) = (0,0);
-  my $now = $self->GetTheYear();
+  $now = $self->GetTheYear() unless defined $now;
   my $when = $self->PredictLastCopyrightYear($id, $year, $ispub, $crown, $record, \$pub);
   return unless defined $when;
   return undef if $pub =~ m/^\d+-\d+$/;
