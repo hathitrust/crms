@@ -60,13 +60,11 @@ else
       my %map = ('rights' => 'rights', 'categories' => 'category',
                  'authorities' => 'authority', 'users' => 'user');
       my ($f1, $f2) = ('project', $map{$prop});
-      $f1 = 'newproject' if $prop eq 'rights';
       my $sql = 'DELETE FROM '. $table. ' WHERE '. $f1;
       $sql .= (defined $id)? '=?':' IS NULL';
       my @args = ($id);
       @args = () unless defined $id;
       $crms->PrepareSubmitSql($sql, @args);
-      #$crms->SetError("$sql {$id}");
       foreach my $value (@values)
       {
         $crms->PrepareSubmitSql('INSERT INTO '. $table. ' ('.$f1. ','. $f2. ') VALUES (?,?)', $id, $value);

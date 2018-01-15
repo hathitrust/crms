@@ -2,7 +2,7 @@
 
 [% projs = crms.GetUserProjects() %]
 [% IF projs.size %]
-  [% proj = crms.GetProjectName(crms.GetUserProperty(undef, 'newproject')) %]
+  [% proj = crms.GetProjectName(crms.GetUserProperty(undef, 'project')) %]
   [% flag = " &#x2014; " _ proj _ " Project" %]
 [% END %]
 

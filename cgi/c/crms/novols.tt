@@ -17,7 +17,7 @@
       [% names = [] %]
       [% FOREACH proj IN projs %][% names.push(proj.name) %][% END %]
       <i>[% names.join(', ') %]</i>.
-      [% cp = crms.GetUserProperty(user, 'newproject') %]
+      [% cp = crms.GetUserProperty(user, 'project') %]
       [% name = crms.GetProjectName(cp) %]
       Your current project is <i>[% name %]</i>.
     [% END %]
