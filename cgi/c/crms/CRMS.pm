@@ -5357,10 +5357,19 @@ sub GetNextItemForReview
         if (!$record)
         {
           $err = 'No Record Found';
-          my $pri2 = ($pri == 0)? -3.14:-$pri;
-          $self->Note("No record found for $id2, downgrading priority from $pri to $pri2.");
-          $sql = 'UPDATE queue SET priority=? WHERE id=?';
-          $self->PrepareSubmitSql($sql, $pri2, $id2);
+          my $note = $err;
+          if ($pri >= 0)
+          {
+            my $pri2 = ($pri == 0)? -3.14:-$pri;
+            $note = "No record found for $id2, downgrading priority from $pri to $pri2.";
+            $sql = 'UPDATE queue SET priority=? WHERE id=?';
+            $self->PrepareSubmitSql($sql, $pri2, $id2);
+          }
+          else
+          {
+            $note = "No record found for $id2, priority $pri already negative.";
+          }
+          $self->Note($note);
         }
         else
         {
