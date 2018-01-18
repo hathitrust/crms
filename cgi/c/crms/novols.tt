@@ -1,3 +1,5 @@
+[% crms.StartHTML('No Volumes to Review', '<link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>') %]
+
 <div class="pages">
   <a href="[% crms.Sysify('crms') %]">
     <img src="[% crms.GetSystemVar('logo') %]" width="455" height="80"
@@ -29,11 +31,7 @@
         the core project please contact your CRMS liaison, or the e-mail below.
         If you feel that this may be a CRMS error, please try refreshing the page
         a couple of times before contacting
-        [% IF experts %]
-        <a href="mailto:[% mail %]"><span style="color:black;">[% experts %]</span></a>
-        or, <i>in extremis</i>,
-        [% END %]
-        <a href="mailto:[% mail %]"><span style="color:black;">[% mail %]</span></a>.
+        <a href="mailto:[% mail %]"><span style="color:black;">[% experts %]</span></a>.
     </h4>
   </div>
 </div>
