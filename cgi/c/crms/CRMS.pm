@@ -1633,10 +1633,6 @@ sub SubmitReview
         (defined $category &&
          ($category eq 'Missing' || $category eq 'Wrong Record')))
     {
-      $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND expert=1';
-      my $expcnt = $self->SimpleSqlGet($sql, $id);
-      $sql = 'UPDATE queue SET expcnt=? WHERE id=?';
-      $result = $self->PrepareSubmitSql($sql, $expcnt, $id);
       my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $category, $renNum, $renDate);
       $self->RegisterStatus($id, $status);
       # Clear all non-expert holds
@@ -1887,7 +1883,11 @@ sub ConvertToSearchTerm
   elsif ($search eq 'Validated') { $new_search = 'r.validated'; }
   elsif ($search eq 'PubDate') { $new_search = 'b.pub_date'; }
   elsif ($search eq 'Locked') { $new_search = 'q.locked'; }
-  elsif ($search eq 'ExpertCount') { $new_search = 'q.expcnt'; }
+  elsif ($search eq 'ExpertCount')
+  {
+    $new_search = '(SELECT COUNT(*) FROM reviews r INNER JOIN users u'.
+                  ' ON r.user=u.id WHERE r.id=q.id AND u.expert=1)';
+  }
   elsif ($search eq 'Reviews')
   {
     $new_search = '(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id)';
@@ -2994,7 +2994,7 @@ sub GetQueueRef
   my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   my @return = ();
   $sql = 'SELECT q.id,DATE(q.time),q.status,q.locked,YEAR(b.pub_date),q.priority,'.
-         ' q.expcnt,b.title,b.author,p.name,q.source,q.ticket,q.added_by'.
+         'b.title,b.author,p.name,q.source,q.ticket,q.added_by'.
          ' FROM queue q LEFT JOIN bibdata b ON q.id=b.id'.
          ' INNER JOIN projects p ON q.project=p.id '. $restrict.
          ' ORDER BY '. "$order $dir $limit";
@@ -3020,27 +3020,31 @@ sub GetQueueRef
     $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND hold=1';
     #print "$sql<br/>\n";
     my $holds = $self->SimpleSqlGet($sql, $id);
+    $sql = 'SELECT COUNT(*) FROM reviews r INNER JOIN users u ON r.user=u.id'.
+           ' WHERE r.id=? AND u.expert=1';
+    my $expcnt = $self->SimpleSqlGet($sql, $id);
     my $item = {id       => $id,
                 date     => $row->[1],
                 status   => $row->[2],
                 locked   => $row->[3],
                 pubdate  => $pubdate,
                 priority => $self->StripDecimal($row->[5]),
-                expcnt   => $row->[6],
-                title    => $row->[7],
-                author   => $row->[8],
+                expcnt   => $expcnt,
+                title    => $row->[6],
+                author   => $row->[7],
                 reviews  => $reviews,
                 holds    => $holds,
-                project  => $row->[9],
-                source   => $row->[10],
-                ticket   => $row->[11],
-                added_by => $row->[12]
+                project  => $row->[8],
+                source   => $row->[9],
+                ticket   => $row->[10],
+                added_by => $row->[11]
                };
     push @return, $item;
     if ($download)
     {
-      $data .= sprintf("\n$id\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t$reviews\t%s\t$holds",
-                       $row->[7], $row->[8], $row->[4], $row->[1], $row->[2], $row->[3], $self->StripDecimal($row->[5]), $row->[6]);
+      $data .= sprintf("\n$id\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t$reviews\t$expcnt\t$holds",
+                       $row->[7], $row->[8], $row->[4], $row->[1], $row->[2],
+                       $row->[3], $self->StripDecimal($row->[5]));
     }
   }
   if (!$download)
@@ -5322,8 +5326,7 @@ sub GetNextItemForReview
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,'.
            'SHA2(CONCAT(?,q.id),0) AS hash,q.priority,q.project,b.sysid'.
            ' FROM queue q INNER JOIN bibdata b ON q.id=b.id'.
-           ' WHERE q.project=? AND q.expcnt=0'.
-           ' AND q.locked IS NULL AND q.status<2'.
+           ' WHERE q.project=? AND q.locked IS NULL AND q.status<2'.
            $excludei. $excludeh.
            ' HAVING cnt<2 ORDER BY '. join ',', @orders;
     if (defined $test)
