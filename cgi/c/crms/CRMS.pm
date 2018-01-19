@@ -95,7 +95,7 @@ sub set
 
 sub Version
 {
-  return '6.6.1';
+  return '6.6.2';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -8602,6 +8602,28 @@ sub EchoInput
   $text = decode_utf8($text);
   $text = encode_entities($text);
   return $text;
+}
+
+sub SubmitMail
+{
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
+  my $text = shift;
+  my $uuid = shift;
+
+  my $sql = 'SELECT COUNT(*) FROM mail WHERE uuid=?';
+  return if $self->SimpleSqlGet($sql, $uuid);
+  $sql = 'INSERT INTO mail (id, user, text, uuid) VALUES (?,?,?,?)';
+  $self->PrepareSubmitSql($sql, $id, $user, $text, $uuid);
+}
+
+sub UUID
+{
+  my $self = shift;
+
+  use UUID::Tiny;
+  return UUID::Tiny::create_uuid_as_string(UUID::Tiny::UUID_V4);
 }
 
 1;
