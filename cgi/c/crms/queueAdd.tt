@@ -187,7 +187,6 @@ function CheckAllTx(box,id)
     <th>Ticket</th>
     <th>Status</th>
     <th>Priority</th>
-    <th>Issues</th>
     <th>Historical<br/>Reviews</th>
     <th>Rights</th>
     <th>Review<br/>Now
@@ -241,7 +240,6 @@ function CheckAllTx(box,id)
     </td>
     <td>[% r.status %]</td>
     <td>[% crms.StripDecimal(r.priority) %]</td>
-    <td>[% r.issues %]</td>
     <td>[% crms.CountHistoricalReviews(r.id) %]</td>
     <td>[% crms.CurrentRightsQuery(r.id).replace('\s','&nbsp;') %]</td>
     <td>

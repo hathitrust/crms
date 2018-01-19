@@ -1533,8 +1533,6 @@ sub AddItemToQueueOrSetItemActive
     }
   }
   my $msg = ucfirst join '; ', @msgs;
-  my $sql = 'UPDATE queue SET issues=? WHERE id=?';
-  $self->PrepareSubmitSql($sql, $msg, $id);
   return {'status' => $stat, 'msg' => $msg};
 }
 
@@ -8284,7 +8282,7 @@ sub GetAddToQueueRef
   my $user = shift || $self->get('user');
 
   my $sql = 'SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.added_by,' .
-            ' q.status,q.priority,q.source,q.issues,q.ticket,p.name FROM queue q'.
+            'q.status,q.priority,q.source,q.ticket,p.name FROM queue q'.
             ' INNER JOIN bibdata b ON q.id=b.id'.
             ' INNER JOIN projects p ON q.project=p.id'.
             ' WHERE q.added_by=? AND p.name="Special"'.
@@ -8297,7 +8295,7 @@ sub GetAddToQueueRef
     push @result, {'id' => $row->[0], 'title' => $row->[1], 'author' => $row->[2],
                    'pub_date' => $row->[3], 'date' => $row->[4], 'added_by' => $row->[5],
                    'status' => $row->[6], 'priority' => $row->[7], 'source' => $row->[8],
-                   'issues' => $row->[9], 'ticket' => $row->[10], 'project' => $row->[11],
+                   'ticket' => $row->[9], 'project' => $row->[10],
                    'tracking' => $self->GetTrackingInfo($row->[0], 1, 1)};
   }
   return \@result;
