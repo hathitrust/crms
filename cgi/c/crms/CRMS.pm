@@ -731,8 +731,6 @@ sub ExportReviews
       }
     }
   }
-  my $sql = 'INSERT INTO exportrecord (itemcount) VALUES (?)';
-  $self->PrepareSubmitSql($sql, $count);
   if (!$training && !$quiet)
   {
     my $dels = $start_size-$self->GetCandidatesSize();
@@ -6016,20 +6014,14 @@ sub GetLastLoadTimeToCandidates
   return $self->FormatTime($self->SimpleSqlGet($sql));
 }
 
-sub GetTotalExported
-{
-  my $self = shift;
-
-  my $sql = 'SELECT SUM(itemcount) FROM exportrecord';
-  return $self->SimpleSqlGet($sql);
-}
-
 sub GetLastExport
 {
   my $self     = shift;
   my $readable = shift;
 
-  my $sql = 'SELECT itemcount,time FROM exportrecord WHERE itemcount>0 ORDER BY time DESC LIMIT 1';
+  my $sql = 'SELECT COUNT(*),MAX(time) FROM exportdata WHERE exported=1'.
+            ' AND DATE(time)='.
+            '  (SELECT DATE(MAX(time)) FROM exportdata WHERE exported=1)';
   my $ref = $self->SelectAll($sql);
   my $count = $ref->[0]->[0];
   my $time = $ref->[0]->[1];
