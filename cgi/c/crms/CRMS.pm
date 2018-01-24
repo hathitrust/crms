@@ -6975,7 +6975,9 @@ sub ConvertToInheritanceSearchTerm
   $new_search = 'b.sysid' if $search eq 'sysid';
   $new_search = 'i.id' if $search eq 'id';
   $new_search = 'IF(i.reason=1 || i.reason=12,0,1)' if $search eq 'prior';
-  $new_search = 'IF((SELECT COUNT(*) FROM historicalreviews WHERE id=i.id AND status=5)>0,1,0)' if $search eq 'prior5';
+  $new_search = 'IF((SELECT COUNT(*) FROM historicalreviews h'.
+                ' INNER JOIN exportdata e ON h.gid=e.gid'.
+                ' WHERE h.id=i.id AND e.status=5)>0,1,0)' if $search eq 'prior5';
   $new_search = 'b.title' if $search eq 'title';
   $new_search = 'i.src' if $search eq 'source';
   return $new_search;
@@ -7090,7 +7092,9 @@ sub GetInheritanceRef
     my $h5 = undef;
     if ($incrms)
     {
-      my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=? AND status=5';
+      my $sql = 'SELECT COUNT(*) FROM historicalreviews h'.
+                ' INNER JOIN exportdata e ON h.gid=e.gid'.
+                ' WHERE h.id=? AND e.status=5';
       $h5 = 1 if $self->SimpleSqlGet($sql, $id) > 0;
     }
     my $change = $self->AccessChange($attr, $attr2);
