@@ -50,18 +50,12 @@ var gSys = '[% crms.Sys() %]';
       <div style="float:right;">
         <table class="helloBox">
           <tr>
-            <td rowspan="3" style="padding:0px;height:80px;line-height:1px;">
+            <td rowspan="2" style="padding:0px;height:80px;line-height:1px;">
               <img src="/c/crms/HathiTrustLogo.png" width="86" height="80" alt="HathiTrust Logo"/>
             </td>
             <td style="line-height:1px;">
               Hello&nbsp;[% crms.GetUserProperty(undef, 'name').replace(" ","&nbsp;") %]&nbsp;&nbsp;
               <a href="[% crms.Sysify('crms?p=Logout') %]" class="header">logout</a>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <img width="20" height="20" alt="Contact experts" src="/c/crms/SendIcon.png"/>
-              <a href="[% crms.Sysify('crms?p=mail') %]" class="header" target="_blank">Contact Experts</a>
             </td>
           </tr>
           <tr>
