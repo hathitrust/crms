@@ -485,7 +485,7 @@ a.tip2:hover span {
   margin-left: auto;
   margin-right: auto;
   width:33%;
-  color: #D0000C;
+  color: #800000;
   background-color: #FFCACA;
 }
 
@@ -500,8 +500,22 @@ a.tip2:hover span {
   margin-left: auto;
   margin-right: auto;
   width:90%;
-  color: #D0000C;
-  background-color: #FFCACA;
+  color: #800000;
+  background-color: #FFDADA;
+}
+
+.emailBox
+{
+  border: 1px solid;
+  margin: 10px 0px;
+  padding:20px 50px 25px 50px;
+  background-repeat: no-repeat;
+  background-position: 10px center;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width:33%;
+  background-color: #DDDDDD;
 }
 
 .ProgressBarRed {
