@@ -1,0 +1,58 @@
+[% crms.StartHTML('Contact CRMS Experts', '<link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>') %]
+
+<script>
+function closeMe()
+{
+  var win = window.open('', '_self');
+  win.close();
+}
+</script>
+
+
+<div class="pages" id="homePage">
+  <img src="[% crms.GetSystemVar('logo') %]"
+       alt="CRMS Logo"
+       style="display:block;margin-left:auto;margin-right:auto;"/>
+  <br/>
+  <br/>
+  <br/>
+  <br/>
+  
+  [% mail = crms.GetSystemVar('expertsEmail') %]
+  [% id = cgi.param('id') %]
+    <div class="emailBox">
+      [% IF cgi.param("submit") %]
+        [% CALL crms.SubmitMail(id, crms.get('remote_user'),
+                                cgi.param('msg'), cgi.param('uuid')) %]
+        <h2>Message stored for <a href="mailto:[% mail %]"><span style="color:black;">[% mail %]</span></a>.
+        A copy will be CC'ed to you.
+        <!-- Confirmation code: <span style="color:black;">[% cgi.param('uuid') %]</span>. -->
+        </h2>
+        <input type="button" value="Close Window" onclick="closeMe();" style="margin:auto;margin-top:18px;display:block;"/>
+      [% ELSE %]
+        [% subj = 'Reviewer Inquiry' %]
+        [% IF id %]
+          [% subj = subj _ ' for '_ id _ ' (project ' _ crms.GetProjectName(id) _ ')' %]
+        [% END %]
+        
+        <strong>To:</strong> <a href="mailto:[% mail %]"><span style="color:black;">[% mail %]</span></a><br/>
+        <strong>Subject:</strong> [% crms.SubjectLine(subj) %]<br/>
+        <br/>
+        [% user = crms.get('user') %]
+        <form action="crms">
+          [% crms.HiddenSys() %]
+          <input type="hidden" name="user" value="[% user %]"/>
+          <input type="hidden" name="p" value="[% cgi.param('p') %]"/>
+          <input type="hidden" name="uuid" value="[% crms.UUID() %]"/>
+          <label for="idInput" class="smallishText">
+            Volume identifier[% UNLESS id %] (if applicable)[% END %]:
+          </label>
+          <input id="idInput" type="text" name="id" value="[% cgi.param('id') %]" style="border: 1px solid #888888;"/><br/>
+          <label for="queryTA" class="smallishText">Type your question or concern here:</label><br/>
+          <textarea id="queryTA" name="msg" cols="80"
+                    rows="10" style="height:9em;" required="required">[% cgi.param('msg') %]</textarea>
+          <input type="submit" name="submit" value="Send E-mail"/>
+        </form>
+      [% END %]
+      </div>
+[% INCLUDE footer.tt %]
