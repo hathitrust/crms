@@ -73,6 +73,7 @@ foreach my $row (@{$ref})
   my $txt = $row->[2];
   my $uuid = $row->[3];
   my $subj = sprintf 'Reviewer Inquiry%s', (defined $id)? " for $id":'';
+  $subj .= sprintf ' (project %s)', $crms->GetProjectName($id) if defined $id;
   $subj = $crms->SubjectLine($subj);
   my $msg = $crms->StartHTML($subj);
   if ($id)
@@ -84,8 +85,15 @@ foreach my $row (@{$ref})
     my $link = '<a href="'. $crms->SelfURL().
                $crms->Sysify('/cgi/c/crms/crms?p=adminReviews&search1=Identifier&search1value='. $id).
                '">'. $id. '</a>';
+    my $username = $crms->GetUserProperty($user, 'name');
     my $table = <<END;
     <table style="border:1px solid #000000;border-collapse:collapse;">
+    <tr><th$thstyle>User</th>
+        <td>$user</td>
+    </tr>
+    <tr><th$thstyle>User Name</th>
+        <td>$username</td>
+    </tr>
     <tr><th$thstyle>Volume ID</th>
         <td>$link</td>
     </tr>
@@ -111,7 +119,7 @@ END
       $table2 .= "<tr><th$thstyle colspan='2'>No review data</td></tr>\n";
     }
     $table .= $table2;
-    $table .= sprintf "<tr><th$thstyle>Tracking</td><td>%s</td></tr>\n", $crms->GetTrackingInfo($id, 1, 1);
+    $table .= sprintf "<tr><th$thstyle>Tracking</th><td>%s</td></tr>\n", $crms->GetTrackingInfo($id, 1, 1);
     $table .= "</table>\n<br/><br/>\n";
     $msg .= $table;
   }
