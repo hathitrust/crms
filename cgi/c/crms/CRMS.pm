@@ -95,7 +95,7 @@ sub set
 
 sub Version
 {
-  return '6.6.3';
+  return '6.6.4';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
