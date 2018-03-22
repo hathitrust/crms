@@ -78,10 +78,14 @@ foreach my $row (@{$ref})
   my $msg = $crms->StartHTML($subj);
   if ($id)
   {
+    $sql = 'SELECT b.author,b.title FROM bibdata b WHERE id=?';
+    my $ref2 = $crms->SelectAll($sql, $id);
+    my $author = $ref2->[0]->[0];
+    my $title = $ref2->[0]->[1];
     $sql = 'SELECT r.hold,r.attr,r.reason FROM reviews r INNER JOIN queue q ON r.id=q.id'.
            ' INNER JOIN projects p ON q.project=p.id'.
            ' WHERE r.id=? AND r.user=? ORDER BY r.time DESC LIMIT 1';
-    my $ref2 = $crms->SelectAll($sql, $id, $user);
+    $ref2 = $crms->SelectAll($sql, $id, $user);
     my $link = '<a href="'. $crms->SelfURL().
                $crms->Sysify('/cgi/c/crms/crms?p=adminReviews&search1=Identifier&search1value='. $id).
                '">'. $id. '</a>';
@@ -96,6 +100,12 @@ foreach my $row (@{$ref})
     </tr>
     <tr><th$thstyle>Volume ID</th>
         <td>$link</td>
+    </tr>
+    <tr><th$thstyle>Author</th>
+        <td>$author</td>
+    </tr>
+    <tr><th$thstyle>Title</th>
+        <td>$title</td>
     </tr>
 END
     my $table2 = '';
