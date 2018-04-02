@@ -123,7 +123,7 @@ foreach my $row (@{$ref})
   $seenAuthorTitles{$at} = 1 if length $at;
 }
 my $n = 0;
-my $usql = '(SELECT id FROM users WHERE reviewer=1 AND expert+admin+superadmin=0)';
+my $usql = '(SELECT id FROM users WHERE reviewer=1 AND expert+admin=0)';
 my $ssql = 'e.status=4';
 $ssql .= ' OR e.status=5' unless $ease == 1;
 $ssql .= ' OR e.status=7' unless $no7;

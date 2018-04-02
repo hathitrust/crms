@@ -220,7 +220,7 @@ if (0)
   $sql = 'SELECT name FROM categories WHERE restricted IS NULL AND interface=1';
   $ref = $crms->SelectAll($sql);
   $cats{$_->[0]} = 1 for (@{$ref});
-  $sql = 'SELECT id FROM users WHERE reviewer+advanced>0 AND expert+admin+superadmin=0';
+  $sql = 'SELECT id FROM users WHERE reviewer+advanced>0 AND expert+admin=0';
   $ref = $crms->SelectAll($sql);
   $report .= '<table><tr><th>User (validation)<th>' . join "</th><th>", keys %cats;
   $report .= "</th></tr>\n";

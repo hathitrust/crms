@@ -95,7 +95,7 @@ sub set
 
 sub Version
 {
-  return '6.6.4';
+  return '6.6.5';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -3406,20 +3406,19 @@ sub AddUser
   my $advanced   = shift;
   my $expert     = shift;
   my $admin      = shift;
-  my $superadmin = shift;
   my $note       = shift;
   my $projects   = shift;
   my $commitment = shift;
   my $disable    = shift;
 
-  my @fields = (\$reviewer,\$advanced,\$expert,\$admin,\$superadmin);
+  my @fields = (\$reviewer,\$advanced,\$expert,\$admin);
   ${$fields[$_]} = (length ${$fields[$_]} && !$disable)? 1:0 for (0 .. scalar @fields - 1);
   # Preserve existing privileges unless there are some checkboxes checked
   my $checked = 0;
   $checked += ${$fields[$_]} for (0 .. scalar @fields - 1);
   if ($checked == 0 && !$disable)
   {
-    my $sql = 'SELECT reviewer,advanced,expert,admin,superadmin FROM users WHERE id=?';
+    my $sql = 'SELECT reviewer,advanced,expert,admin FROM users WHERE id=?';
     my $ref = $self->SelectAll($sql, $id);
     #return "Unknown reviewer '$id'" if 0 == scalar @{$ref};
     ${$fields[$_]} = $ref->[0]->[$_] for (0 .. scalar @fields - 1);
@@ -3452,10 +3451,10 @@ sub AddUser
     my $sql = 'INSERT INTO users (id,institution) VALUES (?,?)';
     $self->PrepareSubmitSql($sql, $id, $inst);
   }
-  my $sql = 'UPDATE users SET name=?,kerberos=?,reviewer=?,advanced=?,expert=?,'.
-            'admin=?,superadmin=?,note=?,institution=?,commitment=? WHERE id=?';
+  my $sql = 'UPDATE users SET name=?,kerberos=?,reviewer=?,advanced=?,'.
+            'expert=?,admin=?,note=?,institution=?,commitment=? WHERE id=?';
   $self->PrepareSubmitSql($sql, $name, $kerberos, $reviewer, $advanced, $expert,
-                          $admin, $superadmin, $note, $inst, $commitment, $id);
+                          $admin, $note, $inst, $commitment, $id);
   $self->Note($_) for @{$self->GetErrors()};
   if (defined $projects)
   {
@@ -3614,7 +3613,7 @@ sub IsUserAtLeastExpert
   my $self = shift;
   my $user = shift || $self->get('user');
 
-  my $sql = 'SELECT (expert OR admin OR superadmin) FROM users WHERE id=?';
+  my $sql = 'SELECT (expert OR admin) FROM users WHERE id=?';
   return $self->SimpleSqlGet($sql, $user);
 }
 
@@ -3623,16 +3622,7 @@ sub IsUserAdmin
   my $self = shift;
   my $user = shift || $self->get('user');
 
-  my $sql = 'SELECT (admin OR superadmin) FROM users WHERE id=?';
-  return $self->SimpleSqlGet($sql, $user);
-}
-
-sub IsUserSuperAdmin
-{
-  my $self = shift;
-  my $user = shift || $self->get('user');
-
-  my $sql = 'SELECT superadmin FROM users WHERE id=?';
+  my $sql = 'SELECT admin FROM users WHERE id=?';
   return $self->SimpleSqlGet($sql, $user);
 }
 
@@ -3648,14 +3638,14 @@ sub GetUsers
   my $ord  = shift;
 
   my @users;
-  my $order = '(u.reviewer+u.advanced+u.admin+u.superadmin > 0) DESC';
+  my $order = '(u.reviewer+u.advanced+u.admin > 0) DESC';
   $order .= ',u.expert ASC' if $ord == 1;
   $order .= ',i.shortname ASC' if $ord == 2;
   $order .= ',(u.reviewer+(2*u.advanced)+(4*u.expert)'.
-            '+(8*u.admin)+(16*u.superadmin)) DESC' if $ord == 3;
+            '+(8*u.admin)) DESC' if $ord == 3;
   $order .= ',u.commitment DESC' if $ord == 4;
   $order .= ',u.name ASC';
-  my $sql = 'SELECT u.id,u.name,u.reviewer,u.advanced,u.expert,u.admin,u.superadmin,u.kerberos,'.
+  my $sql = 'SELECT u.id,u.name,u.reviewer,u.advanced,u.expert,u.admin,u.kerberos,'.
             'u.note,i.shortname,u.commitment'.
             ' FROM users u INNER JOIN institutions i'.
             ' ON u.institution=i.id ORDER BY ' . $order;
@@ -3663,9 +3653,10 @@ sub GetUsers
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
+    my $commitment = $row->[9];
     my $expiration = $self->IsUserExpired($id);
     my $progress = 0.0;
-    if ($row->[10])
+    if ($commitment)
     {
       $sql = 'SELECT s.total_time/60.0 FROM userstats s'.
              ' WHERE s.monthyear=DATE_FORMAT(NOW(),"%Y-%m") AND s.user=?';
@@ -3673,7 +3664,7 @@ sub GetUsers
       $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/3600.0 from reviews'.
              ' WHERE user=?';
       $hours += $self->SimpleSqlGet($sql, $id);
-      $progress = $hours/(160.0*$row->[10]) ;
+      $progress = $hours/(160.0*$commitment) ;
       $progress = 0.0 if $progress < 0.0;
       $progress = 1.0 if $progress > 1.0;
     }
@@ -3681,9 +3672,9 @@ sub GetUsers
     my $secondary = $self->SimpleSqlGet($sql, $id);
     push @users, {'id' => $id, 'name' => $row->[1], 'reviewer' => $row->[2],
                   'advanced' => $row->[3], 'expert' => $row->[4], 'admin' => $row->[5],
-                  'superadmin' => $row->[6], 'kerberos' => $row->[7], 'note' => $row->[8],
-                  'institution' => $row->[9], 'commitment' => $row->[10],
-                  'commitmentFmt' => (100.0 *$row->[10]). '%', 'progress' => $progress,
+                  'kerberos' => $row->[6], 'note' => $row->[7],
+                  'institution' => $row->[8], 'commitment' => $commitment,
+                  'commitmentFmt' => (100.0 *$row->[9]). '%', 'progress' => $progress,
                   'expiration' => $expiration, 'ips' => $self->GetUserIPs($id),
                   'role' => $self->GetUserRole($id), 'secondary' => $secondary};
   }
@@ -3695,7 +3686,7 @@ sub IsUserIncarnationExpertOrHigher
   my $self = shift;
   my $user = shift || $self->get('user');
 
-  my $sql = 'SELECT MAX(expert+admin+superadmin) FROM users WHERE kerberos!=""' .
+  my $sql = 'SELECT MAX(expert+admin) FROM users WHERE kerberos!=""' .
             ' AND kerberos IN (SELECT DISTINCT kerberos FROM users WHERE id=?)';
   return 0 < $self->SimpleSqlGet($sql, $user);
 }
@@ -4674,9 +4665,9 @@ sub GetInstitutionReviewers
   my $inst = shift;
 
   my @revs;
-  my $sql = 'SELECT id,name,reviewer+advanced+expert+admin+superadmin as active,commitment'.
+  my $sql = 'SELECT id,name,reviewer+advanced+expert+admin as active,commitment'.
             ' FROM users WHERE institution=?'.
-            ' AND (reviewer+advanced+expert>0 OR reviewer+advanced+expert+admin+superadmin=0)'.
+            ' AND (reviewer+advanced+expert>0 OR reviewer+advanced+expert+admin=0)'.
             ' ORDER BY active DESC,name';
   my $ref = $self->SelectAll($sql, $inst);
   foreach my $row (@{$ref})
@@ -7697,8 +7688,7 @@ sub GetUserQualifications
   my $sql = 'SELECT CONCAT('.
             ' IF(reviewer=1 OR advanced=1,"r",""),'.
             ' IF(expert=1,"e",""),'.
-            ' IF(admin=1,"a",""),'.
-            ' IF(superadmin=1,"xas",""))'.
+            ' IF(admin=1,"xas",""))'.
             ' FROM users where id=?';
   my $q = $self->SimpleSqlGet($sql, $user);
   $q .= 'i' if $self->IsUserIncarnationExpertOrHigher($user);
@@ -8478,7 +8468,7 @@ sub GetProjectsRef
   my @projects;
   my $sql = 'SELECT p.id,p.name,p.restricted,COALESCE(p.color,"000000"),'.
             '(SELECT COUNT(*) FROM projectusers pu INNER JOIN users u ON pu.user=u.id'.
-            ' WHERE pu.project=p.id AND u.reviewer+u.advanced+u.expert+u.admin+u.superadmin>0),'.
+            ' WHERE pu.project=p.id AND u.reviewer+u.advanced+u.expert+u.admin>0),'.
             '(SELECT COUNT(*) FROM queue q WHERE q.project=p.id),'.
             '(SELECT COUNT(*) FROM candidates c WHERE c.project=p.id),'.
             '(SELECT COUNT(*) FROM exportdata e WHERE e.project=p.id),p.autoinherit,p.group_volumes'.
@@ -8558,7 +8548,9 @@ sub AllAssignableUsers
 {
   my $self = shift;
 
-  my $sql = 'SELECT u.id,u.name FROM users u WHERE u.reviewer+u.advanced+u.expert+u.admin+u.superadmin>0 ORDER BY u.name ASC';
+  my $sql = 'SELECT u.id,u.name FROM users u'.
+            ' WHERE u.reviewer+u.advanced+u.expert+u.admin>0'.
+            ' ORDER BY u.name ASC';
   my $ref = $self->SelectAll($sql);
   my @authorities;
   push @authorities, {'id' => $_->[0], 'name' => $_->[1]} for @{$ref};

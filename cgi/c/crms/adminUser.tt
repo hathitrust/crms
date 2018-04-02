@@ -11,7 +11,6 @@
 [% advanced   = cgi.param('advanced')   %]
 [% expert     = cgi.param('expert')     %]
 [% admin      = cgi.param('admin')      %]
-[% superadmin = cgi.param('superadmin') %]
 [% note       = cgi.param('note')       %]
 [% disable    = cgi.param('disable')    %]
 [% commitment = cgi.param('commitment') %]
@@ -44,8 +43,7 @@
   [% IF add %]
     [% IF id %]
       [% res = crms.AddUser(id, kerberos, name, reviewer, advanced, expert,
-                            admin, superadmin, note, projects,
-                            commitment, disable) %]
+                            admin, note, projects, commitment, disable) %]
     [% ELSE %]
       [% res = "No user ID provided" %]
     [% END %]
@@ -78,8 +76,7 @@
     [% v = u.advanced %]
     [% e = u.expert %]
     [% a = u.admin %]
-    [% s = u.superadmin %]
-    [% active = (r||v||e||a||s) %]
+    [% active = (r||v||e||a) %]
     [% style = (active)? '':'style="background-color:#e2e2e2;"' %]
     <tr [% id == u.id ? 'class="total"':'class="hoverWide"'%] [% style %]>
       <td class="nowrap">
@@ -221,13 +218,10 @@
       <tr>
         <td><input type="checkbox" name="reviewer" id="reviewerCB"/> <label for="reviewerCB">Reviewer</label></td>
         <td><input type="checkbox" name="advanced" id="advancedCB"/> <label for="advancedCB">Advanced Reviewer</label></td>
-        <td><input type="checkbox" name="expert" id="expertCB"/> <label for="expertCB">Expert</label></td>
       </tr>
       <tr>
+        <td><input type="checkbox" name="expert" id="expertCB"/> <label for="expertCB">Expert</label></td>
         <td><input type="checkbox" name="admin" id="adminCB"/> <label for="adminCB">Admin</label></td>
-        <td><input type="checkbox" name="superadmin"[% crms.IsUserSuperAdmin()? '':' disabled="disabled"' %] id="superAdminCB"/>
-            <label for="superAdminCB">Super Admin</label></td>
-        <td></td>
       </tr>
     </table>
     <br/><input type="checkbox" name="disable" id="disableCB"/> <label for="disableCB">Disable user</label>
