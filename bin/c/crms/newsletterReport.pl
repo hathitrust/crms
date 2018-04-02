@@ -73,6 +73,11 @@ my $dUSM = $crmsUS->SimpleSqlGet("SELECT COUNT(*) FROM exportdata WHERE DATE(tim
 my $pdUS = $crmsUS->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE DATE(time)<=? AND (attr="pd" OR attr="pdus")', $lastlast);
 my $pdUSM = $crmsUS->SimpleSqlGet("SELECT COUNT(*) FROM exportdata WHERE DATE(time) LIKE '$my%' AND (attr='pd' OR attr='pdus')");
 
+my $pdWorldPct = sprintf '%.1f%%', 100.0 * $pdWorld / $dWorld;
+my $pdWorldMPct = sprintf '%.1f%%', 100.0 * $pdWorldM / $dWorldM;
+my $pdUSPct = sprintf '%.1f%%', 100.0 * $pdUS / $dUS;
+my $pdUSMPct = sprintf '%.1f%%', 100.0 * $pdUSM / $dUSM;
+
 $dWorld = commify($dWorld);
 $dWorldM = commify($dWorldM);
 $pdWorld = commify($pdWorld);
@@ -99,16 +104,16 @@ $msg .= <<END;
   </tr>
   <tr style="text-align:center;">
     <th style="background-color:#000000;color:#FFFFFF;padding:4px 20px 2px 6px;text-align:left;">CRMS-US</th>
-    <td style="padding:4px 6px 2px 6px;text-align:center;">$pdUSM</th>
+    <td style="padding:4px 6px 2px 6px;text-align:center;">$pdUSM ($pdUSMPct)</th>
     <td style="padding:4px 6px 2px 6px;text-align:center;">$dUSM</th>
-    <td style="padding:4px 6px 2px 6px;text-align:center;">$pdUS</th>
+    <td style="padding:4px 6px 2px 6px;text-align:center;">$pdUS ($pdUSPct)</th>
     <td style="padding:4px 6px 2px 6px;text-align:center;">$dUS</th>
   </tr>
   <tr style="text-align:center;">
     <th style="background-color:#000000;color:#FFFFFF;padding:4px 20px 2px 6px;text-align:left;">CRMS-World</th>
-    <td style="padding:4px 6px 2px 6px;text-align:center;">$pdWorldM</th>
+    <td style="padding:4px 6px 2px 6px;text-align:center;">$pdWorldM ($pdWorldMPct)</th>
     <td style="padding:4px 6px 2px 6px;text-align:center;">$dWorldM</th>
-    <td style="padding:4px 6px 2px 6px;text-align:center;">$pdWorld</th>
+    <td style="padding:4px 6px 2px 6px;text-align:center;">$pdWorld ($pdWorldPct)</th>
     <td style="padding:4px 6px 2px 6px;text-align:center;">$dWorld</th>
   </tr>
 </table>
