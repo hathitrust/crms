@@ -713,24 +713,8 @@ sub ExportReviews
     $self->ReportMsg("<i>Moving to <code>$perm</code>.</i>");
     rename $temp, $perm;
   }
-  # Update correctness/validation now that everything is in historical
-  foreach my $id (@{$list})
-  {
-    my $sql = 'SELECT user,time,validated FROM historicalreviews WHERE id=?';
-    my $ref = $self->SelectAll($sql, $id);
-    foreach my $row (@{$ref})
-    {
-      my $user = $row->[0];
-      my $time = $row->[1];
-      my $val  = $row->[2];
-      my $val2 = $self->IsReviewCorrect($id, $user, $time);
-      if ($val != $val2)
-      {
-        $sql = 'UPDATE historicalreviews SET validated=? WHERE id=? AND user=? AND time=?';
-        $self->PrepareSubmitSql($sql, $val2, $id, $user, $time);
-      }
-    }
-  }
+  # Update correctness now that everything is in historical
+  $self->UpdateValidation($_) for @{$list};
   if (!$training && !$quiet)
   {
     my $dels = $start_size-$self->GetCandidatesSize();
@@ -4686,7 +4670,8 @@ sub GetInstitutionReviewers
 
 sub UpdateStats
 {
-  my $self = shift;
+  my $self  = shift;
+  my $quiet = shift;
 
   # Get the underlying system status, ignoring replication delays.
   my ($blah,$stat,$msg) = @{$self->GetSystemStatus(1)};
@@ -4705,6 +4690,7 @@ sub UpdateStats
       $self->GetMonthStats($user, $y, $m);
     }
   }
+  $self->ReportMsg("Setting system status back to '$stat'") unless $quiet;
   $self->SetSystemStatus($stat, $msg);
 }
 
@@ -6136,81 +6122,80 @@ sub CountHistoricalReviews
   return $self->SimpleSqlGet($sql, $id);
 }
 
-sub IsReviewCorrect
+# Determines correctness of review passed in hash reference $user1
+# containing keys 'user' and 'time'.
+# Fills in additional details about the $user1 review, and the most
+# recent expert review in $user2 hash reference.
+# Returns 0 (incorrect), 1 (correct), or 2 (neutral)
+# The algorithm:
+# Reviews by autocrms are always correct.
+# Reviews with note category Missing and Wrong Record are always correct if S6
+# (these never occur in new reviews because the names have been superseded).
+# Reviews for a determination of status 6, 7, or 8 are always correct.
+# Otherwise, get the most recent subsequent expert review that is not
+# by autocrms or done as a Newyear review.
+#  If there is no such review, then return correct.
+#  Otherwise, if the rights agree for the purposes of review matching, return 1.
+#  Otherwise, return 2 if the expert review is swissed, 0 if not swissed.
+sub ValidateReview
 {
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift;
-  my $time = shift;
+  my $self  = shift;
+  my $id    = shift;
+  my $user1 = shift;
+  my $user2 = shift;
 
-  # Has there ever been a swiss review for this volume?
-  my $sql = 'SELECT COUNT(id) FROM historicalreviews WHERE id=? AND swiss=1';
-  my $swiss = $self->SimpleSqlGet($sql, $id);
+  # autocrms is always right
+  return 1 if $user1->{'user'} eq 'autocrms';
   # Get the review
-  $sql = 'SELECT a.name,rs.name,r.renNum,r.renDate,r.expert,e.status,r.time,r.category,r.gid FROM historicalreviews r'.
-         ' INNER JOIN exportdata e ON r.gid=e.gid'.
-         ' INNER JOIN users u ON r.user=u.id'.
-         ' INNER JOIN attributes a ON r.attr=a.id'.
-         ' INNER JOIN reasons rs ON r.reason=rs.id'.
-         " WHERE r.id=? AND r.user=? AND r.time LIKE '$time%'";
-  my $r = $self->SelectAll($sql, $id, $user);
+  my $sql = 'SELECT a.name,rs.name,r.expert,e.status,COALESCE(r.category,"")'.
+            ' FROM historicalreviews r'.
+            ' INNER JOIN exportdata e ON r.gid=e.gid'.
+            ' INNER JOIN attributes a ON r.attr=a.id'.
+            ' INNER JOIN reasons rs ON r.reason=rs.id'.
+            ' WHERE r.id=? AND r.user=? AND r.time=?';
+  my $r = $self->SelectAll($sql, $id, $user1->{'user'}, $user1->{'time'});
   my $row = $r->[0];
-  my $attr    = $row->[0];
-  my $reason  = $row->[1];
-  my $renNum  = $row->[2];
-  my $renDate = $row->[3];
-  my $expert  = $row->[4];
-  my $status  = $row->[5];
-  my $time2   = $row->[6];
-  my $cat     = $row->[7];
-  my $gid     = $row->[8];
-  #print "($user) $attr, $reason, $renNum, $renDate, $expert, $swiss, $status ($time)\n";
-  # A non-expert with status 6/7/8 is protected rather like Swiss.
-  return 1 if ($status >=6 && $status <= 8 && !$expert);
+  $user1->{'attr'}     = $row->[0];
+  $user1->{'reason'}   = $row->[1];
+  $user1->{'expert'}   = $row->[2];
+  $user1->{'status'}   = $row->[3];
+  $user1->{'category'} = $row->[4];
+  # Missing/Wrong record category is always right if status 6
+  return 1 if ($user1->{'category'} eq 'Missing'
+               or $user1->{'category'} eq 'Wrong Record')
+               and $user1->{'status'} == 6;
+  # A status 6/7/8 is always right.
+  return 1 if ($user1->{'status'} >=6 && $user1->{'status'} <= 8);
   # If there is a newer newyear determination, that also offers blanket protection.
   $sql = 'SELECT COUNT(id) FROM exportdata WHERE id=? AND src="newyear" AND time>?';
-  my $newyear = $self->SimpleSqlGet($sql, $id, $time);
-  return 1 if $newyear;
-  # Get the most recent non-autocrms expert review.
-  $sql = 'SELECT a.name,rs.name,r.renNum,r.renDate,r.user,r.swiss,r.gid,e.status FROM historicalreviews r'.
+  return 1 if $self->SimpleSqlGet($sql, $id, $user1->{'time'});
+  # Get the most recent non-autocrms expert review that is not a subsequent
+  # newyear review.
+  $sql = 'SELECT r.user,r.time,a.name,rs.name,r.swiss'.
+         ' FROM historicalreviews r'.
          ' INNER JOIN exportdata e ON r.gid=e.gid'.
          ' INNER JOIN attributes a ON r.attr=a.id'.
          ' INNER JOIN reasons rs ON r.reason=rs.id'.
-         ' WHERE r.id=? AND r.expert>0 AND r.time>? ORDER BY r.time DESC';
-  $r = $self->SelectAll($sql, $id, $time2);
+         ' WHERE r.id=? AND r.expert>0 AND r.time>? AND r.user!="autocrms"'.
+         ' AND (NOT (e.src="newyear" AND r.time>?))'.
+         ' ORDER BY r.time DESC LIMIT 1';
+  $r = $self->SelectAll($sql, $id, $user1->{'time'}, $user1->{'time'});
   return 1 unless scalar @{$r};
   $row = $r->[0];
-  my $eattr    = $row->[0];
-  my $ereason  = $row->[1];
-  my $erenNum  = $row->[2];
-  my $erenDate = $row->[3];
-  my $euser    = $row->[4];
-  my $eswiss   = $row->[5];
-  my $egid     = $row->[6];
-  my $estatus  = $row->[7];
-  # Missing/Wrong record category, if present, offers protection from re-reviews (different gid)
-  return 1 if $gid ne $egid and ($cat eq 'Missing' or $cat eq 'Wrong Record');
-  #print "Expert: $eattr, $ereason, $erenNum, $erenDate, $euser, $eswiss\n";
-  if ($attr ne $eattr)
-  {
-    # A later status 8 might mismatch against a previous status 4.
-    # It's OK if the reason is crms and the mismatch is und vs ic.
-    return 1 if ($ereason eq 'crms' && $attr eq 'ic' && $eattr eq 'und');
-    return (($swiss && !$expert) || ($eswiss && $euser eq 'autocrms'))? 2:0;
-  }
-  if ($reason ne $ereason ||
-      ($attr eq 'ic' && $reason eq 'ren' && ($renNum ne $erenNum || $renDate ne $erenDate)))
-  {
-    # It's OK if the reason is crms; it can't match anyway.
-    return 1 if $ereason eq 'crms';
-    # It is also OK if the status is 7 (expert accepted) on the same review cycle.
-    return 1 if $estatus == 7 and $gid == $egid;
-    return (($swiss && !$expert) || ($eswiss && $euser eq 'autocrms'))? 2:0;
-  }
-  return 1;
+  $user2->{'user'}   = $row->[0];
+  $user2->{'time'}   = $row->[1];
+  $user2->{'attr'}   = $row->[2];
+  $user2->{'reason'} = $row->[3];
+  $user2->{'swiss'}  = $row->[4];
+  my $module = 'Validator_' . $self->Sys() . '.pm';
+  require $module;
+  return 1 if Validator::DoRightsMatch($self,
+                                       $user1->{'attr'}, $user1->{'reason'},
+                                       $user2->{'attr'}, $user2->{'reason'});
+  return ($user2->{'swiss'} && !$user1->{'expert'})? 2:0;
 }
 
-sub UpdateCorrectness
+sub UpdateValidation
 {
   my $self = shift;
   my $id   = shift;
@@ -6219,14 +6204,14 @@ sub UpdateCorrectness
   my $r = $self->SelectAll($sql, $id);
   foreach my $row (@{$r})
   {
-    my $user = $row->[0];
-    my $time = $row->[1];
     my $val = $row->[2];
-    my $val2 = $self->IsReviewCorrect($id, $user, $time);
+    my %user1 = ('user' => $row->[0], 'time' => $row->[1]);
+    my %user2;
+    my $val2 = $self->ValidateReview($id, \%user1, \%user2);
     if ($val != $val2)
     {
       $sql = 'UPDATE historicalreviews SET validated=? WHERE id=? AND user=? AND time=?';
-      $self->PrepareSubmitSql($sql, $val2, $id, $user, $time);
+      $self->PrepareSubmitSql($sql, $val2, $id, $row->[0], $row->[1]);
     }
   }
 }
@@ -6274,6 +6259,7 @@ sub GetValidation
   my $end   = shift;
   my $users = shift;
 
+  # FIXME: what purpose does GetType1Reviewers serve here?
   $users = sprintf '"%s"', join '","', $self->GetType1Reviewers() unless $users;
   $start = substr($start,0,7);
   $end = substr($end,0,7);
