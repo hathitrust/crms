@@ -80,8 +80,8 @@ foreach my $row (@{$ref})
   {
     $sql = 'SELECT b.author,b.title FROM bibdata b WHERE id=?';
     my $ref2 = $crms->SelectAll($sql, $id);
-    my $author = $ref2->[0]->[0];
-    my $title = $ref2->[0]->[1];
+    my $author = $ref2->[0]->[0] || '';
+    my $title = $ref2->[0]->[1] || '';
     $sql = 'SELECT r.hold,r.attr,r.reason FROM reviews r INNER JOIN queue q ON r.id=q.id'.
            ' INNER JOIN projects p ON q.project=p.id'.
            ' WHERE r.id=? AND r.user=? ORDER BY r.time DESC LIMIT 1';
