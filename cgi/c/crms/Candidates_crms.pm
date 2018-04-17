@@ -41,6 +41,11 @@ sub GetCutoffYear
   my $country = shift;
   my $name    = shift;
 
+  if ($name eq 'minYear')
+  {
+    my $now = $self->{crms}->GetTheYear();
+    return $now - 95 + 1;
+  }
   return 1923 if $name eq 'minYear';
   return 1963 if $name eq 'maxYear';
   return 1977 if $name eq 'maxYearOverride';
