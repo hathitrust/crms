@@ -95,7 +95,7 @@ sub set
 
 sub Version
 {
-  return '6.6.5';
+  return '6.6.6';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -1234,7 +1234,7 @@ sub CandidatesModule
   return $mod;
 }
 
-# Returns an array of error messages (reasons for unsuitability for CRMS) for a volume.
+# Returns an arrayref of error messages (reasons for unsuitability for CRMS) for a volume.
 # Used by candidates loading to ignore inappropriate items.
 # Used by Add to Queue page for filtering non-overrides.
 sub GetViolations
