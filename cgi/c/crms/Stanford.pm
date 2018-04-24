@@ -34,6 +34,7 @@ sub GetStanfordData
     return;
   }
   $json->{'response'}->{'json'} = $res->content;
+  $json->{'response'}->{'url'} = $url;
   return $json->{'response'};
 }
 
