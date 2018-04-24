@@ -64,7 +64,6 @@
     <th scope="col">Advanced</th>
     <th scope="col">Expert</th>
     <th scope="col">Admin</th>
-    <th scope="col">Super<br/>Admin</th>
     <th scope="col">Projects</th>
     <th scope="col">IP Address</th>
     <th scope="col">Commitment[% IF uadmin %]<br/>(Progress)[% END %]</th>
@@ -102,7 +101,6 @@
       <td style="text-align:center;">[% IF v %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF e %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF a %][% icon %][% END %]</td>
-      <td style="text-align:center;">[% IF s %][% icon %][% END %]</td>
       <td style="text-align:center;">
         [% projs = crms.GetUserProjects(userid) %]
         [% names = [] %]
