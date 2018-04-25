@@ -56,7 +56,7 @@ window.onload = function(e)
     
   </form>
 [% END %]
-
+[% crms.Debug %]
 [% n = crms.CountHolds() %]
 [% IF n %]<h4>You have $n [% crms.Pluralize('volume', n) %] on hold.</h4>[% END %]
 
