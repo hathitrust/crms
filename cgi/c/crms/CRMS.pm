@@ -243,23 +243,6 @@ sub ConnectToSdrDb
   {
     my $err = $DBI::errstr;
     $self->SetError($err);
-    # Number of errors reported in the last 12 hours.
-    my $sql = 'SELECT COUNT(*) FROM sdrerror WHERE time > DATE_SUB(NOW(), INTERVAL 12 HOUR)';
-    if (0 == $self->SimpleSqlGet($sql))
-    {
-      $sql = 'INSERT INTO sdrerror (error) VALUES (?)';
-      $self->PrepareSubmitSql($sql, $err);
-      my $me = $self->GetSystemVar('adminEmail', '');
-      my $bytes = encode('utf8', $err);
-      use Mail::Sendmail;
-      my %mail = ('from'         => $me,
-                  'to'           => $me,
-                  'subject'      => $self->SubjectLine('rights database issue'),
-                  'content-type' => 'text/html; charset="UTF-8"',
-                  'body'         => $bytes
-                  );
-      sendmail(%mail) || $self->SetError("Error: $Mail::Sendmail::error\n");
-    }
   }
   return $sdr_dbh;
 }
