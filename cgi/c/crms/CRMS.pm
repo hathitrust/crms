@@ -63,6 +63,7 @@ sub new
   my $alias = $self->GetAlias($user);
   $user = $alias if defined $alias and length $alias and $alias ne $user;
   $self->set('user', $user);
+  $self->DebugVar('self', $self);
   return $self;
 }
 
@@ -395,7 +396,7 @@ sub DebugSql
   my $time = shift;
 
   my $debug = $self->get('debugSql');
-  if ($debug && $self->get('headerLoaded') == 1)
+  if ($debug)
   {
     my $ct = $self->get('debugCount');
     $ct = 0 unless $ct;
@@ -415,7 +416,9 @@ sub DebugSql
       </div>
     </div>
 END
-    printf $html, join(',', @_), $time;
+    my $msg = sprintf $html, join(',', @_), $time;
+    my $storedDebug = $self->get('storedDebug') || '';
+    $self->set('storedDebug', $storedDebug. $msg);
     $ct++;
     $self->set('debugCount', $ct);
   }
@@ -428,7 +431,7 @@ sub DebugVar
   my $val  = shift;
 
   my $debug = $self->get('debugVar');
-  if ($debug && $self->get('headerLoaded') == 1)
+  if ($debug)
   {
     my $ct = $self->get('debugCount');
     $ct = 0 unless $ct;
@@ -444,10 +447,26 @@ sub DebugVar
     </div>
 END
     use Data::Dumper;
-    printf $html, Dumper($val);
+    my $msg = sprintf $html, Dumper($val);
+    my $storedDebug = $self->get('storedDebug') || '';
+    $self->set('storedDebug', $storedDebug. $msg);
     $ct++;
     $self->set('debugCount', $ct);
   }
+}
+
+# Called to return and flush any accumulated debugging display.
+sub Debug
+{
+  my $self = shift;
+
+  my $d = '';
+  if ($self->get('headerLoaded') == 1)
+  {
+    $d = $self->get('storedDebug') || '';
+    $self->set('storedDebug', '');
+  }
+  $d;
 }
 
 sub GetCandidatesSize

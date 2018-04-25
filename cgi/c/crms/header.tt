@@ -6,7 +6,9 @@
     <link rel="stylesheet" type="text/css" href="/c/crms/css/datepicker.css"/>
     <script type="text/javascript" src="/c/crms/js/common.js"></script>
   [% page = cgi.param('p') %]
-  [% reviewType = (page == 'review' OR page == 'corrections' OR page == 'cri' OR page == 'stanford') %]
+  [% reviewType = (page == 'review' OR page == 'corrections' OR page == 'cri'
+                   OR page == 'stanford' OR page == 'frontmatter'
+                   OR page == 'pageimage') %]
   [% IF reviewType %]
     <script type="text/javascript" src="/c/crms/js/review.js"></script>
   [% ELSE %]
@@ -39,7 +41,10 @@ var gSys = '[% crms.Sys() %]';
     <div id="homePage">
   [% ELSE %]
     [% IF where %]
-    <div class="topBanner">[% crms.DevBanner().replace(" ","&nbsp;") %]</div>
+    <div class="topBanner">
+      [% crms.DevBanner().replace(" ","&nbsp;") %]
+      [% crms.Debug %]
+    </div>
     [% END %]
     <div class="pages" id="homePage">
     <div style="height:82px;border-bottom:1px solid black;margin:0px;padding-bottom:6px;">
@@ -66,9 +71,11 @@ var gSys = '[% crms.Sys() %]';
         </table>
       </div>
     </div>
+    [% crms.Debug %]
     <div>[% INCLUDE nav.tt %]</div>
     <br/><br/><br/>
 [% END %]
+[% crms.Debug %]
 [% # Don't display the notice if this is the review page and situation normal %]
 [% IF r.2 && (!reviewType || r.1 != 'normal') %]
   <img src="[% crms.GetSystemVar('smallLogo') %]" alt="CRMS Logo"
@@ -82,6 +89,7 @@ var gSys = '[% crms.Sys() %]';
   </td></tr>
   </table>
 [% END %]
+[% crms.Debug %]
 [% IF r.1 != 'normal' %]
   [% IF page != 'systemStatus' %]
     [% IF r.1 == 'down' %]

@@ -291,6 +291,7 @@ if (!$tt->process($input, $vars))
   printf "<h3>%s</h3>\n", $tt->error();
   die $tt->error();
 }
+print $crms->Debug();
 if ($cgi->param('debug'))
 {
   print '<br/><br/>';
