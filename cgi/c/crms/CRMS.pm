@@ -406,11 +406,11 @@ sub DebugSql
     $trace = join '<br>', @{$trace};
 	  my $html = <<END;
     <div class="debug">
-      <div class="debugSql" onClick="ToggleDiv('details$ct');">
+      <div class="debugSql" onClick="ToggleDiv('details$ct', 'debugSqlDetails');">
         SQL QUERY [$type] ($ct)
       </div>
       <div id="details$ct" class="divHide"
-           style="background-color: #9c9;" onClick="ToggleDiv('details$ct');">
+           style="background-color: #9c9;" onClick="ToggleDiv('details$ct', 'debugSqlDetails');">
         $sql <strong>{%s}</strong> <i>(%.3fms)</i><br/>
         <i>$trace</i>
       </div>
@@ -437,11 +437,11 @@ sub DebugVar
     $ct = 0 unless $ct;
 	  my $html = <<END;
     <div class="debug">
-      <div class="debugVar" onClick="ToggleDiv('details$ct');">
+      <div class="debugVar" onClick="ToggleDiv('details$ct', 'debugVarDetails');">
         VAR $var
       </div>
       <div id="details$ct" class="divHide"
-           style="background-color: #fcc;" onClick="ToggleDiv('details$ct');">
+           style="background-color: #fcc;" onClick="ToggleDiv('details$ct', 'debugVarDetails');">
         %s
       </div>
     </div>

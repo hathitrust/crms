@@ -101,10 +101,10 @@ if (window.attachEvent)
 }
 
 // action code for debugger bars
-function ToggleDiv(thisone)
+function ToggleDiv(id, className)
 {
-  var ndDiv = document.getElementById(thisone);
-  if (ndDiv.className == 'divHide') { ndDiv.className = 'divShow'; }
-  else { ndDiv.className = 'divHide'; }
+  var el = document.getElementById(id);
+  if (el.className == 'divHide') { el.className = className; }
+  else { el.className = 'divHide'; }
 }
 
