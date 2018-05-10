@@ -4,6 +4,7 @@ use Unicode::Normalize;
 
 # If successful, returns a hash ref that contains values for some subset of
 # the following keys: 'abd', 'add', 'author' (the VIAF author name), and 'country'.
+# Also has a 'url' field for debugging bad URLs or unparseable responses.
 # Returns undef if none of that data could be found.
 sub GetVIAFData
 {
@@ -31,7 +32,7 @@ sub GetVIAFData
               'country' => $ref->[0]->[3], 'viafID' => $ref->[0]->[4]};
     }
   }
-  $author =~ s/"//g;
+  $author =~ s/["#]//g;
   my $url = 'http://viaf.org/viaf/search?query=local.names+all+%22'. $author.
             '%22+&maximumRecords=10&startRecord=1&sortKeys=holdingscount&'.
             'httpAccept=application/json';
@@ -86,6 +87,7 @@ sub GetVIAFData
     $self->PrepareSubmitSql($sql, $author, $ret->{'author'}, $ret->{'abd'},
                             $ret->{'add'}, $ret->{'country'}, $ret->{'viafID'});
   }
+  $ret->{'url'} = $url;
   return $ret;
 }
 
