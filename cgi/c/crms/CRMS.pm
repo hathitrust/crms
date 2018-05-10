@@ -3361,7 +3361,7 @@ sub GetCodeFromAttrReason
   my $a    = shift;
   my $r    = shift;
 
-  my $sql = 'SELECT id FROM rights WHERE attr=? AND reason=? ORDER BY IF(restricted LIKE "%o%",0,1) DESC LIMIT 1';
+  my $sql = 'SELECT id FROM rights WHERE attr=? AND reason=? LIMIT 1';
   return $self->SimpleSqlGet($sql, $a, $r);
 }
 
@@ -7763,8 +7763,7 @@ sub Rights
             ' INNER JOIN attributes a ON r.attr=a.id'.
             ' INNER JOIN reasons rs ON r.reason=rs.id'.
             ' INNER JOIN projectrights pr ON r.id=pr.rights'.
-            ' WHERE (r.restricted IS NULL OR r.restricted NOT LIKE "%i%")'.
-            ' AND pr.project=?'.
+            ' WHERE pr.project=?'.
             ' ORDER BY IF(a.name="pd"||a.name="pdus",1,0) DESC, a.name ASC, rs.name ASC';
   #print "$sql<br/>\n";
   my $ref = $self->SelectAll($sql, $proj);
