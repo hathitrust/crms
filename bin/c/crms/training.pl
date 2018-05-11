@@ -1,10 +1,11 @@
 #!/usr/bin/perl
 
-my $DLXSROOT;
-BEGIN
-{
-  $DLXSROOT = $ENV{'DLXSROOT'};
-  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
+my ($root_dir);
+BEGIN 
+{ 
+  $root_dir = $ENV{'DLXSROOT'};
+  $root_dir = $ENV{'SDRROOT'} unless $root_dir;
+  unshift(@INC, $root_dir . '/cgi/c/crms');
 }
 
 use strict;
@@ -69,19 +70,15 @@ die "Ease should be between 1 and 3 inclusive\n" if defined $ease && ($ease < 1 
 $ease = 3 unless defined $ease;
 
 my $crmsp = CRMS->new(
-    logFile      =>   "$DLXSROOT/prep/c/crms/training_hist.txt",
     sys          =>   $sys,
     verbose      =>   $verbose,
-    root         =>   $DLXSROOT,
     instance     =>   'production'
 );
 
 # Connect to training database.
 my $crmst = CRMS->new(
-    logFile  => "$DLXSROOT/prep/c/crms/training_hist2.txt",
     sys      => $sys,
-    verbose  => $verbose,
-    root     => $DLXSROOT,
+    verbose  => $verbose,,
     instance => ($dev)? undef:'crms-training'
 );
 

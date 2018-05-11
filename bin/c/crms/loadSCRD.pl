@@ -1,10 +1,11 @@
 #!/usr/bin/perl
 
-my $DLXSROOT;
-BEGIN
-{
-  $DLXSROOT = $ENV{'DLXSROOT'};
-  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
+my ($root_dir);
+BEGIN 
+{ 
+  $root_dir = $ENV{'DLXSROOT'};
+  $root_dir = $ENV{'SDRROOT'} unless $root_dir;
+  unshift(@INC, $root_dir . '/cgi/c/crms');
 }
 
 use strict;
@@ -42,10 +43,8 @@ $instance = 'crms-training' if $training;
 die $usage if $help or !scalar @ARGV;
 
 my $crms = CRMS->new(
-    logFile  => "$DLXSROOT/prep/c/crms/stanford_log.txt",
     sys      => $sys,
     verbose  => 0,
-    root     => $DLXSROOT,
     instance => $instance
 );
 

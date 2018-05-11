@@ -3,11 +3,12 @@
 # FIXME: assigns Core project to added queue items instead of
 # New Year project.
 
-my $DLXSROOT;
-BEGIN
-{
-  $DLXSROOT = $ENV{'DLXSROOT'};
-  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
+my ($root_dir);
+BEGIN 
+{ 
+  $root_dir = $ENV{'DLXSROOT'};
+  $root_dir = $ENV{'SDRROOT'} unless $root_dir;
+  unshift(@INC, $root_dir . '/cgi/c/crms');
 }
 
 use strict;
@@ -55,10 +56,8 @@ $instance = 'production' if $production;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    logFile  => $DLXSROOT . '/prep/c/crms/newyear_hist.txt',
     sys      => 'crmsworld',
     verbose  => $verbose,
-    root     => $DLXSROOT,
     instance => $instance
 );
 

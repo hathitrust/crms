@@ -1,9 +1,10 @@
 #!/usr/bin/perl
 
-my $DLXSROOT;
-BEGIN
-{
-  $DLXSROOT = $ENV{'DLXSROOT'};
+my ($root_dir);
+BEGIN 
+{ 
+  $root_dir = $ENV{'DLXSROOT'};
+  $root_dir = $ENV{'SDRROOT'} unless $root_dir;
 }
 
 use strict;
@@ -14,10 +15,8 @@ my $cgi  = new CGI;
 my $sys =  $cgi->param('sys') || 'crms';
 my $pdb = $cgi->param('pdb');
 my $tdb = $cgi->param('tdb');
-my $crms = CRMS->new(logFile => $DLXSROOT. '/prep/c/crms/log_getRenewalDate.txt',
-                     sys     => $sys,
+my $crms = CRMS->new(sys     => $sys,
                      verbose => 0,
-                     root    => $DLXSROOT,
                      pdb     => $pdb,
                      tdb     => $tdb);
 my $id  = $cgi->param('id');

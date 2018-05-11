@@ -1,10 +1,11 @@
 #!/usr/bin/perl
 
-my $DLXSROOT;
-BEGIN
-{
-  $DLXSROOT = $ENV{'DLXSROOT'};
-  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
+my ($root_dir);
+BEGIN 
+{ 
+  $root_dir = $ENV{'DLXSROOT'};
+  $root_dir = $ENV{'SDRROOT'} unless $root_dir;
+  unshift(@INC, $root_dir . '/cgi/c/crms');
 }
 
 use strict;
@@ -43,10 +44,8 @@ if ($help || scalar @ARGV < 1 || !$ok)
 my $file = $ARGV[0];
 $instance = 'production' if $production;
 my $crms = CRMS->new(
-    logFile  =>   "$DLXSROOT/prep/c/crms/log_load_hist.txt",
     sys      =>   $sys,
     verbose  =>   $verbose,
-    root     =>   $DLXSROOT,
     instance =>   $instance,
 );
 

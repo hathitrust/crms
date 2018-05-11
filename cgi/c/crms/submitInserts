@@ -1,10 +1,12 @@
 #!/usr/bin/perl
 
-my $DLXSROOT;
-BEGIN
-{
-  $DLXSROOT = $ENV{'DLXSROOT'};
+my ($root_dir);
+BEGIN 
+{ 
+  $root_dir = $ENV{'DLXSROOT'};
+  $root_dir = $ENV{'SDRROOT'} unless $root_dir;
 }
+
 use strict;
 use CGI;
 use CRMS;
@@ -14,10 +16,8 @@ use JSON::XS;
 my $cgi = new CGI;
 my $sys = $cgi->param('sys');
 $sys = 'crms' unless $sys;
-my $crms = CRMS->new(logFile => $DLXSROOT. '/prep/c/crms/log_submitInserts.txt',
-                     sys     => $sys,
+my $crms = CRMS->new(sys     => $sys,
                      verbose => 0,
-                     root    => $DLXSROOT,
                      pdb     => $cgi->param('pdb'),
                      tdb     => $cgi->param('tdb'));
 

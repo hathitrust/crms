@@ -1,11 +1,12 @@
 #!/usr/bin/perl
 
 use warnings;
-my $DLXSROOT;
-BEGIN
-{
-  $DLXSROOT = $ENV{'DLXSROOT'};
-  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
+my ($root_dir);
+BEGIN 
+{ 
+  $root_dir = $ENV{'DLXSROOT'};
+  $root_dir = $ENV{'SDRROOT'} unless $root_dir;
+  unshift(@INC, $root_dir . '/cgi/c/crms');
 }
 
 use strict;
@@ -20,10 +21,8 @@ getopts('x:', \%opts);
 my $sys = $opts{'x'} || 'crms';
 
 my $crms = CRMS->new(
-        logFile  =>   "$DLXSROOT/prep/c/crms/log_unittest.txt",
         sys      =>   $sys,
         verbose  =>   1,
-        root     =>   $DLXSROOT
 		    );
 
 

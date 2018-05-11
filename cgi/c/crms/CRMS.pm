@@ -27,28 +27,30 @@ sub new
   my ($class, %args) = @_;
   my $self = bless {}, $class;
 
-  if ($args{'dev'})
+  my $sys = $args{'sys'} || 'crms';
+  if ($args{'root'})
   {
-    $self->SetError("<strong>WARNING: 'dev' arg no longer used with CRMS <code>new()</code>,".
-          " use 'instance' for CRMS_INSTANCE instead!</strong><br/>\n");
+    print "<strong>Warning: root passed to <code>CRMS->new()</code>\n";
   }
-  my $sys = $args{'sys'};
-  $sys = 'crms' unless $sys;
-  my $root = $args{'root'};
-  my $cfg = $root . '/bin/c/crms/' . $sys . '.cfg';
-  my %d = $self->ReadConfigFile($cfg);
-  if (!%d)
+  if ($args{'logFile'})
   {
-    $sys = 'crms';
-    $cfg = $root . '/bin/c/crms/' . $sys . '.cfg';
-    %d = $self->ReadConfigFile($cfg);
+    print "<strong>Warning: logFile passed to <code>CRMS->new()</code>\n";
   }
-  $self->set($_,        $d{$_}) for keys %d;
-  $self->set('logFile', $args{'logFile'});
+  my $root = $ENV{'DLXSROOT'};
+  if (!$root)
+  {
+    $root = $ENV{'SDRROOT'} unless $root;
+    $self->set('SDRROOT', 1);
+  }
+  die 'ERROR: cannot locate root directory with DLXSROOT or SDRROOT!' unless $root;
+  $root = '/' unless $root;
+  $self->set('root', $root);
+  my %d = $self->ReadConfigFile($sys. '.cfg');
+  $self->set($_, $d{$_}) for keys %d;
+  $self->SetupLogFile();
   my $errors = [];
   $self->set('errors',   $errors);
   $self->set('verbose',  $args{'verbose'});
-  $self->set('root',     $root);
   # If running under Apache.
   $self->set('instance', $ENV{'CRMS_INSTANCE'});
   # If running from command line.
@@ -67,16 +69,62 @@ sub new
   return $self;
 }
 
+# The href or URL to use.
+# Path is e.g. 'logo.png', returns {'/c/crms/logo.png', '/crms/web/logo.png'} 
+sub WebPath
+{
+  my $self = shift;
+  my $type = shift;
+  my $path = shift;
+
+  my %types = ('bin' => 1, 'cgi' => 1, 'prep' => 1, 'web' => 1);
+  if (!$types{$type})
+  {
+    $self->SetError("Unknown path type '$type'");
+    die "FSPath: unknown type $type";
+  }
+  my $fullpath = (($self->get('SDRROOT'))? "/crms/$type/":"/$type/c/crms/"). $path;
+  #print "$fullpath ($type, $path)\n";
+  return $fullpath;
+}
+
+# The href or URL to use.
+# type+path is e.g. 'prep' + 'crms.rights'
+# returns {'/l1/dev/moseshll/prep/c/crms/crms.rights', '/htapps/moseshll.babel/crms/prep/crms.rights'} 
+sub FSPath
+{
+  my $self = shift;
+  my $type = shift;
+  my $path = shift;
+
+  my %types = ('bin' => 1, 'cgi' => 1, 'prep' => 1, 'web' => 1);
+  if (!$types{$type})
+  {
+    $self->SetError("Unknown path type '$type'");
+    die "FSPath: unknown type $type";
+  }
+  my $fullpath = $self->get('root');
+  $fullpath .= '/' unless $path =~ m/\/$/;
+  $fullpath .= (($self->get('SDRROOT'))? "crms/$type/":"$type/c/crms/"). $path;
+  #print "$fullpath ($type, $path)\n";
+  return $fullpath;
+}
+
+sub SetupLogFile
+{
+  my $self = shift;
+
+  my $log = $0 || 'crms_cgi';
+  $log = 'crms_cgi' if $log =~ m/\//;
+  $log =~ s/[^A-Za-z0-9]/_/g;
+  $self->set('logFile', $self->FSPath('prep', $log));
+}
+
 sub get
 {
   my $self = shift;
   my $key  = shift;
 
-  if ($key eq 'dev')
-  {
-    $self->SetError("<strong>WARNING: 'dev' key no longer used with CRMS <code>get()</code>,".
-          " use 'instance' for CRMS_INSTANCE instead!</strong><br/>\n");
-  }
   return $self->{$key};
 }
 
@@ -86,17 +134,12 @@ sub set
   my $key  = shift;
   my $val  = shift;
 
-  if ($key eq 'dev')
-  {
-    $self->SetError("<strong>WARNING: 'dev' key no longer used with CRMS <code>set()</code>,".
-          " use 'instance' for CRMS_INSTANCE instead!</strong><br/>\n");
-  }
   $self->{$key} = $val;
 }
 
 sub Version
 {
-  return '6.6.8';
+  return '7.0.0';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -122,6 +165,7 @@ sub ReadConfigFile
   my $self = shift;
   my $path = shift;
 
+  $path = $self->FSPath('bin', $path);
   my %dict = ();
   my $fh;
   unless (open $fh, '<:encoding(UTF-8)', $path)
@@ -154,11 +198,9 @@ sub ConnectToDb
 
   my $db_server = $self->get('mysqlServerDev');
   my $instance  = $self->get('instance');
-  my $root      = $self->get('root');
   my $sys       = $self->Sys();
 
-  my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
-  my %d = $self->ReadConfigFile($cfg);
+  my %d = $self->ReadConfigFile($sys. 'pw.cfg');
   my $db_user   = $d{'mysqlUser'};
   my $db_passwd = $d{'mysqlPasswd'};
   if ($instance eq 'production'
@@ -184,12 +226,10 @@ sub DbInfo
 
   my $db_server = $self->get('mysqlServerDev');
   my $instance  = $self->get('instance');
-  my $root      = $self->get('root');
   my $sys       = $self->Sys();
 
   my $msg = '';
-  my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
-  my %d = $self->ReadConfigFile($cfg);
+  my %d = $self->ReadConfigFile($sys. 'pw.cfg');
   my $db_user   = $d{'mysqlUser'};
   my $db_passwd = $d{'mysqlPasswd'};
   if ($instance eq 'production'
@@ -220,12 +260,10 @@ sub ConnectToSdrDb
 
   my $db_server = $self->get('mysqlMdpServerDev');
   my $instance  = $self->get('instance');
-  my $root      = $self->get('root');
   my $sys       = $self->Sys();
 
   $db = $self->get('mysqlMdpDbName') unless defined $db;
-  my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
-  my %d = $self->ReadConfigFile($cfg);
+  my %d = $self->ReadConfigFile($sys. 'pw.cfg');
   my $db_user   = $d{'mysqlMdpUser'};
   my $db_passwd = $d{'mysqlMdpPasswd'};
   if ($instance eq 'production' || $instance eq 'crms-training' ||
@@ -867,7 +905,7 @@ sub GetExportFh
   $date    =~ s/:/_/g;
   $date    =~ s/ /_/g;
   my $filename = $self->Sys(). '_'. $date. '.rights';
-  my $perm = $self->get('root'). $self->get('dataDir'). '/'. $filename;
+  my $perm = $self->FSPath('prep', $filename);
   my $temp = $perm . '.tmp';
   if (-f $temp) { die "file already exists: $temp\n"; }
   open (my $fh, '>', $temp) || die "failed to open exported file ($temp): $!\n";
@@ -3288,7 +3326,7 @@ sub LinkToReview
 
   $title = $self->GetTitle($id) unless $title;
   $title = CGI::escapeHTML($title);
-  my $url = $self->Sysify("/cgi/c/crms/crms?p=review;barcode=$id;editing=1");
+  my $url = $self->Sysify($self->WebPath('cgi', "crms?p=review;barcode=$id;editing=1"));
   $url .= ";importUser=$user" if $user;
   $self->ClearErrors();
   return "<a href='$url' target='_blank'>$title</a>";
@@ -4526,14 +4564,14 @@ sub CreateStatsReport
   my $page              = shift;
   my $user              = shift;
   my $cumulative        = shift;
-  my $suppressBreakdown = shift; #unused
+  my $suppressBreakdown = shift; #FIXME: unused?
   my $year              = shift;
   my $inval             = shift;
   my $nononexpert       = shift;
 
   my $data = $self->CreateStatsData($page, $user, $cumulative, $year, $inval, $nononexpert, 1);
   my @lines = split m/\n/, $data;
-  my $url = $self->Sysify("crms?p=$page;download=1;user=$user;cumulative=$cumulative;year=$year;inval=$inval;nne=$nononexpert");
+  my $url = $self->Sysify($self->WebPath('cgi', "crms?p=$page;download=1;user=$user;cumulative=$cumulative;year=$year;inval=$inval;nne=$nononexpert"));
   my $name = shift @lines;
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
   my $dllink = <<END;
@@ -6910,7 +6948,7 @@ sub LinkNoteText
 
   if ($note =~ m/See\sall\sreviews\sfor\sSys\s#(\d+)/)
   {
-    my $url = $self->Sysify("/cgi/c/crms/crms?p=adminHistoricalReviews;stype=reviews;search1=SysID;search1value=$1");
+    my $url = $self->Sysify($self->WebPath('cgi', "crms?p=adminHistoricalReviews;stype=reviews;search1=SysID;search1value=$1"));
     $note =~ s/(See\sall\sreviews\sfor\sSys\s#)(\d+)/$1<a href="$url" target="_blank">$2<\/a>/;
   }
   return $note;
@@ -7354,7 +7392,7 @@ sub LinkToHistorical
   my $sysid = shift;
   my $full  = shift;
 
-  my $url = $self->Sysify('/cgi/c/crms/crms?p=adminHistoricalReviews;search1=SysID;search1value='. $sysid);
+  my $url = $self->Sysify($self->WebPath('cgi','crms?p=adminHistoricalReviews;search1=SysID;search1value='. $sysid));
   $url = $self->SelfURL() . $url if $full;
   return $url;
 }
@@ -7365,7 +7403,7 @@ sub LinkToDeterminations
   my $gid  = shift;
   my $full = shift;
 
-  my $url = $self->Sysify('/cgi/c/crms/crms?p=exportData;search1=GID;search1value='. $gid);
+  my $url = $self->Sysify($self->WebPath('cgi','crms?p=exportData;search1=GID;search1value='. $gid));
   $url = $self->SelfURL() . $url if $full;
   return $url;
 }
@@ -7376,7 +7414,7 @@ sub LinkToRetrieve
   my $sysid = shift;
   my $full  = shift;
 
-  my $url = $self->Sysify('/cgi/c/crms/crms?p=track;query='. $sysid);
+  my $url = $self->Sysify($self->WebPath('cgi','crms?p=track;query='. $sysid));
   $url = $self->SelfURL() . $url if $full;
   return $url;
 }

@@ -1,10 +1,11 @@
 #!/usr/bin/perl
 
-my $DLXSROOT;
-BEGIN
-{
-  $DLXSROOT = $ENV{'DLXSROOT'};
-  unshift (@INC, $DLXSROOT . '/cgi/c/crms/');
+my ($root_dir);
+BEGIN 
+{ 
+  $root_dir = $ENV{'DLXSROOT'};
+  $root_dir = $ENV{'SDRROOT'} unless $root_dir;
+  unshift(@INC, $root_dir . '/cgi/c/crms');
 }
 
 use strict;
@@ -57,18 +58,14 @@ $instance = 'production' if $production;
 die "$usage\n\n" if $help;
 
 my $crmsUS = CRMS->new(
-    logFile  => $DLXSROOT . '/prep/c/crms/corrections_hist.txt',
     sys      => 'crms',
     verbose  => $verbose,
-    root     => $DLXSROOT,
     instance => $instance
 );
 
 my $crmsWorld = CRMS->new(
-    logFile  => $DLXSROOT . '/prep/c/crms/corrections_hist.txt',
     sys      => 'crmsworld',
     verbose  => $verbose,
-    root     => $DLXSROOT,
     instance => $instance
 );
 
