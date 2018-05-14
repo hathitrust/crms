@@ -2,12 +2,13 @@
 
 # This script can be run from crontab
 
-my ($root_dir);
+my ($root);
 BEGIN 
 { 
-  $root_dir = $ENV{'DLXSROOT'};
-  $root_dir = $ENV{'SDRROOT'} unless $root_dir;
-  unshift(@INC, $root_dir . '/cgi/c/crms');
+  $root = $ENV{'SDRROOT'};
+  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
+  unshift(@INC, $root. '/crms/cgi');
+  unshift(@INC, $root. '/cgi/c/crms');
 }
 
 use strict;
@@ -85,8 +86,8 @@ foreach my $row (@{$ref})
            ' INNER JOIN projects p ON q.project=p.id'.
            ' WHERE r.id=? AND r.user=? ORDER BY r.time DESC LIMIT 1';
     $ref2 = $crms->SelectAll($sql, $id, $user);
-    my $link = '<a href="'. $crms->SelfURL().
-               $crms->Sysify('/cgi/c/crms/crms?p=adminReviews&search1=Identifier&search1value='. $id).
+    my $link = '<a href="'. $crms->Host().
+               $crms->WebPath('cgi', 'crms?p=adminReviews&search1=Identifier&search1value='. $id).
                '">'. $id. '</a>';
     my $username = $crms->GetUserProperty($user, 'name');
     my $table = <<END;

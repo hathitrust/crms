@@ -167,7 +167,9 @@ sub System
 {
   my $self = shift;
 
-  return $self->GetSystemVar('system', 'CRMS');
+  my $sys = $self->GetSystemVar('system', 'CRMS');
+  $sys .= ' [HT]' if $self->get('root') =~ m/htapps/;
+  return $sys;
 }
 
 # This is the NOT SO human-readable version used in sys=blah URL param
