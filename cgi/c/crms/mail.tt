@@ -10,7 +10,7 @@ function closeMe()
 
 
 <div class="pages" id="homePage">
-  <img src="[% crms.GetSystemVar('logo') %]"
+  <img src="[% crms.WebPath('web', crms.GetSystemVar('logo')) %]"
        alt="CRMS Logo"
        style="display:block;margin-left:auto;margin-right:auto;"/>
   <br/>
