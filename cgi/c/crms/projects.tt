@@ -106,7 +106,7 @@ function saveProperty(type)
       }
     };
     if (loader) { loader.style.visibility = ''; }
-    var url = gURLBase + ";q=setProjectProperty;id=" + gSelectedProject + ";property=" + type + ";value=" + value;
+    var url = gURLBase + "?q=setProjectProperty;id=" + gSelectedProject + ";property=" + type + ";value=" + value;
     console.log(type + ': ' + url);
     req.open("GET", url, true);
     req.send(null);
@@ -207,7 +207,7 @@ function changeColor(id)
     }
   };
   if (loader) { loader.style.visibility = ''; }
-  var url = gURLBase + ";q=setProjectColor;id=" + id + ";color=" + encodeURIComponent(color);
+  var url = gURLBase + "?q=setProjectColor;id=" + id + ";color=" + encodeURIComponent(color);
   req.open("GET", url, true);
   req.send(null);
 }
@@ -259,7 +259,7 @@ function populateProjects()
     }
   };
   if (loader) { loader.style.visibility=''; }
-  var url = gURLBase + ";q=getProjects";
+  var url = gURLBase + "?q=getProjects";
   req.open("GET", url, true);
   req.send(null);
 }
@@ -351,7 +351,7 @@ function addProject(name)
   var restrict = '';
   if (expert) { restrict = 'e'; }
   if (admin) { restrict += 'a'; }
-  var url = gURLBase + ";q=addProject;name=" + encodeURIComponent(name) + ';restrict=' + restrict;
+  var url = gURLBase + "?q=addProject;name=" + encodeURIComponent(name) + ';restrict=' + restrict;
   req.open("GET", url, true);
   req.send(null);
 }
