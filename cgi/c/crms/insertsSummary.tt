@@ -5,8 +5,8 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <link rel="icon" type="image/png" href="[% crms.GetSystemVar('favicon') %]"/>
     <title>Inserts Summary</title>
-    <script type="text/javascript" src="/c/crms/js/common.js"></script>
-    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
+    <script type="text/javascript" src="[% crms.WebPath('web', 'js/common.js') %]"></script>
+    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/review.css') %]"/>
 
 <script type="text/javascript">
 <!--
@@ -57,7 +57,7 @@ window.onerror = function(msg, url, line, col, error) {
   <th>$i</th>
   <td>[% data.$i.page %]</td><td>[% data.$i.author %]</td><td>[% data.$i.title %]</td>
   <td>[% data.$i.pub_date %]</td><td>[% data.$i.pub_history %]</td><td>[% data.$i.type %]</td>
-  <td class="textcenter"><img width="16" height="16" alt="Renewed?" src="/c/crms/[% icon %]"/></td>
+  <td class="textcenter"><img width="16" height="16" alt="Renewed?" src="[% crms.WebPath('web', icon) %]"/></td>
   <td>[% data.$i.reason %]</td>
   <td>[% data.$i.renNum %]</td><td>[% date %]</td>
   <td>[% data.$i.source %]</td><td>[% data.$i.timer %]</td>
@@ -66,7 +66,7 @@ window.onerror = function(msg, url, line, col, error) {
   [% icon = (data.$i.restored)? 'CheckIcon.png':0 %]
   <td class="textcenter">
     [% IF icon %]
-      <img width="16" height="16" alt="Restored?" src="/c/crms/[% icon %]"/>
+      <img width="16" height="16" alt="Restored?" src="[% crms.WebPath('web', icon) %]"/>
     [% END %]
   </td>
 </tr>

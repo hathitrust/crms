@@ -12,10 +12,8 @@ sub Login
 {
   my $self = shift;
 
-  my $root = $self->get('root');
   my $sys = $self->get('sys');
-  my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
-  my %d = $self->ReadConfigFile($cfg);
+  my %d = $self->ReadConfigFile($sys . 'pw.cfg');
   my $username   = $d{'jiraUser'};
   my $password = $d{'jiraPasswd'};
   my $ua = new LWP::UserAgent;

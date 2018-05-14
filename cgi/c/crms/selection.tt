@@ -36,8 +36,8 @@
 <div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
 
 <div style="position:absolute;top:4px;right:4px;font-size:.8em">
-  <a href="/c/crms/pdf/ReviewSearchHelp.pdf" target="_blank" accesskey="h">Search&nbsp;Help</a> /
-  <a href="/c/crms/pdf/ReviewSearchTerms.pdf" target="_blank">Search&nbsp;Terms</a>
+  <a href="[% crms.WebPath('web', 'pdf/ReviewSearchHelp.pdf') %]" target="_blank" accesskey="h">Search&nbsp;Help</a> /
+  <a href="[% crms.WebPath('web', 'pdf/ReviewSearchTerms.pdf') %]" target="_blank">Search&nbsp;Terms</a>
 </div>
 
 <form id="select" action="crms">

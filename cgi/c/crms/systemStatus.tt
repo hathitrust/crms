@@ -69,9 +69,13 @@ To display a custom message, or override the standard ones (<i>down</i>/<i>parti
   <tr>
   <td class="nowrap">
   <input type="radio" name="autoinherit" value="enabled" [% autoinherit? 'checked="checked"':'' %]/> Enabled&nbsp;
-  [% IF didSet && autoinherit %]<img width="16" height="16" alt="Check" src="/c/crms/CheckIcon.png"/>[% END %]<br/>
+  [% IF didSet && autoinherit %]
+    <img width="16" height="16" alt="Check" src="[% crms.WebPath('web', 'CheckIcon.png') %]"/>
+  [% END %]<br/>
   <input type="radio" name="autoinherit" value="disabled" [% autoinherit? '':'checked="checked"' %]/> Disabled&nbsp;
-  [% IF didSet && !autoinherit %]<img width="16" height="16" alt="Check" src="/c/crms/CheckIcon.png"/>[% END %]
+  [% IF didSet && !autoinherit %]
+    <img width="16" height="16" alt="Check" src="[% crms.WebPath('web', 'CheckIcon.png') %]"/>
+  [% END %]
   </td>
   <td>
   <input type="submit" value="Submit"/>

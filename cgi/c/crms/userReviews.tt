@@ -1,7 +1,7 @@
 [% INCLUDE header.tt %]
 
 <h2>Search Your Previously Processed Reviews</h2>
-<span class="smallishText">To access/edit your recent reviews, go <a href=[% crms.Sysify('/cgi/c/crms/crms?p=editReviews') %]>here</a></span><br/><br/>
+<span class="smallishText">To access/edit your recent reviews, go <a href=[% crms.WebPath('cgi', 'crms?p=editReviews') %]>here</a></span><br/><br/>
 
 [% INCLUDE selection.tt  %]
 [% INCLUDE searchResults.tt  %]

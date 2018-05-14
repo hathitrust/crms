@@ -9,7 +9,7 @@
 [% name = crms.GetInstitutionName(inst, 1) %]
 <h2>[% name %] Review Stats:</h2>
 
-<a href="/c/crms/pdf/AllReviewStatsHelp.pdf" target="_blank">All&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
+<a href="[% crms.WebPath('web', 'pdf/AllReviewStatsHelp.pdf') %]" target="_blank">All&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
 <br/>
 
 [% IF crms.GetTotalHistoricalReviewCount() %]

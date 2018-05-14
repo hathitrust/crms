@@ -3,10 +3,10 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <link rel="icon" type="image/png" href="[% crms.GetSystemVar('favicon') %]"/>
+    <link rel="icon" type="image/png" href="[% crms.WebPath('web', crms.GetSystemVar('favicon')) %]"/>
     <title>Insert Dates</title>
-    <script type="text/javascript" src="/c/crms/js/common.js"></script>
-    <link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>
+    <script type="text/javascript" src="[% crms.WebPath('web', 'js/common.js') %]"></script>
+    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/review.css') %]"/>
 
 <script type="text/javascript">
 <!--

@@ -247,7 +247,7 @@ sub ReadCities
 {
   my $self = shift;
 
-  my $in = $self->{crms}->get('root') . '/bin/c/crms/us_cities.txt';
+  my $in = $self->{crms}->FSPath('bin', 'us_cities.txt');
   open (FH, '<', $in) || $self->{crms}->SetError("Could not open $in");
   my $cities = '';
   while (<FH>) { chomp; $cities .= "==$_=="; }

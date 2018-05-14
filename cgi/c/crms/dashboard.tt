@@ -2,10 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="utf-8"/>
-    <link rel="icon" type="image/png" href="[% crms.GetSystemVar('favicon') %]"/>
-    <link rel="stylesheet" type="text/css" href="/c/crms/css/dashboard.css"/>
+    <link rel="icon" type="image/png" href="[% crms.WebPath('web', crms.GetSystemVar('favicon')) %]"/>
+    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/dashboard.css') %]"/>
     <title>CRMS Dashboard</title>
-    <script type="text/javascript" src="/c/crms/js/common.js"></script>
+    <script type="text/javascript" src="[% crms.WebPath('web', 'js/common.js') %]"></script>
     <script type="text/javascript" src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
     <script type="text/javascript" src="https://code.highcharts.com/highcharts.js"></script>
 </head>
@@ -17,16 +17,16 @@
 	{
 	  try
 	  {
-      loadChart('chart0', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=4') %]");
-      loadChart('chart1', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=0') %]");
-      loadChart('chart2', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=7') %]");
-      loadChart('chart3', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=2') %]");
+      loadChart('chart0', "[% crms.WebPath('cgi', 'getExportStats?type=graph&c=4') %]");
+      loadChart('chart1', "[% crms.WebPath('cgi', 'getExportStats?type=graph&c=0') %]");
+      loadChart('chart2', "[% crms.WebPath('cgi', 'getExportStats?type=graph&c=7') %]");
+      loadChart('chart3', "[% crms.WebPath('cgi', 'getExportStats?type=graph&c=2') %]");
 [% IF crms.get('sys') == 'crmsworld' %]
-      loadChart('chart4', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=5') %]");
+      loadChart('chart4', "[% crms.WebPath('cgi', 'getExportStats?type=graph&c=5') %]");
 [% ELSE %]
-      loadChart('chart4', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=6') %]");
+      loadChart('chart4', "[% crms.WebPath('cgi', 'getExportStats?type=graph&c=6') %]");
 [% END %]
-      loadChart('chart5', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=9') %]");
+      loadChart('chart5', "[% crms.WebPath('cgi', 'getExportStats?type=graph&c=9') %]");
     }
     catch (e)
     {
@@ -39,11 +39,11 @@
 <table class="dashboardTable">
   <tr>
     <td class="dashboardLogo">
-      <img src="[% crms.GetSystemVar('logo') %]" width="455" height="80" alt="CRMS Logo"/>
+      <img src="[% crms.WebPath('web', crms.GetSystemVar('logo')) %]" width="455" height="80" alt="CRMS Logo"/>
     </td>
     <td class="dashboardLogo"><h1>Performance Dashboard</h1></td>
     <td class="dashboardLogo">
-      <img src="/c/crms/IMLSLogo.png" width="330" height="150" alt="IMLS Logo"/>
+      <img src="[% crms.WebPath('web', 'IMLSLogo.png') %]" width="330" height="150" alt="IMLS Logo"/>
     </td>
   </tr>
 </table>

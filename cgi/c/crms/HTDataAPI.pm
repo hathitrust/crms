@@ -11,10 +11,8 @@ sub HasCopyright
   my $self = shift;
   my $id   = shift;
 
-  my $root = $self->get('root');
   my $sys  = $self->Sys();
-  my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
-  my %d = $self->ReadConfigFile($cfg);
+  my %d = $self->ReadConfigFile($sys . 'pw.cfg');
   my $access_key = $d{'dataAPIAccessKey'};
   my $secret_key = $d{'dataAPISecretKey'};
   my $request_url = 'https://babel.hathitrust.org/cgi/htd/structure/'. $id;
@@ -62,10 +60,8 @@ sub GetPageImage
   use OAuth::Lite::Consumer;
   use OAuth::Lite::AuthMethod;
   my %data;
-  my $root = $self->get('root');
   my $sys  = $self->Sys();
-  my $cfg = $root . '/bin/c/crms/' . $sys . 'pw.cfg';
-  my %d = $self->ReadConfigFile($cfg);
+  my %d = $self->ReadConfigFile($sys. 'pw.cfg');
   my $access_key = $d{'dataAPIAccessKey'};
   my $secret_key = $d{'dataAPISecretKey'};
   my $url = 'https://babel.hathitrust.org/cgi/htd/volume/pageimage/'. $id. '/'. $seq;

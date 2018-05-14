@@ -103,7 +103,7 @@ a.date-picker-control:visited
         border:0 none;
         padding:0;
         margin:0 0 0 4px;
-        background:transparent url(/c/crms/cal.gif) no-repeat 50% 50%;
+        background:transparent url(../cal.gif) no-repeat 50% 50%;
         min-width:16px;
         line-height:1;
         cursor:pointer;
@@ -120,7 +120,7 @@ a.dp-button-active:hover,
 a.dp-button-active:active,
 a.dp-button-active:focus
         {
-        background:transparent url(/c/crms/cal.gif) no-repeat 50% 50% !important;
+        background:transparent url(../cal.gif) no-repeat 50% 50% !important;
         }
 /* Feed IE6 the following rule, IE7 should handle the min-width declared above */
 * html a.date-picker-control

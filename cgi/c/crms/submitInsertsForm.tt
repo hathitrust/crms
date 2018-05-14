@@ -28,6 +28,7 @@ var gInspectingAdded = 0;
 var gNInserts = 0;
 var gNRows = 0;
 var gNTotals = 0;
+[% help = crms.WebPath('web', 'help.png') %]
 var gTypeSelect = '<select id="__PRE__type" name="__PRE__type" title="Insert Type" class="review" onchange="restartTime(__PRE__);">'+
                   '<option value="Book">Book</option>'+
                   '<option value="Chapter">Chapter</option>'+
@@ -55,7 +56,7 @@ var gReasonSelect = '<select id="__PRE__reason" name="__PRE__reason"  title="Rea
                   '<option value="Holder unidentified">Holder unidentified</option>'+
                   '</select>';
 var gPrevPubHelp = '<a class="tip" href="#">'+
-                  '<img width="10" height="10" alt="Rights/Reason Help" src="/c/crms/help.png"/>'+
+                  '<img width="10" height="10" alt="Rights/Reason Help" src="[% help %]"/>'+
                   '<span>If the credit for the insert indicates<br/>'+
                         'that the insert was published in an<br/>'+
                         'earlier publication, please provide<br/>'+
@@ -63,7 +64,7 @@ var gPrevPubHelp = '<a class="tip" href="#">'+
                         'publication.'+
                   '</span></a> ';
 var gTypeHelp =   '<a class="tip" href="#">'+
-                  '<img width="10" height="10" alt="Rights/Reason Help" src="/c/crms/help.png"/>'+
+                  '<img width="10" height="10" alt="Rights/Reason Help" src="[% help %]"/>'+
                   '<span>Select "Book" if the insert consists of<br/>'+
                         'poetry, short stories, or other text that<br/>'+
                         'came from a prior book publication.<br/>'+
@@ -74,14 +75,14 @@ var gTypeHelp =   '<a class="tip" href="#">'+
                         'represented in this list.'+
                   '</span></a> ';
 var gRenHelp =   '<a class="tip" href="#">'+
-                  '<img width="10" height="10" alt="Rights/Reason Help" src="/c/crms/help.png"/>'+
+                  '<img width="10" height="10" alt="Rights/Reason Help" src="[% help %]"/>'+
                   '<span>Select "Not enough information" when<br/>'+
                         'you do not have enough information<br/>'+
                         'or sufficient context to search for<br/>'+
                         'a renewal record.'+
                   '</span></a> ';
 var gRestoredHelp = '<a class="tip" href="#">'+
-                    '<img width="10" height="10" alt="Restoration Help" src="/c/crms/help.png"/>'+
+                    '<img width="10" height="10" alt="Restoration Help" src="[% help %]"/>'+
                     '<span>Check this box if you believe the<br/>'+
                           'insert is likely to be subject to<br/>'+
                           'copyright restoration. See <br/>'+
@@ -479,7 +480,7 @@ function CalcRenewal(prefix)
 function LoadInserts(id, user)
 {
   var req = new XMLHttpRequest();
-  var url = "/cgi/c/crms/getInsertsInfo?id=" + id + ";user=" + user;
+  var url = "[% crms.WebPath('cgi', 'getInsertsInfo?id=') %]" + id + ";user=" + user;
   if (gInspecting)
   {
     url += ';inspecting=1';
@@ -663,7 +664,7 @@ function SubmitInserts(fini, override)
     var form = document.getElementById('submitInsertsForm');
     var data = new FormData(form);
     var xhr = new XMLHttpRequest();
-    var url = "/cgi/c/crms/submitInserts";
+    var url = "[crms.WebPath('cgi', 'submitInserts') %]";
     xhr.open('POST', url, true);
     xhr.send(data);
     xhr.onreadystatechange = function()
@@ -769,7 +770,7 @@ function DeleteLastTotal()
 function LoadTotals(id, user)
 {
   var req = new XMLHttpRequest();
-  var url = "/cgi/c/crms/getInsertsInfo?id=" + id + ";user=" + user + ";totals=1";
+  var url = "[% crms.WebPath('cgi', 'getInsertsInfo?id=') %]" + id + ";user=" + user + ";totals=1";
   req.onreadystatechange = function()
   {
     if (req.readyState == 4)
@@ -1064,7 +1065,7 @@ window.onload = function(e)
     </tr>
     <tr>
       <td colspan="2" style="width=20;height=20;">
-        <div id="loader" style="display:none;">Saving… <img src="/c/crms/ajax-loader.gif" alt="Saving..."/></div>
+        <div id="loader" style="display:none;">Saving… <img src="[crms.WebPath('web', 'ajax-loader.gif') %]" alt="Saving..."/></div>
       </td>
     </tr>
   </table>

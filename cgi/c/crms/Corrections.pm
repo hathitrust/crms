@@ -196,7 +196,7 @@ sub CorrectionsDataSearchMenu
   return $html;
 }
 
-# Send the fixed non-Jira corrections to a text file in prep/c/crms and mail it.
+# Send the fixed non-Jira corrections to a text file in prep/ and mail it.
 # Comment and close the Jira corrections.
 # $data is a hashref with the following fields
 # ->{'html'}     In-progress HTML to be sent to recipients
@@ -299,7 +299,9 @@ sub GetCorrectionsExportFh
   my $date = $self->GetTodaysDate();
   $date =~ s/:/_/g;
   $date =~ s/ /_/g;
-  my $perm = $self->get('root') . '/prep/c/crms/' . $self->get('sys') . '_' . $date . '.status.txt';
+  
+  my $filename = $self->Sys(). '_'. $date. '.status.txt';
+  my $perm = $self->FSPath('prep', $filename);
   my $temp = $perm . '.tmp';
   if (-f $temp) { die "file already exists: $temp\n"; }
   open (my $fh, '>', $temp) || die "failed to open exported file ($temp): $!\n";

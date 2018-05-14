@@ -1,7 +1,9 @@
-[% crms.StartHTML('No Access', '<link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>') %]
+[% css = crms.WebPath('web', 'css/review.css') %]
+[% crms.StartHTML('No Access', '<link rel="stylesheet" type="text/css" href="' _ css _ '"/>') %]
+
 [% exp = crms.IsUserExpired(userid) %]
 <div class="pages" id="homePage">
-  <img src="[% crms.GetSystemVar('logo') %]"
+  <img src="[% crms.WebPath('web', crms.GetSystemVar('logo')) %]"
        style="display:block;margin-left:auto;margin-right:auto;"
        alt="[% crms.System() %] Logo"/>
   <br/>
@@ -13,10 +15,10 @@
   [% user = crms.get('user') %]
   <div class="warningBox">
     <h2>Hello [% crms.GetUserProperty(user, 'name') %]. You do not have access to this site.</h2>
-    <strong><a href="[% crms.Sysify('crms?p=Logout') %]"> Logout</a></strong>
+    <strong><a href="[% crms.Sysify('?p=Logout') %]"> Logout</a></strong>
   
     <div class="warningSubbox">
-      <h4>Your access to in-copyright HathiTrust scans expired [% exp %].
+      <h4>Your access to in-copyright HathiTrust scans expired [% exp.expires %].
           Security considerations do not allow Copyright Review Management System reviewer
           <span style="color:black;">[% user %]</span>
           to perform further reviews until scans are fully viewable.

@@ -217,9 +217,9 @@ function CheckAllTx(box,id)
     <!-- <tr style="background-color:[% active_color %];"> -->
     <tr class="hoverWide"><td class="nowrap">
     [% IF r.status > 0 %]
-      <a href="[% crms.Sysify('/cgi/c/crms/crms?p=adminReviews;search1=Identifier;search1value=' _ r.id) %]" target="_blank">
+      <a href="[% crms.Sysify('?p=adminReviews;search1=Identifier;search1value=' _ r.id) %]" target="_blank">
     [% ELSE %]
-      <a href="[% crms.Sysify('/cgi/c/crms/crms?p=queue;search1=Identifier;search1value=' _ r.id) %]" target="_blank">
+      <a href="[% crms.Sysify('?p=queue;search1=Identifier;search1value=' _ r.id) %]" target="_blank">
     [% END %]
     [% r.id %]</a></td>
     <td>[% cgi.escapeHTML(r.title) %]</td>
@@ -234,7 +234,7 @@ function CheckAllTx(box,id)
         [% crms.LinkToJira(tx) %]
         [% stat = tix.$tx %]
         [% IF stat %]
-          img width="16" height="16" alt="Closed" src="/c/crms/XIcon.png"/>
+          <img width="16" height="16" alt="Closed" src="[% crms.WebPath('web', 'XIcon.png') %]"/>
         [% END %]
       [% END %]
     </td>

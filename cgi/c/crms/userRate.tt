@@ -5,7 +5,8 @@
 [% IF !user %][% user = crms.get('user') %][% END %]
 
 <h2>My Review Stats:</h2>
-<a href="/c/crms/pdf/MyReviewStatsHelp.pdf" target="_blank">My&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
+<a href="[% crms.WebPath('web', 'pdf/MyReviewStatsHelp.pdf') %]"
+   target="_blank">My&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
 <br/>
 [% crms.CreateStatsReport(p, 'all', 1, 1) %]
 <br/><br/>
@@ -19,8 +20,8 @@
   [% IF !crms.IsUserExpert(user) %]
     <span class="smallishText">
       **Note: Valid reviews/rates include all reviews with
-      <img width="16" height="16" alt="Check" src="/c/crms/CheckIcon.png"/> or
-      <img width="16" height="16" alt="Minus" src="/c/crms/MinusIcon.png"/>
+      <img width="16" height="16" alt="Check" src="[% crms.WebPath('web', 'CheckIcon.png') %]"/> or
+      <img width="16" height="16" alt="Minus" src="[% crms.WebPath('web', 'MinusIcon.png') %]"/>
     </span>
   [% END %]
   <br/><br/>

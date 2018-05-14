@@ -254,7 +254,8 @@ if (length $page)
   if (defined $dbc)
   {
     $page = 'denied';
-    $cgi->param('dbc', $dbc);
+    $cgi->param('dbc_err', $dbc->{'err'});
+    $cgi->param('dbc_page', $dbc->{'page'});
   }
 }
 my $input = $page . '.tt';
@@ -295,7 +296,7 @@ if ($cgi->param('debug'))
   $dbinfo =~ s/\n/<br\/>/g;
   print "<i>$dbinfo</i><br/>\n";
   eval {
-    foreach my $k (keys %ENV)
+    foreach my $k (sort keys %ENV)
     {
       printf "$k: %s<br/>\n", $ENV{$k};
     }

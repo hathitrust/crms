@@ -37,12 +37,8 @@ sub new
     print "<strong>Warning: logFile passed to <code>CRMS->new()</code>\n";
   }
   my $root = $ENV{'DLXSROOT'};
-  if (!$root)
-  {
-    $root = $ENV{'SDRROOT'} unless $root;
-    $self->set('SDRROOT', 1);
-  }
-  die 'ERROR: cannot locate root directory with DLXSROOT or SDRROOT!' unless $root;
+  $root = $ENV{'SDRROOT'} unless $root and -d $root;
+  die 'ERROR: cannot locate root directory with DLXSROOT or SDRROOT!' unless $root and -d $root;
   $root = '/' unless $root;
   $self->set('root', $root);
   my %d = $self->ReadConfigFile($sys. '.cfg');
@@ -83,9 +79,13 @@ sub WebPath
     $self->SetError("Unknown path type '$type'");
     die "FSPath: unknown type $type";
   }
-  my $fullpath = (($self->get('SDRROOT'))? "/crms/$type/":"/$type/c/crms/"). $path;
+  my $fullpath = "/crms/$type/". $path;
+  if ($self->get('root') !~ m/htapps/)
+  {
+    $fullpath = ($type eq 'web')? ("/c/crms/". $path): ("/$type/c/crms/". $path);
+  }
   #print "$fullpath ($type, $path)\n";
-  return $fullpath;
+  return $self->Sysify($fullpath);
 }
 
 # The href or URL to use.
@@ -104,10 +104,29 @@ sub FSPath
     die "FSPath: unknown type $type";
   }
   my $fullpath = $self->get('root');
-  $fullpath .= '/' unless $path =~ m/\/$/;
-  $fullpath .= (($self->get('SDRROOT'))? "crms/$type/":"$type/c/crms/"). $path;
-  #print "$fullpath ($type, $path)\n";
+  $fullpath .= '/' unless $fullpath =~ m/\/$/;
+  $fullpath .= (($self->get('root') =~ m/htapps/)? "crms/$type/":"$type/c/crms/"). $path;
   return $fullpath;
+}
+
+# Temporary hack to translate menuitems urls into quod/HT urls
+# /c/crms/blah -> $self->WebPath('web', 'blah')
+# crms?blah=1 -> $self->WebPath('cgi', 'crms?blah=1')
+sub MenuPath
+{
+  my $self = shift;
+  my $path = shift;
+
+  my $newpath = $path;
+  if ($path =~ m/^\/c\/crms\/(.*)$/)
+  {
+    $newpath = $self->WebPath('web', $1);
+  }
+  elsif ($path =~ m/^crms/)
+  {
+    $newpath = $self->WebPath('cgi', $path);
+  }
+  return $newpath;
 }
 
 sub SetupLogFile
@@ -4571,13 +4590,14 @@ sub CreateStatsReport
 
   my $data = $self->CreateStatsData($page, $user, $cumulative, $year, $inval, $nononexpert, 1);
   my @lines = split m/\n/, $data;
-  my $url = $self->Sysify($self->WebPath('cgi', "crms?p=$page;download=1;user=$user;cumulative=$cumulative;year=$year;inval=$inval;nne=$nononexpert"));
+  my $url = $self->WebPath('cgi', "crms?p=$page;download=1;user=$user;cumulative=$cumulative;year=$year;inval=$inval;nne=$nononexpert");
+  my $imgurl = $self->WebPath('web', 'help.png');
   my $name = shift @lines;
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
   my $dllink = <<END;
   <a href='$url' target='_blank'>download</a>
   <a class='tip' href='#'>
-    <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
+    <img width="16" height="16" alt="Rights/Reason Help" src="$imgurl"/>
     <span>
     <strong>To get the downloaded stats into a spreadsheet:</strong><br/>
       &#x2022; Click on the "Download" link (this will open a new page in your browser)<br/>
@@ -6904,14 +6924,18 @@ sub DevBanner
   return undef;
 }
 
-sub SelfURL
+sub Host
 {
   my $self = shift;
 
-  my $url = 'quod.lib.umich.edu';
-  my $instance = $self->get('instance') || 'test';
-  $url = $instance . '.' . $url if $instance ne 'production';
-  return 'https://' . $url;
+  my $host = $ENV{'HTTP_HOST'};
+  if (!$host)
+  {
+    $host = $self->GetSystemVar('host');
+    my $instance = $self->get('instance') || 'test';
+    $host = $instance . '.' . $host if $instance ne 'production';
+  }
+  return 'https://' . $host;
 }
 
 sub IsTrainingArea
@@ -7392,8 +7416,8 @@ sub LinkToHistorical
   my $sysid = shift;
   my $full  = shift;
 
-  my $url = $self->Sysify($self->WebPath('cgi','crms?p=adminHistoricalReviews;search1=SysID;search1value='. $sysid));
-  $url = $self->SelfURL() . $url if $full;
+  my $url = $self->WebPath('cgi','crms?p=adminHistoricalReviews;search1=SysID;search1value='. $sysid);
+  $url = $self->Host() . $url if $full;
   return $url;
 }
 
@@ -7403,8 +7427,8 @@ sub LinkToDeterminations
   my $gid  = shift;
   my $full = shift;
 
-  my $url = $self->Sysify($self->WebPath('cgi','crms?p=exportData;search1=GID;search1value='. $gid));
-  $url = $self->SelfURL() . $url if $full;
+  my $url = $self->WebPath('cgi','crms?p=exportData;search1=GID;search1value='. $gid);
+  $url = $self->Host() . $url if $full;
   return $url;
 }
 
@@ -7414,8 +7438,8 @@ sub LinkToRetrieve
   my $sysid = shift;
   my $full  = shift;
 
-  my $url = $self->Sysify($self->WebPath('cgi','crms?p=track;query='. $sysid));
-  $url = $self->SelfURL() . $url if $full;
+  my $url = $self->WebPath('cgi','crms?p=track;query='. $sysid);
+  $url = $self->Host() . $url if $full;
   return $url;
 }
 
@@ -7700,7 +7724,7 @@ sub MenuItems
       {
         $rel = 'rel="noopener"';
       }
-      push @all, [$name, $self->Sysify($row->[1]), $row->[3], $rel];
+      push @all, [$name, $self->MenuPath($row->[1]), $row->[3], $rel];
     }
   }
   return \@all;
@@ -7722,25 +7746,31 @@ sub GetUserQualifications
 }
 
 # Called by the top-level script to make sure the user is allowed.
-# Returns undef if user qualifies, error otherwise.
+# Returns undef if user qualifies, hashref otherwise.
+# hashref -> err string, hashref->page user was trying to access
 sub AccessCheck
 {
   my $self = shift;
   my $page = shift;
   my $user = shift || $self->get('user');
 
+  my $err;
   my $sql = 'SELECT COUNT(*) FROM users WHERE id=?';
   my $cnt = $self->SimpleSqlGet($sql, $user);
   if ($cnt == 0)
   {
-    return "DBC failed for $page.tt: user '$user' not in system";
+    $err = "DBC failed for $page.tt: user '$user' not in system";
   }
   $sql = 'SELECT restricted FROM menuitems WHERE page=?';
   my $r = $self->SimpleSqlGet($sql, $page) || '';
   my $q = $self->GetUserQualifications($user) || '';
   if (!$self->DoQualificationsAndRestrictionsOverlap($q, $r))
   {
-    return "DBC failed for $page.tt: r='$r', q='$q'";
+    $err = "DBC failed for $page.tt: r='$r', q='$q'";
+  }
+  if ($err)
+  {
+    return {'err' => $err, 'page' => $page};
   }
   return undef;
 }

@@ -218,7 +218,7 @@ sub LinkToReview
 
   my $crms = $self->get('crms');
   $text = CGI::escapeHTML($text);
-  my $url = $crms->Sysify("/cgi/c/crms/crms?p=cri;htid=$id;editing=1");
+  my $url = $crms->WebPath('cgi', "crms?p=cri;htid=$id;editing=1");
   #$url .= ";importUser=$user" if $user;
   #$self->ClearErrors();
   return "<a href='$url' target='_blank'>$text</a>";

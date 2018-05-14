@@ -118,7 +118,7 @@ function UpdateRights()
       }
     }
   };
-  var url = "/cgi/c/crms/predictRights?sys=crmsworld;id=[% htid %]" +
+  var url = "[% crms.WebPath('cgi', 'predictRights?id=' _ htid) %]" +
             ";year=" + year + ";ispub=" + isPub +
             ";crown=" + isCrown + ";readable=1";
   if (actualPub != null) { url += ";pub=" + actualPub; }
@@ -195,7 +195,8 @@ function UpdateRights()
     <td>
       <span style="visibility:none;color:red;" id="rightsSpanExtra"></span>
       <img id="predictionLoader" width="12" height="12"
-           src="/c/crms/ajax-loader.gif" alt="loading..." style="display:none;"/>
+           src="[% crms.WebPath('web', 'ajax-loader.gif') %]"
+           alt="loading..." style="display:none;"/>
     </td>
   </tr>
   <tr id="undRow">
@@ -271,7 +272,8 @@ function UpdateRights()
       </td>
       <td style="border:none;">
         <img id="[% review.user %]Img" height="16" width="16"
-             style="display:none;" src="/c/crms/CheckIcon.png" alt="Selected">
+             src="[% crms.WebPath('web', 'CheckIcon.png') %]"
+             style="display:none;" alt="Selected">
       </td>
     </tr>
   [% END %]

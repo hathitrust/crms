@@ -82,20 +82,22 @@
 [% swiss = crms.GetReviewField(barcode, user, "swiss") %]
 [% END %]
 
-[% homeLink = "crms?p=confirmReview;submit=Cancel;barcode=$barcode;sys=$sys" %]
+[% homeLink = crms.WebPath('cgi', "crms?p=confirmReview;submit=Cancel;barcode=$barcode") %]
 
 <div class="divbody">
   <div class="divNav">
     <div class="navtop">
       <table class="nav">
         <tr>
-          <td rowspan="2"><img src="[% crms.GetSystemVar('smallLogo') %]" alt="CRMS Logo" width="52" height="40"/></td>
+          <td rowspan="2">
+            <img src="[% crms.WebPath('web', crms.GetSystemVar('smallLogo')) %]"
+                 alt="CRMS Logo" width="52" height="40"/></td>
           <td style="text-align:left;padding-left:8px;"><strong>Hello [% crms.GetUserProperty(user, 'name') %]</strong></td>
         </tr>
         <tr>
           <td style="text-align:left;padding-left:8px;">
             <a href="[% homeLink %]">Home</a>
-            &nbsp;&nbsp;&nbsp;&nbsp;<a href="crms?p=Logout;sys=$sys">Logout</a>
+            &nbsp;&nbsp;&nbsp;&nbsp;<a href="[% crms.Sysify(crms.WebPath('cgi', 'crms?p=Logout')) %]">Logout</a>
           </td>
         </tr>
         <tr>
@@ -112,9 +114,9 @@
         </tr>
         <tr>
           <td colspan="2">
-            [% url = 'crms?p=mail;id=' _ barcode %]
-            <a href="[% crms.Sysify(url) %]" target="_blank">
-              <img width="16" height="16" alt="Report error" src="/c/crms/SendIcon.png"/>
+            [% url = crms.WebPath('cgi', 'crms?p=mail;id=' _ barcode) %]
+            <a href="[% url %]" target="_blank">
+              <img width="16" height="16" alt="Report error" src="[% crms.WebPath('web', 'SendIcon.png') %]"/>
               <strong>Send message to Experts…</strong>
             </a>
           </td>
@@ -252,7 +254,7 @@
         [% totalReviews = crms.GetReviewCount(barcode, 1) %]
         [% IF totalReviews > 0 %]
           <tr><td><a class="smallishText"
-                     href="[% crms.Sysify('?p=adminHistoricalReviews;search1=Identifier;search1value=' _ barcode) %]"
+                     href="[% crms.WebPath('crms?p=adminHistoricalReviews;search1=Identifier;search1value=' _ barcode) %]"
                      target="_blank">
           [% totalReviews %] historical [% crms.Pluralize("review", totalReviews) %]
           </a></td></tr>
@@ -265,7 +267,7 @@
         [% totalReviews = crms.GetReviewCount(barcode) %]
         [% IF totalReviews > 0 %]
           <tr><td><a class="smallishText"
-                     href="[% crms.Sysify('?p=adminReviews;search1=Identifier;search1value=' _ barcode) %]"
+                     href="[% crms.WebPath('cgi', 'crms?p=adminReviews;search1=Identifier;search1value=' _ barcode) %]"
                      target="_blank">
           [% totalReviews %] active [% crms.Pluralize("review", totalReviews) %]
           </a></td></tr>

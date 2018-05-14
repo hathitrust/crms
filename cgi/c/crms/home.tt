@@ -22,7 +22,7 @@ window.onload = function(e)
   {
     try
     {
-      loadChart(progress, "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=11') %]");
+      loadChart(progress, "[% crms.WebPath('cgi', 'getExportStats?type=graph&c=11') %]");
     }
     catch (e)
     {
@@ -66,7 +66,7 @@ window.onload = function(e)
 [% n = ref.size %]
 [% IF n>0 %]
   <h4>You have $n
-    <a href="[% crms.Sysify('/cgi/c/crms/crms?p=queueAdd') %]">
+    <a href="[% crms.Sysify('?p=queueAdd') %]">
     high-priority</a> [% crms.Pluralize('volume', n) %].
   </h4>
 [% END %]

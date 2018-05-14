@@ -99,7 +99,7 @@
           <td>
           [% IF field=='exported' %]
             [% IF item.exported %]
-              <img width="16" height="16" alt="Exported" src="/c/crms/CheckIcon.png"/>
+              <img width="16" height="16" alt="Exported" src="[% crms.WebPath('web', 'CheckIcon.png') %]"/>
             [%END %]
           [% ELSIF field=='ticket' %]
             [% crms.LinkToJira(item.$field) %]

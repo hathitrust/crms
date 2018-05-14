@@ -3,7 +3,7 @@
 [% INCLUDE header.tt %]
 
 <h2>All Review Stats:</h2>
-<a href="/c/crms/pdf/AllReviewStatsHelp.pdf" target="_blank">All&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
+<a href="[% crms.WebPath('web', 'pdf/AllReviewStatsHelp.pdf') %]" target="_blank">All&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
 <br/>
 [% IF crms.GetTotalHistoricalReviewCount() %]
   [% crms.CreateStatsReport(p, 'all', 1, 1, 0, 1) %]

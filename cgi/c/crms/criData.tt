@@ -1,5 +1,9 @@
 [% INCLUDE header.tt %]
 
+[% xicon = crms.WebPath('web', 'XIcon.png') %]
+[% checkicon = crms.WebPath('web', 'CheckIcon.png') %]
+[% minusicon = crms.WebPath('web', 'MinusIcon.png') %]
+
 <script type="text/javascript">
 <!--
 window.onload = function(e)
@@ -43,7 +47,7 @@ function handleVisibilityChange()
 function UpdateRow(id)
 {
   var req = new XMLHttpRequest();
-  var url = "/cgi/c/crms/getCRIInfo?id=" + id + ";sys=" + gSys;
+  var url = "[% crms.WebPath('cgi', 'getCRIInfo?id=') %]" + id;
   req.onreadystatechange = function()
   {
     if (req.readyState == 4)
@@ -76,17 +80,17 @@ function PopulateRow(id, data)
     {
       if (val == '0')
       {
-        el.innerHTML = '<img width="16" height="16" alt="Accepted" src="/c/crms/XIcon.png"/>';
+        el.innerHTML = '<img width="16" height="16" alt="Accepted" src="[% xicon %]"/>';
         fade = true;
       }
       else if (val == '1')
       {
-        el.innerHTML = '<img width="16" height="16" alt="Accepted" src="/c/crms/CheckIcon.png"/>';
+        el.innerHTML = '<img width="16" height="16" alt="Accepted" src="[% checkicon %]"/>';
         fade = true;
       }
       else if (val == '2')
       {
-        el.innerHTML = '<img width="16" height="16" alt="Accepted" src="/c/crms/MinusIcon.png"/>';
+        el.innerHTML = '<img width="16" height="16" alt="Accepted" src="[% minusicon %]"/>';
         fade = true;
       }
       else
@@ -319,11 +323,11 @@ records per page.
           <td id="[% fid %]">
           [% IF field=='status' %]
             [% IF item.status == 1 %]
-              <img width="16" height="16" alt="Accepted" src="/c/crms/CheckIcon.png"/>
+              <img width="16" height="16" alt="Accepted" src="[% checkicon %]"/>
             [% ELSIF item.status == 0 %]
-              <img width="16" height="16" alt="Rejected" src="/c/crms/XIcon.png"/>
+              <img width="16" height="16" alt="Rejected" src="[% xicon %]"/>
             [% ELSIF item.status == 2 %]
-              <img width="16" height="16" alt="UND" src="/c/crms/MinusIcon.png"/>
+              <img width="16" height="16" alt="UND" src="[% minusicon %]"/>
             [% END %]
           [% ELSIF field=='id' && cri.CanEditCri(item.$field) %]
             [% cri.LinkToReview(item.$field, item.$field) %]

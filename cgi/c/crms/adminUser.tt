@@ -1,7 +1,8 @@
 [% INCLUDE header.tt %]
 
 <h2>User Accounts:</h2>
-<a href="/c/crms/pdf/UserLevelsPrivileges.pdf" target="_blank">Explanation of User Levels/Privileges</a><br/><br/>
+<a href="[% crms.WebPath('web', 'pdf/UserLevelsPrivileges.pdf') %]"
+   target="_blank">Explanation of User Levels/Privileges</a><br/><br/>
 
 [% id         = cgi.param('id')         %]
 [% kerberos   = cgi.param('kerberos')   %]
@@ -37,7 +38,7 @@
   </select>
 </form>
 [% sys = crms.Sys() %]
-[% icon = '<img width="16" height="16" alt="Check" src="/c/crms/CheckIcon.png"/>' %]
+[% icon = '<img width="16" height="16" alt="Check" src="' _ crms.WebPath('web', 'CheckIcon.png') _ '"/>' %]
 
 [% IF uadmin %]
   [% IF add %]
@@ -113,7 +114,7 @@
         <td>
         [% IF active %]
           [% IF u.ips.mfa %]
-            <img src="/c/crms/img/Duo.png"
+            <img src="[% crms.WebPath('web', 'img/Duo.png') %]"
                  alt="Two-factor authentication enabled"
                  width="20" height="20"/>
           [% ELSIF !u.ips.keys.size() && (r || v || e) %]

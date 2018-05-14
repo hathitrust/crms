@@ -146,7 +146,7 @@
 <div id="RightsReason" style="position:relative;">
   <div style="position:absolute;top:0px;right:1em;">
     <a class="tip" href="#">
-      <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
+      <img width="16" height="16" alt="Rights/Reason Help" src="[% crms.WebPath('web', 'help.png') %]"/>
       <span>
       [% asterisk = 0 %]
       [% FOR right IN rights %]
@@ -170,7 +170,8 @@
       <td>
       [% IF !ren %]
         <img id="predictionLoader" width="16" height="16"
-             src="/c/crms/ajax-loader.gif" alt="loading..." style="display:none;"/>
+             src="[% crms.WebPath('web', 'ajax-loader.gif') %]"
+             alt="loading..." style="display:none;"/>
       [% END %]
       </td>
     </tr>
@@ -268,7 +269,7 @@
         </div>
       </td>
       <td>
-        <img id="importLoader" src="/c/crms/ajax-loader.gif"
+        <img id="importLoader" src="[% crms.WebPath('web', 'ajax-loader.gif') %]"
              alt="loading..." style="display:none;"/>
       </td>
     [% FOREACH review IN reviews %]

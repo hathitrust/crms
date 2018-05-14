@@ -121,7 +121,7 @@
         <td>$item.gid</td>
         <td>
           [% IF item.exported %]
-            <img width="16" height="16" alt="Exported" src="/c/crms/CheckIcon.png"/>
+            <img width="16" height="16" alt="Exported" src="[% crms.WebPath('web', 'CheckIcon.png') %]"/>
           [% END %]
         </td>
       </tr>

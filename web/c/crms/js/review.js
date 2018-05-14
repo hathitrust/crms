@@ -71,7 +71,7 @@ function popRenewalDate()
       }
     }
   };
-  req.open("GET", "/cgi/c/crms/getRenewalDate?id=" + id, true);
+  req.open("GET", gCGI + "getRenewalDate?id=" + id, true);
   req.send(null);
 }
 
@@ -105,7 +105,7 @@ function popReviewInfo(id,user,sys)
     }
   };
   if (loader) { loader.style.display=''; }
-  req.open("GET", "/cgi/c/crms/getReviewInfo?id=" + id + ";user=" + user + ";sys=" + sys, true);
+  req.open("GET", gCGI + "getReviewInfo?id=" + id + ";user=" + user + ";sys=" + sys, true);
   req.send(null);
 }
 
@@ -168,7 +168,7 @@ function PredictRights(id)
       }
     }
   };
-  var url = "/cgi/c/crms/predictRights?sys=crmsworld;id=" +
+  var url = gCGI + "predictRights?sys=crmsworld;id=" +
             id + ";year=" + year + ";ispub=" + isPub +
             ";crown=" + isCrown;
   if (actualPub) { url += ";pub=" + actualPub; }
@@ -212,7 +212,7 @@ function PredictDate(id)
       }
     }
   };
-  var url = "/cgi/c/crms/predictRights?sys=crmsworld;doyear=1;id=" +
+  var url = gCGI + "predictRights?sys=crmsworld;doyear=1;id=" +
             id + ";year=" + year;
   if (actualPub) url += ";pub=" + actualPub;
   req.open("GET", url, true);

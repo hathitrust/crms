@@ -1,8 +1,9 @@
-[% crms.StartHTML('No Volumes to Review', '<link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>') %]
+[% css = crms.WebPath('web', 'css/review.css') %]
+[% crms.StartHTML('No Volumes to Review', '<link rel="stylesheet" type="text/css" href="' _ css _ '"/>') %]
 
 <div class="pages">
-  <a href="[% crms.Sysify('crms') %]">
-    <img src="[% crms.GetSystemVar('logo') %]" width="455" height="80"
+  <a href="[% crms.WebPath('cgi', 'crms') %]">
+    <img src="[% crms.WebPath('web', crms.GetSystemVar('logo')) %]" width="455" height="80"
                alt="Jump to home page"
                style="display:block;margin-left:auto;margin-right:auto;"/>
   </a>

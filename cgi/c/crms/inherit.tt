@@ -48,7 +48,7 @@ may not be up-to-date.</h3>
 Restrict selection:
 <div style="position:absolute;top:0.5em;right:0.5em;">
   <a class="tip" href="#">
-    <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
+    <img width="16" height="16" alt="Rights/Reason Help" src="[% crms.WebPath('web', 'help.png') %]"/>
     <span>
     <strong>Access Change</strong> - Either <strong>0</strong> (unchecked) or <strong>1</strong> (checked)<br/>
   [% IF NOT auto %]
@@ -342,9 +342,9 @@ function EnableButtons(formid)
           <td>[% review.src %]</td>
           <td id="status[% review.inheriting %]">
           [% IF review.status == 1 %]
-            <img width="16" height="16" alt="Accepted" src="/c/crms/CheckIcon.png"/>
+            <img width="16" height="16" alt="Accepted" src="[% crms.WebPath('web', 'CheckIcon.png') %]"/>
           [% ELSIF review.status == 0 %]
-            <img width="16" height="16" alt="Accepted" src="/c/crms/XIcon.png"/>
+            <img width="16" height="16" alt="Accepted" src="[% crms.WebPath('web', 'XIcon.png') %]"/>
           [% END %]
           </td>
           <td style="text-align:center;">

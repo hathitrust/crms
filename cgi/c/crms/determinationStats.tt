@@ -6,7 +6,7 @@
 <!--
 window.onload = function()
 {
-	loadChart('chart0', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph&c=3') %]");
+	loadChart('chart0', "[% crms.WebPath('cgi', 'getExportStats?type=graph&c=3') %]");
 }
   // -->
 </script>

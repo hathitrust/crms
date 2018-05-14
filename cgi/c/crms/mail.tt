@@ -1,5 +1,5 @@
-[% crms.StartHTML('Contact CRMS Experts', '<link rel="stylesheet" type="text/css" href="/c/crms/css/review.css"/>') %]
-
+[% css = crms.WebPath('web', 'css/review.css') %]
+[% crms.StartHTML('Contact CRMS Experts', '<link rel="stylesheet" type="text/css" href="' _ css _ '"/>') %]
 <script>
 function closeMe()
 {

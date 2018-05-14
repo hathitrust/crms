@@ -9,14 +9,14 @@
 <!--
 window.onload = function()
 {
-	loadChart('chart0', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph;c=2') %]");
-	loadChart('chart1', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph;c=0') %]");
-	loadChart('chart2', "[% crms.Sysify('/cgi/c/crms/getExportStats?type=graph;c=1') %]");
+	loadChart('chart0', "[% crms.WebPath('cgi', 'getExportStats?type=graph;c=2') %]");
+	loadChart('chart1', "[% crms.WebPath('cgi', 'getExportStats?type=graph;c=0') %]");
+	loadChart('chart2', "[% crms.WebPath('cgi', 'getExportStats?type=graph;c=1') %]");
 }
 // -->
 </script>
 
-[% url = crms.Sysify('/cgi/c/crms/getExportStats?type=text;c=1') %]
+[% url = crms.WebPath('cgi', 'getExportStats?type=text;c=1') %]
 <h3>CRMS&nbsp;Project&nbsp;Cumulative*&nbsp;&nbsp;&nbsp;&nbsp;<a target="_blank" href="[% url %]">Download</a></h3>
 <table style="width:100px;">
   <tr>
@@ -53,7 +53,7 @@ window.onload = function()
 [% years = crms.GetAllExportYears() %]
 [% FOR year IN years.reverse() %]
   <h3>Exported&nbsp;Determinations&nbsp;$year&nbsp;&nbsp;&nbsp;&nbsp;
-    [% url = crms.Sysify("/cgi/c/crms/getExportStats?type=text;y=$year") %]
+    [% url = crms.WebPath('cgi', 'getExportStats?type=text;y=' _ year) %]
     <a target="_blank" href="[% url %]">Download</a></h3>
   [% report = crms.CreateExportReport(year) %]
   [% IF year == '2010' %]

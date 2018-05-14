@@ -651,7 +651,7 @@ sub LinkToInserts
   my $user = shift;
 
   my $crms = $self->get('crms');
-  my $url = $crms->Sysify('/cgi/c/crms/inserts?p=inserts;editing=1;barcode='. $id);
+  my $url = $crms->WebPath('cgi', 'inserts?p=inserts;editing=1;barcode='. $id);
   $url .= ";user=$user" if defined $user;
   return $url;
 }

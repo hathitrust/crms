@@ -51,7 +51,7 @@ function SubmitRequeue(id, user)
     var loader = document.getElementById('loader'+id+user);
     if (loader) { loader.style.display='block'; }
     var xhr = new XMLHttpRequest();
-    var url = "/cgi/c/crms/submitInserts?requeue=1;id="+id+";user="+user;
+    var url = "[% crms.WebPath('cgi', 'submitInserts?requeue=1;id=') %]"+id+";user="+user;
     xhr.onreadystatechange = function()
     {
       if (xhr.readyState == 4)
@@ -85,10 +85,6 @@ function SubmitRequeue(id, user)
 <h2>Inserts:</h2>
 <div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
 
-<!--<div style="position:absolute;top:4px;right:4px;font-size:.8em">
-  <a href="/c/crms/pdf/ReviewSearchHelp.pdf" target="_blank" accesskey="h">Search&nbsp;Help</a> /
-  <a href="/c/crms/pdf/ReviewSearchTerms.pdf" target="_blank">Search&nbsp;Terms</a>
-</div>-->
 
 <form id="select" action="inserts">
 <input type="hidden" name="p" value="$page"/>
@@ -270,13 +266,13 @@ records per page.
               [% IF item.$iid == 0 %]
                   <a href="[% inserts.LinkToInserts(item.id, item.user) %]" target="_blank">[% item.id %]</a>
                 [% IF inserts.IsLocked(item.id) %]
-                  <img width="16" height="16" alt="Locked" src="/c/crms/OtherLock.png"/>
+                  <img width="16" height="16" alt="Locked" src="[% crms.WebPath('web', 'OtherLock.png') %]"/>
                 [% END %]
                 [% totals = inserts.TotalsString(item.id, item.user) %]
                 [% IF totals %]
                 
                   <a class="tip" href="#">
-                    <img width="16" height="16" alt="Rights/Reason Help" src="/c/crms/help.png"/>
+                    <img width="16" height="16" alt="Rights/Reason Help" src="[% crms.WebPath('web', 'help.png') %]"/>
                     <span style="width:auto;">
                     $totals
                     </span>
@@ -294,10 +290,10 @@ records per page.
               [% crms.GetPubDate(item.id) %]
             [% ELSIF field == 'status' %]
               [% IF item.status == 5 && item.$iid==0 && !inserts.IsOverride(item.id, item.$iid, item.user) %]
-                <img id="check[% item.id _ item.user %]" width="16" height="16" alt="Done" src="/c/crms/CheckIcon.png"/>
+                <img id="check[% item.id _ item.user %]" width="16" height="16" alt="Done" src="[% crms.WebPath('web', 'CheckIcon.png') %]"/>
                 <input type="button" name="requeue" value="Requeue" id="submit[% item.id _ item.user %]"
                        onclick="SubmitRequeue('[% item.id %]', '[% item.user %]');"/>
-                <img id="loader[% item.id _ item.user %]" style="display:none;" src="/c/crms/ajax-loader.gif" alt="Submitting..."/>
+                <img id="loader[% item.id _ item.user %]" style="display:none;" src="[% crms.WebPath('web', 'ajax-loader.gif') %]" alt="Submitting..."/>
                 <span id="span[% item.id _ item.user %]" style="display:none;">Requeued</span>
               [% END %]
             [% ELSIF field == 'pd' && item.$iid == 0 %]
@@ -306,7 +302,7 @@ records per page.
               [% txt %]
             [% ELSIF field == 'restored' %]
               [% IF item.restored == 1 %]
-                <img width="16" height="16" alt="Restored" src="/c/crms/CheckIcon.png"/>
+                <img width="16" height="16" alt="Restored" src="[% crms.WebPath('web', 'CheckIcon.png') %]"/>
               [% END %]
             [% ELSE %]
               [% item.$field %]

@@ -5,7 +5,7 @@
 <script type="text/javascript">
 <!--
 
-var gURLBase = '/cgi/c/crms/getProjectInfo?sys=' + gSys;
+var gURLBase = "[% crms.WebPath('cgi', 'getProjectInfo') %]";
 var gSelectedProject;
 var gMaxRights = [% crms.SimpleSqlGet('SELECT MAX(id) FROM rights') %];
 var gMaxCategories = [% crms.SimpleSqlGet('SELECT MAX(id) FROM categories') %];
@@ -263,7 +263,7 @@ function populateProjects()
   req.open("GET", url, true);
   req.send(null);
 }
-
+[% checkicon = crms.WebPath('web', 'CheckIcon.png') %]
 function populateProject(data, table)
 {
   var row = table.insertRow(table.rows.length);
@@ -290,11 +290,11 @@ function populateProject(data, table)
   cell.innerHTML = data.determinationsCount;
   cell = row.insertCell(6);
   cell.className = 'nowrap';
-  cell.innerHTML = (data.autoinherit == 1)? '<img width="16" height="16" alt="Checked" src="/c/crms/CheckIcon.png"/>':'';
+  cell.innerHTML = (data.autoinherit == 1)? '<img width="16" height="16" alt="Checked" src="[% checkicon %]"/>':'';
   cell.style.textAlign = 'center';
   cell = row.insertCell(7);
   cell.className = 'nowrap';
-  cell.innerHTML = (data.group_volumes == 1)? '<img width="16" height="16" alt="Checked" src="/c/crms/CheckIcon.png"/>':'';
+  cell.innerHTML = (data.group_volumes == 1)? '<img width="16" height="16" alt="Checked" src="[% checkicon %]"/>':'';
   cell.style.textAlign = 'center';
   cell = row.insertCell(8);
   var input = document.createElement('input');
@@ -373,7 +373,7 @@ function addProject(name)
     <tr class="nowrap">
       <td>
         <input type="button" onclick="addProject();" value="Add"/>
-        <img id="addLoader" style="visibility:hidden;" src="/c/crms/ajax-loader.gif" alt="Adding..."/>
+        <img id="addLoader" style="visibility:hidden;" src="[% crms.WebPath('web', 'ajax-loader.gif') %]" alt="Adding..."/>
       </td>
       <td class="nowrap">
         <input type="text" id="addName" name="name"></input>
