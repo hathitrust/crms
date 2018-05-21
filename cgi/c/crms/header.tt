@@ -36,7 +36,6 @@ var gCGI = "[% crms.WebPath('cgi', '') %]";
     <title>[% title %] - [% crms.PageToEnglish(page) %]</title>
   </head>
   <body>
-  [% CALL crms.set('headerLoaded', 1) %]
   [% r = crms.GetSystemStatus() %]
   [% IF reviewType %]
     <div id="homePage">
@@ -49,10 +48,22 @@ var gCGI = "[% crms.WebPath('cgi', '') %]";
     [% END %]
     <div class="pages" id="homePage">
     <div style="height:82px;border-bottom:1px solid black;margin:0px;padding-bottom:6px;">
+      [% # Don't display the notice if this is the review page and situation normal %]
+      [% IF r.2 && (!reviewType || r.1 != 'normal') %]
+        <table style="float:left;width:860px;height:80px;border:1px solid #185EAC;background-color:#EEEEFF;padding:1em;">
+        <tr><td>
+         [% status = (r.1 == 'down')? 'unavailable':((r.1 == 'partial')? 'partially available':r.1) %]
+         <span style="font-size:1.3em;text-align:center;color:#DD4444">System status is <b>[% status %]</b>; last modified [% r.0 %]</span><br/>
+         <span style="font-size:1.1em;">[% r.2 %]</span>
+         [% IF page == 'review' %]&nbsp;&nbsp;&nbsp;<a href="[% crms.Sysify('crms') %]">Home</a>[% END %]
+        </td></tr>
+        </table>
+      [% ELSE %]
       <a href="[% crms.Sysify('crms') %]">
         <img src="[% crms.WebPath('web', crms.GetSystemVar('logo')) %]" width="455" height="80" alt="Jump to home page"
              style="float:left;border:0px solid;margin-right:4em;"/>
       </a>
+      [% END %]
       <div style="float:right;">
         <table class="helloBox">
           <tr>
@@ -75,20 +86,6 @@ var gCGI = "[% crms.WebPath('cgi', '') %]";
     [% crms.Debug %]
     <div>[% INCLUDE nav.tt %]</div>
     <br/><br/><br/>
-[% END %]
-[% crms.Debug %]
-[% # Don't display the notice if this is the review page and situation normal %]
-[% IF r.2 && (!reviewType || r.1 != 'normal') %]
-  <img src="[% crms.GetSystemVar('smallLogo') %]" alt="CRMS Logo"
-       width="104" height="80" style="position:absolute;top:20px;left:20px;"/>
-  <table style="width:860px;height:80px;border:1px solid #185EAC;background-color:#EEEEFF;position:absolute;top:20px;left:124px;">
-  <tr><td>
-   [% status = (r.1 == 'down')? 'unavailable':((r.1 == 'partial')? 'partially available':r.1) %]
-   <span style="font-size:1.3em;text-align:center;color:#DD4444">System status is <b>[% status %]</b>; last modified [% r.0 %]</span><br/>
-   <span style="font-size:1.1em;">[% r.2 %]</span>
-   [% IF page == 'review' %]&nbsp;&nbsp;&nbsp;<a href="[% crms.Sysify('crms') %]">Home</a>[% END %]
-  </td></tr>
-  </table>
 [% END %]
 [% crms.Debug %]
 [% IF r.1 != 'normal' %]
