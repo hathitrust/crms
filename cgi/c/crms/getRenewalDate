@@ -25,6 +25,6 @@ my $date = $crms->GetRenDate($id);
 if ($date eq '') { print $cgi->header( -status => "400" ); }
 else
 {
-  print $cgi->header();
+  print CGI::header(-type => 'text/plain', -charset => 'utf-8');
   print $date;
 }

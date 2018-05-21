@@ -56,7 +56,7 @@ else
   #}
   $n = $crms->PredictRights($id, $year, $ispub, $crown, undef, $pub) unless defined $n;
 }
-print $cgi->header();
+print CGI::header(-type => 'text/plain', -charset => 'utf-8');
 if ($readable && $n)
 {
   my $ref = $crms->SelectAll("SELECT attr,reason FROM rights WHERE id=?", $n);
