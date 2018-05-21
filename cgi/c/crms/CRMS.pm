@@ -293,7 +293,7 @@ sub ConnectToSdrDb
     $db_server = $self->get('mysqlMdpServer');
   }
   my $sdr_dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
-            { PrintError => 0, AutoCommit => 1 });
+            { PrintError => 0, AutoCommit => 1 }) || die "Cannot connect to SDR DB: $DBI::errstr";
   if ($sdr_dbh)
   {
     $sdr_dbh->{mysql_auto_reconnect} = 1;
@@ -502,12 +502,8 @@ sub Debug
 {
   my $self = shift;
 
-  my $d = '';
-  if ($self->get('headerLoaded') == 1)
-  {
-    $d = $self->get('storedDebug') || '';
-    $self->set('storedDebug', '');
-  }
+  my $d = $self->get('storedDebug') || '';
+  $self->set('storedDebug', '');
   $d;
 }
 
@@ -8360,22 +8356,20 @@ sub GetBothSystems
   if ($self->Sys() eq 'crmsworld')
   {
     $crmsUS = CRMS->new(
-      logFile      => $self->get('logfile'),
-      sys          => 'crms',
-      verbose      => 0,
-      root         => $self->get('root'),
-      dev          => $self->get('dev'));
+      instance => $self->get('instance'),
+      sys      => 'crms',
+      tdb      => $self->get('tdb'),
+      pdb      => $self->get('pdb'));
     $crmsWorld = $self;
   }
   else
   {
     $crmsUS = $self;
     $crmsWorld = CRMS->new(
-      logFile      => $self->get('logfile'),
-      sys          => 'crmsworld',
-      verbose      => 0,
-      root         => $self->get('root'),
-      dev          => $self->get('dev'));
+      instance => $self->get('instance'),
+      sys      => 'crmsworld',
+      tdb      => $self->get('tdb'),
+      pdb      => $self->get('pdb'));
   }
   return [$crmsUS,$crmsWorld];
 }
