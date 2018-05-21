@@ -12,7 +12,6 @@ use CGI;
 use CRMS;
 
 my $cgi    = new CGI;
-my $user   = $ENV{'REMOTE_USER'};
 my $id     = $cgi->param('id');
 my $year   = $cgi->param('year');
 my $sys    = $cgi->param('sys');
