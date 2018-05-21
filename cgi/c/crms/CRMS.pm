@@ -359,7 +359,7 @@ sub PrepareSubmitSql
   my $sth = $dbh->prepare($sql);
   eval { $sth->execute(@_); };
   my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), @_);
+  $self->DebugSql($sql, 1000.0*($t2-$t1), 1, @_);
   if ($@)
   {
     my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $sth->errstr;
@@ -399,7 +399,7 @@ sub SelectAll
     $ref = $dbh->selectall_arrayref($sql, undef, @_);
   };
   my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), @_);
+  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, @_);
   if ($@)
   {
     my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
@@ -421,7 +421,7 @@ sub SelectAllSDR
     $ref = $dbh->selectall_arrayref($sql, undef, @_);
   };
   my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), @_);
+  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, @_);
   if ($@)
   {
     my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
@@ -436,20 +436,21 @@ sub DebugSql
   my $self = shift;
   my $sql  = shift;
   my $time = shift;
+  my $ref  = shift;
 
   my $debug = $self->get('debugSql');
   if ($debug)
   {
-    my $ct = $self->get('debugCount');
-    $ct = 0 unless $ct;
+    my $ct = $self->get('debugCount') || 0;
     my @parts = split m/\s+/, $sql;
     my $type = uc $parts[0];
     my $trace = Utilities::LocalCallChain();
     $trace = join '<br>', @{$trace};
+    my $stat = ($ref)? '':'<i>FAIL</i>';
 	  my $html = <<END;
     <div class="debug">
       <div class="debugSql" onClick="ToggleDiv('details$ct', 'debugSqlDetails');">
-        SQL QUERY [$type] ($ct)
+        SQL QUERY [$type] ($ct) $stat
       </div>
       <div id="details$ct" class="divHide"
            style="background-color: #9c9;" onClick="ToggleDiv('details$ct', 'debugSqlDetails');">
@@ -475,8 +476,7 @@ sub DebugVar
   my $debug = $self->get('debugVar');
   if ($debug)
   {
-    my $ct = $self->get('debugCount');
-    $ct = 0 unless $ct;
+    my $ct = $self->get('debugCount') || 0;
 	  my $html = <<END;
     <div class="debug">
       <div class="debugVar" onClick="ToggleDiv('details$ct', 'debugVarDetails');">
@@ -3316,8 +3316,8 @@ sub PTAddress
   my $id   = shift;
 
   my $pt = 'babel.hathitrust.org';
-  my $syspt = $self->SimpleSqlGet('SELECT value FROM systemvars WHERE name="pt"');
-  $pt = $syspt if $syspt;
+  #my $syspt = $self->SimpleSqlGet('SELECT value FROM systemvars WHERE name="pt"');
+  #$pt = $syspt if $syspt;
   return 'https://' . $pt . '/cgi/pt?debug=super;id=' . $id;
 }
 
