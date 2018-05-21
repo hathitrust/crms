@@ -6715,11 +6715,14 @@ sub TrackingQuery
        $a1 cmp $b1;} @{$rows})
     {
       my $id2 = $ref->{'id'};
+      my @rightsInfo = ('' x 7);
+      eval {
+        @rightsInfo = @{$self->RightsQuery($id2, 1)->[0]};
+      };
       my $data2 = [$id2, $ref->{'chron'},
                    $syss->[0]->GetTrackingInfo($id2, 1, 1),
                    $syss->[1]->GetTrackingInfo($id2, 1, 1),
-                   $ref->{'rights'},
-                   @{$self->RightsQuery($id2, 1)->[0]}];
+                   $ref->{'rights'}, @rightsInfo];
       if ($rest{$id2})
       {
         unshift @ids, $data2;
