@@ -50,10 +50,12 @@
         <th class="nowrap" scope="col" id="volumeTH">Volume</th>
         <th class="nowrap" scope="col" id="enumchronTH">Enum/Chron</th>
         <th class="nowrap" scope="col" id="CRMSUSTH">
-          <img src="[% data.crms.GetSystemVar('smallLogo') %]" alt="CRMS-US Logo" width="26" height="20"/>
+          <img src="[% data.crms.WebPath('web', data.crms.GetSystemVar('smallLogo')) %]"
+               alt="CRMS-US Logo" width="26" height="20"/>
         </th>
         <th class="nowrap" scope="col" id="CRMSWorldTH">
-          <img src="[% data.crmsworld.GetSystemVar('smallLogo') %]" alt="CRMS-World Logo" width="26" height="20"/>
+          <img src="[% data.crmsworld.WebPath('web', data.crmsworld.GetSystemVar('smallLogo')) %]"
+               alt="CRMS-World Logo" width="26" height="20"/>
         </th>
         <th scope="col" id="USRightTH">U.S.<br/>Rights</th>
         <th scope="col" id="attributeTH">Attribute</th>
