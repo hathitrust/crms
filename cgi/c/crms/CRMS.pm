@@ -5694,13 +5694,19 @@ sub SetError
 
   $error .= "\n";
   $error .= Utilities::StackTrace();
-  my $errors = $self->get('errors');
-  push @{$errors}, $error;
+  my $errorh = $self->get('errorh');
+  if (!$errorh->{$error})
+  {
+    my $errors = $self->get('errors');
+    push @{$errors}, $error;
+    $errorh->{$error} = 1;
+  }
 }
 
 sub CountErrors
 {
   my $self = shift;
+
   my $errs = $self->get('errors');
   return (defined $errs)? scalar @{$errs}:0;
 }
@@ -5717,8 +5723,8 @@ sub ClearErrors
 {
   my $self = shift;
 
-  my $errors = [];
-  $self->set('errors', $errors);
+  $self->set('errors', []);
+  $self->set('errorh', {});
 }
 
 # Remove trailing zeroes and point-zeroes from a floating point format.
