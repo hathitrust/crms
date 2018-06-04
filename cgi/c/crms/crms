@@ -6,6 +6,7 @@ use CRMS;
 use Template;
 use POSIX;
 use Encode;
+use URI::Escape;
 
 my $cgi  = new CGI;
 my $sys =  $cgi->param('sys');
@@ -23,6 +24,14 @@ my $crms = CRMS->new(
         debugSql => $debugSql,
         debugVar => $debugVar
         );
+my $redirect;
+my $target = uri_escape_utf8('https://'. $ENV{'HTTP_HOST'}. $ENV{'REQUEST_URI'});
+if (!$crms->get('remote_user'))
+{
+  my $eid = uri_escape_utf8('https://shibboleth.umich.edu/idp/shibboleth');
+  $redirect = 'https://'. $ENV{'HTTP_HOST'}.
+              "/Shibboleth.sso/Login?entityID=$eid&target=$target";
+}
 my $cri;
 if ($page eq 'cri' || $page eq 'criData' || $page eq 'confirmCRI')
 {
@@ -43,19 +52,14 @@ if ($page eq 'Logout')
   else
   {
     $crms->UnlockAllItemsForUser();
-    # change 'central' to the url of your weblogin server.
-    my $central = "https://weblogin.umich.edu/cgi-bin/logout";
-    my $query_string = '';
-    # expire and nullify service cookie
-    print( "Set-Cookie: $ENV{ COSIGN_SERVICE }=null; path=/; expires=Wednesday, 27-Jan-77 00:00:00 GMT; secure\n" );
-    if ( $ENV{ QUERY_STRING } =~ m|^(https?://.*)$| )
+    my $central = $crms->get('logout');
+    my $service = $ENV{'COSIGN_SERVICE'};
+    if ($service)
     {
-      $query_string = "?$1";
+      print("Set-Cookie: $service=null; path=/; expires=Wednesday, 27-Jan-77 00:00:00 GMT; secure\n");
     }
-    # perform any local cleanup here
-    # redirect to central weblogin server
-    print("Location: $central$query_string\n\n");
-    exit(0);
+    $target =~ s/logout/home/gi;
+    $redirect = $central. $target;
   }
 }
 elsif ($cgi->param('changeuser') == 1)
@@ -224,6 +228,12 @@ if ($cgi->param('download'))
 {
   use Downloads;
   exit if 1 == Downloads::Download($crms, $cgi);
+}
+
+if ($redirect)
+{
+  print $cgi->redirect($redirect);
+  exit(0);
 }
 
 ## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
