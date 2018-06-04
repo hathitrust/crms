@@ -44,8 +44,8 @@ sub new
   my %d = $self->ReadConfigFile($sys. '.cfg');
   $self->set($_, $d{$_}) for keys %d;
   $self->SetupLogFile();
-  my $errors = [];
-  $self->set('errors',   $errors);
+  # Initialize error reporting.
+  $self->ClearErrors();
   $self->set('verbose',  $args{'verbose'});
   # If running under Apache.
   $self->set('instance', $ENV{'CRMS_INSTANCE'});
@@ -56,13 +56,69 @@ sub new
   $self->set('debugSql', $args{'debugSql'});
   $self->set('debugVar', $args{'debugVar'});
   $self->set('sys',      $sys);
-  my $user = $ENV{'REMOTE_USER'};
-  $self->set('remote_user', $user);
-  my $alias = $self->GetAlias($user);
-  $user = $alias if defined $alias and length $alias and $alias ne $user;
-  $self->set('user', $user);
+  my $user = $self->SetupUser();
   $self->DebugVar('self', $self);
   return $self;
+}
+
+# First, try to establish the identity of the user as represented in the users table.
+# 1. REMOTE_USER directly (uniqname/friend)
+# 2. email directly
+# 3. eppn (e.g., moses+blugs.com@umich.edu) directly
+# 4. REMOTE_USER as ht_users userid
+# Then, set login credentials as remote_user and user as alias if it is set.
+sub SetupUser
+{
+  my $self = shift;
+
+  my $note = '';
+  my $usersql = 'SELECT COUNT(*) FROM users WHERE id=?';
+  my $user = $ENV{'REMOTE_USER'};
+  if (!$user || !$self->SimpleSqlGet($usersql, $user))
+  {
+    $note .= sprintf "1: user %s no go\n", (defined $user)? "'$user'":'<undef>';
+    $user = $ENV{'email'};
+    if (!$user || !$self->SimpleSqlGet($usersql, $user))
+    {
+      $note .= sprintf "2: user %s no go\n", (defined $user)? "'$user'":'<undef>';
+      $user = $ENV{'eppn'};
+      $user =~ s/\@umich\.edu//;
+      $user =~ s/\+/@/;
+      if (!$user || !$self->SimpleSqlGet($usersql, $user))
+      {
+        $note .= sprintf "3: user %s no go\n", (defined $user)? "'$user'":'<undef>';
+        my $user = $ENV{'REMOTE_USER'};
+        my $sdr_dbh = $self->get('ht_repository');
+        if (!defined $sdr_dbh)
+        {
+          $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
+          $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
+        }
+        my $sql = 'SELECT email FROM ht_users WHERE userid=? LIMIT 1';
+        my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user);
+        if ($ref && scalar @{$ref})
+        {
+          $user = $ref->[0]->[0];
+          if (!$user || !$self->SimpleSqlGet($usersql, $user))
+          {
+            $note .= sprintf "4: user %s no go\n", (defined $user)? "'$user'":'<undef>';
+            $user = undef;
+          }
+        }
+      }
+    }
+  }
+  if ($user)
+  {
+    $note .= "5: settling on user '$user'\n";
+    $self->Note("Setting user to $user.");
+    $self->set('remote_user', $user);
+    my $alias = $self->GetAlias($user);
+    $user = $alias if defined $alias and length $alias and $alias ne $user;
+    $self->set('user', $user);
+  }
+  $self->Note($note);
+  return $user;
 }
 
 # The href or URL to use.
