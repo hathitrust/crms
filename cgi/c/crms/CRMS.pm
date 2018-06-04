@@ -312,8 +312,7 @@ sub DbInfo
   if ($instance eq 'production'
       || $self->get('pdb')
       || $instance eq 'crms-training'
-      || $self->get('tdb')
-      )
+      || $self->get('tdb'))
   {
     $db_server = $self->get('mysqlServer');
   }
@@ -343,13 +342,15 @@ sub ConnectToSdrDb
   my %d = $self->ReadConfigFile($sys. 'pw.cfg');
   my $db_user   = $d{'mysqlMdpUser'};
   my $db_passwd = $d{'mysqlMdpPasswd'};
-  if ($instance eq 'production' || $instance eq 'crms-training' ||
-      $self->get('pdb') || $self->get('tdb'))
+  if ($instance eq 'production'
+      || $instance eq 'crms-training'
+      || $self->get('pdb')
+      || $self->get('tdb'))
   {
     $db_server = $self->get('mysqlMdpServer');
   }
   my $sdr_dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
-            { PrintError => 0, AutoCommit => 1 }) || die "Cannot connect to SDR DB: $DBI::errstr";
+                             {PrintError => 0, AutoCommit => 1});
   if ($sdr_dbh)
   {
     $sdr_dbh->{mysql_auto_reconnect} = 1;
