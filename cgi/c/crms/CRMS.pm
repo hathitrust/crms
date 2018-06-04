@@ -417,7 +417,7 @@ sub PrepareSubmitSql
   my $sth = $dbh->prepare($sql);
   eval { $sth->execute(@_); };
   my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), 1, @_);
+  $self->DebugSql($sql, 1000.0*($t2-$t1), 1, undef, @_);
   if ($@)
   {
     my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $sth->errstr;
@@ -457,7 +457,7 @@ sub SelectAll
     $ref = $dbh->selectall_arrayref($sql, undef, @_);
   };
   my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, @_);
+  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, undef, @_);
   if ($@)
   {
     my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
@@ -479,7 +479,7 @@ sub SelectAllSDR
     $ref = $dbh->selectall_arrayref($sql, undef, @_);
   };
   my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, @_);
+  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, 'ht_rights', @_);
   if ($@)
   {
     my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
@@ -495,6 +495,7 @@ sub DebugSql
   my $sql  = shift;
   my $time = shift;
   my $ref  = shift;
+  my $db   = shift;
 
   my $debug = $self->get('debugSql');
   if ($debug)
@@ -502,6 +503,7 @@ sub DebugSql
     my $ct = $self->get('debugCount') || 0;
     my @parts = split m/\s+/, $sql;
     my $type = uc $parts[0];
+    $type .= ' '. $db if defined $db;
     my $trace = Utilities::LocalCallChain();
     $trace = join '<br>', @{$trace};
     my $stat = ($ref)? '':'<i>FAIL</i>';
@@ -6624,8 +6626,11 @@ sub GetUserIPs
     $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
   }
   my ($ipr, $mfa);
+  my $t1 = Time::HiRes::time();
   eval {
     my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
+    my $t2 = Time::HiRes::time();
+    $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, 'ht_repository', $user, $user);
     $ipr = $ref->[0]->[0];
     $mfa = $ref->[0]->[1];
   };
