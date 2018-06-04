@@ -24,10 +24,10 @@
     [% CALL crms.ClearErrors() %]
     [% sysid = data.sysid %]
     [% seen.$sysid = 1 %]
-    [% url = crms.Sysify("?p=$p;download=1;q=$id") %]
     <br/><br/>
     [% IF sysid %]
-    <a href="[% url %]" target="_blank">Download</a>
+      [% url = crms.Sysify("?p=$p;download=1;q=$id") %]
+      <a href="[% url %]" target="_blank">Download</a>
     [% END %]
     <table class="exportStats">
       <tr class="nowrap"><th colspan="12" class="major" scope="colgroup" id="topTH">
@@ -41,6 +41,7 @@
           [% ELSE %]
             ([% data.title %])
           [% END %]
+          &nbsp;&nbsp;&nbsp;&nbsp;[% data.data.size %] [% crms.Pluralize('volume', data.data.size) %]
         [% ELSE %]
           [% crms.EchoInput(id) %]&nbsp;&nbsp;&nbsp;&nbsp;(not in catalog)
         [% END %]
