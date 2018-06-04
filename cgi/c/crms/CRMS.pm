@@ -6816,7 +6816,7 @@ sub GetTrackingInfo
     my $sql = 'SELECT p.name FROM queue q LEFT JOIN projects p'.
               ' ON q.project=p.id WHERE q.id=?';
     my $proj = $self->SimpleSqlGet($sql, $id);
-    my $projinfo = (defined $proj)? ", project '$proj'":'';
+    my $projinfo = (defined $proj)? ", $proj project":'';
     push @stati, "in Queue (P$pri, status $status, $n $reviews$projinfo)";
   }
   elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM cri WHERE id=? AND exported=0', $id))
