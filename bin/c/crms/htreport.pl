@@ -58,7 +58,7 @@ my $crmsUS = CRMS->new(
 );
 
 printf "CRMS-World DB: %s\n", $crms->DbInfo() if $verbose;
-printf "CRMS-US DB: %s\n", $crms->DbInfo() if $verbose;
+printf "CRMS-US DB: %s\n", $crmsUS->DbInfo() if $verbose;
 
 my $dWorld = $crms->SimpleSqlGet('SELECT COUNT(*) FROM exportdata');
 my $dWorld2 = $crms->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE time>DATE_SUB(NOW(),INTERVAL 2 WEEK)');
@@ -197,7 +197,7 @@ else
     my $bytes = encode('utf8', $msg);
     my %mail = ('from'         => 'crms-mailbot@umich.edu',
                 'to'           => $to,
-                'subject'      => $crms->SubjectLine('Determinations Report'),
+                'subject'      => 'CRMS Determinations Report',
                 'content-type' => 'text/html; charset="UTF-8"',
                 'body'         => $bytes
                 );
