@@ -6974,8 +6974,9 @@ sub WhereAmI
 {
   my $self = shift;
 
-  my $instance = $self->get('instance') || 'dev';
-  $instance = "dev ($instance)" unless $instance eq 'production' or $instance eq 'crms-training' or $instance eq 'dev';
+  my %instances = ('production' => 1, 'crms-training' => 1, 'dev' => 1);
+  my $instance = $self->get('instance') || $ENV{'HT_DEV'} || 'dev';
+  $instance = "dev ($instance)" unless $instances{$instance};
   $instance = 'training' if $instance eq 'crms-training';
   return ucfirst $instance;
 }
