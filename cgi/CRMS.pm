@@ -51,12 +51,19 @@ sub new
   $self->set('instance', $ENV{'CRMS_INSTANCE'});
   # If running from command line.
   $self->set('instance', $args{'instance'}) if $args{'instance'};
+  # Only need to authorize when running as CGI.
+  $self->set('cgi', $args{'cgi'});
   $self->set('pdb',      $args{'pdb'});
   $self->set('tdb',      $args{'tdb'});
   $self->set('debugSql', $args{'debugSql'});
   $self->set('debugVar', $args{'debugVar'});
   $self->set('sys',      $sys);
-  my $user = $self->SetupUser();
+  # Only need to authorize when running as CGI.
+  if ($ENV{'GATEWAY_INTERFACE'})
+  {
+    print "<strong>Warning: no CGI passed to <code>CRMS->new()</code>\n" unless $args{'cgi'};
+    $self->SetupUser();
+  }
   $self->DebugVar('self', $self);
   return $self;
 }
@@ -76,17 +83,18 @@ sub SetupUser
   my $user = $ENV{'REMOTE_USER'};
   if (!$user || !$self->SimpleSqlGet($usersql, $user))
   {
-    $note .= sprintf "1: user %s no go\n", (defined $user)? "'$user'":'<undef>';
+    $note .= sprintf "ENV{REMOTE_USER} %s NO\n", (defined $user)? "'$user'":'<undef>';
     $user = $ENV{'email'};
+    $user =~ s/\@umich.edu// if $user;
     if (!$user || !$self->SimpleSqlGet($usersql, $user))
     {
-      $note .= sprintf "2: user %s no go\n", (defined $user)? "'$user'":'<undef>';
+      $note .= sprintf "ENV{email} %s NO\n", (defined $user)? "'$user'":'<undef>';
       $user = $ENV{'eppn'};
       $user =~ s/\@umich\.edu//;
       $user =~ s/\+/@/;
       if (!$user || !$self->SimpleSqlGet($usersql, $user))
       {
-        $note .= sprintf "3: user %s no go\n", (defined $user)? "'$user'":'<undef>';
+        $note .= sprintf "ENV{eppn} %s NO\n", (defined $user)? "'$user'":'<undef>';
         my $user = $ENV{'REMOTE_USER'};
         my $sdr_dbh = $self->get('ht_repository');
         if (!defined $sdr_dbh)
@@ -95,30 +103,116 @@ sub SetupUser
           $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
         }
         my $sql = 'SELECT email FROM ht_users WHERE userid=? LIMIT 1';
-        my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user);
+        my $ref;
+        eval {
+          $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user);
+        };
+        if ($@)
+        {
+          $note .= "Can't connect to ht_repository\n";
+        }
         if ($ref && scalar @{$ref})
         {
           $user = $ref->[0]->[0];
           if (!$user || !$self->SimpleSqlGet($usersql, $user))
           {
-            $note .= sprintf "4: user %s no go\n", (defined $user)? "'$user'":'<undef>';
+            $note .= sprintf "4: user %s NO\n", (defined $user)? "'$user'":'<undef>';
             $user = undef;
           }
         }
       }
     }
   }
+  if ($self->NeedStepUpAuth())
+  {
+    $note .= "Step-up auth required.\n";
+    $self->set('stepup', 1);
+    #$user = undef;
+  }
   if ($user)
   {
-    $note .= "5: settling on user '$user'\n";
-    $self->Note("Setting user to $user.");
+    $note .= "Setting user to $user.";
     $self->set('remote_user', $user);
     my $alias = $self->GetAlias($user);
     $user = $alias if defined $alias and length $alias and $alias ne $user;
     $self->set('user', $user);
   }
-  $self->Note($note);
+  $self->set('id_note', $note);
   return $user;
+}
+
+# read the template from ht_institutions
+# replace __HOST__ with $ENV{SERVER_NAME}
+# replace __TARGET__ with something like CGI::self_url($cgi)
+# append &authnContextClassRef=$shib_authncontext_class
+sub NeedStepUpAuth
+{
+  my $self = shift;
+
+  my $need = 1;
+  my $idp = $ENV{'Shib_Identity_Provider'};
+  my $class = $ENV{'Shib_AuthnContext_Class'};
+  my $sdr_dbh = $self->get('ht_repository');
+  my ($dbclass, $dbtemplate);
+  if (!defined $sdr_dbh)
+  {
+    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
+    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
+  }
+  #my $sql = 'SELECT shib_authncontext_class,template FROM ht_institutions'.
+  #          ' WHERE entityID=? LIMIT 1';
+  #my $ref;
+  #eval {
+  #  $ref = $sdr_dbh->selectall_arrayref($sql, undef, $idp);
+  #};
+  #if ($ref && scalar @{$ref})
+  #{
+  #  $dbclass  = $ref->[0]->[0] || '';
+  #  $template = $ref->[0]->[1] || '';
+  #}
+  my $sql = 'SELECT shib_authncontext_class FROM ht_institutions'.
+            ' WHERE entityID=? LIMIT 1';
+  my $ref;
+  eval {
+    $ref = $sdr_dbh->selectall_arrayref($sql, undef, $idp);
+  };
+  if ($ref && scalar @{$ref})
+  {
+    $dbclass  = $ref->[0]->[0] || '';
+  }
+  $sql = 'SELECT template FROM ht_institutions'.
+         ' WHERE entityID=? LIMIT 1';
+  eval {
+    $ref = $sdr_dbh->selectall_arrayref($sql, undef, $idp);
+  };
+  if ($ref && scalar @{$ref})
+  {
+    $dbtemplate = $ref->[0]->[0] || '';
+  }
+  if ($class && $dbclass && $class eq $dbclass)
+  {
+    $need = 0;
+  }
+  my $tpl = $dbtemplate;
+  my $target = CGI::self_url($self->get('cgi'));
+  if ($dbtemplate)
+  {
+    $tpl =~ s/___HOST___/$ENV{SERVER_NAME}/;
+    $tpl =~ s/___TARGET___/$target/;
+    $tpl .= "&authnContextClassRef=$class";
+    $self->set('stepup_redirect', $tpl);
+  }
+  my $note = sprintf "ENV{Shib_Identity_Provider}='$idp'\n".
+                     "ENV{Shib_AuthnContext_Class}='$class'\n".
+                     "DB=%s\nDB class=%s\n".
+                     "TEMPLATE=%s FROM=%s (%s,%s)",
+                     (defined $sdr_dbh)? $sdr_dbh:'<undef>',
+                     (defined $dbclass)? $dbclass:'<undef>',
+                     (defined $tpl)? $tpl:'<undef>',
+                     (defined $dbtemplate)? $dbtemplate:'<undef>',
+                     $ENV{SERVER_NAME}, $target;
+  $self->set('auth_note', $note);
+  return $need;
 }
 
 # The href or URL to use.
@@ -247,7 +341,7 @@ sub ReadConfigFile
   my $fh;
   unless (open $fh, '<:encoding(UTF-8)', $path)
   {
-    $self->SetError('failed to read config file at $path: ' . $!);
+    $self->SetError("failed to read config file at $path: " . $!);
     return undef;
   }
   read $fh, my $buff, -s $path; # one of many ways to slurp file.
@@ -555,6 +649,43 @@ END
     $ct++;
     $self->set('debugCount', $ct);
   }
+}
+
+sub DebugAuth
+{
+  my $self = shift;
+
+  my $debug = $self->get('debugAuth');
+  if ($debug)
+  {
+    my $ct = $self->get('debugCount') || 0;
+	  my $html = <<END;
+    <div class="debug">
+      <div class="debugVar" onClick="ToggleDiv('details$ct', 'debugVarDetails');">
+        AUTH
+      </div>
+      <div id="details$ct" class="divHide"
+           style="background-color: #fcc;" onClick="ToggleDiv('details$ct', 'debugVarDetails');">
+        %s
+      </div>
+    </div>
+END
+    my $storedDebug = $self->get('storedDebug') || '';
+    $self->set('storedDebug', $storedDebug. $self->AuthDebugHTML());
+    $ct++;
+    $self->set('debugCount', $ct);
+  }
+}
+
+sub AuthDebugHTML
+{
+  my $self = shift;
+
+  my $msg = $self->get('id_note');
+  $msg .= "\n". $self->get('auth_note');
+  $msg = CGI::escapeHTML($msg);
+  $msg =~ s/\n+/<br\/>/gs;
+  return $msg;
 }
 
 # Called to return and flush any accumulated debugging display.

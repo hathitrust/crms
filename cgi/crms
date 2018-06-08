@@ -14,23 +14,28 @@ $sys = 'crms' unless $sys;
 my $page = $cgi->param('p');
 my $pdb = $cgi->param('pdb');
 my $tdb = $cgi->param('tdb');
+my $debugAuth = $cgi->param('debugAuth');
 my $debugSql = $cgi->param('debugSql');
 my $debugVar = $cgi->param('debugVar');
 my $crms = CRMS->new(
-        sys      => $sys,
-        verbose  => 0,
-        pdb      => $pdb,
-        tdb      => $tdb,
-        debugSql => $debugSql,
-        debugVar => $debugVar
+        cgi       => $cgi,
+        sys       => $sys,
+        verbose   => 0,
+        pdb       => $pdb,
+        tdb       => $tdb,
+        debugAuth => $debugAuth,
+        debugSql  => $debugSql,
+        debugVar  => $debugVar
         );
 my $redirect;
 my $target = uri_escape_utf8('https://'. $ENV{'HTTP_HOST'}. $ENV{'REQUEST_URI'});
 if (!$crms->get('remote_user'))
 {
-  my $eid = uri_escape_utf8('https://shibboleth.umich.edu/idp/shibboleth');
-  $redirect = 'https://'. $ENV{'HTTP_HOST'}.
-              "/Shibboleth.sso/Login?entityID=$eid&target=$target";
+  $redirect = 'https://'. $ENV{'HTTP_HOST'}. "/cgi/wayf?target=$target";
+}
+if ($crms->get('stepup') && $crms->get('stepup_template') && !$debugAuth)
+{
+  $redirect = $crms->get('stepup_template');
 }
 my $cri;
 if ($page eq 'cri' || $page eq 'criData' || $page eq 'confirmCRI')
@@ -53,6 +58,7 @@ if ($page eq 'Logout')
   {
     $crms->UnlockAllItemsForUser();
     my $central = $crms->get('logout');
+    # FIXME: appears to be unneeded on HT infrastructure.
     my $service = $ENV{'COSIGN_SERVICE'};
     if ($service)
     {
@@ -298,6 +304,16 @@ if (!$tt->process($input, $vars))
   die $tt->error();
 }
 print $crms->Debug();
+if ($cgi->param('debugAuth'))
+{
+  my $db = $crms->AuthDebugHTML();
+  print <<END;
+<div>
+    <h2>Auth Debug</h2>
+    <span style="color:black;"><code>$db</code></span>
+  </div>
+END
+}
 if ($cgi->param('debug'))
 {
   print '<br/><br/>';
@@ -310,6 +326,13 @@ if ($cgi->param('debug'))
     {
       printf "$k: %s<br/>\n", $ENV{$k};
     }
-  }
+  };
+  print "<br/><br/>\n";
+  eval {
+    foreach my $k (sort keys %{$crms})
+    {
+      printf "$k: %s<br/>\n", $crms->get($k);
+    }
+  };
 }
 

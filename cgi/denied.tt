@@ -13,19 +13,22 @@
   [% mail2 = mail.replace('-', '&#8209;') %]
   [% user = crms.get('user') %]
   <div class="warningBox">
-    <h2>Hello [% crms.GetUserProperty(user, 'name') %]. You do not have access to this page.</h2>
-    <strong><a href="[% crms.Sysify('?p=home') %]">Go to home page</a></strong><br/>
-    <strong><a href="[% crms.Sysify('?p=Logout') %]"> Logout</a></strong>
-  
+    [% username = (user)? user : "{unknown user}" %]
+    <h2>You do not have access to this page.</h2>
+    [% IF user %]
+      <strong><a href="[% crms.Sysify('?p=home') %]">Go to home page</a></strong><br/>
+      <strong><a href="[% crms.Sysify('?p=Logout') %]"> Logout</a></strong>
+    [% END %]
     <div class="warningSubbox">
       <h4>Security considerations do not allow Copyright Review Management System reviewer
-          <span style="color:black;">[% user %]</span>
+          <span style="color:black;">[% username %]</span>
           to access the page <span style="color:black;">[% cgi.param('dbc_page') %]</span>.
           If you feel that this message is being displayed in error, contact:
           <a href="mailto:[% mail %]"><span style="color:black;whitespace:nowrap;">[% mail2 %]</span></a>.
-          <br/>
+          <br/><br/>
           Error message: <span style="color:black;"><code>[% cgi.param('dbc_err') %]</code></span>
       </h4>
     </div>
   </div>
+  [% CALL cgi.param('debugAuth', 1) %]
 [% INCLUDE footer.tt %]
