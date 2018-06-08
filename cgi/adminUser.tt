@@ -94,10 +94,7 @@
       </td>
       <td>[% u.id %]</td>
       <td>[% u.kerberos %]</td>
-      <td>
-        <a href="[% crms.Sysify('crms?p=adminUserRateInst;inst=' _ inst) %]"
-           target="_blank">[% u.institution %]</a>
-      </td>
+      <td>[% u.institutionName %]</a></td>
       <td style="text-align:center;">[% IF r %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF v %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF e %][% icon %][% END %]</td>
