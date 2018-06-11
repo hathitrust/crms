@@ -55,7 +55,7 @@
 
       <table class="reviewGrey">
         <tr>
-          <td colspan="2"><strong>Sequence </strong><span id="seqSpan">1</span></td>
+          <td colspan="2"><strong>Sequence </strong><span id="seqSpan"></span></td>
         <tr>
           <td>
             <input id="goBackButton" type="button" value="&lt;" onclick="GoBack();" disabled="disabled;"/>
@@ -158,15 +158,17 @@
 <script>
   //var imgsrv = '[% crms.ImgsrvAddress(barcode) %]';
   var imgsrv = 'https://' + '[% env.HTTP_HOST %]' + '/cgi/imgsrv/image?debug=super;id=' + '[% barcode %]';
-  imgsrv = 'https://roger-full.babel.hathitrust.org/cgi/imgsrv/image?debug=super;id=' + '[% barcode %]';
-  var seq = 0;
+  imgsrv = 'https://test.babel.hathitrust.org/cgi/imgsrv/image?debug=super;id=' + '[% barcode %]';
+  var seq = 1;
   var data = new Array(20);
 
   window.onload = function(e)
   {
     var el = document.getElementById('tFrame');
     el.src = imgsrv + ';seq=1';
-    //Debug(imgsrv);
+    var el = document.getElementById('seqSpan');
+    el.innerHTML = seq;
+    Debug(imgsrv);
   }
 
   function GoForward()
@@ -175,7 +177,9 @@
     {
       var el = document.getElementById('tFrame');
       seq++;
-      el.src = imgsrv + ';seq=' + seq;
+      var fulladdr = imgsrv + ';seq=' + seq;
+      el.src = fulladdr;
+      Debug(fulladdr);
       var el = document.getElementById('seqSpan');
       el.innerHTML = seq;
       el = document.getElementById('goBackButton');
@@ -196,7 +200,9 @@
     {
       var el = document.getElementById('tFrame');
       seq--;
-      el.src = imgsrv + ';seq=' + seq;
+      var fulladdr = imgsrv + ';seq=' + seq;
+      el.src = fulladdr;
+      Debug(fulladdr);
       var el = document.getElementById('seqSpan');
       el.innerHTML = seq;
     }
