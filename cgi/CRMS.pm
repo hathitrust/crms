@@ -199,7 +199,7 @@ sub NeedStepUpAuth
   {
     $tpl =~ s/___HOST___/$ENV{SERVER_NAME}/;
     $tpl =~ s/___TARGET___/$target/;
-    $tpl .= "&authnContextClassRef=$class";
+    $tpl .= "&authnContextClassRef=$dbclass";
     $self->set('stepup_redirect', $tpl);
   }
   my $note = sprintf "ENV{Shib_Identity_Provider}='$idp'\n".
