@@ -159,18 +159,7 @@ sub NeedStepUpAuth
     $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
     $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
   }
-  #my $sql = 'SELECT shib_authncontext_class,template FROM ht_institutions'.
-  #          ' WHERE entityID=? LIMIT 1';
-  #my $ref;
-  #eval {
-  #  $ref = $sdr_dbh->selectall_arrayref($sql, undef, $idp);
-  #};
-  #if ($ref && scalar @{$ref})
-  #{
-  #  $dbclass  = $ref->[0]->[0] || '';
-  #  $template = $ref->[0]->[1] || '';
-  #}
-  my $sql = 'SELECT shib_authncontext_class FROM ht_institutions'.
+  my $sql = 'SELECT shib_authncontext_class,template FROM ht_institutions'.
             ' WHERE entityID=? LIMIT 1';
   my $ref;
   eval {
@@ -178,16 +167,8 @@ sub NeedStepUpAuth
   };
   if ($ref && scalar @{$ref})
   {
-    $dbclass  = $ref->[0]->[0] || '';
-  }
-  $sql = 'SELECT template FROM ht_institutions'.
-         ' WHERE entityID=? LIMIT 1';
-  eval {
-    $ref = $sdr_dbh->selectall_arrayref($sql, undef, $idp);
-  };
-  if ($ref && scalar @{$ref})
-  {
-    $dbtemplate = $ref->[0]->[0] || '';
+    $dbclass    = $ref->[0]->[0] || '';
+    $dbtemplate = $ref->[0]->[1] || '';
   }
   if ($class && $dbclass && $class eq $dbclass)
   {
