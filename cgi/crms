@@ -33,9 +33,9 @@ if (!$crms->get('remote_user'))
 {
   $redirect = 'https://'. $ENV{'HTTP_HOST'}. "/cgi/wayf?target=$target";
 }
-if ($crms->get('stepup') && $crms->get('stepup_template') && !$debugAuth)
+if ($crms->get('stepup') && $crms->get('stepup_redirect'))
 {
-  $redirect = $crms->get('stepup_template');
+  $redirect = $crms->get('stepup_redirect');
 }
 my $cri;
 if ($page eq 'cri' || $page eq 'criData' || $page eq 'confirmCRI')
@@ -230,16 +230,16 @@ elsif ($page eq 'confirmCRI')
 
 $cgi->param('sys', $sys) if $sys and $sys ne 'crms';
 
+if ($redirect && !$debugAuth)
+{
+  print $cgi->redirect($redirect);
+  exit(0);
+}
+
 if ($cgi->param('download'))
 {
   use Downloads;
   exit if 1 == Downloads::Download($crms, $cgi);
-}
-
-if ($redirect)
-{
-  print $cgi->redirect($redirect);
-  exit(0);
 }
 
 ## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
