@@ -27,7 +27,10 @@
     <div class="navtop">
       <table class="nav">
         <tr>
-          <td rowspan="2"><img src="[% crms.GetSystemVar('smallLogo') %]" alt="CRMS Logo" width="52" height="40"/></td>
+          <td rowspan="2">
+            <img src="[% crms.WebPath('web', crms.GetSystemVar('smallLogo')) %]"
+                 alt="CRMS Logo" width="52" height="40"/>
+          </td>
           <td style="text-align:left;"><strong>Hello [% crms.GetUserProperty(user, 'name') %]</strong></td>
         </tr>
         <tr>
@@ -52,7 +55,7 @@
 
       <table class="reviewGrey">
         <tr>
-          <td colspan="2"><strong>Sequence </strong><span id="seqSpan">0</span></td>
+          <td colspan="2"><strong>Sequence </strong><span id="seqSpan">1</span></td>
         <tr>
           <td>
             <input id="goBackButton" type="button" value="&lt;" onclick="GoBack();" disabled="disabled;"/>
@@ -62,27 +65,50 @@
           </td>
         </tr>
         
-        
         <tr>
-          <td><strong>Type</strong></td>
+          <td colspan="2"><strong>Type</strong></td>
+        </tr>
+        <tr>
           <td>
-            <select title="Frontmatter Type" class="review">
-              <option value="0">Table of Contents</option>
-              <option value="1">Illustration</option>
-              <option value="2">Acknowledgments</option>
-              <option value="3">Poetry</option>
-              <option value="4">Manifesto</option>
-              <option value="5">Rant</option>
-            </select>
+            <input id="type_0" type="radio" name="type" value="0"/>
+            <label for="type_0">Table of Contents</label>
+          </td>
+          <td>
+            <input id="type_1" type="radio" name="type" value="1"/>
+            <label for="type_1">Illustration</label>
           </td>
         </tr>
         <tr>
-          <td><strong>Character</strong></td>
           <td>
-            <select title="Frontmatter Type" class="review">
-              <option value="0">Factual</option>
-              <option value="1">Creative</option>
-            </select>
+            <input id="type_2" type="radio" name="type" value="2"/>
+            <label for="type_2">Acknowledgments</label>
+          </td>
+          <td>
+            <input id="type_3" type="radio" name="type" value="3"/>
+            <label for="type_3">Poetry</label>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <input id="type_4" type="radio" name="type" value="4"/>
+            <label for="type_4">Manifesto</label>
+          </td>
+          <td>
+            <input id="type_5" type="radio" name="type" value="5"/>
+            <label for="type_5">Rant</label>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2"><strong>Character</strong></td>
+        </tr>
+        <tr>
+          <td>
+            <input id="character_0" type="radio" name="character" value="0"/>
+            <label for="character_0">Factual</label>
+          </td>
+          <td>
+            <input id="character_1" type="radio" name="character" value="1"/>
+            <label for="character_1">Creative</label>
           </td>
         </tr>
         
@@ -118,50 +144,69 @@
       </form>
 
     </div>
+    <span id="debugArea"></span>
   </div>
   [%# the frame (Stanford, HT, Cat...) %]
   <div class="divFrame" id="divFrame">
-    <iframe frameborder="0" width="100%" height="100%" id="tFrame" name="tFrame" src="crms?p=pageimage;id=[% barcode %]"></iframe>
+    <!--<iframe frameborder="0" width="100%" height="100%" id="tFrame" name="tFrame" src="crms?p=pageimage;id=[% barcode %]"></iframe>-->
+    <!--https://roger-full.babel.hathitrust.org/cgi/imgsrv/image?id=coo.31924052400748;seq=11;debug=super;signon=swle:https://shibboleth.umich.edu/idp/shibboleth -->
+    <iframe frameborder="0" width="100%" height="100%" id="tFrame" name="tFrame"
+            src=""></iframe>
   </div>
 </div>
 
 <script>
+  //var imgsrv = '[% crms.ImgsrvAddress(barcode) %]';
+  var imgsrv = 'https://' + '[% env.HTTP_HOST %]' + '/cgi/imgsrv/image?debug=super;id=' + '[% barcode %]';
+  imgsrv = 'https://roger-full.babel.hathitrust.org/cgi/imgsrv/image?debug=super;id=' + '[% barcode %]';
   var seq = 0;
+  var data = new Array(20);
+
+  window.onload = function(e)
+  {
+    var el = document.getElementById('tFrame');
+    el.src = imgsrv + ';seq=1';
+    //Debug(imgsrv);
+  }
+
   function GoForward()
   {
-    if (seq < 19)
+    if (seq < 20)
     {
-      var htid = '[% barcode %]';
       var el = document.getElementById('tFrame');
       seq++;
-      el.src = 'crms?p=pageimage;id='+htid+';seq='+seq;
+      el.src = imgsrv + ';seq=' + seq;
       var el = document.getElementById('seqSpan');
       el.innerHTML = seq;
       el = document.getElementById('goBackButton');
       el.disabled = false;
     }
     el = document.getElementById('goForwardButton');
-    el.disabled = (seq >= 19);
+    el.disabled = (seq >= 20);
+  }
+
+  function Debug(msg)
+  {
+    document.getElementById('debugArea').innerHTML = msg;
   }
 
   function GoBack()
   {
-    if (seq > 0)
+    if (seq > 1)
     {
-      var htid = '[% barcode %]';
       var el = document.getElementById('tFrame');
       seq--;
-      el.src = 'crms?p=pageimage;id='+htid+';seq='+seq;
+      el.src = imgsrv + ';seq=' + seq;
       var el = document.getElementById('seqSpan');
       el.innerHTML = seq;
     }
-    if (seq == 0)
+    if (seq <= 1)
     {
       var el = document.getElementById('goBackButton');
       el.disabled = true;
     }
     var el = document.getElementById('goForwardButton');
-    el.disabled = (seq >= 19);
+    el.disabled = (seq >= 20);
   }
 </script>
 
