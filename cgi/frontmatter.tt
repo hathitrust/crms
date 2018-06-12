@@ -44,11 +44,9 @@
         <tr><td><strong>Author:</strong> [% author %]    <br/></td></tr>
         <tr><td><strong>Pub Date:</strong> <span id="pubDateSpan">[% pub_date %]</span><br/></td></tr>
       </table>
-      
-    
 
       <form name="submitCorrection" action="crms">
-        <input type="hidden" name="p" value="confirmCorrection"/>
+        <input type="hidden" name="p" value="confirmFrontmatter"/>
         [% IF barcode %]<input type="hidden" name="barcode" value="[% barcode %]"/>[% END %]
         [% IF user %]<input type="hidden" name="user" value="[% user %]"/>[% END %]
         [% IF sys %]<input type="hidden" name="sys" value="[% sys %]"/>[% END %]
