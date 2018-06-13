@@ -232,6 +232,8 @@ $cgi->param('sys', $sys) if $sys and $sys ne 'crms';
 
 if ($redirect && !$debugAuth)
 {
+  $crms->Note("Redirecting to $redirect");
+  $crms->Note($crms->AuthDebugData());
   print $cgi->redirect($redirect);
   exit(0);
 }
@@ -293,7 +295,6 @@ my $vars = {
     crms      => $crms,
     cgi       => $cgi,
     user      => $user,
-    env       => \%ENV,
     yesterday => POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time-86400))
 };
 $vars->{'cri'} = $cri if defined $cri;
@@ -307,7 +308,7 @@ if (!$tt->process($input, $vars))
 print $crms->Debug();
 if ($cgi->param('debugAuth'))
 {
-  my $db = $crms->AuthDebugHTML();
+  my $db = $crms->AuthDebugData(1);
   print <<END;
 <div>
     <h2>Auth Debug</h2>
@@ -315,6 +316,7 @@ if ($cgi->param('debugAuth'))
   </div>
 END
 }
+
 if ($cgi->param('debug'))
 {
   print '<br/><br/>';

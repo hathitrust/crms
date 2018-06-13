@@ -658,14 +658,18 @@ END
   }
 }
 
-sub AuthDebugHTML
+sub AuthDebugData
 {
   my $self = shift;
+  my $html = shift;
 
   my $msg = $self->get('id_note');
   $msg .= "\n". $self->get('auth_note');
-  $msg = CGI::escapeHTML($msg);
-  $msg =~ s/\n+/<br\/>/gs;
+  if ($html)
+  {
+    $msg = CGI::escapeHTML($msg);
+    $msg =~ s/\n+/<br\/>/gs;
+  }
   return $msg;
 }
 
