@@ -523,8 +523,7 @@ sub CreateProgressGraph
   $sql = 'SELECT COUNT(*) FROM candidates';
   my $n = $self->SimpleSqlGet($sql);
   my $total = $val + $n;
-  use Math::Round;
-  my $max = Math::Round::nearest(100, $total);
+  my $max = NearestMultiple(100, $total);
   my $fmt = '<div style="text-align:center">'.
             '<span style="font-size:25px;color:black">{y} of '. $total. '</span><br/>'.
             '<span style="font-size:12px;color:silver">determinations</span></div>';
@@ -606,5 +605,16 @@ sub PickColors
   }
   return @cols;
 }
+
+# From Math::Round
+sub NearestMultiple
+{
+  my $mult = abs(shift);
+  my $n    = shift;
+
+  my $half = 0.50000000000008;
+  return ($n >= 0)? ($mult * int(($_ + $half * $mult) / $mult)):
+                    ($mult * POSIX::ceil(($_ - $half * $mult) / $mult));
+ }
 
 return 1;
