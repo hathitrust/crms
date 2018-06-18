@@ -73,10 +73,12 @@
         <td class="nowrap" style="text-align:right;color:#999;">Claimant:</td>
         <td style="padding-left:1.5em;">[% doc.item('exhibit_copyrightrenewals_claimant_tesim').join(', ') %]</td>
       </tr>
-      <!--<tr>
-        <td class="nowrap" style="text-align:right;color:#999;">Class Code:</td>
-        <td style="padding-left:1.5em;">[% doc.item('exhibit_copyrightrenewals_class-code_ssim').join(', ') %]</td>
-      </tr>-->
+      [% IF doc.item('exhibit_copyrightrenewals_edition-statements_tesim') %]
+      <tr>
+        <td class="nowrap" style="text-align:right;color:#999;">Edition Statement(s):</td>
+        <td style="padding-left:1.5em;">[% doc.item('exhibit_copyrightrenewals_edition-statements_tesim').join(', ') %]</td>
+      </tr>
+      [% END %]
       <tr>
         <td colspan="2" style="padding-bottom:1em;"><hr/>
       </tr>
