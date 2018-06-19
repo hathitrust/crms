@@ -167,8 +167,8 @@ sub NeedStepUpAuth
   };
   if ($ref && scalar @{$ref})
   {
-    $dbclass    = $ref->[0]->[0] || '';
-    $dbtemplate = $ref->[0]->[1] || '';
+    $dbclass    = $ref->[0]->[0];
+    $dbtemplate = $ref->[0]->[1];
   }
   if (defined $class && defined $dbclass && $class ne $dbclass)
   {
@@ -289,7 +289,7 @@ sub set
 
 sub Version
 {
-  return '7.0.2';
+  return '7.0.3';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
