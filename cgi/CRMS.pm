@@ -149,7 +149,7 @@ sub NeedStepUpAuth
 {
   my $self = shift;
 
-  my $need = 1;
+  my $need = 0;
   my $idp = $ENV{'Shib_Identity_Provider'};
   my $class = $ENV{'Shib_AuthnContext_Class'};
   my $sdr_dbh = $self->get('ht_repository');
@@ -170,29 +170,29 @@ sub NeedStepUpAuth
     $dbclass    = $ref->[0]->[0] || '';
     $dbtemplate = $ref->[0]->[1] || '';
   }
-  if ($class && $dbclass && $class eq $dbclass)
+  if (defined $class && defined $dbclass && $class ne $dbclass)
   {
-    $need = 0;
+    $need = 1;
+    my $tpl = $dbtemplate;
+    use URI::Escape;
+    my $target = CGI::self_url($self->get('cgi'));
+    if ($dbtemplate)
+    {
+      $tpl =~ s/___HOST___/$ENV{SERVER_NAME}/;
+      $tpl =~ s/___TARGET___/$target/;
+      $tpl .= "&authnContextClassRef=$dbclass";
+      $self->set('stepup_redirect', $tpl);
+    }
+    my $note = sprintf "ENV{Shib_Identity_Provider}='$idp'\n".
+                       "ENV{Shib_AuthnContext_Class}='$class'\n".
+                       "DB class=%s\n".
+                       "TEMPLATE=%s FROM=%s (%s,%s)",
+                       (defined $dbclass)? $dbclass:'<undef>',
+                       (defined $tpl)? $tpl:'<undef>',
+                       (defined $dbtemplate)? $dbtemplate:'<undef>',
+                       $ENV{SERVER_NAME}, $target;
+    $self->set('auth_note', $note);
   }
-  my $tpl = $dbtemplate;
-  my $target = CGI::self_url($self->get('cgi'));
-  if ($dbtemplate)
-  {
-    $tpl =~ s/___HOST___/$ENV{SERVER_NAME}/;
-    $tpl =~ s/___TARGET___/$target/;
-    $tpl .= "&authnContextClassRef=$dbclass";
-    $self->set('stepup_redirect', $tpl);
-  }
-  my $note = sprintf "ENV{Shib_Identity_Provider}='$idp'\n".
-                     "ENV{Shib_AuthnContext_Class}='$class'\n".
-                     "DB=%s\nDB class=%s\n".
-                     "TEMPLATE=%s FROM=%s (%s,%s)",
-                     (defined $sdr_dbh)? $sdr_dbh:'<undef>',
-                     (defined $dbclass)? $dbclass:'<undef>',
-                     (defined $tpl)? $tpl:'<undef>',
-                     (defined $dbtemplate)? $dbtemplate:'<undef>',
-                     $ENV{SERVER_NAME}, $target;
-  $self->set('auth_note', $note);
   return $need;
 }
 
@@ -289,7 +289,7 @@ sub set
 
 sub Version
 {
-  return '7.0.1';
+  return '7.0.2';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
