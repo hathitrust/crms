@@ -16,8 +16,9 @@ APP_dest = ( /htapps/babel/crms )
 
 #
 # Release instructions
+# -oremove omitted so we don't clobber pw.cfg files and prep directory
 #
 ( ${APP_src} ) -> ( ${NASMACC} ${NASICTC} )
-        install -oremove ${APP_dest};
+        install ${APP_dest};
         except_pat ( \\.git );
         #notify hathitrust-release@umich.edu ;
