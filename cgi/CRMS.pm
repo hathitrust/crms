@@ -289,7 +289,7 @@ sub set
 
 sub Version
 {
-  return '7.0.0';
+  return '7.0.1';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -6061,12 +6061,6 @@ sub CreateDeterminationReport
     $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;%s</th><td colspan='$colspan'>$n</td></tr>",
                        $self->ExportSrcToEnglish($row->[0]));
   }
-  if ($self->Sys() ne 'crmsworld')
-  {
-    my $legacy = $self->GetTotalLegacyCount();
-    $report .= "<tr><th>Total&nbsp;Legacy&nbsp;Determinations</th><td colspan='$colspan'>$legacy</td></tr>";
-    $report .= sprintf("<tr><th>Total&nbsp;Determinations</th><td colspan='$colspan'>%s</td></tr>", $exported + $legacy);
-  }
   $report .= "</table>\n";
   return $report;
 }
@@ -6245,14 +6239,6 @@ sub GetLastExport
   my $time = $ref->[0]->[1];
   $time = $self->FormatTime($time) if $readable;
   return ($count,$time);
-}
-
-sub GetTotalLegacyCount
-{
-  my $self = shift;
-
-  my $sql = 'SELECT COUNT(DISTINCT id) FROM historicalreviews WHERE legacy=1 AND priority!=1';
-  return $self->SimpleSqlGet($sql);
 }
 
 sub GetTotalNonLegacyReviewCount
