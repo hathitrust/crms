@@ -116,7 +116,7 @@ sub SetupUser
   {
     $candidate = $ENV{'email'};
     $candidate =~ s/\@umich.edu//;
-    $note .= sprintf 'ENV{email}=%s', (defined $candidate)? $candidate:'<undef>';
+    $note .= sprintf "ENV{email}=%s\n", (defined $candidate)? $candidate:'<undef>';
     if ($candidate)
     {
       my $candidate2;
