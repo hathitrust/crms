@@ -79,66 +79,85 @@ sub SetupUser
   my $self = shift;
 
   my $note = '';
-  my $usersql = 'SELECT COUNT(*) FROM users WHERE id=?';
-  my $user = $ENV{'REMOTE_USER'};
-  if (!$user || !$self->SimpleSqlGet($usersql, $user))
+  my $sdr_dbh = $self->get('ht_repository');
+  if (!defined $sdr_dbh)
   {
-    $note .= sprintf "ENV{REMOTE_USER} %s NO\n", (defined $user)? "'$user'":'<undef>';
-    $user = $ENV{'email'};
-    $user =~ s/\@umich.edu// if $user;
-    if (!$user || !$self->SimpleSqlGet($usersql, $user))
+    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
+    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
+  }
+  return unless defined $sdr_dbh;
+  my ($ht_user, $crms_user);
+  my $usersql = 'SELECT COUNT(*) FROM users WHERE id=?';
+  my $htsql = 'SELECT email FROM ht_users WHERE userid=?';
+  my $candidate = $ENV{'REMOTE_USER'};
+  $note .= sprintf "ENV{REMOTE_USER}=%s\n", (defined $candidate)? $candidate:'<undef>';
+  if ($candidate)
+  {
+    my $candidate2;
+    my $ref = $sdr_dbh->selectall_arrayref($htsql, undef, $candidate);
+    if ($ref && scalar @{$ref})
     {
-      $note .= sprintf "ENV{email} %s NO\n", (defined $user)? "'$user'":'<undef>';
-      $user = $ENV{'eppn'};
-      $user =~ s/\@umich\.edu//;
-      $user =~ s/\+/@/;
-      if (!$user || !$self->SimpleSqlGet($usersql, $user))
+      $ht_user = $candidate;
+      $note .= "Set ht_user=$ht_user\n";
+      $candidate2 = $ref->[0]->[0];
+    }
+    if ($self->SimpleSqlGet($usersql, $candidate))
+    {
+      $crms_user = $candidate;
+      $note .= "Set crms_user=$crms_user from ENV{REMOTE_USER}\n";
+    }
+    if (!$crms_user && $self->SimpleSqlGet($usersql, $candidate2))
+    {
+      $crms_user = $candidate2;
+      $note .= "Set crms_user=$crms_user from ht_users.email\n";
+    }
+  }
+  if (!$crms_user || !$ht_user)
+  {
+    $candidate = $ENV{'email'};
+    $candidate =~ s/\@umich.edu//;
+    $note .= sprintf "ENV{email}=%s\n", (defined $candidate)? $candidate:'<undef>';
+    if ($candidate)
+    {
+      my $candidate2;
+      my $ref = $sdr_dbh->selectall_arrayref($htsql, undef, $candidate);
+      if ($ref && scalar @{$ref} && !$ht_user)
       {
-        $note .= sprintf "ENV{eppn} %s NO\n", (defined $user)? "'$user'":'<undef>';
-        my $user = $ENV{'REMOTE_USER'};
-        my $sdr_dbh = $self->get('ht_repository');
-        if (!defined $sdr_dbh)
-        {
-          $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
-          $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
-        }
-        my $sql = 'SELECT email FROM ht_users WHERE userid=? LIMIT 1';
-        my $ref;
-        eval {
-          $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user);
-        };
-        if ($@)
-        {
-          $note .= "Can't connect to ht_repository\n";
-        }
-        if ($ref && scalar @{$ref})
-        {
-          $user = $ref->[0]->[0];
-          if (!$user || !$self->SimpleSqlGet($usersql, $user))
-          {
-            $note .= sprintf "4: user %s NO\n", (defined $user)? "'$user'":'<undef>';
-            $user = undef;
-          }
-        }
+        $ht_user = $candidate;
+        $note .= "Set ht_user=$ht_user\n";
+        $candidate2 = $ref->[0]->[0];
+      }
+      if ($self->SimpleSqlGet($usersql, $candidate) && !$crms_user)
+      {
+        $crms_user = $candidate;
+        $note .= "Set crms_user=$crms_user from ENV{email}\n";
+      }
+      if (!$crms_user && $self->SimpleSqlGet($usersql, $candidate2) && !$crms_user)
+      {
+        $crms_user = $candidate2;
+        $note .= "Set crms_user=$crms_user from ht_users.email\n";
       }
     }
   }
-  if ($self->NeedStepUpAuth())
+  if ($ht_user)
   {
-    $note .= "Step-up auth required.\n";
-    $self->set('stepup', 1);
-    #$user = undef;
+    if ($self->NeedStepUpAuth($ht_user))
+    {
+      $note .= "HT user $ht_user step-up auth required.\n";
+      $self->set('stepup', 1);
+    }
+    $self->set('ht_user', $ht_user);
   }
-  if ($user)
+  if ($crms_user)
   {
-    $note .= "Setting user to $user.";
-    $self->set('remote_user', $user);
-    my $alias = $self->GetAlias($user);
-    $user = $alias if defined $alias and length $alias and $alias ne $user;
-    $self->set('user', $user);
+    $note .= "Setting CRMS user to $crms_user.\n";
+    $self->set('remote_user', $crms_user);
+    my $alias = $self->GetAlias($crms_user);
+    $crms_user = $alias if defined $alias and length $alias and $alias ne $crms_user;
+    $self->set('user', $crms_user);
   }
   $self->set('id_note', $note);
-  return $user;
+  return $crms_user;
 }
 
 # read the template from ht_institutions
@@ -148,6 +167,7 @@ sub SetupUser
 sub NeedStepUpAuth
 {
   my $self = shift;
+  my $user = shift;
 
   my $need = 0;
   my $idp = $ENV{'Shib_Identity_Provider'};
@@ -159,45 +179,57 @@ sub NeedStepUpAuth
     $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
     $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
   }
-  my $sql = 'SELECT shib_authncontext_class,template FROM ht_institutions'.
-            ' WHERE entityID=? LIMIT 1';
+  my $sql = 'SELECT COALESCE(mfa,0) FROM ht_users WHERE userid=? LIMIT 1';
   my $ref;
+  my $mfa;
   eval {
-    $ref = $sdr_dbh->selectall_arrayref($sql, undef, $idp);
+    $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user);
   };
   if ($ref && scalar @{$ref})
   {
-    $dbclass    = $ref->[0]->[0];
-    $dbtemplate = $ref->[0]->[1];
+    $mfa = $ref->[0]->[0];
   }
-  if (defined $class && defined $dbclass && $class ne $dbclass)
+  if ($mfa)
   {
-    $need = 1;
-    my $tpl = $dbtemplate;
-    use URI::Escape;
-    my $target = CGI::self_url($self->get('cgi'));
-    if ($dbtemplate)
+    $sql = 'SELECT shib_authncontext_class,template FROM ht_institutions'.
+           ' WHERE entityID=? LIMIT 1';
+    eval {
+      $ref = $sdr_dbh->selectall_arrayref($sql, undef, $idp);
+    };
+    if ($ref && scalar @{$ref})
     {
-      $tpl =~ s/___HOST___/$ENV{SERVER_NAME}/;
-      $tpl =~ s/___TARGET___/$target/;
-      $tpl .= "&authnContextClassRef=$dbclass";
-      $self->set('stepup_redirect', $tpl);
+      $dbclass    = $ref->[0]->[0];
+      $dbtemplate = $ref->[0]->[1];
     }
-    my $note = sprintf "ENV{Shib_Identity_Provider}='$idp'\n".
-                       "ENV{Shib_AuthnContext_Class}='$class'\n".
-                       "DB class=%s\n".
-                       "TEMPLATE=%s FROM=%s (%s,%s)",
-                       (defined $dbclass)? $dbclass:'<undef>',
-                       (defined $tpl)? $tpl:'<undef>',
-                       (defined $dbtemplate)? $dbtemplate:'<undef>',
-                       $ENV{SERVER_NAME}, $target;
-    $self->set('auth_note', $note);
+    if (defined $class && defined $dbclass && $class ne $dbclass)
+    {
+      $need = 1;
+      my $tpl = $dbtemplate;
+      use URI::Escape;
+      my $target = CGI::self_url($self->get('cgi'));
+      if ($dbtemplate)
+      {
+        $tpl =~ s/___HOST___/$ENV{SERVER_NAME}/;
+        $tpl =~ s/___TARGET___/$target/;
+        $tpl .= "&authnContextClassRef=$dbclass";
+        $self->set('stepup_redirect', $tpl);
+      }
+      my $note = sprintf "ENV{Shib_Identity_Provider}='$idp'\n".
+                         "ENV{Shib_AuthnContext_Class}='$class'\n".
+                         "DB class=%s\n".
+                         'TEMPLATE=%s FROM=%s (%s,%s)',
+                         (defined $dbclass)? $dbclass:'<undef>',
+                         (defined $tpl)? $tpl:'<undef>',
+                         (defined $dbtemplate)? $dbtemplate:'<undef>',
+                         $ENV{SERVER_NAME}, $target;
+      $self->set('auth_note', $note);
+    }
   }
   return $need;
 }
 
 # The href or URL to use.
-# Path is e.g. 'logo.png', returns {'/c/crms/logo.png', '/crms/web/logo.png'} 
+# Path is e.g. 'logo.png', returns {'/c/crms/logo.png', '/crms/web/logo.png'}
 sub WebPath
 {
   my $self = shift;
@@ -221,7 +253,7 @@ sub WebPath
 
 # The href or URL to use.
 # type+path is e.g. 'prep' + 'crms.rights'
-# returns {'/l1/dev/moseshll/prep/c/crms/crms.rights', '/htapps/moseshll.babel/crms/prep/crms.rights'} 
+# returns {'/l1/dev/moseshll/prep/c/crms/crms.rights', '/htapps/moseshll.babel/crms/prep/crms.rights'}
 sub FSPath
 {
   my $self = shift;
@@ -289,7 +321,7 @@ sub set
 
 sub Version
 {
-  return '7.0.3';
+  return '7.0.4';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
