@@ -94,7 +94,7 @@
       </td>
       <td>[% u.id %]</td>
       <td>[% u.kerberos %]</td>
-      <td>[% u.institutionName %]</a></td>
+      <td>[% u.institution %]</a></td>
       <td style="text-align:center;">[% IF r %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF v %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF e %][% icon %][% END %]</td>
