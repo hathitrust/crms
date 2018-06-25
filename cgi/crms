@@ -88,7 +88,7 @@ if ($page eq 'confirmReview')
   }
   else
   {
-    my $EncRights = $cgi->param('rights');
+    my $rights    = $cgi->param('rights');
     my $note      = Encode::decode("UTF-8", $cgi->param('note'));
     my $category  = $cgi->param('category');
     my $renNum    = $cgi->param('renNum');
@@ -97,13 +97,13 @@ if ($page eq 'confirmReview')
     my $swiss     = $cgi->param('swiss');
     my $pre       = $cgi->param('prepopulated');
     my $start     = $cgi->param('start');
-    my ($rights, $reason);
-    $err = 'You must select a rights/reason combination.' unless $EncRights;
+    my ($attr, $reason);
+    $err = 'You must select a rights/reason combination.' unless $rights;
     if (!$err)
     {
-      ($rights, $reason) = $crms->GetAttrReasonFromCode($EncRights);
+      ($attr, $reason) = $crms->GetAttrReasonFromCode($rights);
       $err = $crms->HasItemBeenReviewedByTwoReviewers($id, $user);
-      $err = $crms->ValidateSubmission($id, $user, $rights, $reason, $note, $category,
+      $err = $crms->ValidateSubmission($id, $user, $attr, $reason, $note, $category,
                                        $renNum, $renDate) unless $err;
       my $stat = $crms->GetSystemStatus();
       # Actually, this never gets displayed, but that's OK
@@ -113,7 +113,7 @@ if ($page eq 'confirmReview')
     if (!$err)
     {
       #Process the submission, and go on to the next item
-      $crms->SubmitReview($id, $user, $rights, $reason, $note, $renNum, $crms->IsUserExpert($user),
+      $crms->SubmitReview($id, $user, $attr, $reason, $note, $renNum, $crms->IsUserExpert($user),
                           $renDate, $category, $swiss, $hold, $pre, $start);
       my $ref = $crms->GetErrors();
       $err = $ref->[0] if $ref && $ref->[0];

@@ -24,6 +24,8 @@ USAGE: $0 [-hnpqv] [-m USER [-m USER...]]
 Produces TSV file of HTID-renewal ID for Zephir download at
 prep/c/crms/CRMSRenewals.tsv
 
+Data hosted on moxies/rootbeers at /htapps/www/sites/www.hathitrust.org/files
+
 For each distinct HTID in historical reviews with one or more renewal IDs,
 gets all validated reviews with renewal IDs.
 If there is an expert review, that renewal ID is written and no further

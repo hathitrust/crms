@@ -1,0 +1,110 @@
+[% INCLUDE header.tt %]
+
+<h2>Institutions:</h2>
+<br/>
+[% add       = cgi.param('add')       %]
+[% iid       = cgi.param('id')        %]
+[% name      = cgi.param('name')      %]
+[% shortname = cgi.param('shortname') %]
+[% suffix    = cgi.param('suffix')    %]
+[% order     = cgi.param('order')     %]
+
+<form action="crms">
+  <input type="hidden" name="p" value="institutions"/>
+  [% crms.HiddenSys() %]
+  <label for="order">Order by:</label>
+  <select name="order" id="order" onchange="this.form.submit()">
+    <option value="id" [% (order=='id')? 'selected="selected"':'' %]>ID</option>
+    <option value="name" [% (order=='name')? 'selected="selected"':'' %]>Name</option>
+    <option value="shortname" [% (order=='shortname')? 'selected="selected"':'' %]>Short Name</option>
+  </select>
+</form>
+
+[% IF crms.IsUserAdmin %]
+  [% IF add %]
+    [% res = crms.AddInstitution(iid, name, shortname, suffix) %]
+    [% IF res.error %]
+      <h3 style="color:red;">Error: [% res.error %]</h3>
+    [% ELSE %]
+      [% iid = res.id %]
+      [% 'IID: ' _ iid %]
+    [% END %]
+  [% END %]
+  [% crms.Debug() %]
+[% END %]
+
+[% insts = crms.GetInstitutions(order) %]
+<table class="exportStats" style="white-space:nowrap">
+  <tr>
+    <th scope="col">ID</th>
+    <th scope="col">Name</th>
+    <th scope="col">Short Name</th>
+    <th scope="col">Suffix</th>
+    <th scope="col">Reviewers</th>
+    <th scope="col">Active<br/>Reviewers</th>
+  </tr>
+  [% FOREACH inst IN insts %]
+    [% id = inst.id %]
+    [% style = (inst.active > 0 || id == iid)? '':'style="background-color:#e2e2e2;"' %]
+    <tr [% id == iid ? 'class="total"':'class="hoverWide"'%] [% style %]>
+      <td>[% id %]</td>
+      <td class="nowrap">
+        <a href="[% crms.Sysify('crms?p=adminUserRateInst;inst=' _ id) %]">
+          [% inst.name.replace('\s','&nbsp;') %]
+        </a>
+      </td>
+      <td class="nowrap">
+        [% inst.shortname.replace('\s','&nbsp;') %]
+      </td>
+      <td>[% inst.suffix %]</td>
+      <td>[% inst.users %]</td>
+      <td>[% inst.active %]</td>
+    </tr>
+  [% END %]
+</table>
+<br/>
+
+[% crms.Debug() %]
+[% IF crms.IsUserAdmin %]
+
+<h4>Add or Edit an Institution:</h4>
+<div style="border-style:solid;width:36em;border-width:1px;padding:10px;">
+  <form action="crms">
+    <input type="hidden" name="p" value="institutions"/>
+    <input type="hidden" name="add" value="1"/>
+    <input type="hidden" name="order" value="[% order %]"/>
+    [% crms.HiddenSys() %]
+    <table>
+      <tr>
+        <td>
+          <label for="idfield" style="float:left;width:6em;">ID:
+            <span class="darkred smallishText">(to edit)</span>
+          </label>
+          <input id="idfield" type="text" name="id" value="[% iid %]"/>
+        </td>
+      <!--</tr>-->
+      <!--<tr>-->
+        <td>
+          <label for="namefield" style="float:left;width:6em;">Name:</label>
+          <input id="namefield" type="text" name="name" value="[% name %]"/>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <label for="shortnamefield" style="float:left;width:6em;">Short Name:</label>
+          <input id="shortnamefield" type="text" name="shortname" value="[% shortname %]"/>
+        </td>
+      <!--</tr>-->
+      <!--<tr>-->
+        <td>
+          <label for="suffixfield" style="float:left;width:6em;">E-mail Suffix:</label>
+          <input id="suffixfield" type="text" name="suffix" value="[% suffix %]"/>
+        </td>
+      </tr>
+    </table>
+    <input type="submit" value="Submit"/>
+  </form>
+</div>
+[% END %]
+
+[% INCLUDE footer.tt %]
