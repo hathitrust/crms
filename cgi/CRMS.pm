@@ -3941,10 +3941,23 @@ sub IsUserIncarnationExpertOrHigher
 
 sub GetInstitutions
 {
-  my $self = shift;
+  my $self  = shift;
+  my $order = shift || 'id';
 
   my @insts = ();
-  push @insts, $_->[0] for @{$self->SelectAll('SELECT id FROM institutions')};
+  my %ords = ('id' => 1, 'name' => 1, 'shortname' => 1);
+  $order = 'id' unless defined $ords{$order};
+  my $sql = 'SELECT i.id,i.name,i.shortname,i.suffix,'.
+            '(SELECT COUNT(*) FROM users WHERE institution=i.id),'.
+            '(SELECT COUNT(*) FROM users WHERE institution=i.id AND reviewer+advanced+expert+admin>0)'.
+            ' FROM institutions i ORDER BY '. $order;
+  my $ref = $self->SelectAll($sql);
+  foreach my $row (@{$ref})
+  {
+    push @insts, {'id' => $row->[0], 'name' => $row->[1],
+                  'shortname' => $row->[2], 'suffix' => $row->[3],
+                  'users' => $row->[4], 'active' => $row->[5]};
+  }
   return \@insts;
 }
 
