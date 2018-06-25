@@ -321,7 +321,7 @@ sub set
 
 sub Version
 {
-  return '7.0.4';
+  return '7.0.5';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -331,7 +331,6 @@ sub System
   my $self = shift;
 
   my $sys = $self->GetSystemVar('system', 'CRMS');
-  $sys .= ' [HT]' if $self->get('root') =~ m/htapps/;
   return $sys;
 }
 
