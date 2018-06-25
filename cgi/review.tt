@@ -254,7 +254,7 @@
         [% totalReviews = crms.GetReviewCount(barcode, 1) %]
         [% IF totalReviews > 0 %]
           <tr><td><a class="smallishText"
-                     href="[% crms.WebPath('crms?p=adminHistoricalReviews;search1=Identifier;search1value=' _ barcode) %]"
+                     href="[% crms.WebPath('cgi', 'crms?p=adminHistoricalReviews;search1=Identifier;search1value=' _ barcode) %]"
                      target="_blank">
           [% totalReviews %] historical [% crms.Pluralize("review", totalReviews) %]
           </a></td></tr>
