@@ -3961,6 +3961,58 @@ sub GetInstitutions
   return \@insts;
 }
 
+# If $id is blank then add a new institution.
+# Otherwise update an existing one.
+# Returns hashref with error field set if problem.
+# If added, id field is set to the new id.
+sub AddInstitution
+{
+  my $self       = shift;
+  my $id         = shift;
+  my $name       = shift;
+  my $shortname  = shift;
+  my $suffix     = shift;
+
+  my %res;
+  # Remove surrounding whitespace on submitted fields.
+  $id =~ s/^\s*(.+?)\s*$/$1/;
+  $name =~ s/^\s*(.+?)\s*$/$1/;
+  $shortname =~ s/^\s*(.+?)\s*$/$1/;
+  $suffix =~ s/^\s*(.+?)\s*$/$1/;
+  $res{'id'} = $id;
+  if ($id)
+  {
+    my $sql = 'SELECT COUNT(*) FROM institutions WHERE id=?';
+    if ($self->SimpleSqlGet($sql, $id))
+    {
+      $name = $self->SimpleSqlGet('SELECT name FROM institutions WHERE id=?', $id) unless $name;
+      $shortname = $self->SimpleSqlGet('SELECT shortname FROM institutions WHERE id=?', $id) unless $shortname;
+      $suffix = $self->SimpleSqlGet('SELECT suffix FROM institutions WHERE id=?', $id) unless $suffix;
+      $sql = 'UPDATE institutions SET name=?,shortname=?,suffix=? WHERE id=?';
+      $self->PrepareSubmitSql($sql, $name, $shortname, $suffix, $id);
+    }
+    else
+    {
+      $res{'error'} = "unknown Institution ID '$id'";
+    }
+  }
+  else
+  {
+    $res{'error'} = 'Institution e-mail suffix required' unless $suffix;
+    $res{'error'} = 'Institution short name required' unless $shortname;
+    $res{'error'} = 'Institution name required' unless $name;
+    if (!$res{'error'})
+    {
+      my $sql = 'INSERT INTO institutions (name,shortname,suffix) VALUES (?,?,?)';
+      $self->PrepareSubmitSql($sql, $name, $shortname, $suffix);
+      $sql = 'SELECT id FROM institutions WHERE name=?'.
+             ' AND shortname=? AND suffix=? ORDER BY id DESC LIMIT 1';
+      $res{'id'} = $self->SimpleSqlGet($sql, $name, $shortname, $suffix);
+    }
+  }
+  return \%res;
+}
+
 sub PredictUserInstitution
 {
   my $self = shift;
