@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 my ($root);
-BEGIN 
+BEGIN
 { 
   $root = $ENV{'SDRROOT'};
   $root = $ENV{'DLXSROOT'} unless $root and -d $root;
@@ -23,7 +23,7 @@ Sends weekly inactivity reports.
 
 -h       Print this help message.
 -m USER  Check activity only for USER. May be repeated for multiple users.
-         Appends '@umich.edu' in e-mail if necessary.
+         Appends '\@umich.edu' in e-mail if necessary.
 -p       Run in production.
 -q       Do not send any emails at all.
 -v       Be verbose.
