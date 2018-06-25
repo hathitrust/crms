@@ -321,7 +321,7 @@ sub set
 
 sub Version
 {
-  return '7.0.6';
+  return '7.0.7';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -8526,7 +8526,9 @@ sub VIAFWarning
         my $last = $author;
         $last = $1 if $last =~ m/^(.+?),.*/;
         $last =~ s/[.,;) ]*$//;
-        $warnings{"$last ($country$dates)"} = 1;
+        my $url = VIAF::VIAFLink($self, $author);
+        my $warning = "<a href='$url' target='_blank'>$last</a> ($country$dates)";
+        $warnings{$warning} = 1;
       }
     }
   }

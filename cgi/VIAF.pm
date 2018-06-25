@@ -1,6 +1,7 @@
 package VIAF;
 use JSON::XS;
 use Unicode::Normalize;
+use URI::Escape;
 
 # If successful, returns a hash ref that contains values for some subset of
 # the following keys: 'abd', 'add', 'author' (the VIAF author name), and 'country'.
@@ -238,5 +239,14 @@ sub VIAFNormalize
   return ($n1, $n2, $n3);
 }
 
+sub VIAFLink
+{
+  my $self   = shift;
+  my $author = shift;
+
+  $author = URI::Escape::uri_escape_utf8($author);
+  'https://viaf.org/viaf/search?query=local.personalNames+all+%22'.
+  $author. '%22&stylesheet=/viaf/xsl/results.xsl&sortKeys=holdingscount';
+}
 
 return 1;
