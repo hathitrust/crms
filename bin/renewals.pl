@@ -1,12 +1,8 @@
 #!/usr/bin/perl
 
-my ($root);
 BEGIN 
 { 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -37,7 +33,6 @@ If there is more than one distinct renewal ID then no value is written.
 -m MAIL  Send note to MAIL. May be repeated for multiple recipients.
 -n       No-op; do not send e-mail at all.
 -p       Run in production.
--q       Send only to addresses specified via the -m flag.
 -v       Be verbose. May be repeated for increased verbosity.
 END
 
@@ -47,7 +42,6 @@ my $nomail;
 my @mails;
 my $noop;
 my $production;
-my $quiet;
 my $sys;
 my $verbose = 0;
 
@@ -56,7 +50,6 @@ die 'Terminating' unless GetOptions('h|?'  => \$help,
            'm:s@' => \@mails,
            'n'    => \$noop,
            'p'    => \$production,
-           'q'    => \$quiet,
            'v+'   => \$verbose);
 $instance = 'production' if $production;
 print "Verbosity $verbose\n" if $verbose;
@@ -68,7 +61,7 @@ my $crms = CRMS->new(
     instance => $instance
 );
 
-my $outfile = $crms->get('root'). $crms->get('dataDir'). '/CRMSRenewals.tsv';
+my $outfile = $crms->FSPath('prep', 'CRMSRenewals.tsv');
 my $msg = $crms->StartHTML();
 $msg .= <<'END';
 <h2>CRMS-US</h2>

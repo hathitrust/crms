@@ -81,7 +81,7 @@ if ($page eq 'confirmReview')
   my $id = $cgi->param('barcode');
   my $err;
   my $action = $cgi->param('submit');
-  if ($action eq 'Cancel')
+  if ($action eq 'Cancel' || !$action)
   {
     $crms->UnlockItem($id, $user);
     $cgi->delete_all();
@@ -126,7 +126,6 @@ if ($page eq 'confirmReview')
     }
     else
     {
-      $crms->PropagateTheFormula($id, $user) if $action eq 'Propagate';
       # Unused parameter to support submitting last review before leaving the system.
       my $home = $cgi->param('subHome');
       $cgi->delete_all();
