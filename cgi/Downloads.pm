@@ -48,7 +48,6 @@ sub Download
     my $year        = $cgi->param('year');
     my $inval       = $cgi->param('inval');
     my $nononexpert = $cgi->param('nne');
-
     $success = $crms->DownloadUserStats($page, $user, $cumulative, $year, $inval, $nononexpert);
   }
   elsif ($page eq 'exportData')
