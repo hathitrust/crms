@@ -321,7 +321,7 @@ sub set
 
 sub Version
 {
-  return '7.0.8';
+  return '7.0.9';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -6935,20 +6935,15 @@ sub VolumeIDsQuery
 sub DownloadTracking
 {
   my $self = shift;
-  my $id   = shift;
+  my $q    = shift;
 
-  my $syss = $self->GetBothSystems();
-  my $buff = (join "\t", ('ID', 'Enum/Chron', 'CRMS-US Status', 'CRMS-World Status',
+  my $data = $self->TrackingQuery($q);
+  my $buff = (join "\t", ('Volume', 'Enum/Chron', 'CRMS-US Status', 'CRMS-World Status',
                           'U.S. Rights', 'Attribute', 'Reason', 'Source', 'User',
                           'Time', 'Note', 'Access Profile')) . "\n";
-  my $rows = $self->VolumeIDsQuery($id);
-  foreach my $ref (@{$rows})
+  foreach my $row (@{$data->{'data'}})
   {
-    $buff .= (join "\t", (($ref->{'id'}, $ref->{'chron'},
-                           $syss->[0]->GetTrackingInfo($id, 1, 1),
-                           $syss->[1]->GetTrackingInfo($id, 1, 1),
-                           $ref->{'rights'}),
-                           @{$self->RightsQuery($ref->{'id'}, 1)->[0]})) . "\n";
+    $buff .= (join "\t", @{$row}). "\n";
   }
   $self->DownloadSpreadSheet($buff);
   return (1 == scalar @{$self->GetErrors()});
@@ -8631,6 +8626,7 @@ sub GetBothSystems
     $crmsUS = CRMS->new(
       instance => $self->get('instance'),
       sys      => 'crms',
+      cgi      => $self->get('cgi'),
       tdb      => $self->get('tdb'),
       pdb      => $self->get('pdb'));
     $crmsWorld = $self;
@@ -8641,6 +8637,7 @@ sub GetBothSystems
     $crmsWorld = CRMS->new(
       instance => $self->get('instance'),
       sys      => 'crmsworld',
+      cgi      => $self->get('cgi'),
       tdb      => $self->get('tdb'),
       pdb      => $self->get('pdb'));
   }

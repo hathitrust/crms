@@ -44,12 +44,10 @@ sub Download
   elsif ($page =~ m/userrate/i)
   {
     my $user        = $cgi->param('user');
-    my $cumulative  = $cgi->param('cumulative');
     my $year        = $cgi->param('year');
-    my $inval       = $cgi->param('inval');
-    my $nononexpert = $cgi->param('nne');
+    my $project     = $cgi->param('inval');
 
-    $success = $crms->DownloadUserStats($page, $user, $cumulative, $year, $inval, $nononexpert);
+    $success = $crms->DownloadUserStats($user, $year, $project);
   }
   elsif ($page eq 'exportData')
   {
