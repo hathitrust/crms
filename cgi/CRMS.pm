@@ -321,7 +321,7 @@ sub set
 
 sub Version
 {
-  return '7.0.10';
+  return '7.0.11';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -5222,7 +5222,7 @@ sub FormatPubDate
   my $record = shift;
 
   $record = $self->GetMetadata($id) unless defined $record;
-  return $record->formatPubDate() if defined 'record';
+  return $record->formatPubDate() if defined $record;
   return 'unknown';
 }
 
@@ -8502,9 +8502,15 @@ sub VIAFWarning
   $record = $self->GetMetadata($id) unless defined $record;
   return 'unable to fetch MARC metadata for volume' unless defined $record;
   my @authors = $record->GetAllAuthors();
+  my $errs = 0;
   foreach my $author (@authors)
   {
     my $data = VIAF::GetVIAFData($self, $author);
+    if (defined $data->{'error'})
+    {
+      $errs++;
+      next;
+    }
     if (defined $data and scalar keys %{$data} > 0)
     {
       my $country = $data->{'country'};
@@ -8527,6 +8533,7 @@ sub VIAFWarning
       }
     }
   }
+  return 'error contacting VIAF' if $errs > 0 and scalar keys %warnings == 0;
   return (scalar keys %warnings)? join '; ', keys %warnings:undef;
 }
 
