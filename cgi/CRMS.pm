@@ -321,7 +321,7 @@ sub set
 
 sub Version
 {
-  return '7.0.9';
+  return '7.0.10';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -6899,7 +6899,7 @@ sub IsUserExpired
   my %data;
   my $sql = 'SELECT DATE(expires),IF(expires<NOW(),1,'.
             'IF(DATE_SUB(expires,INTERVAL 10 DAY)<NOW(),2,0))'.
-            ' FROM ht_users WHERE userid=? OR userid=?'.
+            ' FROM ht_users WHERE userid=? OR email=?'.
             ' ORDER BY IF(role="crms",1,0) DESC';
   #print "$sql<br/>\n";
   my $sdr_dbh = $self->get('ht_repository');
