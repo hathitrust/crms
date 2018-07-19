@@ -6,6 +6,7 @@ use URI::Escape;
 # If successful, returns a hash ref that contains values for some subset of
 # the following keys: 'abd', 'add', 'author' (the VIAF author name), and 'country'.
 # Also has a 'url' field for debugging bad URLs or unparseable responses.
+# Has an 'error' field in case of comms error.
 # Returns undef if none of that data could be found.
 sub GetVIAFData
 {
@@ -38,13 +39,12 @@ sub GetVIAFData
             '%22+&maximumRecords=10&startRecord=1&sortKeys=holdingscount&'.
             'httpAccept=application/json';
   my $ua = LWP::UserAgent->new;
-  $ua->timeout(1000);
+  $ua->timeout(10);
   my $req = HTTP::Request->new(GET => $url);
   my $res = $ua->request($req);
   if (!$res->is_success)
   {
-    $self->SetError("Got ". $res->code(). " getting $url\n");
-    return;
+    return {'error' => $res->code(), 'url' => $url};
   }
   my $jsonxs = JSON::XS->new->utf8;
   my $json;
@@ -55,7 +55,7 @@ sub GetVIAFData
   if ($@)
   {
     $self->Note('VIAF parse error for '. $url);
-    return;
+    return {'error' => 'VIAF parse error', 'url' => $url};
   }
   my $records = $json->{'searchRetrieveResponse'}->{'records'};
   next unless defined $records;
