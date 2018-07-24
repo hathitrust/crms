@@ -319,9 +319,11 @@ sub set
   $self->{$key} = $val;
 }
 
+# Alas, something like `git describe --tags \$(git rev-list --tags --max-count=1)`
+# will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.0.11';
+  return '7.0.12';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
