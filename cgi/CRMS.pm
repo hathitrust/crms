@@ -321,7 +321,9 @@ sub set
 
 sub Version
 {
-  return '7.0.11';
+  my $v = `git describe --tags \$(git rev-list --tags --max-count=1)`;
+  $v =~ s/crms_v//;
+  return $v;
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
