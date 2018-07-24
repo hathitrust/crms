@@ -35,7 +35,8 @@ sub GetVIAFData
     }
   }
   $author =~ s/["#]//g;
-  my $url = 'http://viaf.org/viaf/search?query=local.names+all+%22'. $author.
+  my $url = 'http://viaf.org/viaf/search?query=local.personalNames+all+%22'.
+            $author.
             '%22+&maximumRecords=10&startRecord=1&sortKeys=holdingscount&'.
             'httpAccept=application/json';
   my $ua = LWP::UserAgent->new;
