@@ -41,15 +41,6 @@ sub Download
     my $pre = $cgi->param('pre');
     $success = $crms->SearchAndDownloadDeterminationStats($startDate, $endDate, $monthly, $priority, $pre);
   }
-  elsif ($page =~ m/userrate/i)
-  {
-    my $user        = $cgi->param('user');
-    my $cumulative  = $cgi->param('cumulative');
-    my $year        = $cgi->param('year');
-    my $inval       = $cgi->param('inval');
-    my $nononexpert = $cgi->param('nne');
-    $success = $crms->DownloadUserStats($page, $user, $cumulative, $year, $inval, $nononexpert);
-  }
   elsif ($page eq 'exportData')
   {
     $success = $crms->SearchAndDownloadExportData($order, $dir, $search1, $search1value, $op1,
