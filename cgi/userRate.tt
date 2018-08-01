@@ -1,5 +1,3 @@
-[% p = cgi.param('p') %]
-
 [% INCLUDE header.tt    %]
 [% user = cgi.param('user') %]
 [% IF !user %][% user = crms.get('user') %][% END %]
@@ -8,39 +6,31 @@
 <a href="[% crms.WebPath('web', 'pdf/MyReviewStatsHelp.pdf') %]"
    target="_blank">My&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
 <br/>
-[% crms.CreateStatsReport(p, 'all', 1, 1) %]
+[% data = crms.CreateUserStatsReport(undef, undef, undef) %]
+<span style="font-size:1.3em;"><strong>[% data.title %]</strong></span>
+[% data.html %]
 <br/><br/>
-[% crms.CreateStatsReport(p, 'all', 0, 1) %]
-<br/><br/>
-[% years = crms.GetStatsYears() %]
-[% IF years %]
-  [% thisyear = years.shift() %]
-  [% crms.CreateStatsReport(p, user, 0, 0, thisyear) %]
-  <span class="smallishText">*Note: does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews</span><br/>
-  [% IF !crms.IsUserExpert(user) %]
-    <span class="smallishText">
-      **Note: Valid reviews/rates include all reviews with
-      <img width="16" height="16" alt="Check" src="[% crms.WebPath('web', 'CheckIcon.png') %]"/> or
-      <img width="16" height="16" alt="Minus" src="[% crms.WebPath('web', 'MinusIcon.png') %]"/>
-    </span>
-  [% END %]
-  <br/><br/>
-  <strong>Reviews Awaiting Verdict: [% crms.CountReviewsForUser(user) %]</strong>
-  <br/><br/>
-  [% IF NOT crms.IsTrainingArea() %]
-    [% divid = user.replace('@','_') %]
-    [% FOR year IN years %]
-      [% IF 0 == crms.CountHistoricalReviewsForUser(user,year) %][% NEXT %][% END %]
-      <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
-         onclick='toggleVisibility("[% divid %]");'>Show $year</a><br/>
-      <div id="[% divid %]" style="display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;">
-      [% crms.CreateStatsReport(p, user, 0, 1, year) %]
-      <br/></div><br/>
-      [% divid = divid _ "_" %]
-    [% END %]
-  [% END %]
-[% ELSE %]
-  There are no historical reviews at this time.
+
+
+[% params = crms.GetUserStatsQueryParams(user, undef, undef) %]
+[% IF params.size == 0 %]
+  <h3>No statistics recorded for user [% user %].</h3>
 [% END %]
+[% FOREACH param IN params %]
+  [% divid = param.id %]
+  [% style = (param.old)? 'display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;' : '' %]
+  [% data = crms.CreateUserStatsReport(param.user, param.year, param.proj) %]
+  [% IF param.old %]
+    <a class="nowrap" style="display:block;margin-bottom:-18px;padding:4px;width:190px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
+       onclick='toggleVisibility("[% divid %]");'>Show [% crms.GetProjectName(param.proj) _ ' ' _ param.year %]</a><br/>
+  [% END %]
+  <div id="[% divid %]" style="[% style %]">
+    <h3>[% data.title %]</h3>
+    [% data.html %]
+  </div>
+  <br/><br/>
+[% END %]
+
+
 [% INCLUDE footer.tt %]
 

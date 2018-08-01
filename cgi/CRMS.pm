@@ -323,7 +323,7 @@ sub set
 # will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.0.12';
+  return '7.1.0';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -2305,7 +2305,7 @@ sub CreateSQLForVolumes
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
-    $doQ = 'LEFT JOIN exportdata q ON r.gid=q.gid';
+    $doQ = 'LEFT JOIN exportdata q ON r.gid=q.gid LEFT JOIN projects p ON q.project=p.id';
   }
   else
   {
@@ -2398,7 +2398,8 @@ sub CreateSQLForVolumesWide
   if ($page eq 'adminHistoricalReviews')
   {
     $table = 'historicalreviews';
-    $joins = 'exportdata q ON r.gid=q.gid LEFT JOIN bibdata b ON q.id=b.id';
+    $joins = 'exportdata q ON r.gid=q.gid LEFT JOIN bibdata b ON q.id=b.id'.
+             ' LEFT JOIN projects p ON q.project=p.id';
   }
   else
   {
@@ -2579,7 +2580,7 @@ sub SearchTermsToSQLWide
     $search2value = $search3value;
     $search3value = $search3 = undef;
   }
-  my %pref2table = ('b'=>'bibdata','r'=>$table,'q'=>'queue');
+  my %pref2table = ('b'=>'bibdata','r'=>$table,'q'=>'queue','p'=>'projects');
   $pref2table{'q'} = 'exportdata' if $table eq 'historicalreviews';
   my $table1 = $pref2table{substr $search1,0,1};
   my $table2 = $pref2table{substr $search2,0,1};
@@ -4129,34 +4130,6 @@ sub YearMonthToEnglish
   return (($long)? $month:substr($month,0,3)).' '.$year;
 }
 
-
-# Returns an array of date strings e.g. ('2009-01'...'2009-12') for the (current if no param) year.
-sub GetAllMonthsInYear
-{
-  my $self = shift;
-  my $year = shift;
-
-  my ($currYear, $currMonth) = $self->GetTheYearMonth();
-  $year = $currYear unless $year;
-  my $start = 1;
-  if ($self->Sys() eq 'crmsworld')
-  {
-    $start = 5 if $year == 2012;
-  }
-  else
-  {
-    $start = 7 if $year == 2009;
-  }
-  my @months = ();
-  foreach my $m ($start..12)
-  {
-    my $ym = sprintf("$year-%.2d", $m);
-    last if $ym gt "$currYear-$currMonth";
-    push @months, $ym;
-  }
-  return @months;
-}
-
 # Returns arrayref of year strings e.g. ('2009','2010') for all years for which we have stats.
 sub GetAllExportYears
 {
@@ -4578,398 +4551,35 @@ sub CreateDeterminationsBreakdownReport
   return $report;
 }
 
-sub GetStatsYears
+sub GetUserStatsYears
 {
   my $self = shift;
   my $user = shift;
 
-  my $usersql = '';
-  $user = '' if $user eq 'all';
-  my @params;
-  if ($user)
-  {
-    if ('all__' eq substr $user, 0, 5)
-    {
-      my $inst = substr $user, 5;
-      $usersql = 'AND u.institution=? ';
-      push @params, $inst;
-    }
-    else
-    {
-      $usersql = 'AND user=? ';
-      push @params, $user;
-    }
-  }
-  my $sql = 'SELECT DISTINCT year FROM userstats s INNER JOIN users u ON s.user=u.id' .
-            ' WHERE s.total_reviews>0 ' . $usersql . 'ORDER BY year DESC';
-  #print "$sql<br/>\n";
-  my $ref = $self->SelectAll($sql, @params);
-  return unless scalar @{$ref};
-  my @years = map {$_->[0];} @{$ref};
-  my $thisyear = $self->GetTheYear();
-  unshift @years, $thisyear unless $years[0] ge $thisyear;
-  return \@years;
+  use UserStats;
+  return UserStats::GetUserStatsYears($self, $user);
 }
 
-sub CreateStatsData
+sub GetUserStatsQueryParams
 {
-  my $self        = shift;
-  my $page        = shift;
-  my $user        = shift;
-  my $cumulative  = shift;
-  my $year        = shift;
-  my $inval       = shift;
-  my $nononexpert = shift;
-  my $dopercent   = shift;
+  my $self    = shift;
+  my $user    = shift;
+  my $year    = shift;
+  my $project = shift;
 
-  my $instusers = undef;
-  my $instusersne = undef;
-  $year = ($self->GetTheYearMonth())[0] unless $year;
-  my @statdates = ($cumulative)? reverse @{$self->GetStatsYears()} : $self->GetAllMonthsInYear($year);
-  my $username;
-  if ($user eq 'all') { $username = 'All Reviewers'; }
-  elsif ('all__' eq substr $user, 0, 5)
-  {
-    my $inst = substr $user, 5;
-    my $name = $self->GetInstitutionName($inst);
-    $username = "All $name Reviewers";
-    my $affs = $self->GetInstitutionUsers($inst);
-    $instusers = sprintf "'%s'", join "','", @{$affs};
-    $instusersne = sprintf "'%s'", join "','", map {($self->IsUserExpert($_))? ():$_} @{$affs};
-  }
-  else
-  {
-    $username = $self->GetUserProperty($user, 'name');
-    if ($page =~ m/^Admin/i && $page !~ m/Inst$/i)
-    {
-      my $inst = $self->GetUserProperty($user, 'institution');
-      my $iname = $self->GetInstitutionName($inst);
-      $username .= ' ('. $iname. ' &#x2014; '. $user. ')';
-    }
-  }
-  #print "username '$username', instusers $instusers<br/>\n";
-  my $label = "$username: " . (($cumulative)? "CRMS&nbsp;Project&nbsp;Cumulative":$year);
-  my $report = sprintf("$label\n\tProject Total%s", (!$cumulative)? "\tTotal $year":'');
-  my %stats = ();
-  my %totals = ();
-  my @usedates = ();
-  my $earliest = '';
-  my $latest = '';
-  my @titles = ('PD Reviews', 'IC Reviews', 'UND/NFI Reviews', '__TOT__', '__TOTNE__', '__NEUT__', '__VAL__', '__AVAL__',
-                'Time Reviewing (mins)', 'Time per Review (mins)','Reviews per Hour', 'Outlier Reviews');
-  my $which = ($inval)? 'SUM(total_incorrect)':($page eq 'userRate')? 'SUM(total_correct)+SUM(total_neutral)':'SUM(total_correct)';
-  foreach my $date (@statdates)
-  {
-    push @usedates, $date;
-    $report .= "\t" . $date;
-    my $mintime = $date . (($cumulative)? '-01':'');
-    my $maxtime = $date . (($cumulative)? '-12':'');
-    $earliest = $mintime if $earliest eq '' or $mintime lt $earliest;
-    $latest = $maxtime if $latest eq '' or $maxtime gt $latest;
-    my $sql = 'SELECT SUM(total_pd), SUM(total_ic), SUM(total_und),SUM(total_reviews),' .
-              '1, SUM(total_neutral),' . $which . ', 1, SUM(total_time),' .
-              'SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),' .
-              '(SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)' .
-              ' FROM userstats WHERE monthyear>=? AND monthyear<=?';
-    if ($instusers) { $sql .= " AND user IN ($instusers)"; }
-    elsif ($user ne 'all') { $sql .= " AND user='$user'"; }
-    #print "$sql<br/>\n";
-    my $rows = $self->SelectAll($sql, $mintime, $maxtime);
-    my $row = $rows->[0];
-    my $i = 0;
-    foreach my $title (@titles)
-    {
-      $stats{$title}{$date} = $row->[$i];
-      $totals{$title} += $row->[$i];
-      $i++;
-    }
-    my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($mintime, $maxtime, $instusersne);
-    $correct += $neutral if $page eq 'userRate';
-    #print "total $total correct $correct incorrect $incorrect neutral $neutral for $mintime to $maxtime ($instusersne)<br/>\n";
-    my $whichone = ($inval)? $incorrect:$correct;
-    my $pct = eval {100.0*$whichone/$total;};
-    if ('all__' eq substr $user, 0, 5)
-    {
-      my ($total2,$correct2,$incorrect2,$neutral2) = $self->GetValidation($mintime, $maxtime);
-      $pct = eval {100.0*$incorrect2/$total2;};
-    }
-    if ($user eq 'all' || $instusers)
-    {
-      $stats{'__TOTNE__'}{$date} = $total;
-      $stats{'__NEUT__'}{$date} = $neutral;
-      $stats{'__VAL__'}{$date} = $whichone;
-    }
-    $stats{'__AVAL__'}{$date} = $pct;
-  }
-  $report .= "\n";
-  $totals{'Time per Review (mins)'} = 0;
-  $totals{'Reviews per Hour'} = 0.0;
-  eval {
-    $totals{'Time per Review (mins)'} = $totals{'Time Reviewing (mins)'}/($totals{'__TOT__'}-$totals{'Outlier Reviews'});
-    $totals{'Reviews per Hour'} = ($totals{'__TOT__'}-$totals{'Outlier Reviews'})/$totals{'Time Reviewing (mins)'}*60.0;
-  };
-  $latest = "$year-01" unless $latest;
-  $earliest = "$year-01" unless $earliest;
-  my ($y, $m) = split '-', $latest;
-  my $lastDay = Days_in_Month($y, $m);
-  my ($total,$correct,$incorrect,$neutral) = $self->GetValidation($earliest, $latest, $instusersne);
-  $correct += $neutral if $page eq 'userRate';
-  #print "total $total correct $correct incorrect $incorrect neutral $neutral for $earliest to $latest ($instusersne)<br/>\n";
-  my $whichone = ($inval)? $incorrect:$correct;
-  my $pct = eval {100.0*$whichone/$total;};
-  if ('all__' eq substr $user, 0, 5)
-  {
-    my ($total2,$correct2,$incorrect2,$neutral2) = $self->GetValidation($earliest, $latest);
-    $pct = eval {100.0*$incorrect2/$total2;};
-  }
-  if ($user eq 'all' || $instusers)
-  {
-    $totals{'__TOTNE__'} = $total;
-    $totals{'__NEUT__'} = $neutral;
-    $totals{'__VAL__'} = $whichone;
-  }
-  $totals{'__AVAL__'} = $pct;
-  # Project totals
-  my %ptotals;
-  if (!$cumulative)
-  {
-    my @params = ();
-    my $sql = 'SELECT SUM(total_pd),SUM(total_ic), SUM(total_und), SUM(total_reviews),' .
-              '1, SUM(total_neutral),' . $which . ', 1, SUM(total_time),' .
-              'SUM(total_time)/(SUM(total_reviews)-SUM(total_outliers)),' .
-              '(SUM(total_reviews)-SUM(total_outliers))/SUM(total_time)*60.0, SUM(total_outliers)' .
-              ' FROM userstats WHERE monthyear >= "2009-07"';
-    # FIXME: use inst table in place of $instusers.
-    if ($instusers) { $sql .= " AND user IN ($instusers)"; }
-    elsif ($user ne 'all')
-    {
-      $sql .= ' AND user=?';
-      push @params, $user;
-    }
-    #print "$sql<br/>\n";
-    my $rows = $self->SelectAll($sql, @params);
-    my $row = $rows->[0];
-    my $i = 0;
-    foreach my $title (@titles)
-    {
-      $ptotals{$title} = $row->[$i];
-      $i++;
-    }
-    my ($total,$correct,$incorrect,$neutral) = $self->GetValidation('2009-07', '3000-01', $instusersne);
-    $correct += $neutral if $page eq 'userRate';
-    #print "project total $total correct $correct incorrect $incorrect neutral $neutral for $user<br/>\n";
-    my $whichone = ($inval)? $incorrect:$correct;
-    my $pct = eval {100.0*$whichone/$total;};
-    if ('all__' eq substr $user, 0, 5)
-    {
-      my ($total2,$correct2,$incorrect2,$neutral2) = $self->GetValidation($earliest, $latest);
-      $pct = eval {100.0*$incorrect2/$total2;};
-    }
-    if ($user eq 'all' || $instusers)
-    {
-      $ptotals{'__TOTNE__'} = $total;
-      $ptotals{'__NEUT__'} = $neutral;
-      $ptotals{'__VAL__'} = $whichone;
-    }
-    $ptotals{'__AVAL__'} = $pct;
-  }
-
-  my %majors = ('PD Reviews' => 1, 'IC Reviews' => 1, 'UND/NFI Reviews' => 1);
-  my %minors = ('Time Reviewing (mins)' => 1, 'Time per Review (mins)' => 1,
-                'Reviews per Hour' => 1, 'Outlier Reviews' => 1);
-  foreach my $title (@titles)
-  {
-    next if ($user eq 'all') and $title eq '__AVAL__';
-    next if $title eq '__TOTNE__' and $nononexpert;
-    $report .= $title;
-    if (!$cumulative)
-    {
-      my $of = $ptotals{'__TOT__'};
-      $of = $ptotals{'__TOTNE__'} if ($title eq '__VAL__' or $title eq '__NEUT__') and ($user eq 'all' or $instusers);
-      my $n = $ptotals{$title};
-      $n = 0 unless $n;
-      if ($title eq '__AVAL__')
-      {
-        $n = sprintf('%.1f%%', $n);
-      }
-      elsif ($title ne '__TOT__' && !exists $minors{$title})
-      {
-        my $pct = eval { 100.0*$n/$of; } or 0.0;
-        $n = sprintf("$n:%.1f", $pct) if $dopercent;
-      }
-      elsif ($title eq 'Time per Review (mins)' || $title eq 'Reviews per Hour')
-      {
-        $n = sprintf('%.1f', $n) if $n > 0.0;
-      }
-      $report .= "\t" . $n;
-    }
-    my $n = $totals{$title};
-    $n = 0 unless $n;
-    if ($title eq '__AVAL__')
-    {
-      $n = sprintf('%.1f%%', $n);
-    }
-    elsif ($title ne '__TOT__' && !exists $minors{$title})
-    {
-      my $of = $totals{'__TOT__'};
-      $of = $totals{'__TOTNE__'} if ($title eq '__VAL__' or $title eq '__NEUT__') and ($user eq 'all' or $instusers);
-      my $pct = eval { 100.0*$n/$of; } or 0.0;
-      $n = sprintf("$n:%.1f", $pct) if $dopercent;
-    }
-    elsif ($title eq 'Time per Review (mins)' || $title eq 'Reviews per Hour')
-    {
-      $n = sprintf('%.1f', $n) if $n > 0.0;
-    }
-    $report .= "\t" . $n;
-    foreach my $date (@usedates)
-    {
-      $n = $stats{$title}{$date};
-      $n = 0 if !$n;
-      if ($title eq '__AVAL__')
-      {
-        $n = sprintf('%.1f%%', $n);
-      }
-      elsif ($title ne '__TOT__' && !exists $minors{$title})
-      {
-        my $of = $stats{'__TOT__'}{$date};
-        $of = $stats{'__TOTNE__'}{$date} if ($title eq '__VAL__' or $title eq '__NEUT__') and ($user eq 'all' or $instusers);
-        my $pct = eval { 100.0*$n/$of; } or 0.0;
-        $n = sprintf("$n:%.1f", $pct) if $dopercent;
-      }
-      elsif ($title eq 'Time per Review (mins)' || $title eq 'Reviews per Hour')
-      {
-        $n = sprintf('%.1f', $n) if $n > 0.0;
-      }
-      $n = 0 unless $n;
-      $report .= "\t" . $n;
-      #print "$user $title $n $of\n";
-    }
-    $report .= "\n";
-  }
-  return $report;
+  use UserStats;
+  return UserStats::GetUserStatsQueryParams($self, $user, $year, $project);
 }
 
-sub CreateStatsReport
+sub CreateUserStatsReport
 {
-  my $self              = shift;
-  my $page              = shift;
-  my $user              = shift;
-  my $cumulative        = shift;
-  my $suppressBreakdown = shift; #FIXME: unused?
-  my $year              = shift;
-  my $inval             = shift;
-  my $nononexpert       = shift;
+  my $self    = shift;
+  my $user    = shift;
+  my $year    = shift;
+  my $project = shift;
 
-  my $data = $self->CreateStatsData($page, $user, $cumulative, $year, $inval, $nononexpert, 1);
-  my @lines = split m/\n/, $data;
-  my $url = $self->WebPath('cgi', "crms?p=$page;download=1;user=$user;cumulative=$cumulative;year=$year;inval=$inval;nne=$nononexpert");
-  my $imgurl = $self->WebPath('web', 'help.png');
-  my $name = shift @lines;
-  my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
-  my $dllink = <<END;
-  <a href='$url' target='_blank'>download</a>
-  <a class='tip' href='#'>
-    <img width="16" height="16" alt="Rights/Reason Help" src="$imgurl"/>
-    <span>
-    <strong>To get the downloaded stats into a spreadsheet:</strong><br/>
-      &#x2022; Click on the "Download" link (this will open a new page in your browser)<br/>
-      &#x2022; Select all of the text on the new page and copy it<br/>
-      &#x2022; Switch to Excel<br/>
-      &#x2022; Choose the menu item <strong>Edit &#x2192; Paste Special...</strong><br/>
-      &#x2022; Choose "Text" or "Unicode" in the dialog box<br/>
-    </span>
-  </a>
-END
-  my $report = "<span style='font-size:1.3em;'><strong>$name</strong></span>$nbsps $dllink\n<br/>";
-  $report .= "<table class='exportStats'>\n<tr>\n";
-  foreach my $th (split "\t", shift @lines)
-  {
-    $th = $self->YearMonthToEnglish($th) if $th =~ m/^\d.*/;
-    $th =~ s/\s/&nbsp;/g;
-    $report .= "<th style='text-align:center;'>$th</th>\n";
-  }
-  $report .= "</tr>\n";
-  my %majors = ('PD Reviews' => 1, 'IC Reviews' => 1, 'UND/NFI Reviews' => 1, '__TOT__' => 1);
-  my %minors = ('Time Reviewing (mins)' => 1, 'Time per Review (mins)' => 1, 'Average Time per Review (mins)' => 1,
-                'Reviews per Hour' => 1, 'Average Reviews per Hour' => 1, 'Outlier Reviews' => 1);
-  my $exp = $self->IsUserExpert($user);
-  foreach my $line (@lines)
-  {
-    my @items = split("\t", $line);
-    my $title = shift @items;
-    next if $title eq '__VAL__' and ($exp);
-    next if $title eq '__MVAL__' and ($exp);
-    next if $title eq '__AVAL__' and ($exp);
-    next if $title eq '__NEUT__' && ($exp || $page eq 'userRate');
-    next if $title eq '__TOTNE__' and ($user ne 'all' and $user !~ m/all__/ and !$cumulative);
-    next if ($cumulative or $user eq 'all' or $user !~ m/all__/) and !exists $majors{$title} and !exists $minors{$title} and $title !~ m/__.+?__/;
-    my $class = (exists $majors{$title})? 'major':(exists $minors{$title})? 'minor':'';
-    $class = 'total' if $title =~ m/__.+?__/ and $title ne '__TOT__';
-    $report .= '<tr>';
-    my $title2 = $title;
-    $title2 =~ s/\s/&nbsp;/g;
-    my $padding = ($class eq 'major' || $class eq 'minor' || $class eq 'total')? '':$nbsps;
-    my $style = '';
-    $style = ' style="text-align:right;"' if $class eq 'total';
-    $class = 'purple' if $title eq '__AVAL__';
-    $title2 = $nbsps . $title2 if $title eq '__AVAL__';
-    $report .= sprintf("<th$style><span%s>$padding$title2</span></th>", ($class)? " class='$class'":'');
-    foreach my $item (@items)
-    {
-      my ($n,$pct) = split ':', $item;
-      $n =~ s/\s/&nbsp;/g;
-      $report .= sprintf("<td%s%s>%s%s%s</td>",
-                         ($class)? " class='$class'":'',
-                         ($title =~ m/__.+?__/ || $class eq 'minor')? ' style="text-align:center;"':'',
-                         $padding,
-                         ($title eq '__TOT__')? "<strong>$n</strong>":$n,
-                         ($pct)? "&nbsp;($pct%)":'');
-    }
-    $report .= "</tr>\n";
-  }
-  $report .= "</table>\n";
-  $report =~ s/__TOT__/Total&nbsp;Reviews*/;
-  $report =~ s/__TOTNE__/Non-Expert&nbsp;Reviews/;
-  my $vtitle = 'Validated&nbsp;Reviews&nbsp;&amp;&nbsp;Rate';
-  $vtitle = 'Invalidated&nbsp;Reviews&nbsp;&amp;&nbsp;Rate' if $inval;
-  $vtitle = 'Valid**&nbsp;Reviews&nbsp;&amp;&nbsp;Rate' if $page eq 'userRate';
-  $report =~ s/__VAL__/$vtitle/;
-  my $avtitle = 'Validation&nbsp;Rate&nbsp;(all&nbsp;reviewers)';
-  $avtitle = 'Invalidation&nbsp;Rate&nbsp;(all&nbsp;reviewers)' if $inval;
-  $avtitle = 'Validation**&nbsp;Rate&nbsp;(all&nbsp;reviewers)' if $page eq 'userRate';
-  $report =~ s/__AVAL__/$avtitle/;
-  my $ntitle = 'Neutral&nbsp;Reviews&nbsp;&amp;&nbsp;Rate';
-  $report =~ s/__NEUT__/$ntitle/;
-  return $report;
-}
-
-sub DownloadUserStats
-{
-  my $self        = shift;
-  my $page        = shift;
-  my $user        = shift;
-  my $cumulative  = shift;
-  my $year        = shift;
-  my $inval       = shift;
-  my $nononexpert = shift;
-
-  my $report = $self->CreateStatsData($page, $user, $cumulative, $year, $inval, $nononexpert);
-  $report =~ s/(\d\d\d\d-\d\d)/$self->YearMonthToEnglish($&)/ge;
-  $report =~ s/&nbsp;/ /g;
-  $report =~ s/__TOT__/Total Reviews/;
-  $report =~ s/__TOTNE__/Non-Expert Reviews/;
-  my $vtitle = 'Validated Reviews & Rate';
-  $vtitle = 'Invalidated Reviews & Rate' if $inval;
-  $vtitle = 'Valid Reviews & Rate' if $page eq 'userRate';
-  $report =~ s/__VAL__/$vtitle/;
-  my $avtitle = 'Validation Rate (all reviewers)';
-  $avtitle = 'Invalidation Rate (all reviewers)' if $inval;
-  $avtitle = 'Validation Rate (all reviewers)' if $page eq 'userRate';
-  $report =~ s/__AVAL__/$avtitle/;
-  my $ntitle = 'Neutral Reviews & Rate';
-  $report =~ s/__NEUT__/$ntitle/;
-  $self->DownloadSpreadSheet($report);
-  return ($report)? 1:0;
+  use UserStats;
+  return UserStats::CreateUserStatsReport($self, $user, $year, $project);
 }
 
 # Returns an array ref of hash refs
@@ -4983,7 +4593,7 @@ sub GetInstitutionReviewers
   my @revs;
   my $sql = 'SELECT id,name,reviewer+advanced+expert+admin as active,commitment'.
             ' FROM users WHERE institution=?'.
-            ' AND (reviewer+advanced+expert>0 OR reviewer+advanced+expert+admin=0)'.
+            #' AND (reviewer+advanced+expert>0 OR reviewer+advanced+expert+admin=0)'.
             ' ORDER BY active DESC,name';
   my $ref = $self->SelectAll($sql, $inst);
   foreach my $row (@{$ref})
@@ -4991,7 +4601,7 @@ sub GetInstitutionReviewers
     my $id = $row->[0];
     my $name = $row->[1];
     my $active = ($row->[2] > 0)? 1:0;
-    next if $name =~ m/\(|\)/;
+    #next if $name =~ m/\(|\)/;
     push @revs, {'id'=>$id, 'name'=>$name, 'active'=>$active, 'commitment'=>$row->[3]};
   }
   @revs = sort {$b->{'active'} <=> $a->{'active'}
@@ -5000,7 +4610,7 @@ sub GetInstitutionReviewers
   return \@revs;
 }
 
-sub UpdateStats
+sub UpdateUserStats
 {
   my $self  = shift;
   my $quiet = shift;
@@ -5008,18 +4618,22 @@ sub UpdateStats
   # Get the underlying system status, ignoring replication delays.
   my ($blah,$stat,$msg) = @{$self->GetSystemStatus(1)};
   $self->SetSystemStatus($stat, 'CRMS is updating user stats, so they may not display correctly. This usually takes five minutes or so to complete.');
-  $self->PrepareSubmitSql('DELETE from userstats');
+  my $sql = 'DELETE from userstats';
+  $self->PrepareSubmitSql($sql);
   my $users = $self->GetUsers();
   foreach my $user (@{$users})
   {
     $user = $user->{'id'};
-    my $sql = 'SELECT DISTINCT DATE_FORMAT(time,"%Y-%m") AS ym FROM historicalreviews' .
-              ' WHERE legacy!=1 AND user=? ORDER BY ym ASC';
+    $sql = 'SELECT DISTINCT DATE_FORMAT(r.time,"%Y-%m") AS ym,e.project'.
+           ' FROM historicalreviews r INNER JOIN exportdata e ON r.gid=e.gid'.
+           ' WHERE r.legacy!=1 AND r.user=? ORDER BY ym ASC';
     my $ref = $self->SelectAll($sql, $user);
     foreach my $row (@{$ref})
     {
       my ($y,$m) = split '-', $row->[0];
-      $self->GetMonthStats($user, $y, $m);
+      my $proj = $row->[1];
+      $self->ReportMsg("Doing stats for $user $y-$m, project $proj") unless $quiet;
+      $self->GetMonthStats($user, $y, $m, $proj);
     }
   }
   $self->ReportMsg("Setting system status back to '$stat'") unless $quiet;
@@ -5032,34 +4646,47 @@ sub GetMonthStats
   my $user = shift;
   my $y    = shift;
   my $m    = shift;
+  my $proj = shift;
 
-  my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND legacy!=1' .
-            ' AND EXTRACT(YEAR FROM time)=? AND EXTRACT(MONTH FROM time)=?';
-  my $total_reviews = $self->SimpleSqlGet($sql, $user, $y, $m);
+  my $lastDay = Days_in_Month($y, $m);
+  my $start = "$y-$m-01 00:00:00";
+  my $end = "$y-$m-$lastDay 23:59:59";
+  my $sql = 'SELECT COUNT(*) FROM historicalreviews r INNER JOIN exportdata e'.
+            ' ON r.gid=e.gid WHERE r.user=? AND r.legacy!=1'.
+            ' AND r.time>=? AND r.time<=? AND e.project=?';
+  my $total_reviews = $self->SimpleSqlGet($sql, $user, $start, $end, $proj);
   #pd/pdus
-  $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND legacy!=1 AND (attr=1 OR attr=9)' .
-         ' AND EXTRACT(YEAR FROM time)=? AND EXTRACT(MONTH FROM time)=?';
-  my $total_pd = $self->SimpleSqlGet($sql, $user, $y, $m);
-  #ic
-  $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND legacy!=1 AND attr=2' .
-         ' AND EXTRACT(YEAR FROM time)=? AND EXTRACT(MONTH FROM time)=?';
-  my $total_ic = $self->SimpleSqlGet($sql, $user, $y, $m);
+  $sql = 'SELECT COUNT(*) FROM historicalreviews r INNER JOIN exportdata e'.
+         ' ON r.gid=e.gid WHERE r.user=? AND r.legacy!=1'.
+         ' AND r.time>=? AND r.time<=? AND e.project=?'.
+         ' AND (r.attr=1 OR r.attr=9)';
+  my $total_pd = $self->SimpleSqlGet($sql, $user, $start, $end, $proj);
+  #ic/icus
+  $sql = 'SELECT COUNT(*) FROM historicalreviews r INNER JOIN exportdata e'.
+         ' ON r.gid=e.gid WHERE r.user=? AND r.legacy!=1'.
+         ' AND r.time>=? AND r.time<=? AND e.project=?'.
+         ' AND (r.attr=2 || r.attr=19)';
+  my $total_ic = $self->SimpleSqlGet($sql, $user, $start, $end, $proj);
   #und
-  $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND legacy!=1 AND attr=5' .
-         ' AND EXTRACT(YEAR FROM time)=? AND EXTRACT(MONTH FROM time)=?';
-  my $total_und = $self->SimpleSqlGet($sql, $user, $y, $m);
+  $sql = 'SELECT COUNT(*) FROM historicalreviews r INNER JOIN exportdata e'.
+         ' ON r.gid=e.gid WHERE r.user=? AND r.legacy!=1'.
+         ' AND r.time>=? AND r.time<=? AND e.project=?'.
+         ' AND r.attr=5';
+  my $total_und = $self->SimpleSqlGet($sql, $user, $start, $end, $proj);
   # time reviewing (in minutes) - not including outliers
   # default outlier seconds is 300 (5 min)
   my $outSec = $self->GetSystemVar('outlierSeconds', 300);
-  $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/60.0 FROM historicalreviews' .
-         ' WHERE user=? AND legacy!=1 AND EXTRACT(YEAR FROM time)=?' .
-         ' AND EXTRACT(MONTH FROM time)=? AND TIME(duration)<=SEC_TO_TIME(?)';
-  my $total_time = $self->SimpleSqlGet($sql, $user, $y, $m, $outSec);
+  $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(r.duration)),0)/60.0'.
+         ' FROM historicalreviews r INNER JOIN exportdata e ON r.gid=e.gid'.
+         ' WHERE r.user=? AND r.legacy!=1 AND r.time>=? AND r.time<=?'.
+         ' AND e.project=? AND TIME(r.duration)<=SEC_TO_TIME(?)';
+  my $total_time = $self->SimpleSqlGet($sql, $user, $start, $end, $proj, $outSec);
   # Total outliers
-  $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE user=? AND legacy!=1' .
-         ' AND EXTRACT(YEAR FROM time)=? AND EXTRACT(MONTH FROM time)=?' .
-         ' AND TIME(duration)>SEC_TO_TIME(?)';
-  my $total_outliers = $self->SimpleSqlGet($sql, $user, $y, $m, $outSec);
+  $sql = 'SELECT COUNT(*) FROM historicalreviews r INNER JOIN exportdata e'.
+         ' ON r.gid=e.gid WHERE r.user=? AND r.legacy!=1'.
+         ' AND r.time>=? AND r.time<=? AND e.project=?'.
+         ' AND TIME(r.duration)>SEC_TO_TIME(?)';
+  my $total_outliers = $self->SimpleSqlGet($sql, $user, $start, $end, $proj, $outSec);
   my $time_per_review = 0;
   if ($total_reviews - $total_outliers > 0)
   {
@@ -5070,17 +4697,16 @@ sub GetMonthStats
   {
     $reviews_per_hour = (60/$time_per_review);
   }
-  my $lastDay = Days_in_Month($y, $m);
-  my $mintime = "$y-$m-01 00:00:00";
-  my $maxtime = "$y-$m-$lastDay 23:59:59";
-  my ($total_correct,$total_incorrect,$total_neutral,$total_flagged) = $self->CountCorrectReviews($user, $mintime, $maxtime);
-  $sql = 'INSERT INTO userstats (user,month,year,monthyear,total_reviews,total_pd,'.
-         'total_ic,total_und,total_time,time_per_review,reviews_per_hour,'.
-         'total_outliers,total_correct,total_incorrect,total_neutral,total_flagged)'.
-         ' VALUES ' . $self->WildcardList(16);
-  $self->PrepareSubmitSql($sql, $user, $m, $y, $y . '-' . $m, $total_reviews, $total_pd,
-                          $total_ic, $total_und, $total_time, $time_per_review, $reviews_per_hour,
-                          $total_outliers, $total_correct, $total_incorrect, $total_neutral, $total_flagged);
+  my ($total_correct,$total_incorrect,$total_neutral,$total_flagged) = $self->CountCorrectReviews($user, $start, $end, $proj);
+  $sql = 'INSERT INTO userstats (user,month,year,monthyear,project,'.
+         'total_reviews,total_pd,total_ic,total_und,total_time,time_per_review,'.
+         'reviews_per_hour,total_outliers,total_correct,total_incorrect,'.
+         'total_neutral,total_flagged) VALUES ' . $self->WildcardList(17);
+  $self->PrepareSubmitSql($sql, $user, $m, $y, $y. '-'. $m, $proj, $total_reviews,
+                          $total_pd, $total_ic, $total_und, $total_time,
+                          $time_per_review, $reviews_per_hour, $total_outliers,
+                          $total_correct, $total_incorrect, $total_neutral,
+                          $total_flagged);
 }
 
 sub UpdateDeterminationsBreakdown
@@ -6546,13 +6172,16 @@ sub CountCorrectReviews
   my $user  = shift;
   my $start = shift;
   my $end   = shift;
+  my $proj  = shift;
 
   my $correct = 0;
   my $incorrect = 0;
   my $neutral = 0;
-  my $sql = 'SELECT validated,COUNT(id) FROM historicalreviews' .
-            ' WHERE legacy!=1 AND user=? AND time>=? AND time<=? GROUP BY validated';
-  my $ref = $self->SelectAll($sql, $user, $start, $end);
+  my $sql = 'SELECT r.validated,COUNT(r.id) FROM historicalreviews r'.
+            ' INNER JOIN exportdata e ON r.gid=e.gid'.
+            ' WHERE r.legacy!=1 AND r.user=? AND r.time>=? AND r.time<=?'.
+            ' AND e.project=? GROUP BY r.validated';
+  my $ref = $self->SelectAll($sql, $user, $start, $end, $proj);
   foreach my $row (@{$ref})
   {
     my $val = $row->[0];
@@ -6561,9 +6190,11 @@ sub CountCorrectReviews
     $correct = $cnt if $val == 1;
     $neutral = $cnt if $val == 2;
   }
-  $sql = 'SELECT COUNT(*) FROM historicalreviews'.
-         ' WHERE legacy!=1 AND user=? AND time>=? AND time<=? AND flagged IS NOT NULL AND flagged>0';
-  my $flagged = $self->SimpleSqlGet($sql, $user, $start, $end);
+  $sql = 'SELECT COUNT(*) FROM historicalreviews r'.
+         ' INNER JOIN exportdata e ON r.gid=e.gid'.
+         ' WHERE r.legacy!=1 AND r.user=? AND r.time>=? AND r.time<=?'.
+         ' AND e.project=? AND r.flagged IS NOT NULL AND r.flagged>0';
+  my $flagged = $self->SimpleSqlGet($sql, $user, $start, $end, $proj);
   return ($correct, $incorrect, $neutral, $flagged);
 }
 
@@ -6727,10 +6358,7 @@ sub PageToEnglish
   my $self = shift;
   my $page = shift;
 
-  return 'Home' unless $page;
-  my $eng = $self->SimpleSqlGet('SELECT name FROM menuitems WHERE page=?', $page);
-  $eng =~ s/__INST__/Institutional/;
-  return $eng;
+  $self->SimpleSqlGet('SELECT name FROM menuitems WHERE page=?', $page) || 'Home';
 }
 
 sub Namespaces
@@ -7972,7 +7600,6 @@ sub MenuItems
 
   $menu = $self->SimpleSqlGet('SELECT id FROM menus WHERE docs=1 LIMIT 1') if $menu eq 'docs';
   my $q = $self->GetUserQualifications($user);
-  my ($inst, $iname);
   my $sql = 'SELECT name,href,restricted,target FROM menuitems WHERE menu=? ORDER BY n ASC';
   my $ref = $self->SelectAll($sql, $menu);
   my @all = ();
@@ -7981,16 +7608,12 @@ sub MenuItems
     my $r = $row->[2];
     if ($self->DoQualificationsAndRestrictionsOverlap($q, $r))
     {
-      $inst = $self->GetUserProperty($user, 'institution') unless defined $inst;
-      $iname = $self->GetInstitutionName($inst, 1) unless defined $iname;
-      my $name = $row->[0];
-      $name =~ s/__INST__/$iname/;
       my $rel = '';
       if ($row->[3] && $row->[3] eq '_blank' && $row->[1] =~ m/^http/i)
       {
         $rel = 'rel="noopener"';
       }
-      push @all, [$name, $self->MenuPath($row->[1]), $row->[3], $rel];
+      push @all, [$row->[0], $self->MenuPath($row->[1]), $row->[3], $rel];
     }
   }
   return \@all;

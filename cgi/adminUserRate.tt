@@ -1,44 +1,118 @@
-[% p = cgi.param('p') %]
+[% p_page = cgi.param('p')           %]
+[% p_proj = cgi.param('project')     %]
+[% p_year = cgi.param('year')        %]
+[% p_inst = cgi.param('institution') %]
+[% p_summ = cgi.param('summary')     %]
+[% #=== p_user is for links from Users page === %]
+[% p_user = cgi.param('user')        %]
 
 [% INCLUDE header.tt %]
 
 <h2>All Review Stats:</h2>
 <a href="[% crms.WebPath('web', 'pdf/AllReviewStatsHelp.pdf') %]" target="_blank">All&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
 <br/>
-[% IF crms.GetTotalHistoricalReviewCount() %]
-  [% crms.CreateStatsReport(p, 'all', 1, 1, 0, 1) %]
-  <br/><br/>
-  [% users = crms.GetUsers(1) %]
-  [% users.unshift({id = 'all'}) %]
-  [% FOREACH item IN users %]
-    [% id = item.id %]
-    [% IF id.match('rereport') %][% NEXT %][% END %]
-    [% years = crms.GetStatsYears(id) %]
-    [% year = years.shift() %]
-    [% IF !id.match('^all') && 0 == crms.CountAllReviewsForUser(id) %][% NEXT %][% END %]
-    [% rep = crms.CreateStatsReport(p, id, 0, 1, year, 1) %]
-    [% IF !id.match('^all') && 0 == crms.CountHistoricalReviewsForUser(id, year) && year == crms.GetTheYear() %]
-      [% matches = rep.match('(<span.*?>.*?):.*') %]
-      [% matches.0 %]</span>
-      [% years.unshift(year) %]
-    [% ELSE %]
-      [% rep %]
-    [% END %]
-    <br/><br/>
-    [% FOREACH year IN years %]
-      [% IF !id.match('^all') && 0 == crms.CountHistoricalReviewsForUser(id, year) %][% NEXT %][% END %]
-      [% divid = id.replace('@','_') _ '_' _ year %]
-      <a style="display:block;margin-bottom:-18px;padding:4px;width:120px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
-         onclick='toggleVisibility("[% divid %]");'>Show [% year %]</a><br/>
-      <div id="[% divid %]" style="display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;">
-      [% crms.CreateStatsReport(p, id, 0, 1, year, 1) %]
-      <br/>
-      </div>
-      <br/><br/>
-    [% END %]
+
+<div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
+<form id="select" action="crms">
+<input type="hidden" name="p" value="$p_page"/>
+[% crms.HiddenSys() %]
+
+[% projs = crms.GetProjectsRef() %]
+<label for="projectSel" style="width:5em;float:left;">Project</label>
+<select title="Project" name="project" id="projectSel">
+  <option value="0" [% !p_proj ? 'selected="selected"':'' %]>(All)</option>
+  [% FOR proj IN projs %]
+    <option value="[% proj.id %]" [% p_proj == proj.id ? 'selected="selected"':'' %]>[% proj.name %]</option>
   [% END %]
-  <span class="smallishText">*Does not include Reviews Awaiting Verdict or pre-CRMS/Legacy reviews.</span>
-[% ELSE %]
-  There are no historical reviews at this time.
+</select>
+<br/>
+
+[% years = crms.GetUserStatsYears() %]
+<label for="projectSel" style="width:5em;float:left;">Year</label>
+<select title="Year" name="year" id="yearSel">
+  <option value="0" [% !project ? 'selected="selected"':'' %]>(All)</option>
+  [% FOR year IN years %]
+    <option value="[% year %]" [% p_year == year ? 'selected="selected"':'' %]>[% year %]</option>
+  [% END %]
+</select>
+<br/>
+
+[% insts = crms.GetInstitutions('shortname') %]
+<label for="institutionSel" style="width:5em;float:left;">Institution</label>
+<select title="Institution" name="institution" id="institutionSel">
+  <option value="0" [% !p_inst ? 'selected="selected"':'' %]>(All)</option>
+  [% FOR inst IN insts %]
+    <option value="[% inst.id %]" [% p_inst == inst.id ? 'selected="selected"':'' %]>[% inst.shortname %]</option>
+  [% END %]
+</select>
+<br/>
+
+<label for="summaryCB" style="width:5em;float:left;">Summary</label>
+<input type="checkbox" id="summaryCB" name="summary"
+       [% p_summ ? 'checked="checked"':'' %]/>
+<br/>
+<input type="submit" value="Submit"/>
+<input type="button" value="Clear"
+       onclick="selMenuItem('projectSel','');
+                selMenuItem('yearSel','');
+                selMenuItem('institutionSel','');"
+/>
+
+</form>
+</div>
+<br/><br/>
+[% IF p_summ %]
+  [% data = crms.CreateUserStatsReport() %]
+  <div id="[% divid %]" style="[% style %]">
+    <span style="font-size:1.3em;"><strong>[% data.title %]</strong></span>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <button type="button" onclick='toggleVisibility("RTDIV_[% param.id %]");'>
+      Show Raw Data
+    </button>
+    <br/>
+    [% data.html %]
+    <div id="RTDIV_[% param.id %]" style="display:none;">
+      <textarea id="RT_[% param.id %]" readonly="readonly"
+                style="font-family:monospace;height:15em;width:72%;">[% data.text %]</textarea>
+      <button type="button" onclick="document.getElementById('RT_[% param.id %]').select();document.execCommand('copy');">
+        Copy
+      </button>
+    </div>
+  </div>
+  <br/><br/>
 [% END %]
+
+[% IF p_user %]
+  [% p_inst = p_user %]
+[% END %]
+
+[% IF p_inst || p_year || p_proj %]
+  [% params = crms.GetUserStatsQueryParams(p_inst, p_year, p_proj) %]
+  [% FOREACH param IN params %]
+    [% divid = param.id %]
+    [% style = (param.old)? 'display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;' : '' %]
+    [% data = crms.CreateUserStatsReport(param.user, param.year, param.proj) %]
+    [% IF param.old %]
+      <a class="nowrap" style="display:block;margin-bottom:-18px;padding:4px;width:190px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
+         onclick='toggleVisibility("[% divid %]");'>Show [% crms.GetProjectName(param.proj) _ ' ' _ param.year %]</a><br/>
+    [% END %]
+    <div id="[% divid %]" style="[% style %]">
+      <h3>[% data.title %]&nbsp;&nbsp;&nbsp;&nbsp;
+          <button type="button" onclick='toggleVisibility("RTDIV_[% param.id %]");'>
+            Show Raw Data
+          </button>
+      </h3>
+      [% data.html %]
+      <div id="RTDIV_[% param.id %]" style="display:none;">
+        <textarea id="RT_[% param.id %]" readonly="readonly"
+                  style="font-family:monospace;height:15em;width:72%;">[% data.text %]</textarea>
+        <button type="button" onclick="document.getElementById('RT_[% param.id %]').select();document.execCommand('copy');">
+          Copy
+        </button>
+      </div>
+    </div>
+    <br/><br/>
+  [% END %]
+[% END %]
+
 [% INCLUDE footer.tt %]

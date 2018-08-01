@@ -134,9 +134,9 @@ else
 if ($skipStats) { $crms->ReportMsg('-s flag set; skipping monthly stats.', 1); }
 else
 {
-  $crms->ReportMsg('Starting to update monthly stats.', 1);
-  $crms->UpdateStats();
-  $crms->ReportMsg('<b>Done</b> updating monthly stats.', 1);
+  $crms->ReportMsg('Starting to update user stats.', 1);
+  $crms->UpdateUserStats();
+  $crms->ReportMsg('<b>Done</b> updating user stats.', 1);
 }
 
 if ($skipLocks) { $crms->ReportMsg('-l flag set; skipping unlock.', 1); }
