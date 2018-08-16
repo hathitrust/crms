@@ -323,7 +323,7 @@ sub set
 # will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.1.0';
+  return '7.1.1';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -4632,7 +4632,7 @@ sub UpdateUserStats
     {
       my ($y,$m) = split '-', $row->[0];
       my $proj = $row->[1];
-      $self->ReportMsg("Doing stats for $user $y-$m, project $proj") unless $quiet;
+      #$self->ReportMsg("Doing stats for $user $y-$m, project $proj") unless $quiet;
       $self->GetMonthStats($user, $y, $m, $proj);
     }
   }
@@ -5260,6 +5260,7 @@ sub GetNextItemForReview
            'SHA2(CONCAT(?,q.id),0) AS hash,q.priority,q.project,b.sysid'.
            ' FROM queue q INNER JOIN bibdata b ON q.id=b.id'.
            ' WHERE q.project=? AND q.locked IS NULL AND q.status<2'.
+           ' AND q.unavailable=0'.
            $excludei. $excludeh.
            ' HAVING cnt<2 ORDER BY '. join ',', @orders;
     if (defined $test)
@@ -5291,19 +5292,9 @@ sub GetNextItemForReview
         if (!$record)
         {
           $err = 'No Record Found';
-          my $note = $err;
-          if ($pri >= 0)
-          {
-            my $pri2 = ($pri == 0)? -3.14:-$pri;
-            $note = "No record found for $id2, downgrading priority from $pri to $pri2.";
-            $sql = 'UPDATE queue SET priority=? WHERE id=?';
-            $self->PrepareSubmitSql($sql, $pri2, $id2);
-          }
-          else
-          {
-            $note = "No record found for $id2, priority $pri already negative.";
-          }
-          $self->Note($note);
+          $sql = 'UPDATE queue SET unavailable=1 WHERE id=?';
+          $self->PrepareSubmitSql($sql, $id2);
+          $self->Note("No record found for $id2, setting unavailable.");
         }
         else
         {
@@ -5328,30 +5319,26 @@ sub GetNextItemForReview
 }
 
 # Called as part of overnight processing,
-# iterates through anything that was downgraded to negative priority by the
-# queueing algorithm, restoring original priority.
-# Anything above priority 0 is set to negative, and priority 0 is set to -3.14.
+# Iterates through anything that was downgraded to unavailable by the
+# queueing algorithm, restoring availability if metadata fetch succeeds.
 sub UpdateQueueNoMeta
 {
   my $self = shift;
 
-  my $sql = 'SELECT id,priority FROM queue WHERE priority<0';
+  my $sql = 'SELECT id FROM queue WHERE unavailable=1';
   my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    my $pri = $row->[1];
     my $record = $self->GetMetadata($id);
     if (defined $record)
     {
-      my $newpri = ($pri == -3.14)? 0:-$pri;
-      $self->ReportMsg("$id: restoring priority from $pri to $newpri");
-      $sql = 'UPDATE queue SET priority=? WHERE id=?';
-      $self->PrepareSubmitSql($sql, $newpri, $id);
+      $sql = 'UPDATE queue SET unavailable=0 WHERE id=?';
+      $self->PrepareSubmitSql($sql, $id);
     }
     else
     {
-      $self->ReportMsg("<b>$id</b>: still no meta, leaving priority at $pri");
+      $self->ReportMsg("<b>$id</b>: still no meta, leaving unavailable");
     }
   }
 }
@@ -8223,6 +8210,7 @@ sub CanVolumeBeCrownCopyright
   return 1 if defined $c && ($c eq 'United Kingdom' || $c eq 'Canada' || $c eq 'Australia');
 }
 
+# FIXME: this should probably not include an explicit reference to "Special" project.
 sub GetAddToQueueRef
 {
   my $self = shift;
