@@ -1,5 +1,5 @@
 [% p = cgi.param('p') %]
-<ul id="menu" style="width:100%;">
+<ul id="menu" style="width:100%;float:left;position:absolute;">
 [% IF p %]
   <li><span>Home</span>
   <dl class="home">
