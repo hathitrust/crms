@@ -323,7 +323,7 @@ sub set
 # will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.1.2';
+  return '7.1.3';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -2718,6 +2718,7 @@ sub SearchAndDownload
   my $search3value   = shift;
   my $startDate      = shift;
   my $endDate        = shift;
+  my $offset         = shift;
   my $stype          = shift;
 
   $stype = 'reviews' unless $stype;
@@ -2735,7 +2736,7 @@ sub SearchAndDownload
   my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQL($stype, $page, $order, $dir, $search1,
                                                                   $search1value, $op1, $search2, $search2value,
                                                                   $op2, $search3, $search3value, $startDate,
-                                                                  $endDate, 0, 0, 1);
+                                                                  $endDate, $offset, 0, 1);
   my $ref = $self->SelectAll($sql);
   my $buff = '';
   if (scalar @{$ref} == 0)
@@ -2884,36 +2885,41 @@ sub SearchAndDownloadDeterminationStats
 
 sub SearchAndDownloadQueue
 {
-  my $self = shift;
-  my $order = shift;
-  my $dir = shift;
-  my $search1 = shift;
+  my $self         = shift;
+  my $order        = shift;
+  my $dir          = shift;
+  my $search1      = shift;
   my $search1Value = shift;
-  my $op1 = shift;
-  my $search2 = shift;
+  my $op1          = shift;
+  my $search2      = shift;
   my $search2Value = shift;
-  my $startDate = shift;
-  my $endDate = shift;
+  my $startDate    = shift;
+  my $endDate      = shift;
+  my $offset       = shift;
 
-  my $buff = $self->GetQueueRef($order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, 0, 0, 1);
+  my $buff = $self->GetQueueRef($order, $dir, $search1, $search1Value, $op1,
+                                $search2, $search2Value, $startDate, $endDate,
+                                $offset, 0, 1);
   $self->DownloadSpreadSheet($buff);
   return ($buff)? 1:0;
 }
 
 sub SearchAndDownloadExportData
 {
-  my $self = shift;
-  my $order = shift;
-  my $dir = shift;
-  my $search1 = shift;
+  my $self         = shift;
+  my $order        = shift;
+  my $dir          = shift;
+  my $search1      = shift;
   my $search1Value = shift;
-  my $op1 = shift;
-  my $search2 = shift;
+  my $op1          = shift;
+  my $search2      = shift;
   my $search2Value = shift;
-  my $startDate = shift;
-  my $endDate = shift;
+  my $startDate    = shift;
+  my $endDate      = shift;
 
-  my $buff = $self->GetExportDataRef($order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $startDate, $endDate, 0, 0, 1);
+  my $buff = $self->GetExportDataRef($order, $dir, $search1, $search1Value, $op1,
+                                     $search2, $search2Value, $startDate, $endDate,
+                                     $offset, 0, 1);
   $self->DownloadSpreadSheet($buff);
   return ($buff)? 1:0;
 }
@@ -2974,8 +2980,7 @@ sub GetReviewsRef
       if ($page eq 'adminHistoricalReviews')
       {
         my $pubdate = $self->SimpleSqlGet('SELECT YEAR(pub_date) FROM bibdata WHERE id=?', $id);
-        $pubdate = '?' unless $pubdate;
-        ${$item}{'pubdate'} = $pubdate;
+        ${$item}{'pubdate'} = $pubdate || '';
         ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
         ${$item}{'validated'} = $row->[17];
         ${$item}{'src'} = $row->[18];
