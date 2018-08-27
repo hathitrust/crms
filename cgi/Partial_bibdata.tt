@@ -1,0 +1,29 @@
+[% cgi    = crms.get('cgi')                        %]
+[% author = cgi.escapeHTML(data.bibdata.author)    %]
+[% title  = cgi.escapeHTML(data.bibdata.title)     %]
+[% proj   = crms.GetProjectRef(data.queue.project) %]
+
+<div class="reviewPartial">
+  <table>
+    <tr><td><strong>ID:</strong> [% htid %]</td></tr>
+    <tr><td><strong>Title:</strong> [% title %]</td></tr>
+    <tr><td><strong>Author:</strong> [% author %]</td></tr>
+    <tr>
+      <td><strong>Pub Date:</strong>
+        <span id="pubDateSpan"
+          [% IF pubDate.match('^\d+-\d*$') %]class="red"[% END %]>
+          [% pubDate %]
+        </span>
+      </td>
+    </tr>
+    [% IF crms.GetSystemVar("showCountry") %] <!-- FIXME: get this from the project -->
+      <tr><td><strong>Country:</strong> [% info.country %]</td></tr>
+    [% END %]
+    <tr><td class="nowrap">
+      <strong>Project:</strong> [% proj.name %]
+      [% IF proj.color.length %]
+        <p style="border:1px solid;margin-left:4px;display:inline-block;width:10px;height:10px;background:#[% proj.color %];"></p>
+      [% END %]
+    </td></tr>
+  </table>
+</div>

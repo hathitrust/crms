@@ -75,40 +75,6 @@ function popRenewalDate()
   req.send(null);
 }
 
-function popReviewInfo(id,user,sys)
-{
-  var loader = document.getElementById('importLoader');
-  var req = new XMLHttpRequest();
-  req.onreadystatechange = function()
-  {
-    if (req.readyState == 4)
-    {
-      if (req.status == 200)
-      {
-        //alert(req.responseText);
-        var data = JSON.parse(req.responseText, null);
-        if (data)
-        {
-          var button = document.getElementById("r" + data.rights);
-          if (button) { button.checked = "checked"; }
-          button = document.getElementById("renewalFieldCheckbox");
-          if (button) { button.checked = (data.renNum != null); }
-          var field = document.getElementById("renewalField");
-          if (field) { field.value = data.renNum; }
-          document.submitReview.renDate.value = data.renDate;
-          document.submitReview.note.value = data.note;
-          selMenuItem('catMenu',(data.category)? data.category:'');
-        }
-      }
-      else {}
-      if (loader) { loader.style.display='none'; }
-    }
-  };
-  if (loader) { loader.style.display=''; }
-  req.open("GET", gCGI + "getReviewInfo?id=" + id + ";user=" + user + ";sys=" + sys, true);
-  req.send(null);
-}
-
 function PredictRights(id)
 {
   var img = document.getElementById("predictionLoader");
@@ -285,4 +251,15 @@ function PullPubDate()
   document.getElementById('renewalField').value=date;
 }
 
-
+function Debug(msg, append)
+{
+  var el = document.getElementById('debugArea');
+  if (el)
+  {
+    if (append)
+    {
+      msg = el.innerHTML + "<br/>\n" + msg;
+    }
+    el.innerHTML = msg;
+  }
+}

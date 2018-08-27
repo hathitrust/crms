@@ -1,7 +1,7 @@
 [% INCLUDE header.tt %]
 
 [% error    = cgi.param('errorMsg')   %]
-[% barcode  = cgi.param('barcode')    %]
+[% htid     = cgi.param('htid')       %]
 [% editing  = cgi.param('editing')    %]
 [% renNum   = cgi.param('renNum')     %]
 [% renDate  = cgi.param('renDate')    %]
@@ -17,12 +17,12 @@
 [% expert   = crms.IsUserExpert(user) %]
 [% ren      = crms.GetSystemVar("showRenewal") %]
 
-[% IF barcode && editing %]
-  [% IF crms.PreviouslyReviewed(barcode, user) %]
+[% IF htid && editing %]
+  [% IF crms.PreviouslyReviewed(htid, user) %]
     <h3>Too late, can't edit your review for this item.</h3>
     [% STOP %]
   [% END %]
-  [% IF expert && crms.HasItemBeenReviewedByAnotherExpert(barcode, user) %]
+  [% IF expert && crms.HasItemBeenReviewedByAnotherExpert(htid, user) %]
     <h3>Item has already been reviewed by another expert.</h3>
     <br/><a href="javascript:window.close()">Close</a>
     [% STOP %]
@@ -30,8 +30,8 @@
   [% IF NOT expert %]
     [% CALL crms.UnlockAllItemsForUser(user) %]
   [% END %]
-  [% err = crms.LockItem(barcode, user, expert) %]
-  [% IF err != 0 %]
+  [% err = crms.LockItem(htid, user, expert) %]
+  [% IF err %]
     <h3>[% err %].</h3>
     <br/><a href="javascript:window.close()">Close</a>
     [% STOP %]
@@ -41,287 +41,78 @@
 [% IF !editing && !error %]
   [%# ## Get locked item or new one from queue ## %]
   [% IF crms.HasLockedItem(user) %]
-    [% barcode = crms.GetLockedItem(user) %]
+    [% htid = crms.GetLockedItem(user) %]
   [% ELSE %]
-    [% barcode = crms.GetNextItemForReview(user) %]
+    [% htid = crms.GetNextItemForReview(user) %]
   [% END %]
 [% END %]
 
-[%# ## failed to get a barcode ## %]
-[% IF NOT barcode %]
+[%# ## failed to get a htid ## %]
+[% IF NOT htid %]
   [% INCLUDE novols.tt %]
   [% INCLUDE footer.tt %]
   [% STOP %]
 [% END %]
 
-[% status   = crms.GetStatus(barcode)      %]
-[% pubDate  = crms.FormatPubDate(barcode)  %]
-[% author   = crms.GetAuthor(barcode)      %]
-[% author   = cgi.escapeHTML(author)       %]
-[% title    = crms.GetTitle(barcode)       %]
-[% title    = cgi.escapeHTML(title)        %]
-[% proj     = crms.GetProjectName(barcode) %]
-
-[% IF NOT renNum %]
-[% renNum = crms.GetReviewField(barcode, user, "renNum") %]
-[% END %]
-
-[% IF NOT renDate %]
-[% renDate = crms.GetReviewField(barcode, user, "renDate") %]
-[% END %]
-
-[% IF NOT note %]
-[% note = crms.GetReviewField(barcode, user, "note") %]
-[% END %]
-
-[% IF NOT category %]
-[% category = crms.GetReviewField(barcode, user, "category") %]
-[% END %]
-
-[% IF NOT swiss %]
-[% swiss = crms.GetReviewField(barcode, user, "swiss") %]
-[% END %]
-
-[% homeLink = crms.WebPath('cgi', "crms?p=confirmReview;submit=Cancel;barcode=$barcode") %]
-
+[% data = crms.ReviewData(htid) %]
 <div class="divbody">
-  <div class="divNav">
-    <div class="navtop">
-      <table class="nav">
-        <tr>
-          <td rowspan="2">
-            <img src="[% crms.WebPath('web', crms.GetSystemVar('smallLogo')) %]"
-                 alt="CRMS Logo" width="52" height="40"/></td>
-          <td style="text-align:left;padding-left:8px;"><strong>Hello [% crms.GetUserProperty(user, 'name') %]</strong></td>
-        </tr>
-        <tr>
-          <td style="text-align:left;padding-left:8px;">
-            <a href="[% homeLink %]">Home</a>
-            &nbsp;&nbsp;&nbsp;&nbsp;<a href="[% crms.Sysify(crms.WebPath('cgi', 'crms?p=Logout')) %]">Logout</a>
-          </td>
-        </tr>
-        <tr>
-          <td colspan="2">
-            <select title="Select Help Documentation" class="review"
-                    onchange="if (this.selectedIndex > 0) window.open(this.options[this.selectedIndex].value);this.selectedIndex=0;">
-              <option>Select Help Documentation</option>
-              [% items = crms.MenuItems('docs') %]
-              [% FOREACH item IN items %]
-                <option value="[% item.1 %]">[% item.0 %]</option>
-              [% END %]
-            </select>
-          </td>
-        </tr>
-        <tr>
-          <td colspan="2">
-            [% url = crms.WebPath('cgi', 'crms?p=mail;id=' _ barcode) %]
-            <a href="[% url %]" target="_blank">
-              <img width="16" height="16" alt="Report error" src="[% crms.WebPath('web', 'SendIcon.png') %]"/>
-              <strong>Send message to Experts…</strong>
-            </a>
-          </td>
-        </tr>
-      </table>
-      <table class="id">
-        <tr><td><strong>ID:</strong> [% barcode %]</td></tr>
-        <tr><td><strong>Title:</strong> [% title %]</td></tr>
-        <tr><td><strong>Author:</strong> [% author %]</td></tr>
-        <tr><td><strong>Pub Date:</strong> <span id="pubDateSpan"
-          [% IF NOT ren && pubDate.match('^\d+-\d*$') %]class="red"[% END %]>
-          [% pubDate %]</span></td>
-        </tr>
-        [% IF crms.GetSystemVar("showCountry") %]
-          [% country = crms.GetPubCountry(barcode, undef, 1) %]
-          <tr><td><strong>Country:</strong> [% country %]</td></tr>
-        [% END %]
-        <tr><td class="nowrap">
-          <strong>Project:</strong> [% proj %]
-          [% color = crms.GetProjectColor(barcode) %]
-          [% IF color %]
-            <p style="border:1px solid;margin-left:4px;display:inline-block;width:10px;height:10px;background:#[% color %];"></p>
-          [% END %]
-        </td></tr>
-      </table>
-      [% sources = crms.Authorities(barcode,mag,ptview) %]
-      <table class="search">
-        <tr>
-          <th class="nowrap">View 1:</th>
-          <td>
-            <select title="Search 1" class="review" id="search1Select" onchange="changeFrame1(1);" style="float:right;">
-            [% optopen = 0 %]
-            [% selectit = 0 %]
-            [% FOREACH src IN sources %]
-              [% IF src.url %]
-                [% selectstr = "" %]
-                [% IF selectit == 0 && src.initial == 1 %]
-                  [% selectit = 1 %]
-                  [% selectstr = "selected='selected'" %]
-                [% END %]
-                <option value="[% src.url %]" [% selectstr %]>[% src.name %]</option>
-              [% ELSE %]
-                [% IF optopen == 1 %]</optgroup>[% END %]
-                <optgroup label="[% src.name %]">
-                [% optopen = 1 %]
-              [% END %]
-            [% END %]
-            [% IF optopen == 1 %]</optgroup>[% END %]
-            </select>
-          </td>
-        </tr>
-        <tr>
-          <th class="nowrap">View 2:</th>
-          <td>
-            <select title="Search 2" class="review" id="search2Select" onchange="changeFrame2(1);" style="float:right;">
-            [% optopen = 0 %]
-            [% selectit = 0 %]
-            [% FOREACH src IN sources %]
-              [% IF src.url %]
-                [% selectstr = "" %]
-                [% IF selectit == 0 && src.initial == 2 %]
-                  [% selectit = 1 %]
-                  [% selectstr = "selected='selected'" %]
-                [% END %]
-                <option value="[% src.url %]" [% selectstr %]>[% src.name %]</option>
-              [% ELSE %]
-                [% IF optopen == 1 %]</optgroup>[% END %]
-                <optgroup label="[% src.name %]">
-                [% optopen = 1 %]
-              [% END %]
-            [% END %]
-            [% IF optopen == 1 %]</optgroup>[% END %]
-            </select>
-          </td>
-        </tr>
-        <tr>
-          <td></td>
-          <td style="margin:0px;padding:0px;">
-             <input type="button" class="reviewblue" value="Toggle View" onclick="flipFrame();" accesskey="o"
-             style="margin:0px;padding:1px;background-color:#e0d6de;float:right;"/>
-          </td>
-        </tr>
-        [% IF ren %]
-          [% viafwarn = crms.VIAFWarning(barcode) %]
-          [% IF viafwarn %]
-            [% viafwarn = "Warning: possible foreign author: " _ viafwarn %]
-            <tr><td colspan="2"><span class="red"><strong>$viafwarn</strong></span></td></tr>
-          [% END %]
-        [% END %]
-      </table>
-    </div>
-    [% realindex = 0 %]
-    [% FOREACH src IN sources %]
-      [% IF src.3 && src.4 %]
-        <a style="position:absolute;left:-999px;" href="#" accesskey="[% src.3 %]"
-           onfocus="document.getElementById('search[% src.4 %]Select').selectedIndex=[% realindex %];changeFrame[% src.4 %](1);">.</a>
+  <div class="divOP">
+    [% IF expert && editing %]
+      [% IF crms.HasItemBeenReviewedByAnotherExpert(htid, user) %]
+        [% error = "An expert has already reviewed this volume. Please cancel." %]
       [% END %]
-      [% IF src.2 %][% realindex = realindex + 1 %][% END %]
     [% END %]
-
-    <div class="navbottom" style="border-collapse:collapse;">
-      [% IF expert && editing %]
-        [% IF crms.HasItemBeenReviewedByAnotherExpert(barcode,user) %]
-          [% error = "An expert has already reviewed this volume. Please cancel." %]
-        [% END %]
+    [% es = crms.GetErrors() %]
+    [% IF es.size %]
+      [% IF NOT error %][% error = '' %][% END %]
+      [% FOREACH e IN es %]
+        [% error = error _ e _ '<br/>' %]
       [% END %]
-      [% es = crms.GetErrors() %]
-      [% IF es.size %]
-        [% IF NOT error %][% error = '' %][% END %]
-        [% FOREACH e IN es %]
-          [% error = error _ e _ '<br/>' %]
-        [% END %]
-      [% END %]
-      [% CALL crms.ClearErrors() %]
-      [% INCLUDE submitReviewForm.tt barcode = barcode, renNum   = renNum,   renDate  = renDate,
-                                     note    = note,    category = category, editing  = editing,
-                                     error   = error,   select   = select,   mag      = mag,
-                                     hold    = hold,    swiss    = swiss,    expert   = expert,
-                                     status  = status,  sys      = sys,      ptview   = ptview,
-                                     import  = import,  ren      = ren       pubDate  = pubDate %]
-      [% IF expert %]
-        <table class="nav">
-        [% IF status == 3 %]
-          <tr><td><span style="font-size:1.1em;color:red;">Provisional Match</span></td></tr>
-        [% ELSIF status == 2 %]
-          <tr><td><span style="font-size:1.1em;color:red;">Conflict</span></td></tr>
-        [% END %]
-        <tr><td><span style="font-size:1.1em">
-          [% IF crms.IsVolumeInQueue(barcode) %]
-            Priority [% crms.GetPriority(barcode) %]
-          [% ELSE %]
-            Not in queue. Please cancel; you will get an error if you submit.
-          [% END %]
-        </span></td></tr>
-        [% totalReviews = crms.GetReviewCount(barcode, 1) %]
-        [% IF totalReviews > 0 %]
-          <tr><td><a class="smallishText"
-                     href="[% crms.WebPath('cgi', 'crms?p=adminHistoricalReviews;search1=Identifier;search1value=' _ barcode) %]"
-                     target="_blank">
-          [% totalReviews %] historical [% crms.Pluralize("review", totalReviews) %]
-          </a></td></tr>
-          <tr><td>
-            <span class="smallishText" style="color:green;">
-              Current rights [% crms.GetCurrentRights(barcode) %]
-            </span>
-          </td></tr>
-        [% END %]
-        [% totalReviews = crms.GetReviewCount(barcode) %]
-        [% IF totalReviews > 0 %]
-          <tr><td><a class="smallishText"
-                     href="[% crms.WebPath('cgi', 'crms?p=adminReviews;search1=Identifier;search1value=' _ barcode) %]"
-                     target="_blank">
-          [% totalReviews %] active [% crms.Pluralize("review", totalReviews) %]
-          </a></td></tr>
-        [% END %]
-        [% addedby = crms.SimpleSqlGet("SELECT added_by FROM queue WHERE id=?", barcode) %]
-        [% IF addedby %]
-          <tr><td><span class="smallishText">Added by [% addedby %]</span></td></tr>
-        [% END %]
+    [% END %]
+    [% CALL crms.ClearErrors() %]
+    
+    [% partials = crms.ReviewPartialsForProject(data.queue.project) %]
+    [% FOR partial IN partials %]
+      [% INCLUDE $partial crms = crms, htid = htid, user = user, data = data,
+                          error = error %]
+    [% END %]
+    
+    [% IF error %]
+      <div class="reviewPartial" id="Error_div">
+        <table>
+          <tr>
+            <td style="text-align:left;">
+              <strong style="color:red;">Error Message:</strong>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <textarea cols="20" rows="5">[% error %]</textarea>
+            </td>
+          </tr>
         </table>
-      [% END %]
-      [% status = crms.GetSystemStatus() %]
-      [% IF status.2 %]
-        <table class="nav">
-        <tr><td style="align:left;"><span style="font-size:1.3em;font-weight:bold;color:#990000;">[% status.2 %]</span></td></tr>
-        </table>
-      [% END %]
-      [% IF !ren %]
-      <table class="reviewGrey">
-        <tr><th style="width:55%"><label for="renewalField2">Date calculator</label></th>
-        <td>
-        <input id="renewalField2" title="[% label %]" type="text" name="renDate2"
-               size="6" style="margin-left:0;"
-               onblur="javascript:PredictDate('[% barcode %]');"/>
-        </td></tr>
-        <tr><th style="width:55%">Public Domain in:</th>
-          <td><strong><span class="red" id=renewalSpan2></span></strong></td>
-        </tr>
-      </table>
-      [% END %]
-    </div>
-  </div>
+      </div>
+    [% END %]
+  </div> <!-- Operational Pane div -->
   [%# the frame (Stanford, HT, Cat...) %]
   <div class="divFrame" id="divFrame">
-    <iframe title="Authority 1" id="tFrame" name="tFrame" src="about:blank" style="border:none;width:100%;height:100%;"></iframe>
-    <iframe title="Authority 2" id="bFrame" name="bFrame" src="about:blank" style="border:none;width:100%;height:100%;display:none;"></iframe>
+    <iframe class="reviewFrame" title="Authority 1" id="tFrame" src="about:blank"></iframe>
+    <iframe class="reviewFrame" title="Authority 2" id="bFrame" src="about:blank" style="display:none;"></iframe>
   </div>
 </div>
 
 <script type="text/javascript">
 <!--
-window.onload = function(e)
+  addEvent(window, 'load', mainWindowLoad);
+function mainWindowLoad(e)
 {
-  changeFrame1();
-  changeFrame2();
-  [% IF import %]
-    popReviewInfo('[% barcode %]', '[% import %]', '[% sys %]');
-  [% END %]
   [% IF !ren %]
     var renewalField = document.getElementById("renewalField");
     var year = renewalField.value;
     var patt = /-?[0-9]+/;
     if (patt.test(year))
     {
-      PredictRights('[% barcode %]');
+      PredictRights('[% htid %]');
       document.getElementById('NoteTextField').focus();
     }
     else

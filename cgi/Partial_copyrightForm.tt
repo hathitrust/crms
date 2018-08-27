@@ -1,7 +1,16 @@
-[% IF NOT select %]
-[% select = crms.GetAttrReasonCode(htid, user) %]
-[% END %]
+[% cgi        = crms.get('cgi')         %]
+[% importUser = cgi.param('importUser') %]
 
+[% # Set up values from CGI (in case of error) or existing review (editing). %]
+[% u_renNum = (error)? cgi.param('renNum') : data.$user.renNum %]
+[% u_renDate = (error)? cgi.param('renDate') : data.$user.renDate %]
+[% u_rights = (error)? cgi.param('rights') : data.$user.rights %]
+[% u_category = (error)? cgi.param('category') : data.$user.category %]
+[% u_note = (error)? cgi.param('note') : data.$user.note %]
+[% u_swiss = (error)? cgi.param('swiss') : data.$user.swiss %]
+[% u_hold = (error)? cgi.param('hold') : data.$user.hold %]
+
+<div class="reviewPartial">
 <form name="submitReview" action="crms">
   <input type="hidden" name="p"       value="finishReview"/>
   <input type="hidden" name="htid" value="[% htid %]"/>
@@ -9,28 +18,22 @@
   <input type="hidden" name="user"    value="[% user %]"/>
   <input type="hidden" name="editing" value="[% editing %]"/>
   <input type="hidden" name="sys"     value="[% sys %]"/>
-  <div class="reviewBlue">
-  
-  [% INCLUDE Partial_HTView.tt crms = crms, htid = htid %]
-  
-  </div>
-  <div>
-  <table class="reviewGrey">
+  <table>
     <tr>
       [% IF ren %]
         [% label = "Renewal&nbsp;ID" %]
       [% ELSE %]
-        [% label = (renNum)? "Publication&nbsp;Date":"Author Death Date" %]
+        [% label = (u_renNum)? "Publication&nbsp;Date":"Author Death Date" %]
       [% END %]
       <td class="nowrap"><strong><label id="renewalFieldLabel" for="renewalField">
       [% label %]: </label></strong></td>
       <td class="nowrap">
       [% IF ren %]
         <input id="renewalField" title="[% label %]" type="text" name="renNum"
-               value="[% renNum %]" size="8"
+               value="[% u_renNum %]" size="8"
                onblur="javascript:popRenewalDate()"/>
       [% ELSE %]
-        [% IF NOT renDate && NOT import %]
+        [% IF NOT u_renDate && NOT importUser %]
           [% authorDD = crms.GetADDFromAuthor(htid) %]
           [% IF NOT authorDD %]
             [% viafdata = crms.GetVIAFData(htid) %]
@@ -41,12 +44,12 @@
           [% END %]
           [% IF authorDD %]
             <input type="hidden" id="prepopulated" name="prepopulated" value="[% (viaf)? 2:1 %]"/>
-            [% renDate = authorDD %]
+            [% u_renDate = authorDD %]
             [% tip = (viaf)? "VIAF":"Zephir" %]
           [% END %]
         [% END %]
         <input id="renewalField" title="[% label %]" type="text" name="renDate"
-               value="[% renDate %]" size="6"
+               value="[% u_renDate %]" size="6"
                onblur="javascript:PredictRights('[% htid %]');"/>
         [% IF tip %]
           <span class="red">$tip</span>
@@ -77,7 +80,7 @@
         <input type="button" value="Get Renewal Date" onclick="popRenewalDate();" accesskey="d"
                class="reviewblue" style="margin:0px;padding:1px;background-color:#d0dee6;"/>
       [% ELSE %]
-        <input type="checkbox" id="renewalFieldCheckbox" name="renNum"[% (renNum)? ' checked="checked"':'' %]
+        <input type="checkbox" id="renewalFieldCheckbox" name="renNum"[% (u_renNum)? ' checked="checked"':'' %]
                onchange="ToggleADD();PredictRights('[% htid %]');"/>
         <label for="renewalFieldCheckbox">&nbsp;Pub Date</label>
       [% END %]
@@ -85,7 +88,7 @@
       <td>
         [% IF ren %]
           <input type="text" title="Stanford Renewal Date" id="getDate" name="renDate"
-                 value="[% renDate %]" size="8" readonly="readonly"/>
+                 value="[% u_renDate %]" size="8" readonly="readonly"/>
         [% ELSE %]
           <input type="button" class="reviewblue" value="Pull Pub Date"
           [% IF NOT pubDate.match('^-?\d+$') %]disabled="disabled"[% END %]
@@ -97,11 +100,10 @@
       </td>
     </tr>
   </table>
-  </div>
 [% rights = crms.Rights(htid, 1) %]
-<div id="RightsCont" class="rightscont">
+<div id="RightsCont" class="subpartial">
 <div id="RightsReason" style="position:relative;">
-  <div style="position:absolute;top:0px;right:1em;">
+  <div id="rightsHelp" style="position:absolute;top:0px;right:1em;">
     <a class="tip" href="#">
       <img width="16" height="16" alt="Rights/Reason Help" src="[% crms.WebPath('web', 'help.png') %]"/>
       <span>
@@ -138,7 +140,7 @@
       <td style="width:50%;">
         <input type="radio" id="[% 'r' _ right.id %]" name="rights" value="[% right.id %]"
               [% IF right.n < 10 %]accesskey="[% right.n %]"[% END %]
-              [% IF select == right.id %] checked="checked"[% END %]/>
+              [% IF u_rights == right.id %] checked="checked"[% END %]/>
         <label for="[% 'r' _ right.id %]">[% right.attr %]/[% right.reason.upper %] ([% right.n %])</label>
       </td>
       [% n = n + 1 %]
@@ -147,7 +149,7 @@
         [% right = rights.$n %]
         <input type="radio" id="[% 'r' _ right.id %]" name="rights" value="[% right.id %]"
               [% IF right.n < 10 %]accesskey="[% right.n %]"[% END %]
-              [% IF select == right.id %] checked="checked"[% END %]/>
+              [% IF u_rights == right.id %] checked="checked"[% END %]/>
         <label for="[% 'r' _ right.id %]">[% right.attr %]/[% right.reason.upper %] ([% right.n %])</label>
         [% END %]
       </td>
@@ -166,14 +168,14 @@
     [% FOREACH cat IN cats %]
       [% # FIXME: projectcategories may make CanVolumeBeCrownCopyright() obsolete %]
       [% NEXT IF cat == 'Crown Copyright' && ! crms.CanVolumeBeCrownCopyright(htid) %]
-      <option value="[% cat %]" [% (cat == category)? 'selected="selected"':'' %]>[% cat %]</option>
+      <option value="[% cat %]" [% (cat == u_category)? 'selected="selected"':'' %]>[% cat %]</option>
     [% END %]
   </select>
-  <textarea title="Note Text" id="NoteTextField" name="note" cols="20" rows="1">[% note %]</textarea>
+  <textarea title="Note Text" id="NoteTextField" name="note" cols="20" rows="1">[% u_note %]</textarea>
   <a style="position:absolute;left:-999px;" href="#" accesskey="n"
      onfocus="document.getElementById('NoteTextField').focus()">.</a>
-  </div>
-  <div id="SubmitForm">
+</div>
+<div id="SubmitForm">
   <table>
     <tr>
       <td><input class="review" type="submit" name="submit" value="Submit" accesskey="s"/></td>
@@ -185,7 +187,7 @@
   <table>
   [% IF expert %]
     <tr>
-      [% checked = (swiss || ((status == 2 || status == 3) && crms.GetSystemVar('swissByDefault'))) %]
+      [% checked = (u_swiss || ((status == 2 || status == 3) && crms.GetSystemVar('swissByDefault'))) %]
       <td style="text-align:left;">
         <input type="checkbox" id="swiss" name="swiss" [% (checked)? 'checked="checked"':'' %]/>
       </td>
@@ -215,46 +217,57 @@
       </td>
     </tr>
   </table>
-  [% data = crms.GetReviewsRef('adminReviews', 'Identifier', 'DESC', 'Identifier', htid) %]
-  [% reviews = data.rows %]
-  [% IF expert && import && reviews.size %]
-  <table>
-    <tr>
-      <td>
-        <div style="line-height:20px;">
-          <strong>Import user review:</strong>
-        </div>
-      </td>
-      <td>
-        <img id="importLoader" src="[% crms.WebPath('web', 'ajax-loader.gif') %]"
-             alt="loading..." style="display:none;"/>
-      </td>
-    [% FOREACH review IN reviews %]
-      <tr>
-        <td><label for="pull[% review.user %]">[% review.user %] ([% review.attr %]/[% review.reason %])</label></td>
-        <td><input type="radio" name="pullrights" id="pull[% review.user %]"
-                   [% IF import == review.user %]checked="checked"[% END %]
-                   onclick="popReviewInfo('[% htid %]','[% review.user %]', '[% sys %]');"/>
-        </td>
-      </tr>
+  [% IF expert && importUser %]
+    [% reviews = data.reviews %]
+    [% IF reviews.keys.size %]
+      <table id="importReviewsTable" data-reviews='[% data.json %]'>
+        <tr>
+          <td>
+            <div style="line-height:20px;">
+              <strong>Import user review:</strong>
+            </div>
+          </td>
+          <td>
+            <img id="importLoader" src="[% crms.WebPath('web', 'ajax-loader.gif') %]"
+                 alt="loading..." style="display:none;"/>
+          </td>
+        [% FOREACH user IN reviews.keys.sort %]
+          <tr>
+            <td><label for="pull[% user %]">[% user %] ([% reviews.$user.attr %]/[% reviews.$user.reason %])</label></td>
+            <td><input type="radio" name="pullrights" id="pull[% user %]"
+                       [% IF importUser == user %]checked="checked"[% END %]
+                       onclick="popReviewInfo('[% user %]');"/>
+            </td>
+          </tr>
+        [% END %]
+      </table>
     [% END %]
-  </table>
   [% END %]
 </div>
-
-[% IF error %]
-  <table class="ReviewError">
-    <tr>
-      <td class="reviewGrey" style="text-align:left;">
-        <strong style="color:red;">Error Message:</strong>
-      </td>
-    </tr>
-    <tr>
-      <td>
-	      <textarea cols="20" rows="5">[% error %]</textarea>
-      </td>
-    </tr>
-  </table>
-[% END %]
-
 </form>
+
+<script>
+[% IF importUser %]
+  addEvent(window, 'load', function(e)
+  {
+    popReviewInfo('[% importUser %]');
+  });
+[% END %]
+function popReviewInfo(user)
+{
+  var el = document.getElementById('importReviewsTable');
+  var data = JSON.parse(el.dataset.reviews);
+  var review = data.reviews[user];
+  var button = document.getElementById("r" + review.rights);
+  if (button) { button.checked = "checked"; }
+  button = document.getElementById("renewalFieldCheckbox");
+  if (button) { button.checked = (review.renNum != null); }
+  var field = document.getElementById("renewalField");
+  if (field) { field.value = review.renNum; }
+  document.submitReview.renDate.value = review.renDate;
+  document.submitReview.note.value = review.note;
+  selMenuItem('catMenu', (review.category)? review.category:'');
+}
+</script>
+
+</div>

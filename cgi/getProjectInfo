@@ -73,8 +73,7 @@ else
   elsif ($q eq 'addProject')
   {
     my $name = $cgi->param('name');
-    my $restrict = $cgi->param('restrict') || undef;
-    my $id = $crms->AddProject($name, $restrict);
+    my $id = $crms->AddProject($name);
     my $ref = $crms->GetProjectsRef($id);
     %data = %{$ref->[0]};
   }

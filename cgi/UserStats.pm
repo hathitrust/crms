@@ -65,7 +65,6 @@ sub GetUserStatsYears
   }
   my $sql = 'SELECT DISTINCT us.year FROM userstats us INNER JOIN users u ON us.user=u.id' .
             ' WHERE us.total_reviews>0 ' . $usersql . 'ORDER BY year DESC';
-  #print "$sql<br/>\n";
   my $ref = $self->SelectAll($sql, @params);
   #return unless scalar @{$ref};
   my @years = map {$_->[0];} @{$ref};
@@ -105,6 +104,7 @@ sub GetUserStatsQueryParams
   my $project = shift; # undef for all projects, project id for project
 
   #printf "User %s year %s proj %s<br/>\n", $user, $year, $project;
+  my $thisyear = $self->GetTheYear();
   my @params;
   my @users = ($user);
   my @years = ($year);
@@ -122,25 +122,23 @@ sub GetUserStatsQueryParams
   foreach my $user (@users)
   {
     @years = GetUserStatsYears($self, $user) unless $year;
-    #printf "<b>$user: %d years</b><br/>\n", scalar @years;
+    unshift @years, $thisyear if scalar @years and $years[0] lt $thisyear;
     my $old = 0;
     foreach my $year (@years)
     {
-      #print "<i>$user: year $year</i><br/>\n";
       my @projects = GetUserStatsProjects($self, $user, $year);
       unshift @projects, undef if scalar @projects > 1;
       foreach my $proj (@projects)
       {
         if (!$project || $project == $proj)
         {
-          #printf "$user: $year $proj<br/>\n";
           my $divid = join '_', ($user, $year, $proj);
           $divid =~ s/@//g;
           push @params, {'user' => $user, 'year' => $year, 'proj' => $proj,
                          'id' => $divid, 'old' => $old};
+          $old = 1;
         }
       }
-      $old = 1;
     }
   }
   return \@params;

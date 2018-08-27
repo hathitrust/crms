@@ -1,0 +1,78 @@
+[% sources = crms.Authorities(htid, mag, ptview) %]
+<div class="reviewPartial">
+  <table>
+    <tr>
+      <th class="nowrap">View 1:</th>
+      <td>
+        <select title="Search 1" class="review" id="search1Select" onchange="changeFrame1(1);" style="float:right;">
+        [% optopen = 0 %]
+        [% selectit = 0 %]
+        [% FOREACH src IN sources %]
+          [% IF src.url %]
+            [% selectstr = "" %]
+            [% IF selectit == 0 && src.initial == 1 %]
+              [% selectit = 1 %]
+              [% selectstr = "selected='selected'" %]
+            [% END %]
+            <option value="[% src.url %]" [% selectstr %]>[% src.name %]</option>
+          [% ELSE %]
+            [% IF optopen == 1 %]</optgroup>[% END %]
+            <optgroup label="[% src.name %]">
+            [% optopen = 1 %]
+          [% END %]
+        [% END %]
+        [% IF optopen == 1 %]</optgroup>[% END %]
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <th class="nowrap">View 2:</th>
+      <td>
+        <select title="Search 2" class="review" id="search2Select" onchange="changeFrame2(1);" style="float:right;">
+        [% optopen = 0 %]
+        [% selectit = 0 %]
+        [% FOREACH src IN sources %]
+          [% IF src.url %]
+            [% selectstr = "" %]
+            [% IF selectit == 0 && src.initial == 2 %]
+              [% selectit = 1 %]
+              [% selectstr = "selected='selected'" %]
+            [% END %]
+            <option value="[% src.url %]" [% selectstr %]>[% src.name %]</option>
+          [% ELSE %]
+            [% IF optopen == 1 %]</optgroup>[% END %]
+            <optgroup label="[% src.name %]">
+            [% optopen = 1 %]
+          [% END %]
+        [% END %]
+        [% IF optopen == 1 %]</optgroup>[% END %]
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <td></td>
+      <td style="margin:0px;padding:0px;">
+         <input type="button" class="reviewblue" value="Toggle View" onclick="flipFrame();" accesskey="o"
+         style="margin:0px;padding:1px;background-color:#e0d6de;float:right;"/>
+      </td>
+    </tr>
+    [% IF ren %]
+      [% viafwarn = crms.VIAFWarning(htid) %]
+      [% IF viafwarn %]
+        [% viafwarn = "Warning: possible foreign author: " _ viafwarn %]
+        <tr><td colspan="2"><span class="red"><strong>$viafwarn</strong></span></td></tr>
+      [% END %]
+    [% END %]
+  </table>
+  
+  <script type="text/javascript">
+<!--
+  addEvent(window, 'load', Partial_authorities_mainWindowLoad);
+  function Partial_authorities_mainWindowLoad(e)
+  {
+    changeFrame1();
+    changeFrame2();
+  }
+-->
+  </script>
+</div>

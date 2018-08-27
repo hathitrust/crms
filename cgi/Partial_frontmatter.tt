@@ -1,0 +1,244 @@
+<div class="reviewPartial" id="Partial_frontmatter_div">
+  <table>
+    <tr>
+      <td colspan="2"><strong>Sequence </strong><span id="seqSpan"></span></td>
+    <tr>
+      <td>
+        <input id="goBackButton" type="button" value="&lt;" onclick="GoBack();" disabled="disabled;"/>
+      </td>
+      <td>
+        <input id="goForwardButton" type="button" value="&gt;" onclick="GoForward();"/>
+      </td>
+    </tr>
+    
+    <tr>
+      <td colspan="2"><strong>Type</strong></td>
+    </tr>
+    <tr>
+      <td>
+        <input id="type_0" type="radio" name="type" value="0"
+               onclick="SaveSelection();"/>
+        <label for="type_0">Table of Contents</label>
+      </td>
+      <td>
+        <input id="type_1" type="radio" name="type" value="1"
+               onclick="SaveSelection();"/>
+        <label for="type_1">Illustration</label>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <input id="type_2" type="radio" name="type" value="2"
+               onclick="SaveSelection();"/>
+        <label for="type_2">Acknowledgments</label>
+      </td>
+      <td>
+        <input id="type_3" type="radio" name="type" value="3"
+               onclick="SaveSelection();"/>
+        <label for="type_3">Poetry</label>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <input id="type_4" type="radio" name="type" value="4"
+               onclick="SaveSelection();"/>
+        <label for="type_4">Manifesto</label>
+      </td>
+      <td>
+        <input id="type_5" type="radio" name="type" value="5"
+               onclick="SaveSelection();"/>
+        <label for="type_5">Rant</label>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>Character</strong></td>
+    </tr>
+    <tr>
+      <td>
+        <input id="character_0" type="radio" name="character" value="0"
+               onclick="SaveSelection();"/>
+        <label for="character_0">Factual</label>
+      </td>
+      <td>
+        <input id="character_1" type="radio" name="character" value="1"
+               onclick="SaveSelection();"/>
+        <label for="character_1">Creative</label>
+      </td>
+    </tr>
+        
+    <form name="submitCorrection" action="crms">
+    <input type="hidden" name="p" value="finishReview"/>
+    <input type="hidden" name="htid" value="[% htid %]"/>
+    <input type="hidden" id="data_hf" name="data" value="[% data %]"/>
+    <input type="hidden" name="start" value="[% crms.GetNow() %]"/>
+    
+    <tr>
+      <td colspan="2"><strong>Notes: </strong></td>
+    </tr>
+    <tr>
+      <td colspan="2"><textarea title="Note Text" id="NoteTextField" name="note" cols="20" rows="1">[% note %]</textarea></td>
+    </tr>
+    <tr>
+      <td>
+        <input class="review" type="submit" name="submit" value="Submit" id="submitButton"
+               accesskey="s" onclick="SaveSelection();this.form.onsubmit=null;"/>
+      </td>
+      <td style="padding-left:2em;">
+        <input class="review" type="submit" name="submit" value="Cancel"
+               accesskey="c" onclick="this.form.onsubmit=null;"/>
+      </td>
+    </tr>
+  </table>
+  <a style="position:absolute;left:-999px;" href="#" accesskey="n"
+       onfocus="document.getElementById('NoteTextField').focus()">.</a>
+
+  [% IF error %]
+    <table class="ReviewError">
+      <tr>
+        <td class="reviewGrey" align="left">
+          <strong style="color:red;">Warning:</strong>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <textarea cols="20" rows="5">[% error %]</textarea>
+        </td>
+      </tr>
+    </table>
+  [% END %]
+  </form>
+  <span id="debugArea"></span>
+
+
+<script>
+  var imgsrv = 'https://' + '[% env.HTTP_HOST %]' + '/cgi/imgsrv/image?debug=super;id=' + '[% htid %]';
+  imgsrv = 'https://test.babel.hathitrust.org/cgi/imgsrv/image?debug=super;id=' + '[% htid %]';
+  var seq = 1;
+  var pages = 4;
+  var data = [% IF data %]
+               [% data %]
+             [% ELSE %]
+               new Array(pages)
+             [% END %];
+
+  window.onload = function(e)
+  {
+    el = document.getElementById('goBackButton');
+    el.disabled = true;
+    el = document.getElementById('submitButton');
+    el.disabled = true;
+    var el = document.getElementById('tFrame');
+    //el.src = imgsrv + ';seq=1';
+    var el = document.getElementById('seqSpan');
+    el.innerHTML = seq;
+    RestoreSelection();
+    //Debug(imgsrv);
+  }
+
+  function GoForward()
+  {
+    if (seq < pages)
+    {
+      SaveSelection();
+      //Debug(data);
+      var el = document.getElementById('tFrame');
+      seq++;
+      var fulladdr = imgsrv + ';seq=' + seq;
+      //el.src = fulladdr;
+      //Debug(fulladdr);
+      var el = document.getElementById('seqSpan');
+      el.innerHTML = seq;
+      el = document.getElementById('goBackButton');
+      el.disabled = false;
+      RestoreSelection();
+    }
+    el = document.getElementById('goForwardButton');
+    el.disabled = (seq >= pages);
+  }
+
+  function GoBack()
+  {
+    if (seq > 1)
+    {
+      SaveSelection();
+      //Debug(data);
+      var el = document.getElementById('tFrame');
+      seq--;
+      var fulladdr = imgsrv + ';seq=' + seq;
+      //el.src = fulladdr;
+      //Debug(fulladdr);
+      var el = document.getElementById('seqSpan');
+      el.innerHTML = seq;
+      RestoreSelection();
+    }
+    if (seq <= 1)
+    {
+      var el = document.getElementById('goBackButton');
+      el.disabled = true;
+    }
+    var el = document.getElementById('goForwardButton');
+    el.disabled = (seq >= pages);
+  }
+  
+  function SaveSelection()
+  {
+    var els = document.getElementsByName("type");
+    var type = GetCheckedValue(els);
+    els = document.getElementsByName("character");
+    var character = GetCheckedValue(els);
+    if (type || character)
+    {
+      data[seq - 1] = [type, character];
+    }
+    var el = document.getElementById('data_hf');
+    el.value = JSON.stringify(data);
+    CheckCompleteness();
+  }
+  
+  function RestoreSelection()
+  {
+    //var msg = 'SEQ '+seq+": "+data+"<br/>\n";
+    var vals = data[seq - 1];
+    var val0 = vals? (vals[0]? vals[0]:-1):-1;
+    var val1 = vals? (vals[1]? vals[1]:-1):-1;
+    var button = document.getElementById("type_" + val0);
+    if (button) { button.checked = "checked"; }
+    button = document.getElementById("character_" + val1);
+    if (button) { button.checked = "checked"; }
+    var buttons = document.getElementsByName("type");
+    for (var i=0; i<buttons.length; i++)
+    {
+      buttons[i].checked = (i == val0);
+    }
+    buttons = document.getElementsByName("character");
+    for (var i=0; i<buttons.length; i++)
+    {
+      buttons[i].checked = (i == val1);
+      //msg += "i "+i+" val1 "+val1+", checked"+buttons[i].checked+"<br/>\n";
+    }
+    //Debug(msg);
+  }
+  
+  function CheckCompleteness()
+  {
+    var complete = true;
+    for (var i=0; i<data.length; i++)
+    {
+      if (data[i] == undefined ||
+          data[i][0] == undefined ||
+          data[i][1] == undefined)
+      {
+        complete = false;
+        break;
+      }
+    }
+    if (complete)
+    {
+      var el = document.getElementById('submitButton');
+      el.disabled = false;
+    }
+    Debug((complete)? "<span style='color:green;'>Complete</span>":"<span style='color:red;'>Incomplete</span>");
+    Debug(data);
+  }
+</script>
+</div>

@@ -706,4 +706,58 @@ sub GetAllSubfields
   return \@data;
 }
 
+# An item is a probable gov doc if one of the following is true. All are case insensitive.
+# Author begins with "United States" and 260 is blank
+# Author begins with "United States" and 260a begins with "([)Washington"
+# Author begins with "United States" and 260b begins with "U.S. G.P.O." or "U.S. Govt. Print. Off."
+# Author begins with "Library of Congress" and 260a begins with "Washington"
+# Title begins with "Code of Federal Regulations" and 260a begins with "Washington"
+# Author is blank and 260(a) begins with "([)Washington" and 260(b) begins with "U.S." or "G.P.O."
+# Author is blank and 260(b) includes "National Aeronautics and Space"
+# Author begins with "Federal Reserve Bank"
+# Author includes "Bureau of Mines"
+sub IsProbableGovDoc
+{
+  my $self   = shift;
+
+  my $author = $self->author;
+  my $title = $self->title;
+  my $xml = $self->xml;
+  my $xpath  = '//*[local-name()="datafield" and @tag="260"]/*[local-name()="subfield" and @code="a"]';
+  my $field260a = $xml->findvalue($xpath);
+  $xpath  = '//*[local-name()="datafield" and @tag="260"]/*[local-name()="subfield" and @code="b"]';
+  my $field260b = $xml->findvalue($xpath);
+  $field260a =~ s/^\s*(.*?)\s*$/$1/;
+  $field260b =~ s/^\s*(.*?)\s*$/$1/;
+  # If there is an alphabetic character in 008:28 other than 'f',
+  # we accept it and say it is NOT probable
+  $xpath  = q{//*[local-name()='controlfield' and @tag='008']};
+  my $leader = lc $xml->findvalue($xpath);
+  if (length $leader >28)
+  {
+    my $code = substr($leader, 28, 1);
+    return 0 if ($code ne 'f' && $code =~ m/[a-z]/);
+  }
+  if (defined $author && $author =~ m/^united\s+states/i)
+  {
+    return 1 unless $field260a or $field260b;
+    return 1 if $field260a =~ m/^\[?washington/i;
+    return 1 if $field260b and $field260b =~ m/^u\.s\.\s+g\.p\.o\./i;
+    return 1 if $field260b and $field260b =~ m/^u\.s\.\s+govt\.\s+print\.\s+off\./i;
+  }
+  return 1 if defined $author and $author =~ m/^library\s+of\s+congress/i and $field260a =~ m/^washington/i;
+  return 1 if defined $title and $title =~ m/^code\s+of\s+federal\s+regulations/i and $field260a =~ m/^washington/i;
+  if (!$author)
+  {
+    return 1 if $field260a =~ m/^\[?washington/i and $field260b =~ m/^(u\.s\.|g\.p\.o\.)/i;
+    return 1 if $field260b and $field260b =~ m/national\s+aeronautics\s+and\s+space/i;
+  }
+  else
+  {
+    return 1 if $author =~ m/^federal\s+reserve\s+bank/i;
+    return 1 if $author =~ m/bureau\s+of\s+mines/i;
+  }
+  return 0;
+}
+
 return 1;

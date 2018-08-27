@@ -88,6 +88,9 @@
 
 [% IF p_inst || p_year || p_proj %]
   [% params = crms.GetUserStatsQueryParams(p_inst, p_year, p_proj) %]
+  [% IF params.size == 0 %]
+    <h3>No statistics recorded with those properties.</h3>
+  [% END %]
   [% FOREACH param IN params %]
     [% divid = param.id %]
     [% style = (param.old)? 'display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;' : '' %]

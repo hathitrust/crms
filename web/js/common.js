@@ -108,3 +108,16 @@ function ToggleDiv(id, className)
   else { el.className = 'divHide'; }
 }
 
+// https://stackoverflow.com/questions/15564029/adding-to-window-onload-event
+// Example: addEvent(window, 'load', myfunc);
+function addEvent(element, eventName, fn)
+{
+  if (element.addEventListener)
+  {
+    element.addEventListener(eventName, fn, false);
+  }
+  else if (element.attachEvent)
+  {
+    element.attachEvent('on' + eventName, fn);
+  }
+}

@@ -297,6 +297,10 @@ function populateProject(data, table)
   cell.innerHTML = (data.group_volumes == 1)? '<img width="16" height="16" alt="Checked" src="[% checkicon %]"/>':'';
   cell.style.textAlign = 'center';
   cell = row.insertCell(8);
+  cell.className = 'nowrap';
+  cell.innerHTML = (data.single_review == 1)? '<img width="16" height="16" alt="Checked" src="[% checkicon %]"/>':'';
+  cell.style.textAlign = 'center';
+  cell = row.insertCell(9);
   var input = document.createElement('input');
   input.setAttribute('type', 'color');
   input.id = data.id+'color';
@@ -363,31 +367,6 @@ function addProject(name)
 <table style="width:50%">
 <tr>
 <td style="vertical-align:top;">
-  <!--
-  <table class="exportStats">
-    <tr>
-      <th class="nowrap">Add Project</th>
-      <th class="nowrap">Name</th>
-      <th class="nowrap">Restricted</th>
-    </tr>
-    <tr class="nowrap">
-      <td>
-        <input type="button" onclick="addProject();" value="Add"/>
-        <img id="addLoader" style="visibility:hidden;" src="[% crms.WebPath('web', 'ajax-loader.gif') %]" alt="Adding..."/>
-      </td>
-      <td class="nowrap">
-        <input type="text" id="addName" name="name"></input>
-      </td>
-      <td class="nowrap">
-        <input type="checkbox" id="restrictE" name="restrictE">
-        <label for="restrictE">Expert</label><br/>
-        <input type="checkbox" id="restrictA" name="restrictA">
-        <label for="restrictA">Admin</label>
-      </td>
-    </tr>
-  </table>
-  <br/>
-  -->
   <table class="exportStats" id="projectsTable" style="display:none">
     <thead>
       <th>ID</th>
@@ -397,7 +376,8 @@ function addProject(name)
       <th>Queue</th>
       <th>Determinations</th>
       <th>Auto-Inherit</th>
-      <th>Group&nbsp;Volumes</th>
+      <th>Group Volumes</th>
+      <th>Single Review</th>
       <th>Color</th>
     </thead>
     <tbody id=projectsTableBody>

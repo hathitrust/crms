@@ -14,7 +14,7 @@ use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 
 my $usage = <<END;
-USAGE: $0 [-acCehlmpqt] [-x SYS] [-m USER [-m USER...]] [start_date [end_date]]
+USAGE: $0 [-acehlmpqt] [-x SYS] [-m USER [-m USER...]] [start_date [end_date]]
 
 Processes reviews, exports determinations, updates candidates,
 updates the queue, recalculates user stats, and clears stale locks.
@@ -24,7 +24,6 @@ with latest rights DB timestamp between them.
 
 -a      Do not synchronize local attribute/reason tables with Rights Database.
 -c      Do not update candidates.
--C      Do not process CRI.
 -e      Do not process statuses or export determinations.
 -h      Print this help message.
 -l      Do not clear old locks.
@@ -39,15 +38,14 @@ with latest rights DB timestamp between them.
 END
 
 my $instance;
-my ($skipAttrReason, $skipCandidates, $skipExport, $help, $skipCRI,
-    $skipLocks, @mails, $skipQueueNoMeta, $production, $skipQueue, $skipStats, $training,
+my ($skipAttrReason, $skipCandidates, $skipExport, $help, $skipLocks,
+    @mails, $skipQueueNoMeta, $production, $skipQueue, $skipStats, $training,
     $verbose, $sys);
 
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
            'a'    => \$skipAttrReason,
            'c'    => \$skipCandidates,
-           'C'    => \$skipCRI,
            'e'    => \$skipExport,
            'h|?'  => \$help,
            'l'    => \$skipLocks,
@@ -103,16 +101,16 @@ else
   $crms->ReportMsg($rc, 1);
   $crms->ReportMsg("<b>Done</b> exporting.", 1);
 }
-if (!$crms->GetSystemVar('cri')) { $crms->ReportMsg('CRI system variable not set; skipping.', 1); }
-elsif ($skipCRI) { $crms->ReportMsg('-i flag set; skipping CRI processing.', 1); }
-else
-{
-  $crms->ReportMsg('Starting to process CRI.', 1);
-  use CRI;
-  my $cri = CRI->new('crms' => $crms);
-  $cri->ProcessCRI();
-  $crms->ReportMsg('DONE processing CRI.', 1);
-}
+#if (!$crms->GetSystemVar('cri')) { $crms->ReportMsg('CRI system variable not set; skipping.', 1); }
+#elsif ($skipCRI) { $crms->ReportMsg('-i flag set; skipping CRI processing.', 1); }
+#else
+#{
+#  $crms->ReportMsg('Starting to process CRI.', 1);
+#  use CRI;
+#  my $cri = CRI->new('crms' => $crms);
+#  $cri->ProcessCRI();
+#  $crms->ReportMsg('DONE processing CRI.', 1);
+#}
 
 if ($skipCandidates) { $crms->ReportMsg("-c flag set; skipping candidates load.", 1); }
 else
@@ -134,9 +132,9 @@ else
 if ($skipStats) { $crms->ReportMsg('-s flag set; skipping monthly stats.', 1); }
 else
 {
-  $crms->ReportMsg('Starting to update user stats.', 1);
+  $crms->ReportMsg('Starting to update monthly stats.', 1);
   $crms->UpdateUserStats();
-  $crms->ReportMsg('<b>Done</b> updating user stats.', 1);
+  $crms->ReportMsg('<b>Done</b> updating monthly stats.', 1);
 }
 
 if ($skipLocks) { $crms->ReportMsg('-l flag set; skipping unlock.', 1); }

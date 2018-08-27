@@ -1,0 +1,50 @@
+[% IF expert %]
+<div class="reviewPartial">
+  <table>
+  [% IF status == 3 %]
+    <tr><td><span style="font-size:1.1em;color:red;">Provisional Match</span></td></tr>
+  [% ELSIF status == 2 %]
+    <tr><td><span style="font-size:1.1em;color:red;">Conflict</span></td></tr>
+  [% END %]
+  <tr><td><span style="font-size:1.1em">
+    [% IF crms.IsVolumeInQueue(htid) %]
+      Priority [% crms.GetPriority(htid) %]
+    [% ELSE %]
+      Not in queue. Please cancel; you will get an error if you submit.
+    [% END %]
+  </span></td></tr>
+  [% totalReviews = crms.GetReviewCount(htid, 1) %]
+  [% IF totalReviews > 0 %]
+    <tr><td><a class="smallishText"
+               href="[% crms.WebPath('cgi', 'crms?p=adminHistoricalReviews;search1=Identifier;search1value=' _ htid) %]"
+               target="_blank">
+    [% totalReviews %] historical [% crms.Pluralize("review", totalReviews) %]
+    </a></td></tr>
+    <tr><td>
+      <span class="smallishText" style="color:green;">
+        Current rights [% crms.GetCurrentRights(htid) %]
+      </span>
+    </td></tr>
+  [% END %]
+  [% totalReviews = crms.GetReviewCount(htid) %]
+  [% IF totalReviews > 0 %]
+    <tr><td><a class="smallishText"
+               href="[% crms.WebPath('cgi', 'crms?p=adminReviews;search1=Identifier;search1value=' _ htid) %]"
+               target="_blank">
+    [% totalReviews %] active [% crms.Pluralize("review", totalReviews) %]
+    </a></td></tr>
+  [% END %]
+  [% IF info.addedby %]
+    <tr><td><span class="smallishText">Added by [% info.addedby %]</span></td></tr>
+  [% END %]
+  [% status = crms.GetSystemStatus() %]
+  [% IF status.2 %]
+    <tr>
+      <td style="align:left;">
+        <span style="font-size:1.3em;font-weight:bold;color:#990000;">[% status.2 %]</span>
+      </td>
+    </tr>
+  [% END %]
+  </table>
+</div>
+[% END %]
