@@ -14,7 +14,6 @@
 [% p              = cgi.param('p')            %]
 [% stype          = cgi.param('stype')        %]
 [% pagesize       = cgi.param('records')      %]
-[% jump           = cgi.param('jump')         %]
 [% pagesize = pagesize.replace('\D','')       %]
 
 [% sys = crms.get('sys') %]
@@ -38,10 +37,6 @@ function CheckAll(box,formid)
 }
 -->
 </script>
-
-[% IF jump %]
-[% offset = (jump - 1) * pagesize %]
-[% END %]
 
 [% IF p == 'adminHistoricalReviews' && !search1.length() AND !search2.length() AND !search3.length() %]
   [% ref = {volumes => 0, reviews => 0} %]
@@ -111,7 +106,7 @@ function CheckAll(box,formid)
 
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   
-  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0;download=1" %]" target="_blank">download</a>
+  <a href="?[% crms.URLify(cgi) _ ";download=1" %]" target="_blank">download</a>
   <a class='tip' href='#'>
     <img width="16" height="16" alt="Rights/Reason Help" src="[% crms.WebPath('web', 'help.png') %]"/>
     <span>

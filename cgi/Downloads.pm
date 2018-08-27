@@ -10,19 +10,20 @@ sub Download
 {
   my $crms = shift;
   my $cgi  = shift;
-  
-  my $page             = $cgi->param('p');
-  my $order            = $cgi->param('order');
-  my $dir              = $cgi->param('dir');
-  my $search1          = $cgi->param('search1');
-  my $search1value     = $cgi->param('search1value');
-  my $op1              = $cgi->param('op1');
-  my $search2          = $cgi->param('search2');
-  my $search2value     = $cgi->param('search2value');
-  my $startDate        = $cgi->param('startDate');
-  my $endDate          = $cgi->param('endDate');
-  my $stype            = $cgi->param('stype');
-  my $q                = $cgi->param('q');
+
+  my $page         = $cgi->param('p');
+  my $order        = $cgi->param('order');
+  my $dir          = $cgi->param('dir');
+  my $search1      = $cgi->param('search1');
+  my $search1value = $cgi->param('search1value');
+  my $op1          = $cgi->param('op1');
+  my $search2      = $cgi->param('search2');
+  my $search2value = $cgi->param('search2value');
+  my $startDate    = $cgi->param('startDate');
+  my $endDate      = $cgi->param('endDate');
+  my $offset       = $cgi->param('offset');
+  my $stype        = $cgi->param('stype');
+  my $q            = $cgi->param('q');
   my $success = 1;
 
   if ($page eq 'track')
@@ -53,7 +54,7 @@ sub Download
     my $search3value     = $cgi->param('search3value');
     $success = $crms->SearchAndDownload($page, $order, $dir, $search1, $search1value, $op1,
                                         $search2, $search2value, $op2, $search3, $search3value,
-                                        $startDate, $endDate, $stype);
+                                        $startDate, $endDate, $offset, $stype);
   }
   return $success;
 }
