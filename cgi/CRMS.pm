@@ -323,7 +323,7 @@ sub set
 # will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.1.3';
+  return '7.1.4';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -2916,6 +2916,7 @@ sub SearchAndDownloadExportData
   my $search2Value = shift;
   my $startDate    = shift;
   my $endDate      = shift;
+  my $offset       = shift;
 
   my $buff = $self->GetExportDataRef($order, $dir, $search1, $search1Value, $op1,
                                      $search2, $search2Value, $startDate, $endDate,
