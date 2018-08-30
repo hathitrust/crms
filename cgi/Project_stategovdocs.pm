@@ -82,13 +82,13 @@ sub IsStateGovDoc
                    $field110ab =~ m/\(state\)/i;
 }
 
-
-
-
 # ========== REVIEW ========== #
-sub ReviewPage
+sub ReviewPartials
 {
-  return 'review';
+  return ['Partial_reviewTop.tt', 'Partial_bibdata.tt',
+          #'Partial_authorities.tt',
+          'Partial_HTView.tt',
+          'Partial_copyrightForm.tt', 'Partial_expertDetails.tt'];
 }
 
 1;

@@ -1787,9 +1787,10 @@ sub SubmitUserReviewForProject
   my $cgi  = shift;
   my $proj = shift;
 
-  $self->ProjectDispatch($proj, 'SubmitUserReview', $id, $user, $cgi);
+  $self->ProjectDispatch($proj, 'SubmitUserReview', 1, $id, $user, $cgi);
 }
 
+# Default built-in submission 
 sub SubmitUserReview
 {
   my $self = shift;
@@ -1802,9 +1803,9 @@ sub SubmitUserReview
   my $category = $cgi->param('category');
   my $renNum   = $cgi->param('renNum');
   my $renDate  = $cgi->param('renDate');
-  my $hold     = $cgi->param('hold');
+  my $hold     = $cgi->param('hold') || 0;
   my $swiss    = $cgi->param('swiss');
-  my $pre      = $cgi->param('prepopulated');
+  my $pre      = $cgi->param('prepopulated') || 0;
   my $start    = $cgi->param('start');
   return 'You must select a rights/reason combination.' unless $rights;
   my ($attr, $reason) = $self->GetAttrReasonFromCode($rights);
@@ -1813,9 +1814,12 @@ sub SubmitUserReview
   $err = $self->ValidateSubmission($id, $user, $attr, $reason, $note, $category,
                                    $renNum, $renDate);
   return $err if $err;
-  #Process the submission, and go on to the next item
-  $self->SubmitReview($id, $user, $attr, $reason, $note, $renNum, $self->IsUserExpert($user),
-                      $renDate, $category, $swiss, $hold, $pre, $start);
+  my $json = JSON::XS->new;
+  my $params = {'attr' => $attr, 'reason' => $reason, 'category' => $category,
+                'note' => $note, 'data' => $json->encode([$renNum, $renDate]),
+                'swiss' => $swiss, 'hold' => $hold, 'prepopulated' => $pre,
+                'start' => $start};
+  $self->SubmitReview($id, $user, $params);
   return join ', ', @{$self->GetErrors()};
 }
 
@@ -1841,12 +1845,12 @@ sub SubmitReview
     my $value = $params->{$field};
     if ($field eq 'start')
     {
-      my $dur = $self->SimpleSqlGet('SELECT TIMEDIFF(NOW(),?)', $value);
+      $value = $self->SimpleSqlGet('SELECT TIMEDIFF(NOW(),?)', $value);
       my $sql = 'SELECT duration FROM reviews WHERE id=? AND user=?';
       my $dur2 = $self->SimpleSqlGet($sql, $id, $user);
       if (defined $dur2)
       {
-        $value = $self->SimpleSqlGet('SELECT ADDTIME(?,?)', $dur, $dur2);
+        $value = $self->SimpleSqlGet('SELECT ADDTIME(?,?)', $value, $dur2);
       }
       $field = 'duration';
     }
@@ -2898,6 +2902,7 @@ sub SearchAndDownloadExportData
   my $search2Value = shift;
   my $startDate    = shift;
   my $endDate      = shift;
+  my $offset       = shift;
 
   my $buff = $self->GetExportDataRef($order, $dir, $search1, $search1Value, $op1,
                                      $search2, $search2Value, $startDate, $endDate,
@@ -4553,6 +4558,7 @@ sub CreateUserStatsReport
   my $user    = shift;
   my $year    = shift;
   my $project = shift;
+  my $active  = shift;
 
   use UserStats;
   return UserStats::CreateUserStatsReport($self, $user, $year, $project);
@@ -4980,6 +4986,8 @@ sub ReviewData
                                                              $ref->{$user}->{'reason'});
     $ref->{$user}->{'attr'} = $self->TranslateAttr($ref->{$user}->{'attr'});
     $ref->{$user}->{'reason'} = $self->TranslateReason($ref->{$user}->{'reason'});
+    $sql = 'SELECT data FROM reviewdata WHERE id=?';
+    $ref->{$user}->{'data'} = $self->SimpleSqlGet($sql, $ref->{$user}->{'data'});
   }
   $q->{'reviews'} = $ref;
   $q->{'json'} = JSON::XS->new->encode($q);
@@ -5193,14 +5201,20 @@ sub ReviewPartialsForProject
 
 sub ProjectDispatch
 {
-  my $self = shift;
-  my $proj = shift || 1;
-  my $sub  = shift;
+  my $self    = shift;
+  my $proj    = shift;
+  my $sub     = shift;
+  my $default = shift;
 
+  $self->SetError('ProjectDispatch() needs explicit project') unless $proj;
   my $mod = $self->ProjectModule($proj);
   if (defined $mod && $mod->can($sub))
   {
     return $mod->$sub(@_);
+  }
+  elsif ($default)
+  {
+    return $self->$sub(@_);
   }
   else
   {
@@ -8323,7 +8337,7 @@ sub GetUserProjects
   my $user = shift || $self->get('user');
 
   my $sql = 'SELECT pu.project,p.name,'.
-            '(SELECT COUNT(*) FROM queue q WHERE q.project=pu.project)'.
+            '(SELECT COUNT(*) FROM queue q WHERE q.project=pu.project AND status=0)'.
             ' FROM projectusers pu INNER JOIN projects p ON pu.project=p.id WHERE pu.user=?'.
             ' ORDER BY p.name';
   #print "$sql\n";

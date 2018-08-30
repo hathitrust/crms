@@ -1,3 +1,6 @@
+[% u_note = (error)? cgi.param('note') : data.$user.note %]
+[% u_data = (error)? cgi.param('data') : data.reviews.$user.data %]
+
 <div class="reviewPartial" id="Partial_frontmatter_div">
   <table>
     <tr>
@@ -80,32 +83,17 @@
     </tr>
     <tr>
       <td>
-        <input class="review" type="submit" name="submit" value="Submit" id="submitButton"
+        <input class="review" type="submit" name="submit" value="Save" id="submitButton"
                accesskey="s" onclick="SaveSelection();this.form.onsubmit=null;"/>
       </td>
       <td style="padding-left:2em;">
-        <input class="review" type="submit" name="submit" value="Cancel"
+        <input class="review" type="submit" name="submit" value="Cancel" id="cancelButton"
                accesskey="c" onclick="this.form.onsubmit=null;"/>
       </td>
     </tr>
   </table>
-  <a style="position:absolute;left:-999px;" href="#" accesskey="n"
-       onfocus="document.getElementById('NoteTextField').focus()">.</a>
-
-  [% IF error %]
-    <table class="ReviewError">
-      <tr>
-        <td class="reviewGrey" align="left">
-          <strong style="color:red;">Warning:</strong>
-        </td>
-      </tr>
-      <tr>
-        <td>
-          <textarea cols="20" rows="5">[% error %]</textarea>
-        </td>
-      </tr>
-    </table>
-  [% END %]
+  <!--<a style="position:absolute;left:-999px;" href="#" accesskey="n"
+       onfocus="document.getElementById('NoteTextField').focus()">.</a>-->
   </form>
   <span id="debugArea"></span>
 
@@ -115,8 +103,8 @@
   imgsrv = 'https://test.babel.hathitrust.org/cgi/imgsrv/image?debug=super;id=' + '[% htid %]';
   var seq = 1;
   var pages = 4;
-  var data = [% IF data %]
-               [% data %]
+  var data = [% IF u_data %]
+               [% u_data %]
              [% ELSE %]
                new Array(pages)
              [% END %];
@@ -132,7 +120,6 @@
     var el = document.getElementById('seqSpan');
     el.innerHTML = seq;
     RestoreSelection();
-    //Debug(imgsrv);
   }
 
   function GoForward()
@@ -214,31 +201,47 @@
     for (var i=0; i<buttons.length; i++)
     {
       buttons[i].checked = (i == val1);
-      //msg += "i "+i+" val1 "+val1+", checked"+buttons[i].checked+"<br/>\n";
     }
-    //Debug(msg);
+    CheckCompleteness();
   }
   
+  // If the user has entered any data, disable Cancel button,
+  // and enable Save/Submit.
   function CheckCompleteness()
   {
     var complete = true;
+    var started = false;
     for (var i=0; i<data.length; i++)
     {
+      if (data[i] && (data[i][0] || data[i][1]))
+      {
+        started = true;
+      }
       if (data[i] == undefined ||
           data[i][0] == undefined ||
           data[i][1] == undefined)
       {
         complete = false;
-        break;
       }
     }
-    if (complete)
+    if (started)
     {
       var el = document.getElementById('submitButton');
       el.disabled = false;
+      if (complete) el.value = "Submit";
+      var el = document.getElementById('cancelButton');
+      el.disabled = true;
     }
-    Debug((complete)? "<span style='color:green;'>Complete</span>":"<span style='color:red;'>Incomplete</span>");
-    Debug(data);
+    else
+    {
+      var el = document.getElementById('submitButton');
+      el.disabled = true;
+      var el = document.getElementById('cancelButton');
+      el.disabled = false;
+    }
+    //Debug(data);
+    //Debug((complete)? "<span style='color:green;'>Complete</span>":
+    //                  "<span style='color:red;'>Incomplete</span>", 1);
   }
 </script>
 </div>

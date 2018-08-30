@@ -21,8 +21,8 @@
       [% FOREACH proj IN projs %][% names.push(proj.name) %][% END %]
       <i>[% names.join(', ') %]</i>.
       [% cp = crms.GetUserProperty(user, 'project') %]
-      [% name = crms.GetProjectName(cp) %]
-      Your current project is <i>[% name %]</i>.
+      [% proj = crms.GetProjectRef(cp) %]
+      Your current project is <i>[% proj.name %]</i>.
     [% END %]
     </h2><br/><br/>
     <div class="warningSubbox">

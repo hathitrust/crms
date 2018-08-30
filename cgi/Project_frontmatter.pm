@@ -48,12 +48,26 @@ sub SubmitUserReview
   my $cgi  = shift;
 
   my $crms = $self->{'crms'};
-  #$crms->Note('SubmitUserReview for frontmatter');
+  my $data;
+  eval {
+    my $json = JSON::XS->new;
+    $data = $json->decode($cgi->param('data'));
+  };
+  return $@ if $@;
+  my $hold = 0;
+  foreach my $datum (@{$data})
+  {
+    unless (defined $datum->[0] && length $datum->[0] &&
+            defined $datum->[1] && length $datum->[1])
+    {
+      $hold = 1;
+      last;
+    }
+  }
   my $params = {'data' => $cgi->param('data'),
                 'note' => Encode::decode('UTF-8', $cgi->param('note')),
-                'start' => $cgi->param('start')};
+                'start' => $cgi->param('start'), 'hold' => $hold};
   return $crms->SubmitReview($id, $user, $params);
-  
 }
 
 1;

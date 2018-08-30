@@ -217,19 +217,19 @@ function SelectedCategory()
 // there are no radio buttons
 function GetCheckedValue(radioObj)
 {
-  if (!radioObj) { return ""; }
+  if (!radioObj) { return null; }
   var radioLength = radioObj.length;
   if (radioLength == undefined)
   {
     if (radioObj.checked) { return radioObj.value; }
-    else { return ""; }
+    else { return null; }
   }
   var i;
   for (i = 0; i < radioLength; i++)
   {
     if (radioObj[i].checked) { return radioObj[i].value; }
   }
-  return "";
+  return null;
 }
 
 function zoom(selector,name)
