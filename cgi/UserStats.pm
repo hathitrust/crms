@@ -42,11 +42,10 @@ sub GetAllMonthsInYear
   return @months;
 }
 
-# Ordered from newest to oldest.
-sub GetUserStatsYears
+sub GetUserStatsProjects
 {
   my $self = shift;
-  my $user = shift; # undef for everyone, institution id, or user id
+  my $user = shift || 0;
 
   my $usersql = '';
   my @params;
@@ -54,45 +53,58 @@ sub GetUserStatsYears
   {
     if ($user =~ m/^\d+$/)
     {
-      $usersql = 'AND u.institution=? ';
+      my @users = map {$_->{'id'};} @{$self->GetInstitutionReviewers($user)};
+      $usersql = ' WHERE us.user IN '. $self->WildcardList(scalar @users);
+      push @params, $_ for @users;
+    }
+    else
+    {
+      $usersql = ' WHERE us.user=?';
+      push @params, $user;
+    }
+  }
+  my $sql = 'SELECT DISTINCT us.project FROM userstats us'.
+            ' INNER JOIN users u ON us.user=u.id'.
+            ' INNER JOIN institutions i ON u.institution=i.id '.
+            $usersql. ' ORDER BY project ASC';
+  my $ref = $self->SelectAll($sql, @params);
+  return map {$_->[0];} @{$ref};
+}
+
+# Ordered from newest to oldest.
+sub GetUserStatsYears
+{
+  my $self = shift;
+  my $user = shift || 0; # undef for everyone, institution id, or user id
+  my $proj = shift;
+
+  my ($usersql, $projsql) = ('', '');
+  my @params;
+  if ($user)
+  {
+    if ($user =~ m/^\d+$/)
+    {
+      $usersql = ' AND u.institution=? ';
       push @params, $user;
     }
     else
     {
-      $usersql = 'AND us.user=? ';
+      $usersql = ' AND us.user=? ';
       push @params, $user;
     }
   }
-  my $sql = 'SELECT DISTINCT us.year FROM userstats us INNER JOIN users u ON us.user=u.id' .
-            ' WHERE us.total_reviews>0 ' . $usersql . 'ORDER BY year DESC';
-  #print "$sql<br/>\n";
-  my $ref = $self->SelectAll($sql, @params);
-  #return unless scalar @{$ref};
-  my @years = map {$_->[0];} @{$ref};
-  #my $thisyear = $self->GetTheYear();
-  #push @years, $thisyear unless $years[-1] ge $thisyear;
-  return @years;
-}
-
-sub GetUserStatsProjects
-{
-  my $self = shift;
-  my $user = shift || '';
-  my $year = shift;
-
-  my $usersql = '';
-  my @params = ($year);
-  if ($user)
+  if ($proj)
   {
-    $usersql = ' AND user=? ';
-    push @params, $user;
+    $projsql = ' AND us.project=? ';
+    push @params, $proj;
   }
-  my $sql = 'SELECT DISTINCT project FROM userstats'.
-            ' WHERE year=?'. $usersql. 'ORDER BY project ASC';
+  my $sql = 'SELECT DISTINCT us.year FROM userstats us'.
+            ' INNER JOIN users u ON us.user=u.id' .
+            ' WHERE us.total_reviews>0 '.
+            $usersql. $projsql. ' ORDER BY year DESC';
   my $ref = $self->SelectAll($sql, @params);
-  #printf "$sql: $year, $user %d results<br/>\n", scalar @{$ref};
-  #return unless scalar @{$ref};
-  return map {$_->[0];} @{$ref};
+  my @years = map {$_->[0];} @{$ref};
+  return @years;
 }
 
 # Returns arrayref of arrayrefs, each being a structure with keys in
@@ -100,47 +112,49 @@ sub GetUserStatsProjects
 sub GetUserStatsQueryParams
 {
   my $self    = shift;
-  my $user    = shift; # undef for everyone, institution id, or user id
-  my $year    = shift; # undef for year-by-year, year for month-by-month
-  my $project = shift; # undef for all projects, project id for project
+  my $user    = shift || 0; # 0 for everyone, institution id, or user id
+  my $year    = shift || 0; # 0 for year-by-year, year for month-by-month
+  my $project = shift || 0; # 0 for all projects, project id for project
 
-  #printf "User %s year %s proj %s<br/>\n", $user, $year, $project;
+  my $thisyear = $self->GetTheYear();
   my @params;
   my @users = ($user);
   my @years = ($year);
-  if (!$user)
+  if ($user eq '0')
   {
-    @users = map {$_->{'id'};} @{$self->GetUsers()};
-    unshift @users, undef;
+    @users = (undef);
+    my $sql = 'SELECT id FROM institutions ORDER BY name ASC';
+    foreach my $row (@{$self->SelectAll($sql)})
+    {
+      my $inst = $row->[0];
+      push @users, $inst;
+      push @users, $_->{'id'} for @{$self->GetInstitutionReviewers($inst)};
+    }
   }
   elsif ($user =~ m/^\d+$/)
   {
     @users = map {$_->{'id'};} @{$self->GetInstitutionReviewers($user)};
     unshift @users, $user;
-    #print "-- USER ($user) $_<br/>\n" for @users;
   }
   foreach my $user (@users)
   {
-    @years = GetUserStatsYears($self, $user) unless $year;
-    #printf "<b>$user: %d years</b><br/>\n", scalar @years;
-    my $old = 0;
-    foreach my $year (@years)
+    my @projects = GetUserStatsProjects($self, $user);
+    unshift @projects, undef if scalar @projects > 1;
+    foreach my $proj (@projects)
     {
-      #print "<i>$user: year $year</i><br/>\n";
-      my @projects = GetUserStatsProjects($self, $user, $year);
-      unshift @projects, undef if scalar @projects > 1;
-      foreach my $proj (@projects)
+      my $old = 0;
+      if (!$project || !$proj || $project == $proj)
       {
-        if (!$project || $project == $proj)
+        @years = GetUserStatsYears($self, $user, $proj) unless $year;
+        foreach my $year2 (@years)
         {
-          #printf "$user: $year $proj<br/>\n";
-          my $divid = join '_', ($user, $year, $proj);
+          my $divid = join '_', ($user || 'user', $year2 || 'year', $proj || 'proj');
           $divid =~ s/@//g;
-          push @params, {'user' => $user, 'year' => $year, 'proj' => $proj,
+          push @params, {'user' => $user, 'year' => $year2, 'proj' => $proj,
                          'id' => $divid, 'old' => $old};
+          $old = 1 if defined $year2 and $year2 le $thisyear;
         }
       }
-      $old = 1;
     }
   }
   return \@params;
@@ -151,16 +165,17 @@ sub GetUserStatsQueryParams
 # columns - arrayref of column names
 # rows - arrayref of row names
 # stats - hashref of keys (from columns) to arrayref of period numbers
+# active - number of active reviews
 sub CreateUserStatsData
 {
   my $self    = shift;
-  my $user    = shift; # undef for everyone, institution id, or user id
-  my $year    = shift; # undef for year-by-year, year for month-by-month
-  my $project = shift; # undef for all projects, project id for project
+  my $user    = shift || 0; # 0 for everyone, institution id, or user id
+  my $year    = shift || 0; # 0 for year-by-year, year for month-by-month
+  my $project = shift || 0; # 0 for all projects, project id for project
 
   my %data;
   my @dates = ($year)? GetAllMonthsInYear($self, $year) :
-                       GetUserStatsYears($self, $user);
+                       reverse GetUserStatsYears($self, $user);
   unshift @dates, 'TOTAL' if $year;
   unshift @dates, 'CRMS_TOTAL';
   $data{'columns'} = \@dates;
@@ -171,11 +186,11 @@ sub CreateUserStatsData
   #$data{'r2i'}->{$data{'rows'}->[$_]} = $_ for (0 .. scalar @{$data{'rows'}} - 1);
   #$data{'i2r'}->{$_} = $data{'rows'}->[$_] for (0 .. scalar @{$data{'rows'}} - 1);
   $data{'stats'}->{$_} = [] for @{$data{'rows'}};
-  my @args;
+  $data{'active'} = 0;
   my ($username, $projname);
   my @users;
   my ($userclause, $projclause) = ('1=1', '1=1');
-  if (!$user)
+  if ($user eq '0')
   {
     $username = 'All Reviewers';
   }
@@ -196,6 +211,7 @@ sub CreateUserStatsData
   }
   if ($project)
   {
+    #$projname = $self->GetProjectRef($project)->{'name'};
     $projname = $self->GetProjectName($project);
     $projclause = 'us.project=?';
   }
@@ -233,7 +249,6 @@ sub CreateUserStatsData
     }
     push @args, $project if $project;
     my $sql2 = $ivsql. ' WHERE '. $tclause. ' AND '. $projclause;
-    #printf "%s<br/>\n", Utilities::StringifySql($sql2, @args);
     my $rows = $self->SelectAll($sql2, @args);
     foreach my $row (@{$rows})
     {
@@ -243,7 +258,6 @@ sub CreateUserStatsData
     }
     push @args, @users;
     my $sql3 = $sql. ' WHERE '. $tclause. ' AND '. $projclause. ' AND '. $userclause;
-    #printf "%s<br/>\n", Utilities::StringifySql($sql3, @args);
     $rows = $self->SelectAll($sql3, @args);
     foreach my $row (@{$rows})
     {
@@ -252,17 +266,29 @@ sub CreateUserStatsData
         push @{$data{'stats'}->{$data{'rows'}->[$i]}}, ($row->[$i] || 0);
       }
     }
-    
   }
+  my @args;
+  push @args, $user if $user ne '0';
+  $sql = 'SELECT COUNT(*) FROM reviews us INNER JOIN queue q ON us.id=q.id'.
+         ' INNER JOIN users u ON us.user=u.id'.
+         ' INNER JOIN institutions i ON u.institution=i.id'.
+         ' WHERE '. $userclause;
+  if ($project)
+  {
+    $sql .= ' AND q.project=?';
+    push @args, $project;
+  }
+  $data{'active'} = $self->SimpleSqlGet($sql, @args);
   return \%data;
 }
 
 sub CreateUserStatsReport
 {
   my $self    = shift;
-  my $user    = shift; # undef for everyone, institution id, or user id
-  my $year    = shift; # undef for year-by-year, year for month-by-month
-  my $project = shift; # undef for all projects, project id for project
+  my $user    = shift || 0; # 0 for everyone, institution id, or user id
+  my $year    = shift || 0; # 0 for year-by-year, year for month-by-month
+  my $project = shift || 0; # 0 for all projects, project id for project
+  my $active  = shift || 0; # Show active reviews (only if current year)
 
   my $data = CreateUserStatsData($self, $user, $year, $project);
   my $nbsps = '&nbsp;&nbsp;&nbsp;&nbsp;';
@@ -331,6 +357,12 @@ sub CreateUserStatsReport
     }
     $data->{'html'} .= "</tr>\n";
   }
+  if ($active)
+  {
+    $data->{'html'} .= '<tr><th style="text-align:right;"><span class="total">Active Reviews</span></th>'. "\n";
+    $data->{'html'} .= '<td class="total" style="text-align:center;" colspan="'. scalar @cols. '">'. $data->{'active'}. "\n";
+    $data->{'html'} .= '</td></tr>'. "\n";
+  }
   $data->{'html'} .= "</table>\n";
   return $data;
 }
@@ -357,6 +389,7 @@ sub URLForHistoricalInvalidations
     $end = $year. '-12-'. Date::Calc::Days_in_Month($year, 12);
   }
   my $proj = '';
+  #$proj = $self->GetProjectRef($project)->{'name'} if $project;
   $proj = $self->GetProjectName($project) if $project;
   my $url = 'crms?p=adminHistoricalReviews;stype=groups;'.
             "search1=UserId&search1value=$user;".
