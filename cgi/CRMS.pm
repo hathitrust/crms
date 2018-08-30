@@ -323,7 +323,7 @@ sub set
 # will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.1.4';
+  return '7.1.5';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -4583,9 +4583,10 @@ sub CreateUserStatsReport
   my $user    = shift;
   my $year    = shift;
   my $project = shift;
+  my $active  = shift;
 
   use UserStats;
-  return UserStats::CreateUserStatsReport($self, $user, $year, $project);
+  return UserStats::CreateUserStatsReport($self, $user, $year, $project, $active);
 }
 
 # Returns an array ref of hash refs
@@ -8413,7 +8414,7 @@ sub GetProjectsRef
   my $self = shift;
 
   my @projects;
-  my $sql = 'SELECT p.id,p.name,p.restricted,COALESCE(p.color,"000000"),'.
+  my $sql = 'SELECT p.id,p.name,COALESCE(p.color,"000000"),'.
             '(SELECT COUNT(*) FROM projectusers pu INNER JOIN users u ON pu.user=u.id'.
             ' WHERE pu.project=p.id AND u.reviewer+u.advanced+u.expert+u.admin>0),'.
             '(SELECT COUNT(*) FROM queue q WHERE q.project=p.id),'.
@@ -8423,10 +8424,10 @@ sub GetProjectsRef
   my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
-    push @projects, {'id' => $row->[0], 'name' => $row->[1], 'restricted' => $row->[2],
-                     'color' => $row->[3], 'userCount' => $row->[4], 'queueCount' => $row->[5],
-                     'candidatesCount' => $row->[6], 'determinationsCount' => $row->[7],
-                     'autoinherit' => $row->[8], 'group_volumes' => $row->[9]};
+    push @projects, {'id' => $row->[0], 'name' => $row->[1], 'color' => $row->[2],
+                     'userCount' => $row->[3], 'queueCount' => $row->[4],
+                     'candidatesCount' => $row->[5], 'determinationsCount' => $row->[6],
+                     'autoinherit' => $row->[7], 'group_volumes' => $row->[8]};
     my $ref2 = $self->SelectAll('SELECT rights FROM projectrights WHERE project=?', $row->[0]);
     $projects[-1]->{'rights'} = [map {$_->[0]} @{$ref2}];
     $ref2 = $self->SelectAll('SELECT category FROM projectcategories WHERE project=?', $row->[0]);
