@@ -321,7 +321,7 @@ sub set
 
 sub Version
 {
-  return '7.1.3';
+  return '7.1.6';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -4561,7 +4561,7 @@ sub CreateUserStatsReport
   my $active  = shift;
 
   use UserStats;
-  return UserStats::CreateUserStatsReport($self, $user, $year, $project);
+  return UserStats::CreateUserStatsReport($self, $user, $year, $project, $active);
 }
 
 # Returns an array ref of hash refs
@@ -8394,6 +8394,7 @@ sub GetProjectsRef
   my $self = shift;
 
   my @projects;
+
   my $sql = 'SELECT p.id,p.name,COALESCE(p.color,"000000"),p.autoinherit,'.
             'p.group_volumes,p.single_review,'.
             '(SELECT COUNT(*) FROM projectusers pu INNER JOIN users u ON pu.user=u.id'.

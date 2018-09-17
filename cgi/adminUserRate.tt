@@ -53,9 +53,9 @@
 <br/>
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"
-       onclick="selMenuItem('projectSel','');
-                selMenuItem('yearSel','');
-                selMenuItem('institutionSel','');"
+       onclick="selMenuItem('projectSel', 0);
+                selMenuItem('yearSel', 0);
+                selMenuItem('institutionSel', 0);"
 />
 
 </form>
@@ -86,7 +86,7 @@
   [% p_inst = p_user %]
 [% END %]
 
-[% IF p_inst || p_year || p_proj %]
+[% IF p_inst.length || p_year.length || p_proj.length %]
   [% params = crms.GetUserStatsQueryParams(p_inst, p_year, p_proj) %]
   [% IF params.size == 0 %]
     <h3>No statistics recorded with those properties.</h3>
@@ -94,7 +94,7 @@
   [% FOREACH param IN params %]
     [% divid = param.id %]
     [% style = (param.old)? 'display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;' : '' %]
-    [% data = crms.CreateUserStatsReport(param.user, param.year, param.proj) %]
+    [% data = crms.CreateUserStatsReport(param.user, param.year, param.proj, !param.old) %]
     [% IF param.old %]
       <a class="nowrap" style="display:block;margin-bottom:-18px;padding:4px;width:190px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
          onclick='toggleVisibility("[% divid %]");'>Show [% crms.GetProjectName(param.proj) _ ' ' _ param.year %]</a><br/>
