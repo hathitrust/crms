@@ -101,12 +101,12 @@
   </div>
 </div>
 
+[% IF !ren %]
 <script type="text/javascript">
 <!--
   addEvent(window, 'load', mainWindowLoad);
-function mainWindowLoad(e)
-{
-  [% IF !ren %]
+  function mainWindowLoad(e)
+  {
     var renewalField = document.getElementById("renewalField");
     var year = renewalField.value;
     var patt = /-?[0-9]+/;
@@ -119,9 +119,9 @@ function mainWindowLoad(e)
     {
       document.getElementById('renewalField').focus();
     }
-  [% END %]
-}
+  }
 -->
 </script>
+[% END %]
 
 [% INCLUDE footer.tt %]
