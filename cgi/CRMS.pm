@@ -4964,7 +4964,6 @@ sub UpdateMetadata
 # reviews -> hashref of user -> hashref of review fields
 # bibdata -> hashref of all fields in bibdata entry
 # JSON -> stringified version of the return value without a self-reference
-# FIXME: attrs and reasons should be translated into human-readable names
 sub ReviewData
 {
   my $self  = shift;
