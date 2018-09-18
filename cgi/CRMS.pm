@@ -323,7 +323,7 @@ sub set
 # will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.1.6';
+  return '7.1.7';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -2702,7 +2702,7 @@ sub SearchTermsToSQLWide
   return ($joins,@rest);
 }
 
-sub SearchAndDownload
+sub DownloadReviews
 {
   my $self           = shift;
   my $page           = shift;
@@ -2719,6 +2719,7 @@ sub SearchAndDownload
   my $startDate      = shift;
   my $endDate        = shift;
   my $offset         = shift;
+  my $pagesize       = shift;
   my $stype          = shift;
 
   $stype = 'reviews' unless $stype;
@@ -2736,7 +2737,7 @@ sub SearchAndDownload
   my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQL($stype, $page, $order, $dir, $search1,
                                                                   $search1value, $op1, $search2, $search2value,
                                                                   $op2, $search3, $search3value, $startDate,
-                                                                  $endDate, $offset, 0, 1);
+                                                                  $endDate, $offset, $pagesize, 1);
   my $ref = $self->SelectAll($sql);
   my $buff = '';
   if (scalar @{$ref} == 0)
@@ -2861,7 +2862,7 @@ sub UnpackResults
   return $buff;
 }
 
-sub SearchAndDownloadDeterminationStats
+sub DownloadDeterminationStats
 {
   my $self      = shift;
   my $startDate = shift;
@@ -2883,7 +2884,7 @@ sub SearchAndDownloadDeterminationStats
   return ($buff)? 1:0;
 }
 
-sub SearchAndDownloadQueue
+sub DownloadQueue
 {
   my $self         = shift;
   my $order        = shift;
@@ -2896,15 +2897,16 @@ sub SearchAndDownloadQueue
   my $startDate    = shift;
   my $endDate      = shift;
   my $offset       = shift;
+  my $pagesize     = shift;
 
   my $buff = $self->GetQueueRef($order, $dir, $search1, $search1Value, $op1,
                                 $search2, $search2Value, $startDate, $endDate,
-                                $offset, 0, 1);
+                                $offset, $pagesize, 1);
   $self->DownloadSpreadSheet($buff);
   return ($buff)? 1:0;
 }
 
-sub SearchAndDownloadExportData
+sub DownloadExportData
 {
   my $self         = shift;
   my $order        = shift;
@@ -2917,10 +2919,11 @@ sub SearchAndDownloadExportData
   my $startDate    = shift;
   my $endDate      = shift;
   my $offset       = shift;
+  my $pagesize     = shift;
 
   my $buff = $self->GetExportDataRef($order, $dir, $search1, $search1Value, $op1,
                                      $search2, $search2Value, $startDate, $endDate,
-                                     $offset, 0, 1);
+                                     $offset, $pagesize, 1);
   $self->DownloadSpreadSheet($buff);
   return ($buff)? 1:0;
 }
@@ -3246,13 +3249,12 @@ sub GetQueueRef
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
-  my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   my @return = ();
   $sql = 'SELECT q.id,DATE(q.time),q.status,q.locked,YEAR(b.pub_date),q.priority,'.
          'b.title,b.author,p.name,q.source,q.ticket,q.added_by'.
          ' FROM queue q LEFT JOIN bibdata b ON q.id=b.id'.
          ' INNER JOIN projects p ON q.project=p.id '. $restrict.
-         ' ORDER BY '. "$order $dir $limit";
+         ' ORDER BY '. "$order $dir LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
   my $ref = undef;
   eval {
@@ -3262,11 +3264,16 @@ sub GetQueueRef
   {
     $self->SetError($@);
   }
-  my $data = join "\t", ('ID','Title','Author','Pub Date','Date Added','Status','Locked','Priority','Reviews','Expert Reviews','Holds','Project');
+  my @columns = ('ID', 'Title', 'Author', 'Pub Date', 'Date Added', 'Status',
+                 'Locked', 'Priority', 'Reviews', 'Expert Reviews',' Holds',
+                 'Source', 'Added By', 'Project', 'Ticket');
+  my @colnames = ('id', 'title', 'author', 'pubdate', 'date', 'status',
+                  'locked', 'priority', 'reviews', 'expcnt', 'holds',
+                  'source', 'added_by', 'project', 'ticket');
+  my $data = join "\t", @columns;
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    
     my $pubdate = $row->[4];
     $pubdate = '?' unless $pubdate;
     $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
@@ -3297,9 +3304,7 @@ sub GetQueueRef
     push @return, $item;
     if ($download)
     {
-      $data .= sprintf("\n$id\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t$reviews\t$expcnt\t$holds",
-                       $row->[7], $row->[8], $row->[4], $row->[1], $row->[2],
-                       $row->[3], $self->StripDecimal($row->[5]));
+      $data .= "\n". join "\t", map {$item->{$_};} @colnames;
     }
   }
   if (!$download)
@@ -3316,6 +3321,7 @@ sub GetQueueRef
   return $data;
 }
 
+# FIXME: could this share code with GetQueueRef()?
 sub GetExportDataRef
 {
   my $self         = shift;
@@ -3379,13 +3385,12 @@ sub GetExportDataRef
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
-  my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   my @return = ();
   $sql = 'SELECT q.id,DATE(q.time),q.attr,q.reason,q.status,q.priority,q.src,b.title,b.author,'.
          'YEAR(b.pub_date),q.exported,p.name,q.gid,q.added_by,q.ticket'.
          ' FROM exportdata q LEFT JOIN bibdata b ON q.id=b.id'.
          ' INNER JOIN projects p ON q.project=p.id'.
-         " $restrict ORDER BY $order $dir $limit";
+         " $restrict ORDER BY $order $dir LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
   my $ref = undef;
   eval { $ref = $self->SelectAll($sql); };
@@ -3393,7 +3398,13 @@ sub GetExportDataRef
   {
     $self->SetError($@);
   }
-  my $data = join "\t", ('ID','Title','Author','Pub Date','Date Exported','Source');
+  my @columns = ('ID', 'Title', 'Author', 'Pub Date', 'Date Exported', 'Rights',
+                 'Status', 'Priority', 'Source', 'Added By', 'Project',
+                 'Ticket', 'GID', 'Exported');
+  my @colnames = ('id', 'title', 'author', 'pubdate', 'date', 'rights',
+                  'status', 'priority', 'src', 'added_by', 'project',
+                  'ticket', 'gid', 'exported');
+  my $data = join "\t", @columns;
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
@@ -3403,6 +3414,7 @@ sub GetExportDataRef
                 date       => $row->[1],
                 attr       => $row->[2],
                 reason     => $row->[3],
+                rights     => $row->[2]. '/'. $row->[3],
                 status     => $row->[4],
                 priority   => $self->StripDecimal($row->[5]),
                 src        => $row->[6],
@@ -3418,8 +3430,7 @@ sub GetExportDataRef
     push @return, $item;
     if ($download)
     {
-      $data .= sprintf("\n$id\t%s\t%s\t$pubdate\t%s\t%s",
-                       $row->[5], $row->[6], $row->[4], $row->[1]);
+      $data .= "\n". join "\t", map {$item->{$_};} @colnames;
     }
   }
   if (!$download)
@@ -3482,14 +3493,6 @@ sub CorrectionsDataSearchMenu
   require 'Corrections.pm';
   unshift @_, $self;
   return Corrections::CorrectionsDataSearchMenu(@_);
-}
-
-sub IsCorrection
-{
-  my $self = shift;
-  my $id   = shift;
-
-  return $self->SimpleSqlGet('SELECT COUNT(*) FROM corrections WHERE id=?', $id);
 }
 
 sub InsertsTitles
