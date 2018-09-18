@@ -70,7 +70,7 @@
   [% END %]
 
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0;download=1" %]" target="_blank">download</a>
+  <a href="?[% crms.URLify(cgi) _ ";download=1" %]" target="_blank">download</a>
 
   [% color_white    = '#FFFFFF' %]
   [% color_gray     = '#C6C4F1' %]
@@ -111,7 +111,7 @@
         <td>[% cgi.escapeHTML(item.author) %]</td>
         <td>$item.pubdate</td>
         <td>$item.date</td>
-        <td>[% item.attr _ '/' _ item.reason %]</td>
+        <td>[% item.rights %]</td>
         <td>$item.status</td>
         <td>$item.priority</td>
         <td class="nowrap">$item.src</td>
