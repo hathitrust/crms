@@ -26,7 +26,6 @@ sub new
 {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
-
   my $sys = $args{'sys'} || 'crms';
   if ($args{'root'})
   {
@@ -65,6 +64,7 @@ sub new
     $self->SetupUser();
   }
   $self->DebugVar('self', $self);
+  $CGI::LIST_CONTEXT_WARN = 0;
   return $self;
 }
 
@@ -169,6 +169,7 @@ sub NeedStepUpAuth
   my $self = shift;
   my $user = shift;
 
+  #return 0 if $self->WhereAmI() =~ m/^dev/i;
   my $need = 0;
   my $idp = $ENV{'Shib_Identity_Provider'};
   my $class = $ENV{'Shib_AuthnContext_Class'};
@@ -323,7 +324,7 @@ sub set
 # will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.1.7';
+  return '7.1.8';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -4986,14 +4987,45 @@ sub UpdateMetadata
   return $record;
 }
 
-sub GetReviewField
+# Returns a hashref with the following fields:
+# queue -> hashref of all fields in queue entry
+# reviews -> hashref of user -> hashref of review fields
+# bibdata -> hashref of all fields in bibdata entry
+#            with <field>_format the HTML-escaped version
+# JSON -> stringified version of the return value without a self-reference
+sub ReviewData
 {
   my $self  = shift;
   my $id    = shift;
-  my $user  = shift;
-  my $field = shift;
 
-  return $self->SimpleSqlGet('SELECT ' . $field . ' FROM reviews WHERE id=? AND user=? LIMIT 1', $id, $user);
+  my $data = {};
+  my $dbh = $self->GetDb();
+  my $sql = 'SELECT * FROM queue WHERE id=?';
+  my $ref = $dbh->selectall_hashref($sql, 'id', undef, $id);
+  $data->{'queue'} = $ref->{$id};
+  $data->{'queue'}->{'project_name'} = $self->GetProjectName($data->{'queue'}->{'project'});
+  $data->{'queue'}->{'priority_format'} = $self->StripDecimal($data->{'queue'}->{'priority'});
+  $sql = 'SELECT * FROM bibdata WHERE id=?';
+  $ref = $dbh->selectall_hashref($sql, 'id', undef, $id);
+  $data->{'bibdata'} = $ref->{$id};
+  $data->{'bibdata'}->{$_. '_format'} = CGI::escapeHTML($data->{'bibdata'}->{$_}) for keys %{$data->{'bibdata'}};
+  $data->{'bibdata'}->{'pub_date_format'} = $self->FormatPubDate($id);
+  $sql = 'SELECT * FROM reviews WHERE id=?';
+  $ref = $dbh->selectall_hashref($sql, 'user', undef, $id);
+  foreach my $user (keys %{$ref})
+  {
+    $ref->{$user}->{'rights'} = $self->GetCodeFromAttrReason($ref->{$user}->{'attr'},
+                                                             $ref->{$user}->{'reason'});
+    $ref->{$user}->{'attr'} = $self->TranslateAttr($ref->{$user}->{'attr'});
+    $ref->{$user}->{'reason'} = $self->TranslateReason($ref->{$user}->{'reason'});
+    # Taste of things to come...
+    # Can we INNER JOIN with reviewdata?
+    #$sql = 'SELECT data FROM reviewdata WHERE id=?';
+    #$ref->{$user}->{'data'} = $self->SimpleSqlGet($sql, $ref->{$user}->{'data'});
+  }
+  $data->{'reviews'} = $ref;
+  $data->{'json'} = JSON::XS->new->encode($data);
+  return $data;
 }
 
 sub HasLockedItem
@@ -8208,16 +8240,6 @@ sub Undollarize
     }
   }
   return undef;
-}
-
-# FIXME: projectcategories may make this obsolete.
-sub CanVolumeBeCrownCopyright
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $c = $self->GetPubCountry($id);
-  return 1 if defined $c && ($c eq 'United Kingdom' || $c eq 'Canada' || $c eq 'Australia');
 }
 
 # FIXME: this should probably not include an explicit reference to "Special" project.
