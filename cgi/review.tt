@@ -74,8 +74,9 @@
     
     [% partials = crms.ReviewPartialsForProject(data.queue.project) %]
     [% FOR partial IN partials %]
-      [% INCLUDE $partial crms = crms, htid = htid, user = user, data = data,
-                          error = error %]
+      [% tmpl = 'partial/' _ partial _ '.tt' %]
+      [% INCLUDE $tmpl crms = crms, htid = htid, user = user, data = data,
+                      error = error %]
     [% END %]
     
     [% IF error %]

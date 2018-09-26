@@ -85,10 +85,8 @@ sub IsStateGovDoc
 # ========== REVIEW ========== #
 sub ReviewPartials
 {
-  return ['Partial_reviewTop.tt', 'Partial_bibdata.tt',
-          #'Partial_authorities.tt',
-          'Partial_HTView.tt',
-          'Partial_copyrightForm.tt', 'Partial_expertDetails.tt'];
+  return ['top', 'bibdata', 'authorities',
+          'HTView', 'copyrightForm', 'expertDetails'];
 }
 
 1;

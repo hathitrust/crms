@@ -26,19 +26,10 @@ sub EvaluateCandidacy
 }
 
 # ========== REVIEW ========== #
-
-sub ReviewPage
-{
-  return 'frontmatter';
-}
-
-
 sub ReviewPartials
 {
-  return ['Partial_reviewTop.tt', 'Partial_bibdata.tt',
-          'Partial_frontmatter.tt', 'Partial_expertDetails.tt'];
+  return ['top', 'bibdata', 'frontmatter', 'expertDetails'];
 }
-
 
 sub SubmitUserReview
 {
