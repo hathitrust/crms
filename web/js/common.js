@@ -68,7 +68,7 @@ function selMenuItem(id, value)
   }
 }
 
-sfHover = function()
+function sfHover()
 {
   var sfEls = document.getElementById("menu").getElementsByTagName("li");
   for (var i=0; i<sfEls.length; i++)
@@ -95,10 +95,6 @@ sfHover = function()
     }
   }
 }
-if (window.attachEvent)
-{
-  window.attachEvent("onload", sfHover);
-}
 
 // action code for debugger bars
 function ToggleDiv(id, className)
@@ -107,4 +103,19 @@ function ToggleDiv(id, className)
   if (el.className == 'divHide') { el.className = className; }
   else { el.className = 'divHide'; }
 }
+
+// https://stackoverflow.com/questions/15564029/adding-to-window-onload-event
+// Example: addEvent(window, 'load', myfunc);
+function addEvent(element, eventName, fn)
+{
+  if (element.addEventListener)
+  {
+    element.addEventListener(eventName, fn, false);
+  }
+  else if (element.attachEvent)
+  {
+    element.attachEvent('on' + eventName, fn);
+  }
+}
+
 

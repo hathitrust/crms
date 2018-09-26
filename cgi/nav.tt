@@ -1,3 +1,9 @@
+<script>
+<!--
+addEvent(window, 'load', sfHover);
+-->
+</script>
+
 [% p = cgi.param('p') %]
 <ul id="menu" style="width:100%;float:left;position:absolute;">
 [% IF p %]
