@@ -1,21 +1,14 @@
 [% INCLUDE header.tt %]
 
-[% error    = cgi.param('errorMsg')   %]
-[% barcode  = cgi.param('barcode')    %]
-[% editing  = cgi.param('editing')    %]
-[% renNum   = cgi.param('renNum')     %]
-[% renDate  = cgi.param('renDate')    %]
-[% note     = cgi.param('note')       %]
-[% category = cgi.param('category')   %]
-[% select   = cgi.param('rights')     %]
-[% hold     = cgi.param('hold')       %]
-[% swiss    = cgi.param('swiss')      %]
-[% sys      = cgi.param('sys')        %]
-[% mag      = cgi.cookie('mag')       %]
-[% ptview   = cgi.cookie('ptview')    %]
-[% import   = cgi.param('importUser') %]
-[% expert   = crms.IsUserExpert(user) %]
-[% ren      = crms.GetSystemVar("showRenewal") %]
+[% error      = cgi.param('errorMsg')   %]
+[% barcode    = cgi.param('barcode')    %]
+[% editing    = cgi.param('editing')    %]
+[% mag        = cgi.cookie('mag')       %]
+[% ptview     = cgi.cookie('ptview')    %]
+[% importUser = cgi.param('importUser') %]
+[% auths      = cgi.param('auths')      %]
+[% expert     = crms.IsUserExpert(user) %]
+[% ren        = crms.GetSystemVar("showRenewal") %]
 
 [% IF barcode && editing %]
   [% IF crms.PreviouslyReviewed(barcode, user) %]
@@ -54,33 +47,7 @@
   [% STOP %]
 [% END %]
 
-[% status   = crms.GetStatus(barcode)      %]
-[% pubDate  = crms.FormatPubDate(barcode)  %]
-[% author   = crms.GetAuthor(barcode)      %]
-[% author   = cgi.escapeHTML(author)       %]
-[% title    = crms.GetTitle(barcode)       %]
-[% title    = cgi.escapeHTML(title)        %]
-[% proj     = crms.GetProjectName(barcode) %]
-
-[% IF NOT renNum %]
-[% renNum = crms.GetReviewField(barcode, user, "renNum") %]
-[% END %]
-
-[% IF NOT renDate %]
-[% renDate = crms.GetReviewField(barcode, user, "renDate") %]
-[% END %]
-
-[% IF NOT note %]
-[% note = crms.GetReviewField(barcode, user, "note") %]
-[% END %]
-
-[% IF NOT category %]
-[% category = crms.GetReviewField(barcode, user, "category") %]
-[% END %]
-
-[% IF NOT swiss %]
-[% swiss = crms.GetReviewField(barcode, user, "swiss") %]
-[% END %]
+[% data = crms.ReviewData(barcode) %]
 
 [% homeLink = crms.WebPath('cgi', "crms?p=confirmReview;submit=Cancel;barcode=$barcode") %]
 
@@ -124,25 +91,26 @@
       </table>
       <table class="id">
         <tr><td><strong>ID:</strong> [% barcode %]</td></tr>
-        <tr><td><strong>Title:</strong> [% title %]</td></tr>
-        <tr><td><strong>Author:</strong> [% author %]</td></tr>
+        <tr><td><strong>Title:</strong> [% data.bibdata.title_format %]</td></tr>
+        <tr><td><strong>Author:</strong> [% data.bibdata.author_format %]</td></tr>
         <tr><td><strong>Pub Date:</strong> <span id="pubDateSpan"
-          [% IF NOT ren && pubDate.match('^\d+-\d*$') %]class="red"[% END %]>
-          [% pubDate %]</span></td>
+          [% IF NOT ren && data.bibdata.pub_date_format.match('^\d+-\d*$') %]class="red"[% END %]>
+          [% data.bibdata.pub_date_format %]</span></td>
         </tr>
+        [% # FIXME: project should provide this %]
         [% IF crms.GetSystemVar("showCountry") %]
-          [% country = crms.GetPubCountry(barcode, undef, 1) %]
-          <tr><td><strong>Country:</strong> [% country %]</td></tr>
+          <tr><td><strong>Country:</strong> [% data.bibdata.country %]</td></tr>
         [% END %]
         <tr><td class="nowrap">
-          <strong>Project:</strong> [% proj %]
+          <strong>Project:</strong> [% data.queue.project_name %]
+          [% # FIXME: get color from project object or ref %]
           [% color = crms.GetProjectColor(barcode) %]
           [% IF color %]
             <p style="border:1px solid;margin-left:4px;display:inline-block;width:10px;height:10px;background:#[% color %];"></p>
           [% END %]
         </td></tr>
       </table>
-      [% sources = crms.Authorities(barcode,mag,ptview) %]
+      [% sources = crms.Authorities(barcode, mag, ptview) %]
       <table class="search">
         <tr>
           <th class="nowrap">View 1:</th>
@@ -231,27 +199,25 @@
         [% END %]
       [% END %]
       [% CALL crms.ClearErrors() %]
-      [% INCLUDE submitReviewForm.tt barcode = barcode, renNum   = renNum,   renDate  = renDate,
-                                     note    = note,    category = category, editing  = editing,
-                                     error   = error,   select   = select,   mag      = mag,
-                                     hold    = hold,    swiss    = swiss,    expert   = expert,
-                                     status  = status,  sys      = sys,      ptview   = ptview,
-                                     import  = import,  ren      = ren       pubDate  = pubDate %]
+      [% INCLUDE submitReviewForm.tt barcode = barcode, data = data,
+                                     editing = editing, error = error,
+                                     expert = expert, ptview = ptview,
+                                     importUser = importUser, ren = ren %]
       [% IF expert %]
         <table class="nav">
-        [% IF status == 3 %]
+        [% IF data.queue.status == 3 %]
           <tr><td><span style="font-size:1.1em;color:red;">Provisional Match</span></td></tr>
-        [% ELSIF status == 2 %]
+        [% ELSIF data.queue.status == 2 %]
           <tr><td><span style="font-size:1.1em;color:red;">Conflict</span></td></tr>
         [% END %]
         <tr><td><span style="font-size:1.1em">
           [% IF crms.IsVolumeInQueue(barcode) %]
-            Priority [% crms.GetPriority(barcode) %]
+            Priority [% data.queue.priority_format %]
           [% ELSE %]
             Not in queue. Please cancel; you will get an error if you submit.
           [% END %]
         </span></td></tr>
-        [% totalReviews = crms.GetReviewCount(barcode, 1) %]
+        [% totalReviews = crms.CountHistoricalReviews(barcode) %]
         [% IF totalReviews > 0 %]
           <tr><td><a class="smallishText"
                      href="[% crms.WebPath('cgi', 'crms?p=adminHistoricalReviews;search1=Identifier;search1value=' _ barcode) %]"
@@ -264,7 +230,7 @@
             </span>
           </td></tr>
         [% END %]
-        [% totalReviews = crms.GetReviewCount(barcode) %]
+        [% totalReviews = data.reviews.keys.size %]
         [% IF totalReviews > 0 %]
           <tr><td><a class="smallishText"
                      href="[% crms.WebPath('cgi', 'crms?p=adminReviews;search1=Identifier;search1value=' _ barcode) %]"
@@ -308,29 +274,30 @@
 
 <script type="text/javascript">
 <!--
-window.onload = function(e)
-{
-  changeFrame1();
-  changeFrame2();
-  [% IF import %]
-    popReviewInfo('[% barcode %]', '[% import %]', '[% sys %]');
-  [% END %]
-  [% IF !ren %]
+  addEvent(window, 'load', mainWindowLoad);
+  function mainWindowLoad(e)
+  {
+    [% IF !ren %]
     var renewalField = document.getElementById("renewalField");
     var year = renewalField.value;
     var patt = /-?[0-9]+/;
     if (patt.test(year))
     {
-      PredictRights('[% barcode %]');
+      PredictRights('[% htid %]');
       document.getElementById('NoteTextField').focus();
     }
     else
     {
       document.getElementById('renewalField').focus();
     }
+    [% END %]
+  [% IF auths || NOT crms.IsDevArea() %]
+    changeFrame1();
+    changeFrame2();
   [% END %]
-}
+  }
 -->
 </script>
+
 
 [% INCLUDE footer.tt %]
