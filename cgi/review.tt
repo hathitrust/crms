@@ -17,6 +17,7 @@
 [% expert   = crms.IsUserExpert(user) %]
 [% ren      = crms.GetSystemVar("showRenewal") %]
 
+
 [% IF htid && editing %]
   [% IF crms.PreviouslyReviewed(htid, user) %]
     <h3>Too late, can't edit your review for this item.</h3>
@@ -119,6 +120,10 @@
     {
       document.getElementById('renewalField').focus();
     }
+  [% IF auths || NOT crms.IsDevArea() %]
+    changeFrame1();
+    changeFrame2();
+  [% END %]
   }
 -->
 </script>

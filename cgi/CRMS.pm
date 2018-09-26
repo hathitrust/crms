@@ -26,7 +26,6 @@ sub new
 {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
-
   my $sys = $args{'sys'} || 'crms';
   if ($args{'root'})
   {
@@ -65,6 +64,7 @@ sub new
     $self->SetupUser();
   }
   $self->DebugVar('self', $self);
+  $CGI::LIST_CONTEXT_WARN = 0;
   return $self;
 }
 
@@ -169,6 +169,7 @@ sub NeedStepUpAuth
   my $self = shift;
   my $user = shift;
 
+  #return 0 if $self->WhereAmI() =~ m/^dev/i;
   my $need = 0;
   my $idp = $ENV{'Shib_Identity_Provider'};
   my $class = $ENV{'Shib_AuthnContext_Class'};
@@ -321,7 +322,7 @@ sub set
 
 sub Version
 {
-  return '7.1.6';
+  return '7.1.9';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -2688,7 +2689,7 @@ sub SearchTermsToSQLWide
   return ($joins,@rest);
 }
 
-sub SearchAndDownload
+sub DownloadReviews
 {
   my $self           = shift;
   my $page           = shift;
@@ -2705,6 +2706,7 @@ sub SearchAndDownload
   my $startDate      = shift;
   my $endDate        = shift;
   my $offset         = shift;
+  my $pagesize       = shift;
   my $stype          = shift;
 
   $stype = 'reviews' unless $stype;
@@ -2722,7 +2724,7 @@ sub SearchAndDownload
   my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQL($stype, $page, $order, $dir, $search1,
                                                                   $search1value, $op1, $search2, $search2value,
                                                                   $op2, $search3, $search3value, $startDate,
-                                                                  $endDate, $offset, 0, 1);
+                                                                  $endDate, $offset, $pagesize, 1);
   my $ref = $self->SelectAll($sql);
   my $buff = '';
   if (scalar @{$ref} == 0)
@@ -2847,7 +2849,7 @@ sub UnpackResults
   return $buff;
 }
 
-sub SearchAndDownloadDeterminationStats
+sub DownloadDeterminationStats
 {
   my $self      = shift;
   my $startDate = shift;
@@ -2869,7 +2871,7 @@ sub SearchAndDownloadDeterminationStats
   return ($buff)? 1:0;
 }
 
-sub SearchAndDownloadQueue
+sub DownloadQueue
 {
   my $self         = shift;
   my $order        = shift;
@@ -2882,15 +2884,16 @@ sub SearchAndDownloadQueue
   my $startDate    = shift;
   my $endDate      = shift;
   my $offset       = shift;
+  my $pagesize     = shift;
 
   my $buff = $self->GetQueueRef($order, $dir, $search1, $search1Value, $op1,
                                 $search2, $search2Value, $startDate, $endDate,
-                                $offset, 0, 1);
+                                $offset, $pagesize, 1);
   $self->DownloadSpreadSheet($buff);
   return ($buff)? 1:0;
 }
 
-sub SearchAndDownloadExportData
+sub DownloadExportData
 {
   my $self         = shift;
   my $order        = shift;
@@ -2903,10 +2906,11 @@ sub SearchAndDownloadExportData
   my $startDate    = shift;
   my $endDate      = shift;
   my $offset       = shift;
+  my $pagesize     = shift;
 
   my $buff = $self->GetExportDataRef($order, $dir, $search1, $search1Value, $op1,
                                      $search2, $search2Value, $startDate, $endDate,
-                                     $offset, 0, 1);
+                                     $offset, $pagesize, 1);
   $self->DownloadSpreadSheet($buff);
   return ($buff)? 1:0;
 }
@@ -3232,13 +3236,12 @@ sub GetQueueRef
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
-  my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   my @return = ();
   $sql = 'SELECT q.id,DATE(q.time),q.status,q.locked,YEAR(b.pub_date),q.priority,'.
          'b.title,b.author,p.name,q.source,q.ticket,q.added_by'.
          ' FROM queue q LEFT JOIN bibdata b ON q.id=b.id'.
          ' INNER JOIN projects p ON q.project=p.id '. $restrict.
-         ' ORDER BY '. "$order $dir $limit";
+         ' ORDER BY '. "$order $dir LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
   my $ref = undef;
   eval {
@@ -3248,11 +3251,16 @@ sub GetQueueRef
   {
     $self->SetError($@);
   }
-  my $data = join "\t", ('ID','Title','Author','Pub Date','Date Added','Status','Locked','Priority','Reviews','Expert Reviews','Holds','Project');
+  my @columns = ('ID', 'Title', 'Author', 'Pub Date', 'Date Added', 'Status',
+                 'Locked', 'Priority', 'Reviews', 'Expert Reviews',' Holds',
+                 'Source', 'Added By', 'Project', 'Ticket');
+  my @colnames = ('id', 'title', 'author', 'pubdate', 'date', 'status',
+                  'locked', 'priority', 'reviews', 'expcnt', 'holds',
+                  'source', 'added_by', 'project', 'ticket');
+  my $data = join "\t", @columns;
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    
     my $pubdate = $row->[4];
     $pubdate = '?' unless $pubdate;
     $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
@@ -3283,9 +3291,7 @@ sub GetQueueRef
     push @return, $item;
     if ($download)
     {
-      $data .= sprintf("\n$id\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t$reviews\t$expcnt\t$holds",
-                       $row->[7], $row->[8], $row->[4], $row->[1], $row->[2],
-                       $row->[3], $self->StripDecimal($row->[5]));
+      $data .= "\n". join "\t", map {$item->{$_};} @colnames;
     }
   }
   if (!$download)
@@ -3302,6 +3308,7 @@ sub GetQueueRef
   return $data;
 }
 
+# FIXME: could this share code with GetQueueRef()?
 sub GetExportDataRef
 {
   my $self         = shift;
@@ -3365,13 +3372,12 @@ sub GetExportDataRef
   #print "$sql<br/>\n";
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
-  my $limit = ($download)? '':"LIMIT $offset, $pagesize";
   my @return = ();
   $sql = 'SELECT q.id,DATE(q.time),q.attr,q.reason,q.status,q.priority,q.src,b.title,b.author,'.
          'YEAR(b.pub_date),q.exported,p.name,q.gid,q.added_by,q.ticket'.
          ' FROM exportdata q LEFT JOIN bibdata b ON q.id=b.id'.
          ' INNER JOIN projects p ON q.project=p.id'.
-         " $restrict ORDER BY $order $dir $limit";
+         " $restrict ORDER BY $order $dir LIMIT $offset, $pagesize";
   #print "$sql<br/>\n";
   my $ref = undef;
   eval { $ref = $self->SelectAll($sql); };
@@ -3379,7 +3385,13 @@ sub GetExportDataRef
   {
     $self->SetError($@);
   }
-  my $data = join "\t", ('ID','Title','Author','Pub Date','Date Exported','Source');
+  my @columns = ('ID', 'Title', 'Author', 'Pub Date', 'Date Exported', 'Rights',
+                 'Status', 'Priority', 'Source', 'Added By', 'Project',
+                 'Ticket', 'GID', 'Exported');
+  my @colnames = ('id', 'title', 'author', 'pubdate', 'date', 'rights',
+                  'status', 'priority', 'src', 'added_by', 'project',
+                  'ticket', 'gid', 'exported');
+  my $data = join "\t", @columns;
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
@@ -3389,6 +3401,7 @@ sub GetExportDataRef
                 date       => $row->[1],
                 attr       => $row->[2],
                 reason     => $row->[3],
+                rights     => $row->[2]. '/'. $row->[3],
                 status     => $row->[4],
                 priority   => $self->StripDecimal($row->[5]),
                 src        => $row->[6],
@@ -3404,8 +3417,7 @@ sub GetExportDataRef
     push @return, $item;
     if ($download)
     {
-      $data .= sprintf("\n$id\t%s\t%s\t$pubdate\t%s\t%s",
-                       $row->[5], $row->[6], $row->[4], $row->[1]);
+      $data .= "\n". join "\t", map {$item->{$_};} @colnames;
     }
   }
   if (!$download)
@@ -3468,14 +3480,6 @@ sub CorrectionsDataSearchMenu
   require 'Corrections.pm';
   unshift @_, $self;
   return Corrections::CorrectionsDataSearchMenu(@_);
-}
-
-sub IsCorrection
-{
-  my $self = shift;
-  my $id   = shift;
-
-  return $self->SimpleSqlGet('SELECT COUNT(*) FROM corrections WHERE id=?', $id);
 }
 
 sub InsertsTitles
@@ -4963,20 +4967,26 @@ sub UpdateMetadata
 # queue -> hashref of all fields in queue entry
 # reviews -> hashref of user -> hashref of review fields
 # bibdata -> hashref of all fields in bibdata entry
+#            with <field>_format the HTML-escaped version
 # JSON -> stringified version of the return value without a self-reference
+# FIXME: add Project object to top level of structure
 sub ReviewData
 {
   my $self  = shift;
   my $id    = shift;
 
-  my $q = {};
+  my $data = {};
   my $dbh = $self->GetDb();
   my $sql = 'SELECT * FROM queue WHERE id=?';
   my $ref = $dbh->selectall_hashref($sql, 'id', undef, $id);
-  $q->{'queue'} = $ref->{$id};
+  $data->{'queue'} = $ref->{$id};
+  $data->{'queue'}->{'project_ref'} = $self->GetProjectRef($data->{'queue'}->{'project'});
+  $data->{'queue'}->{'priority_format'} = $self->StripDecimal($data->{'queue'}->{'priority'});
   $sql = 'SELECT * FROM bibdata WHERE id=?';
   $ref = $dbh->selectall_hashref($sql, 'id', undef, $id);
-  $q->{'bibdata'} = $ref->{$id};
+  $data->{'bibdata'} = $ref->{$id};
+  $data->{'bibdata'}->{$_. '_format'} = CGI::escapeHTML($data->{'bibdata'}->{$_}) for keys %{$data->{'bibdata'}};
+  $data->{'bibdata'}->{'pub_date_format'} = $self->FormatPubDate($id);
   $sql = 'SELECT * FROM reviews WHERE id=?';
   $ref = $dbh->selectall_hashref($sql, 'user', undef, $id);
   foreach my $user (keys %{$ref})
@@ -4988,9 +4998,9 @@ sub ReviewData
     $sql = 'SELECT data FROM reviewdata WHERE id=?';
     $ref->{$user}->{'data'} = $self->SimpleSqlGet($sql, $ref->{$user}->{'data'});
   }
-  $q->{'reviews'} = $ref;
-  $q->{'json'} = JSON::XS->new->encode($q);
-  return $q;
+  $data->{'reviews'} = $ref;
+  $data->{'json'} = JSON::XS->new->encode($data);
+  return $data;
 }
 
 sub HasLockedItem
@@ -6821,6 +6831,13 @@ sub Host
   return 'https://' . $host;
 }
 
+sub IsDevArea
+{
+  my $self = shift;
+
+  return ($self->get('instance'))? 0:1;
+}
+
 sub IsTrainingArea
 {
   my $self = shift;
@@ -8207,16 +8224,7 @@ sub Undollarize
   return undef;
 }
 
-# FIXME: projectcategories may make this obsolete.
-sub CanVolumeBeCrownCopyright
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $c = $self->GetPubCountry($id);
-  return 1 if defined $c && ($c eq 'United Kingdom' || $c eq 'Canada' || $c eq 'Australia');
-}
-
+# FIXME: this should probably not include an explicit reference to "Special" project.
 sub GetAddToQueueRef
 {
   my $self = shift;
@@ -8376,6 +8384,7 @@ sub SetUserCurrentProject
 }
 
 # Get the fields for a single project id.
+# FIXME: this should return a project object rather than a struct.
 sub GetProjectRef
 {
   my $self = shift;

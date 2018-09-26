@@ -1,6 +1,10 @@
-[% IF NOT select %]
-[% select = crms.GetAttrReasonCode(htid, user) %]
-[% END %]
+[% renNum   = data.reviews.$user.renNum   || cgi.param('renNum')   %]
+[% renDate  = data.reviews.$user.renDate  || cgi.param('renDate')  %]
+[% note     = data.reviews.$user.note     || cgi.param('note')     %]
+[% category = data.reviews.$user.category || cgi.param('category') %]
+[% select   = data.reviews.$user.rights   || cgi.param('rights')   %]
+[% hold     = data.reviews.$user.hold     || cgi.param('hold')     %]
+[% swiss    = data.reviews.$user.swiss    || cgi.param('swiss')    %]
 
 <form name="submitReview" action="crms">
   <input type="hidden" name="p"       value="finishReview"/>
@@ -8,11 +12,54 @@
   <input type="hidden" name="start"   value="[% crms.GetNow() %]"/>
   <input type="hidden" name="user"    value="[% user %]"/>
   <input type="hidden" name="editing" value="[% editing %]"/>
-  <input type="hidden" name="sys"     value="[% sys %]"/>
+  <input type="hidden" name="importUser" value="[% importUser %]"/>
+  [% crms.HiddenSys() %]
   <div class="reviewBlue">
-  
-  [% INCLUDE Partial_HTView.tt crms = crms, htid = htid %]
-  
+  <table class="id">
+    <tr>
+	    <td class="display" style="text-align:left;" colspan="2">
+	      <strong>HathiTrust Options:</strong>
+      </td>
+    </tr>
+    <tr>
+      <td class="display" style="text-align:left;">Size:</td>
+      <td>
+        <select title="PageTurner Size" class="review" onchange="zoom(this,'mag');">
+        [% percents = [50, 75, 100, 125, 150, 200] %]
+        [% FOREACH p IN percents %]
+          [% IF p == mag %]
+            <option value="[% p %]" selected="selected">[% "$p%" %]</option>
+          [% ELSE %]
+            <option value="[% p %]">[% "$p%" %]</option>
+          [% END %]
+        [% END %]
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <td class="display" style="text-align:left;">View:</td>
+      <td>
+        <select id="PTViewSelect" title="PageTurner View" class="review" onchange="zoom(this,'ptview');">
+        [% views = ['image', '1up', '2up', 'thumb'] %]
+        [% names = ['Classic', 'Scroll', 'Flip', 'Thumbnails'] %]
+        [% accesskeys = ['-', '=', '[', ']'] %]
+        [% FOR i IN [0 .. 3] %]
+          [% v = views.$i %]
+          [% n = names.$i %]
+          [% IF v == ptview %]
+            <option value="[% v %]" id="view[% names.$i %]Select" selected="selected">[% n %]</option>
+          [% ELSE %]
+            <option value="[% v %]" id="view[% names.$i %]Select">[% n %]</option>
+          [% END %]
+        [% END %]
+        </select>
+        [% FOR i IN [0 .. 3] %]
+          <a style="position:absolute;left:-999px;" href="#" accesskey="[% accesskeys.$i %]"
+             onfocus="var ptvs = document.getElementById('PTViewSelect');ptvs.selectedIndex=[% i %];zoom(ptvs,'ptview');">.</a>
+        [% END %]
+      </td>
+    </tr>
+  </table>
   </div>
   <div>
   <table class="reviewGrey">
@@ -164,8 +211,6 @@
     <option value="" [% ("" == category)? 'selected="selected"':'' %]>none</option>
     [% cats = crms.Categories(htid) %]
     [% FOREACH cat IN cats %]
-      [% # FIXME: projectcategories may make CanVolumeBeCrownCopyright() obsolete %]
-      [% NEXT IF cat == 'Crown Copyright' && ! crms.CanVolumeBeCrownCopyright(htid) %]
       <option value="[% cat %]" [% (cat == category)? 'selected="selected"':'' %]>[% cat %]</option>
     [% END %]
   </select>
@@ -185,7 +230,7 @@
   <table>
   [% IF expert %]
     <tr>
-      [% checked = (swiss || ((status == 2 || status == 3) && crms.GetSystemVar('swissByDefault'))) %]
+      [% checked = (swiss || ((data.queue.status == 2 || data.queue.status == 3) && crms.GetSystemVar('swissByDefault'))) %]
       <td style="text-align:left;">
         <input type="checkbox" id="swiss" name="swiss" [% (checked)? 'checked="checked"':'' %]/>
       </td>
@@ -215,30 +260,26 @@
       </td>
     </tr>
   </table>
-  [% data = crms.GetReviewsRef('adminReviews', 'Identifier', 'DESC', 'Identifier', htid) %]
-  [% reviews = data.rows %]
-  [% IF expert && import && reviews.size %]
-  <table>
-    <tr>
-      <td>
-        <div style="line-height:20px;">
-          <strong>Import user review:</strong>
-        </div>
-      </td>
-      <td>
-        <img id="importLoader" src="[% crms.WebPath('web', 'ajax-loader.gif') %]"
-             alt="loading..." style="display:none;"/>
-      </td>
-    [% FOREACH review IN reviews %]
+  [% reviews = data.reviews %]
+  [% IF expert && importUser && reviews.keys.size %]
+    <table id="importReviewsTable" data-reviews='[% data.json %]'>
       <tr>
-        <td><label for="pull[% review.user %]">[% review.user %] ([% review.attr %]/[% review.reason %])</label></td>
-        <td><input type="radio" name="pullrights" id="pull[% review.user %]"
-                   [% IF import == review.user %]checked="checked"[% END %]
-                   onclick="popReviewInfo('[% htid %]','[% review.user %]', '[% sys %]');"/>
+        <td colspan="2">
+          <div style="line-height:20px;">
+            <strong>Import user review:</strong>
+          </div>
         </td>
       </tr>
-    [% END %]
-  </table>
+      [% FOREACH user IN reviews.keys.sort %]
+        <tr>
+          <td><label for="pull[% user %]">[% user %] ([% reviews.$user.attr %]/[% reviews.$user.reason %])</label></td>
+          <td><input type="radio" name="pullrights" id="pull[% user %]"
+                     [% IF importUser == user %]checked="checked"[% END %]
+                     onclick="popReviewInfo('[% user %]');"/>
+          </td>
+        </tr>
+      [% END %]
+    </table>
   [% END %]
 </div>
 
@@ -258,3 +299,27 @@
 [% END %]
 
 </form>
+
+<script>
+[% IF importUser %]
+  addEvent(window, 'load', function(e)
+  {
+    popReviewInfo('[% importUser %]');
+  });
+[% END %]
+function popReviewInfo(user)
+{
+  var el = document.getElementById('importReviewsTable');
+  var data = JSON.parse(el.dataset.reviews);
+  var review = data.reviews[user];
+  var button = document.getElementById("r" + review.rights);
+  if (button) { button.checked = "checked"; }
+  button = document.getElementById("renewalFieldCheckbox");
+  if (button) { button.checked = (review.renNum != null); }
+  var field = document.getElementById("renewalField");
+  if (field) { field.value = review.renNum; }
+  document.submitReview.renDate.value = review.renDate;
+  document.submitReview.note.value = review.note;
+  selMenuItem('catMenu', (review.category)? review.category:'');
+}
+</script>

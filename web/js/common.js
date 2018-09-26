@@ -68,7 +68,7 @@ function selMenuItem(id, value)
   }
 }
 
-sfHover = function()
+function sfHover()
 {
   var sfEls = document.getElementById("menu").getElementsByTagName("li");
   for (var i=0; i<sfEls.length; i++)
@@ -94,10 +94,6 @@ sfHover = function()
       this.className=this.className.replace(new RegExp(" sfhover\\b"), "");
     }
   }
-}
-if (window.attachEvent)
-{
-  window.attachEvent("onload", sfHover);
 }
 
 // action code for debugger bars

@@ -22,41 +22,45 @@ sub Download
   my $startDate    = $cgi->param('startDate');
   my $endDate      = $cgi->param('endDate');
   my $offset       = $cgi->param('offset');
+  my $records      = $cgi->param('records');
   my $stype        = $cgi->param('stype');
   my $q            = $cgi->param('q');
-  my $success = 1;
 
+  my $res = 1;
   if ($page eq 'track')
   {
     $crms->DownloadTracking($q)
   }
   elsif ($page eq 'queue')
   {
-    $success = $crms->SearchAndDownloadQueue($order, $dir, $search1, $search1value, $op1,
-                                             $search2, $search2value, $startDate, $endDate);
+    $res = $crms->DownloadQueue($order, $dir, $search1, $search1value, $op1,
+                                $search2, $search2value, $startDate, $endDate,
+                                $offset, $records);
   }
   elsif ($page eq 'determinationStats')
   {
     my $monthly = $cgi->param('monthly');
     my $priority = $cgi->param('priority');
     my $pre = $cgi->param('pre');
-    $success = $crms->SearchAndDownloadDeterminationStats($startDate, $endDate, $monthly, $priority, $pre);
+    $res = $crms->DownloadDeterminationStats($startDate, $endDate, $monthly,
+                                             $priority, $pre);
   }
   elsif ($page eq 'exportData')
   {
-    $success = $crms->SearchAndDownloadExportData($order, $dir, $search1, $search1value, $op1,
-                                                  $search2, $search2value, $startDate, $endDate);
+    $res = $crms->DownloadExportData($order, $dir, $search1, $search1value, $op1,
+                                     $search2, $search2value, $startDate, $endDate,
+                                     $offset, $records);
   }
   else
   {
-    my $op2              = $cgi->param('op2');
-    my $search3          = $cgi->param('search3');
-    my $search3value     = $cgi->param('search3value');
-    $success = $crms->SearchAndDownload($page, $order, $dir, $search1, $search1value, $op1,
-                                        $search2, $search2value, $op2, $search3, $search3value,
-                                        $startDate, $endDate, $offset, $stype);
+    my $op2 = $cgi->param('op2');
+    my $search3 = $cgi->param('search3');
+    my $search3value = $cgi->param('search3value');
+    $res = $crms->DownloadReviews($page, $order, $dir, $search1, $search1value, $op1,
+                                  $search2, $search2value, $op2, $search3, $search3value,
+                                  $startDate, $endDate, $offset, $records, $stype);
   }
-  return $success;
+  return $res;
 }
 
 return 1;
