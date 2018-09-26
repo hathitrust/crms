@@ -1,5 +1,5 @@
 <div class="reviewPartial">
-  <table>
+  <table class="nav">
     <tr>
       <td rowspan="2">
         <img src="[% crms.WebPath('web', crms.GetSystemVar('smallLogo')) %]"

@@ -103,9 +103,8 @@ table {
 
 
 table.nav { 
-  border-bottom: 1px solid #72859a;
-  font-size: 12px;
-        
+  /*border-bottom: 1px solid #72859a;*/
+  font-size: 12px;   
 }
 
 table.nav th { 

@@ -1,6 +1,6 @@
 [% IF expert %]
 <div class="reviewPartial">
-  <table>
+  <table class="nav">
   [% IF status == 3 %]
     <tr><td><span style="font-size:1.1em;color:red;">Provisional Match</span></td></tr>
   [% ELSIF status == 2 %]
