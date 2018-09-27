@@ -5,9 +5,12 @@ use warnings;
 
 sub new
 {
-  my $class = shift;
-  my $self = { crms => shift };
-  return bless $self, $class;
+  my ($class, %args) = @_;
+  my $self = bless {}, $class;
+  $self->{'crms'} = $args{'crms'};
+  $self->{'id'}   = $args{'id'};
+  $self->{'name'} = $args{'name'};
+  return $self;
 }
 
 # FIXME: can some of these checks be centralized and kicked off by
@@ -46,6 +49,7 @@ sub EvaluateCandidacy
   my $where = $record->country;
   push @errs, "foreign pub ($where)" if $where ne 'USA';
   push @errs, 'non-BK format' unless $record->isFormatBK($id, $record);
+  #printf "Core candidacy: errors '%s'\n", join ', ', @errs;
   if (scalar @errs)
   {
     return {'status' => 'no', 'msg' => join '; ', @errs};

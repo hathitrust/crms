@@ -5,9 +5,12 @@ use warnings;
 
 sub new
 {
-  my $class = shift;
-  my $self = { crms => shift };
-  return bless $self, $class;
+  my ($class, %args) = @_;
+  my $self = bless {}, $class;
+  $self->{'crms'} = $args{'crms'};
+  $self->{'id'}   = $args{'id'};
+  $self->{'name'} = $args{'name'};
+  return $self;
 }
 
 # ========== CANDIDACY ========== #
@@ -36,7 +39,7 @@ sub EvaluateCandidacy
     push @errs, "pub date not completely specified ($date1,$date2,'$type')";
   }
   # Check year range
-  my $now = $self->{crms}->GetTheYear();
+  my $now = $self->{'crms'}->GetTheYear();
   my $min = $now - 95 + 1;
   my $max = 1977;
   push @errs, "pub date $pub not in range $min-$max" if $pub < $min or $pub > $max;

@@ -563,14 +563,14 @@ sub SelectAll
   eval {
     $ref = $dbh->selectall_arrayref($sql, undef, @_);
   };
-  my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, undef, @_);
   if ($@)
   {
     my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
     $self->SetError($msg);
     $self->Logit($msg);
   }
+  my $t2 = Time::HiRes::time();
+  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, undef, @_);
   return $ref;
 }
 
@@ -585,14 +585,14 @@ sub SelectAllSDR
   eval {
     $ref = $dbh->selectall_arrayref($sql, undef, @_);
   };
-  my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, 'ht_rights', @_);
   if ($@)
   {
     my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
     $self->SetError($msg);
     $self->Logit($msg);
   }
+  my $t2 = Time::HiRes::time();
+  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, 'ht_rights', @_);
   return $ref;
 }
 
@@ -1210,6 +1210,7 @@ sub LoadNewItemsInCandidates
   }
   my $endclause = ($end)? " AND time<='$end' ":' ';
   $sql = 'SELECT namespace,id,time FROM rights_current WHERE time>?' . $endclause . 'ORDER BY time ASC';
+  $sql = 'SELECT namespace,id,time FROM rights_current WHERE attr=2 and reason=1 AND time>?' . $endclause . 'ORDER BY time ASC' . ' LIMIT 5000';
   my $ref = $self->SelectAllSDR($sql, $start);
   my $n = scalar @{$ref};
   $self->ReportMsg("Checking $n possible additions to candidates from rights DB");
@@ -1295,7 +1296,7 @@ sub CheckAndLoadItemIntoCandidates
       if (!defined $inund || $inund ne $src)
       {
         $self->ReportMsg(sprintf("Skip $id ($src) -- %s in filtered volumes",
-                                 (defined $inund)? "updating $inund->$src":'inserting'));
+                                 (defined $inund)? "updating $inund->$src":"inserting as $src"));
         $self->Filter($id, $src);
       }
       else
@@ -1303,11 +1304,13 @@ sub CheckAndLoadItemIntoCandidates
         $self->ReportMsg("Skip $id already filtered as $src");
       }
     }
-    if (defined $inund || defined $incand || $inq)
+    elsif (defined $inund || defined $incand || $inq)
     {
-      $self->ReportMsg(sprintf("Remove $id %s (%s)\n",
-                               (defined $incand)? '--':'from und',
-                               $eval->{'msg'}));
+      my $fromwhere = '';
+      $fromwhere = "und [$inund]" if defined $inund;
+      $fromwhere .= sprintf "%scandidates", (length $fromwhere)? 'and ':'';
+      $fromwhere .= sprintf "%squeue", (length $fromwhere)? 'and ':'';
+      $self->ReportMsg("Remove $id $fromwhere\n");
       $self->RemoveFromCandidates($id);
     }
   }
@@ -1339,7 +1342,7 @@ sub AddItemToCandidates
       $self->Filter($id2, 'duplicate');
     }
   }
-  my $project = $self->GetProjectName($proj);
+  my $project = $self->GetProjectRef($proj)->{'name'};
   if (!$self->IsVolumeInCandidates($id))
   {
     $self->ReportMsg(sprintf("Add $id to candidates for project '$project' ($proj)"));
@@ -1486,15 +1489,18 @@ sub CandidatesModule
 # POSSIBLE FIXME: what if two or more modules want a volume? Priority value?
 sub EvaluateCandidacy
 {
+  use Term::ANSIColor qw(:constants);
+  $Term::ANSIColor::AUTORESET = 1;
   my $self   = shift;
   my $id     = shift;
   my $record = shift || $self->GetMetadata($id);
   my $proj   = shift; # For add to queue when specified by admin
 
+  return {'status' => 'filter', 'msg' => 'no meta'} unless defined $record;
   my $rq = $self->RightsQuery($id, 1);
-  return {'project' => 0, 'src' => 'no rights'} unless defined $rq;
+  return {'status' => 'filter', 'msg' => 'no meta'} unless defined $rq;
   my ($attr, $reason, $src, $usr, $time, $note) = @{$rq->[0]};
-  my $projects = $self->ProjectModules();
+  my $projects = $self->Projects();
   if ($proj)
   {
     my $obj = $projects->{$proj};
@@ -1503,21 +1509,38 @@ sub EvaluateCandidacy
   }
   my $filterEval;
   my ($eval, $filterEval);
+  printf "$id: language %s, country %s, copyright %s, rights $attr/$reason\n", $record->language, $record->country, $record->copyrightDate;
   foreach my $pid (sort keys %{$projects})
   {
+    #print "  Checking project $pid\n";
     my $obj = $projects->{$pid};
     next unless $obj;
+    #print "  Object found for $pid\n";
     $eval = $obj->EvaluateCandidacy($id, $record, $attr, $reason);
-    if ($eval->{'status'} = 'yes')
+    if ($eval->{'status'} eq 'yes')
     {
+      print GREEN "  ACCEPTED by $pid\n";
       $eval->{'project'} = $pid;
       return $eval;
     }
-    elsif ($eval->{'status'} = 'filter')
+    elsif ($eval->{'status'} eq 'filter')
     {
-      $filterEval = $eval;
+      if (defined $filterEval)
+      {
+        print RED "  FILTERABLE by $pid\n";
+      }
+      else
+      {
+        print RED "  FILTERED by $pid\n";
+        $filterEval = $eval;
+      }
+    }
+    else
+    {
+      printf "  REJECTED by $pid (%s)\n", $eval->{'msg'};
     }
   }
+  #print "  Finish $id\n";
   return (defined $filterEval)? $filterEval : $eval;
 }
 
@@ -4969,7 +4992,6 @@ sub UpdateMetadata
 # bibdata -> hashref of all fields in bibdata entry
 #            with <field>_format the HTML-escaped version
 # JSON -> stringified version of the return value without a self-reference
-# FIXME: add Project object to top level of structure
 sub ReviewData
 {
   my $self  = shift;
@@ -4980,8 +5002,8 @@ sub ReviewData
   my $sql = 'SELECT * FROM queue WHERE id=?';
   my $ref = $dbh->selectall_hashref($sql, 'id', undef, $id);
   $data->{'queue'} = $ref->{$id};
-  $data->{'queue'}->{'project_ref'} = $self->GetProjectRef($data->{'queue'}->{'project'});
   $data->{'queue'}->{'priority_format'} = $self->StripDecimal($data->{'queue'}->{'priority'});
+  $data->{'project'} = $self->Projects()->{$data->{'queue'}->{'project'}};
   $sql = 'SELECT * FROM bibdata WHERE id=?';
   $ref = $dbh->selectall_hashref($sql, 'id', undef, $id);
   $data->{'bibdata'} = $ref->{$id};
@@ -5216,7 +5238,7 @@ sub ProjectDispatch
   my $default = shift;
 
   $self->SetError('ProjectDispatch() needs explicit project') unless $proj;
-  my $mod = $self->ProjectModule($proj);
+  my $mod = $self->ProjectModules($proj)->{$proj};
   if (defined $mod && $mod->can($sub))
   {
     return $mod->$sub(@_);
@@ -8474,9 +8496,7 @@ sub AllAssignableAuthorities
 {
   my $self = shift;
 
-  my $sql = 'SELECT a.id,a.name,a.url FROM authorities a'.
-            ' INNER JOIN pageauthorities pa ON a.id=pa.id'.
-            ' WHERE pa.page="review" ORDER BY a.name ASC';
+  my $sql = 'SELECT id,name,url FROM authorities ORDER BY name ASC';
   my $ref = $self->SelectAll($sql);
   my @authorities;
   push @authorities, {'id' => $_->[0], 'name' => $_->[1], 'url' => $_->[2]} for @{$ref};
@@ -8510,13 +8530,13 @@ sub SetProjectUsers
   }
 }
 
-# Returns a hashref of project id to module.
-sub ProjectModules
+# Returns a hashref of project id to project object.
+sub Projects
 {
   my $self = shift;
 
-  my $modules = $self->get('ProjectModules');
-  if (!$modules)
+  my $objs = $self->get('Projects');
+  if (!$objs)
   {
     my $sql = 'SELECT id,name FROM projects ORDER BY id ASC';
     my $ref = $self->SelectAll($sql);
@@ -8529,24 +8549,14 @@ sub ProjectModules
       $class = 'Project_'. $class;
       eval {
           require $class. '.pm';
-          $obj = $class->new($self);
+          $obj = $class->new('crms' => $self, 'id' => $id, 'name' => $row->[1]);
       };
       $self->SetError("Could not load module '$class': $@") if $@;
-      $modules->{$id} = (defined $obj)? $obj: $modules->{'1'};
+      $objs->{$id} = $obj;
     }
-    $self->set('ProjectModules', $modules);
+    $self->set('Projects', $objs);
   }
-  return $modules;
-}
-
-# Takes a project id and returns initialized OO module for the project.
-# Returns undef for default behavior.
-sub ProjectModule
-{
-  my $self = shift;
-  my $proj = shift;
-
-  return $self->ProjectModules()->{$proj};
+  return $objs;
 }
 
 sub GetStanfordData

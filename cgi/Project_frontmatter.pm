@@ -5,9 +5,12 @@ use warnings;
 
 sub new
 {
-  my $class = shift;
-  my $self = { crms => shift };
-  return bless $self, $class;
+  my ($class, %args) = @_;
+  my $self = bless {}, $class;
+  $self->{'crms'} = $args{'crms'};
+  $self->{'id'}   = $args{'id'};
+  $self->{'name'} = $args{'name'};
+  return $self;
 }
 
 # ========== CANDIDACY ========== #

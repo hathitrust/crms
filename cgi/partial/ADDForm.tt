@@ -20,26 +20,61 @@
   <input type="hidden" name="sys"     value="[% sys %]"/>
   <table>
     <tr>
+      [% label = (u_renNum)? "Publication&nbsp;Date":"Author Death Date" %]
+      <td class="nowrap"><strong><label id="renewalFieldLabel" for="renewalField">
+      [% label %]: </label></strong></td>
       <td class="nowrap">
-        <strong><label id="renewalFieldLabel" for="renewalField">
-        Renewal&nbsp;ID: </label></strong>
-      </td>
-      <td class="nowrap">
-        <input id="renewalField" title="[% label %]" type="text" name="renNum"
-               value="[% u_renNum %]" size="8"
-               onblur="javascript:popRenewalDate()"/>
-        <a style="position:absolute;left:-999px;" href="#" accesskey="d"
-           onfocus="document.getElementById('renewalField').focus()">.</a>
+      [% IF NOT u_renDate && NOT importUser %]
+        [% authorDD = crms.GetADDFromAuthor(htid) %]
+        [% IF NOT authorDD %]
+          [% viafdata = crms.GetVIAFData(htid) %]
+          [% IF viafdata && viafdata.add %]
+            [% authorDD = viafdata.add %]
+            [% viaf = 1 %]
+          [% END %]
+        [% END %]
+        [% IF authorDD %]
+          <input type="hidden" id="prepopulated" name="prepopulated" value="[% (viaf)? 2:1 %]"/>
+          [% u_renDate = authorDD %]
+          [% tip = (viaf)? "VIAF":"Zephir" %]
+        [% END %]
+      [% END %]
+      <input id="renewalField" title="[% label %]" type="text" name="renDate"
+             value="[% u_renDate %]" size="6"
+             onblur="javascript:PredictRights('[% htid %]');"/>
+      [% IF tip %]
+        <span class="red">$tip</span>
+      [% END %]
+      <a style="position:absolute;left:-999px;" href="#" accesskey="d"
+         onfocus="document.getElementById('renewalField').focus()">.</a>
       </td>
     </tr>
+    [% IF data.bibdata.pub_date_format.match('^\d+-\d+$') %]
+      <tr id="actualPubRow">
+        <td class="nowrap"><strong><label id="actualPubDateFieldLabel" for="actualPubDateField">
+          Actual Pub Date: </label></strong>
+        </td>
+        <td class="nowrap">
+          <input id="actualPubDateField" title="Actual Pub Date" type="text"
+                 name="actualPubDateField" size="6"
+                 onblur="javascript:PredictRights('[% htid %]');"/>
+        </td>
+      </tr>
+    [% END %]
     <tr>
       <td class="reviewGrey" style="text-align:left;margin:0px;padding:0px;">
-        <input type="button" value="Get Renewal Date" onclick="popRenewalDate();" accesskey="d"
-               class="reviewblue" style="margin:0px;padding:1px;background-color:#d0dee6;"/>
+        <input type="checkbox" id="renewalFieldCheckbox" name="renNum"[% (u_renNum)? ' checked="checked"':'' %]
+               onchange="ToggleADD();PredictRights('[% htid %]');"/>
+        <label for="renewalFieldCheckbox">&nbsp;Pub Date</label>
       </td>
       <td>
-        <input type="text" title="Stanford Renewal Date" id="getDate" name="renDate"
-               value="[% u_renDate %]" size="8" readonly="readonly"/>
+        <input type="button" class="reviewblue" value="Pull Pub Date"
+        [% IF NOT data.bibdata.pub_date_format.match('^-?\d+$') %]disabled="disabled"[% END %]
+        onclick="PullPubDate();
+                 document.getElementById('renewalFieldCheckbox').checked=true;
+                 PredictRights('[% htid %]');"
+        accesskey="d"
+        style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
       </td>
     </tr>
   </table>
