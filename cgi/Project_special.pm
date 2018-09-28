@@ -1,16 +1,13 @@
-package Project_special;
+package Special;
+use parent 'Project';
 
 use strict;
 use warnings;
 
 sub new
 {
-  my ($class, %args) = @_;
-  my $self = bless {}, $class;
-  $self->{'crms'} = $args{'crms'};
-  $self->{'id'}   = $args{'id'};
-  $self->{'name'} = $args{'name'};
-  return $self;
+  my $class = shift;
+  return $class->SUPER::new(@_);
 }
 
 # ========== CANDIDACY ========== #

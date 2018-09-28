@@ -1,16 +1,44 @@
-package Project_commonwealth;
+package Commonwealth;
+use parent 'Project';
 
 use strict;
 use warnings;
 
 sub new
 {
-  my ($class, %args) = @_;
-  my $self = bless {}, $class;
-  $self->{'crms'} = $args{'crms'};
-  $self->{'id'}   = $args{'id'};
-  $self->{'name'} = $args{'name'};
-  return $self;
+  my $class = shift;
+  return $class->SUPER::new(@_);
+}
+
+my %TEST_HTIDS = (
+    'coo.31924000029250' => 'Australia',
+    'bc.ark:/13960/t02z7k303' => 'Canada',
+    'bc.ark:/13960/t0bw4939s' => 'UK');
+
+sub tests
+{
+  my $self = shift;
+
+  my @tests = keys %TEST_HTIDS;
+  return \@tests;
+}
+
+sub test
+{
+  use Test::More;
+  my $self = shift;
+
+  my $crms = $self->{'crms'};
+  foreach my $htid (keys %TEST_HTIDS)
+  {
+    my $res = $self->EvaluateCandidacy($htid, $crms->GetMetadata($htid), 'ic', 'bib');
+    ok(defined $res, "Project::Commonwealth EvaluateCandidacy($htid) defined");
+    isa_ok($res, 'HASH', "Project::Commonwealth EvaluateCandidacy($htid)");
+    ok(defined $res->{'status'}, "Project::Commonwealth EvaluateCandidacy($htid) status defined");
+    is($res->{'status'}, 'yes', "Project::Commonwealth EvaluateCandidacy($htid) YES");
+  }
+  return 1;
+  return $self->SUPER::test();
 }
 
 # ========== CANDIDACY ========== #
@@ -85,11 +113,11 @@ sub GetCutoffYear
     # FIXME: will this ever change?
     return 1954;
   }
-  elsif ($country eq 'Spain')
-  {
-    return $year-140 if $name eq 'minYear';
-    return 1935;
-  }
+  #elsif ($country eq 'Spain')
+  #{
+  #  return $year-140 if $name eq 'minYear';
+  #  return 1935;
+  #}
   return $year-120 if $name eq 'minYear';
   return $year-51;
 }

@@ -1,16 +1,13 @@
-package Project_mdpcorrections;
+package mdpcorrections;
+use parent 'Project';
 
 use strict;
 use warnings;
 
 sub new
 {
-  my ($class, %args) = @_;
-  my $self = bless {}, $class;
-  $self->{'crms'} = $args{'crms'};
-  $self->{'id'}   = $args{'id'};
-  $self->{'name'} = $args{'name'};
-  return $self;
+  my $class = shift;
+  return $class->SUPER::new(@_);
 }
 
 # ========== CANDIDACY ========== #

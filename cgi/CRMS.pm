@@ -1489,16 +1489,17 @@ sub CandidatesModule
 # POSSIBLE FIXME: what if two or more modules want a volume? Priority value?
 sub EvaluateCandidacy
 {
-  use Term::ANSIColor qw(:constants);
-  $Term::ANSIColor::AUTORESET = 1;
   my $self   = shift;
   my $id     = shift;
   my $record = shift || $self->GetMetadata($id);
   my $proj   = shift; # For add to queue when specified by admin
 
-  return {'status' => 'filter', 'msg' => 'no meta'} unless defined $record;
   my $rq = $self->RightsQuery($id, 1);
-  return {'status' => 'filter', 'msg' => 'no meta'} unless defined $rq;
+  unless (defined $record && defined $rq)
+  {
+    $self->ClearErrors();
+    return {'status' => 'filter', 'msg' => 'no meta'};
+  }
   my ($attr, $reason, $src, $usr, $time, $note) = @{$rq->[0]};
   my $projects = $self->Projects();
   if ($proj)
@@ -1509,44 +1510,23 @@ sub EvaluateCandidacy
   }
   my $filterEval;
   my ($eval, $filterEval);
-  printf "$id: language %s, country %s, copyright %s, rights $attr/$reason\n", $record->language, $record->country, $record->copyrightDate;
   foreach my $pid (sort keys %{$projects})
   {
-    #print "  Checking project $pid\n";
     my $obj = $projects->{$pid};
     next unless $obj;
-    #print "  Object found for $pid\n";
     $eval = $obj->EvaluateCandidacy($id, $record, $attr, $reason);
     if ($eval->{'status'} eq 'yes')
     {
-      print GREEN "  ACCEPTED by $pid\n";
       $eval->{'project'} = $pid;
       return $eval;
     }
     elsif ($eval->{'status'} eq 'filter')
     {
-      if (defined $filterEval)
-      {
-        print RED "  FILTERABLE by $pid\n";
-      }
-      else
-      {
-        print RED "  FILTERED by $pid\n";
-        $filterEval = $eval;
-      }
-    }
-    else
-    {
-      printf "  REJECTED by $pid (%s)\n", $eval->{'msg'};
+      $filterEval = $eval unless defined $filterEval;
     }
   }
-  #print "  Finish $id\n";
   return (defined $filterEval)? $filterEval : $eval;
 }
-
-
-
-
 
 sub GetQueueSize
 {
@@ -8544,14 +8524,14 @@ sub Projects
     {
       my $obj;
       my $id = $row->[0];
-      my $class = lc $row->[1] || 'core';
+      my $class = $row->[1] || 'Core';
       $class =~ s/\s//g;
-      $class = 'Project_'. $class;
+      my $file = 'Project_'. (lc $class). '.pm';
       eval {
-          require $class. '.pm';
+          require $file;
           $obj = $class->new('crms' => $self, 'id' => $id, 'name' => $row->[1]);
       };
-      $self->SetError("Could not load module '$class': $@") if $@;
+      $self->SetError("Could not load module file $file '$class': $@") if $@;
       $objs->{$id} = $obj;
     }
     $self->set('Projects', $objs);

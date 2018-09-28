@@ -1,16 +1,13 @@
-package Project_core;
+package Core;
+use parent 'Project';
 
 use strict;
 use warnings;
 
 sub new
 {
-  my ($class, %args) = @_;
-  my $self = bless {}, $class;
-  $self->{'crms'} = $args{'crms'};
-  $self->{'id'}   = $args{'id'};
-  $self->{'name'} = $args{'name'};
-  return $self;
+  my $class = shift;
+  return $class->SUPER::new(@_);
 }
 
 # FIXME: can some of these checks be centralized and kicked off by
