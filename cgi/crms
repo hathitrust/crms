@@ -68,8 +68,6 @@ elsif ($cgi->param('changeuser') == 1)
   $cgi->delete_all();
 }
 my $user = $crms->get('user');
-# Or, get project as CGI parameter for safety.
-my $proj = $crms->GetUserCurrentProject($user);
 
 ### Review submission: all projects go through here.
 if ($page eq 'finishReview')
@@ -91,7 +89,7 @@ if ($page eq 'finishReview')
     $err = "CRMS is not currently accepting reviews (status '$status'). Please Cancel." if $stat->[1] ne 'normal';
     if (!$err)
     {
-      $err = $crms->SubmitUserReviewForProject($id, $user, $cgi, $proj);
+      $err = $crms->SubmitReviewCGI($id, $user, $cgi);
     }
     if ($err)
     {

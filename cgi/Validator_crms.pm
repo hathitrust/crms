@@ -185,57 +185,67 @@ sub ValidateSubmission
   return $errorMsg;
 }
 
+# Returns a data structure with the following fields:
+# status: the status to set to queue item to
+# hold: id of a user with a review on hold
+# attr: the final rights attribute (status 8)
+# reason: the final rights reason (status 8)
+# category: the final determination category (status 8)
 sub CalcStatus
 {
   my $self = shift;
   my $id   = shift;
 
-  my %return;
-  my $status = 0;
-  my $sql = 'SELECT r.user,a.name,rs.name,r.renNum,r.renDate,r.hold'.
+  my $return = {'status' => 0};
+  my $sql = 'SELECT r.user,a.name,rs.name,r.hold,d.data'.
             ' FROM reviews r INNER JOIN attributes a ON r.attr=a.id'.
-            ' INNER JOIN reasons rs ON r.reason=rs.id WHERE r.id=?';
+            ' INNER JOIN reasons rs ON r.reason=rs.id'.
+            ' LEFT JOIN reviewdata d ON r.data=d.id'.
+            ' WHERE r.id=? ORDER BY r.time ASC';
   my $ref = $self->SelectAll($sql, $id);
-  my ($user, $attr, $reason, $renNum, $renDate, $hold) = @{$ref->[0]};
-  $sql = 'SELECT r.user,a.name,rs.name,r.renNum,r.renDate,r.hold'.
+  my ($user, $attr, $reason, $hold, $data) = @{$ref->[0]};
+  $sql = 'SELECT r.user,a.name,rs.name,r.hold,d.data'.
          ' FROM reviews r INNER JOIN attributes a ON r.attr=a.id'.
-         ' INNER JOIN reasons rs ON r.reason=rs.id WHERE r.id=? AND r.user!=?';
+         ' INNER JOIN reasons rs ON r.reason=rs.id'.
+         ' LEFT JOIN reviewdata d ON r.data=d.id'.
+         ' WHERE r.id=? AND r.user!=? ORDER BY r.time ASC';
   $ref = $self->SelectAll($sql, $id, $user);
-  return undef if 0 == scalar @{$ref};
-  my ($other_user, $other_attr, $other_reason, $other_renNum, $other_renDate, $other_hold) = @{$ref->[0]};
+  return $return if 0 == scalar @{$ref};
+  my ($user2, $attr2, $reason2, $hold2, $data2) = @{$ref->[0]};
   if ($hold)
   {
-    $return{'hold'} = $user;
+    $return->{'hold'} = $user;
   }
-  if ($other_hold)
+  if ($hold2)
   {
-    $return{'hold'} = $other_user;
+    $return->{'hold'} = $user2;
   }
-  if (DoRightsMatch($self, $attr, $reason, $other_attr, $other_reason))
+  if (DoRightsMatch($self, $attr, $reason, $attr2, $reason2))
   {
     # If both reviewers are non-advanced mark as provisional match
-    if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($other_user)))
+    if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($user2)))
     {
       $status = 3;
     }
     else # Mark as 4 or 8 - two that agree
     {
       $status = 4;
-      if ($reason ne $other_reason)
+      if ($reason ne $reason2)
       {
-        # Any other nonmatching reasons are resolved as an attr match
+        # Nonmatching reasons are resolved as an attr match status 8
         $status = 8;
         $return{'attr'} = $self->TranslateAttr($attr);
-        $return{'reason'} = 13;
+        $return{'reason'} = $self->TranslateReason('crms');
         $return{'category'} = 'Attr Match';
       }
-      elsif ($attr eq 'ic' && $reason eq 'ren' && $other_reason eq 'ren' && ($renNum ne $other_renNum || $renDate ne $other_renDate))
+      elsif ($attr eq 'ic' && $reason eq 'ren' && $reason2 eq 'ren' &&
+             !TolerantCompare($data, $data2))
       {
         $status = 8;
         $return{'attr'} = $self->TranslateAttr($attr);
         $return{'reason'} = $self->TranslateReason($reason);
         $return{'category'} = 'Attr Match';
-        $return{'note'} = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)', $renNum, $renDate, $other_renNum, $other_renDate;
+        $return{'note'} = 'Nonmatching renewals: %s vs %s', $data, $data2;
       }
     }
   }

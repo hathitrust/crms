@@ -103,14 +103,9 @@
 </div>
 <div id="Notes">
   <strong><label for="catMenu">Notes: </label></strong>
-  <select id="catMenu" class="review" name="category"
-    [% IF !ren %]onchange="javascript:PredictRights('[% htid %]');"[% END %]
-    >
-    <option value="" [% ("" == category)? 'selected="selected"':'' %]>none</option>
-    [% cats = crms.Categories(htid) %]
-    [% FOREACH cat IN cats %]
-      [% # FIXME: projectcategories may make CanVolumeBeCrownCopyright() obsolete %]
-      [% NEXT IF cat == 'Crown Copyright' && ! crms.CanVolumeBeCrownCopyright(htid) %]
+  <select id="catMenu" class="review" name="category">
+    <option value="" [% (NOT u_category)? 'selected="selected"':'' %]>none</option>
+    [% FOREACH cat IN crms.Categories(htid) %]
       <option value="[% cat %]" [% (cat == u_category)? 'selected="selected"':'' %]>[% cat %]</option>
     [% END %]
   </select>

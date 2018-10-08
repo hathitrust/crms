@@ -10,35 +10,20 @@ sub new
   return $class->SUPER::new(@_);
 }
 
-# ========== CANDIDACY ========== #
-# Returns undef for failure, or hashref with two fields:
-# status in {'yes', 'no', 'filter'}
-# msg potentially empty explanation.
-sub EvaluateCandidacy
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-  my $attr   = shift;
-  my $reason = shift;
-
-  return {'status' => 'no', 'msg' => 'frontmatter project does not take candidates'};
-}
-
 # ========== REVIEW ========== #
 sub ReviewPartials
 {
   return ['top', 'bibdata', 'frontmatter', 'expertDetails'];
 }
 
-sub SubmitUserReview
+# Extract Project-specific data from the CGI into a struct
+# that will be encoded as JSON string in the reviewdata table.
+# FIXME: how to signal an error? Use Note()?
+sub ExtractReviewData
 {
   my $self = shift;
-  my $id   = shift;
-  my $user = shift;
   my $cgi  = shift;
 
-  my $crms = $self->{'crms'};
   my $data;
   eval {
     my $json = JSON::XS->new;
@@ -55,10 +40,45 @@ sub SubmitUserReview
       last;
     }
   }
-  my $params = {'data' => $cgi->param('data'),
-                'note' => Encode::decode('UTF-8', $cgi->param('note')),
-                'start' => $cgi->param('start'), 'hold' => $hold};
-  return $crms->SubmitReview($id, $user, $params);
+  return $data;
+}
+
+# Return a dictionary ref with the following keys:
+# id: the reviewdata id
+# format: HTML-formatted data for inline display. May be blank.
+# format_long: HTML-formatted data for tooltip display. May be blank.
+sub FormatReviewData
+{
+  my $self = shift;
+  my $id   = shift;
+  my $json = shift;
+
+  return {'id' => $id,
+          'format' => '',
+          'format_long' => "<code>$json</code>"};
+}
+
+sub ValidateSubmission
+{
+  my $self = shift;
+  my $cgi  = shift;
+
+  return undef;
+}
+
+my @TYPES = ('Factual', 'Creative', 'Mixed', "Don't Know");
+my @CATEGORIES = ('Frontispiece', 'Title Page', 'Advertisement',
+                  'Pub. Information', 'Dedication', 'Pref. Material',
+                  'ToC', 'Text', 'Appendix', 'Index',
+                  'N/A', 'Mixed');
+sub Types
+{
+  return \@TYPES;
+}
+
+sub Categories
+{
+  return \@CATEGORIES;
 }
 
 1;

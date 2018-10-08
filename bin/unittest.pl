@@ -10,6 +10,7 @@ use warnings;
 use CRMS;
 use Test::More;
 use Getopt::Long qw(:config no_ignore_case bundling);
+use Data::Dumper;
 
 my $usage = <<END;
 USAGE: $0 [-ach]
@@ -20,12 +21,14 @@ Unit tests specified systems.
 -c         Test candidacy.
 -h         Print this help message.
 -p         Test projects.
+-r         Test reviews.
 END
 
 my $all;
 my $candidacy;
 my $help;
 my $projects;
+my $reviews;
 
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
@@ -33,6 +36,7 @@ die 'Terminating' unless GetOptions(
            'c'    => \$candidacy,
            'h|?'  => \$help,
            'p'    => \$projects,
+           'r'    => \$reviews,
 );
 die "$usage\n\n" if $help;
 
@@ -40,6 +44,7 @@ if ($all)
 {
   $candidacy = 1;
   $projects = 1;
+  $reviews = 1;
 }
 my $crms = CRMS->new();
 ### === Projects === ###
@@ -57,17 +62,17 @@ if ($projects)
     my $projname = $proj->name;
     can_ok($proj, 'tests');
     my $tests = $proj->tests;
-    isa_ok($tests, 'ARRAY', "Project $projid tests");
+    isa_ok($tests, 'ARRAY', "Project $projname ($projid) tests");
     foreach my $htid (@$tests)
     {
-      my $res = $crms->EvaluateCandidacy($htid);
-      ok(defined $res, "EvaluateCandidacy($htid) defined");
-      isa_ok($res, 'HASH', "EvaluateCandidacy($htid)");
-      ok(defined $res->{'project'}, "EvaluateCandidacy($htid) project defined");
-      is($res->{'project'}, $projid, "EvaluateCandidacy($htid) project Commonwealth ($projid)");
+      my $record = $crms->GetMetadata($htid);
+      ok(defined $record, "$projname $htid metadata defined");
+      my $res = $proj->EvaluateCandidacy($htid, $record, 'ic', 'bib');
+      ok(defined $res, "$projname EvaluateCandidacy($htid) result defined");
+      isa_ok($res, 'HASH', "$projname EvaluateCandidacy($htid)");
+      ok(defined $res->{'status'}, "$projname EvaluateCandidacy($htid) project defined");
+      is($res->{'status'}, 'yes', "$projname EvaluateCandidacy($htid) YES");
     }
-    can_ok($proj, 'test');
-    $proj->test();
   }
 }
 
@@ -84,6 +89,78 @@ if ($candidacy)
   is($res->{'msg'}, 'no meta', 'EvaluateCandidacy(NONEXISTENT) msg "no meta"');
 }
 
+if ($reviews)
+{
+  #$crms->set('debugSql', 1);
+  ### ============= Status 2 ============= ###
+  my $sql = 'DELETE FROM queue WHERE id="coo.31924054065317"';
+  $crms->PrepareSubmitSql($sql);
+  $sql = 'INSERT INTO queue (id,project) VALUES ("coo.31924054065317",5)';
+  $crms->PrepareSubmitSql($sql);
+  $sql = 'DELETE FROM reviews WHERE id="coo.31924054065317"';
+  $crms->PrepareSubmitSql($sql);
+  my $cgi = CGI->new();
+  $cgi->param('rights', 17); # 9/2 - pd/ncn
+  $cgi->param('start', $crms->GetNow());
+  my $res = $crms->SubmitReviewCGI('coo.31924054065317', 'jap232@psu.edu', $cgi);
+  ok(!defined $res, 'SubmitReviewCGI(coo.31924054065317, jap232@psu.edu)');
+  is($crms->GetStatus('coo.31924054065317'), 0, 'coo.31924054065317 single review S0');
+  $cgi = CGI->new();
+  $cgi->param('rights', 6); # 5/8 - und/nfi
+  $cgi->param('start', $crms->GetNow());
+  $cgi->param('note', 'Hold for question');
+  $cgi->param('hold', 1);
+  $res = $crms->SubmitReviewCGI('coo.31924054065317', 'mah94@cornell.edu', $cgi);
+  ok(defined $res, 'SubmitReviewCGI(coo.31924054065317, mah94@cornell.edu) fails w/o category');
+  is($crms->GetStatus('coo.31924054065317'), 0, 'coo.31924054065317 single review still S0');
+  $cgi->param('category', 'Edition/Reprint');
+  $res = $crms->SubmitReviewCGI('coo.31924054065317', 'mah94@cornell.edu', $cgi);
+  ok(!defined $res, 'SubmitReviewCGI(coo.31924054065317, mah94@cornell.edu) succeeds w/ category');
+  is($crms->SimpleSqlGet('SELECT pending_status FROM queue WHERE id="coo.31924054065317"'), 2, 'coo.31924054065317 PS2');
+  my $data = $crms->CalcStatus('coo.31924054065317');
+  ok(defined $data->{'hold'}, 'coo.31924054065317 held for mah94@cornell.edu');
+  $cgi->param('hold', 0);
+  $res = $crms->SubmitReviewCGI('coo.31924054065317', 'mah94@cornell.edu', $cgi);
+  ok(!defined $res, 'SubmitReviewCGI(coo.31924054065317, mah94@cornell.edu) succeeds unholding');
+  my $data = $crms->CalcStatus('coo.31924054065317');
+  ok(!defined $data->{'hold'}, 'coo.31924054065317 no longer held for mah94@cornell.edu');
+  is($data->{'status'}, 2, 'coo.31924054065317 status 2');
+  ### ============= Status 3 ============= ###
+  $sql = 'UPDATE queue SET status=0,pending_status=0 WHERE id="coo.31924054065317"';
+  $crms->PrepareSubmitSql($sql);
+  $sql = 'UPDATE users SET advanced=0 WHERE id IN ("jap232@psu.edu","mah94@cornell.edu")';
+  $crms->PrepareSubmitSql($sql);
+  $sql = 'UPDATE reviews SET attr=5,reason=8 WHERE id="coo.31924054065317"';
+  $crms->PrepareSubmitSql($sql);
+  $data = $crms->CalcStatus('coo.31924054065317');
+  is($data->{'status'}, 3, 'coo.31924054065317 status 3');
+  ### ============= Status 4 ============= ###
+  $sql = 'UPDATE users SET advanced=1 WHERE id IN ("jap232@psu.edu","mah94@cornell.edu")';
+  $crms->PrepareSubmitSql($sql);
+  $data = $crms->CalcStatus('coo.31924054065317');
+  is($data->{'status'}, 4, 'coo.31924054065317 status 4');
+  ### ============= Status 8 ============= ###
+  $sql = 'SELECT id FROM reviewdata LIMIT 2';
+  my $ref = $crms->SelectAll($sql);
+  my $did1 = $ref->[0]->[0];
+  my $did2 = $ref->[0]->[1];
+  $sql = 'UPDATE reviews SET attr=2,reason=7,data=? WHERE id="coo.31924054065317" AND user="jap232@psu.edu"';
+  $crms->PrepareSubmitSql($sql, $did1);
+  $sql = 'UPDATE reviews SET attr=2,reason=7,data=? WHERE id="coo.31924054065317" AND user="mah94@cornell.edu"';
+  $crms->PrepareSubmitSql($sql, $did1);
+  $data = $crms->CalcStatus('coo.31924054065317');
+  is($data->{'status'}, 4, 'coo.31924054065317 status 4');
+  $sql = 'UPDATE reviews SET attr=2,reason=7,data=? WHERE id="coo.31924054065317" AND user="jap232@psu.edu"';
+  $crms->PrepareSubmitSql($sql, $did1);
+  $sql = 'UPDATE reviews SET attr=2,reason=7,data=? WHERE id="coo.31924054065317" AND user="mah94@cornell.edu"';
+  $crms->PrepareSubmitSql($sql, $did2);
+  $data = $crms->CalcStatus('coo.31924054065317');
+  is($data->{'status'}, 8, 'coo.31924054065317 status 8');
+  $sql = 'UPDATE reviews SET attr=2,reason=17,data=? WHERE id="coo.31924054065317" AND user="mah94@cornell.edu"';
+  $crms->PrepareSubmitSql($sql, $did1);
+  $data = $crms->CalcStatus('coo.31924054065317');
+  is($data->{'status'}, 8, 'coo.31924054065317 status 8');
+}
 
 if (0)
 {

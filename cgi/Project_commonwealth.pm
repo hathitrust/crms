@@ -23,24 +23,6 @@ sub tests
   return \@tests;
 }
 
-sub test
-{
-  use Test::More;
-  my $self = shift;
-
-  my $crms = $self->{'crms'};
-  foreach my $htid (keys %TEST_HTIDS)
-  {
-    my $res = $self->EvaluateCandidacy($htid, $crms->GetMetadata($htid), 'ic', 'bib');
-    ok(defined $res, "Project::Commonwealth EvaluateCandidacy($htid) defined");
-    isa_ok($res, 'HASH', "Project::Commonwealth EvaluateCandidacy($htid)");
-    ok(defined $res->{'status'}, "Project::Commonwealth EvaluateCandidacy($htid) status defined");
-    is($res->{'status'}, 'yes', "Project::Commonwealth EvaluateCandidacy($htid) YES");
-  }
-  return 1;
-  return $self->SUPER::test();
-}
-
 # ========== CANDIDACY ========== #
 # Returns undef for failure, or hashref with two fields:
 # status in {'yes', 'no', 'filter'}
@@ -130,5 +112,83 @@ sub ReviewPartials
           'HTView', 'ADDForm', 'ADDCalculator',
           'expertDetails'];
 }
+
+sub ValidateSubmission
+{
+  my $self = shift;
+  my $cgi  = shift;
+
+  my @errs;
+  my ($attr, $reason) = $self->{'crms'}->TranslateAttrReasonFromCode($cgi->param('rights'));
+  my $date = $cgi->param('date');
+  my $pub = $cgi->param('pub');
+  my $note = $cgi->param('note');
+  my $category = $cgi->param('category');
+  $date =~ s/\s+//g if $date;
+  #my $actual = $cgi->param('actual');
+  my ($pubDate, $pubDate2);
+  $pubDate = $date if $pub;
+  #$pubDate = $actual if $actual;
+  if (!defined $pubDate)
+  {
+    $pubDate = $self->{'crms'}->FormatPubDate($cgi->param('htid'));
+    if ($pubDate =~ m/-/)
+    {
+      ($pubDate, $pubDate2) = split '-', $pubDate, 2;
+    }
+  }
+  if ($attr eq 'und' && $reason eq 'nfi' &&
+      (!$category ||
+       (!$note && 1 == $self->{'crms'}->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category))))
+  {
+    push @errs, 'und/nfi must include note category and note text';
+  }
+  if ($date && $date !~ m/^-?\d{1,4}$/)
+  {
+    push @errs, 'year must be only decimal digits';
+  }
+  elsif (($reason eq 'add' || $reason eq 'exp') && !$date)
+  {
+    push @errs, "*/$reason must include a numeric year";
+  }
+  elsif ($pubDate < 1923 && $attr eq 'icus' && $reason eq 'gatt' &&
+         (!$pubDate2 || $pubDate2 < 1923))
+  {
+    push @errs, 'volumes published before 1923 are ineligible for icus/gatt';
+  }
+  if ($category && !$note)
+  {
+    if ($self->{'crms'}->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category))
+    {
+      push @errs, 'must include a note if there is a category';
+    }
+  }
+  elsif ($note && !$category)
+  {
+    push @errs, 'must include a category if there is a note';
+  }
+  return join ', ', @errs;
+}
+
+# Extract Project-specific data from the CGI into a struct
+# that will be encoded as JSON string in the reviewdata table.
+sub ExtractReviewData
+{
+  my $self = shift;
+  my $cgi  = shift;
+
+  my $date = $cgi->param('date');
+  my $data;
+  if ($date)
+  {
+    $data = {'date' => $date};
+    $data->{'pub'} = 1 if $cgi->param('pub');
+    $data->{'crown'} = 1 if $cgi->param('crown');
+    $data->{'src'} = $cgi->param('src') if $cgi->param('src');
+    $data->{'actual'} = $cgi->param('actual') if $cgi->param('actual');
+  }
+  return $data;
+}
+
 
 1;

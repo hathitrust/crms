@@ -5,23 +5,12 @@
       <th class="nowrap">View 1:</th>
       <td>
         <select title="Search 1" class="review" id="search1Select" onchange="changeFrame1(1);" style="float:right;">
-        [% optopen = 0 %]
-        [% selectit = 0 %]
         [% FOREACH src IN sources %]
-          [% IF src.url %]
-            [% selectstr = "" %]
-            [% IF selectit == 0 && src.initial == 1 %]
-              [% selectit = 1 %]
-              [% selectstr = "selected='selected'" %]
-            [% END %]
-            <option value="[% src.url %]" [% selectstr %]>[% src.name %]</option>
-          [% ELSE %]
-            [% IF optopen == 1 %]</optgroup>[% END %]
-            <optgroup label="[% src.name %]">
-            [% optopen = 1 %]
-          [% END %]
+          <option value="[% src.url %]"
+                  [% IF src.initial == 1 %]selected="selected"[% END %]>
+            [% src.name %]
+          </option>
         [% END %]
-        [% IF optopen == 1 %]</optgroup>[% END %]
         </select>
       </td>
     </tr>
@@ -29,23 +18,12 @@
       <th class="nowrap">View 2:</th>
       <td>
         <select title="Search 2" class="review" id="search2Select" onchange="changeFrame2(1);" style="float:right;">
-        [% optopen = 0 %]
-        [% selectit = 0 %]
         [% FOREACH src IN sources %]
-          [% IF src.url %]
-            [% selectstr = "" %]
-            [% IF selectit == 0 && src.initial == 2 %]
-              [% selectit = 1 %]
-              [% selectstr = "selected='selected'" %]
-            [% END %]
-            <option value="[% src.url %]" [% selectstr %]>[% src.name %]</option>
-          [% ELSE %]
-            [% IF optopen == 1 %]</optgroup>[% END %]
-            <optgroup label="[% src.name %]">
-            [% optopen = 1 %]
-          [% END %]
+          <option value="[% src.url %]"
+                  [% IF src.initial == 2 %]selected="selected"[% END %]>
+            [% src.name %]
+          </option>
         [% END %]
-        [% IF optopen == 1 %]</optgroup>[% END %]
         </select>
       </td>
     </tr>
@@ -64,15 +42,18 @@
       [% END %]
     [% END %]
   </table>
-  
+
   <script type="text/javascript">
 <!--
   addEvent(window, 'load', Partial_authorities_mainWindowLoad);
   function Partial_authorities_mainWindowLoad(e)
   {
+[% IF auths || NOT crms.IsDevArea() %]
     changeFrame1();
     changeFrame2();
+[% END %]
   }
 -->
   </script>
+
 </div>

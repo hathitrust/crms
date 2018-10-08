@@ -1,4 +1,4 @@
-[% u_note = (error)? cgi.param('note') : data.$user.note %]
+[% #u_note = (error)? cgi.param('note') : data.$user.note %]
 [% u_data = (error)? cgi.param('data') : data.reviews.$user.data %]
 
 <div class="reviewPartial" id="Partial_frontmatter_div">
@@ -13,73 +13,47 @@
         <input id="goForwardButton" type="button" value="&gt;" onclick="GoForward();"/>
       </td>
     </tr>
-    
     <tr>
       <td colspan="2"><strong>Type</strong></td>
     </tr>
+    [% i = 0 %]
+    [% FOREACH type IN data.project.Types() %]
+      [% IF i % 2 == 0 %]<tr>[% END %]
+      <td><input id="type_[% i %]" type="radio" name="type" value="[% i %]"
+                 onclick="SaveSelection();"/>
+          <label for="type_[% i %]">[% type %]</label></td>
+      [% i = i + 1 %]
+      [% IF i % 2 == 0 %]</tr>[% END %]
+    [% END %]
     <tr>
-      <td>
-        <input id="type_0" type="radio" name="type" value="0"
-               onclick="SaveSelection();"/>
-        <label for="type_0">Table of Contents</label>
-      </td>
-      <td>
-        <input id="type_1" type="radio" name="type" value="1"
-               onclick="SaveSelection();"/>
-        <label for="type_1">Illustration</label>
-      </td>
+      <td colspan="2"><strong>Category</strong></td>
     </tr>
-    <tr>
-      <td>
-        <input id="type_2" type="radio" name="type" value="2"
-               onclick="SaveSelection();"/>
-        <label for="type_2">Acknowledgments</label>
-      </td>
-      <td>
-        <input id="type_3" type="radio" name="type" value="3"
-               onclick="SaveSelection();"/>
-        <label for="type_3">Poetry</label>
-      </td>
-    </tr>
-    <tr>
-      <td>
-        <input id="type_4" type="radio" name="type" value="4"
-               onclick="SaveSelection();"/>
-        <label for="type_4">Manifesto</label>
-      </td>
-      <td>
-        <input id="type_5" type="radio" name="type" value="5"
-               onclick="SaveSelection();"/>
-        <label for="type_5">Rant</label>
-      </td>
-    </tr>
-    <tr>
-      <td colspan="2"><strong>Character</strong></td>
-    </tr>
-    <tr>
-      <td>
-        <input id="character_0" type="radio" name="character" value="0"
-               onclick="SaveSelection();"/>
-        <label for="character_0">Factual</label>
-      </td>
-      <td>
-        <input id="character_1" type="radio" name="character" value="1"
-               onclick="SaveSelection();"/>
-        <label for="character_1">Creative</label>
-      </td>
-    </tr>
+    [% i = 0 %]
+    [% FOREACH cat IN data.project.Categories() %]
+      [% IF i % 2 == 0 %]<tr>[% END %]
+      <td><input id="category_[% i %]" type="radio" name="category" value="[% i %]"
+                 onclick="SaveSelection();"/>
+          <label for="category_[% i %]">[% cat %]</label></td>
+      [% i = i + 1 %]
+      [% IF i % 2 == 0 %]</tr>[% END %]
+    [% END %]
         
     <form name="submitCorrection" action="crms">
     <input type="hidden" name="p" value="finishReview"/>
     <input type="hidden" name="htid" value="[% htid %]"/>
-    <input type="hidden" id="data_hf" name="data" value="[% data %]"/>
+    <input type="hidden" id="data_hf" name="data" value=""/>
     <input type="hidden" name="start" value="[% crms.GetNow() %]"/>
+    <input type="hidden" id="hold_hf" name="hold" value="0"/>
     
     <tr>
       <td colspan="2"><strong>Notes: </strong></td>
     </tr>
     <tr>
-      <td colspan="2"><textarea title="Note Text" id="NoteTextField" name="note" cols="20" rows="1">[% note %]</textarea></td>
+      <td colspan="2">
+        <textarea title="Note Text" id="note_tf" name="note"
+                  cols="20" rows="1" onblur="SaveSelection();">
+        </textarea>
+      </td>
     </tr>
     <tr>
       <td>
@@ -95,7 +69,6 @@
   <!--<a style="position:absolute;left:-999px;" href="#" accesskey="n"
        onfocus="document.getElementById('NoteTextField').focus()">.</a>-->
   </form>
-  <span id="debugArea"></span>
 
 
 <script>
@@ -109,7 +82,7 @@
                new Array(pages)
              [% END %];
 
-  window.onload = function(e)
+  addEvent(window, 'load', function(e)
   {
     el = document.getElementById('goBackButton');
     el.disabled = true;
@@ -120,7 +93,7 @@
     var el = document.getElementById('seqSpan');
     el.innerHTML = seq;
     RestoreSelection();
-  }
+  });
 
   function GoForward()
   {
@@ -171,11 +144,12 @@
   {
     var els = document.getElementsByName("type");
     var type = GetCheckedValue(els);
-    els = document.getElementsByName("character");
-    var character = GetCheckedValue(els);
-    if (type || character)
+    els = document.getElementsByName("category");
+    var category = GetCheckedValue(els);
+    var note = document.getElementById("note_tf").value;
+    if (type || category)
     {
-      data[seq - 1] = [type, character];
+      data[seq - 1] = [type, category, note];
     }
     var el = document.getElementById('data_hf');
     el.value = JSON.stringify(data);
@@ -188,20 +162,23 @@
     var vals = data[seq - 1];
     var val0 = vals? (vals[0]? vals[0]:-1):-1;
     var val1 = vals? (vals[1]? vals[1]:-1):-1;
+    var note = vals? (vals[2]? vals[2]:undefined):undefined;
     var button = document.getElementById("type_" + val0);
     if (button) { button.checked = "checked"; }
-    button = document.getElementById("character_" + val1);
+    button = document.getElementById("category_" + val1);
     if (button) { button.checked = "checked"; }
     var buttons = document.getElementsByName("type");
     for (var i=0; i<buttons.length; i++)
     {
       buttons[i].checked = (i == val0);
     }
-    buttons = document.getElementsByName("character");
+    buttons = document.getElementsByName("category");
     for (var i=0; i<buttons.length; i++)
     {
       buttons[i].checked = (i == val1);
     }
+    if (!note) { note = ''; }
+    document.getElementById("note_tf").value = note;
     CheckCompleteness();
   }
   
@@ -239,9 +216,13 @@
       var el = document.getElementById('cancelButton');
       el.disabled = false;
     }
-    //Debug(data);
-    //Debug((complete)? "<span style='color:green;'>Complete</span>":
-    //                  "<span style='color:red;'>Incomplete</span>", 1);
+    var el = document.getElementById('hold_hf');
+    el.value = (complete)? '0':'1';
+    Debug("<strong>Data:</strong> " + JSON.stringify(data));
+    Debug((started)? "<span style='color:green;'>Started</span>":
+                      "<span style='color:red;'>Not Started</span>", 1);
+    Debug((complete)? "<span style='color:green;'>Complete</span>":
+                      "<span style='color:red;'>Incomplete</span>", 1);
   }
 </script>
 </div>

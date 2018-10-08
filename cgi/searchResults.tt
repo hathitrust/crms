@@ -35,6 +35,11 @@ function CheckAll(box,formid)
 	  aa.elements[i].checked = box.checked;
 	}
 }
+
+addEvent(window, 'load', function(e)
+{
+  tippy('.tippy');
+});
 -->
 </script>
 
@@ -143,7 +148,7 @@ function CheckAll(box,formid)
   [% END %]
   [% prev_id        = '' %]
   [% active_color   = color_white %]
-  [% IF p == 'undReviews' %]
+  [% IF p == 'provisionals' %]
     <br/><br/>
     <form action="crms" id="checks">
     <input type="hidden" name="p" value="$p"/>
@@ -181,24 +186,16 @@ function CheckAll(box,formid)
     <th>Author</th>
     [% IF p == 'adminHistoricalReviews' %]<th>Pub&nbsp;Date</th>[% END %]
     <th>Review&nbsp;Date</th>
-    [% IF p != 'undReviews' AND p != 'expert' %]<th>Status</th>[% END %]
+    [% IF p != 'provisionals' AND p != 'conflicts' %]<th>Status</th>[% END %]
     <th>Reviewer</th>
-    <th>Attr</th>
-    <th>Reason</th>
-    [% showRen = (p == 'undReviews' || p == 'expert' || (p == 'adminHistoricalReviews' && 'crmsworld' == sys)) %]
-    [% IF showRen %]
-      [% IF 'crms' == sys %]
-        <th>Renewal</th>
-      [% ELSE %]
-        <th>Death/<span class="red">Pub</span></th>
-      [% END %]
-    [% END %]
+    <th>Rights</th>
+    <th>Data</th>
     <th>Note&nbsp;Category</th>
     <th>Note</th>
     [% IF crms.IsUserAtLeastExpert() %]<th>Priority</th>[% END %]
     [% IF p == 'adminHistoricalReviews' %]<th>Verdict</th>[% END %]
-    [% IF crms.IsUserAtLeastExpert() && p != 'undReviews' && p != 'expert' %]<th>Swiss</th>[% END %]
-    [% IF p == 'undReviews' %]<th>Select</th>[% END %]
+    [% IF crms.IsUserAtLeastExpert() && p != 'provisionals' && p != 'conflicts' %]<th>Swiss</th>[% END %]
+    [% IF p == 'provisionals' %]<th>Select</th>[% END %]
     [% IF p == 'adminReviews' || p == 'editReviews' %]
       <th>Hold</th>
     [% END %]
@@ -223,7 +220,7 @@ function CheckAll(box,formid)
       <tr style="background-color:[% active_color %];">
         <td class="nowrap">
         [% review.id %]
-        [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' %]
+        [% IF p == 'conflicts' || p == 'provisionals' || p == 'editReviews' %]
           [% IF crms.IsLockedForOtherUser(review.id) %]
             <img width="16" height="16" alt="Locked" src="[% crms.WebPath('web', 'OtherLock.png') %]"/>
           [% ELSIF crms.IsLockedForUser(review.id, user) %]
@@ -241,12 +238,12 @@ function CheckAll(box,formid)
           <td style="display:[% (showSysID)? 'table-cell':'none' %];">$review.src</td>
         [% END %]
         <td>
-        [% IF p == 'expert' || p == 'undReviews' || p == 'editReviews' || p == 'holds' %]
+        [% IF p == 'conflicts' || p == 'provisionals' || p == 'editReviews' || p == 'holds' %]
           [% IF crms.IsLockedForOtherUser(review.id) ||
                 0#crms.HasItemBeenReviewedByAnotherIncarnation(review.id) %]
             [% review.title %]
           [% ELSE %]
-             [% IF p == 'expert' || p == 'undReviews' %]
+             [% IF p == 'conflicts' || p == 'provisionals' %]
                [% crms.LinkToReview(review.id, review.title, review.user) %]
              [% ELSE %]
                [% IF crms.GetStatus(review.id) == 6 %]
@@ -263,33 +260,32 @@ function CheckAll(box,formid)
         <td>[% cgi.escapeHTML(review.author) %]</td>
         [% IF p == 'adminHistoricalReviews' %]<td>$review.pubdate</td>[% END %]
         <td>$review.date</td>
-        [% IF p != 'undReviews' AND p != 'expert' %]<td>$review.status</td>[% END %]
+        [% IF p != 'provisionals' AND p != 'conflicts' %]<td>$review.status</td>[% END %]
         <td>$review.user</td>
-        <td>$review.attr</td>
-        <td class="nowrap">$review.reason
-        [% IF !showRen && (review.renDate || review.renNum) %]
-          [% IF 'crms' == sys %]
-            [% msg = review.renNum _ ', ' _ review.renDate %]
-          [% ELSE %]
-            [% msg = ((review.renNum)? 'Pub Date ':'ADD ')  _ review.renDate %]
+        <td class="nowrap">
+          [% IF review.attr OR review.reason %]
+            [% review.attr _ '/' _ review.reason %]
           [% END %]
-          <a class="tip2" href="#"><strong>&#x1F4DD;</strong><span style="width:10em;">[% msg %]</span></a>
-        [% END %]
         </td>
-        [% IF showRen %]
-          [% IF 'crms' == sys %]
-            <td>$review.renNum</td>
-          [% ELSE %]
-            <td>
-              [% IF review.renNum %]<span class="red">[% END %]
-              $review.renDate
-              [% IF review.renNum %]</span>[% END %]
-            </td>
+        <td>
+          [% # Do not display review data id directly %]
+          [% # If there is a format field, display it inline %]
+          [% # If there is a format_long field, display it as a tip. %]
+          [% # (Alternatively, decision could be made based on length of data string.) %]
+          [% IF review.data %]
+            [% IF review.data.format %]
+            <span>[% review.data.format %]</span>
+            [% END %]
+            [% IF review.data.format_long %]
+            <img class="tippy" width="16" height="16" alt="Review Data"
+                 src="[% crms.WebPath('web', 'help.png') %]"
+                 data-tippy-content="[% cgi.escapeHTML(review.data.format_long) %]"/>
+            [% END %]
           [% END %]
-        [% END %]
+        </td>
         <td class="nowrap">$review.category</td>
         <td>[% crms.LinkNoteText(cgi.escapeHTML(review.note)) %]</td>
-        [% IF crms.IsUserAtLeastExpert() %]<td>$review.priority</td>[% END %]
+        [% IF crms.IsUserAtLeastExpert() %]<td>[% review.priority %]</td>[% END %]
         [% IF p == 'adminHistoricalReviews' %]
           <td class="textcenter">
             [% icon = (review.validated)? ((review.validated == 2)? 'MinusIcon.png':'CheckIcon.png'):'XIcon.png' %]
@@ -297,8 +293,8 @@ function CheckAll(box,formid)
             <img width="16" height="16" alt="Correctness" src="[% icon %]"/>
           </td>
         [% END %]
-        [% IF crms.IsUserAtLeastExpert() && p != 'undReviews' && p != 'expert' %]<td>$review.swiss</td>[% END %]
-        [% IF p == 'undReviews' %]
+        [% IF crms.IsUserAtLeastExpert() && p != 'provisionals' && p != 'conflicts' %]<td>$review.swiss</td>[% END %]
+        [% IF p == 'provisionals' %]
         <td class="textcenter">
           [% IF first && !crms.IsLockedForOtherUser(review.id) %]
             <input type="checkbox" name="vol_[% review.id %]"/>
@@ -319,7 +315,7 @@ function CheckAll(box,formid)
       [% prev_id = review.id %]
     [% END %]
   </table>
-  [% IF p == 'undReviews' %]
+  [% IF p == 'provisionals' %]
     <br/>
     <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
     <input type="submit" name="approve" value="Approve Selected Volumes"/>

@@ -95,6 +95,9 @@
         </table>
       </div>
     [% END %]
+    <!-- FIXME: need to conditionally exclude this or turn off Debug()
+         if in production. -->
+    <span id="debugArea"></span>
   </div> <!-- Operational Pane div -->
   [%# the frame (Stanford, HT, Cat...) %]
   <div class="divFrame" id="divFrame">
@@ -102,32 +105,5 @@
     <iframe class="reviewFrame" title="Authority 2" id="bFrame" src="about:blank" style="display:none;"></iframe>
   </div>
 </div>
-
-[% IF !ren %]
-<script type="text/javascript">
-<!--
-  addEvent(window, 'load', mainWindowLoad);
-  function mainWindowLoad(e)
-  {
-    var renewalField = document.getElementById("renewalField");
-    var year = renewalField.value;
-    var patt = /-?[0-9]+/;
-    if (patt.test(year))
-    {
-      PredictRights('[% htid %]');
-      document.getElementById('NoteTextField').focus();
-    }
-    else
-    {
-      document.getElementById('renewalField').focus();
-    }
-  [% IF auths || NOT crms.IsDevArea() %]
-    changeFrame1();
-    changeFrame2();
-  [% END %]
-  }
--->
-</script>
-[% END %]
 
 [% INCLUDE footer.tt %]

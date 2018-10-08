@@ -115,9 +115,10 @@ foreach my $row (@{$ref})
     $change++;
     next;
   }
-  print "$id\n";
-  $sql = 'SELECT renDate,renNum,category,note,user FROM historicalreviews WHERE gid=?' .
-         ' AND validated=1 AND renDate IS NOT NULL';
+  #print "$id\n";
+  $sql = 'SELECT d.data,r.category,r.note,r.user FROM reviewdata r'.
+         ' INNER JOIN historicalreviews r ON d.id=r.data'.
+         ' WHERE r.gid=? AND r.validated=1 AND d.data LIKE "%date%"';
   my $ref2 = $crms->SelectAll($sql, $gid);
   my $n = scalar @{$ref2};
   next unless $n > 0;
@@ -128,32 +129,34 @@ foreach my $row (@{$ref})
   my $crown = 0;
   foreach my $row2 (@{$ref2})
   {
-    my $pub;
+    my $data = $row2->[0];
+    my $pubdate;
     my %dates = ();
-    $renDate = $row2->[0];
-    $dates{$renDate} = 1 if $renDate;
-    my $renNum = $row2->[1];
-    my $cat = $row2->[2];
-    my $note = $row2->[3];
-    my $user = $row2->[4];
+    my $date = $data->{'date'};
+    $dates{$date} = 1 if $date;
+    my $pub = $data->{'date'};
+    my $cat = $row2->[1] || '';
+    my $note = $row2->[2];
+    my $user = $row2->[3];
     my @matches = $note =~ /(?<!\d)1\d\d\d(?![\d\-])/g;
-    $crown = 1 if $crms->TolerantCompare($cat, 'Crown Copyright');
+    $crown = 1 if $cat eq 'Crown Copyright' or $data->{'crown'};
     foreach my $match (@matches)
     {
       print "Match on '$match'\n" if $verbose > 2;
       $dates{$match} = 1 if length $match and $match < $year;
     }
     printf "Dates %s\n", join ', ', sort keys %dates if $verbose > 2;
+    # FIXME: add check for actual pub date post 2019
     foreach $renDate (sort keys %dates)
     {
-      my $last = $crms->PredictLastCopyrightYear($id, $renDate, $renNum, $crown, $record);
-      $msg .= "   last copyright year '$last' from '$renDate', '$renNum' ($user)\n";
-      my $rid = $crms->PredictRights($id, $renDate, $renNum,
-                                     $crown, $record, \$pub, $year);
+      my $last = $crms->PredictLastCopyrightYear($id, $date, $pub, $crown, $record);
+      $msg .= "   last copyright year '$last' from '$date', '$pub' ($user)\n";
+      my $rid = $crms->PredictRights($id, $date, $pub,
+                                     $crown, $record, undef, $year);
       ($pa, $pr) = $crms->TranslateAttrReasonFromCode($rid);
       $msg .= "   ADD $renDate predicted $pa/$pr (curr $acurr/$rcurr)\n";
       $predictions{$pa} = 1;
-      print "Predict $pa from $renDate ($user)\n" if $verbose > 2;
+      print "Predict $pa from $date ($user)\n" if $verbose > 2;
       last if $pa eq 'ic';
       last if $pa eq $acurr;
     }

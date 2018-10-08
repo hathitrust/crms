@@ -1,9 +1,12 @@
 [% cgi        = crms.get('cgi')         %]
 [% importUser = cgi.param('importUser') %]
 
+[% # FIXME: put Crown Copyright checkbox %]
+
 [% # Set up values from CGI (in case of error) or existing review (editing). %]
-[% u_renNum = (error)? cgi.param('renNum') : data.$user.renNum %]
-[% u_renDate = (error)? cgi.param('renDate') : data.$user.renDate %]
+[% u_pub = (error)? cgi.param('pub') : data.$user.data.pub %]
+[% u_date = (error)? cgi.param('date') : data.$user.data.date %]
+[% u_crown = (error)? cgi.param('crown') : data.$user.data.crown %]
 [% u_rights = (error)? cgi.param('rights') : data.$user.rights %]
 [% u_category = (error)? cgi.param('category') : data.$user.category %]
 [% u_note = (error)? cgi.param('note') : data.$user.note %]
@@ -24,7 +27,7 @@
       <td class="nowrap"><strong><label id="renewalFieldLabel" for="renewalField">
       [% label %]: </label></strong></td>
       <td class="nowrap">
-      [% IF NOT u_renDate && NOT importUser %]
+      [% IF NOT u_date && NOT importUser %]
         [% authorDD = crms.GetADDFromAuthor(htid) %]
         [% IF NOT authorDD %]
           [% viafdata = crms.GetVIAFData(htid) %]
@@ -34,13 +37,13 @@
           [% END %]
         [% END %]
         [% IF authorDD %]
-          <input type="hidden" id="prepopulated" name="prepopulated" value="[% (viaf)? 2:1 %]"/>
-          [% u_renDate = authorDD %]
+          <input type="hidden" name="src" value="[% (viaf)? 'viaf':'catalog' %]"/>
+          [% u_date = authorDD %]
           [% tip = (viaf)? "VIAF":"Zephir" %]
         [% END %]
       [% END %]
-      <input id="renewalField" title="[% label %]" type="text" name="renDate"
-             value="[% u_renDate %]" size="6"
+      <input id="renewalField" title="[% label %]" type="text" name="date"
+             value="[% u_date %]" size="6"
              onblur="javascript:PredictRights('[% htid %]');"/>
       [% IF tip %]
         <span class="red">$tip</span>
@@ -225,12 +228,30 @@
 </form>
 
 <script>
-[% IF importUser %]
-  addEvent(window, 'load', function(e)
+addEvent(window, 'load', function(e)
+{
+  [% IF importUser %]
+  popReviewInfo('[% importUser %]');
+  [% END %]
+  addEvent(window, 'load', Partial_ADDForm_mainWindowLoad);
+});
+
+function Partial_ADDForm_mainWindowLoad(e)
+{
+  var renewalField = document.getElementById("renewalField");
+  var year = renewalField.value;
+  var patt = /-?[0-9]+/;
+  if (patt.test(year))
   {
-    popReviewInfo('[% importUser %]');
-  });
-[% END %]
+    PredictRights('[% htid %]');
+    document.getElementById('NoteTextField').focus();
+  }
+  else
+  {
+    document.getElementById('renewalField').focus();
+  }
+}
+
 function popReviewInfo(user)
 {
   var el = document.getElementById('importReviewsTable');

@@ -10,6 +10,18 @@ sub new
   return $class->SUPER::new(@_);
 }
 
+my %TEST_HTIDS = (
+    'yale.39002030686159' => 'Example'
+);
+
+sub tests
+{
+  my $self = shift;
+
+  my @tests = keys %TEST_HTIDS;
+  return \@tests;
+}
+
 # ========== CANDIDACY ========== #
 # Returns undef for failure, or hashref with two fields:
 # status in {'yes', 'no', 'filter'}
@@ -35,11 +47,14 @@ sub EvaluateCandidacy
     my $date2 = substr($leader, 11, 4);
     push @errs, "pub date not completely specified ($date1,$date2,'$type')";
   }
-  # Check year range
-  my $now = $self->{'crms'}->GetTheYear();
-  my $min = $now - 95 + 1;
-  my $max = 1977;
-  push @errs, "pub date $pub not in range $min-$max" if $pub < $min or $pub > $max;
+  else
+  {
+    # Check year range
+    my $now = $self->{'crms'}->GetTheYear();
+    my $min = $now - 95 + 1;
+    my $max = 1977;
+    push @errs, "pub date $pub not in range $min-$max" if $pub < $min or $pub > $max;
+  }
   my $where = $record->country;
   push @errs, "foreign pub ($where)" if $where ne 'USA';
   push @errs, 'non-BK format' unless $record->isFormatBK($id, $record);

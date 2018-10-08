@@ -37,11 +37,14 @@ sub EvaluateCandidacy
     my $date2 = substr($leader, 11, 4);
     push @errs, "pub date not completely specified ($date1,$date2,'$type')";
   }
-  # Check year range
-  my $now = $self->{crms}->GetTheYear();
-  my $min = $now - 95 + 1;
-  my $max = 1963;
-  push @errs, "pub date $pub not in range $min-$max" if $pub < $min or $pub > $max;
+  else
+  {
+    # Check year range
+    my $now = $self->{crms}->GetTheYear();
+    my $min = $now - 95 + 1;
+    my $max = 1963;
+    push @errs, "pub date $pub not in range $min-$max" if $pub < $min or $pub > $max;
+  }
   push @errs, 'gov doc' if $self->IsGovDoc($record);
   my $where = $record->country;
   push @errs, "foreign pub ($where)" if $where ne 'USA';
@@ -84,6 +87,42 @@ sub ReviewPartials
 {
   return ['top', 'bibdata', 'authorities',
           'HTView', 'copyrightForm', 'expertDetails'];
+}
+
+# Extract Project-specific data from the CGI into a struct
+# that will be encoded as JSON string in the reviewdata table.
+sub ExtractReviewData
+{
+  my $self = shift;
+  my $cgi  = shift;
+
+  my $renNum = $cgi->param('renNum');
+  my $renDate = $cgi->param('renDate');
+  my $data;
+  if ($renNum || $renDate)
+  {
+    $data = {'renNum' => $renNum, 'renDate' => $renDate};
+  }
+  return $data;
+}
+
+# Return a dictionary ref with the following keys:
+# id: the reviewdata id
+# format: HTML-formatted data for inline display. May be blank.
+# format_long: HTML-formatted data for tooltip display. May be blank.
+sub FormatReviewData
+{
+  my $self = shift;
+  my $id   = shift;
+  my $json = shift;
+
+  my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
+  my $data = $jsonxs->decode($json);
+  my $fmt = sprintf '<strong>%s</strong> %s', $data->{'renNum'}, $data->{'renDate'};
+  #my $cgi = new CGI;
+  #my $long = $cgi->escapeHTML("<code>$json</code>");
+  my $long = '';
+  return {'id' => $id, 'format' => $fmt, 'format_long' => $long};
 }
 
 1;

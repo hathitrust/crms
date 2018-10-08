@@ -307,6 +307,17 @@ function populateProject(data, table)
   cell.innerHTML = (data.single_review == 1)? '<img width="16" height="16" alt="Checked" src="[% checkicon %]"/>':'';
   cell.style.textAlign = 'center';
   cell = row.insertCell(9);
+  cell.className = 'nowrap';
+  var html = '';
+  if (data.primary_authority || data.secondary_authority)
+  {
+    var pa = (data.primary_authority)? data.primary_authority:'-';
+    var sa = (data.secondary_authority)? data.secondary_authority:'-';
+    html = pa + '/' + sa;
+  }
+  cell.innerHTML = html;
+  //cell.style.textAlign = 'center';
+  cell = row.insertCell(10);
   var input = document.createElement('input');
   input.setAttribute('type', 'color');
   input.id = data.id+'color';
@@ -384,6 +395,7 @@ function addProject(name)
       <th>Auto-Inherit</th>
       <th>Group Volumes</th>
       <th>Single Review</th>
+      <th>Primary Authorities</th>
       <th>Color</th>
     </thead>
     <tbody id=projectsTableBody>
@@ -394,6 +406,14 @@ function addProject(name)
 <td style="vertical-align:top;">
   <table class="exportStats" style="visibility:hidden;" id="rightsTable">
     <tr><th colspan="2">Rights</th></tr>
+    <tr id="RSaveRow">
+      <td class="nowrap" colspan="3">
+        <div id="RSaveDiv" style="visibility:hidden;">
+        <span id="changedSpan" class="red" style="font-weight:bold;">Change not saved</span>
+        <input type="button" id="RSaveButton" value="Save" onclick="saveProperty('rights');"></input>
+        </div>
+      </td>
+    </tr>
   [% rights = crms.AllAssignableRights() %]
   [% FOREACH r IN rights %]
     <tr>
@@ -402,19 +422,19 @@ function addProject(name)
       <!--<td class="nowrap">[% r.description %]</td>-->
     </tr>
   [% END %]
-  <tr id="RSaveRow">
-    <td class="nowrap" colspan="3">
-      <div id="RSaveDiv" style="visibility:hidden;">
-      <span id="changedSpan" class="red" style="font-weight:bold;">Change not saved</span>
-      <input type="button" id="RSaveButton" value="Save" onclick="saveProperty('rights');"></input>
-      </div>
-    </td>
-  </tr>
   </table>
 </td>
 <td style="vertical-align:top;">
   <table class="exportStats" style="visibility:hidden;" id="categoriesTable">
     <tr><th colspan="2">Categories</th></tr>
+    <tr id="CSaveRow">
+      <td class="nowrap" colspan="3">
+        <div id="CSaveDiv" style="visibility:hidden;">
+        <span id="changedSpan" class="red" style="font-weight:bold;">Change not saved</span>
+        <input type="button" id="CSaveButton" value="Save" onclick="saveProperty('categories');"></input>
+        </div>
+      </td>
+    </tr>
   [% cats = crms.AllAssignableCategories() %]
   [% FOREACH c IN cats %]
     <tr>
@@ -423,19 +443,19 @@ function addProject(name)
       <!--<td class="nowrap">[% r.description %]</td>-->
     </tr>
   [% END %]
-  <tr id="CSaveRow">
-    <td class="nowrap" colspan="3">
-      <div id="CSaveDiv" style="visibility:hidden;">
-      <span id="changedSpan" class="red" style="font-weight:bold;">Change not saved</span>
-      <input type="button" id="CSaveButton" value="Save" onclick="saveProperty('categories');"></input>
-      </div>
-    </td>
-  </tr>
   </table>
 </td>
 <td style="vertical-align:top;">
   <table class="exportStats" style="visibility:hidden;" id="authoritiesTable">
     <tr><th colspan="2">Authorities</th></tr>
+    <tr id="ASaveRow">
+      <td class="nowrap" colspan="3">
+        <div id="ASaveDiv" style="visibility:hidden;">
+        <span id="changedSpan" class="red" style="font-weight:bold;">Change not saved</span>
+        <input type="button" id="ASaveButton" value="Save" onclick="saveProperty('authorities');"></input>
+        </div>
+      </td>
+    </tr>
   [% auths = crms.AllAssignableAuthorities() %]
   [% FOREACH a IN auths %]
     <tr>
@@ -449,33 +469,25 @@ function addProject(name)
       <!--<td class="nowrap">[% r.description %]</td>-->
     </tr>
   [% END %]
-  <tr id="ASaveRow">
-    <td class="nowrap" colspan="3">
-      <div id="ASaveDiv" style="visibility:hidden;">
-      <span id="changedSpan" class="red" style="font-weight:bold;">Change not saved</span>
-      <input type="button" id="ASaveButton" value="Save" onclick="saveProperty('authorities');"></input>
-      </div>
-    </td>
-  </tr>
   </table>
 </td>
 <td style="vertical-align:top;">
   <table class="exportStats" style="visibility:hidden;" id="usersTable">
     <tr><th colspan="2">Users</th></tr>
+    <tr id="USaveRow">
+      <td class="nowrap" colspan="3">
+        <div id="USaveDiv" style="visibility:hidden;">
+        <span id="changedSpan" class="red" style="font-weight:bold;">Change not saved</span>
+        <input type="button" id="USaveButton" value="Save" onclick="saveProperty('users');"></input>
+        </div>
+      </td>
+    </tr>
   [% FOREACH u IN users %]
     <tr>
       <td><input type="checkbox" id="[% u.id %]UCheckbox" name="[% u.id %]" onchange="propertyChanged('users');"/></td>
       <td><label for="[% u.id %]UCheckbox">[% u.name %]</label></td>
     </tr>
   [% END %]
-  <tr id="USaveRow">
-    <td class="nowrap" colspan="3">
-      <div id="USaveDiv" style="visibility:hidden;">
-      <span id="changedSpan" class="red" style="font-weight:bold;">Change not saved</span>
-      <input type="button" id="USaveButton" value="Save" onclick="saveProperty('users');"></input>
-      </div>
-    </td>
-  </tr>
   </table>
 </td>
 </tr>
