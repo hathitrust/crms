@@ -1,12 +1,7 @@
 #!/usr/bin/perl
-
-my ($root);
 BEGIN 
-{ 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+{
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -16,7 +11,7 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 my $usage = <<END;
 USAGE: $0 [-acCdhnpquv] [-s VOL_ID [-s VOL_ID2...]]
           [-m MAIL_ADDR [-m MAIL_ADDR2...]] [-P PROJ1 [-P PROJ2...]]
-          [-t TBL [-t TBL...]] [-x SYS] [start_date[ time] [end_date[ time]]]
+          [-t TBL [-t TBL...]] [start_date[ time] [end_date[ time]]]
 
 Reports on the volumes that can inherit from this morning's export,
 or, if start_date is specified, exported after then and before end_date
@@ -39,7 +34,6 @@ if it is specified.
 -u         Also report on recent additions to the und table
            (ignored if -c is not used).
 -v         Emit debugging information.
--x SYS     Set SYS as the system to execute.
 END
 
 my $all;
@@ -55,7 +49,6 @@ my $production;
 my @projs;
 my $quiet;
 my @singles;
-my $sys;
 my $und;
 my $verbose;
 
@@ -74,8 +67,7 @@ die 'Terminating' unless GetOptions(
            's:s@' => \@singles,
            't:s@' => \@no,
            'u'    => \$und,
-           'v+'   => \$verbose,
-           'x:s'  => \$sys);
+           'v+'   => \$verbose);
 $instance = 'production' if $production;
 die "$usage\n\n" if $help;
 
@@ -83,7 +75,6 @@ my %no = ();
 $no{$_}=1 for @no;
 
 my $crms = CRMS->new(
-    sys      => $sys,
     verbose  => $verbose,
     instance => $instance
 );

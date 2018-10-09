@@ -3,13 +3,9 @@
 # FIXME: assigns Core project to added queue items instead of
 # New Year project.
 
-my ($root);
 BEGIN 
-{ 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+{
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;

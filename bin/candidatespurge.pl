@@ -1,12 +1,7 @@
 #!/usr/bin/perl
-
-my ($root);
 BEGIN 
-{ 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+{
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -16,10 +11,10 @@ use Encode;
 
 my $usage = <<END;
 USAGE: $0 [-achinpv] [-s VOL_ID [-s VOL_ID2...]]
-          [-x SYS] [start_date [end_date]]
+          [start_date [end_date]]
 
-Reports on volumes that are no longer eligible for candidacy in the rights database
-and removes them from the system.
+Reports on volumes that are no longer eligible for candidacy
+in the rights database and removes them from the system.
 
 -a         Report on all volumes, ignoring date range.
 -c         Run against candidates.
@@ -32,7 +27,6 @@ and removes them from the system.
 -p         Run in production.
 -s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
 -v         Emit debugging information.
--x SYS     Set SYS as the system to execute.
 END
 
 my $all;
@@ -46,7 +40,6 @@ my $noop;
 my $production;
 my @singles;
 my $verbose;
-my $sys;
 
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
@@ -59,13 +52,11 @@ die 'Terminating' unless GetOptions(
            'n'    => \$noop,
            'p'    => \$production,
            's:s@' => \@singles,
-           'v+'   => \$verbose,
-           'x:s'  => \$sys);
+           'v+'   => \$verbose);
 $instance = 'production' if $production;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    sys      => $sys,
     verbose  => $verbose,
     instance => $instance
 );

@@ -1,19 +1,13 @@
 #!/usr/bin/perl
-
-my ($root);
 BEGIN 
-{ 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+{
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
 use warnings;
 use CRMS;
 use Getopt::Long;
-use Mail::Sender;
 use Utilities;
 
 my $usage = <<'END';
@@ -51,7 +45,6 @@ print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    sys      => 'crms',
     verbose  => $verbose,
     instance => $instance
 );
@@ -105,15 +98,14 @@ else
 {
   if (scalar @mails)
   {
-    $sender->OpenMultipart({
-      to => $to,
-      subject => $crms->SubjectLine('RCPC Progress Report'),
-      ctype => 'text/html',
-      encoding => 'utf-8'
-    }) or die $Mail::Sender::Error,"\n";
-    $sender->Body();
-    $sender->SendEnc($msg);
-    $sender->Close();
+    use Mail::Sendmail;
+    my $bytes = encode('utf8', $msg);
+    my %mail = ('from'         => 'crms-mailbot@umich.edu',
+                'to'           => $to,
+                'subject'      => $crms->SubjectLine('RCPC Progress Report'),
+                'content-type' => 'text/html; charset="UTF-8"',
+                'body'         => $bytes);
+    sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n");
   }
 }
 print "Warning: $_\n" for @{$crms->GetErrors()};

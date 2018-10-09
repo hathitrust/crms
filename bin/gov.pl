@@ -1,12 +1,7 @@
 #!/usr/bin/perl
-
-my ($root);
 BEGIN 
-{ 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+{
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -16,7 +11,7 @@ use Excel::Writer::XLSX;
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-hnpv] [-m MAIL_ADDR [-m MAIL_ADDR2...]] [-x SYS]
+USAGE: $0 [-hnpv] [-m MAIL_ADDR [-m MAIL_ADDR2...]]
 
 Reports on suspected gov docs in the und table.
 
@@ -25,7 +20,6 @@ Reports on suspected gov docs in the und table.
 -n       No-op. Do not delete src='gov' entries in the und table.
 -p       Run in production.
 -v       Emit debugging information. May be repeated.
--x SYS   Set SYS as the system to execute.
 END
 
 my $help;
@@ -33,7 +27,6 @@ my $instance;
 my @mails;
 my $noop;
 my $production;
-my $sys;
 my $verbose;
 
 Getopt::Long::Configure ('bundling');
@@ -42,14 +35,12 @@ die 'Terminating' unless GetOptions(
            'm:s@' => \@mails,
            'n' => \$noop,
            'p' => \$production,
-           'v+' => \$verbose,
-           'x:s' => \$sys);
+           'v+' => \$verbose);
 $instance = 'production' if $production;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    sys      => $sys,
     verbose  => $verbose,
     instance => $instance
 );

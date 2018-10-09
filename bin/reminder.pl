@@ -1,12 +1,7 @@
 #!/usr/bin/perl
-
-my ($root);
-BEGIN
-{ 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+BEGIN 
+{
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -17,7 +12,7 @@ use Encode;
 use Mail::Sendmail;
 
 my $usage = <<END;
-USAGE: $0 [-hpqv] [-m USER [-m USER...]] [-x SYS]
+USAGE: $0 [-hpqv] [-m USER [-m USER...]]
 
 Sends weekly inactivity reports.
 
@@ -27,7 +22,6 @@ Sends weekly inactivity reports.
 -p       Run in production.
 -q       Do not send any emails at all.
 -v       Be verbose.
--x SYS   Set SYS as the system to execute.
 END
 
 my $help;
@@ -36,7 +30,6 @@ my $nomail;
 my @mails;
 my $production;
 my $quiet;
-my $sys;
 my $verbose = 0;
 
 Getopt::Long::Configure ('bundling');
@@ -44,14 +37,12 @@ die 'Terminating' unless GetOptions('h|?' => \$help,
            'm:s@' => \@mails,
            'p'    => \$production,
            'q'    => \$quiet,
-           'v+'   => \$verbose,
-           'x:s'  => \$sys);
+           'v+'   => \$verbose);
 $instance = 'production' if $production;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    sys      => $sys,
     verbose  => $verbose,
     instance => $instance
 );

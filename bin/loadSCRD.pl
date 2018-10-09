@@ -1,12 +1,7 @@
 #!/usr/bin/perl
-
-my ($root);
 BEGIN 
-{ 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+{
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -15,7 +10,7 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 
 
 my $usage = <<END;
-USAGE: $0 [-hnptv] [-x SYS] FILE [FILE...]
+USAGE: $0 [-hnptv] FILE [FILE...]
 
 Loads a downloaded copy of the Stanford Cpoyright Renewal Database
 into the CRMS database "stanford" table.
@@ -25,26 +20,23 @@ into the CRMS database "stanford" table.
 -p       Run in production.
 -t       Run in training (overrides -p).
 -v       Emit debugging information.
--x SYS   Set SYS as the system to execute.
 END
 
 my $instance;
-my ($help, $noop, $production, $training, $verbose, $sys);
+my ($help, $noop, $production, $training, $verbose);
 Getopt::Long::Configure('bundling');
 die 'Terminating' unless GetOptions(
            'h|?'  => \$help,
            'n'    => \$noop,
            'p'    => \$production,
            't'    => \$training,
-           'v'    => \$verbose,
-           'x:s'  => \$sys);
+           'v'    => \$verbose);
 
 $instance = 'production' if $production;
 $instance = 'crms-training' if $training;
 die $usage if $help or !scalar @ARGV;
 
 my $crms = CRMS->new(
-    sys      => $sys,
     verbose  => 0,
     instance => $instance
 );

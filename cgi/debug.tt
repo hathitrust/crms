@@ -1,97 +1,77 @@
 [% force = cgi.param('force') %]
+[% page = cgi.param('p') %]
 [% INCLUDE header.tt %]
+[% p_proj = cgi.param('project') %]
+[% p_start = cgi.param('startDate') %]
+[% p_end = cgi.param('endDate') %]
 
 <h2>System Administration:</h2>
 <br/><br/>
-<table class='exportStats'>
-<tr>
-  <th>List&nbsp;Unicode&nbsp;bibdata&nbsp;entries</th>
-  <td>
-    <form action="crms">
-      [% crms.HiddenSys() %]
-      <input type="hidden" name="p" value="debug"/>
-      <input type="hidden" name="multibyte" value="1"/>
-      <input type="submit" value="Do it!"/>
-    </form>
-  </td>
-</tr>
-<tr>
-  <th>List&nbsp;System&nbsp;variables</th>
-  <td>
-    <form action="crms">
-      [% crms.HiddenSys() %]
-      <input type="hidden" name="p" value="debug"/>
-      <input type="hidden" name="systemvars" value="1"/>
-      <input type="submit" value="Do it!"/>
-    </form>
-  </td>
-</tr>
-</table>
-<br/><br/>
-[% ids = cgi.param('ids') %]
-<h4>Update Bibliographic Data</h4>
-<form action="crms">
-  [% crms.HiddenSys() %]
-  <input type="hidden" name="p" value="debug"/>
-  <input type="hidden" name="fix" value="1"/>
-  <p class="smallishText">Enter one volume id per line.</p>
-  <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;">[% ids %]</textarea><br/>
-  <input type="checkbox" id="forceCB" name="force" value="1" [% (force)? 'checked="checked"':'' %]/>
-  <label for="forceCB">&nbsp;Force</label>
-  <input type="submit" value="Submit"/>
-</form>
-<br/>
-
-[% IF cgi.param('fix') && ids %]
-  <h4>Tried to Fix:</h4>
-  <table class="exportStats" style="width:33%">
-  <tr><th>ID</th><th>Sys&nbsp;ID</th><th>Author</th><th>Title</th><th>Pub&nbsp;Date</th><th>Country</th></tr>
-  [% FOREACH id IN ids.split %]
-    [% id = id.remove('(^\s+)|(\s+$)') %]
-    [% record = crms.GetMetadata(id) %]
-    [% CALL crms.UpdateMetadata(id, force, record) %]
-    [% sysid = record.sysid %]
-    [% sql = "SELECT id,author,title,YEAR(pub_date),country FROM bibdata WHERE id=?" %]
-    [% ref = crms.SelectAll(sql, id) %]
-    [% FOREACH r IN ref %]
-      <tr><td>[% r.0 %]</td><td>[% sysid %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td><td>[% r.3 %]</td>
-          <td>[% r.4 %]</td></tr>
-      [% LAST %]
+<div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
+<h3>Export Report</h3>
+<form id="select" action="crms">
+  <input type="hidden" name="p" value="$page"/>
+  <input type="hidden" name="export_report" value="1"/>
+  <label for="project_sel">Project:</label>
+  [% projs = crms.Projects() %]
+  <select name="project" id="project_sel">
+    [% FOR proj IN projs.keys.nsort %]
+      <option value="[% proj %]"
+              [% IF proj == p_proj %]selected="selected"[% END %]>
+        [% projs.$proj.name %]
+      </option>
     [% END %]
-  [% END %]
+  </select>
+  <br/>
+  <label for="startDate" style="width:5em;float:left;">Start Date:</label>
+  <input type="text" id="startDate" name="startDate" value="[% p_start %]" onclick="datePickerController.show('startDate');"
+         onblur="datePickerController.hide('startDate');"/>
+  <script type="text/javascript">
+  // <![CDATA[
+    var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };
+    datePickerController.createDatePicker(opts);
+  // ]]>
+  </script>
+  <span class="smallText">(YYYY-MM-DD)</span>
+  <br/>
+  <label for="endDate" style="width:5em;float:left;">End Date:</label>
+  <input type="text" id="endDate" name="endDate" value="[% p_end %]" onclick="datePickerController.show('endDate');"
+         onblur="datePickerController.hide('endDate');"/>
+  <script type="text/javascript">
+  // <![CDATA[
+    var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };
+    datePickerController.createDatePicker(opts);
+  // ]]>
+  </script>
+  <span class="smallText">(YYYY-MM-DD)</span>
+  <br/>
+  <input type="submit" value="Submit"/>
+  </form>
+</div>
+
+[% IF cgi.param('export_report') %]
+  [% report = crms.ExportReport(p_proj, p_start, p_end) %]
+  <br/><br/><br/>
+  <table class="exportStats">
+  <tr>
+    <th>Determinations</th>
+    <td class="nowrap">[% report.all %]</td>
+  </tr>
+  <tr>
+    <th>PD</th>
+    <td class="nowrap">[% report.pd %] ([% report.pdpct %])</td>
+  </tr>
+  <tr>
+    <th>Time</th>
+    <td class="nowrap">[% report.time %] hours</td>
+  </tr>
+    <tr>
+    <th>Candidates</th>
+    <td class="nowrap">[% report.candidates %]</td>
+  </tr>
   </table>
 [% END %]
 
-[% IF cgi.param('multibyte') %]
-  [% sql = "SELECT id,author,title FROM bibdata WHERE LENGTH(title)!=CHAR_LENGTH(title) OR LENGTH(author)!=CHAR_LENGTH(author) ORDER BY author,title,id" %]
-  [% ref  = crms.SelectAll(sql) %]
-  <h4>[% ref.size %] Items</h4>
-  <table class='exportStats'><tr><th>ID</th><th>Author</th><th>Title</th></tr>
-  [% FOREACH r IN ref %]
-    <tr><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td></tr>
-  [% END %]
-  </table>
-[% END %]
-
-[% IF cgi.param('systemvars') %]
-  [% sql = "SELECT name,value FROM systemvars ORDER BY name" %]
-  [% ref  = crms.SelectAll(sql) %]
-  <h4>System Variables</h4>
-  <table class='exportStats'><tr><th>Name</th><th>Value</th></tr>
-  [% FOREACH r IN ref %]
-    <tr><td>[% r.0 %]</td><td>[% r.1 %]</td></tr>
-  [% END %]
-  </table>
-[% END %]
-
-[% IF cgi.param('debug') %]
-  <h3>CRMS&nbsp;Object</h3>
-  <table class="exportStats" style="width:30%;">
-  [% FOREACH key IN crms.keys().sort() %]
-  <tr><td>[% key %]</td><td>[% crms.get(key) %]</td></tr>
-  [% END %]
-  </table>
-[% END %]
 
 [% IF cgi.param('008') %]
   <h3>008 Breakdown</h3>
@@ -121,13 +101,7 @@
   </table>
 [% END %]
 
-[% IF cgi.param('ck') %]
-  [% id = cgi.param('ck') %]
-  <h3>Candidacy check for $id:</h3>
-  [% vs = crms.GetViolations(id) %]
-  <p>Violations: [% vs.join('; ') %]</p>
-  <p>Filter: [% crms.ShouldVolumeBeFiltered(id) %]</p>
-[% END %]
+
 
 [% INCLUDE footer.tt %]
 

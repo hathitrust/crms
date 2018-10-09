@@ -1,14 +1,7 @@
 #!/usr/bin/perl
-
-# This script can be run from crontab
-
-my ($root);
 BEGIN 
-{ 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+{
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -18,7 +11,7 @@ use Encode;
 
 my $usage = <<END;
 USAGE: $0 [-hlptvwz] [-i ID] [-m MAIL_ADDR [-m MAIL_ADDR2...]] [-r TYPE]
-          [-s SUMMARY_PATH] [-t REPORT_TYPE] [-x SYS] [start_date [end_date]]
+          [-s SUMMARY_PATH] [-t REPORT_TYPE] [start_date [end_date]]
 
 Reports on CRMS determinations for volumes that have duplicates,
 multiple volumes, or conflicting determinations.
@@ -38,7 +31,6 @@ multiple volumes, or conflicting determinations.
                           with a pd/crms, ic/crms, or und/crms determination, >0 ic/bib
          May be repeated.
 -v       Be verbose. May be repeated.
--x SYS   Set SYS as the system to execute.
 -z       Generate hyperlinks in the TSV file for Excel.
 END
 
@@ -52,7 +44,6 @@ my $report = 'none';
 my $summary;
 my @types;
 my $verbose;
-my $sys;
 my $link;
 
 die 'Terminating' unless GetOptions('h|?' => \$help,
@@ -63,7 +54,6 @@ die 'Terminating' unless GetOptions('h|?' => \$help,
            'r:s'  => \$report,
            's:s'  => \$summary,
            't=s@' => \@types,
-           'x:s'  => \$sys,
            'v+'   => \$verbose,
            'z'    => \$link);
 $instance = 'production' if $production;
@@ -95,7 +85,6 @@ $end   .= ' 23:59:59' if $end;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    sys      => $sys,
     verbose  => $verbose,
     instance => $instance
 );

@@ -1,12 +1,7 @@
 #!/usr/bin/perl
-
-my ($root);
 BEGIN 
-{ 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+{
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -62,7 +57,6 @@ $instance = 'production' if $production;
 die "$usage\n\n" if $help;
 
 my $crmsUS = CRMS->new(
-    sys      => 'crms',
     verbose  => $verbose,
     instance => $instance
 );
@@ -293,6 +287,7 @@ $html .= "</body></html>\n";
 
 if (scalar @mails)
 {
+  @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
   if ($verbose)
   {
     print "Sending mail to:\n";
@@ -300,29 +295,20 @@ if (scalar @mails)
   }
   #if (!$noop)
   {
-    use Mail::Sender;
-    my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                    from => $crms->GetSystemVar('adminEmail', ''),
-                                    on_errors => 'undef' }
-      or die "Error in mailing: $Mail::Sender::Error\n";
-    my $to = join ',', @mails;
-    $sender->OpenMultipart({
-      to => $to,
-      subject => $title,
-      ctype => 'text/html',
-      encoding => 'utf-8'
-      }) or die $Mail::Sender::Error,"\n";
-    $sender->Body();
+    use Mail::Sendmail;
     my $bytes = encode('utf8', $html);
-    $sender->SendEnc($bytes);
-    $sender->Close();
+    my %mail = ('from'         => 'crms-mailbot@umich.edu',
+                'to'           => join ',', @mails,
+                'subject'      => $title,
+                'content-type' => 'text/html; charset="UTF-8"',
+                'body'         => $bytes);
+    sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n");
   }
 }
 else
 {
   print "$html\n" unless defined $quiet;
 }
-
 
 sub OneoffQuery
 {

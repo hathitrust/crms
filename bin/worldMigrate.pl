@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-
 BEGIN 
 {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
@@ -225,7 +224,6 @@ sub MigrateProjects
     $crmsUS->PrepareSubmitSql($sql, @values);
   }
 }
-
 
 sub MigrateCandidates
 {

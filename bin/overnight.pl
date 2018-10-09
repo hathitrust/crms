@@ -1,12 +1,7 @@
 #!/usr/bin/perl
-
-my ($root);
 BEGIN 
-{ 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+{
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -33,14 +28,13 @@ with latest rights DB timestamp between them.
 -q      Do not update queue.
 -s      Do not recalculate monthly stats.
 -t      Run in training.
--x SYS  Set SYS as the system to execute.
 -v      Be verbose.
 END
 
 my $instance;
 my ($skipAttrReason, $skipCandidates, $skipExport, $help, $skipLocks,
     @mails, $skipQueueNoMeta, $production, $skipQueue, $skipStats, $training,
-    $verbose, $sys);
+    $verbose);
 
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
@@ -55,8 +49,7 @@ die 'Terminating' unless GetOptions(
            'q'    => \$skipQueue,
            's'    => \$skipStats,
            't'    => \$training,
-           'v+'   => \$verbose,
-           'x:s'  => \$sys);
+           'v+'   => \$verbose);
 
 die $usage if $help;
 $instance = 'production' if $production;
@@ -78,7 +71,6 @@ if (scalar @ARGV)
 }
 
 my $crms = CRMS->new(
-    sys      => $sys,
     verbose  => 0,
     instance => $instance
 );

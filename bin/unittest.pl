@@ -155,11 +155,11 @@ if ($reviews)
   $sql = 'UPDATE reviews SET attr=2,reason=7,data=? WHERE id="coo.31924054065317" AND user="mah94@cornell.edu"';
   $crms->PrepareSubmitSql($sql, $did2);
   $data = $crms->CalcStatus('coo.31924054065317');
-  is($data->{'status'}, 8, 'coo.31924054065317 status 8');
+  is($data->{'status'}, 8, 'coo.31924054065317 status 8 part 1');
   $sql = 'UPDATE reviews SET attr=2,reason=17,data=? WHERE id="coo.31924054065317" AND user="mah94@cornell.edu"';
   $crms->PrepareSubmitSql($sql, $did1);
   $data = $crms->CalcStatus('coo.31924054065317');
-  is($data->{'status'}, 8, 'coo.31924054065317 status 8');
+  is($data->{'status'}, 8, 'coo.31924054065317 status 8 part 2');
 }
 
 if (0)

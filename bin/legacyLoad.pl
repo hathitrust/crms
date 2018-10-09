@@ -1,12 +1,7 @@
 #!/usr/bin/perl
-
-my ($root);
 BEGIN 
-{ 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+{
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -24,7 +19,6 @@ as legacy historical reviews.
 -n       Do not update the database.
 -p       Run in production.
 -v       Be verbose.
--x SYS   Set SYS as the system to execute.
 END
 
 my %opts;
@@ -35,7 +29,6 @@ my $instance;
 my $noop       = $opts{'n'};
 my $production = $opts{'p'};
 my $verbose    = $opts{'v'};
-my $sys        = $opts{'x'};
 
 if ($help || scalar @ARGV < 1 || !$ok)
 {
@@ -45,12 +38,11 @@ if ($help || scalar @ARGV < 1 || !$ok)
 my $file = $ARGV[0];
 $instance = 'production' if $production;
 my $crms = CRMS->new(
-    sys      =>   $sys,
     verbose  =>   $verbose,
     instance =>   $instance,
 );
 
-
+$crms->set('noop', 1) if $noop;
 foreach my $f (@ARGV)
 {
   ProcessFile($f);
@@ -240,7 +232,7 @@ sub ChangeDateFormat
 ## ----------------------------------------------------------------------------
 sub SubmitHistReview
 {
-  my ($id, $user, $time, $attr, $reason, $renNum, $renDate, $note, $category, $status, $expert, $legacy, $source, $gid, $noop) = @_;
+  my ($id, $user, $time, $attr, $reason, $renNum, $renDate, $note, $category, $status, $expert, $legacy, $source, $gid) = @_;
 
   $id = lc $id;
   $legacy = ($legacy)? 1:0;
@@ -249,42 +241,38 @@ sub SubmitHistReview
   $attr = $crms->TranslateAttr( $attr ) unless $attr =~ m/^\d+$/;
   $reason = $crms->TranslateReason( $reason ) unless $reason =~ m/^\d+$/;
   # ValidateAttrReasonCombo sets error internally on fail.
-  if ( ! $crms->ValidateAttrReasonCombo( $attr, $reason ) ) { return 0; }
+  return 0 unless $crms->ValidateAttrReasonCombo($attr, $reason);
   if ($status != 9)
   {
     my $err = ValidateSubmissionHistorical($attr, $reason, $note, $category, $renNum, $renDate);
     if ($err) { $crms->SetError($err); return 0; }
   }
   ## do some sort of check for expert submissions
-  if (!$noop)
+  ## all good, INSERT
+  my $sql = 'REPLACE INTO historicalreviews (id,user,time,attr,reason,renNum,'.
+             'renDate,note,legacy,category,status,expert,source,gid)'.
+            ' VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
+  #Now load this info into the bibdata and system table.
+  $crms->UpdateMetadata($id, 1);
+  # Update status on status 1 item
+  if ($status == 5)
   {
-    $note = $dbh->quote($note);
-    ## all good, INSERT
-    my $sql = 'REPLACE INTO historicalreviews (id, user, time, attr, reason, renNum, renDate, note, legacy, category, status, expert, source, gid) ' .
-           "VALUES('$id', '$user', '$time', '$attr', '$reason', '$renNum', '$renDate', $note, $legacy, '$category', $status, $expert, '$source', $gid)";
+    $sql = "UPDATE historicalreviews SET status=$status WHERE id='$id' AND legacy=1 AND gid IS NULL";
     $crms->PrepareSubmitSql( $sql );
-    #Now load this info into the bibdata and system table.
-    $crms->UpdateMetadata($id, 1);
-    # Update status on status 1 item
-    if ($status == 5)
+  }
+  # Update validation on all items with this id
+  $sql = "SELECT user,time,validated FROM historicalreviews WHERE id='$id'";
+  my $ref = $crms->SelectAll($sql);
+  foreach my $row (@{$ref})
+  {
+    $user = $row->[0];
+    $time = $row->[1];
+    my $val  = $row->[2];
+    my $val2 = $crms->IsReviewCorrect($id, $user, $time);
+    if ($val != $val2)
     {
-      $sql = "UPDATE historicalreviews SET status=$status WHERE id='$id' AND legacy=1 AND gid IS NULL";
-      $crms->PrepareSubmitSql( $sql );
-    }
-    # Update validation on all items with this id
-    $sql = "SELECT user,time,validated FROM historicalreviews WHERE id='$id'";
-    my $ref = $self->SelectAll($sql);
-    foreach my $row (@{$ref})
-    {
-      $user = $row->[0];
-      $time = $row->[1];
-      my $val  = $row->[2];
-      my $val2 = $crms->IsReviewCorrect($id, $user, $time);
-      if ($val != $val2)
-      {
-        $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$time'";
-        $crms->PrepareSubmitSql($sql);
-      }
+      $sql = "UPDATE historicalreviews SET validated=$val2 WHERE id='$id' AND user='$user' AND time='$time'";
+      $crms->PrepareSubmitSql($sql);
     }
   }
   return 1;
