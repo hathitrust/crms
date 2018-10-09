@@ -34,6 +34,7 @@
          style="margin:0px;padding:1px;background-color:#e0d6de;float:right;"/>
       </td>
     </tr>
+    [% FIXME: how to restrict this to renewal type projects? %]
     [% IF ren %]
       [% viafwarn = crms.VIAFWarning(htid) %]
       [% IF viafwarn %]
