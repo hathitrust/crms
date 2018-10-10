@@ -17,8 +17,12 @@
   <input type="hidden" name="start"   value="[% crms.GetNow() %]"/>
   <input type="hidden" name="user"    value="[% user %]"/>
   <input type="hidden" name="editing" value="[% editing %]"/>
-  <input type="hidden" name="sys"     value="[% sys %]"/>
   <table>
+    [% viafwarn = crms.VIAFWarning(htid) %]
+    [% IF viafwarn %]
+      [% viafwarn = "Warning: possible foreign author: " _ viafwarn %]
+      <tr><td colspan="2"><span class="red"><strong>$viafwarn</strong></span></td></tr>
+    [% END %]
     <tr>
       <td class="nowrap">
         <strong><label id="renewalFieldLabel" for="renewalField">

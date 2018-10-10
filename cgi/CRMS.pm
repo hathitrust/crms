@@ -878,7 +878,7 @@ sub CalcStatus
         $return->{'attr'} = $self->TranslateAttr($attr);
         $return->{'reason'} = $self->TranslateReason($reason);
         $return->{'category'} = 'Attr Match';
-        $return->{'note'} = sprintf 'Nonmatching renewals: %s vs %s', $data, $data2;
+        $return->{'note'} = 'Nonmatching renewals';
       }
     }
   }
@@ -1055,7 +1055,7 @@ sub CanExportVolume
   # Do not export anything without an attr/reason (like Frontmatter/Corrections).
   if (!defined $attr || !defined $reason ||
       $self->TranslateAttr($attr) eq $attr ||
-      $self->TranslateResaon($reason) eq $reason)
+      $self->TranslateReason($reason) eq $reason)
   {
     my $msg = sprintf "Not exporting $id because of rights %s/%s",
                       (defined $attr)? $attr:'<undef>',
@@ -6173,11 +6173,8 @@ sub ValidateReview
   $user2->{'attr'}   = $row->[2];
   $user2->{'reason'} = $row->[3];
   $user2->{'swiss'}  = $row->[4];
-  my $module = 'Validator_' . $self->Sys() . '.pm';
-  require $module;
-  return 1 if Validator::DoRightsMatch($self,
-                                       $user1->{'attr'}, $user1->{'reason'},
-                                       $user2->{'attr'}, $user2->{'reason'});
+  return 1 if DoRightsMatch($self, $user1->{'attr'}, $user1->{'reason'},
+                            $user2->{'attr'}, $user2->{'reason'});
   return ($user2->{'swiss'} && !$user1->{'expert'})? 2:0;
 }
 
@@ -7813,7 +7810,7 @@ sub Authorities
   my $ref = $self->SelectAll($sql, $proj);
   my $pa = $ref->[0]->[0] || 0;
   my $sa = $ref->[0]->[1] || 0;
-  $sql = 'SELECT a.name,a.url,a.id FROM authorities a'.
+  $sql = 'SELECT a.name,a.url,a.id,a.accesskey FROM authorities a'.
          ' INNER JOIN projectauthorities pa ON a.id=pa.authority'.
          ' WHERE pa.project=? ORDER BY a.name ASC';
   $ref = $self->SelectAll($sql, $proj);
@@ -7824,6 +7821,7 @@ sub Authorities
     my $name = $row->[0];
     my $url = $row->[1];
     my $aid = $row->[2];
+    my $accesskey = $row->[3];
     $url =~ s/__HTID__/$id/g;
     #$url =~ s/__GID__/$gid/g;
     $url =~ s/__MAG__/$mag/g;
@@ -7887,7 +7885,8 @@ sub Authorities
     my $initial = 0;
     $initial = 1 if $aid == $pa;
     $initial = 2 if $aid == $sa;
-    push @all, {'name' => $name, 'url' => $url, 'initial' => $initial };
+    push @all, {'name' => $name, 'url' => $url, 'initial' => $initial,
+                'accesskey' => $accesskey};
   }
   return \@all;
 }

@@ -115,6 +115,7 @@ if ($reviews)
   is($crms->GetStatus('coo.31924054065317'), 0, 'coo.31924054065317 single review still S0');
   $cgi->param('category', 'Edition/Reprint');
   $res = $crms->SubmitReviewCGI('coo.31924054065317', 'mah94@cornell.edu', $cgi);
+  #print "$res\n";
   ok(!defined $res, 'SubmitReviewCGI(coo.31924054065317, mah94@cornell.edu) succeeds w/ category');
   is($crms->SimpleSqlGet('SELECT pending_status FROM queue WHERE id="coo.31924054065317"'), 2, 'coo.31924054065317 PS2');
   my $data = $crms->CalcStatus('coo.31924054065317');
@@ -122,7 +123,7 @@ if ($reviews)
   $cgi->param('hold', 0);
   $res = $crms->SubmitReviewCGI('coo.31924054065317', 'mah94@cornell.edu', $cgi);
   ok(!defined $res, 'SubmitReviewCGI(coo.31924054065317, mah94@cornell.edu) succeeds unholding');
-  my $data = $crms->CalcStatus('coo.31924054065317');
+  $data = $crms->CalcStatus('coo.31924054065317');
   ok(!defined $data->{'hold'}, 'coo.31924054065317 no longer held for mah94@cornell.edu');
   is($data->{'status'}, 2, 'coo.31924054065317 status 2');
   ### ============= Status 3 ============= ###

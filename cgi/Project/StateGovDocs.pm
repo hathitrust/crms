@@ -1,4 +1,4 @@
-package Stategovdocs;
+package StateGovDocs;
 use parent 'Project';
 
 use strict;

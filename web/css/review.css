@@ -226,8 +226,8 @@ table.ReviewError {
 }
 
 input#getDate {
-  border:2px solid #e2e2e2;
-  background-color: #e2e2e2;
+  border:0px;
+  background-color: inherit
 }
 
 iframe.reviewFrame {

@@ -247,10 +247,10 @@ sub GetComments
   my $res = $ua->request($req);
   if ($res->is_success())
   {
-    my $json = JSON::XS->new;
+    my $jsonxs = JSON::XS->new;
     my $content = $res->content;
     eval {
-      my $data = $json->decode($content);
+      my $data = $jsonxs->decode($content);
       push @comments, $_->{'body'} for @{$data->{'fields'}->{'comment'}->{'comments'}};
     }
   }

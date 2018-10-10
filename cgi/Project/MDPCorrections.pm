@@ -1,4 +1,4 @@
-package mdpcorrections;
+package MDPCorrections;
 use parent 'Project';
 
 use strict;
