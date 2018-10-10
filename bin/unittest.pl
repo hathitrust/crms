@@ -161,6 +161,12 @@ if ($reviews)
   $crms->PrepareSubmitSql($sql, $did1);
   $data = $crms->CalcStatus('coo.31924054065317');
   is($data->{'status'}, 8, 'coo.31924054065317 status 8 part 2');
+  ### ============= Status 8 und/crms ============= ###
+  $sql = 'UPDATE reviews SET attr=5,reason=8 WHERE id="coo.31924054065317" AND user="mah94@cornell.edu"';
+  $crms->PrepareSubmitSql($sql);
+  $data = $crms->CalcStatus('coo.31924054065317');
+  is($data->{'status'}, 8, 'coo.31924054065317 status 8 und/crms');
+  is($data->{'category'}, 'Attr Default', 'coo.31924054065317 status 8 Attr Default');
 }
 
 if (0)

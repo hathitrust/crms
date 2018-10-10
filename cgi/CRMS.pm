@@ -885,6 +885,23 @@ sub CalcStatus
   else
   {
     $return->{'status'} = 2;
+    # Do auto for ic vs und
+    if (($attr eq 'ic' && $attr2 eq 'und') ||
+        ($attr eq 'und' && $attr2 eq 'ic'))
+    {
+      # If both reviewers are non-advanced mark as provisional match
+      if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($user2)))
+      {
+         $return->{'status'} = 3;
+      }
+      else
+      {
+        $return->{'status'} = 8;
+        $return->{'attr'} = $self->TranslateAttr('und');
+        $return->{'reason'} = $self->TranslateReason('crms');
+        $return->{'category'} = 'Attr Default';
+      }
+    }
   }
   return $return;
 }
