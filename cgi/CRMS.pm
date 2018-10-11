@@ -322,7 +322,7 @@ sub set
 
 sub Version
 {
-  return '7.1.10';
+  return '7.1.11';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -7822,23 +7822,22 @@ sub Authorities
   my $view = shift || 'image';
 
   use URI::Escape;
-  my $proj = $self->SimpleSqlGet('SELECT project FROM queue WHERE id=?', $id) || 1;
+  my $proj = $self->SimpleSqlGet('SELECT project FROM queue WHERE id=?', $id);
+  $proj = 1 unless defined $proj;
   my $sql = 'SELECT primary_authority,secondary_authority FROM projects WHERE id=?';
-  my $ref = $self->SelectAll($sql, $proj);
-  my $pa = $ref->[0]->[0] || 0;
-  my $sa = $ref->[0]->[1] || 0;
-  $sql = 'SELECT a.name,a.url,a.id,a.accesskey FROM authorities a'.
-         ' INNER JOIN projectauthorities pa ON a.id=pa.authority'.
+  my ($pa, $sa) = @{$self->SelectAll($sql, $proj)->[0]};
+  $sql = 'SELECT a.id,a.name,a.url,a.accesskey FROM authorities a'.
+         ' INNER JOIN projectauthorities pa ON pa.authority=a.id'.
          ' WHERE pa.project=? ORDER BY a.name ASC';
-  $ref = $self->SelectAll($sql, $proj);
+  my $ref = $self->SelectAll($sql, $proj);
   my @all = ();
   my $a = $self->GetAuthor($id);
   foreach my $row (@{$ref})
   {
-    my $name = $row->[0];
-    my $url = $row->[1];
-    my $aid = $row->[2];
-    my $accesskey = $row->[3];
+    my $aid = $row->[0];
+    my $name = $row->[1];
+    my $url = $row->[2];
+    my $ak = $row->[3];
     $url =~ s/__HTID__/$id/g;
     #$url =~ s/__GID__/$gid/g;
     $url =~ s/__MAG__/$mag/g;
@@ -7899,11 +7898,11 @@ sub Authorities
       my $idp = $self->GetIDP($user);
       $url =~ s/__SHIB__/$idp/g;
     }
-    my $initial = 0;
-    $initial = 1 if $aid == $pa;
-    $initial = 2 if $aid == $sa;
-    push @all, {'name' => $name, 'url' => $url, 'initial' => $initial,
-                'accesskey' => $accesskey};
+    my $initial;
+    $initial = 1 if $self->TolerantCompare($aid, $pa);
+    $initial = 2 if $self->TolerantCompare($aid, $sa);
+    push @all, {'name' => $name, 'url' => $url, 'accesskey' => $ak,
+                'initial' => $initial, 'id' => $aid};
   }
   return \@all;
 }
@@ -8449,7 +8448,6 @@ sub GetProjectsRef
   my $self = shift;
 
   my @projects;
-
   my $sql = 'SELECT p.id,p.name,COALESCE(p.color,"000000"),p.autoinherit,'.
             'p.group_volumes,p.single_review,p.primary_authority,p.secondary_authority,'.
             '(SELECT COUNT(*) FROM projectusers pu INNER JOIN users u ON pu.user=u.id'.
@@ -8461,21 +8459,15 @@ sub GetProjectsRef
   my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
-    push @projects, {'id' => $row->[0], 'name' => $row->[1],'color' => $row->[2],
-                     'autoinherit' => $row->[3], 'group_volumes' => $row->[4],
-                     'single_review' => $row->[5], 'primary_authority' => $row->[6],
-                     'secondary_authority' => $row->[7],
+    my $pa = $self->SimpleSqlGet('SELECT name FROM authorities WHERE id=?', $row->[6]);
+    my $sa = $self->SimpleSqlGet('SELECT name FROM authorities WHERE id=?', $row->[7]);
+    push @projects, {'id' => $row->[0], 'name' => $row->[1],
+                     'color' => $row->[2], 'autoinherit' => $row->[3],
+                     'group_volumes' => $row->[4], 'single_review' => $row->[5],
+                     'primary_authority' => $pa, 'secondary_authority' => $sa, 
                      'userCount' => $row->[8], 'queueCount' => $row->[9],
                      'candidatesCount' => $row->[10],
                      'determinationsCount' => $row->[11]};
-    if ($projects[-1]->{'primary_authority'})
-    {
-      $projects[-1]->{'primary_authority'} = $self->SimpleSqlGet('SELECT name FROM authorities WHERE id=?', $projects[-1]->{'primary_authority'});
-    }
-    if ($projects[-1]->{'secondary_authority'})
-    {
-      $projects[-1]->{'secondary_authority'} = $self->SimpleSqlGet('SELECT name FROM authorities WHERE id=?', $projects[-1]->{'secondary_authority'});
-    }
     my $ref2 = $self->SelectAll('SELECT rights FROM projectrights WHERE project=?', $row->[0]);
     $projects[-1]->{'rights'} = [map {$_->[0]} @{$ref2}];
     $ref2 = $self->SelectAll('SELECT category FROM projectcategories WHERE project=?', $row->[0]);
@@ -8665,23 +8657,28 @@ sub ExportReport
 {
   my $self  = shift;
   my $proj  = shift || 1;
-  my $start = shift || $self->GetTheYear(). '-01-01';
-  my $end   = shift || '';
+  my $start = shift;
+  my $end   = shift;
 
-  my %report;
-  my @params = ($proj, $start);
-  my $endc = '';
+  my @params = ($proj);
+  my ($startc, $endc) = ('', '');
+  if ($start)
+  {
+    $startc = ' AND DATE(e.time)>=?';
+    push @params, $start;
+  }
   if ($end)
   {
     $endc = ' AND DATE(e.time)<=?';
     push @params, $end;
   }
+  my %report = ('start' => $start, 'end' => $end);
   my $sql = 'SELECT COUNT(*) FROM exportdata e WHERE e.project=?'.
-            ' AND DATE(e.time)>=?'. $endc;
+            $startc. $endc;
   #printf "$sql (%s)<br/>\n", join ',', @params;
   $report{'all'} = $self->SimpleSqlGet($sql, @params);
   $sql = 'SELECT COUNT(*) FROM exportdata e WHERE e.project=?'.
-         ' AND e.attr IN ("pd","pdus") AND DATE(e.time)>=?'. $endc;
+         ' AND e.attr IN ("pd","pdus")'. $startc. $endc;
   $report{'pd'} = $self->SimpleSqlGet($sql, @params);
   eval {
     $report{'pdpct'} = sprintf "%.1f%%", $report{'pd'} / $report{'all'} * 100.0;
@@ -8690,10 +8687,10 @@ sub ExportReport
   $sql = 'SELECT SUM(COALESCE(TIME_TO_SEC(r.duration),0)/3600.0)'.
          ' FROM historicalreviews r INNER JOIN exportdata e ON r.gid=e.gid'.
          ' WHERE TIME_TO_SEC(r.duration)<=3600 AND e.project=?'.
-         ' AND DATE(e.time)>=?'. $endc;
+         $startc. $endc;
   $report{'time'} = sprintf "%.1f", $self->SimpleSqlGet($sql, @params);
   $sql = 'SELECT COUNT(*) FROM candidates e WHERE e.project=?'.
-         ' AND DATE(e.time)>=?'. $endc;
+         $startc. $endc;
   $report{'candidates'} = $self->SimpleSqlGet($sql, @params);
   return \%report;
 }
