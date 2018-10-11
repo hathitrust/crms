@@ -1117,10 +1117,10 @@ sub CanExportVolume
   }
   my $rq = $self->RightsQuery($id, 1);
   return 0 unless defined $rq;
-  my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
+  my ($attr2, $reason2, $src2, $usr2, $time2, $note2) = @{$rq->[0]};
   # Do not export determination if the volume has gone out of scope,
   # or if exporting und would clobber pdus in World.
-  if ($reason ne 'bib' ||
+  if ($reason2 ne 'bib' ||
       ($attr eq 'und' && ($attr2 eq 'pd' || $attr2 eq 'pdus')))
   {
     # But, we clobber OOS if any of the following conditions hold:
