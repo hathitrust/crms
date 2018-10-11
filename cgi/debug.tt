@@ -37,6 +37,7 @@
 <div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
 <h3>Export Report</h3>
 <form id="select" action="crms">
+  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="$page"/>
   <input type="hidden" name="export_report" value="1"/>
   <label for="project_sel">Project:</label>
