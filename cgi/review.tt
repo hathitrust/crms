@@ -110,7 +110,7 @@
           [% END %]
         </td></tr>
       </table>
-      [% sources = crms.Authorities(barcode, mag, ptview) %]
+      [% authorities = crms.Authorities(barcode, mag, ptview) %]
       <table class="search">
         <tr>
           <th class="nowrap">View 1:</th>
@@ -118,17 +118,17 @@
             <select title="Search 1" class="review" id="search1Select" onchange="changeFrame1(1);" style="float:right;">
             [% optopen = 0 %]
             [% selectit = 0 %]
-            [% FOREACH src IN sources %]
-              [% IF src.url %]
+            [% FOREACH authority IN authorities %]
+              [% IF authority.url %]
                 [% selectstr = "" %]
                 [% IF selectit == 0 && src.initial == 1 %]
                   [% selectit = 1 %]
                   [% selectstr = "selected='selected'" %]
                 [% END %]
-                <option value="[% src.url %]" [% selectstr %]>[% src.name %]</option>
+                <option value="[% authority.url %]" [% selectstr %]>[% authority.name %]</option>
               [% ELSE %]
                 [% IF optopen == 1 %]</optgroup>[% END %]
-                <optgroup label="[% src.name %]">
+                <optgroup label="[% authority.name %]">
                 [% optopen = 1 %]
               [% END %]
             [% END %]
@@ -142,17 +142,17 @@
             <select title="Search 2" class="review" id="search2Select" onchange="changeFrame2(1);" style="float:right;">
             [% optopen = 0 %]
             [% selectit = 0 %]
-            [% FOREACH src IN sources %]
-              [% IF src.url %]
+            [% FOREACH authority IN authorities %]
+              [% IF authority.url %]
                 [% selectstr = "" %]
-                [% IF selectit == 0 && src.initial == 2 %]
+                [% IF selectit == 0 && authority.initial == 2 %]
                   [% selectit = 1 %]
                   [% selectstr = "selected='selected'" %]
                 [% END %]
-                <option value="[% src.url %]" [% selectstr %]>[% src.name %]</option>
+                <option value="[% authority.url %]" [% selectstr %]>[% authority.name %]</option>
               [% ELSE %]
                 [% IF optopen == 1 %]</optgroup>[% END %]
-                <optgroup label="[% src.name %]">
+                <optgroup label="[% authority.name %]">
                 [% optopen = 1 %]
               [% END %]
             [% END %]
@@ -176,13 +176,13 @@
         [% END %]
       </table>
     </div>
-    [% realindex = 0 %]
-    [% FOREACH src IN sources %]
-      [% IF src.3 && src.4 %]
-        <a style="position:absolute;left:-999px;" href="#" accesskey="[% src.3 %]"
-           onfocus="document.getElementById('search[% src.4 %]Select').selectedIndex=[% realindex %];changeFrame[% src.4 %](1);">.</a>
+    [% i = 0 %]
+    [% FOREACH authority IN authorities %]
+      [% IF authority.accesskey %]
+        <a style="position:absolute;left:-999px;" href="#" accesskey="[% authority.accesskey %]"
+           onfocus="document.getElementById('search1Select').selectedIndex=[% i %];changeFrame1(1);">.</a>
       [% END %]
-      [% IF src.2 %][% realindex = realindex + 1 %][% END %]
+      [% i = i + 1 %]
     [% END %]
 
     <div class="navbottom" style="border-collapse:collapse;">
