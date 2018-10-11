@@ -8600,4 +8600,41 @@ sub GetPageImage
   return HTDataAPI::GetPageImage($self, $id, $seq);
 }
 
+sub ExportReport
+{
+  my $self  = shift;
+  my $proj  = shift || 1;
+  my $start = shift || $self->GetTheYear(). '-01-01';
+  my $end   = shift || '';
+
+  my %report;
+  my @params = ($proj, $start);
+  my $endc = '';
+  if ($end)
+  {
+    $endc = ' AND DATE(e.time)<=?';
+    push @params, $end;
+  }
+  my $sql = 'SELECT COUNT(*) FROM exportdata e WHERE e.project=?'.
+            ' AND DATE(e.time)>=?'. $endc;
+  #printf "$sql (%s)<br/>\n", join ',', @params;
+  $report{'all'} = $self->SimpleSqlGet($sql, @params);
+  $sql = 'SELECT COUNT(*) FROM exportdata e WHERE e.project=?'.
+         ' AND e.attr IN ("pd","pdus") AND DATE(e.time)>=?'. $endc;
+  $report{'pd'} = $self->SimpleSqlGet($sql, @params);
+  eval {
+    $report{'pdpct'} = sprintf "%.1f%%", $report{'pd'} / $report{'all'} * 100.0;
+  };
+  $report{'pdpct'} = '0.0%' if $@;
+  $sql = 'SELECT SUM(COALESCE(TIME_TO_SEC(r.duration),0)/3600.0)'.
+         ' FROM historicalreviews r INNER JOIN exportdata e ON r.gid=e.gid'.
+         ' WHERE TIME_TO_SEC(r.duration)<=3600 AND e.project=?'.
+         ' AND DATE(e.time)>=?'. $endc;
+  $report{'time'} = sprintf "%.1f", $self->SimpleSqlGet($sql, @params);
+  $sql = 'SELECT COUNT(*) FROM candidates e WHERE e.project=?'.
+         ' AND DATE(e.time)>=?'. $endc;
+  $report{'candidates'} = $self->SimpleSqlGet($sql, @params);
+  return \%report;
+}
+
 1;

@@ -1,4 +1,8 @@
 [% force = cgi.param('force') %]
+[% page = cgi.param('p')      %]
+[% p_proj = cgi.param('project') %]
+[% p_start = cgi.param('startDate') %]
+[% p_end = cgi.param('endDate') %]
 [% INCLUDE header.tt %]
 
 <h2>System Administration:</h2>
@@ -9,7 +13,7 @@
   <td>
     <form action="crms">
       [% crms.HiddenSys() %]
-      <input type="hidden" name="p" value="debug"/>
+      <input type="hidden" name="p" value="$page"/>
       <input type="hidden" name="multibyte" value="1"/>
       <input type="submit" value="Do it!"/>
     </form>
@@ -20,7 +24,7 @@
   <td>
     <form action="crms">
       [% crms.HiddenSys() %]
-      <input type="hidden" name="p" value="debug"/>
+      <input type="hidden" name="p" value="$page"/>
       <input type="hidden" name="systemvars" value="1"/>
       <input type="submit" value="Do it!"/>
     </form>
@@ -28,6 +32,73 @@
 </tr>
 </table>
 <br/><br/>
+
+
+<div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
+<h3>Export Report</h3>
+<form id="select" action="crms">
+  <input type="hidden" name="p" value="$page"/>
+  <input type="hidden" name="export_report" value="1"/>
+  <label for="project_sel">Project:</label>
+  [% projs = crms.GetProjectsRef() %]
+  <select name="project" id="project_sel">
+    [% FOR proj IN projs %]
+      <option value="[% proj.id %]"
+              [% IF proj.id == p_proj %]selected="selected"[% END %]>
+        [% proj.name %]
+      </option>
+    [% END %]
+  </select>
+  <br/>
+  <label for="startDate" style="width:5em;float:left;">Start Date:</label>
+  <input type="text" id="startDate" name="startDate" value="[% p_start %]" onclick="datePickerController.show('startDate');"
+         onblur="datePickerController.hide('startDate');"/>
+  <script type="text/javascript">
+  // <![CDATA[
+    var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };
+    datePickerController.createDatePicker(opts);
+  // ]]>
+  </script>
+  <span class="smallText">(YYYY-MM-DD)</span>
+  <br/>
+  <label for="endDate" style="width:5em;float:left;">End Date:</label>
+  <input type="text" id="endDate" name="endDate" value="[% p_end %]" onclick="datePickerController.show('endDate');"
+         onblur="datePickerController.hide('endDate');"/>
+  <script type="text/javascript">
+  // <![CDATA[
+    var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };
+    datePickerController.createDatePicker(opts);
+  // ]]>
+  </script>
+  <span class="smallText">(YYYY-MM-DD)</span>
+  <br/>
+  <input type="submit" value="Submit"/>
+  </form>
+  [% IF cgi.param('export_report') %]
+  [% report = crms.ExportReport(p_proj, p_start, p_end) %]
+  <table class="exportStats">
+    <tr>
+      <th>Determinations</th>
+      <td class="nowrap">[% report.all %]</td>
+    </tr>
+    <tr>
+      <th>PD</th>
+      <td class="nowrap">[% report.pd %] ([% report.pdpct %])</td>
+    </tr>
+    <tr>
+      <th>Time</th>
+      <td class="nowrap">[% report.time %] hours</td>
+    </tr>
+      <tr>
+      <th>Candidates</th>
+      <td class="nowrap">[% report.candidates %]</td>
+    </tr>
+  </table>
+[% END %]
+</div>
+<br/><br/>
+
+
 [% ids = cgi.param('ids') %]
 <h4>Update Bibliographic Data</h4>
 <form action="crms">
