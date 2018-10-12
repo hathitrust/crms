@@ -3,8 +3,6 @@
 [% IF !user %][% user = crms.get('user') %][% END %]
 
 <h2>My Review Stats:</h2>
-<a href="[% crms.WebPath('web', 'pdf/MyReviewStatsHelp.pdf') %]"
-   target="_blank">My&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
 <br/>
 [% data = crms.CreateUserStatsReport(undef, undef, undef) %]
 <span style="font-size:1.3em;"><strong>[% data.title %]</strong></span>
