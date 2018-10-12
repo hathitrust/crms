@@ -9,9 +9,7 @@
 [% INCLUDE header.tt %]
 
 <h2>All Review Stats:</h2>
-<a href="[% crms.WebPath('web', 'pdf/AllReviewStatsHelp.pdf') %]" target="_blank">All&nbsp;Review&nbsp;Stats&nbsp;Help</a><br/>
 <br/>
-
 <div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
 <form id="select" action="crms">
 <input type="hidden" name="p" value="$p_page"/>

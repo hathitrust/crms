@@ -13,7 +13,7 @@ use Term::ANSIColor qw(:constants);
 $Term::ANSIColor::AUTORESET = 1;
 
 my $usage = <<END;
-USAGE: $0 [-7Ddhnqv] [-x SYS] [-p PROJ [-p PROJ2...]] COUNT
+USAGE: $0 [-Ddhnqv] [-x SYS] [-p PROJ [-p PROJ2...]] COUNT
 
 Populates the training database with examples (correct, single reviews)
 from production so that the queue size is increased to COUNT.
@@ -165,7 +165,7 @@ foreach my $row (@{$ref})
   my $status = $row->[3];
   my $proj   = $row->[4];
   # Disallow swissed volumes.
-  $sql = 'SELECT MAX(swiss) FROM historicalreviews WHERE id=?';
+  $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=? AND swiss=1';
   if (0 < $crmsp->SimpleSqlGet($sql, $id))
   {
     print RED "Skipping swissed $id\n" if $verbose;

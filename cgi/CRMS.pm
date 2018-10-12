@@ -324,7 +324,7 @@ sub set
 # will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.1.11';
+  return '7.1.12';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
