@@ -263,7 +263,7 @@
   </table>
   [% reviews = data.reviews %]
   [% IF expert && importUser && reviews.keys.size %]
-    <table id="importReviewsTable" data-reviews='[% data.json %]'>
+    <table id="importReviewsTable">
       <tr>
         <td colspan="2">
           <div style="line-height:20px;">
@@ -302,6 +302,7 @@
 </form>
 
 <script>
+var gReviews = [% data.json %];
 [% IF importUser %]
   addEvent(window, 'load', function(e)
   {
@@ -310,9 +311,7 @@
 [% END %]
 function popReviewInfo(user)
 {
-  var el = document.getElementById('importReviewsTable');
-  var data = JSON.parse(el.dataset.reviews);
-  var review = data.reviews[user];
+  var review = gReviews.reviews[user];
   var button = document.getElementById("r" + review.rights);
   if (button) { button.checked = "checked"; }
   button = document.getElementById("renewalFieldCheckbox");
