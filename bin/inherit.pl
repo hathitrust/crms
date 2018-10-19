@@ -488,6 +488,7 @@ sub InheritanceReport
   else
   {
     $sql .= ' src!="inherited" AND time>? AND time<=?'.
+            ' AND attr IS NOT NULL AND reason IS NOT NULL'.
             ' AND NOT EXISTS (SELECT * FROM exportdata e2 WHERE e2.id=id AND e2.time>time)'.
             ' ORDER BY time DESC';
     @params = ($start, $end);

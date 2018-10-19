@@ -44,6 +44,8 @@
     <input type="hidden" id="data_hf" name="data" value=""/>
     <input type="hidden" name="start" value="[% crms.GetNow() %]"/>
     <input type="hidden" id="hold_hf" name="hold" value="0"/>
+    <!--<input type="hidden" name="debugAuth" value="1"/>
+    <input type="hidden" name="debug" value="1"/>-->
     
     <tr>
       <td colspan="2"><strong>Notes: </strong></td>
@@ -72,10 +74,9 @@
 
 
 <script>
-  var imgsrv = 'https://' + '[% env.HTTP_HOST %]' + '/cgi/imgsrv/image?debug=super;id=' + '[% htid %]';
-  imgsrv = 'https://test.babel.hathitrust.org/cgi/imgsrv/image?debug=super;id=' + '[% htid %]';
+  var imgsrv = '[% crms.ImgsrvAddress(htid) %]';
   var seq = 1;
-  var pages = 4;
+  var pages = 20;
   var data = [% IF u_data %]
                [% u_data %]
              [% ELSE %]
@@ -89,7 +90,7 @@
     el = document.getElementById('submitButton');
     el.disabled = true;
     var el = document.getElementById('tFrame');
-    //el.src = imgsrv + ';seq=1';
+    el.src = imgsrv + ';seq=1';
     var el = document.getElementById('seqSpan');
     el.innerHTML = seq;
     RestoreSelection();
@@ -104,7 +105,7 @@
       var el = document.getElementById('tFrame');
       seq++;
       var fulladdr = imgsrv + ';seq=' + seq;
-      //el.src = fulladdr;
+      el.src = fulladdr;
       //Debug(fulladdr);
       var el = document.getElementById('seqSpan');
       el.innerHTML = seq;
@@ -125,7 +126,7 @@
       var el = document.getElementById('tFrame');
       seq--;
       var fulladdr = imgsrv + ';seq=' + seq;
-      //el.src = fulladdr;
+      el.src = fulladdr;
       //Debug(fulladdr);
       var el = document.getElementById('seqSpan');
       el.innerHTML = seq;
@@ -218,7 +219,7 @@
     }
     var el = document.getElementById('hold_hf');
     el.value = (complete)? '0':'1';
-    Debug("<strong>Data:</strong> " + JSON.stringify(data));
+    Debug("<strong>Debug Data:</strong> " + JSON.stringify(data));
     Debug((started)? "<span style='color:green;'>Started</span>":
                       "<span style='color:red;'>Not Started</span>", 1);
     Debug((complete)? "<span style='color:green;'>Complete</span>":

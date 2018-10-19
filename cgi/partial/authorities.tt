@@ -50,10 +50,8 @@
   addEvent(window, 'load', Partial_authorities_mainWindowLoad);
   function Partial_authorities_mainWindowLoad(e)
   {
-[% IF auths || NOT crms.IsDevArea() %]
     changeFrame1();
     changeFrame2();
-[% END %]
   }
 -->
   </script>

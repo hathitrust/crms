@@ -812,10 +812,9 @@ sub ProcessReviews
   $self->SetSystemStatus($stat, $msg);
   $sql = 'INSERT INTO processstatus VALUES ()';
   $self->PrepareSubmitSql($sql);
-  my ($s2,$s3,$s4,$s8) = ($stati{2},$stati{3},$stati{4},$stati{8});
   $self->PrepareSubmitSql('DELETE FROM predeterminationsbreakdown WHERE date=DATE(NOW())');
   $sql = 'INSERT INTO predeterminationsbreakdown (date,s2,s3,s4,s8) VALUES (DATE(NOW()),?,?,?,?)';
-  $self->PrepareSubmitSql($sql, $s2, $s3, $s4, $s8);
+  $self->PrepareSubmitSql($sql, $stati{2}, $stati{3}, $stati{4}, $stati{8});
 }
 
 # Returns a data structure with the following fields:
@@ -1602,32 +1601,15 @@ sub GetQueueSize
   return $self->SimpleSqlGet('SELECT COUNT(*) FROM queue');
 }
 
-sub UpdateQueueRecord
-{
-  my $self  = shift;
-  my $count = shift;
-  my $src   = shift;
-
-  my $sql = 'SELECT MAX(time) FROM queuerecord WHERE source=? AND time>=DATE_SUB(NOW(),INTERVAL 1 MINUTE)';
-  my $then = $self->SimpleSqlGet($sql, $src);
-  if ($then)
-  {
-    $sql = 'UPDATE queuerecord SET itemcount=itemcount+?,time=NOW() WHERE source=? AND time=? LIMIT 1';
-    $self->PrepareSubmitSql($sql, $count, $src, $then);
-  }
-  else
-  {
-    $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,?)';
-    $self->PrepareSubmitSql($sql, $count, $src);
-  }
-}
-
+# Calls LoadQueueForProject() for each project in candidates.
+# Does not bother to do anything for other projects.
+# Updates queuerecord with the delta.
 sub LoadQueue
 {
   my $self = shift;
 
   my $before = $self->GetQueueSize();
-  my $sql = 'SELECT DISTINCT project FROM candidates';
+  my $sql = 'SELECT DISTINCT project FROM candidates ORDER BY project ASC';
   $self->LoadQueueForProject($_->[0]) for @{$self->SelectAll($sql)};
   my $after = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue');
   $self->UpdateQueueRecord($after - $before, 'candidates');
@@ -1705,6 +1687,28 @@ sub LoadQueueForProject
   }
   # FIXME: we should give the volumes a chance to be assigned to another project instead of deleting outright.
   $self->RemoveFromCandidates($_) for keys %dels;
+}
+
+sub UpdateQueueRecord
+{
+  my $self  = shift;
+  my $count = shift;
+  my $src   = shift;
+
+  my $sql = 'SELECT MAX(time) FROM queuerecord WHERE source=?'.
+            ' AND time>=DATE_SUB(NOW(),INTERVAL 1 MINUTE)';
+  my $then = $self->SimpleSqlGet($sql, $src);
+  if ($then)
+  {
+    $sql = 'UPDATE queuerecord SET itemcount=itemcount+?,time=NOW()'.
+           ' WHERE source=? AND time=? LIMIT 1';
+    $self->PrepareSubmitSql($sql, $count, $src, $then);
+  }
+  else
+  {
+    $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,?)';
+    $self->PrepareSubmitSql($sql, $count, $src);
+  }
 }
 
 sub IsRecordInQueue
@@ -1796,17 +1800,15 @@ sub AddItemToQueueOrSetItemActive
       $self->ClearErrors();
       return {'status' => 1, 'msg' => 'HathiTrust search failed'};
     }
-    @msgs = @{ $self->GetViolations($id, $record) };
+    my $eval = $self->EvaluateCandidacy($id, $record, $project);
+    push @msgs, $eval->{'msg'} if $eval->{'msg'};
     # If there are error messages and user is not overriding it is an error.
-    if (scalar @msgs && !$override)
+    if ($eval->{'status'} != 'yes' && !$override)
     {
       $stat = 1;
     }
     else
     {
-      # FIXME: should this also error out?
-      my $src2 = $self->ShouldVolumeBeFiltered($id, $record);
-      push @msgs, "should be filtered ($src2)" if defined $src2;
       my $sql = 'INSERT INTO queue (id,priority,source,'.
                 'project,added_by,ticket) VALUES (?,?,?,?,?,?)';
       $self->PrepareSubmitSql($sql, $id, $priority, $src,
@@ -7898,6 +7900,11 @@ sub Authorities
       my $idp = $self->GetIDP($user);
       $url =~ s/__SHIB__/$idp/g;
     }
+    # To keep Shib from expiring session.
+    if ($url =~ m/babel\.hathitrust/i && $self->IsDevArea())
+    {
+      $url =~ s/babel/beta-3.babel/;
+    }
     my $initial;
     $initial = 1 if $self->TolerantCompare($aid, $pa);
     $initial = 2 if $self->TolerantCompare($aid, $sa);
@@ -7927,8 +7934,8 @@ sub GetIDP
   };
   if ($@)
   {
-    my $msg = "SQL failed ($sql): " . $@;
-    $self->SetError($msg);
+    my $err = "SQL failed ($sql): " . $@;
+    $self->SetError($err);
   }
   return $idp;
 }
@@ -8693,6 +8700,23 @@ sub ExportReport
          $startc. $endc;
   $report{'candidates'} = $self->SimpleSqlGet($sql, @params);
   return \%report;
+}
+
+sub ImgsrvAddress
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $babel = $self->IsDevArea()? 'beta-3.':'';
+  my $imgsrv = 'https://'. $babel. 'babel.hathitrust.org/cgi/imgsrv/image?debug=super;id='. $id;
+  my $user = $self->get('remote_user');
+  $user .= '@umich.edu' unless $user =~ m/@/;
+  my $idp = $self->GetIDP($user);
+  if ($idp)
+  {
+    $imgsrv .= ';signon=swle:'. $idp;
+  }
+  return $imgsrv;
 }
 
 1;

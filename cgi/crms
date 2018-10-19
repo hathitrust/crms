@@ -7,6 +7,7 @@ use Template;
 use POSIX;
 use Encode;
 use URI::Escape;
+use Data::Dumper;
 
 my $cgi  = new CGI;
 my $sys =  $cgi->param('sys');
@@ -17,6 +18,7 @@ my $tdb = $cgi->param('tdb');
 my $debugAuth = $cgi->param('debugAuth');
 my $debugSql = $cgi->param('debugSql');
 my $debugVar = $cgi->param('debugVar');
+my $debug = $cgi->param('debug');
 my $crms = CRMS->new(
         cgi       => $cgi,
         sys       => $sys,
@@ -28,7 +30,9 @@ my $crms = CRMS->new(
         debugVar  => $debugVar
         );
 my $redirect;
-my $target = uri_escape_utf8('https://'. $ENV{'HTTP_HOST'}. $ENV{'REQUEST_URI'});
+my $uri = $ENV{'REQUEST_URI'};
+$uri =~ s/&/;/g;
+my $target = uri_escape_utf8('https://'. $ENV{'HTTP_HOST'}. $uri);
 if (!$crms->get('remote_user'))
 {
   $redirect = 'https://'. $ENV{'HTTP_HOST'}. "/cgi/wayf?target=$target";
@@ -179,6 +183,7 @@ my $vars = {
     cgi       => $cgi,
     user      => $user,
     project   => $crms->GetUserCurrentProject(),
+    env       => $ENV,
     yesterday => POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time-86400))
 };
 
@@ -189,7 +194,7 @@ if (!$tt->process($input, $vars))
   die $tt->error();
 }
 print $crms->Debug();
-if ($cgi->param('debugAuth'))
+if ($debugAuth)
 {
   my $db = $crms->AuthDebugData(1);
   print <<END;
@@ -200,7 +205,7 @@ if ($cgi->param('debugAuth'))
 END
 }
 
-if ($cgi->param('debug'))
+if ($debug)
 {
   print '<br/><br/>';
   printf 'Host: <b>%s</b><br/>', `hostname`;

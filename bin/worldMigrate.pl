@@ -42,7 +42,6 @@ $instance = 'crms_training' if $training;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
-
 my $crmsWorld = CRMS->new(
     sys      => 'crmsworld',
     verbose  => $verbose,
@@ -61,13 +60,68 @@ my %catmap; # Map of World category id to US id.
 my %instmap; # Map of World institution id to US id.
 my $dbhWorld = $crmsWorld->GetDb();
 
-Reset();
-MigrateSources();
-MigrateUsers();
-MigrateProjects();
+# +----------------------------+
+# | Tables_in_crms             |
+# +----------------------------+
+# | attributes                 | # OK, handle automatically
+# | authorities                | # MigrateSources()
+# | bibdata                    | # MigrateCandidates()
+# | candidates                 | # MigrateCandidates()
+# | candidatesrecord           | # MigrateCandidates()
+# | categories                 | # OK, handle automatically
+# | corrections                | # MigrateCorrections()
+# | cri                        | # LEAVE ALONE FOR NOW
+# | determinationsbreakdown    | # UpdateStats()
+# | exportdata                 | # MigrateExportdata()
+# | exportrecord               | # FIXME: DELETE
+# | exportstats                | # UpdateStats()
+# | historicalreviews          | # MigrateExportdata()
+# | inherit                    | # OK, nothing in world??
+# | inserts                    | # OK, nothing in world
+# | insertsqueue               | # OK, nothing in world
+# | insertstotals              | # OK, nothing in world
+# | institutions               | # MigrateUsers()
+# | mail                       | # OK, nothing in world
+# | menuitems                  | # OK, UI
+# | menus                      | # OK, UI
+# | note                       | # OK, ephemeral
+# | orphan                     | # OK, nothing in world
+# | predeterminationsbreakdown | # MigratePredeterminationsbreakdown()
+# | processstatus              | # MigrateExportdata()
+# | projectauthorities         | # MigrateProjects()
+# | projectcategories          | # MigrateProjects()
+# | projectrights              | # MigrateProjects()
+# | projects                   | # MigrateProjects()
+# | projectusers               | # MigrateProjects()
+# | publishers                 | # OK, identical
+# | queue                      | # MigrateQueue()
+# | queuerecord                | # MigrateQueue()
+# | reasons                    | # OK, handle automatically
+# | reviewdata                 | # OK, nothing in world
+# | reviews                    | # MigrateQueue()
+# | rights                     | # MigrateSources()
+# | sdrerror                   | # FIXME: DELETE
+# | stanford                   | # OK, nothing in world
+# | systemstatus               | # OK, UI
+# | systemvars                 | # OK, nothing to see here
+# | unavailable                | # FIXME: unused??
+# | und                        | # MigrateCandidates()
+# | users                      | # MigrateUsers()
+# | userstats                  | # UpdateStats()
+# | viaf                       | # MigrateVIAF(), not really needed
+# +----------------------------+
+
+
+#Reset();
+#MigrateSources();
+#MigrateUsers();
+#MigrateProjects();
 #MigrateCandidates();
 #MigrateQueue();
 #MigrateExportdata();
+#MigrateCorrections();
+#MigratePredeterminationsbreakdown();
+MigrateVIAF();
 #UpdateStats();
 
 sub Reset
@@ -256,6 +310,27 @@ sub MigrateCandidates
       $crmsUS->PrepareSubmitSql($sql, @values);
     }
   }
+  $sql = 'SELECT * FROM und';
+  $ref = $dbhWorld->selectall_hashref($sql, 'id');
+  foreach my $id (sort keys %{$ref})
+  {
+    if (!$crmsUS->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE id=?', $id))
+    {
+      my $row = $ref->{$id};
+      my @fields = keys %{$row};
+      my @values = map {$row->{$_};} @fields;
+      $sql = sprintf 'INSERT INTO und (%s) VALUES %s', join(',', @fields),
+                                                         $crmsUS->WildcardList(scalar @values);
+      $crmsUS->PrepareSubmitSql($sql, @values);
+    }
+  }
+  $sql = 'SELECT time,addedamount FROM candidatesrecord';
+  $ref = $crmsWorld->SelectAll($sql);
+  foreach my $row (@{$ref})
+  {
+    $sql = 'INSERT INTO candidatesrecord (time,addedamount) VALUES (?,?)';
+    $crmsUS->PrepareSubmitSql($sql, $row->[0], $row->[1]);
+  }
 }
 
 # prepopulated HT catalog (value = 1) or VIAF (value = 2)
@@ -315,6 +390,13 @@ sub MigrateQueue
                                                          $crmsUS->WildcardList(scalar @values);
       $crmsUS->PrepareSubmitSql($sql, @values);
     }
+  }
+  $sql = 'SELECT time,itemcount,source FROM queuerecord';
+  $ref = $crmsWorld->SelectAll($sql);
+  foreach my $row (@{$ref})
+  {
+    $sql = 'INSERT INTO queuerecord (time,itemcount,source) VALUES (?,?,?)';
+    $crmsUS->PrepareSubmitSql($sql, $row->[0], $row->[1], $row->[1]);
   }
 }
 
@@ -379,6 +461,97 @@ sub MigrateExportdata
       $crmsUS->PrepareSubmitSql($sql, @values);
     }
   }
+  $sql = 'SELECT time,itemcount FROM exportrecord';
+  $ref = $crmsWorld->SelectAll($sql);
+  foreach my $row (@{$ref})
+  {
+    $sql = 'INSERT INTO exportrecord (time,itemcount) VALUES (?,?)';
+    $crmsUS->PrepareSubmitSql($sql, $row->[0], $row->[1]);
+  }
+  $sql = 'SELECT time FROM processstatus';
+  $ref = $crmsWorld->SelectAll($sql);
+  foreach my $row (@{$ref})
+  {
+    my $time = $row->[0];
+    $sql = 'SELECT COUNT(*) FROM processstatus WHERE time=?';
+    if (!$crmsUS->SimpleSqlGet($sql, $time))
+    {
+      $sql = 'INSERT INTO processstatus (time) VALUES (?)';
+      $crmsUS->PrepareSubmitSql($sql, $time);
+    }
+  }
+}
+
+sub MigrateCorrections
+{
+  my $sql = 'SELECT * FROM corrections';
+  my $ref = $dbhWorld->selectall_hashref($sql, 'id');
+  foreach my $id (sort keys %{$ref})
+  {
+    $sql = 'SELECT COUNT(*) FROM corrections WHERE id=?';
+    if (!$crmsUS->SimpleSqlGet($sql, $id))
+    {
+      my $row = $ref->{$id};
+      my @fields;
+      my @values;
+      foreach my $key (keys %{$row})
+      {
+        push @fields, $key;
+        push @values, $row->{$key};
+      }
+      $sql = sprintf 'INSERT INTO corrections (%s) VALUES %s', join(',', @fields),
+                                                         $crmsUS->WildcardList(scalar @values);
+      $crmsUS->PrepareSubmitSql($sql, @values);
+    }
+  }
+  $crmsUS->PrepareSubmitSql('UPDATE corrections SET locked=NULL');
+}
+
+sub MigratePredeterminationsbreakdown
+{
+  my $sql = 'SELECT date,s2,s3,s4,s8 FROM predeterminationsbreakdown';
+  my $ref = $crmsWorld->SelectAll($sql);
+  foreach my $row (@{$ref})
+  {
+    my $date = $row->[0];
+    $sql = 'SELECT COUNT(*) FROM predeterminationsbreakdown WHERE date=?';
+    if ($crmsUS->SimpleSqlGet($sql, $date))
+    {
+      $sql = 'UPDATE predeterminationsbreakdown SET s2=s2+?,s3=s3+?,s4=s4+?,s8=s8+?'.
+             ' WHERE date=?';
+      $crmsUS->PrepareSubmitSql($sql, $row->[1], $row->[2], $row->[3], $row->[4], $date);
+    }
+    else
+    {
+      $sql = 'INSERT INTO predeterminationsbreakdown (date,s2,s3,s4,s8)'.
+             ' VALUES (?,?,?,?,?)';
+      $crmsUS->PrepareSubmitSql($sql, $date, $row->[1], $row->[2], $row->[3], $row->[4]);
+    }
+  }
+}
+
+sub MigrateVIAF
+{
+  my $sql = 'SELECT * FROM viaf';
+  my $ref = $dbhWorld->selectall_hashref($sql, 'author');
+  foreach my $author (sort keys %{$ref})
+  {
+    $sql = 'SELECT COUNT(*) FROM viaf WHERE author=?';
+    if (!$crmsUS->SimpleSqlGet($sql, $author))
+    {
+      my $row = $ref->{$author};
+      my @fields;
+      my @values;
+      foreach my $key (keys %{$row})
+      {
+        push @fields, $key;
+        push @values, $row->{$key};
+      }
+      $sql = sprintf 'INSERT INTO viaf (%s) VALUES (%s)', join(',', @fields),
+                                                         $crmsUS->WildcardList(scalar @values);
+      $crmsUS->PrepareSubmitSql($sql, @values);
+    }
+  }
 }
 
 sub UpdateStats
@@ -392,6 +565,8 @@ sub UpdateStats
     $crmsUS->UpdateDeterminationsBreakdown($date);
     $crmsUS->UpdateExportStats($date);
   }
+  $crmsUS->UpdateUserStats();
+  
 }
 
 print "Warning: $_\n" for @{$crmsUS->GetErrors()};
