@@ -8431,32 +8431,32 @@ sub GetProjectColor
   return $color;
 }
 
-# Returns an arrayref of hashrefs with id, name, color, userCount (active assignees),
-# queueCount, rights (arrayref), categories (arrayref), authorities (arrayref).
+# Returns an arrayref of hashrefs with id, name, color, flags, userCount (active assignees),
+# queueCount, rights (arrayref), categories (arrayref), authorities (arrayref), users (arrayref).
 sub GetProjectsRef
 {
   my $self = shift;
 
   my @projects;
   my $sql = 'SELECT p.id,p.name,COALESCE(p.color,"000000"),p.autoinherit,'.
-            'p.group_volumes,p.primary_authority,p.secondary_authority,'.
+            'p.group_volumes,p.single_review,a1.name,a2.name,'.
             '(SELECT COUNT(*) FROM projectusers pu INNER JOIN users u ON pu.user=u.id'.
             ' WHERE pu.project=p.id AND u.reviewer+u.advanced+u.expert+u.admin>0),'.
             '(SELECT COUNT(*) FROM queue q WHERE q.project=p.id),'.
             '(SELECT COUNT(*) FROM candidates c WHERE c.project=p.id),'.
             '(SELECT COUNT(*) FROM exportdata e WHERE e.project=p.id)'.
-            ' FROM projects p ORDER BY p.id ASC';
+            ' FROM projects p LEFT JOIN authorities a1 ON p.primary_authority=a1.id'.
+            ' LEFT JOIN authorities a2 ON p.secondary_authority=a2.id'.
+            ' ORDER BY p.id ASC';
   my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
-    my $pa = $self->SimpleSqlGet('SELECT name FROM authorities WHERE id=?', $row->[5]);
-    my $sa = $self->SimpleSqlGet('SELECT name FROM authorities WHERE id=?', $row->[6]);
     push @projects, {'id' => $row->[0], 'name' => $row->[1], 'color' => $row->[2],
                      'autoinherit' => $row->[3], 'group_volumes' => $row->[4],
-                     'primary_authority' => $pa, 'secondary_authority' => $sa, 
-                     'userCount' => $row->[7], 'queueCount' => $row->[8],
-                     'candidatesCount' => $row->[9],
-                     'determinationsCount' => $row->[10]};
+                     'single_review' => $row->[5], 'primary_authority' => $row->[6],
+                     'secondary_authority' => $row->[7], 'userCount' => $row->[8],
+                     'queueCount' => $row->[9], 'candidatesCount' => $row->[10],
+                     'determinationsCount' => $row->[11]};
     my $ref2 = $self->SelectAll('SELECT rights FROM projectrights WHERE project=?', $row->[0]);
     $projects[-1]->{'rights'} = [map {$_->[0]} @{$ref2}];
     $ref2 = $self->SelectAll('SELECT category FROM projectcategories WHERE project=?', $row->[0]);
