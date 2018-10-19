@@ -19,11 +19,11 @@ function ToggleVisibility(id, id2)
       <h3>Volumes&nbsp;in&nbsp;Queue</h3>
       <div id="QueueReportByPriority"
           onclick="ToggleVisibility('QueueReportByPriority','QueueReportByProject');">
-        [% crms.CreateQueueReport() %]
+        [% crms.CreateQueueReport(1) %]
       </div>
       <div id="QueueReportByProject" style="display:none;"
            onclick="ToggleVisibility('QueueReportByPriority','QueueReportByProject');">
-        [% crms.CreateQueueReport(1) %]
+        [% crms.CreateQueueReport() %]
       </div>
     </td>
     <td><h3>Other&nbsp;System&nbsp;Stats</h3>[% crms.CreateSystemReport() %]</td>
@@ -33,22 +33,22 @@ function ToggleVisibility(id, id2)
       <h3>Active&nbsp;Volumes</h3>
       <div id="ReviewReportByPriority"
           onclick="ToggleVisibility('ReviewReportByPriority','ReviewReportByProject');">
-        [% crms.CreateReviewReport() %]
+        [% crms.CreateReviewReport(1) %]
       </div>
       <div id="ReviewReportByProject" style="display:none;"
            onclick="ToggleVisibility('ReviewReportByPriority','ReviewReportByProject');">
-        [% crms.CreateReviewReport(1) %]
+        [% crms.CreateReviewReport() %]
       </div>
     </td>
     <td>
       <h3>Final&nbsp;Determinations</h3>
       <div id="DeterminationReportByPriority"
            onclick="ToggleVisibility('DeterminationReportByPriority','DeterminationReportByProject');">
-        [% crms.CreateDeterminationReport() %]
+        [% crms.CreateDeterminationReport(1) %]
       </div>
       <div id="DeterminationReportByProject" style="display:none;"
            onclick="ToggleVisibility('DeterminationReportByPriority','DeterminationReportByProject');">
-        [% crms.CreateDeterminationReport(1) %]
+        [% crms.CreateDeterminationReport() %]
       </div>
       <h3>Historical&nbsp;Reviews</h3>
         <table class="exportStats">
