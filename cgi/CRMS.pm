@@ -784,7 +784,7 @@ sub ProcessReviews
     }
     my $data = $self->CalcStatus($id, $stat);
     my $status = $data->{'status'};
-    next unless $status > 0;
+    next unless defined $status and $status > 0;
     my $hold = $data->{'hold'};
     if ($hold)
     {
