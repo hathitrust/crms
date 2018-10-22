@@ -37,7 +37,7 @@ function ToggleVisibility(id, id2)
       </div>
       <div id="ReviewReportByProject" style="display:none;"
            onclick="ToggleVisibility('ReviewReportByPriority','ReviewReportByProject');">
-        [% crms.CreateReviewReport(0) %]
+        [% crms.CreateReviewReport() %]
       </div>
     </td>
     <td>
@@ -48,7 +48,7 @@ function ToggleVisibility(id, id2)
       </div>
       <div id="DeterminationReportByProject" style="display:none;"
            onclick="ToggleVisibility('DeterminationReportByPriority','DeterminationReportByProject');">
-        [% crms.CreateDeterminationReport(0) %]
+        [% crms.CreateDeterminationReport() %]
       </div>
       <h3>Historical&nbsp;Reviews</h3>
         <table class="exportStats">

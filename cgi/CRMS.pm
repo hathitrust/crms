@@ -322,7 +322,7 @@ sub set
 
 sub Version
 {
-  return '7.1.12';
+  return '7.1.13';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -8448,8 +8448,8 @@ sub GetProjectRef
   return $ref->{$id};
 }
 
-# Returns an arrayref of hashrefs with table columns, userCount (active assignees),
-# queueCount, rights (arrayref), categories (arrayref), authorities (arrayref).
+# Returns an arrayref of hashrefs with id, name, color, flags, userCount (active assignees),
+# queueCount, rights (arrayref), categories (arrayref), authorities (arrayref), users (arrayref).
 sub GetProjectsRef
 {
   my $self = shift;
@@ -8462,18 +8462,17 @@ sub GetProjectsRef
             '(SELECT COUNT(*) FROM queue q WHERE q.project=p.id),'.
             '(SELECT COUNT(*) FROM candidates c WHERE c.project=p.id),'.
             '(SELECT COUNT(*) FROM exportdata e WHERE e.project=p.id)'.
-            ' FROM projects p ORDER BY p.id ASC';
+            ' FROM projects p LEFT JOIN authorities a1 ON p.primary_authority=a1.id'.
+            ' LEFT JOIN authorities a2 ON p.secondary_authority=a2.id'.
+            ' ORDER BY p.id ASC';
   my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
-    my $pa = $self->SimpleSqlGet('SELECT name FROM authorities WHERE id=?', $row->[6]);
-    my $sa = $self->SimpleSqlGet('SELECT name FROM authorities WHERE id=?', $row->[7]);
-    push @projects, {'id' => $row->[0], 'name' => $row->[1],
-                     'color' => $row->[2], 'autoinherit' => $row->[3],
-                     'group_volumes' => $row->[4], 'single_review' => $row->[5],
-                     'primary_authority' => $pa, 'secondary_authority' => $sa, 
-                     'userCount' => $row->[8], 'queueCount' => $row->[9],
-                     'candidatesCount' => $row->[10],
+    push @projects, {'id' => $row->[0], 'name' => $row->[1], 'color' => $row->[2],
+                     'autoinherit' => $row->[3], 'group_volumes' => $row->[4],
+                     'single_review' => $row->[5], 'primary_authority' => $row->[6],
+                     'secondary_authority' => $row->[7], 'userCount' => $row->[8],
+                     'queueCount' => $row->[9], 'candidatesCount' => $row->[10],
                      'determinationsCount' => $row->[11]};
     my $ref2 = $self->SelectAll('SELECT rights FROM projectrights WHERE project=?', $row->[0]);
     $projects[-1]->{'rights'} = [map {$_->[0]} @{$ref2}];
