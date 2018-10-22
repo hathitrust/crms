@@ -1,6 +1,7 @@
 #!/usr/bin/perl
+
 BEGIN 
-{
+{ 
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
@@ -12,33 +13,35 @@ use Encode;
 use Mail::Sendmail;
 
 my $usage = <<END;
-USAGE: $0 [-hpqv] [-m USER [-m USER...]]
+USAGE: $0 [-hpqtv] [-x SYS]
 
 Sends weekly inactivity reports.
 
 -h       Print this help message.
--m USER  Check activity only for USER. May be repeated for multiple users.
-         Appends '\@umich.edu' in e-mail if necessary.
 -p       Run in production.
 -q       Do not send any emails at all.
+-t       Run in training.
 -v       Be verbose.
 END
 
 my $help;
 my $instance;
 my $nomail;
-my @mails;
 my $production;
 my $quiet;
+my $sys;
+my $training;
 my $verbose = 0;
 
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions('h|?' => \$help,
-           'm:s@' => \@mails,
            'p'    => \$production,
            'q'    => \$quiet,
-           'v+'   => \$verbose);
+           't'    => \$training,
+           'v+'   => \$verbose,
+           'x:s'  => \$sys);
 $instance = 'production' if $production;
+$instance = 'crms-training' if $training;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
@@ -60,35 +63,22 @@ For additional questions or assistance, contact the CRMS Team:
 
 Kristina Eden: 734-764-9602, keden@umich.edu
 END
-my %seen;
-if (!scalar @mails)
+my $sql = 'SELECT u.id FROM users u INNER JOIN institutions i ON u.institution=i.id'.
+          ' WHERE u.reviewer+u.advanced>0 AND u.expert=0'.
+          ' AND i.shortname!="Michigan" AND NOT u.id LIKE "%-%"'.
+          ' ORDER BY u.id ASC';
+my $ref = $crms->SelectAll($sql);
+foreach my $row (@{$ref})
 {
-  my $sql = 'SELECT u.id FROM users u INNER JOIN institutions i ON u.institution=i.id'.
-            ' WHERE u.reviewer+u.advanced+u.expert>0'.
-            ' AND i.shortname!="Michigan" AND NOT u.id LIKE "%-%"';
-  my $ref = $crms->SelectAll($sql);
-  push @mails, $_->[0] for @{$ref};
-}
-foreach my $user (@mails)
-{
-  my @identities = ($user);
-  next if $seen{$user};
-  my $k = $crms->SimpleSqlGet('SELECT kerberos FROM users WHERE id=?', $user);
-  if ($k)
-  {
-    my $sql = 'SELECT id FROM users WHERE kerberos=? AND id!=?';
-    push @identities, $_->[0] for @{$crms->SelectAll($sql , $k, $user)};
-  }
-  my $n = 0;
-  foreach my $id (@identities)
-  {
-    my $sql = 'SELECT COUNT(id) FROM reviews WHERE user=? AND time>DATE_SUB(NOW(), INTERVAL 1 WEEK)';
-    $n += $crms->SimpleSqlGet($sql, $id);
-    $sql = 'SELECT COUNT(id) FROM historicalreviews WHERE user=? AND time>DATE_SUB(NOW(), INTERVAL 1 WEEK)';
-    $n += $crms->SimpleSqlGet($sql, $id);
-  }
-  printf "%s: $n\n", join ', ', @identities if $verbose;
-  push @recips, $user if $n==0;
+  my $user = $row->[0];
+  next if $crms->IsUserIncarnationExpertOrHigher($user);
+  $sql = 'SELECT COUNT(id) FROM reviews WHERE user=?'.
+         ' AND time>DATE_SUB(NOW(), INTERVAL 1 WEEK)';
+  my $n = $crms->SimpleSqlGet($sql, $user);
+  $sql = 'SELECT COUNT(id) FROM historicalreviews WHERE user=? AND time>DATE_SUB(NOW(), INTERVAL 1 WEEK)';
+  $n += $crms->SimpleSqlGet($sql, $user);
+  printf "$user: $n\n" if $verbose;
+  push @recips, $user if $n == 0;
 }
 my $bytes = encode('utf8', $msg);
 foreach my $user (@recips)

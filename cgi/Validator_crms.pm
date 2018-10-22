@@ -279,13 +279,7 @@ sub DoRightsMatch
   my $attr2   = shift;
   my $reason2 = shift;
 
-  if ($attr1 eq $attr2)
-  {
-    # If one is und/nfi and one is und/ren, it is a conflict.
-    return 0 if $attr1 eq 'und' && (($reason1 eq 'nfi' && $reason2 eq 'ren') || ($reason1 eq 'ren' && $reason2 eq 'nfi'));
-    return 1;
-  }
-  return 0;
+  return ($attr1 eq $attr2)? 1:0;
 }
 
 1;

@@ -322,7 +322,7 @@ sub set
 
 sub Version
 {
-  return '7.1.13';
+  return '7.1.15';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -792,7 +792,7 @@ sub ProcessReviews
     }
     my $data = $self->CalcStatus($id);
     my $status = $data->{'status'};
-    next unless $status > 0;
+    next unless defined $status and $status > 0;
     my $hold = $data->{'hold'};
     if ($hold)
     {
