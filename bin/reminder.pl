@@ -29,7 +29,6 @@ my $instance;
 my $nomail;
 my $production;
 my $quiet;
-my $sys;
 my $training;
 my $verbose = 0;
 
@@ -38,8 +37,7 @@ die 'Terminating' unless GetOptions('h|?' => \$help,
            'p'    => \$production,
            'q'    => \$quiet,
            't'    => \$training,
-           'v+'   => \$verbose,
-           'x:s'  => \$sys);
+           'v+'   => \$verbose);
 $instance = 'production' if $production;
 $instance = 'crms-training' if $training;
 print "Verbosity $verbose\n" if $verbose;
