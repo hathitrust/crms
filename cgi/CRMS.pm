@@ -885,6 +885,7 @@ sub CalcStatus
   {
     $return->{'status'} = 2;
     # Do auto for ic vs und
+    # FIXME: allow missing renewal information to slip under radar?
     if (($attr eq 'ic' && $attr2 eq 'und') ||
         ($attr eq 'und' && $attr2 eq 'ic'))
     {
@@ -927,13 +928,7 @@ sub DoRightsMatch
   my $attr2   = shift;
   my $reason2 = shift;
 
-  if ($attr1 eq $attr2)
-  {
-    # If one is und/nfi and one is und/ren, it is a conflict.
-    return 0 if $attr1 eq 'und' && (($reason1 eq 'nfi' && $reason2 eq 'ren') || ($reason1 eq 'ren' && $reason2 eq 'nfi'));
-    return 1;
-  }
-  return 0;
+  return ($attr1 eq $attr2)? 1:0;
 }
 
 # If quiet is set, don't try to create the export file, print stuff, or send mail.
