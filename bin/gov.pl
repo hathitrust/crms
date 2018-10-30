@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+
 BEGIN 
 {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
@@ -11,12 +12,12 @@ use Excel::Writer::XLSX;
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-hnpv] [-m MAIL_ADDR [-m MAIL_ADDR2...]]
+USAGE: $0 [-hnpv] [-m MAIL [-m MAIL2...]] [-x SYS]
 
-Reports on suspected gov docs in the und table.
+Reports on suspected federal government documents in the und table.
 
 -h       Print this help message.
--m ADDR  Mail the report to ADDR. May be repeated for multiple addresses.
+-m MAIL  Mail the report to MAIL. May be repeated for multiple addresses.
 -n       No-op. Do not delete src='gov' entries in the und table.
 -p       Run in production.
 -v       Emit debugging information. May be repeated.
@@ -55,7 +56,7 @@ my $subj = "Suspected Gov Documents, $month";
 $month =~ s/\s+/_/g;
 my $excelname = 'GovDocs_'. $month. '.xlsx';
 my $excelpath = $crms->FSPath('prep', $excelname);
-my @cols= ('ID','Sys ID','Author','Title','Pub Date','Pub');
+my @cols = ('ID', 'Sys ID', 'Author', 'Title', 'Pub Date', 'Pub');
 my $workbook  = Excel::Writer::XLSX->new($excelpath);
 my $worksheet = $workbook->add_worksheet();
 $worksheet->write_string(0, $_, $cols[$_]) for (0 .. scalar @cols - 1);

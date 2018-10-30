@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+
 BEGIN 
 {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
@@ -10,22 +11,22 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-achinpv] [-s VOL_ID [-s VOL_ID2...]]
-          [start_date [end_date]]
+USAGE: $0 [-achinpv] [-f FILE] [-s HTID [-s HTID...]]
+          [-x SYS] [start_date [end_date]]
 
 Reports on volumes that are no longer eligible for candidacy
 in the rights database and removes them from the system.
 
 -a         Report on all volumes, ignoring date range.
 -c         Run against candidates.
--f         Run against single volume ids in a text file.
+-f FILE    Run against single volume ids in text file FILE (in addition to any -s flag HTIDs).
 -h         Print this help message.
 -i         Run the candidates population logic over volumes in the rights database
            for the date range given (if any).
 -j         Only consider ic and op volumes in rights_current when the -i flag is set.
 -n         No-op; reports what would be done but do not modify the database.
 -p         Run in production.
--s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
+-s HTID    Report only for HT volume HTID. May be repeated for multiple volumes.
 -v         Emit debugging information.
 END
 

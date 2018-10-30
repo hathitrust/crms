@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+
 BEGIN 
 {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
@@ -11,7 +12,7 @@ use Getopt::Long;
 use Utilities;
 
 my $usage = <<END;
-USAGE: $0 [-hnpv] [-m USER [-m USER...]]
+USAGE: $0 [-hnpv] [-m MAIL [-m MAIL...]]
 
 Sends weekly or biweekly activity reports to HathiTrust administrators.
 

@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+
 BEGIN 
 {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
@@ -11,9 +12,9 @@ use Getopt::Long;
 use Utilities;
 
 my $usage = <<END;
-USAGE: $0 [-hnpv] [-m USER [-m USER...]]
+USAGE: $0 [-hnpv] [-m MAIL [-m MAIL...]]
 
-Sends monthly determination	stats for HathiTrust newsletter.
+Sends monthly determination stats for HathiTrust newsletter in HTML format.
 
 -h       Print this help message.
 -m MAIL  Send report to MAIL. May be repeated for multiple recipients.

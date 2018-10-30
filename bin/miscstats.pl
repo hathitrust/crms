@@ -11,13 +11,13 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-hpqtv] [-m MAIL_ADDR [-m MAIL_ADDR2...]]
+USAGE: $0 [-hpqtv] [-m MAIL [-m MAIL...]] [-x SYS]
 
 Reports on user progress, patron requests, and past month's invalidations
 and swiss reviews.
 
 -h         Print this help message.
--m ADDR    Mail the report to ADDR. May be repeated for multiple addresses.
+-m MAIL    Mail the report to MAIL. May be repeated for multiple addresses.
 -p         Run in production.
 -q         Do not emit report (ignored if -m is used).
 -t         Run against the training site.
@@ -50,8 +50,6 @@ my $crms = CRMS->new(
     verbose  =>   $verbose,
     instance =>   $instance
 );
-
-#SELECT a.id,b.max FROM users a INNER JOIN (SELECT user,MAX(time) AS max FROM historicalreviews GROUP BY user) b ON a.id=b.user WHERE a.reviewer=1 AND a.expert=0 AND DATE(b.max)<DATE_SUB(DATE(NOW()), INTERVAL 2 WEEK) AND a.id LIKE "%@%" ORDER BY b.max ASC
 
 my $report = $crms->StartHTML('CRMS User Progress Report');
 my $sql = 'SELECT a.id,b.max FROM users a INNER JOIN'.

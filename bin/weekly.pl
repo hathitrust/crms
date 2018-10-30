@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+
 BEGIN 
 {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
@@ -11,10 +12,10 @@ use Getopt::Long;
 use Utilities;
 use Encode;
 
-my $usage = <<'END';
+my $usage = <<END;
 USAGE: $0 [-hlptv] [-m USER [-m USER...]]
 
-Sends weekly activity reports.
+Sends weekly activity report.
 
 -h       Print this help message.
 -l       Send to the MCommunity list for each CRMS system.
