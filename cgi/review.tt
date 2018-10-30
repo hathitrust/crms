@@ -121,7 +121,7 @@
             [% FOREACH authority IN authorities %]
               [% IF authority.url %]
                 [% selectstr = "" %]
-                [% IF selectit == 0 && src.initial == 1 %]
+                [% IF selectit == 0 && authority.initial == 1 %]
                   [% selectit = 1 %]
                   [% selectstr = "selected='selected'" %]
                 [% END %]

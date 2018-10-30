@@ -15,10 +15,10 @@ use Term::ANSIColor qw(:constants);
 $Term::ANSIColor::AUTORESET = 1;
 
 my $usage = <<END;
-USAGE: $0 [-hnpqv] [-m USER [-m USER...]]
+USAGE: $0 [-hnpqv] [-m MAIL [-m MAIL...]]
 
 Produces TSV file of HTID-renewal ID for Zephir download at
-prep/c/crms/CRMSRenewals.tsv
+prep/CRMSRenewals.tsv
 
 Data hosted on moxies/rootbeers at /htapps/www/sites/www.hathitrust.org/files
 
