@@ -1,12 +1,8 @@
 #!/usr/bin/perl
 
-my ($root);
 BEGIN 
 { 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -14,8 +10,8 @@ use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 
 my $usage = <<END;
-USAGE: $0 [-acCdhnpquv] [-s VOL_ID [-s VOL_ID2...]]
-          [-m MAIL_ADDR [-m MAIL_ADDR2...]] [-P PROJ1 [-P PROJ2...]]
+USAGE: $0 [-acCdhnpquv] [-s HTID [-s HTID...]]
+          [-m MAIL [-m MAIL...]] [-P PROJ [-P PROJ...]]
           [-t TBL [-t TBL...]] [-x SYS] [start_date[ time] [end_date[ time]]]
 
 Reports on the volumes that can inherit from this morning's export,
@@ -27,12 +23,12 @@ if it is specified.
 -C         Use 'cleanup' as the source.
 -d         Use volumes filtered as duplicates, similar to the -c flag.
 -h         Print this help message.
--m ADDR    Mail the report to ADDR. May be repeated for multiple addresses.
+-m MAIL    Mail the report to MAIL. May be repeated for multiple addresses.
 -n         No-op; do not modify the database.
 -p         Run in production.
 -P PROJ    For candidates inheritance, only check volumes in the specified project.
 -q         Do not emit report (ignored if -m is used).
--s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
+-s HTID    Report only for HT volume VOL_ID. May be repeated for multiple volumes.
 -t TBL     Suppress table TBL (which is often huge in candidates cleanup),
            where TBL is one of {chron,nodups,noexport,unneeded}.
            May be repeated for multiple tables.

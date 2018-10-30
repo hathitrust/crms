@@ -1,12 +1,8 @@
 #!/usr/bin/perl
 
-my ($root);
 BEGIN 
 { 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -14,7 +10,7 @@ use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 
 my $usage = <<END;
-USAGE: $0 [-acCehlmpqt] [-x SYS] [-m USER [-m USER...]] [start_date [end_date]]
+USAGE: $0 [-acCehlNpqtv] [-x SYS] [-m MAIL [-m MAIL...]] [start_date [end_date]]
 
 Processes reviews, exports determinations, updates candidates,
 updates the queue, recalculates user stats, and clears stale locks.
@@ -35,7 +31,7 @@ with latest rights DB timestamp between them.
 -s      Do not recalculate monthly stats.
 -t      Run in training.
 -x SYS  Set SYS as the system to execute.
--v      Be verbose.
+-v      Be verbose. May be repeated for increased verbosity.
 END
 
 my $instance;

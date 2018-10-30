@@ -1,14 +1,8 @@
 #!/usr/bin/perl
 
-# This script can be run from crontab
-
-my ($root);
 BEGIN 
 { 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -18,7 +12,7 @@ use Getopt::Long;
 use Utilities;
 
 my $usage = <<END;
-USAGE: $0 [-hnpv] [-m USER [-m USER...]]
+USAGE: $0 [-hnpv] [-m MAIL [-m MAIL...]]
 
 Sends weekly or biweekly activity reports to HathiTrust administrators.
 
