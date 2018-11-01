@@ -1,14 +1,8 @@
 #!/usr/bin/perl
 
-# This script can be run from crontab
-
-my ($root);
 BEGIN 
 { 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -18,10 +12,10 @@ use Getopt::Long;
 use Utilities;
 use Encode;
 
-my $usage = <<'END';
-USAGE: $0 [-hlptv] [-m USER [-m USER...]]
+my $usage = <<END;
+USAGE: $0 [-hpqtv] [-m USER [-m USER...]] [-x SYS]
 
-Sends accumulated help requests to crms-experts@umich.edu.
+Sends accumulated help requests to crms-experts\@umich.edu.
 
 -h       Print this help message.
 -m MAIL  Also send report to MAIL. May be repeated for multiple recipients.
