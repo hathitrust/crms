@@ -324,7 +324,7 @@ sub set
 # will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.1.16';
+  return '7.1.17';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -6548,8 +6548,10 @@ sub GetUserRole
   return $role;
 }
 
-# Returns a hash ref with 'expires' => expiration date from database, status => {0,1,2}
-# where 0 is unexpired, 1 is expired, 2 is expiring soon.
+# Returns a hash ref:
+# expires => expiration date from database
+# status => {0,1,2} where 0 is unexpired, 1 is expired, 2 is expiring soon
+# days => number of days left before expiration
 sub IsUserExpired
 {
   my $self = shift;
@@ -6557,7 +6559,8 @@ sub IsUserExpired
 
   my %data;
   my $sql = 'SELECT DATE(expires),IF(expires<NOW(),1,'.
-            'IF(DATE_SUB(expires,INTERVAL 10 DAY)<NOW(),2,0))'.
+            'IF(DATE_SUB(expires,INTERVAL 10 DAY)<NOW(),2,0)),'.
+            ' DATEDIFF(DATE(expires),DATE(NOW()))'.
             ' FROM ht_users WHERE userid=? OR email=?'.
             ' ORDER BY IF(role="crms",1,0) DESC';
   #print "$sql<br/>\n";
@@ -6571,6 +6574,7 @@ sub IsUserExpired
     my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
     $data{'expires'} = $ref->[0]->[0];
     $data{'status'} = $ref->[0]->[1];
+    $data{'days'} = $ref->[0]->[2];
   };
   if ($@)
   {
