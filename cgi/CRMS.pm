@@ -1371,11 +1371,11 @@ sub CheckAndLoadItemIntoCandidates
     }
     elsif (defined $inund || defined $incand || $inq)
     {
-      my $fromwhere = '';
-      $fromwhere = "und [$inund]" if defined $inund;
-      $fromwhere .= sprintf "%scandidates", (length $fromwhere)? 'and ':'';
-      $fromwhere .= sprintf "%squeue", (length $fromwhere)? 'and ':'';
-      $self->ReportMsg("Remove $id $fromwhere\n");
+      my @from;
+      push @from, "und [$inund]" if defined $inund;
+      push @from, 'candidates' if defined $incand;
+      push @from, 'queue' if $inq;
+      $self->ReportMsg(sprintf "Remove $id from %s\n", join ', ', @from);
       $self->RemoveFromCandidates($id);
     }
   }
