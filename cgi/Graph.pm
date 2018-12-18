@@ -296,11 +296,12 @@ sub CreateReviewInstitutionGraph
 sub CreateReviewerGraph
 {
   my $self  = shift;
-  my $type  = shift || 1;
+  my $type  = shift;
   my $start = shift;
   my $end   = shift;
   my @users = @_;
 
+  $type = 0 unless defined $type;
   return CreateFlaggedGraph($self, @users) if $type == 3;
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
               'tooltip'=>{'pointFormat'=>'{series.name}: <strong>{point.y}</strong>'},
