@@ -16,23 +16,19 @@ my $usage = <<END;
 USAGE: $0 [-hnpv] [-e HTID [-e HTID...]]
        [-s HTID [-s HTID...]] [-x EXCEL_FILE] [-y YEAR]
 
-BLUE
 Reports on and submits new determinations for previous determinations
 that may now, as of the new year, have had copyright expire from ic*
 to either pd* or icus.
 
 Accumulates death/pub dates for each determination, whether entered as the
 master date, or in the notes field, and creates new determinations based
-on 50/70-year predicted copyright term.
-
-Also checks icus/gatt and icus/ren determinations that may be affected by the
-95-year US term opening 1923 volumes in 2019.
+on both the 50/70-year predicted copyright term, and the 95-year US term
+opening 1923 volumes in 2019.
 
 The dates accumulated for each volume are translated into a set
 of rights predictions, and if the most restrictive of these is more open
 than the current rights, a new determination is submitted in the CRMS
 database as a queue entry and autocrms review with the new rights.
-RESET
 
 -e HTID        Exclude HTID from being considered.
 -h             Print this help message.
@@ -80,10 +76,10 @@ my ($workbook, $worksheet);
 my $wsrow = 1;
 if ($excel)
 {
-  use Excel::Writer::XLSX;
+  require Excel::Writer::XLSX;
   my $excelpath = $crms->FSPath('prep', $excel);
-  my @cols = ('ID', 'Author', 'Title', 'Pub Date', 'Current Rights', 'Dates',
-              'Predictions', 'Action', 'Message');
+  my @cols = ('ID', 'Author', 'Title', 'Pub Date', 'Current Rights',
+              'Extracted Dates', 'Predictions', 'Action', 'Message');
   $workbook  = Excel::Writer::XLSX->new($excelpath);
   $worksheet = $workbook->add_worksheet();
   $worksheet->write_string(0, $_, $cols[$_]) for (0 .. scalar @cols - 1);
