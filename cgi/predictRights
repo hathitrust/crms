@@ -1,13 +1,8 @@
 #!/usr/bin/perl
 
-my ($root_dir);
-BEGIN 
-{ 
-  $root_dir = $ENV{'DLXSROOT'};
-  $root_dir = $ENV{'SDRROOT'} unless $root_dir;
-}
-
 use strict;
+use FindBin;
+use lib $FindBin::Bin;
 use CGI;
 use CRMS;
 
@@ -19,11 +14,9 @@ my $crown  = $cgi->param('crown');
 my $pub    = $cgi->param('pub');
 my $doyear = $cgi->param('doyear');
 my $readable = $cgi->param('readable');
-my $crms = CRMS->new(verbose => 0,
-                     pdb     => $cgi->param('pdb'),
-                     tdb     => $cgi->param('tdb'),
-                     cgi     => $cgi);
-
+my $crms = CRMS->new(cgi => $cgi,
+                     pdb => $cgi->param('pdb'),
+                     tdb => $cgi->param('tdb'));
 my $n;
 if (defined $doyear)
 {
