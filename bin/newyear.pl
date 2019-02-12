@@ -78,7 +78,7 @@ if ($excel)
 {
   require Excel::Writer::XLSX;
   my $excelpath = $crms->FSPath('prep', $excel);
-  my @cols = ('ID', 'Author', 'Title', 'Pub Date', 'Current Rights',
+  my @cols = ('ID', 'Author', 'Title', 'Pub Date', 'Country', 'Current Rights',
               'Extracted Dates', 'Predictions', 'Action', 'Message');
   $workbook  = Excel::Writer::XLSX->new($excelpath);
   $worksheet = $workbook->add_worksheet();
@@ -89,12 +89,9 @@ my $nyp = $crms->SimpleSqlGet('SELECT id FROM projects WHERE name="New Year"');
 die "Can't get New Year project" unless defined $nyp;
 $year = $crms->GetTheYear() unless $year;
 my $sql = 'SELECT e.id,e.gid,e.time,e.attr,e.reason FROM exportdata e'.
-          #' INNER JOIN bibdata b ON e.id=b.id'.
           ' WHERE (e.attr="pdus" OR e.attr="ic" OR e.attr="icus")'.
-          #' AND b.pub_date="1923-01-01"'.
-          ' AND e.exported=1 AND e.src="candidates" AND YEAR(DATE(e.time))<?'.
-          ' AND e.id NOT IN (SELECT id FROM queue)'.
-          ' AND e.id NOT IN (SELECT DISTINCT id FROM exportdata WHERE project=?)';
+          ' AND e.exported=1 AND e.src!="candidates" AND YEAR(DATE(e.time))<?'.
+          ' AND e.id NOT IN (SELECT id FROM queue)';
 if (scalar @singles)
 {
   $sql .= sprintf(" AND e.id IN ('%s')", join "','", @singles);
@@ -105,8 +102,8 @@ if (scalar @excludes)
 }
 $sql .= ' ORDER BY e.time DESC';
 #$sql .= ' LIMIT 1000';
-print "$sql, $year\n" if $verbose > 1;
-my $ref = $crms->SelectAll($sql, $year, $nyp);
+print Utilities::StringifySql($sql, $year). "\n" if $verbose > 1;
+my $ref = $crms->SelectAll($sql, $year);
 my %seen;
 foreach my $row (@{$ref})
 {
@@ -217,17 +214,19 @@ foreach my $row (@{$ref})
         $worksheet->write_string($wsrow, 1, $record->author || '');
         $worksheet->write_string($wsrow, 2, $record->title || '');
         $worksheet->write_string($wsrow, 3, $record->copyrightDate || '');
-        $worksheet->write_string($wsrow, 4, "$acurr/$rcurr");
-        $worksheet->write_string($wsrow, 5, join(',', sort keys %alldates));
-        $worksheet->write_string($wsrow, 6, join(',', sort keys %predictions));
-        $worksheet->write_string($wsrow, 7, $action);
-        $worksheet->write_string($wsrow, 8, $msg);
+        $worksheet->write_string($wsrow, 4, $record->country || '');
+        $worksheet->write_string($wsrow, 5, "$acurr/$rcurr");
+        $worksheet->write_string($wsrow, 6, join(',', sort keys %alldates));
+        $worksheet->write_string($wsrow, 7, join(',', sort keys %predictions));
+        $worksheet->write_string($wsrow, 8, $action);
+        $worksheet->write_string($wsrow, 9, $msg);
         $wsrow++;
       }
     }
   }
 }
 
-$workbook->close();
+$workbook->close() if $excel;
+
 print RED "Warning: $_\n" for @{$crms->GetErrors()};
 
