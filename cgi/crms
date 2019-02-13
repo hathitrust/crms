@@ -321,30 +321,27 @@ END
 if ($cgi->param('debug'))
 {
   print "<h3>Debug Information</h3>";
-  printf 'Host: <b>%s</b><br/>', `hostname`;
-  my $dbinfo = $crms->DbInfo();
-  $dbinfo =~ s/\n/<br\/>/g;
-  print "<i>$dbinfo</i><br/>\n";
-  print '<br/><strong>Environment Variables:</strong><br/>';
   eval {
+    printf 'Host: <b>%s</b><br/>', `hostname`;
+    my $dbinfo = $crms->DbInfo();
+    $dbinfo =~ s/\n/<br\/>/g;
+    print "<i>$dbinfo</i><br/>\n";
+    print '<br/><strong>Environment Variables:</strong><br/>';
     foreach my $k (sort keys %ENV)
     {
       printf "&nbsp;&nbsp;&nbsp;$k: %s<br/>\n", $ENV{$k};
     }
-  };
-  print "<br/><strong>Perl $] Include Paths (for $FindBin::Bin):</strong><br/>";
-  eval {
+    print "<br/><strong>Perl ${^V}  Include Paths (for $FindBin::Bin):</strong><br/>";
     foreach my $inc (sort @INC)
     {
       print "&nbsp;&nbsp;&nbsp;$inc<br/>\n";
     }
-  };
-  print "<br/><strong>CRMS Variables:</strong><br/>\n";
-  eval {
+    print "<br/><strong>CRMS Variables:</strong><br/>\n";
     foreach my $k (sort keys %{$crms})
     {
       printf "&nbsp;&nbsp;&nbsp;$k: %s<br/>\n", $crms->get($k);
     }
   };
+  print "<i>Error printing debug information:</i> <code>$@</code>\n" if $@;
 }
 
