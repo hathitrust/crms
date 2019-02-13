@@ -1,13 +1,8 @@
 #!/usr/bin/perl
 
-my ($root_dir);
-BEGIN 
-{ 
-  $root_dir = $ENV{'DLXSROOT'};
-  $root_dir = $ENV{'SDRROOT'} unless $root_dir;
-}
-
 use strict;
+use FindBin;
+use lib $FindBin::Bin;
 use CGI;
 use CRMS;
 use Inserts;
@@ -15,17 +10,15 @@ use Template;
 use POSIX;
 use Encode;
 
-my $cgi  = new CGI;
+my $cgi = new CGI;
 my $sys =  $cgi->param('sys');
 $sys = 'crms' unless $sys;
 $cgi->param('sys', $sys) if $sys and $sys ne 'crms';
-my $crms = CRMS->new(
-        sys     => $sys,
-        verbose => 0,
-        pdb     => $cgi->param('pdb'),
-        tdb     => $cgi->param('tdb'));
-
-my $ins = Inserts->new('crms'=>$crms);
+my $crms = CRMS->new(cgi => $cgi,
+                     sys => $sys,
+                     pdb => $cgi->param('pdb'),
+                     tdb => $cgi->param('tdb'));
+my $ins = Inserts->new('crms' => $crms);
 my $editing = $cgi->param('editing');
 my $id = $cgi->param('barcode');
 if ($cgi->param('submit') eq 'Cancel')

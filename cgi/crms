@@ -1,11 +1,13 @@
 #!/usr/bin/perl
 
 use strict;
+use FindBin;
+use lib $FindBin::Bin;
 use CGI;
 use CRMS;
-use Template;
-use POSIX;
 use Encode;
+use POSIX;
+use Template;
 use URI::Escape;
 
 my $cgi  = new CGI;
@@ -318,23 +320,28 @@ END
 
 if ($cgi->param('debug'))
 {
-  print '<br/><br/>';
-  printf 'Host: <b>%s</b><br/>', `hostname`;
-  my $dbinfo = $crms->DbInfo();
-  $dbinfo =~ s/\n/<br\/>/g;
-  print "<i>$dbinfo</i><br/>\n";
+  print "<h3>Debug Information</h3>";
   eval {
+    printf 'Host: <b>%s</b><br/>', `hostname`;
+    my $dbinfo = $crms->DbInfo();
+    $dbinfo =~ s/\n/<br\/>/g;
+    print "<i>$dbinfo</i><br/>\n";
+    print '<br/><strong>Environment Variables:</strong><br/>';
     foreach my $k (sort keys %ENV)
     {
-      printf "$k: %s<br/>\n", $ENV{$k};
+      printf "&nbsp;&nbsp;&nbsp;$k: %s<br/>\n", $ENV{$k};
     }
-  };
-  print "<br/><br/>\n";
-  eval {
+    print "<br/><strong>Perl ${^V}  Include Paths (for $FindBin::Bin):</strong><br/>";
+    foreach my $inc (sort @INC)
+    {
+      print "&nbsp;&nbsp;&nbsp;$inc<br/>\n";
+    }
+    print "<br/><strong>CRMS Variables:</strong><br/>\n";
     foreach my $k (sort keys %{$crms})
     {
-      printf "$k: %s<br/>\n", $crms->get($k);
+      printf "&nbsp;&nbsp;&nbsp;$k: %s<br/>\n", $crms->get($k);
     }
   };
+  print "<i>Error printing debug information:</i> <code>$@</code>\n" if $@;
 }
 

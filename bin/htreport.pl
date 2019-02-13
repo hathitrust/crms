@@ -21,7 +21,7 @@ Sends biweekly activity reports to HathiTrust administrators.
 -n       No-op; do not send e-mail at all.
 -p       Run in production.
 -v       Be verbose.
--y       Run report against entire year.
+-y YEAR  Run report against entire year YEAR.
 END
 
 my $help;
@@ -38,7 +38,7 @@ die 'Terminating' unless GetOptions('h|?'  => \$help,
            'n'    => \$noop,
            'p'    => \$production,
            'v+'   => \$verbose,
-           'y'    => \$year);
+           'y:s'    => \$year);
 $instance = 'production' if $production;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
@@ -57,7 +57,7 @@ my $crmsUS = CRMS->new(
 my ($start, $period);
 if ($year)
 {
-  $start = $crms->GetTheYear(). '-01-01';
+  $start = $year. '-01-01';
   $period = 'Year';
 }
 else
@@ -118,7 +118,7 @@ my $pdoutus = join ', ', sort keys %pdoutus;
 my $candWorld = commify($crms->SimpleSqlGet('SELECT COUNT(*) FROM candidates'));
 my $candUS = commify($crmsUS->SimpleSqlGet('SELECT COUNT(*) FROM candidates'));
 
-my $now = $crms->SimpleSqlGet('SELECT NOW()');
+my $now = ($year)? "$year-12-31" : $crms->SimpleSqlGet('SELECT NOW()');
 my $rnote = sprintf('<span style="font-size:.9em;">Report for %s to %s</span>',
                     $crms->FormatDate($start),
                     #$start,
