@@ -303,7 +303,7 @@
 
 <script>
 var gReviews = [% data.json %];
-[% IF importUser %]
+[% IF importUser && !error %]
   addEvent(window, 'load', function(e)
   {
     popReviewInfo('[% importUser %]');
