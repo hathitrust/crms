@@ -17,9 +17,7 @@ my $doyear = $cgi->param('doyear');
 my $readable = $cgi->param('readable');
 $sys = 'crms' unless $sys;
 my $crms = CRMS->new(cgi => $cgi,
-                     sys => $sys,
-                     pdb => $cgi->param('pdb'),
-                     tdb => $cgi->param('tdb'));
+                     sys => $sys);
 
 my $n;
 if (defined $doyear)

@@ -50,21 +50,21 @@ sub new
   $self->set('instance', $ENV{'CRMS_INSTANCE'});
   # If running from command line.
   $self->set('instance', $args{'instance'}) if $args{'instance'};
-  # Only need to authorize when running as CGI.
-  $self->set('cgi', $args{'cgi'});
-  $self->set('pdb',      $args{'pdb'});
-  $self->set('tdb',      $args{'tdb'});
-  $self->set('debugSql', $args{'debugSql'});
-  $self->set('debugVar', $args{'debugVar'});
   $self->set('sys',      $sys);
   # Only need to authorize when running as CGI.
   if ($ENV{'GATEWAY_INTERFACE'})
   {
-    print "<strong>Warning: no CGI passed to <code>CRMS->new()</code>\n" unless $args{'cgi'};
+    $CGI::LIST_CONTEXT_WARN = 0;
+    my $cgi = $args{'cgi'};
+    print "<strong>Warning: no CGI passed to <code>CRMS->new()</code>\n" unless $cgi;
+    $self->set('cgi',      $cgi);
+    $self->set('pdb',      $cgi->param('pdb'));
+    $self->set('tdb',      $cgi->param('tdb'));
+    $self->set('debugSql', $args{'debugSql'});
+    $self->set('debugVar', $args{'debugVar'});
     $self->SetupUser();
   }
   $self->DebugVar('self', $self);
-  $CGI::LIST_CONTEXT_WARN = 0;
   return $self;
 }
 
