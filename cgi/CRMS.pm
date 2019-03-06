@@ -324,7 +324,7 @@ sub set
 # will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.1.21';
+  return '7.1.22';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -8644,6 +8644,18 @@ sub ExportReport
          $startc. $endc;
   $report{'candidates'} = $self->SimpleSqlGet($sql, @params);
   return \%report;
+}
+
+# Takes output of AllAssignableXXXs (list of hashes) and pulls the IDs into a list.
+sub JSONifyIDs
+{
+  my $self = shift;
+  my $data = shift;
+
+  my @ret;
+  push @ret, $_->{'id'} for @{$data};
+  @ret = sort @ret;
+  return JSON::XS->new->encode(\@ret);
 }
 
 1;
