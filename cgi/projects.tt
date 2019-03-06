@@ -1,6 +1,9 @@
 [% p = cgi.param("p") %]
 [% INCLUDE header.tt %]
 
+[% rights = crms.AllAssignableRights() %]
+[% cats = crms.AllAssignableCategories() %]
+[% auths = crms.AllAssignableAuthorities() %]
 [% users = crms.AllAssignableUsers() %]
 <script type="text/javascript">
 <!--
@@ -12,13 +15,11 @@ if (!/\?/.test(gURLBase))
   gURLBase = gURLBase + "?placeholder=ignore";
 }
 var gSelectedProject;
-var gMaxRights = [% crms.SimpleSqlGet('SELECT MAX(id) FROM rights') %];
-var gMaxCategories = [% crms.SimpleSqlGet('SELECT MAX(id) FROM categories') %];
-var gMaxAuthorities = [% crms.SimpleSqlGet('SELECT MAX(id) FROM authorities') %];
-var gMaxUsers = [% crms.SimpleSqlGet('SELECT COUNT(id) FROM users') %];
-var gUsers = [
-  [% FOREACH user IN users %][% '"'_ user.id _ '",' %][% END %]
-];
+var gAllRights = [% crms.JSONifyIDs(rights) %];
+var gAllCategories = [% crms.JSONifyIDs(cats) %];
+var gAllAuthorities = [% crms.JSONifyIDs(auths) %];
+var gAllUsers = [% crms.JSONifyIDs(users) %];
+
 window.onload = function(e)
 {
   populateProjects();
@@ -30,19 +31,24 @@ function typeToPrefix(type)
   return (type == 'rights')? 'R':((type == 'categories')? 'C':((type == 'authorities')? 'A':'U'));
 }
 
+function typeToArray(type)
+{
+  return (type == 'rights')? gAllRights:((type == 'categories')? gAllCategories:((type == 'authorities')? gAllAuthorities:gAllUsers));
+}
+
 function propertyChanged(type)
 {
-  var prefix = typeToPrefix(type);
   if (gSelectedProject)
   {
+    var prefix = typeToPrefix(type);
     var row = document.getElementById(prefix+'SaveDiv');
     row.style.visibility = 'visible';
     var property = new Array();
-    var max = (type == 'rights')? gMaxRights:((type == 'categories')? gMaxCategories:((type == 'authorities')? gMaxAuthorities:gUsers.length));
-    for (var i = 0; i <= max; i++)
+    var array = typeToArray(type);
+    for (var i = 0; i < array.length; i++)
     {
-      var id = i+prefix+'Checkbox';
-      if (type == 'users') { id = gUsers[i] + 'UCheckbox'; }
+      var id = array[i] + prefix + 'Checkbox';
+      //if (type == 'users') { id = array[i] + 'UCheckbox'; }
       var box = document.getElementById(id);
       if (box)
       {
@@ -147,32 +153,41 @@ function selectProject(id)
     row.style.backgroundColor = '#FFAA44';
     gSelectedProject = id;
     var rights = JSON.parse(sessionStorage.getItem('R'+id));
-    //console.log(rights);
-    for (var i = 0; i <= gMaxRights; i++)
+    if (gAllRights.length && typeof(gAllRights[0]) !== 'string')
+      console.log('ERROR: gAllRights[0] is type ' + typeof(gAllRights[0]));
+    if (rights.length && typeof(rights[0]) !== 'string')
+      console.log('ERROR: rights[0] is type ' + typeof(rights[0]));
+    for (var i = 0; i < gAllRights.length; i++)
     {
-      var box = document.getElementById(i+'RCheckbox');
-      var check = (rights.indexOf(i.toString()) == -1)? '':'checked';
+      var right = gAllRights[i];
+      var box = document.getElementById(right + 'RCheckbox');
+      var check = (rights.indexOf(right) == -1)? '':'checked';
       if (box) { box.checked = check; }
+      else {console.log("can't find "+right+'RCheckbox'+' check'+check); }
     }
     var categories = JSON.parse(sessionStorage.getItem('C'+id));
     //console.log(rights);
-    for (var i = 0; i <= gMaxCategories; i++)
+    for (var i = 0; i < gAllCategories.length; i++)
     {
-      var box = document.getElementById(i+'CCheckbox');
-      var check = (categories.indexOf(i.toString()) == -1)? '':'checked';
+      var cat = gAllCategories[i];
+      var box = document.getElementById(cat + 'CCheckbox');
+      var check = (categories.indexOf(cat) == -1)? '':'checked';
       if (box) { box.checked = check; }
+      else {console.log("can't find "+i+'CCheckbox'+' check'+check); }
     }
     var authorities = JSON.parse(sessionStorage.getItem('A'+id));
-    for (var i = 0; i <= gMaxAuthorities; i++)
+    for (var i = 0; i < gAllAuthorities.length; i++)
     {
-      var box = document.getElementById(i+'ACheckbox');
-      var check = (authorities.indexOf(i.toString()) == -1)? '':'checked';
+      var auth = gAllAuthorities[i];
+      var box = document.getElementById(auth + 'ACheckbox');
+      var check = (authorities.indexOf(auth) == -1)? '':'checked';
       if (box) { box.checked = check; }
+      else {console.log("can't find "+i+'ACheckbox'+' check'+check); }
     }
     var users = JSON.parse(sessionStorage.getItem('U'+id));
-    for (var i = 0; i < gUsers.length; i++)
+    for (var i = 0; i < gAllUsers.length; i++)
     {
-      var user = gUsers[i];
+      var user = gAllUsers[i];
       var box = document.getElementById(user+'UCheckbox');
       var check = (users.indexOf(user) == -1)? '':'checked';
       if (box) { box.checked = check; }
@@ -321,9 +336,9 @@ function populateProject(data, table)
   input.value = '#'+data.color;
   input.addEventListener('change', function(){changeColor(data.id);}, false);
   cell.appendChild(input);
-  sessionStorage.setItem('R'+data.id, JSON.stringify(data.rights));
-  sessionStorage.setItem('C'+data.id, JSON.stringify(data.categories));
-  sessionStorage.setItem('A'+data.id, JSON.stringify(data.authorities));
+  sessionStorage.setItem('R'+data.id, JSON.stringify(data.rights.map(String)));
+  sessionStorage.setItem('C'+data.id, JSON.stringify(data.categories.map(String)));
+  sessionStorage.setItem('A'+data.id, JSON.stringify(data.authorities.map(String)));
   sessionStorage.setItem('U'+data.id, JSON.stringify(data.users));
 }
 
@@ -436,7 +451,6 @@ function addProject(name)
         </div>
       </td>
     </tr>
-  [% rights = crms.AllAssignableRights() %]
   [% FOREACH r IN rights %]
     <tr>
       <td><input type="checkbox" id="[% r.id %]RCheckbox" name="[% r.id %]" onchange="propertyChanged('rights');"/></td>
@@ -457,7 +471,6 @@ function addProject(name)
         </div>
       </td>
     </tr>
-  [% cats = crms.AllAssignableCategories() %]
   [% FOREACH c IN cats %]
     <tr>
       <td><input type="checkbox" id="[% c.id %]CCheckbox" name="[% c.id %]" onchange="propertyChanged('categories');"/></td>
@@ -478,7 +491,6 @@ function addProject(name)
         </div>
       </td>
     </tr>
-  [% auths = crms.AllAssignableAuthorities() %]
   [% FOREACH a IN auths %]
     <tr>
       <td><input type="checkbox" id="[% a.id %]ACheckbox" name="[% a.id %]" onchange="propertyChanged('authorities');"/></td>
