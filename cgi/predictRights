@@ -14,9 +14,8 @@ my $crown  = $cgi->param('crown');
 my $pub    = $cgi->param('pub');
 my $doyear = $cgi->param('doyear');
 my $readable = $cgi->param('readable');
-my $crms = CRMS->new(cgi => $cgi,
-                     pdb => $cgi->param('pdb'),
-                     tdb => $cgi->param('tdb'));
+my $crms = CRMS->new(cgi => $cgi);
+
 my $n;
 if (defined $doyear)
 {

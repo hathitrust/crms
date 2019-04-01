@@ -6,7 +6,7 @@ use Utilities;
 
 sub CreateExportGraph
 {
-  my $self  = shift;
+  my $self = shift;
 
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
               'tooltip'=>{'pointFormat'=>'<strong>{point.y}</strong>'},
@@ -28,7 +28,7 @@ sub CreateExportGraph
 
 sub CreateExportBreakdownGraph
 {
-  my $self  = shift;
+  my $self = shift;
 
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
               'tooltip'=>{'pointFormat'=>'<strong>{point.y}</strong>'},
@@ -63,7 +63,7 @@ sub CreateExportBreakdownGraph
 
 sub CreateDeterminationsBreakdownGraph
 {
-  my $self  = shift;
+  my $self = shift;
 
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
               'tooltip'=>{'pointFormat'=>'<strong>{point.y}</strong>'},
@@ -124,7 +124,7 @@ sub CreateCandidatesData
 
 sub CreateCandidatesGraph
 {
-  my $self  = shift;
+  my $self = shift;
 
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
               'tooltip'=>{'pointFormat'=>'<strong>{point.y}</strong>'},
@@ -154,7 +154,7 @@ sub CreateCandidatesGraph
 
 sub CreateExportsPieChart
 {
-  my $self  = shift;
+  my $self = shift;
 
   my %data = ('chart'=>{'type'=>'pie'}, 'title'=>{'text'=>undef},
               'tooltip'=>{'pointFormat'=>'<strong>{point.percentage:.1f}%</strong><br/>({point.y})'},
@@ -182,7 +182,7 @@ sub CreateExportsPieChart
 
 sub CreateCountriesGraph
 {
-  my $self  = shift;
+  my $self = shift;
   my %data = ('chart'=>{'type'=>'pie'}, 'title'=>{'text'=>undef},
               'tooltip'=>{'pointFormat'=>'<strong>{point.percentage:.1f}%</strong><br/>({point.y})'},
               'plotOptions'=>{'pie'=>{'cursor'=>'pointer', size=>'70%',
@@ -210,7 +210,7 @@ sub CreateCountriesGraph
 
 sub CreateUndGraph
 {
-  my $self  = shift;
+  my $self = shift;
 
   my %data = ('chart'=>{'type'=>'pie'}, 'title'=>{'text'=>''},
               'tooltip'=>{'pointFormat'=>'<strong>{point.percentage:.1f}%</strong><br/>({point.y})'},
@@ -266,7 +266,7 @@ sub CreateNamespaceGraph
 
 sub CreateReviewInstitutionGraph
 {
-  my $self  = shift;
+  my $self = shift;
 
   my %data = ('chart'=>{'type'=>'pie'}, 'title'=>{'text'=>undef},
               'tooltip'=>{'pointFormat'=>'<strong>{point.percentage:.1f}%</strong><br/>({point.y})'},
@@ -436,7 +436,7 @@ sub CreateFlaggedGraph
 
 sub CreateCandidatesGraph2
 {
-  my $self  = shift;
+  my $self = shift;
 
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
               'tooltip'=>{'pointFormat'=>'<strong>{point.y}</strong>'},
@@ -469,7 +469,7 @@ sub CreateCandidatesGraph2
 
 sub CreateCandidatesGraph3
 {
-  my $self  = shift;
+  my $self = shift;
 
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
               'tooltip'=>{'pointFormat'=>'<strong>{point.y}</strong>'},
@@ -517,20 +517,21 @@ sub CreateCandidatesGraph3
 
 sub CreateProgressGraph
 {
-  my $self  = shift;
+  my $self = shift;
+  my $proj = shift || 1;
 
-  my $sql = 'SELECT COUNT(*) FROM exportdata WHERE src="candidates" AND DATE(time)>"2016-10-01"';
-  my $val = $self->SimpleSqlGet($sql);
-  $sql = 'SELECT COUNT(*) FROM candidates';
-  my $n = $self->SimpleSqlGet($sql);
+  my $projname = $self->SimpleSqlGet('SELECT name FROM projects WHERE id=?', $proj);
+  my $sql = 'SELECT COUNT(*) FROM exportdata WHERE project=?';
+  my $val = $self->SimpleSqlGet($sql, $proj);
+  $sql = 'SELECT COUNT(*) FROM candidates WHERE project=?';
+  my $n = $self->SimpleSqlGet($sql, $proj);
   my $total = $val + $n;
-  my $max = NearestMultiple(100, $total);
+  my $ticks = NearestMultiple(1000, $total/10);
   my $fmt = '<div style="text-align:center">'.
             '<span style="font-size:25px;color:black">{y} of '. $total. '</span><br/>'.
             '<span style="font-size:12px;color:silver">determinations</span></div>';
   my %data = ('chart'=>{'type'=>'solidgauge'},
-              'title'=>{'text'=>'<span style="font-size:25px;color:black">October-December 2016</span><br/>'.
-                                '<span style="font-size:25px;color:black">Final Stretch</span>'},
+              'title'=>{'text'=>'<span style="font-size:25px;color:black">'. $projname. ' Project</span><br/>'},
               'pane'=>{'center'=>['50%','85%'],
                        'size'=>'120%',
                        'startAngle'=>'-90',
@@ -539,19 +540,20 @@ sub CreateProgressGraph
                                       'innerRadius'=>'60%',
                                       'outerRadius'=>'100%',
                                       'shape'=>'arc'}},
+              'tooltip'=>{'enabled'=>JSON::XS::false},
               'yAxis'=>{'stops'=>[[0.0, '#DF5353'],[0.5, '#DDDF0D'],[1.0, '#55BF3B']],
                         'min'=>0,
-                        'max'=>$max,
+                        'max'=>$total,
                         'lineWidth'=>1,
                         'minorTickInterval'=>undef,
-                        'tickInterval'=>500,
+                        'tickInterval'=>$ticks,
                         'tickWidth'=>1,
                         'title'=>{'y'=>-70},
                         'labels'=>{'y'=>16}},
               'plotOptions'=>{'solidgauge'=>{'dataLabels'=>{'y'=>5,'borderWidth'=>0,'useHTML'=>JSON::XS::true}}},
               'credits'=>{'enabled'=>JSON::XS::false},
               'series'=>[{'name'=>'Determinations',
-                          'data'=>[int $val],
+                          'data'=>[$val],
                           'dataLabels'=>{'format'=>$fmt},
                           }]);
   return \%data;
@@ -559,7 +561,7 @@ sub CreateProgressGraph
 
 sub CreateInheritanceGraph
 {
-  my $self  = shift;
+  my $self = shift;
 
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
               'tooltip'=>{'pointFormat'=>'<strong>{point.y}</strong>'},
@@ -614,8 +616,8 @@ sub NearestMultiple
   my $n    = shift;
 
   my $half = 0.50000000000008;
-  return ($n >= 0)? ($mult * int(($_ + $half * $mult) / $mult)):
-                    ($mult * POSIX::ceil(($_ - $half * $mult) / $mult));
+  return ($n >= 0)? ($mult * int(($n + $half * $mult) / $mult)):
+                    ($mult * POSIX::ceil(($n - $half * $mult) / $mult));
  }
 
 return 1;
