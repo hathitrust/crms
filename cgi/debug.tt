@@ -101,6 +101,34 @@
 <br/><br/>
 
 
+<div style="position:relative;border-style:solid;width:76em;border-width:1px;padding:10px;">
+  <h3>Candidacy Check</h3>
+  [% p_htid = cgi.param('HTID') %]
+  <form id="select" action="crms">
+    <input type="hidden" name="p" value="$page"/>
+    <input type="hidden" name="candidacy_check" value="1"/>
+    <label for="HTID_text">ID:</label>
+    <input type="text" if="HTID_text" name="HTID" value="[% p_htid %]"/>
+    <input type="submit" value="Submit"/>
+  </form>
+  [% IF cgi.param('candidacy_check') %]
+    [% projs = crms.GetProjectsRef() %]
+    <table class="exportStats">
+      <tr><th>Project</th><th>Allowed</th><th>Message</th></tr>
+      [% FOR proj IN projs %]
+        [% report = crms.EvaluateCandidacy(p_htid, 0, proj.id) %]
+        <tr>
+          <th class="nowrap">[% proj.name %]</th>
+          <td class="nowrap">[% report.status %]</td>
+          <td class="nowrap">[% report.msg.ucfirst %]</td>
+        </tr>
+      [% END %]
+    </table>
+  [% END %]
+</div>
+<br/><br/>
+
+
 [% ids = cgi.param('ids') %]
 <h4>Update Bibliographic Data</h4>
 <form action="crms">

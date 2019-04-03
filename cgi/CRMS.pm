@@ -738,16 +738,17 @@ sub ProcessReviews
 {
   my $self  = shift;
   my $quiet = shift;
+  my $time  = shift || $self->SimpleSqlGet('SELECT NOW()');
 
   # Get the underlying system status, ignoring replication delays.
-  my ($blah, $stat, $msg) = @{$self->GetSystemStatus(1)};
-  $self->ReportMsg("ProcessReviews: system status is '$stat'") unless $quiet;
+  my $stat = $self->GetSystemStatus(1);
+  $self->ReportMsg(sprintf("ProcessReviews: system status is '%s'", (defined $stat)? $stat->[1] : 'normal')) unless $quiet;
   # Clear the deleted inheritances, regardless of system status
   my $sql = 'SELECT COUNT(*) FROM inherit WHERE status=0';
   my $dels = $self->SimpleSqlGet($sql);
   if ($dels)
   {
-    $self->ReportMsg("Deleted inheritances to be removed: $dels.") unless $quiet;
+    $self->ReportMsg('Deleted inheritances to be removed: '. $dels) unless $quiet;
     $self->DeleteInheritances($quiet);
   }
   else
@@ -756,9 +757,9 @@ sub ProcessReviews
   }
   my $reason = '';
   # Don't do this if the system is down or if it is Sunday.
-  if ($stat ne 'normal')
+  if (defined $stat)
   {
-    $reason = "system status is $stat";
+    $reason = 'system status is '. $stat->[1];
   }
   elsif ($self->GetSystemVar('autoinherit') eq 'disabled')
   {
@@ -774,24 +775,29 @@ sub ProcessReviews
   }
   else
   {
-    $self->ReportMsg("Not auto-submitting inheritances because $reason.") unless $quiet;
+    $self->ReportMsg('Not auto-submitting inheritances because '. $reason) unless $quiet;
   }
-  $self->SetSystemStatus('partial', 'CRMS is processing reviews. The Review page is temporarily unavailable. Try back in about a minute.');
+  my $tmpstat = ['', 'partial',
+                 'CRMS is processing reviews. The Review page is temporarily unavailable. '.
+                 'Try back in about a minute.'];
+  $self->SetSystemStatus($tmpstat);
   my %stati = (2=>0, 3=>0, 4=>0, 8=>0);
-  $sql = 'SELECT id FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) GROUP BY id HAVING count(*) = 2';
+  $sql = 'SELECT id FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) GROUP BY id HAVING COUNT(*)=2';
   my $ref = $self->SelectAll($sql);
+  #print Dumper $self->ReviewData('uiug.30112124385599');
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
     # Don't process anything that las a review less than 8 hours old.
-    my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND time>DATE_SUB(NOW(), INTERVAL 8 HOUR)';
-    if (0 < $self->SimpleSqlGet($sql, $id))
+    my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND time>DATE_SUB(?, INTERVAL 8 HOUR)';
+    if (0 < $self->SimpleSqlGet($sql, $id, $time))
     {
       $self->ReportMsg("Not processing $id: it has one or more reviews less than 8 hours old") unless $quiet;
       next;
     }
     my $data = $self->CalcStatus($id);
     my $status = $data->{'status'};
+    print "$id status $status\n";
     next unless defined $status and $status > 0;
     my $hold = $data->{'hold'};
     if ($hold)
@@ -803,13 +809,14 @@ sub ProcessReviews
     {
       $self->SubmitReview($id, 'autocrms', $data);
     }
+    print "RegisterStatus($id, $status)\n";
     $self->RegisterStatus($id, $status);
     $sql = 'UPDATE reviews SET hold=0,time=time WHERE id=?';
     $self->PrepareSubmitSql($sql, $id);
     $stati{$status}++;
   }
-  $self->ReportMsg("Setting system status back to '$stat'") unless $quiet;
-  $self->SetSystemStatus($stat, $msg);
+  $self->ReportMsg(sprintf("Setting system status back to '%s'", (defined $stat)? $stat->[1] : 'normal')) unless $quiet;
+  $self->SetSystemStatus($stat);
   $sql = 'INSERT INTO processstatus VALUES ()';
   $self->PrepareSubmitSql($sql);
   $self->PrepareSubmitSql('DELETE FROM predeterminationsbreakdown WHERE date=DATE(NOW())');
@@ -1547,11 +1554,10 @@ sub CandidatesModule
 
 # Returns hashref with project EvaluateCandidacy fields, plus optional
 # project id of the project that it qualified for, if any.
-# Returns an arrayref of error messages (reasons for unsuitability for CRMS) for a volume.
 # Used by Add to Queue page for filtering non-overrides.
 # Iterate through projects and add to candidates if the status is 'yes'.
 # If one or more projects sees fit to filter, last source is used for filter.
-# POSSIBLE FIXME: what if two or more modules want a volume? Priority value?
+# The first project that says "yes" gets the volume.
 sub EvaluateCandidacy
 {
   my $self   = shift;
@@ -1610,7 +1616,7 @@ sub LoadQueue
   $self->UpdateQueueRecord($after - $before, 'candidates');
 }
 
-# Load candidates into queue for a given project.
+# Load candidates into queue for a given project ID.
 sub LoadQueueForProject
 {
   my $self    = shift;
@@ -1846,7 +1852,7 @@ sub CloneReview
     $reason = 13 if $rows->[0]->[1] ne $rows->[1]->[1];
     my $params = {'attr' => $attr, 'reason' => $reason, 'note' => undef,
                   'category' => 'Expert Accepted', 'status' => 7};
-    $self->Note(Dumper $params);
+    #$self->Note(Dumper $params);
     return $self->SubmitReview($id, $user, $params);
   }
   return $result;
@@ -1863,9 +1869,11 @@ sub SubmitReviewCGI
   my $proj = $self->Projects()->{$projid};
   my $err = $self->ValidateSubmission($id, $user, $cgi);
   return $err if $err;
-  my $err = $self->HasItemBeenReviewedByTwoReviewers($id, $user);
-  return $err if $err;
   my %params = map {$_ => Encode::decode('UTF-8', $cgi->param($_));} $cgi->param;
+  # Log CGI inputs for replay in case of error.
+  my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
+  my $encdata = $jsonxs->encode(\%params);
+  $self->Note("SubmitReviewCGI\t$id\t$user\t$encdata");
   delete $params{'status'}; # Sanitize CGI input
   delete $params{'expert'}; # Sanitize CGI input
   my $json = $proj->ExtractReviewData($cgi);
@@ -1914,6 +1922,8 @@ sub ValidateSubmission
   {
     return "Another expert must do this review because of a review by $incarn. Please cancel.";
   }
+  my $err = $self->HasItemBeenReviewedByTwoReviewers($id, $user);
+  return $err if $err;
   my $projid = $self->GetProject($id);
   my $proj = $self->Projects()->{$projid};
   return $proj->ValidateSubmission($cgi);
@@ -1940,9 +1950,9 @@ sub SubmitReview
   $self->SetError("SubmitReview($id) failed: $@") if $@;
   return $@ if $@;
   my $status = $params->{'status'};
-  $self->Note(sprintf 'Status is %s', (defined $status)? $status:'<undef>');
+  #$self->Note(sprintf 'Status is %s', (defined $status)? $status:'<undef>');
   my %dbfields = ('attr' => 1, 'reason' => 1, 'note' => 1, 'category' => 1,
-                  'duration' => 1, 'swiss' => 1, 'hold' => 1, 'data' => 1);
+                  'time' => 1, 'duration' => 1, 'swiss' => 1, 'hold' => 1, 'data' => 1);
   my @fields = ('id', 'user');
   my @values = ($id, $user);
   if ($params->{'rights'})
@@ -2004,7 +2014,7 @@ sub SubmitReview
   {
     $status = ($proj->single_review)? 5:0;
   }
-  $self->Note("Registering status $status");
+  #$self->Note("Registering status $status");
   $self->RegisterStatus($id, $status);
   my $pstatus = $self->CalcPendingStatus($id);
   $self->RegisterPendingStatus($id, $pstatus);
@@ -4690,8 +4700,11 @@ sub UpdateUserStats
   my $quiet = shift;
 
   # Get the underlying system status, ignoring replication delays.
-  my ($blah, $stat, $msg) = @{$self->GetSystemStatus(1)};
-  $self->SetSystemStatus($stat, 'CRMS is updating user stats, so they may not display correctly. This usually takes five minutes or so to complete.');
+  my $stat = $self->GetSystemStatus(1);
+  my $tmpstat = ['', (defined $stat)? $stat->[1] : 'normal',
+                 'CRMS is updating user stats, so they may not display correctly. '.
+                 'This usually takes five minutes or so to complete.'];
+  $self->SetSystemStatus($tmpstat);
   my $sql = 'DELETE from userstats';
   $self->PrepareSubmitSql($sql);
   my $users = $self->GetUsers();
@@ -4711,7 +4724,7 @@ sub UpdateUserStats
     }
   }
   $self->ReportMsg("Setting system status back to '$stat'") unless $quiet;
-  $self->SetSystemStatus($stat, $msg);
+  $self->SetSystemStatus($stat);
 }
 
 sub GetMonthStats
@@ -4827,7 +4840,7 @@ sub HasItemBeenReviewedByTwoReviewers
   my $msg = '';
   if ($self->IsUserExpert($user))
   {
-    if ($self->HasItemBeenReviewedByAnotherExpert($id,$user))
+    if ($self->HasItemBeenReviewedByAnotherExpert($id, $user))
     {
       $msg = 'This volume does not need to be reviewed. An expert has already reviewed it. Please Cancel.';
     }
@@ -6786,61 +6799,59 @@ sub Pluralize
   return $word . (($n == 1)? '':'s');
 }
 
-# Returns a reference to an array with (time,status,message)
+# Returns undef for system normal, otherwise arrayref with [time, status, message]
+# if $nodelay, ignore replication delay.
 sub GetSystemStatus
 {
   my $self    = shift;
   my $nodelay = shift;
 
-  my @vals = ('forever','normal','');
-  my ($delay,$since) = $self->ReplicationDelay();
+  my ($delay, $since) = $self->ReplicationDelay();
   if (4 < $delay && !$nodelay)
   {
-    @vals = ($since,
-             'delayed',
-             'The CRMS is currently experiencing delays. "Review" and "Add to Queue" pages may not be available. ' .
-             'Please try again in a few minutes. ' .
-             'Locked volumes may need to have reviews re-submitted.');
-    return \@vals;
+    return [$since, 'delayed',
+            'The CRMS is currently experiencing delays. '.
+            '"Review" and "Add to Queue" pages may not be available. '.
+            'Please try again in a few minutes. '.
+            'Locked volumes may need to have reviews re-submitted.'];
   }
   my $sql = 'SELECT time,status,message FROM systemstatus LIMIT 1';
-  my $r = $self->SelectAll($sql);
-  my $row = $r->[0];
-  if ($row)
+  my $ref = $self->SelectAll($sql);
+  if (scalar @{$ref})
   {
-    $vals[0] = $self->FormatTime($row->[0]) if $row->[0];
-    $vals[1] = $row->[1] if $row->[1];
-    $vals[2] = $row->[2] if $row->[2];
-    if ($vals[2] eq '')
+    my $row = $ref->[0];
+    my $vals = ['forever', 'normal', ''];
+    $vals->[0] = $self->FormatTime($row->[0]) if $row->[0];
+    $vals->[1] = $row->[1] if $row->[1];
+    $vals->[2] = $row->[2] if $row->[2];
+    if ($vals->[2] eq '')
     {
-      if ($vals[1] eq 'down')
+      if ($vals->[1] eq 'down')
       {
-        $vals[2] = 'The CRMS is currently unavailable until further notice.';
+        $vals->[2] = 'The CRMS is currently unavailable until further notice.';
       }
-      elsif ($vals[1] eq 'partial')
+      elsif ($vals->[1] eq 'partial')
       {
-        $vals[2] = 'The CRMS has limited functionality. "Review" and "Add to Queue" (administrators only) pages are currently disabled until further notice.';
+        $vals->[2] = 'The CRMS has limited functionality. "Review" and "Add to Queue" (administrators only) pages are currently disabled until further notice.';
       }
     }
-    # FiXME: is this redundant?
-    if ($vals[2] ne '')
-    {
-      $vals[0] = $self->FormatTime($row->[0]) if $row->[0];
-    }
+    return $vals;
   }
-  return \@vals;
+  return undef;
 }
 
-# Sets the status name {normal/down/partial} and the banner message to display in CRMS header.tt.
+# Takes undef/arrayref like return value from GetSystemStatus.
 sub SetSystemStatus
 {
-  my $self   = shift;
-  my $status = shift;
-  my $msg    = shift;
+  my $self = shift;
+  my $stat = shift;
 
   $self->PrepareSubmitSql('DELETE FROM systemstatus');
-  my $sql = 'INSERT INTO systemstatus (status,message) VALUES (?,?)';
-  $self->PrepareSubmitSql($sql, $status, $msg);
+  if (defined $stat)
+  {
+    my $sql = 'INSERT INTO systemstatus (status,message) VALUES (?,?)';
+    $self->PrepareSubmitSql($sql, $stat->[1], $stat->[2]);
+  }
 }
 
 # Returns capitalized name of system
@@ -8705,14 +8716,14 @@ sub ImgsrvAddress
   my $self = shift;
   my $id   = shift;
 
-  my $babel = $self->IsDevArea()? 'beta-3.':'';
+  my $babel = $self->IsDevArea()? 'beta-1.':'';
   my $imgsrv = 'https://'. $babel. 'babel.hathitrust.org/cgi/imgsrv/image?debug=super;id='. $id;
   my $user = $self->get('remote_user');
   $user .= '@umich.edu' unless $user =~ m/@/;
   my $idp = $self->GetIDP($user);
   if ($idp)
   {
-    $imgsrv .= ';signon=swle:'. $idp;
+    #$imgsrv .= ';signon=swle:'. $idp;
   }
   return $imgsrv;
 }
@@ -8727,6 +8738,14 @@ sub JSONifyIDs
   push @ret, $_->{'id'} for @{$data};
   @ret = sort @ret;
   return JSON::XS->new->encode(\@ret);
+}
+
+sub Dump
+{
+  my $self = shift;
+  my $data = shift;
+
+  return Dumper $data;
 }
 
 1;

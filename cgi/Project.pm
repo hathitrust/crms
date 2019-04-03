@@ -5,7 +5,8 @@ sub new
   my ($class, %args) = @_;
   my $self = bless {}, $class;
   $self->{$_} = $args{$_} for keys %args;
-  #$self->{'crms'} = $args{'crms'};
+  $self->{'crms'} = $args{'crms'};
+  die "No CRMS object passed to project" unless $args{'crms'};
   #$self->{'id'}   = $args{'id'};
   #$self->{'name'} = $args{'name'};
   #$self->{'color'} = $args{'color'};
@@ -70,7 +71,7 @@ sub ExtractReviewData
   return undef;
 }
 
-# Return a dictionary ref with the following keys:
+# Return a hashref with the following keys:
 # id: the reviewdata id
 # format: HTML-formatted data for inline display. May be blank.
 # format_long: HTML-formatted data for tooltip display. May be blank.
@@ -90,6 +91,8 @@ sub ValidateSubmission
   my $self = shift;
   my $cgi  = shift;
 
+  my $hold = $cgi->param('hold');
+  return undef if $hold;
   my $rights = $cgi->param('rights');
   return 'You must select a rights/reason combination' unless $rights;
   my ($attr, $reason) = $self->{'crms'}->TranslateAttrReasonFromCode($rights);
@@ -167,7 +170,7 @@ sub ValidateSubmission
   }
   if ($category && !$note)
   {
-    if ($self->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category))
+    if ($self->{'crms'}->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category))
     {
       push @errs, 'must include a note if there is a category. ';
     }

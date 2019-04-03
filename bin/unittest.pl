@@ -115,8 +115,9 @@ if ($reviews)
   is($crms->GetStatus('coo.31924054065317'), 0, 'coo.31924054065317 single review still S0');
   $cgi->param('category', 'Edition/Reprint');
   $res = $crms->SubmitReviewCGI('coo.31924054065317', 'mah94@cornell.edu', $cgi);
-  #print "$res\n";
   ok(!defined $res, 'SubmitReviewCGI(coo.31924054065317, mah94@cornell.edu) succeeds w/ category');
+  $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND user=?';
+  is($crms->SimpleSqlGet($sql, 'coo.31924054065317', 'mah94@cornell.edu'), 1, 'mah94@cornell.edu und in DB');
   is($crms->SimpleSqlGet('SELECT pending_status FROM queue WHERE id="coo.31924054065317"'), 2, 'coo.31924054065317 PS2');
   my $data = $crms->CalcStatus('coo.31924054065317');
   ok(defined $data->{'hold'}, 'coo.31924054065317 held for mah94@cornell.edu');

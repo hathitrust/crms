@@ -37,7 +37,6 @@
       [% i = i + 1 %]
       [% IF i % 2 == 0 %]</tr>[% END %]
     [% END %]
-        
     <form name="submitCorrection" action="crms">
     <input type="hidden" name="p" value="finishReview"/>
     <input type="hidden" name="htid" value="[% htid %]"/>
@@ -46,7 +45,6 @@
     <input type="hidden" id="hold_hf" name="hold" value="0"/>
     <!--<input type="hidden" name="debugAuth" value="1"/>
     <input type="hidden" name="debug" value="1"/>-->
-    
     <tr>
       <td colspan="2"><strong>Notes: </strong></td>
     </tr>

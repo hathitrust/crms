@@ -11,17 +11,15 @@ use Template;
 use URI::Escape;
 use Data::Dumper;
 
-my $cgi  = new CGI;
-my $sys =  $cgi->param('sys');
-$sys = 'crms' unless $sys;
+my $cgi = new CGI;
 my $page = $cgi->param('p');
+# FIXME: should the debugs be extracted w/ CRMS.pm like tdb/pdb?
 my $debugAuth = $cgi->param('debugAuth');
 my $debugSql = $cgi->param('debugSql');
 my $debugVar = $cgi->param('debugVar');
 my $debug = $cgi->param('debug');
 my $crms = CRMS->new(
         cgi       => $cgi,
-        sys       => $sys,
         verbose   => 0,
         debugAuth => $debugAuth,
         debugSql  => $debugSql,
@@ -113,7 +111,6 @@ if ($page eq 'finishReview')
   }
 }
 
-$cgi->param('sys', $sys) if $sys and $sys ne 'crms';
 
 if ($redirect && !$debugAuth)
 {
