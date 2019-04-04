@@ -324,7 +324,7 @@ sub set
 # will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.1.22';
+  return '7.1.23';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -1795,38 +1795,42 @@ sub CloneReview
   my $id   = shift;
   my $user = shift;
 
-  my $result = $self->LockItem($id, $user, 1);
-  return $result if $result;
-  # SubmitReview unlocks it if it succeeds.
-  if ($self->HasItemBeenReviewedByUser($id, $user))
+  my $err = $self->LockItem($id, $user, 1);
+  if (!$err)
   {
-    $result = "Could not approve review for $id because you already reviewed it.";
-    $self->UnlockItem($id, $user);
-  }
-  elsif ($self->HasItemBeenReviewedByAnotherExpert($id, $user))
-  {
-    $result = "Could not approve review for $id because it has already been reviewed by an expert.";
-  }
-  else
-  {
-    my $note = undef;
-    my $sql = 'SELECT attr,reason,renNum,renDate FROM reviews WHERE id=?';
-    my $rows = $self->SelectAll($sql, $id);
-    my $attr = $rows->[0]->[0];
-    my $reason = $rows->[0]->[1];
-    if ($attr == 2 && $reason == 7 &&
-        ($rows->[0]->[2] ne $rows->[1]->[2] ||
-         $rows->[0]->[3] ne $rows->[1]->[3]))
+    # SubmitReview unlocks it if it succeeds.
+    if ($self->HasItemBeenReviewedByUser($id, $user))
     {
-      $note = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)',
-                      $rows->[0]->[2], $rows->[0]->[3], $rows->[1]->[2], $rows->[1]->[3];
+      $err = "Could not approve review for $id because you already reviewed it.";
+      $self->UnlockItem($id, $user);
     }
-    # If reasons mismatch, reason is 'crms'.
-    $reason = 13 if $rows->[0]->[1] ne $rows->[1]->[1];
-    $result = $self->SubmitReview($id,$user,$attr,$reason,$note,undef,1,undef,'Expert Accepted');
-    $result = ($result == 0)? "Could not approve review for $id":undef;
+    elsif ($self->HasItemBeenReviewedByAnotherExpert($id, $user))
+    {
+      $err = "Could not approve review for $id because it has already been reviewed by an expert.";
+    }
+    else
+    {
+      my $note = undef;
+      my $sql = 'SELECT attr,reason,renNum,renDate FROM reviews WHERE id=?';
+      my $rows = $self->SelectAll($sql, $id);
+      my $attr = $rows->[0]->[0];
+      my $reason = $rows->[0]->[1];
+      if ($attr == 2 && $reason == 7 &&
+          ($rows->[0]->[2] ne $rows->[1]->[2] ||
+           $rows->[0]->[3] ne $rows->[1]->[3]))
+      {
+        $note = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)',
+                        $rows->[0]->[2], $rows->[0]->[3], $rows->[1]->[2], $rows->[1]->[3];
+      }
+      # If reasons mismatch, reason is 'crms'.
+      $reason = 13 if $rows->[0]->[1] ne $rows->[1]->[1];
+      $err = $self->SubmitReview($id, $user, $attr, $reason, $note, undef,
+                                    1, undef, 'Expert Accepted');
+      $err = ($err == 0)? "Could not approve review for $id" : undef;
+    }
   }
-  return $result;
+  $self->Note("CloneReview\t$id\t$user\t". ((defined $err)? $err : ''));
+  return $err;
 }
 
 sub SubmitReview
@@ -1835,7 +1839,11 @@ sub SubmitReview
   my ($id, $user, $attr, $reason, $note, $renNum, $exp,
       $renDate, $category, $swiss, $hold, $pre, $start) = @_;
 
-  if (!$self->CheckReviewer($user, $exp))              { $self->SetError("reviewer ($user) check failed"); return 0; }
+  if (!$self->CheckReviewer($user, $exp))
+  {
+    $self->SetError("reviewer ($user) check failed");
+    return 0;
+  }
   # ValidateAttrReasonCombo sets error internally on fail.
   if (!$self->ValidateAttrReasonCombo($attr, $reason)) { return 0; }
   #remove any blanks from renNum
