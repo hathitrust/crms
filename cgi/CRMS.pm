@@ -797,7 +797,6 @@ sub ProcessReviews
     }
     my $data = $self->CalcStatus($id);
     my $status = $data->{'status'};
-    print "$id status $status\n";
     next unless defined $status and $status > 0;
     my $hold = $data->{'hold'};
     if ($hold)
@@ -809,7 +808,6 @@ sub ProcessReviews
     {
       $self->SubmitReview($id, 'autocrms', $data);
     }
-    print "RegisterStatus($id, $status)\n";
     $self->RegisterStatus($id, $status);
     $sql = 'UPDATE reviews SET hold=0,time=time WHERE id=?';
     $self->PrepareSubmitSql($sql, $id);
@@ -1950,14 +1948,14 @@ sub SubmitReview
   $self->SetError("SubmitReview($id) failed: $@") if $@;
   return $@ if $@;
   my $status = $params->{'status'};
-  #$self->Note(sprintf 'Status is %s', (defined $status)? $status:'<undef>');
   my %dbfields = ('attr' => 1, 'reason' => 1, 'note' => 1, 'category' => 1,
                   'time' => 1, 'duration' => 1, 'swiss' => 1, 'hold' => 1, 'data' => 1);
   my @fields = ('id', 'user');
   my @values = ($id, $user);
+  my ($attr, $reason);
   if ($params->{'rights'})
   {
-    my ($attr, $reason) = $self->GetAttrReasonFromCode($params->{'rights'});
+    ($attr, $reason) = $self->GetAttrReasonFromCode($params->{'rights'});
     push @fields, ('attr', 'reason');
     push @values, ($attr, $reason);
   }
@@ -2003,7 +2001,7 @@ sub SubmitReview
   {
     push @fields, 'expert';
     push @values, 1;
-    $status = 5 unless defined $status;
+    $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $params->{'category'}) unless defined $status;
   }
   $self->Note(sprintf 'fields {%s} values {%s}', join(',', @fields), join(',', @values));
   my $wcs = $self->WildcardList(scalar @values);
@@ -2021,6 +2019,41 @@ sub SubmitReview
   $self->UnlockItem($id, $user);
   return join '; ', @{$self->GetErrors()} if scalar @{$self->GetErrors()};
   return undef;
+}
+
+sub GetStatusForExpertReview
+{
+  my $self     = shift;
+  my $id       = shift;
+  my $user     = shift;
+  my $attr     = shift;
+  my $reason   = shift;
+  my $category = shift;
+
+  #return 6 if $category eq 'Missing' or $category eq 'Wrong Record';
+  return 7 if $category eq 'Expert Accepted';
+  return 9 if $category eq 'Rights Inherited';
+  my $status = 5;
+  # See if it's a provisional match and expert agreed with both of existing non-advanced reviews. If so, status 7.
+  my $sql = 'SELECT status FROM queue WHERE id=?';
+  my $s = $self->SimpleSqlGet($sql, $id);
+  if ($s && $s == 3)
+  {
+    $sql = 'SELECT attr,reason FROM reviews WHERE id=?';
+    my $ref = $self->SelectAll($sql, $id);
+    if (scalar @{$ref} >= 2)
+    {
+      my $attr1   = $ref->[0]->[0];
+      my $reason1 = $ref->[0]->[1];
+      my $attr2   = $ref->[1]->[0];
+      my $reason2 = $ref->[1]->[1];
+      if ($attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1)
+      {
+        $status = 7;
+      }
+    }
+  }
+  return $status;
 }
 
 sub GetPriority
