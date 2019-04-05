@@ -8749,8 +8749,8 @@ sub ImgsrvAddress
   my $self = shift;
   my $id   = shift;
 
-  my $babel = $self->IsDevArea()? 'beta-1.':'';
-  my $imgsrv = 'https://'. $babel. 'babel.hathitrust.org/cgi/imgsrv/image?debug=super;id='. $id;
+  my $host = $self->IsDevArea()? $ENV{'HTTP_HOST'} : 'babel.hathitrust.org';
+  my $imgsrv = 'https://'. $host. '/cgi/imgsrv/image?debug=super;id='. $id;
   my $user = $self->get('remote_user');
   $user .= '@umich.edu' unless $user =~ m/@/;
   my $idp = $self->GetIDP($user);
