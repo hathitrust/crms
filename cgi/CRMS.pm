@@ -199,8 +199,10 @@ sub NeedStepUpAuth
     };
     if ($ref && scalar @{$ref})
     {
-      $dbclass    = $ref->[0]->[0];
-      $dbtemplate = $ref->[0]->[1];
+      $dbclass    = $ref->[0]->[0]; # https://refeds.org/profile/mfa
+      $dbtemplate = $ref->[0]->[1]; # https://___HOST___/Shibboleth.sso/umich?target=___TARGET___
+      # FIXME: when ht_institutions.template is up to date, go back to using that.
+      $dbtemplate = 'https://___HOST___/Shibboleth.sso/Login?entityID=___ENTITY_ID___&target=___TARGET___';
     }
     if (defined $class && defined $dbclass && $class ne $dbclass)
     {
@@ -212,6 +214,7 @@ sub NeedStepUpAuth
       {
         $tpl =~ s/___HOST___/$ENV{SERVER_NAME}/;
         $tpl =~ s/___TARGET___/$target/;
+        $tpl =~ s/___ENTITY_ID___/$idp/;
         $tpl .= "&authnContextClassRef=$dbclass";
         $self->set('stepup_redirect', $tpl);
       }
@@ -324,7 +327,7 @@ sub set
 # will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.1.23';
+  return '7.1.24';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
