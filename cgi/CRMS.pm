@@ -199,8 +199,10 @@ sub NeedStepUpAuth
     };
     if ($ref && scalar @{$ref})
     {
-      $dbclass    = $ref->[0]->[0];
-      $dbtemplate = $ref->[0]->[1];
+      $dbclass    = $ref->[0]->[0]; # https://refeds.org/profile/mfa
+      $dbtemplate = $ref->[0]->[1]; # https://___HOST___/Shibboleth.sso/umich?target=___TARGET___
+      # FIXME: when ht_institutions.template is up to date, go back to using that.
+      $dbtemplate = 'https://___HOST___/Shibboleth.sso/Login?entityID=___ENTITY_ID___&target=___TARGET___';
     }
     if (defined $class && defined $dbclass && $class ne $dbclass)
     {
@@ -212,6 +214,7 @@ sub NeedStepUpAuth
       {
         $tpl =~ s/___HOST___/$ENV{SERVER_NAME}/;
         $tpl =~ s/___TARGET___/$target/;
+        $tpl =~ s/___ENTITY_ID___/$idp/;
         $tpl .= "&authnContextClassRef=$dbclass";
         $self->set('stepup_redirect', $tpl);
       }
@@ -1939,7 +1942,8 @@ sub SubmitReview
   my $user   = shift;
   my $params = shift;
   my $proj   = shift || $self->Projects()->{$self->GetProject($id)};
-
+#my $s = $self->SimpleSqlGet('SELECT status FROM queue WHERE id="mdp.39015057051651"');
+#print "SubmitReview STATUS $s\n";
   eval {
   return 'CRMS::SubmitReview: no HTID' unless $id;
   return 'CRMS::SubmitReview: no reviewer' unless $user;
@@ -1962,6 +1966,10 @@ sub SubmitReview
   foreach my $field (keys %{$params})
   {
     my $value = $params->{$field};
+    if ($field eq 'hold')
+    {
+      $value = ($value)? 1:0;
+    }
     if ($field eq 'start')
     {
       $value = $self->SimpleSqlGet('SELECT TIMEDIFF(NOW(),?)', $value);
@@ -2003,9 +2011,10 @@ sub SubmitReview
     push @values, 1;
     $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $params->{'category'}) unless defined $status;
   }
-  $self->Note(sprintf 'fields {%s} values {%s}', join(',', @fields), join(',', @values));
+  #$self->Note(sprintf 'fields {%s} values {%s}', join(',', @fields), join(',', @values));
   my $wcs = $self->WildcardList(scalar @values);
   my $sql = 'REPLACE INTO reviews (' . join(',', @fields) . ') VALUES ' . $wcs;
+  #printf "$sql, %s <-- %s\n", join(',', @fields), join(',', @values);
   my $result = $self->PrepareSubmitSql($sql, @values);
   return join '; ', @{$self->GetErrors()} unless $result;
   if (!defined $status || $status == 0)
@@ -2037,6 +2046,7 @@ sub GetStatusForExpertReview
   # See if it's a provisional match and expert agreed with both of existing non-advanced reviews. If so, status 7.
   my $sql = 'SELECT status FROM queue WHERE id=?';
   my $s = $self->SimpleSqlGet($sql, $id);
+  #printf "Status is %d\n", $s;
   if ($s && $s == 3)
   {
     $sql = 'SELECT attr,reason FROM reviews WHERE id=?';
@@ -6931,7 +6941,8 @@ sub IsDevArea
 {
   my $self = shift;
 
-  return ($self->get('instance'))? 0:1;
+  my $inst = $self->get('instance');
+  return ($inst eq 'production' || $inst eq 'crms-training')? 0:1;
 }
 
 sub IsTrainingArea
