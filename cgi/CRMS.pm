@@ -327,7 +327,7 @@ sub set
 # will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.1.24';
+  return '7.1.25';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -3728,7 +3728,7 @@ sub AddUser
   $self->PrepareSubmitSql($sql, $name, $kerberos, $reviewer, $advanced, $expert,
                           $admin, $note, $inst, $commitment, $id);
   $self->Note($_) for @{$self->GetErrors()};
-  if (defined $projects)
+  if (defined $projects && scalar @{$projects})
   {
     $self->PrepareSubmitSql('DELETE FROM projectusers WHERE user=?', $id);
     $sql = 'INSERT INTO projectusers (user,project) VALUES (?,?)';
