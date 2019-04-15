@@ -4,6 +4,29 @@ use parent 'Project';
 use strict;
 use warnings;
 
+my $TYPES = [{id => 0, code => 'factual', name => 'Factual'},
+             {id => 1, code => 'creative', name => 'Creative'},
+             {id => 2, code => 'mixed', name => 'Mixed'},
+             {id => 3, code => 'no_content', name => "No Content"}];
+my $CATEGORIES = [{id => 0, code => 'frontispiece', name => 'Frontispiece'},
+                  {id => 1, code => 'title', name => 'Title'},
+                  {id => 2, code => 'ad', name => 'Advertisement'},
+                  {id => 3, code => 'pub_info', name => 'Pub. Information'},
+                  {id => 4, code => 'dedication', name => 'Dedication'},
+                  {id => 5, code => 'pref_text', name => 'Prefatory Text'},
+                  {id => 6, code => 'list', name => 'List of Content'},
+                  {id => 7, code => 'main_text', name => 'Main Text'},
+                  {id => 8, code => 'appendix', name => 'Appendix'},
+                  {id => 9, code => 'index', name => 'Index'},
+                  {id => 10, code => 'na', name => 'Null Page'}];
+my $TYPE_ID_NAME_MAP = { map {$_->{'id'} => $_->{'name'}} @{$TYPES} };
+my $TYPE_ID_CODE_MAP = { map {$_->{'id'} => $_->{'code'}} @{$TYPES} };
+my $TYPE_CODE_NAME_MAP = { map {$_->{'code'} => $_->{'name'}} @{$TYPES} };
+my $CATEGORY_ID_NAME_MAP = { map {$_->{'id'} => $_->{'name'}} @{$CATEGORIES} };
+my $CATEGORY_ID_CODE_MAP = { map {$_->{'id'} => $_->{'code'}} @{$CATEGORIES} };
+my $CATEGORY_CODE_NAME_MAP = { map {$_->{'code'} => $_->{'name'}} @{$CATEGORIES} };
+
+
 sub new
 {
   my $class = shift;
@@ -13,7 +36,7 @@ sub new
 # ========== REVIEW ========== #
 sub ReviewPartials
 {
-  return ['top', 'bibdata', 'frontmatter', 'expertDetails'];
+  return ['top', 'bibdata', 'authorities', 'frontmatter'];
 }
 
 # Extract Project-specific data from the CGI into a struct
@@ -26,8 +49,8 @@ sub ExtractReviewData
 
   my $data;
   eval {
-    my $json = JSON::XS->new;
-    $data = $json->decode($cgi->param('data'));
+    my $jsonxs = JSON::XS->new;
+    $data = $jsonxs->decode($cgi->param('data'));
   };
   return $@ if $@;
   my $hold = 0;
@@ -53,9 +76,20 @@ sub FormatReviewData
   my $id   = shift;
   my $json = shift;
 
+  my $fmt = '';
+  eval {
+    my $jsonxs = JSON::XS->new;
+    my $data = $jsonxs->decode($json);
+    foreach my $page (@{$data})
+    {
+      $fmt .= sprintf "{%s, %s, '%s'}<br/>", $TYPE_CODE_NAME_MAP->{$page->[0]},
+                      $CATEGORY_CODE_NAME_MAP->{$page->[1]}, $page->[2];
+    }
+  };
+  #$fmt = $json;
   return {'id' => $id,
           'format' => '',
-          'format_long' => "<code>$json</code>"};
+          'format_long' => "<code>$fmt</code>"};
 }
 
 sub ValidateSubmission
@@ -66,19 +100,14 @@ sub ValidateSubmission
   return undef;
 }
 
-my @TYPES = ('Factual', 'Creative', 'Mixed', "Don't Know");
-my @CATEGORIES = ('Frontispiece', 'Title Page', 'Advertisement',
-                  'Pub. Information', 'Dedication', 'Pref. Material',
-                  'ToC', 'Text', 'Appendix', 'Index',
-                  'N/A', 'Mixed');
 sub Types
 {
-  return \@TYPES;
+  return $TYPES;
 }
 
 sub Categories
 {
-  return \@CATEGORIES;
+  return $CATEGORIES;
 }
 
 1;

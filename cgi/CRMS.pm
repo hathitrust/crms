@@ -1956,7 +1956,7 @@ sub SubmitReview
                   'time' => 1, 'duration' => 1, 'swiss' => 1, 'hold' => 1, 'data' => 1);
   my @fields = ('id', 'user');
   my @values = ($id, $user);
-  my ($attr, $reason);
+  my ($attr, $reason, $did);
   if ($params->{'rights'})
   {
     ($attr, $reason) = $self->GetAttrReasonFromCode($params->{'rights'});
@@ -1990,7 +1990,7 @@ sub SubmitReview
       my $json = $jsonxs->encode($value);
       if ($json)
       {
-        my $did = $self->SimpleSqlGet('SELECT id FROM reviewdata WHERE data=?', $json);
+        $did = $self->SimpleSqlGet('SELECT id FROM reviewdata WHERE data=?', $json);
         if (!$did)
         {
           $self->PrepareSubmitSql('INSERT INTO reviewdata (data) VALUES (?)', $json);
@@ -2009,7 +2009,11 @@ sub SubmitReview
   {
     push @fields, 'expert';
     push @values, 1;
-    $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $params->{'category'}) unless defined $status;
+    if (!defined $status)
+    {
+      $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason,
+                                                $params->{'category'}, $did);
+    }
   }
   #$self->Note(sprintf 'fields {%s} values {%s}', join(',', @fields), join(',', @values));
   my $wcs = $self->WildcardList(scalar @values);
@@ -2038,6 +2042,7 @@ sub GetStatusForExpertReview
   my $attr     = shift;
   my $reason   = shift;
   my $category = shift;
+  my $did     = shift;
 
   #return 6 if $category eq 'Missing' or $category eq 'Wrong Record';
   return 7 if $category eq 'Expert Accepted';
@@ -2049,15 +2054,18 @@ sub GetStatusForExpertReview
   #printf "Status is %d\n", $s;
   if ($s && $s == 3)
   {
-    $sql = 'SELECT attr,reason FROM reviews WHERE id=?';
+    $sql = 'SELECT attr,reason,data FROM reviews WHERE id=?';
     my $ref = $self->SelectAll($sql, $id);
     if (scalar @{$ref} >= 2)
     {
       my $attr1   = $ref->[0]->[0];
       my $reason1 = $ref->[0]->[1];
+      my $data1   = $ref->[0]->[2];
       my $attr2   = $ref->[1]->[0];
       my $reason2 = $ref->[1]->[1];
-      if ($attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1)
+      my $data2   = $ref->[1]->[2];
+      if ($attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1 &&
+          $self->TolerantCompare($did, $data1) && $self->TolerantCompare($data1, $data2))
       {
         $status = 7;
       }
@@ -3847,7 +3855,7 @@ sub AddUser
   $self->PrepareSubmitSql($sql, $name, $kerberos, $reviewer, $advanced, $expert,
                           $admin, $note, $inst, $commitment, $id);
   $self->Note($_) for @{$self->GetErrors()};
-  if (defined $projects)
+  if (defined $projects && scalar @{$projects})
   {
     $self->PrepareSubmitSql('DELETE FROM projectusers WHERE user=?', $id);
     $sql = 'INSERT INTO projectusers (user,project) VALUES (?,?)';
@@ -7954,10 +7962,10 @@ sub Authorities
       my $idp = $self->GetIDP($user);
       $url =~ s/__SHIB__/$idp/g;
     }
-    # To keep Shib from expiring session.
-    if ($url =~ m/babel\.hathitrust/i && $self->IsDevArea())
+    if ($url =~ m/__HATHITRUST__/)
     {
-      $url =~ s/babel/beta-3.babel/;
+      my $host = $self->IsDevArea()? $ENV{'HTTP_HOST'} : 'babel.hathitrust.org';
+      $url =~ s/__HATHITRUST__/$host/;
     }
     my $initial;
     $initial = 1 if $self->TolerantCompare($aid, $pa);
@@ -8067,7 +8075,7 @@ sub HiddenSys
   return $html;
 }
 
-# Compares 2 strings or undefs
+# Compares 2 strings or undefs. Returns 1 or 0 for equality.
 sub TolerantCompare
 {
   my $self = shift;

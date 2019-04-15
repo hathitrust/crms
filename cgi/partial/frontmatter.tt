@@ -1,16 +1,28 @@
-[% #u_note = (error)? cgi.param('note') : data.$user.note %]
 [% u_data = (error)? cgi.param('data') : data.reviews.$user.data %]
-
+[% pages = 20 %]
 <div class="reviewPartial" id="Partial_frontmatter_div">
   <table>
     <tr>
-      <td colspan="2"><strong>Sequence </strong><span id="seqSpan"></span></td>
+      <td>
+        <select id="seq_sel" onchange="SelectSeq(this);" style="font-size:11pt">
+          [% FOREACH i IN [1 .. pages] %]
+            <option style="font-size:14px;" id="[% 'sel_' _ i %]" value="[% i %]"
+                    [% IF i == 1 %]selected="selected"[% END %]>
+              Seq [% i %]
+            </option>
+          [% END %]
+        <select>
+      </td>
+      <td><img id="loader" src="[% crms.WebPath('web', 'ajax-loader.gif') %]"
+               style="display:none;" width="16" height="16" alt="Loading..."/></td>
     <tr>
       <td>
-        <input id="goBackButton" type="button" value="&lt;" onclick="GoBack();" disabled="disabled;"/>
+        <input id="goBackButton" type="button" value="&lt; Back"
+               style="font-size:14px;" onclick="GoBack();" disabled="disabled;"/>
       </td>
       <td>
-        <input id="goForwardButton" type="button" value="&gt;" onclick="GoForward();"/>
+        <input id="goForwardButton" type="button" value="Forward &gt;"
+               style="font-size:14px;" onclick="GoForward();"/>
       </td>
     </tr>
     <tr>
@@ -19,9 +31,9 @@
     [% i = 0 %]
     [% FOREACH type IN data.project.Types() %]
       [% IF i % 2 == 0 %]<tr>[% END %]
-      <td><input id="type_[% i %]" type="radio" name="type" value="[% i %]"
+      <td><input id="type_[% type.code %]" type="radio" name="type" value="[% type.code %]"
                  onclick="SaveSelection();"/>
-          <label for="type_[% i %]">[% type %]</label></td>
+          <label for="type_[% type.code %]">[% type.name %]</label></td>
       [% i = i + 1 %]
       [% IF i % 2 == 0 %]</tr>[% END %]
     [% END %]
@@ -31,20 +43,18 @@
     [% i = 0 %]
     [% FOREACH cat IN data.project.Categories() %]
       [% IF i % 2 == 0 %]<tr>[% END %]
-      <td><input id="category_[% i %]" type="radio" name="category" value="[% i %]"
+      <td><input id="category_[% cat.code %]" type="radio" name="category" value="[% cat.code %]"
                  onclick="SaveSelection();"/>
-          <label for="category_[% i %]">[% cat %]</label></td>
+          <label for="category_[% cat.code %]">[% cat.name %]</label></td>
       [% i = i + 1 %]
       [% IF i % 2 == 0 %]</tr>[% END %]
     [% END %]
-    <form name="submitCorrection" action="crms">
+    <form name="submitFrontmatter" action="crms">
     <input type="hidden" name="p" value="finishReview"/>
     <input type="hidden" name="htid" value="[% htid %]"/>
     <input type="hidden" id="data_hf" name="data" value=""/>
     <input type="hidden" name="start" value="[% crms.GetNow() %]"/>
     <input type="hidden" id="hold_hf" name="hold" value="0"/>
-    <!--<input type="hidden" name="debugAuth" value="1"/>
-    <input type="hidden" name="debug" value="1"/>-->
     <tr>
       <td colspan="2"><strong>Notes: </strong></td>
     </tr>
@@ -65,16 +75,16 @@
                accesskey="c" onclick="this.form.onsubmit=null;"/>
       </td>
     </tr>
+    <tr style="display:none;" id="done_row">
+      <td colspan="2"><span style="color:green;font-size:16px;">Review Complete</span></td>
+    </tr>
   </table>
-  <!--<a style="position:absolute;left:-999px;" href="#" accesskey="n"
-       onfocus="document.getElementById('NoteTextField').focus()">.</a>-->
   </form>
 
 
 <script>
-  var imgsrv = '[% crms.ImgsrvAddress(htid) %]';
   var seq = 1;
-  var pages = 20;
+  var pages = [% pages %];
   var data = [% IF u_data %]
                [% u_data %]
              [% ELSE %]
@@ -83,60 +93,60 @@
 
   addEvent(window, 'load', function(e)
   {
-    el = document.getElementById('goBackButton');
-    el.disabled = true;
     el = document.getElementById('submitButton');
     el.disabled = true;
-    var el = document.getElementById('tFrame');
-    el.src = imgsrv + ';seq=1';
-    var el = document.getElementById('seqSpan');
-    el.innerHTML = seq;
     RestoreSelection();
+    CheckNav();
   });
 
   function GoForward()
   {
     if (seq < pages)
     {
+      SetRadiosDisabled(true);
+      document.getElementById('loader').style.display = 'block';
       SaveSelection();
-      //Debug(data);
-      var el = document.getElementById('tFrame');
       seq++;
-      var fulladdr = imgsrv + ';seq=' + seq;
-      el.src = fulladdr;
-      //Debug(fulladdr);
-      var el = document.getElementById('seqSpan');
-      el.innerHTML = seq;
-      el = document.getElementById('goBackButton');
-      el.disabled = false;
+      var el = document.getElementById('tFrame');
+      var addr = el.src;
+      addr = addr.replace(/;seq=\d+/i, ';seq=' + seq);
+      el.onload = function() { document.getElementById('loader').style.display = 'none'; SetRadiosDisabled(false); };
+      el.src = addr;
       RestoreSelection();
     }
-    el = document.getElementById('goForwardButton');
-    el.disabled = (seq >= pages);
+    CheckNav();
   }
 
   function GoBack()
   {
     if (seq > 1)
     {
+      SetRadiosDisabled(true);
+      document.getElementById('loader').style.display = 'block';
       SaveSelection();
-      //Debug(data);
-      var el = document.getElementById('tFrame');
       seq--;
-      var fulladdr = imgsrv + ';seq=' + seq;
-      el.src = fulladdr;
-      //Debug(fulladdr);
-      var el = document.getElementById('seqSpan');
-      el.innerHTML = seq;
+      var el = document.getElementById('tFrame');
+      var addr = el.src;
+      addr = addr.replace(/;seq=\d+/i, ';seq=' + seq);
+      el.onload = function() { document.getElementById('loader').style.display = 'none'; SetRadiosDisabled(false); };
+      el.src = addr;
       RestoreSelection();
     }
-    if (seq <= 1)
+    CheckNav();
+  }
+  
+  function SetRadiosDisabled(flag)
+  {
+    var els = document.getElementsByName("type");
+    for (i = 0; i < els.length; i++)
     {
-      var el = document.getElementById('goBackButton');
-      el.disabled = true;
+      els[i].disabled = flag;
     }
-    var el = document.getElementById('goForwardButton');
-    el.disabled = (seq >= pages);
+    els = document.getElementsByName("category");
+    for (i = 0; i < els.length; i++)
+    {
+      els[i].disabled = flag;
+    }
   }
   
   function SaveSelection()
@@ -153,32 +163,29 @@
     var el = document.getElementById('data_hf');
     el.value = JSON.stringify(data);
     CheckCompleteness();
+    CheckSeq();
   }
   
   function RestoreSelection()
   {
-    //var msg = 'SEQ '+seq+": "+data+"<br/>\n";
     var vals = data[seq - 1];
     var val0 = vals? (vals[0]? vals[0]:-1):-1;
     var val1 = vals? (vals[1]? vals[1]:-1):-1;
     var note = vals? (vals[2]? vals[2]:undefined):undefined;
-    var button = document.getElementById("type_" + val0);
-    if (button) { button.checked = "checked"; }
-    button = document.getElementById("category_" + val1);
-    if (button) { button.checked = "checked"; }
     var buttons = document.getElementsByName("type");
     for (var i=0; i<buttons.length; i++)
     {
-      buttons[i].checked = (i == val0);
+      buttons[i].checked = (buttons[i].id == 'type_' + val0);
     }
     buttons = document.getElementsByName("category");
     for (var i=0; i<buttons.length; i++)
     {
-      buttons[i].checked = (i == val1);
+      buttons[i].checked = (buttons[i].id == 'category_' + val1);
     }
     if (!note) { note = ''; }
     document.getElementById("note_tf").value = note;
     CheckCompleteness();
+    CheckSeq();
   }
   
   // If the user has entered any data, disable Cancel button,
@@ -217,11 +224,60 @@
     }
     var el = document.getElementById('hold_hf');
     el.value = (complete)? '0':'1';
+    if (complete) { document.getElementById('done_row').style.display = 'table-row'; }
     Debug("<strong>Debug Data:</strong> " + JSON.stringify(data));
     Debug((started)? "<span style='color:green;'>Started</span>":
                       "<span style='color:red;'>Not Started</span>", 1);
     Debug((complete)? "<span style='color:green;'>Complete</span>":
                       "<span style='color:red;'>Incomplete</span>", 1);
+  }
+
+  function SelectSeq(el)
+  {
+    SetRadiosDisabled(true);
+    document.getElementById('loader').style.display = 'block';
+    seq = el.value;
+    var el = document.getElementById('tFrame');
+    var addr = el.src;
+    addr = addr.replace(/;seq=\d+/i, ';seq=' + seq);
+    el.onload = function() { document.getElementById('loader').style.display = 'none'; SetRadiosDisabled(false); };
+    el.src = addr;
+    RestoreSelection();
+    CheckNav();
+  }
+  
+  // Check the sequence menu item at the current sequence
+  function CheckSeq()
+  {
+    var el = document.getElementById('seq_sel');
+    for (i=0; i < el.options.length; i++)
+    {
+      el.options[i].selected = (el.options[i].id == 'sel_' + seq);
+      if (data[i] && (data[i][0] && data[i][1]))
+      {
+        el.options[i].style.color = 'green';
+        if (el.options[i].selected)
+        {
+          el.style.color = 'green';
+        }
+      }
+      else
+      {
+        el.options[i].style.color = 'red';
+        if (el.options[i].selected)
+        {
+          el.style.color = 'red';
+        }
+      }
+    }
+  }
+  
+  function CheckNav()
+  {
+    var el = document.getElementById('goBackButton');
+    el.disabled = (seq <= 1);
+    var el = document.getElementById('goForwardButton');
+    el.disabled = (seq >= pages);
   }
 </script>
 </div>

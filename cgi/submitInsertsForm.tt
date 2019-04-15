@@ -1019,7 +1019,7 @@ window.onload = function(e)
     </tr>
     <tr>
       <td colspan="2" style="width=20;height=20;">
-        <div id="loader" style="display:none;">Saving… <img src="[crms.WebPath('web', 'ajax-loader.gif') %]" alt="Saving..."/></div>
+        <div id="loader" style="display:none;">Saving… <img src="[% crms.WebPath('web', 'ajax-loader.gif') %]" alt="Saving..."/></div>
       </td>
     </tr>
   </table>
