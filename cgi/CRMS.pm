@@ -327,7 +327,7 @@ sub set
 # will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.1.25';
+  return '7.1.26';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -8186,8 +8186,8 @@ sub VIAFWarning
           lc $country ne 'american' && lc $country ne 'zz' &&
           lc $country ne 'xx')
       {
-        my $abd = $data->{'abd'};
-        my $add = $data->{'add'};
+        my $abd = $data->{'birth_year'};
+        my $add = $data->{'death_year'};
         next if defined $abd and $abd <= 1815;
         next if defined $add and $add <= 1925;
         my $dates = '';

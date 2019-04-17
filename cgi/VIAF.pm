@@ -4,7 +4,7 @@ use Unicode::Normalize;
 use URI::Escape;
 
 # If successful, returns a hash ref that contains values for some subset of
-# the following keys: 'abd', 'add', 'author' (the VIAF author name), and 'country'.
+# the following keys: 'birth_year', 'death_year', 'author' (the VIAF author name), and 'country'.
 # Also has a 'url' field for debugging bad URLs or unparseable responses.
 # Has an 'error' field in case of comms error.
 # Returns undef if none of that data could be found.
@@ -16,7 +16,8 @@ sub GetVIAFData
   my $ret;
   return unless defined $author and length $author;
   my $decomposed = Unicode::Normalize::decompose($author);
-  my $sql = 'SELECT viaf_author,abd,`add`,country,viafID,IF(time<=DATE_SUB(NOW(),INTERVAL 1 MONTH),1,0)'.
+  my $sql = 'SELECT viaf_author,birth_year,death_year,country,viafID,'.
+            'IF(time<=DATE_SUB(NOW(),INTERVAL 1 MONTH),1,0)'.
             ' FROM viaf WHERE author=?';
   my $ref = $self->SelectAll($sql, $author);
   if (defined $ref && scalar @{$ref} > 0)
@@ -30,7 +31,7 @@ sub GetVIAFData
     else
     {
       return {'author' => $ref->[0]->[0],
-              'abd' => $ref->[0]->[1], 'add' => $ref->[0]->[2],
+              'birth_year' => $ref->[0]->[1], 'death_year' => $ref->[0]->[2],
               'country' => $ref->[0]->[3], 'viafID' => $ref->[0]->[4]};
     }
   }
@@ -85,9 +86,10 @@ sub GetVIAFData
   {
     $sql = 'DELETE FROM viaf WHERE author=?';
     $self->PrepareSubmitSql($sql, $author);
-    $sql = 'INSERT INTO viaf (author,viaf_author,abd,`add`,country,viafID) VALUES (?,?,?,?,?,?)';
-    $self->PrepareSubmitSql($sql, $author, $ret->{'author'}, $ret->{'abd'},
-                            $ret->{'add'}, $ret->{'country'}, $ret->{'viafID'});
+    $sql = 'INSERT INTO viaf (author,viaf_author,birth_year,death_year,'.
+           'country,viafID) VALUES (?,?,?,?,?,?)';
+    $self->PrepareSubmitSql($sql, $author, $ret->{'author'}, $ret->{'birth_year'},
+                            $ret->{'death_year'}, $ret->{'country'}, $ret->{'viafID'});
   }
   $ret->{'url'} = $url;
   return $ret;
@@ -159,13 +161,13 @@ sub ExtractVIAFAuthorData
   {
     my $date = $record->{'birthDate'};
     my @parts = split '-', $date;
-    $ret->{'abd'} = $parts[0] if $parts[0] and $parts[0] =~ m/^\d+$/;
+    $ret->{'birth_year'} = $parts[0] if $parts[0] and $parts[0] =~ m/^\d+$/;
     $date = $record->{'deathDate'};
     @parts = split '-', $date;
-    $ret->{'add'} = $parts[0] if $parts[0] and $parts[0] =~ m/^\d+$/;
+    $ret->{'death_year'} = $parts[0] if $parts[0] and $parts[0] =~ m/^\d+$/;
   }
   # Fall back to extracting dates our record or VIAF's if not explicit.
-  if (!$ret->{'abd'} || !$ret->{'add'})
+  if (!$ret->{'birth_year'} || !$ret->{'death_year'})
   {
     my ($abd, $add) = ExtractAuthorDates($author);
   }
