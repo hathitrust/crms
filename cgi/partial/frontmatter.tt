@@ -110,7 +110,7 @@
       var el = document.getElementById('tFrame');
       var addr = el.src;
       addr = addr.replace(/;seq=\d+/i, ';seq=' + seq);
-      el.onload = function() { document.getElementById('loader').style.display = 'none'; SetRadiosDisabled(false); };
+      el.onload = function() { document.getElementById('loader').style.display = 'none'; SetRadiosDisabled(false); CheckNoContent() };
       el.src = addr;
       RestoreSelection();
     }
@@ -128,7 +128,7 @@
       var el = document.getElementById('tFrame');
       var addr = el.src;
       addr = addr.replace(/;seq=\d+/i, ';seq=' + seq);
-      el.onload = function() { document.getElementById('loader').style.display = 'none'; SetRadiosDisabled(false); };
+      el.onload = function() { document.getElementById('loader').style.display = 'none'; SetRadiosDisabled(false); CheckNoContent() };
       el.src = addr;
       RestoreSelection();
     }
@@ -151,6 +151,7 @@
   
   function SaveSelection()
   {
+    CheckNoContent();
     var els = document.getElementsByName("type");
     var type = GetCheckedValue(els);
     els = document.getElementsByName("category");
@@ -184,6 +185,7 @@
     }
     if (!note) { note = ''; }
     document.getElementById("note_tf").value = note;
+    CheckNoContent()
     CheckCompleteness();
     CheckSeq();
   }
@@ -278,6 +280,37 @@
     el.disabled = (seq <= 1);
     var el = document.getElementById('goForwardButton');
     el.disabled = (seq >= pages);
+  }
+  
+  function CheckNoContent()
+  {
+    var el = document.getElementById('type_no_content');
+    if (el.checked)
+    {
+      el = document.getElementById('category_no_content');
+      el.checked = true;
+      var els = document.getElementsByName("category");
+      for (i = 0; i < els.length; i++)
+      {
+        els[i].disabled = true;
+      }
+    }
+    else
+    {
+      var els = document.getElementsByName("category");
+      for (i = 0; i < els.length; i++)
+      {
+        if (els[i].id == 'category_no_content')
+        {
+          els[i].checked = false;
+          els[i].disabled = true;
+        }
+        else
+        {
+          els[i].disabled = false;
+        }
+      }
+    }
   }
 </script>
 </div>

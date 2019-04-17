@@ -18,7 +18,7 @@ my $CATEGORIES = [{id => 0, code => 'frontispiece', name => 'Frontispiece'},
                   {id => 7, code => 'main_text', name => 'Main Text'},
                   {id => 8, code => 'appendix', name => 'Appendix'},
                   {id => 9, code => 'index', name => 'Index'},
-                  {id => 10, code => 'na', name => 'Null Page'}];
+                  {id => 10, code => 'no_content', name => 'No Content'}];
 my $TYPE_ID_NAME_MAP = { map {$_->{'id'} => $_->{'name'}} @{$TYPES} };
 my $TYPE_ID_CODE_MAP = { map {$_->{'id'} => $_->{'code'}} @{$TYPES} };
 my $TYPE_CODE_NAME_MAP = { map {$_->{'code'} => $_->{'name'}} @{$TYPES} };
@@ -52,6 +52,7 @@ sub ExtractReviewData
     my $jsonxs = JSON::XS->new;
     $data = $jsonxs->decode($cgi->param('data'));
   };
+  $cgi->delete('note');
   return $@ if $@;
   my $hold = 0;
   foreach my $datum (@{$data})

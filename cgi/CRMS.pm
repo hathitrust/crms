@@ -1870,6 +1870,7 @@ sub SubmitReviewCGI
   my $proj = $self->Projects()->{$projid};
   my $err = $self->ValidateSubmission($id, $user, $cgi);
   return $err if $err;
+  my $json = $proj->ExtractReviewData($cgi);
   my %params = map {$_ => Encode::decode('UTF-8', $cgi->param($_));} $cgi->param;
   # Log CGI inputs for replay in case of error.
   my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
@@ -1877,7 +1878,6 @@ sub SubmitReviewCGI
   $self->Note("SubmitReviewCGI\t$id\t$user\t$encdata");
   delete $params{'status'}; # Sanitize CGI input
   delete $params{'expert'}; # Sanitize CGI input
-  my $json = $proj->ExtractReviewData($cgi);
   $params{'data'} = $json if $json;
   return $self->SubmitReview($id, $user, \%params, $proj);
 }
@@ -1942,8 +1942,7 @@ sub SubmitReview
   my $user   = shift;
   my $params = shift;
   my $proj   = shift || $self->Projects()->{$self->GetProject($id)};
-#my $s = $self->SimpleSqlGet('SELECT status FROM queue WHERE id="mdp.39015057051651"');
-#print "SubmitReview STATUS $s\n";
+
   eval {
   return 'CRMS::SubmitReview: no HTID' unless $id;
   return 'CRMS::SubmitReview: no reviewer' unless $user;
@@ -8269,8 +8268,8 @@ sub VIAFWarning
           lc $country ne 'american' && lc $country ne 'zz' &&
           lc $country ne 'xx')
       {
-        my $abd = $data->{'abd'};
-        my $add = $data->{'add'};
+        my $abd = $data->{'birth_year'};
+        my $add = $data->{'death_year'};
         next if defined $abd and $abd <= 1815;
         next if defined $add and $add <= 1925;
         my $dates = '';
