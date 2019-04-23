@@ -46,6 +46,7 @@ sub GetVIAFData
   my $res = $ua->request($req);
   if (!$res->is_success)
   {
+    $self->Note('VIAF HTTP error '. $res->code(). ' for '. $url);
     return {'error' => $res->code(), 'url' => $url};
   }
   my $jsonxs = JSON::XS->new->utf8;
