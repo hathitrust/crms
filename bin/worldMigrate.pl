@@ -108,21 +108,21 @@ my $dbhWorld = $crmsWorld->GetDb();
 # | und                        | # MigrateCandidates()
 # | users                      | # MigrateUsers()
 # | userstats                  | # UpdateStats()
-# | viaf                       | # MigrateVIAF(), not really needed
+# | viaf                       | # OK, nothing to see here
 # +----------------------------+
 
 
 #Reset();
-#MigrateSources();
-#MigrateUsers();
-#MigrateProjects();
-#MigrateCandidates();
-#MigrateQueue();
-#MigrateExportdata();
-#MigrateCorrections();
-#MigratePredeterminationsbreakdown();
+MigrateSources();
+MigrateUsers();
+MigrateProjects();
+MigrateCandidates();
+MigrateQueue();
+MigrateExportdata();
+MigrateCorrections();
+MigratePredeterminationsbreakdown();
 MigrateVIAF();
-#UpdateStats();
+UpdateStats();
 
 sub Reset
 {
@@ -526,30 +526,6 @@ sub MigratePredeterminationsbreakdown
       $sql = 'INSERT INTO predeterminationsbreakdown (date,s2,s3,s4,s8)'.
              ' VALUES (?,?,?,?,?)';
       $crmsUS->PrepareSubmitSql($sql, $date, $row->[1], $row->[2], $row->[3], $row->[4]);
-    }
-  }
-}
-
-sub MigrateVIAF
-{
-  my $sql = 'SELECT * FROM viaf';
-  my $ref = $dbhWorld->selectall_hashref($sql, 'author');
-  foreach my $author (sort keys %{$ref})
-  {
-    $sql = 'SELECT COUNT(*) FROM viaf WHERE author=?';
-    if (!$crmsUS->SimpleSqlGet($sql, $author))
-    {
-      my $row = $ref->{$author};
-      my @fields;
-      my @values;
-      foreach my $key (keys %{$row})
-      {
-        push @fields, $key;
-        push @values, $row->{$key};
-      }
-      $sql = sprintf 'INSERT INTO viaf (%s) VALUES (%s)', join(',', @fields),
-                                                         $crmsUS->WildcardList(scalar @values);
-      $crmsUS->PrepareSubmitSql($sql, @values);
     }
   }
 }

@@ -258,6 +258,8 @@
       if (data[i] && (data[i][0] && data[i][1]))
       {
         el.options[i].style.color = 'green';
+        el.options[i].innerHTML = 'Seq' + el.options[i].value + ' ✓';
+        console.log(el.options[i].label);
         if (el.options[i].selected)
         {
           el.style.color = 'green';
@@ -266,6 +268,7 @@
       else
       {
         el.options[i].style.color = 'red';
+        el.options[i].innerHTML = 'Seq' + el.options[i].value;
         if (el.options[i].selected)
         {
           el.style.color = 'red';

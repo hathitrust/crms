@@ -5088,6 +5088,8 @@ sub ReviewData
   my $self  = shift;
   my $id    = shift;
 
+  require Languages;
+  my $record = $self->GetMetadata($id);
   my $data = {};
   my $dbh = $self->GetDb();
   my $sql = 'SELECT * FROM queue WHERE id=?';
@@ -5098,7 +5100,8 @@ sub ReviewData
   $ref = $dbh->selectall_hashref($sql, 'id', undef, $id);
   $data->{'bibdata'} = $ref->{$id};
   $data->{'bibdata'}->{$_. '_format'} = CGI::escapeHTML($data->{'bibdata'}->{$_}) for keys %{$data->{'bibdata'}};
-  $data->{'bibdata'}->{'pub_date_format'} = $self->FormatPubDate($id);
+  $data->{'bibdata'}->{'pub_date_format'} = $self->FormatPubDate($id, $record);
+  $data->{'bibdata'}->{'language'} = Languages::TranslateLanguage($record->language);
   $sql = 'SELECT * FROM reviews WHERE id=?';
   $ref = $dbh->selectall_hashref($sql, 'user', undef, $id);
   foreach my $user (keys %{$ref})

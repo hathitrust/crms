@@ -36,7 +36,7 @@ sub new
 # ========== REVIEW ========== #
 sub ReviewPartials
 {
-  return ['top', 'bibdata', 'authorities', 'frontmatter'];
+  return ['top', 'bibdata_frontmatter', 'authorities', 'frontmatter'];
 }
 
 # Extract Project-specific data from the CGI into a struct
