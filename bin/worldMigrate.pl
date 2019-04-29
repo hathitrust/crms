@@ -121,7 +121,6 @@ MigrateQueue();
 MigrateExportdata();
 MigrateCorrections();
 MigratePredeterminationsbreakdown();
-MigrateVIAF();
 UpdateStats();
 
 sub Reset

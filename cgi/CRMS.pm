@@ -325,7 +325,7 @@ sub set
 
 sub Version
 {
-  return '7.1.22';
+  return '8.0';
 }
 
 # Is this CRMS-US or CRMS-World (or something else entirely)?
@@ -1876,6 +1876,7 @@ sub SubmitReviewCGI
   my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
   my $encdata = $jsonxs->encode(\%params);
   $self->Note("SubmitReviewCGI\t$id\t$user\t$encdata");
+  $params{'data'} = $json if defined $json;
   delete $params{'status'}; # Sanitize CGI input
   delete $params{'expert'}; # Sanitize CGI input
   $params{'data'} = $json if $json;

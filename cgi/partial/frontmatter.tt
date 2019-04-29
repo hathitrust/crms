@@ -227,11 +227,11 @@
     var el = document.getElementById('hold_hf');
     el.value = (complete)? '0':'1';
     if (complete) { document.getElementById('done_row').style.display = 'table-row'; }
-    Debug("<strong>Debug Data:</strong> " + JSON.stringify(data));
-    Debug((started)? "<span style='color:green;'>Started</span>":
-                      "<span style='color:red;'>Not Started</span>", 1);
-    Debug((complete)? "<span style='color:green;'>Complete</span>":
-                      "<span style='color:red;'>Incomplete</span>", 1);
+    //Debug("<strong>Debug Data:</strong> " + JSON.stringify(data));
+    //Debug((started)? "<span style='color:green;'>Started</span>":
+    //                  "<span style='color:red;'>Not Started</span>", 1);
+    //Debug((complete)? "<span style='color:green;'>Complete</span>":
+    //                  "<span style='color:red;'>Incomplete</span>", 1);
   }
 
   function SelectSeq(el)

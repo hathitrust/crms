@@ -49,11 +49,15 @@ sub ExtractReviewData
 
   my $data;
   eval {
-    my $jsonxs = JSON::XS->new;
+    my $jsonxs = JSON::XS->new->utf8;
     $data = $jsonxs->decode($cgi->param('data'));
   };
   $cgi->delete('note');
-  return $@ if $@;
+  if ($@)
+  {
+    $self->{'crms'}->SetError($@);
+    return undef;
+  }
   my $hold = 0;
   foreach my $datum (@{$data})
   {
