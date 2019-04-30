@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 BEGIN 
-{ 
+{
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
@@ -21,7 +21,6 @@ Reports on suspected federal government documents in the und table.
 -n       No-op. Do not delete src='gov' entries in the und table.
 -p       Run in production.
 -v       Emit debugging information. May be repeated.
--x SYS   Set SYS as the system to execute.
 END
 
 my $help;
@@ -29,7 +28,6 @@ my $instance;
 my @mails;
 my $noop;
 my $production;
-my $sys;
 my $verbose;
 
 Getopt::Long::Configure ('bundling');
@@ -38,14 +36,12 @@ die 'Terminating' unless GetOptions(
            'm:s@' => \@mails,
            'n' => \$noop,
            'p' => \$production,
-           'v+' => \$verbose,
-           'x:s' => \$sys);
+           'v+' => \$verbose);
 $instance = 'production' if $production;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    sys      => $sys,
     verbose  => $verbose,
     instance => $instance
 );

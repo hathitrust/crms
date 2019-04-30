@@ -1,7 +1,6 @@
 #!/usr/bin/perl
-
 BEGIN 
-{ 
+{
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
@@ -23,7 +22,6 @@ and swiss reviews.
 -q         Do not emit report (ignored if -m is used).
 -t         Run against the training site.
 -v         Emit debugging information.
--x SYS     Set SYS as the system to execute.
 END
 
 
@@ -35,7 +33,6 @@ my $production;
 my $quiet;
 my $training;
 my $verbose;
-my $sys;
 
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
@@ -44,14 +41,12 @@ die 'Terminating' unless GetOptions(
            'p'    => \$production,
            'q'    => \$quiet,
            't'    => \$training,
-           'v+'   => \$verbose,
-           'x:s'  => \$sys);
+           'v+'   => \$verbose);
 $instance = 'production' if $production;
 $instance = 'crms-training' if $training;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    sys      =>   $sys,
     verbose  =>   $verbose,
     instance =>   $instance
 );

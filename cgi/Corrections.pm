@@ -217,7 +217,7 @@ sub ExportCorrections
             ' ORDER BY time DESC';
   my $ref = $self->SelectAll($sql);
   my $html = $data->{'html'};
-  $html .= sprintf "<h3>Exporting %d corrections from %s</h3>\n", scalar @{$ref}, $self->System();
+  $html .= sprintf "<h3>Exporting %d corrections</h3>\n", scalar @{$ref};
   if (scalar @{$ref} > 0)
   {
     foreach my $row (@{$ref})

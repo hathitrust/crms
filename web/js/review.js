@@ -75,40 +75,6 @@ function popRenewalDate()
   req.send(null);
 }
 
-function popReviewInfo(id,user,sys)
-{
-  var loader = document.getElementById('importLoader');
-  var req = new XMLHttpRequest();
-  req.onreadystatechange = function()
-  {
-    if (req.readyState == 4)
-    {
-      if (req.status == 200)
-      {
-        //alert(req.responseText);
-        var data = JSON.parse(req.responseText, null);
-        if (data)
-        {
-          var button = document.getElementById("r" + data.rights);
-          if (button) { button.checked = "checked"; }
-          button = document.getElementById("renewalFieldCheckbox");
-          if (button) { button.checked = (data.renNum != null); }
-          var field = document.getElementById("renewalField");
-          if (field) { field.value = data.renNum; }
-          document.submitReview.renDate.value = data.renDate;
-          document.submitReview.note.value = data.note;
-          selMenuItem('catMenu',(data.category)? data.category:'');
-        }
-      }
-      else {}
-      if (loader) { loader.style.display='none'; }
-    }
-  };
-  if (loader) { loader.style.display=''; }
-  req.open("GET", gCGI + "getReviewInfo?id=" + id + ";user=" + user + ";sys=" + sys, true);
-  req.send(null);
-}
-
 function PredictRights(id)
 {
   var img = document.getElementById("predictionLoader");
@@ -135,13 +101,6 @@ function PredictRights(id)
   var sel = GetCheckedValue(rights);
   // There is a hidden div that tells us which button id is und/nfi
   var und = document.getElementById('UNDNFI').title;
-  // Backed out in favor of submission rules TBD.
-  /*if (und && cat == 'Translation')
-  {
-    var button = document.getElementById('r' + und);
-    if (button) { button.checked = "checked"; }
-    return;
-  }*/
   if (und && sel == und) { return; }
   if (img) { img.style.display = 'block'; }
   var req = new XMLHttpRequest();
@@ -151,15 +110,17 @@ function PredictRights(id)
     {
       if (img) { img.style.display = 'none'; }
       sel = GetCheckedValue(rights);
-      und = document.getElementById('UNDNFI').title;
+      // Bail out if und/nfi is selected.
+      // May be redundant with above, but better here to avoid race condition.
       if (und && sel == und) { return; }
       if (!und || sel != und)
       {
-        if (sel != "")
+        if (sel)
         {
           var button = document.getElementById("r" + sel);
           button.checked = "";
         }
+        Debug("Response text: " + req.responseText, 1);
         if (req.responseText)
         {
           var button = document.getElementById("r" + req.responseText);
@@ -168,10 +129,10 @@ function PredictRights(id)
       }
     }
   };
-  var url = gCGI + "predictRights?sys=crmsworld;id=" +
-            id + ";year=" + year + ";ispub=" + isPub +
-            ";crown=" + isCrown;
+  var url = gCGI + "predictRights?id=" + id + ";year=" + year +
+            ";ispub=" + isPub + ";crown=" + isCrown;
   if (actualPub) { url += ";pub=" + actualPub; }
+  Debug(url);
   req.open("GET", url, true);
   req.send(null);
 }
@@ -215,6 +176,7 @@ function PredictDate(id)
   var url = gCGI + "predictRights?sys=crmsworld;doyear=1;id=" +
             id + ";year=" + year;
   if (actualPub) url += ";pub=" + actualPub;
+  Debug(url);
   req.open("GET", url, true);
   req.send(null);
 }
@@ -251,19 +213,19 @@ function SelectedCategory()
 // there are no radio buttons
 function GetCheckedValue(radioObj)
 {
-  if (!radioObj) { return ""; }
+  if (!radioObj) { return null; }
   var radioLength = radioObj.length;
   if (radioLength == undefined)
   {
     if (radioObj.checked) { return radioObj.value; }
-    else { return ""; }
+    else { return null; }
   }
   var i;
   for (i = 0; i < radioLength; i++)
   {
     if (radioObj[i].checked) { return radioObj[i].value; }
   }
-  return "";
+  return null;
 }
 
 function zoom(selector,name)
@@ -285,4 +247,15 @@ function PullPubDate()
   document.getElementById('renewalField').value=date;
 }
 
-
+function Debug(msg, append)
+{
+  var el = document.getElementById('debugArea');
+  if (el)
+  {
+    if (append)
+    {
+      msg = el.innerHTML + "<br/>\n" + msg;
+    }
+    el.innerHTML = msg;
+  }
+}

@@ -9,15 +9,12 @@ use CRMS;
 my $cgi    = new CGI;
 my $id     = $cgi->param('id');
 my $year   = $cgi->param('year');
-my $sys    = $cgi->param('sys');
 my $ispub  = $cgi->param('ispub');
 my $crown  = $cgi->param('crown');
 my $pub    = $cgi->param('pub');
 my $doyear = $cgi->param('doyear');
 my $readable = $cgi->param('readable');
-$sys = 'crms' unless $sys;
-my $crms = CRMS->new(cgi => $cgi,
-                     sys => $sys);
+my $crms = CRMS->new(cgi => $cgi);
 
 my $n;
 if (defined $doyear)

@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 BEGIN 
-{ 
+{
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
@@ -23,7 +23,6 @@ Sends accumulated help requests to crms-experts\@umich.edu.
 -q       Quiet: do not send to crms-experts, just to the recipients on the -m flag.
 -t       Run in training.
 -v       Be verbose.
--x SYS   Set SYS as the system to execute.
 END
 
 my $help;
@@ -32,7 +31,6 @@ my @mails;
 my $production;
 my $quiet;
 my $training;
-my $sys;
 my $verbose = 0;
 
 Getopt::Long::Configure ('bundling');
@@ -41,8 +39,7 @@ die 'Terminating' unless GetOptions('h|?'  => \$help,
            'p'    => \$production,
            'q'    => \$quiet,
            't'    => \$training,
-           'v+'   => \$verbose,
-           'x:s'  => \$sys);
+           'v+'   => \$verbose);
 $instance = 'production' if $production;
 $instance = 'crms-training' if $training;
 print "Verbosity $verbose\n" if $verbose;
@@ -50,7 +47,6 @@ die "$usage\n\n" if $help;
 
 my %mails;
 my $crms = CRMS->new(
-    sys      => $sys,
     verbose  => $verbose,
     instance => $instance
 );

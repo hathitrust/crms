@@ -809,8 +809,8 @@ function PopulateTotal(i, data)
 -->
 </script>
 
-[% data = inserts.GetInsertsData(barcode, user, 1) %]
-[% totals = inserts.GetTotalsData(barcode, user) %]
+[% data = inserts.GetInsertsData(htid, user, 1) %]
+[% totals = inserts.GetTotalsData(htid, user) %]
 <script type="text/javascript">
 <!--
 window.onload = function(e)
@@ -820,18 +820,18 @@ window.onload = function(e)
   gInspecting = [% (inspecting)? 'true':'false' %];
   gEditing = [% (editing)? 'true':'false' %];
   gUser = [% (user)? "'$user'":"null"  %];
-  LoadInserts("[% barcode %]", "[% user %]");
+  LoadInserts("[% htid %]", "[% user %]");
   [% IF totals.size() %]
-    LoadTotals("[% barcode %]", "[% user %]");
+    LoadTotals("[% htid %]", "[% user %]");
   [% END %]
 }
 -->
 </script>
 
 <form id="submitInsertsForm">
-  <input type="hidden" name="barcode"  value="[% barcode %]"/>
+  <input type="hidden" name="htid"  value="[% htid %]"/>
   <input type="hidden" name="start"    value="[% crms.GetNow() %]"/>
-  <input type="hidden" name="duration" value="[% (inspecting)? 0:inserts.GetDuration(barcode, user) %]"/>
+  <input type="hidden" name="duration" value="[% (inspecting)? 0:inserts.GetDuration(htid, user) %]"/>
   <input type="hidden" name="user"     value="[% user %]"/>
   <input type="hidden" id="insertCount" name="count"      value="0"/>
   <input type="hidden" id="totalCount"  name="totalCount" value="[% totals.size() %]"/>
@@ -842,53 +842,7 @@ window.onload = function(e)
   <input type="hidden" name="editing" value="[% editing %]"/>
   <input type="hidden" name="sys"     value="[% sys %]"/>
   <div class="reviewBlue">
-  <table id="HTOptionsTable" class="id">
-    <tr>
-	    <td class="display" style="text-align:left;" colspan="2">
-	      <strong>HathiTrust Options:</strong>
-      </td>
-    </tr>
-    <tr><td colspan="2"></td></tr>
-    <tr><td colspan="2"></td></tr>
-    <tr>
-      <td class="display" style="text-align:left;"><strong>Size:</strong></td>
-      <td>
-        <select title="PageTurner Size" class="review" onchange="zoom(this,'mag');">
-        [% percents = [50,75,100,125,150,200] %]
-        [% FOREACH p IN percents %]
-          [% IF p == mag %]
-            <option value="[% p %]" selected="selected">[% "$p%" %]</option>
-          [% ELSE %]
-            <option value="[% p %]">[% "$p%" %]</option>
-          [% END %]
-        [% END %]
-        </select>
-      </td>
-    </tr>
-    <tr>
-      <td class="display" style="text-align:left;"><strong>View:</strong></td>
-      <td>
-        <select id="PTViewSelect" title="PageTurner View" class="review" onchange="zoom(this,'ptview');">
-        [% views = ['image','1up','2up','thumb'] %]
-        [% names = ['Classic','Scroll','Flip','Thumbnails'] %]
-        [% accesskeys = ['-','=','[',']'] %]
-        [% FOR i IN [0 .. 3] %]
-          [% v = views.$i %]
-          [% n = names.$i %]
-          [% IF v == ptview %]
-            <option value="[% v %]" id="view[% names.$i %]Select" selected="selected">[% n %]</option>
-          [% ELSE %]
-            <option value="[% v %]" id="view[% names.$i %]Select">[% n %]</option>
-          [% END %]
-        [% END %]
-        </select>
-        [% FOR i IN [0 .. 3] %]
-          <a style="position:absolute;left:-999px;" href="#" accesskey="[% accesskeys.$i %]"
-             onfocus="var ptvs = document.getElementById('PTViewSelect');ptvs.selectedIndex=[% i %];zoom(ptvs,'ptview');">.</a>
-        [% END %]
-      </td>
-    </tr>
-  </table>
+    [% INCLUDE Partial_HTView.tt crms = crms, htid = htid %]
   </div>
 <div id="RenewalDiv" class="rightscont" style="padding-top:2px;">
   <div>
@@ -1056,7 +1010,7 @@ window.onload = function(e)
                onclick="javascript:SubmitInserts(true, false)"/>
       </td>
     </tr>
-    [% homeLink = crms.Sysify("inserts?p=inserts;submit=Cancel;barcode=$barcode;editing=$editing;user=$user") %]
+    [% homeLink = crms.Sysify("inserts?p=inserts;submit=Cancel;htid=$htid;editing=$editing;user=$user") %]
     <tr>
       <td></td>
       <td>
@@ -1065,7 +1019,7 @@ window.onload = function(e)
     </tr>
     <tr>
       <td colspan="2" style="width=20;height=20;">
-        <div id="loader" style="display:none;">Saving… <img src="[crms.WebPath('web', 'ajax-loader.gif') %]" alt="Saving..."/></div>
+        <div id="loader" style="display:none;">Saving… <img src="[% crms.WebPath('web', 'ajax-loader.gif') %]" alt="Saving..."/></div>
       </td>
     </tr>
   </table>
@@ -1076,7 +1030,7 @@ window.onload = function(e)
     <tr>
       <td style="text-align:left;">
         [% IF !hold %]
-          [% hold = crms.HoldForItem(barcode,user) %]
+          [% hold = crms.HoldForItem(htid,user) %]
         [% END %]
         <input type="checkbox" id="hold" name="hold" value="0" [% (hold)? 'checked="checked"':'' %] onclick="toggleVisibility('expiry');"/>
       </td>
@@ -1085,7 +1039,7 @@ window.onload = function(e)
     <tr>
       <td colspan="2">
         <span class="smallishText" id="expiry" [% (hold)? '':'style="display:none;"' %]>
-          Hold will expire at the end of the day<br/>on [% crms.HoldExpiry(barcode,user,1) %].
+          Hold will expire at the end of the day<br/>on [% crms.HoldExpiry(htid,user,1) %].
         </span>
       </td>
     </tr>

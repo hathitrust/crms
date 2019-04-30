@@ -1,12 +1,7 @@
 #!/usr/bin/perl
-
-my ($root);
 BEGIN 
-{ 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+{
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -14,15 +9,13 @@ use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 use Unicode::Normalize;
-
 use Term::ANSIColor qw(:constants);
 $Term::ANSIColor::AUTORESET = 1;
-
 
 my $usage = <<END;
 USAGE: $0 [-aChipqv] [-s VOL_ID [-s VOL_ID2...]]
           [-m MAIL_ADDR [-m MAIL_ADDR2...]] [-n TBL [-n TBL...]]
-          [-x SYS] [start_date[ time] [end_date[ time]]]
+          [start_date[ time] [end_date[ time]]]
 
 Reports on the volumes that can inherit ADD from this morning's export,
 or, if start_date is specified, exported after then and before end_date
@@ -39,7 +32,6 @@ if it is specified.
 -q         Do not emit report (ignored if -m is used).
 -s VOL_ID  Report only for HT volume VOL_ID. May be repeated for multiple volumes.
 -v         Emit debugging information.
--x SYS     Set SYS as the system to execute.
 END
 
 my $all;
@@ -51,7 +43,6 @@ my @no;
 my $production;
 my $quiet;
 my @singles;
-my $sys;
 my $verbose;
 
 Getopt::Long::Configure ('bundling');
@@ -64,8 +55,7 @@ die 'Terminating' unless GetOptions(
            'p'    => \$production,
            'q'    => \$quiet,
            's:s@' => \@singles,
-           'v+'   => \$verbose,
-           'x:s'  => \$sys);
+           'v+'   => \$verbose);
 $instance = 'production' if $production;
 die "$usage\n\n" if $help;
 
@@ -73,7 +63,6 @@ my %no = ();
 $no{$_}=1 for @no;
 
 my $crms = CRMS->new(
-    sys      => $sys,
     verbose  => $verbose,
     instance => $instance
 );

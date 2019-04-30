@@ -116,7 +116,7 @@ sub ConfirmInserts
   my $crms = $self->get('crms');
   my $user = $crms->get('user');
   #$crms->Note("ConfirmInserts($user, $final)");
-  my $id = $cgi->param('barcode');
+  my $id = $cgi->param('htid');
   $self->SubmitInserts($cgi, $id, $user, $final);
   if (!$crms->CountErrors())
   {
@@ -132,7 +132,7 @@ sub ConfirmInserts
   }
 }
 
-my %nogo = ('p'=>1,'editing'=>1,'barcode'=>1,'count'=>1,'confirm'=>1,
+my %nogo = ('p'=>1,'editing'=>1,'htid'=>1,'count'=>1,'confirm'=>1,
             'sys'=>1,'submit'=>1,'final'=>1,'notApplicable'=>1,'duration'=>1,
             'override'=>1, 'user'=>1,'iid'=>1,'totalCount'=>1);
 sub SubmitInserts
@@ -651,7 +651,7 @@ sub LinkToInserts
   my $user = shift;
 
   my $crms = $self->get('crms');
-  my $url = $crms->WebPath('cgi', 'inserts?p=inserts;editing=1;barcode='. $id);
+  my $url = $crms->WebPath('cgi', 'inserts?p=inserts;editing=1;htid='. $id);
   $url .= ";user=$user" if defined $user;
   return $url;
 }

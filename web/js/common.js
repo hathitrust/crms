@@ -117,5 +117,3 @@ function addEvent(element, eventName, fn)
     element.attachEvent('on' + eventName, fn);
   }
 }
-
-

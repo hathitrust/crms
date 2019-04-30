@@ -26,7 +26,6 @@ sub new
 {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
-  my $sys = $args{'sys'} || 'crms';
   if ($args{'root'})
   {
     print "<strong>Warning: root passed to <code>CRMS->new()</code>\n";
@@ -40,7 +39,7 @@ sub new
   die 'ERROR: cannot locate root directory with DLXSROOT or SDRROOT!' unless $root and -d $root;
   $root = '/' unless $root;
   $self->set('root', $root);
-  my %d = $self->ReadConfigFile($sys. '.cfg');
+  my %d = $self->ReadConfigFile('crms.cfg');
   $self->set($_, $d{$_}) for keys %d;
   $self->SetupLogFile();
   # Initialize error reporting.
@@ -50,7 +49,6 @@ sub new
   $self->set('instance', $ENV{'CRMS_INSTANCE'});
   # If running from command line.
   $self->set('instance', $args{'instance'}) if $args{'instance'};
-  $self->set('sys',      $sys);
   # Only need to authorize when running as CGI.
   if ($ENV{'GATEWAY_INTERFACE'})
   {
@@ -323,21 +321,9 @@ sub set
   $self->{$key} = $val;
 }
 
-# Alas, something like `git describe --tags \$(git rev-list --tags --max-count=1)`
-# will not work in production because it's not running from a git repo.
 sub Version
 {
-  return '7.1.27';
-}
-
-# Is this CRMS-US or CRMS-World (or something else entirely)?
-# This is the human-readable version.
-sub System
-{
-  my $self = shift;
-
-  my $sys = $self->GetSystemVar('system', 'CRMS');
-  return $sys;
+  return '8.0';
 }
 
 # This is the NOT SO human-readable version used in sys=blah URL param
@@ -387,9 +373,8 @@ sub ConnectToDb
 
   my $db_server = $self->get('mysqlServerDev');
   my $instance  = $self->get('instance');
-  my $sys       = $self->Sys();
 
-  my %d = $self->ReadConfigFile($sys. 'pw.cfg');
+  my %d = $self->ReadConfigFile('crmspw.cfg');
   my $db_user   = $d{'mysqlUser'};
   my $db_passwd = $d{'mysqlPasswd'};
   if ($instance eq 'production'
@@ -415,10 +400,9 @@ sub DbInfo
 
   my $db_server = $self->get('mysqlServerDev');
   my $instance  = $self->get('instance');
-  my $sys       = $self->Sys();
 
   my $msg = '';
-  my %d = $self->ReadConfigFile($sys. 'pw.cfg');
+  my %d = $self->ReadConfigFile('crmspw.cfg');
   my $db_user   = $d{'mysqlUser'};
   my $db_passwd = $d{'mysqlPasswd'};
   if ($instance eq 'production'
@@ -448,10 +432,9 @@ sub ConnectToSdrDb
 
   my $db_server = $self->get('mysqlMdpServerDev');
   my $instance  = $self->get('instance');
-  my $sys       = $self->Sys();
 
   $db = $self->get('mysqlMdpDbName') unless defined $db;
-  my %d = $self->ReadConfigFile($sys. 'pw.cfg');
+  my %d = $self->ReadConfigFile('crmspw.cfg');
   my $db_user   = $d{'mysqlMdpUser'};
   my $db_passwd = $d{'mysqlMdpPasswd'};
   if ($instance eq 'production'
@@ -568,14 +551,14 @@ sub SelectAll
   eval {
     $ref = $dbh->selectall_arrayref($sql, undef, @_);
   };
-  my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, undef, @_);
   if ($@)
   {
     my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
     $self->SetError($msg);
     $self->Logit($msg);
   }
+  my $t2 = Time::HiRes::time();
+  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, undef, @_);
   return $ref;
 }
 
@@ -590,15 +573,24 @@ sub SelectAllSDR
   eval {
     $ref = $dbh->selectall_arrayref($sql, undef, @_);
   };
-  my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, 'ht_rights', @_);
   if ($@)
   {
     my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
     $self->SetError($msg);
     $self->Logit($msg);
   }
+  my $t2 = Time::HiRes::time();
+  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, 'ht_rights', @_);
   return $ref;
+}
+
+# Returns a parenthesized comma separated list of n question marks.
+sub WildcardList
+{
+  my $self = shift;
+  my $n    = shift;
+
+  my $qs = '(' . ('?,' x ($n-1)) . '?)';
 }
 
 sub DebugSql
@@ -734,26 +726,28 @@ sub ProcessReviews
 {
   my $self  = shift;
   my $quiet = shift;
+  my $time  = shift || $self->SimpleSqlGet('SELECT NOW()');
 
+  # Get the underlying system status, ignoring replication delays.
+  my $stat = $self->GetSystemStatus(1);
+  $self->ReportMsg(sprintf("ProcessReviews: system status is '%s'", (defined $stat)? $stat->[1] : 'normal')) unless $quiet;
   # Clear the deleted inheritances, regardless of system status
   my $sql = 'SELECT COUNT(*) FROM inherit WHERE status=0';
   my $dels = $self->SimpleSqlGet($sql);
   if ($dels)
   {
-    $self->ReportMsg("Deleted inheritances to be removed: $dels.") unless $quiet;
+    $self->ReportMsg('Deleted inheritances to be removed: '. $dels) unless $quiet;
     $self->DeleteInheritances($quiet);
   }
   else
   {
     $self->ReportMsg('No deleted inheritances to remove.') unless $quiet;
   }
-  # Get the underlying system status, ignoring replication delays.
-  my ($blah, $stat, $msg) = @{$self->GetSystemStatus(1)};
   my $reason = '';
   # Don't do this if the system is down or if it is Sunday.
-  if ($stat ne 'normal')
+  if (defined $stat)
   {
-    $reason = "system status is $stat";
+    $reason = 'system status is '. $stat->[1];
   }
   elsif ($self->GetSystemVar('autoinherit') eq 'disabled')
   {
@@ -769,23 +763,27 @@ sub ProcessReviews
   }
   else
   {
-    $self->ReportMsg("Not auto-submitting inheritances because $reason.") unless $quiet;
+    $self->ReportMsg('Not auto-submitting inheritances because '. $reason) unless $quiet;
   }
-  $self->SetSystemStatus('partial', 'CRMS is processing reviews. The Review page is temporarily unavailable. Try back in about a minute.');
-  my %stati = (2=>0,3=>0,4=>0,8=>0);
-  $sql = 'SELECT id FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) GROUP BY id HAVING count(*) = 2';
+  my $tmpstat = ['', 'partial',
+                 'CRMS is processing reviews. The Review page is temporarily unavailable. '.
+                 'Try back in about a minute.'];
+  $self->SetSystemStatus($tmpstat);
+  my %stati = (2=>0, 3=>0, 4=>0, 8=>0);
+  $sql = 'SELECT id FROM reviews WHERE id IN (SELECT id FROM queue WHERE status=0) GROUP BY id HAVING COUNT(*)=2';
   my $ref = $self->SelectAll($sql);
+  #print Dumper $self->ReviewData('uiug.30112124385599');
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
     # Don't process anything that las a review less than 8 hours old.
-    my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND time>DATE_SUB(NOW(), INTERVAL 8 HOUR)';
-    if (0 < $self->SimpleSqlGet($sql, $id))
+    my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND time>DATE_SUB(?, INTERVAL 8 HOUR)';
+    if (0 < $self->SimpleSqlGet($sql, $id, $time))
     {
       $self->ReportMsg("Not processing $id: it has one or more reviews less than 8 hours old") unless $quiet;
       next;
     }
-    my $data = $self->CalcStatus($id, $stat);
+    my $data = $self->CalcStatus($id);
     my $status = $data->{'status'};
     next unless defined $status and $status > 0;
     my $hold = $data->{'hold'};
@@ -796,58 +794,134 @@ sub ProcessReviews
     }
     if ($status == 8)
     {
-      my $attr = $data->{'attr'};
-      my $reason = $data->{'reason'};
-      my $category = $data->{'category'};
-      my $note = $data->{'note'};
-      $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,$category,0,0);
+      $self->SubmitReview($id, 'autocrms', $data);
     }
     $self->RegisterStatus($id, $status);
     $sql = 'UPDATE reviews SET hold=0,time=time WHERE id=?';
     $self->PrepareSubmitSql($sql, $id);
     $stati{$status}++;
   }
-  $self->ReportMsg("Setting system status back to '$stat'") unless $quiet;
-  $self->SetSystemStatus($stat, $msg);
+  $self->ReportMsg(sprintf("Setting system status back to '%s'", (defined $stat)? $stat->[1] : 'normal')) unless $quiet;
+  $self->SetSystemStatus($stat);
   $sql = 'INSERT INTO processstatus VALUES ()';
   $self->PrepareSubmitSql($sql);
-  my ($s2,$s3,$s4,$s8) = ($stati{2},$stati{3},$stati{4},$stati{8});
   $self->PrepareSubmitSql('DELETE FROM predeterminationsbreakdown WHERE date=DATE(NOW())');
   $sql = 'INSERT INTO predeterminationsbreakdown (date,s2,s3,s4,s8) VALUES (DATE(NOW()),?,?,?,?)';
-  $self->PrepareSubmitSql($sql, $s2, $s3, $s4, $s8);
+  $self->PrepareSubmitSql($sql, $stati{2}, $stati{3}, $stati{4}, $stati{8});
 }
 
-# Determines what status a given id should be based on existing reviews and system status.
-# Returns a hashref (status,attr,reason,category,note) where attr, reason, note are for status 8
-# autocrms dummy reviews.
-# In the case of a hold, there will be a 'hold' key pointing to the user with the hold.
+# Returns a data structure with the following fields:
+# status: the status to set to queue item to
+# hold: id of a user with a review on hold
+# attr: the final rights attribute (status 8)
+# reason: the final rights reason (status 8)
+# category: the final determination category (status 8)
 sub CalcStatus
-{
-  my $self = shift;
-
-  my $module = 'Validator_' . $self->Sys() . '.pm';
-  require $module;
-  unshift @_, $self;
-  return Validator::CalcStatus(@_);
-}
-
-sub CheckPendingStatus
 {
   my $self = shift;
   my $id   = shift;
 
-  my $sql = 'SELECT status FROM queue WHERE id=?';
-  my $status = $self->SimpleSqlGet($sql, $id);
-  my $pstatus = $status;
-  if (!$status)
+  my $return = {'status' => 0};
+  my $sql = 'SELECT r.user,a.name,rs.name,r.hold,d.data'.
+            ' FROM reviews r INNER JOIN attributes a ON r.attr=a.id'.
+            ' INNER JOIN reasons rs ON r.reason=rs.id'.
+            ' LEFT JOIN reviewdata d ON r.data=d.id'.
+            ' WHERE r.id=? ORDER BY r.time ASC';
+  my $ref = $self->SelectAll($sql, $id);
+  my ($user, $attr, $reason, $hold, $data) = @{$ref->[0]};
+  $sql = 'SELECT r.user,a.name,rs.name,r.hold,d.data'.
+         ' FROM reviews r INNER JOIN attributes a ON r.attr=a.id'.
+         ' INNER JOIN reasons rs ON r.reason=rs.id'.
+         ' LEFT JOIN reviewdata d ON r.data=d.id'.
+         ' WHERE r.id=? AND r.user!=? ORDER BY r.time ASC';
+  $ref = $self->SelectAll($sql, $id, $user);
+  return $return if 0 == scalar @{$ref};
+  my ($user2, $attr2, $reason2, $hold2, $data2) = @{$ref->[0]};
+  if ($hold)
   {
-    my $module = 'Validator_' . $self->Sys() . '.pm';
-    require $module;
-    unshift @_, $id;
-    unshift @_, $self;
-    $pstatus = Validator::CalcPendingStatus(@_);
+    $return->{'hold'} = $user;
   }
-  $self->RegisterPendingStatus($id, $pstatus);
+  if ($hold2)
+  {
+    $return->{'hold'} = $user2;
+  }
+  if (DoRightsMatch($self, $attr, $reason, $attr2, $reason2))
+  {
+    # If both reviewers are non-advanced mark as provisional match
+    if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($user2)))
+    {
+      $return->{'status'} = 3;
+    }
+    else # Mark as 4 or 8 - two that agree
+    {
+      $return->{'status'} = 4;
+      if ($reason ne $reason2)
+      {
+        # Nonmatching reasons are resolved as an attr match status 8
+        $return->{'status'} = 8;
+        $return->{'attr'} = $self->TranslateAttr($attr);
+        $return->{'reason'} = $self->TranslateReason('crms');
+        $return->{'category'} = 'Attr Match';
+      }
+      elsif ($attr eq 'ic' && $reason eq 'ren' && $reason2 eq 'ren' &&
+             !$self->TolerantCompare($data, $data2))
+      {
+        $return->{'status'} = 8;
+        $return->{'attr'} = $self->TranslateAttr($attr);
+        $return->{'reason'} = $self->TranslateReason($reason);
+        $return->{'category'} = 'Attr Match';
+        $return->{'note'} = 'Nonmatching renewals';
+      }
+    }
+  }
+  else
+  {
+    $return->{'status'} = 2;
+    # Do auto for ic vs und
+    # FIXME: allow missing renewal information to slip under radar?
+    if (($attr eq 'ic' && $attr2 eq 'und') ||
+        ($attr eq 'und' && $attr2 eq 'ic'))
+    {
+      # If both reviewers are non-advanced mark as provisional match
+      if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($user2)))
+      {
+         $return->{'status'} = 3;
+      }
+      else
+      {
+        $return->{'status'} = 8;
+        $return->{'attr'} = $self->TranslateAttr('und');
+        $return->{'reason'} = $self->TranslateReason('crms');
+        $return->{'category'} = 'Attr Default';
+      }
+    }
+  }
+  return $return;
+}
+
+sub CalcPendingStatus
+{
+  my $self = shift;
+  my $id   = shift;
+
+  my $n = $self->SimpleSqlGet('SELECT COUNT(*) FROM reviews WHERE id=?', $id);
+  if ($n > 1)
+  {
+    my $data = CalcStatus($self, $id);
+    return (defined $data)? $data->{'status'}:0;
+  }
+  return $n;
+}
+
+sub DoRightsMatch
+{
+  my $self    = shift;
+  my $attr1   = shift;
+  my $reason1 = shift;
+  my $attr2   = shift;
+  my $reason2 = shift;
+
+  return ($attr1 eq $attr2)? 1:0;
 }
 
 # If quiet is set, don't try to create the export file, print stuff, or send mail.
@@ -856,43 +930,20 @@ sub ClearQueueAndExport
   my $self  = shift;
   my $quiet = shift;
 
-  my $export = [];
-  ## get items > 2, clear these
+  my @export;
   my $expert = $self->GetExpertRevItems();
-  my $eCount = scalar @{$expert};
-  foreach my $row (@{$expert})
-  {
-    my $id = $row->[0];
-    push(@{$export}, $id);
-  }
-  ## get status 8, clear these
+  push @export, $_->[0] for @{$expert};
   my $auto = $self->GetAutoResolvedItems();
-  my $aCount = scalar @{$auto};
-  foreach my $row (@{$auto})
-  {
-    my $id = $row->[0];
-    push(@{$export}, $id);
-  }
-  ## get status 9, clear these
+  push @export, $_->[0] for @{$auto};
   my $inh = $self->GetInheritedItems();
-  my $iCount = scalar @{$inh};
-  foreach my $row (@{$inh})
-  {
-    my $id = $row->[0];
-    push(@{$export}, $id);
-  }
-  ## get items = 2 and see if they agree
+  push @export, $_->[0] for @{$inh};
   my $double = $self->GetDoubleRevItemsInAgreement();
-  my $dCount = scalar @{$double};
-  foreach my $row (@{$double})
-  {
-    my $id = $row->[0];
-    push(@{$export}, $id);
-  }
-  $self->ExportReviews($export, $quiet);
+  push @export, $_->[0] for @{$double};
+  $self->ExportReviews(\@export, $quiet);
   $self->UpdateExportStats();
   $self->UpdateDeterminationsBreakdown();
-  return "Removed from queue: $dCount matching, $eCount expert-reviewed, $aCount auto-resolved, $iCount inherited rights";
+  my $msg = sprintf 'Removed from queue: %d matching, %d expert-reviewed, %d auto-resolved, %d inherited',
+                    scalar @{$double}, scalar @{$expert}, scalar @{$auto}, scalar @{$inh};
 }
 
 sub GetDoubleRevItemsInAgreement
@@ -948,13 +999,13 @@ sub ExportReviews
     $self->ReportMsg('>>> <b>Training site detected. Will not write .rights file.</b>');
   }
   my $count = 0;
-  my $user = $self->Sys();
+  my $user = 'crms';
   my ($fh, $temp, $perm, $filename) = $self->GetExportFh() unless $training or $quiet;
   $self->ReportMsg("<i>Exporting to <code>$temp</code>.</i>") unless $training or $quiet;
   my $start_size = $self->GetCandidatesSize();
   foreach my $id (@{$list})
   {
-    my ($attr,$reason) = $self->GetFinalAttrReason($id);
+    my ($attr, $reason) = $self->GetFinalAttrReason($id);
     my $export = $self->CanExportVolume($id, $attr, $reason, $quiet);
     if ($export && !$training && !$quiet)
     {
@@ -1005,6 +1056,17 @@ sub CanExportVolume
   my $gid    = shift; # Optional
   my $time   = shift; # Optional
 
+  # Do not export anything without an attr/reason (like Frontmatter/Corrections).
+  if (!defined $attr || !defined $reason ||
+      $self->TranslateAttr($attr) eq $attr ||
+      $self->TranslateReason($reason) eq $reason)
+  {
+    my $msg = sprintf "Not exporting $id because of rights %s/%s",
+                      (defined $attr)? $attr:'<undef>',
+                      (defined $reason)? $reason:'<undef>';
+    $self->ReportMsg($msg) unless $quiet;
+    return 0;
+  }
   my $export = 1;
   # Do not export Status 6, since they are not really final determinations.
   my $status = $self->SimpleSqlGet('SELECT status FROM queue WHERE id=?', $id);
@@ -1042,11 +1104,11 @@ sub CanExportVolume
   }
   my $rq = $self->RightsQuery($id, 1);
   return 0 unless defined $rq;
-  my ($attr2,$reason2,$src2,$usr2,$time2,$note2) = @{$rq->[0]};
-  my $cm = $self->CandidatesModule();
+  my ($attr2, $reason2, $src2, $usr2, $time2, $note2) = @{$rq->[0]};
   # Do not export determination if the volume has gone out of scope,
   # or if exporting und would clobber pdus in World.
-  if (!$cm->HasCorrectRights($attr2, $reason2, $attr, $reason))
+  if ($reason2 ne 'bib' ||
+      ($attr eq 'und' && ($attr2 eq 'pd' || $attr2 eq 'pdus')))
   {
     # But, we clobber OOS if any of the following conditions hold:
     # 1. Current rights are pdus/gfv (which per rrotter in Core Services never overrides pd/bib)
@@ -1134,7 +1196,7 @@ sub GetExportFh
   my $date = $self->GetTodaysDate();
   $date    =~ s/:/_/g;
   $date    =~ s/ /_/g;
-  my $filename = $self->Sys(). '_'. $date. '.rights';
+  my $filename = 'crms_'. $date. '.rights';
   my $perm = $self->FSPath('prep', $filename);
   my $temp = $perm . '.tmp';
   if (-f $temp) { die "file already exists: $temp\n"; }
@@ -1205,14 +1267,16 @@ sub LoadNewItemsInCandidates
     $self->ReportMsg("Number of no-meta volumes now $n.");
   }
   my $endclause = ($end)? " AND time<='$end' ":' ';
-  $sql = 'SELECT namespace,id FROM rights_current WHERE time>?' . $endclause . 'ORDER BY time ASC';
+  $sql = 'SELECT namespace,id,time FROM rights_current WHERE time>?' . $endclause . 'ORDER BY time ASC';
+  $sql = 'SELECT namespace,id,time FROM rights_current WHERE attr=2 and reason=1 AND time>?' . $endclause . 'ORDER BY time ASC' . ' LIMIT 5000';
   my $ref = $self->SelectAllSDR($sql, $start);
   my $n = scalar @{$ref};
   $self->ReportMsg("Checking $n possible additions to candidates from rights DB");
   foreach my $row (@{$ref})
   {
     my $id = $row->[0] . '.' . $row->[1];
-    $self->CheckAndLoadItemIntoCandidates($id);
+    my $time = $row->[2];
+    $self->CheckAndLoadItemIntoCandidates($id, $time);
   }
   my $end_size = $self->GetCandidatesSize();
   my $diff = $end_size - $start_size;
@@ -1230,12 +1294,31 @@ sub CheckAndLoadItemIntoCandidates
 {
   my $self   = shift;
   my $id     = shift;
-  my $record = shift;
+  my $time   = shift;
+  my $record = shift || $self->GetMetadata($id);
 
+  if (!defined $record)
+  {
+    $self->ReportMsg("Skip $id -- no metadata to be had");
+    $self->Filter($id, 'no meta');
+    $self->ClearErrors();
+    return;
+  }
+  # FIXME: in some circumstances, can project modules override the historical
+  # and inheritance restrictions?
+  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id) > 0)
+  {
+    $self->ReportMsg("Skip $id -- already in historical reviews");
+    return;
+  }
+  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE (status IS NULL OR status=1) AND id=?', $id) > 0)
+  {
+    $self->ReportMsg("Skip $id -- already inheriting");
+    return;
+  }
   my $incand = $self->SimpleSqlGet('SELECT id FROM candidates WHERE id=?', $id);
   my $inund  = $self->SimpleSqlGet('SELECT src FROM und WHERE id=?', $id);
   my $inq    = $self->IsVolumeInQueue($id);
-  my $remove;
   my $rq = $self->RightsQuery($id, 1);
   if (!defined $rq)
   {
@@ -1243,8 +1326,6 @@ sub CheckAndLoadItemIntoCandidates
     $self->Filter($id, 'no meta');
     return;
   }
-  my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
-  my $cm = $self->CandidatesModule();
   my $oldSysid = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
   if (defined $oldSysid)
   {
@@ -1259,59 +1340,21 @@ sub CheckAndLoadItemIntoCandidates
       }
     }
   }
-  if (!$cm->HasCorrectRights($attr, $reason))
+  my $eval = $self->EvaluateCandidacy($id, $record);
+  if ($eval->{'project'})
   {
-    if ((defined $incand || $inq) && $reason eq 'gfv')
-    {
-      $self->ReportMsg("Filter $id as gfv");
-      $self->Filter($id, 'gfv');
-    }
-    elsif (defined $incand || $inq)
-    {
-      $self->ReportMsg("Remove $id -- (rights now $attr/$reason)");
-      $self->RemoveFromCandidates($id);
-    }
-    if ($inund)
-    {
-      $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
-    }
-    return;
+    $self->AddItemToCandidates($id, $eval->{'project'}, $time, $record);
   }
-  # If it was a gfv and it reverted to ic/bib, remove it from und, alert, and continue.
-  if ($reason ne 'gfv' &&
-      $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE id=? AND src="gfv"', $id) > 0)
+  else
   {
-    $self->ReportMsg("Unfilter $id -- reverted from pdus/gfv");
-    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
-  }
-  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id) > 0)
-  {
-    $self->ReportMsg("Skip $id -- already in historical reviews");
-    return;
-  }
-  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE (status IS NULL OR status=1) AND id=?', $id) > 0)
-  {
-    $self->ReportMsg("Skip $id -- already inheriting");
-    return;
-  }
-  $record = $self->GetMetadata($id) unless defined $record;
-  if (!defined $record)
-  {
-    $self->ReportMsg("Skip $id -- no metadata to be had");
-    $self->Filter($id, 'no meta');
-    $self->ClearErrors();
-    return;
-  }
-  my $errs = $self->GetViolations($id, $record);
-  if (scalar @{$errs} == 0)
-  {
-    my $src = $self->ShouldVolumeBeFiltered($id, $record);
+    my $src;
+    $src = $eval->{'msg'} if $eval->{'status'} eq 'filter';
     if (defined $src)
     {
       if (!defined $inund || $inund ne $src)
       {
         $self->ReportMsg(sprintf("Skip $id ($src) -- %s in filtered volumes",
-                                 (defined $inund)? "updating $inund->$src":'inserting'));
+                                 (defined $inund)? "updating $inund->$src":"inserting as $src"));
         $self->Filter($id, $src);
       }
       else
@@ -1319,16 +1362,13 @@ sub CheckAndLoadItemIntoCandidates
         $self->ReportMsg("Skip $id already filtered as $src");
       }
     }
-    else
+    elsif (defined $inund || defined $incand || $inq)
     {
-      $self->AddItemToCandidates($id, $time, $record);
-    }
-  }
-  else
-  {
-    if (defined $inund || defined $incand || $inq)
-    {
-      $self->ReportMsg(sprintf("Remove $id %s (%s)\n", (defined $incand)? '--':'from und', $errs->[0]));
+      my @from;
+      push @from, "und [$inund]" if defined $inund;
+      push @from, 'candidates' if defined $incand;
+      push @from, 'queue' if $inq;
+      $self->ReportMsg(sprintf "Remove $id from %s\n", join ', ', @from);
       $self->RemoveFromCandidates($id);
     }
   }
@@ -1338,9 +1378,9 @@ sub AddItemToCandidates
 {
   my $self   = shift;
   my $id     = shift;
+  my $proj   = shift;
   my $time   = shift;
   my $record = shift || $self->GetMetadata($id);
-  my $quiet  = shift;
 
   return unless defined $record;
   # Are there duplicates w/ nonmatching enumchron? Filter those.
@@ -1356,20 +1396,14 @@ sub AddItemToCandidates
     {
       my $chron2 = $record->enumchron($id2) || '';
       $self->ReportMsg(sprintf("Filter $id2%s as duplicate of $id%s",
-                       (length $chron)? " ($chron)":'', (length $chron2)? " ($chron2)":'')) unless $quiet;
+                       (length $chron)? " ($chron)":'', (length $chron2)? " ($chron2)":''));
       $self->Filter($id2, 'duplicate');
     }
   }
-  my $project = $self->GetCandidateProject($id, $record);
-  my $proj = $self->SimpleSqlGet('SELECT id FROM projects WHERE name=?', $project);
-  if (! defined $proj)
-  {
-    $proj = 1;
-    $project = 'Core';
-  }
+  my $project = $self->GetProjectRef($proj)->{'name'};
   if (!$self->IsVolumeInCandidates($id))
   {
-    $self->ReportMsg(sprintf("Add $id to candidates for project '$project' ($proj)")) unless $quiet;
+    $self->ReportMsg(sprintf("Add $id to candidates for project '$project' ($proj)"));
     my $sql = 'INSERT INTO candidates (id,time,project) VALUES (?,?,?)';
     $self->PrepareSubmitSql($sql, $id, $time, $proj);
     $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
@@ -1393,42 +1427,42 @@ sub AddItemToCandidates
       $self->PrepareSubmitSql($sql, $proj, $id);
     }
   }
-  if ($self->GetSystemVar('cri') && defined $self->CheckForCRI($id, $quiet))
-  {
-    $self->ReportMsg("Filter $id as CRI") unless $quiet;
-    $self->Filter($id, 'cross-record inheritance');
-  }
-  else
-  {
+  #if ($self->GetSystemVar('cri') && defined $self->CheckForCRI($id, $quiet))
+  #{
+  #  $self->ReportMsg("Filter $id as CRI") unless $quiet;
+  #  $self->Filter($id, 'cross-record inheritance');
+  #}
+  #else
+  #{
     $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
-  }
+  #}
   $self->UpdateMetadata($id, 1, $record);
 }
 
 # Returns the gid of the determination inheriting from, or undef if no inheritance.
-sub CheckForCRI
-{
-  my $self  = shift;
-  my $id    = shift;
-  my $quiet = shift;
-
-  my $cri = $self->get('criModule');
-  if (!defined $cri)
-  {
-    use CRI;
-    $cri = CRI->new('crms' => $self);
-    $self->set('criModule', $cri);
-  }
-  my $gid = $cri->CheckVolume($id);
-  if (defined $gid)
-  {
-    $self->ReportMsg("Adding CRI for $id ($gid)") unless $quiet;
-    my $sql = 'INSERT INTO cri (id,gid) VALUES (?,?)';
-    $self->PrepareSubmitSql($sql, $id, $gid);
-    return $gid;
-  }
-  return undef;
-}
+# sub CheckForCRI
+# {
+#   my $self  = shift;
+#   my $id    = shift;
+#   my $quiet = shift;
+# 
+#   my $cri = $self->get('criModule');
+#   if (!defined $cri)
+#   {
+#     use CRI;
+#     $cri = CRI->new('crms' => $self);
+#     $self->set('criModule', $cri);
+#   }
+#   my $gid = $cri->CheckVolume($id);
+#   if (defined $gid)
+#   {
+#     $self->ReportMsg("Adding CRI for $id ($gid)") unless $quiet;
+#     my $sql = 'INSERT INTO cri (id,gid) VALUES (?,?)';
+#     $self->PrepareSubmitSql($sql, $id, $gid);
+#     return $gid;
+#   }
+#   return undef;
+# }
 
 sub Filter
 {
@@ -1484,97 +1518,47 @@ sub IsVolumeInScope
   return undef;
 }
 
-sub CandidatesModule
-{
-  my $self = shift;
-
-  my $mod = $self->get('Candidates');
-  if (!defined $mod)
-  {
-    my $class = 'Candidates_' . $self->Sys();
-    require $class . '.pm';
-    $mod =  $class->new($self);
-    if (!defined $mod || $@)
-    {
-      $self->SetError("Could not load module $class\n");
-      return;
-    }
-    $self->set('Candidates', $mod);
-  }
-  return $mod;
-}
-
-# Returns an arrayref of error messages (reasons for unsuitability for CRMS) for a volume.
-# Used by candidates loading to ignore inappropriate items.
+# Returns hashref with project EvaluateCandidacy fields, plus optional
+# project id of the project that it qualified for, if any.
 # Used by Add to Queue page for filtering non-overrides.
-sub GetViolations
-{
-  my $self     = shift;
-  my $id       = shift;
-  my $record   = shift || $self->GetMetadata($id);
-
-  my @errs = ();
-  if (!$record)
-  {
-    push @errs, 'not found in HathiTrust';
-  }
-  else
-  {
-    @errs = $self->CandidatesModule()->GetViolations($id, $record);
-  }
-  my $ref = $self->RightsQuery($id, 1);
-  $ref = $ref->[0] if $ref;
-  if ($ref)
-  {
-    my ($attr,$reason,$src,$usr,$time,$note) = @{$ref};
-    unless ($self->CandidatesModule()->HasCorrectRights($attr, $reason))
-    {
-      push @errs, "current rights $attr/$reason";
-    }
-  }
-  else
-  {
-    push @errs, "rights query for $id failed";
-  }
-  return \@errs;
-}
-
-sub GetCutoffYear
-{
-  my $self = shift;
-  my $name = shift;
-
-  return $self->CandidatesModule()->GetCutoffYear(undef, $name);
-}
-
-# Returns a hash ref of Country name => 1 covered by the system.
-sub GetCountries
-{
-  my $self   = shift;
-
-  return $self->CandidatesModule()->Countries();
-}
-
-# Returns a und table src code if the volume belongs in the und table instead of candidates.
-sub ShouldVolumeBeFiltered
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-
-  $record = $self->GetMetadata($id) unless $record;
-  return 'no meta' unless defined $record;
-  return $self->CandidatesModule()->ShouldVolumeBeFiltered($id, $record);
-}
-
-# Returns a project name string or undef.
-sub GetCandidateProject
+# Iterate through projects and add to candidates if the status is 'yes'.
+# If one or more projects sees fit to filter, last source is used for filter.
+# The first project that says "yes" gets the volume.
+sub EvaluateCandidacy
 {
   my $self   = shift;
   my $id     = shift;
   my $record = shift || $self->GetMetadata($id);
+  my $proj   = shift; # For add to queue when specified by admin
 
-  return $self->CandidatesModule()->GetProject($id, $record);
+  my $rq = $self->RightsQuery($id, 1);
+  unless (defined $record && defined $rq)
+  {
+    $self->ClearErrors();
+    return {'status' => 'filter', 'msg' => 'no meta'};
+  }
+  my ($attr, $reason, $src, $usr, $time, $note) = @{$rq->[0]};
+  my $projects = $self->Projects();
+  # Pare down projects hash to one member if it is specified.
+  $projects = {$proj => $projects->{$proj}} if $proj;
+  my $filterEval;
+  my ($eval, $filterEval);
+  foreach my $pid (sort {$a <=> $b;} keys %{$projects})
+  {
+    my $obj = $projects->{$pid};
+    next unless $obj;
+    $eval = $obj->EvaluateCandidacy($id, $record, $attr, $reason);
+    if ($eval->{'status'} eq 'yes')
+    {
+      $eval->{'project'} = $pid;
+      return $eval;
+    }
+    elsif ($eval->{'status'} eq 'filter')
+    {
+      $filterEval = $eval unless defined $filterEval;
+    }
+  }
+  return (defined $filterEval)? $filterEval : $eval;
 }
 
 sub GetQueueSize
@@ -1584,38 +1568,21 @@ sub GetQueueSize
   return $self->SimpleSqlGet('SELECT COUNT(*) FROM queue');
 }
 
-sub UpdateQueueRecord
-{
-  my $self  = shift;
-  my $count = shift;
-  my $src   = shift;
-
-  my $sql = 'SELECT MAX(time) FROM queuerecord WHERE source=? AND time>=DATE_SUB(NOW(),INTERVAL 1 MINUTE)';
-  my $then = $self->SimpleSqlGet($sql, $src);
-  if ($then)
-  {
-    $sql = 'UPDATE queuerecord SET itemcount=itemcount+?,time=NOW() WHERE source=? AND time=? LIMIT 1';
-    $self->PrepareSubmitSql($sql, $count, $src, $then);
-  }
-  else
-  {
-    $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,?)';
-    $self->PrepareSubmitSql($sql, $count, $src);
-  }
-}
-
+# Calls LoadQueueForProject() for each project in candidates.
+# Does not bother to do anything for other projects.
+# Updates queuerecord with the delta.
 sub LoadQueue
 {
   my $self = shift;
 
   my $before = $self->GetQueueSize();
-  my $sql = 'SELECT DISTINCT project FROM candidates';
+  my $sql = 'SELECT DISTINCT project FROM candidates ORDER BY project ASC';
   $self->LoadQueueForProject($_->[0]) for @{$self->SelectAll($sql)};
   my $after = $self->SimpleSqlGet('SELECT COUNT(*) FROM queue');
   $self->UpdateQueueRecord($after - $before, 'candidates');
 }
 
-# Load candidates into queue for a given project (which may be NULL/undef).
+# Load candidates into queue for a given project ID.
 sub LoadQueueForProject
 {
   my $self    = shift;
@@ -1649,12 +1616,22 @@ sub LoadQueueForProject
       $self->Filter($id, 'no meta');
       next;
     }
-    my @errs = @{ $self->GetViolations($id, $record) };
-    if (scalar @errs)
+    my $eval = $self->EvaluateCandidacy($id, $record, $project);
+    if ($eval->{'status'} eq 'no' || $eval->{'status'} eq 'filter')
     {
-      $self->ReportMsg(sprintf("Will delete $id: %s", join '; ', @errs));
-      $dels{$id} = 1;
-      next;
+      my $src;
+      $src = $eval->{'msg'} if $eval->{'status'} eq 'filter';
+      if (defined $src)
+      {
+        $self->ReportMsg("Filtering $id as $src");
+        $self->Filter($id, $src);
+      }
+      else
+      {
+        $self->ReportMsg(sprintf("Will delete $id: %s", $eval->{'msg'}));
+        $dels{$id} = 1;
+        next;
+      }
     }
     # FIXME: this is the wrong place to do this.
     if (!$record->countEnumchron)
@@ -1675,7 +1652,30 @@ sub LoadQueueForProject
     }
     last if $count >= $needed;
   }
+  # FIXME: we should give the volumes a chance to be assigned to another project instead of deleting outright.
   $self->RemoveFromCandidates($_) for keys %dels;
+}
+
+sub UpdateQueueRecord
+{
+  my $self  = shift;
+  my $count = shift;
+  my $src   = shift;
+
+  my $sql = 'SELECT MAX(time) FROM queuerecord WHERE source=?'.
+            ' AND time>=DATE_SUB(NOW(),INTERVAL 1 MINUTE)';
+  my $then = $self->SimpleSqlGet($sql, $src);
+  if ($then)
+  {
+    $sql = 'UPDATE queuerecord SET itemcount=itemcount+?,time=NOW()'.
+           ' WHERE source=? AND time=? LIMIT 1';
+    $self->PrepareSubmitSql($sql, $count, $src, $then);
+  }
+  else
+  {
+    $sql = 'INSERT INTO queuerecord (itemcount,source) VALUES (?,?)';
+    $self->PrepareSubmitSql($sql, $count, $src);
+  }
 }
 
 sub IsRecordInQueue
@@ -1767,17 +1767,15 @@ sub AddItemToQueueOrSetItemActive
       $self->ClearErrors();
       return {'status' => 1, 'msg' => 'HathiTrust search failed'};
     }
-    @msgs = @{ $self->GetViolations($id, $record) };
+    my $eval = $self->EvaluateCandidacy($id, $record, $project);
+    push @msgs, $eval->{'msg'} if $eval->{'msg'};
     # If there are error messages and user is not overriding it is an error.
-    if (scalar @msgs && !$override)
+    if ($eval->{'status'} != 'yes' && !$override)
     {
       $stat = 1;
     }
     else
     {
-      # FIXME: should this also error out?
-      my $src2 = $self->ShouldVolumeBeFiltered($id, $record);
-      push @msgs, "should be filtered ($src2)" if defined $src2;
       my $sql = 'INSERT INTO queue (id,priority,source,'.
                 'project,added_by,ticket) VALUES (?,?,?,?,?,?)';
       $self->PrepareSubmitSql($sql, $id, $priority, $src,
@@ -1801,118 +1799,203 @@ sub CloneReview
   my $err = $self->LockItem($id, $user, 1);
   if (!$err)
   {
-    # SubmitReview unlocks it if it succeeds.
-    if ($self->HasItemBeenReviewedByUser($id, $user))
-    {
-      $err = "Could not approve review for $id because you already reviewed it.";
-      $self->UnlockItem($id, $user);
-    }
-    elsif ($self->HasItemBeenReviewedByAnotherExpert($id, $user))
-    {
-      $err = "Could not approve review for $id because it has already been reviewed by an expert.";
-    }
-    else
-    {
-      my $note = undef;
-      my $sql = 'SELECT attr,reason,renNum,renDate FROM reviews WHERE id=?';
-      my $rows = $self->SelectAll($sql, $id);
-      my $attr = $rows->[0]->[0];
-      my $reason = $rows->[0]->[1];
-      if ($attr == 2 && $reason == 7 &&
-          ($rows->[0]->[2] ne $rows->[1]->[2] ||
-           $rows->[0]->[3] ne $rows->[1]->[3]))
-      {
-        $note = sprintf 'Nonmatching renewals: %s (%s) vs %s (%s)',
-                        $rows->[0]->[2], $rows->[0]->[3], $rows->[1]->[2], $rows->[1]->[3];
-      }
-      # If reasons mismatch, reason is 'crms'.
-      $reason = 13 if $rows->[0]->[1] ne $rows->[1]->[1];
-      $err = $self->SubmitReview($id, $user, $attr, $reason, $note, undef,
-                                    1, undef, 'Expert Accepted');
-      $err = ($err == 0)? "Could not approve review for $id" : undef;
-    }
+    $err = "Could not approve review for $id because you already reviewed it.";
+    $self->UnlockItem($id, $user);
+  }
+  elsif ($self->HasItemBeenReviewedByAnotherExpert($id, $user))
+  {
+    $err = "Could not approve review for $id because it has already been reviewed by an expert.";
+  }
+  else
+  {
+    my $sql = 'SELECT attr,reason FROM reviews WHERE id=?';
+    my $rows = $self->SelectAll($sql, $id);
+    my $attr = $rows->[0]->[0];
+    my $reason = $rows->[0]->[1];
+    # If reasons mismatch, reason is 'crms'.
+    $reason = 13 if $rows->[0]->[1] ne $rows->[1]->[1];
+    my $params = {'attr' => $attr, 'reason' => $reason, 'note' => undef,
+                  'category' => 'Expert Accepted', 'status' => 7};
+    #$self->Note(Dumper $params);
+    return $self->SubmitReview($id, $user, $params);
   }
   $self->Note("CloneReview\t$id\t$user\t". ((defined $err)? $err : ''));
   return $err;
 }
 
-sub SubmitReview
+sub SubmitReviewCGI
 {
   my $self = shift;
-  my ($id, $user, $attr, $reason, $note, $renNum, $exp,
-      $renDate, $category, $swiss, $hold, $pre, $start) = @_;
+  my $id   = shift;
+  my $user = shift;
+  my $cgi  = shift;
 
-  if (!$self->CheckReviewer($user, $exp))
-  {
-    $self->SetError("reviewer ($user) check failed");
-    return 0;
-  }
-  # ValidateAttrReasonCombo sets error internally on fail.
-  if (!$self->ValidateAttrReasonCombo($attr, $reason)) { return 0; }
-  #remove any blanks from renNum
-  $renNum =~ s/\s+//gs;
-  # Javascript code inserts the string 'searching...' into the review text box.
-  # This in once case got submitted as the renDate in production
-  $renDate = '' if $renDate =~ m/searching.*/i;
-  $renDate =~ s/^\s+|\s+$//gs;
-  my @fields = qw(id user attr reason note renNum renDate category);
-  my @values = ($id, $user, $attr, $reason, $note, $renNum, $renDate, $category);
-  push(@fields, 'hold');
-  push(@values, ($hold)? 1:0);
-  my $dur = $self->SimpleSqlGet('SELECT TIMEDIFF(NOW(),?)', $start);
-  my $sql = 'SELECT duration FROM reviews WHERE user=? AND id=?';
-  my $dur2 = $self->SimpleSqlGet($sql, $user, $id);
-  if (defined $dur2)
-  {
-    $dur = $self->SimpleSqlGet('SELECT ADDTIME(?,?)', $dur, $dur2);
-  }
-  if (defined $dur)
-  {
-    push(@fields, 'duration');
-    push(@values, $dur);
-  }
-  if ($exp)
-  {
-    $swiss = ($swiss)? 1:0;
-    push(@fields, 'expert');
-    push(@values, 1);
-    push(@fields, 'swiss');
-    push(@values, $swiss);
-  }
-  if (defined $pre)
-  {
-    push(@fields, 'prepopulated');
-    push(@values, $pre);
-  }
-  my $wcs = $self->WildcardList(scalar @values);
-  $sql = 'REPLACE INTO reviews (' . join(',', @fields) . ') VALUES ' . $wcs;
-  my $result = $self->PrepareSubmitSql($sql, @values);
-  if ($result)
-  {
-    if ($exp ||
-        (defined $category &&
-         ($category eq 'Missing' || $category eq 'Wrong Record')))
-    {
-      my $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason, $category, $renNum, $renDate);
-      $self->RegisterStatus($id, $status);
-      # Clear all non-expert holds
-      $sql = 'UPDATE reviews SET hold=0,time=time WHERE id=?'.
-             ' AND user NOT IN (SELECT id FROM users WHERE expert=1)';
-      $self->PrepareSubmitSql($sql, $id);
-    }
-    $self->CheckPendingStatus($id);
-    $self->UnlockItem($id, $user);
-  }
-  return $result;
+  my $projid = $self->GetProject($id);
+  my $proj = $self->Projects()->{$projid};
+  my $err = $self->ValidateSubmission($id, $user, $cgi);
+  return $err if $err;
+  my $json = $proj->ExtractReviewData($cgi);
+  my %params = map {$_ => Encode::decode('UTF-8', $cgi->param($_));} $cgi->param;
+  # Log CGI inputs for replay in case of error.
+  my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
+  my $encdata = $jsonxs->encode(\%params);
+  $self->Note("SubmitReviewCGI\t$id\t$user\t$encdata");
+  $params{'data'} = $json if defined $json;
+  delete $params{'status'}; # Sanitize CGI input
+  delete $params{'expert'}; # Sanitize CGI input
+  $params{'data'} = $json if $json;
+  return $self->SubmitReview($id, $user, \%params, $proj);
 }
 
-# Returns a parenthesized comma separated list of n question marks.
-sub WildcardList
+sub CheckReviewer
 {
   my $self = shift;
-  my $n    = shift;
+  my $user = shift;
+  
+  return 1 if $user eq 'autocrms';
+  my $isReviewer = $self->IsUserReviewer($user);
+  my $isAdvanced = $self->IsUserAdvanced($user);
+  my $isExpert = $self->IsUserExpert($user);
+  return ($isReviewer || $isAdvanced || $isExpert);
+}
 
-  my $qs = '(' . ('?,' x ($n-1)) . '?)';
+sub ValidateSubmission
+{
+  my $self = shift;
+  my $id   = shift;
+  my $user = shift;
+  my $cgi  = shift;
+
+  ## Someone else has the item locked?
+  my $lock = $self->IsLockedForOtherUser($id, $user);
+  if ($lock)
+  {
+    my $note = sprintf "Collision for $user on %s: $id locked for $lock", $self->Hostname();
+    $self->Note($note);
+    return 'This item has been locked by another reviewer. Please cancel.';
+  }
+  if (!$self->IsVolumeInQueue($id))
+  {
+    return 'This volume is not in the queue. Please cancel.';
+  }
+  ## check user (should never happen)
+  if (!$self->CheckReviewer($user))
+  {
+    return "$user is not a reviewer. Please cancel.";
+  }
+  my $incarn = $self->HasItemBeenReviewedByAnotherIncarnation($id, $user);
+  if ($incarn)
+  {
+    return "Another expert must do this review because of a review by $incarn. Please cancel.";
+  }
+  my $err = $self->HasItemBeenReviewedByTwoReviewers($id, $user);
+  return $err if $err;
+  my $projid = $self->GetProject($id);
+  my $proj = $self->Projects()->{$projid};
+  return $proj->ValidateSubmission($cgi);
+}
+
+# Non-project-specific guts of review submission.
+# Passes CGI params to Project to construct JSON reviewdata entry.
+# Handles duration calculation and anything else that may require looking at
+# existing values in the database.
+# Returns an error message or undef.
+sub SubmitReview
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $user   = shift;
+  my $params = shift;
+  my $proj   = shift || $self->Projects()->{$self->GetProject($id)};
+
+  eval {
+  return 'CRMS::SubmitReview: no HTID' unless $id;
+  return 'CRMS::SubmitReview: no reviewer' unless $user;
+  return 'CRMS::SubmitReview: expert parameter no longer allowed' if defined $params->{'expert'};
+  };
+  $self->SetError("SubmitReview($id) failed: $@") if $@;
+  return $@ if $@;
+  my $status = $params->{'status'};
+  my %dbfields = ('attr' => 1, 'reason' => 1, 'note' => 1, 'category' => 1,
+                  'time' => 1, 'duration' => 1, 'swiss' => 1, 'hold' => 1, 'data' => 1);
+  my @fields = ('id', 'user');
+  my @values = ($id, $user);
+  my ($attr, $reason, $did);
+  if ($params->{'rights'})
+  {
+    ($attr, $reason) = $self->GetAttrReasonFromCode($params->{'rights'});
+    push @fields, ('attr', 'reason');
+    push @values, ($attr, $reason);
+  }
+  foreach my $field (keys %{$params})
+  {
+    my $value = $params->{$field};
+    if ($field eq 'hold')
+    {
+      $value = ($value)? 1:0;
+    }
+    if ($field eq 'start')
+    {
+      $value = $self->SimpleSqlGet('SELECT TIMEDIFF(NOW(),?)', $value);
+      my $note = "$id/$user time diff $value";
+      my $sql = 'SELECT duration FROM reviews WHERE id=? AND user=?';
+      my $dur2 = $self->SimpleSqlGet($sql, $id, $user);
+      if (defined $dur2)
+      {
+        $value = $self->SimpleSqlGet('SELECT ADDTIME(?,?)', $value, $dur2);
+        $note .= " with new time val $value from $dur2";
+        $self->Note($note);
+      }
+      $field = 'duration';
+    }
+    if ($field eq 'data')
+    {
+      my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
+      my $json = $jsonxs->encode($value);
+      if ($json)
+      {
+        $did = $self->SimpleSqlGet('SELECT id FROM reviewdata WHERE data=?', $json);
+        if (!$did)
+        {
+          $self->PrepareSubmitSql('INSERT INTO reviewdata (data) VALUES (?)', $json);
+          $did = $self->SimpleSqlGet('SELECT MAX(id) FROM reviewdata WHERE data=?', $json);
+        }
+        $value = $did;
+      }
+    }
+    if ($dbfields{$field} && $value)
+    {
+      push @fields, $field;
+      push @values, $value;
+    }
+  }
+  if ($self->IsUserExpert($user))
+  {
+    push @fields, 'expert';
+    push @values, 1;
+    if (!defined $status)
+    {
+      $status = $self->GetStatusForExpertReview($id, $user, $attr, $reason,
+                                                $params->{'category'}, $did);
+    }
+  }
+  #$self->Note(sprintf 'fields {%s} values {%s}', join(',', @fields), join(',', @values));
+  my $wcs = $self->WildcardList(scalar @values);
+  my $sql = 'REPLACE INTO reviews (' . join(',', @fields) . ') VALUES ' . $wcs;
+  #printf "$sql, %s <-- %s\n", join(',', @fields), join(',', @values);
+  my $result = $self->PrepareSubmitSql($sql, @values);
+  return join '; ', @{$self->GetErrors()} unless $result;
+  if (!defined $status || $status == 0)
+  {
+    $status = ($proj->single_review)? 5:0;
+  }
+  #$self->Note("Registering status $status");
+  $self->RegisterStatus($id, $status);
+  my $pstatus = $self->CalcPendingStatus($id);
+  $self->RegisterPendingStatus($id, $pstatus);
+  $self->UnlockItem($id, $user);
+  return join '; ', @{$self->GetErrors()} if scalar @{$self->GetErrors()};
+  return undef;
 }
 
 sub GetStatusForExpertReview
@@ -1923,33 +2006,32 @@ sub GetStatusForExpertReview
   my $attr     = shift;
   my $reason   = shift;
   my $category = shift;
-  my $renNum   = shift;
-  my $renDate  = shift;
+  my $did     = shift;
 
-  return 6 if $category eq 'Missing' or $category eq 'Wrong Record';
+  #return 6 if $category eq 'Missing' or $category eq 'Wrong Record';
   return 7 if $category eq 'Expert Accepted';
   return 9 if $category eq 'Rights Inherited';
   my $status = 5;
   # See if it's a provisional match and expert agreed with both of existing non-advanced reviews. If so, status 7.
-  my $sql = 'SELECT attr,reason,renNum,renDate FROM reviews WHERE id=?' .
-            ' AND user IN (SELECT id FROM users WHERE expert=0 AND advanced=0)';
-  my $ref = $self->SelectAll($sql, $id);
-  if (scalar @{ $ref } >= 2)
+  my $sql = 'SELECT status FROM queue WHERE id=?';
+  my $s = $self->SimpleSqlGet($sql, $id);
+  #printf "Status is %d\n", $s;
+  if ($s && $s == 3)
   {
-    my $attr1    = $ref->[0]->[0];
-    my $reason1  = $ref->[0]->[1];
-    my $renNum1  = $ref->[0]->[2];
-    my $renDate1 = $ref->[0]->[3];
-    my $attr2    = $ref->[1]->[0];
-    my $reason2  = $ref->[1]->[1];
-    my $renNum2  = $ref->[1]->[2];
-    my $renDate2 = $ref->[1]->[3];
-    if ($attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1)
+    $sql = 'SELECT attr,reason,data FROM reviews WHERE id=?';
+    my $ref = $self->SelectAll($sql, $id);
+    if (scalar @{$ref} >= 2)
     {
-      $status = 7;
-      if ($attr1 == 2 && $reason1 == 7)
+      my $attr1   = $ref->[0]->[0];
+      my $reason1 = $ref->[0]->[1];
+      my $data1   = $ref->[0]->[2];
+      my $attr2   = $ref->[1]->[0];
+      my $reason2 = $ref->[1]->[1];
+      my $data2   = $ref->[1]->[2];
+      if ($attr1 == $attr2 && $reason1 == $reason2 && $attr == $attr1 && $reason == $reason1 &&
+          $self->TolerantCompare($did, $data1) && $self->TolerantCompare($data1, $data2))
       {
-        $status = 5 if ($renNum ne $renNum1 || $renNum ne $renNum2 || $renDate ne $renDate1 || $renDate ne $renDate2);
+        $status = 7;
       }
     }
   }
@@ -1983,10 +2065,12 @@ sub MoveFromReviewsToHistoricalReviews
   my $id   = shift;
   my $gid  = shift;
 
-  my $sql = 'INSERT INTO historicalreviews (id,time,user,attr,reason,note,' .
-            'renNum,expert,duration,legacy,renDate,category,swiss,prepopulated,gid)' .
-            ' SELECT id,time,user,attr,reason,note,renNum,expert,duration,legacy,' .
-            'renDate,category,swiss,prepopulated,? FROM reviews WHERE id=?';
+  my $sql = 'INSERT INTO historicalreviews'.
+            ' (id,time,user,attr,reason,note,data,expert,duration,legacy,'.
+            '  category,swiss,gid)'.
+            ' SELECT'.
+            '  id,time,user,attr,reason,note,data,expert,duration,legacy,'.
+            '  category,swiss,? FROM reviews WHERE id=?';
   $self->PrepareSubmitSql($sql, $gid, $id);
   $sql = 'DELETE FROM reviews WHERE id=?';
   $self->PrepareSubmitSql($sql, $id);
@@ -2016,12 +2100,20 @@ sub GetFinalAttrReason
             ' WHERE r.id=? ORDER BY r.expert DESC, r.time DESC LIMIT 1';
   #print "$sql\n";
   my $ref = $self->SelectAll($sql, $id);
-  if (!$ref->[0]->[0])
-  {
-    $self->SetError("$id not found in review table");
-  }
+  #if (!$ref->[0]->[0])
+  #{
+  #  $self->SetError("$id not found in review table");
+  #}
   my $attr   = $ref->[0]->[0];
   my $reason = $ref->[0]->[1];
+  # If this is a project like frontmatter or corrections that does not generate
+  # attr/reason values, then use project_name/crms as a placeholder.
+  if (!defined $attr || !defined $reason)
+  {
+    my $proj = $self->Projects()->{$self->GetProject($id)};
+    $attr = lc $proj->name;
+    $reason = 'crms';
+  }
   return ($attr, $reason);
 }
 
@@ -2033,6 +2125,12 @@ sub RegisterStatus
 
   my $sql = 'UPDATE queue SET status=? WHERE id=?';
   $self->PrepareSubmitSql($sql, $status, $id);
+  if ($status > 0)
+  {
+    $sql = 'UPDATE reviews SET hold=0,time=time WHERE id=?'.
+           ' AND user NOT IN (SELECT id FROM users WHERE expert=1)';
+    $self->PrepareSubmitSql($sql, $id);
+  }
 }
 
 sub RegisterPendingStatus
@@ -2208,8 +2306,8 @@ sub CreateSQLForReviews
   $pagesize = 20 unless $pagesize > 0;
   my $user = $self->get('user');
   my $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,'.
-            'r.renNum,r.expert,r.category,r.legacy,r.renDate,q.priority,r.swiss,'.
-            'q.status,b.title,b.author,r.hold FROM reviews r'.
+            'r.data,r.expert,r.category,r.legacy,q.priority,r.swiss,'.
+            'q.status,q.project,b.title,b.author,r.hold FROM reviews r'.
             ' INNER JOIN queue q ON r.id=q.id'.
             ' INNER JOIN bibdata b ON r.id=b.id'.
             ' LEFT JOIN projects p ON q.project=p.id WHERE ';
@@ -2225,7 +2323,7 @@ sub CreateSQLForReviews
   {
     $sql .= 'r.hold=1';
   }
-  elsif ($page eq 'expert')
+  elsif ($page eq 'conflicts')
   {
     my $proj = $self->GetUserProperty($user, 'project');
     $sql .= 'q.status=2 AND q.project'. ((defined $proj)? "=$proj":' IS NULL');
@@ -2233,14 +2331,14 @@ sub CreateSQLForReviews
   elsif ($page eq 'adminHistoricalReviews')
   {
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,'.
-           'r.renNum,r.expert,r.category,r.legacy,r.renDate,q.priority,r.swiss,'.
-           'q.status,b.title,b.author,r.validated,q.src,q.gid'.
+           'r.data,r.expert,r.category,r.legacy,q.priority,r.swiss,'.
+           'q.status,q.project,b.title,b.author,r.validated,q.src,q.gid'.
            ' FROM historicalreviews r'.
            ' LEFT JOIN exportdata q ON r.gid=q.gid'.
            ' LEFT JOIN bibdata b ON r.id=b.id'.
            ' LEFT JOIN projects p ON q.project=p.id WHERE r.id IS NOT NULL';
   }
-  elsif ($page eq 'undReviews')
+  elsif ($page eq 'provisionals')
   {
     my $proj = $self->GetUserProperty($user, 'project');
     $sql .= 'q.status=3 AND q.project'. ((defined $proj)? "=$proj":' IS NULL');
@@ -2323,11 +2421,11 @@ sub CreateSQLForVolumes
   {
     $doQ = 'INNER JOIN queue q ON r.id=q.id';
   }
-  if ($page eq 'undReviews')
+  if ($page eq 'provisionals')
   {
     push @rest, 'q.status=3';
   }
-  elsif ($page eq 'expert')
+  elsif ($page eq 'conflicts')
   {
     push @rest, 'q.status=2';
   }
@@ -2339,7 +2437,7 @@ sub CreateSQLForVolumes
     push @rest, "r.time >= '$yesterday'";
     push @rest, 'q.status=0' unless $self->IsUserAtLeastExpert($user);
   }
-  if ($page eq 'expert' || $page eq 'undReviews')
+  if ($page eq 'conflicts' || $page eq 'provisionals')
   {
     my $proj = $self->GetUserProperty(undef, 'project') || 1;
     push @rest, "q.project=$proj";
@@ -2417,11 +2515,11 @@ sub CreateSQLForVolumesWide
   {
     $joins = 'queue q ON r.id=q.id LEFT JOIN bibdata b ON q.id=b.id';
   }
-  if ($page eq 'undReviews')
+  if ($page eq 'provisionals')
   {
     push @rest, 'q.status=3';
   }
-  elsif ($page eq 'expert')
+  elsif ($page eq 'conflicts')
   {
     push @rest, 'q.status=2';
   }
@@ -2433,7 +2531,7 @@ sub CreateSQLForVolumesWide
     push @rest, "r.time >= '$yesterday'";
     push @rest, 'q.status=0' unless $self->IsUserAdmin($user);
   }
-  if ($page eq 'expert' || $page eq 'undReviews')
+  if ($page eq 'conflicts' || $page eq 'provisionals')
   {
     my $proj = $self->GetUserProperty(undef, 'project') || 1;
     push @rest, "q.project=$proj";
@@ -2766,7 +2864,7 @@ sub DownloadReviews
     {
       $buff .= qq{id\ttitle\tauthor\tdate\tattr\treason\tcategory\tnote\thold};
     }
-    elsif ($page eq 'expert' || $page eq 'undReviews')
+    elsif ($page eq 'conflicts' || $page eq 'provisionals')
     {
       $buff .= qq{id\ttitle\tauthor\tdate\tstatus\tuser\tattr\treason\tcategory\tnote}
     }
@@ -2791,8 +2889,8 @@ sub DownloadReviews
       {
         my $id = $row->[0];
         my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
-        $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
-               'r.category,r.legacy,r.renDate,q.priority,r.swiss,q.status,b.title,b.author,'.
+        $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,r.data,r.expert,'.
+               'r.category,r.legacy,q.priority,r.swiss,q.status,q.project,b.title,b.author,'.
                (($page eq 'adminHistoricalReviews')?'r.validated':'r.hold ').
                " FROM $top INNER JOIN $table r ON b.id=r.id".
                " WHERE r.id='$id' $qrest ORDER BY $order $dir";
@@ -2834,14 +2932,14 @@ sub UnpackResults
     my $attr       = $self->TranslateAttr($row->[4]);
     my $reason     = $self->TranslateReason($row->[5]);
     my $note       = $row->[6];
-    my $renNum     = $row->[7];
+    my $data       = $row->[7];
     my $expert     = $row->[8];
     my $category   = $row->[9];
     my $legacy     = $row->[10];
-    my $renDate    = $row->[11];
-    my $priority   = $self->StripDecimal($row->[12]);
-    my $swiss      = $row->[13];
-    my $status     = $row->[14];
+    my $priority   = $self->StripDecimal($row->[11]);
+    my $swiss      = $row->[12];
+    my $status     = $row->[13];
+    my $project    = $row->[14];
     my $title      = $row->[15];
     my $author     = $row->[16];
     my $holdval    = $row->[17];
@@ -2853,7 +2951,7 @@ sub UnpackResults
     {
       $buff .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note\t$holdval};
     }
-    elsif ($page eq 'expert' || $page eq 'undReviews')
+    elsif ($page eq 'conflicts' || $page eq 'provisionals')
     {
       $buff .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note}
     }
@@ -2974,6 +3072,7 @@ sub GetReviewsRef
   foreach my $row (@{$ref})
   {
       my $id = $row->[0];
+      my $data = $self->FormatReviewData($row->[7], $row->[14]);
       my $item = {id         => $id,
                   date       => $row->[1],
                   duration   => $row->[2],
@@ -2981,14 +3080,14 @@ sub GetReviewsRef
                   attr       => $self->TranslateAttr($row->[4]),
                   reason     => $self->TranslateReason($row->[5]),
                   note       => $row->[6],
-                  renNum     => $row->[7],
+                  data       => $data,
                   expert     => $row->[8],
                   category   => $row->[9],
                   legacy     => $row->[10],
-                  renDate    => $row->[11],
-                  priority   => $self->StripDecimal($row->[12]),
-                  swiss      => $row->[13],
-                  status     => $row->[14],
+                  priority   => $self->StripDecimal($row->[11]),
+                  swiss      => $row->[12],
+                  status     => $row->[13],
+                  project    => $row->[14],
                   title      => $row->[15],
                   author     => $row->[16],
                   hold       => $row->[17]
@@ -2996,16 +3095,14 @@ sub GetReviewsRef
       if ($page eq 'adminHistoricalReviews')
       {
         my $pubdate = $self->SimpleSqlGet('SELECT YEAR(pub_date) FROM bibdata WHERE id=?', $id);
-        ${$item}{'pubdate'} = $pubdate || '';
+        ${$item}{'pubdate'} = $pubdate;
         ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
-        ${$item}{'validated'} = $row->[17];
-        ${$item}{'src'} = $row->[18];
-        ${$item}{'gid'} = $row->[19];
+        ${$item}{'validated'} = $row->[18];
+        ${$item}{'src'} = $row->[19];
+        ${$item}{'gid'} = $row->[20];
       }
-      $sql = 'SELECT p.name FROM projects p INNER JOIN '.
-             (($page eq 'adminHistoricalReviews')? 'exportdata':'queue').
-             ' q ON p.id=q.project WHERE q.id=?';
-      ${$item}{'project'} = $self->SimpleSqlGet($sql, $id);
+      $sql = 'SELECT name FROM projects WHERE id=?';
+      ${$item}{'project'} = $self->SimpleSqlGet($sql, $row->[14]);
       push(@{$return}, $item);
   }
   my $n = POSIX::ceil($offset/$pagesize+1);
@@ -3019,7 +3116,6 @@ sub GetReviewsRef
              };
   return $data;
 }
-
 
 sub GetVolumesRef
 {
@@ -3050,8 +3146,8 @@ sub GetVolumesRef
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
-           'r.category,r.legacy,r.renDate,q.priority,r.swiss,q.status,b.title,b.author'.
+    $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.data,r.expert,'.
+           'r.category,r.legacy,q.priority,q.project,r.swiss,q.status,b.title,b.author'.
            (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':'') .
            (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ',r.hold':'') .
            " FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ " .
@@ -3061,6 +3157,7 @@ sub GetVolumesRef
     my $ref2 = $self->SelectAll($sql);
     foreach my $row (@{$ref2})
     {
+      my $data = $self->FormatReviewData($row->[7], $row->[12]);
       my $item = {id         => $row->[0],
                   date       => $row->[1],
                   duration   => $row->[2],
@@ -3068,12 +3165,12 @@ sub GetVolumesRef
                   attr       => $self->TranslateAttr($row->[4]),
                   reason     => $self->TranslateReason($row->[5]),
                   note       => $row->[6],
-                  renNum     => $row->[7],
+                  data       => $data,
                   expert     => $row->[8],
                   category   => $row->[9],
                   legacy     => $row->[10],
-                  renDate    => $row->[11],
-                  priority   => $self->StripDecimal($row->[12]),
+                  priority   => $self->StripDecimal($row->[11]),
+                  project    => $row->[12],
                   swiss      => $row->[13],
                   status     => $row->[14],
                   title      => $row->[15],
@@ -3082,18 +3179,14 @@ sub GetVolumesRef
                  };
       if ($page eq 'adminHistoricalReviews')
       {
-        my $pubdate = $row->[17];
-        $pubdate = '?' unless $pubdate;
-        ${$item}{'pubdate'} = $pubdate;
-        ${$item}{'validated'} = $row->[18];
-        ${$item}{'sysid'} = $row->[19];
-        ${$item}{'src'} = $row->[20];
-        ${$item}{'gid'} = $row->[21];
+        ${$item}{'pubdate'} = $row->[18];
+        ${$item}{'validated'} = $row->[19];
+        ${$item}{'sysid'} = $row->[20];
+        ${$item}{'src'} = $row->[21];
+        ${$item}{'gid'} = $row->[22];
       }
-      $sql = 'SELECT p.name FROM projects p INNER JOIN '.
-             (($page eq 'adminHistoricalReviews')? 'exportdata':'queue').
-             ' q ON p.id=q.project WHERE q.id=?';
-      ${$item}{'project'} = $self->SimpleSqlGet($sql, $id);
+      $sql = 'SELECT name FROM projects WHERE id=?';
+      ${$item}{'project'} = $self->SimpleSqlGet($sql, $row->[12]);
       push(@{$return}, $item);
     }
   }
@@ -3132,8 +3225,8 @@ sub GetVolumesRefWide
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.renNum,r.expert,'.
-           'r.category,r.legacy,r.renDate,q.priority,r.swiss,q.status,b.title,b.author'.
+    $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.data,r.expert,'.
+           'r.category,r.legacy,q.priority,r.swiss,q.status,b.title,b.author'.
            (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':',r.hold').
            " FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id".
            " WHERE r.id='$id' ORDER BY $order $dir";
@@ -3142,6 +3235,7 @@ sub GetVolumesRefWide
     my $ref2 = $self->SelectAll($sql);
     foreach my $row (@{$ref2})
     {
+      my $data = $self->FormatReviewData($row->[7], $row->[12]);
       my $item = {id         => $row->[0],
                   date       => $row->[1],
                   duration   => $row->[2],
@@ -3149,12 +3243,12 @@ sub GetVolumesRefWide
                   attr       => $self->TranslateAttr($row->[4]),
                   reason     => $self->TranslateReason($row->[5]),
                   note       => $row->[6],
-                  renNum     => $row->[7],
+                  data       => $data,
                   expert     => $row->[8],
                   category   => $row->[9],
                   legacy     => $row->[10],
-                  renDate    => $row->[11],
-                  priority   => $self->StripDecimal($row->[12]),
+                  priority   => $self->StripDecimal($row->[11]),
+                  project    => $row->[12],
                   swiss      => $row->[13],
                   status     => $row->[14],
                   title      => $row->[15],
@@ -3163,18 +3257,14 @@ sub GetVolumesRefWide
                  };
       if ($page eq 'adminHistoricalReviews')
       {
-        my $pubdate = $row->[17];
-        $pubdate = '?' unless $pubdate;
-        ${$item}{'pubdate'} = $pubdate;
-        ${$item}{'validated'} = $row->[18];
-        ${$item}{'sysid'} = $row->[19];
-        ${$item}{'src'} = $row->[20];
-        ${$item}{'gid'} = $row->[21];
+        ${$item}{'pubdate'} = $row->[18];
+        ${$item}{'validated'} = $row->[19];
+        ${$item}{'sysid'} = $row->[20];
+        ${$item}{'src'} = $row->[21];
+        ${$item}{'gid'} = $row->[22];
       }
-      $sql = 'SELECT p.name FROM projects p INNER JOIN '.
-             (($page eq 'adminHistoricalReviews')? 'exportdata':'queue').
-             ' q ON p.id=q.project WHERE q.id=?';
-      ${$item}{'project'} = $self->SimpleSqlGet($sql, $id);
+      $sql = 'SELECT name FROM projects WHERE id=?';
+      ${$item}{'project'} = $self->SimpleSqlGet($sql, $row->[12]);
       push(@{$return}, $item);
     }
   }
@@ -3185,6 +3275,18 @@ sub GetVolumesRefWide
               'of' => $of
              };
   return $data;
+}
+
+sub FormatReviewData
+{
+  my $self = shift;
+  my $did  = shift;
+  my $proj = shift;
+
+  return unless defined $did;
+  my $data = $self->SimpleSqlGet('SELECT data FROM reviewdata WHERE id=?', $did);
+  return unless defined $data;
+  return $self->ProjectDispatch($proj, 'FormatReviewData', 0, $did, $data);
 }
 
 sub GetReviewCount
@@ -3574,7 +3676,7 @@ sub LinkToReview
 
   $title = $self->GetTitle($id) unless $title;
   $title = CGI::escapeHTML($title);
-  my $url = $self->Sysify($self->WebPath('cgi', "crms?p=review;barcode=$id;editing=1"));
+  my $url = $self->Sysify($self->WebPath('cgi', "crms?p=review;htid=$id;editing=1"));
   $url .= ";importUser=$user" if $user;
   $self->ClearErrors();
   return "<a href='$url' target='_blank'>$title</a>";
@@ -3605,17 +3707,6 @@ sub IsVolumeInQueue
 
   my $sql = 'SELECT COUNT(id) FROM queue WHERE id=?';
   return ($self->SimpleSqlGet($sql, $id) > 0);
-}
-
-sub ValidateAttrReasonCombo
-{
-  my $self = shift;
-  my $a    = shift;
-  my $r    = shift;
-
-  my $n = $self->SimpleSqlGet('SELECT COUNT(*) FROM rights WHERE attr=? AND reason=?', $a, $r);
-  $self->SetError("bad attr/reason: $a/$r") unless $n;
-  return $n;
 }
 
 sub GetAttrReasonFromCode
@@ -3739,20 +3830,6 @@ sub AddUser
       $self->PrepareSubmitSql($sql, $id, $proj);
     }
   }
-}
-
-sub CheckReviewer
-{
-  my $self = shift;
-  my $user = shift;
-  my $exp  = shift;
-
-  return 1 if $user eq 'autocrms';
-  my $isReviewer = $self->IsUserReviewer($user);
-  my $isAdvanced = $self->IsUserAdvanced($user);
-  my $isExpert = $self->IsUserExpert($user);
-  return $isExpert if $exp;
-  return ($isReviewer || $isAdvanced || $isExpert);
 }
 
 sub GetUserProperty
@@ -4638,8 +4715,11 @@ sub UpdateUserStats
   my $quiet = shift;
 
   # Get the underlying system status, ignoring replication delays.
-  my ($blah,$stat,$msg) = @{$self->GetSystemStatus(1)};
-  $self->SetSystemStatus($stat, 'CRMS is updating user stats, so they may not display correctly. This usually takes five minutes or so to complete.');
+  my $stat = $self->GetSystemStatus(1);
+  my $tmpstat = ['', (defined $stat)? $stat->[1] : 'normal',
+                 'CRMS is updating user stats, so they may not display correctly. '.
+                 'This usually takes five minutes or so to complete.'];
+  $self->SetSystemStatus($tmpstat);
   my $sql = 'DELETE from userstats';
   $self->PrepareSubmitSql($sql);
   my $users = $self->GetUsers();
@@ -4659,7 +4739,7 @@ sub UpdateUserStats
     }
   }
   $self->ReportMsg("Setting system status back to '$stat'") unless $quiet;
-  $self->SetSystemStatus($stat, $msg);
+  $self->SetSystemStatus($stat);
 }
 
 sub GetMonthStats
@@ -4702,6 +4782,7 @@ sub GetMonthStats
          ' FROM historicalreviews r INNER JOIN exportdata e ON r.gid=e.gid'.
          ' WHERE r.user=? AND r.legacy!=1 AND r.time>=? AND r.time<=?'.
          ' AND e.project=? AND TIME(r.duration)<=SEC_TO_TIME(?)';
+  
   my $total_time = $self->SimpleSqlGet($sql, $user, $start, $end, $proj, $outSec);
   # Total outliers
   $sql = 'SELECT COUNT(*) FROM historicalreviews r INNER JOIN exportdata e'.
@@ -4774,7 +4855,7 @@ sub HasItemBeenReviewedByTwoReviewers
   my $msg = '';
   if ($self->IsUserExpert($user))
   {
-    if ($self->HasItemBeenReviewedByAnotherExpert($id,$user))
+    if ($self->HasItemBeenReviewedByAnotherExpert($id, $user))
     {
       $msg = 'This volume does not need to be reviewed. An expert has already reviewed it. Please Cancel.';
     }
@@ -4794,43 +4875,6 @@ sub HasItemBeenReviewedByTwoReviewers
     if ($count >= 1) { $msg = 'This item has been processed already. Please Cancel.'; }
   }
   return $msg;
-}
-
-sub ValidateSubmission
-{
-  my ($self, $id, $user, $attr, $reason, $note,
-      $category, $renNum, $renDate) = @_;
-  my $errorMsg = '';
-  ## Someone else has the item locked?
-  my $lock = $self->IsLockedForOtherUser($id);
-  if ($lock)
-  {
-    $errorMsg = 'This item has been locked by another reviewer. Please Cancel. ';
-    my $note = sprintf "Collision for $user on %s: $id locked for $lock", $self->Hostname();
-    $self->Note($note);
-  }
-  if (!$self->IsVolumeInQueue($id))
-  {
-    $errorMsg .= 'This volume is not in the queue. Please cancel. ';
-  }
-  ## check user
-  if (!$self->IsUserReviewer($user) && !$self->IsUserAdvanced($user))
-  {
-    $errorMsg .= 'Not a reviewer. ';
-  }
-  if (!$attr || !$reason)
-  {
-    $errorMsg .= 'rights/reason designation required. ';
-  }
-  if (!$errorMsg)
-  {
-    my $module = 'Validator_' . $self->Sys() . '.pm';
-    require $module;
-    $errorMsg = Validator::ValidateSubmission(@_);
-  }
-  my $incarn = $self->HasItemBeenReviewedByAnotherIncarnation($id, $user);
-  $errorMsg .= "Another expert must do this review because of a review by $incarn. Please cancel. " if $incarn;
-  return $errorMsg;
 }
 
 sub GetTitle
@@ -5009,18 +5053,20 @@ sub ReviewData
   my $self  = shift;
   my $id    = shift;
 
+  require Languages;
+  my $record = $self->GetMetadata($id);
   my $data = {};
   my $dbh = $self->GetDb();
   my $sql = 'SELECT * FROM queue WHERE id=?';
   my $ref = $dbh->selectall_hashref($sql, 'id', undef, $id);
   $data->{'queue'} = $ref->{$id};
-  $data->{'queue'}->{'project_name'} = $self->GetProjectName($data->{'queue'}->{'project'});
   $data->{'queue'}->{'priority_format'} = $self->StripDecimal($data->{'queue'}->{'priority'});
   $sql = 'SELECT * FROM bibdata WHERE id=?';
   $ref = $dbh->selectall_hashref($sql, 'id', undef, $id);
   $data->{'bibdata'} = $ref->{$id};
   $data->{'bibdata'}->{$_. '_format'} = CGI::escapeHTML($data->{'bibdata'}->{$_}) for keys %{$data->{'bibdata'}};
-  $data->{'bibdata'}->{'pub_date_format'} = $self->FormatPubDate($id);
+  $data->{'bibdata'}->{'pub_date_format'} = $self->FormatPubDate($id, $record);
+  $data->{'bibdata'}->{'language'} = Languages::TranslateLanguage($record->language);
   $sql = 'SELECT * FROM reviews WHERE id=?';
   $ref = $dbh->selectall_hashref($sql, 'user', undef, $id);
   foreach my $user (keys %{$ref})
@@ -5029,13 +5075,12 @@ sub ReviewData
                                                              $ref->{$user}->{'reason'});
     $ref->{$user}->{'attr'} = $self->TranslateAttr($ref->{$user}->{'attr'});
     $ref->{$user}->{'reason'} = $self->TranslateReason($ref->{$user}->{'reason'});
-    # Taste of things to come...
-    # Can we INNER JOIN with reviewdata?
-    #$sql = 'SELECT data FROM reviewdata WHERE id=?';
-    #$ref->{$user}->{'data'} = $self->SimpleSqlGet($sql, $ref->{$user}->{'data'});
+    $sql = 'SELECT data FROM reviewdata WHERE id=?';
+    $ref->{$user}->{'data'} = $self->SimpleSqlGet($sql, $ref->{$user}->{'data'});
   }
   $data->{'reviews'} = $ref;
   $data->{'json'} = JSON::XS->new->encode($data);
+  $data->{'project'} = $self->Projects()->{$data->{'queue'}->{'project'}};
   return $data;
 }
 
@@ -5043,22 +5088,17 @@ sub HasLockedItem
 {
   my $self = shift;
   my $user = shift || $self->get('user');
-  my $page = shift || 'review';
 
-  my $table = ($page eq 'corrections')? 'corrections':'queue';
-  my $sql = 'SELECT COUNT(*) FROM ' . $table . ' WHERE locked=?';
-  $sql .= ' LIMIT 1';
-  return ($self->SimpleSqlGet($sql, $user))? 1:0;
+  my $sql = 'SELECT COUNT(*) FROM queue WHERE locked=?';
+  return $self->SimpleSqlGet($sql, $user);
 }
 
 sub GetLockedItem
 {
   my $self = shift;
   my $user = shift || $self->get('user');
-  my $page = shift || 'review';
 
-  my $table = ($page eq 'corrections')? 'corrections':'queue';
-  my $sql = 'SELECT id FROM ' . $table . ' WHERE locked=?';
+  my $sql = 'SELECT id FROM queue WHERE locked=?';
   $sql .= ' LIMIT 1';
   return $self->SimpleSqlGet($sql, $user);
 }
@@ -5067,10 +5107,8 @@ sub IsLocked
 {
   my $self = shift;
   my $id   = shift;
-  my $page = shift || 'review';
 
-  my $table = ($page eq 'corrections')? 'corrections':'queue';
-  my $sql = 'SELECT id FROM ' . $table . ' WHERE locked IS NOT NULL AND id=?';
+  my $sql = 'SELECT id FROM queue WHERE locked IS NOT NULL AND id=?';
   return ($self->SimpleSqlGet($sql, $id))? 1:0;
 }
 
@@ -5079,10 +5117,8 @@ sub IsLockedForUser
   my $self = shift;
   my $id   = shift;
   my $user = shift || $self->get('user');
-  my $page = shift || 'review';
 
-  my $table = ($page eq 'corrections')? 'corrections':'queue';
-  my $sql = 'SELECT COUNT(*) FROM ' . $table . ' WHERE id=? AND locked=?';
+  my $sql = 'SELECT COUNT(*) FROM queue WHERE id=? AND locked=?';
   return 1 == $self->SimpleSqlGet($sql, $id, $user);
 }
 
@@ -5091,20 +5127,17 @@ sub IsLockedForOtherUser
   my $self = shift;
   my $id   = shift;
   my $user = shift || $self->get('user');
-  my $page = shift || 'review';
 
-  my $table = ($page eq 'corrections')? 'corrections':'queue';
-  my $lock = $self->SimpleSqlGet('SELECT locked FROM ' . $table . ' WHERE id=?', $id);
-  return ($lock && $lock ne $user)? $lock:undef;
+  my $sql = 'SELECT COUNT(*) FROM queue WHERE id=?'.
+            ' AND locked IS NOT NULL AND locked!=?';
+  return $self->SimpleSqlGet($sql, $id, $user);
 }
 
 sub RemoveOldLocks
 {
   my $self = shift;
   my $time = shift;
-  my $page = shift || 'review';
 
-  my $table = ($page eq 'corrections')? 'corrections':'queue';
   # By default, GetPrevDate() returns the date/time 24 hours ago.
   $time = $self->GetPrevDate($time);
   my $lockedRef = $self->GetLockedItems();
@@ -5112,9 +5145,9 @@ sub RemoveOldLocks
   {
     my $id = $lockedRef->{$item}->{id};
     my $user = $lockedRef->{$item}->{locked};
-    my $sql = 'SELECT id FROM ' . $table . ' WHERE id=? AND time<?';
+    my $sql = 'SELECT id FROM queue WHERE id=? AND time<?';
     my $old = $self->SimpleSqlGet($sql, $id, $time);
-    $self->UnlockItem($id, $user, $page) if $old;
+    $self->UnlockItem($id, $user) if $old;
   }
 }
 
@@ -5132,36 +5165,33 @@ sub PreviouslyReviewed
   return ($found)? 1:0;
 }
 
-# Returns 0 on success, error message on error.
+# Returns undef on success, error message on error.
 sub LockItem
 {
   my $self     = shift;
   my $id       = shift;
   my $user     = shift || $self->get('user');
   my $override = shift;
-  my $page     = shift || 'review';
 
-  my $table = ($page eq 'corrections')? 'corrections':'queue';
   ## if already locked for this user, that's OK
-  return 0 if $self->IsLockedForUser($id, $user);
+  return if $self->IsLockedForUser($id, $user);
   # Not locked for user, maybe someone else
-  if ($self->IsLocked($id, $page))
+  if ($self->IsLocked($id))
   {
     return 'Volume has been locked by another user';
   }
   ## can only have 1 item locked at a time (unless override)
   if (!$override)
   {
-    my $locked = $self->GetLockedItem($user, $page);
+    my $locked = $self->GetLockedItem($user);
     if (defined $locked)
     {
-      return 0 if $locked eq $id;
+      return if $locked eq $id;
       return "You already have a locked item ($locked).";
     }
   }
-  my $sql = 'UPDATE ' . $table . ' SET locked=? WHERE id=?';
-  $self->PrepareSubmitSql($sql, $user, $id);
-  return 0;
+  my $sql = 'UPDATE queue SET locked=? WHERE id=?';
+  return ($self->PrepareSubmitSql($sql, $user, $id))? undef:'SQL error submitting lock';
 }
 
 sub UnlockItem
@@ -5169,43 +5199,26 @@ sub UnlockItem
   my $self = shift;
   my $id   = shift;
   my $user = shift || $self->get('user');
-  my $page = shift || 'review';
 
-  my $table = ($page eq 'corrections')? 'corrections':'queue';
-  my $sql = 'UPDATE ' . $table . ' SET locked=NULL WHERE id=? AND locked=?';
+  my $sql = 'UPDATE queue SET locked=NULL WHERE id=? AND locked=?';
   $self->PrepareSubmitSql($sql, $id, $user);
-}
-
-sub UnlockItemEvenIfNotLocked
-{
-  my $self = shift;
-  my $id   = shift;
-  my $user = shift || $self->get('user');
-
-  my $sql = 'UPDATE queue SET locked=NULL WHERE id=?';
-  if (!$self->PrepareSubmitSql($sql, $id)) { return 0; }
-  return 1;
 }
 
 sub UnlockAllItemsForUser
 {
   my $self = shift;
   my $user = shift || $self->get('user');
-  my $page = shift || 'review';
 
-  my $table = ($page eq 'corrections')? 'corrections':'queue';
-  $self->PrepareSubmitSql('UPDATE ' . $table . ' SET locked=NULL WHERE locked=?', $user);
+  $self->PrepareSubmitSql('UPDATE queue SET locked=NULL WHERE locked=?', $user);
 }
 
 sub GetLockedItems
 {
   my $self = shift;
   my $user = shift || $self->get('user');
-  my $page = shift || 'review';
 
-  my $table = ($page eq 'corrections')? 'corrections':'queue';
   my $restrict = ($user)? "='$user'":'IS NOT NULL';
-  my $sql = 'SELECT id, locked FROM ' . $table . ' WHERE locked ' . $restrict;
+  my $sql = 'SELECT id, locked FROM queue WHERE locked ' . $restrict;
   my $ref = $self->SelectAll($sql);
   my $return = {};
   foreach my $row (@{$ref})
@@ -5266,6 +5279,39 @@ sub CountExpertHistoricalReviews
 
   my $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE id=? AND expert>0';
   return $self->SimpleSqlGet($sql, $id);
+}
+
+sub ReviewPartialsForProject
+{
+  my $self = shift;
+  my $proj = shift;
+
+  return $self->ProjectDispatch($proj, 'ReviewPartials');
+}
+
+sub ProjectDispatch
+{
+  my $self    = shift;
+  my $proj    = shift;
+  my $sub     = shift;
+  my $default = shift;
+
+  $self->SetError('ProjectDispatch() needs explicit project') unless $proj;
+  $self->SetError('ProjectDispatch() should not take default') if $default;
+  my $mod = $self->Projects()->{$proj};
+  if (defined $mod && $mod->can($sub))
+  {
+    return $mod->$sub(@_);
+  }
+  elsif ($default)
+  {
+    return $self->$sub(@_);
+  }
+  else
+  {
+    $self->SetError("Unable to call sub $sub on module $mod");
+    return undef;
+  }
 }
 
 # Code commented out with #### are race condition mitigations
@@ -5394,12 +5440,6 @@ sub UpdateQueueNoMeta
       $self->ReportMsg("<b>$id</b>: still no meta, leaving unavailable");
     }
   }
-}
-
-sub GetNextCorrectionForReview
-{
-  require 'Corrections.pm';
-  return Corrections::GetNextCorrectionForReview(@_);
 }
 
 # Checks whether the attributes and reasons tables are up to date with the Rights DB.
@@ -6122,6 +6162,7 @@ sub CountHistoricalReviews
 # Reviews with note category Missing and Wrong Record are always correct if S6
 # (these never occur in new reviews because the names have been superseded).
 # Reviews for a determination of status 6, 7, or 8 are always correct.
+# Reviews with a subsequent Newyear project determination are always correct.
 # Otherwise, get the most recent subsequent expert review that is not
 # by autocrms or done as a Newyear review.
 #  If there is no such review, then return correct.
@@ -6177,11 +6218,8 @@ sub ValidateReview
   $user2->{'attr'}   = $row->[2];
   $user2->{'reason'} = $row->[3];
   $user2->{'swiss'}  = $row->[4];
-  my $module = 'Validator_' . $self->Sys() . '.pm';
-  require $module;
-  return 1 if Validator::DoRightsMatch($self,
-                                       $user1->{'attr'}, $user1->{'reason'},
-                                       $user2->{'attr'}, $user2->{'reason'});
+  return 1 if DoRightsMatch($self, $user1->{'attr'}, $user1->{'reason'},
+                            $user2->{'attr'}, $user2->{'reason'});
   return ($user2->{'swiss'} && !$user1->{'expert'})? 2:0;
 }
 
@@ -6612,9 +6650,9 @@ sub DownloadTracking
   my $q    = shift;
 
   my $data = $self->TrackingQuery($q);
-  my $buff = (join "\t", ('Volume', 'Enum/Chron', 'CRMS-US Status', 'CRMS-World Status',
-                          'U.S. Rights', 'Attribute', 'Reason', 'Source', 'User',
-                          'Time', 'Note', 'Access Profile')) . "\n";
+  my $buff = (join "\t", ('Volume', 'Enum/Chron', 'CRMS Status',
+                          'U.S. Rights', 'Attribute', 'Reason', 'Source',
+                          'User', 'Time', 'Note', 'Access Profile')) . "\n";
   foreach my $row (@{$data->{'data'}})
   {
     $buff .= (join "\t", @{$row}). "\n";
@@ -6633,15 +6671,14 @@ sub TrackingQuery
 
   my %rest;
   $rest{$_} = 1 for @{$q};
-  my $syss = $self->GetBothSystems();
-  my %data = ('crms' => $syss->[0], 'crmsworld' => $syss->[1]);
+  my $data = {};
   my @ids;
   my $rows;
   my $record = $self->GetMetadata($id);
   if (defined $record)
   {
-    $data{'title'} = $record->title;
-    $data{'sysid'} = $record->sysid;
+    $data->{'title'} = $record->title;
+    $data->{'sysid'} = $record->sysid;
     $rows = $self->VolumeIDsQuery($id, $record);
     foreach my $ref (sort
       {my $a1 = lc $a->{'chron'};
@@ -6656,8 +6693,7 @@ sub TrackingQuery
         @rightsInfo = @{$self->RightsQuery($id2, 1)->[0]};
       };
       my $data2 = [$id2, $ref->{'chron'},
-                   $syss->[0]->GetTrackingInfo($id2, 1, 1),
-                   $syss->[1]->GetTrackingInfo($id2, 1, 1),
+                   $self->GetTrackingInfo($id2, 1, 1),
                    $ref->{'rights'}, @rightsInfo];
       if ($rest{$id2})
       {
@@ -6669,8 +6705,8 @@ sub TrackingQuery
       }
     }
   }
-  $data{'data'} = \@ids;
-  return \%data;
+  $data->{'data'} = \@ids;
+  return $data;
 }
 
 # inherit, correction, and rights allow inclusion of information that is not
@@ -6779,61 +6815,59 @@ sub Pluralize
   return $word . (($n == 1)? '':'s');
 }
 
-# Returns a reference to an array with (time,status,message)
+# Returns undef for system normal, otherwise arrayref with [time, status, message]
+# if $nodelay, ignore replication delay.
 sub GetSystemStatus
 {
   my $self    = shift;
   my $nodelay = shift;
 
-  my @vals = ('forever','normal','');
-  my ($delay,$since) = $self->ReplicationDelay();
+  my ($delay, $since) = $self->ReplicationDelay();
   if (4 < $delay && !$nodelay)
   {
-    @vals = ($since,
-             'delayed',
-             'The CRMS is currently experiencing delays. "Review" and "Add to Queue" pages may not be available. ' .
-             'Please try again in a few minutes. ' .
-             'Locked volumes may need to have reviews re-submitted.');
-    return \@vals;
+    return [$since, 'delayed',
+            'The CRMS is currently experiencing delays. '.
+            '"Review" and "Add to Queue" pages may not be available. '.
+            'Please try again in a few minutes. '.
+            'Locked volumes may need to have reviews re-submitted.'];
   }
   my $sql = 'SELECT time,status,message FROM systemstatus LIMIT 1';
-  my $r = $self->SelectAll($sql);
-  my $row = $r->[0];
-  if ($row)
+  my $ref = $self->SelectAll($sql);
+  if (scalar @{$ref})
   {
-    $vals[0] = $self->FormatTime($row->[0]) if $row->[0];
-    $vals[1] = $row->[1] if $row->[1];
-    $vals[2] = $row->[2] if $row->[2];
-    if ($vals[2] eq '')
+    my $row = $ref->[0];
+    my $vals = ['forever', 'normal', ''];
+    $vals->[0] = $self->FormatTime($row->[0]) if $row->[0];
+    $vals->[1] = $row->[1] if $row->[1];
+    $vals->[2] = $row->[2] if $row->[2];
+    if ($vals->[2] eq '')
     {
-      if ($vals[1] eq 'down')
+      if ($vals->[1] eq 'down')
       {
-        $vals[2] = 'The CRMS is currently unavailable until further notice.';
+        $vals->[2] = 'The CRMS is currently unavailable until further notice.';
       }
-      elsif ($vals[1] eq 'partial')
+      elsif ($vals->[1] eq 'partial')
       {
-        $vals[2] = 'The CRMS has limited functionality. "Review" and "Add to Queue" (administrators only) pages are currently disabled until further notice.';
+        $vals->[2] = 'The CRMS has limited functionality. "Review" and "Add to Queue" (administrators only) pages are currently disabled until further notice.';
       }
     }
-    # FiXME: is this redundant?
-    if ($vals[2] ne '')
-    {
-      $vals[0] = $self->FormatTime($row->[0]) if $row->[0];
-    }
+    return $vals;
   }
-  return \@vals;
+  return undef;
 }
 
-# Sets the status name {normal/down/partial} and the banner message to display in CRMS header.tt.
+# Takes undef/arrayref like return value from GetSystemStatus.
 sub SetSystemStatus
 {
-  my $self   = shift;
-  my $status = shift;
-  my $msg    = shift;
+  my $self = shift;
+  my $stat = shift;
 
   $self->PrepareSubmitSql('DELETE FROM systemstatus');
-  my $sql = 'INSERT INTO systemstatus (status,message) VALUES (?,?)';
-  $self->PrepareSubmitSql($sql, $status, $msg);
+  if (defined $stat)
+  {
+    my $sql = 'INSERT INTO systemstatus (status,message) VALUES (?,?)';
+    $self->PrepareSubmitSql($sql, $stat->[1], $stat->[2]);
+  }
 }
 
 # Returns capitalized name of system
@@ -6880,7 +6914,8 @@ sub IsDevArea
 {
   my $self = shift;
 
-  return ($self->get('instance'))? 0:1;
+  my $inst = $self->get('instance');
+  return ($inst eq 'production' || $inst eq 'crms-training')? 0:1;
 }
 
 sub IsTrainingArea
@@ -7295,7 +7330,10 @@ sub SubmitInheritance
   # FIXME: can this note be generated on the fly in Historical Reviews?
   my $note = 'See all reviews for Sys #'. $self->BarcodeToId($id);
   my $swiss = ($self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id)>0)? 1:0;
-  $self->SubmitReview($id,'autocrms',$attr,$reason,$note,undef,1,undef,$category,$swiss);
+  my $params = {'attr' => $attr, 'reason' => $reason, 'expert' => 1,
+                'category' => 'Rights Inherited', 'swiss' => $swiss,
+                'status' => 9};
+  $self->SubmitReview($id, 'autocrms', $params);
   $self->PrepareSubmitSql('DELETE FROM inherit WHERE id=?', $id);
   return 0;
 }
@@ -7483,9 +7521,8 @@ sub DuplicateVolumesFromExport
       $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from und/crms\n";
     }
     elsif ($okattr{$oldrights} ||
-           ($oldrights eq 'pdus/gfv' && $attr =~ m/^pd/) ||
-           $oldrights eq 'ic/bib' || $oldrights eq 'und/bib' ||
-           ($self->Sys() eq 'crmsworld' && $oldrights =~ m/^pdus/))
+           ($oldrights =~ '^pdus' && $attr =~ m/^pd/) ||
+           $oldrights eq 'ic/bib' || $oldrights eq 'und/bib')
     {
       if (!$record->doEnumchronMatch($id, $id2))
       {
@@ -7651,6 +7688,7 @@ sub MenuItems
 
   $menu = $self->SimpleSqlGet('SELECT id FROM menus WHERE docs=1 LIMIT 1') if $menu eq 'docs';
   my $q = $self->GetUserQualifications($user);
+  my ($inst, $iname);
   my $sql = 'SELECT name,href,restricted,target FROM menuitems WHERE menu=? ORDER BY n ASC';
   my $ref = $self->SelectAll($sql, $menu);
   my @all = ();
@@ -7659,12 +7697,16 @@ sub MenuItems
     my $r = $row->[2];
     if ($self->DoQualificationsAndRestrictionsOverlap($q, $r))
     {
+      $inst = $self->GetUserProperty($user, 'institution') unless defined $inst;
+      $iname = $self->GetInstitutionName($inst, 1) unless defined $iname;
+      my $name = $row->[0];
+      $name =~ s/__INST__/$iname/;
       my $rel = '';
       if ($row->[3] && $row->[3] eq '_blank' && $row->[1] =~ m/^http/i)
       {
         $rel = 'rel="noopener"';
       }
-      push @all, [$row->[0], $self->MenuPath($row->[1]), $row->[3], $rel];
+      push @all, [$name, $self->MenuPath($row->[1]), $row->[3], $rel];
     }
   }
   return \@all;
@@ -7799,15 +7841,13 @@ sub Rights
 
 # Information sources for the various review pages.
 # Returns a ref to in-display-order list of dictionaries with the following keys:
-# name, url, accesskey, initial, id
+# name, url, initial in menu
 sub Authorities
 {
   my $self = shift;
   my $id   = shift;
   my $mag  = shift || '100';
   my $view = shift || 'image';
-  my $page = shift || 'review'; # Ignored in favor of projects
-  my $gid  = shift; # Only used by defunct CRI interface
 
   use URI::Escape;
   my $proj = $self->SimpleSqlGet('SELECT project FROM queue WHERE id=?', $id);
@@ -7827,7 +7867,7 @@ sub Authorities
     my $url = $row->[2];
     my $ak = $row->[3];
     $url =~ s/__HTID__/$id/g;
-    $url =~ s/__GID__/$gid/g;
+    #$url =~ s/__GID__/$gid/g;
     $url =~ s/__MAG__/$mag/g;
     $url =~ s/__VIEW__/$view/g;
     if ($url =~ m/crms\?/)
@@ -7886,6 +7926,11 @@ sub Authorities
       my $idp = $self->GetIDP($user);
       $url =~ s/__SHIB__/$idp/g;
     }
+    if ($url =~ m/__HATHITRUST__/)
+    {
+      my $host = $self->IsDevArea()? $ENV{'HTTP_HOST'} : 'babel.hathitrust.org';
+      $url =~ s/__HATHITRUST__/$host/;
+    }
     my $initial;
     $initial = 1 if $self->TolerantCompare($aid, $pa);
     $initial = 2 if $self->TolerantCompare($aid, $sa);
@@ -7915,8 +7960,8 @@ sub GetIDP
   };
   if ($@)
   {
-    my $msg = "SQL failed ($sql): " . $@;
-    $self->SetError($msg);
+    my $err = "SQL failed ($sql): " . $@;
+    $self->SetError($err);
   }
   return $idp;
 }
@@ -7928,8 +7973,6 @@ sub Sysify
   my $url  = shift;
 
   return $url if $url =~ m/^https/ or $url =~ m/\.pdf(#.*)?$/;
-  my $sys = $self->Sys();
-  $url = Utilities::AppendParam($url, 'sys', $sys) if $sys ne 'crms';
   my $pdb = $self->get('pdb');
   $url = Utilities::AppendParam($url, 'pdb', $pdb) if $pdb;
   my $tdb = $self->get('tdb');
@@ -7984,8 +8027,6 @@ sub HiddenSys
   my $self = shift;
 
   my $html = '';
-  my $sys = $self->Sys();
-  $html = "<input type='hidden' name='sys' value='$sys'/>" if $sys && $sys ne 'crms';
   my $pdb = $self->get('pdb');
   $html .= "<input type='hidden' name='pdb' value='$pdb'/>" if $pdb;
   my $tdb = $self->get('tdb');
@@ -7993,7 +8034,7 @@ sub HiddenSys
   return $html;
 }
 
-# Compares 2 strings or undefs
+# Compares 2 strings or undefs. Returns 1 or 0 for equality.
 sub TolerantCompare
 {
   my $self = shift;
@@ -8105,6 +8146,7 @@ sub PredictRights
   my $sql = 'SELECT r.id FROM rights r INNER JOIN attributes a ON r.attr=a.id'.
             ' INNER JOIN reasons rs ON r.reason=rs.id'.
             ' WHERE a.name=? AND rs.name=?';
+  $self->Note(join ',', ($sql, $attr, $reason));
   return $self->SimpleSqlGet($sql, $attr, $reason);
 }
 
@@ -8232,7 +8274,7 @@ sub Dollarize
   return undef;
 }
 
-# Return undollarized barcode if suffix is the right length,
+# Return undollarized htid if suffix is the right length,
 # or undef.
 sub Undollarize
 {
@@ -8282,34 +8324,6 @@ sub GetAddToQueueRef
   return \@result;
 }
 
-sub GetBothSystems
-{
-  my $self = shift;
-
-  my ($crmsUS, $crmsWorld);
-  if ($self->Sys() eq 'crmsworld')
-  {
-    $crmsUS = CRMS->new(
-      instance => $self->get('instance'),
-      sys      => 'crms',
-      cgi      => $self->get('cgi'),
-      tdb      => $self->get('tdb'),
-      pdb      => $self->get('pdb'));
-    $crmsWorld = $self;
-  }
-  else
-  {
-    $crmsUS = $self;
-    $crmsWorld = CRMS->new(
-      instance => $self->get('instance'),
-      sys      => 'crmsworld',
-      cgi      => $self->get('cgi'),
-      tdb      => $self->get('tdb'),
-      pdb      => $self->get('pdb'));
-  }
-  return [$crmsUS,$crmsWorld];
-}
-
 # The standard XHTML declarations up to an including <body>
 sub StartHTML
 {
@@ -8336,30 +8350,7 @@ sub SubjectLine
   my $self = shift;
   my $rest = shift || '<No Subject>';
 
-  return sprintf "%s %s: $rest", $self->System(), $self->WhereAmI();
-}
-
-sub GetClosedTickets
-{
-  my $self = shift;
-  my $ua   = shift;
-
-  my $sql = 'SELECT DISTINCT source FROM queue WHERE source LIKE "HTS%"';
-  my @txs;
-  my %stats2;
-  push @txs, $_->[0] for @{$self->SelectAll($sql)};
-  if (scalar @txs > 0)
-  {
-    use Jira;
-    $ua = Jira::Login($self) unless defined $ua;
-    my $stats = Jira::GetIssuesStatus($self, $ua, \@txs);
-    foreach my $tx (keys %{$stats})
-    {
-      my $stat = $stats->{$tx};
-      $stats2{$tx} = $stat if $stat eq 'Closed' or $stat eq 'Resolved' or $stat eq 'Status unknown';
-    }
-  }
-  return \%stats2;
+  return sprintf "CRMS %s: $rest", $self->WhereAmI();
 }
 
 sub Note
@@ -8376,7 +8367,7 @@ sub GetUserProjects
   my $user = shift || $self->get('user');
 
   my $sql = 'SELECT pu.project,p.name,'.
-            '(SELECT COUNT(*) FROM queue q WHERE q.project=pu.project)'.
+            '(SELECT COUNT(*) FROM queue q WHERE q.project=pu.project AND status=0)'.
             ' FROM projectusers pu INNER JOIN projects p ON pu.project=p.id WHERE pu.user=?'.
             ' ORDER BY p.name';
   #print "$sql\n";
@@ -8415,35 +8406,16 @@ sub SetUserCurrentProject
   $self->PrepareSubmitSql($sql, $proj, $user);
 }
 
-# Get the name for either a project or volume ID in the queue.
-sub GetProjectName
+# Get the fields for a single project id.
+# FIXME: this should return a project object rather than a struct.
+sub GetProjectRef
 {
   my $self = shift;
   my $id   = shift;
 
-  my $sql = 'SELECT name FROM projects WHERE id=?';
-  $sql = 'SELECT p.name FROM projects p INNER JOIN queue q ON q.project=p.id WHERE q.id=?' if $id !~ m/^\d+$/;
-  return $self->SimpleSqlGet($sql, $id);
-}
-
-# Get the color for either a project or volume ID in the queue.
-# If the project colors are not distinctive, returns undef.
-sub GetProjectColor
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $color = undef;
-  my $sql = 'SELECT COUNT(DISTINCT color) FROM projects WHERE color IS NOT NULL';
-  my $n = $self->SimpleSqlGet($sql);
-  if ($n > 1)
-  {
-    $sql = 'SELECT COALESCE(color,"000000") FROM projects WHERE id=?';
-    $sql = 'SELECT COALESCE(p.color,"000000") FROM projects p'.
-           ' INNER JOIN queue q ON q.project=p.id WHERE q.id=?' if $id !~ m/^\d+$/;
-    $color = $self->SimpleSqlGet($sql, $id);
-  }
-  return $color;
+  my $sql = 'SELECT * FROM projects WHERE id=?';
+  my $ref = $self->GetDb()->selectall_hashref($sql, 'id', undef, $id);
+  return $ref->{$id};
 }
 
 # Returns an arrayref of hashrefs with id, name, color, flags, userCount (active assignees),
@@ -8489,10 +8461,9 @@ sub AddProject
 {
   my $self     = shift;
   my $name     = shift;
-  my $restrict = shift;
 
-  my $sql = 'INSERT INTO projects (name,restricted) VALUES (?,?)';
-  $self->PrepareSubmitSql($sql, $name, $restrict);
+  my $sql = 'INSERT INTO projects (name) VALUES (?,?)';
+  $self->PrepareSubmitSql($sql, $name);
   return $self->SimpleSqlGet('SELECT id FROM projects WHERE name=?', $name);
 }
 
@@ -8559,6 +8530,49 @@ sub SetProjectUsers
   {
     $self->PrepareSubmitSql($sql, $user, $proj);
   }
+}
+
+# Returns a hashref of project id to project object.
+sub Projects
+{
+  my $self = shift;
+
+  my $objs = $self->get('Projects');
+  if (!$objs)
+  {
+    my $sql = 'SELECT id,name,color,single_review FROM projects ORDER BY id ASC';
+    my $ref = $self->SelectAll($sql);
+    foreach my $row (@{$ref})
+    {
+      my $obj;
+      my $id = $row->[0];
+      my $class = $row->[1] || 'Core';
+      $class =~ s/\s//g;
+      my $file = 'Project/'. $class. '.pm';
+      eval {
+          require $file;
+          $obj = $class->new('crms' => $self, 'id' => $id, 'name' => $row->[1],
+                             'color' => $row->[2], 'single_review' => $row->[3]);
+      };
+      if ($@)
+      {
+        if (-f $file)
+        {
+          $self->SetError("Could not load module file $file '$class': $@");
+        }
+        else
+        {
+          $class = 'Project';
+          require 'Project.pm';
+          $obj = $class->new('crms' => $self, 'id' => $id, 'name' => $row->[1],
+                             'color' => $row->[2], 'single_review' => $row->[3]);
+        }
+      }
+      $objs->{$id} = $obj;
+    }
+    $self->set('Projects', $objs);
+  }
+  return $objs;
 }
 
 sub GetStanfordData
@@ -8667,6 +8681,14 @@ sub JSONifyIDs
   push @ret, $_->{'id'} for @{$data};
   @ret = sort @ret;
   return JSON::XS->new->encode(\@ret);
+}
+
+sub Dump
+{
+  my $self = shift;
+  my $data = shift;
+
+  return Dumper $data;
 }
 
 1;

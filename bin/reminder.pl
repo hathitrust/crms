@@ -22,7 +22,6 @@ Sends weekly inactivity reports.
 -q       Do not send any emails at all.
 -t       Run in training.
 -v       Be verbose.
--x SYS   Set SYS as the system to execute.
 END
 
 my $help;
@@ -30,7 +29,6 @@ my $instance;
 my $nomail;
 my $production;
 my $quiet;
-my $sys;
 my $training;
 my $verbose = 0;
 
@@ -39,20 +37,17 @@ die 'Terminating' unless GetOptions('h|?' => \$help,
            'p'    => \$production,
            'q'    => \$quiet,
            't'    => \$training,
-           'v+'   => \$verbose,
-           'x:s'  => \$sys);
+           'v+'   => \$verbose);
 $instance = 'production' if $production;
 $instance = 'crms-training' if $training;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    sys      => $sys,
     verbose  => $verbose,
     instance => $instance
 );
 
-my $system = $crms->System();
 my @recips;
 my $msg = <<'END';
 Automated Reminder: CRMS Review Time - 7 Days out of the system

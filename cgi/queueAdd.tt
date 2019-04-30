@@ -244,7 +244,7 @@ function CheckAllTx(box,id)
     <td>[% crms.CurrentRightsQuery(r.id).replace('\s','&nbsp;') %]</td>
     <td>
       [% IF r.added_by == user %]
-        <a href="[% crms.Sysify('crms?p=review;editing=1;barcode=' _  r.id) %]" target="_blank">Review</a>
+        <a href="[% crms.Sysify('crms?p=review;editing=1;htid=' _  r.id) %]" target="_blank">Review</a>
       [% END %]
     </td>
     <td style="text-align:center"><input type="checkbox" name="vol_[% r.id %]"

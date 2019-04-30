@@ -9,24 +9,26 @@ use Encode;
 use POSIX;
 use Template;
 use URI::Escape;
+use Data::Dumper;
 
-my $cgi  = new CGI;
-my $sys =  $cgi->param('sys');
-$sys = 'crms' unless $sys;
+my $cgi = new CGI;
 my $page = $cgi->param('p');
+# FIXME: should the debugs be extracted w/ CRMS.pm like tdb/pdb?
 my $debugAuth = $cgi->param('debugAuth');
 my $debugSql = $cgi->param('debugSql');
 my $debugVar = $cgi->param('debugVar');
+my $debug = $cgi->param('debug');
 my $crms = CRMS->new(
         cgi       => $cgi,
-        sys       => $sys,
         verbose   => 0,
         debugAuth => $debugAuth,
         debugSql  => $debugSql,
         debugVar  => $debugVar
         );
 my $redirect;
-my $target = uri_escape_utf8('https://'. $ENV{'HTTP_HOST'}. $ENV{'REQUEST_URI'});
+my $uri = $ENV{'REQUEST_URI'};
+$uri =~ s/&/;/g;
+my $target = uri_escape_utf8('https://'. $ENV{'HTTP_HOST'}. $uri);
 if (!$crms->get('remote_user'))
 {
   $redirect = 'https://'. $ENV{'HTTP_HOST'}. "/cgi/wayf?target=$target";
@@ -34,12 +36,6 @@ if (!$crms->get('remote_user'))
 if ($crms->get('stepup') && $crms->get('stepup_redirect'))
 {
   $redirect = $crms->get('stepup_redirect');
-}
-my $cri;
-if ($page eq 'cri' || $page eq 'criData' || $page eq 'confirmCRI')
-{
-  use CRI;
-  $cri = CRI->new('crms' => $crms);
 }
 if ($page eq 'Logout')
 {
@@ -73,10 +69,11 @@ elsif ($cgi->param('changeuser') == 1)
 }
 my $user = $crms->get('user');
 
-if ($page eq 'confirmReview')
+### Review submission: all projects go through here.
+if ($page eq 'finishReview')
 {
   my $editing = $cgi->param('editing');
-  my $id = $cgi->param('barcode');
+  my $id = $cgi->param('htid');
   my $err;
   my $action = $cgi->param('submit');
   if ($action eq 'Cancel' || !$action)
@@ -86,41 +83,13 @@ if ($page eq 'confirmReview')
   }
   else
   {
-    my $rights    = $cgi->param('rights');
-    my $note      = Encode::decode("UTF-8", $cgi->param('note'));
-    my $category  = $cgi->param('category');
-    my $renNum    = $cgi->param('renNum');
-    my $renDate   = $cgi->param('renDate');
-    my $hold      = $cgi->param('hold');
-    my $swiss     = $cgi->param('swiss');
-    my $pre       = $cgi->param('prepopulated');
-    my $start     = $cgi->param('start');
-    my ($attr, $reason);
-    $err = 'You must select a rights/reason combination.' unless $rights;
+    my $stat = $crms->GetSystemStatus();
+    my $status = $stat->[1];
+    $err = "CRMS is not currently accepting reviews (status '$status'). Please Cancel." if defined $status;
     if (!$err)
     {
-      ($attr, $reason) = $crms->GetAttrReasonFromCode($rights);
-      $err = $crms->HasItemBeenReviewedByTwoReviewers($id, $user);
-      $err = $crms->ValidateSubmission($id, $user, $attr, $reason, $note, $category,
-                                       $renNum, $renDate) unless $err;
-      my $stat = $crms->GetSystemStatus();
-      # Actually, this never gets displayed, but that's OK
-      my $status = $stat->[1];
-      $err = "The CRMS is not currently accepting reviews (status '$status'). Please Cancel." if $stat->[1] ne 'normal';
+      $err = $crms->SubmitReviewCGI($id, $user, $cgi);
     }
-    if (!$err)
-    {
-      #Process the submission, and go on to the next item
-      $crms->SubmitReview($id, $user, $attr, $reason, $note, $renNum, $crms->IsUserExpert($user),
-                          $renDate, $category, $swiss, $hold, $pre, $start);
-      my $ref = $crms->GetErrors();
-      $err = $ref->[0] if $ref && $ref->[0];
-    }
-    # Log CGI inputs for replay in case of error.
-    my %params = map {$_ => Encode::decode('UTF-8', $cgi->param($_));} $cgi->param;
-    my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
-    my $encdata = $jsonxs->encode(\%params);
-    $crms->Note("SubmitReview\t$id\t$user\t$encdata\t". ($err || ''));
     if ($err)
     {
       $crms->ClearErrors();
@@ -129,13 +98,8 @@ if ($page eq 'confirmReview')
     }
     else
     {
-      # Unused parameter to support submitting last review before leaving the system.
-      my $home = $cgi->param('subHome');
       $cgi->delete_all();
-      if (!$home)
-      {
-        $cgi->param('p', 'review');
-      }
+      $cgi->param('p', 'review');
     }
   }
   if ($editing && !$err)
@@ -145,100 +109,10 @@ if ($page eq 'confirmReview')
     exit(0);
   }
 }
-elsif ($page eq 'confirmCorrection')
-{
-  my $editing = $cgi->param('editing');
-  my $id = $cgi->param('barcode');
-  my $err;
-  if ($cgi->param('submit') eq 'Cancel')
-  {
-    $crms->UnlockItem($id, $user, $page);
-    $cgi->delete_all();
-  }
-  else
-  {
-    my $stat = $crms->GetSystemStatus();
-    my $status = $stat->[1];
-    $err = "The CRMS is not currently accepting corrections (status '$status'). Please Cancel." if $stat->[1] ne 'normal';
-    if (!defined $err)
-    {
-      use Corrections;
-      $err = Corrections::ConfirmCorrection($crms, $id, $user, $cgi);
-    }
-    if ($err)
-    {
-      $cgi->param('errorMsg', $err);
-      $crms->ClearErrors();
-    }
-    else
-    {
-      $cgi->delete_all();
-      $cgi->param('p', 'corrections');
-    }
-  }
-  if ($editing && !$err)
-  {
-    print "Content-type: text/html\n\n";
-    print '<script type="text/javascript">window.close();</script>';
-    exit(0);
-  }
-}
-elsif ($page eq 'confirmCRI')
-{
-  my $editing = $cgi->param('editing');
-  my $id = $cgi->param('htid');
-  my $err;
-  if ($cgi->param('submit') eq 'Cancel')
-  {
-    $cri->UnlockItem($id, $user);
-    $cgi->delete_all();
-  }
-  else
-  {
-    my $stat = $crms->GetSystemStatus();
-    my $status = $stat->[1];
-    $err = "The CRMS is not currently accepting CRI (status '$status'). Please Cancel." if $stat->[1] ne 'normal';
-    if (!defined $err)
-    {
-      if ($cgi->param('submit') eq 'Submit')
-      {
-        $err = $cri->ConfirmCRI($id, $user, $cgi);
-      }
-      elsif ($cgi->param('submit') eq 'Reject')
-      {
-        $err = $cri->RejectCRI($id, $user, $cgi);
-      }
-    }
-    if ($err)
-    {
-      $cgi->param('errorMsg', $err);
-      $crms->ClearErrors();
-      $cgi->param('p', 'cri');
-    }
-    else
-    {
-      $cri->UnlockItem($id, $user);
-      $cgi->delete_all();
-      $cgi->param('p', 'cri');
-    }
-  }
-  if ($editing && !$err)
-  {
-    print "Content-type: text/html\n\n";
-    print '<script type="text/javascript">window.close();</script>';
-    exit(0);
-  }
-}
-
-$cgi->param('sys', $sys) if $sys and $sys ne 'crms';
 
 if ($redirect && !$debugAuth)
 {
-  if ($crms->GetSystemVar('authDebug'))
-  {
-    $crms->Note("Redirecting to $redirect");
-    $crms->Note($crms->AuthDebugData());
-  }
+  #$crms->Note($redirect);
   print $cgi->redirect($redirect);
   exit(0);
 }
@@ -281,6 +155,7 @@ if (length $page)
     $cgi->param('dbc_page', $dbc->{'page'});
   }
 }
+
 my $input = $page . '.tt';
 $input = 'home.tt' unless -f $input;
 
@@ -296,13 +171,14 @@ my $config =
 
 my $tt   = Template->new($config);
 my $vars = {
-    title     => $crms->System(),
+    title     => 'CRMS',
     crms      => $crms,
     cgi       => $cgi,
     user      => $user,
+    project   => $crms->GetUserCurrentProject(),
+    env       => $ENV,
     yesterday => POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time-86400))
 };
-$vars->{'cri'} = $cri if defined $cri;
 
 print $cgi->header(-charset => 'utf-8', 'cache-control' => 'private');
 if (!$tt->process($input, $vars))
@@ -311,7 +187,7 @@ if (!$tt->process($input, $vars))
   die $tt->error();
 }
 print $crms->Debug();
-if ($cgi->param('debugAuth'))
+if ($debugAuth)
 {
   my $db = $crms->AuthDebugData(1);
   print <<END;
@@ -322,7 +198,7 @@ if ($cgi->param('debugAuth'))
 END
 }
 
-if ($cgi->param('debug'))
+if ($debug)
 {
   print "<h3>Debug Information</h3>";
   eval {

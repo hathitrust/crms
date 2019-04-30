@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 BEGIN 
-{ 
+{
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
@@ -16,7 +16,6 @@ my $help       = $opts{'h'};
 my $instance;
 my $production = $opts{'p'};
 my $verbose    = $opts{'v'};
-my $sys        = $opts{'x'};
 
 if ($help || !$ok)
 {
@@ -24,7 +23,6 @@ if ($help || !$ok)
 }
 $instance = 'production' if $production;
 my $crms = CRMS->new(
-    sys      => $sys,
     verbose  => $verbose,
     instance => $instance
 );

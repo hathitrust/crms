@@ -10,12 +10,56 @@ sub new
   return bless $self, $class;
 }
 
-sub Countries
+# Returns undef for failure, or hashref with two fields:
+# status in {'yes', 'no', 'filter'}
+# msg potentially empty explanation.
+sub EvaluateCandidacy
 {
-  my $self = shift;
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
+  my $attr   = shift;
+  my $reason = shift;
 
-  return {'USA'=>1};
+  my @errs;
+  # Check current rights
+  push @errs, "current rights $attr/$reason" if $attr ne 'ic' or $reason ne 'bib';
+  # Check well-defined record dates
+  my $pub = $record->copyrightDate;
+  if (!defined $pub || $pub !~ m/\d\d\d\d/)
+  {
+    my $leader = $record->GetControlfield('008');
+    my $type = substr($leader, 6, 1);
+    my $date1 = substr($leader, 7, 4);
+    my $date2 = substr($leader, 11, 4);
+    push @errs, "pub date not completely specified ($date1,$date2,'$type')";
+  }
+  # Check year range
+  my $now = $self->{crms}->GetTheYear();
+  my $min = $now - 95 + 1;
+  my $max = 1963;
+  push @errs, "pub date $pub" if $pub < $min or $pub > $max;
+  push @errs, 'gov doc' if $self->IsGovDoc($record);
+  my $where = $record->country;
+  push @errs, "foreign pub ($where)" if $where ne 'USA';
+  push @errs, 'non-BK format' unless $record->isFormatBK($id, $record);
+  if (scalar @errs)
+  {
+    return {'status' => 'no', 'msg' => join '; ', @errs};
+  }
+  my $src;
+  $src = 'gov' if $self->IsProbableGovDoc($record);
+  my %langs = ('   ' => 1, '|||' => 1, 'emg' => 1,
+               'eng' => 1, 'enm' => 1, 'mul' => 1,
+               'new' => 1, 'und' => 1);
+  $src = 'language' if !$langs{$record->language};
+  $src = 'dissertation' if $record->isThesis;
+  $src = 'translation' if $record->isTranslation;
+  #$src = 'foreign' if $self->IsReallyForeignPub($record);
+  return {'status' => 'filter', 'msg' => $src} if defined $src;
+  return {'status' => 'yes', 'msg' => ''};
 }
+
 
 # If new_attr and new_reason are supplied, they are the final determination
 # and this checks whether that determination should be exported (is the

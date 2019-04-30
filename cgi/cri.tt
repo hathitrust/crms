@@ -43,7 +43,7 @@
 [% title     = crms.GetTitle(htid)      %]
 [% dateRange = crms.IsDateRange(htid)   %]
 
-[% homeLink = "crms?p=confirmReview;submit=Cancel;barcode=$htid;sys=$sys" %]
+[% homeLink = "crms?p=finishReview;submit=Cancel;htid=$htid;sys=$sys" %]
 
 <div class="divbody">
   <div class="divNav">
