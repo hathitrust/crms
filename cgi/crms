@@ -85,7 +85,10 @@ if ($page eq 'finishReview')
   {
     my $stat = $crms->GetSystemStatus();
     my $status = $stat->[1];
-    $err = "CRMS is not currently accepting reviews (status '$status'). Please Cancel." if defined $status;
+    if ($status ne 'normal')
+    {
+      $err = "CRMS is not currently accepting reviews (status '$status'). Please Cancel.";
+    }
     if (!$err)
     {
       $err = $crms->SubmitReviewCGI($id, $user, $cgi);

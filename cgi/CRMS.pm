@@ -323,7 +323,7 @@ sub set
 
 sub Version
 {
-  return '8.0';
+  return '8.0.1';
 }
 
 # This is the NOT SO human-readable version used in sys=blah URL param
@@ -3097,9 +3097,9 @@ sub GetReviewsRef
         my $pubdate = $self->SimpleSqlGet('SELECT YEAR(pub_date) FROM bibdata WHERE id=?', $id);
         ${$item}{'pubdate'} = $pubdate;
         ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
-        ${$item}{'validated'} = $row->[18];
-        ${$item}{'src'} = $row->[19];
-        ${$item}{'gid'} = $row->[20];
+        ${$item}{'validated'} = $row->[17];
+        ${$item}{'src'} = $row->[18];
+        ${$item}{'gid'} = $row->[19];
       }
       $sql = 'SELECT name FROM projects WHERE id=?';
       ${$item}{'project'} = $self->SimpleSqlGet($sql, $row->[14]);
@@ -3179,11 +3179,11 @@ sub GetVolumesRef
                  };
       if ($page eq 'adminHistoricalReviews')
       {
-        ${$item}{'pubdate'} = $row->[18];
-        ${$item}{'validated'} = $row->[19];
-        ${$item}{'sysid'} = $row->[20];
-        ${$item}{'src'} = $row->[21];
-        ${$item}{'gid'} = $row->[22];
+        ${$item}{'pubdate'} = $row->[17];
+        ${$item}{'validated'} = $row->[18];
+        ${$item}{'sysid'} = $row->[19];
+        ${$item}{'src'} = $row->[20];
+        ${$item}{'gid'} = $row->[21];
       }
       $sql = 'SELECT name FROM projects WHERE id=?';
       ${$item}{'project'} = $self->SimpleSqlGet($sql, $row->[12]);
@@ -3226,7 +3226,7 @@ sub GetVolumesRefWide
   {
     my $id = $row->[0];
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.data,r.expert,'.
-           'r.category,r.legacy,q.priority,r.swiss,q.status,b.title,b.author'.
+           'r.category,r.legacy,q.priority,q.project,r.swiss,q.status,b.title,b.author'.
            (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':',r.hold').
            " FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id".
            " WHERE r.id='$id' ORDER BY $order $dir";
@@ -3257,11 +3257,11 @@ sub GetVolumesRefWide
                  };
       if ($page eq 'adminHistoricalReviews')
       {
-        ${$item}{'pubdate'} = $row->[18];
-        ${$item}{'validated'} = $row->[19];
-        ${$item}{'sysid'} = $row->[20];
-        ${$item}{'src'} = $row->[21];
-        ${$item}{'gid'} = $row->[22];
+        ${$item}{'pubdate'} = $row->[17];
+        ${$item}{'validated'} = $row->[18];
+        ${$item}{'sysid'} = $row->[19];
+        ${$item}{'src'} = $row->[20];
+        ${$item}{'gid'} = $row->[21];
       }
       $sql = 'SELECT name FROM projects WHERE id=?';
       ${$item}{'project'} = $self->SimpleSqlGet($sql, $row->[12]);
@@ -6815,7 +6815,7 @@ sub Pluralize
   return $word . (($n == 1)? '':'s');
 }
 
-# Returns undef for system normal, otherwise arrayref with [time, status, message]
+# Returns arrayref with [time, status, message]
 # if $nodelay, ignore replication delay.
 sub GetSystemStatus
 {
@@ -6831,16 +6831,15 @@ sub GetSystemStatus
             'Please try again in a few minutes. '.
             'Locked volumes may need to have reviews re-submitted.'];
   }
-  my $sql = 'SELECT time,status,message FROM systemstatus LIMIT 1';
+  my $vals = ['forever', 'normal', ''];
+  my $sql = 'SELECT time,COALESCE(status,"normal"),COALESCE(message,"")'.
+            ' FROM systemstatus ORDER BY time DESC LIMIT 1';
   my $ref = $self->SelectAll($sql);
   if (scalar @{$ref})
   {
-    my $row = $ref->[0];
-    my $vals = ['forever', 'normal', ''];
-    $vals->[0] = $self->FormatTime($row->[0]) if $row->[0];
-    $vals->[1] = $row->[1] if $row->[1];
-    $vals->[2] = $row->[2] if $row->[2];
-    if ($vals->[2] eq '')
+    $vals = $ref->[0];
+    $vals->[0] = $self->FormatTime($vals->[0]);
+    if (!$vals->[2])
     {
       if ($vals->[1] eq 'down')
       {
@@ -6851,9 +6850,8 @@ sub GetSystemStatus
         $vals->[2] = 'The CRMS has limited functionality. "Review" and "Add to Queue" (administrators only) pages are currently disabled until further notice.';
       }
     }
-    return $vals;
   }
-  return undef;
+  return $vals;
 }
 
 # Takes undef/arrayref like return value from GetSystemStatus.
