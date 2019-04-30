@@ -47,6 +47,9 @@ my $crmsWorld = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
+my $dbhWorld = ConnectToWorldDb($crmsWorld);
+$crmsWorld->set('dbh', $dbhWorld);
+
 my $crmsUS = CRMS->new(
     sys      => 'crms',
     verbose  => $verbose,
@@ -58,7 +61,7 @@ my %authmap; # Map of World authority id to US id.
 my %rightsmap; # Map of World rights id to US id.
 my %catmap; # Map of World category id to US id.
 my %instmap; # Map of World institution id to US id.
-my $dbhWorld = $crmsWorld->GetDb();
+
 
 # +----------------------------+
 # | Tables_in_crms             |
@@ -112,16 +115,46 @@ my $dbhWorld = $crmsWorld->GetDb();
 # +----------------------------+
 
 
-#Reset();
+Reset();
 MigrateSources();
 MigrateUsers();
 MigrateProjects();
 MigrateCandidates();
 MigrateQueue();
-MigrateExportdata();
-MigrateCorrections();
-MigratePredeterminationsbreakdown();
-UpdateStats();
+#MigrateExportdata();
+#MigrateCorrections();
+#MigratePredeterminationsbreakdown();
+#UpdateStats();
+
+
+
+sub ConnectToWorldDb
+{
+  my $self = shift;
+
+  my $db_server = $self->get('mysqlServerDev');
+  my $instance  = $self->get('instance') || '';
+
+  my %d = $self->ReadConfigFile('crmsworldpw.cfg');
+  my $db_user   = $d{'mysqlUser'};
+  my $db_passwd = $d{'mysqlPasswd'};
+  if ($instance eq 'production'
+      || $self->get('pdb')
+      || $instance eq 'crms-training'
+      || $self->get('tdb')
+      )
+  {
+    $db_server = $self->get('mysqlServer');
+  }
+  my $db = 'crmsworld';
+  $db .= '_training' if $instance && $instance eq 'crms-training';
+  my $dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
+            { PrintError => 0, RaiseError => 1, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
+  $dbh->{mysql_enable_utf8} = 1;
+  $dbh->{mysql_auto_reconnect} = 1;
+  $dbh->do('SET NAMES "utf8";');
+  return $dbh;
+}
 
 sub Reset
 {
@@ -139,9 +172,9 @@ sub Reset
     $crmsUS->PrepareSubmitSql('DELETE FROM projectusers WHERE project>=?', $newProj);
     $crmsUS->PrepareSubmitSql('DELETE FROM projects WHERE id>=?', $newProj);
   }
-  $crmsUS->PrepareSubmitSql('DELETE FROM rights WHERE id>24');
-  $crmsUS->PrepareSubmitSql('DELETE FROM authorities WHERE id>33');
-  $crmsUS->PrepareSubmitSql('DELETE FROM categories WHERE id>51');
+  #$crmsUS->PrepareSubmitSql('DELETE FROM rights WHERE id>24');
+  #$crmsUS->PrepareSubmitSql('DELETE FROM authorities WHERE id>33');
+  #$crmsUS->PrepareSubmitSql('DELETE FROM categories WHERE id>51');
 }
 
 sub MigrateSources
@@ -227,19 +260,22 @@ sub MigrateUsers
 
 sub MigrateProjects
 {
-  my $sql = 'SELECT id,name,color,autoinherit,group_volumes FROM projects'.
+  my $sql = 'SELECT id,name,color,autoinherit,group_volumes,primary_authority,secondary_authority FROM projects'.
             ' ORDER BY id ASC';
   my $ref = $crmsWorld->SelectAll($sql);
   foreach my $row (@{$ref})
   {
-    my ($id, $name, $color, $autoinherit, $group_volumes) = @{$row};
+    my ($id, $name, $color, $autoinherit, $group_volumes, $primary_authority, $secondary_authority) = @{$row};
     my $usid;
     $name = 'Commonwealth' if $name eq 'Core';
     $usid = $crmsUS->SimpleSqlGet('SELECT id FROM projects WHERE name=?', $name);
     if (!$usid)
     {
-      $sql = 'INSERT INTO projects (name,color,autoinherit,group_volumes) VALUES (?,?,?,?)';
-      $crmsUS->PrepareSubmitSql($sql, $name, $color, $autoinherit, $group_volumes);
+      $sql = 'INSERT INTO projects (name,color,autoinherit,group_volumes,'.
+             'primary_authority,secondary_authority) VALUES (?,?,?,?,?,?)';
+      $crmsUS->PrepareSubmitSql($sql, $name, $color, $autoinherit,
+                                $group_volumes, $authmap{$primary_authority},
+                                $authmap{$secondary_authority});
       $usid = $crmsUS->SimpleSqlGet('SELECT MAX(id) FROM projects WHERE name=?', $name);
     }
     $projmap{$id} = $usid;
@@ -541,7 +577,6 @@ sub UpdateStats
     $crmsUS->UpdateExportStats($date);
   }
   $crmsUS->UpdateUserStats();
-  
 }
 
 print "Warning: $_\n" for @{$crmsUS->GetErrors()};
