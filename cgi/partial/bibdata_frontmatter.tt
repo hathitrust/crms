@@ -1,0 +1,24 @@
+<div class="reviewPartial">
+  <table>
+    <tr><td><strong>ID:</strong> [% htid %]</td></tr>
+    <tr><td><strong>Title:</strong> [% data.bibdata.title_format %]</td></tr>
+    <tr><td><strong>Author:</strong> [% data.bibdata.author_format %]</td></tr>
+    <tr>
+      <td><strong>Pub Date:</strong>
+        <span id="pubDateSpan"
+          [% IF data.bibdata.pub_date_format.match('^\d+-\d*$') %]class="red"[% END %]>
+          [% data.bibdata.pub_date_format %]
+        </span>
+      </td>
+    </tr>
+    
+    <tr><td><strong>Country:</strong> [% data.bibdata.country %]</td></tr>
+    <tr><td><strong>Language:</strong> [% data.bibdata.language %]</td></tr>
+    <tr><td class="nowrap">
+      <strong>Project:</strong> [% data.project.name %]
+      [% IF data.project.color.length %]
+        <p style="border:1px solid;margin-left:4px;display:inline-block;width:10px;height:10px;background:#[% data.project.color %];"></p>
+      [% END %]
+    </td></tr>
+  </table>
+</div>

@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 BEGIN 
-{ 
+{
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
@@ -35,7 +35,6 @@ if it is specified.
 -u         Also report on recent additions to the und table
            (ignored if -c is not used).
 -v         Emit debugging information.
--x SYS     Set SYS as the system to execute.
 END
 
 my $all;
@@ -51,7 +50,6 @@ my $production;
 my @projs;
 my $quiet;
 my @singles;
-my $sys;
 my $und;
 my $verbose;
 
@@ -70,8 +68,7 @@ die 'Terminating' unless GetOptions(
            's:s@' => \@singles,
            't:s@' => \@no,
            'u'    => \$und,
-           'v+'   => \$verbose,
-           'x:s'  => \$sys);
+           'v+'   => \$verbose);
 $instance = 'production' if $production;
 die "$usage\n\n" if $help;
 
@@ -79,7 +76,6 @@ my %no = ();
 $no{$_}=1 for @no;
 
 my $crms = CRMS->new(
-    sys      => $sys,
     verbose  => $verbose,
     instance => $instance
 );
@@ -493,6 +489,7 @@ sub InheritanceReport
   else
   {
     $sql .= ' src!="inherited" AND time>? AND time<=?'.
+            ' AND attr IS NOT NULL AND reason IS NOT NULL'.
             ' AND NOT EXISTS (SELECT * FROM exportdata e2 WHERE e2.id=id AND e2.time>time)'.
             ' ORDER BY time DESC';
     @params = ($start, $end);

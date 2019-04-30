@@ -1,20 +1,20 @@
 [% INCLUDE header.tt %]
 
-[% p        = cgi.param('p')          %]
-[% error    = cgi.param('errorMsg')   %]
-[% barcode  = cgi.param('barcode')    %]
-[% editing  = cgi.param('editing')    %]
-[% sys      = cgi.param('sys')        %]
-[% mag      = cgi.cookie('mag')       %]
-[% ptview   = cgi.cookie('ptview')    %]
+[% p       = cgi.param('p')        %]
+[% error   = cgi.param('errorMsg') %]
+[% htid    = cgi.param('htid')     %]
+[% editing = cgi.param('editing')  %]
+[% sys     = cgi.param('sys')      %]
+[% mag     = cgi.cookie('mag')     %]
+[% ptview  = cgi.cookie('ptview')  %]
 
-[% IF barcode && editing %]
+[% IF htid && editing %]
   [% user2 = cgi.param('user') %]
   [% IF user2 && user2 != user %]
     [% user = user2 %]
     [% inspecting = 1 %]
   [% ELSE %]
-    [% err = inserts.Lock(barcode, user) %]
+    [% err = inserts.Lock(htid, user) %]
     [% IF err != 0 %]
       <h3>[% err %].</h3>
       <br/><a href="JavaScript:window.close()">Close</a>
@@ -25,14 +25,14 @@
 
 [% IF !editing %]
   [%# ## Get locked item or new one from queue ## %]
-  [% barcode = inserts.GetLockedInserts(user) %]
-  [% IF !barcode %]
-    [% barcode = inserts.GetNextInsertsForReview(user) %]
+  [% htid = inserts.GetLockedInserts(user) %]
+  [% IF !htid %]
+    [% htid = inserts.GetNextInsertsForReview(user) %]
   [% END %]
 [% END %]
 
-[%# ## failed to get a barcode ## %]
-[% IF NOT barcode %]
+[%# ## failed to get a htid ## %]
+[% IF NOT htid %]
   <h3>Unable to find a volume ID to review</h3>
   [% FOREACH error IN crms.GetErrors %]
     <strong>ERROR: [% error.replace('\n','<br/>') %]</strong><br/>
@@ -40,11 +40,11 @@
   [% STOP %]
 [% END %]
 
-[% pub_date = crms.FormatPubDate(barcode) %]
-[% author   = crms.GetAuthor(barcode)     %]
-[% title    = crms.GetTitle(barcode)      %]
+[% pub_date = crms.FormatPubDate(htid) %]
+[% author   = crms.GetAuthor(htid)     %]
+[% title    = crms.GetTitle(htid)      %]
 
-[% homeLink = crms.Sysify("inserts?p=inserts;submit=Cancel;barcode=$barcode") %]
+[% homeLink = crms.Sysify("inserts?p=inserts;submit=Cancel;htid=$htid") %]
 
 <div class="divbody" style="overflow-y:hidden;max-height:100vh;">
   <div class="divNav" id="divNav" style="overflow:auto;overflow-x:hidden;max-height:100vh;">
@@ -76,12 +76,12 @@
       </table>
 
       <table class="id">
-        <tr><td><strong>ID:</strong> [% barcode %]</td></tr>
+        <tr><td><strong>ID:</strong> [% htid %]</td></tr>
         <tr><td><strong>Title:</strong> [% title %]</td></tr>
         <tr><td><strong>Author:</strong> [% author %]</td></tr>
         <tr><td><strong>Pub Date:</strong> <span id="pubDateSpan">[% pub_date %]</span><br/></td></tr>
       </table>
-      [% sources = crms.Authorities(barcode,mag,ptview,p) %]
+      [% sources = crms.Authorities(htid,mag,ptview,p) %]
       <table class="search">
         <tr>
           <th>View&nbsp;1:</th>
@@ -150,7 +150,7 @@
       [% END %]
       [% CALL crms.ClearErrors() %]
       [% IF NOT error %][% error = errors.join('; ') %][% END %]
-      [% INCLUDE submitInsertsForm.tt barcode = barcode, editing = editing, inspecting = inspecting,
+      [% INCLUDE submitInsertsForm.tt htid = htid, editing = editing, inspecting = inspecting,
                                       error   = error,   select  = select,  mag        = mag,
                                       sys     = sys,     ptview  = ptview,  user       = user %]
       [% status = crms.GetSystemStatus() %]

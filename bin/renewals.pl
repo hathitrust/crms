@@ -1,7 +1,6 @@
 #!/usr/bin/perl
-
 BEGIN 
-{ 
+{
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
@@ -42,7 +41,6 @@ my $nomail;
 my @mails;
 my $noop;
 my $production;
-my $sys;
 my $verbose = 0;
 
 Getopt::Long::Configure ('bundling');
@@ -56,7 +54,6 @@ print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
-    sys      => 'crms',
     verbose  => $verbose,
     instance => $instance
 );

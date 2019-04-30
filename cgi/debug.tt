@@ -1,5 +1,5 @@
 [% force = cgi.param('force') %]
-[% page = cgi.param('p')      %]
+[% page = cgi.param('p') %]
 [% p_proj = cgi.param('project') %]
 [% p_start = cgi.param('startDate') %]
 [% p_end = cgi.param('endDate') %]
@@ -7,6 +7,7 @@
 
 <h2>System Administration:</h2>
 <br/><br/>
+
 <table class='exportStats'>
 <tr>
   <th>List&nbsp;Unicode&nbsp;bibdata&nbsp;entries</th>
@@ -77,25 +78,53 @@
   </form>
   [% IF cgi.param('export_report') %]
   [% report = crms.ExportReport(p_proj, p_start, p_end) %]
-  <table class="exportStats">
-    <tr>
-      <th>Determinations</th>
-      <td class="nowrap">[% report.all %]</td>
-    </tr>
-    <tr>
-      <th>PD</th>
-      <td class="nowrap">[% report.pd %] ([% report.pdpct %])</td>
-    </tr>
-    <tr>
-      <th>Time</th>
-      <td class="nowrap">[% report.time %] hours</td>
-    </tr>
+    <table class="exportStats">
       <tr>
-      <th>Candidates</th>
-      <td class="nowrap">[% report.candidates %]</td>
-    </tr>
-  </table>
-[% END %]
+        <th>Determinations</th>
+        <td class="nowrap">[% report.all %]</td>
+      </tr>
+      <tr>
+        <th>PD</th>
+        <td class="nowrap">[% report.pd %] ([% report.pdpct %])</td>
+      </tr>
+      <tr>
+        <th>Time</th>
+        <td class="nowrap">[% report.time %] hours</td>
+      </tr>
+        <tr>
+        <th>Candidates</th>
+        <td class="nowrap">[% report.candidates %]</td>
+      </tr>
+    </table>
+  [% END %]
+</div>
+<br/><br/>
+
+
+<div style="position:relative;border-style:solid;width:76em;border-width:1px;padding:10px;">
+  <h3>Candidacy Check</h3>
+  [% p_htid = cgi.param('HTID') %]
+  <form id="select" action="crms">
+    <input type="hidden" name="p" value="$page"/>
+    <input type="hidden" name="candidacy_check" value="1"/>
+    <label for="HTID_text">ID:</label>
+    <input type="text" if="HTID_text" name="HTID" value="[% p_htid %]"/>
+    <input type="submit" value="Submit"/>
+  </form>
+  [% IF cgi.param('candidacy_check') %]
+    [% projs = crms.GetProjectsRef() %]
+    <table class="exportStats">
+      <tr><th>Project</th><th>Allowed</th><th>Message</th></tr>
+      [% FOR proj IN projs %]
+        [% report = crms.EvaluateCandidacy(p_htid, 0, proj.id) %]
+        <tr>
+          <th class="nowrap">[% proj.name %]</th>
+          <td class="nowrap">[% report.status %]</td>
+          <td class="nowrap">[% report.msg.ucfirst %]</td>
+        </tr>
+      [% END %]
+    </table>
+  [% END %]
 </div>
 <br/><br/>
 
@@ -134,36 +163,6 @@
   </table>
 [% END %]
 
-[% IF cgi.param('multibyte') %]
-  [% sql = "SELECT id,author,title FROM bibdata WHERE LENGTH(title)!=CHAR_LENGTH(title) OR LENGTH(author)!=CHAR_LENGTH(author) ORDER BY author,title,id" %]
-  [% ref  = crms.SelectAll(sql) %]
-  <h4>[% ref.size %] Items</h4>
-  <table class='exportStats'><tr><th>ID</th><th>Author</th><th>Title</th></tr>
-  [% FOREACH r IN ref %]
-    <tr><td>[% r.0 %]</td><td>[% r.1 %]</td><td>[% r.2 %]</td></tr>
-  [% END %]
-  </table>
-[% END %]
-
-[% IF cgi.param('systemvars') %]
-  [% sql = "SELECT name,value FROM systemvars ORDER BY name" %]
-  [% ref  = crms.SelectAll(sql) %]
-  <h4>System Variables</h4>
-  <table class='exportStats'><tr><th>Name</th><th>Value</th></tr>
-  [% FOREACH r IN ref %]
-    <tr><td>[% r.0 %]</td><td>[% r.1 %]</td></tr>
-  [% END %]
-  </table>
-[% END %]
-
-[% IF cgi.param('debug') %]
-  <h3>CRMS&nbsp;Object</h3>
-  <table class="exportStats" style="width:30%;">
-  [% FOREACH key IN crms.keys().sort() %]
-  <tr><td>[% key %]</td><td>[% crms.get(key) %]</td></tr>
-  [% END %]
-  </table>
-[% END %]
 
 [% IF cgi.param('008') %]
   <h3>008 Breakdown</h3>
@@ -193,13 +192,6 @@
   </table>
 [% END %]
 
-[% IF cgi.param('ck') %]
-  [% id = cgi.param('ck') %]
-  <h3>Candidacy check for $id:</h3>
-  [% vs = crms.GetViolations(id) %]
-  <p>Violations: [% vs.join('; ') %]</p>
-  <p>Filter: [% crms.ShouldVolumeBeFiltered(id) %]</p>
-[% END %]
 
 [% INCLUDE footer.tt %]
 

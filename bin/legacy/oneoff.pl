@@ -1,12 +1,7 @@
 #!/usr/bin/perl
-
-my ($root);
 BEGIN 
-{ 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+{
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -62,7 +57,6 @@ $instance = 'production' if $production;
 die "$usage\n\n" if $help;
 
 my $crmsUS = CRMS->new(
-    sys      => 'crms',
     verbose  => $verbose,
     instance => $instance
 );
@@ -91,7 +85,7 @@ $html .= sprintf "<h3> %d unique %s</h3>\n", scalar keys %txs, $crms->Pluralize(
 $html .= '<table border="1"><tr><th>Ticket</th><th>Created</th><th>ID</th>'.
          '<th>Author</th><th>Title</th><th>Pub Date</th><th>Note</th>'.
          "<th>Assignee</th></tr>\n";
-#my $closed = $crms->GetClosedTickets($ua);
+#my $closed = GetClosedTickets($crms, $ua);
 #foreach my $tx (keys %{$closed})
 #{
 #  my $url = Jira::LinkToJira($tx);
@@ -293,6 +287,7 @@ $html .= "</body></html>\n";
 
 if (scalar @mails)
 {
+  @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
   if ($verbose)
   {
     print "Sending mail to:\n";
@@ -300,29 +295,20 @@ if (scalar @mails)
   }
   #if (!$noop)
   {
-    use Mail::Sender;
-    my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                    from => $crms->GetSystemVar('adminEmail', ''),
-                                    on_errors => 'undef' }
-      or die "Error in mailing: $Mail::Sender::Error\n";
-    my $to = join ',', @mails;
-    $sender->OpenMultipart({
-      to => $to,
-      subject => $title,
-      ctype => 'text/html',
-      encoding => 'utf-8'
-      }) or die $Mail::Sender::Error,"\n";
-    $sender->Body();
+    use Mail::Sendmail;
     my $bytes = encode('utf8', $html);
-    $sender->SendEnc($bytes);
-    $sender->Close();
+    my %mail = ('from'         => 'crms-mailbot@umich.edu',
+                'to'           => join ',', @mails,
+                'subject'      => $title,
+                'content-type' => 'text/html; charset="UTF-8"',
+                'body'         => $bytes);
+    sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n");
   }
 }
 else
 {
   print "$html\n" unless defined $quiet;
 }
-
 
 sub OneoffQuery
 {
@@ -571,6 +557,29 @@ sub IsTicketResolved
   my $n = $crms->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE src=?', $tx);
   my $of = $crms->SimpleSqlGet('SELECT COUNT(*) FROM tickets WHERE ticket=?', $tx);
   return ($n == $of);
+}
+
+sub GetClosedTickets
+{
+  my $self = shift;
+  my $ua   = shift;
+
+  my $sql = 'SELECT DISTINCT source FROM queue WHERE source LIKE "HTS%"';
+  my @txs;
+  my %stats2;
+  push @txs, $_->[0] for @{$self->SelectAll($sql)};
+  if (scalar @txs > 0)
+  {
+    use Jira;
+    $ua = Jira::Login($self) unless defined $ua;
+    my $stats = Jira::GetIssuesStatus($self, $ua, \@txs);
+    foreach my $tx (keys %{$stats})
+    {
+      my $stat = $stats->{$tx};
+      $stats2{$tx} = $stat if $stat eq 'Closed' or $stat eq 'Resolved' or $stat eq 'Status unknown';
+    }
+  }
+  return \%stats2;
 }
 
 print "Warning (US): $_\n" for @{$crmsUS->GetErrors()};

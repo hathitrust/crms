@@ -1,16 +1,16 @@
 [% INCLUDE header.tt %]
 
-[% p        = cgi.param('p')          %]
-[% error    = cgi.param('errorMsg')   %]
-[% barcode  = cgi.param('barcode')    %]
-[% editing  = cgi.param('editing')    %]
-[% sys      = cgi.param('sys')        %]
-[% mag      = cgi.cookie('mag')       %]
-[% ptview   = cgi.cookie('ptview')    %]
-[% fixed    = cgi.cookie('fixed')     %]
+[% p       = cgi.param('p')        %]
+[% error   = cgi.param('errorMsg') %]
+[% htid    = cgi.param('htid')     %]
+[% editing = cgi.param('editing')  %]
+[% sys     = cgi.param('sys')      %]
+[% mag     = cgi.cookie('mag')     %]
+[% ptview  = cgi.cookie('ptview')  %]
+[% fixed   = cgi.cookie('fixed')   %]
 
-[% IF barcode && editing %]
-  [% err = crms.LockItem(barcode, user, 0, p) %]
+[% IF htid && editing %]
+  [% err = crms.LockItem(htid, user, 0, p) %]
   [% IF err != 0 %]
     <h3>[% err %].</h3>
     <br/><a href="JavaScript:window.close()">Close</a>
@@ -21,14 +21,14 @@
 [% IF !editing %]
   [%# ## Get locked item or new one from queue ## %]
   [% IF crms.HasLockedItem(user, p) %]
-    [% barcode = crms.GetLockedItem(user, p) %]
+    [% htid = crms.GetLockedItem(user, p) %]
   [% ELSE %]
-    [% barcode = crms.GetNextCorrectionForReview(user) %]
+    [% htid = crms.GetNextCorrectionForReview(user) %]
   [% END %]
 [% END %]
 
-[%# ## failed to get a barcode ## %]
-[% IF NOT barcode %]
+[%# ## failed to get a htid ## %]
+[% IF NOT htid %]
   <h3>Unable to find a volume ID to review</h3>
   [% FOREACH error IN crms.GetErrors %]
     <strong>ERROR: [% error.replace('\n','<br/>') %]</strong><br/>
@@ -36,11 +36,11 @@
   [% STOP %]
 [% END %]
 
-[% pub_date = crms.FormatPubDate(barcode) %]
-[% author   = crms.GetAuthor(barcode)     %]
-[% title    = crms.GetTitle(barcode)      %]
+[% pub_date = crms.FormatPubDate(htid) %]
+[% author   = crms.GetAuthor(htid)     %]
+[% title    = crms.GetTitle(htid)      %]
 
-[% homeLink = "crms?p=confirmReview;submit=Cancel;barcode=$barcode;sys=$sys" %]
+[% homeLink = "crms?p=finishReview;submit=Cancel;htid=$htid;sys=$sys" %]
 
 <div class="divbody">
   <div class="divNav">
@@ -69,16 +69,16 @@
       </table>
 
       <table class="id">
-        <tr><td><strong>ID:</strong> <tt>[% barcode %]</tt>   </td></tr>
+        <tr><td><strong>ID:</strong> <tt>[% htid %]</tt>   </td></tr>
         <tr><td><strong>Title:</strong> [% title %]           </td></tr>
         <tr><td><strong>Author:</strong> [% author %]    <br/></td></tr>
         <tr><td><strong>Pub Date:</strong> <span id="pubDateSpan">[% pub_date %]</span><br/></td></tr>
         [% IF crms.GetSystemVar("showCountry") %]
-          [% country = crms.GetPubCountry(barcode, undef, 1) %]
+          [% country = crms.GetPubCountry(htid, undef, 1) %]
           <tr><td><strong>Country:</strong> [% country %]<br/></td></tr>
         [% END %]
       </table>
-      [% sources = crms.Authorities(barcode,mag,ptview,'corrections') %]
+      [% sources = crms.Authorities(htid,mag,ptview,'corrections') %]
       <table class="search">
         <tr>
           <th>View 1:</th>
@@ -127,7 +127,7 @@
              style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
           </td>
         </tr>
-        [% viafwarn = crms.VIAFWarning(barcode) %]
+        [% viafwarn = crms.VIAFWarning(htid) %]
         [% IF viafwarn %]
           [% viafwarn = "Warning: possible foreign author: " _ viafwarn %]
           <tr><td colspan="2"><span class="red"><b>$viafwarn</b></span></td></tr>
@@ -150,13 +150,13 @@
         [% CALL errors.import(es) %]
       [% END %]
       [% CALL crms.ClearErrors() %]
-      [% es = crms.IsVolumeInScope(barcode) %]
+      [% es = crms.IsVolumeInScope(htid) %]
       [% IF es %]
         [% errors.unshift(es) %]
         [% inScope = 0 %]
       [% END %]
       [% IF NOT error %][% error = errors.join('; ') %][% END %]
-      [% INCLUDE submitCorrectionForm.tt barcode = barcode, editing = editing, inScope = inScope,
+      [% INCLUDE submitCorrectionForm.tt htid = htid, editing = editing, inScope = inScope,
                                          error   = error,   select = select,   mag     = mag,
                                          sys     = sys,     ptview  = ptview,  fixed   = fixed %]
       [% status = crms.GetSystemStatus() %]
@@ -166,7 +166,7 @@
         </table>
       [% END %]
     </div>
-    [% tracking = crms.GetTrackingInfo(barcode, 1) %]
+    [% tracking = crms.GetTrackingInfo(htid, 1) %]
     [% IF tracking %]
       <table class="nav">
         <tr><td>

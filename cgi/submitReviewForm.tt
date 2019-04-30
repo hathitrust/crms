@@ -7,11 +7,10 @@
 [% swiss    = data.reviews.$user.swiss    || cgi.param('swiss')    %]
 
 <form name="submitReview" action="crms">
-  <input type="hidden" name="p"       value="confirmReview"/>
-  <input type="hidden" name="barcode" value="[% barcode %]"/>
+  <input type="hidden" name="p"       value="finishReview"/>
+  <input type="hidden" name="htid" value="[% htid %]"/>
   <input type="hidden" name="start"   value="[% crms.GetNow() %]"/>
   <input type="hidden" name="user"    value="[% user %]"/>
-  <input type="hidden" name="confirm" value="1"/>
   <input type="hidden" name="editing" value="[% editing %]"/>
   <input type="hidden" name="importUser" value="[% importUser %]"/>
   [% crms.HiddenSys() %]
@@ -79,9 +78,9 @@
                onblur="javascript:popRenewalDate()"/>
       [% ELSE %]
         [% IF NOT renDate && NOT import %]
-          [% authorDD = crms.GetADDFromAuthor(barcode) %]
+          [% authorDD = crms.GetADDFromAuthor(htid) %]
           [% IF NOT authorDD %]
-            [% viafdata = crms.GetVIAFData(barcode) %]
+            [% viafdata = crms.GetVIAFData(htid) %]
             [% IF viafdata && viafdata.add %]
               [% authorDD = viafdata.add %]
               [% viaf = 1 %]
@@ -95,7 +94,7 @@
         [% END %]
         <input id="renewalField" title="[% label %]" type="text" name="renDate"
                value="[% renDate %]" size="6"
-               onblur="javascript:PredictRights('[% barcode %]');"/>
+               onblur="javascript:PredictRights('[% htid %]');"/>
         [% IF tip %]
           <span class="red">$tip</span>
         [% END %]
@@ -114,7 +113,7 @@
           <td class="nowrap">
             <input id="actualPubDateField" title="Actual Pub Date" type="text"
                    name="actualPubDateField" size="6"
-                   onblur="javascript:PredictRights('[% barcode %]');"/>
+                   onblur="javascript:PredictRights('[% htid %]');"/>
           </td>
         </tr>
       [% END %]
@@ -126,7 +125,7 @@
                class="reviewblue" style="margin:0px;padding:1px;background-color:#d0dee6;"/>
       [% ELSE %]
         <input type="checkbox" id="renewalFieldCheckbox" name="renNum"[% (renNum)? ' checked="checked"':'' %]
-               onchange="ToggleADD();PredictRights('[% barcode %]');"/>
+               onchange="ToggleADD();PredictRights('[% htid %]');"/>
         <label for="renewalFieldCheckbox">&nbsp;Pub Date</label>
       [% END %]
       </td>
@@ -138,7 +137,7 @@
           <input type="button" class="reviewblue" value="Pull Pub Date"
           [% IF NOT pubDate.match('^-?\d+$') %]disabled="disabled"[% END %]
           onclick="PullPubDate();
-                   document.getElementById('renewalFieldCheckbox').checked=true;PredictRights('[% barcode %]');"
+                   document.getElementById('renewalFieldCheckbox').checked=true;PredictRights('[% htid %]');"
           accesskey="d"
           style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
         [% END %]
@@ -146,7 +145,7 @@
     </tr>
   </table>
   </div>
-[% rights = crms.Rights(barcode, 1) %]
+[% rights = crms.Rights(htid, 1) %]
 <div id="RightsCont" class="rightscont">
 <div id="RightsReason" style="position:relative;">
   <div style="position:absolute;top:0px;right:1em;">
@@ -164,7 +163,7 @@
       </span>
     </a>
   </div>
-  [% rights = crms.Rights(barcode) %]
+  [% rights = crms.Rights(htid) %]
   [% of = rights.size() %]
   [% n = 0 %]
     <div style="display:none" id="UNDNFI" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=5 AND reason=8') %]"></div>
@@ -207,10 +206,10 @@
 <div id="Notes">
   <strong><label for="catMenu">Notes: </label></strong>
   <select id="catMenu" class="review" name="category"
-    [% IF !ren %]onchange="javascript:PredictRights('[% barcode %]');"[% END %]
+    [% IF !ren %]onchange="javascript:PredictRights('[% htid %]');"[% END %]
     >
     <option value="" [% ("" == category)? 'selected="selected"':'' %]>none</option>
-    [% cats = crms.Categories(barcode) %]
+    [% cats = crms.Categories(htid) %]
     [% FOREACH cat IN cats %]
       <option value="[% cat %]" [% (cat == category)? 'selected="selected"':'' %]>[% cat %]</option>
     [% END %]
@@ -240,7 +239,7 @@
   [% END %]
   [% holds = crms.CountHolds() %]
   [% IF !hold %]
-    [% hold = crms.HoldForItem(barcode, user) %]
+    [% hold = crms.HoldForItem(htid, user) %]
   [% END %]
     <tr>
       <td style="text-align:left;">

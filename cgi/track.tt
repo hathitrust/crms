@@ -51,12 +51,8 @@
         <th class="nowrap" scope="col" id="volumeTH">Volume</th>
         <th class="nowrap" scope="col" id="enumchronTH">Enum/Chron</th>
         <th class="nowrap" scope="col" id="CRMSUSTH">
-          <img src="[% data.crms.WebPath('web', data.crms.GetSystemVar('smallLogo')) %]"
+          <img src="[% crms.WebPath('web', crms.GetSystemVar('smallLogo')) %]"
                alt="CRMS-US Logo" width="26" height="20"/>
-        </th>
-        <th class="nowrap" scope="col" id="CRMSWorldTH">
-          <img src="[% data.crmsworld.WebPath('web', data.crmsworld.GetSystemVar('smallLogo')) %]"
-               alt="CRMS-World Logo" width="26" height="20"/>
         </th>
         <th scope="col" id="USRightTH">U.S.<br/>Rights</th>
         <th scope="col" id="attributeTH">Attribute</th>
@@ -91,28 +87,22 @@
             <span [% style %]>[% line.2 %]</span><br/>
           [% END %]
         </td>
-        <td class="nowrap" headers="CRMSWorldTH">
+        
+        <td class="nowrap" headers="USRightTH">
           [% FOREACH line IN data.data %]
             [% id2 = line.0 %]
             [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
             <span [% style %]>[% line.3 %]</span><br/>
           [% END %]
         </td>
-        <td class="nowrap" headers="USRightTH">
-          [% FOREACH line IN data.data %]
-            [% id2 = line.0 %]
-            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
-            <span [% style %]>[% line.4 %]</span><br/>
-          [% END %]
-        </td>
-        <td class="nowrap" headers="attributeTH">[% FOREACH line IN data.data %][% line.5 %]<br/>[% END %]</td>
-        <td class="nowrap" headers="reasonTH">[% FOREACH line IN data.data %][% line.6 %]<br/>[% END %]</td>
-        <td class="nowrap" headers="sourceTH">[% FOREACH line IN data.data %][% line.7 %]<br/>[% END %]</td>
-        <td class="nowrap" headers="userTH">[% FOREACH line IN data.data %][% line.8 %]<br/>[% END %]</td>
-        <td class="nowrap" headers="timeTH">[% FOREACH line IN data.data %][% line.9 %]<br/>[% END %]</td>
+        <td class="nowrap" headers="attributeTH">[% FOREACH line IN data.data %][% line.4 %]<br/>[% END %]</td>
+        <td class="nowrap" headers="reasonTH">[% FOREACH line IN data.data %][% line.5 %]<br/>[% END %]</td>
+        <td class="nowrap" headers="sourceTH">[% FOREACH line IN data.data %][% line.6 %]<br/>[% END %]</td>
+        <td class="nowrap" headers="userTH">[% FOREACH line IN data.data %][% line.7 %]<br/>[% END %]</td>
+        <td class="nowrap" headers="timeTH">[% FOREACH line IN data.data %][% line.8 %]<br/>[% END %]</td>
         <td headers="noteTH">[% FOREACH line IN data.data %]
-              [% IF line.10 %]
-              <a class="tip2" href="#"><strong>&#x1F4DD;</strong><span>[% line.10 %]</span></a>
+              [% IF line.9 %]
+              <a class="tip2" href="#"><strong>&#x1F4DD;</strong><span>[% line.9 %]</span></a>
               [% ELSE %]&nbsp;
               [% END %]
             [% END %]

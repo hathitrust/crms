@@ -10,13 +10,6 @@ sub new
   return bless $self, $class;
 }
 
-sub Countries
-{
-  my $self = shift;
-
-  return {'United Kingdom'=>1, 'Canada'=>1, 'Australia'=>1};
-}
-
 # If new_attr and new_reason are supplied, they are the final determination
 # and this checks whether that determination should be exported (is the
 # volume in scope?).
@@ -95,7 +88,6 @@ sub GetViolations
     my $date2 = substr($leader, 11, 4);
     push @errs, "pub date not completely specified ($type,$date1,$date2)";
   }
-  # FIXME: use Countries() method
   push @errs, "foreign pub ($where)" if $where ne 'United Kingdom' and
                                         $where ne 'Australia' and
                                         $where ne 'Canada';

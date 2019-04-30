@@ -1,0 +1,59 @@
+[% authorities = crms.Authorities(htid, mag, ptview) %]
+<div class="reviewPartial">
+  <table>
+    <tr>
+      <th class="nowrap">View 1:</th>
+      <td>
+        <select title="Search 1" class="review" id="search1Select" onchange="changeFrame1(1);" style="float:right;">
+        [% FOREACH authority IN authorities %]
+          <option value="[% authority.url %]"
+                  [% IF authority.initial == 1 %]selected="selected"[% END %]>
+            [% authority.name %]
+          </option>
+        [% END %]
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <th class="nowrap">View 2:</th>
+      <td>
+        <select title="Search 2" class="review" id="search2Select" onchange="changeFrame2(1);" style="float:right;">
+        [% FOREACH authority IN authorities %]
+          <option value="[% authority.url %]"
+                  [% IF authority.initial == 2 %]selected="selected"[% END %]>
+            [% authority.name %]
+          </option>
+        [% END %]
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <td></td>
+      <td style="margin:0px;padding:0px;">
+         <input type="button" class="reviewblue" value="Toggle View" onclick="flipFrame();" accesskey="o"
+         style="margin:0px;padding:1px;background-color:#e0d6de;float:right;"/>
+      </td>
+    </tr>
+  </table>
+
+[% i = 0 %]
+[% FOREACH authority IN authorities %]
+  [% IF authority.accesskey %]
+    <a style="position:absolute;left:-999px;" href="#" accesskey="[% authority.accesskey %]"
+       onfocus="document.getElementById('search1Select').selectedIndex=[% i %];changeFrame1(1);">.</a>
+  [% END %]
+  [% i = i + 1 %]
+[% END %]
+
+  <script type="text/javascript">
+<!--
+  addEvent(window, 'load', Partial_authorities_mainWindowLoad);
+  function Partial_authorities_mainWindowLoad(e)
+  {
+    changeFrame1();
+    changeFrame2();
+  }
+-->
+  </script>
+
+</div>

@@ -211,8 +211,7 @@ sub CreateUserStatsData
   }
   if ($project)
   {
-    #$projname = $self->GetProjectRef($project)->{'name'};
-    $projname = $self->GetProjectName($project);
+    $projname = $self->GetProjectRef($project)->{'name'};
     $projclause = 'us.project=?';
   }
   else
@@ -229,7 +228,8 @@ sub CreateUserStatsData
             'SUM(total_outliers)'.
             ' FROM userstats us INNER JOIN users u ON us.user=u.id'.
             ' INNER JOIN institutions i ON u.institution=i.id';
-  my $ivsql = 'SELECT SUM(us.total_reviews),SUM(us.total_incorrect)'.
+  my $ivsql = 'SELECT COALESCE(SUM(us.total_reviews),0),'.
+              'COALESCE(SUM(us.total_incorrect),0)'.
               ' FROM userstats us';
   #print "$sql<br/>\n";
   foreach my $date (@dates)
@@ -389,8 +389,7 @@ sub URLForHistoricalInvalidations
     $end = $year. '-12-'. Date::Calc::Days_in_Month($year, 12);
   }
   my $proj = '';
-  #$proj = $self->GetProjectRef($project)->{'name'} if $project;
-  $proj = $self->GetProjectName($project) if $project;
+  $proj = $self->GetProjectRef($project)->{'name'} if $project;
   my $url = 'crms?p=adminHistoricalReviews;stype=groups;'.
             "search1=UserId&search1value=$user;".
             "search2=Validated;search2value=0;".

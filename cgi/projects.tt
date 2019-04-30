@@ -1,4 +1,4 @@
-[% p = cgi.param("p") %]
+[% #p = cgi.param("p") %]
 [% INCLUDE header.tt %]
 
 [% rights = crms.AllAssignableRights() %]
@@ -9,7 +9,7 @@
 <!--
 
 var gURLBase = "[% crms.WebPath('cgi', 'getProjectInfo') %]";
-// Fix for CRMS-World URL already having ?sys=crmsworld
+// In case base URL has parameters
 if (!/\?/.test(gURLBase))
 {
   gURLBase = gURLBase + "?placeholder=ignore";
@@ -146,11 +146,14 @@ function selectProject(id)
   {
     row = document.getElementById(gSelectedProject+'row');
     row.style.backgroundColor = '#FFFFFF';
+    row.style.color = '#000000';
   }
   row = document.getElementById(id+'row');
   if (row)
   {
-    row.style.backgroundColor = '#FFAA44';
+    //row.style.backgroundColor = '#FFAA44';
+    row.style.backgroundColor = '#ED7B22';
+    row.style.color = '#FFFFFF';
     gSelectedProject = id;
     var rights = JSON.parse(sessionStorage.getItem('R'+id));
     if (gAllRights.length && typeof(gAllRights[0]) !== 'string')
@@ -396,31 +399,6 @@ function addProject(name)
 <table style="width:50%">
 <tr>
 <td style="vertical-align:top;">
-  <!--
-  <table class="exportStats">
-    <tr>
-      <th class="nowrap">Add Project</th>
-      <th class="nowrap">Name</th>
-      <th class="nowrap">Restricted</th>
-    </tr>
-    <tr class="nowrap">
-      <td>
-        <input type="button" onclick="addProject();" value="Add"/>
-        <img id="addLoader" style="visibility:hidden;" src="[% crms.WebPath('web', 'ajax-loader.gif') %]" alt="Adding..."/>
-      </td>
-      <td class="nowrap">
-        <input type="text" id="addName" name="name"></input>
-      </td>
-      <td class="nowrap">
-        <input type="checkbox" id="restrictE" name="restrictE">
-        <label for="restrictE">Expert</label><br/>
-        <input type="checkbox" id="restrictA" name="restrictA">
-        <label for="restrictA">Admin</label>
-      </td>
-    </tr>
-  </table>
-  <br/>
-  -->
   <table class="exportStats" id="projectsTable" style="display:none">
     <thead>
       <th>ID</th>

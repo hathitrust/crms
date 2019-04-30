@@ -21,7 +21,7 @@ function CheckAll(box,formid)
   [% FOREACH param IN cgi.param %]
     [% matches = param.match('(vol_)(.+)') %]
     [% IF matches.0 == 'vol_' %]
-      [% ok = crms.UnlockItemEvenIfNotLocked(matches.1) %]
+      [% ok = crms.UnlockItem(matches.1) %]
       [% IF ok %]
         <span>Unlocked [% matches.1 %]</span><br/>
       [% ELSE %]
@@ -30,7 +30,7 @@ function CheckAll(box,formid)
     [% END %]
   [% END %]
 [% ELSIF cgi.param('unlock') %]
-  [% ok = crms.UnlockItemEvenIfNotLocked(cgi.param('unlock')) %]
+  [% ok = crms.UnlockItem(cgi.param('unlock')) %]
   [% IF ok %]
     <span>Unlocked [% cgi.param('unlock') %]</span><br/>
   [% ELSE %]

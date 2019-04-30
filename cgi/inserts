@@ -44,7 +44,7 @@ my $config =
 
 my $tt   = Template->new($config);
 my $vars = {
-    title     => $crms->System(),
+    title     => 'CRMS',
     inserts   => $ins,
     crms      => $crms,
     cgi       => $cgi,

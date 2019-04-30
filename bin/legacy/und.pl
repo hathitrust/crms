@@ -1,12 +1,7 @@
 #!/usr/bin/perl
-
-my ($root);
 BEGIN 
-{ 
-  $root = $ENV{'SDRROOT'};
-  $root = $ENV{'DLXSROOT'} unless $root and -d $root;
-  unshift(@INC, $root. '/crms/cgi');
-  unshift(@INC, $root. '/cgi/c/crms');
+{
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
 use strict;
@@ -21,14 +16,13 @@ my $instance;
 my $noop       = $opts{'n'};
 my $production = $opts{'p'};
 my $time       = $opts{'t'};
-my $sys        = $opts{'x'};
 my $verbose    = $opts{'v'};
 $instance = 'production' if $production;
 $time = 10800 unless $time;
 
 
 my $usage = <<END;
-USAGE: $0 [-hnpv] [-t SECS] [-x SYS] FILE
+USAGE: $0 [-hnpv] [-t SECS] FILE
 
 Filter volumes.
 
@@ -37,7 +31,6 @@ Filter volumes.
 -p         Run in production.
 -t SECS    Run only for SECS seconds.
 -v         Emit debugging information.
--x SYS     Set SYS as the system to execute.
 END
 
 die "$usage\n\n" if $help;
@@ -45,7 +38,6 @@ die "$usage\n\n" if $help;
 my $file = $ARGV[0];
 
 my $crms = CRMS->new(
-    sys      =>   $sys,
     verbose  =>   $verbose,
     instance =>   $instance
 );

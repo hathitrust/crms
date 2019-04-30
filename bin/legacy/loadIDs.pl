@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 BEGIN 
-{ 
+{
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
@@ -10,7 +10,7 @@ use CRMS;
 use Getopt::Std;
 
 my $usage = <<END;
-USAGE: $0 [-hnpvx:] -u USER TSV_FILE
+USAGE: $0 [-hnpv] -u USER TSV_FILE
 
 Imports reviews for a rereview project from TSV_FILE.
 
@@ -19,7 +19,6 @@ Imports reviews for a rereview project from TSV_FILE.
 -p       Run in production.
 -u USER  Add reviews by this user ID.
 -v       Be verbose.
--x SYS   Set SYS as the system to execute.
 
 The TSV_FILE has one record per line (spacing added for clarity):
 
@@ -36,7 +35,6 @@ my $noop       = $opts{'n'};
 my $production = $opts{'p'};
 my $user       = $opts{'u'};
 my $verbose    = $opts{'v'};
-my $sys        = $opts{'x'};
 
 if ($help || scalar @ARGV != 1 || !$user || !$ok)
 {
@@ -46,7 +44,6 @@ $instance = 'production' if $production;
 my $file = $ARGV[0];
 
 my $crms = CRMS->new(
-    sys      => $sys,
     verbose  => $verbose,
     instance => $instance
 );
@@ -141,7 +138,6 @@ foreach my $line ( <$fh> )
 close $fh;
 
 $crms = CRMS->new(
-    sys      =>   $sys,
     verbose  =>   $verbose,
     instance =>   $instance
 );

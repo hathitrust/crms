@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 BEGIN 
-{ 
+{
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
 
@@ -133,7 +133,8 @@ foreach my $row (@{$ref})
   my $bogus;
   foreach my $row2 (@{$ref2})
   {
-    my $pub;
+    my $data = $row2->[0];
+    my $pubdate;
     my %dates = ();
     my $renDate = $row2->[0];
     $dates{$renDate} = 1 if $renDate;

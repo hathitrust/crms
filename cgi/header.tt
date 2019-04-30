@@ -5,6 +5,7 @@
     <link rel="icon" type="image/png" href="[% crms.WebPath('web', crms.GetSystemVar('favicon')) %]"/>
     <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/datepicker.css') %]"/>
     <script type="text/javascript" src="[% crms.WebPath('web', 'js/common.js') %]"></script>
+    <script src="https://unpkg.com/tippy.js@3/dist/tippy.all.min.js"></script>
   [% page = cgi.param('p') %]
   [% reviewType = (page == 'review' OR page == 'corrections' OR page == 'cri'
                    OR page == 'stanford' OR page == 'frontmatter'
