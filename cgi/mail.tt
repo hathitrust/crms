@@ -32,7 +32,7 @@ function closeMe()
       [% ELSE %]
         [% subj = 'Reviewer Inquiry' %]
         [% IF id %]
-          [% subj = subj _ ' for '_ id _ ' (project ' _ crms.GetProjectName(id) _ ')' %]
+          [% subj = subj _ ' for '_ id _ ' (project ' _ crms.GetProjectRef(param.proj).name _ ')' %]
         [% END %]
         
         <strong>To:</strong> <a href="mailto:[% mail %]"><span style="color:black;">[% mail %]</span></a><br/>

@@ -95,7 +95,7 @@
     [% data = crms.CreateUserStatsReport(param.user, param.year, param.proj, !param.old) %]
     [% IF param.old %]
       <a class="nowrap" style="display:block;margin-bottom:-18px;padding:4px;width:190px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
-         onclick='toggleVisibility("[% divid %]");'>Show [% crms.GetProjectName(param.proj) _ ' ' _ param.year %]</a><br/>
+         onclick='toggleVisibility("[% divid %]");'>Show [% crms.GetProjectRef(param.proj).name _ ' ' _ param.year %]</a><br/>
     [% END %]
     <div id="[% divid %]" style="[% style %]">
       <h3>[% data.title %]&nbsp;&nbsp;&nbsp;&nbsp;

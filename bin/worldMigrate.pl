@@ -121,10 +121,10 @@ MigrateUsers();
 MigrateProjects();
 MigrateCandidates();
 MigrateQueue();
-#MigrateExportdata();
-#MigrateCorrections();
-#MigratePredeterminationsbreakdown();
-#UpdateStats();
+MigrateExportdata();
+MigrateCorrections();
+MigratePredeterminationsbreakdown();
+UpdateStats();
 
 
 
@@ -285,32 +285,44 @@ sub MigrateProjects
   foreach my $row (@{$ref})
   {
     my @values = ($projmap{$row->[0]}, $authmap{$row->[1]});
-    $sql = 'INSERT INTO projectauthorities (project,authority) VALUES (?,?)';
-    $crmsUS->PrepareSubmitSql($sql, @values);
+    if (!$crmsUS->SimpleSqlGet('SELECT COUNT(*) FROM projectauthorities WHERE project=? AND authority=?', @values))
+    {
+      $sql = 'INSERT INTO projectauthorities (project,authority) VALUES (?,?)';
+      $crmsUS->PrepareSubmitSql($sql, @values);
+    }
   }
   $sql = 'SELECT project,category FROM projectcategories';
   $ref = $crmsWorld->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     my @values = ($projmap{$row->[0]}, $catmap{$row->[1]});
-    $sql = 'INSERT INTO projectcategories (project,category) VALUES (?,?)';
-    $crmsUS->PrepareSubmitSql($sql, @values);
+    if (!$crmsUS->SimpleSqlGet('SELECT COUNT(*) FROM projectcategories WHERE project=? AND category=?', @values))
+    {
+      $sql = 'INSERT INTO projectcategories (project,category) VALUES (?,?)';
+      $crmsUS->PrepareSubmitSql($sql, @values);
+    }
   }
   $sql = 'SELECT project,rights FROM projectrights';
   $ref = $crmsWorld->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     my @values = ($projmap{$row->[0]}, $rightsmap{$row->[1]});
-    $sql = 'INSERT INTO projectrights (project,rights) VALUES (?,?)';
-    $crmsUS->PrepareSubmitSql($sql, @values);
+    if (!$crmsUS->SimpleSqlGet('SELECT COUNT(*) FROM projectrights WHERE project=? AND rights=?', @values))
+    {
+      $sql = 'INSERT INTO projectrights (project,rights) VALUES (?,?)';
+      $crmsUS->PrepareSubmitSql($sql, @values);
+    }
   }
   $sql = 'SELECT project,user FROM projectusers';
   $ref = $crmsWorld->SelectAll($sql);
   foreach my $row (@{$ref})
   {
     my @values = ($projmap{$row->[0]}, $row->[1]);
-    $sql = 'INSERT INTO projectusers (project,user) VALUES (?,?)';
-    $crmsUS->PrepareSubmitSql($sql, @values);
+    if (!$crmsUS->SimpleSqlGet('SELECT COUNT(*) FROM projectusers WHERE project=? AND user=?', @values))
+    {
+      $sql = 'INSERT INTO projectusers (project,user) VALUES (?,?)';
+      $crmsUS->PrepareSubmitSql($sql, @values);
+    }
   }
 }
 
@@ -384,6 +396,7 @@ sub MigrateQueue
       my @values = map {$row->{$_};} @fields;
       $sql = sprintf 'INSERT INTO queue (%s) VALUES %s', join(',', @fields),
                                                          $crmsUS->WildcardList(scalar @values);
+      printf "%s\n", Utilities::StringifySql($sql, @values);
       $crmsUS->PrepareSubmitSql($sql, @values);
     }
     next if $crmsUS->SimpleSqlGet('SELECT COUNT(*) FROM reviews WHERE id=?', $id);
@@ -414,18 +427,15 @@ sub MigrateQueue
           $did = $crmsUS->SimpleSqlGet($sql, $encdata);
         }
       }
+      $row->{'data'} = $did if $did;
       my @fields = keys %{$row};
       my @values = map {$row->{$_};} @fields;
-      if ($did)
-      {
-        push @fields, 'data';
-        push @values, $did;
-      }
       $sql = sprintf 'INSERT INTO reviews (%s) VALUES %s', join(',', @fields),
                                                          $crmsUS->WildcardList(scalar @values);
       $crmsUS->PrepareSubmitSql($sql, @values);
     }
   }
+  # FIXME: coalesce these if possible if same time and source
   $sql = 'SELECT time,itemcount,source FROM queuerecord';
   $ref = $crmsWorld->SelectAll($sql);
   foreach my $row (@{$ref})
