@@ -114,8 +114,13 @@ my %instmap; # Map of World institution id to US id.
 # | viaf                       | # OK, nothing to see here
 # +----------------------------+
 
+$crmsUS->set('die');
+$crmsWorld->set('die');
+my $newProj = $crmsUS->SimpleSqlGet('SELECT id FROM projects WHERE name="Commonwealth"');
 
-Reset();
+$crmsUS->PrepareSubmitSql('DELETE FROM historicalreviews WHERE id IN (SELECT id FROM exportdata WHERE project>=?)', $newProj);
+$crmsUS->PrepareSubmitSql('DELETE FROM exportdata WHERE project>=?', $newProj);
+#Reset();
 MigrateSources();
 MigrateUsers();
 MigrateProjects();
@@ -158,7 +163,6 @@ sub ConnectToWorldDb
 
 sub Reset
 {
-  my $newProj = $crmsUS->SimpleSqlGet('SELECT id FROM projects WHERE name="Commonwealth"');
   if ($newProj)
   {
     $crmsUS->PrepareSubmitSql('DELETE FROM candidates WHERE project>=?', $newProj);
@@ -273,6 +277,9 @@ sub MigrateProjects
     {
       $sql = 'INSERT INTO projects (name,color,autoinherit,group_volumes,'.
              'primary_authority,secondary_authority) VALUES (?,?,?,?,?,?)';
+      printf "%s\n", Utilities::StringifySql($sql, $name, $color, $autoinherit,
+                                $group_volumes, $authmap{$primary_authority},
+                                $authmap{$secondary_authority});
       $crmsUS->PrepareSubmitSql($sql, $name, $color, $autoinherit,
                                 $group_volumes, $authmap{$primary_authority},
                                 $authmap{$secondary_authority});
@@ -288,6 +295,7 @@ sub MigrateProjects
     if (!$crmsUS->SimpleSqlGet('SELECT COUNT(*) FROM projectauthorities WHERE project=? AND authority=?', @values))
     {
       $sql = 'INSERT INTO projectauthorities (project,authority) VALUES (?,?)';
+      printf "%s\n", Utilities::StringifySql($sql, @values);
       $crmsUS->PrepareSubmitSql($sql, @values);
     }
   }
@@ -299,6 +307,7 @@ sub MigrateProjects
     if (!$crmsUS->SimpleSqlGet('SELECT COUNT(*) FROM projectcategories WHERE project=? AND category=?', @values))
     {
       $sql = 'INSERT INTO projectcategories (project,category) VALUES (?,?)';
+      printf "%s\n", Utilities::StringifySql($sql, @values);
       $crmsUS->PrepareSubmitSql($sql, @values);
     }
   }
@@ -310,6 +319,7 @@ sub MigrateProjects
     if (!$crmsUS->SimpleSqlGet('SELECT COUNT(*) FROM projectrights WHERE project=? AND rights=?', @values))
     {
       $sql = 'INSERT INTO projectrights (project,rights) VALUES (?,?)';
+      printf "%s\n", Utilities::StringifySql($sql, @values);
       $crmsUS->PrepareSubmitSql($sql, @values);
     }
   }
@@ -321,6 +331,7 @@ sub MigrateProjects
     if (!$crmsUS->SimpleSqlGet('SELECT COUNT(*) FROM projectusers WHERE project=? AND user=?', @values))
     {
       $sql = 'INSERT INTO projectusers (project,user) VALUES (?,?)';
+      printf "%s\n", Utilities::StringifySql($sql, @values);
       $crmsUS->PrepareSubmitSql($sql, @values);
     }
   }
@@ -339,6 +350,7 @@ sub MigrateCandidates
       my @values = map {$row->{$_};} @fields;
       $sql = sprintf 'INSERT INTO bibdata (%s) VALUES %s', join(',', @fields),
                                                          $crmsUS->WildcardList(scalar @values);
+      printf "%s\n", Utilities::StringifySql($sql, @values);
       $crmsUS->PrepareSubmitSql($sql, @values);
     }
   }
@@ -354,6 +366,7 @@ sub MigrateCandidates
       my @values = map {$row->{$_};} @fields;
       $sql = sprintf 'INSERT INTO candidates (%s) VALUES %s', join(',', @fields),
                                                          $crmsUS->WildcardList(scalar @values);
+      printf "%s\n", Utilities::StringifySql($sql, @values);
       $crmsUS->PrepareSubmitSql($sql, @values);
     }
   }
@@ -368,6 +381,7 @@ sub MigrateCandidates
       my @values = map {$row->{$_};} @fields;
       $sql = sprintf 'INSERT INTO und (%s) VALUES %s', join(',', @fields),
                                                          $crmsUS->WildcardList(scalar @values);
+      printf "%s\n", Utilities::StringifySql($sql, @values);
       $crmsUS->PrepareSubmitSql($sql, @values);
     }
   }
@@ -376,6 +390,7 @@ sub MigrateCandidates
   foreach my $row (@{$ref})
   {
     $sql = 'INSERT INTO candidatesrecord (time,addedamount) VALUES (?,?)';
+    printf "%s\n", Utilities::StringifySql($sql, $row->[0], $row->[1]);
     $crmsUS->PrepareSubmitSql($sql, $row->[0], $row->[1]);
   }
 }
@@ -453,19 +468,22 @@ sub MigrateExportdata
   {
     my $row = $ref->{$gid};
     $row->{'project'} = $projmap{$row->{'project'}};
+    my $worldgid = $row->{'gid'};
     delete $row->{'gid'};
     my @fields = keys %{$row};
     my @values = map {$row->{$_};} @fields;
     $sql = sprintf 'INSERT INTO exportdata (%s) VALUES %s', join(',', @fields),
                                                        $crmsUS->WildcardList(scalar @values);
+    printf "%s\n", Utilities::StringifySql($sql, @values);
     $crmsUS->PrepareSubmitSql($sql, @values);
     $sql = 'SELECT gid FROM exportdata WHERE id=? AND time=?';
-    $gid = $crmsUS->SimpleSqlGet($sql, $row->{'id'}, $row->{'time'});
+    my $usgid = $crmsUS->SimpleSqlGet($sql, $row->{'id'}, $row->{'time'});
+    print "US GID $gid\n";
     $sql = 'SELECT * FROM historicalreviews WHERE gid=?';
-    my $ref2 = $dbhWorld->selectall_hashref($sql, 'user', undef, $gid);
+    my $ref2 = $dbhWorld->selectall_hashref($sql, 'user', undef, $worldgid);
+    #print Dumper $ref2;
     foreach my $user (sort keys %{$ref2})
     {
-      print "MigrateExportdata: $gid/$user review\n";
       my $row = $ref2->{$user};
       delete $row->{'gid'};
       # renNum or renDate must be defined and nonzero-length for an entry to be made.
@@ -494,15 +512,12 @@ sub MigrateExportdata
           $did = $crmsUS->SimpleSqlGet($sql, $encdata);
         }
       }
+      $row->{'data'} = $did if $did;
       my @fields = keys %{$row};
       my @values = map {$row->{$_};} @fields;
-      if ($did)
-      {
-        push @fields, 'data';
-        push @values, $did;
-      }
       $sql = sprintf 'INSERT INTO historicalreviews (%s) VALUES %s', join(',', @fields),
                                                          $crmsUS->WildcardList(scalar @values);
+      printf "%s\n", Utilities::StringifySql($sql, @values);
       $crmsUS->PrepareSubmitSql($sql, @values);
     }
   }
@@ -511,6 +526,7 @@ sub MigrateExportdata
   foreach my $row (@{$ref})
   {
     $sql = 'INSERT INTO exportrecord (time,itemcount) VALUES (?,?)';
+    printf "%s\n", Utilities::StringifySql($sql, $row->[0], $row->[1]);
     $crmsUS->PrepareSubmitSql($sql, $row->[0], $row->[1]);
   }
   $sql = 'SELECT time FROM processstatus';
@@ -522,6 +538,7 @@ sub MigrateExportdata
     if (!$crmsUS->SimpleSqlGet($sql, $time))
     {
       $sql = 'INSERT INTO processstatus (time) VALUES (?)';
+      printf "%s\n", Utilities::StringifySql($sql, $time);
       $crmsUS->PrepareSubmitSql($sql, $time);
     }
   }
@@ -546,6 +563,7 @@ sub MigrateCorrections
       }
       $sql = sprintf 'INSERT INTO corrections (%s) VALUES %s', join(',', @fields),
                                                          $crmsUS->WildcardList(scalar @values);
+      printf "%s\n", Utilities::StringifySql($sql, @values);
       $crmsUS->PrepareSubmitSql($sql, @values);
     }
   }
@@ -564,12 +582,14 @@ sub MigratePredeterminationsbreakdown
     {
       $sql = 'UPDATE predeterminationsbreakdown SET s2=s2+?,s3=s3+?,s4=s4+?,s8=s8+?'.
              ' WHERE date=?';
+      printf "%s\n", Utilities::StringifySql($sql, $row->[1], $row->[2], $row->[3], $row->[4], $date);
       $crmsUS->PrepareSubmitSql($sql, $row->[1], $row->[2], $row->[3], $row->[4], $date);
     }
     else
     {
       $sql = 'INSERT INTO predeterminationsbreakdown (date,s2,s3,s4,s8)'.
              ' VALUES (?,?,?,?,?)';
+      printf "%s\n", Utilities::StringifySql($sql, $date, $row->[1], $row->[2], $row->[3], $row->[4]);
       $crmsUS->PrepareSubmitSql($sql, $date, $row->[1], $row->[2], $row->[3], $row->[4]);
     }
   }
