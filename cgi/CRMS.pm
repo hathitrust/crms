@@ -323,7 +323,7 @@ sub set
 
 sub Version
 {
-  return '8.0.1';
+  return '8.0.2';
 }
 
 # This is the NOT SO human-readable version used in sys=blah URL param
@@ -1797,9 +1797,9 @@ sub CloneReview
   my $user = shift;
 
   my $err = $self->LockItem($id, $user, 1);
-  if (!$err)
+  if ($err)
   {
-    $err = "Could not approve review for $id because you already reviewed it.";
+    $err = "Could not approve review for $id -- lock failed ($err)";
     $self->UnlockItem($id, $user);
   }
   elsif ($self->HasItemBeenReviewedByAnotherExpert($id, $user))
