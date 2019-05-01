@@ -63,7 +63,7 @@ foreach my $row (@{$ref})
   my $txt = $row->[2];
   my $uuid = $row->[3];
   my $subj = sprintf 'Reviewer Inquiry%s', (defined $id)? " for $id":'';
-  $subj .= sprintf ' (project %s)', $crms->GetProjectName($id) if defined $id;
+  $subj .= sprintf ' (project %s)', $crms->GetProjectRef($crms->GetProject($id))->{'name'} if defined $id;
   $subj = $crms->SubjectLine($subj);
   my $msg = $crms->StartHTML($subj);
   if ($id)

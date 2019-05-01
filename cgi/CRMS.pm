@@ -5614,6 +5614,10 @@ sub SetError
 
   $error .= "\n";
   $error .= Utilities::StackTrace();
+  if ($self->get('die'))
+  {
+    die $error;
+  }
   my $errorh = $self->get('errorh');
   if (!$errorh->{$error})
   {
