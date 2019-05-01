@@ -323,7 +323,7 @@ sub set
 
 sub Version
 {
-  return '8.0.2';
+  return '8.0.4';
 }
 
 # This is the NOT SO human-readable version used in sys=blah URL param
@@ -745,7 +745,7 @@ sub ProcessReviews
   }
   my $reason = '';
   # Don't do this if the system is down or if it is Sunday.
-  if (defined $stat)
+  if ($stat->[1] ne 'normal')
   {
     $reason = 'system status is '. $stat->[1];
   }
@@ -801,7 +801,7 @@ sub ProcessReviews
     $self->PrepareSubmitSql($sql, $id);
     $stati{$status}++;
   }
-  $self->ReportMsg(sprintf("Setting system status back to '%s'", (defined $stat)? $stat->[1] : 'normal')) unless $quiet;
+  $self->ReportMsg(sprintf "Setting system status back to '%s'", $stat->[1]) unless $quiet;
   $self->SetSystemStatus($stat);
   $sql = 'INSERT INTO processstatus VALUES ()';
   $self->PrepareSubmitSql($sql);
@@ -4716,7 +4716,7 @@ sub UpdateUserStats
 
   # Get the underlying system status, ignoring replication delays.
   my $stat = $self->GetSystemStatus(1);
-  my $tmpstat = ['', (defined $stat)? $stat->[1] : 'normal',
+  my $tmpstat = ['', $stat->[1],
                  'CRMS is updating user stats, so they may not display correctly. '.
                  'This usually takes five minutes or so to complete.'];
   $self->SetSystemStatus($tmpstat);
@@ -4738,7 +4738,7 @@ sub UpdateUserStats
       $self->GetMonthStats($user, $y, $m, $proj);
     }
   }
-  $self->ReportMsg("Setting system status back to '$stat'") unless $quiet;
+  $self->ReportMsg(sprintf "Setting system status back to '%s'", $stat->[1]) unless $quiet;
   $self->SetSystemStatus($stat);
 }
 
