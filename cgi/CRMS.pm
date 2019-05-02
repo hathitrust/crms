@@ -323,7 +323,7 @@ sub set
 
 sub Version
 {
-  return '8.0.4';
+  return '8.0.5';
 }
 
 # This is the NOT SO human-readable version used in sys=blah URL param
