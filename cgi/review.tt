@@ -23,10 +23,12 @@
     <h3>Too late, can't edit your review for this item.</h3>
     [% STOP %]
   [% END %]
+  [% IF 0 %]
   [% IF expert && crms.HasItemBeenReviewedByAnotherExpert(htid, user) %]
     <h3>Item has already been reviewed by another expert.</h3>
     <br/><a href="javascript:window.close()">Close</a>
     [% STOP %]
+  [% END %]
   [% END %]
   [% IF NOT expert %]
     [% CALL crms.UnlockAllItemsForUser(user) %]
@@ -58,11 +60,6 @@
 [% data = crms.ReviewData(htid) %]
 <div class="divbody">
   <div class="divOP">
-    [% IF expert && editing %]
-      [% IF crms.HasItemBeenReviewedByAnotherExpert(htid, user) %]
-        [% error = "An expert has already reviewed this volume. Please cancel." %]
-      [% END %]
-    [% END %]
     [% es = crms.GetErrors() %]
     [% IF es.size %]
       [% IF NOT error %][% error = '' %][% END %]
