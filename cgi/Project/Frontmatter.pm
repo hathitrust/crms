@@ -8,7 +8,7 @@ my $TYPES = [{id => 0, code => 'factual', name => 'Factual'},
              {id => 1, code => 'creative', name => 'Creative'},
              {id => 2, code => 'mixed', name => 'Mixed'},
              {id => 3, code => 'no_content', name => "No Content"}];
-my $CATEGORIES = [{id => 0, code => 'frontispiece', name => 'Frontispiece'},
+my $CATEGORIES = [{id => 0, code => 'image', name => 'Image'},
                   {id => 1, code => 'title', name => 'Title'},
                   {id => 2, code => 'ad', name => 'Advertisement'},
                   {id => 3, code => 'pub_info', name => 'Pub. Information'},
@@ -17,8 +17,10 @@ my $CATEGORIES = [{id => 0, code => 'frontispiece', name => 'Frontispiece'},
                   {id => 6, code => 'list', name => 'List of Content'},
                   {id => 7, code => 'main_text', name => 'Main Text'},
                   {id => 8, code => 'appendix', name => 'Appendix'},
-                  {id => 9, code => 'index', name => 'Index'},
-                  {id => 10, code => 'no_content', name => 'No Content'}];
+                  {id => 9, code => 'cover', name => 'Cover'},
+                  {id => 10, code => 'epigraph', name => 'Epigraph'},
+                  {id => 11, code => 'poem', name => 'Poem'},
+                  {id => 12, code => 'no_content', name => 'No Content'}];
 my $TYPE_ID_NAME_MAP = { map {$_->{'id'} => $_->{'name'}} @{$TYPES} };
 my $TYPE_ID_CODE_MAP = { map {$_->{'id'} => $_->{'code'}} @{$TYPES} };
 my $TYPE_CODE_NAME_MAP = { map {$_->{'code'} => $_->{'name'}} @{$TYPES} };

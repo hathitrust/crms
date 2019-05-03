@@ -201,11 +201,19 @@ function popReviewInfo(user)
   var review = gReviewData.reviews[user];
   var button = document.getElementById("r" + review.rights);
   if (button) { button.checked = "checked"; }
-  button = document.getElementById("renewalFieldCheckbox");
-  if (button) { button.checked = (review.renNum != null); }
+  var renNum = null;
+  var renDate = null;
+  if (review.data)
+  {
+    var reviewData = JSON.parse(review.data);
+    renNum = reviewData.renNum;
+    renDate = reviewData.renDate;
+  }
   var field = document.getElementById("renewalField");
-  if (field) { field.value = review.renNum; }
-  document.submitReview.renDate.value = review.renDate;
+  if (field) { field.value = renNum; }
+  button = document.getElementById("renewalFieldCheckbox");
+  if (button) { button.checked = (renNum != null); }
+  document.submitReview.renDate.value = renDate;
   document.submitReview.note.value = review.note;
   selMenuItem('catMenu', (review.category)? review.category:'');
 }

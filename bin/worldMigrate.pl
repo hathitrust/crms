@@ -464,11 +464,10 @@ sub MigrateExportdata
 {
   my $sql = 'SELECT * FROM exportdata';
   my $ref = $dbhWorld->selectall_hashref($sql, 'gid');
-  foreach my $gid (sort keys %{$ref})
+  foreach my $worldgid (sort keys %{$ref})
   {
-    my $row = $ref->{$gid};
+    my $row = $ref->{$worldgid};
     $row->{'project'} = $projmap{$row->{'project'}};
-    my $worldgid = $row->{'gid'};
     delete $row->{'gid'};
     my @fields = keys %{$row};
     my @values = map {$row->{$_};} @fields;
@@ -478,7 +477,8 @@ sub MigrateExportdata
     $crmsUS->PrepareSubmitSql($sql, @values);
     $sql = 'SELECT gid FROM exportdata WHERE id=? AND time=?';
     my $usgid = $crmsUS->SimpleSqlGet($sql, $row->{'id'}, $row->{'time'});
-    print "US GID $gid\n";
+    die 'undef US GID from World GID $worldgid' unless defined $usgid;
+    print "US GID $usgid, World GID $worldgid\n";
     $sql = 'SELECT * FROM historicalreviews WHERE gid=?';
     my $ref2 = $dbhWorld->selectall_hashref($sql, 'user', undef, $worldgid);
     #print Dumper $ref2;
@@ -513,6 +513,7 @@ sub MigrateExportdata
         }
       }
       $row->{'data'} = $did if $did;
+      $row->{'gid'} = $usgid;
       my @fields = keys %{$row};
       my @values = map {$row->{$_};} @fields;
       $sql = sprintf 'INSERT INTO historicalreviews (%s) VALUES %s', join(',', @fields),
