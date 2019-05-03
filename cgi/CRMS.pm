@@ -323,7 +323,7 @@ sub set
 
 sub Version
 {
-  return '8.0.6';
+  return '8.0.7';
 }
 
 # This is the NOT SO human-readable version used in sys=blah URL param
@@ -878,23 +878,25 @@ sub CalcStatus
   {
     $return->{'status'} = 2;
     # Do auto for ic vs und
-    # FIXME: allow missing renewal information to slip under radar?
-    if (($attr eq 'ic' && $attr2 eq 'und') ||
-        ($attr eq 'und' && $attr2 eq 'ic'))
-    {
-      # If both reviewers are non-advanced mark as provisional match
-      if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($user2)))
-      {
-         $return->{'status'} = 3;
-      }
-      else
-      {
-        $return->{'status'} = 8;
-        $return->{'attr'} = $self->TranslateAttr('und');
-        $return->{'reason'} = $self->TranslateReason('crms');
-        $return->{'category'} = 'Attr Default';
-      }
-    }
+    # FIXME: for Commonwealth (non-renewal) projects this may need to be
+    # resurrected, but for US Monographs and such we want to catch missing
+    # renewal information.
+    #if (($attr eq 'ic' && $attr2 eq 'und') ||
+    #    ($attr eq 'und' && $attr2 eq 'ic'))
+    #{
+    #  # If both reviewers are non-advanced mark as provisional match
+    #  if ((!$self->IsUserAdvanced($user)) && (!$self->IsUserAdvanced($user2)))
+    #  {
+    #     $return->{'status'} = 3;
+    #  }
+    #  else
+    #  {
+    #    $return->{'status'} = 8;
+    #    $return->{'attr'} = $self->TranslateAttr('und');
+    #    $return->{'reason'} = $self->TranslateReason('crms');
+    #    $return->{'category'} = 'Attr Default';
+    #  }
+    #}
   }
   return $return;
 }
