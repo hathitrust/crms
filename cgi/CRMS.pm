@@ -323,7 +323,7 @@ sub set
 
 sub Version
 {
-  return '8.0.7';
+  return '8.0.8';
 }
 
 # This is the NOT SO human-readable version used in sys=blah URL param
@@ -923,7 +923,10 @@ sub DoRightsMatch
   my $attr2   = shift;
   my $reason2 = shift;
 
-  return ($attr1 eq $attr2)? 1:0;
+  return 0 if $attr1 ne $attr2;
+  return 0 if $attr1 eq 'pdus' && (($reason1 eq 'ncn' && $reason2 eq 'ren') || ($reason1 eq 'ren' && $reason2 eq 'ncn'));
+  return 0 if $attr1 eq 'und' && (($reason1 eq 'nfi' && $reason2 eq 'ren') || ($reason1 eq 'ren' && $reason2 eq 'nfi'));
+  return 1;
 }
 
 # If quiet is set, don't try to create the export file, print stuff, or send mail.
@@ -8693,6 +8696,18 @@ sub Dump
   my $data = shift;
 
   return Dumper $data;
+}
+
+sub Commify
+{
+  my $self = shift;
+  my $n = shift;
+
+  my $n2 = reverse $n;
+  $n2 =~ s<(\d\d\d)(?=\d)(?!\d*\.)><$1,>g;
+  # Don't just try to "return reverse $n2" as a shortcut. reverse() is weird.
+  $n = reverse $n2;
+  return $n;
 }
 
 1;

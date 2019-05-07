@@ -69,7 +69,9 @@ addEvent(window, 'load', function(e)
   [% reviews = ref.rows %]
   <a id="results"></a>
 
-  <strong>Found $Total review[% (Total==1)? "":"s"%] for $TotalVolumes volume[% (TotalVolumes==1)? "":"s"%], page $pagenum of $of</strong><br/>
+  <strong>Found [% crms.Commify(Total) %] [% crms.Pluralize('review', Total) %]
+          for [% crms.Commify(TotalVolumes) %] [% crms.Pluralize('volume', TotalVolumes) %],
+          page [% crms.Commify(pagenum) %] of [% crms.Commify(of) %]</strong><br/>
 
   [% IF NOT offset %] [% offset = 0 %] [% END %]
   [% IF offset > 0 %] [% next = offset + pagesize %]
@@ -326,7 +328,9 @@ addEvent(window, 'load', function(e)
     <br/>
   [% END %]
 
-  <strong>Found $Total review[% (Total==1)? "":"s"%] for $TotalVolumes volume[% (TotalVolumes==1)? "":"s"%], page $pagenum of $of</strong><br/>
+  <strong>Found [% crms.Commify(Total) %] [% crms.Pluralize('review', Total) %]
+          for [% crms.Commify(TotalVolumes) %] [% crms.Pluralize('volume', TotalVolumes) %],
+          page [% crms.Commify(pagenum) %] of [% crms.Commify(of) %]</strong><br/>
   [% IF doPrev %]
   <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">
   [% ELSE %]

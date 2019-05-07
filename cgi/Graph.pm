@@ -517,10 +517,10 @@ sub CreateCandidatesGraph3
 
 sub CreateProgressGraph
 {
-  my $self = shift;
-  my $proj = shift || 1;
+  my $self    = shift;
+  my $project = shift;
 
-  my $projname = $self->SimpleSqlGet('SELECT name FROM projects WHERE id=?', $proj);
+  my $proj = $self->SimpleSqlGet('SELECT COALESCE(id,1) FROM projects WHERE name=?', $project);
   my $sql = 'SELECT COUNT(*) FROM exportdata WHERE project=?';
   my $val = $self->SimpleSqlGet($sql, $proj);
   $sql = 'SELECT COUNT(*) FROM candidates WHERE project=?';
@@ -531,7 +531,7 @@ sub CreateProgressGraph
             '<span style="font-size:25px;color:black">{y} of '. $total. '</span><br/>'.
             '<span style="font-size:12px;color:silver">determinations</span></div>';
   my %data = ('chart'=>{'type'=>'solidgauge'},
-              'title'=>{'text'=>'<span style="font-size:25px;color:black">'. $projname. ' Project</span><br/>'},
+              'title'=>{'text'=>'<span style="font-size:25px;color:black">'. $project. ' Project</span><br/>'},
               'pane'=>{'center'=>['50%','85%'],
                        'size'=>'120%',
                        'startAngle'=>'-90',
