@@ -1,9 +1,9 @@
 [% INCLUDE header.tt %]
 
-<!--<script type="text/javascript" src="https://code.highcharts.com/adapters/standalone-framework.js"></script>-->
-<!--<script type="text/javascript" src="https://code.highcharts.com/highcharts.js"></script>-->
-<!--<script type="text/javascript" src="https://code.highcharts.com/highcharts-more.js"></script>-->
-<!--<script type="text/javascript" src="https://code.highcharts.com/modules/solid-gauge.js"></script>-->
+<script type="text/javascript" src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
+<script type="text/javascript" src="https://code.highcharts.com/highcharts.js"></script>
+<script type="text/javascript" src="https://code.highcharts.com/highcharts-more.js"></script>
+<script type="text/javascript" src="https://code.highcharts.com/modules/solid-gauge.js"></script>
 <script type="text/javascript">
 <!--
 function CheckAll(box,formid)
@@ -22,7 +22,7 @@ window.onload = function(e)
   {
     try
     {
-      loadChart(progress, "[% crms.WebPath('cgi', 'getExportStats?type=graph&c=11') %]");
+      loadChart(progress, "[% crms.WebPath('cgi', 'getExportStats?type=graph&c=11&project=State+Gov+Docs') %]");
     }
     catch (e)
     {
@@ -53,9 +53,11 @@ window.onload = function(e)
       </option>
     [% END %]
     </select>
-    
   </form>
 [% END %]
+
+<div id="progress" style="width:450px;float:right;margin-right:240px;"></div>
+
 [% crms.Debug %]
 [% n = crms.CountHolds() %]
 [% IF n %]<h4>You have $n [% crms.Pluralize('volume', n) %] on hold.</h4>[% END %]

@@ -38,7 +38,7 @@ die 'Terminating' unless GetOptions(
            't'    => \$training,
            'v+'   => \$verbose);
 $instance = 'production' if $production;
-$instance = 'crms_training' if $training;
+$instance = 'crms-training' if $training;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
@@ -60,7 +60,7 @@ my %projmap; # Map of World project id to US id.
 my %authmap; # Map of World authority id to US id.
 my %rightsmap; # Map of World rights id to US id.
 my %catmap; # Map of World category id to US id.
-my %instmap; # Map of World institution id to US id.
+
 
 
 # +----------------------------+
@@ -114,13 +114,12 @@ my %instmap; # Map of World institution id to US id.
 # | viaf                       | # OK, nothing to see here
 # +----------------------------+
 
-$crmsUS->set('die');
-$crmsWorld->set('die');
-my $newProj = $crmsUS->SimpleSqlGet('SELECT id FROM projects WHERE name="Commonwealth"');
+$crmsUS->set('die', 1);
+$crmsWorld->set('die', 1);
 
-$crmsUS->PrepareSubmitSql('DELETE FROM historicalreviews WHERE id IN (SELECT id FROM exportdata WHERE project>=?)', $newProj);
-$crmsUS->PrepareSubmitSql('DELETE FROM exportdata WHERE project>=?', $newProj);
-#Reset();
+%projmap = (1 => 11, 3 => 13, 5 => 15, 7 => 17);
+
+Reset();
 MigrateSources();
 MigrateUsers();
 MigrateProjects();
@@ -163,6 +162,7 @@ sub ConnectToWorldDb
 
 sub Reset
 {
+  my $newProj = $crmsUS->SimpleSqlGet('SELECT id FROM projects WHERE name="Commonwealth"');
   if ($newProj)
   {
     $crmsUS->PrepareSubmitSql('DELETE FROM candidates WHERE project>=?', $newProj);
@@ -226,6 +226,7 @@ sub MigrateSources
 
 sub MigrateUsers
 {
+  my %instmap; # Map of World institution id to US id.
   my $sql = 'SELECT id,name,shortname,suffix FROM institutions';
   my $ref = $crmsWorld->SelectAll($sql);
   foreach my $row (@{$ref})
@@ -477,7 +478,7 @@ sub MigrateExportdata
     $crmsUS->PrepareSubmitSql($sql, @values);
     $sql = 'SELECT gid FROM exportdata WHERE id=? AND time=?';
     my $usgid = $crmsUS->SimpleSqlGet($sql, $row->{'id'}, $row->{'time'});
-    die 'undef US GID from World GID $worldgid' unless defined $usgid;
+    die "undef US GID from World GID $worldgid" unless defined $usgid;
     print "US GID $usgid, World GID $worldgid\n";
     $sql = 'SELECT * FROM historicalreviews WHERE gid=?';
     my $ref2 = $dbhWorld->selectall_hashref($sql, 'user', undef, $worldgid);
