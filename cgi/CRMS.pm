@@ -323,7 +323,7 @@ sub set
 
 sub Version
 {
-  return '8.0.8';
+  return '8.0.9';
 }
 
 # This is the NOT SO human-readable version used in sys=blah URL param
@@ -7498,6 +7498,9 @@ sub DuplicateVolumesFromExport
       }
     }
   }
+  my $proj = $self->SimpleSqlGet('SELECT project FROM exportdata WHERE gid=?', $gid);
+  my $project = $self->Projects()->{$proj};
+  my $projname = $project->name;
   my $wrong = $self->HasMissingOrWrongRecord($id, $sysid, $rows);
   foreach my $ref (@{$rows})
   {
@@ -7515,7 +7518,11 @@ sub DuplicateVolumesFromExport
     }
     my $newrights = "$attr/$reason";
     my $oldrights = "$attr2/$reason2";
-    if ($newrights eq 'pd/ncn')
+    if (!$project->InheritanceAllowed())
+    {
+      $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tProject $projname does not allow inheritance\n";
+    }
+    elsif ($newrights eq 'pd/ncn')
     {
       $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
     }
@@ -8639,44 +8646,47 @@ sub GetPageImage
 sub ExportReport
 {
   my $self  = shift;
-  my $proj  = shift || 1;
-  my $start = shift;
-  my $end   = shift;
-
-  my @params = ($proj);
-  my ($startc, $endc) = ('', '');
-  if ($start)
+  my $start = shift || $self->GetTheYear(). '-01-01';
+  my $report = [];
+  my $sql = 'SELECT id,name FROM projects ORDER BY id';
+  my $ref = $self->SelectAll($sql);
+  foreach my $row (@{$ref})
   {
-    $startc = ' AND DATE(e.time)>=?';
-    push @params, $start;
+    my $proj = $row->[0];
+    my $name = $row->[1];
+    $sql = 'SELECT COUNT(*) FROM candidates WHERE project=?';
+    my $cand = $self->SimpleSqlGet($sql, $proj);
+    if ($cand == 0)
+    {
+      $sql = 'SELECT COUNT(*) FROM queue WHERE project=?';
+      $cand = $self->SimpleSqlGet($sql, $proj);
+    }
+    $sql = 'SELECT COUNT(*) FROM exportdata WHERE project=?';
+    my $det = $self->SimpleSqlGet($sql, $proj);
+    $sql = 'SELECT COUNT(*) FROM exportdata WHERE project=? AND attr IN ("pd","pdus")';
+    my $pddet = $self->SimpleSqlGet($sql, $proj);
+    $sql = 'SELECT COUNT(*) FROM exportdata WHERE project=? AND DATE(time)>=?';
+    my $ytddet = $self->SimpleSqlGet($sql, $proj, $start);
+    $sql = 'SELECT COUNT(*) FROM exportdata WHERE project=? AND attr IN ("pd","pdus") AND DATE(time)>=?';
+    my $ytdpddet = $self->SimpleSqlGet($sql, $proj, $start);
+    my ($pdpct, $ytdpdpct) = ('0.0%', '0.0%');
+    $pdpct = sprintf "%.1f%%", $pddet / $det * 100.0 if $det;
+    $ytdpdpct = sprintf "%.1f%%", $ytdpddet / $ytddet * 100.0 if $ytddet;
+    $sql = 'SELECT SUM(COALESCE(TIME_TO_SEC(r.duration),0)/3600.0)'.
+           ' FROM historicalreviews r INNER JOIN exportdata e ON r.gid=e.gid'.
+           ' WHERE TIME_TO_SEC(r.duration)<=3600 AND e.project=?';
+    my $time = sprintf "%.1f", $self->SimpleSqlGet($sql, $proj);
+    push @{$report}, {'id' => $proj, 'name' => $name, 'candidates' => $cand,
+                      'determinations' => $det, 'pd_determinations' => $pddet,
+                      'pd_pct' => $pdpct,
+                      'ytd_determinations' => $ytddet,
+                      'ytd_pd_determinations' => $ytdpddet,
+                      'ytd_pd_pct' => $ytdpdpct,
+                      'time' => $time};
   }
-  if ($end)
-  {
-    $endc = ' AND DATE(e.time)<=?';
-    push @params, $end;
-  }
-  my %report = ('start' => $start, 'end' => $end);
-  my $sql = 'SELECT COUNT(*) FROM exportdata e WHERE e.project=?'.
-            $startc. $endc;
-  #printf "$sql (%s)<br/>\n", join ',', @params;
-  $report{'all'} = $self->SimpleSqlGet($sql, @params);
-  $sql = 'SELECT COUNT(*) FROM exportdata e WHERE e.project=?'.
-         ' AND e.attr IN ("pd","pdus")'. $startc. $endc;
-  $report{'pd'} = $self->SimpleSqlGet($sql, @params);
-  eval {
-    $report{'pdpct'} = sprintf "%.1f%%", $report{'pd'} / $report{'all'} * 100.0;
-  };
-  $report{'pdpct'} = '0.0%' if $@;
-  $sql = 'SELECT SUM(COALESCE(TIME_TO_SEC(r.duration),0)/3600.0)'.
-         ' FROM historicalreviews r INNER JOIN exportdata e ON r.gid=e.gid'.
-         ' WHERE TIME_TO_SEC(r.duration)<=3600 AND e.project=?'.
-         $startc. $endc;
-  $report{'time'} = sprintf "%.1f", $self->SimpleSqlGet($sql, @params);
-  $sql = 'SELECT COUNT(*) FROM candidates e WHERE e.project=?'.
-         $startc. $endc;
-  $report{'candidates'} = $self->SimpleSqlGet($sql, @params);
-  return \%report;
+  return $report;
 }
+
 
 # Takes output of AllAssignableXXXs (list of hashes) and pulls the IDs into a list.
 sub JSONifyIDs

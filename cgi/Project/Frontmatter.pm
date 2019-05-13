@@ -107,6 +107,13 @@ sub ValidateSubmission
   return undef;
 }
 
+# ========== INHERITANCE ========== #
+sub InheritanceAllowed
+{
+  return 0;
+}
+
+
 sub Types
 {
   return $TYPES;

@@ -188,5 +188,11 @@ sub ReviewPartials
   return ['top', 'bibdata'];
 }
 
+# ========== INHERITANCE ========== #
+sub InheritanceAllowed
+{
+  return 1;
+}
+
 
 1;
