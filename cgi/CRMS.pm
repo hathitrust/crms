@@ -7498,6 +7498,9 @@ sub DuplicateVolumesFromExport
       }
     }
   }
+  my $proj = $self->SimpleSqlGet('SELECT project FROM exportdata WHERE gid=?', $gid);
+  my $project = $self->Projects()->{$proj};
+  my $projname = $project->name;
   my $wrong = $self->HasMissingOrWrongRecord($id, $sysid, $rows);
   foreach my $ref (@{$rows})
   {
@@ -7515,7 +7518,11 @@ sub DuplicateVolumesFromExport
     }
     my $newrights = "$attr/$reason";
     my $oldrights = "$attr2/$reason2";
-    if ($newrights eq 'pd/ncn')
+    if (!$project->InheritanceAllowed())
+    {
+      $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tProject $projname does not allow inheritance\n";
+    }
+    elsif ($newrights eq 'pd/ncn')
     {
       $data->{'disallowed'}->{$id} .= "$id2\t$sysid\t$oldrights\t$newrights\t$id\tCan't inherit from pd/ncn\n";
     }
