@@ -323,7 +323,7 @@ sub set
 
 sub Version
 {
-  return '8.0.9';
+  return '8.0.10';
 }
 
 # This is the NOT SO human-readable version used in sys=blah URL param
@@ -1935,7 +1935,8 @@ sub SubmitReview
   foreach my $field (keys %{$params})
   {
     my $value = $params->{$field};
-    if ($field eq 'hold')
+    # Convert Boolean fields.
+    if ($field eq 'hold' || $field eq 'swiss')
     {
       $value = ($value)? 1:0;
     }
