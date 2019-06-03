@@ -152,7 +152,7 @@
           [% IF u.commitment && u.commitment > 0.0 %]
             [% u.commitmentFmt %]
             [% IF active && uadmin %]
-              <div class="ProgressBar[% (crms.sys() == 'crmsworld')? 'Red':'' %]">
+              <div class="ProgressBar">
                 <div class="ProgressBarInner"
                      style="width:[% (u.progress * 100.0) _ '%' %];">
                 </div>

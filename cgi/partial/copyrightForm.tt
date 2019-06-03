@@ -2,8 +2,8 @@
 [% importUser = cgi.param('importUser') %]
 
 [% # Set up values from CGI (in case of error) or existing review (editing). %]
-[% u_renNum = (error)? cgi.param('renNum') : data.reviews.$user.renNum %]
-[% u_renDate = (error)? cgi.param('renDate') : data.reviews.$user.renDate %]
+[% u_renNum = (error)? cgi.param('renNum') : data.reviews.$user.data.renNum %]
+[% u_renDate = (error)? cgi.param('renDate') : data.reviews.$user.data.renDate %]
 [% u_rights = (error)? cgi.param('rights') : data.reviews.$user.rights %]
 [% u_category = (error)? cgi.param('category') : data.reviews.$user.category %]
 [% u_note = (error)? cgi.param('note') : data.reviews.$user.note %]

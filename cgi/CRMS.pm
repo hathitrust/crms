@@ -199,8 +199,6 @@ sub NeedStepUpAuth
     {
       $dbclass    = $ref->[0]->[0]; # https://refeds.org/profile/mfa
       $dbtemplate = $ref->[0]->[1]; # https://___HOST___/Shibboleth.sso/umich?target=___TARGET___
-      # FIXME: when ht_institutions.template is up to date, go back to using that.
-      $dbtemplate = 'https://___HOST___/Shibboleth.sso/Login?entityID=___ENTITY_ID___&target=___TARGET___';
     }
     if (defined $class && defined $dbclass && $class ne $dbclass)
     {
@@ -213,7 +211,7 @@ sub NeedStepUpAuth
         $tpl =~ s/___HOST___/$ENV{SERVER_NAME}/;
         $tpl =~ s/___TARGET___/$target/;
         $tpl =~ s/___ENTITY_ID___/$idp/;
-        $tpl .= "&authnContextClassRef=$dbclass";
+        $tpl .= "&authnContextClassRef=$dbclass" if defined $dbclass;
         $self->set('stepup_redirect', $tpl);
       }
       my $note = sprintf "ENV{Shib_Identity_Provider}='$idp'\n".
@@ -323,7 +321,7 @@ sub set
 
 sub Version
 {
-  return '8.0.10';
+  return '8.0.11';
 }
 
 # This is the NOT SO human-readable version used in sys=blah URL param
@@ -5060,6 +5058,7 @@ sub ReviewData
   my $id    = shift;
 
   require Languages;
+  my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
   my $record = $self->GetMetadata($id);
   my $data = {};
   my $dbh = $self->GetDb();
@@ -5082,10 +5081,11 @@ sub ReviewData
     $ref->{$user}->{'attr'} = $self->TranslateAttr($ref->{$user}->{'attr'});
     $ref->{$user}->{'reason'} = $self->TranslateReason($ref->{$user}->{'reason'});
     $sql = 'SELECT data FROM reviewdata WHERE id=?';
-    $ref->{$user}->{'data'} = $self->SimpleSqlGet($sql, $ref->{$user}->{'data'});
+    my $encdata = $self->SimpleSqlGet($sql, $ref->{$user}->{'data'});
+    $ref->{$user}->{'data'} = $jsonxs->decode($encdata);
   }
   $data->{'reviews'} = $ref;
-  $data->{'json'} = JSON::XS->new->encode($data);
+  $data->{'json'} = $jsonxs->encode($data);
   $data->{'project'} = $self->Projects()->{$data->{'queue'}->{'project'}};
   return $data;
 }
@@ -8719,6 +8719,36 @@ sub Commify
   # Don't just try to "return reverse $n2" as a shortcut. reverse() is weird.
   $n = reverse $n2;
   return $n;
+}
+
+sub KeioTables
+{
+  use Keio;
+  Keio::Tables(@_);
+}
+
+sub KeioTranslation
+{
+  use Keio;
+  Keio::Translation(@_);
+}
+
+sub KeioTableQuery
+{
+  use Keio;
+  Keio::TableQuery(@_);
+}
+
+sub KeioQueries
+{
+  use Keio;
+  Keio::Queries(@_);
+}
+
+sub KeioQuery
+{
+  use Keio;
+  Keio::Query(@_);
 }
 
 1;

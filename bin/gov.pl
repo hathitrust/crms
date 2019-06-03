@@ -70,14 +70,6 @@ foreach my $row (@{$ref})
     $crms->Filter($id, 'no meta');
     next;
   }
-  # Check to make sure the record has not been updated in the meantime
-  my $src = $crms->ShouldVolumeBeFiltered($id, $record);
-  next unless defined $src;
-  if ($src ne 'gov')
-  {
-    $crms->Filter($id, $src);
-    next;
-  }
   my $catLink = $crms->LinkToMirlynDetails($id);
   my $ptLink = 'https://babel.hathitrust.org/cgi/pt?debug=super;id=' . $id;
   my $au = $record->author || '';

@@ -557,25 +557,6 @@ a.tip2:hover span {
   visibility: visible;
 }
 
-.ProgressBarRed {
-  background-color:#a2a2a2;
-  /* IE10 Consumer Preview */ 
-  /*background-image: -ms-linear-gradient(left, #FF9889 0%, #D1382E 100%);*/
-  /* Mozilla Firefox */ 
-  /*background-image: -moz-linear-gradient(left, #FF9889 0%, #D1382E 100%);*/
-  /* Opera */ 
-  /*background-image: -o-linear-gradient(left, #FF9889 0%, #D1382E 100%);*/
-  /* Webkit (Safari/Chrome 10) */ 
-  /*background-image: -webkit-gradient(linear, left top, right top, color-stop(0, #FF9889), color-stop(1, #D1382E));*/
-  /* Webkit (Chrome 11+) */ 
-  /*background-image: -webkit-linear-gradient(left, #FF9889 0%, #D1382E 100%);*/
-  /* W3C Markup, IE10 Release Preview */ 
-  /*background-image: linear-gradient(to right, #FF9889 0%, #D1382E 100%);*/
-  border-radius: 5px; /* (height of inner div) / 2 + padding */
-  padding: 3px;
-  margin-right: 2px;
-}
-
 .ProgressBar {
   background-color:#a2a2a2;
   /* IE10 Consumer Preview */ 
@@ -595,7 +576,7 @@ a.tip2:hover span {
   margin-right: 2px;
 }
 
-.ProgressBar > div, .ProgressBarRed > div {
+.ProgressBar > div {
   background-color: #00ff00;
   height: 3px;
   border-radius: 4px;

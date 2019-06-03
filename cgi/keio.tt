@@ -1,0 +1,92 @@
+[% INCLUDE header.tt %]
+[% p_table = cgi.param('table') %]
+[% p_query = cgi.param('query') %]
+[% p_page  = cgi.param('page')  %]
+
+<script type="text/Javascript">
+<!--
+addEvent(window, 'load', function(e)
+{
+  tippy('.tippy');
+});
+-->
+</script>
+
+<h2>Keio Daigaku Data:</h2>
+<br/>
+[% IF p_table %]
+  [% data = crms.KeioTableQuery(p_table, p_page) %]
+[% ELSIF p_query %]
+  [% data = crms.KeioQuery(p_query, p_page) %]
+[% END %]
+<form action="crms">
+  <input type="hidden" name="p" value="keio"/>
+  [% crms.HiddenSys() %]
+  <label for="table_sel">Table:</label>
+  <select name="table" id="table_sel" onchange="selMenuItem('query_sel', 0);selMenuItem('page_sel', 0);this.form.submit()">
+    <option value=""></option>
+    [% tables = crms.KeioTables() %]
+    [% FOREACH table IN tables %]
+      <option value="[% table %]" [% (table == p_table)? 'selected="selected"':'' %]>[% table %]</option>
+    [% END %]
+  </select>
+  <label for="query_sel">Query:</label>
+  <select name="query" id="query_sel" onchange="selMenuItem('table_sel', 0);selMenuItem('page_sel', 0);this.form.submit()">
+    <option value=""></option>
+    [% queries = crms.KeioQueries() %]
+    [% FOREACH query IN queries %]
+      <option value="[% query %]" [% (query == p_query)? 'selected="selected"':'' %]>[% query %]</option>
+    [% END %]
+  </select>
+  [% IF p_table || p_query %]
+    <br/>
+    <label for="page_sel">Page </label>
+    <select name="page" id="page_sel" onchange="this.form.submit()">
+      [% last = data.pages - 1 %]
+      [% FOR i IN [0 .. last] %]
+        <option value="[% i %]" [% (i == p_page)? 'selected="selected"':'' %]>[% i + 1 %]</option>
+      [% END %]
+    </select>
+    of [% data.pages %]
+  [% END %]
+  <input type="submit" value="Do it!"/>
+</form>
+<br/><br/>
+
+[% IF p_table || p_query %]
+  <!--<strong>○ = Yes, × = No, △ = Maybe/Partial</strong>-->
+  <strong>[% crms.Commify(data.total) %] Records</strong>
+  <table class="exportStats" style="white-space:nowrap">
+    <tr>
+      [% FOREACH col IN data.fields %]
+        <th scope="col">[% col %]
+        [% trans = crms.KeioTranslation(col) %]
+        [% IF trans %]
+        <img class="tippy" width="16" height="16" alt="Translation"
+                 src="[% crms.WebPath('web', 'help.png') %]"
+                 data-tippy-content="[% trans %]"/>
+        [% END %]
+        </th>
+      [% END %]
+    </tr>
+    [% FOREACH row IN data.data %]
+      <tr>
+      [% last = data.fields.size - 1 %]
+      [% FOR i IN [0 .. last] %]
+        <td>[% row.$i %]
+        [% trans = crms.KeioTranslation(row.$i) %]
+        [% IF trans %]
+        <img class="tippy" width="16" height="16" alt="Translation"
+                 src="[% crms.WebPath('web', 'help.png') %]"
+                 data-tippy-content="[% trans %]"/>
+        [% END %]
+        </td>
+      [% END %]
+      </tr>
+    [% END %]
+  </table>
+  <br/>
+[% END %]
+
+[% crms.Debug() %]
+[% INCLUDE footer.tt %]
