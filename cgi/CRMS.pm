@@ -323,7 +323,7 @@ sub set
 
 sub Version
 {
-  return '8.0.10';
+  return '8.0.11';
 }
 
 # This is the NOT SO human-readable version used in sys=blah URL param
@@ -5060,6 +5060,7 @@ sub ReviewData
   my $id    = shift;
 
   require Languages;
+  my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
   my $record = $self->GetMetadata($id);
   my $data = {};
   my $dbh = $self->GetDb();
@@ -5082,10 +5083,11 @@ sub ReviewData
     $ref->{$user}->{'attr'} = $self->TranslateAttr($ref->{$user}->{'attr'});
     $ref->{$user}->{'reason'} = $self->TranslateReason($ref->{$user}->{'reason'});
     $sql = 'SELECT data FROM reviewdata WHERE id=?';
-    $ref->{$user}->{'data'} = $self->SimpleSqlGet($sql, $ref->{$user}->{'data'});
+    my $encdata = $self->SimpleSqlGet($sql, $ref->{$user}->{'data'});
+    $ref->{$user}->{'data'} = $jsonxs->decode($encdata);
   }
   $data->{'reviews'} = $ref;
-  $data->{'json'} = JSON::XS->new->encode($data);
+  $data->{'json'} = $jsonxs->encode($data);
   $data->{'project'} = $self->Projects()->{$data->{'queue'}->{'project'}};
   return $data;
 }
