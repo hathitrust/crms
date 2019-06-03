@@ -8721,4 +8721,34 @@ sub Commify
   return $n;
 }
 
+sub KeioTables
+{
+  use Keio;
+  Keio::Tables(@_);
+}
+
+sub KeioTranslation
+{
+  use Keio;
+  Keio::Translation(@_);
+}
+
+sub KeioTableQuery
+{
+  use Keio;
+  Keio::TableQuery(@_);
+}
+
+sub KeioQueries
+{
+  use Keio;
+  Keio::Queries(@_);
+}
+
+sub KeioQuery
+{
+  use Keio;
+  Keio::Query(@_);
+}
+
 1;
