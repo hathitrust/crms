@@ -199,8 +199,6 @@ sub NeedStepUpAuth
     {
       $dbclass    = $ref->[0]->[0]; # https://refeds.org/profile/mfa
       $dbtemplate = $ref->[0]->[1]; # https://___HOST___/Shibboleth.sso/umich?target=___TARGET___
-      # FIXME: when ht_institutions.template is up to date, go back to using that.
-      $dbtemplate = 'https://___HOST___/Shibboleth.sso/Login?entityID=___ENTITY_ID___&target=___TARGET___';
     }
     if (defined $class && defined $dbclass && $class ne $dbclass)
     {
@@ -213,7 +211,7 @@ sub NeedStepUpAuth
         $tpl =~ s/___HOST___/$ENV{SERVER_NAME}/;
         $tpl =~ s/___TARGET___/$target/;
         $tpl =~ s/___ENTITY_ID___/$idp/;
-        $tpl .= "&authnContextClassRef=$dbclass";
+        $tpl .= "&authnContextClassRef=$dbclass" if defined $dbclass;
         $self->set('stepup_redirect', $tpl);
       }
       my $note = sprintf "ENV{Shib_Identity_Provider}='$idp'\n".
