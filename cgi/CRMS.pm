@@ -322,7 +322,7 @@ sub set
 
 sub Version
 {
-  return '8.0.12';
+  return '8.0.13';
 }
 
 # This is the NOT SO human-readable version used in sys=blah URL param
@@ -5081,9 +5081,12 @@ sub ReviewData
                                                              $ref->{$user}->{'reason'});
     $ref->{$user}->{'attr'} = $self->TranslateAttr($ref->{$user}->{'attr'});
     $ref->{$user}->{'reason'} = $self->TranslateReason($ref->{$user}->{'reason'});
-    $sql = 'SELECT data FROM reviewdata WHERE id=?';
-    my $encdata = $self->SimpleSqlGet($sql, $ref->{$user}->{'data'});
-    $ref->{$user}->{'data'} = $jsonxs->decode($encdata);
+    if ($ref->{$user}->{'data'})
+    {
+      $sql = 'SELECT data FROM reviewdata WHERE id=?';
+      my $encdata = $self->SimpleSqlGet($sql, $ref->{$user}->{'data'});
+      $ref->{$user}->{'data'} = $jsonxs->decode($encdata);
+    }
   }
   $data->{'reviews'} = $ref;
   $data->{'json'} = $jsonxs->encode($data);
