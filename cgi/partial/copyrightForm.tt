@@ -205,9 +205,8 @@ function popReviewInfo(user)
   var renDate = null;
   if (review.data)
   {
-    var reviewData = JSON.parse(review.data);
-    renNum = reviewData.renNum;
-    renDate = reviewData.renDate;
+    renNum = review.data.renNum;
+    renDate = review.data.renDate;
   }
   var field = document.getElementById("renewalField");
   if (field) { field.value = renNum; }
