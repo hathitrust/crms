@@ -322,7 +322,7 @@ sub set
 
 sub Version
 {
-  return '8.0.14';
+  return '8.0.15';
 }
 
 # This is the NOT SO human-readable version used in sys=blah URL param
@@ -5059,7 +5059,7 @@ sub ReviewData
   my $id    = shift;
 
   require Languages;
-  my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
+  my $jsonxs = JSON::XS->new->canonical(1)->pretty(0);
   my $record = $self->GetMetadata($id);
   my $data = {};
   my $dbh = $self->GetDb();
