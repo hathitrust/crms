@@ -84,7 +84,7 @@ sub json
     my $id = $self->get('id');
     $id = $self->get('sysid') unless defined $id;
     my $type = ($id =~ m/\./)? 'htid' : 'recordnumber';
-    my $url = "http://catalog.hathitrust.org/api/volumes/full/$type/$id.json";
+    my $url = "https://catalog.hathitrust.org/api/volumes/full/$type/$id.json";
     my $ua = LWP::UserAgent->new;
     $ua->timeout(1000);
     my $req = HTTP::Request->new(GET => $url);
