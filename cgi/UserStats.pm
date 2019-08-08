@@ -336,11 +336,11 @@ sub CreateUserStatsReport
       $val =~ s/\s/&nbsp;/g;
       my $astart = '';
       my $aend = '';
-      if ($row eq 'invalid' && $n > 0 &&
+      if (($row eq 'invalid' || $row eq 'neutral') && $n > 0 &&
           defined $user && length $user && $user !~ m/^\d+$/)
       {
         my $date = $data->{'columns'}->[$i];
-        my $url = URLForHistoricalInvalidations($self, $user, $year, $project, $date);
+        my $url = URLForHistoricalVerdicts($self, $user, $year, $project, $date, ($row eq 'invalid')? 0:2);
         if ($url)
         {
           $astart = "<a href='$url' target='_blank'>";
@@ -367,13 +367,14 @@ sub CreateUserStatsReport
   return $data;
 }
 
-sub URLForHistoricalInvalidations
+sub URLForHistoricalVerdicts
 {
   my $self    = shift;
   my $user    = shift;
   my $year    = shift;
   my $project = shift;
   my $date    = shift;
+  my $verdict = shift; # 0 or 2
 
   use Date::Calc;
   my $start = '';
@@ -392,11 +393,10 @@ sub URLForHistoricalInvalidations
   $proj = $self->GetProjectRef($project)->{'name'} if $project;
   my $url = 'crms?p=adminHistoricalReviews;stype=groups;'.
             "search1=UserId&search1value=$user;".
-            "search2=Validated;search2value=0;".
+            "search2=Validated;search2value=$verdict;".
             "search3=Project;search3value=$proj;".
             "startDate=$start;endDate=$end;order=Date;dir=ASC";
   return $self->WebPath('cgi', $url);
 }
-
 
 1;
