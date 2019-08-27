@@ -300,7 +300,7 @@ sub GetCorrectionsExportFh
   $date =~ s/:/_/g;
   $date =~ s/ /_/g;
   
-  my $filename = $self->Sys(). '_'. $date. '.status.txt';
+  my $filename = 'crms_'. $date. '.status.txt';
   my $perm = $self->FSPath('prep', $filename);
   my $temp = $perm . '.tmp';
   if (-f $temp) { die "file already exists: $temp\n"; }

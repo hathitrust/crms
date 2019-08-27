@@ -4,8 +4,8 @@ package CRMS;
 ## Object of shared code for the CRMS DB CGI and BIN scripts.
 ## ----------------------------------------------------------
 
-#use warnings;
 use strict;
+use warnings;
 use LWP::UserAgent;
 use XML::LibXML;
 use Encode;
@@ -17,7 +17,7 @@ use CGI;
 use Utilities;
 use Time::HiRes;
 
-binmode(STDOUT, ':utf8'); #prints characters in utf8
+binmode(STDOUT, ':encoding(UTF-8)');
 
 ## -------------------------------------------------
 ##  Top level CRMS object. This guy does everything.
@@ -64,6 +64,11 @@ sub new
   }
   $self->DebugVar('self', $self);
   return $self;
+}
+
+sub Version
+{
+  return '8.0.17';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -320,20 +325,6 @@ sub set
   $self->{$key} = $val;
 }
 
-sub Version
-{
-  return '8.0.16';
-}
-
-# This is the NOT SO human-readable version used in sys=blah URL param
-# and the -x blah script param.
-sub Sys
-{
-  my $self = shift;
-
-  return $self->get('sys');
-}
-
 sub ReadConfigFile
 {
   my $self = shift;
@@ -371,7 +362,7 @@ sub ConnectToDb
   my $self = shift;
 
   my $db_server = $self->get('mysqlServerDev');
-  my $instance  = $self->get('instance');
+  my $instance  = $self->get('instance') || '';
 
   my %d = $self->ReadConfigFile('crmspw.cfg');
   my $db_user   = $d{'mysqlUser'};
@@ -430,7 +421,7 @@ sub ConnectToSdrDb
   my $db   = shift;
 
   my $db_server = $self->get('mysqlMdpServerDev');
-  my $instance  = $self->get('instance');
+  my $instance  = $self->get('instance') || '';
 
   $db = $self->get('mysqlMdpDbName') unless defined $db;
   my %d = $self->ReadConfigFile('crmspw.cfg');
@@ -477,7 +468,7 @@ sub DbName
 {
   my $self = shift;
 
-  my $instance = $self->get('instance');
+  my $instance = $self->get('instance') || '';
   my $tdb = $self->get('tdb');
   my $db = $self->get('mysqlDbName');
   $db .= '_training' if $instance eq 'crms-training' or $tdb;
