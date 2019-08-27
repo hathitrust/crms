@@ -4,8 +4,8 @@ package CRMS;
 ## Object of shared code for the CRMS DB CGI and BIN scripts.
 ## ----------------------------------------------------------
 
-#use warnings;
 use strict;
+use warnings;
 use LWP::UserAgent;
 use XML::LibXML;
 use Encode;
@@ -17,7 +17,7 @@ use CGI;
 use Utilities;
 use Time::HiRes;
 
-binmode(STDOUT, ':utf8'); #prints characters in utf8
+binmode(STDOUT, ':encoding(UTF-8)');
 
 ## -------------------------------------------------
 ##  Top level CRMS object. This guy does everything.
@@ -64,6 +64,11 @@ sub new
   }
   $self->DebugVar('self', $self);
   return $self;
+}
+
+sub Version
+{
+  return '8.0.17';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -320,20 +325,6 @@ sub set
   $self->{$key} = $val;
 }
 
-sub Version
-{
-  return '8.0.16';
-}
-
-# This is the NOT SO human-readable version used in sys=blah URL param
-# and the -x blah script param.
-sub Sys
-{
-  my $self = shift;
-
-  return $self->get('sys');
-}
-
 sub ReadConfigFile
 {
   my $self = shift;
@@ -371,7 +362,7 @@ sub ConnectToDb
   my $self = shift;
 
   my $db_server = $self->get('mysqlServerDev');
-  my $instance  = $self->get('instance');
+  my $instance  = $self->get('instance') || '';
 
   my %d = $self->ReadConfigFile('crmspw.cfg');
   my $db_user   = $d{'mysqlUser'};
@@ -430,7 +421,7 @@ sub ConnectToSdrDb
   my $db   = shift;
 
   my $db_server = $self->get('mysqlMdpServerDev');
-  my $instance  = $self->get('instance');
+  my $instance  = $self->get('instance') || '';
 
   $db = $self->get('mysqlMdpDbName') unless defined $db;
   my %d = $self->ReadConfigFile('crmspw.cfg');
@@ -477,7 +468,7 @@ sub DbName
 {
   my $self = shift;
 
-  my $instance = $self->get('instance');
+  my $instance = $self->get('instance') || '';
   my $tdb = $self->get('tdb');
   my $db = $self->get('mysqlDbName');
   $db .= '_training' if $instance eq 'crms-training' or $tdb;
@@ -1272,9 +1263,8 @@ sub LoadNewItemsInCandidates
   }
   my $endclause = ($end)? " AND time<='$end' ":' ';
   $sql = 'SELECT namespace,id,time FROM rights_current WHERE time>?' . $endclause . 'ORDER BY time ASC';
-  $sql = 'SELECT namespace,id,time FROM rights_current WHERE attr=2 and reason=1 AND time>?' . $endclause . 'ORDER BY time ASC' . ' LIMIT 5000';
-  my $ref = $self->SelectAllSDR($sql, $start);
-  my $n = scalar @{$ref};
+  $ref = $self->SelectAllSDR($sql, $start);
+  $n = scalar @{$ref};
   $self->ReportMsg("Checking $n possible additions to candidates from rights DB");
   foreach my $row (@{$ref})
   {
@@ -1422,7 +1412,7 @@ sub AddItemToCandidates
       my $sql = 'UPDATE candidates SET project=? WHERE id=?';
       $self->PrepareSubmitSql($sql, $proj, $id);
     }
-    my $sql = 'SELECT project FROM queue WHERE id=? AND source="candidates"';
+    $sql = 'SELECT project FROM queue WHERE id=? AND source="candidates"';
     $proj2 = $self->SimpleSqlGet($sql, $id);
     if (defined $proj2 && $proj != $proj2)
     {
@@ -1545,7 +1535,6 @@ sub EvaluateCandidacy
   my $projects = $self->Projects();
   # Pare down projects hash to one member if it is specified.
   $projects = {$proj => $projects->{$proj}} if $proj;
-  my $filterEval;
   my ($eval, $filterEval);
   foreach my $pid (sort {$a <=> $b;} keys %{$projects})
   {
@@ -5758,7 +5747,7 @@ sub CreateSystemReport
   }
   $report .= '<tr><th class="nowrap">Last Candidates Update</th><td>' . $n . "</td></tr>\n";
   my $sql = 'SELECT COUNT(*) FROM und WHERE src!="no meta" AND src!="duplicate" AND src!="cross-record inheritance"';
-  my $count = $self->SimpleSqlGet($sql);
+  $count = $self->SimpleSqlGet($sql);
   $report .= "<tr><th class='nowrap'>Volumes Filtered*</th><td>$count</td></tr>\n";
   if ($count)
   {
@@ -7288,9 +7277,9 @@ sub CanAutoSubmitInheritance
 
   my $rq = $self->RightsQuery($id, 1);
   return 0 unless defined $rq;
-  my ($attr,$reason,$src,$usr,$time,$note) = @{$rq->[0]};
+  my ($attr, $reason, $src, $usr, $time, $note) = @{$rq->[0]};
   return 1 if $reason eq 'bib';
-  my $attr = $self->SimpleSqlGet('SELECT attr FROM exportdata WHERE gid=?', $gid);
+  $attr = $self->SimpleSqlGet('SELECT attr FROM exportdata WHERE gid=?', $gid);
   return 1 if $attr =~ m/^pd/ and $reason eq 'gfv';
   my $sql = 'SELECT p.autoinherit FROM exportdata e'.
             ' INNER JOIN projects p ON e.project=p.id WHERE e.gid=?';

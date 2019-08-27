@@ -24,14 +24,6 @@ sub GetAllMonthsInYear
   my ($currYear, $currMonth) = $self->GetTheYearMonth();
   $year = $currYear unless $year;
   my $start = 1;
-  #if ($self->Sys() eq 'crmsworld')
-  #{
-  #  $start = 5 if $year == 2012;
-  #}
-  #else
-  #{
-  #  $start = 7 if $year == 2009;
-  #}
   my @months = ();
   foreach my $m ($start..12)
   {

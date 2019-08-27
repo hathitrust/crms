@@ -8,8 +8,10 @@ use strict;
 use warnings;
 use CRMS;
 use Getopt::Long;
+use JSON::XS;
 use Utilities;
 use Encode;
+use File::Copy;
 use Term::ANSIColor qw(:constants);
 $Term::ANSIColor::AUTORESET = 1;
 
@@ -19,7 +21,7 @@ USAGE: $0 [-hnpqv] [-m MAIL [-m MAIL...]]
 Produces TSV file of HTID-renewal ID for Zephir download at
 prep/CRMSRenewals.tsv
 
-Data hosted on moxies/rootbeers at /htapps/www/sites/www.hathitrust.org/files
+Data hosted on macc-ht-web-000 etc at /htapps/www/sites/www.hathitrust.org/files
 
 For each distinct HTID in historical reviews with one or more renewal IDs,
 gets all validated reviews with renewal IDs.
@@ -70,11 +72,32 @@ END
 my $n = CheckStanford();
 $msg =~ s/__N__/$n/g;
 $msg =~ s/__OUTFILE__/$outfile/g;
+
+if ($noop)
+{
+  print "Noop set: not moving file to new location.\n";
+  $msg .= '<strong>Noop set: not moving file to new location.</strong>';
+}
+else
+{
+  eval {
+  File::Copy::move $outfile, '/htapps/www/sites/www.hathitrust.org/files';
+  };
+  if ($@)
+  {
+    $msg .= '<strong>Error moving TSV file: $@</strong>';
+  }
+}
+$msg .= "<p>Warning: $_</p>\n" for @{$crms->GetErrors()};
+$msg .= '</body></html>';
+
 my $subject = $crms->SubjectLine('Stanford Renewal Report');
+@mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
 my $to = join ',', @mails;
 if ($noop || scalar @mails == 0)
 {
   print "No-op or no mails set; not sending e-mail to {$to}\n" if $verbose;
+  print "$msg\n";
 }
 else
 {
@@ -93,22 +116,21 @@ else
   }
 }
 
-$msg .= "<p>Warning: $_</p>\n" for @{$crms->GetErrors()};
-$msg .= '</body></html>';
-
 # Returns number of lines written.
 sub CheckStanford
 {
+  my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
   open my $out, '>:encoding(UTF-8)', $outfile;
   my $sql = 'SELECT NOW()';
   my $now = $crms->SimpleSqlGet($sql);
   print $out "$now\n";
-  $sql = 'SELECT DISTINCT id FROM historicalreviews'.
-         ' WHERE renNum IS NOT NULL AND renNum!=""'.
-         ' AND validated!=0 ORDER BY id ASC';
+  $sql = 'SELECT DISTINCT r.id FROM historicalreviews r'.
+         ' INNER JOIN exportdata e ON r.gid=e.gid'.
+         ' INNER JOIN projects p ON e.project=p.id'.
+         ' WHERE r.data IS NOT NULL AND r.validated!=0 AND p.name="Core"'.
+         ' ORDER BY r.id ASC';
   my $ref = $crms->SelectAll($sql);
   my $n = 0;
-  my $of = scalar @{$ref};
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
@@ -122,16 +144,22 @@ sub CheckStanford
     }
     my %values = ();
     my $val;
-    $sql = 'SELECT user,time,renNum,expert FROM historicalreviews WHERE id=?'.
-           ' AND renNum IS NOT NULL AND renNum!="" AND validated!=0'.
-           ' ORDER BY time DESC';
+    $sql = 'SELECT r.user,r.time,d.data,r.expert FROM historicalreviews r'.
+           ' INNER JOIN exportdata e ON r.gid=e.gid'.
+           ' INNER JOIN projects p ON e.project=p.id'.
+           ' INNER JOIN reviewdata d ON r.data=d.id'.
+           ' WHERE r.id=? AND r.data IS NOT NULL AND r.validated!=0 AND p.name="Core"'.
+           ' ORDER BY r.time DESC';
     #print "$sql\n" if $verbose;
     my $ref2 = $crms->SelectAll($sql, $id);
     foreach my $row2 (@{$ref2})
     {
       my $u = $row2->[0];
       my $t = $row2->[1];
-      my $r = $row2->[2];
+      my $data = $row2->[2];
+      $data = $jsonxs->decode($data);
+      my $r = $data->{'renNum'};
+      next unless $r;
       my $e = $row2->[3];
       if ($e)
       {
