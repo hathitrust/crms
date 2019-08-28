@@ -1,5 +1,6 @@
 [% INCLUDE header.tt %]
 
+[% # FIXME: which of these are actually used? %]
 [% error    = cgi.param('errorMsg')   %]
 [% htid     = cgi.param('htid')       %]
 [% editing  = cgi.param('editing')    %]
@@ -15,7 +16,6 @@
 [% ptview   = cgi.cookie('ptview')    %]
 [% import   = cgi.param('importUser') %]
 [% expert   = crms.IsUserExpert(user) %]
-[% ren      = crms.GetSystemVar("showRenewal") %]
 
 
 [% IF htid && editing %]

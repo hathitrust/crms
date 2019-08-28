@@ -63,7 +63,7 @@ my $crms = CRMS->new(
 my $outfile = $crms->FSPath('prep', 'CRMSRenewals.tsv');
 my $msg = $crms->StartHTML();
 $msg .= <<'END';
-<h2>CRMS-US</h2>
+<h2>CRMS US Monographs</h2>
 <p>Exported __N__ Stanford renewal records (__OUTFILE__) to
 <a href="https://www.hathitrust.org/files/CRMSRenewals.tsv">HathiTrust</a>.
 </p>

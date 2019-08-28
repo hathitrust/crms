@@ -89,8 +89,14 @@ sub FormatReviewData
     my $data = $jsonxs->decode($json);
     foreach my $page (@{$data})
     {
-      $fmt .= sprintf "{%s, %s, '%s'}<br/>", $TYPE_CODE_NAME_MAP->{$page->[0]},
-                      $CATEGORY_CODE_NAME_MAP->{$page->[1]}, $page->[2];
+      my ($type, $cat, $note) = ('', '', '');
+      if (defined $page)
+      {
+        $type = $TYPE_CODE_NAME_MAP->{$page->[0]} if scalar @$page;
+        $cat = $CATEGORY_CODE_NAME_MAP->{$page->[1]} if scalar @$page > 1;
+        $note = $page->[2] if scalar @$page > 2;
+      }
+      $fmt .= sprintf "{$type, $cat, '$note'}<br/>";
     }
   };
   #$fmt = $json;
