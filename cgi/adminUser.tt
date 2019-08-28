@@ -137,7 +137,7 @@
       [% ELSE %]
         <td>
         [% IF active %]
-          [% IF u.expiration.days <= 30 %]
+          [% IF u.expiration.days.defined && u.expiration.days <= 30 %]
             <img width="20" height="20" alt="Warning: expires within 30 days"
                  src="[% warn %]"/>
           [% END %]

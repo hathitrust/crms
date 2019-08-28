@@ -68,7 +68,7 @@ sub new
 
 sub Version
 {
-  return '8.0.17';
+  return '8.0.18';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -389,7 +389,7 @@ sub DbInfo
   my $self = shift;
 
   my $db_server = $self->get('mysqlServerDev');
-  my $instance  = $self->get('instance');
+  my $instance  = $self->get('instance') || '';
 
   my $msg = '';
   my %d = $self->ReadConfigFile('crmspw.cfg');
@@ -580,7 +580,8 @@ sub WildcardList
   my $self = shift;
   my $n    = shift;
 
-  my $qs = '(' . ('?,' x ($n-1)) . '?)';
+  return '()' if $n < 1;
+  return '(' . ('?,' x ($n-1)) . '?)';
 }
 
 sub DebugSql
@@ -1147,7 +1148,7 @@ sub EmailReport
   my $file     = shift;
   my $filename = shift;
 
-  my $instance = $self->get('instance');
+  my $instance = $self->get('instance') || '';
   if ($instance eq 'production')
   {
     my $subject = $self->SubjectLine("$count volumes exported to rights db");
@@ -1158,10 +1159,10 @@ sub EmailReport
                 'subject'      => $subject,
                 'content-type' => "multipart/mixed; boundary=\"$boundary\""
                 );
-    open (F, $file) or die "Cannot read $file: $!";
-    binmode F; undef $/;
-    my $enc = <F>;
-    close F;
+    open (my $FH, '<', $file) or die "Cannot read $file: $!";
+    binmode $FH; undef $/;
+    my $enc = <$FH>;
+    close $FH;
     $boundary = '--'.$boundary;
     $mail{body} = <<END_OF_BODY;
 $boundary
@@ -2287,8 +2288,8 @@ sub CreateSQLForReviews
   my $search3value = shift;
   my $startDate    = shift;
   my $endDate      = shift;
-  my $offset       = shift;
-  my $pagesize     = shift;
+  my $offset       = shift || 0;
+  my $pagesize     = shift || 0;
   my $download     = shift;
 
   $search1 = $self->ConvertToSearchTerm($search1, $page);
@@ -2384,8 +2385,8 @@ sub CreateSQLForVolumes
   my $search3value = shift;
   my $startDate    = shift;
   my $endDate      = shift;
-  my $offset       = shift;
-  my $pagesize     = shift;
+  my $offset       = shift || 0;
+  my $pagesize     = shift || 0;
   my $download     = shift;
 
   $dir = 'DESC' unless $dir;
@@ -2396,7 +2397,6 @@ sub CreateSQLForVolumes
     $order = 'id';
     $order = 'time' if $page eq 'userReviews' or $page eq 'editReviews';
   }
-  $offset = 0 unless $offset;
   $search1 = $self->ConvertToSearchTerm($search1, $page);
   $search2 = $self->ConvertToSearchTerm($search2, $page);
   $search3 = $self->ConvertToSearchTerm($search3, $page);
@@ -2477,8 +2477,8 @@ sub CreateSQLForVolumesWide
   my $search3value = shift;
   my $startDate    = shift;
   my $endDate      = shift;
-  my $offset       = shift;
-  my $pagesize     = shift;
+  my $offset       = shift || 0;
+  my $pagesize     = shift || 0;
   my $download     = shift;
 
   $dir = 'DESC' unless $dir;
@@ -2489,7 +2489,6 @@ sub CreateSQLForVolumesWide
     $order = 'id';
     $order = 'time' if $page eq 'userReviews' or $page eq 'editReviews';
   }
-  $offset = 0 unless $offset;
   $search1 = $self->ConvertToSearchTerm($search1, $page);
   $search2 = $self->ConvertToSearchTerm($search2, $page);
   $search3 = $self->ConvertToSearchTerm($search3, $page);
@@ -2558,8 +2557,8 @@ sub SearchTermsToSQL
 {
   my $self = shift;
   my $dbh = $self->GetDb();
-  my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value) = @_;
-  my ($search1term, $search2term, $search3term);
+  my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value) = map { (defined $_)? $_:'' } @_;
+  my ($search1term, $search2term, $search3term) = ('', '', '');
   $op1 = 'AND' unless $op1;
   $op2 = 'AND' unless $op2;
   # Pull down search 2 if no search 1
@@ -2569,14 +2568,14 @@ sub SearchTermsToSQL
     $search2 = $search3;
     $search1value = $search2value;
     $search2value = $search3value;
-    $search3value = $search3 = undef;
+    $search3value = $search3 = '';
   }
   # Pull down search 3 if no search 2
   if (!length $search2value)
   {
     $search2 = $search3;
     $search2value = $search3value;
-    $search3value = $search3 = undef;
+    $search3value = $search3 = '';
   }
   $search1 = "YEAR($search1)" if $search1 eq 'b.pub_date';
   $search2 = "YEAR($search2)" if $search2 eq 'b.pub_date';
@@ -2822,8 +2821,8 @@ sub DownloadReviews
   my $search3value   = shift;
   my $startDate      = shift;
   my $endDate        = shift;
-  my $offset         = shift;
-  my $pagesize       = shift;
+  my $offset         = shift || 0;
+  my $pagesize       = shift || 0;
   my $stype          = shift;
 
   $stype = 'reviews' unless $stype;
@@ -3000,8 +2999,8 @@ sub DownloadQueue
   my $search2Value = shift;
   my $startDate    = shift;
   my $endDate      = shift;
-  my $offset       = shift;
-  my $pagesize     = shift;
+  my $offset       = shift || 0;
+  my $pagesize     = shift || 0;
 
   my $buff = $self->GetQueueRef($order, $dir, $search1, $search1Value, $op1,
                                 $search2, $search2Value, $startDate, $endDate,
@@ -3022,8 +3021,8 @@ sub DownloadExportData
   my $search2Value = shift;
   my $startDate    = shift;
   my $endDate      = shift;
-  my $offset       = shift;
-  my $pagesize     = shift;
+  my $offset       = shift || 0;
+  my $pagesize     = shift || 0;
 
   my $buff = $self->GetExportDataRef($order, $dir, $search1, $search1Value, $op1,
                                      $search2, $search2Value, $startDate, $endDate,
@@ -3048,8 +3047,8 @@ sub GetReviewsRef
   my $search3Value = shift;
   my $startDate    = shift;
   my $endDate      = shift;
-  my $offset       = shift;
-  my $pagesize     = shift;
+  my $offset       = shift || 0;
+  my $pagesize     = shift || 0;
 
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
@@ -3306,8 +3305,8 @@ sub GetQueueRef
   my $search2Value = shift;
   my $startDate    = shift;
   my $endDate      = shift;
-  my $offset       = shift;
-  my $pagesize     = shift;
+  my $offset       = shift || 0;
+  my $pagesize     = shift || 0;
   my $download     = shift;
 
   $pagesize = 20 unless $pagesize > 0;
@@ -3442,8 +3441,8 @@ sub GetExportDataRef
   my $search2Value = shift;
   my $startDate    = shift;
   my $endDate      = shift;
-  my $offset       = shift;
-  my $pagesize     = shift;
+  my $offset       = shift || 0;
+  my $pagesize     = shift || 0;
   my $download     = shift;
 
   $pagesize = 20 unless $pagesize > 0;
@@ -3915,7 +3914,7 @@ sub CanChangeToUser
   my $him  = shift;
 
   return 1 if $self->SameUser($me, $him);
-  my $instance = $self->get('instance');
+  my $instance = $self->get('instance') || '';
   if ($instance ne 'production' && $instance ne 'crms-training')
   {
     return 0 if $me eq $him;
@@ -3978,7 +3977,7 @@ sub IsUserAdmin
 sub GetUsers
 {
   my $self = shift;
-  my $ord  = shift;
+  my $ord  = shift || 0;
 
   my @users;
   my $order = '(u.reviewer+u.advanced+u.admin > 0) DESC';
@@ -3999,6 +3998,7 @@ sub GetUsers
     my $commitment = $row->[9];
     my $expiration = $self->IsUserExpired($id);
     my $progress = 0.0;
+    my $commitmentFmt = '';
     if ($commitment)
     {
       $sql = 'SELECT s.total_time/60.0 FROM userstats s'.
@@ -4010,6 +4010,7 @@ sub GetUsers
       $progress = $hours/(160.0*$commitment) ;
       $progress = 0.0 if $progress < 0.0;
       $progress = 1.0 if $progress > 1.0;
+      $commitmentFmt = (100.0 *$row->[9]). '%';
     }
     $sql = 'SELECT COUNT(*) FROM users WHERE ? REGEXP CONCAT(id,".+")';
     my $secondary = $self->SimpleSqlGet($sql, $id);
@@ -4017,7 +4018,7 @@ sub GetUsers
                   'advanced' => $row->[3], 'expert' => $row->[4], 'admin' => $row->[5],
                   'kerberos' => $row->[6], 'note' => $row->[7],
                   'institution' => $row->[8], 'commitment' => $commitment,
-                  'commitmentFmt' => (100.0 *$row->[9]). '%', 'progress' => $progress,
+                  'commitmentFmt' => $commitmentFmt, 'progress' => $progress,
                   'expiration' => $expiration, 'ips' => $self->GetUserIPs($id),
                   'role' => $self->GetUserRole($id), 'secondary' => $secondary};
   }
@@ -4684,7 +4685,7 @@ sub GetInstitutionReviewers
   my $inst = shift;
 
   my @revs;
-  my $sql = 'SELECT id,name,reviewer+advanced+expert+admin as active,commitment'.
+  my $sql = 'SELECT id,name,reviewer+advanced+expert+admin as active,COALESCE(commitment,0)'.
             ' FROM users WHERE institution=?'.
             #' AND (reviewer+advanced+expert>0 OR reviewer+advanced+expert+admin=0)'.
             ' ORDER BY active DESC,name';
@@ -4699,7 +4700,7 @@ sub GetInstitutionReviewers
   }
   @revs = sort {$b->{'active'} <=> $a->{'active'}
                 || $b->{'commitment'} <=> $a->{'commitment'}
-                || $a->{'name'} <=> $b->{'name'};} @revs;
+                || $a->{'name'} cmp $b->{'name'};} @revs;
   return \@revs;
 }
 
@@ -6915,7 +6916,7 @@ sub IsDevArea
 {
   my $self = shift;
 
-  my $inst = $self->get('instance');
+  my $inst = $self->get('instance') || '';
   return ($inst eq 'production' || $inst eq 'crms-training')? 0:1;
 }
 
@@ -6923,7 +6924,8 @@ sub IsTrainingArea
 {
   my $self = shift;
 
-  return $self->get('instance') eq 'crms-training';
+  my $inst = $self->get('instance') || '';
+  return $inst eq 'crms-training';
 }
 
 sub Hostname
@@ -6940,9 +6942,13 @@ sub ReplicationDelay
   my $self = shift;
 
   my $host = $self->Hostname();
+  my @return = (0, 'unknown');
   my $sql = 'SELECT seconds,DATE_SUB(time, INTERVAL seconds SECOND) FROM mysqlrep.delay WHERE client=?';
   my $ref = $self->SelectAll($sql, $host);
-  my @return = ($ref->[0]->[0],$self->FormatTime($ref->[0]->[1]));
+  if (scalar @$ref)
+  {
+    @return = ($ref->[0]->[0], $self->FormatTime($ref->[0]->[1]));
+  }
   return @return;
 }
 
@@ -7645,13 +7651,9 @@ sub GetSystemVar
   my $default = shift;
   my $ck      = shift;
 
+  $self->SetError('WARNING: GetSystemVar() ck parameter is obsolete.') if $ck;
   my $sql = 'SELECT value FROM systemvars WHERE name=?';
   my $var = $self->SimpleSqlGet($sql, $name);
-  if ($var && $ck)
-  {
-    $_ = $var;
-    $var = undef unless (eval $ck);
-  }
   $var = $self->get($name) unless defined $var;
   $var = $default unless defined $var;
   return $var;

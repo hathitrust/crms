@@ -118,17 +118,18 @@ sub ConfirmInserts
   #$crms->Note("ConfirmInserts($user, $final)");
   my $id = $cgi->param('htid');
   $self->SubmitInserts($cgi, $id, $user, $final);
-  if (!$crms->CountErrors())
+  my $errs = $crms->GetErrors();
+  if (defined $errs && scalar @{$errs})
+  {
+    $crms->Note("ERROR DETECTED");
+  }
+  else
   {
     if ($final)
     {
       #$crms->Note("Unlocking $id");
       $self->Unlock($id, $user);
     }
-  }
-  else
-  {
-    $crms->Note("ERROR DETECTED");
   }
 }
 
