@@ -54,12 +54,16 @@ sub ConfirmCorrection
   my $fixed   = $cgi->param('fixed');
   my $inScope = $cgi->param('inScope');
   my $status = ($fixed)? (($inScope)? 'added':'fixed'):'unfixed';
-  my $qstatus = $self->AddItemToQueueOrSetItemActive($id, 0, 1, 'correction') if $status eq 'added';
-  my $ref = $self->GetErrors();
-  my $err = $ref->[0] if $ref && $ref->[0];
-  if (!$err)
+  my $err;
+  if ($status eq 'added')
   {
-    $err = $qstatus->{'msg'} if $qstatus->{'status'} eq '1';
+    my $qstatus = $self->AddItemToQueueOrSetItemActive($id, 0, 1, 'correction') 
+    my $ref = $self->GetErrors();
+    $err = $ref->[0] if $ref && $ref->[0];
+    if (!$err)
+    {
+      $err = $qstatus->{'msg'} if $qstatus->{'status'} eq '1';
+    }
   }
   if (!$err)
   {

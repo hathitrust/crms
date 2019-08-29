@@ -1,5 +1,8 @@
 package Project;
 
+use strict;
+use warnings;
+
 sub new
 {
   my ($class, %args) = @_;
@@ -68,7 +71,7 @@ sub ExtractReviewData
   my $self = shift;
   my $cgi  = shift;
 
-  return undef;
+  return;
 }
 
 # Return a hashref with the following keys:

@@ -68,7 +68,7 @@ sub new
 
 sub Version
 {
-  return '8.0.18';
+  return '8.0.19';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -740,7 +740,7 @@ sub ProcessReviews
   {
     $reason = 'system status is '. $stat->[1];
   }
-  elsif ($self->GetSystemVar('autoinherit') eq 'disabled')
+  elsif ($self->GetSystemVar('autoinherit', '') eq 'disabled')
   {
     $reason = 'automatic inheritance is disabled';
   }
@@ -996,7 +996,8 @@ sub ExportReviews
   }
   my $count = 0;
   my $user = 'crms';
-  my ($fh, $temp, $perm, $filename) = $self->GetExportFh() unless $training or $quiet;
+  my ($fh, $temp, $perm, $filename);
+  ($fh, $temp, $perm, $filename) = $self->GetExportFh() unless $training or $quiet;
   $self->ReportMsg("<i>Exporting to <code>$temp</code>.</i>") unless $training or $quiet;
   my $start_size = $self->GetCandidatesSize();
   foreach my $id (@{$list})
@@ -7538,9 +7539,11 @@ sub DuplicateVolumesFromExport
            ($oldrights =~ '^pdus' && $attr =~ m/^pd/) ||
            $oldrights eq 'ic/bib' || $oldrights eq 'und/bib')
     {
+      my $enumchron = $record->enumchron($id) || '';
+      my $enumchron2 = $record->enumchron($id2) || '';
       if (!$record->doEnumchronMatch($id, $id2))
       {
-        $data->{'chron'}->{$id} = sprintf "$id2\t$sysid\t%s\t%s\n", $record->enumchron($id), $record->enumchron($id2);
+        $data->{'chron'}->{$id} = "$id2\t$sysid\t$enumchron\t$enumchron2\n";
       }
       elsif ($wrong)
       {
@@ -7568,8 +7571,7 @@ sub DuplicateVolumesFromExport
       }
       else
       {
-        $data->{'inherit'}->{$id} .= sprintf "$id2\t$sysid\t$attr2\t$reason2\t$attr\t$reason\t$gid\t%s\t%s\n",
-                                             $record->enumchron($id), $record->enumchron($id2);
+        $data->{'inherit'}->{$id} .= "$id2\t$sysid\t$attr2\t$reason2\t$attr\t$reason\t$gid\t$enumchron\t$enumchron2\n";
       }
     }
     else

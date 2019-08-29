@@ -31,7 +31,7 @@ END
   if (!$res->is_success)
   {
     $self->SetError("Got " . $res->code() . " getting $url\n");
-    return undef;
+    return;
   }
   return $ua;
 }

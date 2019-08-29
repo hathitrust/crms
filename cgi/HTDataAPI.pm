@@ -47,7 +47,7 @@ sub HasCopyright
   {
     printf "$id oops: %s\n", $res->content;
   }
-  return undef;
+  return;
 }
 
 # Returns hashref with 'data' field of Base64 image data and 'success' field 1
