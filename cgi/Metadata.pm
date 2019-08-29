@@ -21,7 +21,7 @@ sub new
   die "Metadata module needs CRMS instance." unless defined $crms;
   $self->set('crms', $crms);
   $self->json;
-  return undef unless defined $self->xml;
+  return unless defined $self->xml;
   return $self;
 }
 
@@ -642,7 +642,7 @@ sub CountDatafields
 
 sub GetAllAuthors
 {
-  my $self   = shift;
+  my $self = shift;
 
   my %aus;
   my $au = $self->author(1);
@@ -653,7 +653,8 @@ sub GetAllAuthors
     $au = $self->GetSubfields('700', $i, 'a', 'b', 'q', 'c', 'd');
     $aus{$au} = 1 if $au;
   }
-  return sort keys %aus;
+  my @authors = sort keys %aus;
+  return @authors;
 }
 
 sub GetSubfields

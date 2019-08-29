@@ -1,4 +1,7 @@
 package VIAF;
+
+use strict;
+use warnings;
 use JSON::XS;
 use Unicode::Normalize;
 use URI::Escape;

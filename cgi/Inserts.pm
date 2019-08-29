@@ -11,7 +11,7 @@ sub new
   my $errors = [];
   $self->set('errors', $errors);
   my $crms = $args{'crms'};
-  return undef unless defined $crms;
+  return unless defined $crms;
   $self->set('crms', $crms);
   return $self;
 }

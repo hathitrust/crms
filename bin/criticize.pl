@@ -48,6 +48,7 @@ while (my $pwd = shift @dirs)
   foreach my $file (sort @files)
   {
     next if $file =~ /^\.\.?$/;
+    next if $file eq 'legacy';
     my $path = "$pwd/$file";
     if (-d $path)
     {

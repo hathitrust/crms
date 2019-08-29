@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
-BEGIN 
-{
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
-}
-
 use strict;
+use warnings;
+BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+
 use CRMS;
 use Getopt::Long;
 use Excel::Writer::XLSX;
@@ -116,10 +114,10 @@ if (scalar @mails)
               'subject'      => $subj,
               'content-type' => "multipart/mixed; boundary=\"$boundary\""
               );
-  open (F, $excelpath) or die "Cannot read $excelpath: $!";
-  binmode F; undef $/;
-  my $enc = encode_base64(<F>);
-  close F;
+  open (my $fh, '<', $excelpath) or die "Cannot read $excelpath: $!";
+  binmode $fh; undef $/;
+  my $enc = encode_base64(<$fh>);
+  close $fh;
   $boundary = '--'.$boundary;
   $mail{body} = <<END_OF_BODY;
 $boundary

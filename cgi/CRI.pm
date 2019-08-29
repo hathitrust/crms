@@ -534,10 +534,10 @@ sub CheckVolume
   my $id   = shift;
 
   my $crms = $self->get('crms');
-  return undef if $crms->SimpleSqlGet('SELECT COUNT(*) FROM cri WHERE id=?', $id);
+  returr if $crms->SimpleSqlGet('SELECT COUNT(*) FROM cri WHERE id=?', $id);
   my $author = $crms->GetAuthor($id) || '';
   my $title = $crms->GetTitle($id) || '';
-  return undef unless length $author and length $title;
+  return unless length $author and length $title;
   my $sysid = $crms->BarcodeToId($id);
   my $restr = '';
   $restr .= sprintf ' AND b.author LIKE "%s"', $self->LikeQuery($author);
@@ -580,7 +580,7 @@ sub CheckVolume
     return (defined $best5)? $best5:
                             ((defined $best7)? $best7:$best4);
   }
-  return undef;
+  return;
 }
 
 return 1;
