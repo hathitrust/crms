@@ -58,7 +58,7 @@ sub ExtractReviewData
   if ($@)
   {
     $self->{'crms'}->SetError($@);
-    return undef;
+    return;
   }
   my $hold = 0;
   foreach my $datum (@{$data})
@@ -110,7 +110,7 @@ sub ValidateSubmission
   my $self = shift;
   my $cgi  = shift;
 
-  return undef;
+  return;
 }
 
 # ========== INHERITANCE ========== #

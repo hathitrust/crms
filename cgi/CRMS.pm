@@ -68,7 +68,7 @@ sub new
 
 sub Version
 {
-  return '8.0.19';
+  return '8.0.20';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -4031,7 +4031,7 @@ sub IsUserIncarnationExpertOrHigher
   my $self = shift;
   my $user = shift || $self->get('user');
 
-  my $sql = 'SELECT MAX(expert+admin) FROM users WHERE kerberos!=""' .
+  my $sql = 'SELECT COALESCE(MAX(expert+admin),0) FROM users WHERE kerberos!=""' .
             ' AND kerberos IN (SELECT DISTINCT kerberos FROM users WHERE id=?)';
   return 0 < $self->SimpleSqlGet($sql, $user);
 }
@@ -4607,7 +4607,7 @@ sub CreateDeterminationsBreakdownReport
   $report .= "<table class='exportStats'>\n";
   $report .= "<tr><th/><th colspan='$span1'><span class='major'>Counts</span></th><th colspan='$span2'><span class='total'>Percentages</span></th></tr>\n";
   my $titles = shift @lines;
-  $report .= ('<tr>' . join('', map {s/\s/&nbsp;/g; "<th>$_</th>";} split("\t", $titles)) . '</tr>');
+  $report .= ('<tr>' . join('', map {my $tmp = $_; $tmp =~ s/\s/&nbsp;/g; "<th>$tmp</th>";} split("\t", $titles)) . '</tr>');
   foreach my $line (@lines)
   {
     my @line = split "\t", $line;
@@ -5013,22 +5013,12 @@ sub UpdateMetadata
     $record = $self->GetMetadata($id) unless defined $record;
     if (defined $record)
     {
-      my $date = $record->copyrightDate . '-01-01';
-      # FIXME: can this ever happen? Why would we update bibdata for a catalog record
-      # and not a specific HTID?
-      if ($record->id eq $record->sysid)
-      {
-        my $sql = 'UPDATE bibdata SET author=?,title=?,pub_date=?,country=? WHERE sysid=?';
-        $self->PrepareSubmitSql($sql, $record->author, $record->title,
-                                $date, $record->country, $record->sysid);
-      }
-      else
-      {
-        my $sql = 'REPLACE INTO bibdata (id,author,title,pub_date,country,sysid)' .
-                  ' VALUES (?,?,?,?,?,?)';
-        $self->PrepareSubmitSql($sql, $id, $record->author, $record->title,
-                                $date, $record->country, $record->sysid);
-      }
+      my $date = $record->copyrightDate;
+      $date .= '-01-01' if $date;
+      my $sql = 'REPLACE INTO bibdata (id,author,title,pub_date,country,sysid)' .
+                ' VALUES (?,?,?,?,?,?)';
+      $self->PrepareSubmitSql($sql, $id, $record->author, $record->title,
+                              $date, $record->country, $record->sysid);
     }
     else
     {
@@ -7843,7 +7833,7 @@ sub Rights
   my $of = scalar @all;
   my $middle = int($of / 2);
   $middle += 1 if $of % 2 == 1;
-  foreach $n (0 .. $middle - 1)
+  foreach my $n (0 .. $middle - 1)
   {
     push @inorder, $all[$n];
     push @inorder, $all[$n + $middle] if $n + $middle < $of;
@@ -7912,7 +7902,11 @@ sub Authorities
     }
     if ($url =~ m/__AUTHOR_F__/)
     {
-      my $a2 = $1 if $a =~ m/^.*?([A-Za-z]+)/;
+      my $a2 = '';
+      if ($a =~ m/^.*?([A-Za-z]+)/)
+      {
+        $a2 = $1;
+      }
       $url =~ s/__AUTHOR_F__/$a2/g;
     }
     if ($url =~ m/__TITLE__/)
