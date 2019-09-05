@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
-BEGIN 
-{
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
-}
-
 use strict;
+use warnings;
+BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+
 use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 
@@ -605,7 +603,7 @@ sub KeysSortedOnTitle
   my $ref = shift;
   my $th  = shift;
 
-  return sort {
+  my @keys = sort {
     my $aa = lc $th->{$a};
     my $ba = lc $th->{$b};
     $crms->ClearErrors();
@@ -614,6 +612,7 @@ sub KeysSortedOnTitle
     ||
     $a cmp $b;
   } keys %{$ref};
+  return @keys;
 }
 
 sub CountSystemIds

@@ -1,12 +1,9 @@
 #!/usr/bin/perl
 
-BEGIN 
-{
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
-}
-
 use strict;
-use CRMS;
+use warnings;
+BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+
 use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 

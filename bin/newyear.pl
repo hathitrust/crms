@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
-BEGIN 
-{
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
-}
-
 use strict;
+use warnings;
+BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+
 use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
@@ -148,7 +146,7 @@ foreach my $row (@{$ref})
     {
       $dates{$match} = 1 if length $match and $match < $year;
     }
-    foreach $renDate (sort keys %dates)
+    foreach my $renDate (sort keys %dates)
     {
       my $rid = $crms->PredictRights($id, $renDate, $renNum,
                                      $crown, $record, undef, $year);
