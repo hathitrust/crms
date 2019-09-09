@@ -7,6 +7,7 @@
 [% override = cgi.param('override') %]
 [% noop = cgi.param('noop') %]
 [% delete = cgi.param('delete') %]
+
 [% expert = crms.IsUserExpert() %]
 [% admin = crms.IsUserAdmin() %]
 [% IF NOT pri %][% pri = 0 %][% END %]
@@ -107,7 +108,7 @@ function CheckAllTx(box,id)
 
 [% IF ids %]
   [% IF noop %]
-    [% crms.set('noop', 1) %]
+    [% CALL crms.set('noop', 1) %]
   [% END %]
   <br/>
   <table class="exportStats" style="width:33%;">
