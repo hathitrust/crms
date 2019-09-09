@@ -350,9 +350,11 @@ sub copyrightDate
     $field = $date2 if defined $date2 and (defined $date1 and $date2 > $date1) and $date2 ne '9999';
   }
   $field = undef if defined $field and $field eq '';
-  my $field2;
-  $field2 = $self->get_volume_date;
+  my $field2 = $self->get_volume_date;
+  #printf "%s: field2 %s vs field %s\n", $self->id, (defined $field2)? $field2 : '<undef>', (defined $field)? $field : '<undef>';
+  #$field = $field2 if $field2 && $field2 =~ m/^\d\d\d\d$/;
   $field = $field2 if $field2;
+  #printf "%s: returning %s\n", $self->id, (defined $field)? $field : '<undef>';
   return $field;
 }
 
@@ -399,7 +401,7 @@ sub formatPubDate
   return $date;
 }
 
-# Source code from Tim Prettyman
+# Adapted code from Tim Prettyman
 sub get_volume_date
 {
   my $self = shift;
@@ -443,8 +445,8 @@ sub get_volume_date
   # check for date ranges: yyyy-yy
   #($low, $high) = ( $item_desc =~ /\b(\d{4})\-(\d{2})\b/ ) and do {
   #($low, $high) = ( $item_desc =~ /\s(\d{4})\-(\d{2})\s/ ) and do {
-  #$item_desc =~ /\b(\d{4})\-(\d{2})\b/ and do {
-  $item_desc =~ /\b(\d{4})[-\/](\d{2})\b/ and do {
+  # While loop to handle e.g., 1973/74-1977/78 will push {1974, 1978}
+  while ($item_desc =~ /\b(\d{4})[-\/](\d{2})\b/g) {
     $low = $1;
     $high = $2;
     $high = substr($low,0,2) . $high;

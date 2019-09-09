@@ -69,6 +69,7 @@ die 'Terminating' unless GetOptions(
            'v+'   => \$verbose);
 $instance = 'production' if $production;
 die "$usage\n\n" if $help;
+$verbose = 0 unless $verbose;
 
 my %no = ();
 $no{$_}=1 for @no;
@@ -195,9 +196,10 @@ if (scalar keys %{$data{'chron'}} && !$no{'chron'})
   foreach my $id (KeysSortedOnTitle($data{'chron'}), $th)
   {
     #my $record = $crms->GetMetadata($id);
-    my $title = $th->{$id};
+    my $title = $th->{$id} || '';
     $title =~ s/&/&amp;/g;
-    my @lines = split "\n", $data{'chron'}->{$id};
+    my $chron = $data{'chron'}->{$id} || '';
+    my @lines = split "\n", $chron;
     foreach my $line (@lines)
     {
       $n++;
@@ -280,7 +282,7 @@ if (scalar keys %{$data{'nodups'}} && !$no{'nodups'})
 
 if (scalar keys %{$data{'unneeded'}} && !$no{'unneeded'})
 {
-  my $table = sprintf("<h4>Volumes not needing inheritance</h4>\n", ($candidates)? ' - No Inheritance/Adding to Candidates':'');
+  my $table = sprintf("<h4>Volumes not needing inheritance %s</h4>\n", ($candidates)? ' - No Inheritance/Adding to Candidates':'');
   $table .= '<table border="1"><tr><th>#</th><th>Source&nbsp;Volume<br/>(<span style="color:blue;">historical/SysID</span>)</th>'.
             '<th>Volume Checked<br/>(<span style="color:blue;">volume tracking</span>)</th>'.
             '<th>Sys ID<br/>(<span style="color:blue;">catalog</span>)</th><th>Rights</th><th>New Rights</th>'.
@@ -346,12 +348,14 @@ if ($candidates)
 }
 else
 {
+  my $unneededcnt = $data{'unneededcnt'};
   $crms->ReportMsg(sprintf("Volumes checked, no inheritance needed: %d", scalar keys %{$data{'unneeded'}}));
   $crms->ReportMsg('Unique Sys IDs checked, no inheritance needed: '. CountSystemIds('unneeded', keys %{$data{'unneeded'}}));
-  $crms->ReportMsg(sprintf("Volumes not needing inheritance: %d", $data{'unneededcnt'}));
+  $crms->ReportMsg(sprintf("Volumes not needing inheritance: %d", $unneededcnt));
 }
 $crms->ReportMsg('Volumes checked, inheritance not permitted: '. scalar keys %{$data{'disallowed'}});
-$crms->ReportMsg(sprintf("Volumes not allowed to inherit: %d<br/>\n", $data{'disallowedcnt'}));
+my $disallowedcnt = $data{'disallowedcnt'} || 0;
+$crms->ReportMsg(sprintf("Volumes not allowed to inherit: %d<br/>\n", $disallowedcnt));
 if ($candidates)
 {
   $crms->ReportMsg('<h4>Inheritance Permitted - Not Adding to Candidates - Status 9 Review awaiting approval:</h4>');
@@ -362,10 +366,12 @@ else
   $crms->ReportMsg('Volumes checked - inheritance permitted: '. scalar keys %{$data{'inherit'}});
 }
 $crms->ReportMsg(sprintf('Unique Sys IDs w/ volumes inheriting rights: %d', CountSystemIds('inherit', keys %{$data{'inherit'}})));
-$crms->ReportMsg('Volumes inheriting rights automatically: '. $data{'inheritcnt'});
+my $inheritcnt = $data{'inheritcnt'} || 0;
+$crms->ReportMsg('Volumes inheriting rights automatically: '. $inheritcnt);
 if (!$candidates)
 {
-  $crms->ReportMsg('Volumes inheriting rights pending approval: '. $data{'pendinheritcnt'});
+  my $pendinheritcnt = $data{'pendinheritcnt'} || 0;
+  $crms->ReportMsg('Volumes inheriting rights pending approval: '. $pendinheritcnt);
 }
 
 if (scalar keys %{$data{'inherit'}})
@@ -604,10 +610,9 @@ sub KeysSortedOnTitle
   my $th  = shift;
 
   my @keys = sort {
-    my $aa = lc $th->{$a};
-    my $ba = lc $th->{$b};
+    my $aa = lc($th->{$a} || '');
+    my $ba = lc($th->{$b} || '');
     $crms->ClearErrors();
-    #print "'$aa' cmp '$ba'?\n";
     $aa cmp $ba
     ||
     $a cmp $b;
