@@ -20,7 +20,7 @@
 [% uadmin = crms.IsUserAdmin() %]
 [% projects = [] %]
 [% FOREACH param IN cgi.param %]
-  [% matches = param.match('(proj_)(.?)') %]
+  [% matches = param.match('(proj_)(\d+)') %]
   [% IF matches.0 == 'proj_' %]
     [% projects.push(matches.1) %]
   [% END %]
