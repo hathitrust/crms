@@ -190,5 +190,21 @@ sub ExtractReviewData
   return $data;
 }
 
+# Return a dictionary ref with the following keys:
+# id: the reviewdata id
+# format: HTML-formatted data for inline display. May be blank.
+# format_long: HTML-formatted data for tooltip display. May be blank.
+# e.g., {"date":"1881","pub":1,"src":"VIAF"}
+sub FormatReviewData
+{
+  my $self = shift;
+  my $id   = shift;
+  my $json = shift;
+
+  my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
+  my $data = $jsonxs->decode($json);
+  my $fmt = sprintf '%s <strong>%s</strong> %s', ($data->{'pub'})? 'Pub':'ADD', $data->{'date'};
+  return {'id' => $id, 'format' => $fmt, 'format_long' => ''};
+}
 
 1;
