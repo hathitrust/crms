@@ -68,7 +68,7 @@ sub new
 
 sub Version
 {
-  return '8.0.21';
+  return '8.0.22';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -177,7 +177,6 @@ sub NeedStepUpAuth
   my $idp = $ENV{'Shib_Identity_Provider'};
   my $class = $ENV{'Shib_AuthnContext_Class'};
   my $sdr_dbh = $self->get('ht_repository');
-  my ($dbclass, $dbtemplate);
   if (!defined $sdr_dbh)
   {
     $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
@@ -195,6 +194,7 @@ sub NeedStepUpAuth
   }
   if ($mfa)
   {
+    my ($dbclass, $dbtemplate);
     $sql = 'SELECT shib_authncontext_class,template FROM ht_institutions'.
            ' WHERE entityID=? LIMIT 1';
     eval {
@@ -202,9 +202,9 @@ sub NeedStepUpAuth
     };
     if ($ref && scalar @{$ref})
     {
-      $dbclass    = $ref->[0]->[0]; # https://refeds.org/profile/mfa
-      $dbtemplate = $ref->[0]->[1]; # https://___HOST___/Shibboleth.sso/umich?target=___TARGET___
-      $dbtemplate = 'https://___HOST___/Shibboleth.sso/Login?entityID=___ENTITY_ID___&target=___TARGET___';
+      $dbclass    = $ref->[0]->[0]; # https://refeds.org/profile/mfa or NULL
+      $dbtemplate = $ref->[0]->[1]; # https://___HOST___/Shibboleth.sso/Login?entityID=https://shibboleth.umich.edu/idp/shibboleth&target=___TARGET___
+      #$dbtemplate = 'https://___HOST___/Shibboleth.sso/Login?entityID=___ENTITY_ID___&target=___TARGET___';
     }
     if (defined $class && defined $dbclass && $class ne $dbclass)
     {
@@ -216,7 +216,7 @@ sub NeedStepUpAuth
       {
         $tpl =~ s/___HOST___/$ENV{SERVER_NAME}/;
         $tpl =~ s/___TARGET___/$target/;
-        $tpl =~ s/___ENTITY_ID___/$idp/;
+        $tpl =~ s/___ENTITY_ID___/$idp/; # FIXME: may be obsolete
         $tpl .= "&authnContextClassRef=$dbclass";
         $self->set('stepup_redirect', $tpl);
       }
