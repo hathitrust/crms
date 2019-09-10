@@ -269,7 +269,7 @@ addEvent(window, 'load', function(e)
             [% review.attr _ '/' _ review.reason %]
           [% END %]
         </td>
-        <td>
+        <td class="nowrap">
           [% # Do not display review data id directly %]
           [% # If there is a format field, display it inline %]
           [% # If there is a format_long field, display it as a tip. %]

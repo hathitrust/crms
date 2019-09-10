@@ -89,13 +89,13 @@ sub FormatReviewData
           'format_long' => "<code>$json</code>"};
 }
 
+# Check the CGI parameters and return undef if there is not issue, or an
+# error message if there is an issue to be displayed in the Review page.
 sub ValidateSubmission
 {
   my $self = shift;
   my $cgi  = shift;
-#print "Project ValidateSubmission\n";
-  my $hold = $cgi->param('hold');
-  #return undef if $hold;
+
   my $rights = $cgi->param('rights');
   return 'You must select a rights/reason combination' unless $rights;
   my ($attr, $reason) = $self->{'crms'}->TranslateAttrReasonFromCode($rights);

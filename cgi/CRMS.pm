@@ -68,7 +68,7 @@ sub new
 
 sub Version
 {
-  return '8.0.21';
+  return '8.1';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -177,7 +177,6 @@ sub NeedStepUpAuth
   my $idp = $ENV{'Shib_Identity_Provider'};
   my $class = $ENV{'Shib_AuthnContext_Class'};
   my $sdr_dbh = $self->get('ht_repository');
-  my ($dbclass, $dbtemplate);
   if (!defined $sdr_dbh)
   {
     $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
@@ -195,6 +194,7 @@ sub NeedStepUpAuth
   }
   if ($mfa)
   {
+    my ($dbclass, $dbtemplate);
     $sql = 'SELECT shib_authncontext_class,template FROM ht_institutions'.
            ' WHERE entityID=? LIMIT 1';
     eval {
@@ -202,9 +202,9 @@ sub NeedStepUpAuth
     };
     if ($ref && scalar @{$ref})
     {
-      $dbclass    = $ref->[0]->[0]; # https://refeds.org/profile/mfa
-      $dbtemplate = $ref->[0]->[1]; # https://___HOST___/Shibboleth.sso/umich?target=___TARGET___
-      $dbtemplate = 'https://___HOST___/Shibboleth.sso/Login?entityID=___ENTITY_ID___&target=___TARGET___';
+      $dbclass    = $ref->[0]->[0]; # https://refeds.org/profile/mfa or NULL
+      $dbtemplate = $ref->[0]->[1]; # https://___HOST___/Shibboleth.sso/Login?entityID=https://shibboleth.umich.edu/idp/shibboleth&target=___TARGET___
+      #$dbtemplate = 'https://___HOST___/Shibboleth.sso/Login?entityID=___ENTITY_ID___&target=___TARGET___';
     }
     if (defined $class && defined $dbclass && $class ne $dbclass)
     {
@@ -216,7 +216,7 @@ sub NeedStepUpAuth
       {
         $tpl =~ s/___HOST___/$ENV{SERVER_NAME}/;
         $tpl =~ s/___TARGET___/$target/;
-        $tpl =~ s/___ENTITY_ID___/$idp/;
+        $tpl =~ s/___ENTITY_ID___/$idp/; # FIXME: may be obsolete
         $tpl .= "&authnContextClassRef=$dbclass";
         $self->set('stepup_redirect', $tpl);
       }
@@ -1765,7 +1765,7 @@ sub AddItemToQueueOrSetItemActive
     my $eval = $self->EvaluateCandidacy($id, $record, $project);
     push @msgs, $eval->{'msg'} if $eval->{'msg'};
     # If there are error messages and user is not overriding it is an error.
-    if ($eval->{'status'} != 'yes' && !$override)
+    if ($eval->{'status'} ne 'yes' && !$override)
     {
       $stat = 1;
     }
@@ -2209,11 +2209,12 @@ sub FormatTime
 sub ConvertToSearchTerm
 {
   my $self   = shift;
-  my $search = shift;
+  my $search = shift || '';
   my $page   = shift;
   my $order  = shift;
 
   my $prefix = ($page eq 'queue' || $page eq 'exportData')? 'q.':'r.';
+  $prefix = 'c.' if $page eq 'candidates';
   my $new_search = $search;
   if (!$search || $search eq 'Identifier')
   {
@@ -2235,7 +2236,7 @@ sub ConvertToSearchTerm
   elsif ($search eq 'Author') { $new_search = 'b.author'; }
   elsif ($search eq 'Priority') { $new_search = 'q.priority'; }
   elsif ($search eq 'Validated') { $new_search = 'r.validated'; }
-  elsif ($search eq 'PubDate') { $new_search = 'b.pub_date'; }
+  elsif ($search eq 'PubDate') { $new_search = 'YEAR(b.pub_date)'; }
   elsif ($search eq 'Locked') { $new_search = 'q.locked'; }
   elsif ($search eq 'ExpertCount')
   {
@@ -2806,232 +2807,6 @@ sub SearchTermsToSQLWide
   return ($joins,@rest);
 }
 
-sub DownloadReviews
-{
-  my $self           = shift;
-  my $page           = shift;
-  my $order          = shift;
-  my $dir            = shift;
-  my $search1        = shift;
-  my $search1value   = shift;
-  my $op1            = shift;
-  my $search2        = shift;
-  my $search2value   = shift;
-  my $op2            = shift;
-  my $search3        = shift;
-  my $search3value   = shift;
-  my $startDate      = shift;
-  my $endDate        = shift;
-  my $offset         = shift || 0;
-  my $pagesize       = shift || 0;
-  my $stype          = shift;
-
-  $stype = 'reviews' unless $stype;
-  my $table = 'reviews';
-  my $top = 'bibdata b';
-  if ($page eq 'adminHistoricalReviews')
-  {
-    $table = 'historicalreviews';
-    $top = 'exportdata q INNER JOIN bibdata b ON q.id=b.id';
-  }
-  else
-  {
-    $top = 'queue q INNER JOIN bibdata b ON q.id=b.id';
-  }
-  my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQL($stype, $page, $order, $dir, $search1,
-                                                                  $search1value, $op1, $search2, $search2value,
-                                                                  $op2, $search3, $search3value, $startDate,
-                                                                  $endDate, $offset, $pagesize, 1);
-  my $ref = $self->SelectAll($sql);
-  my $buff = '';
-  if (scalar @{$ref} == 0)
-  {
-    $buff = 'No Results Found.';
-  }
-  else
-  {
-    if ($page eq 'userReviews')
-    {
-      $buff .= qq{id\ttitle\tauthor\tdate\tattr\treason\tcategory\tnote};
-    }
-    elsif ($page eq 'editReviews' || $page eq 'holds')
-    {
-      $buff .= qq{id\ttitle\tauthor\tdate\tattr\treason\tcategory\tnote\thold};
-    }
-    elsif ($page eq 'conflicts' || $page eq 'provisionals')
-    {
-      $buff .= qq{id\ttitle\tauthor\tdate\tstatus\tuser\tattr\treason\tcategory\tnote}
-    }
-    elsif ($page eq 'adminReviews' || $page eq 'adminHolds')
-    {
-      $buff .= qq{id\ttitle\tauthor\tdate\tstatus\tuser\tattr\treason\tcategory\tnote\tswiss\thold};
-    }
-    elsif ($page eq 'adminHistoricalReviews')
-    {
-      $buff .= qq{id\tsystem id\ttitle\tauthor\tpub date\tdate\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated\tswiss};
-    }
-    $buff .= sprintf("%s\n", ($self->IsUserAdmin())? "\tpriority":'');
-    if ($stype eq 'reviews')
-    {
-      $buff .= $self->UnpackResults($page, $ref);
-    }
-    else
-    {
-      #$order = 'Identifier' if $order eq 'SysID';
-      $order = $self->ConvertToSearchTerm($order, 1);
-      foreach my $row (@{$ref})
-      {
-        my $id = $row->[0];
-        my $qrest = ($page ne 'adminHistoricalReviews')? ' AND r.id=q.id':'';
-        $sql = 'SELECT r.id,r.time,r.duration,r.user,r.attr,r.reason,r.note,r.data,r.expert,'.
-               'r.category,r.legacy,q.priority,r.swiss,q.status,q.project,b.title,b.author,'.
-               (($page eq 'adminHistoricalReviews')?'r.validated':'r.hold ').
-               " FROM $top INNER JOIN $table r ON b.id=r.id".
-               " WHERE r.id='$id' $qrest ORDER BY $order $dir";
-        #print "$sql<br/>\n";
-        my $ref2;
-        eval { $ref2 = $self->SelectAll($sql); };
-        if ($@)
-        {
-          $self->SetError("SQL failed: '$sql' ($@)");
-          $self->DownloadSpreadSheet("SQL failed: '$sql' ($@)");
-          return 0;
-        }
-        $buff .= $self->UnpackResults($page, $ref2);
-      }
-    }
-  }
-  $self->DownloadSpreadSheet($buff);
-  return ($buff)? 1:0;
-}
-
-sub UnpackResults
-{
-  my $self = shift;
-  my $page = shift;
-  my $ref  = shift;
-
-  my $buff = '';
-  foreach my $row (@{$ref})
-  {
-    $row->[1] =~ s,(.*) .*,$1,;
-    for (my $i = 0; $i < scalar @{$row}; $i++)
-    {
-      $row->[$i] =~ s/[\n\r\t]+/ /gs;
-    }
-    my $id         = $row->[0];
-    my $time       = $row->[1];
-    my $duration   = $row->[2];
-    my $user       = $row->[3];
-    my $attr       = $self->TranslateAttr($row->[4]);
-    my $reason     = $self->TranslateReason($row->[5]);
-    my $note       = $row->[6];
-    my $data       = $row->[7];
-    my $expert     = $row->[8];
-    my $category   = $row->[9];
-    my $legacy     = $row->[10];
-    my $priority   = $self->StripDecimal($row->[11]);
-    my $swiss      = $row->[12];
-    my $status     = $row->[13];
-    my $project    = $row->[14];
-    my $title      = $row->[15];
-    my $author     = $row->[16];
-    my $holdval    = $row->[17];
-    if ($page eq 'userReviews') # FIXME: is this ever used??
-    {
-      $buff .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note};
-    }
-    elsif ($page eq 'editReviews' || $page eq 'holds')
-    {
-      $buff .= qq{$id\t$title\t$author\t$time\t$attr\t$reason\t$category\t$note\t$holdval};
-    }
-    elsif ($page eq 'conflicts' || $page eq 'provisionals')
-    {
-      $buff .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note}
-    }
-    elsif ($page eq 'adminReviews' || $page eq 'adminHolds')
-    {
-      $buff .= qq{$id\t$title\t$author\t$time\t$status\t$user\t$attr\t$reason\t$category\t$note\t$swiss\t$holdval};
-    }
-    elsif ($page eq 'adminHistoricalReviews')
-    {
-      my $pubdate = $self->SimpleSqlGet('SELECT YEAR(pub_date) FROM bibdata WHERE id=?', $id);
-      $pubdate = '?' unless $pubdate;
-      my $sysid = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
-      #id, title, author, review date, status, user, attr, reason, category, note, validated
-      $buff .= qq{$id\t$sysid\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$holdval\t$swiss};
-    }
-    $buff .= sprintf("%s\n", ($self->IsUserAdmin())? "\t$priority":'');
-  }
-  return $buff;
-}
-
-sub DownloadDeterminationStats
-{
-  my $self      = shift;
-  my $startDate = shift;
-  my $endDate   = shift;
-  my $monthly   = shift;
-  my $priority  = shift;
-  my $pre       = shift;
-
-  my $buff;
-  if ($pre)
-  {
-    $buff = $self->CreatePreDeterminationsBreakdownData($startDate, $endDate, $monthly, undef, $priority);
-  }
-  else
-  {
-    $buff = $self->CreateDeterminationsBreakdownData($startDate, $endDate, $monthly, undef, $priority);
-  }
-  $self->DownloadSpreadSheet($buff);
-  return ($buff)? 1:0;
-}
-
-sub DownloadQueue
-{
-  my $self         = shift;
-  my $order        = shift;
-  my $dir          = shift;
-  my $search1      = shift;
-  my $search1Value = shift;
-  my $op1          = shift;
-  my $search2      = shift;
-  my $search2Value = shift;
-  my $startDate    = shift;
-  my $endDate      = shift;
-  my $offset       = shift || 0;
-  my $pagesize     = shift || 0;
-
-  my $buff = $self->GetQueueRef($order, $dir, $search1, $search1Value, $op1,
-                                $search2, $search2Value, $startDate, $endDate,
-                                $offset, $pagesize, 1);
-  $self->DownloadSpreadSheet($buff);
-  return ($buff)? 1:0;
-}
-
-sub DownloadExportData
-{
-  my $self         = shift;
-  my $order        = shift;
-  my $dir          = shift;
-  my $search1      = shift;
-  my $search1Value = shift;
-  my $op1          = shift;
-  my $search2      = shift;
-  my $search2Value = shift;
-  my $startDate    = shift;
-  my $endDate      = shift;
-  my $offset       = shift || 0;
-  my $pagesize     = shift || 0;
-
-  my $buff = $self->GetExportDataRef($order, $dir, $search1, $search1Value, $op1,
-                                     $search2, $search2Value, $startDate, $endDate,
-                                     $offset, $pagesize, 1);
-  $self->DownloadSpreadSheet($buff);
-  return ($buff)? 1:0;
-}
-
 sub GetReviewsRef
 {
   my $self         = shift;
@@ -3408,6 +3183,119 @@ sub GetQueueRef
                 source   => $row->[9],
                 ticket   => $row->[10],
                 added_by => $row->[11]
+               };
+    push @return, $item;
+    if ($download)
+    {
+      $data .= "\n". join "\t", map {$item->{$_};} @colnames;
+    }
+  }
+  if (!$download)
+  {
+    my $n = POSIX::ceil($offset/$pagesize+1);
+    my $of = POSIX::ceil($totalVolumes/$pagesize);
+    $n = 0 if $of == 0;
+    $data = {'rows' => \@return,
+             'volumes' => $totalVolumes,
+             'page' => $n,
+             'of' => $of
+            };
+  }
+  return $data;
+}
+
+sub GetCandidatesRef
+{
+  my $self         = shift;
+  my $order        = shift;
+  my $dir          = shift;
+  my $search1      = shift;
+  my $search1Value = shift || '';
+  my $op1          = shift;
+  my $search2      = shift;
+  my $search2Value = shift || '';
+  my $startDate    = shift;
+  my $endDate      = shift;
+  my $offset       = shift || 0;
+  my $pagesize     = shift || 0;
+  my $download     = shift;
+
+  $pagesize = 20 unless $pagesize > 0;
+  $offset = 0 unless $offset > 0;
+  $order = 'id' unless $order;
+  $offset = 0 unless $offset;
+  $search1 = $self->ConvertToSearchTerm($search1, 'candidates');
+  $search2 = $self->ConvertToSearchTerm($search2, 'candidates');
+  $order = $self->ConvertToSearchTerm($order, 'candidates');
+  my @rest = ();
+  my $tester1 = '=';
+  my $tester2 = '=';
+  if ($search1Value =~ m/.*\*.*/)
+  {
+    $search1Value =~ s/\*/%/gs;
+    $tester1 = ' LIKE ';
+  }
+  if ($search2Value =~ m/.*\*.*/)
+  {
+    $search2Value =~ s/\*/%/gs;
+    $tester2 = ' LIKE ';
+  }
+  if ($search1Value =~ m/([<>!]=?)\s*(\d+)\s*/)
+  {
+    $search1Value = $2;
+    $tester1 = $1;
+  }
+  if ($search2Value =~ m/([<>!]=?)\s*(\d+)\s*/)
+  {
+    $search2Value = $2;
+    $tester2 = $1;
+  }
+  push @rest, "q.time>='$startDate'" if $startDate;
+  push @rest, "q.time<='$endDate'" if $endDate;
+  if ($search1Value ne '' && $search2Value ne '')
+  {
+    push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
+  }
+  else
+  {
+    push @rest, "$search1 $tester1 '$search1Value'" if $search1Value ne '';
+    push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
+  }
+  my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
+  my $sql = 'SELECT COUNT(c.id) FROM candidates c LEFT JOIN bibdata b ON c.id=b.id'.
+            ' INNER JOIN projects p ON c.project=p.id '. $restrict;
+  #print "$sql<br/>\n";
+  my $totalVolumes = $self->SimpleSqlGet($sql);
+  $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
+  my @return = ();
+  $sql = 'SELECT c.id,DATE(c.time),b.sysid,YEAR(b.pub_date),b.title,b.author,'.
+         ' b.country,p.name'.
+         ' FROM candidates c LEFT JOIN bibdata b ON c.id=b.id'.
+         ' INNER JOIN projects p ON c.project=p.id '. $restrict.
+         ' ORDER BY '. "$order $dir LIMIT $offset, $pagesize";
+  #print "$sql<br/>\n";
+  my $ref = undef;
+  eval {
+    $ref = $self->SelectAll($sql);
+  };
+  if ($@)
+  {
+    $self->SetError($@);
+  }
+  my @columns = ('ID', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Country', 'Date Added', 'Project');
+  my @colnames = ('id', 'sysid', 'title', 'author', 'pubdate', 'country', 'date', 'project');
+  my $data = join "\t", @columns;
+  foreach my $row (@{$ref})
+  {
+    my $id = $row->[0];
+    my $item = {id       => $id,
+                date     => $row->[1],
+                sysid    => $row->[2],
+                pubdate  => $row->[3],
+                title    => $row->[4],
+                author   => $row->[5],
+                country  => $row->[6],
+                project  => $row->[7]
                };
     push @return, $item;
     if ($download)
@@ -6085,18 +5973,6 @@ sub GetLastStatusProcessedTime
   return $self->FormatTime($time);
 }
 
-sub DownloadSpreadSheet
-{
-  my $self   = shift;
-  my $buff = shift;
-
-  if ($buff)
-  {
-    print CGI::header(-type => 'text/plain', -charset => 'utf-8');
-    print $buff;
-  }
-}
-
 sub CountReviews
 {
   my $self = shift;
@@ -6390,15 +6266,41 @@ sub QueueSearchMenu
   my $searchName = shift;
   my $searchVal  = shift;
 
-  my @keys = qw(Identifier SysID Title Author PubDate Date Status Locked Priority Reviews
-                ExpertCount Holds Source AddedBy Project Ticket);
-  my @labs = ('Identifier', 'System Identifier', 'Title', 'Author', 'Pub Date', 'Date Added', 'Status', 'Locked',
-              'Priority', 'Reviews', 'Expert Reviews', 'Holds', 'Source',
-              'Added By', 'Project', 'Ticket');
+   my @keys = qw(Identifier SysID Title Author PubDate Date Status Locked
+                Priority Reviews ExpertCount Holds Source AddedBy Project Ticket);
+  my @labs = ('Identifier', 'System Identifier', 'Title', 'Author', 'Pub Date',
+              'Date Added', 'Status', 'Locked', 'Priority', 'Reviews',
+              'Expert Reviews', 'Holds', 'Source', 'Added By', 'Project',
+              'Ticket');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
-    $html .= sprintf("  <option value='%s'%s>%s</option>\n", $keys[$i], ($searchVal eq $keys[$i])? ' selected="selected"':'', $labs[$i]);
+    $html .= sprintf("  <option value='%s'%s>%s</option>\n",
+                     $keys[$i],
+                     ($searchVal eq $keys[$i])? ' selected="selected"':'',
+                     $labs[$i]);
+  }
+  $html .= "</select>\n";
+  return $html;
+}
+
+# Generates HTML to get the field type menu on the Volumes in Candidates page.
+sub CandidatesSearchMenu
+{
+  my $self       = shift;
+  my $searchName = shift;
+  my $searchVal  = shift;
+
+  my @keys = qw(Identifier SysID Title Author PubDate Date Project);
+  my @labs = ('ID', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Date Added',
+              'Project');
+  my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
+  foreach my $i (0 .. scalar @keys - 1)
+  {
+    $html .= sprintf("  <option value='%s'%s>%s</option>\n",
+                     $keys[$i],
+                     ($searchVal eq $keys[$i])? ' selected="selected"':'',
+                     $labs[$i]);
   }
   $html .= "</select>\n";
   return $html;
@@ -6413,13 +6315,16 @@ sub ExportDataSearchMenu
 
   my @keys = qw(Identifier SysID Title Author PubDate Date Attribute Reason
                 Status Priority Source AddedBy Project Ticket GID Exported);
-  my @labs = ('Identifier', 'System Identifier', 'Title', 'Author', 'Pub Date', 'Date', 'Attribute', 'Reason',
-              'Status', 'Priority', 'Source', 'Added By', 'Project', 'Ticket', 'GID', 'Exported');
+  my @labs = ('Identifier', 'System Identifier', 'Title', 'Author', 'Pub Date',
+              'Date', 'Attribute', 'Reason', 'Status', 'Priority', 'Source',
+              'Added By', 'Project', 'Ticket', 'GID', 'Exported');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
-    $html .= sprintf("  <option value='%s'%s>%s</option>\n", $keys[$i],
-                     ($searchVal eq $keys[$i])? ' selected="selected"':'', $labs[$i]);
+    $html .= sprintf("  <option value='%s'%s>%s</option>\n",
+                     $keys[$i],
+                     ($searchVal eq $keys[$i])? ' selected="selected"':'',
+                     $labs[$i]);
   }
   $html .= "</select>\n";
   return $html;
@@ -6637,23 +6542,6 @@ sub VolumeIDsQuery
   $record = $self->GetMetadata($sysid) unless defined $record;
   return undef unless defined $record;
   return $record->volumeIDs
-}
-
-sub DownloadTracking
-{
-  my $self = shift;
-  my $q    = shift;
-
-  my $data = $self->TrackingQuery($q);
-  my $buff = (join "\t", ('Volume', 'Enum/Chron', 'CRMS Status',
-                          'U.S. Rights', 'Attribute', 'Reason', 'Source',
-                          'User', 'Time', 'Note', 'Access Profile')) . "\n";
-  foreach my $row (@{$data->{'data'}})
-  {
-    $buff .= (join "\t", @{$row}). "\n";
-  }
-  $self->DownloadSpreadSheet($buff);
-  return (1 == scalar @{$self->GetErrors()});
 }
 
 # All volumes in the query (q) are moved to the top of the results.
@@ -7391,6 +7279,14 @@ sub LinkToCatalog
   return 'http://catalog.hathitrust.org/Record/'. $sysid;
 }
 
+sub LinkToCatalogMARC
+{
+  my $self  = shift;
+  my $sysid = shift;
+
+  return 'http://catalog.hathitrust.org/Record/'. $sysid. '.marc';
+}
+
 sub LinkToHistorical
 {
   my $self  = shift;
@@ -7633,8 +7529,6 @@ sub ExportSrcToEnglish
 }
 
 # Retrieves a system var from the DB if possible, otherwise use the value from the config file.
-# If ck is specified, it should be of the form "$_ >= 0 && $_ <= 100" which checks the DB value
-# and uses the config file value if the check is failed.
 # If default is specified, returns it if otherwise the return value would be undefined.
 sub GetSystemVar
 {
@@ -8569,7 +8463,7 @@ sub Projects
         else
         {
           $class = 'Project';
-          require 'Project.pm';
+          require Project;
           $obj = $class->new('crms' => $self, 'id' => $id, 'name' => $row->[1],
                              'color' => $row->[2], 'single_review' => $row->[3]);
         }

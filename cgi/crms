@@ -123,7 +123,8 @@ if ($redirect && !$debugAuth)
 if ($cgi->param('download'))
 {
   use Downloads;
-  exit if 1 == Downloads::Download($crms, $cgi);
+  Downloads::Download($crms, $cgi);
+  exit(0);
 }
 
 ## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
