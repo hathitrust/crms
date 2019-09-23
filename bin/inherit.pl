@@ -348,7 +348,7 @@ if ($candidates)
 }
 else
 {
-  my $unneededcnt = $data{'unneededcnt'} || '';
+  my $unneededcnt = $data{'unneededcnt'} || 0;
   $crms->ReportMsg(sprintf("Volumes checked, no inheritance needed: %d", scalar keys %{$data{'unneeded'}}));
   $crms->ReportMsg('Unique Sys IDs checked, no inheritance needed: '. CountSystemIds('unneeded', keys %{$data{'unneeded'}}));
   $crms->ReportMsg(sprintf("Volumes not needing inheritance: %d", $unneededcnt));
