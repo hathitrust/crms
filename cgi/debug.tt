@@ -105,6 +105,21 @@
 </div>
 <br/><br/>
 
+<div style="position:relative;border-style:solid;width:76em;border-width:1px;padding:10px;">
+<h3>Replication</h3>
+[% reps = crms.SelectAll("SELECT client,seconds,time FROM mysqlrep.delay ORDER BY client") %]
+<table class="exportStats" style="width:33%">
+  <tr><th>Host</th><th>Seconds</th><th>Time</th></tr>
+  [% FOR rep IN reps %]
+    <tr>
+      <td class="nowrap">[% rep.0 %]</td>
+      <td class="nowrap">[% rep.1 %]</td>
+      <td class="nowrap">[% rep.2 %]</td>
+    </tr>
+  [% END %]
+</table>
+</div>
+<br/><br/>
 
 [% ids = cgi.param('ids') %]
 <h4>Update Bibliographic Data</h4>
