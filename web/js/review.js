@@ -75,27 +75,9 @@ function popRenewalDate()
   req.send(null);
 }
 
-function PredictRights(id)
+function PredictRights(id, year, pub, crown)
 {
   var img = document.getElementById("predictionLoader");
-  var year = document.getElementById("renewalField").value;
-  var isPub = (document.getElementById('renewalFieldCheckbox').checked)? 1:0;
-  var cat = SelectedCategory();
-  var isCrown = (cat == 'Crown Copyright')? 1:0;
-  var actualPubField = document.getElementById('actualPubDateField');
-  var actualPub;
-  if (actualPubField)
-  {
-    actualPub = actualPubField.value;
-  }
-  if (actualPub == null)
-  {
-    actualPubField = document.getElementById('pubDateSpan');
-    if (actualPubField)
-    {
-      actualPub = actualPubField.value;
-    }
-  }
   var req = null;
   var rights = document.getElementsByName("rights");
   var sel = GetCheckedValue(rights);
@@ -120,7 +102,6 @@ function PredictRights(id)
           var button = document.getElementById("r" + sel);
           button.checked = "";
         }
-        Debug("Response text: " + req.responseText, 1);
         if (req.responseText)
         {
           var button = document.getElementById("r" + req.responseText);
@@ -130,9 +111,7 @@ function PredictRights(id)
     }
   };
   var url = gCGI + "predictRights?id=" + id + ";year=" + year +
-            ";ispub=" + isPub + ";crown=" + isCrown;
-  if (actualPub) { url += ";pub=" + actualPub; }
-  Debug(url);
+            ";ispub=" + pub + ";crown=" + crown;
   req.open("GET", url, true);
   req.send(null);
 }
@@ -176,7 +155,6 @@ function PredictDate(id)
   var url = gCGI + "predictRights?sys=crmsworld;doyear=1;id=" +
             id + ";year=" + year;
   if (actualPub) url += ";pub=" + actualPub;
-  Debug(url);
   req.open("GET", url, true);
   req.send(null);
 }

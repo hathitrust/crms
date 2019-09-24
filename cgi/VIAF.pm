@@ -256,4 +256,14 @@ sub VIAFLink
   $author. '%22&stylesheet=/viaf/xsl/results.xsl&sortKeys=holdingscount';
 }
 
+sub VIAFCorporateLink
+{
+  my $self   = shift;
+  my $author = shift;
+
+  $author = URI::Escape::uri_escape_utf8($author);
+  'https://viaf.org/viaf/search?query=local.corporateNames+all+%22'.
+  $author. '%22&stylesheet=/viaf/xsl/results.xsl&sortKeys=holdingscount';
+}
+
 return 1;
