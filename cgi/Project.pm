@@ -38,11 +38,39 @@ sub color
   return $self->{'color'};
 }
 
+sub autoinherit
+{
+  my $self = shift;
+
+  return $self->{'autoinherit'};
+}
+
+sub group_volumes
+{
+  my $self = shift;
+
+  return $self->{'group_volumes'};
+}
+
 sub single_review
 {
   my $self = shift;
 
   return $self->{'single_review'};
+}
+
+sub primary_authority
+{
+  my $self = shift;
+
+  return $self->{'primary_authority'};
+}
+
+sub secondary_authority
+{
+  my $self = shift;
+
+  return $self->{'secondary_authority'};
 }
 
 # Return a list of HTIDs that should be claimed by this project.
@@ -62,6 +90,29 @@ sub EvaluateCandidacy
   my $reason = shift;
 
   return {'status' => 'no', 'msg' => $self->{'name'}. ' project does not take candidates'};
+}
+
+# ========== REVIEW ========== #
+# Called by CRMS::GetNextItemForReview to order volumes.
+# Return undef for no additional order (the default), or
+# a column name in bibdata (b.*) or the queue (q.*).
+# Example: 'b.author DESC'
+sub PresentationOrder
+{
+  my $self = shift;
+
+  return;
+}
+
+sub ReviewPartials
+{
+  return ['top', 'bibdata'];
+}
+
+# Show the country of publication in the bibdata partial.
+sub ShowCountry
+{
+  return 0;
 }
 
 # Extract Project-specific data from the CGI into a struct
@@ -183,12 +234,6 @@ sub ValidateSubmission
     push @errs, 'must include a category if there is a note. ';
   }
   return join ', ', @errs;
-}
-
-# ========== REVIEW ========== #
-sub ReviewPartials
-{
-  return ['top', 'bibdata'];
 }
 
 # ========== INHERITANCE ========== #

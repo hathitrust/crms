@@ -68,7 +68,7 @@ sub new
 
 sub Version
 {
-  return '8.1';
+  return '8.1.1';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -1396,7 +1396,7 @@ sub AddItemToCandidates
       $self->Filter($id2, 'duplicate');
     }
   }
-  my $project = $self->GetProjectRef($proj)->{'name'};
+  my $project = $self->GetProjectRef($proj)->name;
   if (!$self->IsVolumeInCandidates($id))
   {
     $self->ReportMsg(sprintf("Add $id to candidates for project '$project' ($proj)"));
@@ -1600,6 +1600,8 @@ sub LoadQueueForProject
          ' ORDER BY time DESC';
   #print "$sql\n";
   my $ref = $self->SelectAll($sql, $project);
+  my $potential = scalar @$ref;
+  $self->ReportMsg("$potential qualifying volumes for project $project queue");
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
@@ -4840,7 +4842,7 @@ sub GetAuthor
     $au = $self->SimpleSqlGet('SELECT author FROM bibdata WHERE id=?', $id);
   }
   #$au =~ s,(.*[A-Za-z]).*,$1,;
-  $au =~ s/^[([{]+(.*?)[)\]}]+\s*$/$1/;
+  $au =~ s/^[([{]+(.*?)[)\]}]+\s*$/$1/ if $au;
   return $au;
 }
 
@@ -5206,17 +5208,17 @@ sub GetNextItemForReview
   my $sql = undef;
   eval {
     my $proj = $self->GetUserCurrentProject($user);
+    my $project_ref = $self->GetProjectRef($proj);
     my @params = ($user, $proj);
     my @orders = ('q.priority DESC', 'cnt DESC', 'hash', 'q.time ASC');
-    $sql = 'SELECT group_volumes FROM projects WHERE id=?';
-    my $gv = $self->SimpleSqlGet($sql, $proj);
     my $sysid;
-    if ($gv && $self->IsUserAdvanced($user))
+    if ($project_ref->group_volumes && $self->IsUserAdvanced($user))
     {
       $sql = 'SELECT b.sysid FROM reviews r INNER JOIN bibdata b ON r.id=b.id'.
              ' WHERE r.user=? AND hold=0 ORDER BY r.time DESC LIMIT 1';
       $sysid = $self->SimpleSqlGet($sql, $user);
     }
+    my $porder = $project_ref->PresentationOrder();
     my ($excludeh, $excludei) = ('', '');
     my $inc = $self->GetUserIncarnations($user);
     my $wc = $self->WildcardList(scalar @{$inc});
@@ -5226,6 +5228,10 @@ sub GetNextItemForReview
     {
       $excludeh = ' AND NOT EXISTS (SELECT * FROM historicalreviews r3 WHERE r3.id=q.id AND r3.user IN '. $wc. ')';
       push @params, @{$inc};
+    }
+    if (defined $porder)
+    {
+      unshift @orders, $porder;
     }
     if (defined $sysid)
     {
@@ -5257,8 +5263,8 @@ sub GetNextItemForReview
       my $sysid = $row->[5];
       if (defined $test)
       {
-        printf "  $id2 ($sysid) %s %s ($cnt, %s...) (P %s Proj %s)\n",
-               $self->GetAuthor($id2), $self->GetTitle($id2),
+        printf "  $id2 ($sysid) [%s] %s ($cnt, %s...) (P %s Proj %s)\n",
+               $self->GetAuthor($id2) || '', $self->GetTitle($id2) || '',
                uc substr($hash, 0, 8), $pri, $proj;
         $id = $id2 unless defined $id;
       }
@@ -7772,7 +7778,9 @@ sub Authorities
     }
     if ($url =~ m/__AUTHOR__/)
     {
-      my $a2 = uri_escape_utf8($a);
+      my $a2 = $a;
+      $a2 =~ s/(.+?)\(.*\)/$1/;
+      $a2 = uri_escape_utf8($a2);
       $url =~ s/__AUTHOR__/$a2/g;
     }
     if ($url =~ m/__AUTHOR_(\d+)__/)
@@ -8040,13 +8048,21 @@ sub PredictRights
   }
   else
   {
-    $attr = ($pub < 1923)? 'pdus':'ic';
-    $reason = 'add';
+    if ($pub < 1923)
+    {
+      $attr = 'pdus';
+      $reason = ($ispub)? 'exp':'add';
+    }
+    else
+    {
+      $attr = 'ic';
+      $reason = ($ispub)? 'cdpp':'add';
+    }
   }
   my $sql = 'SELECT r.id FROM rights r INNER JOIN attributes a ON r.attr=a.id'.
             ' INNER JOIN reasons rs ON r.reason=rs.id'.
             ' WHERE a.name=? AND rs.name=?';
-  $self->Note(join ',', ($sql, $attr, $reason));
+  #$self->Note(join ',', ($sql, $attr, $reason));
   return $self->SimpleSqlGet($sql, $attr, $reason);
 }
 
@@ -8145,6 +8161,24 @@ sub VIAFWarning
   }
   return 'error contacting VIAF' if $errs > 0 and scalar keys %warnings == 0;
   return (scalar keys %warnings)? join '; ', keys %warnings:undef;
+}
+
+sub VIAFLink
+{
+  my $self   = shift;
+  my $author = shift;
+
+  use VIAF;
+  return VIAF::VIAFLink($self, $author);
+}
+
+sub VIAFCorporateLink
+{
+  my $self   = shift;
+  my $author = shift;
+
+  use VIAF;
+  return VIAF::VIAFCorporateLink($self, $author);
 }
 
 # Return dollarized barcode if suffix is the right length,
@@ -8313,9 +8347,7 @@ sub GetProjectRef
   my $self = shift;
   my $id   = shift;
 
-  my $sql = 'SELECT * FROM projects WHERE id=?';
-  my $ref = $self->GetDb()->selectall_hashref($sql, 'id', undef, $id);
-  return $ref->{$id};
+  $self->Projects()->{$id};
 }
 
 # Returns an arrayref of hashrefs with id, name, color, flags, userCount (active assignees),

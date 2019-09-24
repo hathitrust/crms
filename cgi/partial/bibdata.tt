@@ -11,8 +11,8 @@
         </span>
       </td>
     </tr>
-    [% IF crms.GetSystemVar("showCountry") %] <!-- FIXME: get this from the project -->
-      <tr><td><strong>Country:</strong> [% info.country %]</td></tr>
+    [% IF data.project.ShowCountry() %]
+      <tr><td><strong>Country:</strong> [% data.bibdata.country %]</td></tr>
     [% END %]
     <tr><td class="nowrap">
       <strong>Project:</strong> [% data.project.name %]

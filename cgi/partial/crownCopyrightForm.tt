@@ -1,12 +1,8 @@
 [% cgi        = crms.get('cgi')         %]
 [% importUser = cgi.param('importUser') %]
 
-[% # FIXME: put Crown Copyright checkbox %]
-
 [% # Set up values from CGI (in case of error) or existing review (editing). %]
-[% u_pub = (error)? cgi.param('pub') : data.reviews.$user.data.pub %]
 [% u_date = (error)? cgi.param('date') : data.reviews.$user.data.date %]
-[% u_crown = (error)? cgi.param('crown') : data.reviews.$user.data.crown %]
 [% u_rights = (error)? cgi.param('rights') : data.reviews.$user.rights %]
 [% u_category = (error)? cgi.param('category') : data.reviews.$user.category %]
 [% u_note = (error)? cgi.param('note') : data.reviews.$user.note %]
@@ -22,28 +18,13 @@
   <input type="hidden" name="editing" value="[% editing %]"/>
   <table>
     <tr>
-      [% label = (u_renNum)? "Publication&nbsp;Date":"Author Death Date" %]
-      <td class="nowrap"><strong><label id="renewalFieldLabel" for="renewalField">
-      [% label %]: </label></strong></td>
       <td class="nowrap">
-      [% IF NOT u_date && NOT importUser %]
-        [% authorDD = crms.GetADDFromAuthor(htid) %]
-        [% IF NOT authorDD %]
-          [% viafdata = crms.GetVIAFData(htid) %]
-          [% IF viafdata && viafdata.add %]
-            [% authorDD = viafdata.add %]
-            [% viaf = 1 %]
-          [% END %]
-        [% END %]
-        [% IF authorDD %]
-          <input type="hidden" name="src" value="[% (viaf)? 'viaf':'catalog' %]"/>
-          [% u_date = authorDD %]
-          [% tip = (viaf)? "VIAF":"Zephir" %]
-        [% END %]
-      [% END %]
+        <strong><label id="renewalFieldLabel" for="renewalField">
+          Actual Publication&nbsp;Date: </label>
+        </strong></td>
+      <td class="nowrap">
       <input id="renewalField" title="[% label %]" type="text" name="date"
-             value="[% u_date %]" size="6"
-             onblur="javascript:PredictRights('[% htid %]');"/>
+             value="[% u_date %]" size="6" onblur="javascript:dateEntry();"/>
       [% IF tip %]
         <span class="red">$tip</span>
       [% END %]
@@ -51,35 +32,20 @@
          onfocus="document.getElementById('renewalField').focus()">.</a>
       </td>
     </tr>
-    [% IF data.bibdata.pub_date_format.match('^\d+-\d+$') %]
-      <tr id="actualPubRow">
-        <td class="nowrap"><strong><label id="actualPubDateFieldLabel" for="actualPubDateField">
-          Actual Pub Date: </label></strong>
-        </td>
-        <td class="nowrap">
-          <input id="actualPubDateField" title="Actual Pub Date" type="text"
-                 name="actualPubDateField" size="6"
-                 onblur="javascript:PredictRights('[% htid %]');"/>
-        </td>
-      </tr>
-    [% END %]
     <tr>
-      <td class="reviewGrey" style="text-align:left;margin:0px;padding:0px;">
-        <input type="checkbox" id="renewalFieldCheckbox" name="renNum"[% (u_renNum)? ' checked="checked"':'' %]
-               onchange="ToggleADD();PredictRights('[% htid %]');"/>
-        <label for="renewalFieldCheckbox">&nbsp;Pub Date</label>
+      <td colspan="2">
+        [% viaf = crms.VIAFLink(data.bibdata.author) %]
+        <a href="[% viaf %]" target="_blank"><span class="red">VIAF Personal</span><a>
       </td>
-      <td>
-        <input type="button" class="reviewblue" value="Pull Pub Date"
-        [% IF NOT data.bibdata.pub_date_format.match('^-?\d+$') %]disabled="disabled"[% END %]
-        onclick="PullPubDate();
-                 document.getElementById('renewalFieldCheckbox').checked=true;
-                 PredictRights('[% htid %]');"
-        accesskey="d"
-        style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
+    </tr>
+    <tr>
+      <td colspan="2">
+        [% viaf = crms.VIAFCorporateLink(data.bibdata.author) %]
+        <a href="[% viaf %]" target="_blank"><span class="red">VIAF Corporate</span><a>
       </td>
     </tr>
   </table>
+  
 [% rights = crms.Rights(htid, 1) %]
 <div id="RightsCont" class="subpartial">
 <div id="RightsReason" style="position:relative;">
@@ -102,7 +68,6 @@
   [% of = rights.size() %]
   [% n = 0 %]
     <div style="display:none" id="UNDNFI" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=5 AND reason=8') %]"></div>
-    <div style="display:none" id="ICREN" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=2 AND reason=7') %]"></div>
     <table>
     <tr style="height:20px;">
       <td><strong>Rights/Reason:</strong></td>
@@ -136,16 +101,15 @@
     [% END %]
     </table>
 </div>
+
 <div id="Notes">
   <strong><label for="catMenu">Notes: </label></strong>
   <select id="catMenu" class="review" name="category"
-    onchange="javascript:PredictRights('[% htid %]');"
+    [% IF !ren %]onchange="javascript:PredictRights('[% htid %]');"[% END %]
     >
     <option value="" [% ("" == category)? 'selected="selected"':'' %]>none</option>
     [% cats = crms.Categories(htid) %]
     [% FOREACH cat IN cats %]
-      [% # FIXME: projectcategories may make CanVolumeBeCrownCopyright() obsolete %]
-      [% NEXT IF cat == 'Crown Copyright' && ! crms.CanVolumeBeCrownCopyright(htid) %]
       <option value="[% cat %]" [% (cat == u_category)? 'selected="selected"':'' %]>[% cat %]</option>
     [% END %]
   </select>
@@ -198,7 +162,7 @@
   [% IF expert && importUser %]
     [% reviews = data.reviews %]
     [% IF reviews.keys.size %]
-      <table id="importReviewsTable" data-reviews='[% data.json %]'>
+      <table id="importReviewsTable">
         <tr>
           <td>
             <div style="line-height:20px;">
@@ -225,42 +189,43 @@
 </form>
 
 <script>
+var gPubDate = '[% data.bibdata.pub_date_format %]';
+var gReviewData = [% data.json %];
 addEvent(window, 'load', function(e)
 {
   [% IF importUser %]
-  popReviewInfo('[% importUser %]');
-  [% END %]
-  addEvent(window, 'load', Partial_ADDForm_mainWindowLoad);
-});
-
-function Partial_ADDForm_mainWindowLoad(e)
-{
-  var renewalField = document.getElementById("renewalField");
-  var year = renewalField.value;
+    popReviewInfo('[% importUser %]');
+  [% ELSE %]
   var patt = /-?[0-9]+/;
-  if (patt.test(year))
+  if (patt.test(gPubDate))
   {
-    PredictRights('[% htid %]');
+    PredictRights('[% htid %]', gPubDate, 1, 1);
     document.getElementById('NoteTextField').focus();
   }
   else
   {
     document.getElementById('renewalField').focus();
   }
+  [% END %]
+});
+
+function dateEntry()
+{
+  var year = document.getElementById('renewalField').value;
+  PredictRights('[% htid %]', year, 1, 1);
 }
 
 function popReviewInfo(user)
 {
-  var el = document.getElementById('importReviewsTable');
-  var data = JSON.parse(el.dataset.reviews);
-  var review = data.reviews[user];
+  var review = gReviewData.reviews[user];
   var button = document.getElementById("r" + review.rights);
   if (button) { button.checked = "checked"; }
-  button = document.getElementById("renewalFieldCheckbox");
-  if (button) { button.checked = (review.renNum != null); }
-  var field = document.getElementById("renewalField");
-  if (field) { field.value = review.renNum; }
-  document.submitReview.renDate.value = review.renDate;
+  var date = null;
+  if (review.data)
+  {
+    date = review.data.date;
+  }
+  document.submitReview.date.value = date;
   document.submitReview.note.value = review.note;
   selMenuItem('catMenu', (review.category)? review.category:'');
 }
