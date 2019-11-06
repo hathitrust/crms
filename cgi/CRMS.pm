@@ -68,7 +68,7 @@ sub new
 
 sub Version
 {
-  return '8.1.1';
+  return '8.1.2';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -1583,14 +1583,16 @@ sub LoadQueueForProject
   my $self    = shift;
   my $project = shift;
 
+  my $project_name = $self->GetProjectRef($project)->name;
   my $sql = 'SELECT COUNT(*) FROM queue WHERE project=?';
   my $queueSize = $self->SimpleSqlGet($sql, $project);
   my $targetQueueSize = $self->GetSystemVar('queueSize');
   my $needed = $targetQueueSize - $queueSize;
-  $self->ReportMsg("Before load, the queue has $queueSize volumes -- need $needed for project $project");
+  $self->ReportMsg("Project $project_name: $queueSize volumes -- need $needed");
   return if $needed <= 0;
   my $count = 0;
   my %dels = ();
+  my %seen; # Catalog IDs that have been considered
   $sql = 'SELECT id FROM candidates'.
          ' WHERE id NOT IN (SELECT DISTINCT id FROM inherit)'.
          ' AND id NOT IN (SELECT DISTINCT id FROM queue)'.
@@ -1613,39 +1615,45 @@ sub LoadQueueForProject
       $self->Filter($id, 'no meta');
       next;
     }
-    my $eval = $self->EvaluateCandidacy($id, $record, $project);
-    if ($eval->{'status'} eq 'no' || $eval->{'status'} eq 'filter')
+    my $sysid = $record->sysid;
+    next if $seen{$sysid};
+    $seen{$sysid} = 1;
+    my $ids = $record->allHTIDs;
+    $self->ReportMsg(sprintf "Checking %d %s on catalog $sysid (candidate $id)",
+                             scalar @$ids, $self->Pluralize('volume', scalar @$ids));
+    foreach my $id2 (@$ids)
     {
-      my $src;
-      $src = $eval->{'msg'} if $eval->{'status'} eq 'filter';
-      if (defined $src)
-      {
-        $self->ReportMsg("Filtering $id as $src");
-        $self->Filter($id, $src);
-      }
-      else
-      {
-        $self->ReportMsg(sprintf("Will delete $id: %s", $eval->{'msg'}));
-        $dels{$id} = 1;
-        next;
-      }
-    }
-    # FIXME: this is the wrong place to do this.
-    if (!$record->countEnumchron)
-    {
-      my $dup = $self->IsRecordInQueue($record->sysid, $record);
+      my $dup = $self->IsSameVolumeInQueue($id2, $record);
       if ($dup)
       {
-        my $sysid = $record->sysid;
-        $self->ReportMsg("Filtering $id: queue has $dup on $sysid (no chron/enum)");
-        $self->Filter($id, 'duplicate');
+        my $chron = $record->enumchron($id2) || 'no enumchron';
+        my $chron2 = $record->enumchron($dup) || 'no enumchron';
+        $self->ReportMsg("Filtering $id ($chron): queue has $dup ($chron2)");
+        $self->Filter($id2, 'duplicate');
         next;
       }
-    }
-    if ($self->AddItemToQueue($id, $record, $project))
-    {
-      $self->ReportMsg("Added to queue: $id");
-      $count++;
+      my $eval = $self->EvaluateCandidacy($id2, $record, $project);
+      if ($eval->{'status'} eq 'no' || $eval->{'status'} eq 'filter')
+      {
+        my $src;
+        $src = $eval->{'msg'} if $eval->{'status'} eq 'filter';
+        if (defined $src)
+        {
+          $self->ReportMsg("Filtering $id2 as $src ($sysid)");
+          $self->Filter($id2, $src);
+        }
+        else
+        {
+          $self->ReportMsg(sprintf("Will delete $id2: %s ($sysid", $eval->{'msg'}));
+          $dels{$id2} = 1;
+          next;
+        }
+      }
+      if ($self->AddItemToQueue($id2, $record, $project))
+      {
+        $self->ReportMsg("Added to queue: $id2 ($sysid)");
+        $count++;
+      }
     }
     last if $count >= $needed;
   }
@@ -1689,6 +1697,25 @@ sub IsRecordInQueue
   }
   return undef;
 }
+
+# Return HTID from queue if it has matching enumchron.
+sub IsSameVolumeInQueue
+{
+  my $self = shift;
+  my $id   = shift;
+  my $record = shift || $self->GetMetadata($id);
+
+  my $sql = 'SELECT q.id FROM queue q INNER JOIN bibdata b ON q.id=b.id'.
+            ' WHERE q.id!=? AND b.sysid=?';
+  my $ref = $self->SelectAll($sql, $id, $record->sysid);
+  foreach my $row (@$ref)
+  {
+    my $id2 = $row->[0];
+    return $id2 if $record->doEnumchronMatch($id, $id2);
+  }
+  return;
+}
+
 
 # Plain vanilla code for adding an item with status 0, priority 0
 # Returns 1 if item was added, 0 if not added because it was already in the queue.
@@ -8340,8 +8367,7 @@ sub SetUserCurrentProject
   $self->PrepareSubmitSql($sql, $proj, $user);
 }
 
-# Get the fields for a single project id.
-# FIXME: this should return a project object rather than a struct.
+# Get a Project object for a single id.
 sub GetProjectRef
 {
   my $self = shift;
