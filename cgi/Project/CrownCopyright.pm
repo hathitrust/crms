@@ -42,9 +42,8 @@ sub EvaluateCandidacy
     push @errs, "current rights $attr/$reason";
   }
   # Need fully-specified copyright date
-  
   my $pub = $record->copyrightDate;
-  if (!defined $pub || $pub !~ m/\d\d\d\d/)
+  if (!defined $pub || $pub !~ m/^\d\d\d\d$/)
   {
     my $leader = $record->GetControlfield('008');
     my $type = substr($leader, 6, 1);
@@ -65,7 +64,7 @@ sub EvaluateCandidacy
   }
   my $leader = $record->GetControlfield('008');
   push @errs, 'not a crown document' if length $leader <= 28 || substr($leader, 28, 1) ne 'f';
-  my $fmt = $record->fmt;
+  my $fmt = $record->fmt || '';
   push @errs, "disqualifying format $fmt" unless $fmt eq 'Book' or $fmt eq 'Serial';
   return {'status' => 'no', 'msg' => join '; ', @errs} if scalar @errs;
   my $src;
@@ -102,21 +101,12 @@ sub ValidateSubmission
   my @errs;
   my ($attr, $reason) = $self->{'crms'}->TranslateAttrReasonFromCode($cgi->param('rights'));
   my $date = $cgi->param('date');
-  my $pub = $cgi->param('pub');
   my $note = $cgi->param('note');
   my $category = $cgi->param('category');
   $date =~ s/\s+//g if $date;
-  #my $actual = $cgi->param('actual');
-  my ($pubDate, $pubDate2);
-  $pubDate = $date if $pub;
-  #$pubDate = $actual if $actual;
-  if (!defined $pubDate)
+  if (!defined $date && $attr ne 'und')
   {
-    $pubDate = $self->{'crms'}->FormatPubDate($cgi->param('htid'));
-    if ($pubDate =~ m/-/)
-    {
-      ($pubDate, $pubDate2) = split '-', $pubDate, 2;
-    }
+    push @errs, 'Actual Publication Date is required';
   }
   if ($attr eq 'und' && $reason eq 'nfi' &&
       (!$category ||
@@ -124,12 +114,11 @@ sub ValidateSubmission
   {
     push @errs, 'und/nfi must include note category and note text';
   }
-  if ($date && $date !~ m/^-?\d{1,4}$/)
+  if ($date !~ m/^\d{1,4}$/)
   {
-    push @errs, 'year must be only decimal digits';
+    push @errs, 'Actual Publication Date must be four decimal digits';
   }
-  elsif ($pubDate < 1923 && $attr eq 'icus' && $reason eq 'gatt' &&
-         (!$pubDate2 || $pubDate2 < 1923))
+  elsif ($date < 1923 && $attr eq 'icus' && $reason eq 'gatt')
   {
     push @errs, 'volumes published before 1923 are ineligible for icus/gatt';
   }
