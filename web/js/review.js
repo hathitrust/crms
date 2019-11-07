@@ -112,7 +112,7 @@ function PredictRights(id, year, pub, crown)
   };
   var url = gCGI + "predictRights?id=" + id + ";year=" + year +
             ";ispub=" + pub + ";crown=" + crown;
-  #Debug(url, true);
+  //Debug(url, true);
   req.open("GET", url, true);
   req.send(null);
 }
