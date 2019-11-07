@@ -104,9 +104,7 @@
 
 <div id="Notes">
   <strong><label for="catMenu">Notes: </label></strong>
-  <select id="catMenu" class="review" name="category"
-    [% IF !ren %]onchange="javascript:PredictRights('[% htid %]');"[% END %]
-    >
+  <select id="catMenu" class="review" name="category">
     <option value="" [% ("" == category)? 'selected="selected"':'' %]>none</option>
     [% cats = crms.Categories(htid) %]
     [% FOREACH cat IN cats %]
