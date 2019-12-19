@@ -68,7 +68,7 @@ sub new
 
 sub Version
 {
-  return '8.1.3';
+  return '8.1.4';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -1441,7 +1441,7 @@ sub AddItemToCandidates
 #   my $self  = shift;
 #   my $id    = shift;
 #   my $quiet = shift;
-# 
+#
 #   my $cri = $self->get('criModule');
 #   if (!defined $cri)
 #   {
@@ -1875,7 +1875,7 @@ sub CheckReviewer
 {
   my $self = shift;
   my $user = shift;
-  
+
   return 1 if $user eq 'autocrms';
   my $isReviewer = $self->IsUserReviewer($user);
   my $isAdvanced = $self->IsUserAdvanced($user);
@@ -4332,7 +4332,7 @@ sub CreateExportReport
                           ($title eq 'Total')? 'class="total" style="text-align:center;"':
                                                (($title =~ m/^Status/)? ' class="minor"':'');
       $n = '<strong>'. $n. '</strong>' if $title eq 'Total';
-      $newline .= "<td $cstyle>$padding$n</td>", 
+      $newline .= "<td $cstyle>$padding$n</td>",
     }
     $newline .= "</tr>\n";
     $report .= $newline;
@@ -4695,7 +4695,7 @@ sub GetMonthStats
          ' FROM historicalreviews r INNER JOIN exportdata e ON r.gid=e.gid'.
          ' WHERE r.user=? AND r.legacy!=1 AND r.time>=? AND r.time<=?'.
          ' AND e.project=? AND TIME(r.duration)<=SEC_TO_TIME(?)';
-  
+
   my $total_time = $self->SimpleSqlGet($sql, $user, $start, $end, $proj, $outSec);
   # Total outliers
   $sql = 'SELECT COUNT(*) FROM historicalreviews r INNER JOIN exportdata e'.
@@ -4902,7 +4902,7 @@ sub UpdateSysids
 {
   my $self   = shift;
   my $record = shift;
-  
+
   my $sql = 'UPDATE bibdata SET sysid=? WHERE id=?';
   $self->PrepareSubmitSql($sql, $record->sysid, $_) for @{$record->allHTIDs};
 }
@@ -5596,7 +5596,7 @@ sub CreateQueueReport
     $status = 'All' if $status == -1;
     my $class = ($status eq 'All')?' class="total"':'';
     $sql = 'SELECT '. $field. ',COUNT(*) FROM queue q'.
-           ' INNER JOIN projects p ON q.project=p.id '. $statusClause. 
+           ' INNER JOIN projects p ON q.project=p.id '. $statusClause.
            ' GROUP BY '. $field. ' ASC WITH ROLLUP';
     my $ref = $self->SelectAll($sql);
     my $count = (scalar @{$ref})? $ref->[-1]->[1]:0;
@@ -6095,6 +6095,7 @@ sub ValidateReview
   $user1->{'expert'}   = $row->[2];
   $user1->{'status'}   = $row->[3];
   $user1->{'category'} = $row->[4];
+  $self->Note("Possible status issue with $id") unless defined $user1->{'status'};
   # Missing/Wrong record category is always right if status 6
   return 1 if ($user1->{'category'} eq 'Missing'
                or $user1->{'category'} eq 'Wrong Record')
@@ -7133,7 +7134,7 @@ sub SetInheritanceStatus
   my $id     = shift;
   my $status = shift;
 
-  $self->PrepareSubmitSql('UPDATE inherit SET status=? WHERE id=?', $status, $id);  
+  $self->PrepareSubmitSql('UPDATE inherit SET status=? WHERE id=?', $status, $id);
 }
 
 sub DeleteInheritances
