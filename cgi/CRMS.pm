@@ -6095,7 +6095,12 @@ sub ValidateReview
   $user1->{'expert'}   = $row->[2];
   $user1->{'status'}   = $row->[3];
   $user1->{'category'} = $row->[4];
-  $self->Note("Possible status issue with $id") unless defined $user1->{'status'};
+  if (!defined $user1->{'status'} or !defined $user1->{'attr'})
+  {
+    use Data::Dumper;
+    my $dump = Dumper $user1;
+    $self->Note("Validation failure: $id ($dump)");
+  }
   # Missing/Wrong record category is always right if status 6
   return 1 if ($user1->{'category'} eq 'Missing'
                or $user1->{'category'} eq 'Wrong Record')
