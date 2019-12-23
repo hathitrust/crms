@@ -4,11 +4,15 @@ use strict;
 use warnings;
 BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
 
+use utf8;
+binmode(STDOUT, ':encoding(UTF-8)');
 use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
+use JSON::XS;
 use Term::ANSIColor qw(:constants colored);
 $Term::ANSIColor::AUTORESET = 1;
+use Data::Dumper;
 
 my $usage = <<END;
 USAGE: $0 [-hnpv] [-e HTID [-e HTID...]]
@@ -84,11 +88,14 @@ if ($excel)
 }
 
 my $nyp = $crms->SimpleSqlGet('SELECT id FROM projects WHERE name="New Year"');
+my $commonwealth = $crms->SimpleSqlGet('SELECT id FROM projects WHERE name="Commonwealth"');
 die "Can't get New Year project" unless defined $nyp;
+die "Can't get Commonwealth project" unless defined $commonwealth;
+my $nyp_ref = $crms->GetProjectRef($nyp);
 $year = $crms->GetTheYear() unless $year;
 my $sql = 'SELECT e.id,e.gid,e.time,e.attr,e.reason FROM exportdata e'.
           ' WHERE (e.attr="pdus" OR e.attr="ic" OR e.attr="icus")'.
-          ' AND e.exported=1 AND e.src!="candidates" AND YEAR(DATE(e.time))<?'.
+          ' AND e.exported=1 AND e.project=? AND YEAR(DATE(e.time))<?'.
           ' AND e.id NOT IN (SELECT id FROM queue)';
 if (scalar @singles)
 {
@@ -100,9 +107,11 @@ if (scalar @excludes)
 }
 $sql .= ' ORDER BY e.time DESC';
 #$sql .= ' LIMIT 1000';
-print Utilities::StringifySql($sql, $year). "\n" if $verbose > 1;
-my $ref = $crms->SelectAll($sql, $year);
+print Utilities::StringifySql($sql, $commonwealth, $year). "\n" if $verbose > 1;
+my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
+my $ref = $crms->SelectAll($sql, $commonwealth, $year);
 my %seen;
+printf "Checking %d possible determinations…\n", scalar @$ref;
 foreach my $row (@{$ref})
 {
   my $id = $row->[0];
@@ -115,14 +124,15 @@ foreach my $row (@{$ref})
     print RED "No rights available for $id, skipping.\n";
     next;
   }
-  my ($acurr,$rcurr,$src,$usr,$time,$note) = @{$rq->[0]};
+  my ($acurr,$rcurr,$src,$usr,$timecurr,$note) = @{$rq->[0]};
   next if $acurr eq 'pd';
   my $gid = $row->[1];
   my $time = $row->[2];
   $seen{$id} = 1;
-  #my $msg = '';
-  $sql = 'SELECT renDate,renNum,category,note,user FROM historicalreviews'.
-         ' WHERE gid=? AND validated=1 AND renDate IS NOT NULL';
+  $sql = 'SELECT r.note,r.user,d.data FROM historicalreviews r'.
+         ' INNER JOIN reviewdata d ON r.data=d.id'.
+         ' WHERE r.gid=? AND r.validated=1 AND r.data IS NOT NULL';
+  #print Utilities::StringifySql($sql, $gid). "\n" if $verbose > 1;
   my $ref2 = $crms->SelectAll($sql, $gid);
   my $n = scalar @{$ref2};
   next unless $n > 0;
@@ -131,24 +141,24 @@ foreach my $row (@{$ref})
   my $bogus;
   foreach my $row2 (@{$ref2})
   {
-    my $data = $row2->[0];
-    my $pubdate;
-    my %dates = ();
-    my $renDate = $row2->[0];
-    $dates{$renDate} = 1 if $renDate;
-    my $renNum = $row2->[1];
-    my $cat = $row2->[2];
-    my $note = $row2->[3];
-    my $user = $row2->[4];
+    my $note = $row2->[0] || '';
+    my $user = $row2->[1];
+    my $data = $row2->[2];
+    print "$gid: $data\n";
+    $data = $jsonxs->decode($data);
+    my $date = $data->{'date'};
+    my $pub = $data->{'pub'};
+    my $crown = $data->{'crown'};
+    my $dates = [];
+    push @$dates, [$date, $pub] if defined $date;
     my @matches = $note =~ /(?<!\d)1\d\d\d(?![\d\-])/g;
-    my $crown = $crms->TolerantCompare($cat, 'Crown Copyright');
     foreach my $match (@matches)
     {
-      $dates{$match} = 1 if length $match and $match < $year;
+      push @$dates, [$match, 0] if length $match and $match < $year;
     }
-    foreach my $renDate (sort keys %dates)
+    foreach my $date (@$dates)
     {
-      my $rid = $crms->PredictRights($id, $renDate, $renNum,
+      my $rid = $crms->PredictRights($id, $date->[0], $date->[1],
                                      $crown, $record, undef, $year);
       if (!defined $rid)
       {
@@ -158,7 +168,7 @@ foreach my $row (@{$ref})
       my ($pa, $pr) = $crms->TranslateAttrReasonFromCode($rid);
       $predictions{"$pa/$pr"} = 1;
     }
-    $alldates{$_} = 1 for keys %dates;
+    $alldates{$_->[0]} = 1 for @$dates;
   }
   next if $bogus;
   my ($ic, $icus, $pd, $pdus);
@@ -187,13 +197,16 @@ foreach my $row (@{$ref})
     if (defined $action)
     {
       $crms->UpdateMetadata($id, 1, $record);
-      # Returns a status code (0=Add, 1=Error, 2=Skip, 3=Modify) followed by optional text.
       my $res = $crms->AddItemToQueueOrSetItemActive($id, 0, 1, 'newyear', undef, $record, $nyp);
       my $code = $res->{'status'};
       my $msg = $res->{'msg'};
       if ($code eq '1' || $code eq '2')
       {
-        print ($code == 1)? RED:GREEN "Result for $id: $code $msg\n" if $verbose;
+        if ($verbose)
+        {
+          print GREEN "Result for $id: $code $msg\n" if $code == 0;
+          print RED "Result for $id: $code $msg\n" if $code == 1;
+        }
         $msg = '' if $code == 2;
       }
       else
@@ -201,12 +214,14 @@ foreach my $row (@{$ref})
         $msg = '';
       }
       my ($a, $r) = split m/\//, $action;
-      $a = $crms->TranslateAttr($a);
-      $r = $crms->TranslateReason($r);
-      my $note = "New Year $year";
-      my $result = $crms->SubmitReview($id, 'autocrms', $a, $r, $note,
-                                       undef, 1, undef, 'Expert Note', 1);
-      $msg = 'Could not submit review' if $result == 0;
+      my $rights = $crms->GetCodeFromAttrReason($crms->TranslateAttr($a), $crms->TranslateReason($r));
+      die "Can't get rights code from $a/$r\n" unless defined $rights;
+      my $params = {'rights' => $rights,
+                    'note' => "New Year $year",
+                    'category' => 'Expert Note'};
+      print Dumper $params;
+      my $result = $crms->SubmitReview($id, 'autocrms', $params, $nyp_ref);
+      $msg = "Could not submit review: $result" if $result;
       if ($excel)
       {
         $worksheet->write_string($wsrow, 0, $id);
@@ -219,6 +234,7 @@ foreach my $row (@{$ref})
         $worksheet->write_string($wsrow, 7, join(',', sort keys %predictions));
         $worksheet->write_string($wsrow, 8, $action);
         $worksheet->write_string($wsrow, 9, $msg);
+        print GREEN "Worksheet row $wsrow written\n";
         $wsrow++;
       }
     }
