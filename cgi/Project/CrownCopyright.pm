@@ -114,7 +114,7 @@ sub ValidateSubmission
   {
     push @errs, 'und/nfi must include note category and note text';
   }
-  if ($date !~ m/^\d{1,4}$/)
+  if ($date !~ m/^\d{1,4}$/ && $category ne 'Record-Scan Mismatch')
   {
     push @errs, 'Actual Publication Date must be four decimal digits';
   }
