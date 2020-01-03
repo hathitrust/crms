@@ -45,7 +45,7 @@
       </td>
     </tr>
   </table>
-  
+
 [% rights = crms.Rights(htid, 1) %]
 <div id="RightsCont" class="subpartial">
 <div id="RightsReason" style="position:relative;">
@@ -194,16 +194,7 @@ addEvent(window, 'load', function(e)
   [% IF importUser %]
     popReviewInfo('[% importUser %]');
   [% ELSE %]
-  var patt = /-?[0-9]+/;
-  if (patt.test(gPubDate))
-  {
-    PredictRights('[% htid %]', gPubDate, 1, 1);
-    document.getElementById('NoteTextField').focus();
-  }
-  else
-  {
     document.getElementById('renewalField').focus();
-  }
   [% END %]
 });
 
