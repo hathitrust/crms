@@ -56,7 +56,7 @@ window.onload = function(e)
   </form>
 [% END %]
 
-<div id="progress" style="width:450px;float:right;margin-right:240px;"></div>
+<!--<div id="progress" style="width:450px;float:right;margin-right:240px;"></div>-->
 
 [% crms.Debug %]
 [% n = crms.CountHolds() %]
