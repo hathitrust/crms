@@ -68,7 +68,7 @@ sub new
 
 sub Version
 {
-  return '8.1.4';
+  return '8.1.5';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -1994,7 +1994,7 @@ sub SubmitReview
       push @values, $value;
     }
   }
-  if ($self->IsUserExpert($user))
+  if ($user eq 'autocrms' || $self->IsUserExpert($user))
   {
     push @fields, 'expert';
     push @values, 1;
