@@ -59,7 +59,7 @@ addEvent(window, 'load', function(e)
 
 [% IF !Total %]
   [% IF p == 'adminHistoricalReviews' && !search1.length() AND !search2.length() AND !search3.length() %]
-  
+
   [% ELSE %]
     <h4>No results found.</h4>
   [% END %]
@@ -112,7 +112,7 @@ addEvent(window, 'load', function(e)
   [% END %]
 
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  
+
   <a href="?[% crms.URLify(cgi) _ ";download=1" %]" target="_blank">download</a>
   <a class='tip' href='#'>
     <img width="16" height="16" alt="Rights/Reason Help" src="[% crms.WebPath('web', 'help.png') %]"/>
@@ -186,7 +186,10 @@ addEvent(window, 'load', function(e)
     [% END %]
     <th>Title</th>
     <th>Author</th>
-    [% IF p == 'adminHistoricalReviews' %]<th>Pub&nbsp;Date</th>[% END %]
+    [% IF p == 'adminHistoricalReviews' %]
+      <th>Pub&nbsp;Date</th>
+      <th>Country</th>
+    [% END %]
     <th>Review&nbsp;Date</th>
     [% IF p != 'provisionals' AND p != 'conflicts' %]<th>Status</th>[% END %]
     <th>Reviewer</th>
@@ -260,7 +263,10 @@ addEvent(window, 'load', function(e)
         [% END %]
         </td>
         <td>[% cgi.escapeHTML(review.author) %]</td>
-        [% IF p == 'adminHistoricalReviews' %]<td>$review.pubdate</td>[% END %]
+        [% IF p == 'adminHistoricalReviews' %]
+          <td>$review.pubdate</td>
+          <td>$review.country</td>
+        [% END %]
         <td>$review.date</td>
         [% IF p != 'provisionals' AND p != 'conflicts' %]<td>$review.status</td>[% END %]
         <td>$review.user</td>
