@@ -82,6 +82,7 @@
     <th>Title</th>
     <th>Author</th>
     <th>Pub&nbsp;Date</th>
+    <th>Country</th>
     <th>Date</th>
     <th>Rights</th>
     <th>Status</th>
@@ -110,6 +111,7 @@
         <td>[% crms.LinkToPT(item.id, item.title) %]</td>
         <td>[% cgi.escapeHTML(item.author) %]</td>
         <td>$item.pubdate</td>
+        <td>$item.country</td>
         <td>$item.date</td>
         <td>[% item.rights %]</td>
         <td>$item.status</td>

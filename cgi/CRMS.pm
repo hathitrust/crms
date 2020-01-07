@@ -68,7 +68,7 @@ sub new
 
 sub Version
 {
-  return '8.1.4';
+  return '8.1.5';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -1994,7 +1994,7 @@ sub SubmitReview
       push @values, $value;
     }
   }
-  if ($self->IsUserExpert($user))
+  if ($user eq 'autocrms' || $self->IsUserExpert($user))
   {
     push @fields, 'expert';
     push @values, 1;
@@ -2263,6 +2263,7 @@ sub ConvertToSearchTerm
   elsif ($search eq 'Legacy') { $new_search = 'r.legacy'; }
   elsif ($search eq 'Title') { $new_search = 'b.title'; }
   elsif ($search eq 'Author') { $new_search = 'b.author'; }
+  elsif ($search eq 'Country') { $new_search = 'b.country'; }
   elsif ($search eq 'Priority') { $new_search = 'q.priority'; }
   elsif ($search eq 'Validated') { $new_search = 'r.validated'; }
   elsif ($search eq 'PubDate') { $new_search = 'YEAR(b.pub_date)'; }
@@ -2333,7 +2334,7 @@ sub CreateSQLForReviews
   my $user = $self->get('user');
   my $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,'.
             'r.data,r.expert,r.category,r.legacy,q.priority,r.swiss,'.
-            'q.status,q.project,b.title,b.author,r.hold FROM reviews r'.
+            'q.status,q.project,b.title,b.author,b.country,r.hold FROM reviews r'.
             ' INNER JOIN queue q ON r.id=q.id'.
             ' INNER JOIN bibdata b ON r.id=b.id'.
             ' LEFT JOIN projects p ON q.project=p.id WHERE ';
@@ -2358,7 +2359,7 @@ sub CreateSQLForReviews
   {
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,'.
            'r.data,r.expert,r.category,r.legacy,q.priority,r.swiss,'.
-           'q.status,q.project,b.title,b.author,r.validated,q.src,q.gid'.
+           'q.status,q.project,b.title,b.author,b.country,r.validated,q.src,q.gid'.
            ' FROM historicalreviews r'.
            ' LEFT JOIN exportdata q ON r.gid=q.gid'.
            ' LEFT JOIN bibdata b ON r.id=b.id'.
@@ -2888,16 +2889,17 @@ sub GetReviewsRef
                   project    => $row->[14],
                   title      => $row->[15],
                   author     => $row->[16],
-                  hold       => $row->[17]
+                  country    => $row->[17],
+                  hold       => $row->[18]
                  };
       if ($page eq 'adminHistoricalReviews')
       {
         my $pubdate = $self->SimpleSqlGet('SELECT YEAR(pub_date) FROM bibdata WHERE id=?', $id);
         ${$item}{'pubdate'} = $pubdate;
         ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
-        ${$item}{'validated'} = $row->[17];
-        ${$item}{'src'} = $row->[18];
-        ${$item}{'gid'} = $row->[19];
+        ${$item}{'validated'} = $row->[18];
+        ${$item}{'src'} = $row->[19];
+        ${$item}{'gid'} = $row->[20];
       }
       $sql = 'SELECT name FROM projects WHERE id=?';
       ${$item}{'project'} = $self->SimpleSqlGet($sql, $row->[14]);
@@ -2944,13 +2946,13 @@ sub GetVolumesRef
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.data,r.expert,'.
-           'r.category,r.legacy,q.priority,q.project,r.swiss,q.status,b.title,b.author'.
-           (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':'') .
-           (($page eq 'adminReviews' || $page eq 'editReviews' || $page eq 'holds' || $page eq 'adminHolds')? ',r.hold':'') .
-           " FROM $table r LEFT JOIN bibdata b ON r.id=b.id $doQ " .
+    $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.data,'.
+           'r.expert,r.category,r.legacy,q.priority,q.project,r.swiss,q.status,b.title,'.
+           'b.author,YEAR(b.pub_date),b.country,b.sysid,q.src,'.
+           (($page eq 'adminHistoricalReviews')? 'r.validated,q.gid':'r.hold').
+           " FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id".
            " WHERE r.id='$id' ORDER BY $order $dir";
-    $sql .= ', r.time ASC' unless $order eq 'r.time';
+    $sql .= ',r.time ASC' unless $order eq 'r.time';
     #print "$sql<br/>\n";
     my $ref2 = $self->SelectAll($sql);
     foreach my $row (@{$ref2})
@@ -2973,15 +2975,16 @@ sub GetVolumesRef
                   status     => $row->[14],
                   title      => $row->[15],
                   author     => $row->[16],
-                  hold       => $row->[17]
+                  pubdate    => $row->[17],
+                  country    => $row->[18],
+                  sysid      => $row->[19],
+                  src        => $row->[20],
+                  hold       => $row->[21]
                  };
       if ($page eq 'adminHistoricalReviews')
       {
-        ${$item}{'pubdate'} = $row->[17];
-        ${$item}{'validated'} = $row->[18];
-        ${$item}{'sysid'} = $row->[19];
-        ${$item}{'src'} = $row->[20];
-        ${$item}{'gid'} = $row->[21];
+        ${$item}{'validated'} = $row->[21];
+        ${$item}{'gid'} = $row->[22];
       }
       $sql = 'SELECT name FROM projects WHERE id=?';
       ${$item}{'project'} = $self->SimpleSqlGet($sql, $row->[12]);
@@ -3023,9 +3026,10 @@ sub GetVolumesRefWide
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];
-    $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.data,r.expert,'.
-           'r.category,r.legacy,q.priority,q.project,r.swiss,q.status,b.title,b.author'.
-           (($page eq 'adminHistoricalReviews')? ',YEAR(b.pub_date),r.validated,b.sysid,q.src,q.gid':',r.hold').
+    $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.data,'.
+           'r.expert,r.category,r.legacy,q.priority,q.project,r.swiss,q.status,b.title,'.
+           'b.author,YEAR(b.pub_date),b.country,b.sysid,q.src,'.
+           (($page eq 'adminHistoricalReviews')? 'r.validated,q.gid':'r.hold').
            " FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id".
            " WHERE r.id='$id' ORDER BY $order $dir";
     $sql .= ',r.time ASC' unless $order eq 'r.time';
@@ -3051,15 +3055,16 @@ sub GetVolumesRefWide
                   status     => $row->[14],
                   title      => $row->[15],
                   author     => $row->[16],
-                  hold       => $row->[17]
+                  pubdate    => $row->[17],
+                  country    => $row->[18],
+                  sysid      => $row->[19],
+                  src        => $row->[20],
+                  hold       => $row->[21]
                  };
       if ($page eq 'adminHistoricalReviews')
       {
-        ${$item}{'pubdate'} = $row->[17];
-        ${$item}{'validated'} = $row->[18];
-        ${$item}{'sysid'} = $row->[19];
-        ${$item}{'src'} = $row->[20];
-        ${$item}{'gid'} = $row->[21];
+        ${$item}{'validated'} = $row->[21];
+        ${$item}{'gid'} = $row->[22];
       }
       $sql = 'SELECT name FROM projects WHERE id=?';
       ${$item}{'project'} = $self->SimpleSqlGet($sql, $row->[12]);
@@ -3163,7 +3168,7 @@ sub GetQueueRef
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my @return = ();
   $sql = 'SELECT q.id,DATE(q.time),q.status,q.locked,YEAR(b.pub_date),q.priority,'.
-         'b.title,b.author,p.name,q.source,q.ticket,q.added_by'.
+         'b.title,b.author,b.country,p.name,q.source,q.ticket,q.added_by'.
          ' FROM queue q LEFT JOIN bibdata b ON q.id=b.id'.
          ' INNER JOIN projects p ON q.project=p.id '. $restrict.
          ' ORDER BY '. "$order $dir LIMIT $offset, $pagesize";
@@ -3206,12 +3211,13 @@ sub GetQueueRef
                 expcnt   => $expcnt,
                 title    => $row->[6],
                 author   => $row->[7],
+                country  => $row->[8],
                 reviews  => $reviews,
                 holds    => $holds,
-                project  => $row->[8],
-                source   => $row->[9],
-                ticket   => $row->[10],
-                added_by => $row->[11]
+                project  => $row->[9],
+                source   => $row->[10],
+                ticket   => $row->[11],
+                added_by => $row->[12]
                };
     push @return, $item;
     if ($download)
@@ -3412,7 +3418,7 @@ sub GetExportDataRef
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my @return = ();
   $sql = 'SELECT q.id,DATE(q.time),q.attr,q.reason,q.status,q.priority,q.src,b.title,b.author,'.
-         'YEAR(b.pub_date),q.exported,p.name,q.gid,q.added_by,q.ticket'.
+         'YEAR(b.pub_date),b.country,q.exported,p.name,q.gid,q.added_by,q.ticket'.
          ' FROM exportdata q LEFT JOIN bibdata b ON q.id=b.id'.
          ' INNER JOIN projects p ON q.project=p.id'.
          " $restrict ORDER BY $order $dir LIMIT $offset, $pagesize";
@@ -3423,10 +3429,10 @@ sub GetExportDataRef
   {
     $self->SetError($@);
   }
-  my @columns = ('ID', 'Title', 'Author', 'Pub Date', 'Date Exported', 'Rights',
+  my @columns = ('ID', 'Title', 'Author', 'Pub Date', 'Country', 'Date Exported', 'Rights',
                  'Status', 'Priority', 'Source', 'Added By', 'Project',
                  'Ticket', 'GID', 'Exported');
-  my @colnames = ('id', 'title', 'author', 'pubdate', 'date', 'rights',
+  my @colnames = ('id', 'title', 'author', 'pubdate', 'country', 'date', 'rights',
                   'status', 'priority', 'src', 'added_by', 'project',
                   'ticket', 'gid', 'exported');
   my $data = join "\t", @columns;
@@ -3446,11 +3452,12 @@ sub GetExportDataRef
                 title      => $row->[7],
                 author     => $row->[8],
                 pubdate    => $pubdate,
-                exported   => $row->[10],
-                project    => $row->[11],
-                gid        => $row->[12],
-                added_by   => $row->[13],
-                ticket     => $row->[14],
+                country    => $row->[10],
+                exported   => $row->[11],
+                project    => $row->[12],
+                gid        => $row->[13],
+                added_by   => $row->[14],
+                ticket     => $row->[15],
                };
     push @return, $item;
     if ($download)
@@ -6255,10 +6262,12 @@ sub ReviewSearchMenu
   my $searchName = shift;
   my $searchVal  = shift;
 
-  my @keys = ('Identifier', 'SysID', 'Title', 'Author', 'PubDate', 'Date', 'Status', 'Legacy', 'UserId', 'Attribute',
-              'Reason', 'NoteCategory', 'Note', 'Priority', 'Validated', 'Swiss', 'Project');
-  my @labs = ('Identifier', 'System ID', 'Title', 'Author', 'Pub Date', 'Review Date', 'Status', 'Legacy', 'Reviewer', 'Attribute',
-              'Reason', 'Note Category', 'Note', 'Priority', 'Verdict', 'Swiss', 'Project');
+  my @keys = ('Identifier', 'SysID', 'Title', 'Author', 'PubDate', 'Country', 'Date',
+              'Status', 'Legacy', 'UserId', 'Attribute', 'Reason', 'NoteCategory', 'Note',
+              'Priority', 'Validated', 'Swiss', 'Project');
+  my @labs = ('Identifier', 'System ID', 'Title', 'Author', 'Pub Date', 'Country',
+              'Review Date', 'Status', 'Legacy', 'Reviewer', 'Attribute', 'Reason',
+              'Note Category', 'Note', 'Priority', 'Verdict', 'Swiss', 'Project');
   if (!$self->IsUserAtLeastExpert())
   {
     splice @keys, 15, 1; # Swiss
@@ -6266,8 +6275,8 @@ sub ReviewSearchMenu
   }
   if ($page ne 'adminHistoricalReviews')
   {
-    splice @keys, 14, 1;
-    splice @labs, 14, 1; # Validated
+    splice @keys, 14, 1; # Validated
+    splice @labs, 14, 1;
   }
   if (!$self->IsUserAtLeastExpert())
   {
@@ -6281,8 +6290,8 @@ sub ReviewSearchMenu
   }
   if ($page ne 'adminHistoricalReviews')
   {
-    splice @keys, 4, 1; # Pub Date
-    splice @labs, 4, 1;
+    splice @keys, 4, 2; #  Country and Pub Date
+    splice @labs, 4, 2;
   }
   if ($page ne 'adminHistoricalReviews' || !$self->IsUserAtLeastExpert())
   {
@@ -6305,12 +6314,11 @@ sub QueueSearchMenu
   my $searchName = shift;
   my $searchVal  = shift;
 
-   my @keys = qw(Identifier SysID Title Author PubDate Date Status Locked
+   my @keys = qw(Identifier SysID Title Author PubDate Country Date Status Locked
                 Priority Reviews ExpertCount Holds Source AddedBy Project Ticket);
   my @labs = ('Identifier', 'System Identifier', 'Title', 'Author', 'Pub Date',
-              'Date Added', 'Status', 'Locked', 'Priority', 'Reviews',
-              'Expert Reviews', 'Holds', 'Source', 'Added By', 'Project',
-              'Ticket');
+              'Country', 'Date Added', 'Status', 'Locked', 'Priority', 'Reviews',
+              'Expert Reviews', 'Holds', 'Source', 'Added By', 'Project', 'Ticket');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
@@ -6330,8 +6338,8 @@ sub CandidatesSearchMenu
   my $searchName = shift;
   my $searchVal  = shift;
 
-  my @keys = qw(Identifier SysID Title Author PubDate Date Project);
-  my @labs = ('ID', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Date Added',
+  my @keys = qw(Identifier SysID Title Author PubDate Country Date Project);
+  my @labs = ('ID', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Country', 'Date Added',
               'Project');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
@@ -6345,16 +6353,16 @@ sub CandidatesSearchMenu
   return $html;
 }
 
-# Generates HTML to get the field type menu on the Export Data page.
+# Generates HTML to get the field type menu on the Final Determinations page.
 sub ExportDataSearchMenu
 {
   my $self       = shift;
   my $searchName = shift;
   my $searchVal  = shift;
 
-  my @keys = qw(Identifier SysID Title Author PubDate Date Attribute Reason
+  my @keys = qw(Identifier SysID Title Author PubDate Country Date Attribute Reason
                 Status Priority Source AddedBy Project Ticket GID Exported);
-  my @labs = ('Identifier', 'System Identifier', 'Title', 'Author', 'Pub Date',
+  my @labs = ('Identifier', 'System Identifier', 'Title', 'Author', 'Pub Date', 'Country',
               'Date', 'Attribute', 'Reason', 'Status', 'Priority', 'Source',
               'Added By', 'Project', 'Ticket', 'GID', 'Exported');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";

@@ -71,6 +71,7 @@ my $crms = CRMS->new(
     instance => $instance
 );
 
+$verbose = 0 unless defined $verbose;
 print "Verbosity $verbose\n" if $verbose;
 $crms->set('noop', 1) if $noop;
 
@@ -219,9 +220,12 @@ foreach my $row (@{$ref})
       my $params = {'rights' => $rights,
                     'note' => "New Year $year",
                     'category' => 'Expert Note'};
-      print Dumper $params;
+      #print Dumper $params;
       my $result = $crms->SubmitReview($id, 'autocrms', $params, $nyp_ref);
-      $msg = "Could not submit review: $result" if $result;
+      if ($result)
+      {
+        print RED "SubmitReview() for $id: $result\n";
+      }
       if ($excel)
       {
         $worksheet->write_string($wsrow, 0, $id);
