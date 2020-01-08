@@ -70,6 +70,7 @@
   [% n = 0 %]
     <div style="display:none" id="UNDNFI" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=5 AND reason=8') %]"></div>
     <div style="display:none" id="ICREN" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=2 AND reason=7') %]"></div>
+    <div style="display:none" id="PDUSREN" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=9 AND reason=7') %]"></div>
     <table>
     <tr style="height:20px;">
       <td><strong>Rights/Reason:</strong></td>

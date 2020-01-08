@@ -50,10 +50,15 @@ function popRenewalDate()
     if (req.readyState == 4)
     {
       var icren = document.getElementById('ICREN');
-      var button;
+      var pdusren = document.getElementById('PDUSREN');
+      var icrenButton, pdusrenButton;
       if (icren)
       {
-        button = document.getElementById("r" + icren.title);
+        icrenButton = document.getElementById("r" + icren.title);
+      }
+      if (icren)
+      {
+        pdusrenButton = document.getElementById("r" + pdusren.title);
       }
       if (req.status == 200)
       {
@@ -61,13 +66,25 @@ function popRenewalDate()
         var sel = GetCheckedValue(rights);
         var und = document.getElementById('UNDNFI').title;
         renDate.value = req.responseText;
+        // PDUS if renewal is on or before the current year minus 69
+        // So 1951 and earlier in 2020
+        var cutoff = new String(new Date().getFullYear() - 69).slice(-2);
+        var pdus = req.responseText.endsWith(cutoff);
         if (und && sel == und) { return; }
-        if (button) { button.checked = "checked"; }
+        if (pdus)
+        {
+          if (pdusrenButton) { pdusrenButton.checked = "checked"; }
+        }
+        else
+        {
+          if (icrenButton) { icrenButton.checked = "checked"; }
+        }
       }
       else
       {
         renDate.value = "";
-        if (button) { button.checked = ""; }
+        if (icrenButton) { icrenButton.checked = ""; }
+        if (pdusrenButton) { pdusrenButton.checked = ""; }
       }
     }
   };
