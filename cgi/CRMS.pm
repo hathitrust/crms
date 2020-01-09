@@ -68,7 +68,7 @@ sub new
 
 sub Version
 {
-  return '8.1.5';
+  return '8.1.6';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -8047,6 +8047,7 @@ sub PredictLastCopyrightYear
   elsif ($where eq 'Australia')
   {
     $when = $year + (($year >= 1955)? 70:50);
+    $when = $year + 50 if $crown;
   }
   elsif ($where eq 'Spain')
   {
