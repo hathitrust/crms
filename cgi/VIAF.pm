@@ -64,7 +64,7 @@ sub GetVIAFData
     return {'error' => 'VIAF parse error', 'url' => $url};
   }
   my $records = $json->{'searchRetrieveResponse'}->{'records'};
-  next unless defined $records;
+  return unless defined $records;
   my $n = 1;
   my $of = scalar @{$records};
   my $best;
@@ -139,6 +139,7 @@ sub ExtractVIAFAuthorData
     $data = [$data] if ref $data eq 'HASH';
     foreach my $datum (@{$data})
     {
+      next unless defined $datum->{'datafield'} and defined $datum->{'datafield'}->{'normalized'};
       my $author2 = Unicode::Normalize::decompose($datum->{'datafield'}->{'normalized'});
       my ($normalized2, $normalized2t, $normalized2nn) = VIAFNormalize($author2);
       if ($normalized eq $normalized2)
