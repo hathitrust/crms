@@ -6277,23 +6277,28 @@ sub ReviewSearchMenu
               'Note Category', 'Note', 'Priority', 'Verdict', 'Swiss', 'Project');
   if (!$self->IsUserAtLeastExpert())
   {
-    splice @keys, 15, 1; # Swiss
-    splice @labs, 15, 1;
+    splice @keys, 16, 1; # Swiss
+    splice @labs, 16, 1;
   }
   if ($page ne 'adminHistoricalReviews')
   {
-    splice @keys, 14, 1; # Validated
-    splice @labs, 14, 1;
+    splice @keys, 15, 1; # Validated
+    splice @labs, 15, 1;
   }
   if (!$self->IsUserAtLeastExpert())
   {
-    splice @keys, 13, 1; # Priority
-    splice @labs, 13, 1;
+    splice @keys, 14, 1; # Priority
+    splice @labs, 14, 1;
+  }
+  if ($page eq 'editReviews')
+  {
+    splice @keys, 9, 1; # UserId/Reviewer
+    splice @labs, 9, 1;
   }
   if ($page ne 'adminHistoricalReviews' || $self->TolerantCompare(1,$self->GetSystemVar('noLegacy')))
   {
-    splice @keys, 7, 1; # Legacy
-    splice @labs, 7, 1;
+    splice @keys, 8, 1; # Legacy
+    splice @labs, 8, 1;
   }
   if ($page ne 'adminHistoricalReviews')
   {
