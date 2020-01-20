@@ -16,7 +16,8 @@ use List::Util qw(min max);
 use CGI;
 use Utilities;
 use Time::HiRes;
-
+use utf8;
+use Unicode::Normalize;
 binmode(STDOUT, ':encoding(UTF-8)');
 
 ## -------------------------------------------------
@@ -68,7 +69,7 @@ sub new
 
 sub Version
 {
-  return '8.1.6';
+  return '8.1.7';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -5431,9 +5432,15 @@ sub GetRenDate
   my $self = shift;
   my $id   = shift;
 
-  $id =~ s, ,,gs;
+  $id =~ s/ //gs;
   my $sql = 'SELECT DREG FROM stanford WHERE ID=?';
-  return $self->SimpleSqlGet($sql, $id);
+  my $date = $self->SimpleSqlGet($sql, $id);
+  if (!$date)
+  {
+    $sql = 'SELECT DATE_FORMAT(renewal_date,"%e%b%y") FROM renewals WHERE renewal_id=?';
+    $date = $self->SimpleSqlGet($sql, $id);
+  }
+  return $date;
 }
 
 sub GetPrevDate
@@ -6270,23 +6277,28 @@ sub ReviewSearchMenu
               'Note Category', 'Note', 'Priority', 'Verdict', 'Swiss', 'Project');
   if (!$self->IsUserAtLeastExpert())
   {
-    splice @keys, 15, 1; # Swiss
-    splice @labs, 15, 1;
+    splice @keys, 16, 1; # Swiss
+    splice @labs, 16, 1;
   }
   if ($page ne 'adminHistoricalReviews')
   {
-    splice @keys, 14, 1; # Validated
-    splice @labs, 14, 1;
+    splice @keys, 15, 1; # Validated
+    splice @labs, 15, 1;
   }
   if (!$self->IsUserAtLeastExpert())
   {
-    splice @keys, 13, 1; # Priority
-    splice @labs, 13, 1;
+    splice @keys, 14, 1; # Priority
+    splice @labs, 14, 1;
+  }
+  if ($page eq 'editReviews')
+  {
+    splice @keys, 9, 1; # UserId/Reviewer
+    splice @labs, 9, 1;
   }
   if ($page ne 'adminHistoricalReviews' || $self->TolerantCompare(1,$self->GetSystemVar('noLegacy')))
   {
-    splice @keys, 7, 1; # Legacy
-    splice @labs, 7, 1;
+    splice @keys, 8, 1; # Legacy
+    splice @labs, 8, 1;
   }
   if ($page ne 'adminHistoricalReviews')
   {
@@ -8167,6 +8179,12 @@ sub VIAFWarning
 
   use VIAF;
   my %warnings;
+  my %excludes = ('us' => 1, 'usa' => 1, 'american' => 1, 'zz' => 1, 'xx' => 1,
+                  Unicode::Normalize::NFC('미국') => 1,
+                  Unicode::Normalize::NFC('spojené státy americké') => 1,
+                  Unicode::Normalize::NFC('états-unis') => 1,
+                  Unicode::Normalize::NFC('amerikas savienotās valstis') => 1,
+                  'stany zjednoczone' => 1, 'forente stater' => 1);
   $record = $self->GetMetadata($id) unless defined $record;
   return 'unable to fetch MARC metadata for volume' unless defined $record;
   my @authors = $record->GetAllAuthors();
@@ -8182,23 +8200,26 @@ sub VIAFWarning
     if (defined $data and scalar keys %{$data} > 0)
     {
       my $country = $data->{'country'};
-      if (defined $country && lc $country ne 'us' && lc $country ne 'ame' &&
-          lc $country ne 'american' && lc $country ne 'zz' &&
-          lc $country ne 'xx')
+      if (defined $country)
       {
-        my $abd = $data->{'birth_year'};
-        my $add = $data->{'death_year'};
-        next if defined $abd and $abd <= 1815;
-        next if defined $add and $add <= 1925;
-        my $dates = '';
-        $dates = sprintf ' %s-%s', (defined $abd)? $abd:'', (defined $add)? $add:'' if $abd or $add;
-        my $last = $author;
-        $last = $1 if $last =~ m/^(.+?),.*/;
-        $last =~ s/[.,;) ]*$//;
-        my $url = VIAF::VIAFLink($self, $author);
-        my $warning = "<a href='$url' target='_blank'>$last</a> ($country$dates)";
-        $warnings{$warning} = 1;
-      }
+        $country =~ s/[\.,;]+$//;
+        $country =  Unicode::Normalize::NFC($country);
+        if (!defined $excludes{lc $country} && lc $country !~ m/\(usa\)/)
+				{
+					my $abd = $data->{'birth_year'};
+					my $add = $data->{'death_year'};
+					next if defined $abd and $abd <= 1815;
+					next if defined $add and $add <= 1925;
+					my $dates = '';
+					$dates = sprintf ' %s-%s', (defined $abd)? $abd:'', (defined $add)? $add:'' if $abd or $add;
+					my $last = $author;
+					$last = $1 if $last =~ m/^(.+?),.*/;
+					$last =~ s/[.,;) ]*$//;
+					my $url = VIAF::VIAFLink($self, $author);
+					my $warning = "<a href='$url' target='_blank'>$last</a> ($country$dates)";
+					$warnings{$warning} = 1;
+				}
+			}
     }
   }
   return 'error contacting VIAF' if $errs > 0 and scalar keys %warnings == 0;
