@@ -69,7 +69,7 @@ sub new
 
 sub Version
 {
-  return '8.1.7';
+  return '8.1.8';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -684,7 +684,7 @@ sub AuthDebugData
   my $self = shift;
   my $html = shift;
 
-  my $msg = $self->get('id_note');
+  my $msg = $self->get('id_note') || '';
   $msg .= "\n". $self->get('auth_note');
   if ($html)
   {
