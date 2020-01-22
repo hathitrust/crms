@@ -115,7 +115,11 @@ if ($page eq 'finishReview')
 
 if ($redirect && !$debugAuth)
 {
-  #$crms->Note($redirect);
+  if ($crms->GetSystemVar('logAuth'))
+  {
+    my $db = $crms->AuthDebugData();
+    $crms->Note($db);
+  }
   print $cgi->redirect($redirect);
   exit(0);
 }
