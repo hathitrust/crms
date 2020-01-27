@@ -99,10 +99,18 @@ sub ValidateSubmission
   my $cgi  = shift;
 
   my @errs;
-  my ($attr, $reason) = $self->{'crms'}->TranslateAttrReasonFromCode($cgi->param('rights'));
+  my $rights = $cgi->param('rights');
+  return 'You must select a rights/reason combination' unless $rights;
+  my ($attr, $reason) = $self->{'crms'}->TranslateAttrReasonFromCode($rights);
+  return 'Unknown rights combination' unless defined $attr and defined $reason;
   my $date = $cgi->param('date');
   my $note = $cgi->param('note');
   my $category = $cgi->param('category');
+  # FIXME: should probably use categories.need_und field
+  if (defined $category && $category eq 'Not Government' && $attr ne 'und')
+  {
+    push @errs, 'Not Government category requires und/NFI';
+  }
   $date =~ s/\s+//g if $date;
   if (!defined $date && $attr ne 'und')
   {
