@@ -141,7 +141,7 @@
     <tr>
       <td style="text-align:left;">
         <input type="checkbox" id="hold" name="hold"
-               [% (holds >=5 && !hold)? 'disabled="disabled"':'' %]
+               [% (holds >=50 && !hold)? 'disabled="disabled"':'' %]
                [% (hold)? 'checked="checked"':'' %]
                onclick="toggleVisibility('expiry');"/>
       </td>
@@ -151,7 +151,7 @@
       <td colspan="2">
         <span class="smallishText" [% (holds >=5)? 'style="color:red;"':'' %]>
             <!--Held reviews will remain unprocessed.-->
-            You currently have [% holds %] out of the maximum 5 volumes on hold.
+            You currently have [% holds %] out of the maximum 50 volumes on hold.
             <!--It is up to you to get in touch with an expert.-->
         </span>
       </td>
