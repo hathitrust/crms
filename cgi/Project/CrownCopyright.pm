@@ -106,6 +106,11 @@ sub ValidateSubmission
   my $date = $cgi->param('date');
   my $note = $cgi->param('note');
   my $category = $cgi->param('category');
+  # FIXME: should probably use categories.need_und field
+  if (defined $category && $category eq 'Not Government' && $attr ne 'und')
+  {
+    push @errs, 'Not Government category requires und/NFI';
+  }
   $date =~ s/\s+//g if $date;
   if (!defined $date && $attr ne 'und')
   {
