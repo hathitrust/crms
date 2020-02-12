@@ -8,7 +8,7 @@ use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 
 my $usage = <<END;
-USAGE: $0 [-acCehlNpqtv] [-x SYS] [-m MAIL [-m MAIL...]] [start_date [end_date]]
+USAGE: $0 [-acCehlNpqtv] [-m MAIL [-m MAIL...]] [start_date [end_date]]
 
 Processes reviews, exports determinations, updates candidates,
 updates the queue, recalculates user stats, and clears stale locks.
@@ -27,7 +27,6 @@ with latest rights DB timestamp between them.
 -q      Do not update queue.
 -s      Do not recalculate monthly stats.
 -t      Run in training.
--x SYS  Set SYS as the system to execute.
 -v      Be verbose. May be repeated for increased verbosity.
 END
 
