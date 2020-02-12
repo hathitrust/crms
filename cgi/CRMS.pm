@@ -69,7 +69,7 @@ sub new
 
 sub Version
 {
-  return '8.1.9';
+  return '8.2';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -2074,6 +2074,7 @@ sub GetPriority
   return $pri;
 }
 
+# Get project id/name from queue or exportdata.
 sub GetProject
 {
   my $self = shift;
@@ -2082,7 +2083,14 @@ sub GetProject
 
   my $sql = 'SELECT '. (($name)? 'p.name':'p.id').
             ' FROM queue q INNER JOIN projects p ON q.project=p.id WHERE q.id=?';
-  return $self->SimpleSqlGet($sql, $id);
+  my $proj = $self->SimpleSqlGet($sql, $id);
+  unless (defined $proj)
+  {
+    $sql = 'SELECT '. (($name)? 'p.name':'p.id').
+            ' FROM exportdata e INNER JOIN projects p ON e.project=p.id WHERE e.id=?';
+    $proj = $self->SimpleSqlGet($sql, $id);
+  }
+  return $proj;
 }
 
 sub MoveFromReviewsToHistoricalReviews
@@ -8598,11 +8606,17 @@ sub SubmitMail
   my $user = shift;
   my $text = shift;
   my $uuid = shift;
+  my $to   = shift; # default crms-experts
+  my $wait = shift; # until volume is out of queue
 
+  $id = undef if defined $id and $id eq '';
+  $to = undef if defined $to and $to eq '';
+  $wait = 1 if $wait;
+  $wait = 0 unless $id;
   my $sql = 'SELECT COUNT(*) FROM mail WHERE uuid=?';
   return if $self->SimpleSqlGet($sql, $uuid);
-  $sql = 'INSERT INTO mail (id, user, text, uuid) VALUES (?,?,?,?)';
-  $self->PrepareSubmitSql($sql, $id, $user, $text, $uuid);
+  $sql = 'INSERT INTO mail (id,user,text,uuid,mailto,wait) VALUES (?,?,?,?,?,?)';
+  $self->PrepareSubmitSql($sql, $id, $user, $text, $uuid, $to, $wait);
 }
 
 sub UUID

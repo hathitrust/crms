@@ -1,5 +1,12 @@
+[% id = cgi.param('id') %]
+[% IF crms.IsUserExpert() %]
+  [% to = cgi.param('to') %]
+  [% mail = to %]
+[% END %]
+
 [% css = crms.WebPath('web', 'css/review.css') %]
-[% crms.StartHTML('Contact CRMS Experts', '<link rel="stylesheet" type="text/css" href="' _ css _ '"/>') %]
+[% title = (to)? 'Contact Reviewer' : 'Contact CRMS Experts' %]
+[% crms.StartHTML(title, '<link rel="stylesheet" type="text/css" href="' _ css _ '"/>') %]
 <script>
 function closeMe()
 {
@@ -18,12 +25,15 @@ function closeMe()
   <br/>
   <br/>
 
-  [% mail = crms.GetSystemVar('expertsEmail') %]
-  [% id = cgi.param('id') %]
+  [% IF !mail %]
+    [% mail = crms.GetSystemVar('expertsEmail') %]
+  [% END %]
     <div class="emailBox">
       [% IF cgi.param("submit") %]
+        Sending mail to [% cgi.param('to') %]
         [% CALL crms.SubmitMail(id, crms.get('remote_user'),
-                                cgi.param('msg'), cgi.param('uuid')) %]
+                                cgi.param('msg'), cgi.param('uuid'),
+                                cgi.param('to'), cgi.param('wait')) %]
         <h2>Message stored for <a href="mailto:[% mail %]"><span style="color:black;">[% mail %]</span></a>.
         A copy will be CC'ed to you.
         <!-- Confirmation code: <span style="color:black;">[% cgi.param('uuid') %]</span>. -->
@@ -31,8 +41,15 @@ function closeMe()
         <input type="button" value="Close Window" onclick="closeMe();" style="margin:auto;margin-top:18px;display:block;"/>
       [% ELSE %]
         [% subj = 'Reviewer Inquiry' %]
+        [% IF to %]
+          [% subj = 'Message from Expert' %]
+        [% END %]
         [% IF id %]
-          [% subj = subj _ ' for '_ id _ ' (project ' _ crms.GetProjectRef(crms.GetProject(id)).name _ ')' %]
+          [% proj = '' %]
+          [% IF id && crms.GetProject(id) %]
+            [% proj = ' (project ' _ crms.GetProjectRef(crms.GetProject(id)).name _ ')' %]
+          [% END %]
+          [% subj = subj _ ' on '_ id _ proj %]
         [% END %]
 
         <strong>To:</strong> <a href="mailto:[% mail %]"><span style="color:black;">[% mail %]</span></a><br/>
@@ -44,11 +61,21 @@ function closeMe()
           <input type="hidden" name="user" value="[% user %]"/>
           <input type="hidden" name="p" value="[% cgi.param('p') %]"/>
           <input type="hidden" name="uuid" value="[% crms.UUID() %]"/>
+          [% IF to %]
+            <input type="hidden" name="to" value="[% to %]"/>
+          [% END %]
           <label for="idInput" class="smallishText">
             Volume identifier[% UNLESS id %] (if applicable)[% END %]:
           </label>
           <input id="idInput" type="text" name="id" value="[% cgi.param('id') %]" style="border: 1px solid #888888;"/><br/>
-          <label for="queryTA" class="smallishText">Type your question or concern here:</label><br/>
+          [% IF to %]
+            <label for="waitCB" class="smallishText">Hold while active</label>
+            <input type="checkbox" name="wait" id="waitCB"/>
+            <br/>
+            <label for="queryTA" class="smallishText">Type your message here:</label><br/>
+          [% ELSE %]
+            <label for="queryTA" class="smallishText">Type your question or concern here:</label><br/>
+          [% END %]
           <textarea id="queryTA" name="msg" cols="80"
                     rows="10" style="height:9em;" required="required">[% cgi.param('msg') %]</textarea>
           <input type="submit" name="submit" value="Send E-mail"/>
