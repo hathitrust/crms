@@ -10,7 +10,7 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 my $usage = <<END;
 USAGE: $0 [-acCdhnpquv] [-s HTID [-s HTID...]]
           [-m MAIL [-m MAIL...]] [-P PROJ [-P PROJ...]]
-          [-t TBL [-t TBL...]] [-x SYS] [start_date[ time] [end_date[ time]]]
+          [-t TBL [-t TBL...]] [start_date[ time] [end_date[ time]]]
 
 Reports on the volumes that can inherit from this morning's export,
 or, if start_date is specified, exported after then and before end_date

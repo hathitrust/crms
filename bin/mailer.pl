@@ -10,7 +10,7 @@ use Utilities;
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-hpqtv] [-m USER [-m USER...]] [-x SYS]
+USAGE: $0 [-hpqtv] [-m USER [-m USER...]]
 
 Sends accumulated help requests to crms-experts\@umich.edu.
 
@@ -49,8 +49,15 @@ my $crms = CRMS->new(
 );
 
 $mails{$_} = 1 for @mails;
-$mails{$crms->GetSystemVar('expertsEmail')} = 1 unless $quiet;
-my $sql = 'SELECT user,id,text,uuid FROM mail WHERE sent IS NULL';
+if ($crms->IsDevArea())
+{
+  $mails{$crms->GetSystemVar('adminEmail')} = 1 unless $quiet;
+}
+else
+{
+  $mails{$crms->GetSystemVar('expertsEmail')} = 1 unless $quiet;
+}
+my $sql = 'SELECT user,id,text,uuid,mailto,wait FROM mail WHERE sent IS NULL';
 my $ref = $crms->SelectAll($sql);
 my $thstyle = ' style="background-color:#000000;color:#FFFFFF;padding:4px 20px 2px 6px;"';
 foreach my $row (@{$ref})
@@ -59,7 +66,16 @@ foreach my $row (@{$ref})
   my $id = $row->[1];
   my $txt = $row->[2];
   my $uuid = $row->[3];
-  my $subj = sprintf 'Reviewer Inquiry%s', (defined $id)? " for $id":'';
+  my $to = $row->[4];
+  my $wait = $row->[5];
+  $id = undef if defined $id and $id eq '';
+  if ($wait && $id)
+  {
+    $sql = 'SELECT COUNT(*) FROM queue WHERE id=?';
+    next if $crms->SimpleSqlGet($sql, $id);
+  }
+  my $subj = sprintf '%s%s', (defined $to)? 'Message from Expert' : 'Reviewer Inquiry',
+                             (defined $id)? " for $id":'';
   $subj .= sprintf ' (project %s)', $crms->GetProjectRef($crms->GetProject($id))->{'name'} if defined $id;
   $subj = $crms->SubjectLine($subj);
   my $msg = $crms->StartHTML($subj);
@@ -69,22 +85,24 @@ foreach my $row (@{$ref})
     my $ref2 = $crms->SelectAll($sql, $id);
     my $author = $ref2->[0]->[0] || '';
     my $title = $ref2->[0]->[1] || '';
-    $sql = 'SELECT r.hold,r.attr,r.reason FROM reviews r INNER JOIN queue q ON r.id=q.id'.
-           ' INNER JOIN projects p ON q.project=p.id'.
-           ' WHERE r.id=? AND r.user=? ORDER BY r.time DESC LIMIT 1';
-    $ref2 = $crms->SelectAll($sql, $id, $user);
+    my $page = ($wait)? 'adminHistoricalReviews':'adminReviews';
     my $link = '<a href="'. $crms->Host().
-               $crms->WebPath('cgi', 'crms?p=adminReviews&search1=Identifier&search1value='. $id).
+               $crms->WebPath('cgi', 'crms?p='. $page. '&search1=Identifier&search1value='. $id).
                '">'. $id. '</a>';
-    my $username = $crms->GetUserProperty($user, 'name');
-    my $table = <<END;
-    <table style="border:1px solid #000000;border-collapse:collapse;">
+    my $table = '<table style="border:1px solid #000000;border-collapse:collapse;">';
+    if (!$to)
+    {
+      my $username = $crms->GetUserProperty($user, 'name') || '';
+      $table .= <<END;
     <tr><th$thstyle>User</th>
         <td>$user</td>
     </tr>
     <tr><th$thstyle>User Name</th>
         <td>$username</td>
     </tr>
+END
+    }
+    $table .= <<END;
     <tr><th$thstyle>Volume ID</th>
         <td>$link</td>
     </tr>
@@ -96,24 +114,31 @@ foreach my $row (@{$ref})
     </tr>
 END
     my $table2 = '';
-    if (scalar @{$ref2})
+    if (!$to)
     {
-      my $hold = ($ref2->[0]->[0])? 'Yes':'No';
-      my $attr = $crms->TranslateAttr($ref2->[0]->[1]);
-      my $reason = $crms->TranslateReason($ref2->[0]->[2]);
-      my $rights = 
-      $table2 = <<END;
-      <tr><th$thstyle>Hold?</th>
-          <td>$hold</td>
-      </tr>
-      <tr><th$thstyle>Rights</th>
-          <td>$attr/$reason</td>
-      </tr>
+      $sql = 'SELECT r.hold,r.attr,r.reason FROM reviews r INNER JOIN queue q ON r.id=q.id'.
+             ' INNER JOIN projects p ON q.project=p.id'.
+             ' WHERE r.id=? AND r.user=? ORDER BY r.time DESC LIMIT 1';
+      $ref2 = $crms->SelectAll($sql, $id, (defined $to)? $to : $user);
+      if (scalar @{$ref2})
+      {
+        my $hold = ($ref2->[0]->[0])? 'Yes':'No';
+        my $attr = $crms->TranslateAttr($ref2->[0]->[1]);
+        my $reason = $crms->TranslateReason($ref2->[0]->[2]);
+        my $rights =
+        $table2 = <<END;
+        <tr><th$thstyle>Hold?</th>
+            <td>$hold</td>
+        </tr>
+        <tr><th$thstyle>Rights</th>
+            <td>$attr/$reason</td>
+        </tr>
 END
-    }
-    else
-    {
-      $table2 .= "<tr><th$thstyle colspan='2'>No review data</td></tr>\n";
+      }
+      else
+      {
+        $table2 .= "<tr><th$thstyle colspan='2'>No review data</td></tr>\n";
+      }
     }
     $table .= $table2;
     $table .= sprintf "<tr><th$thstyle>Tracking</th><td>%s</td></tr>\n", $crms->GetTrackingInfo($id, 1, 1);
@@ -123,18 +148,22 @@ END
   $txt = $crms->EscapeHTML($txt);
   $msg .= "<div>User message:<br/><strong>$txt</strong></div>";
   $msg .= '</body></html>';
+  if (defined $to)
+  {
+    $mails{$_} = 1 for split m/\s*,\s*/, $to;
+  }
   @mails = keys %mails;
   if (scalar @mails)
   {
     @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
     $user .= '@umich.edu' unless $user =~ m/@/;
-    my $to = join ',', @mails;
-    print "Sending to $to\n" if $verbose;
+    my $recipients = join ',', @mails;
+    printf "Sending to $recipients\n" if $verbose;
     use Encode;
     use Mail::Sendmail;
     my $bytes = encode('utf8', $msg);
     my %mail = ('from'         => $user,
-                'to'           => $to,
+                'to'           => $recipients,
                 'cc'           => $user,
                 'subject'      => $subj,
                 'content-type' => 'text/html; charset="UTF-8"',
