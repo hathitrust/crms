@@ -69,7 +69,7 @@ sub new
 
 sub Version
 {
-  return '8.2';
+  return '8.2.1';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -1519,8 +1519,8 @@ sub IsVolumeInScope
 # project id of the project that it qualified for, if any.
 # Used by Add to Queue page for filtering non-overrides.
 # Iterate through projects and add to candidates if the status is 'yes'.
+# The last project that says "yes" gets the volume.
 # If one or more projects sees fit to filter, last source is used for filter.
-# The first project that says "yes" gets the volume.
 sub EvaluateCandidacy
 {
   my $self   = shift;
@@ -1538,7 +1538,8 @@ sub EvaluateCandidacy
   my $projects = $self->Projects();
   # Pare down projects hash to one member if it is specified.
   $projects = {$proj => $projects->{$proj}} if $proj;
-  my ($eval, $filterEval);
+  my $eval = {'status' => 'no', 'msg' => 'default CRMS::EvaluateCandidacy message'};
+  my ($yesEval, $filterEval);
   foreach my $pid (sort {$a <=> $b;} keys %{$projects})
   {
     my $obj = $projects->{$pid};
@@ -1546,15 +1547,18 @@ sub EvaluateCandidacy
     $eval = $obj->EvaluateCandidacy($id, $record, $attr, $reason);
     if ($eval->{'status'} eq 'yes')
     {
-      $eval->{'project'} = $pid;
-      return $eval;
+      $yesEval = $eval;
+      $yesEval->{'project'} = $pid;
     }
     elsif ($eval->{'status'} eq 'filter')
     {
-      $filterEval = $eval unless defined $filterEval;
+      $filterEval = $eval;
+      $filterEval->{'project'} = $pid;
     }
   }
-  return (defined $filterEval)? $filterEval : $eval;
+  return $yesEval if defined $yesEval;
+  return $filterEval if defined $filterEval;
+  return $eval;
 }
 
 sub GetQueueSize
