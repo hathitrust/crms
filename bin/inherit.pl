@@ -629,9 +629,12 @@ sub CountSystemIds
   foreach my $id (@ids)
   {
     my $record = $crms->GetMetadata($id);
-    my $sysid = $record->sysid;
-    print "$id: $sysid\n" if $verbose > 1;
-    $sysids{$sysid} = 1;
+    if (defined $record)
+    {
+      my $sysid = $record->sysid;
+      print "$id: $sysid\n" if $verbose > 1;
+      $sysids{$sysid} = 1;
+    }
   }
   printf "Counted %d sys ids for $report\n", scalar keys %sysids if $verbose > 1;
   return scalar keys %sysids;
