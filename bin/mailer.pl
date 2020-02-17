@@ -16,6 +16,7 @@ Sends accumulated help requests to crms-experts\@umich.edu.
 
 -h       Print this help message.
 -m MAIL  Also send report to MAIL. May be repeated for multiple recipients.
+-n       No-op: do not update database or send mail.
 -p       Run in production.
 -q       Quiet: do not send to crms-experts, just to the recipients on the -m flag.
 -t       Run in training.
@@ -25,6 +26,7 @@ END
 my $help;
 my $instance;
 my @mails;
+my $noop;
 my $production;
 my $quiet;
 my $training;
@@ -33,6 +35,7 @@ my $verbose = 0;
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions('h|?'  => \$help,
            'm:s@' => \@mails,
+           'n'    => \$noop,
            'p'    => \$production,
            'q'    => \$quiet,
            't'    => \$training,
@@ -42,21 +45,12 @@ $instance = 'crms-training' if $training;
 print "Verbosity $verbose\n" if $verbose;
 die "$usage\n\n" if $help;
 
-my %mails;
 my $crms = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
+$crms->set('noop', 1) if $noop;
 
-$mails{$_} = 1 for @mails;
-if ($crms->IsDevArea())
-{
-  $mails{$crms->GetSystemVar('adminEmail')} = 1 unless $quiet;
-}
-else
-{
-  $mails{$crms->GetSystemVar('expertsEmail')} = 1 unless $quiet;
-}
 my $sql = 'SELECT user,id,text,uuid,mailto,wait FROM mail WHERE sent IS NULL';
 my $ref = $crms->SelectAll($sql);
 my $thstyle = ' style="background-color:#000000;color:#FFFFFF;padding:4px 20px 2px 6px;"';
@@ -69,6 +63,16 @@ foreach my $row (@{$ref})
   my $to = $row->[4];
   my $wait = $row->[5];
   $id = undef if defined $id and $id eq '';
+  my %mails;
+  $mails{$_} = 1 for @mails;
+  if ($crms->IsDevArea())
+  {
+    $mails{$crms->GetSystemVar('adminEmail')} = 1 unless $quiet;
+  }
+  else
+  {
+    $mails{$crms->GetSystemVar('expertsEmail')} = 1 unless $quiet;
+  }
   if ($wait && $id)
   {
     $sql = 'SELECT COUNT(*) FROM queue WHERE id=?';
@@ -150,15 +154,16 @@ END
   $msg .= '</body></html>';
   if (defined $to)
   {
+    # $to can be a comma-delimited list of user ids
     $mails{$_} = 1 for split m/\s*,\s*/, $to;
   }
-  @mails = keys %mails;
-  if (scalar @mails)
+  my @recipients = keys %mails;
+  if (scalar @recipients)
   {
-    @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
+    @recipients = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @recipients;
     $user .= '@umich.edu' unless $user =~ m/@/;
-    my $recipients = join ',', @mails;
-    printf "Sending to $recipients\n" if $verbose;
+    my $recipients = join ',', @recipients;
+    print "Sending to $recipients\n" if $verbose;
     use Encode;
     use Mail::Sendmail;
     my $bytes = encode('utf8', $msg);
@@ -169,9 +174,15 @@ END
                 'content-type' => 'text/html; charset="UTF-8"',
                 'body'         => $bytes
                 );
-    sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n");
-    # FIXME: error checking
-    $crms->PrepareSubmitSql('UPDATE mail SET sent=NOW() WHERE uuid=?', $uuid);
+    if ($noop)
+    {
+      print "No-op set; not sending e-mail to $recipients\n" if $verbose;
+    }
+    else
+    {
+      sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n") unless $noop;
+      $crms->PrepareSubmitSql('UPDATE mail SET sent=NOW() WHERE uuid=?', $uuid);
+    }
   }
   else
   {
