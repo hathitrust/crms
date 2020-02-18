@@ -46,6 +46,7 @@ sub GetUserStatsProjects
     if ($user =~ m/^\d+$/)
     {
       my @users = map {$_->{'id'};} @{$self->GetInstitutionReviewers($user)};
+      return () unless scalar @users;
       $usersql = ' WHERE us.user IN '. $self->WildcardList(scalar @users);
       push @params, $_ for @users;
     }
@@ -131,7 +132,7 @@ sub GetUserStatsQueryParams
   foreach my $user (@users)
   {
     my @projects = GetUserStatsProjects($self, $user);
-    unshift @projects, undef if scalar @projects > 1;
+    unshift @projects, undef if !$project and scalar @projects > 1;
     foreach my $proj (@projects)
     {
       my $old = 0;
