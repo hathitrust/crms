@@ -18,6 +18,7 @@ Sends weekly activity report.
 -l       Send to the MCommunity list for each CRMS system.
 -m MAIL  Also send report to MAIL. May be repeated for multiple recipients.
 -p       Run in production.
+-q       Quiet: do not send any e-mail at all. For testing.
 -t       Run in training.
 -v       Be verbose.
 END
@@ -27,6 +28,7 @@ my $instance;
 my $lists;
 my @mails;
 my $production;
+my $quiet;
 my $training;
 my $verbose = 0;
 
@@ -35,6 +37,7 @@ die 'Terminating' unless GetOptions('h|?'  => \$help,
            'l'    => \$lists,
            'm:s@' => \@mails,
            'p'    => \$production,
+           'q'    => \$quiet,
            't'    => \$training,
            'v+'   => \$verbose);
 $instance = 'production' if $production;
@@ -132,6 +135,6 @@ if (scalar @mails)
               'content-type' => 'text/html; charset="UTF-8"',
               'body'         => $bytes
               );
-  sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n");
+  sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n") unless $quiet;
 }
 print "Warning: $_\n" for @{$crms->GetErrors()};
