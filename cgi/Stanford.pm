@@ -38,7 +38,7 @@ sub GetStanfordData
   }
   $json->{'response'}->{'json'} = $res->content;
   $json->{'response'}->{'url'} = $url;
-  return $json->{'response'};
+  return $json;
 }
 
 sub GetStanfordURL
@@ -50,8 +50,8 @@ sub GetStanfordURL
 
   $q = Unicode::Normalize::decompose($q);
   $q = uri_escape_utf8($q);
-  my $url = 'https://exhibits.stanford.edu/copyrightrenewals/catalog.json?'.
-            '&q='. $q. '&search_field='. $field;
+  my $url = 'https://exhibits.stanford.edu/copyrightrenewals/catalog.json?q='.
+            $q. '&search_field='. $field;
   $url .= '&page='. $page if $page;
   return $url;
 }
