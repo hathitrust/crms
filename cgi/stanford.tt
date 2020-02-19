@@ -21,62 +21,64 @@
 <br/>
 [% IF q && field %]
   [% data = crms.GetStanfordData(q, field, page) %]
-  [% IF data.pages.total_pages %]
-    <strong>Found [% data.pages.total_count %], page [% data.pages.current_page %] of [% data.pages.total_pages %]</strong>
+  [% IF data.meta.pages.total_pages %]
+    <strong>Found [% data.meta.pages.total_count %], page [% data.meta.pages.current_page %] of [% data.meta.pages.total_pages %]</strong>
   [% ELSE %]
     <strong>No results</strong>
   [% END %]
-  [% IF data.pages.current_page && data.pages.current_page > 1 %]
+  [% IF data.meta.pages.current_page && data.meta.pages.current_page > 1 %]
     [% prev = page - 1 %]
     &nbsp;&nbsp;&nbsp;&nbsp;<a href="?[% crms.URLify(cgi,'page') _ "&page=$prev" %]">Prev</a>
   [% END %]
-  [% IF data.pages.current_page && data.pages.total_pages && data.pages.current_page < data.pages.total_pages %]
+  [% IF data.meta.pages.current_page && data.meta.pages.total_pages && data.meta.pages.current_page < data.meta.pages.total_pages %]
     [% next = page + 1 %]
     &nbsp;&nbsp;&nbsp;&nbsp;<a href="?[% crms.URLify(cgi,'page') _ "&page=$next" %]">Next</a>
   [% END %]
   <br/><br/>
   <table style="width:65%;">
-    [% FOR doc IN data.docs %]
+    [% FOR doc IN data.data %]
       <tr>
         <td class="nowrap" style="text-align:right;color:#999;">Title:</td>
-        <td style="padding-left:1.5em;">[% crms.EscapeHTML(doc.title_display) %]</td>
+        <td style="padding-left:1.5em;">[% doc.attributes.title_full_display.attributes.value %]</td>
       </tr>
       <tr>
         <td class="nowrap" style="text-align:right;color:#999;">Author:</td>
-        <td style="padding-left:1.5em;">[% doc.author_sort %]</td>
+        <td style="padding-left:1.5em;">[% doc.attributes.author_person_full_display.attributes.value %]</td>
       </tr>
       <tr>
         <td class="nowrap" style="text-align:right;color:#999;">Publication Date:</td>
         <td style="padding-left:1.5em;">
           <span style="background:yellow;">
-            [% doc.item('exhibit_copyrightrenewals_date-of-publication_tesim').join(', ') %]
+            [% doc.attributes.item('date-of-publication_tesim').attributes.value %]
           </span>
         </td>
       </tr>
+      [% IF 0 %]
       <tr>
         <td class="nowrap" style="text-align:right;color:#999;">Date:</td>
         <td style="padding-left:1.5em;">[% doc.pub_year_no_approx_isi %]</td>
       </tr>
+      [% END %]
       <tr>
         <td class="nowrap" style="text-align:right;color:#999;">Renewal ID:</td>
         <td style="padding-left:1.5em;">[% doc.id %]</td>
       </tr>
       <tr>
         <td class="nowrap" style="text-align:right;color:#999;">Renewal Date:</td>
-        <td style="padding-left:1.5em;">[% doc.item('exhibit_copyrightrenewals_date-of-renewal_tesim').join(', ') %]</td>
+        <td style="padding-left:1.5em;">[% doc.attributes.item('date-of-renewal_tesim').attributes.value %]</td>
       </tr>
       <tr>
         <td class="nowrap" style="text-align:right;color:#999;">Registration Number:</td>
-        <td style="padding-left:1.5em;">[% doc.item('exhibit_copyrightrenewals_original-registration-number_tesim').join(', ') %]</td>
+        <td style="padding-left:1.5em;">[% doc.attributes.item('original-registration-number_tesim').attributes.value %]</td>
       </tr>
       <tr>
         <td class="nowrap" style="text-align:right;color:#999;">Claimant:</td>
-        <td style="padding-left:1.5em;">[% doc.item('exhibit_copyrightrenewals_claimant_tesim').join(', ') %]</td>
+        <td style="padding-left:1.5em;">[% doc.attributes.claimant_tesim.attributes.value %]</td>
       </tr>
-      [% IF doc.item('exhibit_copyrightrenewals_edition-statements_tesim') %]
+      [% IF doc.attributes.item('edition-statements_tesim').attributes.value %]
       <tr>
-        <td class="nowrap" style="text-align:right;color:#999;">Edition Statement(s):</td>
-        <td style="padding-left:1.5em;">[% doc.item('exhibit_copyrightrenewals_edition-statements_tesim').join(', ') %]</td>
+        <td class="nowrap" style="text-align:right;color:#999;">Edition Statements:</td>
+        <td style="padding-left:1.5em;">[% doc.attributes.item('edition-statements_tesim').attributes.value %]</td>
       </tr>
       [% END %]
       <tr>
@@ -85,14 +87,14 @@
     [% END %]
   </table>
   <br/>
-  [% IF data.pages.total_pages %]
-    <strong>Found [% data.pages.total_count %], page [% data.pages.current_page %] of [% data.pages.total_pages %]</strong>
+  [% IF data.meta.pages.total_pages %]
+    <strong>Found [% data.meta.pages.total_count %], page [% data.meta.pages.current_page %] of [% data.meta.pages.total_pages %]</strong>
   [% END %]
-  [% IF data.pages.current_page && data.pages.current_page > 1 %]
+  [% IF data.meta.pages.current_page && data.meta.pages.current_page > 1 %]
     [% prev = page - 1 %]
     &nbsp;&nbsp;&nbsp;&nbsp;<a href="?[% crms.URLify(cgi,'page') _ "&page=$prev" %]">Prev</a>
   [% END %]
-  [% IF data.pages.current_page && data.pages.total_pages && data.pages.current_page < data.pages.total_pages %]
+  [% IF data.meta.pages.current_page && data.meta.pages.total_pages && data.meta.pages.current_page < data.meta.pages.total_pages %]
     [% next = page + 1 %]
     &nbsp;&nbsp;&nbsp;&nbsp;<a href="?[% crms.URLify(cgi,'page') _ "&page=$next" %]">Next</a>
   [% END %]
@@ -101,4 +103,3 @@
 </div>
 [% INCLUDE footer.tt %]
 
-  
