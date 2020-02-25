@@ -69,13 +69,13 @@ sub new
 
 sub Version
 {
-  return '8.2.4';
+  return '8.2.5';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
 # 1. REMOTE_USER directly (uniqname/friend)
 # 2. email directly
-# 3. eppn (e.g., moses+blugs.com@umich.edu) directly
+# 3. eppn (e.g., somebody+blah.com@umich.edu) directly
 # 4. REMOTE_USER as ht_users userid
 # Then, set login credentials as remote_user and user as alias if it is set.
 sub SetupUser
@@ -1038,8 +1038,8 @@ sub ExportReviews
   {
     my $dels = $start_size-$self->GetCandidatesSize();
     $self->ReportMsg("After export, removed $dels volumes from candidates.");
-    eval { $self->EmailReport($count, $perm, $filename); };
-    $self->SetError("EmailReport() failed: $@") if $@;
+    $self->set('export_path', $perm);
+    $self->set('export_file', $filename);
   }
 }
 
@@ -1140,48 +1140,6 @@ sub CanExportVolume
     }
   }
   return $export;
-}
-
-# Send email with rights export data.
-sub EmailReport
-{
-  my $self     = shift;
-  my $count    = shift;
-  my $file     = shift;
-  my $filename = shift;
-
-  my $instance = $self->get('instance') || '';
-  if ($instance eq 'production')
-  {
-    my $subject = $self->SubjectLine("$count volumes exported to rights db");
-    use Mail::Sendmail;
-    my $boundary = "====" . time() . "====";
-    my %mail = ('from'         => $self->GetSystemVar('adminEmail'),
-                'to'           => $self->GetSystemVar('exportEmailTo'),
-                'subject'      => $subject,
-                'content-type' => "multipart/mixed; boundary=\"$boundary\""
-                );
-    open (my $FH, '<', $file) or die "Cannot read $file: $!";
-    binmode $FH; undef $/;
-    my $enc = <$FH>;
-    close $FH;
-    $boundary = '--'.$boundary;
-    $mail{body} = <<END_OF_BODY;
-$boundary
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-
-See attachment.
-$boundary
-Content-Type: text/plain; charset="UTF-8"; name="$filename"
-Content-Transfer-Encoding: base64
-Content-Disposition: attachment; filename="$filename"
-
-$enc
-$boundary--
-END_OF_BODY
-    sendmail(%mail) || $self->SetError("Error: $Mail::Sendmail::error\n");
-  }
 }
 
 # Returns a triplet of (filehandle, temp name, permanent name)
