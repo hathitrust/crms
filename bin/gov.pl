@@ -108,7 +108,7 @@ if (scalar @mails)
   use MIME::Base64;
   use Mail::Sendmail;
   my $boundary = "====" . time() . "====";
-  my %mail = ('from'         => 'crms-mailbot@umich.edu',
+  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
               'to'           => (join ',', @mails),
               'subject'      => $subj,
               'content-type' => "multipart/mixed; boundary=\"$boundary\""

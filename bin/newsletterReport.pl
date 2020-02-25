@@ -123,7 +123,7 @@ else
     use Encode;
     use Mail::Sendmail;
     my $bytes = encode('utf8', $msg);
-    my %mail = ('from'         => 'crms-mailbot@umich.edu',
+    my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
                 'to'           => $to,
                 'subject'      => 'CRMS Newsletter Report for '. $myEng,
                 'content-type' => 'text/html; charset="UTF-8"',

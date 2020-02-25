@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-BEGIN 
+BEGIN
 {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
@@ -116,7 +116,7 @@ if (@mails)
   use Mail::Sendmail;
   my $to = join ',', @mails;
   my $bytes = encode('utf8', $txt);
-  my %mail = ('from'         => from => $crms->GetSystemVar('adminEmail', ''),
+  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
               'to'           => $to,
               'subject'      => $title,
               'content-type' => 'text/html; charset="UTF-8"',

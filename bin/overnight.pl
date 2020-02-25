@@ -162,8 +162,6 @@ $crms->ReportMsg('All <b>done</b> with nightly script.', 1);
 $body = $crms->get('messages');
 $body .= "  </body>\n</html>\n";
 
-#$crms->set('export_file', 'crms_2020-02-24_17_11_06.rights');
-#$crms->set('export_path', '/htapps/moseshll.babel/crms/prep/crms_2020-02-24_17_11_06.rights');
 EmailReport() if scalar @mails;
 
 print "Warning: $_\n" for @{$crms->GetErrors()};
@@ -203,7 +201,7 @@ $boundary--
 END_OF_BODY
   }
   my $bytes = Encode::encode('utf8', $message);
-  my %mail = ('from'         => 'crms-mailbot@umich.edu',
+  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
               'to'           => $to,
               'subject'      => $subj,
               'content-type' => $contentType,

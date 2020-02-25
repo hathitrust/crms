@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-BEGIN 
+BEGIN
 {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
@@ -193,7 +193,7 @@ if (scalar @mails)
   my $to = join ',', @mails;
   my $bytes = encode('utf8', $html);
   my $boundary = "====" . time() . "====";
-  my %mail = ('from'         => $crmsUS->GetSystemVar('adminEmail'),
+  my %mail = ('from'         => $crmsUS->GetSystemVar('senderEmail'),
               'to'           => $to,
               'subject'      => $title,
               'content-type' => "multipart/mixed; boundary=\"$boundary\""

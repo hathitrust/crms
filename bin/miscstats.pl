@@ -171,7 +171,7 @@ if (@mails)
   my $bytes = encode('utf8', $report);
   my $to = join ',', @mails;
   use Mail::Sendmail;
-  my %mail = ('from'         => 'crms-mailbot@umich.edu',
+  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
               'to'           => $to,
               'subject'      => $crms->SubjectLine('User Progress'),
               'content-type' => 'text/html; charset="UTF-8"',
