@@ -102,7 +102,7 @@ function saveProperty(type)
                 //console.log("USERS: found "+span);
                 var users = JSON.parse(sessionStorage.getItem(prefix+gSelectedProject));
                 span.innerHTML = users.length;
-                
+
               }
               //gRightsChanged = false;
             }
@@ -314,17 +314,20 @@ function populateProject(data, table)
   cell.innerHTML = data.determinationsCount;
   cell = row.insertCell(6);
   cell.className = 'nowrap';
-  cell.innerHTML = (data.autoinherit == 1)? '<img width="16" height="16" alt="Checked" src="[% checkicon %]"/>':'';
-  cell.style.textAlign = 'center';
+  cell.innerHTML = data.queue_size;
   cell = row.insertCell(7);
   cell.className = 'nowrap';
-  cell.innerHTML = (data.group_volumes == 1)? '<img width="16" height="16" alt="Checked" src="[% checkicon %]"/>':'';
+  cell.innerHTML = (data.autoinherit == 1)? '<img width="16" height="16" alt="Checked" src="[% checkicon %]"/>':'';
   cell.style.textAlign = 'center';
   cell = row.insertCell(8);
   cell.className = 'nowrap';
-  cell.innerHTML = (data.single_review == 1)? '<img width="16" height="16" alt="Checked" src="[% checkicon %]"/>':'';
+  cell.innerHTML = (data.group_volumes == 1)? '<img width="16" height="16" alt="Checked" src="[% checkicon %]"/>':'';
   cell.style.textAlign = 'center';
   cell = row.insertCell(9);
+  cell.className = 'nowrap';
+  cell.innerHTML = (data.single_review == 1)? '<img width="16" height="16" alt="Checked" src="[% checkicon %]"/>':'';
+  cell.style.textAlign = 'center';
+  cell = row.insertCell(10);
   if (data.primary_authority || data.secondary_authority)
   {
     var pa = (data.primary_authority)? data.primary_authority:'-';
@@ -332,7 +335,7 @@ function populateProject(data, table)
     cell.innerHTML = pa + '/' + sa;
   }
   cell.style.textAlign = 'center';
-  cell = row.insertCell(10);
+  cell = row.insertCell(11);
   var input = document.createElement('input');
   input.setAttribute('type', 'color');
   input.id = data.id+'color';
@@ -407,6 +410,7 @@ function addProject(name)
       <th>Candidates</th>
       <th>Queue</th>
       <th>Determinations</th>
+      <th>Queue Size</th>
       <th>Auto-Inherit</th>
       <th>Group Volumes</th>
       <th>Single Review</th>

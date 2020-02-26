@@ -165,7 +165,7 @@
   <table>
   [% IF expert %]
     <tr>
-      [% checked = (u_swiss || ((status == 2 || status == 3) && crms.GetSystemVar('swissByDefault'))) %]
+      [% checked = (u_swiss || ((status == 2 || status == 3) && data.project.SwissByDefault())) %]
       <td style="text-align:left;">
         <input type="checkbox" id="swiss" name="swiss" [% (checked)? 'checked="checked"':'' %]/>
       </td>

@@ -1549,7 +1549,7 @@ sub LoadQueueForProject
   my $project_name = $self->GetProjectRef($project)->name;
   my $sql = 'SELECT COUNT(*) FROM queue WHERE project=?';
   my $queueSize = $self->SimpleSqlGet($sql, $project);
-  my $targetQueueSize = $self->GetSystemVar('queueSize');
+  my $targetQueueSize = $self->GetProjectRef($project)->queue_size();
   my $needed = $targetQueueSize - $queueSize;
   $self->ReportMsg("Project $project_name: $queueSize volumes -- need $needed");
   return if $needed <= 0;
@@ -4668,7 +4668,8 @@ sub GetMonthStats
   my $total_und = $self->SimpleSqlGet($sql, $user, $start, $end, $proj);
   # time reviewing (in minutes) - not including outliers
   # default outlier seconds is 300 (5 min)
-  my $outSec = $self->GetSystemVar('outlierSeconds', 300);
+  my $outSec = $self->Projects()->{$proj}->OutlierSeconds();
+  #my $outSec = $self->GetSystemVar('outlierSeconds', 300);
   $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(r.duration)),0)/60.0'.
          ' FROM historicalreviews r INNER JOIN exportdata e ON r.gid=e.gid'.
          ' WHERE r.user=? AND r.legacy!=1 AND r.time>=? AND r.time<=?'.
@@ -8389,7 +8390,7 @@ sub GetProjectsRef
   my $self = shift;
 
   my @projects;
-  my $sql = 'SELECT p.id,p.name,COALESCE(p.color,"000000"),p.autoinherit,'.
+  my $sql = 'SELECT p.id,p.name,COALESCE(p.color,"000000"),p.queue_size,p.autoinherit,'.
             'p.group_volumes,p.single_review,a1.name,a2.name,'.
             '(SELECT COUNT(*) FROM projectusers pu INNER JOIN users u ON pu.user=u.id'.
             ' WHERE pu.project=p.id AND u.reviewer+u.advanced+u.expert+u.admin>0),'.
@@ -8403,11 +8404,11 @@ sub GetProjectsRef
   foreach my $row (@{$ref})
   {
     push @projects, {'id' => $row->[0], 'name' => $row->[1], 'color' => $row->[2],
-                     'autoinherit' => $row->[3], 'group_volumes' => $row->[4],
-                     'single_review' => $row->[5], 'primary_authority' => $row->[6],
-                     'secondary_authority' => $row->[7], 'userCount' => $row->[8],
-                     'queueCount' => $row->[9], 'candidatesCount' => $row->[10],
-                     'determinationsCount' => $row->[11]};
+                     'queue_size' => $row->[3], 'autoinherit' => $row->[4],
+                     'group_volumes' => $row->[5], 'single_review' => $row->[6],
+                     'primary_authority' => $row->[7], 'secondary_authority' => $row->[8],
+                     'userCount' => $row->[9], 'queueCount' => $row->[10],
+                     'candidatesCount' => $row->[11], 'determinationsCount' => $row->[12]};
     my $ref2 = $self->SelectAll('SELECT rights FROM projectrights WHERE project=?', $row->[0]);
     $projects[-1]->{'rights'} = [map {$_->[0]} @{$ref2}];
     $ref2 = $self->SelectAll('SELECT category FROM projectcategories WHERE project=?', $row->[0]);
