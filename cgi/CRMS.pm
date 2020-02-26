@@ -2919,8 +2919,8 @@ sub GetVolumesRef
     my $id = $row->[0];
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.data,'.
            'r.expert,r.category,r.legacy,q.priority,q.project,r.swiss,q.status,b.title,'.
-           'b.author,YEAR(b.pub_date),b.country,b.sysid,q.src,'.
-           (($page eq 'adminHistoricalReviews')? 'r.validated,q.gid':'r.hold').
+           'b.author,YEAR(b.pub_date),b.country,b.sysid,'.
+           (($page eq 'adminHistoricalReviews')? 'q.src,r.validated,q.gid':'r.hold').
            " FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id".
            " WHERE r.id='$id' ORDER BY $order $dir";
     $sql .= ',r.time ASC' unless $order eq 'r.time';
@@ -2949,11 +2949,11 @@ sub GetVolumesRef
                   pubdate    => $row->[17],
                   country    => $row->[18],
                   sysid      => $row->[19],
-                  src        => $row->[20],
-                  hold       => $row->[21]
+                  hold       => $row->[20]
                  };
       if ($page eq 'adminHistoricalReviews')
       {
+        ${$item}{'src'} = $row->[20],
         ${$item}{'validated'} = $row->[21];
         ${$item}{'gid'} = $row->[22];
       }
@@ -2999,8 +2999,8 @@ sub GetVolumesRefWide
     my $id = $row->[0];
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.data,'.
            'r.expert,r.category,r.legacy,q.priority,q.project,r.swiss,q.status,b.title,'.
-           'b.author,YEAR(b.pub_date),b.country,b.sysid,q.src,'.
-           (($page eq 'adminHistoricalReviews')? 'r.validated,q.gid':'r.hold').
+           'b.author,YEAR(b.pub_date),b.country,b.sysid,'.
+           (($page eq 'adminHistoricalReviews')? 'q.src,r.validated,q.gid':'r.hold').
            " FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id".
            " WHERE r.id='$id' ORDER BY $order $dir";
     $sql .= ',r.time ASC' unless $order eq 'r.time';
@@ -3029,11 +3029,11 @@ sub GetVolumesRefWide
                   pubdate    => $row->[17],
                   country    => $row->[18],
                   sysid      => $row->[19],
-                  src        => $row->[20],
-                  hold       => $row->[21]
+                  hold       => $row->[20]
                  };
       if ($page eq 'adminHistoricalReviews')
       {
+        ${$item}{'src'} = $row->[20];
         ${$item}{'validated'} = $row->[21];
         ${$item}{'gid'} = $row->[22];
       }
