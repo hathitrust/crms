@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-BEGIN 
+BEGIN
 {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
@@ -297,7 +297,7 @@ if (scalar @mails)
   {
     use Mail::Sendmail;
     my $bytes = encode('utf8', $html);
-    my %mail = ('from'         => 'crms-mailbot@umich.edu',
+    my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
                 'to'           => join ',', @mails,
                 'subject'      => $title,
                 'content-type' => 'text/html; charset="UTF-8"',

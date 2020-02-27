@@ -89,7 +89,11 @@ foreach my $row (@{$ref})
     my $ref2 = $crms->SelectAll($sql, $id);
     my $author = $ref2->[0]->[0] || '';
     my $title = $ref2->[0]->[1] || '';
-    my $page = ($wait)? 'adminHistoricalReviews':'editReviews';
+    my $page = 'adminReviews';
+    if ($to)
+    {
+      $page = ($wait)? 'adminHistoricalReviews':'editReviews';
+    }
     my $link = '<a href="'. $crms->Host().
                $crms->WebPath('cgi', 'crms?p='. $page. '&search1=Identifier&search1value='. $id).
                '">'. $id. '</a>';

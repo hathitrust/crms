@@ -6,6 +6,8 @@ BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
 
 use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
+use Mail::Sendmail;
+use Encode;
 
 my $usage = <<END;
 USAGE: $0 [-acCehlNpqtv] [-m MAIL [-m MAIL...]] [start_date [end_date]]
@@ -160,21 +162,51 @@ $crms->ReportMsg('All <b>done</b> with nightly script.', 1);
 $body = $crms->get('messages');
 $body .= "  </body>\n</html>\n";
 
-if (scalar @mails)
+EmailReport() if scalar @mails;
+
+print "Warning: $_\n" for @{$crms->GetErrors()};
+
+
+
+sub EmailReport
 {
+  my $file = $crms->get('export_file');
+  my $path = $crms->get('export_path');
   @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
   my $to = join ',', @mails;
-  $crms->ReportMsg("Sending to $to\n") if $verbose;
-  use Encode;
-  use Mail::Sendmail;
-  my $bytes = encode('utf8', $body);
-  my %mail = ('from'         => 'crms-mailbot@umich.edu',
+  my $contentType = 'text/html; charset="UTF-8"';
+  my $message = $body;
+  if ($file && $path)
+  {
+    my $boundary = "====" . time() . "====";
+    $contentType = "multipart/mixed; boundary=\"$boundary\"";
+    open (my $FH, '<', $path) or die "Cannot read $path: $!";
+    binmode $FH; undef $/;
+    my $enc = <$FH>;
+    close $FH;
+    $boundary = '--'.$boundary;
+    $message = <<END_OF_BODY;
+$boundary
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+$body
+$boundary
+Content-Type: text/plain; charset="UTF-8"; name="$file"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="$file"
+
+$enc
+$boundary--
+END_OF_BODY
+  }
+  my $bytes = Encode::encode('utf8', $message);
+  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
               'to'           => $to,
               'subject'      => $subj,
-              'content-type' => 'text/html; charset="UTF-8"',
-              'body'         => $bytes
+              'content-type' => $contentType,
+              'body'         => $message
               );
   sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n");
 }
-
 

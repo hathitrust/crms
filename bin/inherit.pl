@@ -430,7 +430,7 @@ if (scalar @mails)
   use Mail::Sendmail;
   use Encode;
   my $bytes = encode('utf8', $txt);
-  my %mail = ('from'         => $crms->GetSystemVar('adminEmail'),
+  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
               'to'           => $to,
               'subject'      => $subj,
               'content-type' => 'text/html; charset="UTF-8"',

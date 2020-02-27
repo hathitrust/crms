@@ -340,7 +340,7 @@ if (@mails)
   use Mail::Sendmail;
   my $bytes = encode('utf8', $txt);
   my $to = join ',', @mails;
-  my %mail = ('from'         => from => $crms->GetSystemVar('adminEmail', ''),
+  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
               'to'           => $to,
               'subject'      => $title,
               'content-type' => 'text/html; charset="UTF-8"',

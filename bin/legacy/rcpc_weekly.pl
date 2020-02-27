@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-BEGIN 
+BEGIN
 {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
@@ -49,10 +49,6 @@ my $crms = CRMS->new(
     instance => $instance
 );
 
-my $sender = new Mail::Sender { smtp => 'mail.umdl.umich.edu',
-                                from => 'crms-mailbot@umich.edu',
-                                on_errors => 'undef' }
-or die "Error in mailing : $Mail::Sender::Error\n";
 
 my $start = $crms->SimpleSqlGet('SELECT DATE_SUB(NOW(), INTERVAL 1 WEEK)');
 my $startFmt = $crms->FormatDate($start);
@@ -99,7 +95,7 @@ else
   {
     use Mail::Sendmail;
     my $bytes = encode('utf8', $msg);
-    my %mail = ('from'         => 'crms-mailbot@umich.edu',
+    my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
                 'to'           => $to,
                 'subject'      => $crms->SubjectLine('RCPC Progress Report'),
                 'content-type' => 'text/html; charset="UTF-8"',

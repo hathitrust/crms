@@ -8,12 +8,11 @@ sub new
   my ($class, %args) = @_;
   my $self = bless {}, $class;
   $self->{$_} = $args{$_} for keys %args;
-  $self->{'crms'} = $args{'crms'};
+  my $id = $args{'id'};
   die "No CRMS object passed to project" unless $args{'crms'};
-  #$self->{'id'}   = $args{'id'};
-  #$self->{'name'} = $args{'name'};
-  #$self->{'color'} = $args{'color'};
-  #$self->{'single_review'} = $args{'single_review'};
+  my $sql = 'SELECT * FROM projects WHERE id=?';
+  my $ref = $self->{'crms'}->get('dbh')->selectall_hashref($sql, 'id', undef, $id);
+  $self->{$_} = $ref->{$id}->{$_} for keys %{$ref->{$id}};
   return $self;
 }
 
@@ -36,6 +35,13 @@ sub color
   my $self = shift;
 
   return $self->{'color'};
+}
+
+sub queue_size
+{
+  my $self = shift;
+
+  return $self->{'queue_size'};
 }
 
 sub autoinherit
@@ -92,7 +98,7 @@ sub EvaluateCandidacy
   return {'status' => 'no', 'msg' => $self->{'name'}. ' project does not take candidates'};
 }
 
-# ========== REVIEW ========== #
+# ========== REVIEW INTERFACE ========== #
 # Called by CRMS::GetNextItemForReview to order volumes.
 # Return undef for no additional order (the default), or
 # a column name in bibdata (b.*) or the queue (q.*).
@@ -115,6 +121,13 @@ sub ShowCountry
   return 0;
 }
 
+# Check Experts' "do not invalidate" checkbox on page load
+sub SwissByDefault
+{
+  return 0;
+}
+
+# ========== REVIEW SUBMISSION ========== #
 # Extract Project-specific data from the CGI into a struct
 # that will be encoded as JSON string in the reviewdata table.
 sub ExtractReviewData
@@ -242,5 +255,13 @@ sub InheritanceAllowed
   return 1;
 }
 
+# ========== MISCELLANEOUS ========== #
+# Duration of review at which review becomes an outlier and we
+# assume the reviewer just walked away from the computer.
+# This is always just a stupid heuristic.
+sub OutlierSeconds
+{
+  return 300;
+}
 
 1;

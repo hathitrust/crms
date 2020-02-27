@@ -80,7 +80,7 @@ foreach my $user (@recips)
   print "Sending to $user\n" if $verbose;
   if (!$quiet)
   {
-    my %mail = ('from'         => 'crms-mailbot@umich.edu',
+    my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
                 'to'           => $user,
                 'subject'      => $crms->SubjectLine('7 Day Out-of-System Automated Reminder'),
                 'content-type' => 'text/html; charset="UTF-8"',
