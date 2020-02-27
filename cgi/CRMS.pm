@@ -8505,7 +8505,7 @@ sub Projects
   my $objs = $self->get('Projects');
   if (!$objs)
   {
-    my $sql = 'SELECT id,name,color,single_review FROM projects ORDER BY id ASC';
+    my $sql = 'SELECT id,name FROM projects ORDER BY id ASC';
     my $ref = $self->SelectAll($sql);
     foreach my $row (@{$ref})
     {
@@ -8516,8 +8516,7 @@ sub Projects
       my $file = 'Project/'. $class. '.pm';
       eval {
           require $file;
-          $obj = $class->new('crms' => $self, 'id' => $id, 'name' => $row->[1],
-                             'color' => $row->[2], 'single_review' => $row->[3]);
+          $obj = $class->new('crms' => $self, 'id' => $id);
       };
       if ($@)
       {
@@ -8529,8 +8528,7 @@ sub Projects
         {
           $class = 'Project';
           require Project;
-          $obj = $class->new('crms' => $self, 'id' => $id, 'name' => $row->[1],
-                             'color' => $row->[2], 'single_review' => $row->[3]);
+          $obj = $class->new('crms' => $self, 'id' => $id);
         }
       }
       $objs->{$id} = $obj;

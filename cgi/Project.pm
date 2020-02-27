@@ -8,12 +8,11 @@ sub new
   my ($class, %args) = @_;
   my $self = bless {}, $class;
   $self->{$_} = $args{$_} for keys %args;
-  $self->{'crms'} = $args{'crms'};
+  my $id = $args{'id'};
   die "No CRMS object passed to project" unless $args{'crms'};
-  #$self->{'id'}   = $args{'id'};
-  #$self->{'name'} = $args{'name'};
-  #$self->{'color'} = $args{'color'};
-  #$self->{'single_review'} = $args{'single_review'};
+  my $sql = 'SELECT * FROM projects WHERE id=?';
+  my $ref = $self->{'crms'}->get('dbh')->selectall_hashref($sql, 'id', undef, $id);
+  $self->{$_} = $ref->{$id}->{$_} for keys %{$ref->{$id}};
   return $self;
 }
 
