@@ -69,7 +69,7 @@ sub new
 
 sub Version
 {
-  return '8.2.6';
+  return '8.2.7';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -1154,6 +1154,12 @@ sub GetExportFh
   $date    =~ s/ /_/g;
   my $filename = 'crms_'. $date. '.rights';
   my $perm = $self->FSPath('prep', $filename);
+  if ($self->WhereAmI() eq 'Production')
+  {
+    $perm = $self->GetSystemVar('productionRightsDirectory');
+    $perm .= '/' unless substr($perm, -1) eq '/';
+    $perm .= $filename;
+  }
   my $temp = $perm . '.tmp';
   if (-f $temp) { die "file already exists: $temp\n"; }
   open (my $fh, '>', $temp) || die "failed to open exported file ($temp): $!\n";
