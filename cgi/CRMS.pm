@@ -93,7 +93,8 @@ sub SetupUser
   my ($ht_user, $crms_user);
   my $usersql = 'SELECT COUNT(*) FROM users WHERE id=?';
   my $htsql = 'SELECT email FROM ht_users WHERE userid=?';
-  my $candidate = lc $ENV{'REMOTE_USER'};
+  my $candidate = $ENV{'REMOTE_USER'};
+  $candidate = lc $candidate if defined $candidate;
   $note .= sprintf "ENV{REMOTE_USER}=%s\n", (defined $candidate)? $candidate:'<undef>';
   if ($candidate)
   {
@@ -118,7 +119,8 @@ sub SetupUser
   }
   if (!$crms_user || !$ht_user)
   {
-    $candidate = lc $ENV{'email'};
+    $candidate = $ENV{'email'};
+    $candidate = lc $candidate if defined $candidate;
     $candidate =~ s/\@umich.edu// if defined $candidate;
     $note .= sprintf "ENV{email}=%s\n", (defined $candidate)? $candidate:'<undef>';
     if ($candidate)
