@@ -116,6 +116,7 @@
      onfocus="document.getElementById('NoteTextField').focus()">.</a>
 </div>
 <div id="SubmitForm">
+  <button type="submit" disabled style="display: none" aria-hidden="true"></button>
   <table>
     <tr>
       <td><input class="review" type="submit" name="submit" value="Submit" accesskey="s"/></td>
