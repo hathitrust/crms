@@ -4,7 +4,7 @@
 <a href="[% crms.WebPath('web', 'pdf/UserLevelsPrivileges.pdf') %]"
    target="_blank">Explanation of User Levels/Privileges</a><br/><br/>
 
-[% id         = cgi.param('id')         %]
+[% id         = cgi.param('id').lower   %]
 [% kerberos   = cgi.param('kerberos')   %]
 [% add        = cgi.param('add')        %]
 [% name       = cgi.param('name')       %]

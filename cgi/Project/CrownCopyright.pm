@@ -156,6 +156,7 @@ sub ExtractReviewData
   if ($date)
   {
     $data = {'date' => $date};
+    # I don't think any of this is used, code is from Commonwealth project.
     $data->{'pub'} = 1 if $cgi->param('pub');
     $data->{'crown'} = 1 if $cgi->param('crown');
     $data->{'src'} = $cgi->param('src') if $cgi->param('src');
@@ -177,7 +178,7 @@ sub FormatReviewData
 
   my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
   my $data = $jsonxs->decode($json);
-  my $fmt = sprintf 'Pub <strong>%s</strong> %s', $data->{'date'};
+  my $fmt = sprintf 'Pub <strong>%s</strong>', $data->{'date'};
   return {'id' => $id, 'format' => $fmt, 'format_long' => ''};
 }
 
