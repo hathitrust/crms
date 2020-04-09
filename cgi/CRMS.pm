@@ -69,7 +69,7 @@ sub new
 
 sub Version
 {
-  return '8.2.8';
+  return '8.2.9';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -119,7 +119,7 @@ sub SetupUser
   if (!$crms_user || !$ht_user)
   {
     $candidate = lc $ENV{'email'};
-    $candidate =~ s/\@umich.edu//;
+    $candidate =~ s/\@umich.edu// if defined $candidate;
     $note .= sprintf "ENV{email}=%s\n", (defined $candidate)? $candidate:'<undef>';
     if ($candidate)
     {
@@ -684,8 +684,9 @@ sub AuthDebugData
   my $self = shift;
   my $html = shift;
 
-  my $msg = $self->get('id_note') || '';
-  $msg .= "\n". $self->get('auth_note');
+  my $note1 = $self->get('id_note') || '';
+  my $note2 = $self->get('auth_note') || '';
+  my $msg = $note1. "\n". $note2;
   if ($html)
   {
     $msg = CGI::escapeHTML($msg);
@@ -7808,14 +7809,14 @@ sub Authorities
     }
     if ($url =~ m/__AUTHOR__/)
     {
-      my $a2 = $a;
+      my $a2 = $a || '';
       $a2 =~ s/(.+?)\(.*\)/$1/;
       $a2 = uri_escape_utf8($a2);
       $url =~ s/__AUTHOR__/$a2/g;
     }
     if ($url =~ m/__AUTHOR_(\d+)__/)
     {
-      my $a2 = $a;
+      my $a2 = $a || '';
       if ($name eq 'NGCOBA' && $a =~ m/^ma?c(.)/i)
       {
         $a2 = 'm1';
@@ -7827,7 +7828,7 @@ sub Authorities
       }
       else
       {
-        $a2 = lc substr($a, 0, $1);
+        $a2 = lc substr($a2, 0, $1);
       }
       $a2 = uri_escape_utf8($a2);
       $url =~ s/__AUTHOR_\d+__/$a2/g;
@@ -7835,7 +7836,7 @@ sub Authorities
     if ($url =~ m/__AUTHOR_F__/)
     {
       my $a2 = '';
-      if ($a =~ m/^.*?([A-Za-z]+)/)
+      if (defined $a && $a =~ m/^.*?([A-Za-z]+)/)
       {
         $a2 = $1;
       }
@@ -7843,25 +7844,25 @@ sub Authorities
     }
     if ($url =~ m/__TITLE__/)
     {
-      my $t = $self->GetTitle($id);
+      my $t = $self->GetTitle($id) || '';
       $t = uri_escape_utf8($t);
       $url =~ s/__TITLE__/$t/g;
     }
     if ($url =~ m/__TICKET__/)
     {
-      my $t = $self->SimpleSqlGet('SELECT ticket FROM queue WHERE id=?', $id);
+      my $t = $self->SimpleSqlGet('SELECT COALESCE(ticket,"") FROM queue WHERE id=?', $id);
       $url =~ s/__TICKET__/$t/g;
     }
     if ($url =~ m/__SYSID__/)
     {
-      my $sysid = $self->BarcodeToId($id);
+      my $sysid = $self->BarcodeToId($id) || '';
       $url =~ s/__SYSID__/$sysid/g;
     }
     if ($url =~ m/__SHIB__/)
     {
-      my $user = $self->get('remote_user');
+      my $user = $self->get('remote_user') || '';
       $user .= '@umich.edu' unless $user =~ m/@/;
-      my $idp = $self->GetIDP($user);
+      my $idp = $self->GetIDP($user) || '';
       $url =~ s/__SHIB__/$idp/g;
     }
     if ($url =~ m/__HATHITRUST__/)
