@@ -93,7 +93,7 @@ sub SetupUser
   my ($ht_user, $crms_user);
   my $usersql = 'SELECT COUNT(*) FROM users WHERE id=?';
   my $htsql = 'SELECT email FROM ht_users WHERE userid=?';
-  my $candidate = $ENV{'REMOTE_USER'};
+  my $candidate = lc $ENV{'REMOTE_USER'};
   $note .= sprintf "ENV{REMOTE_USER}=%s\n", (defined $candidate)? $candidate:'<undef>';
   if ($candidate)
   {
@@ -108,7 +108,7 @@ sub SetupUser
     if ($self->SimpleSqlGet($usersql, $candidate))
     {
       $crms_user = $candidate;
-      $note .= "Set crms_user=$crms_user from ENV{REMOTE_USER}\n";
+      $note .= "Set crms_user=$crms_user from lc ENV{REMOTE_USER}\n";
     }
     if (!$crms_user && $self->SimpleSqlGet($usersql, $candidate2))
     {
@@ -118,7 +118,7 @@ sub SetupUser
   }
   if (!$crms_user || !$ht_user)
   {
-    $candidate = $ENV{'email'};
+    $candidate = lc $ENV{'email'};
     $candidate =~ s/\@umich.edu// if defined $candidate;
     $note .= sprintf "ENV{email}=%s\n", (defined $candidate)? $candidate:'<undef>';
     if ($candidate)
@@ -134,7 +134,7 @@ sub SetupUser
       if ($self->SimpleSqlGet($usersql, $candidate) && !$crms_user)
       {
         $crms_user = $candidate;
-        $note .= "Set crms_user=$crms_user from ENV{email}\n";
+        $note .= "Set crms_user=$crms_user from lc ENV{email}\n";
       }
       if (!$crms_user && $self->SimpleSqlGet($usersql, $candidate2) && !$crms_user)
       {
