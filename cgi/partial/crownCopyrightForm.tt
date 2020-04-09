@@ -134,7 +134,7 @@
       <td><label for="swiss">Do not invalidate other reviews<br/>for this volume</label></td>
     </tr>
   [% END %]
-  [% #holds = crms.CountHolds() %]
+  [% holds = crms.CountHolds() %]
   [% IF !hold %]
     [% hold = crms.HoldForItem(htid, user) %]
   [% END %]
@@ -142,20 +142,21 @@
       <td style="text-align:left;">
         <input type="checkbox" id="hold" name="hold"
                [% #(holds >=50 && !hold)? 'disabled="disabled"':'' %]
-               [% (hold)? 'checked="checked"':'' %]
-               onclick="toggleVisibility('expiry');"/>
+               [% (hold)? 'checked="checked"':'' %] />
       </td>
       <td><label for="hold">Hold for Question</label></td>
     </tr>
+    [% IF holds > 0 %]
     <tr>
       <td colspan="2">
-        <span class="smallishText" [% (holds >=5)? 'style="color:red;"':'' %]>
+        <span class="smallishText">
             <!--Held reviews will remain unprocessed.-->
-            You currently have [% holds %] out of the maximum 50 volumes on hold.
+            You currently have [% holds %] [% crms.Pluralize('volume', holds) %] on hold.
             <!--It is up to you to get in touch with an expert.-->
         </span>
       </td>
     </tr>
+    [% END %]
   </table>
   [% IF expert && importUser %]
     [% reviews = data.reviews %]
