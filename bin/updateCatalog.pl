@@ -81,7 +81,7 @@ if (defined $lastUpdate && $lastUpdate =~ m/^zephir_upd_(\d{8}).json.gz$/i)
 {
   $lastDate = $1 if $1 gt $lastDate;
 }
-my $catalogPath = '/htapps/moseshll.babel/';
+my $catalogPath = '/htapps/archive/catalog/';
 
 opendir(DIR, "$catalogPath") or die "Can't open $catalogPath\n";
 my @files = sort readdir(DIR);
