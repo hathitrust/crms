@@ -34,6 +34,8 @@
         [% IF sysid %]
           [% link = crms.LinkToCatalog(sysid) %]
           <a style="color:white;" href="[% link %]" target="_blank">$sysid</a>
+          [% link = "https://catalog.hathitrust.org/Record/" _ sysid _ ".marc" %]
+          <a style="color:white;" href="[% link %]" target="_blank">MARC View</a>
           &nbsp;&nbsp;&nbsp;&nbsp;
           [% IF sysid.substr(0, 1) == '0' %]
             [% link = crms.LinkToMirlynDetails(sysid) %]
@@ -87,7 +89,7 @@
             <span [% style %]>[% line.2 %]</span><br/>
           [% END %]
         </td>
-        
+
         <td class="nowrap" headers="USRightTH">
           [% FOREACH line IN data.data %]
             [% id2 = line.0 %]
