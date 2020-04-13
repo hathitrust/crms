@@ -71,7 +71,6 @@ sub EvaluateCandidacy
   {
     push @errs, "foreign pub ($where)";
   }
-  push @errs, "foreign pub ($where)" if $where ne 'USA';
   push @errs, 'non-BK format' unless $record->isFormatBK($id, $record);
   push @errs, 'not a state government document' unless $self->IsStateGovDoc($id, $record);
   if (scalar @errs)
