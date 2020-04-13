@@ -182,7 +182,7 @@ sub fmt
                'p' => 'Mixed materials',
                'r' => 'Three-dimensional artifact or naturally occurring object',
                't' => 'Manuscript language material');
-  
+
   my %levs = ('a' => 'Monographic component part',
               'b' => 'Serial component part',
               'c' => 'Collection',
@@ -414,7 +414,7 @@ sub get_volume_date
   my $low;
   my $high;
   my $date;
-  
+
   # umdl item descriptions may contain NNNN.NNN--if so, return null
   $item_desc =~ /^\d{4}\.[a-z0-9]{3}$/i and return '';
 
@@ -437,8 +437,8 @@ sub get_volume_date
   $item_desc =~ s/(jan|feb|mar|apr|may|jun|jul|aug|sept|sep|oct|nov|dec)\.{0,1}-{0,1}//gi;
   $item_desc =~ s/(winter|spring|summer|fall|autumn)-{0,1}//gi;
   $item_desc =~ s/(supplement|suppl|quarter|qtr|jahr)\.{0,1}-{0,1}//gi;
-  
-  # report numbers 
+
+  # report numbers
   #no.CR-2291 1973
   $item_desc =~ s/\b[a-zA-Z.]+-\d+//;
 
@@ -474,7 +474,7 @@ sub get_volume_date
   # reality check--
   #$vol_date < 1700 and $vol_date = '';
   return $vol_date;
-}  
+}
 
 sub language
 {
@@ -492,6 +492,59 @@ sub country
   my $code = substr($self->GetControlfield('008'), 15, 3);
   use Countries;
   return Countries::TranslateCountry($code, $long);
+}
+
+# Returns hash of us-> and non-us-> arrays of normalized city names.
+sub cities
+{
+  my $self  = shift;
+
+  my $data = {'us' => [], 'non-us' => []};
+  my $fields = $self->GetAllSubfields('260', 'a');
+  foreach my $field (@$fields)
+  {
+    my $where = _NormalizeCity($field);
+    my $cities = $self->get('us_cities');
+    $cities = $self->_ReadCities() unless $cities;
+    if (defined $cities->{$where})
+    {
+      push @{$data->{'us'}}, $field;
+    }
+    else
+    {
+      push @{$data->{'non-us'}}, $field;
+    }
+  }
+  return $data;
+}
+
+sub _ReadCities
+{
+  my $self = shift;
+
+  my $crms = $self->get('crms');
+  my $in = $crms->FSPath('bin', 'us_cities.txt');
+  open (FH, '<', $in) || $crms->SetError("Could not open $in");
+  my $cities = {};
+  while (<FH>) { chomp; $cities->{$_} = 1; }
+  close FH;
+  $self->set('us_cities', $cities);
+  return $cities;
+}
+
+# This is code from Tim for normalizing the 260 subfield for U.S. cities.
+sub _NormalizeCity
+{
+  my $suba = shift;
+
+  $suba =~ tr/A-Za-z / /c;
+  $suba = lc($suba);
+  $suba =~ s/ and / /;
+  $suba =~ s/ etc / /;
+  $suba =~ s/ dc / /;
+  $suba =~ s/\s+/ /g;
+  $suba =~ s/^\s*(.*?)\s*$/$1/;
+  return $suba;
 }
 
 sub enumchron
@@ -700,12 +753,11 @@ sub GetAllSubfields
     my $nodes = $xml->findnodes($xpath);
     foreach my $node ($nodes->get_nodelist())
     {
-      my $doc = $node->findvalue("./*[local-name()='subfield' and \@code='$code']");
-      push @data, $doc;
+      push @data, $node->textContent;
     }
   };
   if ($@) { $self->SetError($self->id . " GetAllSubfields failed: $@"); }
-  
+
   return \@data;
 }
 

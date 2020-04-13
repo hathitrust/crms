@@ -46,8 +46,22 @@ sub EvaluateCandidacy
     push @errs, "pub date $pub not in range $min-$max" if $pub < $min or $pub > $max;
   }
   push @errs, 'gov doc' if $self->IsGovDoc($record);
+  # Out of scope if published in a non-US country, or if Undetermined country
+  # and foreign city or no US city.
+  # I.e., explicitly undetermined place requires 1+ US and 0 foreign cities.
   my $where = $record->country;
-  push @errs, "foreign pub ($where)" if $where ne 'USA';
+  my $cities = $record->cities;
+  if ($where =~ m/^Undetermined/i)
+  {
+    if (!scalar @{$cities->{'us'}} || scalar @{$cities->{'non-us'}})
+    {
+      push @errs, 'undetermined pub place';
+    }
+  }
+  elsif ($where ne 'USA')
+  {
+    push @errs, "foreign pub ($where)";
+  }
   push @errs, 'non-BK format' unless $record->isFormatBK($id, $record);
   #printf "Core candidacy: errors '%s'\n", join ', ', @errs;
   if (scalar @errs)
