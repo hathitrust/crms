@@ -55,7 +55,22 @@ sub EvaluateCandidacy
     my $max = 1977;
     push @errs, "pub date $pub not in range $min-$max" if $pub < $min or $pub > $max;
   }
+  # Out of scope if published in a non-US country, or if Undetermined country
+  # and foreign city or no US city.
+  # I.e., explicitly undetermined place requires 1+ US and 0 foreign cities.
   my $where = $record->country;
+  my $cities = $record->cities;
+  if ($where =~ m/^Undetermined/i)
+  {
+    if (!scalar @{$cities->{'us'}} || scalar @{$cities->{'non-us'}})
+    {
+      push @errs, 'undetermined pub place';
+    }
+  }
+  elsif ($where ne 'USA')
+  {
+    push @errs, "foreign pub ($where)";
+  }
   push @errs, "foreign pub ($where)" if $where ne 'USA';
   push @errs, 'non-BK format' unless $record->isFormatBK($id, $record);
   push @errs, 'not a state government document' unless $self->IsStateGovDoc($id, $record);

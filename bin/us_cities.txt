@@ -1276,8 +1276,6 @@ jefferson nc
 jericho ny
 jersey city
 jersey city nj
-jerusalem
-jerusalem israel
 jessup md
 joliet
 joliet ill
@@ -1714,7 +1712,6 @@ morrisania ny
 morristown nj
 morrisville nc
 moscow idaho
-mount carmel israel
 mount kisco ny
 mount morris ill
 mount sterling ky crescent dr mount sterling
