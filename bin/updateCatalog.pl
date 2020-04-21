@@ -141,6 +141,9 @@ elsif (defined $nextUpdateFile)
 my $alarmFired = 0;
 local $SIG{ALRM} = sub { $report .= "ALARM FIRED<br/>\n"; $alarmFired = 1; };
 
+# De-spam the output of this script.
+exit(0) unless defined $fileToProcess;
+
 if (!defined $fileToProcess)
 {
   $report .= "<b>No file found to process.</b><br/>\n";
@@ -248,9 +251,10 @@ else
 $report .= "<i>Warning: $_</i><br/>\n" for @{$crms->GetErrors()};
 
 
-my $subj = $crms->SubjectLine('Catalog Update');
+
 if (@mails)
 {
+  my $subj = $crms->SubjectLine('Catalog Update');
   @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
   my $bytes = encode('utf8', $report);
   my $to = join ',', @mails;

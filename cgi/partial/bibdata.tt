@@ -3,22 +3,27 @@
     <tr><td><strong>ID:</strong> [% htid %]</td></tr>
     <tr><td><strong>Title:</strong> [% data.bibdata.title_format %]</td></tr>
     <tr><td><strong>Author:</strong> [% data.bibdata.author_format %]</td></tr>
-    <tr>
-      <td><strong>Pub Date:</strong>
-        <span id="pubDateSpan"
-          [% IF data.bibdata.pub_date_format.match('^\d+-\d*$') %]class="red"[% END %]>
-          [% data.bibdata.pub_date_format %]
-        </span>
-      </td>
-    </tr>
+    [% IF data.project.ShowPubDate() %]
+      <tr>
+        <td><strong>Pub Date:</strong>
+          <span id="pubDateSpan"
+            [% IF data.bibdata.pub_date_format.match('^\d+-\d*$') %]class="red"[% END %]>
+            [% data.bibdata.pub_date_format %]
+          </span>
+        </td>
+      </tr>
+    [% END %]
     [% IF data.project.ShowCountry() %]
       <tr><td><strong>Country:</strong> [% data.bibdata.country %]</td></tr>
     [% END %]
+    [% projs = crms.GetUserProjects() %]
+    [% IF projs.count > 1 %]
     <tr><td class="nowrap">
       <strong>Project:</strong> [% data.project.name %]
       [% IF data.project.color.length %]
         <p style="border:1px solid;margin-left:4px;display:inline-block;width:10px;height:10px;background:#[% data.project.color %];"></p>
       [% END %]
     </td></tr>
+    [% END %]
   </table>
 </div>
