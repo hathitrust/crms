@@ -69,7 +69,7 @@ sub new
 
 sub Version
 {
-  return '8.2.11';
+  return '8.2.12';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -1614,7 +1614,9 @@ sub LoadQueueForProject
           $self->ReportMsg("Filtering $id2 as $src ($sysid)");
           $self->Filter($id2, $src);
         }
-        else
+        # Allow for static loads in projects that default to Project.pm behavior
+        # in not allowing further candidates.
+        elsif (!$eval->{'default'})
         {
           $self->ReportMsg(sprintf("Will delete $id2: %s ($sysid", $eval->{'msg'}));
           $dels{$id2} = 1;

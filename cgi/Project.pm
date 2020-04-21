@@ -95,7 +95,8 @@ sub EvaluateCandidacy
   my $attr   = shift;
   my $reason = shift;
 
-  return {'status' => 'no', 'msg' => $self->{'name'}. ' project does not take candidates'};
+  return {'status' => 'no', 'default' => 'yes',
+          'msg' => $self->{'name'}. ' project does not take candidates'};
 }
 
 # ========== REVIEW INTERFACE ========== #
@@ -119,6 +120,12 @@ sub ReviewPartials
 sub ShowCountry
 {
   return 0;
+}
+
+# Show the publication/copyright date in the bibdata partial.
+sub ShowPubDate
+{
+  return 1;
 }
 
 # Check Experts' "do not invalidate" checkbox on page load
