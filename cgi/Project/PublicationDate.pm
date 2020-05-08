@@ -113,12 +113,14 @@ sub ExtractReviewData
   my $cgi  = shift;
 
   my $date = $cgi->param('date');
+  my $approximate = $cgi->param('approximate');
   my $country = $cgi->param('country');
   my $data;
-  if (defined $date || defined $country)
+  if (defined $date || defined $country || defined $approximate)
   {
     $data = {};
     $data->{'date'} = $date if defined $date and length $date;
+    $data->{'approximate'} = $approximate if defined $approximate and length $approximate;
     $data->{'country'} = $country if defined $country and length $country;
   }
   return $data;
@@ -139,7 +141,12 @@ sub FormatReviewData
   my $data = $jsonxs->decode($json);
   my @fmts;
   push @fmts, Countries::TranslateCountry($data->{'country'}) if $data->{'country'};
-  push @fmts, $data->{'date'} if $data->{'date'};
+  if ($data->{'date'})
+  {
+    my $date = $data->{'date'};
+    $date = '&#x2245;'. $date if $data->{'approximate'};
+    push @fmts, $date;
+  }
   my $fmt = (scalar @fmts)? join(', ', @fmts) : undef;
   return {'id' => $id, 'format' => $fmt, 'format_long' => ''};
 }
