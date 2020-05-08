@@ -69,7 +69,7 @@ sub new
 
 sub Version
 {
-  return '8.2.12';
+  return '8.2.13';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
