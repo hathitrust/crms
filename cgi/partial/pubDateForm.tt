@@ -3,6 +3,7 @@
 
 [% # Set up values from CGI (in case of error) or existing review (editing). %]
 [% u_date = (error)? cgi.param('date') : data.reviews.$user.data.date %]
+[% u_approx = (error)? cgi.param('approximate') : data.reviews.$user.data.approximate %]
 [% u_country = (error)? cgi.param('country') : data.reviews.$user.data.country %]
 [% u_rights = (error)? cgi.param('rights') : data.reviews.$user.rights %]
 [% u_category = (error)? cgi.param('category') : data.reviews.$user.category %]
@@ -34,6 +35,12 @@
       [% END %]
       <a style="position:absolute;left:-999px;" href="#" accesskey="d"
          onfocus="document.getElementById('renewalField').focus()">.</a>
+      </td>
+    </tr>
+    <tr>
+      <td><label for="approx_cb">Date is Approximate</label></td>
+      <td style="text-align:left;">
+        <input type="checkbox" id="approx_cb" name="approximate" [% (u_approx)? 'checked="checked"':'' %]/>
       </td>
     </tr>
     <td class="nowrap">
