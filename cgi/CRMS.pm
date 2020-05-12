@@ -69,7 +69,7 @@ sub new
 
 sub Version
 {
-  return '8.2.14';
+  return '8.2.16';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -1605,28 +1605,27 @@ sub LoadQueueForProject
         next;
       }
       my $eval = $self->EvaluateCandidacy($id2, $record, $project);
-      if ($eval->{'status'} eq 'no' || $eval->{'status'} eq 'filter')
+      if ($eval->{'status'} eq 'filter')
       {
-        my $src;
-        $src = $eval->{'msg'} if $eval->{'status'} eq 'filter';
-        if (defined $src)
+        my $src = $eval->{'msg'} || '<unknown src>';
+        $self->ReportMsg("Filtering $id2 as $src ($sysid)");
+        $self->Filter($id2, $src);
+      }
+      elsif ($eval->{'status'} eq 'no')
+      {
+        if ($self->IsVolumeInCandidates($id2))
         {
-          $self->ReportMsg("Filtering $id2 as $src ($sysid)");
-          $self->Filter($id2, $src);
-        }
-        # Allow for static loads in projects that default to Project.pm behavior
-        # in not allowing further candidates.
-        elsif (!$eval->{'default'})
-        {
-          $self->ReportMsg(sprintf("Will delete $id2: %s ($sysid", $eval->{'msg'}));
+          $self->ReportMsg(sprintf("Will delete $id2: %s ($sysid)", $eval->{'msg'}));
           $dels{$id2} = 1;
-          next;
         }
       }
-      if ($self->AddItemToQueue($id2, $record, $project))
+      else
       {
-        $self->ReportMsg("Added to queue: $id2 ($sysid)");
-        $count++;
+        if ($self->AddItemToQueue($id2, $record, $project))
+        {
+          $self->ReportMsg("Added to queue: $id2 ($sysid)");
+          $count++;
+        }
       }
     }
     last if $count >= $needed;
@@ -6062,9 +6061,7 @@ sub CountHistoricalReviews
 # Reviews with note category Missing and Wrong Record are always correct if S6
 # (these never occur in new reviews because the names have been superseded).
 # Reviews for a determination of status 6, 7, or 8 are always correct.
-# Reviews with a subsequent Newyear project determination are always correct.
-# Otherwise, get the most recent subsequent expert review that is not
-# by autocrms or done as a Newyear review.
+# Otherwise, get the most recent subsequent expert review on the same project.
 #  If there is no such review, then return correct.
 #  Otherwise, if the rights agree for the purposes of review matching, return 1.
 #  Otherwise, return 2 if the expert review is swissed, 0 if not swissed.
@@ -6078,46 +6075,39 @@ sub ValidateReview
   # autocrms is always right
   return 1 if $user1->{'user'} eq 'autocrms';
   # Get the review
-  my $sql = 'SELECT a.name,rs.name,r.expert,e.status,COALESCE(r.category,"")'.
+  my $sql = 'SELECT a.name,rs.name,r.expert,e.status,r.category,e.project'.
             ' FROM historicalreviews r'.
             ' INNER JOIN exportdata e ON r.gid=e.gid'.
-            ' INNER JOIN attributes a ON r.attr=a.id'.
-            ' INNER JOIN reasons rs ON r.reason=rs.id'.
+            ' LEFT JOIN attributes a ON r.attr=a.id'.
+            ' LEFT JOIN reasons rs ON r.reason=rs.id'.
             ' WHERE r.id=? AND r.user=? AND r.time=?';
   my $r = $self->SelectAll($sql, $id, $user1->{'user'}, $user1->{'time'});
+  # Legacy reviews don't even have a status, so just return default correct
+  return 1 unless scalar @$r > 0;
   my $row = $r->[0];
   $user1->{'attr'}     = $row->[0];
   $user1->{'reason'}   = $row->[1];
   $user1->{'expert'}   = $row->[2];
   $user1->{'status'}   = $row->[3];
-  $user1->{'category'} = $row->[4];
-  if (!defined $user1->{'status'} or !defined $user1->{'attr'})
-  {
-    use Data::Dumper;
-    my $dump = Dumper $user1;
-    $self->Note("Validation failure: $id ($dump)");
-  }
+  $user1->{'category'} = $row->[4] || '';
+  $user1->{'project'}  = $row->[5];
   # Missing/Wrong record category is always right if status 6
   return 1 if ($user1->{'category'} eq 'Missing'
                or $user1->{'category'} eq 'Wrong Record')
                and $user1->{'status'} == 6;
   # A status 6/7/8 is always right.
-  return 1 if ($user1->{'status'} >=6 && $user1->{'status'} <= 8);
-  # If there is a newer newyear determination, that also offers blanket protection.
-  $sql = 'SELECT COUNT(id) FROM exportdata WHERE id=? AND src="newyear" AND time>?';
-  return 1 if $self->SimpleSqlGet($sql, $id, $user1->{'time'});
-  # Get the most recent non-autocrms expert review that is not a subsequent
-  # newyear review.
+  return 1 if ($user1->{'status'} >= 6 && $user1->{'status'} <= 8);
+  # Get the most recent non-autocrms expert review on the same project.
   $sql = 'SELECT r.user,r.time,a.name,rs.name,r.swiss'.
          ' FROM historicalreviews r'.
          ' INNER JOIN exportdata e ON r.gid=e.gid'.
          ' INNER JOIN attributes a ON r.attr=a.id'.
          ' INNER JOIN reasons rs ON r.reason=rs.id'.
          ' WHERE r.id=? AND r.expert>0 AND r.time>? AND r.user!="autocrms"'.
-         ' AND (NOT (e.src="newyear" AND r.time>?))'.
-         ' ORDER BY r.time DESC LIMIT 1';
-  $r = $self->SelectAll($sql, $id, $user1->{'time'}, $user1->{'time'});
-  return 1 unless scalar @{$r};
+         ' AND e.project=? ORDER BY r.time DESC LIMIT 1';
+  #printf "$sql, $id, %s, %s\n", $user1->{'time'}, $user1->{'project'};
+  $r = $self->SelectAll($sql, $id, $user1->{'time'}, $user1->{'project'});
+  return 1 unless scalar @$r;
   $row = $r->[0];
   $user2->{'user'}   = $row->[0];
   $user2->{'time'}   = $row->[1];
