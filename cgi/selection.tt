@@ -16,8 +16,14 @@
 [% recs = recs.replace('\D','') %]
 [% adm = crms.IsUserAdmin() %]
 
-[% IF page == 'holds' %]
-  [% IF !order %][% order = 'hold' %][% END %]
+[% defaultOrder = 'Identifier' %]
+[% defaultDir = 'ASC' %]
+
+[% IF page == 'editReviews' %]
+  [% IF !order %][% order = 'Date' %][% END %]
+  [% IF !dir %][% dir = 'DESC' %][% END %]
+  [% defaultOrder = 'Date' %]
+  [% defaultDir = 'DESC' %]
 [% END %]
 
 [% vrecs = cgi.cookie('vrecs') or 10 %]
@@ -125,8 +131,8 @@ records per page.
                 selMenuItem('search1','Identifier');
                 selMenuItem('search2','Identifier');
                 selMenuItem('search3','Identifier');
-                selMenuItem('order','Identifier');
-                selMenuItem('dir','ASC');
+                selMenuItem('order','[% defaultOrder %]');
+                selMenuItem('dir','[% defaultDir %]');
                 document.getElementById('startDate').value='';
                 document.getElementById('endDate').value='';
                 document.getElementById('search1value').value='';
