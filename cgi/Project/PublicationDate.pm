@@ -25,7 +25,33 @@ sub new
 #}
 
 # ========== CANDIDACY ========== #
-# Use default superclass behavior -- project does not take candidates for the moment.
+# This is a static load project, so we only accept volumes that are already
+# in candidates.
+sub EvaluateCandidacy
+{
+  my $self   = shift;
+  my $id     = shift;
+  my $record = shift;
+  my $attr   = shift;
+  my $reason = shift;
+
+  my $status = 'no';
+  my $msg = $self->{'name'}. ' project does not take candidates';
+  my $sql = 'SELECT COUNT(*) FROM candidates WHERE id=?';
+  if ($self->{'crms'}->SimpleSqlGet($sql, $id) > 0)
+  {
+    if ($attr eq 'und' && $reason eq 'bib')
+    {
+      $status = 'yes';
+      $msg = 'Volume is part of existing static load';
+    }
+    else
+    {
+      $msg = "Rights have changed from und/bib to $attr/$reason";
+    }
+  }
+  return {'status' => $status, 'msg' => $msg};
+}
 
 
 # ========== REVIEW ========== #

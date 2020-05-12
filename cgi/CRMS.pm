@@ -69,7 +69,7 @@ sub new
 
 sub Version
 {
-  return '8.2.14';
+  return '8.2.15';
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -1605,28 +1605,27 @@ sub LoadQueueForProject
         next;
       }
       my $eval = $self->EvaluateCandidacy($id2, $record, $project);
-      if ($eval->{'status'} eq 'no' || $eval->{'status'} eq 'filter')
+      if ($eval->{'status'} eq 'filter')
       {
-        my $src;
-        $src = $eval->{'msg'} if $eval->{'status'} eq 'filter';
-        if (defined $src)
+        my $src = $eval->{'msg'} || '<unknown src>';
+        $self->ReportMsg("Filtering $id2 as $src ($sysid)");
+        $self->Filter($id2, $src);
+      }
+      elsif ($eval->{'status'} eq 'no')
+      {
+        if ($self->IsVolumeInCandidates($id2))
         {
-          $self->ReportMsg("Filtering $id2 as $src ($sysid)");
-          $self->Filter($id2, $src);
-        }
-        # Allow for static loads in projects that default to Project.pm behavior
-        # in not allowing further candidates.
-        elsif (!$eval->{'default'})
-        {
-          $self->ReportMsg(sprintf("Will delete $id2: %s ($sysid", $eval->{'msg'}));
+          $self->ReportMsg(sprintf("Will delete $id2: %s ($sysid)", $eval->{'msg'}));
           $dels{$id2} = 1;
-          next;
         }
       }
-      if ($self->AddItemToQueue($id2, $record, $project))
+      else
       {
-        $self->ReportMsg("Added to queue: $id2 ($sysid)");
-        $count++;
+        if ($self->AddItemToQueue($id2, $record, $project))
+        {
+          $self->ReportMsg("Added to queue: $id2 ($sysid)");
+          $count++;
+        }
       }
     }
     last if $count >= $needed;
