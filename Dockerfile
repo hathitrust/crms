@@ -3,8 +3,6 @@ FROM debian:buster
 RUN sed -i 's/main.*/main contrib non-free/' /etc/apt/sources.list
 
 RUN apt-get update && apt-get install -y \
-  mp3val \
-  openjdk-11-jdk-headless \
   perl \
   imagemagick \
   libxerces-c3.2 \
@@ -45,7 +43,6 @@ RUN apt-get update && apt-get install -y \
   libencode-locale-perl \
   liberror-perl \
   libeval-closure-perl \
-  libexcel-writer-xlsx-perl \
   libfcgi-perl \
   libfcgi-procmanager-perl \
   libfile-listing-perl \
@@ -129,6 +126,39 @@ RUN apt-get update && apt-get install -y \
   libyaml-libyaml-perl \
   libyaml-perl \
   perlmagick
+
+RUN apt-get install -y \
+  autoconf \
+  bison \
+  build-essential \
+  git \
+  libffi-dev \
+  libgdbm-dev \
+  libncurses5-dev \
+  libreadline6-dev \
+  libsqlite3-dev \
+  libssl-dev \
+  libyaml-dev \
+  openssh-server \
+  unzip \
+  wget \
+  zip \
+  zlib1g-dev
+
+RUN cpan \
+  File::Value \
+  File::ANVL \
+  File::Namaste \
+  File::Pairtree \
+  CGI::Application::Plugin::Routes \
+  Algorithm::LUHN \
+  OAuth::Lite \
+  EBook::EPUB \
+  Sub::Uplevel \
+  Test::Exception \
+  Devel::Cycle \
+  Test::Memory::Cycle \
+  Mozilla::CA
 
 RUN mkdir /htapps
 RUN mkdir /htapps/babel
