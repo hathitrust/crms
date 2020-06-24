@@ -1,0 +1,26 @@
+version: '3'
+
+services:
+
+  mariadb:
+    build: docker/db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 'crms'
+    ports:
+      - "52000:3306"
+
+  test:
+    build: .
+    volumes:
+      - .:/htapps/babel/crms
+    environment:
+      - SDRROOT=/htapps/babel
+      - CRMS_SQL_HOST=mariadb
+    depends_on:
+      - mariadb
+    links:
+      - mariadb
+    command: /htapps/babel/crms/t/test.pl
+
+

@@ -27,18 +27,12 @@ sub new
 {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
-  if ($args{'root'})
-  {
-    print "<strong>Warning: root passed to <code>CRMS->new()</code>\n";
-  }
-  if ($args{'logFile'})
-  {
-    print "<strong>Warning: logFile passed to <code>CRMS->new()</code>\n";
-  }
-  my $root = $ENV{'DLXSROOT'};
-  $root = $ENV{'SDRROOT'} unless $root and -d $root;
-  die 'ERROR: cannot locate root directory with DLXSROOT or SDRROOT!' unless $root and -d $root;
-  $root = '/' unless $root;
+  # If running under Apache.
+  $self->set('instance', $ENV{'CRMS_INSTANCE'});
+  # If running from command line.
+  $self->set('instance', $args{'instance'}) if $args{'instance'};
+  my $root = $ENV{'SDRROOT'};
+  die 'ERROR: cannot locate root directory with SDRROOT!' unless $root and -d $root;
   $self->set('root', $root);
   my %d = $self->ReadConfigFile('crms.cfg');
   $self->set($_, $d{$_}) for keys %d;
@@ -46,10 +40,6 @@ sub new
   # Initialize error reporting.
   $self->ClearErrors();
   $self->set('verbose',  $args{'verbose'});
-  # If running under Apache.
-  $self->set('instance', $ENV{'CRMS_INSTANCE'});
-  # If running from command line.
-  $self->set('instance', $args{'instance'}) if $args{'instance'};
   # Only need to authorize when running as CGI.
   if ($ENV{'GATEWAY_INTERFACE'})
   {
@@ -338,8 +328,8 @@ sub ReadConfigFile
   my $fh;
   unless (open $fh, '<:encoding(UTF-8)', $path)
   {
-    $self->SetError("failed to read config file at $path: " . $!);
-    return undef;
+    die ("failed to read config file at $path: ". $!) if defined $self->get('instance');
+    return %dict;
   }
   read $fh, my $buff, -s $path; # one of many ways to slurp file.
   close $fh;
@@ -364,22 +354,24 @@ sub ConnectToDb
 {
   my $self = shift;
 
-  my $db_server = $self->get('mysqlServerDev');
-  my $instance  = $self->get('instance') || '';
+  # Only allow env to override config in dev.
+  my $db_host = $ENV{'CRMS_SQL_HOST'} || $self->get('mysqlServerDev');
+  my $instance = $self->get('instance') || '';
 
   my %d = $self->ReadConfigFile('crmspw.cfg');
-  my $db_user   = $d{'mysqlUser'};
-  my $db_passwd = $d{'mysqlPasswd'};
+  my $db_user   = $d{'mysqlUser'} || 'crms';
+  my $db_passwd = $d{'mysqlPasswd'} || 'crms';
   if ($instance eq 'production'
       || $self->get('pdb')
       || $instance eq 'crms-training'
       || $self->get('tdb')
       )
   {
-    $db_server = $self->get('mysqlServer');
+    $db_host = $self->get('mysqlServer');
   }
   my $db = $self->DbName();
-  my $dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
+  my $dsn = "DBI:mysql:database=$db;host=$db_host";
+  my $dbh = DBI->connect($dsn, $db_user, $db_passwd,
             { PrintError => 0, RaiseError => 1, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
   $dbh->{mysql_enable_utf8} = 1;
   $dbh->{mysql_auto_reconnect} = 1;
@@ -423,8 +415,9 @@ sub ConnectToSdrDb
   my $self = shift;
   my $db   = shift;
 
-  my $db_server = $self->get('mysqlMdpServerDev');
-  my $instance  = $self->get('instance') || '';
+  # Only allow env to override config in dev.
+  my $db_host = $ENV{'CRMS_SQL_HOST'} || $self->get('mysqlServerDev');
+  my $instance = $self->get('instance') || '';
 
   $db = $self->get('mysqlMdpDbName') unless defined $db;
   my %d = $self->ReadConfigFile('crmspw.cfg');
@@ -435,9 +428,10 @@ sub ConnectToSdrDb
       || $self->get('pdb')
       || $self->get('tdb'))
   {
-    $db_server = $self->get('mysqlMdpServer');
+    $db_host = $self->get('mysqlMdpServer');
   }
-  my $sdr_dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
+  my $dsn = "DBI:mysql:database=$db;host=$db_host";
+  my $sdr_dbh = DBI->connect($dsn, $db_user, $db_passwd,
                              {PrintError => 0, AutoCommit => 1});
   if ($sdr_dbh)
   {
@@ -473,7 +467,7 @@ sub DbName
 
   my $instance = $self->get('instance') || '';
   my $tdb = $self->get('tdb');
-  my $db = $self->get('mysqlDbName');
+  my $db = 'crms';
   $db .= '_training' if $instance eq 'crms-training' or $tdb;
   return $db;
 }
