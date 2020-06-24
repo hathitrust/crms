@@ -1,3 +1,4 @@
+
 #!/usr/bin/perl
 
 use strict;
@@ -11,4 +12,3 @@ my $cgi = CGI->new();
 my $crms = CRMS->new('cgi' => $cgi, 'verbose' => 0);
 ok(defined $crms);
 done_testing();
-

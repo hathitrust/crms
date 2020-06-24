@@ -18,4 +18,3 @@ foreach my $file (sort @files)
 }
 
 done_testing();
-
