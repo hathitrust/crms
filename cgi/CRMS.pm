@@ -416,7 +416,7 @@ sub ConnectToSdrDb
   my $db   = shift;
 
   # Only allow env to override config in dev.
-  my $db_host = $ENV{'CRMS_SQL_HOST'} || $self->get('mysqlServerDev');
+  my $db_host = $ENV{'CRMS_SQL_HOST'} || $self->get('mysqlMdpServerDev');
   my $instance = $self->get('instance') || '';
 
   $db = $self->get('mysqlMdpDbName') unless defined $db;
