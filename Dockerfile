@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
   libxerces-c3.2 \
   libxerces-c3-dev \
   sqlite3 \
+  file \
   libalgorithm-diff-xs-perl \
   libany-moose-perl \
   libapache-session-perl \
@@ -158,7 +159,8 @@ RUN cpan \
   Test::Exception \
   Devel::Cycle \
   Test::Memory::Cycle \
-  Mozilla::CA
+  Mozilla::CA \
+  Perl::Critic
 
 RUN mkdir /htapps
 RUN mkdir /htapps/babel

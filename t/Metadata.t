@@ -18,4 +18,3 @@ ok(ref $cities eq 'HASH', 'cities return value is a hashref');
 ok(ref $cities->{'us'} eq 'ARRAY', 'cities us value is an arrayref');
 ok(ref $cities->{'non-us'} eq 'ARRAY', 'cities non-us value is an arrayref');
 done_testing();
-
