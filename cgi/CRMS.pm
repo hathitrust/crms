@@ -57,9 +57,10 @@ sub new
   return $self;
 }
 
+our $VERSION = '8.2.16';
 sub Version
 {
-  return '8.2.16';
+  return $VERSION;
 }
 
 # First, try to establish the identity of the user as represented in the users table.
