@@ -99,7 +99,7 @@ sub json
     my $content = Unicode::Normalize::NFC($res->content);
     # Sometimes the API can return diagnostic information up top,
     # so we cut that out.
-    $content =~ s/^(.*?)({"records":)/$2/s;
+    $content =~ s/^(.*?)(\{"records":)/$2/s;
     eval {
       $json = $jsonxs->decode($content);
       if (!defined $self->get('id'))
