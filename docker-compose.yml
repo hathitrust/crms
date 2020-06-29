@@ -21,4 +21,4 @@ services:
       - mariadb
     links:
       - mariadb
-    command: bash -c "cd /htapps/babel/crms && perl Makefile.PL && bin/wait-for --timeout=60 mariadb:3306 -- make test"
+    command: bash -c "cd /htapps/babel/crms && perl Makefile.PL && bin/wait-for --timeout=60 mariadb:3306 -- make test TEST_VERBOSE=1"
