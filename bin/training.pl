@@ -46,7 +46,7 @@ die 'Terminating' unless GetOptions(
            'v'    => \$verbose,
            'x:s'  => \$sys);
 
-die "$usage\n\n" if $help;
+if ($help) { print $usage. "\n"; exit(0); }
 die "You need a volume count.\n" unless 1 == scalar @ARGV;
 my $count = $ARGV[0];
 die "Count format should be numeric\n" if $count !~ m/^\d+$/;
@@ -71,7 +71,7 @@ if ($verbose)
   print "Production instance: $dbinfo\n";
   $dbinfo = $crmst->DbInfo();
   print "Training instance: $dbinfo\n";
-  
+
 }
 my %seen;
 my %seenAuthorTitles;

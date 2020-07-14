@@ -51,10 +51,9 @@ die 'Terminating' unless GetOptions(
            's'    => \$skipStats,
            't'    => \$training,
            'v+'   => \$verbose);
-
-die $usage if $help;
 $instance = 'production' if $production;
 $instance = 'crms-training' if $training;
+if ($help) { print $usage. "\n"; exit(0); }
 
 my $start = undef;
 my $end = undef;

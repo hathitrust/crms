@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-BEGIN 
+BEGIN
 {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
 }
@@ -33,8 +33,9 @@ Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions(
            'h|?'  => \$help,
            'v+'   => \$verbose);
-die "$usage\n\n" if $help;
+if ($help) { print $usage. "\n"; exit(0); }
 print "Verbosity $verbose\n" if $verbose;
+
 
 my $critic = Perl::Critic->new();
 

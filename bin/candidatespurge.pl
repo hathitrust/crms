@@ -53,7 +53,7 @@ die 'Terminating' unless GetOptions(
            's:s@' => \@singles,
            'v+'   => \$verbose);
 $instance = 'production' if $production;
-die "$usage\n\n" if $help;
+if ($help) { print $usage. "\n"; exit(0); }
 
 my $crms = CRMS->new(
     verbose  => $verbose,
