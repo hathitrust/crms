@@ -20,7 +20,8 @@ foreach my $i (0 .. 9)
 print "\n";
 
 
-my @test_files = ('/crms/t/CRMS.t',
+my @test_files = ('crms/t/bin.t',
+                  '/crms/t/CRMS.t',
                   '/crms/t/Metadata.t',
                   '/crms/t/Project.t',
                   );

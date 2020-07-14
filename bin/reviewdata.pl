@@ -35,8 +35,8 @@ die 'Terminating' unless GetOptions('h|?'  => \$help,
            'v+'   => \$verbose);
 $instance = 'production' if $production;
 $instance = 'crms-training' if $training;
+if ($help) { print $usage. "\n"; exit(0); }
 print "Verbosity $verbose\n" if $verbose;
-die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
     verbose  => $verbose,
@@ -49,7 +49,7 @@ MigrateUSReviewData(1);
 sub MigrateUSReviewData
 {
   my $historical = shift;
-  
+
   my $table = ($historical)? 'historicalreviews':'reviews';
   my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
   my $sql = 'SELECT id,user,time,renNum,renDate FROM '. $table. ' WHERE data IS NULL'.

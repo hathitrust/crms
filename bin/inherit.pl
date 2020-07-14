@@ -68,7 +68,7 @@ die 'Terminating' unless GetOptions(
            'u'    => \$und,
            'v+'   => \$verbose);
 $instance = 'production' if $production;
-die "$usage\n\n" if $help;
+if ($help) { print $usage. "\n"; exit(0); }
 $verbose = 0 unless $verbose;
 
 my %no = ();

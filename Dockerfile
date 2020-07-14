@@ -44,6 +44,7 @@ RUN apt-get update && apt-get install -y \
   libencode-locale-perl \
   liberror-perl \
   libeval-closure-perl \
+  libexcel-writer-xlsx-perl \
   libfcgi-perl \
   libfcgi-procmanager-perl \
   libfile-listing-perl \
