@@ -37,8 +37,8 @@ die 'Terminating' unless GetOptions('h|?' => \$help,
            'v+'   => \$verbose);
 $instance = 'production' if $production;
 $instance = 'crms-training' if $training;
+if ($help) { print $usage. "\n"; exit(0); }
 print "Verbosity $verbose\n" if $verbose;
-die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
     verbose  => $verbose,

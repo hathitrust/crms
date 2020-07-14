@@ -55,6 +55,7 @@ die 'Terminating' unless GetOptions('h|?' => \$help,
            'v+'   => \$verbose,
            'z'    => \$link);
 $instance = 'production' if $production;
+if ($help) { print $usage. "\n"; exit(0); }
 print "Verbosity $verbose\n" if $verbose;
 my %reports = ('html'=>1,'none'=>1,'tsv'=>1);
 die "Bad value '$report' for -r flag" unless defined $reports{$report};
@@ -79,8 +80,6 @@ if ($start > $end)
 }
 $start .= ' 00:00:00' if $start;
 $end   .= ' 23:59:59' if $end;
-
-die "$usage\n\n" if $help;
 
 my $crms = CRMS->new(
     verbose  => $verbose,
