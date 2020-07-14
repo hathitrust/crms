@@ -27,18 +27,12 @@ sub new
 {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
-  if ($args{'root'})
-  {
-    print "<strong>Warning: root passed to <code>CRMS->new()</code>\n";
-  }
-  if ($args{'logFile'})
-  {
-    print "<strong>Warning: logFile passed to <code>CRMS->new()</code>\n";
-  }
-  my $root = $ENV{'DLXSROOT'};
-  $root = $ENV{'SDRROOT'} unless $root and -d $root;
-  die 'ERROR: cannot locate root directory with DLXSROOT or SDRROOT!' unless $root and -d $root;
-  $root = '/' unless $root;
+  # If running under Apache.
+  $self->set('instance', $ENV{'CRMS_INSTANCE'});
+  # If running from command line.
+  $self->set('instance', $args{'instance'}) if $args{'instance'};
+  my $root = $ENV{'SDRROOT'};
+  die 'ERROR: cannot locate root directory with SDRROOT!' unless $root and -d $root;
   $self->set('root', $root);
   my %d = $self->ReadConfigFile('crms.cfg');
   $self->set($_, $d{$_}) for keys %d;
@@ -46,10 +40,6 @@ sub new
   # Initialize error reporting.
   $self->ClearErrors();
   $self->set('verbose',  $args{'verbose'});
-  # If running under Apache.
-  $self->set('instance', $ENV{'CRMS_INSTANCE'});
-  # If running from command line.
-  $self->set('instance', $args{'instance'}) if $args{'instance'};
   # Only need to authorize when running as CGI.
   if ($ENV{'GATEWAY_INTERFACE'})
   {
@@ -67,9 +57,10 @@ sub new
   return $self;
 }
 
+our $VERSION = '8.2.17';
 sub Version
 {
-  return '8.2.16';
+  return $VERSION;
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -338,8 +329,8 @@ sub ReadConfigFile
   my $fh;
   unless (open $fh, '<:encoding(UTF-8)', $path)
   {
-    $self->SetError("failed to read config file at $path: " . $!);
-    return undef;
+    die ("failed to read config file at $path: ". $!) if defined $self->get('instance');
+    return %dict;
   }
   read $fh, my $buff, -s $path; # one of many ways to slurp file.
   close $fh;
@@ -364,22 +355,24 @@ sub ConnectToDb
 {
   my $self = shift;
 
-  my $db_server = $self->get('mysqlServerDev');
-  my $instance  = $self->get('instance') || '';
+  # Only allow env to override config in dev.
+  my $db_host = $ENV{'CRMS_SQL_HOST'} || $self->get('mysqlServerDev');
+  my $instance = $self->get('instance') || '';
 
   my %d = $self->ReadConfigFile('crmspw.cfg');
-  my $db_user   = $d{'mysqlUser'};
-  my $db_passwd = $d{'mysqlPasswd'};
+  my $db_user   = $d{'mysqlUser'} || 'crms';
+  my $db_passwd = $d{'mysqlPasswd'} || 'crms';
   if ($instance eq 'production'
       || $self->get('pdb')
       || $instance eq 'crms-training'
       || $self->get('tdb')
       )
   {
-    $db_server = $self->get('mysqlServer');
+    $db_host = $self->get('mysqlServer');
   }
   my $db = $self->DbName();
-  my $dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
+  my $dsn = "DBI:mysql:database=$db;host=$db_host";
+  my $dbh = DBI->connect($dsn, $db_user, $db_passwd,
             { PrintError => 0, RaiseError => 1, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
   $dbh->{mysql_enable_utf8} = 1;
   $dbh->{mysql_auto_reconnect} = 1;
@@ -423,8 +416,9 @@ sub ConnectToSdrDb
   my $self = shift;
   my $db   = shift;
 
-  my $db_server = $self->get('mysqlMdpServerDev');
-  my $instance  = $self->get('instance') || '';
+  # Only allow env to override config in dev.
+  my $db_host = $ENV{'CRMS_SQL_HOST'} || $self->get('mysqlMdpServerDev');
+  my $instance = $self->get('instance') || '';
 
   $db = $self->get('mysqlMdpDbName') unless defined $db;
   my %d = $self->ReadConfigFile('crmspw.cfg');
@@ -435,9 +429,10 @@ sub ConnectToSdrDb
       || $self->get('pdb')
       || $self->get('tdb'))
   {
-    $db_server = $self->get('mysqlMdpServer');
+    $db_host = $self->get('mysqlMdpServer');
   }
-  my $sdr_dbh = DBI->connect("DBI:mysql:$db:$db_server", $db_user, $db_passwd,
+  my $dsn = "DBI:mysql:database=$db;host=$db_host";
+  my $sdr_dbh = DBI->connect($dsn, $db_user, $db_passwd,
                              {PrintError => 0, AutoCommit => 1});
   if ($sdr_dbh)
   {
@@ -473,7 +468,7 @@ sub DbName
 
   my $instance = $self->get('instance') || '';
   my $tdb = $self->get('tdb');
-  my $db = $self->get('mysqlDbName');
+  my $db = 'crms';
   $db .= '_training' if $instance eq 'crms-training' or $tdb;
   return $db;
 }
@@ -1177,7 +1172,7 @@ sub SafeRemoveFromQueue
   my $id   = shift;
 
   my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
-  return undef if $self->SimpleSqlGet($sql, $id) > 0;
+  return if $self->SimpleSqlGet($sql, $id) > 0;
   $sql = 'UPDATE queue SET priority=-2 WHERE id=?'.
          ' AND project NOT IN (SELECT id FROM projects WHERE name="Special")'.
          ' AND locked IS NULL AND status=0 AND pending_status=0';
@@ -1479,7 +1474,6 @@ sub IsVolumeInScope
   my $cnt = $self->SimpleSqlGet($sql, $id);
   push @{$errs}, 'non-und expert review' if $cnt > 0;
   return ucfirst join '; ', @{$errs} if scalar @{$errs} > 0;
-  return undef;
 }
 
 # Returns hashref with project EvaluateCandidacy fields, plus optional
@@ -1668,7 +1662,6 @@ sub IsRecordInQueue
     my $id = $ref->{'id'};
     return $id if $self->SimpleSqlGet('SELECT COUNT(*) FROM queue WHERE id=?', $id);
   }
-  return undef;
 }
 
 # Return HTID from queue if it has matching enumchron.
@@ -1993,7 +1986,6 @@ sub SubmitReview
   $self->RegisterPendingStatus($id, $pstatus);
   $self->UnlockItem($id, $user);
   return join '; ', @{$self->GetErrors()} if scalar @{$self->GetErrors()};
-  return undef;
 }
 
 sub GetStatusForExpertReview
@@ -3464,7 +3456,7 @@ sub GetPublisherDataRef
 {
   my $self = shift;
 
-  require 'Publisher.pm';
+  require Publisher;
   unshift @_, $self;
   return Publisher::GetPublisherDataRef(@_);
 }
@@ -3473,20 +3465,20 @@ sub PublisherDataSearchMenu
 {
   my $self = shift;
 
-  require 'Publisher.pm';
+  require Publisher;
   unshift @_, $self;
   return Publisher::PublisherDataSearchMenu(@_);
 }
 
 sub CorrectionsTitles
 {
-  require 'Corrections.pm';
+  require Corrections;
   return Corrections::CorrectionsTitles();
 }
 
 sub CorrectionsFields
 {
-  require 'Corrections.pm';
+  require Corrections;
   return Corrections::CorrectionsFields();
 }
 
@@ -3494,7 +3486,7 @@ sub GetCorrectionsDataRef
 {
   my $self = shift;
 
-  require 'Corrections.pm';
+  require Corrections;
   unshift @_, $self;
   return Corrections::GetCorrectionsDataRef(@_);
 }
@@ -3503,32 +3495,32 @@ sub CorrectionsDataSearchMenu
 {
   my $self = shift;
 
-  require 'Corrections.pm';
+  require Corrections;
   unshift @_, $self;
   return Corrections::CorrectionsDataSearchMenu(@_);
 }
 
 sub InsertsTitles
 {
-  require 'Inserts.pm';
+  require Inserts;
   return Inserts::InsertsTitles();
 }
 
 sub InsertsFields
 {
-  require 'Inserts.pm';
+  require Inserts;
   return Inserts::InsertsFields();
 }
 
 sub GetInsertsDataRef
 {
-  require 'Inserts.pm';
+  require Inserts;
   return Inserts::GetInsertsDataRef(@_);
 }
 
 sub InsertsDataSearchMenu
 {
-  require 'Inserts.pm';
+  require Inserts;
   return Inserts::InsertsDataSearchMenu(@_);
 }
 
@@ -3655,7 +3647,6 @@ sub GetAttrReasonCode
   {
     return $self->SimpleSqlGet('SELECT id FROM rights WHERE attr=? AND reason=?', $a, $r);
   }
-  return undef;
 }
 
 sub AddUser
@@ -5207,7 +5198,6 @@ sub ProjectDispatch
   else
   {
     $self->SetError("Unable to call sub $sub on module $mod");
-    return undef;
   }
 }
 
@@ -6402,7 +6392,7 @@ sub RightsQuery
   if ($@)
   {
     $self->SetError("Rights query for $id failed: $@");
-    return undef;
+    return;
   }
   $ref = undef if defined $ref && scalar @{$ref} == 0;
   return $ref;
@@ -6571,7 +6561,7 @@ sub VolumeIDsQuery
   my $record = shift;
 
   $record = $self->GetMetadata($sysid) unless defined $record;
-  return undef unless defined $record;
+  return unless defined $record;
   return $record->volumeIDs
 }
 
@@ -6805,7 +6795,6 @@ sub DevBanner
     $where .= ' | Training DB' if $self->get('tdb');
     return '[ '. $where. ' ]';
   }
-  return undef;
 }
 
 sub Host
@@ -7681,7 +7670,6 @@ sub AccessCheck
   {
     return {'err' => $err, 'page' => $page};
   }
-  return undef;
 }
 
 # Returns Boolean: do qualifications and restriction overlap?
@@ -7993,11 +7981,11 @@ sub PredictLastCopyrightYear
   my $pubref = shift; # Pub date, by reference
 
   # Punt if the year is not exclusively 1 or more decimal digits with optional minus.
-  return undef if $year !~ m/^-?\d+$/;
+  return if $year !~ m/^-?\d+$/;
   my $pub = (defined $pubref)? $$pubref:undef;
   $pub = $year if $ispub;
   $pub = $self->FormatPubDate($id, $record) unless defined $pub;
-  return undef unless defined $pub;
+  return unless defined $pub;
   if ($pub =~ m/-/)
   {
     my ($d1, $d2) = split '-', $pub;
@@ -8009,14 +7997,14 @@ sub PredictLastCopyrightYear
     }
     else
     {
-      return undef;
+      return;
     }
   }
   $$pubref = $pub if defined $pubref;
   my $where = undef;
   $where = $record->country if defined $record;
   $where = $self->GetPubCountry($id) unless $where;
-  return undef unless defined $where;
+  return unless defined $where;
   my $now = $self->GetTheYear();
   # $when is the last year the work was in copyright
   my $when;
@@ -8057,7 +8045,7 @@ sub PredictRights
   $now = $self->GetTheYear() unless defined $now;
   my $when = $self->PredictLastCopyrightYear($id, $year, $ispub, $crown, $record, \$pub);
   return unless defined $when;
-  return undef if $pub =~ m/^\d+-\d+$/;
+  return if $pub =~ m/^\d+-\d+$/;
   if ($when < $now)
   {
     if ($when >= 1996 && $pub >= 1923 &&
@@ -8214,57 +8202,6 @@ sub VIAFCorporateLink
 
   use VIAF;
   return VIAF::VIAFCorporateLink($self, $author);
-}
-
-# Return dollarized barcode if suffix is the right length,
-# and metadata is available, or undef.
-# Returns the metadata by reference.
-sub Dollarize
-{
-  my $self = shift;
-  my $id   = shift;
-  my $meta = shift;
-
-  if ($id =~ m/uc1\.b\d{1,6}$/)
-  {
-    my $id2 = $id;
-    $id2 =~ s/b/\$b/;
-    my $record = $self->GetMetadata($id2);
-    if (!defined $record)
-    {
-      $self->ClearErrors();
-    }
-    else
-    {
-      $$meta = $record if defined $meta;
-      return $id2;
-    }
-  }
-  return undef;
-}
-
-# Return undollarized htid if suffix is the right length,
-# or undef.
-sub Undollarize
-{
-  my $self = shift;
-  my $id   = shift;
-
-  if ($id =~ m/uc1\.\$b\d{1,6}$/)
-  {
-    my $id2 = $id;
-    $id2 =~ s/\$b/b/;
-    my $record = $self->GetMetadata($id2);
-    if (!defined $record)
-    {
-      $self->ClearErrors();
-    }
-    else
-    {
-      return $id2;
-    }
-  }
-  return undef;
 }
 
 # FIXME: this should probably not include an explicit reference to "Special" project.

@@ -99,7 +99,7 @@ sub json
     my $content = Unicode::Normalize::NFC($res->content);
     # Sometimes the API can return diagnostic information up top,
     # so we cut that out.
-    $content =~ s/^(.*?)({"records":)/$2/s;
+    $content =~ s/^(.*?)(\{"records":)/$2/s;
     eval {
       $json = $jsonxs->decode($content);
       if (!defined $self->get('id'))
@@ -523,12 +523,19 @@ sub _ReadCities
   my $self = shift;
 
   my $crms = $self->get('crms');
-  my $in = $crms->FSPath('bin', 'us_cities.txt');
-  open (FH, '<', $in) || $crms->SetError("Could not open $in");
+  my $path = $crms->FSPath('bin', 'us_cities.txt');
+  my $fh;
   my $cities = {};
-  while (<FH>) { chomp; $cities->{$_} = 1; }
-  close FH;
-  $self->set('us_cities', $cities);
+  if (open $fh, '<:encoding(UTF-8)', $path)
+  {
+    while (<$fh>) { chomp; $cities->{$_} = 1; }
+    close $fh;
+    $self->set('us_cities', $cities);
+  }
+  else
+  {
+    $crms->SetError("Could not open cities file at $path");
+  }
   return $cities;
 }
 
