@@ -113,7 +113,8 @@ sub CheckInstitutions
 {
   my $sdr_dbh = $crms->ConnectToSdrDb('ht_repository');
   open my $out, '>:encoding(UTF-8)', $outfile;
-  my $sql = 'SELECT inst_id,name FROM ht_institutions ORDER BY inst_id ASC';
+  my $sql = 'SELECT inst_id,name FROM ht_institutions WHERE enabled=1'.
+            ' ORDER BY inst_id ASC';
   my $ref;
   my $n = 0;
   eval {
