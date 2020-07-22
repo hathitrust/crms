@@ -3440,30 +3440,6 @@ sub PublisherDataSearchMenu
   return Publisher::PublisherDataSearchMenu(@_);
 }
 
-sub InsertsTitles
-{
-  require Inserts;
-  return Inserts::InsertsTitles();
-}
-
-sub InsertsFields
-{
-  require Inserts;
-  return Inserts::InsertsFields();
-}
-
-sub GetInsertsDataRef
-{
-  require Inserts;
-  return Inserts::GetInsertsDataRef(@_);
-}
-
-sub InsertsDataSearchMenu
-{
-  require Inserts;
-  return Inserts::InsertsDataSearchMenu(@_);
-}
-
 sub Linkify
 {
   my $self = shift;
