@@ -1446,35 +1446,6 @@ sub Unfilter
   }
 }
 
-# Returns concatenated error messages (reasons for unsuitability for CRMS) for a volume.
-# Checks everything including current rights, but ignores rights if currently und;
-# also checks for a latest expert non-und determination.
-# This is for evaluating corrections.
-sub IsVolumeInScope
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-
-  $record = $self->GetMetadata($id) unless defined $record;
-  return 'No metadata' unless defined $record;
-  my $errs = $self->GetViolations($id, $record);
-  if (scalar @{$errs})
-  {
-    my $joined = join '; ', @{$errs};
-    $errs = [] if $joined =~ m/^current\srights\sund\/[a-z]+$/i;
-  }
-  my $und = $self->ShouldVolumeBeFiltered($id, $record);
-  push @{$errs}, 'should be filtered (' . $und . ')' if defined $und;
-  push @{$errs}, 'already in the queue' if $self->IsVolumeInQueue($id);
-  my $sql = 'SELECT COUNT(*) FROM exportdata e INNER JOIN historicalreviews r' .
-            ' ON e.gid=r.gid WHERE e.id=? AND e.attr!="und" AND r.expert IS NOT NULL' .
-            ' AND r.expert>0';
-  my $cnt = $self->SimpleSqlGet($sql, $id);
-  push @{$errs}, 'non-und expert review' if $cnt > 0;
-  return ucfirst join '; ', @{$errs} if scalar @{$errs} > 0;
-}
-
 # Returns hashref with project EvaluateCandidacy fields, plus optional
 # project id of the project that it qualified for, if any.
 # Used by Add to Queue page for filtering non-overrides.
@@ -3467,36 +3438,6 @@ sub PublisherDataSearchMenu
   require Publisher;
   unshift @_, $self;
   return Publisher::PublisherDataSearchMenu(@_);
-}
-
-sub CorrectionsTitles
-{
-  require Corrections;
-  return Corrections::CorrectionsTitles();
-}
-
-sub CorrectionsFields
-{
-  require Corrections;
-  return Corrections::CorrectionsFields();
-}
-
-sub GetCorrectionsDataRef
-{
-  my $self = shift;
-
-  require Corrections;
-  unshift @_, $self;
-  return Corrections::GetCorrectionsDataRef(@_);
-}
-
-sub CorrectionsDataSearchMenu
-{
-  my $self = shift;
-
-  require Corrections;
-  unshift @_, $self;
-  return Corrections::CorrectionsDataSearchMenu(@_);
 }
 
 sub InsertsTitles
@@ -6596,7 +6537,7 @@ sub TrackingQuery
         @rightsInfo = @{$self->RightsQuery($id2, 1)->[0]};
       };
       my $data2 = [$id2, $ref->{'chron'},
-                   $self->GetTrackingInfo($id2, 1, 1),
+                   $self->GetTrackingInfo($id2, 1),
                    $ref->{'rights'}, @rightsInfo];
       if ($rest{$id2})
       {
@@ -6619,7 +6560,6 @@ sub GetTrackingInfo
   my $self       = shift;
   my $id         = shift;
   my $inherit    = shift;
-  my $correction = shift; # FIXME: get rid of this altogether
   my $rights     = shift;
 
   my @stati = ();
@@ -6675,19 +6615,6 @@ sub GetTrackingInfo
     my $n = $self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=? AND legacy=1', $id);
     my $reviews = $self->Pluralize('review', $n);
     push @stati, "$n legacy $reviews" if $n;
-  }
-  # FIXME: get rid of this altogether
-  if ($correction && $self->SimpleSqlGet('SELECT COUNT(*) FROM corrections WHERE id=?', $id))
-  {
-    my $sql = 'SELECT user,status,ticket,DATE(time) FROM corrections WHERE id=?';
-    my $ref = $self->SelectAll($sql, $id);
-    my $user = $ref->[0]->[0];
-    my $status = $ref->[0]->[1];
-    my $tx = $ref->[0]->[2];
-    my $date = $ref->[0]->[3];
-    my $s = (defined $user)? "correction by $user, status $status":'awaiting correction';
-    $s .= " (Jira $tx)" if defined $tx;
-    push @stati, $s
   }
   if ($inherit && $self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE id=? AND (status IS NULL OR status=1)', $id))
   {
@@ -8225,7 +8152,7 @@ sub GetAddToQueueRef
                    'pub_date' => $row->[3], 'date' => $row->[4], 'added_by' => $row->[5],
                    'status' => $row->[6], 'priority' => $row->[7], 'source' => $row->[8],
                    'ticket' => $row->[9], 'project' => $row->[10],
-                   'tracking' => $self->GetTrackingInfo($row->[0], 1, 1)};
+                   'tracking' => $self->GetTrackingInfo($row->[0], 1)};
   }
   return \@result;
 }

@@ -297,7 +297,7 @@ sub SubmitTotals
   my $cgi  = shift;
   my $id   = shift;
   my $user = shift;
-  
+
   my $crms = $self->crms;
   $crms->Note("SubmitTotals($id, $user)");
   my $count = $cgi->param('totalCount');
@@ -322,7 +322,7 @@ sub TotalsString
   my $self = shift;
   my $id   = shift;
   my $user = shift;
-  
+
   my $crms = $self->crms;
   my $str = '';
   my $sql = 'SELECT type,total FROM insertstotals WHERE id=? AND user=?';
@@ -627,7 +627,7 @@ sub GetInsertsDataRef
   return $data;
 }
 
-# Generates HTML to get the field type menu on the Corrections Data page.
+# Generates HTML to get the field type menu on the Inserts Data page.
 sub InsertsDataSearchMenu
 {
   my $self       = shift;
