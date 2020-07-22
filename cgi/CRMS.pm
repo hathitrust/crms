@@ -1173,11 +1173,10 @@ sub SafeRemoveFromQueue
 
   my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
   return if $self->SimpleSqlGet($sql, $id) > 0;
-  $sql = 'UPDATE queue SET priority=-2 WHERE id=?'.
-         ' AND project NOT IN (SELECT id FROM projects WHERE name="Special")'.
+  $sql = 'UPDATE queue SET priority=-2,unavailable=1 WHERE id=?'.
          ' AND locked IS NULL AND status=0 AND pending_status=0';
   my $return1 = $self->PrepareSubmitSql($sql, $id);
-  $sql = 'DELETE FROM queue WHERE id=? AND priority=-2'.
+  $sql = 'DELETE FROM queue WHERE id=? AND priority=-2 AND unavailable=1'.
          ' AND locked IS NULL AND status=0 AND pending_status=0';
   my $return2 = $self->PrepareSubmitSql($sql, $id);
   return ($return1 && $return2)? 1:undef;
@@ -6620,7 +6619,7 @@ sub GetTrackingInfo
   my $self       = shift;
   my $id         = shift;
   my $inherit    = shift;
-  my $correction = shift;
+  my $correction = shift; # FIXME: get rid of this altogether
   my $rights     = shift;
 
   my @stati = ();
@@ -6677,6 +6676,7 @@ sub GetTrackingInfo
     my $reviews = $self->Pluralize('review', $n);
     push @stati, "$n legacy $reviews" if $n;
   }
+  # FIXME: get rid of this altogether
   if ($correction && $self->SimpleSqlGet('SELECT COUNT(*) FROM corrections WHERE id=?', $id))
   {
     my $sql = 'SELECT user,status,ticket,DATE(time) FROM corrections WHERE id=?';
