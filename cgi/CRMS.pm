@@ -57,7 +57,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.2.20';
+our $VERSION = '8.2.21';
 sub Version
 {
   return $VERSION;
@@ -5244,6 +5244,7 @@ sub UpdateQueueNoMeta
     }
     else
     {
+      $self->ClearErrors();
       $self->ReportMsg("<b>$id</b>: still no meta, leaving unavailable");
     }
   }
