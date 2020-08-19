@@ -50,7 +50,7 @@
   </script>
   <span class="smallText">(YYYY-MM-DD)</span>
   <br/>
-  
+
   <input type="submit" value="Submit"/>
   </form>
   [% IF cgi.param('export_report') %]
@@ -133,6 +133,38 @@
   <label for="forceCB">&nbsp;Force</label>
   <input type="submit" value="Submit"/>
 </form>
+<br/>
+
+<div style="position:relative;border-style:solid;width:76em;border-width:1px;padding:10px;">
+  <h4>Remove From Candidates</h4>
+  <form action="crms">
+    [% crms.HiddenSys() %]
+    <input type="hidden" name="p" value="debug"/>
+    <input type="hidden" name="deleteFromCandidates" value="1"/>
+    <p class="smallishText">Enter one volume id per line.</p>
+    <textarea name="ids" cols="20" rows="10" style="width:33%; height:9em;">[% ids %]</textarea><br/>
+    <input type="submit" value="Submit"/>
+  </form>
+  [% IF cgi.param('deleteFromCandidates') %]
+    <table class="exportStats">
+      <tr><th>ID</th><th>Status</th><th>Tracking</th></tr>
+      [% FOR id IN ids.split %]
+        [% res = crms.RemoveFromCandidates(id) %]
+        <tr>
+          <th class="nowrap">[% id %]</th>
+          <td class="nowrap">
+            [% IF res == 1 %]
+              <img width="16" height="16" alt="Check" src="[% crms.WebPath('web', 'CheckIcon.png') %]"/>
+            [% ELSE %]
+              <img width="16" height="16" alt="X" src="[% crms.WebPath('web', 'XIcon.png') %]"/>
+            [% END %]
+          </td>
+          <td class="nowrap">[% crms.GetTrackingInfo(id, 1, 1) %]</td>
+        </tr>
+      [% END %]
+    </table>
+  [% END %]
+</div>
 <br/>
 
 [% IF cgi.param('fix') && ids %]

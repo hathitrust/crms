@@ -1,6 +1,0 @@
-[% INCLUDE header.tt %]
-
-<h2>Corrections:</h2>
-[% INCLUDE correctionsSelection.tt %]
-[% INCLUDE correctionsSearchResults.tt %]
-[% INCLUDE footer.tt %]
