@@ -57,7 +57,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.2.22';
+our $VERSION = '8.3';
 sub Version
 {
   return $VERSION;
@@ -1299,7 +1299,7 @@ sub CheckAndLoadItemIntoCandidates
     }
   }
   my $eval = $self->EvaluateCandidacy($id, $record);
-  if ($eval->{'project'})
+  if ($eval->{'msg'} eq 'yes')
   {
     $self->AddItemToCandidates($id, $eval->{'project'}, $time, $record);
   }
@@ -1314,6 +1314,7 @@ sub CheckAndLoadItemIntoCandidates
         $self->ReportMsg(sprintf("Skip $id ($src) -- %s in filtered volumes",
                                  (defined $inund)? "updating $inund->$src":"inserting as $src"));
         $self->Filter($id, $src);
+        $self->UpdateMetadata($id, 1, $record);
       }
       else
       {
@@ -2186,7 +2187,7 @@ sub ConvertToSearchTerm
   my $order  = shift;
 
   my $prefix = ($page eq 'queue' || $page eq 'exportData')? 'q.':'r.';
-  $prefix = 'c.' if $page eq 'candidates';
+  $prefix = 'c.' if $page eq 'candidates' or $page eq 'und';
   my $new_search = $search;
   if (!$search || $search eq 'Identifier')
   {
@@ -2228,7 +2229,7 @@ sub ConvertToSearchTerm
   }
   elsif ($search eq 'Source')
   {
-    $new_search = ($page eq 'queue')? 'q.source':'q.src';
+    $new_search = ($page eq 'queue')? 'q.source': ($prefix.'src');
   }
   elsif ($search eq 'Project') { $new_search = 'p.name'; }
   elsif ($search eq 'GID') { $new_search = $prefix. 'gid'; }
@@ -3274,6 +3275,118 @@ sub GetCandidatesRef
                 author   => $row->[5],
                 country  => $row->[6],
                 project  => $row->[7]
+               };
+    push @return, $item;
+    if ($download)
+    {
+      $data .= "\n". join "\t", map {$item->{$_};} @colnames;
+    }
+  }
+  if (!$download)
+  {
+    my $n = POSIX::ceil($offset/$pagesize+1);
+    my $of = POSIX::ceil($totalVolumes/$pagesize);
+    $n = 0 if $of == 0;
+    $data = {'rows' => \@return,
+             'volumes' => $totalVolumes,
+             'page' => $n,
+             'of' => $of
+            };
+  }
+  return $data;
+}
+
+sub GetUNDRef
+{
+  my $self         = shift;
+  my $order        = shift;
+  my $dir          = shift;
+  my $search1      = shift;
+  my $search1Value = shift || '';
+  my $op1          = shift;
+  my $search2      = shift;
+  my $search2Value = shift || '';
+  my $startDate    = shift;
+  my $endDate      = shift;
+  my $offset       = shift || 0;
+  my $pagesize     = shift || 0;
+  my $download     = shift;
+
+  $pagesize = 20 unless $pagesize > 0;
+  $offset = 0 unless $offset > 0;
+  $order = 'id' unless $order;
+  $offset = 0 unless $offset;
+  $search1 = $self->ConvertToSearchTerm($search1, 'und');
+  $search2 = $self->ConvertToSearchTerm($search2, 'und');
+  $order = $self->ConvertToSearchTerm($order, 'und');
+  my @rest = ();
+  my $tester1 = '=';
+  my $tester2 = '=';
+  if ($search1Value =~ m/.*\*.*/)
+  {
+    $search1Value =~ s/\*/%/gs;
+    $tester1 = ' LIKE ';
+  }
+  if ($search2Value =~ m/.*\*.*/)
+  {
+    $search2Value =~ s/\*/%/gs;
+    $tester2 = ' LIKE ';
+  }
+  if ($search1Value =~ m/([<>!]=?)\s*(\d+)\s*/)
+  {
+    $search1Value = $2;
+    $tester1 = $1;
+  }
+  if ($search2Value =~ m/([<>!]=?)\s*(\d+)\s*/)
+  {
+    $search2Value = $2;
+    $tester2 = $1;
+  }
+  push @rest, "q.time>='$startDate'" if $startDate;
+  push @rest, "q.time<='$endDate'" if $endDate;
+  if ($search1Value ne '' && $search2Value ne '')
+  {
+    push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
+  }
+  else
+  {
+    push @rest, "$search1 $tester1 '$search1Value'" if $search1Value ne '';
+    push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
+  }
+  my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
+  my $sql = 'SELECT COUNT(c.id) FROM und c LEFT JOIN bibdata b ON c.id=b.id '.
+            $restrict;
+  #print "$sql<br/>\n";
+  my $totalVolumes = $self->SimpleSqlGet($sql);
+  $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
+  my @return = ();
+  $sql = 'SELECT c.id,DATE(c.time),b.sysid,YEAR(b.pub_date),b.title,b.author,'.
+         ' b.country, c.src'.
+         ' FROM und c LEFT JOIN bibdata b ON c.id=b.id '. $restrict.
+         ' ORDER BY '. "$order $dir LIMIT $offset, $pagesize";
+  #print "$sql<br/>\n";
+  my $ref = undef;
+  eval {
+    $ref = $self->SelectAll($sql);
+  };
+  if ($@)
+  {
+    $self->SetError($@);
+  }
+  my @columns = ('ID', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Country', 'Date Added', 'Source');
+  my @colnames = ('id', 'sysid', 'title', 'author', 'pubdate', 'country', 'date', 'Source');
+  my $data = join "\t", @columns;
+  foreach my $row (@{$ref})
+  {
+    my $id = $row->[0];
+    my $item = {id       => $id,
+                date     => $row->[1],
+                sysid    => $row->[2],
+                pubdate  => $row->[3],
+                title    => $row->[4],
+                author   => $row->[5],
+                country  => $row->[6],
+                src      => $row->[7]
                };
     push @return, $item;
     if ($download)
@@ -6232,6 +6345,27 @@ sub CandidatesSearchMenu
   my @keys = qw(Identifier SysID Title Author PubDate Country Date Project);
   my @labs = ('ID', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Country', 'Date Added',
               'Project');
+  my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
+  foreach my $i (0 .. scalar @keys - 1)
+  {
+    $html .= sprintf("  <option value='%s'%s>%s</option>\n",
+                     $keys[$i],
+                     ($searchVal eq $keys[$i])? ' selected="selected"':'',
+                     $labs[$i]);
+  }
+  $html .= "</select>\n";
+  return $html;
+}
+
+# Generates HTML to get the field type menu on the Volumes in Candidates page.
+sub UNDSearchMenu
+{
+  my $self       = shift;
+  my $searchName = shift;
+  my $searchVal  = shift;
+
+  my @keys = qw(Identifier SysID Title Author PubDate Country Date Source);
+  my @labs = ('ID', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Country', 'Date Added', 'Source');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
