@@ -25,6 +25,12 @@ sub EvaluateCandidacy
   my $reason = shift;
 
   my @errs;
+  # Check CC license
+  if (($attr eq 'ic' || $attr eq 'und') &&
+      $self->HasCCLicense($record))
+  {
+    return {'status' => 'filter', 'msg' => 'cc'};
+  }
   # Check current rights
   push @errs, "current rights $attr/$reason" if $attr ne 'ic' or $reason ne 'bib';
   # Check well-defined record dates
@@ -63,13 +69,11 @@ sub EvaluateCandidacy
     push @errs, "foreign pub ($where)";
   }
   push @errs, 'non-BK format' unless $record->isFormatBK($id, $record);
-  #printf "Core candidacy: errors '%s'\n", join ', ', @errs;
   if (scalar @errs)
   {
     return {'status' => 'no', 'msg' => join '; ', @errs};
   }
   my $src;
-  $src = 'gov' if $record->IsProbableGovDoc();
   my %langs = ('   ' => 1, '|||' => 1, 'emg' => 1,
                'eng' => 1, 'enm' => 1, 'mul' => 1,
                'new' => 1, 'und' => 1);
@@ -77,6 +81,7 @@ sub EvaluateCandidacy
   $src = 'dissertation' if $record->isThesis;
   $src = 'translation' if $record->isTranslation;
   #$src = 'foreign' if $self->IsReallyForeignPub($record);
+  $src = 'gov' if $record->IsProbableGovDoc();
   return {'status' => 'filter', 'msg' => $src} if defined $src;
   return {'status' => 'yes', 'msg' => ''};
 }
@@ -94,6 +99,24 @@ sub IsGovDoc
   };
   $self->{crms}->SetError($record->id . " failed in IsGovDoc(): $@") if $@;
   return $is;
+}
+
+sub HasCCLicense
+{
+  my $self   = shift;
+  my $record = shift;
+
+  my $id = $record->id;
+  foreach my $id2 (@{$record->allHTIDs})
+  {
+    next if $id2 eq $id;
+    if ($record->doEnumchronMatch($id, $id2))
+    {
+      my $rq = $self->{crms}->RightsQuery($id2, 1);
+      my ($attr, $reason, $src, $usr, $time, $note) = @{$rq->[0]};
+      return 1 if $attr =~ m/^cc-/;
+    }
+  }
 }
 
 # ========== REVIEW ========== #
