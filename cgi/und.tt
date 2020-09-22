@@ -2,28 +2,38 @@
 
 <h2>Filtered Volumes:</h2>
 
-[% page = cgi.param("p") %]
-[% op1 = cgi.param("op1") %]
-[% search1 = cgi.param("search1") %]
-[% search2 = cgi.param("search2") %]
+[% page         = cgi.param("p")            %]
+[% op1          = cgi.param("op1")          %]
+[% search1      = cgi.param("search1")      %]
+[% search2      = cgi.param("search2")      %]
 [% search1value = cgi.param("search1value") %]
 [% search2value = cgi.param("search2value") %]
-[% startDate = cgi.param('startDate') %]
-[% endDate = cgi.param('endDate') %]
-[% order = cgi.param('order') %]
-[% dir = cgi.param('dir') %]
-[% recs = cgi.param('records') %]
+[% startDate    = cgi.param('startDate')    %]
+[% endDate      = cgi.param('endDate')      %]
+[% order        = cgi.param('order')        %]
+[% dir          = cgi.param('dir')          %]
+[% offset       = cgi.param('offset')       %]
+[% p            = cgi.param('p')            %]
+[% records      = cgi.param('records')      %]
+[% jump         = cgi.param('jump')         %]
 
-[% recs = recs.replace('\D','') %]
-[% IF NOT recs %]
-  [% recs = cgi.cookie('recs') or 20 %]
-  [% CALL cgi.param('records', recs) %]
+[% records = records.replace('\D','') %]
+[% IF NOT records %]
+  [% records = cgi.cookie('records') or 20 %]
+[% END %]
+
+[% IF jump %]
+  [% offset = (jump - 1) * records %]
 [% END %]
 
 [% IF NOT dir %]
   [% dir = 'ASC' %]
   [% CALL cgi.param('dir', 'ASC') %]
 [% END %]
+
+[% CALL cgi.param('records', records) %]
+[% CALL cgi.param('offset', offset)   %]
+[% CALL cgi.param('jump', '')         %]
 <br/>
 <div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
 
@@ -87,8 +97,8 @@ Restrict selection:<br/>
 <br/>
 
 <label for="records">Display:</label>
-<input size="3" type="text" id="records" name="records" value="[% recs %]"
-       onblur="setCookie('recs',this.value,31);"
+<input size="3" type="text" id="records" name="records" value="[% records %]"
+       onblur="setCookie('records',this.value,31);"
 />
 records per page.
 <br/>
@@ -108,32 +118,9 @@ records per page.
 </div>
 <br/>
 
-[% search1        = cgi.param('search1')        %]
-[% search1value   = cgi.param('search1value')   %]
-[% search2        = cgi.param('search2')        %]
-[% search2value   = cgi.param('search2value')   %]
-[% op1            = cgi.param('op1')            %]
-[% startDate      = cgi.param('startDate')      %]
-[% endDate        = cgi.param('endDate')        %]
-[% order          = cgi.param('order')          %]
-[% dir            = cgi.param('dir')            %]
-[% offset         = cgi.param('offset')         %]
-[% p              = cgi.param('p')              %]
-[% pagesize       = cgi.param('records')        %]
-[% jump           = cgi.param('jump')           %]
-[% pagesize = pagesize.replace('\D','')         %]
-[% IF NOT pagesize %][% pagesize = 20 %][% END %]
-
-[% IF jump %]
-[% offset = (jump - 1) * pagesize %]
-[% END %]
-
-[% CALL cgi.param('records',pagesize) %]
-[% CALL cgi.param('offset',offset)    %]
-
 [% ref = crms.GetUNDRef(order, dir, search1, search1value, op1, search2,
                         search2value, startDate, endDate, offset,
-                        pagesize, 0) %]
+                        records, 0) %]
 
 [% total = ref.volumes %]
 
@@ -145,12 +132,12 @@ records per page.
   <strong>Found $total volume[% (total==1)? "":"s"%], page $pagenum of $of</strong><br/>
 
   [% IF NOT offset %] [% offset = 0 %] [% END %]
-  [% IF offset > 0 %] [% next = offset + pagesize %]
-  [% ELSE %]          [% next = pagesize %] [% END %]
-  [% IF offset > 0 %] [% prev = offset - pagesize %]
+  [% IF offset > 0 %] [% next = offset + records %]
+  [% ELSE %]          [% next = records %] [% END %]
+  [% IF offset > 0 %] [% prev = offset - records %]
   [% ELSE %]          [% prev = 0 %] [% END %]
 
-  [% IF total > pagesize %] [% last = (of - 1) * pagesize %]
+  [% IF total > records %] [% last = (of - 1) * records %]
   [% ELSE %]          [% last = 0 %] [% END %]
 
   [% doPrev = (offset > 0) %]
@@ -158,15 +145,15 @@ records per page.
   [% doFirst = (offset != 0) %]
   [% doLast = (offset != last) %]
   [% IF doPrev %]
-  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">previous [% pagesize %]</a>
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">previous [% records %]</a>
   [% ELSE %]
-  <span class="disabledLink">previous [% pagesize %]</span>
+  <span class="disabledLink">previous [% records %]</span>
   [% END %]
   &nbsp;||&nbsp;
   [% IF doNext %]
-  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$next#results" %]">next [% pagesize %]</a>
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$next#results" %]">next [% records %]</a>
   [% ELSE %]
-  <span class="disabledLink">next [% pagesize %]</span>
+  <span class="disabledLink">next [% records %]</span>
   [% END %]
   &nbsp;||&nbsp;
   [% IF doFirst %]
@@ -232,7 +219,7 @@ records per page.
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
-  previous [% pagesize %]
+  previous [% records %]
   [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
   &nbsp;||&nbsp;
   [% IF doNext %]
@@ -240,7 +227,7 @@ records per page.
   [% ELSE %]
   <span class="disabledLink">
   [% END %]
-  next [% pagesize %]
+  next [% records %]
   [% IF doNext %]</a>[% ELSE %]</span>[% END %]
 
   [% IF of > 1 %]
@@ -260,7 +247,7 @@ records per page.
       [% IF pg == pagenum %]
         <strong>[% pg %]</strong> ||
       [% ELSE %]
-        [% off = (pg - 1) * pagesize %]
+        [% off = (pg - 1) * records %]
         <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$off#results" %]">[% pg %]</a> ||
       [% END %]
     [% END %]

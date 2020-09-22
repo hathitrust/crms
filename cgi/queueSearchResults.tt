@@ -1,3 +1,4 @@
+[% p              = cgi.param('p')              %]
 [% search1        = cgi.param('search1')        %]
 [% search1value   = cgi.param('search1value')   %]
 [% search2        = cgi.param('search2')        %]
@@ -8,7 +9,6 @@
 [% order          = cgi.param('order')          %]
 [% dir            = cgi.param('dir')            %]
 [% offset         = cgi.param('offset')         %]
-[% p              = cgi.param('p')              %]
 [% pagesize       = cgi.param('records')        %]
 [% jump           = cgi.param('jump')           %]
 [% pagesize = pagesize.replace('\D','')         %]
@@ -18,8 +18,9 @@
 [% offset = (jump - 1) * pagesize %]
 [% END %]
 
-[% CALL cgi.param('records',pagesize) %]
-[% CALL cgi.param('offset',offset)    %]
+[% CALL cgi.param('records', pagesize) %]
+[% CALL cgi.param('offset', offset)    %]
+[% CALL cgi.param('jump', '')    %]
 
 [% ref = crms.GetQueueRef(order, dir, search1, search1value, op1, search2, search2value, startDate, endDate, offset, pagesize, 0) %]
 

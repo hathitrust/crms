@@ -11,6 +11,7 @@
 [% order          = cgi.param('order')        %]
 [% dir            = cgi.param('dir')          %]
 [% offset         = cgi.param('offset')       %]
+[% jump           = cgi.param('jump')         %]
 [% p              = cgi.param('p')            %]
 [% stype          = cgi.param('stype')        %]
 [% pagesize       = cgi.param('records')      %]
@@ -20,11 +21,18 @@
 
 [% showSysID = cgi.cookie('showSysID') %]
 [% vols = (stype == 'volumes' || stype == 'groups') %]
-[% IF NOT pagesize %][% pagesize = (vols)? 10:20 %][% END %]
+[% IF NOT pagesize %]
+  [% pagesize = (vols)? 10:20 %]
+[% END %]
+
+[% IF jump %]
+  [% offset = (jump - 1) * pagesize %]
+[% END %]
 
 [% IF !order %][% order = 'Identifier' %][% END %]
 [% IF !dir %][% dir = 'ASC' %][% END %]
 
+[% CALL cgi.param('jump', '') %]
 <script type="text/Javascript">
 <!--
 function CheckAll(box,formid)
@@ -47,7 +55,7 @@ addEvent(window, 'load', function(e)
   [% ref = {volumes => 0, reviews => 0} %]
 [% ELSE %]
   [% IF stype == 'volumes' %]
-    [% ref = crms.GetVolumesRefWide(p, order, dir, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize) %]
+    [% ref = crms.GetVolumesRefWide(p, order, dir, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, , pagesize) %]
   [% ELSIF stype == 'groups' %]
     [% ref = crms.GetVolumesRef(p, order, dir, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize) %]
   [% ELSE %]
