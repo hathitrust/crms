@@ -15,13 +15,16 @@
 [% IF NOT pagesize %][% pagesize = 20 %][% END %]
 
 [% IF jump %]
-[% offset = (jump - 1) * pagesize %]
+  [% offset = (jump - 1) * pagesize %]
 [% END %]
 
-[% CALL cgi.param('records',pagesize) %]
-[% CALL cgi.param('offset',offset)    %]
+[% CALL cgi.param('records', pagesize) %]
+[% CALL cgi.param('offset', offset)    %]
+[% CALL cgi.param('jump', '')    %]
 
-[% ref = crms.GetExportDataRef(order, dir, search1, search1value, op1, search2, search2value, startDate, endDate, offset, pagesize, 0) %]
+[% ref = crms.GetExportDataRef(order, dir, search1, search1value, op1, search2,
+                               search2value, startDate, endDate, offset,
+                               pagesize, 0) %]
 
 [% total = ref.volumes %]
 
