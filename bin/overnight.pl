@@ -14,6 +14,7 @@ USAGE: $0 [-acCehlNpqtv] [-m MAIL [-m MAIL...]] [start_date [end_date]]
 
 Processes reviews, exports determinations, updates candidates,
 updates the queue, recalculates user stats, and clears stale locks.
+This is the "heartbeat" of CRMS.
 
 If the start or end dates are specified, only loads candidates
 with latest rights DB timestamp between them.
@@ -29,7 +30,7 @@ with latest rights DB timestamp between them.
 -q      Do not update queue.
 -s      Do not recalculate monthly stats.
 -t      Run in training.
--v      Be verbose. May be repeated for increased verbosity.
+-v      Emit verbose debugging information. May be repeated.
 END
 
 my $instance;

@@ -10,15 +10,19 @@ use Excel::Writer::XLSX;
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-hnpv] [-m MAIL [-m MAIL2...]] [-x SYS]
+USAGE: $0 [-hnpv] [-m MAIL [-m MAIL2...]]
 
-Reports on suspected federal government documents in the und table.
+Reports on suspected US federal government documents identified by a heuristic
+(IsProbableGovDoc() in Metadata.pm) and stored in the und table.
+
+The report is run monthly and takes the form of an Excel spreadsheet. By default
+the volumes in question are deleted from the und table after the report is sent.
 
 -h       Print this help message.
 -m MAIL  Mail the report to MAIL. May be repeated for multiple addresses.
 -n       No-op. Do not delete src='gov' entries in the und table.
 -p       Run in production.
--v       Emit debugging information. May be repeated.
+-v       Emit verbose debugging information. May be repeated.
 END
 
 my $help;

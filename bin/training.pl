@@ -10,9 +10,9 @@ use Term::ANSIColor qw(:constants);
 $Term::ANSIColor::AUTORESET = 1;
 
 my $usage = <<END;
-USAGE: $0 [-Ddhnqv] [-x SYS] [-p PROJ [-p PROJ2...]] COUNT
+USAGE: $0 [-Ddhnqv] [-p PROJ [-p PROJ2...]] COUNT
 
-Populates the training database with examples (correct, single reviews)
+Populates the training database with examples (validated single reviews)
 from production so that the queue size is increased to COUNT.
 
 -D       Delete all existing reviews and volumes in queue.
@@ -21,8 +21,7 @@ from production so that the queue size is increased to COUNT.
 -n       Do not submit SQL.
 -p PROJ  Only include reviews on the specified project PROJ. Defaults to 'Core'.
 -q       Only bring in queue entries, do not import single review.
--v       Be verbose.
--x SYS   Set SYS as the system to execute.
+-v       Emit verbose debugging information. May be repeated.
 END
 
 my $del;

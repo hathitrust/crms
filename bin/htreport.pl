@@ -9,7 +9,7 @@ use Getopt::Long;
 use Utilities;
 
 my $usage = <<END;
-USAGE: $0 [-hnpvy] [-m MAIL [-m MAIL...]]
+USAGE: $0 [-hnpv] [-m MAIL [-m MAIL...]] [-y YEAR]
 
 Sends biweekly activity reports to HathiTrust administrators.
 
@@ -17,7 +17,7 @@ Sends biweekly activity reports to HathiTrust administrators.
 -m MAIL  Send report to MAIL. May be repeated for multiple recipients.
 -n       No-op; do not send e-mail at all.
 -p       Run in production.
--v       Be verbose.
+-v       Emit verbose debugging information. May be repeated.
 -y YEAR  Run report against entire year YEAR.
 END
 

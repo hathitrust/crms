@@ -36,7 +36,7 @@ the process or accommodate its resumption.
 -n       No-op. Do not modify the CRMS database.
 -p       Run in production.
 -s SECS  Run importer for SECS seconds, rather than the default 600.
--v       Emit debugging information. May be repeated.
+-v       Emit verbose debugging information. May be repeated.
 END
 
 my $help;

@@ -16,8 +16,8 @@ $Term::ANSIColor::AUTORESET = 1;
 my $usage = <<END;
 USAGE: $0 [-hnpqv] [-m MAIL [-m MAIL...]]
 
-Produces TSV file of HTID-renewal ID for Zephir download at
-prep/CRMSRenewals.tsv
+Produces TSV file of HTID and renewal ID for Zephir download at
+https://www.hathitrust.org/files/CRMSRenewals.tsv
 
 Data hosted on macc-ht-web-000 etc at /htapps/www/sites/www.hathitrust.org/files
 
@@ -32,7 +32,7 @@ If there is more than one distinct renewal ID then no value is written.
 -m MAIL  Send note to MAIL. May be repeated for multiple recipients.
 -n       No-op; do not send e-mail at all.
 -p       Run in production.
--v       Be verbose. May be repeated for increased verbosity.
+-v       Emit verbose debugging information. May be repeated.
 END
 
 my $help;

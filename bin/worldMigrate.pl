@@ -15,12 +15,12 @@ use Data::Dumper;
 my $usage = <<END;
 USAGE: $0 [-hnpv] [-m USER [-m USER...]]
 
-Migrates data from CRMS-World to CRMS-US.
+One-off script to migrate data from CRMS-World to CRMS-US.
 
 -h       Print this help message.
 -p       Run in production.
 -t       Run in training.
--v       Be verbose.
+-v       Emit verbose debugging information. May be repeated.
 END
 
 my $help;

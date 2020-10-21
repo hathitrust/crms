@@ -10,7 +10,7 @@ use Encode;
 
 my $usage = <<END;
 USAGE: $0 [-achinpv] [-f FILE] [-s HTID [-s HTID...]]
-          [-x SYS] [start_date [end_date]]
+          [start_date [end_date]]
 
 Reports on volumes that are no longer eligible for candidacy
 in the rights database and removes them from the system.
@@ -25,7 +25,7 @@ in the rights database and removes them from the system.
 -n         No-op; reports what would be done but do not modify the database.
 -p         Run in production.
 -s HTID    Report only for HT volume HTID. May be repeated for multiple volumes.
--v         Emit debugging information.
+-v         Emit verbose debugging information. May be repeated.
 END
 
 my $all;
