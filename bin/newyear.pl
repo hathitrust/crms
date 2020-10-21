@@ -37,7 +37,7 @@ database as a queue entry and autocrms review with the new rights.
 -n             No-op. Makes no changes to the database.
 -p             Run in production.
 -s HTID        Report only for volume HTID. May be repeated for multiple volumes.
--v             Be verbose. May be repeated for increased verbosity.
+-v             Emit verbose debugging information. May be repeated.
 -x EXCEL_FILE  Write report on new determinations to EXCEL_FILE.
 -y YEAR        Use this year instead of the current one.
 END

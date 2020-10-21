@@ -12,7 +12,8 @@ use Encode;
 my $usage = <<END;
 USAGE: $0 [-hpqtv] [-m USER [-m USER...]]
 
-Sends accumulated help requests to crms-experts\@umich.edu.
+Sends accumulated help requests and announcements to and from
+crms-experts\@umich.edu.
 
 -h       Print this help message.
 -m MAIL  Also send report to MAIL. May be repeated for multiple recipients.
@@ -20,7 +21,7 @@ Sends accumulated help requests to crms-experts\@umich.edu.
 -p       Run in production.
 -q       Quiet: do not send to crms-experts, just to the recipients on the -m flag.
 -t       Run in training.
--v       Be verbose.
+-v       Emit verbose debugging information. May be repeated.
 END
 
 my $help;

@@ -20,7 +20,7 @@ Sends weekly activity report.
 -p       Run in production.
 -q       Quiet: do not send any e-mail at all. For testing.
 -t       Run in training.
--v       Be verbose.
+-v       Emit verbose debugging information. May be repeated.
 END
 
 my $help;

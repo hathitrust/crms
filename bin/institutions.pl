@@ -25,7 +25,7 @@ Data hosted on macc-ht-web-000 etc at /htapps/www/sites/www.hathitrust.org/files
 -m MAIL  Send note to MAIL. May be repeated for multiple recipients.
 -n       No-op; do not send e-mail or move file into hathitrust.org filesystem.
 -p       Run in production.
--v       Be verbose. May be repeated for increased verbosity.
+-v       Emit verbose debugging information. May be repeated.
 END
 
 my $help;

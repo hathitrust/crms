@@ -21,9 +21,11 @@ my $usage = <<END;
 USAGE: $0
 
 Runs Perl::Critic on all .pm, .pl, and extensionless files in cgi/ and bin/.
+This is offered as a sort of sanity check and is not currently part of the
+test suite.
 
 -h       Print this help message.
--v       Be verbose. May be repeated for increased verbosity.
+-v       Emit verbose debugging information. May be repeated.
 END
 
 my $help;

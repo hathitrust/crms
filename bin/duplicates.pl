@@ -11,7 +11,7 @@ my $usage = <<END;
 USAGE: $0 [-hlptvwz] [-i ID] [-m MAIL_ADDR [-m MAIL_ADDR2...]] [-r TYPE]
           [-s SUMMARY_PATH] [-t REPORT_TYPE] [start_date [end_date]]
 
-Reports on CRMS determinations for volumes that have duplicates,
+Reports on determinations for volumes that have duplicates,
 multiple volumes, or conflicting determinations.
 
 -h       Print this help message.
@@ -28,7 +28,7 @@ multiple volumes, or conflicting determinations.
            resolvable:    partially conflicting CRMS determinations that can be resolved
                           with a pd/crms, ic/crms, or und/crms determination, >0 ic/bib
          May be repeated.
--v       Be verbose. May be repeated.
+-v       Emit verbose debugging information. May be repeated.
 -z       Generate hyperlinks in the TSV file for Excel.
 END
 

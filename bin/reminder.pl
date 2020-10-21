@@ -19,7 +19,7 @@ the past two weeks.
 -p       Run in production.
 -q       Do not send any emails at all.
 -t       Run in training.
--v       Be verbose. May be repeated for increased verbosity.
+-v       Emit verbose debugging information. May be repeated.
 END
 
 my $help;
@@ -30,7 +30,7 @@ my $quiet;
 my $training;
 my $verbose = 0;
 
-Getopt::Long::Configure ('bundling');
+Getopt::Long::Configure('bundling');
 die 'Terminating' unless GetOptions('h|?' => \$help,
            'p'    => \$production,
            'q'    => \$quiet,
@@ -60,6 +60,8 @@ thank you! This automated email reminder will run anyway.</p>
 please check with your supervisor. For additional questions or assistance,
 contact Kristina Hall: keden@hathitrust.org</i></p>
 END
+
+my @mails;
 my $sql = 'SELECT u.id FROM users u INNER JOIN institutions i ON u.institution=i.id'.
           ' WHERE u.reviewer+u.advanced>0 AND u.expert=0'.
           ' AND i.shortname!="Michigan" AND u.id NOT LIKE "%-reviewer"'.
