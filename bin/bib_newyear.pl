@@ -186,7 +186,7 @@ foreach my $row (@{$ref})
   #printf "%s\n", Dumper $bri;
   #printf "%s %s %s\n", $bri->{'date_used'}, $year - 95, $bri->{'attr'};
   if ($bri->{'date_used'} && $bri->{'date_used'} == $br->{'us_pd_cutoff_year'} - 1 &&
-      ($bri->{'attr'} eq 'pd' || ($bri->{'attr'} eq 'pdus' && $attr ne 'pd'))
+      ($bri->{'attr'} eq 'pd' || ($bri->{'attr'} eq 'pdus' && $attr ne 'pd')))
   {
     my $bri_attr = $bri->{'attr'};
     my $bri_reason = $bri->{'reason'};
