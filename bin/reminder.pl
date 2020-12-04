@@ -46,6 +46,13 @@ my $crms = CRMS->new(
     instance => $instance
 );
 
+my $disable = $crms->GetSystemVar('disableReminder');
+if ($disable)
+{
+  print "disableReminder system variable set, exiting.\n" if $verbose;
+  exit(0);
+}
+
 my $msg = <<'END';
 <p>Automated Reminder: CRMS Review Time - 14 Days out of the system</p>
 
@@ -61,7 +68,7 @@ please check with your supervisor. For additional questions or assistance,
 contact Kristina Hall: keden@hathitrust.org</i></p>
 END
 
-my @mails;
+
 my $sql = 'SELECT u.id FROM users u INNER JOIN institutions i ON u.institution=i.id'.
           ' WHERE u.reviewer+u.advanced>0 AND u.expert=0'.
           ' AND i.shortname!="Michigan" AND u.id NOT LIKE "%-reviewer"'.
