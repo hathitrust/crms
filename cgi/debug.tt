@@ -32,6 +32,17 @@
 </table>
 <br/><br/>
 
+[% IF cgi.param('systemvars') %]
+  <h4>System Variables:</h4>
+  <table class="exportStats" style="width:33%">
+  <tr><th>Name</th><th>Value</th></tr>
+  [% vars = crms.SelectAll('SELECT name,value FROM systemvars ORDER BY name') %]
+  [% FOREACH r IN vars %]
+    <tr><td>[% r.0 %]</td><td>[% r.1 %]</td></tr>
+  [% END %]
+  </table>
+  <br/><br/>
+[% END %]
 
 <div style="position:relative;border-style:solid;width:66em;border-width:1px;padding:10px;">
 <h3>Export Report</h3>
