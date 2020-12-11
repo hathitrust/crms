@@ -66,11 +66,7 @@ foreach my $row (@{$ref})
   $id = undef if defined $id and $id eq '';
   my %mails;
   $mails{$_} = 1 for @mails;
-  if ($crms->IsDevArea())
-  {
-    $mails{$crms->GetSystemVar('adminEmail')} = 1 unless $quiet;
-  }
-  else
+  if (!$crms->IsDevArea())
   {
     $mails{$crms->GetSystemVar('expertsEmail')} = 1 unless $quiet;
   }
