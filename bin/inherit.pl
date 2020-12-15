@@ -12,9 +12,12 @@ USAGE: $0 [-acCdhnpquv] [-s HTID [-s HTID...]]
           [-m MAIL [-m MAIL...]] [-P PROJ [-P PROJ...]]
           [-t TBL [-t TBL...]] [start_date[ time] [end_date[ time]]]
 
-Reports on the volumes that can inherit from this morning's export,
-or, if start_date is specified, exported after then and before end_date
-if it is specified.
+Reports on the volumes that can inherit from this morning's export, or in the
+case of candidates inheritance, recently-ingested volumes that can inherit
+an earlier CRMS determination.
+
+If start_date is specified, runs against volumes exported after then and before
+end_date if it is specified.
 
 -a         Report on all exports, regardless of date range.
 -c         Report on recent addition to candidates.
@@ -24,7 +27,7 @@ if it is specified.
 -m MAIL    Mail the report to MAIL. May be repeated for multiple addresses.
 -n         No-op; do not modify the database.
 -p         Run in production.
--P PROJ    For candidates inheritance, only check volumes in the specified project.
+-P PROJ    For candidates inheritance, only check volumes in project PROJ.
 -q         Do not emit report (ignored if -m is used).
 -s HTID    Report only for HT volume VOL_ID. May be repeated for multiple volumes.
 -t TBL     Suppress table TBL (which is often huge in candidates cleanup),
@@ -32,7 +35,7 @@ if it is specified.
            May be repeated for multiple tables.
 -u         Also report on recent additions to the und table
            (ignored if -c is not used).
--v         Emit debugging information.
+-v         Emit verbose debugging information. May be repeated.
 END
 
 my $all;

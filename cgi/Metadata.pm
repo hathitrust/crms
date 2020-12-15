@@ -159,11 +159,18 @@ sub xml
   return $xml;
 }
 
+sub leader
+{
+  my $self = shift;
+
+  return $self->xml->findvalue('//*[local-name()="leader"]');
+}
+
 sub fmt
 {
   my $self = shift;
 
-  my $ldr  = $self->xml->findvalue('//*[local-name()="leader"]');
+  my $ldr  = $self->leader;
   my $type = substr $ldr, 6, 1;
   my $lev  = substr $ldr, 7, 1;
   my %bktypes = ('a'=>1, 't'=>1);

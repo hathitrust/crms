@@ -57,7 +57,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.3.1';
+our $VERSION = '8.3.2';
 sub Version
 {
   return $VERSION;
@@ -5479,7 +5479,7 @@ sub OpenErrorLog
   my $logFile = $self->get('logFile');
   if ($logFile)
   {
-    open(my $fh, ">>", $logFile);
+    open(my $fh, '>>:encoding(UTF-8)', $logFile);
     if (!defined $fh) { die "failed to open log: $logFile \n"; }
     my $oldfh = select($fh); $| = 1; select($oldfh); ## flush out
     $self->set('logFh', $fh);

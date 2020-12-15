@@ -8,7 +8,6 @@
                style="display:block;margin-left:auto;margin-right:auto;"/>
   </a>
   <br/><br/><br/><br/>
-  [% mail = crms.GetSystemVar('adminEmail') %]
   [% experts = crms.GetSystemVar("expertsEmail") %]
   [% user = crms.get('user') %]
   <div class="warningBox">
@@ -32,7 +31,7 @@
         the core project please contact your CRMS liaison, or the e-mail below.
         If you feel that this may be a CRMS error, please try refreshing the page
         a couple of times before contacting
-        <a href="mailto:[% mail %]"><span style="color:black;">[% experts %]</span></a>.
+        <a href="mailto:[% experts %]"><span style="color:black;">[% experts %]</span></a>.
     </h4>
   </div>
 </div>

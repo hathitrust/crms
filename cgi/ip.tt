@@ -8,7 +8,7 @@
 <br/>
 <br/>
 <br/>
-[% mail = crms.GetSystemVar('adminEmail') %]
+[% experts = crms.GetSystemVar('expertsEmail') %]
 <div class="warningBox">
 <h2>Your IP address appears to have changed, so you will be unable to
     view HathiTrust page images. Please disconnect from your wireless
@@ -32,7 +32,7 @@
     If this cannot be done, please have the reviewer notify
     the UM CRMS team of a permanent IP address change.
     If you have any questions or concerns, contact
-    <a href="mailto:[% mail %]"><span style="color:black;">[% mail %]</span></a>.
+    <a href="mailto:[% experts %]"><span style="color:black;">[% experts %]</span></a>.
 </h4>
 </div>
 </div>

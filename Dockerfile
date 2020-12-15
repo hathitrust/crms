@@ -127,7 +127,9 @@ RUN apt-get update && apt-get install -y \
   libyaml-appconfig-perl \
   libyaml-libyaml-perl \
   libyaml-perl \
-  perlmagick
+  perlmagick \
+  libmarc-record-perl\
+  libmarc-xml-perl
 
 RUN apt-get install -y \
   autoconf \

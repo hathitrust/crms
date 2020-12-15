@@ -18,7 +18,7 @@ Creates LaTeX title reports for each State Gov Docs reviewer.
 
 -h       Print this help message.
 -p       Run in production.
--v       Be verbose.
+-v       Emit verbose debugging information. May be repeated.
 END
 
 my $help;

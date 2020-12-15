@@ -19,7 +19,7 @@ to reviewdata table.
 -h       Print this help message.
 -p       Run in production.
 -t       Run in training.
--v       Be verbose.
+-v       Emit verbose debugging information. May be repeated.
 END
 
 my $help;

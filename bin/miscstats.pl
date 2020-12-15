@@ -9,7 +9,7 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 
 my $usage = <<END;
-USAGE: $0 [-hpqtv] [-m MAIL [-m MAIL...]] [-x SYS]
+USAGE: $0 [-hpqtv] [-m MAIL [-m MAIL...]]
 
 Reports on user progress, patron requests, and past month's invalidations
 and swiss reviews.
@@ -19,7 +19,7 @@ and swiss reviews.
 -p         Run in production.
 -q         Do not emit report (ignored if -m is used).
 -t         Run against the training site.
--v         Emit debugging information.
+-v         Emit verbose debugging information. May be repeated.
 END
 
 

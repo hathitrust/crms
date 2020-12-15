@@ -11,13 +11,13 @@ use Utilities;
 my $usage = <<END;
 USAGE: $0 [-hnpv] [-m MAIL [-m MAIL...]]
 
-Sends monthly determination stats for HathiTrust newsletter in HTML format.
+Sends monthly determination stats for HathiTrust newsletter.
 
 -h       Print this help message.
 -m MAIL  Send report to MAIL. May be repeated for multiple recipients.
 -n       No-op; do not send e-mail at all.
 -p       Run in production.
--v       Be verbose.
+-v       Emit verbose debugging information. May be repeated.
 END
 
 my $help;
