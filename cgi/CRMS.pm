@@ -201,18 +201,16 @@ sub NeedStepUpAuth
     if (defined $class && defined $dbclass && $class ne $dbclass)
     {
       $need = 1;
-      my $template = 'https://___HOST___/Shibboleth.sso/Login?entityID=___ENTITY_ID___&target=___TARGET___';
       use URI::Escape;
-      my $target = CGI::self_url($self->get('cgi'));
-      $template =~ s/___HOST___/$ENV{SERVER_NAME}/;
-      $template =~ s/___ENTITY_ID___/$idp/;
-      $template =~ s/___TARGET___/$target/;
-      $template .= "&authnContextClassRef=$dbclass";
+      my $target = URI::Escape::uri_escape(CGI::url($self->get('cgi')));
+      my $template = "https://$ENV{SERVER_NAME}/Shibboleth.sso/Login?".
+                     "entityID=$idp&target=$target".
+                     "&authnContextClassRef=$dbclass";
       $self->set('stepup_redirect', $template);
       my $note = sprintf "ENV{Shib_Identity_Provider}='$idp'\n".
                          "ENV{Shib_AuthnContext_Class}='$class'\n".
                          "DB class=%s\n".
-                         'TEMPLATE=%s FROM=%s (%s,%s,%s)',
+                         'TEMPLATE=%s FROM=(%s,%s,%s)',
                          (defined $dbclass)? $dbclass:'<undef>',
                          $template, $ENV{SERVER_NAME}, $idp, $target;
       $self->set('auth_note', $note);
