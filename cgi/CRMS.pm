@@ -57,7 +57,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.3.5';
+our $VERSION = '8.3.6';
 sub Version
 {
   return $VERSION;
@@ -157,7 +157,7 @@ sub SetupUser
   return $crms_user;
 }
 
-# read the template from ht_institutions
+# Construct redirect URL based on template
 # replace __HOST__ with $ENV{SERVER_NAME}
 # replace __TARGET__ with something like CGI::self_url($cgi)
 # append &authnContextClassRef=$shib_authncontext_class
@@ -188,40 +188,31 @@ sub NeedStepUpAuth
   }
   if ($mfa)
   {
-    my ($dbclass, $dbtemplate);
-    $sql = 'SELECT shib_authncontext_class,template FROM ht_institutions'.
+    my $dbclass;
+    $sql = 'SELECT shib_authncontext_class FROM ht_institutions'.
            ' WHERE entityID=? LIMIT 1';
     eval {
       $ref = $sdr_dbh->selectall_arrayref($sql, undef, $idp);
     };
     if ($ref && scalar @{$ref})
     {
-      $dbclass    = $ref->[0]->[0]; # https://refeds.org/profile/mfa or NULL
-      $dbtemplate = $ref->[0]->[1]; # https://___HOST___/Shibboleth.sso/Login?entityID=https://shibboleth.umich.edu/idp/shibboleth&target=___TARGET___
-      #$dbtemplate = 'https://___HOST___/Shibboleth.sso/Login?entityID=___ENTITY_ID___&target=___TARGET___';
+      $dbclass = $ref->[0]->[0]; # https://refeds.org/profile/mfa or NULL
     }
     if (defined $class && defined $dbclass && $class ne $dbclass)
     {
       $need = 1;
-      my $tpl = $dbtemplate;
       use URI::Escape;
-      my $target = CGI::self_url($self->get('cgi'));
-      if ($dbtemplate)
-      {
-        $tpl =~ s/___HOST___/$ENV{SERVER_NAME}/;
-        $tpl =~ s/___TARGET___/$target/;
-        $tpl =~ s/___ENTITY_ID___/$idp/; # FIXME: may be obsolete
-        $tpl .= "&authnContextClassRef=$dbclass";
-        $self->set('stepup_redirect', $tpl);
-      }
+      my $target = URI::Escape::uri_escape(CGI::url($self->get('cgi')));
+      my $template = "https://$ENV{SERVER_NAME}/Shibboleth.sso/Login?".
+                     "entityID=$idp&target=$target".
+                     "&authnContextClassRef=$dbclass";
+      $self->set('stepup_redirect', $template);
       my $note = sprintf "ENV{Shib_Identity_Provider}='$idp'\n".
                          "ENV{Shib_AuthnContext_Class}='$class'\n".
                          "DB class=%s\n".
-                         'TEMPLATE=%s FROM=%s (%s,%s)',
+                         'TEMPLATE=%s FROM=(%s,%s,%s)',
                          (defined $dbclass)? $dbclass:'<undef>',
-                         (defined $tpl)? $tpl:'<undef>',
-                         (defined $dbtemplate)? $dbtemplate:'<undef>',
-                         $ENV{SERVER_NAME}, $target;
+                         $template, $ENV{SERVER_NAME}, $idp, $target;
       $self->set('auth_note', $note);
     }
   }
