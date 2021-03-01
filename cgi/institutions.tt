@@ -49,7 +49,7 @@
     <tr [% id == iid ? 'class="total"':'class="hoverWide"'%] [% style %]>
       <td>[% id %]</td>
       <td class="nowrap">
-        <a href="[% crms.Sysify('crms?p=adminUserRateInst;inst=' _ id) %]">
+        <a href="[% crms.Sysify('crms?p=adminUserRate;institution=' _ id) %]">
           [% inst.name.replace('\s','&nbsp;') %]
         </a>
       </td>
