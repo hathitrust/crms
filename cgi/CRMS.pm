@@ -986,18 +986,13 @@ sub ExportReviews
   }
   my $count = 0;
   my $user = 'crms';
-  my ($fh, $temp, $perm, $filename);
-  ($fh, $temp, $perm, $filename) = $self->GetExportFh() unless $training or $quiet;
-  $self->ReportMsg("<i>Exporting to <code>$temp</code>.</i>") unless $training or $quiet;
   my $start_size = $self->GetCandidatesSize();
+  my $rights_data = '';
   foreach my $id (@{$list})
   {
     my ($attr, $reason) = $self->GetFinalAttrReason($id);
     my $export = $self->CanExportVolume($id, $attr, $reason, $quiet);
-    if ($export && !$training && !$quiet)
-    {
-      print $fh "$id\t$attr\t$reason\t$user\tnull\n";
-    }
+    $rights_data .= "$id\t$attr\t$reason\t$user\tnull\n" if $export;
     my $sql = 'SELECT status,priority,source,added_by,project,ticket FROM queue WHERE id=?';
     my $ref = $self->SelectAll($sql, $id);
     my $status = $ref->[0]->[0];
@@ -1017,9 +1012,8 @@ sub ExportReviews
   }
   if (!$training && !$quiet)
   {
-    close $fh;
-    $self->ReportMsg("<i>Moving to <code>$perm</code>.</i>");
-    rename $temp, $perm;
+    my $rights_file = $self->WriteRightsFile($rights_data);
+    $self->ReportMsg("<i>Wrote .rights file <code>$rights_file</code>.</i>");
   }
   # Update correctness now that everything is in historical
   $self->UpdateValidation($_) for @{$list};
@@ -1027,8 +1021,6 @@ sub ExportReviews
   {
     my $dels = $start_size-$self->GetCandidatesSize();
     $self->ReportMsg("After export, removed $dels volumes from candidates.");
-    $self->set('export_path', $perm);
-    $self->set('export_file', $filename);
   }
 }
 
@@ -1131,16 +1123,14 @@ sub CanExportVolume
   return $export;
 }
 
-# Returns a triplet of (filehandle, temp name, permanent name)
-# Filehande is to the temp file; after it is closed it needs
-# to be renamed to the permanent name.
-sub GetExportFh
+sub WriteRightsFile
 {
-  my $self = shift;
+  my $self   = shift;
+  my $rights = shift;
 
   my $date = $self->GetTodaysDate();
-  $date    =~ s/:/_/g;
-  $date    =~ s/ /_/g;
+  $date =~ s/:/_/g;
+  $date =~ s/ /_/g;
   my $filename = 'crms_'. $date. '.rights';
   my $perm = $self->FSPath('prep', $filename);
   if ($self->WhereAmI() eq 'Production')
@@ -1151,8 +1141,13 @@ sub GetExportFh
   }
   my $temp = $perm . '.tmp';
   if (-f $temp) { die "file already exists: $temp\n"; }
-  open (my $fh, '>', $temp) || die "failed to open exported file ($temp): $!\n";
-  return ($fh, $temp, $perm, $filename);
+  open (my $fh, '>', $temp) || die "failed to open rights file ($temp): $!\n";
+  print $fh $rights;
+  close $fh;
+  rename $temp, $perm;
+  $self->set('export_path', $perm);
+  $self->set('export_file', $filename);
+  return $perm;
 }
 
 # Remove from the queue only if the volume is untouched.
@@ -6665,6 +6660,13 @@ sub GetTrackingInfo
   my $rights     = shift;
 
   my @stati = ();
+  my $licensing = $self->Licensing('crms' => $self);
+  my $lic_item = $licensing->GetData($id);
+  if ($lic_item)
+  {
+    push @stati, sprintf("%sManual Permissions $lic_item->{rights}",
+                         (defined $lic_item->{rights_file})? '' : 'Pending ');
+  }
   my $inQ = $self->IsVolumeInQueue($id);
   if ($inQ)
   {
@@ -8670,6 +8672,14 @@ sub KeioQuery
 {
   use Keio;
   Keio::Query(@_);
+}
+
+sub Licensing
+{
+  my $self = shift;
+
+  use Licensing;
+  Licensing->new('crms' => $self);
 }
 
 1;
