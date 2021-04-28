@@ -8644,34 +8644,12 @@ sub Commify
   return $n;
 }
 
-sub KeioTables
+sub Keio
 {
-  use Keio;
-  Keio::Tables(@_);
-}
+  my $self = shift;
 
-sub KeioTranslation
-{
   use Keio;
-  Keio::Translation(@_);
-}
-
-sub KeioTableQuery
-{
-  use Keio;
-  Keio::TableQuery(@_);
-}
-
-sub KeioQueries
-{
-  use Keio;
-  Keio::Queries(@_);
-}
-
-sub KeioQuery
-{
-  use Keio;
-  Keio::Query(@_);
+  Keio->new('crms' => $self);
 }
 
 sub Licensing
