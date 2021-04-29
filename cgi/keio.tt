@@ -2,6 +2,7 @@
 [% p_table = cgi.param('table') %]
 [% p_query = cgi.param('query') %]
 [% p_page  = cgi.param('page')  %]
+[% keio = crms.Keio() %]
 
 <script type="text/Javascript">
 <!--
@@ -15,9 +16,9 @@ addEvent(window, 'load', function(e)
 <h2>Keio Daigaku Data:</h2>
 <br/>
 [% IF p_table %]
-  [% data = crms.KeioTableQuery(p_table, p_page) %]
+  [% data = keio.TableQuery(p_table, p_page) %]
 [% ELSIF p_query %]
-  [% data = crms.KeioQuery(p_query, p_page) %]
+  [% data = keio.Query(p_query, p_page) %]
 [% END %]
 <form action="crms">
   <input type="hidden" name="p" value="keio"/>
@@ -25,16 +26,14 @@ addEvent(window, 'load', function(e)
   <label for="table_sel">Table:</label>
   <select name="table" id="table_sel" onchange="selMenuItem('query_sel', 0);selMenuItem('page_sel', 0);this.form.submit()">
     <option value=""></option>
-    [% tables = crms.KeioTables() %]
-    [% FOREACH table IN tables %]
+    [% FOREACH table IN keio.Tables %]
       <option value="[% table %]" [% (table == p_table)? 'selected="selected"':'' %]>[% table %]</option>
     [% END %]
   </select>
   <label for="query_sel">Query:</label>
   <select name="query" id="query_sel" onchange="selMenuItem('table_sel', 0);selMenuItem('page_sel', 0);this.form.submit()">
     <option value=""></option>
-    [% queries = crms.KeioQueries() %]
-    [% FOREACH query IN queries %]
+    [% FOREACH query IN keio.Queries() %]
       <option value="[% query %]" [% (query == p_query)? 'selected="selected"':'' %]>[% query %]</option>
     [% END %]
   </select>
@@ -60,11 +59,11 @@ addEvent(window, 'load', function(e)
     <tr>
       [% FOREACH col IN data.fields %]
         <th scope="col">[% col %]
-        [% trans = crms.KeioTranslation(col) %]
+        [% trans = keio.Translation(col) %]
         [% IF trans %]
-        <img class="tippy" width="16" height="16" alt="Translation"
-                 src="[% crms.WebPath('web', 'help.png') %]"
-                 data-tippy-content="[% trans %]"/>
+          <img class="tippy" width="16" height="16" alt="Translation"
+               src="[% crms.WebPath('web', 'help.png') %]"
+               data-tippy-content="[% trans %]"/>
         [% END %]
         </th>
       [% END %]
@@ -74,11 +73,11 @@ addEvent(window, 'load', function(e)
       [% last = data.fields.size - 1 %]
       [% FOR i IN [0 .. last] %]
         <td>[% row.$i %]
-        [% trans = crms.KeioTranslation(row.$i) %]
+        [% trans = keio.Translation(row.$i) %]
         [% IF trans %]
-        <img class="tippy" width="16" height="16" alt="Translation"
-                 src="[% crms.WebPath('web', 'help.png') %]"
-                 data-tippy-content="[% trans %]"/>
+          <img class="tippy" width="16" height="16" alt="Translation"
+               src="[% crms.WebPath('web', 'help.png') %]"
+               data-tippy-content="[% trans %]"/>
         [% END %]
         </td>
       [% END %]
