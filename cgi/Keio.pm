@@ -39,9 +39,9 @@ sub TableQuery
   @fields = map {Encode::decode('UTF-8', $_, Encode::FB_CROAK);} @fields;
   my $offset = $page * 50;
   $sql = 'SELECT * FROM `'. $table. "` LIMIT 50 OFFSET $offset";
-  my $ref = $self->SelectAll($sql);
+  my $ref = $self->{crms}->SelectAll($sql);
   $sql = 'SELECT COUNT(*) FROM `'. $table. '`';
-  my $total = $self->SimpleSqlGet($sql);
+  my $total = $self->{crms}->SimpleSqlGet($sql);
   my $pages = POSIX::ceil($total / 50);
   my $ret = {'fields' => \@fields,
              'data'   => $ref,
