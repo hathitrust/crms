@@ -1227,6 +1227,26 @@ CREATE TABLE `viaf` (
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `licensing`
+--
+
+DROP TABLE IF EXISTS `licensing`;
+CREATE TABLE licensing (
+  `id` BIGINT(20) AUTO_INCREMENT PRIMARY KEY NOT NULL,
+  `htid` VARCHAR(32) NOT NULL,
+  `time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `user` VARCHAR(64) NOT NULL,
+  `attr` TINYINT(3) UNSIGNED NOT NULL,
+  `reason` TINYINT(3) UNSIGNED NOT NULL,
+  `ticket` VARCHAR(32) NOT NULL,
+  `rights_holder` TEXT,
+  `rights_file` TEXT NULL DEFAULT NULL,
+  CONSTRAINT `manual_permissions_ibfk_user` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `manual_permissions_ibfk_attr` FOREIGN KEY (`attr`) REFERENCES `attributes` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `manual_permissions_ibfk_reason` FOREIGN KEY (`reason`) REFERENCES `reasons` (`id`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
