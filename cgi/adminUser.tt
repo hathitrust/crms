@@ -1,21 +1,31 @@
 [% INCLUDE header.tt %]
 
 <h2>User Accounts:</h2>
+<script type="text/Javascript">
+<!--
+addEvent(window, 'load', function(e)
+{
+  tippy('.tippy');
+});
+-->
+</script>
+
 <a href="[% crms.WebPath('web', 'pdf/UserLevelsPrivileges.pdf') %]"
    target="_blank">Explanation of User Levels/Privileges</a><br/><br/>
 
-[% id         = cgi.param('id').lower   %]
-[% kerberos   = cgi.param('kerberos')   %]
-[% add        = cgi.param('add')        %]
-[% name       = cgi.param('name')       %]
-[% reviewer   = cgi.param('reviewer')   %]
-[% advanced   = cgi.param('advanced')   %]
-[% expert     = cgi.param('expert')     %]
-[% admin      = cgi.param('admin')      %]
-[% note       = cgi.param('note')       %]
-[% disable    = cgi.param('disable')    %]
-[% commitment = cgi.param('commitment') %]
-[% order      = cgi.param('order')      %]
+[% id          = cgi.param('id').lower    %]
+[% kerberos    = cgi.param('kerberos')    %]
+[% add         = cgi.param('add')         %]
+[% name        = cgi.param('name')        %]
+[% reviewer    = cgi.param('reviewer')    %]
+[% advanced    = cgi.param('advanced')    %]
+[% expert      = cgi.param('expert')      %]
+[% admin       = cgi.param('admin')       %]
+[% note        = cgi.param('note')        %]
+[% disable     = cgi.param('disable')     %]
+[% commitment  = cgi.param('commitment')  %]
+[% order       = cgi.param('order')       %]
+[% admin_pages = cgi.param('admin_pages') %]
 
 [% uadmin = crms.IsUserAdmin() %]
 [% projects = [] %]
@@ -46,7 +56,8 @@
   [% IF add %]
     [% IF id %]
       [% res = crms.AddUser(id, kerberos, name, reviewer, advanced, expert,
-                            admin, note, projects, commitment, disable) %]
+                            admin, note, projects, commitment, disable,
+                            admin_pages) %]
     [% ELSE %]
       [% res = "No user ID provided" %]
     [% END %]
@@ -79,7 +90,7 @@
     [% v = u.advanced %]
     [% e = u.expert %]
     [% a = u.admin %]
-    [% active = (r||v||e||a) %]
+    [% active = (r||v||e||a||u.admin_pages.size) %]
     [% style = (active)? '':'style="background-color:#e2e2e2;"' %]
     <tr [% id == u.id ? 'class="total"':'class="hoverWide"'%] [% style %]>
       <td class="nowrap">
@@ -101,7 +112,18 @@
       <td style="text-align:center;">[% IF r %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF v %][% icon %][% END %]</td>
       <td style="text-align:center;">[% IF e %][% icon %][% END %]</td>
-      <td style="text-align:center;">[% IF a %][% icon %][% END %]</td>
+      <td style="text-align:center;">
+        [% IF a %][% icon %][% END %]
+        [% IF u.admin_pages.size %]
+          [% tip = "<strong>Special Access:</strong><br/>" %]
+          [% FOREACH page IN u.admin_pages %]
+            [% tip = tip _ '<br/>' _ page.name %]
+          [% END %]
+          <img class="tippy" width="16" height="16" alt="Admin Page Access"
+               src="[% crms.WebPath('web', 'help.png') %]"
+               data-tippy-content="[% cgi.escapeHTML(tip) %]"/>
+        [% END %]
+      </td>
       <td style="text-align:center;">
         [% projs = crms.GetUserProjects(userid) %]
         [% names = [] %]
@@ -231,7 +253,18 @@
         <td><input type="checkbox" name="admin" id="adminCB"/> <label for="adminCB">Admin</label></td>
       </tr>
     </table>
-    <br/><input type="checkbox" name="disable" id="disableCB"/> <label for="disableCB">Disable user</label>
+    <br/>
+    <input type="checkbox" name="disable" id="disableCB"/> <label for="disableCB">Disable user</label>
+    <br/><br/>
+    <hr/>
+    <br/>
+    <label for="admin_page_select">Grant non-admin users special access:</label><br/>
+    <select id="admin_page_select" name="admin_pages" multiple="multiple">
+    [% admin_pages = crms.AdminPages() %]
+    [% FOR page IN admin_pages %]
+      <option value="[% page.page %]">[% page.name %]</option>
+    [% END %]
+    </select>
     <br/><br/><input type="submit" value="Submit"/>
   </form>
 </div>
