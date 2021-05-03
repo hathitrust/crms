@@ -129,6 +129,7 @@ sub submit
     }
     else
     {
+      $crms->UpdateMetadata($id, 1);
       $self->{crms}->SafeRemoveFromQueue($id);
       my $attr = $crms->TranslateAttr($cgi->param('attr'));
       my $reason = $crms->TranslateReason($cgi->param('reason'));
