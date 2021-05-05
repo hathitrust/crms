@@ -148,7 +148,8 @@ RUN apt-get install -y \
   wget \
   zip \
   zlib1g-dev \
-  netcat
+  netcat \
+  libperl-critic-perl
 
 RUN cpan \
   File::Value \
@@ -163,8 +164,7 @@ RUN cpan \
   Test::Exception \
   Devel::Cycle \
   Test::Memory::Cycle \
-  Mozilla::CA \
-  Perl::Critic
+  Mozilla::CA
 
 RUN mkdir /htapps
 RUN mkdir /htapps/babel
