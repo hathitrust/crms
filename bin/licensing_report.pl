@@ -4,10 +4,12 @@ use strict;
 use warnings;
 BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
 
-use CRMS;
 use Getopt::Long;
 use Mail::Sendmail;
 use Encode;
+
+use CRMS;
+use Jira;
 
 my $usage = <<END;
 USAGE: $0 [-hnpv] [-m MAIL [-m MAIL2...]]
@@ -96,6 +98,7 @@ END
 }
 
 $report .= "</table>\n</body>\n</html>\n";
+AddJiraComments() if $production;
 EmailReport() if scalar @mails;
 
 print "Warning: $_\n" for @{$crms->GetErrors()};
@@ -114,3 +117,34 @@ sub EmailReport
   sendmail(%mail) || $crms->SetError("Error: $Mail::Sendmail::error\n");
 }
 
+sub AddJiraComments
+{
+  #my $summary = '';
+  my $sql = 'SELECT DISTINCT ticket FROM licensing'.
+            ' WHERE time >= DATE_SUB(NOW(), INTERVAL 1 DAY)';
+  my $ref = $crms->SelectAll($sql);
+  my @txs = map { $_->[0]; } @$ref;
+  foreach my $tx (@txs)
+  {
+    my $comment = "Rights have been updated for the following volumes:\n";
+    $sql = 'SELECT DISTINCT a.name FROM licensing l'.
+         ' INNER JOIN attributes a ON l.attr=a.id'.
+         ' WHERE l.ticket=?'.
+         ' ORDER BY a.name';
+    $ref = $crms->SelectAll($sql, $tx);
+    my @licenses = map { $_->[0]; } @$ref;
+    foreach my $license (@licenses)
+    {
+      $comment .= "New license: $license\n";
+      $sql = 'SELECT l.htid FROM licensing l'.
+             ' INNER JOIN attributes a ON l.attr=a.id'.
+             ' WHERE l.ticket=? AND a.name=?'.
+             ' ORDER BY l.htid';
+      $ref = $crms->SelectAll($sql, $tx, $license);
+      $comment .= sprintf("%s\n", $_->[0]) for @$ref;
+    }
+    Jira::AddComment($crms, $tx, $comment);
+    #$summary .= "<p>Jira comment for $tx:</p><code>$comment</code>";
+  }
+  #return $summary;
+}

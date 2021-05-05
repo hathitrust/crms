@@ -7,18 +7,20 @@ use warnings;
 use vars qw(@ISA @EXPORT @EXPORT_OK);
 our @EXPORT = qw(Login);
 
+my $JIRA_PREFIX = 'https://tools.lib.umich.edu/jira';
+
 # Returns a user agent or undef.
 sub Login
 {
-  my $self = shift;
+  my $crms = shift;
 
-  my $sys = $self->get('sys');
-  my %d = $self->ReadConfigFile($sys . 'pw.cfg');
+  my %d = $crms->ReadConfigFile('crmspw.cfg');
   my $username   = $d{'jiraUser'};
   my $password = $d{'jiraPasswd'};
   my $ua = new LWP::UserAgent;
   $ua->cookie_jar({});
-  my $url = 'https://wush.net/jira/hathitrust/rest/auth/1/session';
+  
+  my $url = "$JIRA_PREFIX/rest/auth/1/session";
   my $req = HTTP::Request->new(POST => $url);
   $req->content_type('application/json');
   $req->content(<<END);
@@ -30,7 +32,8 @@ END
   my $res = $ua->request($req);
   if (!$res->is_success)
   {
-    $self->SetError("Got " . $res->code() . " getting $url\n");
+    $crms->SetError(sprintf "Got %s (%s) posting $url: %s",
+                            $res->code(), $res->message(), $res->content());
     return;
   }
   return $ua;
@@ -43,92 +46,41 @@ END
 # [noop]: Do not submit
 sub AddComment
 {
-  my $self = shift;
+  my $crms = shift;
   my $tx   = shift;
   my $msg  = shift;
   my $ua   = shift;
   my $noop = shift;
 
-  my $json = <<END;
-{
-  "update":
-  {
-    "comment":
-    [
-      {
-        "add":
-        {
-          "body":"$msg"
-        }
-      }
-    ]
-  }
+  $msg =~ s/"/\\"/g;
+  $msg =~ s/\n/\\n/gm;
+  my $json = qq({ "body": "$msg", "properties":[{"key":"sd.public.comment","value":{"internal":true}}] });
+  my $url = "$JIRA_PREFIX/rest/api/2/issue/$tx/comment";
+  return PostToJira($crms, $tx, $json, $url, $ua, $noop);
 }
-END
-  return PostToJira($self, $tx, $json, $ua, $noop);
-}
+
 
 # Returns undef on success, error otherwise.
 # tx:     Jira ticket
-# msg:    Text of Jira comment
-# [ua]:   LWP user agent to (re-)use from Jira::Login
-# [noop]: Do not submit
-sub CloseIssue
-{
-  my $self = shift;
-  my $tx   = shift;
-  my $msg  = shift;
-  my $ua   = shift;
-  my $noop = shift;
-
-  my $json = <<END;
-{
-  "update":
-  {
-    "comment":
-    [
-      {
-        "add":
-        {
-          "body":"$msg"
-        }
-      }
-    ]
-  },
-  "fields":
-  {
-    "resolution":
-    {
-      "name":"Fixed"
-    }
-  },
-  "transition":
-  {
-    "id":"141"
-  }
-}
-END
-  return PostToJira($self, $tx, $json, $ua, $noop);
-}
-
-# Returns undef on success, error otherwise.
-# tx:     Jira ticket
-# json:   JSON to post
+# json:   JSON data for URL
+# url:    URL to post
 # [ua]:   LWP user agent to (re-)use from Jira::Login
 # [noop]: Do not submit
 sub PostToJira
 {
-  my $self = shift;
+  my $crms = shift;
   my $tx   = shift;
   my $json = shift;
+  my $url  = shift;
   my $ua   = shift;
   my $noop = shift;
 
-  $ua = Jira::Login($self) unless defined $ua;
+  return 'No ticket specified' unless $tx;
+  return 'No JSON specified' unless $json;
+  return 'No URL specified' unless $url;
+  $ua = Jira::Login($crms) unless defined $ua;
   return 'No connection to Jira' unless defined $ua;
-  return 'No ticket specified' unless defined $tx;
   my $err;
-  my $url = 'https://wush.net/jira/hathitrust/rest/api/2/issue/' . $tx . '/transitions';
   my $code;
   if (!$noop)
   {
@@ -145,103 +97,15 @@ sub PostToJira
   return $err;
 }
 
-# 1-6 currently, 1-3 are considered major
-sub GetIssuePriority
-{
-  my $self = shift;
-  my $ua   = shift;
-  my $tx   = shift;
-
-  my $url = 'https://wush.net/jira/hathitrust/rest/api/2/issue/' . $tx;
-  my $stat = 'Unknown';
-  my $req = HTTP::Request->new(GET => $url);
-  my $res = $ua->request($req);
-  if ($res->is_success())
-  {
-    my $json = JSON::XS->new;
-    my $content = $res->content;
-    eval {
-      my $data = $json->decode($content);
-      $stat = $data->{'fields'}->{'priority'}->{'id'};
-    }
-  }
-  else
-  {
-    warn("Got " . $res->code() . " getting $url\n");
-    #printf "%s\n", $res->content();
-  }
-  return $stat;
-}
-
-sub GetIssueStatus
-{
-  my $self = shift;
-  my $ua   = shift;
-  my $tx   = shift;
-
-  my $url = 'https://wush.net/jira/hathitrust/rest/api/2/issue/' . $tx;
-  my $stat = 'Unknown';
-  my $req = HTTP::Request->new(GET => $url);
-  my $res = $ua->request($req);
-  if ($res->is_success())
-  {
-    my $json = JSON::XS->new;
-    my $content = $res->content;
-    eval {
-      my $data = $json->decode($content);
-      $stat = $data->{'fields'}->{'status'}->{'name'};
-    }
-  }
-  else
-  {
-    warn("Got " . $res->code() . " getting $url\n");
-    #printf "%s\n", $res->content();
-  }
-  return $stat;
-}
-
-sub GetIssuesStatus
-{
-  my $self = shift;
-  my $ua   = shift;
-  my $txs  = shift;
-
-  my %stats;
-  my $url = sprintf 'https://wush.net/jira/hathitrust/rest/api/2/search?'.
-                    'fields=status&jql=issueKey in (%s)', join ',', @{$txs};
-  $stats{$_} = 'Status unknown' for @{$txs};
-  my $req = HTTP::Request->new(GET => $url);
-  my $res = $ua->request($req);
-  if ($res->is_success())
-  {
-    my $json = JSON::XS->new;
-    my $content = $res->content;
-    eval {
-      my $data = $json->decode($content);
-      foreach my $iss (@{$data->{'issues'}})
-      {
-        my $tx = $iss->{'key'};
-        my $stat = $iss->{'fields'}->{'status'}->{'name'};
-        $stats{$tx} = $stat;
-      }
-    };
-    $self->SetError("GetIssuesStatus error: " . $@) if $@;
-  }
-  else
-  {
-    $self->SetError("GetIssuesStatus got " . $res->code() . " getting $url\n");
-    #printf "%s\n", $res->content();
-  }
-  return \%stats;
-}
-
 sub GetComments
 {
-  my $self = shift;
-  my $ua   = shift;
+  my $crms = shift;
   my $tx   = shift;
+  my $ua   = shift;
 
-  my $url = 'https://wush.net/jira/hathitrust/rest/api/2/issue/' . $tx;
+  $ua = Jira::Login($crms) unless defined $ua;
+  return 'No connection to Jira' unless defined $ua;
+  my $url = "$JIRA_PREFIX/rest/api/2/issue/" . $tx;
   my @comments;
   my $req = HTTP::Request->new(GET => $url);
   my $res = $ua->request($req);
@@ -257,7 +121,7 @@ sub GetComments
   else
   {
     warn("Got " . $res->code() . " getting $url\n");
-    #printf "%s\n", $res->content();
+    printf "%s\n", $res->content();
   }
   return \@comments;
 }
@@ -266,7 +130,7 @@ sub LinkToJira
 {
   my $tx = shift;
 
-  return '<a href="https://tools.lib.umich.edu/jira/browse/'.
+  return "<a href=\"$JIRA_PREFIX/browse/".
          $tx. '" target="_blank">'. $tx. '</a>';
 }
 
