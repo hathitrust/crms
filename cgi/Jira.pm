@@ -7,8 +7,6 @@ use warnings;
 use vars qw(@ISA @EXPORT @EXPORT_OK);
 our @EXPORT = qw(Login);
 
-my $JIRA_PREFIX = 'https://tools.lib.umich.edu/jira';
-
 # Returns a user agent or undef.
 sub Login
 {
@@ -20,7 +18,7 @@ sub Login
   my $ua = new LWP::UserAgent;
   $ua->cookie_jar({});
   
-  my $url = "$JIRA_PREFIX/rest/auth/1/session";
+  my $url = $crms->get('jira_prefix') . '/rest/auth/1/session';
   my $req = HTTP::Request->new(POST => $url);
   $req->content_type('application/json');
   $req->content(<<END);
@@ -55,7 +53,7 @@ sub AddComment
   $msg =~ s/"/\\"/g;
   $msg =~ s/\n/\\n/gm;
   my $json = qq({ "body": "$msg", "properties":[{"key":"sd.public.comment","value":{"internal":true}}] });
-  my $url = "$JIRA_PREFIX/rest/api/2/issue/$tx/comment";
+  my $url = $crms->get('jira_prefix') . '/rest/api/2/issue/$tx/comment';
   return PostToJira($crms, $tx, $json, $url, $ua, $noop);
 }
 
@@ -105,7 +103,7 @@ sub GetComments
 
   $ua = Jira::Login($crms) unless defined $ua;
   return 'No connection to Jira' unless defined $ua;
-  my $url = "$JIRA_PREFIX/rest/api/2/issue/" . $tx;
+  my $url = $crms->get('jira_prefix') . '/rest/api/2/issue/' . $tx;
   my @comments;
   my $req = HTTP::Request->new(GET => $url);
   my $res = $ua->request($req);
@@ -128,10 +126,11 @@ sub GetComments
 
 sub LinkToJira
 {
-  my $tx = shift;
+  my $crms = shift;
+  my $tx   = shift;
 
-  return "<a href=\"$JIRA_PREFIX/browse/".
-         $tx. '" target="_blank">'. $tx. '</a>';
+  my $url = $crms->get('jira_prefix') . '/browse/' . $tx;
+  return "<a href=\"$url\" target=\"_blank\">$tx</a>";
 }
 
 1;

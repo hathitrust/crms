@@ -232,7 +232,7 @@ function CheckAllTx(box,id)
     [% tx = r.ticket %]
     <td class="nowrap">
       [% IF tx %]
-        [% crms.LinkToJira(tx) %]
+        [% crms.LinkToJira(crms, tx) %]
         [% stat = tix.$tx %]
         [% IF stat %]
           <img width="16" height="16" alt="Closed" src="[% crms.WebPath('web', 'XIcon.png') %]"/>

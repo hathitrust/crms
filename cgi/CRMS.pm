@@ -7429,7 +7429,7 @@ sub LinkToJira
   my $tx   = shift;
 
   use Jira;
-  return Jira::LinkToJira($tx);
+  return Jira::LinkToJira($self, $tx);
 }
 
 # Populates $data (a hash ref) with information about the duplication status of an exported determination.
