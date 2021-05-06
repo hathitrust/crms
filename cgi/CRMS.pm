@@ -57,7 +57,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.3.8';
+our $VERSION = '8.4';
 sub Version
 {
   return $VERSION;
@@ -413,8 +413,8 @@ sub ConnectToSdrDb
 
   $db = $self->get('mysqlMdpDbName') unless defined $db;
   my %d = $self->ReadConfigFile('crmspw.cfg');
-  my $db_user   = $d{'mysqlMdpUser'};
-  my $db_passwd = $d{'mysqlMdpPasswd'};
+  my $db_user   = $d{'mysqlMdpUser'} || 'crms';
+  my $db_passwd = $d{'mysqlMdpPasswd'} || 'crms';
   if ($instance eq 'production'
       || $instance eq 'crms-training'
       || $self->get('pdb')
@@ -3666,18 +3666,19 @@ sub GetAttrReasonCode
 
 sub AddUser
 {
-  my $self       = shift;
-  my $id         = shift;
-  my $kerberos   = shift;
-  my $name       = shift;
-  my $reviewer   = shift;
-  my $advanced   = shift;
-  my $expert     = shift;
-  my $admin      = shift;
-  my $note       = shift;
-  my $projects   = shift;
-  my $commitment = shift;
-  my $disable    = shift;
+  my $self        = shift;
+  my $id          = shift;
+  my $kerberos    = shift;
+  my $name        = shift;
+  my $reviewer    = shift;
+  my $advanced    = shift;
+  my $expert      = shift;
+  my $admin       = shift;
+  my $note        = shift;
+  my $projects    = shift;
+  my $commitment  = shift;
+  my $disable     = shift;
+  my $admin_pages = shift;
 
   my @fields = (\$reviewer,\$advanced,\$expert,\$admin);
   ${$fields[$_]} = (length ${$fields[$_]} && !$disable)? 1:0 for (0 .. scalar @fields - 1);
@@ -3733,6 +3734,17 @@ sub AddUser
       $proj = undef unless int $proj;
       next unless defined $proj;
       $self->PrepareSubmitSql($sql, $id, $proj);
+    }
+  }
+  if (defined $admin_pages)
+  {
+    $admin_pages = [$admin_pages] unless ref $admin_pages;
+    $self->PrepareSubmitSql('DELETE FROM user_pages WHERE user=?', $id);
+    $sql = 'INSERT INTO user_pages (user,page) VALUES (?,?)';
+    foreach my $page (@{$admin_pages})
+    {
+      next unless defined $page;
+      $self->PrepareSubmitSql($sql, $id, $page);
     }
   }
 }
@@ -3892,7 +3904,7 @@ sub GetUsers
   my $ord  = shift || 0;
 
   my @users;
-  my $order = '(u.reviewer+u.advanced+u.admin > 0) DESC';
+  my $order = '(u.reviewer+u.advanced+u.admin > 0 || ct>0) DESC';
   $order .= ',u.expert ASC' if $ord == 1;
   $order .= ',i.shortname ASC' if $ord == 2;
   $order .= ',(u.reviewer+(2*u.advanced)+(4*u.expert)'.
@@ -3900,9 +3912,11 @@ sub GetUsers
   $order .= ',u.commitment DESC' if $ord == 4;
   $order .= ',u.name ASC';
   my $sql = 'SELECT u.id,u.name,u.reviewer,u.advanced,u.expert,u.admin,u.kerberos,'.
-            'u.note,i.shortname,u.commitment'.
-            ' FROM users u INNER JOIN institutions i'.
-            ' ON u.institution=i.id ORDER BY ' . $order;
+            'u.note,i.shortname,u.commitment,'.
+            '(SELECT COUNT(*) FROM user_pages WHERE user=u.id) AS ct'.
+            ' FROM users u'.
+            ' INNER JOIN institutions i ON u.institution=i.id'.
+            ' ORDER BY ' . $order;
   my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
@@ -3926,15 +3940,41 @@ sub GetUsers
     }
     $sql = 'SELECT COUNT(*) FROM users WHERE ? REGEXP CONCAT(id,".+")';
     my $secondary = $self->SimpleSqlGet($sql, $id);
-    push @users, {'id' => $id, 'name' => $row->[1], 'reviewer' => $row->[2],
-                  'advanced' => $row->[3], 'expert' => $row->[4], 'admin' => $row->[5],
-                  'kerberos' => $row->[6], 'note' => $row->[7],
-                  'institution' => $row->[8], 'commitment' => $commitment,
-                  'commitmentFmt' => $commitmentFmt, 'progress' => $progress,
-                  'expiration' => $expiration, 'ips' => $self->GetUserIPs($id),
-                  'role' => $self->GetUserRole($id), 'secondary' => $secondary};
+    push @users, { 'id' => $id, 'name' => $row->[1], 'reviewer' => $row->[2],
+                   'advanced' => $row->[3], 'expert' => $row->[4], 'admin' => $row->[5],
+                   'kerberos' => $row->[6], 'note' => $row->[7],
+                   'institution' => $row->[8], 'commitment' => $commitment,
+                   'commitmentFmt' => $commitmentFmt, 'progress' => $progress,
+                   'expiration' => $expiration, 'ips' => $self->GetUserIPs($id),
+                   'role' => $self->GetUserRole($id), 'secondary' => $secondary,
+                   'admin_pages' => $self->GetUserAdminPages($id),
+                   'projects' => $self->GetUserProjects($id) };
   }
   return \@users;
+}
+
+# List of pages a non-admin user may be granted access to.
+sub AdminPages
+{
+  my $self = shift;
+
+  my $sql = 'SELECT name,page FROM menuitems'.
+            ' WHERE page IS NOT NULL AND restricted LIKE "%a%"'.
+            ' ORDER BY name ASC';
+  my @pages = map { { name => $_->[0], page => $_->[1] }; } @{$self->SelectAll($sql)};
+  return \@pages;
+}
+
+sub GetUserAdminPages
+{
+  my $self = shift;
+  my $user = shift;
+
+  my $sql = 'SELECT m.name,m.page FROM user_pages up'.
+            ' INNER JOIN menuitems m ON up.page=m.page'.
+            ' WHERE up.user=?';
+  my @pages = map { { name => $_->[0], page => $_->[1] }; } @{$self->SelectAll($sql, $user)};
+  return \@pages;
 }
 
 sub IsUserIncarnationExpertOrHigher
@@ -7389,7 +7429,7 @@ sub LinkToJira
   my $tx   = shift;
 
   use Jira;
-  return Jira::LinkToJira($tx);
+  return Jira::LinkToJira($self, $tx);
 }
 
 # Populates $data (a hash ref) with information about the duplication status of an exported determination.
@@ -7636,13 +7676,15 @@ sub MenuItems
   $menu = $self->SimpleSqlGet('SELECT id FROM menus WHERE docs=1 LIMIT 1') if $menu eq 'docs';
   my $q = $self->GetUserQualifications($user);
   my ($inst, $iname);
-  my $sql = 'SELECT name,href,restricted,target FROM menuitems WHERE menu=? ORDER BY n ASC';
+  my $sql = 'SELECT name,href,restricted,target,page FROM menuitems WHERE menu=? ORDER BY n ASC';
   my $ref = $self->SelectAll($sql, $menu);
   my @all = ();
   foreach my $row (@{$ref})
   {
     my $r = $row->[2];
-    if ($self->DoQualificationsAndRestrictionsOverlap($q, $r))
+    my $page = $row->[4];
+    if ($self->DoQualificationsAndRestrictionsOverlap($q, $r) ||
+        $self->DoesUserHavePageAccess($user, $page))
     {
       $inst = $self->GetUserProperty($user, 'institution') unless defined $inst;
       $iname = $self->GetInstitutionName($inst, 1) unless defined $iname;
@@ -7693,7 +7735,8 @@ sub AccessCheck
   $sql = 'SELECT restricted FROM menuitems WHERE page=?';
   my $r = $self->SimpleSqlGet($sql, $page) || '';
   my $q = $self->GetUserQualifications($user) || '';
-  if (!$self->DoQualificationsAndRestrictionsOverlap($q, $r))
+  if (!$self->DoQualificationsAndRestrictionsOverlap($q, $r) &&
+      !$self->DoesUserHavePageAccess($user, $page))
   {
     $err = "DBC failed for $page.tt: r='$r', q='$q'";
   }
@@ -7718,6 +7761,16 @@ sub DoQualificationsAndRestrictionsOverlap
           ($q =~ m/x/ && $r =~ m/x/) ||
           ($q =~ m/a/ && $r =~ m/a/) ||
           ($q =~ m/s/ && $r =~ m/s/));
+}
+
+sub DoesUserHavePageAccess
+{
+  my $self = shift;
+  my $user = shift;
+  my $page = shift;
+
+  my $sql = 'SELECT COUNT(*) FROM user_pages WHERE user=? AND page=?';
+  return $self->SimpleSqlGet($sql, $user, $page);
 }
 
 sub Categories
@@ -8265,21 +8318,19 @@ sub GetAddToQueueRef
 sub StartHTML
 {
   my $self  = shift;
-  my $title = shift;
-  my $head  = shift;
+  my $title = shift || '';
+  my $head  = shift || '';
 
-  $title = '' unless defined $title;
-  $head  = '' unless defined $head;
-  my $html = <<END;
+  return <<END;
 <!DOCTYPE html>
 <html lang="en">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>$title</title>
-    $head
-  </head>
+    <head>
+      $head
+    </head>
   <body>
 END
-  return $html;
 }
 
 sub SubjectLine
@@ -8611,7 +8662,6 @@ sub ExportReport
   return $report;
 }
 
-
 # Takes output of AllAssignableXXXs (list of hashes) and pulls the IDs into a list.
 sub JSONifyIDs
 {
@@ -8644,34 +8694,12 @@ sub Commify
   return $n;
 }
 
-sub KeioTables
+sub Keio
 {
-  use Keio;
-  Keio::Tables(@_);
-}
+  my $self = shift;
 
-sub KeioTranslation
-{
   use Keio;
-  Keio::Translation(@_);
-}
-
-sub KeioTableQuery
-{
-  use Keio;
-  Keio::TableQuery(@_);
-}
-
-sub KeioQueries
-{
-  use Keio;
-  Keio::Queries(@_);
-}
-
-sub KeioQuery
-{
-  use Keio;
-  Keio::Query(@_);
+  Keio->new('crms' => $self);
 }
 
 sub Licensing

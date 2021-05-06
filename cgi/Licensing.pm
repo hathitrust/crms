@@ -83,7 +83,7 @@ sub attributes
   my $crms = $self->{crms};
   my $sql = 'SELECT id,name FROM attributes' .
             ' WHERE (name LIKE "cc%" AND name NOT LIKE "%3.0%")'.
-            ' OR name="nobody"' .
+            ' OR name="nobody" OR name="pd-pvt"' .
             ' ORDER BY id ASC';
   my @attrs = map { { id => $_->[0], name => $_->[1] }; } @{$crms->SelectAll($sql)};
   return \@attrs;
@@ -95,7 +95,7 @@ sub reasons
 
   my $crms = $self->{crms};
   my $sql = 'SELECT id,name FROM reasons' .
-            ' WHERE name IN ("con","man")' .
+            ' WHERE name IN ("con","man","pvt")' .
             ' ORDER BY id ASC';
   my @attrs = map { { id => $_->[0], name => $_->[1] }; } @{$crms->SelectAll($sql)};
   return \@attrs;
@@ -129,6 +129,7 @@ sub submit
     }
     else
     {
+      $crms->UpdateMetadata($id, 1);
       $self->{crms}->SafeRemoveFromQueue($id);
       my $attr = $crms->TranslateAttr($cgi->param('attr'));
       my $reason = $crms->TranslateReason($cgi->param('reason'));
