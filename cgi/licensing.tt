@@ -105,7 +105,7 @@
         [% END %]
         [% id = row.htid %]
         <tr style="background-color:[% active_color %];">
-          <td headers="HTIDTH">$id</td>
+          <td headers="HTIDTH" class="nowrap">$id</td>
           <td headers="SYSIDTH">$row.sysid</td>
           <td headers="enumchronTH">$row.chron</td>
           <td headers="CRMSTH">$row.tracking</td>

@@ -57,7 +57,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.3.9';
+our $VERSION = '8.4';
 sub Version
 {
   return $VERSION;
@@ -413,8 +413,8 @@ sub ConnectToSdrDb
 
   $db = $self->get('mysqlMdpDbName') unless defined $db;
   my %d = $self->ReadConfigFile('crmspw.cfg');
-  my $db_user   = $d{'mysqlMdpUser'};
-  my $db_passwd = $d{'mysqlMdpPasswd'};
+  my $db_user   = $d{'mysqlMdpUser'} || 'crms';
+  my $db_passwd = $d{'mysqlMdpPasswd'} || 'crms';
   if ($instance eq 'production'
       || $instance eq 'crms-training'
       || $self->get('pdb')
