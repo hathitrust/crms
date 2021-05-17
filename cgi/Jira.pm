@@ -53,7 +53,7 @@ sub AddComment
   $msg =~ s/"/\\"/g;
   $msg =~ s/\n/\\n/gm;
   my $json = qq({ "body": "$msg", "properties":[{"key":"sd.public.comment","value":{"internal":true}}] });
-  my $url = $crms->get('jira_prefix') . '/rest/api/2/issue/$tx/comment';
+  my $url = $crms->get('jira_prefix') . "/rest/api/2/issue/$tx/comment";
   return PostToJira($crms, $tx, $json, $url, $ua, $noop);
 }
 
