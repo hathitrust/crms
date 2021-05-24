@@ -13,7 +13,7 @@
 </form>
 
 [% IF q %]
-  <form action="crms">
+  <form action="crms" method="POST">
     [% crms.HiddenSys() %]
     <input type="hidden" name="p" value="[% p %]"/>
     [% IF cgi.param("submit_rights") == "true" %]
