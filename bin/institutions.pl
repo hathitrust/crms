@@ -16,8 +16,10 @@ $Term::ANSIColor::AUTORESET = 1;
 my $usage = <<END;
 USAGE: $0 [-hnpqv] [-m MAIL [-m MAIL...]]
 
-Produces TSV file of HT institution name and identifier for download at
-https://www.hathitrust.org/institution_identifiers
+Produces TSV files of HT institution name, identifier, and SAML entity ID for
+download at https://www.hathitrust.org/institution_identifiers and for use by
+institutions for WAYFless login or login with Dex
+(https://tools.lib.umich.edu/confluence/display/HAT/OIDC+%3C-%3E+SAML+proxy+via+Dex)
 
 Data hosted on macc-ht-web-000 etc at /htapps/www/sites/www.hathitrust.org/files
 
@@ -51,18 +53,20 @@ my $crms = CRMS->new(
     instance => $instance
 );
 
-my $outfile = $crms->FSPath('prep', 'ht_institutions.tsv');
+my $outfile_instid = $crms->FSPath('prep', 'ht_institutions.tsv');
+my $outfile_entityid = $crms->FSPath('prep', 'ht_saml_entity_ids.tsv');
 my $msg = $crms->StartHTML();
 $msg .= <<'END';
 <h2>HathiTrust institution report</h2>
-<p>Wrote __N__ records in __OUTFILE__ to
+<p>Wrote __N__ records in __OUTFILE_INSTID__, __OUTFILE_ENTITYID__ to
 <a href="https://www.hathitrust.org/files/ht_institutions.tsv">HathiTrust</a>.
 </p>
 END
 
 my $n = CheckInstitutions();
 $msg =~ s/__N__/$n/g;
-$msg =~ s/__OUTFILE__/$outfile/g;
+$msg =~ s/__OUTFILE__/$outfile_instid/g;
+$msg =~ s/__OUTFILE_ENTITYID__/$outfile_entityid/g;
 
 if ($noop)
 {
@@ -73,7 +77,8 @@ if ($noop)
 else
 {
   eval {
-    File::Copy::move $outfile, '/htapps/www/sites/www.hathitrust.org/files';
+    File::Copy::move $outfile_instid, '/htapps/www/sites/www.hathitrust.org/files';
+    File::Copy::move $outfile_entityid, '/htapps/www/sites/www.hathitrust.org/files';
   };
   if ($@)
   {
@@ -112,8 +117,9 @@ else
 sub CheckInstitutions
 {
   my $sdr_dbh = $crms->ConnectToSdrDb('ht_repository');
-  open my $out, '>:encoding(UTF-8)', $outfile;
-  my $sql = 'SELECT inst_id,name FROM ht_institutions WHERE enabled!=0'.
+  open my $out_instid, '>:encoding(UTF-8)', $outfile_instid;
+  open my $out_entityid, '>:encoding(UTF-8)', $outfile_entityid;
+  my $sql = 'SELECT inst_id,name,entityID,enabled FROM ht_institutions WHERE enabled!=0'.
             ' ORDER BY inst_id ASC';
   my $ref;
   my $n = 0;
@@ -125,12 +131,13 @@ sub CheckInstitutions
     $n = scalar @$ref;
     foreach my $row (@{$ref})
     {
-      my $id = $row->[0];
-      my $name = $row->[1];
-      print $out "$id\t$name\n";
+      my ($id,$name,$entityID,$enabled) = @$row;
+      print $out_instid "$id\t$name\n";
+      print $out_entityid "$entityID\t$name\n" if $enabled == 1;
     }
   }
-  close $out;
+  close $out_instid;
+  close $out_entityid;
   return $n;
 }
 
