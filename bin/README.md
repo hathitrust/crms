@@ -79,9 +79,6 @@ Creates LaTeX title reports for each State Gov Docs reviewer.
 Populates the training database with examples (validated single reviews)
 from production so that the queue size is increased to a target size.
 
-`updateCatalog.pl`
-Updates the `catalog` table in production based on Zephir files.
-
 `wait-for`
 Shell script that allows the test suite to wait for the `mariadb` service
 to fully start under Docker.
