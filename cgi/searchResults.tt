@@ -188,8 +188,8 @@ addEvent(window, 'load', function(e)
     [% IF crms.IsUserAtLeastExpert() && p == 'adminHistoricalReviews' %]
       <th class="nowrap" id="gidth" style="display:[% (showSysID)? 'table-cell':'none' %];">GID
         <br/>(<span style="color:[% color_gray %];">determinations</span>)</th>
-      <th class="nowrap" id="sysidth" style="display:[% (showSysID)? 'table-cell':'none' %];">System&nbsp;ID
-        <br/>(<span style="color:[% color_gray %];">Mirlyn</span>)</th>
+      <th class="nowrap" id="sysidth" style="display:[% (showSysID)? 'table-cell':'none' %];">Catalog&nbsp;ID
+        <br/>(<span style="color:[% color_gray %];">Catalog</span>)</th>
       <th class="nowrap" id="srcth" style="display:[% (showSysID)? 'table-cell':'none' %];">Source</th>
     [% END %]
     <th>Title</th>
@@ -246,7 +246,7 @@ addEvent(window, 'load', function(e)
             <a href='[% crms.LinkToDeterminations(review.gid) %]' target='_blank'>[% review.gid %]</a>
           </td>
           <td style="display:[% (showSysID)? 'table-cell':'none' %];">
-            <a href="[% crms.LinkToMirlynDetails(review.id) %]" target="_blank">$review.sysid</a>
+            <a href="[% crms.LinkToCatalogMARC(review.id) %]" target="_blank">$review.sysid</a>
           </td>
           <td style="display:[% (showSysID)? 'table-cell':'none' %];">$review.src</td>
         [% END %]

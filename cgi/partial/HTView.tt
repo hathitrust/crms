@@ -24,7 +24,7 @@
       <td class="display" style="text-align:left;">View:</td>
       <td>
         <select id="PTViewSelect" title="PageTurner View" class="review" onchange="zoom(this,'ptview');">
-        [% views = ['image','1up','2up','thumb'] %]
+        [% views = ['page','1up','2up','thumb'] %]
         [% names = ['Classic','Scroll','Flip','Thumbnails'] %]
         [% accesskeys = ['-','=','[',']'] %]
         [% FOR i IN [0 .. 3] %]
