@@ -146,7 +146,7 @@ if (scalar keys %{$data{'inherit'}})
       $chron = "($chron)" if length $chron;
       $chron2 = "($chron2)" if length $chron2;
       print "$line\n" if $verbose > 1;
-      my $catLink = $crms->LinkToMirlynDetails($id);
+      my $catLink = $crms->LinkToCatalogMARC($sysid);
       my $htCatLink = $crms->LinkToCatalog($sysid);
       my $histLink = $crms->LinkToHistorical($sysid,1);
       my $retrLink = $crms->LinkToRetrieve($sysid,1);

@@ -57,7 +57,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.4.4';
+our $VERSION = '8.4.5';
 sub Version
 {
   return $VERSION;
@@ -7408,18 +7408,6 @@ sub LinkToRetrieve
 
   my $url = $self->WebPath('cgi','crms?p=track;query='. $sysid);
   $url = $self->Host() . $url if $full;
-  return $url;
-}
-
-sub LinkToMirlynDetails
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $url = 'http://mirlyn.lib.umich.edu/Record/';
-  $url .= 'HTID/' if $id =~ m/\./;
-  $url .= $id;
-  $url .= '/Details#tabs' unless $id =~ m/\./;
   return $url;
 }
 

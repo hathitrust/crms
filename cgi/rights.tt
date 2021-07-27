@@ -19,14 +19,16 @@
       [% IF rows.size() == 0 %][% CONTINUE %][% END %]
       <br/>
       [% sysid = crms.BarcodeToId(id) %]
-      [% syslink = "No System ID" %]
-      [% IF sysid %]
-         [% syslink = '<a style="color:white;" href="' _ crms.LinkToMirlynDetails(id) _ '" target="_blank">' _ sysid _ "</a>" %]
-      [% END %]
       <table class="exportStats" style="width:33%;">
       <tr>
         <th colspan="7" class="major" style="text-align:center;">
-          [% id %] ([% syslink %])
+          [% id %]
+          [% IF sysid %]
+            [% link = crms.LinkToCatalogMARC(sysid) %]
+            <a style="color:white;" href="[% link %]" target="_blank">([% sysid %])</a>
+          [% ELSE %]
+            <span style="color:white;">(No System ID)</span>
+          [% END %]
         </th>
       </tr>
       <tr><th>Attr</th><th>Reason</th><th>Source</th><th>User</th><th>Time</th><th>Note</th><th>Access</th></tr>

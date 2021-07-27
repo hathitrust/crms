@@ -213,7 +213,7 @@ foreach my $row ( @{$ref} )
     print "  Chron '$chron'; skipping.\n" if $verbose;
     next;
   }
-  my $catlink = $crms->LinkToMirlynDetails($id);
+  my $catlink = $crms->LinkToCatalogMARC($record->sysid);
   my $tracking = $crms->GetTrackingInfo($id);
   if ($report eq 'tsv')
   {

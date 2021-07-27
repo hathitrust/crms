@@ -71,7 +71,7 @@ foreach my $row (@{$ref})
     $crms->Filter($id, 'no meta');
     next;
   }
-  my $catLink = $crms->LinkToMirlynDetails($id);
+  my $catLink = $crms->LinkToCatalogMARC($record->sysid);
   my $ptLink = 'https://babel.hathitrust.org/cgi/pt?debug=super;id=' . $id;
   my $au = $record->author || '';
   $au =~ s/&/&amp;/g;
