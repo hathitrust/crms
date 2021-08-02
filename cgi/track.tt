@@ -35,7 +35,7 @@
           <span style="color:white;">[% sysid %]</span>
           &nbsp;&nbsp;&nbsp;&nbsp;
           [% link = crms.LinkToCatalog(sysid) %]
-          <a style="color:white;" href="[% link %]" target="_blank">[Catalog]</a>
+          <a style="color:white;" href="[% link %]" target="_blank">[% data.title %]</a>
           &nbsp;&nbsp;&nbsp;&nbsp;
           [% link = crms.LinkToCatalogMARC(sysid) %]
           <a style="color:white;" href="[% link %]" target="_blank">[Catalog MARC]</a>
