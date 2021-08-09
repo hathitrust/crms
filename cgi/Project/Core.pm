@@ -138,6 +138,8 @@ sub ExtractReviewData
   my $data;
   if ($renNum || $renDate)
   {
+    $renNum =~ s/\s+//g if $renNum;
+    $renDate =~ s/\s+//g if $renDate;
     $data = {'renNum' => $renNum, 'renDate' => $renDate};
   }
   return $data;
