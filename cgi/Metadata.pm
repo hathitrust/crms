@@ -7,6 +7,19 @@ use LWP::UserAgent;
 use XML::LibXML;
 use JSON::XS;
 use Unicode::Normalize;
+use DB_File;
+
+my $US_CITIES;
+
+sub US_Cities {
+  if (!defined $US_CITIES) {
+    my %us_cities;
+    my $us_cities_db = $ENV{'SDRROOT'} . '/crms/post_zephir_processing/data/us_cities.db';
+    tie %us_cities, 'DB_File', $us_cities_db, O_RDONLY, 0644, $DB_BTREE or die "can't open db file $us_cities_db: $!";
+    $US_CITIES = \%us_cities;
+  }
+  return $US_CITIES;
+}
 
 sub new
 {
@@ -511,8 +524,7 @@ sub cities
   foreach my $field (@$fields)
   {
     my $where = _NormalizeCity($field);
-    my $cities = $self->get('us_cities');
-    $cities = $self->_ReadCities() unless $cities;
+    my $cities = Metadata::US_Cities;
     if (defined $cities->{$where})
     {
       push @{$data->{'us'}}, $field;
@@ -523,27 +535,6 @@ sub cities
     }
   }
   return $data;
-}
-
-sub _ReadCities
-{
-  my $self = shift;
-
-  my $crms = $self->get('crms');
-  my $path = $crms->FSPath('bin', 'us_cities.txt');
-  my $fh;
-  my $cities = {};
-  if (open $fh, '<:encoding(UTF-8)', $path)
-  {
-    while (<$fh>) { chomp; $cities->{$_} = 1; }
-    close $fh;
-    $self->set('us_cities', $cities);
-  }
-  else
-  {
-    $crms->SetError("Could not open cities file at $path");
-  }
-  return $cities;
 }
 
 # This is code from Tim for normalizing the 260 subfield for U.S. cities.
