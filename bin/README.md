@@ -9,6 +9,10 @@ repository at a future date.
 
 ## Executable Files
 
+`bib_newyear.pl`
+Reports proposed new rights for volumes that would otherwise not be eligible
+for bib rights determination.
+
 `candidatespurge.pl`
 Reports on volumes that are no longer eligible for candidacy
 in the rights database and removes them from the system.
@@ -101,5 +105,3 @@ Main configuration file.
 `rdist.app`
 `rdist` configuration for deploying from test.babel to production.
 
-`us_cities.txt`
-Data on US cities used by `cgi/Metadata.pm`.

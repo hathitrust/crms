@@ -13,7 +13,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Check out including private submodules
+        uses: actions/checkout@v2
+        with:
+          # This should be a PAT that has read access to the private submodules
+          # for this repository
+          token: ${{ secrets.ACCESS_TOKEN }}
+          submodules: true
 
       - name: Build docker image
         run: docker-compose build
