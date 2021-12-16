@@ -215,8 +215,8 @@ sub ProcessCommonwealthProject
 sub ProcessPubDateProject
 {
   # get values for pd cutoff dates
-  my $us_pd_cutoff_year = $year - 95;
-  my $non_us_pd_cutoff_year = $year - 140;
+  my $pdus_cutoff_year = $year - 95;
+  my $pd_cutoff_year = $year - 125;
   my $sql = 'SELECT id,gid FROM exportdata e WHERE e.project=?'.
             ' AND e.attr!="und" AND e.attr!="pd"'.
             ' AND e.exported=1'.
@@ -244,7 +244,6 @@ sub ProcessPubDateProject
     $sql = 'SELECT data FROM historicalreviews WHERE gid=? AND data IS NOT NULL AND validated=1';
     my $ref2 = $crms->SelectAll($sql, $gid);
     my %dates = ();
-    my %countries = ();
     my %extracted_data = (); 
     foreach my $row2 (@$ref2)
     {
@@ -253,14 +252,11 @@ sub ProcessPubDateProject
       $extracted_data{$data} = 1 if defined $data;
       my $json = $jsonxs->decode($data);
       my $date = $json->{'date'};
-      my $country = $json->{'country'};
       $date =~ s/^\s+|\s+$//g;
       $dates{$date} = $date if defined $date;
-      $countries{$country} = $country if defined $country;
     }
     my $date_str = join ', ', keys %dates;
-    my $country_str = join ', ', keys %countries;
-    if (scalar keys %dates == 1 && scalar keys %countries < 2)
+    if (scalar keys %dates == 1)
     {
       my $record = $crms->GetMetadata($id);
       if (!defined $record)
@@ -269,16 +265,9 @@ sub ProcessPubDateProject
         next;
       }
       my $date = (keys %dates)[0];
-      my $country = (keys %countries)[0];
       if ($date =~ m/^\d\d\d\d-(\d\d\d\d)$/)
       {
         $date = $1;
-      }
-      my $pub_country = $record->country;
-      if ($pub_country =~ m/undetermined/i && defined $country)
-      {
-        $pub_country = 'US' if $country eq 'us' or $country eq 'US';
-        $pub_country = 'US' if length $country == 3 and substr 2, 1 eq 'u';
       }
       my $rq = $crms->RightsQuery($id, 1);
       if (!defined $rq)
@@ -288,13 +277,13 @@ sub ProcessPubDateProject
       }
       my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
       my $attr = undef;
-      if ($pub_country eq 'US' && $date == $us_pd_cutoff_year - 1)
-      {
-        $attr = 'pdus';
-      }
-      elsif ($date == $non_us_pd_cutoff_year - 1)
+      if ($date <= $pd_cutoff_year - 1)
       {
         $attr = 'pd';
+      }
+      elsif ($date <= $pdus_cutoff_year - 1)
+      {
+        $attr = 'pdus';
       }
       if (defined $attr && $attr ne $acurr)
       {
