@@ -77,8 +77,7 @@ $crms->set('noop', 1) if $noop;
 
 my ($workbook, $worksheet);
 my $wsrow = 1;
-if ($excel)
-{
+if ($excel) {
   require Excel::Writer::XLSX;
   my $excelpath = $crms->FSPath('prep', $excel);
   my @cols = ('ID', 'Project', 'Author', 'Title', 'Pub Date', 'Country', 'Current Rights',
@@ -91,49 +90,48 @@ if ($excel)
 my $nyp = $crms->SimpleSqlGet('SELECT id FROM projects WHERE name="New Year"');
 my $commonwealth_pid = $crms->SimpleSqlGet('SELECT id FROM projects WHERE name="Commonwealth"');
 my $pubdate_pid = $crms->SimpleSqlGet('SELECT id FROM projects WHERE name="Publication Date"');
+my $crown_copyright_pid = $crms->SimpleSqlGet('SELECT id FROM projects WHERE name="Crown Copyright"');
 die "Can't get New Year project" unless defined $nyp;
 die "Can't get Commonwealth project" unless defined $commonwealth_pid;
 die "Can't get Publication Date project" unless defined $pubdate_pid;
+die "Can't get Publication Date project" unless defined $crown_copyright_pid;
 my $nyp_ref = $crms->GetProjectRef($nyp);
 $year = $crms->GetTheYear() unless $year;
+my $pdus_cutoff_year = $year - 95;
+my $pd_cutoff_year = $year - 125;
 my $jsonxs = JSON::XS->new->utf8;
 ProcessCommonwealthProject();
 ProcessPubDateProject();
+ProcessCrownCopyrightProject();
 
-sub ProcessCommonwealthProject
-{
+sub ProcessCommonwealthProject {
   my $sql = 'SELECT e.id,e.gid,e.time,e.attr,e.reason FROM exportdata e'.
             ' WHERE (e.attr="pdus" OR e.attr="ic" OR e.attr="icus")'.
             ' AND e.exported=1 AND e.project=? AND YEAR(DATE(e.time))<?'.
             ' AND e.id NOT IN (SELECT id FROM queue)';
-  if (scalar @singles)
-  {
+  if (scalar @singles) {
     $sql .= sprintf(" AND e.id IN ('%s')", join "','", @singles);
   }
-  if (scalar @excludes)
-  {
+  if (scalar @excludes) {
     $sql .= sprintf(" AND NOT e.id IN ('%s')", join "','", @excludes);
   }
   $sql .= ' ORDER BY e.time DESC';
-
   print Utilities::StringifySql($sql, $commonwealth_pid, $year). "\n" if $verbose > 1;
   my $ref = $crms->SelectAll($sql, $commonwealth_pid, $year);
   my %seen;
   printf "Checking %d possible Commonwealth determinations…\n", scalar @$ref;
-  foreach my $row (@{$ref})
-  {
+  foreach my $row (@{$ref}) {
     my $id = $row->[0];
     next if $seen{$id};
-    my $record = $crms->GetMetadata($id);
-    next unless defined $record;
     my $rq = $crms->RightsQuery($id, 1);
-    if (!defined $rq)
-    {
+    if (!defined $rq) {
       print RED "No rights available for $id, skipping.\n";
       next;
     }
     my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
-    next if $acurr eq 'pd';
+    next if $acurr eq 'pd' or $acurr =~ m/^cc/;
+    my $record = $crms->GetMetadata($id);
+    next unless defined $record;
     my $gid = $row->[1];
     my $time = $row->[2];
     $seen{$id} = 1;
@@ -141,13 +139,11 @@ sub ProcessCommonwealthProject
            ' INNER JOIN reviewdata d ON r.data=d.id'.
            ' WHERE r.gid=? AND r.validated=1 AND r.data IS NOT NULL';
     my $ref2 = $crms->SelectAll($sql, $gid);
-    my $n = scalar @{$ref2};
-    next unless $n > 0;
+    next if scalar @$ref2 == 0;
     my %alldates;
     my %predictions;
     my $bogus;
-    foreach my $row2 (@{$ref2})
-    {
+    foreach my $row2 (@{$ref2}) {
       my $note = $row2->[0] || '';
       my $user = $row2->[1];
       my $data = $row2->[2];
@@ -159,16 +155,13 @@ sub ProcessCommonwealthProject
       my $dates = [];
       push @$dates, [$date, $pub] if defined $date;
       my @matches = $note =~ /(?<!\d)1\d\d\d(?![\d\-])/g;
-      foreach my $match (@matches)
-      {
+      foreach my $match (@matches) {
         push @$dates, [$match, 0] if length $match and $match < $year;
       }
-      foreach my $date (@$dates)
-      {
+      foreach my $date (@$dates) {
         my $rid = $crms->PredictRights($id, $date->[0], $date->[1],
                                        $crown, $record, undef, $year);
-        if (!defined $rid)
-        {
+        if (!defined $rid) {
           $bogus = 1;
           last;
         }
@@ -179,30 +172,24 @@ sub ProcessCommonwealthProject
     }
     next if $bogus;
     my ($ic, $icus, $pd, $pdus);
-    foreach my $pred (keys %predictions)
-    {
+    foreach my $pred (keys %predictions) {
       $ic = $pred if $pred =~ m/^ic\//;
       $icus = $pred if $pred =~ m/^icus/;
       $pd = $pred if $pred =~ m/^pd\//;
       $pdus = $pred if $pred =~ m/^pdus/;
     }
-    if (scalar keys %predictions && !defined $ic && ($icus || $pd || $pdus))
-    {
+    if (scalar keys %predictions && !defined $ic && ($icus || $pd || $pdus)) {
       my $new_rights;
-      if (defined $pd)
-      {
+      if (defined $pd) {
         $new_rights = ($acurr eq 'pd')? undef:$pd;
       }
-      if (defined $pdus)
-      {
+      if (defined $pdus) {
         $new_rights = ($acurr =~ m/^pd/)? undef:$pdus;
       }
-      if (defined $icus)
-      {
+      if (defined $icus) {
         $new_rights = ($acurr =~ m/^pd/ || $acurr =~ m/^icus/)? undef:$icus;
       }
-      if (defined $new_rights)
-      {
+      if (defined $new_rights) {
         my ($a, $r) = split m/\//, $new_rights;
         SubmitNewYearReview($id, $a, $r, 'Commonwealth', $record,
                             join(',', sort keys %alldates),
@@ -214,27 +201,21 @@ sub ProcessCommonwealthProject
 
 sub ProcessPubDateProject
 {
-  # get values for pd cutoff dates
-  my $us_pd_cutoff_year = $year - 95;
-  my $non_us_pd_cutoff_year = $year - 140;
   my $sql = 'SELECT id,gid FROM exportdata e WHERE e.project=?'.
             ' AND e.attr!="und" AND e.attr!="pd"'.
             ' AND e.exported=1'.
             ' AND e.id NOT IN (SELECT id FROM queue)';
-  if (scalar @singles)
-  {
+  if (scalar @singles) {
     $sql .= sprintf(" AND e.id IN ('%s')", join "','", @singles);
   }
-  if (scalar @excludes)
-  {
+  if (scalar @excludes) {
     $sql .= sprintf(" AND NOT e.id IN ('%s')", join "','", @excludes);
   }
   $sql .= ' ORDER BY e.time DESC';
   print Utilities::StringifySql($sql, $pubdate_pid). "\n" if $verbose > 1;
   my $ref = $crms->SelectAll($sql, $pubdate_pid);
   printf "Checking %d possible Publication Date determinations…\n", scalar @$ref;
-  foreach my $row (@$ref)
-  {
+  foreach my $row (@$ref) {
     my $id = $row->[0];
     $sql = 'SELECT COUNT(*) FROM exportdata e INNER JOIN projects p ON e.project=p.id'.
            ' WHERE e.id=? AND p.name="Special"';
@@ -243,63 +224,135 @@ sub ProcessPubDateProject
     my $gid = $row->[1];
     $sql = 'SELECT data FROM historicalreviews WHERE gid=? AND data IS NOT NULL AND validated=1';
     my $ref2 = $crms->SelectAll($sql, $gid);
+    next unless scalar @$ref2;
     my %dates = ();
-    my %countries = ();
     my %extracted_data = (); 
-    foreach my $row2 (@$ref2)
-    {
+    foreach my $row2 (@$ref2) {
       my $did = $row2->[0];
       my $data = $crms->SimpleSqlGet('SELECT data FROM reviewdata WHERE id=?', $did);
       $extracted_data{$data} = 1 if defined $data;
       my $json = $jsonxs->decode($data);
       my $date = $json->{'date'};
-      my $country = $json->{'country'};
       $date =~ s/^\s+|\s+$//g;
       $dates{$date} = $date if defined $date;
-      $countries{$country} = $country if defined $country;
     }
     my $date_str = join ', ', keys %dates;
-    my $country_str = join ', ', keys %countries;
-    if (scalar keys %dates == 1 && scalar keys %countries < 2)
-    {
-      my $record = $crms->GetMetadata($id);
-      if (!defined $record)
-      {
-        #print RED "Unable to get metadata for $id\n";
-        next;
-      }
-      my $date = (keys %dates)[0];
-      my $country = (keys %countries)[0];
-      if ($date =~ m/^\d\d\d\d-(\d\d\d\d)$/)
-      {
-        $date = $1;
-      }
-      my $pub_country = $record->country;
-      if ($pub_country =~ m/undetermined/i && defined $country)
-      {
-        $pub_country = 'US' if $country eq 'us' or $country eq 'US';
-        $pub_country = 'US' if length $country == 3 and substr 2, 1 eq 'u';
-      }
+    if (scalar keys %dates == 1) {
       my $rq = $crms->RightsQuery($id, 1);
-      if (!defined $rq)
-      {
+      if (!defined $rq) {
         print RED "No rights available for $id, skipping.\n";
         next;
       }
       my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
-      my $attr = undef;
-      if ($pub_country eq 'US' && $date == $us_pd_cutoff_year - 1)
-      {
-        $attr = 'pdus';
+      next if $acurr eq 'pd' or $acurr =~ m/^cc/;
+      my $record = $crms->GetMetadata($id);
+      if (!defined $record) {
+        #print RED "Unable to get metadata for $id\n";
+        next;
       }
-      elsif ($date == $non_us_pd_cutoff_year - 1)
-      {
+      my $date = (keys %dates)[0];
+      if ($date =~ m/^\d\d\d\d-(\d\d\d\d)$/) {
+        $date = $1;
+      }
+      my $attr = undef;
+      if ($date <= $pd_cutoff_year - 1) {
         $attr = 'pd';
       }
-      if (defined $attr && $attr ne $acurr)
-      {
+      elsif ($date <= $pdus_cutoff_year - 1) {
+        $attr = 'pdus';
+      }
+      if (defined $attr && $attr ne $acurr) {
         SubmitNewYearReview($id, $attr, 'cdpp', 'Publication Date', $record,
                             join(',', sort keys %extracted_data), '');
+      }
+    }
+  }
+}
+
+sub ProcessCrownCopyrightProject {
+  my $sql = 'SELECT e.id,e.gid,e.time,e.attr,e.reason FROM exportdata e'.
+            ' WHERE (e.attr="ic" OR e.attr="icus")'.
+            ' AND e.exported=1 AND e.project=? AND YEAR(DATE(e.time))<?'.
+            ' AND e.id NOT IN (SELECT id FROM queue)';
+  if (scalar @singles) {
+    $sql .= sprintf(" AND e.id IN ('%s')", join "','", @singles);
+  }
+  if (scalar @excludes) {
+    $sql .= sprintf(" AND NOT e.id IN ('%s')", join "','", @excludes);
+  }
+  $sql .= ' ORDER BY e.time DESC';
+  print Utilities::StringifySql($sql, $crown_copyright_pid, $year). "\n" if $verbose > 1;
+  my $ref = $crms->SelectAll($sql, $crown_copyright_pid, $year);
+  my %seen;
+  printf "Checking %d possible Crown Copyright determinations…\n", scalar @$ref;
+  foreach my $row (@{$ref}) {
+    my $id = $row->[0];
+    next if $seen{$id};
+    my $rq = $crms->RightsQuery($id, 1);
+    if (!defined $rq) {
+      print RED "No rights available for $id, skipping.\n";
+      next;
+    }
+    my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
+    next if $acurr eq 'pd' or $acurr =~ m/^cc/;
+    my $record = $crms->GetMetadata($id);
+    next unless defined $record;
+    my $gid = $row->[1];
+    my $time = $row->[2];
+    $seen{$id} = 1;
+    $sql = 'SELECT r.note,r.user,d.data FROM historicalreviews r'.
+           ' INNER JOIN reviewdata d ON r.data=d.id'.
+           ' WHERE r.gid=? AND r.validated=1 AND r.data IS NOT NULL';
+    my $ref2 = $crms->SelectAll($sql, $gid);
+    next unless scalar @$ref2 > 0;
+    my %alldates;
+    my %predictions = ();
+    my %dates = ();
+    my $bogus = 0;
+    foreach my $row2 (@{$ref2}) {
+      my $note = $row2->[0] || '';
+      my $user = $row2->[1];
+      my $data = $row2->[2];
+      $data = $jsonxs->decode($data);
+      my $date = $data->{'date'};
+      $date =~ s/^\s+|\s+$//g;
+      $dates{$date} = $date if defined $date;
+      foreach my $date (keys %dates) {
+        my $rid = $crms->PredictRights($id, $date, 1, 1, $record, undef, $year);
+        if (!defined $rid) {
+          $bogus = 1;
+          last;
+        }
+        my ($pa, $pr) = $crms->TranslateAttrReasonFromCode($rid);
+        $predictions{"$pa/$pr"} = 1;
+      }
+      $alldates{$_} = 1 for keys %dates;
+    }
+    print RED "  BOGUS rights code '$bogus'\n" if $bogus;
+    next if $bogus;
+    my ($ic, $icus, $pd, $pdus);
+    foreach my $pred (keys %predictions) {
+      $ic = $pred if $pred =~ m/^ic\//;
+      $icus = $pred if $pred =~ m/^icus/;
+      $pd = $pred if $pred =~ m/^pd\//;
+      $pdus = $pred if $pred =~ m/^pdus/;
+    }
+    if (scalar keys %predictions && !defined $ic && ($icus || $pd || $pdus)) {
+      my $new_rights;
+      if (defined $pd) {
+        $new_rights = ($acurr eq 'pd')? undef:$pd;
+      }
+      if (defined $pdus) {
+        $new_rights = ($acurr =~ m/^pd/)? undef:$pdus;
+      }
+      if (defined $icus) {
+        $new_rights = ($acurr =~ m/^pd/ || $acurr =~ m/^icus/)? undef:$icus;
+      }
+      if (defined $new_rights) {
+        my ($a, $r) = split m/\//, $new_rights;
+        SubmitNewYearReview($id, $a, $r, 'Crown Copyright', $record,
+                            join(',', sort keys %alldates),
+                            join(',', sort keys %predictions));
       }
     }
   }
@@ -319,17 +372,14 @@ sub SubmitNewYearReview
   my $res = $crms->AddItemToQueueOrSetItemActive($id, 0, 1, 'newyear', undef, $record, $nyp);
   my $code = $res->{'status'};
   my $msg = $res->{'msg'};
-  if ($code eq '1' || $code eq '2')
-  {
-    if ($verbose)
-    {
+  if ($code eq '1' || $code eq '2') {
+    if ($verbose) {
       print GREEN "Result for $id: $code $msg\n" if $code == 0;
       print RED "Result for $id: $code $msg\n" if $code == 1;
     }
     $msg = '' if $code == 2;
   }
-  else
-  {
+  else {
     $msg = '';
   }
   my $rights = $crms->GetCodeFromAttrReason($crms->TranslateAttr($new_attr),
@@ -339,12 +389,10 @@ sub SubmitNewYearReview
                 'note' => "New Year $year",
                 'category' => 'Expert Note'};
   my $result = $crms->SubmitReview($id, 'autocrms', $params, $nyp_ref);
-  if ($result)
-  {
+  if ($result) {
     print RED "SubmitReview() for $id: $result\n";
   }
-  if ($excel)
-  {
+  if ($excel) {
     my $rq = $crms->RightsQuery($id, 1);
     my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
     $worksheet->write_string($wsrow, 0, $id);
