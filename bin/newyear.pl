@@ -94,7 +94,7 @@ my $crown_copyright_pid = $crms->SimpleSqlGet('SELECT id FROM projects WHERE nam
 die "Can't get New Year project" unless defined $nyp;
 die "Can't get Commonwealth project" unless defined $commonwealth_pid;
 die "Can't get Publication Date project" unless defined $pubdate_pid;
-die "Can't get Publication Date project" unless defined $crown_copyright_pid;
+die "Can't get Crown Copyright project" unless defined $crown_copyright_pid;
 my $nyp_ref = $crms->GetProjectRef($nyp);
 $year = $crms->GetTheYear() unless $year;
 my $pdus_cutoff_year = $year - 95;
