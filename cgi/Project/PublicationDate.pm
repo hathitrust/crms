@@ -73,6 +73,17 @@ sub ShowPubDate
   return 0;
 }
 
+# Return array of label -> date range string
+sub Dates
+{
+  my $self = shift;
+
+  my $year = $self->{crms}->GetTheYear;
+  return [['pd', sprintf("1000-%s", $year - 125 - 1)],
+          ['pdus', sprintf('%s-%s', $year - 125, $year - 95 - 1)],
+          ['ic', sprintf('%s-%s', $year - 95, $year)]];
+}
+
 sub ValidateSubmission
 {
   my $self = shift;
