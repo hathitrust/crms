@@ -125,16 +125,13 @@
     [% END %]
     </table>
     <table style="border-top:1px solid #AAAAAA; border-bottom:1px solid #AAAAAA; padding-top:4px; padding-bottom:4px; margin-bottom:3px;">
+      [% FOR attr IN data.project.Dates() %]
       <tr>
-        <td style="width:50%;">1000-1895</td><td style="width:50%;">pd</td>
+        <td style="width:50%;">[% attr.1 %]</td><td style="width:50%;">[% attr.0 %]</td>
       </tr>
-      <tr>
-        <td style="width:50%;">1896-1925</td><td style="width:50%;">pdus</td>
-      </tr>
-      <tr>
-        <td style="width:50%;">1926-2021</td><td style="width:50%;">ic</td>
-      </tr>
+      [% END %]
     </table>
+    
 </div>
 
 <div id="Notes">
