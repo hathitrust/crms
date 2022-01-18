@@ -7912,13 +7912,6 @@ sub Authorities
       my $sysid = $self->BarcodeToId($id) || '';
       $url =~ s/__SYSID__/$sysid/g;
     }
-    if ($url =~ m/__SHIB__/)
-    {
-      my $user = $self->get('remote_user') || '';
-      $user .= '@umich.edu' unless $user =~ m/@/;
-      my $idp = $self->GetIDP($user) || '';
-      $url =~ s/__SHIB__/$idp/g;
-    }
     if ($url =~ m/__HATHITRUST__/)
     {
       my $host = $self->IsDevArea()? $ENV{'HTTP_HOST'} : 'babel.hathitrust.org';
@@ -7931,32 +7924,6 @@ sub Authorities
                 'initial' => $initial, 'id' => $aid};
   }
   return \@all;
-}
-
-sub GetIDP
-{
-  my $self = shift;
-  my $user = shift;
-
-  my $sql = 'SELECT identity_provider FROM ht_users WHERE email=? OR userid=?'.
-            ' ORDER BY IF(role="crms",1,0) DESC';
-  my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh)
-  {
-    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
-    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
-  }
-  my $idp;
-  eval {
-    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
-    $idp = $ref->[0]->[0];
-  };
-  if ($@)
-  {
-    my $err = "SQL failed ($sql): " . $@;
-    $self->SetError($err);
-  }
-  return $idp;
 }
 
 # Makes sure a URL has the correct sys and pdb params if needed.
