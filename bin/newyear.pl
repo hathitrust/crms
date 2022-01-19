@@ -16,7 +16,7 @@ use Data::Dumper;
 
 my $usage = <<END;
 USAGE: $0 [-hnpv] [-e HTID [-e HTID...]]
-       [-s HTID [-s HTID...]] [-x EXCEL_FILE] [-y YEAR]
+       [-s HTID [-s HTID...]] [-S PATH.txt] [-x EXCEL_FILE] [-y YEAR]
 
 Reports on and submits new determinations for previous determinations
 that may now, as of the new year, have had copyright expire from ic*
@@ -37,6 +37,7 @@ database as a queue entry and autocrms review with the new rights.
 -n             No-op. Makes no changes to the database.
 -p             Run in production.
 -s HTID        Report only for volume HTID. May be repeated for multiple volumes.
+-S PATH        Read text file of single HTIDs as if they were all passed with -s.
 -v             Emit verbose debugging information. May be repeated.
 -x EXCEL_FILE  Write report on new determinations to EXCEL_FILE.
 -y YEAR        Use this year instead of the current one.
@@ -48,6 +49,7 @@ my $instance;
 my $noop;
 my $production;
 my @singles;
+my $singles_path;
 my $verbose;
 my $excel;
 my $year;
@@ -59,6 +61,7 @@ die 'Terminating' unless GetOptions(
            'n'    => \$noop,
            'p'    => \$production,
            's:s@' => \@singles,
+           'S:s'  => \$singles_path,
            'v+'   => \$verbose,
            'x:s'  => \$excel,
            'y:s'  => \$year);
@@ -74,6 +77,19 @@ my $crms = CRMS->new(
 $verbose = 0 unless defined $verbose;
 print "Verbosity $verbose\n" if $verbose;
 $crms->set('noop', 1) if $noop;
+
+if ($singles_path) {
+  my $fh;
+  unless (open $fh, '<:encoding(UTF-8)', $singles_path) {
+    die("failed to open $singles_path: $!");
+  }
+  read $fh, my $buff, -s $singles_path;
+  close $fh;
+  foreach my $line (split "\n", $buff) {
+    push @singles, $line;
+  }
+}
+#exit 0;
 
 my ($workbook, $worksheet);
 my $wsrow = 1;
@@ -147,7 +163,6 @@ sub ProcessCommonwealthProject {
       my $note = $row2->[0] || '';
       my $user = $row2->[1];
       my $data = $row2->[2];
-      #print "$gid: $data\n";
       $data = $jsonxs->decode($data);
       my $date = $data->{'date'};
       my $pub = $data->{'pub'};

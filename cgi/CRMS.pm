@@ -8118,37 +8118,30 @@ sub PredictRights
   my $when = $self->PredictLastCopyrightYear($id, $year, $ispub, $crown, $record, \$pub);
   return unless defined $when;
   return if $pub =~ m/^\d+-\d+$/;
-  if ($when < $now)
-  {
+  if ($when < $now) {
     if ($when >= 1996 && $pub >= 1923 &&
-        $pub + 95 >= $now)
-    {
+        $pub + 95 >= $now) {
       $attr = 'icus';
       $reason = 'gatt';
     }
-    else
-    {
+    else {
       $attr = 'pd';
       $reason = ($ispub)? 'exp':'add';
     }
   }
-  else
-  {
-    if ($pub < 1923)
-    {
-      $attr = 'pdus';
-      $reason = ($ispub)? 'exp':'add';
-    }
-    else
-    {
+  else {
+    if ($pub + 95 >= $now) {
       $attr = 'ic';
       $reason = ($ispub)? 'cdpp':'add';
+    }
+    else {
+      $attr = 'pdus';
+      $reason = ($ispub)? 'exp':'add';
     }
   }
   my $sql = 'SELECT r.id FROM rights r INNER JOIN attributes a ON r.attr=a.id'.
             ' INNER JOIN reasons rs ON r.reason=rs.id'.
             ' WHERE a.name=? AND rs.name=?';
-  #$self->Note(join ',', ($sql, $attr, $reason));
   return $self->SimpleSqlGet($sql, $attr, $reason);
 }
 
