@@ -20,6 +20,7 @@ my %attr_map = ( 'cc-zero' => 1,
                  'cc-by-nc-4.0' => 1,
                  'cc-by-nc-sa-4.0' => 1,
                  'cc-by-sa-4.0' => 1,
+                 'ic' => 1,
                  'nobody' => 1,
                  'pd-pvt' => 1 );
 my %reason_map = ( 'con' => 1,

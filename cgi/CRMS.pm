@@ -57,7 +57,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.4.8';
+our $VERSION = '8.4.9';
 sub Version
 {
   return $VERSION;
@@ -7912,13 +7912,6 @@ sub Authorities
       my $sysid = $self->BarcodeToId($id) || '';
       $url =~ s/__SYSID__/$sysid/g;
     }
-    if ($url =~ m/__SHIB__/)
-    {
-      my $user = $self->get('remote_user') || '';
-      $user .= '@umich.edu' unless $user =~ m/@/;
-      my $idp = $self->GetIDP($user) || '';
-      $url =~ s/__SHIB__/$idp/g;
-    }
     if ($url =~ m/__HATHITRUST__/)
     {
       my $host = $self->IsDevArea()? $ENV{'HTTP_HOST'} : 'babel.hathitrust.org';
@@ -7931,32 +7924,6 @@ sub Authorities
                 'initial' => $initial, 'id' => $aid};
   }
   return \@all;
-}
-
-sub GetIDP
-{
-  my $self = shift;
-  my $user = shift;
-
-  my $sql = 'SELECT identity_provider FROM ht_users WHERE email=? OR userid=?'.
-            ' ORDER BY IF(role="crms",1,0) DESC';
-  my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh)
-  {
-    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
-    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
-  }
-  my $idp;
-  eval {
-    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
-    $idp = $ref->[0]->[0];
-  };
-  if ($@)
-  {
-    my $err = "SQL failed ($sql): " . $@;
-    $self->SetError($err);
-  }
-  return $idp;
 }
 
 # Makes sure a URL has the correct sys and pdb params if needed.
@@ -8118,37 +8085,30 @@ sub PredictRights
   my $when = $self->PredictLastCopyrightYear($id, $year, $ispub, $crown, $record, \$pub);
   return unless defined $when;
   return if $pub =~ m/^\d+-\d+$/;
-  if ($when < $now)
-  {
+  if ($when < $now) {
     if ($when >= 1996 && $pub >= 1923 &&
-        $pub + 95 >= $now)
-    {
+        $pub + 95 >= $now) {
       $attr = 'icus';
       $reason = 'gatt';
     }
-    else
-    {
+    else {
       $attr = 'pd';
       $reason = ($ispub)? 'exp':'add';
     }
   }
-  else
-  {
-    if ($pub < 1923)
-    {
-      $attr = 'pdus';
-      $reason = ($ispub)? 'exp':'add';
-    }
-    else
-    {
+  else {
+    if ($pub + 95 >= $now) {
       $attr = 'ic';
       $reason = ($ispub)? 'cdpp':'add';
+    }
+    else {
+      $attr = 'pdus';
+      $reason = ($ispub)? 'exp':'add';
     }
   }
   my $sql = 'SELECT r.id FROM rights r INNER JOIN attributes a ON r.attr=a.id'.
             ' INNER JOIN reasons rs ON r.reason=rs.id'.
             ' WHERE a.name=? AND rs.name=?';
-  #$self->Note(join ',', ($sql, $attr, $reason));
   return $self->SimpleSqlGet($sql, $attr, $reason);
 }
 
