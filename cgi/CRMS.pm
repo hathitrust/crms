@@ -57,7 +57,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.4.9';
+our $VERSION = '8.4.10';
 sub Version
 {
   return $VERSION;
@@ -1193,34 +1193,43 @@ sub RemoveFromCandidates
 # Returns number of candidates added.
 sub LoadNewItemsInCandidates
 {
-  my $self   = shift;
-  my $start  = shift;
-  my $end    = shift;
+  my $self        = shift;
+  my $start       = shift;
+  my $end         = shift;
+  my $rights_only = shift; # Don't retry no meta filtered volumes
 
   my $now = (defined $end)? $end : $self->GetTodaysDate();
   $start = $self->SimpleSqlGet('SELECT max(time) FROM candidatesrecord') unless $start;
   my $start_size = $self->GetCandidatesSize();
   $self->ReportMsg("Candidates size is $start_size, last load time was $start");
-  my $sql = 'SELECT id FROM und WHERE src="no meta"';
-  my $ref = $self->SelectAll($sql);
-  my $n = scalar @{$ref};
-  if ($n)
-  {
-    $self->ReportMsg("Checking $n possible no-meta additions to candidates");
-    $self->CheckAndLoadItemIntoCandidates($_->[0]) for @{$ref};
-    $n = $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE src="no meta"');
-    $self->ReportMsg("Number of no-meta volumes now $n.");
+  unless ($rights_only) {
+    my $sql = 'SELECT id FROM und WHERE src="no meta"';
+    my $ref = $self->SelectAll($sql);
+    my $n = scalar @{$ref};
+    if ($n) {
+      $self->ReportMsg("Checking $n possible no-meta additions to candidates");
+      $self->CheckAndLoadItemIntoCandidates($_->[0]) for @{$ref};
+      $n = $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE src="no meta"');
+      $self->ReportMsg("Number of no-meta volumes now $n.");
+    }
   }
   my $endclause = ($end)? " AND time<='$end' ":' ';
-  $sql = 'SELECT namespace,id,time FROM rights_current WHERE time>?' . $endclause . 'ORDER BY time ASC';
-  $ref = $self->SelectAllSDR($sql, $start);
-  $n = scalar @{$ref};
+  my $sql = 'SELECT namespace,id,time,DATE(time) FROM rights_current WHERE time>?' .
+            $endclause . 'ORDER BY time ASC';
+  my $ref = $self->SelectAllSDR($sql, $start);
+  my $n = scalar @{$ref};
   $self->ReportMsg("Checking $n possible additions to candidates from rights DB");
-  foreach my $row (@{$ref})
-  {
+  my $last_date = undef;
+  foreach my $row (@{$ref}) {
     my $id = $row->[0] . '.' . $row->[1];
     my $time = $row->[2];
-    $self->CheckAndLoadItemIntoCandidates($id, $time);
+    my $date = $row->[3];
+    if (defined $last_date && $last_date ne $date) {
+      $self->ReportMsg("Processing rights from $date.");
+    }
+    $last_date = $date;
+    my $msg = $self->CheckAndLoadItemIntoCandidates($id, $time);
+    $self->ReportMsg($msg) if defined $msg;
   }
   my $end_size = $self->GetCandidatesSize();
   my $diff = $end_size - $start_size;
@@ -1239,76 +1248,59 @@ sub CheckAndLoadItemIntoCandidates
   my $self   = shift;
   my $id     = shift;
   my $time   = shift;
-  my $record = shift || $self->GetMetadata($id);
+  my $record = shift;
 
-  if (!defined $record)
-  {
-    $self->ReportMsg("Skip $id -- no metadata to be had");
-    $self->Filter($id, 'no meta');
-    $self->ClearErrors();
-    return;
+  # Bail out right away without checking catalog record if volume is already reviewed.
+  # Right now there is no way to allow re-review by a project
+  # other than the one under which it was originally reviewed.
+  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id) > 0) {
+    return "Skip $id -- already in historical reviews";
   }
-  # FIXME: in some circumstances, can project modules override the historical
-  # and inheritance restrictions?
-  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id) > 0)
-  {
-    $self->ReportMsg("Skip $id -- already in historical reviews");
-    return;
-  }
-  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE (status IS NULL OR status=1) AND id=?', $id) > 0)
-  {
-    $self->ReportMsg("Skip $id -- already inheriting");
-    return;
+  if ($self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE (status IS NULL OR status=1) AND id=?', $id) > 0) {
+    return "Skip $id -- already inheriting";
   }
   my $incand = $self->SimpleSqlGet('SELECT id FROM candidates WHERE id=?', $id);
   my $inund  = $self->SimpleSqlGet('SELECT src FROM und WHERE id=?', $id);
   my $inq    = $self->IsVolumeInQueue($id);
   my $rq = $self->RightsQuery($id, 1);
-  if (!defined $rq)
-  {
-    $self->ReportMsg("Can't get rights for $id, filtering.");
+  if (!defined $rq) {
     $self->Filter($id, 'no meta');
-    return;
+    return "Can't get rights for $id, filtering.";
+  }
+  $record = $self->GetMetadata($id) unless defined $record;
+  if (!defined $record) {
+    $self->Filter($id, 'no meta');
+    $self->ClearErrors();
+    return "Skip $id -- no metadata to be had";
   }
   my $oldSysid = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
-  if (defined $oldSysid)
-  {
-    $record = $self->GetMetadata($id);
-    if (defined $record)
-    {
-      my $sysid = $record->sysid;
-      if (defined $sysid && defined $oldSysid && $sysid ne $oldSysid)
-      {
-        $self->ReportMsg("Update system IDs from $oldSysid to $sysid");
-        $self->UpdateSysids($record);
-      }
+  if (defined $oldSysid) {
+    my $sysid = $record->sysid;
+    if (defined $sysid && defined $oldSysid && $sysid ne $oldSysid) {
+      $self->ReportMsg("Update system IDs from $oldSysid to $sysid");
+      $self->UpdateSysids($record);
     }
   }
   my $eval = $self->EvaluateCandidacy($id, $record);
-  if ($eval->{'msg'} eq 'yes')
-  {
+  if ($eval->{'status'} eq 'yes') {
     $self->AddItemToCandidates($id, $eval->{'project'}, $time, $record);
   }
   else
   {
     my $src;
     $src = $eval->{'msg'} if $eval->{'status'} eq 'filter';
-    if (defined $src)
-    {
-      if (!defined $inund || $inund ne $src)
-      {
+    if (defined $src) {
+      if (!defined $inund || $inund ne $src) {
         $self->ReportMsg(sprintf("Skip $id ($src) -- %s in filtered volumes",
                                  (defined $inund)? "updating $inund->$src":"inserting as $src"));
         $self->Filter($id, $src);
         $self->UpdateMetadata($id, 1, $record);
       }
-      else
-      {
-        $self->ReportMsg("Skip $id already filtered as $src");
+      else {
+        $self->ReportMsg("Skip $id: filtered ($src)");
       }
     }
-    elsif (defined $inund || defined $incand || $inq)
-    {
+    elsif (defined $inund || defined $incand || $inq) {
       my @from;
       push @from, "und [$inund]" if defined $inund;
       push @from, 'candidates' if defined $incand;
@@ -1317,6 +1309,7 @@ sub CheckAndLoadItemIntoCandidates
       $self->RemoveFromCandidates($id);
     }
   }
+  return undef;
 }
 
 sub AddItemToCandidates
@@ -1372,42 +1365,9 @@ sub AddItemToCandidates
       $self->PrepareSubmitSql($sql, $proj, $id);
     }
   }
-  #if ($self->GetSystemVar('cri') && defined $self->CheckForCRI($id, $quiet))
-  #{
-  #  $self->ReportMsg("Filter $id as CRI") unless $quiet;
-  #  $self->Filter($id, 'cross-record inheritance');
-  #}
-  #else
-  #{
-    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
-  #}
+  $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
   $self->UpdateMetadata($id, 1, $record);
 }
-
-# Returns the gid of the determination inheriting from, or undef if no inheritance.
-# sub CheckForCRI
-# {
-#   my $self  = shift;
-#   my $id    = shift;
-#   my $quiet = shift;
-#
-#   my $cri = $self->get('criModule');
-#   if (!defined $cri)
-#   {
-#     use CRI;
-#     $cri = CRI->new('crms' => $self);
-#     $self->set('criModule', $cri);
-#   }
-#   my $gid = $cri->CheckVolume($id);
-#   if (defined $gid)
-#   {
-#     $self->ReportMsg("Adding CRI for $id ($gid)") unless $quiet;
-#     my $sql = 'INSERT INTO cri (id,gid) VALUES (?,?)';
-#     $self->PrepareSubmitSql($sql, $id, $gid);
-#     return $gid;
-#   }
-#   return undef;
-# }
 
 sub Filter
 {

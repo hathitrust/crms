@@ -76,10 +76,10 @@ sub EvaluateCandidacy
 }
 
 # ========== REVIEW ========== #
-sub PresentationOrder
-{
-  return 'b.author ASC';
-}
+#sub PresentationOrder
+#{
+#  return 'b.author ASC';
+#}
 
 sub ReviewPartials
 {
