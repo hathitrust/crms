@@ -57,7 +57,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.4.10';
+our $VERSION = '8.4.11';
 sub Version
 {
   return $VERSION;
@@ -1203,19 +1203,19 @@ sub LoadNewItemsInCandidates
   my $start_size = $self->GetCandidatesSize();
   $self->ReportMsg("Candidates size is $start_size, last load time was $start");
   unless ($rights_only) {
-    my $sql = 'SELECT id FROM und WHERE src="no meta"';
+    my $sql = 'SELECT id,time FROM und WHERE src="no meta"';
     my $ref = $self->SelectAll($sql);
     my $n = scalar @{$ref};
     if ($n) {
       $self->ReportMsg("Checking $n possible no-meta additions to candidates");
-      $self->CheckAndLoadItemIntoCandidates($_->[0]) for @{$ref};
+      $self->CheckAndLoadItemIntoCandidates($_->[0], $_->[1]) for @{$ref};
       $n = $self->SimpleSqlGet('SELECT COUNT(*) FROM und WHERE src="no meta"');
       $self->ReportMsg("Number of no-meta volumes now $n.");
     }
   }
   my $endclause = ($end)? " AND time<='$end' ":' ';
   my $sql = 'SELECT namespace,id,time,DATE(time) FROM rights_current WHERE time>?' .
-            $endclause . 'ORDER BY time ASC';
+            $endclause . 'ORDER BY time ASC, namespace ASC, id ASC';
   my $ref = $self->SelectAllSDR($sql, $start);
   my $n = scalar @{$ref};
   $self->ReportMsg("Checking $n possible additions to candidates from rights DB");
@@ -1305,7 +1305,7 @@ sub CheckAndLoadItemIntoCandidates
       push @from, "und [$inund]" if defined $inund;
       push @from, 'candidates' if defined $incand;
       push @from, 'queue' if $inq;
-      $self->ReportMsg(sprintf "Remove $id from %s\n", join ', ', @from);
+      $self->ReportMsg(sprintf "Remove $id from %s", join ', ', @from);
       $self->RemoveFromCandidates($id);
     }
   }
@@ -1341,7 +1341,7 @@ sub AddItemToCandidates
   my $project = $self->GetProjectRef($proj)->name;
   if (!$self->IsVolumeInCandidates($id))
   {
-    $self->ReportMsg(sprintf("Add $id to candidates for project '$project' ($proj)"));
+    $self->ReportMsg("Add $id to candidates for $project project");
     my $sql = 'INSERT INTO candidates (id,time,project) VALUES (?,?,?)';
     $self->PrepareSubmitSql($sql, $id, $time, $proj);
     $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
