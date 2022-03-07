@@ -429,6 +429,7 @@ sub ConnectToSdrDb
   {
     $sdr_dbh->{mysql_auto_reconnect} = 1;
     $sdr_dbh->{mysql_enable_utf8} = 1;
+    $sdr_dbh->do('SET NAMES "utf8";');
   }
   else
   {
