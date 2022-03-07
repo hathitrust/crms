@@ -65,7 +65,7 @@ END
 
 my $n = CheckInstitutions();
 $msg =~ s/__N__/$n/g;
-$msg =~ s/__OUTFILE__/$outfile_instid/g;
+$msg =~ s/__OUTFILE_INSTID__/$outfile_instid/g;
 $msg =~ s/__OUTFILE_ENTITYID__/$outfile_entityid/g;
 
 if ($noop)
