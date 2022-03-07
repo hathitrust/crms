@@ -145,6 +145,33 @@ sub submit
   return $result;
 }
 
+# Returns a hashref:
+# hash->{ids} => arrayref of row ids (not HTIDs)
+# hash->{rights_data} => tab-delimited .rights file content
+sub rights_data {
+  my $self = shift;
+
+  my $retval = {ids => [], rights_data => ''};
+  my $crms = $self->{crms};
+  my $sql = 'SELECT id,htid,attr,reason,user,ticket,rights_holder FROM licensing'.
+            ' WHERE rights_file IS NULL'.
+            ' ORDER BY time, id';
+  my $ref = $crms->SelectAll($sql);
+  foreach my $row (@$ref) {
+    my ($id, $htid, $attr, $reason, $user, $ticket, $rights_holder) = @$row;
+    push @{$retval->{ids}}, $id;
+    my $note = $ticket || '';
+    if ($rights_holder) {
+      $note .= ' ' if length $note;
+      $note .= " ($rights_holder)" if $rights_holder;
+    }
+    $retval->{rights_data} .= join("\t", ($htid, $crms->TranslateAttr($attr),
+                                   $crms->TranslateReason($reason),
+                                   'crms', 'null', $note)) . "\n";
+  }
+  return $retval;
+}
+
 sub GetData
 {
   my $self = shift;

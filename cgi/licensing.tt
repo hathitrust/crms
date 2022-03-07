@@ -47,7 +47,7 @@
           <th><label for="attrSel">Attribute</label></th>
           <th><label for="reasonSel">Reason</label></th>
           <th>Ticket</th>
-          <th colspan="6">Author (Rightsholder) OR Organization (Signee)</th>
+          <th colspan="6">Authorizing signer, Organization or other Rights Database note</th>
           <th>Submit</th>
         </tr>
         <tr>
