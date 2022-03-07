@@ -44,35 +44,21 @@ my $crms = CRMS->new(
     instance => $instance
 );
 
-my $sql = 'SELECT id,htid,attr,reason,user,ticket FROM licensing'.
-          ' WHERE rights_file IS NULL'.
-          ' ORDER BY time, id';
-my $ref = $crms->SelectAll($sql);
-exit(0) unless scalar @$ref;
+my $licensing = $crms->Licensing();
+my $data = Licensing->rights_data();
+exit(0) unless scalar @{$data->{ids}};
 
-my @ids;
-my $rights_data = '';
-foreach my $row (@$ref)
-{
-  my ($id, $htid, $attr, $reason, $user, $ticket) = @$row;
-  push @ids, $id;
-  $rights_data .= join("\t", ($htid, $crms->TranslateAttr($attr),
-                              $crms->TranslateReason($reason),
-                              'crms', 'null', $ticket)) . "\n";
-}
-unless ($noop)
-{
-  my $rights_file = $crms->WriteRightsFile($rights_data);
-  $sql = 'UPDATE licensing SET rights_file=? WHERE id=?';
-  $crms->PrepareSubmitSql($sql, $rights_file, $_) for @ids;
+unless ($noop) {
+  my $rights_file = $crms->WriteRightsFile($data->{rights_data});
+  my $sql = 'UPDATE licensing SET rights_file=? WHERE id=?';
+  $crms->PrepareSubmitSql($sql, $rights_file, $_) for @{$data->{ids}};
 }
 
 EmailReport() if scalar @mails;
 
 print "Warning: $_\n" for @{$crms->GetErrors()};
 
-sub EmailReport
-{
+sub EmailReport {
   my $subj = $crms->SubjectLine('Licensing Export');
   my $body = $crms->StartHTML($subj);
   my $file = $crms->get('export_file');
@@ -82,8 +68,7 @@ sub EmailReport
   my $to = join ',', @mails;
   my $contentType = 'text/html; charset="UTF-8"';
   my $message = $body;
-  if ($file && $path)
-  {
+  if ($file && $path) {
     my $boundary = "====" . time() . "====";
     $contentType = "multipart/mixed; boundary=\"$boundary\"";
     open (my $FH, '<', $path) or die "Cannot read $path: $!";
