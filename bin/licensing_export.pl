@@ -45,7 +45,7 @@ my $crms = CRMS->new(
 );
 
 my $licensing = $crms->Licensing();
-my $data = Licensing->rights_data();
+my $data = $licensing->rights_data();
 exit(0) unless scalar @{$data->{ids}};
 
 unless ($noop) {
