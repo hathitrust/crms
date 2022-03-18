@@ -25,151 +25,130 @@ sub new
 {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
-  my $errors = [];
-  $self->set('errors', $errors);
-  my $id = $args{'id'};
-  $self->set('sysid', $id) if $id !~ m/\./;
-  $self->set('id', $id);
-  my $crms = $args{'crms'};
-  die "Metadata module needs CRMS instance." unless defined $crms;
-  $self->set('crms', $crms);
-  $self->json;
-  return unless defined $self->xml;
+  my $id = $args{id};
+  $self->{sysid} = $id if $id !~ m/\./;
+  $self->{id} = $id;
+  $self->json unless $self->is_error;
+  $self->xml unless $self->is_error;
   return $self;
 }
 
-sub get
+sub set_error
 {
-  my $self = shift;
-  my $key  = shift;
-
-  return $self->{$key};
+  my $self  = shift;
+  my $error = shift;
+  $self->{error} = "[$self->{id}] $error";
 }
 
-sub set
-{
+sub is_error {
   my $self = shift;
-  my $key  = shift;
-  my $val  = shift;
-
-  delete $self->{$key} unless defined $val;
-  $self->{$key} = $val if defined $key and defined $val;
+  return defined $self->{error};
 }
 
-sub SetError
-{
-  my $self   = shift;
-  my $error  = shift;
-
-  $self->get('crms')->SetError($error);
+sub error {
+  my $self = shift;
+  return $self->{error};
 }
 
 sub id
 {
   my $self = shift;
-  return $self->get('id');
+  return $self->{id};
 }
 
 sub sysid
 {
   my $self = shift;
-  my $sysid = $self->get('sysid');
-  if (!defined $sysid)
-  {
-    my $json = $self->json;
-    my $records = $json->{'records'};
-    if ('HASH' eq ref $records)
-    {
+  if (!defined $self->{sysid}) {
+    my $records = $self->json->{'records'};
+    if ('HASH' eq ref $records) {
       my @keys = keys %$records;
-      $sysid = $keys[0];
-      $self->set('sysid', $sysid);
+      $self->{sysid} = $keys[0];
     }
   }
-  return $sysid;
+  return $self->{sysid};
 }
 
 sub json
 {
   my $self = shift;
-  my $json = $self->get('json');
+  my $json = $self->{json};
   if (!defined $json)
   {
-    my $id = $self->get('id');
-    $id = $self->get('sysid') unless defined $id;
-    my $type = ($id =~ m/\./)? 'htid' : 'recordnumber';
-    my $url = "https://catalog.hathitrust.org/api/volumes/full/$type/$id.json";
-    my $ua = LWP::UserAgent->new;
-    $ua->timeout(1000);
-    my $req = HTTP::Request->new(GET => $url);
-    my $res = $ua->request($req);
-    if (!$res->is_success)
-    {
-      $self->SetError($url . ' failed: ' . $res->message());
-      return;
-    }
-    my $xml = undef;
-    my $jsonxs = JSON::XS->new;
-    my $content = Unicode::Normalize::NFC($res->content);
+    my $content = $self->fetch_record($self->{sysid} || $self->{id});
+    return unless defined $content;
     # Sometimes the API can return diagnostic information up top,
     # so we cut that out.
     $content =~ s/^(.*?)(\{"records":)/$2/s;
     eval {
-      $json = $jsonxs->decode($content);
-      if (!defined $self->get('id'))
-      {
-        my $id2 = $json->{items}->[0]->{htid};
-        $self->set('id', $id2);
-      }
+      $json = JSON::XS->new->decode($content);
       my $records = $json->{'records'};
-      if ('HASH' eq ref $records)
-      {
+      if ('HASH' eq ref $records) {
         my @keys = keys %$records;
-        $self->set('sysid', $keys[0]);
+        $self->{sysid} = $keys[0];
       }
     };
-    if ($@)
-    {
-      $self->SetError("failed to parse ($content) for $id:$@");
+    if ($@) {
+      $self->set_error("$@ ($content)");
     }
-    $self->set('json', $json) if defined $json;
+    $self->{json} = $json;
   }
   return $json;
 }
 
-sub xml
-{
+sub fetch_record {
   my $self = shift;
-  my $xml = $self->get('xml');
-  if (! defined $xml)
+  my $id   = shift;
+
+  my $type = ($id =~ m/\./)? 'htid' : 'recordnumber';
+  my $url = "https://catalog.hathitrust.org/api/volumes/full/$type/$id.json";
+  my $attempt = 1;
+  my $err = undef;
+  while ($attempt <= 3) {
+    my $ua = LWP::UserAgent->new;
+    $ua->timeout(1000 * $attempt);
+    my $req = HTTP::Request->new(GET => $url);
+    my $res = $ua->request($req);
+    if ($res->is_error) {
+      $err = sprintf "%d %s from $url\n", $res->code, $res->message;
+    }
+    else {
+      return Unicode::Normalize::NFC($res->content);
+    }
+    $attempt++;
+  }
+  $self->set_error($err);
+  return;
+}
+
+sub xml {
+  my $self = shift;
+  if (!defined $self->{xml})
   {
     my $json = $self->json;
     my $records = $json->{'records'};
     my @keys = keys %$records;
     my $source;
-    if (scalar @keys)
-    {
-      $xml = $records->{$keys[0]}->{'marc-xml'};
+    if (scalar @keys) {
+      my $xml = $records->{$keys[0]}->{'marc-xml'};
       my $parser = XML::LibXML->new();
       eval {
         $source = $parser->parse_string($xml);
       };
-      if (!scalar @keys || $@)
-      {
-        $self->SetError($self->id . " failed to parse ($xml): $@");
+      if (!scalar @keys || $@) {
+        $self->set_error("failed to parse ($xml): $@");
         return;
       }
     }
-    else
-    {
-      $self->SetError($self->id . " no records found");
+    else {
+      $self->set_error('no records found');
       return;
     }
     my $root = $source->getDocumentElement();
     my @records = $root->findnodes('//*[local-name()="record"]');
-    $xml = $records[0];
-    $self->set('xml', $xml) if defined $xml;
+    $self->{xml} = $records[0];
   }
-  return $xml;
+  return $self->{xml};
 }
 
 sub leader
@@ -579,9 +558,8 @@ sub countEnumchron
 {
   my $self = shift;
 
-  my $n = $self->get('enumchronCount');
-  return $n if defined $n;
-  $n = 0;
+  return $self->{enumchronCount} if defined $self->{enumchronCount};
+  my $n = 0;
   eval {
     my $json = $self->json;
     foreach my $item (@{$json->{'items'}})
@@ -590,8 +568,8 @@ sub countEnumchron
       $n++ if $data;
     }
   };
-  $self->SetError('enumchron query for ' . $self->id . " failed: $@") if $@;
-  $self->set('enumchronCount', $n);
+  $self->set_error("enumchron query failed: $@") if $@;
+  $self->{enumchronCount} = $n;
   return $n;
 }
 

@@ -4850,7 +4850,12 @@ sub GetMetadata
   my $id   = shift;
 
   use Metadata;
-  $self->get($id) || Metadata->new('id' => $id, 'crms' => $self);
+  my $metadata = Metadata->new('id' => $id);
+  if ($metadata->is_error) {
+    $self->SetError($metadata->error);
+    return;
+  }
+  return $metadata;
 }
 
 sub BarcodeToId
@@ -5195,22 +5200,23 @@ sub ProjectDispatch
 # Code commented out with #### are race condition mitigations
 # to be considered for a later release.
 # Test param prints debug info and iterates 5 times to test mitigation.
+# If the query returns no results CRMS errors will contain one entry.
+# If there is a Bib API issue, CRMS errors will hold an error for each failed item.
+# Presence of multiple errors should be reported as a catalog outage.
 sub GetNextItemForReview
 {
   my $self = shift;
   my $user = shift || $self->get('user');
   my $test = shift;
 
-  my $id = undef;
-  my $sql = undef;
+  my ($id, $sql, $ref);
   eval {
     my $proj = $self->GetUserCurrentProject($user);
     my $project_ref = $self->GetProjectRef($proj);
     my @params = ($user, $proj);
     my @orders = ('q.priority DESC', 'cnt DESC', 'hash', 'q.time ASC');
     my $sysid;
-    if ($project_ref->group_volumes && $self->IsUserAdvanced($user))
-    {
+    if ($project_ref->group_volumes && $self->IsUserAdvanced($user)) {
       $sql = 'SELECT b.sysid FROM reviews r INNER JOIN bibdata b ON r.id=b.id'.
              ' WHERE r.user=? AND hold=0 ORDER BY r.time DESC LIMIT 1';
       $sysid = $self->SimpleSqlGet($sql, $user);
@@ -5221,17 +5227,14 @@ sub GetNextItemForReview
     my $wc = $self->WildcardList(scalar @{$inc});
     $excludei = ' AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user IN '. $wc. ')';
     push @params, @{$inc};
-    if (!$self->IsUserExpert($user))
-    {
+    if (!$self->IsUserExpert($user)) {
       $excludeh = ' AND NOT EXISTS (SELECT * FROM historicalreviews r3 WHERE r3.id=q.id AND r3.user IN '. $wc. ')';
       push @params, @{$inc};
     }
-    if (defined $porder)
-    {
+    if (defined $porder) {
       unshift @orders, $porder;
     }
-    if (defined $sysid)
-    {
+    if (defined $sysid) {
       # First order, last param (assumes any order param will be last).
       # Adding any additional parameterized ordering will be trickier.
       unshift @orders, 'IF(b.sysid=?,1,0) DESC,q.id ASC';
@@ -5244,57 +5247,51 @@ sub GetNextItemForReview
            ' AND q.unavailable=0'.
            $excludei. $excludeh.
            ' HAVING cnt<2 ORDER BY '. join ',', @orders;
-    if (defined $test)
-    {
+    if (defined $test) {
       $sql .= ' LIMIT 5';
       printf "$user: %s\n", Utilities::StringifySql($sql, @params);
     }
-    my $ref = $self->SelectAll($sql, @params);
-    foreach my $row (@{$ref})
-    {
-      my $id2 = $row->[0];
-      my $cnt = $row->[1];
-      my $hash = $row->[2];
-      my $pri = $row->[3];
-      $proj = $row->[4];
-      my $sysid = $row->[5];
-      if (defined $test)
-      {
-        printf "  $id2 ($sysid) [%s] %s ($cnt, %s...) (P %s Proj %s)\n",
-               $self->GetAuthor($id2) || '', $self->GetTitle($id2) || '',
-               uc substr($hash, 0, 8), $pri, $proj;
-        $id = $id2 unless defined $id;
-      }
-      else
-      {
-        my $err;
-        my $record = $self->GetMetadata($id2);
-        $self->ClearErrors();
-        if (!$record)
-        {
-          $err = 'No Record Found';
-          $sql = 'UPDATE queue SET unavailable=1 WHERE id=?';
-          $self->PrepareSubmitSql($sql, $id2);
-          $self->Note("No record found for $id2, setting unavailable.");
-        }
-        else
-        {
-          $self->set($id2, $record);
-          $err = $self->LockItem($id2, $user);
-        }
-        if (!$err)
-        {
-          $id = $id2;
-          last;
-        }
-      }
-    }
-  };
-  if ($@ && ! defined $id)
-  {
+    $ref = $self->SelectAll($sql, @params);
+  }; # eval
+  # Deal with error with database query setup or execution.
+  if ($@) {
     my $err = "Could not get a volume for $user to review: $@.";
     $err .= "\n$sql" if $sql;
     $self->SetError($err);
+  }
+  return if $self->CountErrors() > 0;
+  # Query returned results: find something to present
+  # If there were no results for the query then we will of course find nothing
+  # and display the "novols.tt" page.
+  foreach my $row (@{$ref})
+  {
+    my $id2 = $row->[0];
+    my $cnt = $row->[1];
+    my $hash = $row->[2];
+    my $pri = $row->[3];
+    my $proj = $row->[4];
+    my $sysid = $row->[5];
+    if (defined $test) {
+      printf "  $id2 ($sysid) [%s] %s ($cnt, %s...) (P %s Proj %s)\n",
+             $self->GetAuthor($id2) || '', $self->GetTitle($id2) || '',
+             uc substr($hash, 0, 8), $pri, $proj;
+      $id = $id2 unless defined $id;
+    }
+    else {
+      my $err;
+      my $record = $self->GetMetadata($id2);
+      if (!$record) {
+        $err = 'No Record Found';
+        $self->Note("[Bib API fail] $id2");
+      }
+      else {
+        $err = $self->LockItem($id2, $user);
+      }
+      if (!$err) {
+        $id = $id2;
+        last;
+      }
+    }
   }
   return $id;
 }
@@ -8323,6 +8320,17 @@ sub GetProjectsRef
     $projects[-1]->{'users'} = [map {$_->[0]} @{$ref2}];
   }
   return \@projects;
+}
+
+sub CountRemainingVolumesForProject
+{
+  my $self = shift;
+  my $proj = shift;
+
+  my $sql = 'SELECT COUNT(*) FROM queue'.
+            ' WHERE project=? AND status=0 AND pending_status=0'.
+            ' AND locked IS NULL';
+  return $self->SimpleSqlGet($sql, $proj);
 }
 
 # Returns the id of the added project, or undef on error.
