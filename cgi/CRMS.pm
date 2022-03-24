@@ -57,7 +57,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.4.12';
+our $VERSION = '8.4.13';
 sub Version
 {
   return $VERSION;
@@ -1462,8 +1462,11 @@ sub LoadQueue
 }
 
 # Load candidates into queue for a given project ID.
-sub LoadQueueForProject
-{
+# Some projects want volumes on a record displayed in order, so we try not to
+# split them up just to observe a limit on queue size. So we get the qualifying
+# catalog records in the outer loop, then consider all candidates on the record
+# (for the project in question) in the inner loop.
+sub LoadQueueForProject {
   my $self    = shift;
   my $project = shift;
 
@@ -1475,75 +1478,47 @@ sub LoadQueueForProject
   $self->ReportMsg("Project $project_name: $queueSize volumes -- need $needed");
   return if $needed <= 0;
   my $count = 0;
-  my %dels = ();
-  my %seen; # Catalog IDs that have been considered
-  $sql = 'SELECT id FROM candidates'.
-         ' WHERE id NOT IN (SELECT DISTINCT id FROM inherit)'.
-         ' AND id NOT IN (SELECT DISTINCT id FROM queue)'.
-         ' AND id NOT IN (SELECT DISTINCT id FROM reviews)'.
-         ' AND id NOT IN (SELECT DISTINCT id FROM historicalreviews)'.
-         ' AND time<=DATE_SUB(NOW(), INTERVAL 1 WEEK) AND project=?'.
-         ' ORDER BY time DESC';
-  #print "$sql\n";
+  $sql = 'SELECT DISTINCT b.sysid FROM bibdata b'.
+         ' INNER JOIN candidates c ON b.id = c.id'.
+         ' WHERE b.id NOT IN (SELECT DISTINCT id FROM inherit)'.
+         ' AND b.id NOT IN (SELECT DISTINCT id FROM queue)'.
+         ' AND b.id NOT IN (SELECT DISTINCT id FROM reviews)'.
+         ' AND b.id NOT IN (SELECT DISTINCT id FROM historicalreviews)'.
+         ' AND c.time<=DATE_SUB(NOW(), INTERVAL 1 WEEK) AND c.project=?'.
+         ' ORDER BY c.time DESC';
   my $ref = $self->SelectAll($sql, $project);
   my $potential = scalar @$ref;
-  $self->ReportMsg("$potential qualifying volumes for project $project queue");
-  foreach my $row (@{$ref})
-  {
-    my $id = $row->[0];
-    next if $dels{$id};
-    my $record = $self->GetMetadata($id);
-    if (!defined $record)
-    {
-      $self->ReportMsg("Filtering $id: can't get metadata for queue");
-      $self->Filter($id, 'no meta');
-      next;
-    }
-    my $sysid = $record->sysid;
-    next if $seen{$sysid};
-    $seen{$sysid} = 1;
-    my $ids = $record->allHTIDs;
-    $self->ReportMsg(sprintf "Checking %d %s on catalog $sysid (candidate $id)",
-                             scalar @$ids, $self->Pluralize('volume', scalar @$ids));
-    foreach my $id2 (@$ids)
-    {
-      my $dup = $self->IsSameVolumeInQueue($id2, $record);
-      if ($dup)
-      {
-        my $chron = $record->enumchron($id2) || 'no enumchron';
-        my $chron2 = $record->enumchron($dup) || 'no enumchron';
-        $self->ReportMsg("Filtering $id ($chron): queue has $dup ($chron2)");
-        $self->Filter($id2, 'duplicate');
+  $self->ReportMsg("$potential qualifying catalog records for project $project queue");
+  foreach my $row (@{$ref}) {
+    my $sysid = $row->[0];
+    my $record = $self->GetMetadata($sysid);
+    $sql = 'SELECT c.id FROM candidates c'.
+           ' INNER JOIN bibdata b ON c.id=b.id'.
+           ' WHERE c.project=? AND b.sysid=?'.
+           ' ORDER BY c.time ASC';
+    my $ref2 = $self->SelectAll($sql, $project, $sysid);
+    foreach my $row2 (@$ref2) {
+      my $id = $row2->[0];
+      if (!defined $record) {
+        $self->ReportMsg("Filtering $id: can't get metadata for queue");
+        $self->Filter($id, 'no meta');
         next;
       }
-      my $eval = $self->EvaluateCandidacy($id2, $record, $project);
-      if ($eval->{'status'} eq 'filter')
-      {
-        my $src = $eval->{'msg'} || '<unknown src>';
-        $self->ReportMsg("Filtering $id2 as $src ($sysid)");
-        $self->Filter($id2, $src);
+      my $dup = $self->IsSameVolumeInQueue($id, $record);
+      if ($dup) {
+        my $chron = $record->enumchron($id) || 'no enumchron';
+        my $chron2 = $record->enumchron($dup) || 'no enumchron';
+        $self->ReportMsg("Filtering $id ($chron): queue has $dup ($chron2)");
+        $self->Filter($id, 'duplicate');
+        next;
       }
-      elsif ($eval->{'status'} eq 'no')
-      {
-        if ($self->IsVolumeInCandidates($id2))
-        {
-          $self->ReportMsg(sprintf("Will delete $id2: %s ($sysid)", $eval->{'msg'}));
-          $dels{$id2} = 1;
-        }
-      }
-      else
-      {
-        if ($self->AddItemToQueue($id2, $record, $project))
-        {
-          $self->ReportMsg("Added to queue: $id2 ($sysid)");
-          $count++;
-        }
+      if ($self->AddItemToQueue($id, $record, $project)) {
+        $self->ReportMsg("Added to queue: $id ($sysid)");
+        $count++;
       }
     }
     last if $count >= $needed;
   }
-  # FIXME: we should give the volumes a chance to be assigned to another project instead of deleting outright.
-  $self->RemoveFromCandidates($_) for keys %dels;
 }
 
 sub UpdateQueueRecord
