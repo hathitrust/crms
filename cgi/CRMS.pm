@@ -57,7 +57,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.4.12';
+our $VERSION = '8.4.13';
 sub Version
 {
   return $VERSION;
@@ -1462,8 +1462,11 @@ sub LoadQueue
 }
 
 # Load candidates into queue for a given project ID.
-sub LoadQueueForProject
-{
+# Some projects want volumes on a record displayed in order, so we try not to
+# split them up just to observe a limit on queue size. So we get the qualifying
+# catalog records in the outer loop, then consider all candidates on the record
+# (for the project in question) in the inner loop.
+sub LoadQueueForProject {
   my $self    = shift;
   my $project = shift;
 
@@ -1475,75 +1478,47 @@ sub LoadQueueForProject
   $self->ReportMsg("Project $project_name: $queueSize volumes -- need $needed");
   return if $needed <= 0;
   my $count = 0;
-  my %dels = ();
-  my %seen; # Catalog IDs that have been considered
-  $sql = 'SELECT id FROM candidates'.
-         ' WHERE id NOT IN (SELECT DISTINCT id FROM inherit)'.
-         ' AND id NOT IN (SELECT DISTINCT id FROM queue)'.
-         ' AND id NOT IN (SELECT DISTINCT id FROM reviews)'.
-         ' AND id NOT IN (SELECT DISTINCT id FROM historicalreviews)'.
-         ' AND time<=DATE_SUB(NOW(), INTERVAL 1 WEEK) AND project=?'.
-         ' ORDER BY time DESC';
-  #print "$sql\n";
+  $sql = 'SELECT DISTINCT b.sysid FROM bibdata b'.
+         ' INNER JOIN candidates c ON b.id = c.id'.
+         ' WHERE b.id NOT IN (SELECT DISTINCT id FROM inherit)'.
+         ' AND b.id NOT IN (SELECT DISTINCT id FROM queue)'.
+         ' AND b.id NOT IN (SELECT DISTINCT id FROM reviews)'.
+         ' AND b.id NOT IN (SELECT DISTINCT id FROM historicalreviews)'.
+         ' AND c.time<=DATE_SUB(NOW(), INTERVAL 1 WEEK) AND c.project=?'.
+         ' ORDER BY c.time DESC';
   my $ref = $self->SelectAll($sql, $project);
   my $potential = scalar @$ref;
-  $self->ReportMsg("$potential qualifying volumes for project $project queue");
-  foreach my $row (@{$ref})
-  {
-    my $id = $row->[0];
-    next if $dels{$id};
-    my $record = $self->GetMetadata($id);
-    if (!defined $record)
-    {
-      $self->ReportMsg("Filtering $id: can't get metadata for queue");
-      $self->Filter($id, 'no meta');
-      next;
-    }
-    my $sysid = $record->sysid;
-    next if $seen{$sysid};
-    $seen{$sysid} = 1;
-    my $ids = $record->allHTIDs;
-    $self->ReportMsg(sprintf "Checking %d %s on catalog $sysid (candidate $id)",
-                             scalar @$ids, $self->Pluralize('volume', scalar @$ids));
-    foreach my $id2 (@$ids)
-    {
-      my $dup = $self->IsSameVolumeInQueue($id2, $record);
-      if ($dup)
-      {
-        my $chron = $record->enumchron($id2) || 'no enumchron';
-        my $chron2 = $record->enumchron($dup) || 'no enumchron';
-        $self->ReportMsg("Filtering $id ($chron): queue has $dup ($chron2)");
-        $self->Filter($id2, 'duplicate');
+  $self->ReportMsg("$potential qualifying catalog records for project $project queue");
+  foreach my $row (@{$ref}) {
+    my $sysid = $row->[0];
+    my $record = $self->GetMetadata($sysid);
+    $sql = 'SELECT c.id FROM candidates c'.
+           ' INNER JOIN bibdata b ON c.id=b.id'.
+           ' WHERE c.project=? AND b.sysid=?'.
+           ' ORDER BY c.time ASC';
+    my $ref2 = $self->SelectAll($sql, $project, $sysid);
+    foreach my $row2 (@$ref2) {
+      my $id = $row2->[0];
+      if (!defined $record) {
+        $self->ReportMsg("Filtering $id: can't get metadata for queue");
+        $self->Filter($id, 'no meta');
         next;
       }
-      my $eval = $self->EvaluateCandidacy($id2, $record, $project);
-      if ($eval->{'status'} eq 'filter')
-      {
-        my $src = $eval->{'msg'} || '<unknown src>';
-        $self->ReportMsg("Filtering $id2 as $src ($sysid)");
-        $self->Filter($id2, $src);
+      my $dup = $self->IsSameVolumeInQueue($id, $record);
+      if ($dup) {
+        my $chron = $record->enumchron($id) || 'no enumchron';
+        my $chron2 = $record->enumchron($dup) || 'no enumchron';
+        $self->ReportMsg("Filtering $id ($chron): queue has $dup ($chron2)");
+        $self->Filter($id, 'duplicate');
+        next;
       }
-      elsif ($eval->{'status'} eq 'no')
-      {
-        if ($self->IsVolumeInCandidates($id2))
-        {
-          $self->ReportMsg(sprintf("Will delete $id2: %s ($sysid)", $eval->{'msg'}));
-          $dels{$id2} = 1;
-        }
-      }
-      else
-      {
-        if ($self->AddItemToQueue($id2, $record, $project))
-        {
-          $self->ReportMsg("Added to queue: $id2 ($sysid)");
-          $count++;
-        }
+      if ($self->AddItemToQueue($id, $record, $project)) {
+        $self->ReportMsg("Added to queue: $id ($sysid)");
+        $count++;
       }
     }
     last if $count >= $needed;
   }
-  # FIXME: we should give the volumes a chance to be assigned to another project instead of deleting outright.
-  $self->RemoveFromCandidates($_) for keys %dels;
 }
 
 sub UpdateQueueRecord
@@ -4875,7 +4850,12 @@ sub GetMetadata
   my $id   = shift;
 
   use Metadata;
-  $self->get($id) || Metadata->new('id' => $id, 'crms' => $self);
+  my $metadata = Metadata->new('id' => $id);
+  if ($metadata->is_error) {
+    $self->SetError($metadata->error);
+    return;
+  }
+  return $metadata;
 }
 
 sub BarcodeToId
@@ -5220,22 +5200,23 @@ sub ProjectDispatch
 # Code commented out with #### are race condition mitigations
 # to be considered for a later release.
 # Test param prints debug info and iterates 5 times to test mitigation.
+# If the query returns no results CRMS errors will contain one entry.
+# If there is a Bib API issue, CRMS errors will hold an error for each failed item.
+# Presence of multiple errors should be reported as a catalog outage.
 sub GetNextItemForReview
 {
   my $self = shift;
   my $user = shift || $self->get('user');
   my $test = shift;
 
-  my $id = undef;
-  my $sql = undef;
+  my ($id, $sql, $ref);
   eval {
     my $proj = $self->GetUserCurrentProject($user);
     my $project_ref = $self->GetProjectRef($proj);
     my @params = ($user, $proj);
     my @orders = ('q.priority DESC', 'cnt DESC', 'hash', 'q.time ASC');
     my $sysid;
-    if ($project_ref->group_volumes && $self->IsUserAdvanced($user))
-    {
+    if ($project_ref->group_volumes && $self->IsUserAdvanced($user)) {
       $sql = 'SELECT b.sysid FROM reviews r INNER JOIN bibdata b ON r.id=b.id'.
              ' WHERE r.user=? AND hold=0 ORDER BY r.time DESC LIMIT 1';
       $sysid = $self->SimpleSqlGet($sql, $user);
@@ -5246,17 +5227,14 @@ sub GetNextItemForReview
     my $wc = $self->WildcardList(scalar @{$inc});
     $excludei = ' AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user IN '. $wc. ')';
     push @params, @{$inc};
-    if (!$self->IsUserExpert($user))
-    {
+    if (!$self->IsUserExpert($user)) {
       $excludeh = ' AND NOT EXISTS (SELECT * FROM historicalreviews r3 WHERE r3.id=q.id AND r3.user IN '. $wc. ')';
       push @params, @{$inc};
     }
-    if (defined $porder)
-    {
+    if (defined $porder) {
       unshift @orders, $porder;
     }
-    if (defined $sysid)
-    {
+    if (defined $sysid) {
       # First order, last param (assumes any order param will be last).
       # Adding any additional parameterized ordering will be trickier.
       unshift @orders, 'IF(b.sysid=?,1,0) DESC,q.id ASC';
@@ -5269,57 +5247,51 @@ sub GetNextItemForReview
            ' AND q.unavailable=0'.
            $excludei. $excludeh.
            ' HAVING cnt<2 ORDER BY '. join ',', @orders;
-    if (defined $test)
-    {
+    if (defined $test) {
       $sql .= ' LIMIT 5';
       printf "$user: %s\n", Utilities::StringifySql($sql, @params);
     }
-    my $ref = $self->SelectAll($sql, @params);
-    foreach my $row (@{$ref})
-    {
-      my $id2 = $row->[0];
-      my $cnt = $row->[1];
-      my $hash = $row->[2];
-      my $pri = $row->[3];
-      $proj = $row->[4];
-      my $sysid = $row->[5];
-      if (defined $test)
-      {
-        printf "  $id2 ($sysid) [%s] %s ($cnt, %s...) (P %s Proj %s)\n",
-               $self->GetAuthor($id2) || '', $self->GetTitle($id2) || '',
-               uc substr($hash, 0, 8), $pri, $proj;
-        $id = $id2 unless defined $id;
-      }
-      else
-      {
-        my $err;
-        my $record = $self->GetMetadata($id2);
-        $self->ClearErrors();
-        if (!$record)
-        {
-          $err = 'No Record Found';
-          $sql = 'UPDATE queue SET unavailable=1 WHERE id=?';
-          $self->PrepareSubmitSql($sql, $id2);
-          $self->Note("No record found for $id2, setting unavailable.");
-        }
-        else
-        {
-          $self->set($id2, $record);
-          $err = $self->LockItem($id2, $user);
-        }
-        if (!$err)
-        {
-          $id = $id2;
-          last;
-        }
-      }
-    }
-  };
-  if ($@ && ! defined $id)
-  {
+    $ref = $self->SelectAll($sql, @params);
+  }; # eval
+  # Deal with error with database query setup or execution.
+  if ($@) {
     my $err = "Could not get a volume for $user to review: $@.";
     $err .= "\n$sql" if $sql;
     $self->SetError($err);
+  }
+  return if $self->CountErrors() > 0;
+  # Query returned results: find something to present
+  # If there were no results for the query then we will of course find nothing
+  # and display the "novols.tt" page.
+  foreach my $row (@{$ref})
+  {
+    my $id2 = $row->[0];
+    my $cnt = $row->[1];
+    my $hash = $row->[2];
+    my $pri = $row->[3];
+    my $proj = $row->[4];
+    my $sysid = $row->[5];
+    if (defined $test) {
+      printf "  $id2 ($sysid) [%s] %s ($cnt, %s...) (P %s Proj %s)\n",
+             $self->GetAuthor($id2) || '', $self->GetTitle($id2) || '',
+             uc substr($hash, 0, 8), $pri, $proj;
+      $id = $id2 unless defined $id;
+    }
+    else {
+      my $err;
+      my $record = $self->GetMetadata($id2);
+      if (!$record) {
+        $err = 'No Record Found';
+        $self->Note("[Bib API fail] $id2");
+      }
+      else {
+        $err = $self->LockItem($id2, $user);
+      }
+      if (!$err) {
+        $id = $id2;
+        last;
+      }
+    }
   }
   return $id;
 }
@@ -8208,7 +8180,8 @@ sub GetAddToQueueRef
             ' INNER JOIN bibdata b ON q.id=b.id'.
             ' INNER JOIN projects p ON q.project=p.id'.
             ' WHERE q.added_by=? AND p.name="Special"'.
-            ' ORDER BY q.added_by,q.source,q.status ASC,q.priority DESC,q.id ASC';
+            ' ORDER BY b.title ASC,b.pub_date ASC,'.
+            'q.source ASC,q.status ASC,q.priority DESC,q.id ASC';
   #print "$sql\n";
   my $ref = $self->SelectAll($sql, $user);
   my @result;
@@ -8348,6 +8321,17 @@ sub GetProjectsRef
     $projects[-1]->{'users'} = [map {$_->[0]} @{$ref2}];
   }
   return \@projects;
+}
+
+sub CountRemainingVolumesForProject
+{
+  my $self = shift;
+  my $proj = shift;
+
+  my $sql = 'SELECT COUNT(*) FROM queue'.
+            ' WHERE project=? AND status=0 AND pending_status=0'.
+            ' AND locked IS NULL';
+  return $self->SimpleSqlGet($sql, $proj);
 }
 
 # Returns the id of the added project, or undef on error.
