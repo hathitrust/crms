@@ -8180,7 +8180,8 @@ sub GetAddToQueueRef
             ' INNER JOIN bibdata b ON q.id=b.id'.
             ' INNER JOIN projects p ON q.project=p.id'.
             ' WHERE q.added_by=? AND p.name="Special"'.
-            ' ORDER BY q.added_by,q.source,q.status ASC,q.priority DESC,q.id ASC';
+            ' ORDER BY b.title ASC,b.pub_date ASC,'.
+            'q.source ASC,q.status ASC,q.priority DESC,q.id ASC';
   #print "$sql\n";
   my $ref = $self->SelectAll($sql, $user);
   my @result;
