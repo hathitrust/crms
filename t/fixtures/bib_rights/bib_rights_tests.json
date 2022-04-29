@@ -1,0 +1,530 @@
+{
+   "chi.082894362" : {
+      "comment" : "date type r--no date1 and date not munged",
+      "id" : "chi.082894362",
+      "years" : {
+         "2010" : "pd",
+         "2015" : "pd",
+         "2020" : "pd",
+         "2025" : "pd",
+         "2030" : "pd"
+      }
+   },
+   "chi.084804371" : {
+      "comment" : "canada/australia bib date1 between 1902 and 1927",
+      "id" : "chi.084804371",
+      "years" : {
+         "2010" : "pdus",
+         "2015" : "pdus",
+         "2020" : "pdus",
+         "2025" : "pd",
+         "2030" : "pd"
+      }
+   },
+   "chi.086014697" : {
+      "comment" : "gov_pub='f' and pub_country!='u'",
+      "id" : "chi.086014697",
+      "years" : {
+         "2010" : "pdus",
+         "2015" : "pdus",
+         "2020" : "pd",
+         "2025" : "pd",
+         "2030" : "pd"
+      }
+   },
+   "chi.086132657" : {
+      "comment" : "canada/australia bib date1 < 1902",
+      "id" : "chi.086132657",
+      "years" : {
+         "2010" : "pdus",
+         "2015" : "pd",
+         "2020" : "pd",
+         "2025" : "pd",
+         "2030" : "pd"
+      }
+   },
+   "chi.086497447" : {
+      "comment" : "bib date2",
+      "id" : "chi.086497447",
+      "years" : {
+         "2010" : "und",
+         "2015" : "und",
+         "2020" : "und",
+         "2025" : "und",
+         "2030" : "und"
+      }
+   },
+   "chi.16700319" : {
+      "comment" : "CHECK_GOV national research council",
+      "id" : "chi.16700319",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "pd"
+      }
+   },
+   "chi.72612798" : {
+      "comment" : "$ri->{\"date_type\"} eq \"t\"",
+      "id" : "chi.72612798",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "pd",
+         "2025" : "pd",
+         "2030" : "pd"
+      }
+   },
+   "coo.31924000088058" : {
+      "comment" : "$bib_info->{mult_260a_non_us} and $ri->{date_used} >= $self->{non_us_pd_cutoff_year} and $ri->{date_used} >= $self->{us_pd_cutoff_year}",
+      "id" : "coo.31924000088058",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "coo.31924013324219" : {
+      "comment" : "date type r--no date1 and date_munged",
+      "id" : "coo.31924013324219",
+      "years" : {
+         "2010" : "und",
+         "2015" : "und",
+         "2020" : "und",
+         "2025" : "und",
+         "2030" : "und"
+      }
+   },
+   "coo.31924067228225" : {
+      "comment" : "bib date1 munged",
+      "id" : "coo.31924067228225",
+      "years" : {
+         "2010" : "und",
+         "2015" : "und",
+         "2020" : "und",
+         "2025" : "und",
+         "2030" : "und"
+      }
+   },
+   "coo.31924077881971" : {
+      "comment" : "check for tech report number formats",
+      "id" : "coo.31924077881971",
+      "years" : {
+         "2010" : "und",
+         "2015" : "und",
+         "2020" : "und",
+         "2025" : "und",
+         "2030" : "und"
+      }
+   },
+   "iau.31858010524910" : {
+      "comment" : "date type r--no date1",
+      "id" : "iau.31858010524910",
+      "years" : {
+         "2010" : "und",
+         "2015" : "und",
+         "2020" : "und",
+         "2025" : "und",
+         "2030" : "und"
+      }
+   },
+   "ien.35558002752380" : {
+      "comment" : "getBibFmt MX",
+      "id" : "ien.35558002752380",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "inu.30000000227821" : {
+      "comment" : "bib date1, date type m",
+      "id" : "inu.30000000227821",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "inu.30000107650602" : {
+      "comment" : "$ri->{\"date2\"} and do { (false branch)",
+      "id" : "inu.30000107650602",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "inu.32000001027186" : {
+      "comment" : "bib_info->{mult_260a_non_us} and $ri->{date_used} >= $self->{non_us_pd_cutoff_year}",
+      "id" : "inu.32000001027186",
+      "years" : {
+         "2010" : "pdus",
+         "2015" : "pdus",
+         "2020" : "pd",
+         "2025" : "pd",
+         "2030" : "pd"
+      }
+   },
+   "mdp.35128001892007" : {
+      "comment" : "date type \"e\"",
+      "id" : "mdp.35128001892007",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "mdp.39015006077963" : {
+      "comment" : "getBibFmt SE",
+      "id" : "mdp.39015006077963",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "mdp.39015010377565" : {
+      "comment" : "getBibFmt MU",
+      "id" : "mdp.39015010377565",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "mdp.39015011016204" : {
+      "comment" : "getBibFmt VM",
+      "id" : "mdp.39015011016204",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "mdp.39015012933928" : {
+      "comment" : "CHECK IMPRINT: no $non_us_city",
+      "id" : "mdp.39015012933928",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "mdp.39015015147864" : {
+      "comment" : "clean_date with 008 date1 0000",
+      "id" : "mdp.39015015147864",
+      "years" : {
+         "2010" : "und",
+         "2015" : "und",
+         "2020" : "und",
+         "2025" : "und",
+         "2030" : "und"
+      }
+   },
+   "mdp.39015021273407" : {
+      "comment" : "multiple 260a",
+      "id" : "mdp.39015021273407",
+      "years" : {
+         "2010" : "pdus",
+         "2015" : "pdus",
+         "2020" : "pdus",
+         "2025" : "pdus",
+         "2030" : "pdus"
+      }
+   },
+   "mdp.39015024459466" : {
+      "comment" : "<space>NNNN-N<space>",
+      "id" : "mdp.39015024459466",
+      "years" : {
+         "2010" : "pd",
+         "2015" : "pd",
+         "2020" : "pd",
+         "2025" : "pd",
+         "2030" : "pd"
+      }
+   },
+   "mdp.39015053274380" : {
+      "comment" : "clean_pub_place pr -> pru (Puerto Rico)",
+      "id" : "mdp.39015053274380",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "mdp.39015054190924" : {
+      "comment" : "getBibFmt CF",
+      "id" : "mdp.39015054190924",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "mdp.39015062147791" : {
+      "comment" : "CHECK_GOV armed forces comm assoc",
+      "id" : "mdp.39015062147791",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "mdp.39015063938933" : {
+      "comment" : "clean_date with 008 date2 0000",
+      "id" : "mdp.39015063938933",
+      "years" : {
+         "2010" : "pd",
+         "2015" : "pd",
+         "2020" : "pd",
+         "2025" : "pd",
+         "2030" : "pd"
+      }
+   },
+   "mdp.39015086492272" : {
+      "comment" : "CHECK_GOV NIST-NSRDS",
+      "id" : "mdp.39015086492272",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "miua.0054431.0007.001" : {
+      "comment" : "umdl item descriptions may contain NNNN.NNN",
+      "id" : "miua.0054431.0007.001",
+      "years" : {
+         "2010" : "und",
+         "2015" : "und",
+         "2020" : "und",
+         "2025" : "und",
+         "2030" : "und"
+      }
+   },
+   "msu.31293023740404" : {
+      "comment" : "getBibFmt XX",
+      "id" : "msu.31293023740404",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "njp.32101066807213" : {
+      "comment" : "CHECK_GOV Federal Reserve",
+      "id" : "njp.32101066807213",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "pd",
+         "2025" : "pd",
+         "2030" : "pd"
+      }
+   },
+   "njp.32101077883609" : {
+      "comment" : "clean_pub_place nonalpha-space",
+      "id" : "njp.32101077883609",
+      "years" : {
+         "2010" : "pd",
+         "2015" : "pd",
+         "2020" : "pd",
+         "2025" : "pd",
+         "2030" : "pd"
+      }
+   },
+   "nyp.33433066275524" : {
+      "comment" : "getBibFmt XX",
+      "id" : "nyp.33433066275524",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "nyp.33433066275540" : {
+      "comment" : "getBibFmt XX",
+      "id" : "nyp.33433066275540",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "pst.000021158902" : {
+      "comment" : "",
+      "id" : "pst.000021158902",
+      "years" : {
+         "2010" : "und",
+         "2015" : "und",
+         "2020" : "und",
+         "2025" : "und",
+         "2030" : "und"
+      }
+   },
+   "pst.000071289526" : {
+      "comment" : "imprint from 264",
+      "id" : "pst.000071289526",
+      "years" : {
+         "2010" : "pd",
+         "2015" : "pd",
+         "2020" : "pd",
+         "2025" : "pd",
+         "2030" : "pd"
+      }
+   },
+   "pst.000071842134" : {
+      "comment" : "no imprint",
+      "id" : "pst.000071842134",
+      "years" : {
+         "2010" : "pd",
+         "2015" : "pd",
+         "2020" : "pd",
+         "2025" : "pd",
+         "2030" : "pd"
+      }
+   },
+   "uc1.31158001472769" : {
+      "comment" : "clean_pub_place us -> xxu",
+      "id" : "uc1.31158001472769",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "uc1.31210013531445" : {
+      "comment" : "serial item date > max_vol_date",
+      "id" : "uc1.31210013531445",
+      "years" : {
+         "2010" : "pd",
+         "2015" : "pd",
+         "2020" : "pd",
+         "2025" : "pd",
+         "2030" : "pd"
+      }
+   },
+   "uc1.31822009441387" : {
+      "comment" : "CHECK_GOV Smithsonian",
+      "id" : "uc1.31822009441387",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "uc1.31822016975690" : {
+      "comment" : "CHECK_GOV armed forces comm assoc (possible bug in RE?)",
+      "id" : "uc1.31822016975690",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "uc1.32106000718277" : {
+      "comment" : "getBibFmt MP",
+      "id" : "uc1.32106000718277",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "uc1.32106020214307" : {
+      "comment" : "no date--US fed doc",
+      "id" : "uc1.32106020214307",
+      "years" : {
+         "2010" : "pd",
+         "2015" : "pd",
+         "2020" : "pd",
+         "2025" : "pd",
+         "2030" : "pd"
+      }
+   },
+   "uiug.30112046498256" : {
+      "comment" : "non-US bib date1, date type e between 1897 and 1927",
+      "id" : "uiug.30112046498256",
+      "years" : {
+         "2010" : "pdus",
+         "2015" : "pdus",
+         "2020" : "pdus",
+         "2025" : "pdus",
+         "2030" : "pdus"
+      }
+   },
+   "umn.319510028195022" : {
+      "comment" : "CHECK_GOV national gallery of art",
+      "id" : "umn.319510028195022",
+      "years" : {
+         "2010" : "ic",
+         "2015" : "ic",
+         "2020" : "ic",
+         "2025" : "ic",
+         "2030" : "ic"
+      }
+   },
+   "umn.31951d02932305y" : {
+      "comment" : "CHECK_GOV NTIS",
+      "id" : "umn.31951d02932305y",
+      "years" : {
+         "2010" : "pd",
+         "2015" : "pd",
+         "2020" : "pd",
+         "2025" : "pd",
+         "2030" : "pd"
+      }
+   },
+   "wu.89095021135" : {
+      "comment" : "no date",
+      "id" : "wu.89095021135",
+      "years" : {
+         "2010" : "und",
+         "2015" : "und",
+         "2020" : "und",
+         "2025" : "und",
+         "2030" : "und"
+      }
+   }
+}

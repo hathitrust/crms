@@ -136,6 +136,7 @@ RUN apt-get install -y \
   bison \
   build-essential \
   git \
+  libdevel-cover-perl \
   libffi-dev \
   libgdbm-dev \
   libncurses5-dev \
