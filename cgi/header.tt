@@ -4,28 +4,28 @@
     <meta charset="utf-8"/>
     <link rel="icon" type="image/png" href="[% crms.WebPath('web', crms.GetSystemVar('favicon')) %]"/>
     <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/datepicker.css') %]"/>
-    <script type="text/javascript" src="[% crms.WebPath('web', 'js/common.js') %]"></script>
+    <script src="[% crms.WebPath('web', 'js/common.js') %]"></script>
     <script src="https://unpkg.com/tippy.js@3/dist/tippy.all.min.js"></script>
   [% page = cgi.param('p') %]
   [% reviewType = (page == 'review' OR page == 'cri'
                    OR page == 'stanford' OR page == 'frontmatter'
                    OR page == 'pageimage') %]
   [% IF reviewType %]
-    <script type="text/javascript" src="[% crms.WebPath('web', 'js/review.js') %]"></script>
+    <script src="[% crms.WebPath('web', 'js/review.js') %]"></script>
   [% ELSE %]
-    <script type="text/javascript" src="[% crms.WebPath('web', 'js/datepicker.packed.js') %]"></script>
+    <script src="[% crms.WebPath('web', 'js/datepicker.packed.js') %]"></script>
   [% END %]
   [% IF crms.get('debugSql') || crms.get('debugVar') %]
     <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/debug.css') %]"/>
   [% END %]
   [% IF page == 'determinationStats' OR page == 'exportStats' OR page == 'reviewerActivity' %]
-    <script type="text/javascript" src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
-    <script type="text/javascript" src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
     [% IF page == 'reviewerActivity' %]
-      <script type="text/javascript" src="https://code.highcharts.com/modules/exporting.js"></script>
+      <script src="https://code.highcharts.com/modules/exporting.js"></script>
     [% END %]
   [% END %]
-    <script type="text/javascript">
+    <script>
 <!--
 var gSys = "[% crms.Sys() %]";
 var gCGI = "[% crms.WebPath('cgi', '') %]";
