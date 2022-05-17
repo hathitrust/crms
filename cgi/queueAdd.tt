@@ -13,7 +13,7 @@
 [% IF NOT pri %][% pri = 0 %][% END %]
 [% IF NOT admin %][% override = 0 %][% END %]
 
-<script type="text/Javascript">
+<script>
 <!--
 function CheckAllTx(box,id)
 {
@@ -34,7 +34,7 @@ function CheckAllTx(box,id)
   [% crms.Hiddenify(cgi, 'ids', 'priority', 'delete', 'ticket', 'project', 'noop') %]
   <textarea name="ids" cols="28" rows="30" style="width:33%; height:9em;">[% ids %]</textarea>
   <br/><br/>
-  <table style="width:30%;">
+  <table style="width:30%;border-spacing:0.25em;">
     <tr>
       <td>
         <label for="priorityField"><strong>Priority</strong></label>
@@ -55,12 +55,12 @@ function CheckAllTx(box,id)
       <td style="text-align:right;">
       [% projs = crms.GetProjectsRef() %]
       [% IF projs.size %]
-        <label id="projectFieldLabel" for="projectField"><strong>Project</strong></label>
+        <label id="projectFieldLabel" for="projectSelect"><strong>Project</strong></label>
       [% END %]
       </td>
       <td style="text-align:right;">
         [% IF projs.size %]
-        <select name="project">
+        <select name="project" id="projectSelect">
         [% FOREACH proj IN projs %]
           <option value="[% proj.id %]" [% (project==proj.id)? 'selected="selected"':'' %]>[% proj.name %]</option>
         [% END %]
@@ -73,7 +73,7 @@ function CheckAllTx(box,id)
         <label id="ticketFieldLabel" for="ticketField"><strong>Ticket</strong></label>
       </td>
       <td>
-        <input id="ticketField" type="text" name="ticket" size="10" value="[% ticket %]"></input>
+        <input id="ticketField" type="text" name="ticket" size="10" value="[% ticket %]"/>
       </td>
       <td style="text-align:right;">
         <label for="NoopCheck"><strong>Test Only</strong></label>
@@ -81,7 +81,7 @@ function CheckAllTx(box,id)
       <td>
         <input type="checkbox" id="NoopCheck" name="noop" [% noop? 'checked="checked"':'' %]/>
       </td>
-      <td/>
+      <td></td>
       <td style="text-align:right;">
         <input type="submit" value="Submit"/>
       </td>
@@ -150,13 +150,9 @@ function CheckAllTx(box,id)
 </table>
 [% END %]
 
-[% color_white = '#FFFFFF' %]
-[% color_gray  = '#FECFCF' %]
-
 [% ref  = crms.GetAddToQueueRef() %]
 [% IF ref.size > 0 %]
-  [% prev_id      = '' %]
-  [% active_color = color_white %]
+  [% prev_id = '' %]
   <br/>
   <table style="width:auto;">
     <tr>
@@ -175,26 +171,28 @@ function CheckAllTx(box,id)
   <input type="hidden" name="p" value="queueAdd"/>
   <input type="submit" name="delSel" value="Delete Selection"/><br/><br/>
   [% END %]
-  </p>
+
   <table class="exportStats" style="width:auto;">
   <tr>
-    <th>ID</th>
+    [% IF admin %]
+      <th>Select</th>
+    [% END %]
+    <th>Review<br/>Now</th>
+    <th>Rights</th>
     <th>Title</th>
     <th>Author</th>
     <th>Pub&nbsp;Date</th>
+    <th>ID</th>
     <th>Added</th>
     <th>Added&nbsp;By</th>
     <th>Project</th>
     <th>Ticket</th>
+    [% IF admin %]
+      <th>Select<br/>Ticket</th>
+    [% END %]
     <th>Status</th>
     <th>Priority</th>
     <th>Historical<br/>Reviews</th>
-    <th>Rights</th>
-    <th>Review<br/>Now
-    [% IF admin %]
-      <th>Select</th>
-      <th>Select<br/>Ticket</th>
-    [% END %]
   </tr>
   [% FOREACH r IN ref %]
    [% changed = 0 %]
@@ -204,56 +202,53 @@ function CheckAllTx(box,id)
       [% changed = 1 %]
     [% END %]
     [% IF prev_id != id %]
-      [% IF active_color == color_gray  %]
-        [% active_color = color_white %]
-      [% ELSIF active_color == color_white %]
-        [% active_color = color_gray %]
-      [% END %]
       [% prev_id = id %]
-      [% changed = 1%]
+      [% changed = 1 %]
     [% END %]
-    [% IF (r.status != 0) %]
-      [% active_color = "#e2e2e2;" %]
-    [% END %]
-    <!-- <tr style="background-color:[% active_color %];"> -->
-    <tr class="hoverWide"><td class="nowrap">
-    [% IF r.status > 0 %]
-      <a href="[% crms.Sysify('?p=adminReviews;search1=Identifier;search1value=' _ r.id) %]" target="_blank">
-    [% ELSE %]
-      <a href="[% crms.Sysify('?p=queue;search1=Identifier;search1value=' _ r.id) %]" target="_blank">
-    [% END %]
-    [% r.id %]</a></td>
-    <td>[% cgi.escapeHTML(r.title) %]</td>
-    <td>[% cgi.escapeHTML(r.author) %]</td>
-    <td>[% r.pub_date %]</td>
-    <td>[% r.date %]</td>
-    <td>[% r.added_by %]</td>
-    <td class="nowrap">[% r.project %]</td>
-    <td class="nowrap">
-      [% IF r.ticket %]
-        [% crms.LinkToJira(r.ticket) %]
+    <tr class="hoverWide">
+      [% IF admin %]
+      <td style="text-align:center">
+        <input type="checkbox" name="vol_[% r.id %]"
+          [% IF tx %]
+            class="tx_[% tx %]"
+          [% END %]/>
+      </td>
       [% END %]
-    </td>
-    <td>[% r.status %]</td>
-    <td>[% crms.StripDecimal(r.priority) %]</td>
-    <td>[% crms.CountHistoricalReviews(r.id) %]</td>
-    <td>[% crms.CurrentRightsQuery(r.id).replace('\s','&nbsp;') %]</td>
-    <td>
-      [% IF r.added_by == user %]
-        <a href="[% crms.Sysify('crms?p=review;editing=1;htid=' _  r.id) %]" target="_blank">Review</a>
+      <td>
+        [% IF r.added_by == user %]
+          <a href="[% crms.Sysify('crms?p=review;editing=1;htid=' _  r.id) %]" target="_blank">Review</a>
+        [% END %]
+      </td>
+      <td>[% crms.CurrentRightsQuery(r.id).replace('\s','&nbsp;') %]</td>
+      <td>[% cgi.escapeHTML(r.title) %]</td>
+      <td>[% cgi.escapeHTML(r.author) %]</td>
+      <td>[% r.pub_date %]</td>
+      <td class="nowrap">
+      [% IF r.status > 0 %]
+        <a href="[% crms.Sysify('?p=adminReviews;search1=Identifier;search1value=' _ r.id) %]" target="_blank">
+      [% ELSE %]
+        <a href="[% crms.Sysify('?p=queue;search1=Identifier;search1value=' _ r.id) %]" target="_blank">
       [% END %]
-    </td>
-    <td style="text-align:center"><input type="checkbox" name="vol_[% r.id %]"
-      [% IF tx %]
-        class="tx_[% tx %]"
+      [% r.id %]</a></td>
+      <td>[% r.date %]</td>
+      <td>[% r.added_by %]</td>
+      <td class="nowrap">[% r.project %]</td>
+      <td class="nowrap">
+        [% IF r.ticket %]
+          [% crms.LinkToJira(r.ticket) %]
+        [% END %]
+      </td>
+      [% IF admin %]
+      <td>
+        [% IF changed && tx %]
+        <input type="checkbox" onclick="CheckAllTx(this,'[% tx %]');"/>
+        [% END %]
+      </td>
       [% END %]
-      /></td>
-    <td>
-      [% IF changed && tx %]
-      <input type="checkbox" onclick="CheckAllTx(this,'[% tx %]');"/>
-      [% END %]
-    </td>
-  </tr>
+      <td>[% r.status %]</td>
+      <td>[% crms.StripDecimal(r.priority) %]</td>
+      <td>[% crms.CountHistoricalReviews(r.id) %]</td>
+    </tr>
   [% END %]
   </table>
   [% IF admin %]
