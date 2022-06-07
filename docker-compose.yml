@@ -6,19 +6,79 @@ services:
     build: docker/db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: 'crms'
+      MYSQL_RANDOM_ROOT_PASSWORD: 1 
     ports:
       - "52000:3306"
+
+  mariadb_ht:
+    image: ghcr.io/hathitrust/db-image:latest
+    restart: always
+    #environment:
+    #  MYSQL_USER: crms
+    #  MYSQL_PASSWORD: crms
+    #ports:
+    #  - "52001:3307"
+
+  web:
+    build: .
+    #image: nginx
+    ports:
+      - "8080:8080"
+    volumes:
+      #- ./docker/nginx-default.conf:/etc/nginx/sites-available/default.conf
+      - .:/htapps/babel/crms
+    environment:
+      SDRROOT: /htapps/babel
+      CRMS_ENV_DEVELOPMENT: 1
+      CRMS_SQL_HOST: mariadb
+      CRMS_SQL_USER: crms
+      CRMS_SQL_PASSWD: crms
+      CRMS_SQL_HOST_HT: mariadb_ht
+      CRMS_SQL_USER_HT: mdp-lib
+      CRMS_SQL_PASSWD_HT: mdp-lib
+    depends_on:
+      - mariadb
+      - mariadb_ht
+    command: bash -c "cd /htapps/babel/crms && bin/wait-for --timeout=60 mariadb:3306 -- t/bin/seed_database.pl && plackup -s Starman -p 8080 -E deployment --workers=10 -a /htapps/babel/crms/cgi/crms.psgi"
 
   test:
     build: .
     volumes:
       - .:/htapps/babel/crms
     environment:
-      - SDRROOT=/htapps/babel
-      - CRMS_SQL_HOST=mariadb
+      SDRROOT: /htapps/babel
+      CRMS_ENV_DEVELOPMENT: 1
+      CRMS_SQL_HOST: mariadb
+      CRMS_SQL_USER: crms
+      CRMS_SQL_PASSWD: crms
+      CRMS_SQL_HOST_HT: mariadb_ht
+      CRMS_SQL_USER_HT: mdp-lib
+      CRMS_SQL_PASSWD_HT: mdp-lib
     depends_on:
       - mariadb
+      - mariadb_ht
     links:
       - mariadb
-    command: bash -c "cd /htapps/babel/crms && perl Makefile.PL && bin/wait-for --timeout=60 mariadb:3306 -- make test TEST_VERBOSE=1"
+      - mariadb_ht
+    command: bash -c "cd /htapps/babel/crms && perl Makefile.PL && bin/wait-for --timeout=60 mariadb:3306 -- t/bin/seed_database.pl && make test TEST_VERBOSE=1"
+
+  cover:
+    build: .
+    volumes:
+      - .:/htapps/babel/crms
+    environment:
+      SDRROOT: /htapps/babel
+      CRMS_ENV_DEVELOPMENT: 1
+      CRMS_SQL_HOST: mariadb
+      CRMS_SQL_USER: crms
+      CRMS_SQL_PASSWD: crms
+      CRMS_SQL_HOST_HT: mariadb_ht
+      CRMS_SQL_USER_HT: mdp-lib
+      CRMS_SQL_PASSWD_HT: mdp-lib
+    depends_on:
+      - mariadb
+      - mariadb_ht
+    links:
+      - mariadb
+      - mariadb_ht
+    command: bash -c "cd /htapps/babel/crms && perl Makefile.PL && bin/wait-for --timeout=60 mariadb:3306 -- t/bin/seed_database.pl && cover -t -nosummary /htapps/babel/crms/cover_db"

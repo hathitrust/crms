@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <link rel="icon" type="image/png" href="[% crms.WebPath('web', crms.GetSystemVar('favicon')) %]"/>
+    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/datepicker.css') %]"/>
+    <!-- jQuery -->
+    <script src="https://unpkg.com/jquery@3.6.0/dist/jquery.min.js"></script>
+    <!-- Select2 -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!-- GitHub Primer -->
+    <!--<link href="https://unpkg.com/@primer/css@^19.0.0/dist/primer.css" rel="stylesheet" />-->
+    
+    <!-- Popper (used by Bootstrap for popovers and tooltips -->
+    <!--<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>-->
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-gH2yIJqKdNHPEq0n4Mqa/HGKIhSkIHeL5AyhkYV8i59U5AR6csBvApHHNl/vI1Bx" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-A3rJD856KowSb7dwlZdYEkO39Gagi7vIsF0jrRAoQmDKKtQBHUuLZ9AsSv4jD4Xa" crossorigin="anonymous"></script>
+
+    
+    
+    
+    <script src="[% crms.WebPath('web', 'js/common.js') %]"></script>
+    <script src="https://unpkg.com/tippy.js@3/dist/tippy.all.min.js"></script>
+    <script src="[% crms.WebPath('web', 'js/review.js') %]"></script>
+    <script src="[% crms.WebPath('web', 'js/datepicker.packed.js') %]"></script>
+    <script src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <!-- FIXME cgi.param('p') is becoming obsolete -->
+    [% page = cgi.param('p') %]
+    [% IF page == 'reviewerActivity' %]
+      <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    [% END %]
+
+    <script>
+    jQuery(document).ready(function() {
+      jQuery(".select-institution").select2({
+        //language: "<%= I18n.locale %>",
+        width: "100%"
+      });
+    });
+
+    jQuery(document).ready(function() {
+      //jQuery('[data-bs-toggle="tooltip"]').tooltip({container: 'body'});
+      jQuery('[data-bs-toggle="tooltip"]').tooltip();   
+    });
+
+    </script>
+
+    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/review.css') %]"/>
+    <title>[% title %] - [% crms.PageName(page) %]</title>
+    
+  </head>
+  <body>
+    [% IF crms.Instance() == 'dev' %]
+      <div class="topBanner">
+        Development&nbsp;Instance
+      </div>
+    [% END %]
+    
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="/crms">
+          <img height="32" alt="CRMS Logo"
+               src="[% crms.WebPath('web', 'crmsblue.png') %]" />
+            CRMS v[% crms.Version() %]
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            [% menus = crms.Menus(current_user) %]
+            [% FOREACH menu IN menus %]
+              [% id = menu.0 %]
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button"
+                 data-bs-toggle="dropdown" aria-expanded="false">
+                [% presenter.t('view.menu.' _ menu.1) %]
+              </a>
+              <ul class="dropdown-menu dropdown-menu-dark">
+                [% items = crms.MenuItems(id, current_user) %]
+                [% FOREACH item IN items %]
+                  [% target = (item.2)? ' target="' _ item.2 _ '"':'' %]
+                  <li>
+                    [% # It's harmless to put locale param on PDF links but it looks not so nice %]
+                    [% # Should be handled by menu/menu item presenter with a bit of regex magic. %]
+                    [% url = router.put_locale(item.1) %]
+                    <a class="dropdown-item" href="[% url %]" [% target %] [% item.3 %]>
+                      [% presenter.t('view.menu_item.' _ menu.1 _ '.' _ item.0) %]
+                    </a>
+                  </li>
+                [% END %]
+              </ul>
+            </li>
+            [% END %]
+            <li class="nav-item">
+              <a class="nav-link" href="[% crms.LinkToLogout() %]">[% presenter.t('view.menu.log_out') %]</a>
+            </li>
+          </ul>
+          <span class="navbar-text">
+            [% presenter.t('view.menu.greeting', 'name', current_user.name).replace(' ', "&nbsp;") %]
+          </span>
+
+          <a class="navbar-brand" href="http://hathitrust.org">
+          <img height="32" style="margin-left:1em;" alt="HathiTrust Logo"
+               src="[% crms.WebPath('web', 'HathiTrustLogo.png') %]" />
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid crms-container">
+      <!--<div class="pages" id="homePage">-->
+
+      [% FOR key IN flash.keys %]
+        [% alert_class = 'alert-primary' %]
+        [% IF key == 'notice' %][% alert_class = 'alert-success' %]
+        [% ELSIF key == 'warning' %][% alert_class = 'alert-warning' %]
+        [% ELSIF key == 'alert' %][% alert_class = 'alert-danger' %]
+        [% END %]
+        [% FOR msg IN flash.get(key) %]
+          <div class="alert [% alert_class %] alert-dismissible fade show">
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+            </button>
+            [% msg %]
+          </div>
+        [% END %]
+      [% END %]
+
+      <br/>
+      [% content %]
+
+      [% FOREACH error IN crms.GetErrors %]
+        <div class="flash">
+          <strong>ERROR: [% error.replace('\n','<br/>') %]</strong>
+        </div>
+      [% END %]
+    </div> <!-- container-fluid -->
+  </body>
+</html>
+

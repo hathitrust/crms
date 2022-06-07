@@ -2,18 +2,26 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
 
-use CRMS;
+BEGIN {
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
+}
+
+use Carp;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use Mail::Sendmail;
 use Encode;
 
+use CRMS;
+
+$SIG{__DIE__} = sub { Carp::confess @_ };
+
 my $usage = <<END;
-USAGE: $0 [-acCehlNpqtv] [-m MAIL [-m MAIL...]] [start_date [end_date]]
+USAGE: $0 [-acCehNpqtv] [-m MAIL [-m MAIL...]] [start_date [end_date]]
 
 Processes reviews, exports determinations, updates candidates,
-updates the queue, recalculates user stats, and clears stale locks.
+updates the queue, and recalculates user stats.
 This is the "heartbeat" of CRMS.
 
 If the start or end dates are specified, only loads candidates
@@ -23,7 +31,6 @@ with latest rights DB timestamp between them.
 -c      Do not update candidates.
 -e      Do not process statuses or export determinations.
 -h      Print this help message.
--l      Do not clear old locks.
 -m MAIL Send report to MAIL. May be repeated for multiple recipients.
 -N      Do not check no meta volumes in queue for priority restoration.
 -p      Run in production.
@@ -34,8 +41,8 @@ with latest rights DB timestamp between them.
 END
 
 my $instance;
-my ($skipAttrReason, $skipCandidates, $skipExport, $help, $skipLocks,
-    @mails, $skipQueueNoMeta, $production, $skipQueue, $skipStats, $training,
+my ($skipAttrReason, $skipCandidates, $skipExport, $help, @mails,
+    $skipQueueNoMeta, $production, $skipQueue, $skipStats, $training,
     $verbose);
 
 Getopt::Long::Configure ('bundling');
@@ -44,7 +51,6 @@ die 'Terminating' unless GetOptions(
            'c'    => \$skipCandidates,
            'e'    => \$skipExport,
            'h|?'  => \$help,
-           'l'    => \$skipLocks,
            'm:s@' => \@mails,
            'N'    => \$skipQueueNoMeta,
            'p'    => \$production,
@@ -128,14 +134,6 @@ else
   $crms->ReportMsg('Starting to update monthly stats.', 1);
   $crms->UpdateUserStats();
   $crms->ReportMsg('<b>Done</b> updating monthly stats.', 1);
-}
-
-if ($skipLocks) { $crms->ReportMsg('-l flag set; skipping unlock.', 1); }
-else
-{
-  $crms->ReportMsg('Starting to clear stale locks.', 1);
-  $crms->RemoveOldLocks();
-  $crms->ReportMsg('<b>Done</b> clearing stale locks.', 1);
 }
 
 if ($skipAttrReason) { $crms->ReportMsg('-a flag set; skipping attr/reason sync.', 1); }

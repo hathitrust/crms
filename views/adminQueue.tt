@@ -1,0 +1,70 @@
+<h2>All Locked Items:</h2>
+
+<script type="text/javascript">
+<!--
+function CheckAll(box,formid)
+{
+	var aa=document.getElementById(formid);
+	for (var i=0; i < aa.elements.length; i++)
+	{
+	  aa.elements[i].checked = box.checked;
+	}
+}
+-->
+</script>
+
+[% IF cgi.param('clear') %]
+  [% crms.RemoveOldLocks() %]
+[% ELSIF cgi.param('unlockSel') %]
+  [% FOREACH param IN cgi.param %]
+    [% matches = param.match('(vol_)(.+)') %]
+    [% IF matches.0 == 'vol_' %]
+      [% ok = crms.UnlockItem(matches.1) %]
+      [% IF ok %]
+        <span>Unlocked [% matches.1 %]</span><br/>
+      [% ELSE %]
+        <span style='color:red;'>Could not unlock [% matches.1 %]</span><br/>
+      [% END %]
+    [% END %]
+  [% END %]
+[% ELSIF cgi.param('unlock') %]
+  [% ok = crms.UnlockItem(cgi.param('unlock')) %]
+  [% IF ok %]
+    <span>Unlocked [% cgi.param('unlock') %]</span><br/>
+  [% ELSE %]
+    <span style='color:red;'>Could not unlock [% cgi.param('unlock') %]</span><br/>
+  [% END %]
+[% END %]
+
+
+<br/><br/>
+[% locked = crms.GetAllLockedItems() %]
+[% IF locked.size %]
+  [% url = crms.BuildURL('adminQueue', 'clear', 1) %]
+  <blockquote><a href="$url">Clear old locks</a></blockquote><br/>
+  <form action="crms" id="checks">
+  <input type="hidden" name="p" value="adminQueue"/>
+  <input type="checkbox" id="SelectAllCB" onclick="CheckAll(this,'checks');"/>
+  <label for="SelectAllCB">Select All</label>&nbsp;&nbsp;&nbsp;&nbsp;
+  <input type="submit" name="unlockSel" value="Unlock Selected Volumes"/><br/><br/>
+  <table class="exportStats" style="width:55%">
+  <tr><th colspan="6" style="text-align:center;"><span class="major">Locked Items</span></th></tr>
+  <tr><th>ID</th><th>Title</th><th>Locked&nbsp;For</th><th>Select</th><th>Unlock</th></tr>
+  [% FOREACH item IN locked %]
+    <tr>
+      <td>[% item.id %]</td>
+      <td>[% item.title %]</td>
+      <td style="text-align:center">[% item.user %]</td>
+      <td style="text-align:center"><input type="checkbox" name="vol_[% item %]"/></td>
+      <td style="text-align:center">
+        [% url = crms.BuildURL('adminQueue', 'unlock', item.id) %]
+        <a href="$url">do it</a>
+      </td>
+    </tr>
+  [% END %]
+</table>
+</form>
+<br/>
+[% ELSE %]
+  <strong>There are no locked items.</strong><br/>
+[% END %]

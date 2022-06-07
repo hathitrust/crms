@@ -2,10 +2,15 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use Getopt::Long qw(:config no_ignore_case bundling);
+BEGIN {
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
+}
 
 use CRMS;
-use Getopt::Long qw(:config no_ignore_case bundling);
+use Utilities;
+
 
 my $usage = <<END;
 USAGE: $0 [-acCdhnpquv] [-s HTID [-s HTID...]]
@@ -422,6 +427,7 @@ my $hashref = $crms->GetSdrDb()->{mysql_dbd_stats};
 $crms->ReportMsg(sprintf "SDR Database OK reconnects: %d, bad reconnects: %d<br/>\n",
                  $hashref->{'auto_reconnects_ok'},
                  $hashref->{'auto_reconnects_failed'});
+$crms->ReportMsg('<b>HOST: ' . `hostname` . "</b>\n");
 $crms->ReportMsg("</body></html>\n");
 
 @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
@@ -490,7 +496,7 @@ sub InheritanceReport
   my @params = ();
   if ($singles && scalar @{$singles})
   {
-    $sql .= sprintf 'id IN %s ORDER BY time DESC', $crms->WildcardList(scalar @{$singles});
+    $sql .= sprintf 'id IN %s ORDER BY time DESC', Utilities->new->WildcardList(scalar @{$singles});
     @params = @{$singles};
   }
   else
@@ -503,7 +509,7 @@ sub InheritanceReport
   }
   $ref = $crms->SelectAll($sql, @params);
   use Utilities;
-  printf "%s\n", Utilities::StringifySql($sql, @params) if $verbose > 1;
+  printf "%s\n", Utilities->new->StringifySql($sql, @params) if $verbose > 1;
   foreach my $row (@{$ref})
   {
     my $id = $row->[0];

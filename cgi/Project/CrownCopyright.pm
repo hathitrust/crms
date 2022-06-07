@@ -4,24 +4,13 @@ use parent 'Project';
 use strict;
 use warnings;
 
+use Utilities;
+
 sub new
 {
   my $class = shift;
   return $class->SUPER::new(@_);
 }
-
-#my %TEST_HTIDS = (
-#    'coo.31924000029250' => 'Australia',
-#    'bc.ark:/13960/t02z7k303' => 'Canada',
-#    'bc.ark:/13960/t0bw4939s' => 'UK');
-
-#sub tests
-#{
-#  my $self = shift;
-#
-#  my @tests = keys %TEST_HTIDS;
-#  return \@tests;
-#}
 
 # ========== CANDIDACY ========== #
 # Returns undef for failure, or hashref with two fields:
@@ -59,7 +48,7 @@ sub EvaluateCandidacy
   if (defined $pub && $pub =~ m/\d\d\d\d/)
   {
     my $min = 1880;
-    my $max = $self->{'crms'}->GetTheYear() - 50;
+    my $max = Utilities->new->Year() - 50;
     push @errs, "$pub not in range $min-$max" if ($pub < $min || $pub > $max);
   }
   my $leader = $record->GetControlfield('008');

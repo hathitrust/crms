@@ -4,6 +4,8 @@ use vars qw(@ISA @EXPORT @EXPORT_OK);
 use strict;
 use warnings;
 
+use Utilities;
+
 sub new
 {
   my ($class, %args) = @_;
@@ -56,6 +58,8 @@ sub query
     $sysid_count++;
     foreach my $htid (@htids)
     {
+      my $rq = $crms->RightsQuery($htid, 1);
+      my $rights = (defined $rq && scalar @$rq)? $rq->[0] : undef;
       my $data = {};
       $data->{htid} = $htid;
       $data->{sysid} = $record->sysid;
@@ -64,7 +68,7 @@ sub query
       $data->{title} = $record->title;
       $data->{date} = $record->copyrightDate;
       $data->{tracking} = $crms->GetTrackingInfo($htid, 1);
-      $data->{rights} = $crms->RightsQuery($htid, 1)->[0];
+      $data->{rights} = $rights;
       $data->{already} = defined $self->GetData($htid);
       push @{$result->{data}}, $data;
       $seen_htid{$htid} = 1;
@@ -108,7 +112,7 @@ sub submit
 
   my $crms = $self->{crms};
   my $result = { errors => [], added => {} };
-  my $now = $crms->GetNow();
+  my $now = Utilities->new->Now();
   my $sql = 'INSERT INTO licensing'.
             ' (htid,time,user,attr,reason,ticket,rights_holder)'.
             ' VALUES (?,?,?,?,?,?,?)';

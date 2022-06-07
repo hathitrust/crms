@@ -1,0 +1,181 @@
+[% search1        = cgi.param('search1')        %]
+[% search1value   = cgi.param('search1value')   %]
+[% search2        = cgi.param('search2')        %]
+[% search2value   = cgi.param('search2value')   %]
+[% op1            = cgi.param('op1')            %]
+[% startDate      = cgi.param('startDate')      %]
+[% endDate        = cgi.param('endDate')        %]
+[% order          = cgi.param('order')          %]
+[% dir            = cgi.param('dir')            %]
+[% offset         = cgi.param('offset')         %]
+[% p              = cgi.param('p')              %]
+[% pagesize       = cgi.param('records')        %]
+[% jump           = cgi.param('jump')           %]
+[% pagesize = pagesize.replace('\D','')         %]
+[% IF NOT pagesize %][% pagesize = 20 %][% END %]
+
+[% IF jump %]
+  [% offset = (jump - 1) * pagesize %]
+[% END %]
+
+[% CALL cgi.param('records', pagesize) %]
+[% CALL cgi.param('offset', offset)    %]
+[% CALL cgi.param('jump', '')    %]
+
+[% ref = crms.GetExportDataRef(order, dir, search1, search1value, op1, search2,
+                               search2value, startDate, endDate, offset,
+                               pagesize, 0) %]
+
+[% total = ref.volumes %]
+
+[% IF total > 0 %]
+  [% pagenum = ref.page %]
+  [% of = ref.of %]
+  [% items = ref.rows %]
+  <a name="results"></a>
+  <p><b>Found $total volume[% (total==1)? "":"s"%], page $pagenum of $of</b></p>
+
+  [% IF NOT offset %] [% offset = 0 %] [% END %]
+  [% IF offset > 0 %] [% next = offset + pagesize %]
+  [% ELSE %]          [% next = pagesize %] [% END %]
+  [% IF offset > 0 %] [% prev = offset - pagesize %]
+  [% ELSE %]          [% prev = 0 %] [% END %]
+
+  [% IF total > pagesize %] [% last = (of - 1) * pagesize %]
+  [% ELSE %]          [% last = 0 %] [% END %]
+
+  [% doPrev = (offset > 0) %]
+  [% doNext = (offset < last) %]
+  [% doFirst = (offset != 0) %]
+  [% doLast = (offset != last) %]
+  [% IF doPrev %]
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">previous [% pagesize %]</a>
+  [% ELSE %]
+  <span class="disabledLink">previous [% pagesize %]</span>
+  [% END %]
+  &nbsp;||&nbsp;
+  [% IF doNext %]
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$next#results" %]">next [% pagesize %]</a>
+  [% ELSE %]
+  <span class="disabledLink">next [% pagesize %]</span>
+  [% END %]
+  &nbsp;||&nbsp;
+  [% IF doFirst %]
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=0#results" %]">first page<a>
+  [% ELSE %]
+  <span class="disabledLink">first page</span>
+  [% END %]
+  &nbsp;||&nbsp;
+  [% IF doLast %]
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$last#results" %]">last page</a>
+  [% ELSE %]
+  <span class="disabledLink">last page</span>
+  [% END %]
+
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="?[% crms.URLify(cgi) _ ";download=1" %]" target="_blank">download</a>
+
+  [% color_white    = '#FFFFFF' %]
+  [% color_gray     = '#C6C4F1' %]
+  [% prev_id        = '' %]
+  [% active_color   = color_white %]
+
+  <table class="exportStats" style="width:100%;"><tr>
+    <th>ID</th>
+    <th>Title</th>
+    <th>Author</th>
+    <th>Pub&nbsp;Date</th>
+    <th>Country</th>
+    <th>Date</th>
+    <th>Rights</th>
+    <th>Status</th>
+    <th>Priority</th>
+    <th>Source</th>
+    <th>Added&nbsp;By</th>
+    <th>Project</th>
+    <th>Ticket</th>
+    <th>GID</th>
+    <th>Exported</th>
+    </tr>
+    [% FOREACH item IN ref.rows %]
+
+      [% IF prev_id == '' %][% prev_id = item.id %][% END %]
+
+      [% IF prev_id != item.id %]
+        [% IF active_color == color_gray  %]
+          [% active_color = color_white %]
+        [% ELSIF active_color == color_white %]
+          [% active_color = color_gray %]
+        [% END %]
+      [% END %]
+
+      <tr style="background-color:[% active_color %];">
+        <td class="nowrap">$item.id</td>
+        <td>[% crms.LinkToPT(item.id, item.title) %]</td>
+        <td>[% utils.EscapeHTML(item.author) %]</td>
+        <td>$item.pubdate</td>
+        <td>$item.country</td>
+        <td>$item.date</td>
+        <td>[% item.rights %]</td>
+        <td>$item.status</td>
+        <td>$item.priority</td>
+        <td class="nowrap">$item.src</td>
+        <td>$item.added_by</td>
+        <td class="nowrap">$item.project</td>
+        <td>[% (item.ticket)? crms.LinkToJira(crms, item.ticket):'' %]</td>
+        <td>$item.gid</td>
+        <td>
+          [% IF item.exported %]
+            <img width="16" height="16" alt="Exported" src="[% crms.WebPath('web', 'CheckIcon.png') %]"/>
+          [% END %]
+        </td>
+      </tr>
+
+      [% prev_id = item.id %]
+
+    [% END %]
+  </table>
+
+  [% IF doPrev %]
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">
+  [% ELSE %]
+  <span class="disabledLink">
+  [% END %]
+  previous [% pagesize %]
+  [% IF doPrev %]</a>[% ELSE %]</span>[% END %]
+  &nbsp;||&nbsp;
+  [% IF doNext %]
+  <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$next#results" %]">
+  [% ELSE %]
+  <span class="disabledLink">
+  [% END %]
+  next [% pagesize %]
+  [% IF doNext %]</a>[% ELSE %]</span>[% END %]
+
+  [% IF of > 1 %]
+    <br/>
+    <p><b>Found $total volumes, page $pagenum of $of</b></p>
+
+    <form action="crms">
+    Jump to Page:
+    [% crms.Hiddenify(cgi) %]
+    <input title="Jump to Page" size="3" type="text" id="jump" name="jump" value="[% pagenum %]"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;||
+    [% min = pagenum - 10 %]
+    [% IF min < 1 %][% min = 1 %][% END %]
+    [% max = pagenum + 10 %]
+    [% IF max > of %][% max = of %][% END %]
+    [% FOREACH pg IN [min .. max] %]
+      [% IF pg == pagenum %]
+        <b>[% pg %]</b> ||
+      [% ELSE %]
+        [% off = (pg - 1) * pagesize %]
+        <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$off#results" %]">[% pg %]</a> ||
+      [% END %]
+    [% END %]
+    </form>
+  [% END %]
+[% ELSE %]
+  <h4>No results found.</h4>
+[% END %]
+

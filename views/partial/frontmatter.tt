@@ -1,0 +1,319 @@
+[% u_data = (error)? cgi.param('data') : data.reviews.$user.data %]
+[% pages = 20 %]
+<div class="reviewPartial" id="Partial_frontmatter_div">
+  <table>
+    <tr>
+      <td>
+        <select id="seq_sel" onchange="SelectSeq(this);" style="font-size:11pt">
+          [% FOREACH i IN [1 .. pages] %]
+            <option style="font-size:14px;" id="[% 'sel_' _ i %]" value="[% i %]"
+                    [% IF i == 1 %]selected="selected"[% END %]>
+              Seq [% i %]
+            </option>
+          [% END %]
+        <select>
+      </td>
+      <td><img id="loader" src="[% crms.WebPath('web', 'ajax-loader.gif') %]"
+               style="display:none;" width="16" height="16" alt="Loading..."/></td>
+    <tr>
+      <td>
+        <input id="goBackButton" type="button" value="&lt; Back"
+               style="font-size:14px;" onclick="GoBack();" disabled="disabled;"/>
+      </td>
+      <td>
+        <input id="goForwardButton" type="button" value="Forward &gt;"
+               style="font-size:14px;" onclick="GoForward();"/>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>Type</strong></td>
+    </tr>
+    [% i = 0 %]
+    [% FOREACH type IN data.project.Types() %]
+      [% IF i % 2 == 0 %]<tr>[% END %]
+      <td><input id="type_[% type.code %]" type="radio" name="type" value="[% type.code %]"
+                 onclick="SaveSelection();"/>
+          <label for="type_[% type.code %]">[% type.name %]</label></td>
+      [% i = i + 1 %]
+      [% IF i % 2 == 0 %]</tr>[% END %]
+    [% END %]
+    <tr>
+      <td colspan="2"><strong>Category</strong></td>
+    </tr>
+    [% i = 0 %]
+    [% FOREACH cat IN data.project.Categories() %]
+      [% IF i % 2 == 0 %]<tr>[% END %]
+      <td><input id="category_[% cat.code %]" type="radio" name="category" value="[% cat.code %]"
+                 onclick="SaveSelection();"/>
+          <label for="category_[% cat.code %]">[% cat.name %]</label></td>
+      [% i = i + 1 %]
+      [% IF i % 2 == 0 %]</tr>[% END %]
+    [% END %]
+    <form name="submitFrontmatter" action="crms">
+    <input type="hidden" name="p" value="finishReview"/>
+    <input type="hidden" name="htid" value="[% htid %]"/>
+    <input type="hidden" id="data_hf" name="data" value=""/>
+    <input type="hidden" name="start" value="[% utils.Now() %]"/>
+    <input type="hidden" id="hold_hf" name="hold" value="0"/>
+    <tr>
+      <td colspan="2"><strong>Notes: </strong></td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <textarea title="Note Text" id="note_tf" name="note"
+                  cols="20" rows="1" onblur="SaveSelection();">
+        </textarea>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <input class="review" type="submit" name="submit" value="Save" id="submitButton"
+               accesskey="s" onclick="SaveSelection();this.form.onsubmit=null;"/>
+      </td>
+      <td style="padding-left:2em;">
+        <input class="review" type="submit" name="submit" value="Cancel" id="cancelButton"
+               accesskey="c" onclick="this.form.onsubmit=null;"/>
+      </td>
+    </tr>
+    <tr style="display:none;" id="done_row">
+      <td colspan="2"><span style="color:green;font-size:16px;">Review Complete</span></td>
+    </tr>
+  </table>
+  </form>
+
+
+<script>
+  var seq = 1;
+  var pages = [% pages %];
+  var data = [% IF u_data %]
+               [% u_data %]
+             [% ELSE %]
+               new Array(pages)
+             [% END %];
+
+  addEvent(window, 'load', function(e)
+  {
+    el = document.getElementById('submitButton');
+    el.disabled = true;
+    RestoreSelection();
+    CheckNav();
+  });
+
+  function GoForward()
+  {
+    if (seq < pages)
+    {
+      SetRadiosDisabled(true);
+      document.getElementById('loader').style.display = 'block';
+      SaveSelection();
+      seq++;
+      var el = document.getElementById('tFrame');
+      var addr = el.src;
+      addr = addr.replace(/;seq=\d+/i, ';seq=' + seq);
+      el.onload = function() { document.getElementById('loader').style.display = 'none'; SetRadiosDisabled(false); CheckNoContent() };
+      el.src = addr;
+      RestoreSelection();
+    }
+    CheckNav();
+  }
+
+  function GoBack()
+  {
+    if (seq > 1)
+    {
+      SetRadiosDisabled(true);
+      document.getElementById('loader').style.display = 'block';
+      SaveSelection();
+      seq--;
+      var el = document.getElementById('tFrame');
+      var addr = el.src;
+      addr = addr.replace(/;seq=\d+/i, ';seq=' + seq);
+      el.onload = function() { document.getElementById('loader').style.display = 'none'; SetRadiosDisabled(false); CheckNoContent() };
+      el.src = addr;
+      RestoreSelection();
+    }
+    CheckNav();
+  }
+  
+  function SetRadiosDisabled(flag)
+  {
+    var els = document.getElementsByName("type");
+    for (i = 0; i < els.length; i++)
+    {
+      els[i].disabled = flag;
+    }
+    els = document.getElementsByName("category");
+    for (i = 0; i < els.length; i++)
+    {
+      els[i].disabled = flag;
+    }
+  }
+  
+  function SaveSelection()
+  {
+    CheckNoContent();
+    var els = document.getElementsByName("type");
+    var type = GetCheckedValue(els);
+    els = document.getElementsByName("category");
+    var category = GetCheckedValue(els);
+    var note = document.getElementById("note_tf").value;
+    if (type || category)
+    {
+      data[seq - 1] = [type, category, note];
+    }
+    var el = document.getElementById('data_hf');
+    el.value = JSON.stringify(data);
+    CheckCompleteness();
+    CheckSeq();
+  }
+  
+  function RestoreSelection()
+  {
+    var vals = data[seq - 1];
+    var val0 = vals? (vals[0]? vals[0]:-1):-1;
+    var val1 = vals? (vals[1]? vals[1]:-1):-1;
+    var note = vals? (vals[2]? vals[2]:undefined):undefined;
+    var buttons = document.getElementsByName("type");
+    for (var i=0; i<buttons.length; i++)
+    {
+      buttons[i].checked = (buttons[i].id == 'type_' + val0);
+    }
+    buttons = document.getElementsByName("category");
+    for (var i=0; i<buttons.length; i++)
+    {
+      buttons[i].checked = (buttons[i].id == 'category_' + val1);
+    }
+    if (!note) { note = ''; }
+    document.getElementById("note_tf").value = note;
+    CheckNoContent()
+    CheckCompleteness();
+    CheckSeq();
+  }
+  
+  // If the user has entered any data, disable Cancel button,
+  // and enable Save/Submit.
+  function CheckCompleteness()
+  {
+    var complete = true;
+    var started = false;
+    for (var i=0; i<data.length; i++)
+    {
+      if (data[i] && (data[i][0] || data[i][1]))
+      {
+        started = true;
+      }
+      if (data[i] == undefined ||
+          data[i][0] == undefined ||
+          data[i][1] == undefined)
+      {
+        complete = false;
+      }
+    }
+    if (started)
+    {
+      var el = document.getElementById('submitButton');
+      el.disabled = false;
+      if (complete) el.value = "Submit";
+      var el = document.getElementById('cancelButton');
+      el.disabled = true;
+    }
+    else
+    {
+      var el = document.getElementById('submitButton');
+      el.disabled = true;
+      var el = document.getElementById('cancelButton');
+      el.disabled = false;
+    }
+    var el = document.getElementById('hold_hf');
+    el.value = (complete)? '0':'1';
+    if (complete) { document.getElementById('done_row').style.display = 'table-row'; }
+    //Debug("<strong>Debug Data:</strong> " + JSON.stringify(data));
+    //Debug((started)? "<span style='color:green;'>Started</span>":
+    //                  "<span style='color:red;'>Not Started</span>", 1);
+    //Debug((complete)? "<span style='color:green;'>Complete</span>":
+    //                  "<span style='color:red;'>Incomplete</span>", 1);
+  }
+
+  function SelectSeq(el)
+  {
+    SetRadiosDisabled(true);
+    document.getElementById('loader').style.display = 'block';
+    seq = el.value;
+    var el = document.getElementById('tFrame');
+    var addr = el.src;
+    addr = addr.replace(/;seq=\d+/i, ';seq=' + seq);
+    el.onload = function() { document.getElementById('loader').style.display = 'none'; SetRadiosDisabled(false); };
+    el.src = addr;
+    RestoreSelection();
+    CheckNav();
+  }
+  
+  // Check the sequence menu item at the current sequence
+  function CheckSeq()
+  {
+    var el = document.getElementById('seq_sel');
+    for (i=0; i < el.options.length; i++)
+    {
+      el.options[i].selected = (el.options[i].id == 'sel_' + seq);
+      if (data[i] && (data[i][0] && data[i][1]))
+      {
+        el.options[i].style.color = 'green';
+        el.options[i].innerHTML = 'Seq' + el.options[i].value + ' ✓';
+        console.log(el.options[i].label);
+        if (el.options[i].selected)
+        {
+          el.style.color = 'green';
+        }
+      }
+      else
+      {
+        el.options[i].style.color = 'red';
+        el.options[i].innerHTML = 'Seq' + el.options[i].value;
+        if (el.options[i].selected)
+        {
+          el.style.color = 'red';
+        }
+      }
+    }
+  }
+  
+  function CheckNav()
+  {
+    var el = document.getElementById('goBackButton');
+    el.disabled = (seq <= 1);
+    var el = document.getElementById('goForwardButton');
+    el.disabled = (seq >= pages);
+  }
+  
+  function CheckNoContent()
+  {
+    var el = document.getElementById('type_no_content');
+    if (el.checked)
+    {
+      el = document.getElementById('category_no_content');
+      el.checked = true;
+      var els = document.getElementsByName("category");
+      for (i = 0; i < els.length; i++)
+      {
+        els[i].disabled = true;
+      }
+    }
+    else
+    {
+      var els = document.getElementsByName("category");
+      for (i = 0; i < els.length; i++)
+      {
+        if (els[i].id == 'category_no_content')
+        {
+          els[i].checked = false;
+          els[i].disabled = true;
+        }
+        else
+        {
+          els[i].disabled = false;
+        }
+      }
+    }
+  }
+</script>
+</div>

@@ -2,7 +2,10 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+BEGIN {
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
+}
 
 use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
@@ -76,7 +79,7 @@ if (scalar @{$ref} > 0)
 $report .= "<h2>Reviewer Progress</h2>\n";
 $report .= '<table style="border:1px solid #000000;border-collapse:collapse;">'. "\n";
 $sql = 'SELECT u.id,u.name FROM users u INNER JOIN projectusers pu'.
-       ' ON u.id=pu.user WHERE u.id LIKE "%@%" AND u.reviewer=1'.
+       ' ON u.id=pu.user WHERE u.email LIKE "%@%" AND u.reviewer=1'.
        ' AND u.advanced=0 AND u.expert=0'.
        ' AND id IN (SELECT DISTINCT user FROM historicalreviews)'.
        ' ORDER BY pu.project,u.name';
@@ -85,11 +88,12 @@ $ref = $crms->SelectAll($sql);
 my $now = $crms->SimpleSqlGet('SELECT CURDATE()');
 foreach my $row (@{$ref})
 {
-  my $user = $row->[0];
-  next if $seen{$user};
-  $seen{$user} = 1;
+  my $uid = $row->[0];
+  next if $seen{$uid};
+  my $user = User::Find($uid);
+  $seen{$uid} = 1;
   my $name = $row->[1];
-  my $projs = $crms->GetUserProjects($user);
+  my $projs = $user->projects;
   my $projnames = join ', ', map {$_->{'name'}} @{$projs};
   $report .= '<tr style="border:1px solid #000000;"><th colspan="2">'.
              $user. " ($name: <i>$projnames</i>)". '</th></tr>'. "\n";

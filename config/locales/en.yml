@@ -1,0 +1,135 @@
+---
+en:
+  controller:
+    user:
+      new:
+        success: Some action succeeded
+  model:
+    role:
+      attribute:
+        id: ID
+        name: Name
+      value:
+        expert: Expert
+        reviewer: Reviewer
+    queue:
+      attribute:
+        added_by: Added By
+        author: Author
+        cid: Catalog ID
+        country: Country
+        date: Date
+        expert_reviews: Expert Reviews
+        holds: Holds
+        id: ID
+        locked: Locked
+        override_restrictions: Override Restrictions
+        priority: Priority
+        project: Project
+        pub_date: Pub Date
+        reviews: Reviews
+        source: Source
+        status: Status
+        test_only: Test Only
+        ticket: Ticket
+        title: Title
+    user:
+      attribute:
+        access: Access
+        active: Active
+        admin: Admin
+        advanced: Advanced
+        commitment: Commitment
+        email: E-mail
+        expert: Expert
+        expires: Expires
+        id: ID
+        institution: Institution
+        internal: Internal
+        name: Name
+        note: Note
+        project: Current Project
+        projects: Projects
+        reviewer: Reviewer
+        role: Current Role
+        roles: Roles
+      error:
+        invalid: Invalid user THIS IS A PLACEHOLDER
+  view:
+    menu:
+      administrative: Administrative
+      documentation: Documentation
+      greeting: Hello %{name}%
+      log_out: Log Out
+      review: Review
+      search_browse: Search/Browse
+      stats_reports: Stats/Reports
+    menu_item:
+      administrative:
+        add_to_queue: Add to Queue
+        all_locked_volumes: All Locked Volumes
+        institutions: Institutions
+        keio_data: Keio Data
+        licensing: Licensing
+        projects: Projects
+        query_rights_database: Query Rights Database
+        set_system_status: Set System Status
+        system_administration: System Administration
+        track_tolumes: Track Volumes
+        user_accounts: User Accounts
+      documentation:
+        crms_documentation: CRMS Documentation
+        crms_status_codes: CRMS Status Codes
+        review_search_help: Review Search Help
+        review_search_terms: Review Search Terms
+        system_generated_reviews: System Generated Reviews
+        user_levels_privileges: User Levels/Privileges
+      review:
+        automatic_rights_inheritance: Automatic Rights Inheritance
+        conflicts: Conflicts
+        my_held_reviews: My Held Reviews
+        my_unprocessed_reviews: My Unprocessed Reviews
+        provisional_matches: Provisional Matches
+        review: Review
+        rights_inheritance_pending_approval: Rights Inheritance Pending Approval
+      search_browse:
+        active_reviews: Active Reviews
+        all_held_reviews: All Held Reviews
+        candidates: Candidates
+        final_determinations: Final Determinations
+        filtered_volumes: Filtered Volumes
+        historical_reviews: Historical Reviews
+        queue: Volumes in Queue
+      stats_reports:
+        all_review_stats: All Review Stats
+        export_stats: Export Stats
+        my_review_stats: My Review Stats
+        progress_dashboard: Progress Dashboard
+        reviewer_activity: Reviewer Activity
+        system_summary: System Summary
+    queue:
+      index:
+        ascending: Ascending
+        clear: Clear
+        descending: Descending
+        direction: Direction
+        end_date: End Date
+        no_results_found: No Results Found.
+        order_by: Order By
+        records_per_page: Records per Page
+        records_summary: %{start}%-%{end}% of %{of}%
+        restrict_selection: Restrict Selection
+        start_date: Start Date
+        submit: Submit
+        volumes_in_queue: Volumes in Queue
+      new:
+        submit: Submit
+    user:
+      edit:
+        privileges: Privileges
+      form:
+        submit: Submit
+      index:
+        add_new_user: Add New User
+      show:
+        edit: Edit

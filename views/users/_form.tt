@@ -1,0 +1,82 @@
+[% projects = [] %]
+[% FOREACH param IN cgi.param %]
+  [% matches = param.match('(proj_)(\d+)') %]
+  [% IF matches.0 == 'proj_' %]
+    [% projects.push(matches.1) %]
+  [% END %]
+[% END %]
+
+<div style="position:relative;border-style:solid;width:38em;border-width:1px;padding:10px;">
+  [% action = (user.is_persisted())? '/crms/users/' _ user.id  : '/crms/users/new' %]
+  <form action="[% action %]" method="post">
+    
+    [% presenter.field_label('email', 1) %]
+    [% presenter.edit_field_value('email') %]
+    <br/>
+    [% presenter.field_label('name', 1) %]
+    [% presenter.edit_field_value('name') %]
+    <br/>
+    [% presenter.field_label('institution', 1) %]
+    [% presenter.edit_field_value('institution') %]
+    <br/><br/>
+    <fieldset id="privGroup">[% presenter.t('.user.edit.privileges') %]
+    <br/>
+      <input type="checkbox" name="user[reviewer]" id="reviewerCB" [% (user.is_reviewer)? 'checked' : '' %]/>
+      <label for="reviewerCB">Reviewer</label><br/>
+
+      <input type="checkbox" name="user[advanced]" id="advancedCB" [% (user.is_advanced)? 'checked' : '' %]/>
+      <label for="advancedCB">Advanced Reviewer</label><br/>
+
+      <input type="checkbox" name="user[expert]" id="expertCB" [% (user.is_expert)? 'checked' : '' %]/>
+      <label for="expertCB">Expert</label><br/>
+      
+      <input type="checkbox" name="user[admin]" id="adminCB" [% (user.is_admin)? 'checked' : '' %]/>
+      <label for="adminCB">Admin</label><br/>
+    </fieldset>
+
+    <br/>
+    <fieldset id="roleGroup">[% presenter.t('model.user.attribute.roles') %]
+      <i>(Only check these if you want the user to be able to switch roles.)</i>
+      <br/>
+
+      [% roles = crms.GetRoles() %]
+      [% FOR role IN roles %]
+        <input type="checkbox" name="user[roles][[% role.id %]]" id="role_[% role.id %]"
+          [% (user.role_id_hash.item(role.id))? 'checked' : '' %]/>
+        <label for="role_[% role.id %]">
+          [% presenter.t('model.role.value.' _ role.name.lower) %]
+        </label><br/>
+      [% END %]
+    </fieldset>
+    <br/>
+
+    <fieldset id="projectsGroup">[% presenter.t('model.user.attribute.projects') %]
+    <br/>
+    [% presenter.edit_field_value('projects') %]
+    </fieldset>
+
+    <br/>
+    [% presenter.field_label('note', 1) %]
+    <textarea name="user[note]" id="note" rows="3" cols="20">[% user.note %]</textarea>
+    <br/>
+    <br/>
+    [% presenter.field_label('commitment', 1) %]
+    <input id="commitmentfield" type="text" name="user[commitment]" value="[% user.commitment %]"/>
+    (as percent or decimal, e.g. 25% or .25)
+    <br/>
+    [% presenter.edit_field_value('active') %]
+    [% presenter.field_label('active', 1) %]
+    <br/>
+    <br/>
+    [% admin_pages = crms.AdminPages() %]
+    <label for="admin_pages">Grant non-admin users special access:</label><br/>
+    <select id="admin_pages" name="user[admin_pages]" multiple>
+    [% FOR page IN admin_pages %]
+      <option value="[% page.page %]" [% (user.admin_pages.item(page.page))? 'selected' : '' %]>
+        [% page.name %]
+      </option>
+    [% END %]
+    </select>
+    <br/><br/><input class="btn btn-primary" type="submit" value="[% presenter.t('.user.form.submit') %]"/>
+  </form>
+</div>

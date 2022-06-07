@@ -1,0 +1,7 @@
+[% proj = current_user.project().name %]
+[% flag = " &#x2014; " _ proj _ " Project" %]
+
+<h2>Conflicts[% flag %]:</h2>
+
+[% INCLUDE selection.tt  %]
+[% INCLUDE searchResults.tt  %]

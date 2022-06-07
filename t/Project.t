@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 use strict;
 use warnings;
 BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }

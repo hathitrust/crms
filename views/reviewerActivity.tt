@@ -1,0 +1,192 @@
+<script type="text/javascript">
+<!--
+
+var graphURLBase = "[% crms.WebPath('cgi', 'getExportStats?type=graph;c=10') %]";
+var graphURL = graphURLBase;
+var gActives = [];
+
+// Define a custom symbol path
+Highcharts.SVGRenderer.prototype.symbols.cross = function(x, y, w, h)
+{
+  return ['M', x, y, 'L', x + w, y + h, 'M', x + w, y, 'L', x, y + h, 'z'];
+};
+if (Highcharts.VMLRenderer)
+{
+  Highcharts.VMLRenderer.prototype.symbols.cross = Highcharts.SVGRenderer.prototype.symbols.cross;
+}
+
+function reloadChart()
+{
+  ConstructURL();
+  loadChart('chart0', graphURL);
+}
+
+function ConstructURL()
+{
+  graphURL = graphURLBase;
+  var table = document.getElementById('userTable');
+	var aa=table.querySelectorAll('input.userCB');
+	for (var i=0; i < aa.length; i++)
+	{
+	  var user = aa[i].id;
+    var res = user.replace(/__AT__/i, "@");
+	  if (aa[i].checked) graphURL += ';user=' + res;
+	}
+	table = document.getElementById('userTable1');
+	aa=table.querySelectorAll('input.userCB');
+	for (var i=0; i < aa.length; i++)
+	{
+	  var user = aa[i].id;
+    var res = user.replace(/__AT__/i, "@");
+	  if (aa[i].checked) graphURL += ';user=' + res;
+	}
+	var menu = document.getElementById('activityTypeMenu');
+	graphURL += ';type2=' + menu.value;
+	var start = document.getElementById('startDate');
+	graphURL += ';startDate=' + start.value;
+	var end = document.getElementById('endDate');
+	graphURL += ';endDate=' + end.value;
+}
+
+function CheckAll(box,id)
+{
+  var q = 'input[name="'+id+'"]';
+	var aa=document.querySelectorAll(q);
+	for (var i=0; i < aa.length; i++)
+	{
+	  aa[i].checked = box.checked;
+	}
+	reloadChart();
+}
+
+function checkInst(id)
+{
+  var cb = document.getElementById(id);
+  var q = 'input[name="'+id+'"]';
+  //alert(q);
+	var aa=document.querySelectorAll(q);
+	var checked = 0;
+	for (var i=0; i < aa.length; i++)
+	{
+	  if (aa[i].checked) checked++;
+	}
+	if (checked == aa.length) cb.checked = true;
+	else cb.checked = false;
+	//alert(id + ' ' + aa.length + ' ' + checked);
+	reloadChart();
+}
+
+function checkActive(cb)
+{
+	for (var i=0; i < gActives.length; i++)
+	{
+	  var cb2 = document.getElementById(gActives[i]);
+	  if (cb2) { cb2.checked = cb.checked; }
+	}
+	reloadChart();
+}
+// -->
+</script>
+
+<table style="padding:0px;border-collapse:collapse;">
+<tr style="background-color:#FFFFFF;">
+  <td style="vertical-align:top;width:1000px;">
+    <label for="activityTypeMenu">Reviewer Activity: </label>
+    <select title="Select Activity Type"
+            class="review" id="activityTypeMenu"
+            onchange="reloadChart();">
+      <option value="0">Review Count</option>
+      <option value="1">Time Reviewing (hours)</option>
+      <option value="2">Invalidation Rate</option>
+      <option value="3">Flagged Reviews</option>
+    </select>
+    <input type="submit" value="Open Image in new Tab" onclick="save_image(0);"/>
+    <input type="checkbox" class="userCB" id="checkActiveCB"
+            onchange="checkActive(this);"/>
+    <label for="checkActiveCB">Check All Active Reviewers</label>
+    <br/>
+    <div id="DateSelectionDiv">
+    <label for="startDate" style="width:5em;float:left;">Start Date:</label>
+    <input type="text" id="startDate" name="startDate" value="[% startDate %]"
+           onclick="datePickerController.show('startDate');"
+           onblur="datePickerController.hide('startDate');reloadChart();"/>
+    <script type="text/javascript">
+    // <![CDATA[
+      var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };
+      datePickerController.createDatePicker(opts);
+    // ]]>
+    </script>
+    <span class="smallText">(YYYY-MM-DD)</span>
+    <br/>
+    <label for="endDate" style="width:5em;float:left;">End Date:</label>
+    <input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
+           onblur="datePickerController.hide('endDate');reloadChart();"/>
+    <script type="text/javascript">
+    // <![CDATA[
+      var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };
+      datePickerController.createDatePicker(opts);
+    // ]]>
+    </script>
+    <span class="smallText">(YYYY-MM-DD)</span>
+    </div>
+    <br/><br/>
+    [% actives = [] %]
+    <div id="chart0" style="width:1000px;height:600px;"></div>
+  </td>
+  <td style="align:left;text-align:left;vertical-align:top">
+    [% sql = "SELECT id,shortname FROM institutions WHERE id!=0 ORDER BY shortname ASC" %]
+    [% ref  = crms.SelectAll(sql) %]
+    <table class='exportStats' id='userTable'>
+    [% i = 1 %]
+    [% col = 0 %]
+    [% FOREACH r IN ref %]
+      [% users = crms.GetInstitutionReviewers(r.0) %]
+      [% IF users.size() > 0 %]
+        [% IF (i >= ref.size() / 2 && col == 0) %]
+          [% col = col + 1 %]
+          </table>
+          <td style="align:left;text-align:left;vertical-align:top">
+          <table class='exportStats' id='userTable[% col %]'>
+        [% END %]
+        [% i = i + 1 %]
+        <tr><th colspan="2">
+          <label for="inst_[% r.0 %]">[% r.1 %]</label>
+          <input type="checkbox"
+                 id="inst_[% r.0 %]"
+                 onclick="CheckAll(this,'inst_[% r.0 %]');"/>
+        </th></tr>
+      [% END %]
+      [% FOREACH user IN users %]
+        <tr>
+          [% #id = user.email.replace('@', '__AT__') %]
+          [% name = user.name %]
+          <td class="nowrap">
+            <input type="checkbox" class="userCB" name="inst_[% r.0 %]" id="[% user.id %]"
+                   onchange="checkInst('inst_[% r.0 %]');"/>
+            <label for="[% user.id %]">
+              [% IF user.active == 0 %]
+                [% name = "<em>" _ name _ "</em>" %]
+              [% ELSE %]
+                [% actives.push(id) %]
+              [% END %]
+              [% name %]
+            </label>
+          </td>
+          <td>[% IF user.commitment %][% 100 * user.commitment %]%[% END %]</td>
+        </tr>
+      [% END %]
+    [% END %]
+  </table>
+</tr>
+</table><br/>
+[% json = '["' _ actives.join('","') _ '"]' %]
+
+<script type="text/javascript">
+<!--
+window.onload = function(e)
+{
+  reloadChart();
+  gActives = JSON.parse('[% json %]', null);
+}
+-->
+</script>

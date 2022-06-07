@@ -1,0 +1,2 @@
+<h2>New User:</h2>
+[% INCLUDE users/_form.tt, user = user %]

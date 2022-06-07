@@ -15,7 +15,7 @@ sub US_Cities {
   if (!defined $US_CITIES) {
     my %us_cities;
     my $us_cities_db = $ENV{'SDRROOT'} . '/crms/post_zephir_processing/data/us_cities.db';
-    tie %us_cities, 'DB_File', $us_cities_db, O_RDONLY, 0644, $DB_BTREE or die "can't open db file $us_cities_db: $!";
+    tie %us_cities, 'DB_File', $us_cities_db, O_RDONLY, oct(644), $DB_BTREE or die "can't open db file $us_cities_db: $!";
     $US_CITIES = \%us_cities;
   }
   return $US_CITIES;
@@ -28,8 +28,15 @@ sub new
   my $id = $args{id};
   $self->{sysid} = $id if $id !~ m/\./;
   $self->{id} = $id;
-  $self->json unless $self->is_error;
-  $self->xml unless $self->is_error;
+  # If XML is passed in, swap it out and parse it without hitting the catalog.
+  # FIXME: note that several enumcron methods use the JSON instead of the XML, so
+  # that will pull potentially non-matching JSON from the BIB API.
+  if (defined $args{'xml'}) {
+    $self->set_xml($args{'xml'});
+  } else {
+    $self->json unless $self->is_error;
+    $self->xml unless $self->is_error;
+  }
   return $self;
 }
 
@@ -131,23 +138,32 @@ sub xml {
     my $source;
     if (scalar @keys) {
       my $xml = $records->{$keys[0]}->{'marc-xml'};
-      my $parser = XML::LibXML->new();
-      eval {
-        $source = $parser->parse_string($xml);
-      };
-      if (!scalar @keys || $@) {
-        $self->set_error("failed to parse ($xml): $@");
-        return;
-      }
+      $self->set_xml($xml);
     }
     else {
-      $self->set_error('no records found');
+      $self->set_error('no records found in JSON');
       return;
     }
-    my $root = $source->getDocumentElement();
-    my @records = $root->findnodes('//*[local-name()="record"]');
-    $self->{xml} = $records[0];
   }
+  return $self->{xml};
+}
+
+sub set_xml {
+  my $self = shift;
+  my $xml  = shift;
+
+  my $parser = XML::LibXML->new();
+  my $source;
+  eval {
+    $source = $parser->parse_string($xml);
+  };
+  if ($@) {
+    $self->set_error("failed to parse XML: $@");
+    return;
+  }
+  my $root = $source->getDocumentElement();
+  my @records = $root->findnodes('//*[local-name()="record"]');
+  $self->{xml} = $records[0];
   return $self->{xml};
 }
 
@@ -489,8 +505,8 @@ sub country
   my $long = shift;
 
   my $code = substr($self->GetControlfield('008'), 15, 3);
-  use Countries;
-  return Countries::TranslateCountry($code, $long);
+  use CRMS::Countries;
+  return CRMS::Countries::TranslateCountry($code, $long);
 }
 
 # Returns hash of us-> and non-us-> arrays of normalized city names.

@@ -1,0 +1,21 @@
+<div>
+  <h2>[% user.name %]</h2>
+
+  FIXME: need to do something with admin_pages<br/>
+
+  <div style="position:relative;border-style:solid;width:38em;border-width:1px;padding:1em;">
+    [% fields = presenter.all_fields %]
+    <dl class="row">
+      [% FOR field IN fields %]
+        <dt class="col-sm-3">[% presenter.field_label(field) %]</dt>
+        <dd class="col-sm-9">[% presenter.show_field_value(field) %]</dd>
+      [% END %]
+    </dl>
+    <br/>
+  </div>
+  <br/>
+  <a href="[% controller.action_path('edit', user) %]" class="btn btn-primary">
+    [% presenter.t('.user.show.edit') %]
+  </a>
+</div>
+

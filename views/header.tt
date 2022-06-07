@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <link rel="icon" type="image/png" href="[% crms.WebPath('web', crms.GetSystemVar('favicon')) %]"/>
+    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/datepicker.css') %]"/>
+    <link href="https://unpkg.com/@primer/css@^19.0.0/dist/primer.css" rel="stylesheet" />
+    <script src="[% crms.WebPath('web', 'js/common.js') %]"></script>
+    <script src="https://unpkg.com/tippy.js@3/dist/tippy.all.min.js"></script>
+  [% page = cgi.param('p') %]
+  [% reviewType = (page == 'review' OR page == 'cri'
+                   OR page == 'stanford' OR page == 'frontmatter'
+                   OR page == 'pageimage') %]
+  [% IF reviewType %]
+    <script src="[% crms.WebPath('web', 'js/review.js') %]"></script>
+  [% ELSE %]
+    <script src="[% crms.WebPath('web', 'js/datepicker.packed.js') %]"></script>
+  [% END %]
+  [% IF page == 'determinationStats' OR page == 'exportStats' OR page == 'reviewerActivity' %]
+    <script src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    [% IF page == 'reviewerActivity' %]
+      <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    [% END %]
+  [% END %]
+
+    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/review.css') %]"/>
+    <title>[% title %] - [% crms.PageName(page) %]</title>
+  </head>
+  <body>
+  [% r = crms.GetSystemStatus() %]
+  [% IF reviewType %]
+    <div id="homePage">
+  [% ELSE %]
+    [% IF crms.Instance() == 'dev' %]
+    <div class="topBanner">
+      Development&nbsp;Instance
+    </div>
+  [% END %]
+    
+    
+
+    
+    <div class="Header" data-color-mode="dark" data-dark-theme="dark_dimmed">
+      [% menus = crms.Menus() %]
+      [% FOREACH menu IN menus %]
+      [% id = menu.0 %]
+      <div class="Header-item">
+        <details class="details-reset details-overlay">
+          <summary class="Header-link" aria-haspopup="true">
+            [% menu.1 %]
+          </summary>
+          [% items = crms.MenuItems(id) %]
+          <div class="SelectMenu">
+            <div class="SelectMenu-modal">
+              <div class="SelectMenu-list">
+                [% FOREACH item IN items %]
+                [% target = (item.2)? ' target="' _ item.2 _ '"':'' %]
+                  <button class="SelectMenu-item" role="menuitem">
+                  <a href="[% item.1 %]" [% target %] [% item.3 %]
+                     class="SelectMenu-item" role="menuitem">[% item.0 %]</a>
+                  </button>
+                [% END %]
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+      [% END %]
+    </div>
+  
+  
+  
+    <div class="pages" id="homePage">
+    
+    <div style="height:82px;border-bottom:1px solid black;margin:0px;padding-bottom:6px;">
+      [% # Don't display the notice if this is the review page and situation normal %]
+      [% IF r.2 && (!reviewType || r.1 != 'normal') %]
+        <table style="float:left;width:860px;height:80px;border:1px solid #185EAC;background-color:#EEEEFF;padding:1em;">
+        <tr><td>
+         [% status = (r.1 == 'down')? 'unavailable':((r.1 == 'partial')? 'partially available':r.1) %]
+         <span style="font-size:1.3em;text-align:center;color:#DD4444">System status is <b>[% status %]</b>; last modified [% r.0 %]</span><br/>
+         <span style="font-size:1.1em;">[% r.2 %]</span>
+         [% IF page == 'review' %]&nbsp;&nbsp;&nbsp;<a href="crms">Home</a>[% END %]
+        </td></tr>
+        </table>
+      [% ELSE %]
+      <a href="crms">
+        <img src="[% crms.WebPath('web', crms.GetSystemVar('logo')) %]" width="455" height="80" alt="Jump to home page"
+             style="float:left;border:0px solid;margin-right:4em;"/>
+      </a>
+      [% END %]
+      <div style="float:right;">
+        <table class="helloBox">
+          <tr>
+            <td rowspan="2" style="padding:0px;height:80px;line-height:1px;">
+              <img src="[% crms.WebPath('web', 'HathiTrustLogo.png') %]" width="86" height="80" alt="HathiTrust Logo"/>
+            </td>
+            <td style="line-height:1px;">
+              Hello&nbsp;[% crms.get('user').name.replace(" ","&nbsp;") %]&nbsp;&nbsp;
+              <a href="[% crms.BuildURL('Logout') %]" class="header">logout</a>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              CRMS&nbsp;version&nbsp;[% crms.Version() %]
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div>[% INCLUDE nav.tt %]</div>
+    <br/><br/><br/>
+[% END %]
+[% IF r.1 != 'normal' %]
+  [% IF page != 'systemStatus' %]
+    [% IF r.1 == 'down' %]
+      [% INCLUDE footer.tt %]
+      [% STOP %]
+    [% END %]
+    [% IF (r.1 == 'partial' || r.1 == 'delayed') && (page == 'queueAdd' || page == 'review') %]
+      [% INCLUDE footer.tt %]
+      [% STOP %]
+    [% END %]
+  [% END %]
+[% END %]

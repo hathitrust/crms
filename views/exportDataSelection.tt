@@ -1,0 +1,106 @@
+[% page = cgi.param("p") %]
+[% op1 = cgi.param("op1") %]
+[% search1 = cgi.param("search1") %]
+[% search2 = cgi.param("search2") %]
+[% search1value = cgi.param("search1value") %]
+[% search2value = cgi.param("search2value") %]
+[% startDate = cgi.param('startDate') %]
+[% endDate = cgi.param('endDate') %]
+[% order = cgi.param('order') %]
+[% dir = cgi.param('dir') %]
+[% recs = cgi.param('records') %]
+
+[% recs = recs.replace('\D','') %]
+[% IF NOT recs %]
+  [% recs = cgi.cookie('recs') or 20 %]
+  [% CALL cgi.param('records', recs) %]
+[% END %]
+
+[% IF NOT dir %]
+  [% dir = 'ASC' %]
+  [% CALL cgi.param('dir', 'ASC') %]
+[% END %]
+<br/>
+<div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
+
+<div style="position:absolute;top:4px;right:4px;font-size:.8em">
+  <a href="[% crms.WebPath('web', 'pdf/ReviewSearchHelp.pdf') %]"
+     target="_blank" accesskey="h">Search&nbsp;Help</a> /
+  <a href="[% crms.WebPath('web', 'pdf/ReviewSearchTerms.pdf') %]"
+     target="_blank">Search&nbsp;Terms</a>
+</div>
+
+<form id="select" action="crms">
+<input type="hidden" name="p" value="$page"/>
+
+Restrict selection:<br/>
+
+[% crms.ExportDataSearchMenu('search1', search1) %]
+<input title="Value 1" type="text"  id="search1value" name="search1value" value="[% crms.EchoInput(search1value) %]" size="30"/>
+<select title="Boolean Option" name="op1">
+  <option [% op1 == 'AND' ? 'selected="selected"':'' %]>AND</option>
+  <option [% op1 == 'OR' ? 'selected="selected"':'' %]>OR</option>
+</select>
+<br/>
+
+[% crms.ExportDataSearchMenu('search2', search2) %]
+<input title="Value 2" type="text" id="search2value" name="search2value" value="[% crms.EchoInput(search2value) %]" size="30"/>
+<br/>
+
+<label for="startDate" style="width:5em;float:left;">Start Date:</label>
+<input type="text" id="startDate" name="startDate" value="[% startDate %]" onclick="datePickerController.show('startDate');"
+       onblur="datePickerController.hide('startDate');"/>
+<script type="text/javascript">
+// <![CDATA[
+  // FIXME: if we start using v6 of the datepicker, need to use "%Y-%m-%d" as the format
+  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };
+  datePickerController.createDatePicker(opts);
+// ]]>
+</script>
+<span class="smallText">(YYYY-MM-DD)</span>
+<br/>
+<label for="endDate" style="width:5em;float:left;">End Date:</label>
+<input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
+       onblur="datePickerController.hide('endDate');"/>
+<script type="text/javascript">
+// <![CDATA[
+  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };
+  datePickerController.createDatePicker(opts);
+// ]]>
+</script>
+<span class="smallText">(YYYY-MM-DD)</span>
+<br/>
+
+<label for="order">Order by:</label>
+[% crms.ExportDataSearchMenu('order', order) %]
+<br/>
+
+<label for="dir">Direction:</label>
+
+<select id="dir" name="dir">
+  <option value="ASC"  [% dir == 'ASC' ?  'selected="selected"':'' %]>Ascending</option>
+  <option value="DESC" [% dir == 'DESC' ? 'selected="selected"':'' %]>Descending</option>
+</select>
+<br/>
+
+<label for="records">Display:</label>
+<input size="3" type="text" id="records" name="records" value="[% recs %]"
+       onblur="setCookie('recs',this.value,31);"
+/>
+records per page.
+<br/>
+<input type="submit" value="Submit"/>
+<input type="button" value="Clear"
+       onclick="selMenuItem('op1','AND');
+                selMenuItem('search1','Identifier');
+                selMenuItem('search2','Identifier');
+                selMenuItem('order','id');
+                selMenuItem('dir','ASC');
+                document.getElementById('startDate').value='';
+                document.getElementById('endDate').value='';
+                document.getElementById('search1value').value='';
+                document.getElementById('search2value').value='';"
+/>
+</form>
+</div>
+<br/>

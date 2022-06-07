@@ -2,12 +2,17 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+BEGIN {
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
+}
+
+use Encode;
+use Getopt::Long;
 
 use CRMS;
-use Getopt::Long;
 use Utilities;
-use Encode;
+
 
 my $usage = <<END;
 USAGE: $0 [-hlptv] [-m USER [-m USER...]]
@@ -77,11 +82,11 @@ $msg .= <<'END';
 END
 my $table = '';
 $sql = 'SELECT COUNT(*) FROM historicalreviews WHERE time>=? AND time<? AND user!="autocrms"';
-printf "%s\n", Utilities::StringifySql($sql, $startThis, $now) if $verbose>1;
+printf "%s\n", Utilities->new->StringifySql($sql, $startThis, $now) if $verbose>1;
 my $thisn = $crms->SimpleSqlGet($sql, $startThis, $now);
 my $lastn = $crms->SimpleSqlGet($sql, $startLast, $startThis);
 $sql = 'SELECT COUNT(*) FROM reviews WHERE time>=? AND time<?';
-printf "%s\n", Utilities::StringifySql($sql, $startThis, $now) if $verbose>1;
+printf "%s\n", Utilities->newStringifySql($sql, $startThis, $now) if $verbose>1;
 $thisn += $crms->SimpleSqlGet($sql, $startThis, $now);
 $lastn += $crms->SimpleSqlGet($sql, $startLast, $startThis);
 $sql = 'SELECT id,shortname FROM institutions'.
@@ -115,8 +120,8 @@ $msg =~ s/__TOTAL_LAST_WEEK__/$lastn/g;
 $mails{$crms->GetSystemVar('mailingList')} = 1 if $lists;
 
 $msg .= sprintf('<span style="font-size:.9em;">Report for week %s to %s, compared to week %s to %s</span>',
-                $crms->FormatDate($startThis), $crms->FormatDate($now),
-                $crms->FormatDate($startLast), $crms->FormatDate($startThis));
+                Utilities->new->FormatDate($startThis), Utilities->new->FormatDate($now),
+                Utilities->new->FormatDate($startLast), Utilities->new->FormatDate($startThis));
 $msg .= '</body></html>';
 
 @mails = keys %mails;

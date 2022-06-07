@@ -1,0 +1,164 @@
+<script type="text/javascript">
+<!--
+function CheckAll(box, formid) {
+	var aa = document.getElementById(formid);
+	for (var i = 0; i < aa.elements.length; i++) {
+	  aa.elements[i].checked = box.checked;
+	}
+}
+-->
+</script>
+
+[% pf = cgi.param('projectForm') %]
+[% ps = cgi.param('projectSel') %]
+[% IF pf == 1 %]
+  [% current_user.project = ps %]
+  [% CALL current_user.save %]
+[% END %]
+
+[% rf = cgi.param('roleForm') %]
+[% rs = cgi.param('roleSel') %]
+[% IF rf == 1 %]
+  [% current_user.role = rs %]
+  [% CALL current_user.save %]
+[% END %]
+
+
+[% IF current_user.projects.size > 1 %]
+  <form action="crms">
+    <input type="hidden" name="projectForm" value="1"/>
+    <label for="projectSel">Current project:</label>
+    <select name="projectSel" id="projectSel" onchange="this.form.submit()">
+    [% FOREACH proj IN current_user.projects %]
+      <option value="[% proj.id %]" [% (current_user.project == proj.id)? 'selected':'' %]>
+        [% proj.name %] ([% proj.count %] available)
+      </option>
+    [% END %]
+    </select>
+  </form>
+[% END %]
+
+
+[% IF current_user.roles.size > 1 %]
+  <form action="crms">
+    <input type="hidden" name="roleForm" value="1"/>
+    <label for="roleSel">Current role:</label>
+    <select name="roleSel" id="roleSel" onchange="this.form.submit()">
+    [% FOREACH role IN current_user.roles %]
+      <option value="[% role.id %]" [% ((current_user.role || 'reviewer') == role.id)? 'selected':'' %]>
+        [% role.name %]
+      </option>
+    [% END %]
+    </select>
+  </form>
+[% END %]
+
+
+[% n = crms.CountHolds(current_user) %]
+[% IF n %]<h4>You have $n [% utils.Pluralize(n, 'volume') %] on hold.</h4>[% END %]
+
+[% # FIXME: GetAddToQueueRef() is potentially inefficient. %]
+[% # FIXME: replace this with breakdown of reviewer's items by project. %]
+[% ref = crms.GetAddToQueueRef(current_user) %]
+[% n = ref.size %]
+[% IF n>0 %]
+  <h4>You have $n
+    <a href="[% crms.BuildURL('queueAdd') %]">
+    high-priority</a> [% utils.Pluralize(n, 'volume') %].
+  </h4>
+[% END %]
+<br/>
+[% IF cgi.param('unlockSel') %]
+  <br/>
+  [% FOREACH param IN cgi.param %]
+    [% matches = param.match('(vol_)(.+)') %]
+    [% IF matches.0 == 'vol_' %]
+      [% CALL crms.UnlockItem(matches.1) %]
+    [% END %]
+  [% END %]
+[% ELSIF cgi.param('unlock') %]
+  [% CALL crms.UnlockItem(cgi.param('unlock')) %]
+[% END %]
+
+<main>
+<div class="text-center">
+  <img height="100%" style="margin-bottom:3em;" alt="CRMS Logo"
+       src="[% crms.WebPath('web', 'crms.png') %]" />
+  <table class="mainnav">
+  [% menus = crms.Menus(current_user) %]
+  [% i = 0 %]
+  [% of = menus.size() %]
+  [% FOREACH menu IN menus %]
+    [% id = menu.0 %]
+    [% IF i % 2 == 0 %]
+      [% j = i+1 %]
+      [% IF j < of %]
+        <tr>
+          <th id="[% menus.$i.1 %]" scope="col">
+            [% presenter.t('.menu.' _ menus.$i.1) %]
+          </th>
+          <th id="[% menus.$j.1 %]" scope="col">
+            [% presenter.t('.menu.' _ menus.$j.1) %]
+          </th>
+        </tr>
+      [% ELSE %]
+        <tr><th colspan='2' id="[% menus.$i.1 %]" scope="col">
+          [% presenter.t('.menu.' _ menus.$i.1) %]
+        </th></tr>
+      [% END %]
+    [% END %]
+    [% colspan = '' %]
+    [% IF i % 2 == 0 %]
+      [% IF j >= of %][% colspan = 'colspan="2"' %][% END %]
+      <tr>
+    [% END %]
+      <td $colspan headers="[% menus.$i.1 %]">
+      [% items = crms.MenuItems(id, current_user) %]
+      [% FOREACH item IN items %]
+        [% target = (item.2)? ' target="' _ item.2 _ '"':'' %]
+        [% url = router.put_locale(item.1) %]
+        [% name = presenter.t('.menu_item.' _ menu.1 _ '.' _ item.0) %]
+        <a href="[% url %]"[% target %] [% item.3 %]>
+          [% name.replace('\s', '&nbsp;') %]
+        </a>
+        <br/>
+      [% END %]
+      </td>
+    [% IF i % 2 != 0 || j >= of %]</tr>[% END %]
+    [% i = i + 1 %]
+  [% END %]
+  </table>
+<div>
+
+
+[% locked = crms.GetLockedItems(current_user) %]
+[% IF locked.size %]
+  [% sysStatus = crms.GetSystemStatus().1 %]
+  <br/><br/>
+  <form action="crms" id="checks">
+  <input type="checkbox" id="SelectAllCB" onclick="CheckAll(this,'checks');"/>
+  <label for="SelectAllCB">Select All</label>&nbsp;&nbsp;&nbsp;&nbsp;
+  [% IF sysStatus == 'normal' %]
+    <input type="submit" name="unlockSel" value="Unlock Selected Volumes"/>
+  [% END %]
+  <br/><br/>
+  <table class="exportStats" style="width:55%">
+  <tr><th colspan="6" style="text-align:center;"><span class="major">Your&nbsp;Locked&nbsp;Items</span></th></tr>
+  <tr><th>ID</th><th>Title</th><th>Select</th><th>Unlock</th></tr>
+  [% sys = cgi.param('sys') %]
+  [% FOREACH item IN locked %]
+    <tr>
+      <td>[% item.id %]</td>
+      <td>[% item.title %]</td>
+      <td style="text-align:center"><input type="checkbox" name="vol_[% item %]"/></td>
+      <td style="text-align:center">
+        [% IF sysStatus == 'normal' %]<a href="[% crms.BuildURL('', 'unlock', item) %]">do it</a>[% END %]
+      </td>
+    </tr>
+  [% END %]
+</table>
+</form>
+<br/>
+[% END %]
+</main>
+

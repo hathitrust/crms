@@ -4,23 +4,12 @@ use parent 'Project';
 use strict;
 use warnings;
 
+use Utilities;
+
 sub new
 {
   my $class = shift;
   return $class->SUPER::new(@_);
-}
-
-my %TEST_HTIDS = (
-    'coo.31924000029250' => 'Australia',
-    'bc.ark:/13960/t02z7k303' => 'Canada',
-    'bc.ark:/13960/t0bw4939s' => 'UK');
-
-sub tests
-{
-  my $self = shift;
-
-  my @tests = keys %TEST_HTIDS;
-  return \@tests;
 }
 
 # ========== CANDIDACY ========== #
@@ -77,7 +66,7 @@ sub GetCutoffYear
   my $country = shift;
   my $name    = shift;
 
-  my $year = $self->{crms}->GetTheYear();
+  my $year = Utilities->new->Year();
   # Generic cutoff for add to queue page.
   if (! defined $country)
   {

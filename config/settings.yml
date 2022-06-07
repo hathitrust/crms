@@ -1,0 +1,57 @@
+## ================================================================== ##
+## Where the system lives
+## ================================================================== ##
+# Used by CRMS::Host with cron scripts that do not have HTTP_HOST when generating URLs.
+# Keep for now, but consider an alternative way of doing this. Maybe k8s can help.
+host: babel.hathitrust.org
+# This should be constructed using SDR_ROOT and removed from config.
+logout: https://babel.hathitrust.org/cgi/logout?
+
+## ================================================================== ##
+## Branding
+## ================================================================== ##
+#system            = CRMS
+logo: crms.png
+smallLogo: crmsblue.png
+# Should modernize favicon practices later.
+# See https://evilmartians.com/chronicles/how-to-favicon-in-2021-six-files-that-fit-most-needs
+# Consider a different favicon for development environment
+favicon: CRMSBlueIcon.png
+
+## ================================================================== ##
+## mysql server connection settings
+## ================================================================== ##
+# The hostname for the database where your CRMS data will be stored.
+mysqlServer: mysql-sdr
+# The hostname for your DEVELOPMENT database if you have one. Otherwise, just enter your database server hostname.
+mysqlServerDev: mysql-htdev
+# The name of your database where your CRMS data will be stored.
+mysqlDbName: crms
+
+## ================================================================== ##
+## MDP (rights) mysql server connection settings
+## ================================================================== ##
+mysqlMdpServer: mysql-sdr
+mysqlMdpServerDev: mysql-sdr
+mysqlMdpDbName: ht
+
+## ================================================================== ##
+## Other stuff. Override by adding an entry to the systemvars table
+## ================================================================== ##
+# The address that scripts in crms/bin send e-mail as.
+# Used by every process that sends mail.
+senderEmail: crms-mailbot@umich.edu
+# The experts/admin email address.
+# Used only by bin/mailer.pl.
+expertsEmail: crms-experts@umich.edu
+# Mailing lists for distribution to reviewers on active projects.
+# FIXME: this can migrate to Project.pm or the projects table.
+# This is only used by Wednesday Data Report (bin/weekly.pl) with the -l flag
+# and may not be used at all. FIXME: check the cron jobs.
+# Yes, it is used on the production cron job.
+mailingList: ht-copyright-review@umich.edu,ht-commonwealth-review@umich.edu
+#logFile            = log.txt
+# Location in Production for writing .rights export files
+productionRightsDirectory: /htapps/babel/feed/var/rights
+# Used by Jira.pm
+jira_prefix: https://hathitrust.atlassian.net

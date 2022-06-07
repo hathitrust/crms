@@ -1,0 +1,100 @@
+[% # FIXME: which of these are actually used? %]
+[% error    = cgi.param('errorMsg')   %]
+[% htid     = cgi.param('htid')       %]
+[% editing  = cgi.param('editing')    %]
+[% renNum   = cgi.param('renNum')     %]
+[% renDate  = cgi.param('renDate')    %]
+[% note     = cgi.param('note')       %]
+[% category = cgi.param('category')   %]
+[% select   = cgi.param('rights')     %]
+[% hold     = cgi.param('hold')       %]
+[% swiss    = cgi.param('swiss')      %]
+[% sys      = cgi.param('sys')        %]
+[% mag      = cgi.cookie('mag')       %]
+[% ptview   = cgi.cookie('ptview')    %]
+[% import   = cgi.param('importUser') %]
+
+[% expert   = current_user.is_expert() %]
+
+[% IF htid && editing %]
+  [% IF crms.PreviouslyReviewed(htid, current_user) %]
+    <h3>Too late, can't edit your review for this item.</h3>
+    [% STOP %]
+  [% END %]
+  [% IF 0 %]
+  [% IF expert && crms.HasItemBeenReviewedByAnotherExpert(htid, current_user) %]
+    <h3>Item has already been reviewed by another expert.</h3>
+    <br/><a href="javascript:window.close()">Close</a>
+    [% STOP %]
+  [% END %]
+  [% END %]
+  [% IF NOT expert %]
+    [% CALL crms.UnlockAllItemsForUser(current_user) %]
+  [% END %]
+  [% err = crms.LockItem(htid, current_user, expert) %]
+  [% IF err %]
+    <h3>[% err %].</h3>
+    <br/><a href="javascript:window.close()">Close</a>
+    [% STOP %]
+  [% END %]
+[% END %]
+
+[% IF !editing && !error %]
+  [%# ## Get locked item or new one from queue ## %]
+  [% IF crms.HasLockedItem(current_user) %]
+    [% htid = crms.GetLockedItem(current_user) %]
+  [% ELSE %]
+    [% htid = crms.GetNextItemForReview(current_user) %]
+  [% END %]
+[% END %]
+
+[%# ## failed to get a htid ## %]
+[% IF NOT htid %]
+  [% INCLUDE novols.tt %]
+  [% #INCLUDE footer.tt %]
+  [% STOP %]
+[% END %]
+
+[% data = crms.ReviewData(htid) %]
+<div class="divbody">
+  <div class="operational-pane">
+    [% es = crms.GetErrors() %]
+    [% IF es.size %]
+      [% IF NOT error %][% error = '' %][% END %]
+      [% FOREACH e IN es %]
+        [% error = error _ e _ '<br/>' %]
+      [% END %]
+    [% END %]
+    [% CALL crms.ClearErrors() %]
+    
+    [% partials = crms.ReviewPartialsForProject(data.queue.project) %]
+    [% FOR partial IN partials %]
+      [% tmpl = 'partial/' _ partial _ '.tt' %]
+      [% INCLUDE $tmpl crms = crms, htid = htid, user = user, data = data,
+                      error = error %]
+    [% END %]
+    
+    [% IF error %]
+      <div class="reviewPartial" id="Error_div">
+        <table>
+          <tr>
+            <td style="text-align:left;">
+              <strong style="color:red;">Error Message:</strong>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <textarea cols="20" rows="5">[% error %]</textarea>
+            </td>
+          </tr>
+        </table>
+      </div>
+    [% END %]
+    <span id="debugArea"></span>
+  </div> <!-- Operational Pane div -->
+  [%# the frame (Stanford, HT, Cat...) %]
+  <div class="divFrame" id="divFrame">
+    <iframe class="review-frame" title="Authority 1" id="tFrame" src="about:blank"></iframe>
+    <iframe class="review-frame" title="Authority 2" id="bFrame" src="about:blank" style="display:none;"></iframe>
+  </div>
+</div>

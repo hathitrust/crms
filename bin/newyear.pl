@@ -2,17 +2,23 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+BEGIN {
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
+}
 
 use utf8;
 binmode(STDOUT, ':encoding(UTF-8)');
-use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 use JSON::XS;
 use Term::ANSIColor qw(:constants colored);
 $Term::ANSIColor::AUTORESET = 1;
 use Data::Dumper;
+
+use CRMS;
+use User;
+use Utilities;
 
 my $usage = <<END;
 USAGE: $0 [-hnpv] [-e HTID [-e HTID...]]
@@ -112,7 +118,7 @@ die "Can't get Commonwealth project" unless defined $commonwealth_pid;
 die "Can't get Publication Date project" unless defined $pubdate_pid;
 die "Can't get Crown Copyright project" unless defined $crown_copyright_pid;
 my $nyp_ref = $crms->GetProjectRef($nyp);
-$year = $crms->GetTheYear() unless $year;
+$year = Utilities->new->Year() unless $year;
 my $pdus_cutoff_year = $year - 95;
 my $pd_cutoff_year = $year - 125;
 my $jsonxs = JSON::XS->new->utf8;
@@ -132,7 +138,7 @@ sub ProcessCommonwealthProject {
     $sql .= sprintf(" AND NOT e.id IN ('%s')", join "','", @excludes);
   }
   $sql .= ' ORDER BY e.time DESC';
-  print Utilities::StringifySql($sql, $commonwealth_pid, $year). "\n" if $verbose > 1;
+  print Utilities->new->StringifySql($sql, $commonwealth_pid, $year). "\n" if $verbose > 1;
   my $ref = $crms->SelectAll($sql, $commonwealth_pid, $year);
   my %seen;
   printf "Checking %d possible Commonwealth determinations…\n", scalar @$ref;
@@ -227,7 +233,7 @@ sub ProcessPubDateProject
     $sql .= sprintf(" AND NOT e.id IN ('%s')", join "','", @excludes);
   }
   $sql .= ' ORDER BY e.time DESC';
-  print Utilities::StringifySql($sql, $pubdate_pid). "\n" if $verbose > 1;
+  print Utilities->new->StringifySql($sql, $pubdate_pid). "\n" if $verbose > 1;
   my $ref = $crms->SelectAll($sql, $pubdate_pid);
   printf "Checking %d possible Publication Date determinations…\n", scalar @$ref;
   foreach my $row (@$ref) {
@@ -296,7 +302,7 @@ sub ProcessCrownCopyrightProject {
     $sql .= sprintf(" AND NOT e.id IN ('%s')", join "','", @excludes);
   }
   $sql .= ' ORDER BY e.time DESC';
-  print Utilities::StringifySql($sql, $crown_copyright_pid, $year). "\n" if $verbose > 1;
+  print Utilities->new->StringifySql($sql, $crown_copyright_pid, $year). "\n" if $verbose > 1;
   my $ref = $crms->SelectAll($sql, $crown_copyright_pid, $year);
   my %seen;
   printf "Checking %d possible Crown Copyright determinations…\n", scalar @$ref;
@@ -403,7 +409,8 @@ sub SubmitNewYearReview
   my $params = {'rights' => $rights,
                 'note' => "New Year $year",
                 'category' => 'Expert Note'};
-  my $result = $crms->SubmitReview($id, 'autocrms', $params, $nyp_ref);
+  my $autocrms = User::Where(email => 'autocrms');
+  my $result = $crms->SubmitReview($id, $autocrms, $params, $nyp_ref);
   if ($result) {
     print RED "SubmitReview() for $id: $result\n";
   }

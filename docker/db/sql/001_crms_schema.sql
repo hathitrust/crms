@@ -112,7 +112,6 @@ DROP TABLE IF EXISTS `projects`;
 CREATE TABLE `projects` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(64) NOT NULL,
-  `color` varchar(6) DEFAULT NULL,
   `queue_size` int(11) NOT NULL DEFAULT '0',
   `autoinherit` tinyint(4) NOT NULL DEFAULT '0',
   `group_volumes` tinyint(4) NOT NULL DEFAULT '0',
@@ -123,8 +122,8 @@ CREATE TABLE `projects` (
   UNIQUE KEY `name` (`name`),
   KEY `fk_auth1` (`primary_authority`),
   KEY `fk_auth2` (`secondary_authority`),
-  CONSTRAINT `projects_ibfk_1` FOREIGN KEY (`primary_authority`) REFERENCES `authorities` (`id`) ON UPDATE CASCADE,
-  CONSTRAINT `projects_ibfk_2` FOREIGN KEY (`secondary_authority`) REFERENCES `authorities` (`id`) ON UPDATE CASCADE
+  CONSTRAINT `projects_fk_primary_authority` FOREIGN KEY (`primary_authority`) REFERENCES `authorities` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `projects_fk_secondary_authority` FOREIGN KEY (`secondary_authority`) REFERENCES `authorities` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -192,7 +191,7 @@ CREATE TABLE `candidates` (
   `project` int(11) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   KEY `fk_project` (`project`),
-  CONSTRAINT `candidates_ibfk_2` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE
+  CONSTRAINT `candidates_fk_project` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -253,7 +252,7 @@ CREATE TABLE `corrections` (
   `id` varchar(32) NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `locked` varchar(64) DEFAULT NULL,
-  `user` varchar(64) DEFAULT NULL,
+  `user` bigint(20) DEFAULT NULL,
   `status` varchar(32) DEFAULT NULL,
   `ticket` varchar(32) DEFAULT NULL,
   `note` text,
@@ -578,7 +577,7 @@ CREATE TABLE `exportdata` (
   KEY `status_idx` (`status`),
   KEY `priority_idx` (`priority`),
   KEY `fk_project` (`project`),
-  CONSTRAINT `exportdata_ibfk_1` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE
+  CONSTRAINT `exportdata_fk_project` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=1737265 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -621,12 +620,13 @@ DROP TABLE IF EXISTS `historicalreviews`;
 CREATE TABLE `historicalreviews` (
   `id` varchar(32) NOT NULL DEFAULT '',
   `time` varchar(100) NOT NULL DEFAULT '',
-  `user` varchar(64) NOT NULL,
+  `user` bigint(20) NOT NULL,
   `attr` tinyint(4) NOT NULL DEFAULT '0',
   `reason` tinyint(4) NOT NULL DEFAULT '0',
   `note` text,
   `category` varchar(32) DEFAULT NULL,
   `expert` int(1) DEFAULT NULL,
+  `role` BIGINT(20) DEFAULT NULL,
   `duration` varchar(10) DEFAULT '00:00:00',
   `legacy` int(11) DEFAULT '0',
   `swiss` tinyint(1) DEFAULT NULL,
@@ -642,7 +642,8 @@ CREATE TABLE `historicalreviews` (
   KEY `user_idx` (`user`),
   KEY `gid_idx` (`gid`),
   KEY `fk_data` (`data`),
-  CONSTRAINT `historicalreviews_ibfk_1` FOREIGN KEY (`data`) REFERENCES `reviewdata` (`id`) ON UPDATE CASCADE
+  CONSTRAINT `historicalreviews_fk_data` FOREIGN KEY (`data`) REFERENCES `reviewdata` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `historicalreviews_fk_role` FOREIGN KEY (`role`) REFERENCES `roles` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -667,89 +668,6 @@ CREATE TABLE `inherit` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `inserts`
---
-
-DROP TABLE IF EXISTS `inserts`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `inserts` (
-  `id` varchar(32) NOT NULL,
-  `iid` int(11) NOT NULL DEFAULT '0',
-  `user` varchar(64) NOT NULL,
-  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `renewed` tinyint(4) NOT NULL,
-  `renNum` varchar(12) DEFAULT NULL,
-  `renDateY` int(11) DEFAULT NULL,
-  `renDateM` int(11) DEFAULT NULL,
-  `renDateD` int(11) DEFAULT NULL,
-  `page` int(11) NOT NULL DEFAULT '0',
-  `author` mediumtext,
-  `title` mediumtext,
-  `pub_date` int(11) DEFAULT NULL,
-  `pub_history` mediumtext,
-  `type` varchar(32) DEFAULT NULL,
-  `timer` time NOT NULL DEFAULT '00:00:00',
-  `source` varchar(32) NOT NULL,
-  `reason` varchar(32) NOT NULL,
-  `hold` timestamp NULL DEFAULT NULL,
-  `estimate` int(11) DEFAULT NULL,
-  `insufficient` int(11) DEFAULT NULL,
-  `pd` tinyint(1) DEFAULT NULL,
-  `restored` tinyint(1) NOT NULL DEFAULT '0',
-  `override` tinyint(1) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`,`iid`,`user`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `insertsqueue`
---
-
-DROP TABLE IF EXISTS `insertsqueue`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `insertsqueue` (
-  `id` varchar(32) NOT NULL,
-  `locked` varchar(64) DEFAULT NULL,
-  `status` tinyint(4) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `insertstotals`
---
-
-DROP TABLE IF EXISTS `insertstotals`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `insertstotals` (
-  `id` varchar(32) NOT NULL,
-  `user` varchar(64) NOT NULL,
-  `type` varchar(32) NOT NULL,
-  `total` int(11) NOT NULL DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `institutions`
---
-
-DROP TABLE IF EXISTS `institutions`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `institutions` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` longtext NOT NULL,
-  `shortname` longtext NOT NULL,
-  `suffix` varchar(31) DEFAULT NULL,
-  `report` tinyint(1) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=105 DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `mail`
 --
 
@@ -757,7 +675,7 @@ DROP TABLE IF EXISTS `mail`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `mail` (
-  `user` varchar(64) NOT NULL,
+  `user` bigint(20) NOT NULL,
   `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `sent` timestamp NULL DEFAULT NULL,
   `id` varchar(32) DEFAULT NULL,
@@ -818,37 +736,6 @@ CREATE TABLE `note` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `orphan`
---
-
-DROP TABLE IF EXISTS `orphan`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `orphan` (
-  `id` varchar(32) NOT NULL,
-  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `predeterminationsbreakdown`
---
-
-DROP TABLE IF EXISTS `predeterminationsbreakdown`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `predeterminationsbreakdown` (
-  `date` date NOT NULL,
-  `s2` int(11) NOT NULL DEFAULT '0',
-  `s3` int(11) NOT NULL DEFAULT '0',
-  `s4` int(11) NOT NULL DEFAULT '0',
-  `s8` int(11) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `processstatus`
 --
 
@@ -868,23 +755,25 @@ DROP TABLE IF EXISTS `users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `users` (
-  `id` varchar(64) NOT NULL,
-  `kerberos` varchar(12) DEFAULT NULL,
+  `id` bigint(20) AUTO_INCREMENT,
+  `email` mediumtext NOT NULL,
   `name` mediumtext NOT NULL,
-  `reviewer` tinyint(1) NOT NULL DEFAULT '1',
-  `advanced` tinyint(1) NOT NULL DEFAULT '0',
-  `expert` tinyint(1) NOT NULL DEFAULT '0',
-  `admin` tinyint(1) NOT NULL DEFAULT '0',
-  `alias` varchar(64) DEFAULT NULL,
+  `reviewer` tinyint(1) NOT NULL DEFAULT 0,
+  `advanced` tinyint(1) NOT NULL DEFAULT 0,
+  `expert` tinyint(1) NOT NULL DEFAULT 0,
+  `admin` tinyint(1) NOT NULL DEFAULT 0,
+  `role` bigint(20) DEFAULT NULL,
   `note` text,
-  `institution` int(11) NOT NULL DEFAULT '0',
+  `institution` varchar(64) NOT NULL,
   `commitment` decimal(4,4) DEFAULT NULL,
   `project` int(11) DEFAULT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  `internal` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
-  KEY `fk_institution` (`institution`),
-  KEY `fk_project` (`project`),
-  CONSTRAINT `fk_institution` FOREIGN KEY (`institution`) REFERENCES `institutions` (`id`) ON UPDATE CASCADE,
-  CONSTRAINT `users_ibfk_2` FOREIGN KEY (`project`) REFERENCES `projects` (`id`)
+  KEY `users_idx_institution` (`institution`),
+  KEY `users_idx_project` (`project`),
+  CONSTRAINT `users_fk_project` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `users_fk_role` FOREIGN KEY (`role`) REFERENCES `roles` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -900,8 +789,8 @@ CREATE TABLE `projectauthorities` (
   `authority` int(11) NOT NULL,
   KEY `fk_proj` (`project`),
   KEY `fk_cat` (`authority`),
-  CONSTRAINT `projectauthorities_ibfk_1` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE,
-  CONSTRAINT `projectauthorities_ibfk_2` FOREIGN KEY (`authority`) REFERENCES `authorities` (`id`) ON UPDATE CASCADE
+  CONSTRAINT `projectauthorities_fk_project` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `projectauthorities_fk_authority` FOREIGN KEY (`authority`) REFERENCES `authorities` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -917,8 +806,8 @@ CREATE TABLE `projectcategories` (
   `category` int(11) NOT NULL,
   KEY `fk_proj` (`project`),
   KEY `fk_cat` (`category`),
-  CONSTRAINT `projectcategories_ibfk_1` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE,
-  CONSTRAINT `projectcategories_ibfk_2` FOREIGN KEY (`category`) REFERENCES `categories` (`id`) ON UPDATE CASCADE
+  CONSTRAINT `projectcategories_fk_project` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `projectcategories_fk_category` FOREIGN KEY (`category`) REFERENCES `categories` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -933,7 +822,7 @@ CREATE TABLE `projectrights` (
   `project` int(11) NOT NULL DEFAULT '1',
   `rights` int(11) NOT NULL,
   KEY `fk_project` (`project`),
-  CONSTRAINT `projectrights_ibfk_2` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE
+  CONSTRAINT `projectrights_fk_project` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -946,32 +835,11 @@ DROP TABLE IF EXISTS `projectusers`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `projectusers` (
   `project` int(11) NOT NULL,
-  `user` varchar(64) NOT NULL,
+  `user` bigint(20) NOT NULL,
   KEY `fk_proj` (`project`),
   KEY `fk_user` (`user`),
-  CONSTRAINT `projectusers_ibfk_1` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE,
-  CONSTRAINT `projectusers_ibfk_2` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `publishers`
---
-
-DROP TABLE IF EXISTS `publishers`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `publishers` (
-  `nff` varchar(2) NOT NULL,
-  `name` text NOT NULL,
-  `citystate` text,
-  `email` text,
-  `phone` text,
-  `postal` text,
-  `added` date NOT NULL,
-  `notes1` text,
-  `notes2` text,
-  `reviewed` text NOT NULL
+  CONSTRAINT `projectusers_fk_project` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `projectusers_fk_users` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -990,16 +858,16 @@ CREATE TABLE `queue` (
   `locked` varchar(64) DEFAULT NULL,
   `priority` decimal(4,2) NOT NULL DEFAULT '0.00',
   `source` varchar(32) NOT NULL DEFAULT 'candidates',
-  `added_by` varchar(64) DEFAULT NULL,
+  `added_by` bigint(20) DEFAULT NULL,
   `ticket` varchar(32) DEFAULT NULL,
   `project` int(11) NOT NULL DEFAULT '1',
-  `unavailable` tinyint(4) NOT NULL DEFAULT '0',
+  `unavailable` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `status_idx` (`status`),
   KEY `locked_idx` (`locked`),
   KEY `priority_idx` (`priority`),
-  KEY `fk_project` (`project`),
-  CONSTRAINT `queue_ibfk_1` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE
+  CONSTRAINT `queue_fk_project` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `queue_fk_added_by` FOREIGN KEY (`added_by`) REFERENCES `users` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1062,12 +930,13 @@ DROP TABLE IF EXISTS `reviews`;
 CREATE TABLE `reviews` (
   `id` varchar(32) NOT NULL DEFAULT '',
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `user` varchar(64) NOT NULL,
+  `user` bigint(20) NOT NULL,
   `attr` tinyint(4) NOT NULL DEFAULT '0',
   `reason` tinyint(4) NOT NULL DEFAULT '0',
   `note` text,
   `category` varchar(32) DEFAULT NULL,
   `expert` int(1) DEFAULT NULL,
+  `role` BIGINT(20) DEFAULT NULL,
   `duration` varchar(10) DEFAULT '00:00:00',
   `legacy` int(11) DEFAULT '0',
   `swiss` tinyint(1) DEFAULT NULL,
@@ -1076,8 +945,9 @@ CREATE TABLE `reviews` (
   PRIMARY KEY (`id`,`user`),
   KEY `attr_idx` (`attr`),
   KEY `reason_idx` (`reason`),
-  KEY `fk_data` (`data`),
-  CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`data`) REFERENCES `reviewdata` (`id`) ON UPDATE CASCADE
+  KEY `data_idx` (`data`),
+  CONSTRAINT `reviews_fk_data` FOREIGN KEY (`data`) REFERENCES `reviewdata` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `reviews_fk_role` FOREIGN KEY (`role`) REFERENCES `roles` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1188,7 +1058,7 @@ DROP TABLE IF EXISTS `userstats`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `userstats` (
-  `user` varchar(64) NOT NULL,
+  `user` bigint(20) NOT NULL,
   `month` varchar(2) DEFAULT NULL,
   `year` varchar(4) DEFAULT NULL,
   `monthyear` varchar(7) NOT NULL DEFAULT '',
@@ -1206,7 +1076,7 @@ CREATE TABLE `userstats` (
   `total_neutral` int(11) DEFAULT NULL,
   `total_flagged` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`user`,`monthyear`,`project`),
-  KEY `fk_project` (`project`)
+  CONSTRAINT `userstats_fk_project` FOREIGN KEY (`project`) REFERENCES `projects` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1237,18 +1107,51 @@ CREATE TABLE licensing (
   `id` BIGINT(20) AUTO_INCREMENT PRIMARY KEY NOT NULL,
   `htid` VARCHAR(32) NOT NULL,
   `time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `user` VARCHAR(64) NOT NULL,
+  `user` bigint(20) NOT NULL,
   `attr` TINYINT(3) UNSIGNED NOT NULL,
   `reason` TINYINT(3) UNSIGNED NOT NULL,
   `ticket` VARCHAR(32) NOT NULL,
   `rights_holder` TEXT,
   `rights_file` TEXT NULL DEFAULT NULL,
-  CONSTRAINT `manual_permissions_ibfk_user` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON UPDATE CASCADE,
-  CONSTRAINT `manual_permissions_ibfk_attr` FOREIGN KEY (`attr`) REFERENCES `attributes` (`id`) ON UPDATE CASCADE,
-  CONSTRAINT `manual_permissions_ibfk_reason` FOREIGN KEY (`reason`) REFERENCES `reasons` (`id`) ON UPDATE CASCADE
+  CONSTRAINT `manual_permissions_fk_user` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `manual_permissions_fk_attr` FOREIGN KEY (`attr`) REFERENCES `attributes` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `manual_permissions_fk_reason` FOREIGN KEY (`reason`) REFERENCES `reasons` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
+DROP TABLE IF EXISTS `roles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `roles` (
+  `id` BIGINT(20) AUTO_INCREMENT PRIMARY KEY NOT NULL,
+  `name` VARCHAR(64) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+
+DROP TABLE IF EXISTS `user_pages`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `user_pages` (
+  `user` bigint(20) NOT NULL,
+  `page` varchar(32) NOT NULL,
+  CONSTRAINT `user_pages_fk_user` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+
+DROP TABLE IF EXISTS `user_roles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `user_roles` (
+  `user` BIGINT(20) NOT NULL,
+  `role` BIGINT(20) NOT NULL,
+  CONSTRAINT `user_roles_fk_user` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `user_roles_fk_role` FOREIGN KEY (`role`) REFERENCES `roles` (`id`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
 /*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;

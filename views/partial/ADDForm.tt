@@ -1,0 +1,270 @@
+[% cgi        = crms.get('cgi')         %]
+[% importUser = cgi.param('importUser') %]
+
+[% # FIXME: put Crown Copyright checkbox %]
+
+[% # Set up values from CGI (in case of error) or existing review (editing). %]
+[% u_pub = (error)? cgi.param('pub') : data.reviews.$user.data.pub %]
+[% u_date = (error)? cgi.param('date') : data.reviews.$user.data.date %]
+[% u_crown = (error)? cgi.param('crown') : data.reviews.$user.data.crown %]
+[% u_rights = (error)? cgi.param('rights') : data.reviews.$user.rights %]
+[% u_category = (error)? cgi.param('category') : data.reviews.$user.category %]
+[% u_note = (error)? cgi.param('note') : data.reviews.$user.note %]
+[% u_swiss = (error)? cgi.param('swiss') : data.reviews.$user.swiss %]
+[% u_hold = (error)? cgi.param('hold') : data.reviews.$user.hold %]
+
+<div class="reviewPartial">
+<form name="submitReview" action="crms">
+  <input type="hidden" name="p"       value="finishReview"/>
+  <input type="hidden" name="htid" value="[% htid %]"/>
+  <input type="hidden" name="start"   value="[% utils.Now() %]"/>
+  <input type="hidden" name="user"    value="[% user %]"/>
+  <input type="hidden" name="editing" value="[% editing %]"/>
+  <table>
+    <tr>
+      [% label = (u_renNum)? "Publication&nbsp;Date":"Author Death Date" %]
+      <td class="nowrap"><strong><label id="renewalFieldLabel" for="renewalField">
+      [% label %]: </label></strong></td>
+      <td class="nowrap">
+      [% IF NOT u_date && NOT importUser %]
+        [% authorDD = crms.GetADDFromAuthor(htid) %]
+        [% IF NOT authorDD %]
+          [% viafdata = crms.GetVIAFData(htid) %]
+          [% IF viafdata && viafdata.add %]
+            [% authorDD = viafdata.add %]
+            [% viaf = 1 %]
+          [% END %]
+        [% END %]
+        [% IF authorDD %]
+          <input type="hidden" name="src" value="[% (viaf)? 'viaf':'catalog' %]"/>
+          [% u_date = authorDD %]
+          [% tip = (viaf)? "VIAF":"Zephir" %]
+        [% END %]
+      [% END %]
+      <input id="renewalField" title="[% label %]" type="text" name="date"
+             value="[% u_date %]" size="6"
+             onblur="javascript:PredictRights('[% htid %]');"/>
+      [% IF tip %]
+        <span class="red">$tip</span>
+      [% END %]
+      <a style="position:absolute;left:-999px;" href="#" accesskey="d"
+         onfocus="document.getElementById('renewalField').focus()">.</a>
+      </td>
+    </tr>
+    [% IF data.bibdata.pub_date_format.match('^\d+-\d+$') %]
+      <tr id="actualPubRow">
+        <td class="nowrap"><strong><label id="actualPubDateFieldLabel" for="actualPubDateField">
+          Actual Pub Date: </label></strong>
+        </td>
+        <td class="nowrap">
+          <input id="actualPubDateField" title="Actual Pub Date" type="text"
+                 name="actualPubDateField" size="6"
+                 onblur="javascript:PredictRights('[% htid %]');"/>
+        </td>
+      </tr>
+    [% END %]
+    <tr>
+      <td class="reviewGrey" style="text-align:left;margin:0px;padding:0px;">
+        <input type="checkbox" id="renewalFieldCheckbox" name="renNum"[% (u_renNum)? ' checked="checked"':'' %]
+               onchange="ToggleADD();PredictRights('[% htid %]');"/>
+        <label for="renewalFieldCheckbox">&nbsp;Pub Date</label>
+      </td>
+      <td>
+        <input type="button" class="reviewblue" value="Pull Pub Date"
+        [% IF NOT data.bibdata.pub_date_format.match('^-?\d+$') %]disabled="disabled"[% END %]
+        onclick="PullPubDate();
+                 document.getElementById('renewalFieldCheckbox').checked=true;
+                 PredictRights('[% htid %]');"
+        accesskey="d"
+        style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
+      </td>
+    </tr>
+  </table>
+[% rights = crms.Rights(htid, 1) %]
+<div id="RightsCont" class="subpartial">
+<div id="RightsReason" style="position:relative;">
+  <div id="rightsHelp" style="position:absolute;top:0px;right:1em;">
+    <a class="tip" href="#">
+      <img width="16" height="16" alt="Rights/Reason Help" src="[% crms.WebPath('web', 'help.png') %]"/>
+      <span>
+      [% asterisk = 0 %]
+      [% FOR right IN rights %]
+        <strong>[% right.rights %]</strong> - [% right.description %]<br/>
+        [% IF right.description.search('\*') %][% asterisk = 1 %][% END %]
+      [% END %]
+      [% IF asterisk %]
+        <br/>* if no publication date listed on piece, use copyright date
+      [% END %]
+      </span>
+    </a>
+  </div>
+  [% rights = crms.Rights(htid) %]
+  [% of = rights.size() %]
+  [% n = 0 %]
+    <div style="display:none" id="UNDNFI" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=5 AND reason=8') %]"></div>
+    <div style="display:none" id="ICREN" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=2 AND reason=7') %]"></div>
+    <table>
+    <tr style="height:20px;">
+      <td><strong>Rights/Reason:</strong></td>
+      <td>
+        <img id="predictionLoader" width="16" height="16"
+             src="[% crms.WebPath('web', 'ajax-loader.gif') %]"
+             alt="loading..." style="display:none;"/>
+      </td>
+    </tr>
+    [% WHILE n < of %]
+      <tr>
+      [% right = rights.$n %]
+      <td style="width:50%;">
+        <input type="radio" id="[% 'r' _ right.id %]" name="rights" value="[% right.id %]"
+              [% IF right.n < 10 %]accesskey="[% right.n %]"[% END %]
+              [% IF u_rights == right.id %] checked="checked"[% END %]/>
+        <label for="[% 'r' _ right.id %]">[% right.attr %]/[% right.reason.upper %] ([% right.n %])</label>
+      </td>
+      [% n = n + 1 %]
+      <td style="width:50%;">
+        [% IF n < of %]
+        [% right = rights.$n %]
+        <input type="radio" id="[% 'r' _ right.id %]" name="rights" value="[% right.id %]"
+              [% IF right.n < 10 %]accesskey="[% right.n %]"[% END %]
+              [% IF u_rights == right.id %] checked="checked"[% END %]/>
+        <label for="[% 'r' _ right.id %]">[% right.attr %]/[% right.reason.upper %] ([% right.n %])</label>
+        [% END %]
+      </td>
+      </tr>
+      [% n = n + 1 %]
+    [% END %]
+    </table>
+</div>
+<div id="Notes">
+  <strong><label for="catMenu">Notes: </label></strong>
+  <select id="catMenu" class="review" name="category"
+    onchange="javascript:PredictRights('[% htid %]');"
+    >
+    <option value="" [% ("" == category)? 'selected="selected"':'' %]>none</option>
+    [% cats = crms.Categories(htid) %]
+    [% FOREACH cat IN cats %]
+      [% # FIXME: projectcategories may make CanVolumeBeCrownCopyright() obsolete %]
+      [% NEXT IF cat == 'Crown Copyright' && ! crms.CanVolumeBeCrownCopyright(htid) %]
+      <option value="[% cat %]" [% (cat == u_category)? 'selected="selected"':'' %]>[% cat %]</option>
+    [% END %]
+  </select>
+  <textarea title="Note Text" id="NoteTextField" name="note" cols="20" rows="1">[% u_note %]</textarea>
+  <a style="position:absolute;left:-999px;" href="#" accesskey="n"
+     onfocus="document.getElementById('NoteTextField').focus()">.</a>
+</div>
+<div id="SubmitForm">
+  <table>
+    <tr>
+      <td><input class="review" type="submit" name="submit" value="Submit" accesskey="s"/></td>
+      <td style="padding-left:2em;"><input class="review" type="submit" name="submit"
+          value="Cancel" accesskey="c" onclick="this.form.onsubmit=null;"/></td>
+    </tr>
+  </table>
+  </div>
+  <table>
+  [% IF expert %]
+    <tr>
+      [% checked = (u_swiss || ((status == 2 || status == 3) && data.project.SwissByDefault())) %]
+      <td style="text-align:left;">
+        <input type="checkbox" id="swiss" name="swiss" [% (checked)? 'checked="checked"':'' %]/>
+      </td>
+      <td><label for="swiss">Do not invalidate other reviews<br/>for this volume</label></td>
+    </tr>
+  [% END %]
+  [% holds = crms.CountHolds() %]
+  [% IF !hold %]
+    [% hold = crms.HoldForItem(htid, user) %]
+  [% END %]
+    <tr>
+      <td style="text-align:left;">
+        <input type="checkbox" id="hold" name="hold"
+               [% (holds >=5 && !hold)? 'disabled="disabled"':'' %]
+               [% (hold)? 'checked="checked"':'' %]
+               onclick="toggleVisibility('expiry');"/>
+      </td>
+      <td><label for="hold">Hold for Question</label></td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <span class="smallishText" [% (holds >=5)? 'style="color:red;"':'' %]>
+            <!--Held reviews will remain unprocessed.-->
+            You currently have [% holds %] out of the maximum 5 volumes on hold.
+            <!--It is up to you to get in touch with an expert.-->
+        </span>
+      </td>
+    </tr>
+  </table>
+  [% IF expert && importUser %]
+    [% reviews = data.reviews %]
+    [% IF reviews.keys.size %]
+      <table id="importReviewsTable" data-reviews='[% data.json %]'>
+        <tr>
+          <td>
+            <div style="line-height:20px;">
+              <strong>Import user review:</strong>
+            </div>
+          </td>
+          <td>
+            <img id="importLoader" src="[% crms.WebPath('web', 'ajax-loader.gif') %]"
+                 alt="loading..." style="display:none;"/>
+          </td>
+        [% FOREACH uid IN reviews.keys.sort %]
+          [% user = crms.GetUser(uid) %]
+          <tr>
+            <td><label for="pull[% uid %]">[% user.email %] ([% reviews.$uid.attr %]/[% reviews.$uid.reason %])</label></td>
+            <td><input type="radio" name="pullrights" id="pull[% user %]"
+                       [% IF importUser == uid %]checked="checked"[% END %]
+                       onclick="popReviewInfo('[% uid %]');"/>
+            </td>
+          </tr>
+        [% END %]
+      </table>
+    [% END %]
+  [% END %]
+</div>
+</form>
+
+<script>
+addEvent(window, 'load', function(e)
+{
+  [% IF importUser %]
+  popReviewInfo('[% importUser %]');
+  [% END %]
+  addEvent(window, 'load', Partial_ADDForm_mainWindowLoad);
+});
+
+function Partial_ADDForm_mainWindowLoad(e)
+{
+  var renewalField = document.getElementById("renewalField");
+  var year = renewalField.value;
+  var patt = /-?[0-9]+/;
+  if (patt.test(year))
+  {
+    PredictRights('[% htid %]');
+    document.getElementById('NoteTextField').focus();
+  }
+  else
+  {
+    document.getElementById('renewalField').focus();
+  }
+}
+
+function popReviewInfo(user)
+{
+  var el = document.getElementById('importReviewsTable');
+  var data = JSON.parse(el.dataset.reviews);
+  var review = data.reviews[user];
+  var button = document.getElementById("r" + review.rights);
+  if (button) { button.checked = "checked"; }
+  button = document.getElementById("renewalFieldCheckbox");
+  if (button) { button.checked = (review.renNum != null); }
+  var field = document.getElementById("renewalField");
+  if (field) { field.value = review.renNum; }
+  document.submitReview.renDate.value = review.renDate;
+  document.submitReview.note.value = review.note;
+  selMenuItem('catMenu', (review.category)? review.category:'');
+}
+</script>
+
+</div>

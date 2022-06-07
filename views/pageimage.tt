@@ -1,0 +1,38 @@
+[% id = cgi.param('id') %]
+[% seq = cgi.param('seq') || 0 %]
+[% data = crms.GetPageImage(id, seq) %]
+
+<div style="margin-top:1em;margin-left:1em;">
+<table class="helloBox">
+  <tr>
+    <td rowspan="4" style="padding:0px;height:80px;line-height:1px;">
+      <img src="[% crms.WebPath('web', 'HathiTrustLogo.png') %]"
+           width="86" height="80" alt="HathiTrust Logo"/>
+    </td>
+    <td>
+      <strong>Page Image for [% id %], sequence [% seq %]</strong>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      [% data.url %]
+    </td>
+  </tr>
+  <tr>
+    <td>
+      AK [% data.access_key %]
+    </td>
+  </tr>
+  <tr>
+    <td>
+      SK [% data.secret_key %]
+    </td>
+  </tr>
+</table>
+
+[% IF data.success %]
+  <img alt="page image" src="data:image/gif;base64,[% data.data %]"/>
+[% ELSE %]
+  <span>Could not get image: [% data.data %]</span>
+[% END %]
+</div>

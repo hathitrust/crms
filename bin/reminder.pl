@@ -2,7 +2,10 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+BEGIN {
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
+}
 
 use CRMS;
 use Getopt::Long;
@@ -78,7 +81,8 @@ my $ref = $crms->SelectAll($sql);
 my @mails;
 foreach my $row (@{$ref})
 {
-  my $user = $row->[0];
+  my $uid = $row->[0];
+  my $user = User::Find($uid);
   next if $crms->IsUserIncarnationExpertOrHigher($user);
   $sql = 'SELECT COUNT(id) FROM reviews WHERE user=?'.
          ' AND time>DATE_SUB(NOW(), INTERVAL 2 WEEK)';

@@ -1,0 +1,115 @@
+[% p_page = cgi.param('p')           %]
+[% p_proj = cgi.param('project')     %]
+[% p_year = cgi.param('year')        %]
+[% p_inst = cgi.param('institution') %]
+[% p_summ = cgi.param('summary')     %]
+[% #=== p_user is for links from Users page === %]
+[% p_user = cgi.param('user')        %]
+
+
+<h2>All Review Stats:</h2>
+<br/>
+<div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
+<form id="select" action="crms">
+<input type="hidden" name="p" value="$p_page"/>
+
+[% projs = crms.GetProjectsRef() %]
+<label for="projectSel" style="width:5em;float:left;">Project</label>
+<select title="Project" name="project" id="projectSel">
+  <option value="0" [% !p_proj ? 'selected="selected"':'' %]>(All)</option>
+  [% FOR proj IN projs %]
+    <option value="[% proj.id %]" [% p_proj == proj.id ? 'selected':'' %]>[% proj.name %]</option>
+  [% END %]
+</select>
+<br/>
+
+[% years = crms.GetUserStatsYears() %]
+<label for="projectSel" style="width:5em;float:left;">Year</label>
+<select title="Year" name="year" id="yearSel">
+  <option value="0" [% !project ? 'selected="selected"':'' %]>(All)</option>
+  [% FOR year IN years %]
+    <option value="[% year %]" [% p_year == year ? 'selected':'' %]>[% year %]</option>
+  [% END %]
+</select>
+<br/>
+
+[% insts = crms.GetParticipatingInstitutions() %]
+<label for="institutionSel" style="width:5em;float:left;">Institution</label>
+<select title="Institution" name="institution" id="institutionSel">
+  <option value="0" [% !p_inst ? 'selected="selected"':'' %]>(All)</option>
+  [% FOR inst IN insts %]
+    <option value="[% inst.inst_id %]" [% p_inst == inst.id ? 'selected':'' %]>[% inst.name %]</option>
+  [% END %]
+</select>
+<br/>
+
+<label for="summaryCB" style="width:5em;float:left;">Summary</label>
+<input type="checkbox" id="summaryCB" name="summary"
+       [% p_summ ? 'checked="checked"':'' %]/>
+<br/>
+<input type="submit" value="Submit"/>
+<input type="button" value="Clear"
+       onclick="selMenuItem('projectSel', 0);
+                selMenuItem('yearSel', 0);
+                selMenuItem('institutionSel', 0);"
+/>
+
+</form>
+</div>
+<br/><br/>
+[% IF p_summ %]
+  [% data = crms.CreateUserStatsReport() %]
+  <div id="[% divid %]" style="[% style %]">
+    <span style="font-size:1.3em;"><strong>[% data.title %]</strong></span>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <button type="button" onclick='toggleVisibility("RTDIV_[% param.id %]");'>
+      Show Raw Data
+    </button>
+    <br/>
+    [% data.html %]
+    <div id="RTDIV_[% param.id %]" style="display:none;">
+      <textarea id="RT_[% param.id %]" readonly="readonly"
+                style="font-family:monospace;height:15em;width:72%;">[% data.text %]</textarea>
+      <button type="button" onclick="document.getElementById('RT_[% param.id %]').select();document.execCommand('copy');">
+        Copy
+      </button>
+    </div>
+  </div>
+  <br/><br/>
+[% END %]
+
+[% IF p_user %]
+  [% p_inst = p_user %]
+[% END %]
+
+[% IF p_inst.length || p_year.length || p_proj.length %]
+  [% params = crms.GetUserStatsQueryParams(p_inst, p_year, p_proj) %]
+  [% IF params.size == 0 %]
+    <h3>No statistics recorded with those properties.</h3>
+  [% END %]
+  [% FOREACH param IN params %]
+    [% divid = param.id %]
+    [% style = (param.old)? 'display:none;position:relative;padding-top:12px;padding-left:40px;border-left:solid 1px #000000;' : '' %]
+    [% data = crms.CreateUserStatsReport(param.user, param.year, param.proj, !param.old) %]
+    [% IF param.old %]
+      <a class="nowrap" style="display:block;margin-bottom:-18px;padding:4px;width:190px;color:#FFFFFF;background-color:#000000;cursor:pointer;text-align:center;"
+         onclick='toggleVisibility("[% divid %]");'>Show [% crms.GetProjectRef(param.proj).name _ ' ' _ param.year %]</a><br/>
+    [% END %]
+    <div id="[% divid %]" style="[% style %]">
+      <h3>[% data.title %]&nbsp;&nbsp;&nbsp;&nbsp;
+          <button type="button" onclick='toggleVisibility("RTDIV_[% param.id %]");'>
+            Show Raw Data
+          </button>
+      </h3>
+      [% data.html %]
+      <div id="RTDIV_[% param.id %]" style="display:none;">
+        <textarea id="RT_[% param.id %]" readonly="readonly"
+                  style="font-family:monospace;height:15em;width:72%;">[% data.text %]</textarea>
+        <button type="button" onclick="document.getElementById('RT_[% param.id %]').select();document.execCommand('copy');">
+          Copy
+        </button>
+      </div>
+    </div>
+    <br/><br/>
+  [% END %]
+[% END %]

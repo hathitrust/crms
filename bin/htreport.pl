@@ -2,11 +2,15 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+BEGIN {
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
+}
 
 use CRMS;
 use Getopt::Long;
 use Utilities;
+my $utils = Utilities->new;
 
 my $usage = <<END;
 USAGE: $0 [-hnpv] [-m MAIL [-m MAIL...]] [-y YEAR]
@@ -69,17 +73,17 @@ my $pdicus = $crms->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE attr="pd
 my $pdicus2 = $crms->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE (attr="pd" OR attr="icus") AND time>?', $start);
 my $pdicusPct = sprintf('%.1f', ($d > 0)? $pdicus/$d*100.0 : 0.0);
 my $pdicus2Pct = sprintf('%.1f', ($d2 > 0)?$pdicus2/$d2*100.0 : 0.0);
-$pdicus = $crms->Commify($pdicus);
-$pdicus2 = $crms->Commify($pdicus2);
+$pdicus = $utils->Commify($pdicus);
+$pdicus2 = $utils->Commify($pdicus2);
 my $sql = 'SELECT FORMAT(SUM(COALESCE(TIME_TO_SEC(duration),0)/3600.0),1) from historicalreviews'.
           ' WHERE TIME_TO_SEC(duration)<=3600';
 my $time = $crms->SimpleSqlGet($sql);
 my $time2 = $crms->SimpleSqlGet($sql. ' AND time>?', $start) || 0;
 
-$d = $crms->Commify($d);
-$d2 = $crms->Commify($d2);
-$pd = $crms->Commify($pd);
-$pd2 = $crms->Commify($pd2);
+$d = $utils->Commify($d);
+$d2 = $utils->Commify($d2);
+$pd = $utils->Commify($pd);
+$pd2 = $utils->Commify($pd2);
 
 my %pdinus;
 $sql = 'SELECT DISTINCT(CONCAT(attr,"/",reason)) FROM exportdata WHERE attr="pd" OR attr="pdus"';
@@ -90,13 +94,12 @@ map {$pdoutus{$_->[0]}=1;} @{$crms->SelectAll($sql)};
 my $pdinus = join ', ', sort keys %pdinus;
 my $pdoutus = join ', ', sort keys %pdoutus;
 
-my $cand = $crms->Commify($crms->SimpleSqlGet('SELECT COUNT(*) FROM candidates'));
+my $cand = $utils->Commify($crms->SimpleSqlGet('SELECT COUNT(*) FROM candidates'));
 
 my $now = ($year)? "$year-12-31" : $crms->SimpleSqlGet('SELECT NOW()');
 my $rnote = sprintf('<span style="font-size:.9em;">Report for %s to %s</span>',
-                    $crms->FormatDate($start),
-                    #$start,
-                    $crms->FormatDate($now));
+                    $utils->FormatDate($start),
+                    $utils->FormatDate($now));
 my $msg = $crms->StartHTML();
 $msg .= <<END;
 <table style="border:1px solid #000000;border-collapse:collapse;">

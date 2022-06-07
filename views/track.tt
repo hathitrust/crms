@@ -1,0 +1,110 @@
+[% p = cgi.param('p') %]
+[% q = cgi.param('query') %]
+
+<h2>Track Volumes:</h2>
+<form action="crms">
+  <input type="hidden" name="p" value="[% p %]"/>
+  <label for="queryTA" class="smallishText">Enter one volume or system id per line.</label><br/>
+  <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;">[% crms.EchoInput(q) %]</textarea>
+  <input type="submit" value="Do it!"/>
+</form>
+
+[% IF q %]
+  [% seen = {} %]
+  [% all = {} %]
+  [% FOREACH id IN q.split %]
+    [% all.$id = 1 %]
+  [% END %]
+  [% query = q.split %]
+  [% FOREACH id IN query %]
+    [% IF seen.$id %][% NEXT %][% END %]
+    [% data = crms.TrackingQuery(id, query) %]
+    [% CALL crms.ClearErrors() %]
+    [% sysid = data.sysid %]
+    [% seen.$sysid = 1 %]
+    <br/><br/>
+    [% IF sysid %]
+      <a href="[% crms.BuildURL(p, 'download', 1, 'q', id) %]" target="_blank">Download</a>
+    [% END %]
+    <table class="exportStats">
+      <tr class="nowrap"><th colspan="12" class="major" scope="colgroup" id="topTH">
+        [% IF sysid %]
+          <span style="color:white;">[% sysid %]</span>
+          &nbsp;&nbsp;&nbsp;&nbsp;
+          [% link = crms.LinkToCatalog(sysid) %]
+          <a style="color:white;" href="[% link %]" target="_blank">[% data.title %]</a>
+          &nbsp;&nbsp;&nbsp;&nbsp;
+          [% link = crms.LinkToCatalogMARC(sysid) %]
+          <a style="color:white;" href="[% link %]" target="_blank">[Catalog MARC]</a>
+          &nbsp;&nbsp;&nbsp;&nbsp;[% data.data.size %] [% utils.Pluralize(data.data.size, 'volume') %]
+        [% ELSE %]
+          [% crms.EchoInput(id) %]&nbsp;&nbsp;&nbsp;&nbsp;(not in catalog)
+        [% END %]
+      </th></tr>
+      [% IF sysid %]
+      <tr class="nowrap">
+        <th class="nowrap" scope="col" id="volumeTH">Volume</th>
+        <th class="nowrap" scope="col" id="enumchronTH">Enum/Chron</th>
+        <th class="nowrap" scope="col" id="CRMSUSTH">
+          <img src="[% crms.WebPath('web', crms.GetSystemVar('smallLogo')) %]"
+               alt="CRMS-US Logo" width="26" height="20"/>
+        </th>
+        <th scope="col" id="USRightTH">U.S.<br/>Rights</th>
+        <th scope="col" id="attributeTH">Attribute</th>
+        <th scope="col" id="reasonTH">Reason</th>
+        <th scope="col" id="sourceTH">Source</th>
+        <th scope="col" id="userTH">User</th>
+        <th scope="col" id="timeTH">Time</th>
+        <th scope="col" id="noteTH">Note</th>
+        <th scope="col" id="accessProfileTH">Access<br/>Profile</th>
+      </tr>
+      <tr>
+        <td class="nowrap" headers="volumeTH">
+          [% FOREACH line IN data.data %]
+            [% id2 = line.0 %]
+            [% seen.$id2 = 1 %]
+            [% url = crms.PTAddress(id2) %]
+            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
+            <a href="[% url %]" target="_blank" [% style %]>[% id2 %]</a><br/>
+          [% END %]
+        </td>
+        <td class="nowrap" headers="enumchronTH">
+          [% FOREACH line IN data.data %]
+            [% id2 = line.0 %]
+            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
+            <span [% style %]>[% line.1 %]</span><br/>
+          [% END %]
+        </td>
+        <td class="nowrap" headers="CRMSUSTH">
+          [% FOREACH line IN data.data %]
+            [% id2 = line.0 %]
+            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
+            <span [% style %]>[% line.2 %]</span><br/>
+          [% END %]
+        </td>
+
+        <td class="nowrap" headers="USRightTH">
+          [% FOREACH line IN data.data %]
+            [% id2 = line.0 %]
+            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
+            <span [% style %]>[% line.3 %]</span><br/>
+          [% END %]
+        </td>
+        <td class="nowrap" headers="attributeTH">[% FOREACH line IN data.data %][% line.4 %]<br/>[% END %]</td>
+        <td class="nowrap" headers="reasonTH">[% FOREACH line IN data.data %][% line.5 %]<br/>[% END %]</td>
+        <td class="nowrap" headers="sourceTH">[% FOREACH line IN data.data %][% line.6 %]<br/>[% END %]</td>
+        <td class="nowrap" headers="userTH">[% FOREACH line IN data.data %][% line.7 %]<br/>[% END %]</td>
+        <td class="nowrap" headers="timeTH">[% FOREACH line IN data.data %][% line.8 %]<br/>[% END %]</td>
+        <td headers="noteTH">[% FOREACH line IN data.data %]
+              [% IF line.9 %]
+              <a class="tip2" href="#"><strong>&#x1F4DD;</strong><span>[% line.9 %]</span></a>
+              [% ELSE %]&nbsp;
+              [% END %]
+            [% END %]
+        </td>
+        <td class="nowrap" headers="accessProfileTH">[% FOREACH line IN data.data %][% line.11 %]<br/>[% END %]</td>
+      </tr>
+      [% END %]
+    </table>
+  [% END %]
+[% END %]

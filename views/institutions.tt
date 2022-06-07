@@ -1,0 +1,40 @@
+<h2>Institutions:</h2>
+<br/>
+
+<form action="crms">
+  <input type="hidden" name="p" value="institutions"/>
+  <label for="order">Order by:</label>
+  <select name="order" id="order" onchange="this.form.submit()">
+    <option value="id" [% (order=='id')? 'selected="selected"':'' %]>ID</option>
+    <option value="name" [% (order=='name')? 'selected="selected"':'' %]>Name</option>
+    <option value="shortname" [% (order=='shortname')? 'selected="selected"':'' %]>Short Name</option>
+  </select>
+</form>
+
+
+[% insts = crms.GetInstitutions() %]
+<table class="exportStats" style="white-space:nowrap">
+  <tr>
+    <th scope="col">ID</th>
+    <th scope="col">Name</th>
+    <th scope="col">Domain</th>
+    <th scope="col">Reviewers</th>
+    <th scope="col">Active<br/>Reviewers</th>
+  </tr>
+  [% FOREACH inst IN insts %]
+    [% id = inst.inst_id %]
+    <tr [% id == iid ? 'class="total"':'class="hoverWide"'%] [% style %]>
+      <td>[% id %]</td>
+      <td class="nowrap">
+        <a href="[% crms.BuildURL('adminUserRate', 'institution', id) %]">
+          [% utils.EscapeHTML(inst.name).replace('\s','&nbsp;') %]
+        </a>
+      </td>
+      <td>[% inst.domain %]</td>
+      <td>[% inst.users %]</td>
+      <td>[% inst.active %]</td>
+    </tr>
+  [% END %]
+</table>
+<br/>
+

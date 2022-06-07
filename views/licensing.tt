@@ -1,0 +1,130 @@
+[% p = cgi.param('p') %]
+[% q = cgi.param('query') %]
+
+[% licensing = crms.Licensing %]
+
+<h2>Licensing:</h2>
+<form action="crms">
+  <input type="hidden" name="p" value="[% p %]"/>
+  <label for="queryTA" class="smallishText">Enter one volume or system id per line.</label><br/>
+  <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;">[% crms.EchoInput(q) %]</textarea>
+  <input type="submit" value="Submit"/>
+</form>
+
+[% IF q %]
+  <form action="crms" method="POST">
+    <input type="hidden" name="p" value="[% p %]"/>
+    [% IF cgi.param("submit_rights") == "true" %]
+      <br/><strong>Data Submitted</strong><br/>
+      [% result = licensing.submit(cgi) %]
+      [% IF result.errors.size() %]
+      <strong>Update failed due to errors:</strong><br/>
+        [% FOREACH error IN result.errors %]
+          <strong>[% error %]</strong><br/>
+        [% END %]
+      [% END %]
+    [% END %]
+    [% data = licensing.query(q.split()) %]
+    [% FOREACH error IN data.errors %]
+      <strong>[% error %]</strong><br/>
+    [% END %]
+    [% IF data.data.size() > 0 %]
+      [% FOREACH row IN data.data %]
+        <input type="hidden" name="htid" value="[% row.htid %]"/>
+      [% END %]
+    [% color_white    = '#FFFFFF' %]
+    [% color_gray     = '#C6C4F1' %]
+    [% prev_id        = '' %]
+    [% active_color   = color_white %]
+    <br/><br/>
+    <table class="exportStats" style="width:100%;">
+      [% UNLESS result %]
+        [% attrs = licensing.attributes() %]
+        [% reasons = licensing.reasons() %]
+        <tr>
+          <th><label for="attrSel">Attribute</label></th>
+          <th><label for="reasonSel">Reason</label></th>
+          <th>Ticket</th>
+          <th colspan="6">Authorizing signer, Organization or other Rights Database note</th>
+          <th>Submit</th>
+        </tr>
+        <tr>
+          <td>
+            <select id="attrSel" name="attr">
+              [% FOREACH attr IN attrs %]
+                <option value="[% attr.id %]"
+                        [% IF cgi.param('attr') == attr.id %]
+                        selected="selected"
+                        [% END %]>$attr.name</option>
+              [% END %]
+            </select>
+          </td>
+          <td>
+            <select id="reasonSel" name="reason">
+              [% FOREACH reason IN reasons %]
+                <option value="[% reason.id %]"
+                        [% IF cgi.param('reason') == reason.id %]
+                        selected="selected"
+                        [% END %]>$reason.name</option>
+              [% END %]
+            </select>
+          </td>
+          <td><input type="text" name="ticket"
+                     value="[% cgi.param('ticket') %]"</input></td>
+          <td colspan="6"><input type="text" name="rights_holder" size="120"
+                     value="[% cgi.param('rights_holder') %]"></input></td>
+          <td>
+            <input type="hidden" name="submit_rights" value="true"/>
+            <input type="hidden" name="query" value="[% q %]"/>
+            <input type="submit" value="Submit"/>
+          </td>
+        </tr>
+      [% END # UNLESS result %]
+      <tr>
+        <th scope="col" id="HTIDTH">ID</th>
+        <th scope="col" id="SYSIDTH">Catalog ID</th>
+        <th scope="col" id="enumchronTH">Enum/Chron</th>
+        <th scope="col" id="CRMSTH">
+          <img src="[% crms.WebPath('web', crms.GetSystemVar('smallLogo')) %]"
+               alt="CRMS-US Logo" width="26" height="20"/>
+        </th>
+        <th scope="col" id="authorTH">Author</th>
+        <th scope="col" id="titleTH">Title</th>
+        <th scope="col" id="dateTH">Pub<br/>Date</th>
+        <th scope="col" id="rightsTH">Rights</th>
+        <th scope="col" id="noteTH">Rights<br/>Note</th>
+        <th scope="col" id="selectTH">Exclude</th>
+      </tr>
+      [% FOREACH row IN data.data %]
+        [% IF prev_id == '' %][% prev_id = row.sysid %][% END %]
+
+        [% IF prev_id != row.sysid %]
+          [% active_color = (active_color == color_white) ? color_gray : color_white %]
+        [% END %]
+        [% id = row.htid %]
+        <tr style="background-color:[% active_color %];">
+          <td headers="HTIDTH" class="nowrap">$id</td>
+          <td headers="SYSIDTH">$row.sysid</td>
+          <td headers="enumchronTH">$row.chron</td>
+          <td headers="CRMSTH">$row.tracking</td>
+          <td headers="authorTH">$row.author</td>
+          <td headers="titleTH">$row.title</td>
+          <td headers="dateTH">$row.date</td>
+          <td headers="rightsTH">[% row.rights.0 _ '/' _ row.rights.1 %]</td>
+          <td headers="noteTH">$row.rights.5</td>
+          <td headers="selectTH">
+            <input type="checkbox" name="exclude" value="[% row.htid %]"
+                   [% IF row.already %]
+                     checked="checked"
+                   [% END %]
+                   >
+          </td>
+        </tr>
+        [% prev_id = row.sysid %]
+      [% END %]
+    </table>
+  [% END # IF data.data.size() %]
+  </form>
+[% END # IF q %]
+
+[% INCLUDE footer.tt %]
