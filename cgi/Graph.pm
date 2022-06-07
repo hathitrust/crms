@@ -2,6 +2,8 @@ package Graph;
 
 use strict;
 use warnings;
+
+use User;
 use Utilities;
 
 sub CreateExportGraph
@@ -113,8 +115,7 @@ sub CreateCandidatesData
     my $added = $row->[1];
     my $exported = $row->[2];
     $exported = 0 unless $exported;
-    #print "$ym $added $exported\n";
-    $ym = $self->YearMonthToEnglish(substr($ym, 0, 4) . '-' . substr($ym, 4, 2));
+    $ym = Utilities->new->FormatYearMonth(substr($ym, 0, 4) . '-' . substr($ym, 4, 2));
     $report = "$ym\t$cnt\n" . $report;
     $cnt -= $added;
     $cnt += $exported;
@@ -299,10 +300,10 @@ sub CreateReviewerGraph
   my $type  = shift;
   my $start = shift;
   my $end   = shift;
-  my @users = @_;
+  my @uids  = @_;
 
   $type = 0 unless defined $type;
-  return CreateFlaggedGraph($self, @users) if $type == 3;
+  return CreateFlaggedGraph($self, @uids) if $type == 3;
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
               'tooltip'=>{'pointFormat'=>'{series.name}: <strong>{point.y}</strong>'},
               'xAxis'=>{'categories'=>[], 'labels'=>{'rotation'=>45}},
@@ -323,29 +324,29 @@ sub CreateReviewerGraph
              3=>'SUM(s.total_flagged)');
   $type = 0 unless defined $titles{$type};
   my $title = $titles{$type};
-  my $sql = 'SELECT DISTINCT monthyear FROM userstats WHERE monthyear>=? AND monthyear<=? ORDER BY monthyear ASC';
-  #print "$sql, $start,  $end\n";
+  my $sql = 'SELECT DISTINCT monthyear FROM userstats'.
+            ' WHERE monthyear>=? AND monthyear<=?'.
+            ' ORDER BY monthyear ASC';
   my @dates;
   my $ref = $self->SelectAll($sql, $start, $end);
   foreach my $row (@{$ref})
   {
     my $date = $row->[0];
     push @dates, $date;
-    push @{$data{'xAxis'}->{'categories'}}, $self->YearMonthToEnglish($date);
+    push @{$data{'xAxis'}->{'categories'}}, Utilities->new->FormatYearMonth($date);
   }
   my $i = 0;
   $data{'yAxis'}->{'title'}->{'text'} = $title;
   $data{'yAxis'}->{'labels'}->{'format'} = '{value}%' if $type == 2;
   $data{'tooltip'}->{'pointFormat'} = '{series.name}: <strong>{point.y}%</strong>' if $type == 2;
-  my @colors = PickColors(scalar @users);
-  foreach my $user (@users)
+  my @colors = PickColors(scalar @uids);
+  foreach my $uid (@uids)
   {
+    my $user = User::Find($uid);
     my $ids = $self->GetUserIncarnations($user);
-    my $name = $self->GetUserProperty($user, 'name');
-    my $comm = $self->SimpleSqlGet('SELECT commitment FROM users WHERE id=?', $user);
     my @counts; # For the inval rate tip
-    my $wc = $self->WildcardList(scalar @{$ids});
-    my $h = {'color'=>$colors[$i], 'name'=>$name, 'data'=>[]};
+    my $wc = Utilities->new->WildcardList(scalar @{$ids});
+    my $h = {'color'=>$colors[$i], 'name'=>$user->{name}, 'data'=>[]};
     push @{$data{'series'}}, $h;
     foreach my $date (@dates)
     {
@@ -370,7 +371,7 @@ sub CreateReviewerGraph
       }
       $val = int($val) if $type == 0;
       $val = $val + 0.0 if $type > 0;
-      if ($type == 1 && defined $comm && 160.0*$comm <= $val)
+      if ($type == 1 && defined $user->{commitment} && 160.0 * $user->{commitment} <= $val)
       {
         $val = {'y'=>$val, 'marker'=>{'radius'=>8}};
       }
@@ -387,8 +388,8 @@ sub CreateReviewerGraph
 
 sub CreateFlaggedGraph
 {
-  my $self  = shift;
-  my @users = @_;
+  my $self = shift;
+  my @uids = @_;
 
   my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
               'tooltip'=>{'pointFormat'=>'{series.name}: <strong>{point.y}</strong>'},
@@ -398,13 +399,12 @@ sub CreateFlaggedGraph
               'credits'=>{'enabled'=>JSON::XS::false},
               'series'=>[],
               'users'=>[]);
+  my $wc = Utilities->new->WildcardList(scalar @uids);
   my $sql = 'SELECT DISTINCT DATE(time) d FROM historicalreviews'.
             ' WHERE time>=DATE_SUB(NOW(), INTERVAL 1 MONTH)'.
-            ' AND user IN ('. join(',',map {"\"$_\"";} @users). ')'.
-            ' ORDER BY d ASC';
-  #print "$sql\n";
+            " AND user IN $wc ORDER BY d ASC";
   my @dates;
-  my $ref = $self->SelectAll($sql);
+  my $ref = $self->SelectAll($sql, @uids);
   foreach my $row (@{$ref})
   {
     my $date = $row->[0];
@@ -413,13 +413,13 @@ sub CreateFlaggedGraph
   }
   my $i = 0;
   $data{'yAxis'}->{'title'}->{'text'} = 'Flagged Reviews';
-  my @colors = PickColors(scalar @users);
-  foreach my $user (@users)
+  my @colors = PickColors(scalar @uids);
+  foreach my $uid (@uids)
   {
+    my $user = User::Find($uid);
     my $ids = $self->GetUserIncarnations($user);
-    my $name = $self->GetUserProperty($user, 'name');
-    my $wc = $self->WildcardList(scalar @{$ids});
-    my $h = {'color'=>$colors[$i], 'name'=>$name, 'data'=>[]};
+    $wc = Utilities->new->WildcardList(scalar @{$ids});
+    my $h = {'color'=>$colors[$i], 'name' => $user->{name}, 'data'=>[]};
     push @{$data{'series'}}, $h;
     foreach my $date (@dates)
     {
@@ -581,26 +581,22 @@ sub CreateInheritanceGraph
   return \%data;
 }
 
-sub PickColors
-{
+sub PickColors {
   my $count   = shift;
   my $shuffle = shift;
 
   my @cols;
   my $delta = ($count>0)? 360/$count:360;
-  for (my $hue = 109; $hue < 469; $hue += $delta)
-  {
+  for (my $hue = 109; $hue < 469; $hue += $delta) {
     my $h2 = $hue;
     $h2 -= 360 if $h2 >= 360;
-    my @col = Utilities::HSV2RGB($h2, 1, .75);
+    my @col = HSV2RGB($h2, 1, .75);
     @col = map {int($_ * 255);} @col;
     push @cols, sprintf '#%02X%02X%02X', $col[0], $col[1], $col[2];
   }
-  if ($shuffle)
-  {
+  if ($shuffle) {
     my ($i,$j) = (1,2);
-    while ($i <= scalar @cols-2)
-    {
+    while ($i <= scalar @cols-2) {
       @cols[$i,$j] = @cols[$j,$i];
       $i += 2;
       $j += 2;
@@ -609,9 +605,25 @@ sub PickColors
   return @cols;
 }
 
+sub HSV2RGB {
+  my ($h, $s, $v) = @_;
+  if ($s == 0) { return $v, $v, $v; }
+  $h /= 60;
+  my $i = floor( $h );
+  my $f = $h - $i;
+  my $p = $v * ( 1 - $s );
+  my $q = $v * ( 1 - $s * $f );
+  my $t = $v * ( 1 - $s * ( 1 - $f ) );
+  if ($i == 0 ) { return $v, $t, $p; }
+  elsif ($i == 1) { return $q, $v, $p; }
+  elsif ($i == 2) { return $p, $v, $t; }
+  elsif ($i == 3) { return $p, $q, $v; }
+  elsif ($i == 4) { return $t, $p, $v; }
+  else { return $v, $p, $q; }
+}
+
 # From Math::Round
-sub NearestMultiple
-{
+sub NearestMultiple {
   my $mult = abs(shift);
   my $n    = shift;
 

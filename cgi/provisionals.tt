@@ -1,8 +1,6 @@
-[% INCLUDE header.tt %]
-
 [% projs = crms.GetUserProjects() %]
 [% IF projs.size %]
-  [% proj = crms.GetProjectRef(crms.GetUserProperty(undef, 'project')).name %]
+  [% proj = crms.GetProjectRef(crms.get('user').project).name %]
   [% flag = " &#x2014; " _ proj _ " Project" %]
 [% END %]
 
@@ -51,9 +49,8 @@
 [% END %]
 
 [% IF cgi.param('approve') || cgi.param('lock') || cgi.param('unlock') %]
-<h4>Modified [% n %] [% crms.Pluralize("item", n) %]</h4>
+<h4>Modified [% n %] [% crms.Pluralize(n, "item") %]</h4>
 [% END %]
 
 [% INCLUDE selection.tt  %]
 [% INCLUDE searchResults.tt  %]
-[% INCLUDE footer.tt %]

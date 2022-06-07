@@ -77,9 +77,9 @@ addEvent(window, 'load', function(e)
   [% reviews = ref.rows %]
   <a id="results"></a>
 
-  <strong>Found [% crms.Commify(Total) %] [% crms.Pluralize('review', Total) %]
-          for [% crms.Commify(TotalVolumes) %] [% crms.Pluralize('volume', TotalVolumes) %],
-          page [% crms.Commify(pagenum) %] of [% crms.Commify(of) %]</strong><br/>
+  <strong>Found [% utils.Commify(Total) %] [% utils.Pluralize(Total, 'review', ) %]
+          for [% utils.Commify(TotalVolumes) %] [% utils.Pluralize(TotalVolumes, 'volume') %],
+          page [% utils.Commify(pagenum) %] of [% utils.Commify(of) %]</strong><br/>
 
   [% IF NOT offset %] [% offset = 0 %] [% END %]
   [% IF offset > 0 %] [% next = offset + pagesize %]
@@ -134,7 +134,7 @@ addEvent(window, 'load', function(e)
     </span>
   </a>
 
-  [% IF crms.IsUserAtLeastExpert() && p == 'adminHistoricalReviews' %]
+  [% IF current_user.is_at_least_expert && p == 'adminHistoricalReviews' %]
       <input type="checkbox" [% IF showSysID %]checked="checked"[% END %] id="sysIDCB"
              onchange="setCookie('showSysID',(this.checked)?1:0,31);
              var tbl  = document.getElementById('resultsTable');
@@ -185,7 +185,7 @@ addEvent(window, 'load', function(e)
   [% END %]
   <table class="exportStats" style="width:100%;" id="resultsTable"><tr>
     <th>ID</th>
-    [% IF crms.IsUserAtLeastExpert() && p == 'adminHistoricalReviews' %]
+    [% IF current_user.is_at_least_expert && p == 'adminHistoricalReviews' %]
       <th class="nowrap" id="gidth" style="display:[% (showSysID)? 'table-cell':'none' %];">GID
         <br/>(<span style="color:[% color_gray %];">determinations</span>)</th>
       <th class="nowrap" id="sysidth" style="display:[% (showSysID)? 'table-cell':'none' %];">Catalog&nbsp;ID
@@ -205,9 +205,9 @@ addEvent(window, 'load', function(e)
     <th>Data</th>
     <th>Note&nbsp;Category</th>
     <th>Note</th>
-    [% IF crms.IsUserAtLeastExpert() %]<th>Priority</th>[% END %]
+    [% IF current_user.is_at_least_expert %]<th>Priority</th>[% END %]
     [% IF p == 'adminHistoricalReviews' %]<th>Verdict</th>[% END %]
-    [% IF crms.IsUserAtLeastExpert() && p != 'provisionals' && p != 'conflicts' %]<th>Swiss</th>[% END %]
+    [% IF current_user.is_at_least_expert && p != 'provisionals' && p != 'conflicts' %]<th>Swiss</th>[% END %]
     [% IF p == 'provisionals' %]<th>Select</th>[% END %]
     [% IF p == 'adminReviews' || p == 'editReviews' %]
       <th>Hold</th>
@@ -241,7 +241,7 @@ addEvent(window, 'load', function(e)
           [% END %]
         [% END %]
         </td>
-        [% IF crms.IsUserAtLeastExpert() && p == 'adminHistoricalReviews' %]
+        [% IF user.is_at_least_expert() && p == 'adminHistoricalReviews' %]
           <td style="display:[% (showSysID)? 'table-cell':'none' %];">
             <a href='[% crms.LinkToDeterminations(review.gid) %]' target='_blank'>[% review.gid %]</a>
           </td>
@@ -270,14 +270,14 @@ addEvent(window, 'load', function(e)
           [% crms.LinkToPT(review.id,review.title) %]
         [% END %]
         </td>
-        <td>[% cgi.escapeHTML(review.author) %]</td>
+        <td>[% utils.EscapeHTML(review.author) %]</td>
         [% IF p == 'adminHistoricalReviews' %]
           <td>$review.pubdate</td>
           <td>$review.country</td>
         [% END %]
         <td>$review.date</td>
         [% IF p != 'provisionals' AND p != 'conflicts' %]<td>$review.status</td>[% END %]
-        <td>$review.user</td>
+        <td>[% crms.GetUser(review.user).email %]</td>
         <td class="nowrap">
           [% IF review.attr OR review.reason %]
             [% review.attr _ '/' _ review.reason %]
@@ -295,13 +295,13 @@ addEvent(window, 'load', function(e)
             [% IF review.data.format_long %]
             <img class="tippy" width="16" height="16" alt="Review Data"
                  src="[% crms.WebPath('web', 'help.png') %]"
-                 data-tippy-content="[% cgi.escapeHTML(review.data.format_long) %]"/>
+                 data-tippy-content="[% utils.EscapeHTML(review.data.format_long) %]"/>
             [% END %]
           [% END %]
         </td>
         <td class="nowrap">$review.category</td>
-        <td>[% crms.LinkNoteText(cgi.escapeHTML(review.note)) %]</td>
-        [% IF crms.IsUserAtLeastExpert() %]<td>[% review.priority %]</td>[% END %]
+        <td>[% crms.LinkNoteText(utils.EscapeHTML(review.note)) %]</td>
+        [% IF user.is_at_least_expert() %]<td>[% review.priority %]</td>[% END %]
         [% IF p == 'adminHistoricalReviews' %]
           <td class="textcenter">
             [% icon = (review.validated)? ((review.validated == 2)? 'MinusIcon.png':'CheckIcon.png'):'XIcon.png' %]
@@ -309,7 +309,7 @@ addEvent(window, 'load', function(e)
             <img width="16" height="16" alt="Correctness" src="[% icon %]"/>
           </td>
         [% END %]
-        [% IF crms.IsUserAtLeastExpert() && p != 'provisionals' && p != 'conflicts' %]<td>$review.swiss</td>[% END %]
+        [% IF user.is_at_least_expert() && p != 'provisionals' && p != 'conflicts' %]<td>$review.swiss</td>[% END %]
         [% IF p == 'provisionals' %]
         <td class="textcenter">
           [% IF first && !crms.IsLockedForOtherUser(review.id) %]
@@ -342,9 +342,9 @@ addEvent(window, 'load', function(e)
     <br/>
   [% END %]
 
-  <strong>Found [% crms.Commify(Total) %] [% crms.Pluralize('review', Total) %]
-          for [% crms.Commify(TotalVolumes) %] [% crms.Pluralize('volume', TotalVolumes) %],
-          page [% crms.Commify(pagenum) %] of [% crms.Commify(of) %]</strong><br/>
+  <strong>Found [% utils.Commify(Total) %] [% utils.Pluralize(Total, 'review') %]
+          for [% utils.Commify(TotalVolumes) %] [% utils.Pluralize(TotalVolumes, 'volume') %],
+          page [% utils.Commify(pagenum) %] of [% utils.Commify(of) %]</strong><br/>
   [% IF doPrev %]
   <a href="?[% crms.URLify(cgi,'offset') _ ";offset=$prev#results" %]">
   [% ELSE %]

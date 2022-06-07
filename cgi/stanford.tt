@@ -1,4 +1,3 @@
-[% INCLUDE header.tt %]
 [% p     = cgi.param('p')         %]
 [% q     = cgi.param('q')         %]
 [% field = cgi.param('field')     %]
@@ -101,5 +100,3 @@
   <br/><br/><br/>
 [% END %]
 </div>
-[% INCLUDE footer.tt %]
-

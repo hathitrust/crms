@@ -3,7 +3,7 @@ package UMCalendar;
 use strict;
 use Date::Calc qw(:all);
 use Date::Calendar;
-use Date::Calendar::Profiles qw( $Profiles );
+use Date::Calendar::Profiles;
 use vars qw( @ISA @EXPORT @EXPORT_OK $UMCal );
 
 $UMCal = {
@@ -22,26 +22,26 @@ $UMCal = {
 
 sub Season1
 {
-   my($year,$label) = @_;
-   return Date::Calendar::Profiles::Next_Monday_or_Tuesday(Date::Calendar::Profiles::US_Christmas($year));
+  my ($year, $label) = @_;
+  return Date::Calendar::Profiles::Next_Monday_or_Tuesday(Date::Calendar::Profiles::US_Christmas($year));
 }
 
 sub Season2
 {
-  my($year,$label) = @_;
-  return Date::Calendar::Profiles::Next_Monday_or_Tuesday(Add_Delta_Days(Season1($year),1));
+  my ($year, $label) = @_;
+  return Date::Calendar::Profiles::Next_Monday_or_Tuesday(Add_Delta_Days(Season1($year), 1));
 }
 
 sub Season3
 {
-  my($year,$label) = @_;
-  return Date::Calendar::Profiles::Next_Monday_or_Tuesday(Add_Delta_Days(Season2($year),1));
+  my ($year, $label) = @_;
+  return Date::Calendar::Profiles::Next_Monday_or_Tuesday(Add_Delta_Days(Season2($year), 1));
 }
 
 sub Season4
 {
-  my($year,$label) = @_;
-  return Date::Calendar::Profiles::Next_Monday_or_Tuesday(Add_Delta_Days(Season3($year),1));
+  my ($year, $label) = @_;
+  return Date::Calendar::Profiles::Next_Monday_or_Tuesday(Add_Delta_Days(Season3($year), 1));
 }
 
 1;

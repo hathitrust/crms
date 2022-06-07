@@ -1,7 +1,6 @@
 [% force = cgi.param('force') %]
 [% page = cgi.param('p') %]
 [% p_start = cgi.param('startDate') %]
-[% INCLUDE header.tt %]
 
 <h2>System Administration:</h2>
 <br/><br/>
@@ -11,7 +10,6 @@
   <th>List&nbsp;Unicode&nbsp;bibdata&nbsp;entries</th>
   <td>
     <form action="crms">
-      [% crms.HiddenSys() %]
       <input type="hidden" name="p" value="$page"/>
       <input type="hidden" name="multibyte" value="1"/>
       <input type="submit" value="Do it!"/>
@@ -22,7 +20,6 @@
   <th>List&nbsp;System&nbsp;variables</th>
   <td>
     <form action="crms">
-      [% crms.HiddenSys() %]
       <input type="hidden" name="p" value="$page"/>
       <input type="hidden" name="systemvars" value="1"/>
       <input type="submit" value="Do it!"/>
@@ -47,7 +44,6 @@
 <div style="position:relative;border-style:solid;width:66em;border-width:1px;padding:10px;">
 <h3>Export Report</h3>
 <form id="select" action="crms">
-  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="$page"/>
   <input type="hidden" name="export_report" value="1"/>
   <label for="startDate" style="width:5em;float:left;">YTD Start:</label>
@@ -77,10 +73,10 @@
       [% FOR proj IN report %]
       <tr>
         <th>[% proj.name %]</th>
-        <td class="nowrap"><strong>[% crms.Commify(proj.candidates) %]</strong></td>
-        <td class="nowrap"><strong>[% crms.Commify(proj.determinations) %]</strong> ([% proj.pd_pct %] pd)</td>
-        <td class="nowrap"><strong>[% crms.Commify(proj.ytd_determinations) %]</strong> ([% proj.ytd_pd_pct %] pd)</td>
-        <td class="nowrap"><strong>[% crms.Commify(proj.time) %]</strong> hours</td>
+        <td class="nowrap"><strong>[% utils.Commify(proj.candidates) %]</strong></td>
+        <td class="nowrap"><strong>[% utils.Commify(proj.determinations) %]</strong> ([% proj.pd_pct %] pd)</td>
+        <td class="nowrap"><strong>[% utils.Commify(proj.ytd_determinations) %]</strong> ([% proj.ytd_pd_pct %] pd)</td>
+        <td class="nowrap"><strong>[% utils.Commify(proj.time) %]</strong> hours</td>
       </tr>
       [% END %]
     </table>
@@ -135,7 +131,6 @@
 [% ids = cgi.param('ids') %]
 <h4>Update Bibliographic Data</h4>
 <form action="crms">
-  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="debug"/>
   <input type="hidden" name="fix" value="1"/>
   <p class="smallishText">Enter one volume id per line.</p>
@@ -149,7 +144,6 @@
 <div style="position:relative;border-style:solid;width:76em;border-width:1px;padding:10px;">
   <h4>Remove From Candidates</h4>
   <form action="crms">
-    [% crms.HiddenSys() %]
     <input type="hidden" name="p" value="debug"/>
     <input type="hidden" name="deleteFromCandidates" value="1"/>
     <p class="smallishText">Enter one volume id per line.</p>
@@ -226,7 +220,4 @@
   <tr><th>Source</th><td>[% field.substr(39, 1) %]</td></tr>
   </table>
 [% END %]
-
-
-[% INCLUDE footer.tt %]
 

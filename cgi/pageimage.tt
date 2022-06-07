@@ -1,4 +1,3 @@
-[% INCLUDE header.tt %]
 [% id = cgi.param('id') %]
 [% seq = cgi.param('seq') || 0 %]
 [% data = crms.GetPageImage(id, seq) %]
@@ -37,6 +36,3 @@
   <span>Could not get image: [% data.data %]</span>
 [% END %]
 </div>
-[% INCLUDE footer.tt %]
-
-  

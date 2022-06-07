@@ -1,8 +1,6 @@
-[% INCLUDE header.tt %]
-
 [% projs = crms.GetUserProjects() %]
 [% IF projs.size %]
-  [% proj = crms.GetProjectRef(crms.GetUserProperty(undef, 'project')).name %]
+  [% proj = crms.GetProjectRef(crms.get('user').project).name %]
   [% flag = " &#x2014; " _ proj _ " Project" %]
 [% END %]
 
@@ -10,4 +8,3 @@
 
 [% INCLUDE selection.tt  %]
 [% INCLUDE searchResults.tt  %]
-[% INCLUDE footer.tt %]

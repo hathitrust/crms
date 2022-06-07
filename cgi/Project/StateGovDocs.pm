@@ -4,22 +4,12 @@ use parent 'Project';
 use strict;
 use warnings;
 
+use Utilities;
+
 sub new
 {
   my $class = shift;
   return $class->SUPER::new(@_);
-}
-
-my %TEST_HTIDS = (
-    'yale.39002030686159' => 'Example'
-);
-
-sub tests
-{
-  my $self = shift;
-
-  my @tests = keys %TEST_HTIDS;
-  return \@tests;
 }
 
 # ========== CANDIDACY ========== #
@@ -50,7 +40,7 @@ sub EvaluateCandidacy
   else
   {
     # Check year range
-    my $now = $self->{'crms'}->GetTheYear();
+    my $now = Utilities->new->Year();
     my $min = $now - 95 + 1;
     my $max = 1977;
     push @errs, "pub date $pub not in range $min-$max" if $pub < $min or $pub > $max;

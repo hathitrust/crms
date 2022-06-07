@@ -271,7 +271,8 @@ sub DownloadReviews
     {
       $buff .= qq{id\tsystem id\ttitle\tauthor\tpub date\tdate\tstatus\tlegacy\tuser\tattr\treason\tcategory\tnote\tvalidated\tswiss};
     }
-    $buff .= sprintf("%s\n", ($crms->IsUserAdmin())? "\tpriority":'');
+    my $user = $crms->get('user');
+    $buff .= sprintf("%s\n", ($user->is_admin())? "\tpriority":'');
     if ($stype eq 'reviews')
     {
       $buff .= UnpackResults($crms, $page, $ref);
@@ -361,7 +362,8 @@ sub UnpackResults
       #id, title, author, review date, status, user, attr, reason, category, note, validated
       $buff .= qq{$id\t$sysid\t$title\t$author\t$pubdate\t$time\t$status\t$legacy\t$user\t$attr\t$reason\t$category\t$note\t$holdval\t$swiss};
     }
-    $buff .= sprintf("%s\n", ($crms->IsUserAdmin())? "\t$priority":'');
+    $user = $crms->get('user');
+    $buff .= sprintf("%s\n", ($user->is_admin())? "\t$priority":'');
   }
   return $buff;
 }

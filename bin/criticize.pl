@@ -3,9 +3,9 @@
 use strict;
 use warnings;
 
-BEGIN
-{
+BEGIN {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
 }
 
 use v5.10;

@@ -1,6 +1,3 @@
-[% INCLUDE header.tt %]
-
-
 <script type="text/javascript">
 <!--
 
@@ -143,8 +140,8 @@ function checkActive(cb)
     [% i = 1 %]
     [% col = 0 %]
     [% FOREACH r IN ref %]
-      [% revs = crms.GetInstitutionReviewers(r.0) %]
-      [% IF revs.size() > 0 %]
+      [% users = crms.GetInstitutionReviewers(r.0) %]
+      [% IF users.size() > 0 %]
         [% IF (i >= ref.size() / 2 && col == 0) %]
           [% col = col + 1 %]
           </table>
@@ -159,15 +156,15 @@ function checkActive(cb)
                  onclick="CheckAll(this,'inst_[% r.0 %]');"/>
         </th></tr>
       [% END %]
-      [% FOREACH h IN revs %]
+      [% FOREACH user IN users %]
         <tr>
-          [% id = h.id.replace('@', '__AT__') %]
-          [% name = h.name %]
+          [% #id = user.email.replace('@', '__AT__') %]
+          [% name = user.name %]
           <td class="nowrap">
-            <input type="checkbox" class="userCB" name="inst_[% r.0 %]" id="[% id %]"
+            <input type="checkbox" class="userCB" name="inst_[% r.0 %]" id="[% user.id %]"
                    onchange="checkInst('inst_[% r.0 %]');"/>
-            <label for="[% id %]">
-              [% IF h.active == 0 %]
+            <label for="[% user.id %]">
+              [% IF user.active == 0 %]
                 [% name = "<em>" _ name _ "</em>" %]
               [% ELSE %]
                 [% actives.push(id) %]
@@ -175,7 +172,7 @@ function checkActive(cb)
               [% name %]
             </label>
           </td>
-          <td>[% IF h.commitment %][% 100 * h.commitment %]%[% END %]</td>
+          <td>[% IF user.commitment %][% 100 * user.commitment %]%[% END %]</td>
         </tr>
       [% END %]
     [% END %]
@@ -193,5 +190,3 @@ window.onload = function(e)
 }
 -->
 </script>
-[% INCLUDE footer.tt %]
-

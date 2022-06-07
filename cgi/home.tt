@@ -1,34 +1,10 @@
-[% INCLUDE header.tt %]
-
-<script type="text/javascript" src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
-<script type="text/javascript" src="https://code.highcharts.com/highcharts.js"></script>
-<script type="text/javascript" src="https://code.highcharts.com/highcharts-more.js"></script>
-<script type="text/javascript" src="https://code.highcharts.com/modules/solid-gauge.js"></script>
 <script type="text/javascript">
 <!--
-function CheckAll(box,formid)
-{
-	var aa=document.getElementById(formid);
-	for (var i=0; i < aa.elements.length; i++)
-	{
+function CheckAll(box, formid) {
+	var aa = document.getElementById(formid);
+	for (var i = 0; i < aa.elements.length; i++) {
 	  aa.elements[i].checked = box.checked;
 	}
-}
-
-window.onload = function(e)
-{
-  var progress = document.getElementById('progress');
-  if (progress)
-  {
-    try
-    {
-      loadChart(progress, "[% crms.WebPath('cgi', 'getExportStats?type=graph&c=11&project=State+Gov+Docs') %]");
-    }
-    catch (e)
-    {
-      //alert('Problem loading chart: '+e);
-    }
-  }
 }
 -->
 </script>
@@ -36,19 +12,25 @@ window.onload = function(e)
 [% pf = cgi.param('projectForm') %]
 [% ps = cgi.param('projectSel') %]
 [% IF pf == 1 %]
-  [% CALL crms.SetUserCurrentProject(undef, ps) %]
+  [% current_user.project = ps %]
+  [% CALL current_user.save %]
 [% END %]
 
-[% projs = crms.GetUserProjects() %]
-[% cp = crms.GetUserCurrentProject() %]
-[% IF projs.size > 1 %]
+[% rf = cgi.param('roleForm') %]
+[% rs = cgi.param('roleSel') %]
+[% IF rf == 1 %]
+  [% current_user.role = rs %]
+  [% CALL current_user.save %]
+[% END %]
+
+
+[% IF current_user.projects.size > 1 %]
   <form action="crms">
     <input type="hidden" name="projectForm" value="1"/>
-    [% crms.HiddenSys() %]
     <label for="projectSel">Current project:</label>
     <select name="projectSel" id="projectSel" onchange="this.form.submit()">
-    [% FOREACH proj IN projs %]
-      <option value="[% proj.id %]" [% (cp==proj.id)? 'selected="selected"':'' %]>
+    [% FOREACH proj IN current_user.projects %]
+      <option value="[% proj.id %]" [% (current_user.project == proj.id)? 'selected':'' %]>
         [% proj.name %] ([% proj.count %] available)
       </option>
     [% END %]
@@ -56,20 +38,33 @@ window.onload = function(e)
   </form>
 [% END %]
 
-<!--<div id="progress" style="width:450px;float:right;margin-right:240px;"></div>-->
 
-[% crms.Debug %]
-[% n = crms.CountHolds() %]
-[% IF n %]<h4>You have $n [% crms.Pluralize('volume', n) %] on hold.</h4>[% END %]
+[% IF current_user.roles.size > 1 %]
+  <form action="crms">
+    <input type="hidden" name="roleForm" value="1"/>
+    <label for="roleSel">Current role:</label>
+    <select name="roleSel" id="roleSel" onchange="this.form.submit()">
+    [% FOREACH role IN current_user.roles %]
+      <option value="[% role.id %]" [% ((current_user.role || 'reviewer') == role.id)? 'selected':'' %]>
+        [% role.name %]
+      </option>
+    [% END %]
+    </select>
+  </form>
+[% END %]
+
+
+[% n = crms.CountHolds(current_user) %]
+[% IF n %]<h4>You have $n [% utils.Pluralize(n, 'volume') %] on hold.</h4>[% END %]
 
 [% # FIXME: GetAddToQueueRef() is potentially inefficient. %]
 [% # FIXME: replace this with breakdown of reviewer's items by project. %]
-[% ref = crms.GetAddToQueueRef() %]
+[% ref = crms.GetAddToQueueRef(current_user) %]
 [% n = ref.size %]
 [% IF n>0 %]
   <h4>You have $n
-    <a href="[% crms.Sysify('?p=queueAdd') %]">
-    high-priority</a> [% crms.Pluralize('volume', n) %].
+    <a href="[% crms.BuildURL('queueAdd') %]">
+    high-priority</a> [% utils.Pluralize(n, 'volume') %].
   </h4>
 [% END %]
 <br/>
@@ -87,7 +82,7 @@ window.onload = function(e)
 
 <main>
 <table class="mainnav">
-[% menus = crms.Menus() %]
+[% menus = crms.Menus(current_user) %]
 [% i = 0 %]
 [% of = menus.size() %]
 [% FOREACH menu IN menus %]
@@ -118,7 +113,7 @@ window.onload = function(e)
     <tr>
   [% END %]
     <td $colspan headers="[% menus.$i.1 %]">
-    [% items = crms.MenuItems(id) %]
+    [% items = crms.MenuItems(id, current_user) %]
     [% FOREACH item IN items %]
       [% target = (item.2)? ' target="' _ item.2 _ '"':'' %]
       <a href="[% item.1 %]"[% target %] [% item.3 %]>[% item.0.replace('\s', '&nbsp;') %]</a><br/>
@@ -130,11 +125,10 @@ window.onload = function(e)
 </table>
 
 
-[% locked = crms.GetLockedItems(user) %]
+[% locked = crms.GetLockedItems(current_user) %]
 [% IF locked.size %]
   [% sysStatus = crms.GetSystemStatus().1 %]
   <br/><br/><form action="crms" id="checks">
-  [% crms.HiddenSys() %]
   <input type="checkbox" id="SelectAllCB" onclick="CheckAll(this,'checks');"/>
   <label for="SelectAllCB">Select All</label>&nbsp;&nbsp;&nbsp;&nbsp;
   [% IF sysStatus == 'normal' %]
@@ -145,13 +139,13 @@ window.onload = function(e)
   <tr><th colspan="6" style="text-align:center;"><span class="major">Your&nbsp;Locked&nbsp;Items</span></th></tr>
   <tr><th>ID</th><th>Title</th><th>Select</th><th>Unlock</th></tr>
   [% sys = cgi.param('sys') %]
-  [% FOREACH item IN locked.keys %]
+  [% FOREACH item IN locked %]
     <tr>
-      <td>[% item %]</td>
-      <td>[% crms.GetTitle( item ) %]</td>
+      <td>[% item.id %]</td>
+      <td>[% item.title %]</td>
       <td style="text-align:center"><input type="checkbox" name="vol_[% item %]"/></td>
       <td style="text-align:center">
-        [% IF sysStatus == 'normal' %]<a href="[% crms.Sysify("crms?unlock=" _ item) %]">do it</a>[% END %]
+        [% IF sysStatus == 'normal' %]<a href="[% crms.BuildURL('', 'unlock', item) %]">do it</a>[% END %]
       </td>
     </tr>
   [% END %]
@@ -160,4 +154,4 @@ window.onload = function(e)
 <br/>
 [% END %]
 </main>
-[% INCLUDE footer.tt %]
+

@@ -1,13 +1,15 @@
-#!/usr/bin/perl
-
 use strict;
 use warnings;
 BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
 
+use FindBin;
 use Test::More;
-use CRMS;
 
-my $crms = CRMS->new();
+use lib "$FindBin::Bin/lib";
+use Factories;
+use TestHelper;
+
+my $crms = TestHelper::CRMS;
 $crms->AttrReasonSync();
 
 ###==== new() ====###
@@ -48,24 +50,24 @@ foreach my $reason (@$reasons)
 ###==== rights_data() ====###
 # FIXME: we need a Faker-heavy DB setup routine so we don't have to do this here.
 $crms->PrepareSubmitSql('DELETE FROM licensing');
-my $sql = 'INSERT INTO institutions (name,shortname,suffix) VALUES ("Test Institution", "Test", "test.edu")';
-$crms->PrepareSubmitSql($sql);
-$sql = 'INSERT INTO users (id,name,institution) VALUES ("test_user","Test User",(SELECT id FROM institutions ORDER BY RAND() LIMIT 1))';
-$crms->PrepareSubmitSql($sql);
+#my $sql = 'INSERT INTO institutions (name,shortname,suffix) VALUES ("Test Institution", "Test", "test.edu")';
+#$crms->PrepareSubmitSql($sql);
+#$sql = 'INSERT INTO users (id,name,institution) VALUES ("test_user","Test User",(SELECT id FROM institutions ORDER BY RAND() LIMIT 1))';
+#$crms->PrepareSubmitSql($sql);
+my $user = Factories::User(email => 'licensing_user');
 my $data = $licensing->rights_data();
 ok(ref $data eq 'HASH', 'Licensing->rights_data returns hashref');
 ok(ref $data->{ids} eq 'ARRAY', 'Licensing->rights_data returns ids hashref');
 ok(ref $data->{rights_data} eq '', 'Licensing->rights_data returns a rights_data string');
 is(scalar @{$data->{ids}}, 0, 'Licensing->rights_data empty if no entries');
-$sql = 'INSERT INTO licensing (htid,user,attr,reason,ticket,rights_holder)'.
-       ' VALUES ("mdp.1","test_user",1,1,"HT-0000","Nobody")';
-$crms->PrepareSubmitSql($sql);
+my $sql = 'INSERT INTO licensing (htid,user,attr,reason,ticket,rights_holder)'.
+  ' VALUES (?,?,?,?,?,?)';
+$crms->PrepareSubmitSql($sql, 'mdp.1', $user->{id}, 1, 1, 'HT-0000', 'Nobody');
 $data = $licensing->rights_data();
 is(scalar @{$data->{ids}}, 1, 'Licensing->rights_data returns one entry');
 ok($data->{rights_data} =~ m/HT-0000 \s\(Nobody\)/, 'Licensing->rights_data returns properly-formatted note');
-$crms->PrepareSubmitSql('DELETE FROM licensing WHERE ticket="HT-0000"');
-$crms->PrepareSubmitSql('DELETE FROM users WHERE id="test_user"');
-$crms->PrepareSubmitSql('DELETE FROM institutions WHERE name="Test Institution"');
+$crms->PrepareSubmitSql('DELETE FROM licensing WHERE user=?', $user->{id});
+$crms->PrepareSubmitSql('DELETE FROM users WHERE id=?', $user->{id});
 
 done_testing();
 

@@ -20,8 +20,6 @@
   [% didSetAutoInherit = 1 %]
 [% END %]
 
-[% INCLUDE header.tt %]
-
 <h2>System Status:</h2>
 
 <table class="exportStats" style="width:30%;">
@@ -45,7 +43,6 @@ function limitText(limitField, limitCount, limitNum)
   <p class="smallishText">Enter a message to be displayed on every page of the CRMS.<br/>
   (Max 150 characters; <input readonly="readonly" type="text" name="countdown" size="3" value="150"/> left.)</p>
 
-  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="systemStatus"/>
   <input type="hidden" name="setStatus" value="1"/>
   <textarea name="msg" cols="20" rows="3" style="width:33%;"
@@ -72,7 +69,6 @@ To display a custom message, or override the standard ones (<i>down</i>/<i>parti
 [% reminder = !crms.GetSystemVar('disableReminder') %]
 <form action="crms">
   <h4>Inactivity Reminder:</h4><br/>
-  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="systemStatus"/>
   <input type="hidden" name="setReminder" value="1"/>
   <table class="exportStats">
@@ -102,7 +98,6 @@ To display a custom message, or override the standard ones (<i>down</i>/<i>parti
 [% autoinherit = ('disabled' != crms.GetSystemVar('autoinherit')) %]
 <form action="crms">
   <h4>Automatic Rights Inheritance:</h4><br/>
-  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="systemStatus"/>
   <input type="hidden" name="setAutoinherit" value="1"/>
   <table class="exportStats">
@@ -128,7 +123,3 @@ To display a custom message, or override the standard ones (<i>down</i>/<i>parti
 <br/>
 <p class="smallishText">Note: if the system status is <i>partial</i> or <i>down</i>, automatic rights
 inheritance is still disabled, regardless of this setting.</p>
-
-
-[% INCLUDE footer.tt %]
-

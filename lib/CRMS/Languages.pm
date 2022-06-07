@@ -1,9 +1,7 @@
-package Languages;
+package CRMS::Languages;
 
 use strict;
 use warnings;
-use vars qw( @ISA @EXPORT @EXPORT_OK );
-our @EXPORT = qw(TranslateLanguage GetLanguages);
 
 my $languages = {
   'aar' => 'Afar',
@@ -524,21 +522,15 @@ my $languages = {
   'zza' => 'Zaza'
 };
 
-sub GetLanguages
-{
+sub GetLanguages {
   return $languages;
 }
 
-sub TranslateLanguage
-{
-  my $code = shift;
+sub TranslateLanguage {
+  my $code = shift || 'undef';
 
-  $code = 'zxx' unless defined $code;
-  my $orig = $code;
-  $code =~ s/[^a-z]//gi;
-  my $lang = $languages->{$code};
-  $lang = "Undetermined [$orig]" unless $lang;
-  return $lang;
+  return $languages->{$code} || "Undetermined [$code]";
+
 }
 
 1;

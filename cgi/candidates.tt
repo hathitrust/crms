@@ -1,5 +1,3 @@
-[% INCLUDE header.tt %]
-
 <h2>Volumes in Candidates:</h2>
 
 [% page         = cgi.param("p")            %]
@@ -44,7 +42,6 @@
 
 <form id="select" action="crms">
 <input type="hidden" name="p" value="$page"/>
-[% crms.HiddenSys() %]
 
 Restrict selection:<br/>
 
@@ -202,7 +199,7 @@ records per page.
         <td class="nowrap">[% crms.LinkToPT(item.id, item.id) %]</td>
         <td><a href="[% crms.LinkToCatalogMARC(item.sysid) %]" target="_blank">[% item.sysid %]</a></td>
         <td><a href="[% crms.LinkToRetrieve(item.id) %]" target="_blank">[% item.title %]</a></td>
-        <td>[% cgi.escapeHTML(item.author) %]</td>
+        <td>[% utils.EscapeHTML(item.author) %]</td>
         <td>$item.pubdate</td>
         <td>$item.country</td>
         <td>$item.date</td>
@@ -256,6 +253,3 @@ records per page.
 [% ELSE %]
   <h4>No results found.</h4>
 [% END %]
-
-
-[% INCLUDE footer.tt %]

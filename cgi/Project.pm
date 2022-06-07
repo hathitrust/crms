@@ -3,15 +3,16 @@ package Project;
 use strict;
 use warnings;
 
-sub new
-{
+use DB;
+
+sub new {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
   $self->{$_} = $args{$_} for keys %args;
   my $id = $args{'id'};
   die "No CRMS object passed to project" unless $args{'crms'};
   my $sql = 'SELECT * FROM projects WHERE id=?';
-  my $ref = $self->{'crms'}->get('dbh')->selectall_hashref($sql, 'id', undef, $id);
+  my $ref = CRMS::DB->new()->dbh()->selectall_hashref($sql, 'id', undef, $id);
   $self->{$_} = $ref->{$id}->{$_} for keys %{$ref->{$id}};
   return $self;
 }
@@ -77,14 +78,6 @@ sub secondary_authority
   my $self = shift;
 
   return $self->{'secondary_authority'};
-}
-
-# Return a list of HTIDs that should be claimed by this project.
-sub tests
-{
-  my $self = shift;
-
-  return [];
 }
 
 sub EvaluateCandidacy

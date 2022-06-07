@@ -1,5 +1,5 @@
 [% id = cgi.param('id') %]
-[% IF crms.IsUserExpert() %]
+[% IF user.is_expert() %]
   [% to = cgi.param('to') %]
   [% mail = to %]
 [% END %]
@@ -31,8 +31,7 @@ function closeMe()
     <div class="emailBox">
       [% IF cgi.param("submit") %]
         Sending mail to [% cgi.param('to') %]
-        [% CALL crms.SubmitMail(id, crms.get('remote_user'),
-                                cgi.param('msg'), cgi.param('uuid'),
+        [% CALL crms.SubmitMail(id, cgi.param('msg'), cgi.param('uuid'),
                                 cgi.param('to'), cgi.param('wait')) %]
         <h2>Message stored for <a href="mailto:[% mail %]"><span style="color:black;">[% mail %]</span></a>.
         A copy will be CC'ed to you.
@@ -57,8 +56,7 @@ function closeMe()
         <br/>
         [% user = crms.get('user') %]
         <form action="crms">
-          [% crms.HiddenSys() %]
-          <input type="hidden" name="user" value="[% user %]"/>
+          <input type="hidden" name="user" value="[% user.id %]"/>
           <input type="hidden" name="p" value="[% cgi.param('p') %]"/>
           <input type="hidden" name="uuid" value="[% crms.UUID() %]"/>
           [% IF to %]

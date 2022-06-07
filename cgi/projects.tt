@@ -1,5 +1,4 @@
 [% #p = cgi.param("p") %]
-[% INCLUDE header.tt %]
 
 [% rights = crms.AllAssignableRights() %]
 [% cats = crms.AllAssignableCategories() %]
@@ -508,4 +507,3 @@ function addProject(name)
 </td>
 </tr>
 </table>
-[% INCLUDE footer.tt %]

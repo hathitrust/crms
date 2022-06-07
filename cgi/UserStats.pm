@@ -6,6 +6,11 @@ use vars qw(@ISA @EXPORT @EXPORT_OK);
 our @EXPORT = qw(GetAllMonthsInYear GetUserStatsYears CreateUserStatsData
                  CreateUserStatsReport);
 
+use Data::Dumper;
+
+use User;
+use Utilities;
+
 my %TITLES = ('pd' => 'PD Reviews', 'ic' => 'IC Reviews',
               'und' => 'UND Reviews', 'total' => 'Total Reviews',
               'valid' => 'Validated Reviews', 'neutral' => 'Neutral Reviews',
@@ -16,12 +21,11 @@ my %TITLES = ('pd' => 'PD Reviews', 'ic' => 'IC Reviews',
               'outliers' => 'Outlier Reviews');
 
 # Returns an array of date strings e.g. ('2009-01'...'2009-12') for the (current if no param) year.
-sub GetAllMonthsInYear
-{
+sub GetAllMonthsInYear {
   my $self = shift;
   my $year = shift;
 
-  my ($currYear, $currMonth) = $self->GetTheYearMonth();
+  my ($currYear, $currMonth) = GetTheYearMonth();
   $year = $currYear unless $year;
   my $start = 1;
   my @months = ();
@@ -34,6 +38,26 @@ sub GetAllMonthsInYear
   return @months;
 }
 
+sub GetTheYearMonth {
+  my $newtime = scalar localtime(time());
+  my $year = substr($newtime, 20, 4);
+  my %months = ('Jan' => '01',
+                'Feb' => '02',
+                'Mar' => '03',
+                'Apr' => '04',
+                'May' => '05',
+                'Jun' => '06',
+                'Jul' => '07',
+                'Aug' => '08',
+                'Sep' => '09',
+                'Oct' => '10',
+                'Nov' => '11',
+                'Dec' => '12',
+               );
+  my $month = $months{substr ($newtime,4,3)};
+  return ($year, $month);
+}
+
 sub GetUserStatsProjects
 {
   my $self = shift;
@@ -43,22 +67,20 @@ sub GetUserStatsProjects
   my @params;
   if ($user)
   {
-    if ($user =~ m/^\d+$/)
-    {
+    if ($user =~ m/^[a-z]+$/i) {
       my @users = map {$_->{'id'};} @{$self->GetInstitutionReviewers($user)};
       return () unless scalar @users;
-      $usersql = ' WHERE us.user IN '. $self->WildcardList(scalar @users);
+      $usersql = ' WHERE us.user IN '. Utilities->new->WildcardList(scalar @users);
       push @params, $_ for @users;
     }
     else
     {
-      $usersql = ' WHERE us.user=?';
+      $usersql = ' AND us.user=? ';
       push @params, $user;
     }
   }
   my $sql = 'SELECT DISTINCT us.project FROM userstats us'.
             ' INNER JOIN users u ON us.user=u.id'.
-            ' INNER JOIN institutions i ON u.institution=i.id '.
             $usersql. ' ORDER BY project ASC';
   my $ref = $self->SelectAll($sql, @params);
   return map {$_->[0];} @{$ref};
@@ -73,21 +95,17 @@ sub GetUserStatsYears
 
   my ($usersql, $projsql) = ('', '');
   my @params;
-  if ($user)
-  {
-    if ($user =~ m/^\d+$/)
-    {
+  if ($user) {
+    if ($user =~ m/^[a-z]+$/i) {
       $usersql = ' AND u.institution=? ';
       push @params, $user;
     }
-    else
-    {
+    else {
       $usersql = ' AND us.user=? ';
       push @params, $user;
     }
   }
-  if ($proj)
-  {
+  if ($proj) {
     $projsql = ' AND us.project=? ';
     push @params, $proj;
   }
@@ -109,38 +127,30 @@ sub GetUserStatsQueryParams
   my $year    = shift || 0; # 0 for year-by-year, year for month-by-month
   my $project = shift || 0; # 0 for all projects, project id for project
 
-  my $thisyear = $self->GetTheYear();
+  my $thisyear = Utilities->new->Year();
   my @params;
   my @users = ($user);
   my @years = ($year);
-  if ($user eq '0')
-  {
+  if ($user eq '0') {
     @users = (undef);
-    my $sql = 'SELECT id FROM institutions ORDER BY name ASC';
-    foreach my $row (@{$self->SelectAll($sql)})
-    {
-      my $inst = $row->[0];
-      push @users, $inst;
-      push @users, $_->{'id'} for @{$self->GetInstitutionReviewers($inst)};
+    #my $sql = 'SELECT id FROM institutions ORDER BY name ASC';
+    foreach my $inst (@{$self->GetParticipatingInstitutions}) {
+      #my $inst = $row->[0];
+      push @users, $inst->{inst_id};
+      push @users, $_->{'email'} for @{$self->GetInstitutionReviewers($inst)};
     }
   }
-  elsif ($user =~ m/^\d+$/)
-  {
-    @users = map {$_->{'id'};} @{$self->GetInstitutionReviewers($user)};
-    unshift @users, $user;
+  if ($user =~ m/^[a-z]+$/i) {
+    push @users, $_->{id} for @{$self->GetInstitutionReviewers($user)};
   }
-  foreach my $user (@users)
-  {
+  foreach my $user (@users) {
     my @projects = GetUserStatsProjects($self, $user);
     unshift @projects, undef if !$project and scalar @projects > 1;
-    foreach my $proj (@projects)
-    {
+    foreach my $proj (@projects) {
       my $old = 0;
-      if (!$project || !$proj || $project == $proj)
-      {
+      if (!$project || !$proj || $project == $proj) {
         @years = GetUserStatsYears($self, $user, $proj) unless $year;
-        foreach my $year2 (@years)
-        {
+        foreach my $year2 (@years) {
           my $divid = join '_', ($user || 'user', $year2 || 'year', $proj || 'proj');
           $divid =~ s/@//g;
           push @params, {'user' => $user, 'year' => $year2, 'proj' => $proj,
@@ -187,19 +197,19 @@ sub CreateUserStatsData
   {
     $username = 'All Reviewers';
   }
-  elsif ($user =~ m/^\d+$/)
+  elsif ($user =~ m/^[a-z]+$/i)
   {
     $username = $self->GetInstitutionName($user). ' Reviewers';
     @users = ($user);
-    $userclause = 'i.id=?';
+    $userclause = 'u.institution=?';
   }
   else
   {
-    $username = $self->GetUserProperty($user, 'name');
-    my $inst = $self->GetUserProperty($user, 'institution');
-    my $iname = $self->GetInstitutionName($inst);
-    $username .= ' ('. $iname. ' &#x2014; '. $user. ')';
-    @users = ($user);
+    my $user_obj = User::Where('email' => $user)->[0];
+    $username = $user_obj->{name};
+    my $iname = $self->GetInstitutionName($user_obj->{institution});
+    $username .= ' ('. $iname. ' &#x2014; '. $user_obj->{name} . ')';
+    @users = ($user_obj->{id});
     $userclause = 'us.user=?';
   }
   if ($project)
@@ -219,8 +229,7 @@ sub CreateUserStatsData
             'SUM(us.total_time)/(SUM(us.total_reviews)-SUM(us.total_outliers)),'.
             '(SUM(us.total_reviews)-SUM(us.total_outliers))/SUM(us.total_time)*60.0,'.
             'SUM(total_outliers)'.
-            ' FROM userstats us INNER JOIN users u ON us.user=u.id'.
-            ' INNER JOIN institutions i ON u.institution=i.id';
+            ' FROM userstats us INNER JOIN users u ON us.user=u.id';
   my $ivsql = 'SELECT COALESCE(SUM(us.total_reviews),0),'.
               'COALESCE(SUM(us.total_incorrect),0)'.
               ' FROM userstats us';
@@ -264,7 +273,6 @@ sub CreateUserStatsData
   push @args, $user if $user ne '0';
   $sql = 'SELECT COUNT(*) FROM reviews us INNER JOIN queue q ON us.id=q.id'.
          ' INNER JOIN users u ON us.user=u.id'.
-         ' INNER JOIN institutions i ON u.institution=i.id'.
          ' WHERE '. $userclause;
   if ($project)
   {
@@ -291,7 +299,7 @@ sub CreateUserStatsReport
   $data->{'text'} .= join "\t", @cols;
   foreach my $th (@cols)
   {
-    $th = $self->YearMonthToEnglish($th) if $th =~ m/^\d\d\d\d-\d\d$/;
+    $th = Utilities->new->FormatYearMonth($th) if $th =~ m/^\d\d\d\d-\d\d$/;
     $th =~ s/\s/&nbsp;/g;
     $data->{'html'} .= "<th style='text-align:center;'>$th</th>\n";
   }

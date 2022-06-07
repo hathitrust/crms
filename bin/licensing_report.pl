@@ -1,8 +1,10 @@
 #!/usr/bin/perl
 
 use strict;
-use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+BEGIN {
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
+}
 
 use Getopt::Long;
 use Mail::Sendmail;
@@ -41,8 +43,7 @@ $instance = 'production' if $production;
 if ($help) { print $usage. "\n"; exit(0); }
 
 my $crms = CRMS->new(
-    verbose  => $verbose,
-    instance => $instance
+  instance => $instance
 );
 
 my $sql = 'SELECT l.id,l.htid,a.name,rs.name,l.user,l.ticket,l.rights_holder,'.

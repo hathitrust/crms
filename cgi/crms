@@ -1,31 +1,38 @@
 #!/usr/bin/perl
 
+BEGIN {
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
+}
+
 use strict;
-use FindBin;
-use lib $FindBin::Bin;
+use warnings;
+
+use Carp;
 use CGI;
-use CRMS;
+use CGI::Cookie;
+use Data::Dumper;
 use Encode;
+use FindBin;
 use POSIX;
 use Template;
 use URI::Escape;
-use Data::Dumper;
+
+use CRMS;
+use Utilities;
+
+
+#$SIG{__DIE__} =  \&Carp::confess;
+#$SIG{__WARN__} = \&Carp::confess;
 
 my $cgi = new CGI;
-my $page = $cgi->param('p');
-# FIXME: should the debugs be extracted w/ CRMS.pm like tdb/pdb?
-my $debugAuth = $cgi->param('debugAuth');
-my $debugSql = $cgi->param('debugSql');
-my $debugVar = $cgi->param('debugVar');
+## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
+## the default is home.tt in case a tt is not found
+my $page = $cgi->param('p') || 'home';
 my $debug = $cgi->param('debug');
-my $crms = CRMS->new(
-        cgi       => $cgi,
-        verbose   => 0,
-        debugAuth => $debugAuth,
-        debugSql  => $debugSql,
-        debugVar  => $debugVar
-        );
+my $crms = CRMS->new(cgi => $cgi);
 my $redirect;
+my $cookie;
 my $uri = $ENV{'REQUEST_URI'};
 $uri =~ s/&/;/g;
 my $target = uri_escape_utf8('https://'. $ENV{'HTTP_HOST'}. $uri);
@@ -33,26 +40,55 @@ if (!$crms->get('remote_user'))
 {
   $redirect = 'https://'. $ENV{'HTTP_HOST'}. "/cgi/wayf?target=$target";
 }
-if ($crms->get('stepup') && $crms->get('stepup_redirect'))
+if ($crms->get('stepup_redirect'))
 {
   $redirect = $crms->get('stepup_redirect');
 }
+my $user = $crms->GetUser();
+my $alias_user_id = undef;
+
+
+my $debug_note = '';
+# Alias stuff is for dev only.
+if ($crms->Instance() eq 'dev' && defined $user) {
+  # Set cookie if changing to user.
+  if (defined $cgi->param('changeuser') && $cgi->param('changeuser') == 1) {
+    $alias_user_id = $cgi->param('newuser');
+    $cgi->delete_all();
+  }
+  if (!defined $alias_user_id) {
+    $alias_user_id = $cgi->cookie('alias_user_id');
+  }
+  if (defined $alias_user_id) {
+    $crms->SetAlias($alias_user_id);
+    if (defined $crms->get('alias_user_id')) {
+      $user = $crms->GetUser($crms->get('alias_user_id'));
+      $cookie = CGI::Cookie->new(-name     => 'alias_user_id',
+                                 -value    =>  $alias_user_id,
+                                 -expires  =>  '+3M',
+                                 -samesite => 'Strict');
+    }
+  }
+}
+
 if ($page eq 'Logout')
 {
   # Remove all locks for this user.
   # If we're aliased, we don't log out, we just drop the alias.
-  my $alias = $crms->GetAlias();
-  if ($alias)
-  {
-    $crms->UnlockAllItemsForUser($alias);
+  $crms->UnlockAllItemsForUser();
+  if ($crms->get('alias_user_id')) {
     $crms->SetAlias();
+    $user = $crms->GetUser();
+    $cookie = CGI::Cookie->new(-name     => 'alias_user_id',
+                               -value    =>  '',
+                               -expires  =>  '-3M',
+                               -samesite => 'Strict');
     $cgi->delete_all();
   }
   else
   {
-    $crms->UnlockAllItemsForUser();
     my $central = $crms->get('logout');
-    # FIXME: appears to be unneeded on HT infrastructure.
+    # FIXME: is this still used?
     my $service = $ENV{'COSIGN_SERVICE'};
     if ($service)
     {
@@ -62,12 +98,24 @@ if ($page eq 'Logout')
     $redirect = $central. $target;
   }
 }
-elsif ($cgi->param('changeuser') == 1)
+
+if ($redirect)
 {
-  $crms->SetAlias(undef, $cgi->param('newuser'));
-  $cgi->delete_all();
+  if ($crms->GetSystemVar('logAuth'))
+  {
+    my $db = $crms->AuthDebugData();
+    $crms->Note($db);
+  }
+  print $cgi->redirect($redirect);
+  exit(0);
 }
-my $user = $crms->get('user');
+
+if ($cgi->param('download'))
+{
+  use Downloads;
+  Downloads::Download($crms, $cgi);
+  exit(0);
+}
 
 ### Review submission: all projects go through here.
 if ($page eq 'finishReview')
@@ -113,48 +161,25 @@ if ($page eq 'finishReview')
   }
 }
 
-if ($redirect && !$debugAuth)
-{
-  if ($crms->GetSystemVar('logAuth'))
-  {
-    my $db = $crms->AuthDebugData();
-    $crms->Note($db);
-  }
-  print $cgi->redirect($redirect);
-  exit(0);
-}
-
-if ($cgi->param('download'))
-{
-  use Downloads;
-  Downloads::Download($crms, $cgi);
-  exit(0);
-}
-
-## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
-## the default is home.tt in case a tt is not found
-$page = $cgi->param('p') || 'home';
-if (!$crms->GetAlias())
-{
-  my %ips = %{$crms->GetUserIPs()};
-  if (scalar keys %ips)
-  {
-    my $ip = $ENV{'REMOTE_ADDR'};
-    if (!defined $ips{$ip} &&
-        !defined $ips{'mfa'} &&
-        ($crms->IsUserReviewer() ||
-         $crms->IsUserAdvanced() ||
-         $crms->IsUserExpert()))
-    {
-      $cgi->param('REMOTE_ADDR', $ip);
-      $page = 'ip';
-    }
+my %ips = %{$crms->GetUserIPs()};
+if (scalar keys %ips) {
+  my $ip = $ENV{'REMOTE_ADDR'};
+  if (!defined $ips{$ip} && !defined $ips{'mfa'} &&
+      ($user->is_reviewer() || $user->is_advanced() || $user->is_expert())) {
+    $cgi->param('REMOTE_ADDR', $ip);
+    $page = 'ip';
   }
 }
+
 my $exp = $crms->IsUserExpired($user);
+$debug_note .= sprintf "EXPIRED %s\n", Dumper $exp;
+foreach my $err (@{$crms->GetErrors()}) {
+  $debug_note .= sprintf "ERR %s\n", $err ;
+}
 $page = 'expired' if $exp->{'status'} == 1;
 if (length $page)
 {
+  $crms->Note(sprintf "ACCESS CHECK with %s", Dumper $crms->get('user'));
   my $dbc = $crms->AccessCheck($page);
   if (defined $dbc)
   {
@@ -177,39 +202,39 @@ my $config =
     ENCODING     => 'UTF-8'
 };
 
-my $tt   = Template->new($config);
+my $tt = Template->new($config);
 my $vars = {
-    title     => 'CRMS',
-    crms      => $crms,
-    cgi       => $cgi,
-    user      => $user,
-    project   => $crms->GetUserCurrentProject(),
-    env       => $ENV,
-    yesterday => POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time-86400))
+    crms         => $crms,
+    cgi          => $cgi,
+    current_user => $user,
+    utils        => Utilities->new()
 };
 
-print $cgi->header(-charset => 'utf-8', 'cache-control' => 'private');
+print $cgi->header(-charset => 'utf-8',
+                   -Cache_control => 'no-cache, no-store, must-revalidate',
+                   -expires => '-1m',
+                   -cookie => $cookie);
 if (!$tt->process($input, $vars))
 {
   printf "<h3>%s</h3>\n", $tt->error();
   die $tt->error();
 }
-print $crms->Debug();
-if ($debugAuth)
+
+if ($debug)
 {
-  my $db = $crms->AuthDebugData(1);
+  print "<h3>Debug Information</h3>";
+  if ($debug_note) {
+    print "<h4>Debug Note</h4>";
+    print "<pre>$debug_note</pre>\n";
+  }
+  eval {
+    my $db = $crms->AuthDebugData(1);
   print <<END;
 <div>
     <h2>Auth Debug</h2>
     <span style="color:black;"><code>$db</code></span>
   </div>
 END
-}
-
-if ($debug)
-{
-  print "<h3>Debug Information</h3>";
-  eval {
     printf 'Host: <b>%s</b><br/>', `hostname`;
     my $dbinfo = $crms->DbInfo();
     $dbinfo =~ s/\n/<br\/>/g;
@@ -227,7 +252,7 @@ if ($debug)
     print "<br/><strong>CRMS Variables:</strong><br/>\n";
     foreach my $k (sort keys %{$crms})
     {
-      printf "&nbsp;&nbsp;&nbsp;$k: %s<br/>\n", $crms->get($k);
+      printf "&nbsp;&nbsp;&nbsp;$k: %s<br/>\n", $crms->get($k) || '<undef>';
     }
   };
   print "<i>Error printing debug information:</i> <code>$@</code>\n" if $@;

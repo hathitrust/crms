@@ -4,6 +4,8 @@ use vars qw(@ISA @EXPORT @EXPORT_OK);
 use strict;
 use warnings;
 
+use Utilities;
+
 sub new
 {
   my ($class, %args) = @_;
@@ -108,7 +110,7 @@ sub submit
 
   my $crms = $self->{crms};
   my $result = { errors => [], added => {} };
-  my $now = $crms->GetNow();
+  my $now = Utilities->new->Now();
   my $sql = 'INSERT INTO licensing'.
             ' (htid,time,user,attr,reason,ticket,rights_holder)'.
             ' VALUES (?,?,?,?,?,?,?)';

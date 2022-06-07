@@ -13,8 +13,7 @@
 <form name="submitReview" action="crms">
   <input type="hidden" name="p"       value="finishReview"/>
   <input type="hidden" name="htid" value="[% htid %]"/>
-  <input type="hidden" name="start"   value="[% crms.GetNow() %]"/>
-  <input type="hidden" name="user"    value="[% user %]"/>
+  <input type="hidden" name="start"   value="[% utils.Now() %]"/>
   <input type="hidden" name="editing" value="[% editing %]"/>
   <table>
     <tr>
@@ -152,7 +151,7 @@
       <td colspan="2">
         <span class="smallishText">
             <!--Held reviews will remain unprocessed.-->
-            You currently have [% holds %] [% crms.Pluralize('volume', holds) %] on hold.
+            You currently have [% holds %] [% utils.Pluralize(holds, 'volume') %] on hold.
             <!--It is up to you to get in touch with an expert.-->
         </span>
       </td>
@@ -173,12 +172,13 @@
             <img id="importLoader" src="[% crms.WebPath('web', 'ajax-loader.gif') %]"
                  alt="loading..." style="display:none;"/>
           </td>
-        [% FOREACH user IN reviews.keys.sort %]
+        [% FOREACH uid IN reviews.keys.sort %]
+          [% user = crms.GetUser(uid) %]
           <tr>
-            <td><label for="pull[% user %]">[% user %] ([% reviews.$user.attr %]/[% reviews.$user.reason %])</label></td>
-            <td><input type="radio" name="pullrights" id="pull[% user %]"
-                       [% IF importUser == user %]checked="checked"[% END %]
-                       onclick="popReviewInfo('[% user %]');"/>
+            <td><label for="pull[% uid %]">[% user.email %] ([% reviews.$uid.attr %]/[% reviews.$uid.reason %])</label></td>
+            <td><input type="radio" name="pullrights" id="pull[% uid %]"
+                       [% IF importUser == uid %]checked="checked"[% END %]
+                       onclick="popReviewInfo('[% uid %]');"/>
             </td>
           </tr>
         [% END %]

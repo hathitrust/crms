@@ -1,5 +1,3 @@
-[% INCLUDE header.tt %]
-
 <h2>All Locked Items:</h2>
 
 <script type="text/javascript">
@@ -40,12 +38,11 @@ function CheckAll(box,formid)
 
 
 <br/><br/>
-[% locked = crms.GetLockedItems() %]
+[% locked = crms.GetAllLockedItems() %]
 [% IF locked.size %]
-  [% url = crms.Sysify('crms?p=adminQueue;clear=1') %]
+  [% url = crms.BuildURL('adminQueue', 'clear', 1) %]
   <blockquote><a href="$url">Clear old locks</a></blockquote><br/>
   <form action="crms" id="checks">
-  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="adminQueue"/>
   <input type="checkbox" id="SelectAllCB" onclick="CheckAll(this,'checks');"/>
   <label for="SelectAllCB">Select All</label>&nbsp;&nbsp;&nbsp;&nbsp;
@@ -53,14 +50,14 @@ function CheckAll(box,formid)
   <table class="exportStats" style="width:55%">
   <tr><th colspan="6" style="text-align:center;"><span class="major">Locked Items</span></th></tr>
   <tr><th>ID</th><th>Title</th><th>Locked&nbsp;For</th><th>Select</th><th>Unlock</th></tr>
-  [% FOREACH item IN locked.keys %]
+  [% FOREACH item IN locked %]
     <tr>
-      <td>[% item %]</td>
-      <td>[% crms.GetTitle( item ) %]</td>
-      <td style="text-align:center">[% locked.${item}.locked %]</td>
+      <td>[% item.id %]</td>
+      <td>[% item.title %]</td>
+      <td style="text-align:center">[% item.user %]</td>
       <td style="text-align:center"><input type="checkbox" name="vol_[% item %]"/></td>
       <td style="text-align:center">
-        [% url = crms.Sysify("crms?p=adminQueue;unlock=$item") %]
+        [% url = crms.BuildURL('adminQueue', 'unlock', item.id) %]
         <a href="$url">do it</a>
       </td>
     </tr>
@@ -71,5 +68,3 @@ function CheckAll(box,formid)
 [% ELSE %]
   <strong>There are no locked items.</strong><br/>
 [% END %]
-
-[% INCLUDE footer.tt %]

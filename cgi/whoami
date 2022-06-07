@@ -1,0 +1,41 @@
+#!/usr/bin/perl
+
+BEGIN {
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
+}
+
+use strict;
+use CGI;
+use CRMS;
+use Encode;
+#use POSIX;
+#use Template;
+#use URI::Escape;
+#use Data::Dumper;
+
+my $cgi = new CGI;
+my $crms = CRMS->new(cgi => $cgi);
+print $cgi->header;
+print <<'TOP';
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <link rel="icon" type="image/png" href="/crms/web/CRMSBlueIcon.png"/>
+  </head>
+  <body>
+  <h1>CRMS Identity Resolver</h1>
+  <pre>
+TOP
+
+print $crms->get('id_note');
+print <<'BOTTOM';
+</pre>
+<br/><br/>
+For further information, check <a href="https://babel.hathitrust.org/cgi/whoami">
+https://babel.hathitrust.org/cgi/whoami</a>.
+</body>
+</html>
+BOTTOM
+

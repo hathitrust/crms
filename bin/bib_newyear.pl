@@ -4,19 +4,24 @@ use strict;
 use warnings;
 BEGIN {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/post_zephir_processing');
 }
 
 use utf8;
-binmode(STDOUT, ':encoding(UTF-8)');
-use CRMS;
-use Getopt::Long qw(:config no_ignore_case bundling);
+
+use Data::Dumper;
 use Encode;
+use Getopt::Long qw(:config no_ignore_case bundling);
+use MARC::File::XML(BinaryEncoding => 'utf8');
 use Term::ANSIColor qw(:constants colored);
 $Term::ANSIColor::AUTORESET = 1;
-use Data::Dumper;
+
 use bib_rights;
-use MARC::File::XML(BinaryEncoding => 'utf8');
+use CRMS;
+use Utilities;
+
+binmode(STDOUT, ':encoding(UTF-8)');
 
 my $usage = <<END;
 USAGE: $0 [-hpv] [-o FILE] [-y YEAR]
@@ -53,15 +58,14 @@ $instance = 'production' if $production;
 if ($help) { print $usage. "\n"; exit(0); }
 
 my $crms = CRMS->new(
-    sys      => 'crmsworld',
-    verbose  => $verbose,
-    instance => $instance
+  verbose  => $verbose,
+  instance => $instance
 );
 
 $verbose = 0 unless defined $verbose;
 print "Verbosity $verbose\n" if $verbose;
-$year = $crms->GetTheYear() unless $year;
 
+$year = Utilities::Year() unless $year;
 $ENV{BIB_RIGHTS_DATE} = $year if defined $year;
   
 my $sql = 'SELECT r.namespace,r.id,a.name,rs.name FROM rights_current r'.

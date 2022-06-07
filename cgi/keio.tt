@@ -1,4 +1,3 @@
-[% INCLUDE header.tt %]
 [% p_table = cgi.param('table') %]
 [% p_query = cgi.param('query') %]
 [% p_page  = cgi.param('page')  %]
@@ -22,7 +21,6 @@ addEvent(window, 'load', function(e)
 [% END %]
 <form action="crms">
   <input type="hidden" name="p" value="keio"/>
-  [% crms.HiddenSys() %]
   <label for="table_sel">Table:</label>
   <select name="table" id="table_sel" onchange="selMenuItem('query_sel', 0);selMenuItem('page_sel', 0);this.form.submit()">
     <option value=""></option>
@@ -54,7 +52,7 @@ addEvent(window, 'load', function(e)
 
 [% IF p_table || p_query %]
   <!--<strong>○ = Yes, × = No, △ = Maybe/Partial</strong>-->
-  <strong>[% crms.Commify(data.total) %] Records</strong>
+  <strong>[% utils.Commify(data.total) %] Records</strong>
   <table class="exportStats" style="white-space:nowrap">
     <tr>
       [% FOREACH col IN data.fields %]
@@ -87,5 +85,3 @@ addEvent(window, 'load', function(e)
   <br/>
 [% END %]
 
-[% crms.Debug() %]
-[% INCLUDE footer.tt %]

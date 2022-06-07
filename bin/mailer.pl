@@ -2,12 +2,16 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+BEGIN {
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
+}
+
+use Encode;
+use Getopt::Long;
 
 use CRMS;
-use Getopt::Long;
 use Utilities;
-use Encode;
 
 my $usage = <<END;
 USAGE: $0 [-hpqtv] [-m USER [-m USER...]]
@@ -57,7 +61,7 @@ my $ref = $crms->SelectAll($sql);
 my $thstyle = ' style="background-color:#000000;color:#FFFFFF;padding:4px 20px 2px 6px;"';
 foreach my $row (@{$ref})
 {
-  my $user = $row->[0];
+  my $user = User::Find($row->[0]);
   my $id = $row->[1];
   my $txt = $row->[2];
   my $uuid = $row->[3];
@@ -66,7 +70,7 @@ foreach my $row (@{$ref})
   $id = undef if defined $id and $id eq '';
   my %mails;
   $mails{$_} = 1 for @mails;
-  if (!$crms->IsDevArea())
+  if ($crms->Instance() ne 'dev')
   {
     $mails{$crms->GetSystemVar('expertsEmail')} = 1 unless $quiet;
   }
@@ -97,13 +101,12 @@ foreach my $row (@{$ref})
     my $table = '<table style="border:1px solid #000000;border-collapse:collapse;">';
     if (!$to)
     {
-      my $username = $crms->GetUserProperty($user, 'name') || '';
       $table .= <<END;
     <tr><th$thstyle>User</th>
-        <td>$user</td>
+        <td>$user->{email}</td>
     </tr>
     <tr><th$thstyle>User Name</th>
-        <td>$username</td>
+        <td>$user->{'name'}</td>
     </tr>
 END
     }
@@ -124,7 +127,7 @@ END
       $sql = 'SELECT r.hold,r.attr,r.reason FROM reviews r INNER JOIN queue q ON r.id=q.id'.
              ' INNER JOIN projects p ON q.project=p.id'.
              ' WHERE r.id=? AND r.user=? ORDER BY r.time DESC LIMIT 1';
-      $ref2 = $crms->SelectAll($sql, $id, (defined $to)? $to : $user);
+      $ref2 = $crms->SelectAll($sql, $id, $user->{id});
       if (scalar @{$ref2})
       {
         my $hold = ($ref2->[0]->[0])? 'Yes':'No';
@@ -150,7 +153,7 @@ END
     $table .= "</table>\n<br/><br/>\n";
     $msg .= $table;
   }
-  $txt = $crms->EscapeHTML($txt);
+  $txt = Utilities->new->EscapeHTML($txt);
   $msg .= "<div>User message:<br/><strong>$txt</strong></div>";
   $msg .= '</body></html>';
   if (defined $to)
@@ -161,23 +164,24 @@ END
   my @recipients = keys %mails;
   if (scalar @recipients)
   {
+    my $user_email = $user->{'email'};
     @recipients = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @recipients;
-    $user .= '@umich.edu' unless $user =~ m/@/;
+    $user_email .= '@umich.edu' unless $user_email =~ m/@/;
     my $recipients = join ',', @recipients;
     print "Sending to $recipients\n" if $verbose;
     use Encode;
     use Mail::Sendmail;
     my $bytes = encode('utf8', $msg);
-    my %mail = ('from'         => $user,
+    my %mail = ('from'         => $user_email,
                 'to'           => $recipients,
-                'cc'           => $user,
+                'cc'           => $user_email,
                 'subject'      => $subj,
                 'content-type' => 'text/html; charset="UTF-8"',
                 'body'         => $bytes
                 );
     if ($noop)
     {
-      print "No-op set; not sending e-mail to $recipients\n" if $verbose;
+      print "No-op set; not sending e-mail to from $user_email to $recipients\n" if $verbose;
     }
     else
     {

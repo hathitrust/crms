@@ -18,7 +18,7 @@
     <tr><td><a class="smallishText"
                href="[% crms.WebPath('cgi', 'crms?p=adminHistoricalReviews;search1=Identifier;search1value=' _ htid) %]"
                target="_blank">
-    [% totalReviews %] historical [% crms.Pluralize("review", totalReviews) %]
+    [% totalReviews %] historical [% utils.Pluralize(totalReviews, "review") %]
     </a></td></tr>
     <tr><td>
       <span class="smallishText" style="color:green;">
@@ -31,7 +31,7 @@
     <tr><td><a class="smallishText"
                href="[% crms.WebPath('cgi', 'crms?p=adminReviews;search1=Identifier;search1value=' _ htid) %]"
                target="_blank">
-    [% totalReviews %] active [% crms.Pluralize("review", totalReviews) %]
+    [% totalReviews %] active [% utils.Pluralize(totalReviews, "review") %]
     </a></td></tr>
   [% END %]
   [% IF info.addedby %]

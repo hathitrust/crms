@@ -1,7 +1,4 @@
-[% INCLUDE header.tt %]
-
 <h2>My Held Reviews:</h2>
 
 [% INCLUDE selection.tt  %]
 [% INCLUDE searchResults.tt %]
-[% INCLUDE footer.tt %]

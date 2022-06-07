@@ -1,7 +1,4 @@
-[% INCLUDE header.tt %]
-
 <h2>Final Determinations:</h2>
 
-[% INCLUDE exportDataSelection.tt  %]
-[% INCLUDE exportDataSearchResults.tt  %]
-[% INCLUDE footer.tt %]
+[% INCLUDE exportDataSelection.tt %]
+[% INCLUDE exportDataSearchResults.tt %]

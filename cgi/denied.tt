@@ -2,8 +2,8 @@
 [% crms.StartHTML('No Access', '<link rel="stylesheet" type="text/css" href="' _ css _ '"/>') %]
 
 <div class="pages" id="homePage">
-  <img src="[% crms.WebPath('web', crms.GetSystemVar('logo')) %]" width="455" height="80"
-             alt="[% crms.System() %] Logo"
+  <img src="[% crms.WebPath('web', crms.GetSystemVar('logo')) %]"
+             width="455" height="80" alt="CRMS Logo"
              style="display:block;margin-left:auto;margin-right:auto;"/>
   <br/>
   <br/>
@@ -13,11 +13,11 @@
   [% mail2 = mail.replace('-', '&#8209;') %]
   [% user = crms.get('user') %]
   <div class="warningBox">
-    [% username = (user)? user : "{unknown user}" %]
+    [% username = (user)? user.name : "{unknown user}" %]
     <h2>You do not have access to this page.</h2>
     [% IF user %]
-      <strong><a href="[% crms.Sysify('?p=home') %]">Go to home page</a></strong><br/>
-      <strong><a href="[% crms.Sysify('?p=Logout') %]"> Logout</a></strong>
+      <strong><a href="[% crms.BuildURL('home') %]">Go to home page</a></strong><br/>
+      <strong><a href="[% crms.BuildURL('Logout') %]"> Logout</a></strong>
     [% END %]
     <div class="warningSubbox">
       <h4>Security considerations do not allow Copyright Review Management System reviewer
@@ -30,5 +30,4 @@
       </h4>
     </div>
   </div>
-  [% CALL cgi.param('debugAuth', 1) %]
 [% INCLUDE footer.tt %]

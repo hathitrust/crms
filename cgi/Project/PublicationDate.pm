@@ -5,24 +5,14 @@ use strict;
 use warnings;
 use utf8;
 
+use CRMS::Countries;
+use Utilities;
+
 sub new
 {
   my $class = shift;
   return $class->SUPER::new(@_);
 }
-
-#my %TEST_HTIDS = (
-#    'coo.31924000029250' => 'Australia',
-#    'bc.ark:/13960/t02z7k303' => 'Canada',
-#    'bc.ark:/13960/t0bw4939s' => 'UK');
-
-#sub tests
-#{
-#  my $self = shift;
-#
-#  my @tests = keys %TEST_HTIDS;
-#  return \@tests;
-#}
 
 # ========== CANDIDACY ========== #
 # This is a static load project, so we only accept volumes that are already
@@ -78,7 +68,7 @@ sub Dates
 {
   my $self = shift;
 
-  my $year = $self->{crms}->GetTheYear;
+  my $year = Utilities->new->Year();
   return [['pd', sprintf("1000-%s", $year - 125 - 1)],
           ['pdus', sprintf('%s-%s', $year - 125, $year - 95 - 1)],
           ['ic', sprintf('%s-%s', $year - 95, $year)]];
@@ -97,7 +87,7 @@ sub ValidateSubmission
   my $date = $cgi->param('date') || '';
   my $note = $cgi->param('note');
   my $country = $cgi->param('country') || '';
-  my $countries = Countries::GetCountries();
+  my $countries = CRMS::Countries::GetCountries();
   my $category = $cgi->param('category');
   $date =~ s/\s+//g if $date;
   if ($attr ne 'und')
@@ -177,7 +167,7 @@ sub FormatReviewData
   my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
   my $data = $jsonxs->decode($json);
   my @fmts;
-  push @fmts, Countries::TranslateCountry($data->{'country'}) if $data->{'country'};
+  push @fmts, CRMS::Countries::TranslateCountry($data->{'country'}) if $data->{'country'};
   if ($data->{'date'})
   {
     my $date = $data->{'date'};

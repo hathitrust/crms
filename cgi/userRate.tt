@@ -1,6 +1,8 @@
-[% INCLUDE header.tt    %]
-[% user = cgi.param('user') %]
-[% IF !user %][% user = crms.get('user') %][% END %]
+[% IF cgi.param('user').length %]
+  [% user = crms.GetUser(cgi.param('user').1) %]
+[% ELSE %]
+  [% user = current_user %]
+[% END %]
 
 <h2>My Review Stats:</h2>
 <br/>
@@ -10,9 +12,9 @@
 <br/><br/>
 
 
-[% params = crms.GetUserStatsQueryParams(user, undef, undef) %]
+[% params = crms.GetUserStatsQueryParams(user.email, undef, undef) %]
 [% IF params.size == 0 %]
-  <h3>No statistics recorded for user [% user %].</h3>
+  <h3>No statistics recorded for user [% user.email %].</h3>
 [% END %]
 [% FOREACH param IN params %]
   [% divid = param.id %]
@@ -28,7 +30,3 @@
   </div>
   <br/><br/>
 [% END %]
-
-
-[% INCLUDE footer.tt %]
-

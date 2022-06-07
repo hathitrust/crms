@@ -14,7 +14,6 @@
 [% stype = cgi.param('stype') %]
 [% recs = cgi.param('records') %]
 [% recs = recs.replace('\D','') %]
-[% adm = crms.IsUserAdmin() %]
 
 [% defaultOrder = 'Identifier' %]
 [% defaultDir = 'ASC' %]
@@ -48,7 +47,6 @@
 
 <form id="select" action="crms">
 <input type="hidden" name="p" value="$page"/>
-[% crms.HiddenSys() %]
 [% IF page != 'editReviews' && page != 'userReviews' && page != 'holds' %]
   <label for="stype">Search for:</label>
   <select name="stype" id="stype">

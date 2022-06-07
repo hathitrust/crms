@@ -6,21 +6,19 @@
 [% #=== p_user is for links from Users page === %]
 [% p_user = cgi.param('user')        %]
 
-[% INCLUDE header.tt %]
 
 <h2>All Review Stats:</h2>
 <br/>
 <div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
 <form id="select" action="crms">
 <input type="hidden" name="p" value="$p_page"/>
-[% crms.HiddenSys() %]
 
 [% projs = crms.GetProjectsRef() %]
 <label for="projectSel" style="width:5em;float:left;">Project</label>
 <select title="Project" name="project" id="projectSel">
   <option value="0" [% !p_proj ? 'selected="selected"':'' %]>(All)</option>
   [% FOR proj IN projs %]
-    <option value="[% proj.id %]" [% p_proj == proj.id ? 'selected="selected"':'' %]>[% proj.name %]</option>
+    <option value="[% proj.id %]" [% p_proj == proj.id ? 'selected':'' %]>[% proj.name %]</option>
   [% END %]
 </select>
 <br/>
@@ -30,17 +28,17 @@
 <select title="Year" name="year" id="yearSel">
   <option value="0" [% !project ? 'selected="selected"':'' %]>(All)</option>
   [% FOR year IN years %]
-    <option value="[% year %]" [% p_year == year ? 'selected="selected"':'' %]>[% year %]</option>
+    <option value="[% year %]" [% p_year == year ? 'selected':'' %]>[% year %]</option>
   [% END %]
 </select>
 <br/>
 
-[% insts = crms.GetInstitutions('shortname') %]
+[% insts = crms.GetParticipatingInstitutions() %]
 <label for="institutionSel" style="width:5em;float:left;">Institution</label>
 <select title="Institution" name="institution" id="institutionSel">
   <option value="0" [% !p_inst ? 'selected="selected"':'' %]>(All)</option>
   [% FOR inst IN insts %]
-    <option value="[% inst.id %]" [% p_inst == inst.id ? 'selected="selected"':'' %]>[% inst.shortname %]</option>
+    <option value="[% inst.inst_id %]" [% p_inst == inst.id ? 'selected':'' %]>[% inst.name %]</option>
   [% END %]
 </select>
 <br/>
@@ -115,5 +113,3 @@
     <br/><br/>
   [% END %]
 [% END %]
-
-[% INCLUDE footer.tt %]

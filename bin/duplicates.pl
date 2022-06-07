@@ -2,7 +2,10 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+BEGIN {
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
+}
 
 use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
@@ -82,8 +85,7 @@ $start .= ' 00:00:00' if $start;
 $end   .= ' 23:59:59' if $end;
 
 my $crms = CRMS->new(
-    verbose  => $verbose,
-    instance => $instance
+  instance => $instance
 );
 
 

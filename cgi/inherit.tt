@@ -18,7 +18,6 @@
 [% IF NOT dir %][% dir = 'DESC' %][% END %]
 [% IF NOT dir2 %][% dir2 = 'ASC' %][% END %]
 
-[% INCLUDE header.tt %]
 
 <h2>Volumes Inheriting Rights [% (auto)? 'Automatically':'Pending Approval' %]:</h2>
 
@@ -44,7 +43,6 @@ may not be up-to-date.</h3>
 <input type="hidden" name="p" value="$p"/>
 <input type="hidden" name="auto" value="$auto"/>
 <input type="hidden" name="n" value="$n"/>
-[% crms.HiddenSys() %]
 
 Restrict selection:
 <div style="position:absolute;top:0.5em;right:0.5em;">
@@ -229,7 +227,6 @@ function EnableButtons(formid)
     <input type="hidden" name="p" value="$p"/>
     <input type="hidden" name="auto" value="$auto"/>
     <input type="hidden" name="n" value="$n"/>
-    [% crms.HiddenSys() %]
     <input type="checkbox" id='SelectAllButton' onclick="CheckAll(this,'checks');"/>
     <label for="SelectAllButton">Select All</label>
     &nbsp;&nbsp;&nbsp;&nbsp;
@@ -387,4 +384,3 @@ function EnableButtons(formid)
   <h4>No results found.</h4>
 [% END %]
 
-[% INCLUDE footer.tt %]

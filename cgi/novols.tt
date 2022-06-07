@@ -9,8 +9,7 @@
   </a>
   <br/><br/><br/><br/>
   [% experts = crms.GetSystemVar("expertsEmail") %]
-  [% user = crms.get('user') %]
-  [% projs = crms.GetUserProjects(user) %]
+  [% projs = crms.GetUserProjects(current_user) %]
   <div class="warningBox">
     <h2>Unable to find a volume for review.</h2>
     <br/><br/>
@@ -26,7 +25,7 @@
         a couple of times before contacting
         <a href="mailto:[% experts %]"><span style="color:black;">[% experts %]</span></a>.
       [% ELSE %]
-        [% error_count %] [% crms.Pluralize('error',error_count) %] encountered while
+        [% error_count %] [% utils.Pluralize(error_count, 'error') %] encountered while
         attempting to select a volume.
         Typically, this is due to a transient outage in the HathiTrust catalog API.
         Please try refreshing the page in a few minutes; if the problem persists contact
@@ -37,11 +36,10 @@
     [% IF projs.size() %]
     <div class="warningSubbox">
       <h4>
-      [% cp = crms.GetUserProperty(user, 'project') %]
-      [% proj = crms.GetProjectRef(cp) %]
+      [% proj = crms.GetProjectRef(current_user.project) %]
       Your current project is <i>[% proj.name %]</i>.
       <br/><br/>
-      You are on the following [% crms.Pluralize('project', projs.size) %]:
+      You are on the following [% utils.Pluralize(projs.size, 'project') %]:
       <br/>
       <ul>
       [% FOREACH proj IN projs %]

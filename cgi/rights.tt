@@ -1,4 +1,3 @@
-[% INCLUDE header.tt %]
 [% q = cgi.param('query') %]
 
 <h2>Query Rights Database:</h2>
@@ -49,4 +48,3 @@
   [% END %]
 [% END %]
 [% cgi.delete('query') %]
-[% INCLUDE footer.tt %]

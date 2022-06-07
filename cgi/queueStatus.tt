@@ -1,5 +1,3 @@
-[% INCLUDE header.tt %]
-
 <script type="text/javascript">
 function ToggleVisibility(id, id2)
 {
@@ -59,5 +57,3 @@ function ToggleVisibility(id, id2)
     </td>
   </tr>
 </table>
-
-[% INCLUDE footer.tt %]

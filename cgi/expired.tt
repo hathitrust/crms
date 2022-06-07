@@ -4,8 +4,8 @@
 [% exp = crms.IsUserExpired(userid) %]
 <div class="pages" id="homePage">
   <img src="[% crms.WebPath('web', crms.GetSystemVar('logo')) %]"
-       style="display:block;margin-left:auto;margin-right:auto;"
-       alt="[% crms.System() %] Logo"/>
+       width="455" height="80" alt="CRMS Logo"
+       style="display:block;margin-left:auto;margin-right:auto;"/>
   <br/>
   <br/>
   <br/>
@@ -14,8 +14,8 @@
   [% mail2 = mail.replace('-', '&#8209;') %]
   [% user = crms.get('user') %]
   <div class="warningBox">
-    <h2>Hello [% crms.GetUserProperty(user, 'name') %]. You do not have access to this site.</h2>
-    <strong><a href="[% crms.Sysify('?p=Logout') %]"> Logout</a></strong>
+    <h2>Hello [% user.name %]. You do not have access to this site.</h2>
+    <strong><a href="[% crms.BuildURL('Logout') %]"> Logout</a></strong>
   
     <div class="warningSubbox">
       <h4>Your access to in-copyright HathiTrust scans expired [% exp.expires %].

@@ -4,6 +4,8 @@ use parent 'Project';
 use strict;
 use warnings;
 
+use Utilities;
+
 sub new
 {
   my $class = shift;
@@ -46,7 +48,7 @@ sub EvaluateCandidacy
   else
   {
     # Check year range
-    my $now = $self->{crms}->GetTheYear();
+    my $now = Utilities->new->Year();
     my $min = $now - 95 + 1;
     my $max = 1963;
     push @errs, "pub date $pub not in range $min-$max" if $pub < $min or $pub > $max;
@@ -158,8 +160,7 @@ sub FormatReviewData
   my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
   my $data = $jsonxs->decode($json);
   my $fmt = sprintf '<strong>%s</strong> %s', $data->{'renNum'}, $data->{'renDate'};
-  #my $cgi = new CGI;
-  #my $long = $cgi->escapeHTML("<code>$json</code>");
+  #my $long = Utilities->new->EscapeHTML("<code>$json</code>");
   my $long = '';
   return {'id' => $id, 'format' => $fmt, 'format_long' => $long};
 }

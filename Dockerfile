@@ -1,4 +1,4 @@
-FROM debian:buster
+FROM debian:bullseye
 
 RUN sed -i 's/main.*/main contrib non-free/' /etc/apt/sources.list
 
@@ -38,7 +38,9 @@ RUN apt-get update && apt-get install -y \
   libdbd-mock-perl \
   libdbd-mysql-perl \
   libdbd-sqlite3-perl \
+  libdevel-cover-perl \
   libdevel-globaldestruction-perl \
+  libdevel-stacktrace-perl \
   libdigest-sha-perl \
   libemail-date-format-perl \
   libencode-locale-perl \
@@ -51,6 +53,7 @@ RUN apt-get update && apt-get install -y \
   libfile-slurp-perl \
   libfilesys-df-perl \
   libgeo-ip-perl \
+  libhtml-escape-perl \
   libhtml-parser-perl \
   libhtml-tree-perl \
   libhttp-browserdetect-perl \
@@ -78,6 +81,8 @@ RUN apt-get update && apt-get install -y \
   liblwp-mediatypes-perl \
   libmail-sendmail-perl \
   libmailtools-perl \
+  libmarc-record-perl \
+  libmarc-xml-perl \
   libmime-lite-perl \
   libmime-types-perl \
   libmodule-implementation-perl \
@@ -128,8 +133,8 @@ RUN apt-get update && apt-get install -y \
   libyaml-libyaml-perl \
   libyaml-perl \
   perlmagick \
-  libmarc-record-perl\
-  libmarc-xml-perl
+  starman
+  
 
 RUN apt-get install -y \
   autoconf \
@@ -152,23 +157,21 @@ RUN apt-get install -y \
   netcat \
   libperl-critic-perl
 
-RUN cpan \
-  File::Value \
-  File::ANVL \
-  File::Namaste \
-  File::Pairtree \
-  CGI::Application::Plugin::Routes \
-  Algorithm::LUHN \
+RUN cpan -T \
+  CGI::PSGI \
   OAuth::Lite \
   EBook::EPUB \
   Sub::Uplevel \
   Test::Exception \
   Devel::Cycle \
   Test::Memory::Cycle \
-  Mozilla::CA
+  Mozilla::CA \
+  Data::Faker \
+  Data::Faker::Internet
 
 RUN mkdir /htapps
 RUN mkdir /htapps/babel
 RUN mkdir /htapps/babel/crms
 RUN mkdir /htapps/babel/crms/prep
+RUN mkdir /htapps/babel/crms/cover_db
 
