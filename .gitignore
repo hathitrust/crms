@@ -8,6 +8,9 @@
 *.pm.tdy
 *.bs
 
+# Keep prep/ directory for testing but ignore any contents
+prep/
+
 # Devel::Cover
 cover_db/
 

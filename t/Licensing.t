@@ -46,7 +46,6 @@ foreach my $reason (@$reasons)
 }
 
 ###==== rights_data() ====###
-# FIXME: we need a Faker-heavy DB setup routine so we don't have to do this here.
 $crms->PrepareSubmitSql('DELETE FROM licensing');
 my $sql = 'INSERT INTO institutions (name,shortname,suffix) VALUES ("Test Institution", "Test", "test.edu")';
 $crms->PrepareSubmitSql($sql);
@@ -62,7 +61,7 @@ $sql = 'INSERT INTO licensing (htid,user,attr,reason,ticket,rights_holder)'.
 $crms->PrepareSubmitSql($sql);
 $data = $licensing->rights_data();
 is(scalar @{$data->{ids}}, 1, 'Licensing->rights_data returns one entry');
-ok($data->{rights_data} =~ m/HT-0000 \s\(Nobody\)/, 'Licensing->rights_data returns properly-formatted note');
+ok($data->{rights_data} =~ m/HT-0000 \(Nobody\)/, 'Licensing->rights_data returns properly-formatted note');
 $crms->PrepareSubmitSql('DELETE FROM licensing WHERE ticket="HT-0000"');
 $crms->PrepareSubmitSql('DELETE FROM users WHERE id="test_user"');
 $crms->PrepareSubmitSql('DELETE FROM institutions WHERE name="Test Institution"');

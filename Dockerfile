@@ -1,10 +1,9 @@
-FROM debian:buster
+FROM debian:bullseye
 
 RUN sed -i 's/main.*/main contrib non-free/' /etc/apt/sources.list
 
 RUN apt-get update && apt-get install -y \
   perl \
-  imagemagick \
   libxerces-c3.2 \
   libxerces-c3-dev \
   sqlite3 \
@@ -127,8 +126,7 @@ RUN apt-get update && apt-get install -y \
   libyaml-appconfig-perl \
   libyaml-libyaml-perl \
   libyaml-perl \
-  perlmagick \
-  libmarc-record-perl\
+  libmarc-record-perl \
   libmarc-xml-perl
 
 RUN apt-get install -y \
@@ -152,22 +150,8 @@ RUN apt-get install -y \
   libperl-critic-perl
 
 RUN cpan \
-  File::Value \
-  File::ANVL \
-  File::Namaste \
-  File::Pairtree \
   CGI::Application::Plugin::Routes \
-  Algorithm::LUHN \
   OAuth::Lite \
-  EBook::EPUB \
-  Sub::Uplevel \
-  Test::Exception \
-  Devel::Cycle \
-  Test::Memory::Cycle \
-  Mozilla::CA
+  Test::Exception
 
-RUN mkdir /htapps
-RUN mkdir /htapps/babel
-RUN mkdir /htapps/babel/crms
-RUN mkdir /htapps/babel/crms/prep
-
+RUN mkdir -p /htapps/babel/crms
