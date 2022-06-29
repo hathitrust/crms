@@ -57,7 +57,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.4.14';
+our $VERSION = '8.4.15';
 sub Version
 {
   return $VERSION;
@@ -8481,7 +8481,7 @@ sub SubmitMail
   my $text = shift;
   my $uuid = shift;
   my $to   = shift; # default crms-experts
-  my $wait = shift; # until volume is out of queue
+  my $wait = shift || 0; # until volume is out of queue
 
   $id = undef if defined $id and $id eq '';
   $to = undef if defined $to and $to eq '';
