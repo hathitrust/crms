@@ -5,6 +5,7 @@ use warnings;
 BEGIN {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/post_zephir_processing');
+  # For local copies of MARC::Record code if otherwise unavailable
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/bib_rights/lib');
 }
 
@@ -25,7 +26,8 @@ $| = 1;
 my $usage = <<END;
 USAGE: $0 [-hnpv] [-m MAIL [-m MAIL2...]]
 
-Updates the catalog table in production based on Zephir files of the form
+Updates the bib_rights_bi (bib information) and bib_rights_bri (bib rights information)
+tables based on Zephir files of the form
 /htapps/archive/catalog/zephir_full_YYYYMMDD_vufind.json.gz (last day of month)
 and
 /htapps/archive/catalog/zephir_upd_YYYYMMDD.json.gz (daily)
@@ -154,11 +156,15 @@ if (scalar @ARGV && -e $ARGV[0]) {
   }
 }
 
-my $alarmFired = 0;
-local $SIG{ALRM} = sub { $report .= "ALARM FIRED<br/>\n"; $alarmFired = 1; };
-my $json_xs = JSON::XS->new;
 # De-spam the output of this script.
 exit(0) unless defined $fileToProcess;
+
+my $alarmFired = 0;
+local $SIG{ALRM} = sub { $report .= "ALARM FIRED<br/>\n"; $alarmFired = 1; };
+local $SIG{TERM} = sub { $report .= "TERM signal received<br/>\n"; cleanup(); };
+local $SIG{INT} = sub { $report .= "INT signal received<br/>\n"; cleanup(); };
+
+my $json_xs = JSON::XS->new;
 
 $sql = 'REPLACE INTO systemvars (name,value) VALUES (?,1)';
 $crms->PrepareSubmitSql($sql, 'catalogUpdateInProgress');
@@ -224,15 +230,8 @@ else {
   $sql = 'REPLACE INTO systemvars (name,value) VALUES (?,?)';
   $crms->PrepareSubmitSql($sql, 'lastCatalogUpdate', $fileToProcess);
 }
-$report .= "Deleting catalogUpdateInProgress flag...<br/>\n";
-$sql = 'DELETE FROM systemvars WHERE name=?';
-$crms->PrepareSubmitSql($sql, 'catalogUpdateInProgress');
-$sql = 'SELECT COUNT(*) FROM systemvars WHERE name=?';
-if ($crms->SimpleSqlGet($sql, 'catalogUpdateInProgress') > 0) {
-  $report .= "<b>HUH? systemvars.catalogUpdateInProgress is still there??</b><br/>\n";
-} else {
-  $report .= "<b>systemvars.catalogUpdateInProgress removed</b><br/>\n";
-}
+
+cleanup();
 
 $report .= "<i>Warning: $_</i><br/>\n" for @{$crms->GetErrors()};
 
@@ -242,16 +241,29 @@ if (scalar @mails) {
   my $bytes = encode('utf8', $report);
   my $to = join ',', @mails;
   use Mail::Sendmail;
-  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
-              'to'           => $to,
-              'subject'      => $subj,
-              'content-type' => 'text/html; charset="UTF-8"',
-              'body'         => $bytes
-              );
+  my %mail = (
+    'from'         => $crms->GetSystemVar('senderEmail'),
+    'to'           => $to,
+    'subject'      => $subj,
+    'content-type' => 'text/html; charset="UTF-8"',
+    'body'         => $bytes
+  );
   sendmail(%mail) || die("Error: $Mail::Sendmail::error\n");
 } else {
   $report =~ s/<br\/>//g;
   print "$report\n";
+}
+
+sub cleanup {
+  $report .= "Deleting catalogUpdateInProgress flag...<br/>\n";
+  $sql = 'DELETE FROM systemvars WHERE name=?';
+  $crms->PrepareSubmitSql($sql, 'catalogUpdateInProgress');
+  $sql = 'SELECT COUNT(*) FROM systemvars WHERE name=?';
+  if ($crms->SimpleSqlGet($sql, 'catalogUpdateInProgress') > 0) {
+    $report .= "<b>HUH? systemvars.catalogUpdateInProgress is still there??</b><br/>\n";
+  } else {
+    $report .= "<b>systemvars.catalogUpdateInProgress removed</b><br/>\n";
+  }
 }
 
 sub process_record {
@@ -275,7 +287,6 @@ sub process_record {
     }
     my $enumcron = $field->subfield('z') || '';
     my $bib_rights_info = $br->get_bib_rights_info($htid, $bib_info, $enumcron);
-    $bib_rights_info->{enumcron} = $enumcron;
     my @bib_rights_info_keys = keys %$bib_rights_info;
     my $sql = sprintf 'REPLACE INTO bib_rights_bri (%s) VALUES %s',
       join(',', map {"`$_`"; } @bib_rights_info_keys), $crms->WildcardList(scalar @bib_rights_info_keys);
