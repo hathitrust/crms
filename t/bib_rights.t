@@ -182,7 +182,6 @@ END_OF_RECORD
 # Test normalization of all the random garbage that shows up in 008 pub_place fields.
 # These are all the attested values and what bib_rights::clean_pub_place should produce.
 # SELECT DISTINCT CONCAT("['",SUBSTR(f008,16,3),"','",pub_place,"'],") AS s FROM bib_rights_bi ORDER BY s;
-# FIXME: move this to the test generator and produce a JSON file with it.
 sub test_clean_pub_place {
   my $test_struct = read_json('clean_pub_place_tests.json');
 
