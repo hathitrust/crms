@@ -12,7 +12,6 @@ BEGIN {
 use CRMS;
 use Encode;
 use Getopt::Long;
-use JSON::XS;
 use IO::Zlib;
 use Data::Dumper;
 use bib_rights;
@@ -164,18 +163,11 @@ local $SIG{ALRM} = sub { $report .= "ALARM FIRED<br/>\n"; $alarmFired = 1; };
 local $SIG{TERM} = sub { $report .= "TERM signal received<br/>\n"; cleanup(); };
 local $SIG{INT} = sub { $report .= "INT signal received<br/>\n"; cleanup(); };
 
-my $json_xs = JSON::XS->new;
-
 $sql = 'REPLACE INTO systemvars (name,value) VALUES (?,1)';
 $crms->PrepareSubmitSql($sql, 'catalogUpdateInProgress');
 
 my $br = bib_rights->new();
 $report .= "<b>Importing from $fileToProcess</b><br/>\n";
-$sql = 'SELECT bib_key FROM bib_rights_bi ORDER BY bib_key DESC LIMIT 1';
-my $max = $crms->SimpleSqlGet($sql) || '<undef>';
-$sql = 'SELECT COUNT(*) FROM bib_rights_bi';
-my $size = $crms->SimpleSqlGet($sql);
-$report .= "MAX ID $max, SIZE $size<br/>\n";
 my $fh = new IO::Zlib;
 my $i = 0;
 my $done = 0;
@@ -192,45 +184,23 @@ if ($fh->open($catalogPath. $fileToProcess, 'rb')) {
     last if $alarmFired;
     my $sysid = undef;
     my $f_008 = undef;
-    my $buff = $fh->getline();
-    if (!defined $buff) {
+    my $record = $fh->getline();
+    if (!defined $record) {
       $report .= "Finished reading gzip file.<br/>\n";
       $done = 1;
       last;
     }
-    process_record($buff);
+    process_record($record);
     $i++;
   }
   my $t2 = Time::HiRes::time();
-  $sql = 'SELECT bib_key FROM bib_rights_bi ORDER BY bib_key DESC LIMIT 1';
-  my $max2 = $crms->SimpleSqlGet($sql);
-  $sql = 'SELECT COUNT(*) FROM bib_rights_bi';
-  my $size2 = $crms->SimpleSqlGet($sql);
-  $report .= "MAX ID $max2, SIZE $size2<br/>\n";
   my $secs = $t2 - $t1;
-  $report .= sprintf("Took %.2f seconds to import %d records, %f records per second<br/>\n",
-                     $secs, $i, $i/$secs);
+  $report .= sprintf("Took %.2f seconds to import $i records, %f records per second<br/>\n",
+                     $secs, $i/$secs);
   $fh->close;
 }
-if ($done) {
-  $sql = 'DELETE FROM systemvars WHERE name=?';
-  $crms->PrepareSubmitSql($sql, 'lastCatalogImportCount');
-}
-else {
-  if (defined $lastCount) {
-    $sql = 'REPLACE INTO systemvars (name,value) VALUES (?,?)';
-    $crms->PrepareSubmitSql($sql, 'lastCatalogImportCount', $lastCount + $i);
-  }
-}
-if ($fileToProcess =~ m/^zephir_full.*?\.gz$/i) {
-  $sql = 'REPLACE INTO systemvars (name,value) VALUES (?,?)';
-  $crms->PrepareSubmitSql($sql, 'lastCatalogImport', $fileToProcess);
-}
-else {
-  $sql = 'REPLACE INTO systemvars (name,value) VALUES (?,?)';
-  $crms->PrepareSubmitSql($sql, 'lastCatalogUpdate', $fileToProcess);
-}
 
+record_progress();
 cleanup();
 
 $report .= "<i>Warning: $_</i><br/>\n" for @{$crms->GetErrors()};
@@ -252,6 +222,25 @@ if (scalar @mails) {
 } else {
   $report =~ s/<br\/>//g;
   print "$report\n";
+}
+
+sub record_progress {
+  if ($done) {
+    $sql = 'DELETE FROM systemvars WHERE name=?';
+    $crms->PrepareSubmitSql($sql, 'lastCatalogImportCount');
+  } else {
+    if (defined $lastCount) {
+      $sql = 'REPLACE INTO systemvars (name,value) VALUES (?,?)';
+      $crms->PrepareSubmitSql($sql, 'lastCatalogImportCount', $lastCount + $i);
+    }
+  }
+  if ($fileToProcess =~ m/^zephir_full.*?\.gz$/i) {
+    $sql = 'REPLACE INTO systemvars (name,value) VALUES (?,?)';
+    $crms->PrepareSubmitSql($sql, 'lastCatalogImport', $fileToProcess);
+  } else {
+    $sql = 'REPLACE INTO systemvars (name,value) VALUES (?,?)';
+    $crms->PrepareSubmitSql($sql, 'lastCatalogUpdate', $fileToProcess);
+  }
 }
 
 sub cleanup {
