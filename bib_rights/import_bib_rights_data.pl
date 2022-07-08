@@ -80,110 +80,38 @@ my $crms = CRMS->new(
 $secs = 600 unless defined $secs;
 $crms->set('noop', 1) if $noop;
 
+my $CATALOG_PATH = '/htapps/archive/catalog/';
 my $report = '';
-my $catalogPath = '';
-my $fileToProcess;
-my $lastCount = 0;
-my $lastUpdate = 0;
-my $type = 'full';
 
-my $sql = 'SELECT COUNT(*) FROM systemvars WHERE name=?';
-if ($crms->SimpleSqlGet($sql, 'catalogUpdateInProgress')) {
-  exit(0);
-}
+check_sentinel();
 
-if (scalar @ARGV && -e $ARGV[0]) {
-  $fileToProcess = $ARGV[0];
-  $report .= "Using $fileToProcess from command line\n";
-  $type = 'manual';
-} else {
-  my $lastFull = $crms->GetSystemVar('lastCatalogImport');
-  my $lastDate;
-  if (defined $lastFull && $lastFull =~ m/^zephir_full_(\d{8})_vufind.json.gz$/i) {
-    $lastDate = $1;
-  }
-  $lastCount = $crms->GetSystemVar('lastCatalogImportCount');
-  $lastUpdate = $crms->GetSystemVar('lastCatalogUpdate');
-  if (defined $lastUpdate && $lastUpdate =~ m/^zephir_upd_(\d{8}).json.gz$/i) {
-    $lastDate = $1 if $1 gt $lastDate;
-  }
-  $catalogPath = '/htapps/archive/catalog/';
-
-  opendir(DIR, "$catalogPath") or die "Can't open $catalogPath\n";
-  my @files = sort readdir(DIR);
-  closedir(DIR);
-
-  my $nextImportFile;
-  my $nextUpdateFile;
-  foreach my $file (@files)
-  {
-    my $date;
-    if ($file =~ m/^zephir_full_(\d{8})_vufind\.json\.gz$/i &&
-        (!defined $lastFull || $file gt $lastFull)) {
-      $date = $1;
-      $nextImportFile = $file;
-    }
-    if ($file =~ m/^zephir_upd_(\d{8})\.json\.gz$/i && !defined $nextUpdateFile) {
-      $date = $1;
-      if (defined $lastDate && $date gt $lastDate) {
-        $nextUpdateFile = $file;
-      }
-    }
-  }
-  $report .= sprintf "Next import %s, next update %s\n",
-                     (defined $nextImportFile)? $nextImportFile:'[undef]',
-                     (defined $nextUpdateFile)? $nextUpdateFile:'[undef]';
-
-  # If there is a newer full file, abandon last file and start over with this one.
-  # Otherwise, if the most recent full dump is incomplete (systemvars.lastCatalogImportCount
-  # is present) then continue to work on that.
-  # Otherwise ingest the oldest update file after systemvars.lastCatalogUpdate
-  # (if it exists) without a timeout.
-  if (defined $nextImportFile) {
-    $report .=  "Moving on to next full import $nextImportFile<br/>\n";
-    $fileToProcess = $nextImportFile;
-    $lastCount = 0;
-  }
-  elsif (defined $lastCount) {
-    $report .=  "Continuing $lastFull at $lastCount<br/>\n";
-    $fileToProcess = $lastFull;
-  }
-  elsif (defined $nextUpdateFile) {
-    $report .= "Beginning update $nextUpdateFile<br/>\n";
-    $fileToProcess = $nextUpdateFile;
-    $type = 'update';
-  }
-}
-
+my $plan = formulate_plan();
 # De-spam the output of this script.
-exit(0) unless defined $fileToProcess;
+exit(0) unless defined $plan;
 
 my $alarmFired = 0;
 local $SIG{ALRM} = sub { $report .= "ALARM FIRED<br/>\n"; $alarmFired = 1; };
 local $SIG{TERM} = sub { $report .= "TERM signal received<br/>\n"; cleanup(); };
 local $SIG{INT} = sub { $report .= "INT signal received<br/>\n"; cleanup(); };
 
-$sql = 'REPLACE INTO systemvars (name,value) VALUES (?,1)';
-$crms->PrepareSubmitSql($sql, 'catalogUpdateInProgress');
+add_sentinel();
 
 my $br = bib_rights->new();
-$report .= "<b>Importing from $fileToProcess</b><br/>\n";
+$report .= "<b>Importing from $plan->{file}</b><br/>\n";
 my $fh = new IO::Zlib;
 my $i = 0;
 my $done = 0;
-if ($fh->open($catalogPath. $fileToProcess, 'rb')) {
-  if (defined $lastCount && $lastCount > 0) {
-    $report .= "Skipping $lastCount records...<br/>\n";
-    for (my $j = 0; $j < $lastCount; $j++) {
+if ($fh->open($CATALOG_PATH . $plan->{file}, 'rb')) {
+  if ($plan->{offset} > 0) {
+    $report .= "Skipping $plan->{offset} records...<br/>\n";
+    for (my $j = 0; $j < $plan->{offset}; $j++) {
       $fh->getline();
     }
   }
   my $t1 = Time::HiRes::time();
-  alarm $secs if $type eq 'full';
+  alarm $secs if $plan->{type} eq 'full';
   while (1) {
     last if $alarmFired;
-    my $sysid = undef;
-    my $f_008 = undef;
     my $record = $fh->getline();
     if (!defined $record) {
       $report .= "Finished reading gzip file.<br/>\n";
@@ -199,53 +127,107 @@ if ($fh->open($catalogPath. $fileToProcess, 'rb')) {
                      $secs, $i/$secs);
   $fh->close;
 }
-
-record_progress();
+$plan->{offset} += $i;
+record_progress($plan);
 cleanup();
-
 $report .= "<i>Warning: $_</i><br/>\n" for @{$crms->GetErrors()};
+send_report();
 
-if (scalar @mails) {
-  my $subj = $crms->SubjectLine('Catalog Update');
-  @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
-  my $bytes = encode('utf8', $report);
-  my $to = join ',', @mails;
-  use Mail::Sendmail;
-  my %mail = (
-    'from'         => $crms->GetSystemVar('senderEmail'),
-    'to'           => $to,
-    'subject'      => $subj,
-    'content-type' => 'text/html; charset="UTF-8"',
-    'body'         => $bytes
-  );
-  sendmail(%mail) || die("Error: $Mail::Sendmail::error\n");
-} else {
-  $report =~ s/<br\/>//g;
-  print "$report\n";
+sub check_sentinel {
+  my $sql = 'SELECT COUNT(*) FROM systemvars WHERE name=?';
+  if ($crms->SimpleSqlGet($sql, 'catalogUpdateInProgress')) {
+    exit(0);
+  }
+}
+
+sub add_sentinel {
+  my $sql = 'REPLACE INTO systemvars (name,value) VALUES ("catalogUpdateInProgress",1)';
+  $crms->PrepareSubmitSql($sql);
+}
+
+# Returns hashref with keys:
+# file: file to process
+# type: {full, update, manual}
+# offset: number of records to count past when resuming a full (monthly) dump, 0 otherwise.
+sub formulate_plan {
+  if (scalar @ARGV && -e $ARGV[0]) {
+    $report .= "Using $ARGV[0] from command line\n";
+    return { file => $ARGV[0], type => 'manual', offset => 0 };
+  }
+  my $plan = undef;
+  my $lastFull = $crms->GetSystemVar('lastCatalogImport');
+  my $lastDate = '';
+  if (defined $lastFull && $lastFull =~ m/^zephir_full_(\d{8})_vufind.json.gz$/i) {
+    $lastDate = $1;
+  }
+  my $lastCount = $crms->GetSystemVar('lastCatalogImportCount');
+  my $lastUpdate = $crms->GetSystemVar('lastCatalogUpdate');
+  if (defined $lastUpdate && $lastUpdate =~ m/^zephir_upd_(\d{8}).json.gz$/i) {
+    $lastDate = $1 if $1 gt $lastDate;
+  }
+  opendir(DIR, $CATALOG_PATH) or die "Can't open $CATALOG_PATH\n";
+  my @files = sort readdir(DIR);
+  closedir(DIR);
+  my $nextImportFile;
+  my $nextUpdateFile;
+  foreach my $file (@files) {
+    my $date;
+    if ($file =~ m/^zephir_full_(\d{8})_vufind\.json\.gz$/i &&
+        (!defined $lastFull || $file gt $lastFull)) {
+      $date = $1;
+      $nextImportFile = $file;
+    }
+    if ($file =~ m/^zephir_upd_(\d{8})\.json\.gz$/i && !defined $nextUpdateFile) {
+      $date = $1;
+      if (defined $lastDate && $date gt $lastDate) {
+        $nextUpdateFile = $file;
+      }
+    }
+  }
+  $report .= sprintf "Next import %s, next update %s<br/>\n",
+                     (defined $nextImportFile)? $nextImportFile:'[undef]',
+                     (defined $nextUpdateFile)? $nextUpdateFile:'[undef]';
+  # If there is a newer full file, abandon last file and start over with this one.
+  # Otherwise, if the most recent full dump is incomplete (systemvars.lastCatalogImportCount
+  # is present) then continue to work on that.
+  # Otherwise ingest the oldest update file after systemvars.lastCatalogUpdate
+  # (if it exists) without a timeout.
+  if (defined $nextImportFile) {
+    $report .=  "Moving on to next full import $nextImportFile<br/>\n";
+    $plan = { file => $nextImportFile, type => 'full', offset => 0 };
+  }
+  elsif (defined $lastCount) {
+    $report .=  "Continuing $lastFull at $lastCount<br/>\n";
+    $plan = { file => $lastFull, type => 'full', offset => $lastCount };
+  }
+  elsif (defined $nextUpdateFile) {
+    $report .= "Beginning update $nextUpdateFile<br/>\n";
+    $plan = { file => $nextUpdateFile, type => 'update', offset => 0 };
+  }
+  return $plan;
 }
 
 sub record_progress {
+  my $plan = shift;
+
   if ($done) {
-    $sql = 'DELETE FROM systemvars WHERE name=?';
-    $crms->PrepareSubmitSql($sql, 'lastCatalogImportCount');
+    $report .= "Removing lastCatalogImportCount value<br/>\n";
+    $crms->PrepareSubmitSql('DELETE FROM systemvars WHERE name="lastCatalogImportCount"');
   } else {
-    if (defined $lastCount) {
-      $sql = 'REPLACE INTO systemvars (name,value) VALUES (?,?)';
-      $crms->PrepareSubmitSql($sql, 'lastCatalogImportCount', $lastCount + $i);
-    }
+    $report .= "Updating lastCatalogImportCount value with offset $plan->{offset}<br/>\n";
+    $crms->PrepareSubmitSql('REPLACE INTO systemvars (name,value) VALUES ("lastCatalogImportCount",?)',
+      $plan->{offset});
   }
-  if ($fileToProcess =~ m/^zephir_full.*?\.gz$/i) {
-    $sql = 'REPLACE INTO systemvars (name,value) VALUES (?,?)';
-    $crms->PrepareSubmitSql($sql, 'lastCatalogImport', $fileToProcess);
-  } else {
-    $sql = 'REPLACE INTO systemvars (name,value) VALUES (?,?)';
-    $crms->PrepareSubmitSql($sql, 'lastCatalogUpdate', $fileToProcess);
-  }
+  my $sql = 'REPLACE INTO systemvars (name,value) VALUES (?,?)';
+  my $name = ($plan->{file} =~ m/^zephir_full.*?\.gz$/i) ?
+    'lastCatalogImport' : 'lastCatalogUpdate';
+  $report .= "Updating systemvars.$name = $plan->{file}<br/>\n";
+  $crms->PrepareSubmitSql($sql, $name, $plan->{file});
 }
 
 sub cleanup {
   $report .= "Deleting catalogUpdateInProgress flag...<br/>\n";
-  $sql = 'DELETE FROM systemvars WHERE name=?';
+  my $sql = 'DELETE FROM systemvars WHERE name=?';
   $crms->PrepareSubmitSql($sql, 'catalogUpdateInProgress');
   $sql = 'SELECT COUNT(*) FROM systemvars WHERE name=?';
   if ($crms->SimpleSqlGet($sql, 'catalogUpdateInProgress') > 0) {
@@ -288,3 +270,25 @@ sub process_record {
   $report .= "Warning: $_<br/>\n" for @{$crms->GetErrors()};
   $crms->ClearErrors();
 }
+
+sub send_report {
+  if (scalar @mails) {
+    my $subj = $crms->SubjectLine('Catalog Update');
+    @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
+    my $bytes = encode('utf8', $report);
+    my $to = join ',', @mails;
+    use Mail::Sendmail;
+    my %mail = (
+      'from'         => $crms->GetSystemVar('senderEmail'),
+      'to'           => $to,
+      'subject'      => $subj,
+      'content-type' => 'text/html; charset="UTF-8"',
+      'body'         => $bytes
+    );
+    sendmail(%mail) || die("Error: $Mail::Sendmail::error\n");
+  } else {
+    $report =~ s/<br\/>//g;
+    print "$report\n";
+  }
+}
+
