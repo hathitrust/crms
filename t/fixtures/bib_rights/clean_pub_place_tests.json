@@ -1,0 +1,6430 @@
+[
+   {
+      "008" : "   ",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "  #",
+      "pub_place" : "  #"
+   },
+   {
+      "008" : "  c",
+      "pub_place" : "  c"
+   },
+   {
+      "008" : "  i",
+      "pub_place" : "  i"
+   },
+   {
+      "008" : "  r",
+      "pub_place" : "  r"
+   },
+   {
+      "008" : "  s",
+      "pub_place" : "  s"
+   },
+   {
+      "008" : "  u",
+      "pub_place" : "  u"
+   },
+   {
+      "008" : " 0 ",
+      "pub_place" : "   "
+   },
+   {
+      "008" : " 00",
+      "pub_place" : "   "
+   },
+   {
+      "008" : " 10",
+      "pub_place" : "   "
+   },
+   {
+      "008" : " 40",
+      "pub_place" : "   "
+   },
+   {
+      "008" : " a ",
+      "pub_place" : " a "
+   },
+   {
+      "008" : " b ",
+      "pub_place" : " b "
+   },
+   {
+      "008" : " bc",
+      "pub_place" : " bc"
+   },
+   {
+      "008" : " bd",
+      "pub_place" : " bd"
+   },
+   {
+      "008" : " be",
+      "pub_place" : " be"
+   },
+   {
+      "008" : " c ",
+      "pub_place" : " c "
+   },
+   {
+      "008" : " dk",
+      "pub_place" : " dk"
+   },
+   {
+      "008" : " e ",
+      "pub_place" : " e "
+   },
+   {
+      "008" : " en",
+      "pub_place" : " en"
+   },
+   {
+      "008" : " f ",
+      "pub_place" : " f "
+   },
+   {
+      "008" : " f0",
+      "pub_place" : " f0"
+   },
+   {
+      "008" : " fr",
+      "pub_place" : " fr"
+   },
+   {
+      "008" : " ge",
+      "pub_place" : " ge"
+   },
+   {
+      "008" : " gw",
+      "pub_place" : " gw"
+   },
+   {
+      "008" : " id",
+      "pub_place" : " id"
+   },
+   {
+      "008" : " j ",
+      "pub_place" : " j "
+   },
+   {
+      "008" : " ke",
+      "pub_place" : " ke"
+   },
+   {
+      "008" : " l ",
+      "pub_place" : " l "
+   },
+   {
+      "008" : " l0",
+      "pub_place" : " l0"
+   },
+   {
+      "008" : " nd",
+      "pub_place" : " nd"
+   },
+   {
+      "008" : " nj",
+      "pub_place" : " nj"
+   },
+   {
+      "008" : " np",
+      "pub_place" : " np"
+   },
+   {
+      "008" : " ny",
+      "pub_place" : " ny"
+   },
+   {
+      "008" : " o0",
+      "pub_place" : " o0"
+   },
+   {
+      "008" : " pl",
+      "pub_place" : " pl"
+   },
+   {
+      "008" : " ru",
+      "pub_place" : " ru"
+   },
+   {
+      "008" : " s0",
+      "pub_place" : " s0"
+   },
+   {
+      "008" : " sz",
+      "pub_place" : " sz"
+   },
+   {
+      "008" : " uk",
+      "pub_place" : " uk"
+   },
+   {
+      "008" : " ur",
+      "pub_place" : " ur"
+   },
+   {
+      "008" : " x ",
+      "pub_place" : " x "
+   },
+   {
+      "008" : " xx",
+      "pub_place" : " xx"
+   },
+   {
+      "008" : " yu",
+      "pub_place" : " yu"
+   },
+   {
+      "008" : " \\U",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "-cn",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "-cs",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "-na",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "000",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "001",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "01 ",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "0w ",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "1  ",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "100",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "101",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "176",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "186",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "188",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "189",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "191",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "1au",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "1ge",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "1nk",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "1t ",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "33 ",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "3en",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "61|",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "7) ",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "7fr",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "9  ",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "930",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "933",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "953",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "958",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "962",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "966",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "967",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "969",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "970",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "972",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "973",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "974",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "?? ",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "???",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "@@@",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "a  ",
+      "pub_place" : "a  "
+   },
+   {
+      "008" : "a #",
+      "pub_place" : "a #"
+   },
+   {
+      "008" : "a 0",
+      "pub_place" : "a 0"
+   },
+   {
+      "008" : "a 1",
+      "pub_place" : "a 1"
+   },
+   {
+      "008" : "a a",
+      "pub_place" : "a a"
+   },
+   {
+      "008" : "a b",
+      "pub_place" : "a b"
+   },
+   {
+      "008" : "a c",
+      "pub_place" : "a c"
+   },
+   {
+      "008" : "a d",
+      "pub_place" : "a d"
+   },
+   {
+      "008" : "a f",
+      "pub_place" : "a f"
+   },
+   {
+      "008" : "a o",
+      "pub_place" : "a o"
+   },
+   {
+      "008" : "a r",
+      "pub_place" : "a r"
+   },
+   {
+      "008" : "a s",
+      "pub_place" : "a s"
+   },
+   {
+      "008" : "aa ",
+      "pub_place" : "aa "
+   },
+   {
+      "008" : "aa#",
+      "pub_place" : "aa#"
+   },
+   {
+      "008" : "aaa",
+      "pub_place" : "aaa"
+   },
+   {
+      "008" : "aar",
+      "pub_place" : "aar"
+   },
+   {
+      "008" : "ab ",
+      "pub_place" : "ab "
+   },
+   {
+      "008" : "abc",
+      "pub_place" : "abc"
+   },
+   {
+      "008" : "abd",
+      "pub_place" : "abd"
+   },
+   {
+      "008" : "abe",
+      "pub_place" : "abe"
+   },
+   {
+      "008" : "abf",
+      "pub_place" : "abf"
+   },
+   {
+      "008" : "abm",
+      "pub_place" : "abm"
+   },
+   {
+      "008" : "abu",
+      "pub_place" : "abu"
+   },
+   {
+      "008" : "ac ",
+      "pub_place" : "ac "
+   },
+   {
+      "008" : "aca",
+      "pub_place" : "aca"
+   },
+   {
+      "008" : "acd",
+      "pub_place" : "acd"
+   },
+   {
+      "008" : "ace",
+      "pub_place" : "ace"
+   },
+   {
+      "008" : "acf",
+      "pub_place" : "acf"
+   },
+   {
+      "008" : "acg",
+      "pub_place" : "acg"
+   },
+   {
+      "008" : "ach",
+      "pub_place" : "ach"
+   },
+   {
+      "008" : "acu",
+      "pub_place" : "acu"
+   },
+   {
+      "008" : "ad ",
+      "pub_place" : "ad "
+   },
+   {
+      "008" : "adf",
+      "pub_place" : "adf"
+   },
+   {
+      "008" : "adg",
+      "pub_place" : "adg"
+   },
+   {
+      "008" : "ae ",
+      "pub_place" : "ae "
+   },
+   {
+      "008" : "ae#",
+      "pub_place" : "ae#"
+   },
+   {
+      "008" : "aef",
+      "pub_place" : "aef"
+   },
+   {
+      "008" : "aeh",
+      "pub_place" : "aeh"
+   },
+   {
+      "008" : "af ",
+      "pub_place" : "af "
+   },
+   {
+      "008" : "af#",
+      "pub_place" : "af#"
+   },
+   {
+      "008" : "afc",
+      "pub_place" : "afc"
+   },
+   {
+      "008" : "afe",
+      "pub_place" : "afe"
+   },
+   {
+      "008" : "afg",
+      "pub_place" : "afg"
+   },
+   {
+      "008" : "afh",
+      "pub_place" : "afh"
+   },
+   {
+      "008" : "afj",
+      "pub_place" : "afj"
+   },
+   {
+      "008" : "afo",
+      "pub_place" : "afo"
+   },
+   {
+      "008" : "afr",
+      "pub_place" : "afr"
+   },
+   {
+      "008" : "ag ",
+      "pub_place" : "ag "
+   },
+   {
+      "008" : "ag#",
+      "pub_place" : "ag#"
+   },
+   {
+      "008" : "agc",
+      "pub_place" : "agc"
+   },
+   {
+      "008" : "agr",
+      "pub_place" : "agr"
+   },
+   {
+      "008" : "agx",
+      "pub_place" : "agx"
+   },
+   {
+      "008" : "ah ",
+      "pub_place" : "ah "
+   },
+   {
+      "008" : "ahu",
+      "pub_place" : "ahu"
+   },
+   {
+      "008" : "ai ",
+      "pub_place" : "ai "
+   },
+   {
+      "008" : "air",
+      "pub_place" : "air"
+   },
+   {
+      "008" : "aj ",
+      "pub_place" : "aj "
+   },
+   {
+      "008" : "ajr",
+      "pub_place" : "ajr"
+   },
+   {
+      "008" : "aju",
+      "pub_place" : "aju"
+   },
+   {
+      "008" : "ak ",
+      "pub_place" : "ak "
+   },
+   {
+      "008" : "ak#",
+      "pub_place" : "ak#"
+   },
+   {
+      "008" : "aku",
+      "pub_place" : "aku"
+   },
+   {
+      "008" : "akv",
+      "pub_place" : "akv"
+   },
+   {
+      "008" : "al ",
+      "pub_place" : "al "
+   },
+   {
+      "008" : "ala",
+      "pub_place" : "ala"
+   },
+   {
+      "008" : "alc",
+      "pub_place" : "alc"
+   },
+   {
+      "008" : "alu",
+      "pub_place" : "alu"
+   },
+   {
+      "008" : "am ",
+      "pub_place" : "am "
+   },
+   {
+      "008" : "amh",
+      "pub_place" : "amh"
+   },
+   {
+      "008" : "ams",
+      "pub_place" : "ams"
+   },
+   {
+      "008" : "an ",
+      "pub_place" : "an "
+   },
+   {
+      "008" : "anc",
+      "pub_place" : "anc"
+   },
+   {
+      "008" : "ank",
+      "pub_place" : "ank"
+   },
+   {
+      "008" : "ann",
+      "pub_place" : "ann"
+   },
+   {
+      "008" : "ao ",
+      "pub_place" : "ao "
+   },
+   {
+      "008" : "ao#",
+      "pub_place" : "ao#"
+   },
+   {
+      "008" : "apu",
+      "pub_place" : "apu"
+   },
+   {
+      "008" : "aq ",
+      "pub_place" : "aq "
+   },
+   {
+      "008" : "aq#",
+      "pub_place" : "aq#"
+   },
+   {
+      "008" : "ar ",
+      "pub_place" : "ar "
+   },
+   {
+      "008" : "ara",
+      "pub_place" : "ara"
+   },
+   {
+      "008" : "are",
+      "pub_place" : "are"
+   },
+   {
+      "008" : "arg",
+      "pub_place" : "arg"
+   },
+   {
+      "008" : "ark",
+      "pub_place" : "ark"
+   },
+   {
+      "008" : "arr",
+      "pub_place" : "arr"
+   },
+   {
+      "008" : "aru",
+      "pub_place" : "aru"
+   },
+   {
+      "008" : "as ",
+      "pub_place" : "as "
+   },
+   {
+      "008" : "asu",
+      "pub_place" : "asu"
+   },
+   {
+      "008" : "at ",
+      "pub_place" : "at "
+   },
+   {
+      "008" : "at#",
+      "pub_place" : "at#"
+   },
+   {
+      "008" : "at?",
+      "pub_place" : "at "
+   },
+   {
+      "008" : "atk",
+      "pub_place" : "atk"
+   },
+   {
+      "008" : "atq",
+      "pub_place" : "atq"
+   },
+   {
+      "008" : "atu",
+      "pub_place" : "atu"
+   },
+   {
+      "008" : "au ",
+      "pub_place" : "au "
+   },
+   {
+      "008" : "au#",
+      "pub_place" : "au#"
+   },
+   {
+      "008" : "aua",
+      "pub_place" : "aua"
+   },
+   {
+      "008" : "aub",
+      "pub_place" : "aub"
+   },
+   {
+      "008" : "auc",
+      "pub_place" : "auc"
+   },
+   {
+      "008" : "aum",
+      "pub_place" : "aum"
+   },
+   {
+      "008" : "aus",
+      "pub_place" : "aus"
+   },
+   {
+      "008" : "aut",
+      "pub_place" : "aut"
+   },
+   {
+      "008" : "auu",
+      "pub_place" : "auu"
+   },
+   {
+      "008" : "av ",
+      "pub_place" : "av "
+   },
+   {
+      "008" : "aw ",
+      "pub_place" : "aw "
+   },
+   {
+      "008" : "ay ",
+      "pub_place" : "ay "
+   },
+   {
+      "008" : "ayu",
+      "pub_place" : "ayu"
+   },
+   {
+      "008" : "az ",
+      "pub_place" : "az "
+   },
+   {
+      "008" : "az#",
+      "pub_place" : "az#"
+   },
+   {
+      "008" : "azr",
+      "pub_place" : "azr"
+   },
+   {
+      "008" : "azu",
+      "pub_place" : "azu"
+   },
+   {
+      "008" : "b  ",
+      "pub_place" : "b  "
+   },
+   {
+      "008" : "b 0",
+      "pub_place" : "b 0"
+   },
+   {
+      "008" : "b b",
+      "pub_place" : "b b"
+   },
+   {
+      "008" : "b c",
+      "pub_place" : "b c"
+   },
+   {
+      "008" : "b f",
+      "pub_place" : "b f"
+   },
+   {
+      "008" : "ba ",
+      "pub_place" : "ba "
+   },
+   {
+      "008" : "ba#",
+      "pub_place" : "ba#"
+   },
+   {
+      "008" : "baf",
+      "pub_place" : "baf"
+   },
+   {
+      "008" : "bau",
+      "pub_place" : "bau"
+   },
+   {
+      "008" : "bb ",
+      "pub_place" : "bb "
+   },
+   {
+      "008" : "bb#",
+      "pub_place" : "bb#"
+   },
+   {
+      "008" : "bbc",
+      "pub_place" : "bbc"
+   },
+   {
+      "008" : "bc ",
+      "pub_place" : "bc "
+   },
+   {
+      "008" : "bcc",
+      "pub_place" : "bcc"
+   },
+   {
+      "008" : "bcu",
+      "pub_place" : "bcu"
+   },
+   {
+      "008" : "bd ",
+      "pub_place" : "bd "
+   },
+   {
+      "008" : "be ",
+      "pub_place" : "be "
+   },
+   {
+      "008" : "be#",
+      "pub_place" : "be#"
+   },
+   {
+      "008" : "bee",
+      "pub_place" : "bee"
+   },
+   {
+      "008" : "bef",
+      "pub_place" : "bef"
+   },
+   {
+      "008" : "bel",
+      "pub_place" : "bel"
+   },
+   {
+      "008" : "ber",
+      "pub_place" : "ber"
+   },
+   {
+      "008" : "bf ",
+      "pub_place" : "bf "
+   },
+   {
+      "008" : "bf#",
+      "pub_place" : "bf#"
+   },
+   {
+      "008" : "bg ",
+      "pub_place" : "bg "
+   },
+   {
+      "008" : "bg#",
+      "pub_place" : "bg#"
+   },
+   {
+      "008" : "bh ",
+      "pub_place" : "bh "
+   },
+   {
+      "008" : "bh#",
+      "pub_place" : "bh#"
+   },
+   {
+      "008" : "bi ",
+      "pub_place" : "bi "
+   },
+   {
+      "008" : "bk ",
+      "pub_place" : "bk "
+   },
+   {
+      "008" : "bl ",
+      "pub_place" : "bl "
+   },
+   {
+      "008" : "bl#",
+      "pub_place" : "bl#"
+   },
+   {
+      "008" : "bl|",
+      "pub_place" : "bl "
+   },
+   {
+      "008" : "bm ",
+      "pub_place" : "bm "
+   },
+   {
+      "008" : "bm#",
+      "pub_place" : "bm#"
+   },
+   {
+      "008" : "bn ",
+      "pub_place" : "bn "
+   },
+   {
+      "008" : "bny",
+      "pub_place" : "bny"
+   },
+   {
+      "008" : "bo ",
+      "pub_place" : "bo "
+   },
+   {
+      "008" : "bo#",
+      "pub_place" : "bo#"
+   },
+   {
+      "008" : "bos",
+      "pub_place" : "bos"
+   },
+   {
+      "008" : "bou",
+      "pub_place" : "bou"
+   },
+   {
+      "008" : "bp ",
+      "pub_place" : "bp "
+   },
+   {
+      "008" : "bp#",
+      "pub_place" : "bp#"
+   },
+   {
+      "008" : "bq ",
+      "pub_place" : "bq "
+   },
+   {
+      "008" : "br ",
+      "pub_place" : "br "
+   },
+   {
+      "008" : "br#",
+      "pub_place" : "br#"
+   },
+   {
+      "008" : "bru",
+      "pub_place" : "bru"
+   },
+   {
+      "008" : "bs ",
+      "pub_place" : "bs "
+   },
+   {
+      "008" : "bs#",
+      "pub_place" : "bs#"
+   },
+   {
+      "008" : "bt ",
+      "pub_place" : "bt "
+   },
+   {
+      "008" : "bt#",
+      "pub_place" : "bt#"
+   },
+   {
+      "008" : "bu ",
+      "pub_place" : "bu "
+   },
+   {
+      "008" : "bu#",
+      "pub_place" : "bu#"
+   },
+   {
+      "008" : "bub",
+      "pub_place" : "bub"
+   },
+   {
+      "008" : "bul",
+      "pub_place" : "bul"
+   },
+   {
+      "008" : "bur",
+      "pub_place" : "bur"
+   },
+   {
+      "008" : "bv ",
+      "pub_place" : "bv "
+   },
+   {
+      "008" : "bvr",
+      "pub_place" : "bvr"
+   },
+   {
+      "008" : "bw ",
+      "pub_place" : "bw "
+   },
+   {
+      "008" : "bw#",
+      "pub_place" : "bw#"
+   },
+   {
+      "008" : "bwr",
+      "pub_place" : "bwr"
+   },
+   {
+      "008" : "bx ",
+      "pub_place" : "bx "
+   },
+   {
+      "008" : "by ",
+      "pub_place" : "by "
+   },
+   {
+      "008" : "byu",
+      "pub_place" : "byu"
+   },
+   {
+      "008" : "bz ",
+      "pub_place" : "bz "
+   },
+   {
+      "008" : "c  ",
+      "pub_place" : "c  "
+   },
+   {
+      "008" : "c 0",
+      "pub_place" : "c 0"
+   },
+   {
+      "008" : "c b",
+      "pub_place" : "c b"
+   },
+   {
+      "008" : "c c",
+      "pub_place" : "c c"
+   },
+   {
+      "008" : "ca ",
+      "pub_place" : "ca "
+   },
+   {
+      "008" : "cak",
+      "pub_place" : "cak"
+   },
+   {
+      "008" : "cal",
+      "pub_place" : "cal"
+   },
+   {
+      "008" : "can",
+      "pub_place" : "can"
+   },
+   {
+      "008" : "cao",
+      "pub_place" : "cao"
+   },
+   {
+      "008" : "caq",
+      "pub_place" : "caq"
+   },
+   {
+      "008" : "cat",
+      "pub_place" : "cat"
+   },
+   {
+      "008" : "cau",
+      "pub_place" : "cau"
+   },
+   {
+      "008" : "cav",
+      "pub_place" : "cav"
+   },
+   {
+      "008" : "caw",
+      "pub_place" : "caw"
+   },
+   {
+      "008" : "cay",
+      "pub_place" : "cay"
+   },
+   {
+      "008" : "cb ",
+      "pub_place" : "cb "
+   },
+   {
+      "008" : "cb#",
+      "pub_place" : "cb#"
+   },
+   {
+      "008" : "cbc",
+      "pub_place" : "cbc"
+   },
+   {
+      "008" : "cbu",
+      "pub_place" : "cbu"
+   },
+   {
+      "008" : "cc ",
+      "pub_place" : "cc "
+   },
+   {
+      "008" : "cc#",
+      "pub_place" : "cc#"
+   },
+   {
+      "008" : "ccc",
+      "pub_place" : "ccc"
+   },
+   {
+      "008" : "ccu",
+      "pub_place" : "ccu"
+   },
+   {
+      "008" : "cd ",
+      "pub_place" : "cd "
+   },
+   {
+      "008" : "cdu",
+      "pub_place" : "cdu"
+   },
+   {
+      "008" : "ce ",
+      "pub_place" : "ce "
+   },
+   {
+      "008" : "ce#",
+      "pub_place" : "ce#"
+   },
+   {
+      "008" : "cef",
+      "pub_place" : "cef"
+   },
+   {
+      "008" : "ceq",
+      "pub_place" : "ceq"
+   },
+   {
+      "008" : "ces",
+      "pub_place" : "ces"
+   },
+   {
+      "008" : "cf ",
+      "pub_place" : "cf "
+   },
+   {
+      "008" : "cf#",
+      "pub_place" : "cf#"
+   },
+   {
+      "008" : "cfh",
+      "pub_place" : "cfh"
+   },
+   {
+      "008" : "cfj",
+      "pub_place" : "cfj"
+   },
+   {
+      "008" : "cfu",
+      "pub_place" : "cfu"
+   },
+   {
+      "008" : "cg ",
+      "pub_place" : "cg "
+   },
+   {
+      "008" : "cg#",
+      "pub_place" : "cg#"
+   },
+   {
+      "008" : "ch ",
+      "pub_place" : "ch "
+   },
+   {
+      "008" : "ch#",
+      "pub_place" : "ch#"
+   },
+   {
+      "008" : "chi",
+      "pub_place" : "chi"
+   },
+   {
+      "008" : "chu",
+      "pub_place" : "chu"
+   },
+   {
+      "008" : "ci ",
+      "pub_place" : "ci "
+   },
+   {
+      "008" : "ci#",
+      "pub_place" : "ci#"
+   },
+   {
+      "008" : "cia",
+      "pub_place" : "cia"
+   },
+   {
+      "008" : "cj ",
+      "pub_place" : "cj "
+   },
+   {
+      "008" : "ck ",
+      "pub_place" : "ck "
+   },
+   {
+      "008" : "ck#",
+      "pub_place" : "ck#"
+   },
+   {
+      "008" : "cl ",
+      "pub_place" : "cl "
+   },
+   {
+      "008" : "cl#",
+      "pub_place" : "cl#"
+   },
+   {
+      "008" : "clt",
+      "pub_place" : "clt"
+   },
+   {
+      "008" : "clu",
+      "pub_place" : "clu"
+   },
+   {
+      "008" : "cm ",
+      "pub_place" : "cm "
+   },
+   {
+      "008" : "cm#",
+      "pub_place" : "cm#"
+   },
+   {
+      "008" : "cn ",
+      "pub_place" : "cn "
+   },
+   {
+      "008" : "cn#",
+      "pub_place" : "cn#"
+   },
+   {
+      "008" : "cnc",
+      "pub_place" : "cnc"
+   },
+   {
+      "008" : "cnk",
+      "pub_place" : "cnk"
+   },
+   {
+      "008" : "cnn",
+      "pub_place" : "cnn"
+   },
+   {
+      "008" : "cnu",
+      "pub_place" : "cnu"
+   },
+   {
+      "008" : "co ",
+      "pub_place" : "co "
+   },
+   {
+      "008" : "col",
+      "pub_place" : "col"
+   },
+   {
+      "008" : "con",
+      "pub_place" : "con"
+   },
+   {
+      "008" : "cou",
+      "pub_place" : "cou"
+   },
+   {
+      "008" : "cov",
+      "pub_place" : "cov"
+   },
+   {
+      "008" : "cp ",
+      "pub_place" : "cp "
+   },
+   {
+      "008" : "cq ",
+      "pub_place" : "cq "
+   },
+   {
+      "008" : "cr ",
+      "pub_place" : "cr "
+   },
+   {
+      "008" : "cr#",
+      "pub_place" : "cr#"
+   },
+   {
+      "008" : "cs ",
+      "pub_place" : "cs "
+   },
+   {
+      "008" : "cs#",
+      "pub_place" : "cs#"
+   },
+   {
+      "008" : "cse",
+      "pub_place" : "cse"
+   },
+   {
+      "008" : "csr",
+      "pub_place" : "csr"
+   },
+   {
+      "008" : "ct ",
+      "pub_place" : "ct "
+   },
+   {
+      "008" : "cta",
+      "pub_place" : "cta"
+   },
+   {
+      "008" : "cti",
+      "pub_place" : "cti"
+   },
+   {
+      "008" : "ctn",
+      "pub_place" : "ctn"
+   },
+   {
+      "008" : "ctu",
+      "pub_place" : "ctu"
+   },
+   {
+      "008" : "ctv",
+      "pub_place" : "ctv"
+   },
+   {
+      "008" : "ctw",
+      "pub_place" : "ctw"
+   },
+   {
+      "008" : "cty",
+      "pub_place" : "cty"
+   },
+   {
+      "008" : "cu ",
+      "pub_place" : "cu "
+   },
+   {
+      "008" : "cu#",
+      "pub_place" : "cu#"
+   },
+   {
+      "008" : "cuu",
+      "pub_place" : "cuu"
+   },
+   {
+      "008" : "cv ",
+      "pub_place" : "cv "
+   },
+   {
+      "008" : "cv#",
+      "pub_place" : "cv#"
+   },
+   {
+      "008" : "cw ",
+      "pub_place" : "cw "
+   },
+   {
+      "008" : "cwr",
+      "pub_place" : "cwr"
+   },
+   {
+      "008" : "cx ",
+      "pub_place" : "cx "
+   },
+   {
+      "008" : "cy ",
+      "pub_place" : "cy "
+   },
+   {
+      "008" : "cy#",
+      "pub_place" : "cy#"
+   },
+   {
+      "008" : "cyu",
+      "pub_place" : "cyu"
+   },
+   {
+      "008" : "cz ",
+      "pub_place" : "cz "
+   },
+   {
+      "008" : "cz#",
+      "pub_place" : "cz#"
+   },
+   {
+      "008" : "cze",
+      "pub_place" : "cze"
+   },
+   {
+      "008" : "czu",
+      "pub_place" : "czu"
+   },
+   {
+      "008" : "c\\U",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "d  ",
+      "pub_place" : "d  "
+   },
+   {
+      "008" : "d 0",
+      "pub_place" : "d 0"
+   },
+   {
+      "008" : "da ",
+      "pub_place" : "da "
+   },
+   {
+      "008" : "dai",
+      "pub_place" : "dai"
+   },
+   {
+      "008" : "dan",
+      "pub_place" : "dan"
+   },
+   {
+      "008" : "dar",
+      "pub_place" : "dar"
+   },
+   {
+      "008" : "dau",
+      "pub_place" : "dau"
+   },
+   {
+      "008" : "dc ",
+      "pub_place" : "dc "
+   },
+   {
+      "008" : "dca",
+      "pub_place" : "dca"
+   },
+   {
+      "008" : "dcc",
+      "pub_place" : "dcc"
+   },
+   {
+      "008" : "dci",
+      "pub_place" : "dci"
+   },
+   {
+      "008" : "dck",
+      "pub_place" : "dck"
+   },
+   {
+      "008" : "dcn",
+      "pub_place" : "dcn"
+   },
+   {
+      "008" : "dcu",
+      "pub_place" : "dcu"
+   },
+   {
+      "008" : "dcv",
+      "pub_place" : "dcv"
+   },
+   {
+      "008" : "dcw",
+      "pub_place" : "dcw"
+   },
+   {
+      "008" : "de ",
+      "pub_place" : "de "
+   },
+   {
+      "008" : "de#",
+      "pub_place" : "de#"
+   },
+   {
+      "008" : "den",
+      "pub_place" : "den"
+   },
+   {
+      "008" : "deu",
+      "pub_place" : "deu"
+   },
+   {
+      "008" : "dew",
+      "pub_place" : "dew"
+   },
+   {
+      "008" : "di ",
+      "pub_place" : "di "
+   },
+   {
+      "008" : "dk ",
+      "pub_place" : "dk "
+   },
+   {
+      "008" : "dk#",
+      "pub_place" : "dk#"
+   },
+   {
+      "008" : "dkg",
+      "pub_place" : "dkg"
+   },
+   {
+      "008" : "dku",
+      "pub_place" : "dku"
+   },
+   {
+      "008" : "dlc",
+      "pub_place" : "dlc"
+   },
+   {
+      "008" : "dlu",
+      "pub_place" : "dlu"
+   },
+   {
+      "008" : "dm ",
+      "pub_place" : "dm "
+   },
+   {
+      "008" : "dm#",
+      "pub_place" : "dm#"
+   },
+   {
+      "008" : "dn ",
+      "pub_place" : "dn "
+   },
+   {
+      "008" : "dnc",
+      "pub_place" : "dnc"
+   },
+   {
+      "008" : "dnu",
+      "pub_place" : "dnu"
+   },
+   {
+      "008" : "dom",
+      "pub_place" : "dom"
+   },
+   {
+      "008" : "dq ",
+      "pub_place" : "dq "
+   },
+   {
+      "008" : "dr ",
+      "pub_place" : "dr "
+   },
+   {
+      "008" : "dr#",
+      "pub_place" : "dr#"
+   },
+   {
+      "008" : "dru",
+      "pub_place" : "dru"
+   },
+   {
+      "008" : "dt ",
+      "pub_place" : "dt "
+   },
+   {
+      "008" : "du ",
+      "pub_place" : "du "
+   },
+   {
+      "008" : "duc",
+      "pub_place" : "duc"
+   },
+   {
+      "008" : "dur",
+      "pub_place" : "dur"
+   },
+   {
+      "008" : "dut",
+      "pub_place" : "dut"
+   },
+   {
+      "008" : "dw ",
+      "pub_place" : "dw "
+   },
+   {
+      "008" : "e  ",
+      "pub_place" : "e  "
+   },
+   {
+      "008" : "e 0",
+      "pub_place" : "e 0"
+   },
+   {
+      "008" : "e b",
+      "pub_place" : "e b"
+   },
+   {
+      "008" : "e c",
+      "pub_place" : "e c"
+   },
+   {
+      "008" : "ea ",
+      "pub_place" : "ea "
+   },
+   {
+      "008" : "eak",
+      "pub_place" : "eak"
+   },
+   {
+      "008" : "eau",
+      "pub_place" : "eau"
+   },
+   {
+      "008" : "eb ",
+      "pub_place" : "eb "
+   },
+   {
+      "008" : "eb#",
+      "pub_place" : "eb#"
+   },
+   {
+      "008" : "ebk",
+      "pub_place" : "ebk"
+   },
+   {
+      "008" : "ec ",
+      "pub_place" : "ec "
+   },
+   {
+      "008" : "ec#",
+      "pub_place" : "ec#"
+   },
+   {
+      "008" : "edi",
+      "pub_place" : "edi"
+   },
+   {
+      "008" : "eei",
+      "pub_place" : "eei"
+   },
+   {
+      "008" : "ef ",
+      "pub_place" : "ef "
+   },
+   {
+      "008" : "efj",
+      "pub_place" : "efj"
+   },
+   {
+      "008" : "eg ",
+      "pub_place" : "eg "
+   },
+   {
+      "008" : "eg#",
+      "pub_place" : "eg#"
+   },
+   {
+      "008" : "egk",
+      "pub_place" : "egk"
+   },
+   {
+      "008" : "ei ",
+      "pub_place" : "ei "
+   },
+   {
+      "008" : "ek ",
+      "pub_place" : "ek "
+   },
+   {
+      "008" : "eku",
+      "pub_place" : "eku"
+   },
+   {
+      "008" : "el ",
+      "pub_place" : "el "
+   },
+   {
+      "008" : "em ",
+      "pub_place" : "em "
+   },
+   {
+      "008" : "eml",
+      "pub_place" : "eml"
+   },
+   {
+      "008" : "en ",
+      "pub_place" : "en "
+   },
+   {
+      "008" : "en#",
+      "pub_place" : "en#"
+   },
+   {
+      "008" : "enb",
+      "pub_place" : "enb"
+   },
+   {
+      "008" : "enc",
+      "pub_place" : "enc"
+   },
+   {
+      "008" : "eng",
+      "pub_place" : "eng"
+   },
+   {
+      "008" : "enh",
+      "pub_place" : "enh"
+   },
+   {
+      "008" : "enk",
+      "pub_place" : "enk"
+   },
+   {
+      "008" : "enl",
+      "pub_place" : "enl"
+   },
+   {
+      "008" : "enm",
+      "pub_place" : "enm"
+   },
+   {
+      "008" : "enn",
+      "pub_place" : "enn"
+   },
+   {
+      "008" : "enu",
+      "pub_place" : "enu"
+   },
+   {
+      "008" : "ep ",
+      "pub_place" : "ep "
+   },
+   {
+      "008" : "er ",
+      "pub_place" : "er "
+   },
+   {
+      "008" : "er#",
+      "pub_place" : "er#"
+   },
+   {
+      "008" : "err",
+      "pub_place" : "err"
+   },
+   {
+      "008" : "erv",
+      "pub_place" : "erv"
+   },
+   {
+      "008" : "es ",
+      "pub_place" : "es "
+   },
+   {
+      "008" : "es#",
+      "pub_place" : "es#"
+   },
+   {
+      "008" : "esk",
+      "pub_place" : "esk"
+   },
+   {
+      "008" : "esp",
+      "pub_place" : "esp"
+   },
+   {
+      "008" : "esr",
+      "pub_place" : "esr"
+   },
+   {
+      "008" : "est",
+      "pub_place" : "est"
+   },
+   {
+      "008" : "et ",
+      "pub_place" : "et "
+   },
+   {
+      "008" : "et#",
+      "pub_place" : "et#"
+   },
+   {
+      "008" : "etu",
+      "pub_place" : "etu"
+   },
+   {
+      "008" : "eu ",
+      "pub_place" : "eu "
+   },
+   {
+      "008" : "eue",
+      "pub_place" : "eue"
+   },
+   {
+      "008" : "euk",
+      "pub_place" : "euk"
+   },
+   {
+      "008" : "ev ",
+      "pub_place" : "ev "
+   },
+   {
+      "008" : "evr",
+      "pub_place" : "evr"
+   },
+   {
+      "008" : "exx",
+      "pub_place" : "exx"
+   },
+   {
+      "008" : "ey ",
+      "pub_place" : "ey "
+   },
+   {
+      "008" : "eyu",
+      "pub_place" : "eyu"
+   },
+   {
+      "008" : "f  ",
+      "pub_place" : "f  "
+   },
+   {
+      "008" : "f 0",
+      "pub_place" : "f 0"
+   },
+   {
+      "008" : "f b",
+      "pub_place" : "f b"
+   },
+   {
+      "008" : "f c",
+      "pub_place" : "f c"
+   },
+   {
+      "008" : "f f",
+      "pub_place" : "f f"
+   },
+   {
+      "008" : "f j",
+      "pub_place" : "f j"
+   },
+   {
+      "008" : "f00",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "fa ",
+      "pub_place" : "fa "
+   },
+   {
+      "008" : "fae",
+      "pub_place" : "fae"
+   },
+   {
+      "008" : "fau",
+      "pub_place" : "fau"
+   },
+   {
+      "008" : "fc ",
+      "pub_place" : "fc "
+   },
+   {
+      "008" : "fe ",
+      "pub_place" : "fe "
+   },
+   {
+      "008" : "fff",
+      "pub_place" : "fff"
+   },
+   {
+      "008" : "fg ",
+      "pub_place" : "fg "
+   },
+   {
+      "008" : "fh ",
+      "pub_place" : "fh "
+   },
+   {
+      "008" : "fi ",
+      "pub_place" : "fi "
+   },
+   {
+      "008" : "fi#",
+      "pub_place" : "fi#"
+   },
+   {
+      "008" : "fin",
+      "pub_place" : "fin"
+   },
+   {
+      "008" : "fir",
+      "pub_place" : "fir"
+   },
+   {
+      "008" : "fiu",
+      "pub_place" : "fiu"
+   },
+   {
+      "008" : "fj ",
+      "pub_place" : "fj "
+   },
+   {
+      "008" : "fj#",
+      "pub_place" : "fj#"
+   },
+   {
+      "008" : "fk ",
+      "pub_place" : "fk "
+   },
+   {
+      "008" : "fl ",
+      "pub_place" : "fl "
+   },
+   {
+      "008" : "fla",
+      "pub_place" : "fla"
+   },
+   {
+      "008" : "fln",
+      "pub_place" : "fln"
+   },
+   {
+      "008" : "flu",
+      "pub_place" : "flu"
+   },
+   {
+      "008" : "fm ",
+      "pub_place" : "fm "
+   },
+   {
+      "008" : "fn ",
+      "pub_place" : "fn "
+   },
+   {
+      "008" : "fnu",
+      "pub_place" : "fnu"
+   },
+   {
+      "008" : "fp ",
+      "pub_place" : "fp "
+   },
+   {
+      "008" : "fr ",
+      "pub_place" : "fr "
+   },
+   {
+      "008" : "fr#",
+      "pub_place" : "fr#"
+   },
+   {
+      "008" : "fr0",
+      "pub_place" : "fr0"
+   },
+   {
+      "008" : "fra",
+      "pub_place" : "fra"
+   },
+   {
+      "008" : "frc",
+      "pub_place" : "frc"
+   },
+   {
+      "008" : "fre",
+      "pub_place" : "fre"
+   },
+   {
+      "008" : "frk",
+      "pub_place" : "frk"
+   },
+   {
+      "008" : "fro",
+      "pub_place" : "fro"
+   },
+   {
+      "008" : "frq",
+      "pub_place" : "frq"
+   },
+   {
+      "008" : "frs",
+      "pub_place" : "frs"
+   },
+   {
+      "008" : "fru",
+      "pub_place" : "fru"
+   },
+   {
+      "008" : "fr^",
+      "pub_place" : "fr "
+   },
+   {
+      "008" : "fs ",
+      "pub_place" : "fs "
+   },
+   {
+      "008" : "ft ",
+      "pub_place" : "ft "
+   },
+   {
+      "008" : "fu ",
+      "pub_place" : "fu "
+   },
+   {
+      "008" : "fv ",
+      "pub_place" : "fv "
+   },
+   {
+      "008" : "fw ",
+      "pub_place" : "fw "
+   },
+   {
+      "008" : "fw#",
+      "pub_place" : "fw#"
+   },
+   {
+      "008" : "fxu",
+      "pub_place" : "fxu"
+   },
+   {
+      "008" : "g  ",
+      "pub_place" : "g  "
+   },
+   {
+      "008" : "ga ",
+      "pub_place" : "ga "
+   },
+   {
+      "008" : "gau",
+      "pub_place" : "gau"
+   },
+   {
+      "008" : "gav",
+      "pub_place" : "gav"
+   },
+   {
+      "008" : "gaw",
+      "pub_place" : "gaw"
+   },
+   {
+      "008" : "gb ",
+      "pub_place" : "gb "
+   },
+   {
+      "008" : "gc ",
+      "pub_place" : "gc "
+   },
+   {
+      "008" : "gd ",
+      "pub_place" : "gd "
+   },
+   {
+      "008" : "gd#",
+      "pub_place" : "gd#"
+   },
+   {
+      "008" : "ge ",
+      "pub_place" : "ge "
+   },
+   {
+      "008" : "ge#",
+      "pub_place" : "ge#"
+   },
+   {
+      "008" : "ge*",
+      "pub_place" : "ge*"
+   },
+   {
+      "008" : "geg",
+      "pub_place" : "geg"
+   },
+   {
+      "008" : "gen",
+      "pub_place" : "gen"
+   },
+   {
+      "008" : "geo",
+      "pub_place" : "geo"
+   },
+   {
+      "008" : "ger",
+      "pub_place" : "ger"
+   },
+   {
+      "008" : "ges",
+      "pub_place" : "ges"
+   },
+   {
+      "008" : "geu",
+      "pub_place" : "geu"
+   },
+   {
+      "008" : "gev",
+      "pub_place" : "gev"
+   },
+   {
+      "008" : "gew",
+      "pub_place" : "gew"
+   },
+   {
+      "008" : "gg ",
+      "pub_place" : "gg "
+   },
+   {
+      "008" : "gh ",
+      "pub_place" : "gh "
+   },
+   {
+      "008" : "gh#",
+      "pub_place" : "gh#"
+   },
+   {
+      "008" : "ghg",
+      "pub_place" : "ghg"
+   },
+   {
+      "008" : "gi ",
+      "pub_place" : "gi "
+   },
+   {
+      "008" : "gi#",
+      "pub_place" : "gi#"
+   },
+   {
+      "008" : "giu",
+      "pub_place" : "giu"
+   },
+   {
+      "008" : "gk ",
+      "pub_place" : "gk "
+   },
+   {
+      "008" : "gl ",
+      "pub_place" : "gl "
+   },
+   {
+      "008" : "gl#",
+      "pub_place" : "gl#"
+   },
+   {
+      "008" : "gm ",
+      "pub_place" : "gm "
+   },
+   {
+      "008" : "gmu",
+      "pub_place" : "gmu"
+   },
+   {
+      "008" : "gn ",
+      "pub_place" : "gn "
+   },
+   {
+      "008" : "go ",
+      "pub_place" : "go "
+   },
+   {
+      "008" : "go#",
+      "pub_place" : "go#"
+   },
+   {
+      "008" : "gp ",
+      "pub_place" : "gp "
+   },
+   {
+      "008" : "gq ",
+      "pub_place" : "gq "
+   },
+   {
+      "008" : "gr ",
+      "pub_place" : "gr "
+   },
+   {
+      "008" : "gr#",
+      "pub_place" : "gr#"
+   },
+   {
+      "008" : "grc",
+      "pub_place" : "grc"
+   },
+   {
+      "008" : "grm",
+      "pub_place" : "grm"
+   },
+   {
+      "008" : "gro",
+      "pub_place" : "gro"
+   },
+   {
+      "008" : "grr",
+      "pub_place" : "grr"
+   },
+   {
+      "008" : "gru",
+      "pub_place" : "gru"
+   },
+   {
+      "008" : "grw",
+      "pub_place" : "grw"
+   },
+   {
+      "008" : "gs ",
+      "pub_place" : "gs "
+   },
+   {
+      "008" : "gs#",
+      "pub_place" : "gs#"
+   },
+   {
+      "008" : "gsr",
+      "pub_place" : "gsr"
+   },
+   {
+      "008" : "gsu",
+      "pub_place" : "gsu"
+   },
+   {
+      "008" : "gt ",
+      "pub_place" : "gt "
+   },
+   {
+      "008" : "gt#",
+      "pub_place" : "gt#"
+   },
+   {
+      "008" : "gtu",
+      "pub_place" : "gtu"
+   },
+   {
+      "008" : "gtw",
+      "pub_place" : "gtw"
+   },
+   {
+      "008" : "gu ",
+      "pub_place" : "gu "
+   },
+   {
+      "008" : "gu#",
+      "pub_place" : "gu#"
+   },
+   {
+      "008" : "gua",
+      "pub_place" : "gua"
+   },
+   {
+      "008" : "guc",
+      "pub_place" : "guc"
+   },
+   {
+      "008" : "gul",
+      "pub_place" : "gul"
+   },
+   {
+      "008" : "gur",
+      "pub_place" : "gur"
+   },
+   {
+      "008" : "gus",
+      "pub_place" : "gus"
+   },
+   {
+      "008" : "guu",
+      "pub_place" : "guu"
+   },
+   {
+      "008" : "gv ",
+      "pub_place" : "gv "
+   },
+   {
+      "008" : "gv#",
+      "pub_place" : "gv#"
+   },
+   {
+      "008" : "gvq",
+      "pub_place" : "gvq"
+   },
+   {
+      "008" : "gw ",
+      "pub_place" : "gw "
+   },
+   {
+      "008" : "gw#",
+      "pub_place" : "gw#"
+   },
+   {
+      "008" : "gwb",
+      "pub_place" : "gwb"
+   },
+   {
+      "008" : "gwq",
+      "pub_place" : "gwq"
+   },
+   {
+      "008" : "gws",
+      "pub_place" : "gws"
+   },
+   {
+      "008" : "gwu",
+      "pub_place" : "gwu"
+   },
+   {
+      "008" : "gwx",
+      "pub_place" : "gwx"
+   },
+   {
+      "008" : "gw^",
+      "pub_place" : "gw "
+   },
+   {
+      "008" : "gx ",
+      "pub_place" : "gx "
+   },
+   {
+      "008" : "gx#",
+      "pub_place" : "gx#"
+   },
+   {
+      "008" : "gy ",
+      "pub_place" : "gy "
+   },
+   {
+      "008" : "gy#",
+      "pub_place" : "gy#"
+   },
+   {
+      "008" : "gz ",
+      "pub_place" : "gz "
+   },
+   {
+      "008" : "gzr",
+      "pub_place" : "gzr"
+   },
+   {
+      "008" : "h  ",
+      "pub_place" : "h  "
+   },
+   {
+      "008" : "h 0",
+      "pub_place" : "h 0"
+   },
+   {
+      "008" : "ha ",
+      "pub_place" : "ha "
+   },
+   {
+      "008" : "ha#",
+      "pub_place" : "ha#"
+   },
+   {
+      "008" : "han",
+      "pub_place" : "han"
+   },
+   {
+      "008" : "hau",
+      "pub_place" : "hau"
+   },
+   {
+      "008" : "hbu",
+      "pub_place" : "hbu"
+   },
+   {
+      "008" : "he ",
+      "pub_place" : "he "
+   },
+   {
+      "008" : "hi ",
+      "pub_place" : "hi "
+   },
+   {
+      "008" : "hi#",
+      "pub_place" : "hi#"
+   },
+   {
+      "008" : "hin",
+      "pub_place" : "hin"
+   },
+   {
+      "008" : "hiu",
+      "pub_place" : "hiu"
+   },
+   {
+      "008" : "hju",
+      "pub_place" : "hju"
+   },
+   {
+      "008" : "hk ",
+      "pub_place" : "hk "
+   },
+   {
+      "008" : "hk#",
+      "pub_place" : "hk#"
+   },
+   {
+      "008" : "hkk",
+      "pub_place" : "hkk"
+   },
+   {
+      "008" : "hls",
+      "pub_place" : "hls"
+   },
+   {
+      "008" : "hn ",
+      "pub_place" : "hn "
+   },
+   {
+      "008" : "ho ",
+      "pub_place" : "ho "
+   },
+   {
+      "008" : "ho#",
+      "pub_place" : "ho#"
+   },
+   {
+      "008" : "hp ",
+      "pub_place" : "hp "
+   },
+   {
+      "008" : "hr ",
+      "pub_place" : "hr "
+   },
+   {
+      "008" : "ht ",
+      "pub_place" : "ht "
+   },
+   {
+      "008" : "ht#",
+      "pub_place" : "ht#"
+   },
+   {
+      "008" : "hu ",
+      "pub_place" : "hu "
+   },
+   {
+      "008" : "hu#",
+      "pub_place" : "hu#"
+   },
+   {
+      "008" : "huc",
+      "pub_place" : "huc"
+   },
+   {
+      "008" : "hui",
+      "pub_place" : "hui"
+   },
+   {
+      "008" : "hun",
+      "pub_place" : "hun"
+   },
+   {
+      "008" : "huq",
+      "pub_place" : "huq"
+   },
+   {
+      "008" : "hur",
+      "pub_place" : "hur"
+   },
+   {
+      "008" : "hy ",
+      "pub_place" : "hy "
+   },
+   {
+      "008" : "hya",
+      "pub_place" : "hya"
+   },
+   {
+      "008" : "hyu",
+      "pub_place" : "hyu"
+   },
+   {
+      "008" : "i  ",
+      "pub_place" : "i  "
+   },
+   {
+      "008" : "i 0",
+      "pub_place" : "i 0"
+   },
+   {
+      "008" : "i u",
+      "pub_place" : "i u"
+   },
+   {
+      "008" : "ia ",
+      "pub_place" : "ia "
+   },
+   {
+      "008" : "ian",
+      "pub_place" : "ian"
+   },
+   {
+      "008" : "iau",
+      "pub_place" : "iau"
+   },
+   {
+      "008" : "iav",
+      "pub_place" : "iav"
+   },
+   {
+      "008" : "iaw",
+      "pub_place" : "iaw"
+   },
+   {
+      "008" : "ic ",
+      "pub_place" : "ic "
+   },
+   {
+      "008" : "ic#",
+      "pub_place" : "ic#"
+   },
+   {
+      "008" : "id ",
+      "pub_place" : "id "
+   },
+   {
+      "008" : "ida",
+      "pub_place" : "ida"
+   },
+   {
+      "008" : "idu",
+      "pub_place" : "idu"
+   },
+   {
+      "008" : "ie ",
+      "pub_place" : "ie "
+   },
+   {
+      "008" : "ie#",
+      "pub_place" : "ie#"
+   },
+   {
+      "008" : "iek",
+      "pub_place" : "iek"
+   },
+   {
+      "008" : "ieu",
+      "pub_place" : "ieu"
+   },
+   {
+      "008" : "ie^",
+      "pub_place" : "ie "
+   },
+   {
+      "008" : "igu",
+      "pub_place" : "igu"
+   },
+   {
+      "008" : "ih ",
+      "pub_place" : "ih "
+   },
+   {
+      "008" : "ihi",
+      "pub_place" : "ihi"
+   },
+   {
+      "008" : "ihu",
+      "pub_place" : "ihu"
+   },
+   {
+      "008" : "ii ",
+      "pub_place" : "ii "
+   },
+   {
+      "008" : "ii#",
+      "pub_place" : "ii#"
+   },
+   {
+      "008" : "iii",
+      "pub_place" : "iii"
+   },
+   {
+      "008" : "iiq",
+      "pub_place" : "iiq"
+   },
+   {
+      "008" : "iis",
+      "pub_place" : "iis"
+   },
+   {
+      "008" : "iiu",
+      "pub_place" : "iiu"
+   },
+   {
+      "008" : "iju",
+      "pub_place" : "iju"
+   },
+   {
+      "008" : "il ",
+      "pub_place" : "il "
+   },
+   {
+      "008" : "il#",
+      "pub_place" : "il#"
+   },
+   {
+      "008" : "ila",
+      "pub_place" : "ila"
+   },
+   {
+      "008" : "ill",
+      "pub_place" : "ill"
+   },
+   {
+      "008" : "ilo",
+      "pub_place" : "ilo"
+   },
+   {
+      "008" : "ilu",
+      "pub_place" : "ilu"
+   },
+   {
+      "008" : "ilv",
+      "pub_place" : "ilv"
+   },
+   {
+      "008" : "ilw",
+      "pub_place" : "ilw"
+   },
+   {
+      "008" : "ily",
+      "pub_place" : "ily"
+   },
+   {
+      "008" : "im ",
+      "pub_place" : "im "
+   },
+   {
+      "008" : "imu",
+      "pub_place" : "imu"
+   },
+   {
+      "008" : "in ",
+      "pub_place" : "in "
+   },
+   {
+      "008" : "ina",
+      "pub_place" : "ina"
+   },
+   {
+      "008" : "inc",
+      "pub_place" : "inc"
+   },
+   {
+      "008" : "ind",
+      "pub_place" : "ind"
+   },
+   {
+      "008" : "inj",
+      "pub_place" : "inj"
+   },
+   {
+      "008" : "ink",
+      "pub_place" : "ink"
+   },
+   {
+      "008" : "inr",
+      "pub_place" : "inr"
+   },
+   {
+      "008" : "inu",
+      "pub_place" : "inu"
+   },
+   {
+      "008" : "inv",
+      "pub_place" : "inv"
+   },
+   {
+      "008" : "inw",
+      "pub_place" : "inw"
+   },
+   {
+      "008" : "inx",
+      "pub_place" : "inx"
+   },
+   {
+      "008" : "io ",
+      "pub_place" : "io "
+   },
+   {
+      "008" : "io#",
+      "pub_place" : "io#"
+   },
+   {
+      "008" : "ioa",
+      "pub_place" : "ioa"
+   },
+   {
+      "008" : "ioq",
+      "pub_place" : "ioq"
+   },
+   {
+      "008" : "iou",
+      "pub_place" : "iou"
+   },
+   {
+      "008" : "iow",
+      "pub_place" : "iow"
+   },
+   {
+      "008" : "iq ",
+      "pub_place" : "iq "
+   },
+   {
+      "008" : "iq#",
+      "pub_place" : "iq#"
+   },
+   {
+      "008" : "ir ",
+      "pub_place" : "ir "
+   },
+   {
+      "008" : "ir#",
+      "pub_place" : "ir#"
+   },
+   {
+      "008" : "ire",
+      "pub_place" : "ire"
+   },
+   {
+      "008" : "irk",
+      "pub_place" : "irk"
+   },
+   {
+      "008" : "iru",
+      "pub_place" : "iru"
+   },
+   {
+      "008" : "is ",
+      "pub_place" : "is "
+   },
+   {
+      "008" : "is#",
+      "pub_place" : "is#"
+   },
+   {
+      "008" : "isq",
+      "pub_place" : "isq"
+   },
+   {
+      "008" : "isr",
+      "pub_place" : "isr"
+   },
+   {
+      "008" : "isu",
+      "pub_place" : "isu"
+   },
+   {
+      "008" : "it ",
+      "pub_place" : "it "
+   },
+   {
+      "008" : "it#",
+      "pub_place" : "it#"
+   },
+   {
+      "008" : "it-",
+      "pub_place" : "it-"
+   },
+   {
+      "008" : "it/",
+      "pub_place" : "it/"
+   },
+   {
+      "008" : "it?",
+      "pub_place" : "it "
+   },
+   {
+      "008" : "ita",
+      "pub_place" : "ita"
+   },
+   {
+      "008" : "ite",
+      "pub_place" : "ite"
+   },
+   {
+      "008" : "itk",
+      "pub_place" : "itk"
+   },
+   {
+      "008" : "itu",
+      "pub_place" : "itu"
+   },
+   {
+      "008" : "iu ",
+      "pub_place" : "iu "
+   },
+   {
+      "008" : "iur",
+      "pub_place" : "iur"
+   },
+   {
+      "008" : "iuu",
+      "pub_place" : "iuu"
+   },
+   {
+      "008" : "iv ",
+      "pub_place" : "iv "
+   },
+   {
+      "008" : "iv#",
+      "pub_place" : "iv#"
+   },
+   {
+      "008" : "ivr",
+      "pub_place" : "ivr"
+   },
+   {
+      "008" : "iw ",
+      "pub_place" : "iw "
+   },
+   {
+      "008" : "iwu",
+      "pub_place" : "iwu"
+   },
+   {
+      "008" : "ix ",
+      "pub_place" : "ix "
+   },
+   {
+      "008" : "iy ",
+      "pub_place" : "iy "
+   },
+   {
+      "008" : "iz ",
+      "pub_place" : "iz "
+   },
+   {
+      "008" : "j  ",
+      "pub_place" : "j  "
+   },
+   {
+      "008" : "j 0",
+      "pub_place" : "j 0"
+   },
+   {
+      "008" : "ja ",
+      "pub_place" : "ja "
+   },
+   {
+      "008" : "ja#",
+      "pub_place" : "ja#"
+   },
+   {
+      "008" : "jap",
+      "pub_place" : "jap"
+   },
+   {
+      "008" : "jaq",
+      "pub_place" : "jaq"
+   },
+   {
+      "008" : "jau",
+      "pub_place" : "jau"
+   },
+   {
+      "008" : "jd ",
+      "pub_place" : "jd "
+   },
+   {
+      "008" : "ji ",
+      "pub_place" : "ji "
+   },
+   {
+      "008" : "jm ",
+      "pub_place" : "jm "
+   },
+   {
+      "008" : "jm#",
+      "pub_place" : "jm#"
+   },
+   {
+      "008" : "jn ",
+      "pub_place" : "jn "
+   },
+   {
+      "008" : "jo ",
+      "pub_place" : "jo "
+   },
+   {
+      "008" : "jo#",
+      "pub_place" : "jo#"
+   },
+   {
+      "008" : "jou",
+      "pub_place" : "jou"
+   },
+   {
+      "008" : "jp ",
+      "pub_place" : "jp "
+   },
+   {
+      "008" : "jpn",
+      "pub_place" : "jpn"
+   },
+   {
+      "008" : "ju ",
+      "pub_place" : "ju "
+   },
+   {
+      "008" : "k  ",
+      "pub_place" : "k  "
+   },
+   {
+      "008" : "k 0",
+      "pub_place" : "k 0"
+   },
+   {
+      "008" : "kau",
+      "pub_place" : "kau"
+   },
+   {
+      "008" : "kcu",
+      "pub_place" : "kcu"
+   },
+   {
+      "008" : "ke ",
+      "pub_place" : "ke "
+   },
+   {
+      "008" : "ke#",
+      "pub_place" : "ke#"
+   },
+   {
+      "008" : "keu",
+      "pub_place" : "keu"
+   },
+   {
+      "008" : "kg ",
+      "pub_place" : "kg "
+   },
+   {
+      "008" : "kg#",
+      "pub_place" : "kg#"
+   },
+   {
+      "008" : "kgr",
+      "pub_place" : "kgr"
+   },
+   {
+      "008" : "ki ",
+      "pub_place" : "ki "
+   },
+   {
+      "008" : "kn ",
+      "pub_place" : "kn "
+   },
+   {
+      "008" : "knu",
+      "pub_place" : "knu"
+   },
+   {
+      "008" : "ko ",
+      "pub_place" : "ko "
+   },
+   {
+      "008" : "ko#",
+      "pub_place" : "ko#"
+   },
+   {
+      "008" : "kor",
+      "pub_place" : "kor"
+   },
+   {
+      "008" : "kr ",
+      "pub_place" : "kr "
+   },
+   {
+      "008" : "krz",
+      "pub_place" : "krz"
+   },
+   {
+      "008" : "ks ",
+      "pub_place" : "ks "
+   },
+   {
+      "008" : "ks#",
+      "pub_place" : "ks#"
+   },
+   {
+      "008" : "ksa",
+      "pub_place" : "ksa"
+   },
+   {
+      "008" : "ksr",
+      "pub_place" : "ksr"
+   },
+   {
+      "008" : "ksu",
+      "pub_place" : "ksu"
+   },
+   {
+      "008" : "ksv",
+      "pub_place" : "ksv"
+   },
+   {
+      "008" : "ksy",
+      "pub_place" : "ksy"
+   },
+   {
+      "008" : "ktu",
+      "pub_place" : "ktu"
+   },
+   {
+      "008" : "ku ",
+      "pub_place" : "ku "
+   },
+   {
+      "008" : "ku#",
+      "pub_place" : "ku#"
+   },
+   {
+      "008" : "kv ",
+      "pub_place" : "kv "
+   },
+   {
+      "008" : "kw ",
+      "pub_place" : "kw "
+   },
+   {
+      "008" : "ky ",
+      "pub_place" : "ky "
+   },
+   {
+      "008" : "kyn",
+      "pub_place" : "kyn"
+   },
+   {
+      "008" : "kyu",
+      "pub_place" : "kyu"
+   },
+   {
+      "008" : "kz ",
+      "pub_place" : "kz "
+   },
+   {
+      "008" : "kz1",
+      "pub_place" : "kz1"
+   },
+   {
+      "008" : "kzr",
+      "pub_place" : "kzr"
+   },
+   {
+      "008" : "kzu",
+      "pub_place" : "kzu"
+   },
+   {
+      "008" : "l  ",
+      "pub_place" : "l  "
+   },
+   {
+      "008" : "l 0",
+      "pub_place" : "l 0"
+   },
+   {
+      "008" : "la ",
+      "pub_place" : "la "
+   },
+   {
+      "008" : "la#",
+      "pub_place" : "la#"
+   },
+   {
+      "008" : "lan",
+      "pub_place" : "lan"
+   },
+   {
+      "008" : "lat",
+      "pub_place" : "lat"
+   },
+   {
+      "008" : "lau",
+      "pub_place" : "lau"
+   },
+   {
+      "008" : "lav",
+      "pub_place" : "lav"
+   },
+   {
+      "008" : "lb ",
+      "pub_place" : "lb "
+   },
+   {
+      "008" : "lb#",
+      "pub_place" : "lb#"
+   },
+   {
+      "008" : "lbu",
+      "pub_place" : "lbu"
+   },
+   {
+      "008" : "lc ",
+      "pub_place" : "lc "
+   },
+   {
+      "008" : "ldn",
+      "pub_place" : "ldn"
+   },
+   {
+      "008" : "le ",
+      "pub_place" : "le "
+   },
+   {
+      "008" : "le#",
+      "pub_place" : "le#"
+   },
+   {
+      "008" : "leb",
+      "pub_place" : "leb"
+   },
+   {
+      "008" : "lee",
+      "pub_place" : "lee"
+   },
+   {
+      "008" : "leg",
+      "pub_place" : "leg"
+   },
+   {
+      "008" : "lei",
+      "pub_place" : "lei"
+   },
+   {
+      "008" : "lek",
+      "pub_place" : "lek"
+   },
+   {
+      "008" : "leq",
+      "pub_place" : "leq"
+   },
+   {
+      "008" : "lh ",
+      "pub_place" : "lh "
+   },
+   {
+      "008" : "lh#",
+      "pub_place" : "lh#"
+   },
+   {
+      "008" : "lhc",
+      "pub_place" : "lhc"
+   },
+   {
+      "008" : "li ",
+      "pub_place" : "li "
+   },
+   {
+      "008" : "li#",
+      "pub_place" : "li#"
+   },
+   {
+      "008" : "lir",
+      "pub_place" : "lir"
+   },
+   {
+      "008" : "lit",
+      "pub_place" : "lit"
+   },
+   {
+      "008" : "liu",
+      "pub_place" : "liu"
+   },
+   {
+      "008" : "liv",
+      "pub_place" : "liv"
+   },
+   {
+      "008" : "llu",
+      "pub_place" : "llu"
+   },
+   {
+      "008" : "ln ",
+      "pub_place" : "ln "
+   },
+   {
+      "008" : "ln*",
+      "pub_place" : "ln*"
+   },
+   {
+      "008" : "lnn",
+      "pub_place" : "lnn"
+   },
+   {
+      "008" : "lo ",
+      "pub_place" : "lo "
+   },
+   {
+      "008" : "lo#",
+      "pub_place" : "lo#"
+   },
+   {
+      "008" : "lok",
+      "pub_place" : "lok"
+   },
+   {
+      "008" : "lou",
+      "pub_place" : "lou"
+   },
+   {
+      "008" : "lp ",
+      "pub_place" : "lp "
+   },
+   {
+      "008" : "lq ",
+      "pub_place" : "lq "
+   },
+   {
+      "008" : "ls ",
+      "pub_place" : "ls "
+   },
+   {
+      "008" : "lsu",
+      "pub_place" : "lsu"
+   },
+   {
+      "008" : "lu ",
+      "pub_place" : "lu "
+   },
+   {
+      "008" : "lu#",
+      "pub_place" : "lu#"
+   },
+   {
+      "008" : "luk",
+      "pub_place" : "luk"
+   },
+   {
+      "008" : "lur",
+      "pub_place" : "lur"
+   },
+   {
+      "008" : "luu",
+      "pub_place" : "luu"
+   },
+   {
+      "008" : "lux",
+      "pub_place" : "lux"
+   },
+   {
+      "008" : "lv ",
+      "pub_place" : "lv "
+   },
+   {
+      "008" : "lv#",
+      "pub_place" : "lv#"
+   },
+   {
+      "008" : "lvr",
+      "pub_place" : "lvr"
+   },
+   {
+      "008" : "lwr",
+      "pub_place" : "lwr"
+   },
+   {
+      "008" : "ly ",
+      "pub_place" : "ly "
+   },
+   {
+      "008" : "ly#",
+      "pub_place" : "ly#"
+   },
+   {
+      "008" : "lyc",
+      "pub_place" : "lyc"
+   },
+   {
+      "008" : "m  ",
+      "pub_place" : "m  "
+   },
+   {
+      "008" : "m 0",
+      "pub_place" : "m 0"
+   },
+   {
+      "008" : "m u",
+      "pub_place" : "m u"
+   },
+   {
+      "008" : "ma ",
+      "pub_place" : "ma "
+   },
+   {
+      "008" : "ma#",
+      "pub_place" : "ma#"
+   },
+   {
+      "008" : "mac",
+      "pub_place" : "mac"
+   },
+   {
+      "008" : "man",
+      "pub_place" : "man"
+   },
+   {
+      "008" : "mar",
+      "pub_place" : "mar"
+   },
+   {
+      "008" : "mas",
+      "pub_place" : "mas"
+   },
+   {
+      "008" : "mau",
+      "pub_place" : "mau"
+   },
+   {
+      "008" : "mav",
+      "pub_place" : "mav"
+   },
+   {
+      "008" : "maw",
+      "pub_place" : "maw"
+   },
+   {
+      "008" : "may",
+      "pub_place" : "may"
+   },
+   {
+      "008" : "mb ",
+      "pub_place" : "mb "
+   },
+   {
+      "008" : "mb#",
+      "pub_place" : "mb#"
+   },
+   {
+      "008" : "mbc",
+      "pub_place" : "mbc"
+   },
+   {
+      "008" : "mbd",
+      "pub_place" : "mbd"
+   },
+   {
+      "008" : "mbk",
+      "pub_place" : "mbk"
+   },
+   {
+      "008" : "mbu",
+      "pub_place" : "mbu"
+   },
+   {
+      "008" : "mc ",
+      "pub_place" : "mc "
+   },
+   {
+      "008" : "mc#",
+      "pub_place" : "mc#"
+   },
+   {
+      "008" : "mcu",
+      "pub_place" : "mcu"
+   },
+   {
+      "008" : "md ",
+      "pub_place" : "md "
+   },
+   {
+      "008" : "mdn",
+      "pub_place" : "mdn"
+   },
+   {
+      "008" : "mdu",
+      "pub_place" : "mdu"
+   },
+   {
+      "008" : "mdw",
+      "pub_place" : "mdw"
+   },
+   {
+      "008" : "me ",
+      "pub_place" : "me "
+   },
+   {
+      "008" : "men",
+      "pub_place" : "men"
+   },
+   {
+      "008" : "meu",
+      "pub_place" : "meu"
+   },
+   {
+      "008" : "mex",
+      "pub_place" : "mex"
+   },
+   {
+      "008" : "mf ",
+      "pub_place" : "mf "
+   },
+   {
+      "008" : "mf#",
+      "pub_place" : "mf#"
+   },
+   {
+      "008" : "mg ",
+      "pub_place" : "mg "
+   },
+   {
+      "008" : "mg#",
+      "pub_place" : "mg#"
+   },
+   {
+      "008" : "mgu",
+      "pub_place" : "mgu"
+   },
+   {
+      "008" : "mh ",
+      "pub_place" : "mh "
+   },
+   {
+      "008" : "mi ",
+      "pub_place" : "mi "
+   },
+   {
+      "008" : "mi#",
+      "pub_place" : "mi#"
+   },
+   {
+      "008" : "mia",
+      "pub_place" : "mia"
+   },
+   {
+      "008" : "mic",
+      "pub_place" : "mic"
+   },
+   {
+      "008" : "min",
+      "pub_place" : "min"
+   },
+   {
+      "008" : "mir",
+      "pub_place" : "mir"
+   },
+   {
+      "008" : "mis",
+      "pub_place" : "mis"
+   },
+   {
+      "008" : "miu",
+      "pub_place" : "miu"
+   },
+   {
+      "008" : "miv",
+      "pub_place" : "miv"
+   },
+   {
+      "008" : "miw",
+      "pub_place" : "miw"
+   },
+   {
+      "008" : "mix",
+      "pub_place" : "mix"
+   },
+   {
+      "008" : "miy",
+      "pub_place" : "miy"
+   },
+   {
+      "008" : "mj ",
+      "pub_place" : "mj "
+   },
+   {
+      "008" : "mju",
+      "pub_place" : "mju"
+   },
+   {
+      "008" : "mk ",
+      "pub_place" : "mk "
+   },
+   {
+      "008" : "mk#",
+      "pub_place" : "mk#"
+   },
+   {
+      "008" : "mku",
+      "pub_place" : "mku"
+   },
+   {
+      "008" : "ml ",
+      "pub_place" : "ml "
+   },
+   {
+      "008" : "ml#",
+      "pub_place" : "ml#"
+   },
+   {
+      "008" : "mlk",
+      "pub_place" : "mlk"
+   },
+   {
+      "008" : "mlu",
+      "pub_place" : "mlu"
+   },
+   {
+      "008" : "mm ",
+      "pub_place" : "mm "
+   },
+   {
+      "008" : "mm#",
+      "pub_place" : "mm#"
+   },
+   {
+      "008" : "mmu",
+      "pub_place" : "mmu"
+   },
+   {
+      "008" : "mn ",
+      "pub_place" : "mn "
+   },
+   {
+      "008" : "mn#",
+      "pub_place" : "mn#"
+   },
+   {
+      "008" : "mnc",
+      "pub_place" : "mnc"
+   },
+   {
+      "008" : "mni",
+      "pub_place" : "mni"
+   },
+   {
+      "008" : "mnu",
+      "pub_place" : "mnu"
+   },
+   {
+      "008" : "mnv",
+      "pub_place" : "mnv"
+   },
+   {
+      "008" : "mny",
+      "pub_place" : "mny"
+   },
+   {
+      "008" : "mo ",
+      "pub_place" : "mo "
+   },
+   {
+      "008" : "moc",
+      "pub_place" : "moc"
+   },
+   {
+      "008" : "mol",
+      "pub_place" : "mol"
+   },
+   {
+      "008" : "mon",
+      "pub_place" : "mon"
+   },
+   {
+      "008" : "mou",
+      "pub_place" : "mou"
+   },
+   {
+      "008" : "mov",
+      "pub_place" : "mov"
+   },
+   {
+      "008" : "mow",
+      "pub_place" : "mow"
+   },
+   {
+      "008" : "moy",
+      "pub_place" : "moy"
+   },
+   {
+      "008" : "mp ",
+      "pub_place" : "mp "
+   },
+   {
+      "008" : "mp#",
+      "pub_place" : "mp#"
+   },
+   {
+      "008" : "mq ",
+      "pub_place" : "mq "
+   },
+   {
+      "008" : "mr ",
+      "pub_place" : "mr "
+   },
+   {
+      "008" : "mr#",
+      "pub_place" : "mr#"
+   },
+   {
+      "008" : "mru",
+      "pub_place" : "mru"
+   },
+   {
+      "008" : "mrv",
+      "pub_place" : "mrv"
+   },
+   {
+      "008" : "ms ",
+      "pub_place" : "ms "
+   },
+   {
+      "008" : "msu",
+      "pub_place" : "msu"
+   },
+   {
+      "008" : "mt ",
+      "pub_place" : "mt "
+   },
+   {
+      "008" : "mtu",
+      "pub_place" : "mtu"
+   },
+   {
+      "008" : "mu ",
+      "pub_place" : "mu "
+   },
+   {
+      "008" : "mua",
+      "pub_place" : "mua"
+   },
+   {
+      "008" : "mui",
+      "pub_place" : "mui"
+   },
+   {
+      "008" : "mul",
+      "pub_place" : "mul"
+   },
+   {
+      "008" : "mun",
+      "pub_place" : "mun"
+   },
+   {
+      "008" : "mur",
+      "pub_place" : "mur"
+   },
+   {
+      "008" : "mv ",
+      "pub_place" : "mv "
+   },
+   {
+      "008" : "mvr",
+      "pub_place" : "mvr"
+   },
+   {
+      "008" : "mvu",
+      "pub_place" : "mvu"
+   },
+   {
+      "008" : "mw ",
+      "pub_place" : "mw "
+   },
+   {
+      "008" : "mw#",
+      "pub_place" : "mw#"
+   },
+   {
+      "008" : "mx ",
+      "pub_place" : "mx "
+   },
+   {
+      "008" : "mx#",
+      "pub_place" : "mx#"
+   },
+   {
+      "008" : "mxu",
+      "pub_place" : "mxu"
+   },
+   {
+      "008" : "mx|",
+      "pub_place" : "mx "
+   },
+   {
+      "008" : "my ",
+      "pub_place" : "my "
+   },
+   {
+      "008" : "my#",
+      "pub_place" : "my#"
+   },
+   {
+      "008" : "myi",
+      "pub_place" : "myi"
+   },
+   {
+      "008" : "myr",
+      "pub_place" : "myr"
+   },
+   {
+      "008" : "myu",
+      "pub_place" : "myu"
+   },
+   {
+      "008" : "myw",
+      "pub_place" : "myw"
+   },
+   {
+      "008" : "mz ",
+      "pub_place" : "mz "
+   },
+   {
+      "008" : "mz#",
+      "pub_place" : "mz#"
+   },
+   {
+      "008" : "n  ",
+      "pub_place" : "n  "
+   },
+   {
+      "008" : "na ",
+      "pub_place" : "na "
+   },
+   {
+      "008" : "na#",
+      "pub_place" : "na#"
+   },
+   {
+      "008" : "nau",
+      "pub_place" : "nau"
+   },
+   {
+      "008" : "nb ",
+      "pub_place" : "nb "
+   },
+   {
+      "008" : "nb#",
+      "pub_place" : "nb#"
+   },
+   {
+      "008" : "nbc",
+      "pub_place" : "nbc"
+   },
+   {
+      "008" : "nbe",
+      "pub_place" : "nbe"
+   },
+   {
+      "008" : "nbk",
+      "pub_place" : "nbk"
+   },
+   {
+      "008" : "nbu",
+      "pub_place" : "nbu"
+   },
+   {
+      "008" : "nc ",
+      "pub_place" : "nc "
+   },
+   {
+      "008" : "ncc",
+      "pub_place" : "ncc"
+   },
+   {
+      "008" : "ncu",
+      "pub_place" : "ncu"
+   },
+   {
+      "008" : "ncv",
+      "pub_place" : "ncv"
+   },
+   {
+      "008" : "ncw",
+      "pub_place" : "ncw"
+   },
+   {
+      "008" : "nd ",
+      "pub_place" : "nd "
+   },
+   {
+      "008" : "ndu",
+      "pub_place" : "ndu"
+   },
+   {
+      "008" : "ndw",
+      "pub_place" : "ndw"
+   },
+   {
+      "008" : "ne ",
+      "pub_place" : "ne "
+   },
+   {
+      "008" : "ne#",
+      "pub_place" : "ne#"
+   },
+   {
+      "008" : "nea",
+      "pub_place" : "nea"
+   },
+   {
+      "008" : "neb",
+      "pub_place" : "neb"
+   },
+   {
+      "008" : "ned",
+      "pub_place" : "ned"
+   },
+   {
+      "008" : "nei",
+      "pub_place" : "nei"
+   },
+   {
+      "008" : "nes",
+      "pub_place" : "nes"
+   },
+   {
+      "008" : "net",
+      "pub_place" : "net"
+   },
+   {
+      "008" : "neu",
+      "pub_place" : "neu"
+   },
+   {
+      "008" : "new",
+      "pub_place" : "new"
+   },
+   {
+      "008" : "nf ",
+      "pub_place" : "nf "
+   },
+   {
+      "008" : "nfc",
+      "pub_place" : "nfc"
+   },
+   {
+      "008" : "ng ",
+      "pub_place" : "ng "
+   },
+   {
+      "008" : "ng#",
+      "pub_place" : "ng#"
+   },
+   {
+      "008" : "ngu",
+      "pub_place" : "ngu"
+   },
+   {
+      "008" : "nh ",
+      "pub_place" : "nh "
+   },
+   {
+      "008" : "nhu",
+      "pub_place" : "nhu"
+   },
+   {
+      "008" : "ni ",
+      "pub_place" : "ni "
+   },
+   {
+      "008" : "nik",
+      "pub_place" : "nik"
+   },
+   {
+      "008" : "niu",
+      "pub_place" : "niu"
+   },
+   {
+      "008" : "niw",
+      "pub_place" : "niw"
+   },
+   {
+      "008" : "nj ",
+      "pub_place" : "nj "
+   },
+   {
+      "008" : "njr",
+      "pub_place" : "njr"
+   },
+   {
+      "008" : "nju",
+      "pub_place" : "nju"
+   },
+   {
+      "008" : "njv",
+      "pub_place" : "njv"
+   },
+   {
+      "008" : "njy",
+      "pub_place" : "njy"
+   },
+   {
+      "008" : "nk ",
+      "pub_place" : "nk "
+   },
+   {
+      "008" : "nkc",
+      "pub_place" : "nkc"
+   },
+   {
+      "008" : "nku",
+      "pub_place" : "nku"
+   },
+   {
+      "008" : "nl ",
+      "pub_place" : "nl "
+   },
+   {
+      "008" : "nl#",
+      "pub_place" : "nl#"
+   },
+   {
+      "008" : "nm ",
+      "pub_place" : "nm "
+   },
+   {
+      "008" : "nm#",
+      "pub_place" : "nm#"
+   },
+   {
+      "008" : "nmn",
+      "pub_place" : "nmn"
+   },
+   {
+      "008" : "nmu",
+      "pub_place" : "nmu"
+   },
+   {
+      "008" : "nn ",
+      "pub_place" : "nn "
+   },
+   {
+      "008" : "nn#",
+      "pub_place" : "nn#"
+   },
+   {
+      "008" : "nnk",
+      "pub_place" : "nnk"
+   },
+   {
+      "008" : "nnu",
+      "pub_place" : "nnu"
+   },
+   {
+      "008" : "nny",
+      "pub_place" : "nny"
+   },
+   {
+      "008" : "no ",
+      "pub_place" : "no "
+   },
+   {
+      "008" : "no#",
+      "pub_place" : "no#"
+   },
+   {
+      "008" : "nor",
+      "pub_place" : "nor"
+   },
+   {
+      "008" : "nou",
+      "pub_place" : "nou"
+   },
+   {
+      "008" : "np ",
+      "pub_place" : "np "
+   },
+   {
+      "008" : "np#",
+      "pub_place" : "np#"
+   },
+   {
+      "008" : "npq",
+      "pub_place" : "npq"
+   },
+   {
+      "008" : "npu",
+      "pub_place" : "npu"
+   },
+   {
+      "008" : "nq ",
+      "pub_place" : "nq "
+   },
+   {
+      "008" : "nq#",
+      "pub_place" : "nq#"
+   },
+   {
+      "008" : "nr ",
+      "pub_place" : "nr "
+   },
+   {
+      "008" : "nr#",
+      "pub_place" : "nr#"
+   },
+   {
+      "008" : "nru",
+      "pub_place" : "nru"
+   },
+   {
+      "008" : "ns ",
+      "pub_place" : "ns "
+   },
+   {
+      "008" : "nsc",
+      "pub_place" : "nsc"
+   },
+   {
+      "008" : "nse",
+      "pub_place" : "nse"
+   },
+   {
+      "008" : "nsk",
+      "pub_place" : "nsk"
+   },
+   {
+      "008" : "nss",
+      "pub_place" : "nss"
+   },
+   {
+      "008" : "nsu",
+      "pub_place" : "nsu"
+   },
+   {
+      "008" : "nt ",
+      "pub_place" : "nt "
+   },
+   {
+      "008" : "ntc",
+      "pub_place" : "ntc"
+   },
+   {
+      "008" : "ntu",
+      "pub_place" : "ntu"
+   },
+   {
+      "008" : "nu ",
+      "pub_place" : "nu "
+   },
+   {
+      "008" : "nu#",
+      "pub_place" : "nu#"
+   },
+   {
+      "008" : "nuc",
+      "pub_place" : "nuc"
+   },
+   {
+      "008" : "nuj",
+      "pub_place" : "nuj"
+   },
+   {
+      "008" : "nur",
+      "pub_place" : "nur"
+   },
+   {
+      "008" : "nuu",
+      "pub_place" : "nuu"
+   },
+   {
+      "008" : "nuy",
+      "pub_place" : "nuy"
+   },
+   {
+      "008" : "nv ",
+      "pub_place" : "nv "
+   },
+   {
+      "008" : "nvu",
+      "pub_place" : "nvu"
+   },
+   {
+      "008" : "nw ",
+      "pub_place" : "nw "
+   },
+   {
+      "008" : "nwi",
+      "pub_place" : "nwi"
+   },
+   {
+      "008" : "nx ",
+      "pub_place" : "nx "
+   },
+   {
+      "008" : "nxc",
+      "pub_place" : "nxc"
+   },
+   {
+      "008" : "nxu",
+      "pub_place" : "nxu"
+   },
+   {
+      "008" : "ny ",
+      "pub_place" : "ny "
+   },
+   {
+      "008" : "ny#",
+      "pub_place" : "ny#"
+   },
+   {
+      "008" : "nya",
+      "pub_place" : "nya"
+   },
+   {
+      "008" : "nyc",
+      "pub_place" : "nyc"
+   },
+   {
+      "008" : "nye",
+      "pub_place" : "nye"
+   },
+   {
+      "008" : "nyj",
+      "pub_place" : "nyj"
+   },
+   {
+      "008" : "nyk",
+      "pub_place" : "nyk"
+   },
+   {
+      "008" : "nyn",
+      "pub_place" : "nyn"
+   },
+   {
+      "008" : "nyo",
+      "pub_place" : "nyo"
+   },
+   {
+      "008" : "nyr",
+      "pub_place" : "nyr"
+   },
+   {
+      "008" : "nys",
+      "pub_place" : "nys"
+   },
+   {
+      "008" : "nyu",
+      "pub_place" : "nyu"
+   },
+   {
+      "008" : "nyv",
+      "pub_place" : "nyv"
+   },
+   {
+      "008" : "nyw",
+      "pub_place" : "nyw"
+   },
+   {
+      "008" : "nz ",
+      "pub_place" : "nz "
+   },
+   {
+      "008" : "nz#",
+      "pub_place" : "nz#"
+   },
+   {
+      "008" : "nzk",
+      "pub_place" : "nzk"
+   },
+   {
+      "008" : "nzu",
+      "pub_place" : "nzu"
+   },
+   {
+      "008" : "o  ",
+      "pub_place" : "o  "
+   },
+   {
+      "008" : "o 0",
+      "pub_place" : "o 0"
+   },
+   {
+      "008" : "o u",
+      "pub_place" : "o u"
+   },
+   {
+      "008" : "o00",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "oau",
+      "pub_place" : "oau"
+   },
+   {
+      "008" : "obu",
+      "pub_place" : "obu"
+   },
+   {
+      "008" : "occ",
+      "pub_place" : "occ"
+   },
+   {
+      "008" : "ocn",
+      "pub_place" : "ocn"
+   },
+   {
+      "008" : "ocu",
+      "pub_place" : "ocu"
+   },
+   {
+      "008" : "ofu",
+      "pub_place" : "ofu"
+   },
+   {
+      "008" : "oh ",
+      "pub_place" : "oh "
+   },
+   {
+      "008" : "ohc",
+      "pub_place" : "ohc"
+   },
+   {
+      "008" : "ohe",
+      "pub_place" : "ohe"
+   },
+   {
+      "008" : "ohk",
+      "pub_place" : "ohk"
+   },
+   {
+      "008" : "ohn",
+      "pub_place" : "ohn"
+   },
+   {
+      "008" : "ohu",
+      "pub_place" : "ohu"
+   },
+   {
+      "008" : "ohv",
+      "pub_place" : "ohv"
+   },
+   {
+      "008" : "ohw",
+      "pub_place" : "ohw"
+   },
+   {
+      "008" : "ohy",
+      "pub_place" : "ohy"
+   },
+   {
+      "008" : "oiu",
+      "pub_place" : "oiu"
+   },
+   {
+      "008" : "ok ",
+      "pub_place" : "ok "
+   },
+   {
+      "008" : "oku",
+      "pub_place" : "oku"
+   },
+   {
+      "008" : "okv",
+      "pub_place" : "okv"
+   },
+   {
+      "008" : "olu",
+      "pub_place" : "olu"
+   },
+   {
+      "008" : "olw",
+      "pub_place" : "olw"
+   },
+   {
+      "008" : "omc",
+      "pub_place" : "omc"
+   },
+   {
+      "008" : "on ",
+      "pub_place" : "on "
+   },
+   {
+      "008" : "onc",
+      "pub_place" : "onc"
+   },
+   {
+      "008" : "ond",
+      "pub_place" : "ond"
+   },
+   {
+      "008" : "one",
+      "pub_place" : "one"
+   },
+   {
+      "008" : "onk",
+      "pub_place" : "onk"
+   },
+   {
+      "008" : "ont",
+      "pub_place" : "ont"
+   },
+   {
+      "008" : "onu",
+      "pub_place" : "onu"
+   },
+   {
+      "008" : "oo ",
+      "pub_place" : "oo "
+   },
+   {
+      "008" : "or ",
+      "pub_place" : "or "
+   },
+   {
+      "008" : "ora",
+      "pub_place" : "ora"
+   },
+   {
+      "008" : "orc",
+      "pub_place" : "orc"
+   },
+   {
+      "008" : "ore",
+      "pub_place" : "ore"
+   },
+   {
+      "008" : "orr",
+      "pub_place" : "orr"
+   },
+   {
+      "008" : "oru",
+      "pub_place" : "oru"
+   },
+   {
+      "008" : "orv",
+      "pub_place" : "orv"
+   },
+   {
+      "008" : "ot ",
+      "pub_place" : "ot "
+   },
+   {
+      "008" : "otc",
+      "pub_place" : "otc"
+   },
+   {
+      "008" : "otu",
+      "pub_place" : "otu"
+   },
+   {
+      "008" : "ouc",
+      "pub_place" : "ouc"
+   },
+   {
+      "008" : "oui",
+      "pub_place" : "oui"
+   },
+   {
+      "008" : "our",
+      "pub_place" : "our"
+   },
+   {
+      "008" : "ovu",
+      "pub_place" : "ovu"
+   },
+   {
+      "008" : "p  ",
+      "pub_place" : "p  "
+   },
+   {
+      "008" : "pa ",
+      "pub_place" : "pa "
+   },
+   {
+      "008" : "paa",
+      "pub_place" : "paa"
+   },
+   {
+      "008" : "pac",
+      "pub_place" : "pac"
+   },
+   {
+      "008" : "pai",
+      "pub_place" : "pai"
+   },
+   {
+      "008" : "pak",
+      "pub_place" : "pak"
+   },
+   {
+      "008" : "pan",
+      "pub_place" : "pan"
+   },
+   {
+      "008" : "pao",
+      "pub_place" : "pao"
+   },
+   {
+      "008" : "par",
+      "pub_place" : "par"
+   },
+   {
+      "008" : "pau",
+      "pub_place" : "pau"
+   },
+   {
+      "008" : "pav",
+      "pub_place" : "pav"
+   },
+   {
+      "008" : "paw",
+      "pub_place" : "paw"
+   },
+   {
+      "008" : "pay",
+      "pub_place" : "pay"
+   },
+   {
+      "008" : "pb ",
+      "pub_place" : "pb "
+   },
+   {
+      "008" : "pc ",
+      "pub_place" : "pc "
+   },
+   {
+      "008" : "pci",
+      "pub_place" : "pci"
+   },
+   {
+      "008" : "pcu",
+      "pub_place" : "pcu"
+   },
+   {
+      "008" : "pdu",
+      "pub_place" : "pdu"
+   },
+   {
+      "008" : "pe ",
+      "pub_place" : "pe "
+   },
+   {
+      "008" : "pe#",
+      "pub_place" : "pe#"
+   },
+   {
+      "008" : "per",
+      "pub_place" : "per"
+   },
+   {
+      "008" : "peu",
+      "pub_place" : "peu"
+   },
+   {
+      "008" : "pf ",
+      "pub_place" : "pf "
+   },
+   {
+      "008" : "pg ",
+      "pub_place" : "pg "
+   },
+   {
+      "008" : "pg#",
+      "pub_place" : "pg#"
+   },
+   {
+      "008" : "ph ",
+      "pub_place" : "ph "
+   },
+   {
+      "008" : "ph#",
+      "pub_place" : "ph#"
+   },
+   {
+      "008" : "phi",
+      "pub_place" : "phi"
+   },
+   {
+      "008" : "phq",
+      "pub_place" : "phq"
+   },
+   {
+      "008" : "phu",
+      "pub_place" : "phu"
+   },
+   {
+      "008" : "phy",
+      "pub_place" : "phy"
+   },
+   {
+      "008" : "pi ",
+      "pub_place" : "pi "
+   },
+   {
+      "008" : "pic",
+      "pub_place" : "pic"
+   },
+   {
+      "008" : "pit",
+      "pub_place" : "pit"
+   },
+   {
+      "008" : "pk ",
+      "pub_place" : "pk "
+   },
+   {
+      "008" : "pk#",
+      "pub_place" : "pk#"
+   },
+   {
+      "008" : "pki",
+      "pub_place" : "pki"
+   },
+   {
+      "008" : "pkq",
+      "pub_place" : "pkq"
+   },
+   {
+      "008" : "pl ",
+      "pub_place" : "pl "
+   },
+   {
+      "008" : "pl#",
+      "pub_place" : "pl#"
+   },
+   {
+      "008" : "pl/",
+      "pub_place" : "pl/"
+   },
+   {
+      "008" : "plc",
+      "pub_place" : "plc"
+   },
+   {
+      "008" : "pls",
+      "pub_place" : "pls"
+   },
+   {
+      "008" : "plu",
+      "pub_place" : "plu"
+   },
+   {
+      "008" : "pmc",
+      "pub_place" : "pmc"
+   },
+   {
+      "008" : "pn ",
+      "pub_place" : "pn "
+   },
+   {
+      "008" : "pn#",
+      "pub_place" : "pn#"
+   },
+   {
+      "008" : "pnu",
+      "pub_place" : "pnu"
+   },
+   {
+      "008" : "po ",
+      "pub_place" : "po "
+   },
+   {
+      "008" : "po#",
+      "pub_place" : "po#"
+   },
+   {
+      "008" : "pok",
+      "pub_place" : "pok"
+   },
+   {
+      "008" : "pol",
+      "pub_place" : "pol"
+   },
+   {
+      "008" : "pop",
+      "pub_place" : "pop"
+   },
+   {
+      "008" : "por",
+      "pub_place" : "por"
+   },
+   {
+      "008" : "pou",
+      "pub_place" : "pou"
+   },
+   {
+      "008" : "pp ",
+      "pub_place" : "pp "
+   },
+   {
+      "008" : "pp#",
+      "pub_place" : "pp#"
+   },
+   {
+      "008" : "ppa",
+      "pub_place" : "ppa"
+   },
+   {
+      "008" : "ppu",
+      "pub_place" : "ppu"
+   },
+   {
+      "008" : "pqu",
+      "pub_place" : "pqu"
+   },
+   {
+      "008" : "pr ",
+      "pub_place" : "pru"
+   },
+   {
+      "008" : "pr#",
+      "pub_place" : "pru"
+   },
+   {
+      "008" : "pru",
+      "pub_place" : "pru"
+   },
+   {
+      "008" : "ps ",
+      "pub_place" : "ps "
+   },
+   {
+      "008" : "pt ",
+      "pub_place" : "pt "
+   },
+   {
+      "008" : "pu ",
+      "pub_place" : "pu "
+   },
+   {
+      "008" : "pvr",
+      "pub_place" : "pvr"
+   },
+   {
+      "008" : "pw ",
+      "pub_place" : "pw "
+   },
+   {
+      "008" : "py ",
+      "pub_place" : "py "
+   },
+   {
+      "008" : "py#",
+      "pub_place" : "py#"
+   },
+   {
+      "008" : "p|u",
+      "pub_place" : "p u"
+   },
+   {
+      "008" : "qa ",
+      "pub_place" : "qa "
+   },
+   {
+      "008" : "qa#",
+      "pub_place" : "qa#"
+   },
+   {
+      "008" : "qau",
+      "pub_place" : "qau"
+   },
+   {
+      "008" : "qbc",
+      "pub_place" : "qbc"
+   },
+   {
+      "008" : "qcc",
+      "pub_place" : "qcc"
+   },
+   {
+      "008" : "qe ",
+      "pub_place" : "qe "
+   },
+   {
+      "008" : "qea",
+      "pub_place" : "qea"
+   },
+   {
+      "008" : "qg ",
+      "pub_place" : "qg "
+   },
+   {
+      "008" : "qic",
+      "pub_place" : "qic"
+   },
+   {
+      "008" : "qld",
+      "pub_place" : "qld"
+   },
+   {
+      "008" : "qnc",
+      "pub_place" : "qnc"
+   },
+   {
+      "008" : "qu ",
+      "pub_place" : "qu "
+   },
+   {
+      "008" : "quc",
+      "pub_place" : "quc"
+   },
+   {
+      "008" : "que",
+      "pub_place" : "que"
+   },
+   {
+      "008" : "quo",
+      "pub_place" : "quo"
+   },
+   {
+      "008" : "qw ",
+      "pub_place" : "qw "
+   },
+   {
+      "008" : "qwc",
+      "pub_place" : "qwc"
+   },
+   {
+      "008" : "qyu",
+      "pub_place" : "qyu"
+   },
+   {
+      "008" : "r  ",
+      "pub_place" : "r  "
+   },
+   {
+      "008" : "r 0",
+      "pub_place" : "r 0"
+   },
+   {
+      "008" : "r a",
+      "pub_place" : "r a"
+   },
+   {
+      "008" : "rar",
+      "pub_place" : "rar"
+   },
+   {
+      "008" : "rau",
+      "pub_place" : "rau"
+   },
+   {
+      "008" : "rb ",
+      "pub_place" : "rb "
+   },
+   {
+      "008" : "rbu",
+      "pub_place" : "rbu"
+   },
+   {
+      "008" : "rcu",
+      "pub_place" : "rcu"
+   },
+   {
+      "008" : "re ",
+      "pub_place" : "re "
+   },
+   {
+      "008" : "rf ",
+      "pub_place" : "rf "
+   },
+   {
+      "008" : "rh ",
+      "pub_place" : "rh "
+   },
+   {
+      "008" : "rh#",
+      "pub_place" : "rh#"
+   },
+   {
+      "008" : "rhk",
+      "pub_place" : "rhk"
+   },
+   {
+      "008" : "rhu",
+      "pub_place" : "rhu"
+   },
+   {
+      "008" : "ri ",
+      "pub_place" : "ri "
+   },
+   {
+      "008" : "rin",
+      "pub_place" : "rin"
+   },
+   {
+      "008" : "riu",
+      "pub_place" : "riu"
+   },
+   {
+      "008" : "rju",
+      "pub_place" : "rju"
+   },
+   {
+      "008" : "rk ",
+      "pub_place" : "rk "
+   },
+   {
+      "008" : "rm ",
+      "pub_place" : "rm "
+   },
+   {
+      "008" : "rm#",
+      "pub_place" : "rm#"
+   },
+   {
+      "008" : "rmr",
+      "pub_place" : "rmr"
+   },
+   {
+      "008" : "rmu",
+      "pub_place" : "rmu"
+   },
+   {
+      "008" : "rn ",
+      "pub_place" : "rn "
+   },
+   {
+      "008" : "ro ",
+      "pub_place" : "ro "
+   },
+   {
+      "008" : "rr ",
+      "pub_place" : "rr "
+   },
+   {
+      "008" : "rs ",
+      "pub_place" : "rs "
+   },
+   {
+      "008" : "rtu",
+      "pub_place" : "rtu"
+   },
+   {
+      "008" : "ru ",
+      "pub_place" : "ru "
+   },
+   {
+      "008" : "ru#",
+      "pub_place" : "ru#"
+   },
+   {
+      "008" : "rud",
+      "pub_place" : "rud"
+   },
+   {
+      "008" : "rui",
+      "pub_place" : "rui"
+   },
+   {
+      "008" : "rum",
+      "pub_place" : "rum"
+   },
+   {
+      "008" : "rur",
+      "pub_place" : "rur"
+   },
+   {
+      "008" : "rus",
+      "pub_place" : "rus"
+   },
+   {
+      "008" : "rut",
+      "pub_place" : "rut"
+   },
+   {
+      "008" : "ruu",
+      "pub_place" : "ruu"
+   },
+   {
+      "008" : "ruv",
+      "pub_place" : "ruv"
+   },
+   {
+      "008" : "rw ",
+      "pub_place" : "rw "
+   },
+   {
+      "008" : "rw#",
+      "pub_place" : "rw#"
+   },
+   {
+      "008" : "rx ",
+      "pub_place" : "rx "
+   },
+   {
+      "008" : "ryu",
+      "pub_place" : "ryu"
+   },
+   {
+      "008" : "rz ",
+      "pub_place" : "rz "
+   },
+   {
+      "008" : "rzr",
+      "pub_place" : "rzr"
+   },
+   {
+      "008" : "s  ",
+      "pub_place" : "s  "
+   },
+   {
+      "008" : "s 0",
+      "pub_place" : "s 0"
+   },
+   {
+      "008" : "s f",
+      "pub_place" : "s f"
+   },
+   {
+      "008" : "sa ",
+      "pub_place" : "sa "
+   },
+   {
+      "008" : "sa#",
+      "pub_place" : "sa#"
+   },
+   {
+      "008" : "sam",
+      "pub_place" : "sam"
+   },
+   {
+      "008" : "sau",
+      "pub_place" : "sau"
+   },
+   {
+      "008" : "sb ",
+      "pub_place" : "sb "
+   },
+   {
+      "008" : "sbu",
+      "pub_place" : "sbu"
+   },
+   {
+      "008" : "sc ",
+      "pub_place" : "sc "
+   },
+   {
+      "008" : "sck",
+      "pub_place" : "sck"
+   },
+   {
+      "008" : "scn",
+      "pub_place" : "scn"
+   },
+   {
+      "008" : "scr",
+      "pub_place" : "scr"
+   },
+   {
+      "008" : "sct",
+      "pub_place" : "sct"
+   },
+   {
+      "008" : "scu",
+      "pub_place" : "scu"
+   },
+   {
+      "008" : "sd ",
+      "pub_place" : "sd "
+   },
+   {
+      "008" : "sdu",
+      "pub_place" : "sdu"
+   },
+   {
+      "008" : "se ",
+      "pub_place" : "se "
+   },
+   {
+      "008" : "se#",
+      "pub_place" : "se#"
+   },
+   {
+      "008" : "sf ",
+      "pub_place" : "sf "
+   },
+   {
+      "008" : "sfk",
+      "pub_place" : "sfk"
+   },
+   {
+      "008" : "sg ",
+      "pub_place" : "sg "
+   },
+   {
+      "008" : "sg#",
+      "pub_place" : "sg#"
+   },
+   {
+      "008" : "sh ",
+      "pub_place" : "sh "
+   },
+   {
+      "008" : "shu",
+      "pub_place" : "shu"
+   },
+   {
+      "008" : "si ",
+      "pub_place" : "si "
+   },
+   {
+      "008" : "si#",
+      "pub_place" : "si#"
+   },
+   {
+      "008" : "sj ",
+      "pub_place" : "sj "
+   },
+   {
+      "008" : "sj#",
+      "pub_place" : "sj#"
+   },
+   {
+      "008" : "sk ",
+      "pub_place" : "sk "
+   },
+   {
+      "008" : "sk#",
+      "pub_place" : "sk#"
+   },
+   {
+      "008" : "skc",
+      "pub_place" : "skc"
+   },
+   {
+      "008" : "skt",
+      "pub_place" : "skt"
+   },
+   {
+      "008" : "sl ",
+      "pub_place" : "sl "
+   },
+   {
+      "008" : "sl#",
+      "pub_place" : "sl#"
+   },
+   {
+      "008" : "slc",
+      "pub_place" : "slc"
+   },
+   {
+      "008" : "slk",
+      "pub_place" : "slk"
+   },
+   {
+      "008" : "slu",
+      "pub_place" : "slu"
+   },
+   {
+      "008" : "slv",
+      "pub_place" : "slv"
+   },
+   {
+      "008" : "sm ",
+      "pub_place" : "sm "
+   },
+   {
+      "008" : "sn ",
+      "pub_place" : "sn "
+   },
+   {
+      "008" : "snc",
+      "pub_place" : "snc"
+   },
+   {
+      "008" : "so ",
+      "pub_place" : "so "
+   },
+   {
+      "008" : "so#",
+      "pub_place" : "so#"
+   },
+   {
+      "008" : "sou",
+      "pub_place" : "sou"
+   },
+   {
+      "008" : "sp ",
+      "pub_place" : "sp "
+   },
+   {
+      "008" : "sp#",
+      "pub_place" : "sp#"
+   },
+   {
+      "008" : "spa",
+      "pub_place" : "spa"
+   },
+   {
+      "008" : "spc",
+      "pub_place" : "spc"
+   },
+   {
+      "008" : "spk",
+      "pub_place" : "spk"
+   },
+   {
+      "008" : "spu",
+      "pub_place" : "spu"
+   },
+   {
+      "008" : "spx",
+      "pub_place" : "spx"
+   },
+   {
+      "008" : "sq ",
+      "pub_place" : "sq "
+   },
+   {
+      "008" : "sq#",
+      "pub_place" : "sq#"
+   },
+   {
+      "008" : "sr ",
+      "pub_place" : "sr "
+   },
+   {
+      "008" : "sr#",
+      "pub_place" : "sr#"
+   },
+   {
+      "008" : "ss ",
+      "pub_place" : "ss "
+   },
+   {
+      "008" : "st ",
+      "pub_place" : "st "
+   },
+   {
+      "008" : "st#",
+      "pub_place" : "st#"
+   },
+   {
+      "008" : "stc",
+      "pub_place" : "stc"
+   },
+   {
+      "008" : "sth",
+      "pub_place" : "sth"
+   },
+   {
+      "008" : "stk",
+      "pub_place" : "stk"
+   },
+   {
+      "008" : "stl",
+      "pub_place" : "stl"
+   },
+   {
+      "008" : "str",
+      "pub_place" : "str"
+   },
+   {
+      "008" : "sts",
+      "pub_place" : "sts"
+   },
+   {
+      "008" : "stu",
+      "pub_place" : "stu"
+   },
+   {
+      "008" : "su ",
+      "pub_place" : "su "
+   },
+   {
+      "008" : "su#",
+      "pub_place" : "su#"
+   },
+   {
+      "008" : "sui",
+      "pub_place" : "sui"
+   },
+   {
+      "008" : "sv ",
+      "pub_place" : "sv "
+   },
+   {
+      "008" : "sw ",
+      "pub_place" : "sw "
+   },
+   {
+      "008" : "sw#",
+      "pub_place" : "sw#"
+   },
+   {
+      "008" : "swe",
+      "pub_place" : "swe"
+   },
+   {
+      "008" : "sw|",
+      "pub_place" : "sw "
+   },
+   {
+      "008" : "sx ",
+      "pub_place" : "sx "
+   },
+   {
+      "008" : "sx#",
+      "pub_place" : "sx#"
+   },
+   {
+      "008" : "sy ",
+      "pub_place" : "sy "
+   },
+   {
+      "008" : "sy#",
+      "pub_place" : "sy#"
+   },
+   {
+      "008" : "syk",
+      "pub_place" : "syk"
+   },
+   {
+      "008" : "syu",
+      "pub_place" : "syu"
+   },
+   {
+      "008" : "sz ",
+      "pub_place" : "sz "
+   },
+   {
+      "008" : "sz#",
+      "pub_place" : "sz#"
+   },
+   {
+      "008" : "szq",
+      "pub_place" : "szq"
+   },
+   {
+      "008" : "szs",
+      "pub_place" : "szs"
+   },
+   {
+      "008" : "szu",
+      "pub_place" : "szu"
+   },
+   {
+      "008" : "t  ",
+      "pub_place" : "t  "
+   },
+   {
+      "008" : "ta ",
+      "pub_place" : "ta "
+   },
+   {
+      "008" : "tam",
+      "pub_place" : "tam"
+   },
+   {
+      "008" : "tar",
+      "pub_place" : "tar"
+   },
+   {
+      "008" : "tc ",
+      "pub_place" : "tc "
+   },
+   {
+      "008" : "tcu",
+      "pub_place" : "tcu"
+   },
+   {
+      "008" : "ter",
+      "pub_place" : "ter"
+   },
+   {
+      "008" : "teu",
+      "pub_place" : "teu"
+   },
+   {
+      "008" : "tg ",
+      "pub_place" : "tg "
+   },
+   {
+      "008" : "tg#",
+      "pub_place" : "tg#"
+   },
+   {
+      "008" : "th ",
+      "pub_place" : "th "
+   },
+   {
+      "008" : "th#",
+      "pub_place" : "th#"
+   },
+   {
+      "008" : "tha",
+      "pub_place" : "tha"
+   },
+   {
+      "008" : "thq",
+      "pub_place" : "thq"
+   },
+   {
+      "008" : "thu",
+      "pub_place" : "thu"
+   },
+   {
+      "008" : "ti ",
+      "pub_place" : "ti "
+   },
+   {
+      "008" : "ti#",
+      "pub_place" : "ti#"
+   },
+   {
+      "008" : "tii",
+      "pub_place" : "tii"
+   },
+   {
+      "008" : "tiu",
+      "pub_place" : "tiu"
+   },
+   {
+      "008" : "tjr",
+      "pub_place" : "tjr"
+   },
+   {
+      "008" : "tk ",
+      "pub_place" : "tk "
+   },
+   {
+      "008" : "tkr",
+      "pub_place" : "tkr"
+   },
+   {
+      "008" : "tl ",
+      "pub_place" : "tl "
+   },
+   {
+      "008" : "tl#",
+      "pub_place" : "tl#"
+   },
+   {
+      "008" : "tm#",
+      "pub_place" : "tm#"
+   },
+   {
+      "008" : "tma",
+      "pub_place" : "tma"
+   },
+   {
+      "008" : "tn ",
+      "pub_place" : "tn "
+   },
+   {
+      "008" : "tn#",
+      "pub_place" : "tn#"
+   },
+   {
+      "008" : "tnu",
+      "pub_place" : "tnu"
+   },
+   {
+      "008" : "tnw",
+      "pub_place" : "tnw"
+   },
+   {
+      "008" : "to ",
+      "pub_place" : "to "
+   },
+   {
+      "008" : "toc",
+      "pub_place" : "toc"
+   },
+   {
+      "008" : "tor",
+      "pub_place" : "tor"
+   },
+   {
+      "008" : "tou",
+      "pub_place" : "tou"
+   },
+   {
+      "008" : "tr ",
+      "pub_place" : "tr "
+   },
+   {
+      "008" : "tr#",
+      "pub_place" : "tr#"
+   },
+   {
+      "008" : "tru",
+      "pub_place" : "tru"
+   },
+   {
+      "008" : "ts ",
+      "pub_place" : "ts "
+   },
+   {
+      "008" : "ts#",
+      "pub_place" : "ts#"
+   },
+   {
+      "008" : "tt ",
+      "pub_place" : "tt "
+   },
+   {
+      "008" : "tt#",
+      "pub_place" : "tt#"
+   },
+   {
+      "008" : "ttu",
+      "pub_place" : "ttu"
+   },
+   {
+      "008" : "tu ",
+      "pub_place" : "tu "
+   },
+   {
+      "008" : "tu#",
+      "pub_place" : "tu#"
+   },
+   {
+      "008" : "tun",
+      "pub_place" : "tun"
+   },
+   {
+      "008" : "tur",
+      "pub_place" : "tur"
+   },
+   {
+      "008" : "tus",
+      "pub_place" : "tus"
+   },
+   {
+      "008" : "tut",
+      "pub_place" : "tut"
+   },
+   {
+      "008" : "tuu",
+      "pub_place" : "tuu"
+   },
+   {
+      "008" : "tv ",
+      "pub_place" : "tv "
+   },
+   {
+      "008" : "tw ",
+      "pub_place" : "tw "
+   },
+   {
+      "008" : "twu",
+      "pub_place" : "twu"
+   },
+   {
+      "008" : "tx ",
+      "pub_place" : "tx "
+   },
+   {
+      "008" : "tx#",
+      "pub_place" : "tx#"
+   },
+   {
+      "008" : "txa",
+      "pub_place" : "txa"
+   },
+   {
+      "008" : "txn",
+      "pub_place" : "txn"
+   },
+   {
+      "008" : "txu",
+      "pub_place" : "txu"
+   },
+   {
+      "008" : "txw",
+      "pub_place" : "txw"
+   },
+   {
+      "008" : "tz ",
+      "pub_place" : "tz "
+   },
+   {
+      "008" : "tz#",
+      "pub_place" : "tz#"
+   },
+   {
+      "008" : "tzr",
+      "pub_place" : "tzr"
+   },
+   {
+      "008" : "u  ",
+      "pub_place" : "u  "
+   },
+   {
+      "008" : "u00",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "ua ",
+      "pub_place" : "ua "
+   },
+   {
+      "008" : "ua#",
+      "pub_place" : "ua#"
+   },
+   {
+      "008" : "uar",
+      "pub_place" : "uar"
+   },
+   {
+      "008" : "uau",
+      "pub_place" : "uau"
+   },
+   {
+      "008" : "ub ",
+      "pub_place" : "ub "
+   },
+   {
+      "008" : "uc ",
+      "pub_place" : "uc "
+   },
+   {
+      "008" : "ucu",
+      "pub_place" : "ucu"
+   },
+   {
+      "008" : "ue ",
+      "pub_place" : "ue "
+   },
+   {
+      "008" : "ug ",
+      "pub_place" : "ug "
+   },
+   {
+      "008" : "ug#",
+      "pub_place" : "ug#"
+   },
+   {
+      "008" : "uhr",
+      "pub_place" : "uhr"
+   },
+   {
+      "008" : "uhu",
+      "pub_place" : "uhu"
+   },
+   {
+      "008" : "ui ",
+      "pub_place" : "ui "
+   },
+   {
+      "008" : "uia",
+      "pub_place" : "uia"
+   },
+   {
+      "008" : "uik",
+      "pub_place" : "uik"
+   },
+   {
+      "008" : "uk ",
+      "pub_place" : "uk "
+   },
+   {
+      "008" : "uk#",
+      "pub_place" : "uk#"
+   },
+   {
+      "008" : "uke",
+      "pub_place" : "uke"
+   },
+   {
+      "008" : "ukk",
+      "pub_place" : "ukk"
+   },
+   {
+      "008" : "ukm",
+      "pub_place" : "ukm"
+   },
+   {
+      "008" : "ukn",
+      "pub_place" : "ukn"
+   },
+   {
+      "008" : "ukr",
+      "pub_place" : "ukr"
+   },
+   {
+      "008" : "uks",
+      "pub_place" : "uks"
+   },
+   {
+      "008" : "uku",
+      "pub_place" : "uku"
+   },
+   {
+      "008" : "ul ",
+      "pub_place" : "ul "
+   },
+   {
+      "008" : "ulb",
+      "pub_place" : "ulb"
+   },
+   {
+      "008" : "ulk",
+      "pub_place" : "ulk"
+   },
+   {
+      "008" : "ulu",
+      "pub_place" : "ulu"
+   },
+   {
+      "008" : "um ",
+      "pub_place" : "um "
+   },
+   {
+      "008" : "umi",
+      "pub_place" : "umi"
+   },
+   {
+      "008" : "umu",
+      "pub_place" : "umu"
+   },
+   {
+      "008" : "un ",
+      "pub_place" : "un "
+   },
+   {
+      "008" : "un#",
+      "pub_place" : "un#"
+   },
+   {
+      "008" : "unc",
+      "pub_place" : "unc"
+   },
+   {
+      "008" : "und",
+      "pub_place" : "und"
+   },
+   {
+      "008" : "une",
+      "pub_place" : "une"
+   },
+   {
+      "008" : "unk",
+      "pub_place" : "unk"
+   },
+   {
+      "008" : "unr",
+      "pub_place" : "unr"
+   },
+   {
+      "008" : "unt",
+      "pub_place" : "unt"
+   },
+   {
+      "008" : "unu",
+      "pub_place" : "unu"
+   },
+   {
+      "008" : "up ",
+      "pub_place" : "up "
+   },
+   {
+      "008" : "upa",
+      "pub_place" : "upa"
+   },
+   {
+      "008" : "ur ",
+      "pub_place" : "ur "
+   },
+   {
+      "008" : "ur#",
+      "pub_place" : "ur#"
+   },
+   {
+      "008" : "urk",
+      "pub_place" : "urk"
+   },
+   {
+      "008" : "urr",
+      "pub_place" : "urr"
+   },
+   {
+      "008" : "urs",
+      "pub_place" : "urs"
+   },
+   {
+      "008" : "uru",
+      "pub_place" : "uru"
+   },
+   {
+      "008" : "us ",
+      "pub_place" : "xxu"
+   },
+   {
+      "008" : "us#",
+      "pub_place" : "xxu"
+   },
+   {
+      "008" : "usa",
+      "pub_place" : "xxu"
+   },
+   {
+      "008" : "use",
+      "pub_place" : "xxu"
+   },
+   {
+      "008" : "usu",
+      "pub_place" : "xxu"
+   },
+   {
+      "008" : "usv",
+      "pub_place" : "xxu"
+   },
+   {
+      "008" : "usx",
+      "pub_place" : "xxu"
+   },
+   {
+      "008" : "ut ",
+      "pub_place" : "ut "
+   },
+   {
+      "008" : "uta",
+      "pub_place" : "uta"
+   },
+   {
+      "008" : "utu",
+      "pub_place" : "utu"
+   },
+   {
+      "008" : "uu ",
+      "pub_place" : "uu "
+   },
+   {
+      "008" : "uur",
+      "pub_place" : "uur"
+   },
+   {
+      "008" : "uuu",
+      "pub_place" : "uuu"
+   },
+   {
+      "008" : "uv ",
+      "pub_place" : "uv "
+   },
+   {
+      "008" : "uv#",
+      "pub_place" : "uv#"
+   },
+   {
+      "008" : "uy ",
+      "pub_place" : "uy "
+   },
+   {
+      "008" : "uy#",
+      "pub_place" : "uy#"
+   },
+   {
+      "008" : "uyu",
+      "pub_place" : "uyu"
+   },
+   {
+      "008" : "uz ",
+      "pub_place" : "uz "
+   },
+   {
+      "008" : "uz#",
+      "pub_place" : "uz#"
+   },
+   {
+      "008" : "uzb",
+      "pub_place" : "uzb"
+   },
+   {
+      "008" : "uzr",
+      "pub_place" : "uzr"
+   },
+   {
+      "008" : "v  ",
+      "pub_place" : "v  "
+   },
+   {
+      "008" : "v 0",
+      "pub_place" : "v 0"
+   },
+   {
+      "008" : "va ",
+      "pub_place" : "va "
+   },
+   {
+      "008" : "va#",
+      "pub_place" : "va#"
+   },
+   {
+      "008" : "vac",
+      "pub_place" : "vac"
+   },
+   {
+      "008" : "van",
+      "pub_place" : "van"
+   },
+   {
+      "008" : "vau",
+      "pub_place" : "vau"
+   },
+   {
+      "008" : "vav",
+      "pub_place" : "vav"
+   },
+   {
+      "008" : "vaw",
+      "pub_place" : "vaw"
+   },
+   {
+      "008" : "vb ",
+      "pub_place" : "vb "
+   },
+   {
+      "008" : "vb#",
+      "pub_place" : "vb#"
+   },
+   {
+      "008" : "vbk",
+      "pub_place" : "vbk"
+   },
+   {
+      "008" : "vc ",
+      "pub_place" : "vc "
+   },
+   {
+      "008" : "vc#",
+      "pub_place" : "vc#"
+   },
+   {
+      "008" : "vdu",
+      "pub_place" : "vdu"
+   },
+   {
+      "008" : "ve ",
+      "pub_place" : "ve "
+   },
+   {
+      "008" : "ve#",
+      "pub_place" : "ve#"
+   },
+   {
+      "008" : "ven",
+      "pub_place" : "ven"
+   },
+   {
+      "008" : "veu",
+      "pub_place" : "veu"
+   },
+   {
+      "008" : "vi ",
+      "pub_place" : "vi "
+   },
+   {
+      "008" : "vic",
+      "pub_place" : "vic"
+   },
+   {
+      "008" : "viu",
+      "pub_place" : "viu"
+   },
+   {
+      "008" : "vm ",
+      "pub_place" : "vm "
+   },
+   {
+      "008" : "vm#",
+      "pub_place" : "vm#"
+   },
+   {
+      "008" : "vmr",
+      "pub_place" : "vmr"
+   },
+   {
+      "008" : "vn ",
+      "pub_place" : "vn "
+   },
+   {
+      "008" : "vn#",
+      "pub_place" : "vn#"
+   },
+   {
+      "008" : "vnq",
+      "pub_place" : "vnq"
+   },
+   {
+      "008" : "vou",
+      "pub_place" : "vou"
+   },
+   {
+      "008" : "vp ",
+      "pub_place" : "vp "
+   },
+   {
+      "008" : "vp#",
+      "pub_place" : "vp#"
+   },
+   {
+      "008" : "vpu",
+      "pub_place" : "vpu"
+   },
+   {
+      "008" : "vra",
+      "pub_place" : "vra"
+   },
+   {
+      "008" : "vrm",
+      "pub_place" : "vrm"
+   },
+   {
+      "008" : "vs ",
+      "pub_place" : "vs "
+   },
+   {
+      "008" : "vs#",
+      "pub_place" : "vs#"
+   },
+   {
+      "008" : "vt ",
+      "pub_place" : "vt "
+   },
+   {
+      "008" : "vt#",
+      "pub_place" : "vt#"
+   },
+   {
+      "008" : "vtu",
+      "pub_place" : "vtu"
+   },
+   {
+      "008" : "vty",
+      "pub_place" : "vty"
+   },
+   {
+      "008" : "vvm",
+      "pub_place" : "vvm"
+   },
+   {
+      "008" : "vy ",
+      "pub_place" : "vy "
+   },
+   {
+      "008" : "vyu",
+      "pub_place" : "vyu"
+   },
+   {
+      "008" : "w  ",
+      "pub_place" : "w  "
+   },
+   {
+      "008" : "w #",
+      "pub_place" : "w #"
+   },
+   {
+      "008" : "w a",
+      "pub_place" : "w a"
+   },
+   {
+      "008" : "wa ",
+      "pub_place" : "wa "
+   },
+   {
+      "008" : "wak",
+      "pub_place" : "wak"
+   },
+   {
+      "008" : "wan",
+      "pub_place" : "wan"
+   },
+   {
+      "008" : "was",
+      "pub_place" : "was"
+   },
+   {
+      "008" : "wau",
+      "pub_place" : "wau"
+   },
+   {
+      "008" : "wav",
+      "pub_place" : "wav"
+   },
+   {
+      "008" : "way",
+      "pub_place" : "way"
+   },
+   {
+      "008" : "wb ",
+      "pub_place" : "wb "
+   },
+   {
+      "008" : "wb#",
+      "pub_place" : "wb#"
+   },
+   {
+      "008" : "wb*",
+      "pub_place" : "wb*"
+   },
+   {
+      "008" : "wdc",
+      "pub_place" : "wdc"
+   },
+   {
+      "008" : "wdu",
+      "pub_place" : "wdu"
+   },
+   {
+      "008" : "we ",
+      "pub_place" : "we "
+   },
+   {
+      "008" : "wea",
+      "pub_place" : "wea"
+   },
+   {
+      "008" : "wek",
+      "pub_place" : "wek"
+   },
+   {
+      "008" : "wf ",
+      "pub_place" : "wf "
+   },
+   {
+      "008" : "wfu",
+      "pub_place" : "wfu"
+   },
+   {
+      "008" : "wg ",
+      "pub_place" : "wg "
+   },
+   {
+      "008" : "wg#",
+      "pub_place" : "wg#"
+   },
+   {
+      "008" : "wgb",
+      "pub_place" : "wgb"
+   },
+   {
+      "008" : "wgw",
+      "pub_place" : "wgw"
+   },
+   {
+      "008" : "wi ",
+      "pub_place" : "wi "
+   },
+   {
+      "008" : "wi#",
+      "pub_place" : "wi#"
+   },
+   {
+      "008" : "wik",
+      "pub_place" : "wik"
+   },
+   {
+      "008" : "win",
+      "pub_place" : "win"
+   },
+   {
+      "008" : "wiu",
+      "pub_place" : "wiu"
+   },
+   {
+      "008" : "wiv",
+      "pub_place" : "wiv"
+   },
+   {
+      "008" : "wiw",
+      "pub_place" : "wiw"
+   },
+   {
+      "008" : "wj ",
+      "pub_place" : "wj "
+   },
+   {
+      "008" : "wk ",
+      "pub_place" : "wk "
+   },
+   {
+      "008" : "wl ",
+      "pub_place" : "wl "
+   },
+   {
+      "008" : "wli",
+      "pub_place" : "wli"
+   },
+   {
+      "008" : "wlk",
+      "pub_place" : "wlk"
+   },
+   {
+      "008" : "wr ",
+      "pub_place" : "wr "
+   },
+   {
+      "008" : "wru",
+      "pub_place" : "wru"
+   },
+   {
+      "008" : "ws ",
+      "pub_place" : "ws "
+   },
+   {
+      "008" : "wsu",
+      "pub_place" : "wsu"
+   },
+   {
+      "008" : "wv ",
+      "pub_place" : "wv "
+   },
+   {
+      "008" : "wv#",
+      "pub_place" : "wv#"
+   },
+   {
+      "008" : "wva",
+      "pub_place" : "wva"
+   },
+   {
+      "008" : "wvu",
+      "pub_place" : "wvu"
+   },
+   {
+      "008" : "wvv",
+      "pub_place" : "wvv"
+   },
+   {
+      "008" : "wvw",
+      "pub_place" : "wvw"
+   },
+   {
+      "008" : "wyo",
+      "pub_place" : "wyo"
+   },
+   {
+      "008" : "wyu",
+      "pub_place" : "wyu"
+   },
+   {
+      "008" : "x  ",
+      "pub_place" : "x  "
+   },
+   {
+      "008" : "x a",
+      "pub_place" : "x a"
+   },
+   {
+      "008" : "xa ",
+      "pub_place" : "xa "
+   },
+   {
+      "008" : "xau",
+      "pub_place" : "xau"
+   },
+   {
+      "008" : "xb ",
+      "pub_place" : "xb "
+   },
+   {
+      "008" : "xc ",
+      "pub_place" : "xc "
+   },
+   {
+      "008" : "xd ",
+      "pub_place" : "xd "
+   },
+   {
+      "008" : "xe ",
+      "pub_place" : "xe "
+   },
+   {
+      "008" : "xf ",
+      "pub_place" : "xf "
+   },
+   {
+      "008" : "xfr",
+      "pub_place" : "xfr"
+   },
+   {
+      "008" : "xh ",
+      "pub_place" : "xh "
+   },
+   {
+      "008" : "xi ",
+      "pub_place" : "xi "
+   },
+   {
+      "008" : "xj ",
+      "pub_place" : "xj "
+   },
+   {
+      "008" : "xk ",
+      "pub_place" : "xk "
+   },
+   {
+      "008" : "xk#",
+      "pub_place" : "xk#"
+   },
+   {
+      "008" : "xl ",
+      "pub_place" : "xl "
+   },
+   {
+      "008" : "xm ",
+      "pub_place" : "xm "
+   },
+   {
+      "008" : "xn ",
+      "pub_place" : "xn "
+   },
+   {
+      "008" : "xna",
+      "pub_place" : "xna"
+   },
+   {
+      "008" : "xo ",
+      "pub_place" : "xo "
+   },
+   {
+      "008" : "xo#",
+      "pub_place" : "xo#"
+   },
+   {
+      "008" : "xoa",
+      "pub_place" : "xoa"
+   },
+   {
+      "008" : "xp ",
+      "pub_place" : "xp "
+   },
+   {
+      "008" : "xr ",
+      "pub_place" : "xr "
+   },
+   {
+      "008" : "xr#",
+      "pub_place" : "xr#"
+   },
+   {
+      "008" : "xr0",
+      "pub_place" : "xr0"
+   },
+   {
+      "008" : "xra",
+      "pub_place" : "xra"
+   },
+   {
+      "008" : "xs ",
+      "pub_place" : "xs "
+   },
+   {
+      "008" : "xt ",
+      "pub_place" : "xt "
+   },
+   {
+      "008" : "xu ",
+      "pub_place" : "xu "
+   },
+   {
+      "008" : "xv ",
+      "pub_place" : "xv "
+   },
+   {
+      "008" : "xv#",
+      "pub_place" : "xv#"
+   },
+   {
+      "008" : "xx ",
+      "pub_place" : "xx "
+   },
+   {
+      "008" : "xx#",
+      "pub_place" : "xx#"
+   },
+   {
+      "008" : "xx-",
+      "pub_place" : "xx-"
+   },
+   {
+      "008" : "xx?",
+      "pub_place" : "xx "
+   },
+   {
+      "008" : "xxa",
+      "pub_place" : "xxa"
+   },
+   {
+      "008" : "xxb",
+      "pub_place" : "xxb"
+   },
+   {
+      "008" : "xxc",
+      "pub_place" : "xxc"
+   },
+   {
+      "008" : "xxd",
+      "pub_place" : "xxd"
+   },
+   {
+      "008" : "xxe",
+      "pub_place" : "xxe"
+   },
+   {
+      "008" : "xxk",
+      "pub_place" : "xxk"
+   },
+   {
+      "008" : "xxp",
+      "pub_place" : "xxp"
+   },
+   {
+      "008" : "xxq",
+      "pub_place" : "xxq"
+   },
+   {
+      "008" : "xxr",
+      "pub_place" : "xxr"
+   },
+   {
+      "008" : "xxs",
+      "pub_place" : "xxs"
+   },
+   {
+      "008" : "xxu",
+      "pub_place" : "xxu"
+   },
+   {
+      "008" : "xxv",
+      "pub_place" : "xxv"
+   },
+   {
+      "008" : "xxx",
+      "pub_place" : "xxx"
+   },
+   {
+      "008" : "xx|",
+      "pub_place" : "xx "
+   },
+   {
+      "008" : "xy ",
+      "pub_place" : "xy "
+   },
+   {
+      "008" : "xz ",
+      "pub_place" : "xz "
+   },
+   {
+      "008" : "y  ",
+      "pub_place" : "y  "
+   },
+   {
+      "008" : "yag",
+      "pub_place" : "yag"
+   },
+   {
+      "008" : "ye ",
+      "pub_place" : "ye "
+   },
+   {
+      "008" : "ye#",
+      "pub_place" : "ye#"
+   },
+   {
+      "008" : "yer",
+      "pub_place" : "yer"
+   },
+   {
+      "008" : "yid",
+      "pub_place" : "yid"
+   },
+   {
+      "008" : "ykc",
+      "pub_place" : "ykc"
+   },
+   {
+      "008" : "yn ",
+      "pub_place" : "yn "
+   },
+   {
+      "008" : "ys ",
+      "pub_place" : "ys "
+   },
+   {
+      "008" : "ysq",
+      "pub_place" : "ysq"
+   },
+   {
+      "008" : "yu ",
+      "pub_place" : "yu "
+   },
+   {
+      "008" : "yu#",
+      "pub_place" : "yu#"
+   },
+   {
+      "008" : "yuc",
+      "pub_place" : "yuc"
+   },
+   {
+      "008" : "yug",
+      "pub_place" : "yug"
+   },
+   {
+      "008" : "yuk",
+      "pub_place" : "yuk"
+   },
+   {
+      "008" : "yw ",
+      "pub_place" : "yw "
+   },
+   {
+      "008" : "za ",
+      "pub_place" : "za "
+   },
+   {
+      "008" : "za#",
+      "pub_place" : "za#"
+   },
+   {
+      "008" : "zi ",
+      "pub_place" : "zi "
+   },
+   {
+      "008" : "zm ",
+      "pub_place" : "zm "
+   },
+   {
+      "008" : "zz ",
+      "pub_place" : "zz "
+   },
+   {
+      "008" : "]]]",
+      "pub_place" : "   "
+   },
+   {
+      "008" : "||u",
+      "pub_place" : "  u"
+   },
+   {
+      "008" : "|||",
+      "pub_place" : "   "
+   }
+]
