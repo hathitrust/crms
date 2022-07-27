@@ -163,7 +163,7 @@ sub rights_data {
     my $note = $ticket || '';
     if ($rights_holder) {
       $note .= ' ' if length $note;
-      $note .= " ($rights_holder)" if $rights_holder;
+      $note .= "($rights_holder)";
     }
     $retval->{rights_data} .= join("\t", ($htid, $crms->TranslateAttr($attr),
                                    $crms->TranslateReason($reason),

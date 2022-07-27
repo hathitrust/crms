@@ -57,7 +57,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.4.16';
+our $VERSION = '8.4.17';
 sub Version
 {
   return $VERSION;
@@ -1142,7 +1142,7 @@ sub WriteRightsFile
   }
   my $temp = $perm . '.tmp';
   if (-f $temp) { die "file already exists: $temp\n"; }
-  open (my $fh, '>', $temp) || die "failed to open rights file ($temp): $!\n";
+  open (my $fh, '>:utf8', $temp) || die "failed to open rights file ($temp): $!\n";
   print $fh $rights;
   close $fh;
   rename $temp, $perm;
