@@ -29,7 +29,7 @@ INSERT INTO `menuitems` VALUES
   (3,'Export Stats','crms?p=exportStats','exportStats','ea',NULL,9),
   (3,'Progress Dashboard','crms?p=dashboard','dashboard',NULL,'_blank',10),
   (3,'Reviewer Activity','crms?p=reviewerActivity','reviewerActivity','ea',NULL,11),
-  (4,'User Accounts','crms?p=adminUser','adminUser','eai',NULL,1),
+  (4,'User Accounts','users','adminUser','eai',NULL,1),
   (4,'Institutions','crms?p=institutions','institutions','a',NULL,2),
   (4,'Query Rights Database','crms?p=rights','rights',NULL,NULL,3),
   (4,'Track Volumes','crms?p=track','track',NULL,NULL,4),

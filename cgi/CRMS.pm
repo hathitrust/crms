@@ -1687,6 +1687,7 @@ sub CreateSQL
 sub CreateSQLForReviews
 {
   my $self         = shift;
+  my $user         = shift;
   my $page         = shift;
   my $order        = shift;
   my $dir          = shift;
@@ -1711,7 +1712,6 @@ sub CreateSQLForReviews
   $dir = 'DESC' unless $dir;
   $offset = 0 unless $offset;
   $pagesize = 20 unless $pagesize > 0;
-  my $user = $self->get('user');
   my $sql = 'SELECT r.id,DATE(r.time),r.duration,u.id,r.attr,r.reason,r.note,'.
             'r.data,r.expert,r.category,r.legacy,q.priority,r.swiss,'.
             'q.status,q.project,b.title,b.author,b.country,r.hold FROM reviews r'.
@@ -1784,6 +1784,7 @@ sub CreateSQLForReviews
 sub CreateSQLForVolumes
 {
   my $self         = shift;
+  my $user         = shift;
   my $page         = shift;
   my $order        = shift;
   my $dir          = shift;
@@ -1809,7 +1810,6 @@ sub CreateSQLForVolumes
     $order = 'id';
     $order = 'time' if $page eq 'userReviews' or $page eq 'editReviews';
   }
-  my $user = $self->get('user');
   $search1 = $self->ConvertToSearchTerm($search1, $page);
   $search2 = $self->ConvertToSearchTerm($search2, $page);
   $search3 = $self->ConvertToSearchTerm($search3, $page);
@@ -1879,6 +1879,7 @@ sub CreateSQLForVolumes
 sub CreateSQLForVolumesWide
 {
   my $self         = shift;
+  my $user         = shift;
   my $page         = shift;
   my $order        = shift;
   my $dir          = shift;
@@ -1934,14 +1935,12 @@ sub CreateSQLForVolumesWide
   # This should not happen; active reviews page does not have a checkbox!
   elsif ($page eq 'editReviews')
   {
-    my $user = $self->get('user');
     my $yesterday = Utilities->new->Yesterday;
     push @rest, "r.time >= '$yesterday'";
     push @rest, 'q.status=0' unless $user->is_admin();
   }
   if ($page eq 'conflicts' || $page eq 'provisionals')
   {
-    my $user = $self->get('user');
     my $proj = $user->{project} || 1;
     push @rest, "q.project=$proj";
   }
@@ -2245,6 +2244,7 @@ sub JoinOn {
 sub GetReviewsRef
 {
   my $self         = shift;
+  my $user         = shift;
   my $page         = shift;
   my $order        = shift;
   my $dir          = shift;
@@ -2263,7 +2263,7 @@ sub GetReviewsRef
 
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
-  my ($sql,$totalReviews,$totalVolumes) = $self->CreateSQLForReviews($page, $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $offset, $pagesize);
+  my ($sql,$totalReviews,$totalVolumes) = $self->CreateSQLForReviews($user, $page, $order, $dir, $search1, $search1Value, $op1, $search2, $search2Value, $op2, $search3, $search3Value, $startDate, $endDate, $offset, $pagesize);
   #print "$sql<br/>\n";
   my $ref = undef;
   eval { $ref = $self->SelectAll($sql); };
@@ -2325,9 +2325,10 @@ sub GetReviewsRef
 sub GetVolumesRef
 {
   my $self = shift;
-  my $page = $_[0];
-  my $order = $self->ConvertToSearchTerm($_[1], $page);
-  my $dir = $_[2];
+  my $user = $_[0];
+  my $page = $_[1];
+  my $order = $self->ConvertToSearchTerm($_[2], $page);
+  my $dir = $_[3];
   my ($sql,$totalReviews,$totalVolumes,$n,$of) = $self->CreateSQLForVolumes(@_);
   my $ref = undef;
   eval { $ref = $self->SelectAll($sql); };
@@ -2408,9 +2409,10 @@ sub GetVolumesRef
 sub GetVolumesRefWide
 {
   my $self = shift;
-  my $page = $_[0];
-  my $order = $self->ConvertToSearchTerm($_[1], $page);
-  my $dir = $_[2];
+  my $user = $_[0];
+  my $page = $_[1];
+  my $order = $self->ConvertToSearchTerm($_[2], $page);
+  my $dir = $_[3];
 
   my $table ='reviews';
   my $joins = '';
@@ -3127,18 +3129,8 @@ sub GetCodeFromAttrReason
   return $self->SimpleSqlGet($sql, $a, $r);
 }
 
-sub GetRoles {
-  my $self = shift;
-
-  my @roles;
-  my $ref = $self->SelectAll('SELECT id,name FROM roles');
-  foreach my $row (@$ref) {
-    push @roles, { id => $row->[0], name => $row->[1] };
-  }
-  return @roles;
-}
-
 # Returns an arrayref of role names allowed to the specified or current user.
+# FIXME: this is probably superseded by User method.
 sub GetUserRoles {
   my $self = shift;
   my $user = shift || $self->get('user');
@@ -5204,6 +5196,7 @@ sub ShouldReviewBeFlagged
 sub ReviewSearchMenu
 {
   my $self       = shift;
+  my $user       = shift;
   my $page       = shift;
   my $searchName = shift;
   my $searchVal  = shift;
@@ -5211,10 +5204,10 @@ sub ReviewSearchMenu
   my @keys = ('Identifier', 'SysID', 'Title', 'Author', 'PubDate', 'Country', 'Date',
               'Status', 'Legacy', 'UserId', 'Attribute', 'Reason', 'NoteCategory', 'Note',
               'Priority', 'Validated', 'Swiss', 'Project');
-  my @labs = ('Identifier', 'System ID', 'Title', 'Author', 'Pub Date', 'Country',
+  my @labs = ('Identifier', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Country',
               'Review Date', 'Status', 'Legacy', 'Reviewer', 'Attribute', 'Reason',
               'Note Category', 'Note', 'Priority', 'Verdict', 'Swiss', 'Project');
-  if (!$self->get('user')->is_at_least_expert)
+  if (!$user->is_at_least_expert)
   {
     splice @keys, 16, 1; # Swiss
     splice @labs, 16, 1;
@@ -5224,7 +5217,7 @@ sub ReviewSearchMenu
     splice @keys, 15, 1; # Validated
     splice @labs, 15, 1;
   }
-  if (!$self->get('user')->is_at_least_expert)
+  if (!$user->is_at_least_expert)
   {
     splice @keys, 14, 1; # Priority
     splice @labs, 14, 1;
@@ -5234,7 +5227,7 @@ sub ReviewSearchMenu
     splice @keys, 9, 1; # UserId/Reviewer
     splice @labs, 9, 1;
   }
-  if ($page ne 'adminHistoricalReviews' || $self->TolerantCompare(1,$self->GetSystemVar('noLegacy')))
+  if ($page ne 'adminHistoricalReviews')
   {
     splice @keys, 8, 1; # Legacy
     splice @labs, 8, 1;
@@ -5244,7 +5237,7 @@ sub ReviewSearchMenu
     splice @keys, 4, 2; #  Country and Pub Date
     splice @labs, 4, 2;
   }
-  if ($page ne 'adminHistoricalReviews' || !$self->get('user')->is_at_least_expert)
+  if ($page ne 'adminHistoricalReviews' || !$user->is_at_least_expert)
   {
     splice @keys, 1, 1; # Sys ID
     splice @labs, 1, 1;
@@ -5252,7 +5245,8 @@ sub ReviewSearchMenu
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
-    $html .= sprintf("  <option value='%s'%s>%s</option>\n", $keys[$i], ($searchVal eq $keys[$i])? ' selected="selected"':'', $labs[$i]);
+    $html .= sprintf("  <option value='%s'%s>%s</option>\n", $keys[$i],
+      ($searchVal eq $keys[$i])? ' selected':'', $labs[$i]);
   }
   $html .= '</select>';
   return $html;
@@ -6240,13 +6234,12 @@ sub LinkToRetrieve
   return $url;
 }
 
-sub LinkToJira
-{
+sub LinkToJira {
   my $self = shift;
   my $tx   = shift;
 
-  use Jira;
-  return Jira::LinkToJira($self, $tx);
+  use CRMS::Jira;
+  return CRMS::Jira::LinkToJira($tx);
 }
 
 # Populates $data (a hash ref) with information about the duplication status of an exported determination.
@@ -6970,13 +6963,12 @@ sub GetADDFromAuthor
   return $add;
 }
 
-sub VIAFWarning
-{
+sub VIAFWarning {
   my $self   = shift;
   my $id     = shift;
   my $record = shift;
 
-  use VIAF;
+  use CRMS::VIAF;
   my %warnings;
   my %excludes = ('us' => 1, 'usa' => 1, 'american' => 1, 'zz' => 1, 'xx' => 1,
                   Unicode::Normalize::NFC('미국') => 1,
@@ -6990,21 +6982,17 @@ sub VIAFWarning
   my $errs = 0;
   foreach my $author (@authors)
   {
-    my $data = VIAF::GetVIAFData($self, $author);
-    if (defined $data->{'error'})
-    {
+    my $data = CRMS::VIAF::GetVIAFData($self, $author);
+    if (defined $data->{'error'}) {
       $errs++;
       next;
     }
-    if (defined $data and scalar keys %{$data} > 0)
-    {
+    if (defined $data and scalar keys %{$data} > 0) {
       my $country = $data->{'country'};
-      if (defined $country)
-      {
+      if (defined $country) {
         $country =~ s/[\.,;]+$//;
         $country =  Unicode::Normalize::NFC($country);
-        if (!defined $excludes{lc $country} && lc $country !~ m/\(usa\)/)
-				{
+        if (!defined $excludes{lc $country} && lc $country !~ m/\(usa\)/) {
 					my $abd = $data->{'birth_year'};
 					my $add = $data->{'death_year'};
 					next if defined $abd and $abd <= 1815;
@@ -7014,7 +7002,7 @@ sub VIAFWarning
 					my $last = $author;
 					$last = $1 if $last =~ m/^(.+?),.*/;
 					$last =~ s/[.,;) ]*$//;
-					my $url = VIAF::VIAFLink($self, $author);
+					my $url = CRMS::VIAF::VIAFLink($author);
 					my $warning = "<a href='$url' target='_blank'>$last</a> ($country$dates)";
 					$warnings{$warning} = 1;
 				}
@@ -7025,22 +7013,20 @@ sub VIAFWarning
   return (scalar keys %warnings)? join '; ', keys %warnings:undef;
 }
 
-sub VIAFLink
-{
+sub VIAFLink {
   my $self   = shift;
   my $author = shift;
 
-  use VIAF;
-  return VIAF::VIAFLink($self, $author);
+  use CRMS::VIAF;
+  return VCRMS::IAF::VIAFLink($author);
 }
 
-sub VIAFCorporateLink
-{
+sub VIAFCorporateLink {
   my $self   = shift;
   my $author = shift;
 
-  use VIAF;
-  return VIAF::VIAFCorporateLink($self, $author);
+  use CRMS::VIAF;
+  return CRMS::VIAF::VIAFCorporateLink($author);
 }
 
 # FIXME: this should probably not include an explicit reference to "Special" project.
@@ -7452,6 +7438,13 @@ sub Licensing
 
   use Licensing;
   Licensing->new('crms' => $self);
+}
+
+sub GetRoles {
+  my $self = shift;
+
+  use Role;
+  return Role::All();
 }
 
 1;

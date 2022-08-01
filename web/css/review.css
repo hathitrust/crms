@@ -4,13 +4,22 @@
   line-height:1.1em;
 }
 
-code {
+/*code {
   font-family:Courier, 'Courier New', Monaco, monospace;
+}*/
+
+a {
+  color: #3344dd;
 }
 
-.pages {
+div.crms-container {
   margin: 10px;
   padding: 10px;
+}
+
+div.crms-review-container {
+  margin: 0px;
+  padding: 0px;
 }
 
 .pages table {
@@ -21,21 +30,12 @@ h3 {
   margin: 15px 0;
 }
 
-a:link {color:#185EAC; text-decoration:none;}    /* unvisited link */
-a:visited {color:#185EAC; text-decoration:none;} /* visited link */
-a:hover {color:#1B75DA; text-decoration:underline;}   /* mouse over link */
-a:active {color:#1B75DA; text-decoration:underline;}  /* selected link */
-a.header:link    {color:#82CAFA;}
-a.header:visited {color:#82CAFA;}
-a.header:hover   {color:#A0DAFF;}
-a.header:active  {color:#82CAFA;}
-
 .divbody {
   float:left;
   width:99%;
 }
 
-.divOP {
+div.operational-pane {
   float:left;
   width:235px;
 }
@@ -49,6 +49,12 @@ a.header:active  {color:#82CAFA;}
   right:0px;
   top:0px;
 }
+
+/* For <tr> elements with inactive objects */
+tr.background-inactive { background-color: #e2e2e2; }
+/* For <tr> elements with inactive objects */
+tr.background-hover:hover { background: #a0feae; }
+tr.background-hover td:hover { background: transparent; }
 
 /*.navtop    {
   text-align:center; 
@@ -102,8 +108,7 @@ table {
 }
 
 
-table.nav { 
-  /*border-bottom: 1px solid #72859a;*/
+table.nav {
   font-size: 12px;   
 }
 
@@ -230,7 +235,7 @@ input#getDate {
   background-color: inherit
 }
 
-iframe.reviewFrame {
+iframe.review-frame {
   border:none;
   width:100%;
   height:100%;
@@ -257,29 +262,6 @@ table.exportStats th {
   color:#FFFFFF;
   text-align:left;
 }
-
-table.helloBox {
-  width:100px;
-  padding:0px;
-  border-collapse:collapse;
-  border:0px;
-  background-color:#000000;
-}
-
-table.helloBox td {
-  padding:0px 6px 0px 6px;
-  color:#FFFFFF;
-  text-align:right;
-  white-space:nowrap;
-  font-weight:bold;
-}
-
-table.helloBox td img {
-  padding:0px;
-}
-
-tr.hoverWide:hover { background: #E0E0E0; }
-tr.hoverWide td:hover { background: transparent; }
 
 span.major {
   color:#82CAFA;
@@ -337,6 +319,7 @@ span.total {
 }
 
 table.mainnav {
+  margin: auto;
   width:35%;
   border-collapse:collapse;
   border-spacing:0px;
@@ -580,111 +563,6 @@ a.tip2:hover span {
   background-color: #00ff00;
   height: 3px;
   border-radius: 4px;
-}
-
-/* ================================================================ 
-This copyright notice must be untouched at all times.
- 
-The original version of this stylesheet and the associated (x)html
-is available at http://www.cssplay.co.uk/menus/variable_dl.html
-Copyright (c) 2005-2007 Stu Nicholls. All rights reserved.
-This stylesheet and the assocaited (x)html may be modified in any 
-way to fit your requirements.
-=================================================================== */
-#menu {list-style-type:none; 
-margin:0;
-padding:0;
-border-collapse:collapse;}
- 
-#menu li {display:block; float:left; position:relative; z-index:100; margin-right:1px; }
-#menu li span {display:block; z-index:100; background:white; margin: 5px 11px; font-size:1.1em;}
-#menu li a, #menu li a:visited {display:block; padding:0;}
- 
-#menu dl {position:absolute; top:0; left:0; margin:0; padding:0;}
-#menu dt {background: white; border-left:1px solid black;border-right:1px solid black;margin:0; font-size:1.1em; float:left;}
-#menu dd {display:none;border-left:1px solid black;border-right:1px solid black; clear:left; margin:0; padding:0; color:#fff; font-size: 1em; text-align:left;}
-
-#menu dt a, #menu dt a:visited {background:white; color:black; text-decoration:none; white-space:nowrap; border:1px solid black; margin:-1px; display:block; padding: 5px 10px; font-weight:bold;}
-#menu dd a, #menu dd a:visited {background:white; color:black; text-decoration:none; white-space:nowrap; border:1px solid black; margin:-1px; display:block; padding: 5px 10px;}
-
-/*#menu li a:hover {border:0;}*/
- 
-#menu li:hover dd, #menu li.sfhover dd, #menu li a:hover dd, #menu li a.sfhover dd {display:block;}
-#menu li:hover dl, #menu li a:hover dl {}
-#menu li:hover dt a, #menu li a:hover dt a, #menu dd a:hover {background: white; color:black;}
-
-#menu dl[class=home] dt a:hover, #menu dl[class=home] dt a.sfhover     {background-color:white;color:#185EAC;}
-#menu dl[class=home] dt a                                              {background-color:white;color:#1B75DA;}
-#menu dl[class=mailto] dt a:hover, #menu dl[class=mailto] dt a.sfhover {background-color:white;color:#000000;}
-#menu dl[class=mailto] dt a                                            {background-color:white;color:#6F7073;}
-#menu dl[class=total] a:hover, #menu dl[class=total] a.sfhover         {background: #A0FEAE;}
-#menu dl[class=major] a:hover, #menu dl[class=major] a.sfhover         {background: #82CAFA;}
-#menu dl[class=minor] a:hover, #menu dl[class=minor] a.sfhover         {background: #FEFCAE;}
-#menu dl[class=orange] a:hover, #menu dl[class=orange] a.sfhover       {background: #EB9747;}
-#menu dl[class=red] a:hover, #menu dl[class=red] a.sfhover             {background: #FB5252;}
-
-
-/* ================================================================ 
-By Keenan Payne
-=================================================================== */
-
-.modalDialog {
-	position: fixed;
-	font-family: Arial, Helvetica, sans-serif;
-	top: 0;
-	right: 0;
-	bottom: 0;
-	left: 0;
-	background: rgba(0,0,0,0.65);
-	z-index: 99999;
-	opacity:0;
-	-webkit-transition: opacity 400ms ease-in;
-	-moz-transition: opacity 400ms ease-in;
-	transition: opacity 400ms ease-in;
-	pointer-events: none;
-}
-
-.modalDialog:target {
-	opacity:1;
-	pointer-events: auto;
-}
-
-.modalDialog > div {
-	width: 400px;
-	position: relative;
-	margin: 10% auto;
-	padding: 5px 20px 13px 20px;
-	border-radius: 10px;
-	background: #fff;
-	background: -moz-linear-gradient(#fff, #999);
-	background: -webkit-linear-gradient(#fff, #999);
-	background: -o-linear-gradient(#fff, #999);
-}
-
-.close {
-	background: #606061;
-	color: #FFFFFF;
-	line-height: 25px;
-	position: absolute;
-	right: -12px;
-	text-align: center;
-	top: -10px;
-	width: 24px;
-	text-decoration: none;
-	font-weight: bold;
-	-webkit-border-radius: 12px;
-	-moz-border-radius: 12px;
-	border-radius: 12px;
-	-moz-box-shadow: 1px 1px 3px #000;
-	-webkit-box-shadow: 1px 1px 3px #000;
-	box-shadow: 1px 1px 3px #000;
-}
-
-a.close:hover { background: #00d9ff; text-decoration:none;}
-a.close {color:white; text-decoration:none;}
-
-@keyframes fadetogrey {
-    100% {background-color:#e2e2e2;}
 }
 
 div.topBanner {

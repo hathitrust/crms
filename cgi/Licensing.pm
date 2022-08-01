@@ -58,6 +58,8 @@ sub query
     $sysid_count++;
     foreach my $htid (@htids)
     {
+      my $rq = $crms->RightsQuery($htid, 1);
+      my $rights = (defined $rq && scalar @$rq)? $rq->[0] : undef;
       my $data = {};
       $data->{htid} = $htid;
       $data->{sysid} = $record->sysid;
@@ -66,7 +68,7 @@ sub query
       $data->{title} = $record->title;
       $data->{date} = $record->copyrightDate;
       $data->{tracking} = $crms->GetTrackingInfo($htid, 1);
-      $data->{rights} = $crms->RightsQuery($htid, 1)->[0];
+      $data->{rights} = $rights;
       $data->{already} = defined $self->GetData($htid);
       push @{$result->{data}}, $data;
       $seen_htid{$htid} = 1;

@@ -1,0 +1,175 @@
+[% order = cgi.param('order') || 0 %]
+
+<h2>User Accounts</h2>
+<script type="text/Javascript">
+<!--
+addEvent(window, 'load', function(e)
+{
+  tippy('.tippy');
+});
+-->
+</script>
+
+
+
+[% uadmin = current_user.is_admin %]
+[% warn = crms.WebPath('web', 'img/warning.png') %]
+
+[% IF uadmin %]
+  <a href="/crms/users/new" class="btn btn-success">Create New User...</a>
+  <br/><br/>
+[% END %]
+
+<form action="users">
+  <label for="order">Order by:</label>
+  <select name="order" id="order" onchange="this.form.submit()">
+    <option value="0" [% (order==0)? 'selected':'' %]>Name</option>
+    <option value="1" [% (order==1)? 'selected':'' %]>Institution</option>
+    <option value="2" [% (order==2)? 'selected':'' %]>Privileges</option>
+    <option value="3" [% (order==3)? 'selected':'' %]>Commitment</option>
+  </select>
+</form>
+
+
+<table class="exportStats" style="white-space:nowrap">
+  <tr>
+    <th scope="col">Name<br/><span>(<span style="color:#e2e2e2;">View Stats</span>)</th>
+    <th scope="col">E-mail
+      <br/><span>(<span style="color:#e2e2e2;">Detail</span>)
+    </th>
+    <th scope="col">Roles</th>
+    <th scope="col">Institution</th>
+    <th scope="col">Reviewer</th>
+    <th scope="col">Advanced</th>
+    <th scope="col">Expert</th>
+    <th scope="col">Admin</th>
+    <th scope="col">Projects</th>
+    <th scope="col">Access</th>
+    <th scope="col">Expires</th>
+    <th scope="col">Commitment[% IF uadmin %]<br/>(Progress)[% END %]</th>
+    <th scope="col">Note</th>
+  </tr>
+  [% FOREACH u IN users %]
+    [% presenter = controller.presenter_for_user(u) %]
+    [% class = (u.active)? 'background-hover':'background-inactive' %]
+    <tr class="[% class %]">
+      <td class="nowrap">
+        <a href="[% crms.BuildURL('userRate', 'uid', u.id) %]"
+           target="_blank">[% u.name.replace('\s','&nbsp;') %]</a>
+        [% IF current_user.id == u.id %]
+          &nbsp;<span class="badge bg-primary">YOU</span>
+        [% END %]
+        [% IF u.active && crms.Instance() == 'dev' && u.id != current_user.id %]
+          &nbsp;&nbsp;&nbsp;
+          <a href="[% crms.BuildURL('home', 'changeuser', 1, 'newuser', u.id) %]">Change To…</a>
+        [% END %]
+      </td>
+      <td>
+        [% IF uadmin && !u.internal %]
+          <a href="/crms/users/[% u.id %]">[% u.email %]</a>
+        [% ELSE %]
+          [% u.email %]
+        [% END %]
+      </td>
+      <td>
+        [% crms.Dump(u.roles) %]
+        [% IF u.roles.size > 0 %]
+          [% roles = [] %]
+          [% FOREACH role IN u.roles %]
+            [% roles.push(role.name) %]
+          [% END %]
+          [% roles.join(', ') %]
+        [% END %]
+      </td>
+      <td>[% u.institution().name %]</td>
+      <td style="text-align:center;">[% presenter.show_field_value('reviewer') %]</td>
+      <td style="text-align:center;">[% presenter.show_field_value('advanced') %]</td>
+      <td style="text-align:center;">[% presenter.show_field_value('expert') %]</td>
+      <td style="text-align:center;">
+        [% presenter.show_field_value('admin') %]
+        [% IF u.admin_pages.size %]
+          [% tip = "<strong>Special Access:</strong><br/>" %]
+          [% FOREACH page IN u.admin_pages %]
+            [% tip = tip _ '<br/>' _ page.name %]
+          [% END %]
+          <img class="tippy" width="16" height="16" alt="Admin Page Access"
+               src="[% crms.WebPath('web', 'help.png') %]"
+               data-tippy-content="[% utils.EscapeHTML(tip) %]"/>
+        [% END %]
+      </td>
+      <td style="text-align:center;">
+        [% crms.Dump(u.projects) %]
+        [% IF u.projects.size > 1 %]
+          [% names = [] %]
+          [% FOREACH proj IN u.projects %]
+            [% names.push(proj.name) %]
+          [% END %]
+          [% tip = "<strong>Projects:</strong>" %]
+          [% FOREACH name IN names.sort %]
+            [% tip = tip _ '<br/>' _ name %]
+          [% END %]
+          <img class="tippy" width="16" height="16" alt="Multiple Projects"
+               src="[% crms.WebPath('web', 'help.png') %]"
+               data-tippy-content="[% utils.EscapeHTML(tip) %]"/>
+        [% ELSIF u.projects.size == 1 %]
+          [% u.projects.0.name %]
+        [% END %]
+      </td>
+      [% IF u.secondary %]
+        <td style="background-color:#e2e2e2;"></td>
+      [% ELSE %]
+        <td>
+        [% IF u.active && !u.internal %]
+          [% IF u.ips.mfa %]
+            <img src="[% crms.WebPath('web', 'img/Duo.png') %]"
+                 alt="Two-factor authentication enabled"
+                 width="20" height="20"/>
+          [% ELSIF !u.ips.keys.size() && (u.reviewer || u.advanced || u.expert) %]
+            <img width="20" height="20" alt="Warning: no IP address"
+                 src="[% warn %]"/>
+          [% ELSE %]
+            [% u.ips.keys.join(', ') %]
+            [% IF !u.email.match("-expert") && !u.email.match("-reviewer") && (u.reviewer || u.advanced) %]
+              [% IF "crms" != u.ht_role %]
+                <span class="red"><br/>Role <strong>[% u.ht_role %]</strong></span>
+              [% END %]
+            [% END %]
+          [% END %]
+        [% END %]
+        </td>
+      [% END %]
+      [% IF u.secondary %]
+        <td style="background-color:#e2e2e2;"></td>
+      [% ELSE %]
+        <td>
+        [% IF u.active %]
+          [% IF u.expiration.days.defined && u.expiration.days <= 30 %]
+            <img width="20" height="20" alt="Warning: expires within 30 days"
+                 src="[% warn %]"/>
+          [% END %]
+          [% u.expiration.expires %]
+        [% END %]
+      [% END %]
+      </td>
+      [% IF u.secondary %]
+        <td style="background-color:#e2e2e2;"></td>
+      [% ELSE %]
+        <td>
+          [% IF u.commitment && u.commitment > 0.0 %]
+            [% u.commitmentFmt %]
+            [% IF u.active && uadmin %]
+              <div class="ProgressBar">
+                <div class="ProgressBarInner"
+                     style="width:[% (u.progress * 100.0) _ '%' %];">
+                </div>
+              </div>
+            [% END %]
+          [% END %]
+        </td>
+      [% END %]
+      <td style="text-align:center;">[% u.note %]</td>
+    </tr>
+  [% END %]
+</table>
+<br/>
+

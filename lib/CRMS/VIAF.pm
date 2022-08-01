@@ -1,4 +1,4 @@
-package VIAF;
+package CRMS::VIAF;
 
 use strict;
 use warnings;
@@ -247,9 +247,7 @@ sub VIAFNormalize
   return ($n1, $n2, $n3);
 }
 
-sub VIAFLink
-{
-  my $self   = shift;
+sub VIAFLink {
   my $author = shift;
 
   $author = URI::Escape::uri_escape_utf8($author);
@@ -257,9 +255,7 @@ sub VIAFLink
   $author. '%22&stylesheet=/viaf/xsl/results.xsl&sortKeys=holdingscount';
 }
 
-sub VIAFCorporateLink
-{
-  my $self   = shift;
+sub VIAFCorporateLink {
   my $author = shift;
 
   $author = URI::Escape::uri_escape_utf8($author);

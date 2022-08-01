@@ -9,7 +9,7 @@ services:
       MYSQL_RANDOM_ROOT_PASSWORD: 1 
     ports:
       - "52000:3306"
-  
+
   mariadb_ht:
     image: ghcr.io/hathitrust/db-image:latest
     restart: always

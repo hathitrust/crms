@@ -1,6 +1,6 @@
 [% p = cgi.param('p') %]
 [% q = cgi.param('query') %]
-[% INCLUDE header.tt %]
+
 [% licensing = crms.Licensing %]
 
 <h2>Licensing:</h2>

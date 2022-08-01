@@ -1,0 +1,30 @@
+<div>
+  <h2>[% user.name %]:</h2>
+
+  [% projects = [] %]
+  [% FOREACH param IN cgi.param %]
+    [% matches = param.match('(proj_)(\d+)') %]
+    [% IF matches.0 == 'proj_' %]
+      [% projects.push(matches.1) %]
+    [% END %]
+  [% END %]
+
+
+  FIXME: need to do something with admin_pages<br/>
+  FIXME: need to do something with role switching<br/>
+  Should be something like <code>crms.EnableUserRoles()</code>.<br/>
+  Right now we are sort of hard-coding in reviewer and expert as the only two available roles.<br/>
+
+  [% fields = presenter.all_fields %]
+  <dl class="row">
+    [% FOR field IN fields %]
+      <dt class="col-sm-1">[% presenter.field_label(field) %]</dt>
+      <dd class="col-sm-11">[% presenter.show_field_value(field) %]</dd>
+    [% END %]
+  </dl>
+  <br/>
+  <a href="/crms/users/[% user.id %]/edit" class="btn btn-primary">
+    Edit
+  </a>
+  
+</div>

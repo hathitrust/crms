@@ -59,7 +59,7 @@
 Search for Reviews where<br/>
 [% END %]
 
-[% crms.ReviewSearchMenu(page, 'search1', search1) %]
+[% crms.ReviewSearchMenu(current_user, page, 'search1', search1) %]
 <input type="text" title="Value 1" id="search1value" name="search1value" value="[% crms.EchoInput(search1value) %]" size="30"/>
 <select title="Boolean Option" name="op1" id="op1">
   <option [% op1 == 'AND' ? 'selected="selected"':'' %]>AND</option>
@@ -68,7 +68,7 @@ Search for Reviews where<br/>
 </select>
 <br/>
 
-[% crms.ReviewSearchMenu(page, 'search2', search2) %]
+[% crms.ReviewSearchMenu(current_user, page, 'search2', search2) %]
 <input title="Value 2" type="text" id="search2value" name="search2value" value="[% crms.EchoInput(search2value) %]" size="30"/>
 <select title="Boolean Option" name="op2" id="op2">
   <option [% op2 == 'AND' ? 'selected="selected"':'' %]>AND</option>
@@ -77,7 +77,7 @@ Search for Reviews where<br/>
 </select>
 <br/>
 
-[% crms.ReviewSearchMenu(page, 'search3', search3) %]
+[% crms.ReviewSearchMenu(current_user, page, 'search3', search3) %]
 <input title="Value 3" type="text" id="search3value" name="search3value" value="[% crms.EchoInput(search3value) %]" size="30"/>
 <br/>
 
@@ -105,7 +105,7 @@ Search for Reviews where<br/>
 <br/>
 
 <label for="order">Order by:</label>
-[% crms.ReviewSearchMenu(page, 'order', order) %]
+[% crms.ReviewSearchMenu(current_user, page, 'order', order) %]
 <br/>
 
 <label for="dir">Direction:</label>

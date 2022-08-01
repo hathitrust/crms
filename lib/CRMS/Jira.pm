@@ -1,18 +1,19 @@
-package Jira;
+package CRMS::Jira;
 
-use LWP::UserAgent;
 use strict;
 use warnings;
-use vars qw(@ISA @EXPORT @EXPORT_OK);
-our @EXPORT = qw(Login);
+
+use LWP::UserAgent;
+
+use CRMS::Config;
+
 
 sub GetComments {
-  my $crms = shift;
-  my $tx   = shift;
+  my $tx = shift;
 
   my $path = '/rest/api/2/issue/' . $tx;
   my @comments;
-  my $req = Request($crms, 'GET', $path);
+  my $req = Request('GET', $path);
   my $res = LWP::UserAgent->new->request($req);
   if ($res->is_success()) {
     my $jsonxs = JSON::XS->new;
@@ -31,7 +32,6 @@ sub GetComments {
 
 # Returns error string or undef for success.
 sub AddComment {
-  my $crms    = shift;
   my $tx      = shift;
   my $comment = shift;
 
@@ -40,7 +40,7 @@ sub AddComment {
   $comment =~ s/\n/\\n/gm;
   my $data = qq({ "body": "$comment", "properties":[{"key":"sd.public.comment","value":{"internal":true}}] });
   my $path = "/rest/api/2/issue/$tx/comment";
-  my $req = Request($crms, 'POST', $path);
+  my $req = Request('POST', $path);
   $req->content_type('application/json');
   $req->content($data);
   my $res = LWP::UserAgent->new->request($req);
@@ -52,22 +52,22 @@ sub AddComment {
 }
 
 sub LinkToJira {
-  my $crms = shift;
-  my $tx   = shift;
+  my $tx = shift;
 
-  my $url = $crms->get('jira_prefix') . '/browse/' . $tx;
+  my $config = CRMS::Config::Config();
+  my $url = $config->{jira_prefix} . '/browse/' . $tx;
   return "<a href=\"$url\" target=\"_blank\">$tx</a>";
 }
 
 sub Request {
-  my $crms   = shift;
   my $method = shift;
   my $path   = shift;
 
-  my %d = $crms->ReadConfigFile('crmspw.cfg');
-  my $username = $d{'jiraUser'};
-  my $password = $d{'jiraPasswd'};
-  my $prefix = $crms->get('jira_prefix');
+  my $config = CRMS::Config::SecretConfig();
+  my $username = $config->{jiraUser};
+  my $password = $config->{jiraPasswd};
+  $config = CRMS::Config::Config();
+  my $prefix = $config->{jira_prefix};
   my $req = HTTP::Request->new($method => $prefix . $path);
   $req->authorization_basic($username, $password);
   return $req;

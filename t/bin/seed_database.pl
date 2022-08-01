@@ -37,5 +37,6 @@ Factories::User(name => 'Default Reviewer', reviewer => 1);
 Factories::User(name => 'Default Advanced Reviewer', reviewer => 1, advanced => 1);
 Factories::User(name => 'Default Expert', reviewer => 1, advanced => 1, expert => 1);
 Factories::User(name => 'Default Admin', reviewer => 1, advanced => 1, expert => 1, admin => 1);
+Factories::User(name => 'Inactive Reviewer', reviewer => 1, active => 0);
 
 print GREEN "========== Done Seeding Database ==========\n";

@@ -159,15 +159,15 @@ RUN apt-get install -y \
 
 RUN cpan -T \
   CGI::PSGI \
-  OAuth::Lite \
-  EBook::EPUB \
-  Sub::Uplevel \
-  Test::Exception \
-  Devel::Cycle \
-  Test::Memory::Cycle \
-  Mozilla::CA \
   Data::Faker \
-  Data::Faker::Internet
+  Data::Faker::Internet \
+  OAuth::Lite \
+  Plack::Middleware::TrailingSlashKiller \
+  Plack::Response \
+  Router::Simple \
+  Test::Exception
+  
+
 
 RUN mkdir /htapps
 RUN mkdir /htapps/babel

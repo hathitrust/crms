@@ -11,7 +11,7 @@ use Mail::Sendmail;
 use Encode;
 
 use CRMS;
-use Jira;
+use CRMS::Jira;
 
 my $usage = <<END;
 USAGE: $0 [-hnpv] [-m MAIL [-m MAIL2...]]
@@ -144,7 +144,7 @@ sub AddJiraComments
       $ref = $crms->SelectAll($sql, $tx, $license);
       $comment .= sprintf("%s\n", $_->[0]) for @$ref;
     }
-    my $err = Jira::AddComment($crms, $tx, $comment);
+    my $err = CRMS::Jira::AddComment($tx, $comment);
     $crms->SetError($err) if defined $err;
     #$summary .= "<p>Jira comment for $tx:</p><code>$comment</code>";
   }

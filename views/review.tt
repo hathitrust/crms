@@ -57,7 +57,7 @@
 
 [% data = crms.ReviewData(htid) %]
 <div class="divbody">
-  <div class="divOP">
+  <div class="operational-pane">
     [% es = crms.GetErrors() %]
     [% IF es.size %]
       [% IF NOT error %][% error = '' %][% END %]
@@ -94,7 +94,7 @@
   </div> <!-- Operational Pane div -->
   [%# the frame (Stanford, HT, Cat...) %]
   <div class="divFrame" id="divFrame">
-    <iframe class="reviewFrame" title="Authority 1" id="tFrame" src="about:blank"></iframe>
-    <iframe class="reviewFrame" title="Authority 2" id="bFrame" src="about:blank" style="display:none;"></iframe>
+    <iframe class="review-frame" title="Authority 1" id="tFrame" src="about:blank"></iframe>
+    <iframe class="review-frame" title="Authority 2" id="bFrame" src="about:blank" style="display:none;"></iframe>
   </div>
 </div>

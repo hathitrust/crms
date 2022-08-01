@@ -1,6 +1,6 @@
-[% projs = crms.GetUserProjects() %]
+[% projs = crms.GetUserProjects(current_user) %]
 [% IF projs.size %]
-  [% proj = crms.GetProjectRef(crms.get('user').project).name %]
+  [% proj = crms.GetProjectRef(current_user.project).name %]
   [% flag = " &#x2014; " _ proj _ " Project" %]
 [% END %]
 

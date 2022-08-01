@@ -11,6 +11,7 @@ use Scalar::Util;
 
 use DB;
 use Institution;
+use Role;
 use Utilities;
 
 
@@ -122,7 +123,7 @@ sub save {
     # Validations should prevent the operation from failing here due to bogus
     # field values so it makes sense to throw an exception.
     # Foreign key validation is a grey area.
-    Carp::confess sprintf 'SQL failed (%s): %s',
+    Carp::confess sprintf 'User save failed (%s): %s',
       Utilities->new->StringifySql($sql, @values), $sth->errstr;
   }
   if (!$self->{persisted}) {
@@ -169,6 +170,7 @@ sub __normalize_field_value {
     $value =~ s/^\s+|\s+$//g if $TRIM_FIELDS->{$field};
     $value = undef if $value eq '' and $NULL_FIELDS->{$field};
     $value = $self->__normalize_commitment($value) if $field eq 'commitment';
+    $value = 1 if $value && ($ONE_FIELDS->{$field} || $ONE_FIELDS->{$field});
   } else {
     $value = 0 if $ZERO_FIELDS->{$field};
     $value = 1 if $ONE_FIELDS->{$field};
@@ -265,6 +267,34 @@ sub privilege_level {
     + (2 * ($self->{advanced} || 0))
     + (4 * ($self->{expert} || 0))
     + (8 * ($self->{admin} || 0));
+}
+
+# FIXME: determine how much responsibility is shared between this module and
+# the Role module. Right now role assignments cannot be saved.
+sub roles {
+  my $self = shift;
+
+  my $roles = [];
+  my $sql = 'SELECT role FROM user_roles ur WHERE ur.user=?';
+  my $ref = __CRMS_DBH()->selectall_arrayref($sql, undef, $self->{id});
+  foreach my $row (@$ref) {
+    my $role = Role::Find($row->[0]);
+    Carp::confess("Unable to instantiate Role id $row->[0]");
+    push @$roles, $role;
+  }
+  return $roles;
+}
+
+# A hackish distillation of roles() to allow easier lookups in views.
+# This is a utility/helper that could be defined elsewhere.
+sub role_id_hash {
+  my $self = shift;
+
+  my $role_ids = {};
+  foreach my $role (@{$self->roles}) {
+    $role_ids->{$role->{id}} = 1;
+  }
+  return $role_ids;
 }
 
 # Only used in test suite.
