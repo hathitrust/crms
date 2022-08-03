@@ -51,6 +51,25 @@ sub FindByEmail {
   return Default;
 }
 
+sub Where {
+  my $constraints = { @_ };
+
+  my $sql = 'SELECT * FROM ht_institutions';
+  my @clauses;
+  my @values;
+  if (scalar keys %$constraints) {
+    $sql .= ' WHERE ';
+    foreach my $key (keys %$constraints) {
+      push @clauses, "$key=?";
+      push @values, $constraints->{$key};
+    }
+    $sql .= join('AND', @clauses);
+  }
+  $sql .= ' ORDER BY inst_id ASC';
+  my $ref = __dbh()->selectall_hashref($sql, 'inst_id', undef, @values);
+  return __institutions_from_hashref($ref);
+}
+
 sub new {
   my $class = shift;
 
@@ -75,6 +94,15 @@ sub __institutions_from_hashref {
     push @institutions, $inst;
   }
   return \@institutions;
+}
+
+sub short_name {
+  my $self = shift;
+
+  my $name = $self->{name};
+  $name =~ s/^university\s+of\s+//i;
+  $name =~ s/university$//i;
+  return $name;
 }
 
 1;

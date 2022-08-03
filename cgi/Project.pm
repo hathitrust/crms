@@ -3,82 +3,126 @@ package Project;
 use strict;
 use warnings;
 
-use DB;
+use Carp;
+use Data::Dumper;
 
+use CRMS::DB;
+
+sub Default {
+  return Find(1);
+}
+
+sub All {
+  my $sql = 'SELECT * FROM projects ORDER BY id';
+  my $ref = CRMS::DB->new->dbh->selectall_hashref($sql, 'id');
+  return __projects_from_hashref($ref);
+}
+
+sub Find {
+  my $id = shift;
+
+  Carp::confess "Project::Find called with undef" unless defined $id;
+
+  my $sql = 'SELECT * FROM projects WHERE id=?';
+  my $ref = CRMS::DB->new->dbh->selectall_hashref($sql, 'id', undef, $id);
+  my $projects = __projects_from_hashref($ref);
+  return (scalar @$projects)? $projects->[0] : undef;
+}
+
+# Not every project is expected to have a subclass. Just the interesting ones.
 sub new {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
   $self->{$_} = $args{$_} for keys %args;
-  my $id = $args{'id'};
-  die "No CRMS object passed to project" unless $args{'crms'};
-  my $sql = 'SELECT * FROM projects WHERE id=?';
-  my $ref = CRMS::DB->new()->dbh()->selectall_hashref($sql, 'id', undef, $id);
-  $self->{$_} = $ref->{$id}->{$_} for keys %{$ref->{$id}};
+  my $id = $self->{id};
+  if (defined $id) {
+    #my $sql = 'SELECT * FROM projects WHERE id=?';
+    #my $ref = CRMS::DB->new->dbh->selectall_hashref($sql, 'id', undef, $self->{id});
+    #my $class = $ref->{name};
+    my $class = $self->{name};
+    $class =~ s/\s//g;
+    my $subclass;
+    my $file = $ENV{'SDRROOT'} . '/crms/cgi/Project/'. $class. '.pm';
+    if (-f $file) {
+      eval {
+        require $file;
+        $subclass = $class->new();
+      };
+      Carp::confess("Unabled to load project $class: $@") if $@;
+    }
+    if (defined $subclass) {
+      $subclass->{$_} = $args{$_} for keys %args;  
+      return $subclass;
+    }
+  }
   return $self;
 }
 
-sub id
-{
-  my $self = shift;
+sub __projects_from_hashref {
+  my $hashref = shift;
 
-  return $self->{'id'};
+  my $projects = [];
+  foreach my $key (sort keys %$hashref) {
+    push @$projects, Project->new(%{$hashref->{$key}});
+  }
+  return $projects;
 }
 
-sub name
-{
-  my $self = shift;
-
-  return $self->{'name'};
-}
-
-sub color
-{
-  my $self = shift;
-
-  return $self->{'color'};
-}
-
-sub queue_size
-{
-  my $self = shift;
-
-  return $self->{'queue_size'};
-}
-
-sub autoinherit
-{
-  my $self = shift;
-
-  return $self->{'autoinherit'};
-}
-
-sub group_volumes
-{
-  my $self = shift;
-
-  return $self->{'group_volumes'};
-}
-
-sub single_review
-{
-  my $self = shift;
-
-  return $self->{'single_review'};
-}
-
-sub primary_authority
-{
-  my $self = shift;
-
-  return $self->{'primary_authority'};
-}
-
-sub secondary_authority
-{
-  my $self = shift;
-
-  return $self->{'secondary_authority'};
-}
+# sub id
+# {
+#   my $self = shift;
+# 
+#   return $self->{'id'};
+# }
+# 
+# sub name
+# {
+#   my $self = shift;
+# 
+#   return $self->{'name'};
+# }
+# 
+# sub queue_size
+# {
+#   my $self = shift;
+# 
+#   return $self->{'queue_size'};
+# }
+# 
+# sub autoinherit
+# {
+#   my $self = shift;
+# 
+#   return $self->{'autoinherit'};
+# }
+# 
+# sub group_volumes
+# {
+#   my $self = shift;
+# 
+#   return $self->{'group_volumes'};
+# }
+# 
+# sub single_review
+# {
+#   my $self = shift;
+# 
+#   return $self->{'single_review'};
+# }
+# 
+# sub primary_authority
+# {
+#   my $self = shift;
+# 
+#   return $self->{'primary_authority'};
+# }
+# 
+# sub secondary_authority
+# {
+#   my $self = shift;
+# 
+#   return $self->{'secondary_authority'};
+# }
 
 sub EvaluateCandidacy
 {
@@ -155,6 +199,7 @@ sub FormatReviewData
 
 # Check the CGI parameters and return undef if there is not issue, or an
 # error message if there is an issue to be displayed in the Review page.
+# $cgi parameter needs to be replaced with a Review hash assembled by ReviewsController.
 sub ValidateSubmission
 {
   my $self = shift;

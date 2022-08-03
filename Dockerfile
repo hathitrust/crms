@@ -38,7 +38,6 @@ RUN apt-get update && apt-get install -y \
   libdbd-mock-perl \
   libdbd-mysql-perl \
   libdbd-sqlite3-perl \
-  libdevel-cover-perl \
   libdevel-globaldestruction-perl \
   libdevel-stacktrace-perl \
   libdigest-sha-perl \
@@ -161,6 +160,7 @@ RUN cpan -T \
   CGI::PSGI \
   Data::Faker \
   Data::Faker::Internet \
+  Devel::Cover \
   OAuth::Lite \
   Plack::Middleware::TrailingSlashKiller \
   Plack::Response \

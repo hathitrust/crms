@@ -9,7 +9,7 @@ use lib "$FindBin::Bin/lib";
 use Factories;
 use TestHelper;
 
-my $crms = TestHelper::CRMS;
+my $crms = TestHelper->new->crms;
 $crms->AttrReasonSync();
 
 ###==== new() ====###

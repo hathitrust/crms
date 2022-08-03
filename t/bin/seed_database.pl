@@ -4,26 +4,30 @@ use warnings;
 use utf8;
 
 use Data::Dumper;
-use DBI;
+#use DBI;
 use FindBin;
 use Term::ANSIColor qw(:constants);
 
 use lib "$FindBin::Bin/../lib";
 use Factories;
+use TestHelper;
 
-use lib "$FindBin::Bin/../../lib";
-use User;
+#use lib "$FindBin::Bin/../../lib";
+#use User;
 
 $Term::ANSIColor::AUTORESET = 1;
 
 print YELLOW "========== Seeding Database ===============\n";
-my $dbh = DBI->connect("DBI:mysql:database=crms;host=mariadb", 'crms', 'crms',
-  { PrintError => 0, RaiseError => 1, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
-$dbh->{mysql_enable_utf8} = 1;
-$dbh->{mysql_auto_reconnect} = 1;
-$dbh->do('SET NAMES "utf8";');
+#my $dbh = DBI->connect("DBI:mysql:database=crms;host=mariadb", 'crms', 'crms',
+#  { PrintError => 0, RaiseError => 1, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
+#$dbh->{mysql_enable_utf8} = 1;
+#$dbh->{mysql_auto_reconnect} = 1;
+#$dbh->do('SET NAMES "utf8";');
+
+my $dbh = TestHelper->new->db;
 
 my @sqls = (
+  'DELETE FROM projectusers',
   'DELETE FROM licensing',
   'DELETE FROM users',
 );

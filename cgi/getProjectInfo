@@ -16,64 +16,41 @@ my $crms = CRMS->new(cgi => $cgi,
 my %data;
 my @errs;
 my $q = $cgi->param('q');
-my %rs = ('setProjectColor' => 'a',
-          'addProject'      => 'a');
-my $qual = $crms->GetUserQualifications();
-my $rest = $rs{$q};
-if (!$crms->DoQualificationsAndRestrictionsOverlap($qual, $rest))
+
+if ($q eq 'setProjectProperty')
 {
-  push @errs, 'insufficient privileges ($qual vs $rest) for this operation';
-}
-else
-{
-  if ($q eq 'setProjectColor')
+  my $id = $cgi->param('id');
+  $id = undef if $id eq '0' or $id eq '';
+  my $prop = $cgi->param('property');
+  $crms->Note("Set property $prop for $id");
+  my @values = split ',', $cgi->param('value');
+  if ($prop eq 'users')
   {
-    my $id = $cgi->param('id');
-    my $color = $cgi->param('color');
-    $color =~ s/^#+// if defined $color;
-    $crms->PrepareSubmitSql('UPDATE projects SET color=? WHERE id=?', $color, $id);
+    $crms->SetProjectUsers($id, @values);
   }
-  elsif ($q eq 'setProjectProperty')
+  else
   {
-    my $id = $cgi->param('id');
-    $id = undef if $id eq '0' or $id eq '';
-    my $prop = $cgi->param('property');
-    $crms->Note("Set property $prop for $id");
-    my @values = split ',', $cgi->param('value');
-    if ($prop eq 'users')
+    my $table = 'project'. $prop;
+    my %map = ('rights' => 'rights', 'categories' => 'category',
+               'authorities' => 'authority', 'users' => 'user');
+    my ($f1, $f2) = ('project', $map{$prop});
+    my $sql = 'DELETE FROM '. $table. ' WHERE '. $f1;
+    $sql .= (defined $id)? '=?':' IS NULL';
+    my @args = ($id);
+    @args = () unless defined $id;
+    $crms->PrepareSubmitSql($sql, @args);
+    foreach my $value (@values)
     {
-      $crms->SetProjectUsers($id, @values);
-    }
-    else
-    {
-      my $table = 'project'. $prop;
-      my %map = ('rights' => 'rights', 'categories' => 'category',
-                 'authorities' => 'authority', 'users' => 'user');
-      my ($f1, $f2) = ('project', $map{$prop});
-      my $sql = 'DELETE FROM '. $table. ' WHERE '. $f1;
-      $sql .= (defined $id)? '=?':' IS NULL';
-      my @args = ($id);
-      @args = () unless defined $id;
-      $crms->PrepareSubmitSql($sql, @args);
-      foreach my $value (@values)
-      {
-        $crms->PrepareSubmitSql('INSERT INTO '. $table. ' ('.$f1. ','. $f2. ') VALUES (?,?)', $id, $value);
-      }
+      $crms->PrepareSubmitSql('INSERT INTO '. $table. ' ('.$f1. ','. $f2. ') VALUES (?,?)', $id, $value);
     }
   }
-  elsif ($q eq 'addProject')
-  {
-    my $name = $cgi->param('name');
-    my $id = $crms->AddProject($name);
-    my $ref = $crms->GetProjectsRef($id);
-    %data = %{$ref->[0]};
-  }
-  elsif ($q eq 'getProjects')
-  {
-    my $ref = $crms->GetProjectsRef(1);
-    $data{'projects'} = $ref;
-  }
 }
+elsif ($q eq 'getProjects')
+{
+  my $ref = $crms->GetProjectsRef(1);
+  $data{'projects'} = $ref;
+}
+
 push @errs, $_ for @{$crms->GetErrors()};
 $data{'error'} = ucfirst join ';', @errs if scalar @errs;
 print $cgi->header(-type=>'application/json', -charset=>'utf-8');

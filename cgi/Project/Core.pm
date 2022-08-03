@@ -6,6 +6,7 @@ use warnings;
 
 use Utilities;
 
+# FIXME: can this boilerplate be removed here and in other Project subclasses?
 sub new
 {
   my $class = shift;

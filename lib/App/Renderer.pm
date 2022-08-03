@@ -1,5 +1,8 @@
 package App::Renderer;
 
+use strict;
+use warnings;
+
 use Data::Dumper;
 use Template;
 
@@ -29,19 +32,19 @@ sub render {
   my $tt = Template->new($TEMPLATE_TOOLKIT_CONFIG);
   # PROCESS MAIN TEMPLATE
   my $template = $self->get_template($path);
-  #$self->{vars}->{flash}->add('notice', sprintf "<br/><br/><h4>RENDERER PROCESSING $template\n");
+  # uncoverable branch true
   if (!$tt->process($template, $self->{vars}, \$output)) {
-    my $tt_err = $tt->error;
-    $tt_err =~ s/\n+/<br\/>\n/gm;
-    $self->{vars}->{flash}->add('alert', $tt_err);
-    $output .= sprintf "<h3>%s</h3>\n", $tt_err;
+    my $tt_err = $tt->error; # uncoverable statement
+    $tt_err =~ s/\n+/<br\/>\n/gm; # uncoverable statement
+    $self->{vars}->{flash}->add('alert', $tt_err); # uncoverable statement
+    $output .= sprintf "<h3>%s</h3>\n", $tt_err; # uncoverable statement
   }
   $layout = $self->get_layout($layout);
   $self->{vars}->{content} = $output;
   $output = '';
-  # PROCESS LAYOUT INSIDE TEMPLATE
+  # PROCESS OUTER LAYOUT WITH CONTENT OF INNER TEMPLATE
   if (!$tt->process($layout, $self->{vars}, \$output)) {
-    $output .= sprintf "<h3><pre>%s</pre></h3>\n", $tt->error();
+    $output .= sprintf "<h3><pre>%s</pre></h3>\n", $tt->error(); # uncoverable statement
   }
   delete $self->{vars}->{content}; # Necessary?
   return $output;

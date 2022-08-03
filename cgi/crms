@@ -1,12 +1,12 @@
 #!/usr/bin/perl
 
+use strict;
+use warnings;
+
 BEGIN {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
 }
-
-use strict;
-use warnings;
 
 use Carp;
 use CGI;

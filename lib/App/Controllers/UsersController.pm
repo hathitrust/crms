@@ -62,15 +62,20 @@ use Data::Dumper;
   my $user = User::Find($uid);
   $self->{vars}->{user} = $user;
   $self->{vars}->{flash}->add('notice', sprintf("__update dealing with %s", Dumper $self->{params}));
+  $self->{vars}->{flash}->add('notice', sprintf("__update applying to %s", Dumper $user));
   Carp::confess "No user found in __update params" unless defined $self->{params}->{user};
-  foreach my $key (%{$self->{params}->{user}}) {
+  foreach my $key (keys %{$self->{params}->{user}}) {
+    $self->{vars}->{flash}->add('notice', sprintf("key %s value %s", Dumper $key, Dumper $self->{params}->{user}->{$key}));
     $user->{$key} = $self->{params}->{user}->{$key};
   }
   $self->__setup_presenter;
+  $self->{vars}->{flash}->add('notice', sprintf("__update saving %s", Dumper $user));
   if ($self->{vars}->{user}->save) {
     # FIXME: this needs to be done in the session.
-    $self->{vars}->{flash}->add('notice', "$self->{vars}->{user}->{name} updated");
-    return $self->redirect("/crms/users/$uid");
+    $self->{vars}->{flash}->add('notice',
+      sprintf("$self->{vars}->{user}->{name} updated<br/>\n%s", Dumper $self->{vars}->{user}));
+    #return $self->redirect("/crms/users/$uid");
+    return $self->render('users/edit');
   } else {
     $self->{vars}->{flash}->add('warning', $self->{vars}->{user}->errors);
     return $self->render('users/edit');

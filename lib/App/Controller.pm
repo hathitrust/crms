@@ -57,7 +57,7 @@ sub render {
   #$self->{vars}->{flash}->add('notice',
   #  sprintf("Controller->render got body <pre>%s<pre>", Dumper $self->{body}));
   }
-  return undef;
+  return;
 }
 
 # Called by action methods

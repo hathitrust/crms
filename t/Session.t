@@ -13,7 +13,7 @@ use Factories;
 
 use CRMS::Session;
 
-my $crms = TestHelper::CRMS();
+#my $crms = TestHelper::CRMS;
 
 # Write access via mdp-admin user should only be used for seeding the database.
 my $dbh = DBI->connect("DBI:mysql:database=ht;host=mariadb_ht", 'mdp-admin', 'mdp-admin',
@@ -45,77 +45,62 @@ foreach my $sql (@sqls) {
   $sth->execute();
 }
 
-subtest "ENV{REMOTE_USER} -> uniqname" => sub {
+subtest "ENV{X-Remote-User} -> uniqname" => sub {
   my $user = Factories::User(email => 'uniqname_1');
-  $ENV{'REMOTE_USER'} = 'uniqname_1';
-  my $session = CRMS::Session->new;
+  my $session = CRMS::Session->new(env => {'X-Remote-User' => 'uniqname_1'});
   is($session->{remote_user}, $user->{id});
-  delete $ENV{'REMOTE_USER'};
   $user->destroy;
 };
 
-subtest "ENV{REMOTE_USER} -> HT opaque Shib ID" => sub {
+subtest "ENV{X-Remote-User} -> HT opaque Shib ID" => sub {
   my $user = Factories::User(email => 'user_2@example.com');
-  $ENV{'REMOTE_USER'} = 'opaque_shib_id_2';
-  my $session = CRMS::Session->new;
+  my $session = CRMS::Session->new(env => {'X-Remote-User' => 'opaque_shib_id_2'});
   is($session->{remote_user}, $user->{id});
-  delete $ENV{'REMOTE_USER'};
   $user->destroy;
 };
 
-subtest "ENV{email} -> ht_users.email" => sub {
-  $ENV{'email'} = 'user_3@example.com';
+subtest "ENV{X-Shib-mail} -> ht_users.email" => sub {
   my $user = Factories::User(email => 'user_3@example.com');
-  my $session = CRMS::Session->new;
+  my $session = CRMS::Session->new(env => {'X-Shib-mail' => 'user_3@example.com'});
   is($session->{remote_user}, $user->{id});
-  delete $ENV{'email'};
   $user->destroy;
 };
 
-subtest "Weird situation ENV{email} -> ht_users.userid and ht_users.email -> crms.users.email" => sub {
-  $ENV{'email'} = 'user_4_userid@example.com';
+subtest "Weird situation X-Shib-mail -> ht_users.userid and ht_users.email -> crms.users.email" => sub {
   my $user = Factories::User(email => 'user_4_email@example.com');
-  my $session = CRMS::Session->new;
+  my $session = CRMS::Session->new(env => {'X-Shib-mail' => 'user_4_userid@example.com'});
   is($session->{remote_user}, $user->{id});
-  delete $ENV{'email'};
   $user->destroy;
 };
 
 subtest "test NeedStepUpAuth" => sub {
-  my $session = CRMS::Session->new;
+  my $session = CRMS::Session->new(env => {});
   is($session->NeedStepUpAuth('ht_user_no_mfa'), 0);
-  $ENV{'Shib_AuthnContext_Class'} = 'test_shib_authncontext_class';
-  $ENV{'Shib_Identity_Provider'} = 'test_entityID';
-  $session = CRMS::Session->new;
+  my $env = {'X-Shib-AuthnContext-Class' => 'test_shib_authncontext_class',
+    'X-Shib-Identity-Provider' => 'test_entityID'};
+  $session = CRMS::Session->new(env => $env);
   is($session->NeedStepUpAuth('ht_user_mfa'), 0);
-  $ENV{'Shib_Identity_Provider'} = 'test_entityID_2';
-  $session = CRMS::Session->new;
+  $env = {'X-Shib-AuthnContext-Class' => 'test_shib_authncontext_class',
+    'X-Shib-Identity-Provider' => 'test_entityID_2'};
+  $session = CRMS::Session->new(env => $env);
   is($session->NeedStepUpAuth('ht_user_mfa'), 1);
-  #printf STDERR "AUTH NOTE %s\n", $crms->get('auth_note');
-  #printf STDERR "%s\n", Dumper $crms;
-  delete $ENV{'Shib_AuthnContext_Class'};
-  delete $ENV{'Shib_Identity_Provider'};
 };
 
 subtest "SetAlias" => sub {
   subtest "SetAlias without an alias has no effect" => sub {
     my $user = Factories::User(email => 'uniqname_1');
-    $ENV{'REMOTE_USER'} = 'uniqname_1';
-    my $session = CRMS::Session->new;
+    my $session = CRMS::Session->new(env => {'X-Remote-User' => 'uniqname_1'});
     $session->SetAlias;
     ok(!defined $session->{alias_user_id});
-    delete $ENV{'REMOTE_USER'};
     $user->destroy;
   };
 
   subtest "SetAlias with an existing user sets alias_user_id" => sub {
     my $user = Factories::User(email => 'uniqname_1');
     my $user2 = Factories::User();
-    $ENV{'REMOTE_USER'} = 'uniqname_1';
-    my $session = CRMS::Session->new;
+    my $session = CRMS::Session->new(env => {'X-Remote-User' => 'uniqname_1'});
     $session->SetAlias($user2->{id});
     is($session->{alias_user_id}, $user2->{id});
-    delete $ENV{'REMOTE_USER'};
     $user->destroy;
     $user2->destroy;
   };
@@ -123,23 +108,19 @@ subtest "SetAlias" => sub {
   subtest "SetAlias with an existing alias drops alias_user_id" => sub {
     my $user = Factories::User(email => 'uniqname_1');
     my $user2 = Factories::User();
-    $ENV{'REMOTE_USER'} = 'uniqname_1';
-    my $session = CRMS::Session->new;
+    my $session = CRMS::Session->new(env => {'X-Remote-User' => 'uniqname_1'});
     $session->SetAlias($user2->{id});
     $session->SetAlias();
     ok(!defined $session->{alias_user_id});
-    delete $ENV{'REMOTE_USER'};
     $user->destroy;
     $user2->destroy;
   };
 
   subtest "SetAlias with an same user does not set alias_user_id" => sub {
     my $user = Factories::User(email => 'uniqname_1');
-    $ENV{'REMOTE_USER'} = 'uniqname_1';
-    my $session = CRMS::Session->new;
+    my $session = CRMS::Session->new(env => {'X-Remote-User' => 'uniqname_1'});
     $session->SetAlias($user->{id});
     ok(!defined $session->{alias_user_id});
-    delete $ENV{'REMOTE_USER'};
     $user->destroy;
   };
 };

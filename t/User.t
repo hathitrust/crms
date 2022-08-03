@@ -2,21 +2,23 @@ use strict;
 use warnings;
 use utf8;
 
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+#BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
 
 use Data::Dumper;
 use FindBin;
-use lib "$FindBin::Bin/lib";
 use Scalar::Util;
 use Test::Exception;
 use Test::More;
 
-use CRMS;
-use User;
+use lib "$FindBin::Bin/lib";
 use Factories;
 use TestHelper;
 
-my $crms = TestHelper::CRMS();
+#use CRMS;
+use User;
+
+
+my $crms = TestHelper->new->crms;
 
 test_All();
 test_Find();

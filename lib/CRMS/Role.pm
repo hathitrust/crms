@@ -1,4 +1,4 @@
-package Role;
+package CRMS::Role;
 
 use strict;
 use warnings;
@@ -14,7 +14,7 @@ use Utilities;
 
 sub All {
   my $sql = 'SELECT * FROM roles ORDER BY id';
-  my $ref = __CRMS_DBH()->selectall_hashref($sql, 'id');
+  my $ref = CRMS::DB->new->dbh->selectall_hashref($sql, 'id');
   return __roles_from_hashref($ref);
 }
 
@@ -24,7 +24,7 @@ sub Find {
   Carp::confess "Role::Find called with undef" unless defined $id;
 
   my $sql = 'SELECT * FROM roles WHERE id=?';
-  my $ref = __CRMS_DBH()->selectall_hashref($sql, 'id', undef, $id);
+  my $ref = CRMS::DB->new->dbh->selectall_hashref($sql, 'id', undef, $id);
   my $roles = __roles_from_hashref($ref);
   return (scalar @$roles)? $roles->[0] : undef;
 }
@@ -44,13 +44,8 @@ sub Where {
     $sql .= join('AND', @clauses);
   }
   $sql .= ' ORDER BY id ASC';
-  my $ref = __CRMS_DBH()->selectall_hashref($sql, 'id', undef, @values);
+  my $ref = CRMS::DB->new->dbh->selectall_hashref($sql, 'id', undef, @values);
   return __roles_from_hashref($ref);
-}
-
-sub __CRMS_DBH {
-  state $dbh = CRMS::DB->new->dbh;
-  return $dbh;
 }
 
 sub new {
@@ -65,14 +60,8 @@ sub __roles_from_hashref {
   my $hashref = shift;
 
   my @roles;
-  push @roles, new Role(%{$hashref->{$_}}) for keys %$hashref;
+  push @roles, new CRMS::Role(%{$hashref->{$_}}) for keys %$hashref;
   return \@roles;
-}
-
-sub is_persisted {
-  my $self = shift;
-
-  return 1;
 }
 
 1;

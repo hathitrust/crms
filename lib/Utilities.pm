@@ -16,6 +16,7 @@ sub new {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
   $UTILITIES_SINGLETON = $self;
+  Time::Piece->use_locale();
   return $self;
 }
 
@@ -30,7 +31,7 @@ sub StringifySql {
 # Returns a parenthesized comma separated list of n question marks.
 sub WildcardList {
   my $self = shift;
-  my    $n = shift;
+  my $n    = shift;
 
   return '()' if $n < 1;
   return '(' . ('?,' x ($n-1)) . '?)';
@@ -67,7 +68,10 @@ sub FormatDate {
   my $self = shift;
   my $date = shift || $self->Today();
 
-  my $t = Time::Piece->strptime($date, "%Y-%m-%d");
+  # Avoid "Garbage at end of string in strptime" noise by using correct pattern.
+  my $pattern = (length $date > 10) ? '%Y-%m-%d %H:%M:%S' : '%Y-%m-%d';
+  my $t = Time::Piece->strptime($date, $pattern);
+  return '' unless defined $t;
   my $fmt = $t->strftime('%A, %B %e %Y');
   $fmt =~ s/\s\s+/ /g;
   return $fmt;
@@ -94,8 +98,7 @@ sub FormatYearMonth {
   return $t->strftime($long ? '%B %Y' : '%b %Y');
 }
 
-sub IsWorkingDay
-{
+sub IsWorkingDay {
   my $self = shift;
   my $time = shift || $self->Today();
   use UMCalendar;
@@ -103,6 +106,18 @@ sub IsWorkingDay
   my $cal = Date::Calendar->new($UMCalendar::UMCal);
   my @parts = split '-', substr($time, 0, 10);
   return ($cal->is_full($parts[0], $parts[1], $parts[2]))? 0:1;
+}
+
+# Difference between time1 and time2 in days.
+sub Timediff {
+  my $self = shift;
+  my $time1 = shift;
+  my $time2 = shift || $self->Now();
+
+  my $t1 = Time::Piece->strptime($time1, "%Y-%m-%d %H:%M:%S");
+  my $t2 = Time::Piece->strptime($time2, "%Y-%m-%d %H:%M:%S");
+  my $delta = $t1 - $t2;
+  return $delta->days;
 }
 
 ##### ===== TEXT UTILITIES ===== #####

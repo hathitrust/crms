@@ -1,16 +1,15 @@
 package App::Root;
 
+use strict;
+use warnings;
+use utf8;
+
 BEGIN {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
 }
 
-use strict;
-use warnings;
-use utf8;
-
 use Carp;
-#use CGI;
 use CGI::Cookie;
 use CGI::PSGI;
 use Data::Dumper;
@@ -57,7 +56,7 @@ sub run {
   my $page = $req->param('p') || 'home';
   my $debug = $req->param('debug');
   my $crms = CRMS->new;
-  my $session = CRMS::Session->new;
+  my $session = CRMS::Session->new(env => $env);
   # Set up default admin user if running in dev
   if ($crms->Instance eq 'dev') {
     my $default_user = User::Where(name => 'Default Admin')->[0];
@@ -135,11 +134,11 @@ sub run {
     #$body .= sprintf "<br/>COOKIE: <pre>%s</pre><br/>\n", ($cookie || '<blank>');
     #$body .= sprintf "<br/>PSGI URI: <pre>%s</pre><br/>\n", $req->uri;
     #$body .= sprintf "<br/><br/><h4>USER</h4><br/><pre>%s</pre><br/>\n", Dumper $session->{user};
-    #$body .= sprintf "<br/><br/><h4>ENV</h4><br/><pre>%s</pre><br/>\n", Dumper $env;
+    $body .= sprintf "<br/><br/><h4>ENV</h4><br/><pre>%s</pre><br/>\n", Dumper $env;
     $body = Encode::encode_utf8($body);
     return [
         '200',
-        [ 'Content-Type' => 'text/html;charset=UTF-8',
+        [ 'Content-Type' => 'text/html; charset=utf-8',
           'Set-Cookie' => $cookie ],
         [ $body ],
     ]; 
@@ -149,7 +148,7 @@ sub run {
     $body =~ s/\n+/<br\/>\n/gm;
     $response = [
       '200',
-      [ 'Content-Type' => 'text/html;charset=UTF-8' ],
+      [ 'Content-Type' => 'text/html; charset=utf-8' ],
       [ $body ],
     ];
   }

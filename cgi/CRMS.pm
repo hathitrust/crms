@@ -36,9 +36,9 @@ binmode(STDOUT, ':encoding(UTF-8)');
 sub new {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
-  
+
   Carp::confess 'ERROR: do not pass sys parameter to CRMS' if defined $args{'sys'};
-  
+
   # If running under Apache.
   $self->set('instance', $ENV{'CRMS_INSTANCE'});
   # If running from command line.
@@ -189,9 +189,9 @@ sub PrepareSubmitSql
   eval { $sth->execute(@_); };
   if ($@) {
     my $msg = sprintf 'SQL failed (%s): %s', Utilities->new->StringifySql($sql, @_), $sth->errstr;
-    Carp::confess($msg) if $self->get('die_on_error');
-    $self->SetError($msg);
-    return 0;
+    Carp::confess($msg);
+    #$self->SetError($msg);
+    #return 0;
   }
   return 1;
 }
@@ -877,7 +877,7 @@ sub CheckAndLoadItemIntoCandidates
       $self->RemoveFromCandidates($id);
     }
   }
-  return undef;
+  return;
 }
 
 sub AddItemToCandidates
@@ -3149,56 +3149,43 @@ sub GetUser {
 
   #return $self->get('user') unless $uid;
   my $user = User::Find($uid);
-  $self->AddUserFields($user) if $user;
+  #$self->AddUserFields($user) if $user;
   return $user;
-}
-
-sub GetUsers
-{
-  my $self = shift;
-  my $ord  = shift || 0;
-
-  my $users = User::All();
-  my @return;
-  foreach my $user (@$users) {
-    push @return, $self->AddUserFields($user);
-  }
-  return \@return;
 }
 
 # Decorate User object with derived data useful for the current user, as well
 # as all of the users displayed on adminUser and editUser pages.
-sub AddUserFields {
-  my $self = shift;
-  my $user = shift;
-
-  my $id = $user->{id};
-  my $progress = 0.0;
-  if (defined $user->{commitment})
-  {
-    my $sql = 'SELECT s.total_time/60.0 FROM userstats s'.
-           ' WHERE s.monthyear=DATE_FORMAT(NOW(),"%Y-%m") AND s.user=?';
-    my $hours = $self->SimpleSqlGet($sql, $id);
-    $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/3600.0 from reviews'.
-           ' WHERE user=?';
-    $hours += $self->SimpleSqlGet($sql, $id);
-    $progress = $hours / (160.0 * $user->{commitment});
-    $progress = 0.0 if $progress < 0.0;
-    $progress = 1.0 if $progress > 1.0;
-    $user->{commitmentFmt} = (100.0 * $user->{commitment}). '%';
-    $user->{progress} = $progress;
-  }
-  $user->{institution_name} = $user->institution->{name};
-  $user->{admin_pages} = $self->GetUserAdminPages($user);
-  $user->{projects} = $self->GetUserProjects($user);
-  $user->{ht_role} = $self->GetUserRole($user);
-  $user->{ips} = $self->GetUserIPs($user);
-  $user->{expiration} = $self->IsUserExpired($user);
-  $user->{roles} = $self->GetUserRoles($user);
-  # Sanity check and update project
-  $self->GetUserCurrentProject($user);
-  return $user;
-}
+# sub AddUserFields {
+#   my $self = shift;
+#   my $user = shift;
+# 
+#   my $id = $user->{id};
+#   my $progress = 0.0;
+#   if (defined $user->{commitment})
+#   {
+#     my $sql = 'SELECT s.total_time/60.0 FROM userstats s'.
+#            ' WHERE s.monthyear=DATE_FORMAT(NOW(),"%Y-%m") AND s.user=?';
+#     my $hours = $self->SimpleSqlGet($sql, $id);
+#     $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(duration)),0)/3600.0 from reviews'.
+#            ' WHERE user=?';
+#     $hours += $self->SimpleSqlGet($sql, $id);
+#     $progress = $hours / (160.0 * $user->{commitment});
+#     $progress = 0.0 if $progress < 0.0;
+#     $progress = 1.0 if $progress > 1.0;
+#     $user->{commitmentFmt} = (100.0 * $user->{commitment}). '%';
+#     $user->{progress} = $progress;
+#   }
+#   $user->{institution_name} = $user->institution->{name};
+#   $user->{admin_pages} = $self->GetUserAdminPages($user);
+#   $user->{projects} = $self->GetUserProjects($user);
+#   $user->{ht_role} = $self->GetUserRole($user);
+#   $user->{ips} = $self->GetUserIPs($user);
+#   $user->{expiration} = $self->IsUserExpired($user);
+#   $user->{roles} = $self->GetUserRoles($user);
+#   # Sanity check and update project
+#   $self->GetUserCurrentProject($user);
+#   return $user;
+# }
 
 
 # List of pages a non-admin user may be granted access to.
@@ -3669,7 +3656,7 @@ sub UpdateUserStats
   $self->SetSystemStatus($tmpstat);
   my $sql = 'DELETE from userstats';
   $self->PrepareSubmitSql($sql);
-  my $users = $self->GetUsers();
+  my $users = User::All();
   foreach my $user (@{$users})
   {
     $sql = 'SELECT DISTINCT DATE_FORMAT(r.time,"%Y-%m") AS ym,e.project'.
@@ -4254,17 +4241,16 @@ sub GetNextItemForReview
 
   my ($id, $sql, $ref);
   eval {
-    my $proj = $self->GetUserCurrentProject($user);
-    my $project_ref = $self->GetProjectRef($proj);
-    my @params = ($user->{id}, $proj);
+    my $project = $user->project;
+    my @params = ($user->{id}, $project->{id});
     my @orders = ('q.priority DESC', 'cnt DESC', 'hash', 'q.time ASC');
     my $sysid;
-    if ($project_ref->group_volumes && $user->is_advanced) {
+    if ($project->group_volumes && $user->is_advanced) {
       $sql = 'SELECT b.sysid FROM reviews r INNER JOIN bibdata b ON r.id=b.id'.
              ' WHERE r.user=? AND hold=0 ORDER BY r.time DESC LIMIT 1';
       $sysid = $self->SimpleSqlGet($sql, $user);
     }
-    my $porder = $project_ref->PresentationOrder();
+    my $porder = $project->PresentationOrder();
     my ($excludeh, $excludei) = ('', '');
 #    my $inc = $self->GetUserIncarnations($user);
 #    my $wc = Utilities->new->WildcardList(scalar @{$inc});
@@ -7091,38 +7077,6 @@ sub Note
   $self->PrepareSubmitSql('INSERT INTO note (note) VALUES (?)', $note);
 }
 
-sub GetUserProjects
-{
-  my $self = shift;
-  my $user = shift || $self->get('user');
-
-  my $sql = 'SELECT pu.project,p.name,'.
-            '(SELECT COUNT(*) FROM queue q WHERE q.project=pu.project AND status=0)'.
-            ' FROM projectusers pu INNER JOIN projects p ON pu.project=p.id WHERE pu.user=?'.
-            ' ORDER BY p.name';
-  #print "$sql\n";
-  my $ref = $self->SelectAll($sql, $user->{id});
-  my @ps = map {{'id' => $_->[0], 'name' => $_->[1], 'count' => $_->[2]};} @{$ref};
-  @ps = () if scalar @ps == 1 and !defined $ref->[0]->[0];
-  return \@ps;
-}
-
-# Get the user's current project, sanity-checking and updating it if necessary.
-sub GetUserCurrentProject {
-  my $self = shift;
-  my $user = shift || $self->get('user');
-
-  my $proj = $user->{project};
-  my $sql = 'SELECT COUNT(*) FROM projectusers WHERE project=? AND user=?';
-  my $ct = $self->SimpleSqlGet($sql, $proj, $user->{id});
-  if (!$ct) {
-    $sql = 'SELECT project FROM projectusers WHERE user=? ORDER BY project ASC LIMIT 1';
-    $proj = $self->SimpleSqlGet($sql, $user->{id});
-    $user->{project} = $proj;
-    $user->save;
-  }
-  return $proj;
-}
 
 # Get a Project object for a single id.
 sub GetProjectRef
@@ -7180,17 +7134,6 @@ sub CountRemainingVolumesForProject
             ' WHERE project=? AND status=0 AND pending_status=0'.
             ' AND locked IS NULL';
   return $self->SimpleSqlGet($sql, $proj);
-}
-
-# Returns the id of the added project, or undef on error.
-sub AddProject
-{
-  my $self     = shift;
-  my $name     = shift;
-
-  my $sql = 'INSERT INTO projects (name) VALUES (?,?)';
-  $self->PrepareSubmitSql($sql, $name);
-  return $self->SimpleSqlGet('SELECT id FROM projects WHERE name=?', $name);
 }
 
 sub AllAssignableRights
@@ -7443,8 +7386,8 @@ sub Licensing
 sub GetRoles {
   my $self = shift;
 
-  use Role;
-  return Role::All();
+  use CRMS::Role;
+  return CRMS::Role::All();
 }
 
 1;

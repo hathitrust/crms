@@ -9,7 +9,7 @@
   </a>
   <br/><br/><br/><br/>
   [% experts = crms.GetSystemVar("expertsEmail") %]
-  [% projs = crms.GetUserProjects(current_user) %]
+  [% projs = current_user.projects %]
   <div class="warningBox">
     <h2>Unable to find a volume for review.</h2>
     <br/><br/>
@@ -36,7 +36,7 @@
     [% IF projs.size() %]
     <div class="warningSubbox">
       <h4>
-      [% proj = crms.GetProjectRef(current_user.project) %]
+      [% proj = current_user.project %]
       Your current project is <i>[% proj.name %]</i>.
       <br/><br/>
       You are on the following [% utils.Pluralize(projs.size, 'project') %]:

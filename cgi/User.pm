@@ -9,9 +9,10 @@ use Carp;
 use Data::Dumper;
 use Scalar::Util;
 
-use DB;
+use CRMS::Role;
+use CRMS::DB;
 use Institution;
-use Role;
+use Project;
 use Utilities;
 
 
@@ -135,7 +136,35 @@ sub save {
   foreach my $field_name (keys %$data) {
     $self->{$field_name} = $data->{$field_name};
   }
+  $self->__save_projects;
   return 1;
+}
+
+# This module assumes shared responsibility with Project.pm over crms.projectusers.
+# The module with primary responsibility is the "one" in a one-to-many situation.
+sub __save_projects {
+  my $self = shift;
+
+  my $projects = $self->{projects};
+  return unless defined $projects;
+
+  my @project_ids = (ref $projects eq 'HASH')? keys(%$projects) : @$projects;
+  my $sql = 'DELETE FROM projectusers WHERE user=?';
+  my $sth = __CRMS_DBH()->prepare($sql);
+  eval { $sth->execute($self->{id}) };
+  if ($@) {
+    Carp::confess sprintf 'User projects save failed (%s): %s',
+      Utilities->new->StringifySql($sql, $self->{id}), $@;
+  }
+  $sql = 'INSERT INTO projectusers (project,user) VALUES (?,?)';
+  $sth = __CRMS_DBH()->prepare($sql);
+  foreach my $project_id (@project_ids) {
+    eval { $sth->execute($project_id, $self->{id}); };
+    if ($@) {
+      Carp::confess sprintf 'User projects save failed (%s): %s',
+        Utilities->new->StringifySql($sql, $project_id, $self->{id}), $@;
+    }
+  }
 }
 
 # Produce field -> value hash with squishy values massaged to be more DB-friendly,
@@ -190,7 +219,7 @@ sub __normalize_commitment {
   my $self       = shift;
   my $commitment = shift;
 
-  return undef unless length $commitment;
+  return unless length $commitment;
 
   if ($commitment !~ m/^\d*(\.?\d)*%?$/) {
     $self->__add_error("commitment '$commitment' not numeric");
@@ -225,7 +254,7 @@ sub is_persisted {
 sub institution {
   my $self = shift;
 
-  return undef unless $self->{institution};
+  return unless $self->{institution};
   return Institution::Find($self->{institution});
 }
 
@@ -278,7 +307,7 @@ sub roles {
   my $sql = 'SELECT role FROM user_roles ur WHERE ur.user=?';
   my $ref = __CRMS_DBH()->selectall_arrayref($sql, undef, $self->{id});
   foreach my $row (@$ref) {
-    my $role = Role::Find($row->[0]);
+    my $role = CRMS::Role::Find($row->[0]);
     Carp::confess("Unable to instantiate Role id $row->[0]");
     push @$roles, $role;
   }
@@ -296,6 +325,64 @@ sub role_id_hash {
   }
   return $role_ids;
 }
+
+# Currently-selected project. DB value can be NULL so this provides a default if possible.
+# FIXME: make sure to test that it returns the project with the lowest id if not currently set.
+sub project {
+  my $self = shift;
+
+  my $project_id = $self->{project};
+  if (!defined $project_id) {
+    my $sql = 'SELECT project FROM projectusers pu WHERE pu.user=? ORDER BY project ASC';
+    my $ref = __CRMS_DBH()->selectall_arrayref($sql, undef, $self->{id});
+    $project_id = $ref->[0]->[0] if scalar @$ref;
+  }
+  return unless defined $project_id;
+  return Project::Find($project_id);
+}
+
+sub projects {
+  my $self = shift;
+
+  my $projects = [];
+  my $sql = 'SELECT project FROM projectusers pu WHERE pu.user=? ORDER BY project ASC';
+  my $ref = __CRMS_DBH()->selectall_arrayref($sql, undef, $self->{id});
+  foreach my $row (@$ref) {
+    my $project = Project::Find($row->[0]);
+    Carp::confess("Unable to instantiate Project id $row->[0]") unless defined $project;
+    push @$projects, $project;
+  }
+  return $projects;
+}
+
+# A hackish distillation of projects() to allow easier lookups in views.
+# This is a utility/helper that could be defined elsewhere.
+sub project_id_hash {
+  my $self = shift;
+
+  my $project_ids = {};
+  foreach my $project (@{$self->projects}) {
+    $project_ids->{$project->{id}} = 1;
+  }
+  return $project_ids;
+}
+
+sub ht_user {
+  my $self = shift;
+
+  my $ht_user;
+  eval {
+    my $sql = 'SELECT * FROM ht_users WHERE userid=? OR email=?'.
+              ' ORDER BY IF(role="crms",1,0) DESC';
+    my $ref = CRMS::DB->new(name => 'ht')->dbh->selectall_arrayref($sql, { Slice => {} },
+      $self->{email}, $self->{email});
+    $ht_user = $ref->[0] if scalar @$ref;
+  };
+  Carp::confess "SQL ERROR: $@" if $@;
+  # FIXME: this is a bogus value for testing
+  return { expires => '2010-01-01 12:55:55' };
+  return $ht_user;
+} 
 
 # Only used in test suite.
 # Could enable this functionality with an environment variable.

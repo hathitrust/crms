@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 
-my $FLASH_KEYS = ['alert', 'warning', 'notice']; # In orer displayed
+my $FLASH_KEYS = ['alert', 'warning', 'notice']; # In order displayed
 my $DEFAULT_FLASH_KEY = 'notice';
 
 sub new {

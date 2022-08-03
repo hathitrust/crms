@@ -21,7 +21,7 @@ services:
 
   web:
     build: .
-    image: nginx
+    #image: nginx
     ports:
       - "8080:8080"
     volumes:
@@ -29,6 +29,7 @@ services:
       - .:/htapps/babel/crms
     environment:
       SDRROOT: /htapps/babel
+      CRMS_ENV_DEVELOPMENT: 1
       CRMS_SQL_HOST: mariadb
       CRMS_SQL_USER: crms
       CRMS_SQL_PASSWD: crms
@@ -46,6 +47,7 @@ services:
       - .:/htapps/babel/crms
     environment:
       SDRROOT: /htapps/babel
+      CRMS_ENV_DEVELOPMENT: 1
       CRMS_SQL_HOST: mariadb
       CRMS_SQL_USER: crms
       CRMS_SQL_PASSWD: crms
@@ -66,6 +68,7 @@ services:
       - .:/htapps/babel/crms
     environment:
       SDRROOT: /htapps/babel
+      CRMS_ENV_DEVELOPMENT: 1
       CRMS_SQL_HOST: mariadb
       CRMS_SQL_USER: crms
       CRMS_SQL_PASSWD: crms

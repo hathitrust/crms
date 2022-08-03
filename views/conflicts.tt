@@ -1,8 +1,5 @@
-[% projs = crms.GetUserProjects() %]
-[% IF projs.size %]
-  [% proj = crms.GetProjectRef(crms.get('user').project).name %]
-  [% flag = " &#x2014; " _ proj _ " Project" %]
-[% END %]
+[% proj = current_user.project().name %]
+[% flag = " &#x2014; " _ proj _ " Project" %]
 
 <h2>Conflicts[% flag %]:</h2>
 

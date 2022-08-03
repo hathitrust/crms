@@ -14,7 +14,6 @@ Right now we are sort of hard-coding in reviewer and expert as the only two avai
 
 <div style="position:relative;border-style:solid;width:38em;border-width:1px;padding:10px;">
   [% action = (user.is_persisted())? '/crms/users/' _ user.id  : '/crms/users/new' %]
-  
   <form action="[% action %]" method="post">
     
     [% presenter.field_label('email', 1) %]
@@ -23,11 +22,8 @@ Right now we are sort of hard-coding in reviewer and expert as the only two avai
     [% presenter.field_label('name', 1) %]
     [% presenter.edit_field_value('name') %]
     <br/>
-
     [% presenter.field_label('institution', 1) %]
     [% presenter.edit_field_value('institution') %]
-
-    [% projects = crms.GetUserProjects(user) %]
 
     <fieldset id="privGroup">Privileges:<br/>
       <input type="checkbox" name="user[reviewer]" id="reviewerCB" [% (user.is_reviewer)? 'checked' : '' %]/>
@@ -68,7 +64,7 @@ Right now we are sort of hard-coding in reviewer and expert as the only two avai
         [% END %]
         <input type="checkbox" name="user[projects][[% proj.id %]]" id="project_[% proj.id %]"
                [% IF found %]checked="checked"[% END %]/>
-        <label for="Project[% proj.id %]CB">[% proj.name %]</label><br/>
+        <label for="project_[% proj.id %]">[% proj.name %]</label><br/>
       [% END %]
       </fieldset>
     [% END %]

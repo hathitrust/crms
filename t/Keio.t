@@ -2,18 +2,17 @@ use strict;
 use warnings;
 use utf8;
 
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+#BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
 
 use FindBin;
 use Test::More;
 
 use lib "$FindBin::Bin/lib";
-#use CRMS;
 use TestHelper;
 
 binmode(STDOUT, ':encoding(UTF-8)');
 
-my $keio = Keio->new('crms' => TestHelper::CRMS);
+my $keio = Keio->new('crms' => TestHelper->new->crms);
 ok($keio , 'new returns a value');
 
 ok(ref $keio->Tables() eq 'ARRAY', 'Tables return value is arrayref');

@@ -1,23 +1,29 @@
 package CRMS::Session;
 
+use strict;
+use warnings;
+
 use CRMS::DB;
 use User;
 
 sub new {
-  my $class = shift;
-
-  my $self = { @_ };
-  bless($self, $class);
+  my ($class, %args) = @_;
+  my $self = bless {}, $class;
+  $self->{$_} = $args{$_} for keys %args;
+  Carp::confess "No Env object passed to Session" unless $args{env};
   $self->SetupUser;
   return $self;
 }
 
+# FIXME: can this be split into routines that identify ht.ht_users and crms.users
+# respectively? It'd read a lot nicer.
+
 # Identify ht.ht_users.id and crms.users.email/id from environment.
-# 1. Try REMOTE_USER as ht.ht_users.userid
-# 1a. Try REMOTE_USER as crms.users.email
+# 1. Try X-Remote-User as ht.ht_users.userid
+# 1a. Try X-Remote-User as crms.users.email
 # 1b. Try ht.ht_users.userid as crms.users.email
-# 2. Try ENV{email} (minus umich) as ht.ht_users.userid
-# 2a. Try ENV{email} as crms.users.email
+# 2. Try ENV X-Shib-mail (minus umich) as ht.ht_users.userid
+# 2a. Try ENV X-Shib-mail as crms.users.email
 # 2b. Try ht.ht_users.userid as crms.users.email
 # Then, set login credentials as remote_user and user as alias if it is set.
 sub SetupUser {
@@ -31,9 +37,9 @@ sub SetupUser {
   my ($ht_user, $crms_user, $crms_id);
   my $usersql = 'SELECT id FROM users WHERE email=?';
   my $htsql = 'SELECT email FROM ht_users WHERE userid=?';
-  my $candidate = $ENV{'REMOTE_USER'};
+  my $candidate = $self->{env}->{'X-Remote-User'};
   $candidate = lc $candidate if defined $candidate;
-  $note .= sprintf "ENV{REMOTE_USER}=%s\n", (defined $candidate)? $candidate:'<undef>';
+  $note .= sprintf "ENV{X-Remote-User}=%s\n", (defined $candidate)? $candidate:'<undef>';
   if ($candidate) {
     my $candidate2;
     my $ref = $ht_dbh->selectall_arrayref($htsql, undef, $candidate);
@@ -42,7 +48,6 @@ sub SetupUser {
       $note .= "ht_users.userid=$ht_user\n";
       $candidate2 = $ref->[0]->[0];
     }
-    #$crms_id = $crms_dbh->selectall_arrayref($usersql, undef, $candidate)->[0]->[0];
     $ref = $crms_dbh->selectall_arrayref($usersql, undef, $candidate);
     $crms_id = $ref->[0]->[0] if scalar @$ref;
     if ($crms_id) {
@@ -58,10 +63,10 @@ sub SetupUser {
     }
   }
   if (!$crms_user || !$ht_user) {
-    $candidate = $ENV{'email'};
+    $candidate = $self->{env}->{'X-Shib-mail'};
     $candidate = lc $candidate if defined $candidate;
     $candidate =~ s/\@umich.edu// if defined $candidate;
-    $note .= sprintf "ENV{email}=%s\n", (defined $candidate)? $candidate:'<undef>';
+    $note .= sprintf "ENV{X-Shib-mail}=%s\n", (defined $candidate)? $candidate:'<undef>';
     if ($candidate) {
       # Candidate is e-mail address with umich stripped
       my $candidate2;
@@ -127,8 +132,8 @@ sub NeedStepUpAuth {
   my $mfa = $ht_dbh->selectall_arrayref($sql, undef, $user)->[0]->[0];
   return 0 unless $mfa;
 
-  my $idp = $ENV{'Shib_Identity_Provider'};
-  my $class = $ENV{'Shib_AuthnContext_Class'};
+  my $idp = $self->{env}->{'X-Shib-Identity-Provider'};
+  my $class = $self->{env}->{'X-Shib-AuthnContext-Class'};
   if (defined $class) {
     my $dbclass;
     $sql = 'SELECT shib_authncontext_class FROM ht_institutions WHERE entityID=?';
@@ -141,8 +146,8 @@ sub NeedStepUpAuth {
       my $template = "https://$server/Shibboleth.sso/Login?".
                      "entityID=$idp&&authnContextClassRef=$dbclass";
       $self->{stepup_redirect} = $template;
-      my $note = sprintf "ENV{Shib_Identity_Provider}='$idp'\n".
-                         "ENV{Shib_AuthnContext_Class}='$class'\n".
+      my $note = sprintf "ENV{X-Shib-Identity-Provider}='$idp'\n".
+                         "ENV{X-Shib-AuthnContext-Class}='$class'\n".
                          "DB class=%s\n".
                          'TEMPLATE=%s',
                          (defined $dbclass)? $dbclass:'<undef>',

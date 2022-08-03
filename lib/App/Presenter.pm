@@ -22,6 +22,25 @@ sub new {
   return $self;
 }
 
+# Lowercase version of the object this class is a presenter for.
+# This needs to be implemented by subclasses.
+sub form_object_name {
+  my $self  = shift;
+
+  # Generic value for generic superclass.
+  #return 'obj';
+  Carp::confess "App::Presenter form_object_name should be defined by subclass";
+}
+
+# The prefix for edit fields like 'name' which get submitted as (for example) 'user[name]'.
+sub form_field_name {
+  my $self  = shift;
+  my $field = shift;
+
+  my $object_name = $self->form_object_name;
+  return $object_name . '[' . $field . ']';
+}
+
 sub all_fields {
   my $self = shift;
 
@@ -77,7 +96,9 @@ sub edit_field_value {
   if (my $ref = eval { $self->{obj}->can($field); }) {
     $value = $self->{obj}->$ref();
   }
-  return "<input id='$field' type='text' value='$value' size='$TEXT_FIELD_SIZE'/>\n";
+  my $name = $self->form_field_name($field);
+  return "<input id='$field' type='text' value='$value'
+    size='$TEXT_FIELD_SIZE' name='$name'/>\n";
 }
 
 1;

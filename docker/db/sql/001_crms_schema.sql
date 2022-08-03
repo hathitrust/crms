@@ -112,7 +112,6 @@ DROP TABLE IF EXISTS `projects`;
 CREATE TABLE `projects` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(64) NOT NULL,
-  `color` varchar(6) DEFAULT NULL,
   `queue_size` int(11) NOT NULL DEFAULT '0',
   `autoinherit` tinyint(4) NOT NULL DEFAULT '0',
   `group_volumes` tinyint(4) NOT NULL DEFAULT '0',

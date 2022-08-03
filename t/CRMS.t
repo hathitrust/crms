@@ -12,8 +12,7 @@ use Factories;
 
 use User;
 
-my $crms = TestHelper::CRMS;
-$crms->set('die_on_error', 1);
+my $crms = TestHelper->new->crms;
 ok(defined $crms);
 
 test_Version();

@@ -47,7 +47,6 @@ addEvent(window, 'load', function(e)
     <th scope="col">Access</th>
     <th scope="col">Expires</th>
     <th scope="col">Commitment[% IF uadmin %]<br/>(Progress)[% END %]</th>
-    <th scope="col">Note</th>
   </tr>
   [% FOREACH u IN users %]
     [% presenter = controller.presenter_for_user(u) %]
@@ -81,7 +80,7 @@ addEvent(window, 'load', function(e)
           [% roles.join(', ') %]
         [% END %]
       </td>
-      <td>[% u.institution().name %]</td>
+      <td>[% u.institution().short_name() %]</td>
       <td style="text-align:center;">[% presenter.show_field_value('reviewer') %]</td>
       <td style="text-align:center;">[% presenter.show_field_value('advanced') %]</td>
       <td style="text-align:center;">[% presenter.show_field_value('expert') %]</td>
@@ -98,76 +97,45 @@ addEvent(window, 'load', function(e)
         [% END %]
       </td>
       <td style="text-align:center;">
-        [% crms.Dump(u.projects) %]
-        [% IF u.projects.size > 1 %]
-          [% names = [] %]
-          [% FOREACH proj IN u.projects %]
-            [% names.push(proj.name) %]
-          [% END %]
-          [% tip = "<strong>Projects:</strong>" %]
-          [% FOREACH name IN names.sort %]
-            [% tip = tip _ '<br/>' _ name %]
-          [% END %]
-          <img class="tippy" width="16" height="16" alt="Multiple Projects"
-               src="[% crms.WebPath('web', 'help.png') %]"
-               data-tippy-content="[% utils.EscapeHTML(tip) %]"/>
-        [% ELSIF u.projects.size == 1 %]
-          [% u.projects.0.name %]
-        [% END %]
+        [% presenter.show_field_value('projects') %]
       </td>
-      [% IF u.secondary %]
-        <td style="background-color:#e2e2e2;"></td>
-      [% ELSE %]
-        <td>
-        [% IF u.active && !u.internal %]
-          [% IF u.ips.mfa %]
-            <img src="[% crms.WebPath('web', 'img/Duo.png') %]"
-                 alt="Two-factor authentication enabled"
-                 width="20" height="20"/>
-          [% ELSIF !u.ips.keys.size() && (u.reviewer || u.advanced || u.expert) %]
-            <img width="20" height="20" alt="Warning: no IP address"
-                 src="[% warn %]"/>
-          [% ELSE %]
-            [% u.ips.keys.join(', ') %]
-            [% IF !u.email.match("-expert") && !u.email.match("-reviewer") && (u.reviewer || u.advanced) %]
-              [% IF "crms" != u.ht_role %]
-                <span class="red"><br/>Role <strong>[% u.ht_role %]</strong></span>
-              [% END %]
+
+      <td>
+      [% IF u.active && !u.internal %]
+        [% IF u.ips.mfa %]
+          <img src="/crms/web/img/Duo.png"
+               alt="Two-factor authentication enabled"
+               width="20" height="20"/>
+        [% ELSIF !u.ips.keys.size() && (u.reviewer || u.advanced || u.expert) %]
+          <img width="20" height="20" alt="Warning: no IP address"
+               src="[% warn %]"/>
+        [% ELSE %]
+          [% u.ips.keys.join(', ') %]
+          [% IF u.reviewer || u.advanced %]
+            [% IF "crms" != u.ht_role %]
+              <span class="red"><br/>Role <strong>[% u.ht_role %]</strong></span>
             [% END %]
           [% END %]
         [% END %]
-        </td>
-      [% END %]
-      [% IF u.secondary %]
-        <td style="background-color:#e2e2e2;"></td>
-      [% ELSE %]
-        <td>
-        [% IF u.active %]
-          [% IF u.expiration.days.defined && u.expiration.days <= 30 %]
-            <img width="20" height="20" alt="Warning: expires within 30 days"
-                 src="[% warn %]"/>
-          [% END %]
-          [% u.expiration.expires %]
-        [% END %]
       [% END %]
       </td>
-      [% IF u.secondary %]
-        <td style="background-color:#e2e2e2;"></td>
-      [% ELSE %]
-        <td>
-          [% IF u.commitment && u.commitment > 0.0 %]
-            [% u.commitmentFmt %]
-            [% IF u.active && uadmin %]
-              <div class="ProgressBar">
-                <div class="ProgressBarInner"
-                     style="width:[% (u.progress * 100.0) _ '%' %];">
-                </div>
+      
+
+      <td>[% presenter.show_field_value('expires') %]</td>
+
+      <td>
+        [% IF u.commitment && u.commitment > 0.0 %]
+          [% u.commitmentFmt %]
+          [% IF u.active && uadmin %]
+            <div class="ProgressBar">
+              <div class="ProgressBarInner"
+                   style="width:[% (u.progress * 100.0) _ '%' %];">
               </div>
-            [% END %]
+            </div>
           [% END %]
-        </td>
-      [% END %]
-      <td style="text-align:center;">[% u.note %]</td>
+        [% END %]
+      </td>
+      
     </tr>
   [% END %]
 </table>
