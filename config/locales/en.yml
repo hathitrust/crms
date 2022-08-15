@@ -1,0 +1,47 @@
+---
+en:
+  model:
+    role:
+      attribute:
+        id: ID
+        name: Name
+      value:
+        expert: Expert
+        reviewer: Reviewer
+    user:
+      attribute:
+        access: Access
+        active: Active
+        admin: Admin
+        advanced: Advanced
+        commitment: Commitment
+        email: E-mail
+        expert: Expert
+        expires: Expires
+        id: ID
+        institution: Institution
+        internal: Internal
+        name: Name
+        note: Note
+        project: Current Project
+        projects: Projects
+        reviewer: Reviewer
+        role: Current Role
+        roles: Roles
+      error:
+        invalid: Invalid user
+  view:
+    user:
+      edit:
+        privileges: Privileges
+      form:
+        submit: Submit
+      index:
+        add_new_user: Add New User
+      show:
+        edit: Edit
+  controller:
+    user:
+      new:
+        success: Some action succeeded
+        

@@ -3,11 +3,17 @@ package Utilities;
 use strict;
 use warnings;
 
+use Data::Dumper;
 use Date::Calendar;
+use DateTime;
+use DateTime::Format::Strptime;
+use DateTime::TimeZone;
 use POSIX;
 use Time::Piece;
 use Time::Seconds;
 
+my $DEFAULT_TIME_ZONE_NAME = 'America/Detroit';
+my $DEFAULT_LOCALE = 'en';
 my $UTILITIES_SINGLETON = undef;
 
 sub new {
@@ -15,9 +21,18 @@ sub new {
 
   my ($class, %args) = @_;
   my $self = bless {}, $class;
+  # Maybe time zone and default locale should go in a config
+  $self->{tz} = DateTime::TimeZone->new(name => $DEFAULT_TIME_ZONE_NAME);
+  $self->{locale} = $DEFAULT_LOCALE;
   $UTILITIES_SINGLETON = $self;
-  Time::Piece->use_locale();
   return $self;
+}
+
+sub SetLocale {
+  my $self = shift;
+  my $locale = shift || $DEFAULT_LOCALE;
+
+  $self->{locale} = $locale;
 }
 
 ##### ===== DATABASE UTILITIES ===== #####
@@ -65,26 +80,28 @@ sub Now {
 }
 
 sub FormatDate {
-  my $self = shift;
-  my $date = shift || $self->Today();
+  my $self   = shift;
+  my $date   = shift || $self->Today();
 
-  # Avoid "Garbage at end of string in strptime" noise by using correct pattern.
-  my $pattern = (length $date > 10) ? '%Y-%m-%d %H:%M:%S' : '%Y-%m-%d';
-  my $t = Time::Piece->strptime($date, $pattern);
-  return '' unless defined $t;
-  my $fmt = $t->strftime('%A, %B %e %Y');
-  $fmt =~ s/\s\s+/ /g;
-  return $fmt;
+  my $pattern = (length $date > 10) ? '%Y-%m-%d %T' : '%Y-%m-%d';
+  my $locale = DateTime::Locale->load($self->{locale});
+  my $dts = DateTime::Format::Strptime->new(pattern => $pattern, locale => $locale,
+    time_zone => $self->{tz}, on_error => 'croak');
+  my $dt = $dts->parse_datetime($date);
+  return '' unless defined $dt;
+  return $dt->format_cldr($locale->date_format_long);
 }
 
 sub FormatTime {
   my $self = shift;
   my $date = shift || $self->Now();
 
-  my $t = Time::Piece->strptime($date, "%Y-%m-%d %H:%M:%S");
-  my $fmt = $t->strftime('%A, %B %e %Y at %l:%M %p');
-  $fmt =~ s/\s\s+/ /g;
-  return $fmt;
+  my $pattern = '%Y-%m-%d %H:%M:%S';
+  my $locale = DateTime::Locale->load($self->{locale});
+  my $dts = DateTime::Format::Strptime->new(pattern => $pattern, locale => $locale,
+    time_zone => $self->{tz}, on_error => 'croak');
+  my $dt = $dts->parse_datetime($date);
+  return $dt->format_cldr($locale->datetime_format_long);
 }
 
 # Convert a yearmonth-type string, e.g. '2009-08' to English: 'August 2009'
@@ -94,8 +111,12 @@ sub FormatYearMonth {
   my $ym   = shift;
   my $long = shift;
 
-  my $t = Time::Piece->strptime($ym . '-01', "%Y-%m-%d");
-  return $t->strftime($long ? '%B %Y' : '%b %Y');
+  my $dts = DateTime::Format::Strptime->new(pattern => '%Y-%m-%d',
+    time_zone => $self->{tz}, on_error => 'croak');
+  my $locale = DateTime::Locale->load($self->{locale});
+  my $dt = $dts->parse_datetime($ym . '-01');
+  $dt->set_locale($locale);
+  return $dt->format_cldr($long ? $locale->format_for('yMMMM') : $locale->format_for('yMMM'));
 }
 
 sub IsWorkingDay {
@@ -109,6 +130,7 @@ sub IsWorkingDay {
 }
 
 # Difference between time1 and time2 in days.
+# FIXME: use Date::Time::subtract_datetime instead of Time::Piece
 sub Timediff {
   my $self = shift;
   my $time1 = shift;

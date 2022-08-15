@@ -16,7 +16,7 @@ addEvent(window, 'load', function(e)
 [% warn = crms.WebPath('web', 'img/warning.png') %]
 
 [% IF uadmin %]
-  <a href="/crms/users/new" class="btn btn-success">Create New User...</a>
+  <a href="/crms/users/new" class="btn btn-success">[% i18n.t('view.user.index.add_new_user') %]</a>
   <br/><br/>
 [% END %]
 
@@ -33,20 +33,24 @@ addEvent(window, 'load', function(e)
 
 <table class="exportStats" style="white-space:nowrap">
   <tr>
-    <th scope="col">Name<br/><span>(<span style="color:#e2e2e2;">View Stats</span>)</th>
-    <th scope="col">E-mail
+    <th scope="col">[% presenter.field_label('name') %]
+      <br/><span>(<span style="color:#e2e2e2;">View Stats</span>)
+    </th>
+    <th scope="col">[% presenter.field_label('email') %]
       <br/><span>(<span style="color:#e2e2e2;">Detail</span>)
     </th>
-    <th scope="col">Roles</th>
-    <th scope="col">Institution</th>
-    <th scope="col">Reviewer</th>
-    <th scope="col">Advanced</th>
-    <th scope="col">Expert</th>
-    <th scope="col">Admin</th>
-    <th scope="col">Projects</th>
-    <th scope="col">Access</th>
-    <th scope="col">Expires</th>
-    <th scope="col">Commitment[% IF uadmin %]<br/>(Progress)[% END %]</th>
+    <th scope="col">[% presenter.field_label('roles') %]</th>
+    <th scope="col">[% presenter.field_label('institution') %]</th>
+    <th scope="col">[% presenter.field_label('reviewer') %]</th>
+    <th scope="col">[% presenter.field_label('advanced') %]</th>
+    <th scope="col">[% presenter.field_label('expert') %]</th>
+    <th scope="col">[% presenter.field_label('admin') %]</th>
+    <th scope="col">[% presenter.field_label('projects') %]</th>
+    <th scope="col">[% presenter.field_label('access') %]</th>
+    <th scope="col">[% presenter.field_label('expires') %]</th>
+    <th scope="col">[% presenter.field_label('commitment') %]
+      [% IF uadmin %]<br/>(Progress)[% END %]
+    </th>
   </tr>
   [% FOREACH u IN users %]
     [% presenter = controller.presenter_for_user(u) %]
@@ -65,13 +69,12 @@ addEvent(window, 'load', function(e)
       </td>
       <td>
         [% IF uadmin && !u.internal %]
-          <a href="/crms/users/[% u.id %]">[% u.email %]</a>
+          <a href="[% controller.action_path('show', u) %]">[% u.email %]</a>
         [% ELSE %]
           [% u.email %]
         [% END %]
       </td>
       <td>
-        [% crms.Dump(u.roles) %]
         [% IF u.roles.size > 0 %]
           [% roles = [] %]
           [% FOREACH role IN u.roles %]

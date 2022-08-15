@@ -29,26 +29,22 @@ subtest "/crms" => sub {
 
 # FIXME: move this to t/app/users.t
 subtest "/crms/users" => sub {
-  my $res = $test->request(GET "/crms/users"); # HTTP::Response
+  my $res = $test->request(GET "/crms/users");
   is $res->code, 200;
   is $res->message, 'OK';
   is $res->header('Content-Type'), 'text/html; charset=utf-8';
-  #diag $res->header('Last-Modified');
-  #is $res->content, $main;
 };
 
 subtest "/crms/users/:id" => sub {
   my $sql = 'SELECT id,name FROM users LIMIT 1';
   my $ref = TestHelper->new->db->selectall_arrayref($sql);
   my ($uid, $name) = @{$ref->[0]};
-  my $res = $test->request(GET "/crms/users/$uid"); # HTTP::Response
+  my $res = $test->request(GET "/crms/users/$uid");
   is $res->code, 200;
   is $res->message, 'OK';
   is $res->header('Content-Type'), 'text/html; charset=utf-8';
   $name = Utilities->new->EscapeHTML($name);
   ok(index($res->content, $name) >= 0);
-  #diag $res->header('Last-Modified');
-  #is $res->content, $main;
 };
 
 done_testing();

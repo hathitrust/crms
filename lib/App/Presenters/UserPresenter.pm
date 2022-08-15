@@ -5,17 +5,23 @@ use strict;
 use warnings;
 
 #use User;
+use App::I18n;
 use Institution;
 use Utilities;
 
 my $ALL_FIELDS = ['id', 'email', 'name', 'reviewer', 'advanced', 'expert', 'admin',
-  'role', 'note', 'institution', 'commitment', 'project', 'active', 'internal'];
+  'role', 'note', 'institution', 'commitment', 'projects', 'project', 'active', 'internal'];
 
-sub form_object_name {
-  my $self  = shift;
-
-  return 'user';
+sub new {
+  my $class = shift;
+  return $class->SUPER::new(model => 'user', @_);
 }
+
+# sub form_object_name {
+#   my $self  = shift;
+# 
+#   return 'user';
+# }
 
 sub all_fields {
   my $self = shift;
@@ -71,25 +77,29 @@ sub show_projects {
 sub show_reviewer {
   my $self = shift;
 
-  return ($self->{obj}->is_reviewer)? "<span class=\"badge text-bg-success\">Reviewer</span>" : '';
+  my $text = App::I18n::Translate('model.user.attribute.reviewer');
+  return ($self->{obj}->is_reviewer)? "<span class=\"badge text-bg-success\">$text</span>" : '';
 }
 
 sub show_advanced {
   my $self = shift;
 
-  return ($self->{obj}->is_advanced)? "<span class=\"badge text-bg-primary\">Advanced</span>" : '';
+  my $text = App::I18n::Translate('model.user.attribute.advanced');
+  return ($self->{obj}->is_advanced)? "<span class=\"badge text-bg-primary\">$text</span>" : '';
 }
 
 sub show_expert {
   my $self = shift;
 
-  return ($self->{obj}->is_expert)? "<span class=\"badge text-bg-warning\">Expert</span>" : '';
+  my $text = App::I18n::Translate('model.user.attribute.expert');
+  return ($self->{obj}->is_expert)? "<span class=\"badge text-bg-warning\">$text</span>" : '';
 }
 
 sub show_admin {
   my $self = shift;
 
-  return ($self->{obj}->is_admin)? "<span class=\"badge text-bg-danger\">Admin</span>" : '';
+  my $text = App::I18n::Translate('model.user.attribute.admin');
+  return ($self->{obj}->is_admin)? "<span class=\"badge text-bg-danger\">$text</span>" : '';
 }
 
 sub show_expires {
@@ -121,6 +131,17 @@ sub show_expires {
 #   return "<span class=\"badge bg-success\">\N{U+25CF}</span>";
 # }
 
+sub edit_active {
+  my $self = shift;
+
+  my $active = $self->{obj}->{active};
+  my $html = ($active)? '<input name="user[active]" type="hidden" value="0"/>' : '';
+  $html .= '<input type="checkbox" name="user[active]" id="active"' .
+    (($active) ? ' checked' : '') . '/>';
+  use Data::Dumper;
+  $html .= sprintf "<i>%s</i>", Dumper $active;
+  return $html;
+}
 
 sub edit_institution {
   my $self = shift;

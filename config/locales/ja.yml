@@ -1,0 +1,47 @@
+---
+ja:
+  model:
+    role:
+      attribute:
+        id: ID
+        name: 表示名
+      value:
+        expert: エキスパート
+        reviewer: レビュアー
+    user:
+      attribute:
+        access: アクセス
+        active: アクティブ
+        admin: 管理者
+        advanced: 上級
+        commitment: コミットメント
+        email: Eメール
+        expert: エキスパート
+        expires: 有効期限
+        id: ID
+        institution: 機関
+        internal: 内部
+        name: 表示名
+        note: ノート
+        project: 現行の企画
+        projects: 企画
+        reviewer: レビュアー
+        role: 現行の役割
+        roles: 役割
+      error:
+        invalid: Invalid user
+  view:
+    user:
+      edit:
+        privileges: 特権
+      form:
+        submit: 送信する
+      index:
+        add_new_user: 新しいユーザーを追加します
+      show:
+        edit: 編集
+  controller:
+    user:
+      new:
+        success: Some action succeeded
+        

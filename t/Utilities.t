@@ -1,6 +1,10 @@
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use utf8;
+BEGIN {
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
+}
 
 use Test::Exception;
 use Test::More;
@@ -12,17 +16,22 @@ my $utils = Utilities->new();
 my $utils2 = Utilities->new();
 cmp_ok($utils, '==', $utils2, 'Utilities->new always returns the singleton');
 
-test_StringifySql();
-test_WildcardList();
-test_Year();
-test_Today();
-test_Yesterday();
-test_Now();
-test_FormatDate();
-test_FormatTime();
-test_FormatYearMonth();
-test_IsWorkingDay();
-test_EscapeHTML();
+
+subtest "SQL Utilities" => sub {
+  subtest 'StringifySql' => sub {
+    is($utils->StringifySql('SELECT * FROM reviews WHERE id=?', 'mdp.001'),
+      'SELECT * FROM reviews WHERE id=? (mdp.001)');
+    is($utils->StringifySql('SELECT * FROM reviews WHERE id=?', undef),
+      'SELECT * FROM reviews WHERE id=? (<undef>)');
+  };
+
+  subtest 'WildcardList' => sub {
+    is('()', $utils->WildcardList(0));
+    is('(?)', $utils->WildcardList(1));
+    is('(?,?)', $utils->WildcardList(2));
+    is('(?,?,?)', $utils->WildcardList(3));
+  };
+};
 
 subtest "Text Utilities" => sub {
   subtest "Commify" => sub {
@@ -40,22 +49,17 @@ subtest "Text Utilities" => sub {
   };
 };
 
+test_Year();
+test_Today();
+test_Yesterday();
+test_Now();
+test_FormatDate();
+test_FormatTime();
+test_FormatYearMonth();
+test_IsWorkingDay();
+test_EscapeHTML();
 
 done_testing();
-
-sub test_StringifySql {
-  is($utils->StringifySql('SELECT * FROM reviews WHERE id=?', 'mdp.001'),
-    'SELECT * FROM reviews WHERE id=? (mdp.001)');
-  is($utils->StringifySql('SELECT * FROM reviews WHERE id=?', undef),
-    'SELECT * FROM reviews WHERE id=? (<undef>)');
-}
-
-sub test_WildcardList {
-  is('()', $utils->WildcardList(0));
-  is('(?)', $utils->WildcardList(1));
-  is('(?,?)', $utils->WildcardList(2));
-  is('(?,?,?)', $utils->WildcardList(3));
-}
 
 sub test_Year {
   ok($utils->Year() =~ m/\d\d\d\d/);
@@ -76,14 +80,22 @@ sub test_Now {
 }
 
 sub test_FormatDate {
-  is($utils->FormatDate('2025-01-01'), 'Wednesday, January 1 2025');
+  is($utils->FormatDate('2025-01-01'), 'January 1, 2025');
   dies_ok { $utils->FormatDate('garbage') };
+  $utils->SetLocale('ja');
+  is($utils->FormatDate('2025-01-01'), '2025年1月1日');
+  $utils->SetLocale;
 }
 
 sub test_FormatTime {
-  is($utils->FormatTime('2025-01-01 09:00:00'), 'Wednesday, January 1 2025 at 9:00 AM');
-  is($utils->FormatTime('2025-01-01 21:00:00'), 'Wednesday, January 1 2025 at 9:00 PM');
+  is($utils->FormatTime('2025-01-01 09:00:00'), 'January 1, 2025 at 9:00:00 AM EST');
+  is($utils->FormatTime('2025-01-01 21:00:00'), 'January 1, 2025 at 9:00:00 PM EST');
   dies_ok { $utils->FormatTime('garbage') };
+  $utils->SetLocale('ja');
+  is($utils->FormatTime('2025-01-01 09:00:00'), '2025年1月1日 9:00:00 EST');
+  is($utils->FormatTime('2025-01-01 21:00:00'), '2025年1月1日 21:00:00 EST');
+  dies_ok { $utils->FormatTime('garbage') };
+  $utils->SetLocale;
 }
 
 sub test_FormatYearMonth {
@@ -92,6 +104,12 @@ sub test_FormatYearMonth {
   is($utils->FormatYearMonth('2025-12'), 'Dec 2025');
   is($utils->FormatYearMonth('2025-12', 1), 'December 2025');
   dies_ok { $utils->FormatYearMonth('garbage') };
+  $utils->SetLocale('ja');
+  is($utils->FormatYearMonth('2025-01'), '2025年1月');
+  is($utils->FormatYearMonth('2025-01', 1), '2025年1月');
+  is($utils->FormatYearMonth('2025-12'), '2025年12月');
+  is($utils->FormatYearMonth('2025-12', 1), '2025年12月');
+  $utils->SetLocale;
 }
 
 sub test_IsWorkingDay {

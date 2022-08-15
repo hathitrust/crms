@@ -23,7 +23,7 @@ sub SecretConfig {
   return $SECRET_CONFIG;
 }
 
-# To be moved from crms/bin to crms/etc.
+# To be moved from crms/bin to crms/etc or crms/config.
 sub __config_dir {
   my $path = $ENV{SDRROOT};
   $path .= '/' unless $path =~ m/\/$/;

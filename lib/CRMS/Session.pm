@@ -10,7 +10,7 @@ sub new {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
   $self->{$_} = $args{$_} for keys %args;
-  Carp::confess "No Env object passed to Session" unless $args{env};
+  Carp::confess "No env passed to Session" unless $args{env};
   $self->SetupUser;
   return $self;
 }
@@ -19,11 +19,11 @@ sub new {
 # respectively? It'd read a lot nicer.
 
 # Identify ht.ht_users.id and crms.users.email/id from environment.
-# 1. Try X-Remote-User as ht.ht_users.userid
-# 1a. Try X-Remote-User as crms.users.email
+# 1. Try HTTP_X_REMOTE_USER as ht.ht_users.userid
+# 1a. Try HTTP_X_REMOTE_USER as crms.users.email
 # 1b. Try ht.ht_users.userid as crms.users.email
-# 2. Try ENV X-Shib-mail (minus umich) as ht.ht_users.userid
-# 2a. Try ENV X-Shib-mail as crms.users.email
+# 2. Try ENV HTTP_X_SHIB_MAIL (minus umich) as ht.ht_users.userid
+# 2a. Try ENV HTTP_X_SHIB_MAIL as crms.users.email
 # 2b. Try ht.ht_users.userid as crms.users.email
 # Then, set login credentials as remote_user and user as alias if it is set.
 sub SetupUser {
@@ -37,9 +37,9 @@ sub SetupUser {
   my ($ht_user, $crms_user, $crms_id);
   my $usersql = 'SELECT id FROM users WHERE email=?';
   my $htsql = 'SELECT email FROM ht_users WHERE userid=?';
-  my $candidate = $self->{env}->{'X-Remote-User'};
+  my $candidate = $self->{env}->{'HTTP_X_REMOTE_USER'};
   $candidate = lc $candidate if defined $candidate;
-  $note .= sprintf "ENV{X-Remote-User}=%s\n", (defined $candidate)? $candidate:'<undef>';
+  $note .= sprintf "ENV{HTTP_X_REMOTE_USER}=%s\n", (defined $candidate)? $candidate:'<undef>';
   if ($candidate) {
     my $candidate2;
     my $ref = $ht_dbh->selectall_arrayref($htsql, undef, $candidate);
@@ -63,10 +63,10 @@ sub SetupUser {
     }
   }
   if (!$crms_user || !$ht_user) {
-    $candidate = $self->{env}->{'X-Shib-mail'};
+    $candidate = $self->{env}->{'HTTP_X_SHIB_MAIL'};
     $candidate = lc $candidate if defined $candidate;
     $candidate =~ s/\@umich.edu// if defined $candidate;
-    $note .= sprintf "ENV{X-Shib-mail}=%s\n", (defined $candidate)? $candidate:'<undef>';
+    $note .= sprintf "ENV{HTTP_X_SHIB_MAIL}=%s\n", (defined $candidate)? $candidate:'<undef>';
     if ($candidate) {
       # Candidate is e-mail address with umich stripped
       my $candidate2;
@@ -122,7 +122,13 @@ sub SetupUser {
 #
 # NOTE: the $session->{stepup_url} redirect needs a '&target=...' appended
 # to it before use since we don't and maybe shouldn't have access to the
-# CGI environment in this module.
+# Plack request in this module:
+#
+# use URI::Escape;
+# my $target = URI::Escape::uri_escape($request->uri());
+#
+# FIXME: make a method to explicitly request redirect URL with URI as a parameter,
+# rather than hiding it as a Session attribute.
 sub NeedStepUpAuth {
   my $self = shift;
   my $user = shift;
@@ -132,22 +138,20 @@ sub NeedStepUpAuth {
   my $mfa = $ht_dbh->selectall_arrayref($sql, undef, $user)->[0]->[0];
   return 0 unless $mfa;
 
-  my $idp = $self->{env}->{'X-Shib-Identity-Provider'};
-  my $class = $self->{env}->{'X-Shib-AuthnContext-Class'};
+  my $idp = $self->{env}->{'HTTP_X_SHIB_IDENTITY_PROVIDER'};
+  my $class = $self->{env}->{'HTTP_X_SHIB_AUTHNCONTEXT_CLASS'};
   if (defined $class) {
     my $dbclass;
     $sql = 'SELECT shib_authncontext_class FROM ht_institutions WHERE entityID=?';
     my $ref = $ht_dbh->selectall_arrayref($sql, undef, $idp);
     $dbclass = $ref->[0]->[0] if scalar @$ref;
     if (defined $dbclass && $class ne $dbclass) {
-      #use URI::Escape;
-      #my $target = URI::Escape::uri_escape(CGI::url($self->get('cgi')));
       my $server = $ENV{SERVER_NAME} || '';
       my $template = "https://$server/Shibboleth.sso/Login?".
                      "entityID=$idp&&authnContextClassRef=$dbclass";
       $self->{stepup_redirect} = $template;
-      my $note = sprintf "ENV{X-Shib-Identity-Provider}='$idp'\n".
-                         "ENV{X-Shib-AuthnContext-Class}='$class'\n".
+      my $note = sprintf "ENV{HTTP_X_SHIB_IDENTITY_PROVIDER}='$idp'\n".
+                         "ENV{HTTP_X_SHIB_AUTHNCONTEXT_CLASS}='$class'\n".
                          "DB class=%s\n".
                          'TEMPLATE=%s',
                          (defined $dbclass)? $dbclass:'<undef>',

@@ -7,6 +7,7 @@ use Carp;
 use Data::Dumper;
 use Plack::Response;
 
+use App::I18n;
 use App::Renderer;
 
 sub new {

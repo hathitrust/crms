@@ -7094,7 +7094,7 @@ sub GetProjectsRef
   my $self = shift;
 
   my @projects;
-  my $sql = 'SELECT p.id,p.name,COALESCE(p.color,"000000"),p.queue_size,p.autoinherit,'.
+  my $sql = 'SELECT p.id,p.name,"000000",p.queue_size,p.autoinherit,'.
             'p.group_volumes,p.single_review,a1.name,a2.name,'.
             '(SELECT COUNT(*) FROM projectusers pu INNER JOIN users u ON pu.user=u.id'.
             ' WHERE pu.project=p.id AND u.reviewer+u.advanced+u.expert+u.admin>0),'.

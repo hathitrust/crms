@@ -34,13 +34,14 @@ sub __index {
     @sorted = sort { $b->{active} <=> $a->{active} || $a->{name} cmp $b->{name} } @$users;
   }
   $self->{vars}->{users} = \@sorted;
+  $self->__setup_presenter;
   return $self->render('users/index');
 }
 
 sub __new {
   my $self = shift;
 
-  $self->{vars}->{user} = User::new;
+  $self->{vars}->{user} = User->new;
   $self->__setup_presenter;
   return $self->render('users/new');
 }
@@ -54,7 +55,6 @@ sub __show {
   return $self->render('users/show');
 }
 
-
 sub __update {
   my $self = shift;
 use Data::Dumper;
@@ -65,8 +65,13 @@ use Data::Dumper;
   $self->{vars}->{flash}->add('notice', sprintf("__update applying to %s", Dumper $user));
   Carp::confess "No user found in __update params" unless defined $self->{params}->{user};
   foreach my $key (keys %{$self->{params}->{user}}) {
-    $self->{vars}->{flash}->add('notice', sprintf("key %s value %s", Dumper $key, Dumper $self->{params}->{user}->{$key}));
-    $user->{$key} = $self->{params}->{user}->{$key};
+    my $value = $self->{params}->{user}->{$key};
+    $self->{vars}->{flash}->add('notice', sprintf("key %s value %s", Dumper $key, Dumper $value));
+    if (ref $value eq 'ARRAY') {
+      $value = $value->[0];
+      $self->{vars}->{flash}->add('notice', sprintf("key %s value now %s", Dumper $key, Dumper $value));
+    }
+    $user->{$key} = $value;
   }
   $self->__setup_presenter;
   $self->{vars}->{flash}->add('notice', sprintf("__update saving %s", Dumper $user));
@@ -93,6 +98,15 @@ sub presenter_for_user {
   my $user = shift;
 
   return App::Presenters::UserPresenter->new(obj => $user, controller => $self);
+}
+
+# Action in {index, show, edit, update, new, create }
+sub action_path {
+  my $self   = shift;
+  my $action = shift;
+  my $user   = shift;
+
+  App::Router->new->path_for($action, 'user', $user->{id});
 }
 
 1;

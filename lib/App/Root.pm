@@ -18,37 +18,24 @@ use FindBin;
 use Plack::Builder;
 use Plack::Request;
 use POSIX;
-use Router::Simple;
 use Template;
 use URI::Escape;
 
 use App::Flash;
+use App::I18n;
+use App::Router;
 
 use CRMS;
 use CRMS::Session;
 use User;
 use Utilities;
 
-my $router;
-
-sub setup_router {
-  return if defined $router;
-  $router = Router::Simple->new();
-  $router->connect('/', {controller => 'AppController', action => 'index'}, {method => 'GET'});
-  $router->connect('/users', {controller => 'UsersController', action => 'index'}, {method => 'GET'});
-  $router->connect('/users/:id', {controller => 'UsersController', action => 'show'}, {method => 'GET'});
-  $router->connect('/users/:id/edit', {controller => 'UsersController', action => 'edit'}, {method => 'GET'});
-  $router->connect('/users/:id', {controller => 'UsersController', action => 'update'}, {method => 'POST'});
-  $router->connect('/users/new', {controller => 'UsersController', action => 'new'}, {method => 'GET'});
-  $router->connect('/users/new', {controller => 'UsersController', action => 'create'}, {method => 'POST'});
-}
-
 $CGI::LIST_CONTEXT_WARN = 0;
 
 sub run {
   my $env = shift;
 
-  setup_router();
+  #setup_router();
   my $cookie;
   my $req = Plack::Request->new($env);
   ## the template page (tt) is called based on the CGI 'p' param (ex editReviews -> editReviews.tt)
@@ -57,6 +44,8 @@ sub run {
   my $debug = $req->param('debug');
   my $crms = CRMS->new;
   my $session = CRMS::Session->new(env => $env);
+  App::I18n::SetLocale($req->param('locale'));
+  Utilities->new->SetLocale($req->param('locale'));
   # Set up default admin user if running in dev
   if ($crms->Instance eq 'dev') {
     my $default_user = User::Where(name => 'Default Admin')->[0];
@@ -108,6 +97,7 @@ sub run {
     }
   }
   my $response = eval {
+    my $router = App::Router->new(prefix => '/crms');
     my $match = $router->match($env);
     if (!defined $match) {
       return [404, [], ['not found']];
@@ -117,7 +107,8 @@ sub run {
       cgi          => $req,
       current_user => $session->{user},
       utils        => Utilities->new(),
-      flash        => App::Flash->new()
+      flash        => App::Flash->new(),
+      i18n         => App::I18n->new()
     };
     my $controller = GetControllerFromClassName($match->{controller}, $tt_vars, $req, $match);
     my $response = undef;
@@ -134,7 +125,9 @@ sub run {
     #$body .= sprintf "<br/>COOKIE: <pre>%s</pre><br/>\n", ($cookie || '<blank>');
     #$body .= sprintf "<br/>PSGI URI: <pre>%s</pre><br/>\n", $req->uri;
     #$body .= sprintf "<br/><br/><h4>USER</h4><br/><pre>%s</pre><br/>\n", Dumper $session->{user};
+    #$body .= sprintf "<br/><br/><h4>URI</h4><br/><pre>%s</pre><br/>\n", $req->uri();
     $body .= sprintf "<br/><br/><h4>ENV</h4><br/><pre>%s</pre><br/>\n", Dumper $env;
+    #$body .= sprintf "<br/><br/><h4>LOCALE</h4><br/><pre>%s</pre><br/>\n", Dumper App::I18n::__locale_hash();
     $body = Encode::encode_utf8($body);
     return [
         '200',

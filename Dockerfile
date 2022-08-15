@@ -160,6 +160,9 @@ RUN cpan -T \
   CGI::PSGI \
   Data::Faker \
   Data::Faker::Internet \
+  DateTime \
+  DateTime::Format::Strptime \
+  DateTime::Locale \
   Devel::Cover \
   OAuth::Lite \
   Plack::Middleware::TrailingSlashKiller \
