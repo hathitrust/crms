@@ -30,14 +30,14 @@ sub render {
 
   my $output = '';
   my $tt = Template->new($TEMPLATE_TOOLKIT_CONFIG);
-  # PROCESS MAIN TEMPLATE
+  # PROCESS PAGE TEMPLATE
   my $template = $self->get_template($path);
   # uncoverable branch true
   if (!$tt->process($template, $self->{vars}, \$output)) {
     my $tt_err = $tt->error; # uncoverable statement
     $tt_err =~ s/\n+/<br\/>\n/gm; # uncoverable statement
     $self->{vars}->{flash}->add('alert', $tt_err); # uncoverable statement
-    $output .= sprintf "<h3>%s</h3>\n", $tt_err; # uncoverable statement
+    #$output .= sprintf "<h3>%s</h3>\n", $tt_err; # uncoverable statement
   }
   $layout = $self->get_layout($layout);
   $self->{vars}->{content} = $output;
@@ -46,7 +46,10 @@ sub render {
   if (!$tt->process($layout, $self->{vars}, \$output)) {
     $output .= sprintf "<h3><pre>%s</pre></h3>\n", $tt->error(); # uncoverable statement
   }
-  delete $self->{vars}->{content}; # Necessary?
+  # If displaying vars inline for debugging purposes,
+  # it is disconcerting to have the HTML content rendered a second time.
+  # Could also wrap it in a <pre> and leave it.
+  delete $self->{vars}->{content};
   return $output;
 }
 

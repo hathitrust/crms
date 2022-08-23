@@ -16,7 +16,9 @@ addEvent(window, 'load', function(e)
 [% warn = crms.WebPath('web', 'img/warning.png') %]
 
 [% IF uadmin %]
-  <a href="/crms/users/new" class="btn btn-success">[% i18n.t('view.user.index.add_new_user') %]</a>
+  <a href="/crms/users/new" class="btn btn-success">
+    [% presenter.t('.user.index.add_new_user') %]
+  </a>
   <br/><br/>
 [% END %]
 
@@ -53,7 +55,7 @@ addEvent(window, 'load', function(e)
     </th>
   </tr>
   [% FOREACH u IN users %]
-    [% presenter = controller.presenter_for_user(u) %]
+    [% CALL presenter.set_obj(u) %]
     [% class = (u.active)? 'background-hover':'background-inactive' %]
     <tr class="[% class %]">
       <td class="nowrap">
@@ -128,11 +130,12 @@ addEvent(window, 'load', function(e)
 
       <td>
         [% IF u.commitment && u.commitment > 0.0 %]
+          [% progress = u.progress || 0 %]
           [% u.commitmentFmt %]
           [% IF u.active && uadmin %]
             <div class="ProgressBar">
               <div class="ProgressBarInner"
-                   style="width:[% (u.progress * 100.0) _ '%' %];">
+                   style="width:[% (progress * 100.0) _ '%' %];">
               </div>
             </div>
           [% END %]

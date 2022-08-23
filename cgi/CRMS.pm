@@ -64,7 +64,7 @@ sub new {
   return $self;
 }
 
-our $VERSION = '8.4.16';
+our $VERSION = '8.5';
 sub Version
 {
   return $VERSION;
@@ -1171,7 +1171,7 @@ sub AddItemToQueueOrSetItemActive
   my $priority = shift;
   my $override = shift;
   my $src      = shift || 'adminui';
-  my $user     = shift || $self->get('user');
+  my $user     = shift;
   my $record   = shift || undef;
   my $project  = shift || 1;
   my $ticket   = shift || undef;
@@ -2514,142 +2514,6 @@ sub GetReviewCount
   return $self->SimpleSqlGet($sql, $id);
 }
 
-sub GetQueueRef
-{
-  my $self         = shift;
-  my $order        = shift;
-  my $dir          = shift;
-  my $search1      = shift;
-  my $search1Value = shift;
-  my $op1          = shift;
-  my $search2      = shift;
-  my $search2Value = shift;
-  my $startDate    = shift;
-  my $endDate      = shift;
-  my $offset       = shift || 0;
-  my $pagesize     = shift || 0;
-  my $download     = shift;
-
-  $pagesize = 20 unless $pagesize > 0;
-  $offset = 0 unless $offset > 0;
-  $order = 'id' unless $order;
-  $offset = 0 unless $offset;
-  $search1 = $self->ConvertToSearchTerm($search1, 'queue');
-  $search2 = $self->ConvertToSearchTerm($search2, 'queue');
-  $order = $self->ConvertToSearchTerm($order, 'queue');
-  my @rest = ('q.id=b.id');
-  my $tester1 = '=';
-  my $tester2 = '=';
-  if ($search1Value =~ m/.*\*.*/)
-  {
-    $search1Value =~ s/\*/%/gs;
-    $tester1 = ' LIKE ';
-  }
-  if ($search2Value =~ m/.*\*.*/)
-  {
-    $search2Value =~ s/\*/%/gs;
-    $tester2 = ' LIKE ';
-  }
-  if ($search1Value =~ m/([<>!]=?)\s*(\d+)\s*/)
-  {
-    $search1Value = $2;
-    $tester1 = $1;
-  }
-  if ($search2Value =~ m/([<>!]=?)\s*(\d+)\s*/)
-  {
-    $search2Value = $2;
-    $tester2 = $1;
-  }
-  push @rest, "q.time>='$startDate'" if $startDate;
-  push @rest, "q.time<='$endDate'" if $endDate;
-  if ($search1Value ne '' && $search2Value ne '')
-  {
-    push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
-  }
-  else
-  {
-    push @rest, "$search1 $tester1 '$search1Value'" if $search1Value ne '';
-    push @rest, "$search2 $tester2 '$search2Value'" if $search2Value ne '';
-  }
-  my $restrict = ((scalar @rest)? 'WHERE ':'') . join(' AND ', @rest);
-  my $sql = 'SELECT COUNT(q.id) FROM queue q LEFT JOIN bibdata b ON q.id=b.id'.
-            ' INNER JOIN projects p ON q.project=p.id '. $restrict;
-  #print "$sql<br/>\n";
-  my $totalVolumes = $self->SimpleSqlGet($sql);
-  $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
-  my @return = ();
-  $sql = 'SELECT q.id,DATE(q.time),q.status,q.locked,YEAR(b.pub_date),q.priority,'.
-         'b.title,b.author,b.country,p.name,q.source,q.ticket,q.added_by'.
-         ' FROM queue q LEFT JOIN bibdata b ON q.id=b.id'.
-         ' INNER JOIN projects p ON q.project=p.id '. $restrict.
-         ' ORDER BY '. "$order $dir LIMIT $offset, $pagesize";
-  #print "$sql<br/>\n";
-  my $ref = undef;
-  eval {
-    $ref = $self->SelectAll($sql);
-  };
-  if ($@)
-  {
-    $self->SetError($@);
-  }
-  my @columns = ('ID', 'Title', 'Author', 'Pub Date', 'Date Added', 'Status',
-                 'Locked', 'Priority', 'Reviews', 'Expert Reviews',' Holds',
-                 'Source', 'Added By', 'Project', 'Ticket');
-  my @colnames = ('id', 'title', 'author', 'pubdate', 'date', 'status',
-                  'locked', 'priority', 'reviews', 'expcnt', 'holds',
-                  'source', 'added_by', 'project', 'ticket');
-  my $data = join "\t", @columns;
-  foreach my $row (@{$ref})
-  {
-    my $id = $row->[0];
-    my $pubdate = $row->[4];
-    $pubdate = '?' unless $pubdate;
-    $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
-    #print "$sql<br/>\n";
-    my $reviews = $self->SimpleSqlGet($sql, $id);
-    $sql = 'SELECT COUNT(*) FROM reviews WHERE id=? AND hold=1';
-    #print "$sql<br/>\n";
-    my $holds = $self->SimpleSqlGet($sql, $id);
-    $sql = 'SELECT COUNT(*) FROM reviews r INNER JOIN users u ON r.user=u.id'.
-           ' WHERE r.id=? AND u.expert=1';
-    my $expcnt = $self->SimpleSqlGet($sql, $id);
-    my $item = {id       => $id,
-                date     => $row->[1],
-                status   => $row->[2],
-                locked   => $row->[3],
-                pubdate  => $pubdate,
-                priority => $self->StripDecimal($row->[5]),
-                expcnt   => $expcnt,
-                title    => $row->[6],
-                author   => $row->[7],
-                country  => $row->[8],
-                reviews  => $reviews,
-                holds    => $holds,
-                project  => $row->[9],
-                source   => $row->[10],
-                ticket   => $row->[11],
-                added_by => $row->[12]
-               };
-    push @return, $item;
-    if ($download)
-    {
-      $data .= "\n". join "\t", map {$item->{$_};} @colnames;
-    }
-  }
-  if (!$download)
-  {
-    my $n = POSIX::ceil($offset/$pagesize+1);
-    my $of = POSIX::ceil($totalVolumes/$pagesize);
-    $n = 0 if $of == 0;
-    $data = {'rows' => \@return,
-             'volumes' => $totalVolumes,
-             'page' => $n,
-             'of' => $of
-            };
-  }
-  return $data;
-}
-
 sub GetCandidatesRef
 {
   my $self         = shift;
@@ -3000,24 +2864,6 @@ sub GetExportDataRef
             };
   }
   return $data;
-}
-
-sub GetPublisherDataRef
-{
-  my $self = shift;
-
-  require Publisher;
-  unshift @_, $self;
-  return Publisher::GetPublisherDataRef(@_);
-}
-
-sub PublisherDataSearchMenu
-{
-  my $self = shift;
-
-  require Publisher;
-  unshift @_, $self;
-  return Publisher::PublisherDataSearchMenu(@_);
 }
 
 sub Linkify
@@ -5238,29 +5084,6 @@ sub ReviewSearchMenu
   return $html;
 }
 
-# Generates HTML to get the field type menu on the Volumes in Queue page.
-sub QueueSearchMenu
-{
-  my $self       = shift;
-  my $searchName = shift;
-  my $searchVal  = shift;
-
-   my @keys = qw(Identifier SysID Title Author PubDate Country Date Status Locked
-                Priority Reviews ExpertCount Holds Source AddedBy Project Ticket);
-  my @labs = ('Identifier', 'System Identifier', 'Title', 'Author', 'Pub Date',
-              'Country', 'Date Added', 'Status', 'Locked', 'Priority', 'Reviews',
-              'Expert Reviews', 'Holds', 'Source', 'Added By', 'Project', 'Ticket');
-  my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
-  foreach my $i (0 .. scalar @keys - 1)
-  {
-    $html .= sprintf("  <option value='%s'%s>%s</option>\n",
-                     $keys[$i],
-                     ($searchVal eq $keys[$i])? ' selected="selected"':'',
-                     $labs[$i]);
-  }
-  $html .= "</select>\n";
-  return $html;
-}
 
 # Generates HTML to get the field type menu on the Volumes in Candidates page.
 sub CandidatesSearchMenu
@@ -7016,11 +6839,14 @@ sub VIAFCorporateLink {
 }
 
 # FIXME: this should probably not include an explicit reference to "Special" project.
+# FIXME: this is a holdover from the Copyright Office "one-off" process. How might it
+# be used more effectively in the current HathiTrust environment?
 sub GetAddToQueueRef
 {
   my $self = shift;
-  my $user = shift || $self->get('user');
+  my $user = shift;
 
+  Carp::confess('undefined user') unless defined $user;
   my $sql = 'SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.added_by,' .
             'q.status,q.priority,q.source,q.ticket,p.name FROM queue q'.
             ' INNER JOIN bibdata b ON q.id=b.id'.
@@ -7388,6 +7214,13 @@ sub GetRoles {
 
   use CRMS::Role;
   return CRMS::Role::All();
+}
+
+sub Unidump {
+  my $self = shift;
+  my $text = shift;
+
+  return uc unpack 'H*', encode 'UTF-16be', $text;
 }
 
 1;

@@ -76,12 +76,12 @@ sub test_DbInfo {
 }
 
 sub test_GetCandidatesSize {
-  $crms->PrepareSubmitSql('DELETE FROM projects');
+  #$crms->PrepareSubmitSql('DELETE FROM projects');
   $crms->PrepareSubmitSql('DELETE FROM candidates');
-  $crms->PrepareSubmitSql('INSERT INTO projects (id,name) VALUES (1,"Core")');
+  #$crms->PrepareSubmitSql('INSERT INTO projects (id,name) VALUES (1,"Core")');
   $crms->PrepareSubmitSql('INSERT INTO candidates (id,project) VALUES (?,1)', "mdp.$_") for (1 .. 5);
   is($crms->GetCandidatesSize(), 5);
   $crms->PrepareSubmitSql('DELETE FROM candidates');
-  $crms->PrepareSubmitSql('DELETE FROM projects');
+  #$crms->PrepareSubmitSql('DELETE FROM projects');
 }
 

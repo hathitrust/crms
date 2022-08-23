@@ -1,5 +1,0 @@
-<h2>Volumes in Queue:</h2>
-<span class="smallishText">*includes both active and inactive volumes</span>
-
-[% INCLUDE queueSelection.tt  %]
-[% INCLUDE queueSearchResults.tt  %]

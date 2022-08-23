@@ -12,16 +12,17 @@ use Utilities;
 my $ALL_FIELDS = ['id', 'email', 'name', 'reviewer', 'advanced', 'expert', 'admin',
   'role', 'note', 'institution', 'commitment', 'projects', 'project', 'active', 'internal'];
 
-sub new {
-  my $class = shift;
-  return $class->SUPER::new(model => 'user', @_);
+sub model_name {
+  my $self  = shift;
+
+  return 'user';
 }
 
-# sub form_object_name {
-#   my $self  = shift;
-# 
-#   return 'user';
-# }
+sub i18n_view_prefix {
+  my $self = shift;
+
+  return 'view.user';
+}
 
 sub all_fields {
   my $self = shift;
@@ -125,21 +126,16 @@ sub show_expires {
   return $html;
 }
 
-# sub __check_mark {
-#   my $self = shift;
-# 
-#   return "<span class=\"badge bg-success\">\N{U+25CF}</span>";
-# }
-
 sub edit_active {
   my $self = shift;
 
   my $active = $self->{obj}->{active};
-  my $html = ($active)? '<input name="user[active]" type="hidden" value="0"/>' : '';
+  my $html = '';
+  $html .= '<input name="user[active]" type="hidden" value="0"/>' if $active;
   $html .= '<input type="checkbox" name="user[active]" id="active"' .
     (($active) ? ' checked' : '') . '/>';
-  use Data::Dumper;
-  $html .= sprintf "<i>%s</i>", Dumper $active;
+  #use Data::Dumper;
+  #$html .= sprintf "<i>%s</i>", Dumper $active;
   return $html;
 }
 
@@ -161,7 +157,36 @@ sub edit_institution {
 sub edit_note {
   my $self = shift;
 
-  return "<textarea rows=\"3\" cols=\"20\">$self->{obj}->{note}</textarea>\n";
+  return <<HTML;
+<textarea rows="3" cols="20">$self->{obj}->{note}</textarea>
+HTML
+}
+
+sub edit_projects {
+  my $self = shift;
+
+  my %user_project_ids;
+  my $projects = $self->{obj}->projects;
+  $user_project_ids{$_->{id}} = 1 for @$projects;
+  $projects = Project::All();
+  my $html = '';
+  foreach my $project (@$projects) {
+    my $id = 'project-' . $project->{id};
+    my $selected = defined $user_project_ids{$project->{id}};
+    if ($selected) {
+      $html .= <<HTML;
+<input name="user[projects][$project->{id}]" type="hidden" value="0"/>
+HTML
+    }
+    my $checked = ($selected) ? ' checked' : '';
+    $html .= <<HTML;
+<input type="checkbox" name="user[projects][$project->{id}]" id="$id"
+  $checked />
+<label for="$id">$project->{name}</label>
+<br/>
+HTML
+  }
+  return $html;
 }
 
 1;

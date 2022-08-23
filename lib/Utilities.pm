@@ -12,6 +12,8 @@ use POSIX;
 use Time::Piece;
 use Time::Seconds;
 
+use App::I18n;
+
 my $DEFAULT_TIME_ZONE_NAME = 'America/Detroit';
 my $DEFAULT_LOCALE = 'en';
 my $UTILITIES_SINGLETON = undef;
@@ -160,8 +162,27 @@ sub Pluralize {
   my $word   = shift;
   my $plural = shift;
 
+  Carp::confess("non-numeric n") unless $n =~ m/\d+/;
   return $word if $n == 1;
   return (defined $plural)? $plural : $word . 's';
+}
+
+# Remove trailing zeroes and point-zeroes from a floating point format.
+sub StripDecimal {
+  my $self = shift;
+  my $dec  = shift;
+
+  $dec =~ s/(\.[1-9]+)0+/$1/g;
+  $dec =~ s/\.0*$//;
+  return $dec;
+}
+
+# Shortcut to App::I18n for views
+sub Translate {
+  my $self = shift;
+  my $key  = shift;
+
+  return App::I18n::Translate($key, undef, @_);
 }
 
 ##### ===== HTML UTILITIES ===== #####

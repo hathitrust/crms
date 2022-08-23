@@ -1,6 +1,5 @@
-<script type="text/javascript">
-function ToggleVisibility(id, id2)
-{
+<script>
+function ToggleVisibility(id, id2) {
    var e = document.getElementById(id);
    var e2 = document.getElementById(id2);
    var tmp = e.style.display;

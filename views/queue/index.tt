@@ -1,0 +1,198 @@
+<h2>[% presenter.translate('.index.volumes_in_queue') %]</h2>
+<span class="smallishText">*includes both active and inactive volumes</span>
+
+[% params = controller.params %]
+[% dir = params.dir || 'ASC' %]
+[% page_size = params.page_size || 20 %]
+
+<br/>
+<div class="border border-dark rounded" 
+ style="position:relative;width:42em;padding:10px;">
+
+  <div style="position:absolute;top:4px;right:4px;font-size:.8em">
+    <a href="[% crms.WebPath('web', 'pdf/ReviewSearchHelp.pdf') %]" target="_blank">
+      Search&nbsp;Help</a>
+    /
+    <a href="[% crms.WebPath('web', 'pdf/ReviewSearchTerms.pdf') %]" target="_blank">
+      Search&nbsp;Terms
+    </a>
+  </div>
+
+  <form id="select" action="[% controller.path_for('index') %]">
+
+  [% presenter.translate('.index.restrict_selection') %]<br/>
+
+    <div class="row">
+      <div class="col">
+        [% presenter.search_menu('search1', params.search1, 'form-select') %]
+      </div>
+      <div class="col">
+        <input type="text" class="form-control" id="search1-value"
+          name="search1_value" title="Value 1"
+          value="[% crms.EchoInput(params.search1_value) %]" size="30"/>
+      </div>
+      <div class="col">
+        <select title="Boolean Option" name="op1" class="form-select">
+          <option [% params.op1 == 'AND' ? 'selected' : '' %]>AND</option>
+          <option [% params.op1 == 'OR' ? 'selected' : '' %]>OR</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        [% presenter.search_menu('search2', params.search2, 'form-select') %]
+      </div>
+      <div class="col">
+        <input type="text" class="form-control" id="search2-value"
+          name="search2_value" title="Value 2" 
+          value="[% crms.EchoInput(params.search2_value) %]" size="30"/>
+      </div>
+      <div class="col"></div>
+    </div>
+
+    <div class="row">
+      <div class="col-2">
+        <label for="start-date" class="col-form-label">
+          [% presenter.translate('.index.start_date') %]
+        </label>
+      </div>
+      <div class="col-4">
+        <input type="date" id="start-date" name="start_date" class="form-control" 
+          value="[% params.start_date %]"/>
+      </div>
+      <div class="col-2">
+        <label for="end-date" class="col-form-label">
+          [% presenter.translate('.index.end_date') %]
+        </label>
+      </div>
+      <div class="col-4">
+        <input type="date" id="end-date" name="end_date" class="form-control" 
+          value="[% params.end_date %]"/>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-2">
+        <label for="order" class="col-form-label">
+          [% presenter.translate('.index.order_by') %]
+        </label>
+      </div>
+      <div class="col-4">
+        [% presenter.search_menu('order', params.order, 'form-select') %]
+      </div>
+      <div class="col-2">
+        <label for="dir" class="col-form-label">
+          [% presenter.translate('.index.direction') %]
+        </label>
+      </div>
+      <div class="col-4">
+        <select id="dir" class="form-select" name="dir">
+          <option value="ASC" [% dir == 'ASC' ? 'selected' : '' %]>
+            [% presenter.translate('.index.ascending') %]
+          </option>
+          <option value="DESC" [% dir == 'DESC' ? 'selected' : '' %]>
+            [% presenter.translate('.index.descending') %]
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-4">
+        <label for="page-size" class="col-form-label">
+          [% presenter.translate('.index.records_per_page') %]
+        </label>
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="page-size" name="page_size"
+          value="[% page_size %]" size="3"/>
+      </div>
+      <div class="col-6 d-grid gap-2 d-md-flex justify-content-md-end">
+        <button class="btn btn-warning"
+          onclick="selMenuItem('op1', 'AND');
+            selMenuItem('search1', 'Identifier');
+            selMenuItem('search2', 'Identifier');
+            selMenuItem('order', 'id');
+            selMenuItem('dir', 'ASC');
+            document.getElementById('start-date').value='';
+            document.getElementById('end-date').value='';
+            document.getElementById('search1-value').value='';
+            document.getElementById('search2-value').value='';">
+          [% presenter.translate('.index.clear') %]
+        </button>
+       <input class="btn btn-primary" type="submit"
+          value="[% presenter.translate('.index.submit') %]"/>
+      </div>
+    </div>
+  </form>
+</div>
+<br/>
+
+
+[% IF data.row_count == 0 %]
+  <h4>[% presenter.translate('.index.no_results_found') %]</h4>
+[% ELSE %]
+  [% pagination = presenter.paginate(data.row_count, data.page, data.page_size) %]
+  <div class="row">
+    <div class="col-auto">
+      <strong class="text-muted">
+        [% # FIXME: no way to indicate "1-10 of 100 volumes" with pluralization in current I18n %]
+        [% presenter.t('.queue.index.records_summary', 'start', data.first_row,
+          'end', data.last_row, 'of', data.row_count) %]
+      </strong>
+    </div>
+    <div class="col-auto">
+      [% IF data.page_count > 1 %]
+        [% pagination %]
+      [% END %]
+    </div>
+  </div>
+
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="[% presenter.put_param('download', 1) %]" target="_blank">download</a>
+
+  <table class="exportStats" style="width:100%;">
+    <tr>
+    [% FOR field IN presenter.index_fields %]
+      <th class="nowrap">[% presenter.field_label(field) %]</th>
+    [% END %]
+    </tr>
+    [% FOREACH item IN data.rows %]
+      <tr class="queue-table">
+        <td class="nowrap">$item.id</td>
+        <td>[% crms.LinkToPT(item.id, item.title) %]</td>
+        <td>[% utils.EscapeHTML(item.author) %]</td>
+        <td>$item.pub_date</td>
+        <td>$item.country</td>
+        <td>$item.date</td>
+        <td>$item.status</td>
+        <td>$item.locked</td>
+        <td>$item.priority</td>
+        <td>$item.reviews</td>
+        <td>$item.expert_reviews</td>
+        <td>$item.holds</td>
+        <td class="nowrap">$item.source</td>
+        <td>$item.added_by</td>
+        <td class="nowrap">$item.project</td>
+        <td class="nowrap">$item.ticket</td>
+      </tr>
+    [% END %]
+  </table>
+  <br/>    
+  <div class="row">
+    <div class="col-auto">
+      <strong class="text-muted">
+        [% # FIXME: no way to indicate "1-10 of 100 volumes" with pluralization in current I18n %]
+        [% presenter.t('.queue.index.records_summary', 'start', data.first_row,
+          'end', data.last_row, 'of', data.row_count) %]
+      </strong>
+    </div>
+    <div class="col-auto">
+      [% IF data.page_count > 1 %]
+        [% pagination %]
+      [% END %]
+    </div>
+  </div>
+[% END %]
+

@@ -1,5 +1,5 @@
 <div>
-  <h2>[% user.name %]:</h2>
+  <h2>[% user.name %]</h2>
 
   FIXME: need to do something with admin_pages<br/>
 
@@ -15,7 +15,7 @@
   </div>
   <br/>
   <a href="[% controller.action_path('edit', user) %]" class="btn btn-primary">
-    [% i18n.t('view.user.show.edit') %]
+    [% presenter.t('.user.show.edit') %]
   </a>
 </div>
 

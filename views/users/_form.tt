@@ -19,7 +19,7 @@
     [% presenter.field_label('institution', 1) %]
     [% presenter.edit_field_value('institution') %]
     <br/><br/>
-    <fieldset id="privGroup">[% i18n.t('view.user.edit.privileges') %]
+    <fieldset id="privGroup">[% presenter.t('.user.edit.privileges') %]
     <br/>
       <input type="checkbox" name="user[reviewer]" id="reviewerCB" [% (user.is_reviewer)? 'checked' : '' %]/>
       <label for="reviewerCB">Reviewer</label><br/>
@@ -35,37 +35,26 @@
     </fieldset>
 
     <br/>
-    <fieldset id="roleGroup">[% i18n.t('model.user.attribute.roles') %] <i>(Only check these if you want the user to be able to switch roles.)</i><br/>
+    <fieldset id="roleGroup">[% presenter.t('model.user.attribute.roles') %]
+      <i>(Only check these if you want the user to be able to switch roles.)</i>
+      <br/>
 
       [% roles = crms.GetRoles() %]
       [% FOR role IN roles %]
         <input type="checkbox" name="user[roles][[% role.id %]]" id="role_[% role.id %]"
           [% (user.role_id_hash.item(role.id))? 'checked' : '' %]/>
         <label for="role_[% role.id %]">
-          [% i18n.t('model.role.value.' _ role.name.lower) %]
+          [% presenter.t('model.role.value.' _ role.name.lower) %]
         </label><br/>
       [% END %]
     </fieldset>
     <br/>
 
-    [% all_projects = crms.GetProjectsRef() %]
-    [% IF all_projects.size %]
-      <fieldset id="projectsGroup">[% i18n.t('model.user.attribute.projects') %]
-      <br/>
-      [% FOR proj IN all_projects %]
-        [% found = 0 %]
-        [% FOR proj_user IN proj.users %]
-          [% IF proj_user == user.id %]
-            [% found = 1 %]
-            [% LAST %]
-          [% END %]
-        [% END %]
-        <input type="checkbox" name="user[projects][[% proj.id %]]" id="project_[% proj.id %]"
-               [% IF found %]checked="checked"[% END %]/>
-        <label for="project_[% proj.id %]">[% proj.name %]</label><br/>
-      [% END %]
-      </fieldset>
-    [% END %]
+    <fieldset id="projectsGroup">[% presenter.t('model.user.attribute.projects') %]
+    <br/>
+    [% presenter.edit_field_value('projects') %]
+    </fieldset>
+
     <br/>
     [% presenter.field_label('note', 1) %]
     <textarea name="user[note]" id="note" rows="3" cols="20">[% user.note %]</textarea>
@@ -88,6 +77,6 @@
       </option>
     [% END %]
     </select>
-    <br/><br/><input class="btn btn-primary" type="submit" value="[% i18n.t('view.user.form.submit') %]"/>
+    <br/><br/><input class="btn btn-primary" type="submit" value="[% presenter.t('.user.form.submit') %]"/>
   </form>
 </div>

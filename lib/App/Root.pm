@@ -19,6 +19,7 @@ use Plack::Builder;
 use Plack::Request;
 use POSIX;
 use Template;
+use Unicode::Normalize;
 use URI::Escape;
 
 use App::Flash;
@@ -97,18 +98,21 @@ sub run {
     }
   }
   my $response = eval {
-    my $router = App::Router->new(prefix => '/crms');
+    my $router = App::Router->new(req => $req, prefix => '/crms');
     my $match = $router->match($env);
     if (!defined $match) {
       return [404, [], ['not found']];
     }
     my $tt_vars = {
       crms         => $crms,
-      cgi          => $req,
+      cgi          => $req, # For compatibility; will be phased out in favor of req
+      req          => $req,
       current_user => $session->{user},
       utils        => Utilities->new(),
       flash        => App::Flash->new(),
-      i18n         => App::I18n->new()
+      router       => App::Router->new(), # For path utilities as needed
+      #i18n         => App::I18n->new() # these are slightly messy calls,
+                                        #so let the presenter do it in views
     };
     my $controller = GetControllerFromClassName($match->{controller}, $tt_vars, $req, $match);
     my $response = undef;
@@ -118,17 +122,19 @@ sub run {
     }
     return $response if defined $response;
     my $body = $controller->{body};
+    $body =~ s/<\/html>//s;
     #$body .= sprintf("<br/><br/><h4>ROUTES</h4><br/><pre>%s</pre><br/>\n", $router->as_string);
     #$body .= sprintf("<br/><br/><h4>ROUTER MATCH</h4><br/><pre>%s</pre><br/>\n", Dumper $match);
     #$body .= sprintf "<br/><br/><h4>Controller</h4><br/><pre>%s</pre><br/>\n", Dumper $controller;
     #$body .= sprintf "<br/><br/><h4>TT VARS</h4><br/><pre>%s</pre><br/>\n", Dumper $tt_vars;
     #$body .= sprintf "<br/>COOKIE: <pre>%s</pre><br/>\n", ($cookie || '<blank>');
-    #$body .= sprintf "<br/>PSGI URI: <pre>%s</pre><br/>\n", $req->uri;
+    #$body .= sprintf "<br/>PSGI URI: <pre>%s</pre><br/>\n", Dumper $req->uri;
     #$body .= sprintf "<br/><br/><h4>USER</h4><br/><pre>%s</pre><br/>\n", Dumper $session->{user};
-    #$body .= sprintf "<br/><br/><h4>URI</h4><br/><pre>%s</pre><br/>\n", $req->uri();
-    $body .= sprintf "<br/><br/><h4>ENV</h4><br/><pre>%s</pre><br/>\n", Dumper $env;
+    #$body .= sprintf "<br/><br/><h4>REQ</h4><br/><pre>%s</pre><br/>\n", Dumper $req;
+    #$body .= sprintf "<br/><br/><h4>ENV</h4><br/><pre>%s</pre><br/>\n", Dumper $env;
     #$body .= sprintf "<br/><br/><h4>LOCALE</h4><br/><pre>%s</pre><br/>\n", Dumper App::I18n::__locale_hash();
-    $body = Encode::encode_utf8($body);
+    $body .= '</html>' . "\n";
+    $body = Encode::encode_utf8(Unicode::Normalize::NFC($body));
     return [
         '200',
         [ 'Content-Type' => 'text/html; charset=utf-8',
@@ -159,11 +165,7 @@ sub GetControllerFromClassName {
   #return unless -f $full_path;
   require $file;
   my $class = 'App::Controllers::'. $name;
-  my $controller = $class->new(req => $req, vars => $tt_vars, params => $match);
-  # if ($@) {
-#     $tt_vars->{flash}->add('alert', "Controller error $@");
-#     $controller = undef;
-#   }
+  my $controller = $class->new(req => $req, vars => $tt_vars, params => $match, model => $match->{model});
   return $controller;
 }
 

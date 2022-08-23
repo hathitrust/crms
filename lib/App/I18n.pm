@@ -19,10 +19,15 @@ my $LOCALE_TO_HASH = {};
 
 # FIXME: fall back to default locale if missing and not set to default.
 sub Translate {
-  my $key = shift;
+  my $key    = shift;
+  my $locale = shift || $CURRENT_LOCALE;
 
+# if (scalar(keys @_) % 2 == 1) {
+#   my @a = @_;
+#   Carp::confess("Odd number of arguments in Translate params: " . Dumper \@a);
+# } 
   my %keys = @_;
-  my $hash = __locale_hash();
+  my $hash = __locale_hash($locale);
   my @components = split /\./, $key;
   my $translation;
   while (my $subkey = shift @components) {
@@ -34,11 +39,15 @@ sub Translate {
       $translation = $res;
     }
   }
-  unless (defined $translation) {
-    return;
+  # Fall back to default translation
+  unless (defined $translation ) {
+    if ($locale ne $CURRENT_LOCALE) {
+      $translation = Translate($key, undef, %keys);
+    }
   }
+  return $key unless defined $translation;
   # Simple-minded interpolation of %{key} placeholders. 
-  $translation =~ s/%\{[A-Za-z_]\}/$keys{$1} || 'ERROR: no interpolation'/eg;
+  $translation =~ s/%\{([A-Za-z_]+)\}%/$keys{$1} || "ERROR: no interpolation for '$1'"/eg;
   return $translation;
 }
 
@@ -67,7 +76,9 @@ sub __locale_hash {
 
   return $LOCALE_TO_HASH->{$locale} if defined $LOCALE_TO_HASH->{$locale};
 
-  my $struct = YAML::LoadFile(__locale_path() . $locale . '.yml');
+  my $locale_file = __locale_path() . $locale . '.yml';
+  return unless -f $locale_file;
+  my $struct = YAML::LoadFile($locale_file);
   unless (defined $struct->{$locale}) {
     Carp::confess "YAML structure doesn't have a top-level entry for '$locale'";
   }

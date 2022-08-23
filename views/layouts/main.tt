@@ -28,6 +28,7 @@
     <script src="[% crms.WebPath('web', 'js/datepicker.packed.js') %]"></script>
     <script src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
     <script src="https://code.highcharts.com/highcharts.js"></script>
+    <!-- FIXME cgi.param('p') is becoming obsolete -->
     [% page = cgi.param('p') %]
     [% IF page == 'reviewerActivity' %]
       <script src="https://code.highcharts.com/modules/exporting.js"></script>
@@ -79,15 +80,18 @@
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" role="button"
                  data-bs-toggle="dropdown" aria-expanded="false">
-                [% menu.1 %]
+                [% presenter.t('view.menu.' _ menu.1) %]
               </a>
               <ul class="dropdown-menu dropdown-menu-dark">
                 [% items = crms.MenuItems(id, current_user) %]
                 [% FOREACH item IN items %]
                   [% target = (item.2)? ' target="' _ item.2 _ '"':'' %]
                   <li>
-                    <a class="dropdown-item" href="[% item.1 %]" [% target %] [% item.3 %]>
-                      [% item.0 %]
+                    [% # It's harmless to put locale param on PDF links but it looks not so nice %]
+                    [% # Should be handled by menu/menu item presenter with a bit of regex magic. %]
+                    [% url = router.put_locale(item.1) %]
+                    <a class="dropdown-item" href="[% url %]" [% target %] [% item.3 %]>
+                      [% presenter.t('view.menu_item.' _ menu.1 _ '.' _ item.0) %]
                     </a>
                   </li>
                 [% END %]
@@ -95,11 +99,11 @@
             </li>
             [% END %]
             <li class="nav-item">
-              <a class="nav-link" href="/crms?p=Logout">Log Out</a>
+              <a class="nav-link" href="/crms?p=Logout">[% presenter.t('view.menu.log_out') %]</a>
             </li>
           </ul>
           <span class="navbar-text">
-            Hello [% current_user.name.replace(" ","&nbsp;") %]
+            [% presenter.t('view.menu.greeting', 'name', current_user.name).replace(' ', "&nbsp;") %]
           </span>
 
           <a class="navbar-brand" href="http://hathitrust.org">

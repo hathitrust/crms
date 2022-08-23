@@ -1,3 +1,7 @@
+[% params = controller.params.queue %]
+
+PARAMS [% crms.Dump(params) %]
+
 [% ids = cgi.param('ids') %]
 [% pri = cgi.param('priority') %]
 [% project = cgi.param('project') %]
@@ -27,61 +31,53 @@ function CheckAllTx(box,id)
 
 <h2>Add Volumes to the Queue:</h2>
 <br/>
-<form action="crms">
+<form action="/crms/queue/new" method="post">
   <p class="smallishText">Enter one volume id per line.</p>
-  [% crms.Hiddenify(cgi, 'ids', 'priority', 'delete', 'ticket', 'project', 'noop') %]
-  <textarea name="ids" cols="28" rows="30" style="width:33%; height:9em;">[% ids %]</textarea>
+  
+  <textarea name="queue[ids]" cols="28" rows="30" style="width:33%; height:9em;">[% params.ids %]</textarea>
   <br/><br/>
   <table style="width:30%;border-spacing:0.25em;">
     <tr>
-      <td>
-        <label for="priorityField"><strong>Priority</strong></label>
+      <td class="nowrap">
+        [% presenter.field_label('priority') %]
       </td>
-      <td>
-        <input type="text" value="[% pri %]" id="priorityField" name="priority" size="6" pattern="-?\d(\.\d\d?)?"/>
+      <td class="nowrap">
+        [% presenter.edit_field_value('priority') %]
       </td>
-      <td style="text-align:right;">
+      <td class="nowrap" style="text-align:right;">
       [% IF admin %]
-        <label for="ORCheck"><strong>Override&nbsp;Restrictions</strong></label>
+        [% presenter.field_label('override_restrictions', 'override-restrictions-checkbox') %]
       [% END %]
       </td>
-      <td>
+      <td class="nowrap">
       [% IF admin %]
-        <input type="checkbox" id="ORCheck" name="override" [% override? 'checked="checked"':'' %]/>
+        <input type="checkbox" id="override-restrictions-checkbox"
+          name="queue[override_restrictions]" [% override? 'checked' : '' %]/>
       [% END %]
       </td>
-      <td style="text-align:right;">
-      [% projs = crms.GetProjectsRef() %]
-      [% IF projs.size %]
-        <label id="projectFieldLabel" for="projectSelect"><strong>Project</strong></label>
-      [% END %]
+      <td class="nowrap" style="text-align:right;">
+        [% presenter.field_label('project', 'project-select') %]
       </td>
-      <td style="text-align:right;">
-        [% IF projs.size %]
-        <select name="project" id="projectSelect">
-        [% FOREACH proj IN projs %]
-          <option value="[% proj.id %]" [% (project==proj.id)? 'selected="selected"':'' %]>[% proj.name %]</option>
-        [% END %]
-        </select>
-      [% END %]
+      <td class="nowrap" style="text-align:right;">
+        [% presenter.edit_field_value('project') %]
       </td>
     </tr>
     <tr>
-      <td>
-        <label id="ticketFieldLabel" for="ticketField"><strong>Ticket</strong></label>
+      <td class="nowrap">
+        [% presenter.field_label('ticket', 'ticket-text') %]
       </td>
-      <td>
-        <input id="ticketField" type="text" name="ticket" size="10" value="[% ticket %]"/>
+      <td class="nowrap">
+        <input id="ticket-text" type="text" name="ticket" size="10" value="[% params.ticket %]"/>
       </td>
-      <td style="text-align:right;">
-        <label for="NoopCheck"><strong>Test Only</strong></label>
+      <td class="nowrap" style="text-align:right;">
+        [% presenter.field_label('test_only', 'noop-checkbox') %]
       </td>
-      <td>
-        <input type="checkbox" id="NoopCheck" name="noop" [% noop? 'checked="checked"':'' %]/>
+      <td class="nowrap">
+        <input type="checkbox" id="noop-checkbox" name="noop" [% params.noop? 'checked':'' %]/>
       </td>
       <td></td>
-      <td style="text-align:right;">
-        <input type="submit" value="Submit"/>
+      <td class="nowrap" style="text-align:right;">
+        <input type="submit" value="[% presenter.t('.new.submit') %]"/>
       </td>
     </tr>
   </table>

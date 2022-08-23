@@ -1,5 +1,9 @@
 ---
 ja:
+  controller:
+    user:
+      new:
+        success: Some action succeeded
   model:
     role:
       attribute:
@@ -8,6 +12,27 @@ ja:
       value:
         expert: エキスパート
         reviewer: レビュアー
+    queue:
+      attribute:
+        added_by: ⋯によって追加した
+        author: 著者
+        cid: カタログID
+        country: 国
+        date: 日にち
+        holds: 保留中
+        expert_reviews: 専門家のレビュー
+        id: ID
+        locked: ロック
+        override_restrictions: 制限を無効にする
+        priority: 優先順位
+        project: 企画
+        pub_date: 発行日
+        reviews: レビュー
+        source: ソース
+        status: 状況
+        test_only: テストのみ
+        title: 書名
+        ticket: チケット
     user:
       attribute:
         access: アクセス
@@ -16,7 +41,7 @@ ja:
         advanced: 上級
         commitment: コミットメント
         email: Eメール
-        expert: エキスパート
+        expert: 専門家
         expires: 有効期限
         id: ID
         institution: 機関
@@ -29,8 +54,76 @@ ja:
         role: 現行の役割
         roles: 役割
       error:
-        invalid: Invalid user
+        invalid: Invalid user THIS IS A PLACEHOLDER
   view:
+    menu:
+      administrative: 管理
+      documentation: ドキュメンテーション
+      greeting: こんにちは%{name}%
+      log_out: ログアウト
+      review: レビュー
+      search_browse: 検索・閲覧
+      stats_reports: 統計・レポート
+    menu_item:
+      administrative:
+        add_to_queue: キューに追加する
+        all_locked_volumes: すべてのロックされたボリューム
+        institutions: 機関
+        keio_data: 慶應義塾データ
+        licensing: ライセンス
+        projects: 企画
+        query_rights_database: 著作権データベースを照会する
+        set_system_status: システムの状態を設定する
+        system_administration: システム管理
+        track_tolumes: ボリュームを追跡する
+        user_accounts: ユーザーアカウント
+      documentation:
+        crms_documentation: CRMS ドキュメンテーション
+        crms_status_codes: CRMS ステータス コード
+        review_search_help: レビュー検索ヘルプ
+        review_search_terms: レビュー検索ワード
+        system_generated_reviews: システム生成のレビュー
+        user_levels_privileges: ユーザーレベルと特権
+      review:
+        automatic_rights_inheritance: 自動著作権継承
+        conflicts: 不一致
+        my_held_reviews: 私の保留中のレビュー
+        my_unprocessed_reviews: 私の未処理のレビュー
+        provisional_matches: 暫定一致
+        review: レビューする
+        rights_inheritance_pending_approval: 承認待ちの著作権継承
+      search_browse:
+        active_reviews: アクティブなレビュー
+        all_held_reviews: すべての保留中のレビュー
+        candidates: 候補
+        final_determinations: 最終決定
+        filtered_volumes: フィルタされたボリューム
+        historical_reviews: 過去のレビュー
+        queue: キュー内のボリューム
+      stats_reports:
+        all_review_stats: すべてのレビュー統計
+        export_stats: 輸出統計
+        my_review_stats: 私のレビュー統計
+        progress_dashboard: 進捗ダッシュボード
+        reviewer_activity: レビュアー活動
+        system_summary: システム概要
+    queue:
+      index:
+        ascending: 昇順
+        clear: クリアする
+        descending: 降順
+        direction: 方向
+        end_date: 終了日
+        no_results_found: 結果が見つかりません。
+        order_by: 順
+        records_per_page: ページあたりのアイテム数
+        records_summary: %{of}%件中%{start}%-%{end}%件目
+        restrict_selection: 選択を制限する
+        start_date: 開始日
+        submit: 送信する
+        volumes_in_queue: キュー内のボリューム
+      new:
+        submit: 送信する
     user:
       edit:
         privileges: 特権
@@ -40,8 +133,4 @@ ja:
         add_new_user: 新しいユーザーを追加します
       show:
         edit: 編集
-  controller:
-    user:
-      new:
-        success: Some action succeeded
-        
+  

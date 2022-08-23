@@ -47,4 +47,11 @@ subtest "/crms/users/:id" => sub {
   ok(index($res->content, $name) >= 0);
 };
 
+subtest "/crms/queue" => sub {
+  my $res = $test->request(GET "/crms/queue");
+  is $res->code, 200;
+  is $res->message, 'OK';
+  is $res->header('Content-Type'), 'text/html; charset=utf-8';
+};
+
 done_testing();

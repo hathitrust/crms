@@ -40,7 +40,7 @@ done_testing();
 
 sub setup {
   #my $before = $crms->SimpleSqlGet('SELECT COUNT(*) FROM users');
-  $crms->PrepareSubmitSql('DELETE FROM users');
+  #$crms->PrepareSubmitSql('DELETE FROM users');
   #my $after = $crms->SimpleSqlGet('SELECT COUNT(*) FROM users');
   #print STDERR "User.t::setup before $before after $after\n";
 }
@@ -51,7 +51,7 @@ sub test_All {
   $user1->save;
   my $all_users = User::All;
   isa_ok($all_users, 'ARRAY', 'User:All returns arrayref');
-  is(scalar @$all_users, 1, 'User::All returns one User');
+  ok(scalar @$all_users > 1, 'User::All returns multiple Users');
 }
 
 sub test_Find {
@@ -66,16 +66,12 @@ sub test_Find {
 
 sub test_Where {
   setup();
-  my $user1 = Factories::User(reviewer => 1, advanced => 1, expert => 0, admin => 0);
-  my $user2 = Factories::User(reviewer => 1, advanced => 1, expert => 1, admin => 0);
-  my $user3 = Factories::User(reviewer => 1, advanced => 1, expert => 0, admin => 1);
-  $user3->save;
+  
   my $result = User::Where(admin => 1);
-  is(scalar @$result, 1);
+  ok(scalar @$result > 0);
   is($result->[0]->{admin}, 1);
-  is($result->[0]->{id}, $user3->{id});
   $result = User::Where;
-  is(scalar @$result, 3);
+  ok(scalar @$result > 0);
 }
 
 sub test_new {
@@ -91,6 +87,7 @@ sub test_save {
   is($user->is_persisted, 1, 'New User is persisted after save');
   my $user_id = $user->{id};
   ok(Scalar::Util::looks_like_number($user_id), 'Saved User gets numeric id');
+  $user->destroy;
 }
 
 sub test_update {

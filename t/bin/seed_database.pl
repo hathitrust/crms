@@ -29,7 +29,7 @@ my $dbh = TestHelper->new->db;
 my @sqls = (
   'DELETE FROM projectusers',
   'DELETE FROM licensing',
-  'DELETE FROM users',
+  'DELETE FROM users WHERE name LIKE "Default%" OR name LIKE "Inactive%"'
 );
 
 foreach my $sql (@sqls) {

@@ -61,6 +61,14 @@ tr.background-inactive { background-color: #e2e2e2; }
 tr.background-hover:hover { background: #a0feae; }
 tr.background-hover td:hover { background: transparent; }
 
+/* queue index page zebra stripe */
+/*tr.queue-table {
+  background-color: #FFFFFF;
+}*/
+tr.queue-table:nth-child(odd) {
+  background-color: #C6C4F1;
+}
+
 /*.navtop    {
   text-align:center; 
   vertical-align:top;

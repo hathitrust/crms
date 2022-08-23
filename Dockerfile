@@ -160,11 +160,13 @@ RUN cpan -T \
   CGI::PSGI \
   Data::Faker \
   Data::Faker::Internet \
+  Data::Page \
   DateTime \
   DateTime::Format::Strptime \
   DateTime::Locale \
   Devel::Cover \
   OAuth::Lite \
+  Plack::Middleware::ErrorDocument \
   Plack::Middleware::TrailingSlashKiller \
   Plack::Response \
   Router::Simple \
