@@ -3672,7 +3672,7 @@ sub AddUser
       $self->PrepareSubmitSql($sql, $id, $proj);
     }
   }
-  if (defined $admin_pages)
+  if (defined $admin_pages && length $admin_pages)
   {
     $admin_pages = [$admin_pages] unless ref $admin_pages;
     $self->PrepareSubmitSql('DELETE FROM user_pages WHERE user=?', $id);
