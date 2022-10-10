@@ -1,0 +1,141 @@
+[% p = cgi.param('p') %]
+[% q = cgi.param('query') %]
+[% INCLUDE header.tt %]
+
+<h2>Query Bibliographic Rights:</h2>
+<form action="crms">
+  [% crms.HiddenSys() %]
+  <input type="hidden" name="p" value="[% p %]"/>
+  <label for="queryTA" class="smallishText">Enter one volume or catalog id per line.</label><br/>
+  <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;">[% crms.EchoInput(q) %]</textarea>
+  <input type="submit" value="Do it!"/>
+</form>
+
+[% br = crms.BibRights() %]
+[% IF q %]
+  [% seen = {} %]
+  [% all = {} %]
+  [% FOREACH id IN q.split %]
+    [% all.$id = 1 %]
+  [% END %]
+  [% query = q.split %]
+  [% FOREACH id IN query %]
+    [% IF seen.$id %][% NEXT %][% END %]
+    [% data = br.query(id) %]
+    [% IF data.error %]
+      <p>
+        <strong>[% id %]: [% data.error %]</strong>
+      </p>
+      [% NEXT %]
+    [% END %]
+    <br/><br/>
+    <table class="exportStats">
+      <tr class="nowrap"><th colspan="15" class="major" scope="colgroup" id="topTH">
+        [% IF data.cid %]
+          <span style="color:white;">[% data.cid %]</span>
+          &nbsp;&nbsp;&nbsp;&nbsp;
+          [% link = crms.LinkToCatalog(data.cid) %]
+          <a style="color:white;" href="[% link %]" target="_blank">[% data.title %]</a>
+          &nbsp;&nbsp;&nbsp;&nbsp;
+          [% link = crms.LinkToCatalogMARC(data.cid) %]
+          <a style="color:white;" href="[% link %]" target="_blank">[Catalog MARC]</a>
+          &nbsp;&nbsp;&nbsp;&nbsp;[% data.entries.size %] [% crms.Pluralize('volume', data.entries.size) %]
+        [% ELSE %]
+          [% crms.EchoInput(id) %]&nbsp;&nbsp;&nbsp;&nbsp;(not in catalog)
+        [% END %]
+      </th></tr>
+      
+      <tr class="nowrap">
+        <th class="nowrap" scope="col" id="volumeTH">HTID</th>
+        <th class="nowrap" scope="col" id="currentRightsTH">Current&nbsp;Rights</th>
+        <th class="nowrap" scope="col" id="rightsTH">Rights</th>
+        <th class="nowrap" scope="col" id="enumchronTH">Enumcron</th>
+        <th class="nowrap" scope="col" id="FMTTH">FMT</th>
+        <th class="nowrap" scope="col" id="reasonTH">Reason</th>
+        <th class="nowrap" scope="col" id="dateUsedTH">Date&nbsp;Used</th>
+        <th scope="col" id="dateMungedTH">Date&nbsp;Munged?</th>
+        <th scope="col" id="dateDescTH">Date Description</th>
+        <th scope="col" id="dateTypeTH">Date&nbsp;Type</th>
+        <th scope="col" id="date1TH">Date1&nbsp;(orig)</th>
+        <th scope="col" id="date2TH">Date2&nbsp;(orig)</th>
+        <th scope="col" id="govTH">Gov&nbsp;Doc</th>
+        <th scope="col" id="fedDocTH">US&nbsp;Fed&nbsp;Doc</th>
+        <th scope="col" id="pubPlaceTH">Pub&nbsp;Place</th>
+      </tr>
+      <tr>
+        <td class="nowrap" headers="volumeTH">
+          [% FOREACH line IN data.entries %]
+            [% id2 = line.id %]
+            [% seen.$id2 = 1 %]
+            [% url = crms.PTAddress(id2) %]
+            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
+            <a href="[% url %]" target="_blank" [% style %]>[% id2 %]</a><br/>
+          [% END %]
+        </td>
+        <td class="nowrap" headers="currentRightsTH">
+          [% FOREACH line IN data.entries %]
+            [% id2 = line.0 %]
+            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
+            <span [% style %]>[% crms.CurrentRightsString(line.id) %]</span><br/>
+          [% END %]
+        </td>
+        <td class="nowrap" headers="rightsTH">
+          [% FOREACH line IN data.entries %]
+            [% id2 = line.0 %]
+            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
+            <span [% style %]>[% line.attr %]</span><br/>
+          [% END %]
+        </td>
+        <td class="nowrap" headers="enumchronTH">
+          [% FOREACH line IN data.entries %]
+            [% id2 = line.0 %]
+            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
+            <span [% style %]>[% line.desc %]</span><br/>
+          [% END %]
+        </td>
+        <td class="nowrap" headers="FMTTH">
+          [% FOREACH line IN data.entries %]
+            [% id2 = line.0 %]
+            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
+            <span [% style %]>[% line.bib_fmt %]</span><br/>
+          [% END %]
+        </td>
+        <td class="nowrap" headers="reasonTH">
+          [% FOREACH line IN data.entries %]
+            [% id2 = line.0 %]
+            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
+            <span [% style %]>[% line.reason %]</span><br/>
+          [% END %]
+        </td>
+        <td class="nowrap" headers="dateUsedTH">
+          [% FOREACH line IN data.entries %]
+            [% id2 = line.0 %]
+            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
+            <span [% style %]>[% line.date_used %]</span><br/>
+          [% END %]
+        </td>
+        <td class="nowrap" headers="dateMungedTH">
+          [% FOREACH line IN data.entries %]
+            [% id2 = line.0 %]
+            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
+            <span [% style %]>[% line.date_munged %]</span><br/>
+          [% END %]
+        </td>
+        <td class="nowrap" headers="dateDescTH">
+          [% FOREACH line IN data.entries %]
+            [% id2 = line.0 %]
+            [% style = (all.$id2 == 1)? 'style="color:green;"':'' %]
+            <span [% style %]>[% line.date_desc %]</span><br/>
+          [% END %]
+        </td>
+        <td class="nowrap" headers="dateTypeTH">[% FOREACH line IN data.entries %][% line.date_type %]<br/>[% END %]</td>
+        <td class="nowrap" headers="date1TH">[% FOREACH line IN data.entries %][% line.date1 %]&nbsp;([% line.orig_date1 %])<br/>[% END %]</td>
+        <td class="nowrap" headers="date2TH">[% FOREACH line IN data.entries %][% line.date2 %]&nbsp;([% line.orig_date2 %])<br/>[% END %]</td>
+        <td class="nowrap" headers="fedDocTH">[% FOREACH line IN data.entries %][% line.gov_pub %]<br/>[% END %]</td>
+        <td class="nowrap" headers="fedDocTH">[% FOREACH line IN data.entries %][% line.us_fed_doc %]<br/>[% END %]</td>
+        <td class="nowrap" headers="pubPlaceTH">[% FOREACH line IN data.entries %][% line.pub_place %]<br/>[% END %]</td>
+      </tr>
+    </table>
+  [% END %]
+[% END %]
+[% INCLUDE footer.tt %]

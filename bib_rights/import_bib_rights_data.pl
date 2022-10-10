@@ -6,18 +6,22 @@ BEGIN {
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
   unshift(@INC, $ENV{'SDRROOT'}. '/crms/post_zephir_processing');
   # For local copies of MARC::Record code if otherwise unavailable
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/bib_rights/lib');
+  # Should no longer be needed with MARC modules back in place
+  # unshift(@INC, $ENV{'SDRROOT'}. '/crms/bib_rights/lib');
 }
 
-use CRMS;
+use Capture::Tiny;
+use Data::Dumper;
 use Encode;
 use Getopt::Long;
 use IO::Zlib;
-use Data::Dumper;
-use bib_rights;
 use MARC::Record;
 use MARC::Record::MIJ;
 use Term::ANSIColor qw(:constants colored);
+
+use CRMS;
+use bib_rights;
+
 $Term::ANSIColor::AUTORESET = 1;
 
 $| = 1;
@@ -96,7 +100,13 @@ local $SIG{INT} = sub { $report .= "INT signal received<br/>\n"; cleanup(); };
 
 add_sentinel();
 
-my $br = bib_rights->new();
+my $br;
+# bib_rights.pm likes to emit cutoff year debugging info to STDERR.
+# So suppress it.
+my ($stderr, @result) = Capture::Tiny::capture_stderr sub {
+  $br = bib_rights->new();
+};
+
 $report .= "<b>Importing from $plan->{file}</b><br/>\n";
 my $fh = new IO::Zlib;
 my $i = 0;

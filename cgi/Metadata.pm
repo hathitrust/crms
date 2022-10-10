@@ -1,16 +1,31 @@
 package Metadata;
+
+# An interface to the HathiTrust Bib API tailored to CRMS requirements.
+
+# Some of the functionality here may be replaced via an intermediate layer
+# using MARC::Record and MARC::File::XML, jettisoning some of the homebrew stuff.
+
+# For testing with static fixtures, set CRMS_METADATA_FIXTURES_PATH
+# and the module will fetch an id like '123456789' from
+# CRMS_METADATA_FIXTURES_PATH + /123456789.json
+
 use vars qw(@ISA @EXPORT @EXPORT_OK);
 
 use strict;
 use warnings;
-use LWP::UserAgent;
-use XML::LibXML;
-use JSON::XS;
-use Unicode::Normalize;
+use utf8;
+
+use Carp;
 use DB_File;
+use File::Slurp;
+use JSON::XS;
+use LWP::UserAgent;
+use Unicode::Normalize;
+use XML::LibXML;
 
 my $US_CITIES;
 
+# TODO: this is duplicative of code in post_zephir_processing/bib_rights.pm
 sub US_Cities {
   if (!defined $US_CITIES) {
     my %us_cities;
@@ -100,6 +115,9 @@ sub fetch_record {
   my $self = shift;
   my $id   = shift;
 
+  if ($ENV{CRMS_METADATA_FIXTURES_PATH}) {
+    return $self->fetch_fixture($id);
+  }
   my $type = ($id =~ m/\./)? 'htid' : 'recordnumber';
   my $url = "https://catalog.hathitrust.org/api/volumes/full/$type/$id.json";
   my $attempt = 1;
@@ -119,6 +137,18 @@ sub fetch_record {
   }
   $self->set_error($err);
   return;
+}
+
+sub fetch_fixture {
+  my $self = shift;
+  my $id   = shift;
+
+  my $fixture = "$ENV{CRMS_METADATA_FIXTURES_PATH}/$id.json";
+  unless (-r $fixture) {
+    $self->set_error("cannot read fixture at $fixture");
+    return;
+  }
+  return File::Slurp::read_file($fixture);
 }
 
 sub xml {
@@ -531,6 +561,15 @@ sub _NormalizeCity
   return $suba;
 }
 
+# TODO: rename other "enumchron" references to use conventional spelling.
+sub enumcron {
+  my $self = shift;
+  my $id   = shift;
+
+  return $self->enumchron($id);
+}
+
+# This is the older, deprecated form
 sub enumchron
 {
   my $self = shift;
