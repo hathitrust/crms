@@ -125,9 +125,8 @@ addEvent(window, 'load', function(e)
         [% END %]
       </td>
       <td style="text-align:center;">
-        [% projs = crms.GetUserProjects(userid) %]
         [% names = [] %]
-        [% FOREACH proj IN projs %][% names.push(proj.name) %][% END %]
+        [% FOREACH proj IN u.projects %][% names.push(proj.name) %][% END %]
         [% names.join(', ') %]
       </td>
       [% IF u.secondary %]

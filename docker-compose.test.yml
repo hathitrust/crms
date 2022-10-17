@@ -1,0 +1,30 @@
+version: '3'
+
+services:
+
+  mariadb:
+    build: docker/db
+    restart: always
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: 1
+    ports:
+      - "52000:3306"
+
+  sut:
+    build: .
+    volumes:
+      - .:/htapps/babel/crms
+    environment:
+      - SDRROOT=/htapps/babel
+      - CRMS_SQL_HOST=mariadb
+      # pass through info needed by coveralls uploader
+      - GITHUB_TOKEN
+      - GITHUB_RUN_ID
+      - GITHUB_EVENT_TOKEN
+      - GITHUB_EVENT_PATH
+      - GITHUB_SHA
+      - GITHUB_REF
+      - GITHUB_ACTIONS
+    depends_on:
+      - mariadb
+    command: scripts/test_and_cover.sh

@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
   libany-moose-perl \
   libapache-session-perl \
   libarchive-zip-perl \
+  libcapture-tiny-perl \
   libcgi-application-perl \
   libcgi-compile-perl \
   libcgi-emulate-psgi-perl \
@@ -151,8 +152,10 @@ RUN apt-get install -y \
   libperl-critic-perl
 
 RUN cpan \
-  CGI::Application::Plugin::Routes \
+  Devel::Cover::Report::Coveralls \
   OAuth::Lite \
   Test::Exception
 
 RUN mkdir -p /htapps/babel/crms
+
+WORKDIR /htapps/babel/crms

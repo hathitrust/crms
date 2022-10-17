@@ -57,7 +57,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.4.17';
+our $VERSION = '8.4.18';
 sub Version
 {
   return $VERSION;
@@ -3653,8 +3653,8 @@ sub AddUser
   $inst = $self->PredictUserInstitution($id) unless defined $inst;
   if (!$self->SimpleSqlGet('SELECT COUNT(*) FROM users WHERE id=?', $id))
   {
-    my $sql = 'INSERT INTO users (id,institution) VALUES (?,?)';
-    $self->PrepareSubmitSql($sql, $id, $inst);
+    my $sql = 'INSERT INTO users (id,name,institution) VALUES (?,?,?)';
+    $self->PrepareSubmitSql($sql, $id, $name, $inst);
   }
   my $sql = 'UPDATE users SET name=?,kerberos=?,reviewer=?,advanced=?,'.
             'expert=?,admin=?,note=?,institution=?,commitment=? WHERE id=?';
@@ -3672,7 +3672,7 @@ sub AddUser
       $self->PrepareSubmitSql($sql, $id, $proj);
     }
   }
-  if (defined $admin_pages)
+  if (defined $admin_pages && length $admin_pages)
   {
     $admin_pages = [$admin_pages] unless ref $admin_pages;
     $self->PrepareSubmitSql('DELETE FROM user_pages WHERE user=?', $id);
@@ -6408,6 +6408,16 @@ sub RightsQuery
   return $ref;
 }
 
+# Return current rights as attr/reason string, or undef if unavailable.
+sub CurrentRightsString {
+  my $self = shift;
+  my $id   = shift;
+
+  my $rq = $self->RightsQuery($id, 1);
+  return unless defined $rq;
+  return $rq->[0]->[0] . '/' . $rq->[0]->[1];
+}
+
 # For completed one-offs in Add to Queue page.
 # Shows current rights and, if available, the rights being transitioned to.
 sub CurrentRightsQuery
@@ -8601,6 +8611,13 @@ sub Licensing
 
   use Licensing;
   Licensing->new('crms' => $self);
+}
+
+sub BibRights {
+  my $self = shift;
+
+  use BibRights;
+  return BibRights->new;
 }
 
 1;

@@ -1,6 +1,6 @@
 # CRMS: Copyright Review Management System
 
-![Run CI](https://github.com/hathitrust/crms/workflows/Run%20CI/badge.svg)
+![Run CI](https://github.com/hathitrust/crms/workflows/Run%20CI/badge.svg) [![Coverage Status](https://coveralls.io/repos/github/hathitrust/crms/badge.svg?branch=87/merge)](https://coveralls.io/github/hathitrust/crms?branch=87/merge)
 
 A web app and suite of tools for performing copyright review projects.
 
@@ -16,11 +16,29 @@ docker-compose up -d mariadb
 docker-compose run --rm test
 ```
 
-## Running `bib_api.pm` Coverage
+## Running Tests with Coverage
 
 ```
-bib_rights/cover.sh
+scripts/cover.sh
 ```
+
+The other coverage script -- `scripts/test_and_cover.sh` -- is used by GitHub actions
+to upload results to Coveralls.
+
+## What is Where
+
+- `bin` For the most part these are actions and reports run as cron jobs
+- `cgi` Main entry point `cgi/crms` as well as Perl modules and view templates
+- `docker` Database seeds
+- `prep` Destination for some log files and reports
+- `scripts` Binaries run as part of development or by GitHub
+- `t` Tests
+- `web` Static assets including images, JS, CSS
+
+`cgi` is the directory most in need of reorganization. In future much of its
+content will be migrated to `lib` and `views`.
+
+## Coverage Notes on `bib_rights.pm`
 
 Currently, with strategic `# uncoverable ...` comments made to `post_zephir_processing/bib_rights.pm`
 I get the following results:
