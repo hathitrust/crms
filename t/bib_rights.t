@@ -2,21 +2,19 @@
 
 use strict;
 use warnings;
-BEGIN {
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/post_zephir_processing');
-}
-
 use utf8;
-binmode(STDOUT, ':encoding(UTF-8)');
-use CRMS;
+
+use Capture::Tiny;
 use Encode;
 use JSON::XS;
-use bib_rights;
 use MARC::File::XML(BinaryEncoding => 'utf8');
 use Test::More;
 
-my $crms = CRMS->new();
+use lib $ENV{SDRROOT} . '/crms/post_zephir_processing';
+use bib_rights;
+
+binmode(STDOUT, ':encoding(UTF-8)');
+
 my $fixtures_dir = $ENV{'SDRROOT'} . '/crms/t/fixtures/bib_rights/';
 my $test_struct = read_json('bib_rights_tests.json');
 
@@ -25,7 +23,7 @@ foreach my $htid (sort keys %$test_struct) {
 }
 
 subtest "Miscellaneous coverage tests" => sub {
-  my $br = bib_rights->new();
+  my $br = create_bib_rights();
 
   # Pass nonexistent fed docs file
   $ENV{'us_fed_pub_exception_file'} = $fixtures_dir . 'no_such_file.txt';
@@ -65,7 +63,7 @@ subtest "Fed docs exception list" => sub {
 </record>
 END_OF_RECORD
   my $fake_marc = MARC::Record->new_from_xml($fake_marc_xml);
-  my $br = bib_rights->new();
+  my $br = create_bib_rights();
   my $bib_info = $br->get_bib_info($fake_marc, 'BOGUS RECORD 1');
   ok($bib_info->{us_fed_pub_exception} && $bib_info->{us_fed_pub_exception} eq 'exception list');
 };
@@ -79,7 +77,7 @@ subtest "Fake unattested 'date type e--no date1'" => sub {
 </record>
 END_OF_RECORD
   my $fake_marc = MARC::Record->new_from_xml($fake_marc_xml);
-  my $br = bib_rights->new();
+  my $br = create_bib_rights();
   my $bib_info = $br->get_bib_info($fake_marc, 'BOGUS RECORD 4');
   my $bib_rights_info = $br->get_bib_rights_info('mdp.0000000000', $bib_info, '');
   ok($bib_rights_info->{date_desc} eq 'date type e--no date1');
@@ -96,7 +94,7 @@ subtest "Fake unattested 'National Research Council' and 'Canada' imprint" => su
   </datafield>
 </record>
 END_OF_RECORD
-  my $br = bib_rights->new();
+  my $br = create_bib_rights();
   my $fake_marc = MARC::Record->new_from_xml($fake_marc_xml);
   my $bib_info = $br->get_bib_info($fake_marc, 'BOGUS RECORD 6');
   ok(!$bib_info->{us_fed_pub_exception} || $bib_info->{us_fed_pub_exception} ne 'national research council');
@@ -110,7 +108,7 @@ subtest "Fake unattested biblevel 's' without matching recType" => sub {
   <controlfield tag="008">950818e||||2001njumr1p       0   a0eng d</controlfield>
 </record>
 END_OF_RECORD
-  my $br = bib_rights->new();
+  my $br = create_bib_rights();
   my $fake_marc = MARC::Record->new_from_xml($fake_marc_xml);
   my $fmt = bib_rights::getBibFmt('BOGUS RECORD 5', $fake_marc);
   is($fmt, 'SE');
@@ -143,7 +141,7 @@ subtest "get_volume_date page/part regex" => sub {
     '1970-1970', '1970,1970', '1970-1970,1970', '1970,1970-1970', '1970-1970,1970-1970',
     '1970-1970-1970'
   ];
-  my $br = bib_rights->new();
+  my $br = create_bib_rights();
   foreach my $pattern (@$patterns) {
     foreach my $first_prefix (@$first_prefixes) {
       foreach my $second_prefix (@$second_prefixes) {
@@ -176,7 +174,7 @@ subtest "get_volume_date month stripping" => sub {
   my @patterns2 = @patterns1;
   push(@patterns2, "");
   Test::More->builder->output("/dev/null");
-  my $br = bib_rights->new();
+  my $br = create_bib_rights();
   foreach my $pattern1 (@patterns1) {
     foreach my $pattern2 (@patterns2) {
       my $input = $pattern1 . $pattern2 . $real_year;
@@ -209,7 +207,7 @@ subtest "get_volume_date Report Number" => sub {
     ["no.201-247(1969:Je-1979:Ag)", "1969"], # degenerate
     ["v.1:2-V.3:4 1975:N-1977:AG", "1975"], # degenerate
   ];
-  my $br = bib_rights->new();
+  my $br = create_bib_rights();
   foreach my $test (@$tests) {
     my ($input, $expected) = @$test;
     my $output = $br->get_volume_date($input);
@@ -237,7 +235,7 @@ sub run_tests_for_htid {
   foreach my $year (sort keys %{$test_struct->{$htid}->{years}}) {
     my $attr = $test_struct->{$htid}->{years}->{$year};
     $ENV{BIB_RIGHTS_DATE} = $year;
-    my $br = bib_rights->new();
+    my $br = create_bib_rights();
     my $bib_info = $br->get_bib_info($marc, $cid);
     my $bib_rights_info = $br->get_bib_rights_info($htid, $bib_info, $enumcron);
     ok($bib_rights_info->{attr} eq $attr);
@@ -272,4 +270,15 @@ sub read_json {
   my $test_data = do { local $/; <$fh> };
   close $fh;
   return $jsonxs->decode($test_data);
+}
+
+# bib_rights.pm likes to emit cutoff year debugging info to STDERR.
+# "The time for talkin' is over. The time for shuttin' up has begun."
+sub create_bib_rights {
+  my $br;
+
+  my ($stderr, @result) = Capture::Tiny::capture_stderr sub {
+    $br = bib_rights->new();
+  };
+  return $br;
 }
