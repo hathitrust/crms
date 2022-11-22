@@ -10,7 +10,7 @@
   <br/>
   <br/>
   <br/>
-  [% mail = crms.GetSystemVar('expertsEmail') %]
+  [% mail = crms.GetSystemVar('experts_email') %]
   [% mail2 = mail.replace('-', '&#8209;') %]
   [% user = crms.get('user') %]
   <div class="warningBox">

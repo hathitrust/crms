@@ -2,19 +2,20 @@
 
 use strict;
 use warnings;
+use utf8;
 
-BEGIN
-{
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
 }
 
 use v5.10;
-binmode(STDOUT, ':encoding(UTF-8)');
-use utf8;
+
 use Getopt::Long;
 use Term::ANSIColor qw(:constants);
 use Perl::Critic;
 
+binmode(STDOUT, ':encoding(UTF-8)');
 
 $Term::ANSIColor::AUTORESET = 1;
 my $usage = <<END;

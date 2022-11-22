@@ -2,7 +2,12 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use utf8;
+
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+}
 
 use CRMS;
 use Getopt::Long;
@@ -92,7 +97,7 @@ $boundary--
 END_OF_BODY
   }
   my $bytes = Encode::encode('utf8', $message);
-  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
+  my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
               'to'           => $to,
               'subject'      => $subj,
               'content-type' => $contentType,

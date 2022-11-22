@@ -2,10 +2,13 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
-
 use utf8;
-binmode(STDOUT, ':encoding(UTF-8)');
+
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+}
+
 use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
@@ -13,6 +16,8 @@ use JSON::XS;
 use Term::ANSIColor qw(:constants colored);
 $Term::ANSIColor::AUTORESET = 1;
 use Data::Dumper;
+
+binmode(STDOUT, ':encoding(UTF-8)');
 
 my $usage = <<END;
 USAGE: $0 [-hnpv] [-e HTID [-e HTID...]]

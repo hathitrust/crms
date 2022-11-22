@@ -26,7 +26,7 @@ function closeMe()
   <br/>
 
   [% IF !mail %]
-    [% mail = crms.GetSystemVar('expertsEmail') %]
+    [% mail = crms.GetSystemVar('experts_email') %]
   [% END %]
     <div class="emailBox">
       [% IF cgi.param("submit") %]

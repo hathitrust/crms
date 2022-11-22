@@ -87,7 +87,7 @@
         <th scope="col" id="SYSIDTH">Catalog ID</th>
         <th scope="col" id="enumchronTH">Enum/Chron</th>
         <th scope="col" id="CRMSTH">
-          <img src="[% crms.WebPath('web', crms.GetSystemVar('smallLogo')) %]"
+          <img src="[% crms.WebPath('web', crms.GetSystemVar('small_logo')) %]"
                alt="CRMS-US Logo" width="26" height="20"/>
         </th>
         <th scope="col" id="authorTH">Author</th>

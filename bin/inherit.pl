@@ -2,7 +2,12 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use utf8;
+
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+}
 
 use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
@@ -433,7 +438,7 @@ if (scalar @mails)
   use Mail::Sendmail;
   use Encode;
   my $bytes = encode('utf8', $txt);
-  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
+  my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
               'to'           => $to,
               'subject'      => $subj,
               'content-type' => 'text/html; charset="UTF-8"',

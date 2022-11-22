@@ -25,12 +25,8 @@ foreach my $htid (sort keys %$test_struct) {
 subtest "Miscellaneous coverage tests" => sub {
   my $br = create_bib_rights();
 
-  # Pass nonexistent fed docs file
-  $ENV{'us_fed_pub_exception_file'} = $fixtures_dir . 'no_such_file.txt';
   # Clone existing BR object
   ok(my $br2 = $br->new());
-
-  delete $ENV{'us_fed_pub_exception_file'};
 
   my $date = bib_rights::getDate(0);
   is($date, '19700101:00:00:00');
