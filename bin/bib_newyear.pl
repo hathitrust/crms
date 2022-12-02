@@ -63,12 +63,12 @@ print "Verbosity $verbose\n" if $verbose;
 $year = $crms->GetTheYear() unless $year;
 
 $ENV{BIB_RIGHTS_DATE} = $year if defined $year;
-  
+
 my $sql = 'SELECT r.namespace,r.id,a.name,rs.name FROM rights_current r'.
           ' INNER JOIN attributes a ON r.attr=a.id'.
           ' INNER JOIN reasons rs ON r.reason=rs.id'.
           ' WHERE CONCAT(a.name,"/",rs.name)'.
-          ' IN ("ic-world/con","ic/cdpp","ic/ipma","ic/ren","op/ipma",
+          ' IN ("ic-world/con","ic/cdpp","ic/crms","ic/ipma","ic/man","ic/ren","op/ipma",
                 "pd/cdpp","pd/crms","pd/ncn","pd/ren","pdus/cdpp",
                 "pdus/crms","pdus/gfv","pdus/ncn","pdus/ren","und/crms",
                 "und/nfi","und/ren")'.
