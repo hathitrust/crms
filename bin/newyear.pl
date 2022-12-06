@@ -15,8 +15,8 @@ $Term::ANSIColor::AUTORESET = 1;
 use Data::Dumper;
 
 my $usage = <<END;
-USAGE: $0 [-hnpv] [-e HTID [-e HTID...]]
-       [-s HTID [-s HTID...]] [-S PATH.txt] [-x EXCEL_FILE] [-y YEAR]
+USAGE: $0 [-hnpv] [-e HTID [-e HTID...]] [-l LIMIT]
+       [-s HTID [-s HTID...]] [-S PATH.txt] [-o TSV_FILE] [-y YEAR]
 
 Reports on and submits new determinations for previous determinations
 that may now, as of the new year, have had copyright expire from ic*
@@ -34,42 +34,44 @@ database as a queue entry and autocrms review with the new rights.
 
 -e HTID        Exclude HTID from being considered.
 -h             Print this help message.
+-l LIMIT       Add LIMIT to SQL queries (used for testing).
 -n             No-op. Makes no changes to the database.
+-o TSV_FILE    Write report on new determinations to TSV_FILE.
 -p             Run in production.
 -s HTID        Report only for volume HTID. May be repeated for multiple volumes.
 -S PATH        Read text file of single HTIDs as if they were all passed with -s.
 -v             Emit verbose debugging information. May be repeated.
--x EXCEL_FILE  Write report on new determinations to EXCEL_FILE.
 -y YEAR        Use this year instead of the current one.
 END
 
 my @excludes;
 my $help;
 my $instance;
+my $limit;
 my $noop;
+my $tsv;
 my $production;
 my @singles;
 my $singles_path;
 my $verbose;
-my $excel;
 my $year;
 
 Getopt::Long::Configure('bundling');
 die 'Terminating' unless GetOptions(
            'e:s@' => \@excludes,
            'h|?'  => \$help,
+           'l:s'  => \$limit,
            'n'    => \$noop,
+           'o:s'  => \$tsv,
            'p'    => \$production,
            's:s@' => \@singles,
            'S:s'  => \$singles_path,
            'v+'   => \$verbose,
-           'x:s'  => \$excel,
            'y:s'  => \$year);
 $instance = 'production' if $production;
 if ($help) { print $usage. "\n"; exit(0); }
 
 my $crms = CRMS->new(
-    sys      => 'crmsworld',
     verbose  => $verbose,
     instance => $instance
 );
@@ -89,18 +91,13 @@ if ($singles_path) {
     push @singles, $line;
   }
 }
-#exit 0;
 
-my ($workbook, $worksheet);
-my $wsrow = 1;
-if ($excel) {
-  require Excel::Writer::XLSX;
-  my $excelpath = $crms->FSPath('prep', $excel);
+my $tsv_fh;
+if ($tsv) {
+  open $tsv_fh, '>:encoding(UTF-8)', $tsv or die "failed to open TSV file $tsv: $!";
   my @cols = ('ID', 'Project', 'Author', 'Title', 'Pub Date', 'Country', 'Current Rights',
               'Extracted Data', 'Predictions', 'New Rights', 'Message');
-  $workbook  = Excel::Writer::XLSX->new($excelpath);
-  $worksheet = $workbook->add_worksheet();
-  $worksheet->write_string(0, $_, $cols[$_]) for (0 .. scalar @cols - 1);
+  printf $tsv_fh "%s\n", join("\t", @cols);
 }
 
 my $nyp = $crms->SimpleSqlGet('SELECT id FROM projects WHERE name="New Year"');
@@ -116,6 +113,7 @@ $year = $crms->GetTheYear() unless $year;
 my $pdus_cutoff_year = $year - 95;
 my $pd_cutoff_year = $year - 125;
 my $jsonxs = JSON::XS->new->utf8;
+
 ProcessCommonwealthProject();
 ProcessPubDateProject();
 ProcessCrownCopyrightProject();
@@ -132,6 +130,7 @@ sub ProcessCommonwealthProject {
     $sql .= sprintf(" AND NOT e.id IN ('%s')", join "','", @excludes);
   }
   $sql .= ' ORDER BY e.time DESC';
+  $sql .= " LIMIT $limit" if $limit;
   print Utilities::StringifySql($sql, $commonwealth_pid, $year). "\n" if $verbose > 1;
   my $ref = $crms->SelectAll($sql, $commonwealth_pid, $year);
   my %seen;
@@ -227,6 +226,7 @@ sub ProcessPubDateProject
     $sql .= sprintf(" AND NOT e.id IN ('%s')", join "','", @excludes);
   }
   $sql .= ' ORDER BY e.time DESC';
+  $sql .= " LIMIT $limit" if $limit;
   print Utilities::StringifySql($sql, $pubdate_pid). "\n" if $verbose > 1;
   my $ref = $crms->SelectAll($sql, $pubdate_pid);
   printf "Checking %d possible Publication Date determinations…\n", scalar @$ref;
@@ -296,6 +296,7 @@ sub ProcessCrownCopyrightProject {
     $sql .= sprintf(" AND NOT e.id IN ('%s')", join "','", @excludes);
   }
   $sql .= ' ORDER BY e.time DESC';
+  $sql .= " LIMIT $limit" if $limit;
   print Utilities::StringifySql($sql, $crown_copyright_pid, $year). "\n" if $verbose > 1;
   my $ref = $crms->SelectAll($sql, $crown_copyright_pid, $year);
   my %seen;
@@ -343,7 +344,6 @@ sub ProcessCrownCopyrightProject {
       }
       $alldates{$_} = 1 for keys %dates;
     }
-    print RED "  BOGUS rights code '$bogus'\n" if $bogus;
     next if $bogus;
     my ($ic, $icus, $pd, $pdus);
     foreach my $pred (keys %predictions) {
@@ -407,26 +407,18 @@ sub SubmitNewYearReview
   if ($result) {
     print RED "SubmitReview() for $id: $result\n";
   }
-  if ($excel) {
+  if ($tsv) {
     my $rq = $crms->RightsQuery($id, 1);
     my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
-    $worksheet->write_string($wsrow, 0, $id);
-    $worksheet->write_string($wsrow, 1, $project_name);
-    $worksheet->write_string($wsrow, 2, $record->author || '');
-    $worksheet->write_string($wsrow, 3, $record->title || '');
-    $worksheet->write_string($wsrow, 4, $record->copyrightDate || '');
-    $worksheet->write_string($wsrow, 5, $record->country || '');
-    $worksheet->write_string($wsrow, 6, "$acurr/$rcurr");
-    $worksheet->write_string($wsrow, 7, $extracted_data);
-    $worksheet->write_string($wsrow, 8, $predictions);
-    $worksheet->write_string($wsrow, 9, "$new_attr/$new_reason");
-    $worksheet->write_string($wsrow, 10, $msg);
-    print GREEN "Worksheet row $wsrow written\n";
-    $wsrow++;
+    my @values = ($id, $project_name, $record->author || '',
+      $record->title || '', $record->copyrightDate || '',
+      $record->country || '', "$acurr/$rcurr", $extracted_data,
+      $predictions, "$new_attr/$new_reason", $msg);
+    @values = map { local $_ = $_; $_ =~ s/\s+/ /g; $_; } @values;
+    printf $tsv_fh "%s\n", join("\t", @values);
   }
 }
 
-$workbook->close() if $excel;
+close($tsv_fh) if $tsv;
 
 print RED "Warning: $_\n" for @{$crms->GetErrors()};
-
