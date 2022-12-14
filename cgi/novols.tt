@@ -8,7 +8,7 @@
                style="display:block;margin-left:auto;margin-right:auto;"/>
   </a>
   <br/><br/><br/><br/>
-  [% experts = crms.GetSystemVar("expertsEmail") %]
+  [% experts = crms.GetSystemVar("experts_email") %]
   [% user = crms.get('user') %]
   [% projs = crms.GetUserProjects(user) %]
   <div class="warningBox">

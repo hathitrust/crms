@@ -2,7 +2,12 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use utf8;
+
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+}
 
 use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
@@ -94,16 +99,6 @@ else
   $crms->ReportMsg($rc, 1);
   $crms->ReportMsg("<b>Done</b> exporting.", 1);
 }
-#if (!$crms->GetSystemVar('cri')) { $crms->ReportMsg('CRI system variable not set; skipping.', 1); }
-#elsif ($skipCRI) { $crms->ReportMsg('-i flag set; skipping CRI processing.', 1); }
-#else
-#{
-#  $crms->ReportMsg('Starting to process CRI.', 1);
-#  use CRI;
-#  my $cri = CRI->new('crms' => $crms);
-#  $cri->ProcessCRI();
-#  $crms->ReportMsg('DONE processing CRI.', 1);
-#}
 
 if ($skipCandidates) { $crms->ReportMsg("-c flag set; skipping candidates load.", 1); }
 else
@@ -201,7 +196,7 @@ $boundary--
 END_OF_BODY
   }
   my $bytes = Encode::encode('utf8', $message);
-  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
+  my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
               'to'           => $to,
               'subject'      => $subj,
               'content-type' => $contentType,

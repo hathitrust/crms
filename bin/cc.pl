@@ -2,7 +2,12 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use utf8;
+
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+}
 
 use CRMS;
 use Getopt::Long;
@@ -94,7 +99,7 @@ if (scalar @mails)
   use MIME::Base64;
   use Mail::Sendmail;
   my $boundary = "====" . time() . "====";
-  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
+  my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
               'to'           => (join ',', @mails),
               'subject'      => $subj,
               'content-type' => "multipart/mixed; boundary=\"$boundary\""

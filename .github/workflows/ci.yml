@@ -22,7 +22,7 @@ jobs:
           submodules: true
 
       - name: Build docker image
-        run: docker-compose build
+        run: docker-compose --file docker-compose.test.yml build
 
       - name: Run tests
         run: docker-compose --file docker-compose.test.yml run sut

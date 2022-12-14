@@ -2,7 +2,12 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use utf8;
+
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+}
 
 use CRMS;
 use Getopt::Long;
@@ -112,7 +117,7 @@ foreach my $row (@{$ref})
 $msg =~ s/__TABLE__/$table/;
 $msg =~ s/__TOTAL_THIS_WEEK__/$thisn/g;
 $msg =~ s/__TOTAL_LAST_WEEK__/$lastn/g;
-$mails{$crms->GetSystemVar('mailingList')} = 1 if $lists;
+$mails{$crms->GetSystemVar('mailing_list')} = 1 if $lists;
 
 $msg .= sprintf('<span style="font-size:.9em;">Report for week %s to %s, compared to week %s to %s</span>',
                 $crms->FormatDate($startThis), $crms->FormatDate($now),
@@ -129,7 +134,7 @@ if (scalar @mails)
   use Encode;
   use Mail::Sendmail;
   my $bytes = encode('utf8', $msg);
-  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
+  my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
               'to'           => $to,
               'subject'      => $subj,
               'content-type' => 'text/html; charset="UTF-8"',

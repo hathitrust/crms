@@ -9,9 +9,11 @@
 
 use strict;
 use warnings;
+
 BEGIN {
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/post_zephir_processing');
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/post_zephir_processing';
 }
 
 use utf8;

@@ -2,22 +2,25 @@
 
 use strict;
 use warnings;
+use utf8;
+
 BEGIN {
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/post_zephir_processing');
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/post_zephir_processing';
 }
 
-use utf8;
-binmode(STDOUT, ':encoding(UTF-8)');
-use CRMS;
-use Getopt::Long qw(:config no_ignore_case bundling);
-use Encode;
-use Term::ANSIColor qw(:constants colored);
-$Term::ANSIColor::AUTORESET = 1;
 use Data::Dumper;
-use bib_rights;
+use Encode;
+use Getopt::Long qw(:config no_ignore_case bundling);
 use MARC::File::XML(BinaryEncoding => 'utf8');
+use Term::ANSIColor qw(:constants colored);
 
+use CRMS;
+use bib_rights;
+
+$Term::ANSIColor::AUTORESET = 1;
+binmode(STDOUT, ':encoding(UTF-8)');
 my $usage = <<END;
 USAGE: $0 [-hpv] [-o FILE] [-y YEAR]
 

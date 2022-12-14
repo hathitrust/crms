@@ -2,7 +2,12 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use utf8;
+
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+}
 
 use CRMS;
 use Getopt::Long;
@@ -45,13 +50,6 @@ my $crms = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
-
-my $disable = $crms->GetSystemVar('disableReminder');
-if ($disable)
-{
-  print "disableReminder system variable set, exiting.\n" if $verbose;
-  exit(0);
-}
 
 my $msg = <<'END';
 <p>Automated Reminder: CRMS Review Time - 14 Days out of the system</p>
@@ -96,7 +94,7 @@ foreach my $user (@mails)
   print "Sending to $user\n" if $verbose;
   if (!$quiet)
   {
-    my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
+    my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
                 'to'           => $user,
                 'subject'      => $crms->SubjectLine('14 Day Out-of-System Automated Reminder'),
                 'content-type' => 'text/html; charset="UTF-8"',

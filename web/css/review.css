@@ -696,3 +696,13 @@ div.topBanner {
   text-align:center;
   vertical-align:top;
 }
+
+div.debug-footer {
+  margin: 10px;
+  padding: 10px;
+}
+
+pre.perl-data {
+  font-family:Courier, 'Courier New', Monaco, monospace;
+  display: inline;
+}

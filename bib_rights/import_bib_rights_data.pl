@@ -2,12 +2,11 @@
 
 use strict;
 use warnings;
+
 BEGIN {
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/post_zephir_processing');
-  # For local copies of MARC::Record code if otherwise unavailable
-  # Should no longer be needed with MARC modules back in place
-  # unshift(@INC, $ENV{'SDRROOT'}. '/crms/bib_rights/lib');
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/post_zephir_processing';
 }
 
 use Capture::Tiny;
@@ -16,7 +15,7 @@ use Encode;
 use Getopt::Long;
 use IO::Zlib;
 use MARC::Record;
-use MARC::Record::MIJ;
+use MARC::Record::MiJ;
 use Term::ANSIColor qw(:constants colored);
 
 use CRMS;

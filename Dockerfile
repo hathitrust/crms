@@ -139,23 +139,24 @@ RUN apt-get install -y \
   libffi-dev \
   libgdbm-dev \
   libncurses5-dev \
+  libperl-critic-perl \
   libreadline6-dev \
   libsqlite3-dev \
   libssl-dev \
   libyaml-dev \
+  netcat \
   openssh-server \
   unzip \
   wget \
   zip \
-  zlib1g-dev \
-  netcat \
-  libperl-critic-perl
+  zlib1g-dev
 
 RUN cpan \
   Devel::Cover::Report::Coveralls \
+  MARC::Record::MiJ \
   OAuth::Lite \
   Test::Exception
 
 RUN mkdir -p /htapps/babel/crms
-
+RUN wget -O /usr/local/bin/wait-for https://github.com/eficode/wait-for/releases/download/v2.2.3/wait-for; chmod +x /usr/local/bin/wait-for
 WORKDIR /htapps/babel/crms

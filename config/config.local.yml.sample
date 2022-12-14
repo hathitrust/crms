@@ -1,0 +1,3 @@
+# config.local.yml values override values in config.yml and
+# are for Apache deployments.
+host: sample.hathitrust.org

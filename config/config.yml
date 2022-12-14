@@ -1,0 +1,45 @@
+## ================================================================== ##
+## Where the system lives
+## ================================================================== ##
+# Used by CRMS::Host with cron scripts that do not have HTTP_HOST when generating URLs.
+# Keep for now, but consider an alternative way of doing this. Maybe k8s can help.
+host: babel.hathitrust.org
+
+## ================================================================== ##
+## Branding
+## ================================================================== ##
+logo: crms.png
+small_logo: crmsblue.png
+# Should modernize favicon practices later.
+# See https://evilmartians.com/chronicles/how-to-favicon-in-2021-six-files-that-fit-most-needs
+# Consider a different favicon for development/training environments.
+favicon: CRMSBlueIcon.png
+
+## ================================================================== ##
+## mysql server connection settings
+## ================================================================== ##
+# The hostname for the database where your CRMS data will be stored.
+db_host: mysql-sdr
+db_host_development: mysql-sdr
+db_name: crms
+# The hostname for the HathiTrust database (read-only access).
+ht_db_host: mysql-sdr
+ht_db_name: ht
+
+## ================================================================== ##
+## Other stuff. Override by adding an entry to the systemvars table
+## ================================================================== ##
+# The address that scripts in crms/bin send e-mail as.
+# Used by every process that sends mail.
+sender_email: crms-mailbot@umich.edu
+# The experts/admin email address.
+# Used only by bin/mailer.pl.
+experts_email: crms-experts@umich.edu
+# Mailing lists for distribution to reviewers on active projects.
+# Used by Wednesday Data Report (bin/weekly.pl) with the -l flag in production
+# This could migrate into the Project infrastructure.
+mailing_list: ht-copyright-review@umich.edu,ht-commonwealth-review@umich.edu,ht-pubdate-review@umich.edu
+# Location in Production for writing .rights export files
+rights_export_directory: /htapps/babel/feed/var/rights
+# Used by Jira.pm
+jira_prefix: https://hathitrust.atlassian.net

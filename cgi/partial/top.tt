@@ -4,7 +4,7 @@
   <table class="nav">
     <tr>
       <td rowspan="2">
-        <img src="[% crms.WebPath('web', crms.GetSystemVar('smallLogo')) %]"
+        <img src="[% crms.WebPath('web', crms.GetSystemVar('small_logo')) %]"
              alt="CRMS Logo" width="52" height="40"/></td>
       <td style="text-align:left;padding-left:8px;"><strong>Hello [% crms.GetUserProperty(user, 'name') %]</strong></td>
     </tr>

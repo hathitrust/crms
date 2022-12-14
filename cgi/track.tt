@@ -49,7 +49,7 @@
         <th class="nowrap" scope="col" id="volumeTH">Volume</th>
         <th class="nowrap" scope="col" id="enumchronTH">Enum/Chron</th>
         <th class="nowrap" scope="col" id="CRMSUSTH">
-          <img src="[% crms.WebPath('web', crms.GetSystemVar('smallLogo')) %]"
+          <img src="[% crms.WebPath('web', crms.GetSystemVar('small_logo')) %]"
                alt="CRMS-US Logo" width="26" height="20"/>
         </th>
         <th scope="col" id="USRightTH">U.S.<br/>Rights</th>

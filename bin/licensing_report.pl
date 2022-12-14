@@ -2,7 +2,12 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use utf8;
+
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+}
 
 use Getopt::Long;
 use Mail::Sendmail;
@@ -108,7 +113,7 @@ sub EmailReport
   @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
   my $to = join ',', @mails;
   my $bytes = Encode::encode('utf8', $report);
-  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
+  my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
               'to'           => $to,
               'subject'      => $subj,
               'content-type' => 'text/html; charset="UTF-8"',
@@ -143,7 +148,7 @@ sub AddJiraComments
       $ref = $crms->SelectAll($sql, $tx, $license);
       $comment .= sprintf("%s\n", $_->[0]) for @$ref;
     }
-    my $err = Jira::AddComment($crms, $tx, $comment);
+    my $err = Jira::AddComment($tx, $comment);
     $crms->SetError($err) if defined $err;
     #$summary .= "<p>Jira comment for $tx:</p><code>$comment</code>";
   }

@@ -5,16 +5,16 @@ use warnings;
 use OAuth::Lite::Consumer;
 use OAuth::Lite::AuthMethod;
 
+use CRMS::Config;
+
 # Returns div if METS copyright is found, undef otherwise.
 sub HasCopyright
 {
-  my $self = shift;
-  my $id   = shift;
+  my $id = shift;
 
-  my $sys  = $self->Sys();
-  my %d = $self->ReadConfigFile($sys . 'pw.cfg');
-  my $access_key = $d{'dataAPIAccessKey'};
-  my $secret_key = $d{'dataAPISecretKey'};
+  my $credentials = CRMS::Config->new->credentials;
+  my $access_key = $credentials->{'data_api_access_key'};
+  my $secret_key = $credentials->{'data_api_secret_key'};
   my $request_url = 'https://babel.hathitrust.org/cgi/htd/structure/'. $id;
   my $consumer = OAuth::Lite::Consumer->new
     (
@@ -53,17 +53,15 @@ sub HasCopyright
 # Returns hashref with 'data' field of Base64 image data and 'success' field 1
 sub GetPageImage
 {
-  my $self = shift;
-  my $id   = shift;
-  my $seq  = shift;
+  my $id  = shift;
+  my $seq = shift;
 
   use OAuth::Lite::Consumer;
   use OAuth::Lite::AuthMethod;
   my %data;
-  my $sys  = $self->Sys();
-  my %d = $self->ReadConfigFile($sys. 'pw.cfg');
-  my $access_key = $d{'dataAPIAccessKey'};
-  my $secret_key = $d{'dataAPISecretKey'};
+  my $credentials = CRMS::Config->new->credentials;
+  my $access_key = $credentials->{'data_api_access_key'};
+  my $secret_key = $credentials->{'data_api_secret_key'};
   my $url = 'https://babel.hathitrust.org/cgi/htd/volume/pageimage/'. $id. '/'. $seq;
   my $consumer = OAuth::Lite::Consumer->new
     (

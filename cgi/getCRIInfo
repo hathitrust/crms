@@ -1,12 +1,17 @@
 #!/usr/bin/perl
 
 use strict;
-use FindBin;
-use lib $FindBin::Bin;
+
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+}
+
 use CGI;
+use JSON::XS;
+
 use CRMS;
 use CRI;
-use JSON::XS;
 
 my $cgi = new CGI;
 my $sys = $cgi->param('sys') || 'crms';

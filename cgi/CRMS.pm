@@ -4,20 +4,31 @@ package CRMS;
 ## Object of shared code for the CRMS DB CGI and BIN scripts.
 ## ----------------------------------------------------------
 
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
+}
+
 use strict;
 use warnings;
-use LWP::UserAgent;
-use XML::LibXML;
-use Encode;
-use Date::Calc qw(:all);
-use POSIX;
-use DBI qw(:sql_types);
-use List::Util qw(min max);
-use CGI;
-use Utilities;
-use Time::HiRes;
 use utf8;
+
+use CGI;
+use Data::Dumper;
+use Date::Calc qw(:all);
+use DBI qw(:sql_types);
+use Encode;
+use List::Util qw(min max);
+use LWP::UserAgent;
+use POSIX;
+use Time::HiRes;
 use Unicode::Normalize;
+use XML::LibXML;
+
+use CRMS::Config;
+use Utilities;
+
 binmode(STDOUT, ':encoding(UTF-8)');
 
 ## -------------------------------------------------
@@ -34,8 +45,7 @@ sub new
   my $root = $ENV{'SDRROOT'};
   die 'ERROR: cannot locate root directory with SDRROOT!' unless $root and -d $root;
   $self->set('root', $root);
-  my %d = $self->ReadConfigFile('crms.cfg');
-  $self->set($_, $d{$_}) for keys %d;
+  $self->{config} = CRMS::Config->new->config;
   $self->SetupLogFile();
   # Initialize error reporting.
   $self->ClearErrors();
@@ -47,8 +57,6 @@ sub new
     my $cgi = $args{'cgi'};
     print "<strong>Warning: no CGI passed to <code>CRMS->new()</code>\n" unless $cgi;
     $self->set('cgi',      $cgi);
-    $self->set('pdb',      $cgi->param('pdb'));
-    $self->set('tdb',      $cgi->param('tdb'));
     $self->set('debugSql', $args{'debugSql'});
     $self->set('debugVar', $args{'debugVar'});
     $self->SetupUser();
@@ -57,7 +65,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.4.18';
+our $VERSION = '8.5.0';
 sub Version
 {
   return $VERSION;
@@ -310,33 +318,6 @@ sub set
   $self->{$key} = $val;
 }
 
-sub ReadConfigFile
-{
-  my $self = shift;
-  my $path = shift;
-
-  $path = $self->FSPath('bin', $path);
-  my %dict = ();
-  my $fh;
-  unless (open $fh, '<:encoding(UTF-8)', $path)
-  {
-    die ("failed to read config file at $path: ". $!) if defined $self->get('instance');
-    return %dict;
-  }
-  read $fh, my $buff, -s $path; # one of many ways to slurp file.
-  close $fh;
-  my @lines = split "\n", $buff;
-  foreach my $line (@lines)
-  {
-    $line =~ s/#.*//;
-    if ($line =~ m/(\S+)\s*=\s*(\S+(\s+\S+)*)/i)
-    {
-      $dict{$1} = $2;
-    }
-  }
-  return %dict;
-}
-
 ## ----------------------------------------------------------------------------
 ##  Function:   connect to the mysql DB
 ##  Parameters: nothing
@@ -346,25 +327,13 @@ sub ConnectToDb
 {
   my $self = shift;
 
-  # Only allow env to override config in dev.
-  my $db_host = $ENV{'CRMS_SQL_HOST'} || $self->get('mysqlServerDev');
-  my $instance = $self->get('instance') || '';
-
-  my %d = $self->ReadConfigFile('crmspw.cfg');
-  my $db_user   = $d{'mysqlUser'} || 'crms';
-  my $db_passwd = $d{'mysqlPasswd'} || 'crms';
-  if ($instance eq 'production'
-      || $self->get('pdb')
-      || $instance eq 'crms-training'
-      || $self->get('tdb')
-      )
-  {
-    $db_host = $self->get('mysqlServer');
-  }
-  my $db = $self->DbName();
-  my $dsn = "DBI:mysql:database=$db;host=$db_host";
+  my $config = CRMS::Config->new;
+  my $credentials = $config->credentials;
+  my $db_user = $credentials->{'db_user'};
+  my $db_passwd = $credentials->{'db_password'};
+  my $dsn = $self->DSN();
   my $dbh = DBI->connect($dsn, $db_user, $db_passwd,
-            { PrintError => 0, RaiseError => 1, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
+    { PrintError => 0, RaiseError => 1, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
   $dbh->{mysql_enable_utf8} = 1;
   $dbh->{mysql_auto_reconnect} = 1;
   $dbh->do('SET NAMES "utf8";');
@@ -375,26 +344,13 @@ sub DbInfo
 {
   my $self = shift;
 
-  my $db_server = $self->get('mysqlServerDev');
-  my $instance  = $self->get('instance') || '';
-
-  my $msg = '';
-  my %d = $self->ReadConfigFile('crmspw.cfg');
-  my $db_user   = $d{'mysqlUser'};
-  my $db_passwd = $d{'mysqlPasswd'};
-  if ($instance eq 'production'
-      || $self->get('pdb')
-      || $instance eq 'crms-training'
-      || $self->get('tdb'))
-  {
-    $db_server = $self->get('mysqlServer');
-  }
-  my $db = $self->DbName();
+  my $config = CRMS::Config->new;
+  my $instance = $self->get('instance') || '';
+  my $credentials = $config->credentials;
+  my $db_user = $credentials->{'db_user'};
+  my $dsn = $self->DSN();
   my $where = $self->DevBanner() || 'PRODUCTION';
-  $msg = "DB Info:\nInstance $instance\n$where\n$db on $db_server as $db_user";
-  $msg .= "\n(PDB set)" if $self->get('pdb');
-  $msg .= "\n(TDB set)" if $self->get('tdb');
-  return $msg;
+  return "DB Info:\nInstance $instance\n$where\n$dsn as $db_user";
 }
 
 ## ----------------------------------------------------------------------------
@@ -404,39 +360,30 @@ sub DbInfo
 ## ----------------------------------------------------------------------------
 sub ConnectToSdrDb
 {
-  my $self = shift;
-  my $db   = shift;
+  my $self    = shift;
+  my $db_name = shift;
 
-  # Only allow env to override config in dev.
-  my $db_host = $ENV{'CRMS_SQL_HOST'} || $self->get('mysqlMdpServerDev');
-  my $instance = $self->get('instance') || '';
-
-  $db = $self->get('mysqlMdpDbName') unless defined $db;
-  my %d = $self->ReadConfigFile('crmspw.cfg');
-  my $db_user   = $d{'mysqlMdpUser'} || 'crms';
-  my $db_passwd = $d{'mysqlMdpPasswd'} || 'crms';
-  if ($instance eq 'production'
-      || $instance eq 'crms-training'
-      || $self->get('pdb')
-      || $self->get('tdb'))
+  my $config = CRMS::Config->new;
+  my $db_host = $config->config->{'ht_db_host'};
+  $db_name ||= $config->config->{'ht_db_name'};
+  my $credentials = $config->credentials;
+  my $db_user = $credentials->{'ht_db_user'};
+  my $db_passwd = $credentials->{'ht_db_password'};
+  my $dsn = "DBI:mysql:database=$db_name;host=$db_host";
+  my $ht_dbh = DBI->connect($dsn, $db_user, $db_passwd,
+    {PrintError => 0, AutoCommit => 1});
+  if ($ht_dbh)
   {
-    $db_host = $self->get('mysqlMdpServer');
-  }
-  my $dsn = "DBI:mysql:database=$db;host=$db_host";
-  my $sdr_dbh = DBI->connect($dsn, $db_user, $db_passwd,
-                             {PrintError => 0, AutoCommit => 1});
-  if ($sdr_dbh)
-  {
-    $sdr_dbh->{mysql_auto_reconnect} = 1;
-    $sdr_dbh->{mysql_enable_utf8} = 1;
-    $sdr_dbh->do('SET NAMES "utf8";');
+    $ht_dbh->{mysql_auto_reconnect} = 1;
+    $ht_dbh->{mysql_enable_utf8} = 1;
+    $ht_dbh->do('SET NAMES "utf8";');
   }
   else
   {
     my $err = $DBI::errstr;
     $self->SetError($err);
   }
-  return $sdr_dbh;
+  return $ht_dbh;
 }
 
 # Gets cached dbh, or connects if no connection is made yet.
@@ -454,15 +401,16 @@ sub GetSdrDb
   return $sdr_dbh;
 }
 
-sub DbName
-{
+sub DSN {
   my $self = shift;
 
   my $instance = $self->get('instance') || '';
-  my $tdb = $self->get('tdb');
-  my $db = 'crms';
-  $db .= '_training' if $instance eq 'crms-training' or $tdb;
-  return $db;
+  my $config = CRMS::Config->new;
+  my $db_host = $config->config->{'db_host'};
+  $db_host = $config->config->{'db_host_development'} if $instance eq '';
+  my $db_name = $config->config->{'db_name'};
+  $db_name = 'crms_training' if $instance eq 'crms-training';
+  return "DBI:mysql:database=$db_name;host=$db_host";
 }
 
 # Gets cached dbh, or connects if no connection is made yet.
@@ -633,7 +581,6 @@ sub DebugVar
       </div>
     </div>
 END
-    use Data::Dumper;
     my $msg = sprintf $html, Dumper($val);
     my $storedDebug = $self->get('storedDebug') || '';
     $self->set('storedDebug', $storedDebug. $msg);
@@ -976,9 +923,9 @@ sub ExportReviews
   my $list  = shift;
   my $quiet = shift;
 
-  if ($self->GetSystemVar('noExport') && !$quiet)
+  if ($self->GetSystemVar('no_export') && !$quiet)
   {
-    $self->ReportMsg('>>> noExport system variable is set; will only export high-priority volumes.');
+    $self->ReportMsg('>>> no_export system variable is set; will only export high-priority volumes.');
   }
   my $training = $self->IsTrainingArea();
   if ($training && !$quiet)
@@ -1069,16 +1016,17 @@ sub CanExportVolume
            ' ON e.project=p.id WHERE e.gid=?';
     $project = $self->SimpleSqlGet($sql, $gid);
   }
-  if ($self->GetSystemVar('noExport'))
+  # FIXME: this system var is no longer used and should be removed
+  if ($self->GetSystemVar('no_export'))
   {
     if ($project eq 'Special')
     {
-      $self->ReportMsg("Exporting $id; noExport is on but it is Special") unless $quiet;
+      $self->ReportMsg("Exporting $id; no_export is on but it is Special") unless $quiet;
       return 1;
     }
     else
     {
-      $self->ReportMsg("Not exporting $id; noExport is on and it is project $project") unless $quiet;
+      $self->ReportMsg("Not exporting $id; no_export is on and it is project $project") unless $quiet;
       return 0;
     }
   }
@@ -1136,7 +1084,7 @@ sub WriteRightsFile
   my $perm = $self->FSPath('prep', $filename);
   if ($self->WhereAmI() eq 'Production')
   {
-    $perm = $self->GetSystemVar('productionRightsDirectory');
+    $perm = $self->GetSystemVar('rights_export_directory');
     $perm .= '/' unless substr($perm, -1) eq '/';
     $perm .= $filename;
   }
@@ -4661,7 +4609,6 @@ sub GetMonthStats
   # time reviewing (in minutes) - not including outliers
   # default outlier seconds is 300 (5 min)
   my $outSec = $self->Projects()->{$proj}->OutlierSeconds();
-  #my $outSec = $self->GetSystemVar('outlierSeconds', 300);
   $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(r.duration)),0)/60.0'.
          ' FROM historicalreviews r INNER JOIN exportdata e ON r.gid=e.gid'.
          ' WHERE r.user=? AND r.legacy!=1 AND r.time>=? AND r.time<=?'.
@@ -6246,7 +6193,7 @@ sub ReviewSearchMenu
     splice @keys, 9, 1; # UserId/Reviewer
     splice @labs, 9, 1;
   }
-  if ($page ne 'adminHistoricalReviews' || $self->TolerantCompare(1,$self->GetSystemVar('noLegacy')))
+  if ($page ne 'adminHistoricalReviews')
   {
     splice @keys, 8, 1; # Legacy
     splice @labs, 8, 1;
@@ -6805,8 +6752,6 @@ sub DevBanner
   my $where = $self->WhereAmI();
   if ($where ne 'Production')
   {
-    $where .= ' | Production DB' if $self->get('pdb');
-    $where .= ' | Training DB' if $self->get('tdb');
     return '[ '. $where. ' ]';
   }
 }
@@ -7360,7 +7305,7 @@ sub LinkToJira
   my $tx   = shift;
 
   use Jira;
-  return Jira::LinkToJira($self, $tx);
+  return Jira::LinkToJira($tx);
 }
 
 # Populates $data (a hash ref) with information about the duplication status of an exported determination.
@@ -7557,12 +7502,10 @@ sub GetSystemVar
   my $self    = shift;
   my $name    = shift;
   my $default = shift;
-  my $ck      = shift;
 
-  $self->SetError('WARNING: GetSystemVar() ck parameter is obsolete.') if $ck;
   my $sql = 'SELECT value FROM systemvars WHERE name=?';
   my $var = $self->SimpleSqlGet($sql, $name);
-  $var = $self->get($name) unless defined $var;
+  $var = $self->{'config'}->{$name} unless defined $var;
   $var = $default unless defined $var;
   return $var;
 }
@@ -7869,17 +7812,13 @@ sub Authorities
   return \@all;
 }
 
-# Makes sure a URL has the correct sys and pdb params if needed.
+# Previously used to make sure viral params were appended to generated URLs.
+# No longer needed -- can be removed.
 sub Sysify
 {
   my $self = shift;
   my $url  = shift;
 
-  return $url if $url =~ m/^https/ or $url =~ m/\.pdf(#.*)?$/;
-  my $pdb = $self->get('pdb');
-  $url = Utilities::AppendParam($url, 'pdb', $pdb) if $pdb;
-  my $tdb = $self->get('tdb');
-  $url = Utilities::AppendParam($url, 'tdb', $tdb) if $tdb;
   return $url;
 }
 
@@ -7924,17 +7863,13 @@ sub Hiddenify
   return join "\n", @comps;
 }
 
-# If necessary, emits a hidden input with the sys name and pdb
+# Previously used to make sure viral params were included in hidden input.
+# No longer needed -- can be removed.
 sub HiddenSys
 {
   my $self = shift;
 
-  my $html = '';
-  my $pdb = $self->get('pdb');
-  $html .= "<input type='hidden' name='pdb' value='$pdb'/>" if $pdb;
-  my $tdb = $self->get('tdb');
-  $html .= "<input type='hidden' name='tdb' value='$tdb'/>" if $tdb;
-  return $html;
+  return '';
 }
 
 # Compares 2 strings or undefs. Returns 1 or 0 for equality.
@@ -8518,7 +8453,7 @@ sub GetPageImage
   my $seq  = shift;
 
   use HTDataAPI;
-  return HTDataAPI::GetPageImage($self, $id, $seq);
+  return HTDataAPI::GetPageImage($id, $seq);
 }
 
 sub ExportReport
