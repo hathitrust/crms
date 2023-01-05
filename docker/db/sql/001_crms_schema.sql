@@ -1247,6 +1247,30 @@ CREATE TABLE licensing (
   CONSTRAINT `manual_permissions_ibfk_attr` FOREIGN KEY (`attr`) REFERENCES `attributes` (`id`) ON UPDATE CASCADE,
   CONSTRAINT `manual_permissions_ibfk_reason` FOREIGN KEY (`reason`) REFERENCES `reasons` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+--
+-- Table structure for table `cron`
+--
+
+DROP TABLE IF EXISTS `cron`;
+CREATE TABLE cron (
+  `id` BIGINT AUTO_INCREMENT PRIMARY KEY NOT NULL,
+  `script` VARCHAR(64) UNIQUE NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Table structure for table `cron_recipients`
+--
+
+DROP TABLE IF EXISTS `cron_recipients`;
+CREATE TABLE cron_recipients (
+  `cron_id` BIGINT NOT NULL,
+  `email` VARCHAR(64) NOT NULL,
+  CONSTRAINT `cron_recipients_fk_cron_id` FOREIGN KEY (`cron_id`) REFERENCES `cron` (`id`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

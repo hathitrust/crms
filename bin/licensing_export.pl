@@ -7,12 +7,15 @@ use utf8;
 BEGIN {
   die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
   use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
 }
 
-use CRMS;
+use Encode;
 use Getopt::Long;
 use Mail::Sendmail;
-use Encode;
+
+use CRMS;
+use CRMS::Cron;
 
 my $usage = <<END;
 USAGE: $0 [-hnpv] [-m MAIL [-m MAIL2...]]
@@ -48,6 +51,7 @@ my $crms = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
+my $cron = CRMS::Cron->new(crms => $crms);
 
 my $licensing = $crms->Licensing();
 my $data = $licensing->rights_data();
@@ -59,18 +63,19 @@ unless ($noop) {
   $crms->PrepareSubmitSql($sql, $rights_file, $_) for @{$data->{ids}};
 }
 
-EmailReport() if scalar @mails;
+EmailReport();
 
 print "Warning: $_\n" for @{$crms->GetErrors()};
 
 sub EmailReport {
+  my $recipients = $cron->recipients(@mails);
+  return unless scalar @$recipients;
   my $subj = $crms->SubjectLine('Licensing Export');
   my $body = $crms->StartHTML($subj);
   my $file = $crms->get('export_file');
   my $path = $crms->get('export_path');
   $body .= "<p>Rights file for licensing entry exported and attached below.</p>";
-  @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
-  my $to = join ',', @mails;
+  my $to = join ',', @$recipients;
   my $contentType = 'text/html; charset="UTF-8"';
   my $message = $body;
   if ($file && $path) {
