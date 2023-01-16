@@ -1,0 +1,40 @@
+use crms;
+
+LOCK TABLES `categories` WRITE;
+/*!40000 ALTER TABLE `categories` DISABLE KEYS */;
+INSERT INTO `categories` VALUES (1,'Attr Default',NULL,0,1,1),
+  (3,'Attr Match',NULL,0,1,1),
+  (5,'Post-1977 Pub Date',NULL,1,1,1),
+  (7,'Dissertation/Thesis',NULL,1,1,1),
+  (9,'Edition/Reprint',NULL,1,1,1),
+  (11,'Expert Accepted',NULL,0,0,1),
+  (13,'Expert Note','ea',1,1,1),
+  (15,'Foreign Pub',NULL,1,1,1),
+  (17,'Insert(s)',NULL,1,1,1),
+  (19,'Language',NULL,1,1,1),
+  (21,'Misc',NULL,1,1,1),
+  (23,'Critical Scan Error',NULL,1,1,1),
+  (25,'Not Class A',NULL,0,1,1),
+  (27,'Periodical',NULL,0,1,1),
+  (29,'Reprint',NULL,0,1,1),
+  (31,'Rights Inherited',NULL,0,1,1),
+  (33,'Translation',NULL,1,1,1),
+  (35,'Record-Scan Mismatch',NULL,1,1,1),
+  (37,'Foreign Author',NULL,1,1,1),
+  (39,'Bound-With',NULL,1,0,1),
+  (41,'Has © Notice',NULL,1,1,1),
+  (43,'Post-1963 Pub Date',NULL,1,1,1),
+  (45,'Inserts/No Renewal',NULL,1,1,1),
+  (47,'Not Class A',NULL,1,1,1),
+  (49,'Periodical',NULL,1,1,1),
+  (51,'Multiple Authors',NULL,1,1,1),
+  (53,'Date',NULL,1,1,0),
+  (55,'Edition',NULL,1,1,0),
+  (57,'Missing',NULL,1,1,1),
+  (59,'Wrong Record',NULL,1,1,1),
+  (61,'Crown Copyright',NULL,1,0,0),
+  (63,'Author',NULL,1,1,0),(65,'Music',NULL,1,1,1),
+  (67,'Country',NULL,1,1,1),
+  (69,'Not Government',NULL,1,0,1);
+/*!40000 ALTER TABLE `categories` ENABLE KEYS */;
+UNLOCK TABLES;

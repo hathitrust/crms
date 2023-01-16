@@ -25,4 +25,14 @@ subtest 'CRMS::WriteRightsFile' => sub {
   close $fh;
 };
 
+subtest 'CRMS::CanExportVolume' => sub {
+  subtest 'CRMS::CanExportVolume und/nfi' => sub {
+    is(0, $crms->CanExportVolume('mdp.001', 'und', 'nfi', 1));
+  };
+
+  subtest 'CRMS::CanExportVolume und/crms' => sub {
+    is(0, $crms->CanExportVolume('mdp.001', 'und', 'crms', 1));
+  };
+};
+
 done_testing();

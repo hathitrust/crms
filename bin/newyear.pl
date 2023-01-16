@@ -7,15 +7,18 @@ use utf8;
 BEGIN {
   die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
   use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
 }
 
-use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
 use JSON::XS;
 use Term::ANSIColor qw(:constants colored);
 $Term::ANSIColor::AUTORESET = 1;
 use Data::Dumper;
+
+use CRMS;
+use CRMS::RightsPredictor;
 
 binmode(STDOUT, ':encoding(UTF-8)');
 
@@ -153,6 +156,7 @@ sub ProcessCommonwealthProject {
     next if $acurr eq 'pd' or $acurr =~ m/^cc/;
     my $record = $crms->GetMetadata($id);
     next unless defined $record;
+    my $rp = CRMS::RightsPredictor->new(record => $record);
     my $gid = $row->[1];
     my $time = $row->[2];
     $seen{$id} = 1;
@@ -163,7 +167,6 @@ sub ProcessCommonwealthProject {
     next if scalar @$ref2 == 0;
     my %alldates;
     my %predictions;
-    my $bogus;
     foreach my $row2 (@{$ref2}) {
       my $note = $row2->[0] || '';
       my $user = $row2->[1];
@@ -179,18 +182,13 @@ sub ProcessCommonwealthProject {
         push @$dates, [$match, 0] if length $match and $match < $year;
       }
       foreach my $date (@$dates) {
-        my $rid = $crms->PredictRights($id, $date->[0], $date->[1],
-                                       $crown, $record, undef, $year);
-        if (!defined $rid) {
-          $bogus = 1;
-          last;
+        my $prediction = $rp->rights($date->[0], $date->[1], $crown, $year);
+        if (defined $prediction->{rights}) {
+          $predictions{$prediction->{rights}} = 1;
         }
-        my ($pa, $pr) = $crms->TranslateAttrReasonFromCode($rid);
-        $predictions{"$pa/$pr"} = 1;
       }
       $alldates{$_->[0]} = 1 for @$dates;
     }
-    next if $bogus;
     my ($ic, $icus, $pd, $pdus);
     foreach my $pred (keys %predictions) {
       $ic = $pred if $pred =~ m/^ic\//;
@@ -319,6 +317,7 @@ sub ProcessCrownCopyrightProject {
     next if $acurr eq 'pd' or $acurr =~ m/^cc/;
     my $record = $crms->GetMetadata($id);
     next unless defined $record;
+    my $rp = CRMS::RightsPredictor->new(record => $record);
     my $gid = $row->[1];
     my $time = $row->[2];
     $seen{$id} = 1;
@@ -330,7 +329,6 @@ sub ProcessCrownCopyrightProject {
     my %alldates;
     my %predictions = ();
     my %dates = ();
-    my $bogus = 0;
     foreach my $row2 (@{$ref2}) {
       my $note = $row2->[0] || '';
       my $user = $row2->[1];
@@ -340,17 +338,13 @@ sub ProcessCrownCopyrightProject {
       $date =~ s/^\s+|\s+$//g;
       $dates{$date} = $date if defined $date;
       foreach my $date (keys %dates) {
-        my $rid = $crms->PredictRights($id, $date, 1, 1, $record, undef, $year);
-        if (!defined $rid) {
-          $bogus = 1;
-          last;
+        my $prediction = $rp->rights($date, 1, 1, $year);
+        if (defined $prediction->{rights}) {
+          $predictions{$prediction->{rights}} = 1;
         }
-        my ($pa, $pr) = $crms->TranslateAttrReasonFromCode($rid);
-        $predictions{"$pa/$pr"} = 1;
       }
       $alldates{$_} = 1 for keys %dates;
     }
-    next if $bogus;
     my ($ic, $icus, $pd, $pdus);
     foreach my $pred (keys %predictions) {
       $ic = $pred if $pred =~ m/^ic\//;

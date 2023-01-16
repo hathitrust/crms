@@ -1,8 +1,6 @@
 [% cgi        = crms.get('cgi')         %]
 [% importUser = cgi.param('importUser') %]
 
-[% # FIXME: put Crown Copyright checkbox %]
-
 [% # Set up values from CGI (in case of error) or existing review (editing). %]
 [% u_pub = (error)? cgi.param('pub') : data.reviews.$user.data.pub %]
 [% u_date = (error)? cgi.param('date') : data.reviews.$user.data.date %]
@@ -22,7 +20,7 @@
   <input type="hidden" name="editing" value="[% editing %]"/>
   <table>
     <tr>
-      [% label = (u_renNum)? "Publication&nbsp;Date":"Author Death Date" %]
+      [% label = (u_pub)? "Publication&nbsp;Date" : "Author Death Date" %]
       <td class="nowrap"><strong><label id="renewalFieldLabel" for="renewalField">
       [% label %]: </label></strong></td>
       <td class="nowrap">
@@ -42,8 +40,7 @@
         [% END %]
       [% END %]
       <input id="renewalField" title="[% label %]" type="text" name="date"
-             value="[% u_date %]" size="6"
-             onblur="javascript:PredictRights('[% htid %]');"/>
+             value="[% u_date %]" size="6" onblur="dateEntry();"/>
       [% IF tip %]
         <span class="red">$tip</span>
       [% END %]
@@ -58,15 +55,14 @@
         </td>
         <td class="nowrap">
           <input id="actualPubDateField" title="Actual Pub Date" type="text"
-                 name="actualPubDateField" size="6"
-                 onblur="javascript:PredictRights('[% htid %]');"/>
+                 name="actualPubDateField" size="6" onblur="dateEntry();"/>
         </td>
       </tr>
     [% END %]
     <tr>
       <td class="reviewGrey" style="text-align:left;margin:0px;padding:0px;">
-        <input type="checkbox" id="renewalFieldCheckbox" name="renNum"[% (u_renNum)? ' checked="checked"':'' %]
-               onchange="ToggleADD();PredictRights('[% htid %]');"/>
+        <input type="checkbox" id="renewalFieldCheckbox" name="pub"[% (u_pub)? ' checked="checked"':'' %]
+               onchange="dateEntry();"/>
         <label for="renewalFieldCheckbox">&nbsp;Pub Date</label>
       </td>
       <td>
@@ -74,9 +70,21 @@
         [% IF NOT data.bibdata.pub_date_format.match('^-?\d+$') %]disabled="disabled"[% END %]
         onclick="PullPubDate();
                  document.getElementById('renewalFieldCheckbox').checked=true;
-                 PredictRights('[% htid %]');"
+                 dateEntry();"
         accesskey="d"
         style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" class="reviewGrey" style="text-align:left;margin:0px;padding:0px;">
+        <input type="checkbox" id="crown-checkbox" name="crown"[% (u_crown)? ' checked="checked"':'' %]
+               onchange="dateEntry();"/>
+        <label for="crown-checkbox">&nbsp;Crown&nbsp;Copyright</label>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" class="reviewGrey" style="text-align:left;margin:0px;padding:0px;">
+        <span id="rights-desc"></span>
       </td>
     </tr>
   </table>
@@ -138,14 +146,10 @@
 </div>
 <div id="Notes">
   <strong><label for="catMenu">Notes: </label></strong>
-  <select id="catMenu" class="review" name="category"
-    onchange="javascript:PredictRights('[% htid %]');"
-    >
+  <select id="catMenu" class="review" name="category" onchange="dateEntry();">
     <option value="" [% ("" == category)? 'selected="selected"':'' %]>none</option>
     [% cats = crms.Categories(htid) %]
     [% FOREACH cat IN cats %]
-      [% # FIXME: projectcategories may make CanVolumeBeCrownCopyright() obsolete %]
-      [% NEXT IF cat == 'Crown Copyright' && ! crms.CanVolumeBeCrownCopyright(htid) %]
       <option value="[% cat %]" [% (cat == u_category)? 'selected="selected"':'' %]>[% cat %]</option>
     [% END %]
   </select>
@@ -221,48 +225,69 @@
       </table>
     [% END %]
   [% END %]
+  <span id="debugArea"></span>
 </div>
 </form>
 
 <script>
-addEvent(window, 'load', function(e)
-{
-  [% IF importUser %]
-  popReviewInfo('[% importUser %]');
-  [% END %]
-  addEvent(window, 'load', Partial_ADDForm_mainWindowLoad);
-});
+var gReviewData = [% data.json %];
+addEvent(window, 'load', partial_ADDForm_mainWindowLoad);
 
-function Partial_ADDForm_mainWindowLoad(e)
-{
+function partial_ADDForm_mainWindowLoad(e) {
+  [% IF importUser %]
+    popReviewInfo('[% importUser %]');
+  [% END %]
   var renewalField = document.getElementById("renewalField");
   var year = renewalField.value;
   var patt = /-?[0-9]+/;
-  if (patt.test(year))
-  {
-    PredictRights('[% htid %]');
+  if (patt.test(year)) {
+    dateEntry();
     document.getElementById('NoteTextField').focus();
-  }
-  else
-  {
+  } else {
     document.getElementById('renewalField').focus();
   }
 }
 
-function popReviewInfo(user)
-{
-  var el = document.getElementById('importReviewsTable');
-  var data = JSON.parse(el.dataset.reviews);
-  var review = data.reviews[user];
+function dateEntry() {
+  toggleADD();
+  var year = document.getElementById('renewalField').value || '';
+  if (year.length == 0) {
+    return;
+  }
+  // There is a hidden div that tells us which button id is und/nfi.
+  // If the id of the selected rights matches that, leave the selection alone.
+  var rights = document.getElementsByName("rights");
+  var sel = GetCheckedValue(rights);
+  var und = document.getElementById("UNDNFI").title;
+  if (und && sel === und) {
+    return;
+  }
+  var isPub = (document.getElementById('renewalFieldCheckbox').checked)? 1 : 0;
+  var isCrown = (document.getElementById('crown-checkbox').checked)? 1 : 0;
+  predictRights('[% htid %]', year, isPub, isCrown);
+}
+
+function popReviewInfo(user) {
+  var review = gReviewData.reviews[user];
   var button = document.getElementById("r" + review.rights);
   if (button) { button.checked = "checked"; }
   button = document.getElementById("renewalFieldCheckbox");
-  if (button) { button.checked = (review.renNum != null); }
+  if (button) { button.checked = (review.data.pub != null); }
+  button = document.getElementById("crown-checkbox");
+  if (button) { button.checked = (review.data.crown != null); }
   var field = document.getElementById("renewalField");
-  if (field) { field.value = review.renNum; }
-  document.submitReview.renDate.value = review.renDate;
-  document.submitReview.note.value = review.note;
+  if (field) { field.value = review.data.date; }
+  document.submitReview.note.value = review.note || '';
   selMenuItem('catMenu', (review.category)? review.category:'');
+}
+
+// Rewords the Commonwealth date entry based on whether "Pub Date" is checked.
+function toggleADD() {
+  var label = document.getElementById("renewalFieldLabel");
+  var cb = document.getElementById("renewalFieldCheckbox");
+  var field = document.getElementById("renewalField");
+  label.innerHTML = (cb.checked) ? "Publication&nbsp;Date:" : "Author&nbsp;Death&nbsp;Date:";
+  field.title = (cb.checked) ? "Publication Date" : "Author Death Date";
 }
 </script>
 

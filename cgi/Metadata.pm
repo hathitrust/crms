@@ -40,6 +40,7 @@ sub new
 {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
+  $self->{$_} = $args{$_} for keys %args;
   my $id = $args{id};
   $self->{sysid} = $id if $id !~ m/\./;
   $self->{id} = $id;
@@ -268,7 +269,7 @@ sub isThesis
       $is = 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
     }
   };
-  $self->SetError($self->id . ": failed in isThesis: $@") if $@;
+  $self->set_error($self->id . ": failed in isThesis: $@") if $@;
   return $is;
 }
 
@@ -315,7 +316,7 @@ sub isTranslation
       }
     }
   };
-  $self->SetError($self->id . ":failed in isTranslation: $@") if $@;
+  $self->set_error($self->id . ":failed in isTranslation: $@") if $@;
   return $is;
 }
 
@@ -589,7 +590,7 @@ sub enumchron
     }
   };
   $data = undef unless $data;
-  $self->SetError('enumchron query for ' . $self->id . " failed: $@") if $@;
+  $self->set_error('enumchron query for ' . $self->id . " failed: $@") if $@;
   return $data;
 }
 
@@ -634,7 +635,7 @@ sub allHTIDs
     my $json = $self->json;
     push @ids, $_->{'htid'} for @{$json->{'items'}};
   };
-  $self->SetError('enumchron query for ' . $self->id . " failed: $@") if $@;
+  $self->set_error('enumchron query for ' . $self->id . " failed: $@") if $@;
   return \@ids;
 }
 
@@ -654,7 +655,7 @@ sub volumeIDs
       push @ids, \%data;
     }
   };
-  $self->SetError('volumeIDsQuery for ' . $self->id . " failed: $@") if $@;
+  $self->set_error('volumeIDsQuery for ' . $self->id . " failed: $@") if $@;
   return \@ids;
 }
 
@@ -668,7 +669,7 @@ sub GetControlfield
   my $xpath = "//*[local-name()='controlfield' and \@tag='$field']";
   my $data;
   eval { $data = $xml->findvalue($xpath); };
-  if ($@) { $self->SetError($self->id . " GetControlfield failed: $@"); }
+  if ($@) { $self->set_error($self->id . " GetControlfield failed: $@"); }
   return $data;
 }
 
@@ -680,14 +681,14 @@ sub GetDatafield
   my $index  = shift;
   my $xml    = shift;
 
-  $self->SetError("no code: $field, $index") unless defined $code;
+  $self->set_error("no code: $field, $index") unless defined $code;
   $xml = $self->xml unless defined $xml;
   $index = 1 unless defined $index;
   my $xpath = "//*[local-name()='datafield' and \@tag='$field'][$index]" .
               "/*[local-name()='subfield' and \@code='$code']";
   my $data;
   eval { $data = $xml->findvalue($xpath); };
-  if ($@) { $self->SetError($self->id . " GetDatafield failed: $@"); }
+  if ($@) { $self->set_error($self->id . " GetDatafield failed: $@"); }
   my $len = length $data;
   if ($len && $len % 3 == 0)
   {
@@ -713,7 +714,7 @@ sub CountDatafields
     my $nodes = $xml->findnodes("//*[local-name()='datafield' and \@tag='$field']");
     $n = scalar $nodes->get_nodelist();
   };
-  $self->SetError('CountDatafields: ' . $@) if $@;
+  $self->set_error('CountDatafields: ' . $@) if $@;
   return $n;
 }
 
@@ -765,7 +766,7 @@ sub GetAllSubfields
   my $code   = shift;
   my $xml    = shift;
 
-  $self->SetError("no code: $field") unless defined $code;
+  $self->set_error("no code: $field") unless defined $code;
   $xml = $self->xml unless defined $xml;
   my $xpath = "//*[local-name()='datafield' and \@tag='$field']" .
               "/*[local-name()='subfield' and \@code='$code']";
@@ -778,7 +779,7 @@ sub GetAllSubfields
       push @data, $node->textContent;
     }
   };
-  if ($@) { $self->SetError($self->id . " GetAllSubfields failed: $@"); }
+  if ($@) { $self->set_error($self->id . " GetAllSubfields failed: $@"); }
 
   return \@data;
 }

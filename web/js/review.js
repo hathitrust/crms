@@ -88,120 +88,52 @@ function popRenewalDate()
       }
     }
   };
-  req.open("GET", gCGI + "getRenewalDate?id=" + id, true);
+  req.open("GET", ajaxURL("getRenewalDate") + "?id=" + id, true);
   req.send(null);
 }
 
-function PredictRights(id, year, pub, crown)
-{
-  var img = document.getElementById("predictionLoader");
-  var req = null;
+async function predictRights(id, year, pub, crown) {
+  togglePredictionLoader(true);
+  var url = ajaxURL("predictRights") + "?id=" + id + "&year=" + year +
+            "&is_pub=" + pub + "&is_crown=" + crown;
+  let response = await fetch(url);
+  if (response.status === 200) {
+    let data = await response.text();
+    displayRightPrediction(data);
+  }
+  togglePredictionLoader(false);
+}
+
+// Display JSON response from predictRights CGI in the Commonwealth UI
+function displayRightPrediction(data) {
+  deselectCurrentRights();
+  var json_data = JSON.parse(data);
+  if (json_data.rights_id) {
+    // Select radio button that corresponds to the appropriate crms.rights.id
+    document.getElementById("r" + json_data.rights_id).checked = true;
+  }
+  // Display prediction logic (or error message)
+  document.getElementById("rights-desc").innerHTML = json_data.desc;
+}
+
+function deselectCurrentRights() {
   var rights = document.getElementsByName("rights");
   var sel = GetCheckedValue(rights);
-  // There is a hidden div that tells us which button id is und/nfi
-  var und = document.getElementById('UNDNFI').title;
-  if (und && sel == und) { return; }
-  if (img) { img.style.display = 'block'; }
-  var req = new XMLHttpRequest();
-  req.onreadystatechange = function()
-  {
-    if (req.readyState == 4 && req.status == 200)
-    {
-      if (img) { img.style.display = 'none'; }
-      sel = GetCheckedValue(rights);
-      // Bail out if und/nfi is selected.
-      // May be redundant with above, but better here to avoid race condition.
-      if (und && sel == und) { return; }
-      if (!und || sel != und)
-      {
-        if (sel)
-        {
-          var button = document.getElementById("r" + sel);
-          button.checked = "";
-        }
-        if (req.responseText)
-        {
-          var button = document.getElementById("r" + req.responseText);
-          if (button) { button.checked = "checked"; }
-        }
-      }
-    }
-  };
-  var url = gCGI + "predictRights?id=" + id + ";year=" + year +
-            ";ispub=" + pub + ";crown=" + crown;
-  //Debug(url, true);
-  req.open("GET", url, true);
-  req.send(null);
-}
-
-function PredictDate(id)
-{
-  var rf = document.getElementById("renewalField2");
-  var year = rf.value;
-  var span = document.getElementById("renewalSpan2");
-  if (year.length == 0)
-  {
-    span.innerHTML = '';
-    return;
-  }
-  //var isPub = (document.getElementById('renewalFieldCheckbox2').checked)? 1:0;
-  //var cat = SelectedCategory();
-  //var isCrown = (cat == 'Crown Copyright')? 1:0;
-  var actualPubField = document.getElementById('actualPubDateField');
-  var actualPub;
-  if (actualPubField)
-  {
-    actualPub = actualPubField.value;
-  }
-  span.innerHTML = "Calculating...";
-  var req = new XMLHttpRequest();
-  req.onreadystatechange = function()
-  {
-    if (req.readyState == 4)
-    {
-      if (req.status == 200)
-      {
-        var txt = req.responseText;
-        span.innerHTML = txt;
-      }
-      else
-      {
-        span.innerHTML = '';
-      }
-    }
-  };
-  var url = gCGI + "predictRights?sys=crmsworld;doyear=1;id=" +
-            id + ";year=" + year;
-  if (actualPub) url += ";pub=" + actualPub;
-  req.open("GET", url, true);
-  req.send(null);
-}
-
-function ToggleADD()
-{
-  var lab = document.getElementById("renewalFieldLabel");
-  var cb = document.getElementById("renewalFieldCheckbox");
-  var field = document.getElementById("renewalField");
-  var actualPubRow = document.getElementById('actualPubRow');
-  lab.innerHTML = (cb.checked)? ((actualPubRow)? "Actual&nbsp;Pub&nbsp;Date":"Publication&nbsp;Date:"):"Author&nbsp;Death&nbsp;Date:";
-  field.title = (cb.checked)? "Publication Date":"Author Death Date";
-  if (actualPubRow)
-  {
-    actualPubRow.style.display = (cb.checked)? "none":"table-row";
-    var actualPubField = document.getElementById('actualPubDateField');
-    if (actualPubField && cb.checked && actualPubField.value)
-    {
-      // not sure about this; it is destructive
-      field.value = actualPubField.value;
-      actualPubField.value = "";
-    }
+  if (sel) {
+    document.getElementById("r" + sel).checked = false;
   }
 }
 
-function SelectedCategory()
-{
-  var cat = document.getElementById("catMenu");
-  return cat.options[cat.selectedIndex].value;
+// ajaxURL("predictRights") => "https://babel.hathitrust.org/crms/cgi/predictRights"
+function ajaxURL(target) {
+  return window.location.protocol + "//" + window.location.host + "/crms/cgi/" + target;
+}
+
+function togglePredictionLoader(display) {
+  var img = document.getElementById("predictionLoader");
+  if (img) {
+    img.style.display = display ? "block" : "none";
+  }
 }
 
 // return the value of the radio button that is checked
