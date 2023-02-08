@@ -7,20 +7,23 @@ use utf8;
 BEGIN {
   die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
   use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
 }
 
-use CRMS;
+use Encode;
 use Getopt::Long;
 use Utilities;
-use Encode;
+
+use CRMS;
+use CRMS::Cron;
+
 
 my $usage = <<END;
-USAGE: $0 [-hlptv] [-m USER [-m USER...]]
+USAGE: $0 [-hptv] [-m USER [-m USER...]]
 
 Sends weekly activity report.
 
 -h       Print this help message.
--l       Send to the MCommunity list for each CRMS system.
 -m MAIL  Also send report to MAIL. May be repeated for multiple recipients.
 -p       Run in production.
 -q       Quiet: do not send any e-mail at all. For testing.
@@ -30,7 +33,6 @@ END
 
 my $help;
 my $instance;
-my $lists;
 my @mails;
 my $production;
 my $quiet;
@@ -39,7 +41,6 @@ my $verbose = 0;
 
 Getopt::Long::Configure ('bundling');
 die 'Terminating' unless GetOptions('h|?'  => \$help,
-           'l'    => \$lists,
            'm:s@' => \@mails,
            'p'    => \$production,
            'q'    => \$quiet,
@@ -50,14 +51,12 @@ $instance = 'crms-training' if $training;
 if ($help) { print $usage. "\n"; exit(0); }
 print "Verbosity $verbose\n" if $verbose;
 
-my %mails;
-
 my $crms = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
+my $cron = CRMS::Cron->new(crms => $crms);
 
-$mails{$_} = 1 for @mails;
 my $msg = $crms->StartHTML();
 my $sql = 'SELECT NOW()';
 my $now = $crms->SimpleSqlGet($sql);
@@ -117,19 +116,18 @@ foreach my $row (@{$ref})
 $msg =~ s/__TABLE__/$table/;
 $msg =~ s/__TOTAL_THIS_WEEK__/$thisn/g;
 $msg =~ s/__TOTAL_LAST_WEEK__/$lastn/g;
-$mails{$crms->GetSystemVar('mailing_list')} = 1 if $lists;
+
 
 $msg .= sprintf('<span style="font-size:.9em;">Report for week %s to %s, compared to week %s to %s</span>',
                 $crms->FormatDate($startThis), $crms->FormatDate($now),
                 $crms->FormatDate($startLast), $crms->FormatDate($startThis));
 $msg .= '</body></html>';
 
-@mails = keys %mails;
-if (scalar @mails)
+my $recipients = $cron->recipients(@mails);
+if (scalar @$recipients)
 {
   my $subj = $crms->SubjectLine('Wednesday Data Report');
-  @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
-  my $to = join ',', @mails;
+  my $to = join ',', @$recipients;
   print "Sending to $to\n" if $verbose;
   use Encode;
   use Mail::Sendmail;

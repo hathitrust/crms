@@ -7,6 +7,7 @@ use utf8;
 BEGIN {
   die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
   use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
 }
 
 use CRMS;
@@ -86,6 +87,7 @@ my $crms = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
+my $cron = CRMS::Cron->new(crms => $crms);
 $crms->set('ping', 'yes');
 $crms->set('noop', 1) if $noop;
 my $src = ($candidates)? 'candidates':'export';
@@ -429,11 +431,11 @@ $crms->ReportMsg(sprintf "SDR Database OK reconnects: %d, bad reconnects: %d<br/
                  $hashref->{'auto_reconnects_failed'});
 $crms->ReportMsg("</body></html>\n");
 
-@mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
-my $to = join(',', @mails);
+my $recipients = $cron->recipients(@mails);
+my $to = join(',', @$recipients);
 printf "Mailing to: $to\n" if $verbose;
 my $txt = $crms->get('messages');
-if (scalar @mails)
+if (scalar @$recipients)
 {
   use Mail::Sendmail;
   use Encode;

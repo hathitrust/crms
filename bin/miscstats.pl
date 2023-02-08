@@ -7,11 +7,14 @@ use utf8;
 BEGIN {
   die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
   use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
 }
 
-use CRMS;
-use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
+use Getopt::Long qw(:config no_ignore_case bundling);
+
+use CRMS;
+use CRMS::Cron;
 
 my $usage = <<END;
 USAGE: $0 [-hpqtv] [-m MAIL [-m MAIL...]]
@@ -53,6 +56,7 @@ my $crms = CRMS->new(
     verbose  =>   $verbose,
     instance =>   $instance
 );
+my $cron = CRMS::Cron->new(crms => $crms);
 
 my $report = $crms->StartHTML('CRMS User Progress Report');
 my $sql = 'SELECT a.id,b.max FROM users a INNER JOIN'.
@@ -165,16 +169,13 @@ foreach my $row (@{$ref})
 						 '<td style="border:1px solid #000000;padding:4px 20px 2px 6px;">'. $row->[2]. '</td>'.
 						 '<td style="border:1px solid #000000;padding:4px 20px 2px 6px;">'. $row->[3]. '</td></tr>'. "\n";
 }
-$report .= '</table>';
+$report .= "</table></body></html>\n";
 
-$report .= "</body></html>\n";
-
-
-if (@mails)
+my $recipients = $cron->recipints(@mails);
+if (scalar @$recipients)
 {
-  @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
   my $bytes = encode('utf8', $report);
-  my $to = join ',', @mails;
+  my $to = join ',', @$recipients;
   use Mail::Sendmail;
   my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
               'to'           => $to,

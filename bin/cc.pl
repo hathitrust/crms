@@ -7,12 +7,15 @@ use utf8;
 BEGIN {
   die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
   use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
 }
 
-use CRMS;
-use Getopt::Long;
-use Excel::Writer::XLSX;
 use Encode;
+use Excel::Writer::XLSX;
+use Getopt::Long;
+
+use CRMS;
+use CRMS::Cron;
 
 my $usage = <<END;
 USAGE: $0 [-hnpv] [-m MAIL [-m MAIL2...]] [-x SYS]
@@ -48,6 +51,7 @@ my $crms = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
+my $cron = CRMS::Cron->new('crms' => $crms);
 
 $crms->set('noop', 1) if $noop;
 my $sql = 'SELECT id FROM und WHERE src="cc"';
@@ -85,9 +89,9 @@ foreach my $row (@{$ref})
 }
 $workbook->close();
 $subj .= " ($n)";
-if (scalar @mails)
+my $recipients = $cron->recipients(@mails);
+if (scalar @$recipients)
 {
-  @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
   $subj = $crms->SubjectLine($subj);
   $txt = 'This is an automatically generated report on volumes suspected of being'.
          ' eligible for CC license based on a volume on the same record'. "\n\n";
@@ -100,7 +104,7 @@ if (scalar @mails)
   use Mail::Sendmail;
   my $boundary = "====" . time() . "====";
   my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
-              'to'           => (join ',', @mails),
+              'to'           => (join ',', @$recipients),
               'subject'      => $subj,
               'content-type' => "multipart/mixed; boundary=\"$boundary\""
               );

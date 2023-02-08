@@ -7,15 +7,19 @@ use utf8;
 BEGIN {
   die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
   use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
 }
 
-use CRMS;
-use Getopt::Long;
-use JSON::XS;
-use Utilities;
 use Encode;
 use File::Copy;
+use Getopt::Long;
+use JSON::XS;
 use Term::ANSIColor qw(:constants);
+
+use CRMS;
+use CRMS::Cron;
+use Utilities;
+
 $Term::ANSIColor::AUTORESET = 1;
 
 my $usage = <<END;
@@ -62,6 +66,7 @@ my $crms = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
+my $cron = CRMS::Cron->new(crms => $crms);
 
 my $outfile = $crms->FSPath('prep', 'CRMSRenewals.tsv');
 my $msg = $crms->StartHTML();
@@ -95,9 +100,9 @@ $msg .= "<p>Warning: $_</p>\n" for @{$crms->GetErrors()};
 $msg .= '</body></html>';
 
 my $subject = $crms->SubjectLine('Stanford Renewal Report');
-@mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
-my $to = join ',', @mails;
-if ($noop || scalar @mails == 0)
+my $recipients = $cron->recipients(@mails);
+my $to = join ',', @$recipients;
+if ($noop || scalar @$recipients == 0)
 {
   print "No-op or no mails set; not sending e-mail to {$to}\n" if $verbose;
   print "$msg\n";
