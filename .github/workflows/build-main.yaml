@@ -1,4 +1,4 @@
-name: Build latest from main and deploy to staging
+name: Build Latest from main
 
 on:
   workflow_run:
