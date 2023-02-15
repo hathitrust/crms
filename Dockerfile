@@ -157,6 +157,10 @@ RUN cpan \
   OAuth::Lite \
   Test::Exception
 
-RUN mkdir -p /htapps/babel/crms
+ENV ROOTDIR /htapps/babel/crms
+
 RUN wget -O /usr/local/bin/wait-for https://github.com/eficode/wait-for/releases/download/v2.2.3/wait-for; chmod +x /usr/local/bin/wait-for
-WORKDIR /htapps/babel/crms
+
+RUN mkdir -p $ROOTDIR
+COPY . $ROOTDIR
+WORKDIR $ROOTDIR

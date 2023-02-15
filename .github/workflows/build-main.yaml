@@ -17,7 +17,7 @@ jobs:
       - uses: hathitrust/github_actions/build@v1
         with:
           image: ghcr.io/${{ github.repository }}-unstable
-          dockerfile: Dockerfile.prod
+          dockerfile: Dockerfile
           tag: ${{ github.sha }}
           push_latest: true
           registry_token: ${{ github.token }}
