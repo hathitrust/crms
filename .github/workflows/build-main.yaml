@@ -18,6 +18,7 @@ jobs:
         with:
           image: ghcr.io/${{ github.repository }}-unstable
           dockerfile: Dockerfile
+          submodules: true
           tag: ${{ github.sha }}
           push_latest: true
           registry_token: ${{ github.token }}
