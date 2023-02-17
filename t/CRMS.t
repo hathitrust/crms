@@ -16,9 +16,9 @@ ok(defined $crms, 'CRMS object created');
 subtest 'CRMS::WriteRightsFile' => sub {
   my $rights_data = join "\t", ('mdp.001', '1', '1', 'crms', 'null', '鬼塚英吉');
   $crms->WriteRightsFile($rights_data);
-  my $path = $crms->get('export_path');
-  ok(-f $path, "WriteRightsFile export path exists");
-  open my $fh, '<:encoding(UTF-8)', $path;
+  my $path = $crms->get('export_path')->filename;
+  ok(-e $path, "WriteRightsFile export path exists");
+  open my $fh, '<:encoding(UTF-8)', $path or die "can't open $path: $!";
   read $fh, my $buffer, -s $path;
   my @fields = split "\t", $buffer;
   is($fields[5], '鬼塚英吉', "WriteRightsFile Unicode characters survive round trip");

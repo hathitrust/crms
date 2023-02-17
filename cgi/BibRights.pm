@@ -22,31 +22,46 @@ our @BIB_RIGHTS_INFO_FIELDS = qw(attr bib_fmt bib_key date1 date2 date_desc
   date_munged date_type date_used desc gov_pub id orig_date1 orig_date2
   pub_country pub_place reason us_fed_doc vol_date);
 
-
+# If using code that manipulates the effective current year for bib rights cutoffs,
+# you should set the BIB_RIGHTS_DATE environment variable before creating a new
+# BibRights object.
 sub new {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
+  # bib_rights.pm likes to emit cutoff year debugging info to STDERR.
+  # So suppress it.
+  my ($stderr, @result) = Capture::Tiny::capture_stderr sub {
+    $self->{bib_rights} = bib_rights->new();
+  };
   return $self;
 }
 
-# Returns a structure {entries => [bib_rights_info+], optional error => errstr}
+# Access the underlying post_zephir_processing/bib_rights object
+sub bib_rights {
+  my $self = shift;
+
+  return $self->{bib_rights};
+}
+
+# Returns a structure {
+#  cid => catalog id string,
+#  record => Metadata object,
+#  marc => MARC::Record object,
+#  title => title string (from MARC::Record -- may remove now that we have the full metadata objects),
+#  entries => [bib_rights_info+],
+#  error => errstr
+# }
 sub query {
   my $self = shift;
   my $id   = shift;
 
-  my $br;
-  # bib_rights.pm likes to emit cutoff year debugging info to STDERR.
-  # So suppress it.
-  my ($stderr, @result) = Capture::Tiny::capture_stderr sub {
-    $br = bib_rights->new();
-  };
-  my $marc;
   my $data = { entries => [] };
   my $metadata = Metadata->new('id' => $id);
   if ($metadata->is_error) {
     $data->{error} = $metadata->error;
     return $data;
   }
+  my $marc;
   eval { $marc = MARC::Record->new_from_xml($metadata->xml); };
   # uncoverable branch true
   if ($@) {
@@ -57,8 +72,11 @@ sub query {
   }
   my $htids = ($id =~ m/\./) ? [ $id ] : $metadata->allHTIDs();
   my $cid = $marc->field('001')->as_string;
+  my $br = $self->bib_rights;
   my $bib_info = $br->get_bib_info($marc, $cid);
   $data->{cid} = $cid;
+  $data->{metadata} = $metadata;
+  $data->{marc} = $marc;
   $data->{title} = $marc->title();
   $data->{entries} = [];
   foreach my $htid (@{$htids}) {

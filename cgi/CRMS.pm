@@ -19,6 +19,8 @@ use Data::Dumper;
 use Date::Calc qw(:all);
 use DBI qw(:sql_types);
 use Encode;
+use File::Copy;
+use File::Temp;
 use List::Util qw(min max);
 use LWP::UserAgent;
 use POSIX;
@@ -1072,30 +1074,43 @@ sub CanExportVolume
   return $export;
 }
 
-sub WriteRightsFile
-{
-  my $self   = shift;
-  my $rights = shift;
+# Write a .rights file with rights data.
+# Rights data format is tab-delimited:
+# HTID attribute reason username source note
+# In CRMS source is "null" and note is only included in licensing exports.
+# source used to be "crms" or "crmsworld" when the two systems were separate;
+# now it is always "crms".
+# overnight.pl currently uses the export_path and export_file attributes for
+# attaching the file to the outgoing e-mail, and for reporting.
+# In future it may only be necessary to report on the permanent file name
+# and allow the temp file to be unlinked immediately.
+sub WriteRightsFile {
+  my $self      = shift;
+  my $rights    = shift;
+  my $file_name = shift;
 
-  my $date = $self->GetTodaysDate();
-  $date =~ s/:/_/g;
-  $date =~ s/ /_/g;
-  my $filename = 'crms_'. $date. '.rights';
-  my $perm = $self->FSPath('prep', $filename);
-  if ($self->WhereAmI() eq 'Production')
-  {
+  unless (defined $file_name) {
+    my $date = $self->GetTodaysDate();
+    $date =~ s/[:\s]+/_/g;
+    $file_name = 'crms_'. $date. '.rights';
+  }
+  my $perm = $self->FSPath('prep', $file_name);
+  if ($self->WhereAmI() eq 'Production') {
     $perm = $self->GetSystemVar('rights_export_directory');
     $perm .= '/' unless substr($perm, -1) eq '/';
-    $perm .= $filename;
+    $perm .= $file_name;
   }
-  my $temp = $perm . '.tmp';
-  if (-f $temp) { die "file already exists: $temp\n"; }
-  open (my $fh, '>:utf8', $temp) || die "failed to open rights file ($temp): $!\n";
-  print $fh $rights;
-  close $fh;
-  rename $temp, $perm;
-  $self->set('export_path', $perm);
-  $self->set('export_file', $filename);
+  my $temp = File::Temp->new();
+  binmode($temp, ':utf8');
+  print $temp $rights;
+  $temp->close;
+  File::Copy::copy($temp->filename, $perm);
+  # UNLINK flag set by default on File::Temp object
+  # so it is expected to hang around until program exits.
+  # export_path is the temp file path so its contents can be attached to overnight.pl e-mail.
+  # export_file is the destination .rights name the attachment will be saved as.
+  $self->set('export_path', $temp);
+  $self->set('export_file', $file_name);
   return $perm;
 }
 
