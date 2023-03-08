@@ -73,6 +73,7 @@ $instance = 'crms-training' if $training;
 
 my $crms = CRMS->new(instance => $instance);
 my $cron = CRMS::Cron->new(crms => $crms);
+my $recipients = $cron->recipients(@mails);
 
 if ($write_env) {
   $crms->Note(sprintf "$0 env: %s\n", Dumper \%ENV);
@@ -98,7 +99,7 @@ if (scalar @ARGV)
 my $subj = $crms->SubjectLine('Nightly Processing');
 my $body = $crms->StartHTML($subj);
 $crms->set('ping', 'yes');
-$crms->set('messages', $body) if scalar @mails;
+$crms->set('messages', $body) if scalar @$recipients;
 $crms->ReportMsg(sprintf "%s\n", $crms->DbInfo()) if $verbose;
 
 if ($skipExport) { $crms->ReportMsg('-e flag set; skipping queue processing and export.', 1); }
@@ -170,14 +171,12 @@ $crms->ReportMsg('All <b>done</b> with nightly script.', 1);
 $body = $crms->get('messages');
 $body .= "  </body>\n</html>\n";
 
-EmailReport();
+EmailReport() if scalar @$recipients;
 
 print "Warning: $_\n" for @{$crms->GetErrors()};
 
 sub EmailReport
 {
-  my $recipients = $cron->recipients(@mails);
-  return unless scalar @$recipients;
   my $to = join ',', @$recipients;
   my $file = $crms->get('export_file');
   my $path = $crms->get('export_path');

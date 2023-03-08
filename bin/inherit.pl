@@ -10,8 +10,10 @@ BEGIN {
   use lib $ENV{'SDRROOT'} . '/crms/lib';
 }
 
-use CRMS;
 use Getopt::Long qw(:config no_ignore_case bundling);
+
+use CRMS;
+use CRMS::Cron;
 
 my $usage = <<END;
 USAGE: $0 [-acCdhnpquv] [-s HTID [-s HTID...]]
