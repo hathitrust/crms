@@ -38,6 +38,23 @@ to upload results to Coveralls.
 `cgi` is the directory most in need of reorganization. In future much of its
 content will be migrated to `lib` and `views`.
 
+## Hello World
+
+Most functionality is exposed via the top-level `CRMS` object, including
+the all-important `SelectAll` (aref), `SimpleSqlGet` (single value), and
+`PrepareSubmitSql` wrappers around `DBI` functions.
+
+```perl
+# SDRROOT is the critical proprioceptive environment variable
+use lib $ENV{'SDRROOT'} . '/crms/cgi';
+use CRMS;
+my $crms = CRMS->new;
+# List all the HTIDs and their priority in project 1 (Core)
+my $sql = "SELECT id,priority FROM queue WHERE project=?";
+my $aref = $crms->SelectAll($sql, 1);
+print "$_->[0], $_->[1]\n" for @$aref;
+```
+
 ## Coverage Notes on `bib_rights.pm`
 
 Currently, with strategic `# uncoverable ...` comments made to `post_zephir_processing/bib_rights.pm`
