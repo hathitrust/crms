@@ -157,7 +157,7 @@ if ($noop)
 }
 else
 {
-  if (scalar @mails)
+  if (scalar @$recipients)
   {
     my $subj = 'CRMS Determinations Report';
     $subj .= ' – Yearly' if $year;

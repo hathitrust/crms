@@ -109,7 +109,7 @@ if ($noop || scalar @$recipients == 0)
 }
 else
 {
-  if (scalar @mails)
+  if (scalar @$recipients)
   {
     use Encode;
     use Mail::Sendmail;
