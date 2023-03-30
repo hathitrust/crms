@@ -7,5 +7,5 @@ my ($mm) = $ExtUtils::MakeMaker::VERSION =~ /^([^_]+)/;
 WriteMakefile(
   NAME         => 'CRMS',
   VERSION_FROM => 'cgi/CRMS.pm',
-  test => {TESTS => 't/*.t'}
+  test => {RECURSIVE_TEST_FILES => 1}
 );

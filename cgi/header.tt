@@ -25,13 +25,8 @@
       <script src="https://code.highcharts.com/modules/exporting.js"></script>
     [% END %]
   [% END %]
-    <script>
-<!--
-var gSys = "[% crms.Sys() %]";
-var gCGI = "[% crms.WebPath('cgi', '') %]";
--->
-    </script>
-    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/review.css') %]"/>
+
+  <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/review.css') %]"/>
   [% where = crms.WhereAmI() %]
   [% IF where != 'Production' %][% title = title _ ' - ' _ where %][% END %]
     <title>[% title %] - [% crms.PageToEnglish(page) %]</title>

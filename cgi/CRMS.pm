@@ -65,7 +65,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.5.4';
+our $VERSION = '8.5.5';
 sub Version
 {
   return $VERSION;
@@ -984,9 +984,7 @@ sub CanExportVolume
   my $time   = shift; # Optional
 
   # Do not export anything without an attr/reason (like Frontmatter/Corrections).
-  if (!defined $attr || !defined $reason ||
-      $self->TranslateAttr($attr) eq $attr ||
-      $self->TranslateReason($reason) eq $reason)
+  if (!defined $attr || !defined $reason)
   {
     my $msg = sprintf "Not exporting $id because of rights %s/%s",
                       (defined $attr)? $attr:'<undef>',
@@ -995,6 +993,11 @@ sub CanExportVolume
     return 0;
   }
   my $export = 1;
+  # Do not export und/*
+  if ($attr eq 'und') {
+    $self->ReportMsg("Not exporting $id as $attr/$reason") unless $quiet;
+    return 0;
+  }
   # Do not export Status 6, since they are not really final determinations.
   my $status = $self->SimpleSqlGet('SELECT status FROM queue WHERE id=?', $id);
   if (!defined $status && defined $gid)
@@ -1033,20 +1036,15 @@ sub CanExportVolume
   my $rq = $self->RightsQuery($id, 1);
   return 0 unless defined $rq;
   my ($attr2, $reason2, $src2, $usr2, $time2, $note2) = @{$rq->[0]};
-  # Do not export determination if the volume has gone out of scope,
-  # or if exporting und would clobber pdus in World.
-  if ($reason2 ne 'bib' ||
-      ($attr eq 'und' && ($attr2 eq 'pd' || $attr2 eq 'pdus')))
+  # Do not export determination if the volume has gone out of scope.
+  if ($reason2 ne 'bib')
   {
     # But, we clobber OOS if any of the following conditions hold:
-    # 1. Current rights are pdus/gfv (which per rrotter in Core Services never overrides pd/bib)
-    #    and determination is not und.
-    # 2. Current rights are */bib (unless a und would clobber pdus/bib).
-    # 3. Project 'Special' FIXME: add "always export" flag to projects table.
-    # 4. Previous rights were by user crms*.
-    # 5. The determination is pd* (unless a pdus would clobber pd/bib).
-    if (($reason2 eq 'gfv' && $attr ne 'und')
-        || ($reason2 eq 'bib' && !($attr eq 'und' && $attr2 =~ m/^pd/))
+    # 1. Current rights are pdus/gfv (which per rrotter in Core Services never overrides pd/bib).
+    # 2. Project 'Special' FIXME: add "always export" flag to projects table.
+    # 3. Previous rights were by user crms*.
+    # 4. The determination is pd* (unless a pdus would clobber pd/bib).
+    if (($reason2 eq 'gfv')
         || $project eq 'Special'
         || $usr2 =~ m/^crms/i
         || ($attr =~ m/^pd/ && !($attr eq 'pdus' && $attr2 eq 'pd')))
@@ -4857,7 +4855,7 @@ sub UpdateMetadata
       $date .= '-01-01' if $date;
       my $sql = 'REPLACE INTO bibdata (id,author,title,pub_date,country,sysid)' .
                 ' VALUES (?,?,?,?,?,?)';
-      $self->PrepareSubmitSql($sql, $id, $record->author, $record->title,
+      $self->PrepareSubmitSql($sql, $id, $record->author(1), $record->title,
                               $date, $record->country, $record->sysid);
     }
     else
@@ -7883,111 +7881,6 @@ sub TolerantCompare
   return 0 if (!defined $s1) && (defined $s2);
   return 0 if (defined $s1) && (!defined $s2);
   return ($s1 eq $s2)?1:0;
-}
-
-# CRMS World specific. Returns the last year the work was/will be in copyright,
-# or undef on error or not enough info.
-sub PredictLastCopyrightYear
-{
-  my $self   = shift;
-  my $id     = shift; # Volume id
-  my $year   = shift; # ADD or Pub entered by user
-  my $ispub  = shift; # Pub date checkbox
-  my $crown  = shift; # Crown copyright note category
-  my $record = shift; # Metadata (optional) so we don't spam bibdata table for volumes not in queue.
-  my $pubref = shift; # Pub date, by reference
-
-  # Punt if the year is not exclusively 1 or more decimal digits with optional minus.
-  return if $year !~ m/^-?\d+$/;
-  my $pub = (defined $pubref)? $$pubref:undef;
-  $pub = $year if $ispub;
-  $pub = $self->FormatPubDate($id, $record) unless defined $pub;
-  return unless defined $pub;
-  if ($pub =~ m/-/)
-  {
-    my ($d1, $d2) = split '-', $pub;
-    # Use the maximum iff the date range does not span 1923 boundary.
-    if ($d1 =~ m/^\d+$/ && $d2 =~ m/^\d+$/ && $d1 < $d2 &&
-        (($d1 < 1923 && $d2 < 1923) || ($d1 >= 1923 && $d2 >= 1923)))
-    {
-      $pub = $d2;
-    }
-    else
-    {
-      return;
-    }
-  }
-  $$pubref = $pub if defined $pubref;
-  my $where = undef;
-  $where = $record->country if defined $record;
-  $where = $self->GetPubCountry($id) unless $where;
-  return unless defined $where;
-  my $now = $self->GetTheYear();
-  # $when is the last year the work was in copyright
-  my $when;
-  if ($where eq 'United Kingdom')
-  {
-    $when = $year + (($crown)? 50:70);
-  }
-  elsif ($where eq 'Canada')
-  {
-    $when = $year + 50;
-  }
-  elsif ($where eq 'Australia')
-  {
-    $when = $year + (($year >= 1955)? 70:50);
-    $when = $year + 50 if $crown;
-  }
-  elsif ($where eq 'Spain')
-  {
-    $when = $year + 80;
-  }
-  return $when;
-}
-
-# CRMS World specific. Predict best radio button (rights combo)
-# to choose based on user selections.
-sub PredictRights
-{
-  my $self   = shift;
-  my $id     = shift; # Volume id
-  my $year   = shift; # ADD or Pub entered by user
-  my $ispub  = shift; # Pub date checkbox
-  my $crown  = shift; # Crown copyright note category
-  my $record = shift; # Metadata (optional) so we don't spam bibdata table for volumes not in queue.
-  my $pub    = shift; # Actual pub date when date range.
-  my $now    = shift; # The current year, for predicting future public domain transitions.
-
-  my ($attr, $reason) = (0,0);
-  $now = $self->GetTheYear() unless defined $now;
-  my $when = $self->PredictLastCopyrightYear($id, $year, $ispub, $crown, $record, \$pub);
-  return unless defined $when;
-  return if $pub =~ m/^\d+-\d+$/;
-  if ($when < $now) {
-    if ($when >= 1996 && $pub >= 1923 &&
-        $pub + 95 >= $now) {
-      $attr = 'icus';
-      $reason = 'gatt';
-    }
-    else {
-      $attr = 'pd';
-      $reason = ($ispub)? 'exp':'add';
-    }
-  }
-  else {
-    if ($pub + 95 >= $now) {
-      $attr = 'ic';
-      $reason = ($ispub)? 'cdpp':'add';
-    }
-    else {
-      $attr = 'pdus';
-      $reason = ($ispub)? 'exp':'add';
-    }
-  }
-  my $sql = 'SELECT r.id FROM rights r INNER JOIN attributes a ON r.attr=a.id'.
-            ' INNER JOIN reasons rs ON r.reason=rs.id'.
-            ' WHERE a.name=? AND rs.name=?';
-  return $self->SimpleSqlGet($sql, $attr, $reason);
 }
 
 sub Unescape

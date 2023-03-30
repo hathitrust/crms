@@ -10,25 +10,18 @@ sub new
   return $class->SUPER::new(@_);
 }
 
-my %TEST_HTIDS = (
-    'coo.31924000029250' => 'Australia',
-    'bc.ark:/13960/t02z7k303' => 'Canada',
-    'bc.ark:/13960/t0bw4939s' => 'UK');
-
-sub tests
-{
-  my $self = shift;
-
-  my @tests = keys %TEST_HTIDS;
-  return \@tests;
-}
+# 2023 Commonwealth reactivation only for Canada
+my $CANDIDATE_COUNTRIES = {
+  # 'Australia' => 1,
+  'Canada' => 1,
+  # 'United Kingdom' => 1
+};
 
 # ========== CANDIDACY ========== #
 # Returns undef for failure, or hashref with two fields:
 # status in {'yes', 'no', 'filter'}
 # msg potentially empty explanation.
-sub EvaluateCandidacy
-{
+sub EvaluateCandidacy {
   my $self   = shift;
   my $id     = shift;
   my $record = shift;
@@ -39,24 +32,21 @@ sub EvaluateCandidacy
   # Check current rights
   push @errs, "current rights $attr/$reason" if ($attr ne 'ic' and $attr ne 'pdus') or $reason ne 'bib';
   # Check well-defined record dates
-  # FIXME: this is duplicated in Core, could add fullySpecifiedCopyrightDate method in Metadata.pm
   my $pub = $record->copyrightDate;
-  if (!defined $pub || $pub !~ m/\d\d\d\d/)
-  {
+  if (!defined $pub || $pub !~ m/\d\d\d\d/) {
     my $leader = $record->GetControlfield('008');
     my $type = substr($leader, 6, 1);
     my $date1 = substr($leader, 7, 4);
     my $date2 = substr($leader, 11, 4);
     push @errs, "pub date not completely specified ($date1,$date2,'$type')";
   }
+  # Check country of publication
   my $where = $record->country;
-  push @errs, "foreign pub ($where)" if $where ne 'United Kingdom' and
-                                        $where ne 'Australia' and
-                                        $where ne 'Canada';
-  if (defined $pub && $pub =~ m/\d\d\d\d/)
-  {
-    my $min = $self->GetCutoffYear($where, 'minYear');
-    my $max = $self->GetCutoffYear($where, 'maxYear');
+  unless ($CANDIDATE_COUNTRIES->{$where}) {
+    push @errs, "foreign pub ($where)";
+  }
+  if (defined $pub && $pub =~ m/\d\d\d\d/) {
+    my ($min, $max) = @{$self->year_range($where)};
     push @errs, "$pub not in range $min-$max for $where" if ($pub < $min || $pub > $max);
   }
   push @errs, 'non-BK format' unless $record->isFormatBK($id);
@@ -71,46 +61,27 @@ sub EvaluateCandidacy
   return {'status' => 'yes', 'msg' => ''};
 }
 
-sub GetCutoffYear
-{
+sub year_range {
   my $self    = shift;
   my $country = shift;
-  my $name    = shift;
+  my $year    = shift || $self->{crms}->GetTheYear();
 
-  my $year = $self->{crms}->GetTheYear();
-  # Generic cutoff for add to queue page.
-  if (! defined $country)
-  {
-    return $year-140 if $name eq 'minYear';
-    return $year-51;
+  if ($country eq 'United Kingdom' || $country eq 'Australia') {
+    return [$year - 125, $year - 71]
   }
-  if ($country eq 'United Kingdom')
-  {
-    return $year-140 if $name eq 'minYear';
-    return $year-71;
-  }
-  elsif ($country eq 'Australia')
-  {
-    return $year-120 if $name eq 'minYear';
-    # FIXME: will this ever change?
-    return 1954;
-  }
-  #elsif ($country eq 'Spain')
-  #{
-  #  return $year-140 if $name eq 'minYear';
-  #  return 1935;
-  #}
-  return $year-120 if $name eq 'minYear';
-  return $year-51;
+  # Magic hardcoded 1971 based on regime changes, not rolling wall.
+  return [$year - 125, 1971] if $country eq 'Canada';
+  return [0, 0];
 }
 
-
 # ========== REVIEW ========== #
-sub ReviewPartials
-{
-  return ['top', 'bibdata', 'authorities',
-          'HTView', 'ADDForm', 'ADDCalculator',
-          'expertDetails'];
+sub PresentationOrder {
+  return 'b.author ASC';
+}
+
+sub ReviewPartials {
+  return ['top', 'bibdata_commonwealth', 'authorities',
+          'HTView', 'ADDForm', 'expertDetails'];
 }
 
 sub ValidateSubmission
@@ -203,7 +174,10 @@ sub FormatReviewData
 
   my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
   my $data = $jsonxs->decode($json);
-  my $fmt = sprintf '%s <strong>%s</strong> %s', ($data->{'pub'})? 'Pub':'ADD', $data->{'date'};
+  my $fmt = sprintf '%s <strong>%s</strong> %s%s',
+    ($data->{'pub'})? 'Pub' : 'ADD',
+    $data->{'date'},
+    ($data->{'crown'})? " Crown <strong>\x{1F451}</strong>" : '';
   return {'id' => $id, 'format' => $fmt, 'format_long' => ''};
 }
 
