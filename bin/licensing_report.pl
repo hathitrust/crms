@@ -115,7 +115,7 @@ sub EmailReport
 {
   my $recipients = $cron->recipients(@mails);
   return unless scalar @$recipients;
-  my $to = join ',', @mails;
+  my $to = join ',', @$recipients;
   my $bytes = Encode::encode('utf8', $report);
   my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
               'to'           => $to,
