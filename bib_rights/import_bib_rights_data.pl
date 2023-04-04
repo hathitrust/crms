@@ -288,7 +288,7 @@ sub send_report {
     my $to = join ',', @mails;
     use Mail::Sendmail;
     my %mail = (
-      'from'         => $crms->GetSystemVar('senderEmail'),
+      'from'         => $crms->GetSystemVar('sender_email'),
       'to'           => $to,
       'subject'      => $subj,
       'content-type' => 'text/html; charset="UTF-8"',
