@@ -171,7 +171,7 @@ foreach my $row (@{$ref})
 }
 $report .= "</table></body></html>\n";
 
-my $recipients = $cron->recipints(@mails);
+my $recipients = $cron->recipients(@mails);
 if (scalar @$recipients)
 {
   my $bytes = encode('utf8', $report);
