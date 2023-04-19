@@ -48,17 +48,6 @@
          onfocus="document.getElementById('renewalField').focus()">.</a>
       </td>
     </tr>
-    [% IF data.bibdata.pub_date_format.match('^\d+-\d+$') %]
-      <tr id="actualPubRow">
-        <td class="nowrap"><strong><label id="actualPubDateFieldLabel" for="actualPubDateField">
-          Actual Pub Date: </label></strong>
-        </td>
-        <td class="nowrap">
-          <input id="actualPubDateField" title="Actual Pub Date" type="text"
-                 name="actualPubDateField" size="6" onblur="dateEntry();"/>
-        </td>
-      </tr>
-    [% END %]
     <tr>
       <td class="reviewGrey" style="text-align:left;margin:0px;padding:0px;">
         <input type="checkbox" id="renewalFieldCheckbox" name="pub"[% (u_pub)? ' checked="checked"':'' %]
