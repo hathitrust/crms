@@ -1,6 +1,6 @@
 # CRMS: Copyright Review Management System
 
-![Run CI](https://github.com/hathitrust/crms/workflows/Run%20CI/badge.svg) [![Coverage Status](https://coveralls.io/repos/github/hathitrust/crms/badge.svg?branch=master)](https://coveralls.io/github/hathitrust/crms?branch=master)
+![Run CI](https://github.com/hathitrust/crms/workflows/Run%20CI/badge.svg) [![Coverage Status](https://coveralls.io/repos/github/hathitrust/crms/badge.svg?branch=main)](https://coveralls.io/github/hathitrust/crms?branch=main)
 
 A web app and suite of tools for performing copyright review projects.
 
@@ -30,6 +30,7 @@ to upload results to Coveralls.
 - `bin` For the most part these are actions and reports run as cron jobs
 - `cgi` Main entry point `cgi/crms` as well as Perl modules and view templates
 - `docker` Database seeds
+- `lib` Perl modules (new development and refactored modules from `cgi`)
 - `prep` Destination for some log files and reports
 - `scripts` Binaries run as part of development or by GitHub
 - `t` Tests
