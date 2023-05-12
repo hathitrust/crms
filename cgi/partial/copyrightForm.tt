@@ -211,6 +211,7 @@ function popReviewInfo(user)
   }
   var field = document.getElementById("renewalField");
   if (field) { field.value = renNum; }
+  // FIXME: renewalFieldCheckbox should only appear in the Commonwealth UI, not here.
   button = document.getElementById("renewalFieldCheckbox");
   if (button) { button.checked = (renNum != null); }
   document.submitReview.renDate.value = renDate;

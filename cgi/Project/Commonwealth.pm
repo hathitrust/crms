@@ -84,58 +84,36 @@ sub ReviewPartials {
           'HTView', 'ADDForm', 'expertDetails'];
 }
 
-sub ValidateSubmission
-{
+sub ValidateSubmission {
   my $self = shift;
   my $cgi  = shift;
 
   my @errs;
-  my ($attr, $reason) = $self->{'crms'}->TranslateAttrReasonFromCode($cgi->param('rights'));
+  my $rights = $cgi->param('rights');
+  return 'You must select a rights/reason combination' unless $rights;
+  my ($attr, $reason) = $self->{'crms'}->TranslateAttrReasonFromCode($rights);
   my $date = $cgi->param('date');
   my $pub = $cgi->param('pub');
   my $note = $cgi->param('note');
   my $category = $cgi->param('category');
   $date =~ s/\s+//g if $date;
-  #my $actual = $cgi->param('actual');
-  my ($pubDate, $pubDate2);
-  $pubDate = $date if $pub;
-  #$pubDate = $actual if $actual;
-  if (!defined $pubDate)
-  {
-    $pubDate = $self->{'crms'}->FormatPubDate($cgi->param('htid'));
-    if ($pubDate =~ m/-/)
-    {
-      ($pubDate, $pubDate2) = split '-', $pubDate, 2;
-    }
-  }
   if ($attr eq 'und' && $reason eq 'nfi' &&
       (!$category ||
-       (!$note && 1 == $self->{'crms'}->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category))))
-  {
+       (!$note && 1 == $self->{'crms'}->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category)))) {
     push @errs, 'und/nfi must include note category and note text';
   }
-  if ($date && $date !~ m/^-?\d{1,4}$/)
-  {
+  if ($date && $date !~ m/^-?\d{1,4}$/) {
     push @errs, 'year must be only decimal digits';
   }
-  elsif (($reason eq 'add' || $reason eq 'exp') && !$date)
-  {
+  elsif (($reason eq 'add' || $reason eq 'exp') && !$date) {
     push @errs, "*/$reason must include a numeric year";
   }
-  elsif ($pubDate < 1923 && $attr eq 'icus' && $reason eq 'gatt' &&
-         (!$pubDate2 || $pubDate2 < 1923))
-  {
-    push @errs, 'volumes published before 1923 are ineligible for icus/gatt';
-  }
-  if ($category && !$note)
-  {
-    if ($self->{'crms'}->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category))
-    {
-      push @errs, 'must include a note if there is a category';
+  if ($category && !$note) {
+    if ($self->{'crms'}->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category)) {
+      push @errs, qq{category "$category" requires a note};
     }
   }
-  elsif ($note && !$category)
-  {
+  elsif ($note && !$category) {
     push @errs, 'must include a category if there is a note';
   }
   return join ', ', @errs;

@@ -50,15 +50,15 @@
     </tr>
     <tr>
       <td class="reviewGrey" style="text-align:left;margin:0px;padding:0px;">
-        <input type="checkbox" id="renewalFieldCheckbox" name="pub"[% (u_pub)? ' checked="checked"':'' %]
-               onchange="dateEntry();"/>
-        <label for="renewalFieldCheckbox">&nbsp;Pub Date</label>
+        <input type="checkbox" id="pub-checkbox" name="pub"[% (u_pub)? ' checked="checked"':'' %]
+               onchange="syncCheckedness(false, this.id, 'crown-checkbox'); dateEntry();"/>
+        <label for="pub-checkbox">&nbsp;Pub Date</label>
       </td>
       <td>
         <input type="button" class="reviewblue" value="Pull Pub Date"
         [% IF NOT data.bibdata.pub_date_format.match('^-?\d+$') %]disabled="disabled"[% END %]
         onclick="PullPubDate();
-                 document.getElementById('renewalFieldCheckbox').checked=true;
+                 document.getElementById('pub-checkbox').checked=true;
                  dateEntry();"
         accesskey="d"
         style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
@@ -67,7 +67,7 @@
     <tr>
       <td colspan="2" class="reviewGrey" style="text-align:left;margin:0px;padding:0px;">
         <input type="checkbox" id="crown-checkbox" name="crown"[% (u_crown)? ' checked="checked"':'' %]
-               onchange="dateEntry();"/>
+               onchange="syncCheckedness(true, this.id, 'pub-checkbox'); dateEntry();"/>
         <label for="crown-checkbox">&nbsp;Crown&nbsp;Copyright</label>
       </td>
     </tr>
@@ -251,7 +251,7 @@ function dateEntry() {
   if (und && sel === und) {
     return;
   }
-  var isPub = (document.getElementById('renewalFieldCheckbox').checked)? 1 : 0;
+  var isPub = (document.getElementById('pub-checkbox').checked)? 1 : 0;
   var isCrown = (document.getElementById('crown-checkbox').checked)? 1 : 0;
   predictRights('[% htid %]', year, isPub, isCrown);
 }
@@ -260,7 +260,7 @@ function popReviewInfo(user) {
   var review = gReviewData.reviews[user];
   var button = document.getElementById("r" + review.rights);
   if (button) { button.checked = "checked"; }
-  button = document.getElementById("renewalFieldCheckbox");
+  button = document.getElementById("pub-checkbox");
   if (button) { button.checked = (review.data.pub != null); }
   button = document.getElementById("crown-checkbox");
   if (button) { button.checked = (review.data.crown != null); }
@@ -273,10 +273,23 @@ function popReviewInfo(user) {
 // Rewords the Commonwealth date entry based on whether "Pub Date" is checked.
 function toggleADD() {
   var label = document.getElementById("renewalFieldLabel");
-  var cb = document.getElementById("renewalFieldCheckbox");
+  var cb = document.getElementById("pub-checkbox");
   var field = document.getElementById("renewalField");
   label.innerHTML = (cb.checked) ? "Publication&nbsp;Date:" : "Author&nbsp;Death&nbsp;Date:";
   field.title = (cb.checked) ? "Publication Date" : "Author Death Date";
+}
+
+// Propagate checkedness across category/subcategory boundary.
+// Check pub date checkbox if crown checkbox is checked:
+// syncCheckedness(true, "crown-checkbox", "pub-checkbox");
+// Uncheck crown checkbox if pub date checkbox is unchecked
+// syncCheckedness(false, "pub-checkbox", "crown-checkbox");
+function syncCheckedness(checked, fromId, toId) {
+  var fromElement = document.getElementById(fromId);
+  var toElement = document.getElementById(toId);
+  if (fromElement && toElement && fromElement.checked === checked) {
+    toElement.checked = fromElement.checked;
+  }
 }
 </script>
 
