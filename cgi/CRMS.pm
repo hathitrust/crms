@@ -5,7 +5,7 @@ package CRMS;
 ## ----------------------------------------------------------
 
 BEGIN {
-  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  die "SDRROOT environment variable not set" unless defined $ENV{SDRROOT};
   use lib $ENV{'SDRROOT'} . '/crms/cgi';
   use lib $ENV{'SDRROOT'} . '/crms/lib';
 }
@@ -27,41 +27,52 @@ use Unicode::Normalize;
 use XML::LibXML;
 
 use CRMS::Config;
+use CRMS::DB;
 use Utilities;
 
 binmode(STDOUT, ':encoding(UTF-8)');
 
-## -------------------------------------------------
-##  Top level CRMS object. This guy does everything.
-## -------------------------------------------------
-sub new
-{
+## -------------------------------------------------------------
+##  Top level CRMS object. This guy does everything. For now....
+## -------------------------------------------------------------
+sub new {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
-  # If running under Apache.
-  $self->set('instance', $ENV{'CRMS_INSTANCE'});
-  # If running from command line.
-  $self->set('instance', $args{'instance'}) if $args{'instance'};
-  my $root = $ENV{'SDRROOT'};
-  die 'ERROR: cannot locate root directory with SDRROOT!' unless $root and -d $root;
-  $self->set('root', $root);
-  $self->{config} = CRMS::Config->new->config;
+  # CGI app will use ENV but command line apps will pass instance parameter.
+  # There's not likely to ever be a reason to assign precedence, so in this case
+  # we'll let the command line flags have the final say.
+  my $instance = $args{instance} || $ENV{CRMS_INSTANCE} || '';
+  $self->{instance} = $instance;
+  # Set canonical instance name from args or ENV
+  # NOTE: this will eventually supersede 'instance' since it's a more controlled
+  # vocabulary  -- only three possible values and no undefs.
+  # Right now we're only using the instance name with CRMS::DB.
+  $self->{config} = CRMS::Config->new(instance => $instance);
+  # Set the global instance name so we don't have to pass around a config
+  # object to any module that wants to use the CRMS DB.
+  # When testing we turn this off otherwise default "development" instance
+  # would tend to get set to whatever instance was most recently created and
+  # hilarity would ensue.
+  unless ($ENV{CRMS_NO_STICKY_INSTANCE_NAME}) {
+    $ENV{CRMS_INSTANCE_NAME} = $self->{config}->{instance_name};
+  }
+  # TODO: just use $ENV{SDRROOT} instead of copying it locally.
+  # It's only used in a couple of places.
+  $self->{root} = $ENV{SDRROOT};
   $self->SetupLogFile();
   # Initialize error reporting.
   $self->ClearErrors();
-  $self->set('verbose',  $args{'verbose'});
+  $self->{verbose} = $args{verbose};
+  # Set no-op to make CRMS database read-only
+  $self->{noop} = $args{noop};
   # Only need to authorize when running as CGI.
-  if ($ENV{'GATEWAY_INTERFACE'})
-  {
+  if ($ENV{GATEWAY_INTERFACE}) {
     $CGI::LIST_CONTEXT_WARN = 0;
-    my $cgi = $args{'cgi'};
+    my $cgi = $args{cgi};
     print "<strong>Warning: no CGI passed to <code>CRMS->new()</code>\n" unless $cgi;
-    $self->set('cgi',      $cgi);
-    $self->set('debugSql', $args{'debugSql'});
-    $self->set('debugVar', $args{'debugVar'});
+    $self->{cgi} = $cgi;
     $self->SetupUser();
   }
-  $self->DebugVar('self', $self);
   return $self;
 }
 
@@ -82,13 +93,6 @@ sub SetupUser
   my $self = shift;
 
   my $note = '';
-  my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh)
-  {
-    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
-    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
-  }
-  return unless defined $sdr_dbh;
   my ($ht_user, $crms_user);
   my $usersql = 'SELECT COUNT(*) FROM users WHERE id=?';
   my $htsql = 'SELECT email FROM ht_users WHERE userid=?';
@@ -98,19 +102,19 @@ sub SetupUser
   if ($candidate)
   {
     my $candidate2;
-    my $ref = $sdr_dbh->selectall_arrayref($htsql, undef, $candidate);
+    my $ref = $self->htdb->all($htsql, $candidate);
     if ($ref && scalar @{$ref})
     {
       $ht_user = $candidate;
       $note .= "Set ht_user=$ht_user\n";
       $candidate2 = $ref->[0]->[0];
     }
-    if ($self->SimpleSqlGet($usersql, $candidate))
+    if ($self->db->one($usersql, $candidate))
     {
       $crms_user = $candidate;
       $note .= "Set crms_user=$crms_user from lc ENV{REMOTE_USER}\n";
     }
-    if (!$crms_user && $self->SimpleSqlGet($usersql, $candidate2))
+    if (!$crms_user && $self->db->one($usersql, $candidate2))
     {
       $crms_user = $candidate2;
       $note .= "Set crms_user=$crms_user from ht_users.email\n";
@@ -125,19 +129,19 @@ sub SetupUser
     if ($candidate)
     {
       my $candidate2;
-      my $ref = $sdr_dbh->selectall_arrayref($htsql, undef, $candidate);
+      my $ref = $self->htdb->all($htsql, $candidate);
       if ($ref && scalar @{$ref} && !$ht_user)
       {
         $ht_user = $candidate;
         $note .= "Set ht_user=$ht_user\n";
         $candidate2 = $ref->[0]->[0];
       }
-      if ($self->SimpleSqlGet($usersql, $candidate) && !$crms_user)
+      if ($self->db->one($usersql, $candidate) && !$crms_user)
       {
         $crms_user = $candidate;
         $note .= "Set crms_user=$crms_user from lc ENV{email}\n";
       }
-      if (!$crms_user && $self->SimpleSqlGet($usersql, $candidate2) && !$crms_user)
+      if (!$crms_user && $self->db->one($usersql, $candidate2) && !$crms_user)
       {
         $crms_user = $candidate2;
         $note .= "Set crms_user=$crms_user from ht_users.email\n";
@@ -178,17 +182,11 @@ sub NeedStepUpAuth
   my $need = 0;
   my $idp = $ENV{'Shib_Identity_Provider'};
   my $class = $ENV{'Shib_AuthnContext_Class'};
-  my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh)
-  {
-    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
-    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
-  }
   my $sql = 'SELECT COALESCE(mfa,0) FROM ht_users WHERE userid=? LIMIT 1';
   my $ref;
   my $mfa;
   eval {
-    $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user);
+    $ref = $self->htdb->all($sql, $user);
   };
   if ($ref && scalar @{$ref})
   {
@@ -200,7 +198,7 @@ sub NeedStepUpAuth
     $sql = 'SELECT shib_authncontext_class FROM ht_institutions'.
            ' WHERE entityID=? LIMIT 1';
     eval {
-      $ref = $sdr_dbh->selectall_arrayref($sql, undef, $idp);
+      $ref = $self->htdb->all($sql, $idp);
     };
     if ($ref && scalar @{$ref})
     {
@@ -318,114 +316,53 @@ sub set
   $self->{$key} = $val;
 }
 
-## ----------------------------------------------------------------------------
-##  Function:   connect to the mysql DB
-##  Parameters: nothing
-##  Return:     ref to DBI
-## ----------------------------------------------------------------------------
-sub ConnectToDb
-{
+sub config {
   my $self = shift;
 
-  my $config = CRMS::Config->new;
-  my $credentials = $config->credentials;
-  my $db_user = $credentials->{'db_user'};
-  my $db_passwd = $credentials->{'db_password'};
-  my $dsn = $self->DSN();
-  my $dbh = DBI->connect($dsn, $db_user, $db_passwd,
-    { PrintError => 0, RaiseError => 1, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
-  $dbh->{mysql_enable_utf8} = 1;
-  $dbh->{mysql_auto_reconnect} = 1;
-  $dbh->do('SET NAMES "utf8";');
-  return $dbh;
+  return $self->get('config');
+}
+
+sub instance_name {
+  my $self = shift;
+
+  return $self->config->instance_name;
+}
+
+## ----------------------------------------------------------------------------
+# #db and #htdb are now the preferred methods for communicating with
+# CRMS and HT databases using the CRMS::DB module.
+# Each returns a CRMS::DB object.
+## ----------------------------------------------------------------------------
+sub db {
+  my $self = shift;
+
+  if (!defined $self->{db}) {
+    $self->{db} = CRMS::DB->new(
+      name => 'crms',
+      instance => $self->instance_name,
+      noop => $self->{noop}
+    );
+  }
+  return $self->{db};
+}
+
+sub htdb {
+  my $self = shift;
+
+  if (!defined $self->{htdb}) {
+    $self->{htdb} = CRMS::DB->new(
+      name => 'ht',
+      instance => $self->instance_name
+    );
+  }
+  return $self->{htdb};
 }
 
 sub DbInfo
 {
   my $self = shift;
 
-  my $config = CRMS::Config->new;
-  my $instance = $self->get('instance') || '';
-  my $credentials = $config->credentials;
-  my $db_user = $credentials->{'db_user'};
-  my $dsn = $self->DSN();
-  my $where = $self->DevBanner() || 'PRODUCTION';
-  return "DB Info:\nInstance $instance\n$where\n$dsn as $db_user";
-}
-
-## ----------------------------------------------------------------------------
-##  Function:   connect to the development mysql DB
-##  Parameters: nothing
-##  Return:     ref to DBI
-## ----------------------------------------------------------------------------
-sub ConnectToSdrDb
-{
-  my $self    = shift;
-  my $db_name = shift;
-
-  my $config = CRMS::Config->new;
-  my $db_host = $config->config->{'ht_db_host'};
-  $db_name ||= $config->config->{'ht_db_name'};
-  my $credentials = $config->credentials;
-  my $db_user = $credentials->{'ht_db_user'};
-  my $db_passwd = $credentials->{'ht_db_password'};
-  my $dsn = "DBI:mysql:database=$db_name;host=$db_host";
-  my $ht_dbh = DBI->connect($dsn, $db_user, $db_passwd,
-    {PrintError => 0, AutoCommit => 1});
-  if ($ht_dbh)
-  {
-    $ht_dbh->{mysql_auto_reconnect} = 1;
-    $ht_dbh->{mysql_enable_utf8} = 1;
-    $ht_dbh->do('SET NAMES "utf8";');
-  }
-  else
-  {
-    my $err = $DBI::errstr;
-    $self->SetError($err);
-  }
-  return $ht_dbh;
-}
-
-# Gets cached dbh, or connects if no connection is made yet.
-sub GetSdrDb
-{
-  my $self = shift;
-
-  my $sdr_dbh = $self->get('sdr_dbh');
-  my $ping = $self->get('ping');
-  if (!$sdr_dbh || !(($ping)? $sdr_dbh->ping():1))
-  {
-    $sdr_dbh = $self->ConnectToSdrDb();
-    $self->set('sdr_dbh', $sdr_dbh);
-  }
-  return $sdr_dbh;
-}
-
-sub DSN {
-  my $self = shift;
-
-  my $instance = $self->get('instance') || '';
-  my $config = CRMS::Config->new;
-  my $db_host = $config->config->{'db_host'};
-  $db_host = $config->config->{'db_host_development'} if $instance eq '';
-  my $db_name = $config->config->{'db_name'};
-  $db_name = 'crms_training' if $instance eq 'crms-training';
-  return "DBI:mysql:database=$db_name;host=$db_host";
-}
-
-# Gets cached dbh, or connects if no connection is made yet.
-sub GetDb
-{
-  my $self = shift;
-
-  my $dbh = $self->get('dbh');
-  my $ping = $self->get('ping');
-  if (!$dbh || !(($ping)? $dbh->ping():1))
-  {
-    $dbh = $self->ConnectToDb();
-    $self->set('dbh', $dbh);
-  }
-  return $dbh;
+  return $self->db->info;
 }
 
 # Returns 1 on success.
@@ -434,17 +371,12 @@ sub PrepareSubmitSql
   my $self = shift;
   my $sql  = shift;
 
-  return 1 if $self->get('noop');
-  my $dbh = $self->GetDb();
-  my $t1 = Time::HiRes::time();
-  my $sth = $dbh->prepare($sql);
-  eval { $sth->execute(@_); };
-  my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), 1, undef, @_);
-  if ($@)
-  {
-    my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $sth->errstr;
-    $self->SetError($msg);
+  eval {
+    $self->db->submit($sql, @_);
+  };
+  if ($@) {
+    $self->SetError($@);
+    $self->Logit($@);
     return 0;
   }
   return 1;
@@ -459,56 +391,19 @@ sub SimpleSqlGet
   return $ref->[0]->[0];
 }
 
-sub SimpleSqlGetSDR
-{
-  my $self = shift;
-  my $sql  = shift;
-
-  my $ref = $self->SelectAllSDR($sql, @_);
-  return $ref->[0]->[0];
-}
-
 sub SelectAll
 {
   my $self = shift;
   my $sql  = shift;
 
   my $ref = undef;
-  my $dbh = $self->GetDb();
-  my $t1 = Time::HiRes::time();
   eval {
-    $ref = $dbh->selectall_arrayref($sql, undef, @_);
+    $ref = $self->db->all($sql, @_);
   };
-  if ($@)
-  {
-    my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
-    $self->SetError($msg);
-    $self->Logit($msg);
+  if ($@) {
+    $self->SetError($@);
+    $self->Logit($@);
   }
-  my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, undef, @_);
-  return $ref;
-}
-
-sub SelectAllSDR
-{
-  my $self = shift;
-  my $sql  = shift;
-
-  my $ref = undef;
-  my $dbh = $self->GetSdrDb();
-  my $t1 = Time::HiRes::time();
-  eval {
-    $ref = $dbh->selectall_arrayref($sql, undef, @_);
-  };
-  if ($@)
-  {
-    my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $@;
-    $self->SetError($msg);
-    $self->Logit($msg);
-  }
-  my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, 'ht_rights', @_);
   return $ref;
 }
 
@@ -520,73 +415,6 @@ sub WildcardList
 
   return '()' if $n < 1;
   return '(' . ('?,' x ($n-1)) . '?)';
-}
-
-sub DebugSql
-{
-  my $self = shift;
-  my $sql  = shift;
-  my $time = shift;
-  my $ref  = shift;
-  my $db   = shift;
-
-  my $debug = $self->get('debugSql');
-  if ($debug)
-  {
-    my $ct = $self->get('debugCount') || 0;
-    my @parts = split m/\s+/, $sql;
-    my $type = uc $parts[0];
-    $type .= ' '. $db if defined $db;
-    my $trace = Utilities::LocalCallChain();
-    $trace = join '<br>', @{$trace};
-    my $stat = ($ref)? '':'<i>FAIL</i>';
-	  my $html = <<END;
-    <div class="debug">
-      <div class="debugSql" onClick="ToggleDiv('details$ct', 'debugSqlDetails');">
-        SQL QUERY [$type] ($ct) $stat
-      </div>
-      <div id="details$ct" class="divHide"
-           style="background-color: #9c9;" onClick="ToggleDiv('details$ct', 'debugSqlDetails');">
-        $sql <strong>{%s}</strong> <i>(%.3fms)</i><br/>
-        <i>$trace</i>
-      </div>
-    </div>
-END
-    my $msg = sprintf $html, join(',', @_), $time;
-    my $storedDebug = $self->get('storedDebug') || '';
-    $self->set('storedDebug', $storedDebug. $msg);
-    $ct++;
-    $self->set('debugCount', $ct);
-  }
-}
-
-sub DebugVar
-{
-  my $self = shift;
-  my $var  = shift;
-  my $val  = shift;
-
-  my $debug = $self->get('debugVar');
-  if ($debug)
-  {
-    my $ct = $self->get('debugCount') || 0;
-	  my $html = <<END;
-    <div class="debug">
-      <div class="debugVar" onClick="ToggleDiv('details$ct', 'debugVarDetails');">
-        VAR $var
-      </div>
-      <div id="details$ct" class="divHide"
-           style="background-color: #fcc;" onClick="ToggleDiv('details$ct', 'debugVarDetails');">
-        %s
-      </div>
-    </div>
-END
-    my $msg = sprintf $html, Dumper($val);
-    my $storedDebug = $self->get('storedDebug') || '';
-    $self->set('storedDebug', $storedDebug. $msg);
-    $ct++;
-    $self->set('debugCount', $ct);
-  }
 }
 
 sub DebugAuth
@@ -1163,7 +991,7 @@ sub LoadNewItemsInCandidates
   my $endclause = ($end)? " AND time<='$end' ":' ';
   my $sql = 'SELECT namespace,id,time,DATE(time) FROM rights_current WHERE time>?' .
             $endclause . 'ORDER BY time ASC, namespace ASC, id ASC';
-  my $ref = $self->SelectAllSDR($sql, $start);
+  my $ref = $self->htdb->all($sql, $start);
   my $n = scalar @{$ref};
   $self->ReportMsg("Checking $n possible additions to candidates from rights DB");
   my $last_date = undef;
@@ -2400,7 +2228,7 @@ sub CreateSQLForVolumesWide
 sub SearchTermsToSQL
 {
   my $self = shift;
-  my $dbh = $self->GetDb();
+  my $dbh = $self->db->dbh;
   my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value) = map { (defined $_)? $_:'' } @_;
   my ($search1term, $search2term, $search3term) = ('', '', '');
   $op1 = 'AND' unless $op1;
@@ -2501,7 +2329,7 @@ sub SearchTermsToSQL
 sub SearchTermsToSQLWide
 {
   my $self = shift;
-  my $dbh = $self->GetDb();
+  my $dbh = $self->db->dbh;
   my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table) = @_;
   $op1 = 'AND' unless $op1;
   $op2 = 'AND' unless $op2;
@@ -3720,8 +3548,7 @@ sub CanChangeToUser
   my $him  = shift;
 
   return 1 if $self->SameUser($me, $him);
-  my $instance = $self->get('instance') || '';
-  if ($instance ne 'production' && $instance ne 'crms-training')
+  if ($self->instance_name eq 'development')
   {
     return 0 if $me eq $him;
     return 1 if $self->IsUserAdmin($me);
@@ -4881,7 +4708,7 @@ sub ReviewData
   my $jsonxs = JSON::XS->new->canonical(1)->pretty(0);
   my $record = $self->GetMetadata($id);
   my $data = {};
-  my $dbh = $self->GetDb();
+  my $dbh = $self->db->dbh;
   my $sql = 'SELECT * FROM queue WHERE id=?';
   my $ref = $dbh->selectall_hashref($sql, 'id', undef, $id);
   $data->{'queue'} = $ref->{$id};
@@ -5277,14 +5104,14 @@ sub AttrReasonSync
   foreach my $table (@tables)
   {
     my $sql = 'SELECT COUNT(*) FROM '. $table;
-    my $count = $self->SimpleSqlGet($sql);
-    my $count2 = $self->SimpleSqlGetSDR($sql);
+    my $count = $self->db->one($sql);
+    my $count2 = $self->htdb->one($sql);
     if ($count != $count2)
     {
       $sql = 'DELETE FROM '. $table;
       $self->PrepareSubmitSql($sql);
       my $sql = 'SELECT * FROM '. $table;
-      my $ref = $self->SelectAllSDR($sql);
+      my $ref = $self->htdb->all($sql);
       my $wc = $self->WildcardList(scalar @{$ref->[0]});
       foreach my $row (@{$ref})
       {
@@ -6321,7 +6148,7 @@ sub Namespaces
 
   my $sql = 'SELECT distinct namespace FROM rights_current';
   my $ref = undef;
-  eval { $ref = $self->SelectAllSDR($sql); };
+  eval { $ref = $self->htdb->all($sql); };
   $self->SetError("Rights query for namespaces failed: $@") if $@;
   return map {$_->[0];} @{$ref};
 }
@@ -6343,7 +6170,7 @@ sub RightsQuery
             ' AND rs.id=r.reason AND p.id=r.access_profile' .
             ' ORDER BY r.time ASC';
   my $ref;
-  eval { $ref = $self->SelectAllSDR($sql, $ns, $n); };
+  eval { $ref = $self->htdb->all($sql, $ns, $n); };
   if ($@)
   {
     $self->SetError("Rights query for $id failed: $@");
@@ -6402,83 +6229,56 @@ sub RightsDBAvailable
 {
   my $self = shift;
 
-  my $dbh = undef;
   eval {
-    $dbh = $self->GetSdrDb();
+    my $dbh = $self->htdb->dbh;
   };
-  $self->ClearErrors();
-  return ($dbh)? 1:0;
+  return ($@) ? 0 : 1;
 }
 
-sub GetUserIPs
-{
+sub GetUserIPs {
   my $self = shift;
   my $user = shift || $self->get('remote_user');
 
   my $sql = 'SELECT iprestrict,mfa FROM ht_users WHERE userid=? OR email=?'.
             ' ORDER BY IF(role="crms",1,0) DESC';
-  my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh)
-  {
-    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
-    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
-  }
   my ($ipr, $mfa);
-  my $t1 = Time::HiRes::time();
   eval {
-    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
-    my $t2 = Time::HiRes::time();
-    $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, 'ht_repository', $user, $user);
+    my $ref = $self->htdb->all($sql, $user, $user);
     $ipr = $ref->[0]->[0];
     $mfa = $ref->[0]->[1];
   };
-  if ($@)
-  {
-    my $msg = "SQL failed ($sql): ". $@;
-    $self->SetError($msg);
+  if ($@) {
+    $self->SetError($@);
   }
   my %ips;
-  if ($mfa)
-  {
+  if ($mfa) {
     $ips{'mfa'} = 1;
   }
-  elsif (defined $ipr)
-  {
+  elsif (defined $ipr) {
     $ipr =~ s/\s//g;
     my @ips2 = split m/\|/, $ipr;
-    foreach my $ip (@ips2)
-    {
+    foreach my $ip (@ips2) {
       $ip =~ s/^\^|\$$//g;
       $ip =~ s/\\\././g;
       $ips{$ip} = 1 if $ip =~ m/(\d+\.){3}\d+/;
     }
   }
-  #$self->ClearErrors();
   return \%ips;
 }
 
-sub GetUserRole
-{
+sub GetUserRole {
   my $self = shift;
   my $user = shift || $self->get('user');
 
   my $sql = 'SELECT role FROM ht_users WHERE userid=? OR email=?'.
             ' ORDER BY IF(role="crms",1,0) DESC';
-  my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh)
-  {
-    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
-    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
-  }
   my $role;
   eval {
-    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
+    my $ref = $self->htdb->all($sql, $user, $user);
     $role = $ref->[0]->[0];
   };
-  if ($@)
-  {
-    my $msg = "SQL failed ($sql): " . $@;
-    $self->SetError($msg);
+  if ($@) {
+    $self->SetError($@);
   }
   return $role;
 }
@@ -6498,23 +6298,14 @@ sub IsUserExpired
             ' DATEDIFF(DATE(expires),DATE(NOW()))'.
             ' FROM ht_users WHERE userid=? OR email=?'.
             ' ORDER BY IF(role="crms",1,0) DESC';
-  #print "$sql<br/>\n";
-  my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh)
-  {
-    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
-    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
-  }
   eval {
-    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
+    my $ref = $self->htdb->all($sql, $user, $user);
     $data{'expires'} = $ref->[0]->[0];
     $data{'status'} = $ref->[0]->[1];
     $data{'days'} = $ref->[0]->[2];
   };
-  if ($@)
-  {
-    my $msg = "SQL failed ($sql): " . $@;
-    $self->SetError($msg);
+  if ($@) {
+    $self->SetError($@);
   }
   return \%data;
 }
@@ -6731,16 +6522,12 @@ sub SetSystemStatus
   }
 }
 
-# Returns capitalized name of system
+# Returns capitalized name of instance
 sub WhereAmI
 {
   my $self = shift;
 
-  my %instances = ('production' => 1, 'crms-training' => 1, 'dev' => 1);
-  my $instance = $self->get('instance') || $ENV{'HT_DEV'} || 'dev';
-  $instance = "dev ($instance)" unless $instances{$instance};
-  $instance = 'training' if $instance eq 'crms-training';
-  return ucfirst $instance;
+  return ucfirst $self->instance_name;
 }
 
 sub DevBanner
@@ -6772,16 +6559,14 @@ sub IsDevArea
 {
   my $self = shift;
 
-  my $inst = $self->get('instance') || '';
-  return ($inst eq 'production' || $inst eq 'crms-training')? 0:1;
+  return $self->instance_name eq 'development';
 }
 
 sub IsTrainingArea
 {
   my $self = shift;
 
-  my $inst = $self->get('instance') || '';
-  return $inst eq 'crms-training';
+  return $self->instance_name eq 'training';
 }
 
 sub Hostname

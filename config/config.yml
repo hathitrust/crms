@@ -19,9 +19,9 @@ favicon: CRMSBlueIcon.png
 ## mysql server connection settings
 ## ================================================================== ##
 # The hostname for the database where your CRMS data will be stored.
-db_host: mysql-sdr
-db_host_development: mysql-sdr
-db_name: crms
+#db_host: mysql-sdr
+#db_host_development: mysql-htdev
+#db_name: crms
 # The hostname for the HathiTrust database (read-only access).
 ht_db_host: mysql-sdr
 ht_db_name: ht

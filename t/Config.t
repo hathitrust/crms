@@ -12,51 +12,61 @@ use CRMS::Config;
 
 subtest 'CRMS::Config' => sub {
   my $config = CRMS::Config->new;
-  ok(ref $config eq 'CRMS::Config');
+  isa_ok($config, 'CRMS::Config');
 };
 
-subtest 'CRMS::Config::config' => sub {
+subtest 'CRMS::Config::instance_name' => sub {
+  is(CRMS::Config::translate_instance_name('production'), 'production');
+  is(CRMS::Config::translate_instance_name('training'), 'training');
+  is(CRMS::Config::translate_instance_name('crms-training'), 'training');
+  is(CRMS::Config::translate_instance_name('crms_training'), 'training');
+  is(CRMS::Config::translate_instance_name('development'), 'development');
+  is(CRMS::Config::translate_instance_name(''), 'development');
+  is(CRMS::Config::translate_instance_name(), 'development');
+};
+
+subtest '#config' => sub {
   my $config = CRMS::Config->new->config;
-  ok(ref $config eq 'HASH');
+  isa_ok($config, 'HASH');
+
+  subtest 'with overriding ENV' => sub {
+    my $save_env = $ENV{'CRMS_HT_DB_HOST'};
+    $ENV{'CRMS_HT_DB_HOST'} = 'test_crms_ht_db_host_value';
+    my $config = CRMS::Config->new->config;
+    is($config->{'ht_db_host'}, 'test_crms_ht_db_host_value');
+    $ENV{'CRMS_HT_DB_HOST'} = $save_env;
+  };
+
+  subtest 'with config.local.yml' => sub {
+    my $config_local_sample = $ENV{'SDRROOT'} . '/crms/config/config.local.yml.sample';
+    my $config_local = $ENV{'SDRROOT'} . '/crms/config/config.local.yml';
+    File::Copy::copy($config_local_sample, $config_local) or Carp::confess "Copy failed: $!";
+    my $config = CRMS::Config->new->config;
+    is($config->{'host'}, 'sample.hathitrust.org');
+    unlink $config_local;
+  };
 };
 
-subtest 'CRMS::Config::config with overriding ENV' => sub {
-  my $save_env = $ENV{'CRMS_DB_HOST'};
-  $ENV{'CRMS_DB_HOST'} = 'test_crms_db_host_value';
-  my $config = CRMS::Config->new->config;
-  is($config->{'db_host'}, 'test_crms_db_host_value');
-  $ENV{'CRMS_DB_HOST'} = $save_env;
-};
-
-subtest 'CRMS::Config::config with config.local.yml' => sub {
-  my $config_local_sample = $ENV{'SDRROOT'} . '/crms/config/config.local.yml.sample';
-  my $config_local = $ENV{'SDRROOT'} . '/crms/config/config.local.yml';
-  File::Copy::copy($config_local_sample, $config_local) or Carp::confess "Copy failed: $!";
-  my $config = CRMS::Config->new->config;
-  is($config->{'host'}, 'sample.hathitrust.org');
-  unlink $config_local;
-};
-
-subtest 'CRMS::Config::credentials' => sub {
+subtest '#credentials' => sub {
   my $credentials = CRMS::Config->new->credentials;
-  ok(ref $credentials eq 'HASH');
-};
+  isa_ok($credentials, 'HASH');
 
-subtest 'CRMS::Config::credentials with overriding ENV' => sub {
-  my $save_env = $ENV{'CRMS_DB_USER'};
-  $ENV{'CRMS_DB_USER'} = 'test_crms_db_user_value';
-  my $credentials = CRMS::Config->new->credentials;
-  is($credentials->{'db_user'}, 'test_crms_db_user_value');
-  $ENV{'CRMS_DB_USER'} = $save_env;
-};
+  subtest 'with overriding ENV' => sub {
+    my $save_env = $ENV{'CRMS_HT_DB_USER'};
+    $ENV{'CRMS_HT_DB_USER'} = 'test_crms_ht_db_user_value';
+    my $credentials = CRMS::Config->new->credentials;
+    is($credentials->{'ht_db_user'}, 'test_crms_ht_db_user_value');
+    $ENV{'CRMS_HT_DB_USER'} = $save_env;
+  };
 
-subtest 'CRMS::Config::credentials with credentials.local.yml' => sub {
-  my $credentials_local_sample = $ENV{'SDRROOT'} . '/crms/config/credentials.local.yml.sample';
-  my $credentials_local = $ENV{'SDRROOT'} . '/crms/config/credentials.local.yml';
-  File::Copy::copy($credentials_local_sample, $credentials_local) or Carp::confess "Copy failed: $!";
-  my $credentials = CRMS::Config->new->credentials;
-  is($credentials->{'data_api_access_key'}, 'sample_value');
-  unlink $credentials_local;
+  subtest 'with credentials.local.yml' => sub {
+    my $credentials_local_sample = $ENV{'SDRROOT'} . '/crms/config/credentials.local.yml.sample';
+    my $credentials_local = $ENV{'SDRROOT'} . '/crms/config/credentials.local.yml';
+    File::Copy::copy($credentials_local_sample, $credentials_local) or Carp::confess "Copy failed: $!";
+    my $credentials = CRMS::Config->new->credentials;
+    is($credentials->{'data_api_access_key'}, 'sample_value');
+    unlink $credentials_local;
+  };
 };
 
 subtest 'sanity check config keys' => sub {
@@ -69,5 +79,26 @@ subtest 'sanity check config keys' => sub {
   }
 };
 
+subtest '#db' => sub {
+  my $db = CRMS::Config->new->db;
+  isa_ok($db, 'HASH');
+  
+  subtest 'with overriding ENV' => sub {
+    my $save_env = $ENV{'CRMS_DB_DEVELOPMENT_HOST'};
+    $ENV{'CRMS_DB_DEVELOPMENT_HOST'} = 'test_crms_db_development_host_value';
+    my $db = CRMS::Config->new->db;
+    is($db->{'host'}, 'test_crms_db_development_host_value');
+    $ENV{'CRMS_DB_DEVELOPMENT_HOST'} = $save_env;
+  };
+  
+  subtest 'with db.local.yml' => sub {
+    my $db_local_sample = $ENV{'SDRROOT'} . '/crms/config/db.local.yml.sample';
+    my $db_local = $ENV{'SDRROOT'} . '/crms/config/db.local.yml';
+    File::Copy::copy($db_local_sample, $db_local) or Carp::confess "Copy failed: $!";
+    my $db = CRMS::Config->new->db;
+    is($db->{'name'}, 'sample-development-name');
+    unlink $db_local;
+  };
+};
 
 done_testing();

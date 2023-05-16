@@ -427,8 +427,8 @@ for (@{$crms->GetErrors()})
   s/\n/<br\/>/g;
   $crms->ReportMsg("<i>Warning: $_</i>");
 }
-my $hashref = $crms->GetSdrDb()->{mysql_dbd_stats};
-$crms->ReportMsg(sprintf "SDR Database OK reconnects: %d, bad reconnects: %d<br/>\n",
+my $hashref = $crms->htdb->dbh->{mysql_dbd_stats};
+$crms->ReportMsg(sprintf "HT Database OK reconnects: %d, bad reconnects: %d<br/>\n",
                  $hashref->{'auto_reconnects_ok'},
                  $hashref->{'auto_reconnects_failed'});
 $crms->ReportMsg("</body></html>\n");

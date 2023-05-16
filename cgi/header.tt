@@ -15,9 +15,6 @@
   [% ELSE %]
     <script src="[% crms.WebPath('web', 'js/datepicker.packed.js') %]"></script>
   [% END %]
-  [% IF crms.get('debugSql') || crms.get('debugVar') %]
-    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/debug.css') %]"/>
-  [% END %]
   [% IF page == 'determinationStats' OR page == 'exportStats' OR page == 'reviewerActivity' %]
     <script src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
     <script src="https://code.highcharts.com/highcharts.js"></script>

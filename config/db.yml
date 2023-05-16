@@ -1,0 +1,16 @@
+# canonical instance names (see lib/CRMS/Config.pm)
+production:
+  name: crms
+  host: mysql-sdr
+  user: mdp-lib
+  password: mdp-lib
+training:
+  name: crms_training
+  host: mysql-sdr
+  user: mdp-lib
+  password: mdp-lib
+development:
+  name: crms
+  host: mariadb
+  user: crms
+  password: crms

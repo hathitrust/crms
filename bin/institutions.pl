@@ -126,7 +126,6 @@ else
 # Returns number of entries written.
 sub CheckInstitutions
 {
-  my $sdr_dbh = $crms->ConnectToSdrDb('ht_repository');
   open my $out_instid, '>:encoding(UTF-8)', $outfile_instid;
   open my $out_entityid, '>:encoding(UTF-8)', $outfile_entityid;
   my $sql = 'SELECT inst_id,name,entityID,enabled FROM ht_institutions WHERE enabled!=0'.
@@ -134,7 +133,7 @@ sub CheckInstitutions
   my $ref;
   my $n = 0;
   eval {
-    $ref = $sdr_dbh->selectall_arrayref($sql);
+    $ref = $crms->htdb->all($sql);
   };
   if (defined $ref)
   {

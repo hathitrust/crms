@@ -24,10 +24,12 @@ services:
       - .:/htapps/babel/crms
     environment:
       - SDRROOT=/htapps/babel
-      - CRMS_DB_HOST=mariadb
-      - CRMS_DB_HOST_DEVELOPMENT=mariadb
+      - CRMS_NO_STICKY_INSTANCE_NAME=1
       - CRMS_HT_DB_HOST=mariadb_ht
     depends_on:
       - mariadb
       - mariadb_ht
     command: scripts/test.sh
+    links:
+      - mariadb:mysql-htdev
+      - mariadb:mysql-sdr

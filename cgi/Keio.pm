@@ -31,7 +31,7 @@ sub TableQuery
   my $table = shift;
   my $page  = shift || 0;
 
-  my $dbh = $self->{crms}->GetDb();
+  my $dbh = $self->{crms}->db->dbh;
   my $sql = 'SELECT * FROM `'. $table. '` WHERE 1=0';
   my $sth = $dbh->prepare($sql);
   $sth->execute();
@@ -67,7 +67,7 @@ sub Query
   my $name  = shift;
   my $page  = shift || 0;
 
-  my $dbh = $self->{crms}->GetDb();
+  my $dbh = $self->{crms}->db->dbh;
   my $sql = $QUERIES->{$name};
   my $offset = $page * 50;
   $sql .= ' LIMIT 50 OFFSET '. $offset;

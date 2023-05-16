@@ -337,8 +337,8 @@ $txt .= "Total System IDs: $n\n";
 
 print "Warning: $_\n" for @{$crms->GetErrors()};
 
-my $hashref = $crms->GetSdrDb()->{mysql_dbd_stats};
-printf "SDR Database OK reconnects: %d, bad reconnects: %d\n", $hashref->{'auto_reconnects_ok'}, $hashref->{'auto_reconnects_failed'} if $verbose;
+my $hashref = $crms->htdb->dbh->{mysql_dbd_stats};
+printf "HT Database OK reconnects: %d, bad reconnects: %d\n", $hashref->{'auto_reconnects_ok'}, $hashref->{'auto_reconnects_failed'} if $verbose;
 $txt .= "</body></html>\n\n" if $report eq 'html';
 my $recipients = $cron->recipients(@mails);
 if (scalar @$recipients)

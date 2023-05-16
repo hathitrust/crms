@@ -9,6 +9,8 @@ use utf8;
 
 use File::Basename;
 
+use CRMS::DB;
+
 my $DEFAULT_EMAIL_DOMAIN = 'umich.edu';
 my $DEFAULT_EMAIL_SUFFIX = '@' . $DEFAULT_EMAIL_DOMAIN;
 
@@ -16,9 +18,10 @@ sub new {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
   # FIXME: once we have a standalone DB module this can go away.
-  my $crms = $args{crms};
-  die "CRMS::Cron module needs CRMS instance." unless defined $crms;
-  $self->{crms} = $crms;
+  #my $crms = $args{crms};
+  #die "CRMS::Cron module needs CRMS instance." unless defined $crms;
+  #$self->{crms} = $crms;
+  $self->{db} = CRMS::DB->new;
   $self->{script_name} = File::Basename::basename($0, '.pl');
   return $self;
 }
@@ -41,10 +44,10 @@ sub recipients {
 
   if (scalar @mails == 0) {
     my $sql = 'SELECT id FROM cron WHERE script=?';
-    my $cron_id = $self->{crms}->SimpleSqlGet($sql, $self->script_name);
+    my $cron_id = $self->{db}->one($sql, $self->script_name);
     if (defined $cron_id) {
       $sql = 'SELECT email FROM cron_recipients WHERE cron_id=?';
-      my $ref = $self->{crms}->SelectAll($sql, $cron_id);
+      my $ref = $self->{db}->all($sql, $cron_id);
       push(@mails, $_->[0]) for @$ref;
     }
   }

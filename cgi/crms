@@ -21,15 +21,11 @@ binmode(STDOUT, ':encoding(UTF-8)');
 my $cgi = new CGI;
 my $page = $cgi->param('p');
 my $debugAuth = $cgi->param('debugAuth');
-my $debugSql = $cgi->param('debugSql');
-my $debugVar = $cgi->param('debugVar');
 my $debug = $cgi->param('debug');
 my $crms = CRMS->new(
         cgi       => $cgi,
         verbose   => 0,
-        debugAuth => $debugAuth,
-        debugSql  => $debugSql,
-        debugVar  => $debugVar
+        debugAuth => $debugAuth
         );
 my $redirect;
 my $uri = $ENV{'REQUEST_URI'};

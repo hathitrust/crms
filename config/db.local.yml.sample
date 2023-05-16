@@ -1,0 +1,17 @@
+# db.local.yml values override values in db.yml and
+# are for Apache deployments.
+production:
+  name: sample-production-name
+  host: sample-production-host
+  user: sample-production-user
+  password: sample-production-password
+training:
+  name: sample-training-name
+  host: sample-training-host
+  user: sample-training-user
+  password: sample-training-password
+development:
+  name: sample-development-name
+  host: sample-development-host
+  user: sample-development-user
+  password: sample-development-password

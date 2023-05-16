@@ -3,15 +3,14 @@ package Project;
 use strict;
 use warnings;
 
-sub new
-{
+sub new {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
   $self->{$_} = $args{$_} for keys %args;
-  my $id = $args{'id'};
-  die "No CRMS object passed to project" unless $args{'crms'};
+  my $id = $args{id};
+  die 'No ID passed to project' unless $args{id};
   my $sql = 'SELECT * FROM projects WHERE id=?';
-  my $ref = $self->{'crms'}->get('dbh')->selectall_hashref($sql, 'id', undef, $id);
+  my $ref = CRMS::DB->new(instance => $args{instance})->dbh->selectall_hashref($sql, 'id', undef, $id);
   $self->{$_} = $ref->{$id}->{$_} for keys %{$ref->{$id}};
   return $self;
 }
