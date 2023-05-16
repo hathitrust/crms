@@ -41,6 +41,26 @@ subtest 'Commonwealth::PresentationOrder' => sub {
   ok(length $order > 0);
 };
 
+subtest 'Commonwealth::ReviewPartials' => sub {
+  ok(defined $proj->ReviewPartials);
+};
+
+subtest 'Commonwealth::ValidateSubmission' => sub {
+  subtest 'no rights selected' => sub {
+    my $cgi = CGI->new;
+    my $err = $proj->ValidateSubmission($cgi);
+    ok($err =~ m/rights\/reason combination/);
+  };
+
+  subtest 'category without required note' => sub {
+    my $cgi = CGI->new;
+    $cgi->param('rights', 1);
+    $cgi->param('category', 'Misc');
+    my $err = $proj->ValidateSubmission($cgi);
+    is($err, 'category "Misc" requires a note');
+  };
+};
+
 done_testing();
 
 
