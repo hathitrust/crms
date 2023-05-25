@@ -5,6 +5,9 @@ use strict;
 use warnings;
 use utf8;
 
+use lib "$ENV{SDRROOT}/crms/lib";
+use CRMS::Country;
+
 sub new
 {
   my $class = shift;
@@ -97,7 +100,7 @@ sub ValidateSubmission
   my $date = $cgi->param('date') || '';
   my $note = $cgi->param('note');
   my $country = $cgi->param('country') || '';
-  my $countries = Countries::GetCountries();
+  my $country_data = CRMS::Country->new->country_data;
   my $category = $cgi->param('category');
   $date =~ s/\s+//g if $date;
   if ($attr ne 'und')
@@ -118,7 +121,8 @@ sub ValidateSubmission
       }
     }
   }
-  if (length $country && !$countries->{$country})
+  # Country code was entered, do a strict check against country data.
+  if (length $country && !$country_data->{$country})
   {
     push @errs, "Country of Publication ($country) not recognized – please check MARC country codes";
   }
@@ -177,7 +181,7 @@ sub FormatReviewData
   my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
   my $data = $jsonxs->decode($json);
   my @fmts;
-  push @fmts, Countries::TranslateCountry($data->{'country'}) if $data->{'country'};
+  push @fmts, CRMS::Country->new->from_code($data->{'country'}) if $data->{'country'};
   if ($data->{'date'})
   {
     my $date = $data->{'date'};

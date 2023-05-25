@@ -44,6 +44,13 @@ subtest "Record cities hash" => sub {
   ok(ref $cities->{'non-us'} eq 'ARRAY', 'cities non-us value is an arrayref');
 };
 
+subtest "#Country" => sub {
+  my $id = 'mdp.39076000925557';
+  my $record = Metadata->new('id' => $id);
+  is($record->country, 'USA');
+  is($record->country(1), 'USA (Michigan)');
+};
+
 delete $ENV{CRMS_METADATA_FIXTURES_PATH};
 
 done_testing();

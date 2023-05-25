@@ -23,6 +23,10 @@ use LWP::UserAgent;
 use Unicode::Normalize;
 use XML::LibXML;
 
+use lib "$ENV{SDRROOT}/crms/lib";
+
+use CRMS::Country;
+
 my $US_CITIES;
 
 # TODO: this is duplicative of code in post_zephir_processing/bib_rights.pm
@@ -520,8 +524,7 @@ sub country
   my $long = shift;
 
   my $code = substr($self->GetControlfield('008'), 15, 3);
-  use Countries;
-  return Countries::TranslateCountry($code, $long);
+  return CRMS::Country->new->from_code($code, $long);
 }
 
 # Returns hash of us-> and non-us-> arrays of normalized city names.
