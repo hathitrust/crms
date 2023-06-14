@@ -16,7 +16,7 @@ use Encode;
 
 use CRMS;
 use CRMS::Cron;
-use Jira;
+use CRMS::Jira;
 
 my $usage = <<END;
 USAGE: $0 [-hnpv] [-m MAIL [-m MAIL2...]]
@@ -128,7 +128,7 @@ sub EmailReport
 
 sub AddJiraComments
 {
-  #my $summary = '';
+  my $jira = CRMS::Jira->new;
   my $sql = 'SELECT DISTINCT ticket FROM licensing'.
             ' WHERE time >= DATE_SUB(NOW(), INTERVAL 1 DAY)';
   my $ref = $crms->SelectAll($sql);
@@ -152,9 +152,7 @@ sub AddJiraComments
       $ref = $crms->SelectAll($sql, $tx, $license);
       $comment .= sprintf("%s\n", $_->[0]) for @$ref;
     }
-    my $err = Jira::AddComment($tx, $comment);
+    my $err = $jira->add_comment(ticket => $tx, comment => $comment);
     $crms->SetError($err) if defined $err;
-    #$summary .= "<p>Jira comment for $tx:</p><code>$comment</code>";
   }
-  #return $summary;
 }

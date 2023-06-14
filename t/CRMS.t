@@ -3,9 +3,9 @@
 use strict;
 use warnings;
 use utf8;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
 
-use Data::Dumper;
+use lib "$ENV{SDRROOT}/crms/cgi";
+
 use Test::More;
 
 require_ok($ENV{'SDRROOT'}. '/crms/cgi/CRMS.pm');
@@ -33,6 +33,11 @@ subtest 'CRMS::CanExportVolume' => sub {
   subtest 'CRMS::CanExportVolume und/crms' => sub {
     is(0, $crms->CanExportVolume('mdp.001', 'und', 'crms', 1));
   };
+};
+
+subtest '#LinkToJira' => sub {
+  is($crms->LinkToJira('DEV-000'),
+    '<a href="https://hathitrust.atlassian.net/browse/DEV-000" target="_blank">DEV-000</a>');
 };
 
 done_testing();

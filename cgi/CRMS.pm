@@ -7302,8 +7302,9 @@ sub LinkToJira
   my $self = shift;
   my $tx   = shift;
 
-  use Jira;
-  return Jira::LinkToJira($tx);
+  use CRMS::Jira;
+  my $url = CRMS::Jira->new->browse_url($tx);
+  return qq{<a href="$url" target="_blank">$tx</a>};
 }
 
 # Populates $data (a hash ref) with information about the duplication status of an exported determination.

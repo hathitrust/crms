@@ -155,7 +155,8 @@ RUN cpan \
   Devel::Cover::Report::Coveralls \
   MARC::Record::MiJ \
   OAuth::Lite \
-  Test::Exception
+  Test::Exception \
+  Test::LWP::UserAgent
 
 ENV SDRROOT /htapps/babel
 ENV ROOTDIR "${SDRROOT}/crms"
