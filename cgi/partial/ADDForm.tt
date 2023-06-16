@@ -261,13 +261,13 @@ function popReviewInfo(user) {
   var button = document.getElementById("r" + review.rights);
   if (button) { button.checked = "checked"; }
   button = document.getElementById("pub-checkbox");
-  if (button) { button.checked = (review.data.pub != null); }
+  if (button) { button.checked = Boolean(review.data?.pub); }
   button = document.getElementById("crown-checkbox");
-  if (button) { button.checked = (review.data.crown != null); }
+  if (button) { button.checked = Boolean(review.data?.crown); }
   var field = document.getElementById("renewalField");
-  if (field) { field.value = review.data.date; }
+  if (field) { field.value = review.data?.date || ''; }
   document.submitReview.note.value = review.note || '';
-  selMenuItem('catMenu', (review.category)? review.category:'');
+  selMenuItem('catMenu', review.category || '');
 }
 
 // Rewords the Commonwealth date entry based on whether "Pub Date" is checked.
