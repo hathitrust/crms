@@ -16,7 +16,7 @@ sub __index {
   #$self->{vars}->{flash}->add('notice', "QueueController->index trying to render 'queue/index'");
   $self->{vars}->{flash}->add('notice', sprintf("QueueController params '%s", Dumper $self->{params}));
   $self->{vars}->{data} = CRMS::Queue::Search(%{$self->{params}});
-  return $self->render('queue/index_bs_form');
+  return $self->render('queue/index');
 }
 
 # Add to queue page, no actual entries are created here because it's a batch creation UI.

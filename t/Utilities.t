@@ -88,8 +88,8 @@ sub test_FormatDate {
 }
 
 sub test_FormatTime {
-  is($utils->FormatTime('2025-01-01 09:00:00'), 'January 1, 2025 at 9:00:00 AM EST');
-  is($utils->FormatTime('2025-01-01 21:00:00'), 'January 1, 2025 at 9:00:00 PM EST');
+  is($utils->FormatTime('2025-01-01 09:00:00'), "January 1, 2025, 9:00:00\x{202f}AM EST");
+  is($utils->FormatTime('2025-01-01 21:00:00'), "January 1, 2025, 9:00:00\x{202f}PM EST");
   dies_ok { $utils->FormatTime('garbage') };
   $utils->SetLocale('ja');
   is($utils->FormatTime('2025-01-01 09:00:00'), '2025年1月1日 9:00:00 EST');

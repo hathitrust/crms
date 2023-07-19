@@ -3,8 +3,8 @@ use warnings;
 use utf8;
 
 BEGIN {
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/lib');
+  use lib "$ENV{SDRROOT}/crms/cgi";
+  use lib "$ENV{SDRROOT}/crms/lib";
 }
 
 use Carp;
@@ -58,5 +58,4 @@ sub serve_api {
   ];
 }
 
-
-
+return $app;

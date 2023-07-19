@@ -4,13 +4,15 @@ use warnings;
 use FindBin;
 use HTTP::Request::Common qw(GET);
 use Plack::Test;
+use Plack::Util;
 use Test::More;
 
 use lib "$FindBin::Bin/lib";
 
 use TestHelper;
 
-my $app = do 'cgi/crms.psgi';
+#my $app = do 'cgi/crms.psgi';
+my $app = Plack::Util::load_psgi "$FindBin::Bin/../cgi/crms.psgi";
  
 my $test = Plack::Test->create($app);
  
