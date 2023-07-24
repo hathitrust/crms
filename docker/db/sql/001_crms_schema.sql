@@ -188,7 +188,7 @@ DROP TABLE IF EXISTS `bibdata_cache`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `bibdata_cache` (
   `id` varchar(32) NOT NULL DEFAULT '',
-  `data` text,
+  `data` longtext,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
