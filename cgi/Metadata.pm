@@ -117,6 +117,12 @@ sub json
   return $json;
 }
 
+sub raw_json {
+  my $self = shift;
+
+  return $self->{raw_json};
+}
+
 sub fetch_record {
   my $self = shift;
   my $id   = shift;
