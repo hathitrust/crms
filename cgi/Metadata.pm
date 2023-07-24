@@ -36,6 +36,8 @@ sub US_Cities {
   return $US_CITIES;
 }
 
+# Note: always pass a 'json' argument from a fixture to bypass the Bib API when testing.
+# The argument can be a string or a hash.
 sub new
 {
   my ($class, %args) = @_;
@@ -44,6 +46,9 @@ sub new
   my $id = $args{id};
   $self->{sysid} = $id if $id !~ m/\./;
   $self->{id} = $id;
+  if ($self->{json} && ref $self->{json} ne 'HASH') {
+    $self->{json} = JSON::XS->new->decode($self->{json});
+  }
   $self->json unless $self->is_error;
   $self->xml unless $self->is_error;
   return $self;
@@ -91,13 +96,13 @@ sub json
   my $json = $self->{json};
   if (!defined $json)
   {
-    my $content = $self->fetch_record($self->{sysid} || $self->{id});
-    return unless defined $content;
+    $self->{raw_json} = $self->fetch_record($self->{sysid} || $self->{id});
+    return unless defined $self->{raw_json};
     # Sometimes the API can return diagnostic information up top,
     # so we cut that out.
-    $content =~ s/^(.*?)(\{"records":)/$2/s;
+    $self->{raw_json} =~ s/^(.*?)(\{"records":)/$2/s;
     eval {
-      $json = JSON::XS->new->decode($content);
+      $json = JSON::XS->new->decode($self->{raw_json});
       my $records = $json->{'records'};
       if ('HASH' eq ref $records) {
         my @keys = keys %$records;
@@ -105,7 +110,7 @@ sub json
       }
     };
     if ($@) {
-      $self->set_error("$@ ($content)");
+      $self->set_error("$@ ($self->{raw_json})");
     }
     $self->{json} = $json;
   }

@@ -1106,15 +1106,21 @@ sub SafeRemoveFromQueue
 
   my $sql = 'SELECT COUNT(*) FROM reviews WHERE id=?';
   return if $self->SimpleSqlGet($sql, $id) > 0;
-  $sql = 'UPDATE queue SET priority=-2,unavailable=1 WHERE id=?'.
+  $sql = 'UPDATE queue SET priority=-2 WHERE id=?'.
          ' AND locked IS NULL AND status=0 AND pending_status=0';
   my $return1 = $self->PrepareSubmitSql($sql, $id);
-  $sql = 'DELETE FROM queue WHERE id=? AND priority=-2 AND unavailable=1'.
+  $sql = 'DELETE FROM queue WHERE id=? AND priority=-2'.
          ' AND locked IS NULL AND status=0 AND pending_status=0';
   my $return2 = $self->PrepareSubmitSql($sql, $id);
-  return ($return1 && $return2)? 1:undef;
+  if ($return1 && $return2) {
+    $self->DeleteCachedMetadata($id);
+    return 1;
+  }
+  return;
 }
 
+# Vanilla version used by overnight processing when there is no need to
+# be careful about database churn from reviewer activity.
 sub RemoveFromQueue
 {
   my $self = shift;
@@ -1122,6 +1128,7 @@ sub RemoveFromQueue
 
   my $sql = 'DELETE FROM queue WHERE id=?';
   $self->PrepareSubmitSql($sql, $id);
+  $self->DeleteCachedMetadata($id);
 }
 
 sub RemoveFromCandidates
@@ -1536,6 +1543,7 @@ sub AddItemToQueue
   # queue table has priority and status default to 0, time to current timestamp.
   $self->PrepareSubmitSql('INSERT INTO queue (id,project) VALUES (?,?)', $id, $project);
   $self->UpdateMetadata($id, 1, $record);
+  $self->AddCachedMetadata($id, $record->raw_json);
   return 1;
 }
 
@@ -1610,6 +1618,7 @@ sub AddItemToQueueOrSetItemActive
       $self->PrepareSubmitSql($sql, $id, $priority, $src,
                               $project, $user, $ticket);
       $self->UpdateMetadata($id, 1, $record);
+      $self->AddCachedMetadata($id, $record->raw_json);
       $self->UpdateQueueRecord(1, $src);
     }
   }
@@ -4795,12 +4804,39 @@ sub GetMetadata
   my $id   = shift;
 
   use Metadata;
-  my $metadata = Metadata->new('id' => $id);
+  my $json = $self->GetCachedMetadata($id);
+  my $metadata = Metadata->new(id => $id, json => $json);
   if ($metadata->is_error) {
     $self->SetError($metadata->error);
     return;
   }
   return $metadata;
+}
+
+# Retrieve JSON record from bibdata_cache, if present.
+sub GetCachedMetadata {
+  my $self = shift;
+  my $id   = shift;
+
+  my $sql = 'SELECT data FROM bibdata_cache WHERE id=?';
+  return $self->SimpleSqlGet($sql, $id);
+}
+
+sub AddCachedMetadata {
+  my $self = shift;
+  my $id   = shift;
+  my $json = shift;
+
+  my $sql = 'REPLACE INTO bibdata_cache (id,data) VALUES (?,?)';
+  $self->PrepareSubmitSql($sql, $id, $json);
+}
+
+sub DeleteCachedMetadata {
+  my $self = shift;
+  my $id   = shift;
+
+  my $sql = 'DELETE FROM bibdata_cache WHERE id=?';
+  $self->PrepareSubmitSql($sql, $id);
 }
 
 sub BarcodeToId
@@ -5189,7 +5225,6 @@ sub GetNextItemForReview
            'SHA2(CONCAT(?,q.id),0) AS hash,q.priority,q.project,b.sysid'.
            ' FROM queue q INNER JOIN bibdata b ON q.id=b.id'.
            ' WHERE q.project=? AND q.locked IS NULL AND q.status<2'.
-           ' AND q.unavailable=0'.
            $excludei. $excludeh.
            ' HAVING cnt<2 ORDER BY '. join ',', @orders;
     if (defined $test) {
@@ -5239,32 +5274,6 @@ sub GetNextItemForReview
     }
   }
   return $id;
-}
-
-# Called as part of overnight processing,
-# Iterates through anything that was downgraded to unavailable by the
-# queueing algorithm, restoring availability if metadata fetch succeeds.
-sub UpdateQueueNoMeta
-{
-  my $self = shift;
-
-  my $sql = 'SELECT id FROM queue WHERE unavailable=1';
-  my $ref = $self->SelectAll($sql);
-  foreach my $row (@{$ref})
-  {
-    my $id = $row->[0];
-    my $record = $self->GetMetadata($id);
-    if (defined $record)
-    {
-      $sql = 'UPDATE queue SET unavailable=0 WHERE id=?';
-      $self->PrepareSubmitSql($sql, $id);
-    }
-    else
-    {
-      $self->ClearErrors();
-      $self->ReportMsg("<b>$id</b>: still no meta, leaving unavailable");
-    }
-  }
 }
 
 # Checks whether the attributes and reasons tables are up to date with the Rights DB.
