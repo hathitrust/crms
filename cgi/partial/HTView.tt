@@ -24,10 +24,10 @@
       <td class="display" style="text-align:left;">View:</td>
       <td>
         <select id="PTViewSelect" title="PageTurner View" class="review" onchange="zoom(this,'ptview');">
-        [% views = ['page','1up','2up','thumb'] %]
-        [% names = ['Classic','Scroll','Flip','Thumbnails'] %]
-        [% accesskeys = ['-','=','[',']'] %]
-        [% FOR i IN [0 .. 3] %]
+        [% views = ['1up','2up','thumb'] %]
+        [% names = ['Scroll','Flip','Thumbnails'] %]
+        [% accesskeys = ['=','[',']'] %]
+        [% FOR i IN [0 .. 2] %]
           [% v = views.$i %]
           [% n = names.$i %]
           [% IF v == ptview %]
@@ -37,7 +37,7 @@
           [% END %]
         [% END %]
         </select>
-        [% FOR i IN [0 .. 3] %]
+        [% FOR i IN [0 .. 2] %]
           <a style="position:absolute;left:-999px;" href="#" accesskey="[% accesskeys.$i %]"
              onfocus="var ptvs = document.getElementById('PTViewSelect');ptvs.selectedIndex=[% i %];zoom(ptvs,'ptview');">.</a>
         [% END %]
