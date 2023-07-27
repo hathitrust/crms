@@ -7787,10 +7787,11 @@ sub Authorities
       $t = uri_escape_utf8($t);
       $url =~ s/__TITLE__/$t/g;
     }
-    if ($url =~ m/__TICKET__/)
+    if ($url =~ m/__TICKET__/ || $url =~ m/__JIRA__/)
     {
-      my $t = $self->SimpleSqlGet('SELECT COALESCE(ticket,"") FROM queue WHERE id=?', $id);
-      $url =~ s/__TICKET__/$t/g;
+      # Replace the entire URL since we use the CRMS::Jira module for URL generation.
+      my $tx = $self->SimpleSqlGet('SELECT COALESCE(ticket,"") FROM queue WHERE id=?', $id);
+      $url = CRMS::Jira->new->browse_url($tx);
     }
     if ($url =~ m/__SYSID__/)
     {
