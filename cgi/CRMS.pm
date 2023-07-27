@@ -65,7 +65,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.5.12';
+our $VERSION = '8.5.13';
 sub Version
 {
   return $VERSION;
