@@ -63,17 +63,18 @@
       <div style="float:right;">
         <table class="helloBox">
           <tr>
-            <td rowspan="2" style="padding:0px;height:80px;line-height:1px;">
-              <img src="[% crms.WebPath('web', 'HathiTrustLogo.png') %]" width="86" height="80" alt="HathiTrust Logo"/>
+            <td rowspan="2" class="logo">
+              <img src="[% crms.WebPath('web', crms.GetSystemVar('hathitrust_logo')) %]"
+                width="70.37" height="76" alt="HathiTrust Logo"/>
             </td>
             <td style="line-height:1px;">
               Hello&nbsp;[% crms.GetUserProperty(undef, 'name').replace(" ","&nbsp;") %]&nbsp;&nbsp;
-              <a href="[% crms.Sysify(crms.WebPath('cgi', 'crms?p=Logout')) %]" class="header">logout</a>
+              <a href="[% crms.Sysify(crms.WebPath('cgi', 'crms?p=Logout')) %]" class="header">Log Out</a>
             </td>
           </tr>
           <tr>
             <td>
-              [% crms.System() %]&nbsp;version&nbsp;[% crms.Version() %]
+              CRMS&nbsp;Version&nbsp;[% crms.Version() %]
             </td>
           </tr>
         </table>

@@ -25,10 +25,13 @@ a:link {color:#185EAC; text-decoration:none;}    /* unvisited link */
 a:visited {color:#185EAC; text-decoration:none;} /* visited link */
 a:hover {color:#1B75DA; text-decoration:underline;}   /* mouse over link */
 a:active {color:#1B75DA; text-decoration:underline;}  /* selected link */
-a.header:link    {color:#82CAFA;}
-a.header:visited {color:#82CAFA;}
-a.header:hover   {color:#A0DAFF;}
-a.header:active  {color:#82CAFA;}
+
+
+a.header:link    {color:#5E5EAC;}
+a.header:visited {color:#5E5EAC;}
+a.header:hover   {color:#7575DA; text-decoration:underline;}
+a.header:active  {color:#7575DA;}
+
 
 .divbody {
   float:left;
@@ -261,17 +264,27 @@ table.exportStats th {
 table.helloBox {
   width:100px;
   padding:0px;
-  border-collapse:collapse;
-  border:0px;
-  background-color:#000000;
+  border:0.5px solid #000000;
+  -webkit-border-radius:0.375rem;
+  border-radius:0.375rem;
+  background-color:#FFFFFF;
+  color:#000000;
+  box-shadow: 0 .5rem 1rem #00000026;
 }
 
 table.helloBox td {
   padding:0px 6px 0px 6px;
-  color:#FFFFFF;
   text-align:right;
   white-space:nowrap;
   font-weight:bold;
+}
+
+table.hellobox td.logo {
+  padding:0px;
+  height:80px;
+  line-height:1px;
+  padding-right:1rem;
+  padding-left:1rem;
 }
 
 table.helloBox td img {
@@ -692,7 +705,7 @@ div.topBanner {
   font-size: 1.1em;
   color:#FFFFFF;
   width:100%;
-  background-color:#ED7B22;
+  background-color:#D97D38;
   text-align:center;
   vertical-align:top;
 }
