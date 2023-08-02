@@ -14,6 +14,7 @@ small_logo: crmsblue.png
 # See https://evilmartians.com/chronicles/how-to-favicon-in-2021-six-files-that-fit-most-needs
 # Consider a different favicon for development/training environments.
 favicon: CRMSBlueIcon.png
+hathitrust_logo: img/hathitrust-icon-orange-rgb.png
 
 ## ================================================================== ##
 ## mysql server connection settings
