@@ -58,7 +58,7 @@ sub EvaluateCandidacy
 sub ReviewPartials
 {
   return ['top', 'bibdata', 'authorities',
-          'HTView', 'pubDateForm', 'expertDetails'];
+          'pubDateForm', 'expertDetails'];
 }
 
 # Show the country of publication in the bibdata partial.

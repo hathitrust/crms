@@ -12,8 +12,6 @@
 [% hold     = cgi.param('hold')       %]
 [% swiss    = cgi.param('swiss')      %]
 [% sys      = cgi.param('sys')        %]
-[% mag      = cgi.cookie('mag')       %]
-[% ptview   = cgi.cookie('ptview')    %]
 [% import   = cgi.param('importUser') %]
 [% expert   = crms.IsUserExpert(user) %]
 

@@ -65,7 +65,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.5.14';
+our $VERSION = '8.5.15';
 sub Version
 {
   return $VERSION;
@@ -7718,8 +7718,6 @@ sub Authorities
 {
   my $self = shift;
   my $id   = shift;
-  my $mag  = shift || '100';
-  my $view = shift || 'image';
 
   use URI::Escape;
   my $proj = $self->SimpleSqlGet('SELECT project FROM queue WHERE id=?', $id);
@@ -7740,12 +7738,6 @@ sub Authorities
     my $ak = $row->[3];
     $url =~ s/__HTID__/$id/g;
     #$url =~ s/__GID__/$gid/g;
-    $url =~ s/__MAG__/$mag/g;
-    $url =~ s/__VIEW__/$view/g;
-    if ($url =~ m/crms\?/)
-    {
-      $url = $self->Sysify($url);
-    }
     if ($url =~ m/__AUTHOR__/)
     {
       my $a2 = $a || '';

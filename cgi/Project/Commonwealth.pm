@@ -81,7 +81,7 @@ sub PresentationOrder {
 
 sub ReviewPartials {
   return ['top', 'bibdata_commonwealth', 'authorities',
-          'HTView', 'ADDForm', 'expertDetails'];
+          'ADDForm', 'expertDetails'];
 }
 
 sub ValidateSubmission {

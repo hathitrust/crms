@@ -123,7 +123,7 @@ sub HasCCLicense
 sub ReviewPartials
 {
   return ['top', 'bibdata', 'authorities',
-          'HTView', 'copyrightForm', 'expertDetails'];
+          'copyrightForm', 'expertDetails'];
 }
 
 # Extract Project-specific data from the CGI into a struct
