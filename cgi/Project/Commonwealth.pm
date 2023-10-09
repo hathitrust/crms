@@ -10,11 +10,10 @@ sub new
   return $class->SUPER::new(@_);
 }
 
-# 2023 Commonwealth reactivation only for Canada
 my $CANDIDATE_COUNTRIES = {
-  # 'Australia' => 1,
+  'Australia' => 1,
   'Canada' => 1,
-  # 'United Kingdom' => 1
+  'United Kingdom' => 1
 };
 
 # ========== CANDIDACY ========== #
@@ -67,7 +66,7 @@ sub year_range {
   my $year    = shift || $self->{crms}->GetTheYear();
 
   if ($country eq 'United Kingdom' || $country eq 'Australia') {
-    return [$year - 125, $year - 71]
+    return [$year - 124, $year - 83]
   }
   # Magic hardcoded 1971 based on regime changes, not rolling wall.
   return [$year - 125, 1971] if $country eq 'Canada';
