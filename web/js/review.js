@@ -159,15 +159,6 @@ function GetCheckedValue(radioObj)
   return null;
 }
 
-function zoom(selector,name)
-{
-  var val = selector.options[selector.selectedIndex].value;
-  setCookie(name,val,365);
-  document.location.search = document.location.search;
-  document.getElementById('tFrame').contentWindow.location.reload(true);
-  //document.getElementById('tFrame').src = document.getElementById('tFrame').src;
-}
-
 function PullPubDate()
 {
   var date = document.getElementById('pubDateSpan').innerHTML;

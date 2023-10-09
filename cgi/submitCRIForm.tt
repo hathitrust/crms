@@ -137,9 +137,6 @@ function UpdateRights()
   [% IF user %]<input type="hidden" name="user" value="[% user %]"/>[% END %]
   [% IF editing %]<input type="hidden" name="editing" value="[% editing %]"/>[% END %]
   [% IF sys %]<input type="hidden" name="sys" value="[% sys %]"/>[% END %]
-  <div class="reviewBlue">
-    [% INCLUDE Partial_HTView.tt crms = crms, htid = htid %]
-  </div>
 
 <table class="reviewGrey">
   <tr>

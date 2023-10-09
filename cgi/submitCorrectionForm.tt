@@ -9,11 +9,6 @@
   [% IF editing %]<input type="hidden" name="editing" value="[% editing %]"/>[% END %]
   [% IF sys %]<input type="hidden" name="sys" value="[% sys %]"/>[% END %]
   <input type="hidden" name="inScopeInput" id="inScopeInput" value="[% inScope %]"/>
-  <div class="reviewBlue">
-  
-  [% INCLUDE Partial_HTView.tt crms = crms, htid = htid %]
-  
-  </div>
 
 <table class="reviewGrey">
   <tr>

@@ -1,4 +1,4 @@
-[% authorities = crms.Authorities(htid, mag, ptview) %]
+[% authorities = crms.Authorities(htid) %]
 <div class="reviewPartial">
   <table>
     <tr>
