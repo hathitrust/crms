@@ -1176,7 +1176,7 @@ sub LoadNewItemsInCandidates
     }
     $last_date = $date;
     my $msg = $self->CheckAndLoadItemIntoCandidates($id, $time);
-    $self->ReportMsg($msg) if defined $msg;
+    $self->ReportMsg($id . ": " . $msg->to_string) if defined $msg;
   }
   my $end_size = $self->GetCandidatesSize();
   my $diff = $end_size - $start_size;
@@ -1197,14 +1197,15 @@ sub CheckAndLoadItemIntoCandidates
   my $time   = shift;
   my $record = shift;
 
+  use CRMS::OpResult;
   # Bail out right away without checking catalog record if volume is already reviewed.
   # Right now there is no way to allow re-review by a project
   # other than the one under which it was originally reviewed.
   if ($self->SimpleSqlGet('SELECT COUNT(*) FROM historicalreviews WHERE id=?', $id) > 0) {
-    return "Skip $id -- already in historical reviews";
+    return CRMS::OpResult->new->warning('already in historical reviews');
   }
   if ($self->SimpleSqlGet('SELECT COUNT(*) FROM inherit WHERE (status IS NULL OR status=1) AND id=?', $id) > 0) {
-    return "Skip $id -- already inheriting";
+    return CRMS::OpResult->new->warning('already inheriting');
   }
   my $incand = $self->SimpleSqlGet('SELECT id FROM candidates WHERE id=?', $id);
   my $inund  = $self->SimpleSqlGet('SELECT src FROM und WHERE id=?', $id);
@@ -1212,25 +1213,27 @@ sub CheckAndLoadItemIntoCandidates
   my $rq = $self->RightsQuery($id, 1);
   if (!defined $rq) {
     $self->Filter($id, 'no meta');
-    return "Can't get rights for $id, filtering.";
+    return CRMS::OpResult->new->error('no rights available, filter as no meta');
   }
   $record = $self->GetMetadata($id) unless defined $record;
   if (!defined $record) {
     $self->Filter($id, 'no meta');
     $self->ClearErrors();
-    return "Skip $id -- no metadata to be had";
+    return CRMS::OpResult->new->warning('no metadata available, filter as no meta');
   }
+  my $res = CRMS::OpResult->new;
   my $oldSysid = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
   if (defined $oldSysid) {
     my $sysid = $record->sysid;
     if (defined $sysid && defined $oldSysid && $sysid ne $oldSysid) {
-      $self->ReportMsg("Update system IDs from $oldSysid to $sysid");
+      $res->message("update system IDs from $oldSysid to $sysid");
       $self->UpdateSysids($record);
     }
   }
   my $eval = $self->EvaluateCandidacy($id, $record);
   if ($eval->{'status'} eq 'yes') {
-    $self->AddItemToCandidates($id, $eval->{'project'}, $time, $record);
+    my $res2 = $self->AddItemToCandidates($id, $eval->{'project'}, $time, $record);
+    $res->append($res2);
   }
   else
   {
@@ -1238,13 +1241,13 @@ sub CheckAndLoadItemIntoCandidates
     $src = $eval->{'msg'} if $eval->{'status'} eq 'filter';
     if (defined $src) {
       if (!defined $inund || $inund ne $src) {
-        $self->ReportMsg(sprintf("Skip $id ($src) -- %s in filtered volumes",
-                                 (defined $inund)? "updating $inund->$src":"inserting as $src"));
+        $res->warning(sprintf("%s in filtered volumes",
+                                 (defined $inund)? "updating $inund -> $src":"inserting as $src"));
         $self->Filter($id, $src);
         $self->UpdateMetadata($id, 1, $record);
       }
       else {
-        $self->ReportMsg("Skip $id: filtered ($src)");
+        $res->warning("skip filtered ($src)");
       }
     }
     elsif (defined $inund || defined $incand || $inq) {
@@ -1252,13 +1255,16 @@ sub CheckAndLoadItemIntoCandidates
       push @from, "und [$inund]" if defined $inund;
       push @from, 'candidates' if defined $incand;
       push @from, 'queue' if $inq;
-      $self->ReportMsg(sprintf "Remove $id from %s", join ', ', @from);
+      $res->warning(sprintf("remove $id from %s", join ', ', @from));
       $self->RemoveFromCandidates($id);
     }
   }
-  return undef;
+  return $res;
 }
 
+# Like AddItemToQueueOrSetItemActive, returns a hashref with
+# 'status' => {0=Add, 1=Error, 2=Warning}
+# and optional 'msg' with human-readable text.
 sub AddItemToCandidates
 {
   my $self   = shift;
@@ -1267,7 +1273,11 @@ sub AddItemToCandidates
   my $time   = shift;
   my $record = shift || $self->GetMetadata($id);
 
-  return unless defined $record;
+  use CRMS::OpResult;
+  my $res = CRMS::OpResult->new;
+  unless (defined $record) {
+    return $res->error('metadata unavailable');
+  }
   # Are there duplicates w/ nonmatching enumchron? Filter those.
   my $chron = $record->enumchron($id) || '';
   my $sysid = $record->sysid;
@@ -1280,26 +1290,30 @@ sub AddItemToCandidates
     if ($record->doEnumchronMatch($id, $id2))
     {
       my $chron2 = $record->enumchron($id2) || '';
-      $self->ReportMsg(sprintf("Filter $id2%s as duplicate of $id%s",
-                       (length $chron)? " ($chron)":'', (length $chron2)? " ($chron2)":''));
+      my $warning = sprintf("filter $id2%s as duplicate%s",
+       (length $chron)? " ($chron)" : '',
+       (length $chron2)? " ($chron2)" : '');
+      $res->warning($warning);
       $self->Filter($id2, 'duplicate');
     }
   }
   my $project = $self->GetProjectRef($proj)->name;
   if (!$self->IsVolumeInCandidates($id))
   {
-    $self->ReportMsg("Add $id to candidates for $project project");
+    my $message = "add to candidates for $project project";
+    $res->message($message);
     my $sql = 'INSERT INTO candidates (id,time,project) VALUES (?,?,?)';
     $self->PrepareSubmitSql($sql, $id, $time, $proj);
-    $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
   }
   else
   {
+    $res->warning('already in candidates');
     my $sql = 'SELECT project FROM candidates WHERE id=?';
     my $proj2 = $self->SimpleSqlGet($sql, $id);
     if ($proj != $proj2)
     {
-      $self->ReportMsg("Update $id project from $proj2 to $proj");
+      my $warning = "update $id project from $proj2 to $proj";
+      $res->warning($warning);
       my $sql = 'UPDATE candidates SET project=? WHERE id=?';
       $self->PrepareSubmitSql($sql, $proj, $id);
     }
@@ -1307,13 +1321,15 @@ sub AddItemToCandidates
     $proj2 = $self->SimpleSqlGet($sql, $id);
     if (defined $proj2 && $proj != $proj2)
     {
-      $self->ReportMsg("Update $id queue project from $proj2 to $proj");
+      my $warning = "update queue project from $proj2 to $proj";
+      $res->warning($warning);
       my $sql = 'UPDATE queue SET project=? WHERE id=?';
       $self->PrepareSubmitSql($sql, $proj, $id);
     }
   }
   $self->PrepareSubmitSql('DELETE FROM und WHERE id=?', $id);
   $self->UpdateMetadata($id, 1, $record);
+  return $res;
 }
 
 sub Filter
