@@ -37,6 +37,8 @@ sub EvaluateCandidacy {
     my $type = substr($leader, 6, 1);
     my $date1 = substr($leader, 7, 4);
     my $date2 = substr($leader, 11, 4);
+    # Dates like "192u" could be handled like pub date ranges if we had an
+    # "actual pub date" UI.
     push @errs, "pub date not completely specified ($date1,$date2,'$type')";
   }
   # Check country of publication
@@ -51,8 +53,8 @@ sub EvaluateCandidacy {
   push @errs, 'non-BK format' unless $record->isFormatBK($id);
   return {'status' => 'no', 'msg' => join '; ', @errs} if scalar @errs;
   my $src;
-  my $lang = $record->language;
-  $src = 'language' if 'eng' ne $lang;
+  #my $lang = $record->language;
+  #$src = 'language' if 'eng' ne $lang;
   $src = 'translation' if $record->isTranslation;
   my $date = $self->{crms}->FormatPubDate($id, $record);
   $src = 'date range' if $date =~ m/^\d+-(\d+)?$/;
