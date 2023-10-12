@@ -25,8 +25,8 @@ ok(defined $proj);
 subtest 'Commonwealth::year_range' => sub {
   my $year = 2020;
   my $test_data = {
-    'United Kingdom' => [1895, 1949],
-    'Australia' => [1895, 1949],
+    'United Kingdom' => [1896, 1937],
+    'Australia' => [1896, 1937],
     'Canada' => [1895, 1971],
     'Undetermined' => [0, 0]
   };
