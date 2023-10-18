@@ -139,6 +139,7 @@ sub AddJiraComments
     $sql = 'SELECT DISTINCT a.name FROM licensing l'.
          ' INNER JOIN attributes a ON l.attr=a.id'.
          ' WHERE l.ticket=?'.
+         ' AND l.time >= DATE_SUB(NOW(), INTERVAL 1 DAY)'.
          ' ORDER BY a.name';
     $ref = $crms->SelectAll($sql, $tx);
     my @licenses = map { $_->[0]; } @$ref;
@@ -148,6 +149,7 @@ sub AddJiraComments
       $sql = 'SELECT l.htid FROM licensing l'.
              ' INNER JOIN attributes a ON l.attr=a.id'.
              ' WHERE l.ticket=? AND a.name=?'.
+             ' AND l.time >= DATE_SUB(NOW(), INTERVAL 1 DAY)'.
              ' ORDER BY l.htid';
       $ref = $crms->SelectAll($sql, $tx, $license);
       $comment .= sprintf("%s\n", $_->[0]) for @$ref;
