@@ -65,7 +65,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.5.17';
+our $VERSION = '8.5.18';
 sub Version
 {
   return $VERSION;
@@ -3401,24 +3401,6 @@ sub GetExportDataRef
             };
   }
   return $data;
-}
-
-sub GetPublisherDataRef
-{
-  my $self = shift;
-
-  require Publisher;
-  unshift @_, $self;
-  return Publisher::GetPublisherDataRef(@_);
-}
-
-sub PublisherDataSearchMenu
-{
-  my $self = shift;
-
-  require Publisher;
-  unshift @_, $self;
-  return Publisher::PublisherDataSearchMenu(@_);
 }
 
 sub Linkify
