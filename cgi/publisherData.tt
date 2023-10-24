@@ -1,7 +1,0 @@
-[% INCLUDE header.tt %]
-
-<h2>Publisher Data:</h2>
-
-[% INCLUDE publisherSelection.tt  %]
-[% INCLUDE publisherSearchResults.tt  %]
-[% INCLUDE footer.tt %]
