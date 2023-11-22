@@ -52,7 +52,7 @@ subtest '::set_visibility_cmd' => sub {
   subtest 'bogus visibility' => sub {
     dies_ok { $cb->set_visibility_cmd(coll_id => '00000000', visibility => 'out of phase with the prime material plane'); }
   };
-}
+};
 
 done_testing();
 
