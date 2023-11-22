@@ -3,14 +3,11 @@
 use strict;
 use warnings;
 
-#use Data::Dumper;
 use Test::Exception;
 use Test::More;
 
 use lib $ENV{'SDRROOT'} . '/crms/lib';
-use lib $ENV{'SDRROOT'} . '/crms/t/support';
 use CRMS::CollectionBuilder;
-use FakeMetadata;
 
 subtest '::new' => sub {
   my $cb = CRMS::CollectionBuilder->new;
