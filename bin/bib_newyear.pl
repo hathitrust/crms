@@ -14,12 +14,10 @@ use Data::Dumper;
 use Encode;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use MARC::File::XML(BinaryEncoding => 'utf8');
-use Term::ANSIColor qw(:constants colored);
 
 use CRMS;
 use bib_rights;
 
-$Term::ANSIColor::AUTORESET = 1;
 binmode(STDOUT, ':encoding(UTF-8)');
 my $usage = <<END;
 USAGE: $0 [-hpv] [-o FILE] [-y YEAR]
@@ -30,7 +28,7 @@ for bib rights determination.
 NOTE: this is a long-running script -- should be invoked in a screen(1) session.
 
 -h         Print this help message.
--o FILE    Write or append report on new determinations to FILE.
+-o FILE    Write report on new determinations to FILE.
 -p         Run in production.
 -v         Emit verbose debugging information. May be repeated.
 -y YEAR    Use this year instead of the current one.
@@ -39,7 +37,6 @@ END
 
 my $help;
 my $instance;
-my $noop;
 my $outfile;
 my $production;
 my $verbose;
@@ -56,9 +53,8 @@ $instance = 'production' if $production;
 if ($help) { print $usage. "\n"; exit(0); }
 
 my $crms = CRMS->new(
-    sys      => 'crmsworld',
-    verbose  => $verbose,
-    instance => $instance
+  verbose  => $verbose,
+  instance => $instance
 );
 
 $verbose = 0 unless defined $verbose;
@@ -78,66 +74,28 @@ my $sql = 'SELECT r.namespace,r.id,a.name,rs.name FROM rights_current r'.
           ' ORDER BY a.name,rs.name';
 my $ref = $crms->SelectAllSDR($sql);
 my $n = scalar @{$ref};
-my $last_processed;
-my $last_processed_seen;
 
 my @cols = ('HTID', 'Current rights/reason', "$year bib rights", 'date_used',
             'pub place', 'us fed doc?', 'bib rights determination reason');
-
 my $fh;
-my $exists;
-my $changed = 0;
-if ($outfile && -f $outfile) {
-  $exists = -f $outfile;
-  unless (open $fh, '<:encoding(UTF-8)', $outfile) {
-    die ("failed to read file at $outfile: ". $!);
-  }
-  read $fh, my $buff, -s $outfile;
-  close $fh;
-  my @lines = split "\n", $buff;
-  shift @lines;
-  foreach my $line (@lines) {
-    my @fields = split "\t", $line;
-    if (scalar @fields == scalar @cols) {
-      #printf "Marking %s as last processed.\n", $fields[0];
-      $last_processed = $fields[0];
-    }
-    else {
-      printf "NOT MARKING %s SINCE %s != %s\n", $fields[0], scalar @fields, scalar @cols;
-    }
-    $changed++;
-  }
-}
-
-print "LAST PROCESSED: $last_processed\n" if $last_processed;
-
 if ($outfile) {
-  unless (open $fh, '>>:encoding(UTF-8)', $outfile) {
-    die ("failed to read file at $outfile: ". $!);
+  unless (open $fh, '>:encoding(UTF-8)', $outfile) {
+    die ("failed to create file at $outfile: ". $!);
   }
-  printf $fh "%s\n", join("\t", @cols) unless $exists;
+  printf $fh "%s\n", join("\t", @cols);
   flush $fh;
 }
 
 my $i = 0;
+my $changed = 0;
 
 my $br = bib_rights->new();
 my $of = scalar @$ref;
-print "Checking $of items\n";
+print "Checking $of items\n" if $verbose;
 foreach my $row (@{$ref}) {
   $i++;
-  print "$i/$of ($changed)\n" if $i % 1000 == 0;
+  print "$i/$of ($changed)\n" if $i % 1000 == 0 && $verbose;
   my $id = $row->[0]. '.'. $row->[1];
-  if ($last_processed) {
-    if ($last_processed eq $id) {
-      print "=== LAST PROCEDDED $id ===\n";
-      $last_processed_seen = 1;
-      next;
-    }
-    unless ($last_processed_seen) {
-      next;
-    }
-  }
   my $attr = $row->[2];
   my $reason = $row->[3];
   my $record = $crms->GetMetadata($id);
