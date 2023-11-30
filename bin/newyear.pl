@@ -210,8 +210,8 @@ sub ProcessCommonwealthProject {
       if (defined $new_rights) {
         my ($a, $r) = split m/\//, $new_rights;
         SubmitNewYearReview($id, $a, $r, 'Commonwealth', $record,
-                            join(',', sort keys %alldates),
-                            join(',', sort keys %predictions));
+                            join(';', sort keys %alldates),
+                            join(';', sort keys %predictions));
       }
     }
   }
@@ -282,7 +282,7 @@ sub ProcessPubDateProject
       }
       if (defined $attr && $attr ne $acurr) {
         SubmitNewYearReview($id, $attr, 'cdpp', 'Publication Date', $record,
-                            join(',', sort keys %extracted_data), '');
+                            join(';', sort keys %extracted_data), '');
       }
     }
   }
@@ -366,8 +366,8 @@ sub ProcessCrownCopyrightProject {
       if (defined $new_rights) {
         my ($a, $r) = split m/\//, $new_rights;
         SubmitNewYearReview($id, $a, $r, 'Crown Copyright', $record,
-                            join(',', sort keys %alldates),
-                            join(',', sort keys %predictions));
+                            join(';', sort keys %alldates),
+                            join(';', sort keys %predictions));
       }
     }
   }
