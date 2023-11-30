@@ -134,6 +134,7 @@ RUN apt-get install -y \
   autoconf \
   bison \
   build-essential \
+  cpanminus \
   git \
   libdevel-cover-perl \
   libffi-dev \
@@ -151,7 +152,7 @@ RUN apt-get install -y \
   zip \
   zlib1g-dev
 
-RUN cpan \
+RUN cpanm --notest \
   Devel::Cover::Report::Coveralls \
   MARC::Record::MiJ \
   OAuth::Lite \

@@ -262,6 +262,11 @@ sub validate_for_rights {
   my $self       = shift;
   my $prediction = shift;
 
+  if (!defined $prediction->{pub_year}) {
+    push @{$prediction->{desc}}, "undefined pub year";
+    $prediction->{error} = 1;
+    return;
+  }
   if ($prediction->{pub_year} !~ m/$VALID_PUB_DATE/) {
     push @{$prediction->{desc}},
       "unsupported pub date format '$prediction->{pub_year}'";
