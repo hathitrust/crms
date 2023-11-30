@@ -87,8 +87,8 @@ if ($noop)
 else
 {
   eval {
-    File::Copy::move $outfile_instid, '/htapps/www/sites/www.hathitrust.org/files';
-    File::Copy::move $outfile_entityid, '/htapps/www/sites/www.hathitrust.org/files';
+    File::Copy::move $outfile_instid, '/htapps/www/files';
+    File::Copy::move $outfile_entityid, '/htapps/www/files';
   };
   if ($@)
   {
