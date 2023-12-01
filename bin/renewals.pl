@@ -11,7 +11,6 @@ BEGIN {
 }
 
 use Encode;
-use File::Copy;
 use Getopt::Long;
 use JSON::XS;
 use Term::ANSIColor qw(:constants);
@@ -28,7 +27,7 @@ USAGE: $0 [-hnpqv] [-m MAIL [-m MAIL...]]
 Produces TSV file of HTID and renewal ID for Zephir download at
 https://www.hathitrust.org/files/CRMSRenewals.tsv
 
-Data hosted on macc-ht-web-000 etc at /htapps/www/sites/www.hathitrust.org/files
+Data hosted on macc-ht-web-000 etc at config->hathitrust_files_directory
 
 For each distinct HTID in historical reviews with one or more renewal IDs,
 gets all validated reviews with renewal IDs.
@@ -81,18 +80,15 @@ my $n = CheckStanford();
 $msg =~ s/__N__/$n/g;
 $msg =~ s/__OUTFILE__/$outfile/g;
 
-if ($noop)
-{
+if ($noop) {
   print "Noop set: not moving file to new location.\n";
   $msg .= '<strong>Noop set: not moving file to new location.</strong>';
 }
-else
-{
+else {
   eval {
-  File::Copy::move $outfile, '/htapps/www/sites/www.hathitrust.org/files';
+    $crms->MoveToHathitrustFiles($outfile);
   };
-  if ($@)
-  {
+  if ($@) {
     $msg .= '<strong>Error moving TSV file: $@</strong>';
   }
 }

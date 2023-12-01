@@ -30,11 +30,11 @@ download at https://www.hathitrust.org/institution_identifiers and for use by
 institutions for WAYFless login or login with Dex
 (https://tools.lib.umich.edu/confluence/display/HAT/OIDC+%3C-%3E+SAML+proxy+via+Dex)
 
-Data hosted on macc-ht-web-000 etc at /htapps/www/sites/www.hathitrust.org/files
+Data hosted on macc-ht-web-000 etc at config->hathitrust_files_directory
 
 -h       Print this help message.
 -m MAIL  Send note to MAIL. May be repeated for multiple recipients.
--n       No-op; do not send e-mail or move file into hathitrust.org filesystem.
+-n       No-op; do not send e-mail or move file into hathitrust_files_directory.
 -p       Run in production.
 -v       Emit verbose debugging information. May be repeated.
 END
@@ -78,20 +78,16 @@ $msg =~ s/__N__/$n/g;
 $msg =~ s/__OUTFILE_INSTID__/$outfile_instid/g;
 $msg =~ s/__OUTFILE_ENTITYID__/$outfile_entityid/g;
 
-if ($noop)
-{
+if ($noop) {
   $crms->set('noop', 1);
-  print "Noop set: not moving file to new location.\n";
-  $msg .= '<strong>Noop set: not moving file to new location.</strong>';
+  print "Noop set: not moving files to new location.\n";
+  $msg .= '<strong>Noop set: not moving files to new location.</strong>';
 }
-else
-{
+else {
   eval {
-    File::Copy::move $outfile_instid, '/htapps/www/files';
-    File::Copy::move $outfile_entityid, '/htapps/www/files';
+    $crms->MoveToHathitrustFiles($outfile_instid, $outfile_entityid);
   };
-  if ($@)
-  {
+  if ($@) {
     $msg .= '<strong>Error moving TSV file: $@</strong>';
   }
 }
