@@ -6,12 +6,28 @@ use utf8;
 
 use lib "$ENV{SDRROOT}/crms/cgi";
 
+use File::Temp;
 use Test::More;
 
 require_ok($ENV{'SDRROOT'}. '/crms/cgi/CRMS.pm');
 my $cgi = CGI->new();
 my $crms = CRMS->new('cgi' => $cgi, 'verbose' => 0);
 ok(defined $crms, 'CRMS object created');
+
+subtest 'CRMS::MoveToHathitrustFiles' => sub {
+  my $tempdir = File::Temp::tempdir(CLEANUP => 1);
+  my $save_hathitrust_files_directory = $ENV{'CRMS_HATHITRUST_FILES_DIRECTORY'};
+  $ENV{'CRMS_HATHITRUST_FILES_DIRECTORY'} = $tempdir;
+  my $crms = CRMS->new('cgi' => $cgi);
+  my $src1 = $crms->FSPath('prep', 'test_1.txt');
+  my $src2 = $crms->FSPath('prep', 'test_2.txt');
+  `touch $src1`;
+  `touch $src2`;
+  $crms->MoveToHathitrustFiles($src1, $src2);
+  ok(-f "$tempdir/test_1.txt");
+  ok(-f "$tempdir/test_2.txt");
+  $ENV{'CRMS_HATHITRUST_FILES_DIRECTORY'} = $save_hathitrust_files_directory;
+};
 
 subtest 'CRMS::WriteRightsFile' => sub {
   my $rights_data = join "\t", ('mdp.001', '1', '1', 'crms', 'null', '鬼塚英吉');

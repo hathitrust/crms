@@ -42,5 +42,6 @@ experts_email: crms-experts@umich.edu
 mailing_list: ht-copyright-review@umich.edu,ht-commonwealth-review@umich.edu,ht-pubdate-review@umich.edu
 # Location in Production for writing .rights export files
 rights_export_directory: /htapps/babel/feed/var/rights
+hathitrust_files_directory: /htapps/www/files
 # Used by Jira.pm
 jira_prefix: https://hathitrust.atlassian.net

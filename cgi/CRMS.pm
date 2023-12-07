@@ -19,6 +19,7 @@ use Data::Dumper;
 use Date::Calc qw(:all);
 use DBI qw(:sql_types);
 use Encode;
+use File::Copy;
 use List::Util qw(min max);
 use LWP::UserAgent;
 use POSIX;
@@ -65,7 +66,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.5.21';
+our $VERSION = '8.5.22';
 sub Version
 {
   return $VERSION;
@@ -289,6 +290,19 @@ sub MenuPath
     $newpath = $self->WebPath('cgi', $path);
   }
   return $newpath;
+}
+
+# Move one or more files into the hathitrust.org Wordpress files area
+# which is configured in config/config.yml.
+# Raises exception if File::Copy encounters a problem.
+sub MoveToHathitrustFiles {
+  my $self = shift;
+  my @files = @_;
+
+  my $dest = $self->GetSystemVar('hathitrust_files_directory');
+  foreach my $file (@files) {
+    File::Copy::move $file, $dest;
+  }
 }
 
 sub SetupLogFile
