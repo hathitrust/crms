@@ -141,7 +141,7 @@ close $fh if defined $fh;
 
 print "Warning: $_\n" for @{$crms->GetErrors()};
 
-# Returns semicolon-delimited string of unique ic/ren values for all ic/ren determinations
+# Returns semicolon-delimited string of unique renDate values for all ic/ren determinations
 sub get_ic_ren_data {
   my $htid = shift;
 
