@@ -67,7 +67,7 @@ my $sql = 'SELECT r.namespace,r.id,a.name,rs.name FROM rights_current r'.
           ' INNER JOIN attributes a ON r.attr=a.id'.
           ' INNER JOIN reasons rs ON r.reason=rs.id'.
           ' WHERE CONCAT(a.name,"/",rs.name)'.
-          ' IN ("ic-world/con","ic/cdpp","ic/crms","ic/ipma","ic/man","ic/ren","op/ipma",
+          ' IN ("ic-world/con","ic/cdpp","ic/crms","ic/ipma","ic/ren","op/ipma",
                 "pd/cdpp","pd/crms","pd/ncn","pd/ren","pdus/cdpp",
                 "pdus/crms","pdus/gfv","pdus/ncn","pdus/ren","und/crms",
                 "und/nfi","und/ren")'.
@@ -98,6 +98,14 @@ foreach my $row (@{$ref}) {
   my $id = $row->[0]. '.'. $row->[1];
   my $attr = $row->[2];
   my $reason = $row->[3];
+  my $like_clause = '%' . ($br->{'us_pd_cutoff_year'} - 1) . '-%';
+  $sql = "SELECT imprint FROM hf WHERE htid=? AND imprint LIKE '$like_clause'";
+  my $bad_imprint = $crms->SimpleSqlGetSDR($sql, $id);
+  if ($bad_imprint) {
+    print "$id: later dates found on imprint ($bad_imprint), skipping\n" if $verbose;
+    next;
+  }
+
   my $record = $crms->GetMetadata($id);
   if (!defined $record) {
     print "Unable to get metadata for $id\n";
