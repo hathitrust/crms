@@ -13,6 +13,7 @@ BEGIN {
 use Data::Dumper;
 use Encode;
 use Getopt::Long qw(:config no_ignore_case bundling);
+use JSON::XS;
 use MARC::File::XML(BinaryEncoding => 'utf8');
 
 use CRMS;
@@ -62,6 +63,7 @@ print "Verbosity $verbose\n" if $verbose;
 $year = $crms->GetTheYear() unless $year;
 
 $ENV{BIB_RIGHTS_DATE} = $year if defined $year;
+my $jsonxs = JSON::XS->new->utf8;
 
 my $sql = 'SELECT r.namespace,r.id,a.name,rs.name FROM rights_current r'.
           ' INNER JOIN attributes a ON r.attr=a.id'.
@@ -72,11 +74,12 @@ my $sql = 'SELECT r.namespace,r.id,a.name,rs.name FROM rights_current r'.
                 "pdus/crms","pdus/gfv","pdus/ncn","pdus/ren","und/crms",
                 "und/nfi","und/ren")'.
           ' ORDER BY a.name,rs.name';
+
 my $ref = $crms->SelectAllSDR($sql);
 my $n = scalar @{$ref};
 
 my @cols = ('HTID', 'Current rights/reason', "$year bib rights", 'date_used',
-            'pub place', 'us fed doc?', 'bib rights determination reason');
+            'pub place', 'us fed doc?', 'bib rights reason', 'ic/ren data');
 my $fh;
 if ($outfile) {
   unless (open $fh, '>:encoding(UTF-8)', $outfile) {
@@ -120,9 +123,14 @@ foreach my $row (@{$ref}) {
       ($bri->{'attr'} eq 'pd' || ($bri->{'attr'} eq 'pdus' && $attr ne 'pd'))) {
     my $bri_attr = $bri->{'attr'};
     my $bri_reason = $bri->{'reason'};
+    my $ic_ren_data = '';
+    if ($attr eq 'ic' && $reason eq 'ren') {
+      $ic_ren_data = get_ic_ren_data($id);
+    }
     my $line = join "\t", ($id, $attr. '/'. $reason, $bri->{'attr'},
                            $bri->{'date_used'}, $bri->{'pub_place'},
-                           $bri->{'us_fed_doc'}, $bri->{'reason'});
+                           $bri->{'us_fed_doc'}, $bri->{'reason'},
+                           $ic_ren_data);
     print $fh $line. "\n" if $fh;
     flush $fh;
     $changed++;
@@ -133,3 +141,34 @@ close $fh if defined $fh;
 
 print "Warning: $_\n" for @{$crms->GetErrors()};
 
+# Returns semicolon-delimited string of unique renDate values for all ic/ren determinations
+sub get_ic_ren_data {
+  my $htid = shift;
+
+  my %data = ();
+  my $sql = 'SELECT gid FROM exportdata WHERE id=? AND attr="ic" AND reason="ren"' .
+    ' ORDER BY time ASC';
+  my $determination_ref = $crms->SelectAll($sql, $htid);
+  foreach my $determination_row (@$determination_ref) {
+    my $gid = $determination_row->[0];
+    $sql = 'SELECT r.data FROM historicalreviews r' .
+      ' INNER JOIN attributes a ON r.attr=a.id' .
+      ' INNER JOIN reasons rs ON r.reason=rs.id '.
+      ' WHERE a.name="ic"' .
+      ' AND rs.name="ren"' .
+      ' AND r.gid=?' .
+      ' AND r.data IS NOT NULL' .
+      ' AND r.validated!=0' .
+      ' ORDER BY time ASC';
+    my $review_ref = $crms->SelectAll($sql, $gid);
+    foreach my $review_row (@$review_ref) {
+      my $reviewdata_id = $review_row->[0];
+      my $reviewdata_json = $crms->SimpleSqlGet('SELECT data FROM reviewdata WHERE id=?', $reviewdata_id);
+      my $reviewdata = $jsonxs->decode($reviewdata_json);
+      if ($reviewdata->{renDate}) {
+        $data{$reviewdata->{renDate}} = 1;
+      }
+    }
+  }
+  return join '; ', sort keys %data;
+}
