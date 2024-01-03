@@ -73,7 +73,7 @@ my $sql = 'SELECT r.namespace,r.id,a.name,rs.name FROM rights_current r'.
                 "pd/cdpp","pd/crms","pd/ncn","pd/ren","pdus/cdpp",
                 "pdus/crms","pdus/gfv","pdus/ncn","pdus/ren","und/crms",
                 "und/nfi","und/ren")'.
-          ' ORDER BY a.name,rs.name';
+          ' ORDER BY a.name,rs.name,r.namespace,r.id';
 
 my $ref = $crms->SelectAllSDR($sql);
 my $n = scalar @{$ref};
