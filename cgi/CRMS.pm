@@ -6305,6 +6305,7 @@ sub TrackingQuery
     }
   }
   $data->{'data'} = \@ids;
+  $data->{'record'} = $record;
   return $data;
 }
 

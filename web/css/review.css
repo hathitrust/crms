@@ -8,6 +8,16 @@ code {
   font-family:Courier, 'Courier New', Monaco, monospace;
 }
 
+.f008 {
+  font-family:Courier, 'Courier New', Monaco, monospace;
+  display: inline-block;
+  border: 1px solid #000;
+  padding: 3px;
+  margin: 4px;
+  letter-spacing: .2rem;
+  text-align: center;
+}
+
 .pages {
   margin: 10px;
   padding: 10px;
