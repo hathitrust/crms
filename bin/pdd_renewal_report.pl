@@ -69,6 +69,7 @@ my $target_year_digits = substr $target_year, -2;
 print "Checking renewals for $target_year, renDate *$target_year_digits\n" if $verbose;
 
 my $jsonxs = JSON::XS->new;
+# Find Core project reviews with (any) renewal date that have not been invalidated.
 my $sql = <<'SQL';
   SELECT r.id,rd.data FROM historicalreviews r
   INNER JOIN exportdata e ON r.gid=e.gid
@@ -89,9 +90,11 @@ foreach my $row (@$ref) {
   next if $seen{$id};
   my $data = $jsonxs->decode($json);
   my $renDate = $data->{'renDate'};
+  # Narrow results down to year of interest.
   if ($renDate && $renDate =~ m/\d+(\D\D\D)(\d\d)/) {
     my $ren_date_year = $2;
     if ($ren_date_year eq $target_year_digits) {
+      # Narrow results further to anything not pd or pdus.
       my $rights = $crms->CurrentRightsString($id);
       if ($rights !~ /^pd/) {
         print "$id\t$renDate\t$rights\n";
