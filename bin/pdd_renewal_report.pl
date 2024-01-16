@@ -55,18 +55,19 @@ if ($help) {
   exit 0;
 }
 
+$verbose = 0 unless defined $verbose;
+print "Verbosity $verbose\n" if $verbose;
+
 my $crms = CRMS->new(
   verbose  => $verbose,
   instance => 'production'
 );
 
-$verbose = 0 unless defined $verbose;
-print "Verbosity $verbose\n" if $verbose;
 $year = $crms->GetTheYear() unless $year;
 
 my $target_year = $year - EXPECTED_RENEWAL_SUNSET;
 my $target_year_digits = substr $target_year, -2;
-print "Checking renewals for $target_year, renDate *$target_year_digits\n" if $verbose;
+print "Checking renewals for $target_year, renDate pattern D[D]Mmm$target_year_digits\n" if $verbose;
 
 my $jsonxs = JSON::XS->new;
 # Find Core project reviews with (any) renewal date that have not been invalidated.
@@ -91,8 +92,10 @@ foreach my $row (@$ref) {
   my $data = $jsonxs->decode($json);
   my $renDate = $data->{'renDate'};
   # Narrow results down to year of interest.
-  if ($renDate && $renDate =~ m/\d+(\D\D\D)(\d\d)/) {
-    my $ren_date_year = $2;
+  # renDate as represented in Catalog of Copyright Entries is of the form D[D]mmmYY
+  # e.g., "4Nov52" or "31Mar59"
+  if ($renDate && $renDate =~ m/\d{1,2}\D{3}(\d{2})/) {
+    my $ren_date_year = $1;
     if ($ren_date_year eq $target_year_digits) {
       # Narrow results further to anything not pd or pdus.
       my $rights = $crms->CurrentRightsString($id);
