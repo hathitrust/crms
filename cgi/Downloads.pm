@@ -43,14 +43,6 @@ sub Download
                        $search2, $search2value, $startDate, $endDate,
                        $offset, $records);
   }
-  elsif ($page eq 'determinationStats')
-  {
-    my $monthly = $cgi->param('monthly');
-    my $priority = $cgi->param('priority');
-    my $pre = $cgi->param('pre');
-    DownloadDeterminationStats($crms, $startDate, $endDate, $monthly,
-                               $priority, $pre);
-  }
   elsif ($page eq 'exportData')
   {
     DownloadExportData($crms, $order, $dir, $search1, $search1value, $op1,
@@ -140,27 +132,6 @@ sub DownloadCandidates
   my $buff = $crms->GetCandidatesRef($order, $dir, $search1, $search1Value, $op1,
                                      $search2, $search2Value, $startDate, $endDate,
                                      $offset, $pagesize, 1);
-  DownloadSpreadsheet($buff);
-}
-
-sub DownloadDeterminationStats
-{
-  my $crms      = shift;
-  my $startDate = shift;
-  my $endDate   = shift;
-  my $monthly   = shift;
-  my $priority  = shift;
-  my $pre       = shift;
-
-  my $buff;
-  if ($pre)
-  {
-    $buff = $crms->CreatePreDeterminationsBreakdownData($startDate, $endDate, $monthly, undef, $priority);
-  }
-  else
-  {
-    $buff = $crms->CreateDeterminationsBreakdownData($startDate, $endDate, $monthly, undef, $priority);
-  }
   DownloadSpreadsheet($buff);
 }
 

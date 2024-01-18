@@ -534,25 +534,6 @@ CREATE TABLE `dbo_T_code` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `determinationsbreakdown`
---
-
-DROP TABLE IF EXISTS `determinationsbreakdown`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `determinationsbreakdown` (
-  `date` date NOT NULL,
-  `s4` int(11) NOT NULL DEFAULT '0',
-  `s5` int(11) NOT NULL DEFAULT '0',
-  `s6` int(11) NOT NULL DEFAULT '0',
-  `s7` int(11) NOT NULL DEFAULT '0',
-  `s8` int(11) NOT NULL DEFAULT '0',
-  `s9` int(11) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `exportdata`
 --
 
@@ -828,23 +809,6 @@ CREATE TABLE `orphan` (
   `id` varchar(32) NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `predeterminationsbreakdown`
---
-
-DROP TABLE IF EXISTS `predeterminationsbreakdown`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `predeterminationsbreakdown` (
-  `date` date NOT NULL,
-  `s2` int(11) NOT NULL DEFAULT '0',
-  `s3` int(11) NOT NULL DEFAULT '0',
-  `s4` int(11) NOT NULL DEFAULT '0',
-  `s8` int(11) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
