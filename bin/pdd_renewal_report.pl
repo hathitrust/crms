@@ -85,12 +85,18 @@ SQL
 
 my $ref = $crms->SelectAll($sql);
 my %seen;
-print "HTID\trenDate\tCurrent rights\n";
+print "HTID\trenDate\trenNum\tStanford ODAT\tCurrent rights\n";
 foreach my $row (@$ref) {
   my ($id, $json) = @$row;
   next if $seen{$id};
   my $data = $jsonxs->decode($json);
   my $renDate = $data->{'renDate'};
+  my $renNum = $data->{'renNum'} || '';
+  my $odat = '';
+  if ($renNum) {
+    $sql = 'SELECT ODAT FROM stanford WHERE ID=?';
+    $odat = $crms->SimpleSqlGet($sql, $renNum);
+  }
   # Narrow results down to year of interest.
   # renDate as represented in Catalog of Copyright Entries is of the form D[D]mmmYY
   # e.g., "4Nov52" or "31Mar59"
@@ -100,7 +106,7 @@ foreach my $row (@$ref) {
       # Narrow results further to anything not pd or pdus.
       my $rights = $crms->CurrentRightsString($id);
       if ($rights !~ /^pd/) {
-        print "$id\t$renDate\t$rights\n";
+        print "$id\t$renDate\t$renNum\t$odat\t$rights\n";
         $seen{$id} = 1;
       }
     } 
