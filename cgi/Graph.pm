@@ -61,39 +61,6 @@ sub CreateExportBreakdownGraph
   return \%data;
 }
 
-sub CreateDeterminationsBreakdownGraph
-{
-  my $self = shift;
-
-  my %data = ('chart'=>{'type'=>'spline'}, 'title'=>{'text'=>undef},
-              'tooltip'=>{'pointFormat'=>'<strong>{point.y}</strong>'},
-              'xAxis'=>{'categories'=>[], 'labels'=>{'rotation'=>45}},
-              'yAxis'=>{'min'=>0, 'title'=>{'text'=>'Volumes'}},
-              'legend'=>{'enabled'=>JSON::XS::true},
-              'credits'=>{'enabled'=>JSON::XS::false},
-              'series'=>[]);
-  my @titles = ('Status 4', 'Status 5', 'Status 6', 'Status 7', 'Status 8', 'Status 9');
-  my @colors = PickColors(scalar @titles, 1);
-  my $i = 0;
-  foreach my $title (@titles)
-  {
-    my $h = {'color'=>$colors[$i], 'name'=>$title, 'data'=>[]};
-    push @{$data{'series'}}, $h;
-    $i++;
-  }
-  $data{'series'}->[$_]->{'color'} = $colors[$_] for (0..2);
-  my $sql = 'SELECT DATE_FORMAT(date,"%b %Y") AS fmt,SUM(s4),SUM(s5),SUM(s6),SUM(s7),SUM(s8),SUM(s9)'.
-            ' FROM determinationsbreakdown'.
-            ' GROUP BY fmt ORDER BY date ASC';
-  my $ref = $self->SelectAll($sql);
-  foreach my $row (@{$ref})
-  {
-    push @{$data{'xAxis'}->{'categories'}}, $row->[0];
-    push(@{$data{'series'}->[$_]->{'data'}}, int($row->[$_+1])) for (0..5);
-  }
-  return \%data;
-}
-
 sub CreateCandidatesData
 {
   my $self = shift;

@@ -27,7 +27,6 @@ if ($type eq 'graph')
   if ($c == 0) { $data = Graph::CreateExportGraph($crms); }
   elsif ($c == 1) { $data = Graph::CreateExportBreakdownGraph($crms); }
   elsif ($c == 2) { $data = Graph::CreateExportsPieChart($crms); }
-  elsif ($c == 3) { $data = Graph::CreateDeterminationsBreakdownGraph($crms); }
   elsif ($c == 4) { $data = Graph::CreateCandidatesGraph($crms); }
   elsif ($c == 5) { $data = Graph::CreateCountriesGraph($crms); }
   elsif ($c == 6) { $data = Graph::CreateUndGraph($crms); }

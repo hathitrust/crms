@@ -748,9 +748,6 @@ sub ProcessReviews
   $self->SetSystemStatus($stat);
   $sql = 'INSERT INTO processstatus VALUES ()';
   $self->PrepareSubmitSql($sql);
-  $self->PrepareSubmitSql('DELETE FROM predeterminationsbreakdown WHERE date=DATE(NOW())');
-  $sql = 'INSERT INTO predeterminationsbreakdown (date,s2,s3,s4,s8) VALUES (DATE(NOW()),?,?,?,?)';
-  $self->PrepareSubmitSql($sql, $stati{2}, $stati{3}, $stati{4}, $stati{8});
 }
 
 # Returns a data structure with the following fields:
@@ -889,7 +886,6 @@ sub ClearQueueAndExport
   push @export, $_->[0] for @{$double};
   $self->ExportReviews(\@export, $quiet);
   $self->UpdateExportStats();
-  $self->UpdateDeterminationsBreakdown();
   my $msg = sprintf 'Removed from queue: %d matching, %d expert-reviewed, %d auto-resolved, %d inherited',
                     scalar @{$double}, scalar @{$expert}, scalar @{$auto}, scalar @{$inh};
 }
@@ -4154,30 +4150,6 @@ sub CreateExportData
       push @{$data{$title}}, $self->SimpleSqlGet($sql, @params);
     }
   }
-  # Append in the Status breakdown
-  foreach my $status (4 .. 9)
-  {
-    my $title = 'Status '.$status;
-    push @titles, $title;
-    $data{$title} = [];
-    foreach my $date (@dates)
-    {
-      Utilities::ClearArrays(\@clauses, \@params);
-      $sql = 'SELECT COALESCE(SUM(s'. $status.'),0) FROM determinationsbreakdown';
-      if ($date =~ m/^\d+/)
-      {
-        push @clauses, $fmt;
-        push @params, $date;
-      }
-      elsif ($date eq 'Total' && defined $year)
-      {
-        push @clauses, $fmt2;
-        push @params, $year;
-      }
-      $sql .= ' WHERE '. join ' AND ', @clauses if scalar @clauses;
-      push @{$data{$title}}, $self->SimpleSqlGet($sql, @params);
-    }
-  }
   # Now that total is available, decorate with percentages.
   if ($pct)
   {
@@ -4248,227 +4220,6 @@ sub CreateExportReport
     }
     $newline .= "</tr>\n";
     $report .= $newline;
-  }
-  $report .= "</table>\n";
-  return $report;
-}
-
-sub CreatePreDeterminationsBreakdownData
-{
-  my $self    = shift;
-  my $start   = shift;
-  my $end     = shift;
-  my $monthly = shift;
-  my $title   = shift;
-
-  my ($year,$month) = $self->GetTheYearMonth();
-  my $titleDate = $self->YearMonthToEnglish("$year-$month");
-  my $justThisMonth = (!$start && !$end);
-  $start = "$year-$month-01" unless $start;
-  my $lastDay = Days_in_Month($year,$month);
-  $end = "$year-$month-$lastDay" unless $end;
-  my $what = 'date';
-  $what = 'DATE_FORMAT(date, "%Y-%m")' if $monthly;
-  my $sql = 'SELECT DISTINCT(' . $what . ') FROM predeterminationsbreakdown WHERE date>=? AND date<=?';
-  #print "$sql<br/>\n";
-  my @dates = map {$_->[0];} @{$self->SelectAll($sql, $start, $end)};
-  if (scalar @dates && !$justThisMonth)
-  {
-    my $startEng = $self->YearMonthToEnglish(substr($dates[0],0,7));
-    my $endEng = $self->YearMonthToEnglish(substr($dates[-1],0,7));
-    $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
-  }
-  my $report = ($title)? "$title\n":"Preliminary Determinations Breakdown $titleDate\n";
-  my @titles = ('Date','Status 2','Status 3','Status 4','Status 8','Total','Status 2','Status 3','Status 4','Status 8');
-  $report .= join("\t", @titles) . "\n";
-  my @totals = (0,0,0,0);
-  foreach my $date (@dates)
-  {
-    my ($y,$m,$d) = split '-', $date;
-    my $date1 = $date;
-    my $date2 = $date;
-    if ($monthly)
-    {
-      $date1 = "$date-01";
-      my $lastDay = Days_in_Month($y,$m);
-      $date2 = "$date-$lastDay";
-      $date = $self->YearMonthToEnglish($date);
-    }
-    my $sql = 'SELECT s2,s3,s4,s8,s2+s3+s4+s8 FROM predeterminationsbreakdown WHERE date LIKE "' . $date1 . '%"';
-    #print "$sql<br/>\n";
-    my ($s2,$s3,$s4,$s8,$sum) = @{$self->SelectAll($sql)->[0]};
-    my @line = ($s2,$s3,$s4,$s8,$sum,0,0,0,0);
-    next unless $sum > 0;
-    for (my $i=0; $i < 4; $i++)
-    {
-      $totals[$i] += $line[$i];
-    }
-    for (my $i=0; $i < 4; $i++)
-    {
-      my $pct = 0.0;
-      eval {$pct = 100.0*$line[$i]/$line[4];};
-      $line[$i+5] = sprintf('%.1f%%', $pct);
-    }
-    $report .= $date;
-    $report .= "\t" . join("\t", @line) . "\n";
-  }
-  my $gt = $totals[0] + $totals[1] + $totals[2] + $totals[3];
-  push @totals, $gt;
-  for (my $i=0; $i < 5; $i++)
-  {
-    my $pct = 0.0;
-    eval {$pct = 100.0*$totals[$i]/$gt;};
-    push @totals, sprintf('%.1f%%', $pct);
-  }
-  $report .= "Total\t" . join("\t", @totals) . "\n";
-  return $report;
-}
-
-sub CreateDeterminationsBreakdownData
-{
-  my $self    = shift;
-  my $start   = shift;
-  my $end     = shift;
-  my $monthly = shift;
-  my $title   = shift;
-
-  my ($year,$month) = $self->GetTheYearMonth();
-  my $titleDate = $self->YearMonthToEnglish("$year-$month");
-  my $justThisMonth = (!$start && !$end);
-  $start = "$year-$month-01" unless $start;
-  my $lastDay = Days_in_Month($year,$month);
-  $end = "$year-$month-$lastDay" unless $end;
-  my $what = 'date';
-  $what = 'DATE_FORMAT(date, "%Y-%m")' if $monthly;
-  my $sql = 'SELECT DISTINCT(' . $what . ') FROM determinationsbreakdown WHERE date>=? AND date<=?'.
-            ' ORDER BY date DESC';
-  #print "$sql<br/>\n";
-  my @dates = map {$_->[0];} @{$self->SelectAll($sql, $start, $end)};
-  if (scalar @dates && !$justThisMonth)
-  {
-    my $startEng = $self->YearMonthToEnglish(substr($dates[0],0,7));
-    my $endEng = $self->YearMonthToEnglish(substr($dates[-1],0,7));
-    $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
-  }
-  my $report = ($title)? "$title\n":"Determinations Breakdown $titleDate\n";
-  my @titles = ('Date','Status 4','Status 5','Status 6','Status 7','Status 8','Subtotal',
-                'Status 9','Total','Status 4','Status 5','Status 6','Status 7','Status 8');
-  $report .= join("\t", @titles) . "\n";
-  my @totals = (0,0,0,0,0,0);
-  foreach my $date (@dates)
-  {
-    my ($y,$m,$d) = split '-', $date;
-    my $date1 = $date;
-    my $date2 = $date;
-    if ($monthly)
-    {
-      $date1 = $date . '-01';
-      my $lastDay = Days_in_Month($y,$m);
-      $date2 = "$date-$lastDay";
-      $date = $self->YearMonthToEnglish($date);
-    }
-    $sql = 'SELECT SUM(s4),SUM(s5),SUM(s6),SUM(s7),SUM(s8),SUM(s4+s5+s6+s7+s8),SUM(s9),SUM(s4+s5+s6+s7+s8+s9)' .
-           ' FROM determinationsbreakdown WHERE date>=? AND date<=?';
-    #print "$sql<br/>\n";
-    my ($s4,$s5,$s6,$s7,$s8,$sum1,$s9,$sum2) = @{$self->SelectAll($sql, $date1, $date2)->[0]};
-    my @line = ($s4,$s5,$s6,$s7,$s8,$sum1,$s9,$sum2,0,0,0,0,0);
-    next unless $sum1 > 0;
-    for (my $i=0; $i < 5; $i++)
-    {
-      $totals[$i] += $line[$i];
-    }
-    $totals[5] += $line[6];
-    for (my $i=0; $i < 5; $i++)
-    {
-      my $pct = 0.0;
-      eval {$pct = 100.0*$line[$i]/$line[5];};
-      $line[$i+8] = sprintf('%.1f%%', $pct);
-    }
-    $report .= $date;
-    $report .= "\t". join("\t", @line). "\n";
-  }
-  my $gt1 = $totals[0] + $totals[1] + $totals[2] + $totals[3] + $totals[4];
-  my $gt2 = $gt1 + $totals[5];
-  splice @totals, 5, 0, $gt1;
-  push @totals, $gt2;
-  for (my $i=0; $i < 5; $i++)
-  {
-    my $pct = 0.0;
-    eval {$pct = 100.0*$totals[$i]/$gt1;};
-    push @totals, sprintf('%.1f%%', $pct);
-  }
-  $report .= "Total\t" . join("\t", @totals) . "\n";
-  return $report;
-}
-
-sub CreateDeterminationsBreakdownReport
-{
-  my $self     = shift;
-  my $start    = shift;
-  my $end      = shift;
-  my $monthly  = shift;
-  my $title    = shift;
-  my $pre      = shift;
-
-  my $data;
-  my %whichlines = (5=>1,7=>1);
-  my $span1 = 8;
-  my $span2 = 5;
-  if ($pre)
-  {
-    $data = $self->CreatePreDeterminationsBreakdownData($start, $end, $monthly, $title);
-    %whichlines = (4=>1);
-    $span1 = 5;
-    $span2 = 4;
-  }
-  else
-  {
-    $data = $self->CreateDeterminationsBreakdownData($start, $end, $monthly, $title);
-    $pre = 0;
-  }
-  my $cols = $span1 + $span2;
-  my @lines = split "\n", $data;
-  $title = shift @lines;
-  $title =~ s/\s/&nbsp;/g;
-  my $url = $self->Sysify(sprintf("?p=determinationStats;startDate=$start;endDate=$end;%sdownload=1;pre=$pre",($monthly)?'monthly=on;':''));
-  my $link = sprintf("<a href='$url' target='_blank'>Download</a>",);
-  my $report = "<h3>$title&nbsp;&nbsp;&nbsp;&nbsp;$link</h3>\n";
-  $report .= "<table class='exportStats'>\n";
-  $report .= "<tr><th/><th colspan='$span1'><span class='major'>Counts</span></th><th colspan='$span2'><span class='total'>Percentages</span></th></tr>\n";
-  my $titles = shift @lines;
-  $report .= ('<tr>' . join('', map {my $tmp = $_; $tmp =~ s/\s/&nbsp;/g; "<th>$tmp</th>";} split("\t", $titles)) . '</tr>');
-  foreach my $line (@lines)
-  {
-    my @line = split "\t", $line;
-    my $date = shift @line;
-    my ($y,$m,$d) = split '-', $date;
-    $date =~ s/\s/&nbsp;/g;
-    if ($date eq 'Total')
-    {
-      $report .= "<tr><th style='text-align:right;'>Total</th>";
-    }
-    else
-    {
-      $report .= "<tr><th>$date</th>";
-    }
-    for (my $i=0; $i < $cols; $i++)
-    {
-      my $class = '';
-      my $style = ($i==max keys %whichlines)? "style='border-right:double 6px black;'":'';
-      if ($whichlines{$i} && $date ne 'Total')
-      {
-        $class = 'class="minor"';
-      }
-      elsif ($date ne 'Total')
-      {
-        $class = 'class="total"';
-        $class = 'class="major"' if $i < max keys %whichlines;
-      }
-      my $val = $line[$i];
-      $val = '' if $val eq '0' or $val eq '0.0%';
-      $report .= "<td $class $style>$val</td>\n";
-    }
-    $report .= "</tr>\n";
   }
   $report .= "</table>\n";
   return $report;
@@ -4635,23 +4386,6 @@ sub GetMonthStats
                           $time_per_review, $reviews_per_hour, $total_outliers,
                           $total_correct, $total_incorrect, $total_neutral,
                           $total_flagged);
-}
-
-sub UpdateDeterminationsBreakdown
-{
-  my $self = shift;
-  my $date = shift;
-
-  $date = $self->SimpleSqlGet('SELECT CURDATE()') unless $date;
-  my @vals = ($date);
-  foreach my $status (4..9)
-  {
-    my $sql = 'SELECT COUNT(gid) FROM exportdata WHERE DATE(time)=? AND status=?';
-    push @vals, $self->SimpleSqlGet($sql, $date, $status);
-  }
-  my $wcs = $self->WildcardList(scalar @vals);
-  my $sql = 'REPLACE INTO determinationsbreakdown (date,s4,s5,s6,s7,s8,s9) VALUES '. $wcs;
-  $self->PrepareSubmitSql($sql, @vals);
 }
 
 sub UpdateExportStats
