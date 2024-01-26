@@ -14,22 +14,6 @@ function CheckAll(box,formid)
 	  aa.elements[i].checked = box.checked;
 	}
 }
-
-window.onload = function(e)
-{
-  var progress = document.getElementById('progress');
-  if (progress)
-  {
-    try
-    {
-      loadChart(progress, "[% crms.WebPath('cgi', 'getExportStats?type=graph&c=11&project=State+Gov+Docs') %]");
-    }
-    catch (e)
-    {
-      //alert('Problem loading chart: '+e);
-    }
-  }
-}
 -->
 </script>
 
