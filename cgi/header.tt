@@ -18,12 +18,9 @@
   [% IF crms.get('debugSql') || crms.get('debugVar') %]
     <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/debug.css') %]"/>
   [% END %]
-  [% IF page == 'exportStats' OR page == 'reviewerActivity' %]
+  [% IF page == 'exportStats' %]
     <script src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
     <script src="https://code.highcharts.com/highcharts.js"></script>
-    [% IF page == 'reviewerActivity' %]
-      <script src="https://code.highcharts.com/modules/exporting.js"></script>
-    [% END %]
   [% END %]
 
   <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/review.css') %]"/>

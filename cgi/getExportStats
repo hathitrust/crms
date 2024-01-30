@@ -32,19 +32,6 @@ if ($type eq 'graph')
   elsif ($c == 6) { $data = Graph::CreateUndGraph($crms); }
   elsif ($c == 7) { $data = Graph::CreateNamespaceGraph($crms); }
   elsif ($c == 9) { $data = Graph::CreateReviewInstitutionGraph($crms); }
-  elsif ($c == 10)
-  {
-    my $start = $cgi->param('startDate');
-    my $end = $cgi->param('endDate');
-    my $type2 = $cgi->param('type2');
-    my @users = $cgi->param('user');
-    $data = Graph::CreateReviewerGraph($crms, $type2, $start, $end, @users);
-  }
-  elsif ($c == 11)
-  {
-    my $proj = $cgi->param('project');
-    $data = Graph::CreateProgressGraph($crms, $proj);
-  }
 }
 else
 {
