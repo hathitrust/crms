@@ -10,13 +10,109 @@ code {
 
 .f008 {
   font-family:Courier, 'Courier New', Monaco, monospace;
-  display: inline-block;
   border: 1px solid #000;
   padding: 3px;
   margin: 4px;
   letter-spacing: .2rem;
   text-align: center;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
 }
+
+.f008 .f008-annotation {
+  margin-bottom: 0.1em;
+  font-size: 0.65em;
+  white-space: nowrap;
+  text-align: left;
+  letter-spacing: -0.02rem;
+}
+
+/* Tooltip container */
+.tooltip {
+  position: relative;
+  display: inline-block;
+  border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+}
+
+/* Tooltip text */
+.tooltip .tooltiptext {
+  font-size: 1.0em;
+  visibility: hidden;
+  width: 120px;
+  background-color: #557777;
+  color: red;
+  text-align: center;
+  padding: 5px 0;
+  border-radius: 6px;
+  font-size: 1.0em;
+  /* Position the tooltip text - see examples below! */
+  position: absolute;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.tooltip:hover > .tooltiptext {
+  font-size: 1.5em;
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Tooltip arrow */
+.tooltip .tooltiptext::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #555 transparent transparent transparent;
+}
+
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]:before,
+[data-tooltip]:after {
+  display: none;
+  position: absolute;
+  top: 0;
+}
+
+[data-tooltip]:before {
+  border-bottom: .6em solid #09f;
+  border-bottom: .6em solid rgba(0,153,255,0.8);
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  content: "";
+  left: 20px;
+  margin-top: 1em;
+}
+
+[data-tooltip]:after {
+  background-color: #eeeeff;
+  background-color: rgba(0,153,255,0.9);
+  border: 4px solid #eeeeff;
+  border: 4px solid rgba(0,153,255,0.9);
+  border-radius: 7px;
+  color: #000000;
+  content: attr(data-tooltip-message);
+  left: 0;
+  margin-top: 1.5em;
+  padding: 5px 15px;
+  white-space: pre-wrap;
+  width: 100px;
+}
+
+[data-tooltip]:hover:after,
+[data-tooltip]:hover:before {
+  display: block;
+}
+
 
 .pages {
   margin: 10px;

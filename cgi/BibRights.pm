@@ -60,6 +60,7 @@ sub query {
   my $bib_info = $br->get_bib_info($marc, $cid);
   $data->{cid} = $cid;
   $data->{title} = $marc->title();
+  $data->{record} = $metadata;
   $data->{entries} = [];
   foreach my $htid (@{$htids}) {
     my $enumcron = $metadata->enumcron($htid) || '';

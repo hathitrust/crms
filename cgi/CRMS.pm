@@ -8173,4 +8173,11 @@ sub BibRights {
   return BibRights->new;
 }
 
+sub Field008Formatter {
+  my $self = shift;
+
+  use CRMS::Field008Formatter;
+  return CRMS::Field008Formatter->new;
+}
+
 1;

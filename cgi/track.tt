@@ -50,25 +50,7 @@
       <tr class="nowrap">
         <td  colspan="12">
           [% f008 = data.record.GetControlfield('008') %]
-          [% f008 = f008.replace(" ", "⊔") %]
-          <span class="f008">
-            [% f008.substr(0, 6) %]
-          </span>
-          <span class="f008">
-            [% f008.substr(6, 9) %]
-          </span>
-          <span class="f008">
-            [% f008.substr(15, 3) %]
-          </span>
-          <span class="f008">
-            [% f008.substr(18, 15) %]
-          </span>
-          <span class="f008">
-            [% f008.substr(35, 3) %]
-          </span>
-          <span class="f008">
-            [% f008.substr(38) %]
-          </span>
+          [% crms.Field008Formatter.format(f008) %]
         </td>
       </tr>
       <tr class="nowrap">
