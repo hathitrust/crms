@@ -175,6 +175,7 @@ sub ProcessCommonwealthProject {
       my $date = $data->{'date'};
       my $pub = $data->{'pub'};
       my $crown = $data->{'crown'};
+      my $actual = $data->{'actual'};
       my $dates = [];
       push @$dates, [$date, $pub] if defined $date;
       my @matches = $note =~ /(?<!\d)1\d\d\d(?![\d\-])/g;
@@ -182,9 +183,12 @@ sub ProcessCommonwealthProject {
         push @$dates, [$match, 0] if length $match and $match < $year;
       }
       foreach my $date (@$dates) {
-        my $prediction = $rp->rights($date->[0], $date->[1], $crown, $year);
-        if (defined $prediction->{rights}) {
-          $predictions{$prediction->{rights}} = 1;
+        my $rp = CRMS::RightsPredictor->new(record => $record, effective_date => $date->[0],
+          is_corporate => $date->[1], is_crown => $crown, pub_date => $actual,
+          reference_year => $year);
+        my $prediction = $rp->rights;
+        if (defined $prediction) {
+          $predictions{$prediction} = 1;
         }
       }
       $alldates{$_->[0]} = 1 for @$dates;
@@ -317,7 +321,6 @@ sub ProcessCrownCopyrightProject {
     next if $acurr eq 'pd' or $acurr =~ m/^cc/;
     my $record = $crms->GetMetadata($id);
     next unless defined $record;
-    my $rp = CRMS::RightsPredictor->new(record => $record);
     my $gid = $row->[1];
     my $time = $row->[2];
     $seen{$id} = 1;
@@ -338,9 +341,14 @@ sub ProcessCrownCopyrightProject {
       $date =~ s/^\s+|\s+$//g;
       $dates{$date} = $date if defined $date;
       foreach my $date (keys %dates) {
-        my $prediction = $rp->rights($date, 1, 1, $year);
-        if (defined $prediction->{rights}) {
-          $predictions{$prediction->{rights}} = 1;
+        # Crown Copyright project never collected author death dates, so there
+        # was no need to resort to an "actual pub date" field, thus no need to
+        # override the record pub date used by the predictor. 
+        my $rp = CRMS::RightsPredictor->new(record => $record, effective_date => $date,
+          is_corporate => 1, is_crown => 1, reference_year => $year);
+        my $prediction = $rp->rights;
+        if (defined $prediction) {
+          $predictions{$prediction} = 1;
         }
       }
       $alldates{$_} = 1 for keys %dates;

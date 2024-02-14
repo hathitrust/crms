@@ -1,0 +1,15 @@
+<div id="rightsHelp" style="position:absolute;top:0px;right:1em;">
+  <a class="tip" href="#">
+    <img width="16" height="16" alt="Rights/Reason Help" src="[% crms.WebPath('web', 'help.png') %]"/>
+    <span>
+      [% asterisk = 0 %]
+      [% FOR right IN rights %]
+        <strong>[% right.rights %]</strong> - [% right.description %]<br/>
+        [% IF right.description.search('\*') %][% asterisk = 1 %][% END %]
+      [% END %]
+      [% IF asterisk %]
+        <br/>* if no publication date listed on piece, use copyright date
+      [% END %]
+    </span>
+  </a>
+</div>

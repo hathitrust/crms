@@ -92,10 +92,10 @@ function popRenewalDate()
   req.send(null);
 }
 
-async function predictRights(id, year, pub, crown) {
+async function predictRights(id, year, actualPubDate, pub, crown) {
   togglePredictionLoader(true);
   var url = ajaxURL("predictRights") + "?id=" + id + "&year=" + year +
-            "&is_pub=" + pub + "&is_crown=" + crown;
+            "&actual=" + actualPubDate + "&is_pub=" + pub + "&is_crown=" + crown;
   let response = await fetch(url);
   if (response.status === 200) {
     let data = await response.text();
@@ -115,7 +115,7 @@ function displayRightPrediction(data) {
   // Display prediction logic (or error message)
   var span = document.getElementById("rights-desc");
   if (span) {
-    span.innerHTML = json_data.desc;
+    span.innerHTML = json_data.description;
   }
 }
 
@@ -157,16 +157,6 @@ function GetCheckedValue(radioObj)
     if (radioObj[i].checked) { return radioObj[i].value; }
   }
   return null;
-}
-
-function PullPubDate()
-{
-  var date = document.getElementById('pubDateSpan').innerHTML;
-  var re = /^\s*(-?\d+)(--?\d+)?\s*$/;
-  var a = re.exec(date);
-  if (a.length > 1) { date = a[1]; }
-  else { date = ''; }
-  document.getElementById('renewalField').value=date;
 }
 
 function Debug(msg, append)
