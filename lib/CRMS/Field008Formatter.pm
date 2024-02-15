@@ -27,9 +27,7 @@ sub format {
 
   my $format = <<END;
 <span class="f008">$f008_1
-  <span class="f008-annotation tooltip">00 01 02 03 04 05
-    <span class="tooltiptext">Date entered on file Date entered on file Date entered on file</span>
-  </span>
+  <span class="f008-annotation">00 01 02 03 04 05</span>
 </span>
 <span class="f008">$f008_2
   <span class="f008-annotation">06 07 08 09 10 11 12 13 14</span>
@@ -44,14 +42,10 @@ sub format {
   <span class="f008-annotation">35 36 37</span>
 </span>
 <span class="f008">$f008_6
-  <span class="f008-annotation tooltip">38
-    <span class="tooltiptext">Modified record</span>
-  </span>
+  <span class="f008-annotation">38</span>
 </span>
 <span class="f008">$f008_7
-  <span class="f008-annotation">
-    <span data-tooltip data-tooltip-message="Cataloging source">39</span>
-  </span>
+  <span class="f008-annotation">39</span>
 </span>
 END
   return $format;
