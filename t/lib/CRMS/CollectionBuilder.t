@@ -52,5 +52,3 @@ subtest '::set_visibility_cmd' => sub {
 };
 
 done_testing();
-
-1;

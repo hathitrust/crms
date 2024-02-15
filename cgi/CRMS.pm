@@ -8150,16 +8150,17 @@ sub Commify
   return $n;
 }
 
-sub Keio
-{
+# The following module hooks exist so that templates
+# (which typically have only a CRMS object among their locals)
+# can call various modules of interest.
+sub Keio {
   my $self = shift;
 
   use Keio;
   Keio->new('crms' => $self);
 }
 
-sub Licensing
-{
+sub Licensing {
   my $self = shift;
 
   use Licensing;
@@ -8170,14 +8171,14 @@ sub BibRights {
   my $self = shift;
 
   use BibRights;
-  return BibRights->new;
+  BibRights->new;
 }
 
 sub Field008Formatter {
   my $self = shift;
 
   use CRMS::Field008Formatter;
-  return CRMS::Field008Formatter->new;
+  CRMS::Field008Formatter->new;
 }
 
 1;

@@ -12,10 +12,24 @@ sub new {
   return $self;
 }
 
+# Pad a truncated or undefined 008 to the full 40 characters.
+sub pad {
+  my $self = shift;
+  my $f008 = shift || '';
+
+  if (length $f008 < 40) {
+    $f008 .= (' ' x (40 - length $f008));
+  }
+  return $f008;
+}
+
 sub format {
   my $self = shift;
   my $f008 = shift;
 
+  # Pad to length if truncated
+  $f008 = $self->pad($f008);
+  # Replace spaces with U+2294 square cup for display
   $f008 =~ s/\s/⊔/g;
   my $f008_1 = substr $f008, 0, 6;
   my $f008_2 = substr $f008, 6, 9;

@@ -244,4 +244,3 @@ subtest 'RightsPredictor::rights' => sub {
 
 done_testing();
 
-1;
