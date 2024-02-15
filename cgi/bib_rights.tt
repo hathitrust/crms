@@ -46,10 +46,10 @@
         [% END %]
         </th>
       </tr>
-      
+
       [% IF data.cid %]
        <tr class="nowrap">
-        <td  colspan="12">
+        <td  colspan="15">
           [% f008 = data.record.GetControlfield('008') %]
           [% crms.Field008Formatter.format(f008) %]
         </td>
