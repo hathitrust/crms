@@ -16,6 +16,7 @@ subtest '::new' => sub {
 };
 
 subtest '#pad' => sub {
+  # Make sure we always get back 40 characters.
   subtest 'with a normal 008' => sub {
     my $formatter = CRMS::Field008Formatter->new;
     is(length($formatter->pad($FAKE_008)), 40);
@@ -33,6 +34,7 @@ subtest '#pad' => sub {
 };
 
 subtest '#format' => sub {
+  # Make sure we get back a string.
   subtest 'with a well-formed 008' => sub {
     my $formatter = CRMS::Field008Formatter->new;
     is(ref $formatter->format($FAKE_008), '');
