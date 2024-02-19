@@ -56,4 +56,8 @@ subtest '#LinkToJira' => sub {
     '<a href="https://hathitrust.atlassian.net/browse/DEV-000" target="_blank">DEV-000</a>');
 };
 
+subtest '#Field008Formatter' => sub {
+  isa_ok $crms->Field008Formatter, "CRMS::Field008Formatter";
+};
+
 done_testing();

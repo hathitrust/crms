@@ -30,7 +30,8 @@
       <a href="[% url %]" target="_blank">Download</a>
     [% END %]
     <table class="exportStats">
-      <tr class="nowrap"><th colspan="12" class="major" scope="colgroup" id="topTH">
+      <tr class="nowrap">
+        <th colspan="12" class="major" scope="colgroup" id="topTH">
         [% IF sysid %]
           <span style="color:white;">[% sysid %]</span>
           &nbsp;&nbsp;&nbsp;&nbsp;
@@ -43,8 +44,15 @@
         [% ELSE %]
           [% crms.EchoInput(id) %]&nbsp;&nbsp;&nbsp;&nbsp;(not in catalog)
         [% END %]
-      </th></tr>
+        </th>
+      </tr>
       [% IF sysid %]
+      <tr class="nowrap">
+        <td  colspan="12">
+          [% f008 = data.record.GetControlfield('008') %]
+          [% crms.Field008Formatter.format(f008) %]
+        </td>
+      </tr>
       <tr class="nowrap">
         <th class="nowrap" scope="col" id="volumeTH">Volume</th>
         <th class="nowrap" scope="col" id="enumchronTH">Enum/Chron</th>

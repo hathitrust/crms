@@ -8,6 +8,27 @@ code {
   font-family:Courier, 'Courier New', Monaco, monospace;
 }
 
+.f008 {
+  font-family:Courier, 'Courier New', Monaco, monospace;
+  border: 1px solid #000;
+  padding: 3px;
+  margin: 4px;
+  letter-spacing: .2rem;
+  text-align: center;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.f008 .f008-annotation {
+  margin-block-end: 0.1em;
+  font-size: 0.65em;
+  white-space: nowrap;
+  text-align: left;
+  letter-spacing: -0.02rem;
+}
+
+
 .pages {
   margin: 10px;
   padding: 10px;
@@ -191,11 +212,11 @@ table.ReviewError {
 }
 
 #Notes textarea {
-  margin-top: 5px;
+  margin-block-start: 5px;
 }
 
 #SubmitForm {
-  margin-top: 8px;
+  margin-block-start: 8px;
 }
 
 .reviewPartial {
@@ -411,7 +432,7 @@ hr {
 }
 
 #select * {
-  margin-bottom:.5em;
+  margin-block-end: 0.5em;
 }
 
 select.review {
