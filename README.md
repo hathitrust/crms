@@ -11,9 +11,9 @@ A web app and suite of tools for performing copyright review projects.
 ```
 git submodule init
 git submodule update
-docker-compose build
-docker-compose up -d mariadb
-docker-compose run --rm test
+docker compose build
+docker compose up -d mariadb
+docker compose run --rm test
 ```
 
 ## Running Tests with Coverage
