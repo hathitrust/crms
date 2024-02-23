@@ -28,8 +28,10 @@ jobs:
         run: docker compose --file docker-compose.test.yml run sut
         env:
           GITHUB_TOKEN: ${{ secrets.github_token }}
+          COVERALLS_PERL_SERVICE_NAME: github-actions
 
       - name: Report to Coveralls
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.github_token }}
+          
