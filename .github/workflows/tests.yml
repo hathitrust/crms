@@ -24,6 +24,9 @@ jobs:
       - name: Build docker image
         run: docker compose --file docker-compose.test.yml build
 
+      - name: Get git to stop complaining about safe directories
+        run: git config --global --add safe.directory /htapps/babel/crms
+
       - name: Run tests
         run: docker compose --file docker-compose.test.yml run sut
         env:
@@ -34,4 +37,6 @@ jobs:
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.github_token }}
+          debug: true
+
           
