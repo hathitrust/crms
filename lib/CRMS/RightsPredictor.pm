@@ -35,7 +35,8 @@ use constant {
   # Thus, if last source copyright year >= 1996 then the work is GATT-eligible.
   GATT_RESTORATION_START => 1996,
   COMMONWEALTH_CROWN_COPYRIGHT_TERM => 50,
-  COMMONWEALTH_STANDARD_TERM => 70
+  COMMONWEALTH_STANDARD_TERM => 70,
+  CANADA_CORPORATE_TERM => 75
 };
 
 # Sanity check on reviewer-supplied date
@@ -69,11 +70,13 @@ sub new {
 sub last_source_copyright {
   my $self              = shift;
   my $death_or_pub_date = shift || ''; # Reviewer-supplied
+  my $is_pub            = shift;
   my $is_crown          = shift; # Crown copyright
   my $reference_year    = shift || POSIX::strftime("%Y", localtime); # The "current" year
 
   # Initialize return struct
   my $prediction = { death_or_pub_date => $death_or_pub_date,
+    is_pub => $is_pub,
     is_crown => $is_crown,
     reference_year => $reference_year,
     desc => [],
@@ -204,14 +207,18 @@ sub predict_last_source_copyright {
   return if $prediction->{error};
   my $country = $self->{record}->country;
   my $predictor = $TERM_PREDICTORS->{$country};
-  my $term = $predictor->($prediction->{death_or_pub_date}, $prediction->{is_crown});
+  my $term = $predictor->(
+    $prediction->{death_or_pub_date},
+    $prediction->{is_pub},
+    $prediction->{is_crown}
+  );
   $prediction->{last_source_copyright_year} = $prediction->{death_or_pub_date} + $term;
   push @{$prediction->{desc}},
     "Last $country © $prediction->{last_source_copyright_year} ($prediction->{death_or_pub_date} + $term-year term)";
 }
 
 sub australia_term {
-  my ($death_or_pub_date, $is_crown) = @_;
+  my ($death_or_pub_date, $is_pub, $is_crown) = @_;
 
   return COMMONWEALTH_CROWN_COPYRIGHT_TERM if $is_crown;
   return 50 if $death_or_pub_date < 1955;
@@ -219,15 +226,15 @@ sub australia_term {
 }
 
 sub canada_term {
-  my ($death_or_pub_date, $is_crown) = @_;
+  my ($death_or_pub_date, $is_pub, $is_crown) = @_;
 
   return COMMONWEALTH_CROWN_COPYRIGHT_TERM if $is_crown;
   return 50 if $death_or_pub_date < 1972;
-  return COMMONWEALTH_STANDARD_TERM;
+  return $is_pub ? CANADA_CORPORATE_TERM : COMMONWEALTH_STANDARD_TERM;
 }
 
 sub united_kingdom_term {
-  my ($death_or_pub_date, $is_crown) = @_;
+  my ($death_or_pub_date, $is_pub, $is_crown) = @_;
 
   return ($is_crown) ? COMMONWEALTH_CROWN_COPYRIGHT_TERM : COMMONWEALTH_STANDARD_TERM;
 }
