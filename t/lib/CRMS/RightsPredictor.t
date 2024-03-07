@@ -27,6 +27,14 @@ subtest 'RightsPredictor::last_source_copyright' => sub {
     is($res->{last_source_copyright_year}, 2070);
   };
 
+  subtest 'UK corporate work' => sub {
+    my $f008 = '850423s1940    uk a          000 0 eng d';
+    my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
+    my $rp = CRMS::RightsPredictor->new(record => $record);
+    my $res = $rp->last_source_copyright(2000, 1);
+    is($res->{last_source_copyright_year}, 2070);
+  };
+
   subtest 'UK crown' => sub {
     my $f008 = '850423s1940    uk a          000 0 eng d';
     my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
