@@ -24,7 +24,7 @@ subtest 'RightsPredictor::last_source_copyright' => sub {
     my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
     my $rp = CRMS::RightsPredictor->new(record => $record);
     my $res = $rp->last_source_copyright(2000);
-    is($res->{last_source_copyright_year}, 2070);
+    is($res->{last_source_copyright_year}, 2070, 'UK baseline 70-year term');
   };
 
   subtest 'UK corporate work' => sub {
@@ -32,7 +32,7 @@ subtest 'RightsPredictor::last_source_copyright' => sub {
     my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
     my $rp = CRMS::RightsPredictor->new(record => $record);
     my $res = $rp->last_source_copyright(2000, 1);
-    is($res->{last_source_copyright_year}, 2070);
+    is($res->{last_source_copyright_year}, 2070), 'UK corporate/anonymous 70-year term';
   };
 
   subtest 'UK crown' => sub {
@@ -40,7 +40,7 @@ subtest 'RightsPredictor::last_source_copyright' => sub {
     my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
     my $rp = CRMS::RightsPredictor->new(record => $record);
     my $res = $rp->last_source_copyright(2000, 0, 1);
-    is($res->{last_source_copyright_year}, 2050);
+    is($res->{last_source_copyright_year}, 2050, 'UK crown copyright 50-year term');
   };
 
   subtest 'Canada pre-1972' => sub {
@@ -48,15 +48,23 @@ subtest 'RightsPredictor::last_source_copyright' => sub {
     my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
     my $rp = CRMS::RightsPredictor->new(record => $record);
     my $res = $rp->last_source_copyright(1970);
-    is($res->{last_source_copyright_year}, 2020);
+    is($res->{last_source_copyright_year}, 2020, 'Canada has 50-year term when the effective date is prior to 1972');
   };
 
-  subtest 'Canada 1972' => sub {
+  subtest 'Canada 1972 author death date' => sub {
     my $f008 = '850423s1940    cn a          000 0 eng d';
     my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
     my $rp = CRMS::RightsPredictor->new(record => $record);
     my $res = $rp->last_source_copyright(1972);
-    is($res->{last_source_copyright_year}, 2042);
+    is($res->{last_source_copyright_year}, 2042, 'Canada has 70-year term for author death dates on or after 1972');
+  };
+
+  subtest 'Canada 1972 corporate work' => sub {
+    my $f008 = '850423s1940    cn a          000 0 eng d';
+    my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
+    my $rp = CRMS::RightsPredictor->new(record => $record);
+    my $res = $rp->last_source_copyright(1972, 1);
+    is($res->{last_source_copyright_year}, 2047, 'Canada has 75-year term for corporate/anonymous works published on or after 1972');
   };
 
   subtest 'Canada post-1972 author death date' => sub {
@@ -64,7 +72,7 @@ subtest 'RightsPredictor::last_source_copyright' => sub {
     my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
     my $rp = CRMS::RightsPredictor->new(record => $record);
     my $res = $rp->last_source_copyright(2000);
-    is($res->{last_source_copyright_year}, 2070);
+    is($res->{last_source_copyright_year}, 2070, 'Canada has 70-year term for author death dates on or after 1972');
   };
 
   subtest 'Canada post-1972 corporate work' => sub {
@@ -72,15 +80,31 @@ subtest 'RightsPredictor::last_source_copyright' => sub {
     my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
     my $rp = CRMS::RightsPredictor->new(record => $record);
     my $res = $rp->last_source_copyright(2000, 1);
-    is($res->{last_source_copyright_year}, 2075);
+    is($res->{last_source_copyright_year}, 2075, 'Canada has 75-year term for corporate/anonymous works published on or after 1972');
   };
 
-  subtest 'Canada crown' => sub {
+  subtest 'Canada pre-1972 crown' => sub {
+    my $f008 = '850423s1940    cn a          000 0 eng d';
+    my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
+    my $rp = CRMS::RightsPredictor->new(record => $record);
+    my $res = $rp->last_source_copyright(1970, 0, 1);
+    is($res->{last_source_copyright_year}, 2020, 'Canada has 50-year term for crown copyright works regardless of effective date');
+  };
+
+  subtest 'Canada 1972 crown' => sub {
+    my $f008 = '850423s1940    cn a          000 0 eng d';
+    my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
+    my $rp = CRMS::RightsPredictor->new(record => $record);
+    my $res = $rp->last_source_copyright(1972, 0, 1);
+    is($res->{last_source_copyright_year}, 2022, 'Canada has 50-year term for crown copyright works regardless of effective date');
+  };
+
+  subtest 'Canada post-1972 crown' => sub {
     my $f008 = '850423s1940    cn a          000 0 eng d';
     my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
     my $rp = CRMS::RightsPredictor->new(record => $record);
     my $res = $rp->last_source_copyright(2000, 0, 1);
-    is($res->{last_source_copyright_year}, 2050);
+    is($res->{last_source_copyright_year}, 2050, 'Canada has 50-year term for crown copyright works regardless of effective date');
   };
 
   subtest 'Australia pre-1955' => sub {
@@ -88,7 +112,7 @@ subtest 'RightsPredictor::last_source_copyright' => sub {
     my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
     my $rp = CRMS::RightsPredictor->new(record => $record);
     my $res = $rp->last_source_copyright(1950);
-    is($res->{last_source_copyright_year}, 2000);
+    is($res->{last_source_copyright_year}, 2000, 'Australia has 50-year term when the effective date is prior to 1955');
   };
 
   subtest 'Australia 1955' => sub {
@@ -96,7 +120,7 @@ subtest 'RightsPredictor::last_source_copyright' => sub {
     my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
     my $rp = CRMS::RightsPredictor->new(record => $record);
     my $res = $rp->last_source_copyright(1955);
-    is($res->{last_source_copyright_year}, 2025);
+    is($res->{last_source_copyright_year}, 2025, 'Australia has 70-year term when the effective date is on or after 1955');
   };
 
   subtest 'Australia post-1955' => sub {
@@ -104,15 +128,31 @@ subtest 'RightsPredictor::last_source_copyright' => sub {
     my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
     my $rp = CRMS::RightsPredictor->new(record => $record);
     my $res = $rp->last_source_copyright(2000);
-    is($res->{last_source_copyright_year}, 2070);
+    is($res->{last_source_copyright_year}, 2070, 'Australia has 70-year term when the effective date is on or after 1955');
   };
 
-  subtest 'Australia crown' => sub {
+  subtest 'Australia pre-1955 crown' => sub {
+    my $f008 = '850423s1940    at a          000 0 eng d';
+    my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
+    my $rp = CRMS::RightsPredictor->new(record => $record);
+    my $res = $rp->last_source_copyright(1940, 0, 1);
+    is($res->{last_source_copyright_year}, 1990, 'Australia has 50-year term for crown copyright works regardless of effective date');
+  };
+
+  subtest 'Australia 1955 crown' => sub {
+    my $f008 = '850423s1940    at a          000 0 eng d';
+    my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
+    my $rp = CRMS::RightsPredictor->new(record => $record);
+    my $res = $rp->last_source_copyright(1955, 0, 1);
+    is($res->{last_source_copyright_year}, 2005, 'Australia has 50-year term for crown copyright works regardless of effective date');
+  };
+
+  subtest 'Australia post-1955 crown' => sub {
     my $f008 = '850423s1940    at a          000 0 eng d';
     my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
     my $rp = CRMS::RightsPredictor->new(record => $record);
     my $res = $rp->last_source_copyright(2000, 0, 1);
-    is($res->{last_source_copyright_year}, 2050);
+    is($res->{last_source_copyright_year}, 2050, 'Australia has 50-year term for crown copyright works regardless of effective date');
   };
 
   subtest 'Unknown country' => sub {
@@ -120,7 +160,7 @@ subtest 'RightsPredictor::last_source_copyright' => sub {
     my $record = FakeMetadata::fake_record_with_008_and_leader($f008);
     my $rp = CRMS::RightsPredictor->new(record => $record);
     my $res = $rp->last_source_copyright(2000);
-    ok(!defined $res->{last_source_copyright_year});
+    ok(!defined $res->{last_source_copyright_year}, 'Last source copyright year cannot be defined for unknown country');
     ok(join(', ', @{$res->{desc}}) =~ m/country/i);
   };
 
@@ -131,7 +171,7 @@ subtest 'RightsPredictor::last_source_copyright' => sub {
     my @bogus_years = (undef, 'abcd', '', 12345);
     foreach my $year (@bogus_years) {
       my $res = $rp->last_source_copyright($year);
-      ok(!defined $res->{last_source_copyright_year});
+      ok(!defined $res->{last_source_copyright_year}, 'Last source copyright year cannot be defined for unknown country');
       ok(join(', ', @{$res->{desc}}) =~ m/unsupported/i);
     }
   };
@@ -143,8 +183,8 @@ subtest 'RightsPredictor::last_source_copyright' => sub {
     my @ok_years = ('-1', '-0', '0000', 999999);
     foreach my $year (@ok_years) {
       my $res = $rp->last_source_copyright(2000);
-      ok(defined $res->{last_source_copyright_year});
-      ok(join(', ', $res->{desc}) !~ m/unsupported/i);
+      ok(defined $res->{last_source_copyright_year}, "Last source copyright year is defined even if the input is $year");
+      ok(join(', ', $res->{desc}) !~ m/unsupported/i, "No 'unsupported date format' error for $year");
     }
   };
 };
@@ -259,4 +299,3 @@ subtest 'RightsPredictor::rights' => sub {
 };
 
 done_testing();
-
