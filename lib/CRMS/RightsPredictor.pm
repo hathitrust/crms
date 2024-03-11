@@ -70,7 +70,7 @@ sub new {
 sub last_source_copyright {
   my $self              = shift;
   my $death_or_pub_date = shift || ''; # Reviewer-supplied
-  my $is_pub            = shift;
+  my $is_pub            = shift; # Treat $death_or_pub_date as pub date for corporate authors
   my $is_crown          = shift; # Crown copyright
   my $reference_year    = shift || POSIX::strftime("%Y", localtime); # The "current" year
 
@@ -218,7 +218,7 @@ sub predict_last_source_copyright {
 }
 
 sub australia_term {
-  my ($death_or_pub_date, $is_pub, $is_crown) = @_;
+  my ($death_or_pub_date, undef, $is_crown) = @_;
 
   return COMMONWEALTH_CROWN_COPYRIGHT_TERM if $is_crown;
   return 50 if $death_or_pub_date < 1955;
@@ -234,7 +234,7 @@ sub canada_term {
 }
 
 sub united_kingdom_term {
-  my ($death_or_pub_date, $is_pub, $is_crown) = @_;
+  my ($death_or_pub_date, undef, $is_crown) = @_;
 
   return ($is_crown) ? COMMONWEALTH_CROWN_COPYRIGHT_TERM : COMMONWEALTH_STANDARD_TERM;
 }
