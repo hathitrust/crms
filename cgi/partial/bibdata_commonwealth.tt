@@ -5,7 +5,7 @@
       <tr>
         <td><strong>Pub Date:</strong>
           <span id="pub-date-span"
-            [% IF data.bibdata.display_date.match('^\d+-\d*$') %]class="red"[% END %]>
+            [% IF data.bibdata.extracted_dates.size > 1 %]class="red"[% END %]>
             [% data.bibdata.display_date %]
           </span>
         </td>
