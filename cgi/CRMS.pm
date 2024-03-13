@@ -4522,7 +4522,8 @@ sub UpdateMetadata
     $record = $self->GetMetadata($id) unless defined $record;
     if (defined $record)
     {
-      my $date = $record->copyrightDate;
+      # pub_date column is deprecated but will still be populated until it is removed.
+      my $date = $record->publication_date->maximum_copyright_date;
       $date .= '-01-01' if $date;
       my $sql = 'REPLACE INTO bibdata (id,author,title,pub_date,country,sysid,display_date)' .
                 ' VALUES (?,?,?,?,?,?,?)';
@@ -4561,9 +4562,9 @@ sub ReviewData
   $ref = $dbh->selectall_hashref($sql, 'id', undef, $id);
   $data->{'bibdata'} = $ref->{$id};
   $data->{'bibdata'}->{$_. '_format'} = CGI::escapeHTML($data->{'bibdata'}->{$_}) for keys %{$data->{'bibdata'}};
-  $data->{'bibdata'}->{'pub_date_format'} = $record->formatPubDate;
+  $data->{'bibdata'}->{'pub_date_format'} = $record->publication_date->format;
   $data->{'bibdata'}->{'language'} = Languages::TranslateLanguage($record->language);
-  $data->{bibdata}->{extracted_dates} = $record->publication_date->extract_dates;
+  $data->{'bibdata'}->{extracted_dates} = $record->publication_date->extract_dates;
   $sql = 'SELECT * FROM reviews WHERE id=?';
   $ref = $dbh->selectall_hashref($sql, 'user', undef, $id);
   foreach my $user (keys %{$ref})

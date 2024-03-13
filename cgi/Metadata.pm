@@ -433,39 +433,6 @@ sub title
   return $title;
 }
 
-# Typically used at the item level. Returns a date extractable from the enumcron if possible,
-# and failing that a conservative estimate similar to what bib_rights.pm does.
-sub copyrightDate
-{
-  my $self = shift;
-
-  # Prefer any value extractable from enumcron if this is being used at the item level.
-  my $field = $self->get_volume_date;
-  return $field if $field;
-
-  my $leader = $self->GetControlfield('008');
-  my $type = substr($leader, 6, 1);
-  my $date1 = substr($leader, 7, 4);
-  my $date2 = substr($leader, 11, 4);
-  $date1 =~ s/\s//g;
-  $date2 =~ s/\s//g;
-  $date1 = undef if $date1 =~ m/\D/ or $date1 eq '';
-  $date2 = undef if $date2 =~ m/\D/ or $date2 eq '';
-  if ($type eq 't' || $type eq 'c') {
-    $field = $date1 if defined $date1;
-    $field = $date2 if defined $date2 and $date2 ne '9999';
-  }
-  elsif ($type eq 'r' || $type eq 'e') {
-    $field = $date1 if defined $date1;
-  }
-  else {
-    $field = $date1 if defined $date1;
-    $field = $date2 if defined $date2 and (defined $date1 and $date2 > $date1) and $date2 ne '9999';
-  }
-  $field = undef if defined $field and $field eq '';
-  return $field;
-}
-
 sub dateType
 {
   my $self  = shift;
@@ -486,42 +453,6 @@ sub publication_date {
     );
   }
   return $self->{publication_date};
-}
-
-sub pubDate
-{
-  my $self  = shift;
-  my $date2 = shift;
-
-  my $leader = $self->GetControlfield('008');
-  my $type = substr($leader, 6, 1);
-  my $field = substr($leader, ($date2)? 11:7, 4);
-  $field =~ s/\s//g;
-  $field = undef if $field =~ m/\D/ or $field eq '';
-  return $field;
-}
-
-# Record-level human readable date.
-sub formatPubDate
-{
-  my $self = shift;
-
-  my $date1 = $self->pubDate(0);
-  my $date2 = $self->pubDate(1);
-  my $type = $self->dateType();
-  my $date = $self->copyrightDate();
-  $date2 = undef if $type eq 'e';
-  if (defined $date1)
-  {
-    if ($type eq 'd' || $type eq 'i' || $type eq 'k' ||
-        $type eq 'm' || $type eq 'u' || $type eq ' ')
-    {
-      $date = "$date1-$date2" if defined $date2 and $date2 > $date1;
-      $date = $date1. '-' if defined $date2 and $date2 eq '9999';
-      $date = $date1. '-' if !defined $date2 and $type eq 'u';
-    }
-  }
-  return $date;
 }
 
 sub get_volume_date
