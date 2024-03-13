@@ -7347,8 +7347,6 @@ sub Categories
 
 # Get the rights combinations appropriate to the project
 # in an order appropriate for a two-column layout unless $order.
-# TODO: remove the $order parameter and just have views call
-# ArrayToTwoColumns when needed.
 sub Rights
 {
   my $self  = shift;
@@ -7358,9 +7356,7 @@ sub Rights
   my $proj = $self->SimpleSqlGet('SELECT project FROM queue WHERE id=?', $id);
   $proj = 1 unless defined $proj;
   my @all = ();
-  my $sql = 'SELECT r.id,CONCAT(a.name,"/",rs.name),'.
-            'COALESCE(r.description,CONCAT(a.dscr,"/",rs.dscr))'.
-            ',a.name,rs.name FROM rights r'.
+  my $sql = 'SELECT r.id,CONCAT(a.name,"/",rs.name),r.description,a.name,rs.name FROM rights r'.
             ' INNER JOIN attributes a ON r.attr=a.id'.
             ' INNER JOIN reasons rs ON r.reason=rs.id'.
             ' INNER JOIN projectrights pr ON r.id=pr.rights'.
@@ -7378,25 +7374,14 @@ sub Rights
     $n++;
   }
   return \@all if $order;
-  return $self->ArrayToTwoColumns(\@all);
-}
-
-# Interleave the first half of an array with the second half,
-# making it amenable to top-to-bottom scanning in two columns.
-# Used in the various review forms to lay out the list of rights
-# into an HTML table.
-# If there is an odd number of elements, the first column gets the extra.
-sub ArrayToTwoColumns {
-  my $self  = shift;
-  my $array = shift;
-
   my @inorder;
-  my $of = scalar @$array;
+  my $of = scalar @all;
   my $middle = int($of / 2);
   $middle += 1 if $of % 2 == 1;
-  foreach my $n (0 .. $middle - 1) {
-    push @inorder, $array->[$n];
-    push @inorder, $array->[$n + $middle] if $n + $middle < $of;
+  foreach my $n (0 .. $middle - 1)
+  {
+    push @inorder, $all[$n];
+    push @inorder, $all[$n + $middle] if $n + $middle < $of;
   }
   return \@inorder;
 }

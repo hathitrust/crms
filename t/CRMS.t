@@ -43,33 +43,11 @@ subtest 'CRMS::WriteRightsFile' => sub {
 
 subtest 'CRMS::CanExportVolume' => sub {
   subtest 'CRMS::CanExportVolume und/nfi' => sub {
-    is($crms->CanExportVolume('mdp.001', 'und', 'nfi', 1), 0);
+    is(0, $crms->CanExportVolume('mdp.001', 'und', 'nfi', 1));
   };
 
   subtest 'CRMS::CanExportVolume und/crms' => sub {
-    is($crms->CanExportVolume('mdp.001', 'und', 'crms', 1), 0);
-  };
-};
-
-subtest '#ArrayToTwoColumns' => sub {
-  subtest 'no items' => sub {
-    is_deeply($crms->ArrayToTwoColumns([]), []);
-  };
-
-  subtest 'one item' => sub {
-    is_deeply($crms->ArrayToTwoColumns([1]), [1]);
-  };
-
-  subtest 'two items' => sub {
-    is_deeply($crms->ArrayToTwoColumns([1, 2]), [1, 2]);
-  };
-
-  subtest 'three items' => sub {
-    is_deeply($crms->ArrayToTwoColumns([1, 2, 3]), [1, 3, 2]);
-  };
-
-  subtest 'four items' => sub {
-    is_deeply($crms->ArrayToTwoColumns([1, 2, 3, 4]), [1, 3, 2, 4]);
+    is(0, $crms->CanExportVolume('mdp.001', 'und', 'crms', 1));
   };
 };
 

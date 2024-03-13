@@ -79,9 +79,22 @@
 [% rights = crms.Rights(htid, 1) %]
 <div id="RightsCont" class="subpartial">
 <div id="RightsReason" style="position:relative;">
-  [% # TODO: use rights_help.tt in other project forms %]
-  [% INCLUDE partial/rights_help.tt rights = rights %]
-  [% rights = crms.ArrayToTwoColumns(rights) %]
+  <div id="rightsHelp" style="position:absolute;top:0px;right:1em;">
+    <a class="tip" href="#">
+      <img width="16" height="16" alt="Rights/Reason Help" src="[% crms.WebPath('web', 'help.png') %]"/>
+      <span>
+      [% asterisk = 0 %]
+      [% FOR right IN rights %]
+        <strong>[% right.rights %]</strong> - [% right.description %]<br/>
+        [% IF right.description.search('\*') %][% asterisk = 1 %][% END %]
+      [% END %]
+      [% IF asterisk %]
+        <br/>* if no publication date listed on piece, use copyright date
+      [% END %]
+      </span>
+    </a>
+  </div>
+  [% rights = crms.Rights(htid) %]
   [% of = rights.size() %]
   [% n = 0 %]
     <div style="display:none" id="UNDNFI" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=5 AND reason=8') %]"></div>
