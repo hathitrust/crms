@@ -150,7 +150,7 @@ sub extract_dates {
     # Type b and n have no usable date info in the 008
     if ($self->{date_type} eq 'b' || $self->{date_type} eq 'n') {
       # do not add any dates
-    } 
+    }
     # Type p has earlier date (production) in date2, date1 is distribution date.
     # Type t has earlier date (copyright notice) in date2, date1 is publication date.
     elsif ($self->{date_type} eq 'p' || $self->{date_type} eq 't') {
@@ -214,10 +214,10 @@ sub do_dates_overlap {
   my $max = $dates->[0];
   $max = $dates->[1] if scalar @$dates > 1 and $dates->[1] > $dates->[0];
   # The two cases where there is no overlap:
-  #            start_____end     
+  #            start_____end
   # min___max
   # (max < start)
-  #            start_____end     
+  #            start_____end
   #                           min___max
   # (min > end)
   return ($max < $start || $min > $end) ? 0 : 1;

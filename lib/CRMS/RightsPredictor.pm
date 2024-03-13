@@ -89,7 +89,7 @@ my $TERM_PREDICTORS = {
 # pub_date        Actual publication/copyright date from UI if date range, otherwise
 #                 the value is supplied by the effective_date (if is_corporate) or catalog record.
 # reference_year  The "current" year, only used for testing.
-# 
+#
 # In addition to the constructor parameters, the following attributes may be consulted:
 # description        Arrayref of human-readable logic
 # error_description  Arrayref of human-readable errors
@@ -105,8 +105,8 @@ sub new {
   my $self = bless {}, $class;
   my %defaults = ( reference_year => POSIX::strftime("%Y", localtime) );
   my %args = (%defaults, @_);
-  # Assigns arguments and default values to %args, actual named 
-  # args will override keys in defaults where they match;      
+  # Assigns arguments and default values to %args, actual named
+  # args will override keys in defaults where they match
   while (my ($attr, $value) = each %args ) {
     $self->{$attr} = $value;
   }

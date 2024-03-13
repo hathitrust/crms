@@ -343,7 +343,7 @@ sub ProcessCrownCopyrightProject {
       foreach my $date (keys %dates) {
         # Crown Copyright project never collected author death dates, so there
         # was no need to resort to an "actual pub date" field, thus no need to
-        # override the record pub date used by the predictor. 
+        # override the record pub date used by the predictor.
         my $rp = CRMS::RightsPredictor->new(record => $record, effective_date => $date,
           is_corporate => 1, is_crown => 1, reference_year => $year);
         my $prediction = $rp->rights;

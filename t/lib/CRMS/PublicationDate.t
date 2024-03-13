@@ -179,7 +179,7 @@ subtest 'do_dates_overlap' => sub {
     my $pd = CRMS::PublicationDate->new(date_type => 'm', date_1 => '1900', date_2 => '2000');
     dies_ok { $pd->do_dates_overlap(undef, '2000'); }
   };
-  
+
   subtest 'dies on undefined end date' => sub {
     my $pd = CRMS::PublicationDate->new(date_type => 'm', date_1 => '1900', date_2 => '2000');
     dies_ok { $pd->do_dates_overlap('1900'); }
