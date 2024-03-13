@@ -172,7 +172,8 @@ sub extract_dates {
 }
 
 # Distill the pub date info down to a single exact copyright date.
-# Returns a single YYYY string or undef.
+# Returns a single YYYY string if single date or there is extractable enumcron.
+# Returns undef if no extractable date, or if date range with no enumcron.
 sub exact_copyright_date {
   my $self = shift;
 
