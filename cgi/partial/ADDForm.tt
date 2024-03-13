@@ -72,7 +72,7 @@
     </tr>
     <tr>
       <td colspan="2" class="reviewGrey">
-        <span id="rights-desc"></span>
+        <span id="rights-description"></span>
       </td>
     </tr>
   </table>

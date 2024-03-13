@@ -113,7 +113,7 @@ function displayRightPrediction(data) {
     document.getElementById("r" + json_data.rights_id).checked = true;
   }
   // Display prediction logic (or error message)
-  var span = document.getElementById("rights-desc");
+  var span = document.getElementById("rights-description");
   if (span) {
     span.innerHTML = json_data.description;
   }
