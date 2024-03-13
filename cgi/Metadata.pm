@@ -33,7 +33,7 @@ use CRMS::PublicationDate;
 my $US_CITIES;
 
 # Class method.
-# Adapted code from Tim Prettyman
+# Adapted from post_zephir_processing/bib_rights.pm
 sub ExtractVolumeDateFromEnumcron
 {
   my $item_desc = shift;
@@ -572,7 +572,8 @@ sub cities
   return $data;
 }
 
-# This is code from Tim for normalizing the 260 subfield for U.S. cities.
+# Normalize the 260 subfield for U.S. cities.
+# Adapted from post_zephir_processing/bib_rights.pm clean_pub_place
 sub _NormalizeCity
 {
   my $suba = shift;
