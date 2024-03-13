@@ -57,7 +57,7 @@
     <tr>
       <td class="reviewGrey">
         <input type="checkbox" id="pub-checkbox" name="pub"[% (u_pub)? ' checked="checked"':'' %]
-               onchange="syncCheckboxes(false, this.id, 'crown-checkbox'); dateEntry();"/>
+               onchange="syncCheckboxes(false, this.id, 'crown-checkbox'); toggleADD(); dateEntry();"/>
         <label for="pub-checkbox">&nbsp;Pub Date</label>
       </td>
       <td>
@@ -66,7 +66,7 @@
     <tr>
       <td colspan="2" class="reviewGrey">
         <input type="checkbox" id="crown-checkbox" name="crown"[% (u_crown)? ' checked="checked"':'' %]
-               onchange="syncCheckboxes(true, this.id, 'pub-checkbox'); dateEntry();"/>
+               onchange="syncCheckboxes(true, this.id, 'pub-checkbox'); toggleADD(); dateEntry();"/>
         <label for="crown-checkbox">&nbsp;Crown&nbsp;Copyright</label>
       </td>
     </tr>
@@ -134,7 +134,7 @@
 </div>
 <div id="Notes">
   <strong><label for="category-menu">Notes: </label></strong>
-  <select id="category-menu" class="review" name="category" onchange="dateEntry();">
+  <select id="category-menu" class="review" name="category">
     <option value="" [% ("" == category)? 'selected="selected"':'' %]>none</option>
     [% cats = crms.Categories(htid) %]
     [% FOREACH cat IN cats %]
@@ -227,9 +227,13 @@ function partial_ADDForm_mainWindowLoad(e) {
 }
 
 function dateEntry() {
-  toggleADD();
+  var rightsDescription = document.getElementById("rights-description");
   var year = document.getElementById("add-field").value || "";
   if (year.length == 0) {
+    // Remove prediction description and bail out.
+    if (rightsDescription) {
+      rightsDescription.innerHTML = "";
+    }
     return;
   }
   // There is a hidden div that tells us which button id is und/nfi.
@@ -238,6 +242,10 @@ function dateEntry() {
   var sel = GetCheckedValue(rights);
   var und = document.getElementById("UNDNFI").title;
   if (und && sel === und) {
+    // Remove prediction description and bail out.
+    if (rightsDescription) {
+      rightsDescription.innerHTML = "";
+    }
     return;
   }
   var actualPubDate = document.getElementById('actual-pub-date-field').value || "";
@@ -264,6 +272,7 @@ function insertUserReviewData(user) {
   document.submitReview.note.value = review.note || "";
   selMenuItem("category-menu", review.category || "");
   toggleADD();
+  dateEntry();
 }
 
 // Rewords the Commonwealth date entry based on whether "Pub Date" is checked.
