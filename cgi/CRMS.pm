@@ -4561,6 +4561,7 @@ sub ReviewData
   $ref = $dbh->selectall_hashref($sql, 'id', undef, $id);
   $data->{'bibdata'} = $ref->{$id};
   $data->{'bibdata'}->{$_. '_format'} = CGI::escapeHTML($data->{'bibdata'}->{$_}) for keys %{$data->{'bibdata'}};
+  $data->{'bibdata'}->{'pub_date_format'} = $record->formatPubDate;
   $data->{'bibdata'}->{'language'} = Languages::TranslateLanguage($record->language);
   $data->{bibdata}->{extracted_dates} = $record->publication_date->extract_dates;
   $sql = 'SELECT * FROM reviews WHERE id=?';
