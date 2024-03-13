@@ -7589,23 +7589,27 @@ sub EscapeHTML
 #Died Between 1930 and 1933=$g 1930...1933 $2 edtf <-- we can't handle this
 #Died 65 AD=$g 0065
 #Died 361 BC= $g -0360
-sub GetADDFromAuthor {
+sub GetADDFromAuthor
+{
   my $self   = shift;
   my $id     = shift;
-  my $author = shift; # For testing
+  my $a      = shift; # For testing
   my $record = shift || $self->GetMetadata($id);
 
-  my $add;
+  my $add = undef;
   return unless defined $record;
-  $author = $record->author(1) unless $author;
+  $a = $record->author(1) unless defined $a;
   my $regex = '(\d?\d\d\d\??)?\s*-\s*(\d?\d\d\d)[.,;) ]*$';
-  if (defined $author && $author =~ m/$regex/) {
+  if (defined $a && $a =~ m/$regex/)
+  {
     $add = $2;
-    $add = undef if $author =~ m/(fl\.*|active)\s*$regex/i;
+    $add = undef if $a =~ m/(fl\.*|active)\s*$regex/i;
   }
-  if (!defined $add) {
+  if (!defined $add)
+  {
     my $data = $record->GetDatafield('046', 'g', 1);
-    if ($data && $data =~ m/^\s*(-?\d\d\d\d)/) {
+    if ($data && $data =~ m/^\s*(-?\d\d\d\d)/)
+    {
       $add = $1;
     }
   }
