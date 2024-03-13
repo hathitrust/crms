@@ -35,8 +35,7 @@ sub GetVIAFData
     {
       return {'author' => $ref->[0]->[0],
               'birth_year' => $ref->[0]->[1], 'death_year' => $ref->[0]->[2],
-              'country' => $ref->[0]->[3], 'viafID' => $ref->[0]->[4],
-              'author_url' => 'http://viaf.org/viaf/' . $ref->[0]->[4]};
+              'country' => $ref->[0]->[3], 'viafID' => $ref->[0]->[4]};
     }
   }
   $author =~ s/["#]//g;
@@ -95,7 +94,6 @@ sub GetVIAFData
            'country,viafID) VALUES (?,?,?,?,?,?)';
     $self->PrepareSubmitSql($sql, $author, $ret->{'author'}, $ret->{'birth_year'},
                             $ret->{'death_year'}, $ret->{'country'}, $ret->{'viafID'});
-    $ret->{'author_url'} = 'http://viaf.org/viaf/' . $ret->{'viafID'};
   }
   $ret->{'url'} = $url;
   return $ret;
