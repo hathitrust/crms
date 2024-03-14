@@ -47,7 +47,7 @@ sub EvaluateCandidacy
     my $now = $self->{crms}->GetTheYear();
     my $min = $now - 95 + 1;
     my $max = 1963;
-    if ($$copyright_date < $min or $$copyright_date > $max)
+    if ($copyright_date < $min or $copyright_date > $max)
     {
       push @errs, "pub date $copyright_date not in range $min-$max";
     }
