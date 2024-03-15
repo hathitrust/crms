@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Check out including private submodules
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           # This should be a PAT that has read access to the private submodules
           # for this repository
