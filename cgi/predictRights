@@ -18,14 +18,27 @@ use Metadata;
 my $cgi = new CGI;
 my $id = $cgi->param('id');
 my $year = $cgi->param('year');
+my $actual = $cgi->param('actual');
 my $is_pub = $cgi->param('is_pub');
 my $is_crown = $cgi->param('is_crown');
 my $crms = CRMS->new(cgi => $cgi);
 
 my $record = Metadata->new('id' => $id);
-my $rp = CRMS::RightsPredictor->new(record => $record);
-my $data = $rp->rights($year, $is_pub, $is_crown);
-$data->{desc} = join(', ', @{$data->{desc}});
+my $rp = CRMS::RightsPredictor->new(
+  effective_date => $year,
+  pub_date => $actual,
+  is_corporate => $is_pub,
+  is_crown => $is_crown,
+  record => $record);
+my $rights = $rp->rights;
+my $data = {
+  rights => $rights,
+  attr => $rp->{attr},
+  reason => $rp->{reason},
+  description => $rp->description,
+  error => $rp->{error}
+};
+
 if ($data->{attr} && $data->{reason}) {
   my $sql = 'SELECT r.id FROM rights r INNER JOIN attributes a ON r.attr=a.id'.
             ' INNER JOIN reasons rs ON r.reason=rs.id'.

@@ -1,5 +1,10 @@
 package Metadata;
 
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
+}
+
 # An interface to the HathiTrust Bib API tailored to CRMS requirements.
 
 # Some of the functionality here may be replaced via an intermediate layer
@@ -23,7 +28,83 @@ use LWP::UserAgent;
 use Unicode::Normalize;
 use XML::LibXML;
 
+use CRMS::PublicationDate;
+
 my $US_CITIES;
+
+# Class method.
+# Adapted from post_zephir_processing/bib_rights.pm
+sub ExtractVolumeDateFromEnumcron
+{
+  my $item_desc = shift;
+  $item_desc or return '';
+  $item_desc = lc $item_desc;
+  my @vol_date = ();
+  my $orig_desc = $item_desc;
+  my $low;
+  my $high;
+  my $date;
+
+  # umdl item descriptions may contain NNNN.NNN--if so, return null
+  $item_desc =~ /^\d{4}\.[a-z0-9]{3}$/i and return '';
+
+  # check for tech report number formats
+  $item_desc =~ /^\d{1,3}-\d{4}$/ and return '';
+
+  # strip confusing page/part data:
+  #39015022710779: Title 7 1965 pt.1090-end
+  #39015022735396: v.23 no.5-8 1984 pp.939-1830
+  #39015022735701: v.77 1983 no.7-12 p.673-1328
+  #39015022735750: v.75 1981 no.7-12 p.673-1324
+  #no. 3086/3115 1964
+  #no.3043,3046
+  #39015040299169      no.5001-5007,5009-5010
+  #$item_desc =~ s/(v\.|no\.|p{1,2}\.|pt\.)[\d,-]+//g;
+  $item_desc =~ s/\b(v\.\s*|no\.\s*|p{1,2}\.\s*|pt\.\s*)[\d,-\/]+//g;
+
+  # strip months
+  $item_desc =~ s/(january|february|march|april|may|june|july|august|september|october|november|december)\.{0,1}-{0,1}//gi;
+  $item_desc =~ s/(jan|feb|mar|apr|may|jun|jul|aug|sept|sep|oct|nov|dec)\.{0,1}-{0,1}//gi;
+  $item_desc =~ s/(winter|spring|summer|fall|autumn)-{0,1}//gi;
+  $item_desc =~ s/(supplement|suppl|quarter|qtr|jahr)\.{0,1}-{0,1}//gi;
+
+  # report numbers
+  #no.CR-2291 1973
+  $item_desc =~ s/\b[a-zA-Z.]+-\d+//;
+
+  # check for date ranges: yyyy-yy
+  #($low, $high) = ( $item_desc =~ /\b(\d{4})\-(\d{2})\b/ ) and do {
+  #($low, $high) = ( $item_desc =~ /\s(\d{4})\-(\d{2})\s/ ) and do {
+  # While loop to handle e.g., 1973/74-1977/78 will push {1974, 1978}
+  while ($item_desc =~ /\b(\d{4})[-\/](\d{2})\b/g) {
+    $low = $1;
+    $high = $2;
+    $high = substr($low,0,2) . $high;
+    push(@vol_date, $high);
+  };
+
+  # check for date ranges: yyyy-y
+  #($low, $high) = ( $item_desc =~ /\b(\d{4})\-(\d)\b/ ) and do {
+  ($low, $high) = ( $item_desc =~ /\s(\d{4})\-(\d)\s/ ) and do {
+    $high = substr($low,0,3) . $high;
+    push(@vol_date, $high);
+  };
+
+  # look for 4-digit strings
+#  $item_desc =~ tr/0-9u/ /cs;           # xlate non-digits to blank (keep "u")
+  $item_desc =~ tr/u^|/9/;              # translate "u" to "9"
+  push (@vol_date, $item_desc =~ /\b(\d{4})\b/g);
+
+  # cull values before 1700 and after 5 years in future
+  @vol_date = grep { $_ >= 1700 && $_ <= 1900 + (localtime)[5] + 5 } @vol_date;
+  # return the maximum year
+  @vol_date = sort(@vol_date);
+  return '' if scalar @vol_date == 0;
+  my $vol_date =  pop(@vol_date);
+  # reality check--
+  #$vol_date < 1700 and $vol_date = '';
+  return $vol_date;
+}
 
 # TODO: this is duplicative of code in post_zephir_processing/bib_rights.pm
 sub US_Cities {
@@ -352,42 +433,6 @@ sub title
   return $title;
 }
 
-sub copyrightDate
-{
-  my $self = shift;
-
-  my $leader = $self->GetControlfield('008');
-  my $type = substr($leader, 6, 1);
-  my $date1 = substr($leader, 7, 4);
-  my $date2 = substr($leader, 11, 4);
-  $date1 =~ s/\s//g;
-  $date2 =~ s/\s//g;
-  $date1 = undef if $date1 =~ m/\D/ or $date1 eq '';
-  $date2 = undef if $date2 =~ m/\D/ or $date2 eq '';
-  my $field;
-  if ($type eq 't' || $type eq 'c')
-  {
-    $field = $date1 if defined $date1;
-    $field = $date2 if defined $date2 and $date2 ne '9999';
-  }
-  elsif ($type eq 'r' || $type eq 'e')
-  {
-    $field = $date1 if defined $date1;
-  }
-  else
-  {
-    $field = $date1 if defined $date1;
-    $field = $date2 if defined $date2 and (defined $date1 and $date2 > $date1) and $date2 ne '9999';
-  }
-  $field = undef if defined $field and $field eq '';
-  my $field2 = $self->get_volume_date;
-  #printf "%s: field2 %s vs field %s\n", $self->id, (defined $field2)? $field2 : '<undef>', (defined $field)? $field : '<undef>';
-  #$field = $field2 if $field2 && $field2 =~ m/^\d\d\d\d$/;
-  $field = $field2 if $field2;
-  #printf "%s: returning %s\n", $self->id, (defined $field)? $field : '<undef>';
-  return $field;
-}
-
 sub dateType
 {
   my $self  = shift;
@@ -396,114 +441,25 @@ sub dateType
   return substr($leader, 6, 1);
 }
 
-sub pubDate
-{
-  my $self  = shift;
-  my $date2 = shift;
-
-  my $leader = $self->GetControlfield('008');
-  my $type = substr($leader, 6, 1);
-  my $field = substr($leader, ($date2)? 11:7, 4);
-  $field =~ s/\s//g;
-  $field = undef if $field =~ m/\D/ or $field eq '';
-  return $field;
-}
-
-sub formatPubDate
-{
+# This is the preferred method for getting combined item-level and record-level
+# publication date info.
+sub publication_date {
   my $self = shift;
 
-  my $date1 = $self->pubDate(0);
-  my $date2 = $self->pubDate(1);
-  my $type = $self->dateType();
-  my $date = $self->copyrightDate();
-  $date2 = undef if $type eq 'e';
-  if (defined $date1)
-  {
-    if ($type eq 'd' || $type eq 'i' || $type eq 'k' ||
-        $type eq 'm' || $type eq 'u' || $type eq ' ')
-    {
-      $date = "$date1-$date2" if defined $date2 and $date2 > $date1;
-      $date = $date1. '-' if defined $date2 and $date2 eq '9999';
-      $date = $date1. '-' if !defined $date2 and $type eq 'u';
-    }
+  if (!$self->{publication_date}) {
+    $self->{publication_date} = CRMS::PublicationDate->new(
+      field_008 => $self->GetControlfield('008'),
+      enumcron_date => $self->get_volume_date
+    );
   }
-  return $date;
+  return $self->{publication_date};
 }
 
-# Adapted code from Tim Prettyman
 sub get_volume_date
 {
   my $self = shift;
 
-  my $item_desc = $self->enumchron;
-  $item_desc or return '';
-  $item_desc = lc $item_desc;
-  my @vol_date = ();
-  my $orig_desc = $item_desc;
-  my $low;
-  my $high;
-  my $date;
-
-  # umdl item descriptions may contain NNNN.NNN--if so, return null
-  $item_desc =~ /^\d{4}\.[a-z0-9]{3}$/i and return '';
-
-  # check for tech report number formats
-  $item_desc =~ /^\d{1,3}-\d{4}$/ and return '';
-
-  # strip confusing page/part data:
-  #39015022710779: Title 7 1965 pt.1090-end
-  #39015022735396: v.23 no.5-8 1984 pp.939-1830
-  #39015022735701: v.77 1983 no.7-12 p.673-1328
-  #39015022735750: v.75 1981 no.7-12 p.673-1324
-  #no. 3086/3115 1964
-  #no.3043,3046
-  #39015040299169      no.5001-5007,5009-5010
-  #$item_desc =~ s/(v\.|no\.|p{1,2}\.|pt\.)[\d,-]+//g;
-  $item_desc =~ s/\b(v\.\s*|no\.\s*|p{1,2}\.\s*|pt\.\s*)[\d,-\/]+//g;
-
-  # strip months
-  $item_desc =~ s/(january|february|march|april|may|june|july|august|september|october|november|december)\.{0,1}-{0,1}//gi;
-  $item_desc =~ s/(jan|feb|mar|apr|may|jun|jul|aug|sept|sep|oct|nov|dec)\.{0,1}-{0,1}//gi;
-  $item_desc =~ s/(winter|spring|summer|fall|autumn)-{0,1}//gi;
-  $item_desc =~ s/(supplement|suppl|quarter|qtr|jahr)\.{0,1}-{0,1}//gi;
-
-  # report numbers
-  #no.CR-2291 1973
-  $item_desc =~ s/\b[a-zA-Z.]+-\d+//;
-
-  # check for date ranges: yyyy-yy
-  #($low, $high) = ( $item_desc =~ /\b(\d{4})\-(\d{2})\b/ ) and do {
-  #($low, $high) = ( $item_desc =~ /\s(\d{4})\-(\d{2})\s/ ) and do {
-  # While loop to handle e.g., 1973/74-1977/78 will push {1974, 1978}
-  while ($item_desc =~ /\b(\d{4})[-\/](\d{2})\b/g) {
-    $low = $1;
-    $high = $2;
-    $high = substr($low,0,2) . $high;
-    push(@vol_date, $high);
-  };
-
-  # check for date ranges: yyyy-y
-  #($low, $high) = ( $item_desc =~ /\b(\d{4})\-(\d)\b/ ) and do {
-  ($low, $high) = ( $item_desc =~ /\s(\d{4})\-(\d)\s/ ) and do {
-    $high = substr($low,0,3) . $high;
-    push(@vol_date, $high);
-  };
-
-  # look for 4-digit strings
-#  $item_desc =~ tr/0-9u/ /cs;           # xlate non-digits to blank (keep "u")
-  $item_desc =~ tr/u^|/9/;              # translate "u" to "9"
-  push (@vol_date, $item_desc =~ /\b(\d{4})\b/g);
-
-  # cull values before 1700 and after 5 years in future
-  @vol_date = grep { $_ >= 1700 && $_ <= 1900 + (localtime)[5] + 5 } @vol_date;
-  # return the maximum year
-  @vol_date = sort(@vol_date);
-  return if scalar @vol_date == 0;
-  my $vol_date =  pop(@vol_date);
-  # reality check--
-  #$vol_date < 1700 and $vol_date = '';
-  return $vol_date;
+  return ExtractVolumeDateFromEnumcron($self->enumchron);
 }
 
 sub language
@@ -547,7 +503,8 @@ sub cities
   return $data;
 }
 
-# This is code from Tim for normalizing the 260 subfield for U.S. cities.
+# Normalize the 260 subfield for U.S. cities.
+# Adapted from post_zephir_processing/bib_rights.pm clean_pub_place
 sub _NormalizeCity
 {
   my $suba = shift;

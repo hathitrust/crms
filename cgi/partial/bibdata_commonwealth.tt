@@ -4,9 +4,9 @@
     [% IF data.project.ShowPubDate() %]
       <tr>
         <td><strong>Pub Date:</strong>
-          <span id="pubDateSpan"
-            [% IF data.bibdata.pub_date_format.match('^\d+-\d*$') %]class="red"[% END %]>
-            [% data.bibdata.pub_date_format %]
+          <span id="pub-date-span"
+            [% IF data.bibdata.extracted_dates.size > 1 %]class="red"[% END %]>
+            [% data.bibdata.display_date %]
           </span>
         </td>
       </tr>

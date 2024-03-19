@@ -18,7 +18,7 @@
   <input type="hidden" name="user"    value="[% user %]"/>
   <input type="hidden" name="editing" value="[% editing %]"/>
   <table>
-    [% viafwarn = crms.VIAFWarning(htid) %]
+    [% viafwarn = crms.VIAFWarning(htid, data.record) %]
     [% IF viafwarn %]
       [% viafwarn = "Warning: possible foreign author: " _ viafwarn %]
       <tr><td colspan="2"><span class="red"><strong>$viafwarn</strong></span></td></tr>
