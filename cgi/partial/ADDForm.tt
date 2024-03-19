@@ -33,7 +33,7 @@
       </td>
       <td class="nowrap">
         <input id="add-field" title="[% label %]" type="text" name="date"
-               value="[% u_date %]" size="6" onblur="dateEntry();"/>
+               value="[% u_date %]" size="6" onblur="loadRightsPrediction();"/>
       </td>
     </tr>
     <!-- ACTUAL PUB DATE -->
@@ -50,14 +50,14 @@
       </td>
       <td class="nowrap">
         <input id="actual-pub-date-field" title="Actual Pub Date" type="text" name="actual"
-               value="[% u_actual %]" size="6" onblur="dateEntry();"/>
+               value="[% u_actual %]" size="6" onblur="loadRightsPrediction();"/>
       </td>
     </tr>
     
     <tr>
       <td class="reviewGrey">
         <input type="checkbox" id="pub-checkbox" name="pub"[% (u_pub)? ' checked="checked"':'' %]
-               onchange="syncCheckboxes(false, this.id, 'crown-checkbox'); toggleADD(); dateEntry();"/>
+               onchange="checkboxSelectionChanged(this.id);"/>
         <label for="pub-checkbox">&nbsp;Pub Date</label>
       </td>
       <td>
@@ -66,7 +66,7 @@
     <tr>
       <td colspan="2" class="reviewGrey">
         <input type="checkbox" id="crown-checkbox" name="crown"[% (u_crown)? ' checked="checked"':'' %]
-               onchange="syncCheckboxes(true, this.id, 'pub-checkbox'); toggleADD(); dateEntry();"/>
+               onchange="checkboxSelectionChanged(this.id);"/>
         <label for="crown-checkbox">&nbsp;Crown&nbsp;Copyright</label>
       </td>
     </tr>
@@ -226,7 +226,7 @@ function partial_ADDForm_mainWindowLoad(e) {
   }
 }
 
-function dateEntry() {
+function loadRightsPrediction() {
   var rightsDescription = document.getElementById("rights-description");
   var year = document.getElementById("add-field").value || "";
   if (year.length == 0) {
@@ -272,7 +272,7 @@ function insertUserReviewData(user) {
   document.submitReview.note.value = review.note || "";
   selMenuItem("category-menu", review.category || "");
   toggleADD();
-  dateEntry();
+  loadRightsPrediction();
 }
 
 // Rewords the Commonwealth date entry based on whether "Pub Date" is checked.
@@ -297,6 +297,20 @@ function toggleADD() {
       actualPubDateRow.style.display = "table-row";
     }
   }
+}
+
+// Called whenever the user checks or unchecks the pub date or crown checkbox.
+// Synchronizes other checkbox to current selection,
+// synchronizes the date label with the pub date checkbox,
+// and refreshes the rights prediction.
+function checkboxSelectionChanged(id) {
+  if (id === 'pub-checkbox') {
+    syncCheckboxes(false, id, 'crown-checkbox');
+  } else {
+    syncCheckboxes(true, id, 'pub-checkbox');
+  }
+  toggleADD();
+  loadRightsPrediction();
 }
 
 // Propagate checkedness across category/subcategory boundary.
