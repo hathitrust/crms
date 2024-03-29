@@ -34,9 +34,8 @@ sub EvaluateCandidacy {
   # Check well-defined record dates
   my $publication_date = $record->publication_date;
   my $publication_date_string = $publication_date->to_s;
-  my $extracted_dates = $publication_date->extract_dates;
   my ($min, $max) = @{$self->year_range($where)};
-  if (!scalar @$extracted_dates) {
+  if (!scalar @{$publication_date->extract_dates}) {
     push @errs, "pub date not completely specified ($publication_date_string)";
   } else {
     if (!$publication_date->do_dates_overlap($min, $max)) {
