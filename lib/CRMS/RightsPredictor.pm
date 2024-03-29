@@ -6,20 +6,11 @@ package CRMS::RightsPredictor;
 # rights based on metadata and researcher-provided data.
 # Also used for New Year rights rollover.
 
-# This could be extended to non-Commonwealth countries.
-
-# TODO: this code relies heavily on publication/copyright date,
-# and as a result makes Bib API calls multiple times in the course
-# of a single review. Extending the Metadata module to use a local
-# database cache for volumes in queue would enhance responsiveness
-# an eliminate some unnecessary "paranoia" code.
-
 use strict;
 use warnings;
 use utf8;
 
 use Carp;
-use Data::Dumper;
 use POSIX;
 
 use constant {
@@ -51,9 +42,6 @@ my $TERM_PREDICTORS = {
   &UNITED_KINGDOM => \&_united_kingdom_term
 };
 
-# Only used in Commonwealth project UI and New Year public domain rollover with
-# dates collected in the course of reviewer research.
-#
 # use CRMS::RightsPredictor;
 # use Metadata;
 #
@@ -99,6 +87,7 @@ my $TERM_PREDICTORS = {
 # reason             "add" or "exp" type rights reason
 # rights             "pd/add" or "ic/exp" type rights string
 #
+# One new instance should be used per prediction. This object is not intended for reuse.
 sub new {
   my $class = shift;
 
@@ -131,10 +120,9 @@ sub new {
 # Return the human-readable description or the error description in case of error.
 sub description {
   my $self = shift;
-#use Data::Dumper;
-#  push @{$self->{error_description}}, Dumper($self);
+
   my $description = ($self->{error} == 0) ? $self->{description} : $self->{error_description};
-  return ucfirst join ', ', @$description;
+  return ucfirst join(', ', @$description);
 }
 
 # Simple API mainly for testing and reports. Currently not used in the GUI or scripts.
@@ -175,7 +163,7 @@ sub rights {
   return $self->{rights};
 }
 
-# The following subroutines should be considered private.
+# ============== PRIVATE INSTANCE METHODS ==============
 
 # Determine overall rights given copyright in (non-US) country of publication has expired.
 sub _predict_rights_with_source_copyright_expired {
