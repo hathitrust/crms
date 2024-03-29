@@ -82,7 +82,7 @@ foreach my $row (@{$ref})
   $au =~ s/&/&amp;/g;
   my $ti = $record->title || '';
   $ti =~ s/&/&amp;/g;
-  my $pub = $record->publication_date->format || '';
+  my $pub = $record->copyrightDate || '';
   $n++;
   @cols = ($id, $record->sysid, $au, $ti, $pub);
   $worksheet->write_string($n, $_, $cols[$_]) for (0 .. scalar @cols - 1);
