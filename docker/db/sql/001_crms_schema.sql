@@ -172,6 +172,7 @@ CREATE TABLE `bibdata` (
   `pub_date` date DEFAULT NULL,
   `country` text,
   `sysid` varchar(32) DEFAULT NULL,
+  `display_date` varchar(16) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `author_idx` (`author`(255)),
   KEY `title_idx` (`title`(255)),
