@@ -4,8 +4,7 @@ use parent 'Project';
 use strict;
 use warnings;
 
-sub new
-{
+sub new {
   my $class = shift;
   return $class->SUPER::new(@_);
 }
@@ -115,15 +114,13 @@ sub ValidateSubmission {
 
 # Extract Project-specific data from the CGI into a struct
 # that will be encoded as JSON string in the reviewdata table.
-sub ExtractReviewData
-{
+sub ExtractReviewData {
   my $self = shift;
   my $cgi  = shift;
 
   my $date = $cgi->param('date');
   my $data;
-  if ($date)
-  {
+  if ($date) {
     $data = {'date' => $date};
     $data->{'pub'} = 1 if $cgi->param('pub');
     $data->{'crown'} = 1 if $cgi->param('crown');
@@ -143,8 +140,7 @@ sub ExtractReviewData
 # format: HTML-formatted data for inline display. May be blank.
 # format_long: HTML-formatted data for tooltip display. May be blank.
 # e.g., {"date":"1881","pub":1,"src":"VIAF"}
-sub FormatReviewData
-{
+sub FormatReviewData {
   my $self = shift;
   my $id   = shift;
   my $json = shift;
