@@ -1,7 +1,8 @@
 package CRMS::PublicationDate;
 
 # An object that encapsulates the date-related parts of the 008 field,
-# in particular 06 dateType, 07-10 date1, and 11-14 date2
+# in particular 06 dateType, 07-10 date1, and 11-14 date2,
+# as well as any year string that can be extracted from enumcron.
 
 use strict;
 use warnings;
@@ -19,6 +20,7 @@ my $MULTIPLE_DATE_TYPES = {
   'u' => 1
 };
 
+# This is currently not used but is staying because it's a useful reference.
 my $DATE_TYPE_TO_DESCRIPTION = {
   'b' => 'No dates given; B.C. date involved',
   'c' => 'Continuing resource currently published',
@@ -123,26 +125,28 @@ sub format {
   return join "-", @$dates;
 }
 
+# For debugging purposes.
 sub inspect {
   my $self = shift;
 
   return Dumper $self;
 }
 
-# Returns an array ref:
+# Returns an arrayref:
 #   Empty if no dates can be extracted.
 #   One entry for single date.
 #   [minimum possible date, maximum possible date] for multiple date types.
+# Date extracted from enumcron takes precedence over 008.
+# Multiple dates are guaranteed to be in sorted order.
 sub extract_dates {
   my $self = shift;
 
   my @dates = ();
   return [$self->{enumcron_date}] if $self->{enumcron_date};
-  if ($self->is_multiple_date_type) {
+  if ($self->_is_multiple_date_type) {
     my $min = round_down($self->{date_1});
     my $max = round_up($self->{date_2}, 1);
     if (defined $min && defined $max) {
-      # FIXME: do we need to swap dates if date2 < date1?
       push @dates, $min;
       push @dates, $max if $max ne $min;
     }
@@ -164,10 +168,11 @@ sub extract_dates {
     }
     # Everything else uses date1 or the range extractable from it.
     else {
-      my @date_array = to_a($self->{date_1});
+      my @date_array = _to_a($self->{date_1});
       push @dates, @date_array;
     }
   }
+  @dates = sort @dates;
   return \@dates;
 }
 
@@ -185,12 +190,15 @@ sub exact_copyright_date {
 # Distill the pub date info down to a single maximum copyright date
 # that may not be guaranteed to be the exact date but may still be useful for
 # calculating the safest copyright term.
+#
+# This is similar in spirit to what the bib rights algorithm does, erring
+# on the side of caution.
+#
 # Returns a single YYYY string or undef.
 sub maximum_copyright_date {
   my $self = shift;
 
-  my $dates = $self->extract_dates;
-  return $dates->[-1];
+  return $self->extract_dates->[-1];
 }
 
 # Does the publication date for the HTID (or the catalog record)
@@ -224,10 +232,16 @@ sub do_dates_overlap {
   return ($max < $start || $min > $end) ? 0 : 1;
 }
 
-# ============== PRIVATE INSTANCE METHODS ==============
+# ============== PRIVATE INSTANCE METHOD ==============
+sub _is_multiple_date_type {
+  my $self = shift;
 
+  return (defined $MULTIPLE_DATE_TYPES->{$self->{date_type}}) ? 1 : 0;
+}
+
+# ============== PRIVATE FUNCTION ==============
 # Turn a single date into an array splitting it into min and max if necessary
-sub to_a {
+sub _to_a {
   my $date = shift;
 
   return () unless defined $date;
@@ -236,15 +250,6 @@ sub to_a {
   return unless defined $max;
   return ($date) if $min eq $max;
   return ($min, $max);
-}
-
-sub is_multiple_date_type {
-  my $self = shift;
-
-  my %multiples = ('c' => 1, 'd' => 1, 'i' => 1, 'k' => 1, 'm' => 1, 'u' => 1);
-  # FIXME: what about date type p?
-  # (There are only about 105 type p's so we don't need to worry about this too much)
-  return (defined $MULTIPLE_DATE_TYPES->{$self->{date_type}}) ? 1 : 0;
 }
 
 1;

@@ -119,6 +119,7 @@ my $TEST_DATA = [
     ['m', 'abcd', 'efgh', [],               undef,                undef,                  0],
     ['m', '1880', 'efgh', [],               undef,                undef,                  0],
     ['p', '1982', 'uuuu', [],               undef,                undef,                  0],
+    ['p', '1967', '1982', ['1982'],         '1982',               '1982',                 1],
   ];
 
 # Examples taken from https://www.loc.gov/marc/bibliographic/bd008a.html
