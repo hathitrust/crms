@@ -433,12 +433,86 @@ sub title
   return $title;
 }
 
+# TODO: deprecated function, use publication_date
+sub copyrightDate
+{
+  my $self = shift;
+
+  my $leader = $self->GetControlfield('008');
+  my $type = substr($leader, 6, 1);
+  my $date1 = substr($leader, 7, 4);
+  my $date2 = substr($leader, 11, 4);
+  $date1 =~ s/\s//g;
+  $date2 =~ s/\s//g;
+  $date1 = undef if $date1 =~ m/\D/ or $date1 eq '';
+  $date2 = undef if $date2 =~ m/\D/ or $date2 eq '';
+  my $field;
+  if ($type eq 't' || $type eq 'c')
+  {
+    $field = $date1 if defined $date1;
+    $field = $date2 if defined $date2 and $date2 ne '9999';
+  }
+  elsif ($type eq 'r' || $type eq 'e')
+  {
+    $field = $date1 if defined $date1;
+  }
+  else
+  {
+    $field = $date1 if defined $date1;
+    $field = $date2 if defined $date2 and (defined $date1 and $date2 > $date1) and $date2 ne '9999';
+  }
+  $field = undef if defined $field and $field eq '';
+  my $field2 = $self->get_volume_date;
+  #printf "%s: field2 %s vs field %s\n", $self->id, (defined $field2)? $field2 : '<undef>', (defined $field)? $field : '<undef>';
+  #$field = $field2 if $field2 && $field2 =~ m/^\d\d\d\d$/;
+  $field = $field2 if $field2;
+  #printf "%s: returning %s\n", $self->id, (defined $field)? $field : '<undef>';
+  return $field;
+}
+
 sub dateType
 {
   my $self  = shift;
 
   my $leader = $self->GetControlfield('008');
   return substr($leader, 6, 1);
+}
+
+# TODO: deprecated function, use publication_date
+sub pubDate
+{
+  my $self  = shift;
+  my $date2 = shift;
+
+  my $leader = $self->GetControlfield('008');
+  my $type = substr($leader, 6, 1);
+  my $field = substr($leader, ($date2)? 11:7, 4);
+  $field =~ s/\s//g;
+  $field = undef if $field =~ m/\D/ or $field eq '';
+  return $field;
+}
+
+# TODO: deprecated function, use publication_date
+sub formatPubDate
+{
+  my $self = shift;
+
+  my $date1 = $self->pubDate(0);
+  my $date2 = $self->pubDate(1);
+  my $type = $self->dateType();
+  my $date = $self->copyrightDate();
+  $date2 = undef if $type eq 'e';
+  if (defined $date1)
+  {
+    if ($type eq 'd' || $type eq 'i' || $type eq 'k' ||
+        $type eq 'm' || $type eq 'u' || $type eq ' ')
+    {
+      $date = "$date1-$date2" if defined $date2 and $date2 > $date1;
+      $date = $date1. '-' if defined $date2 and $date2 eq '9999';
+      $date = $date1. '-' if !defined $date2 and $type eq 'u';
+    }
+  }
+  return $date;
 }
 
 # This is the preferred method for getting combined item-level and record-level

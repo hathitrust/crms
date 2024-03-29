@@ -221,7 +221,7 @@
 </form>
 
 <script>
-var gPubDate = '[% data.bibdata.display_date %]';
+var gPubDate = '[% data.bibdata.pub_date_format %]';
 var gReviewData = [% data.json %];
 addEvent(window, 'load', function(e)
 {

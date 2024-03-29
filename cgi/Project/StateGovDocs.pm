@@ -38,12 +38,14 @@ sub EvaluateCandidacy
   # Check current rights
   push @errs, "current rights $attr/$reason" if $attr ne 'ic' or $reason ne 'bib';
   # Check well-defined record dates
-  my $publication_date = $record->publication_date;
-  my $copyright_date = $publication_date->exact_copyright_date;
-  if (!defined $copyright_date)
+  my $pub = $record->copyrightDate;
+  if (!defined $pub || $pub !~ m/\d\d\d\d/)
   {
-    my $publication_date_string = $publication_date->to_s;
-    push @errs, "pub date not completely specified ($publication_date_string)";
+    my $leader = $record->GetControlfield('008');
+    my $type = substr($leader, 6, 1);
+    my $date1 = substr($leader, 7, 4);
+    my $date2 = substr($leader, 11, 4);
+    push @errs, "pub date not completely specified ($date1,$date2,'$type')";
   }
   else
   {
@@ -51,10 +53,7 @@ sub EvaluateCandidacy
     my $now = $self->{'crms'}->GetTheYear();
     my $min = $now - 95 + 1;
     my $max = 1977;
-    if ($copyright_date < $min or $copyright_date > $max)
-    {
-      push @errs, "pub date $copyright_date not in range $min-$max";
-    }
+    push @errs, "pub date $pub not in range $min-$max" if $pub < $min or $pub > $max;
   }
   # Out of scope if published in a non-US country, or if Undetermined country
   # and foreign city or no US city.

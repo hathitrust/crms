@@ -62,7 +62,7 @@ sub query
       $data->{chron} = $record->enumchron($htid);
       $data->{author} = $record->author;
       $data->{title} = $record->title;
-      $data->{date} = $record->publication_date->format;
+      $data->{date} = $record->copyrightDate;
       $data->{tracking} = $crms->GetTrackingInfo($htid, 1);
       $data->{rights} = $crms->RightsQuery($htid, 1)->[0];
       $data->{already} = defined $self->GetData($htid);

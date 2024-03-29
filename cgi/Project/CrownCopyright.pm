@@ -35,26 +35,25 @@ sub EvaluateCandidacy_DISABLED
     push @errs, "current rights $attr/$reason";
   }
   # Need fully-specified copyright date
-  my $publication_date = $record->publication_date;
-  my $copyright_date = $publication_date->exact_copyright_date;
-  if (!defined $copyright_date)
+  my $pub = $record->copyrightDate;
+  if (!defined $pub || $pub !~ m/^\d\d\d\d$/)
   {
-    my $publication_date_string = $publication_date->to_s;
-    push @errs, "pub date not completely specified ($publication_date_string)";
+    my $leader = $record->GetControlfield('008');
+    my $type = substr($leader, 6, 1);
+    my $date1 = substr($leader, 7, 4);
+    my $date2 = substr($leader, 11, 4);
+    push @errs, "pub date not completely specified ($date1,$date2,'$type')";
   }
   my $where = $record->country;
   my $countries = {'Canada' => 1,
                    'United Kingdom' => 1,
                    'Australia' => 1};
   push @errs, "foreign pub ($where)" unless $countries->{$where};
-  if (defined $copyright_date)
+  if (defined $pub && $pub =~ m/\d\d\d\d/)
   {
     my $min = 1880;
     my $max = $self->{'crms'}->GetTheYear() - 50;
-    if ($copyright_date < $min || $copyright_date > $max)
-    {
-      push @errs, "$copyright_date not in range $min-$max";
-    }
+    push @errs, "$pub not in range $min-$max" if ($pub < $min || $pub > $max);
   }
   my $leader = $record->GetControlfield('008');
   push @errs, 'not a crown document' if length $leader <= 28 || substr($leader, 28, 1) ne 'f';
