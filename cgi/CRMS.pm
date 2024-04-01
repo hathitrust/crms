@@ -4528,7 +4528,7 @@ sub UpdateMetadata
       my $sql = 'REPLACE INTO bibdata (id,author,title,pub_date,country,sysid,display_date)' .
                 ' VALUES (?,?,?,?,?,?,?)';
       $self->PrepareSubmitSql($sql, $id, $record->author(1), $record->title,
-                              $date, $record->country, $record->sysid, $record->publication_date->format);
+                              $date, $record->country, $record->sysid, $record->publication_date->text);
     }
     else
     {
@@ -4562,7 +4562,7 @@ sub ReviewData
   $ref = $dbh->selectall_hashref($sql, 'id', undef, $id);
   $data->{'bibdata'} = $ref->{$id};
   $data->{'bibdata'}->{$_. '_format'} = CGI::escapeHTML($data->{'bibdata'}->{$_}) for keys %{$data->{'bibdata'}};
-  $data->{'bibdata'}->{'pub_date_format'} = $record->publication_date->format;
+  $data->{'bibdata'}->{'pub_date_format'} = $record->publication_date->text;
   $data->{'bibdata'}->{'language'} = Languages::TranslateLanguage($record->language);
   $data->{'bibdata'}->{extracted_dates} = $record->publication_date->extract_dates;
   $sql = 'SELECT * FROM reviews WHERE id=?';

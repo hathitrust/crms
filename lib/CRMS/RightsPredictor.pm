@@ -92,8 +92,8 @@ sub new {
   my $class = shift;
 
   my $self = bless {}, $class;
-  my %defaults = ( reference_year => POSIX::strftime("%Y", localtime) );
-  my %args = (%defaults, @_);
+  $self->{reference_year} = POSIX::strftime("%Y", localtime);
+  my %args = @_;
   # Assigns arguments and default values to %args, actual named
   # args will override keys in defaults where they match
   while (my ($attr, $value) = each %args ) {
@@ -150,13 +150,11 @@ sub rights {
 
   $self->{last_us_copyright_year} = $self->{pub_date} + US_COPYRIGHT_TERM;
   if ($self->{last_source_copyright_year} < $self->{reference_year}) {
-    push @{$self->{description}},
-      "source © expired ($self->{last_source_copyright_year} < $self->{reference_year})";
+    $self->_add_description("source © expired ($self->{last_source_copyright_year} < $self->{reference_year})");
     $self->_predict_rights_with_source_copyright_expired;
   }
   else {
-    push @{$self->{description}},
-      "source © in force ($self->{last_source_copyright_year} >= $self->{reference_year})";
+    $self->_add_description("source © in force ($self->{last_source_copyright_year} >= $self->{reference_year})");
     $self->_predict_rights_with_source_copyright_in_force;
   }
   $self->{rights} = "$self->{attr}/$self->{reason}";
@@ -172,16 +170,18 @@ sub _predict_rights_with_source_copyright_expired {
   if ($self->_is_subject_to_gatt_restoration) {
     $self->{attr} = 'icus';
     $self->{reason} = 'gatt';
-    push @{$self->{description}},
+    $self->_add_description(
       "$self->{last_source_copyright_year} >= @{[ GATT_RESTORATION_START ]}" .
-      " and US © in force ($self->{last_us_copyright_year} >= $self->{reference_year}) [GATT]";
+      " and US © in force ($self->{last_us_copyright_year} >= $self->{reference_year}) [GATT]"
+    );
   }
   else {
     $self->{attr} = 'pd';
     $self->{reason} = ($self->{is_corporate})? 'exp' : 'add';
-    push @{$self->{description}},
+    $self->_add_description(
       "$self->{last_source_copyright_year} < @{[ GATT_RESTORATION_START ]}" .
-      " or US © expired ($self->{last_us_copyright_year} < $self->{reference_year}) [no GATT]";
+      " or US © expired ($self->{last_us_copyright_year} < $self->{reference_year}) [no GATT]"
+    );
   }
 }
 
@@ -191,8 +191,7 @@ sub _predict_rights_with_source_copyright_in_force {
   if ($self->{last_us_copyright_year} >= $self->{reference_year}) {
     $self->{attr} = 'ic';
     $self->{reason} = ($self->{is_corporate})? 'cdpp' : 'add';
-    push @{$self->{description}},
-      "US © in force ($self->{last_us_copyright_year} >= $self->{reference_year})";
+    $self->_add_description("US © in force ($self->{last_us_copyright_year} >= $self->{reference_year})");
   }
   else {
     $self->{attr} = 'pdus';
@@ -201,8 +200,7 @@ sub _predict_rights_with_source_copyright_in_force {
     # when both are based on publication date.
     # uncoverable branch true
     $self->{reason} = ($self->{is_corporate})? 'exp' : 'add';
-    push @{$self->{description}},
-      "US © expired ($self->{last_us_copyright_year} < $self->{reference_year})";
+    $self->_add_description("US © expired ($self->{last_us_copyright_year} < $self->{reference_year})");
   }
 }
 
@@ -226,8 +224,7 @@ sub _predict_last_source_copyright {
   my $effective_date = $self->{effective_date};
   my $term = $predictor->($effective_date, $self->{is_corporate}, $self->{is_crown});
   $self->{last_source_copyright_year} = $effective_date + $term;
-  push @{$self->{description}},
-    "last $country © $self->{last_source_copyright_year} ($effective_date + $term-year term)";
+  $self->_add_description("last $country © $self->{last_source_copyright_year} ($effective_date + $term-year term)");
 }
 
 sub _australia_term {
@@ -280,6 +277,13 @@ sub _validate_for_rights {
   if ($self->{pub_date} !~ m/$VALID_PUB_DATE/) {
     $self->_add_error("unsupported pub date format '$self->{pub_date}'");
   }
+}
+
+sub _add_description {
+  my $self = shift;
+  my $desc = shift;
+
+  push @{$self->{description}}, $desc;
 }
 
 sub _add_error {

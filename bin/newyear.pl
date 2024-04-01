@@ -435,7 +435,7 @@ sub SubmitNewYearReview
     my $rq = $crms->RightsQuery($id, 1);
     my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
     my @values = ($id, $project_name, $record->author || '',
-      $record->title || '', $record->publication_date->format || '',
+      $record->title || '', $record->publication_date->text || '',
       $record->country || '', "$acurr/$rcurr", $extracted_data,
       $predictions, "$new_attr/$new_reason", $msg);
     @values = map { local $_ = $_; $_ =~ s/\s+/ /g; $_; } @values;

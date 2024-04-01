@@ -118,7 +118,7 @@ sub to_s {
 # Another human-readable version.
 # Returns '' for no date, a single YYYY string for single date,
 # and YYYY-YYYY for date range.
-sub format {
+sub text {
   my $self = shift;
 
   my $dates = $self->extract_dates;
@@ -172,8 +172,7 @@ sub extract_dates {
       push @dates, @date_array;
     }
   }
-  @dates = sort @dates;
-  return \@dates;
+  return [sort @dates];
 }
 
 # Distill the pub date info down to a single exact copyright date.
@@ -205,7 +204,7 @@ sub maximum_copyright_date {
 sub is_single_date {
   my $self = shift;
 
-  return @{$self->extract_dates} == 1 ? 1 : 0;
+  return @{$self->extract_dates} == 1;
 }
 
 # Returns 0 or 1
@@ -236,7 +235,7 @@ sub do_dates_overlap {
 sub _is_multiple_date_type {
   my $self = shift;
 
-  return (defined $MULTIPLE_DATE_TYPES->{$self->{date_type}}) ? 1 : 0;
+  defined $MULTIPLE_DATE_TYPES->{$self->{date_type}};
 }
 
 # ============== PRIVATE FUNCTION ==============
