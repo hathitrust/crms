@@ -51,6 +51,18 @@ subtest 'CRMS::CanExportVolume' => sub {
   };
 };
 
+subtest '#UpdateMetadata' => sub {
+  $ENV{CRMS_METADATA_FIXTURES_PATH} = $ENV{'SDRROOT'} . '/crms/t/fixtures/metadata';
+  my $htid = 'coo.31924000029250';
+  my $record = Metadata->new('id' => $htid);
+  $crms->UpdateMetadata($htid, 1, $record);
+  my $count = $crms->SimpleSqlGet('SELECT COUNT(*) FROM bibdata WHERE id=?', $htid);
+  is($count, 1, 'coo.31924000029250 appears in bibdata');
+  # Clean up
+  $crms->PrepareSubmitSql('DELETE FROM bibdata WHERE id=?', $htid);
+  delete $ENV{CRMS_METADATA_FIXTURES_PATH};
+};
+
 subtest '#LinkToJira' => sub {
   is($crms->LinkToJira('DEV-000'),
     '<a href="https://hathitrust.atlassian.net/browse/DEV-000" target="_blank">DEV-000</a>');

@@ -66,7 +66,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.5.25';
+our $VERSION = '8.6';
 sub Version
 {
   return $VERSION;
@@ -2088,7 +2088,7 @@ sub ConvertToSearchTerm
   elsif ($search eq 'Country') { $new_search = 'b.country'; }
   elsif ($search eq 'Priority') { $new_search = 'q.priority'; }
   elsif ($search eq 'Validated') { $new_search = 'r.validated'; }
-  elsif ($search eq 'PubDate') { $new_search = 'YEAR(b.pub_date)'; }
+  elsif ($search eq 'PubDate') { $new_search = 'b.display_date'; }
   elsif ($search eq 'Locked') { $new_search = 'q.locked'; }
   elsif ($search eq 'ExpertCount')
   {
@@ -2431,9 +2431,6 @@ sub SearchTermsToSQL
     $search2value = $search3value;
     $search3value = $search3 = '';
   }
-  $search1 = "YEAR($search1)" if $search1 eq 'b.pub_date';
-  $search2 = "YEAR($search2)" if $search2 eq 'b.pub_date';
-  $search3 = "YEAR($search3)" if $search3 eq 'b.pub_date';
   $search1value = $self->TranslateAttr($search1value) if $search1 eq 'r.attr';
   $search2value = $self->TranslateAttr($search2value) if $search2 eq 'r.attr';
   $search3value = $self->TranslateAttr($search3value) if $search3 eq 'r.attr';
@@ -2546,9 +2543,6 @@ sub SearchTermsToSQLWide
   $table2 = 'historicalreviews' if $search2 =~ m/^DATE/;
   $table3 = 'historicalreviews' if $search3 =~ m/^DATE/;
   my ($search1term,$search2term,$search3term);
-  $search1 = "YEAR($search1)" if $search1 eq 'b.pub_date';
-  $search2 = "YEAR($search2)" if $search2 eq 'b.pub_date';
-  $search3 = "YEAR($search3)" if $search3 eq 'b.pub_date';
   $search1value = $dbh->quote($search1value) if length $search1value;
   $search2value = $dbh->quote($search2value) if length $search2value;
   $search3value = $dbh->quote($search3value) if length $search3value;
@@ -2716,7 +2710,7 @@ sub GetReviewsRef
                  };
       if ($page eq 'adminHistoricalReviews')
       {
-        my $pubdate = $self->SimpleSqlGet('SELECT YEAR(pub_date) FROM bibdata WHERE id=?', $id);
+        my $pubdate = $self->SimpleSqlGet('SELECT display_date FROM bibdata WHERE id=?', $id);
         ${$item}{'pubdate'} = $pubdate;
         ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
         ${$item}{'validated'} = $row->[18];
@@ -2770,7 +2764,7 @@ sub GetVolumesRef
     my $id = $row->[0];
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.data,'.
            'r.expert,r.category,r.legacy,q.priority,q.project,r.swiss,q.status,b.title,'.
-           'b.author,YEAR(b.pub_date),b.country,b.sysid,'.
+           'b.author,b.display_date,b.country,b.sysid,'.
            (($page eq 'adminHistoricalReviews')? 'q.src,r.validated,q.gid':'r.hold').
            " FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id".
            " WHERE r.id='$id' ORDER BY $order $dir";
@@ -2850,7 +2844,7 @@ sub GetVolumesRefWide
     my $id = $row->[0];
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.data,'.
            'r.expert,r.category,r.legacy,q.priority,q.project,r.swiss,q.status,b.title,'.
-           'b.author,YEAR(b.pub_date),b.country,b.sysid,'.
+           'b.author,b.display_date,b.country,b.sysid,'.
            (($page eq 'adminHistoricalReviews')? 'q.src,r.validated,q.gid':'r.hold').
            " FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id".
            " WHERE r.id='$id' ORDER BY $order $dir";
@@ -2989,7 +2983,7 @@ sub GetQueueRef
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my @return = ();
-  $sql = 'SELECT q.id,DATE(q.time),q.status,q.locked,YEAR(b.pub_date),q.priority,'.
+  $sql = 'SELECT q.id,DATE(q.time),q.status,q.locked,b.display_date,q.priority,'.
          'b.title,b.author,b.country,p.name,q.source,q.ticket,q.added_by'.
          ' FROM queue q LEFT JOIN bibdata b ON q.id=b.id'.
          ' INNER JOIN projects p ON q.project=p.id '. $restrict.
@@ -3125,7 +3119,7 @@ sub GetCandidatesRef
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my @return = ();
-  $sql = 'SELECT c.id,DATE(c.time),b.sysid,YEAR(b.pub_date),b.title,b.author,'.
+  $sql = 'SELECT c.id,DATE(c.time),b.sysid,b.display_date,b.title,b.author,'.
          ' b.country,p.name'.
          ' FROM candidates c LEFT JOIN bibdata b ON c.id=b.id'.
          ' INNER JOIN projects p ON c.project=p.id '. $restrict.
@@ -3238,7 +3232,7 @@ sub GetUNDRef
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my @return = ();
-  $sql = 'SELECT c.id,DATE(c.time),b.sysid,YEAR(b.pub_date),b.title,b.author,'.
+  $sql = 'SELECT c.id,DATE(c.time),b.sysid,b.display_date,b.title,b.author,'.
          ' b.country, c.src'.
          ' FROM und c LEFT JOIN bibdata b ON c.id=b.id '. $restrict.
          ' ORDER BY '. "$order $dir LIMIT $offset, $pagesize";
@@ -3352,7 +3346,7 @@ sub GetExportDataRef
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my @return = ();
   $sql = 'SELECT q.id,DATE(q.time),q.attr,q.reason,q.status,q.priority,q.src,b.title,b.author,'.
-         'YEAR(b.pub_date),b.country,q.exported,p.name,q.gid,q.added_by,q.ticket'.
+         'b.display_date,b.country,q.exported,p.name,q.gid,q.added_by,q.ticket'.
          ' FROM exportdata q LEFT JOIN bibdata b ON q.id=b.id'.
          ' INNER JOIN projects p ON q.project=p.id'.
          " $restrict ORDER BY $order $dir LIMIT $offset, $pagesize";
@@ -4450,59 +4444,6 @@ sub GetTitle
   return $ti;
 }
 
-sub GetPubDate
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $do2    = shift;
-  my $record = shift;
-
-  print "Warning: GetPubDate no longer takes a do2 parameter!\n" if $do2;
-  my $sql = 'SELECT YEAR(pub_date) FROM bibdata WHERE id=?';
-  my $date = $self->SimpleSqlGet($sql, $id);
-  if (!defined $date)
-  {
-    $record = $self->UpdateMetadata($id, undef, $record);
-    $date = $self->SimpleSqlGet($sql, $id);
-  }
-  return $date;
-}
-
-sub FormatPubDate
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-
-  $record = $self->GetMetadata($id) unless defined $record;
-  return $record->formatPubDate() if defined $record;
-  return 'unknown';
-}
-
-sub IsDateRange
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $fmt = $self->FormatPubDate($id);
-  return ($fmt =~ m/-/)? 1:0;
-}
-
-sub GetPubCountry
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $sql = 'SELECT country FROM bibdata WHERE id=?';
-  my $where = $self->SimpleSqlGet($sql, $id);
-  if (!defined $where)
-  {
-    $self->UpdateMetadata($id);
-    $where = $self->SimpleSqlGet($sql, $id);
-  }
-  return $where;
-}
-
 sub GetAuthor
 {
   my $self = shift;
@@ -4581,12 +4522,13 @@ sub UpdateMetadata
     $record = $self->GetMetadata($id) unless defined $record;
     if (defined $record)
     {
-      my $date = $record->copyrightDate;
+      # pub_date column is deprecated but will still be populated until it is removed.
+      my $date = $record->publication_date->maximum_copyright_date;
       $date .= '-01-01' if $date;
-      my $sql = 'REPLACE INTO bibdata (id,author,title,pub_date,country,sysid)' .
-                ' VALUES (?,?,?,?,?,?)';
+      my $sql = 'REPLACE INTO bibdata (id,author,title,pub_date,country,sysid,display_date)' .
+                ' VALUES (?,?,?,?,?,?,?)';
       $self->PrepareSubmitSql($sql, $id, $record->author(1), $record->title,
-                              $date, $record->country, $record->sysid);
+                              $date, $record->country, $record->sysid, $record->publication_date->text);
     }
     else
     {
@@ -4620,8 +4562,9 @@ sub ReviewData
   $ref = $dbh->selectall_hashref($sql, 'id', undef, $id);
   $data->{'bibdata'} = $ref->{$id};
   $data->{'bibdata'}->{$_. '_format'} = CGI::escapeHTML($data->{'bibdata'}->{$_}) for keys %{$data->{'bibdata'}};
-  $data->{'bibdata'}->{'pub_date_format'} = $self->FormatPubDate($id, $record);
+  $data->{'bibdata'}->{'pub_date_format'} = $record->publication_date->text;
   $data->{'bibdata'}->{'language'} = Languages::TranslateLanguage($record->language);
+  $data->{'bibdata'}->{extracted_dates} = $record->publication_date->extract_dates;
   $sql = 'SELECT * FROM reviews WHERE id=?';
   $ref = $dbh->selectall_hashref($sql, 'user', undef, $id);
   foreach my $user (keys %{$ref})
@@ -4639,6 +4582,7 @@ sub ReviewData
   }
   $data->{'reviews'} = $ref;
   $data->{'json'} = $jsonxs->encode($data);
+  $data->{'record'} = $record;
   $data->{'project'} = $self->Projects()->{$data->{'queue'}->{'project'}};
   return $data;
 }
@@ -5216,7 +5160,7 @@ sub ClearErrors
 sub StripDecimal
 {
   my $self = shift;
-  my $dec  = shift;
+  my $dec  = shift || '';
 
   $dec =~ s/(\.[1-9]+)0+/$1/g;
   $dec =~ s/\.0*$//;
@@ -7738,12 +7682,12 @@ sub GetAddToQueueRef
   my $self = shift;
   my $user = shift || $self->get('user');
 
-  my $sql = 'SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.added_by,' .
+  my $sql = 'SELECT q.id,b.title,b.author,b.display_date,DATE(q.time),q.added_by,' .
             'q.status,q.priority,q.source,q.ticket,p.name FROM queue q'.
             ' INNER JOIN bibdata b ON q.id=b.id'.
             ' INNER JOIN projects p ON q.project=p.id'.
             ' WHERE q.added_by=? AND p.name="Special"'.
-            ' ORDER BY b.title ASC,b.pub_date ASC,'.
+            ' ORDER BY b.title ASC,b.display_date ASC,'.
             'q.source ASC,q.status ASC,q.priority DESC,q.id ASC';
   #print "$sql\n";
   my $ref = $self->SelectAll($sql, $user);

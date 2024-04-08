@@ -2,78 +2,77 @@
 [% importUser = cgi.param('importUser') %]
 
 [% # Set up values from CGI (in case of error) or existing review (editing). %]
-[% u_pub = (error)? cgi.param('pub') : data.reviews.$user.data.pub %]
 [% u_date = (error)? cgi.param('date') : data.reviews.$user.data.date %]
+[% u_pub = (error)? cgi.param('pub') : data.reviews.$user.data.pub %]
 [% u_crown = (error)? cgi.param('crown') : data.reviews.$user.data.crown %]
+[% u_actual = (error)? cgi.param('actual') : data.reviews.$user.data.actual %]
 [% u_rights = (error)? cgi.param('rights') : data.reviews.$user.rights %]
 [% u_category = (error)? cgi.param('category') : data.reviews.$user.category %]
 [% u_note = (error)? cgi.param('note') : data.reviews.$user.note %]
 [% u_swiss = (error)? cgi.param('swiss') : data.reviews.$user.swiss %]
 [% u_hold = (error)? cgi.param('hold') : data.reviews.$user.hold %]
 
+[% writing_hand_tag = "<img src='" _ crms.WebPath('web', 'img/writing-hand.svg') _ "' width='20' height='20' alt='writing hand'/>" %]
+[% author_death_date_text = "Author&nbsp;Death&nbsp;Date:&nbsp;" _ writing_hand_tag %]
+[% publication_date_text = "Publication&nbsp;Date:" %]
+
 <div class="reviewPartial">
 <form name="submitReview" action="crms">
   <input type="hidden" name="p"       value="finishReview"/>
-  <input type="hidden" name="htid" value="[% htid %]"/>
+  <input type="hidden" name="htid"    value="[% htid %]"/>
   <input type="hidden" name="start"   value="[% crms.GetNow() %]"/>
   <input type="hidden" name="user"    value="[% user %]"/>
   <input type="hidden" name="editing" value="[% editing %]"/>
   <table>
     <tr>
-      [% label = (u_pub)? "Publication&nbsp;Date" : "Author Death Date" %]
-      <td class="nowrap"><strong><label id="renewalFieldLabel" for="renewalField">
-      [% label %]: </label></strong></td>
+      [% label = (u_pub)? publication_date_text : author_death_date_text %]
       <td class="nowrap">
-      [% IF NOT u_date && NOT importUser %]
-        [% authorDD = crms.GetADDFromAuthor(htid) %]
-        [% IF NOT authorDD %]
-          [% viafdata = crms.GetVIAFData(htid) %]
-          [% IF viafdata && viafdata.add %]
-            [% authorDD = viafdata.add %]
-            [% viaf = 1 %]
-          [% END %]
-        [% END %]
-        [% IF authorDD %]
-          <input type="hidden" name="src" value="[% (viaf)? 'viaf':'catalog' %]"/>
-          [% u_date = authorDD %]
-          [% tip = (viaf)? "VIAF":"Zephir" %]
-        [% END %]
-      [% END %]
-      <input id="renewalField" title="[% label %]" type="text" name="date"
-             value="[% u_date %]" size="6" onblur="dateEntry();"/>
-      [% IF tip %]
-        <span class="red">$tip</span>
-      [% END %]
-      <a style="position:absolute;left:-999px;" href="#" accesskey="d"
-         onfocus="document.getElementById('renewalField').focus()">.</a>
+        <strong>
+          <label id="add-field-label" for="add-field">[% label %] </label>
+        </strong>
+      </td>
+      <td class="nowrap">
+        <input id="add-field" title="[% label %]" type="text" name="date"
+               value="[% u_date %]" size="6" onblur="loadRightsPrediction();"/>
       </td>
     </tr>
+    <!-- ACTUAL PUB DATE -->
+    <!-- Only visible when pub is unchecked and pub date is a range -->
+    [% display = "table-row" %]
+    [% IF u_pub || data.bibdata.extracted_dates.size != 2 %]
+      [% display = "none" %]
+    [% END %]
+    <tr id="actual-pub-date-row" style="display:[% display %];">
+      <td class="nowrap">
+        <strong>
+          <label for="actual-pub-date-field">Actual Pub Date:</label>
+        </strong>
+      </td>
+      <td class="nowrap">
+        <input id="actual-pub-date-field" title="Actual Pub Date" type="text" name="actual"
+               value="[% u_actual %]" size="6" onblur="loadRightsPrediction();"/>
+      </td>
+    </tr>
+    
     <tr>
-      <td class="reviewGrey" style="text-align:left;margin:0px;padding:0px;">
+      <td class="reviewGrey">
         <input type="checkbox" id="pub-checkbox" name="pub"[% (u_pub)? ' checked="checked"':'' %]
-               onchange="syncCheckedness(false, this.id, 'crown-checkbox'); dateEntry();"/>
+               onchange="checkboxSelectionChanged(this.id);"/>
         <label for="pub-checkbox">&nbsp;Pub Date</label>
       </td>
       <td>
-        <input type="button" class="reviewblue" value="Pull Pub Date"
-        [% IF NOT data.bibdata.pub_date_format.match('^-?\d+$') %]disabled="disabled"[% END %]
-        onclick="PullPubDate();
-                 document.getElementById('pub-checkbox').checked=true;
-                 dateEntry();"
-        accesskey="d"
-        style="margin:0px;padding:1px;background-color:#d0dee6;float:right;"/>
       </td>
     </tr>
     <tr>
-      <td colspan="2" class="reviewGrey" style="text-align:left;margin:0px;padding:0px;">
+      <td colspan="2" class="reviewGrey">
         <input type="checkbox" id="crown-checkbox" name="crown"[% (u_crown)? ' checked="checked"':'' %]
-               onchange="syncCheckedness(true, this.id, 'pub-checkbox'); dateEntry();"/>
+               onchange="checkboxSelectionChanged(this.id);"/>
         <label for="crown-checkbox">&nbsp;Crown&nbsp;Copyright</label>
       </td>
     </tr>
     <tr>
-      <td colspan="2" class="reviewGrey" style="text-align:left;margin:0px;padding:0px;">
-        <span id="rights-desc"></span>
+      <td colspan="2" class="reviewGrey">
+        <span id="rights-description"></span>
       </td>
     </tr>
   </table>
@@ -101,7 +100,7 @@
     <div style="display:none" id="UNDNFI" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=5 AND reason=8') %]"></div>
     <div style="display:none" id="ICREN" title="[% crms.SimpleSqlGet('SELECT id FROM rights WHERE attr=2 AND reason=7') %]"></div>
     <table>
-    <tr style="height:20px;">
+    <tr>
       <td><strong>Rights/Reason:</strong></td>
       <td>
         <img id="predictionLoader" width="16" height="16"
@@ -112,14 +111,14 @@
     [% WHILE n < of %]
       <tr>
       [% right = rights.$n %]
-      <td style="width:50%;">
+      <td>
         <input type="radio" id="[% 'r' _ right.id %]" name="rights" value="[% right.id %]"
               [% IF right.n < 10 %]accesskey="[% right.n %]"[% END %]
               [% IF u_rights == right.id %] checked="checked"[% END %]/>
         <label for="[% 'r' _ right.id %]">[% right.attr %]/[% right.reason.upper %] ([% right.n %])</label>
       </td>
       [% n = n + 1 %]
-      <td style="width:50%;">
+      <td>
         [% IF n < of %]
         [% right = rights.$n %]
         <input type="radio" id="[% 'r' _ right.id %]" name="rights" value="[% right.id %]"
@@ -134,58 +133,48 @@
     </table>
 </div>
 <div id="Notes">
-  <strong><label for="catMenu">Notes: </label></strong>
-  <select id="catMenu" class="review" name="category" onchange="dateEntry();">
+  <strong><label for="category-menu">Notes: </label></strong>
+  <select id="category-menu" class="review" name="category">
     <option value="" [% ("" == category)? 'selected="selected"':'' %]>none</option>
     [% cats = crms.Categories(htid) %]
     [% FOREACH cat IN cats %]
       <option value="[% cat %]" [% (cat == u_category)? 'selected="selected"':'' %]>[% cat %]</option>
     [% END %]
   </select>
-  <textarea title="Note Text" id="NoteTextField" name="note" cols="20" rows="1">[% u_note %]</textarea>
-  <a style="position:absolute;left:-999px;" href="#" accesskey="n"
-     onfocus="document.getElementById('NoteTextField').focus()">.</a>
+  <textarea title="Note Text" id="note-field" name="note" cols="20" rows="1">[% u_note %]</textarea>
 </div>
 <div id="SubmitForm">
   <table>
     <tr>
-      <td><input class="review" type="submit" name="submit" value="Submit" accesskey="s"/></td>
-      <td style="padding-left:2em;"><input class="review" type="submit" name="submit"
-          value="Cancel" accesskey="c" onclick="this.form.onsubmit=null;"/></td>
+      <td>
+        <input class="review" type="submit" name="submit" value="Submit" accesskey="s"/>
+      </td>
+      <td>
+        <input class="review" type="submit" name="submit"
+          value="Cancel" accesskey="c" onclick="this.form.onsubmit=null;"/>
+      </td>
     </tr>
   </table>
-  </div>
+</div>
   <table>
   [% IF expert %]
     <tr>
       [% checked = (u_swiss || ((status == 2 || status == 3) && data.project.SwissByDefault())) %]
-      <td style="text-align:left;">
-        <input type="checkbox" id="swiss" name="swiss" [% (checked)? 'checked="checked"':'' %]/>
+      <td>
+        <input type="checkbox" id="swiss-checkbox" name="swiss" [% (checked)? 'checked="checked"':'' %]/>
       </td>
-      <td><label for="swiss">Do not invalidate other reviews<br/>for this volume</label></td>
+      <td><label for="swiss-checkbox">Do not invalidate other reviews</label></td>
     </tr>
   [% END %]
-  [% holds = crms.CountHolds() %]
   [% IF !hold %]
     [% hold = crms.HoldForItem(htid, user) %]
   [% END %]
     <tr>
-      <td style="text-align:left;">
-        <input type="checkbox" id="hold" name="hold"
-               [% (holds >=5 && !hold)? 'disabled="disabled"':'' %]
-               [% (hold)? 'checked="checked"':'' %]
-               onclick="toggleVisibility('expiry');"/>
+      <td>
+        <input type="checkbox" id="hold-checkbox" name="hold"
+               [% (hold)? 'checked="checked"':'' %]/>
       </td>
-      <td><label for="hold">Hold for Question</label></td>
-    </tr>
-    <tr>
-      <td colspan="2">
-        <span class="smallishText" [% (holds >=5)? 'style="color:red;"':'' %]>
-            <!--Held reviews will remain unprocessed.-->
-            You currently have [% holds %] out of the maximum 5 volumes on hold.
-            <!--It is up to you to get in touch with an expert.-->
-        </span>
-      </td>
+      <td><label for="hold-checkbox">Hold for Question</label></td>
     </tr>
   </table>
   [% IF expert && importUser %]
@@ -194,7 +183,7 @@
       <table id="importReviewsTable" data-reviews='[% data.json %]'>
         <tr>
           <td>
-            <div style="line-height:20px;">
+            <div>
               <strong>Import user review:</strong>
             </div>
           </td>
@@ -204,10 +193,10 @@
           </td>
         [% FOREACH user IN reviews.keys.sort %]
           <tr>
-            <td><label for="pull[% user %]">[% user %] ([% reviews.$user.attr %]/[% reviews.$user.reason %])</label></td>
-            <td><input type="radio" name="pullrights" id="pull[% user %]"
+            <td><label for="pull-[% user %]">[% user %] ([% reviews.$user.attr %]/[% reviews.$user.reason %])</label></td>
+            <td><input type="radio" name="pullrights" id="pull-[% user %]"
                        [% IF importUser == user %]checked="checked"[% END %]
-                       onclick="popReviewInfo('[% user %]');"/>
+                       onclick="insertUserReviewData('[% user %]');"/>
             </td>
           </tr>
         [% END %]
@@ -224,23 +213,27 @@ addEvent(window, 'load', partial_ADDForm_mainWindowLoad);
 
 function partial_ADDForm_mainWindowLoad(e) {
   [% IF importUser %]
-    popReviewInfo('[% importUser %]');
+    insertUserReviewData('[% importUser %]');
   [% END %]
-  var renewalField = document.getElementById("renewalField");
-  var year = renewalField.value;
+  var addField = document.getElementById("add-field");
+  var year = addField.value;
   var patt = /-?[0-9]+/;
   if (patt.test(year)) {
     dateEntry();
-    document.getElementById('NoteTextField').focus();
+    document.getElementById("note-field").focus();
   } else {
-    document.getElementById('renewalField').focus();
+    document.getElementById("add-field").focus();
   }
 }
 
-function dateEntry() {
-  toggleADD();
-  var year = document.getElementById('renewalField').value || '';
+function loadRightsPrediction() {
+  var rightsDescription = document.getElementById("rights-description");
+  var year = document.getElementById("add-field").value || "";
   if (year.length == 0) {
+    // Remove prediction description and bail out.
+    if (rightsDescription) {
+      rightsDescription.innerHTML = "";
+    }
     return;
   }
   // There is a hidden div that tells us which button id is und/nfi.
@@ -249,14 +242,22 @@ function dateEntry() {
   var sel = GetCheckedValue(rights);
   var und = document.getElementById("UNDNFI").title;
   if (und && sel === und) {
+    // Remove prediction description and bail out.
+    if (rightsDescription) {
+      rightsDescription.innerHTML = "";
+    }
     return;
   }
-  var isPub = (document.getElementById('pub-checkbox').checked)? 1 : 0;
-  var isCrown = (document.getElementById('crown-checkbox').checked)? 1 : 0;
-  predictRights('[% htid %]', year, isPub, isCrown);
+  var actualPubDate = document.getElementById('actual-pub-date-field').value || "";
+  var isPub = (document.getElementById("pub-checkbox").checked)? 1 : 0;
+  var isCrown = (document.getElementById("crown-checkbox").checked)? 1 : 0;
+  predictRights("[% htid %]", year, actualPubDate, isPub, isCrown);
 }
 
-function popReviewInfo(user) {
+// Insert the data entered by one user in a previous review,
+// into the interface of the expert adjudicating the conflict
+// or provisional match.
+function insertUserReviewData(user) {
   var review = gReviewData.reviews[user];
   var button = document.getElementById("r" + review.rights);
   if (button) { button.checked = "checked"; }
@@ -264,19 +265,52 @@ function popReviewInfo(user) {
   if (button) { button.checked = Boolean(review.data?.pub); }
   button = document.getElementById("crown-checkbox");
   if (button) { button.checked = Boolean(review.data?.crown); }
-  var field = document.getElementById("renewalField");
+  var field = document.getElementById("add-field");
   if (field) { field.value = review.data?.date || ''; }
-  document.submitReview.note.value = review.note || '';
-  selMenuItem('catMenu', review.category || '');
+  var field = document.getElementById("actual-pub-date-field");
+  if (field) { field.value = review.data?.actual || ""; }
+  document.submitReview.note.value = review.note || "";
+  selMenuItem("category-menu", review.category || "");
+  toggleADD();
+  loadRightsPrediction();
 }
 
 // Rewords the Commonwealth date entry based on whether "Pub Date" is checked.
+// Shows the Actual Pub Date field if "Pub Date" is checked and not single date
 function toggleADD() {
-  var label = document.getElementById("renewalFieldLabel");
+  var label = document.getElementById("add-field-label");
   var cb = document.getElementById("pub-checkbox");
-  var field = document.getElementById("renewalField");
-  label.innerHTML = (cb.checked) ? "Publication&nbsp;Date:" : "Author&nbsp;Death&nbsp;Date:";
-  field.title = (cb.checked) ? "Publication Date" : "Author Death Date";
+  var addField = document.getElementById("add-field");
+  label.innerHTML = (cb.checked) ? "[% publication_date_text %]" : "[% author_death_date_text %]";
+  addField.title = (cb.checked) ? "Publication Date" : "Author Death Date";
+  var actualPubDateRow = document.getElementById("actual-pub-date-row");
+  if (cb.checked) {
+    actualPubDateRow.style.display = "none";
+    // Transfer content of actual pub date to ADD if there is something there
+    var addField = document.getElementById("add-field");
+    var actualField = document.getElementById("actual-pub-date-field");
+    if (actualField.value.length > 0) {
+      addField.value = actualField.value;
+    }
+  } else {
+    if (gReviewData.bibdata.extracted_dates.length > 1) {
+      actualPubDateRow.style.display = "table-row";
+    }
+  }
+}
+
+// Called whenever the user checks or unchecks the pub date or crown checkbox.
+// Synchronizes other checkbox to current selection,
+// synchronizes the date label with the pub date checkbox,
+// and refreshes the rights prediction.
+function checkboxSelectionChanged(id) {
+  if (id === 'pub-checkbox') {
+    syncCheckboxes(false, id, 'crown-checkbox');
+  } else {
+    syncCheckboxes(true, id, 'pub-checkbox');
+  }
+  toggleADD();
+  loadRightsPrediction();
 }
 
 // Propagate checkedness across category/subcategory boundary.
@@ -284,7 +318,7 @@ function toggleADD() {
 // syncCheckedness(true, "crown-checkbox", "pub-checkbox");
 // Uncheck crown checkbox if pub date checkbox is unchecked
 // syncCheckedness(false, "pub-checkbox", "crown-checkbox");
-function syncCheckedness(checked, fromId, toId) {
+function syncCheckboxes(checked, fromId, toId) {
   var fromElement = document.getElementById(fromId);
   var toElement = document.getElementById(toId);
   if (fromElement && toElement && fromElement.checked === checked) {

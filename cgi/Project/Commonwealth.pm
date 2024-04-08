@@ -4,8 +4,7 @@ use parent 'Project';
 use strict;
 use warnings;
 
-sub new
-{
+sub new {
   my $class = shift;
   return $class->SUPER::new(@_);
 }
@@ -30,34 +29,26 @@ sub EvaluateCandidacy {
   my @errs = ();
   # Check current rights
   push @errs, "current rights $attr/$reason" if ($attr ne 'ic' and $attr ne 'pdus') or $reason ne 'bib';
-  # Check well-defined record dates
-  my $pub = $record->copyrightDate;
-  if (!defined $pub || $pub !~ m/\d\d\d\d/) {
-    my $leader = $record->GetControlfield('008');
-    my $type = substr($leader, 6, 1);
-    my $date1 = substr($leader, 7, 4);
-    my $date2 = substr($leader, 11, 4);
-    # Dates like "192u" could be handled like pub date ranges if we had an
-    # "actual pub date" UI.
-    push @errs, "pub date not completely specified ($date1,$date2,'$type')";
-  }
-  # Check country of publication
+  # Country of publication
   my $where = $record->country;
+  # Check well-defined record dates
+  my $publication_date = $record->publication_date;
+  my $publication_date_string = $publication_date->to_s;
+  my ($min, $max) = @{$self->year_range($where)};
+  if (!scalar @{$publication_date->extract_dates}) {
+    push @errs, "pub date not completely specified ($publication_date_string)";
+  } else {
+    if (!$publication_date->do_dates_overlap($min, $max)) {
+      push @errs, "$publication_date_string not in range $min-$max for $where"
+    }
+  }
   unless ($CANDIDATE_COUNTRIES->{$where}) {
     push @errs, "foreign pub ($where)";
-  }
-  if (defined $pub && $pub =~ m/\d\d\d\d/) {
-    my ($min, $max) = @{$self->year_range($where)};
-    push @errs, "$pub not in range $min-$max for $where" if ($pub < $min || $pub > $max);
   }
   push @errs, 'non-BK format' unless $record->isFormatBK($id);
   return {'status' => 'no', 'msg' => join '; ', @errs} if scalar @errs;
   my $src;
-  #my $lang = $record->language;
-  #$src = 'language' if 'eng' ne $lang;
   $src = 'translation' if $record->isTranslation;
-  my $date = $self->{crms}->FormatPubDate($id, $record);
-  $src = 'date range' if $date =~ m/^\d+-(\d+)?$/;
   return {'status' => 'filter', 'msg' => $src} if defined $src;
   return {'status' => 'yes', 'msg' => ''};
 }
@@ -77,7 +68,7 @@ sub year_range {
 
 # ========== REVIEW ========== #
 sub PresentationOrder {
-  return 'b.author ASC';
+  return 'q.priority DESC,b.author ASC';
 }
 
 sub ReviewPartials {
@@ -122,20 +113,23 @@ sub ValidateSubmission {
 
 # Extract Project-specific data from the CGI into a struct
 # that will be encoded as JSON string in the reviewdata table.
-sub ExtractReviewData
-{
+sub ExtractReviewData {
   my $self = shift;
   my $cgi  = shift;
 
   my $date = $cgi->param('date');
   my $data;
-  if ($date)
-  {
+  if ($date) {
     $data = {'date' => $date};
     $data->{'pub'} = 1 if $cgi->param('pub');
     $data->{'crown'} = 1 if $cgi->param('crown');
     $data->{'src'} = $cgi->param('src') if $cgi->param('src');
-    $data->{'actual'} = $cgi->param('actual') if $cgi->param('actual');
+    # There may be a stale Actual Pub Date hidden in the UI when
+    # the Publication Date checkbox is checked, only record it if
+    # the effective date is not a pub date.
+    if (!$cgi->param('pub') && $cgi->param('actual')) {
+      $data->{'actual'} = $cgi->param('actual');
+    }
   }
   return $data;
 }
@@ -145,18 +139,24 @@ sub ExtractReviewData
 # format: HTML-formatted data for inline display. May be blank.
 # format_long: HTML-formatted data for tooltip display. May be blank.
 # e.g., {"date":"1881","pub":1,"src":"VIAF"}
-sub FormatReviewData
-{
+sub FormatReviewData {
   my $self = shift;
   my $id   = shift;
   my $json = shift;
 
   my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
   my $data = $jsonxs->decode($json);
-  my $fmt = sprintf '%s <strong>%s</strong> %s%s',
-    ($data->{'pub'})? 'Pub' : 'ADD',
-    $data->{'date'},
-    ($data->{'crown'})? " Crown <strong>\x{1F451}</strong>" : '';
+  my $fmt = '';
+  if (scalar keys %$data) {
+    my $date_type = ($data->{pub})? 'Pub' : 'ADD';
+    $fmt = "$date_type <strong>$data->{date}</strong>";
+    if ($data->{crown}) {
+      $fmt .= " Crown <strong>\x{1F451}</strong>";
+    }
+    if ($data->{actual}) {
+      $fmt .= "<br/>Actual Pub Date <strong>$data->{actual}</strong>";
+    }
+  }
   return {'id' => $id, 'format' => $fmt, 'format_long' => ''};
 }
 
