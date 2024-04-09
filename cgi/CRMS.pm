@@ -52,15 +52,20 @@ sub new
   $self->ClearErrors();
   $self->set('verbose',  $args{'verbose'});
   # Only need to authorize when running as CGI.
-  if ($ENV{'GATEWAY_INTERFACE'})
-  {
+  if ($ENV{'GATEWAY_INTERFACE'}) {
     $CGI::LIST_CONTEXT_WARN = 0;
     my $cgi = $args{'cgi'};
     print "<strong>Warning: no CGI passed to <code>CRMS->new()</code>\n" unless $cgi;
     $self->set('cgi',      $cgi);
     $self->set('debugSql', $args{'debugSql'});
     $self->set('debugVar', $args{'debugVar'});
-    $self->SetupUser();
+    if ($ENV{CRMS_REMOTE_USER}) {
+      #print STDERR "CRMS_REMOTE_USER\n";
+      $self->set('user', $ENV{CRMS_REMOTE_USER});
+      $self->set('remote_user', $ENV{CRMS_REMOTE_USER});
+    } else {
+      $self->SetupUser();
+    }
   }
   $self->DebugVar('self', $self);
   return $self;
@@ -6091,16 +6096,10 @@ sub GetUserIPs
 
   my $sql = 'SELECT iprestrict,mfa FROM ht_users WHERE userid=? OR email=?'.
             ' ORDER BY IF(role="crms",1,0) DESC';
-  my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh)
-  {
-    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
-    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
-  }
   my ($ipr, $mfa);
   my $t1 = Time::HiRes::time();
   eval {
-    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
+    my $ref = $self->SelectAllSDR($sql, $user, $user);
     my $t2 = Time::HiRes::time();
     $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, 'ht_repository', $user, $user);
     $ipr = $ref->[0]->[0];
@@ -6173,14 +6172,8 @@ sub IsUserExpired
             ' FROM ht_users WHERE userid=? OR email=?'.
             ' ORDER BY IF(role="crms",1,0) DESC';
   #print "$sql<br/>\n";
-  my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh)
-  {
-    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
-    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
-  }
   eval {
-    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
+    my $ref = $self->SelectAllSDR($sql, $user, $user);
     $data{'expires'} = $ref->[0]->[0];
     $data{'status'} = $ref->[0]->[1];
     $data{'days'} = $ref->[0]->[2];

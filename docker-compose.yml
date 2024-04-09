@@ -18,6 +18,29 @@ services:
     ports:
       - 3307:3306
 
+  apache:
+    build:
+      context: .
+      target: apache
+    user: ${CURRENT_USER}
+    volumes:
+      - .:/htapps/babel/crms
+      - ./apache/000-default.conf:/etc/apache2/sites-enabled/000-default.conf
+      - ./apache/auth:/etc/apache2/auth
+    environment:
+      SDRROOT: /htapps/babel
+      CRMS_DB_HOST: mariadb
+      CRMS_DB_HOST_DEVELOPMENT: mariadb
+      CRMS_HT_DB_HOST: mariadb_ht
+      CRMS_REMOTE_USER: autocrms
+    depends_on:
+      - mariadb
+      - mariadb_ht
+    ports:
+      - "8080:8080"
+      - "5173:5173"
+      - "8173:8173"
+
   test:
     build: .
     volumes:
