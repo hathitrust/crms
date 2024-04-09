@@ -52,15 +52,20 @@ sub new
   $self->ClearErrors();
   $self->set('verbose',  $args{'verbose'});
   # Only need to authorize when running as CGI.
-  if ($ENV{'GATEWAY_INTERFACE'})
-  {
+  if ($ENV{'GATEWAY_INTERFACE'}) {
     $CGI::LIST_CONTEXT_WARN = 0;
     my $cgi = $args{'cgi'};
     print "<strong>Warning: no CGI passed to <code>CRMS->new()</code>\n" unless $cgi;
     $self->set('cgi',      $cgi);
     $self->set('debugSql', $args{'debugSql'});
     $self->set('debugVar', $args{'debugVar'});
-    $self->SetupUser();
+    if ($ENV{CRMS_REMOTE_USER}) {
+      #print STDERR "CRMS_REMOTE_USER\n";
+      $self->set('user', $ENV{CRMS_REMOTE_USER});
+      $self->set('remote_user', $ENV{CRMS_REMOTE_USER});
+    } else {
+      $self->SetupUser();
+    }
   }
   $self->DebugVar('self', $self);
   return $self;
@@ -81,12 +86,6 @@ sub SetupUser
   my $self = shift;
 
   my $note = '';
-  my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh) {
-    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
-    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
-  }
-  return unless defined $sdr_dbh;
   my ($ht_user, $crms_user);
   my $usersql = 'SELECT COUNT(*) FROM users WHERE id=?';
   my $htsql = 'SELECT email FROM ht_users WHERE userid=?';
@@ -95,7 +94,7 @@ sub SetupUser
   $note .= sprintf "ENV{REMOTE_USER}=%s\n", (defined $candidate)? $candidate:'<undef>';
   if ($candidate) {
     my $ht_users_email;
-    my $ref = $sdr_dbh->selectall_arrayref($htsql, undef, $candidate);
+    my $ref = $self->SelectAllSDR($htsql, $candidate);
     if ($ref && scalar @{$ref}) {
       $ht_user = $candidate;
       $note .= "Set ht_user=$ht_user\n";
@@ -114,7 +113,7 @@ sub SetupUser
     $note .= sprintf "ENV{email}=%s\n", (defined $ENV{email}) ? $ENV{email} : '<undef>';
     foreach my $candidate (@{$self->extract_env_email}) {
       my $ht_users_email;
-      my $ref = $sdr_dbh->selectall_arrayref($htsql, undef, $candidate);
+      my $ref = $self->SelectAllSDR($htsql, $candidate);
       if ($ref && scalar @$ref && !$ht_user) {
         $ht_user = $candidate;
         $note .= "Set ht_user=$ht_user\n";
@@ -185,18 +184,9 @@ sub NeedStepUpAuth
   my $need = 0;
   my $idp = $ENV{'Shib_Identity_Provider'};
   my $class = $ENV{'Shib_AuthnContext_Class'};
-  my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh)
-  {
-    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
-    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
-  }
   my $sql = 'SELECT COALESCE(mfa,0) FROM ht_users WHERE userid=? LIMIT 1';
-  my $ref;
   my $mfa;
-  eval {
-    $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user);
-  };
+  my $ref = $self->SelectAllSDR($sql, $user);
   if ($ref && scalar @{$ref})
   {
     $mfa = $ref->[0]->[0];
@@ -206,9 +196,7 @@ sub NeedStepUpAuth
     my $dbclass;
     $sql = 'SELECT shib_authncontext_class FROM ht_institutions'.
            ' WHERE entityID=? LIMIT 1';
-    eval {
-      $ref = $sdr_dbh->selectall_arrayref($sql, undef, $idp);
-    };
+    $ref = $self->SelectAllSDR($sql, $idp);
     if ($ref && scalar @{$ref})
     {
       $dbclass = $ref->[0]->[0]; # https://refeds.org/profile/mfa or NULL
@@ -510,7 +498,7 @@ sub SelectAllSDR
     $self->Logit($msg);
   }
   my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, 'ht_rights', @_);
+  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, 'ht', @_);
   return $ref;
 }
 
@@ -6020,18 +6008,9 @@ sub GetUserIPs
 
   my $sql = 'SELECT iprestrict,mfa FROM ht_users WHERE userid=? OR email=?'.
             ' ORDER BY IF(role="crms",1,0) DESC';
-  my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh)
-  {
-    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
-    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
-  }
   my ($ipr, $mfa);
-  my $t1 = Time::HiRes::time();
   eval {
-    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
-    my $t2 = Time::HiRes::time();
-    $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, 'ht_repository', $user, $user);
+    my $ref = $self->SelectAllSDR($sql, $user, $user);
     $ipr = $ref->[0]->[0];
     $mfa = $ref->[0]->[1];
   };
@@ -6067,22 +6046,7 @@ sub GetUserRole
 
   my $sql = 'SELECT role FROM ht_users WHERE userid=? OR email=?'.
             ' ORDER BY IF(role="crms",1,0) DESC';
-  my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh)
-  {
-    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
-    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
-  }
-  my $role;
-  eval {
-    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
-    $role = $ref->[0]->[0];
-  };
-  if ($@)
-  {
-    my $msg = "SQL failed ($sql): " . $@;
-    $self->SetError($msg);
-  }
+  my $role = $self->SimpleSqlGetSDR($sql, $user, $user) || 'unknown';
   return $role;
 }
 
@@ -6102,14 +6066,8 @@ sub IsUserExpired
             ' FROM ht_users WHERE userid=? OR email=?'.
             ' ORDER BY IF(role="crms",1,0) DESC';
   #print "$sql<br/>\n";
-  my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh)
-  {
-    $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
-    $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
-  }
   eval {
-    my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
+    my $ref = $self->SelectAllSDR($sql, $user, $user);
     $data{'expires'} = $ref->[0]->[0];
     $data{'status'} = $ref->[0]->[1];
     $data{'days'} = $ref->[0]->[2];

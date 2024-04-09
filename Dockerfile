@@ -1,4 +1,4 @@
-FROM debian:bullseye
+FROM debian:bullseye AS crms-base
 
 RUN sed -i 's/main.*/main contrib non-free/' /etc/apt/sources.list
 
@@ -163,3 +163,24 @@ ENV ROOTDIR "${SDRROOT}/crms"
 RUN mkdir -p $ROOTDIR
 COPY . $ROOTDIR
 WORKDIR $ROOTDIR
+
+FROM crms-base AS apache
+
+RUN apt-get -y install apache2 libapache2-mod-perl2
+
+RUN a2dissite '*'
+RUN a2disconf other-vhosts-access-log
+RUN a2dismod 'mpm_*'
+RUN a2enmod headers \
+            mpm_prefork \
+            rewrite \
+            proxy \
+            proxy_http \
+            cgi
+
+COPY apache/000-default.conf /etc/apache2/sites-enabled
+STOPSIGNAL SIGWINCH
+
+COPY apache/apache.sh /
+RUN chmod +x /apache.sh
+ENTRYPOINT ["/apache.sh"]

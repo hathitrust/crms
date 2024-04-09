@@ -31,6 +31,25 @@ services:
       <<: *healthcheck-defaults
       test: [ "CMD", "healthcheck.sh", "--su-mysql", "--connect", "--innodb_initialized" ]
 
+  web:
+    build:
+      context: .
+      target: apache
+    volumes:
+      - .:/htapps/babel/crms
+      - ./apache/000-default.conf:/etc/apache2/sites-enabled/000-default.conf
+    environment:
+      SDRROOT: /htapps/babel
+      CRMS_DB_HOST: mariadb
+      CRMS_DB_HOST_DEVELOPMENT: mariadb
+      CRMS_HT_DB_HOST: mariadb_ht
+      CRMS_REMOTE_USER: autocrms
+    depends_on:
+      mariadb: *healthy
+      mariadb_ht: *healthy
+    ports:
+      - "8080:8080"
+
   test:
     build: .
     volumes:
