@@ -293,7 +293,7 @@ function toggleADD() {
       addField.value = actualField.value;
     }
   } else {
-    if (gReviewData.bibdata.extracted_dates.size != 1) {
+    if (gReviewData.bibdata.extracted_dates.length != 1) {
       actualPubDateRow.style.display = "table-row";
     }
   }
