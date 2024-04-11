@@ -66,7 +66,7 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.6.1';
+our $VERSION = '8.6.2';
 sub Version
 {
   return $VERSION;
@@ -4552,6 +4552,9 @@ sub ReviewData
   require Languages;
   my $jsonxs = JSON::XS->new->canonical(1)->pretty(0);
   my $record = $self->GetMetadata($id);
+  if ($record) {
+    $self->UpdateMetadata($id, 1, $record);
+  }
   my $data = {};
   my $dbh = $self->GetDb();
   my $sql = 'SELECT * FROM queue WHERE id=?';
