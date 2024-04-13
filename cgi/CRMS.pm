@@ -7795,14 +7795,14 @@ sub GetProjectRef
   $self->Projects()->{$id};
 }
 
-# Returns an arrayref of hashrefs with id, name, color, flags, userCount (active assignees),
+# Returns an arrayref of hashrefs with id, name, flags, userCount (active assignees),
 # queueCount, rights (arrayref), categories (arrayref), authorities (arrayref), users (arrayref).
 sub GetProjectsRef
 {
   my $self = shift;
 
   my @projects;
-  my $sql = 'SELECT p.id,p.name,COALESCE(p.color,"000000"),p.queue_size,p.autoinherit,'.
+  my $sql = 'SELECT p.id,p.name,p.queue_size,p.autoinherit,'.
             'p.group_volumes,p.single_review,a1.name,a2.name,'.
             '(SELECT COUNT(*) FROM projectusers pu INNER JOIN users u ON pu.user=u.id'.
             ' WHERE pu.project=p.id AND u.reviewer+u.advanced+u.expert+u.admin>0),'.
@@ -7815,12 +7815,12 @@ sub GetProjectsRef
   my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
-    push @projects, {'id' => $row->[0], 'name' => $row->[1], 'color' => $row->[2],
-                     'queue_size' => $row->[3], 'autoinherit' => $row->[4],
-                     'group_volumes' => $row->[5], 'single_review' => $row->[6],
-                     'primary_authority' => $row->[7], 'secondary_authority' => $row->[8],
-                     'userCount' => $row->[9], 'queueCount' => $row->[10],
-                     'candidatesCount' => $row->[11], 'determinationsCount' => $row->[12]};
+    push @projects, {'id' => $row->[0], 'name' => $row->[1],
+                     'queue_size' => $row->[2], 'autoinherit' => $row->[3],
+                     'group_volumes' => $row->[4], 'single_review' => $row->[5],
+                     'primary_authority' => $row->[6], 'secondary_authority' => $row->[7],
+                     'userCount' => $row->[8], 'queueCount' => $row->[9],
+                     'candidatesCount' => $row->[10], 'determinationsCount' => $row->[11]};
     my $ref2 = $self->SelectAll('SELECT rights FROM projectrights WHERE project=?', $row->[0]);
     $projects[-1]->{'rights'} = [map {$_->[0]} @{$ref2}];
     $ref2 = $self->SelectAll('SELECT category FROM projectcategories WHERE project=?', $row->[0]);

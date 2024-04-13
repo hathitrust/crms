@@ -30,13 +30,6 @@ sub name
   return $self->{'name'};
 }
 
-sub color
-{
-  my $self = shift;
-
-  return $self->{'color'};
-}
-
 sub queue_size
 {
   my $self = shift;
