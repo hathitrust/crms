@@ -833,7 +833,7 @@ DROP TABLE IF EXISTS `users`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `users` (
   `id` varchar(64) NOT NULL,
-  `kerberos` varchar(12) DEFAULT NULL,
+  `kerberos` varchar(64) DEFAULT NULL,
   `name` mediumtext NOT NULL,
   `reviewer` tinyint(1) NOT NULL DEFAULT '1',
   `advanced` tinyint(1) NOT NULL DEFAULT '0',
