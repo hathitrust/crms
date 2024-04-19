@@ -14,11 +14,10 @@
     
     <tr><td><strong>Country:</strong> [% data.bibdata.country %]</td></tr>
     <tr><td><strong>Language:</strong> [% data.bibdata.language %]</td></tr>
-    <tr><td class="nowrap">
-      <strong>Project:</strong> [% data.project.name %]
-      [% IF data.project.color.length %]
-        <p style="border:1px solid;margin-left:4px;display:inline-block;width:10px;height:10px;background:#[% data.project.color %];"></p>
-      [% END %]
-    </td></tr>
+    <tr>
+      <td class="nowrap">
+        <strong>Project:</strong> [% data.project.name %]
+      </td>
+    </tr>
   </table>
 </div>

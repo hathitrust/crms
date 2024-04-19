@@ -18,12 +18,11 @@
     [% END %]
     [% projs = crms.GetUserProjects() %]
     [% IF projs.size > 1 %]
-    <tr><td class="nowrap">
-      <strong>Project:</strong> [% data.project.name %]
-      [% IF data.project.color.length %]
-        <p style="border:1px solid;margin-left:4px;display:inline-block;width:10px;height:10px;background:#[% data.project.color %];"></p>
-      [% END %]
-    </td></tr>
+    <tr>
+      <td class="nowrap">
+        <strong>Project:</strong> [% data.project.name %]
+      </td>
+    </tr>
     [% END %]
   </table>
 </div>
