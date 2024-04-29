@@ -28,6 +28,7 @@ use Unicode::Normalize;
 use XML::LibXML;
 
 use CRMS::Config;
+use CRMS::Version;
 use Utilities;
 
 binmode(STDOUT, ':encoding(UTF-8)');
@@ -66,10 +67,8 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.6.4';
-sub Version
-{
-  return $VERSION;
+sub Version {
+  return $CRMS::Version::VERSION;
 }
 
 # First, try to establish the identity of the user as represented in the users table.
