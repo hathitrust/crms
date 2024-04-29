@@ -5255,13 +5255,13 @@ sub CreateSystemReport
     $n = 'n/a';
   }
   $report .= '<tr><th class="nowrap">Last Candidates Update</th><td>' . $n . "</td></tr>\n";
-  my $sql = 'SELECT COUNT(*) FROM und WHERE src!="no meta" AND src!="duplicate" AND src!="cross-record inheritance"';
+  my $sql = 'SELECT COUNT(*) FROM und WHERE src!="no meta" AND src!="duplicate"';
   $count = $self->SimpleSqlGet($sql);
   $report .= "<tr><th class='nowrap'>Volumes Filtered*</th><td>$count</td></tr>\n";
   if ($count)
   {
-    $sql = 'SELECT src,COUNT(src) FROM und WHERE src!="no meta"'.
-           ' AND src!="duplicate" AND src!="cross-record inheritance" GROUP BY src ORDER BY src';
+    $sql = 'SELECT src,COUNT(src) FROM und WHERE src!="no meta" AND src!="duplicate"'.
+      ' GROUP BY src ORDER BY src';
     my $ref = $self->SelectAll($sql);
     foreach my $row (@{ $ref})
     {
@@ -5270,13 +5270,13 @@ sub CreateSystemReport
       $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$n&nbsp;(%0.1f%%)</td></tr>\n", 100.0*$n/$count);
     }
   }
-  $sql = 'SELECT COUNT(*) FROM und WHERE src="no meta" OR src="duplicate" OR src="cross-record inheritance"';
+  $sql = 'SELECT COUNT(*) FROM und WHERE src="no meta" OR src="duplicate"';
   $count = $self->SimpleSqlGet($sql);
   $report .= "<tr><th class='nowrap'>Volumes Temporarily Filtered*</th><td>$count</td></tr>\n";
   if ($count)
   {
     $sql = 'SELECT src,COUNT(src) FROM und WHERE src="no meta" OR src="duplicate"'.
-           ' OR src="cross-record inheritance" GROUP BY src ORDER BY src';
+           ' GROUP BY src ORDER BY src';
     my $ref = $self->SelectAll($sql);
     foreach my $row (@{ $ref})
     {
@@ -6286,14 +6286,6 @@ sub GetTrackingInfo
     my $projinfo = (defined $proj)? ", $proj project":'';
     push @stati, "in Queue (P$pri, status $status, $n $reviews$projinfo)";
   }
-  elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM cri WHERE id=? AND exported=0', $id))
-  {
-    my $stat = $self->SimpleSqlGet('SELECT status FROM cri WHERE id=?', $id);
-    my %stats = (0 => 'rejected', 1 => 'submitted', 2 => 'UND');
-    my $msg = 'unreviewed';
-    $msg = $stats{$stat} if defined $stat;
-    push @stati, "CRI-eligible ($msg)";
-  }
   elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM candidates WHERE id=?', $id))
   {
     my $sql = 'SELECT p.name FROM candidates c'.
@@ -6304,7 +6296,7 @@ sub GetTrackingInfo
   my $src = $self->SimpleSqlGet('SELECT src FROM und WHERE id=?', $id);
   if (defined $src)
   {
-    my %temps = ('no meta' => 1, 'duplicate' => 1, 'cross-record inheritance' => 1);
+    my %temps = ('no meta' => 1, 'duplicate' => 1);
     push @stati, sprintf "%sfiltered ($src)", (defined $temps{$src})? 'temporarily ':'';
   }
   if ($self->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE id=?', $id))

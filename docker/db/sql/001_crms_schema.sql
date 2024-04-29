@@ -263,24 +263,6 @@ CREATE TABLE `corrections` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `cri`
---
-
-DROP TABLE IF EXISTS `cri`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `cri` (
-  `id` varchar(32) NOT NULL,
-  `gid` bigint(20) NOT NULL,
-  `locked` varchar(64) DEFAULT NULL,
-  `status` tinyint(4) DEFAULT NULL,
-  `exported` tinyint(4) NOT NULL DEFAULT '0',
-  `newgid` bigint(20) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `dbo_T_BOOK`
 --
 
