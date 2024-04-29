@@ -14,6 +14,10 @@ my $cgi = CGI->new();
 my $crms = CRMS->new('cgi' => $cgi, 'verbose' => 0);
 ok(defined $crms, 'CRMS object created');
 
+subtest '#Version' => sub {
+  ok($crms->Version);
+};
+
 subtest 'CRMS::MoveToHathitrustFiles' => sub {
   my $tempdir = File::Temp::tempdir(CLEANUP => 1);
   my $save_hathitrust_files_directory = $ENV{'CRMS_HATHITRUST_FILES_DIRECTORY'};
