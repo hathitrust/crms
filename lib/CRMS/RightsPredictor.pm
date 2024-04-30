@@ -178,10 +178,12 @@ sub _predict_rights_with_source_copyright_expired {
   else {
     $self->{attr} = 'pd';
     $self->{reason} = ($self->{is_corporate})? 'exp' : 'add';
-    $self->_add_description(
-      "$self->{last_source_copyright_year} < @{[ GATT_RESTORATION_START ]}" .
-      " or US © expired ($self->{last_us_copyright_year} < $self->{reference_year}) [no GATT]"
-    );
+    if ($self->{last_source_copyright_year} < GATT_RESTORATION_START) {
+      $self->_add_description("$self->{last_source_copyright_year} < @{[ GATT_RESTORATION_START ]} GATT elegibility date");
+    }
+    if ($self->{last_us_copyright_year} < $self->{reference_year}) {
+      $self->_add_description("US © expired ($self->{last_us_copyright_year} < $self->{reference_year}) [no GATT]");
+    }
   }
 }
 

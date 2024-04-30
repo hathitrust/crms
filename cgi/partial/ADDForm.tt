@@ -37,9 +37,9 @@
       </td>
     </tr>
     <!-- ACTUAL PUB DATE -->
-    <!-- Only visible when pub is unchecked and pub date is a range or unknown -->
+    <!-- Only visible when pub is unchecked -->
     [% display = "table-row" %]
-    [% IF u_pub || data.bibdata.extracted_dates.size == 1 %]
+    [% IF u_pub %]
       [% display = "none" %]
     [% END %]
     <tr id="actual-pub-date-row" style="display:[% display %];">
@@ -293,9 +293,7 @@ function toggleADD() {
       addField.value = actualField.value;
     }
   } else {
-    if (gReviewData.bibdata.extracted_dates.length != 1) {
-      actualPubDateRow.style.display = "table-row";
-    }
+    actualPubDateRow.style.display = "table-row";
   }
 }
 

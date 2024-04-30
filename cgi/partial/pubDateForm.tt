@@ -4,7 +4,6 @@
 [% # Set up values from CGI (in case of error) or existing review (editing). %]
 [% u_date = (error)? cgi.param('date') : data.reviews.$user.data.date %]
 [% u_approx = (error)? cgi.param('approximate') : data.reviews.$user.data.approximate %]
-[% u_country = (error)? cgi.param('country') : data.reviews.$user.data.country %]
 [% u_rights = (error)? cgi.param('rights') : data.reviews.$user.rights %]
 [% u_category = (error)? cgi.param('category') : data.reviews.$user.category %]
 [% u_note = (error)? cgi.param('note') : data.reviews.$user.note %]
@@ -18,9 +17,6 @@
   <input type="hidden" name="start"   value="[% crms.GetNow() %]"/>
   <input type="hidden" name="user"    value="[% user %]"/>
   <input type="hidden" name="editing" value="[% editing %]"/>
-  [% IF NOT data.bibdata.country.match('^Undetermined') %]
-  <input type="hidden" name="c_spec" value="1"/>
-  [% END %]
   <table>
     <tr>
       <td class="nowrap">
@@ -41,29 +37,6 @@
       <td><label for="approx_cb">Date is Approximate</label></td>
       <td style="text-align:left;">
         <input type="checkbox" id="approx_cb" name="approximate" [% (u_approx)? 'checked="checked"':'' %]/>
-      </td>
-    </tr>
-    <td class="nowrap">
-        <strong><label id="countryFieldLabel" for="countryField">
-          Country of Publication: </label>
-        </strong></td>
-      <td class="nowrap">
-      <input id="countryField" type="text" name="country"
-             value="[% u_country %]" size="4"/>
-      [% IF tip %]
-        <span class="red">$tip</span>
-      [% END %]
-      <a style="position:absolute;left:-999px;" href="#" accesskey="c"
-         onfocus="document.getElementById('countryField').focus()">.</a>
-      <a class="tip" href="#">
-        <img width="16" height="16" alt="Country of Publication Help"
-             style="position:relative; left:4px; top:4px;"
-             src="[% crms.WebPath('web', 'help.png') %]"/>
-        <span>Use the code <strong>us</strong> for United States.<br/>
-              For other countries, refer to the <i>MARC Country Codes</i> authority.<br/>
-              You can leave the field blank if the country is already known.
-        </span>
-      </a>
       </td>
     </tr>
   </table>
