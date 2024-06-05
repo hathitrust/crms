@@ -1,6 +1,6 @@
 # CRMS: Copyright Review Management System
 
-![Run CI](https://github.com/hathitrust/crms/workflows/Run%20CI/badge.svg) [![Coverage Status](https://coveralls.io/repos/github/hathitrust/crms/badge.svg?branch=main)](https://coveralls.io/github/hathitrust/crms?branch=main)
+![Run Tests](https://github.com/hathitrust/crms/workflows/Run%20Tests/badge.svg) [![Coverage Status](https://coveralls.io/repos/github/hathitrust/crms/badge.svg?branch=main)](https://coveralls.io/github/hathitrust/crms?branch=main)
 
 A web app and suite of tools for performing copyright review projects.
 
