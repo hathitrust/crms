@@ -1155,6 +1155,18 @@ CREATE TABLE `userstats` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `user_pages`
+--
+
+DROP TABLE IF EXISTS `user_pages`;
+CREATE TABLE `user_pages` (
+  `user` varchar(64) NOT NULL,
+  `page` varchar(32) NOT NULL,
+  KEY `user_pages_ibfk_user` (`user`),
+  CONSTRAINT `user_pages_ibfk_user` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
 -- Table structure for table `viaf`
 --
 
@@ -1213,7 +1225,6 @@ CREATE TABLE cron_recipients (
   `email` VARCHAR(64) NOT NULL,
   CONSTRAINT `cron_recipients_fk_cron_id` FOREIGN KEY (`cron_id`) REFERENCES `cron` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
 
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
