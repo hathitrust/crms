@@ -595,7 +595,6 @@ CREATE TABLE `historicalreviews` (
   `swiss` tinyint(1) DEFAULT NULL,
   `validated` tinyint(4) NOT NULL DEFAULT '1',
   `gid` bigint(20) DEFAULT NULL,
-  `flagged` int(11) DEFAULT NULL,
   `data` bigint(20) DEFAULT NULL,
   PRIMARY KEY (`id`,`time`,`user`),
   KEY `attr_idx` (`attr`),
@@ -1150,7 +1149,6 @@ CREATE TABLE `userstats` (
   `total_correct` int(11) DEFAULT NULL,
   `total_incorrect` int(11) DEFAULT NULL,
   `total_neutral` int(11) DEFAULT NULL,
-  `total_flagged` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`user`,`monthyear`,`project`),
   KEY `fk_project` (`project`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

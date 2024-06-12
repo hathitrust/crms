@@ -1920,18 +1920,6 @@ sub MoveFromReviewsToHistoricalReviews
   $self->PrepareSubmitSql($sql, $gid, $id);
   $sql = 'DELETE FROM reviews WHERE id=?';
   $self->PrepareSubmitSql($sql, $id);
-  $sql = 'SELECT user FROM historicalreviews WHERE gid=?';
-  my $ref = $self->SelectAll($sql, $gid);
-  foreach my $row (@{$ref})
-  {
-    my $user = $row->[0];
-    my $flag = $self->ShouldReviewBeFlagged($gid, $user);
-    if (defined $flag)
-    {
-      $sql = 'UPDATE historicalreviews SET flagged=? WHERE gid=? AND user=?';
-      $self->PrepareSubmitSql($sql, $flag, $gid, $user);
-    }
-  }
 }
 
 sub GetFinalAttrReason
@@ -4369,16 +4357,15 @@ sub GetMonthStats
   {
     $reviews_per_hour = (60/$time_per_review);
   }
-  my ($total_correct,$total_incorrect,$total_neutral,$total_flagged) = $self->CountCorrectReviews($user, $start, $end, $proj);
+  my ($total_correct,$total_incorrect,$total_neutral) = $self->CountCorrectReviews($user, $start, $end, $proj);
   $sql = 'INSERT INTO userstats (user,month,year,monthyear,project,'.
          'total_reviews,total_pd,total_ic,total_und,total_time,time_per_review,'.
          'reviews_per_hour,total_outliers,total_correct,total_incorrect,'.
-         'total_neutral,total_flagged) VALUES ' . $self->WildcardList(17);
+         'total_neutral) VALUES ' . $self->WildcardList(16);
   $self->PrepareSubmitSql($sql, $user, $m, $y, $y. '-'. $m, $proj, $total_reviews,
                           $total_pd, $total_ic, $total_und, $total_time,
                           $time_per_review, $reviews_per_hour, $total_outliers,
-                          $total_correct, $total_incorrect, $total_neutral,
-                          $total_flagged);
+                          $total_correct, $total_incorrect, $total_neutral);
 }
 
 sub UpdateExportStats
@@ -5764,12 +5751,7 @@ sub CountCorrectReviews
     $correct = $cnt if $val == 1;
     $neutral = $cnt if $val == 2;
   }
-  $sql = 'SELECT COUNT(*) FROM historicalreviews r'.
-         ' INNER JOIN exportdata e ON r.gid=e.gid'.
-         ' WHERE r.legacy!=1 AND r.user=? AND r.time>=? AND r.time<=?'.
-         ' AND e.project=? AND r.flagged IS NOT NULL AND r.flagged>0';
-  my $flagged = $self->SimpleSqlGet($sql, $user, $start, $end, $proj);
-  return ($correct, $incorrect, $neutral, $flagged);
+  return ($correct, $incorrect, $neutral);
 }
 
 # Gets only those reviewers that are not experts
@@ -5798,40 +5780,6 @@ sub GetValidation
   my $ref = $self->SelectAll($sql, $start, $end);
   my $row = $ref->[0];
   return @{ $row };
-}
-
-sub ShouldReviewBeFlagged
-{
-  my $self = shift;
-  my $user = shift;
-  my $gid  = shift;
-
-  my ($pd, $icren, $date, $wr);
-  my $sql = 'SELECT r.user,a.name,rs.name,r.category,r.validated FROM historicalreviews r'.
-            ' INNER JOIN exportdata e ON r.gid=e.gid'.
-            ' INNER JOIN attributes a ON r.attr=a.id'.
-            ' INNER JOIN reasons rs ON r.reason=rs.id'.
-            ' WHERE r.gid=? ORDER BY IF(r.user=?,1,0) DESC';
-  my $ref = $self->SelectAll($sql, $gid, $user);
-  foreach my $row (@{$ref})
-  {
-    my ($user2, $attr, $reason, $category, $val) = @{$row};
-    if ($user2 eq $user)
-    {
-      return if $val == 1;
-      $pd = 1 if $attr =~ m/^pd/;
-    }
-    else
-    {
-      $icren = 1 if $attr eq 'ic' and $reason eq 'ren';
-      $date = 1 if $attr eq 'und' and $reason eq 'nfi' and $category eq 'Date';
-      $wr = 1 if $attr eq 'und' and $reason eq 'nfi' and $category eq 'Wrong Record';
-    }
-  }
-  return if !$pd;
-  return 1 if $icren;
-  return 2 if $date;
-  return 3 if $wr;
 }
 
 sub ReviewSearchMenu
