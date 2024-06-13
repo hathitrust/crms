@@ -12,18 +12,13 @@ A web app and suite of tools for performing copyright review projects.
 git submodule init
 git submodule update
 docker compose build
-docker compose up -d mariadb
+docker compose up -d mariadb mariadb-ht
 docker compose run --rm test
 ```
 
-## Running Tests with Coverage
-
-```
-scripts/cover.sh
-```
-
-The other coverage script -- `scripts/test_and_cover.sh` -- is used by GitHub actions
-to upload results to Coveralls.
+By default the `test` service produces a `Devel::Cover` HTML report using
+`scripts/test.sh`. The other script, `scripts/test_and_cover.sh`, is for upload to
+Coveralls and is used in the GitHub action.
 
 ## What is Where
 
@@ -32,7 +27,7 @@ to upload results to Coveralls.
 - `docker` Database seeds
 - `lib` Perl modules (new development and refactored modules from `cgi`)
 - `prep` Destination for some log files and reports
-- `scripts` Binaries run as part of development or by GitHub
+- `scripts` Testing wrappers run as part of development or by GitHub
 - `t` Tests
 - `web` Static assets including images, JS, CSS
 
