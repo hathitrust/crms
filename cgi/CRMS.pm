@@ -7157,34 +7157,34 @@ sub Menus
 }
 
 # Returns aref of arefs to name, url, target, and rel
-sub MenuItems
-{
+# Call with crms.menus.id value or special "docs" keyword.
+# TODO: turning menu items into URLs is done in three different template files
+# (nav.tt, home.tt, top.tt partial) and is hard to read. This routine or a utility
+# should return a complete URL.
+sub MenuItems {
   my $self = shift;
   my $menu = shift;
   my $user = shift || $self->get('user');
 
-  $menu = $self->SimpleSqlGet('SELECT id FROM menus WHERE docs=1 LIMIT 1') if $menu eq 'docs';
-  my $q = $self->GetUserQualifications($user);
+  my $menu_items = [];
+  if ($menu eq 'docs') {
+    $menu = $self->SimpleSqlGet('SELECT id FROM menus WHERE docs=1 LIMIT 1');
+  }
+  my $qualifications = $self->GetUserQualifications($user);
   my $sql = 'SELECT name,href,restricted,target,page FROM menuitems WHERE menu=? ORDER BY n ASC';
   my $ref = $self->SelectAll($sql, $menu);
-  my @all = ();
-  foreach my $row (@{$ref})
-  {
-    my $r = $row->[2];
-    my $page = $row->[4];
-    if ($self->DoQualificationsAndRestrictionsOverlap($q, $r) ||
-        $self->DoesUserHavePageAccess($user, $page))
-    {
-      my $name = $row->[0];
+  foreach my $row (@$ref) {
+    my ($name, $href, $restricted, $target, $page) = @$row;
+    if ($self->DoQualificationsAndRestrictionsOverlap($qualifications, $restricted) ||
+        $self->DoesUserHavePageAccess($user, $page)) {
       my $rel = '';
-      if ($row->[3] && $row->[3] eq '_blank' && $row->[1] =~ m/^http/i)
-      {
+      if ($target && $target eq '_blank' && $href =~ m/^http/i) {
         $rel = 'rel="noopener"';
       }
-      push @all, [$name, $self->MenuPath($row->[1]), $row->[3], $rel];
+      push @$menu_items, [$name, $self->MenuPath($href), $target, $rel];
     }
   }
-  return \@all;
+  return $menu_items;
 }
 
 sub GetUserQualifications
