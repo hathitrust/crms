@@ -7165,7 +7165,6 @@ sub MenuItems
 
   $menu = $self->SimpleSqlGet('SELECT id FROM menus WHERE docs=1 LIMIT 1') if $menu eq 'docs';
   my $q = $self->GetUserQualifications($user);
-  my ($inst, $iname);
   my $sql = 'SELECT name,href,restricted,target,page FROM menuitems WHERE menu=? ORDER BY n ASC';
   my $ref = $self->SelectAll($sql, $menu);
   my @all = ();
@@ -7176,10 +7175,7 @@ sub MenuItems
     if ($self->DoQualificationsAndRestrictionsOverlap($q, $r) ||
         $self->DoesUserHavePageAccess($user, $page))
     {
-      $inst = $self->GetUserProperty($user, 'institution') unless defined $inst;
-      $iname = $self->GetInstitutionName($inst, 1) unless defined $iname;
       my $name = $row->[0];
-      $name =~ s/__INST__/$iname/;
       my $rel = '';
       if ($row->[3] && $row->[3] eq '_blank' && $row->[1] =~ m/^http/i)
       {
