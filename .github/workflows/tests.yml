@@ -22,9 +22,9 @@ jobs:
           submodules: true
 
       - name: Build docker image
-        run: docker compose --file docker-compose.test.yml build
+        run: docker compose build
 
       - name: Run tests
-        run: docker compose --file docker-compose.test.yml run sut
+        run: docker compose run test scripts/test_and_cover.sh
         env:
           GITHUB_TOKEN: ${{ secrets.github_token }}
