@@ -165,6 +165,27 @@ sub SetupUser
   return $crms_user;
 }
 
+# Extract potentially multiple values of ENV{email} as an array ref.
+# We have seen multiple (duplicate) values of email separated by semicolons
+# coming from Shib.
+# Values are downcased, unique, nonempty strings with any "@umich.edu" stripped.
+sub extract_env_email {
+  my $self = shift;
+
+  my $emails = [];
+  if (defined $ENV{email}) {
+    my %seen;
+    foreach my $email (split(';', lc $ENV{email})) {
+      $email =~ s/\@umich.edu//;
+      if (length $email && !$seen{$email}) {
+        push @$emails, $email;
+        $seen{$email} = 1;
+      }
+    }
+  }
+  return $emails;
+}
+
 # Construct redirect URL based on template
 # replace __HOST__ with $ENV{SERVER_NAME}
 # replace __TARGET__ with something like CGI::self_url($cgi)

@@ -18,6 +18,27 @@ subtest '#Version' => sub {
   ok($crms->Version);
 };
 
+subtest '#extract_env_email' => sub {
+  my $save_email = $ENV{email};
+  delete $ENV{email};
+  is_deeply($crms->extract_env_email, [], 'empty array if no ENV{email} defined');
+  $ENV{email} = 'someone@somewhere.edu';
+  is_deeply($crms->extract_env_email, ['someone@somewhere.edu'], 'extracts single value');
+  $ENV{email} = 'someone@somewhere.edu;someone_else@somewhere.edu';
+  is_deeply($crms->extract_env_email, ['someone@somewhere.edu', 'someone_else@somewhere.edu'], 'extracts multiple values');
+  $ENV{email} = ';someone@somewhere.edu';
+  is_deeply($crms->extract_env_email, ['someone@somewhere.edu'], 'ignores leading semicolon');
+  $ENV{email} = 'someone@somewhere.edu;';
+  is_deeply($crms->extract_env_email, ['someone@somewhere.edu'], 'ignores trailing semicolon');
+  $ENV{email} = 'someone@umich.edu';
+  is_deeply($crms->extract_env_email, ['someone'], 'strips @umich.edu');
+  $ENV{email} = 'someone@somewhere.edu;someone@somewhere.edu';
+  is_deeply($crms->extract_env_email, ['someone@somewhere.edu'], 'merges duplicates');
+  $ENV{email} = 'SOMEONE@SOMEWHERE.EDU';
+  is_deeply($crms->extract_env_email, ['someone@somewhere.edu'], 'downcases');
+  $ENV{email} = $save_email;
+};
+
 subtest 'CRMS::MoveToHathitrustFiles' => sub {
   my $tempdir = File::Temp::tempdir(CLEANUP => 1);
   my $save_hathitrust_files_directory = $ENV{'CRMS_HATHITRUST_FILES_DIRECTORY'};
