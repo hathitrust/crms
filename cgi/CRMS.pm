@@ -113,7 +113,7 @@ sub SetupUser
   }
   if (!$crms_user || !$ht_user) {
     $note .= sprintf "ENV{email}=%s\n", (defined $ENV{email}) ? $ENV{email} : '<undef>';
-    foreach my $candidate ($self->extract_env_email) {
+    foreach my $candidate (@{$self->extract_env_email}) {
       my $ht_users_email;
       my $ref = $sdr_dbh->selectall_arrayref($htsql, undef, $candidate);
       if ($ref && scalar @$ref && !$ht_user) {
