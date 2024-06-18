@@ -118,12 +118,8 @@ sub SetupUser
   }
   if (!$crms_user || !$ht_user)
   {
-    $candidate = $ENV{'email'};
-    $candidate = lc $candidate if defined $candidate;
-    $candidate =~ s/\@umich.edu// if defined $candidate;
-    $note .= sprintf "ENV{email}=%s\n", (defined $candidate)? $candidate:'<undef>';
-    if ($candidate)
-    {
+    $note .= sprintf "ENV{email}=%s\n", (defined $ENV{email}) ? $ENV{email} : '<undef>';
+    foreach my $candidate ($self->extract_env_email) {
       my $candidate2;
       my $ref = $sdr_dbh->selectall_arrayref($htsql, undef, $candidate);
       if ($ref && scalar @{$ref} && !$ht_user)
@@ -135,13 +131,15 @@ sub SetupUser
       if ($self->SimpleSqlGet($usersql, $candidate) && !$crms_user)
       {
         $crms_user = $candidate;
-        $note .= "Set crms_user=$crms_user from lc ENV{email}\n";
+        $note .= "Set crms_user=$crms_user from ENV{email} candidate $candidate\n";
       }
       if (!$crms_user && $self->SimpleSqlGet($usersql, $candidate2) && !$crms_user)
       {
         $crms_user = $candidate2;
         $note .= "Set crms_user=$crms_user from ht_users.email\n";
       }
+      # No need to iterate further if we have a match in both crms.users and ht.ht_users
+      last if $ht_user && $crms_user;
     }
   }
   if ($ht_user)
