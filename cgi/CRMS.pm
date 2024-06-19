@@ -83,8 +83,7 @@ sub SetupUser
 
   my $note = '';
   my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh)
-  {
+  if (!defined $sdr_dbh) {
     $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
     $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
   }
@@ -95,66 +94,53 @@ sub SetupUser
   my $candidate = $ENV{'REMOTE_USER'};
   $candidate = lc $candidate if defined $candidate;
   $note .= sprintf "ENV{REMOTE_USER}=%s\n", (defined $candidate)? $candidate:'<undef>';
-  if ($candidate)
-  {
-    my $candidate2;
+  if ($candidate) {
+    my $ht_users_email;
     my $ref = $sdr_dbh->selectall_arrayref($htsql, undef, $candidate);
-    if ($ref && scalar @{$ref})
-    {
+    if ($ref && scalar @{$ref}) {
       $ht_user = $candidate;
       $note .= "Set ht_user=$ht_user\n";
-      $candidate2 = $ref->[0]->[0];
+      $ht_users_email = $ref->[0]->[0];
     }
-    if ($self->SimpleSqlGet($usersql, $candidate))
-    {
+    if ($self->SimpleSqlGet($usersql, $candidate)) {
       $crms_user = $candidate;
       $note .= "Set crms_user=$crms_user from lc ENV{REMOTE_USER}\n";
     }
-    if (!$crms_user && $self->SimpleSqlGet($usersql, $candidate2))
-    {
-      $crms_user = $candidate2;
+    if (!$crms_user && $self->SimpleSqlGet($usersql, $ht_users_email)) {
+      $crms_user = $ht_users_email;
       $note .= "Set crms_user=$crms_user from ht_users.email\n";
     }
   }
-  if (!$crms_user || !$ht_user)
-  {
-    $candidate = $ENV{'email'};
-    $candidate = lc $candidate if defined $candidate;
-    $candidate =~ s/\@umich.edu// if defined $candidate;
-    $note .= sprintf "ENV{email}=%s\n", (defined $candidate)? $candidate:'<undef>';
-    if ($candidate)
-    {
-      my $candidate2;
+  if (!$crms_user || !$ht_user) {
+    $note .= sprintf "ENV{email}=%s\n", (defined $ENV{email}) ? $ENV{email} : '<undef>';
+    foreach my $candidate (@{$self->extract_env_email}) {
+      my $ht_users_email;
       my $ref = $sdr_dbh->selectall_arrayref($htsql, undef, $candidate);
-      if ($ref && scalar @{$ref} && !$ht_user)
-      {
+      if ($ref && scalar @$ref && !$ht_user) {
         $ht_user = $candidate;
         $note .= "Set ht_user=$ht_user\n";
-        $candidate2 = $ref->[0]->[0];
+        $ht_users_email = $ref->[0]->[0];
       }
-      if ($self->SimpleSqlGet($usersql, $candidate) && !$crms_user)
-      {
+      if ($self->SimpleSqlGet($usersql, $candidate) && !$crms_user) {
         $crms_user = $candidate;
-        $note .= "Set crms_user=$crms_user from lc ENV{email}\n";
+        $note .= "Set crms_user=$crms_user from ENV{email} candidate $candidate\n";
       }
-      if (!$crms_user && $self->SimpleSqlGet($usersql, $candidate2) && !$crms_user)
-      {
-        $crms_user = $candidate2;
+      if (!$crms_user && $self->SimpleSqlGet($usersql, $ht_users_email)) {
+        $crms_user = $ht_users_email;
         $note .= "Set crms_user=$crms_user from ht_users.email\n";
       }
+      # No need to iterate further if we have a match in both crms.users and ht.ht_users
+      last if $ht_user && $crms_user;
     }
   }
-  if ($ht_user)
-  {
-    if ($self->NeedStepUpAuth($ht_user))
-    {
+  if ($ht_user) {
+    if ($self->NeedStepUpAuth($ht_user)) {
       $note .= "HT user $ht_user step-up auth required.\n";
       $self->set('stepup', 1);
     }
     $self->set('ht_user', $ht_user);
   }
-  if ($crms_user)
-  {
+  if ($crms_user) {
     $note .= "Setting CRMS user to $crms_user.\n";
     $self->set('remote_user', $crms_user);
     my $alias = $self->GetAlias($crms_user);
@@ -163,6 +149,28 @@ sub SetupUser
   }
   $self->set('id_note', $note);
   return $crms_user;
+}
+
+# Extract potentially multiple values of ENV{email} as an array ref.
+# We have seen multiple (duplicate) values of email separated by semicolons
+# coming from Shib.
+# Values are downcased, unique, nonempty strings with any "@umich.edu" stripped.
+sub extract_env_email {
+  my $self      = shift;
+  my $env_email = shift || $ENV{email};
+
+  my $emails = [];
+  if (defined $env_email) {
+    my %seen;
+    foreach my $email (split(';', lc $env_email)) {
+      $email =~ s/\@umich.edu//;
+      if (length $email && !$seen{$email}) {
+        push @$emails, $email;
+        $seen{$email} = 1;
+      }
+    }
+  }
+  return $emails;
 }
 
 # Construct redirect URL based on template
