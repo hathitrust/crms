@@ -19,23 +19,25 @@ subtest '#Version' => sub {
 };
 
 subtest '#extract_env_email' => sub {
+  my $tests = [
+    # Each is [INPUT, OUTPUT, TEST_COMMENT]
+    [undef, [], 'empty array if no email defined'],
+    ['', [], 'empty array if empty string'],
+    ['someone@somewhere.edu', ['someone@somewhere.edu'], 'extracts single value'],
+    ['someone@somewhere.edu;someone_else@somewhere.edu', ['someone@somewhere.edu', 'someone_else@somewhere.edu'], 'extracts multiple values'],
+    [';someone@somewhere.edu', ['someone@somewhere.edu'], 'ignores leading semicolon'],
+    ['someone@somewhere.edu;', ['someone@somewhere.edu'], 'ignores trailing semicolon'],
+    ['someone@umich.edu', ['someone'], 'strips @umich.edu'],
+    ['someone@somewhere.edu;someone@somewhere.edu', ['someone@somewhere.edu'], 'merges duplicates'],
+    ['SOMEONE@SOMEWHERE.EDU', ['someone@somewhere.edu'], 'downcases']
+  ];
   my $save_email = $ENV{email};
   delete $ENV{email};
-  is_deeply($crms->extract_env_email, [], 'empty array if no ENV{email} defined');
+  foreach my $test (@$tests) {
+    is_deeply($crms->extract_env_email($test->[0]), $test->[1], $test->[2]);
+  }
   $ENV{email} = 'someone@somewhere.edu';
-  is_deeply($crms->extract_env_email, ['someone@somewhere.edu'], 'extracts single value');
-  $ENV{email} = 'someone@somewhere.edu;someone_else@somewhere.edu';
-  is_deeply($crms->extract_env_email, ['someone@somewhere.edu', 'someone_else@somewhere.edu'], 'extracts multiple values');
-  $ENV{email} = ';someone@somewhere.edu';
-  is_deeply($crms->extract_env_email, ['someone@somewhere.edu'], 'ignores leading semicolon');
-  $ENV{email} = 'someone@somewhere.edu;';
-  is_deeply($crms->extract_env_email, ['someone@somewhere.edu'], 'ignores trailing semicolon');
-  $ENV{email} = 'someone@umich.edu';
-  is_deeply($crms->extract_env_email, ['someone'], 'strips @umich.edu');
-  $ENV{email} = 'someone@somewhere.edu;someone@somewhere.edu';
-  is_deeply($crms->extract_env_email, ['someone@somewhere.edu'], 'merges duplicates');
-  $ENV{email} = 'SOMEONE@SOMEWHERE.EDU';
-  is_deeply($crms->extract_env_email, ['someone@somewhere.edu'], 'downcases');
+  is_deeply($crms->extract_env_email, ['someone@somewhere.edu'], 'uses ENV{email} if no parameter');
   $ENV{email} = $save_email;
 };
 

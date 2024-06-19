@@ -156,12 +156,13 @@ sub SetupUser
 # coming from Shib.
 # Values are downcased, unique, nonempty strings with any "@umich.edu" stripped.
 sub extract_env_email {
-  my $self = shift;
+  my $self      = shift;
+  my $env_email = shift || $ENV{email};
 
   my $emails = [];
-  if (defined $ENV{email}) {
+  if (defined $env_email) {
     my %seen;
-    foreach my $email (split(';', lc $ENV{email})) {
+    foreach my $email (split(';', lc $env_email)) {
       $email =~ s/\@umich.edu//;
       if (length $email && !$seen{$email}) {
         push @$emails, $email;
