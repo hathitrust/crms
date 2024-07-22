@@ -8,8 +8,7 @@
     <script src="https://unpkg.com/tippy.js@3/dist/tippy.all.min.js"></script>
   [% page = cgi.param('p') %]
   [% reviewType = (page == 'review' OR page == 'cri'
-                   OR page == 'stanford' OR page == 'frontmatter'
-                   OR page == 'pageimage') %]
+                   OR page == 'stanford' OR page == 'frontmatter' %]
   [% IF reviewType %]
     <script src="[% crms.WebPath('web', 'js/review.js') %]"></script>
   [% ELSE %]

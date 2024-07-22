@@ -7958,16 +7958,6 @@ sub UUID
   return UUID::Tiny::create_uuid_as_string(UUID::Tiny::UUID_V4);
 }
 
-sub GetPageImage
-{
-  my $self = shift;
-  my $id   = shift;
-  my $seq  = shift;
-
-  use HTDataAPI;
-  return HTDataAPI::GetPageImage($id, $seq);
-}
-
 sub ExportReport
 {
   my $self  = shift;
