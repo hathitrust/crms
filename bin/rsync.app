@@ -3,8 +3,8 @@
 DEST_PREFIX=$1
 shift
 
-DEPLOY_DEST=${DEST_PREFIX}babel
-DEPLOY_SRC=/htapps/test.babel
+DEPLOY_DEST=${DEST_PREFIX}babel/crms
+DEPLOY_SRC=/htapps/test.babel/crms
 
 INCLUDE=$(cat <<EOT
   $DEPLOY_SRC/bib_rights
