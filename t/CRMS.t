@@ -95,6 +95,22 @@ subtest '#LinkToJira' => sub {
     '<a href="https://hathitrust.atlassian.net/browse/DEV-000" target="_blank">DEV-000</a>');
 };
 
+subtest '#MenuItems' => sub {
+  subtest 'with menu id' => sub {
+    my $items = $crms->MenuItems(1, 'autocrms');
+    isa_ok($items, 'ARRAY', 'returns arrayref');
+    ok(scalar @$items > 0, 'returns at least one item');
+    is(scalar @{$items->[0]}, 4, 'items are 4-element arrayrefs');
+  };
+
+  subtest 'with "docs" special keyword' => sub {
+    my $items = $crms->MenuItems('docs', 'autocrms');
+    isa_ok($items, 'ARRAY', 'returns arrayref');
+    ok(scalar @$items > 0, 'returns at least one item');
+    is(scalar @{$items->[0]}, 4, 'items are 4-element arrayrefs');
+  };
+};
+
 subtest '#GetProjectsRef' => sub {
   isa_ok($crms->GetProjectsRef, 'ARRAY');
 };
