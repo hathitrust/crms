@@ -60,7 +60,7 @@ git clone git@github.com:hathitrust/crms.git
 cd crms/
 ```
 
-2. Pull the Post Zepher Processing Repo as a sub-module
+2. Pull the Post Zephir Processing Repo as a sub-module
 
 ```sh
 git submodule init
@@ -76,7 +76,7 @@ docker compose run --rm test
 
 
 ### Project Structure
-- `bib_rights` two miscellaneous scrips related to bibliographic rights. 
+- `bib_rights` two miscellaneous scripts related to bibliographic rights. 
 - `bin` For the most part these are actions and reports run as cron jobs
 - `cgi` Main entry point `cgi/crms` as well as Perl modules and view templates
   - This is the directory most in need of reorganization. In future much of its
