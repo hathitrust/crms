@@ -1,6 +1,6 @@
 <br/>
   <p align="center">
-  CRMS: Copyright Review Management System
+  <h1>CRMS: Copyright Review Management System</h1>
   
 ![Run Tests](https://github.com/hathitrust/crms/workflows/Run%20Tests/badge.svg)  [![Coverage Status](https://coveralls.io/repos/github/hathitrust/crms/badge.svg?branch=main)](https://coveralls.io/github/hathitrust/crms?branch=main)
   
