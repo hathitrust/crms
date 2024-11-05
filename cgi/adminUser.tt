@@ -40,7 +40,6 @@ addEvent(window, 'load', function(e)
 
 <form action="crms">
   <input type="hidden" name="p" value="adminUser"/>
-  [% crms.HiddenSys() %]
   <label for="order">Order by:</label>
   <select name="order" id="order" onchange="this.form.submit()">
     <option value="0" [% (order==0)? 'selected="selected"':'' %]>Name</option>
@@ -94,12 +93,11 @@ addEvent(window, 'load', function(e)
     [% style = (active)? '':'style="background-color:#e2e2e2;"' %]
     <tr [% id == u.id ? 'class="total"':'class="hoverWide"'%] [% style %]>
       <td class="nowrap">
-        <a href="[% crms.Sysify('crms?p=userRate;user=' _ userid) %]" target="_blank">
+        <a href="crms?p=userRate;user=[% userid %]" target="_blank">
           [% u.name.replace('\s','&nbsp;') %]
         </a>
         [% IF active && crms.CanChangeToUser(user,userid) %]
         <form action="crms" style="display:inline;align:right;">
-          [% crms.HiddenSys() %]
           <input type="hidden" name="changeuser" value="1"/>
           <input type="hidden" name="newuser" value="[% userid %]"/>
           <input type="submit" value="Change to…"/>
@@ -195,7 +193,6 @@ addEvent(window, 'load', function(e)
     <input type="hidden" name="p" value="adminUser"/>
     <input type="hidden" name="add" value="1"/>
     <input type="hidden" name="order" value="[% order %]"/>
-    [% crms.HiddenSys() %]
     <table>
     <tr>
       <td>

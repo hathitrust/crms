@@ -28,7 +28,6 @@ function CheckAll(box,formid)
 [% IF projs.size > 1 %]
   <form action="crms">
     <input type="hidden" name="projectForm" value="1"/>
-    [% crms.HiddenSys() %]
     <label for="projectSel">Current project:</label>
     <select name="projectSel" id="projectSel" onchange="this.form.submit()">
     [% FOREACH proj IN projs %]
@@ -52,8 +51,7 @@ function CheckAll(box,formid)
 [% n = ref.size %]
 [% IF n>0 %]
   <h4>You have $n
-    <a href="[% crms.Sysify('?p=queueAdd') %]">
-    high-priority</a> [% crms.Pluralize('volume', n) %].
+    <a href="?p=queueAdd">high-priority</a> [% crms.Pluralize('volume', n) %].
   </h4>
 [% END %]
 <br/>
@@ -118,7 +116,6 @@ function CheckAll(box,formid)
 [% IF locked.size %]
   [% sysStatus = crms.GetSystemStatus().1 %]
   <br/><br/><form action="crms" id="checks">
-  [% crms.HiddenSys() %]
   <input type="checkbox" id="SelectAllCB" onclick="CheckAll(this,'checks');"/>
   <label for="SelectAllCB">Select All</label>&nbsp;&nbsp;&nbsp;&nbsp;
   [% IF sysStatus == 'normal' %]
@@ -135,7 +132,7 @@ function CheckAll(box,formid)
       <td>[% crms.GetTitle( item ) %]</td>
       <td style="text-align:center"><input type="checkbox" name="vol_[% item %]"/></td>
       <td style="text-align:center">
-        [% IF sysStatus == 'normal' %]<a href="[% crms.Sysify("crms?unlock=" _ item) %]">do it</a>[% END %]
+        [% IF sysStatus == 'normal' %]<a href="crms?unlock=[% item %]">do it</a>[% END %]
       </td>
     </tr>
   [% END %]
