@@ -120,6 +120,16 @@ sub HasCCLicense
 }
 
 # ========== REVIEW ========== #
+sub queue_order {
+  # Add mdp namespace to queue ahead of everything else.
+  return 'IF("mdp"=LEFT(c.id,LOCATE(".",c.id)-1),1,0) DESC';
+}
+
+sub PresentationOrder {
+  # Present mdp namespace ahead of everything else.
+  return 'IF("mdp"=LEFT(q.id,LOCATE(".",q.id)-1),1,0) DESC';
+}
+
 sub ReviewPartials
 {
   return ['top', 'bibdata', 'authorities',
