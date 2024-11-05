@@ -438,7 +438,7 @@ sub SubmitNewYearReview
       $record->title || '', $record->publication_date->text || '',
       $record->country || '', "$acurr/$rcurr", $extracted_data,
       $predictions, "$new_attr/$new_reason", $msg);
-    @values = map { local $_ = $_; $_ =~ s/\s+/ /g; $_; } @values;
+    @values = map { s/\s+/ /gr } @values;
     printf $tsv_fh "%s\n", join("\t", @values);
   }
 }

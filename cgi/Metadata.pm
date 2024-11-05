@@ -1,5 +1,9 @@
 package Metadata;
 
+use strict;
+use warnings;
+use utf8;
+
 BEGIN {
   die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
   use lib $ENV{'SDRROOT'} . '/crms/lib';
@@ -15,10 +19,6 @@ BEGIN {
 # CRMS_METADATA_FIXTURES_PATH + /123456789.json
 
 use vars qw(@ISA @EXPORT @EXPORT_OK);
-
-use strict;
-use warnings;
-use utf8;
 
 use Carp;
 use DB_File;
@@ -111,7 +111,7 @@ sub US_Cities {
   if (!defined $US_CITIES) {
     my %us_cities;
     my $us_cities_db = $ENV{'SDRROOT'} . '/crms/post_zephir_processing/data/us_cities.db';
-    tie %us_cities, 'DB_File', $us_cities_db, O_RDONLY, 0644, $DB_BTREE or die "can't open db file $us_cities_db: $!";
+    tie %us_cities, 'DB_File', $us_cities_db, O_RDONLY, oct(644), $DB_BTREE or die "can't open db file $us_cities_db: $!";
     $US_CITIES = \%us_cities;
   }
   return $US_CITIES;

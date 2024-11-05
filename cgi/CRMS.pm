@@ -1,5 +1,9 @@
 package CRMS;
 
+use strict;
+use warnings;
+use utf8;
+
 ## ----------------------------------------------------------
 ## Object of shared code for the CRMS DB CGI and BIN scripts.
 ## ----------------------------------------------------------
@@ -9,10 +13,6 @@ BEGIN {
   use lib $ENV{'SDRROOT'} . '/crms/cgi';
   use lib $ENV{'SDRROOT'} . '/crms/lib';
 }
-
-use strict;
-use warnings;
-use utf8;
 
 use CGI;
 use Data::Dumper;
@@ -1105,7 +1105,7 @@ sub WriteRightsFile
   }
   my $temp = $perm . '.tmp';
   if (-f $temp) { die "file already exists: $temp\n"; }
-  open (my $fh, '>:utf8', $temp) || die "failed to open rights file ($temp): $!\n";
+  open (my $fh, '>:encoding(UTF-8)', $temp) || die "failed to open rights file ($temp): $!\n";
   print $fh $rights;
   close $fh;
   rename $temp, $perm;
@@ -1273,7 +1273,7 @@ sub CheckAndLoadItemIntoCandidates
       $self->RemoveFromCandidates($id);
     }
   }
-  return undef;
+  return;
 }
 
 sub AddItemToCandidates
