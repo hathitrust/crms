@@ -7787,17 +7787,6 @@ sub CountRemainingVolumesForProject
   return $self->SimpleSqlGet($sql, $proj);
 }
 
-# Returns the id of the added project, or undef on error.
-sub AddProject
-{
-  my $self     = shift;
-  my $name     = shift;
-
-  my $sql = 'INSERT INTO projects (name) VALUES (?,?)';
-  $self->PrepareSubmitSql($sql, $name);
-  return $self->SimpleSqlGet('SELECT id FROM projects WHERE name=?', $name);
-}
-
 sub AllAssignableRights
 {
   my $self = shift;
