@@ -63,6 +63,8 @@ RUN apt-get update && apt-get install -y \
   liblwp-mediatypes-perl \
   libmail-sendmail-perl \
   libmailtools-perl \
+  libmarc-record-perl \
+  libmarc-xml-perl \
   libmime-lite-perl \
   libmime-types-perl \
   libmodule-implementation-perl \
@@ -93,9 +95,7 @@ RUN apt-get update && apt-get install -y \
   libxml-writer-perl \
   libyaml-appconfig-perl \
   libyaml-libyaml-perl \
-  libyaml-perl \
-  libmarc-record-perl \
-  libmarc-xml-perl
+  libyaml-perl
 
 RUN apt-get install -y \
   autoconf \
@@ -115,7 +115,6 @@ RUN apt-get install -y \
 RUN cpanm --notest \
   Devel::Cover::Report::Coveralls \
   MARC::Record::MiJ \
-  OAuth::Lite \
   Test::Exception \
   Test::LWP::UserAgent
 
