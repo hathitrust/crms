@@ -10,18 +10,6 @@ sub new
   return $class->SUPER::new(@_);
 }
 
-my %TEST_HTIDS = (
-    'yale.39002030686159' => 'Example'
-);
-
-sub tests
-{
-  my $self = shift;
-
-  my @tests = keys %TEST_HTIDS;
-  return \@tests;
-}
-
 # ========== CANDIDACY ========== #
 # Returns undef for failure, or hashref with two fields:
 # status in {'yes', 'no', 'filter'}
