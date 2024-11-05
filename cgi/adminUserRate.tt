@@ -13,7 +13,6 @@
 <div style="position:relative;border-style:solid;width:36em;border-width:1px;padding:10px;">
 <form id="select" action="crms">
 <input type="hidden" name="p" value="$p_page"/>
-[% crms.HiddenSys() %]
 
 [% projs = crms.GetProjectsRef() %]
 <label for="projectSel" style="width:5em;float:left;">Project</label>

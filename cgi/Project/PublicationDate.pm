@@ -11,19 +11,6 @@ sub new
   return $class->SUPER::new(@_);
 }
 
-#my %TEST_HTIDS = (
-#    'coo.31924000029250' => 'Australia',
-#    'bc.ark:/13960/t02z7k303' => 'Canada',
-#    'bc.ark:/13960/t0bw4939s' => 'UK');
-
-#sub tests
-#{
-#  my $self = shift;
-#
-#  my @tests = keys %TEST_HTIDS;
-#  return \@tests;
-#}
-
 # ========== CANDIDACY ========== #
 # This is a static load project, so we only accept volumes that are already
 # in candidates.

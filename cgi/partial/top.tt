@@ -11,7 +11,7 @@
     <tr>
       <td style="text-align:left;padding-left:8px;">
         <a href="[% homeLink %]">Home</a>
-        &nbsp;&nbsp;&nbsp;&nbsp;<a href="[% crms.Sysify(crms.WebPath('cgi', 'crms?p=Logout')) %]">Logout</a>
+        &nbsp;&nbsp;&nbsp;&nbsp;<a href="[% crms.WebPath('cgi', 'crms?p=Logout') %]">Logout</a>
       </td>
     </tr>
     <tr>

@@ -44,7 +44,6 @@ may not be up-to-date.</h3>
 <input type="hidden" name="p" value="$p"/>
 <input type="hidden" name="auto" value="$auto"/>
 <input type="hidden" name="n" value="$n"/>
-[% crms.HiddenSys() %]
 
 Restrict selection:
 <div style="position:absolute;top:0.5em;right:0.5em;">
@@ -229,7 +228,6 @@ function EnableButtons(formid)
     <input type="hidden" name="p" value="$p"/>
     <input type="hidden" name="auto" value="$auto"/>
     <input type="hidden" name="n" value="$n"/>
-    [% crms.HiddenSys() %]
     <input type="checkbox" id='SelectAllButton' onclick="CheckAll(this,'checks');"/>
     <label for="SelectAllButton">Select All</label>
     &nbsp;&nbsp;&nbsp;&nbsp;

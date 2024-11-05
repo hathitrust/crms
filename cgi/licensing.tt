@@ -5,7 +5,6 @@
 
 <h2>Licensing:</h2>
 <form action="crms">
-  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="[% p %]"/>
   <label for="queryTA" class="smallishText">Enter one volume or system id per line.</label><br/>
   <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;">[% crms.EchoInput(q) %]</textarea>
@@ -14,7 +13,6 @@
 
 [% IF q %]
   <form action="crms" method="POST">
-    [% crms.HiddenSys() %]
     <input type="hidden" name="p" value="[% p %]"/>
     [% IF cgi.param("submit_rights") == "true" %]
       <br/><strong>Data Submitted</strong><br/>
