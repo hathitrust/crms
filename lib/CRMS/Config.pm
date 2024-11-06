@@ -21,6 +21,13 @@ use utf8;
 use File::Spec;
 use YAML::XS;
 
+use lib "$ENV{SDRROOT}/crms/lib";
+use CRMS::Instance;
+
+sub config_directory {
+  return File::Spec->catfile($ENV{SDRROOT}, 'crms', 'config');
+}
+
 sub new {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
@@ -32,9 +39,8 @@ sub new {
 sub config {
   my $self = shift;
 
-  # uncoverable branch false
   if (!defined $self->{config}) {
-    my $config = $self->_read_config_files('config');
+    my $config = $self->_read_config_files();
     $self->{config} = $self->_merge_env($config);
   }
   return $self->{config};
@@ -42,27 +48,48 @@ sub config {
 
 # Read credentials.yml (and credentials.local.yml if it exists)
 # and overwrite any keys with values found in ENV.
+# Does not memoize value as this is sensitive data.
 sub credentials {
   my $self = shift;
 
-  # uncoverable branch false
-  if (!defined $self->{credentials}) {
-    my $credentials = $self->_read_config_files('credentials');
-    $self->{credentials} = $self->_merge_env($credentials);
-  }
-  return $self->{credentials};
+  my $credentials = $self->_read_credentials_files();
+  return $self->_merge_env($credentials);
 }
 
-# Read basename.yml and basename.local.yml, merging values from the latter into the former.
+# Read basename.yml, basename.local.yml, instances/<instance_name>.yml, instances/<instance_name>.local.yml
+# merging values from the latter into the former.
 sub _read_config_files {
-  my $self     = shift;
-  my $basename = shift;
+  my $self = shift;
 
   my $config = {};
-  foreach my $file (($basename . '.yml', $basename . '.local.yml')) {
-    my $path = File::Spec->catfile($self->_config_dir, $file);
-    next unless -f $path;
-    my $contents = YAML::XS::LoadFile($path);
+  my @config_files = (
+    File::Spec->catfile(config_directory, 'config.yml'),
+    File::Spec->catfile(config_directory, 'config.local.yml'),
+    File::Spec->catfile(config_directory, 'instances', CRMS::Instance->new->name . '.yml'),
+    File::Spec->catfile(config_directory, 'instances', CRMS::Instance->new->name . '.local.yml')
+  );
+  foreach my $file (@config_files) {
+    next unless -f $file;
+    my $contents = YAML::XS::LoadFile($file);
+    foreach my $key (keys %$contents) {
+      $config->{$key} = $contents->{$key};
+    }
+  }
+  return $config;
+}
+
+# Read credentials.yml and credentials.local.yml, merging values from the latter into the former.
+sub _read_credentials_files {
+  my $self = shift;
+
+  my $config = {};
+  my @credentials_files = (
+    File::Spec->catfile(config_directory, 'credentials.yml'),
+    File::Spec->catfile(config_directory, 'credentials.local.yml')
+  );
+  foreach my $file (@credentials_files) {
+    next unless -f $file;
+    my $contents = YAML::XS::LoadFile($file);
     foreach my $key (keys %$contents) {
       $config->{$key} = $contents->{$key};
     }
@@ -82,12 +109,6 @@ sub _merge_env {
     }
   }
   return $config;
-}
-
-sub _config_dir {
-  my $self = shift;
-
-  return File::Spec->catfile($ENV{SDRROOT}, 'crms', 'config');
 }
 
 1;

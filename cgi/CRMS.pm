@@ -41,9 +41,14 @@ sub new
   my ($class, %args) = @_;
   my $self = bless {}, $class;
   # If running under Apache.
-  $self->set('instance', $ENV{'CRMS_INSTANCE'});
-  # If running from command line.
-  $self->set('instance', $args{'instance'}) if $args{'instance'};
+  #$self->set('instance', $ENV{'CRMS_INSTANCE'});
+  # If running from command line this will ensure the instance is set up as expected,
+  # if it has not already been explicitly set up.
+  if ($args{instance}) {
+    # No need to store it, it's a singleton.
+    my $instance = CRMS::Instance->new(instance => $args{instance});
+  }
+  #$self->set('instance', $args{'instance'}) 
   my $root = $ENV{'SDRROOT'};
   die 'ERROR: cannot locate root directory with SDRROOT!' unless $root and -d $root;
   $self->set('root', $root);
@@ -366,7 +371,8 @@ sub DbInfo
   my $self = shift;
 
   my $config = CRMS::Config->new;
-  my $instance = $self->get('instance') || '';
+  #my $instance = $self->get('instance') || '';
+  my $instance = CRMS::Instance->new->{name};
   my $credentials = $config->credentials;
   my $db_user = $credentials->{'db_user'};
   my $dsn = $self->DSN();
@@ -425,12 +431,12 @@ sub GetSdrDb
 sub DSN {
   my $self = shift;
 
-  my $instance = $self->get('instance') || '';
+  #my $instance = $self->get('instance') || '';
   my $config = CRMS::Config->new;
   my $db_host = $config->config->{'db_host'};
-  $db_host = $config->config->{'db_host_development'} if $instance eq '';
+  #$db_host = $config->config->{'db_host_development'} if $instance eq '';
   my $db_name = $config->config->{'db_name'};
-  $db_name = 'crms_training' if $instance eq 'crms-training';
+  #$db_name = 'crms_training' if $instance eq 'crms-training';
   return "DBI:mysql:database=$db_name;host=$db_host";
 }
 
@@ -3704,8 +3710,9 @@ sub CanChangeToUser
   my $him  = shift;
 
   return 1 if $self->SameUser($me, $him);
-  my $instance = $self->get('instance') || '';
-  if ($instance ne 'production' && $instance ne 'crms-training')
+  #my $instance = $self->get('instance') || '';
+  my $instance = CRMS::Instance->new->{name};
+  if ($instance eq 'development')
   {
     return 0 if $me eq $him;
     return 1 if $self->IsUserAdmin($me);
@@ -6364,11 +6371,11 @@ sub WhereAmI
 {
   my $self = shift;
 
-  my %instances = ('production' => 1, 'crms-training' => 1, 'dev' => 1);
-  my $instance = $self->get('instance') || $ENV{'HT_DEV'} || 'dev';
-  $instance = "dev ($instance)" unless $instances{$instance};
-  $instance = 'training' if $instance eq 'crms-training';
-  return ucfirst $instance;
+  #my %instances = ('production' => 1, 'crms-training' => 1, 'dev' => 1);
+  #my $instance = $self->get('instance') || $ENV{'HT_DEV'} || 'dev';
+  #$instance = "dev ($instance)" unless $instances{$instance};
+  #$instance = 'training' if $instance eq 'crms-training';
+  return ucfirst CRMS::Instance->new->{name};
 }
 
 sub DevBanner
@@ -6390,26 +6397,30 @@ sub Host
   if (!$host)
   {
     $host = $self->GetSystemVar('host');
-    my $instance = $self->get('instance') || 'test';
-    $host = $instance . '.' . $host if $instance ne 'production';
+    #my $instance = $self->get('instance') || 'test';
+    #$host = $instance . '.' . $host if $instance ne 'production';
   }
   return 'https://' . $host;
 }
 
+# TODO: move this to a CRMS::Instance method
 sub IsDevArea
 {
   my $self = shift;
 
-  my $inst = $self->get('instance') || '';
-  return ($inst eq 'production' || $inst eq 'crms-training')? 0:1;
+  #my $inst = $self->get('instance') || '';
+  #return ($inst eq 'production' || $inst eq 'crms-training')? 0:1;
+  return CRMS::Instance->new->name eq 'development';
 }
 
+# TODO: move this to a CRMS::Instance method
 sub IsTrainingArea
 {
   my $self = shift;
 
-  my $inst = $self->get('instance') || '';
-  return $inst eq 'crms-training';
+  #my $inst = $self->get('instance') || '';
+  #return $inst eq 'crms-training';
+  return CRMS::Instance->new->name eq 'training';
 }
 
 sub Hostname

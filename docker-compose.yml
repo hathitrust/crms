@@ -40,7 +40,7 @@ services:
     environment:
       - SDRROOT=/htapps/babel
       - CRMS_DB_HOST=mariadb
-      - CRMS_DB_HOST_DEVELOPMENT=mariadb
+      #- CRMS_DB_HOST_DEVELOPMENT=mariadb
       - CRMS_HT_DB_HOST=mariadb_ht
       # pass through info needed by coveralls uploader
       - GITHUB_TOKEN

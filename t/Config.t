@@ -15,6 +15,10 @@ subtest 'CRMS::Config' => sub {
   ok(ref $config eq 'CRMS::Config');
 };
 
+subtest 'CRMS::Config::config_directory' => sub {
+  is(CRMS::Config::config_directory, '/htapps/babel/crms/config');
+};
+
 subtest 'CRMS::Config::config' => sub {
   my $config = CRMS::Config->new->config;
   ok(ref $config eq 'HASH');
@@ -68,6 +72,5 @@ subtest 'sanity check config keys' => sub {
     ok($key =~ m/^[a-z_]+$/, "check key $key");
   }
 };
-
 
 done_testing();
