@@ -99,22 +99,14 @@ sub EvaluateCandidacy
 # Return undef for no additional order (the default), or
 # a column name in bibdata (b.*) or candidates (c.*).
 # Example: 'b.author DESC'
-sub queue_order {
-  my $self = shift;
-
-  return;
-}
+sub queue_order { }
 
 # Called by CRMS::GetNextItemForReview to order volumes.
 # Return undef for no additional order (the default), or
 # a column name in bibdata (b.*) or the queue (q.*).
 # Example: 'b.author DESC'
-sub PresentationOrder
-{
-  my $self = shift;
+sub PresentationOrder { }
 
-  return;
-}
 
 sub ReviewPartials
 {

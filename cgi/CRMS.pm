@@ -1461,8 +1461,7 @@ sub LoadQueueForProject {
     my $record = $self->GetMetadata($sysid);
     $sql = 'SELECT c.id FROM candidates c'.
            ' INNER JOIN bibdata b ON c.id=b.id'.
-           ' WHERE c.project=? AND b.sysid=?'.
-           ' ORDER BY ' . join(',', @orders);
+           ' WHERE c.project=? AND b.sysid=?';
     my $ref2 = $self->SelectAll($sql, $project, $sysid);
     foreach my $row2 (@$ref2) {
       my $id = $row2->[0];

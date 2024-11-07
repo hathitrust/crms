@@ -26,5 +26,9 @@ subtest '#queue_order' => sub {
   is($project->queue_order, undef, 'default project has no queue_order');
 };
 
+subtest '#PresentationOrder' => sub {
+  is($project->PresentationOrder, undef, 'default project has no PresentationOrder');
+};
+
 done_testing();
 
