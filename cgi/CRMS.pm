@@ -1436,11 +1436,15 @@ sub LoadQueueForProject {
   my $project_name = $self->GetProjectRef($project)->name;
   my $sql = 'SELECT COUNT(*) FROM queue WHERE project=?';
   my $queueSize = $self->SimpleSqlGet($sql, $project);
-  my $targetQueueSize = $self->GetProjectRef($project)->queue_size();
+  my $project_ref = $self->GetProjectRef($project);
+  my $targetQueueSize = $project_ref->queue_size();
   my $needed = $targetQueueSize - $queueSize;
   $self->ReportMsg("Project $project_name: $queueSize volumes -- need $needed");
   return if $needed <= 0;
   my $count = 0;
+  my @orders = ('c.time DESC');
+  my $project_order = $project_ref->queue_order;
+  unshift @orders, $project_order if defined $project_order;
   $sql = 'SELECT DISTINCT b.sysid FROM bibdata b'.
          ' INNER JOIN candidates c ON b.id = c.id'.
          ' WHERE b.id NOT IN (SELECT DISTINCT id FROM inherit)'.
@@ -1448,7 +1452,7 @@ sub LoadQueueForProject {
          ' AND b.id NOT IN (SELECT DISTINCT id FROM reviews)'.
          ' AND b.id NOT IN (SELECT DISTINCT id FROM historicalreviews)'.
          ' AND c.time<=DATE_SUB(NOW(), INTERVAL 1 WEEK) AND c.project=?'.
-         ' ORDER BY c.time DESC';
+         ' ORDER BY ' . join(',', @orders);
   my $ref = $self->SelectAll($sql, $project);
   my $potential = scalar @$ref;
   $self->ReportMsg("$potential qualifying catalog records for project $project queue");
@@ -1457,8 +1461,7 @@ sub LoadQueueForProject {
     my $record = $self->GetMetadata($sysid);
     $sql = 'SELECT c.id FROM candidates c'.
            ' INNER JOIN bibdata b ON c.id=b.id'.
-           ' WHERE c.project=? AND b.sysid=?'.
-           ' ORDER BY c.time ASC';
+           ' WHERE c.project=? AND b.sysid=?';
     my $ref2 = $self->SelectAll($sql, $project, $sysid);
     foreach my $row2 (@$ref2) {
       my $id = $row2->[0];
