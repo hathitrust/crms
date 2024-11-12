@@ -8057,6 +8057,13 @@ sub BibRights {
   BibRights->new;
 }
 
+sub CandidatesController {
+  my $self = shift;
+
+  use CRMS::Controller::CandidatesController;
+  CRMS::Controller::CandidatesController->new(crms => $self, cgi => $self->{cgi});
+}
+
 sub Field008Formatter {
   my $self = shift;
 

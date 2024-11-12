@@ -1,0 +1,54 @@
+[% INCLUDE header.tt %]
+
+[% ids = cgi.param('ids') %]
+[% noop = cgi.param('noop') %]
+
+<h2>Remove Volumes from Candidates:</h2>
+<br/><br/>
+<form action="crms">
+  <p class="smallishText">Enter one volume id per line.</p>
+  [% crms.Hiddenify(cgi, 'ids', 'noop') %]
+  <textarea name="ids" cols="28" rows="30" style="width:33%; height:9em;">[% ids %]</textarea>
+  <br/><br/>
+  <table style="width:30%;border-spacing:0.25em;">
+    <tr>
+      <td style="text-align:right;">
+        <label for="NoopCheck"><strong>Test Only</strong></label>
+      </td>
+      <td>
+        <input type="checkbox" id="NoopCheck" name="noop" [% noop? 'checked="checked"':'' %]/>
+      </td>
+      <td></td>
+      <td style="text-align:right;">
+        <input type="submit" value="Submit"/>
+      </td>
+    </tr>
+  </table>
+</form>
+
+[% IF cgi.param('ids') %]
+  [% controller = crms.CandidatesController() %]
+  [% results = controller.remove %]
+  <br/>
+  <table class="exportStats">
+    <tr><th>ID</th><th>Status</th><th>Message</th><th>Tracking</th></tr>
+    [% FOR result IN results %]
+      <tr>
+        <td class="nowrap">[% result.id %]</td>
+        <td class="nowrap">
+          [% IF result.status == 'ok' %]
+            <img width="16" height="16" alt="Success" src="[% crms.WebPath('web', 'CheckIcon.png') %]"/>
+          [% ELSIF result.status == 'error' %]
+            <img width="16" height="16" alt="Error" src="[% crms.WebPath('web', 'XIcon.png') %]"/>
+          [% ELSIF result.status == 'noop' %]
+            <img width="16" height="16" alt="No Change" src="[% crms.WebPath('web', 'MinusIcon.png') %]"/>
+          [% END %]
+        </td>
+        <td class="nowrap">[% result.message %]</td>
+        <td class="nowrap">[% result.tracking %]</td>
+      </tr>
+    [% END %]
+  </table>
+[% END %]
+
+[% INCLUDE footer.tt %]
