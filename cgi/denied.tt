@@ -16,8 +16,8 @@
     [% username = (user)? user : "{unknown user}" %]
     <h2>You do not have access to this page.</h2>
     [% IF user %]
-      <strong><a href="[% crms.Sysify('?p=home') %]">Go to home page</a></strong><br/>
-      <strong><a href="[% crms.Sysify('?p=Logout') %]"> Logout</a></strong>
+      <strong><a href="?p=home">Go to home page</a></strong><br/>
+      <strong><a href="?p=Logout"> Logout</a></strong>
     [% END %]
     <div class="warningSubbox">
       <h4>Security considerations do not allow Copyright Review Management System reviewer

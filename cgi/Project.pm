@@ -74,14 +74,6 @@ sub secondary_authority
   return $self->{'secondary_authority'};
 }
 
-# Return a list of HTIDs that should be claimed by this project.
-sub tests
-{
-  my $self = shift;
-
-  return [];
-}
-
 sub EvaluateCandidacy
 {
   my $self   = shift;

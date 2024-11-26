@@ -57,7 +57,6 @@ function closeMe()
         <br/>
         [% user = crms.get('user') %]
         <form action="crms">
-          [% crms.HiddenSys() %]
           <input type="hidden" name="user" value="[% user %]"/>
           <input type="hidden" name="p" value="[% cgi.param('p') %]"/>
           <input type="hidden" name="uuid" value="[% crms.UUID() %]"/>

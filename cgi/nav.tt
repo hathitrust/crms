@@ -9,7 +9,7 @@ addEvent(window, 'load', sfHover);
 [% IF p %]
   <li><span>Home</span>
   <dl class="home">
-    <dt><a href="[% crms.Sysify("crms") %]">Home</a></dt>
+    <dt><a href="crms"">Home</a></dt>
     <dd style="display:none"> </dd>
   </dl>
   </li>

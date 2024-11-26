@@ -303,53 +303,6 @@ function populateProject(data, table)
   sessionStorage.setItem('A'+data.id, JSON.stringify(data.authorities.map(String)));
   sessionStorage.setItem('U'+data.id, JSON.stringify(data.users));
 }
-
-function addProject(name)
-{
-  var loader = document.getElementById('addLoader');
-  var err = document.getElementById('errorSpan');
-  var req = new XMLHttpRequest();
-  var name = document.getElementById('addName').value;
-  var expert = document.getElementById('restrictE').checked;
-  var admin = document.getElementById('restrictA').checked;
-  req.onreadystatechange = function()
-  {
-    if (req.readyState == 4)
-    {
-      if (req.status == 200)
-      {
-        var data = JSON.parse(req.responseText, null);
-        if (data)
-        {
-          if (data.error)
-          {
-            err.innerHTML = data.error;
-            err.style.display = '';
-          }
-          else
-          {
-            var body = document.getElementById('projectsTableBody');
-            populateProject(data, body);
-            err.style.display = 'none';
-          }
-        }
-      }
-      else
-      {
-        err.innerHTML = req.responseText;
-        err.style.display='';
-      }
-      if (loader) { loader.style.visibility='hidden'; }
-    }
-  };
-  if (loader) { loader.style.visibility=''; }
-  var restrict = '';
-  if (expert) { restrict = 'e'; }
-  if (admin) { restrict += 'a'; }
-  var url = gURLBase + ";q=addProject;name=" + encodeURIComponent(name) + ';restrict=' + restrict;
-  req.open("GET", url, true);
-  req.send(null);
-}
 // -->
 </script>
 

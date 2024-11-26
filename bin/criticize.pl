@@ -21,9 +21,8 @@ $Term::ANSIColor::AUTORESET = 1;
 my $usage = <<END;
 USAGE: $0
 
-Runs Perl::Critic on all .pm, .pl, and extensionless files in cgi/ and bin/.
-This is offered as a sort of sanity check and is not currently part of the
-test suite.
+Runs Perl::Critic on all .pm, .pl, and extensionless files in bin/, cgi/, lib/, and t/.
+This is not currently part of the test suite.
 
 -h       Print this help message.
 -v       Emit verbose debugging information. May be repeated.
@@ -39,39 +38,36 @@ die 'Terminating' unless GetOptions(
 if ($help) { print $usage. "\n"; exit(0); }
 print "Verbosity $verbose\n" if $verbose;
 
-
 my $critic = Perl::Critic->new();
 
-my @dirs = ($ENV{'SDRROOT'}. '/crms/cgi', $ENV{'SDRROOT'}. '/crms/bin');
+my $exit_status = 0;
+my @dirs = map { $ENV{SDRROOT} . $_; } ('/crms/bin', '/crms/cgi', '/crms/lib', '/crms/t');
 my %seen;
-while (my $pwd = shift @dirs)
-{
-  opendir(DIR, "$pwd") or die "Can't open $pwd\n";
+while (my $dir = shift @dirs) {
+  opendir(DIR, "$dir") or die "Can't open $dir\n";
   my @files = readdir(DIR);
   closedir(DIR);
-  foreach my $file (sort @files)
-  {
+  foreach my $file (sort @files) {
     next if $file =~ /^\.\.?$/;
-    next if $file eq 'legacy';
-    my $path = "$pwd/$file";
-    if (-d $path)
-    {
+    my $path = "$dir/$file";
+    if (-d $path) {
       next if $seen{$path};
       $seen{$path} = 1;
       push @dirs, $path;
     }
     my $desc = `file $path`;
     chomp $desc;
-    next unless $desc =~ m/perl/i;
-    my @violations = $critic->critique($path);
-    if (scalar @violations)
-    {
-      print RED "$path\n";
-      print BOLD "  $_" for @violations;
-    }
-    else
-    {
-      print GREEN "$path\n";
+    if ($desc =~ m/perl/i || $path =~ m/\.pm$/ || $path =~ m/\.t$/) {
+      my @violations = $critic->critique($path);
+      if (scalar @violations) {
+        print RED "$path\n";
+        print BOLD "  $_" for @violations;
+        $exit_status = 1;
+      }
+      else {
+        print GREEN "$path\n" if $verbose;
+      }
     }
   }
 }
+exit($exit_status);
