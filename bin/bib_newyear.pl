@@ -70,8 +70,7 @@ my $sql = 'SELECT r.namespace,r.id,a.name,rs.name FROM rights_current r'.
           ' INNER JOIN reasons rs ON r.reason=rs.id'.
           ' WHERE CONCAT(a.name,"/",rs.name)'.
           ' IN ("ic-world/con","ic/cdpp","ic/crms","ic/ipma","ic/ren","op/ipma",
-                "pd/cdpp","pd/crms","pd/ncn","pd/ren","pdus/cdpp",
-                "pdus/crms","pdus/gfv","pdus/ncn","pdus/ren","und/crms",
+                "pdus/cdpp","pdus/crms","pdus/gfv","pdus/ncn","pdus/ren","und/crms",
                 "und/nfi","und/ren")'.
           ' ORDER BY a.name,rs.name,r.namespace,r.id';
 
