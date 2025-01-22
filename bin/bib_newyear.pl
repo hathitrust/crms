@@ -65,15 +65,28 @@ $year = $crms->GetTheYear() unless $year;
 $ENV{BIB_RIGHTS_DATE} = $year if defined $year;
 my $jsonxs = JSON::XS->new->utf8;
 
-my $sql = 'SELECT r.namespace,r.id,a.name,rs.name FROM rights_current r'.
-          ' INNER JOIN attributes a ON r.attr=a.id'.
-          ' INNER JOIN reasons rs ON r.reason=rs.id'.
-          ' WHERE CONCAT(a.name,"/",rs.name)'.
-          ' IN ("ic-world/con","ic/cdpp","ic/crms","ic/ipma","ic/ren","op/ipma",
-                "pd/cdpp","pd/crms","pd/ncn","pd/ren","pdus/cdpp",
-                "pdus/crms","pdus/gfv","pdus/ncn","pdus/ren","und/crms",
-                "und/nfi","und/ren")'.
-          ' ORDER BY a.name,rs.name,r.namespace,r.id';
+my $sql = <<~'SQL';
+  SELECT r.namespace, r.id, a.name, rs.name FROM rights_current r
+  INNER JOIN attributes a ON r.attr = a.id
+  INNER JOIN reasons rs ON r.reason = rs.id
+  WHERE CONCAT(a.name, "/", rs.name) IN (
+    "ic-world/con",
+    "ic/cdpp",
+    "ic/crms",
+    "ic/ipma",
+    "ic/ren",
+    "op/ipma",
+    "pdus/cdpp",
+    "pdus/crms",
+    "pdus/gfv",
+    "pdus/ncn",
+    "pdus/ren",
+    "und/crms",
+    "und/nfi",
+    "und/ren"
+  )
+  ORDER BY a.name, rs.name, r.namespace, r.id
+SQL
 
 my $ref = $crms->SelectAllSDR($sql);
 my $n = scalar @{$ref};
@@ -150,32 +163,30 @@ close $fh if defined $fh;
 print "Warning: $_\n" for @{$crms->GetErrors()};
 
 # Returns semicolon-delimited string of unique renDate values for all ic/ren determinations
+# for the given HTID.
 sub get_ic_ren_data {
   my $htid = shift;
 
   my %data = ();
-  my $sql = 'SELECT gid FROM exportdata WHERE id=? AND attr="ic" AND reason="ren"' .
-    ' ORDER BY time ASC';
-  my $determination_ref = $crms->SelectAll($sql, $htid);
-  foreach my $determination_row (@$determination_ref) {
-    my $gid = $determination_row->[0];
-    $sql = 'SELECT r.data FROM historicalreviews r' .
-      ' INNER JOIN attributes a ON r.attr=a.id' .
-      ' INNER JOIN reasons rs ON r.reason=rs.id '.
-      ' WHERE a.name="ic"' .
-      ' AND rs.name="ren"' .
-      ' AND r.gid=?' .
-      ' AND r.data IS NOT NULL' .
-      ' AND r.validated!=0' .
-      ' ORDER BY time ASC';
-    my $review_ref = $crms->SelectAll($sql, $gid);
-    foreach my $review_row (@$review_ref) {
-      my $reviewdata_id = $review_row->[0];
-      my $reviewdata_json = $crms->SimpleSqlGet('SELECT data FROM reviewdata WHERE id=?', $reviewdata_id);
-      my $reviewdata = $jsonxs->decode($reviewdata_json);
-      if ($reviewdata->{renDate}) {
-        $data{$reviewdata->{renDate}} = 1;
-      }
+  my $sql = <<~'SQL';
+    SELECT rd.data FROM exportdata e
+    INNER JOIN historicalreviews r ON e.gid = r.gid
+    INNER JOIN reviewdata rd ON r.data = rd.id
+    INNER JOIN attributes a ON r.attr = a.id
+    INNER JOIN reasons rs ON r.reason = rs.id
+    WHERE e.id = ?
+    AND e.attr = "ic"
+    AND e.reason = "ren"
+    AND a.name = "ic"
+    AND rs.name = "ren"
+    AND r.validated != 0
+  SQL
+  my $reviewdata_ref = $crms->SelectAll($sql, $htid);
+  foreach my $reviewdata_row (@$reviewdata_ref) {
+    my $reviewdata_json = $reviewdata_row->[0];
+    my $reviewdata = $jsonxs->decode($reviewdata_json);
+    if ($reviewdata->{renDate}) {
+      $data{$reviewdata->{renDate}} = 1;
     }
   }
   return join '; ', sort keys %data;
