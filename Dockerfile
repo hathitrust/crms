@@ -145,7 +145,6 @@ RUN apt-get install -y \
   libsqlite3-dev \
   libssl-dev \
   libyaml-dev \
-  netcat \
   openssh-server \
   unzip \
   wget \

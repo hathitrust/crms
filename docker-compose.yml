@@ -1,5 +1,3 @@
----
-
 x-condition-healthy: &healthy
   condition: service_healthy
 
