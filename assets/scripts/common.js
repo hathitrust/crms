@@ -1,3 +1,13 @@
+//import 'tippy/dist/css/bootstrap.min.css'
+
+import "./review.js";
+
+import 'tippy.js/dist/tippy.css';
+import 'highcharts/css/highcharts.css';
+
+import tippy from 'tippy.js';
+import Highcharts from 'highcharts/esm/highcharts.js';
+
 function setCookie(name,value,expiredays)
 {
   var exdate = new Date();
