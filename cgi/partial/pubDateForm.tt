@@ -196,7 +196,7 @@
 <script>
 var gPubDate = '[% data.bibdata.pub_date_format %]';
 var gReviewData = [% data.json %];
-addEvent(window, 'load', function(e)
+crms.addEvent(window, 'load', function(e)
 {
   [% IF importUser %]
     popReviewInfo('[% importUser %]');
@@ -223,7 +223,7 @@ function popReviewInfo(user)
   }
   document.submitReview.date.value = date;
   document.submitReview.note.value = review.note;
-  selMenuItem('catMenu', (review.category)? review.category:'');
+  crms.selectOption('catMenu', (review.category)? review.category:'');
 }
 </script>
 

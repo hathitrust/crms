@@ -209,7 +209,7 @@
 
 <script>
 var gReviewData = [% data.json %];
-addEvent(window, 'load', partial_ADDForm_mainWindowLoad);
+crms.addEvent(window, 'load', partial_ADDForm_mainWindowLoad);
 
 function partial_ADDForm_mainWindowLoad(e) {
   [% IF importUser %]
@@ -239,7 +239,7 @@ function loadRightsPrediction() {
   // There is a hidden div that tells us which button id is und/nfi.
   // If the id of the selected rights matches that, leave the selection alone.
   var rights = document.getElementsByName("rights");
-  var sel = GetCheckedValue(rights);
+  var sel = crms.getCheckedValue(rights);
   var und = document.getElementById("UNDNFI").title;
   if (und && sel === und) {
     // Remove prediction description and bail out.
@@ -251,7 +251,7 @@ function loadRightsPrediction() {
   var actualPubDate = document.getElementById('actual-pub-date-field').value || "";
   var isPub = (document.getElementById("pub-checkbox").checked)? 1 : 0;
   var isCrown = (document.getElementById("crown-checkbox").checked)? 1 : 0;
-  predictRights("[% htid %]", year, actualPubDate, isPub, isCrown);
+  crms.predictRights("[% htid %]", year, actualPubDate, isPub, isCrown);
 }
 
 // Insert the data entered by one user in a previous review,
@@ -270,7 +270,7 @@ function insertUserReviewData(user) {
   var field = document.getElementById("actual-pub-date-field");
   if (field) { field.value = review.data?.actual || ""; }
   document.submitReview.note.value = review.note || "";
-  selMenuItem("category-menu", review.category || "");
+  crms.selectOption("category-menu", review.category || "");
   toggleADD();
   loadRightsPrediction();
 }

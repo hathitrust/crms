@@ -126,11 +126,11 @@ inheriting volumes per page.
 <br/>
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"
-       onclick="selMenuItem('search1','src');
-                selMenuItem('order','idate');
-                selMenuItem('order2','date');
-                selMenuItem('dir','DESC');
-                selMenuItem('dir2','ASC');
+       onclick="crms.selectOption('search1','src');
+                crms.selectOption('order','idate');
+                crms.selectOption('order2','date');
+                crms.selectOption('dir','DESC');
+                crms.selectOption('dir2','ASC');
                 document.getElementById('start-date').value='';
                 document.getElementById('end-date').value='';
                 document.getElementById('search1value').value='';"
