@@ -3,9 +3,11 @@
 <h2>User Accounts:</h2>
 <script type="text/Javascript">
 <!--
-addEvent(window, 'load', function(e)
+crms.addEvent(window, 'load', function(e)
 {
-  tippy('.tippy');
+  tippy('.tippy', {
+    allowHTML: true
+  });
 });
 -->
 </script>

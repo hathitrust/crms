@@ -243,7 +243,7 @@ sub WebPath
   my $type = shift;
   my $path = shift;
 
-  my %types = ('bin' => 1, 'cgi' => 1, 'prep' => 1, 'web' => 1);
+  my %types = ('bin' => 1, 'cgi' => 1, 'prep' => 1, 'public' => 1, 'web' => 1);
   if (!$types{$type})
   {
     $self->SetError("Unknown path type '$type'");
@@ -563,11 +563,11 @@ sub DebugSql
     my $stat = ($ref)? '':'<i>FAIL</i>';
 	  my $html = <<END;
     <div class="debug">
-      <div class="debugSql" onClick="ToggleDiv('details$ct', 'debugSqlDetails');">
+      <div class="debugSql" onClick="crms.toggleDiv('details$ct', 'debugSqlDetails');">
         SQL QUERY [$type] ($ct) $stat
       </div>
       <div id="details$ct" class="divHide"
-           style="background-color: #9c9;" onClick="ToggleDiv('details$ct', 'debugSqlDetails');">
+           style="background-color: #9c9;" onClick="crms.toggleDiv('details$ct', 'debugSqlDetails');">
         $sql <strong>{%s}</strong> <i>(%.3fms)</i><br/>
         <i>$trace</i>
       </div>

@@ -104,11 +104,11 @@ records per page.
 <br/>
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"
-       onclick="selMenuItem('op1','AND');
-                selMenuItem('search1','Identifier');
-                selMenuItem('search2','Identifier');
-                selMenuItem('order','id');
-                selMenuItem('dir','ASC');
+       onclick="crms.selectOption('op1', 'AND');
+                crms.selectOption('search1', 'Identifier');
+                crms.selectOption('search2', 'Identifier');
+                crms.selectOption('order', 'id');
+                crms.selectOption('dir', 'ASC');
                 document.getElementById('startDate').value='';
                 document.getElementById('endDate').value='';
                 document.getElementById('search1value').value='';

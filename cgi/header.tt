@@ -4,24 +4,16 @@
     <meta charset="utf-8"/>
     <link rel="icon" type="image/png" href="[% crms.WebPath('web', crms.GetSystemVar('favicon')) %]"/>
     <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/datepicker.css') %]"/>
-    <script src="[% crms.WebPath('web', 'js/common.js') %]"></script>
-    <script src="https://unpkg.com/tippy.js@3/dist/tippy.all.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'scripts/crms.css') %]"/>
+    <script src="[% crms.WebPath('public', 'scripts/main.js') %]"></script>
   [% page = cgi.param('p') %]
   [% reviewType = (page == 'review' OR page == 'stanford' OR page == 'frontmatter') %]
-  [% IF reviewType %]
-    <script src="[% crms.WebPath('web', 'js/review.js') %]"></script>
-  [% ELSE %]
-    <script src="[% crms.WebPath('web', 'js/datepicker.packed.js') %]"></script>
-  [% END %]
+  <script src="[% crms.WebPath('web', 'js/datepicker.packed.js') %]"></script>
   [% IF crms.get('debugSql') || crms.get('debugVar') %]
-    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/debug.css') %]"/>
-  [% END %]
-  [% IF page == 'exportStats' %]
-    <script src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
-    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'styles/debug.css') %]"/>
   [% END %]
 
-  <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/review.css') %]"/>
+  <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'styles/review.css') %]"/>
   [% where = crms.WhereAmI() %]
   [% IF where != 'Production' %][% title = title _ ' - ' _ where %][% END %]
     <title>[% title %] - [% crms.PageToEnglish(page) %]</title>

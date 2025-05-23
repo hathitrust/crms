@@ -1,4 +1,122 @@
-function changeFrame1(doSize) {
+import Highcharts from 'highcharts/esm/highcharts.js';
+
+function setCookie(name,value,expiredays)
+{
+  var exdate = new Date();
+  exdate.setDate(exdate.getDate()+expiredays);
+  document.cookie = name + "=" + escape(value)+
+    ((expiredays==null) ? "" : ";expires="+exdate.toGMTString());
+}
+
+export function loadChart(id, url) {
+  var req = new XMLHttpRequest();
+  req.onreadystatechange = function()
+  { 
+    if (req.readyState == 4)
+    {
+      if (req.status == 200)
+      {
+        var obj = document.getElementById(id);
+        var data = JSON.parse(req.responseText);
+		    Highcharts.chart(id, data);
+		  }
+      else    
+      {
+        alert("Error: "+url+" failed:"+req.status);
+      }
+    }
+  };
+  req.open("GET", url, true);
+  req.send(null);
+}
+
+export function toggleVisibility(id) {
+  var me = document.getElementById(id);
+  if (me == null)
+  {
+    //alert("Can't get " + id);
+  }
+  else
+  {
+    if (me.style.display!="none") {me.style.display="none";}
+    else {me.style.display="";}
+  }
+}
+
+// Renamed from selMenuItem since this function is used everywhere.
+// What if we just do this:
+// document.getElementById(id).value = value
+export function selectOption(id, value) {
+  var me = document.getElementById(id);
+  if (me == null)
+  {
+    //alert("Can't get " + id);
+  }
+  else
+  {
+    var i;
+    for (i = 0; i < me.length; i++)
+    {
+      if (me.options[i].value == value)
+      {
+        me.selectedIndex = i;
+        break;
+      }
+    }
+  }
+}
+
+export function sfHover() {
+  var sfEls = document.getElementById("menu").getElementsByTagName("li");
+  for (var i=0; i<sfEls.length; i++)
+  {
+    sfEls[i].onmouseover=function()
+    {
+      this.className+=" sfhover";
+    }
+    sfEls[i].onmouseout=function()
+    {
+      this.className=this.className.replace(new RegExp(" sfhover\\b"), "");
+    }
+  }
+  var sfAs = document.getElementById("menu").getElementsByTagName("a");
+  for (var i=0; i<sfAs.length; i++)
+  {
+    sfAs[i].onmouseover=function()
+    {
+      this.className+=" sfhover";
+    }
+    sfAs[i].onmouseout=function()
+    {
+      this.className=this.className.replace(new RegExp(" sfhover\\b"), "");
+    }
+  }
+}
+
+// action code for debugger bars
+export function toggleDiv(id, className)
+{
+  var el = document.getElementById(id);
+  if (el.className == 'divHide') { el.className = className; }
+  else { el.className = 'divHide'; }
+}
+
+// FIXME: this is unneeded compatibility code and callers should just call
+// window.addEventListener instead.
+// https://stackoverflow.com/questions/15564029/adding-to-window-onload-event
+// Example: addEvent(window, 'load', myfunc);
+export function addEvent(element, eventName, fn) {
+  if (element.addEventListener)
+  {
+    element.addEventListener(eventName, fn, false);
+  }
+  else if (element.attachEvent)
+  {
+    element.attachEvent('on' + eventName, fn);
+  }
+}
+
+export function changeFrame1(doSize) {
   var sel = document.getElementById("search1Select");
   var url = sel.options[sel.selectedIndex].value;
   var tf = document.getElementById("tFrame");
@@ -10,7 +128,7 @@ function changeFrame1(doSize) {
   }
 }
 
-function changeFrame2(doSize) {
+export function changeFrame2(doSize) {
   var sel = document.getElementById("search2Select");
   var url = sel.options[sel.selectedIndex].value;
   var bf = document.getElementById("bFrame");
@@ -22,7 +140,7 @@ function changeFrame2(doSize) {
   }
 }
 
-function flipFrame()
+export function flipFrame()
 {
   var tf = document.getElementById("tFrame");
   var bf = document.getElementById("bFrame");
@@ -38,7 +156,7 @@ function flipFrame()
   }
 }
 
-function popRenewalDate()
+export function popRenewalDate()
 {
   var renNum = document.getElementById('renewalField');
   var renDate = document.getElementById('getDate');
@@ -92,7 +210,7 @@ function popRenewalDate()
   req.send(null);
 }
 
-async function predictRights(id, year, actualPubDate, pub, crown) {
+export async function predictRights(id, year, actualPubDate, pub, crown) {
   togglePredictionLoader(true);
   var url = ajaxURL("predictRights") + "?id=" + id + "&year=" + year +
             "&actual=" + actualPubDate + "&is_pub=" + pub + "&is_crown=" + crown;
@@ -104,6 +222,7 @@ async function predictRights(id, year, actualPubDate, pub, crown) {
   togglePredictionLoader(false);
 }
 
+// Internal function
 // Display JSON response from predictRights CGI in the Commonwealth UI
 function displayRightPrediction(data) {
   deselectCurrentRights();
@@ -119,6 +238,7 @@ function displayRightPrediction(data) {
   }
 }
 
+// Internal function
 function deselectCurrentRights() {
   var rights = document.getElementsByName("rights");
   var sel = GetCheckedValue(rights);
@@ -127,11 +247,13 @@ function deselectCurrentRights() {
   }
 }
 
+// Internal function
 // ajaxURL("predictRights") => "https://babel.hathitrust.org/crms/cgi/predictRights"
 function ajaxURL(target) {
   return window.location.protocol + "//" + window.location.host + "/crms/cgi/" + target;
 }
 
+// Internal function
 function togglePredictionLoader(display) {
   var img = document.getElementById("predictionLoader");
   if (img) {
@@ -142,8 +264,7 @@ function togglePredictionLoader(display) {
 // return the value of the radio button that is checked
 // return an empty string if none are checked, or
 // there are no radio buttons
-function GetCheckedValue(radioObj)
-{
+export function getCheckedValue(radioObj) {
   if (!radioObj) { return null; }
   var radioLength = radioObj.length;
   if (radioLength == undefined)
@@ -159,8 +280,9 @@ function GetCheckedValue(radioObj)
   return null;
 }
 
-function Debug(msg, append)
-{
+// Only used in Frontmatter views, currently not an active project and not invoked,
+// so not exporting.
+function Debug(msg, append) {
   var el = document.getElementById('debugArea');
   if (el)
   {
@@ -171,3 +293,4 @@ function Debug(msg, append)
     el.innerHTML = msg;
   }
 }
+

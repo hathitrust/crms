@@ -6,9 +6,11 @@
 
 <script type="text/Javascript">
 <!--
-addEvent(window, 'load', function(e)
+crms.addEvent(window, 'load', function(e)
 {
-  tippy('.tippy');
+  tippy('.tippy', {
+    allowHTML: true
+  });
 });
 -->
 </script>
@@ -24,14 +26,14 @@ addEvent(window, 'load', function(e)
   <input type="hidden" name="p" value="keio"/>
   [% crms.HiddenSys() %]
   <label for="table_sel">Table:</label>
-  <select name="table" id="table_sel" onchange="selMenuItem('query_sel', 0);selMenuItem('page_sel', 0);this.form.submit()">
+  <select name="table" id="table_sel" onchange="crms.selectOption('query_sel', 0);crms.selectOption('page_sel', 0);this.form.submit()">
     <option value=""></option>
     [% FOREACH table IN keio.Tables %]
       <option value="[% table %]" [% (table == p_table)? 'selected="selected"':'' %]>[% table %]</option>
     [% END %]
   </select>
   <label for="query_sel">Query:</label>
-  <select name="query" id="query_sel" onchange="selMenuItem('table_sel', 0);selMenuItem('page_sel', 0);this.form.submit()">
+  <select name="query" id="query_sel" onchange="crms.selectOption('table_sel', 0);crms.selectOption('page_sel', 0);this.form.submit()">
     <option value=""></option>
     [% FOREACH query IN keio.Queries() %]
       <option value="[% query %]" [% (query == p_query)? 'selected="selected"':'' %]>[% query %]</option>

@@ -91,7 +91,7 @@
                new Array(pages)
              [% END %];
 
-  addEvent(window, 'load', function(e)
+  crms.addEvent(window, 'load', function(e)
   {
     el = document.getElementById('submitButton');
     el.disabled = true;
@@ -153,9 +153,9 @@
   {
     CheckNoContent();
     var els = document.getElementsByName("type");
-    var type = GetCheckedValue(els);
+    var type = crms.getCheckedValue(els);
     els = document.getElementsByName("category");
-    var category = GetCheckedValue(els);
+    var category = crms.getCheckedValue(els);
     var note = document.getElementById("note_tf").value;
     if (type || category)
     {

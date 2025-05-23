@@ -3,17 +3,12 @@
 <h2>Statistics for Exported Determinations</h2>
 <br/>
 
-<script type="text/javascript" src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
-<script type="text/javascript" src="https://code.highcharts.com/highcharts.js"></script>
-<script type="text/javascript">
-<!--
-window.onload = function()
-{
-	loadChart('chart0', "[% crms.WebPath('cgi', 'getExportStats?type=graph;c=2') %]");
-	loadChart('chart1', "[% crms.WebPath('cgi', 'getExportStats?type=graph;c=0') %]");
-	loadChart('chart2', "[% crms.WebPath('cgi', 'getExportStats?type=graph;c=1') %]");
-}
-// -->
+<script>
+  window.onload = function() {
+    crms.loadChart('chart0', "[% crms.WebPath('cgi', 'getExportStats?type=graph;c=2') %]");
+    crms.loadChart('chart1', "[% crms.WebPath('cgi', 'getExportStats?type=graph;c=0') %]");
+    crms.loadChart('chart2', "[% crms.WebPath('cgi', 'getExportStats?type=graph;c=1') %]");
+  }
 </script>
 
 [% url = crms.WebPath('cgi', 'getExportStats?type=text;c=1') %]

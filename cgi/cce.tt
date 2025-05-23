@@ -1,0 +1,40 @@
+[% INCLUDE header.tt %]
+
+<h2>CCE Mistake Renewal Records:</h2>
+<br/>
+
+<i>
+Renewal records of US monographic works 1923-1963 that were discovered by NYPL
+amid non-renewal portions of the CCE. These renewals may not be represented
+in the Stanford Copyright Renewal Database.
+</i>
+<br/>
+<br/>
+<br/>
+
+[% sql = 'SELECT renewal_id,renewal_date,registration_id,registration_date,author,title,cce_vol,sysid FROM renewals WHERE in_renewals=0' %]
+[% ref = crms.SelectAll(sql) %]
+<table class="exportStats" style="width:100%;">
+  <tr>
+    <th>Renewal ID</th>
+    <th>Renewal Date</th>
+    <th>Registration ID</th>
+    <th>Registration Date</th>
+    <th>Author</th>
+    <th>Title</th>
+    <th>Volume</th>
+    <th>Catalog ID</th>
+  </tr>
+[% FOR row IN ref %]
+  <tr>
+    <td>$row.0</td>
+    <td>$row.1</td>
+    <td>$row.2</td>
+    <td>$row.3</td>
+    <td>$row.4</td>
+    <td>$row.5</td>
+    <td>$row.6</td>
+    <td>$row.7</td>
+  </tr>
+[% END %]
+</table>

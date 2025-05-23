@@ -196,7 +196,7 @@
 <script>
 var gPubDate = '[% data.bibdata.display_date %]';
 var gReviewData = [% data.json %];
-addEvent(window, 'load', function(e)
+crms.addEvent(window, 'load', function(e)
 {
   [% IF importUser %]
     popReviewInfo('[% importUser %]');
@@ -213,12 +213,12 @@ function dateEntry() {
   // There is a hidden div that tells us which button id is und/nfi.
   // If the id of the selected rights matches that, leave the selection alone.
   var rights = document.getElementsByName("rights");
-  var sel = GetCheckedValue(rights);
+  var sel = crms.getCheckedValue(rights);
   var und = document.getElementById("UNDNFI").title;
   if (und && sel === und) {
     return;
   }
-  predictRights('[% htid %]', year, '', 1, 1);
+  crms.predictRights('[% htid %]', year, '', 1, 1);
 }
 
 function popReviewInfo(user)
@@ -233,7 +233,7 @@ function popReviewInfo(user)
   }
   document.submitReview.date.value = date;
   document.submitReview.note.value = review.note;
-  selMenuItem('catMenu', (review.category)? review.category:'');
+  crms.selectOption('catMenu', (review.category)? review.category:'');
 }
 </script>
 
