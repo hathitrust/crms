@@ -31,14 +31,14 @@
       <td class="nowrap">
         <input id="renewalField" title="[% label %]" type="text" name="renNum"
                value="[% u_renNum %]" size="8"
-               onblur="javascript:popRenewalDate()"/>
+               onblur="javascript:crms.popRenewalDate()"/>
         <a style="position:absolute;left:-999px;" href="#" accesskey="d"
            onfocus="document.getElementById('renewalField').focus()">.</a>
       </td>
     </tr>
     <tr>
       <td class="reviewGrey" style="text-align:left;margin:0px;padding:0px;">
-        <input type="button" value="Get Renewal Date" onclick="popRenewalDate();" accesskey="d"
+        <input type="button" value="Get Renewal Date" onclick="crms.popRenewalDate();" accesskey="d"
                class="reviewblue" style="margin:0px;padding:1px;background-color:#d0dee6;"/>
       </td>
       <td>

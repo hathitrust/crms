@@ -181,7 +181,7 @@ export function popRenewalDate()
       if (req.status == 200)
       {
         var rights = document.getElementsByName("rights");
-        var sel = GetCheckedValue(rights);
+        var sel = getCheckedValue(rights);
         var und = document.getElementById('UNDNFI').title;
         renDate.value = req.responseText;
         // PDUS if renewal is on or before the current year minus 69
@@ -241,7 +241,7 @@ function displayRightPrediction(data) {
 // Internal function
 function deselectCurrentRights() {
   var rights = document.getElementsByName("rights");
-  var sel = GetCheckedValue(rights);
+  var sel = getCheckedValue(rights);
   if (sel) {
     document.getElementById("r" + sel).checked = false;
   }
