@@ -67,15 +67,12 @@ sub config {
 
 # Read credentials.yml (and credentials.local.yml if it exists)
 # and overwrite any keys with values found in ENV.
+# This structure is not cached as it might be exposed by Data::Dumper or the like.
 sub credentials {
   my $self = shift;
 
-  # uncoverable branch false
-  if (!defined $self->{credentials}) {
-    my $credentials = $self->_read_config_files('credentials');
-    $self->{credentials} = $self->_merge_env($credentials);
-  }
-  return $self->{credentials};
+  my $credentials = $self->_read_config_files('credentials');
+  return $self->_merge_env($credentials);
 }
 
 # Read basename.yml and basename.local.yml, merging values from the latter into the former.
