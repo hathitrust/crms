@@ -55,7 +55,7 @@ subtest 'CRMS::Config::credentials with credentials.local.yml' => sub {
   my $credentials_local = $ENV{'SDRROOT'} . '/crms/config/credentials.local.yml';
   File::Copy::copy($credentials_local_sample, $credentials_local) or Carp::confess "Copy failed: $!";
   my $credentials = CRMS::Config->new->credentials;
-  is($credentials->{'data_api_access_key'}, 'sample_value');
+  is($credentials->{'db_user'}, 'sample_value');
   unlink $credentials_local;
 };
 
