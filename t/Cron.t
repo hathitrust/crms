@@ -12,8 +12,8 @@ use lib "$ENV{SDRROOT}/crms/cgi";
 use lib "$ENV{SDRROOT}/crms/lib";
 
 use CRMS;
+use CRMS::Cron;
 
-require_ok($ENV{'SDRROOT'}. '/crms/lib/CRMS/Cron.pm');
 my $crms = CRMS->new;
 my $cron = CRMS::Cron->new('crms' => $crms);
 
