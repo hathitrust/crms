@@ -92,10 +92,8 @@ sub _read_config_files {
       my $value = $contents->{$key};
       # If the value is a hash, look for {production, training, development} subkeys.
       if (ref $value eq 'HASH') {
-        $value = $value->{$self->instance};
-        if (!defined $value) {
-          die "No value for $key in " . $self->instance . "\n";
-        }
+        # If misconfigured and instance is not available, use empty string.
+        $value = $value->{$self->instance} || '';
       }
       $config->{$key} = $value;
     }
