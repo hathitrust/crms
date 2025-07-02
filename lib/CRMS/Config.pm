@@ -14,6 +14,13 @@ package CRMS::Config;
 # Derive ENV variable names from YML keys by upcasing and adding "CRMS_" prefix.
 # If the key is, for example, "db_name" then the corresponding ENV is CRMS_DB_NAME
 
+# Keys, particularly those for credentials, may have subkeys corresponding to
+# canonical instance names {production, training, development}.
+# For this reason, this module is the single point of truth for the instance,
+# which currently is also used and abused inside CRMS.pm for display purposes.
+# Using this module (until a CRMS::Instance module is eventually spun off) as the
+# preferred source should help clean up some of the silliness there.
+
 use strict;
 use warnings;
 use utf8;
@@ -24,7 +31,25 @@ use YAML::XS;
 sub new {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
+  $self->{instance} = translate_instance_name($args{instance});
   return $self;
+}
+
+# The canonical name for the instance which can be used as a subkey for per-instance config.
+# Translate CRMS_INSTANCE value into canonical non-empty string.
+sub translate_instance_name {
+  my $inst = shift || $ENV{CRMS_INSTANCE} || '';
+
+  return 'production' if $inst eq 'production';
+  return 'training' if $inst eq 'crms-training' || $inst eq 'crms_training' || $inst eq 'training';
+  return 'development';
+}
+
+# Return the canonical instance name for use in CRMS.pm for various purposes.
+sub instance {
+  my $self = shift;
+
+  return $self->{instance};
 }
 
 # Read config.yml (and config.local.yml if it exists)
@@ -64,7 +89,15 @@ sub _read_config_files {
     next unless -f $path;
     my $contents = YAML::XS::LoadFile($path);
     foreach my $key (keys %$contents) {
-      $config->{$key} = $contents->{$key};
+      my $value = $contents->{$key};
+      # If the value is a hash, look for {production, training, development} subkeys.
+      if (ref $value eq 'HASH') {
+        $value = $value->{$self->instance};
+        if (!defined $value) {
+          die "No value for $key in " . $self->instance . "\n";
+        }
+      }
+      $config->{$key} = $value;
     }
   }
   return $config;
