@@ -69,5 +69,12 @@ subtest 'sanity check config keys' => sub {
   }
 };
 
+subtest 'database config for crms_training instance' => sub {
+  my $config = CRMS::Config->new(instance => 'crms_training');
+  # docker-compose ENV messes with db_host and we don't have different values for db_user
+  is($config->config->{'db_name'}, 'crms_training');
+  is($config->credentials->{'db_password'}, 'crms_training');
+};
+
 
 done_testing();

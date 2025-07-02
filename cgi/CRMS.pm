@@ -425,12 +425,9 @@ sub GetSdrDb
 sub DSN {
   my $self = shift;
 
-  my $instance = $self->get('instance') || '';
   my $config = CRMS::Config->new;
   my $db_host = $config->config->{'db_host'};
-  $db_host = $config->config->{'db_host_development'} if $instance eq '';
   my $db_name = $config->config->{'db_name'};
-  $db_name = 'crms_training' if $instance eq 'crms-training';
   return "DBI:mysql:database=$db_name;host=$db_host";
 }
 
