@@ -43,10 +43,6 @@ sub new
   # Need not store the config, it's a singleton so subsequent calls to `new` will retrieve it.
   # This is the one-time setup.
   $self->{config} = CRMS::Config->new(instance => $args{instance});
-  my $root = $ENV{'SDRROOT'};
-  # TODO: get rid of this and just use ENV. Plus, the warning is redundant with the BEGIN block above.
-  die 'ERROR: cannot locate root directory with SDRROOT!' unless $root and -d $root;
-  $self->set('root', $root);
   $self->SetupLogFile();
   # Initialize error reporting.
   $self->ClearErrors();
@@ -234,8 +230,8 @@ sub NeedStepUpAuth
   return $need;
 }
 
-# The href or URL to use.
-# Path is e.g. 'logo.png', returns {'/c/crms/logo.png', '/crms/web/logo.png'}
+# The href or URL to use for a given asset type.
+# WebPath('web', 'logo.png') => '/crms/web/logo.png'
 sub WebPath
 {
   my $self = shift;
@@ -246,20 +242,13 @@ sub WebPath
   if (!$types{$type})
   {
     $self->SetError("Unknown path type '$type'");
-    die "FSPath: unknown type $type";
+    die "WebPath: unknown type $type";
   }
-  my $fullpath = "/crms/$type/". $path;
-  if ($self->get('root') !~ m/htapps/)
-  {
-    $fullpath = ($type eq 'web')? ("/c/crms/". $path): ("/$type/c/crms/". $path);
-  }
-  #print "$fullpath ($type, $path)\n";
-  return $self->Sysify($fullpath);
+  return "/crms/$type/" . $path;
 }
 
-# The href or URL to use.
-# type+path is e.g. 'prep' + 'crms.rights'
-# returns {'/l1/dev/moseshll/prep/c/crms/crms.rights', '/htapps/moseshll.babel/crms/prep/crms.rights'}
+# The filesystem path for an asset.
+# FSPath('prep', 'crms.rights') => '/htapps/babel/crms/prep/logo.png'
 sub FSPath
 {
   my $self = shift;
@@ -272,14 +261,10 @@ sub FSPath
     $self->SetError("Unknown path type '$type'");
     die "FSPath: unknown type $type";
   }
-  my $fullpath = $self->get('root');
-  $fullpath .= '/' unless $fullpath =~ m/\/$/;
-  $fullpath .= (($self->get('root') =~ m/htapps/)? "crms/$type/":"$type/c/crms/"). $path;
-  return $fullpath;
+  return $ENV{SDRROOT} . "/crms/$type/" . $path;
 }
 
-# Temporary hack to translate menuitems urls into quod/HT urls
-# /c/crms/blah -> $self->WebPath('web', 'blah')
+# Expand menuitems urls into HT urls
 # crms?blah=1 -> $self->WebPath('cgi', 'crms?blah=1')
 sub MenuPath
 {
@@ -287,11 +272,7 @@ sub MenuPath
   my $path = shift;
 
   my $newpath = $path;
-  if ($path =~ m/^\/c\/crms\/(.*)$/)
-  {
-    $newpath = $self->WebPath('web', $1);
-  }
-  elsif ($path =~ m/^crms/)
+  if ($path =~ m/^crms/)
   {
     $newpath = $self->WebPath('cgi', $path);
   }
