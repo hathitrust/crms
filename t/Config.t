@@ -20,6 +20,23 @@ subtest 'CRMS::Config::config' => sub {
   ok(ref $config eq 'HASH');
 };
 
+subtest 'CRMS::Config::instance' => sub {
+  subtest 'CRMS::Config::instance production' => sub {
+    my $instance = CRMS::Config->new(instance => 'production')->instance;
+    is($instance, 'production');
+  };
+
+  subtest 'CRMS::Config::instance training' => sub {
+    my $instance = CRMS::Config->new(instance => 'crms-training')->instance;
+    is($instance, 'training');
+  };
+
+  subtest 'CRMS::Config::instance development' => sub {
+    my $instance = CRMS::Config->new(instance => '')->instance;
+    is($instance, 'development');
+  };
+};
+
 subtest 'CRMS::Config::config with overriding ENV' => sub {
   my $save_env = $ENV{'CRMS_DB_HOST'};
   $ENV{'CRMS_DB_HOST'} = 'test_crms_db_host_value';
