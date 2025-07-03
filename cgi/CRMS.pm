@@ -40,14 +40,13 @@ sub new
 {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
-  # If running under Apache.
-  $self->set('instance', $ENV{'CRMS_INSTANCE'});
-  # If running from command line.
-  $self->set('instance', $args{'instance'}) if $args{'instance'};
+  # Need not store the config, it's a singleton so subsequent calls to `new` will retrieve it.
+  # This is the one-time setup.
+  $self->{config} = CRMS::Config->new(instance => $args{instance});
   my $root = $ENV{'SDRROOT'};
+  # TODO: get rid of this and just use ENV. Plus, the warning is redundant with the BEGIN block above.
   die 'ERROR: cannot locate root directory with SDRROOT!' unless $root and -d $root;
   $self->set('root', $root);
-  $self->{config} = CRMS::Config->new->config;
   $self->SetupLogFile();
   # Initialize error reporting.
   $self->ClearErrors();
@@ -366,7 +365,7 @@ sub DbInfo
   my $self = shift;
 
   my $config = CRMS::Config->new;
-  my $instance = $self->get('instance') || '';
+  my $instance = $config->instance;
   my $credentials = $config->credentials;
   my $db_user = $credentials->{'db_user'};
   my $dsn = $self->DSN();
@@ -3701,8 +3700,7 @@ sub CanChangeToUser
   my $him  = shift;
 
   return 1 if $self->SameUser($me, $him);
-  my $instance = $self->get('instance') || '';
-  if ($instance ne 'production' && $instance ne 'crms-training')
+  if (CRMS::Config->new->instance eq 'development')
   {
     return 0 if $me eq $him;
     return 1 if $self->IsUserAdmin($me);
@@ -6361,11 +6359,7 @@ sub WhereAmI
 {
   my $self = shift;
 
-  my %instances = ('production' => 1, 'crms-training' => 1, 'dev' => 1);
-  my $instance = $self->get('instance') || $ENV{'HT_DEV'} || 'dev';
-  $instance = "dev ($instance)" unless $instances{$instance};
-  $instance = 'training' if $instance eq 'crms-training';
-  return ucfirst $instance;
+  return ucfirst CRMS::Config->new->instance;
 }
 
 sub DevBanner
@@ -6379,6 +6373,13 @@ sub DevBanner
   }
 }
 
+# Tricky only when we don't have Apache to give us the answer.
+# Allows us to generate usable URLs in reports run against training or dev.
+# The best we can do is map:
+#   "training" to "crms-training.X"
+#   "development" to "test.X"
+#   "production" to no prefix
+# The mapping bit could move to CRMS::Config since there's some similar code there already.
 sub Host
 {
   my $self = shift;
@@ -6387,8 +6388,12 @@ sub Host
   if (!$host)
   {
     $host = $self->GetSystemVar('host');
-    my $instance = $self->get('instance') || 'test';
-    $host = $instance . '.' . $host if $instance ne 'production';
+    my $instance_map = {
+      development => 'test.',
+      production => '',
+      training => 'crms-training.'
+    };
+    $host = $instance_map->{CRMS::Config->new->instance} . $host;
   }
   return 'https://' . $host;
 }
@@ -6397,16 +6402,14 @@ sub IsDevArea
 {
   my $self = shift;
 
-  my $inst = $self->get('instance') || '';
-  return ($inst eq 'production' || $inst eq 'crms-training')? 0:1;
+  return (CRMS::Config->new->instance eq 'development') ? 0 : 1;
 }
 
 sub IsTrainingArea
 {
   my $self = shift;
 
-  my $inst = $self->get('instance') || '';
-  return $inst eq 'crms-training';
+  return (CRMS::Config->new->instance eq 'training') ? 0 : 1;
 }
 
 sub Hostname
@@ -7121,6 +7124,7 @@ sub ExportSrcToEnglish
 
 # Retrieves a system var from the DB if possible, otherwise use the value from the config file.
 # If default is specified, returns it if otherwise the return value would be undefined.
+# Does not retrieve credentials.
 sub GetSystemVar
 {
   my $self    = shift;
