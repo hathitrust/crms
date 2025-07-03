@@ -57,14 +57,15 @@ sub new {
 
 # The canonical name for the instance which can be used as a subkey for per-instance config.
 # Translate CRMS_INSTANCE value into canonical non-empty string.
-# We allow some leeway with the (input-side) training name because, well, why not.
-# The "correct" value of CRMS_INSTANCE for training is "crms-training" for the record.
-# The database name is "crms_training". They are easily confused. Hence the canonicalization.
 sub translate_instance_name {
   my $inst = shift || $ENV{CRMS_INSTANCE} || '';
 
   return 'production' if $inst eq 'production';
-  return 'training' if $inst eq 'crms-training' || $inst eq 'crms_training' || $inst eq 'training';
+  # Allow some leeway with the (input-side) training name because, well, why not.
+  # The "correct" value of CRMS_INSTANCE for training is "crms-training" for the record.
+  # The database name is "crms_training". They are easily confused.
+  # Hence the canonicalization, and the regex.
+  return 'training' if $inst =~ /training/;
   return 'development';
 }
 

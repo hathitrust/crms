@@ -42,6 +42,10 @@ sub new
   my $self = bless {}, $class;
   # Need not store the config, it's a singleton so subsequent calls to `new` will retrieve it.
   # This is the one-time setup.
+  # $args{instance} is only set when running one of the scripts in bin/ with the -t (training)
+  # or -p (production) flag. It is `undef` by default, and in a CGI environment.
+  # When $args{instance} is undef then CRMS::Config will pick the instance, if available,
+  # from ENV{CRMS_INSTANCE}.
   $self->{config} = CRMS::Config->new(instance => $args{instance});
   $self->SetupLogFile();
   # Initialize error reporting.
@@ -6422,10 +6426,10 @@ sub LinkNoteText
   my $self = shift;
   my $note = shift;
 
-  if ($note =~ m/See\sall\sreviews\sfor\sSys\s#(\d+)/)
+  if ($note =~ m/See all reviews for Sys #(\d+)/)
   {
     my $url = $self->WebPath('cgi', "crms?p=adminHistoricalReviews;stype=reviews;search1=SysID;search1value=$1");
-    $note =~ s/(See\sall\sreviews\sfor\sSys\s#)(\d+)/$1<a href="$url" target="_blank">$2<\/a>/;
+    $note =~ s/(See all reviews for Sys #)(\d+)/$1<a href="$url" target="_blank">$2<\/a>/;
   }
   return $note;
 }
