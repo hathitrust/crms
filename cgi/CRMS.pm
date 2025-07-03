@@ -3425,7 +3425,7 @@ sub LinkToReview
 
   $title = $self->GetTitle($id) unless $title;
   $title = CGI::escapeHTML($title);
-  my $url = $self->Sysify($self->WebPath('cgi', "crms?p=review;htid=$id;editing=1"));
+  my $url = $self->WebPath('cgi', "crms?p=review;htid=$id;editing=1");
   $url .= ";importUser=$user" if $user;
   $self->ClearErrors();
   return "<a href='$url' target='_blank'>$title</a>";
@@ -6424,7 +6424,7 @@ sub LinkNoteText
 
   if ($note =~ m/See\sall\sreviews\sfor\sSys\s#(\d+)/)
   {
-    my $url = $self->Sysify($self->WebPath('cgi', "crms?p=adminHistoricalReviews;stype=reviews;search1=SysID;search1value=$1"));
+    my $url = $self->WebPath('cgi', "crms?p=adminHistoricalReviews;stype=reviews;search1=SysID;search1value=$1");
     $note =~ s/(See\sall\sreviews\sfor\sSys\s#)(\d+)/$1<a href="$url" target="_blank">$2<\/a>/;
   }
   return $note;
@@ -6835,7 +6835,7 @@ sub AddInheritanceToQueue
       my $n = $self->SimpleSqlGet($sql, $id);
       if ($n)
       {
-        my $url = $self->Sysify("?p=adminReviews;search1=Identifier;search1value=$id");
+        my $url = "?p=adminReviews;search1=Identifier;search1value=$id";
         my $msg = sprintf "already has $n <a href='$url' target='_blank'>%s</a>", $self->Pluralize('review',$n);
         push @msgs, $msg;
         $stat = 1;
@@ -7410,16 +7410,6 @@ sub Authorities
   return \@all;
 }
 
-# Previously used to make sure viral params were appended to generated URLs.
-# No longer needed -- can be removed.
-sub Sysify
-{
-  my $self = shift;
-  my $url  = shift;
-
-  return $url;
-}
-
 # Used to simplify the search results page links.
 # Makes URL params for all values defined in the CGI,
 # ignoring those that are valueless.
@@ -7459,15 +7449,6 @@ sub Hiddenify
     push @comps, "<input type='hidden' name='$key' value='$val'/>" if $val and not $exceptions{$key};
   }
   return join "\n", @comps;
-}
-
-# Previously used to make sure viral params were included in hidden input.
-# No longer needed -- can be removed.
-sub HiddenSys
-{
-  my $self = shift;
-
-  return '';
 }
 
 # Compares 2 strings or undefs. Returns 1 or 0 for equality.

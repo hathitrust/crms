@@ -4,7 +4,6 @@
 
 <h2>Query Bibliographic Rights:</h2>
 <form action="crms">
-  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="[% p %]"/>
   <label for="queryTA" class="smallishText">Enter one volume or catalog id per line.</label><br/>
   <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;">[% crms.EchoInput(q) %]</textarea>

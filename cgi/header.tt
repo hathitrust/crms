@@ -46,11 +46,11 @@
          [% status = (r.1 == 'down')? 'unavailable':((r.1 == 'partial')? 'partially available':r.1) %]
          <span style="font-size:1.3em;text-align:center;color:#DD4444">System status is <b>[% status %]</b>; last modified [% r.0 %]</span><br/>
          <span style="font-size:1.1em;">[% r.2 %]</span>
-         [% IF page == 'review' %]&nbsp;&nbsp;&nbsp;<a href="[% crms.Sysify('crms') %]">Home</a>[% END %]
+         [% IF page == 'review' %]&nbsp;&nbsp;&nbsp;<a href="crms">Home</a>[% END %]
         </td></tr>
         </table>
       [% ELSE %]
-      <a href="[% crms.Sysify('crms') %]">
+      <a href="crms">
         <img src="[% crms.WebPath('web', crms.GetSystemVar('logo')) %]" width="455" height="80" alt="Jump to home page"
              style="float:left;border:0px solid;margin-right:4em;"/>
       </a>
@@ -64,7 +64,7 @@
             </td>
             <td style="line-height:1px;">
               Hello&nbsp;[% crms.GetUserProperty(undef, 'name').replace(" ","&nbsp;") %]&nbsp;&nbsp;
-              <a href="[% crms.Sysify(crms.WebPath('cgi', 'crms?p=Logout')) %]" class="header">Log Out</a>
+              <a href="?p=Logout" class="header">Log Out</a>
             </td>
           </tr>
           <tr>
