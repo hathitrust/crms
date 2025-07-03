@@ -7129,7 +7129,7 @@ sub GetSystemVar
 
   my $sql = 'SELECT value FROM systemvars WHERE name=?';
   my $var = $self->SimpleSqlGet($sql, $name);
-  $var = $self->{'config'}->{$name} unless defined $var;
+  $var = CRMS::Config->new->config->{$name} unless defined $var;
   $var = $default unless defined $var;
   return $var;
 }
