@@ -6387,14 +6387,14 @@ sub IsDevArea
 {
   my $self = shift;
 
-  return (CRMS::Config->new->instance eq 'development') ? 0 : 1;
+  return (CRMS::Config->new->instance eq 'development') ? 1 : 0;
 }
 
 sub IsTrainingArea
 {
   my $self = shift;
 
-  return (CRMS::Config->new->instance eq 'training') ? 0 : 1;
+  return (CRMS::Config->new->instance eq 'training') ? 1 : 0;
 }
 
 sub Hostname
