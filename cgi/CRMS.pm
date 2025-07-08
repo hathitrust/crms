@@ -40,14 +40,13 @@ sub new
 {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
-  # If running under Apache.
-  $self->set('instance', $ENV{'CRMS_INSTANCE'});
-  # If running from command line.
-  $self->set('instance', $args{'instance'}) if $args{'instance'};
-  my $root = $ENV{'SDRROOT'};
-  die 'ERROR: cannot locate root directory with SDRROOT!' unless $root and -d $root;
-  $self->set('root', $root);
-  $self->{config} = CRMS::Config->new->config;
+  # Need not store the config, it's a singleton so subsequent calls to `new` will retrieve it.
+  # This is the one-time setup.
+  # $args{instance} is only set when running one of the scripts in bin/ with the -t (training)
+  # or -p (production) flag. It is `undef` by default, and in a CGI environment.
+  # When $args{instance} is undef then CRMS::Config will pick the instance, if available,
+  # from ENV{CRMS_INSTANCE}.
+  $self->{config} = CRMS::Config->new(instance => $args{instance});
   $self->SetupLogFile();
   # Initialize error reporting.
   $self->ClearErrors();
@@ -235,8 +234,8 @@ sub NeedStepUpAuth
   return $need;
 }
 
-# The href or URL to use.
-# Path is e.g. 'logo.png', returns {'/c/crms/logo.png', '/crms/web/logo.png'}
+# The href or URL to use for a given asset type.
+# WebPath('web', 'logo.png') => '/crms/web/logo.png'
 sub WebPath
 {
   my $self = shift;
@@ -247,20 +246,13 @@ sub WebPath
   if (!$types{$type})
   {
     $self->SetError("Unknown path type '$type'");
-    die "FSPath: unknown type $type";
+    die "WebPath: unknown type $type";
   }
-  my $fullpath = "/crms/$type/". $path;
-  if ($self->get('root') !~ m/htapps/)
-  {
-    $fullpath = ($type eq 'web')? ("/c/crms/". $path): ("/$type/c/crms/". $path);
-  }
-  #print "$fullpath ($type, $path)\n";
-  return $self->Sysify($fullpath);
+  return "/crms/$type/" . $path;
 }
 
-# The href or URL to use.
-# type+path is e.g. 'prep' + 'crms.rights'
-# returns {'/l1/dev/moseshll/prep/c/crms/crms.rights', '/htapps/moseshll.babel/crms/prep/crms.rights'}
+# The filesystem path for an asset.
+# FSPath('prep', 'crms.rights') => '/htapps/babel/crms/prep/logo.png'
 sub FSPath
 {
   my $self = shift;
@@ -273,14 +265,10 @@ sub FSPath
     $self->SetError("Unknown path type '$type'");
     die "FSPath: unknown type $type";
   }
-  my $fullpath = $self->get('root');
-  $fullpath .= '/' unless $fullpath =~ m/\/$/;
-  $fullpath .= (($self->get('root') =~ m/htapps/)? "crms/$type/":"$type/c/crms/"). $path;
-  return $fullpath;
+  return $ENV{SDRROOT} . "/crms/$type/" . $path;
 }
 
-# Temporary hack to translate menuitems urls into quod/HT urls
-# /c/crms/blah -> $self->WebPath('web', 'blah')
+# Expand menuitems urls into HT urls
 # crms?blah=1 -> $self->WebPath('cgi', 'crms?blah=1')
 sub MenuPath
 {
@@ -288,11 +276,7 @@ sub MenuPath
   my $path = shift;
 
   my $newpath = $path;
-  if ($path =~ m/^\/c\/crms\/(.*)$/)
-  {
-    $newpath = $self->WebPath('web', $1);
-  }
-  elsif ($path =~ m/^crms/)
+  if ($path =~ m/^crms/)
   {
     $newpath = $self->WebPath('cgi', $path);
   }
@@ -366,7 +350,7 @@ sub DbInfo
   my $self = shift;
 
   my $config = CRMS::Config->new;
-  my $instance = $self->get('instance') || '';
+  my $instance = $config->instance;
   my $credentials = $config->credentials;
   my $db_user = $credentials->{'db_user'};
   my $dsn = $self->DSN();
@@ -425,12 +409,9 @@ sub GetSdrDb
 sub DSN {
   my $self = shift;
 
-  my $instance = $self->get('instance') || '';
   my $config = CRMS::Config->new;
   my $db_host = $config->config->{'db_host'};
-  $db_host = $config->config->{'db_host_development'} if $instance eq '';
   my $db_name = $config->config->{'db_name'};
-  $db_name = 'crms_training' if $instance eq 'crms-training';
   return "DBI:mysql:database=$db_name;host=$db_host";
 }
 
@@ -3448,7 +3429,7 @@ sub LinkToReview
 
   $title = $self->GetTitle($id) unless $title;
   $title = CGI::escapeHTML($title);
-  my $url = $self->Sysify($self->WebPath('cgi', "crms?p=review;htid=$id;editing=1"));
+  my $url = $self->WebPath('cgi', "crms?p=review;htid=$id;editing=1");
   $url .= ";importUser=$user" if $user;
   $self->ClearErrors();
   return "<a href='$url' target='_blank'>$title</a>";
@@ -3704,8 +3685,7 @@ sub CanChangeToUser
   my $him  = shift;
 
   return 1 if $self->SameUser($me, $him);
-  my $instance = $self->get('instance') || '';
-  if ($instance ne 'production' && $instance ne 'crms-training')
+  if (CRMS::Config->new->instance eq 'development')
   {
     return 0 if $me eq $him;
     return 1 if $self->IsUserAdmin($me);
@@ -6364,11 +6344,7 @@ sub WhereAmI
 {
   my $self = shift;
 
-  my %instances = ('production' => 1, 'crms-training' => 1, 'dev' => 1);
-  my $instance = $self->get('instance') || $ENV{'HT_DEV'} || 'dev';
-  $instance = "dev ($instance)" unless $instances{$instance};
-  $instance = 'training' if $instance eq 'crms-training';
-  return ucfirst $instance;
+  return ucfirst CRMS::Config->new->instance;
 }
 
 sub DevBanner
@@ -6382,6 +6358,13 @@ sub DevBanner
   }
 }
 
+# Tricky only when we don't have Apache to give us the answer.
+# Allows us to generate usable URLs in reports run against training or dev.
+# The best we can do is map:
+#   "training" to "crms-training.X"
+#   "development" to "test.X"
+#   "production" to no prefix
+# The mapping bit could move to CRMS::Config since there's some similar code there already.
 sub Host
 {
   my $self = shift;
@@ -6390,8 +6373,12 @@ sub Host
   if (!$host)
   {
     $host = $self->GetSystemVar('host');
-    my $instance = $self->get('instance') || 'test';
-    $host = $instance . '.' . $host if $instance ne 'production';
+    my $instance_map = {
+      development => 'test.',
+      production => '',
+      training => 'crms-training.'
+    };
+    $host = $instance_map->{CRMS::Config->new->instance} . $host;
   }
   return 'https://' . $host;
 }
@@ -6400,16 +6387,14 @@ sub IsDevArea
 {
   my $self = shift;
 
-  my $inst = $self->get('instance') || '';
-  return ($inst eq 'production' || $inst eq 'crms-training')? 0:1;
+  return (CRMS::Config->new->instance eq 'development') ? 1 : 0;
 }
 
 sub IsTrainingArea
 {
   my $self = shift;
 
-  my $inst = $self->get('instance') || '';
-  return $inst eq 'crms-training';
+  return (CRMS::Config->new->instance eq 'training') ? 1 : 0;
 }
 
 sub Hostname
@@ -6441,10 +6426,10 @@ sub LinkNoteText
   my $self = shift;
   my $note = shift;
 
-  if ($note =~ m/See\sall\sreviews\sfor\sSys\s#(\d+)/)
+  if ($note =~ m/See all reviews for Sys #(\d+)/)
   {
-    my $url = $self->Sysify($self->WebPath('cgi', "crms?p=adminHistoricalReviews;stype=reviews;search1=SysID;search1value=$1"));
-    $note =~ s/(See\sall\sreviews\sfor\sSys\s#)(\d+)/$1<a href="$url" target="_blank">$2<\/a>/;
+    my $url = $self->WebPath('cgi', "crms?p=adminHistoricalReviews;stype=reviews;search1=SysID;search1value=$1");
+    $note =~ s/(See all reviews for Sys #)(\d+)/$1<a href="$url" target="_blank">$2<\/a>/;
   }
   return $note;
 }
@@ -6854,7 +6839,7 @@ sub AddInheritanceToQueue
       my $n = $self->SimpleSqlGet($sql, $id);
       if ($n)
       {
-        my $url = $self->Sysify("?p=adminReviews;search1=Identifier;search1value=$id");
+        my $url = "?p=adminReviews;search1=Identifier;search1value=$id";
         my $msg = sprintf "already has $n <a href='$url' target='_blank'>%s</a>", $self->Pluralize('review',$n);
         push @msgs, $msg;
         $stat = 1;
@@ -7124,6 +7109,7 @@ sub ExportSrcToEnglish
 
 # Retrieves a system var from the DB if possible, otherwise use the value from the config file.
 # If default is specified, returns it if otherwise the return value would be undefined.
+# Does not retrieve credentials.
 sub GetSystemVar
 {
   my $self    = shift;
@@ -7132,7 +7118,7 @@ sub GetSystemVar
 
   my $sql = 'SELECT value FROM systemvars WHERE name=?';
   my $var = $self->SimpleSqlGet($sql, $name);
-  $var = $self->{'config'}->{$name} unless defined $var;
+  $var = CRMS::Config->new->config->{$name} unless defined $var;
   $var = $default unless defined $var;
   return $var;
 }
@@ -7428,16 +7414,6 @@ sub Authorities
   return \@all;
 }
 
-# Previously used to make sure viral params were appended to generated URLs.
-# No longer needed -- can be removed.
-sub Sysify
-{
-  my $self = shift;
-  my $url  = shift;
-
-  return $url;
-}
-
 # Used to simplify the search results page links.
 # Makes URL params for all values defined in the CGI,
 # ignoring those that are valueless.
@@ -7477,15 +7453,6 @@ sub Hiddenify
     push @comps, "<input type='hidden' name='$key' value='$val'/>" if $val and not $exceptions{$key};
   }
   return join "\n", @comps;
-}
-
-# Previously used to make sure viral params were included in hidden input.
-# No longer needed -- can be removed.
-sub HiddenSys
-{
-  my $self = shift;
-
-  return '';
 }
 
 # Compares 2 strings or undefs. Returns 1 or 0 for equality.

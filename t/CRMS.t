@@ -4,12 +4,12 @@ use strict;
 use warnings;
 use utf8;
 
-use lib "$ENV{SDRROOT}/crms/cgi";
-
 use File::Temp;
 use Test::More;
 
-require_ok($ENV{'SDRROOT'}. '/crms/cgi/CRMS.pm');
+use lib "$ENV{SDRROOT}/crms/cgi";
+use CRMS;
+
 my $cgi = CGI->new();
 my $crms = CRMS->new('cgi' => $cgi, 'verbose' => 0);
 ok(defined $crms, 'CRMS object created');
@@ -45,6 +45,8 @@ subtest 'CRMS::MoveToHathitrustFiles' => sub {
   my $tempdir = File::Temp::tempdir(CLEANUP => 1);
   my $save_hathitrust_files_directory = $ENV{'CRMS_HATHITRUST_FILES_DIRECTORY'};
   $ENV{'CRMS_HATHITRUST_FILES_DIRECTORY'} = $tempdir;
+  # Reload to pick up changes to ENV
+  CRMS::Config->new(reinitialize => 1);
   my $crms = CRMS->new('cgi' => $cgi);
   my $src1 = $crms->FSPath('prep', 'test_1.txt');
   my $src2 = $crms->FSPath('prep', 'test_2.txt');

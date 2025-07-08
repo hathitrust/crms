@@ -167,7 +167,6 @@ function CheckAllTx(box,id)
   </table>
   [% IF admin %]
   <form action="crms" id="checks1">
-  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="queueAdd"/>
   <input type="submit" name="delSel" value="Delete Selection"/><br/><br/>
   [% END %]
@@ -216,7 +215,7 @@ function CheckAllTx(box,id)
       [% END %]
       <td>
         [% IF r.added_by == user %]
-          <a href="[% crms.Sysify('crms?p=review;editing=1;htid=' _  r.id) %]" target="_blank">Review</a>
+          <a href="[% 'crms?p=review;editing=1;htid=' _  r.id %]" target="_blank">Review</a>
         [% END %]
       </td>
       <td>[% crms.CurrentRightsQuery(r.id).replace('\s','&nbsp;') %]</td>
@@ -225,9 +224,9 @@ function CheckAllTx(box,id)
       <td>[% r.pub_date %]</td>
       <td class="nowrap">
       [% IF r.status > 0 %]
-        <a href="[% crms.Sysify('?p=adminReviews;search1=Identifier;search1value=' _ r.id) %]" target="_blank">
+        <a href="[% '?p=adminReviews;search1=Identifier;search1value=' _ r.id %]" target="_blank">
       [% ELSE %]
-        <a href="[% crms.Sysify('?p=queue;search1=Identifier;search1value=' _ r.id) %]" target="_blank">
+        <a href="[% '?p=queue;search1=Identifier;search1value=' _ r.id %]" target="_blank">
       [% END %]
       [% r.id %]</a></td>
       <td>[% r.date %]</td>

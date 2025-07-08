@@ -11,7 +11,6 @@
   <th>List&nbsp;Unicode&nbsp;bibdata&nbsp;entries</th>
   <td>
     <form action="crms">
-      [% crms.HiddenSys() %]
       <input type="hidden" name="p" value="$page"/>
       <input type="hidden" name="multibyte" value="1"/>
       <input type="submit" value="Do it!"/>
@@ -22,7 +21,6 @@
   <th>List&nbsp;System&nbsp;variables</th>
   <td>
     <form action="crms">
-      [% crms.HiddenSys() %]
       <input type="hidden" name="p" value="$page"/>
       <input type="hidden" name="systemvars" value="1"/>
       <input type="submit" value="Do it!"/>
@@ -47,7 +45,6 @@
 <div style="position:relative;border-style:solid;width:66em;border-width:1px;padding:10px;">
 <h3>Export Report</h3>
 <form id="select" action="crms">
-  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="$page"/>
   <input type="hidden" name="export_report" value="1"/>
   <label for="startDate" style="width:5em;float:left;">YTD Start:</label>
@@ -135,7 +132,6 @@
 [% ids = cgi.param('ids') %]
 <h4>Update Bibliographic Data</h4>
 <form action="crms">
-  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="debug"/>
   <input type="hidden" name="fix" value="1"/>
   <p class="smallishText">Enter one volume id per line.</p>
@@ -149,7 +145,6 @@
 <div style="position:relative;border-style:solid;width:76em;border-width:1px;padding:10px;">
   <h4>Remove From Candidates</h4>
   <form action="crms">
-    [% crms.HiddenSys() %]
     <input type="hidden" name="p" value="debug"/>
     <input type="hidden" name="deleteFromCandidates" value="1"/>
     <p class="smallishText">Enter one volume id per line.</p>
