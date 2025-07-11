@@ -1,5 +1,9 @@
 FROM debian:bullseye
 
+ARG UNAME=app
+ARG UID=1000
+ARG GID=1000
+
 RUN sed -i 's/main.*/main contrib non-free/' /etc/apt/sources.list
 
 RUN apt-get update && apt-get install -y \
@@ -135,6 +139,7 @@ RUN apt-get install -y \
   bison \
   build-essential \
   cpanminus \
+  default-libmysqlclient-dev \
   git \
   libdevel-cover-perl \
   libffi-dev \
@@ -146,6 +151,7 @@ RUN apt-get install -y \
   libssl-dev \
   libyaml-dev \
   openssh-server \
+  ruby-dev \
   unzip \
   wget \
   zip \
@@ -160,6 +166,20 @@ RUN cpanm --notest \
 
 ENV SDRROOT /htapps/babel
 ENV ROOTDIR "${SDRROOT}/crms"
+
+RUN groupadd -g $GID -o $UNAME
+RUN useradd -m -d "${ROOTDIR}" -u $UID -g $GID -o -s /bin/bash $UNAME
+RUN mkdir -p /gems && chown $UID:$GID /gems
+
 RUN mkdir -p $ROOTDIR
-COPY . $ROOTDIR
+COPY --chown=$UID:$GID . $ROOTDIR
 WORKDIR $ROOTDIR
+
+ENV BUNDLE_PATH /gems
+ENV RUBYLIB "${ROOTDIR}/rubylib"
+
+RUN gem install bundler
+RUN bundle config --global silence_root_warning 1
+
+USER $UNAME
+RUN bundle install

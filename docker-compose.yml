@@ -39,6 +39,14 @@ services:
       - SDRROOT=/htapps/babel
       - CRMS_DB_HOST=mariadb
       - CRMS_HT_DB_HOST=mariadb_ht
+      - MARIADB_CRMS_RW_USERNAME=crms
+      - MARIADB_CRMS_RW_PASSWORD=crms
+      - MARIADB_CRMS_RW_HOST=mariadb
+      - MARIADB_CRMS_RW_DATABASE=crms
+      - MARIADB_HT_RO_USERNAME=mdp-lib
+      - MARIADB_HT_RO_PASSWORD=mdp-lib
+      - MARIADB_HT_RO_HOST=mariadb_ht
+      - MARIADB_HT_RO_DATABASE=ht
       # pass through info needed by coveralls uploader
       - GITHUB_TOKEN
       - GITHUB_RUN_ID
@@ -51,3 +59,6 @@ services:
       mariadb: *healthy
       mariadb_ht: *healthy
     command: scripts/test.sh
+
+volumes:
+  gem_cache:
