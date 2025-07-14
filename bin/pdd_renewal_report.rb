@@ -21,6 +21,7 @@ require "set"
 require "crms"
 
 Dotenv.load
+ENV["CRMS_LOGGER_LEVEL"] = Logger::WARN.to_s
 
 EXPECTED_RENEWAL_SUNSET = 68 # years
 
@@ -55,20 +56,20 @@ CRMS::Services[:crms_database]
   next if seen_htids.include? htid
 
   json = JSON.parse row[:data]
-  ren_date = json["renDate"].strip || ''
-  ren_num = json["renNum"].strip || ''
+  ren_date = json.fetch("renDate", "")&.strip || ""
+  ren_num = json.fetch("renNum", "")&.strip || ""
 
   # Narrow results down to year of interest.
   # renDate as represented in Catalog of Copyright Entries is of the form D[D]mmmYY
   # e.g., "4Nov52" or "31Mar59"
   if ren_date.match?(/^\d{1,2}\D{3}\d{2}$/) && ren_date[-2, 2] == target_year_digits
-    rights = Rights.new(htid)
+    rights = CRMS::Rights.new(htid)
     unless rights.valid?
       CRMS::Services.logger.warn "could not get rights for #{htid}"
       next
     end
 
-    if rights.pd_or_pdus?
+    if !rights.pd_or_pdus?
       odat = ''
       if !ren_num.empty?
         # TODO extract a stanford class
@@ -76,11 +77,12 @@ CRMS::Services[:crms_database]
           .connection[:stanford]
           .where(ID: ren_num)
           .select(:ODAT)
-          .fetch(0) { {} } # first if any, otherwise empty hash
+          .all
+          .fetch(0, {})
           .fetch(:ODAT, "")
       end
       puts [htid, ren_date, ren_num, odat, rights.to_s].join("\t")
-      seen << htid
+      seen_htids << htid
     end
   end
 end
