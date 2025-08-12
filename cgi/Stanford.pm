@@ -6,6 +6,9 @@ use JSON::XS;
 use Unicode::Normalize;
 use URI::Escape;
 
+use lib "$ENV{SDRROOT}/crms/lib";
+use CRMS::Config;
+
 sub GetStanfordData
 {
   my $self  = shift;
@@ -13,16 +16,18 @@ sub GetStanfordData
   my $field = shift || 'search';
   my $page  = shift;
 
-  my $ret;
   return unless defined $q and length $q;
   my $url = GetStanfordURL($self, $q, $field, $page);
-  my $ua = LWP::UserAgent->new;
-  $ua->timeout(1000);
+  my $crms_user_agent = CRMS::Config->new->config->{'crms_user_agent'};
+  my $ua = LWP::UserAgent->new(
+    agent => $crms_user_agent,
+    timeout => 1000
+  );
   my $req = HTTP::Request->new(GET => $url);
   my $res = $ua->request($req);
   if (!$res->is_success)
   {
-    $self->SetError("Got ". $res->code(). " getting $url\n");
+    $self->SetError("Got ". $res->code(). " getting $url: $res->content\n");
     return;
   }
   my $jsonxs = JSON::XS->new->utf8;
@@ -33,7 +38,7 @@ sub GetStanfordData
   };
   if ($@)
   {
-    $self->SetError('Stanford parse error for '. $url);
+    $self->SetError("Stanford parse error for $url: " . $res->content);
     return;
   }
   $json->{'response'}->{'json'} = $res->content;

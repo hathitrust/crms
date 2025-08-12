@@ -50,3 +50,5 @@ rights_export_directory: /htapps/babel/feed/var/rights
 hathitrust_files_directory: /htapps/www/files
 # Used by Jira.pm
 jira_prefix: https://hathitrust.atlassian.net
+# Used when connecting to Stanford API, potentially other services.
+crms_user_agent: HathiTrust-CRMS
