@@ -2944,8 +2944,8 @@ sub GetQueueRef
     $search2Value = $2;
     $tester2 = $1;
   }
-  push @rest, "q.time>='$startDate'" if $startDate;
-  push @rest, "q.time<='$endDate'" if $endDate;
+  push @rest, "DATE(q.time)>='$startDate'" if $startDate;
+  push @rest, "DATE(q.time)<='$endDate'" if $endDate;
   if ($search1Value ne '' && $search2Value ne '')
   {
     push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
@@ -3080,8 +3080,8 @@ sub GetCandidatesRef
     $search2Value = $2;
     $tester2 = $1;
   }
-  push @rest, "q.time>='$startDate'" if $startDate;
-  push @rest, "q.time<='$endDate'" if $endDate;
+  push @rest, "DATE(c.time)>='$startDate'" if $startDate;
+  push @rest, "DATE(c.time)<='$endDate'" if $endDate;
   if ($search1Value ne '' && $search2Value ne '')
   {
     push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
@@ -3193,8 +3193,8 @@ sub GetUNDRef
     $search2Value = $2;
     $tester2 = $1;
   }
-  push @rest, "q.time>='$startDate'" if $startDate;
-  push @rest, "q.time<='$endDate'" if $endDate;
+  push @rest, "DATE(c.time)>='$startDate'" if $startDate;
+  push @rest, "DATE(c.time)<='$endDate'" if $endDate;
   if ($search1Value ne '' && $search2Value ne '')
   {
     push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
@@ -5862,7 +5862,7 @@ sub CandidatesSearchMenu
   my $searchVal  = shift;
 
   my @keys = qw(Identifier SysID Title Author PubDate Country Date Project);
-  my @labs = ('ID', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Country', 'Date Added',
+  my @labs = ('Identifier', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Country', 'Date Added',
               'Project');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
@@ -5884,7 +5884,7 @@ sub UNDSearchMenu
   my $searchVal  = shift;
 
   my @keys = qw(Identifier SysID Title Author PubDate Country Date Source);
-  my @labs = ('ID', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Country', 'Date Added', 'Source');
+  my @labs = ('Identifier', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Country', 'Date Added', 'Source');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
