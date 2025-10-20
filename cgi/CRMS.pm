@@ -2110,15 +2110,15 @@ sub CreateSQLForReviews
   my $self         = shift;
   my $page         = shift;
   my $order        = shift;
-  my $dir          = shift;
+  my $dir          = shift || 'DESC';
   my $search1      = shift;
-  my $search1value = shift;
+  my $search1value = shift || '';
   my $op1          = shift;
   my $search2      = shift;
-  my $search2value = shift;
+  my $search2value = shift || '';
   my $op2          = shift;
   my $search3      = shift;
-  my $search3value = shift;
+  my $search3value = shift || '';
   my $startDate    = shift;
   my $endDate      = shift;
   my $offset       = shift || 0;
@@ -2129,8 +2129,6 @@ sub CreateSQLForReviews
   $search2 = $self->ConvertToSearchTerm($search2, $page);
   $search3 = $self->ConvertToSearchTerm($search3, $page);
   $order = $self->ConvertToSearchTerm($order, $page, 1);
-  $dir = 'DESC' unless $dir;
-  $offset = 0 unless $offset;
   $pagesize = 20 unless $pagesize > 0;
   my $user = $self->get('user');
   my $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,'.
@@ -2207,22 +2205,21 @@ sub CreateSQLForVolumes
   my $self         = shift;
   my $page         = shift;
   my $order        = shift;
-  my $dir          = shift;
-  my $search1      = shift;
-  my $search1value = shift;
+  my $dir          = shift || 'DESC';
+  my $search1      = shift || 'identifier';
+  my $search1value = shift || '';
   my $op1          = shift;
-  my $search2      = shift;
-  my $search2value = shift;
+  my $search2      = shift || 'identifier';
+  my $search2value = shift || '';
   my $op2          = shift;
-  my $search3      = shift;
-  my $search3value = shift;
+  my $search3      = shift || 'identifier';
+  my $search3value = shift || '';
   my $startDate    = shift;
   my $endDate      = shift;
   my $offset       = shift || 0;
   my $pagesize     = shift || 0;
   my $download     = shift;
 
-  $dir = 'DESC' unless $dir;
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
   if (!$order)
@@ -2299,22 +2296,21 @@ sub CreateSQLForVolumesWide
   my $self         = shift;
   my $page         = shift;
   my $order        = shift;
-  my $dir          = shift;
-  my $search1      = shift;
-  my $search1value = shift;
+  my $dir          = shift || 'DESC';
+  my $search1      = shift || 'identifier';
+  my $search1value = shift || '';
   my $op1          = shift;
-  my $search2      = shift;
-  my $search2value = shift;
+  my $search2      = shift || 'identifier';
+  my $search2value = shift || '';
   my $op2          = shift;
-  my $search3      = shift;
-  my $search3value = shift;
+  my $search3      = shift || 'identifier';
+  my $search3value = shift || '';
   my $startDate    = shift;
   my $endDate      = shift;
   my $offset       = shift || 0;
   my $pagesize     = shift || 0;
   my $download     = shift;
 
-  $dir = 'DESC' unless $dir;
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
   if (!$order)
@@ -2488,7 +2484,7 @@ sub SearchTermsToSQLWide
 {
   my $self = shift;
   my $dbh = $self->GetDb();
-  my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table) = @_;
+  my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table) = map { (defined $_)? $_:'' } @_;
   $op1 = 'AND' unless $op1;
   $op2 = 'AND' unless $op2;
   $search1value = $self->TranslateAttr($search1value) if $search1 eq 'r.attr';
@@ -2504,14 +2500,14 @@ sub SearchTermsToSQLWide
     $search2 = $search3;
     $search1value = $search2value;
     $search2value = $search3value;
-    $search3value = $search3 = undef;
+    $search3value = $search3 = '';
   }
   # Pull down search 3 if no search 2
   if (!length $search2value)
   {
     $search2 = $search3;
     $search2value = $search3value;
-    $search3value = $search3 = undef;
+    $search3value = $search3 = '';
   }
   my %pref2table = ('b'=>'bibdata','r'=>$table,'q'=>'queue','p'=>'projects');
   $pref2table{'q'} = 'exportdata' if $table eq 'historicalreviews';
@@ -2901,13 +2897,13 @@ sub GetReviewCount
 sub GetQueueRef
 {
   my $self         = shift;
-  my $order        = shift;
-  my $dir          = shift;
+  my $order        = shift || 'id';
+  my $dir          = shift || 'ASC';
   my $search1      = shift;
-  my $search1Value = shift;
+  my $search1Value = shift || '';
   my $op1          = shift;
   my $search2      = shift;
-  my $search2Value = shift;
+  my $search2Value = shift || '';
   my $startDate    = shift;
   my $endDate      = shift;
   my $offset       = shift || 0;
@@ -2916,8 +2912,6 @@ sub GetQueueRef
 
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
-  $order = 'id' unless $order;
-  $offset = 0 unless $offset;
   $search1 = $self->ConvertToSearchTerm($search1, 'queue');
   $search2 = $self->ConvertToSearchTerm($search2, 'queue');
   $order = $self->ConvertToSearchTerm($order, 'queue');
@@ -3037,8 +3031,8 @@ sub GetQueueRef
 sub GetCandidatesRef
 {
   my $self         = shift;
-  my $order        = shift;
-  my $dir          = shift;
+  my $order        = shift || 'id';
+  my $dir          = shift || 'ASC';
   my $search1      = shift;
   my $search1Value = shift || '';
   my $op1          = shift;
@@ -3052,8 +3046,6 @@ sub GetCandidatesRef
 
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
-  $order = 'id' unless $order;
-  $offset = 0 unless $offset;
   $search1 = $self->ConvertToSearchTerm($search1, 'candidates');
   $search2 = $self->ConvertToSearchTerm($search2, 'candidates');
   $order = $self->ConvertToSearchTerm($order, 'candidates');
@@ -3150,8 +3142,8 @@ sub GetCandidatesRef
 sub GetUNDRef
 {
   my $self         = shift;
-  my $order        = shift;
-  my $dir          = shift;
+  my $order        = shift || 'id';
+  my $dir          = shift || 'ASC';
   my $search1      = shift;
   my $search1Value = shift || '';
   my $op1          = shift;
@@ -3165,8 +3157,6 @@ sub GetUNDRef
 
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
-  $order = 'id' unless $order;
-  $offset = 0 unless $offset;
   $search1 = $self->ConvertToSearchTerm($search1, 'und');
   $search2 = $self->ConvertToSearchTerm($search2, 'und');
   $order = $self->ConvertToSearchTerm($order, 'und');
@@ -3263,13 +3253,13 @@ sub GetUNDRef
 sub GetExportDataRef
 {
   my $self         = shift;
-  my $order        = shift;
-  my $dir          = shift;
+  my $order        = shift || 'id';
+  my $dir          = shift || 'ASC';
   my $search1      = shift;
-  my $search1Value = shift;
+  my $search1Value = shift || '';
   my $op1          = shift;
   my $search2      = shift;
-  my $search2Value = shift;
+  my $search2Value = shift || '';
   my $startDate    = shift;
   my $endDate      = shift;
   my $offset       = shift || 0;
@@ -3278,8 +3268,6 @@ sub GetExportDataRef
 
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
-  $order = 'id' unless $order;
-  $offset = 0 unless $offset;
   $search1 = $self->ConvertToSearchTerm($search1, 'exportData');
   $search2 = $self->ConvertToSearchTerm($search2, 'exportData');
   $order = $self->ConvertToSearchTerm($order, 'exportData');
