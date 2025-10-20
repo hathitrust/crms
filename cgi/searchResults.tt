@@ -55,7 +55,7 @@ addEvent(window, 'load', function(e)
   [% ref = {volumes => 0, reviews => 0} %]
 [% ELSE %]
   [% IF stype == 'volumes' %]
-    [% ref = crms.GetVolumesRefWide(p, order, dir, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, , pagesize) %]
+    [% ref = crms.GetVolumesRefWide(p, order, dir, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize) %]
   [% ELSIF stype == 'groups' %]
     [% ref = crms.GetVolumesRef(p, order, dir, search1, search1value, op1, search2, search2value, op2, search3, search3value, startDate, endDate, offset, pagesize) %]
   [% ELSE %]
