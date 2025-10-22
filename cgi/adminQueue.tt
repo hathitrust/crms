@@ -42,10 +42,8 @@ function CheckAll(box,formid)
 <br/><br/>
 [% locked = crms.GetLockedItems() %]
 [% IF locked.size %]
-  [% url = crms.Sysify('crms?p=adminQueue;clear=1') %]
-  <blockquote><a href="$url">Clear old locks</a></blockquote><br/>
+  <blockquote><a href="crms?p=adminQueue;clear=1">Clear old locks</a></blockquote><br/>
   <form action="crms" id="checks">
-  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="adminQueue"/>
   <input type="checkbox" id="SelectAllCB" onclick="CheckAll(this,'checks');"/>
   <label for="SelectAllCB">Select All</label>&nbsp;&nbsp;&nbsp;&nbsp;
@@ -60,7 +58,7 @@ function CheckAll(box,formid)
       <td style="text-align:center">[% locked.${item}.locked %]</td>
       <td style="text-align:center"><input type="checkbox" name="vol_[% item %]"/></td>
       <td style="text-align:center">
-        [% url = crms.Sysify("crms?p=adminQueue;unlock=$item") %]
+        [% url = "crms?p=adminQueue;unlock=$item" %]
         <a href="$url">do it</a>
       </td>
     </tr>

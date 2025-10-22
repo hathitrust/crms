@@ -9,9 +9,11 @@
 
 use strict;
 use warnings;
+
 BEGIN {
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi');
-  unshift(@INC, $ENV{'SDRROOT'}. '/crms/post_zephir_processing');
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/post_zephir_processing';
 }
 
 use utf8;
@@ -25,6 +27,22 @@ use Encode;
 use JSON::XS;
 use bib_rights;
 use MARC::File::XML(BinaryEncoding => 'utf8');
+
+my $usage = <<END;
+USAGE: $0 [-h]
+
+Generates test fixture for post_zephir_processing/bib_rights tests.
+
+-h    Print this help message.
+END
+
+my $help;
+
+Getopt::Long::Configure('bundling');
+die 'Terminating' unless GetOptions(
+           'h|?'  => \$help);
+
+if ($help) { print $usage. "\n"; exit(0); }
 
 my $crms = CRMS->new();
 my @years = (2010, 2015, 2020, 2025, 2030);

@@ -22,7 +22,6 @@ addEvent(window, 'load', function(e)
 [% END %]
 <form action="crms">
   <input type="hidden" name="p" value="keio"/>
-  [% crms.HiddenSys() %]
   <label for="table_sel">Table:</label>
   <select name="table" id="table_sel" onchange="selMenuItem('query_sel', 0);selMenuItem('page_sel', 0);this.form.submit()">
     <option value=""></option>

@@ -2,12 +2,20 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use utf8;
+
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
+}
+
+use Encode;
+use Getopt::Long;
 
 use CRMS;
-use Getopt::Long;
+use CRMS::Cron;
 use Utilities;
-use Encode;
 
 my $usage = <<END;
 USAGE: $0 [-hpqtv] [-m USER [-m USER...]]
@@ -50,7 +58,10 @@ my $crms = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
+my $cron = CRMS::Cron->new(crms => $crms);
+
 $crms->set('noop', 1) if $noop;
+my $default_recipients = $cron->recipients(@mails);
 
 my $sql = 'SELECT user,id,text,uuid,mailto,wait FROM mail WHERE sent IS NULL';
 my $ref = $crms->SelectAll($sql);
@@ -65,10 +76,10 @@ foreach my $row (@{$ref})
   my $wait = $row->[5];
   $id = undef if defined $id and $id eq '';
   my %mails;
-  $mails{$_} = 1 for @mails;
+  $mails{$_} = 1 for @$default_recipients;
   if (!$crms->IsDevArea())
   {
-    $mails{$crms->GetSystemVar('expertsEmail')} = 1 unless $quiet;
+    $mails{$crms->GetSystemVar('experts_email')} = 1 unless $quiet;
   }
   if ($wait && $id)
   {
@@ -161,15 +172,15 @@ END
   my @recipients = keys %mails;
   if (scalar @recipients)
   {
-    @recipients = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @recipients;
-    $user .= '@umich.edu' unless $user =~ m/@/;
-    my $recipients = join ',', @recipients;
-    print "Sending to $recipients\n" if $verbose;
+    @recipients = map { $cron->expand_email($_); } @recipients;
+    $user = $cron->expand_email($user);
+    my $to = join ',', @recipients;
+    print "Sending to $to\n" if $verbose;
     use Encode;
     use Mail::Sendmail;
     my $bytes = encode('utf8', $msg);
     my %mail = ('from'         => $user,
-                'to'           => $recipients,
+                'to'           => $to,
                 'cc'           => $user,
                 'subject'      => $subj,
                 'content-type' => 'text/html; charset="UTF-8"',
@@ -177,7 +188,7 @@ END
                 );
     if ($noop)
     {
-      print "No-op set; not sending e-mail to $recipients\n" if $verbose;
+      print "No-op set; not sending e-mail to $to\n" if $verbose;
     }
     else
     {

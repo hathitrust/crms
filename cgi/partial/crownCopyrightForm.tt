@@ -44,6 +44,11 @@
         <a href="[% viaf %]" target="_blank"><span class="red">VIAF Corporate</span><a>
       </td>
     </tr>
+    <tr>
+      <td colspan="2">
+        <span id="rights-description"></span>
+      </td>
+    </tr>
   </table>
 
 [% rights = crms.Rights(htid, 1) %]
@@ -189,7 +194,7 @@
 </form>
 
 <script>
-var gPubDate = '[% data.bibdata.pub_date_format %]';
+var gPubDate = '[% data.bibdata.display_date %]';
 var gReviewData = [% data.json %];
 addEvent(window, 'load', function(e)
 {
@@ -200,10 +205,20 @@ addEvent(window, 'load', function(e)
   [% END %]
 });
 
-function dateEntry()
-{
-  var year = document.getElementById('renewalField').value;
-  PredictRights('[% htid %]', year, 1, 1);
+function dateEntry() {
+  var year = document.getElementById('renewalField').value || '';
+  if (year.length == 0) {
+    return;
+  }
+  // There is a hidden div that tells us which button id is und/nfi.
+  // If the id of the selected rights matches that, leave the selection alone.
+  var rights = document.getElementsByName("rights");
+  var sel = GetCheckedValue(rights);
+  var und = document.getElementById("UNDNFI").title;
+  if (und && sel === und) {
+    return;
+  }
+  predictRights('[% htid %]', year, '', 1, 1);
 }
 
 function popReviewInfo(user)

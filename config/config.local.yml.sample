@@ -1,0 +1,7 @@
+# config.local.yml values override values in config.yml and
+# are for Apache deployments.
+host: sample.hathitrust.org
+# Used in CRMS::Config test -- will return empty string
+missing_subkey_test:
+  development: missing_subkey_test_development
+  production: missing_subkey_test_production

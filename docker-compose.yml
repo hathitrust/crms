@@ -1,4 +1,11 @@
-version: '3'
+x-condition-healthy: &healthy
+  condition: service_healthy
+
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 5s
+  timeout: 10s
+  start_period: 10s
+  retries: 5
 
 services:
 
@@ -6,9 +13,23 @@ services:
     build: docker/db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: 'crms'
+      MYSQL_RANDOM_ROOT_PASSWORD: 1
     ports:
-      - "52000:3306"
+      - 3306:3306
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "healthcheck.sh", "--su-mysql", "--connect", "--innodb_initialized" ]
+
+  mariadb_ht:
+    image: ghcr.io/hathitrust/db-image:latest
+    restart: always
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: 1
+    ports:
+      - 3307:3306
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "healthcheck.sh", "--su-mysql", "--connect", "--innodb_initialized" ]
 
   test:
     build: .
@@ -16,9 +37,17 @@ services:
       - .:/htapps/babel/crms
     environment:
       - SDRROOT=/htapps/babel
-      - CRMS_SQL_HOST=mariadb
+      - CRMS_DB_HOST=mariadb
+      - CRMS_HT_DB_HOST=mariadb_ht
+      # pass through info needed by coveralls uploader
+      - GITHUB_TOKEN
+      - GITHUB_RUN_ID
+      - GITHUB_EVENT_TOKEN
+      - GITHUB_EVENT_PATH
+      - GITHUB_SHA
+      - GITHUB_REF
+      - GITHUB_ACTIONS
     depends_on:
-      - mariadb
-    links:
-      - mariadb
-    command: bash -c "cd /htapps/babel/crms && perl Makefile.PL && bin/wait-for --timeout=60 mariadb:3306 -- make test TEST_VERBOSE=1"
+      mariadb: *healthy
+      mariadb_ht: *healthy
+    command: scripts/test.sh

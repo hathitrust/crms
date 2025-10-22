@@ -39,7 +39,7 @@ sub ExtractReviewData
 sub ReviewPartials
 {
   return ['top', 'bibdata', 'authorities',
-          'HTView', 'copyrightForm', 'expertDetails'];
+          'copyrightForm', 'expertDetails'];
 }
 
 1;

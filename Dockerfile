@@ -134,11 +134,13 @@ RUN apt-get install -y \
   autoconf \
   bison \
   build-essential \
+  cpanminus \
   git \
   libdevel-cover-perl \
   libffi-dev \
   libgdbm-dev \
   libncurses5-dev \
+  libperl-critic-perl \
   libreadline6-dev \
   libsqlite3-dev \
   libssl-dev \
@@ -147,15 +149,17 @@ RUN apt-get install -y \
   unzip \
   wget \
   zip \
-  zlib1g-dev \
-  netcat \
-  libperl-critic-perl
+  zlib1g-dev
 
-RUN cpan \
+RUN cpanm --notest \
   Devel::Cover::Report::Coveralls \
+  MARC::Record::MiJ \
   OAuth::Lite \
-  Test::Exception
+  Test::Exception \
+  Test::LWP::UserAgent
 
-RUN mkdir -p /htapps/babel/crms
-
-WORKDIR /htapps/babel/crms
+ENV SDRROOT /htapps/babel
+ENV ROOTDIR "${SDRROOT}/crms"
+RUN mkdir -p $ROOTDIR
+COPY . $ROOTDIR
+WORKDIR $ROOTDIR

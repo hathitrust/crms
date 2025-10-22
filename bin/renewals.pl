@@ -2,15 +2,23 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use utf8;
 
-use CRMS;
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
+}
+
+use Encode;
 use Getopt::Long;
 use JSON::XS;
-use Utilities;
-use Encode;
-use File::Copy;
 use Term::ANSIColor qw(:constants);
+
+use CRMS;
+use CRMS::Cron;
+use Utilities;
+
 $Term::ANSIColor::AUTORESET = 1;
 
 my $usage = <<END;
@@ -19,7 +27,7 @@ USAGE: $0 [-hnpqv] [-m MAIL [-m MAIL...]]
 Produces TSV file of HTID and renewal ID for Zephir download at
 https://www.hathitrust.org/files/CRMSRenewals.tsv
 
-Data hosted on macc-ht-web-000 etc at /htapps/www/sites/www.hathitrust.org/files
+Data hosted on macc-ht-web-000 etc at config->hathitrust_files_directory
 
 For each distinct HTID in historical reviews with one or more renewal IDs,
 gets all validated reviews with renewal IDs.
@@ -57,6 +65,7 @@ my $crms = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
+my $cron = CRMS::Cron->new(crms => $crms);
 
 my $outfile = $crms->FSPath('prep', 'CRMSRenewals.tsv');
 my $msg = $crms->StartHTML();
@@ -71,18 +80,15 @@ my $n = CheckStanford();
 $msg =~ s/__N__/$n/g;
 $msg =~ s/__OUTFILE__/$outfile/g;
 
-if ($noop)
-{
+if ($noop) {
   print "Noop set: not moving file to new location.\n";
   $msg .= '<strong>Noop set: not moving file to new location.</strong>';
 }
-else
-{
+else {
   eval {
-  File::Copy::move $outfile, '/htapps/www/sites/www.hathitrust.org/files';
+    $crms->MoveToHathitrustFiles($outfile);
   };
-  if ($@)
-  {
+  if ($@) {
     $msg .= '<strong>Error moving TSV file: $@</strong>';
   }
 }
@@ -90,21 +96,21 @@ $msg .= "<p>Warning: $_</p>\n" for @{$crms->GetErrors()};
 $msg .= '</body></html>';
 
 my $subject = $crms->SubjectLine('Stanford Renewal Report');
-@mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
-my $to = join ',', @mails;
-if ($noop || scalar @mails == 0)
+my $recipients = $cron->recipients(@mails);
+my $to = join ',', @$recipients;
+if ($noop || scalar @$recipients == 0)
 {
   print "No-op or no mails set; not sending e-mail to {$to}\n" if $verbose;
   print "$msg\n";
 }
 else
 {
-  if (scalar @mails)
+  if (scalar @$recipients)
   {
     use Encode;
     use Mail::Sendmail;
     my $bytes = encode('utf8', $msg);
-    my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
+    my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
                 'to'           => $to,
                 'subject'      => $subject,
                 'content-type' => 'text/html; charset="UTF-8"',

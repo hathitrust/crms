@@ -1,0 +1,22 @@
+<div class="reviewPartial">
+  <table>
+    <tr><td><strong>ID:</strong> [% htid %]</td></tr>
+    [% IF data.project.ShowPubDate() %]
+      <tr>
+        <td><strong>Pub Date:</strong>
+          <span id="pub-date-span"
+            [% IF data.bibdata.extracted_dates.size != 1 %]class="red"[% END %]>
+            [% data.bibdata.display_date || '(unknown)' %]
+          </span>
+        </td>
+      </tr>
+    [% END %]
+    <tr><td><strong>Country:</strong> [% data.bibdata.country %]</td></tr>
+    [% projs = crms.GetUserProjects() %]
+    [% IF projs.size > 1 %]
+    <tr><td class="nowrap">
+      <strong>Project:</strong> [% data.project.name %]
+    </td></tr>
+    [% END %]
+  </table>
+</div>

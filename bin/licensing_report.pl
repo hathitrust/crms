@@ -2,14 +2,21 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use utf8;
+
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
+}
 
 use Getopt::Long;
 use Mail::Sendmail;
 use Encode;
 
 use CRMS;
-use Jira;
+use CRMS::Cron;
+use CRMS::Jira;
 
 my $usage = <<END;
 USAGE: $0 [-hnpv] [-m MAIL [-m MAIL2...]]
@@ -44,6 +51,7 @@ my $crms = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
+my $cron = CRMS::Cron->new(crms => $crms);
 
 my $sql = 'SELECT l.id,l.htid,a.name,rs.name,l.user,l.ticket,l.rights_holder,'.
          'b.title FROM licensing l'.
@@ -99,16 +107,17 @@ END
 
 $report .= "</table>\n</body>\n</html>\n";
 AddJiraComments() if $production;
-EmailReport() if scalar @mails;
+EmailReport();
 
 print "Warning: $_\n" for @{$crms->GetErrors()};
 
 sub EmailReport
 {
-  @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
-  my $to = join ',', @mails;
+  my $recipients = $cron->recipients(@mails);
+  return unless scalar @$recipients;
+  my $to = join ',', @$recipients;
   my $bytes = Encode::encode('utf8', $report);
-  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
+  my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
               'to'           => $to,
               'subject'      => $subj,
               'content-type' => 'text/html; charset="UTF-8"',
@@ -119,7 +128,7 @@ sub EmailReport
 
 sub AddJiraComments
 {
-  #my $summary = '';
+  my $jira = CRMS::Jira->new;
   my $sql = 'SELECT DISTINCT ticket FROM licensing'.
             ' WHERE time >= DATE_SUB(NOW(), INTERVAL 1 DAY)';
   my $ref = $crms->SelectAll($sql);
@@ -130,6 +139,7 @@ sub AddJiraComments
     $sql = 'SELECT DISTINCT a.name FROM licensing l'.
          ' INNER JOIN attributes a ON l.attr=a.id'.
          ' WHERE l.ticket=?'.
+         ' AND l.time >= DATE_SUB(NOW(), INTERVAL 1 DAY)'.
          ' ORDER BY a.name';
     $ref = $crms->SelectAll($sql, $tx);
     my @licenses = map { $_->[0]; } @$ref;
@@ -139,13 +149,12 @@ sub AddJiraComments
       $sql = 'SELECT l.htid FROM licensing l'.
              ' INNER JOIN attributes a ON l.attr=a.id'.
              ' WHERE l.ticket=? AND a.name=?'.
+             ' AND l.time >= DATE_SUB(NOW(), INTERVAL 1 DAY)'.
              ' ORDER BY l.htid';
       $ref = $crms->SelectAll($sql, $tx, $license);
       $comment .= sprintf("%s\n", $_->[0]) for @$ref;
     }
-    my $err = Jira::AddComment($crms, $tx, $comment);
+    my $err = $jira->add_comment(ticket => $tx, comment => $comment);
     $crms->SetError($err) if defined $err;
-    #$summary .= "<p>Jira comment for $tx:</p><code>$comment</code>";
   }
-  #return $summary;
 }

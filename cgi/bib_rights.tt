@@ -4,7 +4,6 @@
 
 <h2>Query Bibliographic Rights:</h2>
 <form action="crms">
-  [% crms.HiddenSys() %]
   <input type="hidden" name="p" value="[% p %]"/>
   <label for="queryTA" class="smallishText">Enter one volume or catalog id per line.</label><br/>
   <textarea id="queryTA" name="query" cols="20" rows="10" style="width:33%; height:9em;">[% crms.EchoInput(q) %]</textarea>
@@ -30,7 +29,8 @@
     [% END %]
     <br/><br/>
     <table class="exportStats">
-      <tr class="nowrap"><th colspan="15" class="major" scope="colgroup" id="topTH">
+      <tr class="nowrap">
+        <th colspan="15" class="major" scope="colgroup" id="topTH">
         [% IF data.cid %]
           <span style="color:white;">[% data.cid %]</span>
           &nbsp;&nbsp;&nbsp;&nbsp;
@@ -43,7 +43,17 @@
         [% ELSE %]
           [% crms.EchoInput(id) %]&nbsp;&nbsp;&nbsp;&nbsp;(not in catalog)
         [% END %]
-      </th></tr>
+        </th>
+      </tr>
+
+      [% IF data.cid %]
+       <tr class="nowrap">
+        <td  colspan="15">
+          [% f008 = data.record.GetControlfield('008') %]
+          [% crms.Field008Formatter.format(f008) %]
+        </td>
+      </tr>
+      [% END %]
       
       <tr class="nowrap">
         <th class="nowrap" scope="col" id="volumeTH">HTID</th>

@@ -122,7 +122,7 @@
         <td class="nowrap">$item.src</td>
         <td>$item.added_by</td>
         <td class="nowrap">$item.project</td>
-        <td>[% (item.ticket)? crms.LinkToJira(crms, item.ticket):'' %]</td>
+        <td>[% (item.ticket)? crms.LinkToJira(item.ticket):'' %]</td>
         <td>$item.gid</td>
         <td>
           [% IF item.exported %]

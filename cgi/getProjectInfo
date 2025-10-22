@@ -1,12 +1,17 @@
 #!/usr/bin/perl
 
 use strict;
-use FindBin;
-use lib $FindBin::Bin;
-use CGI;
-use CRMS;
-use JSON::XS;
 use utf8;
+
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+}
+
+use CGI;
+use JSON::XS;
+
+use CRMS;
 
 my $cgi  = new CGI;
 my $sys  = $cgi->param('sys') || 'crms';
@@ -15,8 +20,7 @@ my $crms = CRMS->new(cgi => $cgi,
 my %data;
 my @errs;
 my $q = $cgi->param('q');
-my %rs = ('setProjectColor' => 'a',
-          'addProject'      => 'a');
+my %rs = ('addProject' => 'a');
 my $qual = $crms->GetUserQualifications();
 my $rest = $rs{$q};
 if (!$crms->DoQualificationsAndRestrictionsOverlap($qual, $rest))
@@ -25,14 +29,7 @@ if (!$crms->DoQualificationsAndRestrictionsOverlap($qual, $rest))
 }
 else
 {
-  if ($q eq 'setProjectColor')
-  {
-    my $id = $cgi->param('id');
-    my $color = $cgi->param('color');
-    $color =~ s/^#+// if defined $color;
-    $crms->PrepareSubmitSql('UPDATE projects SET color=? WHERE id=?', $color, $id);
-  }
-  elsif ($q eq 'setProjectProperty')
+  if ($q eq 'setProjectProperty')
   {
     my $id = $cgi->param('id');
     $id = undef if $id eq '0' or $id eq '';

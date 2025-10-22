@@ -4,6 +4,11 @@ use strict;
 use warnings;
 use utf8;
 
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+}
+
 use Encode;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use Data::Dumper;
@@ -11,7 +16,6 @@ use File::Slurp;
 use MARC::Record;
 use MARC::File::XML(BinaryEncoding => 'utf8');
 
-use lib $ENV{'SDRROOT'} . '/crms/cgi';
 use BibRights;
 
 binmode(STDOUT, ':encoding(UTF-8)');

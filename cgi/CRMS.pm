@@ -4,20 +4,33 @@ package CRMS;
 ## Object of shared code for the CRMS DB CGI and BIN scripts.
 ## ----------------------------------------------------------
 
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
+}
+
 use strict;
 use warnings;
-use LWP::UserAgent;
-use XML::LibXML;
-use Encode;
-use Date::Calc qw(:all);
-use POSIX;
-use DBI qw(:sql_types);
-use List::Util qw(min max);
-use CGI;
-use Utilities;
-use Time::HiRes;
 use utf8;
+
+use CGI;
+use Data::Dumper;
+use Date::Calc qw(:all);
+use DBI qw(:sql_types);
+use Encode;
+use File::Copy;
+use List::Util qw(min max);
+use LWP::UserAgent;
+use POSIX;
+use Time::HiRes;
 use Unicode::Normalize;
+use XML::LibXML;
+
+use CRMS::Config;
+use CRMS::Version;
+use Utilities;
+
 binmode(STDOUT, ':encoding(UTF-8)');
 
 ## -------------------------------------------------
@@ -27,15 +40,13 @@ sub new
 {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
-  # If running under Apache.
-  $self->set('instance', $ENV{'CRMS_INSTANCE'});
-  # If running from command line.
-  $self->set('instance', $args{'instance'}) if $args{'instance'};
-  my $root = $ENV{'SDRROOT'};
-  die 'ERROR: cannot locate root directory with SDRROOT!' unless $root and -d $root;
-  $self->set('root', $root);
-  my %d = $self->ReadConfigFile('crms.cfg');
-  $self->set($_, $d{$_}) for keys %d;
+  # Need not store the config, it's a singleton so subsequent calls to `new` will retrieve it.
+  # This is the one-time setup.
+  # $args{instance} is only set when running one of the scripts in bin/ with the -t (training)
+  # or -p (production) flag. It is `undef` by default, and in a CGI environment.
+  # When $args{instance} is undef then CRMS::Config will pick the instance, if available,
+  # from ENV{CRMS_INSTANCE}.
+  $self->{config} = CRMS::Config->new(instance => $args{instance});
   $self->SetupLogFile();
   # Initialize error reporting.
   $self->ClearErrors();
@@ -47,8 +58,6 @@ sub new
     my $cgi = $args{'cgi'};
     print "<strong>Warning: no CGI passed to <code>CRMS->new()</code>\n" unless $cgi;
     $self->set('cgi',      $cgi);
-    $self->set('pdb',      $cgi->param('pdb'));
-    $self->set('tdb',      $cgi->param('tdb'));
     $self->set('debugSql', $args{'debugSql'});
     $self->set('debugVar', $args{'debugVar'});
     $self->SetupUser();
@@ -57,10 +66,8 @@ sub new
   return $self;
 }
 
-our $VERSION = '8.4.18';
-sub Version
-{
-  return $VERSION;
+sub Version {
+  return $CRMS::Version::VERSION;
 }
 
 # First, try to establish the identity of the user as represented in the users table.
@@ -75,8 +82,7 @@ sub SetupUser
 
   my $note = '';
   my $sdr_dbh = $self->get('ht_repository');
-  if (!defined $sdr_dbh)
-  {
+  if (!defined $sdr_dbh) {
     $sdr_dbh = $self->ConnectToSdrDb('ht_repository');
     $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
   }
@@ -87,66 +93,53 @@ sub SetupUser
   my $candidate = $ENV{'REMOTE_USER'};
   $candidate = lc $candidate if defined $candidate;
   $note .= sprintf "ENV{REMOTE_USER}=%s\n", (defined $candidate)? $candidate:'<undef>';
-  if ($candidate)
-  {
-    my $candidate2;
+  if ($candidate) {
+    my $ht_users_email;
     my $ref = $sdr_dbh->selectall_arrayref($htsql, undef, $candidate);
-    if ($ref && scalar @{$ref})
-    {
+    if ($ref && scalar @{$ref}) {
       $ht_user = $candidate;
       $note .= "Set ht_user=$ht_user\n";
-      $candidate2 = $ref->[0]->[0];
+      $ht_users_email = $ref->[0]->[0];
     }
-    if ($self->SimpleSqlGet($usersql, $candidate))
-    {
+    if ($self->SimpleSqlGet($usersql, $candidate)) {
       $crms_user = $candidate;
       $note .= "Set crms_user=$crms_user from lc ENV{REMOTE_USER}\n";
     }
-    if (!$crms_user && $self->SimpleSqlGet($usersql, $candidate2))
-    {
-      $crms_user = $candidate2;
+    if (!$crms_user && $self->SimpleSqlGet($usersql, $ht_users_email)) {
+      $crms_user = $ht_users_email;
       $note .= "Set crms_user=$crms_user from ht_users.email\n";
     }
   }
-  if (!$crms_user || !$ht_user)
-  {
-    $candidate = $ENV{'email'};
-    $candidate = lc $candidate if defined $candidate;
-    $candidate =~ s/\@umich.edu// if defined $candidate;
-    $note .= sprintf "ENV{email}=%s\n", (defined $candidate)? $candidate:'<undef>';
-    if ($candidate)
-    {
-      my $candidate2;
+  if (!$crms_user || !$ht_user) {
+    $note .= sprintf "ENV{email}=%s\n", (defined $ENV{email}) ? $ENV{email} : '<undef>';
+    foreach my $candidate (@{$self->extract_env_email}) {
+      my $ht_users_email;
       my $ref = $sdr_dbh->selectall_arrayref($htsql, undef, $candidate);
-      if ($ref && scalar @{$ref} && !$ht_user)
-      {
+      if ($ref && scalar @$ref && !$ht_user) {
         $ht_user = $candidate;
         $note .= "Set ht_user=$ht_user\n";
-        $candidate2 = $ref->[0]->[0];
+        $ht_users_email = $ref->[0]->[0];
       }
-      if ($self->SimpleSqlGet($usersql, $candidate) && !$crms_user)
-      {
+      if ($self->SimpleSqlGet($usersql, $candidate) && !$crms_user) {
         $crms_user = $candidate;
-        $note .= "Set crms_user=$crms_user from lc ENV{email}\n";
+        $note .= "Set crms_user=$crms_user from ENV{email} candidate $candidate\n";
       }
-      if (!$crms_user && $self->SimpleSqlGet($usersql, $candidate2) && !$crms_user)
-      {
-        $crms_user = $candidate2;
+      if (!$crms_user && $self->SimpleSqlGet($usersql, $ht_users_email)) {
+        $crms_user = $ht_users_email;
         $note .= "Set crms_user=$crms_user from ht_users.email\n";
       }
+      # No need to iterate further if we have a match in both crms.users and ht.ht_users
+      last if $ht_user && $crms_user;
     }
   }
-  if ($ht_user)
-  {
-    if ($self->NeedStepUpAuth($ht_user))
-    {
+  if ($ht_user) {
+    if ($self->NeedStepUpAuth($ht_user)) {
       $note .= "HT user $ht_user step-up auth required.\n";
       $self->set('stepup', 1);
     }
     $self->set('ht_user', $ht_user);
   }
-  if ($crms_user)
-  {
+  if ($crms_user) {
     $note .= "Setting CRMS user to $crms_user.\n";
     $self->set('remote_user', $crms_user);
     my $alias = $self->GetAlias($crms_user);
@@ -155,6 +148,28 @@ sub SetupUser
   }
   $self->set('id_note', $note);
   return $crms_user;
+}
+
+# Extract potentially multiple values of ENV{email} as an array ref.
+# We have seen multiple (duplicate) values of email separated by semicolons
+# coming from Shib.
+# Values are downcased, unique, nonempty strings with any "@umich.edu" stripped.
+sub extract_env_email {
+  my $self      = shift;
+  my $env_email = shift || $ENV{email};
+
+  my $emails = [];
+  if (defined $env_email) {
+    my %seen;
+    foreach my $email (split(';', lc $env_email)) {
+      $email =~ s/\@umich.edu//;
+      if (length $email && !$seen{$email}) {
+        push @$emails, $email;
+        $seen{$email} = 1;
+      }
+    }
+  }
+  return $emails;
 }
 
 # Construct redirect URL based on template
@@ -219,8 +234,8 @@ sub NeedStepUpAuth
   return $need;
 }
 
-# The href or URL to use.
-# Path is e.g. 'logo.png', returns {'/c/crms/logo.png', '/crms/web/logo.png'}
+# The href or URL to use for a given asset type.
+# WebPath('web', 'logo.png') => '/crms/web/logo.png'
 sub WebPath
 {
   my $self = shift;
@@ -231,20 +246,13 @@ sub WebPath
   if (!$types{$type})
   {
     $self->SetError("Unknown path type '$type'");
-    die "FSPath: unknown type $type";
+    die "WebPath: unknown type $type";
   }
-  my $fullpath = "/crms/$type/". $path;
-  if ($self->get('root') !~ m/htapps/)
-  {
-    $fullpath = ($type eq 'web')? ("/c/crms/". $path): ("/$type/c/crms/". $path);
-  }
-  #print "$fullpath ($type, $path)\n";
-  return $self->Sysify($fullpath);
+  return "/crms/$type/" . $path;
 }
 
-# The href or URL to use.
-# type+path is e.g. 'prep' + 'crms.rights'
-# returns {'/l1/dev/moseshll/prep/c/crms/crms.rights', '/htapps/moseshll.babel/crms/prep/crms.rights'}
+# The filesystem path for an asset.
+# FSPath('prep', 'crms.rights') => '/htapps/babel/crms/prep/logo.png'
 sub FSPath
 {
   my $self = shift;
@@ -257,14 +265,10 @@ sub FSPath
     $self->SetError("Unknown path type '$type'");
     die "FSPath: unknown type $type";
   }
-  my $fullpath = $self->get('root');
-  $fullpath .= '/' unless $fullpath =~ m/\/$/;
-  $fullpath .= (($self->get('root') =~ m/htapps/)? "crms/$type/":"$type/c/crms/"). $path;
-  return $fullpath;
+  return $ENV{SDRROOT} . "/crms/$type/" . $path;
 }
 
-# Temporary hack to translate menuitems urls into quod/HT urls
-# /c/crms/blah -> $self->WebPath('web', 'blah')
+# Expand menuitems urls into HT urls
 # crms?blah=1 -> $self->WebPath('cgi', 'crms?blah=1')
 sub MenuPath
 {
@@ -272,15 +276,24 @@ sub MenuPath
   my $path = shift;
 
   my $newpath = $path;
-  if ($path =~ m/^\/c\/crms\/(.*)$/)
-  {
-    $newpath = $self->WebPath('web', $1);
-  }
-  elsif ($path =~ m/^crms/)
+  if ($path =~ m/^crms/)
   {
     $newpath = $self->WebPath('cgi', $path);
   }
   return $newpath;
+}
+
+# Move one or more files into the hathitrust.org Wordpress files area
+# which is configured in config/config.yml.
+# Raises exception if File::Copy encounters a problem.
+sub MoveToHathitrustFiles {
+  my $self = shift;
+  my @files = @_;
+
+  my $dest = $self->GetSystemVar('hathitrust_files_directory');
+  foreach my $file (@files) {
+    File::Copy::move $file, $dest;
+  }
 }
 
 sub SetupLogFile
@@ -310,33 +323,6 @@ sub set
   $self->{$key} = $val;
 }
 
-sub ReadConfigFile
-{
-  my $self = shift;
-  my $path = shift;
-
-  $path = $self->FSPath('bin', $path);
-  my %dict = ();
-  my $fh;
-  unless (open $fh, '<:encoding(UTF-8)', $path)
-  {
-    die ("failed to read config file at $path: ". $!) if defined $self->get('instance');
-    return %dict;
-  }
-  read $fh, my $buff, -s $path; # one of many ways to slurp file.
-  close $fh;
-  my @lines = split "\n", $buff;
-  foreach my $line (@lines)
-  {
-    $line =~ s/#.*//;
-    if ($line =~ m/(\S+)\s*=\s*(\S+(\s+\S+)*)/i)
-    {
-      $dict{$1} = $2;
-    }
-  }
-  return %dict;
-}
-
 ## ----------------------------------------------------------------------------
 ##  Function:   connect to the mysql DB
 ##  Parameters: nothing
@@ -346,25 +332,13 @@ sub ConnectToDb
 {
   my $self = shift;
 
-  # Only allow env to override config in dev.
-  my $db_host = $ENV{'CRMS_SQL_HOST'} || $self->get('mysqlServerDev');
-  my $instance = $self->get('instance') || '';
-
-  my %d = $self->ReadConfigFile('crmspw.cfg');
-  my $db_user   = $d{'mysqlUser'} || 'crms';
-  my $db_passwd = $d{'mysqlPasswd'} || 'crms';
-  if ($instance eq 'production'
-      || $self->get('pdb')
-      || $instance eq 'crms-training'
-      || $self->get('tdb')
-      )
-  {
-    $db_host = $self->get('mysqlServer');
-  }
-  my $db = $self->DbName();
-  my $dsn = "DBI:mysql:database=$db;host=$db_host";
+  my $config = CRMS::Config->new;
+  my $credentials = $config->credentials;
+  my $db_user = $credentials->{'db_user'};
+  my $db_passwd = $credentials->{'db_password'};
+  my $dsn = $self->DSN();
   my $dbh = DBI->connect($dsn, $db_user, $db_passwd,
-            { PrintError => 0, RaiseError => 1, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
+    { PrintError => 0, RaiseError => 1, AutoCommit => 1 }) || die "Cannot connect: $DBI::errstr";
   $dbh->{mysql_enable_utf8} = 1;
   $dbh->{mysql_auto_reconnect} = 1;
   $dbh->do('SET NAMES "utf8";');
@@ -375,26 +349,13 @@ sub DbInfo
 {
   my $self = shift;
 
-  my $db_server = $self->get('mysqlServerDev');
-  my $instance  = $self->get('instance') || '';
-
-  my $msg = '';
-  my %d = $self->ReadConfigFile('crmspw.cfg');
-  my $db_user   = $d{'mysqlUser'};
-  my $db_passwd = $d{'mysqlPasswd'};
-  if ($instance eq 'production'
-      || $self->get('pdb')
-      || $instance eq 'crms-training'
-      || $self->get('tdb'))
-  {
-    $db_server = $self->get('mysqlServer');
-  }
-  my $db = $self->DbName();
+  my $config = CRMS::Config->new;
+  my $instance = $config->instance;
+  my $credentials = $config->credentials;
+  my $db_user = $credentials->{'db_user'};
+  my $dsn = $self->DSN();
   my $where = $self->DevBanner() || 'PRODUCTION';
-  $msg = "DB Info:\nInstance $instance\n$where\n$db on $db_server as $db_user";
-  $msg .= "\n(PDB set)" if $self->get('pdb');
-  $msg .= "\n(TDB set)" if $self->get('tdb');
-  return $msg;
+  return "DB Info:\nInstance $instance\n$where\n$dsn as $db_user";
 }
 
 ## ----------------------------------------------------------------------------
@@ -404,39 +365,30 @@ sub DbInfo
 ## ----------------------------------------------------------------------------
 sub ConnectToSdrDb
 {
-  my $self = shift;
-  my $db   = shift;
+  my $self    = shift;
+  my $db_name = shift;
 
-  # Only allow env to override config in dev.
-  my $db_host = $ENV{'CRMS_SQL_HOST'} || $self->get('mysqlMdpServerDev');
-  my $instance = $self->get('instance') || '';
-
-  $db = $self->get('mysqlMdpDbName') unless defined $db;
-  my %d = $self->ReadConfigFile('crmspw.cfg');
-  my $db_user   = $d{'mysqlMdpUser'} || 'crms';
-  my $db_passwd = $d{'mysqlMdpPasswd'} || 'crms';
-  if ($instance eq 'production'
-      || $instance eq 'crms-training'
-      || $self->get('pdb')
-      || $self->get('tdb'))
+  my $config = CRMS::Config->new;
+  my $db_host = $config->config->{'ht_db_host'};
+  $db_name ||= $config->config->{'ht_db_name'};
+  my $credentials = $config->credentials;
+  my $db_user = $credentials->{'ht_db_user'};
+  my $db_passwd = $credentials->{'ht_db_password'};
+  my $dsn = "DBI:mysql:database=$db_name;host=$db_host";
+  my $ht_dbh = DBI->connect($dsn, $db_user, $db_passwd,
+    {PrintError => 0, AutoCommit => 1});
+  if ($ht_dbh)
   {
-    $db_host = $self->get('mysqlMdpServer');
-  }
-  my $dsn = "DBI:mysql:database=$db;host=$db_host";
-  my $sdr_dbh = DBI->connect($dsn, $db_user, $db_passwd,
-                             {PrintError => 0, AutoCommit => 1});
-  if ($sdr_dbh)
-  {
-    $sdr_dbh->{mysql_auto_reconnect} = 1;
-    $sdr_dbh->{mysql_enable_utf8} = 1;
-    $sdr_dbh->do('SET NAMES "utf8";');
+    $ht_dbh->{mysql_auto_reconnect} = 1;
+    $ht_dbh->{mysql_enable_utf8} = 1;
+    $ht_dbh->do('SET NAMES "utf8";');
   }
   else
   {
     my $err = $DBI::errstr;
     $self->SetError($err);
   }
-  return $sdr_dbh;
+  return $ht_dbh;
 }
 
 # Gets cached dbh, or connects if no connection is made yet.
@@ -454,15 +406,13 @@ sub GetSdrDb
   return $sdr_dbh;
 }
 
-sub DbName
-{
+sub DSN {
   my $self = shift;
 
-  my $instance = $self->get('instance') || '';
-  my $tdb = $self->get('tdb');
-  my $db = 'crms';
-  $db .= '_training' if $instance eq 'crms-training' or $tdb;
-  return $db;
+  my $config = CRMS::Config->new;
+  my $db_host = $config->config->{'db_host'};
+  my $db_name = $config->config->{'db_name'};
+  return "DBI:mysql:database=$db_name;host=$db_host";
 }
 
 # Gets cached dbh, or connects if no connection is made yet.
@@ -633,7 +583,6 @@ sub DebugVar
       </div>
     </div>
 END
-    use Data::Dumper;
     my $msg = sprintf $html, Dumper($val);
     my $storedDebug = $self->get('storedDebug') || '';
     $self->set('storedDebug', $storedDebug. $msg);
@@ -787,9 +736,6 @@ sub ProcessReviews
   $self->SetSystemStatus($stat);
   $sql = 'INSERT INTO processstatus VALUES ()';
   $self->PrepareSubmitSql($sql);
-  $self->PrepareSubmitSql('DELETE FROM predeterminationsbreakdown WHERE date=DATE(NOW())');
-  $sql = 'INSERT INTO predeterminationsbreakdown (date,s2,s3,s4,s8) VALUES (DATE(NOW()),?,?,?,?)';
-  $self->PrepareSubmitSql($sql, $stati{2}, $stati{3}, $stati{4}, $stati{8});
 }
 
 # Returns a data structure with the following fields:
@@ -928,7 +874,6 @@ sub ClearQueueAndExport
   push @export, $_->[0] for @{$double};
   $self->ExportReviews(\@export, $quiet);
   $self->UpdateExportStats();
-  $self->UpdateDeterminationsBreakdown();
   my $msg = sprintf 'Removed from queue: %d matching, %d expert-reviewed, %d auto-resolved, %d inherited',
                     scalar @{$double}, scalar @{$expert}, scalar @{$auto}, scalar @{$inh};
 }
@@ -976,9 +921,9 @@ sub ExportReviews
   my $list  = shift;
   my $quiet = shift;
 
-  if ($self->GetSystemVar('noExport') && !$quiet)
+  if ($self->GetSystemVar('no_export') && !$quiet)
   {
-    $self->ReportMsg('>>> noExport system variable is set; will only export high-priority volumes.');
+    $self->ReportMsg('>>> no_export system variable is set; will only export high-priority volumes.');
   }
   my $training = $self->IsTrainingArea();
   if ($training && !$quiet)
@@ -1037,9 +982,7 @@ sub CanExportVolume
   my $time   = shift; # Optional
 
   # Do not export anything without an attr/reason (like Frontmatter/Corrections).
-  if (!defined $attr || !defined $reason ||
-      $self->TranslateAttr($attr) eq $attr ||
-      $self->TranslateReason($reason) eq $reason)
+  if (!defined $attr || !defined $reason)
   {
     my $msg = sprintf "Not exporting $id because of rights %s/%s",
                       (defined $attr)? $attr:'<undef>',
@@ -1048,6 +991,11 @@ sub CanExportVolume
     return 0;
   }
   my $export = 1;
+  # Do not export und/*
+  if ($attr eq 'und') {
+    $self->ReportMsg("Not exporting $id as $attr/$reason") unless $quiet;
+    return 0;
+  }
   # Do not export Status 6, since they are not really final determinations.
   my $status = $self->SimpleSqlGet('SELECT status FROM queue WHERE id=?', $id);
   if (!defined $status && defined $gid)
@@ -1069,36 +1017,32 @@ sub CanExportVolume
            ' ON e.project=p.id WHERE e.gid=?';
     $project = $self->SimpleSqlGet($sql, $gid);
   }
-  if ($self->GetSystemVar('noExport'))
+  # FIXME: this system var is no longer used and should be removed
+  if ($self->GetSystemVar('no_export'))
   {
     if ($project eq 'Special')
     {
-      $self->ReportMsg("Exporting $id; noExport is on but it is Special") unless $quiet;
+      $self->ReportMsg("Exporting $id; no_export is on but it is Special") unless $quiet;
       return 1;
     }
     else
     {
-      $self->ReportMsg("Not exporting $id; noExport is on and it is project $project") unless $quiet;
+      $self->ReportMsg("Not exporting $id; no_export is on and it is project $project") unless $quiet;
       return 0;
     }
   }
   my $rq = $self->RightsQuery($id, 1);
   return 0 unless defined $rq;
   my ($attr2, $reason2, $src2, $usr2, $time2, $note2) = @{$rq->[0]};
-  # Do not export determination if the volume has gone out of scope,
-  # or if exporting und would clobber pdus in World.
-  if ($reason2 ne 'bib' ||
-      ($attr eq 'und' && ($attr2 eq 'pd' || $attr2 eq 'pdus')))
+  # Do not export determination if the volume has gone out of scope.
+  if ($reason2 ne 'bib')
   {
     # But, we clobber OOS if any of the following conditions hold:
-    # 1. Current rights are pdus/gfv (which per rrotter in Core Services never overrides pd/bib)
-    #    and determination is not und.
-    # 2. Current rights are */bib (unless a und would clobber pdus/bib).
-    # 3. Project 'Special' FIXME: add "always export" flag to projects table.
-    # 4. Previous rights were by user crms*.
-    # 5. The determination is pd* (unless a pdus would clobber pd/bib).
-    if (($reason2 eq 'gfv' && $attr ne 'und')
-        || ($reason2 eq 'bib' && !($attr eq 'und' && $attr2 =~ m/^pd/))
+    # 1. Current rights are pdus/gfv (which per rrotter in Core Services never overrides pd/bib).
+    # 2. Project 'Special' FIXME: add "always export" flag to projects table.
+    # 3. Previous rights were by user crms*.
+    # 4. The determination is pd* (unless a pdus would clobber pd/bib).
+    if (($reason2 eq 'gfv')
         || $project eq 'Special'
         || $usr2 =~ m/^crms/i
         || ($attr =~ m/^pd/ && !($attr eq 'pdus' && $attr2 eq 'pd')))
@@ -1136,7 +1080,7 @@ sub WriteRightsFile
   my $perm = $self->FSPath('prep', $filename);
   if ($self->WhereAmI() eq 'Production')
   {
-    $perm = $self->GetSystemVar('productionRightsDirectory');
+    $perm = $self->GetSystemVar('rights_export_directory');
     $perm .= '/' unless substr($perm, -1) eq '/';
     $perm .= $filename;
   }
@@ -1473,11 +1417,15 @@ sub LoadQueueForProject {
   my $project_name = $self->GetProjectRef($project)->name;
   my $sql = 'SELECT COUNT(*) FROM queue WHERE project=?';
   my $queueSize = $self->SimpleSqlGet($sql, $project);
-  my $targetQueueSize = $self->GetProjectRef($project)->queue_size();
+  my $project_ref = $self->GetProjectRef($project);
+  my $targetQueueSize = $project_ref->queue_size();
   my $needed = $targetQueueSize - $queueSize;
   $self->ReportMsg("Project $project_name: $queueSize volumes -- need $needed");
   return if $needed <= 0;
   my $count = 0;
+  my @orders = ('c.time DESC');
+  my $project_order = $project_ref->queue_order;
+  unshift @orders, $project_order if defined $project_order;
   $sql = 'SELECT DISTINCT b.sysid FROM bibdata b'.
          ' INNER JOIN candidates c ON b.id = c.id'.
          ' WHERE b.id NOT IN (SELECT DISTINCT id FROM inherit)'.
@@ -1485,7 +1433,7 @@ sub LoadQueueForProject {
          ' AND b.id NOT IN (SELECT DISTINCT id FROM reviews)'.
          ' AND b.id NOT IN (SELECT DISTINCT id FROM historicalreviews)'.
          ' AND c.time<=DATE_SUB(NOW(), INTERVAL 1 WEEK) AND c.project=?'.
-         ' ORDER BY c.time DESC';
+         ' ORDER BY ' . join(',', @orders);
   my $ref = $self->SelectAll($sql, $project);
   my $potential = scalar @$ref;
   $self->ReportMsg("$potential qualifying catalog records for project $project queue");
@@ -1494,8 +1442,7 @@ sub LoadQueueForProject {
     my $record = $self->GetMetadata($sysid);
     $sql = 'SELECT c.id FROM candidates c'.
            ' INNER JOIN bibdata b ON c.id=b.id'.
-           ' WHERE c.project=? AND b.sysid=?'.
-           ' ORDER BY c.time ASC';
+           ' WHERE c.project=? AND b.sysid=?';
     my $ref2 = $self->SelectAll($sql, $project, $sysid);
     foreach my $row2 (@$ref2) {
       my $id = $row2->[0];
@@ -1965,18 +1912,6 @@ sub MoveFromReviewsToHistoricalReviews
   $self->PrepareSubmitSql($sql, $gid, $id);
   $sql = 'DELETE FROM reviews WHERE id=?';
   $self->PrepareSubmitSql($sql, $id);
-  $sql = 'SELECT user FROM historicalreviews WHERE gid=?';
-  my $ref = $self->SelectAll($sql, $gid);
-  foreach my $row (@{$ref})
-  {
-    my $user = $row->[0];
-    my $flag = $self->ShouldReviewBeFlagged($gid, $user);
-    if (defined $flag)
-    {
-      $sql = 'UPDATE historicalreviews SET flagged=? WHERE gid=? AND user=?';
-      $self->PrepareSubmitSql($sql, $flag, $gid, $user);
-    }
-  }
 }
 
 sub GetFinalAttrReason
@@ -2132,7 +2067,7 @@ sub ConvertToSearchTerm
   elsif ($search eq 'Country') { $new_search = 'b.country'; }
   elsif ($search eq 'Priority') { $new_search = 'q.priority'; }
   elsif ($search eq 'Validated') { $new_search = 'r.validated'; }
-  elsif ($search eq 'PubDate') { $new_search = 'YEAR(b.pub_date)'; }
+  elsif ($search eq 'PubDate') { $new_search = 'b.display_date'; }
   elsif ($search eq 'Locked') { $new_search = 'q.locked'; }
   elsif ($search eq 'ExpertCount')
   {
@@ -2175,15 +2110,15 @@ sub CreateSQLForReviews
   my $self         = shift;
   my $page         = shift;
   my $order        = shift;
-  my $dir          = shift;
+  my $dir          = shift || 'DESC';
   my $search1      = shift;
-  my $search1value = shift;
+  my $search1value = shift || '';
   my $op1          = shift;
   my $search2      = shift;
-  my $search2value = shift;
+  my $search2value = shift || '';
   my $op2          = shift;
   my $search3      = shift;
-  my $search3value = shift;
+  my $search3value = shift || '';
   my $startDate    = shift;
   my $endDate      = shift;
   my $offset       = shift || 0;
@@ -2194,8 +2129,6 @@ sub CreateSQLForReviews
   $search2 = $self->ConvertToSearchTerm($search2, $page);
   $search3 = $self->ConvertToSearchTerm($search3, $page);
   $order = $self->ConvertToSearchTerm($order, $page, 1);
-  $dir = 'DESC' unless $dir;
-  $offset = 0 unless $offset;
   $pagesize = 20 unless $pagesize > 0;
   my $user = $self->get('user');
   my $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,'.
@@ -2272,22 +2205,21 @@ sub CreateSQLForVolumes
   my $self         = shift;
   my $page         = shift;
   my $order        = shift;
-  my $dir          = shift;
-  my $search1      = shift;
-  my $search1value = shift;
+  my $dir          = shift || 'DESC';
+  my $search1      = shift || 'identifier';
+  my $search1value = shift || '';
   my $op1          = shift;
-  my $search2      = shift;
-  my $search2value = shift;
+  my $search2      = shift || 'identifier';
+  my $search2value = shift || '';
   my $op2          = shift;
-  my $search3      = shift;
-  my $search3value = shift;
+  my $search3      = shift || 'identifier';
+  my $search3value = shift || '';
   my $startDate    = shift;
   my $endDate      = shift;
   my $offset       = shift || 0;
   my $pagesize     = shift || 0;
   my $download     = shift;
 
-  $dir = 'DESC' unless $dir;
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
   if (!$order)
@@ -2364,22 +2296,21 @@ sub CreateSQLForVolumesWide
   my $self         = shift;
   my $page         = shift;
   my $order        = shift;
-  my $dir          = shift;
-  my $search1      = shift;
-  my $search1value = shift;
+  my $dir          = shift || 'DESC';
+  my $search1      = shift || 'identifier';
+  my $search1value = shift || '';
   my $op1          = shift;
-  my $search2      = shift;
-  my $search2value = shift;
+  my $search2      = shift || 'identifier';
+  my $search2value = shift || '';
   my $op2          = shift;
-  my $search3      = shift;
-  my $search3value = shift;
+  my $search3      = shift || 'identifier';
+  my $search3value = shift || '';
   my $startDate    = shift;
   my $endDate      = shift;
   my $offset       = shift || 0;
   my $pagesize     = shift || 0;
   my $download     = shift;
 
-  $dir = 'DESC' unless $dir;
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
   if (!$order)
@@ -2475,9 +2406,6 @@ sub SearchTermsToSQL
     $search2value = $search3value;
     $search3value = $search3 = '';
   }
-  $search1 = "YEAR($search1)" if $search1 eq 'b.pub_date';
-  $search2 = "YEAR($search2)" if $search2 eq 'b.pub_date';
-  $search3 = "YEAR($search3)" if $search3 eq 'b.pub_date';
   $search1value = $self->TranslateAttr($search1value) if $search1 eq 'r.attr';
   $search2value = $self->TranslateAttr($search2value) if $search2 eq 'r.attr';
   $search3value = $self->TranslateAttr($search3value) if $search3 eq 'r.attr';
@@ -2556,7 +2484,7 @@ sub SearchTermsToSQLWide
 {
   my $self = shift;
   my $dbh = $self->GetDb();
-  my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table) = @_;
+  my ($search1, $search1value, $op1, $search2, $search2value, $op2, $search3, $search3value, $table) = map { (defined $_)? $_:'' } @_;
   $op1 = 'AND' unless $op1;
   $op2 = 'AND' unless $op2;
   $search1value = $self->TranslateAttr($search1value) if $search1 eq 'r.attr';
@@ -2572,14 +2500,14 @@ sub SearchTermsToSQLWide
     $search2 = $search3;
     $search1value = $search2value;
     $search2value = $search3value;
-    $search3value = $search3 = undef;
+    $search3value = $search3 = '';
   }
   # Pull down search 3 if no search 2
   if (!length $search2value)
   {
     $search2 = $search3;
     $search2value = $search3value;
-    $search3value = $search3 = undef;
+    $search3value = $search3 = '';
   }
   my %pref2table = ('b'=>'bibdata','r'=>$table,'q'=>'queue','p'=>'projects');
   $pref2table{'q'} = 'exportdata' if $table eq 'historicalreviews';
@@ -2590,9 +2518,6 @@ sub SearchTermsToSQLWide
   $table2 = 'historicalreviews' if $search2 =~ m/^DATE/;
   $table3 = 'historicalreviews' if $search3 =~ m/^DATE/;
   my ($search1term,$search2term,$search3term);
-  $search1 = "YEAR($search1)" if $search1 eq 'b.pub_date';
-  $search2 = "YEAR($search2)" if $search2 eq 'b.pub_date';
-  $search3 = "YEAR($search3)" if $search3 eq 'b.pub_date';
   $search1value = $dbh->quote($search1value) if length $search1value;
   $search2value = $dbh->quote($search2value) if length $search2value;
   $search3value = $dbh->quote($search3value) if length $search3value;
@@ -2760,7 +2685,7 @@ sub GetReviewsRef
                  };
       if ($page eq 'adminHistoricalReviews')
       {
-        my $pubdate = $self->SimpleSqlGet('SELECT YEAR(pub_date) FROM bibdata WHERE id=?', $id);
+        my $pubdate = $self->SimpleSqlGet('SELECT display_date FROM bibdata WHERE id=?', $id);
         ${$item}{'pubdate'} = $pubdate;
         ${$item}{'sysid'} = $self->SimpleSqlGet('SELECT sysid FROM bibdata WHERE id=?', $id);
         ${$item}{'validated'} = $row->[18];
@@ -2814,7 +2739,7 @@ sub GetVolumesRef
     my $id = $row->[0];
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.data,'.
            'r.expert,r.category,r.legacy,q.priority,q.project,r.swiss,q.status,b.title,'.
-           'b.author,YEAR(b.pub_date),b.country,b.sysid,'.
+           'b.author,b.display_date,b.country,b.sysid,'.
            (($page eq 'adminHistoricalReviews')? 'q.src,r.validated,q.gid':'r.hold').
            " FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id".
            " WHERE r.id='$id' ORDER BY $order $dir";
@@ -2894,7 +2819,7 @@ sub GetVolumesRefWide
     my $id = $row->[0];
     $sql = 'SELECT r.id,DATE(r.time),r.duration,r.user,r.attr,r.reason,r.note,r.data,'.
            'r.expert,r.category,r.legacy,q.priority,q.project,r.swiss,q.status,b.title,'.
-           'b.author,YEAR(b.pub_date),b.country,b.sysid,'.
+           'b.author,b.display_date,b.country,b.sysid,'.
            (($page eq 'adminHistoricalReviews')? 'q.src,r.validated,q.gid':'r.hold').
            " FROM $table r $doQ LEFT JOIN bibdata b ON r.id=b.id".
            " WHERE r.id='$id' ORDER BY $order $dir";
@@ -2972,13 +2897,13 @@ sub GetReviewCount
 sub GetQueueRef
 {
   my $self         = shift;
-  my $order        = shift;
-  my $dir          = shift;
+  my $order        = shift || 'id';
+  my $dir          = shift || 'ASC';
   my $search1      = shift;
-  my $search1Value = shift;
+  my $search1Value = shift || '';
   my $op1          = shift;
   my $search2      = shift;
-  my $search2Value = shift;
+  my $search2Value = shift || '';
   my $startDate    = shift;
   my $endDate      = shift;
   my $offset       = shift || 0;
@@ -2987,8 +2912,6 @@ sub GetQueueRef
 
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
-  $order = 'id' unless $order;
-  $offset = 0 unless $offset;
   $search1 = $self->ConvertToSearchTerm($search1, 'queue');
   $search2 = $self->ConvertToSearchTerm($search2, 'queue');
   $order = $self->ConvertToSearchTerm($order, 'queue');
@@ -3015,8 +2938,8 @@ sub GetQueueRef
     $search2Value = $2;
     $tester2 = $1;
   }
-  push @rest, "q.time>='$startDate'" if $startDate;
-  push @rest, "q.time<='$endDate'" if $endDate;
+  push @rest, "DATE(q.time)>='$startDate'" if $startDate;
+  push @rest, "DATE(q.time)<='$endDate'" if $endDate;
   if ($search1Value ne '' && $search2Value ne '')
   {
     push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
@@ -3033,7 +2956,7 @@ sub GetQueueRef
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my @return = ();
-  $sql = 'SELECT q.id,DATE(q.time),q.status,q.locked,YEAR(b.pub_date),q.priority,'.
+  $sql = 'SELECT q.id,DATE(q.time),q.status,q.locked,b.display_date,q.priority,'.
          'b.title,b.author,b.country,p.name,q.source,q.ticket,q.added_by'.
          ' FROM queue q LEFT JOIN bibdata b ON q.id=b.id'.
          ' INNER JOIN projects p ON q.project=p.id '. $restrict.
@@ -3108,8 +3031,8 @@ sub GetQueueRef
 sub GetCandidatesRef
 {
   my $self         = shift;
-  my $order        = shift;
-  my $dir          = shift;
+  my $order        = shift || 'id';
+  my $dir          = shift || 'ASC';
   my $search1      = shift;
   my $search1Value = shift || '';
   my $op1          = shift;
@@ -3123,8 +3046,6 @@ sub GetCandidatesRef
 
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
-  $order = 'id' unless $order;
-  $offset = 0 unless $offset;
   $search1 = $self->ConvertToSearchTerm($search1, 'candidates');
   $search2 = $self->ConvertToSearchTerm($search2, 'candidates');
   $order = $self->ConvertToSearchTerm($order, 'candidates');
@@ -3151,8 +3072,8 @@ sub GetCandidatesRef
     $search2Value = $2;
     $tester2 = $1;
   }
-  push @rest, "q.time>='$startDate'" if $startDate;
-  push @rest, "q.time<='$endDate'" if $endDate;
+  push @rest, "DATE(c.time)>='$startDate'" if $startDate;
+  push @rest, "DATE(c.time)<='$endDate'" if $endDate;
   if ($search1Value ne '' && $search2Value ne '')
   {
     push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
@@ -3169,7 +3090,7 @@ sub GetCandidatesRef
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my @return = ();
-  $sql = 'SELECT c.id,DATE(c.time),b.sysid,YEAR(b.pub_date),b.title,b.author,'.
+  $sql = 'SELECT c.id,DATE(c.time),b.sysid,b.display_date,b.title,b.author,'.
          ' b.country,p.name'.
          ' FROM candidates c LEFT JOIN bibdata b ON c.id=b.id'.
          ' INNER JOIN projects p ON c.project=p.id '. $restrict.
@@ -3221,8 +3142,8 @@ sub GetCandidatesRef
 sub GetUNDRef
 {
   my $self         = shift;
-  my $order        = shift;
-  my $dir          = shift;
+  my $order        = shift || 'id';
+  my $dir          = shift || 'ASC';
   my $search1      = shift;
   my $search1Value = shift || '';
   my $op1          = shift;
@@ -3236,8 +3157,6 @@ sub GetUNDRef
 
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
-  $order = 'id' unless $order;
-  $offset = 0 unless $offset;
   $search1 = $self->ConvertToSearchTerm($search1, 'und');
   $search2 = $self->ConvertToSearchTerm($search2, 'und');
   $order = $self->ConvertToSearchTerm($order, 'und');
@@ -3264,8 +3183,8 @@ sub GetUNDRef
     $search2Value = $2;
     $tester2 = $1;
   }
-  push @rest, "q.time>='$startDate'" if $startDate;
-  push @rest, "q.time<='$endDate'" if $endDate;
+  push @rest, "DATE(c.time)>='$startDate'" if $startDate;
+  push @rest, "DATE(c.time)<='$endDate'" if $endDate;
   if ($search1Value ne '' && $search2Value ne '')
   {
     push @rest, "($search1 $tester1 '$search1Value' $op1 $search2 $tester2 '$search2Value')";
@@ -3282,7 +3201,7 @@ sub GetUNDRef
   my $totalVolumes = $self->SimpleSqlGet($sql);
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my @return = ();
-  $sql = 'SELECT c.id,DATE(c.time),b.sysid,YEAR(b.pub_date),b.title,b.author,'.
+  $sql = 'SELECT c.id,DATE(c.time),b.sysid,b.display_date,b.title,b.author,'.
          ' b.country, c.src'.
          ' FROM und c LEFT JOIN bibdata b ON c.id=b.id '. $restrict.
          ' ORDER BY '. "$order $dir LIMIT $offset, $pagesize";
@@ -3334,13 +3253,13 @@ sub GetUNDRef
 sub GetExportDataRef
 {
   my $self         = shift;
-  my $order        = shift;
-  my $dir          = shift;
+  my $order        = shift || 'id';
+  my $dir          = shift || 'ASC';
   my $search1      = shift;
-  my $search1Value = shift;
+  my $search1Value = shift || '';
   my $op1          = shift;
   my $search2      = shift;
-  my $search2Value = shift;
+  my $search2Value = shift || '';
   my $startDate    = shift;
   my $endDate      = shift;
   my $offset       = shift || 0;
@@ -3349,8 +3268,6 @@ sub GetExportDataRef
 
   $pagesize = 20 unless $pagesize > 0;
   $offset = 0 unless $offset > 0;
-  $order = 'id' unless $order;
-  $offset = 0 unless $offset;
   $search1 = $self->ConvertToSearchTerm($search1, 'exportData');
   $search2 = $self->ConvertToSearchTerm($search2, 'exportData');
   $order = $self->ConvertToSearchTerm($order, 'exportData');
@@ -3396,7 +3313,7 @@ sub GetExportDataRef
   $offset = $totalVolumes-($totalVolumes % $pagesize) if $offset >= $totalVolumes;
   my @return = ();
   $sql = 'SELECT q.id,DATE(q.time),q.attr,q.reason,q.status,q.priority,q.src,b.title,b.author,'.
-         'YEAR(b.pub_date),b.country,q.exported,p.name,q.gid,q.added_by,q.ticket'.
+         'b.display_date,b.country,q.exported,p.name,q.gid,q.added_by,q.ticket'.
          ' FROM exportdata q LEFT JOIN bibdata b ON q.id=b.id'.
          ' INNER JOIN projects p ON q.project=p.id'.
          " $restrict ORDER BY $order $dir LIMIT $offset, $pagesize";
@@ -3457,24 +3374,6 @@ sub GetExportDataRef
   return $data;
 }
 
-sub GetPublisherDataRef
-{
-  my $self = shift;
-
-  require Publisher;
-  unshift @_, $self;
-  return Publisher::GetPublisherDataRef(@_);
-}
-
-sub PublisherDataSearchMenu
-{
-  my $self = shift;
-
-  require Publisher;
-  unshift @_, $self;
-  return Publisher::PublisherDataSearchMenu(@_);
-}
-
 sub Linkify
 {
   my $self = shift;
@@ -3518,7 +3417,7 @@ sub LinkToReview
 
   $title = $self->GetTitle($id) unless $title;
   $title = CGI::escapeHTML($title);
-  my $url = $self->Sysify($self->WebPath('cgi', "crms?p=review;htid=$id;editing=1"));
+  my $url = $self->WebPath('cgi', "crms?p=review;htid=$id;editing=1");
   $url .= ";importUser=$user" if $user;
   $self->ClearErrors();
   return "<a href='$url' target='_blank'>$title</a>";
@@ -3774,8 +3673,7 @@ sub CanChangeToUser
   my $him  = shift;
 
   return 1 if $self->SameUser($me, $him);
-  my $instance = $self->get('instance') || '';
-  if ($instance ne 'production' && $instance ne 'crms-training')
+  if (CRMS::Config->new->instance eq 'development')
   {
     return 0 if $me eq $him;
     return 1 if $self->IsUserAdmin($me);
@@ -4212,30 +4110,6 @@ sub CreateExportData
       push @{$data{$title}}, $self->SimpleSqlGet($sql, @params);
     }
   }
-  # Append in the Status breakdown
-  foreach my $status (4 .. 9)
-  {
-    my $title = 'Status '.$status;
-    push @titles, $title;
-    $data{$title} = [];
-    foreach my $date (@dates)
-    {
-      Utilities::ClearArrays(\@clauses, \@params);
-      $sql = 'SELECT COALESCE(SUM(s'. $status.'),0) FROM determinationsbreakdown';
-      if ($date =~ m/^\d+/)
-      {
-        push @clauses, $fmt;
-        push @params, $date;
-      }
-      elsif ($date eq 'Total' && defined $year)
-      {
-        push @clauses, $fmt2;
-        push @params, $year;
-      }
-      $sql .= ' WHERE '. join ' AND ', @clauses if scalar @clauses;
-      push @{$data{$title}}, $self->SimpleSqlGet($sql, @params);
-    }
-  }
   # Now that total is available, decorate with percentages.
   if ($pct)
   {
@@ -4306,227 +4180,6 @@ sub CreateExportReport
     }
     $newline .= "</tr>\n";
     $report .= $newline;
-  }
-  $report .= "</table>\n";
-  return $report;
-}
-
-sub CreatePreDeterminationsBreakdownData
-{
-  my $self    = shift;
-  my $start   = shift;
-  my $end     = shift;
-  my $monthly = shift;
-  my $title   = shift;
-
-  my ($year,$month) = $self->GetTheYearMonth();
-  my $titleDate = $self->YearMonthToEnglish("$year-$month");
-  my $justThisMonth = (!$start && !$end);
-  $start = "$year-$month-01" unless $start;
-  my $lastDay = Days_in_Month($year,$month);
-  $end = "$year-$month-$lastDay" unless $end;
-  my $what = 'date';
-  $what = 'DATE_FORMAT(date, "%Y-%m")' if $monthly;
-  my $sql = 'SELECT DISTINCT(' . $what . ') FROM predeterminationsbreakdown WHERE date>=? AND date<=?';
-  #print "$sql<br/>\n";
-  my @dates = map {$_->[0];} @{$self->SelectAll($sql, $start, $end)};
-  if (scalar @dates && !$justThisMonth)
-  {
-    my $startEng = $self->YearMonthToEnglish(substr($dates[0],0,7));
-    my $endEng = $self->YearMonthToEnglish(substr($dates[-1],0,7));
-    $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
-  }
-  my $report = ($title)? "$title\n":"Preliminary Determinations Breakdown $titleDate\n";
-  my @titles = ('Date','Status 2','Status 3','Status 4','Status 8','Total','Status 2','Status 3','Status 4','Status 8');
-  $report .= join("\t", @titles) . "\n";
-  my @totals = (0,0,0,0);
-  foreach my $date (@dates)
-  {
-    my ($y,$m,$d) = split '-', $date;
-    my $date1 = $date;
-    my $date2 = $date;
-    if ($monthly)
-    {
-      $date1 = "$date-01";
-      my $lastDay = Days_in_Month($y,$m);
-      $date2 = "$date-$lastDay";
-      $date = $self->YearMonthToEnglish($date);
-    }
-    my $sql = 'SELECT s2,s3,s4,s8,s2+s3+s4+s8 FROM predeterminationsbreakdown WHERE date LIKE "' . $date1 . '%"';
-    #print "$sql<br/>\n";
-    my ($s2,$s3,$s4,$s8,$sum) = @{$self->SelectAll($sql)->[0]};
-    my @line = ($s2,$s3,$s4,$s8,$sum,0,0,0,0);
-    next unless $sum > 0;
-    for (my $i=0; $i < 4; $i++)
-    {
-      $totals[$i] += $line[$i];
-    }
-    for (my $i=0; $i < 4; $i++)
-    {
-      my $pct = 0.0;
-      eval {$pct = 100.0*$line[$i]/$line[4];};
-      $line[$i+5] = sprintf('%.1f%%', $pct);
-    }
-    $report .= $date;
-    $report .= "\t" . join("\t", @line) . "\n";
-  }
-  my $gt = $totals[0] + $totals[1] + $totals[2] + $totals[3];
-  push @totals, $gt;
-  for (my $i=0; $i < 5; $i++)
-  {
-    my $pct = 0.0;
-    eval {$pct = 100.0*$totals[$i]/$gt;};
-    push @totals, sprintf('%.1f%%', $pct);
-  }
-  $report .= "Total\t" . join("\t", @totals) . "\n";
-  return $report;
-}
-
-sub CreateDeterminationsBreakdownData
-{
-  my $self    = shift;
-  my $start   = shift;
-  my $end     = shift;
-  my $monthly = shift;
-  my $title   = shift;
-
-  my ($year,$month) = $self->GetTheYearMonth();
-  my $titleDate = $self->YearMonthToEnglish("$year-$month");
-  my $justThisMonth = (!$start && !$end);
-  $start = "$year-$month-01" unless $start;
-  my $lastDay = Days_in_Month($year,$month);
-  $end = "$year-$month-$lastDay" unless $end;
-  my $what = 'date';
-  $what = 'DATE_FORMAT(date, "%Y-%m")' if $monthly;
-  my $sql = 'SELECT DISTINCT(' . $what . ') FROM determinationsbreakdown WHERE date>=? AND date<=?'.
-            ' ORDER BY date DESC';
-  #print "$sql<br/>\n";
-  my @dates = map {$_->[0];} @{$self->SelectAll($sql, $start, $end)};
-  if (scalar @dates && !$justThisMonth)
-  {
-    my $startEng = $self->YearMonthToEnglish(substr($dates[0],0,7));
-    my $endEng = $self->YearMonthToEnglish(substr($dates[-1],0,7));
-    $titleDate = ($startEng eq $endEng)? $startEng:sprintf("%s to %s", $startEng, $endEng);
-  }
-  my $report = ($title)? "$title\n":"Determinations Breakdown $titleDate\n";
-  my @titles = ('Date','Status 4','Status 5','Status 6','Status 7','Status 8','Subtotal',
-                'Status 9','Total','Status 4','Status 5','Status 6','Status 7','Status 8');
-  $report .= join("\t", @titles) . "\n";
-  my @totals = (0,0,0,0,0,0);
-  foreach my $date (@dates)
-  {
-    my ($y,$m,$d) = split '-', $date;
-    my $date1 = $date;
-    my $date2 = $date;
-    if ($monthly)
-    {
-      $date1 = $date . '-01';
-      my $lastDay = Days_in_Month($y,$m);
-      $date2 = "$date-$lastDay";
-      $date = $self->YearMonthToEnglish($date);
-    }
-    $sql = 'SELECT SUM(s4),SUM(s5),SUM(s6),SUM(s7),SUM(s8),SUM(s4+s5+s6+s7+s8),SUM(s9),SUM(s4+s5+s6+s7+s8+s9)' .
-           ' FROM determinationsbreakdown WHERE date>=? AND date<=?';
-    #print "$sql<br/>\n";
-    my ($s4,$s5,$s6,$s7,$s8,$sum1,$s9,$sum2) = @{$self->SelectAll($sql, $date1, $date2)->[0]};
-    my @line = ($s4,$s5,$s6,$s7,$s8,$sum1,$s9,$sum2,0,0,0,0,0);
-    next unless $sum1 > 0;
-    for (my $i=0; $i < 5; $i++)
-    {
-      $totals[$i] += $line[$i];
-    }
-    $totals[5] += $line[6];
-    for (my $i=0; $i < 5; $i++)
-    {
-      my $pct = 0.0;
-      eval {$pct = 100.0*$line[$i]/$line[5];};
-      $line[$i+8] = sprintf('%.1f%%', $pct);
-    }
-    $report .= $date;
-    $report .= "\t". join("\t", @line). "\n";
-  }
-  my $gt1 = $totals[0] + $totals[1] + $totals[2] + $totals[3] + $totals[4];
-  my $gt2 = $gt1 + $totals[5];
-  splice @totals, 5, 0, $gt1;
-  push @totals, $gt2;
-  for (my $i=0; $i < 5; $i++)
-  {
-    my $pct = 0.0;
-    eval {$pct = 100.0*$totals[$i]/$gt1;};
-    push @totals, sprintf('%.1f%%', $pct);
-  }
-  $report .= "Total\t" . join("\t", @totals) . "\n";
-  return $report;
-}
-
-sub CreateDeterminationsBreakdownReport
-{
-  my $self     = shift;
-  my $start    = shift;
-  my $end      = shift;
-  my $monthly  = shift;
-  my $title    = shift;
-  my $pre      = shift;
-
-  my $data;
-  my %whichlines = (5=>1,7=>1);
-  my $span1 = 8;
-  my $span2 = 5;
-  if ($pre)
-  {
-    $data = $self->CreatePreDeterminationsBreakdownData($start, $end, $monthly, $title);
-    %whichlines = (4=>1);
-    $span1 = 5;
-    $span2 = 4;
-  }
-  else
-  {
-    $data = $self->CreateDeterminationsBreakdownData($start, $end, $monthly, $title);
-    $pre = 0;
-  }
-  my $cols = $span1 + $span2;
-  my @lines = split "\n", $data;
-  $title = shift @lines;
-  $title =~ s/\s/&nbsp;/g;
-  my $url = $self->Sysify(sprintf("?p=determinationStats;startDate=$start;endDate=$end;%sdownload=1;pre=$pre",($monthly)?'monthly=on;':''));
-  my $link = sprintf("<a href='$url' target='_blank'>Download</a>",);
-  my $report = "<h3>$title&nbsp;&nbsp;&nbsp;&nbsp;$link</h3>\n";
-  $report .= "<table class='exportStats'>\n";
-  $report .= "<tr><th/><th colspan='$span1'><span class='major'>Counts</span></th><th colspan='$span2'><span class='total'>Percentages</span></th></tr>\n";
-  my $titles = shift @lines;
-  $report .= ('<tr>' . join('', map {my $tmp = $_; $tmp =~ s/\s/&nbsp;/g; "<th>$tmp</th>";} split("\t", $titles)) . '</tr>');
-  foreach my $line (@lines)
-  {
-    my @line = split "\t", $line;
-    my $date = shift @line;
-    my ($y,$m,$d) = split '-', $date;
-    $date =~ s/\s/&nbsp;/g;
-    if ($date eq 'Total')
-    {
-      $report .= "<tr><th style='text-align:right;'>Total</th>";
-    }
-    else
-    {
-      $report .= "<tr><th>$date</th>";
-    }
-    for (my $i=0; $i < $cols; $i++)
-    {
-      my $class = '';
-      my $style = ($i==max keys %whichlines)? "style='border-right:double 6px black;'":'';
-      if ($whichlines{$i} && $date ne 'Total')
-      {
-        $class = 'class="minor"';
-      }
-      elsif ($date ne 'Total')
-      {
-        $class = 'class="total"';
-        $class = 'class="major"' if $i < max keys %whichlines;
-      }
-      my $val = $line[$i];
-      $val = '' if $val eq '0' or $val eq '0.0%';
-      $report .= "<td $class $style>$val</td>\n";
-    }
-    $report .= "</tr>\n";
   }
   $report .= "</table>\n";
   return $report;
@@ -4661,7 +4314,6 @@ sub GetMonthStats
   # time reviewing (in minutes) - not including outliers
   # default outlier seconds is 300 (5 min)
   my $outSec = $self->Projects()->{$proj}->OutlierSeconds();
-  #my $outSec = $self->GetSystemVar('outlierSeconds', 300);
   $sql = 'SELECT COALESCE(SUM(TIME_TO_SEC(r.duration)),0)/60.0'.
          ' FROM historicalreviews r INNER JOIN exportdata e ON r.gid=e.gid'.
          ' WHERE r.user=? AND r.legacy!=1 AND r.time>=? AND r.time<=?'.
@@ -4684,33 +4336,15 @@ sub GetMonthStats
   {
     $reviews_per_hour = (60/$time_per_review);
   }
-  my ($total_correct,$total_incorrect,$total_neutral,$total_flagged) = $self->CountCorrectReviews($user, $start, $end, $proj);
+  my ($total_correct,$total_incorrect,$total_neutral) = $self->CountCorrectReviews($user, $start, $end, $proj);
   $sql = 'INSERT INTO userstats (user,month,year,monthyear,project,'.
          'total_reviews,total_pd,total_ic,total_und,total_time,time_per_review,'.
          'reviews_per_hour,total_outliers,total_correct,total_incorrect,'.
-         'total_neutral,total_flagged) VALUES ' . $self->WildcardList(17);
+         'total_neutral) VALUES ' . $self->WildcardList(16);
   $self->PrepareSubmitSql($sql, $user, $m, $y, $y. '-'. $m, $proj, $total_reviews,
                           $total_pd, $total_ic, $total_und, $total_time,
                           $time_per_review, $reviews_per_hour, $total_outliers,
-                          $total_correct, $total_incorrect, $total_neutral,
-                          $total_flagged);
-}
-
-sub UpdateDeterminationsBreakdown
-{
-  my $self = shift;
-  my $date = shift;
-
-  $date = $self->SimpleSqlGet('SELECT CURDATE()') unless $date;
-  my @vals = ($date);
-  foreach my $status (4..9)
-  {
-    my $sql = 'SELECT COUNT(gid) FROM exportdata WHERE DATE(time)=? AND status=?';
-    push @vals, $self->SimpleSqlGet($sql, $date, $status);
-  }
-  my $wcs = $self->WildcardList(scalar @vals);
-  my $sql = 'REPLACE INTO determinationsbreakdown (date,s4,s5,s6,s7,s8,s9) VALUES '. $wcs;
-  $self->PrepareSubmitSql($sql, @vals);
+                          $total_correct, $total_incorrect, $total_neutral);
 }
 
 sub UpdateExportStats
@@ -4773,59 +4407,6 @@ sub GetTitle
     $ti = $self->SimpleSqlGet('SELECT title FROM bibdata WHERE id=?', $id);
   }
   return $ti;
-}
-
-sub GetPubDate
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $do2    = shift;
-  my $record = shift;
-
-  print "Warning: GetPubDate no longer takes a do2 parameter!\n" if $do2;
-  my $sql = 'SELECT YEAR(pub_date) FROM bibdata WHERE id=?';
-  my $date = $self->SimpleSqlGet($sql, $id);
-  if (!defined $date)
-  {
-    $record = $self->UpdateMetadata($id, undef, $record);
-    $date = $self->SimpleSqlGet($sql, $id);
-  }
-  return $date;
-}
-
-sub FormatPubDate
-{
-  my $self   = shift;
-  my $id     = shift;
-  my $record = shift;
-
-  $record = $self->GetMetadata($id) unless defined $record;
-  return $record->formatPubDate() if defined $record;
-  return 'unknown';
-}
-
-sub IsDateRange
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $fmt = $self->FormatPubDate($id);
-  return ($fmt =~ m/-/)? 1:0;
-}
-
-sub GetPubCountry
-{
-  my $self = shift;
-  my $id   = shift;
-
-  my $sql = 'SELECT country FROM bibdata WHERE id=?';
-  my $where = $self->SimpleSqlGet($sql, $id);
-  if (!defined $where)
-  {
-    $self->UpdateMetadata($id);
-    $where = $self->SimpleSqlGet($sql, $id);
-  }
-  return $where;
 }
 
 sub GetAuthor
@@ -4906,12 +4487,13 @@ sub UpdateMetadata
     $record = $self->GetMetadata($id) unless defined $record;
     if (defined $record)
     {
-      my $date = $record->copyrightDate;
+      # pub_date column is deprecated but will still be populated until it is removed.
+      my $date = $record->publication_date->maximum_copyright_date;
       $date .= '-01-01' if $date;
-      my $sql = 'REPLACE INTO bibdata (id,author,title,pub_date,country,sysid)' .
-                ' VALUES (?,?,?,?,?,?)';
-      $self->PrepareSubmitSql($sql, $id, $record->author, $record->title,
-                              $date, $record->country, $record->sysid);
+      my $sql = 'REPLACE INTO bibdata (id,author,title,pub_date,country,sysid,display_date)' .
+                ' VALUES (?,?,?,?,?,?,?)';
+      $self->PrepareSubmitSql($sql, $id, $record->author(1), $record->title,
+                              $date, $record->country, $record->sysid, $record->publication_date->text);
     }
     else
     {
@@ -4935,6 +4517,9 @@ sub ReviewData
   require Languages;
   my $jsonxs = JSON::XS->new->canonical(1)->pretty(0);
   my $record = $self->GetMetadata($id);
+  if ($record) {
+    $self->UpdateMetadata($id, 1, $record);
+  }
   my $data = {};
   my $dbh = $self->GetDb();
   my $sql = 'SELECT * FROM queue WHERE id=?';
@@ -4945,8 +4530,9 @@ sub ReviewData
   $ref = $dbh->selectall_hashref($sql, 'id', undef, $id);
   $data->{'bibdata'} = $ref->{$id};
   $data->{'bibdata'}->{$_. '_format'} = CGI::escapeHTML($data->{'bibdata'}->{$_}) for keys %{$data->{'bibdata'}};
-  $data->{'bibdata'}->{'pub_date_format'} = $self->FormatPubDate($id, $record);
+  $data->{'bibdata'}->{'pub_date_format'} = $record->publication_date->text;
   $data->{'bibdata'}->{'language'} = Languages::TranslateLanguage($record->language);
+  $data->{'bibdata'}->{extracted_dates} = $record->publication_date->extract_dates;
   $sql = 'SELECT * FROM reviews WHERE id=?';
   $ref = $dbh->selectall_hashref($sql, 'user', undef, $id);
   foreach my $user (keys %{$ref})
@@ -4964,6 +4550,7 @@ sub ReviewData
   }
   $data->{'reviews'} = $ref;
   $data->{'json'} = $jsonxs->encode($data);
+  $data->{'record'} = $record;
   $data->{'project'} = $self->Projects()->{$data->{'queue'}->{'project'}};
   return $data;
 }
@@ -5541,7 +5128,7 @@ sub ClearErrors
 sub StripDecimal
 {
   my $self = shift;
-  my $dec  = shift;
+  my $dec  = shift || '';
 
   $dec =~ s/(\.[1-9]+)0+/$1/g;
   $dec =~ s/\.0*$//;
@@ -5633,13 +5220,13 @@ sub CreateSystemReport
     $n = 'n/a';
   }
   $report .= '<tr><th class="nowrap">Last Candidates Update</th><td>' . $n . "</td></tr>\n";
-  my $sql = 'SELECT COUNT(*) FROM und WHERE src!="no meta" AND src!="duplicate" AND src!="cross-record inheritance"';
+  my $sql = 'SELECT COUNT(*) FROM und WHERE src!="no meta" AND src!="duplicate"';
   $count = $self->SimpleSqlGet($sql);
   $report .= "<tr><th class='nowrap'>Volumes Filtered*</th><td>$count</td></tr>\n";
   if ($count)
   {
-    $sql = 'SELECT src,COUNT(src) FROM und WHERE src!="no meta"'.
-           ' AND src!="duplicate" AND src!="cross-record inheritance" GROUP BY src ORDER BY src';
+    $sql = 'SELECT src,COUNT(src) FROM und WHERE src!="no meta" AND src!="duplicate"'.
+      ' GROUP BY src ORDER BY src';
     my $ref = $self->SelectAll($sql);
     foreach my $row (@{ $ref})
     {
@@ -5648,13 +5235,13 @@ sub CreateSystemReport
       $report .= sprintf("<tr><th>&nbsp;&nbsp;&nbsp;&nbsp;$src</th><td>$n&nbsp;(%0.1f%%)</td></tr>\n", 100.0*$n/$count);
     }
   }
-  $sql = 'SELECT COUNT(*) FROM und WHERE src="no meta" OR src="duplicate" OR src="cross-record inheritance"';
+  $sql = 'SELECT COUNT(*) FROM und WHERE src="no meta" OR src="duplicate"';
   $count = $self->SimpleSqlGet($sql);
   $report .= "<tr><th class='nowrap'>Volumes Temporarily Filtered*</th><td>$count</td></tr>\n";
   if ($count)
   {
     $sql = 'SELECT src,COUNT(src) FROM und WHERE src="no meta" OR src="duplicate"'.
-           ' OR src="cross-record inheritance" GROUP BY src ORDER BY src';
+           ' GROUP BY src ORDER BY src';
     my $ref = $self->SelectAll($sql);
     foreach my $row (@{ $ref})
     {
@@ -6143,12 +5730,7 @@ sub CountCorrectReviews
     $correct = $cnt if $val == 1;
     $neutral = $cnt if $val == 2;
   }
-  $sql = 'SELECT COUNT(*) FROM historicalreviews r'.
-         ' INNER JOIN exportdata e ON r.gid=e.gid'.
-         ' WHERE r.legacy!=1 AND r.user=? AND r.time>=? AND r.time<=?'.
-         ' AND e.project=? AND r.flagged IS NOT NULL AND r.flagged>0';
-  my $flagged = $self->SimpleSqlGet($sql, $user, $start, $end, $proj);
-  return ($correct, $incorrect, $neutral, $flagged);
+  return ($correct, $incorrect, $neutral);
 }
 
 # Gets only those reviewers that are not experts
@@ -6177,40 +5759,6 @@ sub GetValidation
   my $ref = $self->SelectAll($sql, $start, $end);
   my $row = $ref->[0];
   return @{ $row };
-}
-
-sub ShouldReviewBeFlagged
-{
-  my $self = shift;
-  my $user = shift;
-  my $gid  = shift;
-
-  my ($pd, $icren, $date, $wr);
-  my $sql = 'SELECT r.user,a.name,rs.name,r.category,r.validated FROM historicalreviews r'.
-            ' INNER JOIN exportdata e ON r.gid=e.gid'.
-            ' INNER JOIN attributes a ON r.attr=a.id'.
-            ' INNER JOIN reasons rs ON r.reason=rs.id'.
-            ' WHERE r.gid=? ORDER BY IF(r.user=?,1,0) DESC';
-  my $ref = $self->SelectAll($sql, $gid, $user);
-  foreach my $row (@{$ref})
-  {
-    my ($user2, $attr, $reason, $category, $val) = @{$row};
-    if ($user2 eq $user)
-    {
-      return if $val == 1;
-      $pd = 1 if $attr =~ m/^pd/;
-    }
-    else
-    {
-      $icren = 1 if $attr eq 'ic' and $reason eq 'ren';
-      $date = 1 if $attr eq 'und' and $reason eq 'nfi' and $category eq 'Date';
-      $wr = 1 if $attr eq 'und' and $reason eq 'nfi' and $category eq 'Wrong Record';
-    }
-  }
-  return if !$pd;
-  return 1 if $icren;
-  return 2 if $date;
-  return 3 if $wr;
 }
 
 sub ReviewSearchMenu
@@ -6246,7 +5794,7 @@ sub ReviewSearchMenu
     splice @keys, 9, 1; # UserId/Reviewer
     splice @labs, 9, 1;
   }
-  if ($page ne 'adminHistoricalReviews' || $self->TolerantCompare(1,$self->GetSystemVar('noLegacy')))
+  if ($page ne 'adminHistoricalReviews')
   {
     splice @keys, 8, 1; # Legacy
     splice @labs, 8, 1;
@@ -6302,7 +5850,7 @@ sub CandidatesSearchMenu
   my $searchVal  = shift;
 
   my @keys = qw(Identifier SysID Title Author PubDate Country Date Project);
-  my @labs = ('ID', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Country', 'Date Added',
+  my @labs = ('Identifier', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Country', 'Date Added',
               'Project');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
@@ -6324,7 +5872,7 @@ sub UNDSearchMenu
   my $searchVal  = shift;
 
   my @keys = qw(Identifier SysID Title Author PubDate Country Date Source);
-  my @labs = ('ID', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Country', 'Date Added', 'Source');
+  my @labs = ('Identifier', 'Catalog ID', 'Title', 'Author', 'Pub Date', 'Country', 'Date Added', 'Source');
   my $html = "<select title='Search Field' name='$searchName' id='$searchName'>\n";
   foreach my $i (0 .. scalar @keys - 1)
   {
@@ -6630,6 +6178,7 @@ sub TrackingQuery
     }
   }
   $data->{'data'} = \@ids;
+  $data->{'record'} = $record;
   return $data;
 }
 
@@ -6663,14 +6212,6 @@ sub GetTrackingInfo
     my $projinfo = (defined $proj)? ", $proj project":'';
     push @stati, "in Queue (P$pri, status $status, $n $reviews$projinfo)";
   }
-  elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM cri WHERE id=? AND exported=0', $id))
-  {
-    my $stat = $self->SimpleSqlGet('SELECT status FROM cri WHERE id=?', $id);
-    my %stats = (0 => 'rejected', 1 => 'submitted', 2 => 'UND');
-    my $msg = 'unreviewed';
-    $msg = $stats{$stat} if defined $stat;
-    push @stati, "CRI-eligible ($msg)";
-  }
   elsif ($self->SimpleSqlGet('SELECT COUNT(*) FROM candidates WHERE id=?', $id))
   {
     my $sql = 'SELECT p.name FROM candidates c'.
@@ -6681,7 +6222,7 @@ sub GetTrackingInfo
   my $src = $self->SimpleSqlGet('SELECT src FROM und WHERE id=?', $id);
   if (defined $src)
   {
-    my %temps = ('no meta' => 1, 'duplicate' => 1, 'cross-record inheritance' => 1);
+    my %temps = ('no meta' => 1, 'duplicate' => 1);
     push @stati, sprintf "%sfiltered ($src)", (defined $temps{$src})? 'temporarily ':'';
   }
   if ($self->SimpleSqlGet('SELECT COUNT(*) FROM exportdata WHERE id=?', $id))
@@ -6791,11 +6332,7 @@ sub WhereAmI
 {
   my $self = shift;
 
-  my %instances = ('production' => 1, 'crms-training' => 1, 'dev' => 1);
-  my $instance = $self->get('instance') || $ENV{'HT_DEV'} || 'dev';
-  $instance = "dev ($instance)" unless $instances{$instance};
-  $instance = 'training' if $instance eq 'crms-training';
-  return ucfirst $instance;
+  return ucfirst CRMS::Config->new->instance;
 }
 
 sub DevBanner
@@ -6805,12 +6342,17 @@ sub DevBanner
   my $where = $self->WhereAmI();
   if ($where ne 'Production')
   {
-    $where .= ' | Production DB' if $self->get('pdb');
-    $where .= ' | Training DB' if $self->get('tdb');
     return '[ '. $where. ' ]';
   }
 }
 
+# Tricky only when we don't have Apache to give us the answer.
+# Allows us to generate usable URLs in reports run against training or dev.
+# The best we can do is map:
+#   "training" to "crms-training.X"
+#   "development" to "test.X"
+#   "production" to no prefix
+# The mapping bit could move to CRMS::Config since there's some similar code there already.
 sub Host
 {
   my $self = shift;
@@ -6819,8 +6361,12 @@ sub Host
   if (!$host)
   {
     $host = $self->GetSystemVar('host');
-    my $instance = $self->get('instance') || 'test';
-    $host = $instance . '.' . $host if $instance ne 'production';
+    my $instance_map = {
+      development => 'test.',
+      production => '',
+      training => 'crms-training.'
+    };
+    $host = $instance_map->{CRMS::Config->new->instance} . $host;
   }
   return 'https://' . $host;
 }
@@ -6829,16 +6375,14 @@ sub IsDevArea
 {
   my $self = shift;
 
-  my $inst = $self->get('instance') || '';
-  return ($inst eq 'production' || $inst eq 'crms-training')? 0:1;
+  return (CRMS::Config->new->instance eq 'development') ? 1 : 0;
 }
 
 sub IsTrainingArea
 {
   my $self = shift;
 
-  my $inst = $self->get('instance') || '';
-  return $inst eq 'crms-training';
+  return (CRMS::Config->new->instance eq 'training') ? 1 : 0;
 }
 
 sub Hostname
@@ -6870,10 +6414,10 @@ sub LinkNoteText
   my $self = shift;
   my $note = shift;
 
-  if ($note =~ m/See\sall\sreviews\sfor\sSys\s#(\d+)/)
+  if ($note =~ m/See all reviews for Sys #(\d+)/)
   {
-    my $url = $self->Sysify($self->WebPath('cgi', "crms?p=adminHistoricalReviews;stype=reviews;search1=SysID;search1value=$1"));
-    $note =~ s/(See\sall\sreviews\sfor\sSys\s#)(\d+)/$1<a href="$url" target="_blank">$2<\/a>/;
+    my $url = $self->WebPath('cgi', "crms?p=adminHistoricalReviews;stype=reviews;search1=SysID;search1value=$1");
+    $note =~ s/(See all reviews for Sys #)(\d+)/$1<a href="$url" target="_blank">$2<\/a>/;
   }
   return $note;
 }
@@ -7283,7 +6827,7 @@ sub AddInheritanceToQueue
       my $n = $self->SimpleSqlGet($sql, $id);
       if ($n)
       {
-        my $url = $self->Sysify("?p=adminReviews;search1=Identifier;search1value=$id");
+        my $url = "?p=adminReviews;search1=Identifier;search1value=$id";
         my $msg = sprintf "already has $n <a href='$url' target='_blank'>%s</a>", $self->Pluralize('review',$n);
         push @msgs, $msg;
         $stat = 1;
@@ -7359,8 +6903,9 @@ sub LinkToJira
   my $self = shift;
   my $tx   = shift;
 
-  use Jira;
-  return Jira::LinkToJira($self, $tx);
+  use CRMS::Jira;
+  my $url = CRMS::Jira->new->browse_url($tx);
+  return qq{<a href="$url" target="_blank">$tx</a>};
 }
 
 # Populates $data (a hash ref) with information about the duplication status of an exported determination.
@@ -7552,17 +7097,16 @@ sub ExportSrcToEnglish
 
 # Retrieves a system var from the DB if possible, otherwise use the value from the config file.
 # If default is specified, returns it if otherwise the return value would be undefined.
+# Does not retrieve credentials.
 sub GetSystemVar
 {
   my $self    = shift;
   my $name    = shift;
   my $default = shift;
-  my $ck      = shift;
 
-  $self->SetError('WARNING: GetSystemVar() ck parameter is obsolete.') if $ck;
   my $sql = 'SELECT value FROM systemvars WHERE name=?';
   my $var = $self->SimpleSqlGet($sql, $name);
-  $var = $self->get($name) unless defined $var;
+  $var = CRMS::Config->new->config->{$name} unless defined $var;
   $var = $default unless defined $var;
   return $var;
 }
@@ -7598,38 +7142,34 @@ sub Menus
 }
 
 # Returns aref of arefs to name, url, target, and rel
-sub MenuItems
-{
+# Call with crms.menus.id value or special "docs" keyword.
+# TODO: turning menu items into URLs is done in three different template files
+# (nav.tt, home.tt, top.tt partial) and is hard to read. This routine or a utility
+# should return a complete URL.
+sub MenuItems {
   my $self = shift;
   my $menu = shift;
   my $user = shift || $self->get('user');
 
-  $menu = $self->SimpleSqlGet('SELECT id FROM menus WHERE docs=1 LIMIT 1') if $menu eq 'docs';
-  my $q = $self->GetUserQualifications($user);
-  my ($inst, $iname);
+  my $menu_items = [];
+  if ($menu eq 'docs') {
+    $menu = $self->SimpleSqlGet('SELECT id FROM menus WHERE docs=1 LIMIT 1');
+  }
+  my $qualifications = $self->GetUserQualifications($user);
   my $sql = 'SELECT name,href,restricted,target,page FROM menuitems WHERE menu=? ORDER BY n ASC';
   my $ref = $self->SelectAll($sql, $menu);
-  my @all = ();
-  foreach my $row (@{$ref})
-  {
-    my $r = $row->[2];
-    my $page = $row->[4];
-    if ($self->DoQualificationsAndRestrictionsOverlap($q, $r) ||
-        $self->DoesUserHavePageAccess($user, $page))
-    {
-      $inst = $self->GetUserProperty($user, 'institution') unless defined $inst;
-      $iname = $self->GetInstitutionName($inst, 1) unless defined $iname;
-      my $name = $row->[0];
-      $name =~ s/__INST__/$iname/;
+  foreach my $row (@$ref) {
+    my ($name, $href, $restricted, $target, $page) = @$row;
+    if ($self->DoQualificationsAndRestrictionsOverlap($qualifications, $restricted) ||
+        $self->DoesUserHavePageAccess($user, $page)) {
       my $rel = '';
-      if ($row->[3] && $row->[3] eq '_blank' && $row->[1] =~ m/^http/i)
-      {
+      if ($target && $target eq '_blank' && $href =~ m/^http/i) {
         $rel = 'rel="noopener"';
       }
-      push @all, [$name, $self->MenuPath($row->[1]), $row->[3], $rel];
+      push @$menu_items, [$name, $self->MenuPath($href), $target, $rel];
     }
   }
-  return \@all;
+  return $menu_items;
 }
 
 sub GetUserQualifications
@@ -7776,8 +7316,6 @@ sub Authorities
 {
   my $self = shift;
   my $id   = shift;
-  my $mag  = shift || '100';
-  my $view = shift || 'image';
 
   use URI::Escape;
   my $proj = $self->SimpleSqlGet('SELECT project FROM queue WHERE id=?', $id);
@@ -7798,12 +7336,6 @@ sub Authorities
     my $ak = $row->[3];
     $url =~ s/__HTID__/$id/g;
     #$url =~ s/__GID__/$gid/g;
-    $url =~ s/__MAG__/$mag/g;
-    $url =~ s/__VIEW__/$view/g;
-    if ($url =~ m/crms\?/)
-    {
-      $url = $self->Sysify($url);
-    }
     if ($url =~ m/__AUTHOR__/)
     {
       my $a2 = $a || '';
@@ -7845,10 +7377,11 @@ sub Authorities
       $t = uri_escape_utf8($t);
       $url =~ s/__TITLE__/$t/g;
     }
-    if ($url =~ m/__TICKET__/)
+    if ($url =~ m/__TICKET__/ || $url =~ m/__JIRA__/)
     {
-      my $t = $self->SimpleSqlGet('SELECT COALESCE(ticket,"") FROM queue WHERE id=?', $id);
-      $url =~ s/__TICKET__/$t/g;
+      # Replace the entire URL since we use the CRMS::Jira module for URL generation.
+      my $tx = $self->SimpleSqlGet('SELECT COALESCE(ticket,"") FROM queue WHERE id=?', $id);
+      $url = CRMS::Jira->new->browse_url($tx);
     }
     if ($url =~ m/__SYSID__/)
     {
@@ -7867,20 +7400,6 @@ sub Authorities
                 'initial' => $initial, 'id' => $aid};
   }
   return \@all;
-}
-
-# Makes sure a URL has the correct sys and pdb params if needed.
-sub Sysify
-{
-  my $self = shift;
-  my $url  = shift;
-
-  return $url if $url =~ m/^https/ or $url =~ m/\.pdf(#.*)?$/;
-  my $pdb = $self->get('pdb');
-  $url = Utilities::AppendParam($url, 'pdb', $pdb) if $pdb;
-  my $tdb = $self->get('tdb');
-  $url = Utilities::AppendParam($url, 'tdb', $tdb) if $tdb;
-  return $url;
 }
 
 # Used to simplify the search results page links.
@@ -7924,19 +7443,6 @@ sub Hiddenify
   return join "\n", @comps;
 }
 
-# If necessary, emits a hidden input with the sys name and pdb
-sub HiddenSys
-{
-  my $self = shift;
-
-  my $html = '';
-  my $pdb = $self->get('pdb');
-  $html .= "<input type='hidden' name='pdb' value='$pdb'/>" if $pdb;
-  my $tdb = $self->get('tdb');
-  $html .= "<input type='hidden' name='tdb' value='$tdb'/>" if $tdb;
-  return $html;
-}
-
 # Compares 2 strings or undefs. Returns 1 or 0 for equality.
 sub TolerantCompare
 {
@@ -7948,111 +7454,6 @@ sub TolerantCompare
   return 0 if (!defined $s1) && (defined $s2);
   return 0 if (defined $s1) && (!defined $s2);
   return ($s1 eq $s2)?1:0;
-}
-
-# CRMS World specific. Returns the last year the work was/will be in copyright,
-# or undef on error or not enough info.
-sub PredictLastCopyrightYear
-{
-  my $self   = shift;
-  my $id     = shift; # Volume id
-  my $year   = shift; # ADD or Pub entered by user
-  my $ispub  = shift; # Pub date checkbox
-  my $crown  = shift; # Crown copyright note category
-  my $record = shift; # Metadata (optional) so we don't spam bibdata table for volumes not in queue.
-  my $pubref = shift; # Pub date, by reference
-
-  # Punt if the year is not exclusively 1 or more decimal digits with optional minus.
-  return if $year !~ m/^-?\d+$/;
-  my $pub = (defined $pubref)? $$pubref:undef;
-  $pub = $year if $ispub;
-  $pub = $self->FormatPubDate($id, $record) unless defined $pub;
-  return unless defined $pub;
-  if ($pub =~ m/-/)
-  {
-    my ($d1, $d2) = split '-', $pub;
-    # Use the maximum iff the date range does not span 1923 boundary.
-    if ($d1 =~ m/^\d+$/ && $d2 =~ m/^\d+$/ && $d1 < $d2 &&
-        (($d1 < 1923 && $d2 < 1923) || ($d1 >= 1923 && $d2 >= 1923)))
-    {
-      $pub = $d2;
-    }
-    else
-    {
-      return;
-    }
-  }
-  $$pubref = $pub if defined $pubref;
-  my $where = undef;
-  $where = $record->country if defined $record;
-  $where = $self->GetPubCountry($id) unless $where;
-  return unless defined $where;
-  my $now = $self->GetTheYear();
-  # $when is the last year the work was in copyright
-  my $when;
-  if ($where eq 'United Kingdom')
-  {
-    $when = $year + (($crown)? 50:70);
-  }
-  elsif ($where eq 'Canada')
-  {
-    $when = $year + 50;
-  }
-  elsif ($where eq 'Australia')
-  {
-    $when = $year + (($year >= 1955)? 70:50);
-    $when = $year + 50 if $crown;
-  }
-  elsif ($where eq 'Spain')
-  {
-    $when = $year + 80;
-  }
-  return $when;
-}
-
-# CRMS World specific. Predict best radio button (rights combo)
-# to choose based on user selections.
-sub PredictRights
-{
-  my $self   = shift;
-  my $id     = shift; # Volume id
-  my $year   = shift; # ADD or Pub entered by user
-  my $ispub  = shift; # Pub date checkbox
-  my $crown  = shift; # Crown copyright note category
-  my $record = shift; # Metadata (optional) so we don't spam bibdata table for volumes not in queue.
-  my $pub    = shift; # Actual pub date when date range.
-  my $now    = shift; # The current year, for predicting future public domain transitions.
-
-  my ($attr, $reason) = (0,0);
-  $now = $self->GetTheYear() unless defined $now;
-  my $when = $self->PredictLastCopyrightYear($id, $year, $ispub, $crown, $record, \$pub);
-  return unless defined $when;
-  return if $pub =~ m/^\d+-\d+$/;
-  if ($when < $now) {
-    if ($when >= 1996 && $pub >= 1923 &&
-        $pub + 95 >= $now) {
-      $attr = 'icus';
-      $reason = 'gatt';
-    }
-    else {
-      $attr = 'pd';
-      $reason = ($ispub)? 'exp':'add';
-    }
-  }
-  else {
-    if ($pub + 95 >= $now) {
-      $attr = 'ic';
-      $reason = ($ispub)? 'cdpp':'add';
-    }
-    else {
-      $attr = 'pdus';
-      $reason = ($ispub)? 'exp':'add';
-    }
-  }
-  my $sql = 'SELECT r.id FROM rights r INNER JOIN attributes a ON r.attr=a.id'.
-            ' INNER JOIN reasons rs ON r.reason=rs.id'.
-            ' WHERE a.name=? AND rs.name=?';
-  return $self->SimpleSqlGet($sql, $attr, $reason);
 }
 
 sub Unescape
@@ -8185,12 +7586,12 @@ sub GetAddToQueueRef
   my $self = shift;
   my $user = shift || $self->get('user');
 
-  my $sql = 'SELECT q.id,b.title,b.author,YEAR(b.pub_date),DATE(q.time),q.added_by,' .
+  my $sql = 'SELECT q.id,b.title,b.author,b.display_date,DATE(q.time),q.added_by,' .
             'q.status,q.priority,q.source,q.ticket,p.name FROM queue q'.
             ' INNER JOIN bibdata b ON q.id=b.id'.
             ' INNER JOIN projects p ON q.project=p.id'.
             ' WHERE q.added_by=? AND p.name="Special"'.
-            ' ORDER BY b.title ASC,b.pub_date ASC,'.
+            ' ORDER BY b.title ASC,b.display_date ASC,'.
             'q.source ASC,q.status ASC,q.priority DESC,q.id ASC';
   #print "$sql\n";
   my $ref = $self->SelectAll($sql, $user);
@@ -8295,14 +7696,14 @@ sub GetProjectRef
   $self->Projects()->{$id};
 }
 
-# Returns an arrayref of hashrefs with id, name, color, flags, userCount (active assignees),
+# Returns an arrayref of hashrefs with id, name, flags, userCount (active assignees),
 # queueCount, rights (arrayref), categories (arrayref), authorities (arrayref), users (arrayref).
 sub GetProjectsRef
 {
   my $self = shift;
 
   my @projects;
-  my $sql = 'SELECT p.id,p.name,COALESCE(p.color,"000000"),p.queue_size,p.autoinherit,'.
+  my $sql = 'SELECT p.id,p.name,p.queue_size,p.autoinherit,'.
             'p.group_volumes,p.single_review,a1.name,a2.name,'.
             '(SELECT COUNT(*) FROM projectusers pu INNER JOIN users u ON pu.user=u.id'.
             ' WHERE pu.project=p.id AND u.reviewer+u.advanced+u.expert+u.admin>0),'.
@@ -8315,12 +7716,12 @@ sub GetProjectsRef
   my $ref = $self->SelectAll($sql);
   foreach my $row (@{$ref})
   {
-    push @projects, {'id' => $row->[0], 'name' => $row->[1], 'color' => $row->[2],
-                     'queue_size' => $row->[3], 'autoinherit' => $row->[4],
-                     'group_volumes' => $row->[5], 'single_review' => $row->[6],
-                     'primary_authority' => $row->[7], 'secondary_authority' => $row->[8],
-                     'userCount' => $row->[9], 'queueCount' => $row->[10],
-                     'candidatesCount' => $row->[11], 'determinationsCount' => $row->[12]};
+    push @projects, {'id' => $row->[0], 'name' => $row->[1],
+                     'queue_size' => $row->[2], 'autoinherit' => $row->[3],
+                     'group_volumes' => $row->[4], 'single_review' => $row->[5],
+                     'primary_authority' => $row->[6], 'secondary_authority' => $row->[7],
+                     'userCount' => $row->[8], 'queueCount' => $row->[9],
+                     'candidatesCount' => $row->[10], 'determinationsCount' => $row->[11]};
     my $ref2 = $self->SelectAll('SELECT rights FROM projectrights WHERE project=?', $row->[0]);
     $projects[-1]->{'rights'} = [map {$_->[0]} @{$ref2}];
     $ref2 = $self->SelectAll('SELECT category FROM projectcategories WHERE project=?', $row->[0]);
@@ -8511,16 +7912,6 @@ sub UUID
   return UUID::Tiny::create_uuid_as_string(UUID::Tiny::UUID_V4);
 }
 
-sub GetPageImage
-{
-  my $self = shift;
-  my $id   = shift;
-  my $seq  = shift;
-
-  use HTDataAPI;
-  return HTDataAPI::GetPageImage($self, $id, $seq);
-}
-
 sub ExportReport
 {
   my $self  = shift;
@@ -8597,16 +7988,17 @@ sub Commify
   return $n;
 }
 
-sub Keio
-{
+# The following module hooks exist so that templates
+# (which typically have only a CRMS object among their locals)
+# can call various modules of interest.
+sub Keio {
   my $self = shift;
 
   use Keio;
   Keio->new('crms' => $self);
 }
 
-sub Licensing
-{
+sub Licensing {
   my $self = shift;
 
   use Licensing;
@@ -8617,7 +8009,14 @@ sub BibRights {
   my $self = shift;
 
   use BibRights;
-  return BibRights->new;
+  BibRights->new;
+}
+
+sub Field008Formatter {
+  my $self = shift;
+
+  use CRMS::Field008Formatter;
+  CRMS::Field008Formatter->new;
 }
 
 1;

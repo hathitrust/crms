@@ -112,7 +112,6 @@ DROP TABLE IF EXISTS `projects`;
 CREATE TABLE `projects` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(64) NOT NULL,
-  `color` varchar(6) DEFAULT NULL,
   `queue_size` int(11) NOT NULL DEFAULT '0',
   `autoinherit` tinyint(4) NOT NULL DEFAULT '0',
   `group_volumes` tinyint(4) NOT NULL DEFAULT '0',
@@ -172,6 +171,7 @@ CREATE TABLE `bibdata` (
   `pub_date` date DEFAULT NULL,
   `country` text,
   `sysid` varchar(32) DEFAULT NULL,
+  `display_date` varchar(16) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `author_idx` (`author`(255)),
   KEY `title_idx` (`title`(255)),
@@ -258,24 +258,6 @@ CREATE TABLE `corrections` (
   `ticket` varchar(32) DEFAULT NULL,
   `note` text,
   `exported` tinyint(1) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `cri`
---
-
-DROP TABLE IF EXISTS `cri`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `cri` (
-  `id` varchar(32) NOT NULL,
-  `gid` bigint(20) NOT NULL,
-  `locked` varchar(64) DEFAULT NULL,
-  `status` tinyint(4) DEFAULT NULL,
-  `exported` tinyint(4) NOT NULL DEFAULT '0',
-  `newgid` bigint(20) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -534,25 +516,6 @@ CREATE TABLE `dbo_T_code` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `determinationsbreakdown`
---
-
-DROP TABLE IF EXISTS `determinationsbreakdown`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `determinationsbreakdown` (
-  `date` date NOT NULL,
-  `s4` int(11) NOT NULL DEFAULT '0',
-  `s5` int(11) NOT NULL DEFAULT '0',
-  `s6` int(11) NOT NULL DEFAULT '0',
-  `s7` int(11) NOT NULL DEFAULT '0',
-  `s8` int(11) NOT NULL DEFAULT '0',
-  `s9` int(11) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `exportdata`
 --
 
@@ -632,7 +595,6 @@ CREATE TABLE `historicalreviews` (
   `swiss` tinyint(1) DEFAULT NULL,
   `validated` tinyint(4) NOT NULL DEFAULT '1',
   `gid` bigint(20) DEFAULT NULL,
-  `flagged` int(11) DEFAULT NULL,
   `data` bigint(20) DEFAULT NULL,
   PRIMARY KEY (`id`,`time`,`user`),
   KEY `attr_idx` (`attr`),
@@ -744,7 +706,6 @@ CREATE TABLE `institutions` (
   `name` longtext NOT NULL,
   `shortname` longtext NOT NULL,
   `suffix` varchar(31) DEFAULT NULL,
-  `report` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=105 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -832,23 +793,6 @@ CREATE TABLE `orphan` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `predeterminationsbreakdown`
---
-
-DROP TABLE IF EXISTS `predeterminationsbreakdown`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `predeterminationsbreakdown` (
-  `date` date NOT NULL,
-  `s2` int(11) NOT NULL DEFAULT '0',
-  `s3` int(11) NOT NULL DEFAULT '0',
-  `s4` int(11) NOT NULL DEFAULT '0',
-  `s8` int(11) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `processstatus`
 --
 
@@ -869,7 +813,7 @@ DROP TABLE IF EXISTS `users`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `users` (
   `id` varchar(64) NOT NULL,
-  `kerberos` varchar(12) DEFAULT NULL,
+  `kerberos` varchar(64) DEFAULT NULL,
   `name` mediumtext NOT NULL,
   `reviewer` tinyint(1) NOT NULL DEFAULT '1',
   `advanced` tinyint(1) NOT NULL DEFAULT '0',
@@ -1098,19 +1042,6 @@ CREATE TABLE `rights` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `sdrerror`
---
-
-DROP TABLE IF EXISTS `sdrerror`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `sdrerror` (
-  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `error` mediumtext
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `stanford`
 --
 
@@ -1204,11 +1135,22 @@ CREATE TABLE `userstats` (
   `total_correct` int(11) DEFAULT NULL,
   `total_incorrect` int(11) DEFAULT NULL,
   `total_neutral` int(11) DEFAULT NULL,
-  `total_flagged` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`user`,`monthyear`,`project`),
   KEY `fk_project` (`project`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `user_pages`
+--
+
+DROP TABLE IF EXISTS `user_pages`;
+CREATE TABLE `user_pages` (
+  `user` varchar(64) NOT NULL,
+  `page` varchar(32) NOT NULL,
+  KEY `user_pages_ibfk_user` (`user`),
+  CONSTRAINT `user_pages_ibfk_user` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Table structure for table `viaf`
@@ -1247,6 +1189,29 @@ CREATE TABLE licensing (
   CONSTRAINT `manual_permissions_ibfk_attr` FOREIGN KEY (`attr`) REFERENCES `attributes` (`id`) ON UPDATE CASCADE,
   CONSTRAINT `manual_permissions_ibfk_reason` FOREIGN KEY (`reason`) REFERENCES `reasons` (`id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+--
+-- Table structure for table `cron`
+--
+
+DROP TABLE IF EXISTS `cron`;
+CREATE TABLE cron (
+  `id` BIGINT AUTO_INCREMENT PRIMARY KEY NOT NULL,
+  `script` VARCHAR(64) UNIQUE NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Table structure for table `cron_recipients`
+--
+
+DROP TABLE IF EXISTS `cron_recipients`;
+CREATE TABLE cron_recipients (
+  `cron_id` BIGINT NOT NULL,
+  `email` VARCHAR(64) NOT NULL,
+  CONSTRAINT `cron_recipients_fk_cron_id` FOREIGN KEY (`cron_id`) REFERENCES `cron` (`id`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

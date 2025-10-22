@@ -1,12 +1,18 @@
 #!/usr/bin/perl
 
 use strict;
-use FindBin;
-use lib $FindBin::Bin;
+
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+}
+
 use CGI;
-use CRMS;
 use JSON::XS;
+
+use CRMS;
 use Graph;
+
 my $cgi  = new CGI;
 my $sys =  $cgi->param('sys') || 'crms';
 my $crms = CRMS->new(cgi => $cgi,
@@ -21,25 +27,11 @@ if ($type eq 'graph')
   if ($c == 0) { $data = Graph::CreateExportGraph($crms); }
   elsif ($c == 1) { $data = Graph::CreateExportBreakdownGraph($crms); }
   elsif ($c == 2) { $data = Graph::CreateExportsPieChart($crms); }
-  elsif ($c == 3) { $data = Graph::CreateDeterminationsBreakdownGraph($crms); }
   elsif ($c == 4) { $data = Graph::CreateCandidatesGraph($crms); }
   elsif ($c == 5) { $data = Graph::CreateCountriesGraph($crms); }
   elsif ($c == 6) { $data = Graph::CreateUndGraph($crms); }
   elsif ($c == 7) { $data = Graph::CreateNamespaceGraph($crms); }
   elsif ($c == 9) { $data = Graph::CreateReviewInstitutionGraph($crms); }
-  elsif ($c == 10)
-  {
-    my $start = $cgi->param('startDate');
-    my $end = $cgi->param('endDate');
-    my $type2 = $cgi->param('type2');
-    my @users = $cgi->param('user');
-    $data = Graph::CreateReviewerGraph($crms, $type2, $start, $end, @users);
-  }
-  elsif ($c == 11)
-  {
-    my $proj = $cgi->param('project');
-    $data = Graph::CreateProgressGraph($crms, $proj);
-  }
 }
 else
 {

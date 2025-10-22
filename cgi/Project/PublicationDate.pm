@@ -58,7 +58,7 @@ sub EvaluateCandidacy
 sub ReviewPartials
 {
   return ['top', 'bibdata', 'authorities',
-          'HTView', 'pubDateForm', 'expertDetails'];
+          'pubDateForm', 'expertDetails'];
 }
 
 # Show the country of publication in the bibdata partial.
@@ -96,8 +96,6 @@ sub ValidateSubmission
   return 'Unknown rights combination' unless defined $attr and defined $reason;
   my $date = $cgi->param('date') || '';
   my $note = $cgi->param('note');
-  my $country = $cgi->param('country') || '';
-  my $countries = Countries::GetCountries();
   my $category = $cgi->param('category');
   $date =~ s/\s+//g if $date;
   if ($attr ne 'und')
@@ -110,17 +108,6 @@ sub ValidateSubmission
     {
       push @errs, 'Actual Publication Date must be a date or a date range (DDDD or DDDD-DDDD)';
     }
-    if (!$cgi->param('c_spec'))
-    {
-      if (!length $country)
-      {
-        push @errs, 'Country of Publication is required';
-      }
-    }
-  }
-  if (length $country && !$countries->{$country})
-  {
-    push @errs, "Country of Publication ($country) not recognized – please check MARC country codes";
   }
   if ($attr eq 'und' && $reason eq 'nfi' &&
       (!$category ||
@@ -151,14 +138,12 @@ sub ExtractReviewData
 
   my $date = $cgi->param('date');
   my $approximate = $cgi->param('approximate');
-  my $country = $cgi->param('country');
   my $data;
-  if (defined $date || defined $country || defined $approximate)
+  if (defined $date || defined $approximate)
   {
     $data = {};
     $data->{'date'} = $date if defined $date and length $date;
     $data->{'approximate'} = $approximate if defined $approximate and length $approximate;
-    $data->{'country'} = $country if defined $country and length $country;
   }
   return $data;
 }

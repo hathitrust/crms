@@ -1,5 +1,10 @@
 package Metadata;
 
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
+}
+
 # An interface to the HathiTrust Bib API tailored to CRMS requirements.
 
 # Some of the functionality here may be replaced via an intermediate layer
@@ -23,7 +28,83 @@ use LWP::UserAgent;
 use Unicode::Normalize;
 use XML::LibXML;
 
+use CRMS::PublicationDate;
+
 my $US_CITIES;
+
+# Class method.
+# Adapted from post_zephir_processing/bib_rights.pm
+sub ExtractVolumeDateFromEnumcron
+{
+  my $item_desc = shift;
+  $item_desc or return '';
+  $item_desc = lc $item_desc;
+  my @vol_date = ();
+  my $orig_desc = $item_desc;
+  my $low;
+  my $high;
+  my $date;
+
+  # umdl item descriptions may contain NNNN.NNN--if so, return null
+  $item_desc =~ /^\d{4}\.[a-z0-9]{3}$/i and return '';
+
+  # check for tech report number formats
+  $item_desc =~ /^\d{1,3}-\d{4}$/ and return '';
+
+  # strip confusing page/part data:
+  #39015022710779: Title 7 1965 pt.1090-end
+  #39015022735396: v.23 no.5-8 1984 pp.939-1830
+  #39015022735701: v.77 1983 no.7-12 p.673-1328
+  #39015022735750: v.75 1981 no.7-12 p.673-1324
+  #no. 3086/3115 1964
+  #no.3043,3046
+  #39015040299169      no.5001-5007,5009-5010
+  #$item_desc =~ s/(v\.|no\.|p{1,2}\.|pt\.)[\d,-]+//g;
+  $item_desc =~ s/\b(v\.\s*|no\.\s*|p{1,2}\.\s*|pt\.\s*)[\d,-\/]+//g;
+
+  # strip months
+  $item_desc =~ s/(january|february|march|april|may|june|july|august|september|october|november|december)\.{0,1}-{0,1}//gi;
+  $item_desc =~ s/(jan|feb|mar|apr|may|jun|jul|aug|sept|sep|oct|nov|dec)\.{0,1}-{0,1}//gi;
+  $item_desc =~ s/(winter|spring|summer|fall|autumn)-{0,1}//gi;
+  $item_desc =~ s/(supplement|suppl|quarter|qtr|jahr)\.{0,1}-{0,1}//gi;
+
+  # report numbers
+  #no.CR-2291 1973
+  $item_desc =~ s/\b[a-zA-Z.]+-\d+//;
+
+  # check for date ranges: yyyy-yy
+  #($low, $high) = ( $item_desc =~ /\b(\d{4})\-(\d{2})\b/ ) and do {
+  #($low, $high) = ( $item_desc =~ /\s(\d{4})\-(\d{2})\s/ ) and do {
+  # While loop to handle e.g., 1973/74-1977/78 will push {1974, 1978}
+  while ($item_desc =~ /\b(\d{4})[-\/](\d{2})\b/g) {
+    $low = $1;
+    $high = $2;
+    $high = substr($low,0,2) . $high;
+    push(@vol_date, $high);
+  };
+
+  # check for date ranges: yyyy-y
+  #($low, $high) = ( $item_desc =~ /\b(\d{4})\-(\d)\b/ ) and do {
+  ($low, $high) = ( $item_desc =~ /\s(\d{4})\-(\d)\s/ ) and do {
+    $high = substr($low,0,3) . $high;
+    push(@vol_date, $high);
+  };
+
+  # look for 4-digit strings
+#  $item_desc =~ tr/0-9u/ /cs;           # xlate non-digits to blank (keep "u")
+  $item_desc =~ tr/u^|/9/;              # translate "u" to "9"
+  push (@vol_date, $item_desc =~ /\b(\d{4})\b/g);
+
+  # cull values before 1700 and after 5 years in future
+  @vol_date = grep { $_ >= 1700 && $_ <= 1900 + (localtime)[5] + 5 } @vol_date;
+  # return the maximum year
+  @vol_date = sort(@vol_date);
+  return '' if scalar @vol_date == 0;
+  my $vol_date =  pop(@vol_date);
+  # reality check--
+  #$vol_date < 1700 and $vol_date = '';
+  return $vol_date;
+}
 
 # TODO: this is duplicative of code in post_zephir_processing/bib_rights.pm
 sub US_Cities {
@@ -40,6 +121,7 @@ sub new
 {
   my ($class, %args) = @_;
   my $self = bless {}, $class;
+  $self->{$_} = $args{$_} for keys %args;
   my $id = $args{id};
   $self->{sysid} = $id if $id !~ m/\./;
   $self->{id} = $id;
@@ -268,7 +350,7 @@ sub isThesis
       $is = 1 if $doc =~ m/thes(e|i)s/i or $doc =~ m/diss/i;
     }
   };
-  $self->SetError($self->id . ": failed in isThesis: $@") if $@;
+  $self->set_error($self->id . ": failed in isThesis: $@") if $@;
   return $is;
 }
 
@@ -315,7 +397,7 @@ sub isTranslation
       }
     }
   };
-  $self->SetError($self->id . ":failed in isTranslation: $@") if $@;
+  $self->set_error($self->id . ":failed in isTranslation: $@") if $@;
   return $is;
 }
 
@@ -351,6 +433,7 @@ sub title
   return $title;
 }
 
+# TODO: deprecated function, use publication_date
 sub copyrightDate
 {
   my $self = shift;
@@ -395,6 +478,7 @@ sub dateType
   return substr($leader, 6, 1);
 }
 
+# TODO: deprecated function, use publication_date
 sub pubDate
 {
   my $self  = shift;
@@ -408,6 +492,7 @@ sub pubDate
   return $field;
 }
 
+# TODO: deprecated function, use publication_date
 sub formatPubDate
 {
   my $self = shift;
@@ -430,79 +515,25 @@ sub formatPubDate
   return $date;
 }
 
-# Adapted code from Tim Prettyman
+# This is the preferred method for getting combined item-level and record-level
+# publication date info.
+sub publication_date {
+  my $self = shift;
+
+  if (!$self->{publication_date}) {
+    $self->{publication_date} = CRMS::PublicationDate->new(
+      field_008 => $self->GetControlfield('008'),
+      enumcron_date => $self->get_volume_date
+    );
+  }
+  return $self->{publication_date};
+}
+
 sub get_volume_date
 {
   my $self = shift;
 
-  my $item_desc = $self->enumchron;
-  $item_desc or return '';
-  $item_desc = lc $item_desc;
-  my @vol_date = ();
-  my $orig_desc = $item_desc;
-  my $low;
-  my $high;
-  my $date;
-
-  # umdl item descriptions may contain NNNN.NNN--if so, return null
-  $item_desc =~ /^\d{4}\.[a-z0-9]{3}$/i and return '';
-
-  # check for tech report number formats
-  $item_desc =~ /^\d{1,3}-\d{4}$/ and return '';
-
-  # strip confusing page/part data:
-  #39015022710779: Title 7 1965 pt.1090-end
-  #39015022735396: v.23 no.5-8 1984 pp.939-1830
-  #39015022735701: v.77 1983 no.7-12 p.673-1328
-  #39015022735750: v.75 1981 no.7-12 p.673-1324
-  #no. 3086/3115 1964
-  #no.3043,3046
-  #39015040299169      no.5001-5007,5009-5010
-  #$item_desc =~ s/(v\.|no\.|p{1,2}\.|pt\.)[\d,-]+//g;
-  $item_desc =~ s/\b(v\.\s*|no\.\s*|p{1,2}\.\s*|pt\.\s*)[\d,-\/]+//g;
-
-  # strip months
-  $item_desc =~ s/(january|february|march|april|may|june|july|august|september|october|november|december)\.{0,1}-{0,1}//gi;
-  $item_desc =~ s/(jan|feb|mar|apr|may|jun|jul|aug|sept|sep|oct|nov|dec)\.{0,1}-{0,1}//gi;
-  $item_desc =~ s/(winter|spring|summer|fall|autumn)-{0,1}//gi;
-  $item_desc =~ s/(supplement|suppl|quarter|qtr|jahr)\.{0,1}-{0,1}//gi;
-
-  # report numbers
-  #no.CR-2291 1973
-  $item_desc =~ s/\b[a-zA-Z.]+-\d+//;
-
-  # check for date ranges: yyyy-yy
-  #($low, $high) = ( $item_desc =~ /\b(\d{4})\-(\d{2})\b/ ) and do {
-  #($low, $high) = ( $item_desc =~ /\s(\d{4})\-(\d{2})\s/ ) and do {
-  # While loop to handle e.g., 1973/74-1977/78 will push {1974, 1978}
-  while ($item_desc =~ /\b(\d{4})[-\/](\d{2})\b/g) {
-    $low = $1;
-    $high = $2;
-    $high = substr($low,0,2) . $high;
-    push(@vol_date, $high);
-  };
-
-  # check for date ranges: yyyy-y
-  #($low, $high) = ( $item_desc =~ /\b(\d{4})\-(\d)\b/ ) and do {
-  ($low, $high) = ( $item_desc =~ /\s(\d{4})\-(\d)\s/ ) and do {
-    $high = substr($low,0,3) . $high;
-    push(@vol_date, $high);
-  };
-
-  # look for 4-digit strings
-#  $item_desc =~ tr/0-9u/ /cs;           # xlate non-digits to blank (keep "u")
-  $item_desc =~ tr/u^|/9/;              # translate "u" to "9"
-  push (@vol_date, $item_desc =~ /\b(\d{4})\b/g);
-
-  # cull values before 1700 and after 5 years in future
-  @vol_date = grep { $_ >= 1700 && $_ <= 1900 + (localtime)[5] + 5 } @vol_date;
-  # return the maximum year
-  @vol_date = sort(@vol_date);
-  return if scalar @vol_date == 0;
-  my $vol_date =  pop(@vol_date);
-  # reality check--
-  #$vol_date < 1700 and $vol_date = '';
-  return $vol_date;
+  return ExtractVolumeDateFromEnumcron($self->enumchron);
 }
 
 sub language
@@ -546,7 +577,8 @@ sub cities
   return $data;
 }
 
-# This is code from Tim for normalizing the 260 subfield for U.S. cities.
+# Normalize the 260 subfield for U.S. cities.
+# Adapted from post_zephir_processing/bib_rights.pm clean_pub_place
 sub _NormalizeCity
 {
   my $suba = shift;
@@ -589,7 +621,7 @@ sub enumchron
     }
   };
   $data = undef unless $data;
-  $self->SetError('enumchron query for ' . $self->id . " failed: $@") if $@;
+  $self->set_error('enumchron query for ' . $self->id . " failed: $@") if $@;
   return $data;
 }
 
@@ -634,7 +666,7 @@ sub allHTIDs
     my $json = $self->json;
     push @ids, $_->{'htid'} for @{$json->{'items'}};
   };
-  $self->SetError('enumchron query for ' . $self->id . " failed: $@") if $@;
+  $self->set_error('enumchron query for ' . $self->id . " failed: $@") if $@;
   return \@ids;
 }
 
@@ -654,7 +686,7 @@ sub volumeIDs
       push @ids, \%data;
     }
   };
-  $self->SetError('volumeIDsQuery for ' . $self->id . " failed: $@") if $@;
+  $self->set_error('volumeIDsQuery for ' . $self->id . " failed: $@") if $@;
   return \@ids;
 }
 
@@ -668,7 +700,7 @@ sub GetControlfield
   my $xpath = "//*[local-name()='controlfield' and \@tag='$field']";
   my $data;
   eval { $data = $xml->findvalue($xpath); };
-  if ($@) { $self->SetError($self->id . " GetControlfield failed: $@"); }
+  if ($@) { $self->set_error($self->id . " GetControlfield failed: $@"); }
   return $data;
 }
 
@@ -680,14 +712,14 @@ sub GetDatafield
   my $index  = shift;
   my $xml    = shift;
 
-  $self->SetError("no code: $field, $index") unless defined $code;
+  $self->set_error("no code: $field, $index") unless defined $code;
   $xml = $self->xml unless defined $xml;
   $index = 1 unless defined $index;
   my $xpath = "//*[local-name()='datafield' and \@tag='$field'][$index]" .
               "/*[local-name()='subfield' and \@code='$code']";
   my $data;
   eval { $data = $xml->findvalue($xpath); };
-  if ($@) { $self->SetError($self->id . " GetDatafield failed: $@"); }
+  if ($@) { $self->set_error($self->id . " GetDatafield failed: $@"); }
   my $len = length $data;
   if ($len && $len % 3 == 0)
   {
@@ -713,7 +745,7 @@ sub CountDatafields
     my $nodes = $xml->findnodes("//*[local-name()='datafield' and \@tag='$field']");
     $n = scalar $nodes->get_nodelist();
   };
-  $self->SetError('CountDatafields: ' . $@) if $@;
+  $self->set_error('CountDatafields: ' . $@) if $@;
   return $n;
 }
 
@@ -765,7 +797,7 @@ sub GetAllSubfields
   my $code   = shift;
   my $xml    = shift;
 
-  $self->SetError("no code: $field") unless defined $code;
+  $self->set_error("no code: $field") unless defined $code;
   $xml = $self->xml unless defined $xml;
   my $xpath = "//*[local-name()='datafield' and \@tag='$field']" .
               "/*[local-name()='subfield' and \@code='$code']";
@@ -778,7 +810,7 @@ sub GetAllSubfields
       push @data, $node->textContent;
     }
   };
-  if ($@) { $self->SetError($self->id . " GetAllSubfields failed: $@"); }
+  if ($@) { $self->set_error($self->id . " GetAllSubfields failed: $@"); }
 
   return \@data;
 }

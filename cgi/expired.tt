@@ -10,12 +10,12 @@
   <br/>
   <br/>
   <br/>
-  [% mail = crms.GetSystemVar('expertsEmail') %]
+  [% mail = crms.GetSystemVar('experts_email') %]
   [% mail2 = mail.replace('-', '&#8209;') %]
   [% user = crms.get('user') %]
   <div class="warningBox">
     <h2>Hello [% crms.GetUserProperty(user, 'name') %]. You do not have access to this site.</h2>
-    <strong><a href="[% crms.Sysify('?p=Logout') %]"> Logout</a></strong>
+    <strong><a href="?p=Logout"> Logout</a></strong>
   
     <div class="warningSubbox">
       <h4>Your access to in-copyright HathiTrust scans expired [% exp.expires %].

@@ -10,24 +10,17 @@ sub new
   return $class->SUPER::new(@_);
 }
 
-#my %TEST_HTIDS = (
-#    'coo.31924000029250' => 'Australia',
-#    'bc.ark:/13960/t02z7k303' => 'Canada',
-#    'bc.ark:/13960/t0bw4939s' => 'UK');
-
-#sub tests
-#{
-#  my $self = shift;
-#
-#  my @tests = keys %TEST_HTIDS;
-#  return \@tests;
-#}
+# Note: this project is being folded into Commonwealth starting January 2024.
+# By renaming EvaluateCandidacy the project should revert to the default
+# behavior of not allowing candidates. Any volumes that qualify for both projects should
+# get picked up by Commonwealth, and anything that falls through the cracks can
+# be recovered by looking at the metadata if and when Commonwealth scope is changed.
 
 # ========== CANDIDACY ========== #
 # Returns undef for failure, or hashref with two fields:
 # status in {'yes', 'no', 'filter'}
 # msg potentially empty explanation.
-sub EvaluateCandidacy
+sub EvaluateCandidacy_DISABLED
 {
   my $self   = shift;
   my $id     = shift;
@@ -84,7 +77,7 @@ sub EvaluateCandidacy
 sub ReviewPartials
 {
   return ['top', 'bibdata', 'authorities',
-          'HTView', 'crownCopyrightForm', 'expertDetails'];
+          'crownCopyrightForm', 'expertDetails'];
 }
 
 # Show the country of publication in the bibdata partial.

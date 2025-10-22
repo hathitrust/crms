@@ -1,57 +1,52 @@
 #!/usr/bin/perl
 
 use strict;
-use FindBin;
-use lib $FindBin::Bin;
-use CGI;
-use CRMS;
 
-my $cgi    = new CGI;
-my $id     = $cgi->param('id');
-my $year   = $cgi->param('year');
-my $ispub  = $cgi->param('ispub');
-my $crown  = $cgi->param('crown');
-my $pub    = $cgi->param('pub');
-my $doyear = $cgi->param('doyear');
-my $readable = $cgi->param('readable');
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
+}
+
+use CGI;
+use JSON::XS;
+
+use CRMS;
+use CRMS::RightsPredictor;
+use Metadata;
+
+my $cgi = new CGI;
+my $id = $cgi->param('id');
+my $year = $cgi->param('year');
+my $actual = $cgi->param('actual');
+my $is_pub = $cgi->param('is_pub');
+my $is_crown = $cgi->param('is_crown');
 my $crms = CRMS->new(cgi => $cgi);
 
-my $n;
-if (defined $doyear)
-{
-  $n = $crms->PredictLastCopyrightYear($id, $year, $ispub, $crown, undef, \$pub);
-  my $r = $crms->TranslateRights($crms->PredictRights($id, $year, $ispub, $crown, undef, $pub));
-  if (defined $n)
-  {
-    $n++;
-    if (defined $r && $r =~ /gatt$/)
-    {
-      $n = 95 + ((defined $pub)? $pub:$crms->GetPubDate($id));
-      $n .= ' (GATT)';
-    }
-  }
-  else
-  {
-    $n = 'unknown';
-  }
+my $record = Metadata->new('id' => $id);
+my $rp = CRMS::RightsPredictor->new(
+  effective_date => $year,
+  pub_date => $actual,
+  is_corporate => $is_pub,
+  is_crown => $is_crown,
+  record => $record);
+my $rights = $rp->rights;
+my $data = {
+  rights => $rights,
+  attr => $rp->{attr},
+  reason => $rp->{reason},
+  description => $rp->description,
+  error => $rp->{error}
+};
+
+if ($data->{attr} && $data->{reason}) {
+  my $sql = 'SELECT r.id FROM rights r INNER JOIN attributes a ON r.attr=a.id'.
+            ' INNER JOIN reasons rs ON r.reason=rs.id'.
+            ' WHERE a.name=? AND rs.name=?';
+  my $rights_id = $crms->SimpleSqlGet($sql, $data->{attr}, $data->{reason});
+  $data->{rights_id} = $rights_id;
 }
-else
-{
-  #if (defined $pub && $pub =~ m/^(\d+)-(\d+)$/)
-  #{
-  #  my ($pub1, $pub2) = ($1, $2);
-  #  my $r1 = $crms->PredictRights($id, $year, $ispub, $crown, $pub1);
-  #  my $r2 = $crms->PredictRights($id, $year, $ispub, $crown, $pub2);
-  #  $n = $r1 if $crms->TolerantCompare($r1, $r2);
-  #}
-  $n = $crms->PredictRights($id, $year, $ispub, $crown, undef, $pub) unless defined $n;
-}
-print CGI::header(-type => 'text/plain', -charset => 'utf-8');
-if ($readable && $n)
-{
-  my $ref = $crms->SelectAll("SELECT attr,reason FROM rights WHERE id=?", $n);
-  my $pa = $crms->TranslateAttr($ref->[0]->[0]);
-  my $pr = $crms->TranslateReason($ref->[0]->[1]);
-  $n = $pa . '/' . $pr;
-}
-print $n if defined $n;
+
+print CGI::header(-type => 'application/json', -charset => 'utf-8');
+my $json = JSON::XS->new->encode($data);
+print $json;

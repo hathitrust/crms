@@ -2,10 +2,18 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use utf8;
+
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
+}
+
+use Getopt::Long;
 
 use CRMS;
-use Getopt::Long;
+use CRMS::Cron;
 use Utilities;
 
 my $usage = <<END;
@@ -44,6 +52,7 @@ my $crms = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
+my $cron = CRMS::Cron->new(crms => $crms);
 
 my ($start, $period);
 if ($year)
@@ -140,22 +149,22 @@ $rnote
 END
 
 $msg =~ s/__PERIOD__/$period/g;
-@mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
-my $to = join ',', @mails;
+my $recipients = $cron->recipients(@mails);
+my $to = join ',', @$recipients;
 if ($noop)
 {
   print "No-op set; not sending e-mail to $to\n" if $verbose;
 }
 else
 {
-  if (scalar @mails)
+  if (scalar @$recipients)
   {
     my $subj = 'CRMS Determinations Report';
     $subj .= ' – Yearly' if $year;
     use Encode;
     use Mail::Sendmail;
     my $bytes = encode('utf8', $msg);
-    my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
+    my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
                 'to'           => $to,
                 'subject'      => $subj,
                 'content-type' => 'text/html; charset="UTF-8"',

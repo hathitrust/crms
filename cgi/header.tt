@@ -3,35 +3,22 @@
   <head>
     <meta charset="utf-8"/>
     <link rel="icon" type="image/png" href="[% crms.WebPath('web', crms.GetSystemVar('favicon')) %]"/>
-    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/datepicker.css') %]"/>
     <script src="[% crms.WebPath('web', 'js/common.js') %]"></script>
     <script src="https://unpkg.com/tippy.js@3/dist/tippy.all.min.js"></script>
   [% page = cgi.param('p') %]
-  [% reviewType = (page == 'review' OR page == 'cri'
-                   OR page == 'stanford' OR page == 'frontmatter'
-                   OR page == 'pageimage') %]
+  [% reviewType = (page == 'review' OR page == 'stanford' OR page == 'frontmatter') %]
   [% IF reviewType %]
     <script src="[% crms.WebPath('web', 'js/review.js') %]"></script>
-  [% ELSE %]
-    <script src="[% crms.WebPath('web', 'js/datepicker.packed.js') %]"></script>
   [% END %]
   [% IF crms.get('debugSql') || crms.get('debugVar') %]
     <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/debug.css') %]"/>
   [% END %]
-  [% IF page == 'determinationStats' OR page == 'exportStats' OR page == 'reviewerActivity' %]
+  [% IF page == 'exportStats' %]
     <script src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
     <script src="https://code.highcharts.com/highcharts.js"></script>
-    [% IF page == 'reviewerActivity' %]
-      <script src="https://code.highcharts.com/modules/exporting.js"></script>
-    [% END %]
   [% END %]
-    <script>
-<!--
-var gSys = "[% crms.Sys() %]";
-var gCGI = "[% crms.WebPath('cgi', '') %]";
--->
-    </script>
-    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/review.css') %]"/>
+
+  <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/review.css') %]"/>
   [% where = crms.WhereAmI() %]
   [% IF where != 'Production' %][% title = title _ ' - ' _ where %][% END %]
     <title>[% title %] - [% crms.PageToEnglish(page) %]</title>
@@ -56,11 +43,11 @@ var gCGI = "[% crms.WebPath('cgi', '') %]";
          [% status = (r.1 == 'down')? 'unavailable':((r.1 == 'partial')? 'partially available':r.1) %]
          <span style="font-size:1.3em;text-align:center;color:#DD4444">System status is <b>[% status %]</b>; last modified [% r.0 %]</span><br/>
          <span style="font-size:1.1em;">[% r.2 %]</span>
-         [% IF page == 'review' %]&nbsp;&nbsp;&nbsp;<a href="[% crms.Sysify('crms') %]">Home</a>[% END %]
+         [% IF page == 'review' %]&nbsp;&nbsp;&nbsp;<a href="crms">Home</a>[% END %]
         </td></tr>
         </table>
       [% ELSE %]
-      <a href="[% crms.Sysify('crms') %]">
+      <a href="crms">
         <img src="[% crms.WebPath('web', crms.GetSystemVar('logo')) %]" width="455" height="80" alt="Jump to home page"
              style="float:left;border:0px solid;margin-right:4em;"/>
       </a>
@@ -68,17 +55,18 @@ var gCGI = "[% crms.WebPath('cgi', '') %]";
       <div style="float:right;">
         <table class="helloBox">
           <tr>
-            <td rowspan="2" style="padding:0px;height:80px;line-height:1px;">
-              <img src="[% crms.WebPath('web', 'HathiTrustLogo.png') %]" width="86" height="80" alt="HathiTrust Logo"/>
+            <td rowspan="2" class="logo">
+              <img src="[% crms.WebPath('web', crms.GetSystemVar('hathitrust_logo')) %]"
+                width="70.37" height="76" alt="HathiTrust Logo"/>
             </td>
             <td style="line-height:1px;">
               Hello&nbsp;[% crms.GetUserProperty(undef, 'name').replace(" ","&nbsp;") %]&nbsp;&nbsp;
-              <a href="[% crms.Sysify(crms.WebPath('cgi', 'crms?p=Logout')) %]" class="header">logout</a>
+              <a href="?p=Logout" class="header">Log Out</a>
             </td>
           </tr>
           <tr>
             <td>
-              [% crms.System() %]&nbsp;version&nbsp;[% crms.Version() %]
+              CRMS&nbsp;Version&nbsp;[% crms.Version() %]
             </td>
           </tr>
         </table>

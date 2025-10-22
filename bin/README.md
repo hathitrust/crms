@@ -4,18 +4,21 @@ Most programs in this directory run as cron jobs. They are listed here with
 brief descriptions. For more complete documentation, consult the `USAGE` strings
 or invoke with the `-h` flag.
 
-Binaries in the `legacy/` directory are obsolete and may be deleted from the
-repository at a future date.
-
 ## Executable Files
 
 `bib_newyear.pl`
 Reports proposed new rights for volumes that would otherwise not be eligible
 for bib rights determination.
 
+`bib_rights.pl`
+Reports the bibliographic rights for one or more HathiTrust and/or catalog ids.
+
 `candidatespurge.pl`
 Reports on volumes that are no longer eligible for candidacy
 in the rights database and removes them from the system.
+
+`cc.pl`
+Reports on volumes suspected to be eligible for Creative Commons license.
 
 `criticize.pl`
 Runs `Perl::Critic` on all `.pm`, `.pl`, and extensionless files
@@ -26,10 +29,6 @@ test suite.
 `duplicates.pl`
 Reports on determinations for volumes that have duplicates,
 multiple volumes, or conflicting determinations.
-
-`gov.pl`
-Reports on suspected US federal government documents identified by a heuristic
-(`IsProbableGovDoc()` in `Metadata.pm`) and stored in the `und` table.
 
 `htreport.pl`
 Sends biweekly activity reports to HathiTrust administrators.
@@ -43,6 +42,13 @@ an earlier CRMS determination.
 Produces TSV file of HT institution name and identifier for download at
 <https://www.hathitrust.org/institution_identifiers>
 
+`licensing_export.pl`
+Exports .rights file based on unexported crms.licensing table entries.
+This is expected to run every 15 minutes or so.
+
+`licensing_report.pl`
+Daily summary of licensing exports.
+
 `mailer.pl`
 Sends accumulated help requests and announcements to and from
 <crms-experts@umich.edu>.
@@ -50,9 +56,6 @@ Sends accumulated help requests and announcements to and from
 `miscstats.pl`
 Reports on user progress, patron requests, and past month's invalidations
 and swiss reviews.
-
-`newsletterReport.pl`
-Sends monthly determination stats for HathiTrust newsletter.
 
 `newyear.pl`
 Reports on and submits new determinations for previous determinations
@@ -83,24 +86,13 @@ Creates LaTeX title reports for each State Gov Docs reviewer.
 Populates the training database with examples (validated single reviews)
 from production so that the queue size is increased to a target size.
 
-`wait-for`
-Shell script that allows the test suite to wait for the `mariadb` service
-to fully start under Docker.
-
 `warm_cache.pl`
 Call `imgsrv` script to cache frontmatter page images for volumes in the queue.
 
 `weekly.pl`
 Sends weekly activity report.
 
-`worldMigrate.pl`
-One-off script to migrate data from CRMS-World to CRMS-US.
-(Will probably be archived in `legacy/`)
-
 ## Other Files
-
-`crms.cfg`
-Main configuration file.
 
 `rdist.app`
 `rdist` configuration for deploying from test.babel to production.

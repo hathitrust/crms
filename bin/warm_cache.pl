@@ -2,11 +2,19 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use utf8;
 
-use CRMS;
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
+}
+
 use Getopt::Long;
 use Time::HiRes;
+
+use CRMS;
+use CRMS::Cron;
 
 my $usage = <<END;
 USAGE: $0 [-fhptv]
@@ -58,6 +66,7 @@ my $crms = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
+my $cron = CRMS::Cron->new(crms => $crms);
 
 $crms->set('messages', '');
 $crms->ReportMsg("Verbosity $verbose") if $verbose;
@@ -85,21 +94,23 @@ $crms->ReportMsg("Warning: $_", 1) for @{$crms->GetErrors()};
 $crms->ClearErrors();
 
 my $subject = $crms->SubjectLine('Nightly Cache Warming');
-@mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
-my $to = join ',', @mails;
-if ($noop || scalar @mails == 0)
+
+my $recipients = $cron->recipients(@mails);
+my $to = join ',', @$recipients;
+
+if ($noop || scalar @$recipients == 0)
 {
   print "No-op or no mails set; not sending e-mail to {$to}\n" if $verbose;
   print $crms->get('messages') if $verbose;
 }
 else
 {
-  if (scalar @mails)
+  if (scalar @$recipients)
   {
     use Encode;
     use Mail::Sendmail;
     my $bytes = encode('utf8', $crms->get('messages'));
-    my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
+    my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
                 'to'           => $to,
                 'subject'      => $subject,
                 'content-type' => 'text/html; charset="UTF-8"',

@@ -1,4 +1,3 @@
 #!/bin/bash
 
-bin/wait-for --timeout=300 mariadb:3306
-cover -test -report Coveralls -make 'prove; exit $?'
+cover -test -ignore_re '^t/' +ignore_re '^post' -report Coveralls -make 'prove -r t/; exit $?'

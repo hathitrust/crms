@@ -2,15 +2,24 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use utf8;
 
-use CRMS;
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
+}
+
+use Data::Dumper;
+use Encode;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use Mail::Sendmail;
-use Encode;
+
+use CRMS;
+use CRMS::Cron;
 
 my $usage = <<END;
-USAGE: $0 [-acCehlNpqtv] [-m MAIL [-m MAIL...]] [start_date [end_date]]
+USAGE: $0 [-acCeEhlNpqtv] [-m MAIL [-m MAIL...]] [start_date [end_date]]
 
 Processes reviews, exports determinations, updates candidates,
 updates the queue, recalculates user stats, and clears stale locks.
@@ -22,6 +31,7 @@ with latest rights DB timestamp between them.
 -a      Do not synchronize local attribute/reason tables with Rights Database.
 -c      Do not update candidates.
 -e      Do not process statuses or export determinations.
+-E      Write ENV information to crms.note (temporary flag for k8s testing)
 -h      Print this help message.
 -l      Do not clear old locks.
 -m MAIL Send report to MAIL. May be repeated for multiple recipients.
@@ -31,10 +41,15 @@ with latest rights DB timestamp between them.
 -s      Do not recalculate monthly stats.
 -t      Run in training.
 -v      Emit verbose debugging information. May be repeated.
+
+
+# cron table: id int, script $0 minus .pl, last_started timestamp, last_completed timestamp
+# cron_users id foreign key, user
+
 END
 
 my $instance;
-my ($skipAttrReason, $skipCandidates, $skipExport, $help, $skipLocks,
+my ($skipAttrReason, $skipCandidates, $skipExport, $write_env, $help, $skipLocks,
     @mails, $skipQueueNoMeta, $production, $skipQueue, $skipStats, $training,
     $verbose);
 
@@ -43,6 +58,7 @@ die 'Terminating' unless GetOptions(
            'a'    => \$skipAttrReason,
            'c'    => \$skipCandidates,
            'e'    => \$skipExport,
+           'E'    => \$write_env,
            'h|?'  => \$help,
            'l'    => \$skipLocks,
            'm:s@' => \@mails,
@@ -54,6 +70,15 @@ die 'Terminating' unless GetOptions(
            'v+'   => \$verbose);
 $instance = 'production' if $production;
 $instance = 'crms-training' if $training;
+
+my $crms = CRMS->new(instance => $instance);
+my $cron = CRMS::Cron->new(crms => $crms);
+my $recipients = $cron->recipients(@mails);
+
+if ($write_env) {
+  $crms->Note(sprintf "$0 env: %s\n", Dumper \%ENV);
+}
+
 if ($help) { print $usage. "\n"; exit(0); }
 
 my $start = undef;
@@ -71,16 +96,10 @@ if (scalar @ARGV)
   }
 }
 
-my $crms = CRMS->new(
-    verbose  => 0,
-    instance => $instance
-);
-
-
 my $subj = $crms->SubjectLine('Nightly Processing');
 my $body = $crms->StartHTML($subj);
 $crms->set('ping', 'yes');
-$crms->set('messages', $body) if scalar @mails;
+$crms->set('messages', $body) if scalar @$recipients;
 $crms->ReportMsg(sprintf "%s\n", $crms->DbInfo()) if $verbose;
 
 if ($skipExport) { $crms->ReportMsg('-e flag set; skipping queue processing and export.', 1); }
@@ -94,16 +113,6 @@ else
   $crms->ReportMsg($rc, 1);
   $crms->ReportMsg("<b>Done</b> exporting.", 1);
 }
-#if (!$crms->GetSystemVar('cri')) { $crms->ReportMsg('CRI system variable not set; skipping.', 1); }
-#elsif ($skipCRI) { $crms->ReportMsg('-i flag set; skipping CRI processing.', 1); }
-#else
-#{
-#  $crms->ReportMsg('Starting to process CRI.', 1);
-#  use CRI;
-#  my $cri = CRI->new('crms' => $crms);
-#  $cri->ProcessCRI();
-#  $crms->ReportMsg('DONE processing CRI.', 1);
-#}
 
 if ($skipCandidates) { $crms->ReportMsg("-c flag set; skipping candidates load.", 1); }
 else
@@ -162,18 +171,15 @@ $crms->ReportMsg('All <b>done</b> with nightly script.', 1);
 $body = $crms->get('messages');
 $body .= "  </body>\n</html>\n";
 
-EmailReport() if scalar @mails;
+EmailReport() if scalar @$recipients;
 
 print "Warning: $_\n" for @{$crms->GetErrors()};
 
-
-
 sub EmailReport
 {
+  my $to = join ',', @$recipients;
   my $file = $crms->get('export_file');
   my $path = $crms->get('export_path');
-  @mails = map { ($_ =~ m/@/)? $_:($_ . '@umich.edu'); } @mails;
-  my $to = join ',', @mails;
   my $contentType = 'text/html; charset="UTF-8"';
   my $message = $body;
   if ($file && $path)
@@ -201,7 +207,7 @@ $boundary--
 END_OF_BODY
   }
   my $bytes = Encode::encode('utf8', $message);
-  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
+  my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
               'to'           => $to,
               'subject'      => $subj,
               'content-type' => $contentType,

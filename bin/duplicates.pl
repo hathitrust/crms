@@ -2,7 +2,13 @@
 
 use strict;
 use warnings;
-BEGIN { unshift(@INC, $ENV{'SDRROOT'}. '/crms/cgi'); }
+use utf8;
+
+BEGIN {
+  die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
+  use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
+}
 
 use Getopt::Long qw(:config no_ignore_case bundling);
 use Encode;
@@ -85,6 +91,7 @@ my $crms = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
+my $cron = CRMS::Cron->new(crms => $crms);
 
 
 sub Date1Field
@@ -333,13 +340,14 @@ print "Warning: $_\n" for @{$crms->GetErrors()};
 my $hashref = $crms->GetSdrDb()->{mysql_dbd_stats};
 printf "SDR Database OK reconnects: %d, bad reconnects: %d\n", $hashref->{'auto_reconnects_ok'}, $hashref->{'auto_reconnects_failed'} if $verbose;
 $txt .= "</body></html>\n\n" if $report eq 'html';
-if (@mails)
+my $recipients = $cron->recipients(@mails);
+if (scalar @$recipients)
 {
   use Encode;
   use Mail::Sendmail;
   my $bytes = encode('utf8', $txt);
-  my $to = join ',', @mails;
-  my %mail = ('from'         => $crms->GetSystemVar('senderEmail'),
+  my $to = join ',', @$recipients;
+  my %mail = ('from'         => $crms->GetSystemVar('sender_email'),
               'to'           => $to,
               'subject'      => $title,
               'content-type' => 'text/html; charset="UTF-8"',

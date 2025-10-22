@@ -8,6 +8,27 @@ code {
   font-family:Courier, 'Courier New', Monaco, monospace;
 }
 
+.f008 {
+  font-family:Courier, 'Courier New', Monaco, monospace;
+  border: 1px solid #000;
+  padding: 3px;
+  margin: 4px;
+  letter-spacing: .2rem;
+  text-align: center;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.f008 .f008-annotation {
+  margin-block-end: 0.1em;
+  font-size: 0.65em;
+  white-space: nowrap;
+  text-align: left;
+  letter-spacing: -0.02rem;
+}
+
+
 .pages {
   margin: 10px;
   padding: 10px;
@@ -25,10 +46,13 @@ a:link {color:#185EAC; text-decoration:none;}    /* unvisited link */
 a:visited {color:#185EAC; text-decoration:none;} /* visited link */
 a:hover {color:#1B75DA; text-decoration:underline;}   /* mouse over link */
 a:active {color:#1B75DA; text-decoration:underline;}  /* selected link */
-a.header:link    {color:#82CAFA;}
-a.header:visited {color:#82CAFA;}
-a.header:hover   {color:#A0DAFF;}
-a.header:active  {color:#82CAFA;}
+
+
+a.header:link    {color:#5E5EAC;}
+a.header:visited {color:#5E5EAC;}
+a.header:hover   {color:#7575DA; text-decoration:underline;}
+a.header:active  {color:#7575DA;}
+
 
 .divbody {
   float:left;
@@ -188,11 +212,11 @@ table.ReviewError {
 }
 
 #Notes textarea {
-  margin-top: 5px;
+  margin-block-start: 5px;
 }
 
 #SubmitForm {
-  margin-top: 8px;
+  margin-block-start: 8px;
 }
 
 .reviewPartial {
@@ -261,17 +285,27 @@ table.exportStats th {
 table.helloBox {
   width:100px;
   padding:0px;
-  border-collapse:collapse;
-  border:0px;
-  background-color:#000000;
+  border:0.5px solid #000000;
+  -webkit-border-radius:0.375rem;
+  border-radius:0.375rem;
+  background-color:#FFFFFF;
+  color:#000000;
+  box-shadow: 0 .5rem 1rem #00000026;
 }
 
 table.helloBox td {
   padding:0px 6px 0px 6px;
-  color:#FFFFFF;
   text-align:right;
   white-space:nowrap;
   font-weight:bold;
+}
+
+table.hellobox td.logo {
+  padding:0px;
+  height:80px;
+  line-height:1px;
+  padding-right:1rem;
+  padding-left:1rem;
 }
 
 table.helloBox td img {
@@ -398,7 +432,7 @@ hr {
 }
 
 #select * {
-  margin-bottom:.5em;
+  margin-block-end: 0.5em;
 }
 
 select.review {
@@ -692,7 +726,17 @@ div.topBanner {
   font-size: 1.1em;
   color:#FFFFFF;
   width:100%;
-  background-color:#ED7B22;
+  background-color:#D97D38;
   text-align:center;
   vertical-align:top;
+}
+
+div.debug-footer {
+  margin: 10px;
+  padding: 10px;
+}
+
+pre.perl-data {
+  font-family:Courier, 'Courier New', Monaco, monospace;
+  display: inline;
 }

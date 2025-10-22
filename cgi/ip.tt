@@ -8,7 +8,7 @@
 <br/>
 <br/>
 <br/>
-[% experts = crms.GetSystemVar('expertsEmail') %]
+[% experts = crms.GetSystemVar('experts_email') %]
 <div class="warningBox">
 <h2>Your IP address appears to have changed, so you will be unable to
     view HathiTrust page images. Please disconnect from your wireless

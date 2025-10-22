@@ -1,0 +1,27 @@
+name: Run Tests
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+
+jobs:
+  # Run tests
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out including submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Build docker image
+        run: docker compose build
+
+      - name: Run tests
+        run: docker compose run test scripts/test_and_cover.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token }}

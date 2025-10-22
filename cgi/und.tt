@@ -44,7 +44,6 @@
 
 <form id="select" action="crms">
 <input type="hidden" name="p" value="$page"/>
-[% crms.HiddenSys() %]
 
 Restrict selection:<br/>
 
@@ -60,28 +59,19 @@ Restrict selection:<br/>
 <input title="Value 2" type="text" id="search2value" name="search2value" value="[% crms.EchoInput(search2value) %]" size="30"/>
 <br/>
 
-<label for="startDate" style="width:5em;float:left;">Start Date:</label>
-<input type="text" id="startDate" name="startDate" value="[% startDate %]" onclick="datePickerController.show('startDate');"
-       onblur="datePickerController.hide('startDate');"/>
-<script type="text/javascript">
-// <![CDATA[
-  // FIXME: if we start using v6 of the datepicker, need to use "%Y-%m-%d" as the format
-  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };
-  datePickerController.createDatePicker(opts);
-// ]]>
-</script>
-<span class="smallText">(YYYY-MM-DD)</span>
+<!-- START AND END DATE -->
+<label for="start-date" style="width:5em;float:left;">Start Date:</label>
+<input type="date" id="start-date" name="startDate"
+  value="[% startDate %]"
+  min="2009-07-01"
+/>
+
 <br/>
-<label for="endDate" style="width:5em;float:left;">End Date:</label>
-<input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
-       onblur="datePickerController.hide('endDate');"/>
-<script type="text/javascript">
-// <![CDATA[
-  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };
-  datePickerController.createDatePicker(opts);
-// ]]>
-</script>
-<span class="smallText">(YYYY-MM-DD)</span>
+<label for="end-date" style="width:5em;float:left;">End Date:</label>
+<input type="date" id="end-date" name="endDate"
+  value="[% endDate %]"
+  min="2009-07-01"
+/>
 <br/>
 
 <label for="order">Order by:</label>
@@ -107,10 +97,10 @@ records per page.
        onclick="selMenuItem('op1','AND');
                 selMenuItem('search1','Identifier');
                 selMenuItem('search2','Identifier');
-                selMenuItem('order','id');
+                selMenuItem('order','ID');
                 selMenuItem('dir','ASC');
-                document.getElementById('startDate').value='';
-                document.getElementById('endDate').value='';
+                document.getElementById('start-date').value='';
+                document.getElementById('end-date').value='';
                 document.getElementById('search1value').value='';
                 document.getElementById('search2value').value='';"
 />

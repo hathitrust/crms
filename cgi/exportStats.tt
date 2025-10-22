@@ -33,11 +33,6 @@ window.onload = function()
   They do not include legacy determinations (determinations done pre-CRMS).
   If a volume that has been reviewed using the CRMS is subsequently re-queued/re-reviewed,
   the subsequent determination is counted as an additional determination (these occurrences should be rare).
-      </span><br/><br/>
-      <span class="smallishText">
-      ** Note: Status 6 (expert-reviewed matching <code>und</code> reviews) was
-      discontinued 4/19/2010. As of 2014 it indicates that a Missing
-      or Wrong Record was submitted by a reviewer, and no determination is made.
       </span>
     </td>
   </tr>
@@ -55,19 +50,7 @@ window.onload = function()
   <h3>Exported&nbsp;Determinations&nbsp;$year&nbsp;&nbsp;&nbsp;&nbsp;
     [% url = crms.WebPath('cgi', 'getExportStats?type=text;y=' _ year) %]
     <a target="_blank" href="[% url %]">Download</a></h3>
-  [% report = crms.CreateExportReport(year) %]
-  [% IF year == '2010' %]
-    [% report = report.replace('Status&nbsp;6','Status&nbsp;6**') %]
-  [% END %]
-  [% report %]
-  [% IF year == '2010' %]
-    <br/>
-    <span class="smallishText">
-      ** Note: Status 6 (expert-reviewed matching <code>und</code> reviews) was
-      discontinued 4/19/2010. As of 2014 it is used to indicates that a Missing
-      or Wrong Record was submitted by a reviewer, and no determination is made.
-    </span><br/>
-  [% END %]
+  [% crms.CreateExportReport(year) %]
 [% END %]
 
 [% INCLUDE footer.tt %]

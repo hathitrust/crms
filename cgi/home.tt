@@ -14,22 +14,6 @@ function CheckAll(box,formid)
 	  aa.elements[i].checked = box.checked;
 	}
 }
-
-window.onload = function(e)
-{
-  var progress = document.getElementById('progress');
-  if (progress)
-  {
-    try
-    {
-      loadChart(progress, "[% crms.WebPath('cgi', 'getExportStats?type=graph&c=11&project=State+Gov+Docs') %]");
-    }
-    catch (e)
-    {
-      //alert('Problem loading chart: '+e);
-    }
-  }
-}
 -->
 </script>
 
@@ -44,7 +28,6 @@ window.onload = function(e)
 [% IF projs.size > 1 %]
   <form action="crms">
     <input type="hidden" name="projectForm" value="1"/>
-    [% crms.HiddenSys() %]
     <label for="projectSel">Current project:</label>
     <select name="projectSel" id="projectSel" onchange="this.form.submit()">
     [% FOREACH proj IN projs %]
@@ -68,7 +51,7 @@ window.onload = function(e)
 [% n = ref.size %]
 [% IF n>0 %]
   <h4>You have $n
-    <a href="[% crms.Sysify('?p=queueAdd') %]">
+    <a href="?p=queueAdd">
     high-priority</a> [% crms.Pluralize('volume', n) %].
   </h4>
 [% END %]
@@ -134,7 +117,6 @@ window.onload = function(e)
 [% IF locked.size %]
   [% sysStatus = crms.GetSystemStatus().1 %]
   <br/><br/><form action="crms" id="checks">
-  [% crms.HiddenSys() %]
   <input type="checkbox" id="SelectAllCB" onclick="CheckAll(this,'checks');"/>
   <label for="SelectAllCB">Select All</label>&nbsp;&nbsp;&nbsp;&nbsp;
   [% IF sysStatus == 'normal' %]
@@ -151,7 +133,7 @@ window.onload = function(e)
       <td>[% crms.GetTitle( item ) %]</td>
       <td style="text-align:center"><input type="checkbox" name="vol_[% item %]"/></td>
       <td style="text-align:center">
-        [% IF sysStatus == 'normal' %]<a href="[% crms.Sysify("crms?unlock=" _ item) %]">do it</a>[% END %]
+        [% IF sysStatus == 'normal' %]<a href="[% 'crms?unlock=' _ item %]">do it</a>[% END %]
       </td>
     </tr>
   [% END %]

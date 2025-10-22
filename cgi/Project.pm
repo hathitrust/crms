@@ -10,9 +10,11 @@ sub new
   $self->{$_} = $args{$_} for keys %args;
   my $id = $args{'id'};
   die "No CRMS object passed to project" unless $args{'crms'};
-  my $sql = 'SELECT * FROM projects WHERE id=?';
-  my $ref = $self->{'crms'}->get('dbh')->selectall_hashref($sql, 'id', undef, $id);
-  $self->{$_} = $ref->{$id}->{$_} for keys %{$ref->{$id}};
+  if (defined $id) {
+    my $sql = 'SELECT * FROM projects WHERE id=?';
+    my $ref = $self->{'crms'}->get('dbh')->selectall_hashref($sql, 'id', undef, $id);
+    $self->{$_} = $ref->{$id}->{$_} for keys %{$ref->{$id}};
+  }
   return $self;
 }
 
@@ -28,13 +30,6 @@ sub name
   my $self = shift;
 
   return $self->{'name'};
-}
-
-sub color
-{
-  my $self = shift;
-
-  return $self->{'color'};
 }
 
 sub queue_size
@@ -100,16 +95,18 @@ sub EvaluateCandidacy
 }
 
 # ========== REVIEW INTERFACE ========== #
+# Called by CRMS::LoadQueueForProject to prioritize candidates for the queue.
+# Return undef for no additional order (the default), or
+# a column name in bibdata (b.*) or candidates (c.*).
+# Example: 'b.author DESC'
+sub queue_order { }
+
 # Called by CRMS::GetNextItemForReview to order volumes.
 # Return undef for no additional order (the default), or
 # a column name in bibdata (b.*) or the queue (q.*).
 # Example: 'b.author DESC'
-sub PresentationOrder
-{
-  my $self = shift;
+sub PresentationOrder { }
 
-  return;
-}
 
 sub ReviewPartials
 {

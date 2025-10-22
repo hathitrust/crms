@@ -151,7 +151,6 @@ function selectProject(id)
   row = document.getElementById(id+'row');
   if (row)
   {
-    //row.style.backgroundColor = '#FFAA44';
     row.style.backgroundColor = '#ED7B22';
     row.style.color = '#FFFFFF';
     gSelectedProject = id;
@@ -197,42 +196,6 @@ function selectProject(id)
       else {console.log("can't find "+user+'UCheckbox'+' check'+check); }
     }
   }
-}
-
-function changeColor(id)
-{
-  var color = document.getElementById(id+'color').value;
-  var loader = document.getElementById(id + 'loader');
-  var err = document.getElementById('errorSpan');
-  var req = new XMLHttpRequest();
-  req.onreadystatechange = function()
-  {
-    if (req.readyState == 4)
-    {
-      if (req.status == 200)
-      {
-        var data = JSON.parse(req.responseText, null);
-        if (data)
-        {
-          if (data.error)
-          {
-            err.innerHTML = data.error;
-            err.style.display='';
-          }
-        }
-      }
-      else
-      {
-        err.innerHTML = req.responseText;
-        err.style.display='';
-      }
-      if (loader) { loader.style.visibility = 'hidden'; }
-    }
-  };
-  if (loader) { loader.style.visibility = ''; }
-  var url = gURLBase + ";q=setProjectColor;id=" + id + ";color=" + encodeURIComponent(color);
-  req.open("GET", url, true);
-  req.send(null);
 }
 
 function populateProjects()
@@ -335,13 +298,6 @@ function populateProject(data, table)
     cell.innerHTML = pa + '/' + sa;
   }
   cell.style.textAlign = 'center';
-  cell = row.insertCell(11);
-  var input = document.createElement('input');
-  input.setAttribute('type', 'color');
-  input.id = data.id+'color';
-  input.value = '#'+data.color;
-  input.addEventListener('change', function(){changeColor(data.id);}, false);
-  cell.appendChild(input);
   sessionStorage.setItem('R'+data.id, JSON.stringify(data.rights.map(String)));
   sessionStorage.setItem('C'+data.id, JSON.stringify(data.categories.map(String)));
   sessionStorage.setItem('A'+data.id, JSON.stringify(data.authorities.map(String)));
@@ -415,7 +371,6 @@ function addProject(name)
       <th>Group Volumes</th>
       <th>Single Review</th>
       <th>Initial Authorities</th>
-      <th>Color</th>
     </thead>
     <tbody id=projectsTableBody>
     </tbody>
