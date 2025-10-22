@@ -47,16 +47,10 @@
 <form id="select" action="crms">
   <input type="hidden" name="p" value="$page"/>
   <input type="hidden" name="export_report" value="1"/>
-  <label for="startDate" style="width:5em;float:left;">YTD Start:</label>
-  <input type="text" id="startDate" name="startDate" value="[% p_start %]" onclick="datePickerController.show('startDate');"
-         onblur="datePickerController.hide('startDate');"/>
-  <script type="text/javascript">
-  // <![CDATA[
-    var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };
-    datePickerController.createDatePicker(opts);
-  // ]]>
-  </script>
-  <span class="smallText">(YYYY-MM-DD)</span>
+  <label for="start-date" style="width:5em;float:left;">YTD Start:</label>
+  <input type="date" id="start-date" name="startDate"
+    value="[% p_start %]"
+  />
   <br/>
 
   <input type="submit" value="Submit"/>

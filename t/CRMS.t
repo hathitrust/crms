@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use utf8;
 
+use Data::Dumper;
 use File::Temp;
 use Test::More;
 
@@ -77,6 +78,57 @@ subtest 'CRMS::CanExportVolume' => sub {
 
   subtest 'CRMS::CanExportVolume und/crms' => sub {
     is(0, $crms->CanExportVolume('mdp.001', 'und', 'crms', 1));
+  };
+};
+
+# The GetXRef tests to follow are just basic "does it run" tests with the data logic, which
+# was most recently touched.
+subtest 'CRMS::GetReviewsRef' => sub {
+  subtest 'with startDate and endDate' => sub {
+    my $res = $crms->GetReviewsRef('adminHistoricalReviews', undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, '2010-01-01', '2012-01-01');
+    isa_ok($res, 'HASH', 'returns hashref');
+  };
+};
+
+subtest 'CRMS::GetVolumesRef' => sub {
+  subtest 'with startDate and endDate' => sub {
+    my $res = $crms->GetVolumesRef('adminHistoricalReviews', undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, '2010-01-01', '2012-01-01');
+    isa_ok($res, 'HASH', 'returns hashref');
+  };
+};
+
+subtest 'CRMS::GetVolumesRefWide' => sub {
+  subtest 'with startDate and endDate' => sub {
+    my $res = $crms->GetVolumesRefWide('adminHistoricalReviews', undef, undef, undef, undef, undef, undef, undef, undef, undef, undef, '2010-01-01', '2012-01-01');
+    isa_ok($res, 'HASH', 'returns hashref');
+  };
+};
+
+subtest 'CRMS::GetQueueRef' => sub {
+  subtest 'with startDate and endDate' => sub {
+    my $res = $crms->GetQueueRef(undef, undef, undef, undef, undef, undef, undef, '2010-01-01', '2012-01-01');
+    isa_ok($res, 'HASH', 'returns hashref');
+  };
+};
+
+subtest 'CRMS::GetCandidatesRef' => sub {
+  subtest 'with startDate and endDate' => sub {
+    my $res = $crms->GetCandidatesRef(undef, undef, undef, undef, undef, undef, undef, '2010-01-01', '2012-01-01');
+    isa_ok($res, 'HASH', 'returns hashref');
+  };
+};
+
+subtest 'CRMS::GetUNDRef' => sub {
+  subtest 'with startDate and endDate' => sub {
+    my $res = $crms->GetUNDRef(undef, undef, undef, undef, undef, undef, undef, '2010-01-01', '2012-01-01');
+    isa_ok($res, 'HASH', 'returns hashref');
+  };
+};
+
+subtest 'CRMS::GetExportDataRef' => sub {
+  subtest 'with startDate and endDate' => sub {
+    my $res = $crms->GetExportDataRef(undef, undef, undef, undef, undef, undef, undef, '2010-01-01', '2012-01-01');
+    isa_ok($res, 'HASH', 'returns hashref');
   };
 };
 

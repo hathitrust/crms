@@ -82,27 +82,19 @@ Search for Reviews where<br/>
 <input title="Value 3" type="text" id="search3value" name="search3value" value="[% crms.EchoInput(search3value) %]" size="30"/>
 <br/>
 
-<label for="startDate" style="width:5em;float:left;">Start Date:</label>
-<input type="text" id="startDate" name="startDate" value="[% startDate %]" onclick="datePickerController.show('startDate');"
-       onblur="datePickerController.hide('startDate');"/>
-<script type="text/javascript">
-// <![CDATA[
-  var opts = { formElements:{"startDate":"Y-ds-m-ds-d"} };
-  datePickerController.createDatePicker(opts);
-// ]]>
-</script>
-<span class="smallText">(YYYY-MM-DD)</span>
+<!-- START AND END DATE -->
+<label for="start-date" style="width:5em;float:left;">Start Date:</label>
+<input type="date" id="start-date" name="startDate"
+  value="[% startDate %]"
+  min="2009-07-01"
+/>
+
 <br/>
-<label for="endDate" style="width:5em;float:left;">End Date:</label>
-<input type="text" id="endDate" name="endDate" value="[% endDate %]" onclick="datePickerController.show('endDate');"
-       onblur="datePickerController.hide('endDate');"/>
-<script type="text/javascript">
-// <![CDATA[
-  var opts = { formElements:{"endDate":"Y-ds-m-ds-d"} };
-  datePickerController.createDatePicker(opts);
-// ]]>
-</script>
-<span class="smallText">(YYYY-MM-DD)</span>
+<label for="end-date" style="width:5em;float:left;">End Date:</label>
+<input type="date" id="end-date" name="endDate"
+  value="[% endDate %]"
+  min="2009-07-01"
+/>
 <br/>
 
 <label for="order">Order by:</label>
@@ -132,8 +124,8 @@ records per page.
                 selMenuItem('search3','Identifier');
                 selMenuItem('order','[% defaultOrder %]');
                 selMenuItem('dir','[% defaultDir %]');
-                document.getElementById('startDate').value='';
-                document.getElementById('endDate').value='';
+                document.getElementById('start-date').value='';
+                document.getElementById('end-date').value='';
                 document.getElementById('search1value').value='';
                 document.getElementById('search2value').value='';
                 document.getElementById('search3value').value='';
