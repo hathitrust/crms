@@ -159,6 +159,8 @@ function CheckAllTx(box,id)
       <td><h4>[% ref.size %]&nbsp;Special Project&nbsp;[% crms.Pluralize("Volume", ref.size) %]</h4></td>
       <td>
         <form action="crms">
+          [% USE date %]
+          <input type="hidden" name="nocache" value="[% date.now %]"/>
           [% crms.Hiddenify(cgi, 'ids', 'priority', 'delete', 'delSel') %]
           <input type="submit" value="Refresh Page"/>
         </form>
