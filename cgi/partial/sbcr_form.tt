@@ -8,6 +8,7 @@
 [% u_pub = (error)? cgi.param('pub') : data.reviews.$user.data.pub %]
 [% u_crown = (error)? cgi.param('crown') : data.reviews.$user.data.crown %]
 [% u_actual = (error)? cgi.param('actual') : data.reviews.$user.data.actual %]
+[% u_approximate = (error)? cgi.param('approximate') : data.reviews.$user.data.approximate %]
 [% u_rights = (error)? cgi.param('rights') : data.reviews.$user.rights %]
 [% u_category = (error)? cgi.param('category') : data.reviews.$user.category %]
 [% u_note = (error)? cgi.param('note') : data.reviews.$user.note %]
@@ -112,57 +113,18 @@
     </tr>
     <tr>
       <td colspan="2" class="reviewGrey">
-        <span id="rights-description"></span>
+        <input type="checkbox" id="approximate-checkbox" name="approximate"[% (u_approximate)? ' checked="checked"':'' %]
+               onchange="checkboxSelectionChanged(this.id);"/>
+        <label for="approximate-checkbox">&nbsp;Pub&nbsp;Date&nbsp;is&nbsp;Approximate</label>
       </td>
     </tr>
+    
     
   </table>
 [% rights = crms.Rights(htid, 1) %]
 <div id="RightsCont" class="subpartial">
-<div id="RightsReason" style="position:relative;">
-  <div id="rightsHelp" style="position:absolute;top:0px;right:1em;">
-    <a class="tip" href="#">
-      <img width="16" height="16" alt="Rights/Reason Help" src="[% crms.WebPath('web', 'help.png') %]"/>
-      <span>
-      [% asterisk = 0 %]
-      [% FOR right IN rights %]
-        <strong>[% right.rights %]</strong> - [% right.description %]<br/>
-        [% IF right.description.search('\*') %][% asterisk = 1 %][% END %]
-      [% END %]
-      [% IF asterisk %]
-        <br/>* if no publication date listed on piece, use copyright date
-      [% END %]
-      </span>
-    </a>
-  </div>
-  [% rights = crms.Rights(htid) %]
-  [% of = rights.size() %]
-  [% n = 0 %]
-    <table>
-    [% WHILE n < of %]
-      <tr>
-      [% right = rights.$n %]
-      <td style="width:50%;">
-        <input type="radio" id="[% 'r' _ right.id %]" name="rights" value="[% right.id %]"
-              [% IF right.n < 10 %]accesskey="[% right.n %]"[% END %]
-              [% IF u_rights == right.id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ right.id %]">[% right.attr %]/[% right.reason.upper %] ([% right.n %])</label>
-      </td>
-      [% n = n + 1 %]
-      <td style="width:50%;">
-        [% IF n < of %]
-        [% right = rights.$n %]
-        <input type="radio" id="[% 'r' _ right.id %]" name="rights" value="[% right.id %]"
-              [% IF right.n < 10 %]accesskey="[% right.n %]"[% END %]
-              [% IF u_rights == right.id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ right.id %]">[% right.attr %]/[% right.reason.upper %] ([% right.n %])</label>
-        [% END %]
-      </td>
-      </tr>
-      [% n = n + 1 %]
-    [% END %]
-    </table>
-</div>
+  [% INCLUDE partial/rights.tt %]
+
 <div id="Notes">
   <strong><label for="catMenu">Notes: </label></strong>
   <select id="catMenu" class="review" name="category">
@@ -291,16 +253,26 @@ function partial_sbcr_form_mainWindowLoad(e) {
 // or provisional match.
 function insertUserReviewData(user) {
   var review = gReviewData.reviews[user];
-  var button = document.getElementById("r" + review.rights);
-  if (button) { button.checked = "checked"; }
+  // Renewal
+  var field = document.getElementById("renNum");
+  if (field) { field.value = review.data?.renNum || ''; }
+  field = document.getElementById("renDate");
+  if (field) { field.value = review.data?.renDate || ''; }
+  // ADD/Pub
+  field = document.getElementById("add-field");
+  if (field) { field.value = review.data?.date || ''; }
+  var field = document.getElementById("actual-pub-date-field");
+  if (field) { field.value = review.data?.actual || ""; }
   button = document.getElementById("pub-checkbox");
   if (button) { button.checked = Boolean(review.data?.pub); }
   button = document.getElementById("crown-checkbox");
   if (button) { button.checked = Boolean(review.data?.crown); }
-  var field = document.getElementById("add-field");
-  if (field) { field.value = review.data?.date || ''; }
-  var field = document.getElementById("actual-pub-date-field");
-  if (field) { field.value = review.data?.actual || ""; }
+  button = document.getElementById("approximate-checkbox");
+  if (button) { button.checked = Boolean(review.data?.approximate); }
+  // Rights
+  var button = document.getElementById("r" + review.rights);
+  if (button) { button.checked = "checked"; }
+  // Note
   document.submitReview.note.value = review.note || "";
   selMenuItem("category-menu", review.category || "");
   toggleADD();
