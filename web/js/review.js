@@ -135,7 +135,7 @@ function ajaxURL(target) {
 function togglePredictionLoader(display) {
   var img = document.getElementById("predictionLoader");
   if (img) {
-    img.style.display = display ? "block" : "none";
+    img.style.display = display ? "inline-block" : "none";
   }
 }
 
