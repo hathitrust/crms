@@ -37,7 +37,7 @@
 
     <tr>
       <td class="nowrap">
-        <label id="renewalFieldLabel" for="renewalField" style="display:inline-block;">
+        <label id="renewalFieldLabel" for="renewal-number-field" style="display:inline-block;">
           <strong>Renewal&nbsp;ID:</strong>
           <img id="predictionLoader" width="12" height="12"
                    src="[% crms.WebPath('web', 'ajax-loader.gif') %]"
@@ -45,7 +45,7 @@
         </label>
       </td>
       <td class="nowrap">
-        <input id="renewalField" title="[% label %]" type="text" name="renNum"
+        <input id="renewal-number-field" title="[% label %]" type="text" name="renNum"
                value="[% u_renNum %]" size="8"
                onblur="getRenewalDate(0)"/>
       </td>
@@ -113,8 +113,7 @@
     </tr>
     <tr>
       <td colspan="2" class="reviewGrey">
-        <input type="checkbox" id="approximate-checkbox" name="approximate"[% (u_approximate)? ' checked="checked"':'' %]
-               onchange="checkboxSelectionChanged(this.id);"/>
+        <input type="checkbox" id="approximate-checkbox" name="approximate"[% (u_approximate)? ' checked="checked"':'' %]/>
         <label for="approximate-checkbox">&nbsp;Pub&nbsp;Date&nbsp;is&nbsp;Approximate</label>
       </td>
     </tr>
@@ -198,7 +197,7 @@
             <td><label for="pull[% user %]">[% user %] ([% reviews.$user.attr %]/[% reviews.$user.reason %])</label></td>
             <td><input type="radio" name="pullrights" id="pull[% user %]"
                        [% IF importUser == user %]checked="checked"[% END %]
-                       onclick="popReviewInfo('[% user %]');"/>
+                       onclick="insertUserReviewData('[% user %]');"/>
             </td>
           </tr>
         [% END %]
@@ -211,28 +210,6 @@
 <script>
 var gReviewData = [% data.json %];
 addEvent(window, 'load', partial_sbcr_form_mainWindowLoad);
-
-function popReviewInfo(user)
-{
-  var review = gReviewData.reviews[user];
-  var button = document.getElementById("r" + review.rights);
-  if (button) { button.checked = "checked"; }
-  var renNum = null;
-  var renDate = null;
-  if (review.data)
-  {
-    renNum = review.data.renNum;
-    renDate = review.data.renDate;
-  }
-  var field = document.getElementById("renewalField");
-  if (field) { field.value = renNum; }
-  // FIXME: renewalFieldCheckbox should only appear in the Commonwealth UI, not here.
-  button = document.getElementById("renewalFieldCheckbox");
-  if (button) { button.checked = (renNum != null); }
-  document.submitReview.renDate.value = renDate;
-  document.submitReview.note.value = review.note;
-  selMenuItem('catMenu', (review.category)? review.category:'');
-}
 
 function partial_sbcr_form_mainWindowLoad(e) {
   [% IF importUser %]
@@ -254,14 +231,14 @@ function partial_sbcr_form_mainWindowLoad(e) {
 function insertUserReviewData(user) {
   var review = gReviewData.reviews[user];
   // Renewal
-  var field = document.getElementById("renNum");
+  var field = document.getElementById("renewal-number-field");
   if (field) { field.value = review.data?.renNum || ''; }
-  field = document.getElementById("renDate");
+  field = document.getElementById("renewal-date-field");
   if (field) { field.value = review.data?.renDate || ''; }
   // ADD/Pub
   field = document.getElementById("add-field");
   if (field) { field.value = review.data?.date || ''; }
-  var field = document.getElementById("actual-pub-date-field");
+  field = document.getElementById("actual-pub-date-field");
   if (field) { field.value = review.data?.actual || ""; }
   button = document.getElementById("pub-checkbox");
   if (button) { button.checked = Boolean(review.data?.pub); }
@@ -331,7 +308,7 @@ function syncCheckboxes(checked, fromId, toId) {
 // but when tabbing out of the field force=0 so we don't clobber user-entered
 // values.
 async function getRenewalDate(force) {
-  var renNum = document.getElementById('renewalField');
+  var renNum = document.getElementById('renewal-number-field');
   var renDate = document.getElementById('renewal-date-field');
   if (renDate.value.length > 0 && !force) {
     return;
