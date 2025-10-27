@@ -59,6 +59,9 @@ sub ValidateSubmission {
       push @errs, 'pd/ren should not include renewal info';
     }
   }
+  if ($actual && $actual !~ m/^\d{4}(-\d{4})?$/) {
+    push @errs, 'Actual Publication Date must be a date or a date range (DDDD or DDDD-DDDD)';
+  }
   ## pd*/cdpp must not have a ren number
   if (($attr eq 'pd' || $attr eq 'pdus') && $reason eq 'cdpp' && ($renNum || $renDate)) {
     push @errs, "$attr/$reason must not include renewal info";
@@ -96,6 +99,9 @@ sub ValidateSubmission {
   }
   elsif ($note && !$category) {
     push @errs, 'must include a category if there is a note';
+  }
+  if ($category && $category eq 'Not Government' && $attr ne 'und') {
+    push @errs, 'Not Government category requires und/NFI';
   }
   return join ', ', @errs;
 }
