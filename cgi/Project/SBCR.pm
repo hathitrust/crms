@@ -10,29 +10,25 @@ sub new {
 }
 
 # ========== REVIEW ========== #
-# There must be a rights selection
-# 
 sub ValidateSubmission {
   my $self = shift;
   my $cgi  = shift;
 
   my @errs;
-  my $rights = $cgi->param('rights');
-  return 'You must select a rights/reason combination' unless $rights;
-  my ($attr, $reason) = $self->{'crms'}->TranslateAttrReasonFromCode($rights);
+  my $params = $self->extract_parameters($cgi);
+  return 'You must select a rights/reason combination' unless $params->{rights};
+  my $rights_data = CRMS::Entitlements->new(crms => $self->{crms})->rights_by_id($params->{rights});
+  my $attr = $rights_data->{attribute_name};
+  my $reason = $rights_data->{reason_name};
   # Renewal information
-  my $renNum = $cgi->param('renNum');
-  my $renDate = $cgi->param('renDate');
+  my $renNum = $params->{renNum};
+  my $renDate = $params->{renDate};
   # ADD and pub date
-  my $date = $cgi->param('date');
-  my $pub = $cgi->param('pub');
-  my $crown = $cgi->param('crown');
-  my $actual = $cgi->param('actual');
-  #my $approximate = $cgi->param('approximate');
-  my $note = $cgi->param('note');
-  my $category = $cgi->param('category');
-  $date =~ s/\s+//g if $date;
-  $actual =~ s/\s+//g if $actual;
+  my $date = $params->{date};
+  my $actual = $params->{actual};
+  # Note and note category
+  my $note = $params->{note};
+  my $category = $params->{category};
   if ($date && $date !~ m/^-?\d{1,4}$/) {
     push @errs, 'year must be only decimal digits';
   }
@@ -42,10 +38,8 @@ sub ValidateSubmission {
   ## ic/ren requires a nonexpired renewal if 1963 or earlier
   if ($attr eq 'ic' && $reason eq 'ren') {
     if ($renNum && $renDate) {
-      # Blow away everything but the trailing 2 year digits.
-      $renDate =~ s,.*[A-Za-z](.*),$1,;
-      $renDate = '19'. $renDate;
-      if ($renDate < 1950 && $renDate != 19) {
+      my $year = $self->renewal_date_to_year($renDate);
+      if ($year && $year < 1950) {
         push @errs, "renewal ($renDate) has expired: volume is pd";
       }
     }
@@ -60,33 +54,38 @@ sub ValidateSubmission {
     }
   }
   if ($actual && $actual !~ m/^\d{4}(-\d{4})?$/) {
-    push @errs, 'Actual Publication Date must be a date or a date range (DDDD or DDDD-DDDD)';
+    push @errs, 'Actual Publication Date must be a date or a date range (YYYY or YYYY-YYYY)';
   }
-  ## pd*/cdpp must not have a ren number
+  ## pd*/cdpp must not have renewal data
   if (($attr eq 'pd' || $attr eq 'pdus') && $reason eq 'cdpp' && ($renNum || $renDate)) {
     push @errs, "$attr/$reason must not include renewal info";
   }
   if ($attr eq 'pd' && $reason eq 'cdpp' && (!$note || !$category)) {
     push @errs, 'pd/cdpp must include note category and note text';
   }
-  ## ic/cdpp requires a ren number
+  ## ic/cdpp must not have renewal data
+  # NOTE: this could be merged with the pd/cdpp and pdus/cdpp logic above
   if ($attr eq 'ic' && $reason eq 'cdpp' && ($renNum || $renDate)) {
-    push @errs, 'ic/cdpp should not include renewal info';
+    push @errs, 'ic/cdpp must not include renewal info';
   }
+  # NOTE: this could be merged with the pd/cdpp and pdus/cdpp logic above
   if ($attr eq 'ic' && $reason eq 'cdpp' && (!$note || !$category)) {
     push @errs, 'ic/cdpp must include note category and note text';
   }
   if ($attr eq 'und' && $reason eq 'nfi' && !$category) {
     push @errs, 'und/nfi must include note category';
   }
+  
+  ### FIXME: STILL NEED TESTS FOR MOST OF THESE
+  
   ## und/ren must have Note Category Inserts/No Renewal
   if ($attr eq 'und' && $reason eq 'ren') {
-    if ($category ne 'Inserts/No Renewal') {
+    if (!defined $category || $category ne 'Inserts/No Renewal') {
       push @errs, 'und/ren must have note category Inserts/No Renewal';
     }
   }
   ## and vice versa
-  if ($category eq 'Inserts/No Renewal') {
+  if ($category && $category eq 'Inserts/No Renewal') {
     if ($attr ne 'und' || $reason ne 'ren') {
       push @errs, 'Inserts/No Renewal must have rights code und/ren. ';
     }
@@ -105,7 +104,6 @@ sub ValidateSubmission {
   }
   return join ', ', @errs;
 }
-
 
 # Extract Project-specific data from the CGI into a struct
 # that will be encoded as JSON string in the reviewdata table.
@@ -136,6 +134,7 @@ sub FormatReviewData {
   my $id   = shift;
   my $json = shift;
 
+  # FIXME pretty() isn't needed here?
   my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
   my $data = $jsonxs->decode($json);
   my @lines;
@@ -172,6 +171,33 @@ sub ReviewPartials {
     'authorities',
     'sbcr_form'
   ];
+}
+
+# extract CGI parameters into a hashref
+# values are stripped
+# Note: this might be useful to apply much earlier in the call chain, would
+# decouple project modules from CGI
+sub extract_parameters {
+  my $self = shift;
+  my $cgi  = shift;
+
+  my $params = {};
+  foreach my $name ($cgi->param) {
+    my $value = $cgi->param($name);
+    $value =~ s/\A\s+|\s+\z//ug;
+    $params->{$name} = $value;
+  }
+  return $params;
+}
+
+# Turn a Stanford renewal date, e.g., 21Oct52, into a year, e.g., 1952
+sub renewal_date_to_year {
+  my $self    = shift;
+  my $renDate = shift;
+
+  # If the last two digits are not numeric for some reason then there is no reasonable answer.
+  return '' unless $renDate =~ m/\d\d$/;
+  return '19' . substr($renDate, -2, 2);
 }
 
 1;
