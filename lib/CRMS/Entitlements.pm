@@ -8,6 +8,10 @@ package CRMS::Entitlements;
 # Manages an in-memory copy of the crms.rights table
 # and through it the attributes and reasons it ties together.
 
+# As of CRMS version 8.7.1 the crms.rights table has a UNIQUE constraint on the attr,reason
+# combination. As a result, a method like `rights_by_attribute_reason` need never worry
+# about handling more than one result.
+
 use strict;
 use warnings;
 
@@ -24,9 +28,9 @@ sub new {
   my $crms = $args{crms};
   die "CRMS::Entitlements module needs CRMS instance." unless defined $crms;
   $self->{crms} = $crms;
-  # Eager load lookup tables
-  $self->_load_tables;
   if (!defined $ONE_TRUE_ENTITLEMENTS) {
+    # Eager load lookup tables
+    $self->_load_tables;
     $ONE_TRUE_ENTITLEMENTS = $self;
   }
   return $ONE_TRUE_ENTITLEMENTS;
