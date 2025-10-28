@@ -6,6 +6,7 @@ use utf8;
 
 use CGI;
 use Data::Dumper;
+use JSON::XS;
 use Test::More;
 
 use lib $ENV{'SDRROOT'} . '/crms/cgi';
@@ -13,6 +14,7 @@ use lib $ENV{'SDRROOT'} . '/crms/lib';
 use CRMS;
 use CRMS::Entitlements;
 
+my $jsonxs = JSON::XS->new->utf8->canonical(1)->pretty(0);
 
 require_ok($ENV{'SDRROOT'}. '/crms/cgi/Project/SBCR.pm');
 
@@ -263,6 +265,25 @@ subtest 'ExtractReviewData' => sub {
     my $extracted = $proj->ExtractReviewData($cgi);
     is_deeply($extracted, {});
   };
+};
+
+subtest 'FormatReviewData' => sub {
+  my $data = {
+    renNum => 'R123',
+    renDate => '26Sep39',
+    date => '1950',
+    pub => 1,
+    crown => 1,
+    actual => '1960',
+    approximate => 1
+  };
+  my $json = $jsonxs->encode($data);
+  my $format = $proj->FormatReviewData(1, $json);
+  ok($format->{format} =~ /renewal/i);
+  ok($format->{format} =~ /pub/i);
+  ok($format->{format} =~ /crown/i);
+  ok($format->{format} =~ /actual/i);
+  is($format->{id}, 1);
 };
 
 subtest 'extract_parameters' => sub {
