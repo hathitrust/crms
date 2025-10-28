@@ -111,21 +111,15 @@ sub ExtractReviewData {
   my $self = shift;
   my $cgi  = shift;
 
-  my $renNum = $cgi->param('renNum') || '';
-  my $renDate = $cgi->param('renDate') || '';
-  my $date = $cgi->param('date') || '';
-  my $pub = $cgi->param('pub') || '';
-  my $crown = $cgi->param('crown') || '';
-  my $actual = $cgi->param('actual') || '';
-  my $approximate = $cgi->param('approximate') || '';
+  my $params = $self->extract_parameters($cgi);
   my $data = {};
-  $data->{'renNum'} = $renNum if $renNum;
-  $data->{'renDate'} = $renDate if $renDate;
-  $data->{'date'} = $date if $cgi->param('date');
-  $data->{'pub'} = 1 if $cgi->param('pub');
-  $data->{'crown'} = 1 if $cgi->param('crown');
-  $data->{'actual'} = $actual if $actual;
-  $data->{'approximate'} = 1 if $approximate;
+  $data->{'renNum'} = $params->{renNum} if $params->{renNum};
+  $data->{'renDate'} = $params->{renDate} if $params->{renDate};
+  $data->{'date'} = $params->{date} if $params->{date};
+  $data->{'pub'} = 1 if $params->{pub};
+  $data->{'crown'} = 1 if $params->{crown};
+  $data->{'actual'} = $params->{actual} if $params->{actual};
+  $data->{'approximate'} = 1 if $params->{approximate};
   return $data;
 }
 

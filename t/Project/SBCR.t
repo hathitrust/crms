@@ -239,10 +239,10 @@ subtest 'SBCR::ValidateSubmission' => sub {
 };
 
 subtest 'ExtractReviewData' => sub {
-  subtest 'with lots of data' => sub {
+  subtest 'with lots of data, some of it messy' => sub {
     my $cgi = CGI->new;
-    $cgi->param('renNum', 'R123');
-    $cgi->param('renDate', '26Sep39');
+    $cgi->param('renNum', ' R123');
+    $cgi->param('renDate', ' 26Sep39');
     $cgi->param('date', '1950');
     $cgi->param('pub', 'on');
     $cgi->param('crown', 'on');
