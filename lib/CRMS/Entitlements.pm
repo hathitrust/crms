@@ -23,12 +23,14 @@ my $ONE_TRUE_ENTITLEMENTS;
 
 sub new {
   my ($class, %args) = @_;
-  my $self = bless {}, $class;
-  # TODO: once we have a standalone DB module this can go away.
-  my $crms = $args{crms};
-  die "CRMS::Entitlements module needs CRMS instance." unless defined $crms;
-  $self->{crms} = $crms;
-  if (!defined $ONE_TRUE_ENTITLEMENTS) {
+  if (!$ONE_TRUE_ENTITLEMENTS) {
+    my $self = bless {}, $class;
+    # TODO: once we have a standalone DB module this can go away.
+    my $crms = $args{crms};
+    if (!defined $crms) {
+      die "CRMS::Entitlements module needs CRMS instance.";
+    }
+    $self->{crms} = $crms;
     # Eager load lookup tables
     $self->_load_tables;
     $ONE_TRUE_ENTITLEMENTS = $self;
@@ -48,19 +50,14 @@ sub rights_by_attribute_reason {
   my $attribute = shift;
   my $reason    = shift;
 
-  # Translate attribute and reason into ids if not numeric
-  if ($attribute !~ m/^\d+$/) {
-    $attribute = $self->attribute_by_name($attribute)->{id};
+  # Translate attribute and reason into names if numeric
+  if ($attribute =~ m/^\d+$/) {
+    $attribute = $self->attribute_by_id($attribute)->{name};
   }
-  if ($reason !~ m/^\d+$/) {
-    $reason = $self->reason_by_name($reason)->{id};
+  if ($reason =~ m/^\d+$/) {
+    $reason = $self->reason_by_id($reason)->{name};
   }
-  foreach my $id (keys %{$self->{rights}}) {
-    my $rights = $self->{rights}->{$id};
-    if ($rights->{attr} == $attribute && $rights->{reason} == $reason) {
-      return $rights;
-    }
-  }
+  return $self->{rights_by_name}->{"$attribute/$reason"};
 }
 
 # Returns a hashref with the fields id, type, dscr, name just as they appear in the
@@ -114,6 +111,7 @@ sub _load_tables {
   $self->{reasons_by_name} = $self->{crms}->GetDb->selectall_hashref($sql, 'name');
   # crms.rights
   $self->{rights} = {};
+  $self->{rights_by_name} = {};
   $sql = 'SELECT * FROM rights ORDER BY id';
   $self->{rights} = $self->{crms}->GetDb->selectall_hashref($sql, 'id');
   # Decorare each entry with attribute and reason names
@@ -124,6 +122,7 @@ sub _load_tables {
     $rights->{attribute_name} = $attr_name;
     $rights->{reason_name} = $reason_name;
     $rights->{name} = "$attr_name/$reason_name";
+    $self->{rights_by_name}->{$rights->{name}} = $rights;
   }
 }
 

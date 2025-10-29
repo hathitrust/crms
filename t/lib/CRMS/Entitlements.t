@@ -13,12 +13,15 @@ use CRMS::Entitlements;
 
 my $crms = CRMS->new;
 
-subtest '::new' => sub {
-  my $rights = CRMS::Entitlements->new(crms => $crms);
-  isa_ok($rights, 'CRMS::Entitlements');
-  
+#$CRMS::Entitlements::ONE_TRUE_ENTITLEMENTS = undef;
+subtest 'new' => sub {
   subtest 'Missing CRMS' => sub {
     dies_ok { CRMS::Entitlements->new; };
+  };
+
+  subtest 'CRMS supplied' => sub {
+    my $rights = CRMS::Entitlements->new(crms => $crms, reinit => 1);
+    isa_ok($rights, 'CRMS::Entitlements');
   };
 };
 
@@ -34,7 +37,7 @@ subtest 'rights_by_attribute_reason' => sub {
     is($rights->{reason_name}, 'ren');
     is($rights->{name}, 'ic/ren');
   };
-  
+
   subtest 'with names' => sub {
     my $rights = CRMS::Entitlements->new(crms => $crms)->rights_by_attribute_reason('ic', 'ren');
     is($rights->{attribute_name}, 'ic');
