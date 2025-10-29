@@ -36,69 +36,14 @@ sub ValidateSubmission {
   if (($reason eq 'add' || $reason eq 'exp') && !$date) {
     push @errs, "*/$reason must include a numeric year";
   }
-  ## ic/ren requires a nonexpired renewal if 1963 or earlier
+  ## ic/ren requires a renewal number and date
   if ($rights eq 'ic/ren') {
-    if ($renNum && $renDate) {
-      my $year = $self->renewal_date_to_year($renDate);
-      if ($year && $year < 1950) {
-        push @errs, "renewal ($renDate) has expired: volume is pd";
-      }
-    }
-    else {
+    if (!$renNum || !$renDate) {
       push @errs, 'ic/ren must include renewal id and renewal date';
-    }
-  }
-  ## pd/ren should not have a ren number or date, and is not allowed for post-1963 works.
-  if ($rights eq 'pd/ren') {
-    if ($renNum || $renDate) {
-      push @errs, 'pd/ren should not include renewal info';
     }
   }
   if ($actual && $actual !~ m/^\d{4}(-\d{4})?$/) {
     push @errs, 'Actual Publication Date must be a date or a date range (YYYY or YYYY-YYYY)';
-  }
-  ## pd*/cdpp must not have renewal data
-  if (($rights eq 'pd/cdpp' || $rights eq 'pdus/cdpp') && ($renNum || $renDate)) {
-    push @errs, "$attr/cdpp must not include renewal info";
-  }
-  if ($rights eq 'pd/cdpp' && (!$note || !$category)) {
-    push @errs, 'pd/cdpp must include note category and note text';
-  }
-  ## ic/cdpp must not have renewal data
-  # NOTE: this could be merged with the pd/cdpp and pdus/cdpp logic above
-  if ($rights eq 'ic/cdpp' && ($renNum || $renDate)) {
-    push @errs, 'ic/cdpp must not include renewal info';
-  }
-  # NOTE: this could be merged with the pd/cdpp and pdus/cdpp logic above
-  if ($rights eq 'ic/cdpp' && (!$note || !$category)) {
-    push @errs, 'ic/cdpp must include note category and note text';
-  }
-  if ($rights eq 'und/nfi' && !$category) {
-    push @errs, 'und/nfi must include note category';
-  }
-  ## und/ren must have Note Category Inserts/No Renewal
-  if ($rights eq 'und/ren') {
-    if (!$category || $category ne 'Inserts/No Renewal') {
-      push @errs, 'und/ren must have note category Inserts/No Renewal';
-    }
-  }
-  ## and vice versa
-  if ($category && $category eq 'Inserts/No Renewal') {
-    if ($rights ne 'und/ren') {
-      push @errs, 'Inserts/No Renewal must have rights code und/ren. ';
-    }
-  }
-  # Category/Note
-  if ($category && !$note) {
-    if ($self->{'crms'}->SimpleSqlGet('SELECT need_note FROM categories WHERE name=?', $category)) {
-      push @errs, qq{category "$category" requires a note};
-    }
-  }
-  elsif ($note && !$category) {
-    push @errs, 'must include a category if there is a note';
-  }
-  if ($category && $category eq 'Not Government' && $attr ne 'und') {
-    push @errs, 'Not Government category requires und/NFI';
   }
   return join ', ', @errs;
 }
@@ -182,17 +127,6 @@ sub extract_parameters {
     $params->{$name} = $value;
   }
   return $params;
-}
-
-# Turn a Stanford renewal date, e.g., 21Oct52, into a year, e.g., 1952
-# Note: this can also be used by the Core project logic in Project.pm
-sub renewal_date_to_year {
-  my $self    = shift;
-  my $renDate = shift;
-
-  # If the last two digits are not numeric for some reason then there is no reasonable answer.
-  return '' unless $renDate =~ m/\d\d$/;
-  return '19' . substr($renDate, -2, 2);
 }
 
 sub format_renewal_data {
