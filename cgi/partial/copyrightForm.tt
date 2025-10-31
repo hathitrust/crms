@@ -74,13 +74,7 @@
     <table>
     <tr style="height:20px;">
       <td><strong>Rights/Reason:</strong></td>
-      <td>
-      [% IF !ren %]
-        <img id="predictionLoader" width="16" height="16"
-             src="[% crms.WebPath('web', 'ajax-loader.gif') %]"
-             alt="loading..." style="display:none;"/>
-      [% END %]
-      </td>
+      <td></td>
     </tr>
     [% WHILE n < of %]
       <tr>

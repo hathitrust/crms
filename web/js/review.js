@@ -51,12 +51,16 @@ function popRenewalDate()
     {
       var icren = document.getElementById('ICREN');
       var pdusren = document.getElementById('PDUSREN');
+      // TODO: this is a really clunky way of making the mapping from rights name ->
+      // rights id (and ultimately the radio button with that id value) available to JavaScript.
+      // Ideally, review.tt should query Entitlements.pm and construct JSON with name -> id map
+      // as a global variable.
       var icrenButton, pdusrenButton;
       if (icren)
       {
         icrenButton = document.getElementById("r" + icren.title);
       }
-      if (icren)
+      if (pdusren)
       {
         pdusrenButton = document.getElementById("r" + pdusren.title);
       }
@@ -135,7 +139,7 @@ function ajaxURL(target) {
 function togglePredictionLoader(display) {
   var img = document.getElementById("predictionLoader");
   if (img) {
-    img.style.display = display ? "block" : "none";
+    img.style.display = display ? "inline-block" : "none";
   }
 }
 

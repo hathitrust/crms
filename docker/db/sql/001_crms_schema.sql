@@ -1037,7 +1037,8 @@ CREATE TABLE `rights` (
   `attr` tinyint(4) NOT NULL,
   `reason` tinyint(4) NOT NULL,
   `description` text,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_attr_reason` (`attr`,`reason`)
 ) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
