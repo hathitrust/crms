@@ -1,4 +1,8 @@
 
+[% # Note: before trying to use this with projects other than SBCR, need to add a prediction loader in the <td> after Rights/Reason %]
+[% # and modify the JS togglePredictionLoader() routine to take an id parameter. %]
+[% # SBCR has a prediction loader for the renDate so we need to trigger a loader by id instead of %]
+[% # assuming there will only be one loader per operational pane, and its id will be "predictionLoader" %]
 [% rights = crms.Rights(htid, 1) %]
 <div id="RightsReason" style="position:relative;">
   <div id="rightsHelp" style="position:absolute;top:0px;right:1em;">
