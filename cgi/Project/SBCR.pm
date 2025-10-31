@@ -4,6 +4,9 @@ use parent 'Project';
 use strict;
 use warnings;
 
+use lib $ENV{'SDRROOT'} . '/crms/lib';
+use CRMS::Entitlements;
+
 sub new {
   my $class = shift;
   return $class->SUPER::new(@_);
