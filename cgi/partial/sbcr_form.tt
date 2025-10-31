@@ -123,19 +123,8 @@
 
 <div id="RightsCont" class="subpartial">
   [% INCLUDE partial/rights.tt %]
+  [% INCLUDE partial/notes.tt %]
 
-<div id="Notes">
-  <strong><label for="catMenu">Notes: </label></strong>
-  <select id="catMenu" class="review" name="category">
-    <option value="" [% (NOT u_category)? 'selected="selected"':'' %]>none</option>
-    [% FOREACH cat IN crms.Categories(htid) %]
-      <option value="[% cat %]" [% (cat == u_category)? 'selected="selected"':'' %]>[% cat %]</option>
-    [% END %]
-  </select>
-  <textarea title="Note Text" id="note-textarea" name="note" cols="20" rows="1">[% u_note %]</textarea>
-  <a style="position:absolute;left:-999px;" href="#" accesskey="n"
-     onfocus="document.getElementById('NoteTextField').focus()">.</a>
-</div>
 <div id="SubmitForm">
   <table>
     <tr>

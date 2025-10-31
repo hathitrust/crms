@@ -207,11 +207,22 @@ table.ReviewError {
   font-size:12px;
 }
 
+/*
+  FIXME: remove the #Notes styles when all review interfaces are using .note-container class
+*/
 #Notes {
   margin-left:10px;
 }
 
 #Notes textarea {
+  margin-block-start: 5px;
+}
+
+.note-container {
+  margin-left:10px;
+}
+
+.note-container textarea {
   margin-block-start: 5px;
 }
 
