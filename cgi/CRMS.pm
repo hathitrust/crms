@@ -8021,4 +8021,30 @@ sub Field008Formatter {
   CRMS::Field008Formatter->new;
 }
 
+# TODO: move to a Utilities class or module.
+# This is only used with output of CRMS::Rights for the rights.tt partial.
+sub array_to_pairs {
+  my $self  = shift;
+  my $array = shift;
+
+  my $pairs = [];
+  if (!scalar @$array) {
+    return $pairs;
+  }
+  foreach my $element (@$array) {
+    # If there is nothing in the pairs list, or if the last entry contains two elements, add a new one-item pair
+    # Otherwise add second pair to last element
+    if (scalar @$pairs == 0 || scalar @{$pairs->[-1]} == 2) {
+      push @$pairs, [$element];
+    } else {
+      push @{$pairs->[-1]}, $element;
+    }
+  }
+  # Final non-pair in case of odd array, [x] -> [x, undef]
+  if (scalar @{$pairs->[-1]} == 1) {
+    push @{$pairs->[-1]}, undef;
+  }
+  return $pairs;
+}
+
 1;

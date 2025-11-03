@@ -173,4 +173,16 @@ subtest '#Field008Formatter' => sub {
   isa_ok $crms->Field008Formatter, "CRMS::Field008Formatter";
 };
 
+subtest '#Field008Formatter' => sub {
+  isa_ok $crms->Field008Formatter, "CRMS::Field008Formatter";
+};
+
+subtest 'array_to_pairs' => sub {
+  is_deeply($crms->array_to_pairs([]), [], 'no elements');
+  is_deeply($crms->array_to_pairs([1]), [[1, undef]], 'one element');
+  is_deeply($crms->array_to_pairs([1, 2]), [[1, 2]], 'two elements');
+  is_deeply($crms->array_to_pairs([1, 2, 3]), [[1, 2], [3, undef]], 'three elements');
+  is_deeply($crms->array_to_pairs([1, 2, 3, 4]), [[1, 2], [3, 4]], 'four elements');
+};
+
 done_testing();

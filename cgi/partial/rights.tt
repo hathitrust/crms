@@ -11,42 +11,45 @@
       <span>
       [% # This is an experimental version of the "rights reference" tooltip which uses %]
       [% # attr/reason descriptions from ht_rights rather than our own, which are not well %]
-      [% # maintained and contain many blanks. Do we need specialized CRMS rights descriptions? %]
+      [% # maintained and contain many blanks. %]
+      [% # KH says: we do not need specialized CRMS rights descriptions. %]
+      [% # When projects other than SBCR begin to use this, the `description` column from %]
+      [% # the `crms.rights` table can be removed %]
       [% FOR right IN rights %]
         <strong>[% right.rights %]</strong> - [% right.attr_dscr %] / [% right.reason_dscr %]<br/>
       [% END %]
       </span>
     </a>
   </div>
-  [% rights = crms.Rights(htid) %]
-  [% of = rights.size() %]
-  [% n = 0 %]
-    <table>
+  [% # TODO: the rights structure is needed by every project. %]
+  [% # We should provide it to the templates and let them derive layouts as needed %]
+  [% # e.g., convert to two columns, convert to pairs, via utility routines %]
+  [% rights = crms.array_to_pairs(crms.Rights(htid)) %]
+  <table>
     <tr>
       <td><strong>Rights/Reason:</strong></td>
       <td></td>
     </tr>
-    [% WHILE n < of %]
+    [% FOREACH rights_pair IN rights %]
       <tr>
-      [% right = rights.$n %]
-      <td style="width:50%;">
-        <input type="radio" id="[% 'r' _ right.id %]" name="rights" value="[% right.id %]"
-              [% IF right.n < 10 %]accesskey="[% right.n %]"[% END %]
-              [% IF u_rights == right.id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ right.id %]">[% right.attr %]/[% right.reason.upper %] ([% right.n %])</label>
-      </td>
-      [% n = n + 1 %]
-      <td style="width:50%;">
-        [% IF n < of %]
-        [% right = rights.$n %]
-        <input type="radio" id="[% 'r' _ right.id %]" name="rights" value="[% right.id %]"
-              [% IF right.n < 10 %]accesskey="[% right.n %]"[% END %]
-              [% IF u_rights == right.id %] checked="checked"[% END %]/>
-        <label for="[% 'r' _ right.id %]">[% right.attr %]/[% right.reason.upper %] ([% right.n %])</label>
-        [% END %]
-      </td>
+        [% right = rights_pair.0 %]
+        <td style="width:50%;">
+          <input type="radio" id="[% 'r' _ right.id %]" name="rights" value="[% right.id %]"
+                [% IF right.n < 10 %]accesskey="[% right.n %]"[% END %]
+                [% IF u_rights == right.id %] checked="checked"[% END %]/>
+          <label for="[% 'r' _ right.id %]">[% right.attr %]/[% right.reason.upper %] ([% right.n %])</label>
+        </td>
+
+        <td style="width:50%;">
+          [% right = rights_pair.1 %]
+          [% IF right %]
+            <input type="radio" id="[% 'r' _ right.id %]" name="rights" value="[% right.id %]"
+                  [% IF right.n < 10 %]accesskey="[% right.n %]"[% END %]
+                  [% IF u_rights == right.id %] checked="checked"[% END %]/>
+            <label for="[% 'r' _ right.id %]">[% right.attr %]/[% right.reason.upper %] ([% right.n %])</label>
+          [% END %]
+        </td>
       </tr>
-      [% n = n + 1 %]
     [% END %]
   </table>
 </div>
