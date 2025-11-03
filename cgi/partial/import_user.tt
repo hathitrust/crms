@@ -1,0 +1,32 @@
+[% # When an expert is adjudicating a conflict, make it possible to import user-entered data %]
+[% # rather than manually entering it (though there is that option if expert needs to add or modify %]
+
+[% IF expert && importUser %]
+  [% reviews = data.reviews %]
+  [% IF reviews.keys.size %]
+    <table>
+      <tr>
+        <td>
+          <div style="line-height:20px;">
+            <strong>Import user review:</strong>
+          </div>
+        </td>
+        <td>
+          [% # Note there is no JS that actually causes this image to be displayed %]
+          [% # Since importing user review data is just a matter of swapping in local JSON data %]
+          [% # It would probably be safe to remove this %]
+          <img id="importLoader" src="[% crms.WebPath('web', 'ajax-loader.gif') %]"
+               alt="loading..." style="display:none;"/>
+        </td>
+      [% FOREACH user IN reviews.keys.sort %]
+        <tr>
+          <td><label for="pull[% user %]">[% user %] ([% reviews.$user.attr %]/[% reviews.$user.reason %])</label></td>
+          <td><input type="radio" name="pullrights" id="pull[% user %]"
+                     [% IF importUser == user %]checked="checked"[% END %]
+                     onclick="insertUserReviewData('[% user %]');"/>
+          </td>
+        </tr>
+      [% END %]
+    </table>
+  [% END %]
+[% END %]
