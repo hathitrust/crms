@@ -8022,6 +8022,8 @@ sub Field008Formatter {
 }
 
 # TODO: move to a Utilities class or module.
+# Right now the partials do not have access to the Utilities module directly
+# so until that gets refactored keep this here so it can be used in a template.
 # This is only used with output of CRMS::Rights for the rights.tt partial.
 sub array_to_pairs {
   my $self  = shift;
@@ -8032,8 +8034,8 @@ sub array_to_pairs {
     return $pairs;
   }
   foreach my $element (@$array) {
-    # If there is nothing in the pairs list, or if the last entry contains two elements, add a new one-item pair
-    # Otherwise add second pair to last element
+    # If there is nothing in the pairs list, or if the last entry contains two elements, add a new one-item arrayref.
+    # Otherwise add as the second half of the pair under construction.
     if (scalar @$pairs == 0 || scalar @{$pairs->[-1]} == 2) {
       push @$pairs, [$element];
     } else {
