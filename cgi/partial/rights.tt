@@ -9,13 +9,11 @@
     <a class="tip" href="#">
       <img width="16" height="16" alt="Rights/Reason Help" src="[% crms.WebPath('web', 'help.png') %]"/>
       <span>
-      [% asterisk = 0 %]
+      [% # This is an experimental version of the "rights reference" tooltip which uses %]
+      [% # attr/reason descriptions from ht_rights rather than our own, which are not well %]
+      [% # maintained and contain many blanks. Do we need specialized CRMS rights descriptions? %]
       [% FOR right IN rights %]
-        <strong>[% right.rights %]</strong> - [% right.description %]<br/>
-        [% IF right.description.search('\*') %][% asterisk = 1 %][% END %]
-      [% END %]
-      [% IF asterisk %]
-        <br/>* if no publication date listed on piece, use copyright date
+        <strong>[% right.rights %]</strong> - [% right.attr_dscr %] / [% right.reason_dscr %]<br/>
       [% END %]
       </span>
     </a>

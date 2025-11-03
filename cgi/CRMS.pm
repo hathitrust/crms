@@ -7279,7 +7279,8 @@ sub Rights
   my $proj = $self->SimpleSqlGet('SELECT project FROM queue WHERE id=?', $id);
   $proj = 1 unless defined $proj;
   my @all = ();
-  my $sql = 'SELECT r.id,CONCAT(a.name,"/",rs.name),r.description,a.name,rs.name FROM rights r'.
+  my $sql = 'SELECT r.id,CONCAT(a.name,"/",rs.name),r.description,a.name,rs.name,a.dscr,rs.dscr'.
+            ' FROM rights r'.
             ' INNER JOIN attributes a ON r.attr=a.id'.
             ' INNER JOIN reasons rs ON r.reason=rs.id'.
             ' INNER JOIN projectrights pr ON r.id=pr.rights'.
@@ -7293,7 +7294,8 @@ sub Rights
   {
     push @all, {'id' => $row->[0], 'rights' => $row->[1],
                 'description' => $row->[2], 'n' => $n,
-                'attr' => $row->[3], 'reason' => $row->[4]};
+                'attr' => $row->[3], 'reason' => $row->[4],
+                'attr_dscr' => $row->[5], 'reason_dscr' => $row->[6]};
     $n++;
   }
   return \@all if $order;
