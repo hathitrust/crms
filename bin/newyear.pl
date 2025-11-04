@@ -18,6 +18,7 @@ $Term::ANSIColor::AUTORESET = 1;
 use Data::Dumper;
 
 use CRMS;
+use CRMS::NewYear;
 use CRMS::RightsPredictor;
 
 binmode(STDOUT, ':encoding(UTF-8)');
@@ -83,6 +84,7 @@ my $crms = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
+my $new_year = CRMS::NewYear->new;
 
 $verbose = 0 unless defined $verbose;
 print "Verbosity $verbose\n" if $verbose;
@@ -153,7 +155,7 @@ sub ProcessCommonwealthProject {
       next;
     }
     my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
-    next if $acurr eq 'pd' or $acurr =~ m/^cc/;
+    next if !$new_year->are_rights_in_scope($acurr, $rcurr);
     my $record = $crms->GetMetadata($id);
     next unless defined $record;
     my $rp = CRMS::RightsPredictor->new(record => $record);
@@ -259,6 +261,7 @@ sub ProcessPubDateProject
       $date =~ s/^\s+|\s+$//g;
       $dates{$date} = $date if defined $date;
     }
+    # FIXME: $date_str is unused
     my $date_str = join ', ', keys %dates;
     if (scalar keys %dates == 1) {
       my $rq = $crms->RightsQuery($id, 1);
@@ -267,7 +270,7 @@ sub ProcessPubDateProject
         next;
       }
       my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
-      next if $acurr eq 'pd' or $acurr =~ m/^cc/;
+      next if !$new_year->are_rights_in_scope($acurr, $rcurr);
       my $record = $crms->GetMetadata($id);
       if (!defined $record) {
         #print RED "Unable to get metadata for $id\n";
@@ -318,7 +321,7 @@ sub ProcessCrownCopyrightProject {
       next;
     }
     my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
-    next if $acurr eq 'pd' or $acurr =~ m/^cc/;
+    next if !$new_year->are_rights_in_scope($acurr, $rcurr);
     my $record = $crms->GetMetadata($id);
     next unless defined $record;
     my $gid = $row->[1];
