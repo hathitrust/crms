@@ -100,7 +100,7 @@ sub choose_rights_prediction {
     ($a->{value} || 0) < ($b->{value} || 0) ? $a : $b;
   } @values;
 
-  # Bail out if there were no predictions, or if the best we can do is undef/ic
+  # Bail out if there were no predictions, or if the best we can do is ic or "anything else"
   if (!$min || !$min->{value}) {
     return;
   }
