@@ -171,7 +171,7 @@ sub ProcessCommonwealthProject {
     my %predictions;
     foreach my $row2 (@{$ref2}) {
       my $note = $row2->[0] || '';
-      my $user = $row2->[1];
+      my $user = $row2->[1]; # FIXME: not used
       my $data = $row2->[2];
       $data = $jsonxs->decode($data);
       my $date = $data->{'date'};
@@ -337,7 +337,7 @@ sub ProcessCrownCopyrightProject {
     my %dates = ();
     foreach my $row2 (@{$ref2}) {
       my $note = $row2->[0] || '';
-      my $user = $row2->[1];
+      my $user = $row2->[1]; # FIXME: not used
       my $data = $row2->[2];
       $data = $jsonxs->decode($data);
       my $date = $data->{'date'};
