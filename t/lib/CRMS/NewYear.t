@@ -93,4 +93,49 @@ subtest 'are_rights_in_scope' => sub {
   };
 };
 
+subtest 'choose_rights_prediction' => sub {
+  subtest 'with no predictions' => sub {
+    my $predictions = {};
+    my $res = $new_year->choose_rights_prediction('ic', $predictions);
+    ok(!defined $res, 'no prediction');
+  };
+
+  subtest 'with minimum prediction greater than current rights' => sub {
+    my $predictions = {'pd/add' => 1, 'pdus/exp' => 1, 'icus/gatt' => 1};
+    my $res = $new_year->choose_rights_prediction('ic', $predictions);
+    is($res, 'icus/gatt', 'ic moves up to icus/gatt');
+  };
+
+  subtest 'with minimum prediction same as current rights' => sub {
+    my $predictions = {'pd/add' => 1};
+    my $res = $new_year->choose_rights_prediction('pd', $predictions);
+    ok(!defined $res, 'no prediction');
+  };
+
+  subtest 'with minimum prediction less than current rights' => sub {
+    my $predictions = {'pdus/add' => 1, 'icus/gatt' => 1};
+    my $res = $new_year->choose_rights_prediction('pd', $predictions);
+    ok(!defined $res, 'no prediction');
+  };
+  subtest 'edge cases' => sub {
+    subtest 'nonsense prediction' => sub {
+      my $predictions = {'xxx/yyy' => 1, 'ic/ren' => 1};
+      my $res = $new_year->choose_rights_prediction('pdus', $predictions);
+      ok(!defined $res, 'no prediction');
+    };
+
+    subtest 'nonsense prediction part deux' => sub {
+      my $predictions = {'xxx/yyy' => 1, 'ic/ren' => 1, 'pdus/ren' => 1};
+      my $res = $new_year->choose_rights_prediction('pd', $predictions);
+      ok(!defined $res, 'no prediction');
+    };
+
+    subtest 'out of scope current rights' => sub {
+      my $predictions = {'pdus/add' => 1};
+      my $res = $new_year->choose_rights_prediction('und', $predictions);
+      ok(!defined $res, 'no prediction');
+    };
+  };
+};
+
 done_testing();
