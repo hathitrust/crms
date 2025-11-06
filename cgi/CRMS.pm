@@ -4784,9 +4784,6 @@ sub ProjectDispatch
   }
 }
 
-# Code commented out with #### are race condition mitigations
-# to be considered for a later release.
-# Test param prints debug info and iterates 5 times to test mitigation.
 # If the query returns no results CRMS errors will contain one entry.
 # If there is a Bib API issue, CRMS errors will hold an error for each failed item.
 # Presence of multiple errors should be reported as a catalog outage.
@@ -4794,93 +4791,112 @@ sub GetNextItemForReview
 {
   my $self = shift;
   my $user = shift || $self->get('user');
-  my $test = shift;
 
-  my ($id, $sql, $ref);
+  my $result;
   eval {
-    my $proj = $self->GetUserCurrentProject($user);
-    my $project_ref = $self->GetProjectRef($proj);
-    my @params = ($user, $proj);
-    my @orders = ('q.priority DESC', 'cnt DESC', 'hash', 'q.time ASC');
-    my $sysid;
-    if ($project_ref->group_volumes && $self->IsUserAdvanced($user)) {
-      $sql = 'SELECT b.sysid FROM reviews r INNER JOIN bibdata b ON r.id=b.id'.
-             ' WHERE r.user=? AND hold=0 ORDER BY r.time DESC LIMIT 1';
-      $sysid = $self->SimpleSqlGet($sql, $user);
-    }
-    my $porder = $project_ref->PresentationOrder();
-    my ($excludeh, $excludei) = ('', '');
-    my $inc = $self->GetUserIncarnations($user);
-    my $wc = $self->WildcardList(scalar @{$inc});
-    $excludei = ' AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user IN '. $wc. ')';
-    push @params, @{$inc};
-    if (!$self->IsUserExpert($user)) {
-      $excludeh = ' AND NOT EXISTS (SELECT * FROM historicalreviews r3 WHERE r3.id=q.id AND r3.user IN '. $wc. ')';
-      push @params, @{$inc};
-    }
-    if (defined $porder) {
-      unshift @orders, $porder;
-    }
-    if (defined $sysid) {
-      # First order, last param (assumes any order param will be last).
-      # Adding any additional parameterized ordering will be trickier.
-      unshift @orders, 'IF(b.sysid=?,1,0) DESC,q.id ASC';
-      push @params, $sysid;
-    }
-    $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,'.
-           'SHA2(CONCAT(?,q.id),0) AS hash,q.priority,q.project,b.sysid'.
-           ' FROM queue q INNER JOIN bibdata b ON q.id=b.id'.
-           ' WHERE q.project=? AND q.locked IS NULL AND q.status<2'.
-           ' AND q.unavailable=0'.
-           $excludei. $excludeh.
-           ' HAVING cnt<2 ORDER BY '. join ',', @orders;
-    if (defined $test) {
-      $sql .= ' LIMIT 5';
-      printf "$user: %s\n", Utilities::StringifySql($sql, @params);
-    }
-    $ref = $self->SelectAll($sql, @params);
-  }; # eval
+    $result = $self->select_from_queue_for_user($user);
+  };
   # Deal with error with database query setup or execution.
   if ($@) {
-    my $err = "Could not get a volume for $user to review: $@.";
-    $err .= "\n$sql" if $sql;
+    my $err = "Could not get a volume for $user to review: $@ ($result->{sql})";
+    $err .= Utilities::StringifySql($result->{sql}, @{$result->{params}});
     $self->SetError($err);
+    return;
   }
-  return if $self->CountErrors() > 0;
   # Query returned results: find something to present
   # If there were no results for the query then we will of course find nothing
   # and display the "novols.tt" page.
-  foreach my $row (@{$ref})
-  {
-    my $id2 = $row->[0];
-    my $cnt = $row->[1];
-    my $hash = $row->[2];
-    my $pri = $row->[3];
-    my $proj = $row->[4];
-    my $sysid = $row->[5];
-    if (defined $test) {
-      printf "  $id2 ($sysid) [%s] %s ($cnt, %s...) (P %s Proj %s)\n",
-             $self->GetAuthor($id2) || '', $self->GetTitle($id2) || '',
-             uc substr($hash, 0, 8), $pri, $proj;
-      $id = $id2 unless defined $id;
+  foreach my $row (@{$result->{data}}) {
+    my ($htid, $count, $hash, $priority, $project, $sysid) = @$row;
+    my $err;
+    my $record = $self->GetMetadata($htid);
+    if (!$record) {
+      $err = 'No Record Found';
+      $self->Note("[Bib API fail] $htid");
     }
     else {
-      my $err;
-      my $record = $self->GetMetadata($id2);
-      if (!$record) {
-        $err = 'No Record Found';
-        $self->Note("[Bib API fail] $id2");
-      }
-      else {
-        $err = $self->LockItem($id2, $user);
-      }
-      if (!$err) {
-        $id = $id2;
-        last;
-      }
+      $err = $self->LockItem($htid, $user);
+    }
+    if (!$err) {
+      return $htid;
     }
   }
-  return $id;
+  return;
+}
+
+# Construct SQL query against queue and other tables and retrieve results.
+# Returns a hashref with the following fields:
+# sql: the constricted SQL query
+# params: the wildcard parameters used in the query
+# data: an arrayref of arrayrefs of the form
+#       [htid, review_count, SHA, priority, project, sysid]
+#       i.e., the typical CRMS::SelectAll return value
+# The sql and params data are not used within CRMS but they are useful for
+# debugging, e.g., with bin/debug_user.pl
+sub select_from_queue_for_user {
+  my $self = shift;
+  my $user = shift;
+
+  my $sql;
+  my $proj = $self->GetUserCurrentProject($user);
+  my $project_ref = $self->GetProjectRef($proj);
+  my @params = ($user, $proj);
+  # Critical orders are priority and count. These are crucial for keeping review activity
+  # relevant and not keeping half-done work in progress.
+  my @critical_order = ('q.priority DESC', 'cnt DESC');
+  my @noncritical_order = ('hash', 'q.time ASC');
+  my $sysid;
+  # FIXME: WHAT DOES THIS DO???
+  if ($project_ref->group_volumes && $self->IsUserAdvanced($user)) {
+    $sql = <<~SQL;
+    SELECT b.sysid FROM reviews r
+    INNER JOIN bibdata b ON r.id=b.id
+    WHERE r.user=? AND hold=0
+    ORDER BY r.time DESC LIMIT 1
+    SQL
+    $sysid = $self->SimpleSqlGet($sql, $user);
+  }
+  my $project_order = $project_ref->PresentationOrder();
+  if ($project_order) {
+    unshift @noncritical_order, $project_order;
+  }
+  my ($excludeh, $excludei) = ('', undef, '');
+  my $inc = $self->GetUserIncarnations($user);
+  my $wc = $self->WildcardList(scalar @{$inc});
+  $excludei = 'AND NOT EXISTS (SELECT * FROM reviews r2 WHERE r2.id=q.id AND r2.user IN '. $wc. ')';
+  push @params, @{$inc};
+  if (!$self->IsUserExpert($user)) {
+    $excludeh = 'AND NOT EXISTS (SELECT * FROM historicalreviews r3 WHERE r3.id=q.id AND r3.user IN '. $wc. ')';
+    push @params, @{$inc};
+  }
+  if (defined $sysid) {
+    # First order, last param (assumes any order param will be last).
+    # Adding any additional parameterized ordering will be trickier.
+    unshift @noncritical_order, ('IF(b.sysid=?,1,0) DESC', 'q.id ASC');
+    push @params, $sysid;
+  }
+  my $order_clause = join ',', (@critical_order, @noncritical_order);
+  $sql = <<~SQL;
+    SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,
+    SHA2(CONCAT(?,q.id),0) AS hash,q.priority,q.project,b.sysid
+    FROM queue q
+    INNER JOIN bibdata b ON q.id=b.id
+    WHERE q.project=?
+    AND q.locked IS NULL
+    AND q.status<2
+    AND q.unavailable=0
+    $excludei
+    $excludeh
+    HAVING cnt<2
+    ORDER BY $order_clause
+  SQL
+  my $ref = $self->SelectAll($sql, @params);
+  my $return = {
+    sql => $sql,
+    params => \@params,
+    data => $ref
+  };
+  return $return;
 }
 
 # Called as part of overnight processing,
