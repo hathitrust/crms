@@ -144,6 +144,24 @@ subtest '#UpdateMetadata' => sub {
   delete $ENV{CRMS_METADATA_FIXTURES_PATH};
 };
 
+subtest 'GetNextItemForReview' => sub {
+  $ENV{CRMS_METADATA_FIXTURES_PATH} = $ENV{'SDRROOT'} . '/crms/t/fixtures/metadata';
+  my $htid = 'coo.31924000029250';
+  my $record = Metadata->new('id' => $htid);
+  $crms->UpdateMetadata($htid, 1, $record);
+  $crms->PrepareSubmitSql('INSERT INTO queue (id,project) VALUES (?,?)', $htid, 1);
+  # Assign autocrms to this project
+  $crms->PrepareSubmitSql('INSERT INTO projectusers (project,user) VALUES (?,?)',1, 'autocrms');
+  $crms->PrepareSubmitSql('UPDATE users SET project=1 WHERE id=?', 'autocrms');
+  $crms->ClearErrors;
+  my $next_volume = $crms->GetNextItemForReview('autocrms');
+  is($next_volume, $htid, 'expected volume is returned');
+  $crms->PrepareSubmitSql('DELETE FROM projectusers');
+  $crms->PrepareSubmitSql('DELETE FROM queue');
+  $crms->PrepareSubmitSql('DELETE FROM bibdata');
+  delete $ENV{CRMS_METADATA_FIXTURES_PATH};
+};
+
 subtest '#LinkToJira' => sub {
   is($crms->LinkToJira('DEV-000'),
     '<a href="https://hathitrust.atlassian.net/browse/DEV-000" target="_blank">DEV-000</a>');
