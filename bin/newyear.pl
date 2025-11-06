@@ -157,7 +157,11 @@ sub ProcessCommonwealthProject {
     my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
     next if !$new_year->are_rights_in_scope($acurr, $rcurr);
     my $record = $crms->GetMetadata($id);
-    next unless defined $record;
+    if (!defined $record) {
+      $crms->ClearErrors;
+      print RED "Unable to get metadata for $id\n" if $verbose;
+      next;
+    }
     my $rp = CRMS::RightsPredictor->new(record => $record);
     my $gid = $row->[1];
     my $time = $row->[2];
@@ -273,7 +277,8 @@ sub ProcessPubDateProject
       next if !$new_year->are_rights_in_scope($acurr, $rcurr);
       my $record = $crms->GetMetadata($id);
       if (!defined $record) {
-        #print RED "Unable to get metadata for $id\n";
+        $crms->ClearErrors;
+        print RED "Unable to get metadata for $id\n" if $verbose;
         next;
       }
       my $date = (keys %dates)[0];
@@ -323,7 +328,11 @@ sub ProcessCrownCopyrightProject {
     my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
     next if !$new_year->are_rights_in_scope($acurr, $rcurr);
     my $record = $crms->GetMetadata($id);
-    next unless defined $record;
+    if (!defined $record) {
+      $crms->ClearErrors;
+      print RED "Unable to get metadata for $id\n" if $verbose;
+      next;
+    }
     my $gid = $row->[1];
     my $time = $row->[2];
     $seen{$id} = 1;
@@ -394,8 +403,11 @@ sub ProcessKeioICUS {
     my $current_rights = $crms->GetCurrentRights($id);
     next if $current_rights !~ m/^icus/;
     my $record = $crms->GetMetadata($id);
-    print BOLD RED "Can't get metadata for $id\n" unless defined $record;
-    next unless defined $record;
+    if (!defined $record) {
+      $crms->ClearErrors;
+      print RED "Unable to get metadata for $id\n" if $verbose;
+      next;
+    }
     SubmitNewYearReview($id, 'pd', 'add', 'Keio', $record, '', '');
   }
 }
