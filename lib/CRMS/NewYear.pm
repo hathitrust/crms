@@ -71,6 +71,10 @@ sub are_rights_in_scope {
 # |-----------|
 #
 # In a nutshell: choose minimum prediction and return it if it is greater than current rights
+#
+# Note: there are rare but attested cases where we have legit pd/add and pd/exp predictions
+# and the unordered hash implementation will, if pd is chosen, choose one at random.
+# The old implementation did the same thing. KH has signed off on this as "don't care."
 sub choose_rights_prediction {
   my $self        = shift;
   my $attribute   = shift; # current rights attr string
