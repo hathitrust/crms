@@ -151,7 +151,7 @@ subtest 'GetNextItemForReview' => sub {
   $crms->UpdateMetadata($htid, 1, $record);
   $crms->PrepareSubmitSql('INSERT INTO queue (id,project) VALUES (?,?)', $htid, 1);
   # Assign autocrms to this project
-  $crms->PrepareSubmitSql('INSERT INTO projectusers (project,user) VALUES (?,?)',1, 'autocrms');
+  $crms->PrepareSubmitSql('INSERT INTO projectusers (project,user) VALUES (?,?)', 1, 'autocrms');
   $crms->PrepareSubmitSql('UPDATE users SET project=1 WHERE id=?', 'autocrms');
   $crms->ClearErrors;
   my $next_volume = $crms->GetNextItemForReview('autocrms');
