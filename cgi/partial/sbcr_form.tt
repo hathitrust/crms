@@ -173,6 +173,9 @@
 
 <script>
 var gReviewData = [% data.json %];
+// Save contents of ADD entry when Pub is selected and Actual Pub Date is swapped in.
+// Restore from this value if Pub is deselected.
+var gSavedADD = '';
 addEvent(window, 'load', partial_sbcr_form_mainWindowLoad);
 
 function partial_sbcr_form_mainWindowLoad(e) {
@@ -231,7 +234,6 @@ function toggleADD() {
   if (cb.checked) {
     actualPubDateRow.style.display = "none";
     // Transfer content of actual pub date to ADD if there is something there
-    var addField = document.getElementById("add-field");
     var actualField = document.getElementById("actual-pub-date-field");
     if (actualField.value.length > 0) {
       addField.value = actualField.value;
@@ -243,15 +245,37 @@ function toggleADD() {
 
 // Called whenever the user checks or unchecks the pub date or crown checkbox.
 // Synchronizes other checkbox to current selection,
-// synchronizes the date label with the pub date checkbox,
-// and refreshes the rights prediction.
+// synchronizes the date label with the pub date checkbox.
 function checkboxSelectionChanged(id) {
   if (id === 'pub-checkbox') {
     syncCheckboxes(false, id, 'crown-checkbox');
+    if (document.getElementById(id).checked) {
+      saveADD();
+    } else {
+      restoreADD();
+    }
   } else {
     syncCheckboxes(true, id, 'pub-checkbox');
   }
   toggleADD();
+}
+
+// Called when the user selects the pub date checkbox.
+function saveADD() {
+  console.log("AHOY saveADD");
+  var addField = document.getElementById("add-field");
+  var actualField = document.getElementById("actual-pub-date-field");
+  if (actualField.value.length > 0) {
+    gSavedADD = addField.value;
+  }
+}
+
+// Called when the user deselects the pub date checkbox.
+function restoreADD() {
+  var addField = document.getElementById("add-field");
+  if (gSavedADD.length > 0) {
+    addField.value = gSavedADD;
+  }
 }
 
 // Propagate checkedness across category/subcategory boundary.
