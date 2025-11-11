@@ -18,6 +18,7 @@ $Term::ANSIColor::AUTORESET = 1;
 use Data::Dumper;
 
 use CRMS;
+use CRMS::NewYear;
 use CRMS::RightsPredictor;
 
 binmode(STDOUT, ':encoding(UTF-8)');
@@ -83,6 +84,7 @@ my $crms = CRMS->new(
     verbose  => $verbose,
     instance => $instance
 );
+my $new_year = CRMS::NewYear->new;
 
 $verbose = 0 unless defined $verbose;
 print "Verbosity $verbose\n" if $verbose;
@@ -104,7 +106,7 @@ my $tsv_fh;
 if ($tsv) {
   open $tsv_fh, '>:encoding(UTF-8)', $tsv or die "failed to open TSV file $tsv: $!";
   my @cols = ('ID', 'Project', 'Author', 'Title', 'Pub Date', 'Country', 'Current Rights',
-              'Extracted Data', 'Predictions', 'New Rights', 'Message');
+              'Extracted Data', 'Predictions', 'New Rights');
   printf $tsv_fh "%s\n", join("\t", @cols);
 }
 
@@ -153,9 +155,13 @@ sub ProcessCommonwealthProject {
       next;
     }
     my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
-    next if $acurr eq 'pd' or $acurr =~ m/^cc/;
+    next if !$new_year->are_rights_in_scope($acurr, $rcurr);
     my $record = $crms->GetMetadata($id);
-    next unless defined $record;
+    if (!defined $record) {
+      $crms->ClearErrors;
+      print RED "Unable to get metadata for $id\n" if $verbose;
+      next;
+    }
     my $rp = CRMS::RightsPredictor->new(record => $record);
     my $gid = $row->[1];
     my $time = $row->[2];
@@ -166,10 +172,10 @@ sub ProcessCommonwealthProject {
     my $ref2 = $crms->SelectAll($sql, $gid);
     next if scalar @$ref2 == 0;
     my %alldates;
-    my %predictions;
+    my $predictions = {};
     foreach my $row2 (@{$ref2}) {
       my $note = $row2->[0] || '';
-      my $user = $row2->[1];
+      my $user = $row2->[1]; # FIXME: not used
       my $data = $row2->[2];
       $data = $jsonxs->decode($data);
       my $date = $data->{'date'};
@@ -188,35 +194,18 @@ sub ProcessCommonwealthProject {
           reference_year => $year);
         my $prediction = $rp->rights;
         if (defined $prediction) {
-          $predictions{$prediction} = 1;
+          $predictions->{$prediction} = 1;
         }
       }
       $alldates{$_->[0]} = 1 for @$dates;
     }
-    my ($ic, $icus, $pd, $pdus);
-    foreach my $pred (keys %predictions) {
-      $ic = $pred if $pred =~ m/^ic\//;
-      $icus = $pred if $pred =~ m/^icus/;
-      $pd = $pred if $pred =~ m/^pd\//;
-      $pdus = $pred if $pred =~ m/^pdus/;
-    }
-    if (scalar keys %predictions && !defined $ic && ($icus || $pd || $pdus)) {
-      my $new_rights;
-      if (defined $pd) {
-        $new_rights = ($acurr eq 'pd')? undef:$pd;
-      }
-      if (defined $pdus) {
-        $new_rights = ($acurr =~ m/^pd/)? undef:$pdus;
-      }
-      if (defined $icus) {
-        $new_rights = ($acurr =~ m/^pd/ || $acurr =~ m/^icus/)? undef:$icus;
-      }
-      if (defined $new_rights) {
-        my ($a, $r) = split m/\//, $new_rights;
-        SubmitNewYearReview($id, $a, $r, 'Commonwealth', $record,
-                            join(';', sort keys %alldates),
-                            join(';', sort keys %predictions));
-      }
+    my $new_rights = $new_year->choose_rights_prediction($acurr, $predictions);
+    if ($new_rights) {
+      my ($a, $r) = split m/\//, $new_rights;
+      SubmitNewYearReview($id, $a, $r, 'Commonwealth', $record,
+                          join(';', sort keys %alldates),
+                          join(';', sort keys %$predictions),
+                          "$acurr/$rcurr");
     }
   }
 }
@@ -259,6 +248,7 @@ sub ProcessPubDateProject
       $date =~ s/^\s+|\s+$//g;
       $dates{$date} = $date if defined $date;
     }
+    # FIXME: $date_str is unused
     my $date_str = join ', ', keys %dates;
     if (scalar keys %dates == 1) {
       my $rq = $crms->RightsQuery($id, 1);
@@ -267,10 +257,11 @@ sub ProcessPubDateProject
         next;
       }
       my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
-      next if $acurr eq 'pd' or $acurr =~ m/^cc/;
+      next if !$new_year->are_rights_in_scope($acurr, $rcurr);
       my $record = $crms->GetMetadata($id);
       if (!defined $record) {
-        #print RED "Unable to get metadata for $id\n";
+        $crms->ClearErrors;
+        print RED "Unable to get metadata for $id\n" if $verbose;
         next;
       }
       my $date = (keys %dates)[0];
@@ -286,7 +277,7 @@ sub ProcessPubDateProject
       }
       if (defined $attr && $attr ne $acurr) {
         SubmitNewYearReview($id, $attr, 'cdpp', 'Publication Date', $record,
-                            join(';', sort keys %extracted_data), '');
+                            join(';', sort keys %extracted_data), '', "$acurr/$rcurr");
       }
     }
   }
@@ -318,9 +309,13 @@ sub ProcessCrownCopyrightProject {
       next;
     }
     my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
-    next if $acurr eq 'pd' or $acurr =~ m/^cc/;
+    next if !$new_year->are_rights_in_scope($acurr, $rcurr);
     my $record = $crms->GetMetadata($id);
-    next unless defined $record;
+    if (!defined $record) {
+      $crms->ClearErrors;
+      print RED "Unable to get metadata for $id\n" if $verbose;
+      next;
+    }
     my $gid = $row->[1];
     my $time = $row->[2];
     $seen{$id} = 1;
@@ -330,11 +325,11 @@ sub ProcessCrownCopyrightProject {
     my $ref2 = $crms->SelectAll($sql, $gid);
     next unless scalar @$ref2 > 0;
     my %alldates;
-    my %predictions = ();
+    my $predictions = {};
     my %dates = ();
     foreach my $row2 (@{$ref2}) {
       my $note = $row2->[0] || '';
-      my $user = $row2->[1];
+      my $user = $row2->[1]; # FIXME: not used
       my $data = $row2->[2];
       $data = $jsonxs->decode($data);
       my $date = $data->{'date'};
@@ -348,35 +343,18 @@ sub ProcessCrownCopyrightProject {
           is_corporate => 1, is_crown => 1, reference_year => $year);
         my $prediction = $rp->rights;
         if (defined $prediction) {
-          $predictions{$prediction} = 1;
+          $predictions->{$prediction} = 1;
         }
       }
       $alldates{$_} = 1 for keys %dates;
     }
-    my ($ic, $icus, $pd, $pdus);
-    foreach my $pred (keys %predictions) {
-      $ic = $pred if $pred =~ m/^ic\//;
-      $icus = $pred if $pred =~ m/^icus/;
-      $pd = $pred if $pred =~ m/^pd\//;
-      $pdus = $pred if $pred =~ m/^pdus/;
-    }
-    if (scalar keys %predictions && !defined $ic && ($icus || $pd || $pdus)) {
-      my $new_rights;
-      if (defined $pd) {
-        $new_rights = ($acurr eq 'pd')? undef:$pd;
-      }
-      if (defined $pdus) {
-        $new_rights = ($acurr =~ m/^pd/)? undef:$pdus;
-      }
-      if (defined $icus) {
-        $new_rights = ($acurr =~ m/^pd/ || $acurr =~ m/^icus/)? undef:$icus;
-      }
-      if (defined $new_rights) {
-        my ($a, $r) = split m/\//, $new_rights;
-        SubmitNewYearReview($id, $a, $r, 'Crown Copyright', $record,
-                            join(';', sort keys %alldates),
-                            join(';', sort keys %predictions));
-      }
+    my $new_rights = $new_year->choose_rights_prediction($acurr, $predictions);
+    if ($new_rights) {
+      my ($a, $r) = split m/\//, $new_rights;
+      SubmitNewYearReview($id, $a, $r, 'Crown Copyright', $record,
+                          join(';', sort keys %alldates),
+                          join(';', sort keys %$predictions),
+                          "$acurr/$rcurr");
     }
   }
 }
@@ -391,9 +369,12 @@ sub ProcessKeioICUS {
     my $current_rights = $crms->GetCurrentRights($id);
     next if $current_rights !~ m/^icus/;
     my $record = $crms->GetMetadata($id);
-    print BOLD RED "Can't get metadata for $id\n" unless defined $record;
-    next unless defined $record;
-    SubmitNewYearReview($id, 'pd', 'add', 'Keio', $record, '', '');
+    if (!defined $record) {
+      $crms->ClearErrors;
+      print RED "Unable to get metadata for $id\n" if $verbose;
+      next;
+    }
+    SubmitNewYearReview($id, 'pd', 'add', 'Keio', $record, '', '', $current_rights);
   }
 }
 
@@ -406,7 +387,17 @@ sub SubmitNewYearReview
   my $record         = shift;
   my $extracted_data = shift;
   my $predictions    = shift;
+  my $current_rights = shift;
 
+  if ($tsv) {
+    my @values = ($id, $project_name, $record->author || '',
+      $record->title || '', $record->publication_date->text || '',
+      $record->country || '', $current_rights, $extracted_data,
+      $predictions, "$new_attr/$new_reason");
+    @values = map { local $_ = $_; $_ =~ s/\s+/ /g; $_; } @values;
+    printf $tsv_fh "%s\n", join("\t", @values);
+  }
+  return if $noop;
   $crms->UpdateMetadata($id, 1, $record);
   my $res = $crms->AddItemToQueueOrSetItemActive($id, 0, 1, 'newyear', undef, $record, $nyp);
   my $code = $res->{'status'};
@@ -430,16 +421,6 @@ sub SubmitNewYearReview
   my $result = $crms->SubmitReview($id, 'autocrms', $params, $nyp_ref);
   if ($result) {
     print RED "SubmitReview() for $id: $result\n";
-  }
-  if ($tsv) {
-    my $rq = $crms->RightsQuery($id, 1);
-    my ($acurr, $rcurr, $src, $usr, $timecurr, $note) = @{$rq->[0]};
-    my @values = ($id, $project_name, $record->author || '',
-      $record->title || '', $record->publication_date->text || '',
-      $record->country || '', "$acurr/$rcurr", $extracted_data,
-      $predictions, "$new_attr/$new_reason", $msg);
-    @values = map { local $_ = $_; $_ =~ s/\s+/ /g; $_; } @values;
-    printf $tsv_fh "%s\n", join("\t", @values);
   }
 }
 
