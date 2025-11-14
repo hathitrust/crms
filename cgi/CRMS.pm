@@ -4784,8 +4784,6 @@ sub ProjectDispatch
   }
 }
 
-# Code commented out with #### are race condition mitigations
-# to be considered for a later release.
 # Test param prints debug info and iterates 5 times to test mitigation.
 # If the query returns no results CRMS errors will contain one entry.
 # If there is a Bib API issue, CRMS errors will hold an error for each failed item.
@@ -4801,7 +4799,10 @@ sub GetNextItemForReview
     my $proj = $self->GetUserCurrentProject($user);
     my $project_ref = $self->GetProjectRef($proj);
     my @params = ($user, $proj);
-    my @orders = ('q.priority DESC', 'cnt DESC', 'hash', 'q.time ASC');
+    my @critical_order = ('q.priority DESC', 'cnt DESC');
+    my @critical_order_params = ();
+    my @noncritical_order = ('hash', 'q.time ASC');
+    my @noncritical_order_params = ();
     my $sysid;
     if ($project_ref->group_volumes && $self->IsUserAdvanced($user)) {
       $sql = 'SELECT b.sysid FROM reviews r INNER JOIN bibdata b ON r.id=b.id'.
@@ -4818,14 +4819,15 @@ sub GetNextItemForReview
       $excludeh = ' AND NOT EXISTS (SELECT * FROM historicalreviews r3 WHERE r3.id=q.id AND r3.user IN '. $wc. ')';
       push @params, @{$inc};
     }
+    # The `PresentationOrder` interface is not rich enough to support wildcard parameters
+    # but if it were then we would want to unshift them on `@noncritical_order_params`
+    # the way we do below with sysid.
     if (defined $porder) {
-      unshift @orders, $porder;
+      unshift @noncritical_order, $porder;
     }
     if (defined $sysid) {
-      # First order, last param (assumes any order param will be last).
-      # Adding any additional parameterized ordering will be trickier.
-      unshift @orders, 'IF(b.sysid=?,1,0) DESC,q.id ASC';
-      push @params, $sysid;
+      unshift @noncritical_order, 'IF(b.sysid=?,1,0) DESC,q.id ASC';
+      unshift @noncritical_order_params, $sysid;
     }
     $sql = 'SELECT q.id,(SELECT COUNT(*) FROM reviews r WHERE r.id=q.id) AS cnt,'.
            'SHA2(CONCAT(?,q.id),0) AS hash,q.priority,q.project,b.sysid'.
@@ -4833,12 +4835,12 @@ sub GetNextItemForReview
            ' WHERE q.project=? AND q.locked IS NULL AND q.status<2'.
            ' AND q.unavailable=0'.
            $excludei. $excludeh.
-           ' HAVING cnt<2 ORDER BY '. join ',', @orders;
+           ' HAVING cnt<2 ORDER BY '. join ',', (@critical_order, @noncritical_order);
     if (defined $test) {
       $sql .= ' LIMIT 5';
-      printf "$user: %s\n", Utilities::StringifySql($sql, @params);
+      printf "$user: %s\n", Utilities::StringifySql($sql, @params, @critical_order_params, @noncritical_order_params);
     }
-    $ref = $self->SelectAll($sql, @params);
+    $ref = $self->SelectAll($sql, @params, @critical_order_params, @noncritical_order_params);
   }; # eval
   # Deal with error with database query setup or execution.
   if ($@) {
