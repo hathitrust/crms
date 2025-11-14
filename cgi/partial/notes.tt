@@ -1,0 +1,12 @@
+<div id="note-container" class="note-container">
+  <strong><label for="category-menu">Notes: </label></strong>
+  <select id="category-menu" class="review" name="category">
+    <option value="" [% (NOT u_category)? 'selected="selected"':'' %]>none</option>
+    [% FOREACH cat IN crms.Categories(htid) %]
+      <option value="[% cat %]" [% (cat == u_category)? 'selected="selected"':'' %]>[% cat %]</option>
+    [% END %]
+  </select>
+  <textarea title="Note Text" id="note-textarea" name="note" cols="20" rows="1">[% u_note %]</textarea>
+  <a style="position:absolute;left:-999px;" href="#" accesskey="n"
+     onfocus="document.getElementById('NoteTextField').focus()">.</a>
+</div>
