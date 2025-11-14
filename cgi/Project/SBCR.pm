@@ -106,7 +106,7 @@ sub ReviewPartials {
   return [
     'top',
     'bibdata_sbcr',
-    'expertDetails',
+    'expertDetails_sbcr',
     'authorities',
     'sbcr_form'
   ];
