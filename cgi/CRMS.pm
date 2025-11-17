@@ -7281,7 +7281,8 @@ sub Rights
   my $proj = $self->SimpleSqlGet('SELECT project FROM queue WHERE id=?', $id);
   $proj = 1 unless defined $proj;
   my @all = ();
-  my $sql = 'SELECT r.id,CONCAT(a.name,"/",rs.name),r.description,a.name,rs.name FROM rights r'.
+  my $sql = 'SELECT r.id,CONCAT(a.name,"/",rs.name),r.description,a.name,rs.name,a.dscr,rs.dscr'.
+            ' FROM rights r'.
             ' INNER JOIN attributes a ON r.attr=a.id'.
             ' INNER JOIN reasons rs ON r.reason=rs.id'.
             ' INNER JOIN projectrights pr ON r.id=pr.rights'.
@@ -7295,7 +7296,8 @@ sub Rights
   {
     push @all, {'id' => $row->[0], 'rights' => $row->[1],
                 'description' => $row->[2], 'n' => $n,
-                'attr' => $row->[3], 'reason' => $row->[4]};
+                'attr' => $row->[3], 'reason' => $row->[4],
+                'attr_dscr' => $row->[5], 'reason_dscr' => $row->[6]};
     $n++;
   }
   return \@all if $order;
@@ -8019,6 +8021,34 @@ sub Field008Formatter {
 
   use CRMS::Field008Formatter;
   CRMS::Field008Formatter->new;
+}
+
+# TODO: move to a Utilities class or module.
+# Right now the partials do not have access to the Utilities module directly
+# so until that gets refactored keep this here so it can be used in a template.
+# This is only used with output of CRMS::Rights for the rights.tt partial.
+sub array_to_pairs {
+  my $self  = shift;
+  my $array = shift;
+
+  my $pairs = [];
+  if (!scalar @$array) {
+    return $pairs;
+  }
+  foreach my $element (@$array) {
+    # If there is nothing in the pairs list, or if the last entry contains two elements, add a new one-item arrayref.
+    # Otherwise add as the second half of the pair under construction.
+    if (scalar @$pairs == 0 || scalar @{$pairs->[-1]} == 2) {
+      push @$pairs, [$element];
+    } else {
+      push @{$pairs->[-1]}, $element;
+    }
+  }
+  # Final non-pair in case of odd array, [x] -> [x, undef]
+  if (scalar @{$pairs->[-1]} == 1) {
+    push @{$pairs->[-1]}, undef;
+  }
+  return $pairs;
 }
 
 1;
