@@ -187,8 +187,11 @@ subtest '#GetProjectsRef' => sub {
   isa_ok($crms->GetProjectsRef, 'ARRAY');
 };
 
-subtest '#Field008Formatter' => sub {
-  isa_ok $crms->Field008Formatter, "CRMS::Field008Formatter";
+subtest '#UUID' => sub {
+  ok(
+    $crms->UUID =~ m/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/,
+    'UUID matches expected format'
+  );
 };
 
 subtest '#Field008Formatter' => sub {

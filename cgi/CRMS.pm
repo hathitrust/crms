@@ -7908,6 +7908,7 @@ sub SubmitMail
   $self->PrepareSubmitSql($sql, $id, $user, $text, $uuid, $to, $wait);
 }
 
+# DEPRECATED. Remove UUID::Tiny from Dockerfile and use CRMS::Utility::Data::uuid instead.
 sub UUID
 {
   my $self = shift;
