@@ -59,13 +59,11 @@ sub new
     print "<strong>Warning: no CGI passed to <code>CRMS->new()</code>\n" unless $cgi;
     $self->set('cgi',      $cgi);
     $self->set('debugSql', $args{'debugSql'});
-    $self->set('debugVar', $args{'debugVar'});
     $self->SetupUser();
     if ($cgi->param('debugAuth')) {
       $self->AuthDebugData;
     }
   }
-  $self->DebugVar('self', $self);
   return $self;
 }
 
@@ -558,35 +556,6 @@ sub DebugSql
     </div>
 END
     my $msg = sprintf $html, join(',', @_), $time;
-    my $storedDebug = $self->get('storedDebug') || '';
-    $self->set('storedDebug', $storedDebug. $msg);
-    $ct++;
-    $self->set('debugCount', $ct);
-  }
-}
-
-sub DebugVar
-{
-  my $self = shift;
-  my $var  = shift;
-  my $val  = shift;
-
-  my $debug = $self->get('debugVar');
-  if ($debug)
-  {
-    my $ct = $self->get('debugCount') || 0;
-	  my $html = <<END;
-    <div class="debug">
-      <div class="debugVar" onClick="ToggleDiv('details$ct', 'debugVarDetails');">
-        VAR $var
-      </div>
-      <div id="details$ct" class="divHide"
-           style="background-color: #fcc;" onClick="ToggleDiv('details$ct', 'debugVarDetails');">
-        %s
-      </div>
-    </div>
-END
-    my $msg = sprintf $html, Dumper($val);
     my $storedDebug = $self->get('storedDebug') || '';
     $self->set('storedDebug', $storedDebug. $msg);
     $ct++;

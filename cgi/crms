@@ -20,12 +20,10 @@ binmode(STDOUT, ':encoding(UTF-8)');
 my $cgi = new CGI;
 my $page = $cgi->param('p');
 my $debugSql = $cgi->param('debugSql');
-my $debugVar = $cgi->param('debugVar');
 my $crms = CRMS->new(
         cgi       => $cgi,
         verbose   => 0,
-        debugSql  => $debugSql,
-        debugVar  => $debugVar
+        debugSql  => $debugSql
         );
 my $redirect;
 my $uri = $ENV{'REQUEST_URI'};
