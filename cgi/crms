@@ -9,7 +9,6 @@ BEGIN {
 }
 
 use CGI;
-use Data::Dumper;
 use Encode;
 use POSIX;
 use Template;
@@ -22,7 +21,6 @@ my $cgi = new CGI;
 my $page = $cgi->param('p');
 my $debugSql = $cgi->param('debugSql');
 my $debugVar = $cgi->param('debugVar');
-my $debug = $cgi->param('debug');
 my $crms = CRMS->new(
         cgi       => $cgi,
         verbose   => 0,
@@ -193,11 +191,20 @@ if (!$tt->process($input, $vars))
   printf "<h3>%s</h3>\n", $tt->error();
   die $tt->error();
 }
+
+# Debugging output is restricted to development instance
+exit if CRMS::Config->new->instance ne 'development';
+
+# Print accumulated output of DebugSql calls
 print $crms->Debug();
-if ($debug)
+
+# Print diagnostics with debug URL parameter
+if ($cgi->param('debug'))
 {
   print "<div class=\"debug-footer\">\n<h3>Debug Information</h3>\n";
   eval {
+    use Data::Dumper;
+
     printf 'Host: <b>%s</b><br/>', `hostname`;
     my $dbinfo = $crms->DbInfo();
     $dbinfo =~ s/\n/<br\/>/g;
