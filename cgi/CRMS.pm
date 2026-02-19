@@ -61,6 +61,9 @@ sub new
     $self->set('debugSql', $args{'debugSql'});
     $self->set('debugVar', $args{'debugVar'});
     $self->SetupUser();
+    if ($cgi->param('debugAuth')) {
+      $self->AuthDebugData;
+    }
   }
   $self->DebugVar('self', $self);
   return $self;
@@ -591,46 +594,14 @@ END
   }
 }
 
-sub DebugAuth
-{
-  my $self = shift;
-
-  my $debug = $self->get('debugAuth');
-  if ($debug)
-  {
-    my $ct = $self->get('debugCount') || 0;
-	  my $html = <<END;
-    <div class="debug">
-      <div class="debugVar" onClick="ToggleDiv('details$ct', 'debugVarDetails');">
-        AUTH
-      </div>
-      <div id="details$ct" class="divHide"
-           style="background-color: #fcc;" onClick="ToggleDiv('details$ct', 'debugVarDetails');">
-        %s
-      </div>
-    </div>
-END
-    my $storedDebug = $self->get('storedDebug') || '';
-    $self->set('storedDebug', $storedDebug. $self->AuthDebugHTML());
-    $ct++;
-    $self->set('debugCount', $ct);
-  }
-}
-
+# Log auth debugging information to the crms.note table.
 sub AuthDebugData
 {
   my $self = shift;
-  my $html = shift;
 
   my $note1 = $self->get('id_note') || '';
   my $note2 = $self->get('auth_note') || '';
-  my $msg = $note1. "\n". $note2;
-  if ($html)
-  {
-    $msg = CGI::escapeHTML($msg);
-    $msg =~ s/\n+/<br\/>/gs;
-  }
-  return $msg;
+  $self->Note($note1 . "\n" . $note2);
 }
 
 # Called to return and flush any accumulated debugging display.

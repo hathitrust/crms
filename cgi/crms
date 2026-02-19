@@ -20,14 +20,12 @@ use CRMS;
 binmode(STDOUT, ':encoding(UTF-8)');
 my $cgi = new CGI;
 my $page = $cgi->param('p');
-my $debugAuth = $cgi->param('debugAuth');
 my $debugSql = $cgi->param('debugSql');
 my $debugVar = $cgi->param('debugVar');
 my $debug = $cgi->param('debug');
 my $crms = CRMS->new(
         cgi       => $cgi,
         verbose   => 0,
-        debugAuth => $debugAuth,
         debugSql  => $debugSql,
         debugVar  => $debugVar
         );
@@ -196,17 +194,6 @@ if (!$tt->process($input, $vars))
   die $tt->error();
 }
 print $crms->Debug();
-if ($debugAuth)
-{
-  my $db = $crms->AuthDebugData(1);
-  print <<END;
-<div>
-    <h2>Auth Debug</h2>
-    <span style="color:black;"><code>$db</code></span>
-  </div>
-END
-}
-
 if ($debug)
 {
   print "<div class=\"debug-footer\">\n<h3>Debug Information</h3>\n";
