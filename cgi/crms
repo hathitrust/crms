@@ -35,6 +35,8 @@ my $redirect;
 my $uri = $ENV{'REQUEST_URI'};
 $uri =~ s/&/;/g;
 my $target = uri_escape_utf8('https://'. $ENV{'HTTP_HOST'}. $uri);
+# remote_user is the crms.users primary key
+# If not set, may be authenticated with ht.ht_users but not in the CRMS system
 if (!$crms->get('remote_user'))
 {
   $redirect = 'https://'. $ENV{'HTTP_HOST'}. "/cgi/wayf?target=$target";
@@ -43,6 +45,14 @@ if ($crms->get('stepup') && $crms->get('stepup_redirect'))
 {
   $redirect = $crms->get('stepup_redirect');
 }
+
+# If $redirect is set then the user is unauthenticated
+# Emit the redirect immediately and terminate
+if ($redirect) {
+  print $cgi->redirect($redirect);
+  exit;
+}
+
 if ($page eq 'Logout')
 {
   # Remove all locks for this user.
@@ -59,6 +69,8 @@ if ($page eq 'Logout')
     $crms->UnlockAllItemsForUser();
     $target =~ s/logout/home/gi;
     $redirect = 'https://' . $ENV{'HTTP_HOST'} . '/cgi/logout?' . $target;
+    print $cgi->redirect($redirect);
+    exit;
   }
 }
 elsif ($cgi->param('changeuser') == 1)
@@ -66,6 +78,7 @@ elsif ($cgi->param('changeuser') == 1)
   $crms->SetAlias(undef, $cgi->param('newuser'));
   $cgi->delete_all();
 }
+
 my $user = $crms->get('user');
 
 ### Review submission: all projects go through here.
@@ -110,17 +123,6 @@ if ($page eq 'finishReview')
     print '<script type="text/javascript">window.close();</script>';
     exit(0);
   }
-}
-
-if ($redirect && !$debugAuth)
-{
-  if ($crms->GetSystemVar('logAuth'))
-  {
-    my $db = $crms->AuthDebugData();
-    $crms->Note($db);
-  }
-  print $cgi->redirect($redirect);
-  exit(0);
 }
 
 if ($cgi->param('download'))
