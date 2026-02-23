@@ -59,10 +59,11 @@ sub new
     print "<strong>Warning: no CGI passed to <code>CRMS->new()</code>\n" unless $cgi;
     $self->set('cgi',      $cgi);
     $self->set('debugSql', $args{'debugSql'});
-    $self->set('debugVar', $args{'debugVar'});
     $self->SetupUser();
+    if ($cgi->param('debugAuth')) {
+      $self->AuthDebugData;
+    }
   }
-  $self->DebugVar('self', $self);
   return $self;
 }
 
@@ -562,75 +563,14 @@ END
   }
 }
 
-sub DebugVar
-{
-  my $self = shift;
-  my $var  = shift;
-  my $val  = shift;
-
-  my $debug = $self->get('debugVar');
-  if ($debug)
-  {
-    my $ct = $self->get('debugCount') || 0;
-	  my $html = <<END;
-    <div class="debug">
-      <div class="debugVar" onClick="ToggleDiv('details$ct', 'debugVarDetails');">
-        VAR $var
-      </div>
-      <div id="details$ct" class="divHide"
-           style="background-color: #fcc;" onClick="ToggleDiv('details$ct', 'debugVarDetails');">
-        %s
-      </div>
-    </div>
-END
-    my $msg = sprintf $html, Dumper($val);
-    my $storedDebug = $self->get('storedDebug') || '';
-    $self->set('storedDebug', $storedDebug. $msg);
-    $ct++;
-    $self->set('debugCount', $ct);
-  }
-}
-
-sub DebugAuth
-{
-  my $self = shift;
-
-  my $debug = $self->get('debugAuth');
-  if ($debug)
-  {
-    my $ct = $self->get('debugCount') || 0;
-	  my $html = <<END;
-    <div class="debug">
-      <div class="debugVar" onClick="ToggleDiv('details$ct', 'debugVarDetails');">
-        AUTH
-      </div>
-      <div id="details$ct" class="divHide"
-           style="background-color: #fcc;" onClick="ToggleDiv('details$ct', 'debugVarDetails');">
-        %s
-      </div>
-    </div>
-END
-    my $storedDebug = $self->get('storedDebug') || '';
-    $self->set('storedDebug', $storedDebug. $self->AuthDebugHTML());
-    $ct++;
-    $self->set('debugCount', $ct);
-  }
-}
-
+# Log auth debugging information to the crms.note table.
 sub AuthDebugData
 {
   my $self = shift;
-  my $html = shift;
 
   my $note1 = $self->get('id_note') || '';
   my $note2 = $self->get('auth_note') || '';
-  my $msg = $note1. "\n". $note2;
-  if ($html)
-  {
-    $msg = CGI::escapeHTML($msg);
-    $msg =~ s/\n+/<br\/>/gs;
-  }
-  return $msg;
+  $self->Note($note1 . "\n" . $note2);
 }
 
 # Called to return and flush any accumulated debugging display.
@@ -7908,6 +7848,7 @@ sub SubmitMail
   $self->PrepareSubmitSql($sql, $id, $user, $text, $uuid, $to, $wait);
 }
 
+# DEPRECATED. Remove UUID::Tiny from Dockerfile and use CRMS::Utility::Data::uuid instead.
 sub UUID
 {
   my $self = shift;
