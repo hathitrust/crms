@@ -9,7 +9,6 @@ BEGIN {
 }
 
 use CGI;
-use Data::Dumper;
 use Encode;
 use POSIX;
 use Template;
@@ -20,21 +19,18 @@ use CRMS;
 binmode(STDOUT, ':encoding(UTF-8)');
 my $cgi = new CGI;
 my $page = $cgi->param('p');
-my $debugAuth = $cgi->param('debugAuth');
 my $debugSql = $cgi->param('debugSql');
-my $debugVar = $cgi->param('debugVar');
-my $debug = $cgi->param('debug');
 my $crms = CRMS->new(
         cgi       => $cgi,
         verbose   => 0,
-        debugAuth => $debugAuth,
-        debugSql  => $debugSql,
-        debugVar  => $debugVar
+        debugSql  => $debugSql
         );
 my $redirect;
 my $uri = $ENV{'REQUEST_URI'};
 $uri =~ s/&/;/g;
 my $target = uri_escape_utf8('https://'. $ENV{'HTTP_HOST'}. $uri);
+# remote_user is the crms.users primary key
+# If not set, may be authenticated with ht.ht_users but not in the CRMS system
 if (!$crms->get('remote_user'))
 {
   $redirect = 'https://'. $ENV{'HTTP_HOST'}. "/cgi/wayf?target=$target";
@@ -43,6 +39,14 @@ if ($crms->get('stepup') && $crms->get('stepup_redirect'))
 {
   $redirect = $crms->get('stepup_redirect');
 }
+
+# If $redirect is set then the user is unauthenticated
+# Emit the redirect immediately and terminate
+if ($redirect) {
+  print $cgi->redirect($redirect);
+  exit;
+}
+
 if ($page eq 'Logout')
 {
   # Remove all locks for this user.
@@ -59,6 +63,8 @@ if ($page eq 'Logout')
     $crms->UnlockAllItemsForUser();
     $target =~ s/logout/home/gi;
     $redirect = 'https://' . $ENV{'HTTP_HOST'} . '/cgi/logout?' . $target;
+    print $cgi->redirect($redirect);
+    exit;
   }
 }
 elsif ($cgi->param('changeuser') == 1)
@@ -66,6 +72,7 @@ elsif ($cgi->param('changeuser') == 1)
   $crms->SetAlias(undef, $cgi->param('newuser'));
   $cgi->delete_all();
 }
+
 my $user = $crms->get('user');
 
 ### Review submission: all projects go through here.
@@ -110,17 +117,6 @@ if ($page eq 'finishReview')
     print '<script type="text/javascript">window.close();</script>';
     exit(0);
   }
-}
-
-if ($redirect && !$debugAuth)
-{
-  if ($crms->GetSystemVar('logAuth'))
-  {
-    my $db = $crms->AuthDebugData();
-    $crms->Note($db);
-  }
-  print $cgi->redirect($redirect);
-  exit(0);
 }
 
 if ($cgi->param('download'))
@@ -193,22 +189,20 @@ if (!$tt->process($input, $vars))
   printf "<h3>%s</h3>\n", $tt->error();
   die $tt->error();
 }
-print $crms->Debug();
-if ($debugAuth)
-{
-  my $db = $crms->AuthDebugData(1);
-  print <<END;
-<div>
-    <h2>Auth Debug</h2>
-    <span style="color:black;"><code>$db</code></span>
-  </div>
-END
-}
 
-if ($debug)
+# Debugging output is restricted to development instance
+exit if CRMS::Config->new->instance ne 'development';
+
+# Print accumulated output of DebugSql calls
+print $crms->Debug();
+
+# Print diagnostics with debug URL parameter
+if ($cgi->param('debug'))
 {
   print "<div class=\"debug-footer\">\n<h3>Debug Information</h3>\n";
   eval {
+    use Data::Dumper;
+
     printf 'Host: <b>%s</b><br/>', `hostname`;
     my $dbinfo = $crms->DbInfo();
     $dbinfo =~ s/\n/<br\/>/g;

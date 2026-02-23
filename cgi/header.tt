@@ -10,7 +10,7 @@
   [% IF reviewType %]
     <script src="[% crms.WebPath('web', 'js/review.js') %]"></script>
   [% END %]
-  [% IF crms.get('debugSql') || crms.get('debugVar') %]
+  [% IF crms.get('debugSql') %]
     <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/debug.css') %]"/>
   [% END %]
   [% IF page == 'exportStats' %]
