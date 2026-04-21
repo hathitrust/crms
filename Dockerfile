@@ -32,8 +32,9 @@ RUN apt-get update && apt-get install -y \
   libyaml-perl \
   libmarc-record-perl \
   libmarc-xml-perl \
-  perl \
-  wget
+  nodejs \
+  npm \
+  perl
 
 RUN cpanm --notest \
   Devel::Cover::Report::Coveralls \
@@ -45,20 +46,5 @@ RUN mkdir -p $ROOTDIR
 COPY . $ROOTDIR
 WORKDIR $ROOTDIR
 
-ENV NODE_VERSION 22
-
-# install nvm
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
-
-# set env
-ENV NVM_DIR=/root/.nvm
-
-# install node
-RUN bash -c "source $NVM_DIR/nvm.sh && nvm install $NODE_VERSION"
-
-# install dependencies
-RUN bash -c "source $NVM_DIR/nvm.sh && npm ci && npm run build"
-
-
-# set ENTRYPOINT for reloading nvm-environment
-ENTRYPOINT ["bash", "-c", "source $NVM_DIR/nvm.sh && exec \"$@\"", "--"]
+RUN npm ci
+RUN npm run build
