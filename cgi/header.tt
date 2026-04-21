@@ -1,20 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+  <!--
+    There us only one JS file we need: public/scripts/main.js
+    
+    There are four CSS files:
+      public/styles/dashboard.css   WILL BE GOING AWAY
+      public/styles/debug.css       SHOULD BE MERGED WITH review.css/crms.css?
+      public/styles/review.css      SHOULD BE RENAMED crms.css?
+      public/styles/tippy.css       NOT INVENTED HERE
+    
+    FIXME: add and use CRMS::Utility for path to CSS and JS files
+  -->
     <meta charset="utf-8"/>
     <link rel="icon" type="image/png" href="[% crms.WebPath('web', crms.GetSystemVar('favicon')) %]"/>
-    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'scripts/crms.css') %]"/>
-    <script src="[% crms.WebPath('public', 'scripts/main.js') %]"></script>
-  [% page = cgi.param('p') %]
-  [% reviewType = (page == 'review' OR page == 'stanford' OR page == 'frontmatter') %]
-  <script src="[% crms.WebPath('web', 'js/datepicker.packed.js') %]"></script>
-  [% IF crms.get('debugSql') %]
-    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'styles/debug.css') %]"/>
-  [% END %]
 
-  <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'styles/review.css') %]"/>
-  [% where = crms.WhereAmI() %]
-  [% IF where != 'Production' %][% title = title _ ' - ' _ where %][% END %]
+    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'scripts/review.css') %]"/>
+    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'scripts/tippy.css') %]"/>
+    [% IF crms.get('debugSql') %]
+      <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'styles/debug.css') %]"/>
+    [% END %]
+
+    <script src="[% crms.WebPath('public', 'scripts/main.js') %]"></script>
+    [% page = cgi.param('p') %]
+    [% reviewType = (page == 'review' OR page == 'stanford') %]
+    [% where = crms.WhereAmI() %]
+    [% IF where != 'Production' %][% title = title _ ' - ' _ where %][% END %]
     <title>[% title %] - [% crms.PageToEnglish(page) %]</title>
   </head>
   <body>

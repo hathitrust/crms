@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "npm run build:css && npm run build:js",
-    "build:css": "sass $* assets/styles:public/styles --style=compressed --load-path=node_modules",
+    "build:css": "assets/build_css.sh",
     "build:js": "assets/build.sh"
   }
 }

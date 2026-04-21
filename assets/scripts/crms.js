@@ -1,5 +1,3 @@
-import Highcharts from 'highcharts/esm/highcharts.js';
-
 function setCookie(name,value,expiredays)
 {
   var exdate = new Date();
