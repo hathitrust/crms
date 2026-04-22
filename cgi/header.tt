@@ -15,8 +15,8 @@
     <meta charset="utf-8"/>
     <link rel="icon" type="image/png" href="[% crms.WebPath('web', crms.GetSystemVar('favicon')) %]"/>
 
-    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'scripts/review.css') %]"/>
-    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'scripts/tippy.css') %]"/>
+    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'styles/review.css') %]"/>
+    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'styles/tippy.css') %]"/>
     [% IF crms.get('debugSql') %]
       <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'styles/debug.css') %]"/>
     [% END %]

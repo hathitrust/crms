@@ -183,7 +183,7 @@ export function popRenewalDate()
       if (req.status == 200)
       {
         var rights = document.getElementsByName("rights");
-        var sel = GetCheckedValue(rights);
+        var sel = getCheckedValue(rights);
         var und = document.getElementById('UNDNFI').title;
         renDate.value = req.responseText;
         // PDUS if renewal is on or before the current year minus 69
@@ -249,14 +249,14 @@ function deselectCurrentRights() {
   }
 }
 
-// Internal function
+// Get the URL for one of our Ajax endpoints
 // ajaxURL("predictRights") => "https://babel.hathitrust.org/crms/cgi/predictRights"
-function ajaxURL(target) {
+export function ajaxURL(target) {
   return window.location.protocol + "//" + window.location.host + "/crms/cgi/" + target;
 }
 
-// Internal function
-function togglePredictionLoader(display) {
+// Display or hide the prediction loader
+export function togglePredictionLoader(display) {
   var img = document.getElementById("predictionLoader");
   if (img) {
     img.style.display = display ? "inline-block" : "none";
