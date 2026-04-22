@@ -9,6 +9,10 @@ use CRMS::Utility::Data qw();
 use CRMS::Utility::URL qw();
 
 # This is a stateless class so it's fine for the singleton pattern.
+# Modules under the Utility umbrella are cached and/or singletons themselves.
+# The important thing is, it must be easy and cheap to get the needed object
+# given a top-level CRMS::Utility object.
+# This singleton is passed to the templates as `utility` in `cgi/crms`
 my $ONE_TRUE_UTILITY;
 
 sub new {

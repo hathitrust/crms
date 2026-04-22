@@ -14,7 +14,21 @@ subtest '#new' => sub {
 };
 
 subtest '#data' => sub {
-  ok(defined CRMS::Utility->new->data);
+  my $data = CRMS::Utility->new->data;
+  ok(defined $data);
+
+  subtest 'CRMS::Utility::Data cached' => sub {
+    is_deeply($data, CRMS::Utility->new->data);
+  };
+};
+
+subtest '#url' => sub {
+  my $url = CRMS::Utility->new->url;
+  ok(defined $url);
+
+  subtest 'CRMS::Utility::URL cached' => sub {
+    is_deeply($url, CRMS::Utility->new->url);
+  };
 };
 
 done_testing();
