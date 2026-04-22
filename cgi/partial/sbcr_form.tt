@@ -218,7 +218,7 @@ function insertUserReviewData(user) {
   if (button) { button.checked = "checked"; }
   // Note
   document.submitReview.note.value = review.note || "";
-  selMenuItem("category-menu", review.category || "");
+  crms.selectOption("category-menu", review.category || "");
   toggleADD();
 }
 
