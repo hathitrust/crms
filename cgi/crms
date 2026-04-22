@@ -183,7 +183,10 @@ my $vars = {
     yesterday => POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time-86400))
 };
 
-print $cgi->header(-charset => 'utf-8', 'cache-control' => 'private');
+# Do not cache review page EVER.
+# Otherwise do not allow shared cache.
+my $cache_control = ($page eq 'review') ? 'no-cache' : 'private';
+print $cgi->header(-charset => 'utf-8', 'cache-control' => $cache_control);
 if (!$tt->process($input, $vars))
 {
   printf "<h3>%s</h3>\n", $tt->error();
