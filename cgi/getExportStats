@@ -17,15 +17,5 @@ my $crms = CRMS->new(cgi => $cgi);
 my $year = $cgi->param('y');
 my $data = $crms->CreateExportData($year);
 
-if ( $data eq '') { print $cgi->header( -status => "400" ); }
-if (ref($data))
-{
-  my $json = JSON::XS->new->encode($data);
-  print $cgi->header(-type => 'application/json', -charset => 'utf-8');
-  print $json;
-}
-else
-{
-  print $cgi->header(-type => 'text/plain', -charset => 'utf-8');
-  print $data;
-}
+print $cgi->header(-type => 'text/plain', -charset => 'utf-8');
+print $data;
