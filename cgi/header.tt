@@ -15,13 +15,13 @@
     <meta charset="utf-8"/>
     <link rel="icon" type="image/png" href="[% crms.WebPath('web', crms.GetSystemVar('favicon')) %]"/>
 
-    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'styles/review.css') %]"/>
-    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'styles/tippy.css') %]"/>
+    <link rel="stylesheet" type="text/css" href="[% utility.url.css_url('review.css') %]"/>
+    <link rel="stylesheet" type="text/css" href="[% utility.url.css_url('tippy.css') %]"/>
     [% IF crms.get('debugSql') %]
-      <link rel="stylesheet" type="text/css" href="[% crms.WebPath('public', 'styles/debug.css') %]"/>
+      <link rel="stylesheet" type="text/css" href="[% utility.url.css_url('debug.css') %]"/>
     [% END %]
 
-    <script src="[% crms.WebPath('public', 'scripts/main.js') %]"></script>
+    <script src="[% utility.url.js_url('main.js') %]"></script>
     [% page = cgi.param('p') %]
     [% reviewType = (page == 'review' OR page == 'stanford') %]
     [% where = crms.WhereAmI() %]

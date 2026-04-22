@@ -6,6 +6,7 @@ use utf8;
 BEGIN {
   die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
   use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
 }
 
 use CGI;
@@ -15,6 +16,7 @@ use Template;
 use URI::Escape;
 
 use CRMS;
+use CRMS::Utility;
 
 binmode(STDOUT, ':encoding(UTF-8)');
 my $cgi = new CGI;
@@ -176,6 +178,7 @@ my $tt   = Template->new($config);
 my $vars = {
     title     => 'CRMS',
     crms      => $crms,
+    utility   => CRMS::Utility->new,
     cgi       => $cgi,
     user      => $user,
     project   => $crms->GetUserCurrentProject(),

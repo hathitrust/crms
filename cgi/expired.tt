@@ -1,4 +1,4 @@
-[% css = crms.WebPath('web', 'css/review.css') %]
+[% css = utility.url.css_url('review.css') %]
 [% crms.StartHTML('No Access', '<link rel="stylesheet" type="text/css" href="' _ css _ '"/>') %]
 
 [% exp = crms.IsUserExpired(userid) %]
