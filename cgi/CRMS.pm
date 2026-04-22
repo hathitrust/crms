@@ -4103,18 +4103,29 @@ sub CreateExportReport
     $title = shift @items;
     my $major = exists $majors{$title};
     $title =~ s/\s/&nbsp;/g;
-    my $cstyle = ($title eq 'Total')? 'class="total" style="text-align:right;"':'';
-    my $sstyle = ($major)? 'class="major"':
-                           (($title =~ m/^Status/)? 'class="minor"':
-                                                    ($title eq 'Total')? 'class="total"':''),
+    my ($cstyle, $sstyle) = ('', '');
+    if ($title eq 'Total') {
+      $cstyle = 'class="total nowrap" style="text-align:right;"';
+    } else {
+      $cstyle = 'class="nowrap"';
+    }
+    if ($major) {
+      $sstyle = 'class="major nowrap"';
+    } elsif ($title eq 'Total') {
+      $sstyle = 'class="total nowrap"';
+    }
     my $padding = ($major)? '':$nbsps;
     my $newline = "<tr><th $cstyle><span $sstyle>$padding$title</span></th>";
     foreach my $n (@items)
     {
       $n =~ s/\s/&nbsp;/g;
-      $cstyle = ($major)? 'class="major"':
-                          ($title eq 'Total')? 'class="total" style="text-align:center;"':
-                                               (($title =~ m/^Status/)? ' class="minor"':'');
+      if ($major) {
+        $cstyle = 'class="major nowrap"';
+      } elsif ($title eq 'Total') {
+        $cstyle = 'class="total" style="text-align:center;"';
+      } else {
+        $cstyle = '';
+      }
       $n = '<strong>'. $n. '</strong>' if $title eq 'Total';
       $newline .= "<td $cstyle>$padding$n</td>",
     }

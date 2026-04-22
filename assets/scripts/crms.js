@@ -6,28 +6,6 @@ function setCookie(name,value,expiredays)
     ((expiredays==null) ? "" : ";expires="+exdate.toGMTString());
 }
 
-export function loadChart(id, url) {
-  var req = new XMLHttpRequest();
-  req.onreadystatechange = function()
-  { 
-    if (req.readyState == 4)
-    {
-      if (req.status == 200)
-      {
-        var obj = document.getElementById(id);
-        var data = JSON.parse(req.responseText);
-		    Highcharts.chart(id, data);
-		  }
-      else    
-      {
-        alert("Error: "+url+" failed:"+req.status);
-      }
-    }
-  };
-  req.open("GET", url, true);
-  req.send(null);
-}
-
 export function toggleVisibility(id) {
   var me = document.getElementById(id);
   if (me == null)
