@@ -22,7 +22,7 @@ function CheckAll(box,formid)
 [% projs = crms.GetUserProjects() %]
 [% cp = crms.GetUserCurrentProject() %]
 [% IF projs.size > 1 %]
-  <form action="crms">
+  <form action="crms" method="post">
     <input type="hidden" name="projectForm" value="1"/>
     <label for="projectSel">Current project:</label>
     <select name="projectSel" id="projectSel" onchange="this.form.submit()">
