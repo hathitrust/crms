@@ -12,6 +12,8 @@
   "scripts": {
     "build": "npm run build:css && npm run build:js",
     "build:css": "assets/build_css.sh",
-    "build:js": "assets/build.sh"
+    "build:js": "assets/build.sh",
+    "watch:css": "npm run build:css -- --watch",
+    "watch:js": "npm run build:js -- --watch=forever"
   }
 }

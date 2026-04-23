@@ -50,4 +50,28 @@ services:
     depends_on:
       mariadb: *healthy
       mariadb_ht: *healthy
+      js:
+        condition: service_started
+      css:
+        condition: service_started
     command: scripts/test.sh
+
+  js:
+    build:
+      context: .
+    volumes:
+      - .:/htapps/babel/crms
+    command:
+      - npm
+      - run
+      - watch:js
+
+  css:
+    build:
+      context: .
+    volumes:
+      - .:/htapps/babel/crms
+    command:
+      - npm
+      - run
+      - watch:css
