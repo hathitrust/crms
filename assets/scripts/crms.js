@@ -68,14 +68,6 @@ export function sfHover() {
   }
 }
 
-// action code for debugger bars
-export function toggleDiv(id, className)
-{
-  var el = document.getElementById(id);
-  if (el.className == 'divHide') { el.className = className; }
-  else { el.className = 'divHide'; }
-}
-
 // FIXME: this is unneeded compatibility code and callers should just call
 // window.addEventListener instead.
 // https://stackoverflow.com/questions/15564029/adding-to-window-onload-event
