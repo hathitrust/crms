@@ -47,7 +47,7 @@
 
   <script type="text/javascript">
 <!--
-  crms.addEvent(window, 'load', Partial_authorities_mainWindowLoad);
+  window.addEventListener('load', Partial_authorities_mainWindowLoad);
   function Partial_authorities_mainWindowLoad(e) {
     crms.changeFrame1();
     crms.changeFrame2();

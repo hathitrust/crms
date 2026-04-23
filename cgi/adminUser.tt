@@ -3,7 +3,7 @@
 <h2>User Accounts:</h2>
 <script type="text/Javascript">
 <!--
-crms.addEvent(window, 'load', function(e)
+window.addEventListener('load', function(e)
 {
   tippy('.tippy', {
     allowHTML: true

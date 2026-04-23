@@ -1,6 +1,6 @@
 <script>
 <!--
-crms.addEvent(window, 'load', crms.sfHover);
+  window.addEventListener('load', crms.sfHover);
 -->
 </script>
 

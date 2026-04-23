@@ -176,7 +176,7 @@ var gReviewData = [% data.json %];
 // Save contents of ADD entry when Pub is selected and Actual Pub Date is swapped in.
 // Restore from this value if Pub is deselected.
 var gSavedADD = '';
-crms.addEvent(window, 'load', partial_sbcr_form_mainWindowLoad);
+window.addEventListener('load', partial_sbcr_form_mainWindowLoad);
 
 function partial_sbcr_form_mainWindowLoad(e) {
   [% IF importUser %]

@@ -44,7 +44,7 @@ function CheckAll(box,formid)
 	}
 }
 
-crms.addEvent(window, 'load', function(e)
+window.addEventListener('load', function(e)
 {
   tippy('.tippy', {
     allowHTML: true

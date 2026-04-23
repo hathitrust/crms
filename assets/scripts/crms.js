@@ -68,21 +68,6 @@ export function sfHover() {
   }
 }
 
-// FIXME: this is unneeded compatibility code and callers should just call
-// window.addEventListener instead.
-// https://stackoverflow.com/questions/15564029/adding-to-window-onload-event
-// Example: addEvent(window, 'load', myfunc);
-export function addEvent(element, eventName, fn) {
-  if (element.addEventListener)
-  {
-    element.addEventListener(eventName, fn, false);
-  }
-  else if (element.attachEvent)
-  {
-    element.attachEvent('on' + eventName, fn);
-  }
-}
-
 export function changeFrame1(doSize) {
   var sel = document.getElementById("search1Select");
   var url = sel.options[sel.selectedIndex].value;

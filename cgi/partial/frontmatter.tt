@@ -91,7 +91,7 @@
                new Array(pages)
              [% END %];
 
-  crms.addEvent(window, 'load', function(e)
+  window.addEventListener('load', function(e)
   {
     el = document.getElementById('submitButton');
     el.disabled = true;

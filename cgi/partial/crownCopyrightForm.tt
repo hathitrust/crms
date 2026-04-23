@@ -196,7 +196,7 @@
 <script>
 var gPubDate = '[% data.bibdata.display_date %]';
 var gReviewData = [% data.json %];
-crms.addEvent(window, 'load', function(e)
+window.addEventListener('load', function(e)
 {
   [% IF importUser %]
     popReviewInfo('[% importUser %]');
