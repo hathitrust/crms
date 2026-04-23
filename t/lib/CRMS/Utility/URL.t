@@ -13,12 +13,12 @@ subtest '#new' => sub {
   ok(defined CRMS::Utility::URL->new);
 };
 
-#subtest '#css_url' => sub {
-#  my $file = 'review.css';
-#  my $url = CRMS::Utility::URL->new->css_url($file);
-#  ok(length $url > 0, 'produces a URL string');
-#  ok($url =~ m/\?v=\d+$/, 'URL has a cache buster param');
-#};
+subtest '#css_url' => sub {
+  my $file = 'review.css';
+  my $url = CRMS::Utility::URL->new->css_url($file);
+  ok(length $url > 0, 'produces a URL string');
+  ok($url =~ m/\?v=\d+$/, 'URL has a cache buster param');
+};
 
 subtest '#js_url' => sub {
   my $file = 'main.js';
