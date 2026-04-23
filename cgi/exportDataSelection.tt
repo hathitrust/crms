@@ -76,7 +76,7 @@ Restrict selection:<br/>
 
 <label for="records">Display:</label>
 <input size="3" type="text" id="records" name="records" value="[% recs %]"
-       onblur="setCookie('recs',this.value,31);"
+       onblur="crms.setCookie('recs', this.value, 31);"
 />
 records per page.
 <br/>

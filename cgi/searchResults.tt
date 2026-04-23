@@ -138,7 +138,7 @@ crms.addEvent(window, 'load', function(e)
 
   [% IF crms.IsUserAtLeastExpert() && p == 'adminHistoricalReviews' %]
       <input type="checkbox" [% IF showSysID %]checked="checked"[% END %] id="sysIDCB"
-             onchange="setCookie('showSysID',(this.checked)?1:0,31);
+             onchange="crms.setCookie('showSysID', (this.checked)? 1 : 0, 31);
              var tbl  = document.getElementById('resultsTable');
              var rows = tbl.getElementsByTagName('tr');
              var vis = (this.checked)? 'table-cell':'none';
