@@ -1,16 +1,5 @@
 [% INCLUDE header.tt %]
 
-<script>
-function CheckAll(box,formid)
-{
-	var aa=document.getElementById(formid);
-	for (var i=0; i < aa.elements.length; i++)
-	{
-	  aa.elements[i].checked = box.checked;
-	}
-}
-</script>
-
 [% pf = cgi.param('projectForm') %]
 [% ps = cgi.param('projectSel') %]
 [% IF pf == 1 %]
@@ -110,7 +99,7 @@ function CheckAll(box,formid)
 [% IF locked.size %]
   [% sysStatus = crms.GetSystemStatus().1 %]
   <br/><br/><form action="crms" id="checks">
-  <input type="checkbox" id="SelectAllCB" onclick="CheckAll(this,'checks');"/>
+  <input type="checkbox" id="SelectAllCB" onclick="crms.syncCheckboxToForm(this, 'checks');"/>
   <label for="SelectAllCB">Select All</label>&nbsp;&nbsp;&nbsp;&nbsp;
   [% IF sysStatus == 'normal' %]
     <input type="submit" name="unlockSel" value="Unlock Selected Volumes"/>

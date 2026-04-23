@@ -41,6 +41,15 @@ export function selectOption(id, value) {
   }
 }
 
+// Propagates checked status from `checkbox` to all the other checkboxes
+// in form with id `formid`
+export function syncCheckboxToForm(box, formid) {
+	var form = document.getElementById(formid);
+	for (var i = 0; i < form.elements.length; i++) {
+	  form.elements[i].checked = box.checked;
+	}
+}
+
 export function sfHover() {
   var sfEls = document.getElementById("menu").getElementsByTagName("li");
   for (var i=0; i<sfEls.length; i++)

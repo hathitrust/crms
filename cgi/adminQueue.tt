@@ -2,17 +2,6 @@
 
 <h2>All Locked Items:</h2>
 
-<script>
-function CheckAll(box,formid)
-{
-	var aa=document.getElementById(formid);
-	for (var i=0; i < aa.elements.length; i++)
-	{
-	  aa.elements[i].checked = box.checked;
-	}
-}
-</script>
-
 [% IF cgi.param('clear') %]
   [% crms.RemoveOldLocks() %]
 [% ELSIF cgi.param('unlockSel') %]
@@ -43,7 +32,7 @@ function CheckAll(box,formid)
   <blockquote><a href="crms?p=adminQueue;clear=1">Clear old locks</a></blockquote><br/>
   <form action="crms" id="checks">
   <input type="hidden" name="p" value="adminQueue"/>
-  <input type="checkbox" id="SelectAllCB" onclick="CheckAll(this,'checks');"/>
+  <input type="checkbox" id="SelectAllCB" onclick="crms.syncCheckboxToForm(this, 'checks');"/>
   <label for="SelectAllCB">Select All</label>&nbsp;&nbsp;&nbsp;&nbsp;
   <input type="submit" name="unlockSel" value="Unlock Selected Volumes"/><br/><br/>
   <table class="exportStats" style="width:55%">

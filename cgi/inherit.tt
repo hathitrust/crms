@@ -141,16 +141,6 @@ inheriting volumes per page.
 
 
 <script>
-function CheckAll(box,formid)
-{
-	var aa=document.getElementById(formid);
-	for (var i=0; i < aa.elements.length; i++)
-	{
-	  aa.elements[i].checked = box.checked;
-	}
-	EnableButtons(formid);
-}
-
 function CountChecked(formid)
 {
 	var aa=document.getElementById(formid);
@@ -218,7 +208,10 @@ function EnableButtons(formid)
     <input type="hidden" name="p" value="$p"/>
     <input type="hidden" name="auto" value="$auto"/>
     <input type="hidden" name="n" value="$n"/>
-    <input type="checkbox" id='SelectAllButton' onclick="CheckAll(this,'checks');"/>
+    <input type="checkbox"
+      id='SelectAllButton'
+      onclick="crms.syncCheckboxToForm(this,'checks');EnableButtons('checks')"
+    />
     <label for="SelectAllButton">Select All</label>
     &nbsp;&nbsp;&nbsp;&nbsp;
     [% IF !auto %]
