@@ -23,7 +23,6 @@ use File::Copy;
 use List::Util qw(min max);
 use LWP::UserAgent;
 use POSIX;
-use Time::HiRes;
 use Unicode::Normalize;
 use XML::LibXML;
 
@@ -58,7 +57,6 @@ sub new
     my $cgi = $args{'cgi'};
     print "<strong>Warning: no CGI passed to <code>CRMS->new()</code>\n" unless $cgi;
     $self->set('cgi',      $cgi);
-    $self->set('debugSql', $args{'debugSql'});
     $self->SetupUser();
     if ($cgi->param('debugAuth')) {
       $self->AuthDebugData;
@@ -439,11 +437,8 @@ sub PrepareSubmitSql
 
   return 1 if $self->get('noop');
   my $dbh = $self->GetDb();
-  my $t1 = Time::HiRes::time();
   my $sth = $dbh->prepare($sql);
   eval { $sth->execute(@_); };
-  my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), 1, undef, @_);
   if ($@)
   {
     my $msg = sprintf 'SQL failed (%s): %s', Utilities::StringifySql($sql, @_), $sth->errstr;
@@ -478,7 +473,6 @@ sub SelectAll
 
   my $ref = undef;
   my $dbh = $self->GetDb();
-  my $t1 = Time::HiRes::time();
   eval {
     $ref = $dbh->selectall_arrayref($sql, undef, @_);
   };
@@ -488,8 +482,6 @@ sub SelectAll
     $self->SetError($msg);
     $self->Logit($msg);
   }
-  my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, undef, @_);
   return $ref;
 }
 
@@ -500,7 +492,6 @@ sub SelectAllSDR
 
   my $ref = undef;
   my $dbh = $self->GetSdrDb();
-  my $t1 = Time::HiRes::time();
   eval {
     $ref = $dbh->selectall_arrayref($sql, undef, @_);
   };
@@ -510,8 +501,6 @@ sub SelectAllSDR
     $self->SetError($msg);
     $self->Logit($msg);
   }
-  my $t2 = Time::HiRes::time();
-  $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, 'ht_rights', @_);
   return $ref;
 }
 
@@ -525,44 +514,6 @@ sub WildcardList
   return '(' . ('?,' x ($n-1)) . '?)';
 }
 
-sub DebugSql
-{
-  my $self = shift;
-  my $sql  = shift;
-  my $time = shift;
-  my $ref  = shift;
-  my $db   = shift;
-
-  my $debug = $self->get('debugSql');
-  if ($debug)
-  {
-    my $ct = $self->get('debugCount') || 0;
-    my @parts = split m/\s+/, $sql;
-    my $type = uc $parts[0];
-    $type .= ' '. $db if defined $db;
-    my $trace = Utilities::LocalCallChain();
-    $trace = join '<br>', @{$trace};
-    my $stat = ($ref)? '':'<i>FAIL</i>';
-	  my $html = <<END;
-    <div class="debug">
-      <div class="debugSql" onClick="crms.toggleDiv('details$ct', 'debugSqlDetails');">
-        SQL QUERY [$type] ($ct) $stat
-      </div>
-      <div id="details$ct" class="divHide"
-           style="background-color: #9c9;" onClick="crms.toggleDiv('details$ct', 'debugSqlDetails');">
-        $sql <strong>{%s}</strong> <i>(%.3fms)</i><br/>
-        <i>$trace</i>
-      </div>
-    </div>
-END
-    my $msg = sprintf $html, join(',', @_), $time;
-    my $storedDebug = $self->get('storedDebug') || '';
-    $self->set('storedDebug', $storedDebug. $msg);
-    $ct++;
-    $self->set('debugCount', $ct);
-  }
-}
-
 # Log auth debugging information to the crms.note table.
 sub AuthDebugData
 {
@@ -571,16 +522,6 @@ sub AuthDebugData
   my $note1 = $self->get('id_note') || '';
   my $note2 = $self->get('auth_note') || '';
   $self->Note($note1 . "\n" . $note2);
-}
-
-# Called to return and flush any accumulated debugging display.
-sub Debug
-{
-  my $self = shift;
-
-  my $d = $self->get('storedDebug') || '';
-  $self->set('storedDebug', '');
-  $d;
 }
 
 sub GetCandidatesSize
@@ -5980,11 +5921,8 @@ sub GetUserIPs
     $self->set('ht_repository', $sdr_dbh) if defined $sdr_dbh;
   }
   my ($ipr, $mfa);
-  my $t1 = Time::HiRes::time();
   eval {
     my $ref = $sdr_dbh->selectall_arrayref($sql, undef, $user, $user);
-    my $t2 = Time::HiRes::time();
-    $self->DebugSql($sql, 1000.0*($t2-$t1), $ref, 'ht_repository', $user, $user);
     $ipr = $ref->[0]->[0];
     $mfa = $ref->[0]->[1];
   };

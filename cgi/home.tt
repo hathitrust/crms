@@ -37,7 +37,6 @@ function CheckAll(box,formid)
 
 <!--<div id="progress" style="width:450px;float:right;margin-right:240px;"></div>-->
 
-[% crms.Debug %]
 [% n = crms.CountHolds() %]
 [% IF n %]<h4>You have $n [% crms.Pluralize('volume', n) %] on hold.</h4>[% END %]
 

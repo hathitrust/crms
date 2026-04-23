@@ -4,8 +4,7 @@
   <!--
     There us only one JS file we need: public/scripts/main.js
     
-    There are three CSS files:
-      public/styles/debug.css       SHOULD BE MERGED WITH review.css/crms.css?
+    There are two CSS files:
       public/styles/review.css      SHOULD BE RENAMED crms.css?
       public/styles/tippy.css       NOT INVENTED HERE
     
@@ -16,9 +15,6 @@
 
     <link rel="stylesheet" type="text/css" href="[% utility.url.css_url('review.css') %]"/>
     <link rel="stylesheet" type="text/css" href="[% utility.url.css_url('tippy.css') %]"/>
-    [% IF crms.get('debugSql') %]
-      <link rel="stylesheet" type="text/css" href="[% utility.url.css_url('debug.css') %]"/>
-    [% END %]
 
     <script src="[% utility.url.js_url('main.js') %]"></script>
     [% page = cgi.param('p') %]
@@ -35,7 +31,6 @@
     [% IF where %]
     <div class="topBanner">
       [% crms.DevBanner().replace(" ","&nbsp;") %]
-      [% crms.Debug %]
     </div>
     [% END %]
     <div class="pages" id="homePage">
@@ -76,11 +71,11 @@
         </table>
       </div>
     </div>
-    [% crms.Debug %]
+
     <div>[% INCLUDE nav.tt %]</div>
     <br/><br/><br/>
 [% END %]
-[% crms.Debug %]
+
 [% IF r.1 != 'normal' %]
   [% IF page != 'systemStatus' %]
     [% IF r.1 == 'down' %]

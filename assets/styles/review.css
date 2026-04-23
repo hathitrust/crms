@@ -413,19 +413,6 @@ textarea {
 	border: 1px solid #72859A;
 }
 
-
-td.debugTab {
-  color:black;
-}
-
-td.debugExpl {
-  color:red;
-}
-
-td.debugVal {
-  color:red;
-}
-
 hr {
   border:0;
   color:#000000;

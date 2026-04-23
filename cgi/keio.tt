@@ -88,5 +88,4 @@ crms.addEvent(window, 'load', function(e)
   <br/>
 [% END %]
 
-[% crms.Debug() %]
 [% INCLUDE footer.tt %]

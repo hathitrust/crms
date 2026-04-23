@@ -21,12 +21,10 @@ use CRMS::Utility;
 binmode(STDOUT, ':encoding(UTF-8)');
 my $cgi = new CGI;
 my $page = $cgi->param('p');
-my $debugSql = $cgi->param('debugSql');
 my $crms = CRMS->new(
-        cgi       => $cgi,
-        verbose   => 0,
-        debugSql  => $debugSql
-        );
+  cgi     => $cgi,
+  verbose => 0,
+);
 my $redirect;
 my $uri = $ENV{'REQUEST_URI'};
 $uri =~ s/&/;/g;
@@ -198,9 +196,6 @@ if (!$tt->process($input, $vars))
 
 # Debugging output is restricted to development instance
 exit if CRMS::Config->new->instance ne 'development';
-
-# Print accumulated output of DebugSql calls
-print $crms->Debug();
 
 # Print diagnostics with debug URL parameter
 if ($cgi->param('debug'))

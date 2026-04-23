@@ -78,19 +78,6 @@ sub StackTrace
   return $trace . "--- End stack trace ---\n";
 }
 
-sub LocalCallChain
-{
-  my $i = 2;
-  my @chain;
-  while (my @call_details = (caller($i++)))
-  {
-    next if $call_details[3] eq '(eval)';
-    last if $call_details[3] =~ m/^Template/;
-    push @chain, $call_details[3];
-  }
-  return \@chain;
-}
-
 sub GenerateID
 {
   my @chars = ('a' .. 'z', 0 .. 9);

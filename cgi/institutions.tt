@@ -29,7 +29,6 @@
       [% 'IID: ' _ iid %]
     [% END %]
   [% END %]
-  [% crms.Debug() %]
 [% END %]
 
 [% insts = crms.GetInstitutions(order) %]
@@ -63,7 +62,6 @@
 </table>
 <br/>
 
-[% crms.Debug() %]
 [% IF crms.IsUserAdmin %]
 
 <h4>Add or Edit an Institution:</h4>
