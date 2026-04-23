@@ -4,15 +4,13 @@
 [% p_page  = cgi.param('page')  %]
 [% keio = crms.Keio() %]
 
-<script type="text/Javascript">
-<!--
+<script>
 window.addEventListener('load', function(e)
 {
   tippy('.tippy', {
     allowHTML: true
   });
 });
--->
 </script>
 
 <h2>Keio Daigaku Data:</h2>

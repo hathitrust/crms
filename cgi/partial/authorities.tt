@@ -45,14 +45,12 @@
   [% i = i + 1 %]
 [% END %]
 
-  <script type="text/javascript">
-<!--
+  <script>
   window.addEventListener('load', Partial_authorities_mainWindowLoad);
   function Partial_authorities_mainWindowLoad(e) {
     crms.changeFrame1();
     crms.changeFrame2();
   }
--->
   </script>
 
 </div>

@@ -114,7 +114,7 @@ if ($page eq 'finishReview')
   if ($editing && !$err)
   {
     print "Content-type: text/html\n\n";
-    print '<script type="text/javascript">window.close();</script>';
+    print '<script>window.close();</script>';
     exit(0);
   }
 }

@@ -33,8 +33,7 @@
 [% IF !dir %][% dir = 'ASC' %][% END %]
 
 [% CALL cgi.param('jump', '') %]
-<script type="text/Javascript">
-<!--
+<script>
 function CheckAll(box,formid)
 {
 	var aa=document.getElementById(formid);
@@ -50,7 +49,6 @@ window.addEventListener('load', function(e)
     allowHTML: true
   });
 });
--->
 </script>
 
 [% IF p == 'adminHistoricalReviews' && !search1.length() AND !search2.length() AND !search3.length() %]

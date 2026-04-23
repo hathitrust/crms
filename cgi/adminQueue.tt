@@ -2,8 +2,7 @@
 
 <h2>All Locked Items:</h2>
 
-<script type="text/javascript">
-<!--
+<script>
 function CheckAll(box,formid)
 {
 	var aa=document.getElementById(formid);
@@ -12,7 +11,6 @@ function CheckAll(box,formid)
 	  aa.elements[i].checked = box.checked;
 	}
 }
--->
 </script>
 
 [% IF cgi.param('clear') %]

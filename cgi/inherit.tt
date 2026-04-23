@@ -140,8 +140,7 @@ inheriting volumes per page.
 <br/>
 
 
-<script type="text/Javascript">
-<!--
+<script>
 function CheckAll(box,formid)
 {
 	var aa=document.getElementById(formid);
@@ -174,7 +173,6 @@ function EnableButtons(formid)
   el = document.getElementById('resetButton');
   if (el) { el.disabled = (n == 0); }
 }
--->
 </script>
 
 [% i = 0 %]

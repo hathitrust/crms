@@ -1,6 +1,6 @@
 [% INCLUDE header.tt %]
 
-<script type="text/javascript">
+<script>
 function ToggleVisibility(id, id2)
 {
    var e = document.getElementById(id);

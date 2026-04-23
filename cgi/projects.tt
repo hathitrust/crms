@@ -5,9 +5,7 @@
 [% cats = crms.AllAssignableCategories() %]
 [% auths = crms.AllAssignableAuthorities() %]
 [% users = crms.AllAssignableUsers() %]
-<script type="text/javascript">
-<!--
-
+<script>
 var gURLBase = "[% crms.WebPath('cgi', 'getProjectInfo') %]";
 // In case base URL has parameters
 if (!/\?/.test(gURLBase))
@@ -350,7 +348,6 @@ function addProject(name)
   req.open("GET", url, true);
   req.send(null);
 }
-// -->
 </script>
 
 <h2>Projects:</h2>

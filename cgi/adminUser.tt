@@ -1,15 +1,13 @@
 [% INCLUDE header.tt %]
 
 <h2>User Accounts:</h2>
-<script type="text/Javascript">
-<!--
+<script>
 window.addEventListener('load', function(e)
 {
   tippy('.tippy', {
     allowHTML: true
   });
 });
--->
 </script>
 
 <a href="[% crms.WebPath('web', 'pdf/UserLevelsPrivileges.pdf') %]"

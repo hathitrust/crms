@@ -21,7 +21,7 @@
 </table><br/>
 
 
-<script type="text/javascript">
+<script>
 function limitText(limitField, limitCount, limitNum)
 {
 	if (limitField.value.length > limitNum)

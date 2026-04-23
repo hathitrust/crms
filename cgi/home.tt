@@ -1,7 +1,6 @@
 [% INCLUDE header.tt %]
 
-<script type="text/javascript">
-<!--
+<script>
 function CheckAll(box,formid)
 {
 	var aa=document.getElementById(formid);
@@ -10,7 +9,6 @@ function CheckAll(box,formid)
 	  aa.elements[i].checked = box.checked;
 	}
 }
--->
 </script>
 
 [% pf = cgi.param('projectForm') %]
