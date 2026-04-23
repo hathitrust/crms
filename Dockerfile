@@ -1,9 +1,5 @@
 FROM debian:trixie
 
-ARG UNAME=crms
-ARG UID=1000
-ARG GID=1000
-
 RUN apt-get update && apt-get install -y \
   cpanminus \
   file \
@@ -46,15 +42,6 @@ RUN cpanm --notest \
 
 ENV SDRROOT /htapps/babel
 ENV ROOTDIR "${SDRROOT}/crms"
-
-RUN groupadd -g $GID -o $UNAME
-RUN useradd -m -d $ROOTDIR -u $UID -g $GID -o -s /bin/bash $UNAME
-RUN chmod 755 $ROOTDIR
-
-USER $UNAME
 WORKDIR $ROOTDIR
 
-COPY --chown=crms:crms . $ROOTDIR
-
-RUN npm ci
-RUN npm run build
+LABEL org.opencontainers.image.source="https://github.com/hathitrust/crms"

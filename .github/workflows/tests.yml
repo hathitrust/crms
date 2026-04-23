@@ -18,8 +18,10 @@ jobs:
         with:
           submodules: true
 
-      - name: Build docker image
-        run: docker compose build
+      - name: Set up tests
+        run: |
+          docker compose build
+          ./scripts/setup-dev.sh
 
       - name: Run tests
         run: docker compose run test scripts/test_and_cover.sh
