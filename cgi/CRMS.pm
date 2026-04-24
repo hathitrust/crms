@@ -235,6 +235,11 @@ sub NeedStepUpAuth
 
 # The href or URL to use for a given asset type.
 # WebPath('web', 'logo.png') => '/crms/web/logo.png'
+# TODO: this functionality is in the process of moving to `CRMS::Utility::URL`
+# Now is mainly used for displaying img tags.
+# I'd like to see a JSON file that consolidates info on our various images,
+# including description and dimensions, and a utility method `image_tag` that
+# can assemble all of it when called with a standard image name like 'check'.
 sub WebPath
 {
   my $self = shift;
