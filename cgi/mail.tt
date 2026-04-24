@@ -4,7 +4,7 @@
   [% mail = to %]
 [% END %]
 
-[% css = utility.url.css_url('review.css') %]"
+[% css = utility.url.css_url('main.css') %]
 [% title = (to)? 'Contact Reviewer' : 'Contact CRMS Experts' %]
 [% crms.StartHTML(title, '<link rel="stylesheet" type="text/css" href="' _ css _ '"/>') %]
 <script>

@@ -14,7 +14,7 @@ subtest '#new' => sub {
 };
 
 subtest '#css_url' => sub {
-  my $file = 'review.css';
+  my $file = 'main.css';
   my $url = CRMS::Utility::URL->new->css_url($file);
   ok(length $url > 0, 'produces a URL string');
   ok($url =~ m/\?v=\d+$/, 'URL has a cache buster param');
