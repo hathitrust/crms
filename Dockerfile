@@ -32,8 +32,9 @@ RUN apt-get update && apt-get install -y \
   libyaml-perl \
   libmarc-record-perl \
   libmarc-xml-perl \
-  perl \
-  wget
+  nodejs \
+  npm \
+  perl
 
 RUN cpanm --notest \
   Devel::Cover::Report::Coveralls \
@@ -41,6 +42,6 @@ RUN cpanm --notest \
 
 ENV SDRROOT /htapps/babel
 ENV ROOTDIR "${SDRROOT}/crms"
-RUN mkdir -p $ROOTDIR
-COPY . $ROOTDIR
 WORKDIR $ROOTDIR
+
+LABEL org.opencontainers.image.source="https://github.com/hathitrust/crms"

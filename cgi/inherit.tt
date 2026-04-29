@@ -120,17 +120,17 @@ Restrict selection:
 
 <label for="records">Display:</label>
 <input size="3" type="text" id="records" name="records" value="[% recs %]"
-       onblur="setCookie('recs',this.value,31);"
+       onblur="crms.setCookie('recs', this.value, 31);"
 />
 inheriting volumes per page.
 <br/>
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"
-       onclick="selMenuItem('search1','src');
-                selMenuItem('order','idate');
-                selMenuItem('order2','date');
-                selMenuItem('dir','DESC');
-                selMenuItem('dir2','ASC');
+       onclick="crms.selectOption('search1','src');
+                crms.selectOption('order','idate');
+                crms.selectOption('order2','date');
+                crms.selectOption('dir','DESC');
+                crms.selectOption('dir2','ASC');
                 document.getElementById('start-date').value='';
                 document.getElementById('end-date').value='';
                 document.getElementById('search1value').value='';"
@@ -140,18 +140,7 @@ inheriting volumes per page.
 <br/>
 
 
-<script type="text/Javascript">
-<!--
-function CheckAll(box,formid)
-{
-	var aa=document.getElementById(formid);
-	for (var i=0; i < aa.elements.length; i++)
-	{
-	  aa.elements[i].checked = box.checked;
-	}
-	EnableButtons(formid);
-}
-
+<script>
 function CountChecked(formid)
 {
 	var aa=document.getElementById(formid);
@@ -174,7 +163,6 @@ function EnableButtons(formid)
   el = document.getElementById('resetButton');
   if (el) { el.disabled = (n == 0); }
 }
--->
 </script>
 
 [% i = 0 %]
@@ -220,7 +208,10 @@ function EnableButtons(formid)
     <input type="hidden" name="p" value="$p"/>
     <input type="hidden" name="auto" value="$auto"/>
     <input type="hidden" name="n" value="$n"/>
-    <input type="checkbox" id='SelectAllButton' onclick="CheckAll(this,'checks');"/>
+    <input type="checkbox"
+      id='SelectAllButton'
+      onclick="crms.syncCheckboxToForm(this,'checks');EnableButtons('checks')"
+    />
     <label for="SelectAllButton">Select All</label>
     &nbsp;&nbsp;&nbsp;&nbsp;
     [% IF !auto %]

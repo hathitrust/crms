@@ -1,0 +1,20 @@
+{
+  "name": "crms",
+  "dependencies": {
+    "tippy.js": "^6.3.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.20.1",
+    "globals": "^15.15.0",
+    "sass": "1.77.6"
+  },
+  "scripts": {
+    "build": "npm run build:css && npm run build:js",
+    "build:css": "assets/build_css.sh",
+    "build:js": "assets/build.sh",
+    "watch:css": "npm run build:css -- --watch",
+    "watch:js": "npm run build:js -- --watch=forever"
+  }
+}

@@ -6,6 +6,7 @@ use utf8;
 BEGIN {
   die "SDRROOT environment variable not set" unless defined $ENV{'SDRROOT'};
   use lib $ENV{'SDRROOT'} . '/crms/cgi';
+  use lib $ENV{'SDRROOT'} . '/crms/lib';
 }
 
 use CGI;
@@ -15,16 +16,15 @@ use Template;
 use URI::Escape;
 
 use CRMS;
+use CRMS::Utility;
 
 binmode(STDOUT, ':encoding(UTF-8)');
 my $cgi = new CGI;
 my $page = $cgi->param('p');
-my $debugSql = $cgi->param('debugSql');
 my $crms = CRMS->new(
-        cgi       => $cgi,
-        verbose   => 0,
-        debugSql  => $debugSql
-        );
+  cgi     => $cgi,
+  verbose => 0,
+);
 my $redirect;
 my $uri = $ENV{'REQUEST_URI'};
 $uri =~ s/&/;/g;
@@ -114,7 +114,7 @@ if ($page eq 'finishReview')
   if ($editing && !$err)
   {
     print "Content-type: text/html\n\n";
-    print '<script type="text/javascript">window.close();</script>';
+    print '<script>window.close();</script>';
     exit(0);
   }
 }
@@ -176,6 +176,7 @@ my $tt   = Template->new($config);
 my $vars = {
     title     => 'CRMS',
     crms      => $crms,
+    utility   => CRMS::Utility->new,
     cgi       => $cgi,
     user      => $user,
     project   => $crms->GetUserCurrentProject(),
@@ -183,7 +184,10 @@ my $vars = {
     yesterday => POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime(time-86400))
 };
 
-print $cgi->header(-charset => 'utf-8', 'cache-control' => 'private');
+# Do not cache review page EVER.
+# Otherwise do not allow shared cache.
+my $cache_control = ($page eq 'review') ? 'no-cache' : 'private';
+print $cgi->header(-charset => 'utf-8', 'cache-control' => $cache_control);
 if (!$tt->process($input, $vars))
 {
   printf "<h3>%s</h3>\n", $tt->error();
@@ -192,9 +196,6 @@ if (!$tt->process($input, $vars))
 
 # Debugging output is restricted to development instance
 exit if CRMS::Config->new->instance ne 'development';
-
-# Print accumulated output of DebugSql calls
-print $crms->Debug();
 
 # Print diagnostics with debug URL parameter
 if ($cgi->param('debug'))

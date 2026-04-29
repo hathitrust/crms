@@ -14,6 +14,7 @@ INCLUDE=$(cat <<EOT
   $DEPLOY_SRC/lib
   $DEPLOY_SRC/post_zephir_processing
   $DEPLOY_SRC/prep
+  $DEPLOY_SRC/public
   $DEPLOY_SRC/web
 EOT
 )
@@ -25,6 +26,7 @@ EXCLUDE=$(cat <<EOT
   --exclude .gitmodules
   --exclude docker-compose.yml
   --exclude Dockerfile
+  --exclude node_modules
   --exclude rsync.timestamp
 EOT
 )

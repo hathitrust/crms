@@ -71,11 +71,13 @@ git submodule update
    - This will run two database services and make sure that the local MariaDB connections are healthy.
 ```
 docker compose build
+docker compose run --rm test bin/setup.sh
 docker compose run --rm test
 ```
 
 
 ### Project Structure
+- `assets` Raw JS and CS assets
 - `bib_rights` two miscellaneous scripts related to bibliographic rights. 
 - `bin` For the most part these are actions and reports run as cron jobs
 - `cgi` Main entry point `cgi/crms` as well as Perl modules and view templates
@@ -84,9 +86,10 @@ content will be migrated to `lib` and `views`.
 - `docker` Database seeds
 - `lib` Perl modules (new development and refactored modules from `cgi`)
 - `prep` Destination for some log files and reports
+- `public` Compiled JS and CS assets
 - `scripts` Testing wrappers run as part of development or by GitHub
 - `t` Tests
-- `web` Static assets including images, JS, CSS
+- `web` Static assets including images and PDFs (will be migrating to `public`)
 
 ## Functionality
 - CRMS has its own database, called `crms`, to which it has write access.

@@ -33,22 +33,13 @@
 [% IF !dir %][% dir = 'ASC' %][% END %]
 
 [% CALL cgi.param('jump', '') %]
-<script type="text/Javascript">
-<!--
-function CheckAll(box,formid)
+<script>
+window.addEventListener('load', function(e)
 {
-	var aa=document.getElementById(formid);
-	for (var i=0; i < aa.elements.length; i++)
-	{
-	  aa.elements[i].checked = box.checked;
-	}
-}
-
-addEvent(window, 'load', function(e)
-{
-  tippy('.tippy');
+  tippy('.tippy', {
+    allowHTML: true
+  });
 });
--->
 </script>
 
 [% IF p == 'adminHistoricalReviews' && !search1.length() AND !search2.length() AND !search3.length() %]
@@ -136,7 +127,7 @@ addEvent(window, 'load', function(e)
 
   [% IF crms.IsUserAtLeastExpert() && p == 'adminHistoricalReviews' %]
       <input type="checkbox" [% IF showSysID %]checked="checked"[% END %] id="sysIDCB"
-             onchange="setCookie('showSysID',(this.checked)?1:0,31);
+             onchange="crms.setCookie('showSysID', (this.checked)? 1 : 0, 31);
              var tbl  = document.getElementById('resultsTable');
              var rows = tbl.getElementsByTagName('tr');
              var vis = (this.checked)? 'table-cell':'none';
@@ -176,7 +167,7 @@ addEvent(window, 'load', function(e)
     <input type="hidden" name="stype" value="$stype"/>
     <input type="hidden" name="offset" value="$offset"/>
     [% IF sys %]<input type="hidden" name="sys" value="$sys"/>[% END %]
-    <input type="checkbox" id="selectAllCB" onclick="CheckAll(this,'checks');"/>
+    <input type="checkbox" id="selectAllCB" onclick="crms.syncCheckboxToForm(this, 'checks');"/>
     <label for="selectAllCB">Select All</label>&nbsp;&nbsp;&nbsp;&nbsp;
     <input type="submit" name="approve" value="Approve Selected Volumes"/>
     <input type="submit" name="lock" value="Lock Selected Volumes"/>
@@ -333,7 +324,7 @@ addEvent(window, 'load', function(e)
   </table>
   [% IF p == 'provisionals' %]
     <br/>
-    <input type="checkbox" onclick="CheckAll(this,'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
+    <input type="checkbox" onclick="crms.syncCheckboxToForm(this, 'checks');"/> Select All&nbsp;&nbsp;&nbsp;&nbsp;
     <input type="submit" name="approve" value="Approve Selected Volumes"/>
     <input type="submit" name="lock" value="Lock Selected Volumes"/>
     <input type="submit" name="unlock" value="Unlock Selected Volumes"/>

@@ -176,7 +176,7 @@ var gReviewData = [% data.json %];
 // Save contents of ADD entry when Pub is selected and Actual Pub Date is swapped in.
 // Restore from this value if Pub is deselected.
 var gSavedADD = '';
-addEvent(window, 'load', partial_sbcr_form_mainWindowLoad);
+window.addEventListener('load', partial_sbcr_form_mainWindowLoad);
 
 function partial_sbcr_form_mainWindowLoad(e) {
   [% IF importUser %]
@@ -218,7 +218,7 @@ function insertUserReviewData(user) {
   if (button) { button.checked = "checked"; }
   // Note
   document.submitReview.note.value = review.note || "";
-  selMenuItem("category-menu", review.category || "");
+  crms.selectOption("category-menu", review.category || "");
   toggleADD();
 }
 
@@ -305,14 +305,16 @@ async function getRenewalDate(force) {
   if (!id.length) {
     return;
   }
-  togglePredictionLoader(true);
-  var url = ajaxURL("getRenewalDate") + "?id=" + id
+  crms.togglePredictionLoader(true);
+  var url = crms.ajaxURL("getRenewalDate") + "?id=" + id
   let response = await fetch(url);
   if (response.status === 200) {
     let data = await response.text();
     displayRenewalDate(data);
+  } else {
+    displayRenewalDate('');
   }
-  togglePredictionLoader(false);
+  crms.togglePredictionLoader(false);
 }
 
 // Display JSON response from predictRights CGI in the Commonwealth UI
