@@ -18,10 +18,12 @@ jobs:
         with:
           submodules: true
 
-      - name: Build docker image
-        run: docker compose build
+      - name: Set up tests
+        run: |
+          docker compose build
+          docker compose run --rm test /htapps/babel/crms/bin/build.sh
 
       - name: Run tests
-        run: docker compose run test scripts/test_and_cover.sh
+        run: docker compose run --rm test /htapps/babel/crms/scripts/test_and_cover.sh
         env:
           GITHUB_TOKEN: ${{ secrets.github_token }}

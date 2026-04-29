@@ -3,32 +3,20 @@
 <h2>Statistics for Exported Determinations</h2>
 <br/>
 
-<script type="text/javascript" src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
-<script type="text/javascript" src="https://code.highcharts.com/highcharts.js"></script>
-<script type="text/javascript">
-<!--
-window.onload = function()
-{
-	loadChart('chart0', "[% crms.WebPath('cgi', 'getExportStats?type=graph;c=2') %]");
-	loadChart('chart1', "[% crms.WebPath('cgi', 'getExportStats?type=graph;c=0') %]");
-	loadChart('chart2', "[% crms.WebPath('cgi', 'getExportStats?type=graph;c=1') %]");
-}
-// -->
-</script>
-
-[% url = crms.WebPath('cgi', 'getExportStats?type=text;c=1') %]
-<h3>CRMS&nbsp;Project&nbsp;Cumulative*&nbsp;&nbsp;&nbsp;&nbsp;<a target="_blank" href="[% url %]">Download</a></h3>
+[% url = crms.WebPath('cgi', 'getExportStats') %]
+<h3>CRMS&nbsp;Project&nbsp;Cumulative*&nbsp;&nbsp;&nbsp;&nbsp;
+  <a target="_blank" href="[% url %]">Download</a>
+</h3>
 <table style="width:100px;">
   <tr>
     <td>[% report = crms.CreateExportReport() %]
         [% report.replace('Status&nbsp;6','Status&nbsp;6**') %]
     </td>
-    <td style="padding-left:60px;"><div id="chart0"></div></td>
   </tr>
   <tr>
     <td colspan="2" style="padding-top:12px;">
       <span class="smallishText">
-  * Note: The CRMS Project Cumulative table and graph represent the current breakdown of all final determinations exported
+  * Note: The CRMS Project Cumulative table represents the current breakdown of all final determinations exported
   to the rights database since the CRMS version 1.0 was released (July 10, 2009).
   They do not include legacy determinations (determinations done pre-CRMS).
   If a volume that has been reviewed using the CRMS is subsequently re-queued/re-reviewed,
@@ -40,16 +28,12 @@ window.onload = function()
 <br/>
 <br/><br/>
 
-<table style="padding:0px; width:800px; height:600px; border-collapse:collapse">
-<tr><td><div id="chart1"></div></td></tr>
-<tr><td><div id="chart2"></div></td></tr>
-</table><br/>
-
 [% years = crms.GetAllExportYears() %]
 [% FOR year IN years.reverse() %]
   <h3>Exported&nbsp;Determinations&nbsp;$year&nbsp;&nbsp;&nbsp;&nbsp;
-    [% url = crms.WebPath('cgi', 'getExportStats?type=text;y=' _ year) %]
-    <a target="_blank" href="[% url %]">Download</a></h3>
+    [% url = crms.WebPath('cgi', 'getExportStats?y=' _ year) %]
+    <a target="_blank" href="[% url %]">Download</a>
+  </h3>
   [% crms.CreateExportReport(year) %]
 [% END %]
 

@@ -14,7 +14,6 @@
 [% IF NOT admin %][% override = 0 %][% END %]
 
 <script>
-<!--
 function CheckAllTx(box,id)
 {
   var q = '.tx_'+id;
@@ -24,7 +23,6 @@ function CheckAllTx(box,id)
 	  aa[i].checked = box.checked;
 	}
 }
--->
 </script>
 
 <h2>Add Volumes to the Queue:</h2>

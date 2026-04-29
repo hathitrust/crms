@@ -1,26 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+  <!--
+    There us only one JS file we need: public/scripts/main.js
+    
+    There are two CSS files:
+      public/styles/main.css      OUR STUFF
+      public/styles/tippy.css     NOT INVENTED HERE
+  -->
     <meta charset="utf-8"/>
     <link rel="icon" type="image/png" href="[% crms.WebPath('web', crms.GetSystemVar('favicon')) %]"/>
-    <script src="[% crms.WebPath('web', 'js/common.js') %]"></script>
-    <script src="https://unpkg.com/tippy.js@3/dist/tippy.all.min.js"></script>
-  [% page = cgi.param('p') %]
-  [% reviewType = (page == 'review' OR page == 'stanford' OR page == 'frontmatter') %]
-  [% IF reviewType %]
-    <script src="[% crms.WebPath('web', 'js/review.js') %]"></script>
-  [% END %]
-  [% IF crms.get('debugSql') %]
-    <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/debug.css') %]"/>
-  [% END %]
-  [% IF page == 'exportStats' %]
-    <script src="https://code.highcharts.com/adapters/standalone-framework.js"></script>
-    <script src="https://code.highcharts.com/highcharts.js"></script>
-  [% END %]
 
-  <link rel="stylesheet" type="text/css" href="[% crms.WebPath('web', 'css/review.css') %]"/>
-  [% where = crms.WhereAmI() %]
-  [% IF where != 'Production' %][% title = title _ ' - ' _ where %][% END %]
+    <link rel="stylesheet" type="text/css" href="[% utility.url.css_url('main.css') %]"/>
+    <link rel="stylesheet" type="text/css" href="[% utility.url.css_url('tippy.css') %]"/>
+
+    <script src="[% utility.url.js_url('main.js') %]"></script>
+    [% page = cgi.param('p') %]
+    [% reviewType = (page == 'review' OR page == 'stanford') %]
+    [% where = crms.WhereAmI() %]
+    [% IF where != 'Production' %][% title = title _ ' - ' _ where %][% END %]
     <title>[% title %] - [% crms.PageToEnglish(page) %]</title>
   </head>
   <body>
@@ -31,7 +29,6 @@
     [% IF where %]
     <div class="topBanner">
       [% crms.DevBanner().replace(" ","&nbsp;") %]
-      [% crms.Debug %]
     </div>
     [% END %]
     <div class="pages" id="homePage">
@@ -72,11 +69,11 @@
         </table>
       </div>
     </div>
-    [% crms.Debug %]
+
     <div>[% INCLUDE nav.tt %]</div>
     <br/><br/><br/>
 [% END %]
-[% crms.Debug %]
+
 [% IF r.1 != 'normal' %]
   [% IF page != 'systemStatus' %]
     [% IF r.1 == 'down' %]

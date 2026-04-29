@@ -111,19 +111,19 @@ Search for Reviews where<br/>
 
 <label for="records">Display:</label>
 <input size="3" type="text" id="records" name="records" value="[% recs %]"
-       onblur="setCookie((document.getElementById('vols').checked)? 'vrecs':'recs',this.value,31);"
+       onblur="crms.setCookie((document.getElementById('vols').checked)? 'vrecs':'recs', this.value, 31);"
 />
 records per page.
 <br/>
 <input type="submit" value="Submit"/>
 <input type="button" value="Clear"
-       onclick="selMenuItem('op1','AND');
-                selMenuItem('op2','AND');
-                selMenuItem('search1','Identifier');
-                selMenuItem('search2','Identifier');
-                selMenuItem('search3','Identifier');
-                selMenuItem('order','[% defaultOrder %]');
-                selMenuItem('dir','[% defaultDir %]');
+       onclick="crms.selectOption('op1','AND');
+                crms.selectOption('op2','AND');
+                crms.selectOption('search1','Identifier');
+                crms.selectOption('search2','Identifier');
+                crms.selectOption('search3','Identifier');
+                crms.selectOption('order','[% defaultOrder %]');
+                crms.selectOption('dir','[% defaultDir %]');
                 document.getElementById('start-date').value='';
                 document.getElementById('end-date').value='';
                 document.getElementById('search1value').value='';
