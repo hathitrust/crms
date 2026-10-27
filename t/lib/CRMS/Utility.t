@@ -22,6 +22,15 @@ subtest '#data' => sub {
   };
 };
 
+subtest '#time' => sub {
+  my $time = CRMS::Utility->new->time;
+  ok(defined $time);
+
+  subtest 'CRMS::Utility::Time cached' => sub {
+    is_deeply($time, CRMS::Utility->new->time);
+  };
+};
+
 subtest '#url' => sub {
   my $url = CRMS::Utility->new->url;
   ok(defined $url);
