@@ -53,7 +53,7 @@ my $config = CRMS::Config->new(instance => 'production');
 my $cb = CRMS::CollectionBuilder->new(year => $year);
 my $db = CRMS::Database::HT->new;
 
-my $target_year = $cb->pdd_us_collection_target_year;
+my $target_year = $cb->pdd_collection_target_year;
 
 # Get everything from our local bib rights database that has a "date used" of
 # YEAR - 96 and no "permanently closed" rights.

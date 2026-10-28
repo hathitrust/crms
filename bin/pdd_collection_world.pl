@@ -51,7 +51,7 @@ if ($help) { print $usage. "\n"; exit(0); }
 my $config = CRMS::Config->new(instance => 'production');
 my $cb = CRMS::CollectionBuilder->new(year => $year);
 my $db = CRMS::Database::HT->new;
-my $target_year = $cb->pdd_us_collection_target_year(1);
+my $target_year = $cb->pdd_collection_target_year(1);
 
 
 # Now get everything from our local bib rights database that has a "date used" of
