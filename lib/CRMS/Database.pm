@@ -5,15 +5,11 @@ use warnings;
 use utf8;
 
 use Carp qw();
-use Data::Dumper;
 use DBI;
 
 use lib "$ENV{SDRROOT}/crms/cgi";
-# FIXME: needed?
-use lib "$ENV{SDRROOT}/crms/lib/CRMS";
 
 use CRMS::Config;
-#use CRMS::Instance;
 use Utilities;
 
 # Global map of DSN to DBH so we don't run out of connections.
@@ -150,9 +146,6 @@ sub submit {
   my $sth;
   eval {
     $sth = $self->dbh->prepare($sql);
-    die "NO STATEMENT HANDLE?" unless defined $sth;
-    use Data::Dumper;
-    printf "PARAMS %s\n", Dumper \@_;
     $sth->execute(@_);
     $sth->finish;
   };
