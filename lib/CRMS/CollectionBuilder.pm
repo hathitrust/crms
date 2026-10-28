@@ -52,7 +52,7 @@ sub find_collection_by_name {
   die 'find_collection_by_name: missing name' unless defined $name;
 
   my $database = CRMS::Database::HT->new;
-  my $sql = "SELECT MColl_ID FROM mb_collection WHERE collname=? AND owner=?";
+  my $sql = "SELECT * FROM mb_collection WHERE collname=? AND owner=?";
   my $ref = $database->all($sql, $name, $BATCH_COLLECTION_OWNER);
   if (scalar @$ref > 1) {
     die "found more than one collection for name='$name' and owner='$BATCH_COLLECTION_OWNER'";
@@ -166,7 +166,6 @@ sub submit_set_shared {
 
 # Internal routine to Capture::Tiny the supplied command with
 # HT_DEV set to nothing, and MB_SUPERUSER set to the current user.
-# SDRDATAROOT also needs to be set in some cases?
 sub _batch_collection {
   my $self = shift;
 
@@ -174,7 +173,6 @@ sub _batch_collection {
   my ($stdout, $stderr, $status) = Capture::Tiny::capture {
     local $ENV{HT_DEV} = '';
     local $ENV{MB_SUPERUSER} = $self->{whoami};
-    ####local $ENV{SDRDATAROOT} = '/sdr1' unless defined $ENV{SDRDATAROOT};
     system(@params);
   };
   chomp $stdout;
