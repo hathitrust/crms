@@ -360,9 +360,9 @@ sub ProcessCrownCopyrightProject {
 }
 
 sub ProcessKeioICUS {
-  my $sql = 'SELECT id,date_used FROM bib_rights_bri' .
-    ' WHERE id LIKE "keio%" AND date_used=?';
-  my $ref = $crms->SelectAll($sql, $pdus_cutoff_year - 1);
+  my $sql = 'SELECT htid,rights_date_used FROM hf' .
+    ' WHERE htid LIKE "keio%" AND rights_date_used=?';
+  my $ref = $crms->SelectAllSDR($sql, $pdus_cutoff_year - 1);
   foreach my $row (@$ref) {
     my $id = $row->[0];
     my $date_used = $row->[1];
