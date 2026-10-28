@@ -121,7 +121,9 @@ sub submit_create_collection {
     '-t', $name,
   );
   my $collection = $self->find_collection_by_name($name);
-  $res->{coll_id} = $collection->{MColl_ID};
+  # Yes, the mb_collection schema is awful but it's what we got.
+  # Can pull the collection id and count from it, maybe dump the row in the crons if needed.
+  $res->{collection} = $collection;
   return $res;
 }
 

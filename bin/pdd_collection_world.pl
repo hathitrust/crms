@@ -65,12 +65,14 @@ AND substr(pub_place,3,1)!='u'
 ORDER BY htid
 SQL
 
+my $collection_size = 0;
 my $outfile = File::Spec->catfile($ENV{SDRROOT}, 'crms', 'prep', "pdd_collection_world_$year.txt");
 open(my $fh, '>:encoding(UTF-8)', $outfile) or die "Could not open '$outfile' $!";
 $db->for($sql, sub {
   my $row = shift;
   my $htid = $row->[0];
   print $fh "$htid\n";
+  $collection_size++;
 });
 close $fh;
 
@@ -85,7 +87,7 @@ if ($res->{status} != 0) {
   die "Error communicating with Collection Builder, cannot continue.";
 }
 
-my $coll_id = $res->{coll_id};
+my $coll_id = $res->{collection}->{MColl_ID};
 $res = $cb->submit_set_shared($coll_id, 'public');
 print "Set collection shared exit code: $res->{result}\n";
 if ($res->{status} != 0) {
@@ -94,3 +96,5 @@ if ($res->{status} != 0) {
 }
 
 print "Done with World Collection: new id is $coll_id\n";
+print "Expected size is $collection_size items\n";
+printf "Actual size is %s\n", $res->{collection}->{num_items};

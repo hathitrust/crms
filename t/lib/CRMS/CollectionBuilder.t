@@ -87,10 +87,10 @@ subtest 'submit_create_collection' => sub {
   subtest 'with all required parameters' => sub {
     my $res = $cb->submit_create_collection('Test Title', 'Test Description', $temp_filename);
     ok(defined $res);
-    ok(defined $res->{coll_id}, 'new collection id reported');
     is($res->{status}, 0, 'zero exit status');
     ok(defined $res->{stderr}, 'STDERR reported');
     ok(defined $res->{stdout}, 'STDOUT reported');
+    isa_ok($res->{collection}, 'HASH');
   };
 
   subtest 'missing title' => sub {
