@@ -86,7 +86,7 @@ print "US collection id: $collection->{MColl_ID}\n";
 print "Expected size: $collection_size items\n";
 print "Actual size: $collection->{num_items}\n";
 
-# Set status tp "public"
+# Set status to "public"
 $res = $cb->submit_set_shared($collection->{MColl_ID}, 'public');
 print "Set collection shared exit code: $res->{status}\n";
 if ($res->{status} != 0) {
