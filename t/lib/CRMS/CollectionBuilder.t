@@ -23,6 +23,15 @@ sub clear_db {
   $ht_db->submit('DELETE FROM mb_collection');
 }
 
+# A "testing the test" kind of test
+subtest 'mock_batch_collection.pl refuses to run outside development' => sub {
+  local $ENV{CRMS_INSTANCE} = 'production';
+  my $cb = CRMS::CollectionBuilder->new(batch_collection_path => $mock);
+  my $result = $cb->submit_set_featured(1, 0);
+  isnt($result->{status}, 0, 'nonzero exit status');
+  ok($result->{stderr} =~ m/development instance/, 'complains about development instance');
+};
+
 subtest 'find_collection_by_name' => sub {
   subtest 'with a unique collection name' => sub {
     clear_db();

@@ -10,6 +10,7 @@
 use Getopt::Long qw(:config no_ignore_case bundling);
 
 use lib "$ENV{SDRROOT}/crms/lib";
+use CRMS::Config;
 use CRMS::Database::HT;
 
 my $SHARED_VALUES = {
@@ -17,6 +18,10 @@ my $SHARED_VALUES = {
   'private' => 0,
   'public' => 1
 };
+
+if ('development' ne CRMS::Config->new->instance) {
+  die "Mock CB can run only as development instance";
+}
 
 my ($description, $featured, $file, $owner, $owner_name, $shared, $title, $update);
 
