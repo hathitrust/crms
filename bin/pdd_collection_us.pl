@@ -22,14 +22,15 @@ USAGE: $0 [-h]
 
 Creates a collection for the upcoming public domain rollover on January 1 of YEAR.
 Intended to be run by a cron job in November of YEAR - 1.
+The US collection contains all items published in YEAR - 96:
+ - items published inside the US will be pd worldwide
+ - items published outside the us will be pdus
 
-First creates a text file of HTIDs with a publication/copyright date of YEAR - 96,
-minus any with "permanently closed" rights attributes {pd-pvt, nobody, supp}.
+First creates a text file of HTIDs with the target publication date,
+minus any with "permanently closed" rights {pd-pvt, nobody, supp}.
 These are written to SDRROOT/crms/prep/pdd_us_collection_YEAR.txt
 
 Then, uses mb/scripts/batch-collection.pl to create a collection based on the report.
-
-Note: the Collection Builder component of this script runs long and should be invoked with nohup.
 
 -h          Print this help message.
 END

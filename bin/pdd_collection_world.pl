@@ -22,8 +22,10 @@ USAGE: $0 [-h]
 
 Creates a collection for the upcoming public domain rollover on January 1 of YEAR.
 Intended to be run by a cron job in November of YEAR - 1.
+This collection contains all items published outside the US in YEAR - 126, which we anticipate
+will be pd worldwide on or around the first day of the new year.
 
-First creates a text file of non-US HTIDs with a publication/copyright date of YEAR - 126,
+First creates a text file of non-US HTIDs with the target publication date,
 minus any with "permanently closed" rights attributes {pd-pvt, nobody, supp}.
 These are written to SDRROOT/crms/prep/pdd_world_collection_YEAR.txt
 
@@ -31,8 +33,6 @@ Then, uses mb/scripts/batch-collection.pl to create a collection based on the re
 
 This is similar to the logic in pdd_collection_us.pl except it uses an earlier cutoff
 date, and it uses the 008-derived value in hathifiles.hf.pub_place to exclude US publications.
-
-Note: the Collection Builder component of this script runs long and should be invoked with nohup.
 
 -h             Print this help message.
 END

@@ -87,7 +87,9 @@ sub pdd_collection_name {
 
 # Used by US and World collection crons for database query, and in the US name/description.
 # The 95- and 125- year cutoff dates in bib_rights.pm are the earliest dates still eligible for copyright.
-# Going one year earlier gives us the newest rights date that is opening in $self->{year}.
+# Going one year earlier gives us the latest rights date that is opening in $self->{year}.
+# The "world" category is for works that will be opening pd worldwide.
+# The "us" side is for works that will be opening pd if published in the US, pdus otherwise.
 sub pdd_collection_target_year {
   my $self  = shift;
   my $world = shift;
