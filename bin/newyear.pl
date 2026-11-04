@@ -360,8 +360,9 @@ sub ProcessCrownCopyrightProject {
 }
 
 sub ProcessKeioICUS {
+  # TODO: after ETT-1836, can check `namespace="keio"`
   my $sql = 'SELECT htid,rights_date_used FROM hf' .
-    ' WHERE htid LIKE "keio%" AND rights_date_used=?';
+    ' WHERE content_provider_code="keio" AND rights_date_used=?';
   my $ref = $crms->SelectAllSDR($sql, $pdus_cutoff_year - 1);
   foreach my $row (@$ref) {
     my $id = $row->[0];
