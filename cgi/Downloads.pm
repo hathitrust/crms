@@ -162,10 +162,10 @@ sub DownloadUNDData
   my $order        = shift;
   my $dir          = shift;
   my $search1      = shift;
-  my $search1Value = shift || '';
+  my $search1Value = shift;
   my $op1          = shift;
   my $search2      = shift;
-  my $search2Value = shift || '';
+  my $search2Value = shift;
   my $startDate    = shift;
   my $endDate      = shift;
   my $offset       = shift || 0;
