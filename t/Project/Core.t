@@ -23,11 +23,11 @@ my $project = Core->new(crms => $crms, id => $project_id);
 ok(defined $project);
 
 subtest '#queue_order' => sub {
-  ok(defined $project->queue_order, 'Core project defines a queue_order');
+  ok(!defined $project->queue_order, 'Core project does not define a queue_order');
 };
 
 subtest '#PresentationOrder' => sub {
-  ok(defined $project->PresentationOrder, 'Core project defines a PresentationOrder');
+  ok(!defined $project->PresentationOrder, 'Core project does not define a PresentationOrder');
 };
 
 done_testing();

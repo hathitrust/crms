@@ -38,6 +38,9 @@ services:
     environment:
       - SDRROOT=/htapps/babel
       - CRMS_DB_HOST=mariadb
+      # CollectionBuilder.pm tests require write access to `ht`
+      - CRMS_HT_DB_USER=mdp-admin
+      - CRMS_HT_DB_PASSWORD=mdp-admin
       - CRMS_HT_DB_HOST=mariadb_ht
       # pass through info needed by coveralls uploader
       - GITHUB_TOKEN

@@ -6,6 +6,7 @@ use utf8;
 
 use lib "$ENV{SDRROOT}/crms/lib";
 use CRMS::Utility::Data qw();
+use CRMS::Utility::Time qw();
 use CRMS::Utility::URL qw();
 
 # This is a stateless class so it's fine for the singleton pattern.
@@ -32,6 +33,15 @@ sub data {
     $self->{data} = CRMS::Utility::Data->new;
   }
   return $self->{data};
+}
+
+sub time {
+  my $self = shift;
+
+  if (!defined $self->{time}) {
+    $self->{time} = CRMS::Utility::Time->new;
+  }
+  return $self->{time};
 }
 
 sub url {
